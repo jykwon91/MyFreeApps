@@ -54,13 +54,13 @@ function renderPicker(currentApplicantId: string | null = null) {
 }
 
 describe("AttributeTenantPicker", () => {
-  it("queries the dedicated tenants endpoint with a within-cap limit", () => {
+  it("queries the dedicated tenants endpoint with a within-cap limit, including ended tenants", () => {
     // Regression guard: the generic /applicants endpoint caps limit at 100;
     // requesting it with limit > 100 returned 422 and rendered as the empty
     // state. The picker must use the tenants endpoint with a valid limit.
     mockTenants({ data: { items: [], total: 0, has_more: false } });
     renderPicker();
-    expect(vi.mocked(useGetTenantsQuery)).toHaveBeenCalledWith({ limit: 100 });
+    expect(vi.mocked(useGetTenantsQuery)).toHaveBeenCalledWith({ limit: 100, include_ended: true });
     const [[args]] = vi.mocked(useGetTenantsQuery).mock.calls;
     expect((args as { limit: number }).limit).toBeLessThanOrEqual(100);
   });
@@ -105,6 +105,27 @@ describe("AttributeTenantPicker", () => {
     expect(
       screen.getByRole("option", { name: "Dana Wells" }),
     ).toBeInTheDocument();
+  });
+
+  it("keeps a payment linked to an ended tenant selected, labelled and sorted last", () => {
+    // Regression: ending a tenancy made its payments look unattributed —
+    // the picker only listed active tenants, so the linked applicant_id had
+    // no <option> and the select fell back to "— select tenant —".
+    mockTenants({
+      data: {
+        items: [
+          { id: "ended-1", legal_name: "Andrew Le", tenant_ended_at: "2026-09-01T00:00:00Z", contract_end: null },
+          { id: "a2", legal_name: "Dana Wells", tenant_ended_at: null, contract_end: null },
+        ],
+        total: 2,
+        has_more: false,
+      },
+    });
+    renderPicker("ended-1");
+    const select = screen.getByRole("combobox", { name: /select tenant/i }) as HTMLSelectElement;
+    expect(select.value).toBe("ended-1");
+    const labels = Array.from(select.options).map((o) => o.textContent);
+    expect(labels).toEqual(["— select tenant —", "Dana Wells", "Andrew Le (ended)"]);
   });
 
   it("links the payment to the selected tenant", async () => {

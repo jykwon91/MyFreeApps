@@ -19,6 +19,7 @@ import { LoadingButton } from "@platform/ui";
 import { useGetTenantsQuery } from "@/shared/store/applicantsApi";
 import { useAttributeTransactionManuallyMutation } from "@/shared/store/attributionApi";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { buildTenantOptions } from "@/shared/lib/tenant-status";
 
 export interface AttributeTenantPickerProps {
   transactionId: string;
@@ -36,9 +37,10 @@ export default function AttributeTenantPicker({
 
   const { data: tenantsResponse, isLoading: loadingApplicants } = useGetTenantsQuery({
     limit: 100,
+    include_ended: true,
   });
 
-  const applicants = tenantsResponse?.items ?? [];
+  const tenantOptions = buildTenantOptions(tenantsResponse?.items ?? []);
 
   const isAlreadyAttributed = Boolean(currentApplicantId);
   const hasChanged = selectedId !== (currentApplicantId ?? "");
@@ -59,7 +61,7 @@ export default function AttributeTenantPicker({
     );
   }
 
-  if (applicants.length === 0) {
+  if (tenantOptions.length === 0) {
     return (
       <p className="text-xs text-muted-foreground italic">
         No lease-signed tenants to link to.
@@ -77,9 +79,9 @@ export default function AttributeTenantPicker({
           aria-label="Select tenant"
         >
           <option value="">— select tenant —</option>
-          {applicants.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.legal_name ?? "Unnamed"}
+          {tenantOptions.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
             </option>
           ))}
         </select>

@@ -9,6 +9,7 @@ import {
   useAttributeTransactionManuallyMutation,
 } from "@/shared/store/attributionApi";
 import { useGetTenantsQuery } from "@/shared/store/applicantsApi";
+import { buildTenantOptions } from "@/shared/lib/tenant-status";
 import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import AttributionChannelBadge from "./AttributionChannelBadge";
@@ -64,10 +65,11 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
     isError: applicantsError,
     isUninitialized: applicantsUninitialized,
   } = useGetTenantsQuery(
-    { limit: 100 },
+    // include_ended: a final or late payment can arrive after move-out.
+    { limit: 100, include_ended: true },
     { skip: !isUnmatched || isPropertyRow },
   );
-  const applicants = tenantsResponse?.items ?? [];
+  const tenantOptions = buildTenantOptions(tenantsResponse?.items ?? []);
 
   // Property list only for property rows that are unmatched (no proposal to
   // confirm — the host picks the listing the payout belongs to).
@@ -178,9 +180,9 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
     showTenantPicker && (loadingApplicants || applicantsUninitialized);
   const tenantsErrored = showTenantPicker && !tenantsLoading && applicantsError;
   const tenantsEmpty =
-    showTenantPicker && !tenantsLoading && !applicantsError && applicants.length === 0;
+    showTenantPicker && !tenantsLoading && !applicantsError && tenantOptions.length === 0;
   const tenantsReady =
-    showTenantPicker && !tenantsLoading && !applicantsError && applicants.length > 0;
+    showTenantPicker && !tenantsLoading && !applicantsError && tenantOptions.length > 0;
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-start gap-4 p-4 border rounded-lg bg-card">
@@ -276,9 +278,9 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
               disabled={anyLoading}
             >
               <option value="">— pick a tenant —</option>
-              {applicants.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.legal_name ?? "Unnamed"}
+              {tenantOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
                 </option>
               ))}
             </select>
