@@ -51,6 +51,7 @@ from app.services.email.exceptions import (
     GmailSendScopeError,
 )
 from app.services.integrations import integration_service
+from app.services.leases.listing_resolution import resolve_inquiry_listing_id
 from app.services.leases.receipt_formatting import (
     format_period_long as _format_period_long,
     format_period_short as _format_period_short,
@@ -116,6 +117,10 @@ async def _resolve_property_address(
 
     Returns ``(address_string, signed_lease_id)``.  The address is best-effort
     — if the chain is broken at any point, a fallback string is returned.
+
+    A lease carrying no ``listing_id`` falls back to the listing the tenant's
+    inquiry came in through, so the receipt still prints the real address
+    instead of "Address on file".
     """
     leases = await signed_lease_repo.list_for_tenant(
         db,
@@ -125,18 +130,51 @@ async def _resolve_property_address(
         include_deleted=False,
         limit=5,
     )
+    lease_id = leases[0].id if leases else None
     for lease in leases:
         if not lease.listing_id:
             continue
-        listing = await listing_repo.get_by_id(db, lease.listing_id, organization_id)
-        if listing is None or not listing.property_id:
-            continue
-        prop = await property_repo.get_by_id(
-            db, listing.property_id, organization_id=organization_id
+        address = await _property_address_for_listing(
+            db, listing_id=lease.listing_id, organization_id=organization_id,
         )
-        if prop and prop.address:
-            return prop.address, lease.id
-    return "Address on file", None
+        if address:
+            return address, lease.id
+
+    applicant = await applicant_repo.get(
+        db,
+        applicant_id=applicant_id,
+        organization_id=organization_id,
+        user_id=user_id,
+    )
+    if applicant is not None:
+        listing_id = await resolve_inquiry_listing_id(
+            db, applicant=applicant, organization_id=organization_id,
+        )
+        if listing_id is not None:
+            address = await _property_address_for_listing(
+                db, listing_id=listing_id, organization_id=organization_id,
+            )
+            if address:
+                return address, lease_id
+    return "Address on file", lease_id
+
+
+async def _property_address_for_listing(
+    db: AsyncSession,
+    *,
+    listing_id: uuid.UUID,
+    organization_id: uuid.UUID,
+) -> str | None:
+    """Return the address of the property behind a listing, if both resolve."""
+    listing = await listing_repo.get_by_id(db, listing_id, organization_id)
+    if listing is None or not listing.property_id:
+        return None
+    prop = await property_repo.get_by_id(
+        db, listing.property_id, organization_id=organization_id
+    )
+    if prop is None or not prop.address:
+        return None
+    return prop.address
 
 
 # ---------------------------------------------------------------------------

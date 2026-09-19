@@ -12,8 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.applicants.applicant import Applicant
 from app.repositories.applicants import applicant_repo
-from app.repositories.leases import signed_lease_repo
 from app.repositories.listings import listing_repo
+from app.services.leases.listing_resolution import resolve_listing_id_for_applicant
 
 
 async def _get_lease_signed_applicants(
@@ -39,23 +39,20 @@ async def _get_property_id_for_applicant(
     applicant: Applicant,
     organization_id: uuid.UUID,
 ) -> uuid.UUID | None:
-    """Resolve the property_id linked to an applicant via their signed lease.
+    """Resolve the property_id linked to an applicant via their listing.
 
-    Walks: applicant → signed_lease → listing → property_id.
-    Returns the first non-null property_id found, or None.
+    Walks: applicant → signed_lease (or inquiry) → listing → property_id.
+    Returns the property_id, or None when the chain is broken.
+
+    A lease without a ``listing_id`` used to end the walk here, which left
+    every auto-attributed payment for that tenant with no property — the money
+    landed in the dashboard's "Unassigned" bucket instead of their property.
+    ``resolve_listing_id_for_applicant`` falls back to the inquiry's listing.
     """
-    leases = await signed_lease_repo.list_for_tenant(
-        db,
-        user_id=applicant.user_id,
-        organization_id=organization_id,
-        applicant_id=applicant.id,
-        include_deleted=False,
-        limit=5,
-    )
-    for lease in leases:
-        if not lease.listing_id:
-            continue
-        listing = await listing_repo.get_by_id(db, lease.listing_id, organization_id)
-        if listing and listing.property_id:
-            return listing.property_id
-    return None
+    listing_id = await resolve_listing_id_for_applicant(db, applicant, organization_id)
+    if listing_id is None:
+        return None
+    listing = await listing_repo.get_by_id(db, listing_id, organization_id)
+    if listing is None:
+        return None
+    return listing.property_id
