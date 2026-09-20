@@ -15,6 +15,7 @@ from app.repositories.applicants import applicant_repo
 from app.repositories.leases import signed_lease_attachment_repo, signed_lease_repo
 from app.repositories.listings import listing_repo
 from app.schemas.leases.signed_lease_response import SignedLeaseResponse
+from app.services.leases.listing_resolution import resolve_inquiry_listing_id
 from app.services.leases._lease_helpers import (
     ALLOWED_ATTACHMENT_MIME_TYPES,
     AttachmentTooLargeError,
@@ -208,6 +209,11 @@ async def import_signed_lease(
                 parent_lease_id=parent_lease_id,
                 user_id=user_id,
                 organization_id=organization_id,
+            )
+
+        if listing_id is None:
+            listing_id = await resolve_inquiry_listing_id(
+                db, applicant=applicant, organization_id=organization_id,
             )
 
         now = _dt.datetime.now(_dt.timezone.utc)

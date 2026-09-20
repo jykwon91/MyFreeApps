@@ -37,8 +37,6 @@ from app.repositories.leases import (
     signed_lease_attachment_repo,
     signed_lease_repo,
 )
-from app.repositories.properties import property_repo
-from app.repositories.listings import listing_repo
 from app.repositories.transactions import transaction_repo
 from app.repositories.user import user_repo
 from app.repositories.inquiries import inquiry_repo
@@ -51,6 +49,7 @@ from app.services.email.exceptions import (
     GmailSendScopeError,
 )
 from app.services.integrations import integration_service
+from app.services.leases.receipt_address_resolver import resolve_property_address
 from app.services.leases.receipt_formatting import (
     format_period_long as _format_period_long,
     format_period_short as _format_period_short,
@@ -99,44 +98,6 @@ class ReceiptTransactionNotAttributedError(Exception):
 class ReceiptSendResult:
     receipt_number: str
     attachment_id: uuid.UUID
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-async def _resolve_property_address(
-    db: AsyncSession,
-    *,
-    applicant_id: uuid.UUID,
-    organization_id: uuid.UUID,
-    user_id: uuid.UUID,
-) -> tuple[str, uuid.UUID | None]:
-    """Walk applicant → signed_lease → listing → property to get the address.
-
-    Returns ``(address_string, signed_lease_id)``.  The address is best-effort
-    — if the chain is broken at any point, a fallback string is returned.
-    """
-    leases = await signed_lease_repo.list_for_tenant(
-        db,
-        user_id=user_id,
-        organization_id=organization_id,
-        applicant_id=applicant_id,
-        include_deleted=False,
-        limit=5,
-    )
-    for lease in leases:
-        if not lease.listing_id:
-            continue
-        listing = await listing_repo.get_by_id(db, lease.listing_id, organization_id)
-        if listing is None or not listing.property_id:
-            continue
-        prop = await property_repo.get_by_id(
-            db, listing.property_id, organization_id=organization_id
-        )
-        if prop and prop.address:
-            return prop.address, lease.id
-    return "Address on file", None
 
 
 # ---------------------------------------------------------------------------
@@ -281,7 +242,7 @@ async def send_receipt(
         # dependency on expire_on_commit=False after the context exits.
         txn_applicant_id: uuid.UUID = txn.applicant_id
 
-        property_address, signed_lease_id = await _resolve_property_address(
+        property_address, signed_lease_id = await resolve_property_address(
             db,
             applicant_id=txn_applicant_id,
             organization_id=organization_id,
@@ -523,7 +484,7 @@ async def preview_receipt_pdf(
             if inq is not None:
                 tenant_email = inq.inquirer_email
 
-        property_address, _ = await _resolve_property_address(
+        property_address, _ = await resolve_property_address(
             db,
             applicant_id=txn.applicant_id,
             organization_id=organization_id,

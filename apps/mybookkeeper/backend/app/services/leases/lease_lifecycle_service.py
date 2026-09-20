@@ -11,6 +11,7 @@ from typing import Any
 
 from app.db.session import unit_of_work
 from app.repositories.applicants import applicant_repo
+from app.services.leases.listing_resolution import default_listing_id
 from app.repositories.leases import (
     lease_template_placeholder_repo,
     lease_template_repo,
@@ -113,6 +114,14 @@ async def create_lease(
             )
 
         starts, ends = _denormalise_dates(values)
+
+        listing_id = await default_listing_id(
+            db,
+            listing_id=listing_id,
+            applicant_id=applicant_id,
+            organization_id=organization_id,
+            user_id=user_id,
+        )
 
         lease = await signed_lease_repo.create(
             db,
