@@ -2,13 +2,22 @@
   {
     "slug": "valorant",
     "name": "VALORANT",
+    "kind": "lineups",
     "side_a_label": "Attacker",
     "side_b_label": "Defender"
   },
   {
     "slug": "cs2",
     "name": "Counter-Strike 2",
+    "kind": "lineups",
     "side_a_label": "T",
     "side_b_label": "CT"
+  },
+  {
+    "slug": "wow-forever",
+    "name": "World of Warcraft: Forever",
+    "kind": "companion",
+    "side_a_label": null,
+    "side_b_label": null
   }
 ]

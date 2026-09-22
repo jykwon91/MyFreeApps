@@ -11,7 +11,8 @@
  */
 import { useState } from "react";
 import { Package, Plus } from "lucide-react";
-import { useGetGamesQuery, useGetMapsQuery } from "@/store/gamesApi";
+import { useGetMapsQuery } from "@/store/gamesApi";
+import { useLineupGames } from "@/hooks/useLineupGames";
 import { useGetLineupPackagesQuery } from "@/store/lineupPackagesApi";
 import type { GameMap } from "@/types/game";
 import CreatePackageDialog from "@/components/game/CreatePackageDialog";
@@ -23,7 +24,7 @@ export default function LineupPackages() {
   const [filterSide, setFilterSide] = useState<string>("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
-  const { data: games = [] } = useGetGamesQuery();
+  const { data: games = [] } = useLineupGames();
   const { data: maps = [] } = useGetMapsQuery(
     games.find((g) => g.id === filterGameId)?.slug ?? "",
     { skip: !filterGameId },

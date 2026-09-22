@@ -65,6 +65,7 @@ async def list_games(
             "id": str(g.id),
             "slug": g.slug,
             "name": g.name,
+            "kind": g.kind,
             "side_a_label": g.side_a_label,
             "side_b_label": g.side_b_label,
         }

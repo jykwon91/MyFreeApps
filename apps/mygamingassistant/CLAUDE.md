@@ -4,7 +4,9 @@
 
 **MyGamingAssistant** — a single-user, self-hosted lineup and utility management tool
 for tactical FPS games (Valorant, CS2). Core value: store and visualize lineup throws
-overlaid on game minimaps. Part of the MyFreeApps monorepo.
+overlaid on game minimaps. Also hosts **companion** games — static per-game pages
+with no maps (currently World of Warcraft: Forever: a New Player Guide and an Item
+Compare tool). Part of the MyFreeApps monorepo.
 
 **Single-user app:** There is NO `/register` route. The operator account is seeded at
 boot time from `SEED_USER_EMAIL` + `SEED_USER_PASSWORD_HASH` env vars. Production boot
@@ -66,7 +68,11 @@ Domain: `mygamingassistant.myfreeapps.org`
 ## Domain Models
 
 ### Game domain
-- `game` — slug + name + side labels (attacker/defender or T/CT)
+- `game` — slug + name + `kind` + side labels (attacker/defender or T/CT)
+  - `kind` is `lineups` (map/lineup library) or `companion` (static feature pages,
+    no maps — WoW Forever). CHECK `ck_game_kind`.
+  - Side labels are nullable; `ck_game_lineup_side_labels` requires them on
+    `lineups` games. The classifier's reference data only lists `lineups` games.
 - `map` — belongs to game; slug + name + minimap URL
 - `map_zone` — polygon overlay zones on a map (A main, B site, etc.)
 - `site` — bomb sites / objective sites on a map
@@ -77,6 +83,37 @@ Domain: `mygamingassistant.myfreeapps.org`
 - `lineup` — A → B trajectory (source + destination zone/site, side, description)
 - `lineup_package` — named collection of lineups
 - `lineup_package_lineup` — M2M join
+
+## Per-game features (game registry)
+
+A lineup game uses the generic pages under `/:gameSlug`. A companion game owns its
+own pages, registered in `frontend/src/games/registry.ts` and routed by
+`frontend/src/games/<slug>/routes.tsx`, which `src/routes.tsx` mounts BEFORE
+`/:gameSlug`. `GameGrid` links every card through `getGameLandingPath()`. Game
+pickers in the lineup library use `useLineupGames()` so companion games never
+appear where a map must be chosen.
+
+To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
+a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
+
+### WoW Forever (`/wow-forever`, `/wow-forever/guide`, `/wow-forever/compare`)
+
+- All public, static, frontend-only. Content is typed data under
+  `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
+- Class/spec ids in `data/classes.ts` are the stable key for anything
+  class-shaped (stat weights, compare settings, a future BiS page). Never rename.
+- **Scoring lives in the frontend** (`scoring/`), deterministic and unit-tested.
+  Level 60 weights: Pawn's Classic Era scales (HawsJon) in
+  `data/weights/pawnClassicWeights.ts` — the header cites the source commit.
+  Leveling: documented heuristic in `levelingWeights.ts`. Stats a spec has no
+  weight for are shown as "not scored", never silently 0.
+- Pasted tooltip text is parsed in the browser (`parsing/`), so compare works
+  signed out and in the serve-only deployment.
+- Screenshot reading calls `POST /api/wow/items/extract` (Claude tool-use, nothing
+  stored). It's an auth route, so it is NOT mounted in serve-only production; the
+  UI says so and points to pasting text.
+- Stat keys / slots / qualities exist on both sides —
+  `tests/test_wow_stat_keys_parity.py` fails CI on drift.
 
 ## Fixture Loading
 
@@ -192,6 +229,7 @@ once on the router. This is the no-bandaid approach (see
 | `/api/lineups/*` mutations | — | All (upload-url, POST, PATCH, DELETE, classify, accept, hide, bulk-accept, pending) |
 | `/api/lineup-packages` | GET + `/pin` (no server state) | POST / PATCH / DELETE |
 | `/api/sources/*` | — | All |
+| `/api/wow/items/extract` | — | POST (Claude reads an item screenshot/text; per-user rate limit; 503 when `ANTHROPIC_API_KEY` is unset) |
 | `/api/scheduler/*` | — | All |
 | `/admin/*` | — | All |
 | `/users/me*` | — | All |
@@ -244,6 +282,8 @@ public, or empty pages where they expected to see content.
 | `ENCRYPTION_KEY` | Yes | Fernet key for PII — generate with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
 | `DATABASE_URL` | Yes | Full async postgres URL |
 | `TURNSTILE_SECRET_KEY` | Optional | MGA has no public registration; Turnstile is only on forgot-password |
+| `ANTHROPIC_API_KEY` | Optional | Classifier + WoW item reader. Missing → the item reader returns 503 (no boot guard) |
+| `CLAUDE_ITEM_EXTRACTOR_MODEL` | Optional | Defaults to `claude-haiku-4-5-20251001` |
 
 **After first deploy:**
 ```bash

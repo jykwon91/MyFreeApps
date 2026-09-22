@@ -27,7 +27,7 @@ from platform_shared.core.openapi import docs_kwargs
 from platform_shared.core.logging_safety import install_crlf_safe_logging
 from platform_shared.api.transparency_router import build_transparency_router
 
-from app.api import account, admin, games, health, lineups, lineup_packages, scheduler, sources, totp
+from app.api import account, admin, games, health, lineups, lineup_packages, scheduler, sources, totp, wow_items
 # Note on lineups + lineup_packages routers:
 # MGA uses public-read / auth-write — each of those modules exports two
 # routers: ``public_router`` (no auth) and ``auth_router`` (operator only).
@@ -321,10 +321,8 @@ def _mount_auth_routes(app: FastAPI) -> None:
         tags=["users"],
     )
 
-    # Auth-write domain routers.
-    # games.auth_router handles operator-only minimap-upload endpoints under
-    # /api/maps/{map_id}/... — kept separate from games.router so auth gating is
-    # router-level, not per-handler.
+    # Auth-write domain routers. games.auth_router = operator-only minimap endpoints
+    # under /api/maps/{map_id}/..., split from games.router so gating is router-level.
     app.include_router(games.auth_router)
     # Auth-router includes literal-path routes (/lineups/pending, /lineups/bulk-accept)
     # that would otherwise be shadowed by the public_router's /lineups/{lineup_id}
@@ -337,6 +335,7 @@ def _mount_auth_routes(app: FastAPI) -> None:
     app.include_router(sources.router)
     app.include_router(scheduler.router)
     app.include_router(admin.router)
+    app.include_router(wow_items.router)  # Claude item reader — spends API money
 
     # Shared platform admin router — generic user-management endpoints
     # (list/role/activate/deactivate/superuser/stats-users).

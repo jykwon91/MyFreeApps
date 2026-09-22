@@ -98,6 +98,20 @@ class Settings(BaseAppSettings):
     enable_classifier: bool = True
 
     # ------------------------------------------------------------------
+    # WoW Forever item reader (POST /wow/items/extract — operator-only).
+    # Reads an in-game item tooltip (screenshot or pasted text) into
+    # structured stats with Claude. Reuses ANTHROPIC_API_KEY; with no key the
+    # endpoint answers 503 — deliberately NO boot guard, so a deploy without
+    # the key still boots. Scoring is deterministic frontend code, not AI.
+    # ------------------------------------------------------------------
+    claude_item_extractor_model: str = "claude-haiku-4-5-20251001"
+    item_extract_max_image_bytes: int = 5 * 1024 * 1024  # 5 MB
+    item_extract_max_text_chars: int = 4000
+    # Per-user throttle — each call spends API money.
+    item_extract_rate_limit_threshold: int = 30
+    item_extract_rate_limit_window_seconds: int = 600
+
+    # ------------------------------------------------------------------
     # Test-only helpers — never set in production.
     # When true, /api/_test/* endpoints are mounted (rate-limit reset,
     # seed lineup for E2E tests). Guarded by the mga_enable_test_helpers flag.
