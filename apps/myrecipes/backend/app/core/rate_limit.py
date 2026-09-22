@@ -17,6 +17,7 @@ from platform_shared.core.auth_messages import RATE_LIMIT_GENERIC_DETAIL
 from platform_shared.core.rate_limit import (
     RateLimiter,
     email_domain_from_request,
+    make_require_turnstile,
 )
 from platform_shared.core.request_utils import get_client_ip
 from platform_shared.services.turnstile_service import verify_turnstile_token
@@ -76,27 +77,20 @@ discovery_limiter = RateLimiter(max_attempts=20, window_seconds=3600)
 # ---------------------------------------------------------------------------
 
 
-async def require_turnstile(request: Request) -> None:
-    """FastAPI dependency that enforces Turnstile CAPTCHA verification.
+async def _verify_turnstile(*args: object, **kwargs: object) -> tuple[bool, list[str]]:
+    # Resolve the module-level name at call time so tests can keep patching
+    # ``app.core.rate_limit.verify_turnstile_token``.
+    return await verify_turnstile_token(*args, **kwargs)  # type: ignore[arg-type]
 
-    No-op when ``settings.turnstile_secret_key`` is empty (dev/CI mode).
-    """
-    if not settings.turnstile_secret_key:
-        return
-    token = request.headers.get("X-Turnstile-Token", "")
-    if not token:
-        raise HTTPException(status_code=400, detail="Captcha token required")
-    success, error_codes = await verify_turnstile_token(
-        token,
-        get_client_ip(request),
-        secret_key=settings.turnstile_secret_key,
-    )
-    if not success:
-        if any(c in error_codes for c in ("invalid-input-secret", "missing-input-secret")):
-            raise HTTPException(status_code=503, detail="captcha_service_misconfigured")
-        if "timeout-or-duplicate" in error_codes:
-            raise HTTPException(status_code=400, detail="captcha_expired_please_retry")
-        raise HTTPException(status_code=400, detail="captcha_verification_failed")
+
+# Shared factory (platform_shared.core.rate_limit): no-op when the secret is
+# empty; 400 on missing token / captcha_expired_please_retry /
+# captcha_verification_failed; 503 captcha_service_misconfigured + an ERROR log
+# on a bad secret.
+require_turnstile = make_require_turnstile(
+    lambda: settings.turnstile_secret_key,
+    verify=_verify_turnstile,
+)
 
 
 # ---------------------------------------------------------------------------
