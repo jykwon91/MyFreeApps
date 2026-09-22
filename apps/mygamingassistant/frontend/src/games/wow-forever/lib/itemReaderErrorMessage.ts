@@ -1,6 +1,6 @@
 import { extractErrorMessage } from "@platform/ui";
 
-const MANUAL_FALLBACK = "Paste the tooltip text or enter the stats by hand instead.";
+const MANUAL_FALLBACK = "You can also paste tooltip text copied from a website.";
 
 /** Backend detail codes → what the user should do next. */
 const MESSAGES_BY_DETAIL: Readonly<Record<string, string>> = {

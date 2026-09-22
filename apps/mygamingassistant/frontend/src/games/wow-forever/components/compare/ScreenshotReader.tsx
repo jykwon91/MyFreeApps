@@ -21,7 +21,7 @@ function imageFromClipboard(e: ClipboardEvent<HTMLDivElement>): File | null {
  * Read an item from a screenshot with AI. Open to everyone, but each read
  * spends API money, so the backend gates it with a Cloudflare Turnstile check,
  * a per-IP limit and a shared daily budget. When any of those says no, the
- * message points back to pasting text or typing the stats by hand.
+ * message points back to pasting tooltip text copied from a website.
  */
 export default function ScreenshotReader({ onRead }: ScreenshotReaderProps) {
   const [file, setFile] = useState<File | null>(null);
@@ -37,7 +37,7 @@ export default function ScreenshotReader({ onRead }: ScreenshotReaderProps) {
   if (!isScreenshotReaderOffered()) {
     return (
       <AlertBox variant="info">
-        Reading screenshots isn't switched on for this site. Paste the tooltip text instead, or add the stats by hand.
+        Reading screenshots isn't switched on for this site. Paste tooltip text copied from a website instead.
       </AlertBox>
     );
   }
@@ -90,8 +90,8 @@ export default function ScreenshotReader({ onRead }: ScreenshotReaderProps) {
       </LoadingButton>
       <p className="text-xs text-muted-foreground">
         {waitingForCheck ? "Complete the quick human check above to enable reading. " : null}
-        Screenshot reading uses AI on a small shared daily budget. If it's busy or unavailable, paste the tooltip
-        text or enter the stats by hand.
+        Screenshot reading uses AI on a small shared daily budget. If it's busy or unavailable, paste tooltip text
+        copied from a website instead.
       </p>
       {error ? <AlertBox variant="error">{error}</AlertBox> : null}
     </div>

@@ -5,13 +5,14 @@ import { MemoryRouter } from "react-router-dom";
 import WowComparePage from "@/games/wow-forever/pages/WowComparePage";
 import { COMPARE_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/useCompareSettings";
 
-// The screenshot reader needs the Redux store; this flow only uses local text parsing.
+// Screenshot is the default input; this flow switches to local text parsing.
 vi.mock("@/games/wow-forever/api/wowItemsApi", () => ({
   useExtractItemMutation: () => [vi.fn(), { isLoading: false }],
 }));
 
 async function pasteInto(position: number, text: string) {
   const card = screen.getByRole("article", { name: new RegExp(`^Item ${position}:`) });
+  await userEvent.click(within(card).getByRole("radio", { name: "Paste from a website" }));
   await userEvent.click(within(card).getByRole("textbox", { name: /tooltip text/i }));
   await userEvent.paste(text);
   await userEvent.click(within(card).getByRole("button", { name: "Read text" }));
@@ -19,6 +20,18 @@ async function pasteInto(position: number, text: string) {
 
 describe("WoW Forever Item Compare page", () => {
   beforeEach(() => window.localStorage.clear());
+
+  it("opens each item on the screenshot reader, with pasting text as the alternative", () => {
+    render(
+      <MemoryRouter>
+        <WowComparePage />
+      </MemoryRouter>,
+    );
+    const card = screen.getByRole("article", { name: /^Item 1:/ });
+    expect(within(card).getByRole("radio", { name: "Screenshot" })).toHaveAttribute("aria-checked", "true");
+    expect(within(card).getByRole("radio", { name: "Paste from a website" })).toHaveAttribute("aria-checked", "false");
+    expect(within(card).getByRole("button", { name: "Read screenshot" })).toBeInTheDocument();
+  });
 
   it("compares two pasted items and explains the winner", async () => {
     window.localStorage.setItem(
