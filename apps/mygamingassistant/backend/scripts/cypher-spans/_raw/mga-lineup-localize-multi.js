@@ -157,7 +157,7 @@ Video ${VIDEO}, map ${it.map}. Chapter NN=${it.nn} titled "${it.name || ''}", wi
 
 ${GROUP_NOTE} Your job: watch the chapter and enumerate EVERY DISTINCT placement it contains.
 
-Method: a single COARSE pass is enough -- frame_study.py --video ${VIDEO} --t0 ${it.cs} --t1 ${it.next} --step 0.5 --label ${it.map}-${it.nn}-survey, then montage_study.py to read it as a grid. Use the PowerShell tool. Read the montage and identify the shot boundaries: each placement typically runs walk-to-spot -> aim at surface -> deploy -> brief look at the result, then cuts to the next spot.
+Method: a single COARSE pass is enough -- frame_study.py --video ${VIDEO} --t0 ${it.cs} --t1 ${it.next} --step 0.5 --height 720 --label ${it.map}-${it.nn}-survey (ONE call for the whole window: it decodes once and takes ~1-3 s per 30 s of footage; do not split it or poll for it), then montage_study.py to read it as a grid. Use the PowerShell tool. Read the montage and identify the shot boundaries: each placement typically runs walk-to-spot -> aim at surface -> deploy -> brief look at the result, then cuts to the next spot.
 
 ${CAPTIONS ? `READ THE ON-SCREEN CAPTIONS. This creator burns a caption into the footage for each placement (${CAPTION_EXAMPLES}). They name the spot and state the intent, and they are the best evidence available. Transcribe them verbatim.` : `THIS SOURCE HAS NO ON-SCREEN CAPTIONS, no chapter title plates and no drawn marks. Return caption:"" for every placement. Do not transcribe a HUD string, a location readout or an editor flourish as though it were a caption -- there is nothing to quote, and an invented one becomes the next agent's "best available statement" of what the spot is for.`}
 
