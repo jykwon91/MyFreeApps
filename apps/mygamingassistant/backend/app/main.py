@@ -259,14 +259,15 @@ def _mount_public_routes(app: FastAPI) -> None:
     """Mount the public read-only surface — served in BOTH modes.
 
     games + health are entirely public; lineups + lineup_packages contribute
-    their ``public_router`` (read-only). version is a public deploy probe.
-    Nothing here requires auth, so it is identical in serve_only and full-auth
-    deployments.
+    their ``public_router`` (read-only); wow_items is the anonymous item reader
+    (Turnstile + per-IP limit + durable daily cap). Nothing here requires auth,
+    so it is identical in both modes. version is a public deploy probe.
     """
     app.include_router(health.router, tags=["health"])
     app.include_router(games.router)
     app.include_router(lineups.public_router)
     app.include_router(lineup_packages.public_router)
+    app.include_router(wow_items.router)  # Turnstile + per-IP + daily-capped
 
     # Deploy verification — exposes the git commit + boot timestamp so the
     # deploy workflow can confirm which commit is live without parsing logs.
@@ -335,7 +336,6 @@ def _mount_auth_routes(app: FastAPI) -> None:
     app.include_router(sources.router)
     app.include_router(scheduler.router)
     app.include_router(admin.router)
-    app.include_router(wow_items.router)  # Claude item reader — spends API money
 
     # Shared platform admin router — generic user-management endpoints
     # (list/role/activate/deactivate/superuser/stats-users).

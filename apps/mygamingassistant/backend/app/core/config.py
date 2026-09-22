@@ -98,18 +98,25 @@ class Settings(BaseAppSettings):
     enable_classifier: bool = True
 
     # ------------------------------------------------------------------
-    # WoW Forever item reader (POST /wow/items/extract — operator-only).
+    # WoW Forever item reader (POST /wow/items/extract — PUBLIC, both modes).
     # Reads an in-game item tooltip (screenshot or pasted text) into
-    # structured stats with Claude. Reuses ANTHROPIC_API_KEY; with no key the
-    # endpoint answers 503 — deliberately NO boot guard, so a deploy without
-    # the key still boots. Scoring is deterministic frontend code, not AI.
+    # structured stats with Claude. Reuses ANTHROPIC_API_KEY. Anonymous in
+    # serve-only prod, so it is gated by (in order): availability → per-IP
+    # limit → Turnstile → input validation → durable global daily cap.
+    # Deliberately NO boot guard: without ANTHROPIC_API_KEY (or, in serve-only
+    # / production, without TURNSTILE_SECRET_KEY) the endpoint answers 503
+    # ``item_reader_unavailable`` and the UI falls back to manual entry.
+    # Scoring is deterministic frontend code, not AI.
     # ------------------------------------------------------------------
     claude_item_extractor_model: str = "claude-haiku-4-5-20251001"
     item_extract_max_image_bytes: int = 5 * 1024 * 1024  # 5 MB
     item_extract_max_text_chars: int = 4000
-    # Per-user throttle — each call spends API money.
-    item_extract_rate_limit_threshold: int = 30
-    item_extract_rate_limit_window_seconds: int = 600
+    # Per-IP throttle (in-process; bounds one caller).
+    item_extract_rate_limit_threshold: int = 20
+    item_extract_rate_limit_window_seconds: int = 3600
+    # Global Claude calls per UTC day, across restarts + workers (DB-backed,
+    # daily_usage_counters). 0 turns the reader off (503).
+    wow_extract_daily_cap: int = 300
 
     # ------------------------------------------------------------------
     # Test-only helpers — never set in production.

@@ -18,6 +18,10 @@ class ItemExtractionNotConfiguredError(ItemExtractionError):
     """ANTHROPIC_API_KEY is not set on this deployment."""
 
 
+class ItemExtractionDailyCapError(ItemExtractionError):
+    """The global daily cap of Claude calls (WOW_EXTRACT_DAILY_CAP) is used up."""
+
+
 class ItemExtractionInputError(ItemExtractionError):
     """The request itself is unusable (no input, both inputs, bad image, too long)."""
 

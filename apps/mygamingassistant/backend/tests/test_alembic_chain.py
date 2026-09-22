@@ -24,8 +24,8 @@ def script_directory() -> ScriptDirectory:
     return ScriptDirectory.from_config(cfg)
 
 
-def test_single_head_is_0022(script_directory: ScriptDirectory) -> None:
-    """The DAG must resolve to exactly one head and it must be 0022.
+def test_single_head_is_0023(script_directory: ScriptDirectory) -> None:
+    """The DAG must resolve to exactly one head and it must be 0023.
 
     Bump this pin (and add a down_revision assertion below) in the same PR
     that adds a new migration — same per-PR contract as the fixture
@@ -37,8 +37,8 @@ def test_single_head_is_0022(script_directory: ScriptDirectory) -> None:
         "Orphan heads usually mean a migration's down_revision is stale "
         "after a merge — rebase and re-point the down_revision."
     )
-    assert heads[0] == "0022", (
-        f"Expected head 0022 (game.kind lineups/companion), "
+    assert heads[0] == "0023", (
+        f"Expected head 0023 (daily_usage_counters), "
         f"got {heads[0]}."
     )
 
@@ -177,3 +177,11 @@ def test_0022_down_revision_points_at_0021(
     """0022 must chain directly off 0021 (game.kind + nullable side labels)."""
     rev = script_directory.get_revision("0022")
     assert rev.down_revision == "0021"
+
+
+def test_0023_down_revision_points_at_0022(
+    script_directory: ScriptDirectory,
+) -> None:
+    """0023 must chain directly off 0022 (daily_usage_counters)."""
+    rev = script_directory.get_revision("0023")
+    assert rev.down_revision == "0022"

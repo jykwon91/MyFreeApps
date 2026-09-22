@@ -110,8 +110,17 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - Pasted tooltip text is parsed in the browser (`parsing/`), so compare works
   signed out and in the serve-only deployment.
 - Screenshot reading calls `POST /api/wow/items/extract` (Claude tool-use, nothing
-  stored). It's an auth route, so it is NOT mounted in serve-only production; the
-  UI says so and points to pasting text.
+  stored). It is PUBLIC and mounted in BOTH modes (serve-only prod included),
+  gated in order by: availability (503 `item_reader_unavailable` when
+  `ANTHROPIC_API_KEY` is unset, `WOW_EXTRACT_DAILY_CAP<=0`, or — serve-only /
+  production — `TURNSTILE_SECRET_KEY` is unset) → per-IP limit (20/h) →
+  shared Turnstile dependency (`X-Turnstile-Token`) → input validation →
+  durable global daily cap (`daily_usage_counters`, platform_shared
+  `try_consume_daily_quota`; 429 `item_reader_daily_limit_reached`). No boot
+  guard — an unconfigured reader degrades to 503 and the UI to manual entry.
+  The frontend only offers it in serve-only builds when `VITE_TURNSTILE_SITE_KEY`
+  is baked into the bundle (GitHub Actions variable
+  `MYGAMINGASSISTANT_VITE_TURNSTILE_SITE_KEY`).
 - Stat keys / slots / qualities exist on both sides —
   `tests/test_wow_stat_keys_parity.py` fails CI on drift.
 
@@ -229,7 +238,7 @@ once on the router. This is the no-bandaid approach (see
 | `/api/lineups/*` mutations | — | All (upload-url, POST, PATCH, DELETE, classify, accept, hide, bulk-accept, pending) |
 | `/api/lineup-packages` | GET + `/pin` (no server state) | POST / PATCH / DELETE |
 | `/api/sources/*` | — | All |
-| `/api/wow/items/extract` | — | POST (Claude reads an item screenshot/text; per-user rate limit; 503 when `ANTHROPIC_API_KEY` is unset) |
+| `/api/wow/items/extract` | POST, both modes (Claude reads an item screenshot/text; Turnstile + per-IP limit + durable daily cap; 503 `item_reader_unavailable` when unconfigured) | — |
 | `/api/scheduler/*` | — | All |
 | `/admin/*` | — | All |
 | `/users/me*` | — | All |
@@ -281,9 +290,12 @@ public, or empty pages where they expected to see content.
 | `SECRET_KEY` | Yes | JWT signing key — generate with `openssl rand -hex 32` |
 | `ENCRYPTION_KEY` | Yes | Fernet key for PII — generate with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
 | `DATABASE_URL` | Yes | Full async postgres URL |
-| `TURNSTILE_SECRET_KEY` | Optional | MGA has no public registration; Turnstile is only on forgot-password |
+| `TURNSTILE_SECRET_KEY` | Optional | Forgot-password (full-auth) + the public WoW item reader. In serve-only/production the item reader answers 503 without it (no boot guard) |
+| `TURNSTILE_SITE_KEY` | Optional | Public site key. The prod bundle gets it from the GitHub Actions variable `MYGAMINGASSISTANT_VITE_TURNSTILE_SITE_KEY` (registry build), not from `.env.docker` |
 | `ANTHROPIC_API_KEY` | Optional | Classifier + WoW item reader. Missing → the item reader returns 503 (no boot guard) |
 | `CLAUDE_ITEM_EXTRACTOR_MODEL` | Optional | Defaults to `claude-haiku-4-5-20251001` |
+| `WOW_EXTRACT_DAILY_CAP` | Optional | Global item-reader Claude calls per UTC day (DB-backed). Default 300; `0` switches the reader off |
+| `ITEM_EXTRACT_RATE_LIMIT_THRESHOLD` / `_WINDOW_SECONDS` | Optional | Per-IP item-reader limit. Default 20 per 3600 s |
 
 **After first deploy:**
 ```bash

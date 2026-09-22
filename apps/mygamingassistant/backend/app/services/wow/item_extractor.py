@@ -1,6 +1,10 @@
 """Read one WoW item tooltip (screenshot or pasted text) into structured stats.
 
-Stateless: nothing is stored. Claude is called with a single forced tool call
+Nothing about the item is stored. The only write is one increment of the
+durable global daily cap (``daily_usage_counters``, platform_shared), made in
+its own short transaction AFTER input validation (so bad input never burns
+quota) and BEFORE the Claude call (so no DB connection is held for the call).
+Claude is called with a single forced tool call
 (``record_item``); the tool input is validated by ``item_response_mapper``.
 
 Anthropic failures are logged with their documented ``error.type`` and raised
@@ -15,10 +19,14 @@ from typing import Any
 
 import anthropic
 
+from platform_shared.repositories.daily_quota_repo import try_consume_daily_quota
+
 from app.core.config import settings
+from app.db.session import unit_of_work
 from app.schemas.wow.extracted_item import ItemExtractionResponse
 from app.services.wow.image_validation import detect_image_media_type
 from app.services.wow.item_extraction_errors import (
+    ItemExtractionDailyCapError,
     ItemExtractionInputError,
     ItemExtractionMisconfiguredError,
     ItemExtractionNotConfiguredError,
@@ -34,6 +42,7 @@ logger = logging.getLogger(__name__)
 
 _MAX_TOKENS = 1500
 _TIMEOUT_SECONDS = 60.0
+DAILY_CAP_BUCKET = "wow-item-extract"
 
 
 def _build_client() -> anthropic.AsyncAnthropic:
@@ -81,6 +90,7 @@ async def extract_item(
             "ANTHROPIC_API_KEY is not set", error_type="missing_api_key"
         )
     content = _validate_input(image, text)
+    await _consume_daily_quota()
 
     try:
         response = await _build_client().messages.create(
@@ -116,6 +126,18 @@ async def extract_item(
         )
         raise ItemExtractionUnreadableError("The AI returned no item", error_type="no_tool_call")
     return map_tool_input(tool_input)
+
+
+async def _consume_daily_quota() -> None:
+    """Take one unit of today's global cap, or raise ``ItemExtractionDailyCapError``."""
+    cap = settings.wow_extract_daily_cap
+    async with unit_of_work() as db:
+        consumed = await try_consume_daily_quota(db, bucket=DAILY_CAP_BUCKET, cap=cap)
+    if not consumed:
+        logger.warning("wow item extract: daily cap reached (cap=%d)", cap)
+        raise ItemExtractionDailyCapError(
+            "Daily item-reader cap reached", error_type="daily_cap_reached"
+        )
 
 
 def _map_status_error(exc: anthropic.APIStatusError) -> Exception:
