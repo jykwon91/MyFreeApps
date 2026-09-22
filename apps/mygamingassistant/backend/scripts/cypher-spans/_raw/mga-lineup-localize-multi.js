@@ -17,6 +17,7 @@
 //     items: [{ nn, cs, next, ability, name, placed?, varNote?, varNoteAdd? }],
 //     locModel?, locEffort?, gateModel?, gateEffort?, surveyModel?, surveyEffort?,
 //     maxPerChapter?,        // safety cap, default 6
+//     surveyed?,             // true: items are placements from a prior run -- skip the survey
 //   } })
 export const meta = {
   name: 'mga-lineup-localize-multi',
@@ -198,6 +199,31 @@ function gatePrompt(it, loc) {
   return `INDEPENDENT ADVERSARIAL gate for a lineup localization (MGA). Judge ONLY what you SEE in the card; default FAIL when uncertain (a wrong PASS ships a bad clip).\nLineup ${it.map}-${it.nn} ability ${it.ability}, window [${it.cs},${it.next}] video ${VIDEO}. This window is ONE placement out of several in its chapter: "${it.what}".\nClaimed: STAND ${f(loc.stand)} | AIM ${f(loc.aim)} | THROW ${f(loc['throw'])} | LANDING ${f(loc.landing)}.\nRead this card: ${loc.card_path}\nIf missing/unreadable -> pass=false, reason="card missing". Strips top->bottom: STAND, AIM, THROW, LANDING.\nPASS needs ALL: STAND stable at the spot; AIM settled on an alignment reference; THROW the actual RELEASE visible (${releaseOf(it.ability)}); LANDING ${landingOf(it.ability)}; no editor-overlay-only evidence; spans within/near the window with positive length.\nReturn pass (bool), failed_events (subset stand/aim/throw/landing), reason (cite what you saw).`
 }
 
+async function localizeAndGate(sit) {
+  const loc = await agent(locPrompt(sit, null), { label: 'loc:' + sit.nn, phase: 'Localize', schema: locSchema(sit), model: LOC_MODEL, effort: LOC_EFFORT })
+  if (!loc) return { item: sit, status: 'LOCALIZE_DIED' }
+  const v = await agent(gatePrompt(sit, loc), { label: 'gate:' + sit.nn, phase: 'Verify', schema: VERDICT_SCHEMA, model: GATE_MODEL, effort: GATE_EFFORT })
+  if (v && v.pass) return { item: sit, loc, verdict: v, status: 'GATE_PASSED' }
+  const re = await agent(locPrompt(sit, v || { reason: 'gate died' }), { label: 'reloc:' + sit.nn, phase: 'Localize', schema: locSchema(sit), model: LOC_MODEL, effort: LOC_EFFORT })
+  if (!re) return { item: sit, loc, verdict: v, status: 'FAILED_GATE' }
+  const v2 = await agent(gatePrompt(sit, re), { label: 'regate:' + sit.nn, phase: 'Verify', schema: VERDICT_SCHEMA, model: GATE_MODEL, effort: GATE_EFFORT })
+  if (v2 && v2.pass) return { item: sit, loc: re, verdict: v2, status: 'GATE_PASSED' }
+  return { item: sit, loc: re, verdict: v2 || v, status: 'FAILED_GATE' }
+}
+
+// Retry mode: `items` are already-surveyed placements (the `item` of a prior run's results,
+// with nn/cs/next/what set). A run cut short by a usage limit leaves placements that never
+// got a verdict, and workflow resume only works inside the session that started it. Re-running
+// their chapters would re-survey them into different sub-windows and duplicate the placements
+// that already passed, so skip the survey and localize exactly the windows given.
+if (A.surveyed) {
+  log(`${MAP}: retrying ${ITEMS.length} surveyed placements (video ${VIDEO}; loc=${LOC_MODEL}/${LOC_EFFORT}, gate=${GATE_MODEL}/${GATE_EFFORT})`)
+  const results = (await parallel(ITEMS.map((sit) => () => localizeAndGate(sit)))).filter(Boolean)
+  const passed = results.filter((r) => r.status === 'GATE_PASSED').length
+  log(`${MAP} retry done: ${results.length} placements, ${passed} gate-passed`)
+  return { recutCount: 0, map: MAP, chapters: 0, placements: results.length, passed, droppedIncomplete: 0, emptyChapters: [], results }
+}
+
 log(`${MAP}: surveying ${ITEMS.length} grouped chapters (video ${VIDEO}; survey=${SURVEY_MODEL}/${SURVEY_EFFORT}, loc=${LOC_MODEL}/${LOC_EFFORT}, gate=${GATE_MODEL}/${GATE_EFFORT})`)
 
 const perChapter = await pipeline(
@@ -223,17 +249,7 @@ const perChapter = await pipeline(
       name: (it.name || '') + ' -- ' + p.what,
     }))
 
-    const out = await parallel(subs.map((sit) => async () => {
-      const loc = await agent(locPrompt(sit, null), { label: 'loc:' + sit.nn, phase: 'Localize', schema: locSchema(sit), model: LOC_MODEL, effort: LOC_EFFORT })
-      if (!loc) return { item: sit, status: 'LOCALIZE_DIED' }
-      const v = await agent(gatePrompt(sit, loc), { label: 'gate:' + sit.nn, phase: 'Verify', schema: VERDICT_SCHEMA, model: GATE_MODEL, effort: GATE_EFFORT })
-      if (v && v.pass) return { item: sit, loc, verdict: v, status: 'GATE_PASSED' }
-      const re = await agent(locPrompt(sit, v || { reason: 'gate died' }), { label: 'reloc:' + sit.nn, phase: 'Localize', schema: locSchema(sit), model: LOC_MODEL, effort: LOC_EFFORT })
-      if (!re) return { item: sit, loc, verdict: v, status: 'FAILED_GATE' }
-      const v2 = await agent(gatePrompt(sit, re), { label: 'regate:' + sit.nn, phase: 'Verify', schema: VERDICT_SCHEMA, model: GATE_MODEL, effort: GATE_EFFORT })
-      if (v2 && v2.pass) return { item: sit, loc: re, verdict: v2, status: 'GATE_PASSED' }
-      return { item: sit, loc: re, verdict: v2 || v, status: 'FAILED_GATE' }
-    }))
+    const out = await parallel(subs.map((sit) => () => localizeAndGate(sit)))
 
     return { item: it, survey: sv, droppedIncomplete: dropped, status: 'OK', results: out.filter(Boolean) }
   }

@@ -309,7 +309,7 @@ elif OLD_VIDEOS:
 # every subagent, silently. Add a creator here in the same commit that first names them in a doc.
 CREATOR_POOL = ("Tseeky", "Bonsai", "AiltonVG", "maxWELL", "Quible", "Snapiex",
                 "NartOutHere", "B3ast", "HEHE", "SC Valorant Guides", "ItsFlameBTW",
-                "Briiest", "hoverboarD", "Chiru")
+                "Briiest", "hoverboarD", "Chiru", "Reco", "Amirant")
 foreign = sorted({(i, c) for i, ln in enumerate(after.splitlines(), 1) for c in CREATOR_POOL
                   if re.search(rf"\b{re.escape(c)}\b", ln) and c not in (CREATOR or "")})
 if foreign:
