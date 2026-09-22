@@ -61,7 +61,7 @@ AGENTS = {
         "short": {"spycam": "Cam", "trapwire": "Trip", "cyber-cage": "Cage"},
     },
     "killjoy": {
-        "sources": {"llo9vOgRrFw": "SC Valorant Guides", "o1_qZPhJjRs": "Briiest", "U823N6M2UGM": "hoverboarD", "1FScWR9StjI": "Chiru", "liSWxxXao-I": "Briiest", "cvENl2ZCyWQ": "Chiru", "u2CM5Cra06o": "Reco", "Q-SIy8T-XHc": "Amirant", "Qoq6I433E-c": "Briiest", "Sa1JTXfaBFY": "Reco"},
+        "sources": {"llo9vOgRrFw": "SC Valorant Guides", "o1_qZPhJjRs": "Briiest", "U823N6M2UGM": "hoverboarD", "1FScWR9StjI": "Chiru", "liSWxxXao-I": "Briiest", "cvENl2ZCyWQ": "Chiru", "u2CM5Cra06o": "Reco", "Q-SIy8T-XHc": "Amirant", "Qoq6I433E-c": "Briiest", "Sa1JTXfaBFY": "Reco", "shvDHsAXn9g": "Reco", "MgMzBBl8TVg": "Chiru"},
         # Both are PLACED. Riot's own text is "FIRE to deploy a bot" for the
         # alarmbot -- it is deployed at a spot, not lobbed on an arc -- and the
         # app fixture's `placement` column agrees. Only nanoswarm is thrown.
@@ -121,6 +121,14 @@ def drop_non_latin(s):
     kept = "".join(" " if ord(c) > 0x2500 else c for c in s or "")
     kept = kept.replace(" / ", " ")
     return " ".join(kept.split())
+
+
+def technique_word(raw):
+    """The leading technique word. Localizers sometimes hedge in prose ("standing (not certain:
+    ...)"), which overflows lineup.technique (varchar 80) and fails the INSERT. The hedge
+    already lives in the localizer's WEAKEST/NOTES, so only the word is kept."""
+    m = re.match(r"\s*([a-z][a-z-]*)", str(raw or "").lower())
+    return m.group(1) if m else "standing"
 
 
 def short_desc(caption, what, limit=62):
@@ -322,7 +330,7 @@ def main():
             "_desc": short_desc(it.get("caption"), it.get("what")),
             "_key": (tgt, ability),
             "ability": ability,
-            "technique": (L.get("technique") or "standing") if not placed else "standing",
+            "technique": technique_word(L.get("technique")) if not placed else "standing",
             "target": tgt,
             "stand": std,
             "side": side,
