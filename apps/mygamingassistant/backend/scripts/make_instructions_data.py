@@ -21,6 +21,7 @@ from make_instructions_examples_kayo import EXAMPLES as _KAYO  # noqa: E402
 from make_instructions_examples_killjoy import EXAMPLES as _KILLJOY  # noqa: E402
 from make_instructions_examples_killjoy_lotus import EXAMPLES as _KILLJOY_LOTUS  # noqa: E402
 from make_instructions_examples_killjoy_split import EXAMPLES as _KILLJOY_SPLIT  # noqa: E402
+from make_instructions_examples_killjoy_summit import EXAMPLES as _KILLJOY_SUMMIT  # noqa: E402
 from make_instructions_examples_phoenix import EXAMPLES as _PHOENIX  # noqa: E402
 from make_instructions_examples_sova import EXAMPLES as _SOVA  # noqa: E402
 from make_instructions_examples_viper import EXAMPLES as _VIPER  # noqa: E402
@@ -54,6 +55,23 @@ MAPS = {
             "**`A Link` is part of A SITE here**, not mid — it sits 0.019 from the A site box. "
             "Elsewhere in this project a `... Link` callout belongs to mid; do not carry that "
             "over. Read every callout against THIS map."
+        ),
+    },
+    "summit": {
+        # Straight off callouts_summit.SUMMIT_CALLOUTS, the table build_cypher_pack zones by.
+        "callouts": (
+            "A Main, A Lobby, A Site, A Garden, A Cave, A Art, A Heaven, A Link, A Default, "
+            "A Open, Mid / Middle, Mid Fountain, Mid Tiles, Mid Bend, Mid Top, Mid Bottom, "
+            "B Main, B Lobby, B Site, B Drop, B Hut, B Heaven, B Link, B Gym, B Default, B Open, "
+            "Attacker Side Spawn, Defender Side Spawn."
+        ),
+        "note": (
+            "**Both Links are MID here** — `A Link` and `B Link` are the connectors off the long "
+            "middle, not part of either site. `A Lobby` is A MAIN and `B Lobby` is B MAIN. On the "
+            "sites: `A Garden`, `A Cave`, `A Art` and `A Heaven` are A SITE; `B Drop`, `B Hut` "
+            "and `B Heaven` are B SITE. **`B Gym` is DEFENDER SIDE SPAWN**, not B Site, despite "
+            "its letter. A bare `Heaven` with no letter is ambiguous — say so in NOTES instead "
+            "of picking one."
         ),
     },
     "breeze": {
@@ -152,7 +170,7 @@ MAPS = {
 # the exact failure the per-source keying exists to prevent.
 EXAMPLES: dict[tuple[str, str], object] = {}
 for _part in (_BRIMSTONE, _CYPHER, _FADE, _KAYO, _KILLJOY, _KILLJOY_LOTUS, _KILLJOY_SPLIT,
-              _PHOENIX, _SOVA, _VIPER):
+              _KILLJOY_SUMMIT, _PHOENIX, _SOVA, _VIPER):
     _dupes = EXAMPLES.keys() & _part.keys()
     if _dupes:
         raise SystemExit(f"ABORT - duplicate EXAMPLES key(s) across agent corpora: {sorted(_dupes)}")

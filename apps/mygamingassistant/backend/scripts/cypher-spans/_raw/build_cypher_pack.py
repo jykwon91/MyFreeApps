@@ -61,7 +61,7 @@ AGENTS = {
         "short": {"spycam": "Cam", "trapwire": "Trip", "cyber-cage": "Cage"},
     },
     "killjoy": {
-        "sources": {"llo9vOgRrFw": "SC Valorant Guides", "o1_qZPhJjRs": "Briiest", "U823N6M2UGM": "hoverboarD", "1FScWR9StjI": "Chiru", "liSWxxXao-I": "Briiest", "cvENl2ZCyWQ": "Chiru", "u2CM5Cra06o": "Reco", "Q-SIy8T-XHc": "Amirant"},
+        "sources": {"llo9vOgRrFw": "SC Valorant Guides", "o1_qZPhJjRs": "Briiest", "U823N6M2UGM": "hoverboarD", "1FScWR9StjI": "Chiru", "liSWxxXao-I": "Briiest", "cvENl2ZCyWQ": "Chiru", "u2CM5Cra06o": "Reco", "Q-SIy8T-XHc": "Amirant", "Qoq6I433E-c": "Briiest", "Sa1JTXfaBFY": "Reco"},
         # Both are PLACED. Riot's own text is "FIRE to deploy a bot" for the
         # alarmbot -- it is deployed at a spot, not lobbed on an arc -- and the
         # app fixture's `placement` column agrees. Only nanoswarm is thrown.

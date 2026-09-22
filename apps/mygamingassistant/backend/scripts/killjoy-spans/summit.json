@@ -1,0 +1,843 @@
+{
+ "video_id": "Qoq6I433E-c",
+ "map_slug": "summit",
+ "author": "Briiest",
+ "lineups": [
+  {
+   "cs": 23,
+   "title": "A Site Turret 1 \u2014 You can use this Turret to distract the enemies and peek on",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     23.5,
+     24.6
+    ],
+    "aim": [
+     24.8,
+     25.78
+    ],
+    "landing": [
+     25.82,
+     26.9
+    ]
+   }
+  },
+  {
+   "cs": 39,
+   "title": "A Site Turret 2 \u2014 This Turret gives you early info on Main and gives info if",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     39.8,
+     41.2
+    ],
+    "aim": [
+     42.9,
+     44.0
+    ],
+    "landing": [
+     45.0,
+     46.5
+    ]
+   }
+  },
+  {
+   "cs": 61,
+   "title": "A Site Turret 3 \u2014 This Turret gives you late info on Main and Mid lurk and",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     61.34,
+     61.49
+    ],
+    "aim": [
+     61.37,
+     61.49
+    ],
+    "landing": [
+     61.55,
+     62.25
+    ]
+   }
+  },
+  {
+   "cs": 72,
+   "title": "A Site Turret 4 \u2014 This Turret gives you info if someone is pushing on site",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     72.5,
+     74.0
+    ],
+    "aim": [
+     76.84,
+     77.17
+    ],
+    "landing": [
+     77.9,
+     79.2
+    ]
+   }
+  },
+  {
+   "cs": 100,
+   "title": "B Site Turret 1 \u2014 This Turret gives you early info on Main and gives info if",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     100.47,
+     100.76
+    ],
+    "aim": [
+     100.6,
+     100.75
+    ],
+    "landing": [
+     101.38,
+     101.62
+    ]
+   }
+  },
+  {
+   "cs": 112,
+   "title": "B Site Turret 2 \u2014 This Turret gives you info for Main and distract enemies in",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     112.3,
+     113.4
+    ],
+    "aim": [
+     115.0,
+     115.7
+    ],
+    "landing": [
+     116.3,
+     117.2
+    ]
+   }
+  },
+  {
+   "cs": 129,
+   "title": "Mid Turret 1 \u2014 This Turret gives info for Main (if not blocked by Smokes)",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     129.15,
+     130.15
+    ],
+    "aim": [
+     129.7,
+     130.33
+    ],
+    "landing": [
+     131.52,
+     132.22
+    ]
+   }
+  },
+  {
+   "cs": 145,
+   "title": "B Site Turret 3 \u2014 This Turret gives you info if someone is pushing on site and",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     145.45,
+     146.05
+    ],
+    "aim": [
+     146.1,
+     146.56
+    ],
+    "landing": [
+     147.05,
+     148.25
+    ]
+   }
+  },
+  {
+   "cs": 170,
+   "title": "A Site Bot 1 \u2014 This Setup covers the whole area in front of Main",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     170.35,
+     171.1
+    ],
+    "aim": [
+     174.9,
+     175.98
+    ],
+    "landing": [
+     176.4,
+     177.4
+    ]
+   }
+  },
+  {
+   "cs": 179,
+   "title": "A Site Nano 1 \u2014 This Setup covers the whole area in front of Main",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     179.5,
+     180.5
+    ],
+    "aim": [
+     181.45,
+     182.42
+    ],
+    "throw": [
+     182.4,
+     182.95
+    ],
+    "landing": [
+     182.68,
+     183.05
+    ]
+   }
+  },
+  {
+   "cs": 183,
+   "title": "A Site Nano 2 \u2014 This Setup covers the whole area in front of Main",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     183.5,
+     184.9
+    ],
+    "aim": [
+     185.1,
+     186.13
+    ],
+    "throw": [
+     186.12,
+     186.72
+    ],
+    "landing": [
+     186.38,
+     187.0
+    ]
+   }
+  },
+  {
+   "cs": 203,
+   "title": "A Site Bot 2 \u2014 This Setup will deal a lot of damage to enemies pushing on",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     203.4,
+     204.6
+    ],
+    "aim": [
+     206.0,
+     207.13
+    ],
+    "landing": [
+     207.25,
+     208.0
+    ]
+   }
+  },
+  {
+   "cs": 209,
+   "title": "A Site Nano 3 \u2014 This Setup will deal a lot of damage to enemies pushing on",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     209.3,
+     210.9
+    ],
+    "aim": [
+     211.0,
+     212.0
+    ],
+    "throw": [
+     212.0,
+     212.6
+    ],
+    "landing": [
+     212.28,
+     213.2
+    ]
+   }
+  },
+  {
+   "cs": 215,
+   "title": "A Site Nano 4 \u2014 This Setup will deal a lot of damage to enemies pushing on",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     215.3,
+     216.8
+    ],
+    "aim": [
+     217.13,
+     217.27
+    ],
+    "throw": [
+     217.27,
+     217.87
+    ],
+    "landing": [
+     218.9,
+     219.4
+    ]
+   }
+  },
+  {
+   "cs": 236,
+   "title": "A Site Bot 3 \u2014 A Site: third setup begins",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     236.0,
+     237.05
+    ],
+    "aim": [
+     237.2,
+     237.47
+    ],
+    "landing": [
+     237.63,
+     237.71
+    ]
+   }
+  },
+  {
+   "cs": 244,
+   "title": "A Site Nano 5 \u2014 Another variant of the previous setup with hidden Mollies",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     244.0,
+     245.0
+    ],
+    "aim": [
+     245.98,
+     246.47
+    ],
+    "throw": [
+     246.47,
+     247.07
+    ],
+    "landing": [
+     246.83,
+     247.63
+    ]
+   }
+  },
+  {
+   "cs": 276,
+   "title": "B Site Bot 1 \u2014 This setup stops enemies from pushing on site and buy time",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     276.4,
+     277.2
+    ],
+    "aim": [
+     277.2,
+     277.95
+    ],
+    "landing": [
+     278.05,
+     279.0
+    ]
+   }
+  },
+  {
+   "cs": 280,
+   "title": "B Site Nano 1 \u2014 This setup stops enemies from pushing on site and buy time",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     280.55,
+     281.9
+    ],
+    "aim": [
+     281.65,
+     282.25
+    ],
+    "throw": [
+     282.22,
+     282.78
+    ],
+    "landing": [
+     282.42,
+     282.74
+    ]
+   }
+  },
+  {
+   "cs": 285,
+   "title": "B Site Nano 2 \u2014 This setup stops enemies from pushing on site and buy time",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     285.3,
+     286.6
+    ],
+    "aim": [
+     287.8,
+     288.42
+    ],
+    "throw": [
+     288.4,
+     288.9
+    ],
+    "landing": [
+     288.9,
+     289.55
+    ]
+   }
+  },
+  {
+   "cs": 308,
+   "title": "B Site Bot 2 \u2014 This setup covers the whole area in front of Main",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     308.3,
+     309.05
+    ],
+    "aim": [
+     312.0,
+     313.1
+    ],
+    "landing": [
+     313.25,
+     314.2
+    ]
+   }
+  },
+  {
+   "cs": 315,
+   "title": "B Site Nano 3 \u2014 This setup covers the whole area in front of Main",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     315.0,
+     316.2
+    ],
+    "aim": [
+     317.2,
+     318.15
+    ],
+    "throw": [
+     318.1,
+     318.7
+    ],
+    "landing": [
+     318.35,
+     318.95
+    ]
+   }
+  },
+  {
+   "cs": 320,
+   "title": "B Site Nano 4 \u2014 This setup covers the whole area in front of Main",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     320.2,
+     321.65
+    ],
+    "aim": [
+     322.85,
+     323.42
+    ],
+    "throw": [
+     323.42,
+     324.02
+    ],
+    "landing": [
+     323.83,
+     324.8
+    ]
+   }
+  },
+  {
+   "cs": 341,
+   "title": "B Site Bot 3 \u2014 This setup blocks enemies right between Main and bomb site",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     341.25,
+     342.0
+    ],
+    "aim": [
+     344.3,
+     345.4
+    ],
+    "landing": [
+     345.93,
+     346.75
+    ]
+   }
+  },
+  {
+   "cs": 347,
+   "title": "B Main Nano 1 \u2014 This setup blocks enemies right between Main and bomb site",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     347.2,
+     348.7
+    ],
+    "aim": [
+     351.2,
+     351.87
+    ],
+    "throw": [
+     351.83,
+     352.4
+    ],
+    "landing": [
+     352.22,
+     353.2
+    ]
+   }
+  },
+  {
+   "cs": 353,
+   "title": "B Site Nano 5 \u2014 This setup blocks enemies right between Main and bomb site",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     353.25,
+     354.75
+    ],
+    "aim": [
+     355.0,
+     355.95
+    ],
+    "throw": [
+     355.95,
+     356.55
+    ],
+    "landing": [
+     356.2,
+     357.1
+    ]
+   }
+  },
+  {
+   "cs": 422,
+   "title": "A Site Nano 6 \u2014 Attacker postplant nanoswarm from the same A Lobby pillar",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     422.6,
+     424.4
+    ],
+    "aim": [
+     430.4,
+     431.4
+    ],
+    "throw": [
+     436.55,
+     437.15
+    ],
+    "landing": [
+     441.6,
+     442.45
+    ]
+   }
+  },
+  {
+   "cs": 453,
+   "title": "A Site Nano 7 \u2014 Attacker postplant nanoswarm, a third throw from the A Lobby",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     453.0,
+     453.55
+    ],
+    "aim": [
+     461.4,
+     462.6
+    ],
+    "throw": [
+     467.78,
+     468.38
+    ],
+    "landing": [
+     472.9,
+     474.0
+    ]
+   }
+  },
+  {
+   "cs": 487,
+   "title": "B Site Nano 6 \u2014 Attacker postplant nanoswarm thrown from the B Main corner by",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     487.3,
+     489.3
+    ],
+    "aim": [
+     494.2,
+     495.2
+    ],
+    "throw": [
+     500.4,
+     501.0
+    ],
+    "landing": [
+     504.9,
+     505.7
+    ]
+   }
+  },
+  {
+   "cs": 513,
+   "title": "B Site Nano 7 \u2014 Can also be used as an initiator lineup",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     513.9,
+     515.2
+    ],
+    "aim": [
+     522.7,
+     523.9
+    ],
+    "throw": [
+     529.35,
+     529.95
+    ],
+    "landing": [
+     533.5,
+     534.4
+    ]
+   }
+  },
+  {
+   "cs": 545,
+   "title": "B Site Nano 8 \u2014 Can also be used as an initiator lineup",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     545.9,
+     547.2
+    ],
+    "aim": [
+     561.0,
+     561.45
+    ],
+    "throw": [
+     561.45,
+     562.05
+    ],
+    "landing": [
+     565.05,
+     566.0
+    ]
+   }
+  },
+  {
+   "cs": 586,
+   "title": "A Site Nano 8 \u2014 Summit is a good Map for lurks, so here are some Postplant",
+   "ability": "nanoswarm",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     586.5,
+     589.0
+    ],
+    "aim": [
+     598.6,
+     599.09
+    ],
+    "throw": [
+     599.12,
+     599.72
+    ],
+    "landing": [
+     605.05,
+     605.75
+    ]
+   }
+  },
+  {
+   "cs": 620,
+   "title": "A Site Nano 9 \u2014 Attacker postplant lurk: second nanoswarm from the same Mid",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     620.0,
+     622.0
+    ],
+    "aim": [
+     633.1,
+     633.46
+    ],
+    "throw": [
+     633.46,
+     634.06
+    ],
+    "landing": [
+     638.95,
+     639.6
+    ]
+   }
+  },
+  {
+   "cs": 653,
+   "title": "B Site Nano 9 \u2014 Attacker postplant lurk: nanoswarm thrown from B Link",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     653.0,
+     655.3
+    ],
+    "aim": [
+     658.0,
+     659.0
+    ],
+    "throw": [
+     664.25,
+     664.85
+    ],
+    "landing": [
+     668.3,
+     669.2
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
