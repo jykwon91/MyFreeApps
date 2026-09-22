@@ -1,10 +1,12 @@
 import { Link } from "react-router-dom";
 import { Gamepad2 } from "lucide-react";
+import { getGameLandingPath, getGameTagline } from "@/games/registry";
 import { useGetGamesQuery } from "@/store/gamesApi";
 
 /**
  * Landing page — shows all available games as a selection grid.
- * Phase 1: populated from fixture data (Valorant + CS2).
+ * Each card links through the game registry: lineup games go to their map
+ * grid, companion games (WoW Forever) to their own landing page.
  */
 export default function GameGrid() {
   const { data: games, isLoading, isError } = useGetGamesQuery();
@@ -59,11 +61,12 @@ export default function GameGrid() {
         {games.map((game) => (
           <Link
             key={game.id}
-            to={`/${game.slug}`}
-            className="group flex flex-col items-center justify-center h-32 rounded-xl border bg-card hover:bg-muted/40 transition-colors p-6 gap-3"
+            to={getGameLandingPath(game)}
+            className="group flex flex-col items-center justify-center min-h-32 rounded-xl border bg-card hover:bg-muted/40 transition-colors p-6 gap-3"
           >
             <Gamepad2 className="h-8 w-8 text-primary group-hover:scale-110 transition-transform" />
-            <span className="text-base font-semibold">{game.name}</span>
+            <span className="text-base font-semibold text-center">{game.name}</span>
+            <span className="text-xs text-muted-foreground text-center">{getGameTagline(game)}</span>
           </Link>
         ))}
       </div>

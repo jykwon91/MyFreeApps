@@ -65,8 +65,11 @@ async def _load_games(db: AsyncSession) -> None:
             db,
             slug=g["slug"],
             name=g["name"],
-            side_a_label=g["side_a_label"],
-            side_b_label=g["side_b_label"],
+            # Companion games (WoW Forever) have no maps and no sides — their
+            # labels are null and no map fixture references them.
+            kind=g.get("kind", "lineups"),
+            side_a_label=g.get("side_a_label"),
+            side_b_label=g.get("side_b_label"),
         )
         logger.debug("fixture_loader: upserted game %s", g["slug"])
 

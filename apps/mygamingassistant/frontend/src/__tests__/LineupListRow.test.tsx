@@ -74,6 +74,7 @@ const GAME: Game = {
   id: "g1",
   slug: "cs2",
   name: "CS2",
+  kind: "lineups",
   side_a_label: "T",
   side_b_label: "CT",
 };
@@ -218,6 +219,7 @@ describe("LineupListRow", () => {
       id: "g2",
       slug: "valorant",
       name: "Valorant",
+      kind: "lineups",
       side_a_label: "Atk",
       side_b_label: "Def",
     };

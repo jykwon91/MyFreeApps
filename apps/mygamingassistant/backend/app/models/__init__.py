@@ -19,3 +19,5 @@ from app.models.game.lineup_package import LineupPackage, LineupPackageLineup  #
 # see the schema. MGA does not own these tables — platform_shared is canonical.
 from platform_shared.db.models.audit_log import AuditLog  # noqa: F401
 from platform_shared.db.models.auth_event import AuthEvent  # noqa: F401
+# Durable global daily cap for the public WoW item reader (migration 0023).
+from platform_shared.db.models.daily_usage_counter import DailyUsageCounter  # noqa: F401

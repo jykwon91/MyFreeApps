@@ -41,14 +41,17 @@ async def upsert_game(
     *,
     slug: str,
     name: str,
-    side_a_label: str,
-    side_b_label: str,
+    kind: str,
+    side_a_label: str | None,
+    side_b_label: str | None,
 ) -> Game:
     """Insert a game if it doesn't exist; return the existing row if it does."""
     existing = await get_game_by_slug(db, slug)
     if existing is not None:
         return existing
-    game = Game(slug=slug, name=name, side_a_label=side_a_label, side_b_label=side_b_label)
+    game = Game(
+        slug=slug, name=name, kind=kind, side_a_label=side_a_label, side_b_label=side_b_label
+    )
     db.add(game)
     await db.flush()
     return game

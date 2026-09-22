@@ -20,11 +20,9 @@ import {
   showError,
   showSuccess,
 } from "@platform/ui";
-import { useGetGamesQuery, useGetMapDetailQuery, useGetMapsQuery } from "@/store/gamesApi";
-import {
-  useCreateLineupMutation,
-  useGetUploadUrlMutation,
-} from "@/store/lineupsApi";
+import { useGetMapDetailQuery, useGetMapsQuery } from "@/store/gamesApi";
+import { useLineupGames } from "@/hooks/useLineupGames";
+import { useCreateLineupMutation, useGetUploadUrlMutation } from "@/store/lineupsApi";
 import type { LineupCreate } from "@/types/game";
 import { uploadFileToPresignedUrl } from "@/lib/storage";
 
@@ -46,7 +44,7 @@ export default function LineupUpload() {
   const defaultGameSlug = searchParams.get("game") ?? "";
   const defaultMapSlug = searchParams.get("map") ?? "";
 
-  const { data: games } = useGetGamesQuery();
+  const { data: games } = useLineupGames();
   const [selectedGameSlug, setSelectedGameSlug] = useState(defaultGameSlug);
   const [selectedMapSlug, setSelectedMapSlug] = useState(defaultMapSlug);
 
@@ -261,8 +259,8 @@ export default function LineupUpload() {
 
   const sideOptions = selectedGame
     ? [
-        { value: "side_a", label: selectedGame.side_a_label },
-        { value: "side_b", label: selectedGame.side_b_label },
+        { value: "side_a", label: selectedGame.side_a_label ?? "Side A" },
+        { value: "side_b", label: selectedGame.side_b_label ?? "Side B" },
         { value: "any", label: "Any (both sides)" },
       ]
     : [

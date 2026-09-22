@@ -23,11 +23,8 @@ import {
   useHideLineupMutation,
   useReclassifyLineupMutation,
 } from "@/store/lineupsApi";
-import {
-  useGetGamesQuery,
-  useGetMapsQuery,
-  useGetMapDetailQuery,
-} from "@/store/gamesApi";
+import { useGetMapsQuery, useGetMapDetailQuery } from "@/store/gamesApi";
+import { useLineupGames } from "@/hooks/useLineupGames";
 import type { Lineup, LineupAcceptBody } from "@/types/game";
 import ConfidenceBadge from "./ConfidenceBadge";
 import { confidenceBorderClass } from "./confidenceUtils";
@@ -150,7 +147,7 @@ export default function ReviewCard({
   };
 
   // --- Classification data (cascading: game → map → zones/utility) --------
-  const { data: games = [] } = useGetGamesQuery();
+  const { data: games = [] } = useLineupGames();
   const gameSlug = games.find((g) => g.id === fields.game_id)?.slug ?? "";
 
   const { data: maps = [], isFetching: isMapsFetching } = useGetMapsQuery(

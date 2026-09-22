@@ -27,7 +27,7 @@ from platform_shared.core.openapi import docs_kwargs
 from platform_shared.core.logging_safety import install_crlf_safe_logging
 from platform_shared.api.transparency_router import build_transparency_router
 
-from app.api import account, admin, games, health, lineups, lineup_packages, scheduler, sources, totp
+from app.api import account, admin, games, health, lineups, lineup_packages, scheduler, sources, totp, wow_items
 # Note on lineups + lineup_packages routers:
 # MGA uses public-read / auth-write — each of those modules exports two
 # routers: ``public_router`` (no auth) and ``auth_router`` (operator only).
@@ -259,14 +259,15 @@ def _mount_public_routes(app: FastAPI) -> None:
     """Mount the public read-only surface — served in BOTH modes.
 
     games + health are entirely public; lineups + lineup_packages contribute
-    their ``public_router`` (read-only). version is a public deploy probe.
-    Nothing here requires auth, so it is identical in serve_only and full-auth
-    deployments.
+    their ``public_router`` (read-only); wow_items is the anonymous item reader
+    (Turnstile + per-IP limit + durable daily cap). Nothing here requires auth,
+    so it is identical in both modes. version is a public deploy probe.
     """
     app.include_router(health.router, tags=["health"])
     app.include_router(games.router)
     app.include_router(lineups.public_router)
     app.include_router(lineup_packages.public_router)
+    app.include_router(wow_items.router)  # Turnstile + per-IP + daily-capped
 
     # Deploy verification — exposes the git commit + boot timestamp so the
     # deploy workflow can confirm which commit is live without parsing logs.
@@ -321,10 +322,8 @@ def _mount_auth_routes(app: FastAPI) -> None:
         tags=["users"],
     )
 
-    # Auth-write domain routers.
-    # games.auth_router handles operator-only minimap-upload endpoints under
-    # /api/maps/{map_id}/... — kept separate from games.router so auth gating is
-    # router-level, not per-handler.
+    # Auth-write domain routers. games.auth_router = operator-only minimap endpoints
+    # under /api/maps/{map_id}/..., split from games.router so gating is router-level.
     app.include_router(games.auth_router)
     # Auth-router includes literal-path routes (/lineups/pending, /lineups/bulk-accept)
     # that would otherwise be shadowed by the public_router's /lineups/{lineup_id}

@@ -10,7 +10,8 @@
  * Reused at source-create time and to edit an existing source's scope. Reads
  * the game/map taxonomy from the shared gamesApi (public endpoints).
  */
-import { useGetGamesQuery, useGetMapsQuery } from "@/store/gamesApi";
+import { useGetMapsQuery } from "@/store/gamesApi";
+import { useLineupGames } from "@/hooks/useLineupGames";
 
 export interface MapScopeValue {
   game_hint: string | null;
@@ -34,7 +35,7 @@ export function MapScopePicker({
   disabled = false,
   idPrefix = "scope",
 }: MapScopePickerProps) {
-  const { data: games, isLoading: gamesLoading } = useGetGamesQuery();
+  const { data: games, isLoading: gamesLoading } = useLineupGames();
   const gameSlug = value.game_hint;
   const { data: maps, isFetching: mapsFetching } = useGetMapsQuery(
     gameSlug ?? "",

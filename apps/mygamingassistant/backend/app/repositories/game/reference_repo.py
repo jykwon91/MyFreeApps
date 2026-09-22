@@ -46,7 +46,11 @@ async def load_reference_data(
     single agent (Source.config_json ``agent_hint``) — the recurrence fix for a
     Sova recon dart being mis-tagged as another agent's smoke.
     """
-    game_rows = (await db.execute(select(Game).order_by(Game.slug))).scalars().all()
+    # Only lineup games are classifier candidates — a companion game (WoW
+    # Forever) has no maps, zones or sides and must never be offered.
+    game_rows = (
+        await db.execute(select(Game).where(Game.kind == "lineups").order_by(Game.slug))
+    ).scalars().all()
     # All agents (few — 29 across the fixtures); a plain id→slug map avoids an
     # async lazy-load of ``UtilityType.agent`` per row below.
     agent_rows = (await db.execute(select(Agent))).scalars().all()

@@ -1,9 +1,18 @@
+/**
+ * What a game offers. MUST match `ck_game_kind` on the backend `game` table.
+ * - `lineups` — the map/lineup library (Valorant, CS2); has maps and side labels.
+ * - `companion` — static feature pages owned by `src/games/registry.ts` (WoW Forever); no maps.
+ */
+export type GameKind = "lineups" | "companion";
+
 export interface Game {
   id: string;
   slug: string;
   name: string;
-  side_a_label: string;
-  side_b_label: string;
+  kind: GameKind;
+  /** Always set for `lineups` games (DB check constraint); null for companion games. */
+  side_a_label: string | null;
+  side_b_label: string | null;
 }
 
 export interface GameMap {

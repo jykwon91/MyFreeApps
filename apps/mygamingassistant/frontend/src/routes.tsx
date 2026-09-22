@@ -22,6 +22,7 @@ import VerifyEmail from "@/pages/VerifyEmail";
 import NotFound from "@/pages/NotFound";
 import RootLayout from "@/RootLayout";
 import { isServeOnly } from "@/lib/serveOnly";
+import { wowForeverRoutes } from "@/games/wow-forever/routes";
 
 // Serve-only mode (production public library): the backend mounts NO auth
 // routes, so the standalone auth pages would dead-end on 404 API calls. Render
@@ -59,6 +60,8 @@ export const routes: RouteObject[] = [
       // operator can also reach pending_review/hidden via the admin fallback.
       // Must come BEFORE /:gameSlug so "/lineups/..." doesn't match as a game slug.
       { path: "/lineups/:id", element: <LineupDetail /> },
+      // Companion-game pages (src/games/registry.ts) — also BEFORE /:gameSlug.
+      ...wowForeverRoutes,
       { path: "/:gameSlug", element: <MapGrid /> },
       { path: "/:gameSlug/:mapSlug", element: <MapPage /> },
 

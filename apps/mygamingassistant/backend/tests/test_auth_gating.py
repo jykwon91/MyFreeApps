@@ -389,50 +389,10 @@ async def test_authed_scheduler_status(auth_client: AsyncClient):
 # and every auth-write route must be ABSENT (404) — fail closed: routes are not
 # registered at all, never present-but-bypassed. Public browse must still work.
 #
-# These tests build a SECOND app via create_app() with a serve_only settings
-# clone, and a dedicated client bound to the same test DB session (so the
-# public reads can see fixture rows). They do NOT touch the module-level app,
-# so the rest of the suite (full-auth) is unaffected.
+# These tests use the conftest ``serve_only_client`` fixture: a SECOND app built
+# via create_app() with a serve_only settings clone, bound to the same test DB
+# session (so the public reads can see fixture rows).
 # ---------------------------------------------------------------------------
-
-@pytest_asyncio.fixture
-async def serve_only_client(
-    db: AsyncSession, monkeypatch: pytest.MonkeyPatch
-) -> AsyncClient:
-    """An AsyncClient against a freshly-built serve_only app.
-
-    Mirrors the DB / unit_of_work binding the conftest ``client`` fixture does,
-    so public reads resolve against the test's SAVEPOINT-bound session.
-    """
-    from contextlib import asynccontextmanager
-
-    from httpx import ASGITransport
-
-    import app.db.session as _session_mod
-    from app.db.session import get_db as _get_db
-    from app.main import create_app
-
-    serve_settings = settings.model_copy(update={"serve_only": True})
-    serve_app = create_app(serve_settings)
-
-    async def _override_get_db():
-        yield db
-
-    @asynccontextmanager
-    async def _override_unit_of_work():
-        yield db
-
-    monkeypatch.setattr(_session_mod, "unit_of_work", _override_unit_of_work)
-    serve_app.dependency_overrides[_get_db] = _override_get_db
-
-    async with AsyncClient(
-        transport=ASGITransport(app=serve_app),
-        base_url="http://test",
-    ) as ac:
-        yield ac
-
-    serve_app.dependency_overrides.clear()
-
 
 @pytest.mark.parametrize(
     "method, path",
