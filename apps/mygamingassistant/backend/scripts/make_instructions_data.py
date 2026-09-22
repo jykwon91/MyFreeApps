@@ -22,6 +22,7 @@ from make_instructions_examples_killjoy import EXAMPLES as _KILLJOY  # noqa: E40
 from make_instructions_examples_killjoy_lotus import EXAMPLES as _KILLJOY_LOTUS  # noqa: E402
 from make_instructions_examples_killjoy_split import EXAMPLES as _KILLJOY_SPLIT  # noqa: E402
 from make_instructions_examples_killjoy_summit import EXAMPLES as _KILLJOY_SUMMIT  # noqa: E402
+from make_instructions_examples_killjoy_sunset import EXAMPLES as _KILLJOY_SUNSET  # noqa: E402
 from make_instructions_examples_phoenix import EXAMPLES as _PHOENIX  # noqa: E402
 from make_instructions_examples_sova import EXAMPLES as _SOVA  # noqa: E402
 from make_instructions_examples_viper import EXAMPLES as _VIPER  # noqa: E402
@@ -170,7 +171,7 @@ MAPS = {
 # the exact failure the per-source keying exists to prevent.
 EXAMPLES: dict[tuple[str, str], object] = {}
 for _part in (_BRIMSTONE, _CYPHER, _FADE, _KAYO, _KILLJOY, _KILLJOY_LOTUS, _KILLJOY_SPLIT,
-              _KILLJOY_SUMMIT, _PHOENIX, _SOVA, _VIPER):
+              _KILLJOY_SUMMIT, _KILLJOY_SUNSET, _PHOENIX, _SOVA, _VIPER):
     _dupes = EXAMPLES.keys() & _part.keys()
     if _dupes:
         raise SystemExit(f"ABORT - duplicate EXAMPLES key(s) across agent corpora: {sorted(_dupes)}")
