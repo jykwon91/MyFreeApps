@@ -16,7 +16,7 @@ export default function TextReader({ itemLabel, onRead }: TextReaderProps) {
   return (
     <div className="space-y-2">
       <label htmlFor={textareaId} className="text-xs font-medium text-muted-foreground">
-        Paste the item's tooltip text (name on the first line)
+        Paste tooltip text copied from a site like Wowhead (name on the first line)
       </label>
       <textarea
         id={textareaId}

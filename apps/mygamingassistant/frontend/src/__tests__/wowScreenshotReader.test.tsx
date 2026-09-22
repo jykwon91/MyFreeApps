@@ -89,7 +89,7 @@ describe("WoW screenshot reader", () => {
     await userEvent.click(screen.getByRole("button", { name: "Pass human check" }));
     await userEvent.click(screen.getByRole("button", { name: "Read screenshot" }));
     expect(await screen.findByText(/used up today's budget/i)).toBeInTheDocument();
-    expect(screen.getByText(/enter the stats by hand instead/i)).toBeInTheDocument();
+    expect(screen.getByText(/you can also paste tooltip text/i)).toBeInTheDocument();
   });
 
   it("needs no human check when the bundle has no site key (local build)", async () => {
