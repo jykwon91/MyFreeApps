@@ -1,0 +1,630 @@
+{
+ "video_id": "1HpSjkEZK38",
+ "map_slug": "inferno",
+ "game_slug": "cs2",
+ "author": "MikyFPS",
+ "lineups": [
+  {
+   "cs": 7,
+   "title": "B Site Smoke 1 \u2014 B site CT smoke thrown boosted on a teammate from the",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "banana",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     7.6,
+     9.2
+    ],
+    "aim": [
+     9.5,
+     10.18
+    ],
+    "throw": [
+     14.12,
+     14.7
+    ],
+    "landing": [
+     19.35,
+     20.6
+    ]
+   }
+  },
+  {
+   "cs": 22,
+   "title": "B Site Smoke 2 \u2014 T-side Coffins smoke from upper Banana near the B entrance",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "banana",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     22.7,
+     24.1
+    ],
+    "aim": [
+     28.1,
+     29.05
+    ],
+    "throw": [
+     29.15,
+     29.8
+    ],
+    "landing": [
+     35.8,
+     37.2
+    ]
+   }
+  },
+  {
+   "cs": 43,
+   "title": "B Site Smoke 3 \u2014 T-side Banana stand against the red wall by the flower box",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "banana",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     43.8,
+     44.15
+    ],
+    "aim": [
+     46.8,
+     47.8
+    ],
+    "throw": [
+     47.98,
+     48.58
+    ],
+    "landing": [
+     54.3,
+     55.0
+    ]
+   }
+  },
+  {
+   "cs": 93,
+   "title": "Banana Flash 1 \u2014 CT pop-flash from B site over the wall onto Banana",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "banana",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     93.3,
+     94.0
+    ],
+    "aim": [
+     94.08,
+     94.68
+    ],
+    "throw": [
+     97.98,
+     98.58
+    ],
+    "landing": [
+     104.92,
+     105.52
+    ]
+   }
+  },
+  {
+   "cs": 117,
+   "title": "Banana Flash 2 \u2014 T-side pop-flash for Banana, thrown from Lower Mid at the",
+   "ability": "flash",
+   "technique": "jump",
+   "target": "banana",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     117.6,
+     118.65
+    ],
+    "aim": [
+     118.8,
+     119.45
+    ],
+    "throw": [
+     119.6,
+     120.2
+    ],
+    "landing": [
+     121.28,
+     122.1
+    ]
+   }
+  },
+  {
+   "cs": 136,
+   "title": "B Site Molly 1 \u2014 T molotov from top of Banana (standing by the wooden board",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "banana",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     136.3,
+     137.3
+    ],
+    "aim": [
+     142.25,
+     142.9
+    ],
+    "throw": [
+     142.85,
+     143.45
+    ],
+    "landing": [
+     146.87,
+     147.6
+    ]
+   }
+  },
+  {
+   "cs": 157,
+   "title": "B Site Molly 2 \u2014 T-side molotov thrown from lower Banana, standing tight",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "banana",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     157.6,
+     159.4
+    ],
+    "aim": [
+     163.6,
+     164.45
+    ],
+    "throw": [
+     164.8,
+     165.4
+    ],
+    "landing": [
+     167.1,
+     168.9
+    ]
+   }
+  },
+  {
+   "cs": 188,
+   "title": "Banana Molly 1 \u2014 T-side molotov onto Banana Car: stand on the T Ramp steps",
+   "ability": "molotov",
+   "technique": "running",
+   "target": "banana",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     188.0,
+     190.0
+    ],
+    "aim": [
+     191.1,
+     192.2
+    ],
+    "throw": [
+     193.15,
+     193.8
+    ],
+    "landing": [
+     195.95,
+     197.3
+    ]
+   }
+  },
+  {
+   "cs": 205,
+   "title": "A Long Smoke 1 \u2014 T-side smoke for A Long corner, thrown from the Second Mid",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-long",
+   "stand": "second-mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     205.0,
+     207.5
+    ],
+    "aim": [
+     209.9,
+     210.9
+    ],
+    "throw": [
+     212.58,
+     213.18
+    ],
+    "landing": [
+     219.4,
+     220.7
+    ]
+   }
+  },
+  {
+   "cs": 222,
+   "title": "A Site Smoke 1 \u2014 T-side Moto smoke for A site, thrown from Second Mid against",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "second-mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     222.0,
+     224.0
+    ],
+    "aim": [
+     227.6,
+     228.6
+    ],
+    "throw": [
+     231.45,
+     232.05
+    ],
+    "landing": [
+     238.7,
+     240.0
+    ]
+   }
+  },
+  {
+   "cs": 247,
+   "title": "A Long Smoke 2 \u2014 T-side jump-throw smoke from the Mexico/Underpass area toward",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-long",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     247.2,
+     249.3
+    ],
+    "aim": [
+     250.7,
+     251.4
+    ],
+    "throw": [
+     254.72,
+     255.35
+    ],
+    "landing": [
+     263.35,
+     264.6
+    ]
+   }
+  },
+  {
+   "cs": 270,
+   "title": "A Site Smoke 2 \u2014 T-side Moto smoke thrown from the Underpass/Mexico area: the",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     270.0,
+     271.9
+    ],
+    "aim": [
+     276.0,
+     276.9
+    ],
+    "throw": [
+     277.1,
+     277.65
+    ],
+    "landing": [
+     286.25,
+     287.5
+    ]
+   }
+  },
+  {
+   "cs": 294,
+   "title": "A Site Smoke 3 \u2014 T-side Library smoke thrown from Second Mid: stand tucked",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "second-mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     294.68,
+     295.17
+    ],
+    "aim": [
+     297.6,
+     298.1
+    ],
+    "throw": [
+     302.78,
+     303.4
+    ],
+    "landing": [
+     309.02,
+     310.2
+    ]
+   }
+  },
+  {
+   "cs": 319,
+   "title": "A Site Smoke 4 \u2014 T Arch smoke from Second Mid, jump throw",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "second-mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     319.0,
+     319.48
+    ],
+    "aim": [
+     321.4,
+     322.5
+    ],
+    "throw": [
+     324.3,
+     324.9
+    ],
+    "landing": [
+     332.7,
+     334.0
+    ]
+   }
+  },
+  {
+   "cs": 337,
+   "title": "Mid Smoke 1 \u2014 T Spawn (T Start) jump-throw smoke for Top Mid: stand beside",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     337.5,
+     338.5
+    ],
+    "aim": [
+     339.6,
+     340.8
+    ],
+    "throw": [
+     340.98,
+     341.58
+    ],
+    "landing": [
+     349.95,
+     351.5
+    ]
+   }
+  },
+  {
+   "cs": 384,
+   "title": "Apartments Flash 1 \u2014 CT pop-flash thrown from A site (stand against the wall by",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "apartments",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     384.2,
+     384.9
+    ],
+    "aim": [
+     385.5,
+     386.3
+    ],
+    "throw": [
+     386.3,
+     386.9
+    ],
+    "landing": [
+     395.22,
+     395.82
+    ]
+   }
+  },
+  {
+   "cs": 399,
+   "title": "Mid Flash 1 \u2014 CT flash from A site over the roof toward Short",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     399.95,
+     400.75
+    ],
+    "aim": [
+     401.3,
+     402.4
+    ],
+    "throw": [
+     403.35,
+     403.95
+    ],
+    "landing": [
+     410.78,
+     411.18
+    ]
+   }
+  },
+  {
+   "cs": 418,
+   "title": "A Long Flash 1 \u2014 CT flash over the wall toward Long",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "a-long",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     418.12,
+     418.52
+    ],
+    "aim": [
+     419.95,
+     420.65
+    ],
+    "throw": [
+     423.85,
+     424.45
+    ],
+    "landing": [
+     431.0,
+     431.8
+    ]
+   }
+  },
+  {
+   "cs": 445,
+   "title": "A Site Flash 1 \u2014 T flash from Underpass over Short",
+   "ability": "flash",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     445.7,
+     447.0
+    ],
+    "aim": [
+     448.98,
+     449.44
+    ],
+    "throw": [
+     449.55,
+     450.15
+    ],
+    "landing": [
+     457.92,
+     458.2
+    ]
+   }
+  },
+  {
+   "cs": 463,
+   "title": "A Site Flash 2 \u2014 T A-site flash from Mid",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     463.8,
+     464.45
+    ],
+    "aim": [
+     468.8,
+     469.8
+    ],
+    "throw": [
+     470.6,
+     471.25
+    ],
+    "landing": [
+     479.45,
+     481.2
+    ]
+   }
+  },
+  {
+   "cs": 490,
+   "title": "A Site Flash 3 \u2014 T-side A Site pop-flash thrown from the covered Apartments",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "apartments",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     490.88,
+     491.75
+    ],
+    "aim": [
+     491.7,
+     492.32
+    ],
+    "throw": [
+     492.25,
+     492.85
+    ],
+    "landing": [
+     504.12,
+     504.88
+    ]
+   }
+  },
+  {
+   "cs": 526,
+   "title": "Banana HE 1 \u2014 HE into the Banana Cubby",
+   "ability": "grenade",
+   "technique": "running",
+   "target": "banana",
+   "stand": "banana",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     526.7,
+     527.25
+    ],
+    "aim": [
+     527.05,
+     527.6
+    ],
+    "throw": [
+     527.58,
+     528.18
+    ],
+    "landing": [
+     530.38,
+     531.1
+    ]
+   }
+  },
+  {
+   "cs": 541,
+   "title": "Apartments Molly 1 \u2014 CT-side anti-rush molotov thrown from small Pit (A site)",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "apartments",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     541.7,
+     543.5
+    ],
+    "aim": [
+     547.3,
+     548.3
+    ],
+    "throw": [
+     548.45,
+     549.05
+    ],
+    "landing": [
+     550.0,
+     551.2
+    ]
+   }
+  }
+ ],
+ "note": ""
+}

@@ -33,4 +33,7 @@ INFERNO_CALLOUTS = [
     # --- middle ---------------------------------------------------------------------------------
     ("second mid", "second-mid"), ("2nd mid", "second-mid"),
     ("top mid", "mid"), ("alt mid", "mid"), ("mid", "mid"),
+    # Mexico is the Underpass under the Second Mid bridge (the HUD reads "Underpass"); its
+    # prose names the "arch" overhead, which must not win the A-site `arch` entry.
+    ("mexico", "mid"), ("underpass", "mid"),
 ]
