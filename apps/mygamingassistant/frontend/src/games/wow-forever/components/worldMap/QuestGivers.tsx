@@ -16,11 +16,13 @@ interface QuestGiversProps {
   givers: readonly RankedQuestGiver[];
   selectedPoiId: string | null;
   onToggle: (poiId: string) => void;
+  onSelect: (poiId: string) => void;
   directions: Directions | null | undefined;
 }
 
 /** Nearest quest givers with a quest you could take. */
-export default function QuestGivers({ data, faction, level, givers, selectedPoiId, onToggle, directions }: QuestGiversProps) {
+export default function QuestGivers(props: QuestGiversProps) {
+  const { data, faction, level, givers, selectedPoiId, onToggle, onSelect, directions } = props;
   const [limit, setLimit] = useState(PAGE_SIZE);
   const shown = givers.slice(0, limit);
 
@@ -48,6 +50,7 @@ export default function QuestGivers({ data, faction, level, givers, selectedPoiI
               heading="Quest giver"
               selected={ranked.poi.id === selectedPoiId}
               onToggle={onToggle}
+              onSelect={onSelect}
               directions={directions}
             >
               <QuestList giverName={ranked.poi.name} quests={quests} level={level} />

@@ -24,12 +24,13 @@ interface FindServicesProps {
   results: readonly RankedPoi[];
   selectedPoiId: string | null;
   onToggle: (poiId: string) => void;
+  onSelect: (poiId: string) => void;
   directions: Directions | null | undefined;
 }
 
 /** Pick any service type and list every one, nearest first, in the three distance groups. */
 export default function FindServices(props: FindServicesProps) {
-  const { data, faction, classId, filter, results, selectedPoiId, onToggle, directions } = props;
+  const { data, faction, classId, filter, results, selectedPoiId, onToggle, onSelect, directions } = props;
   const [limit, setLimit] = useState(PAGE_SIZE);
   const shown = results.slice(0, limit);
 
@@ -95,6 +96,7 @@ export default function FindServices(props: FindServicesProps) {
               faction={faction}
               selected={ranked.poi.id === selectedPoiId}
               onToggle={onToggle}
+              onSelect={onSelect}
               directions={directions}
             />
           </div>

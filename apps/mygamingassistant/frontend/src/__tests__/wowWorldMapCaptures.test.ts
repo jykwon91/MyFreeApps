@@ -4,6 +4,7 @@ import travelJson from "@/games/wow-forever/data/worldMap/travel.json";
 import servicesJson from "@/games/wow-forever/data/worldMap/classic/classicServices.json";
 import questsJson from "@/games/wow-forever/data/worldMap/classic/classicQuests.json";
 import dungeonsJson from "@/games/wow-forever/data/worldMap/classic/classicDungeons.json";
+import masksJson from "@/games/wow-forever/data/worldMap/mapMasks.json";
 import { SERVICE_KIND } from "@/games/wow-forever/data/worldMap/serviceKinds";
 import type { MapCapture } from "@/games/wow-forever/types/mapCapture";
 import { POI_SOURCE } from "@/games/wow-forever/types/worldMap";
@@ -19,6 +20,7 @@ const data = decodeWorldMap({
   services: servicesJson,
   quests: questsJson,
   dungeons: dungeonsJson,
+  masks: masksJson,
 });
 const knownZone = (id: number) => data.zoneById.has(id);
 

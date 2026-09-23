@@ -114,6 +114,23 @@ export function useMinimapZoomPan(containerRef: React.RefObject<HTMLElement | nu
 
   const reset = useCallback(() => setT({ scale: 1, tx: 0, ty: 0 }), []);
 
+  // Zoom to `scale` with the content point (fx, fy) — 0..1 of the content —
+  // as close to the centre as the no-gutter clamp allows.
+  const focusOn = useCallback(
+    (fx: number, fy: number, scale: number) => {
+      const el = containerRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const next = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale));
+      setT({
+        scale: next,
+        tx: clampTranslate(r.width / 2 - fx * r.width * next, next, r.width),
+        ty: clampTranslate(r.height / 2 - fy * r.height * next, next, r.height),
+      });
+    },
+    [containerRef],
+  );
+
   const transformStyle: React.CSSProperties = {
     transform: `translate(${t.tx}px, ${t.ty}px) scale(${t.scale})`,
     transformOrigin: "0 0",
@@ -127,6 +144,7 @@ export function useMinimapZoomPan(containerRef: React.RefObject<HTMLElement | nu
     onPanMove,
     onPanEnd,
     reset,
+    focusOn,
     isZoomed: t.scale > 1,
   };
 }

@@ -6,7 +6,7 @@
  *
  * Run: npm run test:e2e -- wow-world-map
  */
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 test.use({ permissions: ["clipboard-read", "clipboard-write"] });
 
@@ -105,6 +105,88 @@ test("a location captured in Forever replaces the Classic spot and the waypoint 
   await trainer.getByRole("button", { name: "Copy in-game waypoint" }).first().click();
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   expect(copied).toBe("/mga way 1429 43.1 65.5 Maximillian Crowe");
+});
+
+/** Hover / click the map at map percent (x, y) — the map isn't zoomed, so its box is the picture's. */
+async function mapPoint(page: Page, x: number, y: number) {
+  const box = await page.getByTestId("zone-map").boundingBox();
+  if (!box) throw new Error("the map isn't on screen");
+  return { x: (box.width * x) / 100, y: (box.height * y) / 100 };
+}
+
+async function standInGoldshire(page: Page) {
+  // The capture API is the only backend call; answer it like a server with none.
+  await page.route("**/api/wow/map-captures", (route) => route.fulfill({ json: { captures: [] } }));
+  await page.goto("/wow-forever/map");
+  await page.getByRole("radio", { name: "Alliance" }).click();
+  await page.getByLabel("Class").selectOption("warlock");
+  await page.getByLabel("Zone").selectOption({ label: "Elwynn Forest" });
+  await page.getByLabel(/Your coordinates/).fill("42, 65");
+  await page.getByRole("button", { name: "Set position" }).click();
+  await expect(page.getByRole("img", { name: "Elwynn Forest map" })).toBeVisible();
+}
+
+test("the map zooms out to the continent, opens zones, crosses borders and goes back", async ({ page }) => {
+  await standInGoldshire(page);
+  const map = page.getByTestId("zone-map");
+
+  // Elwynn's neighbours are named at its edges.
+  await expect(page.getByRole("button", { name: "Go to Westfall" })).toHaveText("Westfall ←");
+
+  await page.getByRole("button", { name: "Zoom out" }).click();
+  await expect(page.getByRole("img", { name: "Eastern Kingdoms map" })).toBeVisible();
+  await expect(page).toHaveURL(/[?&]m=1415/);
+  await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toContainText("Azeroth");
+
+  // Westfall's middle on the continent map (generated bounds: Westfall (45, 50) -> EK (41.4, 76.8)).
+  await map.hover({ position: await mapPoint(page, 41.4, 76.8) });
+  await expect(page.getByText(/Westfall · Level \d+–\d+ · Alliance territory — click to go there/)).toBeVisible();
+  await expect(page.getByTestId("map-hover-highlight")).toBeVisible();
+  await map.click({ position: await mapPoint(page, 41.4, 76.8) });
+  await expect(page.getByRole("img", { name: "Westfall map" })).toBeVisible();
+  await expect(page).toHaveURL(/[?&]m=1436/);
+
+  // Westfall's map shows a corner of Elwynn: clicking it crosses the border.
+  await map.hover({ position: await mapPoint(page, 88, 12) });
+  await expect(page.getByText(/Elwynn Forest · .* — click to go there/)).toBeVisible();
+  await map.click({ position: await mapPoint(page, 88, 12) });
+  await expect(page.getByRole("img", { name: "Elwynn Forest map" })).toBeVisible();
+
+  // Browsing never moved you: your saved zone and position are unchanged.
+  const stored = await page.evaluate(() => window.localStorage.getItem("mga.wowForever.worldMap.player.v1"));
+  expect(JSON.parse(stored ?? "{}")).toMatchObject({ zoneId: 1429, position: { x: 42, y: 65 } });
+
+  // Browser back is zoom-out history: Westfall, then the continent.
+  await page.goBack();
+  await expect(page.getByRole("img", { name: "Westfall map" })).toBeVisible();
+  await page.goBack();
+  await expect(page.getByRole("img", { name: "Eastern Kingdoms map" })).toBeVisible();
+
+  // Right-click zooms out too.
+  await map.click({ button: "right", position: await mapPoint(page, 50, 50) });
+  await expect(page.getByRole("img", { name: "Azeroth map" })).toBeVisible();
+});
+
+test("clicking a result in the list shows it on its map, highlighted", async ({ page }) => {
+  await standInGoldshire(page);
+  const find = page.getByRole("region", { name: "Find" });
+  const calder = find.getByRole("article", { name: "Alexander Calder" });
+  await calder.getByRole("heading", { name: "Alexander Calder" }).click();
+
+  await expect(page.getByRole("img", { name: "Ironforge map" })).toBeVisible();
+  await expect(page).toHaveURL(/[?&]m=1455/);
+  const marker = page.getByRole("group", { name: "Ironforge markers" }).getByRole("button", { pressed: true });
+  await expect(marker).toHaveAccessibleName(/Alexander Calder/);
+  await expect(calder).toHaveAttribute("aria-current", "true");
+
+  // Enter on a focused row does the same.
+  const crowe = page.getByRole("article", { name: "Warlock trainer: Maximillian Crowe" });
+  await crowe.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("img", { name: "Elwynn Forest map" })).toBeVisible();
+  await expect(
+    page.getByRole("group", { name: "Elwynn Forest markers" }).getByRole("button", { pressed: true }),
+  ).toHaveAccessibleName(/Maximillian Crowe/);
 });
 
 test("a far-away trainer gets flight directions with the discovery caveat", async ({ page }) => {

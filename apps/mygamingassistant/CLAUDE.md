@@ -145,6 +145,23 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   fully explored) stitched from the Forever client's map tiles — © Blizzard
   Entertainment, shown for reference in a free fan tool. One image loads per
   viewed zone. See `public/wow-maps/README.md`.
+- **Navigation like the in-game map.** `zones.json` carries every map's UiMap
+  `parent` (Azeroth `947` → continents → zones → capitals), `levels` and
+  `territory`; `decodeMapTree` builds the tree. The viewed map lives in the URL
+  (`?m=<uiMapId>`, pushed on navigation so browser Back = zoom out); with no `m`
+  the page follows the player's zone. Browsing never changes the saved
+  position — only a click on your own zone's map (or a confirmed "Set position
+  here") does. Zoom out = button, breadcrumb, right-click or Esc.
+- **Hit-testing** (`worldMap/mapHitTest.ts`, mirrors `C_Map.GetMapInfoAtPosition`):
+  on a continent/world view the candidates are the children; on a zone view,
+  its siblings. A candidate must cover the point with its mask
+  (`mapMasks.json`, 120×80 bits from the zone's highlight art, zones only) —
+  continents are covered via their child zones because their highlight art is
+  only a coastline. Smallest area wins; a click that resolves to nothing never
+  navigates. Neighbour zones are labelled at the map edges.
+- **List ↔ map selection** (`hooks/useMapSelection.ts`): clicking / Enter on a
+  result row opens that result's zone, zooms to it and highlights the marker
+  (and the row); clicking a marker selects and scrolls to its row.
 - Placement: a nested capital wins, then the flight-path name's zone, then the
   zone whose painted overlay covers the point. Classic NPCs never land on a
   Forever-only zone (`FOREVER_ONLY_ZONES`); those zones say "Not mapped yet".
