@@ -284,6 +284,29 @@ async def test_import_force_publishes_refined_polygon(db: AsyncSession, seeded: 
     assert refreshed.polygon_points == refined
 
 
+@pytest.mark.asyncio
+async def test_pack_publishes_zones_no_lineup_references(db: AsyncSession, seeded: dict):
+    """Every zone on an exported map travels — prod's only polygon source is the
+    pack, so an unreferenced zone would otherwise keep a stale shape forever."""
+    await _make_accepted(db, seeded, title="Smoke A")
+    mid_poly = [{"x": 0.40, "y": 0.40}, {"x": 0.50, "y": 0.40}, {"x": 0.50, "y": 0.50}]
+    mid = MapZone(map_id=seeded["map"].id, slug="rt-mid", name="Mid", polygon_points=mid_poly)
+    db.add(mid)
+    await db.flush()
+    mid_id = mid.id
+
+    pack = await _scoped_pack(db)
+    assert {z["zone_slug"] for z in pack["zones"]} == {"rt-a-site", "rt-t-spawn", "rt-mid"}
+
+    mid.polygon_points = [{"x": 0.90, "y": 0.90}, {"x": 0.80, "y": 0.90}, {"x": 0.80, "y": 0.80}]
+    await db.flush()
+    await import_pack(db, pack)
+
+    db.expire_all()
+    refreshed = (await db.execute(select(MapZone).where(MapZone.id == mid_id))).scalar_one()
+    assert refreshed.polygon_points == mid_poly
+
+
 # --------------------------------------------------------------------------
 # Retraction — the pack is a complete snapshot, so absence means "unpublished".
 #
