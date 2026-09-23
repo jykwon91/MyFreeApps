@@ -33,6 +33,15 @@ def add(db: AsyncSession, values: dict[str, object]) -> WowMapCapture:
     return row
 
 
+def update(row: WowMapCapture, values: dict[str, object]) -> None:
+    for field, value in values.items():
+        setattr(row, field, value)
+
+
+async def flush(db: AsyncSession) -> None:
+    await db.flush()
+
+
 async def delete_except(db: AsyncSession, keep_keys: Collection[str]) -> int:
     """Delete every capture whose key is not in ``keep_keys``. Returns the count."""
     result = await db.execute(

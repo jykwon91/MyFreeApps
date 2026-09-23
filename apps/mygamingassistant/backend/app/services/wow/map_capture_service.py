@@ -93,10 +93,9 @@ async def _upsert(
         elif _is_same(row, values) or (newer_only and capture.captured_at <= row.captured_at):
             unchanged += 1
         else:
-            for field, value in values.items():
-                setattr(row, field, value)
+            map_capture_repo.update(row, values)
             updated += 1
-    await db.flush()
+    await map_capture_repo.flush(db)
     return created, updated, unchanged
 
 
