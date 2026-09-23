@@ -1,0 +1,279 @@
+{
+ "video_id": "K3JbrpkoE8I",
+ "map_slug": "mirage",
+ "game_slug": "cs2",
+ "author": "CS Tactics",
+ "lineups": [
+  {
+   "cs": 33,
+   "title": "Stairs Flash 1 \u2014 T-side flash thrown from A Site, standing beside the",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "stairs",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     33.05,
+     34.55
+    ],
+    "aim": [
+     36.95,
+     37.65
+    ],
+    "throw": [
+     37.62,
+     38.22
+    ],
+    "landing": [
+     39.38,
+     39.62
+    ]
+   }
+  },
+  {
+   "cs": 52,
+   "title": "A Ramp Flash 1 \u2014 T-side pop-flash thrown from the T-side corridor with the",
+   "ability": "flash",
+   "technique": "running",
+   "target": "a-ramp",
+   "stand": "a-ramp",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     52.6,
+     55.2
+    ],
+    "aim": [
+     59.1,
+     60.1
+    ],
+    "throw": [
+     60.7,
+     61.3
+    ],
+    "landing": [
+     62.37,
+     62.62
+    ]
+   }
+  },
+  {
+   "cs": 70,
+   "title": "A Site Flash 1 \u2014 T-side flash thrown from beside the barred-window door on the",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-ramp",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     70.75,
+     71.5
+    ],
+    "aim": [
+     72.66,
+     73.08
+    ],
+    "throw": [
+     73.45,
+     74.05
+    ],
+    "landing": [
+     79.05,
+     79.25
+    ]
+   }
+  },
+  {
+   "cs": 164,
+   "title": "B Apts Flash 1 \u2014 CT flash from B Site (lower area, by the green-tarp awning",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "b-apts",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     164.55,
+     166.1
+    ],
+    "aim": [
+     168.2,
+     169.35
+    ],
+    "throw": [
+     169.4,
+     169.95
+    ],
+    "landing": [
+     171.1,
+     171.5
+    ]
+   }
+  },
+  {
+   "cs": 183,
+   "title": "B Apts Flash 2 \u2014 CT flash from B Site: stand against the wall by a wooden",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "b-apts",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     183.7,
+     184.72
+    ],
+    "aim": [
+     190.2,
+     190.9
+    ],
+    "throw": [
+     190.95,
+     191.55
+    ],
+    "landing": [
+     192.5,
+     192.95
+    ]
+   }
+  },
+  {
+   "cs": 198,
+   "title": "Catwalk Flash 1 \u2014 CT anti-rush flash from the B Site Market side: stand at the",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "catwalk",
+   "stand": "market",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     198.5,
+     199.22
+    ],
+    "aim": [
+     207.6,
+     208.3
+    ],
+    "throw": [
+     208.97,
+     209.5
+    ],
+    "landing": [
+     210.72,
+     211.12
+    ]
+   }
+  },
+  {
+   "cs": 241,
+   "title": "Top Mid Flash 1 \u2014 T side: stand against the red wall beside the ornate carved",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "top-mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     241.95,
+     243.65
+    ],
+    "aim": [
+     244.6,
+     245.15
+    ],
+    "throw": [
+     245.15,
+     245.7
+    ],
+    "landing": [
+     246.8,
+     247.05
+    ]
+   }
+  },
+  {
+   "cs": 303,
+   "title": "Connector Flash 1 \u2014 T side: stand at the corner of the blue wall at Top Mid and",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "connector",
+   "stand": "top-mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     303.8,
+     305.35
+    ],
+    "aim": [
+     305.52,
+     306.4
+    ],
+    "throw": [
+     307.02,
+     307.5
+    ],
+    "landing": [
+     308.73,
+     308.89
+    ]
+   }
+  },
+  {
+   "cs": 343,
+   "title": "Top Mid Flash 2 \u2014 CT side: stand inside the arched doorway room overlooking",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "top-mid",
+   "stand": "connector",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     343.85,
+     344.9
+    ],
+    "aim": [
+     345.8,
+     346.8
+    ],
+    "throw": [
+     346.95,
+     347.55
+    ],
+    "landing": [
+     360.55,
+     361.2
+    ]
+   }
+  },
+  {
+   "cs": 366,
+   "title": "Mid Flash 1 \u2014 T side: stand next to the wooden bench by the pink/red wall",
+   "ability": "flash",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "top-mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     366.88,
+     367.15
+    ],
+    "aim": [
+     368.2,
+     368.82
+    ],
+    "throw": [
+     368.8,
+     369.45
+    ],
+    "landing": [
+     370.45,
+     370.98
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
