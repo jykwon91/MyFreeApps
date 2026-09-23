@@ -47,6 +47,7 @@ describe("routing", () => {
     expect(matchedPath("/wow-forever")).toBe("/wow-forever");
     expect(matchedPath("/wow-forever/guide")).toBe("/wow-forever/guide");
     expect(matchedPath("/wow-forever/compare")).toBe("/wow-forever/compare");
+    expect(matchedPath("/wow-forever/map")).toBe("/wow-forever/map");
     expect(matchedPath("/cs2")).toBe("/:gameSlug");
     expect(matchedPath("/valorant/ascent")).toBe("/:gameSlug/:mapSlug");
   });

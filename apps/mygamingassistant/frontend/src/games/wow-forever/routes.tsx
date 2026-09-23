@@ -6,6 +6,7 @@ import WowPageSkeleton from "@/games/wow-forever/components/shared/WowPageSkelet
 const WowForeverLanding = lazy(() => import("@/games/wow-forever/pages/WowForeverLanding"));
 const WowGuidePage = lazy(() => import("@/games/wow-forever/pages/WowGuidePage"));
 const WowComparePage = lazy(() => import("@/games/wow-forever/pages/WowComparePage"));
+const WowWorldMapPage = lazy(() => import("@/games/wow-forever/pages/WowWorldMapPage"));
 
 function withSuspense(page: ReactElement): ReactElement {
   return <Suspense fallback={<WowPageSkeleton />}>{page}</Suspense>;
@@ -19,4 +20,5 @@ export const wowForeverRoutes: RouteObject[] = [
   { path: "/wow-forever", element: withSuspense(<WowForeverLanding />) },
   { path: "/wow-forever/guide", element: withSuspense(<WowGuidePage />) },
   { path: "/wow-forever/compare", element: withSuspense(<WowComparePage />) },
+  { path: "/wow-forever/map", element: withSuspense(<WowWorldMapPage />) },
 ];

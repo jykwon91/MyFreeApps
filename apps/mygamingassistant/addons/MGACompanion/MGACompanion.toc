@@ -1,0 +1,8 @@
+## Interface: 16001
+## Title: MGA Companion
+## Notes: In-game waypoints from the MyGamingAssistant World Map (/mga way).
+## Author: MyGamingAssistant
+## Version: 1.0.0
+## IconTexture: Interface\Icons\INV_Misc_Map_01
+
+MGACompanion.lua

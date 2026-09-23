@@ -5,8 +5,8 @@
 **MyGamingAssistant** — a single-user, self-hosted lineup and utility management tool
 for tactical FPS games (Valorant, CS2). Core value: store and visualize lineup throws
 overlaid on game minimaps. Also hosts **companion** games — static per-game pages
-with no maps (currently World of Warcraft: Forever: a New Player Guide and an Item
-Compare tool). Part of the MyFreeApps monorepo.
+with no maps (currently World of Warcraft: Forever: a World Map, a New Player Guide
+and an Item Compare tool). Part of the MyFreeApps monorepo.
 
 **Single-user app:** There is NO `/register` route. The operator account is seeded at
 boot time from `SEED_USER_EMAIL` + `SEED_USER_PASSWORD_HASH` env vars. Production boot
@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/guide`, `/wow-forever/compare`)
+### WoW Forever (`/wow-forever`, `/wow-forever/map`, `/wow-forever/guide`, `/wow-forever/compare`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -123,6 +123,37 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `MYGAMINGASSISTANT_VITE_TURNSTILE_SITE_KEY`).
 - Stat keys / slots / qualities exist on both sides —
   `tests/test_wow_stat_keys_parity.py` fails CI on drift.
+
+#### World Map (`/wow-forever/map`)
+
+- Frontend-only, static data under `src/games/wow-forever/data/worldMap/`, logic
+  in `src/games/wow-forever/worldMap/` (pure, unit-tested), page in
+  `pages/WowWorldMapPage.tsx`. Player choices (faction/class/zone/level/position)
+  live in localStorage key `mga.wowForever.worldMap.player.v1` — preferences
+  only, never world data.
+- **Data is GENERATED — never hand-edit the JSON.** Re-run from `backend/`:
+  `python -m scripts.wow_world_map.build [--no-art]`. Sources are pinned in
+  `scripts/wow_world_map/sources.py` (wago.tools DB2 export of the Forever beta
+  client for zones/flight paths/map art/factions; cmangos classic-db at a
+  pinned commit for NPCs). `tests/test_wow_world_map_generator.py` checks the
+  coordinate conversion against wiki NPC positions and the committed output.
+- **Licensing:** `data/worldMap/classic/` is derived from cmangos classic-db,
+  GPL-3.0 — keep its LICENSE + README (commit SHA) next to the data. No cmangos
+  code is copied; no Questie/ForeverGuide/Wowhead data. Every Classic row is
+  labelled "Classic location — may differ in Forever" in the UI.
+- **Map art:** `frontend/public/wow-maps/<uiMapId>.webp` (WebP q70, 1002×668,
+  fully explored) stitched from the Forever client's map tiles — © Blizzard
+  Entertainment, shown for reference in a free fan tool. One image loads per
+  viewed zone. See `public/wow-maps/README.md`.
+- Placement: a nested capital wins, then the flight-path name's zone, then the
+  zone whose painted overlay covers the point. Classic NPCs never land on a
+  Forever-only zone (`FOREVER_ONLY_ZONES`); those zones say "Not mapped yet".
+- Directions = travel-time search over walking, discovered-agnostic flight
+  paths (fewest hops, then distance) and boats/zeppelins, always with the
+  "flight paths must be discovered first" caveat.
+- **Companion addon** `apps/mygamingassistant/addons/MGACompanion` (Interface
+  16001): `/mga way <uiMapID|zone name> <x> <y> [label]` sets the in-game map
+  pin. The page's "Copy in-game waypoint" buttons emit that command.
 
 ## Fixture Loading
 
