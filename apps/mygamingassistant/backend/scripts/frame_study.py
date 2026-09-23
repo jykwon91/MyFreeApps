@@ -14,12 +14,11 @@ Two modes:
     Use inside a TIGHT window (~1-2 s) to pin an exact instant.
   * COARSE (--step S>0): one still every S seconds. The label IS the exact seek
     the cutter would use (``-ss ts -i`` lands on the first frame at or after ts).
-    Use across a wider rough window to orient. When S spans a whole number of
-    frames (0.5 s at 60 fps), the window is decoded ONCE and every Nth frame kept
-    -- pixel-identical to a per-still seek (PSNR inf) and ~10x faster, because a
-    per-still seek re-decodes the source from its previous keyframe (AV1
-    sources key every ~6 s) and runs one ffmpeg per still. Other strides fall
-    back to per-still seeks.
+    Use across a wider rough window to orient. The window is decoded ONCE and the
+    frame crossing each step boundary kept -- pixel-identical to a per-still seek
+    (PSNR inf at 29.97 / 59.94 / 60 fps) and ~10x faster, because a per-still seek
+    re-decodes the source from its previous keyframe (AV1 sources key every ~6 s)
+    and runs one ffmpeg per still.
 
 ``--height H`` downscales every output frame to H px tall. It is for the SURVEY
 only (720 is plenty to tell placements apart and read a caption); anything that
@@ -82,29 +81,25 @@ def extract_dense(video: Path, t0: float, t1: float, fps: float, out: Path, heig
     return result
 
 
-def frame_stride(step: float, fps: float) -> int:
-    """Frames per coarse step, or 0 when the step is not a whole number of frames."""
-    n = step * fps
-    return int(round(n)) if n >= 1 and abs(n - round(n)) < 1e-6 else 0
-
-
-def extract_coarse(video: Path, t0: float, t1: float, step: float, fps: float, out: Path,
+def extract_coarse(video: Path, t0: float, t1: float, step: float, out: Path,
                    height: int = 0) -> list[tuple[Path, float]]:
-    """One still every `step` seconds, labelled with the seek that reproduces it."""
-    stride = frame_stride(step, fps)
-    if not stride:
-        return _extract_coarse_seeks(video, t0, t1, step, out, height)
-    # Same count the per-still loop produces: every t0 + k*step that does not pass t1.
+    """One still every `step` seconds, labelled with the seek that reproduces it.
+
+    One continuous decode from the same single-stage seek. A seek to t0 + k*step returns the
+    first frame at or after that instant, so keep exactly the frame that crosses each step
+    boundary (frame time t is relative to t0 after the input seek). Works for any fps, including
+    29.97 / 59.94 where a step is not a whole number of frames.
+    """
+    # Same count the per-still loop produced: every t0 + k*step that does not pass t1.
     n = int((t1 - t0) / step + 1e-6) + 1
     tmp = out / "_raw"
     tmp.mkdir(parents=True, exist_ok=True)
-    # One continuous decode from the same single-stage seek; frame k*stride of it is the
-    # first frame at or after t0 + k*step, i.e. exactly what a seek to that label returns.
-    # The first decoded frame can sit up to 1/fps past t0, hence the 2-frame -t margin.
-    vf = f"select='not(mod(n\\,{stride}))'" + (f",scale=-2:{height}" if height > 0 else "")
+    vf = (f"select='isnan(prev_selected_t)+gt(floor(t/{step}),floor(prev_selected_t/{step}))'"
+          + (f",scale=-2:{height}" if height > 0 else ""))
     subprocess.run(
         ["ffmpeg", "-y", "-loglevel", "error",
-         "-ss", f"{t0:.3f}", "-i", str(video), "-t", f"{(n - 1) * step + 2 / fps:.3f}",
+         # +0.1 s covers the first decoded frame sitting up to one frame past t0.
+         "-ss", f"{t0:.3f}", "-i", str(video), "-t", f"{(n - 1) * step + 0.1:.3f}",
          "-vf", vf, "-vsync", "0", "-q:v", "2", str(tmp / "f%05d.png")],
         check=True,
     )
@@ -115,26 +110,6 @@ def extract_coarse(video: Path, t0: float, t1: float, step: float, fps: float, o
         raw.rename(dest)
         result.append((dest, ts))
     shutil.rmtree(tmp, ignore_errors=True)
-    return result
-
-
-def _extract_coarse_seeks(video: Path, t0: float, t1: float, step: float, out: Path,
-                          height: int) -> list[tuple[Path, float]]:
-    """Fallback for strides that are not a whole number of frames: one exact seek per still."""
-    result: list[tuple[Path, float]] = []
-    n = int(round((t1 - t0) / step)) + 1
-    for i in range(n):
-        ts = t0 + i * step
-        if ts > t1 + 1e-6:
-            break
-        dest = out / f"f{i + 1:03d}_t{ts:.3f}.png"
-        subprocess.run(
-            ["ffmpeg", "-y", "-loglevel", "error",
-             "-ss", f"{ts:.3f}", "-i", str(video), *_scale_args(height),
-             "-frames:v", "1", "-q:v", "2", str(dest)],
-            check=True,
-        )
-        result.append((dest, ts))
     return result
 
 
@@ -167,7 +142,7 @@ def main() -> None:
     if args.step <= 0:
         frames = extract_dense(video, args.t0, args.t1, fps, out, args.height)
     else:
-        frames = extract_coarse(video, args.t0, args.t1, args.step, fps, out, args.height)
+        frames = extract_coarse(video, args.t0, args.t1, args.step, out, args.height)
 
     res = f"{args.height}p" if args.height > 0 else "full-res"
     print(f"\n{len(frames)} {res} frames:")
