@@ -69,6 +69,14 @@ AGENTS = {
         "legacy_zone_maps": {"ascent"},
         "short": {"turret": "Turret", "alarmbot": "Bot", "nanoswarm": "Nano"},
     },
+    "viper": {
+        "sources": {"XfRvdsxx1P8": "Frost LIVE", "X8erN-c1kyE": "CoachCow",
+                    "KrlfJElQex4": "Locked", "LbcPQO_AdJI": "nAts"},
+        # None is placed: the toxic screen's THROW beat is its placement confirm.
+        "placed": set(),
+        "legacy_zone_maps": set(),
+        "short": {"snake-bite": "Molly", "poison-cloud": "Orb", "toxic-screen": "Wall"},
+    },
 }
 DEFAULT_AGENT = "cypher"
 
@@ -321,7 +329,16 @@ def main():
             cs += 1
         used_cs.add(cs)
 
-        side = "side_a" if str(L.get("side", "")).lower().startswith("att") else "side_b"
+        # Anything but an explicit attacker/defender read is excluded, never defaulted: a
+        # localizer that could not tell the side used to land on side_b (defender) silently.
+        side_word = str(L.get("side", "")).strip().lower()
+        if side_word.startswith("att"):
+            side = "side_a"
+        elif side_word.startswith("def"):
+            side = "side_b"
+        else:
+            excluded.append((it.get("nn"), it.get("name"), "NO_SIDE", repr(L.get("side"))))
+            continue
         if tgt == std:
             degenerate.append(cs)
 

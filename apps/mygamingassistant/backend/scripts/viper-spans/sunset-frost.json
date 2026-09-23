@@ -1,0 +1,116 @@
+{
+ "video_id": "XfRvdsxx1P8",
+ "map_slug": "sunset",
+ "author": "Frost LIVE",
+ "lineups": [
+  {
+   "cs": 366,
+   "title": "A Site Molly 1 \u2014 Attacker post-plant Snake Bite from A Lobby: stands against",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     366.8,
+     369.2
+    ],
+    "aim": [
+     371.0,
+     371.9
+    ],
+    "throw": [
+     371.95,
+     372.55
+    ],
+    "landing": [
+     376.85,
+     378.1
+    ]
+   }
+  },
+  {
+   "cs": 386,
+   "title": "B Site Molly 1 \u2014 Attacker post-plant snake-bite thrown from the corner by the",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     386.0,
+     387.0
+    ],
+    "aim": [
+     391.4,
+     392.6
+    ],
+    "throw": [
+     392.55,
+     393.2
+    ],
+    "landing": [
+     397.7,
+     399.2
+    ]
+   }
+  },
+  {
+   "cs": 404,
+   "title": "B Site Molly 2 \u2014 Attacker post-plant Viper snake bite onto the B Site default",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     404.3,
+     405.8
+    ],
+    "aim": [
+     409.3,
+     410.15
+    ],
+    "throw": [
+     410.1,
+     410.75
+    ],
+    "landing": [
+     415.8,
+     417.0
+    ]
+   }
+  },
+  {
+   "cs": 420,
+   "title": "A Site Molly 2 \u2014 Attacker post-plant snake-bite from Mid Top: stand pressed",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     420.8,
+     421.6
+    ],
+    "aim": [
+     422.6,
+     423.75
+    ],
+    "throw": [
+     423.75,
+     424.4
+    ],
+    "landing": [
+     426.9,
+     428.2
+    ]
+   }
+  }
+ ],
+ "note": ""
+}

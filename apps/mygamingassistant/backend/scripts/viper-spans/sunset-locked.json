@@ -1,0 +1,224 @@
+{
+ "video_id": "KrlfJElQex4",
+ "map_slug": "sunset",
+ "author": "Locked",
+ "lineups": [
+  {
+   "cs": 2968,
+   "title": "B Site Wall 1 \u2014 Toxic screen placed from Mid Bottom by pressing into a wall",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     2968.0,
+     2969.5
+    ],
+    "aim": [
+     2975.4,
+     2976.42
+    ],
+    "throw": [
+     2976.36,
+     2976.96
+    ],
+    "landing": [
+     2979.4,
+     2980.8
+    ]
+   }
+  },
+  {
+   "cs": 3010,
+   "title": "A Site Molly 1 \u2014 Aligned lineup from A Lobby, aiming high at the vine-covered",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     3010.5,
+     3012.2
+    ],
+    "aim": [
+     3014.2,
+     3014.9
+    ],
+    "throw": [
+     3018.0,
+     3018.6
+    ],
+    "landing": [
+     3023.1,
+     3024.6
+    ]
+   }
+  },
+  {
+   "cs": 3064,
+   "title": "B Site Orb 1 \u2014 Lineup from B Lobby near the fish-mural ledge, aiming up at",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     3064.0,
+     3065.0
+    ],
+    "aim": [
+     3065.18,
+     3065.42
+    ],
+    "throw": [
+     3072.62,
+     3073.2
+    ],
+    "landing": [
+     3077.55,
+     3078.7
+    ]
+   }
+  },
+  {
+   "cs": 3100,
+   "title": "A Main Orb 1 \u2014 Attacker Poison Cloud thrown from Attacker Side Spawn near",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     3100.0,
+     3102.1
+    ],
+    "aim": [
+     3104.4,
+     3105.4
+    ],
+    "throw": [
+     3105.4,
+     3106.0
+    ],
+    "landing": [
+     3112.3,
+     3113.9
+    ]
+   }
+  },
+  {
+   "cs": 3151,
+   "title": "Market Wall 1 \u2014 Toxic Screen cast from B Site next to the tall building corner",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "market",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     3151.5,
+     3153.0
+    ],
+    "aim": [
+     3155.1,
+     3156.0
+    ],
+    "throw": [
+     3156.05,
+     3156.65
+    ],
+    "landing": [
+     3156.7,
+     3158.5
+    ]
+   }
+  },
+  {
+   "cs": 3164,
+   "title": "A Site Orb 1 \u2014 Poison Cloud thrown from Mid Top: Viper holds the orb aimed",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     3164.6,
+     3166.0
+    ],
+    "aim": [
+     3171.8,
+     3173.0
+    ],
+    "throw": [
+     3173.0,
+     3173.6
+    ],
+    "landing": [
+     3179.5,
+     3180.8
+    ]
+   }
+  },
+  {
+   "cs": 3201,
+   "title": "A Site Molly 2 \u2014 Snake Bite thrown from A Link by Paola's Pawn Shop, lobbed",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     3201.4,
+     3202.7
+    ],
+    "aim": [
+     3202.85,
+     3203.65
+    ],
+    "throw": [
+     3203.55,
+     3204.2
+    ],
+    "landing": [
+     3206.15,
+     3207.4
+    ]
+   }
+  },
+  {
+   "cs": 3212,
+   "title": "B Main Wall 1 \u2014 Defender B Site: from inside B Site near the pillar by the",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     3212.0,
+     3214.5
+    ],
+    "aim": [
+     3217.0,
+     3217.95
+    ],
+    "throw": [
+     3217.95,
+     3218.55
+    ],
+    "landing": [
+     3219.6,
+     3220.8
+    ]
+   }
+  }
+ ],
+ "note": ""
+}

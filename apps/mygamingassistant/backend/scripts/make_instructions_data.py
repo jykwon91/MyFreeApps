@@ -26,6 +26,7 @@ from make_instructions_examples_killjoy_sunset import EXAMPLES as _KILLJOY_SUNSE
 from make_instructions_examples_phoenix import EXAMPLES as _PHOENIX  # noqa: E402
 from make_instructions_examples_sova import EXAMPLES as _SOVA  # noqa: E402
 from make_instructions_examples_viper import EXAMPLES as _VIPER  # noqa: E402
+from make_instructions_examples_viper_sunset import EXAMPLES as _VIPER_SUNSET  # noqa: E402
 
 # map slug -> the callout vocabulary + the map's own gotchas. Per-MAP, shared by every agent.
 MAPS = {
@@ -52,7 +53,7 @@ MAPS = {
             # destination map everywhere, so a sentence like "on Summit A Link maps to mid" comes
             # out as "on Sunset A Link maps to mid" — the exact opposite of the warning intended.
             "**Two of these callouts do NOT mean what other maps trained you to expect.** "
-            "**Market is its own zone**, neither Mid nor B Main — the same rule as Ascent. And "
+            "**Market is its own zone**, neither Mid nor B Main. And "
             "**`A Link` is part of A SITE here**, not mid — it sits 0.019 from the A site box. "
             "Elsewhere in this project a `... Link` callout belongs to mid; do not carry that "
             "over. Read every callout against THIS map."
@@ -171,7 +172,7 @@ MAPS = {
 # the exact failure the per-source keying exists to prevent.
 EXAMPLES: dict[tuple[str, str], object] = {}
 for _part in (_BRIMSTONE, _CYPHER, _FADE, _KAYO, _KILLJOY, _KILLJOY_LOTUS, _KILLJOY_SPLIT,
-              _KILLJOY_SUMMIT, _KILLJOY_SUNSET, _PHOENIX, _SOVA, _VIPER):
+              _KILLJOY_SUMMIT, _KILLJOY_SUNSET, _PHOENIX, _SOVA, _VIPER, _VIPER_SUNSET):
     _dupes = EXAMPLES.keys() & _part.keys()
     if _dupes:
         raise SystemExit(f"ABORT - duplicate EXAMPLES key(s) across agent corpora: {sorted(_dupes)}")

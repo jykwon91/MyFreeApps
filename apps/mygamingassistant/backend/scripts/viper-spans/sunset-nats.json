@@ -1,0 +1,89 @@
+{
+ "video_id": "LbcPQO_AdJI",
+ "map_slug": "sunset",
+ "author": "nAts",
+ "lineups": [
+  {
+   "cs": 1046,
+   "title": "A Main Orb 1 \u2014 Buy-phase Poison Cloud orb from Attacker Side Spawn A Lobby",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     1046.0,
+     1047.5
+    ],
+    "aim": [
+     1052.17,
+     1052.45
+    ],
+    "throw": [
+     1052.43,
+     1052.9
+    ],
+    "landing": [
+     1054.05,
+     1055.2
+    ]
+   }
+  },
+  {
+   "cs": 1107,
+   "title": "Mid Orb 1 \u2014 Poison Cloud orb from A Lobby aimed into the sky with",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     1107.4,
+     1107.95
+    ],
+    "aim": [
+     1110.3,
+     1110.9
+    ],
+    "throw": [
+     1113.97,
+     1114.6
+    ],
+    "landing": [
+     1117.6,
+     1118.5
+    ]
+   }
+  },
+  {
+   "cs": 1146,
+   "title": "Mid Wall 1 \u2014 Toxic Screen from B Market lined up on the INFO booth",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "market",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     1146.0,
+     1148.5
+    ],
+    "aim": [
+     1158.5,
+     1159.45
+    ],
+    "throw": [
+     1159.45,
+     1160.05
+    ],
+    "landing": [
+     1161.2,
+     1162.4
+    ]
+   }
+  }
+ ],
+ "note": ""
+}

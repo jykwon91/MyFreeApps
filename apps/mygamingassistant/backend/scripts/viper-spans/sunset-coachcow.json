@@ -1,0 +1,278 @@
+{
+ "video_id": "X8erN-c1kyE",
+ "map_slug": "sunset",
+ "author": "CoachCow",
+ "lineups": [
+  {
+   "cs": 82,
+   "title": "Market Wall 1 \u2014 Attacker-side long Viper wall",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "market",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     82.0,
+     83.0
+    ],
+    "aim": [
+     84.6,
+     85.67
+    ],
+    "throw": [
+     85.6,
+     86.3
+    ],
+    "landing": [
+     87.7,
+     89.0
+    ]
+   }
+  },
+  {
+   "cs": 93,
+   "title": "Market Wall 2 \u2014 Wall fired from Mid Courtyard (readout 'Mid Courtyard')",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "market",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     93.95,
+     94.12
+    ],
+    "aim": [
+     93.97,
+     94.12
+    ],
+    "throw": [
+     94.1,
+     94.7
+    ],
+    "landing": [
+     96.1,
+     97.3
+    ]
+   }
+  },
+  {
+   "cs": 101,
+   "title": "B Site Orb 1 \u2014 Attacker Poison Cloud orb thrown from Mid Bottom in a high",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     101.0,
+     102.4
+    ],
+    "aim": [
+     103.0,
+     103.73
+    ],
+    "throw": [
+     105.35,
+     105.95
+    ],
+    "landing": [
+     114.3,
+     115.4
+    ]
+   }
+  },
+  {
+   "cs": 107,
+   "title": "Market Wall 3 \u2014 Attacker Toxic Screen placed from inside B Main: the hand is",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "market",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     107.4,
+     107.8
+    ],
+    "aim": [
+     108.45,
+     109.1
+    ],
+    "throw": [
+     109.12,
+     109.75
+    ],
+    "landing": [
+     111.6,
+     112.8
+    ]
+   }
+  },
+  {
+   "cs": 120,
+   "title": "A Main Wall 1 \u2014 Attacker Viper wall thrown from Mid Tiles, standing tight",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     120.3,
+     121.3
+    ],
+    "aim": [
+     121.75,
+     122.35
+    ],
+    "throw": [
+     122.3,
+     122.9
+    ],
+    "landing": [
+     122.45,
+     123.0
+    ]
+   }
+  },
+  {
+   "cs": 182,
+   "title": "A Main Orb 1 \u2014 Attacker Side Spawn: Viper stands under the bunting by the",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     182.0,
+     183.2
+    ],
+    "aim": [
+     183.25,
+     183.7
+    ],
+    "throw": [
+     185.1,
+     185.7
+    ],
+    "landing": [
+     188.9,
+     189.9
+    ]
+   }
+  },
+  {
+   "cs": 190,
+   "title": "A Site Orb 1 \u2014 A Lobby: Viper stands against the grey wall and garage door",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     190.3,
+     191.2
+    ],
+    "aim": [
+     192.1,
+     193.0
+    ],
+    "throw": [
+     193.05,
+     193.65
+    ],
+    "landing": [
+     196.3,
+     196.64
+    ]
+   }
+  },
+  {
+   "cs": 200,
+   "title": "Mid Orb 1 \u2014 Mid Bottom, during buy phase: Viper lines up on the wooden",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     200.5,
+     201.5
+    ],
+    "aim": [
+     202.2,
+     203.3
+    ],
+    "throw": [
+     205.1,
+     205.7
+    ],
+    "landing": [
+     208.15,
+     209.1
+    ]
+   }
+  },
+  {
+   "cs": 223,
+   "title": "A Site Molly 1 \u2014 A Lobby, second stand spot under the bunting, facing the",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     223.65,
+     224.4
+    ],
+    "aim": [
+     225.0,
+     225.3
+    ],
+    "throw": [
+     226.98,
+     227.58
+    ],
+    "landing": [
+     231.25,
+     232.2
+    ]
+   }
+  },
+  {
+   "cs": 234,
+   "title": "A Site Molly 2 \u2014 A Link alley by Paola's Pawn Shop, Viper carrying the spike",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     234.4,
+     236.9
+    ],
+    "aim": [
+     237.2,
+     237.83
+    ],
+    "throw": [
+     237.75,
+     238.3
+    ],
+    "landing": [
+     240.05,
+     241.1
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
