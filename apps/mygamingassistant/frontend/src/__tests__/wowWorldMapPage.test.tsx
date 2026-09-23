@@ -1,9 +1,21 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import WowWorldMapPage from "@/games/wow-forever/pages/WowWorldMapPage";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
+import type { MapCapture } from "@/games/wow-forever/types/mapCapture";
+
+const capturesQuery = vi.hoisted(() => ({
+  data: { captures: [] as MapCapture[] },
+  isLoading: false,
+  isError: false,
+}));
+
+vi.mock("@/games/wow-forever/api/wowMapCapturesApi", () => ({
+  useGetMapCapturesQuery: () => capturesQuery,
+  useImportMapCapturesMutation: () => [vi.fn(), { isLoading: false }],
+}));
 
 function renderPage() {
   return render(
@@ -64,6 +76,37 @@ describe("WoW Forever World Map page", () => {
     const dungeons = screen.getByRole("region", { name: "Dungeons & raids" });
     const stockade = within(dungeons).getByRole("article", { name: "Dungeon: Stormwind Stockade" });
     expect(within(stockade).getByText(/Level 23 in Forever · opens at level 15 — too low to enter yet/)).toBeInTheDocument();
+  });
+
+  it("shows where a trainer was captured in Forever instead of the Classic spot", async () => {
+    capturesQuery.data = {
+      captures: [
+        {
+          capture_key: "npc:906:service",
+          kind: "service",
+          subkind: "class_trainer",
+          tag: "warlock",
+          npc_id: 906,
+          name: "Maximillian Crowe",
+          title: "Warlock Trainer",
+          zone_id: 1429,
+          subzone: "Goldshire",
+          x: 43.1,
+          y: 65.5,
+          faction: "A",
+          captured_at: "2026-09-20T18:00:00.000Z",
+        },
+      ],
+    };
+    window.localStorage.setItem(
+      PLAYER_SETTINGS_STORAGE_KEY,
+      JSON.stringify({ faction: "A", classId: "warlock", zoneId: 1429, level: null, position: { x: 42, y: 65 } }),
+    );
+    renderPage();
+    const trainer = await screen.findByRole("article", { name: "Warlock trainer: Maximillian Crowe" });
+    expect(within(trainer).getByText(/Goldshire, Elwynn Forest \(43\.1, 65\.5\)/)).toBeInTheDocument();
+    expect(within(trainer).getByText(/^Captured in Forever/)).toBeInTheDocument();
+    capturesQuery.data = { captures: [] };
   });
 
   it("warns on a zone that's new in Forever", async () => {

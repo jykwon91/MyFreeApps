@@ -66,6 +66,47 @@ test("a level 1 Warlock sees Northshire's quests and the nearby dungeons", async
   await expect(page.getByRole("group", { name: "Elwynn Forest markers" })).toBeVisible();
 });
 
+test("a location captured in Forever replaces the Classic spot and the waypoint follows it", async ({ page }) => {
+  // The capture API is the only backend call; answer it like a server with one capture.
+  await page.route("**/api/wow/map-captures", (route) =>
+    route.fulfill({
+      json: {
+        captures: [
+          {
+            capture_key: "npc:906:service",
+            kind: "service",
+            subkind: "class_trainer",
+            tag: "warlock",
+            npc_id: 906,
+            name: "Maximillian Crowe",
+            title: "Warlock Trainer",
+            zone_id: 1429,
+            subzone: "Goldshire",
+            x: 43.1,
+            y: 65.5,
+            faction: "A",
+            quests: null,
+            captured_at: "2026-09-20T18:00:00Z",
+          },
+        ],
+      },
+    }),
+  );
+  await page.goto("/wow-forever/map");
+  await page.getByRole("radio", { name: "Alliance" }).click();
+  await page.getByLabel("Class").selectOption("warlock");
+  await page.getByLabel("Zone").selectOption({ label: "Elwynn Forest" });
+  await page.getByLabel(/Your coordinates/).fill("42, 65");
+  await page.getByRole("button", { name: "Set position" }).click();
+
+  const trainer = page.getByRole("article", { name: "Warlock trainer: Maximillian Crowe" });
+  await expect(trainer.getByText(/^Captured in Forever/)).toBeVisible();
+  await expect(trainer.getByText("Classic location — may differ in Forever")).toHaveCount(0);
+  await trainer.getByRole("button", { name: "Copy in-game waypoint" }).first().click();
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toBe("/mga way 1429 43.1 65.5 Maximillian Crowe");
+});
+
 test("a far-away trainer gets flight directions with the discovery caveat", async ({ page }) => {
   await page.goto("/wow-forever/map");
   await page.getByRole("radio", { name: "Alliance" }).click();

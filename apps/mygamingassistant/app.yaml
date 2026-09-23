@@ -50,6 +50,8 @@ workers: []
 post_deploy_commands:
   - python -m app.cli load-fixtures
   - python -m app.cli import-lineups
+  # WoW World Map captures from the committed pack (backend/data/wow_map_captures.json).
+  - python -m app.cli import-wow-captures
 
 # Host-side smoke checks run AFTER the health check + bundle tripwire (see the
 # deploy template's post_deploy_verifications block). Each entry is a name + a

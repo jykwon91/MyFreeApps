@@ -3,10 +3,13 @@
 --   /mga way <uiMapID> <x> <y> [label]     e.g. /mga way 1429 44.4 66.2 Maximillian Crowe
 --   /mga way <zone name> <x> <y> [label]   e.g. /mga way Elwynn Forest 44.4 66.2
 --   /mga clear                             remove the pin
+--   /mga captures                          how many places Capture.lua has noted
 --   /mga                                   help
 --
 -- Uses the client's own map pin: C_Map.SetUserWaypoint + C_SuperTrack.
 -- Coordinates are map percent (0-100), the same numbers the site shows.
+
+local _, ns = ...
 
 local ADDON = "MGA Companion"
 local PREFIX = "|cff33aaff" .. ADDON .. ":|r "
@@ -15,6 +18,7 @@ local MAX_MAP_ID = 5000 -- WoW Forever map ids stay well below this
 local function say(message)
   DEFAULT_CHAT_FRAME:AddMessage(PREFIX .. message)
 end
+ns.say = say -- Capture.lua reports what it notes
 
 local function trim(text)
   return (text:gsub("^%s+", ""):gsub("%s+$", ""))
@@ -93,9 +97,16 @@ local function clearWaypoint()
   end
 end
 
+local function captures()
+  local count = ns.captureCount and ns.captureCount() or 0
+  say(count .. " place(s) noted. Type /reload (or log out) so WoW saves them, then upload")
+  say("WTF\\Account\\<account>\\SavedVariables\\MGACompanion.lua on the World Map page.")
+end
+
 local function help()
   say("/mga way <map id or zone> <x> <y> [label] — pin a spot on your map")
   say("/mga clear — remove the pin")
+  say("/mga captures — how many trainers, quest givers and entrances you've noted")
   say("Copy ready-made commands from the World Map on mygamingassistant.myfreeapps.org")
 end
 
@@ -107,6 +118,8 @@ SlashCmdList.MGACOMPANION = function(input)
     setWaypoint(rest or "")
   elseif command == "clear" then
     clearWaypoint()
+  elseif command == "captures" then
+    captures()
   else
     help()
   end

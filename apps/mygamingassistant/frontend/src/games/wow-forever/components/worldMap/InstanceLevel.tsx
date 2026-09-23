@@ -14,6 +14,9 @@ interface InstanceLevelProps {
 
 /** "Level 17 (Forever) · opens at level 10 — your level", coloured for the player. */
 export default function InstanceLevel({ poi, level }: InstanceLevelProps) {
+  if (poi.levelMin === undefined) {
+    return <p className="text-sm text-muted-foreground">Level not known yet</p>;
+  }
   const band = level === null ? null : instanceBand(poi, level);
   const locked = level !== null && level < (poi.requiredLevel ?? 0);
   return (

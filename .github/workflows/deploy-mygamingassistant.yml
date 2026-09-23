@@ -174,6 +174,7 @@ jobs:
             # goes live with no manual VPS step.
             docker compose -f apps/mygamingassistant/docker-compose.yml exec -T api python -m app.cli load-fixtures
             docker compose -f apps/mygamingassistant/docker-compose.yml exec -T api python -m app.cli import-lineups
+            docker compose -f apps/mygamingassistant/docker-compose.yml exec -T api python -m app.cli import-wow-captures
 
             echo "--- Wait for API health check ---"
             for i in $(seq 1 30); do

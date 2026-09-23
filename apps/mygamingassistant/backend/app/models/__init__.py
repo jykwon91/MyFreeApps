@@ -14,6 +14,9 @@ from app.models.game.source import Source  # noqa: F401
 from app.models.game.lineup import Lineup  # noqa: F401
 from app.models.game.lineup_package import LineupPackage, LineupPackageLineup  # noqa: F401
 
+# WoW Forever World Map — locations captured in game by the companion addon
+from app.models.wow.map_capture import WowMapCapture  # noqa: F401
+
 # Shared models from platform_shared. Importing them here registers their
 # tables with ``Base.metadata`` so Alembic autogenerate + Base.metadata.create_all
 # see the schema. MGA does not own these tables — platform_shared is canonical.
