@@ -1,0 +1,279 @@
+{
+ "video_id": "SvKwHEe-FNc",
+ "map_slug": "mirage",
+ "game_slug": "cs2",
+ "author": "CS2 NADES",
+ "lineups": [
+  {
+   "cs": 0,
+   "title": "Mid Flash 1 \u2014 CT self pop-flash from the Mid Window room: stand against the",
+   "ability": "flash",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "window",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     0.75,
+     2.6
+    ],
+    "aim": [
+     3.0,
+     4.12
+    ],
+    "throw": [
+     4.4,
+     5.0
+    ],
+    "landing": [
+     6.05,
+     6.7
+    ]
+   }
+  },
+  {
+   "cs": 12,
+   "title": "Window Flash 1 \u2014 T-side Window flash from the Top Mid area: stand at the end",
+   "ability": "flash",
+   "technique": "jump",
+   "target": "window",
+   "stand": "top-mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     12.27,
+     13.45
+    ],
+    "aim": [
+     14.0,
+     15.1
+    ],
+    "throw": [
+     15.4,
+     15.97
+    ],
+    "landing": [
+     17.07,
+     17.3
+    ]
+   }
+  },
+  {
+   "cs": 66,
+   "title": "Catwalk Flash 1 \u2014 T-side Top Mid, standing against the wall beside the",
+   "ability": "flash",
+   "technique": "jump",
+   "target": "catwalk",
+   "stand": "top-mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     66.35,
+     67.85
+    ],
+    "aim": [
+     68.2,
+     69.25
+    ],
+    "throw": [
+     70.7,
+     71.3
+    ],
+    "landing": [
+     72.38,
+     72.98
+    ]
+   }
+  },
+  {
+   "cs": 79,
+   "title": "Mid Flash 2 \u2014 T-side mid flash thrown from inside a small wooden-ceilinged",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "top-mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     79.0,
+     80.6
+    ],
+    "aim": [
+     82.15,
+     82.9
+    ],
+    "throw": [
+     82.92,
+     83.52
+    ],
+    "landing": [
+     87.37,
+     88.1
+    ]
+   }
+  },
+  {
+   "cs": 91,
+   "title": "A Site Flash 1 \u2014 CT retake pop-flash onto A Site: the player stands in the",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "jungle",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     91.9,
+     92.9
+    ],
+    "aim": [
+     93.0,
+     93.77
+    ],
+    "throw": [
+     95.23,
+     95.83
+    ],
+    "landing": [
+     100.05,
+     100.95
+    ]
+   }
+  },
+  {
+   "cs": 102,
+   "title": "Connector Flash 1 \u2014 CT step-throw pop-flash into Connector: aimed at the",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "connector",
+   "stand": "jungle",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     102.8,
+     103.7
+    ],
+    "aim": [
+     105.5,
+     106.5
+    ],
+    "throw": [
+     106.6,
+     107.2
+    ],
+    "landing": [
+     108.25,
+     108.85
+    ]
+   }
+  },
+  {
+   "cs": 112,
+   "title": "A Site Flash 2 \u2014 CT retake flash for A Site: stand against the gas-cylinder",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     112.45,
+     113.95
+    ],
+    "aim": [
+     114.05,
+     114.95
+    ],
+    "throw": [
+     115.0,
+     115.6
+    ],
+    "landing": [
+     119.8,
+     120.6
+    ]
+   }
+  },
+  {
+   "cs": 121,
+   "title": "A Palace Flash 1 \u2014 T-side flash thrown from the outdoor alcove beside the red",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "a-palace",
+   "stand": "a-palace",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     121.34,
+     122.25
+    ],
+    "aim": [
+     122.52,
+     122.93
+    ],
+    "throw": [
+     122.9,
+     123.5
+    ],
+    "landing": [
+     126.65,
+     127.25
+    ]
+   }
+  },
+  {
+   "cs": 130,
+   "title": "Market Flash 1 \u2014 T-side flash from the B Apartments exit room: stand at the",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "market",
+   "stand": "b-apts",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     130.4,
+     131.9
+    ],
+    "aim": [
+     132.45,
+     133.45
+    ],
+    "throw": [
+     133.45,
+     134.05
+    ],
+    "landing": [
+     135.4,
+     136.1
+    ]
+   }
+  },
+  {
+   "cs": 138,
+   "title": "CT Spawn Flash 1 \u2014 T flash from the top of A Ramp by the box stack (steps down",
+   "ability": "flash",
+   "technique": "jump",
+   "target": "ct-spawn",
+   "stand": "a-ramp",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     138.6,
+     140.4
+    ],
+    "aim": [
+     141.0,
+     142.1
+    ],
+    "throw": [
+     142.25,
+     142.85
+    ],
+    "landing": [
+     144.05,
+     144.85
+    ]
+   }
+  }
+ ],
+ "note": ""
+}

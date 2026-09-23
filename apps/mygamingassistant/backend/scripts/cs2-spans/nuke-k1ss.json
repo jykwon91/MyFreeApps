@@ -1,0 +1,441 @@
+{
+ "video_id": "y_bSh_OiGho",
+ "map_slug": "nuke",
+ "game_slug": "cs2",
+ "author": "k1ss",
+ "lineups": [
+  {
+   "cs": 26,
+   "title": "Outside Smoke 1 \u2014 T Spawn: stand against the gravel wall beside the truck at T",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "outside",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     26.6,
+     28.4
+    ],
+    "aim": [
+     28.5,
+     29.55
+    ],
+    "throw": [
+     29.55,
+     30.15
+    ],
+    "landing": [
+     36.2,
+     37.4
+    ]
+   }
+  },
+  {
+   "cs": 29,
+   "title": "Outside Smoke 2 \u2014 Same T Spawn gravel-wall stand and the same high aim over the",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "outside",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     29.75,
+     31.2
+    ],
+    "aim": [
+     31.2,
+     31.95
+    ],
+    "throw": [
+     32.05,
+     32.65
+    ],
+    "landing": [
+     36.75,
+     37.9
+    ]
+   }
+  },
+  {
+   "cs": 54,
+   "title": "Upper A Molly 1 \u2014 T-side molotov from the outside roof (T Roof, beside the",
+   "ability": "molotov",
+   "technique": "jump",
+   "target": "upper-a",
+   "stand": "outside",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     54.8,
+     56.3
+    ],
+    "aim": [
+     61.1,
+     62.15
+    ],
+    "throw": [
+     62.73,
+     63.33
+    ],
+    "landing": [
+     65.7,
+     66.9
+    ]
+   }
+  },
+  {
+   "cs": 76,
+   "title": "Upper A Flash 1 \u2014 T-side pop-flash for A Site, thrown from Roof (above",
+   "ability": "flash",
+   "technique": "jump",
+   "target": "upper-a",
+   "stand": "outside",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     76.22,
+     76.52
+    ],
+    "aim": [
+     76.28,
+     76.52
+    ],
+    "throw": [
+     76.62,
+     77.2
+    ],
+    "landing": [
+     85.95,
+     86.75
+    ]
+   }
+  },
+  {
+   "cs": 121,
+   "title": "Ramp Flash 1 \u2014 T-side pop-flash for Ramp, thrown from Trophy room",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "a-ramp",
+   "stand": "a-ramp",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     121.2,
+     122.7
+    ],
+    "aim": [
+     130.25,
+     131.2
+    ],
+    "throw": [
+     131.1,
+     131.75
+    ],
+    "landing": [
+     144.45,
+     145.3
+    ]
+   }
+  },
+  {
+   "cs": 161,
+   "title": "Ramp Flash 2 \u2014 Second, different T-side flash from Trophy room",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "a-ramp",
+   "stand": "a-ramp",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     161.5,
+     161.95
+    ],
+    "aim": [
+     161.98,
+     162.19
+    ],
+    "throw": [
+     162.15,
+     162.75
+    ],
+    "landing": [
+     163.93,
+     164.33
+    ]
+   }
+  },
+  {
+   "cs": 217,
+   "title": "Lower B Flash 1 \u2014 T-side flashbang from the Control Room (Observation) corner",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "lower-b",
+   "stand": "a-ramp",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     217.0,
+     218.8
+    ],
+    "aim": [
+     222.4,
+     223.4
+    ],
+    "throw": [
+     223.5,
+     224.1
+    ],
+    "landing": [
+     232.95,
+     234.0
+    ]
+   }
+  },
+  {
+   "cs": 238,
+   "title": "Ramp Flash 3 \u2014 Ramp, standing by the red crates below the Ramp-to-Control",
+   "ability": "flash",
+   "technique": "running",
+   "target": "a-ramp",
+   "stand": "a-ramp",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     238.2,
+     238.5
+    ],
+    "aim": [
+     238.25,
+     238.5
+    ],
+    "throw": [
+     238.55,
+     239.15
+    ],
+    "landing": [
+     240.25,
+     241.25
+    ]
+   }
+  },
+  {
+   "cs": 246,
+   "title": "Ramp HE 1 \u2014 Ramp, by the red crates: HE aimed at the ceiling or top of",
+   "ability": "grenade",
+   "technique": "standing",
+   "target": "a-ramp",
+   "stand": "a-ramp",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     246.45,
+     247.1
+    ],
+    "aim": [
+     246.9,
+     247.38
+    ],
+    "throw": [
+     247.38,
+     248.0
+    ],
+    "landing": [
+     249.0,
+     250.0
+    ]
+   }
+  },
+  {
+   "cs": 273,
+   "title": "Ramp Molly 1 \u2014 Ramp, close to the doorway: molotov aimed at the top of the",
+   "ability": "molotov",
+   "technique": "running",
+   "target": "a-ramp",
+   "stand": "a-ramp",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     273.6,
+     274.25
+    ],
+    "aim": [
+     273.85,
+     274.45
+    ],
+    "throw": [
+     274.4,
+     274.98
+    ],
+    "landing": [
+     276.8,
+     278.0
+    ]
+   }
+  },
+  {
+   "cs": 287,
+   "title": "Outside Molly 1 \u2014 CT molotov thrown from Outside beside the grey",
+   "ability": "molotov",
+   "technique": "running",
+   "target": "outside",
+   "stand": "outside",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     287.0,
+     288.2
+    ],
+    "aim": [
+     290.2,
+     291.35
+    ],
+    "throw": [
+     291.97,
+     292.57
+    ],
+    "landing": [
+     295.15,
+     296.9
+    ]
+   }
+  },
+  {
+   "cs": 309,
+   "title": "Outside HE 1 \u2014 CT HE grenade thrown from right at the Garage door on",
+   "ability": "grenade",
+   "technique": "running",
+   "target": "outside",
+   "stand": "outside",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     309.05,
+     309.7
+    ],
+    "aim": [
+     309.65,
+     310.13
+    ],
+    "throw": [
+     310.3,
+     310.9
+    ],
+    "landing": [
+     312.0,
+     312.8
+    ]
+   }
+  },
+  {
+   "cs": 326,
+   "title": "Outside HE 2 \u2014 Second CT HE grenade from Outside, standing a few steps back",
+   "ability": "grenade",
+   "technique": "standing",
+   "target": "outside",
+   "stand": "outside",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     326.75,
+     328.35
+    ],
+    "aim": [
+     328.72,
+     329.02
+    ],
+    "throw": [
+     328.98,
+     329.6
+    ],
+    "landing": [
+     330.75,
+     331.35
+    ]
+   }
+  },
+  {
+   "cs": 348,
+   "title": "Outside Smoke 3 \u2014 T side: from Outside, standing tucked into the chain-link",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "outside",
+   "stand": "outside",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     348.1,
+     349.6
+    ],
+    "aim": [
+     350.5,
+     351.4
+    ],
+    "throw": [
+     351.45,
+     352.05
+    ],
+    "landing": [
+     359.35,
+     360.5
+    ]
+   }
+  },
+  {
+   "cs": 403,
+   "title": "Outside Flash 1 \u2014 Outside: stand tucked behind the blue container by the fence",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "outside",
+   "stand": "outside",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     403.25,
+     403.58
+    ],
+    "aim": [
+     403.42,
+     403.58
+    ],
+    "throw": [
+     403.8,
+     404.35
+    ],
+    "landing": [
+     405.5,
+     406.2
+    ]
+   }
+  },
+  {
+   "cs": 425,
+   "title": "Ramp Flash 4 \u2014 Trophy room: stand facing the doorway toward Control Room",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "a-ramp",
+   "stand": "lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     425.0,
+     426.6
+    ],
+    "aim": [
+     426.6,
+     427.45
+    ],
+    "throw": [
+     427.45,
+     428.05
+    ],
+    "landing": [
+     429.05,
+     429.45
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
