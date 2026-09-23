@@ -89,6 +89,15 @@ AGENTS = {
         "legacy_zone_maps": set(),
         "short": {"hot-hands": "Molly"},
     },
+    # CS2 grenades belong to no agent: the "agent" is the game, and its pack says so in
+    # game_slug so ingest_agent resolves the CS2 map, zones and utility types.
+    "cs2": {
+        "game": "cs2",
+        "sources": {},
+        "placed": set(),
+        "legacy_zone_maps": set(),
+        "short": {"smoke": "Smoke", "flash": "Flash", "molotov": "Molly", "grenade": "HE"},
+    },
 }
 DEFAULT_AGENT = "cypher"
 
@@ -103,6 +112,7 @@ from legacy_pack_zones import ZONES  # noqa: E402
 AUTHOR = None
 PLACED = AGENTS[DEFAULT_AGENT]["placed"]
 AB_SHORT = AGENTS[DEFAULT_AGENT]["short"]
+GAME = "valorant"
 ZONE_LABEL = {
     "a-site": "A Site", "b-site": "B Site", "c-site": "C Site",
     "a-main": "A Main", "b-main": "B Main", "c-main": "C Main",
@@ -111,6 +121,16 @@ ZONE_LABEL = {
     "showers": "Showers", "mid": "Mid", "market": "Market", "mail": "Mail",
     "t-spawn": "Attacker Spawn", "ct-spawn": "Defender Spawn",
 }
+
+
+def zone_label(slug):
+    """A zone's display name. ZONE_LABEL speaks VALORANT ("Attacker Spawn"); a CS2 map's zones
+    (banana, second-mid, ct-spawn) read as their own words, with the side letters upper-cased."""
+    if GAME == "valorant" and slug in ZONE_LABEL:
+        return ZONE_LABEL[slug]
+    return " ".join(w.upper() if w in ("t", "ct") else w.capitalize() for w in slug.split("-"))
+
+
 # Chapter-level narration ("And here's just all the trips...") describes the
 # whole chapter, not the one placement it happened to be burned over. Using it
 # as a title would name several different lineups the same thing.
@@ -254,7 +274,7 @@ def resolve_author(agent, video, stated):
 
 
 def main():
-    global AUTHOR, PLACED, AB_SHORT
+    global AUTHOR, PLACED, AB_SHORT, GAME
     argv, video, agent, author = [], DEFAULT_VIDEO, DEFAULT_AGENT, None
     rest = list(sys.argv[1:])
     while rest:
@@ -285,6 +305,7 @@ def main():
     AUTHOR = resolve_author(agent, video, author)
     PLACED = AGENTS[agent]["placed"]
     AB_SHORT = AGENTS[agent]["short"]
+    GAME = AGENTS[agent].get("game", "valorant")
     if len(argv) < 3:
         raise SystemExit(__doc__)
     src, map_slug, out_path = argv[0], argv[1], argv[2]
@@ -347,9 +368,10 @@ def main():
         # Anything but an explicit attacker/defender read is excluded, never defaulted: a
         # localizer that could not tell the side used to land on side_b (defender) silently.
         side_word = str(L.get("side", "")).strip().lower()
-        if side_word.startswith("att"):
+        # CS2 localizers may answer in the game's own terms: T attacks, CT defends.
+        if side_word.startswith(("att", "terror")) or side_word in ("t", "t side", "t-side"):
             side = "side_a"
-        elif side_word.startswith("def"):
+        elif side_word.startswith(("def", "ct", "counter")):
             side = "side_b"
         else:
             excluded.append((it.get("nn"), it.get("name"), "NO_SIDE", repr(L.get("side"))))
@@ -384,12 +406,12 @@ def main():
         tgt, ability = r.pop("_key")
         desc = r.pop("_desc")
         seen_key[(tgt, ability)] += 1
-        ident = f"{ZONE_LABEL.get(tgt, tgt)} {AB_SHORT.get(ability, ability)} {seen_key[(tgt, ability)]}"
+        ident = f"{zone_label(tgt)} {AB_SHORT.get(ability, ability)} {seen_key[(tgt, ability)]}"
         r["title"] = f"{ident} — {desc}" if desc else ident
     ordered = ["cs", "title", "ability", "technique", "target", "stand", "side", "spans"]
     rows = [{k: r[k] for k in ordered} for r in rows]
 
-    pack = {"video_id": video, "map_slug": map_slug, "author": AUTHOR,
+    pack = {"video_id": video, "map_slug": map_slug, "game_slug": GAME, "author": AUTHOR,
             "lineups": rows, "note": note}
     with open(out_path, "w", encoding="utf-8") as fh:
         json.dump(pack, fh, indent=1)

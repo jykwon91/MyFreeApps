@@ -16,6 +16,7 @@ from callouts_abyss import ABYSS_CALLOUTS
 from callouts_ascent import ASCENT_CALLOUTS
 from callouts_breeze import BREEZE_CALLOUTS
 from callouts_haven import HAVEN_CALLOUTS
+from callouts_inferno import INFERNO_CALLOUTS
 from callouts_lotus import LOTUS_CALLOUTS
 from callouts_split import SPLIT_CALLOUTS
 from callouts_summit import SUMMIT_CALLOUTS
@@ -28,6 +29,7 @@ CALLOUTS_BY_MAP = {
     "ascent": ASCENT_CALLOUTS,
     "breeze": BREEZE_CALLOUTS,
     "haven": HAVEN_CALLOUTS,
+    "inferno": INFERNO_CALLOUTS,
     "lotus": LOTUS_CALLOUTS,
     "split": SPLIT_CALLOUTS,
     "summit": SUMMIT_CALLOUTS,

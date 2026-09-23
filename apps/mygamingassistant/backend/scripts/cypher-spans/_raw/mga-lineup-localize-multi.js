@@ -14,6 +14,7 @@
 // Launch with:
 //   Workflow({ scriptPath: '<this file>', args: {
 //     map, video, instr,
+//     game?,                 // 'valorant' (default) or 'cs2' -- names the game and its expert doc
 //     items: [{ nn, cs, next, ability, name, placed?, varNote?, varNoteAdd? }],
 //     locModel?, locEffort?, gateModel?, gateEffort?, surveyModel?, surveyEffort?,
 //     maxPerChapter?,        // safety cap, default 6
@@ -37,6 +38,19 @@ const MAX_PER_CHAPTER = A.maxPerChapter || 6
 // available' will reach for a HUD string or an editor flourish and transcribe that instead.
 // Pass captions:false for a source with none.
 const CAPTIONS = A.captions !== false
+
+// The game names itself in every prompt and picks the domain reference the localizer reads.
+// A CS2 localizer told it is looking at VALORANT reaches for agent abilities and Riot callouts.
+const GAMES = {
+  valorant: { name: 'VALORANT', expert: 'valorant-lineup-expert.md' },
+  cs2: { name: 'CS2', expert: 'cs2-lineup-expert.md' },
+}
+const GAME = GAMES[A.game || 'valorant']
+if (!GAME) return { error: `unknown game ${A.game}; one of ${Object.keys(GAMES).join(', ')}` }
+// Frame-study labels are directory names under one shared mga-frame-study folder. Two runs on
+// the same map (two sources of one agent) both wrote abyss-01a-CARD.png, and a gate could read
+// the other run's card. The video id keeps every run's labels apart.
+const tag = (it) => it.map + '-' + String(VIDEO || '').slice(0, 6) + '-' + it.nn
 
 // `map` may be set per item so one run can cover several maps (the callout
 // vocabulary an agent needs is per-map, so it must reach the prompt).
@@ -151,13 +165,13 @@ const f = (s) => s[0] + ' ' + s[1]
 
 function surveyPrompt(it) {
   const vn = it.varNote ? `\nNOTE: ${it.varNote}` : ''
-  return `You are a VALORANT lineup SURVEY subagent for MGA. You are NOT localizing anything precisely -- you are producing an INVENTORY so that later agents each get one placement.
+  return `You are a ${GAME.name} lineup SURVEY subagent for MGA. You are NOT localizing anything precisely -- you are producing an INVENTORY so that later agents each get one placement.
 
 Video ${VIDEO}, map ${it.map}. Chapter NN=${it.nn} titled "${it.name || ''}", window [${it.cs}, ${it.next}].${vn}
 
 ${GROUP_NOTE} Your job: watch the chapter and enumerate EVERY DISTINCT placement it contains.
 
-Method: a single COARSE pass is enough -- frame_study.py --video ${VIDEO} --t0 ${it.cs} --t1 ${it.next} --step 0.5 --height 720 --label ${it.map}-${it.nn}-survey (ONE call for the whole window: it decodes once and takes ~1-3 s per 30 s of footage; do not split it or poll for it), then montage_study.py to read it as a grid. Use the PowerShell tool. Read the montage and identify the shot boundaries: each placement typically runs walk-to-spot -> aim at surface -> deploy -> brief look at the result, then cuts to the next spot.
+Method: a single COARSE pass is enough -- frame_study.py --video ${VIDEO} --t0 ${it.cs} --t1 ${it.next} --step 0.5 --height 720 --label ${tag(it)}-survey (ONE call for the whole window: it decodes once and takes ~1-3 s per 30 s of footage; do not split it or poll for it), then montage_study.py to read it as a grid. Use the PowerShell tool. Read the montage and identify the shot boundaries: each placement typically runs walk-to-spot -> aim at surface -> deploy -> brief look at the result, then cuts to the next spot.
 
 ${CAPTIONS ? `READ THE ON-SCREEN CAPTIONS. This creator burns a caption into the footage for each placement (${CAPTION_EXAMPLES}). They name the spot and state the intent, and they are the best evidence available. Transcribe them verbatim.` : `THIS SOURCE HAS NO ON-SCREEN CAPTIONS, no chapter title plates and no drawn marks. Return caption:"" for every placement. Do not transcribe a HUD string, a location readout or an editor flourish as though it were a caption -- there is nothing to quote, and an invented one becomes the next agent's "best available statement" of what the spot is for.`}
 
@@ -176,7 +190,7 @@ Return via StructuredOutput: placements[] and notes.`
 }
 
 function locPrompt(it, fb) {
-  const label = it.map + '-' + it.nn + (fb ? '-r2' : '')
+  const label = tag(it) + (fb ? '-r2' : '')
   const fbb = fb ? `\n\nA PRIOR ATTEMPT FAILED the gate (events: ${(fb.failed_events || []).join(',') || '?'}; reason: ${fb.reason || '?'}). Re-localize honestly -- don't resubmit the same spans.` : ''
   const vn = it.varNote ? `\nNOTE: ${it.varNote}` : ''
   const placed = isPlaced(it)
@@ -188,7 +202,7 @@ function locPrompt(it, fb) {
   const ret = placed ? 'stand/aim/landing=[start,end] abs seconds (NO throw)' : 'stand/aim/throw/landing=[start,end] abs seconds'
   const cap = it.caption ? `\nThe creator's own on-screen caption for it reads: "${it.caption}" -- treat that as the best available statement of what this spot is for, and carry it into NOTES.` : ''
   const scoped = `\n\n*** SCOPED SUB-WINDOW ***\nThis chapter contains several separate placements. YOURS is only: "${it.what}" inside [${it.cs}, ${it.next}]. Other placements appear before/after that window -- localize ONLY yours and ignore the neighbours entirely. If your window turns out to contain no complete placement, say so in WEAKEST with low confidence rather than localizing a neighbour's.${cap}\nThe ability below came from a survey pass reading the footage, not from the chapter title (${TITLE_SHORT}). CONFIRM it against what you see deployed and correct it in your return if it disagrees.`
-  return `You are a VALORANT lineup-localization subagent for MGA. FIRST read this instructions file COMPLETELY and follow it (tooling, the events, mode-invariance, honesty contract): ${INSTR}\nIt points to a domain reference (valorant-lineup-expert.md) -- read that too.\n\nYOUR LINEUP: NN=${it.nn} name="${it.name || ''}" window [${it.cs}, ${it.next}] ability=${it.ability} on video ${VIDEO} (map ${it.map}). Use label prefix ${label} for ALL frame_study/montage/verify_events labels.${vn}${scoped}${mode}\n\nLocalize ${beats} by DENSE frame study (${pin}, --step 0). Build the verify_events CARD (--video ${VIDEO} --label ${label}) and READ it yourself; if a strip mismatches its event, re-localize before returning. Do NOT run recut_lineup_clips.py, do NOT edit repo files. Disk hygiene: Remove-Item -Recurse -Force your frame-dump + montage dirs under mga-frame-study before returning, KEEP verify-cards.${fbb}\n\nReturn via StructuredOutput: ${ret}; ability; charge; bounces; technique; target+stand_loc (callouts); side; confidence; weakest; notes; card_path (absolute path to the CARD png).`
+  return `You are a ${GAME.name} lineup-localization subagent for MGA. FIRST read this instructions file COMPLETELY and follow it (tooling, the events, mode-invariance, honesty contract): ${INSTR}\nIt points to a domain reference (${GAME.expert}) -- read that too.\n\nYOUR LINEUP: NN=${it.nn} name="${it.name || ''}" window [${it.cs}, ${it.next}] ability=${it.ability} on video ${VIDEO} (map ${it.map}). Use label prefix ${label} for ALL frame_study/montage/verify_events labels.${vn}${scoped}${mode}\n\nLocalize ${beats} by DENSE frame study (${pin}, --step 0). Build the verify_events CARD (--video ${VIDEO} --label ${label}) and READ it yourself; if a strip mismatches its event, re-localize before returning. Do NOT run recut_lineup_clips.py, do NOT edit repo files. Disk hygiene: Remove-Item -Recurse -Force your frame-dump + montage dirs under mga-frame-study before returning, KEEP verify-cards.${fbb}\n\nReturn via StructuredOutput: ${ret}; ability; charge; bounces; technique; target+stand_loc (callouts); side; confidence; weakest; notes; card_path (absolute path to the CARD png).`
 }
 
 function gatePrompt(it, loc) {
