@@ -77,6 +77,18 @@ AGENTS = {
         "legacy_zone_maps": set(),
         "short": {"snake-bite": "Molly", "poison-cloud": "Orb", "toxic-screen": "Wall"},
     },
+    "fade": {
+        "sources": {"7N1Q4SFvaHE": "LNX", "5yqNa4HIq5Q": "Frost LIVE"},
+        "placed": set(),
+        "legacy_zone_maps": set(),
+        "short": {"haunt": "Haunt", "seize": "Seize"},
+    },
+    "phoenix": {
+        "sources": {"suTAk5BOVnc": "NRG mada"},
+        "placed": set(),
+        "legacy_zone_maps": set(),
+        "short": {"hot-hands": "Molly"},
+    },
 }
 DEFAULT_AGENT = "cypher"
 
@@ -124,9 +136,12 @@ def drop_non_latin(s):
     "under the <CJK> / <CJK> poster". Accurate, but the title is read by an
     English-speaking operator, and it crashes a cp1252 console outright. Keep the
     landmark ("under the poster"), drop the glyphs. Latin-1 accents and the
-    em-dash separator are below the cutoff and survive.
+    em-dash separator are below the cutoff and survive. A parenthetical holding
+    such glyphs (a non-English client's "(readout 'B <CJK>')") goes whole: it
+    only transcribes the callout the prose already names in English.
     """
-    kept = "".join(" " if ord(c) > 0x2500 else c for c in s or "")
+    s = re.sub(r"\s*\([^()]*[^\x00-─][^()]*\)", "", s or "")
+    kept = "".join(" " if ord(c) > 0x2500 else c for c in s)
     kept = kept.replace(" / ", " ")
     return " ".join(kept.split())
 

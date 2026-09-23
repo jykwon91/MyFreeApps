@@ -1,0 +1,89 @@
+{
+ "video_id": "5yqNa4HIq5Q",
+ "map_slug": "abyss",
+ "author": "Frost LIVE",
+ "lineups": [
+  {
+   "cs": 10,
+   "title": "A Site Haunt 1 \u2014 Attacker Haunt from A Main, stood at a wall/doorframe and",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     10.9,
+     13.0
+    ],
+    "aim": [
+     16.3,
+     17.1
+    ],
+    "throw": [
+     17.07,
+     17.67
+    ],
+    "landing": [
+     19.9,
+     20.9
+    ]
+   }
+  },
+  {
+   "cs": 27,
+   "title": "A Site Haunt 2 \u2014 Standing in A Main by the doorway, looking out toward A Site",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     27.8,
+     30.1
+    ],
+    "aim": [
+     30.25,
+     30.97
+    ],
+    "throw": [
+     30.96,
+     31.58
+    ],
+    "landing": [
+     33.55,
+     34.45
+    ]
+   }
+  },
+  {
+   "cs": 39,
+   "title": "B Site Haunt 1 \u2014 Haunt thrown high over the B Lobby wall/ledge (aimed up at",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     39.4,
+     41.4
+    ],
+    "aim": [
+     43.0,
+     44.03
+    ],
+    "throw": [
+     43.95,
+     44.6
+    ],
+    "landing": [
+     46.05,
+     47.2
+    ]
+   }
+  }
+ ],
+ "note": ""
+}

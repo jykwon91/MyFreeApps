@@ -17,6 +17,7 @@ sys.path[0].
 from make_instructions_examples_brimstone import EXAMPLES as _BRIMSTONE  # noqa: E402
 from make_instructions_examples_cypher import EXAMPLES as _CYPHER  # noqa: E402
 from make_instructions_examples_fade import EXAMPLES as _FADE  # noqa: E402
+from make_instructions_examples_fade_phoenix_abyss import EXAMPLES as _FADE_PHOENIX_ABYSS  # noqa: E402
 from make_instructions_examples_kayo import EXAMPLES as _KAYO  # noqa: E402
 from make_instructions_examples_killjoy import EXAMPLES as _KILLJOY  # noqa: E402
 from make_instructions_examples_killjoy_lotus import EXAMPLES as _KILLJOY_LOTUS  # noqa: E402
@@ -171,8 +172,8 @@ MAPS = {
 # win, and the loser's source would then be localized against another creator's title grammar --
 # the exact failure the per-source keying exists to prevent.
 EXAMPLES: dict[tuple[str, str], object] = {}
-for _part in (_BRIMSTONE, _CYPHER, _FADE, _KAYO, _KILLJOY, _KILLJOY_LOTUS, _KILLJOY_SPLIT,
-              _KILLJOY_SUMMIT, _KILLJOY_SUNSET, _PHOENIX, _SOVA, _VIPER, _VIPER_SUNSET):
+for _part in (_BRIMSTONE, _CYPHER, _FADE, _FADE_PHOENIX_ABYSS, _KAYO, _KILLJOY, _KILLJOY_LOTUS,
+              _KILLJOY_SPLIT, _KILLJOY_SUMMIT, _KILLJOY_SUNSET, _PHOENIX, _SOVA, _VIPER, _VIPER_SUNSET):
     _dupes = EXAMPLES.keys() & _part.keys()
     if _dupes:
         raise SystemExit(f"ABORT - duplicate EXAMPLES key(s) across agent corpora: {sorted(_dupes)}")
