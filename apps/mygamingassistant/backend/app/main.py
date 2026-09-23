@@ -27,7 +27,19 @@ from platform_shared.core.openapi import docs_kwargs
 from platform_shared.core.logging_safety import install_crlf_safe_logging
 from platform_shared.api.transparency_router import build_transparency_router
 
-from app.api import account, admin, games, health, lineups, lineup_packages, scheduler, sources, totp, wow_items
+from app.api import (
+    account,
+    admin,
+    games,
+    health,
+    lineup_packages,
+    lineups,
+    scheduler,
+    sources,
+    totp,
+    wow_items,
+    wow_map_captures,
+)
 # Note on lineups + lineup_packages routers:
 # MGA uses public-read / auth-write — each of those modules exports two
 # routers: ``public_router`` (no auth) and ``auth_router`` (operator only).
@@ -268,6 +280,7 @@ def _mount_public_routes(app: FastAPI) -> None:
     app.include_router(lineups.public_router)
     app.include_router(lineup_packages.public_router)
     app.include_router(wow_items.router)  # Turnstile + per-IP + daily-capped
+    app.include_router(wow_map_captures.public_router)
 
     # Deploy verification — exposes the git commit + boot timestamp so the
     # deploy workflow can confirm which commit is live without parsing logs.
@@ -333,6 +346,7 @@ def _mount_auth_routes(app: FastAPI) -> None:
     # function runs before _mount_public_routes in create_app (see below).
     app.include_router(lineups.auth_router)
     app.include_router(lineup_packages.auth_router)
+    app.include_router(wow_map_captures.auth_router)
     app.include_router(sources.router)
     app.include_router(scheduler.router)
     app.include_router(admin.router)

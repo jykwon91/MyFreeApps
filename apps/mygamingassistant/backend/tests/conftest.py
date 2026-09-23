@@ -107,6 +107,7 @@ _UOW_CONSUMERS = (
     "app.services.user.seed_user_service",
     "app.services.user.totp_service",
     "app.services.wow.item_extractor",
+    "app.services.wow.map_capture_service",
 )
 
 

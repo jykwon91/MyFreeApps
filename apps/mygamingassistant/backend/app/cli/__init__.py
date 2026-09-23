@@ -3,6 +3,8 @@
 Usage:
     python -m app.cli load-fixtures
     python -m app.cli import-lineups [pack.json]
+    python -m app.cli import-wow-captures [pack.json]
+    python -m app.cli export-wow-captures [pack.json]
     python -m app.cli backfill-clips
     python -m app.cli backfill-technique
     python -m app.cli backfill-landing-clips
@@ -12,6 +14,7 @@ Usage:
 """
 import asyncio
 import sys
+from pathlib import Path
 
 
 async def _run_backfill_clips() -> int:
@@ -181,6 +184,17 @@ def main() -> None:
         pack_path = sys.argv[2] if len(sys.argv) > 2 else None
         stats = asyncio.run(import_lineups_standalone(pack_path))
         print(stats.summary())
+    elif command == "import-wow-captures":
+        # Mirrors the World Map capture pack (backend/data/wow_map_captures.json)
+        # into the database — the serve-only prod half of the capture flow.
+        from app.services.wow.map_capture_service import import_pack
+        pack_path = Path(sys.argv[2]) if len(sys.argv) > 2 else None
+        print(asyncio.run(import_pack(pack_path)).summary())
+    elif command == "export-wow-captures":
+        # Local: write every stored capture to the pack, then commit it.
+        from app.services.wow.map_capture_service import export_pack
+        pack_path = Path(sys.argv[2]) if len(sys.argv) > 2 else None
+        print(f"Wrote {asyncio.run(export_pack(pack_path))} World Map capture(s) to the pack.")
     elif command == "backfill-clips":
         sys.exit(asyncio.run(_run_backfill_clips()))
     elif command == "backfill-technique":
@@ -198,6 +212,8 @@ def main() -> None:
         print("Available commands:")
         print("  load-fixtures          — load game taxonomy fixtures into the database")
         print("  import-lineups [pack]  — seed the public library from a published pack (after load-fixtures)")
+        print("  import-wow-captures [pack] — mirror the World Map capture pack into the database")
+        print("  export-wow-captures [pack] — write stored World Map captures to the pack (local)")
         print("  backfill-clips         — generate clips for accepted lineups missing one")
         print("  backfill-technique     — name throw-technique for accepted lineups missing one")
         print("  backfill-landing-clips — generate landing clips for accepted lineups missing one")

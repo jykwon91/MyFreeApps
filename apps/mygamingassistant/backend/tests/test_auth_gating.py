@@ -306,6 +306,8 @@ async def test_public_health_no_auth(client: AsyncClient):
         ("POST", "/api/lineup-packages"),
         ("PATCH", "/api/lineup-packages/00000000-0000-0000-0000-000000000000"),
         ("DELETE", "/api/lineup-packages/00000000-0000-0000-0000-000000000000"),
+        # WoW World Map capture import
+        ("POST", "/api/wow/map-captures"),
         # Sources (entire surface)
         ("GET", "/api/sources"),
         ("POST", "/api/sources"),
