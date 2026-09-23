@@ -7,11 +7,9 @@ CLAUDE.md tech-debt policy). ``lineup_callout_tables`` aggregates every map's ta
 ``from lineup_callouts import ...`` keeps resolving.
 """
 
-# Zones seeded for Inferno: a-site b-site a-long banana mid second-mid t-spawn ct-spawn. The first
-# CS2 table: no Riot readout to derive from, so it is written from the community callouts and each
-# family is placed by the side of the map it belongs to. Apartments has no zone of its own and is
-# deliberately ABSENT -- an apartments stand fails loud in the pack builder rather than silently
-# landing on a neighbour.
+# Zones seeded for Inferno: a-site b-site a-long banana mid second-mid apartments t-spawn ct-spawn.
+# The first CS2 table: no Riot readout to derive from, so it is written from the community callouts
+# and each family is placed by the side of the map it belongs to.
 INFERNO_CALLOUTS = [
     ("t spawn", "t-spawn"), ("t ramp", "t-spawn"), ("terrorist spawn", "t-spawn"),
     ("ct spawn", "ct-spawn"), ("counter terrorist spawn", "ct-spawn"),
@@ -29,6 +27,9 @@ INFERNO_CALLOUTS = [
     ("truck", "a-site"), ("triple", "a-site"), ("short", "a-site"), ("short a", "a-site"),
     ("moto", "a-site"), ("a default", "a-site"),
     ("long", "a-long"), ("a long", "a-long"), ("long a", "a-long"), ("long hall", "a-long"),
+    # Apartments is the T route up to A Balcony; Balcony itself stays with the site.
+    ("apartments", "apartments"), ("apartmants", "apartments"), ("apps", "apartments"),
+    ("aps", "apartments"), ("boiler", "apartments"),
     # --- middle ---------------------------------------------------------------------------------
     ("second mid", "second-mid"), ("2nd mid", "second-mid"),
     ("top mid", "mid"), ("alt mid", "mid"), ("mid", "mid"),
