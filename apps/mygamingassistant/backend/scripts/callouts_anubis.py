@@ -37,8 +37,8 @@ ANUBIS_CALLOUTS = [
     ("b back site", "b-site"), ("back b", "b-site"), ("back of b", "b-site"),
     # E-Box is the room linking the Water under Bridge to B; it opens onto the site beside
     # Pillar/Ninja, and since 2026-01-22 has a hole through to Back Site, so it belongs to B.
-    ("e box", "b-site"), ("e-box", "b-site"), ("ebox", "b-site"),
-    ("e box hole", "b-site"), ("e-box hole", "b-site"), ("ebox hole", "b-site"),
+    ("e box", "b-site"), ("ebox", "b-site"),
+    ("e box hole", "b-site"), ("ebox hole", "b-site"),
     ("b hole", "b-site"), ("b window", "b-site"),
     # Bare "hole" = the 2026 E-Box -> Back Site cut, the opening the patch notes call a "hole".
     # The moved Bridge drop is keyed separately below as "bridge hole".
