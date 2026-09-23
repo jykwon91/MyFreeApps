@@ -164,8 +164,10 @@ export default function ZoneMap({ zone, player, markers, selectedId, destination
       </div>
       <p className="text-xs text-muted-foreground">
         <span className="font-medium text-blue-600">●</span> You ·{" "}
-        <span className="font-medium text-amber-500">●</span> direction steps · coloured dots are results. Click the map to set where
-        you are; scroll to zoom, drag to move.
+        <span className="font-medium text-amber-500">●</span> direction steps ·{" "}
+        <span className="font-medium text-cyan-400">●</span> quest givers ·{" "}
+        <span className="font-medium text-red-700">●</span> dungeons · other coloured dots are results. Click the map to set
+        where you are; scroll to zoom, drag to move.
       </p>
       {imageFailed && <p className="text-xs text-muted-foreground">The map picture didn't load — showing a grid instead.</p>}
     </div>

@@ -3,7 +3,8 @@
  * choices. Pure, so the page stays a thin view and this is unit-tested.
  */
 import type { WowClassId } from "@/games/wow-forever/data/classes";
-import type { PlayerFaction, WorldMapData, WorldZone } from "@/games/wow-forever/types/worldMap";
+import type { PlayerFaction, QuestInfo, WorldMapData, WorldZone } from "@/games/wow-forever/types/worldMap";
+import { questsFor } from "@/games/wow-forever/worldMap/levels";
 import { poiRouteEnd } from "@/games/wow-forever/worldMap/describeRank";
 import { planDirections, type Directions, type RouteEnd } from "@/games/wow-forever/worldMap/directions";
 import { zoneToWorld } from "@/games/wow-forever/worldMap/geometry";
@@ -16,11 +17,17 @@ export interface WorldMapChoices {
   faction: PlayerFaction;
   classId: WowClassId;
   zoneId: number | null;
+  level: number | null;
   position: { x: number; y: number } | null;
   findFilterId: string;
   showAllClasses: boolean;
   includeOtherFaction: boolean;
   selectedPoiId: string | null;
+}
+
+export interface RankedQuestGiver {
+  ranked: RankedPoi;
+  quests: QuestInfo[];
 }
 
 export interface HeroRow {
@@ -36,6 +43,10 @@ export interface WorldMapModel {
   hero: HeroRow[];
   findFilter: ServiceFilter;
   findResults: RankedPoi[];
+  /** Nearest quest givers with a quest this player could take (level rules applied). */
+  questGivers: RankedQuestGiver[];
+  /** Every dungeon and raid entrance, nearest first. */
+  instances: RankedPoi[];
   selected: RankedPoi | null;
   /** null = no known route; undefined = nothing selected. */
   directions: Directions | null | undefined;
@@ -67,7 +78,17 @@ export function buildWorldMapModel(data: WorldMapData, choices: WorldMapChoices)
     data,
   );
 
-  const selectedPoi = choices.selectedPoiId ? data.pois.find((p) => p.id === choices.selectedPoiId) : undefined;
+  const questGivers = rankPois(
+    data.questGivers.filter((p) => usableBy(p, choices.faction, false)),
+    player,
+    data,
+  ).flatMap((ranked) => {
+    const quests = questsFor(ranked.poi.quests ?? [], choices.faction, choices.classId, choices.level);
+    return quests.length ? [{ ranked, quests }] : [];
+  });
+  const instances = rankPois(data.instances, player, data);
+
+  const selectedPoi = choices.selectedPoiId ? data.poiById.get(choices.selectedPoiId) : undefined;
   const selected = selectedPoi ? (rankPois([selectedPoi], player, data)[0] ?? null) : null;
   let directions: Directions | null | undefined;
   if (selected) directions = planDirections(playerEnd, poiRouteEnd(selected), choices.faction, data);
@@ -80,6 +101,8 @@ export function buildWorldMapModel(data: WorldMapData, choices: WorldMapChoices)
     hero,
     findFilter: activeFilter,
     findResults,
+    questGivers,
+    instances,
     selected,
     directions,
   };

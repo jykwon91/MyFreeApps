@@ -9,13 +9,18 @@
 import { isServiceKind } from "@/games/wow-forever/data/worldMap/serviceKinds";
 import {
   FACTION,
+  INSTANCE_KIND,
   POI_KIND,
   POI_SOURCE,
+  QUEST_GIVER_KIND,
   VEHICLE,
   ZONE_KIND,
   type Faction,
   type FlightNode,
+  type InstanceKind,
   type MapPoi,
+  type QuestGiverKind,
+  type QuestInfo,
   type Transport,
   type TransportStop,
   type Vehicle,
@@ -112,6 +117,85 @@ function decodeServices(raw: unknown): MapPoi[] {
   });
 }
 
+function decodeQuest(raw: unknown, col: ReturnType<typeof columnReader>): QuestInfo {
+  const row = list(raw, "quest");
+  const classes = str(col(row, "classes"), "quest classes");
+  return {
+    id: num(col(row, "id"), "quest id"),
+    title: str(col(row, "title"), "quest title"),
+    minLevel: num(col(row, "minLevel"), "quest min level"),
+    level: num(col(row, "level"), "quest level"),
+    side: faction(col(row, "side"), "quest"),
+    classes: classes ? classes.split(",") : [],
+  };
+}
+
+function decodeQuestGivers(raw: unknown): MapPoi[] {
+  const payload = record(raw, "quests");
+  const questCol = columnReader(payload.questColumns, "quests");
+  const quests = new Map<number, QuestInfo>();
+  for (const q of list(payload.quests, "quests")) {
+    const quest = decodeQuest(q, questCol);
+    quests.set(quest.id, quest);
+  }
+  const col = columnReader(payload.giverColumns, "quest givers");
+  return list(payload.givers, "quest givers").map((r) => {
+    const row = list(r, "quest giver");
+    const type = col(row, "type");
+    const subkind: QuestGiverKind | undefined = Object.values(QUEST_GIVER_KIND).find((k) => k === type);
+    if (!subkind) fail(`unknown quest giver type ${String(type)}`);
+    const offered = list(col(row, "quests"), "giver quests").map((id) => {
+      const quest = quests.get(num(id, "giver quest id"));
+      if (!quest) fail(`quest giver lists unknown quest ${String(id)}`);
+      return quest;
+    });
+    return {
+      id: `classic-q${subkind === QUEST_GIVER_KIND.npc ? "n" : "o"}-${num(col(row, "guid"), "giver guid")}`,
+      kind: POI_KIND.questGiver,
+      subkind,
+      tag: "",
+      name: str(col(row, "name"), "giver name"),
+      title: "",
+      zone: num(col(row, "zone"), "giver zone"),
+      subzone: str(col(row, "subzone"), "giver subzone"),
+      x: num(col(row, "x"), "giver x"),
+      y: num(col(row, "y"), "giver y"),
+      faction: faction(col(row, "faction"), "quest giver"),
+      source: POI_SOURCE.classic,
+      npcId: subkind === QUEST_GIVER_KIND.npc ? num(col(row, "entry"), "giver entry") : undefined,
+      quests: offered,
+    };
+  });
+}
+
+function decodeInstances(raw: unknown): MapPoi[] {
+  const payload = record(raw, "dungeons");
+  const col = columnReader(payload.columns, "dungeons");
+  return list(payload.rows, "dungeon rows").map((r) => {
+    const row = list(r, "dungeon row");
+    const type = col(row, "type");
+    const subkind: InstanceKind | undefined = Object.values(INSTANCE_KIND).find((k) => k === type);
+    if (!subkind) fail(`unknown instance type ${String(type)}`);
+    return {
+      id: `classic-i-${num(col(row, "trigger"), "dungeon trigger")}`,
+      kind: POI_KIND.instance,
+      subkind,
+      tag: String(num(col(row, "instance"), "dungeon instance")),
+      name: str(col(row, "name"), "dungeon name"),
+      title: str(col(row, "wing"), "dungeon wing"),
+      zone: num(col(row, "zone"), "dungeon zone"),
+      subzone: str(col(row, "subzone"), "dungeon subzone"),
+      x: num(col(row, "x"), "dungeon x"),
+      y: num(col(row, "y"), "dungeon y"),
+      faction: FACTION.neutral,
+      source: POI_SOURCE.classic,
+      levelMin: num(col(row, "minLevel"), "dungeon min level"),
+      levelMax: num(col(row, "maxLevel"), "dungeon max level"),
+      requiredLevel: num(col(row, "requiredLevel"), "dungeon required level"),
+    };
+  });
+}
+
 function decodeTravel(raw: unknown): Pick<WorldMapData, "flightNodes" | "flightEdges" | "transports"> {
   const payload = record(raw, "travel");
   const nodeCol = columnReader(payload.nodeColumns, "flight nodes");
@@ -162,18 +246,33 @@ function decodeTravel(raw: unknown): Pick<WorldMapData, "flightNodes" | "flightE
   return { flightNodes, flightEdges, transports };
 }
 
-export function decodeWorldMap(zonesJson: unknown, travelJson: unknown, servicesJson: unknown): WorldMapData {
-  const zonesPayload = record(zonesJson, "zones file");
+/** The generator's JSON files, as imported. */
+export interface WorldMapFiles {
+  zones: unknown;
+  travel: unknown;
+  services: unknown;
+  quests: unknown;
+  dungeons: unknown;
+}
+
+export function decodeWorldMap(files: WorldMapFiles): WorldMapData {
+  const zonesPayload = record(files.zones, "zones file");
   const zones = list(zonesPayload.zones, "zones").map(decodeZone);
   const continents = record(zonesPayload.continents, "continents");
   const continentNames = new Map<number, string>(
     Object.entries(continents).map(([id, name]) => [Number(id), str(name, "continent name")]),
   );
+  const pois = decodeServices(files.services);
+  const questGivers = decodeQuestGivers(files.quests);
+  const instances = decodeInstances(files.dungeons);
   return {
     zones,
     zoneById: new Map(zones.map((z) => [z.id, z])),
     continentNames,
-    pois: decodeServices(servicesJson),
-    ...decodeTravel(travelJson),
+    pois,
+    questGivers,
+    instances,
+    poiById: new Map([...pois, ...questGivers, ...instances].map((p) => [p.id, p])),
+    ...decodeTravel(files.travel),
   };
 }

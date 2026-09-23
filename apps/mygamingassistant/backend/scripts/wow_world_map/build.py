@@ -14,6 +14,8 @@ Writes (paths relative to ``apps/mygamingassistant/frontend``):
 * ``src/games/wow-forever/data/worldMap/classic/classicServices.json`` —
   service NPCs (trainers, flight masters, inns, banks, ...). Derived from
   cmangos classic-db, so GPL-3.0 — see the LICENSE file in that folder.
+* ``.../classic/classicQuests.json`` — quest givers and their quests (GPL-3.0).
+* ``.../classic/classicDungeons.json`` — dungeon / raid entrances (GPL-3.0).
 * ``public/wow-maps/<uiMapId>.webp`` — the in-game map art of each map,
   stitched from the client's 256px tiles.
 
@@ -26,7 +28,10 @@ import json
 from pathlib import Path
 
 from scripts.wow_world_map import sources
+from scripts.wow_world_map.dungeons import COLUMNS as DUNGEON_COLUMNS
+from scripts.wow_world_map.dungeons import build_dungeons
 from scripts.wow_world_map.map_art import WorldMapArt
+from scripts.wow_world_map.quests import GIVER_COLUMNS, QUEST_COLUMNS, build_quests
 from scripts.wow_world_map.services import COLUMNS as SERVICE_COLUMNS
 from scripts.wow_world_map.services import build_services
 from scripts.wow_world_map.travel import build_travel
@@ -44,6 +49,17 @@ BLIZZARD_SOURCE = {
     "branch": sources.WAGO_BRANCH,
     "build": sources.WAGO_BUILD,
 }
+
+
+def classic_source(client_tables: str) -> dict[str, object]:
+    """Provenance block for a GPL-3.0 file derived from cmangos classic-db."""
+    return {
+        "repo": sources.CMANGOS_REPO,
+        "commit": sources.CMANGOS_COMMIT,
+        "file": sources.CMANGOS_DUMP,
+        "license": "GPL-3.0-or-later",
+        "clientTables": {**BLIZZARD_SOURCE, "tables": client_tables},
+    }
 
 
 def write_json(path: Path, payload: object) -> None:
@@ -86,22 +102,31 @@ def main() -> None:
 
     rows, counts = build_services(zone_bounds, art)
     write_json(CLASSIC_DIR / "classicServices.json", {
-        "source": {
-            "repo": sources.CMANGOS_REPO,
-            "commit": sources.CMANGOS_COMMIT,
-            "file": sources.CMANGOS_DUMP,
-            "license": "GPL-3.0-or-later",
-            "clientTables": {
-                **BLIZZARD_SOURCE,
-                "tables": "FactionTemplate, UiMapAssignment, WorldMapOverlay, AreaTable",
-            },
-        },
+        "source": classic_source("FactionTemplate, UiMapAssignment, WorldMapOverlay, AreaTable"),
         "columns": SERVICE_COLUMNS,
         "rows": rows,
     })
     print(f"services: {len(rows)}")
     for key, n in sorted(counts.items()):
         print(f"  {key}: {n}")
+
+    quest_rows, giver_rows = build_quests(zone_bounds, art)
+    write_json(CLASSIC_DIR / "classicQuests.json", {
+        "source": classic_source("FactionTemplate, UiMapAssignment, WorldMapOverlay, AreaTable"),
+        "questColumns": QUEST_COLUMNS,
+        "quests": quest_rows,
+        "giverColumns": GIVER_COLUMNS,
+        "givers": giver_rows,
+    })
+    print(f"quests: {len(quest_rows)}, quest givers: {len(giver_rows)}")
+
+    dungeon_rows = build_dungeons(zone_bounds, art)
+    write_json(CLASSIC_DIR / "classicDungeons.json", {
+        "source": classic_source("AreaTrigger, Map, LFGDungeons, UiMapAssignment, WorldMapOverlay, AreaTable"),
+        "columns": DUNGEON_COLUMNS,
+        "rows": dungeon_rows,
+    })
+    print(f"dungeon / raid entrances: {len(dungeon_rows)}")
 
 
 if __name__ == "__main__":

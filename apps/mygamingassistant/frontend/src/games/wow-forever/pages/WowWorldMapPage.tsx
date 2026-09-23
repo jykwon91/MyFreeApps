@@ -4,6 +4,8 @@ import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import AddonHelp from "@/games/wow-forever/components/worldMap/AddonHelp";
 import FindServices from "@/games/wow-forever/components/worldMap/FindServices";
 import ForeverNotes from "@/games/wow-forever/components/worldMap/ForeverNotes";
+import InstanceList from "@/games/wow-forever/components/worldMap/InstanceList";
+import QuestGivers from "@/games/wow-forever/components/worldMap/QuestGivers";
 import MapPanel from "@/games/wow-forever/components/worldMap/MapPanel";
 import NearestServices from "@/games/wow-forever/components/worldMap/NearestServices";
 import PlayerStrip from "@/games/wow-forever/components/worldMap/PlayerStrip";
@@ -30,6 +32,7 @@ export default function WowWorldMapPage() {
         faction: settings.faction,
         classId: settings.classId,
         zoneId: settings.zoneId,
+        level: settings.level,
         position: settings.position,
         findFilterId,
         showAllClasses,
@@ -46,7 +49,7 @@ export default function WowWorldMapPage() {
     <main className="p-4 sm:p-8 space-y-6 max-w-7xl">
       <WowPageHeader
         title="World Map"
-        subtitle="Find the nearest trainer, flight master, inn or bank — and how to get there."
+        subtitle="Find the nearest trainer, flight master, inn, bank, quest or dungeon — and how to get there."
         backTo="/wow-forever"
         backLabel="Back to WoW Forever"
       />
@@ -99,6 +102,24 @@ export default function WowWorldMapPage() {
                     includeOtherFaction={includeOtherFaction}
                     onIncludeOtherFactionChange={setIncludeOtherFaction}
                     results={model.findResults}
+                    selectedPoiId={selectedPoiId}
+                    onToggle={toggle}
+                    directions={model.directions}
+                  />
+                  <QuestGivers
+                    data={data}
+                    faction={settings.faction}
+                    level={settings.level}
+                    givers={model.questGivers}
+                    selectedPoiId={selectedPoiId}
+                    onToggle={toggle}
+                    directions={model.directions}
+                  />
+                  <InstanceList
+                    data={data}
+                    faction={settings.faction}
+                    level={settings.level}
+                    instances={model.instances}
                     selectedPoiId={selectedPoiId}
                     onToggle={toggle}
                     directions={model.directions}

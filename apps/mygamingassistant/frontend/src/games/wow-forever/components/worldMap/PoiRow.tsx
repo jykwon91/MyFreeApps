@@ -1,10 +1,11 @@
+import type { ReactNode } from "react";
 import clsx from "clsx";
 import { Badge } from "@platform/ui";
 import { ChevronDown, MapPin } from "lucide-react";
 import DirectionsPanel from "@/games/wow-forever/components/worldMap/DirectionsPanel";
 import ProvenanceBadge from "@/games/wow-forever/components/worldMap/ProvenanceBadge";
 import WaypointButtons from "@/games/wow-forever/components/worldMap/WaypointButtons";
-import { FACTION, type PlayerFaction, type WorldMapData } from "@/games/wow-forever/types/worldMap";
+import { FACTION, POI_KIND, type PlayerFaction, type WorldMapData } from "@/games/wow-forever/types/worldMap";
 import { areaLabel, distanceLabel, poiWaypoint } from "@/games/wow-forever/worldMap/describeRank";
 import type { Directions } from "@/games/wow-forever/worldMap/directions";
 import { formatCoord } from "@/games/wow-forever/worldMap/geometry";
@@ -20,9 +21,11 @@ interface PoiRowProps {
   onToggle: (poiId: string) => void;
   /** Directions for the selected row. */
   directions: Directions | null | undefined;
+  /** Layer-specific detail under the location line (quests offered, dungeon level). */
+  children?: ReactNode;
 }
 
-export default function PoiRow({ ranked, data, faction, heading, selected, onToggle, directions }: PoiRowProps) {
+export default function PoiRow({ ranked, data, faction, heading, selected, onToggle, directions, children }: PoiRowProps) {
   const { poi, zone } = ranked;
   const panelId = `wm-directions-${poi.id}`;
   return (
@@ -41,9 +44,15 @@ export default function PoiRow({ ranked, data, faction, heading, selected, onTog
           {areaLabel(poi, zone)} ({formatCoord(poi.x)}, {formatCoord(poi.y)}) · {distanceLabel(ranked, data)}
         </span>
       </p>
+      {children}
       <div className="flex flex-wrap gap-2">
         <ProvenanceBadge poi={poi} />
-        {poi.faction === FACTION.neutral && <Badge color="purple" label="Neutral town — both factions" />}
+        {poi.faction === FACTION.neutral && poi.kind === POI_KIND.service && (
+          <Badge color="purple" label="Neutral town — both factions" />
+        )}
+        {poi.faction === FACTION.neutral && poi.kind === POI_KIND.questGiver && (
+          <Badge color="purple" label="Both factions" />
+        )}
         {poi.faction !== FACTION.neutral && poi.faction !== faction && <Badge color="red" label="Other faction" />}
       </div>
       <div className="flex flex-wrap gap-2">
