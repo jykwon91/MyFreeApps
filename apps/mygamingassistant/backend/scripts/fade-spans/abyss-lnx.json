@@ -1,0 +1,305 @@
+{
+ "video_id": "7N1Q4SFvaHE",
+ "map_slug": "abyss",
+ "author": "LNX",
+ "lineups": [
+  {
+   "cs": 23,
+   "title": "A Site Haunt 1 \u2014 Defender A Site: stand on the A Site hex floor lined up with",
+   "ability": "haunt",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     23.0,
+     25.8
+    ],
+    "aim": [
+     29.2,
+     29.95
+    ],
+    "throw": [
+     29.97,
+     30.6
+    ],
+    "landing": [
+     31.6,
+     32.6
+    ]
+   }
+  },
+  {
+   "cs": 43,
+   "title": "A Site Haunt 2 \u2014 Defender jump-throw from A Security: crosshair lined up on",
+   "ability": "haunt",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     43.5,
+     44.9
+    ],
+    "aim": [
+     45.9,
+     46.6
+    ],
+    "throw": [
+     46.6,
+     47.2
+    ],
+    "landing": [
+     49.1,
+     49.9
+    ]
+   }
+  },
+  {
+   "cs": 59,
+   "title": "B Main Seize 1 \u2014 Defender B Site: stand against the B Site wall under the blue",
+   "ability": "seize",
+   "technique": "jump",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     59.1,
+     60.2
+    ],
+    "aim": [
+     63.5,
+     64.33
+    ],
+    "throw": [
+     64.33,
+     64.93
+    ],
+    "landing": [
+     67.15,
+     68.3
+    ]
+   }
+  },
+  {
+   "cs": 77,
+   "title": "B Main Haunt 1 \u2014 Defender-side B Site haunt: stand spot set by looking down at",
+   "ability": "haunt",
+   "technique": "jump",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     77.0,
+     79.5
+    ],
+    "aim": [
+     83.5,
+     84.2
+    ],
+    "throw": [
+     84.2,
+     84.8
+    ],
+    "landing": [
+     86.9,
+     88.0
+    ]
+   }
+  },
+  {
+   "cs": 97,
+   "title": "B Site Haunt 1 \u2014 Defender haunt from the B Link side: stand flush against a",
+   "ability": "haunt",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     97.0,
+     99.0
+    ],
+    "aim": [
+     104.0,
+     104.8
+    ],
+    "throw": [
+     104.8,
+     105.4
+    ],
+    "landing": [
+     106.7,
+     108.0
+    ]
+   }
+  },
+  {
+   "cs": 118,
+   "title": "Mid Haunt 1 \u2014 Defender side, Mid Top (location readout reads Mid Top)",
+   "ability": "haunt",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     118.5,
+     120.5
+    ],
+    "aim": [
+     122.95,
+     123.65
+    ],
+    "throw": [
+     123.7,
+     124.3
+    ],
+    "landing": [
+     125.87,
+     126.6
+    ]
+   }
+  },
+  {
+   "cs": 153,
+   "title": "A Site Haunt 3 \u2014 Attacker jump-throw haunt from A Main, lined up on a wall",
+   "ability": "haunt",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     153.4,
+     155.3
+    ],
+    "aim": [
+     159.0,
+     159.93
+    ],
+    "throw": [
+     159.9,
+     160.5
+    ],
+    "landing": [
+     162.3,
+     163.1
+    ]
+   }
+  },
+  {
+   "cs": 174,
+   "title": "A Site Haunt 4 \u2014 Attacker-side haunt from A Site (the location readout says 'A",
+   "ability": "haunt",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     174.1,
+     175.9
+    ],
+    "aim": [
+     176.85,
+     177.45
+    ],
+    "throw": [
+     177.7,
+     178.3
+    ],
+    "landing": [
+     179.27,
+     180.27
+    ]
+   }
+  },
+  {
+   "cs": 187,
+   "title": "B Site Haunt 2 \u2014 Attacker B Lobby: stand by the wood wall and vine pillar, aim",
+   "ability": "haunt",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     187.2,
+     188.2
+    ],
+    "aim": [
+     192.5,
+     193.07
+    ],
+    "throw": [
+     193.53,
+     194.13
+    ],
+    "landing": [
+     195.97,
+     196.6
+    ]
+   }
+  },
+  {
+   "cs": 222,
+   "title": "B Site Haunt 3 \u2014 Attacker B Site haunt: stand by the tall tower/wall edge",
+   "ability": "haunt",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     222.6,
+     224.2
+    ],
+    "aim": [
+     227.5,
+     228.3
+    ],
+    "throw": [
+     228.33,
+     228.93
+    ],
+    "landing": [
+     230.7,
+     231.9
+    ]
+   }
+  },
+  {
+   "cs": 242,
+   "title": "Mid Haunt 2 \u2014 Attacker-side Mid Bottom jump-throw Haunt: stand by the wall",
+   "ability": "haunt",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     242.6,
+     244.5
+    ],
+    "aim": [
+     244.7,
+     245.35
+    ],
+    "throw": [
+     245.4,
+     246.0
+    ],
+    "landing": [
+     247.9,
+     248.08
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
