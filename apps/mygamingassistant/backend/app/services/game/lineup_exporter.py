@@ -26,11 +26,14 @@ would leak pre-trim frames or stale authoring state to prod.
 """
 from __future__ import annotations
 
+import uuid
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.game.lineup import Lineup
+from app.models.game.map_zone import MapZone
 
 # Bump when the pack shape changes in a way the importer must branch on. The
 # importer validates this so an old binary can't silently mis-read a newer pack.
@@ -84,6 +87,16 @@ class MalformedAcceptedLineup(Exception):
     """An accepted lineup is missing an FK the CHECK constraint should guarantee."""
 
 
+def _zone_entry(game_slug: str, map_slug: str, zone: MapZone) -> dict:
+    return {
+        "game_slug": game_slug,
+        "map_slug": map_slug,
+        "zone_slug": zone.slug,
+        "name": zone.name,
+        "polygon_points": zone.polygon_points or [],
+    }
+
+
 async def build_pack(db: AsyncSession) -> dict:
     """Return the full accepted-lineup library as a JSON-serializable pack dict.
 
@@ -120,9 +133,10 @@ async def build_pack(db: AsyncSession) -> dict:
         .all()
     )
 
-    # Dedup referenced zones by (game_slug, map_slug, zone_slug) and sources by
-    # id so the pack carries each once even when many lineups share them.
+    # Dedup zones by (game_slug, map_slug, zone_slug) and sources by id so the
+    # pack carries each once even when many lineups share them.
     zones: dict[tuple[str, str, str], dict] = {}
+    map_slugs: dict[uuid.UUID, tuple[str, str]] = {}
     sources: dict[str, dict] = {}
     lineups_out: list[dict] = []
 
@@ -143,14 +157,7 @@ async def build_pack(db: AsyncSession) -> dict:
         game_slug = lineup.game.slug
         map_slug = lineup.map.slug
 
-        for zone in (lineup.target_zone, lineup.stand_zone):
-            zones[(game_slug, map_slug, zone.slug)] = {
-                "game_slug": game_slug,
-                "map_slug": map_slug,
-                "zone_slug": zone.slug,
-                "name": zone.name,
-                "polygon_points": zone.polygon_points or [],
-            }
+        map_slugs[lineup.map_id] = (game_slug, map_slug)
 
         if lineup.source is not None:
             sources[str(lineup.source.id)] = {
@@ -171,6 +178,18 @@ async def build_pack(db: AsyncSession) -> dict:
         for field in LINEUP_SCALAR_FIELDS:
             entry[field] = getattr(lineup, field)
         lineups_out.append(entry)
+
+    # EVERY zone on an exported map travels, not only the ones a lineup
+    # references: prod gets polygons only from this pack (load-fixtures never
+    # overwrites a stored polygon), so an unreferenced zone would otherwise keep
+    # a stale shape on the prod minimap forever. Referenced zones are a subset.
+    if map_slugs:
+        map_zones = await db.execute(
+            select(MapZone).where(MapZone.map_id.in_(map_slugs.keys()))
+        )
+        for zone in map_zones.scalars():
+            game_slug, map_slug = map_slugs[zone.map_id]
+            zones[(game_slug, map_slug, zone.slug)] = _zone_entry(game_slug, map_slug, zone)
 
     return {
         "version": PACK_VERSION,
