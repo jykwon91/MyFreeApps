@@ -1,0 +1,252 @@
+{
+ "video_id": "g1jYVHvj2w8",
+ "map_slug": "anubis",
+ "game_slug": "cs2",
+ "author": "Tigerr",
+ "lineups": [
+  {
+   "cs": 98,
+   "title": "Mid Smoke 1 \u2014 SMOKE #2 MID - E-BOX",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     98.0,
+     100.5
+    ],
+    "aim": [
+     102.95,
+     103.53
+    ],
+    "throw": [
+     103.5,
+     104.1
+    ],
+    "landing": [
+     109.15,
+     110.5
+    ]
+   }
+  },
+  {
+   "cs": 196,
+   "title": "Mid HE 1 \u2014 HE grenade from Ruins on the T side of B (by the 'B' arrow",
+   "ability": "grenade",
+   "technique": "running",
+   "target": "mid",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     196.9,
+     198.3
+    ],
+    "aim": [
+     199.15,
+     199.78
+    ],
+    "throw": [
+     199.8,
+     200.4
+    ],
+    "landing": [
+     201.64,
+     202.64
+    ]
+   }
+  },
+  {
+   "cs": 292,
+   "title": "B Site Smoke 1 \u2014 T smoke from the same Outside Long stand spot (vine wall",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     292.0,
+     294.5
+    ],
+    "aim": [
+     300.75,
+     301.75
+    ],
+    "throw": [
+     301.78,
+     302.38
+    ],
+    "landing": [
+     307.3,
+     308.3
+    ]
+   }
+  },
+  {
+   "cs": 322,
+   "title": "B Site Molly 1 \u2014 T molotov thrown from Outside Long (B Main side)",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     322.25,
+     323.9
+    ],
+    "aim": [
+     323.4,
+     324.15
+    ],
+    "throw": [
+     324.15,
+     324.75
+    ],
+    "landing": [
+     325.95,
+     326.75
+    ]
+   }
+  },
+  {
+   "cs": 360,
+   "title": "B Site Flash 1 \u2014 T pop-flash for B Site: stand in Outside Long (B Main",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     360.2,
+     362.4
+    ],
+    "aim": [
+     367.0,
+     368.0
+    ],
+    "throw": [
+     368.05,
+     368.65
+    ],
+    "landing": [
+     380.2,
+     380.95
+    ]
+   }
+  },
+  {
+   "cs": 430,
+   "title": "A Site Smoke 1 \u2014 T-side smoke onto Camera (A Site)",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     430.4,
+     432.3
+    ],
+    "aim": [
+     442.8,
+     443.9
+    ],
+    "throw": [
+     443.95,
+     444.6
+    ],
+    "landing": [
+     447.45,
+     450.45
+    ]
+   }
+  },
+  {
+   "cs": 460,
+   "title": "A Site Smoke 2 \u2014 T-side smoke onto Heaven (A Site)",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     460.6,
+     462.3
+    ],
+    "aim": [
+     466.95,
+     467.68
+    ],
+    "throw": [
+     467.7,
+     468.3
+    ],
+    "landing": [
+     472.42,
+     475.2
+    ]
+   }
+  },
+  {
+   "cs": 568,
+   "title": "A Site Molly 1 \u2014 T-side molotov thrown from T Side Upper (by the water pool",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     568.45,
+     569.95
+    ],
+    "aim": [
+     579.7,
+     580.75
+    ],
+    "throw": [
+     581.45,
+     582.05
+    ],
+    "landing": [
+     583.65,
+     585.15
+    ]
+   }
+  },
+  {
+   "cs": 620,
+   "title": "B Site Smoke 2 \u2014 T-side SMOKE #7 'MID - TEMPLE'",
+   "ability": "smoke",
+   "technique": "running",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     620.9,
+     622.4
+    ],
+    "aim": [
+     622.85,
+     623.55
+    ],
+    "throw": [
+     623.72,
+     624.32
+    ],
+    "landing": [
+     627.85,
+     629.4
+    ]
+   }
+  }
+ ],
+ "note": ""
+}

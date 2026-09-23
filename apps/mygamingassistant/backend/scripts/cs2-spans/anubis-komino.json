@@ -1,0 +1,468 @@
+{
+ "video_id": "SGJbL7_pqAU",
+ "map_slug": "anubis",
+ "game_slug": "cs2",
+ "author": "Komino",
+ "lineups": [
+  {
+   "cs": 0,
+   "title": "A Site Smoke 1 \u2014 T smoke toward A from the A-side canal/water, standing beside",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     0.0,
+     1.5
+    ],
+    "aim": [
+     1.9,
+     2.8
+    ],
+    "throw": [
+     2.85,
+     3.4
+    ],
+    "landing": [
+     10.0,
+     11.2
+    ]
+   }
+  },
+  {
+   "cs": 4,
+   "title": "A Site Smoke 2 \u2014 Second T smoke toward A from a stone ledge further along the",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     4.8,
+     6.3
+    ],
+    "aim": [
+     7.0,
+     8.0
+    ],
+    "throw": [
+     8.0,
+     8.6
+    ],
+    "landing": [
+     12.75,
+     14.0
+    ]
+   }
+  },
+  {
+   "cs": 19,
+   "title": "B Site Smoke 1 \u2014 T-side B execute smoke #1: stand by the vine-covered wall",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     19.0,
+     20.4
+    ],
+    "aim": [
+     21.45,
+     22.3
+    ],
+    "throw": [
+     22.4,
+     22.98
+    ],
+    "landing": [
+     29.0,
+     29.9
+    ]
+   }
+  },
+  {
+   "cs": 23,
+   "title": "B Site Smoke 2 \u2014 T-side B execute smoke #2: same vine-wall area outside B, aim",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     23.05,
+     23.85
+    ],
+    "aim": [
+     23.85,
+     24.45
+    ],
+    "throw": [
+     24.5,
+     25.1
+    ],
+    "landing": [
+     30.15,
+     30.95
+    ]
+   }
+  },
+  {
+   "cs": 25,
+   "title": "B Site Smoke 3 \u2014 T-side B execute smoke #3: vine-wall area outside B, slightly",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     25.2,
+     26.2
+    ],
+    "aim": [
+     26.2,
+     26.85
+    ],
+    "throw": [
+     26.9,
+     27.5
+    ],
+    "landing": [
+     30.15,
+     30.95
+    ]
+   }
+  },
+  {
+   "cs": 40,
+   "title": "Mid Smoke 1 \u2014 T-side smoke thrown from outside, near the payphone wall",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     40.3,
+     41.5
+    ],
+    "aim": [
+     41.2,
+     41.82
+    ],
+    "throw": [
+     41.95,
+     42.55
+    ],
+    "landing": [
+     47.45,
+     48.8
+    ]
+   }
+  },
+  {
+   "cs": 64,
+   "title": "Mid Smoke 2 \u2014 T-side alternative Mid smoke: player stands against the wall",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     64.3,
+     65.9
+    ],
+    "aim": [
+     66.75,
+     67.45
+    ],
+    "throw": [
+     67.47,
+     68.07
+    ],
+    "landing": [
+     73.8,
+     74.95
+    ]
+   }
+  },
+  {
+   "cs": 78,
+   "title": "Mid Smoke 3 \u2014 T-side smoke from a Mid approach, thrown high over the",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     78.15,
+     79.5
+    ],
+    "aim": [
+     78.7,
+     79.6
+    ],
+    "throw": [
+     79.6,
+     80.2
+    ],
+    "landing": [
+     87.8,
+     88.9
+    ]
+   }
+  },
+  {
+   "cs": 92,
+   "title": "Mid Smoke 4 \u2014 CT smoke thrown from the CT side of the map, by the water (CT",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     92.5,
+     94.0
+    ],
+    "aim": [
+     94.45,
+     95.3
+    ],
+    "throw": [
+     95.3,
+     95.9
+    ],
+    "landing": [
+     99.95,
+     101.9
+    ]
+   }
+  },
+  {
+   "cs": 103,
+   "title": "A Main Smoke 1 \u2014 CT smoke onto A Main: thrown from a corner stand, aimed up at",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     103.35,
+     104.65
+    ],
+    "aim": [
+     104.7,
+     105.85
+    ],
+    "throw": [
+     105.85,
+     106.45
+    ],
+    "landing": [
+     109.6,
+     110.8
+    ]
+   }
+  },
+  {
+   "cs": 112,
+   "title": "Mid Molly 1 \u2014 T-side molotov into Mid from the same settled stand",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     112.9,
+     113.9
+    ],
+    "aim": [
+     113.9,
+     114.9
+    ],
+    "throw": [
+     114.9,
+     115.5
+    ],
+    "landing": [
+     117.3,
+     118.05
+    ]
+   }
+  },
+  {
+   "cs": 115,
+   "title": "Mid HE 1 \u2014 T-side HE grenade into Mid thrown from the same stand and aim",
+   "ability": "grenade",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     115.65,
+     116.3
+    ],
+    "aim": [
+     115.8,
+     116.4
+    ],
+    "throw": [
+     116.35,
+     116.95
+    ],
+    "landing": [
+     118.05,
+     118.75
+    ]
+   }
+  },
+  {
+   "cs": 122,
+   "title": "B Site Molly 1 \u2014 T molotov from Connector, standing against the wall by the",
+   "ability": "molotov",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     122.4,
+     123.5
+    ],
+    "aim": [
+     123.5,
+     124.45
+    ],
+    "throw": [
+     124.62,
+     125.25
+    ],
+    "landing": [
+     126.6,
+     127.6
+    ]
+   }
+  },
+  {
+   "cs": 130,
+   "title": "Mid Flash 1 \u2014 Flash from Backsite: stand tucked against a small stone block",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     130.7,
+     130.87
+    ],
+    "aim": [
+     131.5,
+     132.4
+    ],
+    "throw": [
+     132.42,
+     133.0
+    ],
+    "landing": [
+     136.05,
+     136.85
+    ]
+   }
+  },
+  {
+   "cs": 139,
+   "title": "B Site Flash 1 \u2014 CT-side pop-flash for B: stand on the CT-side stairs/corridor",
+   "ability": "flash",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     139.7,
+     141.5
+    ],
+    "aim": [
+     142.15,
+     143.15
+    ],
+    "throw": [
+     143.18,
+     143.78
+    ],
+    "landing": [
+     145.85,
+     146.65
+    ]
+   }
+  },
+  {
+   "cs": 150,
+   "title": "Mid Flash 2 \u2014 T flash thrown from a spot beside a stone pillar in the",
+   "ability": "flash",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     150.15,
+     150.85
+    ],
+    "aim": [
+     150.85,
+     151.45
+    ],
+    "throw": [
+     151.7,
+     152.3
+    ],
+    "landing": [
+     155.98,
+     156.7
+    ]
+   }
+  },
+  {
+   "cs": 160,
+   "title": "A Main Flash 1 \u2014 Flash from Upper toward Market: stand in the sunlit street at",
+   "ability": "flash",
+   "technique": "jump",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     160.62,
+     161.2
+    ],
+    "aim": [
+     161.0,
+     161.63
+    ],
+    "throw": [
+     162.5,
+     163.1
+    ],
+    "landing": [
+     165.55,
+     166.25
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
