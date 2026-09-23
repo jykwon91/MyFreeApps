@@ -1,11 +1,11 @@
-"""Data-driven Valorant lineup ingest driver — generic across ALL agents + maps.
+"""Data-driven lineup ingest driver — generic across ALL agents + maps, VALORANT and CS2.
 
 Generalized from ingest_viper.py (Initiative 18) for the full-agent build (Phase B):
 build every lineup-capable Valorant agent. One JSON per (agent, map) lives under
 scripts/<agent>-spans/<map>.json, e.g. scripts/brimstone-spans/ascent.json.
 
 Each spans JSON has:
-  {video_id, map_slug, author, note, lineups: [
+  {video_id, map_slug, game_slug?, author, note, lineups: [
     {cs, title, ability, technique, target, stand, side,
      spans:{stand:[s,e], aim:[s,e], throw:[s,e], landing:[s,e]}}, ...]}
 - cs = floor(STAND.start), unique per lineup within the video (synthetic clip-storage
@@ -15,7 +15,10 @@ Each spans JSON has:
   the utility_type table already carries agent_id. All 56 ability slugs are seeded on
   origin/main + prod, so every agent's abilities resolve with no fixture work.
 - target/stand are COARSE map-zone slugs (the fine callout lives in `title`).
-- side = side_a (attacker) | side_b (defender).
+- side = side_a (attacker / CS2 T) | side_b (defender / CS2 CT).
+- game_slug defaults to "valorant". A CS2 pack sets "cs2" and lives under
+  scripts/cs2-spans/ (the "agent" is the game: CS2 grenades belong to no agent), and
+  its abilities are the CS2 utility slugs (smoke, flash, molotov, grenade).
 - spans.throw is OMITTED for PLACED utility (utility_type.placement == 'placed':
   Cypher's trapwire/spycam, Killjoy's alarmbot/turret, Chamber's trademark,
   Deadlock's sonic sensor). A mounted device never leaves the player's hands, so
@@ -87,7 +90,11 @@ from app.models.game.source import Source  # noqa: E402
 from app.models.game.utility_type import UtilityType  # noqa: E402
 from app.repositories.game.lineup.lifecycle import accept_lineup  # noqa: E402
 
-GAME_SLUG = "valorant"
+DEFAULT_GAME = "valorant"
+
+
+def _game(data: dict) -> str:
+    return data.get("game_slug") or DEFAULT_GAME
 
 
 def _spans_dir(agent: str) -> Path:
@@ -105,7 +112,7 @@ def _load(agent: str, pack: str) -> dict:
 
 async def _resolve(db, data: dict):
     game_id = (await db.execute(text("SELECT id FROM game WHERE slug=:s"),
-                                {"s": GAME_SLUG})).scalar_one()
+                                {"s": _game(data)})).scalar_one()
     vmap = (await db.execute(select(Map).where(
         Map.slug == data["map_slug"], Map.game_id == game_id))).scalar_one()
     zones = {z.slug: z.id for z in (await db.execute(
@@ -125,7 +132,7 @@ def _validate(data: dict, zones: dict, utils: dict) -> None:
             errs.append(f"duplicate cs={ln['cs']}")
         seen.add(ln["cs"])
         if ln["ability"] not in utils:
-            errs.append(f"cs={ln['cs']} ability {ln['ability']!r} not a valorant "
+            errs.append(f"cs={ln['cs']} ability {ln['ability']!r} not a {_game(data)} "
                         f"utility_type slug (have: {', '.join(sorted(utils))})")
         for zk in ("target", "stand"):
             if ln[zk] not in zones:
@@ -182,8 +189,10 @@ async def cmd_create(agent: str, pack: str) -> None:
         src_id = (await db.execute(
             text("SELECT id FROM source WHERE config_json->>'url' = :u"), {"u": url})).scalar_one_or_none()
         if src_id is None:
-            src = Source(kind="youtube_playlist", config_json={
-                "url": url, "map_hint": data["map_slug"], "game_hint": GAME_SLUG, "agent_hint": agent})
+            hints = {"url": url, "map_hint": data["map_slug"], "game_hint": _game(data)}
+            if _game(data) == DEFAULT_GAME:
+                hints["agent_hint"] = agent
+            src = Source(kind="youtube_playlist", config_json=hints)
             db.add(src); await db.flush(); src_id = src.id
         existing = {cs for (cs,) in (await db.execute(
             select(Lineup.chapter_start_seconds).where(Lineup.youtube_video_id == vid))).all() if cs is not None}
