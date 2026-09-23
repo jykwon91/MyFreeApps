@@ -165,6 +165,26 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - **Companion addon** `apps/mygamingassistant/addons/MGACompanion` (Interface
   16001): `/mga way <uiMapID|zone name> <x> <y> [label]` sets the in-game map
   pin. The page's "Copy in-game waypoint" buttons emit that command.
+- **Captured locations (Forever ground truth):** the addon's `Capture.lua`
+  records — out of combat only, never hostile units — titled NPCs you target or
+  mouse over within interact range (plus what they offer: trainer, flight
+  master, bank, auction house, stable, repair), quest givers you talk to (with
+  their quests) and dungeon entrances you walk through, into SavedVariables
+  `MGACompanionDB` (`/mga captures` shows the count). The operator imports
+  `WTF\Account\<account>\SavedVariables\MGACompanion.lua` on the map page
+  (signed in, full-auth mode only): it is parsed in the browser
+  (`worldMap/capture/` — a data-only Lua table reader, never `eval`),
+  classified into the map's service subkinds, then `POST /api/wow/map-captures`
+  upserts by `capture_key` (newer `captured_at` wins). `GET` is public in both
+  modes; the page merges captures over Classic rows (`applyCaptures.ts`): same
+  npc id / instance id, else same name + zone; matched rows keep their Classic
+  id, subkind and levels and show "Captured in Forever <date>". If the GET
+  fails the page says so and shows Classic only — never localStorage.
+- **Publishing captures to prod (serve-only, no import route):** locally run
+  `python -m app.cli export-wow-captures` → commit
+  `backend/data/wow_map_captures.json` → the deploy's `post_deploy_commands`
+  run `import-wow-captures`, which mirrors the pack (a full snapshot: captures
+  absent from it are deleted; an empty pack deletes nothing).
 
 ## Fixture Loading
 
@@ -281,6 +301,7 @@ once on the router. This is the no-bandaid approach (see
 | `/api/lineup-packages` | GET + `/pin` (no server state) | POST / PATCH / DELETE |
 | `/api/sources/*` | — | All |
 | `/api/wow/items/extract` | POST, both modes (Claude reads an item screenshot/text; Turnstile + per-IP limit + durable daily cap; 503 `item_reader_unavailable` when unconfigured) | — |
+| `/api/wow/map-captures` | GET, both modes (World Map locations captured in Forever) | POST import (full-auth only; prod gets captures via the committed pack) |
 | `/api/scheduler/*` | — | All |
 | `/admin/*` | — | All |
 | `/users/me*` | — | All |

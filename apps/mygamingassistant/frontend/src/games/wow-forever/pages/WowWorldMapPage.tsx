@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { AlertBox } from "@platform/ui";
+import { AlertBox, useIsAuthenticated } from "@platform/ui";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import AddonHelp from "@/games/wow-forever/components/worldMap/AddonHelp";
+import CaptureImport from "@/games/wow-forever/components/worldMap/CaptureImport";
 import FindServices from "@/games/wow-forever/components/worldMap/FindServices";
 import ForeverNotes from "@/games/wow-forever/components/worldMap/ForeverNotes";
 import InstanceList from "@/games/wow-forever/components/worldMap/InstanceList";
@@ -12,13 +13,16 @@ import PlayerStrip from "@/games/wow-forever/components/worldMap/PlayerStrip";
 import WorldMapSkeleton from "@/games/wow-forever/components/worldMap/WorldMapSkeleton";
 import { SERVICE_KIND } from "@/games/wow-forever/data/worldMap/serviceKinds";
 import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
-import { LOAD_STATUS, useWorldMapData } from "@/games/wow-forever/hooks/useWorldMapData";
+import { useWorldMap } from "@/games/wow-forever/hooks/useWorldMap";
+import { LOAD_STATUS } from "@/games/wow-forever/hooks/useWorldMapData";
+import { isServeOnly } from "@/lib/serveOnly";
 import { nextWarlockTraining } from "@/games/wow-forever/worldMap/training";
 import { buildWorldMapModel } from "@/games/wow-forever/worldMap/worldMapModel";
 
 /** /wow-forever/map — where is the nearest trainer / flight master / bank, and how do I get there. */
 export default function WowWorldMapPage() {
-  const { status, data, retry } = useWorldMapData();
+  const { status, data, retry, capturesFailed } = useWorldMap();
+  const canImport = useIsAuthenticated() && !isServeOnly();
   const [settings, updateSettings] = usePlayerSettings();
   const [findFilterId, setFindFilterId] = useState<string>(SERVICE_KIND.classTrainer);
   const [showAllClasses, setShowAllClasses] = useState(false);
@@ -65,6 +69,11 @@ export default function WowWorldMapPage() {
       {data && (
         <>
           <PlayerStrip data={data} settings={settings} onChange={updateSettings} />
+          {capturesFailed && (
+            <p className="text-sm text-muted-foreground">
+              Locations recorded in Forever didn't load — showing Classic locations only.
+            </p>
+          )}
           {!model && (
             <AlertBox variant="info">Pick your zone above to see what's nearest to you.</AlertBox>
           )}
@@ -138,6 +147,7 @@ export default function WowWorldMapPage() {
           )}
           <ForeverNotes />
           <AddonHelp />
+          {canImport && <CaptureImport data={data} />}
         </>
       )}
     </main>

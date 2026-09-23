@@ -81,8 +81,13 @@ export function instanceLevelText(poi: Pick<MapPoi, "levelMin" | "levelMax">): s
   return min === max ? `Level ${min}` : `Levels ${min}–${max}`;
 }
 
-/** A dungeon's colour for the player: by its level, red when the entrance won't let them in yet. */
-export function instanceBand(poi: Pick<MapPoi, "levelMin" | "requiredLevel">, playerLevel: number): LevelBand {
+/**
+ * A dungeon's colour for the player: by its level, red when the entrance
+ * won't let them in yet. Null when its level isn't known (a captured
+ * entrance with no Classic match).
+ */
+export function instanceBand(poi: Pick<MapPoi, "levelMin" | "requiredLevel">, playerLevel: number): LevelBand | null {
   if (playerLevel < (poi.requiredLevel ?? 0)) return LEVEL_BAND.red;
-  return levelBand(poi.levelMin ?? 0, playerLevel);
+  if (poi.levelMin === undefined) return null;
+  return levelBand(poi.levelMin, playerLevel);
 }

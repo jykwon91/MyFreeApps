@@ -17,7 +17,7 @@ export default function AddonHelp() {
           <a href={ADDON_URL} target="_blank" rel="noreferrer" className="text-primary underline">
             GitHub
           </a>{" "}
-          (both files: <code>MGACompanion.toc</code> and <code>MGACompanion.lua</code>).
+          (all three files: <code>MGACompanion.toc</code>, <code>MGACompanion.lua</code> and <code>Capture.lua</code>).
         </li>
         <li>
           Put the folder in your WoW Forever game folder under <code>Interface\AddOns\</code>, so you have{" "}
@@ -32,9 +32,14 @@ export default function AddonHelp() {
         <strong>Copy /way</strong> gives a plain <code>/way Elwynn Forest 44.4 66.2</code> for coordinate addons like TomTom. Cities
         don't always accept pins — use the zone around the city then.
       </p>
+      <p>
+        While it's on, the addon also notes — out of combat only — where trainers and other services you walk up to, quest givers
+        you talk to and dungeon entrances you walk through really are in Forever. Type <code>/mga captures</code> to see how many.
+        Those places replace the Classic ones on this map and are marked <strong>Captured in Forever</strong>.
+      </p>
       <h3 className="font-semibold">Where the locations come from</h3>
       <p className="text-muted-foreground">
-        NPC locations are from the Classic 1.12 world (cmangos classic-db, GPL-3.0) and may differ in Forever — each row says so.
+        Other NPC locations are from the Classic 1.12 world (cmangos classic-db, GPL-3.0) and may differ in Forever — each row says so.
         Maps, flight paths, boats and zeppelins are from the WoW Forever beta client data (via wago.tools). World of Warcraft and its
         maps are © Blizzard Entertainment; this is a free fan tool.
       </p>
