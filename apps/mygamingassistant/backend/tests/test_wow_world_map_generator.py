@@ -18,6 +18,7 @@ import pytest
 from scripts.wow_world_map.classify import classify
 from scripts.wow_world_map.coords import ZoneBounds, pick_zone, world_to_zone, zone_to_world
 from scripts.wow_world_map.factions import FactionTemplate, usable_by
+from scripts.wow_world_map.quests import quest_classes, quest_side
 from scripts.wow_world_map.sql_dump import parse_values, read_tables
 
 ELWYNN = ZoneBounds(1429, "Elwynn Forest", 0, -10254.17, -7939.58, -1935.42, 1535.42)
@@ -180,3 +181,62 @@ def test_committed_travel_data_is_consistent() -> None:
     assert vigil["zone"] == 1428  # Burning Steppes
     for transport in travel["transports"]:
         assert len(transport["stops"]) >= 2
+
+
+@pytest.mark.parametrize(
+    ("races", "side"),
+    [(0, "N"), (77, "A"), (178, "H"), (255, "N"), (1, "A"), (16, "H"), (1024, None)],
+)
+def test_quest_side_reads_the_race_mask(races: int, side: str | None) -> None:
+    assert quest_side(races) == side
+
+
+def test_quest_classes_reads_the_class_mask() -> None:
+    assert quest_classes(0) == ""
+    assert quest_classes(256) == "warlock"
+    assert quest_classes(4 | 1024) == "hunter,druid"
+
+
+def test_committed_quest_data_is_consistent() -> None:
+    zones = json.loads((FRONTEND_DATA / "zones.json").read_text(encoding="utf-8"))
+    payload = json.loads(
+        (FRONTEND_DATA / "classic" / "classicQuests.json").read_text(encoding="utf-8")
+    )
+    assert payload["source"]["license"].startswith("GPL-3.0")
+    forever_only = {z["id"] for z in zones["zones"] if z.get("foreverOnly")}
+    zone_ids = {z["id"] for z in zones["zones"]} - forever_only
+    quests = {q[0]: dict(zip(payload["questColumns"], q)) for q in payload["quests"]}
+    givers = [dict(zip(payload["giverColumns"], g)) for g in payload["givers"]]
+    assert len(quests) > 3000 and len(givers) > 1000
+    for giver in givers:
+        assert giver["zone"] in zone_ids
+        assert giver["type"] in ("npc", "object")
+        assert giver["faction"] in ("A", "H", "N")
+        assert giver["quests"] and all(q in quests for q in giver["quests"])
+    for quest in quests.values():
+        assert quest["side"] in ("A", "H", "N")
+        assert quest["minLevel"] >= 0 and quest["level"] >= 0
+    # Deputy Willem gives a human's first quest in Northshire, Elwynn Forest.
+    willem = next(g for g in givers if g["name"] == "Deputy Willem")
+    assert willem["zone"] == 1429 and willem["faction"] == "A"
+    assert any(quests[q]["title"] == "A Threat Within" for q in willem["quests"])
+
+
+def test_committed_dungeon_data_is_consistent() -> None:
+    payload = json.loads(
+        (FRONTEND_DATA / "classic" / "classicDungeons.json").read_text(encoding="utf-8")
+    )
+    rows = [dict(zip(payload["columns"], r)) for r in payload["rows"]]
+    by_name: dict[str, list[dict[str, object]]] = {}
+    for row in rows:
+        by_name.setdefault(str(row["name"]), []).append(row)
+        assert row["type"] in ("dungeon", "raid")
+        assert 0 <= float(str(row["x"])) <= 100 and 0 <= float(str(row["y"])) <= 100
+    assert by_name["Ragefire Chasm"][0]["zone"] == 1454  # Orgrimmar
+    assert by_name["Deadmines"][0]["zone"] == 1436  # Westfall
+    assert by_name["Wailing Caverns"][0]["zone"] == 1413  # The Barrens
+    wings = {r["wing"] for r in by_name["Scarlet Monastery"]}
+    assert wings == {"Graveyard", "Library", "Armory", "Cathedral"}
+    # Forever levels (ContentTuning), not Classic's ranges.
+    assert by_name["Wailing Caverns"][0]["minLevel"] == 17
+    assert by_name["Blackwing Lair"][0]["wing"] == "Inside Blackrock Spire"

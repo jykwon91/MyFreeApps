@@ -32,6 +32,12 @@ CMANGOS_DUMP_URL = (
 WAGO_BRANCH = "wow_classic_beta"  # WoW Forever beta client builds (1.60.x)
 WAGO_BUILD = "1.60.1.69977"
 
+# The Forever client no longer ships instance-entrance area triggers (they
+# are server-side now), so their positions come from the Classic Era client:
+# the same 1.x world, where the entrances haven't moved.
+WAGO_ERA_BRANCH = "wow_classic_era"
+WAGO_ERA_BUILD = "1.15.9.69722"
+
 _USER_AGENT = "MyGamingAssistant world-map generator (github.com/jykwon91/MyFreeApps)"
 
 CACHE_DIR = Path(tempfile.gettempdir()) / "mga-wow-world-map-cache"
@@ -54,9 +60,11 @@ def cmangos_dump() -> Path:
     return _fetch(CMANGOS_DUMP_URL, CACHE_DIR / f"classicdb-{CMANGOS_COMMIT[:12]}.sql.gz")
 
 
-def wago_table(name: str) -> list[dict[str, str]]:
-    url = f"https://wago.tools/db2/{name}/csv?branch={WAGO_BRANCH}&build={WAGO_BUILD}"
-    path = _fetch(url, CACHE_DIR / WAGO_BUILD / f"{name}.csv")
+def wago_table(
+    name: str, *, branch: str = WAGO_BRANCH, build: str = WAGO_BUILD
+) -> list[dict[str, str]]:
+    url = f"https://wago.tools/db2/{name}/csv?branch={branch}&build={build}"
+    path = _fetch(url, CACHE_DIR / build / f"{name}.csv")
     return list(csv.DictReader(io.StringIO(path.read_text(encoding="utf-8"))))
 
 
