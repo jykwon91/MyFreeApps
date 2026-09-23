@@ -1,0 +1,387 @@
+{
+ "video_id": "Skh6cMwNyCQ",
+ "map_slug": "dust2",
+ "game_slug": "cs2",
+ "author": "Tigerr",
+ "lineups": [
+  {
+   "cs": 46,
+   "title": "Mid Smoke 1 \u2014 T Spawn: stand against the T Spawn wall/corner, aim up at a",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     46.5,
+     48.8
+    ],
+    "aim": [
+     54.4,
+     55.3
+    ],
+    "throw": [
+     55.8,
+     56.4
+    ],
+    "landing": [
+     62.15,
+     62.95
+    ]
+   }
+  },
+  {
+   "cs": 106,
+   "title": "Mid Smoke 2 \u2014 T-side Mid Doors smoke thrown from Outside Long near the teal",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "a-long",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     106.0,
+     108.5
+    ],
+    "aim": [
+     118.7,
+     119.5
+    ],
+    "throw": [
+     119.45,
+     120.05
+    ],
+    "landing": [
+     124.6,
+     126.0
+    ]
+   }
+  },
+  {
+   "cs": 221,
+   "title": "Mid Smoke 3 \u2014 T-side Mid to B smoke",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     221.5,
+     224.5
+    ],
+    "aim": [
+     235.65,
+     236.05
+    ],
+    "throw": [
+     236.05,
+     236.65
+    ],
+    "landing": [
+     240.4,
+     241.4
+    ]
+   }
+  },
+  {
+   "cs": 285,
+   "title": "B Site Molly 1 \u2014 T molotov thrown from outside B Doors (sunlit lane, low",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     285.8,
+     287.3
+    ],
+    "aim": [
+     290.35,
+     291.35
+    ],
+    "throw": [
+     291.3,
+     291.9
+    ],
+    "landing": [
+     293.45,
+     294.65
+    ]
+   }
+  },
+  {
+   "cs": 305,
+   "title": "B Site Molly 2 \u2014 Second T molotov stand for the same mid-B-site target, from a",
+   "ability": "molotov",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     305.3,
+     306.3
+    ],
+    "aim": [
+     306.4,
+     307.1
+    ],
+    "throw": [
+     307.15,
+     307.75
+    ],
+    "landing": [
+     309.3,
+     310.3
+    ]
+   }
+  },
+  {
+   "cs": 459,
+   "title": "B Site Molly 3 \u2014 T-side molotov thrown from inside Upper Tunnels, aimed at the",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-tunnels",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     459.2,
+     461.2
+    ],
+    "aim": [
+     464.6,
+     465.4
+    ],
+    "throw": [
+     465.35,
+     465.95
+    ],
+    "landing": [
+     467.4,
+     469.6
+    ]
+   }
+  },
+  {
+   "cs": 510,
+   "title": "B Site Smoke 1 \u2014 T Spawn: stand on the paper/tarp ground marker in spawn",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     510.6,
+     512.2
+    ],
+    "aim": [
+     512.3,
+     513.3
+    ],
+    "throw": [
+     513.4,
+     514.0
+    ],
+    "landing": [
+     521.55,
+     522.8
+    ]
+   }
+  },
+  {
+   "cs": 569,
+   "title": "A Long Flash 1 \u2014 T-side pop-flash for A Long: stand outside Long Doors, backed",
+   "ability": "flash",
+   "technique": "jump",
+   "target": "a-long",
+   "stand": "a-long",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     569.5,
+     571.1
+    ],
+    "aim": [
+     572.2,
+     573.2
+    ],
+    "throw": [
+     573.66,
+     574.26
+    ],
+    "landing": [
+     575.4,
+     575.76
+    ]
+   }
+  },
+  {
+   "cs": 614,
+   "title": "A Long Smoke 1 \u2014 T-side Long A cross smoke: stand just outside Long Doors",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-long",
+   "stand": "a-long",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     614.3,
+     615.8
+    ],
+    "aim": [
+     615.8,
+     616.8
+    ],
+    "throw": [
+     616.75,
+     617.4
+    ],
+    "landing": [
+     628.7,
+     630.2
+    ]
+   }
+  },
+  {
+   "cs": 671,
+   "title": "A Site Molly 1 \u2014 T-side molotov thrown from the stairs between Mid and",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "catwalk",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     671.2,
+     673.8
+    ],
+    "aim": [
+     676.95,
+     677.95
+    ],
+    "throw": [
+     678.05,
+     678.65
+    ],
+    "landing": [
+     684.15,
+     685.05
+    ]
+   }
+  },
+  {
+   "cs": 725,
+   "title": "Mid HE 1 \u2014 CT-side HE thrown from under the CT Spawn/mid-side overhang",
+   "ability": "grenade",
+   "technique": "running",
+   "target": "mid",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     725.8,
+     727.4
+    ],
+    "aim": [
+     727.9,
+     728.8
+    ],
+    "throw": [
+     729.0,
+     729.6
+    ],
+    "landing": [
+     730.68,
+     731.6
+    ]
+   }
+  },
+  {
+   "cs": 788,
+   "title": "A Long Smoke 2 \u2014 CT-side smoke on Long Doors, thrown from A Long near the",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-long",
+   "stand": "a-long",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     788.8,
+     790.6
+    ],
+    "aim": [
+     794.3,
+     795.3
+    ],
+    "throw": [
+     807.6,
+     808.2
+    ],
+    "landing": [
+     814.2,
+     816.2
+    ]
+   }
+  },
+  {
+   "cs": 825,
+   "title": "A Long Molly 1 \u2014 CT incendiary thrown from Long A, standing against the",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "a-long",
+   "stand": "a-long",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     825.3,
+     827.3
+    ],
+    "aim": [
+     827.25,
+     827.95
+    ],
+    "throw": [
+     827.8,
+     828.45
+    ],
+    "landing": [
+     830.55,
+     832.4
+    ]
+   }
+  },
+  {
+   "cs": 893,
+   "title": "Mid Flash 1 \u2014 CT flash thrown from the CT side of Mid Doors (minimap",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     893.5,
+     896.0
+    ],
+    "aim": [
+     901.6,
+     902.6
+    ],
+    "throw": [
+     902.55,
+     903.15
+    ],
+    "landing": [
+     904.35,
+     906.0
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
