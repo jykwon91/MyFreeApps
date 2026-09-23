@@ -148,6 +148,17 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - Placement: a nested capital wins, then the flight-path name's zone, then the
   zone whose painted overlay covers the point. Classic NPCs never land on a
   Forever-only zone (`FOREVER_ONLY_ZONES`); those zones say "Not mapped yet".
+- **Layers:** NPC services (`classicServices.json`), quest givers
+  (`classicQuests.json` — creature/gameobject questrelation + quest_template;
+  side from RequiredRaces, class quests from RequiredClasses) and dungeon/raid
+  entrances (`classicDungeons.json`). Entrances come from the Classic Era
+  client's AreaTrigger (the Forever client ships no dungeon triggers) joined to
+  cmangos `areatrigger_teleport`; levels are Forever's own, from LFGDungeons →
+  ContentTuning `MinLevelSquish`. Forever-only dungeons have no positions yet.
+- Level rules (`worldMap/levels.ts`): trainers are never filtered by level;
+  quests show when min level ≤ your level + 2; dungeons are coloured by the
+  Classic con bands (grey/green/yellow/orange/red) and flagged "too low to
+  enter" below the required level.
 - Directions = travel-time search over walking, discovered-agnostic flight
   paths (fewest hops, then distance) and boats/zeppelins, always with the
   "flight paths must be discovered first" caveat.

@@ -42,6 +42,30 @@ test("an Alliance Warlock in Elwynn finds a trainer, gets directions and copies 
   await expect(page.getByRole("article", { name: "Warlock trainer: Maximillian Crowe" })).toBeVisible();
 });
 
+test("a level 1 Warlock sees Northshire's quests and the nearby dungeons", async ({ page }) => {
+  await page.goto("/wow-forever/map");
+  await page.getByRole("radio", { name: "Alliance" }).click();
+  await page.getByLabel("Class").selectOption("warlock");
+  await page.getByLabel("Zone").selectOption({ label: "Elwynn Forest" });
+  await page.getByLabel("Level").fill("1");
+  await page.getByLabel(/Your coordinates/).fill("48, 42");
+  await page.getByRole("button", { name: "Set position" }).click();
+
+  const quests = page.getByRole("region", { name: "Quests near you" });
+  const willem = quests.getByRole("article", { name: "Quest giver: Deputy Willem" });
+  await expect(willem.getByRole("list", { name: "Quests from Deputy Willem" })).toContainText("A Threat Within");
+  await willem.getByRole("button", { name: /Directions/ }).click();
+  // Standing at the abbey: he's within a few yards.
+  await expect(willem.getByRole("list", { name: "Directions" })).toContainText("Deputy Willem is right here");
+
+  const dungeons = page.getByRole("region", { name: "Dungeons & raids" });
+  await expect(dungeons.getByRole("article", { name: "Dungeon: Stormwind Stockade" })).toContainText("too low to enter yet");
+
+  // The dungeon layer is on by default; quest givers can be switched on.
+  await page.getByLabel("Quest givers").check();
+  await expect(page.getByRole("group", { name: "Elwynn Forest markers" })).toBeVisible();
+});
+
 test("a far-away trainer gets flight directions with the discovery caveat", async ({ page }) => {
   await page.goto("/wow-forever/map");
   await page.getByRole("radio", { name: "Alliance" }).click();

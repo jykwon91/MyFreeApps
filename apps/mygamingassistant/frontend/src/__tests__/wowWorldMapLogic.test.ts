@@ -2,18 +2,22 @@ import { describe, expect, it } from "vitest";
 import zonesJson from "@/games/wow-forever/data/worldMap/zones.json";
 import travelJson from "@/games/wow-forever/data/worldMap/travel.json";
 import servicesJson from "@/games/wow-forever/data/worldMap/classic/classicServices.json";
+import questsJson from "@/games/wow-forever/data/worldMap/classic/classicQuests.json";
+import dungeonsJson from "@/games/wow-forever/data/worldMap/classic/classicDungeons.json";
 import { parsePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { FACTION } from "@/games/wow-forever/types/worldMap";
 import { decodeWorldMap } from "@/games/wow-forever/worldMap/decodeWorldMap";
 import { STEP_KIND } from "@/games/wow-forever/worldMap/directions";
 import { compassDirection, formatYards, worldToZone, zoneToWorld } from "@/games/wow-forever/worldMap/geometry";
+import { greyLevel, instanceBand, LEVEL_BAND, levelBand, questsFor } from "@/games/wow-forever/worldMap/levels";
 import { NEAR_GROUP, sameAreaZoneIds } from "@/games/wow-forever/worldMap/nearest";
 import { parseCoords } from "@/games/wow-forever/worldMap/parseCoords";
 import { nextWarlockTraining } from "@/games/wow-forever/worldMap/training";
 import { mgaWayCommand, wayCommand } from "@/games/wow-forever/worldMap/waypoints";
 import { buildWorldMapModel, type WorldMapChoices } from "@/games/wow-forever/worldMap/worldMapModel";
 
-const data = decodeWorldMap(zonesJson, travelJson, servicesJson);
+const files = { zones: zonesJson, travel: travelJson, services: servicesJson, quests: questsJson, dungeons: dungeonsJson };
+const data = decodeWorldMap(files);
 
 const ELWYNN = 1429;
 const STORMWIND = 1453;
@@ -26,6 +30,7 @@ function choices(patch: Partial<WorldMapChoices>): WorldMapChoices {
     faction: FACTION.alliance,
     classId: "warlock",
     zoneId: ELWYNN,
+    level: null,
     position: { x: 42, y: 65 }, // Goldshire
     findFilterId: "class_trainer",
     showAllClasses: false,
@@ -56,7 +61,46 @@ describe("world map data", () => {
 
   it("rejects data with a missing column", () => {
     const broken = { ...servicesJson, columns: servicesJson.columns.filter((c) => c !== "zone") };
-    expect(() => decodeWorldMap(zonesJson, travelJson, broken)).toThrow(/zone/);
+    expect(() => decodeWorldMap({ ...files, services: broken })).toThrow(/zone/);
+  });
+
+  it("links quest givers to their quests and lists dungeon entrances", () => {
+    expect(data.questGivers.length).toBeGreaterThan(1000);
+    const willem = data.questGivers.find((g) => g.name === "Deputy Willem");
+    expect(willem?.quests?.map((q) => q.title)).toContain("A Threat Within");
+    const wc = data.instances.find((i) => i.name === "Wailing Caverns");
+    expect(wc).toMatchObject({ zone: 1413, levelMin: 17, requiredLevel: 10 });
+    expect(data.poiById.get(wc!.id)).toBe(wc);
+  });
+});
+
+describe("levels", () => {
+  it("colours like the quest log", () => {
+    expect(levelBand(20, 14)).toBe(LEVEL_BAND.red);
+    expect(levelBand(17, 14)).toBe(LEVEL_BAND.orange);
+    expect(levelBand(13, 14)).toBe(LEVEL_BAND.yellow);
+    expect(levelBand(10, 14)).toBe(LEVEL_BAND.green);
+    expect(levelBand(8, 14)).toBe(LEVEL_BAND.grey);
+    expect(greyLevel(60)).toBe(51);
+  });
+
+  it("shows quests up to two levels ahead, for your faction and class", () => {
+    const quests = [
+      { id: 1, title: "Now", minLevel: 10, level: 12, side: FACTION.alliance, classes: [] },
+      { id: 2, title: "Soon", minLevel: 12, level: 14, side: FACTION.neutral, classes: [] },
+      { id: 3, title: "Later", minLevel: 13, level: 15, side: FACTION.alliance, classes: [] },
+      { id: 4, title: "Horde", minLevel: 1, level: 5, side: FACTION.horde, classes: [] },
+      { id: 5, title: "Mage only", minLevel: 1, level: 5, side: FACTION.alliance, classes: ["mage"] },
+      { id: 6, title: "Warlock only", minLevel: 1, level: 5, side: FACTION.alliance, classes: ["warlock"] },
+    ];
+    expect(questsFor(quests, FACTION.alliance, "warlock", 10).map((q) => q.title)).toEqual(["Warlock only", "Now", "Soon"]);
+    expect(questsFor(quests, FACTION.alliance, "warlock", null)).toHaveLength(4);
+  });
+
+  it("marks a dungeon you can't enter yet red", () => {
+    expect(instanceBand({ levelMin: 17, requiredLevel: 10 }, 9)).toBe(LEVEL_BAND.red);
+    expect(instanceBand({ levelMin: 17, requiredLevel: 10 }, 17)).toBe(LEVEL_BAND.yellow);
+    expect(instanceBand({ levelMin: 17, requiredLevel: 10 }, 40)).toBe(LEVEL_BAND.grey);
   });
 });
 
@@ -130,6 +174,23 @@ describe("nearest services", () => {
 
   it("counts Stormwind as the same area as Elwynn Forest", () => {
     expect(sameAreaZoneIds(data.zoneById.get(ELWYNN)!, data.zones).has(STORMWIND)).toBe(true);
+  });
+
+  it("lists nearby quests a level 1 Alliance Warlock can take", () => {
+    const m = model({ level: 1, position: { x: 48, y: 42 } }); // Northshire Abbey
+    expect(m.questGivers[0].ranked.poi.name).toBe("Deputy Willem");
+    for (const { quests } of m.questGivers) {
+      for (const q of quests) {
+        expect(q.minLevel).toBeLessThanOrEqual(3);
+        expect(q.side).not.toBe(FACTION.horde);
+        if (q.classes.length) expect(q.classes).toContain("warlock");
+      }
+    }
+  });
+
+  it("ranks dungeon entrances nearest first", () => {
+    const names = model({}).instances.slice(0, 2).map((r) => r.poi.name);
+    expect(names).toContain("Stormwind Stockade");
   });
 
   it("puts other-continent results last with no distance", () => {
