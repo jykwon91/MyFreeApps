@@ -157,6 +157,12 @@ def test_committed_service_data_is_consistent() -> None:
     assert warlock_trainers["Gimrizz Shadowcog"]["zone"] == 1426  # Kharanos, Dun Morogh
     assert warlock_trainers["Alexander Calder"]["zone"] == 1455  # Ironforge
     assert warlock_trainers["Zevrost"]["faction"] == "H"
+    # Classic NPCs never land on a zone that only exists in Forever.
+    forever_only = {z["id"] for z in zones["zones"] if z.get("foreverOnly")}
+    assert forever_only, "expected Forever-only zones in zones.json"
+    assert not any(row["zone"] in forever_only for row in rows)
+    # Placement names come straight from area names: no stray whitespace.
+    assert all(row["subzone"] == row["subzone"].strip() for row in rows)
 
 
 def test_committed_travel_data_is_consistent() -> None:
@@ -167,5 +173,10 @@ def test_committed_travel_data_is_consistent() -> None:
     names = {n[1] for n in travel["nodes"]}
     # Forever: Powderfuse Port (Riverglades) has no flight path.
     assert not any("Powderfuse" in name for name in names)
+    # The flight-path name's zone wins over overlapping zone rectangles.
+    columns = travel["nodeColumns"]
+    nodes = {n[columns.index("name")]: dict(zip(columns, n)) for n in travel["nodes"]}
+    vigil = next(v for k, v in nodes.items() if k.startswith("Morgan's Vigil"))
+    assert vigil["zone"] == 1428  # Burning Steppes
     for transport in travel["transports"]:
         assert len(transport["stops"]) >= 2

@@ -46,7 +46,7 @@ export default function PositionInput({ data, onSet }: PositionInputProps) {
           className="min-w-0 flex-1 rounded-md border bg-card px-3 text-sm min-h-[44px]"
         />
         <button type="submit" className="rounded-md border px-3 text-sm min-h-[44px] hover:bg-muted/40">
-          Set
+          Set position
         </button>
       </div>
       {error && (

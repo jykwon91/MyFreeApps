@@ -83,7 +83,7 @@ function zoneName(data: WorldMapData, zoneId: number): string {
 
 function flightPlace(data: WorldMapData, node: FlightNode): StepPlace {
   return {
-    label: `the ${node.name} flight master`,
+    label: `the flight master at ${node.name}`,
     zoneId: node.zone,
     zoneName: zoneName(data, node.zone),
     subzone: node.subzone,
