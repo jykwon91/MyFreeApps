@@ -109,6 +109,48 @@ describe("WoW Forever World Map page", () => {
     capturesQuery.data = { captures: [] };
   });
 
+  it("clicking a result opens its map and highlights it, without moving you", async () => {
+    window.localStorage.setItem(
+      PLAYER_SETTINGS_STORAGE_KEY,
+      JSON.stringify({ faction: "A", classId: "warlock", zoneId: 1429, level: null, position: { x: 42, y: 65 } }),
+    );
+    renderPage();
+    const find = await screen.findByRole("region", { name: "Find" });
+    const calder = within(find).getByRole("article", { name: "Alexander Calder" });
+    await userEvent.click(within(calder).getByText(/Ironforge/, { selector: "span" }));
+
+    expect(screen.getByRole("img", { name: "Ironforge map" })).toBeInTheDocument();
+    const markers = screen.getByRole("group", { name: "Ironforge markers" });
+    expect(within(markers).getByRole("button", { pressed: true })).toHaveAccessibleName(/Alexander Calder/);
+    expect(calder).toHaveAttribute("aria-current", "true");
+    const stored = JSON.parse(window.localStorage.getItem(PLAYER_SETTINGS_STORAGE_KEY) ?? "{}");
+    expect(stored).toMatchObject({ zoneId: 1429, position: { x: 42, y: 65 } });
+  });
+
+  it("Enter on a focused row shows it on the map; zoom out climbs the map tree", async () => {
+    window.localStorage.setItem(
+      PLAYER_SETTINGS_STORAGE_KEY,
+      JSON.stringify({ faction: "A", classId: "warlock", zoneId: 1429, level: null, position: { x: 42, y: 65 } }),
+    );
+    renderPage();
+    const trainer = await screen.findByRole("article", { name: "Warlock trainer: Maximillian Crowe" });
+    trainer.focus();
+    await userEvent.keyboard("{Enter}");
+    expect(trainer).toHaveAttribute("aria-current", "true");
+    const markers = screen.getByRole("group", { name: "Elwynn Forest markers" });
+    expect(within(markers).getByRole("button", { pressed: true })).toHaveAccessibleName(/Maximillian Crowe/);
+
+    await userEvent.click(screen.getByRole("button", { name: "Zoom out" }));
+    expect(screen.getByRole("img", { name: "Eastern Kingdoms map" })).toBeInTheDocument();
+    const levels = screen.getByRole("navigation", { name: "Breadcrumb" });
+    expect(levels).toHaveTextContent("Azeroth");
+    await userEvent.click(within(levels).getByRole("button", { name: "Azeroth" }));
+    expect(screen.getByRole("img", { name: "Azeroth map" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Zoom out" })).toBeDisabled();
+    await userEvent.selectOptions(screen.getByLabelText("Open a map"), "Zephras Isle");
+    expect(screen.getByRole("img", { name: "Zephras Isle map" })).toBeInTheDocument();
+  });
+
   it("warns on a zone that's new in Forever", async () => {
     window.localStorage.setItem(
       PLAYER_SETTINGS_STORAGE_KEY,

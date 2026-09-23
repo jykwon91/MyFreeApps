@@ -16,11 +16,13 @@ interface InstanceListProps {
   instances: readonly RankedPoi[];
   selectedPoiId: string | null;
   onToggle: (poiId: string) => void;
+  onSelect: (poiId: string) => void;
   directions: Directions | null | undefined;
 }
 
 /** Dungeon and raid entrances, nearest first; ones too low for you are dimmed. */
-export default function InstanceList({ data, faction, level, instances, selectedPoiId, onToggle, directions }: InstanceListProps) {
+export default function InstanceList(props: InstanceListProps) {
+  const { data, faction, level, instances, selectedPoiId, onToggle, onSelect, directions } = props;
   const [limit, setLimit] = useState(PAGE_SIZE);
   const shown = instances.slice(0, limit);
 
@@ -45,6 +47,7 @@ export default function InstanceList({ data, faction, level, instances, selected
               heading={ranked.poi.subkind === INSTANCE_KIND.raid ? "Raid" : "Dungeon"}
               selected={ranked.poi.id === selectedPoiId}
               onToggle={onToggle}
+              onSelect={onSelect}
               directions={directions}
             >
               <InstanceLevel poi={ranked.poi} level={level} />

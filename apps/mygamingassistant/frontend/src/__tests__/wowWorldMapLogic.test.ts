@@ -4,6 +4,7 @@ import travelJson from "@/games/wow-forever/data/worldMap/travel.json";
 import servicesJson from "@/games/wow-forever/data/worldMap/classic/classicServices.json";
 import questsJson from "@/games/wow-forever/data/worldMap/classic/classicQuests.json";
 import dungeonsJson from "@/games/wow-forever/data/worldMap/classic/classicDungeons.json";
+import masksJson from "@/games/wow-forever/data/worldMap/mapMasks.json";
 import { parsePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { FACTION } from "@/games/wow-forever/types/worldMap";
 import { decodeWorldMap } from "@/games/wow-forever/worldMap/decodeWorldMap";
@@ -16,7 +17,14 @@ import { nextWarlockTraining } from "@/games/wow-forever/worldMap/training";
 import { mgaWayCommand, wayCommand } from "@/games/wow-forever/worldMap/waypoints";
 import { buildWorldMapModel, type WorldMapChoices } from "@/games/wow-forever/worldMap/worldMapModel";
 
-const files = { zones: zonesJson, travel: travelJson, services: servicesJson, quests: questsJson, dungeons: dungeonsJson };
+const files = {
+  zones: zonesJson,
+  travel: travelJson,
+  services: servicesJson,
+  quests: questsJson,
+  dungeons: dungeonsJson,
+  masks: masksJson,
+};
 const data = decodeWorldMap(files);
 
 const ELWYNN = 1429;

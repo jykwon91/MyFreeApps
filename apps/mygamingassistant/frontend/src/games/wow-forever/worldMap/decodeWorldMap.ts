@@ -10,15 +10,21 @@ import { isServiceKind } from "@/games/wow-forever/data/worldMap/serviceKinds";
 import {
   FACTION,
   INSTANCE_KIND,
+  MAP_KIND,
   POI_KIND,
   POI_SOURCE,
   QUEST_GIVER_KIND,
+  TERRITORY,
   VEHICLE,
   ZONE_KIND,
   type Faction,
   type FlightNode,
   type InstanceKind,
+  type MapMask,
   type MapPoi,
+  type MapRegion,
+  type MapView,
+  type Territory,
   type QuestGiverKind,
   type QuestInfo,
   type Transport,
@@ -84,11 +90,76 @@ function decodeZone(raw: unknown): WorldZone {
     name: str(z.name, "zone name"),
     kind,
     continent: num(z.continent, "zone continent"),
+    parent: num(z.parent, "zone parent"),
     bounds: [b[0], b[1], b[2], b[3]],
   };
   if (z.faction !== undefined) zone.faction = faction(z.faction, `zone ${zone.name}`);
   if (z.foreverOnly === true) zone.foreverOnly = true;
+  if (z.highlight === true) zone.highlight = true;
+  if (z.territory !== undefined) {
+    const territory: Territory | undefined = Object.values(TERRITORY).find((t) => t === z.territory);
+    if (!territory) fail(`zone ${zone.name} has an unknown territory`);
+    zone.territory = territory;
+  }
+  if (z.levels !== undefined) {
+    const levels = list(z.levels, "zone levels").map((v) => num(v, "zone level"));
+    if (levels.length !== 2) fail(`zone ${zone.name} levels need 2 numbers`);
+    zone.levels = [levels[0], levels[1]];
+  }
   return zone;
+}
+
+function rect(value: unknown, what: string): readonly [number, number, number, number] {
+  const r = list(value, what).map((v) => num(v, what));
+  if (r.length !== 4) fail(`${what} needs 4 numbers`);
+  return [r[0], r[1], r[2], r[3]];
+}
+
+/** The zoom-out tree: the world map (drawing each continent in its own region) + every zone map. */
+function decodeMapTree(raw: unknown, zones: readonly WorldZone[]): { maps: Map<number, MapView>; worldMapId: number } {
+  const w = record(raw, "world map");
+  const worldMapId = num(w.id, "world map id");
+  const regions: MapRegion[] = list(w.regions, "world regions").map((r) => {
+    const region = record(r, "world region");
+    return {
+      continent: num(region.continent, "region continent"),
+      ui: rect(region.ui, "region ui"),
+      bounds: rect(region.bounds, "region bounds"),
+    };
+  });
+  const maps = new Map<number, MapView>([
+    [worldMapId, { id: worldMapId, name: str(w.name, "world map name"), kind: MAP_KIND.world, parent: null, regions, zone: null }],
+  ]);
+  for (const zone of zones) {
+    maps.set(zone.id, {
+      id: zone.id,
+      name: zone.name,
+      kind: zone.kind,
+      parent: zone.parent,
+      regions: [{ continent: zone.continent, ui: [0, 0, 1, 1], bounds: zone.bounds }],
+      zone,
+    });
+  }
+  for (const map of maps.values()) {
+    if (map.parent !== null && !maps.has(map.parent)) fail(`${map.name} has an unknown parent map`);
+  }
+  return { maps, worldMapId };
+}
+
+function decodeMasks(raw: unknown): Map<number, MapMask> {
+  const payload = record(raw, "map masks");
+  const width = num(payload.width, "mask width");
+  const height = num(payload.height, "mask height");
+  const masks = new Map<number, MapMask>();
+  for (const [id, packed] of Object.entries(record(payload.masks, "masks"))) {
+    const binary = atob(str(packed, "mask"));
+    const bits = new Uint8Array(width * height);
+    for (let i = 0; i < bits.length; i++) {
+      bits[i] = (binary.charCodeAt(i >> 3) >> (7 - (i & 7))) & 1;
+    }
+    masks.set(Number(id), { width, height, bits });
+  }
+  return masks;
 }
 
 function decodeServices(raw: unknown): MapPoi[] {
@@ -253,11 +324,13 @@ export interface WorldMapFiles {
   services: unknown;
   quests: unknown;
   dungeons: unknown;
+  masks: unknown;
 }
 
 export function decodeWorldMap(files: WorldMapFiles): WorldMapData {
   const zonesPayload = record(files.zones, "zones file");
   const zones = list(zonesPayload.zones, "zones").map(decodeZone);
+  const { maps, worldMapId } = decodeMapTree(zonesPayload.world, zones);
   const continents = record(zonesPayload.continents, "continents");
   const continentNames = new Map<number, string>(
     Object.entries(continents).map(([id, name]) => [Number(id), str(name, "continent name")]),
@@ -268,6 +341,9 @@ export function decodeWorldMap(files: WorldMapFiles): WorldMapData {
   return {
     zones,
     zoneById: new Map(zones.map((z) => [z.id, z])),
+    maps,
+    worldMapId,
+    masks: decodeMasks(files.masks),
     continentNames,
     pois,
     questGivers,

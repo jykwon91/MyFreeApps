@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
 import clsx from "clsx";
 import { Badge } from "@platform/ui";
 import { ChevronDown, MapPin } from "lucide-react";
@@ -19,19 +19,47 @@ interface PoiRowProps {
   heading?: string;
   selected: boolean;
   onToggle: (poiId: string) => void;
+  /** Show this result on the map (click or Enter on the row). */
+  onSelect: (poiId: string) => void;
   /** Directions for the selected row. */
   directions: Directions | null | undefined;
   /** Layer-specific detail under the location line (quests offered, dungeon level). */
   children?: ReactNode;
 }
 
-export default function PoiRow({ ranked, data, faction, heading, selected, onToggle, directions, children }: PoiRowProps) {
+/** Controls inside the row keep their own clicks (directions toggle, copy buttons). */
+const OWN_CONTROLS = "button, a, input, select, textarea, [role='button']";
+
+export default function PoiRow(props: PoiRowProps) {
+  const { ranked, data, faction, heading, selected, onToggle, onSelect, directions, children } = props;
   const { poi, zone } = ranked;
   const panelId = `wm-directions-${poi.id}`;
+
+  function rowClick(e: MouseEvent<HTMLElement>) {
+    if (e.target instanceof Element && e.target.closest(OWN_CONTROLS)) return;
+    onSelect(poi.id);
+  }
+
+  function rowKey(e: KeyboardEvent<HTMLElement>) {
+    if (e.key !== "Enter" || e.target !== e.currentTarget) return;
+    e.preventDefault();
+    onSelect(poi.id);
+  }
+
   return (
     <article
       aria-label={`${heading ? `${heading}: ` : ""}${poi.name}`}
-      className={clsx("rounded-lg border p-3 space-y-2", selected && "border-primary ring-1 ring-primary")}
+      aria-current={selected || undefined}
+      data-poi-row={poi.id}
+      tabIndex={0}
+      onClick={rowClick}
+      onKeyDown={rowKey}
+      className={clsx(
+        "rounded-lg border p-3 space-y-2 cursor-pointer transition-colors scroll-mt-4",
+        // Concrete colours: the theme's `*-primary` tokens exist only as bg-/text- utilities (index.css).
+        "hover:border-blue-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500",
+        selected && "border-blue-500 ring-2 ring-blue-500/50",
+      )}
     >
       {heading && <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{heading}</p>}
       <div className="flex flex-wrap items-baseline gap-x-2">

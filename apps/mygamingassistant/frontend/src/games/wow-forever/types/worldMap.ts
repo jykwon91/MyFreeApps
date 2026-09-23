@@ -8,19 +8,64 @@ export type PlayerFaction = typeof FACTION.alliance | typeof FACTION.horde;
 export const ZONE_KIND = { continent: "continent", zone: "zone", city: "city" } as const;
 export type ZoneKind = (typeof ZONE_KIND)[keyof typeof ZONE_KIND];
 
+/** Whose land a zone is — the colour the game gives its name. */
+export const TERRITORY = { alliance: "alliance", horde: "horde", contested: "contested" } as const;
+export type Territory = (typeof TERRITORY)[keyof typeof TERRITORY];
+
 /** A map the player can open in game — the id is the client's uiMapID. */
 export interface WorldZone {
   id: number;
   name: string;
   kind: ZoneKind;
-  /** World map id: 0 Eastern Kingdoms, 1 Kalimdor, 2991 Zephras Isle. */
+  /** World map id: 0 Eastern Kingdoms, 1 Kalimdor, 2991 Zephras Isle, 2997 Darkspear Islands. */
   continent: number;
+  /** The map one level up (zoom out): a zone's continent, a continent's world map. */
+  parent: number;
   /** World rectangle drawn on the map: [minX, maxX, minY, maxY]. */
   bounds: readonly [number, number, number, number];
   /** Capital cities: the faction that owns it. */
   faction?: Faction;
   /** New in Forever — nothing from the Classic seed is placed here. */
   foreverOnly?: boolean;
+  /** Zones: whose territory it is (not set for new Forever zones). */
+  territory?: Territory;
+  /** Zones: the level range, from the client's sub-area levels. */
+  levels?: readonly [number, number];
+  /** The client ships a hover highlight (and hit-test outline) for this map. */
+  highlight?: boolean;
+}
+
+export const MAP_KIND = { world: "world", ...ZONE_KIND } as const;
+export type MapKind = (typeof MAP_KIND)[keyof typeof MAP_KIND];
+
+/**
+ * Where one world rectangle is drawn on a map. `ui` is [x0, y0, x1, y1] in
+ * 0..1 of the map picture; zone maps have one region covering the whole
+ * picture, the world map one per continent.
+ */
+export interface MapRegion {
+  continent: number;
+  ui: readonly [number, number, number, number];
+  bounds: readonly [number, number, number, number];
+}
+
+/** Any map in the zoom-out tree: the world, a continent, a zone or a city. */
+export interface MapView {
+  id: number;
+  name: string;
+  kind: MapKind;
+  /** null for the world map, the top of the tree. */
+  parent: number | null;
+  regions: readonly MapRegion[];
+  /** The zone entry behind every map but the world map. */
+  zone: WorldZone | null;
+}
+
+/** A map's outline, sampled in its own 0..100 frame (true = inside). */
+export interface MapMask {
+  width: number;
+  height: number;
+  bits: Uint8Array;
 }
 
 /** A position in world yards on one continent (+X north, +Y west). */
@@ -118,6 +163,12 @@ export interface Transport {
 export interface WorldMapData {
   zones: readonly WorldZone[];
   zoneById: ReadonlyMap<number, WorldZone>;
+  /** Every map in the zoom-out tree by uiMapID, the world map included. */
+  maps: ReadonlyMap<number, MapView>;
+  /** The top of the tree (Azeroth). */
+  worldMapId: number;
+  /** Zone / continent outlines for hit-testing, by uiMapID. */
+  masks: ReadonlyMap<number, MapMask>;
   continentNames: ReadonlyMap<number, string>;
   /** Service NPCs (trainers, flight masters, banks, ...). */
   pois: readonly MapPoi[];

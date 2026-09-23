@@ -7,12 +7,14 @@ import FindServices from "@/games/wow-forever/components/worldMap/FindServices";
 import ForeverNotes from "@/games/wow-forever/components/worldMap/ForeverNotes";
 import InstanceList from "@/games/wow-forever/components/worldMap/InstanceList";
 import QuestGivers from "@/games/wow-forever/components/worldMap/QuestGivers";
-import MapPanel from "@/games/wow-forever/components/worldMap/MapPanel";
 import NearestServices from "@/games/wow-forever/components/worldMap/NearestServices";
 import PlayerStrip from "@/games/wow-forever/components/worldMap/PlayerStrip";
+import WorldMapPanel from "@/games/wow-forever/components/worldMap/WorldMapPanel";
 import WorldMapSkeleton from "@/games/wow-forever/components/worldMap/WorldMapSkeleton";
 import { SERVICE_KIND } from "@/games/wow-forever/data/worldMap/serviceKinds";
-import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
+import { useMapSelection } from "@/games/wow-forever/hooks/useMapSelection";
+import { useMapView } from "@/games/wow-forever/hooks/useMapView";
+import { usePlayerSettings, type PlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { useWorldMap } from "@/games/wow-forever/hooks/useWorldMap";
 import { LOAD_STATUS } from "@/games/wow-forever/hooks/useWorldMapData";
 import { isServeOnly } from "@/lib/serveOnly";
@@ -27,7 +29,9 @@ export default function WowWorldMapPage() {
   const [findFilterId, setFindFilterId] = useState<string>(SERVICE_KIND.classTrainer);
   const [showAllClasses, setShowAllClasses] = useState(false);
   const [includeOtherFaction, setIncludeOtherFaction] = useState(false);
-  const [selectedPoiId, setSelectedPoiId] = useState<string | null>(null);
+  const view = useMapView(data, settings.zoneId);
+  const selection = useMapSelection(data, view.goTo);
+  const { selectedPoiId } = selection;
 
   const model = useMemo(
     () =>
@@ -46,8 +50,21 @@ export default function WowWorldMapPage() {
     [data, settings, findFilterId, showAllClasses, includeOtherFaction, selectedPoiId],
   );
 
-  const toggle = (poiId: string) => setSelectedPoiId((current) => (current === poiId ? null : poiId));
+  /** The strip changing your zone brings the map back to it; browsing the map never changes your zone. */
+  function changeSettings(patch: Partial<PlayerSettings>) {
+    updateSettings(patch);
+    if (patch.zoneId !== undefined && patch.zoneId !== settings.zoneId) view.followPlayer();
+  }
+
   const training = nextWarlockTraining(settings.classId, settings.level);
+  const rowProps = {
+    data,
+    faction: settings.faction,
+    selectedPoiId,
+    onToggle: selection.toggle,
+    onSelect: selection.select,
+    directions: model?.directions,
+  };
 
   return (
     <main className="p-4 sm:p-8 space-y-6 max-w-7xl">
@@ -68,41 +85,36 @@ export default function WowWorldMapPage() {
       )}
       {data && (
         <>
-          <PlayerStrip data={data} settings={settings} onChange={updateSettings} />
+          <PlayerStrip data={data} settings={settings} onChange={changeSettings} />
           {capturesFailed && (
             <p className="text-sm text-muted-foreground">
               Locations recorded in Forever didn't load — showing Classic locations only.
             </p>
           )}
-          {!model && (
-            <AlertBox variant="info">Pick your zone above to see what's nearest to you.</AlertBox>
+          {model?.zone.foreverOnly && (
+            <AlertBox variant="warning">
+              {model.zone.name} is new in Forever and not mapped yet — the results below are the nearest known places outside it.
+            </AlertBox>
           )}
-          {model && (
-            <>
-              {model.zone.foreverOnly && (
-                <AlertBox variant="warning">
-                  {model.zone.name} is new in Forever and not mapped yet — the results below are the nearest known places outside it.
+          {model?.usingZoneCentre && (
+            <p className="text-sm text-muted-foreground">
+              Measuring from the middle of {model.zone.name}. Click the map or enter your coordinates for better results.
+            </p>
+          )}
+          {model && training && <p className="text-sm">{training}</p>}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            <div className="space-y-8">
+              {!model && (
+                <AlertBox variant="info">
+                  Pick your zone above — or open it on the map and click where you are — to see what's nearest to you.
                 </AlertBox>
               )}
-              {model.usingZoneCentre && (
-                <p className="text-sm text-muted-foreground">
-                  Measuring from the middle of {model.zone.name}. Click the map or enter your coordinates for better results.
-                </p>
-              )}
-              {training && <p className="text-sm">{training}</p>}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                <div className="space-y-8">
-                  <NearestServices
-                    rows={model.hero}
-                    data={data}
-                    faction={settings.faction}
-                    selectedPoiId={selectedPoiId}
-                    onToggle={toggle}
-                    directions={model.directions}
-                  />
+              {model && (
+                <>
+                  <NearestServices {...rowProps} data={data} rows={model.hero} />
                   <FindServices
+                    {...rowProps}
                     data={data}
-                    faction={settings.faction}
                     classId={settings.classId}
                     filter={model.findFilter}
                     onFilterChange={setFindFilterId}
@@ -111,40 +123,29 @@ export default function WowWorldMapPage() {
                     includeOtherFaction={includeOtherFaction}
                     onIncludeOtherFactionChange={setIncludeOtherFaction}
                     results={model.findResults}
-                    selectedPoiId={selectedPoiId}
-                    onToggle={toggle}
-                    directions={model.directions}
                   />
-                  <QuestGivers
-                    data={data}
-                    faction={settings.faction}
-                    level={settings.level}
-                    givers={model.questGivers}
-                    selectedPoiId={selectedPoiId}
-                    onToggle={toggle}
-                    directions={model.directions}
-                  />
-                  <InstanceList
-                    data={data}
-                    faction={settings.faction}
-                    level={settings.level}
-                    instances={model.instances}
-                    selectedPoiId={selectedPoiId}
-                    onToggle={toggle}
-                    directions={model.directions}
-                  />
-                </div>
-                <div className="lg:sticky lg:top-4">
-                  <MapPanel
-                    data={data}
-                    model={model}
-                    onPick={(zoneId, x, y) => updateSettings({ zoneId, position: { x, y } })}
-                    onSelect={toggle}
-                  />
-                </div>
+                  <QuestGivers {...rowProps} data={data} level={settings.level} givers={model.questGivers} />
+                  <InstanceList {...rowProps} data={data} level={settings.level} instances={model.instances} />
+                </>
+              )}
+            </div>
+            {view.mapId !== null && (
+              <div className="lg:sticky lg:top-4">
+                <WorldMapPanel
+                  data={data}
+                  model={model}
+                  faction={settings.faction}
+                  mapId={view.mapId}
+                  playerZoneId={settings.zoneId}
+                  focus={selection.focus}
+                  onFocusApplied={selection.clearFocus}
+                  onOpen={view.goTo}
+                  onSetPosition={(zoneId, x, y) => updateSettings({ zoneId, position: { x, y } })}
+                  onSelectMarker={selection.selectMarker}
+                />
               </div>
-            </>
-          )}
+            )}
+          </div>
           <ForeverNotes />
           <AddonHelp />
           {canImport && <CaptureImport data={data} />}
