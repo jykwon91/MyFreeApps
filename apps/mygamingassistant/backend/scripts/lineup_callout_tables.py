@@ -13,6 +13,7 @@ Same purity contract as before: constants only, no argv, no filesystem, no recon
 globals.
 """
 from callouts_abyss import ABYSS_CALLOUTS
+from callouts_ancient import ANCIENT_CALLOUTS
 from callouts_anubis import ANUBIS_CALLOUTS
 from callouts_ascent import ASCENT_CALLOUTS
 from callouts_breeze import BREEZE_CALLOUTS
@@ -30,6 +31,7 @@ from callouts_sunset import SUNSET_CALLOUTS
 # "mid" and "b gym" beats "b".
 CALLOUTS_BY_MAP = {
     "abyss": ABYSS_CALLOUTS,
+    "ancient": ANCIENT_CALLOUTS,
     "ascent": ASCENT_CALLOUTS,
     "breeze": BREEZE_CALLOUTS,
     "haven": HAVEN_CALLOUTS,

@@ -1,0 +1,495 @@
+{
+ "video_id": "1IHb4QNlEBI",
+ "map_slug": "abyss",
+ "game_slug": "valorant",
+ "author": "Raion",
+ "lineups": [
+  {
+   "cs": 23,
+   "title": "B Site Orb 1 \u2014 Poison Cloud orb lobbed high from B Lobby toward B Site",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     23.0,
+     24.2
+    ],
+    "aim": [
+     31.95,
+     32.93
+    ],
+    "throw": [
+     35.23,
+     35.93
+    ],
+    "landing": [
+     85.95,
+     87.2
+    ]
+   }
+  },
+  {
+   "cs": 42,
+   "title": "B Site Wall 1 \u2014 Toxic Screen fired from B Main, facing a pillar or wall with",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     42.9,
+     43.9
+    ],
+    "aim": [
+     57.5,
+     58.85
+    ],
+    "throw": [
+     58.95,
+     59.55
+    ],
+    "landing": [
+     64.0,
+     65.0
+    ]
+   }
+  },
+  {
+   "cs": 170,
+   "title": "B Site Molly 1 \u2014 Snake Bite canister thrown from B Lobby onto B Site",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     170.55,
+     171.85
+    ],
+    "aim": [
+     183.0,
+     183.72
+    ],
+    "throw": [
+     183.72,
+     184.32
+    ],
+    "landing": [
+     188.85,
+     190.05
+    ]
+   }
+  },
+  {
+   "cs": 228,
+   "title": "A Site Orb 1 \u2014 Poison Cloud orb lobbed from A Lobby over the low wall/ledge",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     228.6,
+     229.9
+    ],
+    "aim": [
+     230.05,
+     230.8
+    ],
+    "throw": [
+     230.85,
+     231.45
+    ],
+    "landing": [
+     245.8,
+     246.8
+    ]
+   }
+  },
+  {
+   "cs": 237,
+   "title": "A Site Wall 1 \u2014 Toxic Screen fired from A Main: gauntlet raised with the",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     237.0,
+     237.7
+    ],
+    "aim": [
+     241.8,
+     242.63
+    ],
+    "throw": [
+     242.6,
+     243.15
+    ],
+    "landing": [
+     242.75,
+     243.6
+    ]
+   }
+  },
+  {
+   "cs": 256,
+   "title": "A Site Molly 1 \u2014 Snake Bite thrown from A Main (pillar/doorway) onto A Site",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     256.5,
+     258.2
+    ],
+    "aim": [
+     258.65,
+     259.4
+    ],
+    "throw": [
+     259.4,
+     260.0
+    ],
+    "landing": [
+     262.0,
+     263.5
+    ]
+   }
+  },
+  {
+   "cs": 347,
+   "title": "Mid Orb 1 \u2014 Mid Bottom by the stairs: looks up at the blue skylight and",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     347.6,
+     349.3
+    ],
+    "aim": [
+     349.6,
+     350.4
+    ],
+    "throw": [
+     350.4,
+     351.0
+    ],
+    "landing": [
+     354.5,
+     355.6
+    ]
+   }
+  },
+  {
+   "cs": 358,
+   "title": "A Site Wall 2 \u2014 A Vent by the fan wall: gauntlet aimed high at the ceiling",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     358.0,
+     360.5
+    ],
+    "aim": [
+     367.4,
+     367.8
+    ],
+    "throw": [
+     367.8,
+     368.4
+    ],
+    "landing": [
+     386.0,
+     388.0
+    ]
+   }
+  },
+  {
+   "cs": 374,
+   "title": "A Site Molly 2 \u2014 A Vent near the doorway into A Tower: short arcing canister",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     374.0,
+     374.4
+    ],
+    "aim": [
+     379.4,
+     379.95
+    ],
+    "throw": [
+     379.95,
+     380.55
+    ],
+    "landing": [
+     381.93,
+     382.73
+    ]
+   }
+  },
+  {
+   "cs": 410,
+   "title": "Mid Molly 1 \u2014 Back of A Vent beside the big fan: canister thrown at about",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     410.5,
+     411.6
+    ],
+    "aim": [
+     411.88,
+     412.27
+    ],
+    "throw": [
+     412.22,
+     412.7
+    ],
+    "landing": [
+     413.07,
+     413.78
+    ]
+   }
+  },
+  {
+   "cs": 467,
+   "title": "Mid Wall 1 \u2014 Attacker Toxic Screen fired from Mid Catwalk (location",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     467.4,
+     468.6
+    ],
+    "aim": [
+     473.45,
+     473.8
+    ],
+    "throw": [
+     473.8,
+     474.35
+    ],
+    "landing": [
+     482.0,
+     483.5
+    ]
+   }
+  },
+  {
+   "cs": 529,
+   "title": "B Site Wall 2 \u2014 Defender toxic screen (wall) fired from B Link: stand against",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     529.2,
+     530.8
+    ],
+    "aim": [
+     532.95,
+     533.7
+    ],
+    "throw": [
+     533.55,
+     534.25
+    ],
+    "landing": [
+     536.2,
+     537.8
+    ]
+   }
+  },
+  {
+   "cs": 578,
+   "title": "B Site Orb 2 \u2014 Poison cloud orb #1 thrown from B Site, crosshair held on a",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     578.0,
+     580.5
+    ],
+    "aim": [
+     588.0,
+     589.05
+    ],
+    "throw": [
+     589.1,
+     589.75
+    ],
+    "landing": [
+     592.55,
+     593.6
+    ]
+   }
+  },
+  {
+   "cs": 651,
+   "title": "B Site Orb 3 \u2014 Poison cloud orb #2 thrown from a different B Site stand near",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     651.0,
+     654.0
+    ],
+    "aim": [
+     659.1,
+     660.1
+    ],
+    "throw": [
+     660.15,
+     660.75
+    ],
+    "landing": [
+     665.4,
+     666.6
+    ]
+   }
+  },
+  {
+   "cs": 726,
+   "title": "A Site Orb 2 \u2014 Defender holding A Site (location reads 'A Site'), looking at",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     726.0,
+     728.3
+    ],
+    "aim": [
+     730.2,
+     731.2
+    ],
+    "throw": [
+     731.25,
+     731.85
+    ],
+    "landing": [
+     733.3,
+     734.8
+    ]
+   }
+  },
+  {
+   "cs": 747,
+   "title": "A Site Wall 3 \u2014 Wall fired from A Main (location reads 'A Main')",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     747.5,
+     749.8
+    ],
+    "aim": [
+     760.55,
+     760.99
+    ],
+    "throw": [
+     760.98,
+     761.6
+    ],
+    "landing": [
+     762.3,
+     764.0
+    ]
+   }
+  },
+  {
+   "cs": 804,
+   "title": "Mid Wall 2 \u2014 Wall fired from inside A Tower (the green room)",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     804.0,
+     805.5
+    ],
+    "aim": [
+     809.1,
+     809.55
+    ],
+    "throw": [
+     809.5,
+     810.1
+    ],
+    "landing": [
+     812.4,
+     813.8
+    ]
+   }
+  },
+  {
+   "cs": 841,
+   "title": "A Main Wall 1 \u2014 Wall fired from A Site (location reads 'A Site')",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     841.0,
+     843.0
+    ],
+    "aim": [
+     846.85,
+     846.97
+    ],
+    "throw": [
+     846.95,
+     847.5
+    ],
+    "landing": [
+     847.1,
+     848.3
+    ]
+   }
+  }
+ ],
+ "note": ""
+}

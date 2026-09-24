@@ -71,11 +71,19 @@ AGENTS = {
     },
     "viper": {
         "sources": {"XfRvdsxx1P8": "Frost LIVE", "X8erN-c1kyE": "CoachCow",
-                    "KrlfJElQex4": "Locked", "LbcPQO_AdJI": "nAts"},
+                    "KrlfJElQex4": "Locked", "LbcPQO_AdJI": "nAts",
+                    "1IHb4QNlEBI": "Raion", "Y4EW7dlWmrM": "inuis!"},
         # None is placed: the toxic screen's THROW beat is its placement confirm.
         "placed": set(),
         "legacy_zone_maps": set(),
         "short": {"snake-bite": "Molly", "poison-cloud": "Orb", "toxic-screen": "Wall"},
+    },
+    "sova": {
+        "sources": {"liTRXcUDWus": "Yolzy", "KKfmFMV-Yas": "Valomate | VALORANT Lineups App"},
+        # Both are fired from the bow (the fixture's recon / shock), so both keep a THROW.
+        "placed": set(),
+        "legacy_zone_maps": set(),
+        "short": {"recon": "Recon", "shock": "Shock"},
     },
     "fade": {
         "sources": {"7N1Q4SFvaHE": "LNX", "5yqNa4HIq5Q": "Frost LIVE"},
@@ -93,7 +101,8 @@ AGENTS = {
     # game_slug so ingest_agent resolves the CS2 map, zones and utility types.
     "cs2": {
         "game": "cs2",
-        "sources": {},
+        "sources": {"zCVFwsUktls": "GettClutch", "dutDQFa4cxA": "GettClutch",
+                    "x3DmUjLu0uk": "Tigerr"},
         "placed": set(),
         "legacy_zone_maps": set(),
         "short": {"smoke": "Smoke", "flash": "Flash", "molotov": "Molly", "grenade": "HE"},
