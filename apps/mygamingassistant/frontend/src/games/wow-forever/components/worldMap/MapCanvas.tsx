@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
 import clsx from "clsx";
-import { useMinimapZoomPan } from "@/hooks/useMinimapZoomPan";
+import { useMinimapZoomPan, type ZoomView } from "@/hooks/useMinimapZoomPan";
 import MapEdgeFrame from "@/games/wow-forever/components/worldMap/MapEdgeFrame";
 import MapGrid from "@/games/wow-forever/components/worldMap/MapGrid";
 import MapHoverHighlight from "@/games/wow-forever/components/worldMap/MapHoverHighlight";
@@ -12,6 +12,7 @@ import { worldToMap } from "@/games/wow-forever/worldMap/mapGeometry";
 import { revealInViewport } from "@/games/wow-forever/lib/revealInViewport";
 import { HIT_KIND, hitTestMap, type MapHit } from "@/games/wow-forever/worldMap/mapHitTest";
 import { neighbourLabels } from "@/games/wow-forever/worldMap/mapNeighbours";
+import type { MapZoomRestore } from "@/games/wow-forever/hooks/useMapSelection";
 import type { MapDestination, MapFocus, MapMarker, MapStop } from "@/games/wow-forever/worldMap/mapLayers";
 
 /** Pointer travel (px) that turns a click into a drag. */
@@ -30,12 +31,19 @@ interface MapCanvasProps {
   stops: readonly MapStop[];
   focus: MapFocus | null;
   onFocusApplied: () => void;
+  /** Put a remembered zoom + pan back (letting go of a selection). */
+  restore: MapZoomRestore | null;
+  onRestoreApplied: () => void;
+  /** Every zoom / pan change, so the page can remember the view. */
+  onZoomChange: (zoom: ZoomView) => void;
+  /** The player zoomed or panned by hand (wheel, drag, Reset zoom). */
+  onManualZoom: () => void;
   onOpen: (mapId: number) => void;
   onZoomOut: () => void;
   /** A click on the viewed zone itself, in its map percent. */
   onPick: (x: number, y: number) => void;
   onSelectMarker: (id: string) => void;
-  /** Clear the selected result (the view stays where it is). */
+  /** Clear the selected result. */
   onClearSelection: () => void;
 }
 
@@ -46,17 +54,19 @@ function sameHit(a: MapHit | null, b: MapHit): boolean {
 /**
  * One map of the zoom-out tree with its art, the route and the results.
  * Like the in-game map: hover a zone to light it up, click to open it,
- * right-click or Esc to zoom out (Esc, or a click, first clears a selected result); on a zone map the neighbours are named at
+ * right-click or Esc to zoom out (Esc, or a click, first clears a selected result — and the view goes back to where it
+ * was before the selection, unless the player moved it since); on a zone map the neighbours are named at
  * the edges and a click past a border opens that zone. Scroll to zoom, drag
  * to pan.
  */
 export default function MapCanvas(props: MapCanvasProps) {
-  const { data, map, faction, focus, onFocusApplied, onOpen, onZoomOut, onPick, selectedId, onClearSelection } = props;
+  const { data, map, faction, focus, onFocusApplied, restore, onRestoreApplied, onManualZoom } = props;
+  const { onOpen, onZoomOut, onPick, selectedId, onClearSelection } = props;
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
-  const zoom = useMinimapZoomPan(containerRef);
-  const { focusOn } = zoom;
+  const zoom = useMinimapZoomPan(containerRef, { onChange: props.onZoomChange, onWheelZoom: onManualZoom });
+  const { focusOn, setView } = zoom;
   const [imageFailed, setImageFailed] = useState(false);
   const [hover, setHover] = useState<MapHit | null>(null);
   const down = useRef<{ x: number; y: number } | null>(null);
@@ -72,6 +82,13 @@ export default function MapCanvas(props: MapCanvasProps) {
     revealInViewport(canvasRef.current);
     onFocusApplied();
   }, [focus, map, props.markers, focusOn, onFocusApplied]);
+
+  // Letting go of a selection: back to the zoom + pan from before it.
+  useEffect(() => {
+    if (!restore || restore.mapId !== map.id) return;
+    setView(restore.zoom);
+    onRestoreApplied();
+  }, [restore, map.id, setView, onRestoreApplied]);
 
   /** Map percent under the pointer (the art is transformed with the markers, so its box is the map's). */
   function percentAt(e: PointerEvent<HTMLDivElement>): { x: number; y: number } | null {
@@ -100,7 +117,12 @@ export default function MapCanvas(props: MapCanvasProps) {
     const start = down.current;
     down.current = null;
     const at = percentAt(e);
-    if (!start || !at || Math.hypot(e.clientX - start.x, e.clientY - start.y) > CLICK_SLOP) return;
+    if (!start || !at) return;
+    if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > CLICK_SLOP) {
+      // A drag: on a zoomed map that was a hand pan.
+      if (zoom.isZoomed) onManualZoom();
+      return;
+    }
     // With a result selected, a click off its marker only lets go of it (markers keep their own clicks).
     if (selectedId !== null) {
       onClearSelection();
@@ -184,7 +206,10 @@ export default function MapCanvas(props: MapCanvasProps) {
               type="button"
               onPointerDown={(e) => e.stopPropagation()}
               onPointerUp={(e) => e.stopPropagation()}
-              onClick={zoom.reset}
+              onClick={() => {
+                zoom.reset();
+                onManualZoom();
+              }}
               className="absolute right-2 top-12 z-10 rounded-md border bg-card px-3 text-xs min-h-[36px]"
             >
               Reset zoom

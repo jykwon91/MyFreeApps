@@ -29,6 +29,25 @@ interface Transform {
   ty: number;
 }
 
+/**
+ * A zoom + pan that survives a container resize: the translate is a fraction
+ * of the container's size rather than pixels. `{ scale: 1, x: 0, y: 0 }` is unzoomed.
+ */
+export interface ZoomView {
+  scale: number;
+  x: number;
+  y: number;
+}
+
+export const UNZOOMED: ZoomView = { scale: 1, x: 0, y: 0 };
+
+export interface ZoomPanOptions {
+  /** Every change of the zoom / pan, programmatic or not. */
+  onChange?: (view: ZoomView) => void;
+  /** The wheel changed the zoom (a person, never focusOn / setView / reset). */
+  onWheelZoom?: () => void;
+}
+
 /** Clamp translate so the scaled content still covers the [0,size] container. */
 function clampTranslate(t: number, scale: number, size: number): number {
   const min = size - size * scale; // most-negative (content right/bottom edge at container edge)
@@ -36,8 +55,17 @@ function clampTranslate(t: number, scale: number, size: number): number {
   return Math.max(min, Math.min(0, t));
 }
 
-export function useMinimapZoomPan(containerRef: React.RefObject<HTMLElement | null>) {
+function toView(t: Transform, r: { width: number; height: number }): ZoomView {
+  return { scale: t.scale, x: r.width ? t.tx / r.width : 0, y: r.height ? t.ty / r.height : 0 };
+}
+
+export function useMinimapZoomPan(containerRef: React.RefObject<HTMLElement | null>, options: ZoomPanOptions = {}) {
   const [t, setT] = useState<Transform>({ scale: 1, tx: 0, ty: 0 });
+  // Latest callbacks, read at event / effect time so they never re-attach listeners.
+  const optionsRef = useRef(options);
+  useEffect(() => {
+    optionsRef.current = options;
+  });
   const [panning, setPanning] = useState(false);
   const panState = useRef<{ startX: number; startY: number; startTx: number; startTy: number } | null>(null);
   // Mirror of `t` so the native wheel handler + pan-start (both fire at event
@@ -46,7 +74,10 @@ export function useMinimapZoomPan(containerRef: React.RefObject<HTMLElement | nu
   const tRef = useRef(t);
   useEffect(() => {
     tRef.current = t;
-  }, [t]);
+    const el = containerRef.current;
+    if (!el) return;
+    optionsRef.current.onChange?.(toView(t, el.getBoundingClientRect()));
+  }, [t, containerRef]);
 
   // Native non-passive wheel listener (synthetic onWheel is passive → can't
   // preventDefault the page scroll).
@@ -67,6 +98,7 @@ export function useMinimapZoomPan(containerRef: React.RefObject<HTMLElement | nu
       const tx = clampTranslate(cx - px * next, next, r.width);
       const ty = clampTranslate(cy - py * next, next, r.height);
       setT({ scale: next, tx, ty });
+      optionsRef.current.onWheelZoom?.();
     }
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
@@ -131,6 +163,22 @@ export function useMinimapZoomPan(containerRef: React.RefObject<HTMLElement | nu
     [containerRef],
   );
 
+  /** Put back a view read from `onChange` (clamped to the current container). */
+  const setView = useCallback(
+    (view: ZoomView) => {
+      const el = containerRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, view.scale));
+      setT({
+        scale,
+        tx: clampTranslate(view.x * r.width, scale, r.width),
+        ty: clampTranslate(view.y * r.height, scale, r.height),
+      });
+    },
+    [containerRef],
+  );
+
   const transformStyle: React.CSSProperties = {
     transform: `translate(${t.tx}px, ${t.ty}px) scale(${t.scale})`,
     transformOrigin: "0 0",
@@ -145,6 +193,7 @@ export function useMinimapZoomPan(containerRef: React.RefObject<HTMLElement | nu
     onPanEnd,
     reset,
     focusOn,
+    setView,
     isZoomed: t.scale > 1,
   };
 }

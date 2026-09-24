@@ -172,7 +172,18 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (and the row); clicking a marker selects and scrolls to its row. A selection
   is let go of by clicking its row again, the row's "Clear" button, Esc (on the
   map Esc clears first and only zooms out when nothing is selected) or a click
-  on the map; the view stays put. "Reset filters" (`hooks/useFindFilters.ts`)
+  on the map. **Letting go puts the view back:** a row selection snapshots the
+  view (map id + zoom + pan) first — selecting another row keeps the ORIGINAL
+  snapshot — and every clear path (incl. Reset filters) restores it: the
+  `?m=` pushes the selection made are undone with browser Back (`back(n)`, so
+  history is as it was) and the zoom/pan is re-applied once that map is on
+  screen. **Manual-navigation rule:** any map change the selection didn't
+  make (zoom out, breadcrumb, neighbour label, map click, "Open a map",
+  "Your zone"/"Destination" buttons, browser Back, changing your zone) or any
+  hand zoom/pan (wheel, a drag on a zoomed map, "Reset zoom") while selected
+  drops the snapshot — the player took control, so letting go only clears the
+  highlight in place. A marker click on the map never moves the view, so it
+  takes no snapshot of its own. "Reset filters" (`hooks/useFindFilters.ts`)
   restores the finding filters + map layers and clears the selection — never
   the "You" section (faction/class/zone/level/position).
 - Placement: a nested capital wins, then the flight-path name's zone, then the
