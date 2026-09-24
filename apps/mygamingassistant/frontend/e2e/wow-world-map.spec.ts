@@ -235,6 +235,59 @@ test("on the stacked layout a chosen result scrolls the map into view", async ({
   await expect(page.getByTestId("zone-map")).toBeInViewport({ ratio: 0.9 });
 });
 
+test("a selected result can be let go of — click again, Clear, Esc or the map — and Reset filters restores the defaults", async ({
+  page,
+}) => {
+  await standInGoldshire(page);
+  const crowe = page.getByRole("article", { name: "Warlock trainer: Maximillian Crowe" });
+  const name = crowe.getByRole("heading", { name: "Maximillian Crowe" });
+  const selectedMarker = page.getByRole("group", { name: "Elwynn Forest markers" }).getByRole("button", { pressed: true });
+  const elwynn = page.getByRole("img", { name: "Elwynn Forest map" });
+
+  // Click the selected row again.
+  await name.click();
+  await expect(selectedMarker).toHaveAccessibleName(/Maximillian Crowe/);
+  await name.click();
+  await expect(crowe).not.toHaveAttribute("aria-current", "true");
+  await expect(selectedMarker).toHaveCount(0);
+  await expect(elwynn).toBeVisible();
+
+  // The row's Clear button.
+  await name.click();
+  await crowe.getByRole("button", { name: "Clear selection: Maximillian Crowe" }).click();
+  await expect(selectedMarker).toHaveCount(0);
+
+  // Esc on the map: first lets go, then zooms out.
+  await name.click();
+  const map = page.getByTestId("zone-map");
+  await map.focus();
+  await page.keyboard.press("Escape");
+  await expect(selectedMarker).toHaveCount(0);
+  await expect(elwynn).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("img", { name: "Eastern Kingdoms map" })).toBeVisible();
+
+  // A click on the map lets go and neither moves you nor the map.
+  await name.click();
+  await expect(selectedMarker).toHaveAccessibleName(/Maximillian Crowe/);
+  await map.click({ position: await mapPoint(page, 20, 20) });
+  await expect(selectedMarker).toHaveCount(0);
+  await expect(elwynn).toBeVisible();
+
+  // Reset filters: back to class trainers and the default layers; the You section stays.
+  const find = page.getByRole("region", { name: "Find" });
+  const reset = find.getByRole("button", { name: "Reset filters" });
+  await expect(reset).toBeDisabled();
+  await find.getByLabel("What are you looking for?").selectOption("flight_master");
+  await page.getByRole("checkbox", { name: "Quest givers" }).check();
+  await expect(reset).toBeEnabled();
+  await reset.click();
+  await expect(find.getByLabel("What are you looking for?")).toHaveValue("class_trainer");
+  await expect(page.getByRole("checkbox", { name: "Quest givers" })).not.toBeChecked();
+  await expect(reset).toBeDisabled();
+  await expect(page.getByLabel("Zone").locator("option:checked")).toHaveText("Elwynn Forest");
+});
+
 test("a far-away trainer gets flight directions with the discovery caveat", async ({ page }) => {
   await page.goto("/wow-forever/map");
   await page.getByRole("radio", { name: "Alliance" }).click();

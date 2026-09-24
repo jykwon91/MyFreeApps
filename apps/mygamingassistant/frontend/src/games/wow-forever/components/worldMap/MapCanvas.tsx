@@ -35,6 +35,8 @@ interface MapCanvasProps {
   /** A click on the viewed zone itself, in its map percent. */
   onPick: (x: number, y: number) => void;
   onSelectMarker: (id: string) => void;
+  /** Clear the selected result (the view stays where it is). */
+  onClearSelection: () => void;
 }
 
 function sameHit(a: MapHit | null, b: MapHit): boolean {
@@ -44,12 +46,12 @@ function sameHit(a: MapHit | null, b: MapHit): boolean {
 /**
  * One map of the zoom-out tree with its art, the route and the results.
  * Like the in-game map: hover a zone to light it up, click to open it,
- * right-click or Esc to zoom out; on a zone map the neighbours are named at
+ * right-click or Esc to zoom out (Esc, or a click, first clears a selected result); on a zone map the neighbours are named at
  * the edges and a click past a border opens that zone. Scroll to zoom, drag
  * to pan.
  */
 export default function MapCanvas(props: MapCanvasProps) {
-  const { data, map, faction, focus, onFocusApplied, onOpen, onZoomOut, onPick } = props;
+  const { data, map, faction, focus, onFocusApplied, onOpen, onZoomOut, onPick, selectedId, onClearSelection } = props;
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -99,6 +101,11 @@ export default function MapCanvas(props: MapCanvasProps) {
     down.current = null;
     const at = percentAt(e);
     if (!start || !at || Math.hypot(e.clientX - start.x, e.clientY - start.y) > CLICK_SLOP) return;
+    // With a result selected, a click off its marker only lets go of it (markers keep their own clicks).
+    if (selectedId !== null) {
+      onClearSelection();
+      return;
+    }
     const hit = hitTestMap(data, map.id, at.x, at.y);
     if (hit.kind === HIT_KIND.goTo && hit.target) onOpen(hit.target.id);
     if (hit.kind === HIT_KIND.here) onPick(Number(formatCoord(at.x)), Number(formatCoord(at.y)));
@@ -112,7 +119,9 @@ export default function MapCanvas(props: MapCanvasProps) {
   function keyDown(e: KeyboardEvent<HTMLDivElement>) {
     if (e.key !== "Escape") return;
     e.preventDefault();
-    onZoomOut();
+    // Like the in-game map: Esc first lets go of the selection, then zooms out.
+    if (selectedId !== null) onClearSelection();
+    else onZoomOut();
   }
 
   const goTo = hover?.kind === HIT_KIND.goTo ? hover.target : null;

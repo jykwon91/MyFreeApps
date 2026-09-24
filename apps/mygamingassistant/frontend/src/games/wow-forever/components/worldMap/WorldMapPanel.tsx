@@ -23,6 +23,11 @@ interface WorldMapPanelProps {
   onOpen: (mapId: number) => void;
   onSetPosition: (zoneId: number, x: number, y: number) => void;
   onSelectMarker: (poiId: string) => void;
+  /** Esc or a click on the map with a result selected: clear it (the view stays). */
+  onClearSelection: () => void;
+  /** Which optional layers are drawn (owned by the page so Reset filters can restore them). */
+  layers: MapLayerChoice;
+  onLayersChange: (layers: MapLayerChoice) => void;
 }
 
 interface PendingSpot {
@@ -33,8 +38,7 @@ interface PendingSpot {
 
 /** The map beside the list: navigable from Azeroth down to a city, with you, the results and the route. */
 export default function WorldMapPanel(props: WorldMapPanelProps) {
-  const { data, model, faction, mapId, playerZoneId, onOpen, onSetPosition } = props;
-  const [layers, setLayers] = useState<MapLayerChoice>({ questGivers: false, instances: true });
+  const { data, model, faction, mapId, playerZoneId, onOpen, onSetPosition, layers, onLayersChange } = props;
   const [pending, setPending] = useState<PendingSpot | null>(null);
   const map = data.maps.get(mapId) ?? data.maps.get(data.worldMapId);
   if (!map) return null;
@@ -95,7 +99,7 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
             <input
               type="checkbox"
               checked={layers.questGivers}
-              onChange={(e) => setLayers((l) => ({ ...l, questGivers: e.target.checked }))}
+              onChange={(e) => onLayersChange({ ...layers, questGivers: e.target.checked })}
               className="h-4 w-4"
             />
             Quest givers
@@ -104,7 +108,7 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
             <input
               type="checkbox"
               checked={layers.instances}
-              onChange={(e) => setLayers((l) => ({ ...l, instances: e.target.checked }))}
+              onChange={(e) => onLayersChange({ ...layers, instances: e.target.checked })}
               className="h-4 w-4"
             />
             Dungeons &amp; raids
@@ -139,14 +143,15 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
         onZoomOut={() => map.parent !== null && onOpen(map.parent)}
         onPick={pick}
         onSelectMarker={props.onSelectMarker}
+        onClearSelection={props.onClearSelection}
       />
       <p className="text-xs text-muted-foreground">
         <span className="font-medium text-blue-600">●</span> You ·{" "}
         <span className="font-medium text-amber-500">●</span> direction steps, joined by a dashed route ·{" "}
         <span className="font-medium text-fuchsia-500">●</span> destination on a wider map ·{" "}
         <span className="font-medium text-cyan-400">●</span> quest givers ·{" "}
-        <span className="font-medium text-red-700">●</span> dungeons · other coloured dots are results. Click a zone to
-        open it; right-click or Esc zooms out. On your zone's map, click to set where you are. Scroll to zoom, drag to
+        <span className="font-medium text-red-700">●</span> dungeons · other coloured dots are results. With a result selected, a click on the map or Esc clears it.
+        Otherwise click a zone to open it; right-click or Esc zooms out. On your zone's map, click to set where you are. Scroll to zoom, drag to
         move.
       </p>
     </section>

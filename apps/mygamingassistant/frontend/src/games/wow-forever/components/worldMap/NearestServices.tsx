@@ -9,13 +9,12 @@ interface NearestServicesProps {
   faction: PlayerFaction;
   selectedPoiId: string | null;
   onToggle: (poiId: string) => void;
-  onSelect: (poiId: string) => void;
   directions: Directions | null | undefined;
 }
 
 /** The hero list: the closest of each everyday service, your class trainer first. */
 export default function NearestServices(props: NearestServicesProps) {
-  const { rows, data, faction, selectedPoiId, onToggle, onSelect, directions } = props;
+  const { rows, data, faction, selectedPoiId, onToggle, directions } = props;
   return (
     <section aria-labelledby="wm-nearest" className="space-y-3">
       <h2 id="wm-nearest" className="text-lg font-semibold">
@@ -39,7 +38,6 @@ export default function NearestServices(props: NearestServicesProps) {
               faction={faction}
               selected={best.poi.id === selectedPoiId}
               onToggle={onToggle}
-              onSelect={onSelect}
               directions={directions}
             />
           );

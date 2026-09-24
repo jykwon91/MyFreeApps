@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import WowWorldMapPage from "@/games/wow-forever/pages/WowWorldMapPage";
@@ -30,7 +30,8 @@ describe("WoW Forever World Map page", () => {
 
   it("asks for a zone first, then lists the nearest Warlock trainer", async () => {
     renderPage();
-    expect(await screen.findByText(/Pick your zone above/)).toBeInTheDocument();
+    // The first render pays for the cold import of the world data.
+    expect(await screen.findByText(/Pick your zone above/, {}, { timeout: 4000 })).toBeInTheDocument();
 
     await userEvent.selectOptions(screen.getByLabelText("Class"), "warlock");
     await userEvent.selectOptions(screen.getByLabelText("Zone"), "Elwynn Forest");
@@ -149,6 +150,7 @@ describe("WoW Forever World Map page", () => {
       expect(scrolled.some((el) => el.contains(map))).toBe(true);
 
       // Side by side: the map is already on screen — nothing scrolls.
+      await userEvent.keyboard("{Escape}");
       scrolled.length = 0;
       const onScreen = { ...below, top: 100, bottom: 500, y: 100 };
       rectSpy.mockReturnValue({ ...onScreen, toJSON: () => onScreen });
@@ -185,6 +187,118 @@ describe("WoW Forever World Map page", () => {
     await userEvent.selectOptions(screen.getByLabelText("Open a map"), "Zephras Isle");
     expect(screen.getByRole("img", { name: "Zephras Isle map" })).toBeInTheDocument();
     // Five map changes through userEvent: slow on a cold, busy CI worker.
+  }, 15_000);
+
+  // Each case renders the whole page and selects first: generous time on a busy CI worker.
+  describe("letting go of a selection", { timeout: 20_000 }, () => {
+    function renderInElwynn() {
+      window.localStorage.setItem(
+        PLAYER_SETTINGS_STORAGE_KEY,
+        JSON.stringify({ faction: "A", classId: "warlock", zoneId: 1429, level: null, position: { x: 42, y: 65 } }),
+      );
+      renderPage();
+    }
+
+    async function selectCrowe() {
+      const trainer = await screen.findByRole("article", { name: "Warlock trainer: Maximillian Crowe" });
+      await userEvent.click(within(trainer).getByRole("heading", { name: "Maximillian Crowe" }));
+      expect(trainer).toHaveAttribute("aria-current", "true");
+      return trainer;
+    }
+
+    function pressedMarkers() {
+      return within(screen.getByRole("group", { name: "Elwynn Forest markers" })).queryAllByRole("button", { pressed: true });
+    }
+
+    it("clicking the selected row again clears it, and the map stays put", async () => {
+      renderInElwynn();
+      const trainer = await selectCrowe();
+      await userEvent.click(within(trainer).getByRole("heading", { name: "Maximillian Crowe" }));
+      expect(trainer).not.toHaveAttribute("aria-current");
+      expect(pressedMarkers()).toHaveLength(0);
+      expect(screen.getByRole("img", { name: "Elwynn Forest map" })).toBeInTheDocument();
+    });
+
+    it("the selected row's Clear button clears it", async () => {
+      renderInElwynn();
+      const trainer = await selectCrowe();
+      await userEvent.click(within(trainer).getByRole("button", { name: "Clear selection: Maximillian Crowe" }));
+      expect(trainer).not.toHaveAttribute("aria-current");
+      expect(within(trainer).queryByRole("button", { name: /Clear selection/ })).not.toBeInTheDocument();
+    });
+
+    it("Esc clears the selection first, and only then zooms out", async () => {
+      renderInElwynn();
+      const trainer = await selectCrowe();
+      screen.getByTestId("zone-map").focus();
+      await userEvent.keyboard("{Escape}");
+      expect(trainer).not.toHaveAttribute("aria-current");
+      expect(screen.getByRole("img", { name: "Elwynn Forest map" })).toBeInTheDocument();
+
+      await userEvent.keyboard("{Escape}");
+      expect(screen.getByRole("img", { name: "Eastern Kingdoms map" })).toBeInTheDocument();
+    });
+
+    it("Esc on the list clears the selection", async () => {
+      renderInElwynn();
+      const trainer = await selectCrowe();
+      trainer.focus();
+      await userEvent.keyboard("{Escape}");
+      expect(trainer).not.toHaveAttribute("aria-current");
+      expect(screen.getByRole("img", { name: "Elwynn Forest map" })).toBeInTheDocument();
+    });
+
+    it("a click on the map clears the selection without moving you or the map", async () => {
+      renderInElwynn();
+      const trainer = await selectCrowe();
+      // jsdom lays nothing out: give the map a box so the click lands on it.
+      const box = { top: 0, left: 0, right: 600, bottom: 400, width: 600, height: 400, x: 0, y: 0 };
+      const rectSpy = vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue({ ...box, toJSON: () => box });
+      try {
+        const map = screen.getByTestId("zone-map");
+        fireEvent.pointerDown(map, { button: 0, clientX: 300, clientY: 200 });
+        fireEvent.pointerUp(map, { button: 0, clientX: 300, clientY: 200 });
+      } finally {
+        rectSpy.mockRestore();
+      }
+      expect(trainer).not.toHaveAttribute("aria-current");
+      expect(pressedMarkers()).toHaveLength(0);
+      expect(screen.getByRole("img", { name: "Elwynn Forest map" })).toBeInTheDocument();
+      const stored = JSON.parse(window.localStorage.getItem(PLAYER_SETTINGS_STORAGE_KEY) ?? "{}");
+      expect(stored).toMatchObject({ zoneId: 1429, position: { x: 42, y: 65 } });
+    });
+  });
+
+  it("Reset filters restores the finding filters and clears the selection, keeping the You section", async () => {
+    window.localStorage.setItem(
+      PLAYER_SETTINGS_STORAGE_KEY,
+      JSON.stringify({ faction: "A", classId: "warlock", zoneId: 1429, level: 12, position: { x: 42, y: 65 } }),
+    );
+    renderPage();
+    const find = await screen.findByRole("region", { name: "Find" });
+    const reset = within(find).getByRole("button", { name: "Reset filters" });
+    expect(reset).toBeDisabled();
+
+    await userEvent.selectOptions(within(find).getByLabelText("What are you looking for?"), "flight_master");
+    await userEvent.click(within(find).getByLabelText("Include the other faction"));
+    await userEvent.click(screen.getByLabelText("Quest givers"));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Dungeons & raids" }));
+    const trainer = screen.getByRole("article", { name: "Warlock trainer: Maximillian Crowe" });
+    await userEvent.click(within(trainer).getByRole("heading", { name: "Maximillian Crowe" }));
+    expect(reset).toBeEnabled();
+
+    await userEvent.click(reset);
+    expect(within(find).getByLabelText("What are you looking for?")).toHaveValue("class_trainer");
+    expect(within(find).getByLabelText("Include the other faction")).not.toBeChecked();
+    expect(within(find).getByLabelText("Show every class's trainers")).not.toBeChecked();
+    expect(screen.getByLabelText("Quest givers")).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Dungeons & raids" })).toBeChecked();
+    expect(trainer).not.toHaveAttribute("aria-current");
+    expect(reset).toBeDisabled();
+    // Who you are is not a filter.
+    const stored = JSON.parse(window.localStorage.getItem(PLAYER_SETTINGS_STORAGE_KEY) ?? "{}");
+    expect(stored).toMatchObject({ faction: "A", classId: "warlock", zoneId: 1429, level: 12, position: { x: 42, y: 65 } });
+    expect(screen.getByLabelText("Zone")).toHaveDisplayValue("Elwynn Forest");
   }, 15_000);
 
   it("warns on a zone that's new in Forever", async () => {

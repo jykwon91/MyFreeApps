@@ -169,7 +169,12 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `wowWorldMapNeighbours.test.ts` checks every zone at several widths.
 - **List ↔ map selection** (`hooks/useMapSelection.ts`): clicking / Enter on a
   result row opens that result's zone, zooms to it and highlights the marker
-  (and the row); clicking a marker selects and scrolls to its row.
+  (and the row); clicking a marker selects and scrolls to its row. A selection
+  is let go of by clicking its row again, the row's "Clear" button, Esc (on the
+  map Esc clears first and only zooms out when nothing is selected) or a click
+  on the map; the view stays put. "Reset filters" (`hooks/useFindFilters.ts`)
+  restores the finding filters + map layers and clears the selection — never
+  the "You" section (faction/class/zone/level/position).
 - Placement: a nested capital wins, then the flight-path name's zone, then the
   zone whose painted overlay covers the point. Classic NPCs never land on a
   Forever-only zone (`FOREVER_ONLY_ZONES`); those zones say "Not mapped yet".
