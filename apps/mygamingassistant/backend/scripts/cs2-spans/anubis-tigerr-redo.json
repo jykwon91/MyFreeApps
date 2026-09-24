@@ -1,0 +1,333 @@
+{
+ "video_id": "fJ0TTHKJne0",
+ "map_slug": "anubis",
+ "game_slug": "cs2",
+ "author": "Tigerr",
+ "lineups": [
+  {
+   "cs": 52,
+   "title": "B Site Smoke 1 \u2014 T Spawn (minimap 'T Start') aligned smoke thrown over the",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     52.2,
+     53.9
+    ],
+    "aim": [
+     56.25,
+     57.25
+    ],
+    "throw": [
+     57.25,
+     57.85
+    ],
+    "landing": [
+     59.6,
+     62.2
+    ]
+   }
+  },
+  {
+   "cs": 97,
+   "title": "Mid Smoke 1 \u2014 T-side smoke thrown from the T courtyard over or through the",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     97.0,
+     98.4
+    ],
+    "aim": [
+     98.5,
+     99.5
+    ],
+    "throw": [
+     99.45,
+     100.05
+    ],
+    "landing": [
+     105.4,
+     106.7
+    ]
+   }
+  },
+  {
+   "cs": 192,
+   "title": "Mid HE 1 \u2014 T-side HE from the same stairs/arch stand as the molotov",
+   "ability": "grenade",
+   "technique": "running",
+   "target": "mid",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     192.7,
+     193.5
+    ],
+    "aim": [
+     193.55,
+     194.4
+    ],
+    "throw": [
+     195.8,
+     196.4
+    ],
+    "landing": [
+     197.6,
+     198.3
+    ]
+   }
+  },
+  {
+   "cs": 202,
+   "title": "Mid Molly 1 \u2014 A molotov thrown from the same stand and aim as the HE, sent",
+   "ability": "molotov",
+   "technique": "running",
+   "target": "mid",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     202.5,
+     203.75
+    ],
+    "aim": [
+     203.96,
+     204.16
+    ],
+    "throw": [
+     204.2,
+     204.8
+    ],
+    "landing": [
+     206.26,
+     206.32
+    ]
+   }
+  },
+  {
+   "cs": 231,
+   "title": "B Site Smoke 2 \u2014 T-side B Site left-side smoke: stand outside B Main (HUD",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     231.45,
+     232.9
+    ],
+    "aim": [
+     234.88,
+     235.42
+    ],
+    "throw": [
+     235.45,
+     236.05
+    ],
+    "landing": [
+     252.95,
+     253.9
+    ]
+   }
+  },
+  {
+   "cs": 241,
+   "title": "B Site Smoke 3 \u2014 T-side smoke thrown from Outside Long (B approach) over the B",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     241.5,
+     243.5
+    ],
+    "aim": [
+     249.5,
+     250.6
+    ],
+    "throw": [
+     250.6,
+     251.2
+    ],
+    "landing": [
+     253.2,
+     254.4
+    ]
+   }
+  },
+  {
+   "cs": 272,
+   "title": "B Site Molly 1 \u2014 T-side molotov from the B approach (the red 'B' sign wall is",
+   "ability": "molotov",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     272.5,
+     275.0
+    ],
+    "aim": [
+     283.8,
+     284.85
+    ],
+    "throw": [
+     284.95,
+     285.55
+    ],
+    "landing": [
+     289.0,
+     290.4
+    ]
+   }
+  },
+  {
+   "cs": 312,
+   "title": "A Site Smoke 1 \u2014 T-side smoke into Heaven on A Site",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     312.5,
+     315.0
+    ],
+    "aim": [
+     315.2,
+     316.2
+    ],
+    "throw": [
+     316.72,
+     317.32
+    ],
+    "landing": [
+     321.6,
+     324.0
+    ]
+   }
+  },
+  {
+   "cs": 345,
+   "title": "A Site Smoke 2 \u2014 T-side A smoke for Camera: stand tucked against the big",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     345.8,
+     347.6
+    ],
+    "aim": [
+     353.45,
+     354.05
+    ],
+    "throw": [
+     354.0,
+     354.62
+    ],
+    "landing": [
+     357.7,
+     359.5
+    ]
+   }
+  },
+  {
+   "cs": 360,
+   "title": "B Site Molly 2 \u2014 T-side molotov thrown from beside a thick pillar/column in",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     360.0,
+     362.0
+    ],
+    "aim": [
+     368.1,
+     369.1
+    ],
+    "throw": [
+     369.05,
+     369.65
+    ],
+    "landing": [
+     371.3,
+     373.0
+    ]
+   }
+  },
+  {
+   "cs": 385,
+   "title": "A Site Flash 1 \u2014 T flash thrown from Canal (standing in the water below the 'A",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     385.0,
+     387.1
+    ],
+    "aim": [
+     390.2,
+     391.2
+    ],
+    "throw": [
+     391.28,
+     391.88
+    ],
+    "landing": [
+     405.64,
+     406.0
+    ]
+   }
+  },
+  {
+   "cs": 436,
+   "title": "B Site Smoke 4 \u2014 T-side mid smoke onto the Temple doorway/window, thrown from",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     436.3,
+     437.7
+    ],
+    "aim": [
+     438.8,
+     439.74
+    ],
+    "throw": [
+     439.78,
+     440.34
+    ],
+    "landing": [
+     444.0,
+     445.0
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
