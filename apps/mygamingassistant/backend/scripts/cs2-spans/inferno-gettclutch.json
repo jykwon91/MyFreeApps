@@ -1,0 +1,306 @@
+{
+ "video_id": "xBVKvESvv2U",
+ "map_slug": "inferno",
+ "game_slug": "cs2",
+ "author": "GettClutch",
+ "lineups": [
+  {
+   "cs": 5,
+   "title": "Mid Smoke 1 \u2014 T-side Top Mid smoke: stand in T spawn tucked against a stone",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     5.5,
+     7.5
+    ],
+    "aim": [
+     11.0,
+     11.95
+    ],
+    "throw": [
+     12.0,
+     12.6
+    ],
+    "landing": [
+     18.25,
+     18.95
+    ]
+   }
+  },
+  {
+   "cs": 23,
+   "title": "Mid Smoke 2 \u2014 T-side smoke for Top Mid, thrown from the T-side archway",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     23.6,
+     24.5
+    ],
+    "aim": [
+     24.52,
+     25.04
+    ],
+    "throw": [
+     24.98,
+     25.58
+    ],
+    "landing": [
+     31.85,
+     33.3
+    ]
+   }
+  },
+  {
+   "cs": 44,
+   "title": "Second Mid Smoke 1 \u2014 T-side smoke from the stone stairs under the arch by the red",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "second-mid",
+   "stand": "banana",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     44.2,
+     45.8
+    ],
+    "aim": [
+     50.2,
+     51.15
+    ],
+    "throw": [
+     52.05,
+     52.65
+    ],
+    "landing": [
+     54.1,
+     55.3
+    ]
+   }
+  },
+  {
+   "cs": 67,
+   "title": "A Site Smoke 1 \u2014 First of the two smokes, likely Arch (the title lists Arch",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     67.15,
+     68.15
+    ],
+    "aim": [
+     75.5,
+     76.6
+    ],
+    "throw": [
+     77.07,
+     77.67
+    ],
+    "landing": [
+     87.95,
+     88.75
+    ]
+   }
+  },
+  {
+   "cs": 99,
+   "title": "A Site Smoke 2 \u2014 T-side Short smoke: stand tucked into a wall corner",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "second-mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     99.0,
+     101.5
+    ],
+    "aim": [
+     106.0,
+     106.95
+    ],
+    "throw": [
+     107.25,
+     107.85
+    ],
+    "landing": [
+     113.72,
+     114.9
+    ]
+   }
+  },
+  {
+   "cs": 125,
+   "title": "A Long Smoke 1 \u2014 T-side smoke for Bracket/Long: walk up Top Mid past the pink",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-long",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     125.6,
+     127.3
+    ],
+    "aim": [
+     129.8,
+     130.85
+    ],
+    "throw": [
+     131.62,
+     132.22
+    ],
+    "landing": [
+     138.15,
+     138.8
+    ]
+   }
+  },
+  {
+   "cs": 147,
+   "title": "A Site Smoke 3 \u2014 T-side Apartments lurk smoke: the player walks through the",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "apartments",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     147.3,
+     149.8
+    ],
+    "aim": [
+     151.4,
+     152.5
+    ],
+    "throw": [
+     152.5,
+     153.08
+    ],
+    "landing": [
+     156.65,
+     157.8
+    ]
+   }
+  },
+  {
+   "cs": 168,
+   "title": "A Site Smoke 4 \u2014 T-side Moto smoke: from the Apartments/T approach, stand",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "apartments",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     168.9,
+     170.7
+    ],
+    "aim": [
+     172.8,
+     173.9
+    ],
+    "throw": [
+     174.33,
+     174.93
+    ],
+    "landing": [
+     181.5,
+     182.15
+    ]
+   }
+  },
+  {
+   "cs": 186,
+   "title": "Mid Smoke 3 \u2014 T-side smoke thrown from beside the Mercato doorway and the",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "banana",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     186.95,
+     188.95
+    ],
+    "aim": [
+     194.3,
+     195.3
+    ],
+    "throw": [
+     195.5,
+     196.1
+    ],
+    "landing": [
+     203.0,
+     204.6
+    ]
+   }
+  },
+  {
+   "cs": 257,
+   "title": "B Site Smoke 1 \u2014 T-side B smoke onto CT (the arch area beside the yellow",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "banana",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     257.6,
+     259.6
+    ],
+    "aim": [
+     260.5,
+     261.6
+    ],
+    "throw": [
+     261.72,
+     262.32
+    ],
+    "landing": [
+     270.7,
+     271.7
+    ]
+   }
+  },
+  {
+   "cs": 264,
+   "title": "B Site Smoke 2 \u2014 T-side B smoke onto Coffins: same 'B arrow' wall spot with a",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "banana",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     264.0,
+     266.5
+    ],
+    "aim": [
+     267.0,
+     268.1
+    ],
+    "throw": [
+     268.7,
+     269.35
+    ],
+    "landing": [
+     275.4,
+     276.4
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
