@@ -1,0 +1,306 @@
+{
+ "video_id": "zCVFwsUktls",
+ "map_slug": "anubis",
+ "game_slug": "cs2",
+ "author": "GettClutch",
+ "lineups": [
+  {
+   "cs": 5,
+   "title": "Mid Smoke 1 \u2014 Same T Spawn plaza, near the first spot but a slightly",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     5.6,
+     7.1
+    ],
+    "aim": [
+     7.05,
+     7.72
+    ],
+    "throw": [
+     7.8,
+     8.4
+    ],
+    "landing": [
+     14.9,
+     15.9
+    ]
+   }
+  },
+  {
+   "cs": 8,
+   "title": "Mid Smoke 2 \u2014 T Spawn plaza, same house view, crosshair on the rooftop near",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     8.9,
+     10.0
+    ],
+    "aim": [
+     10.0,
+     10.6
+    ],
+    "throw": [
+     11.4,
+     12.0
+    ],
+    "landing": [
+     17.6,
+     18.4
+    ]
+   }
+  },
+  {
+   "cs": 48,
+   "title": "B Site Smoke 1 \u2014 Second B Main jump-throw smoke from the same vine-wall spot",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     48.5,
+     49.4
+    ],
+    "aim": [
+     49.4,
+     50.33
+    ],
+    "throw": [
+     50.25,
+     50.85
+    ],
+    "landing": [
+     56.1,
+     57.3
+    ]
+   }
+  },
+  {
+   "cs": 51,
+   "title": "B Site Molly 1 \u2014 B Main jump-throw molotov from the same vine-wall spot, aimed",
+   "ability": "molotov",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     51.5,
+     53.3
+    ],
+    "aim": [
+     53.3,
+     54.25
+    ],
+    "throw": [
+     54.28,
+     54.88
+    ],
+    "landing": [
+     56.45,
+     57.85
+    ]
+   }
+  },
+  {
+   "cs": 64,
+   "title": "B Site Molly 2 \u2014 T molotov #2 of the Temple+Ninja combo",
+   "ability": "molotov",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     64.0,
+     65.2
+    ],
+    "aim": [
+     65.1,
+     65.83
+    ],
+    "throw": [
+     65.82,
+     66.42
+    ],
+    "landing": [
+     69.1,
+     69.38
+    ]
+   }
+  },
+  {
+   "cs": 78,
+   "title": "Mid Molly 1 \u2014 CT stands at the base of a painted pillar, aims at the top",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     78.6,
+     80.4
+    ],
+    "aim": [
+     80.5,
+     81.45
+    ],
+    "throw": [
+     81.4,
+     82.0
+    ],
+    "landing": [
+     84.7,
+     86.7
+    ]
+   }
+  },
+  {
+   "cs": 123,
+   "title": "Mid HE 1 \u2014 CT HE from inside an arched-window room (stand next to a",
+   "ability": "grenade",
+   "technique": "running",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     123.45,
+     124.3
+    ],
+    "aim": [
+     124.3,
+     125.0
+    ],
+    "throw": [
+     125.0,
+     125.6
+    ],
+    "landing": [
+     126.7,
+     127.5
+    ]
+   }
+  },
+  {
+   "cs": 132,
+   "title": "A Site Molly 1 \u2014 T side, A Main by the canal pool: jump up onto the wicker",
+   "ability": "molotov",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     132.15,
+     133.0
+    ],
+    "aim": [
+     133.0,
+     133.7
+    ],
+    "throw": [
+     133.62,
+     134.22
+    ],
+    "landing": [
+     138.24,
+     139.1
+    ]
+   }
+  },
+  {
+   "cs": 156,
+   "title": "A Site Smoke 1 \u2014 Same stand under the orange awning: look up at the awning",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     156.6,
+     158.1
+    ],
+    "aim": [
+     158.0,
+     158.75
+    ],
+    "throw": [
+     158.7,
+     159.3
+    ],
+    "landing": [
+     164.8,
+     165.8
+    ]
+   }
+  },
+  {
+   "cs": 160,
+   "title": "A Site Smoke 2 \u2014 A slightly different stand a little further back/left in the",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     160.3,
+     162.0
+    ],
+    "aim": [
+     161.95,
+     162.55
+    ],
+    "throw": [
+     162.5,
+     163.1
+    ],
+    "landing": [
+     164.65,
+     166.0
+    ]
+   }
+  },
+  {
+   "cs": 170,
+   "title": "Mid Molly 2 \u2014 T side: stand beside the lantern table against the orange",
+   "ability": "molotov",
+   "technique": "running",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     170.0,
+     172.0
+    ],
+    "aim": [
+     172.8,
+     173.8
+    ],
+    "throw": [
+     173.9,
+     174.5
+    ],
+    "landing": [
+     175.9,
+     177.0
+    ]
+   }
+  }
+ ],
+ "note": ""
+}

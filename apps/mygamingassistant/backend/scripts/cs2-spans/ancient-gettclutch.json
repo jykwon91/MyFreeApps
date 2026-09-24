@@ -1,0 +1,468 @@
+{
+ "video_id": "dutDQFa4cxA",
+ "map_slug": "ancient",
+ "game_slug": "cs2",
+ "author": "GettClutch",
+ "lineups": [
+  {
+   "cs": 0,
+   "title": "Mid Smoke 1 \u2014 T Spawn (spawn position 5, under the wooden plank bridge)",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     0.6,
+     1.6
+    ],
+    "aim": [
+     1.6,
+     2.3
+    ],
+    "throw": [
+     2.3,
+     2.9
+    ],
+    "landing": [
+     10.65,
+     11.55
+    ]
+   }
+  },
+  {
+   "cs": 19,
+   "title": "B Site Smoke 1 \u2014 T-side jump-throw from the water under the wooden bridge (B",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     19.8,
+     21.0
+    ],
+    "aim": [
+     21.1,
+     22.1
+    ],
+    "throw": [
+     22.1,
+     22.7
+    ],
+    "landing": [
+     27.78,
+     28.8
+    ]
+   }
+  },
+  {
+   "cs": 29,
+   "title": "B Site Smoke 2 \u2014 T-side B approach (T Spawn toward B): stand in the shallow",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     29.5,
+     30.6
+    ],
+    "aim": [
+     30.6,
+     31.45
+    ],
+    "throw": [
+     31.45,
+     32.05
+    ],
+    "landing": [
+     38.25,
+     39.4
+    ]
+   }
+  },
+  {
+   "cs": 32,
+   "title": "B Site Smoke 3 \u2014 Same general stand by the mossy pillar and rope bridge, but",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     32.5,
+     33.9
+    ],
+    "aim": [
+     33.9,
+     34.8
+    ],
+    "throw": [
+     35.2,
+     35.8
+    ],
+    "landing": [
+     38.3,
+     39.4
+    ]
+   }
+  },
+  {
+   "cs": 58,
+   "title": "Mid HE 1 \u2014 T-side early HE thrown from T Spawn out toward Mid",
+   "ability": "grenade",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     58.08,
+     58.72
+    ],
+    "aim": [
+     58.15,
+     58.78
+    ],
+    "throw": [
+     58.75,
+     59.35
+    ],
+    "landing": [
+     61.25,
+     62.05
+    ]
+   }
+  },
+  {
+   "cs": 64,
+   "title": "Mid Flash 1 \u2014 T-side pop-flash for Mid and Window, thrown from the same",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     64.0,
+     65.6
+    ],
+    "aim": [
+     67.95,
+     68.68
+    ],
+    "throw": [
+     68.68,
+     69.28
+    ],
+    "landing": [
+     70.5,
+     71.1
+    ]
+   }
+  },
+  {
+   "cs": 74,
+   "title": "Mid Molly 1 \u2014 T-side Heaven molly: stand crouched against a mossy stone",
+   "ability": "molotov",
+   "technique": "running",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     74.9,
+     76.4
+    ],
+    "aim": [
+     77.1,
+     78.2
+    ],
+    "throw": [
+     79.6,
+     80.2
+    ],
+    "landing": [
+     81.85,
+     83.3
+    ]
+   }
+  },
+  {
+   "cs": 89,
+   "title": "B Main Flash 1 \u2014 T-side pop-flash from the same Mid-side Cave-entrance room",
+   "ability": "flash",
+   "technique": "jump",
+   "target": "b-main",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     89.5,
+     90.3
+    ],
+    "aim": [
+     90.3,
+     90.95
+    ],
+    "throw": [
+     90.88,
+     91.48
+    ],
+    "landing": [
+     92.72,
+     93.32
+    ]
+   }
+  },
+  {
+   "cs": 97,
+   "title": "B Site Smoke 4 \u2014 T side, standing in the B Main/B Ramp wooden doorway looking",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     97.3,
+     98.3
+    ],
+    "aim": [
+     98.6,
+     99.6
+    ],
+    "throw": [
+     99.6,
+     100.2
+    ],
+    "landing": [
+     106.6,
+     108.0
+    ]
+   }
+  },
+  {
+   "cs": 100,
+   "title": "B Site Molly 1 \u2014 Same B Main doorway spot, aimed at the top of the plant on",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     100.5,
+     101.9
+    ],
+    "aim": [
+     101.2,
+     102.05
+    ],
+    "throw": [
+     102.0,
+     102.6
+    ],
+    "landing": [
+     106.1,
+     106.9
+    ]
+   }
+  },
+  {
+   "cs": 102,
+   "title": "B Site Flash 1 \u2014 B Main doorway with a lower view of the Plaza B sign and crate",
+   "ability": "flash",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     102.55,
+     103.2
+    ],
+    "aim": [
+     103.0,
+     103.67
+    ],
+    "throw": [
+     103.67,
+     104.27
+    ],
+    "landing": [
+     110.96,
+     111.56
+    ]
+   }
+  },
+  {
+   "cs": 115,
+   "title": "B Site Smoke 5 \u2014 T-side smoke from the B Main B Ramp approach (stone wall",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     115.45,
+     116.95
+    ],
+    "aim": [
+     118.7,
+     119.62
+    ],
+    "throw": [
+     119.62,
+     120.22
+    ],
+    "landing": [
+     126.6,
+     127.6
+    ]
+   }
+  },
+  {
+   "cs": 131,
+   "title": "B Main Molly 1 \u2014 CT incendiary from the CT-side lane by the wooden crate",
+   "ability": "molotov",
+   "technique": "jump",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     131.05,
+     131.45
+    ],
+    "aim": [
+     131.78,
+     132.13
+    ],
+    "throw": [
+     132.1,
+     132.7
+    ],
+    "landing": [
+     138.05,
+     139.3
+    ]
+   }
+  },
+  {
+   "cs": 146,
+   "title": "B Site HE 1 \u2014 HE running jump-throw from beside the pillar by the tall blue",
+   "ability": "grenade",
+   "technique": "running",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     146.75,
+     147.4
+    ],
+    "aim": [
+     147.0,
+     147.4
+    ],
+    "throw": [
+     147.75,
+     148.3
+    ],
+    "landing": [
+     149.48,
+     150.28
+    ]
+   }
+  },
+  {
+   "cs": 152,
+   "title": "A Main Smoke 1 \u2014 CT early A-Main control: from the CT side of the plaza (wall",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-main",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     152.3,
+     153.6
+    ],
+    "aim": [
+     153.2,
+     154.0
+    ],
+    "throw": [
+     153.95,
+     154.55
+    ],
+    "landing": [
+     162.8,
+     163.8
+    ]
+   }
+  },
+  {
+   "cs": 157,
+   "title": "A Main Molly 1 \u2014 CT early A-Main control: after walking past the '14' crates",
+   "ability": "molotov",
+   "technique": "running",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     157.85,
+     158.2
+    ],
+    "aim": [
+     158.0,
+     158.35
+    ],
+    "throw": [
+     158.2,
+     158.8
+    ],
+    "landing": [
+     161.5,
+     161.88
+    ]
+   }
+  },
+  {
+   "cs": 166,
+   "title": "A Site Molly 1 \u2014 T post-plant molly thrown with a jump-throw from an indoor",
+   "ability": "molotov",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     166.4,
+     167.0
+    ],
+    "aim": [
+     167.05,
+     167.7
+    ],
+    "throw": [
+     167.69,
+     168.29
+    ],
+    "landing": [
+     169.95,
+     170.55
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
