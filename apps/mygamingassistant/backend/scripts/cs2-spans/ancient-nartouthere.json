@@ -1,0 +1,1386 @@
+{
+ "video_id": "xEhS-AmIzIw",
+ "map_slug": "ancient",
+ "game_slug": "cs2",
+ "author": "NartOutHere",
+ "lineups": [
+  {
+   "cs": 39,
+   "title": "Mid Smoke 1 \u2014 T-side smoke thrown from the left side of T Spawn (knife out",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     39.1,
+     39.5
+    ],
+    "aim": [
+     40.4,
+     41.25
+    ],
+    "throw": [
+     41.23,
+     41.7
+    ],
+    "landing": [
+     43.85,
+     44.75
+    ]
+   }
+  },
+  {
+   "cs": 45,
+   "title": "Mid Smoke 2 \u2014 T Spawn right side (minimap 'T Start'): stand near the wooden",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     45.75,
+     47.25
+    ],
+    "aim": [
+     47.3,
+     48.25
+    ],
+    "throw": [
+     48.3,
+     48.9
+    ],
+    "landing": [
+     50.7,
+     51.6
+    ]
+   }
+  },
+  {
+   "cs": 53,
+   "title": "Mid Smoke 3 \u2014 T-side smoke from the yard, walking up to the left-side stone",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     53.0,
+     54.0
+    ],
+    "aim": [
+     54.0,
+     54.74
+    ],
+    "throw": [
+     54.7,
+     55.3
+    ],
+    "landing": [
+     57.2,
+     58.05
+    ]
+   }
+  },
+  {
+   "cs": 59,
+   "title": "Mid Smoke 4 \u2014 T-side smoke into Red Room thrown from the Elbow wall outside",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     59.0,
+     60.55
+    ],
+    "aim": [
+     60.8,
+     61.55
+    ],
+    "throw": [
+     61.5,
+     62.1
+    ],
+    "landing": [
+     63.58,
+     64.5
+    ]
+   }
+  },
+  {
+   "cs": 81,
+   "title": "A Site Smoke 1 \u2014 T smoke into Donut from the Outside/mid side: thrower",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     81.75,
+     83.0
+    ],
+    "aim": [
+     83.0,
+     83.62
+    ],
+    "throw": [
+     83.62,
+     84.22
+    ],
+    "landing": [
+     86.35,
+     86.95
+    ]
+   }
+  },
+  {
+   "cs": 98,
+   "title": "B Site Smoke 1 \u2014 T-side Cheetah smoke from near T Spawn (minimap reads 'T",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     98.15,
+     98.8
+    ],
+    "aim": [
+     99.2,
+     99.95
+    ],
+    "throw": [
+     99.97,
+     100.25
+    ],
+    "landing": [
+     103.75,
+     104.45
+    ]
+   }
+  },
+  {
+   "cs": 110,
+   "title": "B Site Smoke 2 \u2014 T-side smoke from the T Spawn T Start area (minimap label 'T",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     110.2,
+     111.1
+    ],
+    "aim": [
+     111.1,
+     111.8
+    ],
+    "throw": [
+     111.8,
+     112.02
+    ],
+    "landing": [
+     113.5,
+     114.4
+    ]
+   }
+  },
+  {
+   "cs": 117,
+   "title": "B Main Smoke 1 \u2014 T-side B lurk smoke thrown from the T Spawn side (minimap",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     117.7,
+     118.15
+    ],
+    "aim": [
+     119.1,
+     120.2
+    ],
+    "throw": [
+     120.2,
+     120.8
+    ],
+    "landing": [
+     124.15,
+     124.75
+    ]
+   }
+  },
+  {
+   "cs": 128,
+   "title": "B Main Smoke 2 \u2014 T smoke for a B rush through Cave",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     128.95,
+     129.55
+    ],
+    "aim": [
+     129.2,
+     129.78
+    ],
+    "throw": [
+     130.6,
+     131.2
+    ],
+    "landing": [
+     133.75,
+     134.35
+    ]
+   }
+  },
+  {
+   "cs": 136,
+   "title": "B Main Smoke 3 \u2014 T smoke from the 'Ruins' area outside B Ramp (next to the",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-main",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     136.88,
+     137.1
+    ],
+    "aim": [
+     137.75,
+     138.7
+    ],
+    "throw": [
+     138.75,
+     139.3
+    ],
+    "landing": [
+     143.55,
+     144.55
+    ]
+   }
+  },
+  {
+   "cs": 139,
+   "title": "B Site Molly 1 \u2014 Right after the smoke, the same player switches to a molotov",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     139.0,
+     139.78
+    ],
+    "aim": [
+     140.1,
+     140.95
+    ],
+    "throw": [
+     140.9,
+     141.5
+    ],
+    "landing": [
+     142.3,
+     143.4
+    ]
+   }
+  },
+  {
+   "cs": 145,
+   "title": "B Site Smoke 3 \u2014 T-side smoke thrown from B Main/B Ramp, standing next to the",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     145.78,
+     145.98
+    ],
+    "aim": [
+     146.88,
+     147.03
+    ],
+    "throw": [
+     147.03,
+     147.38
+    ],
+    "landing": [
+     148.68,
+     149.45
+    ]
+   }
+  },
+  {
+   "cs": 152,
+   "title": "B Site Smoke 4 \u2014 T-side smoke for B Short: thrown from beside the wooden door",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     152.6,
+     154.05
+    ],
+    "aim": [
+     154.05,
+     154.62
+    ],
+    "throw": [
+     154.6,
+     155.2
+    ],
+    "landing": [
+     158.95,
+     160.0
+    ]
+   }
+  },
+  {
+   "cs": 165,
+   "title": "B Site Molly 2 \u2014 Follow-up T molotov by a different player (m0NESY) from T",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     165.95,
+     167.0
+    ],
+    "aim": [
+     168.45,
+     169.12
+    ],
+    "throw": [
+     169.15,
+     169.75
+    ],
+    "landing": [
+     171.5,
+     172.3
+    ]
+   }
+  },
+  {
+   "cs": 173,
+   "title": "B Site Smoke 5 \u2014 T smoke thrown from B Main (by the crate, facing the B Long",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     173.5,
+     175.0
+    ],
+    "aim": [
+     175.55,
+     176.17
+    ],
+    "throw": [
+     176.12,
+     176.72
+    ],
+    "landing": [
+     178.45,
+     179.2
+    ]
+   }
+  },
+  {
+   "cs": 179,
+   "title": "B Site Smoke 6 \u2014 T-side B Long smoke: stand at T Side Upper against the orange",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     179.8,
+     181.0
+    ],
+    "aim": [
+     181.0,
+     182.0
+    ],
+    "throw": [
+     182.2,
+     182.8
+    ],
+    "landing": [
+     185.15,
+     186.4
+    ]
+   }
+  },
+  {
+   "cs": 187,
+   "title": "B Site Smoke 7 \u2014 T-side smoke onto B Long from the T-side lower area (minimap",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     187.3,
+     188.75
+    ],
+    "aim": [
+     189.0,
+     189.85
+    ],
+    "throw": [
+     189.75,
+     190.35
+    ],
+    "landing": [
+     192.15,
+     193.0
+    ]
+   }
+  },
+  {
+   "cs": 194,
+   "title": "B Site Smoke 8 \u2014 T smoke into Speedway, thrown from the B Ramp Ruins approach",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     194.2,
+     194.85
+    ],
+    "aim": [
+     195.2,
+     196.05
+    ],
+    "throw": [
+     196.5,
+     197.0
+    ],
+    "landing": [
+     198.5,
+     199.0
+    ]
+   }
+  },
+  {
+   "cs": 205,
+   "title": "B Main Smoke 4 \u2014 T-side smoke for Ancient Speedway (B-side route)",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-main",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     205.95,
+     206.9
+    ],
+    "aim": [
+     206.9,
+     207.47
+    ],
+    "throw": [
+     207.47,
+     208.07
+    ],
+    "landing": [
+     209.5,
+     210.3
+    ]
+   }
+  },
+  {
+   "cs": 211,
+   "title": "B Site Smoke 9 \u2014 T side, standing at the crate by the left wall in Ruins (B",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     211.5,
+     212.3
+    ],
+    "aim": [
+     212.5,
+     213.45
+    ],
+    "throw": [
+     213.46,
+     213.96
+    ],
+    "landing": [
+     223.85,
+     224.75
+    ]
+   }
+  },
+  {
+   "cs": 217,
+   "title": "B Site Molly 3 \u2014 Same Ruins/B Ramp crate spot: molotov thrown over B Doors",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     217.05,
+     217.8
+    ],
+    "aim": [
+     218.2,
+     219.3
+    ],
+    "throw": [
+     219.32,
+     219.67
+    ],
+    "landing": [
+     224.7,
+     226.5
+    ]
+   }
+  },
+  {
+   "cs": 228,
+   "title": "A Site Smoke 2 \u2014 T-side smoke thrown from the lower A Main T approach (by the",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     228.8,
+     229.45
+    ],
+    "aim": [
+     230.67,
+     230.88
+    ],
+    "throw": [
+     230.8,
+     231.4
+    ],
+    "landing": [
+     234.35,
+     235.55
+    ]
+   }
+  },
+  {
+   "cs": 238,
+   "title": "A Site Smoke 3 \u2014 T-side CT smoke for A site, thrown from T Spawn ('Outside')",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     238.9,
+     239.6
+    ],
+    "aim": [
+     239.8,
+     240.6
+    ],
+    "throw": [
+     240.6,
+     241.16
+    ],
+    "landing": [
+     244.15,
+     245.1
+    ]
+   }
+  },
+  {
+   "cs": 248,
+   "title": "A Site Smoke 4 \u2014 T-side smoke from the 'Outside' area at the bottom of the A",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     248.3,
+     248.8
+    ],
+    "aim": [
+     250.0,
+     250.18
+    ],
+    "throw": [
+     250.3,
+     250.9
+    ],
+    "landing": [
+     257.5,
+     258.85
+    ]
+   }
+  },
+  {
+   "cs": 260,
+   "title": "A Site Smoke 5 \u2014 T-side smoke from T Spawn (minimap reads 'T Start'): the",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     260.45,
+     261.25
+    ],
+    "aim": [
+     262.36,
+     262.85
+    ],
+    "throw": [
+     262.85,
+     263.4
+    ],
+    "landing": [
+     265.88,
+     266.45
+    ]
+   }
+  },
+  {
+   "cs": 267,
+   "title": "A Site Smoke 6 \u2014 T smoke thrown from A Main (the minimap reads 'Main Hall')",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     267.75,
+     268.35
+    ],
+    "aim": [
+     268.35,
+     268.88
+    ],
+    "throw": [
+     268.85,
+     269.4
+    ],
+    "landing": [
+     270.8,
+     271.8
+    ]
+   }
+  },
+  {
+   "cs": 274,
+   "title": "A Site Smoke 7 \u2014 T smoke of CT (A site side, by the A sign CT boxes), thrown",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     274.6,
+     275.3
+    ],
+    "aim": [
+     275.3,
+     276.15
+    ],
+    "throw": [
+     276.18,
+     276.78
+    ],
+    "landing": [
+     278.1,
+     279.1
+    ]
+   }
+  },
+  {
+   "cs": 279,
+   "title": "A Site Smoke 8 \u2014 T smoke thrown from the Donut stairs area below A: player",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     279.7,
+     281.0
+    ],
+    "aim": [
+     281.15,
+     281.88
+    ],
+    "throw": [
+     282.95,
+     283.45
+    ],
+    "landing": [
+     286.5,
+     287.0
+    ]
+   }
+  },
+  {
+   "cs": 301,
+   "title": "A Site Smoke 9 \u2014 T Spawn under the wooden scaffold overhang: aim up at the",
+   "ability": "smoke",
+   "technique": "running",
+   "target": "a-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     301.2,
+     302.0
+    ],
+    "aim": [
+     301.45,
+     302.05
+    ],
+    "throw": [
+     301.98,
+     302.58
+    ],
+    "landing": [
+     306.1,
+     307.0
+    ]
+   }
+  },
+  {
+   "cs": 309,
+   "title": "A Site Smoke 10 \u2014 Mid, by the wall with the yellow A sign (toward Donut): aim",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     309.2,
+     309.72
+    ],
+    "aim": [
+     309.9,
+     310.3
+    ],
+    "throw": [
+     311.15,
+     311.75
+    ],
+    "landing": [
+     316.3,
+     316.78
+    ]
+   }
+  },
+  {
+   "cs": 319,
+   "title": "A Site Smoke 11 \u2014 Outside, below the Donut stairs (minimap reads 'Outside')",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     319.96,
+     320.68
+    ],
+    "aim": [
+     321.02,
+     321.8
+    ],
+    "throw": [
+     321.76,
+     322.36
+    ],
+    "landing": [
+     324.78,
+     325.5
+    ]
+   }
+  },
+  {
+   "cs": 336,
+   "title": "A Site Smoke 12 \u2014 T smoke from Outside (A side, near the A sign by the stairs)",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     336.43,
+     336.65
+    ],
+    "aim": [
+     336.72,
+     337.7
+    ],
+    "throw": [
+     337.74,
+     338.26
+    ],
+    "landing": [
+     343.1,
+     343.9
+    ]
+   }
+  },
+  {
+   "cs": 345,
+   "title": "A Site Molly 1 \u2014 Follow-up T molotov from Middle (killfeed reads 'Middle",
+   "ability": "molotov",
+   "technique": "running",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     345.92,
+     346.4
+    ],
+    "aim": [
+     346.05,
+     346.63
+    ],
+    "throw": [
+     346.55,
+     347.15
+    ],
+    "landing": [
+     347.8,
+     349.4
+    ]
+   }
+  },
+  {
+   "cs": 353,
+   "title": "A Site Smoke 13 \u2014 T-side smoke thrown from Outside (T Spawn side, minimap",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     353.05,
+     353.75
+    ],
+    "aim": [
+     354.1,
+     355.3
+    ],
+    "throw": [
+     355.45,
+     356.05
+    ],
+    "landing": [
+     357.25,
+     357.85
+    ]
+   }
+  },
+  {
+   "cs": 358,
+   "title": "A Site Smoke 14 \u2014 Donut smoke thrown from the A Main A-site side: stand near a",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     358.8,
+     360.2
+    ],
+    "aim": [
+     360.2,
+     361.0
+    ],
+    "throw": [
+     361.05,
+     361.65
+    ],
+    "landing": [
+     364.4,
+     365.1
+    ]
+   }
+  },
+  {
+   "cs": 366,
+   "title": "A Site Smoke 15 \u2014 First of two smokes from one T-side 'Outside' stand (low",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     366.1,
+     367.25
+    ],
+    "aim": [
+     367.4,
+     368.4
+    ],
+    "throw": [
+     368.55,
+     369.15
+    ],
+    "landing": [
+     373.7,
+     374.5
+    ]
+   }
+  },
+  {
+   "cs": 377,
+   "title": "A Site Smoke 16 \u2014 T-side smoke thrown from the 'Outside' stand (the jungle",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     377.6,
+     379.1
+    ],
+    "aim": [
+     379.17,
+     379.4
+    ],
+    "throw": [
+     379.36,
+     379.96
+    ],
+    "landing": [
+     383.92,
+     384.52
+    ]
+   }
+  },
+  {
+   "cs": 385,
+   "title": "A Site Smoke 17 \u2014 First of two smokes from one stand at 'Outside' (T side, near",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     385.85,
+     387.0
+    ],
+    "aim": [
+     387.1,
+     388.2
+    ],
+    "throw": [
+     388.2,
+     388.8
+    ],
+    "landing": [
+     393.95,
+     394.55
+    ]
+   }
+  },
+  {
+   "cs": 389,
+   "title": "A Site Smoke 18 \u2014 Second smoke from the same 'Outside' stand, using a",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     389.0,
+     390.4
+    ],
+    "aim": [
+     390.4,
+     391.43
+    ],
+    "throw": [
+     391.4,
+     392.0
+    ],
+    "landing": [
+     394.0,
+     394.9
+    ]
+   }
+  },
+  {
+   "cs": 395,
+   "title": "Mid Smoke 5 \u2014 T-side A split smoke",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     395.8,
+     397.0
+    ],
+    "aim": [
+     397.1,
+     398.03
+    ],
+    "throw": [
+     398.1,
+     398.7
+    ],
+    "landing": [
+     401.48,
+     402.3
+    ]
+   }
+  },
+  {
+   "cs": 405,
+   "title": "Mid Smoke 6 \u2014 T Spawn instant Elbow smoke: stand by the T Spawn wall, aim",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     405.12,
+     406.4
+    ],
+    "aim": [
+     405.9,
+     406.56
+    ],
+    "throw": [
+     406.55,
+     407.15
+    ],
+    "landing": [
+     410.06,
+     410.25
+    ]
+   }
+  },
+  {
+   "cs": 412,
+   "title": "Mid Smoke 7 \u2014 T-side Mid Cubby smoke: stand tight against the pale stone",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     412.5,
+     414.0
+    ],
+    "aim": [
+     414.35,
+     415.35
+    ],
+    "throw": [
+     415.3,
+     415.9
+    ],
+    "landing": [
+     418.5,
+     419.4
+    ]
+   }
+  },
+  {
+   "cs": 424,
+   "title": "B Site Smoke 10 \u2014 CT Spawn stand against a stepped stone wall",
+   "ability": "smoke",
+   "technique": "running",
+   "target": "b-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     424.6,
+     426.2
+    ],
+    "aim": [
+     427.5,
+     428.45
+    ],
+    "throw": [
+     428.75,
+     429.25
+    ],
+    "landing": [
+     432.75,
+     433.35
+    ]
+   }
+  },
+  {
+   "cs": 434,
+   "title": "B Site Smoke 11 \u2014 CT smoke of B Doors, thrown from the B site side next to the",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     434.3,
+     435.3
+    ],
+    "aim": [
+     435.3,
+     435.83
+    ],
+    "throw": [
+     435.83,
+     436.33
+    ],
+    "landing": [
+     439.6,
+     440.6
+    ]
+   }
+  },
+  {
+   "cs": 441,
+   "title": "B Main Smoke 5 \u2014 CT retake smoke for Banana/B Ramp: stand outside B (near",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     441.62,
+     442.07
+    ],
+    "aim": [
+     442.25,
+     443.12
+    ],
+    "throw": [
+     443.1,
+     443.62
+    ],
+    "landing": [
+     446.5,
+     447.15
+    ]
+   }
+  },
+  {
+   "cs": 456,
+   "title": "A Main Smoke 1 \u2014 CT-side A Main retake smoke thrown from the CT Start area",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-main",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     456.7,
+     458.0
+    ],
+    "aim": [
+     460.45,
+     461.5
+    ],
+    "throw": [
+     461.72,
+     462.32
+    ],
+    "landing": [
+     470.62,
+     471.6
+    ]
+   }
+  },
+  {
+   "cs": 462,
+   "title": "A Site Molly 2 \u2014 CT incendiary from the CT Start area onto the A Site A Main",
+   "ability": "molotov",
+   "technique": "running",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     462.7,
+     463.8
+    ],
+    "aim": [
+     468.3,
+     469.1
+    ],
+    "throw": [
+     469.2,
+     469.8
+    ],
+    "landing": [
+     470.75,
+     471.55
+    ]
+   }
+  },
+  {
+   "cs": 474,
+   "title": "A Site Smoke 19 \u2014 CT retake smoke from CT side (minimap label 'CT Start', near",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     474.9,
+     476.1
+    ],
+    "aim": [
+     478.2,
+     478.98
+    ],
+    "throw": [
+     478.95,
+     479.55
+    ],
+    "landing": [
+     482.0,
+     483.1
+    ]
+   }
+  },
+  {
+   "cs": 498,
+   "title": "A Main Molly 1 \u2014 CT at A site behind the square pillar (player NiKo, HUD shows",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     498.35,
+     500.0
+    ],
+    "aim": [
+     499.75,
+     500.8
+    ],
+    "throw": [
+     500.9,
+     501.5
+    ],
+    "landing": [
+     501.65,
+     502.4
+    ]
+   }
+  },
+  {
+   "cs": 503,
+   "title": "A Site Smoke 20 \u2014 T-side long smoke from the 'Outside' area below Mid (AK POV)",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     503.65,
+     505.1
+    ],
+    "aim": [
+     505.1,
+     505.92
+    ],
+    "throw": [
+     505.88,
+     506.45
+    ],
+    "landing": [
+     510.45,
+     511.05
+    ]
+   }
+  },
+  {
+   "cs": 506,
+   "title": "Mid Smoke 8 \u2014 Second smoke from the same Outside stand (picked-up 'kyxsan's",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     506.9,
+     507.5
+    ],
+    "aim": [
+     507.7,
+     508.55
+    ],
+    "throw": [
+     508.6,
+     509.2
+    ],
+    "landing": [
+     510.45,
+     511.05
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
