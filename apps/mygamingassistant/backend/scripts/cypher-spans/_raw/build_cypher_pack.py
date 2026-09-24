@@ -102,7 +102,8 @@ AGENTS = {
     "cs2": {
         "game": "cs2",
         "sources": {"zCVFwsUktls": "GettClutch", "dutDQFa4cxA": "GettClutch",
-                    "x3DmUjLu0uk": "Tigerr"},
+                    "x3DmUjLu0uk": "Tigerr", "fJ0TTHKJne0": "Tigerr",
+                    "xEhS-AmIzIw": "NartOutHere"},
         "placed": set(),
         "legacy_zone_maps": set(),
         "short": {"smoke": "Smoke", "flash": "Flash", "molotov": "Molly", "grenade": "HE"},

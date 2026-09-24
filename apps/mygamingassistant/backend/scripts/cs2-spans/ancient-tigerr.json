@@ -1,0 +1,360 @@
+{
+ "video_id": "x3DmUjLu0uk",
+ "map_slug": "ancient",
+ "game_slug": "cs2",
+ "author": "Tigerr",
+ "lineups": [
+  {
+   "cs": 48,
+   "title": "Mid Smoke 1 \u2014 T-spawn corner (stone wall by the water) aligned smoke",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     48.5,
+     50.6
+    ],
+    "aim": [
+     55.9,
+     56.8
+    ],
+    "throw": [
+     56.85,
+     57.45
+    ],
+    "landing": [
+     62.25,
+     62.85
+    ]
+   }
+  },
+  {
+   "cs": 89,
+   "title": "A Site Smoke 1 \u2014 T Spawn corner (hugging the wall by the T-spawn stairs, same",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     89.0,
+     91.0
+    ],
+    "aim": [
+     91.75,
+     92.55
+    ],
+    "throw": [
+     92.6,
+     93.2
+    ],
+    "landing": [
+     97.6,
+     98.6
+    ]
+   }
+  },
+  {
+   "cs": 150,
+   "title": "Mid Smoke 2 \u2014 T-side Heaven smoke for Mid, thrown from the T Spawn corner",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     150.3,
+     151.65
+    ],
+    "aim": [
+     156.55,
+     157.2
+    ],
+    "throw": [
+     157.95,
+     158.55
+    ],
+    "landing": [
+     164.3,
+     165.3
+    ]
+   }
+  },
+  {
+   "cs": 212,
+   "title": "Mid Smoke 3 \u2014 T Spawn (HUD location readout says 'T Start'), standing under",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     212.8,
+     214.8
+    ],
+    "aim": [
+     214.85,
+     215.45
+    ],
+    "throw": [
+     215.45,
+     216.1
+    ],
+    "landing": [
+     221.3,
+     222.5
+    ]
+   }
+  },
+  {
+   "cs": 354,
+   "title": "Mid Molly 1 \u2014 T-side molotov into Mid Cubby, thrown from the T-side mid",
+   "ability": "molotov",
+   "technique": "running",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     354.0,
+     357.0
+    ],
+    "aim": [
+     361.9,
+     362.95
+    ],
+    "throw": [
+     363.2,
+     363.8
+    ],
+    "landing": [
+     365.35,
+     367.0
+    ]
+   }
+  },
+  {
+   "cs": 459,
+   "title": "B Site Smoke 1 \u2014 SMOKE #6: from inside the T-side lower doorway on the B",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     459.8,
+     461.6
+    ],
+    "aim": [
+     462.2,
+     463.15
+    ],
+    "throw": [
+     463.1,
+     463.7
+    ],
+    "landing": [
+     466.05,
+     466.85
+    ]
+   }
+  },
+  {
+   "cs": 573,
+   "title": "A Site Smoke 2 \u2014 T-side smoke from the T Spawn 'Outside' corner, facing the",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     573.0,
+     575.0
+    ],
+    "aim": [
+     576.4,
+     577.4
+    ],
+    "throw": [
+     577.35,
+     577.95
+    ],
+    "landing": [
+     580.7,
+     581.9
+    ]
+   }
+  },
+  {
+   "cs": 639,
+   "title": "A Site Molly 1 \u2014 T molotov thrown from A Main (HUD reads 'Main Hall'), lined",
+   "ability": "molotov",
+   "technique": "running",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     639.4,
+     640.9
+    ],
+    "aim": [
+     640.4,
+     641.3
+    ],
+    "throw": [
+     641.95,
+     642.55
+    ],
+    "landing": [
+     643.5,
+     645.0
+    ]
+   }
+  },
+  {
+   "cs": 663,
+   "title": "A Site Molly 2 \u2014 T-side molotov thrown from inside an interior room through",
+   "ability": "molotov",
+   "technique": "running",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     663.4,
+     665.6
+    ],
+    "aim": [
+     666.1,
+     667.1
+    ],
+    "throw": [
+     668.05,
+     668.65
+    ],
+    "landing": [
+     670.15,
+     672.55
+    ]
+   }
+  },
+  {
+   "cs": 705,
+   "title": "A Main Flash 1 \u2014 T-side flashbang from inside Main Hall (mid building, HUD",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     705.5,
+     708.0
+    ],
+    "aim": [
+     709.95,
+     710.85
+    ],
+    "throw": [
+     710.8,
+     711.4
+    ],
+    "landing": [
+     713.2,
+     713.35
+    ]
+   }
+  },
+  {
+   "cs": 804,
+   "title": "Mid HE 1 \u2014 CT HE grenade thrown from inside Red Room (HUD location",
+   "ability": "grenade",
+   "technique": "running",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     804.2,
+     806.0
+    ],
+    "aim": [
+     806.92,
+     807.5
+    ],
+    "throw": [
+     807.85,
+     808.45
+    ],
+    "landing": [
+     809.68,
+     810.3
+    ]
+   }
+  },
+  {
+   "cs": 833,
+   "title": "Mid Molly 2 \u2014 CT incendiary thrown from inside Red Room (minimap: House)",
+   "ability": "molotov",
+   "technique": "running",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     833.5,
+     835.6
+    ],
+    "aim": [
+     838.0,
+     839.1
+    ],
+    "throw": [
+     839.7,
+     840.3
+    ],
+    "landing": [
+     841.8,
+     843.6
+    ]
+   }
+  },
+  {
+   "cs": 1035,
+   "title": "B Site HE 1 \u2014 CT HE grenade (B Lane nade) thrown from the B site blue-box",
+   "ability": "grenade",
+   "technique": "running",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1035.4,
+     1036.83
+    ],
+    "aim": [
+     1041.0,
+     1041.95
+    ],
+    "throw": [
+     1041.95,
+     1042.55
+    ],
+    "landing": [
+     1043.7,
+     1044.9
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
