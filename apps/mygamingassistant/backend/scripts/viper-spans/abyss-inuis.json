@@ -1,0 +1,144 @@
+{
+ "video_id": "Y4EW7dlWmrM",
+ "map_slug": "abyss",
+ "game_slug": "valorant",
+ "author": "inuis!",
+ "lineups": [
+  {
+   "cs": 37,
+   "title": "A Site Orb 1 \u2014 Poison cloud lineup from A Site: orb held and aimed high at",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     37.0,
+     38.4
+    ],
+    "aim": [
+     39.6,
+     40.6
+    ],
+    "throw": [
+     40.55,
+     41.15
+    ],
+    "landing": [
+     44.35,
+     45.35
+    ]
+   }
+  },
+  {
+   "cs": 51,
+   "title": "A Main Wall 1 \u2014 Toxic Screen fired from a corner beside the crates at the A",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     51.0,
+     51.9
+    ],
+    "aim": [
+     54.4,
+     55.55
+    ],
+    "throw": [
+     55.5,
+     56.05
+    ],
+    "landing": [
+     55.8,
+     56.25
+    ]
+   }
+  },
+  {
+   "cs": 86,
+   "title": "B Site Orb 1 \u2014 Same stand spot and high skyward aim",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     86.0,
+     88.0
+    ],
+    "aim": [
+     92.9,
+     93.8
+    ],
+    "throw": [
+     93.82,
+     94.4
+    ],
+    "landing": [
+     119.6,
+     120.9
+    ]
+   }
+  },
+  {
+   "cs": 97,
+   "title": "B Site Molly 1 \u2014 Same stand spot",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     97.0,
+     99.0
+    ],
+    "aim": [
+     103.2,
+     104.25
+    ],
+    "throw": [
+     104.2,
+     104.8
+    ],
+    "landing": [
+     109.8,
+     111.2
+    ]
+   }
+  },
+  {
+   "cs": 148,
+   "title": "Mid Orb 1 \u2014 Mid Orb from Attacker Side Spawn: Viper stands tight against",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     148.3,
+     150.3
+    ],
+    "aim": [
+     158.7,
+     159.3
+    ],
+    "throw": [
+     159.35,
+     159.95
+    ],
+    "landing": [
+     162.85,
+     164.2
+    ]
+   }
+  }
+ ],
+ "note": ""
+}

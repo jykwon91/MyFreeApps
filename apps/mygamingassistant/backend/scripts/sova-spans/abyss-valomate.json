@@ -1,0 +1,549 @@
+{
+ "video_id": "KKfmFMV-Yas",
+ "map_slug": "abyss",
+ "game_slug": "valorant",
+ "author": "Valomate | VALORANT Lineups App",
+ "lineups": [
+  {
+   "cs": 12,
+   "title": "A Lobby Shock 1 \u2014 Stand in B Link against the blue wall, aim down the Mid",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "a-lobby",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     12.2,
+     14.2
+    ],
+    "aim": [
+     15.35,
+     15.95
+    ],
+    "throw": [
+     15.95,
+     16.55
+    ],
+    "landing": [
+     27.0,
+     28.0
+    ]
+   }
+  },
+  {
+   "cs": 42,
+   "title": "A Main Shock 1 \u2014 Attacker A Main: stand pressed against the wall/door corner",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     42.5,
+     44.5
+    ],
+    "aim": [
+     48.8,
+     49.85
+    ],
+    "throw": [
+     49.85,
+     50.38
+    ],
+    "landing": [
+     52.85,
+     53.75
+    ]
+   }
+  },
+  {
+   "cs": 98,
+   "title": "A Site Shock 1 \u2014 Attacker side, standing in A Main beside a blue door",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     98.7,
+     101.2
+    ],
+    "aim": [
+     105.27,
+     106.03
+    ],
+    "throw": [
+     106.05,
+     106.65
+    ],
+    "landing": [
+     107.43,
+     108.35
+    ]
+   }
+  },
+  {
+   "cs": 118,
+   "title": "A Site Shock 2 \u2014 Standing in A Main at the opening that looks out over the void",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     118.1,
+     119.8
+    ],
+    "aim": [
+     119.85,
+     120.65
+    ],
+    "throw": [
+     120.55,
+     121.2
+    ],
+    "landing": [
+     124.43,
+     125.33
+    ]
+   }
+  },
+  {
+   "cs": 134,
+   "title": "A Site Shock 3 \u2014 Attacker shock dart fired from A Main",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     134.7,
+     136.7
+    ],
+    "aim": [
+     140.0,
+     140.73
+    ],
+    "throw": [
+     140.7,
+     141.3
+    ],
+    "landing": [
+     142.55,
+     143.55
+    ]
+   }
+  },
+  {
+   "cs": 154,
+   "title": "B Site Shock 1 \u2014 Attacker shock dart from B Main",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     154.2,
+     155.8
+    ],
+    "aim": [
+     155.93,
+     156.53
+    ],
+    "throw": [
+     156.5,
+     157.1
+    ],
+    "landing": [
+     158.9,
+     159.65
+    ]
+   }
+  },
+  {
+   "cs": 165,
+   "title": "B Site Shock 2 \u2014 From B Lobby near the wooden crates: line up on the wall",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     165.0,
+     167.5
+    ],
+    "aim": [
+     174.05,
+     174.8
+    ],
+    "throw": [
+     174.75,
+     175.35
+    ],
+    "landing": [
+     180.85,
+     181.9
+    ]
+   }
+  },
+  {
+   "cs": 191,
+   "title": "B Site Shock 3 \u2014 Stand at the B Main ledge beside the void edge, facing the",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     191.5,
+     192.7
+    ],
+    "aim": [
+     192.8,
+     193.43
+    ],
+    "throw": [
+     193.33,
+     193.93
+    ],
+    "landing": [
+     194.77,
+     195.36
+    ]
+   }
+  },
+  {
+   "cs": 213,
+   "title": "B Site Shock 4 \u2014 Attacker, standing on the B Lobby ledge by the void edge",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     213.4,
+     214.5
+    ],
+    "aim": [
+     214.5,
+     215.2
+    ],
+    "throw": [
+     215.1,
+     215.7
+    ],
+    "landing": [
+     225.6,
+     226.5
+    ]
+   }
+  },
+  {
+   "cs": 260,
+   "title": "Mid Recon 1 \u2014 Attacker recon bolt from a Lobby stand toward Mid",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     260.3,
+     262.3
+    ],
+    "aim": [
+     262.65,
+     263.2
+    ],
+    "throw": [
+     263.15,
+     263.8
+    ],
+    "landing": [
+     266.6,
+     268.0
+    ]
+   }
+  },
+  {
+   "cs": 276,
+   "title": "A Site Recon 1 \u2014 Attacker recon bolt from A Lobby, standing at the",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     276.2,
+     278.2
+    ],
+    "aim": [
+     278.8,
+     279.6
+    ],
+    "throw": [
+     279.53,
+     280.13
+    ],
+    "landing": [
+     291.2,
+     292.4
+    ]
+   }
+  },
+  {
+   "cs": 299,
+   "title": "A Site Recon 2 \u2014 Attacker recon bolt from A Main",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     299.8,
+     301.4
+    ],
+    "aim": [
+     301.6,
+     302.5
+    ],
+    "throw": [
+     302.43,
+     303.03
+    ],
+    "landing": [
+     304.65,
+     306.1
+    ]
+   }
+  },
+  {
+   "cs": 316,
+   "title": "B Site Recon 1 \u2014 Recon Bolt thrown from a spot next to a tall wall toward A",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     316.3,
+     318.2
+    ],
+    "aim": [
+     318.3,
+     319.07
+    ],
+    "throw": [
+     319.0,
+     319.6
+    ],
+    "landing": [
+     323.8,
+     325.0
+    ]
+   }
+  },
+  {
+   "cs": 341,
+   "title": "B Site Recon 2 \u2014 From B Lobby, standing against the wooden wall/crate",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     341.6,
+     343.3
+    ],
+    "aim": [
+     343.4,
+     344.1
+    ],
+    "throw": [
+     344.05,
+     344.65
+    ],
+    "landing": [
+     346.45,
+     347.65
+    ]
+   }
+  },
+  {
+   "cs": 358,
+   "title": "B Site Recon 3 \u2014 Attacker B Lobby: stand tucked into the corner by the wooden",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     358.9,
+     360.4
+    ],
+    "aim": [
+     359.7,
+     360.43
+    ],
+    "throw": [
+     360.4,
+     361.0
+    ],
+    "landing": [
+     366.7,
+     367.9
+    ]
+   }
+  },
+  {
+   "cs": 380,
+   "title": "B Site Recon 4 \u2014 Attacker-side ledge approaching B (railing/void edge)",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     380.0,
+     382.5
+    ],
+    "aim": [
+     383.0,
+     383.9
+    ],
+    "throw": [
+     383.75,
+     384.35
+    ],
+    "landing": [
+     394.35,
+     395.8
+    ]
+   }
+  },
+  {
+   "cs": 409,
+   "title": "A Main Shock 2 \u2014 Defender-side A Main shock bolt: walk to a stand beside a",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     409.6,
+     411.6
+    ],
+    "aim": [
+     411.8,
+     412.43
+    ],
+    "throw": [
+     412.4,
+     413.0
+    ],
+    "landing": [
+     417.3,
+     418.0
+    ]
+   }
+  },
+  {
+   "cs": 430,
+   "title": "A Main Shock 3 \u2014 Defender stands at A Tower by the tower wall/door frame and",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     430.5,
+     432.5
+    ],
+    "aim": [
+     436.6,
+     437.6
+    ],
+    "throw": [
+     437.65,
+     438.25
+    ],
+    "landing": [
+     439.6,
+     440.6
+    ]
+   }
+  },
+  {
+   "cs": 479,
+   "title": "A Main Recon 1 \u2014 Recon bolt from the A Tower area hugging the green",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     479.3,
+     481.5
+    ],
+    "aim": [
+     483.13,
+     483.73
+    ],
+    "throw": [
+     483.65,
+     484.25
+    ],
+    "landing": [
+     485.4,
+     486.7
+    ]
+   }
+  },
+  {
+   "cs": 500,
+   "title": "B Main Recon 1 \u2014 Recon bolt from B Tower, standing under the overhang by the",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     500.6,
+     502.6
+    ],
+    "aim": [
+     502.9,
+     503.8
+    ],
+    "throw": [
+     503.8,
+     504.4
+    ],
+    "landing": [
+     507.9,
+     509.2
+    ]
+   }
+  }
+ ],
+ "note": ""
+}

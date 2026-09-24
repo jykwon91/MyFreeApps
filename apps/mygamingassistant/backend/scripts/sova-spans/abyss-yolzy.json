@@ -1,0 +1,576 @@
+{
+ "video_id": "liTRXcUDWus",
+ "map_slug": "abyss",
+ "game_slug": "valorant",
+ "author": "Yolzy",
+ "lineups": [
+  {
+   "cs": 19,
+   "title": "A Site Recon 1 \u2014 Recon bolt from a stand at the A Lobby railing/ledge",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     19.1,
+     21.1
+    ],
+    "aim": [
+     21.7,
+     22.7
+    ],
+    "throw": [
+     22.65,
+     23.25
+    ],
+    "landing": [
+     26.5,
+     27.8
+    ]
+   }
+  },
+  {
+   "cs": 40,
+   "title": "A Site Recon 2 \u2014 Recon bolt from A Main (per location readout) toward A Site",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     40.8,
+     42.05
+    ],
+    "aim": [
+     50.3,
+     51.13
+    ],
+    "throw": [
+     51.1,
+     51.7
+    ],
+    "landing": [
+     53.1,
+     53.9
+    ]
+   }
+  },
+  {
+   "cs": 72,
+   "title": "A Site Recon 3 \u2014 Recon bolt from A Main (location readout 'A Main'), Sova",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     72.35,
+     73.4
+    ],
+    "aim": [
+     73.0,
+     73.6
+    ],
+    "throw": [
+     73.5,
+     73.92
+    ],
+    "landing": [
+     75.75,
+     76.61
+    ]
+   }
+  },
+  {
+   "cs": 94,
+   "title": "A Site Shock 1 \u2014 Attacker shock dart onto A Site where a Cypher trip usually",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     94.6,
+     96.3
+    ],
+    "aim": [
+     96.4,
+     97.1
+    ],
+    "throw": [
+     97.1,
+     97.56
+    ],
+    "landing": [
+     83.8,
+     84.8
+    ]
+   }
+  },
+  {
+   "cs": 114,
+   "title": "A Site Shock 2 \u2014 A Site post-plant double shock dart from A Main (location",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     114.3,
+     116.3
+    ],
+    "aim": [
+     125.4,
+     126.25
+    ],
+    "throw": [
+     126.2,
+     126.8
+    ],
+    "landing": [
+     127.95,
+     129.1
+    ]
+   }
+  },
+  {
+   "cs": 139,
+   "title": "A Site Shock 3 \u2014 Attacker post-plant shock darts from A Lobby, standing near",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     139.6,
+     141.1
+    ],
+    "aim": [
+     141.2,
+     142.03
+    ],
+    "throw": [
+     141.97,
+     142.57
+    ],
+    "landing": [
+     143.42,
+     143.62
+    ]
+   }
+  },
+  {
+   "cs": 159,
+   "title": "Mid Recon 1 \u2014 Recon bolt fired from Mid Bottom (location readout says 'Mid",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     159.3,
+     160.3
+    ],
+    "aim": [
+     160.35,
+     161.0
+    ],
+    "throw": [
+     160.9,
+     161.5
+    ],
+    "landing": [
+     162.3,
+     163.0
+    ]
+   }
+  },
+  {
+   "cs": 178,
+   "title": "B Site Recon 1 \u2014 B Lobby stand, tucked beside the crates and wooden wall",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     178.7,
+     180.5
+    ],
+    "aim": [
+     182.08,
+     182.76
+    ],
+    "throw": [
+     182.7,
+     183.3
+    ],
+    "landing": [
+     187.35,
+     188.75
+    ]
+   }
+  },
+  {
+   "cs": 206,
+   "title": "B Site Shock 1 \u2014 Attacker shock dart from B Lobby (HUD location readout says",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     206.9,
+     208.4
+    ],
+    "aim": [
+     207.5,
+     208.53
+    ],
+    "throw": [
+     208.38,
+     208.88
+    ],
+    "landing": [
+     211.75,
+     212.8
+    ]
+   }
+  },
+  {
+   "cs": 224,
+   "title": "B Site Recon 2 \u2014 Recon bolt from Attacker Side Spawn, fired high over the",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     224.2,
+     225.1
+    ],
+    "aim": [
+     225.2,
+     226.03
+    ],
+    "throw": [
+     225.87,
+     226.45
+    ],
+    "landing": [
+     231.3,
+     232.7
+    ]
+   }
+  },
+  {
+   "cs": 249,
+   "title": "B Site Recon 3 \u2014 Attacker Side Spawn: stand tucked into the corner of the tan",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     249.55,
+     250.95
+    ],
+    "aim": [
+     251.2,
+     251.87
+    ],
+    "throw": [
+     251.8,
+     252.4
+    ],
+    "landing": [
+     256.6,
+     258.0
+    ]
+   }
+  },
+  {
+   "cs": 282,
+   "title": "A Main Recon 1 \u2014 Defender recon bolt that reveals A Main",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     282.6,
+     284.1
+    ],
+    "aim": [
+     284.15,
+     284.98
+    ],
+    "throw": [
+     284.93,
+     285.53
+    ],
+    "landing": [
+     293.3,
+     294.7
+    ]
+   }
+  },
+  {
+   "cs": 306,
+   "title": "A Main Recon 2 \u2014 Defender recon bolt from A Bridge (per the HUD location",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     306.9,
+     308.6
+    ],
+    "aim": [
+     314.2,
+     314.82
+    ],
+    "throw": [
+     314.75,
+     315.35
+    ],
+    "landing": [
+     315.95,
+     317.35
+    ]
+   }
+  },
+  {
+   "cs": 333,
+   "title": "A Main Shock 1 \u2014 Defender shock dart onto the A Main ult orb, fired from a",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     333.75,
+     335.05
+    ],
+    "aim": [
+     335.1,
+     335.77
+    ],
+    "throw": [
+     335.62,
+     336.25
+    ],
+    "landing": [
+     336.95,
+     337.85
+    ]
+   }
+  },
+  {
+   "cs": 344,
+   "title": "A Main Recon 3 \u2014 Sova defender recon bolt from A Tower (high ledge by a metal",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     344.6,
+     345.85
+    ],
+    "aim": [
+     350.4,
+     351.35
+    ],
+    "throw": [
+     351.32,
+     351.92
+    ],
+    "landing": [
+     352.4,
+     353.2
+    ]
+   }
+  },
+  {
+   "cs": 368,
+   "title": "A Site Recon 4 \u2014 Defender recon bolt from the A Tower interior: stand beside",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     368.7,
+     369.9
+    ],
+    "aim": [
+     369.95,
+     370.77
+    ],
+    "throw": [
+     370.7,
+     371.3
+    ],
+    "landing": [
+     371.95,
+     373.25
+    ]
+   }
+  },
+  {
+   "cs": 405,
+   "title": "A Site Recon 5 \u2014 Recon bolt from Defender Side Spawn: stand by the spawn door",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     405.4,
+     406.4
+    ],
+    "aim": [
+     406.15,
+     406.78
+    ],
+    "throw": [
+     406.75,
+     407.35
+    ],
+    "landing": [
+     412.25,
+     413.95
+    ]
+   }
+  },
+  {
+   "cs": 434,
+   "title": "Mid Recon 2 \u2014 Defender Mid Top stand: Outlaw-scoped aim reference on the",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     434.85,
+     436.0
+    ],
+    "aim": [
+     436.0,
+     436.7
+    ],
+    "throw": [
+     436.55,
+     437.15
+    ],
+    "landing": [
+     437.42,
+     438.6
+    ]
+   }
+  },
+  {
+   "cs": 457,
+   "title": "Mid Recon 3 \u2014 Defender recon bolt from B Link: stand against the blue",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     457.5,
+     458.6
+    ],
+    "aim": [
+     458.6,
+     459.53
+    ],
+    "throw": [
+     459.45,
+     460.05
+    ],
+    "landing": [
+     460.6,
+     461.8
+    ]
+   }
+  },
+  {
+   "cs": 481,
+   "title": "B Main Recon 1 \u2014 Defender recon bolt from the open area outside B Main (by the",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     481.8,
+     482.9
+    ],
+    "aim": [
+     482.9,
+     483.7
+    ],
+    "throw": [
+     483.7,
+     484.3
+    ],
+    "landing": [
+     485.9,
+     486.85
+    ]
+   }
+  },
+  {
+   "cs": 501,
+   "title": "B Main Recon 2 \u2014 Defender recon bolt from B Tower (location readout 'B",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     501.3,
+     502.4
+    ],
+    "aim": [
+     502.45,
+     503.35
+    ],
+    "throw": [
+     503.25,
+     503.85
+    ],
+    "landing": [
+     505.7,
+     506.6
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
