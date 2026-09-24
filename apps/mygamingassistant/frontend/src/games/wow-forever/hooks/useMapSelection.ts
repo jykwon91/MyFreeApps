@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import type { WorldMapData } from "@/games/wow-forever/types/worldMap";
+import { scrollBehavior } from "@/games/wow-forever/lib/revealInViewport";
 import type { MapFocus } from "@/games/wow-forever/worldMap/mapLayers";
 
 export interface MapSelection {
@@ -46,7 +47,7 @@ export function useMapSelection(data: WorldMapData | null, openMap: (mapId: numb
     setSelectedPoiId(poiId);
     const quoted = poiId.replace(/["\\]/g, "\\$&");
     const row = document.querySelector<HTMLElement>(`[data-poi-row="${quoted}"]`);
-    row?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+    row?.scrollIntoView?.({ block: "nearest", behavior: scrollBehavior() });
   }, []);
 
   const clearFocus = useCallback(() => setFocus(null), []);

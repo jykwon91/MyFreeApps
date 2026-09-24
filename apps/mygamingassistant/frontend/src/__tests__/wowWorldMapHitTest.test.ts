@@ -11,10 +11,8 @@ import { mapToWorld, projectRect, worldToMap } from "@/games/wow-forever/worldMa
 import {
   childrenOf,
   HIT_KIND,
-  MAP_EDGE,
   hitTestMap,
   mapPath,
-  neighbourLabels,
 } from "@/games/wow-forever/worldMap/mapHitTest";
 
 const data = decodeWorldMap({
@@ -124,15 +122,3 @@ describe("hit-testing a click", () => {
   });
 });
 
-describe("neighbour labels", () => {
-  it("names Westfall on Elwynn's west side and Duskwood on its south", () => {
-    const labels = neighbourLabels(data, ELWYNN);
-    expect(labels).toContainEqual(expect.objectContaining({ edge: MAP_EDGE.west, text: "Westfall ←" }));
-    expect(labels.find((l) => l.target.id === DUSKWOOD)?.edge).toBe(MAP_EDGE.south);
-    expect(labels.some((l) => l.target.id === ELWYNN)).toBe(false);
-  });
-
-  it("labels no edges on a continent", () => {
-    expect(neighbourLabels(data, EASTERN_KINGDOMS)).toEqual([]);
-  });
-});

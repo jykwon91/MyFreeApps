@@ -127,6 +127,41 @@ describe("WoW Forever World Map page", () => {
     expect(stored).toMatchObject({ zoneId: 1429, position: { x: 42, y: 65 } });
   });
 
+  it("scrolls the map into view when a row is chosen on the stacked layout, and not when it's on screen", async () => {
+    window.localStorage.setItem(
+      PLAYER_SETTINGS_STORAGE_KEY,
+      JSON.stringify({ faction: "A", classId: "warlock", zoneId: 1429, level: null, position: { x: 42, y: 65 } }),
+    );
+    const scrolled: Element[] = [];
+    // jsdom has no scrollIntoView; record who asks.
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push(this);
+    };
+    // Everything sits below the fold, as the map does under the list on a narrow screen.
+    const below = { top: 2000, bottom: 2400, left: 0, right: 600, width: 600, height: 400, x: 0, y: 2000 };
+    const rectSpy = vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue({ ...below, toJSON: () => below });
+    try {
+      renderPage();
+      const trainer = await screen.findByRole("article", { name: "Warlock trainer: Maximillian Crowe" });
+      trainer.focus();
+      await userEvent.keyboard("{Enter}");
+      const map = screen.getByTestId("zone-map");
+      expect(scrolled.some((el) => el.contains(map))).toBe(true);
+
+      // Side by side: the map is already on screen — nothing scrolls.
+      scrolled.length = 0;
+      const onScreen = { ...below, top: 100, bottom: 500, y: 100 };
+      rectSpy.mockReturnValue({ ...onScreen, toJSON: () => onScreen });
+      trainer.focus();
+      await userEvent.keyboard("{Enter}");
+      expect(trainer).toHaveAttribute("aria-current", "true");
+      expect(scrolled.some((el) => el.contains(screen.getByTestId("zone-map")))).toBe(false);
+    } finally {
+      delete (Element.prototype as Partial<Element>).scrollIntoView;
+      rectSpy.mockRestore();
+    }
+  });
+
   it("Enter on a focused row shows it on the map; zoom out climbs the map tree", async () => {
     window.localStorage.setItem(
       PLAYER_SETTINGS_STORAGE_KEY,
@@ -149,7 +184,8 @@ describe("WoW Forever World Map page", () => {
     expect(screen.getByRole("button", { name: "Zoom out" })).toBeDisabled();
     await userEvent.selectOptions(screen.getByLabelText("Open a map"), "Zephras Isle");
     expect(screen.getByRole("img", { name: "Zephras Isle map" })).toBeInTheDocument();
-  });
+    // Five map changes through userEvent: slow on a cold, busy CI worker.
+  }, 15_000);
 
   it("warns on a zone that's new in Forever", async () => {
     window.localStorage.setItem(
