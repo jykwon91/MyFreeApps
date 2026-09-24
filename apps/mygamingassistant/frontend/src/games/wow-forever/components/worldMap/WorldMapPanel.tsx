@@ -4,6 +4,8 @@ import ChildMapSelect from "@/games/wow-forever/components/worldMap/ChildMapSele
 import MapBreadcrumb from "@/games/wow-forever/components/worldMap/MapBreadcrumb";
 import MapCanvas from "@/games/wow-forever/components/worldMap/MapCanvas";
 import PositionConfirm from "@/games/wow-forever/components/worldMap/PositionConfirm";
+import type { ZoomView } from "@/hooks/useMinimapZoomPan";
+import type { MapZoomRestore } from "@/games/wow-forever/hooks/useMapSelection";
 import type { PlayerFaction, WorldMapData, WorldZone } from "@/games/wow-forever/types/worldMap";
 import { childrenOf, isZoneView, mapPath } from "@/games/wow-forever/worldMap/mapHitTest";
 import { directionStops, resultMarkers, type MapFocus, type MapLayerChoice } from "@/games/wow-forever/worldMap/mapLayers";
@@ -20,10 +22,14 @@ interface WorldMapPanelProps {
   playerZoneId: number | null;
   focus: MapFocus | null;
   onFocusApplied: () => void;
+  restore: MapZoomRestore | null;
+  onRestoreApplied: () => void;
+  onZoomChange: (zoom: ZoomView) => void;
+  onManualZoom: () => void;
   onOpen: (mapId: number) => void;
   onSetPosition: (zoneId: number, x: number, y: number) => void;
   onSelectMarker: (poiId: string) => void;
-  /** Esc or a click on the map with a result selected: clear it (the view stays). */
+  /** Esc or a click on the map with a result selected: clear it. */
   onClearSelection: () => void;
   /** Which optional layers are drawn (owned by the page so Reset filters can restore them). */
   layers: MapLayerChoice;
@@ -139,6 +145,10 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
         stops={stops}
         focus={props.focus}
         onFocusApplied={props.onFocusApplied}
+        restore={props.restore}
+        onRestoreApplied={props.onRestoreApplied}
+        onZoomChange={props.onZoomChange}
+        onManualZoom={props.onManualZoom}
         onOpen={onOpen}
         onZoomOut={() => map.parent !== null && onOpen(map.parent)}
         onPick={pick}
@@ -150,7 +160,8 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
         <span className="font-medium text-amber-500">●</span> direction steps, joined by a dashed route ·{" "}
         <span className="font-medium text-fuchsia-500">●</span> destination on a wider map ·{" "}
         <span className="font-medium text-cyan-400">●</span> quest givers ·{" "}
-        <span className="font-medium text-red-700">●</span> dungeons · other coloured dots are results. With a result selected, a click on the map or Esc clears it.
+        <span className="font-medium text-red-700">●</span> dungeons · other coloured dots are results. With a result selected, a click on the map or Esc clears it and the map goes back to where it
+        was — unless you've moved it yourself since.
         Otherwise click a zone to open it; right-click or Esc zooms out. On your zone's map, click to set where you are. Scroll to zoom, drag to
         move.
       </p>

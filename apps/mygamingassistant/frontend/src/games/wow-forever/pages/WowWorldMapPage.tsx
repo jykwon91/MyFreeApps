@@ -29,7 +29,7 @@ export default function WowWorldMapPage() {
   const find = useFindFilters();
   const { findFilterId, showAllClasses, includeOtherFaction } = find.filters;
   const view = useMapView(data, settings.zoneId);
-  const selection = useMapSelection(data, view.goTo);
+  const selection = useMapSelection(data, view);
   const { selectedPoiId } = selection;
 
   const model = useMemo(
@@ -55,7 +55,7 @@ export default function WowWorldMapPage() {
     if (patch.zoneId !== undefined && patch.zoneId !== settings.zoneId) view.followPlayer();
   }
 
-  /** Back to the default finding filters with nothing selected; the You section is kept. */
+  /** Back to the default finding filters with nothing selected (and the view from before it); the You section is kept. */
   function resetFilters() {
     find.reset();
     selection.clear();
@@ -145,6 +145,10 @@ export default function WowWorldMapPage() {
                   playerZoneId={settings.zoneId}
                   focus={selection.focus}
                   onFocusApplied={selection.clearFocus}
+                  restore={selection.restore}
+                  onRestoreApplied={selection.clearRestore}
+                  onZoomChange={selection.trackZoom}
+                  onManualZoom={selection.takeControl}
                   onOpen={view.goTo}
                   onSetPosition={(zoneId, x, y) => updateSettings({ zoneId, position: { x, y } })}
                   onSelectMarker={selection.selectMarker}

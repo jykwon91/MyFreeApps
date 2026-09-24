@@ -210,7 +210,7 @@ describe("WoW Forever World Map page", () => {
       return within(screen.getByRole("group", { name: "Elwynn Forest markers" })).queryAllByRole("button", { pressed: true });
     }
 
-    it("clicking the selected row again clears it, and the map stays put", async () => {
+    it("clicking the selected row again clears it", async () => {
       renderInElwynn();
       const trainer = await selectCrowe();
       await userEvent.click(within(trainer).getByRole("heading", { name: "Maximillian Crowe" }));
@@ -248,7 +248,7 @@ describe("WoW Forever World Map page", () => {
       expect(screen.getByRole("img", { name: "Elwynn Forest map" })).toBeInTheDocument();
     });
 
-    it("a click on the map clears the selection without moving you or the map", async () => {
+    it("a click on the map clears the selection without moving you", async () => {
       renderInElwynn();
       const trainer = await selectCrowe();
       // jsdom lays nothing out: give the map a box so the click lands on it.
@@ -266,6 +266,124 @@ describe("WoW Forever World Map page", () => {
       expect(screen.getByRole("img", { name: "Elwynn Forest map" })).toBeInTheDocument();
       const stored = JSON.parse(window.localStorage.getItem(PLAYER_SETTINGS_STORAGE_KEY) ?? "{}");
       expect(stored).toMatchObject({ zoneId: 1429, position: { x: 42, y: 65 } });
+    });
+  });
+
+  // Letting go puts the view back to where it was before the selection (map + zoom), unless the player moved it since.
+  describe("letting go of a selection restores the view", { timeout: 20_000 }, () => {
+    function renderInElwynn() {
+      window.localStorage.setItem(
+        PLAYER_SETTINGS_STORAGE_KEY,
+        JSON.stringify({ faction: "A", classId: "warlock", zoneId: 1429, level: null, position: { x: 42, y: 65 } }),
+      );
+      renderPage();
+    }
+
+    const resetZoom = () => screen.queryByRole("button", { name: "Reset zoom" });
+
+    /** Calder trains in Ironforge: selecting him opens Ironforge and zooms in on him. */
+    async function selectCalder() {
+      const find = await screen.findByRole("region", { name: "Find" });
+      const calder = within(find).getByRole("article", { name: "Alexander Calder" });
+      await userEvent.click(within(calder).getByRole("heading", { name: "Alexander Calder" }));
+      expect(screen.getByRole("img", { name: "Ironforge map" })).toBeInTheDocument();
+      expect(resetZoom()).toBeInTheDocument();
+      return calder;
+    }
+
+    function expectBackInElwynnUnzoomed() {
+      expect(screen.getByRole("img", { name: "Elwynn Forest map" })).toBeInTheDocument();
+      expect(resetZoom()).not.toBeInTheDocument();
+    }
+
+    function clickMap() {
+      // jsdom lays nothing out: give the map a box so the click lands on it.
+      const box = { top: 0, left: 0, right: 600, bottom: 400, width: 600, height: 400, x: 0, y: 0 };
+      const rectSpy = vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue({ ...box, toJSON: () => box });
+      try {
+        const map = screen.getByTestId("zone-map");
+        fireEvent.pointerDown(map, { button: 0, clientX: 300, clientY: 200 });
+        fireEvent.pointerUp(map, { button: 0, clientX: 300, clientY: 200 });
+      } finally {
+        rectSpy.mockRestore();
+      }
+    }
+
+    const deselectPaths: [string, (calder: HTMLElement) => Promise<void> | void][] = [
+      ["clicking the row again", (calder) => userEvent.click(within(calder).getByRole("heading", { name: "Alexander Calder" }))],
+      ["the row's Clear button", (calder) => userEvent.click(within(calder).getByRole("button", { name: /Clear selection/ }))],
+      [
+        "Esc on the map",
+        async () => {
+          screen.getByTestId("zone-map").focus();
+          await userEvent.keyboard("{Escape}");
+        },
+      ],
+      [
+        "Esc on the list",
+        async (calder) => {
+          calder.focus();
+          await userEvent.keyboard("{Escape}");
+        },
+      ],
+      ["a click on the map", () => clickMap()],
+      ["Reset filters", () => userEvent.click(screen.getByRole("button", { name: "Reset filters" }))],
+    ];
+
+    it.each(deselectPaths)("%s returns to the map and zoom from before", async (_path, deselect) => {
+      renderInElwynn();
+      const calder = await selectCalder();
+      await deselect(calder);
+      expect(calder).not.toHaveAttribute("aria-current");
+      expectBackInElwynnUnzoomed();
+      // Still browsable afterwards: Esc on the map now zooms out.
+      screen.getByTestId("zone-map").focus();
+      await userEvent.keyboard("{Escape}");
+      expect(screen.getByRole("img", { name: "Eastern Kingdoms map" })).toBeInTheDocument();
+    });
+
+    it("selecting A then B then letting go restores the view from before A", async () => {
+      renderInElwynn();
+      const calder = await selectCalder();
+      const crowe = screen.getByRole("article", { name: "Warlock trainer: Maximillian Crowe" });
+      await userEvent.click(within(crowe).getByRole("heading", { name: "Maximillian Crowe" }));
+      expect(screen.getByRole("img", { name: "Elwynn Forest map" })).toBeInTheDocument();
+      expect(resetZoom()).toBeInTheDocument();
+      expect(calder).not.toHaveAttribute("aria-current");
+
+      await userEvent.click(within(crowe).getByRole("button", { name: /Clear selection/ }));
+      expect(crowe).not.toHaveAttribute("aria-current");
+      expectBackInElwynnUnzoomed();
+    });
+
+    it("a zoomed-in view before the selection comes back zoomed in", async () => {
+      renderInElwynn();
+      await screen.findByRole("region", { name: "Find" });
+      fireEvent.wheel(screen.getByTestId("zone-map"), { deltaY: -400, clientX: 10, clientY: 10 });
+      expect(resetZoom()).toBeInTheDocument();
+      const calder = await selectCalder();
+      await userEvent.click(within(calder).getByRole("button", { name: /Clear selection/ }));
+      expect(screen.getByRole("img", { name: "Elwynn Forest map" })).toBeInTheDocument();
+      expect(resetZoom()).toBeInTheDocument();
+    });
+
+    it("after the player navigates the map themselves, letting go leaves the map where it is", async () => {
+      renderInElwynn();
+      const calder = await selectCalder();
+      await userEvent.click(screen.getByRole("button", { name: "Zoom out" }));
+      expect(screen.getByRole("img", { name: "Eastern Kingdoms map" })).toBeInTheDocument();
+      await userEvent.click(within(calder).getByRole("button", { name: /Clear selection/ }));
+      expect(calder).not.toHaveAttribute("aria-current");
+      expect(screen.getByRole("img", { name: "Eastern Kingdoms map" })).toBeInTheDocument();
+    });
+
+    it("after the player zooms by hand, letting go leaves the map where it is", async () => {
+      renderInElwynn();
+      const calder = await selectCalder();
+      await userEvent.click(screen.getByRole("button", { name: "Reset zoom" }));
+      await userEvent.click(within(calder).getByRole("button", { name: /Clear selection/ }));
+      expect(calder).not.toHaveAttribute("aria-current");
+      expect(screen.getByRole("img", { name: "Ironforge map" })).toBeInTheDocument();
     });
   });
 

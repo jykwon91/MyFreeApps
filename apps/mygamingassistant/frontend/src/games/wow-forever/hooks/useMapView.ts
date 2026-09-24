@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import type { WorldMapData } from "@/games/wow-forever/types/worldMap";
 
 /** `/wow-forever/map?m=1429` — the map being looked at, so back = zoom out and a view can be linked. */
@@ -12,6 +12,8 @@ export interface MapViewState {
   goTo: (mapId: number) => void;
   /** Drop the URL's map so the view follows the player's zone again. */
   followPlayer: () => void;
+  /** Undo `steps` of our own `goTo`s (browser history), putting the earlier `?m=` back exactly. */
+  back: (steps: number) => void;
 }
 
 /**
@@ -21,6 +23,7 @@ export interface MapViewState {
  */
 export function useMapView(data: WorldMapData | null, playerZoneId: number | null): MapViewState {
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
   const requested = Number(params.get(MAP_PARAM));
   let mapId: number | null = null;
   if (data) {
@@ -52,5 +55,12 @@ export function useMapView(data: WorldMapData | null, playerZoneId: number | nul
     );
   }, [setParams]);
 
-  return { mapId, goTo, followPlayer };
+  const back = useCallback(
+    (steps: number) => {
+      if (steps > 0) navigate(-steps);
+    },
+    [navigate],
+  );
+
+  return { mapId, goTo, followPlayer, back };
 }
