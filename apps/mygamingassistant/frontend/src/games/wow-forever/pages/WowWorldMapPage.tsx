@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { AlertBox, useIsAuthenticated } from "@platform/ui";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import AddonHelp from "@/games/wow-forever/components/worldMap/AddonHelp";
@@ -11,7 +11,7 @@ import NearestServices from "@/games/wow-forever/components/worldMap/NearestServ
 import PlayerStrip from "@/games/wow-forever/components/worldMap/PlayerStrip";
 import WorldMapPanel from "@/games/wow-forever/components/worldMap/WorldMapPanel";
 import WorldMapSkeleton from "@/games/wow-forever/components/worldMap/WorldMapSkeleton";
-import { SERVICE_KIND } from "@/games/wow-forever/data/worldMap/serviceKinds";
+import { useFindFilters } from "@/games/wow-forever/hooks/useFindFilters";
 import { useMapSelection } from "@/games/wow-forever/hooks/useMapSelection";
 import { useMapView } from "@/games/wow-forever/hooks/useMapView";
 import { usePlayerSettings, type PlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
@@ -26,9 +26,8 @@ export default function WowWorldMapPage() {
   const { status, data, retry, capturesFailed } = useWorldMap();
   const canImport = useIsAuthenticated() && !isServeOnly();
   const [settings, updateSettings] = usePlayerSettings();
-  const [findFilterId, setFindFilterId] = useState<string>(SERVICE_KIND.classTrainer);
-  const [showAllClasses, setShowAllClasses] = useState(false);
-  const [includeOtherFaction, setIncludeOtherFaction] = useState(false);
+  const find = useFindFilters();
+  const { findFilterId, showAllClasses, includeOtherFaction } = find.filters;
   const view = useMapView(data, settings.zoneId);
   const selection = useMapSelection(data, view.goTo);
   const { selectedPoiId } = selection;
@@ -56,13 +55,18 @@ export default function WowWorldMapPage() {
     if (patch.zoneId !== undefined && patch.zoneId !== settings.zoneId) view.followPlayer();
   }
 
+  /** Back to the default finding filters with nothing selected; the You section is kept. */
+  function resetFilters() {
+    find.reset();
+    selection.clear();
+  }
+
   const training = nextWarlockTraining(settings.classId, settings.level);
   const rowProps = {
     data,
     faction: settings.faction,
     selectedPoiId,
     onToggle: selection.toggle,
-    onSelect: selection.select,
     directions: model?.directions,
   };
 
@@ -117,11 +121,13 @@ export default function WowWorldMapPage() {
                     data={data}
                     classId={settings.classId}
                     filter={model.findFilter}
-                    onFilterChange={setFindFilterId}
+                    onFilterChange={(id) => find.update({ findFilterId: id })}
                     showAllClasses={showAllClasses}
-                    onShowAllClassesChange={setShowAllClasses}
+                    onShowAllClassesChange={(value) => find.update({ showAllClasses: value })}
                     includeOtherFaction={includeOtherFaction}
-                    onIncludeOtherFactionChange={setIncludeOtherFaction}
+                    onIncludeOtherFactionChange={(value) => find.update({ includeOtherFaction: value })}
+                    canReset={!find.atDefaults || selectedPoiId !== null}
+                    onReset={resetFilters}
                     results={model.findResults}
                   />
                   <QuestGivers {...rowProps} data={data} level={settings.level} givers={model.questGivers} />
@@ -142,6 +148,9 @@ export default function WowWorldMapPage() {
                   onOpen={view.goTo}
                   onSetPosition={(zoneId, x, y) => updateSettings({ zoneId, position: { x, y } })}
                   onSelectMarker={selection.selectMarker}
+                  onClearSelection={selection.clear}
+                  layers={find.filters.layers}
+                  onLayersChange={(layers) => find.update({ layers })}
                 />
               </div>
             )}

@@ -158,10 +158,23 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`mapMasks.json`, 120×80 bits from the zone's highlight art, zones only) —
   continents are covered via their child zones because their highlight art is
   only a coastline. Smallest area wins; a click that resolves to nothing never
-  navigates. Neighbour zones are labelled at the map edges.
+  navigates.
+- **Neighbour labels** (`worldMap/mapNeighbours.ts`): a zone's neighbours are
+  the siblings its land actually touches — rays marched out from every border
+  cell of its mask hit the first sibling outline (never a zone that is merely
+  on the same picture). Each label sits on the side / at the point where that
+  contact is. Labels live in a reserved band OUTSIDE the picture
+  (`edgeLabelLayout.ts`, `MapEdgeFrame`), so they never cover markers, and are
+  pushed apart / shared along the band so they never overlap —
+  `wowWorldMapNeighbours.test.ts` checks every zone at several widths.
 - **List ↔ map selection** (`hooks/useMapSelection.ts`): clicking / Enter on a
   result row opens that result's zone, zooms to it and highlights the marker
-  (and the row); clicking a marker selects and scrolls to its row.
+  (and the row); clicking a marker selects and scrolls to its row. A selection
+  is let go of by clicking its row again, the row's "Clear" button, Esc (on the
+  map Esc clears first and only zooms out when nothing is selected) or a click
+  on the map; the view stays put. "Reset filters" (`hooks/useFindFilters.ts`)
+  restores the finding filters + map layers and clears the selection — never
+  the "You" section (faction/class/zone/level/position).
 - Placement: a nested capital wins, then the flight-path name's zone, then the
   zone whose painted overlay covers the point. Classic NPCs never land on a
   Forever-only zone (`FOREVER_ONLY_ZONES`); those zones say "Not mapped yet".

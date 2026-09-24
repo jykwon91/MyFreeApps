@@ -1,7 +1,7 @@
 import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
 import clsx from "clsx";
 import { Badge } from "@platform/ui";
-import { ChevronDown, MapPin } from "lucide-react";
+import { ChevronDown, MapPin, X } from "lucide-react";
 import DirectionsPanel from "@/games/wow-forever/components/worldMap/DirectionsPanel";
 import ProvenanceBadge from "@/games/wow-forever/components/worldMap/ProvenanceBadge";
 import WaypointButtons from "@/games/wow-forever/components/worldMap/WaypointButtons";
@@ -18,9 +18,8 @@ interface PoiRowProps {
   /** Shown above the name in the hero list ("Warlock trainer"). */
   heading?: string;
   selected: boolean;
+  /** Show this result on the map (click or Enter on the row), or clear it when it's the selected one. */
   onToggle: (poiId: string) => void;
-  /** Show this result on the map (click or Enter on the row). */
-  onSelect: (poiId: string) => void;
   /** Directions for the selected row. */
   directions: Directions | null | undefined;
   /** Layer-specific detail under the location line (quests offered, dungeon level). */
@@ -31,19 +30,19 @@ interface PoiRowProps {
 const OWN_CONTROLS = "button, a, input, select, textarea, [role='button']";
 
 export default function PoiRow(props: PoiRowProps) {
-  const { ranked, data, faction, heading, selected, onToggle, onSelect, directions, children } = props;
+  const { ranked, data, faction, heading, selected, onToggle, directions, children } = props;
   const { poi, zone } = ranked;
   const panelId = `wm-directions-${poi.id}`;
 
   function rowClick(e: MouseEvent<HTMLElement>) {
     if (e.target instanceof Element && e.target.closest(OWN_CONTROLS)) return;
-    onSelect(poi.id);
+    onToggle(poi.id);
   }
 
   function rowKey(e: KeyboardEvent<HTMLElement>) {
     if (e.key !== "Enter" || e.target !== e.currentTarget) return;
     e.preventDefault();
-    onSelect(poi.id);
+    onToggle(poi.id);
   }
 
   return (
@@ -61,10 +60,26 @@ export default function PoiRow(props: PoiRowProps) {
         selected && "border-blue-500 ring-2 ring-blue-500/50",
       )}
     >
-      {heading && <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{heading}</p>}
-      <div className="flex flex-wrap items-baseline gap-x-2">
-        <h3 className="font-semibold">{poi.name}</h3>
-        {poi.title && <span className="text-sm text-muted-foreground">{poi.title}</span>}
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-2">
+          {heading && <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{heading}</p>}
+          <div className="flex flex-wrap items-baseline gap-x-2">
+            <h3 className="font-semibold">{poi.name}</h3>
+            {poi.title && <span className="text-sm text-muted-foreground">{poi.title}</span>}
+          </div>
+        </div>
+        {selected && (
+          <button
+            type="button"
+            onClick={() => onToggle(poi.id)}
+            aria-label={`Clear selection: ${poi.name}`}
+            title="Clear selection (Esc)"
+            className="-m-1 inline-flex shrink-0 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground min-h-[44px] sm:min-h-[32px] hover:bg-muted/40 hover:text-foreground"
+          >
+            <X className="h-4 w-4" aria-hidden />
+            Clear
+          </button>
+        )}
       </div>
       <p className="flex items-start gap-1.5 text-sm">
         <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />

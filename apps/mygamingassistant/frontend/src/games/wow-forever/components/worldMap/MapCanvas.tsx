@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
 import clsx from "clsx";
 import { useMinimapZoomPan } from "@/hooks/useMinimapZoomPan";
-import MapEdgeLabels from "@/games/wow-forever/components/worldMap/MapEdgeLabels";
+import MapEdgeFrame from "@/games/wow-forever/components/worldMap/MapEdgeFrame";
 import MapGrid from "@/games/wow-forever/components/worldMap/MapGrid";
 import MapHoverHighlight from "@/games/wow-forever/components/worldMap/MapHoverHighlight";
 import MapHoverStatus from "@/games/wow-forever/components/worldMap/MapHoverStatus";
@@ -9,7 +9,9 @@ import MapMarkerLayer, { MAP_H, MAP_W } from "@/games/wow-forever/components/wor
 import type { MapView, PlayerFaction, WorldMapData, WorldPoint } from "@/games/wow-forever/types/worldMap";
 import { formatCoord } from "@/games/wow-forever/worldMap/geometry";
 import { worldToMap } from "@/games/wow-forever/worldMap/mapGeometry";
-import { HIT_KIND, hitTestMap, neighbourLabels, type MapHit } from "@/games/wow-forever/worldMap/mapHitTest";
+import { revealInViewport } from "@/games/wow-forever/lib/revealInViewport";
+import { HIT_KIND, hitTestMap, type MapHit } from "@/games/wow-forever/worldMap/mapHitTest";
+import { neighbourLabels } from "@/games/wow-forever/worldMap/mapNeighbours";
 import type { MapDestination, MapFocus, MapMarker, MapStop } from "@/games/wow-forever/worldMap/mapLayers";
 
 /** Pointer travel (px) that turns a click into a drag. */
@@ -33,6 +35,8 @@ interface MapCanvasProps {
   /** A click on the viewed zone itself, in its map percent. */
   onPick: (x: number, y: number) => void;
   onSelectMarker: (id: string) => void;
+  /** Clear the selected result (the view stays where it is). */
+  onClearSelection: () => void;
 }
 
 function sameHit(a: MapHit | null, b: MapHit): boolean {
@@ -42,12 +46,13 @@ function sameHit(a: MapHit | null, b: MapHit): boolean {
 /**
  * One map of the zoom-out tree with its art, the route and the results.
  * Like the in-game map: hover a zone to light it up, click to open it,
- * right-click or Esc to zoom out; on a zone map the neighbours are named at
+ * right-click or Esc to zoom out (Esc, or a click, first clears a selected result); on a zone map the neighbours are named at
  * the edges and a click past a border opens that zone. Scroll to zoom, drag
  * to pan.
  */
 export default function MapCanvas(props: MapCanvasProps) {
-  const { data, map, faction, focus, onFocusApplied, onOpen, onZoomOut, onPick } = props;
+  const { data, map, faction, focus, onFocusApplied, onOpen, onZoomOut, onPick, selectedId, onClearSelection } = props;
+  const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const zoom = useMinimapZoomPan(containerRef);
@@ -63,6 +68,8 @@ export default function MapCanvas(props: MapCanvasProps) {
     const marker = props.markers.find((m) => m.id === focus.poiId);
     const at = marker && worldToMap(map, marker.world);
     if (at) focusOn(at.x / 100, at.y / 100, FOCUS_SCALE);
+    // Stacked layout: the list is above the map — bring the map on screen so the zoom is seen.
+    revealInViewport(canvasRef.current);
     onFocusApplied();
   }, [focus, map, props.markers, focusOn, onFocusApplied]);
 
@@ -94,6 +101,11 @@ export default function MapCanvas(props: MapCanvasProps) {
     down.current = null;
     const at = percentAt(e);
     if (!start || !at || Math.hypot(e.clientX - start.x, e.clientY - start.y) > CLICK_SLOP) return;
+    // With a result selected, a click off its marker only lets go of it (markers keep their own clicks).
+    if (selectedId !== null) {
+      onClearSelection();
+      return;
+    }
     const hit = hitTestMap(data, map.id, at.x, at.y);
     if (hit.kind === HIT_KIND.goTo && hit.target) onOpen(hit.target.id);
     if (hit.kind === HIT_KIND.here) onPick(Number(formatCoord(at.x)), Number(formatCoord(at.y)));
@@ -107,76 +119,79 @@ export default function MapCanvas(props: MapCanvasProps) {
   function keyDown(e: KeyboardEvent<HTMLDivElement>) {
     if (e.key !== "Escape") return;
     e.preventDefault();
-    onZoomOut();
+    // Like the in-game map: Esc first lets go of the selection, then zooms out.
+    if (selectedId !== null) onClearSelection();
+    else onZoomOut();
   }
 
   const goTo = hover?.kind === HIT_KIND.goTo ? hover.target : null;
 
   return (
-    <div className="space-y-2">
-      <div
-        ref={containerRef}
-        data-testid="zone-map"
-        tabIndex={0}
-        aria-label={`${map.name} — right-click or press Escape to zoom out`}
-        className={clsx(
-          "relative w-full overflow-hidden rounded-xl border bg-muted/40 touch-none select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500",
-          zoom.panning && "cursor-grabbing",
-          !zoom.panning && goTo && "cursor-pointer",
-          !zoom.panning && hover?.kind === HIT_KIND.here && "cursor-crosshair",
-        )}
-        style={{ aspectRatio: `${MAP_W} / ${MAP_H}` }}
-        onPointerDown={pointerDown}
-        onPointerMove={pointerMove}
-        onPointerUp={pointerUp}
-        onPointerLeave={() => setHover(null)}
-        onContextMenu={contextMenu}
-        onKeyDown={keyDown}
-      >
-        <div className="absolute inset-0" style={zoom.transformStyle}>
-          {!imageFailed && (
-            <img
-              src={`/wow-maps/${map.id}.webp`}
-              alt={`${map.name} map`}
-              draggable={false}
-              decoding="async"
-              onError={() => setImageFailed(true)}
-              className="absolute inset-0 h-full w-full"
-            />
+    <div ref={canvasRef} className="space-y-2">
+      <MapEdgeFrame labels={edgeLabels} onOpen={onOpen}>
+        <div
+          ref={containerRef}
+          data-testid="zone-map"
+          tabIndex={0}
+          aria-label={`${map.name} — right-click or press Escape to zoom out`}
+          className={clsx(
+            "relative w-full overflow-hidden rounded-xl border bg-muted/40 touch-none select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500",
+            zoom.panning && "cursor-grabbing",
+            !zoom.panning && goTo && "cursor-pointer",
+            !zoom.panning && hover?.kind === HIT_KIND.here && "cursor-crosshair",
           )}
-          {goTo && <MapHoverHighlight map={map} target={goTo} faction={faction} />}
-          <svg
-            ref={svgRef}
-            viewBox={`0 0 ${MAP_W} ${MAP_H}`}
-            className="absolute inset-0 h-full w-full"
-            role="group"
-            aria-label={`${map.name} markers`}
-          >
-            {imageFailed && <MapGrid width={MAP_W} height={MAP_H} />}
-            <MapMarkerLayer
-              map={map}
-              player={props.player}
-              markers={props.markers}
-              selectedId={props.selectedId}
-              destination={props.destination}
-              stops={props.stops}
-              onSelectMarker={props.onSelectMarker}
-            />
-          </svg>
+          style={{ aspectRatio: `${MAP_W} / ${MAP_H}` }}
+          onPointerDown={pointerDown}
+          onPointerMove={pointerMove}
+          onPointerUp={pointerUp}
+          onPointerLeave={() => setHover(null)}
+          onContextMenu={contextMenu}
+          onKeyDown={keyDown}
+        >
+          <div className="absolute inset-0" style={zoom.transformStyle}>
+            {!imageFailed && (
+              <img
+                src={`/wow-maps/${map.id}.webp`}
+                alt={`${map.name} map`}
+                draggable={false}
+                decoding="async"
+                onError={() => setImageFailed(true)}
+                className="absolute inset-0 h-full w-full"
+              />
+            )}
+            {goTo && <MapHoverHighlight map={map} target={goTo} faction={faction} />}
+            <svg
+              ref={svgRef}
+              viewBox={`0 0 ${MAP_W} ${MAP_H}`}
+              className="absolute inset-0 h-full w-full"
+              role="group"
+              aria-label={`${map.name} markers`}
+            >
+              {imageFailed && <MapGrid width={MAP_W} height={MAP_H} />}
+              <MapMarkerLayer
+                map={map}
+                player={props.player}
+                markers={props.markers}
+                selectedId={props.selectedId}
+                destination={props.destination}
+                stops={props.stops}
+                onSelectMarker={props.onSelectMarker}
+              />
+            </svg>
+          </div>
+          {zoom.isZoomed && (
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
+              onClick={zoom.reset}
+              className="absolute right-2 top-12 z-10 rounded-md border bg-card px-3 text-xs min-h-[36px]"
+            >
+              Reset zoom
+            </button>
+          )}
         </div>
-        <MapEdgeLabels labels={edgeLabels} onOpen={onOpen} />
-        {zoom.isZoomed && (
-          <button
-            type="button"
-            onPointerDown={(e) => e.stopPropagation()}
-            onPointerUp={(e) => e.stopPropagation()}
-            onClick={zoom.reset}
-            className="absolute right-2 top-12 z-10 rounded-md border bg-card px-3 text-xs min-h-[36px]"
-          >
-            Reset zoom
-          </button>
-        )}
-      </div>
+      </MapEdgeFrame>
       <MapHoverStatus map={map} hover={hover} faction={faction} />
       {imageFailed && <p className="text-xs text-muted-foreground">The map picture didn't load — showing a grid instead.</p>}
     </div>

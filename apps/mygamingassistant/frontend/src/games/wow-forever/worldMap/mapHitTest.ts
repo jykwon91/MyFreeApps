@@ -74,7 +74,7 @@ function area(map: MapView): number {
  * continent's zones (its highlight art is only a coastline), else the
  * rectangle (cities, islands).
  */
-function covers(data: WorldMapData, map: MapView, p: WorldPoint): boolean {
+export function covers(data: WorldMapData, map: MapView, p: WorldPoint): boolean {
   const zone = map.zone;
   if (!zone || zone.continent !== p.continent) return false;
   const [minX, maxX, minY, maxY] = zone.bounds;
@@ -107,64 +107,4 @@ export function hitTestMap(data: WorldMapData, viewedId: number, x: number, y: n
   // The seam between two outlines still belongs to the zone you are looking at.
   if (zoneView && onPicture) return { kind: HIT_KIND.here, target: viewed, world };
   return NOTHING;
-}
-
-export const MAP_EDGE = { west: "west", east: "east", north: "north", south: "south" } as const;
-export type MapEdge = (typeof MAP_EDGE)[keyof typeof MAP_EDGE];
-
-const EDGE_ARROW: Record<MapEdge, string> = { west: "←", east: "→", north: "↑", south: "↓" };
-
-/** A neighbouring map named at the edge of the viewed one ("Westfall ←"). */
-export interface EdgeLabel {
-  target: MapView;
-  edge: MapEdge;
-  /** Where along the edge, 0..100 (top -> bottom for west/east, left -> right for north/south). */
-  along: number;
-  text: string;
-}
-
-/** Points sampled per edge, and how far outside the picture (map percent). */
-const EDGE_SAMPLES = 50;
-const EDGE_DEPTHS = [2, 6] as const;
-/** A neighbour needs this many samples on an edge to be named there. */
-const MIN_EDGE_SAMPLES = 3;
-
-function edgePoint(edge: MapEdge, along: number, depth: number): { x: number; y: number } {
-  if (edge === MAP_EDGE.west) return { x: -depth, y: along };
-  if (edge === MAP_EDGE.east) return { x: 100 + depth, y: along };
-  if (edge === MAP_EDGE.north) return { x: along, y: -depth };
-  return { x: along, y: 100 + depth };
-}
-
-/**
- * The zones just past each edge of a zone map: sample points just outside
- * every edge, hit-test them, and name each neighbour once, at the edge where
- * most of it touches.
- */
-export function neighbourLabels(data: WorldMapData, viewedId: number): EdgeLabel[] {
-  const viewed = data.maps.get(viewedId);
-  if (!viewed || !isZoneView(viewed)) return [];
-  const tally = new Map<number, Map<MapEdge, number[]>>();
-  for (const edge of Object.values(MAP_EDGE)) {
-    for (let i = 0; i < EDGE_SAMPLES; i++) {
-      const along = ((i + 0.5) / EDGE_SAMPLES) * 100;
-      for (const depth of EDGE_DEPTHS) {
-        const { x, y } = edgePoint(edge, along, depth);
-        const hit = hitTestMap(data, viewedId, x, y);
-        if (hit.kind !== HIT_KIND.goTo || !hit.target) continue;
-        const byEdge = tally.get(hit.target.id) ?? new Map<MapEdge, number[]>();
-        byEdge.set(edge, [...(byEdge.get(edge) ?? []), along]);
-        tally.set(hit.target.id, byEdge);
-      }
-    }
-  }
-  const labels: EdgeLabel[] = [];
-  for (const [id, byEdge] of tally) {
-    const target = data.maps.get(id);
-    const [edge, samples] = [...byEdge].sort((a, b) => b[1].length - a[1].length)[0];
-    if (!target || samples.length < MIN_EDGE_SAMPLES) continue;
-    const along = samples.reduce((sum, v) => sum + v, 0) / samples.length;
-    labels.push({ target, edge, along, text: `${target.name} ${EDGE_ARROW[edge]}` });
-  }
-  return labels.sort((a, b) => a.target.name.localeCompare(b.target.name));
 }

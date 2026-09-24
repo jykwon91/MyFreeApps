@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Select } from "@platform/ui";
+import { RotateCcw } from "lucide-react";
 import PoiRow from "@/games/wow-forever/components/worldMap/PoiRow";
 import type { WowClassId } from "@/games/wow-forever/data/classes";
 import { SERVICE_KIND } from "@/games/wow-forever/data/worldMap/serviceKinds";
@@ -21,16 +22,19 @@ interface FindServicesProps {
   onShowAllClassesChange: (value: boolean) => void;
   includeOtherFaction: boolean;
   onIncludeOtherFactionChange: (value: boolean) => void;
+  /** False when the filters (and the map layers) are at their defaults and nothing is selected. */
+  canReset: boolean;
+  /** Default filters and no selection — never the You section. */
+  onReset: () => void;
   results: readonly RankedPoi[];
   selectedPoiId: string | null;
   onToggle: (poiId: string) => void;
-  onSelect: (poiId: string) => void;
   directions: Directions | null | undefined;
 }
 
 /** Pick any service type and list every one, nearest first, in the three distance groups. */
 export default function FindServices(props: FindServicesProps) {
-  const { data, faction, classId, filter, results, selectedPoiId, onToggle, onSelect, directions } = props;
+  const { data, faction, classId, filter, results, selectedPoiId, onToggle, directions } = props;
   const [limit, setLimit] = useState(PAGE_SIZE);
   const shown = results.slice(0, limit);
 
@@ -82,6 +86,19 @@ export default function FindServices(props: FindServicesProps) {
           />
           Include the other faction
         </label>
+        <button
+          type="button"
+          onClick={() => {
+            props.onReset();
+            setLimit(PAGE_SIZE);
+          }}
+          disabled={!props.canReset}
+          title="Back to class trainers, default map layers, nothing selected — your faction, class, zone and level stay"
+          className="inline-flex items-center gap-1.5 self-start rounded-md border px-3 text-sm min-h-[44px] sm:min-h-[32px] sm:self-auto hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
+        >
+          <RotateCcw className="h-4 w-4" aria-hidden />
+          Reset filters
+        </button>
       </div>
       {results.length === 0 && <p className="text-sm text-muted-foreground">None found for your faction.</p>}
       <div className="space-y-3">
@@ -96,7 +113,6 @@ export default function FindServices(props: FindServicesProps) {
               faction={faction}
               selected={ranked.poi.id === selectedPoiId}
               onToggle={onToggle}
-              onSelect={onSelect}
               directions={directions}
             />
           </div>

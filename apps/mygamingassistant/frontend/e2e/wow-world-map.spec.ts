@@ -114,6 +114,26 @@ async function mapPoint(page: Page, x: number, y: number) {
   return { x: (box.width * x) / 100, y: (box.height * y) / 100 };
 }
 
+/** The neighbour labels overlap neither each other nor the map picture (where the markers are). */
+async function expectLabelsClear(page: Page) {
+  const labels = page.getByTestId("map-edge-frame").getByRole("button", { name: /^Go to / });
+  await expect(labels.first()).toBeVisible();
+  const picture = await page.getByTestId("zone-map").boundingBox();
+  const boxes = await labels.evaluateAll((els) =>
+    els.map((el) => {
+      const r = el.getBoundingClientRect();
+      return { name: el.getAttribute("aria-label"), x: r.x, y: r.y, width: r.width, height: r.height };
+    }),
+  );
+  if (!picture) throw new Error("the map isn't on screen");
+  const overlap = (a: { x: number; y: number; width: number; height: number }, b: typeof a) =>
+    a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+  for (const [i, a] of boxes.entries()) {
+    expect(overlap(a, picture), `${a.name} covers the map`).toBe(false);
+    for (const b of boxes.slice(i + 1)) expect(overlap(a, b), `${a.name} / ${b.name}`).toBe(false);
+  }
+}
+
 async function standInGoldshire(page: Page) {
   // The capture API is the only backend call; answer it like a server with none.
   await page.route("**/api/wow/map-captures", (route) => route.fulfill({ json: { captures: [] } }));
@@ -130,8 +150,9 @@ test("the map zooms out to the continent, opens zones, crosses borders and goes 
   await standInGoldshire(page);
   const map = page.getByTestId("zone-map");
 
-  // Elwynn's neighbours are named at its edges.
-  await expect(page.getByRole("button", { name: "Go to Westfall" })).toHaveText("Westfall ←");
+  // Elwynn's neighbours are named in the band around the map, where each one is.
+  await expect(page.getByRole("button", { name: "Go to Redridge Mountains" })).toHaveText("Redridge Mountains →");
+  await expectLabelsClear(page);
 
   await page.getByRole("button", { name: "Zoom out" }).click();
   await expect(page.getByRole("img", { name: "Eastern Kingdoms map" })).toBeVisible();
@@ -187,6 +208,84 @@ test("clicking a result in the list shows it on its map, highlighted", async ({ 
   await expect(
     page.getByRole("group", { name: "Elwynn Forest markers" }).getByRole("button", { pressed: true }),
   ).toHaveAccessibleName(/Maximillian Crowe/);
+});
+
+test("Stranglethorn names only the zones it borders, without labels piling up", async ({ page }) => {
+  await page.route("**/api/wow/map-captures", (route) => route.fulfill({ json: { captures: [] } }));
+  await page.goto("/wow-forever/map?m=1434");
+  await expect(page.getByRole("img", { name: "Stranglethorn Vale map" })).toBeVisible();
+  const frame = page.getByTestId("map-edge-frame");
+  for (const name of ["Westfall", "Duskwood", "Deadwind Pass", "Blasted Lands"]) {
+    await expect(frame.getByRole("button", { name: `Go to ${name}` })).toBeVisible();
+  }
+  await expect(frame.getByRole("button", { name: "Go to Swamp of Sorrows" })).toHaveCount(0);
+  await expectLabelsClear(page);
+});
+
+test("on the stacked layout a chosen result scrolls the map into view", async ({ page }) => {
+  await page.setViewportSize({ width: 930, height: 800 });
+  await standInGoldshire(page);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const crowe = page.getByRole("article", { name: "Warlock trainer: Maximillian Crowe" });
+  await crowe.focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("group", { name: "Elwynn Forest markers" }).getByRole("button", { pressed: true }),
+  ).toHaveAccessibleName(/Maximillian Crowe/);
+  await expect(page.getByTestId("zone-map")).toBeInViewport({ ratio: 0.9 });
+});
+
+test("a selected result can be let go of — click again, Clear, Esc or the map — and Reset filters restores the defaults", async ({
+  page,
+}) => {
+  await standInGoldshire(page);
+  const crowe = page.getByRole("article", { name: "Warlock trainer: Maximillian Crowe" });
+  const name = crowe.getByRole("heading", { name: "Maximillian Crowe" });
+  const selectedMarker = page.getByRole("group", { name: "Elwynn Forest markers" }).getByRole("button", { pressed: true });
+  const elwynn = page.getByRole("img", { name: "Elwynn Forest map" });
+
+  // Click the selected row again.
+  await name.click();
+  await expect(selectedMarker).toHaveAccessibleName(/Maximillian Crowe/);
+  await name.click();
+  await expect(crowe).not.toHaveAttribute("aria-current", "true");
+  await expect(selectedMarker).toHaveCount(0);
+  await expect(elwynn).toBeVisible();
+
+  // The row's Clear button.
+  await name.click();
+  await crowe.getByRole("button", { name: "Clear selection: Maximillian Crowe" }).click();
+  await expect(selectedMarker).toHaveCount(0);
+
+  // Esc on the map: first lets go, then zooms out.
+  await name.click();
+  const map = page.getByTestId("zone-map");
+  await map.focus();
+  await page.keyboard.press("Escape");
+  await expect(selectedMarker).toHaveCount(0);
+  await expect(elwynn).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("img", { name: "Eastern Kingdoms map" })).toBeVisible();
+
+  // A click on the map lets go and neither moves you nor the map.
+  await name.click();
+  await expect(selectedMarker).toHaveAccessibleName(/Maximillian Crowe/);
+  await map.click({ position: await mapPoint(page, 20, 20) });
+  await expect(selectedMarker).toHaveCount(0);
+  await expect(elwynn).toBeVisible();
+
+  // Reset filters: back to class trainers and the default layers; the You section stays.
+  const find = page.getByRole("region", { name: "Find" });
+  const reset = find.getByRole("button", { name: "Reset filters" });
+  await expect(reset).toBeDisabled();
+  await find.getByLabel("What are you looking for?").selectOption("flight_master");
+  await page.getByRole("checkbox", { name: "Quest givers" }).check();
+  await expect(reset).toBeEnabled();
+  await reset.click();
+  await expect(find.getByLabel("What are you looking for?")).toHaveValue("class_trainer");
+  await expect(page.getByRole("checkbox", { name: "Quest givers" })).not.toBeChecked();
+  await expect(reset).toBeDisabled();
+  await expect(page.getByLabel("Zone").locator("option:checked")).toHaveText("Elwynn Forest");
 });
 
 test("a far-away trainer gets flight directions with the discovery caveat", async ({ page }) => {
