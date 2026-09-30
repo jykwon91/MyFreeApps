@@ -125,6 +125,12 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   The frontend only offers it in serve-only builds when `VITE_TURNSTILE_SITE_KEY`
   is baked into the bundle (GitHub Actions variable
   `MYGAMINGASSISTANT_VITE_TURNSTILE_SITE_KEY`).
+- The reader's tool call transcribes the tooltip first (`tooltip_lines`, stopping
+  at the game's "If you replace this item" comparison); `item_response_mapper`
+  drops any stat whose number isn't on those lines, with a warning. The UI
+  (`ScreenshotReader`) takes a screenshot by a "Paste screenshot" button
+  (Clipboard API), Ctrl+V in the focused box, file or drop — and keeps the
+  image on screen before and after reading so it can be checked.
 - Stat keys / slots / qualities exist on both sides —
   `tests/test_wow_stat_keys_parity.py` fails CI on drift.
 

@@ -1,5 +1,7 @@
-import { useCallback, useState, type ClipboardEvent } from "react";
-import { AlertBox, FileUploadDropzone, LoadingButton, TurnstileWidget } from "@platform/ui";
+import { useCallback, useState } from "react";
+import { AlertBox, LoadingButton, TurnstileWidget } from "@platform/ui";
+import ScreenshotDropTarget from "@/games/wow-forever/components/compare/ScreenshotDropTarget";
+import ScreenshotPreview from "@/games/wow-forever/components/compare/ScreenshotPreview";
 import { useExtractItemMutation } from "@/games/wow-forever/api/wowItemsApi";
 import { isScreenshotReaderOffered, turnstileSiteKey } from "@/games/wow-forever/lib/itemReaderAvailability";
 import { itemReaderErrorMessage } from "@/games/wow-forever/lib/itemReaderErrorMessage";
@@ -12,11 +14,6 @@ interface ScreenshotReaderProps {
 const ACCEPTED_TYPES = "image/png,image/jpeg,image/webp";
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-function imageFromClipboard(e: ClipboardEvent<HTMLDivElement>): File | null {
-  const file = Array.from(e.clipboardData.files).find((f) => f.type.startsWith("image/"));
-  return file ?? null;
-}
-
 /**
  * Read an item from a screenshot with AI. Open to everyone, but each read
  * spends API money, so the backend gates it with a Cloudflare Turnstile check,
@@ -25,6 +22,8 @@ function imageFromClipboard(e: ClipboardEvent<HTMLDivElement>): File | null {
  */
 export default function ScreenshotReader({ onRead }: ScreenshotReaderProps) {
   const [file, setFile] = useState<File | null>(null);
+  // The shown screenshot has been read into the item — kept on screen so it can be checked.
+  const [wasRead, setWasRead] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [token, setToken] = useState("");
   // Turnstile tokens are single-use: remounting the widget fetches a new one.
@@ -42,14 +41,20 @@ export default function ScreenshotReader({ onRead }: ScreenshotReaderProps) {
     );
   }
 
-  function choose(next: File | null) {
-    if (!next) return;
+  function choose(next: File) {
     if (next.size > MAX_IMAGE_BYTES) {
       setError("That image is over 5 MB — crop it to just the tooltip.");
       return;
     }
     setError(null);
+    setWasRead(false);
     setFile(next);
+  }
+
+  function remove() {
+    setFile(null);
+    setWasRead(false);
+    setError(null);
   }
 
   async function read() {
@@ -57,7 +62,7 @@ export default function ScreenshotReader({ onRead }: ScreenshotReaderProps) {
     setError(null);
     try {
       onRead(await extractItem({ image: file, turnstileToken: token || undefined }).unwrap());
-      setFile(null);
+      setWasRead(true);
     } catch (err) {
       setError(itemReaderErrorMessage(err));
     } finally {
@@ -69,25 +74,23 @@ export default function ScreenshotReader({ onRead }: ScreenshotReaderProps) {
   const waitingForCheck = needsToken && !token;
 
   return (
-    <div className="space-y-2" onPaste={(e) => choose(imageFromClipboard(e))}>
-      <FileUploadDropzone
-        onFilesSelected={(files) => choose(files[0] ?? null)}
-        accept={ACCEPTED_TYPES}
-        maxSizeBytes={MAX_IMAGE_BYTES}
-        disabled={isLoading}
-        label={file ? `Selected: ${file.name}` : "Drop a tooltip screenshot, click to browse, or paste (Ctrl+V)"}
-        helperText="PNG, JPEG or WebP up to 5 MB. Crop to the tooltip for the best result."
-      />
-      {needsToken ? <TurnstileWidget key={widgetKey} onVerify={handleVerify} onExpire={handleExpire} /> : null}
-      <LoadingButton
-        isLoading={isLoading}
-        loadingText="Reading screenshot..."
-        disabled={!file || waitingForCheck}
-        onClick={read}
-        size="sm"
-      >
-        Read screenshot
-      </LoadingButton>
+    <div className="space-y-2">
+      {file && <ScreenshotPreview file={file} wasRead={wasRead} disabled={isLoading} onRemove={remove} />}
+      {!file && (
+        <ScreenshotDropTarget accept={ACCEPTED_TYPES} disabled={isLoading} onImage={choose} onProblem={setError} />
+      )}
+      {needsToken && <TurnstileWidget key={widgetKey} onVerify={handleVerify} onExpire={handleExpire} />}
+      {!wasRead && (
+        <LoadingButton
+          isLoading={isLoading}
+          loadingText="Reading screenshot..."
+          disabled={!file || waitingForCheck}
+          onClick={read}
+          size="sm"
+        >
+          Read screenshot
+        </LoadingButton>
+      )}
       <p className="text-xs text-muted-foreground">
         {waitingForCheck ? "Complete the quick human check above to enable reading. " : null}
         Screenshot reading uses AI on a small shared daily budget. If it's busy or unavailable, paste tooltip text

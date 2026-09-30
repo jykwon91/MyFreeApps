@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ScreenshotReader from "@/games/wow-forever/components/compare/ScreenshotReader";
 import { itemReaderErrorMessage } from "@/games/wow-forever/lib/itemReaderErrorMessage";
@@ -34,6 +34,10 @@ vi.mock("@platform/ui", async (importOriginal) => {
   }
   return { ...actual, TurnstileWidget: FakeTurnstileWidget };
 });
+
+// jsdom has no object URLs; the preview only needs a src.
+URL.createObjectURL = vi.fn(() => "blob:preview");
+URL.revokeObjectURL = vi.fn();
 
 const PNG = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], "tooltip.png", { type: "image/png" });
 
@@ -100,6 +104,52 @@ describe("WoW screenshot reader", () => {
     await chooseFile();
     await userEvent.click(screen.getByRole("button", { name: "Read screenshot" }));
     expect(extractItem).toHaveBeenCalledWith({ image: PNG, turnstileToken: undefined });
+  });
+});
+
+describe("getting a screenshot in", () => {
+  beforeEach(() => {
+    availability.offered = true;
+    availability.siteKey = "";
+    extractItem.mockReset();
+  });
+
+  it("takes Ctrl+V in the box and shows the image before reading", () => {
+    render(<ScreenshotReader onRead={vi.fn()} />);
+    fireEvent.paste(screen.getByRole("group", { name: "Add a screenshot" }), { clipboardData: { files: [PNG] } });
+    expect(screen.getByRole("img", { name: "Screenshot to read: tooltip.png" })).toBeInTheDocument();
+    expect(screen.getByText(/check this is the right tooltip/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Read screenshot" })).toBeEnabled();
+  });
+
+  it("says so when the clipboard has no image", () => {
+    render(<ScreenshotReader onRead={vi.fn()} />);
+    fireEvent.paste(screen.getByRole("group", { name: "Add a screenshot" }), { clipboardData: { files: [] } });
+    expect(screen.getByText(/no image on your clipboard/i)).toBeInTheDocument();
+  });
+
+  it("reads the clipboard from the Paste screenshot button", async () => {
+    const blob = new Blob([new Uint8Array([1])], { type: "image/png" });
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { read: () => Promise.resolve([{ types: ["image/png"], getType: () => Promise.resolve(blob) }]) },
+    });
+    vi.resetModules();
+    const { default: Reader } = await import("@/games/wow-forever/components/compare/ScreenshotReader");
+    render(<Reader onRead={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Paste screenshot" }));
+    expect(await screen.findByRole("img", { name: /Screenshot to read/ })).toBeInTheDocument();
+  });
+
+  it("keeps the screenshot on screen after reading, and lets you swap it", async () => {
+    extractItem.mockReturnValue({ unwrap: () => Promise.resolve({ item: { name: "Bracers" } }) });
+    render(<ScreenshotReader onRead={vi.fn()} />);
+    await chooseFile();
+    await userEvent.click(screen.getByRole("button", { name: "Read screenshot" }));
+    expect(await screen.findByText(/read from this screenshot/i)).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /Screenshot to read/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Use a different screenshot" }));
+    expect(screen.getByRole("group", { name: "Add a screenshot" })).toBeInTheDocument();
   });
 });
 

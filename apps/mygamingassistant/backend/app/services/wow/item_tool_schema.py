@@ -23,6 +23,17 @@ ITEM_TOOL: dict[str, Any] = {
     "input_schema": {
         "type": "object",
         "properties": {
+            # First, so the model reads the tooltip before it fills in stats; the
+            # mapper also checks every stat's number against these lines.
+            "tooltip_lines": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": (
+                    "Every line of the item's own tooltip, copied exactly, top to bottom. "
+                    "Stop before any 'If you replace this item' section and leave out any "
+                    "'Currently Equipped' tooltip."
+                ),
+            },
             "is_item_tooltip": {
                 "type": "boolean",
                 "description": "False if the input is not a WoW item tooltip.",
@@ -58,7 +69,7 @@ ITEM_TOOL: dict[str, Any] = {
             "required_level": _nullable({"type": "integer"}),
             "set_name": _nullable({"type": "string"}),
         },
-        "required": ["is_item_tooltip", "stats", "unparsed_effects"],
+        "required": ["tooltip_lines", "is_item_tooltip", "stats", "unparsed_effects"],
     },
 }
 
@@ -67,6 +78,8 @@ You read World of Warcraft item tooltips (Classic Era and the "Forever" \
 re-release) and record them with the {TOOL_NAME} tool. Always call the tool exactly once.
 
 Rules:
+- First copy the tooltip into tooltip_lines exactly as written, one line per entry. Read every number digit by digit ("by up to 4." is 4, not 14). Then fill in the other fields ONLY from those lines.
+- Record ONE item: the tooltip whose name is at the top. Ignore a "Currently Equipped" tooltip beside it, and ignore everything from "If you replace this item, the following stat changes will occur:" down — those are differences from another item, not this item's stats.
 - If the input is not a WoW item tooltip, call the tool with is_item_tooltip=false and empty stats.
 - Only record what the tooltip shows. Never guess or add stats from memory of the item.
 - name: the first line (the item name). quality: from the name colour if an image \
