@@ -48,6 +48,11 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "Where to train, the fastest route to 300, and fixes for \"can't find Cooking\" or \"can't equip my pole\".",
       },
       {
+        path: "/wow-forever/food",
+        title: "What should I eat?",
+        description: "The best food to cook for your level, class and what you're doing — leveling, dungeons, raids, PvP or fishing.",
+      },
+      {
         path: "/wow-forever/compare",
         title: "Item Compare",
         description: "Paste or screenshot two or more items and see which is better for your class and spec.",

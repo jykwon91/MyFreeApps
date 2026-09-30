@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/map`, `/wow-forever/guide`, `/wow-forever/professions`, `/wow-forever/compare`)
+### WoW Forever (`/wow-forever`, `/wow-forever/map`, `/wow-forever/guide`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/compare`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -133,6 +133,29 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   image on screen before and after reading so it can be checked.
 - Stat keys / slots / qualities exist on both sides —
   `tests/test_wow_stat_keys_parity.py` fails CI on drift.
+
+#### Food picker (`/wow-forever/food`, "What should I eat?")
+
+- Level + class + spec + activity (Leveling / Dungeon / Raid / PvP / Fishing /
+  Just healing) + optional Cooking skill → best pick, runners-up (same-effect
+  foods folded into one row), "Worth training for" (better but above your
+  skill) and "Next upgrade at level N". Settings live in the URL
+  (`?lvl&class&spec&act&skill`, replace-history) and
+  `mga.wowForever.food.settings.v1`; first visit seeds level/class from the
+  World Map player settings.
+- **Data is GENERATED** — `python -m scripts.wow_food.build` (from `backend/`)
+  writes `data/food/foods.json` from the Forever beta client (SkillLine 185
+  recipes → created item → its use spell → Food/Drink + Well Fed spell). Buffs
+  are parsed from the client's evaluated tooltip text (`scripts/wow_food/tooltip.py`
+  evaluates `$s/$o/$t/$d/$@spelldesc` tokens), never from aura codes.
+  `data/food/classic/trainerSkills.json` (trainer recipe skill) is cmangos
+  GPL data — keep its LICENSE + README. `tests/test_wow_food_generator.py`.
+- Ranking (`food/`, pure, unit-tested): leveling uses the class leveling rule
+  of thumb; other activities use Pawn's Classic spec weights. Attack power
+  counts once (max of melee/ranged), healing only for healers, a healer's
+  `spell_power` never counts as spell damage, PvP lifts Stamina to your main
+  stat's worth. Feasts only for Dungeon/Raid. The +5% kill-XP is shown as
+  Unconfirmed (conditions unpublished).
 
 #### World Map (`/wow-forever/map`)
 

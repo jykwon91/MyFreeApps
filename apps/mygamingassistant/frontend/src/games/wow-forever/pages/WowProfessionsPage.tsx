@@ -1,5 +1,6 @@
 import { useSearchParams } from "react-router-dom";
 import FishRecipesList from "@/games/wow-forever/components/professions/FishRecipesList";
+import FoodPickerLink from "@/games/wow-forever/components/professions/FoodPickerLink";
 import ForeverChangesBox from "@/games/wow-forever/components/professions/ForeverChangesBox";
 import HowToSteps from "@/games/wow-forever/components/professions/HowToSteps";
 import ProfessionRoute from "@/games/wow-forever/components/professions/ProfessionRoute";
@@ -101,6 +102,7 @@ export default function WowProfessionsPage() {
           showLegend={profession === PROFESSION.cooking}
         />
         {profession === PROFESSION.fishing ? <FishRecipesList /> : null}
+        {profession === PROFESSION.cooking ? <FoodPickerLink /> : null}
       </GuideSection>
 
       <GuideSection id="forever" title="What's different in Forever">
