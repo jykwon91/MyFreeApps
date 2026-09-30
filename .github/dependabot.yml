@@ -229,6 +229,40 @@ updates:
     open-pull-requests-limit: 3
     labels: ["dependencies", "docker", "mypizzatracker"]
 
+  # MyLanguageTutor (multi-user)
+  - package-ecosystem: "pip"
+    directory: "/apps/mylanguagetutor/backend"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "python", "mylanguagetutor"]
+    groups:
+      python-minor-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "npm"
+    directory: "/apps/mylanguagetutor/frontend"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "npm", "mylanguagetutor"]
+    groups:
+      npm-minor-patch:
+        update-types: ["minor", "patch"]
+    ignore:
+      # @types/node must track the Node runtime, not leap ahead. Major bumps
+      # (e.g. 25 -> 26) desync the lock / break tsc against the version we
+      # actually run. Allow minor+patch; hold majors until the runtime moves.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "docker"
+    directory: "/apps/mylanguagetutor"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "docker", "mylanguagetutor"]
+
   # myfreeapps.org landing page (sites/landing) — standalone npm package whose
   # only dependency is @playwright/test for its E2E suite (ci-landing.yml).
   - package-ecosystem: "npm"

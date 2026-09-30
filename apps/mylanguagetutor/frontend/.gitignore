@@ -1,0 +1,6 @@
+# `tsc -b` emits transpiled JS + declaration files for files in
+# `tsconfig.node.json`'s `include`. These are build artifacts, not
+# source — never commit.
+vite.config.js
+vite.config.d.ts
+postcss.config.d.ts

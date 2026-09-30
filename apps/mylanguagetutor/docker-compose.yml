@@ -1,0 +1,127 @@
+# GENERATED FROM infra/templates/docker-compose.yml.j2 — DO NOT EDIT.
+# Edit the template + apps/<app>/app.yaml; re-render via:
+#   python -m platform_shared.infra.render --app mylanguagetutor
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    # Resource caps — blast-radius containment on a small shared VPS. The apps
+    # share one host with no swap headroom, so a single runaway/compromised
+    # container must not exhaust RAM and trigger the kernel OOM-killer against a
+    # sibling app's Postgres (the open blast-radius gap this closes). These are
+    # CEILINGS, not reservations — sized well above observed steady-state working
+    # sets, so the lighter apps never approach them. They pair with a host swap
+    # file (see the PR's operational notes): with swap present, a container that
+    # reaches its mem_limit soft-lands into swap instead of an instant hard kill.
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 256
+    environment:
+      POSTGRES_USER: mylanguagetutor
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: mylanguagetutor
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mylanguagetutor"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      # initdb on a cold start can take 10–20s; without start_period the
+      # early pg_isready failures count toward retries and Docker reports
+      # the container "unhealthy" before postgres has bound the socket.
+      # Dependent services (migrate, api) then bail before postgres is ready.
+      start_period: 30s
+
+  migrate:
+    image: ghcr.io/jykwon91/myfreeapps-mylanguagetutor-backend:${IMAGE_TAG:-latest}
+    command: ["alembic", "upgrade", "head"]
+    # One-shot migration — caps guard a runaway migration, not steady state.
+    mem_limit: 512m
+    cpus: 1.5
+    pids_limit: 128
+    # format: raw (compose >= 2.30) — values are literal, never interpolated.
+    # Default env_file parsing expands $-sequences, which silently corrupts
+    # bcrypt hashes (SEED_*_PASSWORD_HASH: "$2b$12$<salt>..." loses everything
+    # after the first $<alnum-run> to a blank-variable substitution).
+    env_file:
+      - path: backend/.env.docker
+        format: raw
+    environment:
+      DATABASE_URL: postgresql+asyncpg://mylanguagetutor:${DB_PASSWORD}@postgres/mylanguagetutor
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    image: ghcr.io/jykwon91/myfreeapps-mylanguagetutor-backend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    # Highest single consumer on the box (the busiest app's API steady-states
+    # well under this); cap leaves headroom for request-handling spikes while
+    # still bounding a runaway. See the postgres service for the full rationale.
+    mem_limit: 1024m
+    cpus: 1.5
+    pids_limit: 256
+    # format: raw (compose >= 2.30) — values are literal, never interpolated.
+    # Default env_file parsing expands $-sequences, which silently corrupts
+    # bcrypt hashes (SEED_*_PASSWORD_HASH: "$2b$12$<salt>..." loses everything
+    # after the first $<alnum-run> to a blank-variable substitution).
+    env_file:
+      - path: backend/.env.docker
+        format: raw
+    environment:
+      DATABASE_URL: postgresql+asyncpg://mylanguagetutor:${DB_PASSWORD}@postgres/mylanguagetutor
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - default
+      - myfreeapps
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8010/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  caddy:
+    # Custom image: caddy:2-alpine + freshly-built frontend dist baked in
+    # at /srv/frontend + Caddyfile baked at /etc/caddy/Caddyfile. No shared
+    # volume, no entrypoint copy, no drift between deploys. See
+    # docker/caddy.Dockerfile for the full rationale.
+    # Registry path: this image is built + pushed by the deploy workflow's
+    # build-and-push job (VITE_* build args sourced from GitHub Actions vars
+    # there, not the VPS .env.docker). The VPS pulls it; no on-box build.
+    image: ghcr.io/jykwon91/myfreeapps-mylanguagetutor-caddy:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.5
+    pids_limit: 64
+    ports:
+      # Bind only to localhost — host Caddy is the public front door and proxies here.
+      - "127.0.0.1:8102:80"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - default
+      - myfreeapps
+
+volumes:
+  pg_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  # Per-app default network for postgres + migrate + workers.
+  default:
+  # Shared external network owned by infra/docker-compose.yml — joined
+  # by services that need to reach myfreeapps-minio. Bring up the infra
+  # stack first or compose-up will fail with "network myfreeapps not found".
+  myfreeapps:
+    external: true

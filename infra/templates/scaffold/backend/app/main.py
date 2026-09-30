@@ -20,6 +20,8 @@ from jwt.exceptions import PyJWTError as JWTError
 from platform_shared.core.git import resolve_git_commit
 from platform_shared.core.lifespan import create_app_lifespan
 from platform_shared.api.transparency_router import build_transparency_router
+from platform_shared.core.openapi import docs_kwargs
+from platform_shared.core.logging_safety import install_crlf_safe_logging
 
 from app.api import account, admin, health, totp
 from app.core.audit import current_user_id
@@ -47,6 +49,11 @@ logging.basicConfig(
     datefmt="%Y-%m-%dT%H:%M:%S",
 )
 logger = logging.getLogger("app")
+
+# Escape CR/LF + ANSI in every interpolated log message, so a request-supplied
+# value can never forge a log record (log injection). Applied at the handler
+# boundary, so it covers every call site in the process without per-call work.
+install_crlf_safe_logging()
 
 
 async def _on_startup() -> None:
@@ -86,6 +93,7 @@ app = FastAPI(
     title="__APP_DISPLAY_NAME__ API",
     lifespan=lifespan,
     root_path="/api",
+    **docs_kwargs(settings.environment),
 )
 
 app.add_middleware(
