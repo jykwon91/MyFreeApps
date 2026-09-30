@@ -8,9 +8,8 @@ has_minio_subdomain: false
 joins_minio_network: true
 block_api_docs: false
 include_bundle_tripwire: false
-# Manual-dispatch-only until the voice UI (PR 4) makes the app usable. Flip to
-# true + re-render + drop from _NO_AUTO_DEPLOY in test_app_conformance.py.
-automated_deploy: false
+# Auto-deploys on push to main since the voice conversation loop (PR 4).
+automated_deploy: true
 registry_images: true
 serve_only_build_arg: false
 # Voice-first tutor: the page itself needs getUserMedia for the microphone.

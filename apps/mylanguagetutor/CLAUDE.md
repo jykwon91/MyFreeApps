@@ -30,8 +30,9 @@ Tables:
 - `tutor_turn` -- one learner utterance + tutor reply, ordered by `seq`
   (unique per session). Transcript columns (`learner_text`, `reply_text`,
   `corrections_json`, `translation_text`) are `EncryptedString` + `key_version`.
+- `tutor_profile` -- one row per learner: onboarding language + level.
 - `daily_usage_counters` -- the shared per-user daily quota table (same shape
-  as MGA's); the token-quota service lands with the conversation loop.
+  as MGA's). Buckets `ltutor:user:<id>` and `ltutor:global` hold cost units.
 
 Every tutor table carries `user_id` FK -> `users.id` `ON DELETE CASCADE`, so
 account deletion removes all tutor data. Repositories filter by `user_id` on
@@ -42,7 +43,36 @@ API (router prefixes are resource names, never `/api`; all require a verified
 user at the router level): `GET /languages`, `GET /scenarios?language=es`,
 `POST /sessions`, `GET /sessions` (paginated, newest first),
 `GET /sessions/{id}` (turns by seq), `POST /sessions/{id}/end`,
-`DELETE /sessions/{id}`.
+`DELETE /sessions/{id}`, `GET|PUT /profile` (`null` before onboarding),
+`GET /usage/today` (caller's remaining fraction only),
+`POST /sessions/{id}/turns` (SSE).
+
+## Conversation loop
+
+`POST /sessions/{id}/turns` streams SSE events in this order:
+`turn.started`, `reply.delta`*, `reply.done`, `corrections`, `done`
+(or `error` then `done` on a mid-stream failure). Pre-stream refusals are
+plain HTTP errors: 404 `session_not_found`, 409 `session_ended` /
+`session_turn_limit`, 429 `daily_limit_reached` / `turn_in_progress` /
+burst limiter, 503 `tutor_unavailable` (global cap, kill switch, or no key).
+
+- **Three Claude calls per turn.** Reply (Haiku, streamed) and corrections
+  (Sonnet, JSON) run in parallel; the translation (Haiku) runs after
+  `reply.done` and rides the `corrections` event. Model ids come from
+  Settings (`LTUTOR_*_MODEL`) -- never hardcode them in services.
+- **Cost caps.** Every turn reserves an upper-bound estimate in cost units
+  (see `core/config.py`) against the per-user and global daily buckets, then
+  reconciles to actual usage. `LTUTOR_GLOBAL_DAILY_UNITS=0` is the kill switch.
+  One turn in flight per user (`services/tutor/turn_slots.py`).
+- **Frontend.** Speech recognition and TTS are the browser's Web Speech API
+  (no audio reaches our servers). The SSE body is read with `fetch` +
+  `eventsource-parser` (`features/tutor-stream/`) because `EventSource` can't
+  POST or send a bearer token. Replies are spoken sentence by sentence
+  (`features/speech/sentenceChunker.ts`). Browsers without recognition
+  (Firefox) get labelled typed practice.
+- **Copy rules.** No pronunciation scoring, no "fluent", no "native speaker",
+  no streak guilt. Corrections are hedged ("It looked like you said...")
+  because the transcript may be a mishearing.
 
 **Adding a language / scenario / level** requires an alembic migration that
 rewrites the matching CHECK constraint (the migration freezes literal value
@@ -196,15 +226,18 @@ then dispatch the "Seed VPS env files" workflow:
 | `ENCRYPTION_KEY` | Yes | Fernet key for PII -- generate with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
 | `DATABASE_URL` | Yes | Full async postgres URL |
 | `TURNSTILE_SECRET_KEY` | Yes (prod) | Protects /auth/register + /forgot-password; the frontend needs the matching site key at BUILD time |
+| `ANTHROPIC_API_KEY` | Yes (prod) | The tutor. The lifespan boot guard refuses to start in production without it. Also set a ~$20/mo spend limit in the Anthropic console |
+| `LTUTOR_REPLY_MODEL` / `LTUTOR_CORRECTIONS_MODEL` / `LTUTOR_TRANSLATION_MODEL` | No | Defaults `claude-haiku-4-5` / `claude-sonnet-5` / `claude-haiku-4-5` |
+| `LTUTOR_USER_DAILY_UNITS` / `LTUTOR_GLOBAL_DAILY_UNITS` | No | Daily cost caps (defaults 250000 / 650000 ~= $0.25 / $0.65). Global `0` = kill switch |
+| `LTUTOR_CORRECTIONS_UNIT_WEIGHT` | No | Sonnet price relative to Haiku (default 2.0) |
 
 **Routing:**
 - Domain: `mylanguagetutor.myfreeapps.org`
 - Host Caddy proxies to docker Caddy on `127.0.0.1:8102`
 - Docker Caddy owns `/api/*` -> backend proxy, SPA fallback, security headers
 
-**Deploys are manual** (`automated_deploy: false` in `app.yaml`) until the
-conversation loop ships: flip it, re-render, and drop the app from
-`_NO_AUTO_DEPLOY` in `packages/shared-backend/tests/test_app_conformance.py`.
+**Deploys are automatic** on push to main (`automated_deploy: true` in
+`app.yaml`) since the conversation loop shipped.
 
 **Microphone.** `permissions_policy_self: [microphone]` in `app.yaml` renders
 `microphone=(self)` into the Caddy `Permissions-Policy` header -- the voice UI

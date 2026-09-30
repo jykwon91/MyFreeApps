@@ -35,6 +35,7 @@ __all__ = [
     "login_limiter",
     "totp_limiter",
     "register_limiter",
+    "turn_limiter",
     "check_login_rate_limit",
     "check_register_rate_limit",
     "check_totp_rate_limit",
@@ -61,6 +62,11 @@ totp_limiter = RateLimiter(max_attempts=20, window_seconds=300)
 # than login, so the budget is tight — a burst of signups from one IP is
 # almost certainly abuse.
 register_limiter = RateLimiter(max_attempts=5, window_seconds=3600)
+
+# Per-USER burst limiter on tutor turns (POST /sessions/{id}/turns). In-process
+# and per-worker, so it only smooths bursts -- the durable spend bound is the
+# daily cost-unit quota (app/services/tutor/quota_service.py).
+turn_limiter = RateLimiter(max_attempts=settings.ltutor_turns_per_minute, window_seconds=60)
 
 
 # ---------------------------------------------------------------------------

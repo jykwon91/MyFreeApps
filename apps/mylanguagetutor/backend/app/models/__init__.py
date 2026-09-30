@@ -9,9 +9,10 @@ from app.models.user.user import User  # noqa: F401
 from platform_shared.db.models.audit_log import AuditLog  # noqa: F401
 from platform_shared.db.models.auth_event import AuthEvent  # noqa: F401
 # Opt-in shared model: durable per-bucket daily counter. Provisioned in 0002;
-# the token quota service that consumes it lands with the tutor turns (PR 4).
+# consumed by the tutor's cost-unit quota (app/services/tutor/quota_service.py).
 from platform_shared.db.models.daily_usage_counter import DailyUsageCounter  # noqa: F401
 
 # App-specific domain models (MyLanguageTutor). Parents before children.
 from app.models.tutor.tutor_session import TutorSession  # noqa: F401
 from app.models.tutor.tutor_turn import TutorTurn  # noqa: F401
+from app.models.tutor.tutor_profile import TutorProfile  # noqa: F401

@@ -745,9 +745,7 @@ class TestPostDeployCommands:
 #
 # - mypizzatracker: paused until it is converted to a mobile app.
 # - myrecipes: paused until local development is complete.
-# - mylanguagetutor: manual until the conversation loop (PR 4) ships; then flip
-#   app.yaml `automated_deploy`, re-render, and drop it from this set.
-_NO_AUTO_DEPLOY = {"mypizzatracker", "myrecipes", "mylanguagetutor"}
+_NO_AUTO_DEPLOY = {"mypizzatracker", "myrecipes"}
 
 
 class TestAutomatedDeployExclusion:

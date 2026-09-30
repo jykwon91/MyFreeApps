@@ -19,6 +19,7 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from jwt.exceptions import PyJWTError as JWTError
 
+from platform_shared.core.boot_guards import check_extraction_configured
 from platform_shared.core.git import resolve_git_commit
 from platform_shared.core.lifespan import create_app_lifespan
 from platform_shared.core.openapi import docs_kwargs
@@ -26,7 +27,7 @@ from platform_shared.core.logging_safety import install_crlf_safe_logging
 from platform_shared.api.transparency_router import build_transparency_router
 from platform_shared.services.seed_admin_service import build_seed_admin_hook
 
-from app.api import account, admin, catalog, health, sessions, totp
+from app.api import account, admin, catalog, health, profile, sessions, totp, turns, usage
 from app.core.audit import current_user_id
 from app.core.auth import auth_backend, fastapi_users
 from app.core.config import settings
@@ -57,6 +58,17 @@ install_crlf_safe_logging()
 logger = logging.getLogger("app")
 
 
+def _check_tutor_configured() -> None:
+    """Fail loud at boot when production has no Anthropic key -- the whole
+    app is the tutor, so booting without one is a broken deploy, not a
+    degraded mode. (The LTUTOR_GLOBAL_DAILY_UNITS=0 kill switch is the
+    deliberate way to turn the tutor off.)"""
+    check_extraction_configured(
+        anthropic_api_key=settings.anthropic_api_key,
+        environment=settings.environment,
+    )
+
+
 lifespan = create_app_lifespan(
     settings=settings,
     init_sentry=init_sentry,
@@ -72,6 +84,7 @@ lifespan = create_app_lifespan(
         user_model=User,
         required=True,
     ),
+    on_startup=_check_tutor_configured,
 )
 
 
@@ -192,6 +205,9 @@ app.include_router(admin.router)
 app.include_router(catalog.languages_router)
 app.include_router(catalog.scenarios_router)
 app.include_router(sessions.router)
+app.include_router(turns.router)
+app.include_router(profile.router)
+app.include_router(usage.router)
 
 # Shared platform admin router -- generic user-management endpoints
 # (list/role/activate/deactivate/superuser/stats-users).
