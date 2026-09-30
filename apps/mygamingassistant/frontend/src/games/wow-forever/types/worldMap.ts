@@ -73,6 +73,8 @@ export interface WorldPoint {
   continent: number;
   wx: number;
   wy: number;
+  /** Height in yards, when known (NPC spawns) — picks the right floor of a multi-level city. */
+  z?: number;
 }
 
 export const POI_KIND = { service: "service", questGiver: "quest_giver", instance: "instance" } as const;
@@ -116,6 +118,8 @@ export interface MapPoi {
   subzone: string;
   x: number;
   y: number;
+  /** Spawn height in yards (Classic rows); captured rows have none. */
+  z?: number;
   faction: Faction;
   source: PoiSource;
   npcId?: number;

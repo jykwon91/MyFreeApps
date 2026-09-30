@@ -22,7 +22,7 @@ CLASSIC_CONTINENTS = (0, 1)  # cmangos 1.12 has no Forever-only maps
 # Two spawns of the same NPC closer than this are one map marker.
 SAME_SPOT_YARDS = 40.0
 
-COLUMNS = ["guid", "npcId", "subkind", "tag", "name", "title", "zone", "subzone", "x", "y", "faction"]
+COLUMNS = ["guid", "npcId", "subkind", "tag", "name", "title", "zone", "subzone", "x", "y", "z", "faction"]
 
 
 def build_services(
@@ -77,6 +77,7 @@ def build_services(
             str(template["Name"]),
             str(template["SubName"] or ""),
             *spot.as_row(),
+            round(float(str(spawn["position_z"]))),
             faction,
         ])
         counts[f"{subkind}:{tag}" if tag else subkind] += 1

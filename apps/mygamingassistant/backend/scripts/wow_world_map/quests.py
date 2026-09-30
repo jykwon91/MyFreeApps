@@ -20,7 +20,7 @@ from scripts.wow_world_map.sql_dump import read_dump
 from scripts.wow_world_map.zones import FOREVER_ONLY_ZONES
 
 QUEST_COLUMNS = ["id", "title", "minLevel", "level", "side", "classes"]
-GIVER_COLUMNS = ["guid", "type", "entry", "name", "zone", "subzone", "x", "y", "faction", "quests"]
+GIVER_COLUMNS = ["guid", "type", "entry", "name", "zone", "subzone", "x", "y", "z", "faction", "quests"]
 
 GIVER_NPC = "npc"
 GIVER_OBJECT = "object"
@@ -159,7 +159,7 @@ def build_quests(
         placed.setdefault(key, []).append((wx, wy))
         quest_ids = sorted(offered[key])
         used_quests.update(quest_ids)
-        givers.append([guid, giver_type, entry, name, *spot.as_row(), faction, quest_ids])
+        givers.append([guid, giver_type, entry, name, *spot.as_row(), round(float(str(spawn["position_z"]))), faction, quest_ids])
 
     givers.sort(key=lambda r: (int(str(r[4])), str(r[3]), str(r[1]), int(str(r[0]))))
     quest_rows = [quests[q] for q in sorted(used_quests)]

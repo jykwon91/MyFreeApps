@@ -117,6 +117,7 @@ minio==7.2.20
     # via
     #   mygamingassistant-backend
     #   platform-shared
+numpy==2.5.3
 packaging==26.2
     # via pytest
 passlib==1.7.4

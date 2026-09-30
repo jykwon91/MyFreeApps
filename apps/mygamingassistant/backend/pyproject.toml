@@ -43,5 +43,8 @@ dev = [
     "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
     "pytest-timeout==2.4.0",
+    # World Map walk-graph generator (scripts/wow_world_map/walk/) — an
+    # offline build tool, never imported by the app, so dev-only.
+    "numpy==2.5.3",
 ]
 

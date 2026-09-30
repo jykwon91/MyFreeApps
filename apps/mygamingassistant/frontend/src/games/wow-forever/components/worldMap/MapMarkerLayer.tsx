@@ -28,9 +28,10 @@ interface Px {
 }
 
 interface Leg {
-  from: Px;
-  to: Px;
+  points: Px[];
   kind: StepKind;
+  /** The step this leg ends at. */
+  number: number;
 }
 
 /** Walking solid, flights dashed, boats, zeppelins and the tram dotted. */
@@ -51,17 +52,23 @@ function samePoint(a: WorldPoint, b: WorldPoint): boolean {
   return a.continent === b.continent && Math.abs(a.wx - b.wx) < 1 && Math.abs(a.wy - b.wy) < 1;
 }
 
-/** One leg per step, from the previous stop (or A). */
+/** One leg per step, from the previous stop (or A): a walk's path when it has one, else a straight line. */
 function routeLegs(map: MapView, route: MapRoute | null): Leg[] {
   if (!route?.origin) return [];
   const legs: Leg[] = [];
   let prev = toPx(map, route.origin.world);
   for (const stop of route.stops) {
     const at = toPx(map, stop.world);
-    if (prev && at) legs.push({ from: prev, to: at, kind: stop.kind });
+    const path = stop.path?.flatMap((p) => toPx(map, p) ?? []);
+    if (path && path.length > 1) legs.push({ points: path, kind: stop.kind, number: stop.number });
+    else if (prev && at) legs.push({ points: [prev, at], kind: stop.kind, number: stop.number });
     prev = at;
   }
   return legs;
+}
+
+function pointList(points: readonly Px[]): string {
+  return points.map((p) => `${p.px.toFixed(1)},${p.py.toFixed(1)}`).join(" ");
 }
 
 /**
@@ -77,7 +84,9 @@ function MapMarkerLayer({ map, player, markers, selectedId, route, onSelectMarke
   const origin = route?.origin ?? null;
   const b = destination && shown(destination.world) ? toPx(map, destination.world) : null;
   const a = origin && shown(origin.world) ? toPx(map, origin.world) : null;
-  const legs = routeLegs(map, route);
+  const highlight = route?.highlight ?? null;
+  // The highlighted leg is drawn last, over the others.
+  const legs = routeLegs(map, route).sort((a, b) => Number(a.number === highlight) - Number(b.number === highlight));
   // B stands on the last stop; its own marker names it.
   const stops = (route?.stops ?? []).filter((s) => shown(s.world) && !(destination && samePoint(s.world, destination.world)));
   const visible = markers.filter((m) => shown(m.world));
@@ -96,29 +105,28 @@ function MapMarkerLayer({ map, player, markers, selectedId, route, onSelectMarke
     <>
       {legs.length > 0 && (
         <g className="pointer-events-none" aria-hidden>
-          {legs.map((leg, i) => (
-            <line
-              key={`halo-${i}`}
-              x1={leg.from.px}
-              y1={leg.from.py}
-              x2={leg.to.px}
-              y2={leg.to.py}
-              strokeWidth={8}
+          {legs.map((leg) => (
+            <polyline
+              key={`halo-${leg.number}`}
+              points={pointList(leg.points)}
+              fill="none"
+              strokeWidth={leg.number === highlight ? 12 : 8}
               strokeLinecap="round"
+              strokeLinejoin="round"
               className="stroke-black/60"
             />
           ))}
-          {legs.map((leg, i) => (
-            <line
-              key={`leg-${i}`}
-              x1={leg.from.px}
-              y1={leg.from.py}
-              x2={leg.to.px}
-              y2={leg.to.py}
-              strokeWidth={4}
+          {legs.map((leg) => (
+            <polyline
+              key={`leg-${leg.number}`}
+              data-testid={`route-leg-${leg.number}`}
+              points={pointList(leg.points)}
+              fill="none"
+              strokeWidth={leg.number === highlight ? 6 : 4}
               strokeLinecap="round"
+              strokeLinejoin="round"
               strokeDasharray={LEG_DASH[leg.kind]}
-              className="stroke-white"
+              className={leg.number === highlight ? "stroke-amber-300" : "stroke-white"}
             />
           ))}
         </g>

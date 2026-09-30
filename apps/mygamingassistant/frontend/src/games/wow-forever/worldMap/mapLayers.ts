@@ -25,6 +25,8 @@ export interface MapStop {
   number: number;
   label: string;
   kind: StepKind;
+  /** A walk's path from the previous stop (or A), when it follows the walk graph. */
+  path?: readonly WorldPoint[];
 }
 
 /** A named spot drawn on every map level: the trip's start (A) and destination (B). */
@@ -38,6 +40,8 @@ export interface MapRoute {
   origin: MapDestination | null;
   destination: MapDestination;
   stops: readonly MapStop[];
+  /** The step whose leg is drawn highlighted (hovered / focused in the directions). */
+  highlight?: number | null;
 }
 
 /** "Fit the map to these": once `mapId` is on screen, zoom so every point shows (one point: zoom in on it; none: whole map). */
@@ -81,7 +85,9 @@ export function directionStops(directions: Directions | null, data: WorldMapData
   return directions.steps.flatMap((step, i) => {
     const zone = data.zoneById.get(step.place.zoneId);
     if (!zone) return [];
-    return [{ number: i + 1, label: step.place.label, kind: step.kind, world: zoneToWorld(zone, step.place.x, step.place.y) }];
+    return [
+      { number: i + 1, label: step.place.label, kind: step.kind, world: zoneToWorld(zone, step.place.x, step.place.y), path: step.path },
+    ];
   });
 }
 

@@ -62,6 +62,7 @@ export default function RoutePlanner({ planner, data, places, context, faction, 
           toKey={planner.toKey}
           myLocationLabel={planner.myLocationLabel}
           directions={planner.directions}
+          walk={{ status: planner.walkStatus, retry: planner.retryWalk, onHighlight: planner.highlightStep }}
           onSetFrom={planner.setFrom}
           onSetTo={planner.setTo}
           onSwap={planner.swap}

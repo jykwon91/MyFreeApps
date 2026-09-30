@@ -288,6 +288,27 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   know, as in game; the choice and the ticked list live in
   `mga.wowForever.worldMap.travel.v1` (`hooks/useTravelSettings.ts`). Every
   flight step keeps the "flight paths must be discovered first" caveat.
+- **Walks follow the ground** (`worldMap/walkGraph.ts`, `walkSteps.ts`,
+  `hooks/useWalkGraphs.ts`): `public/wow-walk/<mapId>.walk` (gzipped, loaded
+  only while directions are open for that continent) is a graph of walkable
+  patches built from the Forever client's terrain, buildings and doodads
+  (Recast navmesh), each labelled with its room / sub-area, plus lifts and
+  same-map portals. It also holds the walk cost between every pair of travel
+  hubs, so planning never searches once per hub. A walk leg is drawn as its
+  real path and gets "Step by step" sub-steps ("Go into The Great Forge and
+  head …", "Ride the lift up to …"); hovering a step highlights its leg.
+  Where the graph can't join two ends (or the file failed to load — the
+  panel says so with Retry) the walk falls back to a straight line and the
+  footnote says so. NPCs, quest givers and dungeon entrances carry a `z`
+  column so an end snaps to the right floor.
+  - **Generated** by `python -m scripts.wow_world_map.walk <mapId> ...`
+    (also run by `scripts.wow_world_map.build` unless `--no-walk`; needs
+    `npm install` for `recast-navigation` and the dev-group numpy). Stages
+    cache per client build under the download cache. Travel hubs snap to
+    the largest ground in reach; a boat / zeppelin stop snaps to the highest
+    non-water ground within 40 yd and not above the vehicle (the pier, the
+    tower top) — a hub the log calls "off the walk graph" walks straight.
+    Layout in `walk/export.py`; `tests/test_wow_walk_graph.py`.
 - **Companion addon** `apps/mygamingassistant/addons/MGACompanion` (Interface
   16001): `/mga way <uiMapID|zone name> <x> <y> [label]` sets the in-game map
   pin. The page's "Copy in-game waypoint" buttons emit that command.

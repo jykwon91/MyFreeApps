@@ -9,6 +9,7 @@ import {
 import { MAP_PARAM } from "@/games/wow-forever/hooks/useMapView";
 import type { PlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { useTrip } from "@/games/wow-forever/hooks/useTrip";
+import { useWalkGraphs, type WalkStatus } from "@/games/wow-forever/hooks/useWalkGraphs";
 import type { PlayerFaction, WorldMapData, WorldPoint } from "@/games/wow-forever/types/worldMap";
 import { planDirections, type Directions, type TravelOptions } from "@/games/wow-forever/worldMap/directions";
 import { directionStops, type MapFit, type MapRoute } from "@/games/wow-forever/worldMap/mapLayers";
@@ -51,6 +52,11 @@ export interface TripPlanner {
   directionsOpen: boolean;
   /** undefined until directions are open with a start; null when nothing connects the ends. */
   directions: Directions | null | undefined;
+  /** The walk graphs behind the directions' walking steps. */
+  walkStatus: WalkStatus;
+  retryWalk: () => void;
+  /** Highlight a step's leg on the map (null: none). */
+  highlightStep: (step: number | null) => void;
   /** "Near Goldshire" for the saved location; null when there isn't one. */
   myLocationLabel: string | null;
   route: MapRoute | null;
@@ -86,6 +92,7 @@ export function useTripPlanner({ data, places, faction, travel, model, updateSet
   const [params] = useSearchParams();
   const [fit, setFit] = useState<MapFit | null>(null);
   const [picking, setPicking] = useState<PickTarget | null>(null);
+  const [highlight, setHighlight] = useState<number | null>(null);
 
   const resolve = useCallback(
     (end: TripStart | null): ResolvedEnd | null => {
@@ -98,10 +105,14 @@ export function useTripPlanner({ data, places, faction, travel, model, updateSet
 
   const to = useMemo(() => resolve(trip.to), [resolve, trip.to]);
   const from = useMemo(() => resolve(trip.from), [resolve, trip.from]);
+  const walk = useWalkGraphs(
+    trip.directionsOpen && from && to ? [from.route.world.continent, to.route.world.continent] : [],
+  );
+  const walkGraphs = walk.graphs;
   const plan = useCallback(
     (start: ResolvedEnd | null, end: ResolvedEnd | null) =>
-      data && start && end ? planDirections(start.route, end.route, faction, data, travel) : undefined,
-    [data, faction, travel],
+      data && start && end ? planDirections(start.route, end.route, faction, data, travel, walkGraphs) : undefined,
+    [data, faction, travel, walkGraphs],
   );
   const directions = useMemo(
     () => (trip.directionsOpen ? plan(from, to) : undefined),
@@ -115,8 +126,9 @@ export function useTripPlanner({ data, places, faction, travel, model, updateSet
       origin,
       destination: { world: to.route.world, label: to.title },
       stops: origin ? directionStops(directions ?? null, data) : [],
+      highlight,
     };
-  }, [data, to, from, trip.directionsOpen, directions]);
+  }, [data, to, from, trip.directionsOpen, directions, highlight]);
 
   /** Where the map looks for the trip: the destination's map, or with directions open the smallest map holding the whole route. */
   const fitFor = useCallback(
@@ -249,6 +261,9 @@ export function useTripPlanner({ data, places, faction, travel, model, updateSet
     linkMissing: Boolean(data && trip.to && !to),
     directionsOpen: trip.directionsOpen && to !== null,
     directions,
+    walkStatus: walk.status,
+    retryWalk: walk.retry,
+    highlightStep: setHighlight,
     myLocationLabel,
     route,
     fit,

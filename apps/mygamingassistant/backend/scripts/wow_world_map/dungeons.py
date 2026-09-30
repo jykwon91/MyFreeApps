@@ -26,7 +26,7 @@ from scripts.wow_world_map.zones import FOREVER_ONLY_ZONES
 
 COLUMNS = [
     "trigger", "instance", "name", "wing", "type",
-    "minLevel", "maxLevel", "requiredLevel", "zone", "subzone", "x", "y",
+    "minLevel", "maxLevel", "requiredLevel", "zone", "subzone", "x", "y", "z",
 ]
 
 DUNGEON = "dungeon"
@@ -154,7 +154,7 @@ def build_dungeons(zones: list[ZoneBounds], art: WorldMapArt) -> list[list[objec
             continue
         seen.append((instance, wing, wx, wy))
         low, high = _level_range(instance, wing, kind, lfg, required)
-        placement = spot.as_row()
+        placement = [*spot.as_row(), round(float(trigger["Pos_2"]))]
         entrances.setdefault(instance, (placement, target["MapName_lang"]))
         rows.append([
             trigger_id, instance, target["MapName_lang"], wing, kind, low, high, required, *placement,

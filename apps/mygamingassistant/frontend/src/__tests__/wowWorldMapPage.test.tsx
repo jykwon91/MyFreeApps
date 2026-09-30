@@ -17,6 +17,15 @@ vi.mock("@/games/wow-forever/api/wowMapCapturesApi", () => ({
   useImportMapCapturesMutation: () => [vi.fn(), { isLoading: false }],
 }));
 
+// Walk graphs are files of a few MB (`wowWorldMapWalk.test.ts` covers them):
+// by default none is loaded, so walks are the straight-line fallback.
+const walkGraphs = vi.hoisted(() => ({ status: "ready", retry: () => {} }));
+
+vi.mock("@/games/wow-forever/hooks/useWalkGraphs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/games/wow-forever/hooks/useWalkGraphs")>();
+  return { ...actual, useWalkGraphs: () => ({ graphs: new Map(), ...walkGraphs }) };
+});
+
 function renderPage() {
   return render(
     <MemoryRouter>
@@ -26,7 +35,11 @@ function renderPage() {
 }
 
 describe("WoW Forever World Map page", () => {
-  beforeEach(() => window.localStorage.clear());
+  beforeEach(() => {
+    window.localStorage.clear();
+    walkGraphs.status = "ready";
+    walkGraphs.retry = () => {};
+  });
 
   it("asks for a zone first, then lists the nearest Warlock trainer", async () => {
     renderPage();
@@ -517,6 +530,26 @@ describe("WoW Forever World Map page", () => {
       await userEvent.clear(from);
       await userEvent.type(from, "zzzqqq{Enter}");
       expect(screen.getByRole("alert")).toHaveTextContent(`I don't know "zzzqqq"`);
+    });
+
+    it("says while the walking routes load, and offers Retry when they can't", async () => {
+      walkGraphs.status = "loading";
+      const first = renderAt("/wow-forever/map?to=npc:5482&from=place:zone-1429&dir=1");
+      const planner = await screen.findByRole("region", { name: "Route planner" }, { timeout: 4000 });
+      expect(within(planner).getByRole("status")).toHaveTextContent("Finding the walking route…");
+      expect(within(planner).queryByRole("list", { name: "Directions" })).not.toBeInTheDocument();
+      first.unmount();
+
+      walkGraphs.status = "error";
+      const retry = vi.fn();
+      walkGraphs.retry = retry;
+      renderAt("/wow-forever/map?to=npc:5482&from=place:zone-1429&dir=1");
+      const again = await screen.findByRole("region", { name: "Route planner" });
+      expect(within(again).getByRole("alert")).toHaveTextContent("Couldn't load the walking routes");
+      expect(within(again).getByRole("list", { name: "Directions" })).toBeInTheDocument();
+      expect(within(again).getByText(/Some walks are straight lines/)).toBeInTheDocument();
+      await userEvent.click(within(again).getByRole("button", { name: "Retry" }));
+      expect(retry).toHaveBeenCalledOnce();
     });
 
     it("opens on an NPC from a ?npc= link, with directions from a ?to=&dir=1 link, and says so when the link is bad", async () => {
