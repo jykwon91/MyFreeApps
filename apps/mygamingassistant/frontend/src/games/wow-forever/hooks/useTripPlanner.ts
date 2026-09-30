@@ -10,7 +10,7 @@ import { MAP_PARAM } from "@/games/wow-forever/hooks/useMapView";
 import type { PlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { useTrip } from "@/games/wow-forever/hooks/useTrip";
 import type { PlayerFaction, WorldMapData, WorldPoint } from "@/games/wow-forever/types/worldMap";
-import { planDirections, type Directions } from "@/games/wow-forever/worldMap/directions";
+import { planDirections, type Directions, type TravelOptions } from "@/games/wow-forever/worldMap/directions";
 import { directionStops, type MapFit, type MapRoute } from "@/games/wow-forever/worldMap/mapLayers";
 import type { Place } from "@/games/wow-forever/worldMap/places";
 import {
@@ -34,6 +34,8 @@ interface TripPlannerInput {
   data: WorldMapData | null;
   places: readonly Place[];
   faction: PlayerFaction;
+  /** Which flight paths routes may use. */
+  travel: TravelOptions;
   model: WorldMapModel | null;
   updateSettings: (patch: Partial<PlayerSettings>) => void;
 }
@@ -79,7 +81,7 @@ function focusSoon(id: string) {
  * against the map data, the directions between its ends, what the map
  * draws for it, and where the map looks when it changes.
  */
-export function useTripPlanner({ data, places, faction, model, updateSettings }: TripPlannerInput): TripPlanner {
+export function useTripPlanner({ data, places, faction, travel, model, updateSettings }: TripPlannerInput): TripPlanner {
   const trip = useTrip();
   const [params] = useSearchParams();
   const [fit, setFit] = useState<MapFit | null>(null);
@@ -98,8 +100,8 @@ export function useTripPlanner({ data, places, faction, model, updateSettings }:
   const from = useMemo(() => resolve(trip.from), [resolve, trip.from]);
   const plan = useCallback(
     (start: ResolvedEnd | null, end: ResolvedEnd | null) =>
-      data && start && end ? planDirections(start.route, end.route, faction, data) : undefined,
-    [data, faction],
+      data && start && end ? planDirections(start.route, end.route, faction, data, travel) : undefined,
+    [data, faction, travel],
   );
   const directions = useMemo(
     () => (trip.directionsOpen ? plan(from, to) : undefined),

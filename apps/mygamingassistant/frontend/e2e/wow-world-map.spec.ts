@@ -314,7 +314,7 @@ test("a selected result can be let go of — click again, Clear, Esc or the map 
   await expect(page.getByRole("img", { name: "Eastern Kingdoms map" })).toBeVisible();
 });
 
-test("a far-away trainer gets flight directions with the discovery caveat", async ({ page }) => {
+test("a trainer in Ironforge gets directions through the Deeprun Tram", async ({ page }) => {
   await page.goto("/wow-forever/map");
   await page.getByRole("radio", { name: "Alliance" }).click();
   await page.getByLabel("Class").selectOption("warlock");
@@ -328,8 +328,8 @@ test("a far-away trainer gets flight directions with the discovery caveat", asyn
   await ironforge.getByRole("button", { name: "Directions to Alexander Calder" }).click();
   const planner = page.getByRole("region", { name: "Route planner" });
   const steps = planner.getByRole("list", { name: "Directions" });
-  await expect(steps).toContainText("Fly from Stormwind, Elwynn to Ironforge, Dun Morogh");
-  await expect(planner.getByText(/Flight paths must be discovered first/)).toBeVisible();
+  await expect(steps).toContainText("Take the tram (Stormwind - Ironforge)");
+  await expect(planner.getByText(/Boats, zeppelins and the tram run on a loop/)).toBeVisible();
   // Selecting a result switches the map to the destination on demand.
   await page.getByRole("button", { name: "Destination: Ironforge" }).click();
   await expect(page.getByRole("img", { name: "Ironforge map" })).toBeVisible();

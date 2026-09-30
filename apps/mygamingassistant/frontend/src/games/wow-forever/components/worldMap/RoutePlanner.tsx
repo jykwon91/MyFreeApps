@@ -3,6 +3,7 @@ import DestinationCard from "@/games/wow-forever/components/worldMap/Destination
 import DirectionsForm from "@/games/wow-forever/components/worldMap/DirectionsForm";
 import EndpointField from "@/games/wow-forever/components/worldMap/EndpointField";
 import { PLANNER_SEARCH_ID } from "@/games/wow-forever/components/worldMap/plannerIds";
+import type { TravelSettingsState } from "@/games/wow-forever/hooks/useTravelSettings";
 import type { TripPlanner } from "@/games/wow-forever/hooks/useTripPlanner";
 import type { PlayerFaction, WorldMapData } from "@/games/wow-forever/types/worldMap";
 import type { Place } from "@/games/wow-forever/worldMap/places";
@@ -14,6 +15,7 @@ interface RoutePlannerProps {
   places: readonly Place[];
   context: SearchContext;
   faction: PlayerFaction;
+  travel: TravelSettingsState;
   /** The saved zone, for bare coordinates. */
   currentZoneId: number | null;
   onShowMap: () => void;
@@ -23,7 +25,7 @@ interface RoutePlannerProps {
  * Search, then directions — like a maps app: find a place or NPC, see its
  * card, press Directions, and change where you start from if you like.
  */
-export default function RoutePlanner({ planner, data, places, context, faction, currentZoneId, onShowMap }: RoutePlannerProps) {
+export default function RoutePlanner({ planner, data, places, context, faction, travel, currentZoneId, onShowMap }: RoutePlannerProps) {
   const { to } = planner;
   const fieldProps = { data, places, context, currentZoneId };
 
@@ -52,6 +54,7 @@ export default function RoutePlanner({ planner, data, places, context, faction, 
         <DirectionsForm
           {...fieldProps}
           faction={faction}
+          travel={travel}
           from={planner.from}
           fromKey={planner.fromKey}
           fromIsMe={planner.fromIsMe}

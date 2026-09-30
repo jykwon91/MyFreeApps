@@ -183,6 +183,11 @@ def test_committed_travel_data_is_consistent() -> None:
     assert vigil["zone"] == 1428  # Burning Steppes
     for transport in travel["transports"]:
         assert len(transport["stops"]) >= 2
+    # The Deeprun Tram joins Stormwind City and Ironforge, for both factions.
+    tram = next(t for t in travel["transports"] if t["vehicle"] == "tram")
+    assert tram["faction"] == "N"
+    stop_zone = travel["stopColumns"].index("zone")
+    assert sorted(stop[stop_zone] for stop in tram["stops"]) == [1453, 1455]
 
 
 @pytest.mark.parametrize(

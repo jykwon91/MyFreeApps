@@ -1,8 +1,9 @@
 /**
- * Step-by-step directions: walk, fly, take a boat or zeppelin.
+ * Step-by-step directions: walk, fly, take a boat, zeppelin or the tram.
  *
  * A travel-time search over: the player, the destination, every flight
- * master and dock the player's faction can use. Walking is a straight line
+ * master the player can use (all, only the ones they know, or none) and every
+ * dock their faction can use. Walking is a straight line
  * (no terrain / navmesh — "head north-east ~350 yd"). A flight between two
  * flight masters follows `flightRoutesFrom` (fewest hops, then distance) and
  * becomes ONE step, since the game chains the hops for you. Speeds are rough
@@ -21,8 +22,20 @@ import { FACTION } from "@/games/wow-forever/types/worldMap";
 import { compassDirection, formatCoord, formatYards, yardsBetween } from "@/games/wow-forever/worldMap/geometry";
 import { flightRoutesFrom, usableFlightNodes, type FlightRoute } from "@/games/wow-forever/worldMap/flightRoutes";
 
-export const STEP_KIND = { walk: "walk", fly: "fly", boat: "boat", zeppelin: "zeppelin" } as const;
+export const STEP_KIND = { walk: "walk", fly: "fly", boat: "boat", zeppelin: "zeppelin", tram: "tram" } as const;
 export type StepKind = (typeof STEP_KIND)[keyof typeof STEP_KIND];
+
+/** Which flight paths the route may use: a new character knows none until they talk to each flight master. */
+export const FLIGHT_MODE = { all: "all", known: "known", none: "none" } as const;
+export type FlightMode = (typeof FLIGHT_MODE)[keyof typeof FLIGHT_MODE];
+
+export interface TravelOptions {
+  flights: FlightMode;
+  /** Flight master ids the player has, for `FLIGHT_MODE.known`. */
+  knownFlightIds: ReadonlySet<number>;
+}
+
+export const ALL_FLIGHTS: TravelOptions = { flights: FLIGHT_MODE.all, knownFlightIds: new Set() };
 
 /** Where a step ends — what the step's waypoint buttons point at. */
 export interface StepPlace {
@@ -55,8 +68,8 @@ const RUN_YARDS_PER_SECOND = 7;
 const FLY_YARDS_PER_SECOND = 20;
 /** Talking to the flight master, take-off and landing. */
 const FLIGHT_OVERHEAD_SECONDS = 30;
-/** Average wait at the dock plus the crossing. */
-const TRANSPORT_SECONDS = 240;
+/** Average wait at the dock plus the crossing (the tram's is an estimate). */
+const TRANSPORT_SECONDS: Readonly<Record<Vehicle, number>> = { boat: 240, zeppelin: 240, tram: 150 };
 /** Closer than this, you're already there. */
 const ARRIVED_YARDS = 25;
 
@@ -102,9 +115,27 @@ export function describePlace(place: StepPlace): string {
   return place.zoneName;
 }
 
-function buildGraph(start: RouteEnd, end: RouteEnd, faction: PlayerFaction, data: WorldMapData): GraphNode[] {
+/** The flight masters a route may fly between. A multi-hop flight only goes through ones you know, as in game. */
+export function allowedFlightNodes(
+  nodes: readonly FlightNode[],
+  faction: PlayerFaction,
+  options: TravelOptions,
+): FlightNode[] {
+  if (options.flights === FLIGHT_MODE.none) return [];
+  const usable = usableFlightNodes(nodes, faction);
+  if (options.flights === FLIGHT_MODE.all) return usable;
+  return usable.filter((n) => options.knownFlightIds.has(n.id));
+}
+
+function buildGraph(
+  start: RouteEnd,
+  end: RouteEnd,
+  faction: PlayerFaction,
+  data: WorldMapData,
+  options: TravelOptions,
+): GraphNode[] {
   const graph: GraphNode[] = [{ end: start }, { end }];
-  for (const node of usableFlightNodes(data.flightNodes, faction)) {
+  for (const node of allowedFlightNodes(data.flightNodes, faction, options)) {
     graph.push({ end: { place: flightPlace(data, node), world: node.world }, flight: node });
   }
   for (const transport of data.transports) {
@@ -142,14 +173,20 @@ function stepFor(edge: Edge, from: GraphNode, to: GraphNode, graph: readonly Gra
   };
 }
 
+/** "the flight master at …" leads some steps — steps read as sentences. */
+function sentence(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 /** Plan a route, or null when no known travel connects the two places. */
 export function planDirections(
   start: RouteEnd,
   end: RouteEnd,
   faction: PlayerFaction,
   data: WorldMapData,
+  options: TravelOptions = ALL_FLIGHTS,
 ): Directions | null {
-  const graph = buildGraph(start, end, faction, data);
+  const graph = buildGraph(start, end, faction, data, options);
   const flightIndex = new Map<number, number>();
   graph.forEach((g, i) => {
     if (g.flight) flightIndex.set(g.flight.id, i);
@@ -194,7 +231,7 @@ export function planDirections(
       const { transport, index } = here.dock;
       graph.forEach((there, v) => {
         if (there.dock?.transport.id === transport.id && there.dock.index !== index) {
-          relax(v, TRANSPORT_SECONDS, { kind: transport.vehicle, transport });
+          relax(v, TRANSPORT_SECONDS[transport.vehicle], { kind: transport.vehicle, transport });
         }
       });
     }
@@ -205,7 +242,8 @@ export function planDirections(
   for (let v = 1; v > 0; ) {
     const visit = visits[v];
     if (!visit || !visit.edge) break;
-    steps.unshift(stepFor(visit.edge, graph[visit.prev], graph[v], graph));
+    const step = stepFor(visit.edge, graph[visit.prev], graph[v], graph);
+    steps.unshift({ ...step, text: sentence(step.text) });
     v = visit.prev;
   }
   // Where you end up is the one spot worth reading coordinates for.

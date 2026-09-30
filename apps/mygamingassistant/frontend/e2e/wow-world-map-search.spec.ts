@@ -33,14 +33,45 @@ test("search an NPC by name and get directions to them from your location", asyn
   await expect(page.getByLabel("Destination: Stephen Ryback")).toBeVisible();
 });
 
-test("plain vendors are searchable: Old Man Heming in Booty Bay", async ({ page }) => {
+test("plain vendors are searchable: Old Man Heming in Booty Bay, a flight away", async ({ page }) => {
+  await page.getByRole("combobox", { name: "Where are you?" }).fill("Goldshire");
+  await page.getByRole("button", { name: "Set", exact: true }).click();
   await page.getByRole("combobox", { name: "Find an NPC or place" }).fill("Old Man Heming");
   await page.getByRole("option", { name: /Old Man Heming/ }).click();
   const card = page.getByRole("article", { name: "Old Man Heming" });
   await expect(card).toContainText("Booty Bay");
   await expect(card).toContainText("27.4, 77.2");
   await card.getByRole("button", { name: "Directions" }).click();
-  await expect(page.getByLabel("Destination: Old Man Heming")).toBeVisible();
+
+  const planner = page.getByRole("region", { name: "Route planner" });
+  await expect(planner.getByRole("list", { name: "Directions" })).toContainText("Fly from Stormwind, Elwynn to Booty Bay");
+  await expect(planner.getByText(/Flight paths must be discovered first/)).toBeVisible();
+  await expect(page.getByTestId("zone-map").getByLabel("Destination: Old Man Heming")).toBeVisible();
+});
+
+test("travel without flight paths: None takes the tram, Only ones I know lists flight paths to tick", async ({ page }) => {
+  await page.getByRole("combobox", { name: "Where are you?" }).fill("Stormwind");
+  await page.getByRole("button", { name: "Set", exact: true }).click();
+  await page.getByRole("combobox", { name: "Find an NPC or place" }).fill("Gryth Thurden");
+  await page.getByRole("option", { name: /Gryth Thurden/ }).click();
+  await page.getByRole("article", { name: "Gryth Thurden" }).getByRole("button", { name: "Directions" }).click();
+
+  const planner = page.getByRole("region", { name: "Route planner" });
+  const flights = planner.getByRole("radiogroup", { name: "Flight paths" });
+  await flights.getByRole("radio", { name: "None" }).click();
+  const steps = planner.getByRole("list", { name: "Directions" });
+  await expect(steps).toContainText("Take the tram (Stormwind - Ironforge)");
+  await expect(steps).not.toContainText("Fly from");
+
+  await flights.getByRole("radio", { name: "Only ones I know" }).click();
+  await expect(planner.getByText(/No flight paths ticked/)).toBeVisible();
+  await planner.getByRole("checkbox", { name: "Stormwind, Elwynn" }).check();
+  await expect(planner.getByText(/1 of \d+ ticked/)).toBeVisible();
+  // Remembered on the next visit.
+  await page.reload();
+  await expect(
+    page.getByRole("region", { name: "Route planner" }).getByRole("radio", { name: "Only ones I know" }),
+  ).toHaveAttribute("aria-checked", "true");
 });
 
 test("directions from a typed starting point, without a saved location", async ({ page }) => {

@@ -6,10 +6,11 @@ import questsJson from "@/games/wow-forever/data/worldMap/classic/classicQuests.
 import dungeonsJson from "@/games/wow-forever/data/worldMap/classic/classicDungeons.json";
 import masksJson from "@/games/wow-forever/data/worldMap/mapMasks.json";
 import { parsePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
+import { parseTravelSettings } from "@/games/wow-forever/hooks/useTravelSettings";
 import { FACTION } from "@/games/wow-forever/types/worldMap";
 import { decodeWorldMap } from "@/games/wow-forever/worldMap/decodeWorldMap";
 import { poiRouteEnd } from "@/games/wow-forever/worldMap/describeRank";
-import { planDirections, STEP_KIND } from "@/games/wow-forever/worldMap/directions";
+import { FLIGHT_MODE, planDirections, STEP_KIND, type TravelOptions } from "@/games/wow-forever/worldMap/directions";
 import { compassDirection, formatYards, worldToZone, zoneToWorld } from "@/games/wow-forever/worldMap/geometry";
 import { greyLevel, instanceBand, LEVEL_BAND, levelBand, questsFor } from "@/games/wow-forever/worldMap/levels";
 import { NEAR_GROUP, sameAreaZoneIds } from "@/games/wow-forever/worldMap/nearest";
@@ -59,7 +60,7 @@ describe("world map data", () => {
   it("decodes every layer and places every NPC on a known map", () => {
     expect(data.pois.length).toBeGreaterThan(900);
     expect(data.flightNodes.length).toBeGreaterThan(60);
-    expect(data.transports.length).toBe(8);
+    expect(data.transports.length).toBe(9); // 8 boats/zeppelins + the Deeprun Tram
     for (const poi of data.pois) {
       const zone = data.zoneById.get(poi.zone);
       expect(zone, poi.name).toBeDefined();
@@ -212,13 +213,19 @@ describe("nearest services", () => {
 });
 
 describe("directions", () => {
-  function directionsTo(name: string, patch: Partial<WorldMapChoices> = {}) {
+  function directionsTo(name: string, patch: Partial<WorldMapChoices> = {}, travel?: TravelOptions) {
     const poi = data.pois.find((p) => p.name === name);
     if (!poi) throw new Error(name);
     const m = model({ ...patch, selectedPoiId: poi.id });
     if (!m.selected) throw new Error(`${name} not ranked`);
-    return planDirections(m.playerEnd, poiRouteEnd(m.selected), patch.faction ?? FACTION.alliance, data);
+    return planDirections(m.playerEnd, poiRouteEnd(m.selected), patch.faction ?? FACTION.alliance, data, travel);
   }
+
+  const STORMWIND_FLIGHTS = 2;
+  const IRONFORGE_FLIGHTS = 6;
+  const THELSAMAR_FLIGHTS = 8;
+  const inStormwind = { zoneId: STORMWIND, position: { x: 60, y: 40 } };
+  const known = (...ids: number[]): TravelOptions => ({ flights: FLIGHT_MODE.known, knownFlightIds: new Set(ids) });
 
   it("walks to a trainer in the same zone", () => {
     const d = directionsTo("Maximillian Crowe");
@@ -228,10 +235,10 @@ describe("directions", () => {
   });
 
   it("flies across a continent", () => {
-    const d = directionsTo("Gimrizz Shadowcog");
+    const d = directionsTo("Old Man Heming");
     expect(d?.usesFlight).toBe(true);
     expect(d?.steps.map((s) => s.kind)).toContain(STEP_KIND.fly);
-    expect(d?.steps[d.steps.length - 1].place.label).toBe("Gimrizz Shadowcog");
+    expect(d?.steps[d.steps.length - 1].place.label).toBe("Old Man Heming");
   });
 
   it("takes a boat to another continent for the Alliance", () => {
@@ -242,6 +249,32 @@ describe("directions", () => {
   it("takes a zeppelin between Orgrimmar and Undercity for the Horde", () => {
     const d = directionsTo("Kaal Soulreaper", { faction: FACTION.horde, zoneId: ORGRIMMAR, position: { x: 50, y: 50 } });
     expect(d?.steps.some((s) => s.kind === STEP_KIND.zeppelin)).toBe(true);
+  });
+
+  it("takes the Deeprun Tram from Stormwind to Ironforge when not flying", () => {
+    const d = directionsTo("Gryth Thurden", inStormwind, { flights: FLIGHT_MODE.none, knownFlightIds: new Set() });
+    expect(d?.usesFlight).toBe(false);
+    const tram = d?.steps.find((s) => s.kind === STEP_KIND.tram);
+    expect(tram?.text).toMatch(/^Take the tram \(Stormwind - Ironforge\) from Deeprun Tram entrance, Stormwind/);
+  });
+
+  it("only flies between flight paths you know, and only through ones you know", () => {
+    // Stormwind and Thelsamar alone: no flight joins them without Ironforge, so you walk.
+    const twoKnown = directionsTo("Innkeeper Hearthstove", inStormwind, known(STORMWIND_FLIGHTS, THELSAMAR_FLIGHTS));
+    expect(twoKnown?.usesFlight).toBe(false);
+    const viaIronforge = directionsTo(
+      "Innkeeper Hearthstove",
+      inStormwind,
+      known(STORMWIND_FLIGHTS, IRONFORGE_FLIGHTS, THELSAMAR_FLIGHTS),
+    );
+    // Ironforge known too: the tram to Ironforge, then the flight on to Thelsamar.
+    expect(viaIronforge?.steps.find((s) => s.kind === STEP_KIND.fly)?.text).toMatch(/^Fly from Ironforge, Dun Morogh to Thelsamar/);
+  });
+
+  it("starts every step with a capital letter", () => {
+    const d = directionsTo("Old Man Heming", { zoneId: STORMWIND, position: { x: 71.0, y: 72.9 } });
+    expect(d?.steps[0].text).toMatch(/^The flight master at Stormwind/);
+    for (const step of d?.steps ?? []) expect(step.text).toMatch(/^[A-Z]/);
   });
 
   it("says there is no known route off Zephras Isle", () => {
@@ -256,6 +289,15 @@ describe("player settings", () => {
     expect(parsePlayerSettings({ ...stored, faction: "X" })).toBeNull();
     expect(parsePlayerSettings({ ...stored, level: 99 })?.level).toBeNull();
     expect(parsePlayerSettings({ ...stored, position: { x: 500, y: 1 } })?.position).toBeNull();
+  });
+
+  it("keeps valid travel settings and drops broken ones", () => {
+    expect(parseTravelSettings({ flights: "known", knownFlightIds: [2, 8, 8, "x"] })).toEqual({
+      flights: "known",
+      knownFlightIds: [2, 8],
+    });
+    expect(parseTravelSettings({ flights: "teleport", knownFlightIds: [] })).toBeNull();
+    expect(parseTravelSettings({ flights: "none" })).toEqual({ flights: "none", knownFlightIds: [] });
   });
 
   it("hints Warlock training on even levels", () => {
