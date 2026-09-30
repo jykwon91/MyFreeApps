@@ -96,10 +96,10 @@ function dockPlace(data: WorldMapData, stop: TransportStop): StepPlace {
   return { label: stop.label, zoneId: stop.zone, zoneName: zoneName(data, stop.zone), subzone: stop.subzone, x: stop.x, y: stop.y };
 }
 
-/** "Goldshire, Elwynn Forest (44.4, 66.2)" */
+/** "Goldshire, Elwynn Forest" — coordinates only go on the last step (see `planDirections`). */
 export function describePlace(place: StepPlace): string {
-  const area = place.subzone && place.subzone !== place.zoneName ? `${place.subzone}, ${place.zoneName}` : place.zoneName;
-  return `${area} (${formatCoord(place.x)}, ${formatCoord(place.y)})`;
+  if (place.subzone && place.subzone !== place.zoneName) return `${place.subzone}, ${place.zoneName}`;
+  return place.zoneName;
 }
 
 function buildGraph(start: RouteEnd, end: RouteEnd, faction: PlayerFaction, data: WorldMapData): GraphNode[] {
@@ -208,5 +208,8 @@ export function planDirections(
     steps.unshift(stepFor(visit.edge, graph[visit.prev], graph[v], graph));
     v = visit.prev;
   }
+  // Where you end up is the one spot worth reading coordinates for.
+  const last = steps[steps.length - 1];
+  if (last) last.text = `${last.text} (${formatCoord(last.place.x)}, ${formatCoord(last.place.y)})`;
   return { steps, usesFlight: steps.some((s) => s.kind === STEP_KIND.fly) };
 }

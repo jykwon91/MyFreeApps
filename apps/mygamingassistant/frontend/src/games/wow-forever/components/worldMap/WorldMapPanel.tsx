@@ -8,7 +8,14 @@ import type { ZoomView } from "@/hooks/useMinimapZoomPan";
 import type { MapZoomRestore } from "@/games/wow-forever/hooks/useMapSelection";
 import type { PlayerFaction, WorldMapData, WorldZone } from "@/games/wow-forever/types/worldMap";
 import { childrenOf, isZoneView, mapPath } from "@/games/wow-forever/worldMap/mapHitTest";
-import { directionStops, resultMarkers, type MapFocus, type MapLayerChoice } from "@/games/wow-forever/worldMap/mapLayers";
+import {
+  directionStops,
+  resultMarkers,
+  selectedOnlyMarkers,
+  type MapFocus,
+  type MapLayerChoice,
+  type MapMarker,
+} from "@/games/wow-forever/worldMap/mapLayers";
 import type { WorldMapModel } from "@/games/wow-forever/worldMap/worldMapModel";
 
 interface WorldMapPanelProps {
@@ -20,6 +27,8 @@ interface WorldMapPanelProps {
   mapId: number;
   /** The player's saved zone. */
   playerZoneId: number | null;
+  /** The chosen result — drawn even before the player has picked a zone. */
+  selectedPoiId: string | null;
   focus: MapFocus | null;
   onFocusApplied: () => void;
   restore: MapZoomRestore | null;
@@ -50,7 +59,9 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
   if (!map) return null;
   const zoneView = isZoneView(map);
   // Results belong on zone maps; a continent or the world shows you, the route and the destination.
-  const markers = model && zoneView ? resultMarkers(model, layers) : [];
+  let markers: MapMarker[] = [];
+  if (zoneView && model) markers = resultMarkers(model, layers);
+  else if (zoneView) markers = selectedOnlyMarkers(props.selectedPoiId, data);
   const stops = model ? directionStops(model, data) : [];
   const selected = model?.selected ?? null;
   const destination = selected && { world: selected.world, label: selected.poi.name };
@@ -140,7 +151,7 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
         faction={faction}
         player={model?.player.world ?? null}
         markers={markers}
-        selectedId={selected?.poi.id ?? null}
+        selectedId={props.selectedPoiId}
         destination={destination}
         stops={stops}
         focus={props.focus}

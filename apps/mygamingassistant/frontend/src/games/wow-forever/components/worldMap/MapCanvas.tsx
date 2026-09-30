@@ -79,7 +79,7 @@ export default function MapCanvas(props: MapCanvasProps) {
     const at = marker && worldToMap(map, marker.world);
     if (at) focusOn(at.x / 100, at.y / 100, FOCUS_SCALE);
     // Stacked layout: the list is above the map — bring the map on screen so the zoom is seen.
-    revealInViewport(canvasRef.current);
+    if (focus.reveal) revealInViewport(canvasRef.current);
     onFocusApplied();
   }, [focus, map, props.markers, focusOn, onFocusApplied]);
 

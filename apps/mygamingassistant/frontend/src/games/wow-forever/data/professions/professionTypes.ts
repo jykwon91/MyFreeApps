@@ -45,10 +45,15 @@ export interface HowToStep {
   warning?: string;
 }
 
+/** A trainer as the World Map knows them — `npcId` opens `/wow-forever/map?npc=<id>`. */
 export interface TrainerNpc {
   name: string;
-  /** Classic map coordinates, e.g. "78, 53". */
-  coords: string;
+  npcId: number;
+  /** "Stormwind City" / "Goldshire, Elwynn Forest" — the World Map's area label. */
+  where: string;
+  /** Classic map coordinates on that map. */
+  x: number;
+  y: number;
 }
 
 export interface CityTrainers {
@@ -59,8 +64,8 @@ export interface CityTrainers {
 }
 
 export interface TownTrainers {
-  cooking: readonly string[];
-  fishing: readonly string[];
+  cooking: readonly TrainerNpc[];
+  fishing: readonly TrainerNpc[];
 }
 
 export interface FishRecipe {

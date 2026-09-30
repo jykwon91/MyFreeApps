@@ -1,8 +1,11 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AlertBox, useIsAuthenticated } from "@platform/ui";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import AddonHelp from "@/games/wow-forever/components/worldMap/AddonHelp";
 import CaptureImport from "@/games/wow-forever/components/worldMap/CaptureImport";
+import GoingToCard from "@/games/wow-forever/components/worldMap/GoingToCard";
+import MapSearch from "@/games/wow-forever/components/worldMap/MapSearch";
 import FindServices from "@/games/wow-forever/components/worldMap/FindServices";
 import ForeverNotes from "@/games/wow-forever/components/worldMap/ForeverNotes";
 import InstanceList from "@/games/wow-forever/components/worldMap/InstanceList";
@@ -18,8 +21,16 @@ import { usePlayerSettings, type PlayerSettings } from "@/games/wow-forever/hook
 import { useWorldMap } from "@/games/wow-forever/hooks/useWorldMap";
 import { LOAD_STATUS } from "@/games/wow-forever/hooks/useWorldMapData";
 import { isServeOnly } from "@/lib/serveOnly";
+import { revealInViewport } from "@/games/wow-forever/lib/revealInViewport";
+import { buildPlaces, type Place } from "@/games/wow-forever/worldMap/places";
+import { findLinkedPoi } from "@/games/wow-forever/worldMap/search";
 import { nextWarlockTraining } from "@/games/wow-forever/worldMap/training";
 import { buildWorldMapModel } from "@/games/wow-forever/worldMap/worldMapModel";
+
+/** `/wow-forever/map?npc=5482` — open the map on that NPC (a creature id, or a map result id). */
+export const NPC_PARAM = "npc";
+
+const MAP_PANEL_ID = "wm-map-panel";
 
 /** /wow-forever/map — where is the nearest trainer / flight master / bank, and how do I get there. */
 export default function WowWorldMapPage() {
@@ -31,6 +42,16 @@ export default function WowWorldMapPage() {
   const view = useMapView(data, settings.zoneId);
   const selection = useMapSelection(data, view);
   const { selectedPoiId } = selection;
+  const places = useMemo(() => (data ? buildPlaces(data) : []), [data]);
+  /** A result picked in the search box (or linked): shown pinned above the lists while it's selected. */
+  const [pinnedPoiId, setPinnedPoiId] = useState<string | null>(null);
+  const goingToRef = useRef<HTMLElement>(null);
+  const [params] = useSearchParams();
+  const linkedNpc = params.get(NPC_PARAM);
+  const linkedPoi = useMemo(() => (data && linkedNpc ? findLinkedPoi(linkedNpc, data) : undefined), [data, linkedNpc]);
+  const linkMissing = Boolean(data && linkedNpc && !linkedPoi);
+  const linkHandled = useRef<string | null>(null);
+  const { select } = selection;
 
   const model = useMemo(
     () =>
@@ -47,6 +68,32 @@ export default function WowWorldMapPage() {
         selectedPoiId,
       }),
     [data, settings, findFilterId, showAllClasses, includeOtherFaction, selectedPoiId],
+  );
+
+  function pickNpc(poiId: string) {
+    setPinnedPoiId(poiId);
+    selection.select(poiId, { revealMap: false });
+    // Stacked layout: the card with the directions is what to see first; "Show on map" is on it.
+    window.requestAnimationFrame(() => revealInViewport(goingToRef.current));
+  }
+
+  function pickPlace(place: Place) {
+    selection.clear();
+    view.goTo(place.zoneId);
+    revealInViewport(document.getElementById(MAP_PANEL_ID));
+  }
+
+  // A `?npc=` link selects its NPC once per value; after that the page is the player's.
+  useEffect(() => {
+    if (!linkedPoi || !linkedNpc || linkHandled.current === linkedNpc) return;
+    linkHandled.current = linkedNpc;
+    select(linkedPoi.id, { revealMap: false });
+  }, [linkedPoi, linkedNpc, select]);
+  const showGoingTo = selectedPoiId !== null && (selectedPoiId === pinnedPoiId || selectedPoiId === linkedPoi?.id);
+
+  const searchContext = useMemo(
+    () => ({ faction: settings.faction, player: model?.player ?? null }),
+    [settings.faction, model?.player],
   );
 
   /** The strip changing your zone brings the map back to it; browsing the map never changes your zone. */
@@ -89,7 +136,11 @@ export default function WowWorldMapPage() {
       )}
       {data && (
         <>
-          <PlayerStrip data={data} settings={settings} onChange={changeSettings} />
+          <MapSearch data={data} places={places} context={searchContext} onPickNpc={pickNpc} onPickPlace={pickPlace} />
+          {linkMissing && (
+            <AlertBox variant="info">That link's NPC isn't on the map. Search for them by name above.</AlertBox>
+          )}
+          <PlayerStrip data={data} settings={settings} places={places} onChange={changeSettings} />
           {capturesFailed && (
             <p className="text-sm text-muted-foreground">
               Locations recorded in Forever didn't load — showing Classic locations only.
@@ -108,9 +159,20 @@ export default function WowWorldMapPage() {
           {model && training && <p className="text-sm">{training}</p>}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             <div className="space-y-8">
+              {showGoingTo && selectedPoiId !== null && (
+                <GoingToCard
+                  ref={goingToRef}
+                  data={data}
+                  faction={settings.faction}
+                  poiId={selectedPoiId}
+                  model={model}
+                  onClear={selection.clear}
+                  onShowMap={() => document.getElementById(MAP_PANEL_ID)?.scrollIntoView({ block: "start" })}
+                />
+              )}
               {!model && (
                 <AlertBox variant="info">
-                  Pick your zone above — or open it on the map and click where you are — to see what's nearest to you.
+                  Say where you are above — a town like "Goldshire" or your coordinates — or open your zone on the map and click where you are, to see what's nearest to you.
                 </AlertBox>
               )}
               {model && (
@@ -136,13 +198,14 @@ export default function WowWorldMapPage() {
               )}
             </div>
             {view.mapId !== null && (
-              <div className="lg:sticky lg:top-4">
+              <div id={MAP_PANEL_ID} className="lg:sticky lg:top-4 scroll-mt-4">
                 <WorldMapPanel
                   data={data}
                   model={model}
                   faction={settings.faction}
                   mapId={view.mapId}
                   playerZoneId={settings.zoneId}
+                  selectedPoiId={selectedPoiId}
                   focus={selection.focus}
                   onFocusApplied={selection.clearFocus}
                   restore={selection.restore}
