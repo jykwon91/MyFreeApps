@@ -60,7 +60,7 @@ export default function WowFoodPickerPage() {
             <FoodEmptyState message="Nothing you can eat at this level helps with that yet." />
           )}
           {result.trainFor && cookingSkill !== null ? (
-            <FoodTrainTarget pick={result.trainFor} cookingSkill={cookingSkill} />
+            <FoodTrainTarget pick={result.trainFor} cookingSkill={cookingSkill} activity={activity} />
           ) : null}
           {result.nextUpgrade ? <FoodNextUpgrade level={result.nextUpgrade.level} pick={result.nextUpgrade.pick} /> : null}
           <FoodRunnersUp key={`${activity}/${level}`} picks={result.runnersUp} activity={activity} />

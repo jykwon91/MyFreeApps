@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 
 from scripts.wow_food.foods import parse_buff
+from scripts.wow_food.recipe_sources import MOB_COLUMNS, VENDOR_COLUMNS, LootIndex, _compact, _references
 from scripts.wow_food.tooltip import Effect, SpellBook, evaluate, format_duration
 
 FOOD_DATA = (
@@ -176,3 +177,73 @@ class TestCommittedData:
         for item_id, skill in skills.items():
             assert by_id[item_id]["learn"]["source"] == "trainer"
             assert 1 <= skill <= 300
+
+    def test_westfall_stew_recipe_ingredients_and_fire(self, foods: dict[str, dict]) -> None:
+        stew = foods["Westfall Stew"]
+        assert stew["learn"]["recipeItem"] == 728
+        assert stew["learn"]["greenAt"] == 115
+        assert [r["name"] for r in stew["reagents"]] == ["Stringy Vulture Meat", "Murloc Eye", "Goretusk Snout"]
+        assert stew["focus"] == "Cooking Fire"
+
+    def test_iron_oven_is_a_forever_requirement(self, foods: dict[str, dict]) -> None:
+        assert foods["Bear Bruscitti"]["focus"] == "Iron Oven"
+
+
+@pytest.fixture(scope="module")
+def recipe_sources() -> dict:
+    return json.loads((FOOD_DATA / "classic" / "recipeSources.json").read_text(encoding="utf-8"))
+
+
+class TestRecipeSources:
+    def test_columns_match_the_generator(self, recipe_sources: dict) -> None:
+        assert recipe_sources["vendorColumns"] == VENDOR_COLUMNS
+        assert recipe_sources["mobColumns"] == MOB_COLUMNS
+        assert recipe_sources["source"].startswith("cmangos/classic-db@")
+
+    def test_every_key_is_a_food_or_reagent(self, foods: dict[str, dict], recipe_sources: dict) -> None:
+        by_id = {str(f["id"]): f for f in foods.values()}
+        reagent_ids = {str(r["id"]) for f in foods.values() for r in f["reagents"]}
+        for food_id in recipe_sources["recipes"]:
+            assert by_id[food_id]["learn"]["source"] == "recipe"
+        assert set(recipe_sources["reagents"]) <= reagent_ids
+
+    def test_every_vendor_and_zone_is_placed(self, recipe_sources: dict) -> None:
+        records = [*recipe_sources["recipes"].values(), *recipe_sources["reagents"].values()]
+        for record in records:
+            for vendor in record.get("vendors", []):
+                row = dict(zip(VENDOR_COLUMNS, vendor))
+                assert str(row["zone"]) in recipe_sources["zones"], row
+                assert 0 <= row["x"] <= 100 and 0 <= row["y"] <= 100
+                assert row["faction"] in {"A", "H", "N"}
+            for quest in record.get("quests", []):
+                assert str(quest) in recipe_sources["quests"]
+
+    def test_westfall_stew_recipe_is_sold_in_stormwind(self, foods: dict[str, dict], recipe_sources: dict) -> None:
+        sources = recipe_sources["recipes"][str(foods["Westfall Stew"]["id"])]
+        names = [dict(zip(VENDOR_COLUMNS, v))["name"] for v in sources["vendors"]]
+        assert "Kendor Kabonka" in names
+
+    def test_a_goretusk_drops_goretusk_snout(self, recipe_sources: dict) -> None:
+        drop = recipe_sources["reagents"]["731"]["drop"]
+        assert not drop["world"]
+        assert any("Goretusk" in mob[0] for mob in drop["mobs"])
+
+    def test_savory_deviate_delight_is_a_rare_drop(self, foods: dict[str, dict], recipe_sources: dict) -> None:
+        drop = recipe_sources["recipes"][str(foods["Savory Deviate Delight"]["id"])]["drop"]
+        assert max(mob[3] for mob in drop["mobs"]) < 1
+
+
+class TestLootIndex:
+    def test_follows_reference_tables(self) -> None:
+        refs = _references([
+            {"entry": 900, "item": 5, "mincountOrRef": 1, "ChanceOrQuestChance": 2.5},
+        ])
+        index = LootIndex.build([
+            {"entry": 1, "item": 7, "mincountOrRef": 1, "ChanceOrQuestChance": -40},
+            {"entry": 1, "item": 900, "mincountOrRef": -900, "ChanceOrQuestChance": 100},
+        ], refs)
+        assert index.by_table[7] == [(1, 40.0, False)]
+        assert index.by_table[5] == [(1, 2.5, True)]
+
+    def test_compact_drops_empty_sources(self) -> None:
+        assert _compact({"vendors": [], "drop": None, "quests": [3]}) == {"quests": [3]}

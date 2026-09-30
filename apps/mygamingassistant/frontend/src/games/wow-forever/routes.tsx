@@ -9,6 +9,7 @@ const WowComparePage = lazy(() => import("@/games/wow-forever/pages/WowComparePa
 const WowWorldMapPage = lazy(() => import("@/games/wow-forever/pages/WowWorldMapPage"));
 const WowProfessionsPage = lazy(() => import("@/games/wow-forever/pages/WowProfessionsPage"));
 const WowFoodPickerPage = lazy(() => import("@/games/wow-forever/pages/WowFoodPickerPage"));
+const WowFoodDetailPage = lazy(() => import("@/games/wow-forever/pages/WowFoodDetailPage"));
 
 function withSuspense(page: ReactElement): ReactElement {
   return <Suspense fallback={<WowPageSkeleton />}>{page}</Suspense>;
@@ -25,4 +26,5 @@ export const wowForeverRoutes: RouteObject[] = [
   { path: "/wow-forever/map", element: withSuspense(<WowWorldMapPage />) },
   { path: "/wow-forever/professions", element: withSuspense(<WowProfessionsPage />) },
   { path: "/wow-forever/food", element: withSuspense(<WowFoodPickerPage />) },
+  { path: "/wow-forever/food/:foodId", element: withSuspense(<WowFoodDetailPage />) },
 ];
