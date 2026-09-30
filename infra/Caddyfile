@@ -101,6 +101,19 @@ myrecipes.myfreeapps.org {
     reverse_proxy 127.0.0.1:8100
 }
 
+# MyLanguageTutor — separate subdomain. New app (no sslip.io legacy address).
+# SSE turn streaming: reverse_proxy flushes text/event-stream immediately.
+mylanguagetutor.myfreeapps.org {
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    reverse_proxy 127.0.0.1:8102
+}
+
 # MyFreeApps landing page — apex domain. Static HTML + CSS, no JavaScript,
 # served straight from the /srv/myfreeapps checkout (deploy-landing.yml
 # `git pull`s it). Source: sites/landing/public/. The CSP allows only
