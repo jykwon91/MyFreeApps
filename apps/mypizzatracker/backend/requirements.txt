@@ -120,7 +120,7 @@ minio==7.2.20
     # via
     #   mypizzatracker-backend
     #   platform-shared
-multidict==6.7.1
+multidict==7.0.0
     # via
     #   aiohttp
     #   yarl
