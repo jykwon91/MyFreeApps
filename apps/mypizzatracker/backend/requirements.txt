@@ -57,7 +57,6 @@ click==8.5.0
     # via uvicorn
 colorama==0.4.6 ; sys_platform == 'win32'
     # via
-    #   click
     #   pytest
     #   qrcode
 cryptography==50.0.1
@@ -139,7 +138,7 @@ propcache==0.5.4
     #   yarl
 psycopg2-binary==2.9.13
     # via mypizzatracker-backend
-pwdlib==0.3.1
+pwdlib==0.3.0
     # via fastapi-users
 pycparser==3.0 ; implementation_name != 'PyPy'
     # via cffi
@@ -151,7 +150,7 @@ pydantic==2.13.5
     #   mypizzatracker-backend
     #   platform-shared
     #   pydantic-settings
-pydantic-core==2.49.0
+pydantic-core==2.46.5
     # via pydantic
 pydantic-settings==2.15.0
     # via
@@ -193,7 +192,7 @@ sentry-sdk==2.70.0
     # via
     #   mypizzatracker-backend
     #   platform-shared
-sqlalchemy==2.1.1
+sqlalchemy==2.0.54
     # via
     #   alembic
     #   fastapi-users-db-sqlalchemy
