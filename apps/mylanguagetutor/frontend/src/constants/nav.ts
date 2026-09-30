@@ -13,7 +13,7 @@ interface NavDescriptor {
 }
 
 const NAV_DESCRIPTORS: NavDescriptor[] = [
-  { path: "/", label: "Home", iconName: "Home", exact: true },
+  { path: "/scenarios", label: "Practice", iconName: "MessageCircle" },
   { path: "/settings", label: "Settings", iconName: "Settings" },
   { path: "/security", label: "Security", iconName: "Shield" },
 ];

@@ -1,6 +1,10 @@
 import { type RouteObject } from "react-router-dom";
 import { Support } from "@platform/ui";
 import Home from "@/pages/Home";
+import OnboardingLanguage from "@/pages/OnboardingLanguage";
+import OnboardingLevel from "@/pages/OnboardingLevel";
+import Scenarios from "@/pages/Scenarios";
+import Practice from "@/pages/Practice";
 import Security from "@/pages/Security";
 import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
@@ -19,6 +23,10 @@ export const routes: RouteObject[] = [
     element: <RootLayout />,
     children: [
       { index: true, element: <Home /> },
+      { path: "/onboarding/language", element: <OnboardingLanguage /> },
+      { path: "/onboarding/level", element: <OnboardingLevel /> },
+      { path: "/scenarios", element: <Scenarios /> },
+      { path: "/practice", element: <Practice /> },
       { path: "/settings", element: <Settings /> },
       { path: "/security", element: <Security /> },
     ],

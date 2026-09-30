@@ -20,6 +20,7 @@ from app.domain.levels import LEVEL_CODES, Level
 from app.domain.scenarios import SCENARIO_SLUGS, get_scenario, list_scenarios
 from app.domain.session_status import SESSION_STATUS_CODES
 from app.domain.turn_status import TURN_STATUS_CODES
+from app.models.tutor.tutor_profile import TutorProfile
 from app.models.tutor.tutor_session import TutorSession
 from app.models.tutor.tutor_turn import TutorTurn
 
@@ -42,6 +43,8 @@ _CONSTRAINT_REGISTRY: dict[str, tuple[str, ...]] = {
     "ck_tutor_session_level": LEVEL_CODES,
     "ck_tutor_session_status": SESSION_STATUS_CODES,
     "ck_tutor_turn_status": TURN_STATUS_CODES,
+    "ck_tutor_profile_language_code": LANGUAGE_CODES,
+    "ck_tutor_profile_level": LEVEL_CODES,
 }
 
 
@@ -51,7 +54,7 @@ def _quoted_values(sql: str) -> set[str]:
 
 def _model_check_constraints() -> dict[str, str]:
     found: dict[str, str] = {}
-    for table in (TutorSession.__table__, TutorTurn.__table__):
+    for table in (TutorSession.__table__, TutorTurn.__table__, TutorProfile.__table__):
         for constraint in table.constraints:
             if isinstance(constraint, CheckConstraint):
                 found[str(constraint.name)] = str(constraint.sqltext)

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.tutor.tutor_session import TutorSession
@@ -22,6 +22,30 @@ async def get_by_id(
         )
     )
     return result.scalar_one_or_none()
+
+
+async def get_by_id_for_update(
+    db: AsyncSession, session_id: uuid.UUID, user_id: uuid.UUID,
+) -> TutorSession | None:
+    """Like ``get_by_id`` but row-locks the session (``SELECT ... FOR UPDATE``)
+    so two turns for one session can't claim the same ``seq``."""
+    result = await db.execute(
+        select(TutorSession)
+        .where(TutorSession.id == session_id, TutorSession.user_id == user_id)
+        .with_for_update()
+    )
+    return result.scalar_one_or_none()
+
+
+async def increment_turn_count(
+    db: AsyncSession, session_id: uuid.UUID, user_id: uuid.UUID,
+) -> None:
+    """Atomic ``turn_count = turn_count + 1`` (no read-modify-write)."""
+    await db.execute(
+        update(TutorSession)
+        .where(TutorSession.id == session_id, TutorSession.user_id == user_id)
+        .values(turn_count=TutorSession.turn_count + 1)
+    )
 
 
 async def list_by_user(

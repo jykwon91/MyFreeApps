@@ -12,7 +12,17 @@
 - ``find_json`` — pull the JSON payload out of a text response.
 - ``ExtractionNotConfiguredError`` / ``ExtractionError`` /
   ``ExtractionParseError`` — typed errors.
+- ``map_anthropic_status_error`` / ``map_anthropic_connection_error`` /
+  ``AnthropicFailure`` / ``AnthropicFailureKind`` — classify a raw SDK
+  failure (and log its documented ``error.type``) for callers that call
+  the SDK directly (MGA item reader, MyLanguageTutor).
 """
+from platform_shared.extraction.anthropic_errors import (
+    AnthropicFailure,
+    AnthropicFailureKind,
+    map_anthropic_connection_error,
+    map_anthropic_status_error,
+)
 from platform_shared.extraction.backoff import (
     RateLimitEvent,
     ThrottleState,
@@ -46,4 +56,8 @@ __all__ = [
     "ExtractionError",
     "ExtractionNotConfiguredError",
     "ExtractionParseError",
+    "AnthropicFailure",
+    "AnthropicFailureKind",
+    "map_anthropic_status_error",
+    "map_anthropic_connection_error",
 ]

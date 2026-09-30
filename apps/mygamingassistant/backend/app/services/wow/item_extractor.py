@@ -19,6 +19,10 @@ from typing import Any
 
 import anthropic
 
+from platform_shared.extraction.anthropic_errors import (
+    AnthropicFailureKind,
+    map_anthropic_status_error,
+)
 from platform_shared.repositories.daily_quota_repo import try_consume_daily_quota
 
 from app.core.config import settings
@@ -27,6 +31,7 @@ from app.schemas.wow.extracted_item import ItemExtractionResponse
 from app.services.wow.image_validation import detect_image_media_type
 from app.services.wow.item_extraction_errors import (
     ItemExtractionDailyCapError,
+    ItemExtractionError,
     ItemExtractionInputError,
     ItemExtractionMisconfiguredError,
     ItemExtractionNotConfiguredError,
@@ -43,6 +48,7 @@ logger = logging.getLogger(__name__)
 _MAX_TOKENS = 1500
 _TIMEOUT_SECONDS = 60.0
 DAILY_CAP_BUCKET = "wow-item-extract"
+_LOG_PREFIX = "wow item extract"
 
 
 def _build_client() -> anthropic.AsyncAnthropic:
@@ -140,25 +146,16 @@ async def _consume_daily_quota() -> None:
         )
 
 
+# Shared classification (platform_shared) -> this feature's exception classes.
+_FAILURE_CLASSES: dict[AnthropicFailureKind, type[ItemExtractionError]] = {
+    AnthropicFailureKind.RATE_LIMITED: ItemExtractionRateLimitedError,
+    AnthropicFailureKind.MISCONFIGURED: ItemExtractionMisconfiguredError,
+    AnthropicFailureKind.INPUT_REJECTED: ItemExtractionUnreadableError,
+    AnthropicFailureKind.UPSTREAM: ItemExtractionUpstreamError,
+}
+
+
 def _map_status_error(exc: anthropic.APIStatusError) -> Exception:
     """Log Anthropic's documented error.type and pick the matching failure class."""
-    error_type = exc.type or f"http_{exc.status_code}"
-    if isinstance(exc, anthropic.RateLimitError):
-        logger.warning("wow item extract: rate limited: error_type=%s", error_type)
-        return ItemExtractionRateLimitedError(str(exc), error_type=error_type)
-    if isinstance(exc, (anthropic.AuthenticationError, anthropic.PermissionDeniedError)):
-        logger.error(
-            "wow item extract: credentials rejected: error_type=%s status=%s",
-            error_type,
-            exc.status_code,
-        )
-        return ItemExtractionMisconfiguredError(str(exc), error_type=error_type)
-    if exc.status_code in (400, 413, 422):
-        logger.warning(
-            "wow item extract: input rejected: error_type=%s status=%s", error_type, exc.status_code
-        )
-        return ItemExtractionUnreadableError(str(exc), error_type=error_type)
-    logger.error(
-        "wow item extract: upstream error: error_type=%s status=%s", error_type, exc.status_code
-    )
-    return ItemExtractionUpstreamError(str(exc), error_type=error_type)
+    failure = map_anthropic_status_error(exc, log_prefix=_LOG_PREFIX, logger=logger)
+    return _FAILURE_CLASSES[failure.kind](str(exc), error_type=failure.error_type)

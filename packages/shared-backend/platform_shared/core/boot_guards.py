@@ -246,3 +246,38 @@ def check_transparency_configured(
         "TRANSPARENCY_PRIMARY=false on this app (only one app should be the "
         "writer), or set ENVIRONMENT=development."
     )
+
+
+def check_extraction_configured(
+    *,
+    anthropic_api_key: str,
+    environment: str,
+) -> None:
+    """Fail loud at boot if an app whose core feature calls Claude has no API key.
+
+    Only apps whose PRIMARY feature is a Claude call invoke this (e.g.
+    MyLanguageTutor — every conversation turn is a Claude call). Apps where
+    Claude is an optional add-on keep degrading to a 503 on that one feature
+    instead. The runtime ``ExtractionService`` error message points here.
+
+    Dev / test pass with an empty key (tests mock the client; local dev may
+    run without AI).
+
+    Raises:
+        ExtractionNotConfiguredError: If ``environment`` is not dev/test and
+            ``anthropic_api_key`` is empty.
+    """
+    # Local import: keeps this module's import graph free of the extraction
+    # package for apps that never call Claude.
+    from platform_shared.extraction.errors import ExtractionNotConfiguredError
+
+    if environment in _DEV_ENVIRONMENTS:
+        return
+    if anthropic_api_key:
+        return
+    raise ExtractionNotConfiguredError(
+        "ANTHROPIC_API_KEY must be set in non-development environments for "
+        "an app whose core feature calls Claude — without it every request to "
+        "that feature fails. Set ANTHROPIC_API_KEY in the app's "
+        "backend/.env.docker, or set ENVIRONMENT=development."
+    )

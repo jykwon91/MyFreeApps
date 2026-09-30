@@ -12,6 +12,11 @@ on:
   # truthy in apps/<slug>/app.yaml. A missing key defaults to enabled, so
   # existing apps keep auto-deploying. Set `automated_deploy: false` to make
   # an app manual-dispatch-only (e.g. not yet ready for production).
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mylanguagetutor/**'
+      - 'packages/**'
 
 concurrency:
   group: deploy-mylanguagetutor

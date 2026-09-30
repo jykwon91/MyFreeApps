@@ -7,6 +7,8 @@ rotation can re-encrypt selectively. Never log these columns.
 
 ``reply_text`` / ``corrections_json`` are nullable so a turn whose reply stream
 was cut off (``partial``) or never produced (``failed``) is still recorded.
+Token columns sum every Claude call made for the turn (reply, corrections,
+translation); ``model`` records the reply model.
 ``user_id`` is denormalised from the session so every read can filter by tenant
 without a join, and so the cascade from ``users`` reaches turns directly.
 """
@@ -87,6 +89,14 @@ class TutorTurn(Base):
         Integer, nullable=False, default=0, server_default="0",
     )
     cache_read_tokens: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0",
+    )
+    cache_write_tokens: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0",
+    )
+    # Cost-weighted units actually spent on this turn (all Claude calls);
+    # see app/services/tutor/usage_units.py. The per-turn usage ledger.
+    cost_units: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0",
     )
     created_at: Mapped[datetime] = mapped_column(
