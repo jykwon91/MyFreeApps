@@ -26,6 +26,15 @@
 # existing file values, so re-dispatching after rotating a secret updates the
 # VPS file in place.
 #
+# Reusing a sibling app's shared operator values (one mailbox, one Turnstile
+# widget, one admin login) without re-entering secrets: set `copy_from` to an
+# already-seeded app and `copy_keys` to the keys to copy. Copies fill only keys
+# no GitHub secret supplies and the target file doesn't already hold; per-app
+# secrets (SECRET_KEY, ENCRYPTION_KEY, DB creds, SENTRY_DSN, API keys) are
+# rejected by seed_env's COPYABLE_KEYS allowlist. Only key names are logged.
+#
+#   gh workflow run seed-env.yml -f app=mylanguagetutor -f copy_from=myrecipes
+#
 # The job FAILS (via the final --check) while required operator values are
 # still blank; the log lists the blank KEY NAMES only — values are never
 # printed by seed_env, and GitHub masks secret values regardless.
@@ -46,6 +55,31 @@ on:
           - mypizzatracker
           - myrecipes
           - mylanguagetutor
+      copy_from:
+        description: >-
+          Optional: copy shared operator values (mailbox, Turnstile, admin
+          login) from this already-seeded app's VPS env file. Fills only keys
+          no GitHub secret supplies and the target does not already hold.
+        required: false
+        default: ""
+        type: choice
+        options:
+          - ""
+          - mybookkeeper
+          - mygamingassistant
+          - myjobhunter
+          - mypizzatracker
+          - myrecipes
+          - mylanguagetutor
+      copy_keys:
+        description: >-
+          Comma-separated keys to copy (used only with copy_from). Allowed:
+          SMTP_USER, SMTP_PASSWORD, EMAIL_FROM_ADDRESS, SMTP_HOST, SMTP_PORT,
+          TURNSTILE_SITE_KEY, TURNSTILE_SECRET_KEY, SEED_ADMIN_EMAIL,
+          SEED_ADMIN_PASSWORD_HASH.
+        required: false
+        default: "SMTP_USER,SMTP_PASSWORD,EMAIL_FROM_ADDRESS,TURNSTILE_SECRET_KEY,SEED_ADMIN_EMAIL,SEED_ADMIN_PASSWORD_HASH"
+        type: string
 
 concurrency:
   group: seed-env-${{ inputs.app }}
@@ -57,9 +91,41 @@ jobs:
   seed:
     runs-on: ubuntu-latest
     steps:
+      # Validate the free-text copy inputs on the runner BEFORE anything is
+      # sent to the VPS. Inputs arrive via env vars (never `${{ }}` in the
+      # shell body), so a hostile value can't inject commands here, and a
+      # value that fails the allowlist regex never reaches the SSH step.
+      # seed_env re-validates keys against COPYABLE_KEYS on the VPS.
+      - name: Validate copy inputs
+        env:
+          COPY_FROM: ${{ inputs.copy_from }}
+          COPY_KEYS: ${{ inputs.copy_keys }}
+          TARGET_APP: ${{ inputs.app }}
+        run: |
+          if [ -z "$COPY_FROM" ]; then
+            echo "No copy_from — copy_keys ignored."
+            exit 0
+          fi
+          if ! printf '%s' "$COPY_FROM" | grep -Eq '^[a-z0-9][a-z0-9-]*$'; then
+            echo "::error::copy_from must be an app slug."
+            exit 1
+          fi
+          if ! printf '%s' "$COPY_KEYS" | grep -Eq '^[A-Z_,]+$'; then
+            echo "::error::copy_keys must match ^[A-Z_,]+$ (comma-separated KEY names)."
+            exit 1
+          fi
+          if [ "$COPY_FROM" = "$TARGET_APP" ]; then
+            echo "::error::copy_from must differ from app."
+            exit 1
+          fi
+
       - name: Seed env files on VPS
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        env:
+          COPY_FROM: ${{ inputs.copy_from }}
+          COPY_KEYS: ${{ inputs.copy_keys }}
         with:
+          envs: COPY_FROM,COPY_KEYS
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -108,13 +174,31 @@ jobs:
             SEED_ADMIN_PASSWORD_HASH=${{ secrets[format('{0}_seed_admin_password_hash', inputs.app)] }}
             SEED_ENV_OVERRIDES_EOF
 
+            # Optional copy of shared operator values from a sibling app's
+            # already-seeded env file. COPY_FROM / COPY_KEYS arrive as env
+            # vars (validated on the runner); re-check here as defence in
+            # depth, and pass them as quoted args — never interpolated.
+            # POSIX positional params (not a bash array) — the remote login
+            # shell is not guaranteed to be bash.
+            set --
+            if [ -n "${COPY_FROM:-}" ]; then
+              case "$COPY_FROM" in
+                *[!a-z0-9-]*) echo "::error::invalid copy_from"; exit 1 ;;
+              esac
+              case "${COPY_KEYS:-}" in
+                ""|*[!A-Z_,]*) echo "::error::copy_keys must match ^[A-Z_,]+$"; exit 1 ;;
+              esac
+              set -- --copy-from "$COPY_FROM" --copy-keys "$COPY_KEYS"
+            fi
+
             echo "--- Seed ---"
             # Exit 1 = required values still blank (expected on partial
             # seed; the --check below reports it). Exit >=2 = hard error
-            # (bad slug, missing template) — fail immediately with it.
+            # (bad slug, missing template, rejected copy request) — fail
+            # immediately with it.
             rc=0
             PYTHONPATH=packages/shared-backend python3 -m platform_shared.infra.seed_env \
-              --app "${{ inputs.app }}" --overrides "$OVERRIDES" || rc=$?
+              --app "${{ inputs.app }}" --overrides "$OVERRIDES" "$@" || rc=$?
             if [ "$rc" -gt 1 ]; then
               exit "$rc"
             fi
