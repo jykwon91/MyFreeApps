@@ -1,9 +1,13 @@
 import { GUIDE_SECTIONS } from "@/games/wow-forever/components/guide/guideSections";
 
-export default function GuideSectionNav() {
+interface GuideSectionNavProps {
+  sections?: readonly { id: string; label: string }[];
+}
+
+export default function GuideSectionNav({ sections = GUIDE_SECTIONS }: GuideSectionNavProps) {
   return (
-    <nav aria-label="Guide sections" className="flex flex-wrap gap-2">
-      {GUIDE_SECTIONS.map((s) => (
+    <nav aria-label="Page sections" className="flex flex-wrap gap-2">
+      {sections.map((s) => (
         <a
           key={s.id}
           href={`#${s.id}`}
