@@ -1,34 +1,28 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useMemo } from "react";
 import { AlertBox, useIsAuthenticated } from "@platform/ui";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import AddonHelp from "@/games/wow-forever/components/worldMap/AddonHelp";
 import CaptureImport from "@/games/wow-forever/components/worldMap/CaptureImport";
-import GoingToCard from "@/games/wow-forever/components/worldMap/GoingToCard";
-import MapSearch from "@/games/wow-forever/components/worldMap/MapSearch";
 import FindServices from "@/games/wow-forever/components/worldMap/FindServices";
 import ForeverNotes from "@/games/wow-forever/components/worldMap/ForeverNotes";
 import InstanceList from "@/games/wow-forever/components/worldMap/InstanceList";
 import QuestGivers from "@/games/wow-forever/components/worldMap/QuestGivers";
 import NearestServices from "@/games/wow-forever/components/worldMap/NearestServices";
 import PlayerStrip from "@/games/wow-forever/components/worldMap/PlayerStrip";
+import RoutePlanner from "@/games/wow-forever/components/worldMap/RoutePlanner";
 import WorldMapPanel from "@/games/wow-forever/components/worldMap/WorldMapPanel";
 import WorldMapSkeleton from "@/games/wow-forever/components/worldMap/WorldMapSkeleton";
 import { useFindFilters } from "@/games/wow-forever/hooks/useFindFilters";
 import { useMapSelection } from "@/games/wow-forever/hooks/useMapSelection";
 import { useMapView } from "@/games/wow-forever/hooks/useMapView";
 import { usePlayerSettings, type PlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
+import { useTripPlanner } from "@/games/wow-forever/hooks/useTripPlanner";
 import { useWorldMap } from "@/games/wow-forever/hooks/useWorldMap";
 import { LOAD_STATUS } from "@/games/wow-forever/hooks/useWorldMapData";
 import { isServeOnly } from "@/lib/serveOnly";
-import { revealInViewport } from "@/games/wow-forever/lib/revealInViewport";
-import { buildPlaces, type Place } from "@/games/wow-forever/worldMap/places";
-import { findLinkedPoi } from "@/games/wow-forever/worldMap/search";
+import { buildPlaces } from "@/games/wow-forever/worldMap/places";
 import { nextWarlockTraining } from "@/games/wow-forever/worldMap/training";
 import { buildWorldMapModel } from "@/games/wow-forever/worldMap/worldMapModel";
-
-/** `/wow-forever/map?npc=5482` — open the map on that NPC (a creature id, or a map result id). */
-export const NPC_PARAM = "npc";
 
 const MAP_PANEL_ID = "wm-map-panel";
 
@@ -43,15 +37,6 @@ export default function WowWorldMapPage() {
   const selection = useMapSelection(data, view);
   const { selectedPoiId } = selection;
   const places = useMemo(() => (data ? buildPlaces(data) : []), [data]);
-  /** A result picked in the search box (or linked): shown pinned above the lists while it's selected. */
-  const [pinnedPoiId, setPinnedPoiId] = useState<string | null>(null);
-  const goingToRef = useRef<HTMLElement>(null);
-  const [params] = useSearchParams();
-  const linkedNpc = params.get(NPC_PARAM);
-  const linkedPoi = useMemo(() => (data && linkedNpc ? findLinkedPoi(linkedNpc, data) : undefined), [data, linkedNpc]);
-  const linkMissing = Boolean(data && linkedNpc && !linkedPoi);
-  const linkHandled = useRef<string | null>(null);
-  const { select } = selection;
 
   const model = useMemo(
     () =>
@@ -70,26 +55,8 @@ export default function WowWorldMapPage() {
     [data, settings, findFilterId, showAllClasses, includeOtherFaction, selectedPoiId],
   );
 
-  function pickNpc(poiId: string) {
-    setPinnedPoiId(poiId);
-    selection.select(poiId, { revealMap: false });
-    // Stacked layout: the card with the directions is what to see first; "Show on map" is on it.
-    window.requestAnimationFrame(() => revealInViewport(goingToRef.current));
-  }
-
-  function pickPlace(place: Place) {
-    selection.clear();
-    view.goTo(place.zoneId);
-    revealInViewport(document.getElementById(MAP_PANEL_ID));
-  }
-
-  // A `?npc=` link selects its NPC once per value; after that the page is the player's.
-  useEffect(() => {
-    if (!linkedPoi || !linkedNpc || linkHandled.current === linkedNpc) return;
-    linkHandled.current = linkedNpc;
-    select(linkedPoi.id, { revealMap: false });
-  }, [linkedPoi, linkedNpc, select]);
-  const showGoingTo = selectedPoiId !== null && (selectedPoiId === pinnedPoiId || selectedPoiId === linkedPoi?.id);
+  // A `?npc=` / `?to=` link, a search pick or a row's Directions: the trip, drawn on the map.
+  const planner = useTripPlanner({ data, places, faction: settings.faction, model, updateSettings });
 
   const searchContext = useMemo(
     () => ({ faction: settings.faction, player: model?.player ?? null }),
@@ -114,8 +81,9 @@ export default function WowWorldMapPage() {
     faction: settings.faction,
     selectedPoiId,
     onToggle: selection.toggle,
-    directions: model?.directions,
+    onDirections: planner.directionsTo,
   };
+  const showMap = () => document.getElementById(MAP_PANEL_ID)?.scrollIntoView({ block: "start" });
 
   return (
     <main className="p-4 sm:p-8 space-y-6 max-w-7xl">
@@ -136,9 +104,17 @@ export default function WowWorldMapPage() {
       )}
       {data && (
         <>
-          <MapSearch data={data} places={places} context={searchContext} onPickNpc={pickNpc} onPickPlace={pickPlace} />
-          {linkMissing && (
-            <AlertBox variant="info">That link's NPC isn't on the map. Search for them by name above.</AlertBox>
+          <RoutePlanner
+            planner={planner}
+            data={data}
+            places={places}
+            context={searchContext}
+            faction={settings.faction}
+            currentZoneId={settings.zoneId}
+            onShowMap={showMap}
+          />
+          {planner.linkMissing && (
+            <AlertBox variant="info">That link's destination isn't on the map. Search for it by name above.</AlertBox>
           )}
           <PlayerStrip data={data} settings={settings} places={places} onChange={changeSettings} />
           {capturesFailed && (
@@ -159,17 +135,6 @@ export default function WowWorldMapPage() {
           {model && training && <p className="text-sm">{training}</p>}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             <div className="space-y-8">
-              {showGoingTo && selectedPoiId !== null && (
-                <GoingToCard
-                  ref={goingToRef}
-                  data={data}
-                  faction={settings.faction}
-                  poiId={selectedPoiId}
-                  model={model}
-                  onClear={selection.clear}
-                  onShowMap={() => document.getElementById(MAP_PANEL_ID)?.scrollIntoView({ block: "start" })}
-                />
-              )}
               {!model && (
                 <AlertBox variant="info">
                   Say where you are above — a town like "Goldshire" or your coordinates — or open your zone on the map and click where you are, to see what's nearest to you.
@@ -208,6 +173,14 @@ export default function WowWorldMapPage() {
                   selectedPoiId={selectedPoiId}
                   focus={selection.focus}
                   onFocusApplied={selection.clearFocus}
+                  route={planner.route}
+                  destinationZoneId={planner.to?.route.place.zoneId ?? null}
+                  fit={planner.fit}
+                  onFitApplied={planner.clearFit}
+                  picking={planner.picking}
+                  onPickPoint={planner.pickPoint}
+                  onCancelPick={planner.cancelPick}
+                  directionsOpen={planner.directionsOpen}
                   restore={selection.restore}
                   onRestoreApplied={selection.clearRestore}
                   onZoomChange={selection.trackZoom}

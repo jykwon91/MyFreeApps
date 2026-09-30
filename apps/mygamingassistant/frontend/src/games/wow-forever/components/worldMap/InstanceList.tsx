@@ -3,7 +3,6 @@ import clsx from "clsx";
 import InstanceLevel from "@/games/wow-forever/components/worldMap/InstanceLevel";
 import PoiRow from "@/games/wow-forever/components/worldMap/PoiRow";
 import { INSTANCE_KIND, type PlayerFaction, type WorldMapData } from "@/games/wow-forever/types/worldMap";
-import type { Directions } from "@/games/wow-forever/worldMap/directions";
 import { instanceBand, LEVEL_BAND } from "@/games/wow-forever/worldMap/levels";
 import type { RankedPoi } from "@/games/wow-forever/worldMap/nearest";
 
@@ -16,12 +15,12 @@ interface InstanceListProps {
   instances: readonly RankedPoi[];
   selectedPoiId: string | null;
   onToggle: (poiId: string) => void;
-  directions: Directions | null | undefined;
+  onDirections: (poiId: string) => void;
 }
 
 /** Dungeon and raid entrances, nearest first; ones too low for you are dimmed. */
 export default function InstanceList(props: InstanceListProps) {
-  const { data, faction, level, instances, selectedPoiId, onToggle, directions } = props;
+  const { data, faction, level, instances, selectedPoiId, onToggle, onDirections } = props;
   const [limit, setLimit] = useState(PAGE_SIZE);
   const shown = instances.slice(0, limit);
 
@@ -46,7 +45,7 @@ export default function InstanceList(props: InstanceListProps) {
               heading={ranked.poi.subkind === INSTANCE_KIND.raid ? "Raid" : "Dungeon"}
               selected={ranked.poi.id === selectedPoiId}
               onToggle={onToggle}
-              directions={directions}
+              onDirections={onDirections}
             >
               <InstanceLevel poi={ranked.poi} level={level} />
             </PoiRow>

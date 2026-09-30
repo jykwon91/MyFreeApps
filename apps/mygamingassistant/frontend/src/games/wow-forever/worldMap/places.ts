@@ -27,6 +27,8 @@ export interface Place {
   /** Map percent on `zoneId`; null = the whole map. */
   spot: { x: number; y: number } | null;
   aliases: readonly string[];
+  /** Towns: how many NPCs / quest givers / flight masters the data puts there (its "main town" weight). */
+  size?: number;
 }
 
 /** "Goldshire, Elwynn Forest" / "Stormwind City". */
@@ -79,6 +81,7 @@ function townPlaces(data: WorldMapData, taken: ReadonlySet<string>): Place[] {
       zoneName: zone.name,
       spot: { x, y },
       aliases: [],
+      size: list.length,
     };
   });
 }

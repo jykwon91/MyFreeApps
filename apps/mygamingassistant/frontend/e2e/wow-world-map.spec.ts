@@ -29,9 +29,12 @@ test("an Alliance Warlock in Elwynn finds a trainer, gets directions and copies 
   // The map shows the zone art.
   await expect(page.getByRole("img", { name: "Elwynn Forest map" })).toBeVisible();
 
-  await trainer.getByRole("button", { name: /Directions/ }).click();
-  await expect(trainer.getByRole("list", { name: "Directions" })).toContainText(/Head .* to Maximillian Crowe/);
+  await trainer.getByRole("button", { name: "Directions to Maximillian Crowe" }).click();
+  const planner = page.getByRole("region", { name: "Route planner" });
+  await expect(planner.getByLabel("From")).toHaveValue("Your location");
+  await expect(planner.getByRole("list", { name: "Directions" })).toContainText(/Head .* to Maximillian Crowe/);
 
+  await trainer.getByRole("button", { name: /Show on map/ }).click();
   await trainer.getByRole("button", { name: "Copy in-game waypoint" }).first().click();
   await expect(trainer.getByText("Copied").first()).toBeVisible();
   const copied = await page.evaluate(() => navigator.clipboard.readText());
@@ -54,9 +57,9 @@ test("a level 1 Warlock sees Northshire's quests and the nearby dungeons", async
   const quests = page.getByRole("region", { name: "Quests near you" });
   const willem = quests.getByRole("article", { name: "Quest giver: Deputy Willem" });
   await expect(willem.getByRole("list", { name: "Quests from Deputy Willem" })).toContainText("A Threat Within");
-  await willem.getByRole("button", { name: /Directions/ }).click();
+  await willem.getByRole("button", { name: "Directions to Deputy Willem" }).click();
   // Standing at the abbey: he's within a few yards.
-  await expect(willem.getByRole("list", { name: "Directions" })).toContainText("Deputy Willem is right here");
+  await expect(page.getByRole("region", { name: "Route planner" }).getByRole("list", { name: "Directions" })).toContainText("Deputy Willem is right here");
 
   const dungeons = page.getByRole("region", { name: "Dungeons & raids" });
   await expect(dungeons.getByRole("article", { name: "Dungeon: Stormwind Stockade" })).toContainText("too low to enter yet");
@@ -102,7 +105,7 @@ test("a location captured in Forever replaces the Classic spot and the waypoint 
   const trainer = page.getByRole("article", { name: "Warlock trainer: Maximillian Crowe" });
   await expect(trainer.getByText(/^Captured in Forever/)).toBeVisible();
   await expect(trainer.getByText("Classic location — may differ in Forever")).toHaveCount(0);
-  await trainer.getByRole("button", { name: /Directions/ }).click();
+  await trainer.getByRole("button", { name: /Show on map/ }).click();
   await trainer.getByRole("button", { name: "Copy in-game waypoint" }).first().click();
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   expect(copied).toBe("/mga way 1429 43.1 65.5 Maximillian Crowe");
@@ -322,10 +325,11 @@ test("a far-away trainer gets flight directions with the discovery caveat", asyn
   const find = page.getByRole("region", { name: "Find" });
   await expect(find.getByText("Elsewhere on this continent")).toBeVisible();
   const ironforge = find.getByRole("article", { name: "Alexander Calder" });
-  await ironforge.getByRole("button", { name: /Directions/ }).click();
-  const steps = ironforge.getByRole("list", { name: "Directions" });
+  await ironforge.getByRole("button", { name: "Directions to Alexander Calder" }).click();
+  const planner = page.getByRole("region", { name: "Route planner" });
+  const steps = planner.getByRole("list", { name: "Directions" });
   await expect(steps).toContainText("Fly from Stormwind, Elwynn to Ironforge, Dun Morogh");
-  await expect(ironforge.getByText(/Flight paths must be discovered first/)).toBeVisible();
+  await expect(planner.getByText(/Flight paths must be discovered first/)).toBeVisible();
   // Selecting a result switches the map to the destination on demand.
   await page.getByRole("button", { name: "Destination: Ironforge" }).click();
   await expect(page.getByRole("img", { name: "Ironforge map" })).toBeVisible();

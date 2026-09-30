@@ -8,7 +8,8 @@ import masksJson from "@/games/wow-forever/data/worldMap/mapMasks.json";
 import { parsePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { FACTION } from "@/games/wow-forever/types/worldMap";
 import { decodeWorldMap } from "@/games/wow-forever/worldMap/decodeWorldMap";
-import { STEP_KIND } from "@/games/wow-forever/worldMap/directions";
+import { poiRouteEnd } from "@/games/wow-forever/worldMap/describeRank";
+import { planDirections, STEP_KIND } from "@/games/wow-forever/worldMap/directions";
 import { compassDirection, formatYards, worldToZone, zoneToWorld } from "@/games/wow-forever/worldMap/geometry";
 import { greyLevel, instanceBand, LEVEL_BAND, levelBand, questsFor } from "@/games/wow-forever/worldMap/levels";
 import { NEAR_GROUP, sameAreaZoneIds } from "@/games/wow-forever/worldMap/nearest";
@@ -214,7 +215,9 @@ describe("directions", () => {
   function directionsTo(name: string, patch: Partial<WorldMapChoices> = {}) {
     const poi = data.pois.find((p) => p.name === name);
     if (!poi) throw new Error(name);
-    return model({ ...patch, selectedPoiId: poi.id }).directions;
+    const m = model({ ...patch, selectedPoiId: poi.id });
+    if (!m.selected) throw new Error(`${name} not ranked`);
+    return planDirections(m.playerEnd, poiRouteEnd(m.selected), patch.faction ?? FACTION.alliance, data);
   }
 
   it("walks to a trainer in the same zone", () => {
