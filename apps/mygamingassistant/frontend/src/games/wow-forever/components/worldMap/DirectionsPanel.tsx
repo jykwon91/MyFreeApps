@@ -1,4 +1,4 @@
-import { Anchor, Footprints, Plane, Ship } from "lucide-react";
+import { Anchor, Footprints, Plane, Ship, TramFront } from "lucide-react";
 import type { ReactNode } from "react";
 import WaypointButtons from "@/games/wow-forever/components/worldMap/WaypointButtons";
 import { STEP_KIND, type Directions, type StepKind } from "@/games/wow-forever/worldMap/directions";
@@ -8,6 +8,7 @@ const STEP_ICON: Readonly<Record<StepKind, ReactNode>> = {
   fly: <Plane className="h-4 w-4" aria-hidden />,
   boat: <Ship className="h-4 w-4" aria-hidden />,
   zeppelin: <Anchor className="h-4 w-4" aria-hidden />,
+  tram: <TramFront className="h-4 w-4" aria-hidden />,
 };
 
 interface DirectionsPanelProps {
@@ -23,7 +24,9 @@ export default function DirectionsPanel({ directions }: DirectionsPanelProps) {
       </p>
     );
   }
-  const usesTransport = directions.steps.some((s) => s.kind === STEP_KIND.boat || s.kind === STEP_KIND.zeppelin);
+  const usesTransport = directions.steps.some(
+    (s) => s.kind === STEP_KIND.boat || s.kind === STEP_KIND.zeppelin || s.kind === STEP_KIND.tram,
+  );
   return (
     <div className="space-y-3">
       <ol className="space-y-3" aria-label="Directions">
@@ -49,7 +52,7 @@ export default function DirectionsPanel({ directions }: DirectionsPanelProps) {
         {directions.usesFlight && (
           <li>Flight paths must be discovered first: talk to each flight master once on foot before you can fly there.</li>
         )}
-        {usesTransport && <li>Boats and zeppelins run on a loop — wait at the dock if one just left.</li>}
+        {usesTransport && <li>Boats, zeppelins and the tram run on a loop — wait at the stop if one just left.</li>}
       </ul>
     </div>
   );

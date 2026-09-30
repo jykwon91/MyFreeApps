@@ -1,7 +1,9 @@
 import { ArrowUpDown, Map as MapIcon, X } from "lucide-react";
 import DirectionsPanel from "@/games/wow-forever/components/worldMap/DirectionsPanel";
 import EndpointField, { type FieldShortcut } from "@/games/wow-forever/components/worldMap/EndpointField";
+import FlightPathChoice from "@/games/wow-forever/components/worldMap/FlightPathChoice";
 import { DIRECTIONS_HEADING_ID, FROM_FIELD_ID } from "@/games/wow-forever/components/worldMap/plannerIds";
+import type { TravelSettingsState } from "@/games/wow-forever/hooks/useTravelSettings";
 import type { PlayerFaction, WorldMapData } from "@/games/wow-forever/types/worldMap";
 import type { Directions } from "@/games/wow-forever/worldMap/directions";
 import type { Place } from "@/games/wow-forever/worldMap/places";
@@ -20,6 +22,7 @@ interface DirectionsFormProps {
   places: readonly Place[];
   context: SearchContext;
   faction: PlayerFaction;
+  travel: TravelSettingsState;
   /** The saved zone, for bare coordinates. */
   currentZoneId: number | null;
   from: ResolvedEnd | null;
@@ -129,12 +132,13 @@ export default function DirectionsForm(props: DirectionsFormProps) {
         </button>
       </div>
       {to.note && <p className="text-sm text-muted-foreground">{to.note}</p>}
+      <FlightPathChoice data={props.data} faction={props.faction} travel={props.travel} />
       <div className="border-t pt-3">
         {!from && <p className="text-sm text-muted-foreground">Enter a starting point to see directions.</p>}
         {from && directions === null && (
           <p className="text-sm">
-            I couldn't find a route from {from.title} to {to.title} for {FACTION_NAME[props.faction]}. Flight paths and
-            boats don't connect them.
+            I couldn't find a route from {from.title} to {to.title} for {FACTION_NAME[props.faction]}. Walking, the flight
+            paths you've chosen, boats, zeppelins and the tram don't connect them.
           </p>
         )}
         {directions && <DirectionsPanel directions={directions} />}

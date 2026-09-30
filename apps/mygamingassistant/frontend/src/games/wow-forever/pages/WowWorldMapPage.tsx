@@ -16,6 +16,7 @@ import { useFindFilters } from "@/games/wow-forever/hooks/useFindFilters";
 import { useMapSelection } from "@/games/wow-forever/hooks/useMapSelection";
 import { useMapView } from "@/games/wow-forever/hooks/useMapView";
 import { usePlayerSettings, type PlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
+import { useTravelSettings } from "@/games/wow-forever/hooks/useTravelSettings";
 import { useTripPlanner } from "@/games/wow-forever/hooks/useTripPlanner";
 import { useWorldMap } from "@/games/wow-forever/hooks/useWorldMap";
 import { LOAD_STATUS } from "@/games/wow-forever/hooks/useWorldMapData";
@@ -56,7 +57,8 @@ export default function WowWorldMapPage() {
   );
 
   // A `?npc=` / `?to=` link, a search pick or a row's Directions: the trip, drawn on the map.
-  const planner = useTripPlanner({ data, places, faction: settings.faction, model, updateSettings });
+  const travel = useTravelSettings();
+  const planner = useTripPlanner({ data, places, faction: settings.faction, travel: travel.options, model, updateSettings });
 
   const searchContext = useMemo(
     () => ({ faction: settings.faction, player: model?.player ?? null }),
@@ -110,6 +112,7 @@ export default function WowWorldMapPage() {
             places={places}
             context={searchContext}
             faction={settings.faction}
+            travel={travel}
             currentZoneId={settings.zoneId}
             onShowMap={showMap}
           />

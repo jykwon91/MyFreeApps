@@ -253,7 +253,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
     town, else its centre — the card says which ("Westfall has no single
     spot, so I'm routing to …").
   - The map draws A (green, start) and B (red, destination) and each leg:
-    walk solid, fly dashed, boat/zeppelin dotted. It fits the smallest map
+    walk solid, fly dashed, boat/zeppelin/tram dotted. It fits the smallest map
     that shows the whole route (`commonMap`: an end's own map when its
     picture holds every point, else the nearest common parent).
 - **"Where are you?"** (`WhereAreYou`, `worldMap/places.ts` + `where.ts`) takes a
@@ -279,9 +279,15 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   quests show when min level ≤ your level + 2; dungeons are coloured by the
   Classic con bands (grey/green/yellow/orange/red) and flagged "too low to
   enter" below the required level.
-- Directions = travel-time search over walking, discovered-agnostic flight
-  paths (fewest hops, then distance) and boats/zeppelins, always with the
-  "flight paths must be discovered first" caveat.
+- Directions = travel-time search over walking, flight paths (fewest hops,
+  then distance), boats/zeppelins and the Deeprun Tram (Stormwind ↔
+  Ironforge — its stops are the Classic Era client's tram-entrance area
+  triggers, see `travel.py`; the ride time is an estimate). "Flight paths:
+  All / Only ones I know / None" (`FlightPathChoice`) limits which flight
+  masters a route may use — a multi-hop flight only goes through ones you
+  know, as in game; the choice and the ticked list live in
+  `mga.wowForever.worldMap.travel.v1` (`hooks/useTravelSettings.ts`). Every
+  flight step keeps the "flight paths must be discovered first" caveat.
 - **Companion addon** `apps/mygamingassistant/addons/MGACompanion` (Interface
   16001): `/mga way <uiMapID|zone name> <x> <y> [label]` sets the in-game map
   pin. The page's "Copy in-game waypoint" buttons emit that command.

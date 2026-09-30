@@ -33,12 +33,13 @@ interface Leg {
   kind: StepKind;
 }
 
-/** Walking solid, flights dashed, boats and zeppelins dotted. */
+/** Walking solid, flights dashed, boats, zeppelins and the tram dotted. */
 const LEG_DASH: Readonly<Record<StepKind, string | undefined>> = {
   walk: undefined,
   fly: "14 9",
   boat: "2 10",
   zeppelin: "2 10",
+  tram: "2 10",
 };
 
 function toPx(map: MapView, p: WorldPoint): Px | null {

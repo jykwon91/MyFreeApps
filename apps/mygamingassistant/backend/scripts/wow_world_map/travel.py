@@ -1,10 +1,14 @@
-"""Flight paths, boats and zeppelins — the travel graph for the directions.
+"""Flight paths, boats, zeppelins and the tram — the travel graph for the directions.
 
 All positions come from the Forever client tables (``TaxiNodes``,
 ``TaxiPath``, ``TaxiPathNode``); only the transport names / dock labels below
 are hand-written, keyed by the client's transport path id. The generator
 fails if a listed transport's stop count no longer matches its labels, so a
 client change can't silently mislabel a dock.
+
+The Deeprun Tram isn't a taxi path: its two stops are the entrance area
+triggers into the tram instance, read from the Classic Era client (the
+Forever client no longer ships area triggers — see ``dungeons.py``).
 """
 from __future__ import annotations
 
@@ -41,6 +45,13 @@ TRANSPORTS: dict[int, tuple[str, str, str, tuple[str, ...]]] = {
           ("Ratchet dock", "Booty Bay dock")),
 }
 
+# Deeprun Tram: its entrance area triggers (Stormwind, Ironforge) -> stop label.
+TRAM_ID = 369  # the tram instance's map id; doubles as the transport id
+TRAM_ENTRANCES: dict[int, str] = {
+    2173: "Deeprun Tram entrance, Stormwind",
+    2175: "Deeprun Tram entrance, Ironforge",
+}
+
 
 def _node_faction(flags: int) -> str | None:
     alliance = bool(flags & TAXI_FLAG_ALLIANCE)
@@ -70,6 +81,27 @@ def _zone_hint(node_name: str) -> str | None:
     """Flight paths are named "Place, Zone" ("Morgan's Vigil, Burning Steppes")."""
     _, sep, zone = node_name.rpartition(", ")
     return zone if sep else None
+
+
+def _tram(zones: list[ZoneBounds], art: WorldMapArt) -> dict[str, object]:
+    triggers = {
+        int(r["ID"]): r
+        for r in sources.wago_table(
+            "AreaTrigger", branch=sources.WAGO_ERA_BRANCH, build=sources.WAGO_ERA_BUILD
+        )
+    }
+    stops: list[list[object]] = []
+    for trigger_id, label in TRAM_ENTRANCES.items():
+        row = triggers.get(trigger_id)
+        if row is None:
+            raise ValueError(f"Deeprun Tram: area trigger {trigger_id} is gone from the client")
+        continent = int(row["ContinentID"])
+        wx, wy = float(row["Pos_0"]), float(row["Pos_1"])
+        placed = _place(zones, art, continent, wx, wy)
+        if placed is None:
+            raise ValueError(f"Deeprun Tram: entrance {trigger_id} is outside every zone map")
+        stops.append([label, continent, round(wx, 1), round(wy, 1), *placed])
+    return {"id": TRAM_ID, "name": "Tram: Stormwind - Ironforge", "vehicle": "tram", "faction": "N", "stops": stops}
 
 
 def build_travel(
@@ -117,6 +149,7 @@ def build_travel(
         if len(stops) != len(docks):
             raise ValueError(f"transport {path_id} ({label}): {len(stops)} stops, {len(docks)} dock labels")
         transports.append({"id": path_id, "name": label, "vehicle": vehicle, "faction": faction, "stops": stops})
+    transports.append(_tram(zones, art))
 
     return {
         "nodeColumns": ["id", "name", "continent", "worldX", "worldY", "faction", "zone", "subzone", "x", "y"],

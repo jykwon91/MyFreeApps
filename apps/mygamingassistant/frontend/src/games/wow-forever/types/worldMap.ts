@@ -140,7 +140,7 @@ export interface FlightNode {
   y: number;
 }
 
-export const VEHICLE = { boat: "boat", zeppelin: "zeppelin" } as const;
+export const VEHICLE = { boat: "boat", zeppelin: "zeppelin", tram: "tram" } as const;
 export type Vehicle = (typeof VEHICLE)[keyof typeof VEHICLE];
 
 export interface TransportStop {
