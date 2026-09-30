@@ -1,4 +1,5 @@
-import { describeMob, describeRareDrop, isRareDrop } from "@/games/wow-forever/food/recipeSources";
+import FoodMobRow from "@/games/wow-forever/components/food/detail/FoodMobRow";
+import { describeRareDrop, isRareDrop } from "@/games/wow-forever/food/recipeSources";
 import type { DropSource } from "@/games/wow-forever/types/recipeSources";
 
 function otherMobs(more: number): string {
@@ -13,11 +14,11 @@ export default function FoodDropList({ drop }: { drop: DropSource }) {
   const mobs = [...drop.mobs].sort((a, b) => a.minLevel - b.minLevel);
   const where = drop.zones.length ? `Mostly in ${drop.zones.join(", ")}.` : "";
   return (
-    <div className="space-y-1">
+    <div className="space-y-2">
       <p className="text-sm font-medium">Drops from</p>
-      <ul className="list-disc pl-5 text-sm space-y-0.5">
+      <ul className="space-y-2" aria-label="Mobs that drop it">
         {mobs.map((m) => (
-          <li key={m.name}>{describeMob(m)}</li>
+          <FoodMobRow key={m.name} mob={m} />
         ))}
       </ul>
       <p className="text-xs text-muted-foreground">

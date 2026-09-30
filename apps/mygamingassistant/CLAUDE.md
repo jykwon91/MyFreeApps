@@ -163,7 +163,9 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   sources, and what to cook it at (`focus`: Cooking Fire / Forever's Iron Oven).
   Vendors: player faction (World Map settings) + neutral first, other faction
   behind a toggle; Directions go to `/wow-forever/map?to=pt:<zone>,<x>,<y>&dir=1`
-  (vendors aren't World Map POIs, so `npc:` doesn't resolve). Reagents you can
+  (vendors aren't World Map POIs, so `npc:` doesn't resolve). Each farmable
+  mob carries a spot — its densest pack (spawns within 150 yd) in the zone it's
+  most common in — with the same Directions link. Reagents you can
   buy, fish or open from a container hide their mob-drop list.
   Sources are `data/food/classic/recipeSources.json` — cmangos Classic data
   from `scripts/wow_food/recipe_sources.py`, GPL, same LICENSE. Items with id

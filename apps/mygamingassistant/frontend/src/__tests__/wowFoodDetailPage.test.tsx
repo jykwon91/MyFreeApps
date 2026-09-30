@@ -58,6 +58,11 @@ describe("food detail page", () => {
     const need = section("What you need");
     expect(within(need).getByRole("heading", { level: 3, name: "1× Goretusk Snout" })).toBeInTheDocument();
     expect(within(need).getByText(/^Goretusk \(level 14–15\)/)).toBeInTheDocument();
+    expect(within(need).getByText("Moonbrook, Westfall · 45.6, 57.4")).toBeInTheDocument();
+    expect(within(need).getByRole("link", { name: "Directions to Goretusk" })).toHaveAttribute(
+      "href",
+      "/wow-forever/map?to=pt%3A1436%2C45.6%2C57.4&dir=1",
+    );
   });
 
   it("puts the player's faction first and hides the other faction's vendors until asked", async () => {

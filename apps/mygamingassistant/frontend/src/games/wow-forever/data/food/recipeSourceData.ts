@@ -1,6 +1,6 @@
 import sourcesJson from "@/games/wow-forever/data/food/classic/recipeSources.json";
 import type { Faction } from "@/games/wow-forever/types/worldMap";
-import type { DropSource, ItemSources, QuestGiver, QuestSource, VendorSpot } from "@/games/wow-forever/types/recipeSources";
+import type { DropMob, DropSource, ItemSources, QuestGiver, QuestSource, VendorSpot } from "@/games/wow-forever/types/recipeSources";
 
 /**
  * Where recipes and reagents come from — vendors, quests, drops, fishing,
@@ -77,17 +77,26 @@ function quest(id: number): QuestSource | null {
   };
 }
 
+function mob(r: Row): DropMob {
+  const [name, minLevel, maxLevel, chance, zoneId, subzone, x, y] = r;
+  return {
+    name: String(name),
+    minLevel: Number(minLevel),
+    maxLevel: Number(maxLevel),
+    chance: Number(chance),
+    spot:
+      zoneId === null || zoneId === undefined
+        ? null
+        : { zoneId: Number(zoneId), zoneName: zoneName(Number(zoneId)), subzone: String(subzone ?? ""), x: Number(x), y: Number(y) },
+  };
+}
+
 function drop(raw: RawSources["drop"]): DropSource | null {
   if (!raw) return null;
   return {
     world: raw.world,
     levels: [raw.levels[0], raw.levels[1]],
-    mobs: raw.mobs.map(([name, minLevel, maxLevel, chance]) => ({
-      name: String(name),
-      minLevel: Number(minLevel),
-      maxLevel: Number(maxLevel),
-      chance: Number(chance),
-    })),
+    mobs: raw.mobs.map(mob),
     more: raw.more,
     zones: raw.zones.map(zoneName).filter(Boolean),
   };

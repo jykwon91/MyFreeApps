@@ -17,12 +17,23 @@ export interface VendorSpot {
   limited: boolean;
 }
 
+/** Where on the World Map a mob is found. */
+export interface MobSpot {
+  zoneId: number;
+  zoneName: string;
+  subzone: string;
+  x: number;
+  y: number;
+}
+
 export interface DropMob {
   name: string;
   minLevel: number;
   maxLevel: number;
   /** Percent chance per kill. */
   chance: number;
+  /** Its biggest pack, in the zone it's most common in. */
+  spot: MobSpot | null;
 }
 
 export interface DropSource {
