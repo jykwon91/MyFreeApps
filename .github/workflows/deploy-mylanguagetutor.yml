@@ -1,0 +1,196 @@
+# GENERATED FROM infra/templates/.github/workflows/deploy.yml.j2 — DO NOT EDIT.
+# Edit the template + apps/<app>/app.yaml; re-render via:
+#   python -m platform_shared.infra.render --app mylanguagetutor
+
+name: Deploy MyLanguageTutor
+
+on:
+  # Manual "Run workflow" button — always available so any app can be
+  # deployed on demand, even when push-triggered auto-deploy is off.
+  workflow_dispatch:
+  # Push-triggered auto-deploy. Rendered ONLY when `automated_deploy` is
+  # truthy in apps/<slug>/app.yaml. A missing key defaults to enabled, so
+  # existing apps keep auto-deploying. Set `automated_deploy: false` to make
+  # an app manual-dispatch-only (e.g. not yet ready for production).
+
+concurrency:
+  group: deploy-mylanguagetutor
+  cancel-in-progress: false
+
+jobs:
+  # Build images on the GitHub runner (fast, layer-cached via type=gha) and push
+  # to GHCR. The deploy job below PULLS these prebuilt images instead of building
+  # on the VPS — cutting deploy time from ~20m to ~2-3m and shrinking the
+  # container-recreate downtime window. Each image is tagged with the commit SHA
+  # (immutable; enables rollback via `IMAGE_TAG=<old-sha> docker compose up -d`)
+  # plus :latest. GHCR namespace = the repo owner (jykwon91).
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          file: apps/mylanguagetutor/docker/backend.Dockerfile
+          push: true
+          tags: |
+            ghcr.io/jykwon91/myfreeapps-mylanguagetutor-backend:${{ github.sha }}
+            ghcr.io/jykwon91/myfreeapps-mylanguagetutor-backend:latest
+          build-args: |
+            GIT_COMMIT=${{ github.sha }}
+          cache-from: type=gha,scope=mylanguagetutor-backend
+          cache-to: type=gha,mode=max,scope=mylanguagetutor-backend
+
+      - name: Build and push caddy image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          file: apps/mylanguagetutor/docker/caddy.Dockerfile
+          push: true
+          tags: |
+            ghcr.io/jykwon91/myfreeapps-mylanguagetutor-caddy:${{ github.sha }}
+            ghcr.io/jykwon91/myfreeapps-mylanguagetutor-caddy:latest
+          # VITE_* values are inlined into the frozen bundle at build time. They
+          # now come from GitHub Actions variables (public values — the Turnstile
+          # site key is rendered into the HTML) instead of the VPS .env.docker,
+          # because the build no longer runs on the VPS. See
+          # rules/verify-frontend-build-args.md.
+          build-args: |
+            VITE_TURNSTILE_SITE_KEY=${{ vars.MYLANGUAGETUTOR_VITE_TURNSTILE_SITE_KEY }}
+          cache-from: type=gha,scope=mylanguagetutor-caddy
+          cache-to: type=gha,mode=max,scope=mylanguagetutor-caddy
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        env:
+          # Forwarded into the remote script via `envs:` below. IMAGE_TAG pins the
+          # exact images the build-and-push job just pushed; GHCR_* authenticate
+          # the VPS to pull the (private) packages.
+          IMAGE_TAG: ${{ github.sha }}
+          GHCR_USER: ${{ github.repository_owner }}
+          GHCR_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: IMAGE_TAG,GHCR_USER,GHCR_TOKEN
+          # Generous: deploys are serialized via the flock below, so a
+          # later app can wait through several earlier app deploys before
+          # its own runs. 10m was too tight once deploys serialize.
+          command_timeout: 30m
+          script: |
+            set -e
+
+            # Serialize deploys across ALL apps on this shared VPS.
+            # Every app's deploy SSHes here and `git pull`s the SAME
+            # /srv/myfreeapps checkout; a `packages/**` change fans out
+            # to every app's deploy workflow at once. Without this lock
+            # they race on the shared git refs — observed failures:
+            #   error: cannot lock ref 'refs/remotes/origin/main'
+            #   fatal: Cannot fast-forward to multiple branches
+            # flock gives mutual exclusion WITHOUT dropping any app's
+            # deploy. A shared GitHub `concurrency` group can't be used
+            # here: it cancels intermediate *pending* runs, silently
+            # skipping some apps. So `concurrency.group` stays per-app
+            # (GitHub runs all of them) and this lock orders them. The
+            # lock auto-releases when this SSH script exits, even on
+            # failure (FD closed on process exit).
+            exec 9>/tmp/myfreeapps-deploy.lock
+            if ! flock -w 1500 9; then
+              echo "::error::Timed out (25m) waiting for the VPS deploy lock — an earlier app deploy is wedged. Investigate before retrying."
+              exit 1
+            fi
+
+            cd /srv/myfreeapps
+
+            echo "--- Pull latest code ---"
+            git pull --ff-only
+
+            echo "--- Preflight: verify required env files exist ---"
+            test -f /srv/myfreeapps/apps/mylanguagetutor/.env || {
+              echo "::error::Missing /srv/myfreeapps/apps/mylanguagetutor/.env — seed with 'cd /srv/myfreeapps && PYTHONPATH=packages/shared-backend python3 -m platform_shared.infra.seed_env --app mylanguagetutor'"
+              exit 1
+            }
+            test -f /srv/myfreeapps/apps/mylanguagetutor/backend/.env.docker || {
+              echo "::error::Missing /srv/myfreeapps/apps/mylanguagetutor/backend/.env.docker — seed with 'cd /srv/myfreeapps && PYTHONPATH=packages/shared-backend python3 -m platform_shared.infra.seed_env --app mylanguagetutor'"
+              exit 1
+            }
+            echo "Env files present — proceeding"
+
+            echo "--- Authenticate to GHCR and pull prebuilt images ---"
+            # Images were built + pushed by the build-and-push job on the runner.
+            # The VPS only pulls — no on-box build. IMAGE_TAG pins this commit's
+            # images; docker-compose resolves ${IMAGE_TAG:-latest} against it for
+            # `pull`, `up`, and any later `create`.
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            export IMAGE_TAG
+            docker compose -f apps/mylanguagetutor/docker-compose.yml pull
+            docker compose -f apps/mylanguagetutor/docker-compose.yml up -d --remove-orphans
+
+            echo "--- One-time cleanup: remove obsolete frontend_dist volume ---"
+            # The frontend_dist volume was used by the pre-baked-caddy layout.
+            # The new layout bakes dist into the caddy image; volume is orphaned.
+            docker volume rm mylanguagetutor_frontend_dist 2>/dev/null || true
+
+            echo "--- Run database migrations ---"
+            docker compose -f apps/mylanguagetutor/docker-compose.yml exec -T api alembic upgrade head
+
+            echo "--- Wait for API health check ---"
+            for i in $(seq 1 30); do
+              if docker compose -f apps/mylanguagetutor/docker-compose.yml exec -T api python -c "import urllib.request; urllib.request.urlopen('http://localhost:8010/health')" 2>/dev/null; then
+                echo "API is healthy"
+                break
+              fi
+              if [ $i -eq 30 ]; then
+                echo "API health check failed after 30 attempts"
+                docker compose -f apps/mylanguagetutor/docker-compose.yml logs api --tail=50
+                exit 1
+              fi
+              sleep 2
+            done
+
+            echo "--- Update host Caddyfile ---"
+            # Sync the SHARED host Caddyfile (infra/Caddyfile) → /etc/caddy/Caddyfile.
+            # Shared with deploy-landing.yml — see infra/sync-host-caddyfile.sh.
+            sudo bash infra/sync-host-caddyfile.sh
+
+            echo "--- Reclaim disk: prune images + build cache superseded by this deploy ---"
+            # Registry-pull deploys (registry_images) fetch a fresh SHA-tagged
+            # image from GHCR every time but never remove the prior one, so
+            # orphaned image layers accumulate across ALL apps on this shared
+            # 24GB droplet until the disk fills and the next deploy's "Deploy to
+            # VPS" step fails (observed 2026-06-23 at 99% full). The new
+            # containers are already up and the health check above has passed,
+            # so the in-use image is safe — `image prune -af` only removes
+            # dangling + unreferenced images (never the running one). Run on
+            # every app's deploy; the first one to fire after a fan-out reclaims
+            # the shared layers, the rest are cheap no-ops.
+            docker image prune -af || true
+            docker builder prune -af || true
+
+            echo "--- Clean up GHCR credentials ---"
+            docker logout ghcr.io || true

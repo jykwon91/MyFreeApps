@@ -153,6 +153,15 @@ def _write_app_yaml(repo_root: Path, slug: str, *,
         # key also defaults to enabled). Flip to False to scaffold an app
         # as manual-dispatch-only.
         "automated_deploy": True,
+        # Build images in CI and pull from GHCR on the VPS -- the standard
+        # deploy path for every app since mbk moved to the registry.
+        "registry_images": True,
+        # MGA-only VITE_SERVE_ONLY build arg. Must be present (the Tier 3
+        # templates render under StrictUndefined), so default it off.
+        "serve_only_build_arg": False,
+        # Permissions-Policy features allowed for the app's own origin.
+        # Empty = every feature denied (e.g. set [microphone] for a voice app).
+        "permissions_policy_self": [],
         "env_seed_command": (
             "seed with 'cd /srv/myfreeapps && PYTHONPATH=packages/shared-backend "
             f"python3 -m platform_shared.infra.seed_env --app {slug}'"

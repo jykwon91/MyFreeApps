@@ -45,6 +45,7 @@ on:
           - myjobhunter
           - mypizzatracker
           - myrecipes
+          - mylanguagetutor
 
 concurrency:
   group: seed-env-${{ inputs.app }}

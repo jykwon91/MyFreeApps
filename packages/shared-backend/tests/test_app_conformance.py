@@ -39,6 +39,9 @@ _APPS = [
     # from the scaffold's single-user seed to the multi-user register router
     # (see apps/myrecipes/backend/app/main.py).
     "myrecipes",
+    # mylanguagetutor is MULTI-USER (public registration + per-user tutor
+    # sessions), converted from the scaffold the same way as myrecipes.
+    "mylanguagetutor",
 ]
 
 # Apps that have intentionally opted OUT of Sentry error monitoring.
@@ -578,7 +581,7 @@ class TestInfraTemplateDrift:
     the template owns the shape.
     """
 
-    @pytest.mark.parametrize("app", ["mybookkeeper", "myjobhunter", "mygamingassistant", "mypizzatracker", "myrecipes"])
+    @pytest.mark.parametrize("app", ["mybookkeeper", "myjobhunter", "mygamingassistant", "mypizzatracker", "myrecipes", "mylanguagetutor"])
     def test_no_drift(self, app: str) -> None:
         try:
             from platform_shared.infra.render import diff_app, _repo_root
@@ -742,7 +745,9 @@ class TestPostDeployCommands:
 #
 # - mypizzatracker: paused until it is converted to a mobile app.
 # - myrecipes: paused until local development is complete.
-_NO_AUTO_DEPLOY = {"mypizzatracker", "myrecipes"}
+# - mylanguagetutor: manual until the conversation loop (PR 4) ships; then flip
+#   app.yaml `automated_deploy`, re-render, and drop it from this set.
+_NO_AUTO_DEPLOY = {"mypizzatracker", "myrecipes", "mylanguagetutor"}
 
 
 class TestAutomatedDeployExclusion:
@@ -898,6 +903,41 @@ class TestScaffolderProducesBootableApp:
         assert yaml_data["api_port"] == 18999
         assert yaml_data["caddy_host_port"] == 18998
 
+    def test_scaffolded_app_yaml_renders_under_strict_templates(self, tmp_path) -> None:
+        """The scaffolder's app.yaml must carry every key the Tier 3 templates
+        read. They render under StrictUndefined, so a key the templates gained
+        after the scaffolder was written (e.g. `serve_only_build_arg`) crashes
+        `new_app` at its final render step -- exactly what happened when
+        mylanguagetutor was scaffolded. Render against the REAL templates.
+        """
+        import shutil
+        try:
+            from platform_shared.infra import new_app as _new_app
+            from platform_shared.infra import render as _render
+        except ModuleNotFoundError as e:
+            pytest.skip(f"infra modules unavailable ({e}); skipping render check")
+
+        templates_src = _REPO_ROOT / "infra" / "templates"
+        if not templates_src.exists():
+            pytest.skip(f"templates not present at {templates_src}")
+        shutil.copytree(templates_src, tmp_path / "infra" / "templates")
+
+        summary = _new_app.scaffold_app(
+            slug="scaffoldtest",
+            display_name="ScaffoldTest",
+            api_port=18999,
+            caddy_host_port=18998,
+            frontend_port=15999,
+            repo_root=tmp_path,
+            skip_uv=True,
+            skip_npm=True,
+        )
+        assert len(summary["rendered"]) == len(_render.TEMPLATE_MAP)
+        caddyfile = (tmp_path / "apps" / "scaffoldtest" / "docker" / "Caddyfile.docker").read_text(
+            encoding="utf-8"
+        )
+        assert "microphone=()" in caddyfile, "scaffold default must deny every permission"
+
     def test_refuses_existing_app_dir(self, tmp_path) -> None:
         try:
             from platform_shared.infra import new_app as _new_app
@@ -1023,6 +1063,7 @@ _SUPPORT_ROUTING_FILE = {
     "mygamingassistant": ("frontend", "src", "routes.tsx"),
     "mypizzatracker": ("frontend", "src", "routes.tsx"),
     "myrecipes": ("frontend", "src", "routes.tsx"),
+    "mylanguagetutor": ("frontend", "src", "routes.tsx"),
 }
 _SUPPORT_LINK_FILE = {
     "mybookkeeper": ("frontend", "src", "app", "pages", "Login.tsx"),
@@ -1030,6 +1071,7 @@ _SUPPORT_LINK_FILE = {
     "mygamingassistant": ("frontend", "src", "pages", "Login.tsx"),
     "mypizzatracker": ("frontend", "src", "pages", "Login.tsx"),
     "myrecipes": ("frontend", "src", "pages", "Login.tsx"),
+    "mylanguagetutor": ("frontend", "src", "pages", "Login.tsx"),
 }
 
 
