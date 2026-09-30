@@ -1,4 +1,5 @@
-import { Component, type ReactNode } from "react";
+import { Component, type ErrorInfo, type ReactNode } from "react";
+import { NewVersionPrompt, isChunkLoadError } from "@platform/ui";
 
 export interface ErrorBoundaryProps {
   children: ReactNode;
@@ -15,11 +16,16 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, State> 
     return { error };
   }
 
-  componentDidCatch(error: Error, info: { componentStack: string }) {
+  componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error("[ErrorBoundary]", error.message, info.componentStack);
   }
 
-  render() {
+  render(): ReactNode {
+    // A lazy route chunk that 404s after a deploy is not a bug in the page —
+    // the tab is running a replaced build. Offer the reload instead.
+    if (this.state.error && isChunkLoadError(this.state.error)) {
+      return <NewVersionPrompt />;
+    }
     if (this.state.error) {
       return (
         <div className="p-8 text-center space-y-2">

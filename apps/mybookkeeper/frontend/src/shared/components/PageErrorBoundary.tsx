@@ -1,6 +1,6 @@
-import { Component, type ReactNode, useState } from "react";
+import { Component, type ErrorInfo, type ReactNode, useState } from "react";
 import { Coffee, ChevronDown, ChevronUp, Copy, Home, RotateCcw } from "lucide-react";
-import { Button } from "@platform/ui";
+import { Button, NewVersionPrompt, isChunkLoadError } from "@platform/ui";
 import api from "@/shared/lib/api";
 
 export interface PageErrorBoundaryProps {
@@ -97,20 +97,25 @@ export default class PageErrorBoundary extends Component<PageErrorBoundaryProps,
     return { error };
   }
 
-  componentDidCatch(error: Error, info: { componentStack: string }) {
+  componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error("[PageErrorBoundary]", error.message, info.componentStack);
     api
       .post("/frontend-errors", {
         message: error.message,
         stack: error.stack ?? "",
-        component_stack: info.componentStack,
+        component_stack: info.componentStack ?? "",
         url: window.location.href,
         timestamp: new Date().toISOString(),
       })
       .catch(() => {});
   }
 
-  render() {
+  render(): ReactNode {
+    // A lazy route chunk that 404s after a deploy is not a bug in the page —
+    // the tab is running a replaced build. Offer the reload instead.
+    if (this.state.error && isChunkLoadError(this.state.error)) {
+      return <NewVersionPrompt />;
+    }
     if (this.state.error) {
       return (
         <PageErrorFallback
