@@ -10,8 +10,8 @@
 import { test, expect, type Page } from "@playwright/test";
 
 const SETTINGS_KEY = "mga.wowForever.compare.settings.v1";
-// Smallest valid PNG header — the stubbed endpoint never decodes it.
-const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+// A real 1x1 PNG, so the preview renders.
+const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
 
 async function useArmsWarrior(page: Page) {
   await page.addInitScript(
@@ -51,10 +51,25 @@ test("items open on the screenshot reader and a read fills the item", async ({ p
 
   const card = itemCard(page, 1);
   await expect(card.getByRole("radio", { name: "Screenshot" })).toHaveAttribute("aria-checked", "true");
-  await card.locator('input[type="file"]').setInputFiles({ name: "tooltip.png", mimeType: "image/png", buffer: PNG });
+  // Ctrl+V into the box (a real paste event carrying the image).
+  const box = card.getByRole("group", { name: "Add a screenshot" });
+  await box.click();
+  await box.evaluate((el, bytes) => {
+    const data = new DataTransfer();
+    data.items.add(new File([new Uint8Array(bytes)], "tooltip.png", { type: "image/png" }));
+    el.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }));
+  }, Array.from(PNG));
+  const preview = card.getByRole("img", { name: "Screenshot to read: tooltip.png" });
+  await expect(preview).toBeVisible();
+  await expect.poll(() => preview.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
   await card.getByRole("button", { name: "Read screenshot" }).click();
 
-  await expect(page.getByRole("article", { name: /^Item 1: Strong Helm/ })).toBeVisible();
+  const filled = page.getByRole("article", { name: /^Item 1: Strong Helm/ });
+  await expect(filled).toBeVisible();
+  // The screenshot stays on screen so the reading can be checked against it.
+  await expect(filled.getByText("The item below was read from this screenshot.")).toBeVisible();
+  await filled.getByRole("button", { name: "Use a different screenshot" }).click();
+  await expect(filled.getByRole("group", { name: "Add a screenshot" })).toBeVisible();
 });
 
 test("pasted tooltips from a website are compared and a winner explained", async ({ page }) => {

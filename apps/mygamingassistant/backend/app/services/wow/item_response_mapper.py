@@ -3,11 +3,15 @@
 Tool-use input is shaped by our JSON schema but not guaranteed by it, so this is
 the trust boundary: unknown stat keys, non-numeric or out-of-range values and a
 malformed weapon block are dropped with a warning instead of reaching the UI,
-and input that isn't an item tooltip at all is rejected.
+and input that isn't an item tooltip at all is rejected. Every stat's number
+must also appear on a line the model transcribed from the item's own tooltip
+(``tooltip_lines``, cut at any "If you replace this item" comparison) — a
+misread or invented number is dropped with a warning rather than scored.
 """
 from __future__ import annotations
 
 import math
+import re
 from typing import Any
 
 from pydantic import ValidationError
@@ -27,6 +31,10 @@ from app.services.wow.stat_keys import MAX_ABS_STAT_VALUE, STAT_KEYS
 
 _MAX_UNPARSED = 20
 _MAX_EFFECT_CHARS = 300
+_MAX_TOOLTIP_LINES = 60
+_NUMBER = re.compile(r"\d+(?:\.\d+)?")
+# Where the item's own tooltip ends: the game's comparison block, or a second tooltip.
+_COMPARISON_STARTS = ("if you replace this item", "currently equipped")
 
 
 def map_tool_input(raw: dict[str, Any]) -> ItemExtractionResponse:
@@ -49,6 +57,7 @@ def map_tool_input(raw: dict[str, Any]) -> ItemExtractionResponse:
     warnings: list[str] = []
     unparsed = _clean_effects(raw.get("unparsed_effects"))
     stats = _clean_stats(raw.get("stats"), warnings, unparsed)
+    stats = _grounded_stats(stats, _tooltip_numbers(raw.get("tooltip_lines")), warnings)
     weapon = _clean_weapon(raw.get("weapon"), warnings)
 
     try:
@@ -146,3 +155,36 @@ def _clean_weapon(value: Any, warnings: list[str]) -> ExtractedWeapon | None:
     except ValidationError:
         warnings.append("Weapon damage or speed looked wrong — check it by hand.")
         return None
+
+
+def _tooltip_numbers(value: Any) -> set[float] | None:
+    """Every number on the item's own tooltip lines, or None when no lines were sent."""
+    if not isinstance(value, list):
+        return None
+    lines = [line for line in (_clean_str(v, _MAX_EFFECT_CHARS) for v in value[:_MAX_TOOLTIP_LINES]) if line]
+    if not lines:
+        return None
+    numbers: set[float] = set()
+    for line in lines:
+        if line.lower().startswith(_COMPARISON_STARTS):
+            break
+        numbers.update(float(n) for n in _NUMBER.findall(line))
+    return numbers
+
+
+def _grounded_stats(
+    stats: dict[str, float], numbers: set[float] | None, warnings: list[str]
+) -> dict[str, float]:
+    """Keep only stats whose number is printed on the tooltip."""
+    if numbers is None:
+        return stats
+    kept: dict[str, float] = {}
+    for key, value in stats.items():
+        if abs(value) in numbers:
+            kept[key] = value
+        else:
+            warnings.append(
+                f"Couldn't find {key} {value:g} on the tooltip, so it was left out"
+                " — add it by hand if it's there."
+            )
+    return kept

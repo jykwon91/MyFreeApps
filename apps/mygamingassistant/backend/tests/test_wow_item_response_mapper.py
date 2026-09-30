@@ -90,3 +90,44 @@ def test_non_tooltips_are_rejected(raw: dict) -> None:
 def test_item_with_nothing_readable_gets_a_warning() -> None:
     result = map_tool_input(_raw(stats={}, unparsed_effects=[]))
     assert any("No stats" in w for w in result.warnings)
+
+
+_BRACERS_LINES = [
+    "Buccaneer's Bracers of Magic",
+    "Soulbound",
+    "Wrist Cloth",
+    "14 Armor",
+    "Equip: Increases damage and healing done by magical spells and effects by up to 4.",
+    "Durability 20 / 20",
+    "Requires Level 14",
+    "If you replace this item, the following stat changes will occur:",
+    "+1 Armor",
+    "+2 Intellect",
+    "+2 Spirit",
+    "-4 Spell Power",
+]
+
+
+def test_stats_are_kept_when_their_number_is_on_the_tooltip() -> None:
+    result = map_tool_input(_raw(tooltip_lines=_BRACERS_LINES, stats={"spell_power": 4}))
+    assert result.item.stats == {"spell_power": 4.0}
+    assert result.warnings == []
+
+
+def test_a_misread_number_is_dropped_not_scored() -> None:
+    # The model's own transcription says "by up to 4" but its stats say 40.
+    result = map_tool_input(_raw(tooltip_lines=_BRACERS_LINES, stats={"spell_power": 40}))
+    assert result.item.stats == {}
+    assert any("spell_power 40" in w for w in result.warnings)
+
+
+def test_the_replace_this_item_comparison_is_not_this_items_stats() -> None:
+    result = map_tool_input(
+        _raw(tooltip_lines=_BRACERS_LINES, stats={"spell_power": 4, "intellect": 2, "spirit": 2})
+    )
+    assert result.item.stats == {"spell_power": 4.0}
+    assert len(result.warnings) == 2
+
+
+def test_without_transcribed_lines_stats_are_not_checked() -> None:
+    assert map_tool_input(_raw(tooltip_lines=[])).item.stats == {"attack_power": 20.0}
