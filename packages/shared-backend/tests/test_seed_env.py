@@ -292,6 +292,30 @@ class TestCheckMode:
         assert run(repo, "--check") == 0
 
 
+    def test_leftover_key_the_template_no_longer_declares_is_not_enforced(
+        self, repo: Path, capsys,
+    ):
+        # An app that opted out of Sentry drops SENTRY_DSN from its template,
+        # but a file seeded from the OLD template keeps a blank SENTRY_DSN=
+        # as a preserved leftover. Neither seed nor --check may demand it.
+        run(repo)
+        docker_example = repo / "apps" / "testapp" / "backend" / ".env.docker.example"
+        docker_example.write_text(
+            DOCKER_EXAMPLE.replace("SENTRY_DSN=\n", ""), encoding="utf-8")
+        docker_path = repo / "apps" / "testapp" / "backend" / ".env.docker"
+        filled = docker_path.read_text(encoding="utf-8")
+        for key in ("SMTP_USER", "SMTP_PASSWORD", "EMAIL_FROM_ADDRESS",
+                    "TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY"):
+            filled = filled.replace(f"{key}=", f"{key}=some-value", 1)
+        docker_path.write_text(filled, encoding="utf-8")
+        capsys.readouterr()
+
+        assert run(repo) == 0
+        assert "SENTRY_DSN" in read_env(docker_path)  # preserved, not deleted
+        assert "BLANK SENTRY_DSN" not in capsys.readouterr().out
+        assert run(repo, "--check") == 0
+
+
 class TestErrors:
     def test_unknown_app_exits_2(self, repo: Path, capsys):
         rc = seed_env._cli(["--app", "nosuchapp", "--repo-root", str(repo)])
