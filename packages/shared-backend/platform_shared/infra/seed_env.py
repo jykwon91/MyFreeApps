@@ -366,8 +366,11 @@ def seed_app(repo_root: Path, slug: str, *, domain: str | None = None,
             declared = _parse_env(example.read_text(encoding="utf-8"))
             current = _read_env_file(path)
             for key in enforced:
-                if key not in declared and key not in current:
-                    continue  # this app doesn't use the key
+                if key not in declared:
+                    # The template is the contract: a key the app no longer
+                    # declares (e.g. SENTRY_DSN after a _SENTRY_EXEMPT opt-out)
+                    # survives only as a preserved leftover line — never enforce it.
+                    continue
                 if _is_unset(current.get(key, "")):
                     problems.append(f"BLANK {key} in {path}")
         if problems:
@@ -418,9 +421,14 @@ def seed_app(repo_root: Path, slug: str, *, domain: str | None = None,
         else:
             print(f"copied {key} from {source_label}")
 
+    declared_keys = (
+        set(_parse_env(compose_example.read_text(encoding="utf-8")))
+        | set(_parse_env(docker_example.read_text(encoding="utf-8")))
+    )
     required_blanks, other_blanks = _blank_report(
         {**compose_final, **docker_final},
-        ("DB_PASSWORD", "SECRET_KEY", "ENCRYPTION_KEY", *REQUIRED_OPERATOR_KEYS),
+        tuple(k for k in ("DB_PASSWORD", "SECRET_KEY", "ENCRYPTION_KEY", *REQUIRED_OPERATOR_KEYS)
+              if k in declared_keys),
     )
 
     if required_blanks:
