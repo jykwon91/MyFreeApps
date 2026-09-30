@@ -2,7 +2,7 @@
 #    uv export --format requirements-txt --no-hashes --no-emit-project --output-file requirements.txt
 -e ../../../packages/shared-backend
     # via mylanguagetutor-backend
-alembic==1.19.2
+alembic==1.20.0
     # via mylanguagetutor-backend
 annotated-doc==0.0.5
     # via fastapi
@@ -107,9 +107,9 @@ pillow==12.3.0
     # via qrcode
 pluggy==1.6.0
     # via pytest
-psycopg2-binary==2.9.12
+psycopg2-binary==2.9.13
     # via mylanguagetutor-backend
-pwdlib==0.3.0
+pwdlib==0.3.1
     # via fastapi-users
 pycparser==3.0 ; implementation_name != 'PyPy'
     # via cffi
@@ -121,7 +121,7 @@ pydantic==2.13.5
     #   mylanguagetutor-backend
     #   platform-shared
     #   pydantic-settings
-pydantic-core==2.46.5
+pydantic-core==2.49.0
     # via pydantic
 pydantic-settings==2.15.0
     # via
@@ -129,7 +129,7 @@ pydantic-settings==2.15.0
     #   platform-shared
 pygments==2.21.0
     # via pytest
-pyjwt==2.14.0
+pyjwt==2.15.0
     # via
     #   fastapi-users
     #   mylanguagetutor-backend
@@ -156,11 +156,11 @@ qrcode==8.2
     # via
     #   mylanguagetutor-backend
     #   platform-shared
-sentry-sdk==2.69.1
+sentry-sdk==2.70.0
     # via
     #   mylanguagetutor-backend
     #   platform-shared
-sqlalchemy==2.0.52
+sqlalchemy==2.1.1
     # via
     #   alembic
     #   fastapi-users-db-sqlalchemy
@@ -189,7 +189,7 @@ urllib3==2.8.0
     # via
     #   minio
     #   sentry-sdk
-uvicorn==0.52.4
+uvicorn==0.54.0
     # via mylanguagetutor-backend
 uvloop==0.22.1 ; platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32'
     # via uvicorn
