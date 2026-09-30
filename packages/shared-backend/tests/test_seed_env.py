@@ -305,6 +305,105 @@ class TestErrors:
         assert "Missing template" in capsys.readouterr().err
 
 
+SOURCE_SECRETS = {
+    "SMTP_USER": "shared-mailbox@example.org",
+    "SMTP_PASSWORD": "abcd efgh ijkl mnop",
+    "EMAIL_FROM_ADDRESS": "noreply-shared@example.org",
+    "TURNSTILE_SECRET_KEY": "0x4AAAsharedsecretvalue",
+    "SECRET_KEY": "source-app-secret-key-must-never-move",
+}
+
+
+class TestCopyFrom:
+    @pytest.fixture()
+    def source(self, repo: Path) -> Path:
+        """An already-seeded sibling app 'otherapp'."""
+        path = repo / "apps" / "otherapp" / "backend" / ".env.docker"
+        path.parent.mkdir(parents=True)
+        path.write_text(
+            "".join(f"{k}={v}\n" for k, v in SOURCE_SECRETS.items()), encoding="utf-8")
+        return path
+
+    def _docker(self, repo: Path) -> dict[str, str]:
+        return read_env(repo / "apps" / "testapp" / "backend" / ".env.docker")
+
+    def test_copies_blank_keys(self, repo: Path, source: Path, capsys):
+        rc = run(repo, "--copy-from", "otherapp",
+                 "--copy-keys", "SMTP_USER,SMTP_PASSWORD,EMAIL_FROM_ADDRESS,TURNSTILE_SECRET_KEY")
+        assert rc == 1  # SENTRY_DSN / TURNSTILE_SITE_KEY still blank
+        docker = self._docker(repo)
+        for key in ("SMTP_USER", "SMTP_PASSWORD", "EMAIL_FROM_ADDRESS", "TURNSTILE_SECRET_KEY"):
+            assert docker[key] == SOURCE_SECRETS[key]
+        # per-app secret untouched: freshly generated, not the source's
+        assert docker["SECRET_KEY"] != SOURCE_SECRETS["SECRET_KEY"]
+        out = capsys.readouterr().out
+        assert "copied SMTP_PASSWORD from otherapp" in out
+
+    def test_existing_target_value_not_clobbered(self, repo: Path, source: Path, capsys):
+        docker_path = repo / "apps" / "testapp" / "backend" / ".env.docker"
+        docker_path.parent.mkdir(parents=True, exist_ok=True)
+        docker_path.write_text("SMTP_USER=own@example.org\n", encoding="utf-8")
+        run(repo, "--copy-from", "otherapp", "--copy-keys", "SMTP_USER")
+        assert self._docker(repo)["SMTP_USER"] == "own@example.org"
+        assert "skipped SMTP_USER (already set in target)" in capsys.readouterr().out
+
+    def test_override_wins_over_copy(self, repo: Path, source: Path, tmp_path: Path, capsys):
+        ov = tmp_path / "overrides.env"
+        ov.write_text("SMTP_PASSWORD=override-password\n", encoding="utf-8")
+        run(repo, "--overrides", str(ov), "--copy-from", "otherapp",
+            "--copy-keys", "SMTP_USER,SMTP_PASSWORD")
+        docker = self._docker(repo)
+        assert docker["SMTP_PASSWORD"] == "override-password"
+        assert docker["SMTP_USER"] == SOURCE_SECRETS["SMTP_USER"]
+        assert "skipped SMTP_PASSWORD (override wins)" in capsys.readouterr().out
+
+    @pytest.mark.parametrize("key", ["SECRET_KEY", "ENCRYPTION_KEY", "DB_PASSWORD",
+                                     "SENTRY_DSN", "ANTHROPIC_API_KEY"])
+    def test_rejects_non_allowlisted_key(self, repo: Path, source: Path, capsys, key: str):
+        rc = run(repo, "--copy-from", "otherapp", "--copy-keys", f"SMTP_USER,{key}")
+        assert rc == 2
+        assert "not copyable" in capsys.readouterr().err
+        # Nothing written on a rejected request
+        assert not (repo / "apps" / "testapp" / "backend" / ".env.docker").exists()
+
+    def test_missing_source_file_errors(self, repo: Path, capsys):
+        rc = run(repo, "--copy-from", "otherapp", "--copy-keys", "SMTP_USER")
+        assert rc == 2
+        assert "Copy source not found" in capsys.readouterr().err
+
+    def test_blank_source_key_errors(self, repo: Path, source: Path, capsys):
+        rc = run(repo, "--copy-from", "otherapp", "--copy-keys", "SEED_ADMIN_EMAIL")
+        assert rc == 2
+        assert "has no value for: SEED_ADMIN_EMAIL" in capsys.readouterr().err
+
+    def test_source_equals_target_rejected(self, repo: Path, capsys):
+        rc = run(repo, "--copy-from", "testapp", "--copy-keys", "SMTP_USER")
+        assert rc == 2
+        assert "different app" in capsys.readouterr().err
+
+    def test_copy_from_requires_copy_keys(self, repo: Path, source: Path, capsys):
+        rc = run(repo, "--copy-from", "otherapp")
+        assert rc == 2
+        assert "must be given together" in capsys.readouterr().err
+
+    def test_copy_from_rejected_with_check(self, repo: Path, source: Path, capsys):
+        rc = run(repo, "--check", "--copy-from", "otherapp", "--copy-keys", "SMTP_USER")
+        assert rc == 2
+        assert "--check" in capsys.readouterr().err
+
+    def test_never_prints_values(self, repo: Path, source: Path, tmp_path: Path, capsys):
+        ov = tmp_path / "overrides.env"
+        ov.write_text("SMTP_USER=override-user@example.org\n", encoding="utf-8")
+        run(repo, "--overrides", str(ov), "--copy-from", "otherapp",
+            "--copy-keys", "SMTP_USER,SMTP_PASSWORD,EMAIL_FROM_ADDRESS,TURNSTILE_SECRET_KEY")
+        # Error paths too: blank key + rejected key
+        run(repo, "--copy-from", "otherapp", "--copy-keys", "SMTP_USER,SEED_ADMIN_EMAIL")
+        captured = capsys.readouterr()
+        combined = captured.out + captured.err
+        for value in (*SOURCE_SECRETS.values(), "override-user@example.org"):
+            assert value not in combined
+
+
 class TestRealAppTemplates:
     """The seeder must work against every real app's checked-in templates."""
 
