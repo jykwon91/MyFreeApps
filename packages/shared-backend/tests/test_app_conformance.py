@@ -57,7 +57,11 @@ _APPS = [
 # - mygamingassistant: single-user casual app for the operator + a few
 #   friends. No error-monitoring need; also conserves the shared free
 #   Sentry quota (kept for the serious apps — MBK / MJH).
-_SENTRY_EXEMPT = {"mygamingassistant"}
+# - mylanguagetutor: operator opted out at launch (2026-09-30) — no
+#   error-monitoring need yet. Anthropic failures still log at WARNING/ERROR
+#   (platform_shared.extraction.anthropic_errors); re-enable by removing it
+#   here and restoring app/core/observability.py + main.py wiring.
+_SENTRY_EXEMPT = {"mygamingassistant", "mylanguagetutor"}
 
 
 def _read(*parts: str) -> str:

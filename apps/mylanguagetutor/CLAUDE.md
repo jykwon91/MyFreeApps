@@ -202,7 +202,8 @@ when set.
 
 Seed both in one shot on the VPS -- secrets are auto-generated, deploy values
 stamped, and the command prints a checklist of operator-external values
-(Sentry DSN, SMTP, Turnstile) to fill in. Re-run with `--check` to verify:
+(SMTP, Turnstile, seed admin) to fill in. No Sentry -- this app is in
+`_SENTRY_EXEMPT`. Re-run with `--check` to verify:
 
 ```bash
 cd /srv/myfreeapps
@@ -210,10 +211,11 @@ PYTHONPATH=packages/shared-backend python3 -m platform_shared.infra.seed_env --a
 ```
 
 No-SSH alternative: set the per-app repo secrets (slug uppercased +
-`_SENTRY_DSN`, `_SMTP_USER`, `_SMTP_PASSWORD`, `_EMAIL_FROM_ADDRESS`,
+`_ANTHROPIC_API_KEY`, `_SMTP_USER`, `_SMTP_PASSWORD`, `_EMAIL_FROM_ADDRESS`,
 `_TURNSTILE_SECRET_KEY`, `_MINIO_ACCESS_KEY`, `_MINIO_SECRET_KEY`,
 `_SEED_ADMIN_EMAIL` + `_SEED_ADMIN_PASSWORD_HASH`) via `gh secret set`,
-then dispatch the "Seed VPS env files" workflow:
+then dispatch the "Seed VPS env files" workflow. To reuse another app's
+mailbox / Turnstile / admin values, dispatch with `copy_from=myrecipes`:
 `gh workflow run seed-env.yml -f app=mylanguagetutor`.
 
 **Critical env vars:**

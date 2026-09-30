@@ -31,7 +31,6 @@ from app.api import account, admin, catalog, health, profile, sessions, totp, tu
 from app.core.audit import current_user_id
 from app.core.auth import auth_backend, fastapi_users
 from app.core.config import settings
-from app.core.observability import init_sentry
 from app.core.rate_limit import (
     check_account_not_locked,
     check_login_rate_limit,
@@ -71,7 +70,6 @@ def _check_tutor_configured() -> None:
 
 lifespan = create_app_lifespan(
     settings=settings,
-    init_sentry=init_sentry,
     bucket_init=ensure_bucket,
     # Boot-seeded platform admin (SEED_ADMIN_EMAIL + SEED_ADMIN_PASSWORD_HASH).
     # required=True: production refuses to boot while the vars are blank —
