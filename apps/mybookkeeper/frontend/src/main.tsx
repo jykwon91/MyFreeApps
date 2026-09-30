@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import posthog from "posthog-js";
 import { setupListeners } from "@reduxjs/toolkit/query";
+import { installStaleChunkRecovery } from "@platform/ui";
 import { store } from "@/shared/store";
 import App from "./App";
 import "./index.css";
@@ -55,6 +56,10 @@ if (import.meta.env.PROD) {
     });
   }
 }
+
+// A tab opened before a deploy can't load the new build's lazy chunks —
+// reload once onto the new build (guarded so it can never loop).
+installStaleChunkRecovery();
 
 // Activates baseApi's refetchOnFocus / refetchOnReconnect. Without this call
 // both options are inert and the app serves stale cache after a tab regains focus.

@@ -645,6 +645,136 @@ class TestEdgeHardeningDirectives:
         )
 
 
+def _caddy_block(caddyfile: str, opener: str) -> str:
+    """Return the body of the brace-delimited block that starts at ``opener``
+    (e.g. ``"handle /assets/* {"``), or ``""`` when the block is absent."""
+    start = caddyfile.find(opener)
+    if start == -1:
+        return ""
+    depth = 0
+    for i in range(start + len(opener) - 1, len(caddyfile)):
+        if caddyfile[i] == "{":
+            depth += 1
+        elif caddyfile[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return caddyfile[start + len(opener) : i]
+    raise AssertionError(f"unbalanced braces after {opener!r}")
+
+
+def _strip_caddy_comments(block: str) -> str:
+    return "\n".join(line.split("#", 1)[0] for line in block.splitlines())
+
+
+@pytest.mark.parametrize("app", _APPS)
+class TestStaleAssetHandling:
+    """Missing build assets must 404 — never fall back to the SPA index.html.
+
+    Regression: a tab opened before a deploy lazy-loaded a chunk the deploy had
+    removed (`/assets/WowProfessionsPage-BY91k5ug.js`). The SPA fallback's
+    `try_files {path} /index.html` answered it with `200 text/html`, and the
+    page died on React Router's "error loading dynamically imported module".
+    The drift test can't catch a regression here (every rendered file would
+    change together), so assert the shape explicitly.
+    """
+
+    def test_assets_have_their_own_handle_without_spa_fallback(self, app: str) -> None:
+        caddy = _read("apps", app, "docker", "Caddyfile.docker")
+        assets = _strip_caddy_comments(_caddy_block(caddy, "handle /assets/* {"))
+        assert assets, (
+            f"{app} docker Caddyfile has no `handle /assets/* {{ ... }}` block — "
+            f"missing hashed assets would fall through to the SPA index.html "
+            f"(200 text/html for a JS module). Restore it in "
+            f"infra/templates/Caddyfile.docker.j2 and re-render."
+        )
+        assert "try_files" not in assets and "index.html" not in assets, (
+            f"{app}: the /assets/* handle must not fall back to index.html — a "
+            f"missing chunk has to be a real 404."
+        )
+        assert "file_server" in assets, f"{app}: the /assets/* handle must serve files."
+
+    def test_missing_assets_are_not_cached(self, app: str) -> None:
+        assets = _strip_caddy_comments(
+            _caddy_block(_read("apps", app, "docker", "Caddyfile.docker"), "handle /assets/* {")
+        )
+        assert "@missing_asset not file" in assets, (
+            f"{app}: the /assets/* handle must match missing files (`@missing_asset not file`)."
+        )
+        assert 'header @missing_asset Cache-Control "no-store"' in assets, (
+            f"{app}: a missing-asset 404 must be `no-store` so no cache pins the miss."
+        )
+
+    def test_existing_assets_are_immutable(self, app: str) -> None:
+        assets = _strip_caddy_comments(
+            _caddy_block(_read("apps", app, "docker", "Caddyfile.docker"), "handle /assets/* {")
+        )
+        assert "@existing_asset file" in assets and (
+            'header @existing_asset Cache-Control "public, max-age=31536000, immutable"' in assets
+        ), (
+            f"{app}: existing hashed assets under /assets/ must be served "
+            f"`immutable` (and only existing ones — never a 404)."
+        )
+
+    def test_spa_fallback_is_never_cacheable(self, app: str) -> None:
+        caddy = _strip_caddy_comments(_read("apps", app, "docker", "Caddyfile.docker"))
+        assert "@spa_route not file" in caddy and (
+            'header @spa_route Cache-Control "no-cache, no-store, must-revalidate"' in caddy
+        ), (
+            f"{app}: deep links answered with index.html must be no-store, like `/` — "
+            f"otherwise browsers may heuristically cache an entry point that "
+            f"references a previous build's chunks."
+        )
+        assert "try_files {path} /index.html" in caddy, (
+            f"{app}: client-side routes must still fall back to index.html."
+        )
+
+
+# Data-router apps wrap their route table in the shared errorElement; MBK uses
+# <BrowserRouter>/<Routes> (no errorElement support), so its class error
+# boundaries render the shared NewVersionPrompt for chunk errors instead.
+_MBK_ERROR_BOUNDARIES = (
+    ("frontend", "src", "shared", "components", "ErrorBoundary.tsx"),
+    ("frontend", "src", "shared", "components", "PageErrorBoundary.tsx"),
+)
+
+
+class TestStaleChunkRecoveryWired:
+    """Every app frontend (and the scaffolder's template) must recover from a
+    failed lazy-chunk load after a deploy instead of showing a raw error page.
+    """
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_main_installs_stale_chunk_recovery(self, app: str) -> None:
+        main = _read("apps", app, "frontend", "src", "main.tsx")
+        assert "installStaleChunkRecovery()" in main, (
+            f"apps/{app}/frontend/src/main.tsx must call "
+            f"`installStaleChunkRecovery()` from @platform/ui so a stale tab "
+            f"reloads onto a new deploy when a lazy chunk fails."
+        )
+
+    @pytest.mark.parametrize("app", [a for a in _APPS if a != "mybookkeeper"])
+    def test_data_router_uses_shared_error_element(self, app: str) -> None:
+        app_tsx = _read("apps", app, "frontend", "src", "App.tsx")
+        assert "createBrowserRouter(withRouteErrorBoundary(routes))" in app_tsx, (
+            f"apps/{app}/frontend/src/App.tsx must build the router with "
+            f"`withRouteErrorBoundary(routes)` — without an errorElement React "
+            f"Router renders its default developer error screen."
+        )
+
+    @pytest.mark.parametrize("parts", _MBK_ERROR_BOUNDARIES)
+    def test_mbk_boundaries_handle_chunk_errors(self, parts: tuple[str, ...]) -> None:
+        src = _read("apps", "mybookkeeper", *parts)
+        assert "isChunkLoadError(" in src and "<NewVersionPrompt" in src, (
+            f"apps/mybookkeeper/{'/'.join(parts)} must render the shared "
+            f"NewVersionPrompt for chunk-load errors."
+        )
+
+    def test_scaffold_template_wires_recovery(self) -> None:
+        scaffold = ("infra", "templates", "scaffold", "frontend", "src")
+        assert "installStaleChunkRecovery()" in _read(*scaffold, "main.tsx")
+        assert "createBrowserRouter(withRouteErrorBoundary(routes))" in _read(*scaffold, "App.tsx")
+
+
 class TestContainerResourceLimits:
     """Every app's compose must cap per-container memory, CPU, and PIDs.
 

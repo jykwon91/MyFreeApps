@@ -67,6 +67,16 @@ export { installStepUpInterceptor } from "./auth/stepUpInterceptor";
 export { StepUpCancelledError } from "./auth/errors/StepUpCancelledError";
 export { StepUpReauthRequiredError } from "./auth/errors/StepUpReauthRequiredError";
 
+// Stale-chunk recovery after a deploy (vite:preloadError reload-once + router errorElement)
+export {
+  installStaleChunkRecovery,
+  isChunkLoadError,
+  reloadOnceForStaleChunk,
+} from "./lib/stale-chunk";
+export { default as NewVersionPrompt } from "./components/errors/NewVersionPrompt";
+export { default as RouteErrorFallback } from "./components/errors/RouteErrorFallback";
+export { withRouteErrorBoundary } from "./components/errors/withRouteErrorBoundary";
+
 // Data components
 export { default as DataTable } from "./components/data/DataTable";
 export type { DataTableProps, ColumnDef, SortingState, PaginationState } from "./components/data/DataTable";
