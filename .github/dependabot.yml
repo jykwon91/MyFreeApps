@@ -18,6 +18,14 @@ updates:
       # this block. See project_dependabot_autorelock_and_fastapi_hold.
       - dependency-name: "fastapi"
         versions: [">=0.137"]
+      # sqlalchemy held < 2.1: fastapi-users[sqlalchemy]==15.0.5 (via
+      # fastapi-users-db-sqlalchemy 7.0.0, which caps sqlalchemy < 2.1) cannot
+      # resolve against 2.1.x, so the bump is unsatisfiable and leaves
+      # backend-deps-resolve red (#1299 broke main this way). Every app pins
+      # fastapi-users, so every app carries this hold; drop it everywhere once
+      # fastapi-users-db-sqlalchemy supports 2.1.
+      - dependency-name: "sqlalchemy"
+        versions: [">=2.1"]
 
   - package-ecosystem: "pip"
     directory: "/packages/shared-backend"
@@ -87,6 +95,14 @@ updates:
       # block. See project_dependabot_autorelock_and_fastapi_hold.
       - dependency-name: "fastapi"
         versions: [">=0.137"]
+      # sqlalchemy held < 2.1: fastapi-users[sqlalchemy]==15.0.5 (via
+      # fastapi-users-db-sqlalchemy 7.0.0, which caps sqlalchemy < 2.1) cannot
+      # resolve against 2.1.x, so the bump is unsatisfiable and leaves
+      # backend-deps-resolve red (#1299 broke main this way). Every app pins
+      # fastapi-users, so every app carries this hold; drop it everywhere once
+      # fastapi-users-db-sqlalchemy supports 2.1.
+      - dependency-name: "sqlalchemy"
+        versions: [">=2.1"]
 
   - package-ecosystem: "npm"
     directory: "/apps/mybookkeeper/frontend"
@@ -176,6 +192,15 @@ updates:
     groups:
       python-minor-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # sqlalchemy held < 2.1: fastapi-users[sqlalchemy]==15.0.5 (via
+      # fastapi-users-db-sqlalchemy 7.0.0, which caps sqlalchemy < 2.1) cannot
+      # resolve against 2.1.x, so the bump is unsatisfiable and leaves
+      # backend-deps-resolve red (#1299 broke main this way). Every app pins
+      # fastapi-users, so every app carries this hold; drop it everywhere once
+      # fastapi-users-db-sqlalchemy supports 2.1.
+      - dependency-name: "sqlalchemy"
+        versions: [">=2.1"]
 
   - package-ecosystem: "npm"
     directory: "/apps/mygamingassistant/frontend"
@@ -212,6 +237,15 @@ updates:
     groups:
       python-minor-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # sqlalchemy held < 2.1: fastapi-users[sqlalchemy]==15.0.5 (via
+      # fastapi-users-db-sqlalchemy 7.0.0, which caps sqlalchemy < 2.1) cannot
+      # resolve against 2.1.x, so the bump is unsatisfiable and leaves
+      # backend-deps-resolve red (#1299 broke main this way). Every app pins
+      # fastapi-users, so every app carries this hold; drop it everywhere once
+      # fastapi-users-db-sqlalchemy supports 2.1.
+      - dependency-name: "sqlalchemy"
+        versions: [">=2.1"]
 
   - package-ecosystem: "npm"
     directory: "/apps/mypizzatracker/frontend"
@@ -246,6 +280,15 @@ updates:
     groups:
       python-minor-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # sqlalchemy held < 2.1: fastapi-users[sqlalchemy]==15.0.5 (via
+      # fastapi-users-db-sqlalchemy 7.0.0, which caps sqlalchemy < 2.1) cannot
+      # resolve against 2.1.x, so the bump is unsatisfiable and leaves
+      # backend-deps-resolve red (#1299 broke main this way). Every app pins
+      # fastapi-users, so every app carries this hold; drop it everywhere once
+      # fastapi-users-db-sqlalchemy supports 2.1.
+      - dependency-name: "sqlalchemy"
+        versions: [">=2.1"]
 
   - package-ecosystem: "npm"
     directory: "/apps/mylanguagetutor/frontend"

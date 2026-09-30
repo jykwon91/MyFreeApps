@@ -18,7 +18,13 @@ name: Dependabot Lock Sync
 #   runs only see Dependabot secrets. A push by the default GITHUB_TOKEN would not
 #   re-trigger the required checks, which is why a PAT is needed.
 #   Until the secret exists, this workflow no-ops (green, with a warning) and PRs
-#   continue to need a manual relock — it never blocks existing CI.
+#   continue to need a manual relock.
+#
+#   The PAT EXPIRES (fine-grained PATs carry an expiry). A set-but-expired token
+#   fails this job with an explicit "rejected by the GitHub API (HTTP 401)" error
+#   — rotate the PAT and update the Dependabot secret. A failed relock is never
+#   merged over: dependabot-auto-merge.yml only approves a head commit on which
+#   every workflow, this one included, finished green.
 #
 # Security: gated to the first-party dependabot[bot] actor. `uv lock` resolves the
 # PR's pyproject (which can build sdists). The dependency set is your own
@@ -52,17 +58,33 @@ jobs:
     # gate and skips — that is what prevents an infinite relock loop.
     if: ${{ github.actor == 'dependabot[bot]' }}
     steps:
-      - name: Check relock token is configured
+      - name: Check relock token is configured and valid
         id: guard
         env:
           RELOCK_TOKEN: ${{ secrets.DEPENDABOT_RELOCK_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
-          if [ -n "$RELOCK_TOKEN" ]; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          else
+          set -euo pipefail
+          if [ -z "$RELOCK_TOKEN" ]; then
             echo "::warning::DEPENDABOT_RELOCK_TOKEN (Dependabot secret) is not set; skipping auto-relock. See workflow header for setup."
             echo "enabled=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          # A set-but-dead token otherwise surfaces only as checkout's cryptic
+          # "could not read Username ... terminal prompts disabled" (git's reaction
+          # to a rejected credential). That is exactly how the PAT's expiry hid
+          # on 2026-09-30. Probe the API with it and fail with the real reason.
+          BODY="$(mktemp)"
+          STATUS="$(curl -sS -o "$BODY" -w '%{http_code}' \
+            -H "Authorization: Bearer $RELOCK_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO")"
+          if [ "$STATUS" != "200" ]; then
+            MESSAGE="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("message", "?"))' "$BODY" 2>/dev/null || echo "?")"
+            echo "::error::DEPENDABOT_RELOCK_TOKEN was rejected by the GitHub API (HTTP $STATUS: $MESSAGE). 401 = expired or revoked; 403/404 = missing repo access. Regenerate the fine-grained PAT (Contents + Pull requests: Read and write, this repo only) and update the *Dependabot* secret — see the workflow header."
+            exit 1
+          fi
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
 
       - name: Checkout PR head
         if: steps.guard.outputs.enabled == 'true'
