@@ -1,32 +1,58 @@
 name: Dependabot auto-merge
 
-# Auto-merges Dependabot PRs once required checks pass — EXCEPT major bumps,
-# which are labelled and held for manual review. Effect: patch / minor / security
-# updates flow through invisibly; only a breaking-change major ever needs your
-# attention.
+# Auto-merges Dependabot PRs once EVERYTHING on the head commit is green — EXCEPT
+# major bumps, which are labelled and held for manual review. Effect: patch /
+# minor / security updates flow through invisibly; only a breaking-change major
+# ever needs your attention.
 #
-# The job approves the PR (github-actions[bot]) and enables `gh pr merge --auto`,
-# which GitHub performs server-side after checks go green. The approval is
-# required: main enforces 1 review + last-push approval, and Dependabot cannot
-# approve its own PR, so without it auto-merge would enable then block forever.
+# The job waits until every workflow run on the PR's head commit has finished
+# green, then approves that exact commit (github-actions[bot]) and enables
+# `gh pr merge --auto` pinned to it. GitHub performs the merge server-side.
+#
+# Why wait here instead of trusting GitHub's native auto-merge: native auto-merge
+# waits only for the branch-protection REQUIRED contexts, and those cannot cover
+# the path-filtered app workflows (myrecipes / mygamingassistant / mypizzatracker
+# / mylanguagetutor) — a path-filtered workflow never reports on unrelated PRs,
+# so requiring it would block every other PR forever. #1299 and #1308 were merged
+# with `backend-deps-resolve` AND `Dependabot Lock Sync` both red because of this
+# gap, breaking main. Approving only after the whole head commit is green closes
+# it for every app, including future ones, with no per-app required-context list.
+#
+# Why that is sufficient: main enforces 1 approving review + dismiss_stale_reviews
+# + require_last_push_approval, and Dependabot cannot approve its own PR. The
+# approval below is bound to the verified commit (commit_id), and any later push
+# dismisses it, so GitHub cannot merge a commit this job has not verified. Any
+# auto-merge left enabled from an earlier commit is revoked first, belt-and-braces.
+#
 # Because GitHub (not this token) does the actual merge, this also lands
 # github-actions PRs that edit workflow files — which an OAuth/PAT token cannot
 # merge without the `workflow` scope.
 #
 # Security: pull_request_target runs in base context with a write token, but this
 # job NEVER checks out or executes PR code — it only reads Dependabot metadata and
-# calls the gh API. Gated to the first-party dependabot[bot] actor.
+# calls the gh API. Gated to first-party dependabot[bot] PRs.
 
 on: pull_request_target
 
 permissions:
   contents: write
   pull-requests: write
+  # Read the workflow runs on the head commit (the green gate below).
+  actions: read
+
+# One gate per PR. A new push (Dependabot rebase, relock commit) supersedes the
+# in-flight wait for the old commit, which could never be merged anyway.
+concurrency:
+  group: dependabot-auto-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   auto-merge:
     name: auto-merge
     runs-on: ubuntu-latest
+    # Bounded by the slowest CI a Dependabot PR can trigger (sharded backend
+    # tests + the Playwright layout e2e), with headroom for runner queueing.
+    timeout-minutes: 90
     # Gate on the PR AUTHOR, not github.actor. When the relock workflow pushes
     # its lockfile-sync commit, the resulting `synchronize` event carries
     # github.actor = the PAT owner, so an actor gate SKIPS the run entirely —
@@ -80,25 +106,91 @@ jobs:
           gh pr comment "$PR_URL" --body \
             "🚧 Major version bump — held for manual review, not auto-merged. Merge deliberately once you've assessed the breaking changes."
 
-      - name: Approve patch / minor / security
+      - name: Revoke auto-merge enabled for an earlier commit
         if: ${{ steps.meta.outputs.update-type != 'version-update:semver-major' && steps.authors.outputs.safe == 'true' }}
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # main requires 1 approving review and Dependabot can't approve its own
-          # PR, so `--auto` below would enable then block forever without this.
-          # The github-actions[bot] approval satisfies the rule — it is neither the
-          # PR author (dependabot[bot]) nor the last pusher, so require_last_push_approval
-          # is met. Re-runs on each synchronize, re-approving after a relock push trips
-          # dismiss_stale_reviews — which only actually works now that the job gates on
-          # the PR author rather than github.actor (see the job-level `if:` above).
-          # Gated to non-major (majors are held above) and to bot-only authorship.
-          gh pr review --approve "$PR_URL" || true
+          set -euo pipefail
+          # Auto-merge survives pushes. Without this, an enablement granted for a
+          # previous (verified) commit would carry over to this unverified one.
+          if [ "$(gh pr view "$PR_URL" --json autoMergeRequest --jq '.autoMergeRequest != null')" = "true" ]; then
+            gh pr merge --disable-auto "$PR_URL"
+            echo "Revoked auto-merge from an earlier commit; it is re-enabled below only if this commit goes green."
+          fi
 
-      - name: Enable auto-merge for patch / minor / security
+      - name: Wait for every workflow on this commit to finish green
+        if: ${{ steps.meta.outputs.update-type != 'version-update:semver-major' && steps.authors.outputs.safe == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          # Every workflow triggered by this push is created (queued) when the
+          # event is dispatched; the settle delay covers dispatch skew so a
+          # just-created run is never missed.
+          sleep 60
+          SELF_WORKFLOW_ID="$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq '.workflow_id')"
+          # Latest run per workflow on the head commit, excluding this workflow.
+          # Older runs of the same workflow were superseded (concurrency cancels
+          # them), so only the newest one decides. Emits one line per workflow:
+          # name<TAB>status<TAB>conclusion. The first line is the total count.
+          FILTER='.total_count, ([.workflow_runs[] | select(.workflow_id != '"$SELF_WORKFLOW_ID"')] | group_by(.workflow_id) | map(max_by(.id)) | .[] | [.name, .status, (.conclusion // "")] | @tsv)'
+          while :; do
+            RESP="$(gh api "repos/$REPO/actions/runs?head_sha=$HEAD_SHA&per_page=100" --jq "$FILTER")"
+            TOTAL="$(printf '%s\n' "$RESP" | head -n 1)"
+            ROWS="$(printf '%s\n' "$RESP" | tail -n +2)"
+            if [ "$TOTAL" -gt 100 ]; then
+              echo "::error::More than 100 workflow runs on $HEAD_SHA; this gate reads one page. Refusing to approve on a partial view."
+              exit 1
+            fi
+            if [ -z "$ROWS" ]; then
+              echo "::error::No other workflow ran on $HEAD_SHA, so nothing verified it. Not approving."
+              exit 1
+            fi
+            FAILED="$(printf '%s\n' "$ROWS" | awk -F'\t' '$2 == "completed" && $3 != "success" && $3 != "skipped" && $3 != "neutral"')"
+            if [ -n "$FAILED" ]; then
+              echo "::error::Not auto-merging: workflow(s) on $HEAD_SHA did not pass (name / status / conclusion):"
+              printf '%s\n' "$FAILED"
+              exit 1
+            fi
+            PENDING="$(printf '%s\n' "$ROWS" | awk -F'\t' '$2 != "completed"')"
+            if [ -z "$PENDING" ]; then
+              echo "Every workflow on $HEAD_SHA passed:"
+              printf '%s\n' "$ROWS"
+              exit 0
+            fi
+            echo "Waiting on: $(printf '%s\n' "$PENDING" | cut -f1 | paste -sd, -)"
+            sleep 30
+          done
+
+      - name: Approve the verified commit
+        if: ${{ steps.meta.outputs.update-type != 'version-update:semver-major' && steps.authors.outputs.safe == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          # main requires 1 approving review and Dependabot can't approve its own
+          # PR. github-actions[bot] is neither the author nor the last pusher, so
+          # require_last_push_approval is met. The approval is bound to the
+          # commit verified above (commit_id): if the branch moved meanwhile it is
+          # stale, dismiss_stale_reviews discards it, and the run for the new
+          # commit decides. Errors deliberately propagate: a swallowed failure on
+          # this step once hid a repo-settings block for months.
+          gh api -X POST "repos/$REPO/pulls/$PR_NUMBER/reviews" \
+            -f commit_id="$HEAD_SHA" -f event=APPROVE --silent
+
+      - name: Enable auto-merge for the verified commit
         if: ${{ steps.meta.outputs.update-type != 'version-update:semver-major' && steps.authors.outputs.safe == 'true' }}
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh pr merge --auto --squash "$PR_URL"
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        # --match-head-commit: refuse if the branch moved since verification.
+        run: gh pr merge --auto --squash --match-head-commit "$HEAD_SHA" "$PR_URL"

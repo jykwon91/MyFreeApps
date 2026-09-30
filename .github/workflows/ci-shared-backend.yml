@@ -44,6 +44,13 @@ jobs:
         with:
           python-version: '3.12'
 
+      # tests/test_dependency_lock_chain.py runs `uv lock --check` for EVERY
+      # backend. This required, never-path-filtered job is the only place that
+      # check can block a merge — the per-app `backend-deps-resolve` jobs are
+      # path-filtered and so cannot be required (#1299 / #1308 broke main).
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+
       - name: Install shared-backend with dev extras
         working-directory: packages/shared-backend
         run: |
