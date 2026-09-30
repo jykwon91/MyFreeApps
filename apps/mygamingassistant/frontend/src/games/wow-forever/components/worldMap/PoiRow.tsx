@@ -1,13 +1,11 @@
 import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
 import clsx from "clsx";
 import { Badge } from "@platform/ui";
-import { ChevronDown, MapPin, X } from "lucide-react";
-import DirectionsPanel from "@/games/wow-forever/components/worldMap/DirectionsPanel";
+import { ChevronDown, MapPin, Route, X } from "lucide-react";
 import ProvenanceBadge from "@/games/wow-forever/components/worldMap/ProvenanceBadge";
 import WaypointButtons from "@/games/wow-forever/components/worldMap/WaypointButtons";
 import { FACTION, POI_KIND, type PlayerFaction, type WorldMapData } from "@/games/wow-forever/types/worldMap";
 import { areaLabel, distanceLabel, poiWaypoint } from "@/games/wow-forever/worldMap/describeRank";
-import type { Directions } from "@/games/wow-forever/worldMap/directions";
 import { formatCoord } from "@/games/wow-forever/worldMap/geometry";
 import type { RankedPoi } from "@/games/wow-forever/worldMap/nearest";
 
@@ -20,19 +18,19 @@ interface PoiRowProps {
   selected: boolean;
   /** Show this result on the map (click or Enter on the row), or clear it when it's the selected one. */
   onToggle: (poiId: string) => void;
-  /** Directions for the selected row. */
-  directions: Directions | null | undefined;
+  /** Open the route planner with this result as the destination. */
+  onDirections: (poiId: string) => void;
   /** Layer-specific detail under the location line (quests offered, dungeon level). */
   children?: ReactNode;
 }
 
-/** Controls inside the row keep their own clicks (directions toggle, copy buttons). */
+/** Controls inside the row keep their own clicks (map toggle, directions, copy buttons). */
 const OWN_CONTROLS = "button, a, input, select, textarea, [role='button']";
 
 export default function PoiRow(props: PoiRowProps) {
-  const { ranked, data, faction, heading, selected, onToggle, directions, children } = props;
+  const { ranked, data, faction, heading, selected, onToggle, onDirections, children } = props;
   const { poi, zone } = ranked;
-  const panelId = `wm-directions-${poi.id}`;
+  const panelId = `wm-row-map-${poi.id}`;
 
   function rowClick(e: MouseEvent<HTMLElement>) {
     if (e.target instanceof Element && e.target.closest(OWN_CONTROLS)) return;
@@ -110,19 +108,25 @@ export default function PoiRow(props: PoiRowProps) {
             !selected && "hover:bg-muted/40",
           )}
         >
-          Directions &amp; map
+          Show on map
           <ChevronDown className={clsx("h-4 w-4 transition-transform", selected && "rotate-180")} aria-hidden />
+        </button>
+        <button
+          type="button"
+          onClick={() => onDirections(poi.id)}
+          aria-label={`Directions to ${poi.name}`}
+          className="inline-flex items-center gap-1.5 rounded-md border px-3 text-sm min-h-[44px] sm:min-h-[32px] hover:bg-muted/40"
+        >
+          <Route className="h-4 w-4" aria-hidden />
+          Directions
         </button>
       </div>
       {selected && (
-        <div id={panelId} className="border-t pt-3 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted-foreground">
-              Map {formatCoord(poi.x)}, {formatCoord(poi.y)}
-            </span>
-            <WaypointButtons target={poiWaypoint(ranked)} />
-          </div>
-          {directions !== undefined && <DirectionsPanel directions={directions} />}
+        <div id={panelId} className="flex flex-wrap items-center gap-2 border-t pt-3">
+          <span className="text-sm text-muted-foreground">
+            Map {formatCoord(poi.x)}, {formatCoord(poi.y)}
+          </span>
+          <WaypointButtons target={poiWaypoint(ranked)} />
         </div>
       )}
     </article>

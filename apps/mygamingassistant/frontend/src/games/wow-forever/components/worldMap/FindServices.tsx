@@ -6,7 +6,6 @@ import type { WowClassId } from "@/games/wow-forever/data/classes";
 import { SERVICE_KIND } from "@/games/wow-forever/data/worldMap/serviceKinds";
 import type { PlayerFaction, WorldMapData } from "@/games/wow-forever/types/worldMap";
 import { GROUP_HEADING } from "@/games/wow-forever/worldMap/describeRank";
-import type { Directions } from "@/games/wow-forever/worldMap/directions";
 import { NEAR_GROUP, type RankedPoi } from "@/games/wow-forever/worldMap/nearest";
 import { findFilterGroups, type ServiceFilter } from "@/games/wow-forever/worldMap/serviceFilters";
 
@@ -29,12 +28,12 @@ interface FindServicesProps {
   results: readonly RankedPoi[];
   selectedPoiId: string | null;
   onToggle: (poiId: string) => void;
-  directions: Directions | null | undefined;
+  onDirections: (poiId: string) => void;
 }
 
 /** Pick any service type and list every one, nearest first, in the three distance groups. */
 export default function FindServices(props: FindServicesProps) {
-  const { data, faction, classId, filter, results, selectedPoiId, onToggle, directions } = props;
+  const { data, faction, classId, filter, results, selectedPoiId, onToggle, onDirections } = props;
   const [limit, setLimit] = useState(PAGE_SIZE);
   const shown = results.slice(0, limit);
 
@@ -113,7 +112,7 @@ export default function FindServices(props: FindServicesProps) {
               faction={faction}
               selected={ranked.poi.id === selectedPoiId}
               onToggle={onToggle}
-              directions={directions}
+              onDirections={onDirections}
             />
           </div>
         ))}

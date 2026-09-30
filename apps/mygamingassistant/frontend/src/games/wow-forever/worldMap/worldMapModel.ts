@@ -5,8 +5,7 @@
 import type { WowClassId } from "@/games/wow-forever/data/classes";
 import type { PlayerFaction, QuestInfo, WorldMapData, WorldZone } from "@/games/wow-forever/types/worldMap";
 import { questsFor } from "@/games/wow-forever/worldMap/levels";
-import { poiRouteEnd } from "@/games/wow-forever/worldMap/describeRank";
-import { planDirections, type Directions, type RouteEnd } from "@/games/wow-forever/worldMap/directions";
+import type { RouteEnd } from "@/games/wow-forever/worldMap/directions";
 import { zoneToWorld } from "@/games/wow-forever/worldMap/geometry";
 import { rankPois, usableBy, type PlayerLocation, type RankedPoi } from "@/games/wow-forever/worldMap/nearest";
 import { findFilter, heroFilters, type ServiceFilter } from "@/games/wow-forever/worldMap/serviceFilters";
@@ -48,8 +47,6 @@ export interface WorldMapModel {
   /** Every dungeon and raid entrance, nearest first. */
   instances: RankedPoi[];
   selected: RankedPoi | null;
-  /** null = no known route; undefined = nothing selected. */
-  directions: Directions | null | undefined;
 }
 
 /** null until the player has picked a zone that exists in the data. */
@@ -90,8 +87,6 @@ export function buildWorldMapModel(data: WorldMapData, choices: WorldMapChoices)
 
   const selectedPoi = choices.selectedPoiId ? data.poiById.get(choices.selectedPoiId) : undefined;
   const selected = selectedPoi ? (rankPois([selectedPoi], player, data)[0] ?? null) : null;
-  let directions: Directions | null | undefined;
-  if (selected) directions = planDirections(playerEnd, poiRouteEnd(selected), choices.faction, data);
 
   return {
     zone,
@@ -104,6 +99,5 @@ export function buildWorldMapModel(data: WorldMapData, choices: WorldMapChoices)
     questGivers,
     instances,
     selected,
-    directions,
   };
 }

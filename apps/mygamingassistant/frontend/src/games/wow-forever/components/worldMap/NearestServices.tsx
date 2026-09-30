@@ -1,6 +1,5 @@
 import PoiRow from "@/games/wow-forever/components/worldMap/PoiRow";
 import type { PlayerFaction, WorldMapData } from "@/games/wow-forever/types/worldMap";
-import type { Directions } from "@/games/wow-forever/worldMap/directions";
 import type { HeroRow } from "@/games/wow-forever/worldMap/worldMapModel";
 
 interface NearestServicesProps {
@@ -9,12 +8,12 @@ interface NearestServicesProps {
   faction: PlayerFaction;
   selectedPoiId: string | null;
   onToggle: (poiId: string) => void;
-  directions: Directions | null | undefined;
+  onDirections: (poiId: string) => void;
 }
 
 /** The hero list: the closest of each everyday service, your class trainer first. */
 export default function NearestServices(props: NearestServicesProps) {
-  const { rows, data, faction, selectedPoiId, onToggle, directions } = props;
+  const { rows, data, faction, selectedPoiId, onToggle, onDirections } = props;
   return (
     <section aria-labelledby="wm-nearest" className="space-y-3">
       <h2 id="wm-nearest" className="text-lg font-semibold">
@@ -38,7 +37,7 @@ export default function NearestServices(props: NearestServicesProps) {
               faction={faction}
               selected={best.poi.id === selectedPoiId}
               onToggle={onToggle}
-              directions={directions}
+              onDirections={onDirections}
             />
           );
         })}

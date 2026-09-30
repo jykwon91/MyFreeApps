@@ -31,6 +31,8 @@ interface SearchComboboxProps {
   /** A button next to the box (e.g. "Set"). */
   action?: ReactNode;
   icon?: ReactNode;
+  /** Focusing the box selects its text, so typing replaces a chosen value. */
+  selectOnFocus?: boolean;
 }
 
 /**
@@ -108,7 +110,10 @@ export default function SearchCombobox(props: SearchComboboxProps) {
               setOpen(true);
               setActive(-1);
             }}
-            onFocus={() => setOpen(true)}
+            onFocus={(e) => {
+              setOpen(true);
+              if (props.selectOnFocus) e.target.select();
+            }}
             onBlur={() => setOpen(false)}
             onKeyDown={keyDown}
             className={clsx(

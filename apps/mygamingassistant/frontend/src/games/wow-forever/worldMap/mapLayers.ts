@@ -1,5 +1,6 @@
 import type { WorldMapData, WorldPoint } from "@/games/wow-forever/types/worldMap";
 import { zoneToWorld } from "@/games/wow-forever/worldMap/geometry";
+import type { Directions, StepKind } from "@/games/wow-forever/worldMap/directions";
 import type { RankedPoi } from "@/games/wow-forever/worldMap/nearest";
 import { poiMarkerClass, poiMarkerLabel } from "@/games/wow-forever/worldMap/poiDisplay";
 import type { WorldMapModel } from "@/games/wow-forever/worldMap/worldMapModel";
@@ -18,17 +19,32 @@ export interface MapMarker {
   className: string;
 }
 
-/** A numbered direction step drawn on the map. */
+/** A numbered direction step drawn on the map, reached by `kind` (walk / fly / boat / zeppelin). */
 export interface MapStop {
   world: WorldPoint;
   number: number;
   label: string;
+  kind: StepKind;
 }
 
-/** The chosen result, drawn on every map level so a route reads as one picture. */
+/** A named spot drawn on every map level: the trip's start (A) and destination (B). */
 export interface MapDestination {
   world: WorldPoint;
   label: string;
+}
+
+/** The trip on the map: B alone while choosing, then A -> numbered stops -> B once directions are open. */
+export interface MapRoute {
+  origin: MapDestination | null;
+  destination: MapDestination;
+  stops: readonly MapStop[];
+}
+
+/** "Fit the map to these": once `mapId` is on screen, zoom so every point shows (one point: zoom in on it; none: whole map). */
+export interface MapFit {
+  mapId: number;
+  points: readonly WorldPoint[];
+  nonce: number;
 }
 
 /**
@@ -60,12 +76,12 @@ export function resultMarkers(model: WorldMapModel, layers: MapLayerChoice): Map
 }
 
 /** Numbered direction stops, placed in the world so any map can draw them. */
-export function directionStops(model: WorldMapModel, data: WorldMapData): MapStop[] {
-  if (!model.directions) return [];
-  return model.directions.steps.flatMap((step, i) => {
+export function directionStops(directions: Directions | null, data: WorldMapData): MapStop[] {
+  if (!directions) return [];
+  return directions.steps.flatMap((step, i) => {
     const zone = data.zoneById.get(step.place.zoneId);
     if (!zone) return [];
-    return [{ number: i + 1, label: step.place.label, world: zoneToWorld(zone, step.place.x, step.place.y) }];
+    return [{ number: i + 1, label: step.place.label, kind: step.kind, world: zoneToWorld(zone, step.place.x, step.place.y) }];
   });
 }
 

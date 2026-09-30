@@ -3,7 +3,6 @@ import PoiRow from "@/games/wow-forever/components/worldMap/PoiRow";
 import QuestList from "@/games/wow-forever/components/worldMap/QuestList";
 import type { PlayerFaction, WorldMapData } from "@/games/wow-forever/types/worldMap";
 import { GROUP_HEADING } from "@/games/wow-forever/worldMap/describeRank";
-import type { Directions } from "@/games/wow-forever/worldMap/directions";
 import { QUEST_LOOKAHEAD_LEVELS } from "@/games/wow-forever/worldMap/levels";
 import type { RankedQuestGiver } from "@/games/wow-forever/worldMap/worldMapModel";
 
@@ -16,12 +15,12 @@ interface QuestGiversProps {
   givers: readonly RankedQuestGiver[];
   selectedPoiId: string | null;
   onToggle: (poiId: string) => void;
-  directions: Directions | null | undefined;
+  onDirections: (poiId: string) => void;
 }
 
 /** Nearest quest givers with a quest you could take. */
 export default function QuestGivers(props: QuestGiversProps) {
-  const { data, faction, level, givers, selectedPoiId, onToggle, directions } = props;
+  const { data, faction, level, givers, selectedPoiId, onToggle, onDirections } = props;
   const [limit, setLimit] = useState(PAGE_SIZE);
   const shown = givers.slice(0, limit);
 
@@ -49,7 +48,7 @@ export default function QuestGivers(props: QuestGiversProps) {
               heading="Quest giver"
               selected={ranked.poi.id === selectedPoiId}
               onToggle={onToggle}
-              directions={directions}
+              onDirections={onDirections}
             >
               <QuestList giverName={ranked.poi.name} quests={quests} level={level} />
             </PoiRow>

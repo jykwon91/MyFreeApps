@@ -1,5 +1,5 @@
 /**
- * WoW Forever World Map — find an NPC or place, and say where you are in words.
+ * WoW Forever World Map — search a destination, get directions from anywhere, and say where you are in words.
  *
  * Run: npm run test:e2e -- wow-world-map-search
  */
@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate(() => window.localStorage.clear());
 });
 
-test("search an NPC by name and get directions to them", async ({ page }) => {
+test("search an NPC by name and get directions to them from your location", async ({ page }) => {
   await page.goto("/wow-forever/map");
   await page.getByRole("combobox", { name: "Where are you?" }).fill("Goldshire");
   await page.getByRole("button", { name: "Set", exact: true }).click();
@@ -20,11 +20,39 @@ test("search an NPC by name and get directions to them", async ({ page }) => {
   await search.fill("ryback");
   await page.getByRole("option", { name: /Stephen Ryback/ }).click();
 
-  const card = page.getByRole("region", { name: "Going to" });
-  await expect(card.getByRole("heading", { name: "Stephen Ryback" })).toBeVisible();
-  await expect(card.getByRole("list", { name: "Directions" })).toContainText("(78.2, 53.1)");
-  // The map opened Stormwind City with the marker chosen.
+  const card = page.getByRole("article", { name: "Stephen Ryback" });
+  await expect(card).toContainText("78.2, 53.1");
+  // The map opened Stormwind City on the destination.
   await expect(page.getByRole("img", { name: "Stormwind City map" })).toBeVisible();
+
+  await card.getByRole("button", { name: "Directions" }).click();
+  const planner = page.getByRole("region", { name: "Route planner" });
+  await expect(planner.getByLabel("From")).toHaveValue("Your location");
+  await expect(planner.getByRole("list", { name: "Directions" })).toContainText("(78.2, 53.1)");
+  await expect(page.getByLabel("Start: Your location")).toBeVisible();
+  await expect(page.getByLabel("Destination: Stephen Ryback")).toBeVisible();
+});
+
+test("directions from a typed starting point, without a saved location", async ({ page }) => {
+  await page.goto("/wow-forever/map");
+  const search = page.getByRole("combobox", { name: "Find an NPC or place" });
+  await search.fill("ryback");
+  await search.press("Enter");
+  await page.getByRole("article", { name: "Stephen Ryback" }).getByRole("button", { name: "Directions" }).click();
+
+  const planner = page.getByRole("region", { name: "Route planner" });
+  await expect(planner.getByText("Enter a starting point to see directions.")).toBeVisible();
+  const from = planner.getByLabel("From");
+  await from.fill("Goldshire");
+  await from.press("Enter");
+  await expect(planner.getByRole("list", { name: "Directions" })).toContainText("(78.2, 53.1)");
+  // The trip is in the URL, so it can be shared or reloaded.
+  await expect(page).toHaveURL(/to=npc/);
+  await expect(page).toHaveURL(/from=place/);
+  await page.reload();
+  await expect(page.getByRole("region", { name: "Route planner" }).getByRole("list", { name: "Directions" })).toContainText("(78.2, 53.1)");
+  // A typed start never changes where you are.
+  await expect(page.getByText(/Say where you are above/)).toBeVisible();
 });
 
 test("minimap text puts you on the city's map", async ({ page }) => {
@@ -40,7 +68,7 @@ test("a Cooking trainer's Show on map link opens the map on them", async ({ page
   await page.goto("/wow-forever/professions");
   await page.getByRole("link", { name: "Show Stephen Ryback on the map" }).click();
   await expect(page).toHaveURL(/\/wow-forever\/map\?npc=5482/);
-  await expect(page.getByRole("region", { name: "Going to" }).getByRole("heading", { name: "Stephen Ryback" })).toBeVisible();
+  await expect(page.getByRole("article", { name: "Stephen Ryback" })).toBeVisible();
 });
 
 test("the phone layout never scrolls sideways with the search open", async ({ page }) => {
@@ -60,12 +88,12 @@ test("coordinates read inside a city can be moved onto the city's map while goin
   const search = page.getByRole("combobox", { name: "Find an NPC or place" });
   await search.fill("ryback");
   await search.press("Enter");
-  await expect(page.getByRole("region", { name: "Going to" })).toBeVisible();
+  await page.getByRole("article", { name: "Stephen Ryback" }).getByRole("button", { name: "Directions" }).click();
 
   await where.fill("42.1, 65.9");
   await where.press("Enter");
   await page.getByRole("button", { name: "Read those inside Stormwind City? Use the Stormwind City map" }).click();
   await expect(page.getByLabel("Zone")).toHaveValue("1453");
   await expect(page.getByText(/42\.1, 65\.9 on the Stormwind City map/)).toBeVisible();
-  await expect(page.getByRole("region", { name: "Going to" }).getByRole("list", { name: "Directions" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Route planner" }).getByRole("list", { name: "Directions" })).toBeVisible();
 });

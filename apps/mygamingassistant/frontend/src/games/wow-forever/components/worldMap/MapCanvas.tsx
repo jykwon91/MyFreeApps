@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
 import clsx from "clsx";
-import { useMinimapZoomPan, type ZoomView } from "@/hooks/useMinimapZoomPan";
+import { UNZOOMED, useMinimapZoomPan, type ZoomView } from "@/hooks/useMinimapZoomPan";
 import MapEdgeFrame from "@/games/wow-forever/components/worldMap/MapEdgeFrame";
 import MapGrid from "@/games/wow-forever/components/worldMap/MapGrid";
 import MapHoverHighlight from "@/games/wow-forever/components/worldMap/MapHoverHighlight";
@@ -13,12 +13,14 @@ import { revealInViewport } from "@/games/wow-forever/lib/revealInViewport";
 import { HIT_KIND, hitTestMap, type MapHit } from "@/games/wow-forever/worldMap/mapHitTest";
 import { neighbourLabels } from "@/games/wow-forever/worldMap/mapNeighbours";
 import type { MapZoomRestore } from "@/games/wow-forever/hooks/useMapSelection";
-import type { MapDestination, MapFocus, MapMarker, MapStop } from "@/games/wow-forever/worldMap/mapLayers";
+import type { MapFit, MapFocus, MapMarker, MapRoute } from "@/games/wow-forever/worldMap/mapLayers";
 
 /** Pointer travel (px) that turns a click into a drag. */
 const CLICK_SLOP = 6;
 /** How far "show on map" zooms in. */
 const FOCUS_SCALE = 2.5;
+/** A fitted route fills this much of the map, leaving room round the edges for A and B. */
+const FIT_FILL = 0.7;
 
 interface MapCanvasProps {
   data: WorldMapData;
@@ -27,10 +29,12 @@ interface MapCanvasProps {
   player: WorldPoint | null;
   markers: readonly MapMarker[];
   selectedId: string | null;
-  destination: MapDestination | null;
-  stops: readonly MapStop[];
+  route: MapRoute | null;
   focus: MapFocus | null;
   onFocusApplied: () => void;
+  /** Zoom to fit the trip. */
+  fit: MapFit | null;
+  onFitApplied: () => void;
   /** Put a remembered zoom + pan back (letting go of a selection). */
   restore: MapZoomRestore | null;
   onRestoreApplied: () => void;
@@ -82,6 +86,20 @@ export default function MapCanvas(props: MapCanvasProps) {
     if (focus.reveal) revealInViewport(canvasRef.current);
     onFocusApplied();
   }, [focus, map, props.markers, focusOn, onFocusApplied]);
+
+  // A trip: zoom so its ends (and stops) all show.
+  const { fit, onFitApplied } = props;
+  useEffect(() => {
+    if (!fit || fit.mapId !== map.id) return;
+    const points = fit.points.flatMap((p) => worldToMap(map, p) ?? []);
+    const xs = points.map((p) => p.x / 100);
+    const ys = points.map((p) => p.y / 100);
+    const span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
+    const centre = { x: (Math.max(...xs) + Math.min(...xs)) / 2, y: (Math.max(...ys) + Math.min(...ys)) / 2 };
+    if (!points.length) setView(UNZOOMED);
+    else focusOn(centre.x, centre.y, Math.max(1, Math.min(FOCUS_SCALE, FIT_FILL / span)));
+    onFitApplied();
+  }, [fit, map, focusOn, setView, onFitApplied]);
 
   // Letting go of a selection: back to the zoom + pan from before it.
   useEffect(() => {
@@ -139,7 +157,8 @@ export default function MapCanvas(props: MapCanvasProps) {
   }
 
   function keyDown(e: KeyboardEvent<HTMLDivElement>) {
-    if (e.key !== "Escape") return;
+    // Esc already used (leaving "choose on map").
+    if (e.key !== "Escape" || e.nativeEvent.defaultPrevented) return;
     e.preventDefault();
     // Like the in-game map: Esc first lets go of the selection, then zooms out.
     if (selectedId !== null) onClearSelection();
@@ -195,8 +214,7 @@ export default function MapCanvas(props: MapCanvasProps) {
                 player={props.player}
                 markers={props.markers}
                 selectedId={props.selectedId}
-                destination={props.destination}
-                stops={props.stops}
+                route={props.route}
                 onSelectMarker={props.onSelectMarker}
               />
             </svg>

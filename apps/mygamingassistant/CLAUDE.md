@@ -196,13 +196,29 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   takes no snapshot of its own. "Reset filters" (`hooks/useFindFilters.ts`)
   restores the finding filters + map layers and clears the selection — never
   the "You" section (faction/class/zone/level/position).
-- **Find an NPC or place** (`MapSearch`, `worldMap/search.ts`): one box over
-  services, quest givers and entrances — name, title, kind ("cooking trainer")
-  and area, any word order, accent/apostrophe-insensitive; own faction, then
-  nearest first. Picking an NPC pins a "Going to" card (directions open) and
-  opens their map; picking a place opens its map. `?npc=<creature id | result
-  id>` deep-links to an NPC (the Cooking & Fishing trainers use it — a test
-  checks every trainer's id, area and coords against `classicServices.json`).
+- **Route planner — works like a maps app** (`RoutePlanner`, `hooks/useTripPlanner.ts`,
+  `worldMap/trip.ts`, search in `worldMap/search.ts`): search an NPC, town,
+  zone or coordinates ("Find an NPC or place" — name, title, kind like
+  "cooking trainer", area; any word order, accent-insensitive; Enter on an
+  exact place name takes the place) → a destination card → **Directions**
+  opens From/To fields (From defaults to "Your location"; also any NPC /
+  place / coords, or "Choose on map"), with Swap and "Set as my location".
+  Every result row's "Directions to X" button makes that row the destination.
+  - The trip lives in the URL: `to=` / `from=` = `npc:<id>` | `place:<placeId>` |
+    `pt:<zone>,<x>,<y>` (no `from` = your location), `dir=1` = directions
+    open. Legacy `?npc=<creature id | result id>` = `to=npc:` (the Cooking &
+    Fishing trainers link with it — a test checks every trainer's id, area
+    and coords against `classicServices.json`).
+  - **A trip never changes the saved location** — only "Set as my location"
+    does; with directions open a map click does nothing (use "Choose on map").
+  - Where a place routes to: a town → its middle; a city/district → its map
+    centre; a zone → its flight master for your faction, else its largest
+    town, else its centre — the card says which ("Westfall has no single
+    spot, so I'm routing to …").
+  - The map draws A (green, start) and B (red, destination) and each leg:
+    walk solid, fly dashed, boat/zeppelin dotted. It fits the smallest map
+    that shows the whole route (`commonMap`: an end's own map when its
+    picture holds every point, else the nearest common parent).
 - **"Where are you?"** (`WhereAreYou`, `worldMap/places.ts` + `where.ts`) takes a
   place ("Goldshire", "Stormwind", "sw"), the minimap's district + coords
   ("Old Town 78.4, 53.2" → the city's map), bare coords (on the zone already

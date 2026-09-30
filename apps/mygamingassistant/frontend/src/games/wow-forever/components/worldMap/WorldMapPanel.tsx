@@ -9,13 +9,15 @@ import type { MapZoomRestore } from "@/games/wow-forever/hooks/useMapSelection";
 import type { PlayerFaction, WorldMapData, WorldZone } from "@/games/wow-forever/types/worldMap";
 import { childrenOf, isZoneView, mapPath } from "@/games/wow-forever/worldMap/mapHitTest";
 import {
-  directionStops,
   resultMarkers,
   selectedOnlyMarkers,
+  type MapFit,
   type MapFocus,
   type MapLayerChoice,
   type MapMarker,
+  type MapRoute,
 } from "@/games/wow-forever/worldMap/mapLayers";
+import type { PickTarget } from "@/games/wow-forever/worldMap/trip";
 import type { WorldMapModel } from "@/games/wow-forever/worldMap/worldMapModel";
 
 interface WorldMapPanelProps {
@@ -31,6 +33,18 @@ interface WorldMapPanelProps {
   selectedPoiId: string | null;
   focus: MapFocus | null;
   onFocusApplied: () => void;
+  /** The trip drawn on the map (B, or A -> stops -> B). */
+  route: MapRoute | null;
+  /** The zone the trip goes to, for the "Your zone" / "Destination" buttons. */
+  destinationZoneId: number | null;
+  fit: MapFit | null;
+  onFitApplied: () => void;
+  /** "Choose on map": the next click on a zone map picks the trip's start ("start") or destination. */
+  picking: PickTarget | null;
+  onPickPoint: (zoneId: number, x: number, y: number) => void;
+  onCancelPick: () => void;
+  /** With directions open a click never moves your saved location — trips don't change it. */
+  directionsOpen: boolean;
   restore: MapZoomRestore | null;
   onRestoreApplied: () => void;
   onZoomChange: (zoom: ZoomView) => void;
@@ -44,6 +58,11 @@ interface WorldMapPanelProps {
   layers: MapLayerChoice;
   onLayersChange: (layers: MapLayerChoice) => void;
 }
+
+const PICK_PROMPT: Readonly<Record<PickTarget, string>> = {
+  start: "Click the map to set your start. Esc to cancel.",
+  destination: "Click the map to set your destination. Esc to cancel.",
+};
 
 interface PendingSpot {
   mapId: number;
@@ -62,16 +81,19 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
   let markers: MapMarker[] = [];
   if (zoneView && model) markers = resultMarkers(model, layers);
   else if (zoneView) markers = selectedOnlyMarkers(props.selectedPoiId, data);
-  const stops = model ? directionStops(model, data) : [];
-  const selected = model?.selected ?? null;
-  const destination = selected && { world: selected.world, label: selected.poi.name };
+  const destinationZone = props.destinationZoneId === null ? undefined : data.zoneById.get(props.destinationZoneId);
 
   const quickJumps: { zone: WorldZone; label: string }[] = [];
-  if (model && selected && selected.zone.id !== model.zone.id) {
-    quickJumps.push({ zone: model.zone, label: "Your zone" }, { zone: selected.zone, label: `Destination: ${selected.zone.name}` });
+  if (model && destinationZone && destinationZone.id !== model.zone.id) {
+    quickJumps.push({ zone: model.zone, label: "Your zone" }, { zone: destinationZone, label: `Destination: ${destinationZone.name}` });
   }
 
   function pick(x: number, y: number) {
+    if (props.picking) {
+      props.onPickPoint(mapId, x, y);
+      return;
+    }
+    if (props.directionsOpen) return;
     // Your own zone (or no zone yet): a click says where you are. Anywhere else, ask first.
     if (playerZoneId === null || playerZoneId === mapId) onSetPosition(mapId, x, y);
     else setPending({ mapId, x, y });
@@ -132,6 +154,14 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
           </label>
         </fieldset>
       )}
+      {props.picking && (
+        <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-blue-500 bg-blue-500/10 px-3 py-2 text-sm">
+          <span>{PICK_PROMPT[props.picking]}</span>
+          <button type="button" onClick={props.onCancelPick} className="rounded-md border bg-card px-3 min-h-[44px] sm:min-h-[32px]">
+            Cancel
+          </button>
+        </div>
+      )}
       {confirm && (
         <PositionConfirm
           zoneName={map.name}
@@ -151,11 +181,13 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
         faction={faction}
         player={model?.player.world ?? null}
         markers={markers}
-        selectedId={props.selectedPoiId}
-        destination={destination}
-        stops={stops}
+        // While choosing a spot, a click picks it instead of letting go of the selection.
+        selectedId={props.picking ? null : props.selectedPoiId}
+        route={props.route}
         focus={props.focus}
         onFocusApplied={props.onFocusApplied}
+        fit={props.fit}
+        onFitApplied={props.onFitApplied}
         restore={props.restore}
         onRestoreApplied={props.onRestoreApplied}
         onZoomChange={props.onZoomChange}
@@ -168,8 +200,9 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
       />
       <p className="text-xs text-muted-foreground">
         <span className="font-medium text-blue-600">●</span> You ·{" "}
-        <span className="font-medium text-amber-500">●</span> direction steps, joined by a dashed route ·{" "}
-        <span className="font-medium text-fuchsia-500">●</span> destination on a wider map ·{" "}
+        <span className="font-medium text-emerald-600">A</span> start ·{" "}
+        <span className="font-medium text-red-600">B</span> destination ·{" "}
+        <span className="font-medium text-amber-500">●</span> direction steps (walk solid, fly dashed, boat dotted) ·{" "}
         <span className="font-medium text-cyan-400">●</span> quest givers ·{" "}
         <span className="font-medium text-red-700">●</span> dungeons · other coloured dots are results. With a result selected, a click on the map or Esc clears it and the map goes back to where it
         was — unless you've moved it yourself since.
