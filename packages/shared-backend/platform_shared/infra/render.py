@@ -15,6 +15,46 @@ CLI:
 The renderer never runs inside a request handler — only from CI, tests, or the
 future scaffolder CLI. `jinja2` and `PyYAML` are dev-only deps of
 platform_shared for that reason.
+
+app.yaml keys
+-------------
+Standard keys (required):
+  app_slug          str   Lowercase slug matching the apps/<slug>/ directory.
+  app_display_name  str   Human-readable display name, e.g. "MyBookkeeper".
+  api_port          int   Uvicorn port inside the container, e.g. 8000.
+  caddy_host_port   int   Host-side port Caddy listens on, e.g. 8094.
+  node_version      str   Node major version for the Vite build stage, e.g. "22".
+  postgres_image    str   Docker Hub postgres image + tag.
+  csp               str   Full Content-Security-Policy header value.
+  env_seed_command  str   Shell snippet shown in the deploy workflow on missing .env.
+
+Boolean flags (optional, all default false/disabled when absent):
+  has_minio_subdomain     bool   True when the app uses a storage.{$DOMAIN} subdomain
+                                 fronted by MinIO (adds the @storage handle block).
+  joins_minio_network     bool   True when docker-compose joins the shared minio network.
+  block_api_docs          bool   True to serve 404 for /api/docs* in the Caddyfile.
+  include_bundle_tripwire bool   True to enable the post-deploy bundle freshness check.
+  automated_deploy        bool   True (default) to add push trigger to deploy workflow.
+  registry_images         bool   True to build images in CI (GHCR) instead of on-VPS.
+  serve_only_build_arg    bool   True (MGA only) to wire the VITE_SERVE_ONLY build arg.
+
+Permissions-Policy (optional):
+  permissions_policy_self  list[str]   Features to allow for the app's own origin.
+                                       Default: empty list (all features denied).
+                                       Example: [microphone] for a voice app.
+
+                           The full policy header is computed by ``_build_permissions_policy``
+                           from the canonical feature order below. Every feature not listed in
+                           ``permissions_policy_self`` is emitted as ``feature=()``;  listed
+                           features are emitted as ``feature=(self)``. Unknown feature names
+                           raise ``ValueError`` so typos are caught at render time. The
+                           computed value is injected into the Jinja context as
+                           ``{{ permissions_policy }}`` and used in both branches of
+                           ``infra/templates/Caddyfile.docker.j2``.
+
+Other keys:
+  workers               list   Worker definitions, each with ``name`` and ``command``.
+  post_deploy_commands  list   Shell commands run in-container after ``alembic upgrade head``.
 """
 
 from __future__ import annotations
@@ -27,6 +67,61 @@ from typing import Any
 
 import yaml
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
+
+
+# Canonical feature order for the Permissions-Policy header.  This list is the
+# single source of truth — the order matches what was previously hardcoded in
+# Caddyfile.docker.j2.  Add new features here (at the end) to keep the header
+# stable across re-renders.
+_PERMISSIONS_POLICY_FEATURES: tuple[str, ...] = (
+    "accelerometer",
+    "camera",
+    "geolocation",
+    "gyroscope",
+    "magnetometer",
+    "microphone",
+    "payment",
+    "usb",
+    "interest-cohort",
+    "browsing-topics",
+)
+
+
+def _build_permissions_policy(self_allow: list[str]) -> str:
+    """Build the Permissions-Policy header value.
+
+    Each feature in ``_PERMISSIONS_POLICY_FEATURES`` is emitted as
+    ``feature=(self)`` when it appears in ``self_allow``, or ``feature=()``
+    otherwise.  Unknown feature names in ``self_allow`` raise ``ValueError``
+    so typos are caught at render time rather than silently shipped.
+
+    Args:
+        self_allow: Feature names to grant ``(self)`` permission.  Empty list
+                    (the default) denies all features.
+
+    Returns:
+        A ready-to-embed header value string, e.g.
+        ``"accelerometer=(), ..., microphone=(self), ..."``.
+
+    Raises:
+        ValueError: If any name in ``self_allow`` is not in
+                    ``_PERMISSIONS_POLICY_FEATURES``.
+    """
+    known = set(_PERMISSIONS_POLICY_FEATURES)
+    unknown = set(self_allow) - known
+    if unknown:
+        sorted_unknown = ", ".join(sorted(unknown))
+        sorted_known = ", ".join(_PERMISSIONS_POLICY_FEATURES)
+        raise ValueError(
+            f"permissions_policy_self contains unknown feature(s): {sorted_unknown}. "
+            f"Allowed features: {sorted_known}"
+        )
+    self_set = set(self_allow)
+    parts = [
+        f"{feature}=(self)" if feature in self_set else f"{feature}=()"
+        for feature in _PERMISSIONS_POLICY_FEATURES
+    ]
+    return ", ".join(parts)
 
 
 # Each entry maps a template path (relative to infra/templates/) to its
@@ -87,6 +182,12 @@ def render_app(repo_root: Path, app_slug: str, *, write: bool) -> dict[str, tupl
     When ``write`` is True, the file is also written to disk.
     """
     ctx = _load_app_config(repo_root, app_slug)
+
+    # Compute the Permissions-Policy header value from the app's opt-in list and
+    # inject it so templates can reference {{ permissions_policy }} directly.
+    permissions_policy_self: list[str] = ctx.get("permissions_policy_self") or []
+    ctx["permissions_policy"] = _build_permissions_policy(permissions_policy_self)
+
     env = Environment(
         loader=FileSystemLoader(str(repo_root / "infra" / "templates")),
         undefined=StrictUndefined,
