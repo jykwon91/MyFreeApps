@@ -15,6 +15,8 @@ from httpx import AsyncClient
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from platform_shared.testing.factories import _FastPasswordHelper
+
 from app.domain.turn_status import TurnStatus
 from app.models.tutor.tutor_session import TutorSession
 from app.models.tutor.tutor_turn import TutorTurn
@@ -273,8 +275,16 @@ class TestAccountDataLifecycle:
 
     @pytest.mark.asyncio
     async def test_account_deletion_cascades_tutor_rows(
-        self, user_factory, as_user, db: AsyncSession,
+        self, user_factory, as_user, db: AsyncSession, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        # The shared deletion router bound the real PasswordHelper at import,
+        # before the test factories swapped in the fast hasher that
+        # user_factory registered with. Point it at the same hasher so the
+        # real password is still verified (MBK / MJH patch the same symbol).
+        monkeypatch.setattr(
+            "platform_shared.api.account_deletion_router.PasswordHelper",
+            _FastPasswordHelper,
+        )
         user = await user_factory()
         async with await as_user(user) as authed:
             session_id = (await authed.post("/sessions", json=_payload())).json()["id"]
