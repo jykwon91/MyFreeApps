@@ -30,6 +30,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 
 CAPTURE_KINDS = ("service", "quest_giver", "instance")
+# The frontend also has "vendor" (plain merchants) — Classic data only; the
+# addon doesn't capture vendors, so it isn't a capture subkind.
 SERVICE_SUBKINDS = (
     "class_trainer",
     "demon_trainer",

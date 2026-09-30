@@ -108,7 +108,9 @@ def _template(**overrides: object) -> dict[str, object]:
         (_template(NpcFlags=0x10, SubName="Journeyman Tailor", TrainerType=2), ("profession_trainer", "tailoring")),
         (_template(NpcFlags=0x10, SubName="Weapon Master", TrainerType=2), ("weapon_master", "")),
         (_template(NpcFlags=0x80 | 0x4, SubName="Innkeeper"), ("innkeeper", "")),
-        (_template(NpcFlags=0x80 | 0x4, SubName="Horse Breeder"), None),
+        (_template(NpcFlags=0x80 | 0x4, SubName="Horse Breeder"), ("vendor", "")),
+        (_template(NpcFlags=0x4 | 0x1, SubName="Fishing Supplies"), ("vendor", "")),
+        (_template(NpcFlags=0x4 | 0x4000, SubName="Armorer"), ("repair", "")),
         (_template(NpcFlags=0x8, SubName="Gryphon Master"), ("flight_master", "")),
         (_template(NpcFlags=0x1000), ("auctioneer", "")),
         (_template(NpcFlags=0x2), None),  # quest giver only

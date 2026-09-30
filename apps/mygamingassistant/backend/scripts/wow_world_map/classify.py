@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+NPC_FLAG_VENDOR = 0x4
 NPC_FLAG_FLIGHT_MASTER = 0x8
 NPC_FLAG_TRAINER = 0x10
 NPC_FLAG_INNKEEPER = 0x80
@@ -76,6 +77,7 @@ BANKER = "banker"
 AUCTIONEER = "auctioneer"
 STABLE_MASTER = "stable_master"
 REPAIR = "repair"
+VENDOR = "vendor"
 
 
 def profession_for(subname: str) -> str | None:
@@ -117,4 +119,8 @@ def classify(template: Mapping[str, object]) -> tuple[str, str] | None:
         return STABLE_MASTER, ""
     if flags & NPC_FLAG_REPAIR:
         return REPAIR, ""
+    # Plain merchants (fishing supplies, trade goods, reagents...) — found by
+    # name or title in the search, and under "Vendor" in the Find picker.
+    if flags & NPC_FLAG_VENDOR:
+        return VENDOR, ""
     return None
