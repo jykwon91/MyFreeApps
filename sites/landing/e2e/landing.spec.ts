@@ -26,7 +26,7 @@ test("renders every app card under the production CSP with no console errors", a
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "Free apps, built by one developer.",
   );
-  await expect(page.locator("a.app")).toHaveCount(4);
+  await expect(page.locator("a.app")).toHaveCount(5);
   expect(errors).toEqual([]);
 });
 
