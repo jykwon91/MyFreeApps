@@ -5,12 +5,14 @@ interface SegmentedToggleProps<T extends string> {
   options: readonly { id: T; label: string }[];
   value: T;
   onChange: (value: T) => void;
+  /** Extra classes for the group, e.g. "flex-wrap" when there are many options. */
+  className?: string;
 }
 
 /** Single-choice pill toggle (radio group semantics). */
-export default function SegmentedToggle<T extends string>({ label, options, value, onChange }: SegmentedToggleProps<T>) {
+export default function SegmentedToggle<T extends string>({ label, options, value, onChange, className }: SegmentedToggleProps<T>) {
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex rounded-lg border bg-card p-1 gap-1">
+    <div role="radiogroup" aria-label={label} className={clsx("inline-flex rounded-lg border bg-card p-1 gap-1", className)}>
       {options.map((o) => (
         <button
           key={o.id}
