@@ -129,6 +129,13 @@ updates:
     groups:
       python-minor-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # sqlalchemy held < 2.1: fastapi-users[sqlalchemy]==15.0.5 (via
+      # fastapi-users-db-sqlalchemy) cannot resolve against sqlalchemy 2.1.x, so
+      # the bump leaves backend-deps-resolve red (see #1299). Match the 2.0.x pin
+      # used by the other apps until fastapi-users supports 2.1, then drop this.
+      - dependency-name: "sqlalchemy"
+        versions: [">=2.1"]
 
   - package-ecosystem: "npm"
     directory: "/apps/myrecipes/frontend"
