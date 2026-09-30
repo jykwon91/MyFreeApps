@@ -39,6 +39,8 @@ export interface MapFocus {
   poiId: string;
   mapId: number;
   nonce: number;
+  /** Scroll the map on screen (stacked layout). Off when the list shows the result instead. */
+  reveal: boolean;
 }
 
 /** Result markers: the hero picks, the Find list and any switched-on layer, each once. */
@@ -65,4 +67,12 @@ export function directionStops(model: WorldMapModel, data: WorldMapData): MapSto
     if (!zone) return [];
     return [{ number: i + 1, label: step.place.label, world: zoneToWorld(zone, step.place.x, step.place.y) }];
   });
+}
+
+/** Before the player has a zone there are no results — only the chosen NPC, if any, is drawn. */
+export function selectedOnlyMarkers(poiId: string | null, data: WorldMapData): MapMarker[] {
+  const poi = poiId === null ? undefined : data.poiById.get(poiId);
+  const zone = poi && data.zoneById.get(poi.zone);
+  if (!poi || !zone) return [];
+  return [{ id: poi.id, world: zoneToWorld(zone, poi.x, poi.y), label: poiMarkerLabel(poi), className: poiMarkerClass(poi) }];
 }

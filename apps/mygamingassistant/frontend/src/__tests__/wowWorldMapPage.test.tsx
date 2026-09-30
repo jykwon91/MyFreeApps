@@ -31,7 +31,7 @@ describe("WoW Forever World Map page", () => {
   it("asks for a zone first, then lists the nearest Warlock trainer", async () => {
     renderPage();
     // The first render pays for the cold import of the world data.
-    expect(await screen.findByText(/Pick your zone above/, {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(await screen.findByText(/Say where you are above/, {}, { timeout: 4000 })).toBeInTheDocument();
 
     await userEvent.selectOptions(screen.getByLabelText("Class"), "warlock");
     await userEvent.selectOptions(screen.getByLabelText("Zone"), "Elwynn Forest");
@@ -40,7 +40,10 @@ describe("WoW Forever World Map page", () => {
     const trainer = await screen.findByRole("article", { name: "Warlock trainer: Drusilla La Salle" });
     expect(within(trainer).getByText(/Northshire Valley, Elwynn Forest/)).toBeInTheDocument();
     expect(within(trainer).getByText("Classic location — may differ in Forever")).toBeInTheDocument();
-    expect(within(trainer).getByRole("button", { name: "Copy in-game waypoint" })).toBeInTheDocument();
+    // Coordinates and waypoints wait until the row is opened.
+    expect(within(trainer).queryByRole("button", { name: "Copy in-game waypoint" })).not.toBeInTheDocument();
+    await userEvent.click(within(trainer).getByRole("button", { name: /Directions/ }));
+    expect(within(trainer).getAllByRole("button", { name: "Copy in-game waypoint" }).length).toBeGreaterThan(0);
 
     const stored = JSON.parse(window.localStorage.getItem(PLAYER_SETTINGS_STORAGE_KEY) ?? "{}");
     expect(stored).toMatchObject({ faction: "A", classId: "warlock", zoneId: 1429 });
@@ -54,9 +57,10 @@ describe("WoW Forever World Map page", () => {
     renderPage();
     expect(await screen.findByText(/Measuring from the middle of Elwynn Forest/)).toBeInTheDocument();
 
-    await userEvent.type(screen.getByLabelText(/Your coordinates/), "/way 42 65");
-    await userEvent.click(screen.getByRole("button", { name: "Set position" }));
+    await userEvent.type(screen.getByLabelText("Where are you?"), "/way 42 65");
+    await userEvent.click(screen.getByRole("button", { name: "Set" }));
     expect(screen.queryByText(/Measuring from the middle/)).not.toBeInTheDocument();
+    expect(screen.getByText(/You're near Goldshire, Elwynn Forest · 42\.0, 65\.0 on the Elwynn Forest map/)).toBeInTheDocument();
 
     const trainer = screen.getByRole("article", { name: "Warlock trainer: Maximillian Crowe" });
     await userEvent.click(within(trainer).getByRole("button", { name: /Directions/ }));
@@ -105,7 +109,9 @@ describe("WoW Forever World Map page", () => {
     );
     renderPage();
     const trainer = await screen.findByRole("article", { name: "Warlock trainer: Maximillian Crowe" });
-    expect(within(trainer).getByText(/Goldshire, Elwynn Forest \(43\.1, 65\.5\)/)).toBeInTheDocument();
+    expect(within(trainer).getByText(/Goldshire, Elwynn Forest ·/)).toBeInTheDocument();
+    await userEvent.click(within(trainer).getByRole("button", { name: /Directions/ }));
+    expect(within(trainer).getByText("Map 43.1, 65.5")).toBeInTheDocument();
     expect(within(trainer).getByText(/^Captured in Forever/)).toBeInTheDocument();
     capturesQuery.data = { captures: [] };
   });
@@ -426,5 +432,84 @@ describe("WoW Forever World Map page", () => {
     );
     renderPage();
     expect(await screen.findByText(/Riverglades is new in Forever and not mapped yet/)).toBeInTheDocument();
+  });
+  describe("search and where you are", { timeout: 20_000 }, () => {
+    function renderAt(path: string) {
+      return render(
+        <MemoryRouter initialEntries={[path]}>
+          <WowWorldMapPage />
+        </MemoryRouter>,
+      );
+    }
+
+    it("finds an NPC by name and pins it with a place to go, before you've said where you are", async () => {
+      renderAt("/wow-forever/map");
+      const search = await screen.findByRole("combobox", { name: "Find an NPC or place" }, { timeout: 4000 });
+      await userEvent.type(search, "ryback");
+      await userEvent.click(screen.getByRole("option", { name: /Stephen Ryback/ }));
+      const card = screen.getByRole("region", { name: "Going to" });
+      expect(within(card).getByText("Stephen Ryback")).toBeInTheDocument();
+      expect(within(card).getByText(/Say where you are/)).toBeInTheDocument();
+      expect(search).toHaveValue("");
+    });
+
+    it("keyboard: arrows + Enter pick a result, and with a zone set the card has directions", async () => {
+      window.localStorage.setItem(
+        PLAYER_SETTINGS_STORAGE_KEY,
+        JSON.stringify({ faction: "A", classId: "warlock", zoneId: 1429, level: null, position: { x: 42, y: 65 } }),
+      );
+      renderAt("/wow-forever/map");
+      const search = await screen.findByRole("combobox", { name: "Find an NPC or place" });
+      await userEvent.type(search, "cooking trainer stormwind{ArrowDown}{Enter}");
+      const card = screen.getByRole("region", { name: "Going to" });
+      expect(within(card).getByRole("list", { name: "Directions" })).toBeInTheDocument();
+      expect(within(card).getByText("Map 78.2, 53.1")).toBeInTheDocument();
+      await userEvent.click(within(card).getByRole("button", { name: /Clear selection/ }));
+      expect(screen.queryByRole("region", { name: "Going to" })).not.toBeInTheDocument();
+    });
+
+    it("opens on an NPC from a ?npc= link, and says so when the link is bad", async () => {
+      const { unmount } = renderAt("/wow-forever/map?npc=5482");
+      const card = await screen.findByRole("region", { name: "Going to" }, { timeout: 4000 });
+      expect(within(card).getByText("Stephen Ryback")).toBeInTheDocument();
+      unmount();
+      renderAt("/wow-forever/map?npc=999999999");
+      expect(await screen.findByText(/That link's NPC isn't on the map/)).toBeInTheDocument();
+    });
+
+    it("typing a place sets your zone; minimap text picks the city's map", async () => {
+      renderAt("/wow-forever/map");
+      const where = await screen.findByRole("combobox", { name: "Where are you?" });
+      await userEvent.type(where, "stormwind city");
+      await userEvent.click(screen.getByRole("button", { name: "Set" }));
+      expect(screen.getByLabelText("Zone")).toHaveDisplayValue("Stormwind City");
+      expect(screen.getByText(/You're in Stormwind City — measuring from the middle/)).toBeInTheDocument();
+
+      await userEvent.type(where, "Goldshire 42, 65{Enter}");
+      expect(screen.getByLabelText("Zone")).toHaveDisplayValue("Elwynn Forest");
+      expect(screen.getByText(/You're near Goldshire, Elwynn Forest · 42\.0, 65\.0/)).toBeInTheDocument();
+    });
+
+    it("bare coordinates offer the capital that shares the zone's ground", async () => {
+      window.localStorage.setItem(
+        PLAYER_SETTINGS_STORAGE_KEY,
+        JSON.stringify({ faction: "A", classId: "warlock", zoneId: 1429, level: null, position: null }),
+      );
+      renderAt("/wow-forever/map");
+      const where = await screen.findByRole("combobox", { name: "Where are you?" });
+      await userEvent.type(where, "78.4, 53.2{Enter}");
+      await userEvent.click(screen.getByRole("button", { name: /Use the Stormwind City map/ }));
+      expect(screen.getByLabelText("Zone")).toHaveDisplayValue("Stormwind City");
+      expect(screen.getByText(/78\.4, 53\.2 on the Stormwind City map/)).toBeInTheDocument();
+    });
+
+    it("a name that fits several places asks which one", async () => {
+      renderAt("/wow-forever/map");
+      const where = await screen.findByRole("combobox", { name: "Where are you?" });
+      await userEvent.type(where, "valley{Enter}");
+      const which = screen.getByRole("group", { name: "Which place?" });
+      await userEvent.click(within(which).getByRole("button", { name: "Valley of Trials, Durotar" }));
+      expect(screen.getByLabelText("Zone")).toHaveDisplayValue("Durotar");
+    });
   });
 });

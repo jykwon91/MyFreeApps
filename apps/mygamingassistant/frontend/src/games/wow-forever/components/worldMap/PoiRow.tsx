@@ -84,7 +84,7 @@ export default function PoiRow(props: PoiRowProps) {
       <p className="flex items-start gap-1.5 text-sm">
         <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
         <span>
-          {areaLabel(poi, zone)} ({formatCoord(poi.x)}, {formatCoord(poi.y)}) · {distanceLabel(ranked, data)}
+          {areaLabel(poi, zone)} · {distanceLabel(ranked, data)}
         </span>
       </p>
       {children}
@@ -113,11 +113,16 @@ export default function PoiRow(props: PoiRowProps) {
           Directions &amp; map
           <ChevronDown className={clsx("h-4 w-4 transition-transform", selected && "rotate-180")} aria-hidden />
         </button>
-        <WaypointButtons target={poiWaypoint(ranked)} />
       </div>
-      {selected && directions !== undefined && (
-        <div id={panelId} className="border-t pt-3">
-          <DirectionsPanel directions={directions} />
+      {selected && (
+        <div id={panelId} className="border-t pt-3 space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              Map {formatCoord(poi.x)}, {formatCoord(poi.y)}
+            </span>
+            <WaypointButtons target={poiWaypoint(ranked)} />
+          </div>
+          {directions !== undefined && <DirectionsPanel directions={directions} />}
         </div>
       )}
     </article>

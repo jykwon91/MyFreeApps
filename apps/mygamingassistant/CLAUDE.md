@@ -190,6 +190,22 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   takes no snapshot of its own. "Reset filters" (`hooks/useFindFilters.ts`)
   restores the finding filters + map layers and clears the selection — never
   the "You" section (faction/class/zone/level/position).
+- **Find an NPC or place** (`MapSearch`, `worldMap/search.ts`): one box over
+  services, quest givers and entrances — name, title, kind ("cooking trainer")
+  and area, any word order, accent/apostrophe-insensitive; own faction, then
+  nearest first. Picking an NPC pins a "Going to" card (directions open) and
+  opens their map; picking a place opens its map. `?npc=<creature id | result
+  id>` deep-links to an NPC (the Cooking & Fishing trainers use it — a test
+  checks every trainer's id, area and coords against `classicServices.json`).
+- **"Where are you?"** (`WhereAreYou`, `worldMap/places.ts` + `where.ts`) takes a
+  place ("Goldshire", "Stormwind", "sw"), the minimap's district + coords
+  ("Old Town 78.4, 53.2" → the city's map), bare coords (on the zone already
+  picked, with a one-click "use the city map" when a city shares that ground)
+  or `/way`. Places = zones + capitals (map tree), towns (subzone centroids of
+  the NPC data) and capital districts / short names from the hand-written,
+  names-only `data/worldMap/placeNames.ts`. A town puts you at its middle and
+  says so. Coordinates are shown only in an opened row and on the last
+  directions step.
 - Placement: a nested capital wins, then the flight-path name's zone, then the
   zone whose painted overlay covers the point. Classic NPCs never land on a
   Forever-only zone (`FOREVER_ONLY_ZONES`); those zones say "Not mapped yet".

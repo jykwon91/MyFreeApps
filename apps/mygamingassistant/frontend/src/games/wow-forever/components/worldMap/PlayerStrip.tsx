@@ -1,10 +1,11 @@
 import { Select } from "@platform/ui";
 import SegmentedToggle from "@/games/wow-forever/components/shared/SegmentedToggle";
-import PositionInput from "@/games/wow-forever/components/worldMap/PositionInput";
+import WhereAreYou from "@/games/wow-forever/components/worldMap/WhereAreYou";
 import ZoneSelect from "@/games/wow-forever/components/worldMap/ZoneSelect";
 import { WOW_CLASSES, findClass } from "@/games/wow-forever/data/classes";
 import { MAX_LEVEL, type PlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { FACTION, type PlayerFaction, type WorldMapData } from "@/games/wow-forever/types/worldMap";
+import type { Place } from "@/games/wow-forever/worldMap/places";
 
 const FACTION_OPTIONS: readonly { id: PlayerFaction; label: string }[] = [
   { id: FACTION.alliance, label: "Alliance" },
@@ -14,6 +15,7 @@ const FACTION_OPTIONS: readonly { id: PlayerFaction; label: string }[] = [
 interface PlayerStripProps {
   data: WorldMapData;
   settings: PlayerSettings;
+  places: readonly Place[];
   onChange: (patch: Partial<PlayerSettings>) => void;
 }
 
@@ -23,8 +25,8 @@ function parseLevel(raw: string): number | null {
   return Math.min(n, MAX_LEVEL);
 }
 
-/** "You": faction -> class -> zone (+ level, + exact coordinates). */
-export default function PlayerStrip({ data, settings, onChange }: PlayerStripProps) {
+/** "You": where you are (a place or coordinates), then faction -> class -> zone (+ level). */
+export default function PlayerStrip({ data, settings, places, onChange }: PlayerStripProps) {
   function changeFaction(faction: PlayerFaction) {
     const zone = settings.zoneId === null ? undefined : data.zoneById.get(settings.zoneId);
     // Standing in the other faction's capital makes no sense — pick a new zone.
@@ -37,6 +39,13 @@ export default function PlayerStrip({ data, settings, onChange }: PlayerStripPro
       <h2 id="wm-you" className="text-lg font-semibold">
         You
       </h2>
+      <WhereAreYou
+        data={data}
+        places={places}
+        zoneId={settings.zoneId}
+        position={settings.position}
+        onSet={(zoneId, position) => onChange({ zoneId, position })}
+      />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="space-y-1">
           <span className="text-sm font-medium">Faction</span>
@@ -92,12 +101,6 @@ export default function PlayerStrip({ data, settings, onChange }: PlayerStripPro
           />
         </div>
       </div>
-      {settings.zoneId !== null && (
-        <PositionInput
-          data={data}
-          onSet={(position, zoneId) => onChange(zoneId === null ? { position } : { zoneId, position })}
-        />
-      )}
     </section>
   );
 }

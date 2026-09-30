@@ -22,6 +22,8 @@ export interface MapSelection {
    * result's map and zoom to it — or, on the already-selected result, clear.
    */
   toggle: (poiId: string) => void;
+  /** From the search box or a link: select, open the result's map and zoom to it (never clears). */
+  select: (poiId: string, options?: SelectOptions) => void;
   /** From the map: select and bring the result's row into view. */
   selectMarker: (poiId: string) => void;
   /**
@@ -36,6 +38,11 @@ export interface MapSelection {
   trackZoom: (zoom: ZoomView) => void;
   /** The player zoomed / panned the map by hand: they've taken over the view. */
   takeControl: () => void;
+}
+
+export interface SelectOptions {
+  /** Scroll the map on screen on the stacked layout (default true). */
+  revealMap?: boolean;
 }
 
 /** The view right before a list selection moved it. */
@@ -93,12 +100,8 @@ export function useMapSelection(data: WorldMapData | null, view: MapViewState): 
     back(snap.pushes);
   }, [back]);
 
-  const toggle = useCallback(
-    (poiId: string) => {
-      if (poiId === selectedPoiId) {
-        clear();
-        return;
-      }
+  const select = useCallback(
+    (poiId: string, options: SelectOptions = {}) => {
       setSelectedPoiId(poiId);
       const poi = data?.poiById.get(poiId);
       if (!poi || !data?.maps.has(poi.zone) || mapId === null) return;
@@ -108,9 +111,17 @@ export function useMapSelection(data: WorldMapData | null, view: MapViewState): 
       snapshot.current = { ...snap, pushes: snap.pushes + Number(pushed), selectedMapId: poi.zone };
       setRestore(null);
       goTo(poi.zone);
-      setFocus({ poiId, mapId: poi.zone, nonce: Date.now() });
+      setFocus({ poiId, mapId: poi.zone, nonce: Date.now(), reveal: options.revealMap ?? true });
     },
-    [clear, data, goTo, mapId, selectedPoiId],
+    [data, goTo, mapId],
+  );
+
+  const toggle = useCallback(
+    (poiId: string) => {
+      if (poiId === selectedPoiId) clear();
+      else select(poiId);
+    },
+    [clear, select, selectedPoiId],
   );
 
   const selectMarker = useCallback((poiId: string) => {
@@ -140,5 +151,5 @@ export function useMapSelection(data: WorldMapData | null, view: MapViewState): 
     return () => document.removeEventListener("keydown", escape);
   }, [selectedPoiId, clear]);
 
-  return { selectedPoiId, focus, restore, toggle, selectMarker, clear, clearFocus, clearRestore, trackZoom, takeControl };
+  return { selectedPoiId, focus, restore, toggle, select, selectMarker, clear, clearFocus, clearRestore, trackZoom, takeControl };
 }

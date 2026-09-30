@@ -13,14 +13,14 @@ test.use({ permissions: ["clipboard-read", "clipboard-write"] });
 test("an Alliance Warlock in Elwynn finds a trainer, gets directions and copies a waypoint", async ({ page }) => {
   await page.goto("/wow-forever/map");
 
-  await expect(page.getByText(/Pick your zone above/)).toBeVisible();
+  await expect(page.getByText(/Say where you are above/)).toBeVisible();
   await page.getByRole("radio", { name: "Alliance" }).click();
   await page.getByLabel("Class").selectOption("warlock");
   await page.getByLabel("Zone").selectOption({ label: "Elwynn Forest" });
 
   // Stand in Goldshire: the trainer there is the nearest.
-  await page.getByLabel(/Your coordinates/).fill("/way 42 65");
-  await page.getByRole("button", { name: "Set position" }).click();
+  await page.getByRole("combobox", { name: "Where are you?" }).fill("/way 42 65");
+  await page.getByRole("button", { name: "Set", exact: true }).click();
 
   const trainer = page.getByRole("article", { name: "Warlock trainer: Maximillian Crowe" });
   await expect(trainer).toBeVisible();
@@ -48,8 +48,8 @@ test("a level 1 Warlock sees Northshire's quests and the nearby dungeons", async
   await page.getByLabel("Class").selectOption("warlock");
   await page.getByLabel("Zone").selectOption({ label: "Elwynn Forest" });
   await page.getByLabel("Level").fill("1");
-  await page.getByLabel(/Your coordinates/).fill("48, 42");
-  await page.getByRole("button", { name: "Set position" }).click();
+  await page.getByRole("combobox", { name: "Where are you?" }).fill("48, 42");
+  await page.getByRole("button", { name: "Set", exact: true }).click();
 
   const quests = page.getByRole("region", { name: "Quests near you" });
   const willem = quests.getByRole("article", { name: "Quest giver: Deputy Willem" });
@@ -96,12 +96,13 @@ test("a location captured in Forever replaces the Classic spot and the waypoint 
   await page.getByRole("radio", { name: "Alliance" }).click();
   await page.getByLabel("Class").selectOption("warlock");
   await page.getByLabel("Zone").selectOption({ label: "Elwynn Forest" });
-  await page.getByLabel(/Your coordinates/).fill("42, 65");
-  await page.getByRole("button", { name: "Set position" }).click();
+  await page.getByRole("combobox", { name: "Where are you?" }).fill("42, 65");
+  await page.getByRole("button", { name: "Set", exact: true }).click();
 
   const trainer = page.getByRole("article", { name: "Warlock trainer: Maximillian Crowe" });
   await expect(trainer.getByText(/^Captured in Forever/)).toBeVisible();
   await expect(trainer.getByText("Classic location — may differ in Forever")).toHaveCount(0);
+  await trainer.getByRole("button", { name: /Directions/ }).click();
   await trainer.getByRole("button", { name: "Copy in-game waypoint" }).first().click();
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   expect(copied).toBe("/mga way 1429 43.1 65.5 Maximillian Crowe");
@@ -141,8 +142,8 @@ async function standInGoldshire(page: Page) {
   await page.getByRole("radio", { name: "Alliance" }).click();
   await page.getByLabel("Class").selectOption("warlock");
   await page.getByLabel("Zone").selectOption({ label: "Elwynn Forest" });
-  await page.getByLabel(/Your coordinates/).fill("42, 65");
-  await page.getByRole("button", { name: "Set position" }).click();
+  await page.getByRole("combobox", { name: "Where are you?" }).fill("42, 65");
+  await page.getByRole("button", { name: "Set", exact: true }).click();
   await expect(page.getByRole("img", { name: "Elwynn Forest map" })).toBeVisible();
 }
 
@@ -315,8 +316,8 @@ test("a far-away trainer gets flight directions with the discovery caveat", asyn
   await page.getByRole("radio", { name: "Alliance" }).click();
   await page.getByLabel("Class").selectOption("warlock");
   await page.getByLabel("Zone").selectOption({ label: "Elwynn Forest" });
-  await page.getByLabel(/Your coordinates/).fill("42, 65");
-  await page.getByRole("button", { name: "Set position" }).click();
+  await page.getByRole("combobox", { name: "Where are you?" }).fill("42, 65");
+  await page.getByRole("button", { name: "Set", exact: true }).click();
 
   const find = page.getByRole("region", { name: "Find" });
   await expect(find.getByText("Elsewhere on this continent")).toBeVisible();
