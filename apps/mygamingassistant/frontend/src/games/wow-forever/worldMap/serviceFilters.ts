@@ -3,7 +3,8 @@
  *
  * The hero list ("Nearest services") has one row per everyday need, your
  * class trainer first. The "Find" picker offers the same plus the less
- * common services under "More" (stable masters, professions, riding, repair).
+ * common services under "More" (stable masters, professions, riding, repair,
+ * vendors).
  * Trainers are never filtered by level — you visit them at every level.
  */
 import { findClass, type WowClassId } from "@/games/wow-forever/data/classes";
@@ -76,6 +77,7 @@ export function findFilterGroups(classId: WowClassId): FilterGroup[] {
         bySubkind(SERVICE_KIND.stableMaster),
         bySubkind(SERVICE_KIND.ridingTrainer),
         bySubkind(SERVICE_KIND.repair),
+        bySubkind(SERVICE_KIND.vendor),
         ...otherCompanion,
         ...professions,
       ],

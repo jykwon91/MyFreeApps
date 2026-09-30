@@ -52,6 +52,14 @@ describe("NPC search", () => {
     );
   });
 
+  it("finds plain vendors too, by name or what they sell", () => {
+    const [heming] = searchNpcs("Old Man Heming", data, { faction: FACTION.alliance, player: null });
+    expect(heming.poi.name).toBe("Old Man Heming");
+    expect(heming.zone.name).toBe("Stranglethorn Vale");
+    const [khara] = searchNpcs("fishing supplies loch modan", data, { faction: FACTION.alliance, player: null });
+    expect(khara.poi).toMatchObject({ name: "Khara Deepwater", subkind: "vendor" });
+  });
+
   it("puts your faction's NPCs before the other faction's", () => {
     const hits = searchNpcs("flight master", data, { faction: FACTION.horde, player: null });
     expect(hits[0].poi.faction).not.toBe(FACTION.alliance);

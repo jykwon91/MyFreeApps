@@ -3,10 +3,11 @@
  * what they are and where ("cooking trainer stormwind") — plus places.
  *
  * Every word typed must appear in the NPC's name, title, town, zone or type.
- * Best first: the name matches (exact, then starts with it), then NPCs your
- * faction can use, then the nearest, then A–Z.
+ * Best first: the name matches (exact, then starts with it), then services
+ * before plain vendors ("cooking" = the trainer before cooking suppliers), then
+ * NPCs your faction can use, then the nearest, then A–Z.
  */
-import { PROFESSION_LABEL, SERVICE_LABEL, isServiceKind } from "@/games/wow-forever/data/worldMap/serviceKinds";
+import { PROFESSION_LABEL, SERVICE_KIND, SERVICE_LABEL, isServiceKind } from "@/games/wow-forever/data/worldMap/serviceKinds";
 import { ZONE_ALIASES } from "@/games/wow-forever/data/worldMap/placeNames";
 import {
   POI_KIND,
@@ -64,6 +65,7 @@ function haystackFor(poi: MapPoi, zone: WorldZone): string {
 
 interface Scored extends NpcHit {
   name: number;
+  vendor: number;
   side: number;
   yards: number;
 }
@@ -85,11 +87,15 @@ export function searchNpcs(query: string, data: WorldMapData, context: SearchCon
       poi,
       zone,
       name: nameMatches ? nameScore(poi.name, query) : 5,
+      vendor: poi.subkind === SERVICE_KIND.vendor ? 1 : 0,
       side: usableBy(poi, context.faction, false) ? 0 : 1,
       yards: distance(poi, zone, context.player),
     });
   }
-  scored.sort((a, b) => a.name - b.name || a.side - b.side || a.yards - b.yards || a.poi.name.localeCompare(b.poi.name));
+  scored.sort(
+    (a, b) =>
+      a.name - b.name || a.vendor - b.vendor || a.side - b.side || a.yards - b.yards || a.poi.name.localeCompare(b.poi.name),
+  );
 
   // One row per NPC: a trainer who also gives quests shows once, as the trainer.
   const seen = new Set<string>();

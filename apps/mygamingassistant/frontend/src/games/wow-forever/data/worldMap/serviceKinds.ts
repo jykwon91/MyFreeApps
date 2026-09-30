@@ -17,6 +17,7 @@ export const SERVICE_KIND = {
   innkeeper: "innkeeper",
   stableMaster: "stable_master",
   repair: "repair",
+  vendor: "vendor",
 } as const;
 
 export type ServiceKind = (typeof SERVICE_KIND)[keyof typeof SERVICE_KIND];
@@ -40,6 +41,7 @@ export const SERVICE_LABEL: Readonly<Record<ServiceKind, string>> = {
   innkeeper: "Innkeeper",
   stable_master: "Stable master",
   repair: "Repair / vendor",
+  vendor: "Vendor",
 };
 
 /** Map marker colour per type (Tailwind fill classes on the SVG marker). */
@@ -56,6 +58,7 @@ export const SERVICE_MARKER_CLASS: Readonly<Record<ServiceKind, string>> = {
   innkeeper: "fill-rose-500",
   stable_master: "fill-emerald-600",
   repair: "fill-zinc-400",
+  vendor: "fill-stone-400",
 };
 
 export const PROFESSION_LABEL: Readonly<Record<string, string>> = {
