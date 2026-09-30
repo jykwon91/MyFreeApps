@@ -23,13 +23,13 @@ from scripts.wow_world_map import sources
 from scripts.wow_world_map.coords import ZoneBounds
 from scripts.wow_world_map.factions import FactionTemplate, usable_by
 from scripts.wow_world_map.map_art import WorldMapArt
-from scripts.wow_world_map.placement import place
+from scripts.wow_world_map.placement import Placement, place
 from scripts.wow_world_map.services import CLASSIC_CONTINENTS, SAME_SPOT_YARDS
 from scripts.wow_world_map.sql_dump import SqlValue, read_dump
 from scripts.wow_world_map.zones import FOREVER_ONLY_ZONES
 
 VENDOR_COLUMNS = ["npcId", "name", "title", "zone", "subzone", "x", "y", "faction", "limited"]
-MOB_COLUMNS = ["name", "minLevel", "maxLevel", "chance"]
+MOB_COLUMNS = ["name", "minLevel", "maxLevel", "chance", "zone", "subzone", "x", "y"]
 
 # An item only on this many mobs' shared loot is a world drop, not a named mob's.
 WORLD_DROP_MOBS = 25
@@ -39,6 +39,8 @@ SHOWN_MOBS = 3
 SHOWN_ZONES = 3
 # Drops rarer than this are noise next to a likelier mob (the expert's cut).
 MIN_SHOWN_CHANCE = 1.0
+# Spawns this close (yards) count as one pack when picking where to farm a mob.
+PACK_YARDS = 150.0
 
 _TABLES = {
     "creature",
@@ -190,31 +192,49 @@ class ClassicSources:
         # Expected drops on offer: a common mob at 40% beats a rare one at 50%.
         zone_worth: Counter[int] = Counter()
         mob_worth: Counter[int] = Counter()
+        placed: dict[int, list[tuple[float, float, Placement]]] = defaultdict(list)
         for npc in chances:
             for s in self._spawns[npc]:
-                spot = place(
-                    self._zones, self._art, _i(s["map"]),
-                    float(str(s["position_x"])), float(str(s["position_y"])), exclude=FOREVER_ONLY_ZONES,
-                )
+                wx, wy = float(str(s["position_x"])), float(str(s["position_y"]))
+                spot = place(self._zones, self._art, _i(s["map"]), wx, wy, exclude=FOREVER_ONLY_ZONES)
                 if spot:
                     zone_worth[spot.zone.ui_map_id] += chances[npc]
                     mob_worth[npc] += chances[npc]
-                    self.zone_names[spot.zone.ui_map_id] = spot.zone.name
+                    placed[npc].append((wx, wy, spot))
         world = not direct and len(chances) >= WORLD_DROP_MOBS
         best = sorted(chances, key=lambda n: (-mob_worth[n], str(self._npcs[n]["Name"])))
         shown = [n for n in best if chances[n] >= MIN_SHOWN_CHANCE][:SHOWN_MOBS] or best[:1]
         mobs = [] if world else [
             [str(self._npcs[n]["Name"]), _i(self._npcs[n]["MinLevel"]), _i(self._npcs[n]["MaxLevel"]),
-             round(chances[n], 1)]
+             round(chances[n], 1), *self._farm_spot(placed[n])]
             for n in shown
         ]
+        zones = [z for z, _ in sorted(zone_worth.items(), key=lambda kv: (-kv[1], kv[0]))[:SHOWN_ZONES]]
+        for spots in placed.values():
+            for _, _, spot in spots:
+                if spot.zone.ui_map_id in zones:
+                    self.zone_names[spot.zone.ui_map_id] = spot.zone.name
         return {
             "world": world,
             "levels": [min(lo for lo, _ in levels), max(hi for _, hi in levels)],
             "mobs": mobs,
             "more": len(chances) - len(mobs),
-            "zones": [z for z, _ in sorted(zone_worth.items(), key=lambda kv: (-kv[1], kv[0]))[:SHOWN_ZONES]],
+            "zones": zones,
         }
+
+    def _farm_spot(self, spots: list[tuple[float, float, Placement]]) -> list[object]:
+        """Where to farm a mob: the spawn with the most others nearby, in its busiest zone."""
+        if not spots:
+            return [None, "", None, None]
+        per_zone = Counter(spot.zone.ui_map_id for _, _, spot in spots)
+        zone = max(per_zone, key=lambda z: (per_zone[z], -z))
+        here = [s for s in spots if s[2].zone.ui_map_id == zone]
+        wx, wy, best = max(
+            here,
+            key=lambda a: (sum(math.hypot(a[0] - b[0], a[1] - b[1]) <= PACK_YARDS for b in here), -a[0], -a[1]),
+        )
+        self.zone_names[zone] = best.zone.name
+        return best.as_row()
 
     def fishing(self, item: int) -> list[str]:
         areas = {area for area, _, _ in self._fishing.by_table.get(item, [])}

@@ -49,8 +49,8 @@ describe("skillLine", () => {
 
 describe("drops", () => {
   it("calls a drop under 1% rare", () => {
-    expect(isRareDrop({ ...DROP, mobs: [{ name: "a", minLevel: 1, maxLevel: 2, chance: 0.1 }] })).toBe(true);
-    expect(isRareDrop({ ...DROP, mobs: [{ name: "a", minLevel: 1, maxLevel: 2, chance: 30 }] })).toBe(false);
+    expect(isRareDrop({ ...DROP, mobs: [{ name: "a", minLevel: 1, maxLevel: 2, chance: 0.1, spot: null }] })).toBe(true);
+    expect(isRareDrop({ ...DROP, mobs: [{ name: "a", minLevel: 1, maxLevel: 2, chance: 30, spot: null }] })).toBe(false);
     expect(describeRareDrop({ ...DROP, world: true })).toBe("World drop from mobs level 10–30, mostly in The Barrens");
   });
 });
