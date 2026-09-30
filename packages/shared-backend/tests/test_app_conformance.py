@@ -1234,3 +1234,34 @@ class TestDocsDisabledInProduction:
             f"constructor so /docs, /redoc, and /openapi.json are disabled in "
             f"production."
         )
+
+
+# Third-party packages platform_shared declares only as a dev extra. An app
+# that imports one must pin it itself: production images install the app's
+# requirements.txt plus platform_shared WITHOUT extras, so CI (which installs
+# dev extras) passes while the container crashes with ImportError at boot.
+# Near-incident 2026-09-30: mylanguagetutor imported anthropic undeclared.
+_SHARED_DEV_ONLY_IMPORTS = ("anthropic",)
+
+
+@pytest.mark.parametrize("app", _APPS)
+class TestAppDeclaresItsThirdPartyImports:
+    def test_dev_only_shared_deps_are_declared_by_importing_app(self, app: str) -> None:
+        app_dir = _REPO_ROOT / "apps" / app / "backend" / "app"
+        requirements = _read("apps", app, "backend", "requirements.txt")
+        for package in _SHARED_DEV_ONLY_IMPORTS:
+            import_re = re.compile(rf"^\s*(?:import|from)\s+{package}\b", re.MULTILINE)
+            importers = [
+                p.relative_to(_REPO_ROOT).as_posix()
+                for p in app_dir.rglob("*.py")
+                if import_re.search(p.read_text(encoding="utf-8"))
+            ]
+            if not importers:
+                continue
+            assert re.search(rf"^{package}==", requirements, re.MULTILINE), (
+                f"{app} imports {package} ({importers[0]}) but "
+                f"apps/{app}/backend/requirements.txt does not pin it. Add it to "
+                f"pyproject.toml, run `uv lock`, then `uv export --format "
+                f"requirements-txt --no-hashes --no-emit-project --output-file "
+                f"requirements.txt`."
+            )
