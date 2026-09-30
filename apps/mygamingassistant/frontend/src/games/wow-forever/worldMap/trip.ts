@@ -74,9 +74,10 @@ export function sameEndpoint(a: TripStart | null, b: TripStart | null): boolean 
   return formatEndpoint(a) === formatEndpoint(b);
 }
 
-function routeEnd(zone: WorldZone, x: number, y: number, label: string, subzone: string): RouteEnd {
+function routeEnd(zone: WorldZone, x: number, y: number, label: string, subzone: string, z?: number): RouteEnd {
+  const world = zoneToWorld(zone, x, y);
   return {
-    world: zoneToWorld(zone, x, y),
+    world: z === undefined ? world : { ...world, z },
     place: { label, zoneId: zone.id, zoneName: zone.name, subzone, x, y },
   };
 }
@@ -87,7 +88,7 @@ function coords(x: number, y: number): string {
 
 function npcEnd(poi: MapPoi, zone: WorldZone): ResolvedEnd {
   return {
-    route: routeEnd(zone, poi.x, poi.y, poi.name, poi.subzone),
+    route: routeEnd(zone, poi.x, poi.y, poi.name, poi.subzone, poi.z),
     title: poi.name,
     subtitle: poi.title,
     detail: `${areaLabel(poi, zone)} · ${coords(poi.x, poi.y)}`,

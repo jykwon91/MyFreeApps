@@ -1,5 +1,5 @@
 import { ArrowUpDown, Map as MapIcon, X } from "lucide-react";
-import DirectionsPanel from "@/games/wow-forever/components/worldMap/DirectionsPanel";
+import DirectionsPanel, { type DirectionsWalk } from "@/games/wow-forever/components/worldMap/DirectionsPanel";
 import EndpointField, { type FieldShortcut } from "@/games/wow-forever/components/worldMap/EndpointField";
 import FlightPathChoice from "@/games/wow-forever/components/worldMap/FlightPathChoice";
 import { DIRECTIONS_HEADING_ID, FROM_FIELD_ID } from "@/games/wow-forever/components/worldMap/plannerIds";
@@ -35,6 +35,7 @@ interface DirectionsFormProps {
   myLocationLabel: string | null;
   /** undefined until there's a start; null when no route connects them. */
   directions: Directions | null | undefined;
+  walk: DirectionsWalk;
   onSetFrom: (end: TripStart) => void;
   onSetTo: (end: TripStart) => void;
   onSwap: () => void;
@@ -141,7 +142,7 @@ export default function DirectionsForm(props: DirectionsFormProps) {
             paths you've chosen, boats, zeppelins and the tram don't connect them.
           </p>
         )}
-        {directions && <DirectionsPanel directions={directions} />}
+        {directions && <DirectionsPanel directions={directions} walk={props.walk} />}
       </div>
       <p aria-live="polite" className="sr-only">
         {directions && `Route ready: ${steps} ${steps === 1 ? "step" : "steps"}`}

@@ -23,6 +23,10 @@ Writes (paths relative to ``apps/mygamingassistant/frontend``):
   (world, continents, zones, cities), stitched from the client's 256px tiles.
 * ``public/wow-maps/highlight/<uiMapId>.webp`` — the hover highlight of each
   zone / continent on its parent map.
+* ``public/wow-walk/<mapId>.bin`` — each continent's walk graph (paths
+  through towns, cities and caves), from a navmesh of the client's terrain,
+  buildings and props — see ``walk/``. Needs ``node`` (``npm ci`` at the repo
+  root); the first run downloads a few GB of client files. ``--no-walk`` skips it.
 
 Deterministic for the pinned sources in ``sources.py``.
 """
@@ -41,6 +45,7 @@ from scripts.wow_world_map.quests import GIVER_COLUMNS, QUEST_COLUMNS, build_que
 from scripts.wow_world_map.services import COLUMNS as SERVICE_COLUMNS
 from scripts.wow_world_map.services import build_services
 from scripts.wow_world_map.travel import build_travel
+from scripts.wow_world_map.walk.build import build_walk
 from scripts.wow_world_map.zones import CONTINENT_NAMES, load_world, load_zones
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
@@ -49,6 +54,7 @@ DATA_DIR = FRONTEND_DIR / "src" / "games" / "wow-forever" / "data" / "worldMap"
 CLASSIC_DIR = DATA_DIR / "classic"
 ART_DIR = FRONTEND_DIR / "public" / "wow-maps"
 HIGHLIGHT_DIR = ART_DIR / "highlight"
+WALK_DIR = FRONTEND_DIR / "public" / "wow-walk"
 
 BLIZZARD_SOURCE = {
     "publisher": "Blizzard Entertainment (World of Warcraft: Forever client data)",
@@ -80,6 +86,7 @@ def write_json(path: Path, payload: object) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build the WoW Forever World Map data.")
     parser.add_argument("--no-art", action="store_true", help="skip the map art images")
+    parser.add_argument("--no-walk", action="store_true", help="skip the walk graphs")
     args = parser.parse_args()
     print(f"download cache: {sources.CACHE_DIR}")
 
@@ -127,6 +134,10 @@ def main() -> None:
     })
     print(f"flight nodes: {len(travel['nodes'])}, routes: {len(travel['edges'])}, "  # type: ignore[arg-type]
           f"transports: {len(travel['transports'])}")  # type: ignore[arg-type]
+
+    if not args.no_walk:
+        for map_id in sorted(CONTINENT_NAMES):
+            build_walk(map_id, travel, WALK_DIR)
 
     rows, counts = build_services(zone_bounds, art)
     write_json(CLASSIC_DIR / "classicServices.json", {
