@@ -12,7 +12,7 @@ The buff is read from the client's own tooltip text, not from aura codes:
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from scripts.wow_food.tooltip import SpellBook, evaluate
 
@@ -71,6 +71,10 @@ class Tables:
     book: SpellBook
     # recipe spell -> lowest Classic trainer skill that teaches it
     trainer_skill: dict[int, int]
+    # recipe spell -> [(reagent item id, count)] (SpellReagents)
+    reagents: dict[int, list[tuple[int, int]]] = field(default_factory=dict)
+    # recipe spell -> what it must be cast next to ("Cooking Fire", "Iron Oven")
+    focus: dict[int, str] = field(default_factory=dict)
 
 
 def _int(value: str | None) -> int:
@@ -208,6 +212,11 @@ def build_foods(tables: Tables) -> list[dict]:
             # A feast's summon spell carries the Well Fed text of the food it sets out.
             buff = parse_buff(text) if _well_fed_spell(book, use_spell) or text.startswith("Serve ") else None
             recipe_item = recipes.get(recipe_spell)
+            reagents = [
+                {"id": reagent, "name": tables.items[reagent]["Display_lang"], "count": count}
+                for reagent, count in tables.reagents.get(recipe_spell, [])
+                if reagent in tables.items
+            ]
             record: dict = {
                 "id": create.item_type,
                 "name": item["Display_lang"],
@@ -221,8 +230,12 @@ def build_foods(tables: Tables) -> list[dict]:
                     "source": "recipe" if recipe_item else "trainer",
                     "skill": _int(recipe_item["RequiredSkillRank"]) if recipe_item else tables.trainer_skill.get(recipe_spell),
                     "recipe": recipe_item["Display_lang"] if recipe_item else None,
+                    "recipeItem": _int(recipe_item["ID"]) if recipe_item else None,
+                    "greenAt": _int(ability["TrivialSkillLineRankLow"]) or None,
                     "greyAt": _int(ability["TrivialSkillLineRankHigh"]) or None,
                 },
+                "reagents": reagents,
+                "focus": tables.focus.get(recipe_spell),
             }
             record["kind"] = _kind(text, heal, mana, buff)
             foods.setdefault(create.item_type, record)

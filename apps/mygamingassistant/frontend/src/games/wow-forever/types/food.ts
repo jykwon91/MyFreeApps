@@ -32,9 +32,23 @@ export interface FoodLearn {
   /** Cooking skill to learn it — from the recipe item; null for trainer recipes (see trainerSkills). */
   skill: number | null;
   recipe: string | null;
+  /** The Recipe item's id — keys its sources in `classic/recipeSources.json`. */
+  recipeItem: number | null;
+  /** Cooking skill at which it turns green (skill-ups get less likely). */
+  greenAt: number | null;
   /** Cooking skill at which it turns grey (no more skill-ups). */
   greyAt: number | null;
 }
+
+/** One thing that goes into it. */
+export interface FoodReagent {
+  id: number;
+  name: string;
+  count: number;
+}
+
+/** What you cook it at: "Cooking Fire", or "Iron Oven" (new in Forever). */
+export type FoodFocus = "Cooking Fire" | "Iron Oven";
 
 /** A row of `data/food/foods.json` — generated from the Forever client, never hand-edited. */
 export interface FoodRecord {
@@ -49,5 +63,8 @@ export interface FoodRecord {
   xpBonusPct: number | null;
   tooltip: string;
   learn: FoodLearn;
+  reagents: FoodReagent[];
+  /** null = no cooking fire needed. */
+  focus: FoodFocus | null;
   kind: FoodKind;
 }

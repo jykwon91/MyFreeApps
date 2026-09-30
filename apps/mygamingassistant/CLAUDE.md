@@ -156,6 +156,18 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `spell_power` never counts as spell damage, PvP lifts Stamina to your main
   stat's worth. Feasts only for Dungeon/Raid. The +5% kill-XP is shown as
   Unconfirmed (conditions unpublished).
+- **Food detail** (`/wow-forever/food/:foodId`, `pages/WowFoodDetailPage.tsx`):
+  every food name in the picker links here, carrying the picker query so Back
+  returns to the same answer. Shows what it does, how to learn it (skill
+  learn/green/grey; vendors, quests, drops, containers), each ingredient's
+  sources, and what to cook it at (`focus`: Cooking Fire / Forever's Iron Oven).
+  Vendors: player faction (World Map settings) + neutral first, other faction
+  behind a toggle; Directions go to `/wow-forever/map?to=pt:<zone>,<x>,<y>&dir=1`
+  (vendors aren't World Map POIs, so `npc:` doesn't resolve). Reagents you can
+  buy, fish or open from a container hide their mob-drop list.
+  Sources are `data/food/classic/recipeSources.json` — cmangos Classic data
+  from `scripts/wow_food/recipe_sources.py`, GPL, same LICENSE. Items with id
+  ≥ 100000 are new in Forever and have no source data.
 
 #### World Map (`/wow-forever/map`)
 

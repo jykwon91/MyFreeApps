@@ -60,3 +60,30 @@ test("the phone layout never scrolls sideways", async ({ page }) => {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test("click a food to see where to get the recipe, then get directions to the vendor", async ({ page }) => {
+  await page.goto("/wow-forever/food");
+  await page.getByLabel("Your level").fill("20");
+  await page.getByLabel("Class").selectOption("warlock");
+  await page.getByRole("link", { name: "Gooey Spider Cake" }).click();
+
+  await expect(page.getByRole("heading", { level: 1, name: "Gooey Spider Cake" })).toBeVisible();
+  await expect(page.getByText("Buy the recipe from Kendor Kabonka in Stormwind City.")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 3, name: "2× Gooey Spider Leg" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Back to What should I eat?" }).click();
+  await expect(page).toHaveURL(/\/wow-forever\/food\?.*lvl=20/);
+  await page.getByRole("link", { name: "Gooey Spider Cake" }).click();
+
+  await page.getByRole("link", { name: "Directions to Kendor Kabonka" }).click();
+  await expect(page).toHaveURL(/\/wow-forever\/map\?to=pt%3A1453/);
+  await expect(page.getByRole("heading", { name: "Directions" })).toBeVisible();
+});
+
+test("the food detail page never scrolls sideways on a phone", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto("/wow-forever/food/733");
+  await expect(page.getByRole("heading", { level: 1, name: "Westfall Stew" })).toBeVisible();
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});
