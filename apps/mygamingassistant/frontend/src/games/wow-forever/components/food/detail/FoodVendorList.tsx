@@ -56,11 +56,16 @@ export default function FoodVendorList({ vendors, faction, zoneId }: FoodVendorL
         ) : null}
       </div>
       {showOther ? (
-        <ul className="space-y-2" aria-label={`${otherName} ${otherNoun}`}>
-          {other.slice(0, MAX_SHOWN).map((v) => (
-            <FoodVendorRow key={vendorKey(v)} vendor={v} />
-          ))}
-        </ul>
+        <div className="space-y-2 rounded-lg border border-dashed p-3">
+          <p className="text-sm font-medium">
+            {otherName} {otherNoun} <span className="font-normal text-muted-foreground">— you can't buy from these</span>
+          </p>
+          <ul className="space-y-2" aria-label={`${otherName} ${otherNoun}`}>
+            {other.slice(0, MAX_SHOWN).map((v) => (
+              <FoodVendorRow key={vendorKey(v)} vendor={v} />
+            ))}
+          </ul>
+        </div>
       ) : null}
     </div>
   );

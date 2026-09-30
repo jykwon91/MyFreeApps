@@ -87,3 +87,12 @@ test("the food detail page never scrolls sideways on a phone", async ({ page }) 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test("the other faction's vendors are labelled as ones you can't buy from", async ({ page }) => {
+  await page.goto("/wow-forever/food?lvl=20&class=warlock&act=healing&skill=1");
+  await page.getByRole("link", { name: "Longjaw Mud Snapper" }).click();
+  const recipe = page.locator("section", { has: page.getByRole("heading", { name: "Learn the recipe" }) });
+  await recipe.getByRole("button", { name: /Show \d+ Horde vendors/ }).click();
+  await expect(recipe.getByText("— you can't buy from these")).toBeVisible();
+  await expect(recipe.getByRole("list", { name: "Horde vendors" }).getByText("Harn Longcast")).toBeVisible();
+});

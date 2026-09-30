@@ -71,7 +71,8 @@ describe("food detail page", () => {
     const recipe = section("Learn the recipe");
     expect(within(recipe).getByText("Only Alliance vendors sell it.")).toBeInTheDocument();
     await user.click(within(recipe).getByRole("button", { name: "Show 1 Alliance vendor" }));
-    expect(within(recipe).getByText("Kendor Kabonka")).toBeInTheDocument();
+    expect(within(recipe).getByText("— you can't buy from these")).toBeInTheDocument();
+    expect(within(within(recipe).getByRole("list", { name: "Alliance vendor" })).getByText("Kendor Kabonka")).toBeInTheDocument();
   });
 
   it("says when a Forever recipe's source isn't known, and names the Iron Oven", () => {
