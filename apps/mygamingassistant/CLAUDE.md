@@ -96,10 +96,14 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/map`, `/wow-forever/guide`, `/wow-forever/compare`)
+### WoW Forever (`/wow-forever`, `/wow-forever/map`, `/wow-forever/guide`, `/wow-forever/professions`, `/wow-forever/compare`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
+- Cooking & Fishing (`/wow-forever/professions`, `?p=cooking|fishing`) is
+  pre-launch data in `data/professions/`: every row carries
+  `confidence: "confirmed" | "unconfirmed"`. After Forever launches, re-check
+  the unconfirmed rows and bump `PROFESSIONS_DATA_STATUS`.
 - Class/spec ids in `data/classes.ts` are the stable key for anything
   class-shaped (stat weights, compare settings, a future BiS page). Never rename.
 - **Scoring lives in the frontend** (`scoring/`), deterministic and unit-tested.

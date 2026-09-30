@@ -1,3 +1,5 @@
+import { ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import GuideSection from "@/games/wow-forever/components/guide/GuideSection";
 import { PROFESSION_PAIRS } from "@/games/wow-forever/data/guide/professions";
 
@@ -17,6 +19,13 @@ export default function ProfessionsSection() {
           </li>
         ))}
       </ul>
+      <Link
+        to="/wow-forever/professions"
+        className="group flex items-center justify-between gap-2 rounded-xl border bg-card p-4 font-semibold hover:bg-muted/40 transition-colors"
+      >
+        Cooking & Fishing: where to train and how to level them fast
+        <ArrowRight className="h-5 w-5 text-primary group-hover:translate-x-1 transition-transform" aria-hidden />
+      </Link>
     </GuideSection>
   );
 }
