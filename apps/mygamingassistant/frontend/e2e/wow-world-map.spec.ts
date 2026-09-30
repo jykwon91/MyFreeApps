@@ -32,7 +32,12 @@ test("an Alliance Warlock in Elwynn finds a trainer, gets directions and copies 
   await trainer.getByRole("button", { name: "Directions to Maximillian Crowe" }).click();
   const planner = page.getByRole("region", { name: "Route planner" });
   await expect(planner.getByLabel("From")).toHaveValue("Your location");
-  await expect(planner.getByRole("list", { name: "Directions" })).toContainText(/Head .* to Maximillian Crowe/);
+  // The walk follows the ground (public/wow-walk/0.walk): into the inn, drawn as its real path.
+  const steps = planner.getByRole("list", { name: "Directions" });
+  await expect(steps).toContainText(/Walk ~\d+ yd to Maximillian Crowe/);
+  await steps.getByText(/Step by step/).click();
+  await expect(steps).toContainText("Go inside");
+  await expect(page.getByTestId("route-leg-1")).toBeAttached();
 
   await trainer.getByRole("button", { name: /Show on map/ }).click();
   await trainer.getByRole("button", { name: "Copy in-game waypoint" }).first().click();
