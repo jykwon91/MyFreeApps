@@ -30,6 +30,9 @@ dependencies = [
     # APScheduler — in-process background cron for source syncs (PR 6+).
     # 3.x series; 4.x is a rewrite with breaking API changes — stay on 3.x.
     "apscheduler==3.11.3",
+    # IANA timezone database for zoneinfo — the Discord raid bot resolves
+    # guild timezones; python:slim images don't guarantee /usr/share/zoneinfo.
+    "tzdata==2026.2",
 ]
 
 [tool.uv]

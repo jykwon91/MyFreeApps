@@ -27,10 +27,20 @@ We MUST respond within 3 seconds.  This handler:
      as "failed" with no message, which is worse UX).
 
   4. MESSAGE_COMPONENT (type 3) → dispatched by custom_id prefix through
-     ``dispatch_message_component`` (wired for future PRs; currently returns
-     ephemeral "Unknown component").
+     ``dispatch_message_component`` (raid signup buttons, pickers, confirms).
 
-  5. Any other type → ephemeral "Unsupported interaction type" (safe fallback).
+  5. APPLICATION_COMMAND_AUTOCOMPLETE (type 4) → ``dispatch_autocomplete``;
+     on any error, an empty choice list (autocomplete can't show messages).
+
+  6. Any other type → ephemeral "Unsupported interaction type" (safe fallback).
+
+3-second budget
+---------------
+Handlers do local DB work only (one transaction per interaction) and return
+the callback body.  Outbound Discord REST calls (posting a raid, editing the
+public post after a private flow, DMs) are queued on FastAPI
+``BackgroundTasks`` and run after the response is sent — see
+``app/services/discord/raid_publisher.py``.
 
 Signature verification
 -----------------------
@@ -40,23 +50,25 @@ tests can monkeypatch the key without rebuilding the app.
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
 
 from platform_shared.services.discord import (
-    CALLBACK_TYPE_CHANNEL_MESSAGE_WITH_SOURCE,
     CALLBACK_TYPE_PONG,
     INTERACTION_TYPE_APPLICATION_COMMAND,
+    INTERACTION_TYPE_AUTOCOMPLETE,
     INTERACTION_TYPE_MESSAGE_COMPONENT,
     INTERACTION_TYPE_PING,
-    MESSAGE_FLAG_EPHEMERAL,
 )
 from platform_shared.services.discord.signature import verify_discord_request
 
 from app.core.config import settings
 from app.services.discord.dispatcher import (
     dispatch_application_command,
+    dispatch_autocomplete,
     dispatch_message_component,
 )
+from app.services.discord.interaction import autocomplete_response, ephemeral_response
+from app.services.discord.raid_copy import GENERIC_ERROR
 
 logger = logging.getLogger(__name__)
 
@@ -75,24 +87,18 @@ async def verify_discord(request: Request) -> Any:
     )
 
 
-def _ephemeral(content: str) -> dict[str, Any]:
-    """Return an ephemeral channel message (visible only to the invoking user)."""
-    return {
-        "type": CALLBACK_TYPE_CHANNEL_MESSAGE_WITH_SOURCE,
-        "data": {
-            "content": content,
-            "flags": MESSAGE_FLAG_EPHEMERAL,
-        },
-    }
-
-
 @router.post("/interactions")
-async def interactions(payload: Any = Depends(verify_discord)) -> dict[str, Any]:
+async def interactions(
+    background: BackgroundTasks,
+    payload: Any = Depends(verify_discord),
+) -> dict[str, Any]:
     """Handle all Discord interactions.
 
-    Must respond within 3 seconds.  All handlers in this file are synchronous
-    or perform no outbound I/O in this PR, so the budget is never at risk.
+    Must respond within 3 seconds: handlers only touch the local database;
+    Discord REST calls go on ``background`` and run after the response.
     """
+    if not isinstance(payload, dict):
+        return ephemeral_response("Unsupported interaction type.")
     interaction_type: int = payload.get("type", 0)
 
     # --- PING: Discord uses this to verify the interactions endpoint URL ---
@@ -102,28 +108,39 @@ async def interactions(payload: Any = Depends(verify_discord)) -> dict[str, Any]
     # --- Slash commands ---
     if interaction_type == INTERACTION_TYPE_APPLICATION_COMMAND:
         try:
-            return await dispatch_application_command(payload)
+            return await dispatch_application_command(payload, background)
         except Exception:
             logger.exception(
                 "Unhandled exception in Discord command handler: command=%r",
                 payload.get("data", {}).get("name"),
             )
-            return _ephemeral("Something went wrong. Please try again later.")
+            return ephemeral_response(GENERIC_ERROR)
+
+    # --- Autocomplete suggestions for command options ---
+    if interaction_type == INTERACTION_TYPE_AUTOCOMPLETE:
+        try:
+            return await dispatch_autocomplete(payload)
+        except Exception:
+            logger.exception(
+                "Unhandled exception in Discord autocomplete handler: command=%r",
+                payload.get("data", {}).get("name"),
+            )
+            return autocomplete_response([])
 
     # --- Button / select-menu components ---
     if interaction_type == INTERACTION_TYPE_MESSAGE_COMPONENT:
         try:
-            return await dispatch_message_component(payload)
+            return await dispatch_message_component(payload, background)
         except Exception:
             logger.exception(
                 "Unhandled exception in Discord component handler: custom_id=%r",
                 payload.get("data", {}).get("custom_id"),
             )
-            return _ephemeral("Something went wrong. Please try again later.")
+            return ephemeral_response(GENERIC_ERROR)
 
     # --- Unknown / unsupported type ---
     logger.warning(
         "Discord: received unsupported interaction type %r — returning safe fallback",
         interaction_type,
     )
-    return _ephemeral("Unsupported interaction type.")
+    return ephemeral_response("Unsupported interaction type.")

@@ -1,7 +1,7 @@
 """Per-command handler modules for the MGA Discord bot.
 
-Each module here handles one top-level slash command:
-  raid.py → /raid (ping, and future setup/create/cancel/list)
+  raid.py        → /raid        (everyone: ping, list, prefs)
+  raid_admin.py  → /raid-admin  (organisers: setup, create, edit, cancel)
 
 The dispatcher in app/services/discord/dispatcher.py maps command names
 to their handler functions.
