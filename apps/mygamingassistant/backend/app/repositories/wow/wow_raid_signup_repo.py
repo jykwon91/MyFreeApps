@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.wow.wow_raid_signup import WowRaidSignup
@@ -26,36 +27,37 @@ async def upsert_signup(
 ) -> WowRaidSignup:
     """Insert or update a player's signup for an event.
 
-    On conflict (same event + user): updates all mutable fields and refreshes
-    ``updated_at``.  Returns the row in its post-upsert state.
+    Single INSERT … ON CONFLICT (event_id, discord_user_id) DO UPDATE, so two
+    near-simultaneous button clicks from the same player can't race into a
+    unique-violation.  ``signed_up_at`` is preserved on update (it orders the
+    bench); ``updated_at`` is refreshed.  Returns the post-upsert row.
     """
-    result = await db.execute(
-        select(WowRaidSignup).where(
-            WowRaidSignup.event_id == event_id,
-            WowRaidSignup.discord_user_id == discord_user_id,
+    values = {
+        "event_id": event_id,
+        "discord_user_id": discord_user_id,
+        "display_name": display_name,
+        "status": status,
+        "wow_class": wow_class,
+        "role": role,
+    }
+    stmt = (
+        pg_insert(WowRaidSignup)
+        .values(**values)
+        .on_conflict_do_update(
+            index_elements=["event_id", "discord_user_id"],
+            set_={
+                "display_name": display_name,
+                "status": status,
+                "wow_class": wow_class,
+                "role": role,
+                "updated_at": datetime.now(timezone.utc),
+            },
         )
+        .returning(WowRaidSignup)
+        .execution_options(populate_existing=True)
     )
-    existing = result.scalar_one_or_none()
-    if existing is not None:
-        existing.display_name = display_name
-        existing.status = status
-        existing.wow_class = wow_class
-        existing.role = role
-        existing.updated_at = datetime.now(timezone.utc)
-        await db.flush()
-        return existing
-
-    row = WowRaidSignup(
-        event_id=event_id,
-        discord_user_id=discord_user_id,
-        display_name=display_name,
-        status=status,
-        wow_class=wow_class,
-        role=role,
-    )
-    db.add(row)
-    await db.flush()
-    return row
+    result = await db.execute(stmt)
+    return result.scalar_one()
 
 
 async def list_for_event(

@@ -31,7 +31,7 @@ async def upsert_config(
     discord_guild_id: str,
     raid_channel_id: str | None = None,
     ping_role_id: str | None = None,
-    timezone: str = "UTC",
+    timezone: str | None = None,
     settings: dict[str, Any] | None = None,
     configured_by_user_id: str | None = None,
 ) -> WowRaidGuild:
@@ -39,8 +39,8 @@ async def upsert_config(
 
     Only the fields explicitly passed are updated on an existing row — callers
     can omit fields they don't want to change by leaving them at their
-    defaults (None for nullable strings, "UTC" for timezone, None for
-    settings).  An existing ``settings`` value is replaced in full if a new
+    defaults (None).  A new row with no ``timezone`` gets "UTC".  An
+    existing ``settings`` value is replaced in full if a new
     dict is provided; otherwise it is left unchanged.
     """
     existing = await get_by_discord_id(db, discord_guild_id)
@@ -52,7 +52,7 @@ async def upsert_config(
         if ping_role_id is not None and existing.ping_role_id != ping_role_id:
             existing.ping_role_id = ping_role_id
             changed = True
-        if timezone != "UTC" and existing.timezone != timezone:
+        if timezone is not None and existing.timezone != timezone:
             existing.timezone = timezone
             changed = True
         if settings is not None and existing.settings != settings:
@@ -72,7 +72,7 @@ async def upsert_config(
         discord_guild_id=discord_guild_id,
         raid_channel_id=raid_channel_id,
         ping_role_id=ping_role_id,
-        timezone=timezone,
+        timezone=timezone or "UTC",
         configured_by_user_id=configured_by_user_id,
     )
     if settings is not None:

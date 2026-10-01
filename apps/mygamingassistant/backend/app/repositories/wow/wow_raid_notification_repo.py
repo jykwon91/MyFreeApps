@@ -82,20 +82,36 @@ def _build_schedule_rows(
     return rows
 
 
+def _drop_past_due(
+    rows: list[dict[str, Any]], *, now: datetime
+) -> list[dict[str, Any]]:
+    """Drop rows whose ``due_at`` has already passed.
+
+    A raid created 20h out must not fire its 48h and 24h nudges the moment
+    the worker next ticks — those windows are simply missed.
+    """
+    return [row for row in rows if row["due_at"] > now]
+
+
 async def schedule_for_event(
     db: AsyncSession,
     *,
     event_id: uuid.UUID,
     starts_at: datetime,
     guild_settings: dict[str, Any],
+    now: datetime | None = None,
 ) -> int:
     """Insert notification rows derived from guild settings.  Idempotent.
 
-    Uses INSERT … ON CONFLICT DO NOTHING (no explicit target) so both
-    partial unique indexes on wow_raid_notification are honoured.
-    Returns the number of rows actually inserted.
+    Rows already past due at scheduling time are skipped.  Uses INSERT …
+    ON CONFLICT DO NOTHING (no explicit target) so both partial unique
+    indexes on wow_raid_notification are honoured.  Returns the number of
+    rows actually inserted.
     """
-    rows = _build_schedule_rows(event_id, starts_at, guild_settings)
+    rows = _drop_past_due(
+        _build_schedule_rows(event_id, starts_at, guild_settings),
+        now=now or datetime.now(timezone.utc),
+    )
     if not rows:
         return 0
 
