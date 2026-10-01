@@ -30,6 +30,7 @@ from platform_shared.api.transparency_router import build_transparency_router
 from app.api import (
     account,
     admin,
+    discord_interactions,
     games,
     health,
     lineup_packages,
@@ -80,6 +81,10 @@ logger = logging.getLogger("app")
 
 class ClassifierNotConfiguredError(RuntimeError):
     """Raised at startup when ENABLE_CLASSIFIER=true but ANTHROPIC_API_KEY is missing."""
+
+
+class DiscordNotConfiguredError(RuntimeError):
+    """Raised at startup when DISCORD_ENABLED=true but required Discord vars are missing."""
 
 
 class SchedulerStartupError(RuntimeError):
@@ -140,6 +145,46 @@ def _check_media_public_base_url_resolvable() -> None:
         logger.warning("_on_startup: %s (non-production — continuing)", msg)
 
 
+def _check_discord_configured() -> None:
+    """Fail loud in production when DISCORD_ENABLED=true but required vars are missing.
+
+    Required when ``discord_enabled=True``:
+      - ``discord_application_id``  (DISCORD_APPLICATION_ID)
+      - ``discord_public_key``      (DISCORD_PUBLIC_KEY)
+      - ``discord_bot_token``       (DISCORD_BOT_TOKEN)
+
+    ``discord_dev_guild_id`` is optional (empty = register commands globally).
+
+    In production: raises :exc:`DiscordNotConfiguredError`.
+    In non-production: logs WARNING (Discord routes will still be mounted but
+    Ed25519 verification will reject every request until the key is set).
+    """
+    if not settings.discord_enabled:
+        return
+
+    missing = [
+        name
+        for name, val in [
+            ("DISCORD_APPLICATION_ID", settings.discord_application_id),
+            ("DISCORD_PUBLIC_KEY", settings.discord_public_key),
+            ("DISCORD_BOT_TOKEN", settings.discord_bot_token),
+        ]
+        if not val
+    ]
+    if not missing:
+        return
+
+    msg = (
+        f"DISCORD_ENABLED=true but the following required vars are not set: "
+        f"{', '.join(missing)}. "
+        "Set them in apps/mygamingassistant/backend/.env.docker, or set "
+        "DISCORD_ENABLED=false to disable the Discord bot."
+    )
+    if settings.environment == "production":
+        raise DiscordNotConfiguredError(msg)
+    logger.warning("_on_startup: %s (non-production — Discord will not verify requests)", msg)
+
+
 async def _on_startup() -> None:
     """MGA-specific startup: seed the single operator user + classifier boot guard.
 
@@ -149,6 +194,8 @@ async def _on_startup() -> None:
         serializes the operator via an EmailStr field; an invalid address
         makes GET /users/me 500 on every authenticated request).
       - production + ENABLE_CLASSIFIER=true: ANTHROPIC_API_KEY required.
+      - production + DISCORD_ENABLED=true: DISCORD_APPLICATION_ID,
+        DISCORD_PUBLIC_KEY, DISCORD_BOT_TOKEN required.
       - development: missing/invalid vars log WARNING and seed/classifier
         are skipped.
     """
@@ -171,6 +218,10 @@ async def _on_startup() -> None:
     # dead-links while /health stays green. No-op in the default presigned mode
     # (empty base). See _check_media_public_base_url_resolvable.
     _check_media_public_base_url_resolvable()
+
+    # Discord boot guard: fail loud in production if Discord is enabled but
+    # the required vars (application_id, public_key, bot_token) are missing.
+    _check_discord_configured()
 
     # Classifier boot guard: fail loud in production if classifier is enabled
     # but ANTHROPIC_API_KEY is not set.
@@ -274,6 +325,10 @@ def _mount_public_routes(app: FastAPI) -> None:
     their ``public_router`` (read-only); wow_items is the anonymous item reader
     (Turnstile + per-IP limit + durable daily cap). Nothing here requires auth,
     so it is identical in both modes. version is a public deploy probe.
+
+    Discord interactions are mounted only when ``discord_enabled=True`` — if
+    disabled the route is absent (404). Ed25519 signature verification gates
+    every request, so the endpoint is safe to serve publicly.
     """
     app.include_router(health.router, tags=["health"])
     app.include_router(games.router)
@@ -281,6 +336,12 @@ def _mount_public_routes(app: FastAPI) -> None:
     app.include_router(lineup_packages.public_router)
     app.include_router(wow_items.router)  # Turnstile + per-IP + daily-capped
     app.include_router(wow_map_captures.public_router)
+
+    # Discord HTTP-interactions endpoint (PR 2+).
+    # Mount only when Discord is enabled — disabled = absent (404), not
+    # present-but-broken. The Ed25519 verification dependency is the gate.
+    if settings.discord_enabled:
+        app.include_router(discord_interactions.router)
 
     # Deploy verification — exposes the git commit + boot timestamp so the
     # deploy workflow can confirm which commit is live without parsing logs.

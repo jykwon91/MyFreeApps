@@ -598,6 +598,78 @@ curl http://127.0.0.1:8096/health
 - **Phase 6:** Multi-game analytics — compare lineup coverage across maps
 - **Phase 7:** Desktop shell — Tauri wrapper for native-app feel
 
+## Discord Bot
+
+MGA uses an **HTTP-interactions** model — no gateway, no persistent WebSocket. Discord
+POSTs signed requests to `https://mygamingassistant.myfreeapps.org/api/discord/interactions`
+(Caddy strips `/api`, FastAPI handles `/discord/interactions`).
+
+### Activation
+
+1. Create a Discord application at https://discord.com/developers/applications
+2. Set in `backend/.env.docker`:
+   ```
+   DISCORD_ENABLED=true
+   DISCORD_APPLICATION_ID=<General Information → Application ID>
+   DISCORD_PUBLIC_KEY=<General Information → Public Key>
+   DISCORD_BOT_TOKEN=<Bot → Reset Token>
+   DISCORD_DEV_GUILD_ID=<optional, your dev server ID for instant command propagation>
+   ```
+3. Register slash commands (run from inside the container or with the venv active):
+   ```bash
+   # Register globally (~1h propagation):
+   python -m app.cli discord-register-commands
+
+   # Register to a specific guild (instant):
+   python -m app.cli discord-register-commands --guild 1234567890
+   ```
+4. **After deploy**, set the Interactions Endpoint URL in the Developer Portal:
+   ```
+   https://mygamingassistant.myfreeapps.org/api/discord/interactions
+   ```
+   Discord sends a PING when you save; the endpoint must return `{"type":1}`.
+
+### Local testing with cloudflared
+
+Discord requires a public HTTPS URL for the Interactions Endpoint. Use `cloudflared`
+to expose the local backend:
+
+```bash
+# In one terminal — start the backend
+uvicorn app.main:app --reload --port 8004
+
+# In another terminal — create a tunnel
+cloudflared tunnel --url http://localhost:8004
+# Cloudflared prints: https://<random>.trycloudflare.com
+
+# Construct the interactions URL (backend path, no /api prefix needed with tunnel):
+# https://<random>.trycloudflare.com/discord/interactions
+```
+
+Set the Interactions Endpoint URL to `https://<random>.trycloudflare.com/discord/interactions`
+in the Developer Portal **→ General Information** and click **Save Changes**. Discord
+will send a PING — if the backend returns `{"type":1}` the URL is accepted.
+
+Note: the tunnel URL changes every session. You must re-register it in the Portal
+each time. **Do not use this URL in production** — set the production URL after deploy.
+
+### Architecture
+
+| Layer | File |
+|---|---|
+| Route (Ed25519 verification, dispatch) | `app/api/discord_interactions.py` |
+| Dispatcher (command/component registry) | `app/services/discord/dispatcher.py` |
+| Command handlers | `app/services/discord/commands/*.py` |
+| Command definitions (API payload shape) | `app/services/discord/commands_spec.py` |
+| Shared primitives (platform_shared) | `packages/shared-backend/platform_shared/services/discord/` |
+
+### Adding a new slash command
+
+1. Add a handler in `app/services/discord/commands/<name>.py`
+2. Register it in `app/services/discord/dispatcher._COMMAND_HANDLERS`
+3. Add the definition in `app/services/discord/commands_spec.ALL_COMMANDS`
+4. Re-run `python -m app.cli discord-register-commands`
+
 ## Tech Debt Policy
 
 mode: no-growth on flagged files

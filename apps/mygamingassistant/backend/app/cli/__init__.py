@@ -11,6 +11,7 @@ Usage:
     python -m app.cli backfill-micro-clips
     python -m app.cli backfill-posters
     python -m app.cli widen-source
+    python -m app.cli discord-register-commands [--guild GUILD_ID]
 """
 import asyncio
 import sys
@@ -167,6 +168,86 @@ async def _run_backfill_posters() -> int:
     return 1 if stats.failed else 0
 
 
+def _run_discord_register_commands() -> int:
+    """Register MGA slash commands with Discord.  Returns an exit code.
+
+    Parses an optional ``--guild GUILD_ID`` flag from sys.argv.  When a guild
+    ID is provided (or settings.discord_dev_guild_id is set) the commands are
+    registered as guild commands (instant propagation, <1s).  Otherwise they
+    are registered as global commands (~1h propagation).
+
+    No-op with a clear message when DISCORD_ENABLED=false so a post-deploy
+    step before the operator has configured Discord does not break the deploy.
+
+    Usage (in-container):
+        python -m app.cli discord-register-commands
+        python -m app.cli discord-register-commands --guild 1234567890
+    """
+    from app.core.config import settings
+    from app.services.discord.commands_spec import ALL_COMMANDS
+    from platform_shared.services.discord.client import DiscordRestClient
+
+    if not settings.discord_enabled:
+        print(
+            "DISCORD_ENABLED=false — skipping command registration. "
+            "Set DISCORD_ENABLED=true and the required DISCORD_* vars to activate."
+        )
+        return 0  # non-fatal: post-deploy must not break an unconfigured app
+
+    # Validate required settings before attempting the API call.
+    missing = [
+        name
+        for name, val in [
+            ("DISCORD_APPLICATION_ID", settings.discord_application_id),
+            ("DISCORD_BOT_TOKEN", settings.discord_bot_token),
+        ]
+        if not val
+    ]
+    if missing:
+        print(
+            f"discord-register-commands: DISCORD_ENABLED=true but the following "
+            f"required vars are not set: {', '.join(missing)}. "
+            "Set them in apps/mygamingassistant/backend/.env.docker."
+        )
+        return 1
+
+    # Parse --guild flag from remaining argv (after the command name).
+    guild_id: str = settings.discord_dev_guild_id
+    args = sys.argv[2:]
+    idx = 0
+    while idx < len(args):
+        if args[idx] == "--guild" and idx + 1 < len(args):
+            guild_id = args[idx + 1]
+            idx += 2
+        else:
+            print(f"discord-register-commands: unknown argument {args[idx]!r}")
+            return 1
+
+    async def _register() -> list:
+        async with DiscordRestClient(settings.discord_bot_token) as client:
+            if guild_id:
+                print(
+                    f"Registering {len(ALL_COMMANDS)} command(s) to guild {guild_id} "
+                    "(instant propagation)..."
+                )
+                return await client.bulk_overwrite_guild_commands(
+                    settings.discord_application_id, guild_id, ALL_COMMANDS
+                )
+            print(
+                f"Registering {len(ALL_COMMANDS)} command(s) globally "
+                "(may take up to ~1h to propagate)..."
+            )
+            return await client.bulk_overwrite_global_commands(
+                settings.discord_application_id, ALL_COMMANDS
+            )
+
+    registered = asyncio.run(_register())
+    for cmd in registered:
+        print(f"  /{cmd.get('name')} (id={cmd.get('id')})")
+    print(f"Done — {len(registered)} command(s) registered.")
+    return 0
+
+
 def main() -> None:
     command = sys.argv[1] if len(sys.argv) > 1 else ""
 
@@ -207,6 +288,8 @@ def main() -> None:
         sys.exit(asyncio.run(_run_backfill_posters()))
     elif command == "widen-source":
         sys.exit(asyncio.run(_run_widen_source()))
+    elif command == "discord-register-commands":
+        sys.exit(_run_discord_register_commands())
     else:
         print(f"Unknown command: {command!r}")
         print("Available commands:")
@@ -220,6 +303,8 @@ def main() -> None:
         print("  backfill-micro-clips   — generate stand + aim micro-clips for accepted lineups missing one")
         print("  backfill-posters       — generate stand + landing poster stills for accepted lineups missing one")
         print("  widen-source           — replace tight=wide pairs with a wider trim-editor source")
+        print("  discord-register-commands [--guild GUILD_ID]")
+        print("                         — register slash commands with Discord (no-op when DISCORD_ENABLED=false)")
         sys.exit(1)
 
 
