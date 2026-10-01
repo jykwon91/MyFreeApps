@@ -28,6 +28,7 @@ from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.repositories.wow import (
     wow_raid_event_repo,
+    wow_raid_guild_repo,
     wow_raid_member_pref_repo,
     wow_raid_notification_repo,
     wow_raid_signup_repo,
@@ -83,7 +84,7 @@ async def schedule_late_dms(db: AsyncSession, now: datetime) -> int:
     inserted = 0
     events = await wow_raid_event_repo.list_scheduled_starting_after(db, after=now + LATE_DM_MIN_LEAD)
     for event in events:
-        guild = await db.get(WowRaidGuild, event.guild_id)
+        guild = await wow_raid_guild_repo.get(db, event.guild_id)
         if guild is not None and round_due_at(event, guild) <= now:
             inserted += (await schedule_dms(db, event, guild)).inserted
     return inserted

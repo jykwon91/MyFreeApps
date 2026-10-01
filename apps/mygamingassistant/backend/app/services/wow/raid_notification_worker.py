@@ -64,6 +64,7 @@ from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.models.wow.wow_raid_notification import MAX_ATTEMPTS, WowRaidNotification
 from app.repositories.wow import (
     wow_raid_event_repo,
+    wow_raid_guild_repo,
     wow_raid_member_pref_repo,
     wow_raid_notification_repo,
     wow_raid_signup_repo,
@@ -356,7 +357,7 @@ async def _plan(db: AsyncSession, claim: _Claim, now: datetime) -> _Plan:
     max_late = MAX_LATENESS.get(claim.kind)
     if claim.target_user_id is None and max_late is not None and now - claim.due_at > max_late:
         return Skipped("missed its window")
-    guild = await db.get(WowRaidGuild, event.guild_id)
+    guild = await wow_raid_guild_repo.get(db, event.guild_id)
     if guild is None:
         return Skipped("guild deleted")
     ctx = _Context(event=event, guild=guild, now=now)
