@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from platform_shared.services.discord import EMPTY_EMOJIS, EmojiRef, EmojiSet
 
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_guild import WowRaidGuild
@@ -21,6 +22,7 @@ from app.services.wow.raid_embed import (
     NO_SIGNUPS_TEXT,
     build_initial_post,
     build_signup_message,
+    class_icon,
     embed_length,
     escape_name,
 )
@@ -105,7 +107,7 @@ def _assert_within_limits(embed: dict) -> None:
 
 
 def test_empty_raid_invites_first_signup() -> None:
-    message = build_signup_message(_event(), [], _guild())
+    message = build_signup_message(_event(), [], _guild(), emojis=EMPTY_EMOJIS)
     embed = _embed(message)
     assert embed["title"] == "Onyxia — Sat Oct 10"
     assert embed["color"] == COLOR_OPEN
@@ -124,7 +126,7 @@ def test_description_has_timestamps_notes_and_counts() -> None:
         _signup("Cleo", status="late", wow_class="priest", role="healer"),
         _signup("Dan", status="declined", wow_class=None, role=None),
     ]
-    embed = _embed(build_signup_message(_event(notes="Bring fire resist"), signups, _guild()))
+    embed = _embed(build_signup_message(_event(notes="Bring fire resist"), signups, _guild(), emojis=EMPTY_EMOJIS))
     stamp = int(_STARTS.timestamp())
     lines = embed["description"].split("\n")
     assert lines[0] == f"<t:{stamp}:F> (<t:{stamp}:R>)"
@@ -141,11 +143,12 @@ def test_role_fields_group_by_class_in_signup_order() -> None:
         _signup("Heals", wow_class="priest", role="healer", minute=4),
         _signup("Rogue", wow_class="rogue", role="dps", minute=5),
     ]
-    fields = _fields_by_name(_embed(build_signup_message(_event(), signups, _guild())))
+    embed = _embed(build_signup_message(_event(), signups, _guild(), emojis=EMPTY_EMOJIS))
+    fields = _fields_by_name(embed)
     assert fields["Tanks (3)"] == "[WAR] Warrior ×2: Alice, Bob\n[PAL] Paladin ×1: Pala"
     assert fields["Healers (1)"] == "[PRI] Priest ×1: Heals"
     assert fields["DPS (1)"] == "[ROG] Rogue ×1: Rogue"
-    assert all(field["inline"] is False for field in _embed(build_signup_message(_event(), signups, _guild()))["fields"])
+    assert all(field["inline"] is False for field in embed["fields"])
 
 
 def test_status_fields_and_empty_roles() -> None:
@@ -155,7 +158,7 @@ def test_status_fields_and_empty_roles() -> None:
         _signup("Bench2", status="bench", wow_class="rogue", role="dps", minute=9),
         _signup("Bench1", status="bench", wow_class="hunter", role="dps", minute=3),
     ]
-    fields = _fields_by_name(_embed(build_signup_message(_event(), signups, _guild())))
+    fields = _fields_by_name(_embed(build_signup_message(_event(), signups, _guild(), emojis=EMPTY_EMOJIS)))
     assert fields["Tanks (0)"] == "—"
     assert fields["Tentative (1)"] == "[MAG] Maybe"
     assert fields["Late (1)"] == "[DRU] Slow"
@@ -164,20 +167,21 @@ def test_status_fields_and_empty_roles() -> None:
 
 def test_full_raid_is_orange() -> None:
     signups = [_signup(f"P{i}", minute=i) for i in range(10)]
-    embed = _embed(build_signup_message(_event(raid_key="barrow_deeps", size_cap=10), signups, _guild()))
+    event = _event(raid_key="barrow_deeps", size_cap=10)
+    embed = _embed(build_signup_message(event, signups, _guild(), emojis=EMPTY_EMOJIS))
     assert embed["color"] == COLOR_FULL
     assert embed["title"].startswith("Barrow Deeps — ")
 
 
 def test_late_holds_a_seat_for_fullness() -> None:
     signups = [_signup("A"), _signup("B", status="late")]
-    embed = _embed(build_signup_message(_event(size_cap=2), signups, _guild()))
+    embed = _embed(build_signup_message(_event(size_cap=2), signups, _guild(), emojis=EMPTY_EMOJIS))
     assert embed["color"] == COLOR_FULL
 
 
 def test_cancelled_state() -> None:
     event = _event(status="cancelled", cancel_reason="Server maintenance")
-    message = build_signup_message(event, [_signup("Alice")], _guild())
+    message = build_signup_message(event, [_signup("Alice")], _guild(), emojis=EMPTY_EMOJIS)
     embed = _embed(message)
     stamp = int(_STARTS.timestamp())
     assert embed["title"] == "CANCELLED — Onyxia — Sat Oct 10"
@@ -189,7 +193,7 @@ def test_cancelled_state() -> None:
 
 def test_buttons_and_custom_ids() -> None:
     event = _event()
-    message = build_signup_message(event, [], _guild())
+    message = build_signup_message(event, [], _guild(), emojis=EMPTY_EMOJIS)
     rows = message["components"]
     labels = [[c["label"] for c in row["components"]] for row in rows]
     assert labels == [["Sign up", "Tentative", "Late", "Decline"], ["My signup", "Roster"]]
@@ -204,21 +208,22 @@ def test_buttons_and_custom_ids() -> None:
 
 
 def test_initial_post_pings_only_the_configured_role() -> None:
-    message = build_initial_post(_event(), [], _guild(ping_role_id="r9"), ping_role=True)
+    message = build_initial_post(_event(), [], _guild(ping_role_id="r9"), ping_role=True, emojis=EMPTY_EMOJIS)
     assert message["content"] == "<@&r9>"
     assert message["allowed_mentions"] == {"parse": [], "roles": ["r9"]}
 
 
 def test_repost_and_no_role_never_ping() -> None:
-    assert "content" not in build_initial_post(_event(), [], _guild(ping_role_id="r9"), ping_role=False)
-    no_role = build_initial_post(_event(), [], _guild(), ping_role=True)
+    guild = _guild(ping_role_id="r9")
+    assert "content" not in build_initial_post(_event(), [], guild, ping_role=False, emojis=EMPTY_EMOJIS)
+    no_role = build_initial_post(_event(), [], _guild(), ping_role=True, emojis=EMPTY_EMOJIS)
     assert "content" not in no_role
     assert no_role["allowed_mentions"] == {"parse": []}
 
 
 def test_title_override_and_guild_timezone() -> None:
     event = _event(title="Ony speedrun")
-    embed = _embed(build_signup_message(event, [], _guild(timezone="Asia/Tokyo")))
+    embed = _embed(build_signup_message(event, [], _guild(timezone="Asia/Tokyo"), emojis=EMPTY_EMOJIS))
     assert embed["title"] == "Ony speedrun — Sun Oct 11"
 
 
@@ -239,7 +244,7 @@ def _long_name(i: int) -> str:
 
 def test_forty_long_names_one_class_stays_within_limits() -> None:
     signups = [_signup(_long_name(i), wow_class="mage", role="dps", minute=i) for i in range(40)]
-    embed = _embed(build_signup_message(_event(), signups, _guild()))
+    embed = _embed(build_signup_message(_event(), signups, _guild(), emojis=EMPTY_EMOJIS))
     _assert_within_limits(embed)
     dps = _fields_by_name(embed)["DPS (40)"]
     assert dps.startswith("[MAG] Mage ×40: ")
@@ -255,7 +260,7 @@ def test_forty_markdown_heavy_names_mixed_statuses_stays_within_limits() -> None
         signups.append(
             _signup("*" * 32, status=statuses[i % 4], wow_class=cls.key, role=cls.roles[0], minute=i)
         )
-    embed = _embed(build_signup_message(_event(notes="n" * 200), signups, _guild()))
+    embed = _embed(build_signup_message(_event(notes="n" * 200), signups, _guild(), emojis=EMPTY_EMOJIS))
     _assert_within_limits(embed)
 
 
@@ -267,7 +272,7 @@ def test_degradation_caps_names_per_line_with_more_suffix() -> None:
         _signup("*" * 32, status=status, wow_class="mage", role="dps", minute=100 + i)
         for i, status in enumerate(["tentative", "late", "bench"] * 20)
     ]
-    embed = _embed(build_signup_message(_event(), signups, _guild()))
+    embed = _embed(build_signup_message(_event(), signups, _guild(), emojis=EMPTY_EMOJIS))
     _assert_within_limits(embed)
     fields = _fields_by_name(embed)
     assert fields["DPS (20)"].startswith("[ROG] Rogue ×20: \\_")
@@ -287,5 +292,79 @@ def test_any_roster_size_fits(count: int) -> None:
         signups.append(
             _signup(f"[{i}]" + "|" * 28, status=statuses[i % len(statuses)], wow_class=cls.key, role=cls.roles[-1], minute=i)
         )
-    embed = _embed(build_signup_message(_event(notes="x" * 200, title="T" * 200), signups, _guild()))
+    event = _event(notes="x" * 200, title="T" * 200)
+    embed = _embed(build_signup_message(event, signups, _guild(), emojis=EMPTY_EMOJIS))
     _assert_within_limits(embed)
+
+
+# ---------------------------------------------------------------------------
+# Icons (Discord application emojis)
+# ---------------------------------------------------------------------------
+
+
+def _icons(*logical: str) -> EmojiSet:
+    """Uploaded icons as the registry would resolve them (versioned names, snowflake ids)."""
+    return EmojiSet({name: EmojiRef(str(1400000000000000000 + i), f"{name}__a1b2c3") for i, name in enumerate(logical)})
+
+
+_ALL_ICONS = _icons(
+    *(cls.key for cls in CLASSES), "status_signed", "status_tentative", "status_late", "status_absence"
+)
+
+
+def test_class_icons_replace_text_tags_once_uploaded() -> None:
+    icons = _icons("warrior", "mage")
+    signups = [
+        _signup("Alice", minute=1),
+        _signup("Pala", wow_class="paladin", role="tank", minute=2),
+        _signup("Maybe", status="tentative", wow_class="mage", role="dps", minute=3),
+    ]
+    fields = _fields_by_name(_embed(build_signup_message(_event(), signups, _guild(), emojis=icons)))
+    warrior = icons.markup("warrior")
+    assert warrior == "<:warrior__a1b2c3:1400000000000000000>"
+    # Paladin's icon isn't uploaded yet: its text tag stands in.
+    assert fields["Tanks (2)"] == f"{warrior} Warrior ×1: Alice\n[PAL] Paladin ×1: Pala"
+    assert fields["Tentative (1)"] == f"{icons.markup('mage')} Maybe"
+
+
+def test_class_icon_falls_back_to_tag_and_is_empty_without_a_class() -> None:
+    assert class_icon("rogue", EMPTY_EMOJIS) == "[ROG]"
+    assert class_icon("rogue", _icons("rogue")) == "<:rogue__a1b2c3:1400000000000000000>"
+    assert class_icon(None, _ALL_ICONS) == ""
+    assert class_icon("bard", _ALL_ICONS) == ""
+
+
+def test_status_buttons_carry_icons_once_uploaded() -> None:
+    message = build_signup_message(_event(), [], _guild(), emojis=_ALL_ICONS)
+    first_row = message["components"][0]["components"]
+    assert [button["emoji"]["name"] for button in first_row] == [
+        "status_signed__a1b2c3",
+        "status_tentative__a1b2c3",
+        "status_late__a1b2c3",
+        "status_absence__a1b2c3",
+    ]
+    assert all(button["emoji"]["id"].isdigit() for button in first_row)
+    # Row 2 (My signup / Roster) stays text-only.
+    assert all("emoji" not in button for button in message["components"][1]["components"])
+
+
+def test_buttons_have_no_emoji_before_the_first_sync() -> None:
+    message = build_signup_message(_event(), [], _guild(), emojis=EMPTY_EMOJIS)
+    assert all("emoji" not in c for row in message["components"] for c in row["components"])
+
+
+@pytest.mark.parametrize("count", [40, 120])
+def test_rosters_with_icons_stay_within_limits(count: int) -> None:
+    # Each icon is ~40 chars of <:name:id> markup — the degradation ladder must absorb it.
+    statuses = ["confirmed", "confirmed", "tentative", "late", "bench", "declined"]
+    signups = []
+    for i in range(count):
+        cls = CLASSES[i % len(CLASSES)]
+        signups.append(
+            _signup("*" * 32, status=statuses[i % len(statuses)], wow_class=cls.key, role=cls.roles[-1], minute=i)
+        )
+    embed = _embed(build_signup_message(_event(notes="x" * 200), signups, _guild(), emojis=_ALL_ICONS))
+    _assert_within_limits(embed)
+    for field in embed["fields"]:
+        # An icon is never cut mid-markup.
+        assert field["value"].count("<:") == field["value"].count(":1400000000000")

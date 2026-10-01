@@ -66,6 +66,10 @@ post_deploy_commands:
   # configured the bot. When DISCORD_ENABLED=true, registers commands to
   # DISCORD_DEV_GUILD_ID (if set) or globally.
   - python -m app.cli discord-register-commands
+  # The raid bot's icons (backend/data/discord_emojis/*.png) as Discord
+  # application emojis. Uploads only art that changed (the emoji name carries
+  # the image hash); same DISCORD_ENABLED=false no-op as above.
+  - python -m app.cli discord-sync-emojis
 
 # Host-side smoke checks run AFTER the health check + bundle tripwire (see the
 # deploy template's post_deploy_verifications block). Each entry is a name + a

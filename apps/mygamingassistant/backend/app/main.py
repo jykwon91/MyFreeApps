@@ -56,6 +56,7 @@ from app.core.rate_limit import (
     require_turnstile,
 )
 from app.schemas.user.user_base import UserCreate, UserRead, UserUpdate
+from app.services.discord import emojis as discord_emojis
 from app.services.storage.bucket_initializer import ensure_bucket
 from app.services.system.admin_user_service_factory import shared_admin_user_service
 from app.services.user.seed_user_service import (
@@ -223,6 +224,10 @@ async def _on_startup() -> None:
     # Discord boot guard: fail loud in production if Discord is enabled but
     # the required vars (application_id, public_key, bot_token) are missing.
     _check_discord_configured()
+
+    # Warm the raid bot's icon registry in the background (never blocks boot;
+    # posts render text tags such as "[WAR]" until the icons are listed).
+    discord_emojis.start_refresh()
 
     # Classifier boot guard: fail loud in production if classifier is enabled
     # but ANTHROPIC_API_KEY is not set.

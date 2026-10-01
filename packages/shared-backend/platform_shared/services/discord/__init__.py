@@ -5,6 +5,7 @@ App-agnostic building blocks for an HTTP-interactions Discord bot:
 - :mod:`~platform_shared.services.discord.signature` — Ed25519 request verification
 - :mod:`~platform_shared.services.discord.client` — async REST client with rate limiting
 - :mod:`~platform_shared.services.discord.commands` — global command overwrite that keeps an Activity entry point
+- :mod:`~platform_shared.services.discord.emojis` — versioned application-emoji sync + per-process registry
 - :mod:`~platform_shared.services.discord.interactions` — interaction/response type constants
 - :mod:`~platform_shared.services.discord.permissions` — permission bits + channel-permission computation
 
@@ -34,6 +35,17 @@ from .commands import (
     entry_points_to_carry,
     is_entry_point_command,
     overwrite_global_commands_preserving_entry_point,
+)
+from .emojis import (
+    EMPTY_EMOJIS,
+    EmojiAsset,
+    EmojiRef,
+    EmojiRegistry,
+    EmojiSet,
+    SyncReport,
+    expected_names,
+    load_assets,
+    sync_application_emojis,
 )
 from .interactions import (
     BUTTON_STYLE_DANGER,
@@ -98,6 +110,16 @@ __all__ = [
     "entry_points_to_carry",
     "is_entry_point_command",
     "overwrite_global_commands_preserving_entry_point",
+    # emojis
+    "EMPTY_EMOJIS",
+    "EmojiAsset",
+    "EmojiRef",
+    "EmojiRegistry",
+    "EmojiSet",
+    "SyncReport",
+    "expected_names",
+    "load_assets",
+    "sync_application_emojis",
     # interactions
     "BUTTON_STYLE_DANGER",
     "BUTTON_STYLE_LINK",

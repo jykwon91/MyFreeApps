@@ -48,7 +48,7 @@ from app.db.session import unit_of_work
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.repositories.wow import wow_raid_event_repo, wow_raid_signup_repo
-from app.services.discord import raid_copy, rest
+from app.services.discord import emojis, raid_copy, rest
 from app.services.discord.interaction import NO_MENTIONS, ephemeral_data
 from app.services.discord.raid_views import preview_data, unix
 from app.services.wow import raid_event_service
@@ -88,10 +88,11 @@ async def _load(db: AsyncSession, event_id: uuid.UUID, *, initial_post: bool = F
     if guild is None:
         return None
     signups = await wow_raid_signup_repo.list_for_event(db, event.id)
+    icons = emojis.current()
     if initial_post:
-        message = build_initial_post(event, signups, guild, ping_role=True)
+        message = build_initial_post(event, signups, guild, ping_role=True, emojis=icons)
     else:
-        message = build_signup_message(event, signups, guild)
+        message = build_signup_message(event, signups, guild, emojis=icons)
     return _Snapshot(
         event_id=event.id,
         status=event.status,

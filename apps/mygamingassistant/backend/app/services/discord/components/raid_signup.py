@@ -21,7 +21,7 @@ from fastapi import BackgroundTasks
 
 from app.db.session import unit_of_work
 from app.repositories.wow import wow_raid_signup_repo
-from app.services.discord import raid_copy, raid_publisher
+from app.services.discord import emojis, raid_copy, raid_publisher
 from app.services.discord.interaction import (
     Interaction,
     ephemeral_response,
@@ -77,7 +77,7 @@ async def _request_status(
                 wow_class = pref.default_wow_class
                 role = pref.default_role
             elif requested != "declined":
-                return message_response(class_picker_data(event, requested))
+                return message_response(class_picker_data(event, requested, emojis=emojis.current()))
 
         change = await raid_signup_service.change_status(
             db,
@@ -92,7 +92,7 @@ async def _request_status(
             return ephemeral_response(raid_copy.already_in_status(change.status))
         dm_ids = await raid_event_service.dm_recipients(db, guild=context.guild, user_ids=change.promoted)
         signups = await wow_raid_signup_repo.list_for_event(db, event.id)
-        message = build_signup_message(event, signups, context.guild)
+        message = build_signup_message(event, signups, context.guild, emojis=emojis.current())
 
     background.add_task(raid_publisher.notify_promoted, event_id, dm_ids)
     if change.benched:
@@ -115,7 +115,7 @@ async def handle_class_pick(interaction: Interaction, parsed: RaidCustomId, back
         context = await load_event(db, interaction, parsed.event_id, lock=False)
         if context is None:
             return update_text_response(raid_copy.NOT_FOUND)
-        return update_response(role_picker_data(context.event, status, wow_class))
+        return update_response(role_picker_data(context.event, status, wow_class, emojis=emojis.current()))
 
 
 async def handle_role_pick(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
@@ -187,7 +187,7 @@ async def handle_change(interaction: Interaction, parsed: RaidCustomId, backgrou
         status = mine.status
         if status == BENCH_STATUS:
             status = "confirmed"
-        return update_response(class_picker_data(context.event, status))
+        return update_response(class_picker_data(context.event, status, emojis=emojis.current()))
 
 
 async def handle_roster(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
@@ -197,4 +197,4 @@ async def handle_roster(interaction: Interaction, parsed: RaidCustomId, backgrou
         if context is None:
             return ephemeral_response(raid_copy.NOT_FOUND)
         signups = await wow_raid_signup_repo.list_for_event(db, context.event.id)
-        return message_response(roster_data(context.event, signups, context.guild))
+        return message_response(roster_data(context.event, signups, context.guild, emojis=emojis.current()))
