@@ -1,5 +1,5 @@
 /**
- * WoW Forever Cooking & Fishing guide — static, frontend-only page.
+ * WoW Forever Professions guide (Cooking, Fishing, Tailoring, Enchanting) — static, frontend-only page.
  *
  * Run: npm run test:e2e -- wow-forever-professions
  */
@@ -7,7 +7,7 @@ import { test, expect } from "@playwright/test";
 
 test("reaches the page from the landing card and leads with training", async ({ page }) => {
   await page.goto("/wow-forever");
-  await page.getByRole("link", { name: /Cooking & Fishing/ }).click();
+  await page.getByRole("link", { name: /^Professions/ }).click();
   await expect(page).toHaveURL(/\/wow-forever\/professions$/);
   await expect(page.getByRole("radio", { name: "Cooking" })).toBeChecked();
   await expect(page.getByRole("heading", { name: /train it first/i })).toBeVisible();
@@ -39,4 +39,37 @@ test("the phone layout never scrolls sideways", async ({ page }) => {
   await page.goto("/wow-forever/professions");
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("Tailoring shows the route for your skill and a shopping list", async ({ page }) => {
+  await page.goto("/wow-forever/professions");
+  await page.getByRole("radio", { name: "Tailoring" }).click();
+  await expect(page).toHaveURL(/\?p=tailoring$/);
+  await expect(page.getByText("Georgio Bolero")).toBeVisible();
+
+  const route = page.locator("#route");
+  await route.getByLabel("Your skill").fill("120");
+  await expect(page).toHaveURL(/skill=120/);
+  await expect(route.locator('[aria-current="step"]')).toBeVisible();
+  await expect(route.getByText("You are here")).toBeVisible();
+
+  await page.locator("#shopping summary").click();
+  await expect(page.locator("#shopping").getByRole("button", { name: /Copy list/ })).toBeVisible();
+});
+
+test("Enchanting sends you to Uldaman for Artisan", async ({ page }) => {
+  await page.goto("/wow-forever/professions?p=enchanting");
+  const route = page.locator("#route");
+  await expect(route.getByText("Annora")).toBeVisible();
+  await expect(route.getByRole("link", { name: /Uldaman/ }).first()).toHaveAttribute("href", /npc=classic-i-286/);
+});
+
+test("the crafting guides never scroll sideways on a phone", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  for (const p of ["tailoring", "enchanting"]) {
+    await page.goto(`/wow-forever/professions?p=${p}&skill=150`);
+    await expect(page.locator("#route").getByText("You are here")).toBeVisible();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow, p).toBeLessThanOrEqual(0);
+  }
 });

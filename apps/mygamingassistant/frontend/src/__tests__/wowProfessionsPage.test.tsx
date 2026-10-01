@@ -7,6 +7,7 @@ import { COOKING_ROUTE } from "@/games/wow-forever/data/professions/cooking";
 import { FISHING_ROUTE } from "@/games/wow-forever/data/professions/fishing";
 import { CITY_TRAINERS } from "@/games/wow-forever/data/professions/trainers";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
+import { CRAFT_SKILL_STORAGE_KEY } from "@/games/wow-forever/hooks/useCraftingSkill";
 
 function renderAt(path: string) {
   return render(
@@ -22,7 +23,7 @@ function route() {
   return within(section);
 }
 
-describe("Cooking & Fishing page", () => {
+describe("Professions page", () => {
   beforeEach(() => window.localStorage.clear());
 
   it("defaults to Cooking and leads with training", () => {
@@ -73,5 +74,36 @@ describe("Cooking & Fishing page", () => {
     for (const faction of ["A", "H"]) {
       expect(CITY_TRAINERS.filter((c) => c.faction === faction)).toHaveLength(3);
     }
+  });
+
+  it("opens Tailoring from ?p=tailoring with its trainers, route and shopping list", async () => {
+    renderAt("/wow-forever/professions?p=tailoring");
+    expect(screen.getByRole("radio", { name: "Tailoring" })).toBeChecked();
+    expect(screen.getByRole("heading", { name: "Professions" })).toBeInTheDocument();
+    expect(screen.getByText("Georgio Bolero")).toBeInTheDocument();
+    await screen.findByRole("heading", { name: "Leveling route" });
+    expect(route().getAllByText("Bolt of Linen Cloth").length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: "Shopping list" })).toBeInTheDocument();
+    expect(screen.getByText(/Forever adds 180 Tailoring recipes/)).toBeInTheDocument();
+  });
+
+  it("points at your row for ?skill= without overwriting the saved skill", async () => {
+    window.localStorage.setItem(CRAFT_SKILL_STORAGE_KEY, JSON.stringify({ enchanting: 10 }));
+    renderAt("/wow-forever/professions?p=enchanting&skill=120");
+    await screen.findByRole("heading", { name: "Leveling route" });
+    expect(route().getByText("You are here")).toBeInTheDocument();
+    const current = document.querySelector('[aria-current="step"]');
+    expect(current).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Jump to my step" })).toBeInTheDocument();
+    expect(JSON.parse(window.localStorage.getItem(CRAFT_SKILL_STORAGE_KEY) ?? "{}").enchanting).toBe(10);
+  });
+
+  it("saves a typed skill per profession", async () => {
+    renderAt("/wow-forever/professions?p=enchanting");
+    const input = await screen.findByLabelText("Your skill");
+    expect(route().queryByText("You are here")).not.toBeInTheDocument();
+    await userEvent.type(input, "120");
+    expect(await route().findByText("You are here")).toBeInTheDocument();
+    expect(JSON.parse(window.localStorage.getItem(CRAFT_SKILL_STORAGE_KEY) ?? "{}").enchanting).toBe(120);
   });
 });

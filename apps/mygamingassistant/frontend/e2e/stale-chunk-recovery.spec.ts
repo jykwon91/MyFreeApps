@@ -26,7 +26,7 @@ test("a chunk removed by a deploy reloads once, then offers a manual reload", as
   });
 
   await page.goto("/wow-forever");
-  await expect(page.getByRole("link", { name: /Cooking & Fishing/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Professions/ })).toBeVisible();
   expect(documentLoads).toBe(1);
 
   // "Deploy": the professions chunk this tab would load no longer exists.
@@ -36,7 +36,7 @@ test("a chunk removed by a deploy reloads once, then offers a manual reload", as
     await route.fulfill({ status: 404, body: "" });
   });
 
-  await page.getByRole("link", { name: /Cooking & Fishing/ }).click();
+  await page.getByRole("link", { name: /^Professions/ }).click();
 
   // One automatic reload, then the prompt — not the router's dev error page.
   await expect(page.getByRole("heading", { name: "A new version was released" })).toBeVisible();

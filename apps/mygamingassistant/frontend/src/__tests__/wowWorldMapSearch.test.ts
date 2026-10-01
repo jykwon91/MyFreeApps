@@ -6,6 +6,7 @@ import questsJson from "@/games/wow-forever/data/worldMap/classic/classicQuests.
 import dungeonsJson from "@/games/wow-forever/data/worldMap/classic/classicDungeons.json";
 import masksJson from "@/games/wow-forever/data/worldMap/mapMasks.json";
 import { CITY_TRAINERS, TOWN_TRAINERS } from "@/games/wow-forever/data/professions/trainers";
+import { CRAFTING_RANKS, CRAFTING_TRAINERS } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
 import { FACTION } from "@/games/wow-forever/types/worldMap";
 import { decodeWorldMap } from "@/games/wow-forever/worldMap/decodeWorldMap";
 import { areaLabel } from "@/games/wow-forever/worldMap/describeRank";
@@ -191,10 +192,17 @@ describe("directions text", () => {
   });
 });
 
-describe("Cooking & Fishing trainers link to the map", () => {
+describe("Profession trainers link to the map", () => {
   const trainers = [
     ...CITY_TRAINERS.flatMap((c) => [c.cooking, c.fishing]),
     ...Object.values(TOWN_TRAINERS).flatMap((t) => [...t.cooking, ...t.fishing]),
+    ...Object.values(CRAFTING_TRAINERS).flatMap((t) => [
+      ...Object.values(t.cities).flatMap((cities) => cities.map((c) => c.npc)),
+      ...Object.values(t.towns).flat(),
+    ]),
+    ...Object.values(CRAFTING_RANKS)
+      .flat()
+      .flatMap((r) => (r.trainers.kind === "named" ? Object.values(r.trainers.trainers) : [])),
   ];
 
   it.each(trainers.map((t) => [t.name, t] as const))("%s is on the World Map where the page says", (_name, trainer) => {
@@ -204,5 +212,13 @@ describe("Cooking & Fishing trainers link to the map", () => {
     expect(areaLabel(poi, zone(poi.zone))).toBe(trainer.where);
     expect(poi.x).toBeCloseTo(trainer.x, 1);
     expect(poi.y).toBeCloseTo(trainer.y, 1);
+  });
+
+  it("links the Artisan Enchanting trainer to the Uldaman entrance", () => {
+    for (const rank of Object.values(CRAFTING_RANKS).flat()) {
+      if (rank.trainers.kind !== "dungeon") continue;
+      const id = new URL(rank.trainers.dungeonLink, "https://x").searchParams.get("npc") ?? "";
+      expect(findLinkedPoi(id, data)?.name).toBe(rank.trainers.dungeon);
+    }
   });
 });

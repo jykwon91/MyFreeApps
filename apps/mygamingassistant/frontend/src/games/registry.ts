@@ -44,8 +44,8 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
       },
       {
         path: "/wow-forever/professions",
-        title: "Cooking & Fishing",
-        description: "Where to train, the fastest route to 300, and fixes for \"can't find Cooking\" or \"can't equip my pole\".",
+        title: "Professions",
+        description: "Cooking, Fishing, Tailoring and Enchanting: where to train, the fastest route to 300 and a shopping list.",
       },
       {
         path: "/wow-forever/food",
