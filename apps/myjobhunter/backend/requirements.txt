@@ -230,7 +230,7 @@ pyjwt==2.13.0
     #   platform-shared
 pyotp==2.10.0
     # via platform-shared
-pypdf==6.16.1
+pypdf==6.19.0
     # via myjobhunter-backend
 pyphen==0.17.2
     # via weasyprint
