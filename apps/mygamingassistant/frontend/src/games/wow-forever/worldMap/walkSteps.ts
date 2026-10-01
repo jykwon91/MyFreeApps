@@ -19,6 +19,7 @@ import {
   type WalkGraph,
   type WalkHop,
 } from "@/games/wow-forever/worldMap/walkGraph";
+import { insideRuns, type InsideRun } from "@/games/wow-forever/worldMap/insideRuns";
 
 /** A stretch shorter than this is folded into the one before it — "head north, ~10 yd" is noise. */
 const MIN_STRETCH_YARDS = 25;
@@ -46,6 +47,8 @@ export interface WalkLeg {
   path: WorldPoint[];
   /** Sub-steps; empty when the leg is one stretch (the step's own text says it all). */
   detail: string[];
+  /** Stretches inside a cave or building, each drawn as its own sketch. */
+  inside: InsideRun[];
 }
 
 type StretchKind = "walk" | "swim" | "lift" | "portal" | "drop" | "teleport";
@@ -68,6 +71,8 @@ interface Stretch extends Piece {
 export interface WalkStep {
   text: string;
   points: WorldPoint[];
+  /** The area (graph label) the line walks through. */
+  label: number;
 }
 
 function distance(a: WorldPoint, b: WorldPoint): number {
@@ -291,8 +296,8 @@ export function walkSteps(graph: WalkGraph, hops: readonly WalkHop[]): WalkStep[
   return list.flatMap((s, i) => {
     const legs = legsOf(graph, s);
     return [
-      { text: stretchText(graph, s, legs[0], list[i - 1], list[i + 1]), points: legs[0].points },
-      ...legs.slice(1).map((p, k) => ({ text: turnText(legs[k], p), points: p.points })),
+      { text: stretchText(graph, s, legs[0], list[i - 1], list[i + 1]), points: legs[0].points, label: s.label },
+      ...legs.slice(1).map((p, k) => ({ text: turnText(legs[k], p), points: p.points, label: s.label })),
     ];
   });
 }
@@ -316,5 +321,12 @@ export function walkLeg(graph: WalkGraph, a: number, b: number, from: WorldPoint
     // path[i] is hops[i - 1], reached by that hop's kind.
     if (i > hops.length || !isJump(hops[i - 1].kind)) yards += Math.hypot(path[i].wx - path[i - 1].wx, path[i].wy - path[i - 1].wy);
   }
-  return { cost: searchFrom(graph, a).dist[b], yards, path, detail: describeWalk(graph, hops) };
+  const steps = walkSteps(graph, hops);
+  return {
+    cost: searchFrom(graph, a).dist[b],
+    yards,
+    path,
+    detail: steps.length < 2 ? [] : steps.map((s) => s.text),
+    inside: steps.length < 2 ? [] : insideRuns(graph, hops, steps),
+  };
 }

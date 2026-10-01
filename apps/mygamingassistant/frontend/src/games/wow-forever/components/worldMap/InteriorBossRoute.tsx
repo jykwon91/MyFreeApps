@@ -1,7 +1,7 @@
 import { useState } from "react";
 import clsx from "clsx";
 import { ChevronDown, Lock } from "lucide-react";
-import InteriorSchematic from "@/games/wow-forever/components/worldMap/InteriorSchematic";
+import RouteSketch from "@/games/wow-forever/components/worldMap/RouteSketch";
 import type { WorldPoint } from "@/games/wow-forever/types/worldMap";
 import { formatYards } from "@/games/wow-forever/worldMap/geometry";
 import {
@@ -94,14 +94,14 @@ export default function InteriorBossRoute(props: InteriorBossRouteProps) {
                   ` — it can spawn in ${boss.spots} places; this is one of them`}
                 .
               </p>
-              <InteriorSchematic
+              <RouteSketch
                 ground={ground}
                 path={route.path}
                 highlight={
                   highlight === null ? null : route.steps[highlight].points
                 }
                 startLabel={startName(route)}
-                bossName={boss.name}
+                endLabel={boss.name}
                 label={`Sketch of the route from ${startName(route)} to ${boss.name}, ${route.steps.length} steps, about ${Math.round(route.yards)} yards`}
               />
               {route.steps.length > 0 && (

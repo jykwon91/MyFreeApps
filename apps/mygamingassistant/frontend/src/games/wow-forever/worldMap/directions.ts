@@ -25,6 +25,7 @@ import { FACTION } from "@/games/wow-forever/types/worldMap";
 import { compassDirection, formatCoord, formatYards, yardsBetween } from "@/games/wow-forever/worldMap/geometry";
 import { flightRoutesFrom, usableFlightNodes, type FlightRoute } from "@/games/wow-forever/worldMap/flightRoutes";
 import { hubNodeOf, hubToHub, searchFrom, snapToGraph, type WalkGraph } from "@/games/wow-forever/worldMap/walkGraph";
+import type { InsideRun } from "@/games/wow-forever/worldMap/insideRuns";
 import { walkLeg } from "@/games/wow-forever/worldMap/walkSteps";
 
 /** Loaded walk graphs by continent (map id). */
@@ -64,6 +65,8 @@ export interface DirectionStep {
   path?: readonly WorldPoint[];
   /** A walk's sub-steps ("Go into The Great Forge and head east, ~60 yd"). */
   detail?: readonly string[];
+  /** A walk's stretches inside caves / buildings, each sketched on its own. */
+  inside?: readonly InsideRun[];
 }
 
 export interface Directions {
@@ -242,6 +245,7 @@ class Walking {
       place: to.place,
       path: leg.path,
       detail: leg.detail,
+      inside: leg.inside,
     };
   }
 }

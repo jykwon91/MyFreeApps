@@ -300,6 +300,13 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   head …", "Ride the lift up to …", "Step on the teleporter up …"); indoors
   and in capital cities they go turn by turn ("Turn left and head west,
   ~80 yd"). Hovering a step highlights its leg.
+  - **Inside a cave or building** (`worldMap/insideRuns.ts`, `InsideSketch`):
+    a stretch of a walk on indoor ground (≥ 40 yd or ≥ 2 lines; a capital
+    city's buildings only when the walk ends in there) gets an open "Inside
+    <name> · ~N yd, going down ~M yd" sketch in the walk step — the route over
+    the indoor floor around it (`RouteSketch`, shared with dungeon interiors),
+    shaded by height (lighter = higher), with numbered markers matching its
+    lines; hovering / focusing / tapping a line picks out its stretch.
   - **Room labels** (`walk/floors.py`, `walk_graph.py`): a patch is in the
     WMO group whose walkable floor is right under it (never bounding boxes —
     they swallow the street outside). Indoor = the group's interior flag and
@@ -319,7 +326,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
     tower top) — a hub the log calls "off the walk graph" walks straight.
     Layout in `walk/export.py`; `tests/test_wow_walk_graph.py`.
   - **Dungeon interiors** ("Inside · bosses & routes" on an entrance row,
-    `InstanceInterior` / `InteriorBossRoute` / `InteriorSchematic`,
+    `InstanceInterior` / `InteriorBossRoute` / `RouteSketch`,
     `worldMap/interiors.ts`, `hooks/useInteriors.ts`): each instance map has
     its own `public/wow-walk/<instance map id>.walk` (meta `instance: 1`;
     hubs `e<trigger>` = where an entrance puts you, `b<encounter>` = a boss),
