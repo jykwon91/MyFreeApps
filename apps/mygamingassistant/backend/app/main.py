@@ -263,6 +263,11 @@ async def _on_startup() -> None:
             "Use POST /api/scheduler/trigger/sync_all_sources for manual runs, or "
             "set SCHEDULER_ENABLED=true to re-enable.",
         )
+        if settings.discord_enabled:
+            logger.warning(
+                "_on_startup: DISCORD_ENABLED=true but SCHEDULER_ENABLED=false — "
+                "raid reminders (nudges, consumables DMs, ready checks) will NOT be sent.",
+            )
 
 
 async def _seed_operator_if_configured() -> None:

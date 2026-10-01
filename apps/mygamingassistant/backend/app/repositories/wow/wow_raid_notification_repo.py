@@ -5,8 +5,11 @@ Standalone async functions; the caller owns the transaction.
 Worker flow:
   1. schedule_for_event()  — idempotently insert rows from guild settings
   2. claim_due()           — atomically claim a batch using SKIP LOCKED
-  3. mark_sent() / mark_failed() — post-dispatch bookkeeping
+  3. mark_sent() / mark_failed() / mark_skipped() / mark_undeliverable() /
+     defer() — post-dispatch bookkeeping (re-load the row with
+     get_for_update() first: a cancel may have deleted it mid-flight)
   4. cancel_pending_for_event() — delete unsent rows when an event is cancelled
+  5. schedule_user_rows() / schedule_channel_row() — worker fan-out
 """
 from __future__ import annotations
 
@@ -14,18 +17,33 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import CTE, delete, select, update
+from sqlalchemy import CTE, delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.wow.wow_raid_notification import (
     MAX_ATTEMPTS,
-    NOTIFICATION_KINDS,
     WowRaidNotification,
 )
 
 # How long a worker may hold a claim before another worker can reclaim the row.
 _STALE_CLAIM_MINUTES: int = 10
+
+# Retry backoff after a failed attempt: 1, 2, 4, 8 … minutes, capped.
+_BACKOFF_BASE_MINUTES: int = 1
+_BACKOFF_CAP_MINUTES: int = 30
+
+# ``last_error`` marker for a DM Discord refused with 50007 (DMs closed).
+# The dm_fallback post finds the players to mention by this exact value.
+DM_BLOCKED_ERROR: str = "discord_cannot_dm:50007"
+_SKIPPED_PREFIX: str = "skipped:"
+
+
+def backoff_delay(attempts: int) -> timedelta:
+    """Delay before the retry that follows failed attempt number ``attempts``."""
+    exponent = max(attempts - 1, 0)
+    minutes = min(_BACKOFF_BASE_MINUTES * (2**exponent), _BACKOFF_CAP_MINUTES)
+    return timedelta(minutes=minutes)
 
 
 def _build_schedule_rows(
@@ -147,10 +165,16 @@ async def claim_due(
             WowRaidNotification.attempts < MAX_ATTEMPTS,
         )
         .filter(
+            # Not held back by a retry backoff / fallback wait.
+            (WowRaidNotification.next_attempt_at.is_(None))
+            | (WowRaidNotification.next_attempt_at <= now)
+        )
+        .filter(
             # Unclaimed or stale claim
             (WowRaidNotification.claimed_at.is_(None))
             | (WowRaidNotification.claimed_at < stale_cutoff)
         )
+        .order_by(WowRaidNotification.due_at)
         .limit(limit)
         .with_for_update(skip_locked=True)
         .cte("claimable")
@@ -182,21 +206,149 @@ async def mark_failed(
     notification: WowRaidNotification,
     *,
     error: str,
+    now: datetime | None = None,
 ) -> WowRaidNotification:
-    """Increment attempt count and store the error.
+    """Increment attempt count, store the error and back off before the retry.
 
     When attempts reaches MAX_ATTEMPTS the row is given up on: sent_at is
     set to the current time so claim_due no longer picks it up, and
     last_error records why.
     """
+    moment = now or datetime.now(timezone.utc)
     notification.attempts += 1
     notification.last_error = error
     notification.claimed_at = None
+    notification.next_attempt_at = moment + backoff_delay(notification.attempts)
     if notification.attempts >= MAX_ATTEMPTS:
         # Give up — mark as sent so the row leaves the pending queue.
         notification.sent_at = datetime.now(timezone.utc)
     await db.flush()
     return notification
+
+
+async def mark_skipped(
+    db: AsyncSession, notification: WowRaidNotification, *, reason: str
+) -> WowRaidNotification:
+    """Close a row without sending (event cancelled, raid started, too late…)."""
+    notification.sent_at = datetime.now(timezone.utc)
+    notification.claimed_at = None
+    notification.last_error = f"{_SKIPPED_PREFIX} {reason}"
+    await db.flush()
+    return notification
+
+
+async def mark_undeliverable(
+    db: AsyncSession, notification: WowRaidNotification, *, error: str
+) -> WowRaidNotification:
+    """Close a row Discord permanently refused (e.g. 50007) — no retry."""
+    notification.attempts += 1
+    notification.sent_at = datetime.now(timezone.utc)
+    notification.claimed_at = None
+    notification.last_error = error
+    await db.flush()
+    return notification
+
+
+async def defer(
+    db: AsyncSession, notification: WowRaidNotification, *, until: datetime
+) -> WowRaidNotification:
+    """Release the claim and hold the row back until *until* (no attempt used)."""
+    notification.claimed_at = None
+    notification.next_attempt_at = until
+    await db.flush()
+    return notification
+
+
+async def get_for_update(
+    db: AsyncSession, notification_id: uuid.UUID
+) -> WowRaidNotification | None:
+    """Re-load a claimed row with a row lock; None if a cancel deleted it."""
+    result = await db.execute(
+        select(WowRaidNotification)
+        .where(WowRaidNotification.id == notification_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    return result.scalar_one_or_none()
+
+
+async def schedule_user_rows(
+    db: AsyncSession,
+    *,
+    event_id: uuid.UUID,
+    kind: str,
+    due_at: datetime,
+    user_ids: list[str],
+) -> int:
+    """Insert one per-user row per id.  Idempotent (``uq_wowraidnotif_user_notif``).
+
+    The caller passes the *trigger's* ``due_at`` so a retried fan-out hits
+    the unique index instead of scheduling a second DM.
+    """
+    if not user_ids:
+        return 0
+    rows = [
+        {"event_id": event_id, "kind": kind, "target_user_id": user_id, "due_at": due_at}
+        for user_id in dict.fromkeys(user_ids)
+    ]
+    result = await db.execute(
+        pg_insert(WowRaidNotification).values(rows).on_conflict_do_nothing()
+    )
+    await db.flush()
+    return result.rowcount or 0
+
+
+async def schedule_channel_row(
+    db: AsyncSession, *, event_id: uuid.UUID, kind: str, due_at: datetime
+) -> int:
+    """Insert one channel-post row.  Idempotent (``uq_wowraidnotif_channel_post``)."""
+    result = await db.execute(
+        pg_insert(WowRaidNotification)
+        .values(event_id=event_id, kind=kind, target_user_id=None, due_at=due_at)
+        .on_conflict_do_nothing()
+    )
+    await db.flush()
+    return result.rowcount or 0
+
+
+async def count_pending_user_rows(
+    db: AsyncSession, *, event_id: uuid.UUID, kind: str, due_at: datetime
+) -> int:
+    """Per-user rows of one fan-out (*kind*, *due_at*) that are not finished yet."""
+    result = await db.execute(
+        select(func.count())
+        .select_from(WowRaidNotification)
+        .where(
+            WowRaidNotification.event_id == event_id,
+            WowRaidNotification.kind == kind,
+            WowRaidNotification.target_user_id.is_not(None),
+            WowRaidNotification.due_at == due_at,
+            WowRaidNotification.sent_at.is_(None),
+        )
+    )
+    return int(result.scalar_one())
+
+
+async def dm_blocked_user_ids(
+    db: AsyncSession, *, event_id: uuid.UUID, kind: str, due_at: datetime
+) -> list[str]:
+    """Players whose DM in one fan-out (*kind*, *due_at*) failed with 50007.
+
+    Scoped to *due_at* so a raid whose time was edited (new fan-out) doesn't
+    re-mention players from the earlier round.
+    """
+    result = await db.execute(
+        select(WowRaidNotification.target_user_id)
+        .where(
+            WowRaidNotification.event_id == event_id,
+            WowRaidNotification.kind == kind,
+            WowRaidNotification.target_user_id.is_not(None),
+            WowRaidNotification.due_at == due_at,
+            WowRaidNotification.last_error == DM_BLOCKED_ERROR,
+        )
+        .order_by(WowRaidNotification.created_at, WowRaidNotification.target_user_id)
+    )
+    return [user_id for user_id in result.scalars().all() if user_id is not None]
 
 
 async def cancel_pending_for_event(

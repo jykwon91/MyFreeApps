@@ -143,3 +143,36 @@ def promoted_dm(raid_label: str, unix: int, link: str | None) -> str:
     if link:
         return f"{text}\n[Jump to the raid]({link})"
     return text
+
+
+# ---------------------------------------------------------------------------
+# Scheduled notifications (raid_notification_worker)
+# ---------------------------------------------------------------------------
+
+DM_FOOTER: Final = "To stop these DMs, use /raid prefs dm_reminders:false"
+CLASSIC_CAVEAT: Final = "*Classic advice, which may differ in Forever.*"
+DM_FALLBACK_HEAD: Final = "I couldn't DM "
+DM_FALLBACK_TAIL: Final = ". Open DMs from this server to get reminders, or use `/raid prefs`."
+
+
+def nudge_headline(raid_label: str, unix: int) -> str:
+    return f"**{raid_label} is <t:{unix}:R>.**"
+
+
+def ready_check_headline(raid_label: str, unix: int) -> str:
+    return f"**Ready check — {raid_label} starts <t:{unix}:R>.**"
+
+
+def consumables_title(raid_label: str, day_word: str, class_role: str) -> str:
+    return f"{raid_label} {day_word} — {class_role}"
+
+
+def generic_reminder_dm(raid_label: str, unix: int, link: str | None) -> str:
+    """Reminder for a player with no class picked — no checklist to personalise."""
+    text = (
+        f"**{raid_label}** starts <t:{unix}:R> (<t:{unix}:F>). "
+        "Tell me your class and role with `/raid prefs` and I'll send you a consumables checklist next time."
+    )
+    if link:
+        text = f"{text}\n[Jump to the raid]({link})"
+    return f"{text}\n-# {DM_FOOTER}"

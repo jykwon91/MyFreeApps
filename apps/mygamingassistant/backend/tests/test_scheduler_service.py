@@ -20,6 +20,7 @@ import pytest
 
 from app.services.scheduling.scheduler_service import (
     JOB_CLEANUP_DOWNLOADS,
+    JOB_RAID_NOTIFICATIONS,
     JOB_SYNC_ALL_SOURCES,
     SchedulerNotStartedError,
     _run_cleanup_downloads,
@@ -75,6 +76,21 @@ async def test_start_scheduler_custom_interval():
     assert "interval" in trigger_str.lower()
 
 
+@pytest.mark.asyncio
+async def test_raid_notifications_job_only_when_discord_enabled(monkeypatch: pytest.MonkeyPatch):
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "discord_enabled", False)
+    assert start_scheduler().get_job(JOB_RAID_NOTIFICATIONS) is None
+    shutdown_scheduler()
+
+    monkeypatch.setattr(settings, "discord_enabled", True)
+    job = start_scheduler().get_job(JOB_RAID_NOTIFICATIONS)
+    assert job is not None
+    assert job.trigger.interval.total_seconds() == 60
+    assert job.max_instances == 1
+
+
 # ---------------------------------------------------------------------------
 # shutdown_scheduler
 # ---------------------------------------------------------------------------
@@ -105,7 +121,10 @@ def test_get_job_status_returns_empty_when_not_started():
 
 
 @pytest.mark.asyncio
-async def test_get_job_status_returns_jobs_when_started():
+async def test_get_job_status_returns_jobs_when_started(monkeypatch: pytest.MonkeyPatch):
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "discord_enabled", False)
     start_scheduler()
     jobs = get_job_status()
     assert len(jobs) == 2

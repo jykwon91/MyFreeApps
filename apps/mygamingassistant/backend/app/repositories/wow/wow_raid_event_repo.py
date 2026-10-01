@@ -6,9 +6,8 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.wow.wow_raid_event import WowRaidEvent
@@ -129,3 +128,22 @@ async def mark_completed(
     event.status = "completed"
     await db.flush()
     return event
+
+
+async def complete_started_events(db: AsyncSession, *, started_before: datetime) -> int:
+    """Flip every ``scheduled`` event that started before *started_before* to ``completed``.
+
+    Run by the notification worker each tick so finished raids drop out of
+    ``scheduled`` (listings, autocomplete, the worker's own sends).  Returns
+    the number of events completed.
+    """
+    result = await db.execute(
+        update(WowRaidEvent)
+        .where(
+            WowRaidEvent.status == "scheduled",
+            WowRaidEvent.starts_at < started_before,
+        )
+        .values(status="completed", updated_at=func.now())
+    )
+    await db.flush()
+    return result.rowcount or 0

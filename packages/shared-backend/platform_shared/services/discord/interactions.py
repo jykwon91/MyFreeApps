@@ -33,6 +33,8 @@ CALLBACK_TYPE_MODAL: Final = 9
 # ---------------------------------------------------------------------------
 
 MESSAGE_FLAG_EPHEMERAL: Final = 64
+# Deliver the message without push/desktop notifications ("@silent").
+MESSAGE_FLAG_SUPPRESS_NOTIFICATIONS: Final = 4096
 
 # ---------------------------------------------------------------------------
 # Message component types

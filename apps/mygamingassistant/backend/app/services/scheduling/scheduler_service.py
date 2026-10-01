@@ -1,6 +1,6 @@
 """APScheduler wiring for scheduled source syncs (PR 6).
 
-Two scheduled jobs:
+Scheduled jobs:
   sync_all_sources  — every SOURCE_SYNC_INTERVAL_HOURS hours (default 6).
                       Iterates active sources and calls sync_source() for each
                       sequentially (rate-limit-safe). Skips sources marked
@@ -9,6 +9,11 @@ Two scheduled jobs:
                       INGESTION_DOWNLOAD_DIR_MAX_GB cap by deleting oldest
                       files first. Prevents unbounded disk growth from
                       interrupted downloads.
+  raid_notifications — every 60 seconds, only when DISCORD_ENABLED=true.
+                      Drains the WoW raid bot's notification outbox
+                      (``app/services/wow/raid_notification_worker.py``).
+                      Safe with several processes ticking at once: the
+                      outbox is claimed with FOR UPDATE SKIP LOCKED.
 
 Architecture rationale
 ----------------------
@@ -55,6 +60,8 @@ _scheduler: AsyncIOScheduler | None = None
 # Job name constants — used by both the scheduler wiring and admin API.
 JOB_SYNC_ALL_SOURCES = "sync_all_sources"
 JOB_CLEANUP_DOWNLOADS = "cleanup_ingestion_downloads"
+JOB_RAID_NOTIFICATIONS = "raid_notifications"
+RAID_NOTIFICATIONS_INTERVAL_SECONDS = 60
 
 
 class SchedulerNotStartedError(RuntimeError):
@@ -103,6 +110,20 @@ def start_scheduler(sync_interval_hours: int = 6) -> AsyncIOScheduler:
         misfire_grace_time=1800,
         max_instances=1,
     )
+
+    from app.core.config import settings
+
+    if settings.discord_enabled:
+        _scheduler.add_job(
+            _run_raid_notifications,
+            trigger=IntervalTrigger(seconds=RAID_NOTIFICATIONS_INTERVAL_SECONDS),
+            id=JOB_RAID_NOTIFICATIONS,
+            name="raid_notifications",
+            replace_existing=True,
+            coalesce=True,
+            misfire_grace_time=RAID_NOTIFICATIONS_INTERVAL_SECONDS,
+            max_instances=1,
+        )
 
     _scheduler.start()
     logger.info(
@@ -234,6 +255,18 @@ async def _run_sync_all_sources() -> None:
     )
 
 
+async def _run_raid_notifications() -> None:
+    """Scheduled job: send due raid-bot notifications (no-op unless DISCORD_ENABLED)."""
+    from app.services.wow.raid_notification_worker import process_due_notifications
+
+    try:
+        await process_due_notifications()
+    except Exception:
+        # process_due_notifications never raises by design; belt and braces so
+        # one bad tick can't kill the job.
+        logger.exception("scheduler_service: raid_notifications: run failed")
+
+
 async def _run_cleanup_downloads() -> None:
     """Scheduled job: enforce INGESTION_DOWNLOAD_DIR_MAX_GB disk cap.
 
@@ -287,7 +320,7 @@ async def _run_cleanup_downloads() -> None:
     deleted_count = 0
     freed_bytes = 0
 
-    for mtime, size, path in files:
+    for _mtime, size, path in files:
         if total_bytes <= max_bytes:
             break
         try:

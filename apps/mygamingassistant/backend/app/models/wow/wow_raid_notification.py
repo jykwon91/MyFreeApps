@@ -20,6 +20,16 @@ either partial index — safe to call from schedule_for_event idempotently.
 Workers claim due rows with SELECT ... FOR UPDATE SKIP LOCKED, set claimed_at,
 then call mark_sent or mark_failed.  Rows with attempts >= MAX_ATTEMPTS are
 excluded from future claims (give-up semantics without extra columns).
+``next_attempt_at`` (migration 0027) holds a row back after a failure
+(exponential backoff) or while a ``dm_fallback`` waits for its DMs.
+
+Row shapes the worker produces (see raid_notification_worker):
+  * ``consumables_reminder`` with target_user_id NULL is the per-raid
+    trigger; processing it fans out one ``consumables_reminder`` row per
+    player (target_user_id set, same due_at) plus one ``dm_fallback`` row.
+  * ``raid_cancelled`` is never scheduled: the cancel flow announces
+    synchronously and drops every pending row.  The kind stays in the CHECK
+    for compatibility; the worker skips any such row.
 """
 import uuid
 from datetime import datetime, timezone
@@ -36,6 +46,8 @@ NOTIFICATION_KINDS = (
     "consumables_reminder",
     "ready_check",
     "raid_cancelled",
+    # One combined "I couldn't DM …" channel post per raid (migration 0027).
+    "dm_fallback",
 )
 
 MAX_ATTEMPTS = 5
@@ -102,6 +114,11 @@ class WowRaidNotification(Base):
         Integer, nullable=False, default=0, server_default="0"
     )
     last_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # Not claimable before this time (retry backoff / fallback wait); null =
+    # claimable as soon as due.  Migration 0027.
+    next_attempt_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     # Set by claim_due; cleared when mark_sent/mark_failed runs.
     claimed_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
