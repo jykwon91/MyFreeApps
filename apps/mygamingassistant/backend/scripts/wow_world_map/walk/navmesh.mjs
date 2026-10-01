@@ -1,6 +1,6 @@
 // Builds Recast navmesh polygons for terrain tiles written by geometry.py.
 //
-//   node navmesh.mjs <out-dir> <tile.bin> [<tile.bin> ...]
+//   node navmesh.mjs [--fine] <out-dir> <tile.bin> [<tile.bin> ...]
 //
 // Each input tile (533.33 yd, plus a margin of neighbouring geometry) is
 // built as SUBTILES x SUBTILES Recast tiles of CELLS_PER_SUBTILE cells, so
@@ -39,17 +39,22 @@ import {
   Recast,
 } from 'recast-navigation';
 
+const args = process.argv.slice(2);
+// --fine: a dungeon's smaller cells (~0.35 yd), so a tower's narrow spiral
+// stair survives (0.26 yd starts splitting floors at thin trim, and a whole
+// continent at either size is too big).
+const FINE = args[0] === '--fine';
 const TILE_SIZE = 1600 / 3;
-const SUBTILES = 4;
+const SUBTILES = FINE ? 6 : 4;
 const CELLS_PER_SUBTILE = 256;
-const CS = TILE_SIZE / SUBTILES / CELLS_PER_SUBTILE; // ~0.52 yd
+const CS = TILE_SIZE / SUBTILES / CELLS_PER_SUBTILE; // ~0.52 yd (~0.35 fine)
 const CH = 0.25;
 const AGENT_HEIGHT = 2.0; // yd
 const AGENT_CLIMB = 1.0; // yd — stairs, kerbs, small ledges
-const AGENT_RADIUS = 0.5; // yd
+const AGENT_RADIUS = 0.3; // yd — a player's own collision radius
 const WALKABLE_HEIGHT = Math.ceil(AGENT_HEIGHT / CH);
 const WALKABLE_CLIMB = Math.floor(AGENT_CLIMB / CH);
-const WALKABLE_RADIUS = Math.ceil(AGENT_RADIUS / CS);
+const WALKABLE_RADIUS = Math.max(1, Math.round(AGENT_RADIUS / CS)); // whole cells, at least one
 const BORDER = WALKABLE_RADIUS + 3;
 const MAX_EDGE_LEN = Math.round(12 / CS);
 const MAX_SIMPLIFICATION_ERROR = 1.3;
@@ -195,7 +200,7 @@ function buildTile(file, outDir) {
 }
 
 await init();
-const [outDir, ...files] = process.argv.slice(2);
+const [outDir, ...files] = FINE ? args.slice(1) : args;
 fs.mkdirSync(outDir, { recursive: true });
 for (const file of files) {
   const t = Date.now();

@@ -114,10 +114,13 @@ def _geometry_job(args: tuple[tuple[int, int], str]) -> int:
     return soup.write(Path(out), tile_box(tile))
 
 
-def build_navmesh(map_id: int, wdt_file_data_id: int) -> tuple[Path, MapScene]:
-    """Build (or reuse) every tile's navmesh polygons; returns the nav dir and the scene."""
+def build_navmesh(map_id: int, wdt_file_data_id: int, fine: bool = False) -> tuple[Path, MapScene]:
+    """Build (or reuse) every tile's navmesh polygons; returns the nav dir and the scene.
+
+    ``fine``: smaller cells (a dungeon — see ``navmesh.mjs --fine``), cached apart.
+    """
     root = work_dir(map_id)
-    geo_dir, nav_dir = root / "geometry", root / "nav"
+    geo_dir, nav_dir = root / "geometry", root / ("nav-fine" if fine else "nav")
     scene = load_scene(wdt_file_data_id)
     todo = [(k, str(geo_dir / f"{k[0]}_{k[1]}.bin")) for k in scene.tiles
             if not (geo_dir / f"{k[0]}_{k[1]}.bin").exists()]
@@ -130,17 +133,18 @@ def build_navmesh(map_id: int, wdt_file_data_id: int) -> tuple[Path, MapScene]:
                      if not (nav_dir / f"{r}_{c}.nav").exists())
     if pending:
         print(f"  navmesh: {len(pending)} tiles on {WORKERS} workers")
-        _run_node(pending, nav_dir)
+        _run_node(pending, nav_dir, fine)
     return nav_dir, scene
 
 
-def _run_node(files: list[str], nav_dir: Path) -> None:
+def _run_node(files: list[str], nav_dir: Path, fine: bool) -> None:
     node = shutil.which("node")
     if node is None:
         raise RuntimeError("node is required to build the navmesh (npm ci at the repo root first)")
     batches = [files[i::WORKERS] for i in range(WORKERS)]
     procs = [
-        subprocess.Popen([node, str(NAVMESH_SCRIPT), str(nav_dir), *batch], stdout=subprocess.DEVNULL)
+        subprocess.Popen([node, str(NAVMESH_SCRIPT), *(["--fine"] if fine else []), str(nav_dir), *batch],
+                         stdout=subprocess.DEVNULL)
         for batch in batches if batch
     ]
     failed = [p.args for p in procs if p.wait() != 0]

@@ -11,6 +11,7 @@
 import type { WorldPoint } from "@/games/wow-forever/types/worldMap";
 import { compassDirection, formatYards } from "@/games/wow-forever/worldMap/geometry";
 import {
+  isJump,
   nodePoint,
   searchFrom,
   walkPath,
@@ -47,7 +48,7 @@ export interface WalkLeg {
   detail: string[];
 }
 
-type StretchKind = "walk" | "swim" | "lift" | "portal";
+type StretchKind = "walk" | "swim" | "lift" | "portal" | "drop" | "teleport";
 
 /** A straight piece of a walk. */
 interface Piece {
@@ -76,6 +77,8 @@ function distance(a: WorldPoint, b: WorldPoint): number {
 function hopKind(graph: WalkGraph, hop: WalkHop): StretchKind {
   if (hop.kind === WALK_EDGE.lift) return "lift";
   if (hop.kind === WALK_EDGE.portal) return "portal";
+  if (hop.kind === WALK_EDGE.drop) return "drop";
+  if (hop.kind === WALK_EDGE.teleport) return "teleport";
   return graph.water[hop.node] ? "swim" : "walk";
 }
 
@@ -240,12 +243,16 @@ function turnText(before: Piece, p: Piece): string {
   return `Turn ${sharp}${side} and head ${compassDirection(p.from, p.to)}, ${formatYards(p.yards)}${climb(p)}`;
 }
 
-/** "up to The Mystic Ward" — where a lift / teleporter puts you, unless that's where you were. */
+/** " to The Mystic Ward" — where a lift / teleporter / drop puts you, unless that's where you were. */
+function destination(graph: WalkGraph, before: Stretch | undefined, after: Stretch | undefined): string {
+  const where = after ? areaName(graph, after.label) : "";
+  return where && (!before || areaName(graph, before.label) !== where) ? ` to ${where}` : "";
+}
+
+/** "up to The Mystic Ward". */
 function arrival(graph: WalkGraph, s: Stretch, before: Stretch | undefined, after: Stretch | undefined): string {
   const up = (s.to.z ?? 0) > (s.from.z ?? 0);
-  const where = after ? areaName(graph, after.label) : "";
-  const there = where && (!before || areaName(graph, before.label) !== where) ? ` to ${where}` : "";
-  return `${up ? "up" : "down"}${there}`;
+  return `${up ? "up" : "down"}${destination(graph, before, after)}`;
 }
 
 function stretchText(
@@ -262,10 +269,13 @@ function stretchText(
     const near = Math.hypot(s.to.wx - s.from.wx, s.to.wy - s.from.wy) < TELEPORTER_YARDS;
     return near ? `Step on the teleporter ${arrival(graph, s, before, after)}` : `Take the portal to ${name}`;
   }
+  // One way: there's no way back up the ledge or back through the teleporter.
+  if (s.kind === "drop") return `Drop down from the ledge${destination(graph, before, after)} (no way back up)`;
+  if (s.kind === "teleport") return `Step on the teleporter${destination(graph, before, after)} (one way)`;
   if (s.kind === "swim") return `Swim ${heading}, ${formatYards(head.yards)}${name ? ` across ${name}` : ""}`;
   const move = `head ${heading}, ${formatYards(head.yards)}`;
   const through = `${move}, through ${name}${climb(head)}`;
-  // Off a lift / out of a portal, the step before already named where you are.
+  // Off a lift / out of a portal / after a drop, the step before already named where you are.
   if (!before || !isMove(before)) return before ? `H${move.slice(1)}${climb(head)}` : `H${through.slice(1)}`;
   const indoor = graph.labels[s.label].indoor;
   const wasIndoor = graph.labels[before.label].indoor;
@@ -302,6 +312,9 @@ export function walkLeg(graph: WalkGraph, a: number, b: number, from: WorldPoint
   if (!hops) return null;
   const path = [from, ...hops.map((h) => nodePoint(graph, h.node)), to];
   let yards = 0;
-  for (let i = 1; i < path.length; i++) yards += Math.hypot(path[i].wx - path[i - 1].wx, path[i].wy - path[i - 1].wy);
+  for (let i = 1; i < path.length; i++) {
+    // path[i] is hops[i - 1], reached by that hop's kind.
+    if (i > hops.length || !isJump(hops[i - 1].kind)) yards += Math.hypot(path[i].wx - path[i - 1].wx, path[i].wy - path[i - 1].wy);
+  }
   return { cost: searchFrom(graph, a).dist[b], yards, path, detail: describeWalk(graph, hops) };
 }

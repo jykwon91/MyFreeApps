@@ -16,7 +16,8 @@ inside, the layout is (little-endian)::
             u16 label[n]                      index into json "labels"
             u8  flags[n]                      1 = water (swim)
     edges:  u32 a[m], u32 b[m], u16 cost[m]   cost in yards at run speed
-            u8  kind[m]                       0 = walk / swim, 1 = lift, 2 = portal
+            u8  kind[m]                       0 = walk / swim, 1 = lift, 2 = portal,
+                                              3 = drop, 4 = teleport (3+ go a -> b only)
     hubs:   u32 node[h], u16 matrix[h*h]      hub-to-hub cost; 65535 = no path
     json:   {"labels": [[name, zone, indoor, city]], "hubs": [key], "instance": 0 | 1}
 
@@ -39,6 +40,7 @@ import numpy as np
 from scripts.wow_world_map import sources
 from scripts.wow_world_map.travel import TRAM_ENTRANCES, TRAM_ID
 from scripts.wow_world_map.walk.clusters import Anchor, WalkGraph
+from scripts.wow_world_map.walk.links import ONE_WAY
 
 MAGIC = b"MGWK"
 VERSION = 1
@@ -97,9 +99,10 @@ def travel_hubs(travel: dict, map_id: int) -> list[Hub]:
 
 def _adjacency(graph: WalkGraph) -> list[list[tuple[int, float]]]:
     adj: list[list[tuple[int, float]]] = [[] for _ in range(len(graph.position))]
-    for (a, b), c in zip(graph.edges.tolist(), graph.cost.tolist()):
+    for (a, b), c, kind in zip(graph.edges.tolist(), graph.cost.tolist(), graph.kind.tolist()):
         adj[a].append((b, c))
-        adj[b].append((a, c))
+        if kind not in ONE_WAY:
+            adj[b].append((a, c))
     return adj
 
 

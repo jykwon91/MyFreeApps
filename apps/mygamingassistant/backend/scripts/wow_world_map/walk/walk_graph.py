@@ -28,11 +28,9 @@ from scripts.wow_world_map import sources
 from scripts.wow_world_map.walk import terrain
 from scripts.wow_world_map.walk.client_files import client_file
 from scripts.wow_world_map.walk.floors import building_floors, floor_under
-from scripts.wow_world_map.walk.navfile import BORDER_FLAG, NULL_INDEX, read_nav
+from scripts.wow_world_map.walk.navfile import BORDER_FLAG, CELLS, NULL_INDEX, read_nav
 from scripts.wow_world_map.walk.terrain import CHUNK_SIZE, MAP_ORIGIN, Placement
 
-CELLS = 256  # cells per Recast tile side (navmesh.mjs CELLS_PER_SUBTILE)
-SUBTILES = 4
 MAX_STEP = 1.5  # yd of height mismatch allowed where two tiles' edges meet
 AREA_CAPITAL = 0x100  # AreaTable.Flags_0: the zone is a capital city
 ROOM_OUTDOORS = 0x4  # WMOAreaTable.Flags: open air — a street, a square, a cavern hall you can mount in
@@ -45,6 +43,13 @@ class PolyGraph:
     water: np.ndarray  # (n,) bool
     indptr: np.ndarray  # CSR neighbour lists
     indices: np.ndarray
+    # With ``load_polys(..., ledges=True)`` (a dungeon): the open edges — a
+    # polygon side with no floor past it, where you could step off — and every
+    # polygon corner, for ``drops.py``.
+    ledge: np.ndarray | None = None  # (k, 2, 3) the edge's two ends
+    ledge_poly: np.ndarray | None = None  # (k,)
+    corner: np.ndarray | None = None  # (c, 3)
+    corner_poly: np.ndarray | None = None  # (c,)
 
     def __len__(self) -> int:
         return len(self.area)
@@ -82,8 +87,8 @@ def _border_edge(mesh, p: int, j: int) -> tuple[tuple, int, int, float, float] |
     if j >= len(verts):
         return None
     va, vb = verts[j], verts[(j + 1) % len(verts)]
-    gx0 = (mesh.col * SUBTILES + mesh.sx) * CELLS
-    gz0 = (mesh.row * SUBTILES + mesh.sz) * CELLS
+    gx0 = (mesh.col * mesh.subtiles + mesh.sx) * CELLS
+    gz0 = (mesh.row * mesh.subtiles + mesh.sz) * CELLS
     # West / east edges run along z (south); north / south edges along x (east).
     if side in (0, 2):
         key = ("x", gx0 + (CELLS if side == 2 else 0), gz0)
@@ -97,8 +102,24 @@ def _border_edge(mesh, p: int, j: int) -> tuple[tuple, int, int, float, float] |
     return (key, side), a, b, za, zb
 
 
-def load_polys(nav_dir: Path) -> PolyGraph:
+def _open_edges(mesh, base: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """A tile's open edges (no neighbour, not on the tile border) and its polygons' corners."""
+    valid = mesh.polys != NULL_INDEX
+    count = valid.sum(axis=1)
+    j = np.arange(mesh.polys.shape[1])
+    nxt = np.where(j[None, :] + 1 < count[:, None], j[None, :] + 1, 0)
+    rows = np.arange(len(mesh.polys))[:, None]
+    open_ = valid & (mesh.neis == NULL_INDEX)
+    p, k = np.nonzero(open_)
+    a = mesh.world[mesh.polys[p, k]]
+    b = mesh.world[mesh.polys[rows, nxt][p, k]]
+    cp, ck = np.nonzero(valid)
+    return np.stack([a, b], axis=1), base + p, mesh.world[mesh.polys[cp, ck]], base + cp
+
+
+def load_polys(nav_dir: Path, ledges: bool = False) -> PolyGraph:
     centroids, areas, waters, links = [], [], [], []
+    opens: list[tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]] = []
     # Border edges by shared line: key -> [(side, lo, hi, z at lo, z at hi, poly)]
     borders: dict[tuple, list[tuple[int, int, int, float, float, int]]] = defaultdict(list)
     base = 0
@@ -112,6 +133,8 @@ def load_polys(nav_dir: Path) -> PolyGraph:
             border = present & ((mesh.neis & BORDER_FLAG) != 0)
             inner = present & ~border
             p, _ = np.nonzero(inner)
+            if ledges:
+                opens.append(_open_edges(mesh, base))
             links.append(np.stack([base + p, base + mesh.neis[inner]], axis=1))
             for p, j in zip(*np.nonzero(border)):
                 edge = _border_edge(mesh, int(p), int(j))
@@ -138,8 +161,12 @@ def load_polys(nav_dir: Path) -> PolyGraph:
     counts = np.bincount(pairs[:, 0], minlength=base)
     indptr = np.concatenate([[0], np.cumsum(counts)])
     print(f"  polygons: {base}, links: {len(pairs) // 2}, across tile borders: {len(joined) // 2}")
-    return PolyGraph(np.concatenate(centroids), np.concatenate(areas), np.concatenate(waters),
-                     indptr, pairs[:, 1].copy())
+    graph = PolyGraph(np.concatenate(centroids), np.concatenate(areas), np.concatenate(waters),
+                      indptr, pairs[:, 1].copy())
+    if ledges:
+        graph.ledge, graph.ledge_poly, graph.corner, graph.corner_poly = (
+            np.concatenate([o[i] for o in opens]) for i in range(4))
+    return graph
 
 
 # --- labels -----------------------------------------------------------------
