@@ -23,11 +23,19 @@ from scripts.wow_world_map.walk.clusters import (
     cluster,
     components,
     snap_hub,
+    snap_inside,
 )
-from scripts.wow_world_map.walk.export import UNREACHABLE, Hub, hub_matrix, write_walk
+from scripts.wow_world_map.walk.export import (
+    UNREACHABLE,
+    Hub,
+    hub_matrix,
+    interior_hubs,
+    write_walk,
+)
 from scripts.wow_world_map.walk.floors import Floors, Triangles, floor_under
 from scripts.wow_world_map.walk.links import EDGE_LIFT, EDGE_PORTAL, PORTAL_COST_YARDS
 from scripts.wow_world_map.walk.navfile import BORDER_FLAG, NULL_INDEX
+from scripts.wow_world_map.walk.terrain import global_wmo
 from scripts.wow_world_map.walk.walk_graph import (
     CELLS,
     AreaNames,
@@ -338,3 +346,71 @@ def test_rooms_say_when_they_are_open_air(monkeypatch: pytest.MonkeyPatch) -> No
     # A group with no row of its own takes the building's, named after its area.
     assert names.room(10, 0, 9) == ("Stormwind City", 1519, False)
     assert names.room(99, 0, 1) == ("", 0, False)
+
+
+# --- dungeons ---------------------------------------------------------------
+
+def test_a_dungeon_has_entrance_and_boss_hubs() -> None:
+    interior = {
+        "entrances": [[78, -16.4, -383.1, 61.8]],
+        "bosses": [[1, "Rhahk'Zor", -190.8, -455.9, 54.7, 1], [2, "Summoned", None, None, None, 1]],
+    }
+    hubs = interior_hubs(interior)
+    assert [(h.key, h.keeps) for h in hubs] == [("e78", True), ("b1", False)]
+
+
+def test_a_dungeon_anchor_snaps_to_the_nearest_floor_not_the_biggest_ground() -> None:
+    # 0-1 is the room the entrance and boss are in; 2-4 is the zone's terrain under the castle.
+    position = np.array([[0, 0, 80], [30, 0, 80], [0, 0, 60], [100, 0, 60], [200, 0, 60]], dtype=float)
+    comp, size = _comp(position, [(0, 1), (2, 3), (3, 4)])
+    water = np.zeros(5, dtype=bool)
+    snapped = snap_inside(position, water, comp, size * 1000, [Anchor(0, 0, 80), Anchor(30, 0, 78, keeps=False)])
+    assert snapped == [0, 1]
+
+
+def test_a_boss_prefers_floor_the_entrance_reaches() -> None:
+    # The boss stands on a ledge (2, sealed) just above the room (1) the entrance reaches.
+    position = np.array([[0, 0, 0], [40, 0, 0], [40, 0, 4]], dtype=float)
+    comp, size = _comp(position, [(0, 1)])
+    snapped = snap_inside(position, np.zeros(3, dtype=bool), comp, size * 1000,
+                          [Anchor(0, 0, 0), Anchor(40, 0, 4, keeps=False)])
+    assert snapped == [0, 1]
+
+
+def test_a_boss_does_not_keep_ground_no_entrance_reaches() -> None:
+    polys = _poly_graph([(0, 0, 0), (40, 0, 0), (500, 0, 0), (540, 0, 0)], [(0, 1), (2, 3)])
+    labels = [Label("Mast Room", "The Deadmines", True, False)]
+    graph = cluster(polys, np.zeros(4, dtype=np.int32), labels, [],
+                    [Anchor(0, 0, 0), Anchor(540, 0, 0, keeps=False)], fine=True)
+    assert graph.position[:, 0].tolist() == [0, 40]
+    assert graph.anchor_node == [0, None]
+
+
+def test_a_dungeon_walk_file_says_so(tmp_path: Path) -> None:
+    graph = WalkGraph(np.array([[0.0, 0, 0]]), np.zeros(1, dtype=int), np.zeros(1, dtype=bool),
+                      np.zeros((0, 2), dtype=np.int64), np.zeros(0), np.zeros(0, dtype=np.uint8),
+                      [Label("", "The Deadmines", True, False)], [0])
+    write_walk(tmp_path / "36.walk", 36, graph, [Hub("e78", 0, 0, 0)], [0], np.zeros((1, 1)), instance=True)
+    data = gzip.decompress((tmp_path / "36.walk").read_bytes())
+    *_, json_bytes = struct.unpack_from("<2H4I", data, 4)
+    assert json.loads(data[-json_bytes:])["instance"] == 1
+
+
+def test_a_dungeons_own_building_is_centred_on_the_map(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The WDT places a WMO-only map's building with no map-origin offset:
+    # placement (0, 0, 0) is world (0, 0), not the map corner an ADT's would be.
+    modf = struct.pack("<2I6f6f4H", 1234, 1, 0, 0, 0, 0, 0, 0, -150, -35, -8, 152, 15, 197, 0, 0, 0, 1024)
+    wdt = b"FDOM" + struct.pack("<I", len(modf)) + modf
+    monkeypatch.setattr("scripts.wow_world_map.walk.terrain.client_file", lambda _fid: wdt)
+    building = global_wmo(42)
+    assert building is not None
+    assert building.position == (0, 0, 0)
+    assert building.extents == (-197, -152, 8, 150)
+
+
+def test_an_entrance_skips_a_speck_of_floor_for_the_ground_beside_it() -> None:
+    # 0 is a ledge by the trigger; 1-2 is the hall you walk on.
+    position = np.array([[0, 0, 0], [8, 0, 0], [40, 0, 0]], dtype=float)
+    comp, _ = _comp(position, [(1, 2)])
+    area = np.array([10.0, 5000.0])
+    assert snap_inside(position, np.zeros(3, dtype=bool), comp, area, [Anchor(0, 0, 0)]) == [1]

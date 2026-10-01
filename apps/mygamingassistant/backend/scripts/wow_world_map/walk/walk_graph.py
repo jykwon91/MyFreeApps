@@ -177,6 +177,8 @@ class AreaNames:
 def _chunk_areas(tiles: list[terrain.TileFiles]) -> dict[tuple[int, int], int]:
     out = {}
     for tile in tiles:
+        if not tile.root:  # a dungeon's tiles have no terrain
+            continue
         for north, west, area in terrain.chunk_areas(client_file(tile.root)):
             out[(round((MAP_ORIGIN - north) / CHUNK_SIZE), round((MAP_ORIGIN - west) / CHUNK_SIZE))] = area
     return out

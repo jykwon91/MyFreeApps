@@ -318,6 +318,24 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
     non-water ground within 40 yd and not above the vehicle (the pier, the
     tower top) — a hub the log calls "off the walk graph" walks straight.
     Layout in `walk/export.py`; `tests/test_wow_walk_graph.py`.
+  - **Dungeon interiors** ("Inside · bosses & routes" on an entrance row,
+    `InstanceInterior` / `InteriorBossRoute` / `InteriorSchematic`,
+    `worldMap/interiors.ts`, `hooks/useInteriors.ts`): each instance map has
+    its own `public/wow-walk/<instance map id>.walk` (meta `instance: 1`;
+    hubs `e<trigger>` = where an entrance puts you, `b<encounter>` = a boss),
+    built from `classicInteriors.json` (`scripts/wow_world_map/interiors.py`:
+    Forever `DungeonEncounter` order + cmangos spawns matched by name;
+    group encounters use a stand-in creature, `_STAND_INS`). A boss is listed
+    under the entrance it's the shortest walk from (Dire Maul / Scarlet
+    Monastery wings never route into each other); routes start from the boss
+    before (default) or the entrance (`mga.wowForever.worldMap.interior.v1`).
+    Bosses with no fixed spawn say so, never a guessed spot; doors needing a
+    key are flagged on the step that passes them (doors aren't in the
+    navmesh). A WMO-only map's building is placed by its WDT with **no
+    map-origin offset** (`terrain.global_wmo`); dungeon anchors snap to the
+    nearest floor (`clusters.snap_inside`), never "the largest ground", which
+    outside a castle is the zone's terrain. Rebuild with
+    `python -m scripts.wow_world_map.walk --interiors [mapId ...]`.
 - **Companion addon** `apps/mygamingassistant/addons/MGACompanion` (Interface
   16001): `/mga way <uiMapID|zone name> <x> <y> [label]` sets the in-game map
   pin. The page's "Copy in-game waypoint" buttons emit that command.

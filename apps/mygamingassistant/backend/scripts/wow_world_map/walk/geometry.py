@@ -206,7 +206,7 @@ def tile_soup(tile: TileFiles, tiles: dict[tuple[int, int], TileFiles],
     for dr in (-1, 0, 1):
         for dc in (-1, 0, 1):
             other = tiles.get((tile.row + dr, tile.col + dc))
-            if other is None or not tile_box(other, 0).overlaps(box):
+            if other is None or not other.root or not tile_box(other, 0).overlaps(box):
                 continue
             for chunk in _terrain(other.root):
                 cbox = Box(chunk.north - CHUNK_SIZE, chunk.west - CHUNK_SIZE, chunk.north, chunk.west)
