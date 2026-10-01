@@ -24,8 +24,8 @@ def script_directory() -> ScriptDirectory:
     return ScriptDirectory.from_config(cfg)
 
 
-def test_single_head_is_0024(script_directory: ScriptDirectory) -> None:
-    """The DAG must resolve to exactly one head and it must be 0024.
+def test_single_head_is_0025(script_directory: ScriptDirectory) -> None:
+    """The DAG must resolve to exactly one head and it must be 0025.
 
     Bump this pin (and add a down_revision assertion below) in the same PR
     that adds a new migration — same per-PR contract as the fixture
@@ -37,8 +37,8 @@ def test_single_head_is_0024(script_directory: ScriptDirectory) -> None:
         "Orphan heads usually mean a migration's down_revision is stale "
         "after a merge — rebase and re-point the down_revision."
     )
-    assert heads[0] == "0024", (
-        f"Expected head 0024 (wow_map_capture), "
+    assert heads[0] == "0025", (
+        f"Expected head 0025 (wow_raid), "
         f"got {heads[0]}."
     )
 
@@ -193,3 +193,11 @@ def test_0024_down_revision_points_at_0023(
     """0024 must chain directly off 0023 (wow_map_capture)."""
     rev = script_directory.get_revision("0024")
     assert rev.down_revision == "0023"
+
+
+def test_0025_down_revision_points_at_0024(
+    script_directory: ScriptDirectory,
+) -> None:
+    """0025 must chain directly off 0024 (the WoW raid signup tables)."""
+    rev = script_directory.get_revision("0025")
+    assert rev.down_revision == "0024"
