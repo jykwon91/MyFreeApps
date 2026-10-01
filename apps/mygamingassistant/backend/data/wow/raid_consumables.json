@@ -1,0 +1,774 @@
+{
+  "generated_at": "2026-10-01T16:08:31Z",
+  "client_build": "1.60.1.69977",
+  "attribution": "Item names sourced from WoW Forever beta client (build 1.60.1.69977) via wago.tools DB2 export. Game data © Blizzard Entertainment.",
+  "raids": {
+    "barrow_deeps": {
+      "name": "Barrow Deeps",
+      "size": 10,
+      "advice_source": "forever",
+      "available": true
+    },
+    "hyjal_summit": {
+      "name": "Hyjal Summit",
+      "size": 20,
+      "advice_source": "forever",
+      "available": true
+    },
+    "onyxia": {
+      "name": "Onyxia's Lair",
+      "size": 40,
+      "advice_source": "classic",
+      "available": true
+    },
+    "mc": {
+      "name": "Molten Core",
+      "size": 40,
+      "advice_source": "classic",
+      "available": false
+    },
+    "bwl": {
+      "name": "Blackwing Lair",
+      "size": 40,
+      "advice_source": "classic",
+      "available": false
+    },
+    "zg": {
+      "name": "Zul'Gurub",
+      "size": 20,
+      "advice_source": "classic",
+      "available": false
+    },
+    "aq20": {
+      "name": "Ruins of Ahn'Qiraj",
+      "size": 20,
+      "advice_source": "classic",
+      "available": false
+    },
+    "aq40": {
+      "name": "Temple of Ahn'Qiraj",
+      "size": 40,
+      "advice_source": "classic",
+      "available": false
+    },
+    "naxx": {
+      "name": "Naxxramas",
+      "size": 40,
+      "advice_source": "classic",
+      "available": false
+    }
+  },
+  "raid_specific": {
+    "onyxia": [
+      {
+        "item_id": 13457,
+        "name": "Greater Fire Protection Potion",
+        "why": "absorb Deep Breath / P2 fire",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13457"
+      }
+    ],
+    "hyjal_summit": [
+      {
+        "item_id": 274273,
+        "name": "Flask of Natural Accuracy",
+        "why": "Stamina + in-raid bonus (Hyjal/Barrow)",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=274273"
+      },
+      {
+        "item_id": 274274,
+        "name": "Flask of Natural Aggression",
+        "why": "Stamina + in-raid bonus (Hyjal/Barrow)",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=274274"
+      },
+      {
+        "item_id": 274275,
+        "name": "Flask of Natural Precision",
+        "why": "Stamina + in-raid bonus (Hyjal/Barrow)",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=274275"
+      },
+      {
+        "item_id": 274276,
+        "name": "Flask of Natural Swiftness",
+        "why": "Stamina + in-raid bonus (Hyjal/Barrow)",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=274276"
+      }
+    ],
+    "barrow_deeps": [
+      {
+        "item_id": 274273,
+        "name": "Flask of Natural Accuracy",
+        "why": "Stamina + in-raid bonus (Hyjal/Barrow)",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=274273"
+      },
+      {
+        "item_id": 274274,
+        "name": "Flask of Natural Aggression",
+        "why": "Stamina + in-raid bonus (Hyjal/Barrow)",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=274274"
+      },
+      {
+        "item_id": 274275,
+        "name": "Flask of Natural Precision",
+        "why": "Stamina + in-raid bonus (Hyjal/Barrow)",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=274275"
+      },
+      {
+        "item_id": 274276,
+        "name": "Flask of Natural Swiftness",
+        "why": "Stamina + in-raid bonus (Hyjal/Barrow)",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=274276"
+      }
+    ],
+    "mc": [
+      {
+        "item_id": 13457,
+        "name": "Greater Fire Protection Potion",
+        "why": "Ragnaros / Baron fire damage",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13457"
+      },
+      {
+        "item_id": 6049,
+        "name": "Fire Protection Potion",
+        "why": "budget fire protection alternative",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=6049"
+      }
+    ],
+    "bwl": [
+      {
+        "item_id": 15138,
+        "name": "Onyxia Scale Cloak",
+        "why": "Nefarian Shadow Flame instakill without it",
+        "tier": "essential",
+        "wowhead_url": "https://www.wowhead.com/classic/item=15138"
+      },
+      {
+        "item_id": 13457,
+        "name": "Greater Fire Protection Potion",
+        "why": "Vael / Firemaw / Ebonroc fire damage",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13457"
+      },
+      {
+        "item_id": 3387,
+        "name": "Limited Invulnerability Potion",
+        "why": "drop aggro or survive a mistake",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=3387"
+      }
+    ],
+    "zg": [],
+    "aq20": [],
+    "aq40": [
+      {
+        "item_id": 13458,
+        "name": "Greater Nature Protection Potion",
+        "why": "Huhuran poison — tank/healer must have it",
+        "tier": "essential",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13458",
+        "roles": [
+          "tank",
+          "healer"
+        ]
+      },
+      {
+        "item_id": 13458,
+        "name": "Greater Nature Protection Potion",
+        "why": "Huhuran poison — dps recommended",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13458",
+        "roles": [
+          "dps"
+        ]
+      },
+      {
+        "item_id": 3829,
+        "name": "Frost Oil",
+        "why": "Viscidus frost hits (melee dps)",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=3829",
+        "roles": [
+          "melee"
+        ]
+      },
+      {
+        "item_id": 17708,
+        "name": "Elixir of Frost Power",
+        "why": "Viscidus (frost casters)",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=17708",
+        "classes": [
+          "mage"
+        ]
+      }
+    ],
+    "naxx": [
+      {
+        "item_id": 13456,
+        "name": "Greater Frost Protection Potion",
+        "why": "Sapphiron (plus frost-resist gear)",
+        "tier": "essential",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13456"
+      },
+      {
+        "item_id": 13459,
+        "name": "Greater Shadow Protection Potion",
+        "why": "Loatheb shadow damage",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13459"
+      },
+      {
+        "item_id": 13446,
+        "name": "Major Healing Potion",
+        "why": "Loatheb blocks most healing — emergency self-heal",
+        "tier": "essential",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13446"
+      }
+    ]
+  },
+  "role_baseline": {
+    "tank": [
+      {
+        "item_id": 13446,
+        "name": "Major Healing Potion",
+        "why": "emergency self-heal",
+        "tier": "essential",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13446"
+      },
+      {
+        "item_id": 13445,
+        "name": "Elixir of Greater Defense",
+        "why": "armor",
+        "tier": "essential",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13445"
+      },
+      {
+        "item_id": 3825,
+        "name": "Elixir of Lesser Fortitude",
+        "why": "max HP boost",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=3825"
+      },
+      {
+        "item_id": 13455,
+        "name": "Greater Stoneshield Potion",
+        "why": "armor burst cooldown",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13455"
+      },
+      {
+        "item_id": 21151,
+        "name": "Rumsey Rum Black Label",
+        "why": "+Stamina drink",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=21151"
+      },
+      {
+        "item_id": 13452,
+        "name": "Elixir of the Mongoose",
+        "why": "crit / dodge for threat",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13452"
+      },
+      {
+        "item_id": 13510,
+        "name": "Flask of the Titans",
+        "why": "+HP flask",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13510"
+      },
+      {
+        "item_id": 3387,
+        "name": "Limited Invulnerability Potion",
+        "why": "survive a mistake",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=3387"
+      },
+      {
+        "item_id": 13442,
+        "name": "Mighty Rage Potion",
+        "why": "rage burst (Warriors only)",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13442",
+        "classes": [
+          "warrior"
+        ]
+      }
+    ],
+    "healer": [
+      {
+        "item_id": 13444,
+        "name": "Major Mana Potion",
+        "why": "mana",
+        "tier": "essential",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13444"
+      },
+      {
+        "item_id": 20007,
+        "name": "Mageblood Elixir",
+        "why": "mana regen",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=20007"
+      },
+      {
+        "item_id": 12662,
+        "name": "Demonic Rune",
+        "why": "mana restore (costs HP)",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=12662"
+      },
+      {
+        "item_id": 20520,
+        "name": "Dark Rune",
+        "why": "mana restore — shares Demonic Rune cooldown",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=20520"
+      },
+      {
+        "item_id": 11952,
+        "name": "Night Dragon's Breath",
+        "why": "HP + mana restoration",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=11952"
+      },
+      {
+        "item_id": 13511,
+        "name": "Flask of Distilled Wisdom",
+        "why": "+mana flask",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13511"
+      }
+    ],
+    "dps_physical": [
+      {
+        "item_id": 13446,
+        "name": "Major Healing Potion",
+        "why": "emergency self-heal",
+        "tier": "essential",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13446"
+      },
+      {
+        "item_id": 13452,
+        "name": "Elixir of the Mongoose",
+        "why": "Agility + crit",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13452"
+      },
+      {
+        "item_id": 9206,
+        "name": "Elixir of Greater Strength",
+        "why": "Strength",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=9206"
+      },
+      {
+        "item_id": 12451,
+        "name": "Juju Power",
+        "why": "Strength",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=12451"
+      },
+      {
+        "item_id": 12460,
+        "name": "Juju Might",
+        "why": "attack power (not with Firewater)",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=12460"
+      },
+      {
+        "item_id": 12820,
+        "name": "Winterfall Firewater",
+        "why": "attack power",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=12820"
+      },
+      {
+        "item_id": 8410,
+        "name": "R.O.I.D.S.",
+        "why": "Strength",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=8410"
+      },
+      {
+        "item_id": 8412,
+        "name": "Ground Scorpok Assay",
+        "why": "Agility",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=8412"
+      }
+    ],
+    "dps_caster": [
+      {
+        "item_id": 13444,
+        "name": "Major Mana Potion",
+        "why": "mana",
+        "tier": "essential",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13444"
+      },
+      {
+        "item_id": 13454,
+        "name": "Greater Arcane Elixir",
+        "why": "spell damage",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13454"
+      },
+      {
+        "item_id": 9264,
+        "name": "Elixir of Shadow Power",
+        "why": "shadow damage",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=9264",
+        "classes": [
+          "warlock",
+          "priest"
+        ]
+      },
+      {
+        "item_id": 17708,
+        "name": "Elixir of Frost Power",
+        "why": "frost damage",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=17708",
+        "classes": [
+          "mage"
+        ]
+      },
+      {
+        "item_id": 13512,
+        "name": "Flask of Supreme Power",
+        "why": "spell damage flask",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13512"
+      },
+      {
+        "item_id": 8423,
+        "name": "Cerebral Cortex Compound",
+        "why": "Intellect",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=8423"
+      }
+    ]
+  },
+  "class_extras": {
+    "warrior": [
+      {
+        "item_id": 12404,
+        "name": "Dense Sharpening Stone",
+        "why": "blade weapon sharpening",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=12404"
+      },
+      {
+        "item_id": 12643,
+        "name": "Dense Weightstone",
+        "why": "blunt weapon weighting",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=12643"
+      },
+      {
+        "item_id": 18262,
+        "name": "Elemental Sharpening Stone",
+        "why": "+2% crit chance",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=18262"
+      }
+    ],
+    "rogue": [
+      {
+        "item_id": 8928,
+        "name": "Instant Poison VI",
+        "why": "main-hand poison",
+        "tier": "essential",
+        "wowhead_url": "https://www.wowhead.com/classic/item=8928"
+      },
+      {
+        "item_id": 20844,
+        "name": "Deadly Poison V",
+        "why": "off-hand poison",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=20844"
+      },
+      {
+        "item_id": 12404,
+        "name": "Dense Sharpening Stone",
+        "why": "if not poisoning that hand",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=12404"
+      },
+      {
+        "item_id": 18262,
+        "name": "Elemental Sharpening Stone",
+        "why": "+2% crit chance",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=18262"
+      }
+    ],
+    "hunter": [
+      {
+        "item_id": 11285,
+        "name": "Jagged Arrow",
+        "why": "ammo (bows)",
+        "tier": "essential",
+        "wowhead_url": "https://www.wowhead.com/classic/item=11285"
+      },
+      {
+        "item_id": 10512,
+        "name": "Hi-Impact Mithril Slugs",
+        "why": "ammo (guns)",
+        "tier": "essential",
+        "wowhead_url": "https://www.wowhead.com/classic/item=10512"
+      },
+      {
+        "item_id": 18042,
+        "name": "Thorium Headed Arrow",
+        "why": "better arrows",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=18042"
+      },
+      {
+        "item_id": 15997,
+        "name": "Thorium Shells",
+        "why": "better shells",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=15997"
+      }
+    ],
+    "warlock": [
+      {
+        "item_id": 6265,
+        "name": "Soul Shard",
+        "why": "summons / Soulstone / Healthstones",
+        "tier": "essential",
+        "wowhead_url": "https://www.wowhead.com/classic/item=6265"
+      }
+    ],
+    "mage": [
+      {
+        "item_id": 17020,
+        "name": "Arcane Powder",
+        "why": "Arcane Brilliance reagent",
+        "tier": "essential",
+        "wowhead_url": "https://www.wowhead.com/classic/item=17020"
+      },
+      {
+        "item_id": 20749,
+        "name": "Brilliant Wizard Oil",
+        "why": "spell damage + crit",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=20749"
+      }
+    ],
+    "priest": [
+      {
+        "item_id": 17029,
+        "name": "Sacred Candle",
+        "why": "Prayer of Fortitude reagent",
+        "tier": "essential",
+        "wowhead_url": "https://www.wowhead.com/classic/item=17029"
+      },
+      {
+        "item_id": 20748,
+        "name": "Brilliant Mana Oil",
+        "why": "healing + mana regen (holy/disc)",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=20748",
+        "roles": [
+          "healer"
+        ]
+      },
+      {
+        "item_id": 20749,
+        "name": "Brilliant Wizard Oil",
+        "why": "shadow spec spell damage",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=20749",
+        "roles": [
+          "dps"
+        ]
+      }
+    ],
+    "shaman": [
+      {
+        "item_id": 17030,
+        "name": "Ankh",
+        "why": "Reincarnation reagent",
+        "tier": "essential",
+        "wowhead_url": "https://www.wowhead.com/classic/item=17030"
+      },
+      {
+        "item_id": 20748,
+        "name": "Brilliant Mana Oil",
+        "why": "healing + mana regen (resto)",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=20748",
+        "roles": [
+          "healer"
+        ]
+      }
+    ],
+    "paladin": [
+      {
+        "item_id": 21177,
+        "name": "Symbol of Kings",
+        "why": "Greater Blessings reagent",
+        "tier": "essential",
+        "wowhead_url": "https://www.wowhead.com/classic/item=21177"
+      },
+      {
+        "item_id": 20748,
+        "name": "Brilliant Mana Oil",
+        "why": "healing + mana regen (holy)",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=20748",
+        "roles": [
+          "healer"
+        ]
+      }
+    ],
+    "druid": [
+      {
+        "item_id": 17026,
+        "name": "Wild Thornroot",
+        "why": "Gift of the Wild reagent",
+        "tier": "essential",
+        "wowhead_url": "https://www.wowhead.com/classic/item=17026"
+      }
+    ]
+  },
+  "food": {
+    "raid": [
+      {
+        "item_id": 238641,
+        "name": "Specklefin Feast",
+        "why": "serves 40; grants AP/spellpower/healing/Stamina for 45 min",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=238641"
+      }
+    ],
+    "tank": [
+      {
+        "item_id": 21023,
+        "name": "Dirge's Kickin' Chimaerok Chops",
+        "why": "+25 Stamina",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=21023"
+      },
+      {
+        "item_id": 12218,
+        "name": "Monster Omelet",
+        "why": "+15 Stamina, cheap and easy to obtain",
+        "tier": "essential",
+        "wowhead_url": "https://www.wowhead.com/classic/item=12218"
+      },
+      {
+        "item_id": 286152,
+        "name": "Plated Armorfish",
+        "why": "+150 armor",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=286152"
+      }
+    ],
+    "dps_physical": [
+      {
+        "item_id": 20452,
+        "name": "Smoked Desert Dumplings",
+        "why": "+20 Strength",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=20452"
+      },
+      {
+        "item_id": 18045,
+        "name": "Tender Wolf Steak",
+        "why": "+15 Agility",
+        "tier": "essential",
+        "wowhead_url": "https://www.wowhead.com/classic/item=18045"
+      },
+      {
+        "item_id": 13934,
+        "name": "Mightfish Steak",
+        "why": "+40 attack power",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13934"
+      },
+      {
+        "item_id": 13928,
+        "name": "Grilled Squid",
+        "why": "+1% crit chance",
+        "tier": "tryhard",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13928"
+      }
+    ],
+    "dps_caster": [
+      {
+        "item_id": 13931,
+        "name": "Nightfin Soup",
+        "why": "+22 spell damage",
+        "tier": "essential",
+        "wowhead_url": "https://www.wowhead.com/classic/item=13931"
+      }
+    ],
+    "healer": [
+      {
+        "item_id": 232438,
+        "name": "Smoked Redgill",
+        "why": "+22 healing power",
+        "tier": "essential",
+        "wowhead_url": "https://www.wowhead.com/classic/item=232438"
+      },
+      {
+        "item_id": 249870,
+        "name": "Sage's Tea",
+        "why": "mana per 5 + 44 healing power",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=249870"
+      },
+      {
+        "item_id": 18254,
+        "name": "Runn Tum Tuber Surprise",
+        "why": "+15 Intellect",
+        "tier": "recommended",
+        "wowhead_url": "https://www.wowhead.com/classic/item=18254"
+      }
+    ]
+  },
+  "always": [
+    {
+      "item_id": 13446,
+      "name": "Major Healing Potion",
+      "why": "every raider needs an emergency heal",
+      "tier": "essential",
+      "wowhead_url": "https://www.wowhead.com/classic/item=13446"
+    },
+    {
+      "item_id": 14530,
+      "name": "Heavy Runecloth Bandage",
+      "why": "free healing between pulls",
+      "tier": "essential",
+      "wowhead_url": "https://www.wowhead.com/classic/item=14530"
+    },
+    {
+      "item_id": 5634,
+      "name": "Free Action Potion",
+      "why": "removes stuns / roots from some bosses",
+      "tier": "recommended",
+      "wowhead_url": "https://www.wowhead.com/classic/item=5634"
+    },
+    {
+      "item_id": 9421,
+      "name": "Major Healthstone",
+      "why": "ask your warlock",
+      "tier": "recommended",
+      "wowhead_url": "https://www.wowhead.com/classic/item=9421"
+    }
+  ]
+}
