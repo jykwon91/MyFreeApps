@@ -123,7 +123,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   the World Map's saved level) is hand-written advice in `data/gold/goldTips.ts`:
   each tip is `classic` (no chip), `forever` (published for Forever) or
   `unknown` (Unconfirmed). **No prices** before launch — a test fails on any
-  "N gold/silver". Class tips follow the saved class. Its checklist has its own
+  "N gold/silver". Class tips follow the saved World Map class; the page's Class picker saves to it. Its checklist has its own
   key (`mga.wowForever.gold.checklist.v1`), separate from the guide's.
 - Class/spec ids in `data/classes.ts` are the stable key for anything
   class-shaped (stat weights, compare settings, a future BiS page). Never rename.

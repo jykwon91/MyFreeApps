@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { AlertBox } from "@platform/ui";
 import GoldBandSection from "@/games/wow-forever/components/gold/GoldBandSection";
 import GoldClassSection from "@/games/wow-forever/components/gold/GoldClassSection";
@@ -20,7 +21,8 @@ const SECTIONS = [
 
 /** /wow-forever/gold — how to make gold while leveling, by level and class. */
 export default function WowGoldPage() {
-  const [player] = usePlayerSettings();
+  const [player, updatePlayer] = usePlayerSettings();
+  const [showAllClasses, setShowAllClasses] = useState(false);
   const [band, setBand] = useGoldBand(player.level);
   return (
     <main className="p-4 sm:p-8 space-y-8 max-w-4xl">
@@ -37,7 +39,15 @@ export default function WowGoldPage() {
       </AlertBox>
       <GuideSectionNav sections={SECTIONS} />
       <GoldBandSection band={band} onBandChange={setBand} />
-      <GoldClassSection classId={player.classId} />
+      <GoldClassSection
+        classId={player.classId}
+        showAll={showAllClasses}
+        onClassChange={(classId) => {
+          setShowAllClasses(false);
+          updatePlayer({ classId });
+        }}
+        onShowAll={() => setShowAllClasses(true)}
+      />
       <GoldGatheringSection />
       <GoldSellSection />
       <GoldDontDoSection />

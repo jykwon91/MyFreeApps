@@ -26,7 +26,7 @@ test("the level toggle changes the tips and is kept in the URL", async ({ page }
 
 test("class tips switch to every class", async ({ page }) => {
   await page.goto("/wow-forever/gold");
-  await page.getByRole("radio", { name: "All classes" }).click();
+  await page.getByLabel("Class", { exact: true }).selectOption("all");
   await expect(page.locator("#class").getByRole("heading", { name: "Rogue" })).toBeVisible();
 });
 
