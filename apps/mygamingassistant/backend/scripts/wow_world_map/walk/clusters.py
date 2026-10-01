@@ -2,7 +2,8 @@
 
 Neighbouring polygons with the same label (room / sub-area) and medium
 (ground or water) are grouped around a seed, at most :data:`OUTDOOR_RADIUS`
-yards out (:data:`INDOOR_RADIUS` indoors). A cluster edge costs the travel
+yards out (:data:`INDOOR_RADIUS` indoors and in capital cities, where the
+directions turn by turn). A cluster edge costs the travel
 time between the two clusters' centre polygons over the polygon graph, in
 "ground yards" (yards at run speed); lifts and portals add their own edges.
 
@@ -206,7 +207,7 @@ def cluster(polys: PolyGraph, poly_label: np.ndarray, labels: list[Label], links
     members: list[list[int]] = []
     for seed in range(n):
         if owner[seed] < 0 and keep_list[seed]:
-            radius = INDOOR_RADIUS if labels[lab[seed]].indoor else OUTDOOR_RADIUS
+            radius = INDOOR_RADIUS if labels[lab[seed]].indoor or labels[lab[seed]].city else OUTDOOR_RADIUS
             members.append(_grow(seed, radius * radius, indptr, indices, owner, len(members),
                                  cx, cy, cz, lab, water))
     reps = []

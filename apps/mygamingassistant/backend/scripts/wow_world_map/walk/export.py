@@ -18,7 +18,7 @@ inside, the layout is (little-endian)::
     edges:  u32 a[m], u32 b[m], u16 cost[m]   cost in yards at run speed
             u8  kind[m]                       0 = walk / swim, 1 = lift, 2 = portal
     hubs:   u32 node[h], u16 matrix[h*h]      hub-to-hub cost; 65535 = no path
-    json:   {"labels": [[name, zone, indoor]], "hubs": [key]}
+    json:   {"labels": [[name, zone, indoor, city]], "hubs": [key]}
 
 Hub keys match ``travel.json``: ``t<taxi node id>`` and ``s<transport id>.<stop index>``.
 """
@@ -143,7 +143,7 @@ def hub_matrix(graph: WalkGraph, hubs: list[Hub]) -> tuple[list[Hub], list[int],
 def write_walk(path: Path, map_id: int, graph: WalkGraph, hubs: list[Hub], hub_nodes: list[int],
                matrix: np.ndarray) -> int:
     meta = json.dumps({
-        "labels": [[lab.name, lab.zone, int(lab.indoor)] for lab in graph.labels],
+        "labels": [[lab.name, lab.zone, int(lab.indoor), int(lab.city)] for lab in graph.labels],
         "hubs": [h.key for h in hubs],
     }, ensure_ascii=False, separators=(",", ":")).encode()
     pos = np.round(graph.position).astype(np.int16)

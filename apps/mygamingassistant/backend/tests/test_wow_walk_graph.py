@@ -25,9 +25,16 @@ from scripts.wow_world_map.walk.clusters import (
     snap_hub,
 )
 from scripts.wow_world_map.walk.export import UNREACHABLE, Hub, hub_matrix, write_walk
+from scripts.wow_world_map.walk.floors import Floors, Triangles, floor_under
 from scripts.wow_world_map.walk.links import EDGE_LIFT, EDGE_PORTAL, PORTAL_COST_YARDS
 from scripts.wow_world_map.walk.navfile import BORDER_FLAG, NULL_INDEX
-from scripts.wow_world_map.walk.walk_graph import CELLS, Label, PolyGraph, load_polys
+from scripts.wow_world_map.walk.walk_graph import (
+    CELLS,
+    AreaNames,
+    Label,
+    PolyGraph,
+    load_polys,
+)
 
 NVP = 6
 
@@ -193,7 +200,7 @@ def test_clustering_keeps_only_ground_joined_to_a_hub() -> None:
     # 0-1-2 is a town with a flight master at 0; 3-4 is a rooftop nobody reaches.
     polys = _poly_graph([(0, 0, 0), (50, 0, 0), (100, 0, 0), (0, 300, 40), (50, 300, 40)],
                         [(0, 1), (1, 2), (3, 4)])
-    labels = [Label("Goldshire", "Elwynn Forest", False)]
+    labels = [Label("Goldshire", "Elwynn Forest", False, False)]
     graph = cluster(polys, np.zeros(5, dtype=np.int32), labels, [], [Anchor(0, 0, 0), Anchor(9000, 0, 0)])
     assert graph.position[:, :2].tolist() == [[0, 0], [50, 0], [100, 0]]
     assert graph.edges.tolist() == [[0, 1], [1, 2]]
@@ -203,7 +210,7 @@ def test_clustering_keeps_only_ground_joined_to_a_hub() -> None:
 
 def test_a_lift_becomes_an_edge_between_its_floors() -> None:
     polys = _poly_graph([(0, 0, 0), (40, 0, 0), (0, 0, 60), (40, 0, 60)], [(0, 1), (2, 3)])
-    labels = [Label("Thunder Bluff", "Mulgore", False)]
+    labels = [Label("Thunder Bluff", "Mulgore", False, False)]
     lift = links.Link((0.0, 0.0, 0.0), (0.0, 0.0, 60.0), 140.0, EDGE_LIFT)
     graph = cluster(polys, np.zeros(4, dtype=np.int32), labels, [lift], [Anchor(40, 0, 60)])
     assert len(graph.position) == 4
@@ -216,7 +223,7 @@ def test_a_lift_boards_from_the_ground_not_the_top_of_its_housing() -> None:
     # (4, joined to nothing); the ground you board from is at z 61.
     polys = _poly_graph([(0, 5, 61), (40, 5, 61), (0, 0, 130), (40, 0, 130), (1, 1, 69)],
                         [(0, 1), (2, 3)])
-    labels = [Label("Thunder Bluff", "Mulgore", False)]
+    labels = [Label("Thunder Bluff", "Mulgore", False, False)]
     lift = links.Link((0.0, 0.0, 69.0), (0.0, 0.0, 130.0), 140.0, EDGE_LIFT)
     graph = cluster(polys, np.zeros(5, dtype=np.int32), labels, [lift], [Anchor(40, 0, 130)])
     lift_edge = graph.edges[graph.kind == EDGE_LIFT].tolist()
@@ -233,7 +240,7 @@ def test_the_walk_file_has_the_layout_the_page_reads(tmp_path: Path) -> None:
         edges=np.array([[0, 1], [1, 2]]),
         cost=np.array([30.2, 42.0]),
         kind=np.array([0, 1], dtype=np.uint8),
-        labels=[Label("Kharanos", "Dun Morogh", False), Label("The Great Forge", "Ironforge", True)],
+        labels=[Label("Kharanos", "Dun Morogh", False, False), Label("The Great Forge", "Ironforge", True, True)],
         anchor_node=[0, 1, None],
     )
     hubs = [Hub("t6", 10, -20, 3), Hub("s10.0", 40, -20, 5, dock=True), Hub("t99", 0, 0, 0)]
@@ -263,7 +270,7 @@ def test_the_walk_file_has_the_layout_the_page_reads(tmp_path: Path) -> None:
     assert np.frombuffer(data, "<u2", h * h, at + 4 * h).tolist() == [0, 30, 30, 0]
     at += 4 * h + 2 * h * h
     assert json.loads(data[at:at + json_bytes]) == {
-        "labels": [["Kharanos", "Dun Morogh", 0], ["The Great Forge", "Ironforge", 1]],
+        "labels": [["Kharanos", "Dun Morogh", 0, 0], ["The Great Forge", "Ironforge", 1, 1]],
         "hubs": ["t6", "s10.0"],
     }
 
@@ -271,6 +278,63 @@ def test_the_walk_file_has_the_layout_the_page_reads(tmp_path: Path) -> None:
 def test_hubs_the_graph_cannot_join_are_marked_unreachable() -> None:
     graph = WalkGraph(np.array([[0.0, 0, 0], [900, 0, 0]]), np.zeros(2, dtype=int), np.zeros(2, dtype=bool),
                       np.zeros((0, 2), dtype=np.int64), np.zeros(0), np.zeros(0, dtype=np.uint8),
-                      [Label("", "Durotar", False)], [0, 1])
+                      [Label("", "Durotar", False, False)], [0, 1])
     _, _, matrix = hub_matrix(graph, [Hub("t1", 0, 0, 0), Hub("t2", 900, 0, 0)])
     assert matrix.tolist() == [[0, UNREACHABLE], [UNREACHABLE, 0]]
+
+
+# --- rooms ------------------------------------------------------------------
+
+def _square(x0: float, y0: float, size: float, z: float) -> np.ndarray:
+    """Two triangles covering a square floor at height ``z``."""
+    a, b, c, d = (x0, y0, z), (x0 + size, y0, z), (x0 + size, y0 + size, z), (x0, y0 + size, z)
+    return np.array([[a, b, c], [a, c, d]], dtype=float)
+
+
+def _floors(*squares: tuple[np.ndarray, int, bool]) -> Floors:
+    t = np.concatenate([s for s, _, _ in squares])
+    group = np.concatenate([np.full(len(s), g) for s, g, _ in squares])
+    interior = np.concatenate([np.full(len(s), i) for s, _, i in squares])
+    return Floors(Triangles(t[:, 0], t[:, 1], t[:, 2]), group, interior)
+
+
+def test_a_point_stands_on_the_floor_under_it_not_the_one_above() -> None:
+    # A street (group 1, z 0) under a shop's upper floor (group 2, z 6).
+    floors = _floors((_square(0, 0, 20, 0.0), 1, False), (_square(0, 0, 10, 6.0), 2, True))
+    z, group, interior = floor_under(np.array([[5.0, 5.0, 0.5], [5.0, 5.0, 6.2], [15.0, 15.0, 0.0]]), floors)
+    assert group.tolist() == [1, 2, 1]
+    assert z.tolist() == [0.0, 6.0, 0.0]
+    assert interior.tolist() == [False, True, False]
+
+
+def test_a_point_off_every_floor_is_in_no_room() -> None:
+    floors = _floors((_square(0, 0, 10, 0.0), 1, True))
+    # Beside the building, and far under its floor (a cellar the building doesn't have).
+    z, group, _ = floor_under(np.array([[30.0, 5.0, 0.0], [5.0, 5.0, -20.0]]), floors)
+    assert group.tolist() == [-1, -1]
+    assert np.isnan(z).all()
+
+
+def test_rooms_say_when_they_are_open_air(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Stormwind: its streets are WMO groups flagged outdoors (Flags 4); a shop isn't.
+    tables = {
+        "AreaTable": [
+            {"ID": "1519", "AreaName_lang": "Stormwind City", "ParentAreaID": "0", "Flags_0": "312"},
+            {"ID": "5150", "AreaName_lang": "Trade District", "ParentAreaID": "1519", "Flags_0": "0"},
+        ],
+        "WMOAreaTable": [
+            {"WMOID": "10", "NameSetID": "0", "WMOGroupID": "3", "AreaName_lang": "Trade District",
+             "AreaTableID": "5150", "Flags": "4"},
+            {"WMOID": "10", "NameSetID": "0", "WMOGroupID": "4", "AreaName_lang": "The Gilded Rose",
+             "AreaTableID": "0", "Flags": "0"},
+            {"WMOID": "10", "NameSetID": "0", "WMOGroupID": "-1", "AreaName_lang": "",
+             "AreaTableID": "1519", "Flags": "0"},
+        ],
+    }
+    monkeypatch.setattr(sources, "wago_table", lambda name, **_: tables[name])
+    names = AreaNames()
+    assert names.room(10, 0, 3) == ("Trade District", 5150, True)
+    assert names.room(10, 0, 4) == ("The Gilded Rose", 0, False)
+    # A group with no row of its own takes the building's, named after its area.
+    assert names.room(10, 0, 9) == ("Stormwind City", 1519, False)
+    assert names.room(99, 0, 1) == ("", 0, False)
