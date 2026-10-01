@@ -87,8 +87,19 @@ describe("Making gold page", () => {
     renderAt("/wow-forever/gold");
     expect(section("class").getByText("Pick pockets before you kill")).toBeInTheDocument();
     expect(section("class").queryByText("Sell portals")).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("radio", { name: "All classes" }));
+    await userEvent.selectOptions(screen.getByLabelText("Class"), "all");
     expect(section("class").getByText("Sell portals")).toBeInTheDocument();
+  });
+
+  it("saves a picked class as yours, shared with the World Map", async () => {
+    savePlayer(20, "mage");
+    renderAt("/wow-forever/gold");
+    expect(screen.getByLabelText("Class")).toHaveValue("mage");
+    await userEvent.selectOptions(screen.getByLabelText("Class"), "warlock");
+    expect(section("class").getByText("Summon players for tips")).toBeInTheDocument();
+    expect(section("class").queryByText("Sell portals")).not.toBeInTheDocument();
+    const saved = JSON.parse(localStorage.getItem(PLAYER_SETTINGS_STORAGE_KEY) ?? "{}");
+    expect(saved).toMatchObject({ classId: "warlock", level: 20 });
   });
 
   it("marks Forever-only and unknown tips", () => {
