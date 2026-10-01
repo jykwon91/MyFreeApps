@@ -274,13 +274,13 @@ function stretchText(
   if (s.kind === "teleport") return `Step on the teleporter${destination(graph, before, after)} (one way)`;
   if (s.kind === "swim") return `Swim ${heading}, ${formatYards(head.yards)}${name ? ` across ${name}` : ""}`;
   const move = `head ${heading}, ${formatYards(head.yards)}`;
-  const through = `${move}, through ${name}${climb(head)}`;
+  const through = `${move}${name ? `, through ${name}` : ""}${climb(head)}`;
   // Off a lift / out of a portal / after a drop, the step before already named where you are.
   if (!before || !isMove(before)) return before ? `H${move.slice(1)}${climb(head)}` : `H${through.slice(1)}`;
   const indoor = graph.labels[s.label].indoor;
   const wasIndoor = graph.labels[before.label].indoor;
   const sameName = areaName(graph, before.label) === name;
-  if (indoor && !wasIndoor) return sameName ? `Go inside and ${move}${climb(head)}` : `Go into ${name} and ${move}${climb(head)}`;
+  if (indoor && !wasIndoor) return sameName || !name ? `Go inside and ${move}${climb(head)}` : `Go into ${name} and ${move}${climb(head)}`;
   if (!indoor && wasIndoor) return sameName ? `Go outside and ${move}${climb(head)}` : `Go outside and ${through}`;
   return `H${through.slice(1)}`;
 }

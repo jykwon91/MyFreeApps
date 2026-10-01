@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import interiorsJson from "@/games/wow-forever/data/worldMap/classic/classicInteriors.json";
 import dungeonsJson from "@/games/wow-forever/data/worldMap/classic/classicDungeons.json";
-import { decodeWalkGraph, type WalkGraph } from "@/games/wow-forever/worldMap/walkGraph";
+import { decodeWalkGraph, WALK_EDGE, type WalkGraph } from "@/games/wow-forever/worldMap/walkGraph";
 import {
   BOSS_ROUTE,
   decodeInteriors,
@@ -107,6 +107,31 @@ describe("dungeon interiors", () => {
     expect(routes[1].fromBoss?.name).toBe("Rhahk'Zor");
     expect(routes[1].yards).toBeCloseTo(30);
     expect(routes[1].path[routes[1].path.length - 1]).toMatchObject({ wx: 60, wy: 30 });
+  });
+
+  it("routes from the entrance when there's no walk back from the boss before", () => {
+    // Rhahk'Zor (node 2) is down a one-way drop; Sneed (node 4) is back up past it.
+    const nodes: TestNode[] = [
+      { x: 0, y: 0, z: 10, label: 0 },
+      { x: 30, y: 0, z: 10, label: 0 },
+      { x: 30, y: 30, z: 0, label: 0 },
+      { x: 45, y: 0, z: 10, label: 0 },
+      { x: 60, y: 30, z: 10, label: 0 },
+    ];
+    const edges: TestEdge[] = [[0, 1, 30], [1, 2, 35, WALK_EDGE.drop], [1, 3, 15], [3, 4, 35]];
+    const hubs = [
+      { key: "e1", node: 0 },
+      { key: "b1", node: 2 },
+      { key: "b2", node: 4 },
+    ];
+    const cost = [0, 65, 80, NO_WAY, 0, NO_WAY, NO_WAY, NO_WAY, 0];
+    const labels: [string, string, number][] = [["Mast Room", "The Deadmines", 1]];
+    const graph = decodeWalkGraph(encode(MAP, nodes, edges, labels, hubs, cost, true));
+    const [rhahk, sneed] = interiorRoutes(graph, interior(), 1, ROUTE_FROM.previous);
+    expect(rhahk.status).toBe(BOSS_ROUTE.route);
+    expect(sneed.status).toBe(BOSS_ROUTE.route);
+    expect(sneed.fromBoss).toBeNull();
+    expect(sneed.path[0]).toMatchObject({ wx: 0, wy: 0 });
   });
 
   it("walks every boss from the entrance when asked", () => {

@@ -137,6 +137,21 @@ describe("walking over the graph", () => {
     expect(lines[1]).toMatch(/^Swim west, ~80 yd across Loch Modan$/);
   });
 
+  it("leaves out \"through\" where the ground has no name at all", () => {
+    const nodes: TestNode[] = [
+      { x: 0, y: 0, z: 0, label: 0 },
+      { x: 100, y: 0, z: 0, label: 0 },
+      { x: 100, y: 0, z: 40, label: 1 },
+      { x: 160, y: 0, z: 40, label: 1 },
+    ];
+    const edges: TestEdge[] = [[0, 1, 100], [1, 2, 70, WALK_EDGE.lift], [2, 3, 60]];
+    const unnamed: [string, string, number][] = [["", "", 1], ["The Great Forge", "Ironforge", 1]];
+    const graph = decodeWalkGraph(encode(0, nodes, edges, unnamed));
+    const lines = describeWalk(graph, walkPath(graph, 0, 3) ?? []);
+    expect(lines[0]).toMatch(/^Head north, ~100 yd$/);
+    expect(lines.join("|")).not.toMatch(/through ?(,|\||$)|Go into {2}/);
+  });
+
   it("says nothing extra for a single stretch", () => {
     expect(describeWalk(g, walkPath(g, 2, 4) ?? [])).toEqual([]);
   });
