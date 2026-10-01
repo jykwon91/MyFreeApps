@@ -239,9 +239,16 @@ jobs:
         # See frontend-build job above for why npm install vs npm ci.
         run: npm install
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ hashFiles('package-lock.json') }}
+
       - name: Install Playwright Chromium
         working-directory: apps/mybookkeeper/frontend
-        run: npx playwright install --with-deps chromium
+        timeout-minutes: 4
+        run: npx playwright install chromium
 
       - name: Run layout E2E tests (no backend)
         working-directory: apps/mybookkeeper/frontend
