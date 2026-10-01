@@ -246,7 +246,39 @@ class Walking {
   }
 }
 
-function stepFor(edge: Edge, u: number, v: number, graph: readonly GraphNode[], walking: Walking): DirectionStep {
+/** A flight route's in-game path, hop by hop (the client stores each hop one way). */
+export function flightPath(route: FlightRoute, paths: WorldMapData["flightPaths"]): WorldPoint[] {
+  const points: WorldPoint[] = [];
+  for (let i = 1; i < route.path.length; i++) {
+    const a = route.path[i - 1];
+    const b = route.path[i];
+    const hop = paths.get(`${a}>${b}`) ?? [...(paths.get(`${b}>${a}`) ?? [])].reverse();
+    points.push(...hop);
+  }
+  return points;
+}
+
+/** A boat / zeppelin's path from one stop to another, the way it sails (round the loop if need be). */
+export function sailPath(transport: Transport, from: number, to: number): WorldPoint[] {
+  const a = transport.stopAt[from];
+  const b = transport.stopAt[to];
+  if (a === undefined || b === undefined) return [];
+  return b > a ? transport.path.slice(a, b + 1) : [...transport.path.slice(a), ...transport.path.slice(0, b + 1)];
+}
+
+/** The drawn path of a ride: its in-game path, pinned to the two ends. */
+function ridePath(from: WorldPoint, middle: readonly WorldPoint[], to: WorldPoint): WorldPoint[] | undefined {
+  return middle.length ? [from, ...middle, to] : undefined;
+}
+
+function stepFor(
+  edge: Edge,
+  u: number,
+  v: number,
+  graph: readonly GraphNode[],
+  walking: Walking,
+  data: WorldMapData,
+): DirectionStep {
   const from = graph[u];
   const to = graph[v];
   if (edge.kind === STEP_KIND.walk) return walking.step(u, v);
@@ -257,12 +289,17 @@ function stepFor(edge: Edge, u: number, v: number, graph: readonly GraphNode[], 
       kind: STEP_KIND.fly,
       text: `Fly from ${from.flight?.name ?? "here"} to ${to.flight?.name ?? "there"}${viaText}`,
       place: to.end.place,
+      path: ridePath(from.end.world, flightPath(edge.route, data.flightPaths), to.end.world),
     };
   }
   return {
     kind: edge.kind,
     text: `Take the ${edge.kind} (${edge.transport.name.replace(/^\w+: /, "")}) from ${from.end.place.label} to ${to.end.place.label} — ${describePlace(to.end.place)}`,
     place: to.end.place,
+    path:
+      from.dock && to.dock
+        ? ridePath(from.end.world, sailPath(edge.transport, from.dock.index, to.dock.index), to.end.world)
+        : undefined,
   };
 }
 
@@ -337,7 +374,7 @@ export function planDirections(
   for (let v = 1; v > 0; ) {
     const visit = visits[v];
     if (!visit || !visit.edge) break;
-    const step = stepFor(visit.edge, visit.prev, v, graph, walking);
+    const step = stepFor(visit.edge, visit.prev, v, graph, walking, data);
     steps.unshift({ ...step, text: sentence(step.text) });
     v = visit.prev;
   }

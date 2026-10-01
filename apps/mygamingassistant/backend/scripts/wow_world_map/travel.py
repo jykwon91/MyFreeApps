@@ -6,6 +6,11 @@ are hand-written, keyed by the client's transport path id. The generator
 fails if a listed transport's stop count no longer matches its labels, so a
 client change can't silently mislabel a dock.
 
+Each flight route and boat / zeppelin loop also ships its in-game path
+(``TaxiPathNode``), so the map draws the way you actually fly or sail, not a
+straight line between the two ends. Flight paths are thinned to within
+``PATH_TOLERANCE`` yards of the client's.
+
 The Deeprun Tram isn't a taxi path: its two stops are the entrance area
 triggers into the tram instance, read from the Classic Era client (the
 Forever client no longer ships area triggers — see ``dungeons.py``).
@@ -44,6 +49,9 @@ TRANSPORTS: dict[int, tuple[str, str, str, tuple[str, ...]]] = {
     241: ("Boat: Ratchet - Booty Bay", "boat", "N",
           ("Ratchet dock", "Booty Bay dock")),
 }
+
+# Yards a thinned flight path may stray from the client's path.
+PATH_TOLERANCE = 20.0
 
 # Deeprun Tram: its entrance area triggers (Stormwind, Ironforge) -> stop label.
 TRAM_ID = 369  # the tram instance's map id; doubles as the transport id
@@ -104,6 +112,30 @@ def _tram(zones: list[ZoneBounds], art: WorldMapArt) -> dict[str, object]:
     return {"id": TRAM_ID, "name": "Tram: Stormwind - Ironforge", "vehicle": "tram", "faction": "N", "stops": stops}
 
 
+def _thin(points: list[tuple[float, float]], tolerance: float) -> list[tuple[float, float]]:
+    """Douglas-Peucker: drop points within ``tolerance`` yards of the line they sit on."""
+    if len(points) < 3:
+        return points
+    (ax, ay), (bx, by) = points[0], points[-1]
+    length = math.hypot(bx - ax, by - ay)
+    worst, far = -1.0, 0
+    for i in range(1, len(points) - 1):
+        px, py = points[i]
+        if length == 0:
+            d = math.hypot(px - ax, py - ay)
+        else:
+            d = abs((bx - ax) * (ay - py) - (ax - px) * (by - ay)) / length
+        if d > worst:
+            worst, far = d, i
+    if worst <= tolerance:
+        return [points[0], points[-1]]
+    return _thin(points[: far + 1], tolerance)[:-1] + _thin(points[far:], tolerance)
+
+
+def _flat(points: list[tuple[float, float]]) -> list[int]:
+    return [round(v) for point in points for v in point]
+
+
 def build_travel(
     zones: list[ZoneBounds], art: WorldMapArt, continents: set[int]
 ) -> dict[str, object]:
@@ -120,41 +152,63 @@ def build_travel(
             continue
         candidates[int(row["ID"])] = [int(row["ID"]), name, continent, round(wx, 1), round(wy, 1), faction, *placed]
 
-    edges: set[tuple[int, int]] = set()
-    for row in sources.wago_table("TaxiPath"):
+    path_rows: dict[int, list[dict[str, str]]] = defaultdict(list)
+    for row in sources.wago_table("TaxiPathNode"):
+        path_rows[int(row["PathID"])].append(row)
+    for rows in path_rows.values():
+        rows.sort(key=lambda r: int(r["NodeIndex"]))
+
+    # (from, to) -> the client's path id; the lowest id wins when two share ends.
+    edge_path: dict[tuple[int, int], int] = {}
+    for row in sorted(sources.wago_table("TaxiPath"), key=lambda r: int(r["ID"])):
         a, b = int(row["FromTaxiNode"]), int(row["ToTaxiNode"])
         if a in candidates and b in candidates and a != b:
-            edges.add((a, b))
+            edge_path.setdefault((a, b), int(row["ID"]))
+    edges = sorted(edge_path)
     linked = {n for edge in edges for n in edge}
     nodes = [candidates[n] for n in sorted(linked)]
+    edge_paths: list[list[int]] = []
+    for edge in edges:
+        rows = path_rows.get(edge_path[edge], [])
+        continent = int(str(candidates[edge[0]][2]))
+        points = [(float(r["Loc_0"]), float(r["Loc_1"])) for r in rows if int(r["ContinentID"]) == continent]
+        edge_paths.append(_flat(_thin(points, PATH_TOLERANCE)))
 
-    stops_by_path: dict[int, list[dict[str, str]]] = defaultdict(list)
-    for row in sources.wago_table("TaxiPathNode"):
-        if int(row["PathID"]) in TRANSPORTS and int(row["Delay"]) > 0:
-            stops_by_path[int(row["PathID"])].append(row)
     transports: list[dict[str, object]] = []
     for path_id, (label, vehicle, faction, docks) in sorted(TRANSPORTS.items()):
         stops: list[list[object]] = []
+        stop_at: list[int] = []
         seen: list[tuple[float, float]] = []
-        for row in sorted(stops_by_path.get(path_id, []), key=lambda r: int(r["NodeIndex"])):
+        rows = path_rows.get(path_id, [])
+        for index, row in enumerate(rows):
+            if int(row["Delay"]) <= 0:
+                continue
             continent = int(row["ContinentID"])
             wx, wy = float(row["Loc_0"]), float(row["Loc_1"])
             if any(math.hypot(wx - sx, wy - sy) < 50 for sx, sy in seen):
                 continue  # a round-trip path revisits its first dock
             seen.append((wx, wy))
+            stop_at.append(index)
             placed = _place(zones, art, continent, wx, wy)
             if placed is None:
                 raise ValueError(f"transport {path_id}: stop outside every zone map")
             stops.append([docks[len(stops)] if len(stops) < len(docks) else "?", continent, round(wx, 1), round(wy, 1), *placed])
         if len(stops) != len(docks):
             raise ValueError(f"transport {path_id} ({label}): {len(stops)} stops, {len(docks)} dock labels")
-        transports.append({"id": path_id, "name": label, "vehicle": vehicle, "faction": faction, "stops": stops})
+        # The whole loop, so a trip either way follows the water it really takes.
+        path = [[int(r["ContinentID"]), round(float(r["Loc_0"])), round(float(r["Loc_1"]))] for r in rows]
+        transports.append({
+            "id": path_id, "name": label, "vehicle": vehicle, "faction": faction, "stops": stops,
+            "path": [v for point in path for v in point], "stopAt": stop_at,
+        })
     transports.append(_tram(zones, art))
 
     return {
         "nodeColumns": ["id", "name", "continent", "worldX", "worldY", "faction", "zone", "subzone", "x", "y"],
         "nodes": nodes,
-        "edges": sorted([list(e) for e in edges]),
+        "edges": [list(e) for e in edges],
+        # Per edge: its flight path as flat x, y world yards.
+        "edgePaths": edge_paths,
         "stopColumns": ["label", "continent", "worldX", "worldY", "zone", "subzone", "x", "y"],
         "transports": transports,
     }

@@ -28,6 +28,7 @@ import {
   type QuestGiverKind,
   type QuestInfo,
   type Transport,
+  type WorldPoint,
   type TransportStop,
   type Vehicle,
   type WorldMapData,
@@ -270,7 +271,7 @@ function decodeInstances(raw: unknown): MapPoi[] {
   });
 }
 
-function decodeTravel(raw: unknown): Pick<WorldMapData, "flightNodes" | "flightEdges" | "transports"> {
+function decodeTravel(raw: unknown): Pick<WorldMapData, "flightNodes" | "flightEdges" | "flightPaths" | "transports"> {
   const payload = record(raw, "travel");
   const nodeCol = columnReader(payload.nodeColumns, "flight nodes");
   const flightNodes: FlightNode[] = list(payload.nodes, "flight nodes").map((r) => {
@@ -292,6 +293,16 @@ function decodeTravel(raw: unknown): Pick<WorldMapData, "flightNodes" | "flightE
     const pair = list(e, "flight edge");
     return [num(pair[0], "edge from"), num(pair[1], "edge to")] as const;
   });
+  const continentOf = new Map(flightNodes.map((n) => [n.id, n.continent]));
+  const flightPaths = new Map<string, WorldPoint[]>();
+  list(payload.edgePaths, "flight paths").forEach((p, i) => {
+    const [from, to] = flightEdges[i] ?? fail(`flight path ${i} has no edge`);
+    const continent = continentOf.get(from) ?? fail(`flight path ${i} starts off every node`);
+    const flat = list(p, "flight path").map((v) => num(v, "flight path point"));
+    const points: WorldPoint[] = [];
+    for (let k = 0; k + 1 < flat.length; k += 2) points.push({ continent, wx: flat[k], wy: flat[k + 1] });
+    flightPaths.set(`${from}>${to}`, points);
+  });
   const stopCol = columnReader(payload.stopColumns, "transport stops");
   const transports: Transport[] = list(payload.transports, "transports").map((t) => {
     const tr = record(t, "transport");
@@ -309,15 +320,21 @@ function decodeTravel(raw: unknown): Pick<WorldMapData, "flightNodes" | "flightE
         y: num(stopCol(row, "y"), "stop map y"),
       };
     });
+    const flat = tr.path === undefined ? [] : list(tr.path, "transport path").map((v) => num(v, "transport path point"));
+    const path: WorldPoint[] = [];
+    for (let k = 0; k + 2 < flat.length; k += 3) path.push({ continent: flat[k], wx: flat[k + 1], wy: flat[k + 2] });
+    const stopAt = tr.stopAt === undefined ? [] : list(tr.stopAt, "transport stop indexes").map((v) => num(v, "stop index"));
     return {
       id: num(tr.id, "transport id"),
       name: str(tr.name, "transport name"),
       vehicle,
       faction: faction(tr.faction, "transport"),
       stops,
+      path,
+      stopAt,
     };
   });
-  return { flightNodes, flightEdges, transports };
+  return { flightNodes, flightEdges, flightPaths, transports };
 }
 
 /** The generator's JSON files, as imported. */
