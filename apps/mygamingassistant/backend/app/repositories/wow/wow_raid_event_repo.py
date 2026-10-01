@@ -25,17 +25,24 @@ async def create(
     created_by_user_id: str,
     title: str | None = None,
     notes: str | None = None,
+    status: str = "scheduled",
+    created_by_display_name: str | None = None,
 ) -> WowRaidEvent:
-    """Insert a new raid event and flush."""
+    """Insert a new raid event and flush.
+
+    ``status="draft"`` is used by /raid-admin create: the row backs the
+    organiser's private preview until they press [Post raid].
+    """
     row = WowRaidEvent(
         guild_id=guild_id,
         raid_key=raid_key,
         title=title,
         starts_at=starts_at,
         size_cap=size_cap,
-        status="scheduled",
+        status=status,
         channel_id=channel_id,
         created_by_user_id=created_by_user_id,
+        created_by_display_name=created_by_display_name,
         notes=notes,
     )
     db.add(row)
@@ -46,6 +53,30 @@ async def create(
 async def get(db: AsyncSession, event_id: uuid.UUID) -> WowRaidEvent | None:
     """Return a single event by primary key."""
     return await db.get(WowRaidEvent, event_id)
+
+
+async def get_for_update(
+    db: AsyncSession, event_id: uuid.UUID
+) -> WowRaidEvent | None:
+    """Return the event with a row lock (SELECT … FOR UPDATE).
+
+    Every signup mutation locks its event first so concurrent clicks on the
+    same raid serialise — two players can't both take the last seat.
+    ``populate_existing`` refreshes an already-loaded instance.
+    """
+    result = await db.execute(
+        select(WowRaidEvent)
+        .where(WowRaidEvent.id == event_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    return result.scalar_one_or_none()
+
+
+async def delete(db: AsyncSession, event: WowRaidEvent) -> None:
+    """Hard-delete an event (used only for discarded drafts)."""
+    await db.delete(event)
+    await db.flush()
 
 
 async def list_upcoming(

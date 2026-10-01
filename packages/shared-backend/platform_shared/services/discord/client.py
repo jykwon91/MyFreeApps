@@ -329,6 +329,23 @@ class DiscordRestClient:
         assert result is not None, "create_followup_message must return a message"
         return result
 
+    async def get_channel(self, channel_id: str) -> dict[str, Any]:
+        """GET /channels/{channel_id} — includes ``guild_id`` and ``permission_overwrites``."""
+        result = await self._call("GET", f"/channels/{channel_id}")
+        assert result is not None, "get_channel must return a channel object"
+        return result
+
+    async def get_guild_member(self, guild_id: str, user_id: str) -> dict[str, Any]:
+        """GET /guilds/{guild_id}/members/{user_id} — the member's ``roles`` list."""
+        result = await self._call("GET", f"/guilds/{guild_id}/members/{user_id}")
+        assert result is not None, "get_guild_member must return a member object"
+        return result
+
+    async def get_guild_roles(self, guild_id: str) -> list[dict[str, Any]]:
+        """GET /guilds/{guild_id}/roles — every role with its ``permissions`` bitfield."""
+        result = await self._call("GET", f"/guilds/{guild_id}/roles")
+        return result or []
+
     async def bulk_overwrite_global_commands(
         self,
         application_id: str,

@@ -5,6 +5,7 @@ App-agnostic building blocks for an HTTP-interactions Discord bot:
 - :mod:`~platform_shared.services.discord.signature` — Ed25519 request verification
 - :mod:`~platform_shared.services.discord.client` — async REST client with rate limiting
 - :mod:`~platform_shared.services.discord.interactions` — interaction/response type constants
+- :mod:`~platform_shared.services.discord.permissions` — permission bits + channel-permission computation
 
 Quick-start::
 
@@ -48,6 +49,20 @@ from .interactions import (
     INTERACTION_TYPE_PING,
     MESSAGE_FLAG_EPHEMERAL,
 )
+from .permissions import (
+    ADMINISTRATOR,
+    EMBED_LINKS,
+    MANAGE_EVENTS,
+    MANAGE_GUILD,
+    MENTION_EVERYONE,
+    SEND_MESSAGES,
+    VIEW_CHANNEL,
+    compute_channel_permissions,
+    has_permission,
+    missing_permissions,
+    parse_bitfield,
+    permission_labels,
+)
 from .signature import (
     TIMESTAMP_TOLERANCE_S,
     DiscordSignatureError,
@@ -88,6 +103,19 @@ __all__ = [
     "INTERACTION_TYPE_MODAL_SUBMIT",
     "INTERACTION_TYPE_PING",
     "MESSAGE_FLAG_EPHEMERAL",
+    # permissions
+    "ADMINISTRATOR",
+    "EMBED_LINKS",
+    "MANAGE_EVENTS",
+    "MANAGE_GUILD",
+    "MENTION_EVERYONE",
+    "SEND_MESSAGES",
+    "VIEW_CHANNEL",
+    "compute_channel_permissions",
+    "has_permission",
+    "missing_permissions",
+    "parse_bitfield",
+    "permission_labels",
     # signature
     "DiscordSignatureError",
     "TIMESTAMP_TOLERANCE_S",

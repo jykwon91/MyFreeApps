@@ -24,14 +24,27 @@ async def upsert_signup(
     status: str,
     wow_class: Optional[str] = None,
     role: Optional[str] = None,
+    requeue: bool = False,
 ) -> WowRaidSignup:
     """Insert or update a player's signup for an event.
 
     Single INSERT … ON CONFLICT (event_id, discord_user_id) DO UPDATE, so two
     near-simultaneous button clicks from the same player can't race into a
     unique-violation.  ``signed_up_at`` is preserved on update (it orders the
-    bench); ``updated_at`` is refreshed.  Returns the post-upsert row.
+    bench) unless ``requeue`` is set — the signup service passes it when a
+    player *joins* the bench so FIFO promotion follows bench-join order.
+    ``updated_at`` is refreshed.  Returns the post-upsert row.
     """
+    now = datetime.now(timezone.utc)
+    update_set: dict[str, object] = {
+        "display_name": display_name,
+        "status": status,
+        "wow_class": wow_class,
+        "role": role,
+        "updated_at": now,
+    }
+    if requeue:
+        update_set["signed_up_at"] = now
     values = {
         "event_id": event_id,
         "discord_user_id": discord_user_id,
@@ -45,13 +58,7 @@ async def upsert_signup(
         .values(**values)
         .on_conflict_do_update(
             index_elements=["event_id", "discord_user_id"],
-            set_={
-                "display_name": display_name,
-                "status": status,
-                "wow_class": wow_class,
-                "role": role,
-                "updated_at": datetime.now(timezone.utc),
-            },
+            set_=update_set,
         )
         .returning(WowRaidSignup)
         .execution_options(populate_existing=True)
@@ -70,6 +77,36 @@ async def list_for_event(
         .order_by(WowRaidSignup.signed_up_at)
     )
     return list(result.scalars().all())
+
+
+async def get(
+    db: AsyncSession, *, event_id: uuid.UUID, discord_user_id: str
+) -> WowRaidSignup | None:
+    """Return one player's signup for an event, or None."""
+    result = await db.execute(
+        select(WowRaidSignup).where(
+            WowRaidSignup.event_id == event_id,
+            WowRaidSignup.discord_user_id == discord_user_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def list_for_events(
+    db: AsyncSession, event_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, list[WowRaidSignup]]:
+    """Signups for several events in one query, grouped by event id."""
+    grouped: dict[uuid.UUID, list[WowRaidSignup]] = {event_id: [] for event_id in event_ids}
+    if not event_ids:
+        return grouped
+    result = await db.execute(
+        select(WowRaidSignup)
+        .where(WowRaidSignup.event_id.in_(event_ids))
+        .order_by(WowRaidSignup.signed_up_at)
+    )
+    for signup in result.scalars().all():
+        grouped[signup.event_id].append(signup)
+    return grouped
 
 
 async def counts_by_role_status(

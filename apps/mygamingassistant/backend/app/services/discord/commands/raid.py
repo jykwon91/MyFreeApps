@@ -1,63 +1,81 @@
-"""/raid slash-command handler for the MGA Discord bot.
+"""/raid — the member-facing command (everyone can use it).
 
-Current subcommands
--------------------
-  ping    — health check; always responds with a public "alive" message.
+Subcommands
+-----------
+  ping    health check; public "alive" message.
+  list    up to 10 upcoming raids with links to their posts (private).
+  prefs   remembered class/role + DM reminders; with no options shows the
+          current settings and a [Send me a test DM] button (private).
 
-Future subcommands (separate PRs)
-----------------------------------
-  setup   — configure the raid-signup channel and roles for this guild.
-  create  — open a new raid event (name, date/time, roster size, notes).
-  cancel  — cancel an open event (operator-only via default_member_permissions).
-  list    — show upcoming events in this guild.
-
-Extending
----------
-Add a branch in ``handle_raid`` below, add the subcommand to
-``app/services/discord/commands_spec.py``, and register the command again
-via ``python -m app.cli discord-register-commands``.
+Organiser commands live under ``/raid-admin`` (see ``raid_admin.py``).
+Each handler runs in one transaction and returns the interaction response.
 """
+from __future__ import annotations
+
 from typing import Any
 
-from platform_shared.services.discord import (
-    CALLBACK_TYPE_CHANNEL_MESSAGE_WITH_SOURCE,
-    MESSAGE_FLAG_EPHEMERAL,
+from fastapi import BackgroundTasks
+
+from app.db.session import unit_of_work
+from app.repositories.wow import wow_raid_event_repo, wow_raid_signup_repo
+from app.services.discord import raid_copy
+from app.services.discord.interaction import (
+    Interaction,
+    ephemeral_response,
+    message_response,
+    public_response,
 )
+from app.services.discord.raid_context import load_configured_guild, utcnow
+from app.services.discord.raid_views import list_data, prefs_data
+from app.services.wow import raid_member_prefs_service
+
+LIST_LIMIT = 10
 
 
-def _ephemeral(content: str) -> dict[str, Any]:
-    """Return an ephemeral channel message (only visible to the invoking user)."""
-    return {
-        "type": CALLBACK_TYPE_CHANNEL_MESSAGE_WITH_SOURCE,
-        "data": {
-            "content": content,
-            "flags": MESSAGE_FLAG_EPHEMERAL,
-        },
-    }
-
-
-async def handle_raid(payload: dict[str, Any]) -> dict[str, Any]:
-    """Dispatch /raid APPLICATION_COMMAND interactions by subcommand name.
-
-    Returns a valid Discord interaction callback dict.  The response MUST be
-    returned within 3 seconds; this handler makes no outbound calls so it is
-    well within budget.
-
-    Args:
-        payload: The verified interaction payload from Discord.
-
-    Returns:
-        A Discord interaction response dict (``{"type": ..., "data": ...}``).
-    """
-    options: list[dict[str, Any]] = payload.get("data", {}).get("options", [])
-    subcommand: str = options[0].get("name", "") if options else ""
-
+async def handle_raid(interaction: Interaction, background: BackgroundTasks) -> dict[str, Any]:
+    """Dispatch /raid subcommands."""
+    subcommand = interaction.subcommand
     if subcommand == "ping":
-        return {
-            "type": CALLBACK_TYPE_CHANNEL_MESSAGE_WITH_SOURCE,
-            "data": {"content": "Raid bot is alive and ready!"},
-        }
+        return public_response("Raid bot is alive and ready!")
+    if interaction.guild_id is None:
+        return ephemeral_response(raid_copy.GUILD_ONLY)
+    if subcommand == "list":
+        return await _list(interaction)
+    if subcommand == "prefs":
+        return await _prefs(interaction)
+    return ephemeral_response("Unknown command.")
 
-    # Subcommand recognised by Discord (it's in commands_spec) but not yet
-    # handled here → tell the user cleanly rather than returning a 500.
-    return _ephemeral(f"The /{payload.get('data', {}).get('name', 'raid')} {subcommand} subcommand is not implemented yet.")
+
+async def _list(interaction: Interaction) -> dict[str, Any]:
+    async with unit_of_work() as db:
+        guild = await load_configured_guild(db, interaction)
+        if guild is None:
+            return ephemeral_response(raid_copy.NOT_CONFIGURED)
+        events = await wow_raid_event_repo.list_upcoming(db, guild.id, after=utcnow(), limit=LIST_LIMIT)
+        signups = await wow_raid_signup_repo.list_for_events(db, [event.id for event in events])
+        return message_response(list_data(guild.discord_guild_id, events, signups))
+
+
+async def _prefs(interaction: Interaction) -> dict[str, Any]:
+    wow_class = interaction.str_option("class")
+    role = interaction.str_option("role")
+    dm_reminders = interaction.bool_option("dm_reminders")
+
+    async with unit_of_work() as db:
+        guild = await load_configured_guild(db, interaction)
+        if guild is None:
+            return ephemeral_response(raid_copy.NOT_CONFIGURED)
+        if wow_class is None and role is None and dm_reminders is None:
+            pref = await raid_member_prefs_service.get(db, guild=guild, discord_user_id=interaction.user_id)
+            return message_response(prefs_data(pref))
+        result = await raid_member_prefs_service.update_prefs(
+            db,
+            guild=guild,
+            discord_user_id=interaction.user_id,
+            wow_class=wow_class,
+            role=role,
+            dm_reminders=dm_reminders,
+        )
+        if result.error is not None:
+            return ephemeral_response(result.error)
+        return message_response(prefs_data(result.pref, heading="Saved."))

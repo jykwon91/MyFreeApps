@@ -570,6 +570,7 @@ dependencies = [
     { name = "pyotp" },
     { name = "qrcode", extra = ["pil"] },
     { name = "sqlalchemy" },
+    { name = "tzdata" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "yt-dlp" },
 ]
@@ -604,6 +605,7 @@ requires-dist = [
     { name = "pyotp", specifier = "==2.10.0" },
     { name = "qrcode", extras = ["pil"], specifier = "==8.2" },
     { name = "sqlalchemy", specifier = "==2.0.52" },
+    { name = "tzdata", specifier = "==2026.2" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.52.4" },
     { name = "yt-dlp", specifier = "==2026.8.19" },
 ]

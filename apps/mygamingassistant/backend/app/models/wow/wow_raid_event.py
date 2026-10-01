@@ -4,6 +4,9 @@ guild_id FK → wow_raid_guild (ON DELETE CASCADE).
 starts_at is stored as UTC timestamptz; the guild's timezone is used for
 display only.  message_id is null until the bot posts the signup embed.
 
+Lifecycle: draft (organiser preview) → scheduled (posted) → cancelled /
+completed.  Migration 0026 added ``draft``.
+
 raid_key is a short slug identifying the instance (mc, onyxia, etc.).  title
 overrides the default display name if set.
 """
@@ -39,7 +42,9 @@ RAID_KEYS = (
     "aq40",
     "naxx",
 )
-RAID_STATUSES = ("scheduled", "cancelled", "completed")
+# ``draft`` = created by /raid-admin create, shown only in the organiser's
+# private preview; flipped to ``scheduled`` when they press [Post raid].
+RAID_STATUSES = ("draft", "scheduled", "cancelled", "completed")
 
 
 class WowRaidEvent(Base):
@@ -96,7 +101,14 @@ class WowRaidEvent(Base):
     message_id: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     # Discord user ID of whoever created the event.
     created_by_user_id: Mapped[str] = mapped_column(String(32), nullable=False)
+    # Creator's display name at creation time — embed footers can't render
+    # <@id> mentions, so the name is captured once.
+    created_by_display_name: Mapped[Optional[str]] = mapped_column(
+        String(100), nullable=True
+    )
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # Shown on the cancelled embed; written by /raid-admin cancel.
+    cancel_reason: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

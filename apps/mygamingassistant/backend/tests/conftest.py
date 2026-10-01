@@ -101,6 +101,12 @@ async def db(db_engine) -> AsyncGenerator[AsyncSession, None]:
 # consumer that imported the name by reference.
 _UOW_CONSUMERS = (
     "app.api.account",
+    "app.services.discord.autocomplete.raid_admin",
+    "app.services.discord.commands.raid",
+    "app.services.discord.commands.raid_admin",
+    "app.services.discord.components.raid_admin",
+    "app.services.discord.components.raid_signup",
+    "app.services.discord.raid_publisher",
     "app.services.game.fixture_loader",
     "app.services.game.lineup_package_service",
     "app.services.game.source_service",
@@ -127,6 +133,17 @@ def _bind_unit_of_work_to(db: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> 
         _mod = importlib.import_module(_mod_name)
         if hasattr(_mod, "unit_of_work"):
             monkeypatch.setattr(_mod, "unit_of_work", _override_unit_of_work)
+
+
+@pytest.fixture
+def bound_unit_of_work(db: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> AsyncSession:
+    """Bind every ``unit_of_work`` consumer to the test session (no HTTP client).
+
+    For tests that build their own app (e.g. the Discord interactions app)
+    but still need service transactions to land on the SAVEPOINT-bound ``db``.
+    """
+    _bind_unit_of_work_to(db, monkeypatch)
+    return db
 
 
 @pytest_asyncio.fixture(scope="function")
