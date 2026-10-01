@@ -17,6 +17,15 @@ from app.models.game.lineup_package import LineupPackage, LineupPackageLineup  #
 # WoW Forever World Map — locations captured in game by the companion addon
 from app.models.wow.map_capture import WowMapCapture  # noqa: F401
 
+# WoW Raid signup bot — guild config, events, signups, member prefs, notification outbox
+# Order: guild first (no deps), then event (fk→guild), signup (fk→event),
+# member_pref (fk→guild), notification (fk→event).
+from app.models.wow.wow_raid_guild import WowRaidGuild  # noqa: F401
+from app.models.wow.wow_raid_event import WowRaidEvent  # noqa: F401
+from app.models.wow.wow_raid_signup import WowRaidSignup  # noqa: F401
+from app.models.wow.wow_raid_member_pref import WowRaidMemberPref  # noqa: F401
+from app.models.wow.wow_raid_notification import WowRaidNotification  # noqa: F401
+
 # Shared models from platform_shared. Importing them here registers their
 # tables with ``Base.metadata`` so Alembic autogenerate + Base.metadata.create_all
 # see the schema. MGA does not own these tables — platform_shared is canonical.
