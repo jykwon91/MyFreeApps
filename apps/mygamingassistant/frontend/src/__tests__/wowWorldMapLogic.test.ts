@@ -246,6 +246,24 @@ describe("directions", () => {
     expect(d?.steps.some((s) => s.kind === STEP_KIND.boat)).toBe(true);
   });
 
+  it("draws a flight along its in-game path, not a straight line", () => {
+    const fly = directionsTo("Old Man Heming", inStormwind)?.steps.find((s) => s.kind === STEP_KIND.fly);
+    const path = fly?.path ?? [];
+    expect(path.length).toBeGreaterThan(5);
+    // How far the path strays from the straight line between its ends.
+    const [a, b] = [path[0], path[path.length - 1]];
+    const chord = Math.hypot(b.wx - a.wx, b.wy - a.wy);
+    const stray = Math.max(...path.map((p) => Math.abs((b.wx - a.wx) * (a.wy - p.wy) - (a.wx - p.wx) * (b.wy - a.wy)) / chord));
+    expect(stray).toBeGreaterThan(100);
+  });
+
+  it("draws a boat crossing the sea from one continent to the other", () => {
+    const boat = directionsTo("Mirket", { includeOtherFaction: true })?.steps.find((s) => s.kind === STEP_KIND.boat);
+    const path = boat?.path ?? [];
+    expect(path.length).toBeGreaterThan(5);
+    expect(new Set(path.map((p) => p.continent)).size).toBe(2);
+  });
+
   it("takes a zeppelin between Orgrimmar and Undercity for the Horde", () => {
     const d = directionsTo("Kaal Soulreaper", { faction: FACTION.horde, zoneId: ORGRIMMAR, position: { x: 50, y: 50 } });
     expect(d?.steps.some((s) => s.kind === STEP_KIND.zeppelin)).toBe(true);

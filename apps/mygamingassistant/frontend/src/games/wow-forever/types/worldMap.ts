@@ -162,6 +162,10 @@ export interface Transport {
   vehicle: Vehicle;
   faction: Faction;
   stops: readonly TransportStop[];
+  /** Its whole loop as sailed / flown in game (empty for the tram). */
+  path: readonly WorldPoint[];
+  /** Where each stop sits in `path`. */
+  stopAt: readonly number[];
 }
 
 export interface WorldMapData {
@@ -184,6 +188,8 @@ export interface WorldMapData {
   flightNodes: readonly FlightNode[];
   /** Directed flight routes between node ids. */
   flightEdges: readonly (readonly [number, number])[];
+  /** Each flight route's in-game path, keyed `from>to`. */
+  flightPaths: ReadonlyMap<string, readonly WorldPoint[]>;
   transports: readonly Transport[];
 }
 

@@ -16,10 +16,16 @@ from pathlib import Path
 import pytest
 
 from scripts.wow_world_map.classify import classify
-from scripts.wow_world_map.coords import ZoneBounds, pick_zone, world_to_zone, zone_to_world
+from scripts.wow_world_map.coords import (
+    ZoneBounds,
+    pick_zone,
+    world_to_zone,
+    zone_to_world,
+)
 from scripts.wow_world_map.factions import FactionTemplate, usable_by
 from scripts.wow_world_map.quests import quest_classes, quest_side
 from scripts.wow_world_map.sql_dump import parse_values, read_tables
+from scripts.wow_world_map.travel import _thin
 
 ELWYNN = ZoneBounds(1429, "Elwynn Forest", 0, -10254.17, -7939.58, -1935.42, 1535.42)
 WESTFALL = ZoneBounds(1436, "Westfall", 0, -11733.33, -9400.0, -483.33, 3016.67)
@@ -183,11 +189,26 @@ def test_committed_travel_data_is_consistent() -> None:
     assert vigil["zone"] == 1428  # Burning Steppes
     for transport in travel["transports"]:
         assert len(transport["stops"]) >= 2
+        # Each boat / zeppelin ships its loop, with every stop on it.
+        if transport["vehicle"] != "tram":
+            points = len(transport["path"]) // 3
+            assert len(transport["stopAt"]) == len(transport["stops"])
+            assert all(0 <= i < points for i in transport["stopAt"])
+    # Every flight route ships its in-game path: at least its two ends.
+    assert len(travel["edgePaths"]) == len(travel["edges"])
+    assert all(len(p) >= 4 and len(p) % 2 == 0 for p in travel["edgePaths"])
     # The Deeprun Tram joins Stormwind City and Ironforge, for both factions.
     tram = next(t for t in travel["transports"] if t["vehicle"] == "tram")
     assert tram["faction"] == "N"
     stop_zone = travel["stopColumns"].index("zone")
     assert sorted(stop[stop_zone] for stop in tram["stops"]) == [1453, 1455]
+
+
+def test_thin_drops_points_near_the_line_and_keeps_corners() -> None:
+    straight = [(0.0, 0.0), (10.0, 1.0), (20.0, -1.0), (30.0, 0.0)]
+    assert _thin(straight, 5) == [(0.0, 0.0), (30.0, 0.0)]
+    corner = [(0.0, 0.0), (50.0, 0.0), (50.0, 50.0)]
+    assert _thin(corner, 5) == corner
 
 
 @pytest.mark.parametrize(
