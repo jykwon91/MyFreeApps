@@ -292,11 +292,20 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `hooks/useWalkGraphs.ts`): `public/wow-walk/<mapId>.walk` (gzipped, loaded
   only while directions are open for that continent) is a graph of walkable
   patches built from the Forever client's terrain, buildings and doodads
-  (Recast navmesh), each labelled with its room / sub-area, plus lifts and
-  same-map portals. It also holds the walk cost between every pair of travel
+  (Recast navmesh), each labelled with its room / sub-area, indoor or not, and
+  whether its zone is a capital city, plus lifts and same-map portals. It also
+  holds the walk cost between every pair of travel
   hubs, so planning never searches once per hub. A walk leg is drawn as its
   real path and gets "Step by step" sub-steps ("Go into The Great Forge and
-  head …", "Ride the lift up to …"); hovering a step highlights its leg.
+  head …", "Ride the lift up to …", "Step on the teleporter up …"); indoors
+  and in capital cities they go turn by turn ("Turn left and head west,
+  ~80 yd"). Hovering a step highlights its leg.
+  - **Room labels** (`walk/floors.py`, `walk_graph.py`): a patch is in the
+    WMO group whose walkable floor is right under it (never bounding boxes —
+    they swallow the street outside). Indoor = the group's interior flag and
+    its `WMOAreaTable` row NOT flagged `0x4` (open air). Don't use a roof
+    test or the interior flag alone: Stormwind's streets are interior groups
+    of the city WMO with arches and trees over them.
   Where the graph can't join two ends (or the file failed to load — the
   panel says so with Retry) the walk falls back to a straight line and the
   footnote says so. NPCs, quest givers and dungeon entrances carry a `z`

@@ -27,6 +27,8 @@ export interface WalkLabel {
   /** Zone: "Ironforge", "Dun Morogh". */
   zone: string;
   indoor: boolean;
+  /** The zone is a capital city — directions there go turn by turn. */
+  city: boolean;
 }
 
 export interface WalkGraph {
@@ -86,7 +88,7 @@ export function decodeWalkGraph(buffer: ArrayBuffer): WalkGraph {
   const hubNode = take(4 * h, (b) => new Uint32Array(b));
   const hubCost = take(2 * h * h, (b) => new Uint16Array(b));
   const meta = JSON.parse(new TextDecoder().decode(bytes.subarray(at, at + jsonBytes))) as {
-    labels: [string, string, number][];
+    labels: [string, string, number, number?][];
     hubs: string[];
   };
 
@@ -128,7 +130,7 @@ export function decodeWalkGraph(buffer: ArrayBuffer): WalkGraph {
     to,
     cost,
     kind,
-    labels: meta.labels.map(([name, zone, indoor]) => ({ name, zone, indoor: indoor === 1 })),
+    labels: meta.labels.map(([name, zone, indoor, city]) => ({ name, zone, indoor: indoor === 1, city: city === 1 })),
     hubRow: new Map(meta.hubs.map((key, i) => [key, i])),
     hubNode,
     hubCost,

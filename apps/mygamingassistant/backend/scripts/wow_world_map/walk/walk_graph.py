@@ -5,9 +5,14 @@ them into the page's graph nodes.
 1. **Polygon graph.** Every Recast tile's polygons with their neighbour
    links; edges on a tile border are matched to the neighbouring tile's
    border edges (same line, overlapping span, heights within a step).
-2. **Labels.** A polygon inside a building room takes the room's name from
-   ``WMOAreaTable`` ("The Great Forge"); otherwise its terrain chunk's
-   ``AreaTable`` sub-area ("Kharanos"), under the zone ("Dun Morogh").
+2. **Labels.** A polygon standing on a building room's floor takes the
+   room's name from ``WMOAreaTable`` ("The Great Forge"); otherwise its
+   terrain chunk's ``AreaTable`` sub-area ("Kharanos"), under the zone
+   ("Dun Morogh"). Labels also say whether that's indoors — a room in a
+   group flagged interior whose WMOAreaTable row isn't flagged outdoors
+   (Stormwind's streets are "interior" groups of the city WMO, flagged
+   outdoors; its shops aren't) — and whether the zone is a capital city,
+   where directions go turn by turn.
 
 Arrays are numpy / flat lists throughout: a continent has millions of polygons.
 """
@@ -20,16 +25,17 @@ from pathlib import Path
 import numpy as np
 
 from scripts.wow_world_map import sources
-from scripts.wow_world_map.walk import models, terrain
+from scripts.wow_world_map.walk import terrain
 from scripts.wow_world_map.walk.client_files import client_file
+from scripts.wow_world_map.walk.floors import building_floors, floor_under
 from scripts.wow_world_map.walk.navfile import BORDER_FLAG, NULL_INDEX, read_nav
 from scripts.wow_world_map.walk.terrain import CHUNK_SIZE, MAP_ORIGIN, Placement
-from scripts.wow_world_map.walk.transform import placement_matrix
 
 CELLS = 256  # cells per Recast tile side (navmesh.mjs CELLS_PER_SUBTILE)
 SUBTILES = 4
 MAX_STEP = 1.5  # yd of height mismatch allowed where two tiles' edges meet
-ROOM_MARGIN = 1.0
+AREA_CAPITAL = 0x100  # AreaTable.Flags_0: the zone is a capital city
+ROOM_OUTDOORS = 0x4  # WMOAreaTable.Flags: open air — a street, a square, a cavern hall you can mount in
 
 
 @dataclass
@@ -49,6 +55,7 @@ class Label:
     name: str  # room or sub-area: "The Great Forge", "Kharanos" (or the zone itself)
     zone: str  # "Ironforge", "Dun Morogh"
     indoor: bool
+    city: bool  # the zone is a capital city
 
 
 # --- polygon graph ----------------------------------------------------------
@@ -142,10 +149,12 @@ class AreaNames:
         rows = sources.wago_table("AreaTable")
         self.name = {int(r["ID"]): r["AreaName_lang"].strip() for r in rows}
         self.parent = {int(r["ID"]): int(r["ParentAreaID"]) for r in rows}
-        self.wmo: dict[tuple[int, int, int], tuple[str, int]] = {}
+        self.flags = {int(r["ID"]): int(r["Flags_0"]) for r in rows}
+        self.wmo: dict[tuple[int, int, int], tuple[str, int, bool]] = {}
         for r in sources.wago_table("WMOAreaTable"):
             key = (int(r["WMOID"]), int(r["NameSetID"]), int(r["WMOGroupID"]))
-            self.wmo[key] = (r["AreaName_lang"].strip(), int(r["AreaTableID"]))
+            outdoors = bool(int(r["Flags"]) & ROOM_OUTDOORS)
+            self.wmo[key] = (r["AreaName_lang"].strip(), int(r["AreaTableID"]), outdoors)
 
     def zone_of(self, area_id: int) -> int:
         for _ in range(8):
@@ -155,13 +164,14 @@ class AreaNames:
             area_id = parent
         return area_id
 
-    def room(self, wmo_id: int, name_set: int, group_id: int) -> tuple[str, int]:
-        """A building room's name and AreaTable id ("" / 0 when it has none)."""
+    def room(self, wmo_id: int, name_set: int, group_id: int) -> tuple[str, int, bool]:
+        """A building room's name, AreaTable id ("" / 0 when it has none) and
+        whether it's flagged outdoors."""
         for key in ((wmo_id, name_set, group_id), (wmo_id, name_set, -1), (wmo_id, 0, -1)):
             if key in self.wmo:
-                name, area = self.wmo[key]
-                return name or self.name.get(area, ""), area
-        return "", 0
+                name, area, outdoors = self.wmo[key]
+                return name or self.name.get(area, ""), area, outdoors
+        return "", 0, False
 
 
 def _chunk_areas(tiles: list[terrain.TileFiles]) -> dict[tuple[int, int], int]:
@@ -179,12 +189,12 @@ def label_polys(polys: PolyGraph, tiles: list[terrain.TileFiles], buildings: lis
     rows = np.floor((MAP_ORIGIN - c[:, 0]) / CHUNK_SIZE).astype(int)
     cols = np.floor((MAP_ORIGIN - c[:, 1]) / CHUNK_SIZE).astype(int)
     terrain_area = np.array([chunk_area.get(k, 0) for k in zip(rows.tolist(), cols.tolist())], dtype=np.int64)
-    # The smallest named or interior building room around each polygon.
+    # The building floor each polygon stands on (the highest one under it).
     room_names = [""]
     room_name = np.zeros(len(c), dtype=np.int64)
     room_area = np.zeros(len(c), dtype=np.int64)
     room_inside = np.zeros(len(c), dtype=bool)
-    room_volume = np.full(len(c), np.inf)
+    floor_z = np.full(len(c), -np.inf)
     for b in buildings:
         if not b.extents or not b.heights:
             continue
@@ -193,26 +203,23 @@ def label_polys(polys: PolyGraph, tiles: list[terrain.TileFiles], buildings: lis
                           & (c[:, 2] >= b.heights[0] - 2) & (c[:, 2] <= b.heights[1] + 2))[0]
         if not len(near):
             continue
-        wmo_id, boxes = models.wmo_group_boxes(b.file_data_id)
-        m = placement_matrix(b)
-        local = (c[near] - m[:3, 3]) @ np.linalg.inv(m[:3, :3]).T
-        for box in boxes:
-            name, area = names.room(wmo_id, b.name_set, box.group_id)
-            if not name and not box.interior:
-                continue
-            lo = np.array(box.bbox_min) - ROOM_MARGIN
-            hi = np.array(box.bbox_max) + ROOM_MARGIN
-            inside = near[np.all((local >= lo) & (local <= hi), axis=1)]
-            volume = float(np.prod(hi - lo))
-            better = inside[room_volume[inside] > volume]
-            if not len(better):
-                continue
+        wmo_id, floors = building_floors(b)
+        z, group, interior = floor_under(c[near], floors)
+        on = (group >= 0) & (z > floor_z[near])
+        if not on.any():
+            continue
+        idx, groups = near[on], group[on]
+        floor_z[idx] = z[on]
+        room_inside[idx] = interior[on]
+        for g in np.unique(groups).tolist():
+            hit = idx[groups == g]
+            name, area, outdoors = names.room(wmo_id, b.name_set, g)
+            if outdoors:
+                room_inside[hit] = False
             if name not in room_names:
                 room_names.append(name)
-            room_volume[better] = volume
-            room_name[better] = room_names.index(name)
-            room_area[better] = area
-            room_inside[better] = box.interior
+            room_name[hit] = room_names.index(name)
+            room_area[hit] = area
     keys = np.stack([terrain_area, room_name, room_area, room_inside.astype(np.int64)], axis=1)
     unique, inverse = np.unique(keys, axis=0, return_inverse=True)
     canonical: dict[Label, int] = {}
@@ -220,7 +227,8 @@ def label_polys(polys: PolyGraph, tiles: list[terrain.TileFiles], buildings: lis
     for t_area, r_name, r_area, inside in unique.tolist():
         zone = names.zone_of(r_area or t_area)
         name = room_names[r_name] or names.name.get(t_area, "")
-        label = Label(name, names.name.get(zone, ""), bool(inside))
+        city = bool(names.flags.get(zone, 0) & AREA_CAPITAL)
+        label = Label(name, names.name.get(zone, ""), bool(inside), city)
         remap.append(canonical.setdefault(label, len(canonical)))
     return np.array(remap)[inverse.ravel()].astype(np.int32), list(canonical)
 
