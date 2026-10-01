@@ -418,3 +418,39 @@ class DiscordRestClient:
             json=commands,
         )
         return result or []
+
+    async def list_application_emojis(self, application_id: str) -> list[dict[str, Any]]:
+        """GET /applications/{application_id}/emojis.
+
+        Application emojis (up to 2000) belong to the app rather than to a
+        server, so the bot can use them in any guild or DM it can post in.
+        Discord wraps the list as ``{"items": [...]}``; this returns the items.
+        """
+        result = await self._call("GET", f"/applications/{application_id}/emojis")
+        if not result:
+            return []
+        return list(result.get("items", []))
+
+    async def create_application_emoji(
+        self,
+        application_id: str,
+        name: str,
+        image_data_uri: str,
+    ) -> dict[str, Any]:
+        """POST /applications/{application_id}/emojis.
+
+        ``name`` is 2-32 characters of ``[A-Za-z0-9_]`` and unique within the
+        app; ``image_data_uri`` is a ``data:image/png;base64,...`` URI of at
+        most 256 KiB. Returns the created emoji (with its ``id``).
+        """
+        result = await self._call(
+            "POST",
+            f"/applications/{application_id}/emojis",
+            json={"name": name, "image": image_data_uri},
+        )
+        assert result is not None, "create_application_emoji must return an emoji object"
+        return result
+
+    async def delete_application_emoji(self, application_id: str, emoji_id: str) -> None:
+        """DELETE /applications/{application_id}/emojis/{emoji_id}."""
+        await self._call("DELETE", f"/applications/{application_id}/emojis/{emoji_id}")

@@ -20,6 +20,7 @@ from platform_shared.services.discord import (
     COMPONENT_TYPE_ACTION_ROW,
     COMPONENT_TYPE_BUTTON,
     COMPONENT_TYPE_STRING_SELECT,
+    EmojiSet,
 )
 
 from app.models.wow.wow_raid_event import WowRaidEvent
@@ -40,7 +41,7 @@ from app.services.wow.raid_catalog import (
 )
 from app.services.wow.raid_embed import (
     COLOR_OPEN,
-    class_tag,
+    class_icon,
     display_title,
     escape_name,
     local_day_label,
@@ -80,8 +81,18 @@ def event_choice_label(event: WowRaidEvent, tz_name: str) -> str:
     return f"{local:%a %b} {local.day} {clock} {display_title(event)}"[:100]
 
 
-def _button(label: str, style: int, custom_id: str) -> dict[str, Any]:
-    return {"type": COMPONENT_TYPE_BUTTON, "style": style, "label": label, "custom_id": custom_id}
+def _button(label: str, style: int, custom_id: str, *, emoji: dict[str, str] | None = None) -> dict[str, Any]:
+    button: dict[str, Any] = {"type": COMPONENT_TYPE_BUTTON, "style": style, "label": label, "custom_id": custom_id}
+    if emoji is not None:
+        button["emoji"] = emoji
+    return button
+
+
+def _option(label: str, value: str, emoji: dict[str, str] | None) -> dict[str, Any]:
+    option: dict[str, Any] = {"label": label, "value": value}
+    if emoji is not None:
+        option["emoji"] = emoji
+    return option
 
 
 def _row(*components: dict[str, Any]) -> dict[str, Any]:
@@ -132,22 +143,27 @@ def cancel_confirm_data(event: WowRaidEvent) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def class_picker_data(event: WowRaidEvent, status: str) -> dict[str, Any]:
+def class_picker_data(event: WowRaidEvent, status: str, *, emojis: EmojiSet) -> dict[str, Any]:
     select = {
         "type": COMPONENT_TYPE_STRING_SELECT,
         "custom_id": raid_custom_id.encode("class", event.id, status),
         "placeholder": "Pick your class",
         "min_values": 1,
         "max_values": 1,
-        "options": [{"label": cls.label, "value": cls.key} for cls in CLASSES],
+        "options": [_option(cls.label, cls.key, emojis.component(cls.key)) for cls in CLASSES],
     }
     return ephemeral_data(raid_copy.CLASS_PROMPT, components=[_row(select)])
 
 
-def role_picker_data(event: WowRaidEvent, status: str, wow_class: str) -> dict[str, Any]:
+def role_picker_data(event: WowRaidEvent, status: str, wow_class: str, *, emojis: EmojiSet) -> dict[str, Any]:
     info = CLASSES_BY_KEY[wow_class]
     buttons = [
-        _button(ROLE_LABELS[role], BUTTON_STYLE_PRIMARY, raid_custom_id.encode("role", event.id, status, wow_class, role))
+        _button(
+            ROLE_LABELS[role],
+            BUTTON_STYLE_PRIMARY,
+            raid_custom_id.encode("role", event.id, status, wow_class, role),
+            emoji=emojis.component(f"role_{role}"),
+        )
         for role in info.roles
     ]
     return ephemeral_data(f"Which role will you play as a {info.label}?", components=[_row(*buttons)])
@@ -179,30 +195,32 @@ def my_signup_data(
     return ephemeral_data(content, components=[_row(change)])
 
 
-def roster_data(event: WowRaidEvent, signups: Sequence[WowRaidSignup], guild: WowRaidGuild) -> dict[str, Any]:
+def roster_data(
+    event: WowRaidEvent, signups: Sequence[WowRaidSignup], guild: WowRaidGuild, *, emojis: EmojiSet
+) -> dict[str, Any]:
     ordered = sorted(signups, key=lambda s: s.signed_up_at)
     summary = compute_roster_summary(ordered, size_cap=event.size_cap)
     sections: list[str] = []
 
     for role in ROLE_ORDER:
         players = [s for s in ordered if s.status == "confirmed" and s.role == role]
-        sections.append(_section(f"{ROLE_FIELD_LABELS[role]} ({len(players)})", players))
+        sections.append(_section(f"{ROLE_FIELD_LABELS[role]} ({len(players)})", players, emojis))
     unassigned = [s for s in ordered if s.status == "confirmed" and s.role not in ROLE_ORDER]
     if unassigned:
-        sections.append(_section(f"No role yet ({len(unassigned)})", unassigned))
+        sections.append(_section(f"No role yet ({len(unassigned)})", unassigned, emojis))
     for status, label in (("late", "Late"), ("tentative", "Tentative")):
         players = [s for s in ordered if s.status == status]
         if players:
-            sections.append(_section(f"{label} ({len(players)})", players))
+            sections.append(_section(f"{label} ({len(players)})", players, emojis))
     if summary.bench_overflow:
-        sections.append(_section(f"Bench ({summary.bench_count}), in line order", summary.bench_overflow, numbered=True))
+        sections.append(
+            _section(f"Bench ({summary.bench_count}), in line order", summary.bench_overflow, emojis, numbered=True)
+        )
     declined = [s for s in ordered if s.status == "declined"]
     if declined:
         sections.append(f"**Declined ({len(declined)})**\n" + ", ".join(escape_name(s.display_name) for s in declined))
 
-    description = "\n\n".join(sections)
-    if len(description) > EMBED_DESCRIPTION_LIMIT:
-        description = description[: EMBED_DESCRIPTION_LIMIT - 1] + "…"
+    description = _clip_lines("\n\n".join(sections), EMBED_DESCRIPTION_LIMIT)
     embed = {
         "title": f"Roster — {display_title(event)} — {local_day_label(event.starts_at, guild.timezone)}",
         "description": description,
@@ -212,12 +230,27 @@ def roster_data(event: WowRaidEvent, signups: Sequence[WowRaidSignup], guild: Wo
     return ephemeral_data("", embeds=[embed])
 
 
-def _section(heading: str, players: Sequence[WowRaidSignup], *, numbered: bool = False) -> str:
+def _clip_lines(text: str, limit: int) -> str:
+    """Cut at a line break so an icon's ``<:name:id>`` markup is never split.
+
+    The "…" goes on a line of its own, so the last name shown reads whole.
+    """
+    if len(text) <= limit:
+        return text
+    cut = text.rfind("\n", 0, limit - 1)
+    if cut <= 0:
+        return text[: limit - 1] + "…"
+    return text[:cut] + "\n…"
+
+
+def _section(
+    heading: str, players: Sequence[WowRaidSignup], emojis: EmojiSet, *, numbered: bool = False
+) -> str:
     if not players:
         return f"**{heading}**\n—"
     lines = []
     for index, player in enumerate(players, start=1):
-        line = f"{class_tag(player.wow_class)} {escape_name(player.display_name)}".strip()
+        line = f"{class_icon(player.wow_class, emojis)} {escape_name(player.display_name)}".strip()
         if numbered:
             line = f"{index}. {line}"
         lines.append(line)

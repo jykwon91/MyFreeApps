@@ -23,12 +23,24 @@ from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
 from app.main import app
+from app.services.discord import emojis as discord_emojis
 
 
 @pytest.fixture(autouse=True)
 def _disable_external_auth_gates(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "hibp_enabled", False)
     monkeypatch.setattr(settings, "turnstile_secret_key", "")
+
+
+@pytest.fixture(autouse=True)
+def _no_discord_emoji_registry(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Raid posts render text tags ("[WAR]") unless a test patches in icons.
+
+    The process-wide registry would otherwise list the app's emojis over the
+    (fake) REST client on its first use — an extra recorded Discord call whose
+    timing depends on test order.
+    """
+    monkeypatch.setattr(discord_emojis, "current", lambda: discord_emojis.EMPTY_EMOJIS)
 
 
 @pytest.fixture(autouse=True)

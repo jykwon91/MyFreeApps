@@ -488,3 +488,69 @@ class TestReadEndpoints:
             with pytest.raises(DiscordApiError) as exc_info:
                 await client.get_channel("c1")
         assert exc_info.value.code == 50001
+
+
+# ---------------------------------------------------------------------------
+# Application emojis
+# ---------------------------------------------------------------------------
+
+class TestApplicationEmojis:
+    @pytest.mark.anyio
+    async def test_list_unwraps_items(self) -> None:
+        seen: list[tuple[str, str]] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append((request.method, request.url.path))
+            return _json_response({"items": [{"id": "e1", "name": "class_mage"}]})
+
+        async with _make_client(handler) as client:
+            emojis = await client.list_application_emojis("app-123")
+
+        assert seen == [("GET", "/api/v10/applications/app-123/emojis")]
+        assert emojis == [{"id": "e1", "name": "class_mage"}]
+
+    @pytest.mark.anyio
+    async def test_list_tolerates_missing_items(self) -> None:
+        async with _make_client(lambda _: _json_response({})) as client:
+            assert await client.list_application_emojis("app-123") == []
+
+    @pytest.mark.anyio
+    async def test_create_posts_name_and_image(self) -> None:
+        captured: dict[str, Any] = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            captured["method"] = request.method
+            captured["path"] = request.url.path
+            captured["body"] = json.loads(request.content)
+            return _json_response({"id": "e9", "name": "tile_a"}, status=201)
+
+        async with _make_client(handler) as client:
+            emoji = await client.create_application_emoji("app-123", "tile_a", "data:image/png;base64,AAAA")
+
+        assert captured["method"] == "POST"
+        assert captured["path"].endswith("/applications/app-123/emojis")
+        assert captured["body"] == {"name": "tile_a", "image": "data:image/png;base64,AAAA"}
+        assert emoji["id"] == "e9"
+
+    @pytest.mark.anyio
+    async def test_create_raises_with_discord_code(self) -> None:
+        def handler(_: httpx.Request) -> httpx.Response:
+            return _json_response({"code": 50035, "message": "Invalid Form Body"}, status=400)
+
+        async with _make_client(handler) as client:
+            with pytest.raises(DiscordApiError) as exc_info:
+                await client.create_application_emoji("app-123", "tile_a", "data:image/png;base64,AAAA")
+        assert exc_info.value.code == 50035
+
+    @pytest.mark.anyio
+    async def test_delete_hits_emoji_route(self) -> None:
+        seen: list[tuple[str, str]] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append((request.method, request.url.path))
+            return httpx.Response(204)
+
+        async with _make_client(handler) as client:
+            assert await client.delete_application_emoji("app-123", "e9") is None
+
+        assert seen == [("DELETE", "/api/v10/applications/app-123/emojis/e9")]

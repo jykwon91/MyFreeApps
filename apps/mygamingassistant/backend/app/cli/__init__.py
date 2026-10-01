@@ -12,6 +12,7 @@ Usage:
     python -m app.cli backfill-posters
     python -m app.cli widen-source
     python -m app.cli discord-register-commands [--guild GUILD_ID]
+    python -m app.cli discord-sync-emojis [--dry-run]
 """
 import asyncio
 import sys
@@ -272,6 +273,89 @@ def _run_discord_register_commands() -> int:
     return 0
 
 
+def _run_discord_sync_emojis() -> int:
+    """Upload the raid bot's icons as Discord application emojis.  Exit code.
+
+    Uploads every PNG in ``backend/data/discord_emojis`` whose current art is
+    not on Discord yet — the emoji name carries a hash of the image, so
+    changed art uploads as a new version — and prunes versions older than the
+    previous one.  Idempotent: a deploy with no art changes uploads nothing.
+
+    ``--dry-run`` prints the plan without writing.  No-op when
+    DISCORD_ENABLED=false.  A failed listing prints status + code and exits 1;
+    so does any refused upload or delete (the rest still sync).
+
+    Usage (in-container):
+        python -m app.cli discord-sync-emojis
+        python -m app.cli discord-sync-emojis --dry-run
+    """
+    from app.core.config import settings
+    from app.services.discord.emojis import EMOJI_DIR
+    from platform_shared.services.discord import load_assets, sync_application_emojis
+    from platform_shared.services.discord.client import DiscordApiError, DiscordRestClient
+
+    if not settings.discord_enabled:
+        print(
+            "DISCORD_ENABLED=false — skipping emoji sync. "
+            "Set DISCORD_ENABLED=true and the required DISCORD_* vars to activate."
+        )
+        return 0  # non-fatal: post-deploy must not break an unconfigured app
+
+    missing = [
+        name
+        for name, val in [
+            ("DISCORD_APPLICATION_ID", settings.discord_application_id),
+            ("DISCORD_BOT_TOKEN", settings.discord_bot_token),
+        ]
+        if not val
+    ]
+    if missing:
+        print(
+            f"discord-sync-emojis: DISCORD_ENABLED=true but the following "
+            f"required vars are not set: {', '.join(missing)}. "
+            "Set them in apps/mygamingassistant/backend/.env.docker."
+        )
+        return 1
+
+    args = sys.argv[2:]
+    if args not in ([], ["--dry-run"]):
+        print(f"discord-sync-emojis: unknown argument(s) {' '.join(args)!r}")
+        return 1
+    dry_run = args == ["--dry-run"]
+
+    assets = load_assets(EMOJI_DIR)
+
+    async def _sync():
+        async with DiscordRestClient(settings.discord_bot_token) as client:
+            return await sync_application_emojis(
+                client, settings.discord_application_id, assets, dry_run=dry_run
+            )
+
+    try:
+        report = asyncio.run(_sync())
+    except DiscordApiError as exc:
+        print(
+            f"discord-sync-emojis: Discord rejected the emoji listing "
+            f"(status={exc.status} code={exc.code}): {exc.message}"
+        )
+        return 1
+
+    verb = "would upload" if dry_run else "uploaded"
+    for name in report.uploaded:
+        print(f"  {verb} {name}")
+    for name in report.pruned:
+        print(f"  {'would prune' if dry_run else 'pruned'} {name}")
+    for name, reason in report.failed:
+        print(f"  FAILED {name}: {reason}")
+    print(
+        f"{'Dry run' if dry_run else 'Done'} — {len(assets)} icon(s): "
+        f"{len(report.uploaded)} {verb}, {len(report.unchanged)} already current, "
+        f"{len(report.pruned)} old version(s) {'to prune' if dry_run else 'pruned'}, "
+        f"{len(report.failed)} failed."
+    )
+    return 0 if report.ok else 1
+
+
 def main() -> None:
     command = sys.argv[1] if len(sys.argv) > 1 else ""
 
@@ -314,6 +398,8 @@ def main() -> None:
         sys.exit(asyncio.run(_run_widen_source()))
     elif command == "discord-register-commands":
         sys.exit(_run_discord_register_commands())
+    elif command == "discord-sync-emojis":
+        sys.exit(_run_discord_sync_emojis())
     else:
         print(f"Unknown command: {command!r}")
         print("Available commands:")
@@ -329,6 +415,8 @@ def main() -> None:
         print("  widen-source           — replace tight=wide pairs with a wider trim-editor source")
         print("  discord-register-commands [--guild GUILD_ID]")
         print("                         — register slash commands with Discord (no-op when DISCORD_ENABLED=false)")
+        print("  discord-sync-emojis [--dry-run]")
+        print("                         — upload the raid bot's icons (no-op when DISCORD_ENABLED=false)")
         sys.exit(1)
 
 
