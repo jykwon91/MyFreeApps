@@ -1,8 +1,10 @@
 import { useState } from "react";
 import CopyButton from "@/games/wow-forever/components/worldMap/CopyButton";
 import SegmentedToggle from "@/games/wow-forever/components/shared/SegmentedToggle";
-import { shoppingList, shoppingListText, type ShoppingList } from "@/games/wow-forever/crafting/shoppingList";
-import type { CraftingFile, ResolvedRouteEntry, ShoppingLine } from "@/games/wow-forever/types/crafting";
+import CraftMakeLines from "@/games/wow-forever/components/crafting/CraftMakeLines";
+import CraftShoppingLines from "@/games/wow-forever/components/crafting/CraftShoppingLines";
+import { shoppingList, shoppingListText } from "@/games/wow-forever/crafting/shoppingList";
+import type { CraftingFile, ResolvedRouteEntry } from "@/games/wow-forever/types/crafting";
 
 const SCOPE = { mine: "mine", all: "all" } as const;
 type Scope = (typeof SCOPE)[keyof typeof SCOPE];
@@ -15,45 +17,6 @@ interface CraftShoppingListProps {
   file: Pick<CraftingFile, "madeBy" | "recipes">;
   professionLabel: string;
   note?: string;
-}
-
-function Lines({ title, lines }: { title: string; lines: readonly ShoppingLine[] }) {
-  if (!lines.length) return null;
-  return (
-    <div className="space-y-1">
-      <p className="text-sm font-medium">{title}</p>
-      <ul className="grid gap-x-6 gap-y-0.5 sm:grid-cols-2 text-sm">
-        {lines.map((l) => (
-          <li key={l.id} className="flex justify-between gap-3">
-            <span className="min-w-0">
-              {l.name}
-              {l.madeBy ? <span className="text-muted-foreground"> · {l.madeBy}</span> : null}
-            </span>
-            <span className="tabular-nums font-medium">{l.count}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function MakeLines({ lines }: { lines: ShoppingList["make"] }) {
-  if (!lines.length) return null;
-  return (
-    <div className="space-y-1">
-      <p className="text-sm font-medium">Make on the way</p>
-      <ul className="text-sm space-y-0.5">
-        {lines.map((l) => (
-          <li key={l.id}>
-            {l.count} more {l.name}{" "}
-            <span className="text-muted-foreground">
-              (= {(l.makesFrom ?? []).map((r) => `${r.count} ${r.name}`).join(", ")}, counted above)
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
 }
 
 /** Everything the route still needs, as one list to shop or farm from — collapsed under its top items. */
@@ -90,9 +53,9 @@ export default function CraftShoppingList({ entries, skill, file, professionLabe
           <p className="text-sm">You're past the end of this route ({end}). See the last row for what to craft next.</p>
         ) : (
           <>
-            <Lines title="Buy or farm" lines={list.buy.filter((l) => !l.madeBy)} />
-            <Lines title="Made by other professions (buy at the auction house)" lines={list.buy.filter((l) => l.madeBy)} />
-            <MakeLines lines={list.make} />
+            <CraftShoppingLines title="Buy or farm" lines={list.buy.filter((l) => !l.madeBy)} />
+            <CraftShoppingLines title="Made by other professions (buy at the auction house)" lines={list.buy.filter((l) => l.madeBy)} />
+            <CraftMakeLines lines={list.make} />
           </>
         )}
         <p className="text-xs text-muted-foreground">
