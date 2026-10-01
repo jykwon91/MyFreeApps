@@ -42,13 +42,20 @@ public post after a private flow, DMs) are queued on FastAPI
 ``BackgroundTasks`` and run after the response is sent — see
 ``app/services/discord/raid_publisher.py``.
 
+Every interaction's age on arrival (now minus the creation time in its
+snowflake ID) is logged, at WARNING once it has used most of the budget.
+That splits a "This interaction failed" in two: a slow handler shows up as
+a long duration on the request's ``POST /discord/interactions`` log line,
+a request that reached us late as a large age here.
+
 Signature verification
 -----------------------
 ``verify_discord`` reads ``settings.discord_public_key`` at call time so
 tests can monkeypatch the key without rebuilding the app.
 """
 import logging
-from typing import Any
+import time
+from typing import Any, Final
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
 
@@ -67,12 +74,19 @@ from app.services.discord.dispatcher import (
     dispatch_autocomplete,
     dispatch_message_component,
 )
-from app.services.discord.interaction import autocomplete_response, ephemeral_response
+from app.services.discord.interaction import (
+    autocomplete_response,
+    ephemeral_response,
+    snowflake_created_ms,
+)
 from app.services.discord.raid_copy import GENERIC_ERROR
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/discord", tags=["discord"])
+
+# Discord fails an interaction it has no answer to 3 s after creating it.
+_LATE_ARRIVAL_MS: Final = 2000
 
 
 async def verify_discord(request: Request) -> Any:
@@ -87,6 +101,20 @@ async def verify_discord(request: Request) -> Any:
     )
 
 
+def _log_arrival(payload: dict[str, Any]) -> None:
+    """Log how old the interaction already is — see "3-second budget" above."""
+    created_ms = snowflake_created_ms(payload.get("id"))
+    if created_ms is None:
+        return
+    age_ms = int(time.time() * 1000) - created_ms
+    data = payload.get("data")
+    name = None
+    if isinstance(data, dict):
+        name = data.get("name") or data.get("custom_id")
+    level = logging.WARNING if age_ms >= _LATE_ARRIVAL_MS else logging.INFO
+    logger.log(level, "Discord interaction type=%s name=%r age_ms=%d", payload.get("type"), name, age_ms)
+
+
 @router.post("/interactions")
 async def interactions(
     background: BackgroundTasks,
@@ -99,6 +127,7 @@ async def interactions(
     """
     if not isinstance(payload, dict):
         return ephemeral_response("Unsupported interaction type.")
+    _log_arrival(payload)
     interaction_type: int = payload.get("type", 0)
 
     # --- PING: Discord uses this to verify the interactions endpoint URL ---

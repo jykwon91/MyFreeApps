@@ -11,6 +11,8 @@ is sent.  Each task:
   already committed;
 * bounds every REST call with ``rest.bounded`` (timeout) — the shared client
   already honours 429 ``retry_after``;
+* treats "Discord never answered" — ``TimeoutError`` or an ``httpx.HTTPError``
+  (see ``rest.bounded``) — like a refusal;
 * never raises: failures are logged with the Discord error code (the shared
   client logs status + code + route) and, where a user is waiting on a
   deferred/"Posting…" message, that message is edited with an explanation.
@@ -25,6 +27,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
+import httpx
 from platform_shared.services.discord import (
     CANNOT_SEND_MESSAGES_TO_USER,
     EMBED_LINKS,
@@ -119,8 +122,8 @@ def _edit_body(data: dict[str, Any]) -> dict[str, Any]:
 async def _edit_original(client: DiscordRestClient, application_id: str, token: str, data: dict[str, Any]) -> None:
     try:
         await rest.bounded(client.edit_original_interaction_response(application_id, token, _edit_body(data)))
-    except (DiscordApiError, TimeoutError):
-        logger.warning("Raid bot: could not edit the original interaction response")
+    except (DiscordApiError, TimeoutError, httpx.HTTPError) as exc:
+        logger.warning("Raid bot: could not edit the original interaction response (%s)", type(exc).__name__)
 
 
 async def _send_dm(client: DiscordRestClient, user_id: str, content: str) -> bool:
@@ -131,8 +134,8 @@ async def _send_dm(client: DiscordRestClient, user_id: str, content: str) -> boo
         if exc.code == CANNOT_SEND_MESSAGES_TO_USER:
             logger.info("Raid bot: user has DMs closed (50007); skipping DM")
         return False
-    except TimeoutError:
-        logger.warning("Raid bot: DM timed out")
+    except (TimeoutError, httpx.HTTPError) as exc:
+        logger.warning("Raid bot: DM got no answer from Discord (%s)", type(exc).__name__)
         return False
 
 
@@ -154,8 +157,8 @@ async def post_raid(event_id: uuid.UUID, application_id: str, token: str) -> Non
             except DiscordApiError as exc:
                 await _post_failed(client, event_id, application_id, token, snapshot.channel_id, exc.code)
                 return
-            except TimeoutError:
-                logger.warning("Raid bot: posting raid %s timed out", event_id)
+            except (TimeoutError, httpx.HTTPError) as exc:
+                logger.warning("Raid bot: posting raid %s got no answer from Discord (%s)", event_id, type(exc).__name__)
                 await _post_failed(client, event_id, application_id, token, snapshot.channel_id, None)
                 return
 
@@ -219,8 +222,10 @@ async def _edit_or_repost(client: DiscordRestClient, snapshot: _Snapshot) -> Non
     except DiscordApiError as exc:
         if exc.code != UNKNOWN_MESSAGE:
             return
-    except TimeoutError:
-        logger.warning("Raid bot: editing raid post %s timed out", snapshot.event_id)
+    except (TimeoutError, httpx.HTTPError) as exc:
+        logger.warning(
+            "Raid bot: editing raid post %s got no answer from Discord (%s)", snapshot.event_id, type(exc).__name__
+        )
         return
 
     # 10008 — someone deleted the public post.
@@ -234,7 +239,8 @@ async def _edit_or_repost(client: DiscordRestClient, snapshot: _Snapshot) -> Non
     logger.info("Raid bot: raid post for %s was deleted; reposting", snapshot.event_id)
     try:
         created = await rest.bounded(client.create_message(snapshot.channel_id, snapshot.message))
-    except (DiscordApiError, TimeoutError):
+    except (DiscordApiError, TimeoutError, httpx.HTTPError) as exc:
+        logger.warning("Raid bot: reposting raid %s failed (%s)", snapshot.event_id, type(exc).__name__)
         return
     async with unit_of_work() as db:
         event = await wow_raid_event_repo.get_for_update(db, snapshot.event_id)
@@ -247,8 +253,8 @@ async def send_ephemeral_followup(application_id: str, token: str, content: str)
     try:
         async with rest.make_rest_client() as client:
             await rest.bounded(client.create_followup_message(application_id, token, ephemeral_data(content)))
-    except (DiscordApiError, TimeoutError):
-        logger.warning("Raid bot: follow-up message failed")
+    except (DiscordApiError, TimeoutError, httpx.HTTPError) as exc:
+        logger.warning("Raid bot: follow-up message failed (%s)", type(exc).__name__)
     except Exception:
         logger.exception("Raid bot: follow-up message crashed")
 
@@ -290,8 +296,10 @@ async def announce_cancellation(event_id: uuid.UUID, dm_user_ids: list[str]) -> 
                 await rest.bounded(
                     client.create_message(snapshot.channel_id, {"content": announcement, "allowed_mentions": NO_MENTIONS})
                 )
-            except (DiscordApiError, TimeoutError):
-                logger.warning("Raid bot: cancellation announcement failed for event %s", event_id)
+            except (DiscordApiError, TimeoutError, httpx.HTTPError) as exc:
+                logger.warning(
+                    "Raid bot: cancellation announcement failed for event %s (%s)", event_id, type(exc).__name__
+                )
             dm_text = raid_copy.cancellation_dm(snapshot.title, snapshot.starts_unix, snapshot.cancel_reason)
             for user_id in dm_user_ids:
                 await _send_dm(client, user_id, dm_text)
@@ -312,7 +320,8 @@ async def send_test_dm(user_id: str, application_id: str, token: str) -> None:
                 result = raid_copy.TEST_DM_FAILED
                 if exc.code == CANNOT_SEND_MESSAGES_TO_USER:
                     result = raid_copy.TEST_DM_BLOCKED
-            except TimeoutError:
+            except (TimeoutError, httpx.HTTPError) as exc:
+                logger.warning("Raid bot: test DM got no answer from Discord (%s)", type(exc).__name__)
                 result = raid_copy.TEST_DM_FAILED
             await _edit_original(client, application_id, token, ephemeral_data(result))
     except Exception:
@@ -358,7 +367,8 @@ async def _setup_report(client: DiscordRestClient, check: SetupCheck) -> list[st
         channel = await rest.bounded(client.get_channel(check.channel_id))
         member = await rest.bounded(client.get_guild_member(check.guild_discord_id, check.application_id))
         roles = await rest.bounded(client.get_guild_roles(check.guild_discord_id))
-    except (DiscordApiError, TimeoutError):
+    except (DiscordApiError, TimeoutError, httpx.HTTPError) as exc:
+        logger.warning("Raid bot: setup permission check failed (%s)", type(exc).__name__)
         return [ok_line, raid_copy.SETUP_CHECK_FAILED]
 
     perms = compute_channel_permissions(

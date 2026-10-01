@@ -28,7 +28,13 @@ def make_rest_client() -> DiscordRestClient:
 
 
 async def bounded(call: Awaitable[T]) -> T:
-    """Await a Discord REST call with the module timeout (raises TimeoutError)."""
+    """Await a Discord REST call with the module timeout.
+
+    A call Discord never answers ends in ``TimeoutError`` (this timeout) or —
+    usually first — an ``httpx.HTTPError`` from the shared client's own
+    session: its default 5 s httpx timeout, or a connection failure.  Callers
+    handle both alongside ``DiscordApiError``.
+    """
     return await asyncio.wait_for(call, timeout=REST_TIMEOUT_S)
 
 

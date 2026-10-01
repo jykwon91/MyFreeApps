@@ -25,6 +25,11 @@ NO_MENTIONS: Final[dict[str, Any]] = {"parse": []}
 # Option type for SUB_COMMAND — its nested ``options`` are the real inputs.
 _OPTION_TYPE_SUB_COMMAND: Final = 1
 
+# Snowflake IDs carry their creation time: ms since the Discord epoch
+# (2015-01-01T00:00:00Z) in the bits above the low 22.
+_DISCORD_EPOCH_MS: Final = 1_420_070_400_000
+_SNOWFLAKE_TIME_SHIFT: Final = 22
+
 
 @dataclass(frozen=True)
 class Interaction:
@@ -108,6 +113,13 @@ class Interaction:
         if isinstance(value, bool):
             return value
         return None
+
+
+def snowflake_created_ms(snowflake: Any) -> int | None:
+    """Unix time in ms when Discord created ``snowflake``; ``None`` if it isn't one."""
+    if not isinstance(snowflake, str) or not snowflake.isdecimal():
+        return None
+    return (int(snowflake) >> _SNOWFLAKE_TIME_SHIFT) + _DISCORD_EPOCH_MS
 
 
 # ---------------------------------------------------------------------------
