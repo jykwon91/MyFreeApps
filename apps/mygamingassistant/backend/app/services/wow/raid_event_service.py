@@ -9,7 +9,7 @@ Notification outbox
 Posting schedules the nudge / consumables / ready-check rows
 (``wow_raid_notification_repo.schedule_for_event``); a time edit reschedules
 (cancel pending, then schedule); cancelling drops every pending row.  The
-worker that sends them ships in a later PR.
+worker that sends them is ``app/services/wow/raid_notification_worker.py``.
 """
 from __future__ import annotations
 

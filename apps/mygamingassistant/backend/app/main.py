@@ -259,9 +259,9 @@ async def _on_startup() -> None:
             )
     else:
         logger.warning(
-            "_on_startup: SCHEDULER_ENABLED=false — automatic source syncs are disabled. "
-            "Use POST /api/scheduler/trigger/sync_all_sources for manual runs, or "
-            "set SCHEDULER_ENABLED=true to re-enable.",
+            "_on_startup: SCHEDULER_ENABLED=false — automatic source syncs and Discord raid "
+            "reminders are disabled. Use POST /api/scheduler/trigger/sync_all_sources for "
+            "manual syncs, or set SCHEDULER_ENABLED=true to re-enable.",
         )
 
 

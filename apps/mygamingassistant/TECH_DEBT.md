@@ -1,7 +1,7 @@
 # MyGamingAssistant - Tech Debt Log
 
 > Last scanned: 2026-06-01 (serve-only PR — logged 1 pre-existing test failure + extended the ORM-in-routes entry to include totp.py; prior findings preserved)
-> Issues: 0 critical, 6 high, 7 medium, 3 low
+> Issues: 0 critical, 6 high, 8 medium, 5 low
 
 mode: log-only - fix only Critical items that block the current feature; log everything else here.
 
@@ -475,6 +475,31 @@ Stylistic items flagged in the glance-board PR1 review and intentionally deferre
 - **Location:** frontend/src/pages/MapPage.tsx (two separate empty-state conditions in the main scroll area - filtered-empty ternary and the below-board CTA)
 - **Problem:** The two empty-state render paths (filtered empty + no-filters CTA) are evaluated in separate JSX branches using duplicated conditions. Hard to follow when both filter conditions change.
 - **Recommendation:** Extract an EmptyStatePanel sub-component that accepts isFiltered, mapName, gameSlug, mapSlug props and consolidates both branches.
+
+---
+
+## Raid notification worker (deferred from the worker PR - 2026-10-01)
+
+### [Backend] Raid notifications - at-least-once window between send and bookkeeping
+- **Severity:** Medium
+- **Effort:** M
+- **Location:** backend/app/services/wow/raid_notification_worker.py (`_dispatch_safely` -> `_record`)
+- **Problem:** A message is sent, then the row is marked sent in a separate transaction. If the process dies (or the DB write fails) in between, the claim goes stale and the row is re-sent ~10 minutes later. The Discord `nonce` + `enforce_nonce` only dedupes within a few minutes, so that late retry can double-post. Same window exists if a cancel commits after the worker planned a nudge but before it sent.
+- **Recommendation:** Acceptable for a guild bot; if it bites, record the Discord message id returned by `create_message` in a `delivered_message_id` column inside the same short transaction that re-checks the claim, and skip sends whose row already has one.
+
+### [Backend] Raid notifications - composition table is a heuristic
+- **Severity:** Low
+- **Effort:** S
+- **Location:** backend/app/services/wow/raid_composition.py (`COMPOSITION_BANDS`)
+- **Problem:** "Still need" uses one size-banded tank/healer table (Classic rule of thumb), not per-raid needs (Naxx wants more tanks than Onyxia). WoW Forever hasn't published raid compositions.
+- **Recommendation:** After Forever raids are known, key the table by raid (falling back to the size band), or let organisers set tank/healer targets on `/raid-admin create`.
+
+### [Backend] Raid notifications - completed raids keep their live signup embed
+- **Severity:** Low
+- **Effort:** S
+- **Location:** backend/app/repositories/wow/wow_raid_event_repo.py (`complete_started_events`)
+- **Problem:** The worker flips raids to `completed` 6h after start in bulk, but doesn't re-render the public post, so the embed keeps its open/full colour (buttons already refuse once the raid starts).
+- **Recommendation:** Return the completed ids and call `raid_publisher.refresh_public_message` for each, with a "Finished" embed state.
 
 ---
 
