@@ -25,22 +25,30 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-{%- if registry_images | default(false) %}
-  # Build images on the GitHub runner (fast, layer-cached via type=gha) and push
-  # to GHCR. The deploy job below PULLS these prebuilt images instead of building
-  # on the VPS — cutting deploy time from ~20m to ~2-3m and shrinking the
-  # container-recreate downtime window. Each image is tagged with the commit SHA
-  # (immutable; enables rollback via `IMAGE_TAG=<old-sha> docker compose up -d`)
-  # plus :latest. GHCR namespace = the repo owner (jykwon91).
-  build-and-push:
+  # ONE job: build + push images, then SSH-deploy, on the same runner.
+  # Previously build-and-push and deploy were separate jobs, so every deploy
+  # queued for a runner TWICE (1.5-4 min of pure wait under contention, more
+  # than the deploy's actual work). Keeping it one job pays the queue once.
+  deploy:
     runs-on: ubuntu-latest
+{%- if registry_images | default(false) %}
     permissions:
       contents: read
       packages: write
+{%- endif %}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+{%- if registry_images | default(false) %}
 
+      # Build images on the GitHub runner (fast, layer-cached via type=gha) and
+      # push to GHCR. The VPS step below PULLS these prebuilt images instead of
+      # building on the VPS — cutting deploy time from ~20m to ~2-3m and
+      # shrinking the container-recreate downtime window. Each image is tagged
+      # with the commit SHA (immutable; enables rollback via
+      # `IMAGE_TAG=<old-sha> docker compose up -d`) plus :latest. GHCR
+      # namespace = the repo owner (jykwon91).
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 
@@ -86,23 +94,14 @@ jobs:
 {%- endif %}
           cache-from: type=gha,scope={{ app_slug }}-caddy
           cache-to: type=gha,mode=max,scope={{ app_slug }}-caddy
-{% endif %}
-  deploy:
-    runs-on: ubuntu-latest
-{%- if registry_images | default(false) %}
-    needs: build-and-push
 {%- endif %}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
 {%- if registry_images | default(false) %}
         env:
           # Forwarded into the remote script via `envs:` below. IMAGE_TAG pins the
-          # exact images the build-and-push job just pushed; GHCR_* authenticate
+          # exact images the build steps above just pushed; GHCR_* authenticate
           # the VPS to pull the (private) packages.
           IMAGE_TAG: ${{ '{{' }} github.sha {{ '}}' }}
           GHCR_USER: ${{ '{{' }} github.repository_owner {{ '}}' }}
@@ -160,7 +159,7 @@ jobs:
 {%- if registry_images | default(false) %}
 
             echo "--- Authenticate to GHCR and pull prebuilt images ---"
-            # Images were built + pushed by the build-and-push job on the runner.
+            # Images were built + pushed by the build steps on the runner.
             # The VPS only pulls — no on-box build. IMAGE_TAG pins this commit's
             # images; docker-compose resolves ${IMAGE_TAG:-latest} against it for
             # `pull`, `up`, and any later `create`.
