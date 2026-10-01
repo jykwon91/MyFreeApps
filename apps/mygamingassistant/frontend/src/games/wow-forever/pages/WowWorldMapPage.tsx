@@ -20,7 +20,7 @@ import { useTravelSettings } from "@/games/wow-forever/hooks/useTravelSettings";
 import { useTripPlanner } from "@/games/wow-forever/hooks/useTripPlanner";
 import { useWorldMap } from "@/games/wow-forever/hooks/useWorldMap";
 import { LOAD_STATUS } from "@/games/wow-forever/hooks/useWorldMapData";
-import { isServeOnly } from "@/lib/serveOnly";
+import { isReadOnly } from "@/lib/readOnly";
 import { buildPlaces } from "@/games/wow-forever/worldMap/places";
 import { nextWarlockTraining } from "@/games/wow-forever/worldMap/training";
 import { buildWorldMapModel } from "@/games/wow-forever/worldMap/worldMapModel";
@@ -30,7 +30,7 @@ const MAP_PANEL_ID = "wm-map-panel";
 /** /wow-forever/map — where is the nearest trainer / flight master / bank, and how do I get there. */
 export default function WowWorldMapPage() {
   const { status, data, retry, capturesFailed } = useWorldMap();
-  const canImport = useIsAuthenticated() && !isServeOnly();
+  const canImport = useIsAuthenticated() && !isReadOnly();
   const [settings, updateSettings] = usePlayerSettings();
   const find = useFindFilters();
   const { findFilterId, showAllClasses, includeOtherFaction } = find.filters;

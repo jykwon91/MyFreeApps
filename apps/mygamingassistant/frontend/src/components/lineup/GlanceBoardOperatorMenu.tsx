@@ -2,16 +2,18 @@
  * GlanceBoardOperatorMenu — ⚙ dropdown for operator-only map actions.
  *
  * Houses actions that were previously scattered in the MapPage header:
- *   - Add lineup
+ *   - Add lineup (not in the Discord Activity — adding needs the website)
  *   - Edit zones (superuser)
  *   - Replace minimap (superuser)
  *   - Unplaceable lineups notice (if applicable)
  *
  * Opened via the ⚙ chip in the top bar. Closes on outside-click or Escape.
+ * Renders nothing when it would open an empty menu.
  */
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ImagePlus, Pencil, Plus, Settings2 } from "lucide-react";
+import { isDiscordActivity } from "@platform/ui/discord-activity";
 
 interface GlanceBoardOperatorMenuProps {
   gameSlug: string;
@@ -54,6 +56,11 @@ export default function GlanceBoardOperatorMenu({
   }, [open]);
 
   const addLineupHref = `/lineups/new?game=${gameSlug}&map=${mapSlug}`;
+  // The Discord Activity is read-only (lib/readOnly.ts): /lineups/new would
+  // just bounce back home there.
+  const canAddLineup = !isDiscordActivity();
+
+  if (!canAddLineup && !isSuperuser && unplaceableCount === 0) return null;
 
   return (
     <div className="relative" ref={menuRef}>
@@ -78,15 +85,17 @@ export default function GlanceBoardOperatorMenu({
           role="menu"
           aria-label="Map actions menu"
         >
-          <Link
-            to={addLineupHref}
-            className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/40 transition-colors"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-          >
-            <Plus className="w-4 h-4 flex-shrink-0" aria-hidden />
-            Add lineup
-          </Link>
+          {canAddLineup && (
+            <Link
+              to={addLineupHref}
+              className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/40 transition-colors"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+            >
+              <Plus className="w-4 h-4 flex-shrink-0" aria-hidden />
+              Add lineup
+            </Link>
+          )}
 
           {isSuperuser && (
             <>

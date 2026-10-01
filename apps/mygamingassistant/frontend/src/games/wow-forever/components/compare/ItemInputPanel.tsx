@@ -3,7 +3,10 @@ import ScreenshotReader from "@/games/wow-forever/components/compare/ScreenshotR
 import TextReader from "@/games/wow-forever/components/compare/TextReader";
 import SegmentedToggle from "@/games/wow-forever/components/shared/SegmentedToggle";
 import { INPUT_MODE, type InputMode } from "@/games/wow-forever/data/itemInputModes";
-import { isScreenshotReaderOffered } from "@/games/wow-forever/lib/itemReaderAvailability";
+import {
+  isScreenshotReaderBrowserOnly,
+  isScreenshotReaderOffered,
+} from "@/games/wow-forever/lib/itemReaderAvailability";
 import type { ParsedTooltip } from "@/games/wow-forever/parsing/parseTooltipText";
 import type { ItemExtractionResponse } from "@/games/wow-forever/types/extractionResponse";
 
@@ -15,8 +18,10 @@ const INPUT_MODES: readonly { id: InputMode; label: string }[] = [
   { id: INPUT_MODE.TEXT, label: "Paste from a website" },
 ];
 
+// Start on whichever mode works here: inside the Discord Activity the reader
+// only explains itself, so pasting comes first.
 function defaultMode(): InputMode {
-  if (isScreenshotReaderOffered()) return INPUT_MODE.SCREENSHOT;
+  if (isScreenshotReaderOffered() && !isScreenshotReaderBrowserOnly()) return INPUT_MODE.SCREENSHOT;
   return INPUT_MODE.TEXT;
 }
 

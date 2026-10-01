@@ -1,15 +1,17 @@
 import { Link } from "react-router-dom";
 import { Gamepad2 } from "lucide-react";
+import LoadErrorRetry from "@/components/game/LoadErrorRetry";
 import { getGameLandingPath, getGameTagline } from "@/games/registry";
 import { useGetGamesQuery } from "@/store/gamesApi";
 
 /**
- * Landing page — shows all available games as a selection grid.
+ * Landing page — shows all available games as a selection grid. Also the
+ * Discord Activity's landing (the game picker) inside DiscordActivityShell.
  * Each card links through the game registry: lineup games go to their map
  * grid, companion games (WoW Forever) to their own landing page.
  */
 export default function GameGrid() {
-  const { data: games, isLoading, isError } = useGetGamesQuery();
+  const { data: games, isLoading, isError, isFetching, refetch } = useGetGamesQuery();
 
   if (isLoading) {
     return (
@@ -32,9 +34,7 @@ export default function GameGrid() {
     return (
       <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
         <h1 className="text-2xl font-semibold">Games</h1>
-        <p className="text-sm text-destructive">
-          Failed to load games. Please refresh the page.
-        </p>
+        <LoadErrorRetry message="Couldn't load the games." retrying={isFetching} onRetry={refetch} />
       </main>
     );
   }

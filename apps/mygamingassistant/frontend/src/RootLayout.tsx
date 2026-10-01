@@ -11,6 +11,8 @@ import {
   Shield,
 } from "lucide-react";
 import { AppShell, GuestShell, StepUpModal, ThemeToggle, Toaster, useIsAuthenticated } from "@platform/ui";
+import { isDiscordActivity } from "@platform/ui/discord-activity";
+import DiscordActivityShell from "@/components/discord/DiscordActivityShell";
 import { buildNav, PUBLIC_NAV_PATHS } from "@/constants/nav";
 import { signOut } from "@/lib/auth";
 import { useIsSuperuser } from "@/hooks/useIsSuperuser";
@@ -57,6 +59,9 @@ const LOGO = (
  * MGA uses a public-read / auth-write model (see apps/mygamingassistant/CLAUDE.md
  * → Authentication Model). The layout reflects that:
  *
+ *   - Discord Activity (opened from Discord) → DiscordActivityShell: one slim
+ *     bar (Games / theme / Open in browser) and no account UI, ALWAYS — it
+ *     wins over every mode below. The Activity is read-only (lib/readOnly.ts).
  *   - Serve-only mode (VITE_SERVE_ONLY) → GuestShell with NO Sign-in CTA and
  *     public nav only, ALWAYS. The production public library has zero auth;
  *     the backend mounts no login route, so no AppShell and no Sign-in
@@ -85,6 +90,8 @@ export default function RootLayout() {
   // Tauri injects `window.__TAURI_INTERNALS__` before the bundle's first
   // script eval, so the check is stable at mount. Capture once.
   const [inTauri] = useState(() => isTauri());
+  // Fixed for the page: Discord's launch parameters are read once at startup.
+  const [inDiscord] = useState(isDiscordActivity);
 
   const isCompact = searchParams.get("compact") === "1";
 
@@ -96,6 +103,21 @@ export default function RootLayout() {
     ? buildNav(ICONS, inTauri)
     : buildNav(ICONS, inTauri).filter((n) => PUBLIC_NAV_PATHS.has(n.path));
   const user = showAuthedNav ? projectUser(currentUser) : ANONYMOUS_USER;
+
+  // Discord Activity: the compact Activity frame. Checked first so neither a
+  // stale token (AppShell) nor ?compact=1 (bare page, no way home) applies
+  // inside Discord.
+  if (inDiscord) {
+    return (
+      <>
+        <ScrollRestoration />
+        <Toaster />
+        <DiscordActivityShell>
+          <Outlet />
+        </DiscordActivityShell>
+      </>
+    );
+  }
 
   // Serve-only mode: the public read-only library has zero auth. Render the
   // GuestShell with public nav and NO Sign-in CTA, regardless of any stale
