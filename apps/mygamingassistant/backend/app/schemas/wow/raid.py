@@ -12,8 +12,6 @@ from typing import Any, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.models.wow.wow_raid_event import RAID_KEYS, RAID_STATUSES
-from app.models.wow.wow_raid_member_pref import WowRaidMemberPref as _PrefModel
-from app.models.wow.wow_raid_notification import NOTIFICATION_KINDS
 from app.models.wow.wow_raid_signup import RAID_ROLES, WOW_CLASSES, WOW_SPECS
 from app.services.wow.raid_catalog import spec_info
 from app.services.wow.raid_roster import REQUESTABLE_STATUSES

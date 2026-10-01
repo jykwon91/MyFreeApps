@@ -8,7 +8,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.models.wow.wow_raid_event import RAID_KEYS
-from app.models.wow.wow_raid_signup import RAID_ROLES, WOW_CLASSES
+from app.models.wow.wow_raid_signup import WOW_CLASSES
 from app.schemas.wow.raid import (
     MemberPrefUpsert,
     RaidEventCreate,
