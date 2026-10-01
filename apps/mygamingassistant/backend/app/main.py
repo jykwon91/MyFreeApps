@@ -21,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from jwt.exceptions import PyJWTError as JWTError
 
 from platform_shared.api.admin_router import build_admin_router
+from platform_shared.api.discord_activity_router import build_discord_activity_router
 from platform_shared.core.git import resolve_git_commit
 from platform_shared.core.lifespan import create_app_lifespan
 from platform_shared.core.openapi import docs_kwargs
@@ -326,9 +327,8 @@ def _mount_public_routes(app: FastAPI) -> None:
     (Turnstile + per-IP limit + durable daily cap). Nothing here requires auth,
     so it is identical in both modes. version is a public deploy probe.
 
-    Discord interactions are mounted only when ``discord_enabled=True`` — if
-    disabled the route is absent (404). Ed25519 signature verification gates
-    every request, so the endpoint is safe to serve publicly.
+    Discord routes (interactions — Ed25519-gated; Activity config — the public
+    client id) mount only when ``discord_enabled=True``; else absent (404).
     """
     app.include_router(health.router, tags=["health"])
     app.include_router(games.router)
@@ -337,11 +337,11 @@ def _mount_public_routes(app: FastAPI) -> None:
     app.include_router(wow_items.router)  # Turnstile + per-IP + daily-capped
     app.include_router(wow_map_captures.public_router)
 
-    # Discord HTTP-interactions endpoint (PR 2+).
-    # Mount only when Discord is enabled — disabled = absent (404), not
-    # present-but-broken. The Ed25519 verification dependency is the gate.
+    # Disabled = absent (404), not present-but-broken.
     if settings.discord_enabled:
         app.include_router(discord_interactions.router)
+    if settings.discord_enabled and settings.discord_application_id:
+        app.include_router(build_discord_activity_router(client_id=settings.discord_application_id))
 
     # Deploy verification — exposes the git commit + boot timestamp so the
     # deploy workflow can confirm which commit is live without parsing logs.
