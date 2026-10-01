@@ -15,8 +15,8 @@ from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.services.discord.emojis import EMOJI_DIR
-from app.services.discord.raid_views import class_picker_data, role_picker_data, roster_data
-from app.services.wow.raid_catalog import CLASSES
+from app.services.discord.raid_views import class_picker_data, roster_data, spec_picker_data
+from app.services.wow.raid_catalog import CLASSES, SPECS
 from app.services.wow.raid_embed import build_signup_message
 
 # Discord's per-application cap; the sync keeps the previous version of each icon too.
@@ -58,7 +58,8 @@ def test_every_icon_the_raid_bot_renders_has_art() -> None:
             display_name=cls.label,
             status="confirmed",
             wow_class=cls.key,
-            role=cls.roles[0],
+            role=cls.specs[0].raid_role,
+            spec=cls.specs[0].key,
             signed_up_at=datetime(2026, 10, 1, 12, i, tzinfo=timezone.utc),
             updated_at=datetime(2026, 10, 1, tzinfo=timezone.utc),
         )
@@ -73,9 +74,10 @@ def test_every_icon_the_raid_bot_renders_has_art() -> None:
 
     [picker_row] = class_picker_data(event, "confirmed", emojis=icons)["components"]
     assert all("emoji" in option for option in picker_row["components"][0]["options"])
+    assert [spec.icon for spec in SPECS if not icons.has(spec.icon)] == []
     for cls in CLASSES:
-        [role_row] = role_picker_data(event, "confirmed", cls.key, emojis=icons)["components"]
-        assert all("emoji" in button for button in role_row["components"])
+        spec_row, _ = spec_picker_data(event, "confirmed", cls.key, current=None, emojis=icons)["components"]
+        assert all("emoji" in option for option in spec_row["components"][0]["options"])
 
     [roster] = roster_data(event, signups, guild, emojis=icons)["embeds"]
     assert not re.search(r"\[[A-Z]{3}\]", roster["description"])

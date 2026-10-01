@@ -4,8 +4,8 @@ Subcommands
 -----------
   ping    health check; public "alive" message.
   list    up to 10 upcoming raids with links to their posts (private).
-  prefs   remembered class/role + DM reminders; with no options shows the
-          current settings and a [Send me a test DM] button (private).
+  prefs   remembered class + per-class spec + DM reminders; with no options
+          shows the current settings and a [Send me a test DM] button (private).
 
 Organiser commands live under ``/raid-admin`` (see ``raid_admin.py``).
 Each handler runs in one transaction and returns the interaction response.
@@ -58,14 +58,14 @@ async def _list(interaction: Interaction) -> dict[str, Any]:
 
 async def _prefs(interaction: Interaction) -> dict[str, Any]:
     wow_class = interaction.str_option("class")
-    role = interaction.str_option("role")
+    spec = interaction.str_option("spec")
     dm_reminders = interaction.bool_option("dm_reminders")
 
     async with unit_of_work() as db:
         guild = await load_configured_guild(db, interaction)
         if guild is None:
             return ephemeral_response(raid_copy.NOT_CONFIGURED)
-        if wow_class is None and role is None and dm_reminders is None:
+        if wow_class is None and spec is None and dm_reminders is None:
             pref = await raid_member_prefs_service.get(db, guild=guild, discord_user_id=interaction.user_id)
             return message_response(prefs_data(pref))
         result = await raid_member_prefs_service.update_prefs(
@@ -73,7 +73,7 @@ async def _prefs(interaction: Interaction) -> dict[str, Any]:
             guild=guild,
             discord_user_id=interaction.user_id,
             wow_class=wow_class,
-            role=role,
+            spec=spec,
             dm_reminders=dm_reminders,
         )
         if result.error is not None:

@@ -4,8 +4,9 @@ event_id FK → wow_raid_event (ON DELETE CASCADE).
 UNIQUE(event_id, discord_user_id) — one row per player per event; the
 upsert_signup repo function updates in place.
 
-wow_class and role are nullable: a player can sign up before choosing their
-role (the bot prompts them after the initial signup click).
+wow_class, role and spec are nullable: a player can decline before choosing
+a class, and sign-ups saved before specs existed (revision 0028) have no
+spec.  ``role`` is the seat role (tank / healer / dps) derived from the spec.
 """
 import uuid
 from datetime import datetime, timezone
@@ -36,6 +37,36 @@ WOW_CLASSES = (
     "druid",
 )
 RAID_ROLES = ("tank", "healer", "dps")
+# Every spec id across all classes ("holy" is both a paladin and a priest
+# spec).  The class/spec pairing is checked in code against
+# app.services.wow.raid_catalog.SPECS, which a unit test pins to this tuple.
+WOW_SPECS = (
+    "affliction",
+    "arcane",
+    "arms",
+    "assassination",
+    "balance",
+    "beast-mastery",
+    "combat",
+    "demonology",
+    "destruction",
+    "discipline",
+    "elemental",
+    "enhancement",
+    "feral-damage",
+    "feral-tank",
+    "fire",
+    "frost",
+    "fury",
+    "holy",
+    "marksmanship",
+    "protection",
+    "restoration",
+    "retribution",
+    "shadow",
+    "subtlety",
+    "survival",
+)
 SIGNUP_STATUSES = ("confirmed", "tentative", "bench", "late", "declined")
 
 
@@ -56,6 +87,10 @@ class WowRaidSignup(Base):
         CheckConstraint(
             f"status IN {SIGNUP_STATUSES!r}",
             name="ck_wowraidsignup_status",
+        ),
+        CheckConstraint(
+            f"spec IS NULL OR spec IN {WOW_SPECS!r}",
+            name="ck_wowraidsignup_spec",
         ),
     )
 
@@ -79,6 +114,8 @@ class WowRaidSignup(Base):
     wow_class: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     # Nullable for the same reason as wow_class.
     role: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    # Null for sign-ups saved before specs existed, and for declines without a class.
+    spec: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,

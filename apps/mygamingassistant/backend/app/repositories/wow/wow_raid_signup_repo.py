@@ -24,6 +24,7 @@ async def upsert_signup(
     status: str,
     wow_class: Optional[str] = None,
     role: Optional[str] = None,
+    spec: Optional[str] = None,
     requeue: bool = False,
 ) -> WowRaidSignup:
     """Insert or update a player's signup for an event.
@@ -41,6 +42,7 @@ async def upsert_signup(
         "status": status,
         "wow_class": wow_class,
         "role": role,
+        "spec": spec,
         "updated_at": now,
     }
     if requeue:
@@ -52,6 +54,7 @@ async def upsert_signup(
         "status": status,
         "wow_class": wow_class,
         "role": role,
+        "spec": spec,
     }
     stmt = (
         pg_insert(WowRaidSignup)

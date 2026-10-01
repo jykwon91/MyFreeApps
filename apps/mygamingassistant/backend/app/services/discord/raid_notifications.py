@@ -19,6 +19,7 @@ from zoneinfo import ZoneInfo
 from platform_shared.services.discord import MESSAGE_FLAG_SUPPRESS_NOTIFICATIONS
 
 from app.services.discord import raid_copy
+from app.services.wow.raid_catalog import effective_spec
 from app.services.wow.raid_composition import RoleGaps
 from app.services.wow.raid_consumables import ConsumableChecklist, ConsumableItem
 from app.services.wow.raid_embed import COLOR_OPEN, EMBED_TOTAL_BUDGET, FIELD_VALUE_LIMIT, embed_length
@@ -33,8 +34,6 @@ LATE_NUDGE_PING_PERCENT: Final = 70
 # Classes whose DPS spec is a caster for consumables purposes.  Balance
 # druids / elemental shamans exist, but the bot doesn't know specs — the
 # class default (physical) matches the consumables dataset's own default.
-_CASTER_DPS_CLASSES: Final = frozenset({"mage", "warlock", "priest"})
-
 _TIER_TITLES: Final[tuple[tuple[str, str], ...]] = (
     ("essential", "Essential"),
     ("recommended", "Recommended"),
@@ -176,13 +175,21 @@ def build_dm_fallback(user_ids: list[str]) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 
-def consumables_role(wow_class: str | None, role: str | None) -> str | None:
-    """Signup role → the consumables dataset's role vocabulary."""
+def consumables_role(wow_class: str | None, role: str | None, spec: str | None = None) -> str | None:
+    """The player's spec → the consumables dataset's role vocabulary.
+
+    Caster specs (Balance, Elemental, Shadow, every Mage and Warlock spec) get
+    caster consumables, other DPS specs physical ones.  A sign-up from before
+    specs uses the Classic default spec for its class and role.
+    """
+    info = effective_spec(wow_class, role, spec)
+    if info is not None:
+        if info.spec_role == "caster":
+            return "dps_caster"
+        role = info.raid_role
     if role in ("tank", "healer"):
         return role
     if role == "dps":
-        if wow_class in _CASTER_DPS_CLASSES:
-            return "dps_caster"
         return "dps_physical"
     return None
 

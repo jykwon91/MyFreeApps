@@ -53,6 +53,7 @@ from app.services.wow.raid_catalog import (
     ROLE_FIELD_LABELS,
     ROLE_ORDER,
     raid_name,
+    spec_info,
 )
 from app.services.wow.raid_roster import RosterSummary, compute_roster_summary
 
@@ -232,6 +233,14 @@ def class_icon(wow_class: str | None, emojis: EmojiSet) -> str:
     if wow_class is None or wow_class not in CLASSES_BY_KEY:
         return ""
     return emojis.markup(wow_class, class_tag(wow_class))
+
+
+def spec_icon(wow_class: str | None, spec: str | None, emojis: EmojiSet) -> str:
+    """The spec's emoji; else the class icon (a pre-spec signup, or the spec emoji is missing)."""
+    info = spec_info(wow_class, spec)
+    if info is None:
+        return class_icon(wow_class, emojis)
+    return emojis.markup(info.icon, class_icon(wow_class, emojis))
 
 
 # ---------------------------------------------------------------------------

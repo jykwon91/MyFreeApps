@@ -2,7 +2,7 @@
 
 The public signup post lives in :mod:`app.services.wow.raid_embed`; this
 module renders everything only the clicking user sees: the create preview,
-the first-time class/role picker, "My signup", the full roster, /raid list,
+the class and spec selects, "My signup", the full roster, /raid list,
 /raid prefs and the cancel confirmation.
 """
 from __future__ import annotations
@@ -14,7 +14,6 @@ from zoneinfo import ZoneInfo
 
 from platform_shared.services.discord import (
     BUTTON_STYLE_DANGER,
-    BUTTON_STYLE_PRIMARY,
     BUTTON_STYLE_SECONDARY,
     BUTTON_STYLE_SUCCESS,
     COMPONENT_TYPE_ACTION_ROW,
@@ -34,17 +33,19 @@ from app.services.wow import raid_custom_id
 from app.services.wow.raid_catalog import (
     CLASSES,
     CLASSES_BY_KEY,
+    ROLE_DESCRIPTIONS,
     ROLE_FIELD_LABELS,
-    ROLE_LABELS,
     ROLE_ORDER,
-    class_role_label,
+    WowSpecInfo,
+    saved_spec,
+    signup_label,
 )
 from app.services.wow.raid_embed import (
     COLOR_OPEN,
-    class_icon,
     display_title,
     escape_name,
     local_day_label,
+    spec_icon,
 )
 from app.services.wow.raid_roster import compute_roster_summary
 
@@ -88,10 +89,16 @@ def _button(label: str, style: int, custom_id: str, *, emoji: dict[str, str] | N
     return button
 
 
-def _option(label: str, value: str, emoji: dict[str, str] | None) -> dict[str, Any]:
+def _option(
+    label: str, value: str, emoji: dict[str, str] | None, *, description: str | None = None, default: bool = False
+) -> dict[str, Any]:
     option: dict[str, Any] = {"label": label, "value": value}
+    if description is not None:
+        option["description"] = description
     if emoji is not None:
         option["emoji"] = emoji
+    if default:
+        option["default"] = True
     return option
 
 
@@ -139,7 +146,7 @@ def cancel_confirm_data(event: WowRaidEvent) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# First-time signup picker
+# Class and spec selects
 # ---------------------------------------------------------------------------
 
 
@@ -155,18 +162,38 @@ def class_picker_data(event: WowRaidEvent, status: str, *, emojis: EmojiSet) -> 
     return ephemeral_data(raid_copy.CLASS_PROMPT, components=[_row(select)])
 
 
-def role_picker_data(event: WowRaidEvent, status: str, wow_class: str, *, emojis: EmojiSet) -> dict[str, Any]:
+def spec_picker_data(
+    event: WowRaidEvent, status: str, wow_class: str, *, current: WowSpecInfo | None, emojis: EmojiSet
+) -> dict[str, Any]:
+    """The class's specs; *current* (the player's spec, never a guess) is preselected.
+
+    Discord sends nothing when the preselected option is picked again, so
+    only the spec the player actually has may be marked default.
+    """
     info = CLASSES_BY_KEY[wow_class]
-    buttons = [
-        _button(
-            ROLE_LABELS[role],
-            BUTTON_STYLE_PRIMARY,
-            raid_custom_id.encode("role", event.id, status, wow_class, role),
-            emoji=emojis.component(f"role_{role}"),
+    options = [
+        _option(
+            spec.label,
+            spec.choice_value,
+            emojis.component(spec.icon) or emojis.component(wow_class),
+            description=ROLE_DESCRIPTIONS[spec.display_role],
+            default=spec == current,
         )
-        for role in info.roles
+        for spec in info.specs
     ]
-    return ephemeral_data(f"Which role will you play as a {info.label}?", components=[_row(*buttons)])
+    select = {
+        "type": COMPONENT_TYPE_STRING_SELECT,
+        "custom_id": raid_custom_id.encode("spec", event.id, wow_class, status),
+        "placeholder": "Pick your spec",
+        "min_values": 1,
+        "max_values": 1,
+        "options": options,
+    }
+    other_class = _button("Different class", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("pickclass", event.id, status))
+    content = raid_copy.spec_prompt(info.label)
+    if current is not None:
+        content = raid_copy.spec_switch_prompt(current.full_label)
+    return ephemeral_data(content, components=[_row(select), _row(other_class)])
 
 
 # ---------------------------------------------------------------------------
@@ -187,11 +214,11 @@ def my_signup_data(
             status_text = f"on the bench (#{position} in line)"
     content = f"For **{display_title(event)}** you're **{status_text}**"
     if signup.wow_class or signup.role:
-        content += f" as {class_role_label(signup.wow_class, signup.role)}"
+        content += f" as {signup_label(signup.wow_class, signup.role, signup.spec)}"
     content += "."
     if signup.status == "declined":
         return ephemeral_data(content)
-    change = _button("Change class or role", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("change", event.id))
+    change = _button("Change class or spec", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("change", event.id))
     return ephemeral_data(content, components=[_row(change)])
 
 
@@ -250,7 +277,7 @@ def _section(
         return f"**{heading}**\n—"
     lines = []
     for index, player in enumerate(players, start=1):
-        line = f"{class_icon(player.wow_class, emojis)} {escape_name(player.display_name)}".strip()
+        line = f"{spec_icon(player.wow_class, player.spec, emojis)} {escape_name(player.display_name)}".strip()
         if numbered:
             line = f"{index}. {line}"
         lines.append(line)
@@ -280,22 +307,35 @@ def list_data(
 
 
 def prefs_data(pref: WowRaidMemberPref | None, *, heading: str | None = None) -> dict[str, Any]:
-    wow_class = None
-    role = None
-    dm_on = True
-    if pref is not None:
-        wow_class = pref.default_wow_class
-        role = pref.default_role
-        dm_on = not pref.dm_opt_out
     lines = []
     if heading:
         lines.append(heading)
-    if wow_class or role:
-        lines.append(f"Signing up as: **{class_role_label(wow_class, role)}**")
-    else:
-        lines.append("Signing up as: not set yet. I'll ask the first time you tap **Sign up**.")
-    reminder_state = "on" if dm_on else "off"
+    lines.append(_signing_up_as(pref))
+    others = _other_saved_specs(pref)
+    if others:
+        lines.append(f"Also saved: {', '.join(spec.full_label for spec in others)}")
+    reminder_state = "on"
+    if pref is not None and pref.dm_opt_out:
+        reminder_state = "off"
     lines.append(f"DM reminders: **{reminder_state}**")
-    lines.append("Change these with `/raid prefs class: role: dm_reminders:`.")
+    lines.append("Change these with `/raid prefs class: spec: dm_reminders:`.")
     test_button = _button("Send me a test DM", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("testdm"))
     return ephemeral_data("\n".join(lines), components=[_row(test_button)])
+
+
+def _signing_up_as(pref: WowRaidMemberPref | None) -> str:
+    if pref is None or pref.default_wow_class not in CLASSES_BY_KEY:
+        return "Signing up as: not set yet. I'll ask the first time you tap **Sign up**."
+    spec = saved_spec(pref.saved_specs, pref.default_wow_class)
+    if spec is not None:
+        return f"Signing up as: **{spec.full_label}**"
+    class_label = CLASSES_BY_KEY[pref.default_wow_class].label
+    return f"Signing up as: **{class_label}**. I'll ask your spec the first time you tap **Sign up**."
+
+
+def _other_saved_specs(pref: WowRaidMemberPref | None) -> list[WowSpecInfo]:
+    """Saved specs for classes other than the default, in class order."""
+    if pref is None:
+        return []
+    specs = [saved_spec(pref.saved_specs, cls.key) for cls in CLASSES if cls.key != pref.default_wow_class]
+    return [spec for spec in specs if spec is not None]

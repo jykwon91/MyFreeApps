@@ -27,12 +27,14 @@ class StatusChange:
     status:    the status the player ended up with.
     benched:   they asked for a seat and landed on the bench (raid full).
     promoted:  Discord user IDs moved bench → confirmed by this change.
+    previous:  the status before this change; None for a new signup.
     """
 
     outcome: Literal["changed", "unchanged"]
     status: str
     benched: bool
     promoted: list[str] = field(default_factory=list)
+    previous: str | None = None
 
 
 async def change_status(
@@ -44,6 +46,7 @@ async def change_status(
     requested_status: str,
     wow_class: str | None,
     role: str | None,
+    spec: str | None,
 ) -> StatusChange:
     """Apply a player's status request; bench if full; promote if a seat opened."""
     signups = await wow_raid_signup_repo.list_for_event(db, event.id)
@@ -55,9 +58,10 @@ async def change_status(
         size_cap=event.size_cap,
     )
     benched = status == BENCH_STATUS and requested_status != BENCH_STATUS
+    previous = mine.status if mine is not None else None
 
-    if mine is not None and (mine.status, mine.wow_class, mine.role) == (status, wow_class, role):
-        return StatusChange(outcome="unchanged", status=status, benched=benched)
+    if mine is not None and (mine.status, mine.wow_class, mine.role, mine.spec) == (status, wow_class, role, spec):
+        return StatusChange(outcome="unchanged", status=status, benched=benched, previous=previous)
 
     joins_bench = status == BENCH_STATUS and (mine is None or mine.status != BENCH_STATUS)
     await wow_raid_signup_repo.upsert_signup(
@@ -68,10 +72,11 @@ async def change_status(
         status=status,
         wow_class=wow_class,
         role=role,
+        spec=spec,
         requeue=joins_bench,
     )
     promoted = await promote_from_bench(db, event)
-    return StatusChange(outcome="changed", status=status, benched=benched, promoted=promoted)
+    return StatusChange(outcome="changed", status=status, benched=benched, promoted=promoted, previous=previous)
 
 
 async def promote_from_bench(db: AsyncSession, event: WowRaidEvent) -> list[str]:
