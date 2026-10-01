@@ -8,8 +8,8 @@ player to one checklist DM per raid time, whichever path adds the row:
 * the round's trigger row fans out when it comes due (the notification
   worker), and
 * every worker run's late pass (``schedule_late_dms``) adds a row for anyone
-  who became eligible after the round opened — a late signup, a bench
-  promotion, DMs switched back on, or a signup on a raid posted inside the
+  who became eligible after the round opened — a late signup, a move up
+  from the queue, DMs switched back on, or a signup on a raid posted inside the
   window (whose trigger was never scheduled) — unless the raid starts within
   ``LATE_DM_MIN_LEAD``.
 

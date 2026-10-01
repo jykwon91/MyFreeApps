@@ -87,7 +87,7 @@ class WowRaidEvent(Base):
     starts_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
-    # Maximum confirmed signups before the bench kicks in (1–40).
+    # Seats (confirmed + late) before new seat requests are queued (1–40).
     size_cap: Mapped[int] = mapped_column(Integer, nullable=False, default=25)
     status: Mapped[str] = mapped_column(
         String(20),

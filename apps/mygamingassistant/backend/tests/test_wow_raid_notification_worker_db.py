@@ -218,10 +218,11 @@ async def test_consumables_dms_and_single_fallback_post(
     await _signup(db, event, "38", wow_class="druid", role="dps", spec="balance")  # spec → spec title
     await _signup(db, event, "32", status="tentative", wow_class="mage", role="dps")  # DMs closed
     await _signup(db, event, "33", status="late", wow_class=None, role=None)  # no class → generic DM
-    await _signup(db, event, "34", status="declined")                         # not DMed
+    await _signup(db, event, "34", status="absence")                          # not DMed
     await _signup(db, event, "35")                                            # opted out
     await _signup(db, event, "36", wow_class="warrior", role="tank")          # DMs closed
-    await _signup(db, event, "37", status="bench")                            # not DMed
+    await _signup(db, event, "37", status="queued")                           # not DMed
+    await _signup(db, event, "39", status="bench")                            # not DMed
     guild_id = event.guild_id
     await wow_raid_member_pref_repo.upsert(db, guild_id=guild_id, discord_user_id="35", dm_opt_out=True)
     for blocked in ("32", "36"):
@@ -250,7 +251,8 @@ async def test_consumables_dms_and_single_fallback_post(
 
     [generic] = fake_discord.posts("dm-33")
     assert generic.body is not None and "/raid prefs" in generic.body["content"]
-    assert not fake_discord.posts("dm-34") and not fake_discord.posts("dm-35") and not fake_discord.posts("dm-37")
+    for not_dmed in ("34", "35", "37", "39"):
+        assert not fake_discord.posts(f"dm-{not_dmed}"), not_dmed
     assert not fake_discord.posts(CHANNEL)  # fallback waits for its due time
 
     await process_due_notifications(now=_NOW + timedelta(minutes=3))
@@ -310,16 +312,16 @@ async def test_late_signups_get_one_dm_and_earlier_players_none_extra(
     await process_due_notifications(now=_NOW)
     await process_due_notifications(now=_NOW + timedelta(minutes=3))  # fallback: every DM delivered
 
-    # Two hours on: a new signup, a benched player, a tentative one with DMs closed.
+    # Two hours on: a new signup, a queued player, a tentative one with DMs closed.
     later = _NOW + timedelta(hours=2)
     await _signup(db, event, "52")
-    await _signup(db, event, "53", status="bench")
+    await _signup(db, event, "53", status="queued")
     await _signup(db, event, "54", status="tentative")
     fake_discord.always[("POST", "/channels/dm-54/messages")] = (403, {"code": 50007, "message": "closed"})
     stats = await process_due_notifications(now=later)
     assert (stats.late_dms, stats.sent, stats.undeliverable) == (2, 1, 1)
 
-    await _signup(db, event, "53", status="confirmed")  # promoted off the bench
+    await _signup(db, event, "53", status="confirmed")  # moved up from the queue
     assert (await process_due_notifications(now=later + timedelta(minutes=1))).late_dms == 1
     assert (await process_due_notifications(now=later + timedelta(minutes=10))).late_dms == 0
 
@@ -344,7 +346,7 @@ async def test_raid_posted_inside_the_window_dms_each_signup(
     assert [r.kind for r in await _rows(db, event)] == ["ready_check"]
     await _signup(db, event, "61")
     await _signup(db, event, "62", status="late")
-    await _signup(db, event, "63", status="declined")
+    await _signup(db, event, "63", status="absence")
     await _signup(db, event, "64")
     await wow_raid_member_pref_repo.upsert(db, guild_id=guild.id, discord_user_id="64", dm_opt_out=True)
 

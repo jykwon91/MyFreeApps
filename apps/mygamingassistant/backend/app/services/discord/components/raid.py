@@ -39,6 +39,8 @@ _HANDLERS: Final[dict[str, ComponentHandler]] = {
     "mine": raid_signup.handle_mine,
     "change": raid_signup.handle_change,
     "roster": raid_signup.handle_roster,
+    "release": raid_signup.handle_release,
+    "stay": raid_signup.handle_stay,
     "confirm": raid_admin.handle_confirm,
     "discard": raid_admin.handle_discard,
     "cancel": raid_admin.handle_cancel,

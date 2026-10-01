@@ -4,9 +4,15 @@ event_id FK → wow_raid_event (ON DELETE CASCADE).
 UNIQUE(event_id, discord_user_id) — one row per player per event; the
 upsert_signup repo function updates in place.
 
-wow_class, role and spec are nullable: a player can decline before choosing
-a class, and sign-ups saved before specs existed (revision 0028) have no
-spec.  ``role`` is the seat role (tank / healer / dps) derived from the spec.
+wow_class, role and spec are nullable: a player can mark Absence before
+choosing a class, and sign-ups saved before specs existed (revision 0028)
+have no spec.  ``role`` is the seat role (tank / healer / dps) derived from
+the spec.
+
+Statuses (Raid-Helper semantics, revision 0029): ``confirmed`` and ``late``
+hold a seat; ``queued`` is the bot's overflow line when the raid is full
+(moved up automatically); ``bench`` is a backup the member chose (never
+moved up automatically); ``tentative`` and ``absence`` hold no seat.
 """
 import uuid
 from datetime import datetime, timezone
@@ -67,7 +73,7 @@ WOW_SPECS = (
     "subtlety",
     "survival",
 )
-SIGNUP_STATUSES = ("confirmed", "tentative", "bench", "late", "declined")
+SIGNUP_STATUSES = ("confirmed", "late", "tentative", "bench", "queued", "absence")
 
 
 class WowRaidSignup(Base):
@@ -114,7 +120,7 @@ class WowRaidSignup(Base):
     wow_class: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     # Nullable for the same reason as wow_class.
     role: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
-    # Null for sign-ups saved before specs existed, and for declines without a class.
+    # Null for sign-ups saved before specs existed, and for absences without a class.
     spec: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     status: Mapped[str] = mapped_column(
         String(20),

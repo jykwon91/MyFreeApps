@@ -7,14 +7,18 @@ unknown id yields ``None`` and the caller answers with the generic error.
 Actions
 -------
 signup   public [Sign up] button                     raid:v1:signup:<event>
-status   public [Tentative]/[Late]/[Decline]          raid:v1:status:<event>:<status>
+status   public [Late]/[Tentative]/[Bench]/[Absence]  raid:v1:status:<event>:<status>
+         (posts from before revision 0029 carry ``declined`` — read as ``absence``)
 class    class select (value = class)                 raid:v1:class:<event>:<status>
 spec     spec select (value = <class>.<spec>)         raid:v1:spec:<event>:<class>:<status>
 pickclass [Different class] under the spec select     raid:v1:pickclass:<event>:<status>
+         (menus opened from My signup carry ``same``: keep the status you have when you pick)
 role     role button from a pre-spec picker (legacy)  raid:v1:role:<event>:<status>:<class>:<role>
 mine     public [My signup]                           raid:v1:mine:<event>
 change   [Change class or spec] on My signup          raid:v1:change:<event>
 roster   public [Roster]                              raid:v1:roster:<event>
+release  [Yes, free my seat] on the seat confirm      raid:v1:release:<event>:<status>
+stay     [Keep my seat] on the seat confirm           raid:v1:stay:<event>
 confirm  create preview [Post raid]                   raid:v1:confirm:<event>
 discard  create preview [Cancel]                      raid:v1:discard:<event>
 cancel   cancel flow [Cancel raid]                    raid:v1:cancel:<event>
@@ -27,7 +31,8 @@ import uuid
 from dataclasses import dataclass
 from typing import Final
 
-from app.models.wow.wow_raid_signup import RAID_ROLES, SIGNUP_STATUSES, WOW_CLASSES
+from app.models.wow.wow_raid_signup import RAID_ROLES, WOW_CLASSES
+from app.services.wow.raid_roster import REQUESTABLE_STATUSES
 
 PREFIX: Final = "raid:v1:"
 MAX_CUSTOM_ID_LEN: Final = 100
@@ -43,6 +48,8 @@ _EVENT_ACTIONS: Final[dict[str, int]] = {
     "mine": 0,
     "change": 0,
     "roster": 0,
+    "release": 1,
+    "stay": 0,
     "confirm": 0,
     "discard": 0,
     "cancel": 0,
@@ -50,8 +57,14 @@ _EVENT_ACTIONS: Final[dict[str, int]] = {
 }
 _BARE_ACTIONS: Final = frozenset({"testdm"})
 
-# Statuses a member can request from a button (bench is assigned, never requested).
-REQUESTABLE_STATUSES: Final = tuple(s for s in SIGNUP_STATUSES if s != "bench")
+# A menu opened from My signup: keep whatever status you have when you pick.
+SAME_STATUS: Final = "same"
+# What the class / spec menus can carry: the status asked for, or ``same``.
+_MENU_STATUSES: Final = (*REQUESTABLE_STATUSES, SAME_STATUS)
+# What a seat holder can give their seat up for (the confirm card's [Yes]).
+RELEASE_STATUSES: Final = ("tentative", "bench", "absence")
+# Old status names still on buttons of posts not re-rendered since they changed.
+_LEGACY_STATUSES: Final[dict[str, str]] = {"declined": "absence"}
 
 
 @dataclass(frozen=True)
@@ -94,17 +107,23 @@ def parse(custom_id: object) -> RaidCustomId | None:
     except ValueError:
         return None
     args = tuple(parts[2:])
+    if action == "status":
+        args = (_LEGACY_STATUSES.get(args[0], args[0]),)
     if not _args_valid(action, args):
         return None
     return RaidCustomId(action=action, event_id=event_id, args=args)
 
 
 def _args_valid(action: str, args: tuple[str, ...]) -> bool:
-    if action in ("status", "class", "pickclass"):
+    if action == "status":
         return args[0] in REQUESTABLE_STATUSES
+    if action in ("class", "pickclass"):
+        return args[0] in _MENU_STATUSES
+    if action == "release":
+        return args[0] in RELEASE_STATUSES
     if action == "spec":
         wow_class, status = args
-        return wow_class in WOW_CLASSES and status in REQUESTABLE_STATUSES
+        return wow_class in WOW_CLASSES and status in _MENU_STATUSES
     if action == "role":
         status, wow_class, role = args
         return status in REQUESTABLE_STATUSES and wow_class in WOW_CLASSES and role in RAID_ROLES

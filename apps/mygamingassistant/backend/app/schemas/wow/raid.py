@@ -12,10 +12,9 @@ from typing import Any, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.models.wow.wow_raid_event import RAID_KEYS, RAID_STATUSES
-from app.models.wow.wow_raid_member_pref import WowRaidMemberPref as _PrefModel
-from app.models.wow.wow_raid_notification import NOTIFICATION_KINDS
-from app.models.wow.wow_raid_signup import RAID_ROLES, SIGNUP_STATUSES, WOW_CLASSES, WOW_SPECS
+from app.models.wow.wow_raid_signup import RAID_ROLES, WOW_CLASSES, WOW_SPECS
 from app.services.wow.raid_catalog import spec_info
+from app.services.wow.raid_roster import REQUESTABLE_STATUSES
 
 # ---------------------------------------------------------------------------
 # Shared field types
@@ -138,7 +137,7 @@ class RaidEventRead(BaseModel):
 WowClass = str  # validated against WOW_CLASSES
 RaidRole = str  # validated against RAID_ROLES
 WowSpec = str  # validated against WOW_SPECS + the class's specs
-SignupStatus = str  # validated against SIGNUP_STATUSES
+SignupStatus = str  # validated against REQUESTABLE_STATUSES (the bot assigns ``queued``)
 
 
 def _check_spec_pair(wow_class: Optional[str], spec: Optional[str]) -> None:
@@ -166,8 +165,8 @@ class RaidSignupUpsert(BaseModel):
     @field_validator("status")
     @classmethod
     def _valid_status(cls, v: str) -> str:
-        if v not in SIGNUP_STATUSES:
-            raise ValueError(f"status must be one of {SIGNUP_STATUSES}")
+        if v not in REQUESTABLE_STATUSES:
+            raise ValueError(f"status must be one of {REQUESTABLE_STATUSES}")
         return v
 
     @field_validator("wow_class")
