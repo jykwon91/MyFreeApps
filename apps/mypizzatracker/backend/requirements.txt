@@ -138,7 +138,7 @@ propcache==0.5.4
     #   yarl
 psycopg2-binary==2.9.13
     # via mypizzatracker-backend
-pwdlib==0.3.0
+pwdlib==0.3.1
     # via fastapi-users
 pycparser==3.0 ; implementation_name != 'PyPy'
     # via cffi
@@ -150,7 +150,7 @@ pydantic==2.13.5
     #   mypizzatracker-backend
     #   platform-shared
     #   pydantic-settings
-pydantic-core==2.46.5
+pydantic-core==2.49.0
     # via pydantic
 pydantic-settings==2.15.0
     # via
@@ -200,7 +200,7 @@ sqlalchemy==2.0.54
     #   platform-shared
 starlette==1.7.0
     # via fastapi
-twilio==9.11.1
+twilio==9.11.2
     # via mypizzatracker-backend
 typing-extensions==4.16.0
     # via
