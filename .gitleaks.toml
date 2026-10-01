@@ -19,6 +19,8 @@ regexes = [
   '''\$\{\{\s*secrets\.[A-Z_]+\s*\}\}''',
   '''hashed_password="fakehash"''',
   '''hashed_password='fakehash''',
+  # Browser localStorage keys ("mga.wowForever.professions.skill.v1") — names, never secrets.
+  '''mga\.[A-Za-z0-9]+(\.[A-Za-z0-9]+)*\.v[0-9]+''',
 ]
 
 paths = [
