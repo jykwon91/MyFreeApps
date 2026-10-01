@@ -104,6 +104,21 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   pre-launch data in `data/professions/`: every row carries
   `confidence: "confirmed" | "unconfirmed"`. After Forever launches, re-check
   the unconfirmed rows and bump `PROFESSIONS_DATA_STATUS`.
+- Professions also has Tailoring and Enchanting (`?p=tailoring|enchanting`,
+  `&skill=N`): trainers, rank-ups (Artisan Enchanting = Annora in Uldaman), a
+  hand-picked route to 300 (`data/professions/crafting/*Route.ts`, joined to
+  the recipe data by spell id — `wowCraftRoute.test.ts` checks it runs 1→300
+  with no gaps, never past a rank cap, never crafting a recipe at grey or
+  before it can be learned), expected crafts per row (Classic skill-up
+  formula, `crafting/craftRoute.ts`) and a shopping list (bolts / motes the
+  profession makes itself are expanded into raw materials). The skill lives in
+  `?skill=` (wins for that visit) and `mga.wowForever.professions.skill.v1`.
+  **Recipe data is GENERATED** — `python -m scripts.wow_professions.build`
+  (from `backend/`) writes `data/professions/crafting/{tailoring,enchanting}.json`
+  from the Forever beta client, plus `classic/trainerSkills.json` and
+  `classic/sources.json` (cmangos GPL — keep LICENSE + README).
+  `tests/test_wow_professions_generator.py`. A route row that names a spell
+  missing from the data throws, so re-run the route test after regenerating.
 - Class/spec ids in `data/classes.ts` are the stable key for anything
   class-shaped (stat weights, compare settings, a future BiS page). Never rename.
 - **Scoring lives in the frontend** (`scoring/`), deterministic and unit-tested.

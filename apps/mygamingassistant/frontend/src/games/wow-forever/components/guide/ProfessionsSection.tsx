@@ -23,7 +23,7 @@ export default function ProfessionsSection() {
         to="/wow-forever/professions"
         className="group flex items-center justify-between gap-2 rounded-xl border bg-card p-4 font-semibold hover:bg-muted/40 transition-colors"
       >
-        Cooking & Fishing: where to train and how to level them fast
+        Professions: where to train Cooking, Fishing, Tailoring and Enchanting and how to level them fast
         <ArrowRight className="h-5 w-5 text-primary group-hover:translate-x-1 transition-transform" aria-hidden />
       </Link>
     </GuideSection>

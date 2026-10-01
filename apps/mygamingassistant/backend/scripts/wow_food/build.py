@@ -141,8 +141,8 @@ def load_focus() -> dict[int, str]:
     }
 
 
-def load_trainer_skill() -> dict[int, int]:
-    """Recipe spell -> lowest Cooking skill a Classic trainer asks to teach it.
+def load_trainer_skill(skill_line: int = COOKING_SKILL_LINE) -> dict[int, int]:
+    """Recipe spell -> lowest skill a Classic trainer of ``skill_line`` asks to teach it.
 
     cmangos lists the trainer's *teaching* spell; the Classic Era client's
     LEARN_SPELL effect says which recipe it teaches (the Forever client
@@ -155,7 +155,7 @@ def load_trainer_skill() -> dict[int, int]:
     rows = read_dump(cmangos_dump(), {"npc_trainer", "npc_trainer_template"})
     skill: dict[int, int] = {}
     for row in rows["npc_trainer"] + rows["npc_trainer_template"]:
-        if row["reqskill"] != COOKING_SKILL_LINE:
+        if row["reqskill"] != skill_line:
             continue
         spell = int(row["spell"] or 0)
         value = int(row["reqskillvalue"] or 0)
