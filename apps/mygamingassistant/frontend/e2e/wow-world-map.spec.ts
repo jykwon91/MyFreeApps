@@ -339,3 +339,13 @@ test("a trainer in Ironforge gets directions through the Deeprun Tram", async ({
   await page.getByRole("button", { name: "Destination: Ironforge" }).click();
   await expect(page.getByRole("img", { name: "Ironforge map" })).toBeVisible();
 });
+
+test("markers keep their size when the map zooms in", async ({ page }) => {
+  await standInGoldshire(page);
+  const you = page.getByRole("group", { name: "Elwynn Forest markers" }).getByLabel("You", { exact: true });
+  const before = (await you.boundingBox())?.width ?? 0;
+  expect(before).toBeGreaterThan(0);
+  await page.getByRole("article", { name: "Warlock trainer: Maximillian Crowe" }).getByRole("heading", { name: "Maximillian Crowe" }).click();
+  await expect(page.getByRole("button", { name: "Reset zoom" })).toBeVisible();
+  await expect.poll(async () => Math.abs(((await you.boundingBox())?.width ?? 0) - before)).toBeLessThan(2);
+});

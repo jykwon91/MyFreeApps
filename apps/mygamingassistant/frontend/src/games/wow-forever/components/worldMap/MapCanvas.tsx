@@ -216,6 +216,7 @@ export default function MapCanvas(props: MapCanvasProps) {
                 selectedId={props.selectedId}
                 route={props.route}
                 onSelectMarker={props.onSelectMarker}
+                scale={zoom.scale}
               />
             </svg>
           </div>
