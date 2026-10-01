@@ -334,7 +334,7 @@ def test_discord_register_commands_noop_when_disabled(
 def test_boot_guard_raises_in_production_when_vars_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """_check_discord_configured must raise when DISCORD_ENABLED=true in production
+    """check_discord_configured must raise when DISCORD_ENABLED=true in production
     and any required var is empty."""
     monkeypatch.setattr(settings, "discord_enabled", True)
     monkeypatch.setattr(settings, "discord_application_id", "")
@@ -342,10 +342,10 @@ def test_boot_guard_raises_in_production_when_vars_missing(
     monkeypatch.setattr(settings, "discord_bot_token", "")
     monkeypatch.setattr(settings, "environment", "production")
 
-    from app.main import DiscordNotConfiguredError, _check_discord_configured
+    from app.services.discord.startup import DiscordNotConfiguredError, check_discord_configured
 
     with pytest.raises(DiscordNotConfiguredError) as exc_info:
-        _check_discord_configured()
+        check_discord_configured()
 
     msg = str(exc_info.value)
     assert "DISCORD_APPLICATION_ID" in msg
@@ -356,27 +356,27 @@ def test_boot_guard_raises_in_production_when_vars_missing(
 def test_boot_guard_no_op_when_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """_check_discord_configured must be a no-op when discord_enabled=False."""
+    """check_discord_configured must be a no-op when discord_enabled=False."""
     monkeypatch.setattr(settings, "discord_enabled", False)
     monkeypatch.setattr(settings, "environment", "production")
 
-    from app.main import _check_discord_configured
+    from app.services.discord.startup import check_discord_configured
 
     # Must not raise
-    _check_discord_configured()
+    check_discord_configured()
 
 
 def test_boot_guard_no_op_when_fully_configured(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """_check_discord_configured must be a no-op when all required vars are set."""
+    """check_discord_configured must be a no-op when all required vars are set."""
     monkeypatch.setattr(settings, "discord_enabled", True)
     monkeypatch.setattr(settings, "discord_application_id", "123")
     monkeypatch.setattr(settings, "discord_public_key", _PUBLIC_KEY_HEX)
     monkeypatch.setattr(settings, "discord_bot_token", "token")
     monkeypatch.setattr(settings, "environment", "production")
 
-    from app.main import _check_discord_configured
+    from app.services.discord.startup import check_discord_configured
 
     # Must not raise
-    _check_discord_configured()
+    check_discord_configured()
