@@ -9,7 +9,8 @@ Worker flow:
      defer() — post-dispatch bookkeeping (re-load the row with
      get_for_update() first: a cancel may have deleted it mid-flight)
   4. cancel_pending_for_event() — delete unsent rows when an event is cancelled
-  5. schedule_user_rows() / schedule_channel_row() — worker fan-out
+  5. schedule_user_rows() / schedule_channel_row() / scheduled_user_ids() —
+     worker fan-out and the late-DM catch-up pass
 """
 from __future__ import annotations
 
@@ -46,6 +47,17 @@ def backoff_delay(attempts: int) -> timedelta:
     return timedelta(minutes=minutes)
 
 
+def consumables_due_at(starts_at: datetime, guild_settings: dict[str, Any]) -> datetime:
+    """When a raid's consumables round opens (24h before start by default).
+
+    The round's trigger row and every per-player DM row in it carry this
+    ``due_at``, so ``uq_wowraidnotif_user_notif`` allows one consumables DM
+    per player per raid time.  Pure — no DB access.
+    """
+    minutes = int(guild_settings.get("consumables_reminder_minutes", 1440))
+    return starts_at - timedelta(minutes=minutes)
+
+
 def _build_schedule_rows(
     event_id: uuid.UUID,
     starts_at: datetime,
@@ -58,9 +70,6 @@ def _build_schedule_rows(
     """
     nudge_offsets: list[int] = guild_settings.get(
         "nudge_offsets_minutes", [2880, 1440]
-    )
-    consumables_minutes: int = guild_settings.get(
-        "consumables_reminder_minutes", 1440
     )
     ready_check_minutes: int = guild_settings.get("ready_check_minutes", 60)
 
@@ -77,13 +86,13 @@ def _build_schedule_rows(
             }
         )
 
-    # consumables_reminder — single channel post
+    # consumables_reminder — the round's trigger (fans out to per-player DMs)
     rows.append(
         {
             "event_id": event_id,
             "kind": "consumables_reminder",
             "target_user_id": None,
-            "due_at": starts_at - timedelta(minutes=consumables_minutes),
+            "due_at": consumables_due_at(starts_at, guild_settings),
         }
     )
 
@@ -282,8 +291,9 @@ async def schedule_user_rows(
 ) -> int:
     """Insert one per-user row per id.  Idempotent (``uq_wowraidnotif_user_notif``).
 
-    The caller passes the *trigger's* ``due_at`` so a retried fan-out hits
-    the unique index instead of scheduling a second DM.
+    The caller passes the round's ``due_at`` (``consumables_due_at``) so a
+    retried fan-out or a repeat late-DM pass hits the unique index instead of
+    scheduling a second DM.
     """
     if not user_ids:
         return 0
@@ -309,6 +319,21 @@ async def schedule_channel_row(
     )
     await db.flush()
     return result.rowcount or 0
+
+
+async def scheduled_user_ids(
+    db: AsyncSession, *, event_id: uuid.UUID, kind: str, due_at: datetime
+) -> set[str]:
+    """Players who already have a row, in any state, in one fan-out (*kind*, *due_at*)."""
+    result = await db.execute(
+        select(WowRaidNotification.target_user_id).where(
+            WowRaidNotification.event_id == event_id,
+            WowRaidNotification.kind == kind,
+            WowRaidNotification.target_user_id.is_not(None),
+            WowRaidNotification.due_at == due_at,
+        )
+    )
+    return {user_id for user_id in result.scalars().all() if user_id is not None}
 
 
 async def count_pending_user_rows(

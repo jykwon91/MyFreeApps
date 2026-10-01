@@ -148,6 +148,11 @@ async def _rows(db: AsyncSession, event: WowRaidEvent) -> list[WowRaidNotificati
     return list(result.scalars().all())
 
 
+def _starts_for_round(round_due_at: datetime) -> datetime:
+    """The pull time whose consumables round (24h before, the default) opens at *round_due_at*."""
+    return round_due_at + timedelta(hours=24)
+
+
 # ---------------------------------------------------------------------------
 # Channel posts
 # ---------------------------------------------------------------------------
@@ -207,7 +212,8 @@ async def test_consumables_dms_and_single_fallback_post(
     bound_unit_of_work: AsyncSession, fake_discord: FakeDiscord
 ) -> None:
     db = bound_unit_of_work
-    event = await _raid(db, starts_at=_NOW + timedelta(hours=23))
+    round_due = _NOW - timedelta(minutes=1)
+    event = await _raid(db, starts_at=_starts_for_round(round_due))
     await _signup(db, event, "31")                                            # priest healer → checklist
     await _signup(db, event, "32", status="tentative", wow_class="mage", role="dps")  # DMs closed
     await _signup(db, event, "33", status="late", wow_class=None, role=None)  # no class → generic DM
@@ -221,10 +227,13 @@ async def test_consumables_dms_and_single_fallback_post(
         fake_discord.always[("POST", f"/channels/dm-{blocked}/messages")] = (
             403, {"code": 50007, "message": "Cannot send messages to this user"},
         )
-    trigger = await _row(db, event, "consumables_reminder", _NOW - timedelta(minutes=1))
+    trigger = await _row(db, event, "consumables_reminder", round_due)
 
     first = await process_due_notifications(now=_NOW)
     assert first.undeliverable == 2
+    rows = await _rows(db, event)
+    assert {r.target_user_id for r in rows if r.target_user_id} == {"31", "32", "33", "36"}
+    assert {r.due_at for r in rows if r.kind == "consumables_reminder"} == {round_due}
 
     dm_31 = fake_discord.posts("dm-31")
     assert len(dm_31) == 1 and dm_31[0].body is not None
@@ -262,12 +271,13 @@ async def test_consumables_dms_and_single_fallback_post(
 
 async def test_fallback_waits_for_pending_dms(bound_unit_of_work: AsyncSession, fake_discord: FakeDiscord) -> None:
     db = bound_unit_of_work
-    event = await _raid(db, starts_at=_NOW + timedelta(hours=23))
+    round_due = _NOW - timedelta(minutes=5)
+    event = await _raid(db, starts_at=_starts_for_round(round_due))
     await _signup(db, event, "41")
     await _signup(db, event, "42")
     fake_discord.always[("POST", "/channels/dm-41/messages")] = (403, {"code": 50007, "message": "closed"})
     fake_discord.queued[("POST", "/channels/dm-42/messages")] = [(503, {"message": "busy"})]
-    await _row(db, event, "consumables_reminder", _NOW - timedelta(minutes=5))
+    await _row(db, event, "consumables_reminder", round_due)
 
     # 41 blocked, 42 failed once (backs off 1 min) → the already-due fallback waits.
     first = await process_due_notifications(now=_NOW)
@@ -278,6 +288,111 @@ async def test_fallback_waits_for_pending_dms(bound_unit_of_work: AsyncSession, 
     [fallback] = fake_discord.posts(CHANNEL)
     assert fallback.body is not None and fallback.body["allowed_mentions"]["users"] == ["41"]
     assert len(fake_discord.posts("dm-42")) == 2
+
+
+# ---------------------------------------------------------------------------
+# Late consumables DMs (players eligible after the round opened)
+# ---------------------------------------------------------------------------
+
+
+async def test_late_signups_get_one_dm_and_earlier_players_none_extra(
+    bound_unit_of_work: AsyncSession, fake_discord: FakeDiscord
+) -> None:
+    db = bound_unit_of_work
+    round_due = _NOW - timedelta(minutes=1)
+    event = await _raid(db, starts_at=_starts_for_round(round_due))
+    await _signup(db, event, "51")
+    await _row(db, event, "consumables_reminder", round_due)
+    await process_due_notifications(now=_NOW)
+    await process_due_notifications(now=_NOW + timedelta(minutes=3))  # fallback: every DM delivered
+
+    # Two hours on: a new signup, a benched player, a tentative one with DMs closed.
+    later = _NOW + timedelta(hours=2)
+    await _signup(db, event, "52")
+    await _signup(db, event, "53", status="bench")
+    await _signup(db, event, "54", status="tentative")
+    fake_discord.always[("POST", "/channels/dm-54/messages")] = (403, {"code": 50007, "message": "closed"})
+    stats = await process_due_notifications(now=later)
+    assert (stats.late_dms, stats.sent, stats.undeliverable) == (2, 1, 1)
+
+    await _signup(db, event, "53", status="confirmed")  # promoted off the bench
+    assert (await process_due_notifications(now=later + timedelta(minutes=1))).late_dms == 1
+    assert (await process_due_notifications(now=later + timedelta(minutes=10))).late_dms == 0
+
+    for user_id in ("51", "52", "53", "54"):
+        assert len(fake_discord.posts(f"dm-{user_id}")) == 1, user_id
+    assert not fake_discord.posts(CHANNEL)  # the round's one fallback already ran
+    dm_rows = [r for r in await _rows(db, event) if r.target_user_id]
+    assert len(dm_rows) == 4 and {r.due_at for r in dm_rows} == {round_due}
+
+
+async def test_raid_posted_inside_the_window_dms_each_signup(
+    bound_unit_of_work: AsyncSession, fake_discord: FakeDiscord
+) -> None:
+    db = bound_unit_of_work
+    event = await _raid(db, starts_at=_NOW + timedelta(hours=10))
+    guild = await db.get(WowRaidGuild, event.guild_id)
+    assert guild is not None
+    # Posted 10h out: the 24h trigger is already past, so only the ready check is scheduled.
+    await wow_raid_notification_repo.schedule_for_event(
+        db, event_id=event.id, starts_at=event.starts_at, guild_settings=guild.settings, now=_NOW
+    )
+    assert [r.kind for r in await _rows(db, event)] == ["ready_check"]
+    await _signup(db, event, "61")
+    await _signup(db, event, "62", status="late")
+    await _signup(db, event, "63", status="declined")
+    await _signup(db, event, "64")
+    await wow_raid_member_pref_repo.upsert(db, guild_id=guild.id, discord_user_id="64", dm_opt_out=True)
+
+    assert (await process_due_notifications(now=_NOW)).late_dms == 2
+    assert len(fake_discord.posts("dm-61")) == 1 and len(fake_discord.posts("dm-62")) == 1
+    assert not fake_discord.posts("dm-63") and not fake_discord.posts("dm-64")
+
+    # Switching DMs back on gets the checklist on the next run.
+    await wow_raid_member_pref_repo.upsert(db, guild_id=guild.id, discord_user_id="64", dm_opt_out=False)
+    assert (await process_due_notifications(now=_NOW + timedelta(minutes=1))).late_dms == 1
+    assert len(fake_discord.posts("dm-64")) == 1
+    assert not fake_discord.posts(CHANNEL)
+
+
+async def test_no_late_dms_before_the_round_opens_or_in_the_last_hour(
+    bound_unit_of_work: AsyncSession, fake_discord: FakeDiscord
+) -> None:
+    db = bound_unit_of_work
+    too_early = await _raid(db, starts_at=_NOW + timedelta(hours=25))
+    too_close = await _raid(db, starts_at=_NOW + timedelta(minutes=59), guild_discord_id="5153")
+    for event in (too_early, too_close):
+        await _signup(db, event, "71")
+
+    stats = await process_due_notifications(now=_NOW)
+    assert stats.late_dms == 0 and fake_discord.calls == []
+    assert await _rows(db, too_early) == [] and await _rows(db, too_close) == []
+
+
+async def test_time_edit_dms_again_and_skips_rows_for_the_old_time(
+    bound_unit_of_work: AsyncSession, fake_discord: FakeDiscord
+) -> None:
+    db = bound_unit_of_work
+    old_round = _NOW - timedelta(hours=3)
+    event = await _raid(db, starts_at=_starts_for_round(old_round))
+    await _signup(db, event, "81")
+    await process_due_notifications(now=_NOW)
+    assert len(fake_discord.posts("dm-81")) == 1
+
+    # The pull moves 30 minutes later.  A row a concurrent run scheduled for
+    # the old time (it read the event before the edit) must not be sent.
+    event.starts_at += timedelta(minutes=30)
+    await wow_raid_notification_repo.cancel_pending_for_event(db, event.id)
+    stale = await _row(db, event, "consumables_reminder", old_round, target="82")
+    await _signup(db, event, "82")
+
+    stats = await process_due_notifications(now=_NOW + timedelta(minutes=1))
+    assert (stats.late_dms, stats.sent, stats.skipped) == (2, 2, 1)
+    await db.refresh(stale)
+    assert stale.last_error == "skipped: raid time changed"
+    second = fake_discord.posts("dm-81")[1]
+    assert f"<t:{int(event.starts_at.timestamp())}" in json.dumps(second.body)
+    assert len(fake_discord.posts("dm-82")) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -384,13 +499,12 @@ async def test_concurrent_workers_never_double_send(db_engine: AsyncEngine, fake
     users = [str(600 + i) for i in range(12)]
     try:
         async with scope() as db:
-            event = await _raid(db, starts_at=_NOW + timedelta(hours=23), guild_discord_id=guild_discord_id)
+            # The round opened a minute ago with no DM rows yet: both runs'
+            # late passes race to schedule them, then both claim loops race.
+            due = _NOW - timedelta(minutes=1)
+            event = await _raid(db, starts_at=_starts_for_round(due), guild_discord_id=guild_discord_id)
             for user_id in users:
                 await _signup(db, event, user_id)
-            due = _NOW - timedelta(minutes=1)
-            await wow_raid_notification_repo.schedule_user_rows(
-                db, event_id=event.id, kind="consumables_reminder", due_at=due, user_ids=users,
-            )
             await _row(db, event, "ready_check", due)
             event_id = event.id
 
@@ -400,6 +514,7 @@ async def test_concurrent_workers_never_double_send(db_engine: AsyncEngine, fake
             process_due_notifications(now=_NOW, session_scope=scope),
         )
 
+        assert sum(r.late_dms for r in results) == len(users)
         assert sum(r.claimed for r in results) == len(users) + 1
         assert all(r.claimed > 0 for r in results)
         for user_id in users:

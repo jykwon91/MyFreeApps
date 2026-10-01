@@ -105,6 +105,24 @@ async def list_upcoming(
     return list(result.scalars().all())
 
 
+async def list_scheduled_starting_after(
+    db: AsyncSession, *, after: datetime
+) -> list[WowRaidEvent]:
+    """Every guild's ``scheduled`` events starting after *after*, soonest first.
+
+    Ties go by id, so concurrent workers visit the events in the same order.
+    """
+    result = await db.execute(
+        select(WowRaidEvent)
+        .where(
+            WowRaidEvent.status == "scheduled",
+            WowRaidEvent.starts_at > after,
+        )
+        .order_by(WowRaidEvent.starts_at, WowRaidEvent.id)
+    )
+    return list(result.scalars().all())
+
+
 async def set_message_id(
     db: AsyncSession, event: WowRaidEvent, message_id: str
 ) -> WowRaidEvent:

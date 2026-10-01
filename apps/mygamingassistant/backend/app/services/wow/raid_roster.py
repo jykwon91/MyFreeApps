@@ -18,7 +18,7 @@ Seat rules
 """
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from typing import Final
 
@@ -167,3 +167,12 @@ def pick_promotions(
     """Bench signups to promote (FIFO) to fill the open seats."""
     summary = compute_roster_summary(signups, size_cap=size_cap)
     return summary.bench_overflow[: summary.open_seats]
+
+
+def ordered_user_ids(signups: Iterable[WowRaidSignup]) -> list[str]:
+    """User ids in signup order, earliest first, so mentions read like the roster.
+
+    Ties go by user id, so two workers scheduling the same players insert
+    their rows in the same order (no deadlock between them).
+    """
+    return [s.discord_user_id for s in sorted(signups, key=lambda s: (s.signed_up_at, s.discord_user_id))]

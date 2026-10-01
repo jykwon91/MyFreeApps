@@ -23,8 +23,9 @@ Kinds
 -----
 ``signup_nudge`` (channel, 48h/24h), ``ready_check`` (channel, 1h),
 ``consumables_reminder`` (the channel-less trigger row fans out one DM row
-per player plus one ``dm_fallback`` row), ``dm_fallback`` (one combined
-"I couldn't DM …" channel post per raid, after the DMs settle).
+per player plus one ``dm_fallback`` row; each run's late pass DMs players
+who sign up afterwards — see ``raid_consumables_round``), ``dm_fallback``
+(one combined "I couldn't DM …" channel post per raid, after the DMs settle).
 ``raid_cancelled`` is never scheduled — ``/raid-admin cancel`` announces
 synchronously and drops every pending row — so such a row is skipped.
 
@@ -43,7 +44,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -61,7 +62,6 @@ from app.core.config import settings
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.models.wow.wow_raid_notification import MAX_ATTEMPTS, WowRaidNotification
-from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.repositories.wow import (
     wow_raid_event_repo,
     wow_raid_member_pref_repo,
@@ -70,11 +70,13 @@ from app.repositories.wow import (
 )
 from app.services.discord import raid_copy, raid_notifications, rest
 from app.services.discord.raid_views import unix
+from app.services.wow import raid_consumables_round
 from app.services.wow.raid_catalog import class_role_label
 from app.services.wow.raid_composition import role_gaps
 from app.services.wow.raid_consumables import UnknownRaidError, select_consumables
 from app.services.wow.raid_embed import display_title
-from app.services.wow.raid_roster import SEAT_STATUSES, TENTATIVE_STATUS, compute_roster_summary
+from app.services.wow.raid_consumables_round import DM_STATUSES
+from app.services.wow.raid_roster import SEAT_STATUSES, compute_roster_summary, ordered_user_ids
 
 logger = logging.getLogger(__name__)
 
@@ -86,8 +88,9 @@ COMPLETE_AFTER: Final = timedelta(hours=6)
 
 # A channel post that couldn't go out within this long after its due time is
 # dropped — a 48h nudge delivered at 24h, or a ready check after the pull,
-# is noise.  DM rows inherit their trigger's due_at, so they aren't checked
-# (they only need the raid not to have started).
+# is noise.  DM rows carry their round's due_at — hours old for a late
+# signup — so they aren't checked (they only need the raid not to have
+# started).
 MAX_LATENESS: Final[dict[str, timedelta]] = {
     "signup_nudge": timedelta(hours=6),
     "consumables_reminder": timedelta(hours=6),
@@ -99,9 +102,6 @@ MAX_LATENESS: Final[dict[str, timedelta]] = {
 DM_FALLBACK_DELAY: Final = timedelta(minutes=2)
 DM_FALLBACK_RECHECK: Final = timedelta(minutes=1)
 DM_FALLBACK_MAX_WAIT: Final = timedelta(minutes=45)
-
-# Who gets the consumables DM (spec: confirmed + tentative + late).
-DM_STATUSES: Final = (*SEAT_STATUSES, TENTATIVE_STATUS)
 
 _NONCE_LEN: Final = 25
 
@@ -144,6 +144,7 @@ Outcome = Sent | Skipped | Failed | Undeliverable | Deferred
 @dataclass
 class RunStats:
     completed_events: int = 0
+    late_dms: int = 0
     claimed: int = 0
     sent: int = 0
     skipped: int = 0
@@ -266,6 +267,12 @@ async def process_due_notifications(
     except Exception:
         logger.exception("raid_notifications: completing finished raids failed")
 
+    try:
+        async with scope() as db:
+            stats.late_dms = await raid_consumables_round.schedule_late_dms(db, clock())
+    except Exception:
+        logger.exception("raid_notifications: scheduling late consumables DMs failed")
+
     loop = asyncio.get_running_loop()
     deadline = loop.time() + time_budget_s
     try:
@@ -282,12 +289,12 @@ async def process_due_notifications(
     except Exception:
         logger.exception("raid_notifications: run aborted")
 
-    if stats.claimed or stats.completed_events:
+    if stats.claimed or stats.completed_events or stats.late_dms:
         logger.info(
             "raid_notifications: run done claimed=%d sent=%d skipped=%d failed=%d "
-            "undeliverable=%d deferred=%d completed_events=%d",
+            "undeliverable=%d deferred=%d completed_events=%d late_dms=%d",
             stats.claimed, stats.sent, stats.skipped, stats.failed,
-            stats.undeliverable, stats.deferred, stats.completed_events,
+            stats.undeliverable, stats.deferred, stats.completed_events, stats.late_dms,
         )
     return stats
 
@@ -359,9 +366,11 @@ async def _plan(db: AsyncSession, claim: _Claim, now: datetime) -> _Plan:
     if claim.kind == "ready_check":
         return await _plan_ready_check(db, ctx)
     if claim.kind == "consumables_reminder" and claim.target_user_id is None:
-        return await _fan_out_consumables(db, ctx, claim)
+        return await _fan_out_consumables(db, ctx)
     if claim.kind == "consumables_reminder":
         assert claim.target_user_id is not None
+        if claim.due_at != raid_consumables_round.round_due_at(event, guild):
+            return Skipped("raid time changed")  # the late pass DMs them in the new round
         return await _plan_consumables_dm(db, ctx, claim.target_user_id)
     if claim.kind == "dm_fallback":
         return await _plan_dm_fallback(db, ctx, claim)
@@ -394,7 +403,7 @@ async def _plan_nudge(db: AsyncSession, ctx: _Context, claim: _Claim) -> _Plan:
 
 async def _plan_ready_check(db: AsyncSession, ctx: _Context) -> _Plan:
     signups = await wow_raid_signup_repo.list_for_event(db, ctx.event.id)
-    seated = _ordered_user_ids(s for s in signups if s.status in SEAT_STATUSES)
+    seated = ordered_user_ids(s for s in signups if s.status in SEAT_STATUSES)
     if not seated:
         return Skipped("nobody confirmed")
     payloads = raid_notifications.build_ready_check(
@@ -403,28 +412,15 @@ async def _plan_ready_check(db: AsyncSession, ctx: _Context) -> _Plan:
     return _ChannelPlan(channel_id=ctx.event.channel_id, payloads=payloads)
 
 
-def _ordered_user_ids(signups: Iterable[WowRaidSignup]) -> list[str]:
-    """Signup order — earliest first — so mentions read like the roster."""
-    return [s.discord_user_id for s in sorted(signups, key=lambda s: s.signed_up_at)]
-
-
-async def _fan_out_consumables(db: AsyncSession, ctx: _Context, claim: _Claim) -> Outcome:
+async def _fan_out_consumables(db: AsyncSession, ctx: _Context) -> Outcome:
     """Turn the raid's trigger row into one DM row per player + the fallback row."""
-    signups = await wow_raid_signup_repo.list_for_event(db, ctx.event.id)
-    candidates = _ordered_user_ids(s for s in signups if s.status in DM_STATUSES)
-    opted_out = await wow_raid_member_pref_repo.opted_out_user_ids(
-        db, guild_id=ctx.guild.id, discord_user_ids=candidates
-    )
-    recipients = [user_id for user_id in candidates if user_id not in opted_out]
-    if not recipients:
+    dms = await raid_consumables_round.schedule_dms(db, ctx.event, ctx.guild)
+    if not dms.players:
         return Skipped("nobody to DM")
-    inserted = await wow_raid_notification_repo.schedule_user_rows(
-        db, event_id=ctx.event.id, kind="consumables_reminder", due_at=claim.due_at, user_ids=recipients
-    )
     await wow_raid_notification_repo.schedule_channel_row(
-        db, event_id=ctx.event.id, kind="dm_fallback", due_at=claim.due_at + DM_FALLBACK_DELAY
+        db, event_id=ctx.event.id, kind="dm_fallback", due_at=dms.due_at + DM_FALLBACK_DELAY
     )
-    return Sent(detail=f"fanned out {inserted} DM(s)")
+    return Sent(detail=f"round of {dms.players} DM(s), {dms.inserted} new")
 
 
 async def _plan_consumables_dm(db: AsyncSession, ctx: _Context, user_id: str) -> _Plan:
@@ -463,7 +459,7 @@ def _generic_dm(ctx: _Context) -> dict[str, Any]:
 
 
 async def _plan_dm_fallback(db: AsyncSession, ctx: _Context, claim: _Claim) -> _Plan:
-    # The fallback row sits DM_FALLBACK_DELAY after the trigger it summarises.
+    # The fallback row sits DM_FALLBACK_DELAY after the round it summarises.
     round_due_at = claim.due_at - DM_FALLBACK_DELAY
     pending = await wow_raid_notification_repo.count_pending_user_rows(
         db, event_id=ctx.event.id, kind="consumables_reminder", due_at=round_due_at
