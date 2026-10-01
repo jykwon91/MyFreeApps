@@ -13,6 +13,7 @@ tasks have finished by the time ``post`` returns.
 from __future__ import annotations
 
 import json
+import logging
 import time
 import uuid
 from collections.abc import AsyncGenerator, Callable
@@ -84,11 +85,16 @@ class FakeDiscord:
     calls: list[Call] = field(default_factory=list)
     # (method, path) → (status, json body); consumed in order, falls back to default.
     errors: dict[tuple[str, str], list[tuple[int, dict[str, Any]]]] = field(default_factory=dict)
+    # (method, path) → how many upcoming calls Discord never answers (httpx.ReadTimeout).
+    unanswered: dict[tuple[str, str], int] = field(default_factory=dict)
     bot_channel_permissions: int = VIEW_CHANNEL | SEND_MESSAGES | EMBED_LINKS
     _next_message: int = 0
 
     def fail(self, method: str, path: str, status: int, code: int) -> None:
         self.errors.setdefault((method, path), []).append((status, {"code": code, "message": "nope"}))
+
+    def time_out(self, method: str, path: str) -> None:
+        self.unanswered[(method, path)] = self.unanswered.get((method, path), 0) + 1
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         path = request.url.path.removeprefix("/api/v10")
@@ -96,6 +102,9 @@ class FakeDiscord:
         if request.content:
             body = json.loads(request.content)
         self.calls.append(Call(request.method, path, body))
+        if self.unanswered.get((request.method, path)):
+            self.unanswered[(request.method, path)] -= 1
+            raise httpx.ReadTimeout("Discord never answered", request=request)
         queued = self.errors.get((request.method, path))
         if queued:
             status, payload = queued.pop(0)
@@ -647,6 +656,20 @@ async def test_post_refused_reverts_to_draft(post: Post, db: AsyncSession, fake_
     assert event.status == "scheduled" and event.message_id is not None
 
 
+async def test_unanswered_post_reverts_to_draft(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
+    await _setup(post)
+    fake_discord.time_out("POST", f"/channels/{CHANNEL}/messages")
+    preview = await post(command("raid-admin", "create", raid="onyxia", when=future_when()))
+    await post(click(custom_id_for(preview, "confirm"), user_id=ORGANISER, permissions=ORGANISER_PERMS))
+    event = (await db.execute(select(WowRaidEvent))).scalars().one()
+    await db.refresh(event)
+    assert event.status == "draft"
+    assert event.message_id is None
+    edit = fake_discord.original_edits()[-1]
+    assert edit.body is not None
+    assert raid_copy.post_refused(CHANNEL, None) in edit.body["content"]
+
+
 async def test_deleted_public_post_is_reposted(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
     await _setup(post)
     event = await _create_and_post(post, db)
@@ -669,6 +692,27 @@ async def test_setup_reports_missing_bot_permissions(post: Post, fake_discord: F
     assert edit.body is not None
     assert edit.body["content"].startswith(f"Saved, but I can't post in <#{CHANNEL}> yet.")
     assert "Send Messages" in edit.body["content"] and "Embed Links" in edit.body["content"]
+
+
+async def test_setup_check_reports_when_discord_does_not_answer(post: Post, fake_discord: FakeDiscord) -> None:
+    fake_discord.time_out("GET", f"/channels/{CHANNEL}")
+    response = await _setup(post, ping_role=None)
+    assert response == {"type": 5, "data": {"flags": _EPHEMERAL}}
+    (edit,) = fake_discord.original_edits()
+    assert edit.body is not None
+    assert edit.body["content"].endswith(raid_copy.SETUP_CHECK_FAILED)
+
+
+async def test_unanswered_reply_edit_is_one_warning(
+    post: Post, fake_discord: FakeDiscord, caplog: pytest.LogCaptureFixture
+) -> None:
+    fake_discord.time_out("PATCH", f"/webhooks/{APP_ID}/{TOKEN}/messages/@original")
+    with caplog.at_level(logging.WARNING, logger="app.services.discord.raid_publisher"):
+        await _setup(post, ping_role=None)
+    records = [r for r in caplog.records if r.name == "app.services.discord.raid_publisher"]
+    assert [(r.levelno, r.getMessage()) for r in records] == [
+        (logging.WARNING, "Raid bot: could not edit the original interaction response (ReadTimeout)")
+    ]
 
 
 async def test_setup_rejects_unknown_timezone(post: Post, fake_discord: FakeDiscord) -> None:
@@ -723,6 +767,27 @@ async def test_prefs_and_test_dm(post: Post, fake_discord: FakeDiscord) -> None:
     fake_discord.fail("POST", "/channels/dm-502/messages", 403, 50007)
     await post(click(test_dm_id, user_id="502"))
     assert fake_discord.original_edits()[-1].body["content"] == raid_copy.TEST_DM_BLOCKED
+
+    fake_discord.time_out("POST", "/channels/dm-503/messages")
+    await post(click(test_dm_id, user_id="503"))
+    assert fake_discord.original_edits()[-1].body["content"] == raid_copy.TEST_DM_FAILED
+
+
+async def test_cancellation_dms_continue_past_an_unanswered_one(
+    post: Post, db: AsyncSession, fake_discord: FakeDiscord
+) -> None:
+    await _setup(post)
+    event = await _create_and_post(post, db)
+    for user_id in ("801", "802"):
+        await _save_prefs(post, user_id)
+        await post(click(_signup_id(event), user_id=user_id))
+    prompt = await post(command("raid-admin", "cancel", event=str(event.id)))
+    fake_discord.clear()
+    fake_discord.time_out("POST", "/users/@me/channels")  # whoever is DMed first
+    await post(click(custom_id_for(prompt, "cancel"), user_id=ORGANISER, permissions=ORGANISER_PERMS))
+    opened = sorted(c.body["recipient_id"] for c in fake_discord.find("POST", "/users/@me/channels") if c.body)
+    assert opened == ["801", "802"]
+    assert len(fake_discord.dms_to("801")) + len(fake_discord.dms_to("802")) == 1
 
 
 async def test_dm_opt_out_skips_promotion_dm(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:

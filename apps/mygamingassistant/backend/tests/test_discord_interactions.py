@@ -21,6 +21,7 @@ in-memory.  The ``discord_client`` fixture does not need a ``db`` fixture.
 from __future__ import annotations
 
 import json
+import logging
 import time
 from collections.abc import AsyncGenerator
 from typing import Any
@@ -172,6 +173,42 @@ async def test_raid_ping_returns_message(discord_client: AsyncClient) -> None:
     assert data["type"] == 4  # CALLBACK_TYPE_CHANNEL_MESSAGE_WITH_SOURCE
     assert "content" in data["data"]
     assert len(data["data"]["content"]) > 0
+
+
+# ---------------------------------------------------------------------------
+# Arrival age — how much of Discord's 3 s budget was gone before we saw it
+# ---------------------------------------------------------------------------
+
+_DISCORD_EPOCH_MS = 1_420_070_400_000
+
+
+def _snowflake_minted_ago(ms: int) -> str:
+    """A snowflake ID Discord would have created ``ms`` milliseconds ago."""
+    return str((int(time.time() * 1000) - ms - _DISCORD_EPOCH_MS) << 22)
+
+
+def test_snowflake_created_ms() -> None:
+    from app.services.discord.interaction import snowflake_created_ms
+
+    # The worked example from Discord's "Snowflakes" reference docs.
+    assert snowflake_created_ms("175928847299117063") == 1462015105796
+    for not_a_snowflake in (None, "", "abc", "-5", 175928847299117063):
+        assert snowflake_created_ms(not_a_snowflake) is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("age_ms", "level"), [(100, logging.INFO), (2500, logging.WARNING)])
+async def test_interaction_age_is_logged(
+    discord_client: AsyncClient, caplog: pytest.LogCaptureFixture, age_ms: int, level: int
+) -> None:
+    body = _discord_payload(type=1, id=_snowflake_minted_ago(age_ms))
+    with caplog.at_level(logging.INFO, logger="app.api.discord_interactions"):
+        resp = await discord_client.post("/discord/interactions", content=body, headers=_discord_headers(body))
+    assert resp.status_code == 200
+    (record,) = [r for r in caplog.records if r.name == "app.api.discord_interactions"]
+    assert record.levelno == level
+    logged_age = int(record.getMessage().rsplit("age_ms=", 1)[1])
+    assert age_ms <= logged_age < age_ms + 1000
 
 
 # ---------------------------------------------------------------------------
