@@ -1378,7 +1378,6 @@ class TestDocsDisabledInProduction:
 _SHARED_DEV_ONLY_IMPORTS = ("anthropic",)
 
 
-@pytest.mark.parametrize("app", _APPS)
 class TestCILayerRelevance:
     """Each app's ci-<app>.yml must gate backend and frontend jobs separately.
 

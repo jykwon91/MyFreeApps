@@ -93,7 +93,7 @@ jobs:
             FRONTEND=true
           fi
           # packages/ outside the two shared packages → both (ambiguous).
-          PKG_OTHER="$(echo "$FILES" | grep -E '^packages/' | grep -vE '^packages/shared-(backend|frontend)/')"
+          PKG_OTHER="$(echo "$FILES" | grep -E '^packages/' | grep -vE '^packages/shared-(backend|frontend)/' || true)\"
           if [ -n "$PKG_OTHER" ]; then
             BACKEND=true; FRONTEND=true
           fi
@@ -107,7 +107,7 @@ jobs:
           fi
           # apps/mypizzatracker/ outside backend/ or frontend/ (docker/,
           # Caddyfile, docker-compose.yml, etc.) → both (ambiguous infra change).
-          APP_OTHER="$(echo "$FILES" | grep -E '^apps/mypizzatracker/' | grep -vE '^apps/mypizzatracker/(backend|frontend)/')"
+          APP_OTHER="$(echo "$FILES" | grep -E '^apps/mypizzatracker/' | grep -vE '^apps/mypizzatracker/(backend|frontend)/' || true)\"
           if [ -n "$APP_OTHER" ]; then
             BACKEND=true; FRONTEND=true
           fi

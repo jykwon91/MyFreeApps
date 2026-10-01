@@ -114,7 +114,7 @@ jobs:
             FRONTEND=true
           fi
           # packages/ outside the two shared packages → both (ambiguous).
-          PKG_OTHER="$(echo "$FILES" | grep -E '^packages/' | grep -vE '^packages/shared-(backend|frontend)/')"
+          PKG_OTHER="$(echo "$FILES" | grep -E '^packages/' | grep -vE '^packages/shared-(backend|frontend)/' || true)\"
           if [ -n "$PKG_OTHER" ]; then
             BACKEND=true; FRONTEND=true
           fi
@@ -130,7 +130,7 @@ jobs:
           # docker-compose.yml, etc.) → both. The caddy-headers-blob-iframe spec
           # reads apps/mybookkeeper/docker/Caddyfile.docker directly, so a
           # Caddyfile change IS frontend-relevant.
-          APP_OTHER="$(echo "$FILES" | grep -E '^apps/mybookkeeper/' | grep -vE '^apps/mybookkeeper/(backend|frontend)/')"
+          APP_OTHER="$(echo "$FILES" | grep -E '^apps/mybookkeeper/' | grep -vE '^apps/mybookkeeper/(backend|frontend)/' || true)\"
           if [ -n "$APP_OTHER" ]; then
             BACKEND=true; FRONTEND=true
           fi
