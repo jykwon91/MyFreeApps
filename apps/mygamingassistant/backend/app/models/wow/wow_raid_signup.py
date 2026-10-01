@@ -120,7 +120,7 @@ class WowRaidSignup(Base):
     wow_class: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     # Nullable for the same reason as wow_class.
     role: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
-    # Null for sign-ups saved before specs existed, and for declines without a class.
+    # Null for sign-ups saved before specs existed, and for absences without a class.
     spec: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     status: Mapped[str] = mapped_column(
         String(20),

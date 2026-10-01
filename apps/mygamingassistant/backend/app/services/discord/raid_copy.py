@@ -26,6 +26,10 @@ BENCH_NOTE: Final = (
 )
 TENTATIVE_NOTE: Final = "Tentative doesn't hold a seat. Tap **Sign up** on the raid post to take one."
 SEAT_KEPT: Final = "Okay, you keep your seat."
+NO_SEAT_TO_FREE: Final = (
+    "You don't hold a seat any more, so this question is out of date. Use the buttons on the raid post."
+)
+LEFT_QUEUE: Final = "You've left the queue. Tap **Sign up** on the raid post to rejoin it at the back."
 NOT_SIGNED_UP: Final = "You haven't signed up for this raid yet. Tap **Sign up** on the raid post."
 CLASS_PROMPT: Final = "Which class are you bringing? I'll remember it for next time."
 

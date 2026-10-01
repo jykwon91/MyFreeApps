@@ -5,8 +5,9 @@ Flows
 * **One tap** — [Sign up] / [Late] / [Tentative] / [Bench] / [Absence] with
   a known class and spec (this raid's signup, else the remembered class's
   saved spec) changes the status and answers UPDATE_MESSAGE (type 7) with
-  the rebuilt post.  Landing in the queue (raid full) or on the bench adds a
-  private follow-up; players moved up from the queue get a DM.
+  the rebuilt post.  Landing in the queue (raid full), on the bench, or
+  leaving the queue adds a private follow-up; players moved up from the
+  queue get a DM.
 * **Spec unknown** — the class is known (this raid's signup, else the
   remembered class) but not its spec: a private spec select for that class,
   with [Different class] for the class select.  Signups saved before specs
@@ -15,12 +16,15 @@ Flows
   select (skipped when that class already has a saved spec).  Finishing
   saves prefs + the signup and edits the public post via REST.
 * **Change class or spec** (My signup) — the spec select for your class with
-  your spec preselected; picking your own class again does the same.
+  your spec preselected; picking your own class again does the same.  These
+  menus keep the status you have when you pick, however long they sat open.
 * **Seat confirm** — a seat holder tapping [Tentative] / [Bench] / [Absence]
   while players are queued gets a private "free my seat?" card first, since
   the seat goes to the queue at once: [Yes, free my seat] applies it (the
   card becomes the result, the post refreshes via REST), [Keep my seat]
-  changes nothing.
+  changes nothing.  A spec picked for one of those after a queue formed
+  asks the same way (the spec is saved, the seat kept until they answer).
+  Both answers re-check that the player still holds a seat.
 * [Absence] never asks for a class.  Same status again → private
   "You're already …" (no-op).  A raid that has started refuses every button.
 """
@@ -53,9 +57,16 @@ from app.services.discord.raid_views import (
 )
 from app.services.wow import raid_event_service, raid_member_prefs_service, raid_signup_service
 from app.services.wow.raid_catalog import CLASSES_BY_KEY, WowSpecInfo, spec_info
-from app.services.wow.raid_custom_id import RaidCustomId
+from app.services.wow.raid_custom_id import SAME_STATUS, RaidCustomId
 from app.services.wow.raid_embed import build_signup_message
-from app.services.wow.raid_roster import ABSENCE_STATUS, BENCH_STATUS, QUEUED_STATUS, hands_seat_to_queue
+from app.services.wow.raid_roster import (
+    ABSENCE_STATUS,
+    BENCH_STATUS,
+    QUEUED_STATUS,
+    SEAT_STATUSES,
+    TENTATIVE_STATUS,
+    hands_seat_to_queue,
+)
 from app.services.wow.raid_signup_service import StatusChange
 
 
@@ -117,12 +128,19 @@ async def _request_status(
 
 
 def _private_note(change: StatusChange, requested: str) -> str | None:
-    """What the public post can't say: your place in the queue, or what bench means."""
+    """What the public post can't say: your place in the queue, what bench means, or that you left the queue."""
     if change.queued:
         return raid_copy.queued_note(change.queue_position, asked_late=requested == "late")
     if change.status == BENCH_STATUS:
         return raid_copy.BENCH_NOTE
+    if _left_the_queue(change):
+        return raid_copy.LEFT_QUEUE
     return None
+
+
+def _left_the_queue(change: StatusChange) -> bool:
+    """A queued player chose tentative or absence (the bench note covers the bench)."""
+    return change.previous == QUEUED_STATUS and change.status in (TENTATIVE_STATUS, ABSENCE_STATUS)
 
 
 def _already(change: StatusChange, requested: str, spec: WowSpecInfo | None) -> str:
@@ -217,13 +235,32 @@ async def _finish_pick(
     spec: WowSpecInfo,
     background: BackgroundTasks,
 ) -> dict[str, Any]:
-    """Save the spec as the member's default + the signup; refresh the public post via REST."""
+    """Save the spec as the member's default + the signup; refresh the public post via REST.
+
+    The menu may have sat open, so the status is checked against the raid as
+    it is now: ``same`` keeps the status the player has, and giving a seat to
+    a queue that formed meanwhile asks first, like the buttons on the post.
+    """
+    seat_card: dict[str, Any] | None = None
     async with unit_of_work() as db:
         context = await load_event(db, interaction, event_id, lock=True)
         if context is None:
             return update_text_response(raid_copy.NOT_FOUND)
         if context.event.starts_at <= utcnow():
             return update_text_response(raid_copy.RAID_STARTED)
+        signups = await wow_raid_signup_repo.list_for_event(db, context.event.id)
+        mine = next((s for s in signups if s.discord_user_id == interaction.user_id), None)
+        requested = status
+        if status == SAME_STATUS:
+            if mine is None:
+                return update_text_response(raid_copy.NOT_SIGNED_UP)
+            requested = _status_to_keep(mine)
+        applied = requested
+        if mine is not None and hands_seat_to_queue(
+            signups, discord_user_id=interaction.user_id, requested_status=requested
+        ):
+            applied = mine.status  # save the spec, keep the seat until they answer
+            seat_card = release_confirm_data(context.event, requested)
         first_save = await raid_member_prefs_service.remember_spec(
             db, guild=context.guild, discord_user_id=interaction.user_id, spec=spec
         )
@@ -232,7 +269,7 @@ async def _finish_pick(
             event=context.event,
             discord_user_id=interaction.user_id,
             display_name=interaction.display_name,
-            requested_status=status,
+            requested_status=applied,
             wow_class=spec.class_key,
             role=spec.raid_role,
             spec=spec.key,
@@ -242,7 +279,16 @@ async def _finish_pick(
     if change.outcome == "changed":
         background.add_task(raid_publisher.refresh_public_message, event_id)
     background.add_task(raid_publisher.notify_promoted, event_id, dm_ids)
-    return update_text_response(_pick_result(change, status, spec, first_save))
+    if seat_card is not None:
+        return update_response(seat_card)
+    return update_text_response(_pick_result(change, requested, spec, first_save))
+
+
+def _status_to_keep(mine: WowRaidSignup) -> str:
+    """``same``: the status you have now — asking for a seat keeps a queued player's place."""
+    if mine.status == QUEUED_STATUS:
+        return "confirmed"
+    return mine.status
 
 
 def _pick_result(change: StatusChange, requested: str, spec: WowSpecInfo, first_save: bool) -> str:
@@ -255,6 +301,8 @@ def _pick_result(change: StatusChange, requested: str, spec: WowSpecInfo, first_
         text = f"{raid_copy.saved_as(label)}\n{note}"
     elif change.status != "confirmed":
         text = raid_copy.marked_as(change.status, label)
+        if _left_the_queue(change):
+            text = f"{text}\n{raid_copy.LEFT_QUEUE}"
     elif change.previous == "confirmed":
         text = raid_copy.switched_to(label)
     else:
@@ -277,6 +325,10 @@ async def handle_release(interaction: Interaction, parsed: RaidCustomId, backgro
         mine = await wow_raid_signup_repo.get(db, event_id=context.event.id, discord_user_id=interaction.user_id)
         if mine is None:
             return update_text_response(raid_copy.NOT_SIGNED_UP)
+        if mine.status == status:
+            return update_text_response(raid_copy.already_in_status(status))  # tapped twice
+        if mine.status not in SEAT_STATUSES:
+            return update_text_response(raid_copy.NO_SEAT_TO_FREE)  # the seat went some other way
         change = await raid_signup_service.change_status(
             db,
             event=context.event,
@@ -287,8 +339,6 @@ async def handle_release(interaction: Interaction, parsed: RaidCustomId, backgro
             role=mine.role,
             spec=mine.spec,
         )
-        if change.outcome == "unchanged":
-            return update_text_response(raid_copy.already_in_status(change.status))
         dm_ids = await raid_event_service.dm_recipients(db, guild=context.guild, user_ids=change.promoted)
 
     background.add_task(raid_publisher.refresh_public_message, parsed.event_id)
@@ -298,7 +348,19 @@ async def handle_release(interaction: Interaction, parsed: RaidCustomId, backgro
 
 async def handle_stay(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
     """[Keep my seat] — nothing changes."""
-    return update_text_response(raid_copy.SEAT_KEPT)
+    assert parsed.event_id is not None
+    async with unit_of_work() as db:
+        context = await load_event(db, interaction, parsed.event_id, lock=False)
+        if context is None:
+            return update_text_response(raid_copy.NOT_FOUND)
+        if context.event.starts_at <= utcnow():
+            return update_text_response(raid_copy.RAID_STARTED)
+        mine = await wow_raid_signup_repo.get(db, event_id=context.event.id, discord_user_id=interaction.user_id)
+        if mine is None:
+            return update_text_response(raid_copy.NOT_SIGNED_UP)
+        if mine.status not in SEAT_STATUSES:
+            return update_text_response(raid_copy.NO_SEAT_TO_FREE)
+        return update_text_response(raid_copy.SEAT_KEPT)
 
 
 def _current_spec(signup: WowRaidSignup | None) -> WowSpecInfo | None:
@@ -328,14 +390,12 @@ async def handle_change(interaction: Interaction, parsed: RaidCustomId, backgrou
         mine = await wow_raid_signup_repo.get(db, event_id=context.event.id, discord_user_id=interaction.user_id)
         if mine is None:
             return update_text_response(raid_copy.NOT_SIGNED_UP)
-        # Nobody can ask to be queued; asking for a seat keeps a queued player's place.
-        status = mine.status
-        if status == QUEUED_STATUS:
-            status = "confirmed"
+        # The menus carry ``same``: you keep the status you have when you pick.
         if mine.wow_class not in CLASSES_BY_KEY:
-            return update_response(class_picker_data(context.event, status, emojis=emojis.current()))
+            return update_response(class_picker_data(context.event, SAME_STATUS, emojis=emojis.current()))
+        current = _current_spec(mine)
         return update_response(
-            spec_picker_data(context.event, status, mine.wow_class, current=_current_spec(mine), emojis=emojis.current())
+            spec_picker_data(context.event, SAME_STATUS, mine.wow_class, current=current, emojis=emojis.current())
         )
 
 

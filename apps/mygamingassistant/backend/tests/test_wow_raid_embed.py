@@ -26,6 +26,7 @@ from app.services.wow.raid_embed import (
     embed_length,
     escape_name,
 )
+from app.services.wow.raid_roster import order_numbers
 
 # Sat Oct 10 2026, 20:00 America/New_York
 _STARTS = datetime(2026, 10, 11, 0, 0, tzinfo=timezone.utc)
@@ -152,6 +153,15 @@ def test_role_fields_group_by_class_in_signup_order() -> None:
     assert fields["Healers (1)"] == "[PRI] Priest ×1: Heals"
     assert fields["DPS (1)"] == "[ROG] Rogue ×1: Rogue"
     assert all(field["inline"] is False for field in embed["fields"])
+
+
+def test_same_signup_time_lists_players_in_order_number_order() -> None:
+    bee = _signup("Bee")
+    ann = _signup("Ann")
+    bee.discord_user_id, ann.discord_user_id = "200", "100"
+    embed = _embed(build_signup_message(_event(), [bee, ann], _guild(), emojis=EMPTY_EMOJIS))
+    assert _fields_by_name(embed)["Tanks (2)"] == "[WAR] Warrior ×2: Ann, Bee"
+    assert order_numbers([bee, ann]) == {"100": 1, "200": 2}
 
 
 def test_status_fields_and_empty_roles() -> None:

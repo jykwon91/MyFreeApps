@@ -8,7 +8,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.models.wow.wow_raid_event import RAID_KEYS
-from app.models.wow.wow_raid_signup import RAID_ROLES, SIGNUP_STATUSES, WOW_CLASSES
+from app.models.wow.wow_raid_signup import RAID_ROLES, WOW_CLASSES
 from app.schemas.wow.raid import (
     MemberPrefUpsert,
     RaidEventCreate,
@@ -16,6 +16,7 @@ from app.schemas.wow.raid import (
     RaidGuildUpsert,
     RaidSignupUpsert,
 )
+from app.services.wow.raid_roster import REQUESTABLE_STATUSES
 
 
 # ---------------------------------------------------------------------------
@@ -149,7 +150,7 @@ def test_all_valid_wow_classes():
 
 
 def test_all_valid_statuses():
-    for status in SIGNUP_STATUSES:
+    for status in REQUESTABLE_STATUSES:
         s = RaidSignupUpsert(
             discord_user_id="1",
             display_name="X",
@@ -165,6 +166,11 @@ def test_invalid_status_rejected():
             display_name="X",
             status="afk",
         )
+
+
+def test_queued_is_assigned_by_the_bot_never_requested():
+    with pytest.raises(ValidationError, match="status"):
+        RaidSignupUpsert(discord_user_id="1", display_name="X", status="queued")
 
 
 def test_invalid_class_rejected():

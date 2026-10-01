@@ -579,6 +579,8 @@ async def test_started_raid_refuses_signups(post: Post, db: AsyncSession, fake_d
     assert content(response) == raid_copy.RAID_STARTED
     response = await post(click(f"raid:v1:release:{event.id}:absence", user_id="202"))
     assert content(response) == raid_copy.RAID_STARTED
+    response = await post(click(f"raid:v1:stay:{event.id}", user_id="202"))
+    assert content(response) == raid_copy.RAID_STARTED
     assert (await _signups(db, event)) == {}
 
 
@@ -991,6 +993,100 @@ async def test_keeping_the_seat_changes_nothing(post: Post, db: AsyncSession, fa
     # A stale card from someone who has since left.
     response = await post(click(f"raid:v1:release:{event.id}:absence", user_id="1004"))
     assert content(response) == raid_copy.NOT_SIGNED_UP
+
+
+async def test_an_old_seat_card_changes_nothing_once_the_seat_is_gone(
+    post: Post, db: AsyncSession, fake_discord: FakeDiscord
+) -> None:
+    await _setup(post)
+    event = await _create_and_post(post, db)
+    for user_id in ("1110", "1111", "1112", "1113", "1101", "1103"):  # five seats, then 1103 is queued
+        await _save_prefs(post, user_id)
+        await post(click(_signup_id(event), user_id=user_id))
+    bench_card = await post(click(f"raid:v1:status:{event.id}:bench", user_id="1101"))
+    absence_card = await post(click(f"raid:v1:status:{event.id}:absence", user_id="1101"))
+    release_absence = custom_id_for(absence_card, "release")
+    await post(click(release_absence, user_id="1101"))
+    assert (await _signups(db, event))["1101"] == "absence"
+
+    # Tapped twice: still absent, and it says so.
+    response = await post(click(release_absence, user_id="1101"))
+    assert content(response) == raid_copy.already_in_status("absence")
+    # The bench card from before has no seat left to free or keep.
+    fake_discord.clear()
+    for action in ("release", "stay"):
+        response = await post(click(custom_id_for(bench_card, action), user_id="1101"))
+        assert response["type"] == 7
+        assert content(response) == raid_copy.NO_SEAT_TO_FREE
+    assert (await _signups(db, event))["1101"] == "absence"
+    assert fake_discord.public_edits() == []
+
+
+async def test_an_old_change_menu_keeps_the_status_you_have_now(
+    post: Post, db: AsyncSession, fake_discord: FakeDiscord
+) -> None:
+    await _setup(post)
+    event = await _create_and_post(post, db)
+    await _save_prefs(post, "1201")
+    await post(click(f"raid:v1:status:{event.id}:bench", user_id="1201"))
+    menu = await post(click(f"raid:v1:change:{event.id}", user_id="1201"))
+    spec_id = custom_id_for(menu, "spec")
+    assert spec_id == f"raid:v1:spec:{event.id}:mage:same"
+
+    # They take a seat from the post while the menu sits open...
+    await post(click(_signup_id(event), user_id="1201"))
+    # ...so picking from it switches the spec and keeps the seat.
+    response = await post(click(spec_id, user_id="1201", values=["mage.fire"]))
+    assert content(response) == raid_copy.switched_to("Fire Mage")
+    row = await _signup_row(db, event, "1201")
+    assert (row.status, row.spec) == ("confirmed", "fire")
+
+
+async def test_a_spec_picked_after_a_queue_formed_asks_before_freeing_the_seat(
+    post: Post, db: AsyncSession, fake_discord: FakeDiscord
+) -> None:
+    await _setup(post)
+    event = await _create_and_post(post, db)
+    # A seat from before the bot asked for classes.
+    await wow_raid_signup_repo.upsert_signup(
+        db, event_id=event.id, discord_user_id="1301", display_name="Old", status="confirmed"
+    )
+    menu = await post(click(f"raid:v1:status:{event.id}:tentative", user_id="1301"))
+    class_id = custom_id_for(menu, "class")
+    # The raid fills and a queue forms while the menu sits open.
+    for user_id in ("1302", "1303", "1304", "1305", "1306"):
+        await _save_prefs(post, user_id)
+        await post(click(_signup_id(event), user_id=user_id))
+    assert (await _signups(db, event))["1306"] == "queued"
+
+    response = await post(click(class_id, user_id="1301", values=["mage"]))
+    response = await post(click(custom_id_for(response, "spec"), user_id="1301", values=["mage.frost"]))
+    assert response["type"] == 7
+    assert content(response) == raid_copy.release_prompt("tentative")
+    assert custom_ids(response) == [f"raid:v1:release:{event.id}:tentative", f"raid:v1:stay:{event.id}"]
+    row = await _signup_row(db, event, "1301")
+    assert (row.status, row.spec) == ("confirmed", "frost")  # the spec is saved, the seat kept
+    assert (await _signups(db, event))["1306"] == "queued"
+
+    response = await post(click(custom_id_for(response, "release"), user_id="1301"))
+    assert content(response) == raid_copy.seat_released("tentative", handed_on=True)
+    assert (await _signups(db, event))["1306"] == "confirmed"
+
+
+async def test_leaving_the_queue_needs_no_card_but_says_so(
+    post: Post, db: AsyncSession, fake_discord: FakeDiscord
+) -> None:
+    await _setup(post)
+    event = await _create_and_post(post, db)
+    for user_id in ("1401", "1402", "1403", "1404", "1405", "1406"):  # 1406 is queued
+        await _save_prefs(post, user_id)
+        await post(click(_signup_id(event), user_id=user_id))
+    fake_discord.clear()
+    response = await post(click(f"raid:v1:status:{event.id}:tentative", user_id="1406"))
+    assert response["type"] == 7  # a place in the queue isn't a seat, so no card
+    (followup,) = fake_discord.find("POST", f"/webhooks/{APP_ID}/{TOKEN}")
+    assert followup.body is not None and followup.body["content"] == raid_copy.LEFT_QUEUE
+    assert (await _signups(db, event))["1406"] == "tentative"
 
 
 async def test_keep_raid_leaves_it_scheduled(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:

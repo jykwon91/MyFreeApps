@@ -45,6 +45,8 @@ TENTATIVE_STATUS: Final = "tentative"
 ABSENCE_STATUS: Final = "absence"
 # The numbered line: seat holders, then the queue behind them.
 LINE_STATUSES: Final = (*SEAT_STATUSES, QUEUED_STATUS)
+# What a member can ask for; only the bot puts anyone in the queue.
+REQUESTABLE_STATUSES: Final = tuple(s for s in SIGNUP_STATUSES if s != QUEUED_STATUS)
 
 
 @dataclass(frozen=True)
@@ -233,13 +235,18 @@ def queue_position(signups: Iterable[WowRaidSignup], discord_user_id: str) -> in
     )
 
 
+def in_line_order(signups: Iterable[WowRaidSignup]) -> list[WowRaidSignup]:
+    """Earliest ``signed_up_at`` first, ties by user id: the order every list shows."""
+    return sorted(signups, key=_line_key)
+
+
 def ordered_user_ids(signups: Iterable[WowRaidSignup]) -> list[str]:
     """User ids in signup order, earliest first, so mentions read like the roster.
 
     Ties go by user id, so two workers scheduling the same players insert
     their rows in the same order (no deadlock between them).
     """
-    return [s.discord_user_id for s in sorted(signups, key=_line_key)]
+    return [s.discord_user_id for s in in_line_order(signups)]
 
 
 def _line_key(signup: WowRaidSignup) -> tuple[datetime, str]:

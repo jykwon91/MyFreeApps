@@ -27,8 +27,8 @@ from app.services.wow.raid_catalog import (
     spec_info,
     spec_list_text,
 )
-from app.services.wow.raid_custom_id import MAX_CUSTOM_ID_LEN, RELEASE_STATUSES, REQUESTABLE_STATUSES
-from app.services.wow.raid_roster import SEAT_STATUSES
+from app.services.wow.raid_custom_id import MAX_CUSTOM_ID_LEN, RELEASE_STATUSES, SAME_STATUS
+from app.services.wow.raid_roster import REQUESTABLE_STATUSES, SEAT_STATUSES
 
 _EVENT = uuid.UUID("ffffffff-ffff-4fff-bfff-ffffffffffff")
 _CLASSES_TS = Path(__file__).resolve().parents[2] / "frontend/src/games/wow-forever/data/classes.ts"
@@ -153,6 +153,14 @@ def test_round_trip() -> None:
     assert raid_custom_id.parse(stay_id) == raid_custom_id.RaidCustomId("stay", _EVENT)
 
 
+def test_menus_from_my_signup_keep_the_status_you_have() -> None:
+    spec_id = raid_custom_id.encode("spec", _EVENT, "mage", SAME_STATUS)
+    assert raid_custom_id.parse(spec_id) == raid_custom_id.RaidCustomId("spec", _EVENT, ("mage", "same"))
+    for action in ("class", "pickclass"):
+        custom_id = raid_custom_id.encode(action, _EVENT, SAME_STATUS)
+        assert raid_custom_id.parse(custom_id) == raid_custom_id.RaidCustomId(action, _EVENT, ("same",))
+
+
 def test_a_seat_can_be_given_up_for_every_status_that_holds_none() -> None:
     assert set(RELEASE_STATUSES) == set(REQUESTABLE_STATUSES) - set(SEAT_STATUSES)
 
@@ -182,10 +190,12 @@ def test_encode_rejects_overlong() -> None:
         f"raid:v1:signup:{_EVENT}:extra",
         f"raid:v1:status:{_EVENT}",
         f"raid:v1:status:{_EVENT}:queued",  # the bot assigns queued; nobody requests it
+        f"raid:v1:status:{_EVENT}:same",  # only the menus keep your status
         f"raid:v1:status:{_EVENT}:yolo",
         f"raid:v1:role:{_EVENT}:confirmed:mage",
         f"raid:v1:role:{_EVENT}:confirmed:necromancer:dps",
         f"raid:v1:role:{_EVENT}:confirmed:mage:support",
+        f"raid:v1:role:{_EVENT}:same:mage:dps",  # menus from before specs never carried it
         f"raid:v1:spec:{_EVENT}:mage",
         f"raid:v1:spec:{_EVENT}:necromancer:confirmed",
         f"raid:v1:spec:{_EVENT}:mage:queued",
@@ -195,6 +205,7 @@ def test_encode_rejects_overlong() -> None:
         f"raid:v1:release:{_EVENT}",
         f"raid:v1:release:{_EVENT}:confirmed",  # a seat status keeps the seat
         f"raid:v1:release:{_EVENT}:queued",
+        f"raid:v1:release:{_EVENT}:same",
         f"raid:v1:stay:{_EVENT}:absence",
         f"raid:v1:explode:{_EVENT}",
         "raid:v1:testdm:extra",

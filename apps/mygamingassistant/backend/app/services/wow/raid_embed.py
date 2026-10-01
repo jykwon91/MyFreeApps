@@ -58,7 +58,7 @@ from app.services.wow.raid_catalog import (
     raid_name,
     spec_info,
 )
-from app.services.wow.raid_roster import RosterSummary, compute_roster_summary
+from app.services.wow.raid_roster import RosterSummary, compute_roster_summary, in_line_order
 
 COLOR_OPEN: Final = 0x5865F2
 COLOR_FULL: Final = 0xE67E22
@@ -335,7 +335,7 @@ def _color(event: WowRaidEvent, summary: RosterSummary) -> int:
 
 
 def _fit_fields(signups: Sequence[WowRaidSignup], emojis: EmojiSet, *, fixed_len: int) -> list[dict[str, Any]]:
-    ordered = sorted(signups, key=lambda s: s.signed_up_at)
+    ordered = in_line_order(signups)
     role_groups = _role_groups(ordered)
     status_groups = {
         status: [_entry(s) for s in ordered if s.status == status] for status, _ in _STATUS_FIELDS

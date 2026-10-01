@@ -55,6 +55,7 @@ from app.services.wow.raid_roster import (
     QUEUED_STATUS,
     TENTATIVE_STATUS,
     compute_roster_summary,
+    in_line_order,
     order_numbers,
     queue_position,
 )
@@ -258,7 +259,7 @@ def roster_data(
     Seat holders carry their order number (`12`); the queue lists each
     player's place in it (#1 moves up first).
     """
-    ordered = sorted(signups, key=lambda s: (s.signed_up_at, s.discord_user_id))
+    ordered = in_line_order(signups)
     summary = compute_roster_summary(ordered, size_cap=event.size_cap)
     seat_marks = {user_id: f"`{number}`" for user_id, number in order_numbers(ordered).items()}
     queue_marks = {s.discord_user_id: f"#{place}" for place, s in enumerate(summary.queue, start=1)}
