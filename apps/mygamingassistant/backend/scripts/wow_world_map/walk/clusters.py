@@ -5,7 +5,9 @@ Neighbouring polygons with the same label (room / sub-area) and medium
 yards out (:data:`INDOOR_RADIUS` indoors and in capital cities, where the
 directions turn by turn). A cluster edge costs the travel
 time between the two clusters' centre polygons over the polygon graph, in
-"ground yards" (yards at run speed); lifts and portals add their own edges.
+"ground yards" (yards at run speed); lifts and portals add their own edges,
+and in a dungeon so do one-way teleports and drops (``drops.py``) — edges of
+the kinds in ``links.ONE_WAY`` go a -> b only.
 
 Only the parts of the navmesh a player can reach are kept: those joined (on
 foot, by lift or portal) to a travel hub, or — on a map without hubs — every
@@ -21,7 +23,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from scripts.wow_world_map.walk.links import EDGE_LIFT, Link, snap_point
+from scripts.wow_world_map.walk.drops import find_drops
+from scripts.wow_world_map.walk.links import EDGE_LIFT, EDGE_TELEPORT, Link, snap_point
 from scripts.wow_world_map.walk.walk_graph import Label, PolyGraph
 
 RUN_SPEED = 7.0
@@ -46,7 +49,7 @@ class WalkGraph:
     water: np.ndarray  # (n,) bool
     edges: np.ndarray  # (m, 2) node pairs
     cost: np.ndarray  # (m,) ground yards
-    kind: np.ndarray  # (m,) EDGE_WALK / links.EDGE_LIFT / links.EDGE_PORTAL
+    kind: np.ndarray  # (m,) EDGE_WALK / links.EDGE_* (a one-way kind goes a -> b)
     labels: list[Label]
     # The node each anchor (travel hub) stands on, snapped against the polygons
     # before clustering — a cluster's centre can be well off the pier it covers.
@@ -187,11 +190,23 @@ def _snap_links(polys: PolyGraph, indptr: list[int], indices: list[int],
     for link in links:
         a, b = snap_point(polys.centroid, reach, link.a), snap_point(polys.centroid, reach, link.b)
         if a is None or b is None or a == b:
-            what = "lift" if link.kind == EDGE_LIFT else "portal"
+            what = {EDGE_LIFT: "lift", EDGE_TELEPORT: "teleport"}.get(link.kind, "portal")
             print(f"  {what} at ({link.a[0]:.0f}, {link.a[1]:.0f}) has no floor at one end — skipped")
             continue
         out.append((a, b, link.cost, link.kind))
     return out
+
+
+def _components(polys: PolyGraph, indptr: list[int], indices: list[int],
+                special: list[tuple[int, int, float, int]]) -> tuple[np.ndarray, np.ndarray]:
+    """Connected pieces of floor (a one-way link joins both ends: it decides what's
+    kept, not the route) and each piece's area."""
+    extra: dict[int, list[int]] = defaultdict(list)
+    for a, b, _, _ in special:
+        extra[a].append(b)
+        extra[b].append(a)
+    comp = np.array(components(indptr, indices, len(polys), extra))
+    return comp, np.bincount(comp, weights=polys.area)
 
 
 def _grow(seed: int, radius2: float, indptr: list[int], indices: list[int], owner: list[int], k: int,
@@ -221,14 +236,17 @@ def cluster(polys: PolyGraph, poly_label: np.ndarray, labels: list[Label], links
     water = polys.water.tolist()
     lab = poly_label.tolist()
     special = _snap_links(polys, indptr, indices, links)
-    extra: dict[int, list[int]] = defaultdict(list)
-    for a, b, _, _ in special:
-        extra[a].append(b)
-        extra[b].append(a)
-    comp = np.array(components(indptr, indices, n, extra))
-    comp_area = np.bincount(comp, weights=polys.area)
+    comp, comp_area = _components(polys, indptr, indices, special)
     if fine:
         snapped = snap_inside(polys.centroid, polys.water, comp, comp_area, anchors)
+        if polys.ledge is not None:
+            reached = {int(comp[p]) for p, a in zip(snapped, anchors) if p is not None and a.keeps}
+            wanted = {int(comp[p]) for p, a in zip(snapped, anchors) if p is not None and not a.keeps}
+            drops = find_drops(polys, comp, comp_area, reached, wanted, MIN_COMPONENT_AREA)
+            if drops:
+                special += drops
+                comp, comp_area = _components(polys, indptr, indices, special)
+                snapped = snap_inside(polys.centroid, polys.water, comp, comp_area, anchors)
     else:
         snapped = [snap_hub(polys.centroid, polys.water, comp, comp_area, a) for a in anchors]
     anchored = {int(comp[p]) for p, a in zip(snapped, anchors) if p is not None and a.keeps}
@@ -275,7 +293,7 @@ def cluster(polys: PolyGraph, poly_label: np.ndarray, labels: list[Label], links
             kinds.append(kind)
     anchor_node = [None if p is None or owner[p] < 0 else owner[p] for p in snapped]
     rep = np.array(reps, dtype=np.int64)
-    print(f"  clusters: {len(members)}, edges: {len(edges)} ({len(special)} lifts / portals), "
+    print(f"  clusters: {len(members)}, edges: {len(edges)} ({len(special)} lifts / portals / drops), "
           f"kept {keep.mean():.0%} of polygons")
     return WalkGraph(polys.centroid[rep], poly_label[rep], polys.water[rep],
                      np.array(edges, dtype=np.int64).reshape(-1, 2), np.array(costs),

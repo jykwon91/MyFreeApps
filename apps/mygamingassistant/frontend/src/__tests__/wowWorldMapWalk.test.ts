@@ -18,7 +18,7 @@ import {
   WALK_EDGE,
   type WalkGraph,
 } from "@/games/wow-forever/worldMap/walkGraph";
-import { describeWalk } from "@/games/wow-forever/worldMap/walkSteps";
+import { describeWalk, walkLeg } from "@/games/wow-forever/worldMap/walkSteps";
 import { encode, type TestEdge, type TestNode } from "./wowWalkFile";
 
 const LABELS: [string, string, number, number?][] = [
@@ -184,6 +184,44 @@ describe("walking through a city", () => {
       "Step on the teleporter up to The Gilded Rose",
       "Head north, ~40 yd",
     ]);
+  });
+
+  it("drops off a ledge one way only", () => {
+    const nodes: TestNode[] = [
+      { x: 0, y: 0, z: 20, label: 0 },
+      { x: 40, y: 0, z: 20, label: 0 },
+      { x: 45, y: 0, z: 12, label: 1 },
+      { x: 85, y: 0, z: 12, label: 1 },
+    ];
+    const edges: TestEdge[] = [[0, 1, 40], [1, 2, 10, WALK_EDGE.drop], [2, 3, 40]];
+    const g = decodeWalkGraph(encode(0, nodes, edges, CITY_LABELS));
+    expect(describeWalk(g, walkPath(g, 0, 3) ?? [])).toEqual([
+      "Head north, ~40 yd, through Trade District",
+      "Drop down from the ledge to The Gilded Rose (no way back up)",
+      "Head north, ~40 yd",
+    ]);
+    expect(walkPath(g, 3, 0)).toBeNull();
+  });
+
+  it("takes a one-way teleporter forward, never back", () => {
+    const nodes: TestNode[] = [
+      { x: 0, y: 0, z: 0, label: 0 },
+      { x: 40, y: 0, z: 0, label: 0 },
+      { x: 2000, y: 500, z: -150, label: 1 },
+      { x: 2040, y: 500, z: -150, label: 1 },
+    ];
+    const edges: TestEdge[] = [[0, 1, 40], [1, 2, 35, WALK_EDGE.teleport], [2, 3, 40]];
+    const g = decodeWalkGraph(encode(0, nodes, edges, CITY_LABELS));
+    expect(describeWalk(g, walkPath(g, 0, 3) ?? [])).toEqual([
+      "Head north, ~40 yd, through Trade District",
+      "Step on the teleporter to The Gilded Rose (one way)",
+      "Head north, ~40 yd",
+    ]);
+    expect(walkPath(g, 2, 1)).toBeNull();
+    expect(g.start[g.size]).toBe(5); // two-way edges twice, the teleporter once
+    // The teleporter covers no ground: 40 yd before it, 40 after.
+    const end = (wx: number, wy: number) => ({ continent: 0, wx, wy });
+    expect(walkLeg(g, 0, 3, end(0, 0), end(2040, 500))?.yards).toBe(80);
   });
 
   it("doesn't name a short patch of another area crossed on the way", () => {

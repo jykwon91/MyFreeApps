@@ -33,8 +33,9 @@ from scripts.wow_world_map.walk.export import (
     write_walk,
 )
 from scripts.wow_world_map.walk.floors import Floors, Triangles, floor_under
-from scripts.wow_world_map.walk.links import EDGE_LIFT, EDGE_PORTAL, PORTAL_COST_YARDS
-from scripts.wow_world_map.walk.navfile import BORDER_FLAG, NULL_INDEX
+from scripts.wow_world_map.walk.drops import DROP_COST_YARDS, find_drops
+from scripts.wow_world_map.walk.links import EDGE_DROP, EDGE_LIFT, EDGE_PORTAL, EDGE_TELEPORT, PORTAL_COST_YARDS
+from scripts.wow_world_map.walk.navfile import BORDER_FLAG, NULL_INDEX, read_nav
 from scripts.wow_world_map.walk.terrain import global_wmo
 from scripts.wow_world_map.walk.walk_graph import (
     CELLS,
@@ -82,6 +83,21 @@ def test_polygons_on_either_side_of_a_tile_border_are_joined(tmp_path: Path) -> 
     assert len(polys) == 2
     assert _neighbours(polys, 0) == [1]
     assert _neighbours(polys, 1) == [0]
+
+
+def test_the_tile_size_comes_from_the_cell_size(tmp_path: Path) -> None:
+    # 0.5 yd cells: 256 of them a side is a quarter of a terrain tile.
+    _write_nav(tmp_path / "0_0.nav", [_quad_part(0, 2, 2, by=10.0)])
+    assert read_nav(tmp_path / "0_0.nav")[0].subtiles == 4
+
+
+def test_a_dungeon_load_keeps_the_open_edges_and_corners(tmp_path: Path) -> None:
+    _write_nav(tmp_path / "0_0.nav", [_quad_part(0, 2, 2, by=10.0)])
+    polys = load_polys(tmp_path, ledges=True)
+    assert polys.ledge.shape == (3, 2, 3)  # the tile-border edge isn't open
+    assert polys.ledge_poly.tolist() == [0, 0, 0]
+    assert len(polys.corner) == 4
+    assert load_polys(tmp_path).ledge is None
 
 
 def test_a_border_with_a_ledge_is_not_joined(tmp_path: Path) -> None:
@@ -183,11 +199,60 @@ def test_portals_link_only_as_a_pair(monkeypatch: pytest.MonkeyPatch) -> None:
         {"id": i, "target_map": 1, "target_position_x": x, "target_position_y": y, "target_position_z": z}
         for i, (x, y, z) in teleport.items()
     ]}
-    found = links._portal_links(1, tables)
-    assert found == [
+    pair = [
         links.Link(trigger[1], teleport[1], PORTAL_COST_YARDS, EDGE_PORTAL),
         links.Link(trigger[2], teleport[2], PORTAL_COST_YARDS, EDGE_PORTAL),
     ]
+    assert links._portal_links(1, tables, one_way=False) == pair
+    # Inside a dungeon the unpaired one is a one-way teleport (Naxxramas' Frostwyrm Lair).
+    assert links._portal_links(1, tables, one_way=True) == pair + [
+        links.Link(trigger[3], teleport[3], PORTAL_COST_YARDS, EDGE_TELEPORT)]
+
+
+# --- drops ------------------------------------------------------------------
+
+def _ledge_graph() -> PolyGraph:
+    """A floor at z 20 (0, 1) ending in a ledge at x 50; below it at z 12, a
+    floor past the ledge (2, 3: a boss), a floor past it to the side (4, 5:
+    nobody) and a cellar under the floor itself (6, 7)."""
+    centroid = [(0, 0, 20), (40, 0, 20), (60, 0, 12), (90, 0, 12),
+                (60, 200, 12), (90, 200, 12), (20, 0, 12), (30, 0, 12)]
+    polys = _poly_graph(centroid, [(0, 1), (2, 3), (4, 5), (6, 7)])
+    polys.ledge = np.array([[[50, -5, 20], [50, 5, 20]], [[50, 195, 20], [50, 205, 20]]], dtype=float)
+    polys.ledge_poly = np.array([1, 1])
+    polys.corner = np.array([[53, 0, 12], [53, 200, 12], [25, 0, 12]], dtype=float)
+    polys.corner_poly = np.array([2, 4, 6])
+    return polys
+
+
+def test_a_drop_reaches_a_boss_floor_only_off_a_ledge_past_it() -> None:
+    polys = _ledge_graph()
+    comp, area = _comp(polys.centroid, [(0, 1), (2, 3), (4, 5), (6, 7)])
+    drops = find_drops(polys, comp, area * 400, reached={int(comp[0])}, wanted={int(comp[2])}, min_area=600)
+    assert drops == [(1, 2, 3.0 + DROP_COST_YARDS, EDGE_DROP)]
+    # Nothing for the floor nobody needs, nor the cellar under the floor (not past the ledge).
+    assert find_drops(polys, comp, area * 400, {int(comp[0])}, {int(comp[6])}, 600) == []
+
+
+def test_a_drop_is_never_a_shortcut_between_joined_floors() -> None:
+    polys = _ledge_graph()
+    comp, area = _comp(polys.centroid, [(0, 1), (2, 3), (1, 3), (4, 5), (6, 7)])
+    assert find_drops(polys, comp, area * 400, {int(comp[0])}, {int(comp[2])}, 600) == []
+
+
+def test_a_one_way_edge_has_no_way_back_in_the_hub_matrix() -> None:
+    graph = WalkGraph(
+        position=np.array([[0.0, 0.0, 20.0], [10.0, 0.0, 12.0]]),
+        label=np.array([0, 0]),
+        water=np.array([False, False]),
+        edges=np.array([[0, 1]]),
+        cost=np.array([8.0]),
+        kind=np.array([EDGE_DROP], dtype=np.uint8),
+        labels=[Label("Wailing Caverns", "The Barrens", True, False)],
+        anchor_node=[0, 1],
+    )
+    _, _, matrix = hub_matrix(graph, [Hub("e228", 0, 0, 20), Hub("b585", 10, 0, 12, keeps=False)])
+    assert matrix.tolist() == [[0, 8], [UNREACHABLE, 0]]
 
 
 # --- clustering -------------------------------------------------------------

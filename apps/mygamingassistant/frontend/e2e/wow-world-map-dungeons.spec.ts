@@ -46,3 +46,21 @@ test("the phone layout never scrolls sideways with a boss route open", async ({ 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test("a boss past a one-way drop routes over the ledge (Wailing Caverns)", async ({ page }) => {
+  await page.goto("/wow-forever/map");
+  await page.getByRole("radio", { name: "Horde" }).click();
+  await page.getByLabel("Zone").selectOption({ label: "The Barrens" });
+  await page.getByLabel("Level").fill("18");
+  await page.getByRole("combobox", { name: "Where are you?" }).fill("46, 36");
+  await page.getByRole("button", { name: "Set", exact: true }).click();
+  const row = page.getByRole("region", { name: "Dungeons & raids" }).getByRole("article", { name: "Dungeon: Wailing Caverns" });
+  await row.getByRole("button", { name: /Inside/ }).click();
+  const inside = row.getByRole("region", { name: "Inside Wailing Caverns" });
+  await inside.getByRole("radio", { name: "From the entrance" }).click();
+  const serpentis = inside.getByRole("list", { name: /Bosses in/ }).getByRole("button", { name: /Serpentis/ });
+  await serpentis.click();
+  const panel = page.locator(`#${await serpentis.getAttribute("aria-controls")}`);
+  await expect(panel).toContainText("Drop down from the ledge");
+  await expect(panel).not.toContainText(/No walking route/i);
+});

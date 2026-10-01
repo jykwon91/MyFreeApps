@@ -334,7 +334,16 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
     navmesh). A WMO-only map's building is placed by its WDT with **no
     map-origin offset** (`terrain.global_wmo`); dungeon anchors snap to the
     nearest floor (`clusters.snap_inside`), never "the largest ground", which
-    outside a castle is the zone's terrain. Rebuild with
+    outside a castle is the zone's terrain. Dungeons use a finer navmesh
+    (`navmesh.mjs --fine`, ~0.35 yd cells, the player's 0.3 yd radius) so
+    narrow spiral stairs survive (Shadowfang's tower); finer still splits
+    Blackrock Depths. Two **one-way** edge kinds exist only in dungeon files
+    (kind ≥ 3 goes a → b only, in `export._adjacency` and `decodeWalkGraph`):
+    `teleport` (an unpaired same-map area trigger — Naxxramas' Frostwyrm
+    Lair) and `drop` (`walk/drops.py`: off an open navmesh edge down 2–20 yd
+    onto floor past it — Wailing Caverns' gap to Serpentis, Grobbulus → Gluth).
+    A drop is added only on the way to a boss's floor nothing else reaches,
+    never as a shortcut. Rebuild with
     `python -m scripts.wow_world_map.walk --interiors [mapId ...]`.
 - **Companion addon** `apps/mygamingassistant/addons/MGACompanion` (Interface
   16001): `/mga way <uiMapID|zone name> <x> <y> [label]` sets the in-game map

@@ -10,6 +10,8 @@ import numpy as np
 NULL_INDEX = 0xFFFF
 BORDER_FLAG = 0x8000
 RECAST_WATER_AREA = 1
+CELLS = 256  # cells per Recast tile side (navmesh.mjs CELLS_PER_SUBTILE)
+TILE_SIZE = 1600 / 3
 
 
 @dataclass
@@ -20,6 +22,7 @@ class PolyMesh:
     col: int
     sx: int  # subtile within the terrain tile (east, south)
     sz: int
+    subtiles: int  # Recast tiles per terrain tile side (from the cell size)
     cells: np.ndarray  # (nverts, 3) uint16 cell coords (x east, y up, z south)
     world: np.ndarray  # (nverts, 3) float64 world X, Y, Z
     polys: np.ndarray  # (npolys, nvp) vertex indices, NULL_INDEX padded
@@ -47,6 +50,6 @@ def read_nav(path: Path) -> list[PolyMesh]:
         ry = by + cells[:, 1] * ch
         rz = bz + cells[:, 2] * cs
         world = np.stack([-rz, -rx, ry], axis=1).astype(np.float64)
-        out.append(PolyMesh(row, col, sx, sz, cells, world, polys[:, :nvp].astype(np.int32),
+        out.append(PolyMesh(row, col, sx, sz, round(TILE_SIZE / (cs * CELLS)), cells, world, polys[:, :nvp].astype(np.int32),
                             polys[:, nvp:].astype(np.int32), areas == RECAST_WATER_AREA))
     return out

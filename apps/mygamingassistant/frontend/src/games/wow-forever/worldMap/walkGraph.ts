@@ -18,8 +18,18 @@ const GZIP_MAGIC = [0x1f, 0x8b];
 const HEADER_BYTES = 24;
 const FLAG_WATER = 1;
 
-export const WALK_EDGE = { walk: 0, lift: 1, portal: 2 } as const;
+/** Kinds from `drop` up go one way only, a -> b (a dungeon's ledges and one-way teleports). */
+export const WALK_EDGE = { walk: 0, lift: 1, portal: 2, drop: 3, teleport: 4 } as const;
 export type WalkEdgeKind = (typeof WALK_EDGE)[keyof typeof WALK_EDGE];
+
+function isOneWay(kind: number): boolean {
+  return kind >= WALK_EDGE.drop;
+}
+
+/** A portal / teleporter hop covers no ground — leave it out of a walk's yards. */
+export function isJump(kind: WalkEdgeKind): boolean {
+  return kind === WALK_EDGE.portal || kind === WALK_EDGE.teleport;
+}
 
 export interface WalkLabel {
   /** Room or sub-area: "The Great Forge", "Kharanos" — "" when the ground has none. */
@@ -95,23 +105,23 @@ export function decodeWalkGraph(buffer: ArrayBuffer): WalkGraph {
     instance?: number;
   };
 
-  // Undirected edges -> CSR, both directions.
+  // Edges -> CSR: both directions, a one-way kind a -> b only.
   const degree = new Uint32Array(n + 1);
   for (let i = 0; i < m; i++) {
     degree[a[i] + 1]++;
-    degree[bEnd[i] + 1]++;
+    if (!isOneWay(edgeKind[i])) degree[bEnd[i] + 1]++;
   }
   for (let i = 0; i < n; i++) degree[i + 1] += degree[i];
   const start = degree;
   const fill = start.slice(0, n);
-  const to = new Uint32Array(2 * m);
-  const cost = new Uint16Array(2 * m);
-  const kind = new Uint8Array(2 * m);
+  const slots = start[n];
+  const to = new Uint32Array(slots);
+  const cost = new Uint16Array(slots);
+  const kind = new Uint8Array(slots);
   for (let i = 0; i < m; i++) {
-    for (const [u, v] of [
-      [a[i], bEnd[i]],
-      [bEnd[i], a[i]],
-    ]) {
+    const ways: [number, number][] = [[a[i], bEnd[i]]];
+    if (!isOneWay(edgeKind[i])) ways.push([bEnd[i], a[i]]);
+    for (const [u, v] of ways) {
       const slot = fill[u]++;
       to[slot] = v;
       cost[slot] = edgeCost[i];

@@ -14,10 +14,12 @@ import type { WorldPoint } from "@/games/wow-forever/types/worldMap";
 import {
   hubNodeOf,
   hubToHub,
+  isJump,
   nodePoint,
   searchFrom,
   walkPath,
   type WalkGraph,
+  type WalkHop,
 } from "@/games/wow-forever/worldMap/walkGraph";
 import { walkSteps } from "@/games/wow-forever/worldMap/walkSteps";
 
@@ -163,9 +165,11 @@ function doorOn(points: readonly WorldPoint[], doors: readonly InteriorDoor[], n
   return null;
 }
 
-function planYards(path: readonly WorldPoint[]): number {
+function planYards(path: readonly WorldPoint[], hops: readonly WalkHop[]): number {
   let yards = 0;
-  for (let i = 1; i < path.length; i++) yards += Math.hypot(path[i].wx - path[i - 1].wx, path[i].wy - path[i - 1].wy);
+  for (let i = 1; i < path.length; i++) {
+    if (!isJump(hops[i].kind)) yards += Math.hypot(path[i].wx - path[i - 1].wx, path[i].wy - path[i - 1].wy);
+  }
   return yards;
 }
 
@@ -191,7 +195,7 @@ function walk(graph: WalkGraph, doors: readonly InteriorDoor[], from: number, to
   // every step along the door, nor again at a gate's other half.
   const needed = new Set<string>();
   const steps = walkSteps(graph, hops).map((s) => ({ ...s, door: doorOn(s.points, doors, needed) }));
-  return { path, steps, yards: planYards(path) };
+  return { path, steps, yards: planYards(path, hops) };
 }
 
 /**

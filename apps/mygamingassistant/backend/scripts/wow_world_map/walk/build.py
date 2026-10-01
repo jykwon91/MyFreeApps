@@ -17,11 +17,11 @@ def wdt_ids() -> dict[int, int]:
 def _build(map_id: int, hubs: list[export.Hub], out_dir: Path, instance: bool) -> Path:
     start = time.time()
     print(f"walk graph, map {map_id}")
-    nav_dir, scene = build_navmesh(map_id, wdt_ids()[map_id])
-    polys = walk_graph.load_polys(nav_dir)
+    nav_dir, scene = build_navmesh(map_id, wdt_ids()[map_id], fine=instance)
+    polys = walk_graph.load_polys(nav_dir, ledges=instance)
     buildings = [b for b, _ in scene.buildings]
     labels, names = walk_graph.label_polys(polys, list(scene.tiles.values()), buildings, walk_graph.AreaNames())
-    graph = clusters.cluster(polys, labels, names, map_links(map_id), [h.anchor for h in hubs], fine=instance)
+    graph = clusters.cluster(polys, labels, names, map_links(map_id, instance), [h.anchor for h in hubs], fine=instance)
     hubs, hub_nodes, matrix = export.hub_matrix(graph, hubs)
     path = out_dir / f"{map_id}.walk"
     size = export.write_walk(path, map_id, graph, hubs, hub_nodes, matrix, instance)
