@@ -26,6 +26,13 @@ export default function ProfessionsSection() {
         Professions: where to train Cooking, Fishing, Tailoring and Enchanting and how to level them fast
         <ArrowRight className="h-5 w-5 text-primary group-hover:translate-x-1 transition-transform" aria-hidden />
       </Link>
+      <Link
+        to="/wow-forever/gold"
+        className="group flex items-center justify-between gap-2 rounded-xl border bg-card p-4 font-semibold hover:bg-muted/40 transition-colors"
+      >
+        Making gold: what to gather, what to sell, and what not to do
+        <ArrowRight className="h-5 w-5 text-primary group-hover:translate-x-1 transition-transform" aria-hidden />
+      </Link>
     </GuideSection>
   );
 }

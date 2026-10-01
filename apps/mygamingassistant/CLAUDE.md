@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/map`, `/wow-forever/guide`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/compare`)
+### WoW Forever (`/wow-forever`, `/wow-forever/map`, `/wow-forever/guide`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/compare`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -119,6 +119,12 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `classic/sources.json` (cmangos GPL — keep LICENSE + README).
   `tests/test_wow_professions_generator.py`. A route row that names a spell
   missing from the data throws, so re-run the route test after regenerating.
+- Making gold (`/wow-forever/gold`, `?band=1-20|20-40|40-60|all`, seeded from
+  the World Map's saved level) is hand-written advice in `data/gold/goldTips.ts`:
+  each tip is `classic` (no chip), `forever` (published for Forever) or
+  `unknown` (Unconfirmed). **No prices** before launch — a test fails on any
+  "N gold/silver". Class tips follow the saved class. Its checklist has its own
+  key (`mga.wowForever.gold.checklist.v1`), separate from the guide's.
 - Class/spec ids in `data/classes.ts` are the stable key for anything
   class-shaped (stat weights, compare settings, a future BiS page). Never rename.
 - **Scoring lives in the frontend** (`scoring/`), deterministic and unit-tested.
