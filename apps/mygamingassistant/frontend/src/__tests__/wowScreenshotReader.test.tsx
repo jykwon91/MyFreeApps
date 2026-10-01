@@ -4,11 +4,14 @@ import userEvent from "@testing-library/user-event";
 import ScreenshotReader from "@/games/wow-forever/components/compare/ScreenshotReader";
 import { itemReaderErrorMessage } from "@/games/wow-forever/lib/itemReaderErrorMessage";
 
-const availability = vi.hoisted(() => ({ offered: true, siteKey: "site-key" }));
+// Inside-Discord behaviour (browserOnly) is covered with the real availability
+// check in discordActivityReadOnly.test.tsx.
+const availability = vi.hoisted(() => ({ offered: true, siteKey: "site-key", browserOnly: false }));
 const extractItem = vi.hoisted(() => vi.fn());
 
 vi.mock("@/games/wow-forever/lib/itemReaderAvailability", () => ({
   isScreenshotReaderOffered: () => availability.offered,
+  isScreenshotReaderBrowserOnly: () => availability.browserOnly,
   turnstileSiteKey: () => availability.siteKey,
 }));
 

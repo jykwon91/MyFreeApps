@@ -1,7 +1,7 @@
 # MyGamingAssistant - Tech Debt Log
 
 > Last scanned: 2026-06-01 (serve-only PR — logged 1 pre-existing test failure + extended the ORM-in-routes entry to include totp.py; prior findings preserved)
-> Issues: 0 critical, 6 high, 8 medium, 5 low
+> Issues: 0 critical, 6 high, 11 medium, 15 low (open entries, recounted 2026-10-01 with the Discord Activity PR)
 
 mode: log-only - fix only Critical items that block the current feature; log everything else here.
 
@@ -500,6 +500,56 @@ Stylistic items flagged in the glance-board PR1 review and intentionally deferre
 - **Location:** backend/app/repositories/wow/wow_raid_event_repo.py (`complete_started_events`)
 - **Problem:** The worker flips raids to `completed` 6h after start in bulk, but doesn't re-render the public post, so the embed keeps its open/full colour (buttons already refuse once the raid starts).
 - **Recommendation:** Return the completed ids and call `raid_publisher.refresh_public_message` for each, with a "Finished" embed state.
+
+---
+
+## Discord Activity (deferred from the Activity PR - 2026-10-01)
+
+Found while building the Discord Activity and left out of that PR: either the website had to stay unchanged, or the item can't be reached inside the Activity yet. Paths under `packages/` are from the repo root; the shared `discord-activity` module has no other consumer yet.
+
+### [Frontend] Serve-only site - "Add lineup" bounces visitors back to the home page
+- **Severity:** Medium
+- **Effort:** S
+- **Location:** frontend/src/components/lineup/GlanceBoardOperatorMenu.tsx (`canAddLineup`; the menu renders for every visitor from components/map/MapPageTopBar.tsx:256), frontend/src/pages/MapPage.tsx:471 (empty-map "Add the first lineup" CTA)
+- **Problem:** Production is a serve-only build (`VITE_SERVE_ONLY=true`), where `/lineups/new` sits behind `<AuthRequired unavailable>` and redirects to `/`. The gear "Map actions" menu still offers "Add lineup" to every visitor, and an empty map still shows "Add the first lineup", so both send the visitor to the home page with no explanation. The Activity PR hid both only inside Discord (`!isDiscordActivity()`), because that PR had to leave the website unchanged.
+- **Recommendation:** Gate both on `!isReadOnly()` (lib/readOnly.ts). The menu already hides itself when it has nothing else to show (no superuser actions, no unplaceable lineups). Builds with sign-in keep the entry, so `discordActivityReadOnly.test.tsx` ("still offers Add lineup on the website") and e2e/lineup-upload-plan-mode.spec.ts stay valid; add a serve-only case asserting it is hidden.
+
+### [Frontend] Auth-only pages - "Please refresh" error dead ends
+- **Severity:** Low
+- **Effort:** S
+- **Location:** frontend/src/pages/ZoneEditPage.tsx:276, frontend/src/pages/Sources.tsx:535, frontend/src/pages/LineupPackages.tsx:147, frontend/src/pages/Review.tsx:215
+- **Problem:** A failed load shows "Failed to load ... Please refresh." with no way to retry from the page. The Activity PR replaced this on Games, Maps and Map with `LoadErrorRetry`, since Discord has no refresh button. These four can't be reached inside the Activity (three are auth-only routes, and /packages isn't linked from the Activity bar), so they were left as they are.
+- **Recommendation:** Use `LoadErrorRetry` (components/game/LoadErrorRetry.tsx) with the query's `refetch`, so every page recovers the same way.
+
+### [Frontend] Uploads - two-argument `xhr.open` turns synchronous under the Discord SDK's URL patch
+- **Severity:** Low
+- **Effort:** S
+- **Location:** frontend/src/lib/storage.ts:41, frontend/src/hooks/usePaneUpload.ts:124
+- **Problem:** Both call `xhr.open("PUT", url)` with two arguments. Inside the Activity, the Embedded App SDK's `patchUrlMappings` replaces `XMLHttpRequest.prototype.open` with a wrapper that always passes a third `async` argument. A missing one arrives as `undefined`, which the browser reads as `false`, so the upload would run synchronously (frozen UI, no progress events). Uploads are hidden in the read-only Activity, so nothing is broken today; it would bite the day uploads are allowed inside Discord.
+- **Recommendation:** Pass the flag explicitly: `xhr.open("PUT", url, true)`. No change on the website.
+
+### [Frontend] WoW World Map - clipboard copy inside Discord is unverified
+- **Severity:** Low
+- **Effort:** S
+- **Location:** frontend/src/games/wow-forever/components/worldMap/CopyButton.tsx
+- **Problem:** `navigator.clipboard.writeText` needs the `clipboard-write` permission, which a cross-origin iframe only gets if the embedding page grants it. Whether Discord's Activity iframe grants it on every client (desktop, browser, mobile) is unknown. If it doesn't, the button shows "Copy failed — select the text": a graceful fallback, but a worse experience.
+- **Recommendation:** Click a Copy button during the first live test on each platform. If it fails, hide the button inside the Activity or swap it for a select-on-focus text field there.
+
+### [Frontend] Activity detection - `frame_id` alone decides, and storage-blocked reloads forget it
+- **Severity:** Low
+- **Effort:** S
+- **Location:** packages/shared-frontend/src/discord-activity/launchParams.ts (`resolveLaunchSearch`)
+- **Problem:** Two edge cases.
+  1. A `frame_id` query parameter is the only signal. Opening `https://mygamingassistant.myfreeapps.org/?frame_id=x` directly shows "Couldn't connect to Discord" and keeps that tab read-only for the session (sessionStorage). Hand-crafted URLs only; no security impact.
+  2. When the browser blocks storage in the iframe (third-party storage off), the launch parameters can't be kept. Client-side navigation drops the query string, so a later in-app reload (stale-chunk recovery in lib/stale-chunk.ts, NewVersionPrompt's Reload, RouteErrorFallback's Reload / Go home) lands on a URL without `frame_id` and renders the website shells inside Discord, where R2 media can't load.
+- **Recommendation:** (1) Also require being framed (`window.self !== window.top`) before treating `frame_id` as a launch. (2) Route those reloads through a helper that re-appends the in-memory launch search (`getDiscordLaunchSearch()`) to the target URL instead of relying on sessionStorage alone.
+
+### [Infra] CSP - frame-src allows www.youtube-nocookie.com, which no page embeds
+- **Severity:** Low
+- **Effort:** S
+- **Location:** app.yaml `csp` (frame-src), rendered into docker/Caddyfile.docker
+- **Problem:** No page embeds a YouTube player (lineups play R2 clips), so the allowance widens the CSP for no feature. Found while auditing hosts for the Activity's URL mappings; the host was deliberately left unmapped (see constants/discordActivity.ts).
+- **Recommendation:** Drop it from `frame-src` and re-render (`python -m platform_shared.infra.render --app mygamingassistant`). Re-add it, and map it for the Activity, when an embed ships.
 
 ---
 

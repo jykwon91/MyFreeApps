@@ -1,8 +1,9 @@
 """Discord slash-command definitions for MyGamingAssistant.
 
 These are the payload shapes sent to the Discord API via
-``DiscordRestClient.bulk_overwrite_global_commands`` or
-``bulk_overwrite_guild_commands``:
+``overwrite_global_commands_preserving_entry_point`` (global — keeps the
+Activity's ``PRIMARY_ENTRY_POINT`` launch command, which is never declared
+here) or ``DiscordRestClient.bulk_overwrite_guild_commands``:
 
   https://discord.com/developers/docs/interactions/application-commands#application-command-object
 

@@ -149,19 +149,37 @@
     # `defer` lets these headers also override anything the upstream FastAPI
     # process might emit, so we never accidentally regress on a stricter
     # policy because the API set a looser one.
+{%- if discord_activity %}
+    # Discord Activity (app.yaml `discord_activity: true`): the framing
+    # headers — X-Frame-Options + CSP — are NOT global. The API handler keeps
+    # the strict pair; the SPA handler swaps them for a CSP whose
+    # `frame-ancestors` admits Discord's Activity host and nothing else.
+{%- endif %}
     header {
         defer
         Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+{%- if not discord_activity %}
         X-Frame-Options "DENY"
+{%- endif %}
         X-Content-Type-Options "nosniff"
         Referrer-Policy "strict-origin-when-cross-origin"
         Permissions-Policy "{{ permissions_policy }}"
+{%- if not discord_activity %}
         Content-Security-Policy "{{ csp }}"
+{%- endif %}
         -Server
     }
 
     # API proxy (strip /api prefix)
     handle /api/* {
+{%- if discord_activity %}
+        # JSON is never a framed document — the strict pair stays.
+        header {
+            defer
+            X-Frame-Options "DENY"
+            Content-Security-Policy "{{ csp }}"
+        }
+{% endif %}
         uri strip_prefix /api
         reverse_proxy api:{{ api_port }} {
             # Overwrite X-Forwarded-For with Caddy's trusted computed client
@@ -175,6 +193,21 @@
 
     # SPA fallback for frontend
     handle {
+{%- if discord_activity %}
+        # Discord Activity framing. Discord iframes the SPA from
+        # https://<client_id>.discordsays.com inside its web/desktop clients
+        # (*.discord.com; discordapp.com is the legacy alias) and mobile
+        # clients (*.discordsays.com). X-Frame-Options has no allow-list form
+        # (DENY would block Discord too), so it is omitted here and CSP
+        # `frame-ancestors` — which supersedes XFO in every current browser —
+        # admits exactly those origins. Every other directive is the app's
+        # `csp` verbatim (render.py swaps only `frame-ancestors`), so the
+        # inline-script hashes in `script-src` stay valid.
+        header {
+            defer
+            Content-Security-Policy "{{ discord_activity_csp }}"
+        }
+{% endif %}
         # Cache strategy:
         # - HTML and the service worker MUST never be cached. They are the
         #   entry points that reference the latest asset bundles. If they

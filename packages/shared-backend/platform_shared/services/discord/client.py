@@ -205,11 +205,18 @@ class DiscordRestClient:
         method: str,
         path: str,
         json: Any = None,
+        params: dict[str, str] | None = None,
     ) -> Any:
-        """Make a request and return the parsed response body (or ``None`` for 204)."""
+        """Make a request and return the parsed response body (or ``None`` for 204).
+
+        ``params`` become the query string. Only ``path`` is ever logged (see
+        :meth:`_raise_for_status`), so query values never reach the logs either.
+        """
         kwargs: dict[str, Any] = {}
         if json is not None:
             kwargs["json"] = json
+        if params is not None:
+            kwargs["params"] = params
         resp = await self._request(method, path, **kwargs)
         self._raise_for_status(resp, path)
         if resp.status_code == 204:
@@ -346,6 +353,32 @@ class DiscordRestClient:
         result = await self._call("GET", f"/guilds/{guild_id}/roles")
         return result or []
 
+    async def list_global_commands(
+        self,
+        application_id: str,
+        *,
+        with_localizations: bool = True,
+    ) -> list[dict[str, Any]]:
+        """GET /applications/{application_id}/commands.
+
+        Returns every global application command currently registered —
+        including ones Discord created on the app's behalf, such as the
+        ``PRIMARY_ENTRY_POINT`` command that enabling Activities adds.
+
+        ``with_localizations`` (default on) asks for the full
+        ``name_localizations`` / ``description_localizations`` dictionaries.
+        Without it Discord returns only the requester-locale ``*_localized``
+        strings, so a caller that re-submits a fetched command would silently
+        drop its translations.
+        """
+        params = {"with_localizations": "true"} if with_localizations else None
+        result = await self._call(
+            "GET",
+            f"/applications/{application_id}/commands",
+            params=params,
+        )
+        return result or []
+
     async def bulk_overwrite_global_commands(
         self,
         application_id: str,
@@ -355,6 +388,11 @@ class DiscordRestClient:
 
         Overwrites the entire list of global application commands.
         Returns the updated command list.
+
+        Once Activities is enabled for the app, Discord rejects an overwrite
+        that omits the app's ``PRIMARY_ENTRY_POINT`` command — use
+        :func:`platform_shared.services.discord.commands.overwrite_global_commands_preserving_entry_point`
+        for deploy-time registration.
         """
         result = await self._call(
             "PUT",

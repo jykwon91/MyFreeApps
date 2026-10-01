@@ -1,18 +1,22 @@
 import axios from "axios";
 import { installStepUpInterceptor } from "../auth/stepUpInterceptor";
 import { notifyAuthChange } from "./auth-store";
+import { readLocalStorage, removeLocalStorage } from "./safeStorage";
 
 const api = axios.create({
   baseURL: "/api",
 });
 
+// Storage reads go through safeStorage: in a third-party iframe (a Discord
+// Activity) a browser that blocks storage throws on access, and an unguarded
+// read here would fail every request instead of sending it unauthenticated.
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+  const token = readLocalStorage("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  const orgId = localStorage.getItem("v1_activeOrgId");
+  const orgId = readLocalStorage("v1_activeOrgId");
   if (orgId) {
     config.headers["X-Organization-Id"] = orgId;
   }
@@ -42,7 +46,7 @@ api.interceptors.response.use(
       const isLoginRequest = err.config?.url?.includes("/auth/");
       const isAlreadyOnLogin = window.location.pathname === "/login";
       if (!isLoginRequest && !isAlreadyOnLogin) {
-        localStorage.removeItem("token");
+        removeLocalStorage("token");
         notifyAuthChange();
       }
     }

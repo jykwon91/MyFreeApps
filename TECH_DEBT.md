@@ -1,7 +1,7 @@
 # MyFreeApps — Tech Debt
 
 Cross-app / shared-package tech debt. Per-app items live in each app's own
-TECH_DEBT.md (none yet). Ranked by severity.
+`apps/<app>/TECH_DEBT.md`. Ranked by severity.
 
 ---
 
@@ -106,3 +106,117 @@ of syncing it via an effect) or wrapped in a condition that prevents double-firi
 
 Do not fix drive-by — these files have complex Tauri-specific interactions and need
 focused testing after refactor.
+
+---
+
+## MEDIUM — Inline theme script blocked by CSP in 4 of 6 apps, canonical MBK included
+
+**Logged:** 2026-10-01
+**Scope:** `apps/mybookkeeper` (canonical), `apps/mylanguagetutor`, `apps/mypizzatracker`, `apps/myrecipes` (`app.yaml` `csp` + `frontend/index.html`)
+**Effort:** Small (~1h: four hashes, re-render, one parametrised conformance test)
+
+### Problem
+
+Every app's `frontend/index.html` has an inline theme-bootstrap `<script>`. It adds
+`dark` to `<html>` before React mounts, so dark-mode users don't see a light flash.
+Under each app's strict `script-src`, the browser runs it only if its SHA-256 hash
+is listed (`rules/inline-script-csp-hashes.md`). Hashing the LF bytes a CI build
+serves:
+
+| App | Script hash | Allowed by `script-src`? |
+|---|---|---|
+| mybookkeeper | `sha256-pRmp+e9Kbp/gMfqkTunUSwQiXg5fOIUXX1ZIdhOiwW8=` | No — lists a stale `sha256-6gP5…` |
+| mylanguagetutor | `sha256-5ZdhFxrnnX1Ovg0nAtuU78NThCLbXwy2T09p3sU1V7k=` | No — no hash at all |
+| mypizzatracker | same as mylanguagetutor | No — no hash at all |
+| myrecipes | same as mylanguagetutor | No — no hash at all |
+| myjobhunter | `sha256-6gP5jY9WKtmx3Qr/KXGhyuG+YL86Nf6nSb7wHrV5jmk=` | Yes |
+| mygamingassistant | `sha256-5Zdh…` | Yes (fixed in the MGA Discord Activity PR) |
+
+Wherever those four apps' CSP is served, the browser blocks the script on every
+page load (a CSP violation in the console), and dark-mode users get a light flash until React's
+`useTheme` applies the class. The script's code is the same in all six apps; only
+its surrounding whitespace differs, hence three different hashes.
+
+### Recommendation
+
+1. Add the hashes above to each app's `script-src`, canonical MBK first per the
+   parity flow, and re-render the Caddyfiles.
+2. Generalise
+   `packages/shared-backend/tests/test_discord_activity_framing.py::test_mga_inline_theme_script_hash_matches_its_csp`
+   into a conformance test over every app with an inline script, so an edit to
+   `index.html` fails CI instead of silently breaking the theme.
+3. Longer term, render the script from `infra/templates/` (theme bootstrap is
+   Tier 2) so every app serves the same bytes under one hash.
+
+---
+
+## MEDIUM — Shared shells keep the previous page's scroll position on navigation
+
+**Logged:** 2026-10-01
+**Scope:** `packages/shared-frontend/src/components/layout/AppShell.tsx` + `GuestShell.tsx` (every app)
+**Effort:** Small (~1h with a test)
+
+### Problem
+
+Both shells are `h-screen overflow-hidden`, with the page inside
+`<main className="flex-1 overflow-y-auto">`. So `<main>` scrolls, not the window.
+react-router's `<ScrollRestoration />` (mounted by most apps' RootLayout) only
+handles window scroll, and `<main>` stays mounted across route changes. Navigating
+from a scrolled page therefore opens the next page at the same offset, e.g. a long
+list followed by a detail page that starts half-way down. Found in MGA's Discord
+Activity, whose own shell now resets its scroll container on every pathname
+change (`apps/mygamingassistant/frontend/src/components/discord/DiscordActivityShell.tsx`).
+
+### Recommendation
+
+In both shells, hold a ref on `<main>` and set `scrollTop = 0` in an effect keyed
+on `location.pathname` (not search/hash, so filter changes don't jump). Restoring
+the offset on Back would need offsets saved per `location.key`. Add a shell test
+that scrolls `<main>`, navigates, and asserts it is back at 0.
+
+---
+
+## LOW — index.html theme scripts read localStorage unguarded
+
+**Logged:** 2026-10-01
+**Scope:** every app's `frontend/index.html`
+**Effort:** Small; pair it with the CSP-hash item above, since any byte change needs a new hash
+
+### Problem
+
+`localStorage.getItem("v1_theme")` throws a `SecurityError` where storage is
+blocked (third-party iframes with third-party storage off, some privacy modes).
+The script then stops before applying `dark`, so those users get the light flash.
+The MGA Discord Activity PR made the React side safe (`@platform/ui`
+`lib/safeStorage.ts`, used by `api.ts`, `auth-store.ts` and `useTheme`), but left
+the inline script alone so its CSP hash stays put.
+
+### Recommendation
+
+Wrap the read in `try { … } catch (e) {}` in the same change as the CSP-hash fix,
+since the hashes are regenerated then anyway.
+
+---
+
+## LOW — Caddy error responses carry none of the deferred security headers
+
+**Logged:** 2026-10-01
+**Scope:** `infra/templates/Caddyfile.docker.j2` (every app's rendered `docker/Caddyfile.docker`)
+**Effort:** Small (~1h + a render-conformance assertion)
+
+### Problem
+
+The security headers (HSTS, nosniff, Referrer-Policy, Permissions-Policy,
+X-Frame-Options, CSP) are set in `header { defer … }` blocks. Caddy applies
+deferred header operations when a handler writes its response, but not to
+responses produced by its error handling. Examples are a `file_server` 404 for a
+missing `/assets/*` file and a 502 while the API is down. Those responses go out
+without any of the headers. Pre-existing for every app; noticed while splitting
+MGA's framing headers per handler.
+
+### Recommendation
+
+Add a `handle_errors` block to the template that sets the same headers (the
+API's strict pair for `/api/*`, the app's CSP elsewhere) and responds with the
+error status. Then assert in the render conformance tests that every rendered
+Caddyfile has it.

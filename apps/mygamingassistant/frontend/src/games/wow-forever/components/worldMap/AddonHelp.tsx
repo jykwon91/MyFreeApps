@@ -1,3 +1,5 @@
+import { OutboundLink } from "@platform/ui/discord-activity";
+
 const ADDON_URL = "https://github.com/jykwon91/MyFreeApps/tree/main/apps/mygamingassistant/addons/MGACompanion";
 
 /** How to install and use the MGA Companion addon, plus where the data comes from. */
@@ -14,9 +16,9 @@ export default function AddonHelp() {
       <ol className="list-decimal space-y-1 pl-5">
         <li>
           Download the <code>MGACompanion</code> folder from{" "}
-          <a href={ADDON_URL} target="_blank" rel="noreferrer" className="text-primary underline">
+          <OutboundLink href={ADDON_URL} className="text-primary underline">
             GitHub
-          </a>{" "}
+          </OutboundLink>{" "}
           (all three files: <code>MGACompanion.toc</code>, <code>MGACompanion.lua</code> and <code>Capture.lua</code>).
         </li>
         <li>

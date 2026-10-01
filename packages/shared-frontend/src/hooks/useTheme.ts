@@ -1,26 +1,30 @@
 import { useCallback, useEffect, useState } from "react";
+import { readLocalStorage, writeLocalStorage } from "../lib/safeStorage";
 
 type Theme = "light" | "dark" | "system";
 
+// Guarded storage (safeStorage): where the browser blocks storage — e.g. a
+// third-party iframe such as a Discord Activity — the toggle still works for
+// the session and the choice simply isn't remembered.
 const STORAGE_KEY = "v1_theme";
 
 function getSystemTheme(): "light" | "dark" {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
-function applyTheme(theme: Theme) {
+function applyTheme(theme: Theme): void {
   const resolved = theme === "system" ? getSystemTheme() : theme;
   document.documentElement.classList.toggle("dark", resolved === "dark");
 }
 
-export function useTheme() {
+export function useTheme(): { theme: Theme; setTheme: (next: Theme) => void } {
   const [theme, setThemeState] = useState<Theme>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = readLocalStorage(STORAGE_KEY);
     return (stored === "light" || stored === "dark" || stored === "system") ? stored : "system";
   });
 
   const setTheme = useCallback((next: Theme) => {
-    localStorage.setItem(STORAGE_KEY, next);
+    writeLocalStorage(STORAGE_KEY, next);
     setThemeState(next);
     applyTheme(next);
   }, []);

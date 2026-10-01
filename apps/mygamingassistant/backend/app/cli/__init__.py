@@ -176,8 +176,13 @@ def _run_discord_register_commands() -> int:
     registered as guild commands (instant propagation, <1s).  Otherwise they
     are registered as global commands (~1h propagation).
 
+    The global overwrite keeps the Activity's ``PRIMARY_ENTRY_POINT`` launch
+    command when one exists (Discord creates it when Activities is enabled and
+    rejects any bulk overwrite that omits it); it never creates one.
+
     No-op with a clear message when DISCORD_ENABLED=false so a post-deploy
     step before the operator has configured Discord does not break the deploy.
+    A Discord API rejection prints status + error code and exits 1.
 
     Usage (in-container):
         python -m app.cli discord-register-commands
@@ -185,7 +190,12 @@ def _run_discord_register_commands() -> int:
     """
     from app.core.config import settings
     from app.services.discord.commands_spec import ALL_COMMANDS
-    from platform_shared.services.discord.client import DiscordRestClient
+    from platform_shared.services.discord.client import DiscordApiError, DiscordRestClient
+    from platform_shared.services.discord.commands import (
+        ENTRY_POINT_REMOVAL_REJECTED,
+        is_entry_point_command,
+        overwrite_global_commands_preserving_entry_point,
+    )
 
     if not settings.discord_enabled:
         print(
@@ -223,7 +233,7 @@ def _run_discord_register_commands() -> int:
             print(f"discord-register-commands: unknown argument {args[idx]!r}")
             return 1
 
-    async def _register() -> list:
+    async def _register() -> list[dict]:
         async with DiscordRestClient(settings.discord_bot_token) as client:
             if guild_id:
                 print(
@@ -237,13 +247,27 @@ def _run_discord_register_commands() -> int:
                 f"Registering {len(ALL_COMMANDS)} command(s) globally "
                 "(may take up to ~1h to propagate)..."
             )
-            return await client.bulk_overwrite_global_commands(
-                settings.discord_application_id, ALL_COMMANDS
+            return await overwrite_global_commands_preserving_entry_point(
+                client, settings.discord_application_id, ALL_COMMANDS
             )
 
-    registered = asyncio.run(_register())
+    try:
+        registered = asyncio.run(_register())
+    except DiscordApiError as exc:
+        print(
+            f"discord-register-commands: Discord rejected the request "
+            f"(status={exc.status} code={exc.code}): {exc.message}"
+        )
+        if exc.code == ENTRY_POINT_REMOVAL_REJECTED:
+            print(
+                "  The overwrite would have removed the Activity's entry-point "
+                "(Launch) command — Activities was likely enabled mid-run. Re-run "
+                "this command; it re-reads the registered commands first."
+            )
+        return 1
     for cmd in registered:
-        print(f"  /{cmd.get('name')} (id={cmd.get('id')})")
+        kept = " — Activity entry point, kept" if is_entry_point_command(cmd) else ""
+        print(f"  /{cmd.get('name')} (id={cmd.get('id')}){kept}")
     print(f"Done — {len(registered)} command(s) registered.")
     return 0
 

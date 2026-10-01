@@ -37,6 +37,12 @@ Boolean flags (optional, all default false/disabled when absent):
   automated_deploy        bool   True (default) to add push trigger to deploy workflow.
   registry_images         bool   True to build images in CI (GHCR) instead of on-VPS.
   serve_only_build_arg    bool   True (MGA only) to wire the VITE_SERVE_ONLY build arg.
+  discord_activity        bool   True to let Discord iframe the SPA as an Activity.
+                                 Non-minio Caddyfile branch only. The SPA handler gets
+                                 ``csp`` with ``frame-ancestors`` swapped for
+                                 ``DISCORD_ACTIVITY_FRAME_ANCESTORS`` (and no
+                                 X-Frame-Options); the API handler keeps XFO DENY + the
+                                 app's ``csp``. Apps without the flag render unchanged.
 
 Permissions-Policy (optional):
   permissions_policy_self  list[str]   Features to allow for the app's own origin.
@@ -61,6 +67,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -122,6 +129,59 @@ def _build_permissions_policy(self_allow: list[str]) -> str:
         for feature in _PERMISSIONS_POLICY_FEATURES
     ]
     return ", ".join(parts)
+
+
+# Origins allowed to frame the SPA of an app with ``discord_activity: true``.
+# Discord serves an Activity from https://<client_id>.discordsays.com, iframed
+# by the web + desktop clients on discord.com (stable / ptb / canary are all
+# *.discord.com; discordapp.com is the legacy alias the Embedded App SDK still
+# accepts messages from) and hosted under *.discordsays.com on mobile.
+DISCORD_ACTIVITY_FRAME_ANCESTORS: tuple[str, ...] = (
+    "https://discord.com",
+    "https://*.discord.com",
+    "https://discordapp.com",
+    "https://*.discordapp.com",
+    "https://*.discordsays.com",
+)
+
+_FRAME_ANCESTORS_DIRECTIVE = re.compile(r"(?<![\w-])frame-ancestors(?![\w-])[^;]*")
+
+
+def _build_discord_activity_csp(csp: str) -> str:
+    """Return ``csp`` with ``frame-ancestors`` admitting Discord's Activity host only.
+
+    The existing ``frame-ancestors`` directive is replaced in place — or one is
+    appended when the policy has none — and every other byte is left alone, so
+    inline-script hashes in ``script-src`` stay valid.
+
+    Raises:
+        ValueError: ``csp`` is empty or declares ``frame-ancestors`` twice.
+    """
+    if not csp.strip():
+        raise ValueError("discord_activity needs the app's `csp` to derive the SPA policy from")
+    directive = "frame-ancestors " + " ".join(DISCORD_ACTIVITY_FRAME_ANCESTORS)
+    matches = _FRAME_ANCESTORS_DIRECTIVE.findall(csp)
+    if len(matches) > 1:
+        raise ValueError("csp declares frame-ancestors more than once")
+    if not matches:
+        return f"{csp.rstrip().rstrip(';').rstrip()}; {directive}"
+    return _FRAME_ANCESTORS_DIRECTIVE.sub(lambda _match: directive, csp, count=1)
+
+
+def _apply_discord_activity(ctx: dict[str, Any]) -> None:
+    """Normalise the ``discord_activity`` flag and derive ``discord_activity_csp``."""
+    enabled = ctx.get("discord_activity", False)
+    if not isinstance(enabled, bool):
+        raise ValueError(f"discord_activity must be true/false, got {enabled!r}")
+    ctx["discord_activity"] = enabled
+    if not enabled:
+        return
+    if ctx.get("has_minio_subdomain"):
+        raise ValueError(
+            "discord_activity is only implemented for the non-minio Caddyfile "
+            "branch (has_minio_subdomain: false)"
+        )
+    ctx["discord_activity_csp"] = _build_discord_activity_csp(str(ctx.get("csp") or ""))
 
 
 # Each entry maps a template path (relative to infra/templates/) to its
@@ -187,6 +247,7 @@ def render_app(repo_root: Path, app_slug: str, *, write: bool) -> dict[str, tupl
     # inject it so templates can reference {{ permissions_policy }} directly.
     permissions_policy_self: list[str] = ctx.get("permissions_policy_self") or []
     ctx["permissions_policy"] = _build_permissions_policy(permissions_policy_self)
+    _apply_discord_activity(ctx)
 
     env = Environment(
         loader=FileSystemLoader(str(repo_root / "infra" / "templates")),

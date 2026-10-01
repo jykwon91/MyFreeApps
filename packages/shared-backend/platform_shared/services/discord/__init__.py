@@ -4,6 +4,7 @@ App-agnostic building blocks for an HTTP-interactions Discord bot:
 
 - :mod:`~platform_shared.services.discord.signature` — Ed25519 request verification
 - :mod:`~platform_shared.services.discord.client` — async REST client with rate limiting
+- :mod:`~platform_shared.services.discord.commands` — global command overwrite that keeps an Activity entry point
 - :mod:`~platform_shared.services.discord.interactions` — interaction/response type constants
 - :mod:`~platform_shared.services.discord.permissions` — permission bits + channel-permission computation
 
@@ -25,6 +26,14 @@ from .client import (
     UNKNOWN_MESSAGE,
     DiscordApiError,
     DiscordRestClient,
+)
+from .commands import (
+    COMMAND_TYPE_PRIMARY_ENTRY_POINT,
+    ENTRY_POINT_HANDLER_DISCORD_LAUNCH_ACTIVITY,
+    ENTRY_POINT_REMOVAL_REJECTED,
+    entry_points_to_carry,
+    is_entry_point_command,
+    overwrite_global_commands_preserving_entry_point,
 )
 from .interactions import (
     BUTTON_STYLE_DANGER,
@@ -82,6 +91,13 @@ __all__ = [
     "UNKNOWN_CHANNEL",
     "UNKNOWN_INTERACTION",
     "UNKNOWN_MESSAGE",
+    # commands
+    "COMMAND_TYPE_PRIMARY_ENTRY_POINT",
+    "ENTRY_POINT_HANDLER_DISCORD_LAUNCH_ACTIVITY",
+    "ENTRY_POINT_REMOVAL_REJECTED",
+    "entry_points_to_carry",
+    "is_entry_point_command",
+    "overwrite_global_commands_preserving_entry_point",
     # interactions
     "BUTTON_STYLE_DANGER",
     "BUTTON_STYLE_LINK",

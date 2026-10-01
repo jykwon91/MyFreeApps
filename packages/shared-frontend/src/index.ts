@@ -6,6 +6,11 @@
 //   import { useTheme } from "@platform/ui/hooks/useTheme"
 //   import api from "@platform/ui/lib/api"
 //   import { baseApi } from "@platform/ui/store/baseApi"
+//
+// Subpath-only modules — never re-export them here:
+//   @platform/ui/discord-activity — Discord Activity support. Re-exporting it
+//   from this index would pull the Embedded App SDK into every app's build
+//   output; see src/discord-activity/index.ts.
 
 // Re-export key utilities for convenience
 export { cn } from "./utils/cn";

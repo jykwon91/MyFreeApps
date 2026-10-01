@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Map } from "lucide-react";
+import LoadErrorRetry from "@/components/game/LoadErrorRetry";
+import MapGridCard from "@/components/map/MapGridCard";
 import { useGetGamesQuery, useGetMapsQuery } from "@/store/gamesApi";
-import type { GameMap } from "@/types/game";
 
 /**
  * Map selection grid for a specific game.
@@ -14,7 +14,7 @@ export default function MapGrid() {
   const navigate = useNavigate();
 
   const { data: games } = useGetGamesQuery();
-  const { data: maps, isLoading, isError } = useGetMapsQuery(gameSlug ?? "", {
+  const { data: maps, isLoading, isError, isFetching, refetch } = useGetMapsQuery(gameSlug ?? "", {
     skip: !gameSlug,
   });
 
@@ -62,9 +62,7 @@ export default function MapGrid() {
           </button>
           <h1 className="text-2xl font-semibold">{gameTitle}</h1>
         </div>
-        <p className="text-sm text-destructive">
-          Failed to load maps. Please refresh the page.
-        </p>
+        <LoadErrorRetry message="Couldn't load the maps." retrying={isFetching} onRetry={refetch} />
       </main>
     );
   }
@@ -110,34 +108,5 @@ export default function MapGrid() {
         ))}
       </div>
     </main>
-  );
-}
-
-interface MapGridCardProps {
-  map: GameMap;
-  gameSlug: string;
-}
-
-function MapGridCard({ map, gameSlug }: MapGridCardProps) {
-  const [imageFailed, setImageFailed] = useState(false);
-  const showImage = map.minimap_url && !imageFailed;
-
-  return (
-    <Link
-      to={`/${gameSlug}/${map.slug}`}
-      className="group flex flex-col items-center justify-center h-24 rounded-xl border bg-card hover:bg-muted/40 transition-colors p-4 gap-2"
-    >
-      {showImage ? (
-        <img
-          src={map.minimap_url ?? ""}
-          alt={map.name}
-          className="h-10 w-10 rounded object-cover group-hover:scale-105 transition-transform"
-          onError={() => setImageFailed(true)}
-        />
-      ) : (
-        <Map className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
-      )}
-      <span className="text-sm font-medium capitalize">{map.name}</span>
-    </Link>
   );
 }

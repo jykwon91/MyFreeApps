@@ -31,11 +31,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, X } from "lucide-react";
+import { isDiscordActivity } from "@platform/ui/discord-activity";
 import { useGetGamesQuery, useGetMapDetailQuery } from "@/store/gamesApi";
 import { useGetLineupsQuery, useGetZoneDensityQuery } from "@/store/lineupsApi";
 import { countUnplaceableLineups } from "@/components/lineup/MapLineupPins";
 import KeyboardShortcutsHelp from "@/components/lineup/KeyboardShortcutsHelp";
 import MapBoardBody from "@/components/lineup/MapBoardBody";
+import LoadErrorRetry from "@/components/game/LoadErrorRetry";
 import MapSpatialSidebar from "@/components/lineup/MapSpatialSidebar";
 import MapPageTopBar from "@/components/map/MapPageTopBar";
 import MapPageSkeleton from "@/components/map/MapPageSkeleton";
@@ -84,6 +86,7 @@ export default function MapPage() {
     data: mapDetail,
     isLoading: mapLoading,
     isError: mapError,
+    isFetching: mapFetching,
     refetch: refetchMapDetail,
   } = useGetMapDetailQuery(
     { gameSlug: gameSlug ?? "", mapSlug: mapSlug ?? "" },
@@ -293,7 +296,9 @@ export default function MapPage() {
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <p className="text-sm text-destructive mt-4">Failed to load map. Please refresh.</p>
+        <div className="mt-4">
+          <LoadErrorRetry message="Couldn't load this map." retrying={mapFetching} onRetry={refetchMapDetail} />
+        </div>
       </main>
     );
   }
@@ -461,8 +466,9 @@ export default function MapPage() {
             />
 
             {/* Add lineup CTA at bottom if completely empty (no lineups AND
-                no filters applied) — the truly-empty-map state. */}
-            {allMapLineups.length === 0 && !allMapFetching && effectiveUtils.length === 0 && side === "any" && !zoneFilter && (
+                no filters applied) — the truly-empty-map state. Not in the
+                read-only Discord Activity, where /lineups/new bounces home. */}
+            {!isDiscordActivity() && allMapLineups.length === 0 && !allMapFetching && effectiveUtils.length === 0 && side === "any" && !zoneFilter && (
               <div className="mt-6 text-center">
                 <Link
                   to={`/lineups/new?game=${gameSlug}&map=${mapSlug}`}

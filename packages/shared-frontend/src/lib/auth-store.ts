@@ -1,9 +1,11 @@
 import { useSyncExternalStore } from "react";
+import { readLocalStorage } from "./safeStorage";
 
 // Reactive auth store — allows React components to re-render immediately
 // when the JWT token is added or removed (e.g., by the axios 401 interceptor,
 // by an explicit logout, or by a sibling tab via the browser storage event).
 // This module has zero dependencies on api.ts or auth.ts to avoid circular imports.
+// The token read is guarded (safeStorage): blocked storage reads as signed out.
 
 type Listener = () => void;
 const listeners = new Set<Listener>();
@@ -33,7 +35,7 @@ export function notifyAuthChange(): void {
 }
 
 function getSnapshot(): boolean {
-  const token = localStorage.getItem("token");
+  const token = readLocalStorage("token");
   if (!token) return false;
   try {
     const payload = JSON.parse(atob(token.split(".")[1]));

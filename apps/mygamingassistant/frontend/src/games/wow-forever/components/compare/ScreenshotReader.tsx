@@ -2,8 +2,13 @@ import { useCallback, useState } from "react";
 import { AlertBox, LoadingButton, TurnstileWidget } from "@platform/ui";
 import ScreenshotDropTarget from "@/games/wow-forever/components/compare/ScreenshotDropTarget";
 import ScreenshotPreview from "@/games/wow-forever/components/compare/ScreenshotPreview";
+import ScreenshotReaderOpenInBrowser from "@/games/wow-forever/components/compare/ScreenshotReaderOpenInBrowser";
 import { useExtractItemMutation } from "@/games/wow-forever/api/wowItemsApi";
-import { isScreenshotReaderOffered, turnstileSiteKey } from "@/games/wow-forever/lib/itemReaderAvailability";
+import {
+  isScreenshotReaderBrowserOnly,
+  isScreenshotReaderOffered,
+  turnstileSiteKey,
+} from "@/games/wow-forever/lib/itemReaderAvailability";
 import { itemReaderErrorMessage } from "@/games/wow-forever/lib/itemReaderErrorMessage";
 import type { ItemExtractionResponse } from "@/games/wow-forever/types/extractionResponse";
 
@@ -40,6 +45,8 @@ export default function ScreenshotReader({ onRead }: ScreenshotReaderProps) {
       </AlertBox>
     );
   }
+
+  if (isScreenshotReaderBrowserOnly()) return <ScreenshotReaderOpenInBrowser />;
 
   function choose(next: File) {
     if (next.size > MAX_IMAGE_BYTES) {

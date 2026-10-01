@@ -1,3 +1,4 @@
+import { isDiscordActivity } from "@platform/ui/discord-activity";
 import { isServeOnly } from "@/lib/serveOnly";
 
 /**
@@ -21,4 +22,14 @@ export function turnstileSiteKey(): string {
  */
 export function isScreenshotReaderOffered(): boolean {
   return !isServeOnly() || turnstileSiteKey() !== "";
+}
+
+/**
+ * The site offers the reader, but not inside the Discord Activity: the public
+ * backend requires a Cloudflare Turnstile check, and Turnstile doesn't load
+ * through Discord's proxy (challenges.cloudflare.com is not URL-mapped). The
+ * Activity defaults to pasting text and points to "Open in browser" instead.
+ */
+export function isScreenshotReaderBrowserOnly(): boolean {
+  return isDiscordActivity() && isScreenshotReaderOffered();
 }

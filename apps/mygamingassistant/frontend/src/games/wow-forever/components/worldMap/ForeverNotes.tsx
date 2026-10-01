@@ -1,3 +1,4 @@
+import { OutboundLink } from "@platform/ui/discord-activity";
 import { FOREVER_NOTES } from "@/games/wow-forever/data/worldMap/foreverNotes";
 
 /** Forever-specific travel facts that the Classic data can't know. */
@@ -14,9 +15,9 @@ export default function ForeverNotes() {
             {note.source && (
               <>
                 {" "}
-                <a href={note.source.url} target="_blank" rel="noreferrer" className="text-xs text-primary underline">
+                <OutboundLink href={note.source.url} className="text-xs text-primary underline">
                   {note.source.label}
-                </a>
+                </OutboundLink>
               </>
             )}
           </li>

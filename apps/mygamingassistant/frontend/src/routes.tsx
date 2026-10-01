@@ -21,17 +21,19 @@ import ResetPassword from "@/pages/ResetPassword";
 import VerifyEmail from "@/pages/VerifyEmail";
 import NotFound from "@/pages/NotFound";
 import RootLayout from "@/RootLayout";
-import { isServeOnly } from "@/lib/serveOnly";
+import { isReadOnly } from "@/lib/readOnly";
 import { wowForeverRoutes } from "@/games/wow-forever/routes";
 
-// Serve-only mode (production public library): the backend mounts NO auth
-// routes, so the standalone auth pages would dead-end on 404 API calls. Render
-// a redirect to the public home instead of the page. In full-auth mode these
+// Read-only sessions (lib/readOnly.ts) can never sign in: in serve-only mode
+// (production public library) the backend mounts NO auth routes, and the
+// Discord Activity has no sign-in in v1. The standalone auth pages would
+// dead-end, so they redirect to the public home, and every <AuthRequired>
+// route below is `unavailable` (redirects home too). In full-auth mode these
 // resolve to the real pages unchanged.
-const serveOnly = isServeOnly();
+const readOnly = isReadOnly();
 
 function authPageElement(page: ReactElement): ReactElement {
-  return serveOnly ? <Navigate to="/" replace /> : page;
+  return readOnly ? <Navigate to="/" replace /> : page;
 }
 
 // MGA is single-user — no /register route.
@@ -71,7 +73,7 @@ export const routes: RouteObject[] = [
       {
         path: "/lineups/new",
         element: (
-          <AuthRequired action="upload a new lineup" unavailable={serveOnly}>
+          <AuthRequired action="upload a new lineup" unavailable={readOnly}>
             <LineupUpload />
           </AuthRequired>
         ),
@@ -79,7 +81,7 @@ export const routes: RouteObject[] = [
       {
         path: "/sources",
         element: (
-          <AuthRequired action="manage video sources" unavailable={serveOnly}>
+          <AuthRequired action="manage video sources" unavailable={readOnly}>
             <Sources />
           </AuthRequired>
         ),
@@ -87,7 +89,7 @@ export const routes: RouteObject[] = [
       {
         path: "/review",
         element: (
-          <AuthRequired action="review pending lineups" unavailable={serveOnly}>
+          <AuthRequired action="review pending lineups" unavailable={readOnly}>
             <Review />
           </AuthRequired>
         ),
@@ -95,7 +97,7 @@ export const routes: RouteObject[] = [
       {
         path: "/live/cs2/setup",
         element: (
-          <AuthRequired action="install the GSI config" unavailable={serveOnly}>
+          <AuthRequired action="install the GSI config" unavailable={readOnly}>
             <LiveCs2Setup />
           </AuthRequired>
         ),
@@ -103,7 +105,7 @@ export const routes: RouteObject[] = [
       {
         path: "/live/cs2/calibrate",
         element: (
-          <AuthRequired action="calibrate the minimap CV pipeline" unavailable={serveOnly}>
+          <AuthRequired action="calibrate the minimap CV pipeline" unavailable={readOnly}>
             <LiveCs2Calibrate />
           </AuthRequired>
         ),
@@ -113,7 +115,7 @@ export const routes: RouteObject[] = [
         // specific path doesn't shadow the plan-mode map view.
         path: "/:gameSlug/:mapSlug/zones/edit",
         element: (
-          <AuthRequired action="edit map zones" unavailable={serveOnly}>
+          <AuthRequired action="edit map zones" unavailable={readOnly}>
             <ZoneEditPage />
           </AuthRequired>
         ),
@@ -121,7 +123,7 @@ export const routes: RouteObject[] = [
       {
         path: "/settings",
         element: (
-          <AuthRequired action="manage your account" unavailable={serveOnly}>
+          <AuthRequired action="manage your account" unavailable={readOnly}>
             <Settings />
           </AuthRequired>
         ),
@@ -129,7 +131,7 @@ export const routes: RouteObject[] = [
       {
         path: "/security",
         element: (
-          <AuthRequired action="manage account security" unavailable={serveOnly}>
+          <AuthRequired action="manage account security" unavailable={readOnly}>
             <Security />
           </AuthRequired>
         ),
