@@ -3,7 +3,7 @@
 The public signup post lives in :mod:`app.services.wow.raid_embed`; this
 module renders everything only the clicking user sees: the create preview,
 the class and spec selects, "My signup", the full roster, /raid list,
-/raid prefs and the cancel confirmation.
+/raid prefs, the cancel confirmation and the "free my seat?" confirmation.
 """
 from __future__ import annotations
 
@@ -45,18 +45,35 @@ from app.services.wow.raid_embed import (
     display_title,
     escape_name,
     local_day_label,
+    seats_label,
     spec_icon,
+    status_heading,
 )
-from app.services.wow.raid_roster import compute_roster_summary
+from app.services.wow.raid_roster import (
+    ABSENCE_STATUS,
+    BENCH_STATUS,
+    QUEUED_STATUS,
+    TENTATIVE_STATUS,
+    compute_roster_summary,
+    order_numbers,
+    queue_position,
+)
 
 EMBED_DESCRIPTION_LIMIT: Final = 4096
 
+# Second line on "My signup" for statuses that don't speak for themselves.
+_MY_SIGNUP_NOTES: Final[dict[str, str]] = {
+    TENTATIVE_STATUS: raid_copy.TENTATIVE_NOTE,
+    QUEUED_STATUS: raid_copy.QUEUE_MOVES_UP,
+    BENCH_STATUS: raid_copy.BENCH_NOTE,
+}
+
 _STATUS_WORDS: Final[dict[str, str]] = {
     "confirmed": "signed up",
-    "tentative": "tentative",
     "late": "coming late",
-    "declined": "declined",
+    "tentative": "tentative",
     "bench": "on the bench",
+    "absence": "absent",
 }
 
 
@@ -107,7 +124,7 @@ def _row(*components: dict[str, Any]) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# /raid-admin create preview + cancel confirmation
+# /raid-admin create preview, cancel confirmation, seat confirmation
 # ---------------------------------------------------------------------------
 
 
@@ -130,6 +147,17 @@ def preview_data(event: WowRaidEvent, guild: WowRaidGuild, *, notice: str | None
         )
     ]
     return ephemeral_data("\n".join(lines), components=components)
+
+
+def release_confirm_data(event: WowRaidEvent, status: str) -> dict[str, Any]:
+    """Ask before a seat holder's seat goes to the queue (see ``hands_seat_to_queue``)."""
+    components = [
+        _row(
+            _button("Yes, free my seat", BUTTON_STYLE_DANGER, raid_custom_id.encode("release", event.id, status)),
+            _button("Keep my seat", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("stay", event.id)),
+        )
+    ]
+    return ephemeral_data(raid_copy.release_prompt(status), components=components)
 
 
 def cancel_confirm_data(event: WowRaidEvent) -> dict[str, Any]:
@@ -207,17 +235,17 @@ def my_signup_data(
     if signup is None:
         return ephemeral_data(raid_copy.NOT_SIGNED_UP)
     status_text = _STATUS_WORDS.get(signup.status, signup.status)
-    if signup.status == "bench":
-        bench = compute_roster_summary(signups, size_cap=event.size_cap).bench_overflow
-        position = next((i for i, s in enumerate(bench, start=1) if s.discord_user_id == signup.discord_user_id), None)
-        if position is not None:
-            status_text = f"on the bench (#{position} in line)"
+    if signup.status == QUEUED_STATUS:
+        status_text = raid_copy.queue_place(queue_position(signups, signup.discord_user_id))
     content = f"For **{display_title(event)}** you're **{status_text}**"
+    if signup.status == ABSENCE_STATUS:
+        return ephemeral_data(f"{content}.")
     if signup.wow_class or signup.role:
         content += f" as {signup_label(signup.wow_class, signup.role, signup.spec)}"
     content += "."
-    if signup.status == "declined":
-        return ephemeral_data(content)
+    note = _MY_SIGNUP_NOTES.get(signup.status)
+    if note is not None:
+        content += f"\n{note}"
     change = _button("Change class or spec", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("change", event.id))
     return ephemeral_data(content, components=[_row(change)])
 
@@ -225,34 +253,45 @@ def my_signup_data(
 def roster_data(
     event: WowRaidEvent, signups: Sequence[WowRaidSignup], guild: WowRaidGuild, *, emojis: EmojiSet
 ) -> dict[str, Any]:
-    ordered = sorted(signups, key=lambda s: s.signed_up_at)
+    """Everyone, by role then status.
+
+    Seat holders carry their order number (`12`); the queue lists each
+    player's place in it (#1 moves up first).
+    """
+    ordered = sorted(signups, key=lambda s: (s.signed_up_at, s.discord_user_id))
     summary = compute_roster_summary(ordered, size_cap=event.size_cap)
+    seat_marks = {user_id: f"`{number}`" for user_id, number in order_numbers(ordered).items()}
+    queue_marks = {s.discord_user_id: f"#{place}" for place, s in enumerate(summary.queue, start=1)}
     sections: list[str] = []
 
     for role in ROLE_ORDER:
         players = [s for s in ordered if s.status == "confirmed" and s.role == role]
-        sections.append(_section(f"{ROLE_FIELD_LABELS[role]} ({len(players)})", players, emojis))
+        sections.append(_section(f"{ROLE_FIELD_LABELS[role]} ({len(players)})", players, emojis, seat_marks))
     unassigned = [s for s in ordered if s.status == "confirmed" and s.role not in ROLE_ORDER]
     if unassigned:
-        sections.append(_section(f"No role yet ({len(unassigned)})", unassigned, emojis))
-    for status, label in (("late", "Late"), ("tentative", "Tentative")):
-        players = [s for s in ordered if s.status == status]
-        if players:
-            sections.append(_section(f"{label} ({len(players)})", players, emojis))
-    if summary.bench_overflow:
-        sections.append(
-            _section(f"Bench ({summary.bench_count}), in line order", summary.bench_overflow, emojis, numbered=True)
-        )
-    declined = [s for s in ordered if s.status == "declined"]
-    if declined:
-        sections.append(f"**Declined ({len(declined)})**\n" + ", ".join(escape_name(s.display_name) for s in declined))
+        sections.append(_section(f"No role yet ({len(unassigned)})", unassigned, emojis, seat_marks))
+    late = [s for s in ordered if s.status == "late"]
+    if late:
+        sections.append(_section(status_heading("late", "Late", len(late)), late, emojis, seat_marks))
+    tentative = [s for s in ordered if s.status == TENTATIVE_STATUS]
+    if tentative:
+        sections.append(_section(status_heading(TENTATIVE_STATUS, "Tentative", len(tentative)), tentative, emojis, {}))
+    if summary.queue:
+        heading = status_heading(QUEUED_STATUS, "Queued", summary.queued_count)
+        sections.append(_section(heading, summary.queue, emojis, queue_marks))
+    bench = [s for s in ordered if s.status == BENCH_STATUS]
+    if bench:
+        sections.append(_section(status_heading(BENCH_STATUS, "Bench", len(bench)), bench, emojis, {}))
+    absent = [s for s in ordered if s.status == ABSENCE_STATUS]
+    if absent:
+        sections.append(f"**Absence ({len(absent)})**\n" + ", ".join(escape_name(s.display_name) for s in absent))
 
     description = _clip_lines("\n\n".join(sections), EMBED_DESCRIPTION_LIMIT)
     embed = {
         "title": f"Roster — {display_title(event)} — {local_day_label(event.starts_at, guild.timezone)}",
         "description": description,
         "color": COLOR_OPEN,
-        "footer": {"text": f"Confirmed {summary.confirmed_count}/{event.size_cap} · Signed up {summary.signed_up_count}"},
+        "footer": {"text": f"{seats_label(summary)} · Signed up {summary.signed_up_count}"},
     }
     return ephemeral_data("", embeds=[embed])
 
@@ -271,16 +310,19 @@ def _clip_lines(text: str, limit: int) -> str:
 
 
 def _section(
-    heading: str, players: Sequence[WowRaidSignup], emojis: EmojiSet, *, numbered: bool = False
+    heading: str, players: Sequence[WowRaidSignup], emojis: EmojiSet, marks: dict[str, str]
 ) -> str:
+    """One line per player: icon, their mark (order number or queue place) if any, name."""
     if not players:
         return f"**{heading}**\n—"
     lines = []
-    for index, player in enumerate(players, start=1):
-        line = f"{spec_icon(player.wow_class, player.spec, emojis)} {escape_name(player.display_name)}".strip()
-        if numbered:
-            line = f"{index}. {line}"
-        lines.append(line)
+    for player in players:
+        parts = [
+            spec_icon(player.wow_class, player.spec, emojis),
+            marks.get(player.discord_user_id, ""),
+            escape_name(player.display_name),
+        ]
+        lines.append(" ".join(part for part in parts if part))
     return f"**{heading}**\n" + "\n".join(lines)
 
 
@@ -299,7 +341,7 @@ def list_data(
     lines = ["**Upcoming raids**"]
     for event in events:
         summary = compute_roster_summary(signups_by_event.get(event.id, []), size_cap=event.size_cap)
-        line = f"**{display_title(event)}** — <t:{unix(event.starts_at)}:F> · {summary.confirmed_count}/{event.size_cap} confirmed"
+        line = f"**{display_title(event)}** — <t:{unix(event.starts_at)}:F> · {summary.seats_taken}/{event.size_cap} confirmed"
         if event.message_id:
             line += f" · [Open]({message_link(guild_discord_id, event.channel_id, event.message_id)})"
         lines.append(line)

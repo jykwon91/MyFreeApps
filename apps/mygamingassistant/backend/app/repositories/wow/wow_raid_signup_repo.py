@@ -31,9 +31,10 @@ async def upsert_signup(
 
     Single INSERT … ON CONFLICT (event_id, discord_user_id) DO UPDATE, so two
     near-simultaneous button clicks from the same player can't race into a
-    unique-violation.  ``signed_up_at`` is preserved on update (it orders the
-    bench) unless ``requeue`` is set — the signup service passes it when a
-    player *joins* the bench so FIFO promotion follows bench-join order.
+    unique-violation.  ``signed_up_at`` is preserved on update (it is the
+    order number and orders the queue) unless ``requeue`` is set — the
+    signup service passes it when a player joins the queue, or takes a seat
+    again after tentative, bench or absence.
     ``updated_at`` is refreshed.  Returns the post-upsert row.
     """
     now = datetime.now(timezone.utc)

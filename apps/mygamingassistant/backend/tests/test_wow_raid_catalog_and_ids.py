@@ -27,7 +27,8 @@ from app.services.wow.raid_catalog import (
     spec_info,
     spec_list_text,
 )
-from app.services.wow.raid_custom_id import MAX_CUSTOM_ID_LEN, REQUESTABLE_STATUSES
+from app.services.wow.raid_custom_id import MAX_CUSTOM_ID_LEN, RELEASE_STATUSES, REQUESTABLE_STATUSES
+from app.services.wow.raid_roster import SEAT_STATUSES
 
 _EVENT = uuid.UUID("ffffffff-ffff-4fff-bfff-ffffffffffff")
 _CLASSES_TS = Path(__file__).resolve().parents[2] / "frontend/src/games/wow-forever/data/classes.ts"
@@ -144,6 +145,22 @@ def test_round_trip() -> None:
     assert raid_custom_id.parse(spec_id) == raid_custom_id.RaidCustomId("spec", _EVENT, ("druid", "late"))
     pick_id = raid_custom_id.encode("pickclass", _EVENT, "confirmed")
     assert raid_custom_id.parse(pick_id) == raid_custom_id.RaidCustomId("pickclass", _EVENT, ("confirmed",))
+    bench_id = raid_custom_id.encode("status", _EVENT, "bench")
+    assert raid_custom_id.parse(bench_id) == raid_custom_id.RaidCustomId("status", _EVENT, ("bench",))
+    release_id = raid_custom_id.encode("release", _EVENT, "absence")
+    assert raid_custom_id.parse(release_id) == raid_custom_id.RaidCustomId("release", _EVENT, ("absence",))
+    stay_id = raid_custom_id.encode("stay", _EVENT)
+    assert raid_custom_id.parse(stay_id) == raid_custom_id.RaidCustomId("stay", _EVENT)
+
+
+def test_a_seat_can_be_given_up_for_every_status_that_holds_none() -> None:
+    assert set(RELEASE_STATUSES) == set(REQUESTABLE_STATUSES) - set(SEAT_STATUSES)
+
+
+def test_decline_buttons_on_old_posts_mean_absence() -> None:
+    parsed = raid_custom_id.parse(f"raid:v1:status:{_EVENT}:declined")
+    assert parsed == raid_custom_id.RaidCustomId("status", _EVENT, ("absence",))
+    assert REQUESTABLE_STATUSES == ("confirmed", "late", "tentative", "bench", "absence")
 
 
 def test_encode_rejects_overlong() -> None:
@@ -164,16 +181,21 @@ def test_encode_rejects_overlong() -> None:
         "raid:v1:signup:not-a-uuid",
         f"raid:v1:signup:{_EVENT}:extra",
         f"raid:v1:status:{_EVENT}",
-        f"raid:v1:status:{_EVENT}:bench",  # bench is assigned, never requested
+        f"raid:v1:status:{_EVENT}:queued",  # the bot assigns queued; nobody requests it
         f"raid:v1:status:{_EVENT}:yolo",
         f"raid:v1:role:{_EVENT}:confirmed:mage",
         f"raid:v1:role:{_EVENT}:confirmed:necromancer:dps",
         f"raid:v1:role:{_EVENT}:confirmed:mage:support",
         f"raid:v1:spec:{_EVENT}:mage",
         f"raid:v1:spec:{_EVENT}:necromancer:confirmed",
-        f"raid:v1:spec:{_EVENT}:mage:bench",
+        f"raid:v1:spec:{_EVENT}:mage:queued",
+        f"raid:v1:spec:{_EVENT}:mage:declined",  # only the status button keeps the old name
         f"raid:v1:pickclass:{_EVENT}:yolo",
         f"raid:v1:pickclass:{_EVENT}",
+        f"raid:v1:release:{_EVENT}",
+        f"raid:v1:release:{_EVENT}:confirmed",  # a seat status keeps the seat
+        f"raid:v1:release:{_EVENT}:queued",
+        f"raid:v1:stay:{_EVENT}:absence",
         f"raid:v1:explode:{_EVENT}",
         "raid:v1:testdm:extra",
         "raid:v1:signup:" + "a" * 200,

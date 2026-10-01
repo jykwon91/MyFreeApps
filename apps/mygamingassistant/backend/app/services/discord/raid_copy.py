@@ -19,10 +19,13 @@ MENU_TIMEOUT: Final = "That menu timed out. Tap Sign up again."
 GUILD_ONLY: Final = "Use this in a server channel, not in DMs."
 
 NEXT_TIME_ONE_TAP: Final = "Next time it's one tap."
-BENCHED: Final = (
-    "The raid is full, so I've put you on the bench. "
-    "You'll be moved up automatically if someone drops out."
+QUEUE_MOVES_UP: Final = "I'll move you up automatically when a seat opens."
+BENCH_NOTE: Final = (
+    "Bench is for backups, so I won't move you into a seat automatically. "
+    "Tap **Sign up** on the raid post to ask for one."
 )
+TENTATIVE_NOTE: Final = "Tentative doesn't hold a seat. Tap **Sign up** on the raid post to take one."
+SEAT_KEPT: Final = "Okay, you keep your seat."
 NOT_SIGNED_UP: Final = "You haven't signed up for this raid yet. Tap **Sign up** on the raid post."
 CLASS_PROMPT: Final = "Which class are you bringing? I'll remember it for next time."
 
@@ -50,18 +53,75 @@ SETUP_CHECK_FAILED: Final = (
 
 _ALREADY: Final[dict[str, str]] = {
     "confirmed": "You're already signed up.",
-    "tentative": "You're already tentative.",
-    "late": "You're already marked as late.",
-    "declined": "You've already declined.",
-    "bench": "You're already on the bench. You'll be moved up automatically if someone drops out.",
+    "late": "You're already marked **late**.",
+    "tentative": "You're already marked **tentative**.",
+    "bench": "You're already on the **bench**. Tap **Sign up** if you want a seat.",
+    "absence": "You're already marked **absent**. Tap **Sign up** if your plans change.",
+}
+
+_MARKED_WORDS: Final[dict[str, str]] = {"late": "late", "tentative": "tentative", "absence": "absent"}
+
+# The seat confirm: a seat holder leaving while players are queued.
+_RELEASE_QUESTIONS: Final[dict[str, str]] = {
+    "tentative": "Mark yourself **tentative**?",
+    "bench": "Move to the **bench**?",
+    "absence": "Mark yourself **absent**?",
+}
+_RELEASED: Final[dict[str, str]] = {
+    "tentative": "You're marked **tentative**.",
+    "bench": "You're on the **bench**.",
+    "absence": "You're marked **absent**.",
 }
 
 
-_MARKED_WORDS: Final[dict[str, str]] = {"late": "late", "tentative": "tentative"}
-
-
-def already_in_status(status: str) -> str:
+def already_in_status(
+    status: str, *, spec_label: str | None = None, queue_position: int | None = None, asked_late: bool = False
+) -> str:
+    """Same status again: say so, and point at what they probably wanted instead."""
+    if status == "queued":
+        if asked_late:
+            return late_while_queued(queue_position)
+        return f"You're already **{queue_place(queue_position)}**. {QUEUE_MOVES_UP}"
+    if status == "confirmed" and spec_label:
+        return f"You're already signed up as **{spec_label}**. To switch spec, tap **My signup**."
     return _ALREADY.get(status, "Nothing changed.")
+
+
+def queue_place(position: int | None) -> str:
+    """'#2 in the queue' — or just 'in the queue' when the place isn't known."""
+    if position is None:
+        return "in the queue"
+    return f"#{position} in the queue"
+
+
+def queued_note(position: int | None, *, asked_late: bool = False) -> str:
+    """Asked for a seat while the raid is full."""
+    if asked_late:
+        return late_while_queued(position)
+    return f"The raid is full, so you're **{queue_place(position)}**. {QUEUE_MOVES_UP}"
+
+
+def late_while_queued(position: int | None) -> str:
+    """Late holds a seat, so a full raid queues it; moving up makes you confirmed."""
+    return (
+        f"The raid is full, so I can't mark you late yet. You're **{queue_place(position)}**. "
+        "Once I move you up, tap **Late**."
+    )
+
+
+def release_prompt(status: str) -> str:
+    return (
+        "Players are waiting in the queue, so your seat goes to the next one right away. "
+        "If you want it back later, you'll join the back of the queue. "
+        + _RELEASE_QUESTIONS.get(status, "Give up your seat?")
+    )
+
+
+def seat_released(status: str, *, handed_on: bool) -> str:
+    text = _RELEASED.get(status, "Done.")
+    if handed_on:
+        text += " Your seat went to the next player in the queue."
+    return text
 
 
 def spec_prompt(class_label: str) -> str:
@@ -85,7 +145,9 @@ def saved_as(spec_label: str) -> str:
 
 
 def marked_as(status: str, spec_label: str) -> str:
-    """'You're marked **late** as Fury Warrior.'"""
+    """'You're marked **late** as Fury Warrior.' — the bench also says what bench means."""
+    if status == "bench":
+        return f"You're on the **bench** as {spec_label}. {BENCH_NOTE}"
     return f"You're marked **{_MARKED_WORDS.get(status, status)}** as {spec_label}."
 
 
@@ -167,7 +229,11 @@ def cancellation_dm(raid_label: str, unix: int, reason: str | None) -> str:
 
 
 def promoted_dm(raid_label: str, unix: int, link: str | None) -> str:
-    text = f"Good news: a spot opened up in **{raid_label}** (<t:{unix}:F>). You're off the bench and confirmed."
+    text = (
+        f"Good news: a seat opened up in **{raid_label}** (<t:{unix}:F>, <t:{unix}:R>), "
+        "so I've moved you up from the queue. You're confirmed. "
+        "Can't make it any more? Tap **Absence** on the raid post so someone else can have the seat."
+    )
     if link:
         return f"{text}\n[Jump to the raid]({link})"
     return text

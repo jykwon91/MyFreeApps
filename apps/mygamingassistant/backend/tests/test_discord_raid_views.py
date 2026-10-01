@@ -21,6 +21,8 @@ from app.services.discord.raid_views import (
     EMBED_DESCRIPTION_LIMIT,
     _clip_lines,
     class_picker_data,
+    my_signup_data,
+    release_confirm_data,
     roster_data,
     spec_picker_data,
 )
@@ -155,8 +157,8 @@ def test_roster_lists_players_with_their_class_icon() -> None:
 
     description = _roster_description(signups, _ALL_ICONS)
 
-    assert "<:warrior__a1b2c3:1400000000000000000> Alice" in description
-    assert f"{_ALL_ICONS.markup('mage')} Maybe" in description
+    assert "<:warrior__a1b2c3:1400000000000000000> `1` Alice" in description
+    assert f"{_ALL_ICONS.markup('mage')} Maybe" in description  # tentative: no order number
 
 
 def test_roster_shows_the_spec_icon_when_the_spec_is_known() -> None:
@@ -165,18 +167,45 @@ def test_roster_shows_the_spec_icon_when_the_spec_is_known() -> None:
 
     description = _roster_description(signups, icons)
 
-    assert f"{icons.markup('druid_feral_tank')} Bear" in description
-    assert f"{icons.markup('warrior')} Alice" in description
+    assert f"{icons.markup('druid_feral_tank')} `1` Bear" in description
+    assert f"{icons.markup('warrior')} `2` Alice" in description
 
 
 def test_roster_falls_back_to_text_tags_before_the_first_sync() -> None:
     description = _roster_description([_signup("Alice")], EMPTY_EMOJIS)
-    assert "[WAR] Alice" in description
+    assert "[WAR] `1` Alice" in description
     assert "<:" not in description
 
 
+def test_roster_sections_order_numbers_and_queue_places() -> None:
+    signups = [
+        _signup("Tank", minute=0),
+        _signup("Slow", status="late", wow_class="druid", role="healer", minute=1),
+        _signup("Maybe", status="tentative", wow_class="mage", role="dps", minute=2),
+        _signup("Second", status="queued", wow_class="rogue", role="dps", minute=9),
+        _signup("First", status="queued", wow_class="hunter", role="dps", minute=5),
+        _signup("Backup", status="bench", wow_class="warlock", role="dps", minute=3),
+        _signup("Away", status="absence", wow_class=None, role=None, minute=4),
+    ]
+
+    [embed] = roster_data(_event(), signups, _guild(), emojis=EMPTY_EMOJIS)["embeds"]
+
+    # Seat holders carry their order number; the queue shows each place in it.
+    assert embed["description"].split("\n\n") == [
+        "**Tanks (1)**\n[WAR] `1` Tank",
+        "**Healers (0)**\n—",
+        "**DPS (0)**\n—",
+        "**Late (1)**\n[DRU] `2` Slow",
+        "**Tentative (1)**\n[MAG] Maybe",
+        "**Queued (2) · waiting for a seat**\n[HUN] #1 First\n[ROG] #2 Second",
+        "**Bench (1) · backups**\n[WLK] Backup",
+        "**Absence (1)**\nAway",
+    ]
+    assert embed["footer"]["text"] == "Confirmed 2/40 (1 late) · Signed up 6"
+
+
 def test_a_long_roster_is_clipped_at_a_line_break_so_icons_stay_whole() -> None:
-    statuses = ["confirmed", "confirmed", "tentative", "late", "bench"]
+    statuses = ["confirmed", "confirmed", "tentative", "late", "bench", "queued"]
     signups = [
         _signup(
             f"{i:03d}" + "x" * 29,
@@ -210,3 +239,55 @@ def test_clip_lines(text: str, limit: int, expected: str) -> None:
     clipped = _clip_lines(text, limit)
     assert clipped == expected
     assert len(clipped) <= limit
+
+
+# ---------------------------------------------------------------------------
+# My signup
+# ---------------------------------------------------------------------------
+
+
+def test_my_signup_in_the_queue_shows_the_place_in_line() -> None:
+    seat = _signup("Seated")
+    first = _signup("First", status="queued", wow_class="rogue", role="dps", minute=5)
+    me = _signup("Me", status="queued", wow_class="mage", role="dps", spec="frost", minute=9)
+    data = my_signup_data(_event(), me, [seat, first, me])
+    assert data["content"] == f"For **Onyxia** you're **#2 in the queue** as Frost Mage.\n{raid_copy.QUEUE_MOVES_UP}"
+    assert len(data["components"]) == 1  # [Change class or spec]
+
+
+def test_my_signup_on_the_bench_says_what_bench_means() -> None:
+    me = _signup("Me", status="bench", wow_class="mage", role="dps", spec="frost")
+    data = my_signup_data(_event(), me, [me])
+    assert data["content"] == f"For **Onyxia** you're **on the bench** as Frost Mage.\n{raid_copy.BENCH_NOTE}"
+
+
+def test_my_signup_when_tentative_says_it_holds_no_seat() -> None:
+    me = _signup("Me", status="tentative", wow_class="mage", role="dps", spec="frost")
+    data = my_signup_data(_event(), me, [me])
+    assert data["content"] == f"For **Onyxia** you're **tentative** as Frost Mage.\n{raid_copy.TENTATIVE_NOTE}"
+
+
+def test_my_signup_when_absent_has_no_class_or_button() -> None:
+    me = _signup("Me", status="absence", wow_class="mage", role="dps", spec="frost")
+    data = my_signup_data(_event(), me, [me])
+    assert data["content"] == "For **Onyxia** you're **absent**."
+    assert data["components"] == []
+
+
+# ---------------------------------------------------------------------------
+# Seat confirmation
+# ---------------------------------------------------------------------------
+
+
+def test_release_confirm_asks_before_the_seat_goes_to_the_queue() -> None:
+    event = _event()
+    data = release_confirm_data(event, "absence")
+
+    assert data["content"] == raid_copy.release_prompt("absence")
+    assert data["content"].endswith("Mark yourself **absent**?")
+    assert data["flags"] == 64  # only the clicking player sees it
+    [row] = data["components"]
+    assert [(b["label"], b["style"], b["custom_id"]) for b in row["components"]] == [
+        ("Yes, free my seat", 4, f"raid:v1:release:{event.id}:absence"),
+        ("Keep my seat", 2, f"raid:v1:stay:{event.id}"),
+    ]

@@ -124,15 +124,18 @@ def test_description_has_timestamps_notes_and_counts() -> None:
         _signup("Alice"),
         _signup("Bob", status="tentative", wow_class="mage", role="dps"),
         _signup("Cleo", status="late", wow_class="priest", role="healer"),
-        _signup("Dan", status="declined", wow_class=None, role=None),
+        _signup("Dan", status="absence", wow_class=None, role=None),
+        _signup("Eve", status="bench", wow_class="rogue", role="dps"),
+        _signup("Finn", status="queued", wow_class="hunter", role="dps"),
     ]
     embed = _embed(build_signup_message(_event(notes="Bring fire resist"), signups, _guild(), emojis=EMPTY_EMOJIS))
     stamp = int(_STARTS.timestamp())
     lines = embed["description"].split("\n")
     assert lines[0] == f"<t:{stamp}:F> (<t:{stamp}:R>)"
     assert lines[1] == "Bring fire resist"
-    assert lines[2] == "**Confirmed 1/40** · Tentative 1 · Late 1 · Declined 1"
-    assert embed["footer"]["text"].startswith("Signed up: 3 ")
+    # Late players hold seats, so they count in the headline.
+    assert lines[2] == "**Confirmed 2/40 (1 late)** · Tentative 1 · Queued 1 · Bench 1 · Absence 1"
+    assert embed["footer"]["text"].startswith("Signed up: 5 ")
 
 
 def test_role_fields_group_by_class_in_signup_order() -> None:
@@ -155,14 +158,34 @@ def test_status_fields_and_empty_roles() -> None:
     signups = [
         _signup("Maybe", status="tentative", wow_class="mage", role="dps", minute=1),
         _signup("Slow", status="late", wow_class="druid", role="healer", minute=2),
-        _signup("Bench2", status="bench", wow_class="rogue", role="dps", minute=9),
-        _signup("Bench1", status="bench", wow_class="hunter", role="dps", minute=3),
+        _signup("Queue2", status="queued", wow_class="rogue", role="dps", minute=9),
+        _signup("Queue1", status="queued", wow_class="hunter", role="dps", minute=3),
+        _signup("Backup", status="bench", wow_class="warlock", role="dps", minute=4),
+        _signup("Away", status="absence", wow_class=None, role=None, minute=5),
     ]
-    fields = _fields_by_name(_embed(build_signup_message(_event(), signups, _guild(), emojis=EMPTY_EMOJIS)))
+    embed = _embed(build_signup_message(_event(), signups, _guild(), emojis=EMPTY_EMOJIS))
+    fields = _fields_by_name(embed)
     assert fields["Tanks (0)"] == "—"
     assert fields["Tentative (1)"] == "[MAG] Maybe"
     assert fields["Late (1)"] == "[DRU] Slow"
-    assert fields["Bench (2)"] == "[HUN] Bench1, [ROG] Bench2"  # FIFO
+    assert fields["Queued (2) · waiting for a seat"] == "[HUN] Queue1, [ROG] Queue2"  # line order
+    assert fields["Bench (1) · backups"] == "[WLK] Backup"
+    assert fields["Absence (1)"] == "Away"
+    status_fields = [f["name"] for f in embed["fields"]][3:]
+    assert status_fields == [
+        "Late (1)",
+        "Tentative (1)",
+        "Queued (2) · waiting for a seat",
+        "Bench (1) · backups",
+        "Absence (1)",
+    ]
+
+
+def test_absences_alone_still_show_who_cant_make_it() -> None:
+    signups = [_signup("Away", status="absence", wow_class="mage", role="dps")]
+    embed = _embed(build_signup_message(_event(), signups, _guild(), emojis=EMPTY_EMOJIS))
+    assert NO_SIGNUPS_TEXT in embed["description"]
+    assert _fields_by_name(embed)["Absence (1)"] == "[MAG] Away"
 
 
 def test_full_raid_is_orange() -> None:
@@ -196,9 +219,11 @@ def test_buttons_and_custom_ids() -> None:
     message = build_signup_message(event, [], _guild(), emojis=EMPTY_EMOJIS)
     rows = message["components"]
     labels = [[c["label"] for c in row["components"]] for row in rows]
-    assert labels == [["Sign up", "Tentative", "Late", "Decline"], ["My signup", "Roster"]]
+    assert labels == [["Sign up", "Late", "Tentative", "Bench", "Absence"], ["My signup", "Roster"]]
     styles = [c["style"] for c in rows[0]["components"]]
-    assert styles == [3, 2, 2, 4]
+    assert styles == [3, 2, 2, 2, 2]
+    statuses = [raid_custom_id.parse(c["custom_id"]).args for c in rows[0]["components"][1:]]
+    assert statuses == [("late",), ("tentative",), ("bench",), ("absence",)]
     for row in rows:
         for button in row["components"]:
             assert len(button["custom_id"]) <= 100
@@ -253,12 +278,12 @@ def test_forty_long_names_one_class_stays_within_limits() -> None:
 
 def test_forty_markdown_heavy_names_mixed_statuses_stays_within_limits() -> None:
     # '*' doubles in length when escaped — worst case per name.
-    statuses = ["confirmed", "tentative", "late", "bench"]
+    statuses = ["confirmed", "tentative", "late", "bench", "queued", "absence"]
     signups = []
     for i in range(40):
         cls = CLASSES[i % len(CLASSES)]
         signups.append(
-            _signup("*" * 32, status=statuses[i % 4], wow_class=cls.key, role=cls.roles[0], minute=i)
+            _signup("*" * 32, status=statuses[i % 6], wow_class=cls.key, role=cls.roles[0], minute=i)
         )
     embed = _embed(build_signup_message(_event(notes="n" * 200), signups, _guild(), emojis=EMPTY_EMOJIS))
     _assert_within_limits(embed)
@@ -270,14 +295,14 @@ def test_degradation_caps_names_per_line_with_more_suffix() -> None:
     signups = [_signup("_" * 32, wow_class="rogue", role="dps", minute=i) for i in range(20)]
     signups += [
         _signup("*" * 32, status=status, wow_class="mage", role="dps", minute=100 + i)
-        for i, status in enumerate(["tentative", "late", "bench"] * 20)
+        for i, status in enumerate(["tentative", "late", "queued"] * 20)
     ]
     embed = _embed(build_signup_message(_event(), signups, _guild(), emojis=EMPTY_EMOJIS))
     _assert_within_limits(embed)
     fields = _fields_by_name(embed)
     assert fields["DPS (20)"].startswith("[ROG] Rogue ×20: \\_")
     assert fields["DPS (20)"].endswith("more")
-    for name in ("Tentative (20)", "Late (20)", "Bench (20)"):
+    for name in ("Tentative (20)", "Late (20)", "Queued (20) · waiting for a seat"):
         assert fields[name].startswith("[MAG] \\*")
         assert fields[name].endswith("more")
         assert fields[name] != COLLAPSED_STATUS_TEXT
@@ -285,7 +310,7 @@ def test_degradation_caps_names_per_line_with_more_suffix() -> None:
 
 @pytest.mark.parametrize("count", [1, 10, 25, 40, 120])
 def test_any_roster_size_fits(count: int) -> None:
-    statuses = ["confirmed", "confirmed", "tentative", "late", "bench", "declined"]
+    statuses = ["confirmed", "confirmed", "tentative", "late", "bench", "queued", "absence"]
     signups = []
     for i in range(count):
         cls = CLASSES[i % len(CLASSES)]
@@ -308,7 +333,8 @@ def _icons(*logical: str) -> EmojiSet:
 
 
 _ALL_ICONS = _icons(
-    *(cls.key for cls in CLASSES), "status_signed", "status_tentative", "status_late", "status_absence"
+    *(cls.key for cls in CLASSES),
+    *(f"status_{status}" for status in ("signed", "late", "tentative", "bench", "absence")),
 )
 
 
@@ -339,8 +365,9 @@ def test_status_buttons_carry_icons_once_uploaded() -> None:
     first_row = message["components"][0]["components"]
     assert [button["emoji"]["name"] for button in first_row] == [
         "status_signed__a1b2c3",
-        "status_tentative__a1b2c3",
         "status_late__a1b2c3",
+        "status_tentative__a1b2c3",
+        "status_bench__a1b2c3",
         "status_absence__a1b2c3",
     ]
     assert all(button["emoji"]["id"].isdigit() for button in first_row)
@@ -356,7 +383,7 @@ def test_buttons_have_no_emoji_before_the_first_sync() -> None:
 @pytest.mark.parametrize("count", [40, 120])
 def test_rosters_with_icons_stay_within_limits(count: int) -> None:
     # Each icon is ~40 chars of <:name:id> markup — the degradation ladder must absorb it.
-    statuses = ["confirmed", "confirmed", "tentative", "late", "bench", "declined"]
+    statuses = ["confirmed", "confirmed", "tentative", "late", "bench", "queued", "absence"]
     signups = []
     for i in range(count):
         cls = CLASSES[i % len(CLASSES)]

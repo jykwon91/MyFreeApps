@@ -27,14 +27,20 @@ from app.repositories.wow import (
     wow_raid_notification_repo,
     wow_raid_signup_repo,
 )
-from app.services.wow.raid_roster import SEAT_STATUSES, TENTATIVE_STATUS, compute_roster_summary
-from app.services.wow.raid_signup_service import promote_from_bench
+from app.services.wow.raid_roster import (
+    BENCH_STATUS,
+    QUEUED_STATUS,
+    SEAT_STATUSES,
+    TENTATIVE_STATUS,
+    compute_roster_summary,
+)
+from app.services.wow.raid_signup_service import promote_from_queue
 
 PostOutcome = Literal["posted", "already_posted", "in_past", "gone"]
 
-# Who hears about a cancellation by DM (spec: confirmed + tentative; late
-# players are coming too).
-_CANCEL_DM_STATUSES = (*SEAT_STATUSES, TENTATIVE_STATUS)
+# Who hears about a cancellation by DM: everyone still on the list — seats,
+# maybes, the queue and backups (not absences).
+_CANCEL_DM_STATUSES = (*SEAT_STATUSES, TENTATIVE_STATUS, QUEUED_STATUS, BENCH_STATUS)
 
 
 @dataclass(frozen=True)
@@ -147,7 +153,7 @@ async def edit_event(
 
     promoted: list[str] = []
     if size_cap is not None:
-        promoted = await promote_from_bench(db, event)
+        promoted = await promote_from_queue(db, event)
     return EditOutcome(promoted=promoted, time_changed=time_changed)
 
 

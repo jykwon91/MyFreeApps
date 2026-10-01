@@ -8,9 +8,13 @@ Discord ``<t:…>`` timestamps so every viewer sees their own local time.
 Layout
 ------
 Title        "Onyxia — Sat Oct 10"               ("CANCELLED — " prefix when cancelled)
-Description  <t:X:F> (<t:X:R>) / notes / "**Confirmed 14/40** · Tentative 3 · Late 1 · Bench 2 · Declined 4"
+Description  <t:X:F> (<t:X:R>) / notes /
+             "**Confirmed 15/40 (1 late)** · Tentative 3 · Queued 2 · Bench 1 · Absence 4"
+             (seats taken: late players hold seats too)
 Fields       Tanks (n) / Healers (n) / DPS (n): one line per class, e.g.
-             "<class icon> Warrior ×2: Alice, Bob"; then Tentative / Late / Bench.
+             "<class icon> Warrior ×2: Alice, Bob"; then Late / Tentative /
+             "Queued (n) · waiting for a seat" (in line order) /
+             "Bench (n) · backups" / Absence.
              Icons are the bot's application emojis; without them (before the
              first emoji sync) the class shows as a text tag, "[WAR]".
 Footer       "Signed up: 20 · Created by Thrall · Raid ID a1b2"
@@ -21,7 +25,7 @@ Discord limits & degradation
 Each field value ≤ 1024 chars, the whole embed ≤ 6000 (we budget 5800).
 When the full roster doesn't fit, degrade in order until it does:
   1. cap the names shown per line, the rest become "+N more";
-  2. Tentative / Late / Bench fields become counts ("Tap Roster to see who.");
+  2. the status fields become counts ("Tap Roster to see who.");
   3. role lines drop names entirely ("[WAR] Warrior ×5").
 The [Roster] button always shows the complete list privately.
 """
@@ -35,7 +39,6 @@ from typing import Any, Final
 from zoneinfo import ZoneInfo
 
 from platform_shared.services.discord import (
-    BUTTON_STYLE_DANGER,
     BUTTON_STYLE_SECONDARY,
     BUTTON_STYLE_SUCCESS,
     COMPONENT_TYPE_ACTION_ROW,
@@ -72,7 +75,22 @@ COLLAPSED_STATUS_TEXT: Final = "Tap **Roster** to see who."
 NO_MENTIONS: Final[dict[str, Any]] = {"parse": []}
 
 _MARKDOWN_SPECIALS: Final = re.compile(r"([\\*_~`|>\[\]])")
-_STATUS_FIELDS: Final = (("tentative", "Tentative"), ("late", "Late"), ("bench", "Bench"))
+_STATUS_FIELDS: Final = (
+    ("late", "Late"),
+    ("tentative", "Tentative"),
+    ("queued", "Queued"),
+    ("bench", "Bench"),
+    ("absence", "Absence"),
+)
+# Said after the count, so the queue and the bench aren't mistaken for each other.
+_STATUS_HINTS: Final[dict[str, str]] = {"queued": "waiting for a seat", "bench": "backups"}
+# Status buttons after [Sign up]: (status, label, icon).
+_STATUS_BUTTONS: Final = (
+    ("late", "Late", "status_late"),
+    ("tentative", "Tentative", "status_tentative"),
+    ("bench", "Bench", "status_bench"),
+    ("absence", "Absence", "status_absence"),
+)
 
 
 @dataclass(frozen=True)
@@ -142,18 +160,13 @@ def build_signup_components(event: WowRaidEvent, *, emojis: EmojiSet) -> list[di
             "Sign up", BUTTON_STYLE_SUCCESS, raid_custom_id.encode("signup", event.id), disabled,
             emoji=emojis.component("status_signed"),
         ),
+    ]
+    row1 += [
         _button(
-            "Tentative", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("status", event.id, "tentative"), disabled,
-            emoji=emojis.component("status_tentative"),
-        ),
-        _button(
-            "Late", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("status", event.id, "late"), disabled,
-            emoji=emojis.component("status_late"),
-        ),
-        _button(
-            "Decline", BUTTON_STYLE_DANGER, raid_custom_id.encode("status", event.id, "declined"), disabled,
-            emoji=emojis.component("status_absence"),
-        ),
+            label, BUTTON_STYLE_SECONDARY, raid_custom_id.encode("status", event.id, status), disabled,
+            emoji=emojis.component(icon),
+        )
+        for status, label, icon in _STATUS_BUTTONS
     ]
     row2 = [
         _button("My signup", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("mine", event.id), disabled),
@@ -177,9 +190,8 @@ def build_signup_embed(
     description = _description(event, summary)
     footer = _footer(event, summary)
 
-    if summary.signed_up_count == 0:
-        fields: list[dict[str, Any]] = []
-    else:
+    fields: list[dict[str, Any]] = []
+    if signups:
         fields = _fit_fields(signups, emojis, fixed_len=len(title) + len(description) + len(footer))
 
     embed: dict[str, Any] = {
@@ -269,12 +281,12 @@ def _description(event: WowRaidEvent, summary: RosterSummary) -> str:
     if event.notes:
         lines.append(event.notes)
 
-    counts = [f"**Confirmed {summary.confirmed_count}/{summary.size_cap}**"]
+    counts = [f"**{seats_label(summary)}**"]
     optional_counts = (
         ("Tentative", summary.tentative_count),
-        ("Late", summary.late_count),
+        ("Queued", summary.queued_count),
         ("Bench", summary.bench_count),
-        ("Declined", summary.declined_count),
+        ("Absence", summary.absence_count),
     )
     counts.extend(f"{label} {count}" for label, count in optional_counts if count)
     lines.append(" · ".join(counts))
@@ -282,6 +294,23 @@ def _description(event: WowRaidEvent, summary: RosterSummary) -> str:
     if summary.signed_up_count == 0:
         lines.append(NO_SIGNUPS_TEXT)
     return "\n".join(lines)
+
+
+def seats_label(summary: RosterSummary) -> str:
+    """'Confirmed 40/40 (2 late)' — late players hold seats too."""
+    label = f"Confirmed {summary.seats_taken}/{summary.size_cap}"
+    if summary.late_count:
+        label += f" ({summary.late_count} late)"
+    return label
+
+
+def status_heading(status: str, label: str, count: int) -> str:
+    """'Queued (3) · waiting for a seat' — the count, plus a hint for the queue and the bench."""
+    heading = f"{label} ({count})"
+    hint = _STATUS_HINTS.get(status)
+    if hint:
+        heading += f" · {hint}"
+    return heading
 
 
 def _footer(event: WowRaidEvent, summary: RosterSummary) -> str:
@@ -387,7 +416,7 @@ def _render_fields(
             value = COLLAPSED_STATUS_TEXT
         else:
             value = _tagged_names(entries, mode.names_per_line, emojis)
-        fields.append(_field(f"{label} ({len(entries)})", value))
+        fields.append(_field(status_heading(status, label, len(entries)), value))
     return fields
 
 

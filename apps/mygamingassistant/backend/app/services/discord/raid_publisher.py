@@ -250,7 +250,7 @@ async def _edit_or_repost(client: DiscordRestClient, snapshot: _Snapshot) -> Non
 
 
 async def send_ephemeral_followup(application_id: str, token: str, content: str) -> None:
-    """A private note after an UPDATE_MESSAGE response (e.g. 'you're on the bench')."""
+    """A private note after an UPDATE_MESSAGE response (e.g. 'you're #2 in the queue')."""
     try:
         async with rest.make_rest_client() as client:
             await rest.bounded(client.create_followup_message(application_id, token, ephemeral_data(content)))
@@ -261,12 +261,12 @@ async def send_ephemeral_followup(application_id: str, token: str, content: str)
 
 
 # ---------------------------------------------------------------------------
-# DMs: bench promotion, cancellation, test DM
+# DMs: moved up from the queue, cancellation, test DM
 # ---------------------------------------------------------------------------
 
 
 async def notify_promoted(event_id: uuid.UUID, user_ids: list[str]) -> None:
-    """DM players moved off the bench (already filtered for DM opt-out)."""
+    """DM players moved up from the queue (already filtered for DM opt-out)."""
     if not user_ids:
         return
     try:

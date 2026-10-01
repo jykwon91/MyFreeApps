@@ -47,6 +47,7 @@ from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.repositories.wow import wow_raid_signup_repo
 from app.services.discord import raid_copy, rest
 from app.services.wow.raid_embed import COLOR_FULL
+from app.services.wow.raid_roster import order_numbers
 from app.services.wow.raid_time_parser import PAST_MESSAGE, UNREADABLE_MESSAGE
 
 pytestmark = pytest.mark.asyncio
@@ -437,7 +438,7 @@ async def test_full_raid_journey(post: Post, db: AsyncSession, fake_discord: Fak
     assert_ephemeral(response)
     assert content(response) == raid_copy.already_in_status("tentative")
 
-    # --- fill the raid (5 seats), then a sixth player lands on the bench
+    # --- fill the raid (5 seats), then a sixth player joins the queue
     for user_id in ("101", "102", "103", "104", "105"):
         if user_id != "101":
             await _save_prefs(post, user_id)
@@ -449,46 +450,61 @@ async def test_full_raid_journey(post: Post, db: AsyncSession, fake_discord: Fak
     assert response["type"] == 7
     full_embed = response["data"]["embeds"][0]
     assert full_embed["color"] == COLOR_FULL
-    assert [f["name"] for f in full_embed["fields"]][-1] == "Bench (1)"
+    assert [f["name"] for f in full_embed["fields"]][-1] == "Queued (1) · waiting for a seat"
     (followup,) = fake_discord.find("POST", f"/webhooks/{APP_ID}/{TOKEN}")
     assert followup.body is not None
-    assert followup.body["content"] == raid_copy.BENCHED
+    assert followup.body["content"] == raid_copy.queued_note(1)
     assert followup.body["flags"] == _EPHEMERAL
     await _save_prefs(post, "107", "rogue.combat")
     await post(click(_signup_id(event), user_id="107"))
     statuses = await _signups(db, event)
-    assert statuses["106"] == "bench" and statuses["107"] == "bench"
+    assert statuses["106"] == "queued" and statuses["107"] == "queued"
 
-    # --- a confirmed player declines → the earliest bench player is promoted and DM'd
+    # --- a DPS seat holder marks absence while players queue: asked first, since
+    #     the seat goes to the queue at once
     fake_discord.clear()
-    response = await post(click(f"raid:v1:status:{event.id}:declined", user_id="102"))
-    assert response["type"] == 7
-    statuses = await _signups(db, event)
-    assert statuses["102"] == "declined"
-    assert statuses["106"] == "confirmed"
-    assert statuses["107"] == "bench"
-    (promotion_dm,) = fake_discord.dms_to("106")
-    assert promotion_dm.body is not None
-    assert promotion_dm.body["content"].startswith("Good news: a spot opened up in **Onyxia**")
-    assert promotion_dm.body["allowed_mentions"] == {"parse": []}
-    assert fake_discord.dms_to("107") == []
-
-    # --- My signup shows the bench position
-    response = await post(click(f"raid:v1:mine:{event.id}", user_id="107"))
+    response = await post(click(f"raid:v1:status:{event.id}:absence", user_id="102"))
     assert_ephemeral(response)
-    assert content(response) == "For **Onyxia** you're **on the bench (#1 in line)** as Combat Rogue."
+    assert content(response) == raid_copy.release_prompt("absence")
+    assert custom_ids(response) == [f"raid:v1:release:{event.id}:absence", f"raid:v1:stay:{event.id}"]
+    assert (await _signups(db, event))["102"] == "confirmed"
+    assert fake_discord.public_edits() == []
+
+    # --- [Yes, free my seat] → the first queued DPS moves up (ahead of the tank at
+    #     the front of the line, so the raid keeps its shape) and is DM'd
+    response = await post(click(custom_id_for(response, "release"), user_id="102"))
+    assert response["type"] == 7
+    assert content(response) == raid_copy.seat_released("absence", handed_on=True)
+    assert custom_ids(response) == []
+    assert len(fake_discord.public_edits()) == 1
+    statuses = await _signups(db, event)
+    assert statuses["102"] == "absence"
+    assert statuses["107"] == "confirmed"
+    assert statuses["106"] == "queued"
+    (promotion_dm,) = fake_discord.dms_to("107")
+    assert promotion_dm.body is not None
+    assert promotion_dm.body["content"].startswith("Good news: a seat opened up in **Onyxia**")
+    assert promotion_dm.body["allowed_mentions"] == {"parse": []}
+    assert fake_discord.dms_to("106") == []
+
+    # --- My signup shows the queue position
+    response = await post(click(f"raid:v1:mine:{event.id}", user_id="106"))
+    assert_ephemeral(response)
+    assert content(response) == (
+        f"For **Onyxia** you're **#1 in the queue** as Protection Warrior.\n{raid_copy.QUEUE_MOVES_UP}"
+    )
     assert custom_ids(response) == [f"raid:v1:change:{event.id}"]
 
     # --- Roster lists everyone privately
-    response = await post(click(f"raid:v1:roster:{event.id}", user_id="107"))
+    response = await post(click(f"raid:v1:roster:{event.id}", user_id="106"))
     assert_ephemeral(response)
 
-    # --- edit size: increase promotes from the bench; shrinking below seats is refused
+    # --- edit size: a bigger raid moves the queue up; shrinking below seats is refused
     fake_discord.clear()
     response = await post(command("raid-admin", "edit", event=str(event.id), size=6))
     assert content(response) == raid_copy.EDIT_DONE
-    assert (await _signups(db, event))["107"] == "confirmed"
-    assert len(fake_discord.dms_to("107")) == 1
+    assert (await _signups(db, event))["106"] == "confirmed"
+    assert len(fake_discord.dms_to("106")) == 1
     assert len(fake_discord.public_edits()) == 1
     response = await post(command("raid-admin", "edit", event=str(event.id), size=5))
     assert content(response) == raid_copy.size_too_small(6)
@@ -533,7 +549,7 @@ async def test_full_raid_journey(post: Post, db: AsyncSession, fake_discord: Fak
     assert announcement.body["allowed_mentions"] == {"parse": []}
     for user_id in ("101", "103", "104", "105", "106", "107"):
         assert len(fake_discord.dms_to(user_id)) == 1, user_id
-    assert fake_discord.dms_to("102") == []  # declined players aren't told
+    assert fake_discord.dms_to("102") == []  # absent players aren't told
 
     # --- every button on the cancelled raid refuses
     response = await post(click(_signup_id(event), user_id="108"))
@@ -560,6 +576,8 @@ async def test_started_raid_refuses_signups(post: Post, db: AsyncSession, fake_d
     response = await post(click(f"raid:v1:spec:{event.id}:druid:confirmed", user_id="202", values=["druid.balance"]))
     assert content(response) == raid_copy.RAID_STARTED
     response = await post(click(f"raid:v1:pickclass:{event.id}:confirmed", user_id="202"))
+    assert content(response) == raid_copy.RAID_STARTED
+    response = await post(click(f"raid:v1:release:{event.id}:absence", user_id="202"))
     assert content(response) == raid_copy.RAID_STARTED
     assert (await _signups(db, event)) == {}
 
@@ -635,12 +653,48 @@ async def test_pre_spec_signup_is_asked_for_its_spec_once(
     assert custom_id_for(response, "spec") == f"raid:v1:spec:{event.id}:druid:confirmed"
 
 
-async def test_decline_without_class_needs_no_picker(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
+async def test_absence_without_class_needs_no_picker(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
     await _setup(post)
     event = await _create_and_post(post, db)
-    response = await post(click(f"raid:v1:status:{event.id}:declined", user_id="302"))
+    response = await post(click(f"raid:v1:status:{event.id}:absence", user_id="302"))
     assert response["type"] == 7
-    assert (await _signups(db, event)) == {"302": "declined"}
+    assert (await _signups(db, event)) == {"302": "absence"}
+    # A [Decline] button on a post from before the rename marks absence too.
+    response = await post(click(f"raid:v1:status:{event.id}:declined", user_id="303"))
+    assert response["type"] == 7
+    assert (await _signups(db, event)) == {"302": "absence", "303": "absence"}
+
+
+async def test_bench_is_a_backup_that_is_never_moved_up(
+    post: Post, db: AsyncSession, fake_discord: FakeDiscord
+) -> None:
+    await _setup(post)
+    event = await _create_and_post(post, db)
+    await _save_prefs(post, "900")
+    fake_discord.clear()
+    response = await post(click(f"raid:v1:status:{event.id}:bench", user_id="900"))
+    assert response["type"] == 7
+    assert [f["name"] for f in response["data"]["embeds"][0]["fields"]][-1] == "Bench (1) · backups"
+    (followup,) = fake_discord.find("POST", f"/webhooks/{APP_ID}/{TOKEN}")
+    assert followup.body is not None and followup.body["content"] == raid_copy.BENCH_NOTE
+
+    for user_id in ("901", "902", "903", "904", "905"):
+        await _save_prefs(post, user_id)
+        await post(click(_signup_id(event), user_id=user_id))
+    # A seat opens: the backup stays on the bench and isn't DM'd.
+    fake_discord.clear()
+    await post(click(f"raid:v1:status:{event.id}:absence", user_id="901"))
+    assert (await _signups(db, event))["900"] == "bench"
+    assert fake_discord.dms_to("900") == []
+    response = await post(click(f"raid:v1:mine:{event.id}", user_id="900"))
+    assert content(response) == f"For **Onyxia** you're **on the bench** as Frost Mage.\n{raid_copy.BENCH_NOTE}"
+
+    # Asking for a seat takes the open one, at the back of the line.
+    response = await post(click(_signup_id(event), user_id="900"))
+    assert response["type"] == 7
+    rows = [await _signup_row(db, event, user_id) for user_id in ("900", "902", "903", "904", "905")]
+    assert rows[0].status == "confirmed"
+    assert order_numbers(rows)["900"] == 5
 
 
 @pytest.mark.parametrize(
@@ -648,7 +702,7 @@ async def test_decline_without_class_needs_no_picker(post: Post, db: AsyncSessio
     [
         "raid:v1:explode",
         "raid:v1:signup:not-a-uuid",
-        "raid:v1:status:" + str(uuid.uuid4()) + ":bench",
+        "raid:v1:status:" + str(uuid.uuid4()) + ":queued",
         "raid:v1:signup:" + "a" * 150,
     ],
 )
@@ -899,11 +953,44 @@ async def test_dm_opt_out_skips_promotion_dm(post: Post, db: AsyncSession, fake_
     )
     assert "Saved." in content(response)
     await post(click(_signup_id(event), user_id="606"))
-    assert (await _signups(db, event))["606"] == "bench"
+    assert (await _signups(db, event))["606"] == "queued"
     fake_discord.clear()
-    await post(click(f"raid:v1:status:{event.id}:tentative", user_id="601"))
+    await post(click(f"raid:v1:status:{event.id}:tentative", user_id="601"))  # asks first
+    await post(click(f"raid:v1:release:{event.id}:tentative", user_id="601"))
     assert (await _signups(db, event))["606"] == "confirmed"
     assert fake_discord.dms_to("606") == []
+
+
+async def test_keeping_the_seat_changes_nothing(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
+    await _setup(post)
+    event = await _create_and_post(post, db)
+    players = ("1010", "1011", "1012", "1013", "1001", "1003")  # five seats, then 1003 is queued
+    for user_id in players:
+        await _save_prefs(post, user_id)
+        await post(click(_signup_id(event), user_id=user_id))
+    before = dict.fromkeys(players, "confirmed") | {"1003": "queued"}
+    assert (await _signups(db, event)) == before
+
+    response = await post(click(f"raid:v1:status:{event.id}:bench", user_id="1001"))
+    assert content(response) == raid_copy.release_prompt("bench")
+    fake_discord.clear()
+    response = await post(click(custom_id_for(response, "stay"), user_id="1001"))
+    assert response["type"] == 7
+    assert content(response) == raid_copy.SEAT_KEPT
+    assert custom_ids(response) == []
+    assert (await _signups(db, event)) == before
+    assert fake_discord.public_edits() == [] and fake_discord.dms_to("1003") == []
+
+    # Same status again points at what they probably wanted.
+    response = await post(click(_signup_id(event), user_id="1001"))
+    assert content(response) == raid_copy.already_in_status("confirmed", spec_label="Frost Mage")
+    # Late holds a seat too, so the queue can't skip ahead that way.
+    response = await post(click(f"raid:v1:status:{event.id}:late", user_id="1003"))
+    assert_ephemeral(response)
+    assert content(response) == raid_copy.late_while_queued(1)
+    # A stale card from someone who has since left.
+    response = await post(click(f"raid:v1:release:{event.id}:absence", user_id="1004"))
+    assert content(response) == raid_copy.NOT_SIGNED_UP
 
 
 async def test_keep_raid_leaves_it_scheduled(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
@@ -919,7 +1006,7 @@ async def test_keep_raid_leaves_it_scheduled(post: Post, db: AsyncSession, fake_
     assert content(response) == raid_copy.NOT_PERMITTED_EVENTS
 
 
-async def test_benched_player_changing_class_keeps_queue_position(
+async def test_queued_player_changing_class_keeps_queue_position(
     post: Post, db: AsyncSession, fake_discord: FakeDiscord
 ) -> None:
     await _setup(post)
@@ -928,16 +1015,17 @@ async def test_benched_player_changing_class_keeps_queue_position(
         await _save_prefs(post, user_id)
         await post(click(_signup_id(event), user_id=user_id))
     statuses = await _signups(db, event)
-    assert statuses["706"] == "bench" and statuses["707"] == "bench"
+    assert statuses["706"] == "queued" and statuses["707"] == "queued"
 
     response = await post(click(f"raid:v1:change:{event.id}", user_id="706"))
     assert response["type"] == 7
     response = await post(click(custom_id_for(response, "pickclass"), user_id="706"))
     response = await post(click(custom_id_for(response, "class"), user_id="706", values=["warlock"]))
     response = await post(click(custom_id_for(response, "spec"), user_id="706", values=["warlock.affliction"]))
-    assert raid_copy.BENCHED in content(response)
+    assert raid_copy.queued_note(1) in content(response)
 
-    await post(click(f"raid:v1:status:{event.id}:declined", user_id="701"))
+    await post(click(f"raid:v1:status:{event.id}:absence", user_id="701"))  # asks first
+    await post(click(f"raid:v1:release:{event.id}:absence", user_id="701"))
     statuses = await _signups(db, event)
     assert statuses["706"] == "confirmed"  # still first in line despite the later edit
-    assert statuses["707"] == "bench"
+    assert statuses["707"] == "queued"
