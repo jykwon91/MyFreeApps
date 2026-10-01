@@ -126,6 +126,30 @@ class Settings(BaseAppSettings):
     mga_enable_test_helpers: bool = False
 
     # ------------------------------------------------------------------
+    # Discord bot (HTTP-interactions, no gateway — PR 2+).
+    # Set DISCORD_ENABLED=true to activate; all three vars below become
+    # required in production and the /discord/interactions route is mounted.
+    # When false (the default) the route is absent (404) and none of the
+    # Discord vars are read.
+    # ------------------------------------------------------------------
+    discord_enabled: bool = False
+    # Application ID from the Discord Developer Portal → General Information.
+    discord_application_id: str = ""
+    # Public key (hex) from the Developer Portal — used to verify Ed25519
+    # signatures on every incoming interaction.
+    discord_public_key: str = ""
+    # Bot token — used by the REST client (bulk_overwrite_*_commands, follow-ups).
+    # Treat as a secret: never log it. Plain str matches the existing convention
+    # in this codebase (all secrets are str, not SecretStr — see minio_secret_key
+    # and turnstile_secret_key in BaseAppSettings).
+    discord_bot_token: str = ""
+    # Optional: register commands to a single guild for instant propagation in
+    # dev (guild commands update in <1s vs ~1h for global). Set to the Discord
+    # guild/server ID of your dev server. Leave empty to always register
+    # globally.
+    discord_dev_guild_id: str = ""
+
+    # ------------------------------------------------------------------
     # Per-IP login throttle — matches MJH defaults
     # ------------------------------------------------------------------
     login_rate_limit_threshold: int = 10

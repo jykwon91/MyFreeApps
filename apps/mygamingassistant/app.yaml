@@ -52,6 +52,11 @@ post_deploy_commands:
   - python -m app.cli import-lineups
   # WoW World Map captures from the committed pack (backend/data/wow_map_captures.json).
   - python -m app.cli import-wow-captures
+  # Discord slash-command registration. No-op when DISCORD_ENABLED=false (returns
+  # exit 0 immediately), so this never breaks a deploy before the operator has
+  # configured the bot. When DISCORD_ENABLED=true, registers commands to
+  # DISCORD_DEV_GUILD_ID (if set) or globally.
+  - python -m app.cli discord-register-commands
 
 # Host-side smoke checks run AFTER the health check + bundle tripwire (see the
 # deploy template's post_deploy_verifications block). Each entry is a name + a
