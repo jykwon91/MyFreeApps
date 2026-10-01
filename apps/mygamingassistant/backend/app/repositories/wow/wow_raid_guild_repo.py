@@ -13,6 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.wow.wow_raid_guild import WowRaidGuild
 
 
+async def get(db: AsyncSession, guild_id: uuid.UUID) -> WowRaidGuild | None:
+    """Return a guild config row by primary key."""
+    return await db.get(WowRaidGuild, guild_id)
+
+
 async def get_by_discord_id(
     db: AsyncSession, discord_guild_id: str
 ) -> WowRaidGuild | None:
