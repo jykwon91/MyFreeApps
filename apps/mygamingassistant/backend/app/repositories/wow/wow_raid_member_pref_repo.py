@@ -84,18 +84,3 @@ async def opted_out_user_ids(
         )
     )
     return set(result.scalars().all())
-
-
-async def list_for_users(
-    db: AsyncSession, *, guild_id: uuid.UUID, discord_user_ids: list[str]
-) -> dict[str, WowRaidMemberPref]:
-    """Preference rows for *discord_user_ids* in a guild, keyed by user id."""
-    if not discord_user_ids:
-        return {}
-    result = await db.execute(
-        select(WowRaidMemberPref).where(
-            WowRaidMemberPref.guild_id == guild_id,
-            WowRaidMemberPref.discord_user_id.in_(discord_user_ids),
-        )
-    )
-    return {row.discord_user_id: row for row in result.scalars().all()}
