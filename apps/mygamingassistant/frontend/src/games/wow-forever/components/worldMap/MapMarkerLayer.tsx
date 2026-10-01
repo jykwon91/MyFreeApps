@@ -1,4 +1,4 @@
-import { memo, type KeyboardEvent } from "react";
+import { memo, type KeyboardEvent, type ReactNode } from "react";
 import clsx from "clsx";
 import MapPointLabel from "@/games/wow-forever/components/worldMap/MapPointLabel";
 import TripEndMarker from "@/games/wow-forever/components/worldMap/TripEndMarker";
@@ -20,6 +20,8 @@ interface MapMarkerLayerProps {
   /** The trip: destination (B), and once directions are open the start (A) and the stops between. */
   route: MapRoute | null;
   onSelectMarker: (id: string) => void;
+  /** The map's zoom: markers, labels and lines are drawn this much smaller so they keep their size on screen. */
+  scale?: number;
 }
 
 interface Px {
@@ -42,6 +44,17 @@ const LEG_DASH: Readonly<Record<StepKind, string | undefined>> = {
   zeppelin: "2 10",
   tram: "2 10",
 };
+
+/** Scales a "1 2" dash pattern to the zoom. */
+function scaledDash(dash: string | undefined, scale: number): string | undefined {
+  return dash?.split(" ").map((n) => Number(n) / scale).join(" ");
+}
+
+/** Keeps what's inside the same size on screen however far the map is zoomed, around its point. */
+function Pinned({ at, scale, children }: { at: Px; scale: number; children: ReactNode }) {
+  if (scale === 1) return <>{children}</>;
+  return <g transform={`translate(${at.px} ${at.py}) scale(${1 / scale}) translate(${-at.px} ${-at.py})`}>{children}</g>;
+}
 
 function toPx(map: MapView, p: WorldPoint): Px | null {
   const at = worldToMap(map, p);
@@ -77,7 +90,7 @@ function pointList(points: readonly Px[]): string {
  * pulsing, named), you, and the trip's A and B. Memoised: hovering the map
  * re-renders the canvas, not every marker.
  */
-function MapMarkerLayer({ map, player, markers, selectedId, route, onSelectMarker }: MapMarkerLayerProps) {
+function MapMarkerLayer({ map, player, markers, selectedId, route, onSelectMarker, scale = 1 }: MapMarkerLayerProps) {
   const shown = (p: WorldPoint | null | undefined): p is WorldPoint => !!p && mapShows(map, p);
   const you = shown(player) ? toPx(map, player) : null;
   const destination = route?.destination ?? null;
@@ -110,7 +123,7 @@ function MapMarkerLayer({ map, player, markers, selectedId, route, onSelectMarke
               key={`halo-${leg.number}`}
               points={pointList(leg.points)}
               fill="none"
-              strokeWidth={leg.number === highlight ? 12 : 8}
+              strokeWidth={(leg.number === highlight ? 12 : 8) / scale}
               strokeLinecap="round"
               strokeLinejoin="round"
               className="stroke-black/60"
@@ -122,10 +135,10 @@ function MapMarkerLayer({ map, player, markers, selectedId, route, onSelectMarke
               data-testid={`route-leg-${leg.number}`}
               points={pointList(leg.points)}
               fill="none"
-              strokeWidth={leg.number === highlight ? 6 : 4}
+              strokeWidth={(leg.number === highlight ? 6 : 4) / scale}
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeDasharray={LEG_DASH[leg.kind]}
+              strokeDasharray={scaledDash(LEG_DASH[leg.kind], scale)}
               className={leg.number === highlight ? "stroke-amber-300" : "stroke-white"}
             />
           ))}
@@ -136,10 +149,12 @@ function MapMarkerLayer({ map, player, markers, selectedId, route, onSelectMarke
         if (!at) return null;
         return (
           <g key={`stop-${s.number}`} aria-label={`Step ${s.number}: ${s.label}`}>
-            <circle cx={at.px} cy={at.py} r={14} strokeWidth={3} className="fill-amber-400 stroke-black/70" />
-            <text x={at.px} y={at.py + 6} textAnchor="middle" className="fill-black text-[18px] font-bold">
-              {s.number}
-            </text>
+            <Pinned at={at} scale={scale}>
+              <circle cx={at.px} cy={at.py} r={14} strokeWidth={3} className="fill-amber-400 stroke-black/70" />
+              <text x={at.px} y={at.py + 6} textAnchor="middle" className="fill-black text-[18px] font-bold">
+                {s.number}
+              </text>
+            </Pinned>
           </g>
         );
       })}
@@ -161,6 +176,7 @@ function MapMarkerLayer({ map, player, markers, selectedId, route, onSelectMarke
             onKeyDown={(e) => markerKey(e, m.id)}
           >
             <title>{m.label}</title>
+            <Pinned at={at} scale={scale}>
             {selected && (
               <circle
                 cx={at.px}
@@ -172,18 +188,29 @@ function MapMarkerLayer({ map, player, markers, selectedId, route, onSelectMarke
             )}
             {selected && <circle cx={at.px} cy={at.py} r={21} strokeWidth={5} className="fill-black/25 stroke-white" />}
             <circle cx={at.px} cy={at.py} r={selected ? 14 : 9} strokeWidth={3} className={clsx(m.className, "stroke-white")} />
-            {selected && !b && <MapPointLabel x={at.px} y={at.py} text={m.label} />}
+              {selected && !b && <MapPointLabel x={at.px} y={at.py} text={m.label} />}
+            </Pinned>
           </g>
         );
       })}
       {you && (
         <g aria-label="You" className="pointer-events-none">
-          <circle cx={you.px} cy={you.py} r={16} className="fill-blue-500/30" />
-          <circle cx={you.px} cy={you.py} r={8} strokeWidth={3} className="fill-blue-600 stroke-white" />
+          <Pinned at={you} scale={scale}>
+            <circle cx={you.px} cy={you.py} r={16} className="fill-blue-500/30" />
+            <circle cx={you.px} cy={you.py} r={8} strokeWidth={3} className="fill-blue-600 stroke-white" />
+          </Pinned>
         </g>
       )}
-      {a && origin && <TripEndMarker at={a} letter="A" label={`Start: ${origin.label}`} name={origin.label} start />}
-      {b && destination && <TripEndMarker at={b} letter="B" label={`Destination: ${destination.label}`} name={destination.label} />}
+      {a && origin && (
+        <Pinned at={a} scale={scale}>
+          <TripEndMarker at={a} letter="A" label={`Start: ${origin.label}`} name={origin.label} start />
+        </Pinned>
+      )}
+      {b && destination && (
+        <Pinned at={b} scale={scale}>
+          <TripEndMarker at={b} letter="B" label={`Destination: ${destination.label}`} name={destination.label} />
+        </Pinned>
+      )}
     </>
   );
 }
