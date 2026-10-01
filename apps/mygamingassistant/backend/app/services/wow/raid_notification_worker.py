@@ -72,7 +72,7 @@ from app.repositories.wow import (
 from app.services.discord import raid_copy, raid_notifications, rest
 from app.services.discord.raid_views import unix
 from app.services.wow import raid_consumables_round
-from app.services.wow.raid_catalog import class_role_label
+from app.services.wow.raid_member_prefs_service import resolve_player
 from app.services.wow.raid_composition import role_gaps
 from app.services.wow.raid_consumables import UnknownRaidError, select_consumables
 from app.services.wow.raid_embed import display_title
@@ -431,21 +431,19 @@ async def _plan_consumables_dm(db: AsyncSession, ctx: _Context, user_id: str) ->
     pref = await wow_raid_member_pref_repo.get(db, guild_id=ctx.guild.id, discord_user_id=user_id)
     if pref is not None and pref.dm_opt_out:
         return Skipped("opted out of DMs")
-    wow_class = signup.wow_class or (pref.default_wow_class if pref else None)
-    role = signup.role or (pref.default_role if pref else None)
-    if wow_class is None:
+    player = resolve_player(signup, pref)
+    if player.wow_class is None:
         return _DmPlan(user_id, _generic_dm(ctx))
+    role = raid_notifications.consumables_role(player.wow_class, player.role, player.spec)
     try:
-        checklist = select_consumables(
-            ctx.event.raid_key, wow_class, raid_notifications.consumables_role(wow_class, role)
-        )
+        checklist = select_consumables(ctx.event.raid_key, player.wow_class, role)
     except UnknownRaidError:
         logger.warning("raid_notifications: no consumables data for raid_key=%s", ctx.event.raid_key)
         return _DmPlan(user_id, _generic_dm(ctx))
     title = raid_copy.consumables_title(
         ctx.label,
         raid_notifications.day_word(ctx.event.starts_at, ctx.now, ctx.guild.timezone),
-        class_role_label(wow_class, role),
+        player.label,
     )
     payload = raid_notifications.build_consumables_dm(
         title=title, starts_unix=ctx.starts_unix, checklist=checklist, signup_link=ctx.signup_link

@@ -232,10 +232,21 @@ def test_consumables_embed_trims_essential_only_as_last_resort() -> None:
 
 
 def test_consumables_role_mapping() -> None:
-    assert raid_notifications.consumables_role("priest", "healer") == "healer"
-    assert raid_notifications.consumables_role("priest", "dps") == "dps_caster"
-    assert raid_notifications.consumables_role("rogue", "dps") == "dps_physical"
+    assert raid_notifications.consumables_role("priest", "healer", "holy") == "healer"
+    assert raid_notifications.consumables_role("druid", "dps", "balance") == "dps_caster"
+    assert raid_notifications.consumables_role("shaman", "dps", "elemental") == "dps_caster"
+    assert raid_notifications.consumables_role("shaman", "dps", "enhancement") == "dps_physical"
+    assert raid_notifications.consumables_role("hunter", "dps", "marksmanship") == "dps_physical"
+    assert raid_notifications.consumables_role("druid", "tank", "feral-tank") == "tank"
     assert raid_notifications.consumables_role("warrior", None) is None
+
+
+def test_consumables_role_for_a_pre_spec_signup_uses_the_classic_default() -> None:
+    assert raid_notifications.consumables_role("priest", "healer") == "healer"
+    assert raid_notifications.consumables_role("priest", "dps") == "dps_caster"  # Shadow
+    assert raid_notifications.consumables_role("druid", "dps") == "dps_physical"  # Feral
+    assert raid_notifications.consumables_role("rogue", "dps") == "dps_physical"
+    assert raid_notifications.consumables_role(None, "tank") == "tank"
 
 
 def test_day_word_uses_guild_timezone() -> None:

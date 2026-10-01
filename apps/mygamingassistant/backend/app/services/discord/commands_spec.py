@@ -30,7 +30,7 @@ from typing import Any, Final
 
 from platform_shared.services.discord import MANAGE_EVENTS
 
-from app.services.wow.raid_catalog import CLASSES, RAIDS, ROLE_LABELS, ROLE_ORDER
+from app.services.wow.raid_catalog import CLASSES, RAIDS
 
 # Application command option types
 _SUB_COMMAND: Final = 1
@@ -45,7 +45,6 @@ _POSTABLE_CHANNEL_TYPES: Final = [0, 5]
 
 _RAID_CHOICES: Final = [{"name": raid.choice_label, "value": raid.key} for raid in RAIDS]
 _CLASS_CHOICES: Final = [{"name": cls.label, "value": cls.key} for cls in CLASSES]
-_ROLE_CHOICES: Final = [{"name": ROLE_LABELS[role], "value": role} for role in ROLE_ORDER]
 
 _WHEN_DESCRIPTION: Final = "When it starts, in the server's timezone (e.g. sat 8pm, 10/14 8:00pm)"
 
@@ -76,7 +75,7 @@ RAID_COMMAND: Final[dict[str, Any]] = {
         {
             "type": _SUB_COMMAND,
             "name": "prefs",
-            "description": "Your class, role and reminder settings",
+            "description": "Your class, spec and reminder settings",
             "options": [
                 {
                     "type": _STRING,
@@ -86,9 +85,10 @@ RAID_COMMAND: Final[dict[str, Any]] = {
                 },
                 {
                     "type": _STRING,
-                    "name": "role",
-                    "description": "The role you usually play",
-                    "choices": _ROLE_CHOICES,
+                    "name": "spec",
+                    "description": "Your spec (fill in class first for a shorter list)",
+                    "autocomplete": True,
+                    "max_length": 40,
                 },
                 {
                     "type": _BOOLEAN,

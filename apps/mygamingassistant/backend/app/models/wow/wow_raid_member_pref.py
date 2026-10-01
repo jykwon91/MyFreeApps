@@ -3,13 +3,14 @@
 guild_id FK → wow_raid_guild (ON DELETE CASCADE).
 UNIQUE(guild_id, discord_user_id) — one preference row per player per guild.
 
-Remembers the class and role a player most recently signed up with so
-subsequent signups can pre-fill both fields (one-click confirm flow).
+Remembers the class a player most recently signed up with plus, per class,
+the spec they play (``saved_specs``), so the next signup is one tap.
+``default_role`` is the seat role of that class's saved spec.
 dm_opt_out suppresses DM reminders for players who prefer channel-only notices.
 """
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Optional
 
 from sqlalchemy import (
     Boolean,
@@ -19,8 +20,9 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
     func,
+    text,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -63,6 +65,12 @@ class WowRaidMemberPref(Base):
         String(20), nullable=True
     )
     default_role: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    # class → spec, e.g. {"warrior": "fury", "mage": "frost"}.  Validated on
+    # read (raid_catalog.saved_spec); always assign a new dict so the change
+    # is detected.
+    saved_specs: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
     # When true, the worker skips DM notifications for this player.
     dm_opt_out: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"

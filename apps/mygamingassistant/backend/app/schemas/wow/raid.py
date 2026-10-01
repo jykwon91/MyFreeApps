@@ -14,7 +14,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from app.models.wow.wow_raid_event import RAID_KEYS, RAID_STATUSES
 from app.models.wow.wow_raid_member_pref import WowRaidMemberPref as _PrefModel
 from app.models.wow.wow_raid_notification import NOTIFICATION_KINDS
-from app.models.wow.wow_raid_signup import RAID_ROLES, SIGNUP_STATUSES, WOW_CLASSES
+from app.models.wow.wow_raid_signup import RAID_ROLES, SIGNUP_STATUSES, WOW_CLASSES, WOW_SPECS
+from app.services.wow.raid_catalog import spec_info
 
 # ---------------------------------------------------------------------------
 # Shared field types
@@ -136,7 +137,18 @@ class RaidEventRead(BaseModel):
 
 WowClass = str  # validated against WOW_CLASSES
 RaidRole = str  # validated against RAID_ROLES
+WowSpec = str  # validated against WOW_SPECS + the class's specs
 SignupStatus = str  # validated against SIGNUP_STATUSES
+
+
+def _check_spec_pair(wow_class: Optional[str], spec: Optional[str]) -> None:
+    """A spec must be one of its class's specs (the DB only checks the flat list)."""
+    if spec is None:
+        return
+    if spec not in WOW_SPECS:
+        raise ValueError(f"spec must be one of {WOW_SPECS}")
+    if wow_class is not None and spec_info(wow_class, spec) is None:
+        raise ValueError(f"{spec} is not a {wow_class} spec")
 
 
 class RaidSignupUpsert(BaseModel):
@@ -149,6 +161,7 @@ class RaidSignupUpsert(BaseModel):
     status: SignupStatus
     wow_class: Optional[WowClass] = None
     role: Optional[RaidRole] = None
+    spec: Optional[WowSpec] = None
 
     @field_validator("status")
     @classmethod
@@ -171,6 +184,11 @@ class RaidSignupUpsert(BaseModel):
             raise ValueError(f"role must be one of {RAID_ROLES}")
         return v
 
+    @model_validator(mode="after")
+    def _valid_spec(self) -> "RaidSignupUpsert":
+        _check_spec_pair(self.wow_class, self.spec)
+        return self
+
 
 class RaidSignupRead(BaseModel):
     model_config = ConfigDict(extra="forbid", from_attributes=True)
@@ -181,6 +199,7 @@ class RaidSignupRead(BaseModel):
     display_name: str
     wow_class: Optional[str]
     role: Optional[str]
+    spec: Optional[str]
     status: str
     signed_up_at: datetime
     updated_at: datetime
@@ -196,6 +215,7 @@ class MemberPrefUpsert(BaseModel):
 
     default_wow_class: Optional[WowClass] = None
     default_role: Optional[RaidRole] = None
+    saved_specs: dict[WowClass, WowSpec] = Field(default_factory=dict)
     dm_opt_out: bool = False
 
     @field_validator("default_wow_class")
@@ -212,6 +232,15 @@ class MemberPrefUpsert(BaseModel):
             raise ValueError(f"default_role must be one of {RAID_ROLES}")
         return v
 
+    @field_validator("saved_specs")
+    @classmethod
+    def _valid_saved_specs(cls, v: dict[str, str]) -> dict[str, str]:
+        for wow_class, spec in v.items():
+            if wow_class not in WOW_CLASSES:
+                raise ValueError(f"saved_specs keys must be one of {WOW_CLASSES}")
+            _check_spec_pair(wow_class, spec)
+        return v
+
 
 class MemberPrefRead(BaseModel):
     model_config = ConfigDict(extra="forbid", from_attributes=True)
@@ -221,6 +250,7 @@ class MemberPrefRead(BaseModel):
     discord_user_id: str
     default_wow_class: Optional[str]
     default_role: Optional[str]
+    saved_specs: dict[str, Any]
     dm_opt_out: bool
     created_at: datetime
     updated_at: datetime

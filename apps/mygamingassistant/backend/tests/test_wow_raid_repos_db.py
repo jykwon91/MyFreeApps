@@ -55,13 +55,15 @@ async def test_signup_upsert_updates_in_place_and_keeps_signed_up_at(db: AsyncSe
         status="tentative", wow_class="shaman", role="healer",
     )
     signed_up_at = first.signed_up_at
+    assert first.spec is None
 
     second = await wow_raid_signup_repo.upsert_signup(
         db, event_id=event.id, discord_user_id="9", display_name="Thrall",
-        status="confirmed", wow_class="shaman", role="healer",
+        status="confirmed", wow_class="shaman", role="healer", spec="restoration",
     )
     assert second.id == first.id
     assert second.status == "confirmed"
+    assert second.spec == "restoration"
     assert second.signed_up_at == signed_up_at
     assert len(await wow_raid_signup_repo.list_for_event(db, event.id)) == 1
 

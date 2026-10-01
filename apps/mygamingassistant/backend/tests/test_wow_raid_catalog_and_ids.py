@@ -2,19 +2,35 @@
 lookup, and the slash-command spec's Discord limits."""
 from __future__ import annotations
 
+import re
 import uuid
+from pathlib import Path
 
 import pytest
 
 from app.models.wow.wow_raid_event import RAID_KEYS
-from app.models.wow.wow_raid_signup import RAID_ROLES, WOW_CLASSES
+from app.models.wow.wow_raid_signup import RAID_ROLES, WOW_CLASSES, WOW_SPECS
 from app.services.discord.commands_spec import ALL_COMMANDS, RAID_ADMIN_COMMAND, RAID_COMMAND
 from app.services.discord.components.raid import _HANDLERS
 from app.services.wow import raid_custom_id, raid_timezones
-from app.services.wow.raid_catalog import CLASSES, RAIDS, ROLE_ORDER, class_can_fill
+from app.services.wow.raid_catalog import (
+    _LEGACY_SPECS,
+    CLASSES,
+    RAIDS,
+    ROLE_ORDER,
+    SPECS,
+    class_can_fill,
+    effective_spec,
+    find_specs,
+    search_specs,
+    signup_label,
+    spec_info,
+    spec_list_text,
+)
 from app.services.wow.raid_custom_id import MAX_CUSTOM_ID_LEN, REQUESTABLE_STATUSES
 
 _EVENT = uuid.UUID("ffffffff-ffff-4fff-bfff-ffffffffffff")
+_CLASSES_TS = Path(__file__).resolve().parents[2] / "frontend/src/games/wow-forever/data/classes.ts"
 
 # ---------------------------------------------------------------------------
 # Catalog
@@ -37,6 +53,62 @@ def test_class_can_fill() -> None:
     assert class_can_fill("druid", "tank")
     assert not class_can_fill("mage", "healer")
     assert not class_can_fill("necromancer", "dps")
+
+
+def test_spec_keys_match_the_model_check_constraint() -> None:
+    assert {spec.key for spec in SPECS} == set(WOW_SPECS)
+    assert max(len(key) for key in WOW_SPECS) <= 20  # String(20)
+
+
+def test_specs_mirror_the_frontend_class_data() -> None:
+    source = _CLASSES_TS.read_text(encoding="utf-8")
+    frontend = {
+        (class_key, *spec)
+        for class_key, block in re.findall(r'id: "([a-z]+)",[^\[]*?specs: \[(.*?)\]', source, re.S)
+        for spec in re.findall(r'\{ id: "([a-z-]+)", name: "([^"]+)", role: "([a-z]+)" \}', block)
+    }
+    assert frontend == {(spec.class_key, spec.key, spec.label, spec.spec_role) for spec in SPECS}
+
+
+def test_every_pre_spec_class_role_has_a_legacy_spec_that_fills_it() -> None:
+    assert set(_LEGACY_SPECS) == {(cls.key, role) for cls in CLASSES for role in cls.roles}
+    for (wow_class, role), key in _LEGACY_SPECS.items():
+        spec = spec_info(wow_class, key)
+        assert spec is not None and spec.raid_role == role
+
+
+def test_spec_labels() -> None:
+    assert signup_label("warrior", "dps", "fury") == "Fury Warrior"
+    assert signup_label("druid", "tank", "feral-tank") == "Feral Druid (tank)"
+    assert signup_label("warrior", "tank", None) == "Warrior (Tank)"  # signed up before specs
+    assert signup_label("mage", "dps", "holy") == "Mage (DPS)"  # a spec of another class is ignored
+    assert spec_list_text("mage") == "Arcane, Fire or Frost"
+    assert effective_spec("priest", "dps", None) == spec_info("priest", "shadow")
+
+
+@pytest.mark.parametrize(
+    ("text", "wow_class", "expected"),
+    [
+        ("druid.feral-tank", None, ["druid.feral-tank"]),
+        ("Feral (tank)", None, ["druid.feral-tank"]),
+        ("feral tank", None, ["druid.feral-tank"]),
+        ("FURY", None, ["warrior.fury"]),
+        ("Holy Priest", None, ["priest.holy"]),
+        ("holy", None, ["paladin.holy", "priest.holy"]),
+        ("holy", "paladin", ["paladin.holy"]),
+        ("holy", "mage", []),
+        ("", None, []),
+    ],
+)
+def test_find_specs(text: str, wow_class: str | None, expected: list[str]) -> None:
+    assert [spec.choice_value for spec in find_specs(text, wow_class)] == expected
+
+
+def test_search_specs_matches_every_typed_word() -> None:
+    assert len(search_specs("")) == len(SPECS)
+    assert {spec.class_key for spec in search_specs("war")} == {"warrior", "warlock"}
+    assert [spec.choice_value for spec in search_specs("resto", "shaman")] == ["shaman.restoration"]
+    assert [spec.choice_value for spec in search_specs("tank feral")] == ["druid.feral-tank"]
 
 
 # ---------------------------------------------------------------------------
@@ -68,6 +140,10 @@ def test_round_trip() -> None:
     parsed = raid_custom_id.parse(custom_id)
     assert parsed == raid_custom_id.RaidCustomId("role", _EVENT, ("tentative", "priest", "healer"))
     assert raid_custom_id.parse("raid:v1:testdm") == raid_custom_id.RaidCustomId("testdm", None)
+    spec_id = raid_custom_id.encode("spec", _EVENT, "druid", "late")
+    assert raid_custom_id.parse(spec_id) == raid_custom_id.RaidCustomId("spec", _EVENT, ("druid", "late"))
+    pick_id = raid_custom_id.encode("pickclass", _EVENT, "confirmed")
+    assert raid_custom_id.parse(pick_id) == raid_custom_id.RaidCustomId("pickclass", _EVENT, ("confirmed",))
 
 
 def test_encode_rejects_overlong() -> None:
@@ -93,6 +169,11 @@ def test_encode_rejects_overlong() -> None:
         f"raid:v1:role:{_EVENT}:confirmed:mage",
         f"raid:v1:role:{_EVENT}:confirmed:necromancer:dps",
         f"raid:v1:role:{_EVENT}:confirmed:mage:support",
+        f"raid:v1:spec:{_EVENT}:mage",
+        f"raid:v1:spec:{_EVENT}:necromancer:confirmed",
+        f"raid:v1:spec:{_EVENT}:mage:bench",
+        f"raid:v1:pickclass:{_EVENT}:yolo",
+        f"raid:v1:pickclass:{_EVENT}",
         f"raid:v1:explode:{_EVENT}",
         "raid:v1:testdm:extra",
         "raid:v1:signup:" + "a" * 200,

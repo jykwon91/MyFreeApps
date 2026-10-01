@@ -122,11 +122,11 @@ async def _raid(
 
 async def _signup(
     db: AsyncSession, event: WowRaidEvent, user_id: str, status: str = "confirmed",
-    wow_class: str | None = "priest", role: str | None = "healer",
+    wow_class: str | None = "priest", role: str | None = "healer", spec: str | None = None,
 ) -> None:
     await wow_raid_signup_repo.upsert_signup(
         db, event_id=event.id, discord_user_id=user_id, display_name=f"P{user_id}",
-        status=status, wow_class=wow_class, role=role,
+        status=status, wow_class=wow_class, role=role, spec=spec,
     )
 
 
@@ -215,6 +215,7 @@ async def test_consumables_dms_and_single_fallback_post(
     round_due = _NOW - timedelta(minutes=1)
     event = await _raid(db, starts_at=_starts_for_round(round_due))
     await _signup(db, event, "31")                                            # priest healer → checklist
+    await _signup(db, event, "38", wow_class="druid", role="dps", spec="balance")  # spec → spec title
     await _signup(db, event, "32", status="tentative", wow_class="mage", role="dps")  # DMs closed
     await _signup(db, event, "33", status="late", wow_class=None, role=None)  # no class → generic DM
     await _signup(db, event, "34", status="declined")                         # not DMed
@@ -232,7 +233,7 @@ async def test_consumables_dms_and_single_fallback_post(
     first = await process_due_notifications(now=_NOW)
     assert first.undeliverable == 2
     rows = await _rows(db, event)
-    assert {r.target_user_id for r in rows if r.target_user_id} == {"31", "32", "33", "36"}
+    assert {r.target_user_id for r in rows if r.target_user_id} == {"31", "32", "33", "36", "38"}
     assert {r.due_at for r in rows if r.kind == "consumables_reminder"} == {round_due}
 
     dm_31 = fake_discord.posts("dm-31")
@@ -243,6 +244,9 @@ async def test_consumables_dms_and_single_fallback_post(
     assert {f["name"] for f in embed["fields"]} <= {"Essential", "Recommended", "Tryhard"}
     assert "https://www.wowhead.com/classic/item=" in embed["fields"][0]["value"]
     assert embed["footer"]["text"] == "To stop these DMs, use /raid prefs dm_reminders:false"
+
+    [balance] = fake_discord.posts("dm-38")
+    assert balance.body is not None and balance.body["embeds"][0]["title"] == "Onyxia tomorrow — Balance Druid"
 
     [generic] = fake_discord.posts("dm-33")
     assert generic.body is not None and "/raid prefs" in generic.body["content"]

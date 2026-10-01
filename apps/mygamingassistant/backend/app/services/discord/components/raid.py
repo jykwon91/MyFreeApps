@@ -33,6 +33,8 @@ _HANDLERS: Final[dict[str, ComponentHandler]] = {
     "signup": raid_signup.handle_signup,
     "status": raid_signup.handle_status,
     "class": raid_signup.handle_class_pick,
+    "spec": raid_signup.handle_spec_pick,
+    "pickclass": raid_signup.handle_pick_class,
     "role": raid_signup.handle_role_pick,
     "mine": raid_signup.handle_mine,
     "change": raid_signup.handle_change,

@@ -8,10 +8,12 @@ Actions
 -------
 signup   public [Sign up] button                     raid:v1:signup:<event>
 status   public [Tentative]/[Late]/[Decline]          raid:v1:status:<event>:<status>
-class    first-time class select (value = class)      raid:v1:class:<event>:<status>
-role     class-filtered role button                   raid:v1:role:<event>:<status>:<class>:<role>
+class    class select (value = class)                 raid:v1:class:<event>:<status>
+spec     spec select (value = <class>.<spec>)         raid:v1:spec:<event>:<class>:<status>
+pickclass [Different class] under the spec select     raid:v1:pickclass:<event>:<status>
+role     role button from a pre-spec picker (legacy)  raid:v1:role:<event>:<status>:<class>:<role>
 mine     public [My signup]                           raid:v1:mine:<event>
-change   [Change class or role] on My signup          raid:v1:change:<event>
+change   [Change class or spec] on My signup          raid:v1:change:<event>
 roster   public [Roster]                              raid:v1:roster:<event>
 confirm  create preview [Post raid]                   raid:v1:confirm:<event>
 discard  create preview [Cancel]                      raid:v1:discard:<event>
@@ -35,6 +37,8 @@ _EVENT_ACTIONS: Final[dict[str, int]] = {
     "signup": 0,
     "status": 1,
     "class": 1,
+    "spec": 2,
+    "pickclass": 1,
     "role": 3,
     "mine": 0,
     "change": 0,
@@ -96,8 +100,11 @@ def parse(custom_id: object) -> RaidCustomId | None:
 
 
 def _args_valid(action: str, args: tuple[str, ...]) -> bool:
-    if action in ("status", "class"):
+    if action in ("status", "class", "pickclass"):
         return args[0] in REQUESTABLE_STATUSES
+    if action == "spec":
+        wow_class, status = args
+        return wow_class in WOW_CLASSES and status in REQUESTABLE_STATUSES
     if action == "role":
         status, wow_class, role = args
         return status in REQUESTABLE_STATUSES and wow_class in WOW_CLASSES and role in RAID_ROLES

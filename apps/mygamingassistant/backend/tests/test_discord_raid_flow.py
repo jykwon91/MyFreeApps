@@ -41,8 +41,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models.wow.wow_raid_event import WowRaidEvent
+from app.models.wow.wow_raid_member_pref import WowRaidMemberPref
 from app.models.wow.wow_raid_notification import WowRaidNotification
 from app.models.wow.wow_raid_signup import WowRaidSignup
+from app.repositories.wow import wow_raid_signup_repo
 from app.services.discord import raid_copy, rest
 from app.services.wow.raid_embed import COLOR_FULL
 from app.services.wow.raid_time_parser import PAST_MESSAGE, UNREADABLE_MESSAGE
@@ -186,12 +188,12 @@ def command(
     return _base(_TYPE_COMMAND, data, user_id, permissions, display)
 
 
-def autocomplete(sub: str, focused: str, value: str, *, user_id: str = ORGANISER) -> dict[str, Any]:
-    data = {
-        "name": "raid-admin",
-        "type": 1,
-        "options": [{"type": 1, "name": sub, "options": [{"name": focused, "type": 3, "value": value, "focused": True}]}],
-    }
+def autocomplete(
+    sub: str, focused: str, value: str, *, user_id: str = ORGANISER, name: str = "raid-admin", **filled: Any
+) -> dict[str, Any]:
+    options = [{"name": key, "type": 3, "value": other} for key, other in filled.items()]
+    options.append({"name": focused, "type": 3, "value": value, "focused": True})
+    data = {"name": name, "type": 1, "options": [{"type": 1, "name": sub, "options": options}]}
     return _base(_TYPE_AUTOCOMPLETE, data, user_id, ORGANISER_PERMS, "Thrall")
 
 
@@ -316,9 +318,24 @@ async def _signups(db: AsyncSession, event: WowRaidEvent) -> dict[str, str]:
     return {row.discord_user_id: row.status for row in rows}
 
 
-async def _save_prefs(post: Post, user_id: str, wow_class: str = "mage", role: str | None = None) -> None:
-    response = await post(command("raid", "prefs", user_id=user_id, permissions=0, **{"class": wow_class, "role": role}))
+async def _save_prefs(post: Post, user_id: str, spec: str = "mage.frost") -> None:
+    response = await post(command("raid", "prefs", user_id=user_id, permissions=0, spec=spec))
     assert "Saved." in content(response)
+
+
+async def _signup_row(db: AsyncSession, event: WowRaidEvent, user_id: str) -> WowRaidSignup:
+    row = await wow_raid_signup_repo.get(db, event_id=event.id, discord_user_id=user_id)
+    assert row is not None
+    await db.refresh(row)
+    return row
+
+
+async def _pref_row(db: AsyncSession, user_id: str) -> WowRaidMemberPref:
+    row = (
+        await db.execute(select(WowRaidMemberPref).where(WowRaidMemberPref.discord_user_id == user_id))
+    ).scalars().one()
+    await db.refresh(row)
+    return row
 
 
 def _signup_id(event: WowRaidEvent) -> str:
@@ -379,23 +396,30 @@ async def test_full_raid_journey(post: Post, db: AsyncSession, fake_discord: Fak
     assert content(response) == raid_copy.already_posted(link)
     assert fake_discord.channel_posts() == []
 
-    # --- first-time signup: class select → class-filtered role buttons → saved
+    # --- first-time signup: class select → that class's spec select → saved
     response = await post(click(_signup_id(event), user_id="101"))
     assert_ephemeral(response)
     class_select = response["data"]["components"][0]["components"][0]
     assert class_select["type"] == 3
     response = await post(click(class_select["custom_id"], user_id="101", values=["druid"]))
     assert response["type"] == 7
-    role_ids = custom_ids(response)
-    assert role_ids == [
-        f"raid:v1:role:{event.id}:confirmed:druid:tank",
-        f"raid:v1:role:{event.id}:confirmed:druid:healer",
-        f"raid:v1:role:{event.id}:confirmed:druid:dps",
+    assert content(response) == raid_copy.spec_prompt("Druid")
+    assert custom_ids(response) == [
+        f"raid:v1:spec:{event.id}:druid:confirmed",
+        f"raid:v1:pickclass:{event.id}:confirmed",
     ]
+    spec_options = response["data"]["components"][0]["components"][0]["options"]
+    assert [o["value"] for o in spec_options] == [
+        "druid.balance",
+        "druid.feral-damage",
+        "druid.feral-tank",
+        "druid.restoration",
+    ]
+    assert not any(o.get("default") for o in spec_options)  # never guess a preselection
     fake_discord.clear()
-    response = await post(click(role_ids[1], user_id="101"))
+    response = await post(click(f"raid:v1:spec:{event.id}:druid:confirmed", user_id="101", values=["druid.restoration"]))
     assert response["type"] == 7
-    assert content(response) == raid_copy.SAVED_ONE_TAP
+    assert content(response) == f"{raid_copy.signed_up_as('Restoration Druid')} {raid_copy.NEXT_TIME_ONE_TAP}"
     (refresh,) = fake_discord.public_edits()
     assert refresh.path == f"/channels/{CHANNEL}/messages/m1"
     assert refresh.body is not None and "content" not in refresh.body  # never re-pings
@@ -419,7 +443,7 @@ async def test_full_raid_journey(post: Post, db: AsyncSession, fake_discord: Fak
             await _save_prefs(post, user_id)
         response = await post(click(_signup_id(event), user_id=user_id))
         assert response["type"] == 7
-    await _save_prefs(post, "106", "warrior", "tank")
+    await _save_prefs(post, "106", "warrior.protection")
     fake_discord.clear()
     response = await post(click(_signup_id(event), user_id="106"))
     assert response["type"] == 7
@@ -430,7 +454,7 @@ async def test_full_raid_journey(post: Post, db: AsyncSession, fake_discord: Fak
     assert followup.body is not None
     assert followup.body["content"] == raid_copy.BENCHED
     assert followup.body["flags"] == _EPHEMERAL
-    await _save_prefs(post, "107", "rogue")
+    await _save_prefs(post, "107", "rogue.combat")
     await post(click(_signup_id(event), user_id="107"))
     statuses = await _signups(db, event)
     assert statuses["106"] == "bench" and statuses["107"] == "bench"
@@ -452,7 +476,7 @@ async def test_full_raid_journey(post: Post, db: AsyncSession, fake_discord: Fak
     # --- My signup shows the bench position
     response = await post(click(f"raid:v1:mine:{event.id}", user_id="107"))
     assert_ephemeral(response)
-    assert content(response) == "For **Onyxia** you're **on the bench (#1 in line)** as Rogue (DPS)."
+    assert content(response) == "For **Onyxia** you're **on the bench (#1 in line)** as Combat Rogue."
     assert custom_ids(response) == [f"raid:v1:change:{event.id}"]
 
     # --- Roster lists everyone privately
@@ -533,18 +557,82 @@ async def test_started_raid_refuses_signups(post: Post, db: AsyncSession, fake_d
     assert content(response) == raid_copy.RAID_STARTED
     response = await post(click(f"raid:v1:role:{event.id}:confirmed:druid:tank", user_id="202"))
     assert content(response) == raid_copy.RAID_STARTED
+    response = await post(click(f"raid:v1:spec:{event.id}:druid:confirmed", user_id="202", values=["druid.balance"]))
+    assert content(response) == raid_copy.RAID_STARTED
+    response = await post(click(f"raid:v1:pickclass:{event.id}:confirmed", user_id="202"))
+    assert content(response) == raid_copy.RAID_STARTED
     assert (await _signups(db, event)) == {}
 
 
-async def test_single_role_class_skips_role_buttons(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
+async def test_first_late_signup_asks_class_then_spec(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
     await _setup(post)
     event = await _create_and_post(post, db)
     response = await post(click(f"raid:v1:status:{event.id}:late", user_id="301"))
     select_id = response["data"]["components"][0]["components"][0]["custom_id"]
     assert select_id == f"raid:v1:class:{event.id}:late"
     response = await post(click(select_id, user_id="301", values=["mage"]))
-    assert content(response) == raid_copy.SAVED_ONE_TAP
+    spec_id = custom_id_for(response, "spec")
+    assert spec_id == f"raid:v1:spec:{event.id}:mage:late"
+    response = await post(click(spec_id, user_id="301", values=["mage.frost"]))
+    assert content(response) == f"{raid_copy.marked_as('late', 'Frost Mage')} {raid_copy.NEXT_TIME_ONE_TAP}"
     assert (await _signups(db, event)) == {"301": "late"}
+
+
+async def test_change_spec_then_switch_to_a_saved_class(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
+    await _setup(post)
+    event = await _create_and_post(post, db)
+    await _save_prefs(post, "311", "Holy Priest")
+    await _save_prefs(post, "311", "warrior.fury")
+    response = await post(click(_signup_id(event), user_id="311"))
+    assert response["type"] == 7  # one tap as the remembered Fury Warrior
+
+    # Change class or spec: your class's specs with yours preselected.
+    response = await post(click(f"raid:v1:change:{event.id}", user_id="311"))
+    assert response["type"] == 7
+    assert content(response) == raid_copy.spec_switch_prompt("Fury Warrior")
+    options = response["data"]["components"][0]["components"][0]["options"]
+    assert [o["value"] for o in options if o.get("default")] == ["warrior.fury"]
+    response = await post(click(custom_id_for(response, "spec"), user_id="311", values=["warrior.arms"]))
+    assert content(response) == raid_copy.switched_to("Arms Warrior")
+
+    # [Different class] → a class with a saved spec switches without asking.
+    response = await post(click(f"raid:v1:change:{event.id}", user_id="311"))
+    response = await post(click(custom_id_for(response, "pickclass"), user_id="311"))
+    response = await post(click(custom_id_for(response, "class"), user_id="311", values=["priest"]))
+    assert content(response) == raid_copy.switched_to("Holy Priest")
+
+    row = await _signup_row(db, event, "311")
+    assert (row.status, row.wow_class, row.role, row.spec) == ("confirmed", "priest", "healer", "holy")
+    pref = await _pref_row(db, "311")
+    assert pref.default_wow_class == "priest"
+    assert pref.saved_specs == {"priest": "holy", "warrior": "arms"}
+
+
+async def test_pre_spec_signup_is_asked_for_its_spec_once(
+    post: Post, db: AsyncSession, fake_discord: FakeDiscord
+) -> None:
+    await _setup(post)
+    event = await _create_and_post(post, db)
+    await wow_raid_signup_repo.upsert_signup(
+        db, event_id=event.id, discord_user_id="321", display_name="Old", status="confirmed",
+        wow_class="warrior", role="tank",
+    )
+    response = await post(click(f"raid:v1:status:{event.id}:tentative", user_id="321"))
+    assert_ephemeral(response)
+    assert content(response) == raid_copy.spec_prompt("Warrior")
+    spec_id = custom_id_for(response, "spec")
+    assert spec_id == f"raid:v1:spec:{event.id}:warrior:tentative"
+    response = await post(click(spec_id, user_id="321", values=["mage.frost"]))  # not this select's class
+    assert content(response) == raid_copy.MENU_TIMEOUT
+    response = await post(click(spec_id, user_id="321", values=["warrior.protection"]))
+    assert content(response) == f"{raid_copy.marked_as('tentative', 'Protection Warrior')} {raid_copy.NEXT_TIME_ONE_TAP}"
+    row = await _signup_row(db, event, "321")
+    assert (row.status, row.spec) == ("tentative", "protection")
+
+    # A role button from a picker opened before the update asks for the spec instead.
+    response = await post(click(f"raid:v1:role:{event.id}:confirmed:druid:tank", user_id="322"))
+    assert response["type"] == 7
+    assert custom_id_for(response, "spec") == f"raid:v1:spec:{event.id}:druid:confirmed"
 
 
 async def test_decline_without_class_needs_no_picker(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
@@ -734,6 +822,14 @@ async def test_autocomplete(post: Post, db: AsyncSession, fake_discord: FakeDisc
     response = await post(autocomplete("cancel", "event", "naxx"))
     assert response["data"]["choices"] == []
 
+    # /raid prefs spec: — the filled-in class narrows the list.
+    response = await post(autocomplete("prefs", "spec", "ho", name="raid", **{"class": "priest"}))
+    assert response["data"]["choices"] == [{"name": "Holy", "value": "priest.holy"}]
+    response = await post(autocomplete("prefs", "spec", "holy", name="raid"))
+    assert [c["name"] for c in response["data"]["choices"]] == ["Holy Paladin", "Holy Priest"]
+    response = await post(autocomplete("prefs", "spec", "feral tank", name="raid"))
+    assert response["data"]["choices"] == [{"name": "Feral Druid (tank)", "value": "druid.feral-tank"}]
+
 
 async def test_list_shows_upcoming_raids(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
     await _setup(post)
@@ -750,11 +846,13 @@ async def test_prefs_and_test_dm(post: Post, fake_discord: FakeDiscord) -> None:
     fake_discord.clear()
     response = await post(command("raid", "prefs", user_id="501", permissions=0))
     assert_ephemeral(response)
-    response = await post(command("raid", "prefs", user_id="501", permissions=0, role="healer"))
-    assert content(response) == "Pick your class too, so I know which roles you can fill."
-    response = await post(command("raid", "prefs", user_id="501", permissions=0, **{"class": "mage", "role": "tank"}))
+    response = await post(command("raid", "prefs", user_id="501", permissions=0, spec="holy"))
+    assert content(response) == "Did you mean Holy Paladin or Holy Priest? Add `class:` too, or pick from the list."
+    response = await post(command("raid", "prefs", user_id="501", permissions=0, **{"class": "mage", "spec": "holy"}))
     assert_ephemeral(response)
-    assert "Saved." not in content(response)
+    assert content(response) == "A Mage can be Arcane, Fire or Frost."
+    response = await post(command("raid", "prefs", user_id="501", permissions=0, spec="Holy Priest"))
+    assert "Signing up as: **Holy Priest**" in content(response)
 
     test_dm_id = "raid:v1:testdm"
     assert test_dm_id in custom_ids(await post(command("raid", "prefs", user_id="501", permissions=0)))
@@ -797,7 +895,7 @@ async def test_dm_opt_out_skips_promotion_dm(post: Post, db: AsyncSession, fake_
         await _save_prefs(post, user_id)
         await post(click(_signup_id(event), user_id=user_id))
     response = await post(
-        command("raid", "prefs", user_id="606", permissions=0, **{"class": "mage", "dm_reminders": False})
+        command("raid", "prefs", user_id="606", permissions=0, spec="mage.frost", dm_reminders=False)
     )
     assert "Saved." in content(response)
     await post(click(_signup_id(event), user_id="606"))
@@ -834,8 +932,9 @@ async def test_benched_player_changing_class_keeps_queue_position(
 
     response = await post(click(f"raid:v1:change:{event.id}", user_id="706"))
     assert response["type"] == 7
-    select_id = response["data"]["components"][0]["components"][0]["custom_id"]
-    response = await post(click(select_id, user_id="706", values=["warlock"]))
+    response = await post(click(custom_id_for(response, "pickclass"), user_id="706"))
+    response = await post(click(custom_id_for(response, "class"), user_id="706", values=["warlock"]))
+    response = await post(click(custom_id_for(response, "spec"), user_id="706", values=["warlock.affliction"]))
     assert raid_copy.BENCHED in content(response)
 
     await post(click(f"raid:v1:status:{event.id}:declined", user_id="701"))

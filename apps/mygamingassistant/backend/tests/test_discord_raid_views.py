@@ -16,14 +16,15 @@ from platform_shared.services.discord import EMPTY_EMOJIS, EmojiRef, EmojiSet
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.models.wow.wow_raid_signup import WowRaidSignup
+from app.services.discord import raid_copy
 from app.services.discord.raid_views import (
     EMBED_DESCRIPTION_LIMIT,
     _clip_lines,
     class_picker_data,
-    role_picker_data,
     roster_data,
+    spec_picker_data,
 )
-from app.services.wow.raid_catalog import CLASSES
+from app.services.wow.raid_catalog import CLASSES, CLASSES_BY_KEY, spec_info
 
 _STARTS = datetime(2026, 10, 11, 0, 0, tzinfo=timezone.utc)
 _T0 = datetime(2026, 10, 1, 12, 0, tzinfo=timezone.utc)
@@ -59,6 +60,7 @@ def _signup(
     status: str = "confirmed",
     wow_class: str | None = "warrior",
     role: str | None = "tank",
+    spec: str | None = None,
     minute: int = 0,
 ) -> WowRaidSignup:
     return WowRaidSignup(
@@ -68,6 +70,7 @@ def _signup(
         status=status,
         wow_class=wow_class,
         role=role,
+        spec=spec,
         signed_up_at=_T0 + timedelta(minutes=minute),
         updated_at=_T0,
     )
@@ -81,7 +84,7 @@ _ALL_ICONS = _icons(*(cls.key for cls in CLASSES), "role_tank", "role_healer", "
 
 
 # ---------------------------------------------------------------------------
-# Class + role pickers
+# Class + spec pickers
 # ---------------------------------------------------------------------------
 
 
@@ -98,15 +101,43 @@ def test_class_picker_has_plain_options_before_the_first_sync() -> None:
     assert all("emoji" not in option for option in row["components"][0]["options"])
 
 
-def test_role_buttons_carry_role_icons() -> None:
-    [row] = role_picker_data(_event(), "confirmed", "druid", emojis=_ALL_ICONS)["components"]
-    assert [(button["label"], button["emoji"]["name"]) for button in row["components"]] == [
-        ("Tank", "role_tank__a1b2c3"),
-        ("Healer", "role_healer__a1b2c3"),
-        ("DPS", "role_dps__a1b2c3"),
+def _spec_options(data: dict) -> list[dict]:
+    return data["components"][0]["components"][0]["options"]
+
+
+def test_spec_picker_lists_the_class_specs_with_icons_and_roles() -> None:
+    icons = _icons(*(spec.icon for spec in CLASSES_BY_KEY["druid"].specs))
+    data = spec_picker_data(_event(), "confirmed", "druid", current=None, emojis=icons)
+
+    select_row, button_row = data["components"]
+    assert select_row["components"][0]["custom_id"] == f"raid:v1:spec:{_event().id}:druid:confirmed"
+    assert [(o["label"], o["description"], o["emoji"]["name"]) for o in _spec_options(data)] == [
+        ("Balance", "Ranged DPS", "druid_balance__a1b2c3"),
+        ("Feral (damage)", "Melee DPS", "druid_feral_damage__a1b2c3"),
+        ("Feral (tank)", "Tank", "druid_feral_tank__a1b2c3"),
+        ("Restoration", "Healer", "druid_restoration__a1b2c3"),
     ]
-    [row] = role_picker_data(_event(), "confirmed", "druid", emojis=EMPTY_EMOJIS)["components"]
-    assert all("emoji" not in button for button in row["components"])
+    assert not any(o.get("default") for o in _spec_options(data))
+    [other_class] = button_row["components"]
+    assert (other_class["label"], other_class["custom_id"]) == (
+        "Different class",
+        f"raid:v1:pickclass:{_event().id}:confirmed",
+    )
+    assert data["content"] == raid_copy.spec_prompt("Druid")
+
+
+def test_spec_picker_preselects_only_the_current_spec() -> None:
+    current = spec_info("druid", "feral-tank")
+    data = spec_picker_data(_event(), "late", "druid", current=current, emojis=_ALL_ICONS)
+    assert [o["value"] for o in _spec_options(data) if o.get("default")] == ["druid.feral-tank"]
+    assert data["content"] == raid_copy.spec_switch_prompt("Feral Druid (tank)")
+
+
+def test_spec_picker_falls_back_to_the_class_icon_then_plain_options() -> None:
+    data = spec_picker_data(_event(), "confirmed", "mage", current=None, emojis=_ALL_ICONS)
+    assert {o["emoji"]["name"] for o in _spec_options(data)} == {"mage__a1b2c3"}
+    data = spec_picker_data(_event(), "confirmed", "mage", current=None, emojis=EMPTY_EMOJIS)
+    assert all("emoji" not in o for o in _spec_options(data))
 
 
 # ---------------------------------------------------------------------------
@@ -126,6 +157,16 @@ def test_roster_lists_players_with_their_class_icon() -> None:
 
     assert "<:warrior__a1b2c3:1400000000000000000> Alice" in description
     assert f"{_ALL_ICONS.markup('mage')} Maybe" in description
+
+
+def test_roster_shows_the_spec_icon_when_the_spec_is_known() -> None:
+    icons = _icons("warrior", "druid", "druid_feral_tank")
+    signups = [_signup("Bear", wow_class="druid", role="tank", spec="feral-tank"), _signup("Alice", minute=1)]
+
+    description = _roster_description(signups, icons)
+
+    assert f"{icons.markup('druid_feral_tank')} Bear" in description
+    assert f"{icons.markup('warrior')} Alice" in description
 
 
 def test_roster_falls_back_to_text_tags_before_the_first_sync() -> None:

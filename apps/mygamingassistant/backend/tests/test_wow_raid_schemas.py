@@ -187,6 +187,15 @@ def test_invalid_role_rejected():
         )
 
 
+def test_spec_must_belong_to_the_class():
+    s = RaidSignupUpsert(discord_user_id="1", display_name="X", status="confirmed", wow_class="druid", spec="feral-tank")
+    assert s.spec == "feral-tank"
+    with pytest.raises(ValidationError, match="not a mage spec"):
+        RaidSignupUpsert(discord_user_id="1", display_name="X", status="confirmed", wow_class="mage", spec="holy")
+    with pytest.raises(ValidationError, match="spec must be one of"):
+        RaidSignupUpsert(discord_user_id="1", display_name="X", status="confirmed", spec="frost-dk")
+
+
 def test_null_class_and_role_allowed():
     """Players can sign up before selecting class/role."""
     s = RaidSignupUpsert(
@@ -229,3 +238,13 @@ def test_invalid_class_in_pref_rejected():
 def test_invalid_role_in_pref_rejected():
     with pytest.raises(ValidationError, match="default_role"):
         MemberPrefUpsert(default_role="carry")
+
+
+def test_saved_specs_are_per_class():
+    p = MemberPrefUpsert(saved_specs={"warrior": "fury", "priest": "holy"})
+    assert p.saved_specs == {"warrior": "fury", "priest": "holy"}
+    assert MemberPrefUpsert().saved_specs == {}
+    with pytest.raises(ValidationError, match="saved_specs keys"):
+        MemberPrefUpsert(saved_specs={"necromancer": "fury"})
+    with pytest.raises(ValidationError, match="not a warrior spec"):
+        MemberPrefUpsert(saved_specs={"warrior": "holy"})

@@ -26,6 +26,7 @@ from typing import Any
 
 from fastapi import BackgroundTasks
 
+from app.services.discord.autocomplete.raid import handle_raid_autocomplete
 from app.services.discord.autocomplete.raid_admin import handle_raid_admin_autocomplete
 from app.services.discord.commands.raid import handle_raid
 from app.services.discord.commands.raid_admin import handle_raid_admin
@@ -47,6 +48,7 @@ _COMMAND_HANDLERS: dict[str, Any] = {
 
 # Slash-command name → async handler(interaction) returning choices.
 _AUTOCOMPLETE_HANDLERS: dict[str, Any] = {
+    "raid": handle_raid_autocomplete,
     "raid-admin": handle_raid_admin_autocomplete,
 }
 

@@ -18,7 +18,7 @@ RAID_STARTED: Final = "This raid has already started."
 MENU_TIMEOUT: Final = "That menu timed out. Tap Sign up again."
 GUILD_ONLY: Final = "Use this in a server channel, not in DMs."
 
-SAVED_ONE_TAP: Final = "Saved. Next time it's one tap."
+NEXT_TIME_ONE_TAP: Final = "Next time it's one tap."
 BENCHED: Final = (
     "The raid is full, so I've put you on the bench. "
     "You'll be moved up automatically if someone drops out."
@@ -57,8 +57,36 @@ _ALREADY: Final[dict[str, str]] = {
 }
 
 
+_MARKED_WORDS: Final[dict[str, str]] = {"late": "late", "tentative": "tentative"}
+
+
 def already_in_status(status: str) -> str:
     return _ALREADY.get(status, "Nothing changed.")
+
+
+def spec_prompt(class_label: str) -> str:
+    return f"Which spec are you playing as **{class_label}**? I'll remember it for next time."
+
+
+def spec_switch_prompt(spec_label: str) -> str:
+    return f"You're playing **{spec_label}**. Pick another spec to switch."
+
+
+def signed_up_as(spec_label: str) -> str:
+    return f"You're in as **{spec_label}**."
+
+
+def switched_to(spec_label: str) -> str:
+    return f"Switched to **{spec_label}**."
+
+
+def saved_as(spec_label: str) -> str:
+    return f"Saved as **{spec_label}**."
+
+
+def marked_as(status: str, spec_label: str) -> str:
+    """'You're marked **late** as Fury Warrior.'"""
+    return f"You're marked **{_MARKED_WORDS.get(status, status)}** as {spec_label}."
 
 
 def setup_ok(channel_id: str, ping_role_id: str | None, tz_name: str) -> str:
@@ -171,7 +199,7 @@ def generic_reminder_dm(raid_label: str, unix: int, link: str | None) -> str:
     """Reminder for a player with no class picked — no checklist to personalise."""
     text = (
         f"**{raid_label}** starts <t:{unix}:R> (<t:{unix}:F>). "
-        "Tell me your class and role with `/raid prefs` and I'll send you a consumables checklist next time."
+        "Tell me your class and spec with `/raid prefs` and I'll send you a consumables checklist next time."
     )
     if link:
         text = f"{text}\n[Jump to the raid]({link})"
