@@ -670,6 +670,83 @@ each time. **Do not use this URL in production** — set the production URL afte
 3. Add the definition in `app/services/discord/commands_spec.ALL_COMMANDS`
 4. Re-run `python -m app.cli discord-register-commands`
 
+`discord-register-commands` bulk-overwrites the global commands but **keeps the
+`PRIMARY_ENTRY_POINT` command** that Discord creates when Activities are enabled
+(`overwrite_global_commands_preserving_entry_point` in
+`platform_shared/services/discord/commands.py`). Never drop that preservation:
+Discord rejects a bulk overwrite that removes the Entry Point command, so every
+deploy's post-deploy command would fail.
+
+## Discord Activity
+
+The same Discord application also runs MGA as an **Activity**. From the App
+Launcher (voice or text channel), Discord iframes the SPA at
+`https://1555249458542022666.discordsays.com`, its proxy for
+`mygamingassistant.myfreeapps.org`. v1 is **read-only public content** with no
+Discord sign-in, which would need the client secret plus a token exchange.
+
+| Piece | Where |
+|---|---|
+| Framing: SPA `frame-ancestors` admits Discord, API keeps XFO DENY | `app.yaml` `discord_activity: true` → `infra/templates/Caddyfile.docker.j2` + `platform_shared/infra/render.py` |
+| SDK client id (`GET /api/discord/activity-config`) | `platform_shared/api/discord_activity_router.py`, mounted in `app/main.py` only when `DISCORD_ENABLED` + `DISCORD_APPLICATION_ID` are set |
+| Detection, SDK bootstrap, connect/error screens, `openExternal`, `OutboundLink`, API URL remap | `@platform/ui/discord-activity` |
+| Activity bar (Games / theme / Open in browser); the landing is the game picker | `src/components/discord/DiscordActivityShell.tsx`, `src/RootLayout.tsx` |
+| Read-only switch (serve-only build OR Activity) | `src/lib/readOnly.ts` |
+| URL Mappings, as data | `src/constants/discordActivity.ts` |
+
+`@platform/ui/discord-activity` is a subpath import only. Re-exporting it from the
+package index would bundle the SDK into every app.
+
+The app knows it is inside the Activity from Discord's `frame_id` launch parameter,
+which is kept in sessionStorage across reloads. Inside the Activity:
+
+- Sign-in, account and write routes are unavailable.
+- Add lineup and World Map import are hidden.
+- The WoW screenshot reader is browser-only, because Turnstile can't load through
+  Discord's proxy.
+
+**Open in browser** covers the rest: Discord's `openExternalLink` opens the same
+page on the real site.
+
+### Rules when changing the frontend
+
+- **New external origin**, i.e. a host added to `csp` in `app.yaml`: add it to
+  `MGA_DISCORD_URL_MAPPINGS` **and** the Developer Portal, or list it as
+  deliberately unmapped. `discordActivityMappings.test.ts` fails otherwise.
+- **Outbound links:** use `OutboundLink` / `openExternal`, never a bare
+  `target="_blank"`. Discord's sandbox blocks new tabs.
+- **New write surface or auth-only route:** gate it on `isReadOnly()`, not
+  `isServeOnly()`.
+- **Load errors:** offer a retry (`LoadErrorRetry`), not "please refresh". Discord
+  has no refresh button.
+
+### Developer Portal (Activities)
+
+Enable Activities only **after** the Entry-Point-preserving
+`discord-register-commands` is deployed.
+
+1. **Activities → Settings:**
+   - Enable Activities. This auto-creates the "Launch" Entry Point command.
+   - Supported Platforms: Web, iOS, Android.
+   - Default orientation lock, phone and tablet: unlocked.
+   - Not age-restricted.
+2. **Activities → URL Mappings**, in this order. The root `/` goes LAST, because
+   shorter shared prefixes must come after longer ones:
+
+   | Prefix | Target |
+   |---|---|
+   | `/r2/{subdomain}` | `{subdomain}.r2.cloudflarestorage.com` |
+   | `/mga-clips` | `mga-clips.myfreeapps.org` |
+   | `/` | `mygamingassistant.myfreeapps.org` |
+
+3. **Try it:**
+   - Turn on Developer Mode (User Settings → App Settings → Advanced).
+   - In the operator's server, launch MyGamingAssistant from the App Launcher, or
+     from the rocket button in a voice call.
+
+`e2e/discord-activity.spec.ts` covers the in-Discord flow without Discord. It uses
+a same-origin host page that plays Discord's client.
+
 ## Tech Debt Policy
 
 mode: no-growth on flagged files
