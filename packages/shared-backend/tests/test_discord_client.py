@@ -448,3 +448,43 @@ class TestContextManagerGuard:
         client = DiscordRestClient("token-x", transport=httpx.MockTransport(lambda _: httpx.Response(200)))
         with pytest.raises(RuntimeError, match="context manager"):
             await client.create_message("ch1", {"content": "hi"})
+
+
+# ---------------------------------------------------------------------------
+# Read endpoints used to compute the bot's permissions in a channel
+# ---------------------------------------------------------------------------
+
+class TestReadEndpoints:
+    @pytest.mark.anyio
+    async def test_get_channel_member_and_roles_hit_expected_routes(self) -> None:
+        seen: list[tuple[str, str]] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append((request.method, request.url.path))
+            if request.url.path.endswith("/channels/c1"):
+                return _json_response({"id": "c1", "guild_id": "g1", "permission_overwrites": []})
+            if request.url.path.endswith("/guilds/g1/members/u1"):
+                return _json_response({"roles": ["r1"]})
+            if request.url.path.endswith("/guilds/g1/roles"):
+                return _json_response([{"id": "g1", "permissions": "0"}])
+            return httpx.Response(404, json={"code": 0, "message": "unexpected"})
+
+        async with _make_client(handler) as client:
+            channel = await client.get_channel("c1")
+            member = await client.get_guild_member("g1", "u1")
+            roles = await client.get_guild_roles("g1")
+
+        assert channel["guild_id"] == "g1"
+        assert member["roles"] == ["r1"]
+        assert roles == [{"id": "g1", "permissions": "0"}]
+        assert [method for method, _ in seen] == ["GET", "GET", "GET"]
+
+    @pytest.mark.anyio
+    async def test_get_channel_raises_with_discord_code(self) -> None:
+        def handler(_: httpx.Request) -> httpx.Response:
+            return _json_response({"code": 50001, "message": "Missing Access"}, status=403)
+
+        async with _make_client(handler) as client:
+            with pytest.raises(DiscordApiError) as exc_info:
+                await client.get_channel("c1")
+        assert exc_info.value.code == 50001
