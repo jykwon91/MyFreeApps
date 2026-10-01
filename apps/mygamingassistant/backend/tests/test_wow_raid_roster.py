@@ -5,10 +5,15 @@ Pure-Python: no DB, no fixtures, no async.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from app.models.wow.wow_raid_signup import WowRaidSignup
-from app.services.wow.raid_roster import RoleCounts, RosterSummary, compute_roster_summary
+from app.services.wow.raid_roster import (
+    RoleCounts,
+    compute_roster_summary,
+    pick_promotions,
+    seat_status_for,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -69,15 +74,20 @@ def test_confirmed_increments_count():
 def test_late_counts_toward_cap():
     signups = [_signup(status="late", role="healer") for _ in range(2)]
     summary = compute_roster_summary(signups, size_cap=25)
-    assert summary.confirmed_count == 2
+    assert summary.seats_taken == 2
+    assert summary.late_count == 2
+    assert summary.confirmed_count == 0
     assert summary.role_counts.healer == 2
 
 
-def test_tentative_counts_toward_cap():
+def test_tentative_does_not_hold_a_seat():
+    # A "maybe" must never push a sure player onto the bench.
     signups = [_signup(status="tentative", role="dps") for _ in range(5)]
-    summary = compute_roster_summary(signups, size_cap=25)
-    assert summary.confirmed_count == 5
-    assert summary.role_counts.dps == 5
+    summary = compute_roster_summary(signups, size_cap=5)
+    assert summary.seats_taken == 0
+    assert summary.tentative_count == 5
+    assert summary.is_full is False
+    assert summary.role_counts.dps == 0
 
 
 def test_bench_does_not_count_toward_cap():
@@ -184,8 +194,61 @@ def test_full_roster_snapshot():
         + [_signup(status="tentative", role="dps") for _ in range(1)]
     )
     summary = compute_roster_summary(signups, size_cap=25)
-    assert summary.confirmed_count == 26  # 3+5+17+1
+    assert summary.seats_taken == 25  # 3+5+17; tentative holds no seat
+    assert summary.tentative_count == 1
     assert summary.bench_count == 4
     assert summary.declined_count == 2
     assert summary.is_full is True
-    assert summary.role_counts.total == 26
+    assert summary.role_counts.total == 25
+    assert summary.signed_up_count == 30
+
+
+# ---------------------------------------------------------------------------
+# seat_status_for / pick_promotions
+# ---------------------------------------------------------------------------
+
+
+def _seated(count: int) -> list[WowRaidSignup]:
+    return [
+        _signup(discord_user_id=f"seat{i}", signed_up_at=_BASE_TS + timedelta(minutes=i))
+        for i in range(count)
+    ]
+
+
+def test_seat_request_with_room_is_granted():
+    assert seat_status_for(_seated(2), discord_user_id="new", requested_status="confirmed", size_cap=3) == "confirmed"
+
+
+def test_seat_request_when_full_is_benched():
+    assert seat_status_for(_seated(3), discord_user_id="new", requested_status="confirmed", size_cap=3) == "bench"
+    assert seat_status_for(_seated(3), discord_user_id="new", requested_status="late", size_cap=3) == "bench"
+
+
+def test_non_seat_requests_are_never_benched():
+    for status in ("tentative", "declined"):
+        assert seat_status_for(_seated(3), discord_user_id="new", requested_status=status, size_cap=3) == status
+
+
+def test_seat_holder_switching_confirmed_late_keeps_seat():
+    signups = _seated(3)
+    assert seat_status_for(signups, discord_user_id="seat1", requested_status="late", size_cap=3) == "late"
+
+
+def test_benched_player_stays_benched_while_full():
+    signups = _seated(3) + [_signup(status="bench", discord_user_id="b1")]
+    assert seat_status_for(signups, discord_user_id="b1", requested_status="confirmed", size_cap=3) == "bench"
+
+
+def test_pick_promotions_fifo_into_open_seats():
+    signups = _seated(1) + [
+        _signup(status="bench", discord_user_id="late_bench", signed_up_at=_BASE_TS + timedelta(hours=2)),
+        _signup(status="bench", discord_user_id="early_bench", signed_up_at=_BASE_TS + timedelta(hours=1)),
+        _signup(status="bench", discord_user_id="last_bench", signed_up_at=_BASE_TS + timedelta(hours=3)),
+    ]
+    promoted = pick_promotions(signups, size_cap=3)
+    assert [s.discord_user_id for s in promoted] == ["early_bench", "late_bench"]
+
+
+def test_pick_promotions_none_when_full():
+    signups = _seated(3) + [_signup(status="bench", discord_user_id="b1")]
+    assert pick_promotions(signups, size_cap=3) == []

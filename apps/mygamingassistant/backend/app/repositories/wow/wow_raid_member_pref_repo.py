@@ -68,3 +68,19 @@ async def upsert(
     db.add(row)
     await db.flush()
     return row
+
+
+async def opted_out_user_ids(
+    db: AsyncSession, *, guild_id: uuid.UUID, discord_user_ids: list[str]
+) -> set[str]:
+    """Subset of *discord_user_ids* who turned DM reminders off in this guild."""
+    if not discord_user_ids:
+        return set()
+    result = await db.execute(
+        select(WowRaidMemberPref.discord_user_id).where(
+            WowRaidMemberPref.guild_id == guild_id,
+            WowRaidMemberPref.discord_user_id.in_(discord_user_ids),
+            WowRaidMemberPref.dm_opt_out.is_(True),
+        )
+    )
+    return set(result.scalars().all())
