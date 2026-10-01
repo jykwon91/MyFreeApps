@@ -8,14 +8,17 @@ function parseIds(raw: unknown): string[] | null {
   return raw.filter((v): v is string => typeof v === "string");
 }
 
-/** Checked item ids for the guide's checklist, persisted in localStorage. */
-export function useChecklist(validIds: readonly string[]): {
+/** Checked item ids for a checklist, persisted in localStorage (the guide's by default). */
+export function useChecklist(
+  validIds: readonly string[],
+  storageKey: string = CHECKLIST_STORAGE_KEY,
+): {
   checked: ReadonlySet<string>;
   toggle: (id: string) => void;
   reset: () => void;
 } {
   const [checked, setChecked] = useState<ReadonlySet<string>>(() => {
-    const stored = readStored(CHECKLIST_STORAGE_KEY, parseIds, []);
+    const stored = readStored(storageKey, parseIds, []);
     return new Set(stored.filter((id) => validIds.includes(id)));
   });
 
@@ -24,15 +27,15 @@ export function useChecklist(validIds: readonly string[]): {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
-      writeStored(CHECKLIST_STORAGE_KEY, [...next]);
+      writeStored(storageKey, [...next]);
       return next;
     });
-  }, []);
+  }, [storageKey]);
 
   const reset = useCallback(() => {
     setChecked(new Set());
-    removeStored(CHECKLIST_STORAGE_KEY);
-  }, []);
+    removeStored(storageKey);
+  }, [storageKey]);
 
   return { checked, toggle, reset };
 }
