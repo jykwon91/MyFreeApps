@@ -1,5 +1,6 @@
 import { Anchor, Footprints, Loader2, Plane, Ship, TramFront } from "lucide-react";
 import type { ReactNode } from "react";
+import InsideSketch from "@/games/wow-forever/components/worldMap/InsideSketch";
 import WaypointButtons from "@/games/wow-forever/components/worldMap/WaypointButtons";
 import { WALK_STATUS, type WalkStatus } from "@/games/wow-forever/hooks/useWalkGraphs";
 import { STEP_KIND, type Directions, type StepKind } from "@/games/wow-forever/worldMap/directions";
@@ -61,6 +62,7 @@ export default function DirectionsPanel({ directions, walk }: DirectionsPanelPro
             className="flex gap-3"
             onMouseEnter={() => walk.onHighlight(i + 1)}
             onFocus={() => walk.onHighlight(i + 1)}
+            onBlur={() => walk.onHighlight(null)}
           >
             <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
               {i + 1}
@@ -70,6 +72,9 @@ export default function DirectionsPanel({ directions, walk }: DirectionsPanelPro
                 <span className="mt-0.5 text-muted-foreground">{STEP_ICON[step.kind]}</span>
                 <span>{step.text}</span>
               </p>
+              {step.inside?.map((run) => (
+                <InsideSketch key={run.firstStep} run={run} destination={step.place.label} />
+              ))}
               {step.detail && step.detail.length > 0 && (
                 <details className="text-sm">
                   <summary className="cursor-pointer text-muted-foreground hover:text-foreground">

@@ -64,3 +64,24 @@ test("a boss past a one-way drop routes over the ledge (Wailing Caverns)", async
   await expect(panel).toContainText("Drop down from the ledge");
   await expect(panel).not.toContainText(/No walking route/i);
 });
+
+test("directions to the Deadmines sketch the way through the cave, and a line picks out its stretch", async ({
+  page,
+}) => {
+  await page.goto("/wow-forever/map?to=npc%3Aclassic-i-78&m=1436&dir=1&from=place%3Atown-1436-sentinel+hill");
+  const cave = page.locator("details", { hasText: /Inside Defias Hideout/ });
+  await expect(cave.locator("summary")).toContainText(/Inside Defias Hideout · ~\d/);
+  const sketch = cave.getByRole("img", { name: /Sketch of the way through Defias Hideout/ });
+  await expect(sketch).toBeVisible();
+  const line = cave.getByRole("button", { name: /^Go into Defias Hideout/ });
+  await line.click();
+  await expect(line).toHaveAttribute("aria-pressed", "true");
+});
+
+test("the phone layout never scrolls sideways with a cave sketch open", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto("/wow-forever/map?to=npc%3Aclassic-i-78&m=1436&dir=1&from=place%3Atown-1436-sentinel+hill");
+  await expect(page.getByRole("img", { name: /Sketch of the way through Defias Hideout/ })).toBeVisible();
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});
