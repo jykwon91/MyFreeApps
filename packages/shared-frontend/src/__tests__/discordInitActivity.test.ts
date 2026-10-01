@@ -8,6 +8,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DISCORD_READY_TIMEOUT_MS,
+  DISCORD_SDK_LOAD_TIMEOUT_MS,
   __resetDiscordActivityForTests,
   getDiscordSdk,
   initDiscordActivity,
@@ -173,6 +174,18 @@ describe("initDiscordActivity", () => {
     const error = await rejection(initDiscordActivity(OPTIONS, { loadSdk: () => Promise.reject(cause) }));
     expect(error.reason).toBe("sdk-load-failed");
     expect(error.cause).toBe(cause);
+  });
+
+  it("gives up on an SDK chunk that never arrives", async () => {
+    vi.useFakeTimers();
+    const failed = rejection(initDiscordActivity(OPTIONS, { loadSdk: () => new Promise<never>(() => undefined) }));
+
+    await vi.advanceTimersByTimeAsync(DISCORD_SDK_LOAD_TIMEOUT_MS);
+
+    const error = await failed;
+    expect(error.reason).toBe("sdk-load-failed");
+    expect(error.message).toContain("took longer than");
+    expect(sdk.clients).toHaveLength(0);
   });
 
   it("reports launch parameters the SDK rejects", async () => {

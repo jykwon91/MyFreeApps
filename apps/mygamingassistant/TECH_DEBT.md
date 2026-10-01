@@ -1,7 +1,7 @@
 # MyGamingAssistant - Tech Debt Log
 
 > Last scanned: 2026-06-01 (serve-only PR — logged 1 pre-existing test failure + extended the ORM-in-routes entry to include totp.py; prior findings preserved)
-> Issues: 0 critical, 6 high, 11 medium, 16 low (open entries, recounted 2026-10-01 with the Discord Activity PR)
+> Issues: 0 critical, 6 high, 11 medium, 15 low (open entries, recounted 2026-10-01 with the Discord Activity PR)
 
 mode: log-only - fix only Critical items that block the current feature; log everything else here.
 
@@ -543,15 +543,6 @@ Found while building the Discord Activity and left out of that PR: either the we
   1. A `frame_id` query parameter is the only signal. Opening `https://mygamingassistant.myfreeapps.org/?frame_id=x` directly shows "Couldn't connect to Discord" and keeps that tab read-only for the session (sessionStorage). Hand-crafted URLs only; no security impact.
   2. When the browser blocks storage in the iframe (third-party storage off), the launch parameters can't be kept. Client-side navigation drops the query string, so a later in-app reload (stale-chunk recovery in lib/stale-chunk.ts, NewVersionPrompt's Reload, RouteErrorFallback's Reload / Go home) lands on a URL without `frame_id` and renders the website shells inside Discord, where R2 media can't load.
 - **Recommendation:** (1) Also require being framed (`window.self !== window.top`) before treating `frame_id` as a launch. (2) Route those reloads through a helper that re-appends the in-memory launch search (`getDiscordLaunchSearch()`) to the target URL instead of relying on sessionStorage alone.
-
-### [Frontend] Activity connect - no overall deadline, and one failed SDK load disables media remapping for the page
-- **Severity:** Low
-- **Effort:** S
-- **Location:** packages/shared-frontend/src/discord-activity/bootDiscordActivity.ts, initDiscordActivity.ts, urlRemap.ts (`installDiscordUrlRemap`)
-- **Problem:**
-  - The 10 s READY timeout starts only after the client id has loaded (`GET /api/discord/activity-config`, through the shared axios instance, which has no timeout) and the SDK chunk has downloaded. A request that hangs leaves "Connecting to Discord..." up with no way out.
-  - `installDiscordUrlRemap` caches its SDK load for the page. If that load fails (a transient network error) and `initDiscordActivity`'s own load then succeeds, the Activity connects but API responses are never remapped, so R2 media doesn't load until the page reloads.
-- **Recommendation:** Put one deadline around the whole boot (client-id fetch, SDK load and READY) that rejects with the existing `"timeout"` reason, so the connect-failed screen (Try again / Continue anyway) always appears. In `getRemapper`, clear the cached promise on failure so the next response retries the load.
 
 ### [Infra] CSP - frame-src allows www.youtube-nocookie.com, which no page embeds
 - **Severity:** Low

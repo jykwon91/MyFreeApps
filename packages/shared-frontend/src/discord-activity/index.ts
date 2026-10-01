@@ -14,7 +14,12 @@ export {
   isDiscordActivity,
   withoutDiscordLaunchParams,
 } from "./launchParams";
-export { DISCORD_READY_TIMEOUT_MS, getDiscordSdk, initDiscordActivity } from "./initDiscordActivity";
+export {
+  DISCORD_READY_TIMEOUT_MS,
+  DISCORD_SDK_LOAD_TIMEOUT_MS,
+  getDiscordSdk,
+  initDiscordActivity,
+} from "./initDiscordActivity";
 export type { InitDiscordActivityOptions } from "./initDiscordActivity";
 export type { DiscordSdkClient } from "./loadEmbeddedAppSdk";
 export { installDiscordUrlRemap, remapUrlsDeep } from "./urlRemap";

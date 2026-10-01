@@ -3,7 +3,11 @@
  * every failure logged with its reason and Discord's code.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { __resetDiscordBootForTests, bootDiscordActivity } from "../discord-activity/bootDiscordActivity";
+import {
+  DISCORD_CLIENT_ID_TIMEOUT_MS,
+  __resetDiscordBootForTests,
+  bootDiscordActivity,
+} from "../discord-activity/bootDiscordActivity";
 import { __resetDiscordActivityForTests } from "../discord-activity/initDiscordActivity";
 import {
   LAUNCH_QUERY,
@@ -33,6 +37,7 @@ beforeEach(() => {
 afterEach(() => {
   sdk.teardown();
   restoreConsole();
+  vi.useRealTimers();
   vi.restoreAllMocks();
   __resetDiscordBootForTests();
   __resetDiscordActivityForTests();
@@ -69,6 +74,29 @@ describe("bootDiscordActivity", () => {
       error.message,
       error.cause,
     );
+  });
+
+  it("reports client-id-unavailable when the id never arrives", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    let settled = false;
+    const booting = bootDiscordActivity(
+      { loadClientId: () => new Promise<string>(() => undefined), urlMappings: [] },
+      { loadSdk: sdk.load },
+    );
+    void booting.then(
+      () => (settled = true),
+      () => (settled = true),
+    );
+
+    await vi.advanceTimersByTimeAsync(DISCORD_CLIENT_ID_TIMEOUT_MS - 1_000);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    const error = await rejection(booting);
+    expect(error.reason).toBe("client-id-unavailable");
+    expect(String(error.cause)).toContain("took longer than");
+    expect(sdk.clients).toHaveLength(0);
   });
 
   it("logs Discord's close code when Discord refuses the connection", async () => {

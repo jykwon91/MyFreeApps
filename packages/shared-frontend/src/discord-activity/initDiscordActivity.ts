@@ -6,6 +6,10 @@ import {
   type DiscordSdkClient,
   type EmbeddedAppSdkModule,
 } from "./loadEmbeddedAppSdk";
+import { withTimeout } from "./withTimeout";
+
+/** How long the SDK chunk may take to download before the error screen shows. */
+export const DISCORD_SDK_LOAD_TIMEOUT_MS = 15_000;
 
 /** How long to wait for Discord's READY before showing the error screen. */
 export const DISCORD_READY_TIMEOUT_MS = 10_000;
@@ -106,7 +110,7 @@ async function connect(options: InitDiscordActivityOptions, deps: InitDiscordAct
 
   let sdk: EmbeddedAppSdkModule;
   try {
-    sdk = await deps.loadSdk();
+    sdk = await withTimeout(deps.loadSdk(), DISCORD_SDK_LOAD_TIMEOUT_MS, "Downloading the Embedded App SDK");
   } catch (cause) {
     throw new DiscordActivityError("sdk-load-failed", `The Discord Embedded App SDK didn't load: ${errorMessage(cause)}`, {
       cause,
@@ -144,7 +148,8 @@ async function connect(options: InitDiscordActivityOptions, deps: InitDiscordAct
 /**
  * Connect to Discord as an Activity: load the Embedded App SDK (dynamic
  * import — never in the website's bundle path), patch the URL Mappings,
- * construct the SDK and wait for READY.
+ * construct the SDK and wait for READY. The download and the READY wait are
+ * both time-bounded, so this always settles.
  *
  * One connection per page: later calls return the first call's promise. It
  * rejects with a {@link DiscordActivityError} saying which step failed; a

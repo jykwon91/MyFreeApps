@@ -95,7 +95,8 @@ export function createUrlRemapper(
  * them. Outside Discord this installs nothing.
  *
  * Install once at startup, before the first request. If the SDK can't load,
- * responses pass through untouched (and the connect screen reports it).
+ * that response passes through untouched (and the connect screen reports it);
+ * the next response tries again.
  */
 export function installDiscordUrlRemap(
   client: AxiosInstance,
@@ -110,7 +111,11 @@ export function installDiscordUrlRemap(
       remapper = deps.loadSdk().then(
         (sdk) => createUrlRemapper(sdk.attemptRemap, mappings),
         (error: unknown) => {
-          console.warn("[discord-activity] Embedded App SDK failed to load; API URLs are not remapped", error);
+          // Not kept: the next response retries the load (the loader doesn't
+          // cache a failure either), so one transient network error doesn't
+          // leave media unloadable for the rest of the page.
+          remapper = null;
+          console.warn("[discord-activity] Embedded App SDK failed to load; this response's URLs are not remapped", error);
           return null;
         },
       );

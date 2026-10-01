@@ -204,4 +204,24 @@ describe("installDiscordUrlRemap", () => {
     expect((await client.get("/lineups")).data).toBe(data);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("failed to load"), failure);
   });
+
+  it("tries the SDK again on the next response after a failed load", async () => {
+    loadPage(`/${LAUNCH_QUERY}`);
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const loadSdk = vi
+      .fn<() => Promise<{ attemptRemap: typeof attemptRemap }>>()
+      .mockRejectedValueOnce(new TypeError("Failed to fetch dynamically imported module"))
+      .mockResolvedValue({ attemptRemap });
+    const data = { image_url: PRESIGNED };
+    const client = apiReturning(data);
+    installDiscordUrlRemap(client, MAPPINGS, { loadSdk });
+
+    expect((await client.get("/lineups")).data).toBe(data);
+    expect((await client.get("/lineups")).data).toEqual({
+      image_url: proxied(
+        "/r2/acct123/media/lineups/mirage/42.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Signature=ab%2Fcd",
+      ),
+    });
+    expect(loadSdk).toHaveBeenCalledTimes(2);
+  });
 });

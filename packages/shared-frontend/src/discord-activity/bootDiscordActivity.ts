@@ -3,6 +3,10 @@ import { DiscordActivityError } from "./errors/DiscordActivityError";
 import { toDiscordActivityError } from "./errors/toDiscordActivityError";
 import { initDiscordActivity, type InitDiscordActivityDeps } from "./initDiscordActivity";
 import { loadEmbeddedAppSdk } from "./loadEmbeddedAppSdk";
+import { withTimeout } from "./withTimeout";
+
+/** How long fetching the application id may take before the error screen shows. */
+export const DISCORD_CLIENT_ID_TIMEOUT_MS = 10_000;
 
 export interface BootDiscordActivityOptions {
   /** Resolves the Discord application (client) id, e.g. from a public config endpoint. */
@@ -18,7 +22,8 @@ let boot: Promise<void> | null = null;
 async function loadClientIdOrFail(loadClientId: () => Promise<string>): Promise<string> {
   let clientId: string;
   try {
-    clientId = (await loadClientId()).trim();
+    const loading = withTimeout(loadClientId(), DISCORD_CLIENT_ID_TIMEOUT_MS, "Fetching the Discord application id");
+    clientId = (await loading).trim();
   } catch (cause) {
     throw new DiscordActivityError("client-id-unavailable", "Couldn't load the Discord application id.", { cause });
   }
@@ -51,9 +56,10 @@ async function run(options: BootDiscordActivityOptions, deps: InitDiscordActivit
 
 /**
  * Connect this page to Discord: fetch the application id, then
- * {@link initDiscordActivity}. One attempt per page — React StrictMode's
- * doubled effects share it — and a failure is logged with its reason and
- * Discord's code before it rejects.
+ * {@link initDiscordActivity}. Every step is time-bounded, so the attempt
+ * always settles — "Connecting to Discord…" ends in the app or the error
+ * screen. One attempt per page — React StrictMode's doubled effects share it —
+ * and a failure is logged with its reason and Discord's code before it rejects.
  */
 export function bootDiscordActivity(
   options: BootDiscordActivityOptions,
