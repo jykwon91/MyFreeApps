@@ -1379,6 +1379,116 @@ _SHARED_DEV_ONLY_IMPORTS = ("anthropic",)
 
 
 @pytest.mark.parametrize("app", _APPS)
+class TestCILayerRelevance:
+    """Each app's ci-<app>.yml must gate backend and frontend jobs separately.
+
+    Problem: a PR touching only packages/shared-backend still ran frontend-build
+    and frontend-layout-e2e (Playwright) — they are expensive and unaffected.
+    Fix: the `changes` job emits `backend`, `frontend`, and `relevant` outputs;
+    backend-only jobs gate on `backend`; frontend-only jobs gate on `frontend`.
+
+    Sample file-list assertions document the expected routing:
+      - packages/shared-backend/... → backend=true, frontend=false
+      - packages/shared-frontend/... → frontend=true, backend=false
+      - apps/<app>/docker/Caddyfile.docker → both=true (infra rule)
+      - package-lock.json → frontend=true, backend=false
+      - unrelated app path → backend=false, frontend=false, relevant=false
+      - workflow file → backend=true, frontend=true
+
+    The structural tests below check the YAML instead of running bash so they
+    stay fast. They also guard against regressions where someone re-adds the
+    top-level `on.pull_request.paths:` filter (which would break required-
+    status-check reporting on PRs that don't touch the app).
+    """
+
+    # Apps whose CI workflow uses job-level gating rather than top-level
+    # on.pull_request.paths. ci-mygamingassistant-desktop is manual-only;
+    # ci-landing uses its own independent path set with no packages dependency.
+    _CI_APPS = [
+        "mybookkeeper",
+        "myjobhunter",
+        "mygamingassistant",
+        "mypizzatracker",
+        "myrecipes",
+        "mylanguagetutor",
+    ]
+
+    @pytest.mark.parametrize("app", _CI_APPS)
+    def test_no_pr_paths_filter(self, app: str) -> None:
+        """on.pull_request must NOT carry a paths: filter.
+
+        A workflow skipped by a top-level paths filter never reports its check
+        contexts to GitHub, so PRs not touching the app hang forever on
+        'Expected — Waiting for status to be reported'. Job-level if: gating
+        is the correct fix (a skipped job reports SUCCESS).
+        """
+        import yaml as _yaml
+        ci_text = _read(".github", "workflows", f"ci-{app}.yml")
+        ci = _yaml.safe_load(ci_text)
+        # yaml.safe_load parses the bare `on:` key as the boolean True, not the
+        # string "on". Access it via the boolean key.
+        triggers = ci.get(True) or {}
+        pr_trigger = triggers.get("pull_request") or {}
+        assert "paths" not in pr_trigger, (
+            f"ci-{app}.yml must NOT have `on.pull_request.paths:` — use job-level "
+            f"`if: needs.changes.outputs.<layer> != 'false'` instead. See "
+            f"ci-mybookkeeper.yml for the full rationale."
+        )
+
+    @pytest.mark.parametrize("app", _CI_APPS)
+    def test_changes_job_emits_backend_output(self, app: str) -> None:
+        """The changes job must declare a `backend` output."""
+        ci = _read(".github", "workflows", f"ci-{app}.yml")
+        assert "backend: ${{ steps.filter.outputs.backend }}" in ci, (
+            f"ci-{app}.yml changes job must emit `backend` output so backend-only "
+            f"jobs can be skipped when a PR touches only packages/shared-frontend."
+        )
+
+    @pytest.mark.parametrize("app", _CI_APPS)
+    def test_changes_job_emits_frontend_output(self, app: str) -> None:
+        """The changes job must declare a `frontend` output."""
+        ci = _read(".github", "workflows", f"ci-{app}.yml")
+        assert "frontend: ${{ steps.filter.outputs.frontend }}" in ci, (
+            f"ci-{app}.yml changes job must emit `frontend` output so frontend-only "
+            f"jobs can be skipped when a PR touches only packages/shared-backend."
+        )
+
+    @pytest.mark.parametrize("app", _CI_APPS)
+    def test_backend_jobs_gate_on_backend_output(self, app: str) -> None:
+        """backend-deps-resolve and backend-tests must gate on the backend output."""
+        ci = _read(".github", "workflows", f"ci-{app}.yml")
+        assert "needs.changes.outputs.backend" in ci, (
+            f"ci-{app}.yml must gate backend jobs on needs.changes.outputs.backend "
+            f"so shared-frontend-only PRs skip the backend suite."
+        )
+
+    @pytest.mark.parametrize("app", _CI_APPS)
+    def test_frontend_jobs_gate_on_frontend_output(self, app: str) -> None:
+        """frontend-build and caddy-image must gate on the frontend output."""
+        ci = _read(".github", "workflows", f"ci-{app}.yml")
+        assert "needs.changes.outputs.frontend" in ci, (
+            f"ci-{app}.yml must gate frontend jobs on needs.changes.outputs.frontend "
+            f"so shared-backend-only PRs skip the frontend build and caddy-image."
+        )
+
+    @pytest.mark.parametrize("app", _CI_APPS)
+    def test_push_still_has_paths_filter(self, app: str) -> None:
+        """on.push MUST keep its paths: filter — main builds don't need to
+        report status contexts, so we can skip unrelated app builds on push.
+        """
+        import yaml as _yaml
+        ci_text = _read(".github", "workflows", f"ci-{app}.yml")
+        ci = _yaml.safe_load(ci_text)
+        # yaml.safe_load parses the bare `on:` key as the boolean True.
+        triggers = ci.get(True) or {}
+        push_trigger = triggers.get("push") or {}
+        assert "paths" in push_trigger, (
+            f"ci-{app}.yml on.push must keep its paths: filter to avoid running "
+            f"main-branch builds for completely unrelated apps."
+        )
+
+
+@pytest.mark.parametrize("app", _APPS)
 class TestAppDeclaresItsThirdPartyImports:
     def test_dev_only_shared_deps_are_declared_by_importing_app(self, app: str) -> None:
         app_dir = _REPO_ROOT / "apps" / app / "backend" / "app"

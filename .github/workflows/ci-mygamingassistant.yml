@@ -3,12 +3,6 @@ name: MyGamingAssistant CI
 on:
   pull_request:
     branches: [main]
-    paths:
-      - 'apps/mygamingassistant/**'
-      - 'packages/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/ci-mygamingassistant.yml'
   push:
     branches: [main]
     paths:
@@ -26,7 +20,116 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Path filtering lives HERE, at the job level — NOT in `on.pull_request.paths`.
+  # See ci-mybookkeeper.yml for the full rationale (required status checks,
+  # skipped-by-if reports success, fail-open gate form).
+  #
+  # DO NOT re-add `paths:` under `on.pull_request`.
+  #
+  # Three outputs — `backend`, `frontend`, `relevant` (= backend || frontend):
+  # backend-only jobs gate on `backend`; frontend-only jobs gate on `frontend`.
+  changes:
+    name: changes / mygamingassistant
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      relevant: ${{ steps.filter.outputs.relevant }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Detect changes relevant to mygamingassistant
+        id: filter
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -uo pipefail
+          # Non-PR events (push to main): paths: filter still applied above, so
+          # if this job is running at all the change is relevant — set all true.
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          MERGE_BASE="$(git merge-base "$BASE_SHA" "$HEAD_SHA")" || MERGE_BASE=""
+          if [ -z "$MERGE_BASE" ]; then
+            echo "::warning::Could not compute merge base; running the full suite."
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! FILES="$(git diff --name-only "$MERGE_BASE" "$HEAD_SHA")"; then
+            echo "::warning::Could not diff; running the full suite."
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "::group::changed files"
+          echo "$FILES"
+          echo "::endgroup::"
+
+          BACKEND=false
+          FRONTEND=false
+
+          # Workflow file itself → run everything.
+          if echo "$FILES" | grep -qE '^\.github/workflows/ci-mygamingassistant\.yml$'; then
+            BACKEND=true; FRONTEND=true
+          fi
+          # packages/shared-backend/ → backend only.
+          if echo "$FILES" | grep -qE '^packages/shared-backend/'; then
+            BACKEND=true
+          fi
+          # packages/shared-frontend/ → frontend only.
+          if echo "$FILES" | grep -qE '^packages/shared-frontend/'; then
+            FRONTEND=true
+          fi
+          # packages/ outside the two shared packages → both (ambiguous).
+          PKG_OTHER="$(echo "$FILES" | grep -E '^packages/' | grep -vE '^packages/shared-(backend|frontend)/')"
+          if [ -n "$PKG_OTHER" ]; then
+            BACKEND=true; FRONTEND=true
+          fi
+          # apps/mygamingassistant/backend/ → backend only.
+          if echo "$FILES" | grep -qE '^apps/mygamingassistant/backend/'; then
+            BACKEND=true
+          fi
+          # apps/mygamingassistant/frontend/ → frontend only.
+          if echo "$FILES" | grep -qE '^apps/mygamingassistant/frontend/'; then
+            FRONTEND=true
+          fi
+          # apps/mygamingassistant/ outside backend/ or frontend/ (docker/,
+          # Caddyfile, docker-compose.yml, etc.) → both (ambiguous infra change).
+          APP_OTHER="$(echo "$FILES" | grep -E '^apps/mygamingassistant/' | grep -vE '^apps/mygamingassistant/(backend|frontend)/')"
+          if [ -n "$APP_OTHER" ]; then
+            BACKEND=true; FRONTEND=true
+          fi
+          # package.json / package-lock.json → frontend.
+          if echo "$FILES" | grep -qE '^(package\.json|package-lock\.json)$'; then
+            FRONTEND=true
+          fi
+
+          # relevant = backend || frontend (used by jobs spanning both layers).
+          if [ "$BACKEND" = "true" ] || [ "$FRONTEND" = "true" ]; then
+            RELEVANT=true
+          else
+            RELEVANT=false
+          fi
+
+          echo "backend=$BACKEND" >> "$GITHUB_OUTPUT"
+          echo "frontend=$FRONTEND" >> "$GITHUB_OUTPUT"
+          echo "relevant=$RELEVANT" >> "$GITHUB_OUTPUT"
+
   backend-deps-resolve:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.backend != 'false' }}
     name: backend-deps-resolve / mygamingassistant
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -54,6 +157,8 @@ jobs:
         run: uv sync --frozen
 
   backend-tests:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.backend != 'false' }}
     name: backend-tests / mygamingassistant
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -125,6 +230,8 @@ jobs:
         run: PYTHONPATH=. uv run pytest -q --timeout=60
 
   frontend-build:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.frontend != 'false' }}
     name: frontend-build / mygamingassistant
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -153,6 +260,8 @@ jobs:
         run: npm run build --workspace=mygamingassistant-frontend
 
   caddy-image:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.frontend != 'false' }}
     name: caddy-image / mygamingassistant
     runs-on: ubuntu-latest
     timeout-minutes: 10

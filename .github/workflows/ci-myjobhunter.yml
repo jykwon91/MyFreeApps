@@ -37,16 +37,23 @@ jobs:
   #
   # DO NOT re-add `paths:` under `on.pull_request`.
   #
-  # The gate below is `!cancelled() && ... != 'false'`, NOT `== 'true'`.
-  # A plain `needs: changes` would skip every dependent job if the gate job
-  # itself failed — and a skipped job reports SUCCESS, which would let a PR
-  # merge with no tests run at all. This form inverts that: work is skipped
-  # only on an explicit `false`, so any failure of the gate runs everything.
+  # The gate form is `!cancelled() && needs.changes.outputs.<layer> != 'false'`,
+  # NOT `== 'true'`. A plain `needs: changes` would skip every dependent job if
+  # the gate job itself failed — and a skipped job reports SUCCESS, which would
+  # let a PR merge with no tests run at all. This form inverts that: work is
+  # skipped only on an explicit `false`, so any failure of the gate runs
+  # everything.
+  #
+  # Three outputs — `backend`, `frontend`, `relevant` (= backend || frontend):
+  # backend-only jobs gate on `backend`; frontend-only jobs gate on `frontend`.
+  # This skips e.g. Playwright when a PR touches only packages/shared-backend.
   changes:
     name: changes / myjobhunter
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
       relevant: ${{ steps.filter.outputs.relevant }}
     steps:
       - name: Checkout
@@ -62,9 +69,11 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
         run: |
           set -uo pipefail
-          # Non-PR events (push to main) still carry the `paths:` filter below,
-          # so if we are running at all the change is relevant by definition.
+          # Non-PR events (push to main): paths: filter still applied above, so
+          # if this job is running at all the change is relevant — set all true.
           if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
             echo "relevant=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -73,29 +82,75 @@ jobs:
           MERGE_BASE="$(git merge-base "$BASE_SHA" "$HEAD_SHA")" || MERGE_BASE=""
           if [ -z "$MERGE_BASE" ]; then
             echo "::warning::Could not compute merge base; running the full suite."
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
             echo "relevant=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           if ! FILES="$(git diff --name-only "$MERGE_BASE" "$HEAD_SHA")"; then
             echo "::warning::Could not diff; running the full suite."
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
             echo "relevant=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           echo "::group::changed files"
           echo "$FILES"
           echo "::endgroup::"
-          # Mirrors the `paths:` filter still applied to `push` below. Every
-          # failure path above falls back to relevant=true — this gate may only
-          # ever skip work it is certain is unrelated.
-          if echo "$FILES" | grep -qE '^(apps/myjobhunter/|packages/|package\.json$|package-lock\.json$|\.github/workflows/ci-myjobhunter\.yml$)'; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "relevant=false" >> "$GITHUB_OUTPUT"
+
+          BACKEND=false
+          FRONTEND=false
+
+          # Workflow file itself → run everything.
+          if echo "$FILES" | grep -qE '^\.github/workflows/ci-myjobhunter\.yml$'; then
+            BACKEND=true; FRONTEND=true
           fi
+          # packages/shared-backend/ → backend only.
+          if echo "$FILES" | grep -qE '^packages/shared-backend/'; then
+            BACKEND=true
+          fi
+          # packages/shared-frontend/ → frontend only.
+          if echo "$FILES" | grep -qE '^packages/shared-frontend/'; then
+            FRONTEND=true
+          fi
+          # packages/ outside the two shared packages → both (ambiguous).
+          PKG_OTHER="$(echo "$FILES" | grep -E '^packages/' | grep -vE '^packages/shared-(backend|frontend)/')"
+          if [ -n "$PKG_OTHER" ]; then
+            BACKEND=true; FRONTEND=true
+          fi
+          # apps/myjobhunter/backend/ → backend only.
+          if echo "$FILES" | grep -qE '^apps/myjobhunter/backend/'; then
+            BACKEND=true
+          fi
+          # apps/myjobhunter/frontend/ → frontend only.
+          if echo "$FILES" | grep -qE '^apps/myjobhunter/frontend/'; then
+            FRONTEND=true
+          fi
+          # apps/myjobhunter/ outside backend/ or frontend/ (docker/, Caddyfile,
+          # docker-compose.yml, etc.) → both (ambiguous infra change).
+          APP_OTHER="$(echo "$FILES" | grep -E '^apps/myjobhunter/' | grep -vE '^apps/myjobhunter/(backend|frontend)/')"
+          if [ -n "$APP_OTHER" ]; then
+            BACKEND=true; FRONTEND=true
+          fi
+          # package.json / package-lock.json → frontend.
+          if echo "$FILES" | grep -qE '^(package\.json|package-lock\.json)$'; then
+            FRONTEND=true
+          fi
+
+          # relevant = backend || frontend (used by jobs spanning both layers).
+          if [ "$BACKEND" = "true" ] || [ "$FRONTEND" = "true" ]; then
+            RELEVANT=true
+          else
+            RELEVANT=false
+          fi
+
+          echo "backend=$BACKEND" >> "$GITHUB_OUTPUT"
+          echo "frontend=$FRONTEND" >> "$GITHUB_OUTPUT"
+          echo "relevant=$RELEVANT" >> "$GITHUB_OUTPUT"
 
   backend-deps-resolve:
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
+    if: ${{ !cancelled() && needs.changes.outputs.backend != 'false' }}
     name: backend-deps-resolve / myjobhunter
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -118,10 +173,10 @@ jobs:
 
   backend-tests:
     needs: changes
-    # `!cancelled()` (not a `relevant` test) so the job still RUNS — and so still
+    # `!cancelled()` (not a `backend` test) so the job still RUNS — and so still
     # expands its matrix into the five required contexts — even if the `changes`
     # gate job itself failed. The per-step conditions below then evaluate an empty
-    # `relevant`, which is != 'false', so the full suite runs. Fail-safe either way.
+    # `backend`, which is != 'false', so the full suite runs. Fail-safe either way.
     if: ${{ !cancelled() }}
     # NOTE: unlike every other job here, the gate is applied per-STEP, not at
     # the job level. A matrix job skipped by a job-level `if:` does not have its
@@ -239,11 +294,11 @@ jobs:
 
     steps:
       - name: Checkout
-        if: ${{ needs.changes.outputs.relevant != 'false' }}
+        if: ${{ needs.changes.outputs.backend != 'false' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        if: ${{ needs.changes.outputs.relevant != 'false' }}
+        if: ${{ needs.changes.outputs.backend != 'false' }}
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.12'
@@ -251,19 +306,19 @@ jobs:
           cache-dependency-path: apps/myjobhunter/backend/requirements.txt
 
       - name: Install backend dependencies
-        if: ${{ needs.changes.outputs.relevant != 'false' }}
+        if: ${{ needs.changes.outputs.backend != 'false' }}
         working-directory: apps/myjobhunter/backend
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Run alembic migrations
-        if: ${{ needs.changes.outputs.relevant != 'false' }}
+        if: ${{ needs.changes.outputs.backend != 'false' }}
         working-directory: apps/myjobhunter/backend
         run: PYTHONPATH=. alembic upgrade head
 
       - name: Run pytest (${{ matrix.shard.name }})
-        if: ${{ needs.changes.outputs.relevant != 'false' }}
+        if: ${{ needs.changes.outputs.backend != 'false' }}
         working-directory: apps/myjobhunter/backend
         # --timeout=60 (pytest-timeout) is a safety net so a future
         # teardown bug can't consume the whole shard timeout silently.
@@ -271,7 +326,7 @@ jobs:
 
   frontend-build:
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
+    if: ${{ !cancelled() && needs.changes.outputs.frontend != 'false' }}
     name: frontend-build / myjobhunter
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -295,7 +350,7 @@ jobs:
 
   caddy-image:
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
+    if: ${{ !cancelled() && needs.changes.outputs.frontend != 'false' }}
     name: caddy-image / myjobhunter
     runs-on: ubuntu-latest
     timeout-minutes: 10
