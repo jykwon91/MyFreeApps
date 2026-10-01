@@ -9,8 +9,8 @@ MyFreeApps.
 |---|---|
 | Upstream | `cmangos/classic-db`, file `Full_DB/ClassicDB_1_12_1_z2815.sql.gz` |
 | Pinned commit | `ec4f596146be6467ea93c57397858e329e2db852` |
-| Tables used | `creature` / `gameobject` (spawn positions), `creature_template` / `gameobject_template` (name, title, NPC flags, trainer type/class, faction), `game_event_creature` / `game_event_gameobject` (to drop seasonal spawns), `quest_template` + `creature_questrelation` / `gameobject_questrelation` (who starts which quest), `areatrigger_teleport` (which trigger leads into which dungeon) |
-| Transformation | `classicServices.json`: service NPCs only (trainers, flight masters, innkeepers, bankers, auctioneers, stable masters, weapon masters, repair vendors). `classicQuests.json`: quest givers (NPCs and objects) with each quest's title, levels, faction and class. `classicDungeons.json`: dungeon and raid entrances. All world positions converted to Forever zone-map coordinates, plus which faction may use each one |
+| Tables used | `creature` / `gameobject` (spawn positions), `creature_template` / `gameobject_template` (name, title, NPC flags, trainer type/class, faction), `game_event_creature` / `game_event_gameobject` (to drop seasonal spawns), `quest_template` + `creature_questrelation` / `gameobject_questrelation` (who starts which quest), `areatrigger_teleport` (which trigger leads into which dungeon), `creature_spawn_entry` / `spawn_group_spawn` / `spawn_group_entry` (bosses spawned from a list or a group), `gameobject` type 0 + `item_template` (doors and the key that opens them) |
+| Transformation | `classicServices.json`: service NPCs only (trainers, flight masters, innkeepers, bankers, auctioneers, stable masters, weapon masters, repair vendors). `classicQuests.json`: quest givers (NPCs and objects) with each quest's title, levels, faction and class. `classicDungeons.json`: dungeon and raid entrances. `classicInteriors.json`: per dungeon, where each entrance puts you, each boss's spawn (in the instance's own coordinates) and the doors that need a key. All world positions converted to Forever zone-map coordinates, plus which faction may use each one |
 | Generator | `apps/mygamingassistant/backend/scripts/wow_world_map/` (our own code — no cmangos code is copied) |
 
 Zone bounds and faction reactions used during the conversion come from the
@@ -18,7 +18,9 @@ World of Warcraft: Forever client tables (© Blizzard Entertainment), exported b
 wago.tools. The build is recorded in each file's `source` block. Dungeon
 entrance positions come from the Classic Era client's `AreaTrigger` table
 (the Forever client no longer ships them); dungeon levels are Forever's own
-(`LFGDungeons` → `ContentTuning`).
+(`LFGDungeons` → `ContentTuning`). Which bosses a dungeon has, and their
+order, is Forever's `DungeonEncounter` table; a door's key comes from the
+Forever `Lock` table.
 
 These are **Classic (1.12) locations**. WoW Forever keeps Classic's world and
 coordinate system and most trainers stand where they always did, but Forever

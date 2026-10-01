@@ -40,12 +40,18 @@ from scripts.wow_world_map import sources
 from scripts.wow_world_map.dungeons import COLUMNS as DUNGEON_COLUMNS
 from scripts.wow_world_map.dungeons import build_dungeons
 from scripts.wow_world_map.highlights import MASK_H, MASK_W, MapHighlights
+from scripts.wow_world_map.interiors import (
+    BOSS_COLUMNS,
+    DOOR_COLUMNS,
+    ENTRANCE_COLUMNS,
+    build_interiors,
+)
 from scripts.wow_world_map.map_art import WorldMapArt
 from scripts.wow_world_map.quests import GIVER_COLUMNS, QUEST_COLUMNS, build_quests
 from scripts.wow_world_map.services import COLUMNS as SERVICE_COLUMNS
 from scripts.wow_world_map.services import build_services
 from scripts.wow_world_map.travel import build_travel
-from scripts.wow_world_map.walk.build import build_walk
+from scripts.wow_world_map.walk.build import build_interior_walk, build_walk
 from scripts.wow_world_map.zones import CONTINENT_NAMES, load_world, load_zones
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
@@ -166,6 +172,26 @@ def main() -> None:
         "rows": dungeon_rows,
     })
     print(f"dungeon / raid entrances: {len(dungeon_rows)}")
+
+    interiors = write_interiors(dungeon_rows)
+    if not args.no_walk:
+        for map_id, interior in interiors.items():
+            build_interior_walk(int(map_id), interior, WALK_DIR)
+
+
+def write_interiors(dungeon_rows: list[list[object]]) -> dict[str, dict[str, list]]:
+    interiors = build_interiors(dungeon_rows, DUNGEON_COLUMNS)
+    write_json(CLASSIC_DIR / "classicInteriors.json", {
+        "source": classic_source("DungeonEncounter, Lock"),
+        "entranceColumns": ENTRANCE_COLUMNS,
+        "bossColumns": BOSS_COLUMNS,
+        "doorColumns": DOOR_COLUMNS,
+        "instances": interiors,
+    })
+    placed = sum(1 for i in interiors.values() for b in i["bosses"] if b[2] is not None)
+    total = sum(len(i["bosses"]) for i in interiors.values())
+    print(f"interiors: {len(interiors)} instances, {placed}/{total} bosses placed")
+    return interiors
 
 
 if __name__ == "__main__":

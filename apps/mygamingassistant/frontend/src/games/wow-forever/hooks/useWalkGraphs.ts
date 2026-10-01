@@ -23,7 +23,8 @@ async function fetchWalkGraph(mapId: number): Promise<WalkGraph> {
   return decodeWalkGraph(await inflateWalkFile(await res.arrayBuffer()));
 }
 
-function loadWalkGraph(mapId: number): Promise<WalkGraph> {
+/** A walk file, fetched once per page load (a failed fetch is retried next time). */
+export function loadWalkGraph(mapId: number): Promise<WalkGraph> {
   let pending = loaded.get(mapId);
   if (!pending) {
     pending = fetchWalkGraph(mapId);

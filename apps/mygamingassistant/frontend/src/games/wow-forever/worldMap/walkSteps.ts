@@ -4,9 +4,9 @@
  * "Swim north, ~120 yd". The path is split into stretches by the area it
  * crosses (room / sub-area), swimming vs walking, and lifts / portals.
  *
- * Indoors and in capital cities, where one "head west, ~300 yd" would walk
- * you into a wall, a stretch goes turn by turn: "Turn left and head south,
- * ~80 yd".
+ * Indoors, in capital cities and inside dungeons, where one "head west,
+ * ~300 yd" would walk you into a wall, a stretch goes turn by turn: "Turn
+ * left and head south, ~80 yd".
  */
 import type { WorldPoint } from "@/games/wow-forever/types/worldMap";
 import { compassDirection, formatYards } from "@/games/wow-forever/worldMap/geometry";
@@ -54,12 +54,18 @@ interface Piece {
   from: WorldPoint;
   to: WorldPoint;
   yards: number;
+  /** Every graph point along it, `from` to `to`. */
+  points: WorldPoint[];
 }
 
 interface Stretch extends Piece {
   kind: StretchKind;
   label: number;
-  /** Every graph point along it, `from` to `to`. */
+}
+
+/** One line of a walk's directions and the stretch of path it covers. */
+export interface WalkStep {
+  text: string;
   points: WorldPoint[];
 }
 
@@ -84,7 +90,7 @@ function isMove(s: Stretch): boolean {
 }
 
 /** `s` carried on to the end of `next`. */
-function extend(s: Stretch, next: Stretch): void {
+function extend(s: Piece, next: Piece): void {
   s.to = next.to;
   s.yards += next.yards;
   s.points = [...s.points, ...next.points.slice(1)];
@@ -193,27 +199,26 @@ function pieces(s: Stretch): Piece[] {
   for (let k = 1; k < at.length; k++) {
     let yards = 0;
     for (let i = at[k - 1] + 1; i <= at[k]; i++) yards += distance(s.points[i - 1], s.points[i]);
-    const piece = { from: s.points[at[k - 1]], to: s.points[at[k]], yards };
+    const piece = { from: s.points[at[k - 1]], to: s.points[at[k]], yards, points: s.points.slice(at[k - 1], at[k] + 1) };
     const last = out[out.length - 1];
     if (last && (piece.yards < MIN_TURN_LEG_YARDS || Math.abs(turn(last, piece)) < TURN_DEGREES)) {
-      last.to = piece.to;
-      last.yards += piece.yards;
+      extend(last, piece);
     } else {
       out.push(piece);
     }
   }
   // A short first leg is a step off the start, not a turn.
   if (out.length > 1 && out[0].yards < MIN_TURN_LEG_YARDS) {
-    out[1] = { from: out[0].from, to: out[1].to, yards: out[0].yards + out[1].yards };
-    out.shift();
+    extend(out[0], out[1]);
+    out.splice(1, 1);
   }
   return out;
 }
 
-/** Pieces to tell for a stretch: turn by turn indoors and in capital cities. */
+/** Pieces to tell for a stretch: turn by turn indoors, in capital cities and inside dungeons. */
 function legsOf(graph: WalkGraph, s: Stretch): Piece[] {
   const label = graph.labels[s.label];
-  if (s.kind !== "walk" || !(label.indoor || label.city)) return [s];
+  if (s.kind !== "walk" || !(label.indoor || label.city || graph.instance)) return [s];
   return pieces(s);
 }
 
@@ -270,15 +275,22 @@ function stretchText(
   return `H${through.slice(1)}`;
 }
 
+/** The lines of a path's directions, each with the stretch of path it covers. */
+export function walkSteps(graph: WalkGraph, hops: readonly WalkHop[]): WalkStep[] {
+  const list = stretches(graph, hops);
+  return list.flatMap((s, i) => {
+    const legs = legsOf(graph, s);
+    return [
+      { text: stretchText(graph, s, legs[0], list[i - 1], list[i + 1]), points: legs[0].points },
+      ...legs.slice(1).map((p, k) => ({ text: turnText(legs[k], p), points: p.points })),
+    ];
+  });
+}
+
 /** Sub-step lines for a path (empty when it's one straight stretch). */
 export function describeWalk(graph: WalkGraph, hops: readonly WalkHop[]): string[] {
-  const list = stretches(graph, hops);
-  const legs = list.map((s) => legsOf(graph, s));
-  if (list.length < 2 && (legs[0]?.length ?? 0) < 2) return [];
-  return list.flatMap((s, i) => [
-    stretchText(graph, s, legs[i][0], list[i - 1], list[i + 1]),
-    ...legs[i].slice(1).map((p, k) => turnText(legs[i][k], p)),
-  ]);
+  const steps = walkSteps(graph, hops);
+  return steps.length < 2 ? [] : steps.map((s) => s.text);
 }
 
 /**

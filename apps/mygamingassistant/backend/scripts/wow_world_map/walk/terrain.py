@@ -88,20 +88,22 @@ def global_wmo(wdt_file_data_id: int) -> Placement | None:
     modf = chunk_map(client_file(wdt_file_data_id)).get("MODF", b"")
     if len(modf) < 64:
         return None
-    return _modf(modf, 0)
+    return _modf(modf, 0, origin=0.0)
 
 
-def _world(px: float, py: float, pz: float) -> tuple[float, float, float]:
+def _world(px: float, py: float, pz: float, origin: float = MAP_ORIGIN) -> tuple[float, float, float]:
     """Placement coordinates (x = west-east, y = up, z = north-south) -> world."""
-    return MAP_ORIGIN - pz, MAP_ORIGIN - px, py
+    return origin - pz, origin - px, py
 
 
-def _modf(data: bytes, offset: int) -> Placement:
+def _modf(data: bytes, offset: int, origin: float = MAP_ORIGIN) -> Placement:
+    """One MODF entry. An ADT's placements are offset by the map origin; the
+    WDT's own (a dungeon's one building) are centred on 0 — ``origin=0``."""
     (fid, uid, px, py, pz, rx, ry, rz) = struct.unpack_from("<2I6f", data, offset)
     lo_x, lo_y, lo_z, hi_x, hi_y, hi_z = struct.unpack_from("<6f", data, offset + 32)
     _flags, doodad_set, name_set, scale = struct.unpack_from("<4H", data, offset + 56)
-    extents = (MAP_ORIGIN - hi_z, MAP_ORIGIN - hi_x, MAP_ORIGIN - lo_z, MAP_ORIGIN - lo_x)
-    return Placement(fid, uid, _world(px, py, pz), (rx, ry, rz), (scale or 1024) / 1024.0, doodad_set,
+    extents = (origin - hi_z, origin - hi_x, origin - lo_z, origin - lo_x)
+    return Placement(fid, uid, _world(px, py, pz, origin), (rx, ry, rz), (scale or 1024) / 1024.0, doodad_set,
                      extents, (lo_y, hi_y), name_set)
 
 

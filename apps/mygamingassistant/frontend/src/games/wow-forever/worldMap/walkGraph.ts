@@ -45,6 +45,8 @@ export interface WalkGraph {
   cost: Uint16Array;
   kind: Uint8Array;
   labels: readonly WalkLabel[];
+  /** A dungeon's graph: its hubs are entrances (`e<trigger>`) and bosses (`b<encounter>`). */
+  instance: boolean;
   /** Travel hub key (`t<flight node id>`, `s<transport id>.<stop>`) -> hub row. */
   hubRow: ReadonlyMap<string, number>;
   hubNode: Uint32Array;
@@ -90,6 +92,7 @@ export function decodeWalkGraph(buffer: ArrayBuffer): WalkGraph {
   const meta = JSON.parse(new TextDecoder().decode(bytes.subarray(at, at + jsonBytes))) as {
     labels: [string, string, number, number?][];
     hubs: string[];
+    instance?: number;
   };
 
   // Undirected edges -> CSR, both directions.
@@ -131,6 +134,7 @@ export function decodeWalkGraph(buffer: ArrayBuffer): WalkGraph {
     cost,
     kind,
     labels: meta.labels.map(([name, zone, indoor, city]) => ({ name, zone, indoor: indoor === 1, city: city === 1 })),
+    instance: meta.instance === 1,
     hubRow: new Map(meta.hubs.map((key, i) => [key, i])),
     hubNode,
     hubCost,

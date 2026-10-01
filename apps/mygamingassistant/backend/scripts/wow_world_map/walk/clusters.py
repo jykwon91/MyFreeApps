@@ -65,6 +65,9 @@ class Anchor:
     y: float
     z: float
     dock: bool = False
+    # Whether the ground it stands on is kept. A boss isn't somewhere you
+    # arrive from, so its ground is kept only when an entrance reaches it.
+    keeps: bool = True
 
 
 def snap_hub(position: np.ndarray, water: np.ndarray, comp: np.ndarray, comp_size: np.ndarray,
@@ -91,6 +94,33 @@ def snap_hub(position: np.ndarray, water: np.ndarray, comp: np.ndarray, comp_siz
         reach = np.hypot(position[near, 0] - hub.x, position[near, 1] - hub.y)
         return int(near[np.lexsort((reach, -position[near, 2]))[0]])
     return int(near[np.argmin(score[near])])
+
+
+def snap_inside(position: np.ndarray, water: np.ndarray, comp: np.ndarray, comp_area: np.ndarray,
+                anchors: list[Anchor]) -> list[int | None]:
+    """Snap a dungeon's anchors: each to the nearest floor — never "the
+    largest ground in reach", which outside the castle is the zone's terrain
+    under it — though an entrance skips a speck smaller than
+    :data:`MIN_COMPONENT_AREA` for real ground in reach. Entrances first; a boss then prefers floor an entrance reaches,
+    so it isn't put on the ledge above or the cellar below its room."""
+    score = [_snap_score(position, water, a.x, a.y, a.z) for a in anchors]
+    snapped: list[int | None] = [None] * len(anchors)
+    big = comp_area[comp] >= MIN_COMPONENT_AREA
+    for i, a in enumerate(anchors):
+        near = score[i] <= MAX_SNAP
+        if a.keeps and near.any():
+            # Not a speck of floor by the trigger when real ground is in reach (Naxxramas).
+            pick = near & big if (near & big).any() else near
+            snapped[i] = int(np.argmin(np.where(pick, score[i], np.inf)))
+    reached = np.isin(comp, [comp[p] for p in snapped if p is not None])
+    for i, a in enumerate(anchors):
+        if a.keeps:
+            continue
+        near = score[i] <= MAX_SNAP
+        pick = near & reached if (near & reached).any() else near
+        if pick.any():
+            snapped[i] = int(np.argmin(np.where(pick, score[i], np.inf)))
+    return snapped
 
 
 def components(indptr: list[int], indices: list[int], n: int, extra: dict[int, list[int]]) -> list[int]:
@@ -183,7 +213,8 @@ def _grow(seed: int, radius2: float, indptr: list[int], indices: list[int], owne
 
 
 def cluster(polys: PolyGraph, poly_label: np.ndarray, labels: list[Label], links: list[Link],
-            anchors: list[Anchor]) -> WalkGraph:
+            anchors: list[Anchor], fine: bool = False) -> WalkGraph:
+    """``fine``: small clusters everywhere (a dungeon, told turn by turn throughout)."""
     n = len(polys)
     indptr, indices = polys.indptr.tolist(), polys.indices.tolist()
     cx, cy, cz = (polys.centroid[:, k].tolist() for k in range(3))
@@ -196,8 +227,11 @@ def cluster(polys: PolyGraph, poly_label: np.ndarray, labels: list[Label], links
         extra[b].append(a)
     comp = np.array(components(indptr, indices, n, extra))
     comp_area = np.bincount(comp, weights=polys.area)
-    snapped = [snap_hub(polys.centroid, polys.water, comp, comp_area, a) for a in anchors]
-    anchored = {int(comp[p]) for p in snapped if p is not None}
+    if fine:
+        snapped = snap_inside(polys.centroid, polys.water, comp, comp_area, anchors)
+    else:
+        snapped = [snap_hub(polys.centroid, polys.water, comp, comp_area, a) for a in anchors]
+    anchored = {int(comp[p]) for p, a in zip(snapped, anchors) if p is not None and a.keeps}
     keep = comp_area[comp] >= MIN_COMPONENT_AREA
     if anchored:
         keep &= np.isin(comp, list(anchored))
@@ -207,7 +241,8 @@ def cluster(polys: PolyGraph, poly_label: np.ndarray, labels: list[Label], links
     members: list[list[int]] = []
     for seed in range(n):
         if owner[seed] < 0 and keep_list[seed]:
-            radius = INDOOR_RADIUS if labels[lab[seed]].indoor or labels[lab[seed]].city else OUTDOOR_RADIUS
+            label = labels[lab[seed]]
+            radius = INDOOR_RADIUS if fine or label.indoor or label.city else OUTDOOR_RADIUS
             members.append(_grow(seed, radius * radius, indptr, indices, owner, len(members),
                                  cx, cy, cz, lab, water))
     reps = []

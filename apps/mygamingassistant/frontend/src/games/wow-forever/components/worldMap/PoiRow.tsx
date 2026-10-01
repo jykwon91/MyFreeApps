@@ -22,13 +22,15 @@ interface PoiRowProps {
   onDirections: (poiId: string) => void;
   /** Layer-specific detail under the location line (quests offered, dungeon level). */
   children?: ReactNode;
+  /** A section of its own under the buttons (a dungeon's "Inside"). */
+  footer?: ReactNode;
 }
 
 /** Controls inside the row keep their own clicks (map toggle, directions, copy buttons). */
 const OWN_CONTROLS = "button, a, input, select, textarea, [role='button']";
 
 export default function PoiRow(props: PoiRowProps) {
-  const { ranked, data, faction, heading, selected, onToggle, onDirections, children } = props;
+  const { ranked, data, faction, heading, selected, onToggle, onDirections, children, footer } = props;
   const { poi, zone } = ranked;
   const panelId = `wm-row-map-${poi.id}`;
 
@@ -129,6 +131,7 @@ export default function PoiRow(props: PoiRowProps) {
           <WaypointButtons target={poiWaypoint(ranked)} />
         </div>
       )}
+      {footer}
     </article>
   );
 }

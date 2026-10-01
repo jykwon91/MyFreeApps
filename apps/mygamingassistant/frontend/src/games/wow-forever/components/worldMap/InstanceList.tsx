@@ -1,12 +1,32 @@
 import { useState } from "react";
 import clsx from "clsx";
+import InstanceInterior from "@/games/wow-forever/components/worldMap/InstanceInterior";
 import InstanceLevel from "@/games/wow-forever/components/worldMap/InstanceLevel";
 import PoiRow from "@/games/wow-forever/components/worldMap/PoiRow";
-import { INSTANCE_KIND, type PlayerFaction, type WorldMapData } from "@/games/wow-forever/types/worldMap";
+import { useInteriors } from "@/games/wow-forever/hooks/useInteriors";
+import {
+  INSTANCE_KIND,
+  type PlayerFaction,
+  type WorldMapData,
+} from "@/games/wow-forever/types/worldMap";
 import { instanceBand, LEVEL_BAND } from "@/games/wow-forever/worldMap/levels";
+import type { Interior } from "@/games/wow-forever/worldMap/interiors";
 import type { RankedPoi } from "@/games/wow-forever/worldMap/nearest";
 
 const PAGE_SIZE = 4;
+const ENTRANCE_ID = /^classic-i-(\d+)$/;
+
+/** A Classic entrance row's interior and its area trigger, when we have one walked. */
+function interiorOf(
+  poi: RankedPoi["poi"],
+  interiors: ReadonlyMap<number, Interior> | null,
+) {
+  const trigger = ENTRANCE_ID.exec(poi.id)?.[1];
+  const interior = interiors?.get(Number(poi.tag));
+  if (!trigger || !interior || !interior.entrances.has(Number(trigger)))
+    return null;
+  return { interior, trigger: Number(trigger) };
+}
 
 interface InstanceListProps {
   data: WorldMapData;
@@ -20,8 +40,17 @@ interface InstanceListProps {
 
 /** Dungeon and raid entrances, nearest first; ones too low for you are dimmed. */
 export default function InstanceList(props: InstanceListProps) {
-  const { data, faction, level, instances, selectedPoiId, onToggle, onDirections } = props;
+  const {
+    data,
+    faction,
+    level,
+    instances,
+    selectedPoiId,
+    onToggle,
+    onDirections,
+  } = props;
   const [limit, setLimit] = useState(PAGE_SIZE);
+  const interiors = useInteriors();
   const shown = instances.slice(0, limit);
 
   return (
@@ -30,27 +59,47 @@ export default function InstanceList(props: InstanceListProps) {
         Dungeons &amp; raids
       </h2>
       <p className="text-sm text-muted-foreground">
-        Levels are Forever's own. Entrances are from Classic — Forever's new dungeons aren't mapped yet.
+        Levels are Forever's own. Entrances are from Classic — Forever's new
+        dungeons aren't mapped yet.
       </p>
       <div className="space-y-3">
-        {shown.map((ranked) => (
-          <div
-            key={ranked.poi.id}
-            className={clsx(level !== null && instanceBand(ranked.poi, level) === LEVEL_BAND.grey && "opacity-60")}
-          >
-            <PoiRow
-              ranked={ranked}
-              data={data}
-              faction={faction}
-              heading={ranked.poi.subkind === INSTANCE_KIND.raid ? "Raid" : "Dungeon"}
-              selected={ranked.poi.id === selectedPoiId}
-              onToggle={onToggle}
-              onDirections={onDirections}
+        {shown.map((ranked) => {
+          const inside = interiorOf(ranked.poi, interiors);
+          return (
+            <div
+              key={ranked.poi.id}
+              className={clsx(
+                level !== null &&
+                  instanceBand(ranked.poi, level) === LEVEL_BAND.grey &&
+                  "opacity-60",
+              )}
             >
-              <InstanceLevel poi={ranked.poi} level={level} />
-            </PoiRow>
-          </div>
-        ))}
+              <PoiRow
+                ranked={ranked}
+                data={data}
+                faction={faction}
+                heading={
+                  ranked.poi.subkind === INSTANCE_KIND.raid ? "Raid" : "Dungeon"
+                }
+                selected={ranked.poi.id === selectedPoiId}
+                onToggle={onToggle}
+                onDirections={onDirections}
+                footer={
+                  inside && (
+                    <InstanceInterior
+                      interior={inside.interior}
+                      trigger={inside.trigger}
+                      name={ranked.poi.name}
+                      rowId={`wm-row-${ranked.poi.id}`}
+                    />
+                  )
+                }
+              >
+                <InstanceLevel poi={ranked.poi} level={level} />
+              </PoiRow>
+            </div>
+          );
+        })}
       </div>
       {instances.length > limit && (
         <button

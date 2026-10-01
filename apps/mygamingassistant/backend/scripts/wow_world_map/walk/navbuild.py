@@ -51,6 +51,12 @@ def _tiles_touching(box: Box) -> list[tuple[int, int]]:
     return [(r, c) for r in rows for c in cols]
 
 
+def _instance_tiles(building: Placement) -> dict[tuple[int, int], TileFiles]:
+    """Tiles with no terrain covering a WMO-only map's one building."""
+    assert building.extents is not None
+    return {k: TileFiles(k[0], k[1], 0, 0) for k in _tiles_touching(Box(*building.extents))}
+
+
 def load_scene(wdt_file_data_id: int) -> MapScene:
     tiles = {(t.row, t.col): t for t in terrain.map_tiles(wdt_file_data_id)}
     prefetch([t.root for t in tiles.values()] + [t.obj0 for t in tiles.values()])
@@ -60,6 +66,13 @@ def load_scene(wdt_file_data_id: int) -> MapScene:
         b, p = terrain.placements(client_file(tile.obj0))
         buildings.update((x.unique_id, x) for x in b)
         props.update((x.unique_id, x) for x in p)
+    if not tiles:
+        # A dungeon: no terrain, one building placed by the WDT itself.
+        building = terrain.global_wmo(wdt_file_data_id)
+        if building is None:
+            raise ValueError(f"WDT {wdt_file_data_id} has neither terrain tiles nor a global building")
+        buildings[building.unique_id] = building
+        tiles = _instance_tiles(building)
     wmo_ids = {b.file_data_id for b in buildings.values()}
     prefetch(wmo_ids)
     prefetch(f for w in wmo_ids for f in models.wmo_group_file_ids(w) + models.wmo_doodad_file_ids(w))
