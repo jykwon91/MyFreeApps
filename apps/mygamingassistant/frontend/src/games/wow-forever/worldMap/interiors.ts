@@ -223,8 +223,14 @@ export function interiorRoutes(graph: WalkGraph, interior: Interior, trigger: nu
     }
     const bossNode = hubNodeOf(graph, `b${boss.encounter}`);
     if (home !== trigger || entranceNode === null || bossNode === null) continue;
-    const start = from === ROUTE_FROM.previous && previous ? previous : null;
-    const leg = walk(graph, interior.doors, start ? start.node : entranceNode, bossNode);
+    let start = from === ROUTE_FROM.previous && previous ? previous : null;
+    let leg = walk(graph, interior.doors, start ? start.node : entranceNode, bossNode);
+    if (!leg && start) {
+      // No walk back from the boss before (a one-way drop to it — in game you'd
+      // take the wing's portal out): route from the entrance instead.
+      start = null;
+      leg = walk(graph, interior.doors, entranceNode, bossNode);
+    }
     if (leg) routes.push({ boss, status: BOSS_ROUTE.route, fromBoss: start?.boss ?? null, ...leg });
     else routes.push({ ...empty, status: BOSS_ROUTE.unreachable });
     previous = { boss, node: bossNode };
