@@ -11,11 +11,15 @@ import sys
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
+import json
 from collections.abc import AsyncGenerator
+from typing import Any
 
+import httpx
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from platform_shared.services.discord import DiscordRestClient
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
@@ -23,6 +27,9 @@ from sqlalchemy.pool import NullPool
 from app.core.config import settings
 from app.main import app
 from app.services.discord import emojis as discord_emojis
+from app.services.discord import rest
+
+from discord_raid_harness import APP_ID, PUBLIC_KEY_HEX, FakeDiscord, Post, signed_headers
 
 
 @pytest.fixture(autouse=True)
@@ -117,7 +124,9 @@ _UOW_CONSUMERS = (
     "app.services.discord.commands.raid_admin",
     "app.services.discord.components.raid_admin",
     "app.services.discord.components.raid_card",
+    "app.services.discord.components.raid_leader",
     "app.services.discord.components.raid_signup",
+    "app.services.discord.raid_ping",
     "app.services.discord.raid_publisher",
     "app.services.game.fixture_loader",
     "app.services.game.lineup_package_service",
@@ -207,3 +216,52 @@ async def serve_only_client(
         yield ac
 
     serve_app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------
+# The raid bot over POST /discord/interactions — see discord_raid_harness.py
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def fake_discord(monkeypatch: pytest.MonkeyPatch) -> FakeDiscord:
+    """Every outbound Discord REST call lands here instead of the network."""
+    fake = FakeDiscord()
+
+    async def _no_sleep(_seconds: float) -> None:
+        return None
+
+    def _factory() -> DiscordRestClient:
+        return DiscordRestClient("test-bot-token", transport=httpx.MockTransport(fake.handler), sleep=_no_sleep)
+
+    monkeypatch.setattr(rest, "make_rest_client", _factory)
+    return fake
+
+
+@pytest_asyncio.fixture
+async def http(
+    monkeypatch: pytest.MonkeyPatch, bound_unit_of_work: AsyncSession, fake_discord: FakeDiscord
+) -> AsyncGenerator[AsyncClient, None]:
+    """The interactions endpoint, trusting the harness's signing key."""
+    monkeypatch.setattr(settings, "discord_enabled", True)
+    monkeypatch.setattr(settings, "discord_public_key", PUBLIC_KEY_HEX)
+    monkeypatch.setattr(settings, "discord_application_id", APP_ID)
+    monkeypatch.setattr(settings, "discord_bot_token", "test-bot-token")
+
+    from app.main import create_app
+
+    async with AsyncClient(transport=ASGITransport(app=create_app()), base_url="http://test") as ac:
+        yield ac
+
+
+@pytest.fixture
+def post(http: AsyncClient) -> Post:
+    """Sign and send one interaction; returns the bot's reply."""
+
+    async def _post(payload: dict[str, Any]) -> dict[str, Any]:
+        body = json.dumps(payload).encode()
+        resp = await http.post("/discord/interactions", content=body, headers=signed_headers(body))
+        assert resp.status_code == 200, resp.text
+        return resp.json()
+
+    return _post

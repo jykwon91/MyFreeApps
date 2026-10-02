@@ -21,7 +21,8 @@ We MUST respond within 3 seconds.  This handler:
   2. PING (type 1) → immediate PONG (type 1).
 
   3. APPLICATION_COMMAND (type 2) → dispatched by command name through
-     ``app.services.discord.dispatcher.dispatch_application_command``.
+     ``app.services.discord.dispatcher.dispatch_application_command`` —
+     slash commands and the raid post's right-click menu alike.
      Exceptions are caught here: we always return an ephemeral error message
      rather than letting a 500 propagate (Discord would show the interaction
      as "failed" with no message, which is worse UX).
@@ -32,7 +33,10 @@ We MUST respond within 3 seconds.  This handler:
   5. APPLICATION_COMMAND_AUTOCOMPLETE (type 4) → ``dispatch_autocomplete``;
      on any error, an empty choice list (autocomplete can't show messages).
 
-  6. Any other type → ephemeral "Unsupported interaction type" (safe fallback).
+  6. MODAL_SUBMIT (type 5) → dispatched by custom_id prefix through
+     ``dispatch_modal_submit`` (the leader's ping message form).
+
+  7. Any other type → ephemeral "Unsupported interaction type" (safe fallback).
 
 3-second budget
 ---------------
@@ -64,6 +68,7 @@ from platform_shared.services.discord import (
     INTERACTION_TYPE_APPLICATION_COMMAND,
     INTERACTION_TYPE_AUTOCOMPLETE,
     INTERACTION_TYPE_MESSAGE_COMPONENT,
+    INTERACTION_TYPE_MODAL_SUBMIT,
     INTERACTION_TYPE_PING,
 )
 from platform_shared.services.discord.signature import verify_discord_request
@@ -73,6 +78,7 @@ from app.services.discord.dispatcher import (
     dispatch_application_command,
     dispatch_autocomplete,
     dispatch_message_component,
+    dispatch_modal_submit,
 )
 from app.services.discord.interaction import (
     autocomplete_response,
@@ -163,6 +169,17 @@ async def interactions(
         except Exception:
             logger.exception(
                 "Unhandled exception in Discord component handler: custom_id=%r",
+                payload.get("data", {}).get("custom_id"),
+            )
+            return ephemeral_response(GENERIC_ERROR)
+
+    # --- A modal's submit (the form a button opened) ---
+    if interaction_type == INTERACTION_TYPE_MODAL_SUBMIT:
+        try:
+            return await dispatch_modal_submit(payload, background)
+        except Exception:
+            logger.exception(
+                "Unhandled exception in Discord modal handler: custom_id=%r",
                 payload.get("data", {}).get("custom_id"),
             )
             return ephemeral_response(GENERIC_ERROR)

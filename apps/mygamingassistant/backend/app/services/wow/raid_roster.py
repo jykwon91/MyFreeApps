@@ -47,6 +47,8 @@ ABSENCE_STATUS: Final = "absence"
 LINE_STATUSES: Final = (*SEAT_STATUSES, QUEUED_STATUS)
 # What a member can ask for; only the bot puts anyone in the queue.
 REQUESTABLE_STATUSES: Final = tuple(s for s in SIGNUP_STATUSES if s != QUEUED_STATUS)
+# Everyone still on the list — seats, maybes, the queue and backups (not absences).
+LISTED_STATUSES: Final = (*SEAT_STATUSES, TENTATIVE_STATUS, QUEUED_STATUS, BENCH_STATUS)
 
 
 @dataclass(frozen=True)
@@ -247,6 +249,11 @@ def ordered_user_ids(signups: Iterable[WowRaidSignup]) -> list[str]:
     their rows in the same order (no deadlock between them).
     """
     return [s.discord_user_id for s in in_line_order(signups)]
+
+
+def listed_user_ids(signups: Iterable[WowRaidSignup]) -> list[str]:
+    """Everyone still on the list, in signup order: who a cancellation DMs and a ping mentions."""
+    return ordered_user_ids(s for s in signups if s.status in LISTED_STATUSES)
 
 
 def _line_key(signup: WowRaidSignup) -> tuple[datetime, str]:

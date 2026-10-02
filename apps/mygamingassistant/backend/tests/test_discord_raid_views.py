@@ -19,8 +19,9 @@ from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.services.discord import raid_copy
 from app.services.discord.raid_views import (
     EMBED_DESCRIPTION_LIMIT,
-    _clip_lines,
     class_picker_data,
+    clip_lines,
+    list_data,
     my_signup_data,
     preview_data,
     release_confirm_data,
@@ -334,7 +335,7 @@ def test_a_long_roster_is_clipped_at_a_line_break_so_icons_stay_whole() -> None:
     ],
 )
 def test_clip_lines(text: str, limit: int, expected: str) -> None:
-    clipped = _clip_lines(text, limit)
+    clipped = clip_lines(text, limit)
     assert clipped == expected
     assert len(clipped) <= limit
 
@@ -420,6 +421,28 @@ def test_my_sign_up_when_not_signed_up() -> None:
     assert data["embeds"] == []
     [row] = data["components"]
     assert _buttons(row) == [_FULL_ROSTER]
+
+
+def test_my_sign_up_once_sign_ups_close_says_so_and_drops_change_spec() -> None:
+    me = _signup("Me", status="tentative", wow_class="mage", role="dps", spec="frost")
+    data = my_signup_data(_event(closed_at=_T0), me, [me], emojis=EMPTY_EMOJIS)
+    assert data["content"].split("\n") == [
+        _CARD_HEADING,
+        "Status: **Tentative**",
+        "Spec: [MAG] **Frost Mage**",
+        raid_copy.CLOSED,
+    ]
+    [row] = data["components"]
+    assert _buttons(row) == [_FULL_ROSTER]
+    assert my_signup_data(_event(closed_at=_T0), None, [], emojis=EMPTY_EMOJIS)["content"] == raid_copy.CLOSED
+
+
+def test_raid_list_marks_closed_sign_ups() -> None:
+    open_raid = _event(message_id="m1")
+    closed = _event(id=uuid.uuid4(), title="Molten Core", closed_at=_T0)
+    lines = list_data("g1", [open_raid, closed], {open_raid.id: [_signup("Alice")]})["content"].split("\n")
+    assert lines[1] == f"**Onyxia's Lair** — <t:{_STAMP}:F> · 1/40 confirmed · [Open](https://discord.com/channels/g1/c1/m1)"
+    assert lines[2] == f"**Molten Core** — <t:{_STAMP}:F> · 0/40 confirmed · sign-ups closed"
 
 
 # ---------------------------------------------------------------------------

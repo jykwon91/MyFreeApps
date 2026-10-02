@@ -106,16 +106,16 @@ def event_choice_label(event: WowRaidEvent, tz_name: str) -> str:
     return f"{local:%a %b} {local.day} {clock} {display_title(event)}"[:100]
 
 
-def _button(label: str, style: int, custom_id: str, *, emoji: dict[str, str] | None = None) -> dict[str, Any]:
-    button: dict[str, Any] = {"type": COMPONENT_TYPE_BUTTON, "style": style, "label": label, "custom_id": custom_id}
+def button(label: str, style: int, custom_id: str, *, emoji: dict[str, str] | None = None) -> dict[str, Any]:
+    component: dict[str, Any] = {"type": COMPONENT_TYPE_BUTTON, "style": style, "label": label, "custom_id": custom_id}
     if emoji is not None:
-        button["emoji"] = emoji
-    return button
+        component["emoji"] = emoji
+    return component
 
 
 def _back_to_card(event: WowRaidEvent) -> dict[str, Any]:
     """[Back] to the My sign-up card a menu or the roster was opened from."""
-    return _button("Back", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("card", event.id, "back"))
+    return button("Back", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("card", event.id, "back"))
 
 
 def _option(
@@ -131,7 +131,7 @@ def _option(
     return option
 
 
-def _row(*components: dict[str, Any]) -> dict[str, Any]:
+def action_row(*components: dict[str, Any]) -> dict[str, Any]:
     return {"type": COMPONENT_TYPE_ACTION_ROW, "components": list(components)}
 
 
@@ -163,9 +163,9 @@ def preview_data(
     intro = raid_copy.preview_intro(event.channel_id, guild.ping_role_id)
     if notice:
         intro = f"{notice}\n\n{intro}"
-    actions = _row(
-        _button("Post raid", BUTTON_STYLE_SUCCESS, raid_custom_id.encode("confirm", event.id)),
-        _button("Cancel", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("discard", event.id)),
+    actions = action_row(
+        button("Post raid", BUTTON_STYLE_SUCCESS, raid_custom_id.encode("confirm", event.id)),
+        button("Cancel", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("discard", event.id)),
     )
     post_buttons = build_signup_components(event, [], emojis=emojis)  # disabled until it's posted
     return ephemeral_data(
@@ -178,9 +178,9 @@ def preview_data(
 def release_confirm_data(event: WowRaidEvent, status: str) -> dict[str, Any]:
     """Ask before a seat holder's seat goes to the queue (see ``hands_seat_to_queue``)."""
     components = [
-        _row(
-            _button("Yes, free my seat", BUTTON_STYLE_DANGER, raid_custom_id.encode("release", event.id, status)),
-            _button("Keep my seat", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("stay", event.id)),
+        action_row(
+            button("Yes, free my seat", BUTTON_STYLE_DANGER, raid_custom_id.encode("release", event.id, status)),
+            button("Keep my seat", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("stay", event.id)),
         )
     ]
     return ephemeral_data(raid_copy.release_prompt(status), components=components)
@@ -188,9 +188,9 @@ def release_confirm_data(event: WowRaidEvent, status: str) -> dict[str, Any]:
 
 def cancel_confirm_data(event: WowRaidEvent) -> dict[str, Any]:
     components = [
-        _row(
-            _button("Cancel raid", BUTTON_STYLE_DANGER, raid_custom_id.encode("cancel", event.id)),
-            _button("Keep raid", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("keep", event.id)),
+        action_row(
+            button("Cancel raid", BUTTON_STYLE_DANGER, raid_custom_id.encode("cancel", event.id)),
+            button("Keep raid", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("keep", event.id)),
         )
     ]
     content = raid_copy.cancel_prompt(display_title(event), unix(event.starts_at))
@@ -218,9 +218,9 @@ def class_picker_data(event: WowRaidEvent, status: str, *, emojis: EmojiSet, bac
     )
     classes = [_option(cls.label, cls.key, emojis.component(cls.key)) for cls in CLASSES]
     select = _select(raid_custom_id.encode("class", event.id, status), "Pick your class", [tank, *classes])
-    rows = [_row(select)]
+    rows = [action_row(select)]
     if back:
-        rows.append(_row(_back_to_card(event)))
+        rows.append(action_row(_back_to_card(event)))
     return ephemeral_data(raid_copy.CLASS_PROMPT, components=rows)
 
 
@@ -244,10 +244,10 @@ def spec_picker_data(
         "Pick your spec",
         [_spec_option(spec, column, current, emojis) for spec in column_specs(column)],
     )
-    buttons = [_button("Different class", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("pickclass", event.id, status))]
+    buttons = [button("Different class", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("pickclass", event.id, status))]
     if back:
         buttons.append(_back_to_card(event))
-    return ephemeral_data(_spec_prompt(column, current), components=[_row(select), _row(*buttons)])
+    return ephemeral_data(_spec_prompt(column, current), components=[action_row(select), action_row(*buttons)])
 
 
 def _spec_option(spec: WowSpecInfo, column: str, current: WowSpecInfo | None, emojis: EmojiSet) -> dict[str, Any]:
@@ -276,10 +276,15 @@ def _spec_prompt(column: str, current: WowSpecInfo | None) -> str:
 def my_signup_data(
     event: WowRaidEvent, signup: WowRaidSignup | None, signups: Sequence[WowRaidSignup], *, emojis: EmojiSet
 ) -> dict[str, Any]:
-    """Your status and spec for this raid, with [Change spec] and [Full roster]."""
-    roster = _button("Full roster", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("card", event.id, "roster"))
+    """Your status and spec for this raid, with [Change spec] and [Full roster].
+
+    Once the leader closes sign-ups, [Change spec] goes and the card says so.
+    """
+    roster = button("Full roster", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("card", event.id, "roster"))
+    closed = event.closed_at is not None
     if signup is None:
-        return ephemeral_data(raid_copy.NOT_SIGNED_UP, components=[_row(roster)], embeds=[])
+        text = raid_copy.CLOSED if closed else raid_copy.NOT_SIGNED_UP
+        return ephemeral_data(text, components=[action_row(roster)], embeds=[])
     lines = [
         f"**Your sign-up** · {escape_markdown(display_title(event))} · <t:{unix(event.starts_at)}:F>",
         f"Status: {_status_text(signup, signups, emojis)}",
@@ -289,11 +294,12 @@ def my_signup_data(
         if signup.wow_class is not None:
             label = f"**{signup_label(signup.wow_class, signup.role, signup.spec)}**"
             lines.append(" ".join(part for part in ("Spec:", signup_icon(signup, emojis), label) if part))
-        buttons.insert(0, _button("Change spec", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("change", event.id)))
-    note = _MY_SIGNUP_NOTES.get(signup.status)
+        if not closed:
+            buttons.insert(0, button("Change spec", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("change", event.id)))
+    note = raid_copy.CLOSED if closed else _MY_SIGNUP_NOTES.get(signup.status)
     if note is not None:
         lines.append(note)
-    return ephemeral_data("\n".join(lines), components=[_row(*buttons)], embeds=[])
+    return ephemeral_data("\n".join(lines), components=[action_row(*buttons)], embeds=[])
 
 
 def _status_text(signup: WowRaidSignup, signups: Sequence[WowRaidSignup], emojis: EmojiSet) -> str:
@@ -335,17 +341,17 @@ def roster_data(
 
     embed = {
         "title": f"Roster — {display_title(event)} — {local_day_label(event.starts_at, guild.timezone)}",
-        "description": _clip_lines("\n\n".join(sections) or raid_copy.NOBODY_SIGNED_UP, EMBED_DESCRIPTION_LIMIT),
+        "description": clip_lines("\n\n".join(sections) or raid_copy.NOBODY_SIGNED_UP, EMBED_DESCRIPTION_LIMIT),
         "color": COLOR_OPEN,
         "footer": {"text": f"{seats_label(summary)} · Signed up {summary.signed_up_count}"},
     }
     components: list[dict[str, Any]] = []
     if back:
-        components.append(_row(_back_to_card(event)))
+        components.append(action_row(_back_to_card(event)))
     return ephemeral_data("", components=components, embeds=[embed])
 
 
-def _clip_lines(text: str, limit: int) -> str:
+def clip_lines(text: str, limit: int) -> str:
     """Cut at a line break so an icon's ``<:name:id>`` markup is never split.
 
     The "…" goes on a line of its own, so the last name shown reads whole.
@@ -374,6 +380,8 @@ def list_data(
     for event in events:
         summary = compute_roster_summary(signups_by_event.get(event.id, []), size_cap=event.size_cap)
         line = f"**{display_title(event)}** — <t:{unix(event.starts_at)}:F> · {summary.seats_taken}/{event.size_cap} confirmed"
+        if event.closed_at is not None:
+            line += " · sign-ups closed"
         if event.message_id:
             line += f" · [Open]({message_link(guild_discord_id, event.channel_id, event.message_id)})"
         lines.append(line)
@@ -393,8 +401,8 @@ def prefs_data(pref: WowRaidMemberPref | None, *, heading: str | None = None) ->
         reminder_state = "off"
     lines.append(f"DM reminders: **{reminder_state}**")
     lines.append("Change these with `/raid prefs class: spec: dm_reminders:`.")
-    test_button = _button("Send me a test DM", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("testdm"))
-    return ephemeral_data("\n".join(lines), components=[_row(test_button)])
+    test_button = button("Send me a test DM", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("testdm"))
+    return ephemeral_data("\n".join(lines), components=[action_row(test_button)])
 
 
 def _signing_up_as(pref: WowRaidMemberPref | None) -> str:

@@ -14,6 +14,7 @@ from platform_shared.services.discord import (
     CALLBACK_TYPE_APPLICATION_COMMAND_AUTOCOMPLETE_RESULT,
     CALLBACK_TYPE_CHANNEL_MESSAGE_WITH_SOURCE,
     CALLBACK_TYPE_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+    CALLBACK_TYPE_MODAL,
     CALLBACK_TYPE_UPDATE_MESSAGE,
     MESSAGE_FLAG_EPHEMERAL,
     has_permission,
@@ -48,6 +49,10 @@ class Interaction:
     custom_id: str = ""
     values: tuple[str, ...] = ()
     resolved: dict[str, Any] = field(default_factory=dict)
+    # The message (or member) a context-menu command was used on.
+    target_id: str = ""
+    # A modal submit's text inputs: custom_id → what the member typed.
+    fields: dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> "Interaction":
@@ -87,6 +92,8 @@ class Interaction:
             custom_id=str(data.get("custom_id") or ""),
             values=tuple(str(v) for v in _as_list(data.get("values"))),
             resolved=_as_dict(data.get("resolved")),
+            target_id=str(data.get("target_id") or ""),
+            fields=_modal_fields(data.get("components")),
         )
 
     def has_permission(self, permission: int) -> bool:
@@ -192,6 +199,14 @@ def deferred_ephemeral_response() -> dict[str, Any]:
     }
 
 
+def modal_response(custom_id: str, title: str, components: list[dict[str, Any]]) -> dict[str, Any]:
+    """MODAL (type 9) — a form; its submit comes back as a MODAL_SUBMIT interaction."""
+    return {
+        "type": CALLBACK_TYPE_MODAL,
+        "data": {"custom_id": custom_id, "title": title, "components": components},
+    }
+
+
 def autocomplete_response(choices: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "type": CALLBACK_TYPE_APPLICATION_COMMAND_AUTOCOMPLETE_RESULT,
@@ -214,6 +229,24 @@ def _as_list(value: Any) -> list[Any]:
     if isinstance(value, list):
         return value
     return []
+
+
+def _modal_fields(components: Any) -> dict[str, str]:
+    """Text input values by custom_id from a modal submit's ``data.components``.
+
+    Each input comes back inside the Label that showed it (``component``), or
+    inside an action row's ``components`` for modals laid out the old way.
+    """
+    fields: dict[str, str] = {}
+    for raw in _as_list(components):
+        wrapper = _as_dict(raw)
+        for child in (wrapper.get("component"), *_as_list(wrapper.get("components"))):
+            item = _as_dict(child)
+            custom_id = item.get("custom_id")
+            value = item.get("value")
+            if isinstance(custom_id, str) and isinstance(value, str):
+                fields[custom_id] = value
+    return fields
 
 
 def _optional_str(value: Any) -> str | None:

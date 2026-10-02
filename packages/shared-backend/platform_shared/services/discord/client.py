@@ -35,6 +35,8 @@ UNKNOWN_CHANNEL: Final = 10003
 MISSING_ACCESS: Final = 50001
 MISSING_PERMISSIONS: Final = 50013
 UNKNOWN_INTERACTION: Final = 10062
+# A reply (message_reference) needs Read Message History in the channel.
+CANNOT_REPLY_WITHOUT_READ_HISTORY: Final = 160002
 
 # ---------------------------------------------------------------------------
 # Safe allowed_mentions default

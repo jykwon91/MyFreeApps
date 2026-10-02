@@ -27,6 +27,9 @@ _MARKDOWN_SPECIALS: Final = re.compile(r"([\\*_~`|>\[\]])")
 # A name can start a line: a heading, bullet or numbered list there shows as typed.
 _LEADING_MARK: Final = re.compile(r"^([#+-])")
 _LEADING_NUMBER: Final = re.compile(r"^(\d+)\.")
+# In a leader's words: small print ("-# …", also quoted) and a masked link's brackets.
+_SMALL_PRINT_LINE: Final = re.compile(r"^([ \t>]*)-#", re.MULTILINE)
+_LINK_BRACKETS: Final = re.compile(r"([\[\]])")
 # Said after the count, so the bench isn't mistaken for seats.
 _STATUS_HINTS: Final[dict[str, str]] = {"bench": "backups"}
 
@@ -64,6 +67,16 @@ def escape_name(display_name: str, *, max_chars: int = MAX_NAME_CHARS) -> str:
         name = name[: max_chars - 1] + "…"
     name = _LEADING_NUMBER.sub(r"\1\\.", _LEADING_MARK.sub(r"\\\1", escape_markdown(name)))
     return name.replace("://", ":\u200b//")
+
+
+def leader_words(text: str) -> str:
+    """A leader's message for the bot to post: their formatting, minus two disguises.
+
+    Small print ("-# \u2026") shows as typed, so nothing in it passes for the
+    bot's own signed small print, and a masked link ("[text](url)") shows
+    as typed with its URL, so a link the bot posts never hides where it goes.
+    """
+    return _LINK_BRACKETS.sub(r"\\\1", _SMALL_PRINT_LINE.sub(r"\1\\-#", text))
 
 
 def seats_label(summary: RosterSummary) -> str:

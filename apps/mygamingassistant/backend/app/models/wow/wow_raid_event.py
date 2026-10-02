@@ -109,6 +109,15 @@ class WowRaidEvent(Base):
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     # Shown on the cancelled embed; written by /raid-admin cancel.
     cancel_reason: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    # Set by Raid: Close, cleared by Raid: Open (migration 0030).  A closed
+    # raid stays ``scheduled``; members just can't change their sign-up.
+    closed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # When Ping signed members last went out — at most one ping every few minutes.
+    last_pinged_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

@@ -24,6 +24,7 @@ from app.services.wow.raid_composition import RoleGaps
 from app.services.wow.raid_consumables import ConsumableChecklist, ConsumableItem
 from app.services.wow.raid_embed import COLOR_OPEN, EMBED_TOTAL_BUDGET, FIELD_VALUE_LIMIT, embed_length
 from app.services.wow.raid_roster import RosterSummary
+from app.services.wow.raid_text import leader_words
 
 CONTENT_LIMIT: Final = 2000
 # Discord rejects allowed_mentions.users lists longer than 100.
@@ -112,7 +113,7 @@ def build_signup_nudge(
 
 
 # ---------------------------------------------------------------------------
-# User-mention messages (ready check, DM fallback)
+# User-mention messages (ready check, DM fallback, the leader's ping)
 # ---------------------------------------------------------------------------
 
 
@@ -167,6 +168,22 @@ def build_ready_check(*, raid_label: str, starts_unix: int, user_ids: list[str])
 def build_dm_fallback(user_ids: list[str]) -> list[dict[str, Any]]:
     """'I couldn't DM @A @B. …' — mentions only the players the DM missed."""
     chunks = chunk_user_mentions(raid_copy.DM_FALLBACK_HEAD, raid_copy.DM_FALLBACK_TAIL, user_ids)
+    return [mention_payload(chunk) for chunk in chunks]
+
+
+def build_ping(text: str, signature: str, user_ids: list[str]) -> list[dict[str, Any]]:
+    """Raid: Signed → [Ping signed members]: the leader's words, the mentions, the small print.
+
+    The words keep their formatting but can't fake the small print or mask
+    a link (``leader_words``).  A list too long for one message spills into
+    more that carry only the mentions and the small print, so the channel
+    reads the words once.
+    """
+    tail = f"\n{signature}"
+    chunks = chunk_user_mentions(f"{leader_words(text)}\n", tail, user_ids)
+    if len(chunks) > 1:
+        spilled = [user_id for chunk in chunks[1:] for user_id in chunk.user_ids]
+        chunks = [chunks[0], *chunk_user_mentions("", tail, spilled)]
     return [mention_payload(chunk) for chunk in chunks]
 
 

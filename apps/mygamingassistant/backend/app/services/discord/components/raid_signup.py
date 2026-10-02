@@ -31,7 +31,8 @@ Flows
   asks the same way (the spec is saved, the seat kept until they answer).
   Both answers re-check that the player still holds a seat.
 * [Absence] never asks for a class.  Same status again → private
-  "You're already …" (no-op).  A raid that has started refuses every button.
+  "You're already …" (no-op).  A raid that has started, or whose sign-ups
+  the leader closed, refuses every change (menus left open included).
 """
 from __future__ import annotations
 
@@ -54,7 +55,7 @@ from app.services.discord.interaction import (
     update_response,
     update_text_response,
 )
-from app.services.discord.raid_context import RaidContext, load_event, utcnow
+from app.services.discord.raid_context import RaidContext, load_event, signup_refusal, utcnow
 from app.services.discord.raid_views import class_picker_data, release_confirm_data, spec_picker_data
 from app.services.wow import raid_event_service, raid_member_prefs_service, raid_signup_service
 from app.services.wow.raid_catalog import CLASSES_BY_KEY, POST_COLUMNS, WowSpecInfo, column_specs, spec_info
@@ -89,8 +90,9 @@ async def handle_class_button(interaction: Interaction, parsed: RaidCustomId, ba
         context = await load_event(db, interaction, parsed.event_id, lock=True)
         if context is None:
             return ephemeral_response(raid_copy.NOT_FOUND)
-        if context.event.starts_at <= utcnow():
-            return ephemeral_response(raid_copy.RAID_STARTED)
+        refusal = signup_refusal(context.event, utcnow())
+        if refusal is not None:
+            return ephemeral_response(refusal)
         spec = await _spec_for_column(db, context, interaction.user_id, parsed.args[0], "confirmed", tapped=True)
         if isinstance(spec, dict):  # a choice to make: the spec select
             return message_response(spec)
@@ -120,8 +122,9 @@ async def _request_status(
         if context is None:
             return ephemeral_response(raid_copy.NOT_FOUND)
         event = context.event
-        if event.starts_at <= utcnow():
-            return ephemeral_response(raid_copy.RAID_STARTED)
+        refusal = signup_refusal(event, utcnow())
+        if refusal is not None:
+            return ephemeral_response(refusal)
 
         signups = await wow_raid_signup_repo.list_for_event(db, event.id)
         if hands_seat_to_queue(signups, discord_user_id=interaction.user_id, requested_status=requested):
@@ -254,8 +257,9 @@ async def handle_class_pick(interaction: Interaction, parsed: RaidCustomId, back
         context = await load_event(db, interaction, parsed.event_id, lock=False)
         if context is None:
             return update_text_response(raid_copy.NOT_FOUND)
-        if context.event.starts_at <= utcnow():
-            return update_text_response(raid_copy.RAID_STARTED)
+        refusal = signup_refusal(context.event, utcnow())
+        if refusal is not None:
+            return update_text_response(refusal)
         spec = await _spec_for_column(db, context, interaction.user_id, column, status, tapped=False)
         if isinstance(spec, dict):
             return update_response(spec)
@@ -281,8 +285,9 @@ async def handle_pick_class(interaction: Interaction, parsed: RaidCustomId, back
         context = await load_event(db, interaction, parsed.event_id, lock=False)
         if context is None:
             return update_text_response(raid_copy.NOT_FOUND)
-        if context.event.starts_at <= utcnow():
-            return update_text_response(raid_copy.RAID_STARTED)
+        refusal = signup_refusal(context.event, utcnow())
+        if refusal is not None:
+            return update_text_response(refusal)
         status = parsed.args[0]
         return update_response(
             class_picker_data(context.event, status, emojis=emojis.current(), back=status == SAME_STATUS)
@@ -297,8 +302,9 @@ async def handle_role_pick(interaction: Interaction, parsed: RaidCustomId, backg
         context = await load_event(db, interaction, parsed.event_id, lock=False)
         if context is None:
             return update_text_response(raid_copy.NOT_FOUND)
-        if context.event.starts_at <= utcnow():
-            return update_text_response(raid_copy.RAID_STARTED)
+        refusal = signup_refusal(context.event, utcnow())
+        if refusal is not None:
+            return update_text_response(refusal)
         return update_response(
             spec_picker_data(context.event, status, wow_class, current=None, emojis=emojis.current())
         )
@@ -322,8 +328,9 @@ async def _finish_pick(
         context = await load_event(db, interaction, event_id, lock=True)
         if context is None:
             return update_text_response(raid_copy.NOT_FOUND)
-        if context.event.starts_at <= utcnow():
-            return update_text_response(raid_copy.RAID_STARTED)
+        refusal = signup_refusal(context.event, utcnow())
+        if refusal is not None:
+            return update_text_response(refusal)
         signups = await wow_raid_signup_repo.list_for_event(db, context.event.id)
         mine = next((s for s in signups if s.discord_user_id == interaction.user_id), None)
         requested = status
@@ -396,8 +403,9 @@ async def handle_release(interaction: Interaction, parsed: RaidCustomId, backgro
         context = await load_event(db, interaction, parsed.event_id, lock=True)
         if context is None:
             return update_text_response(raid_copy.NOT_FOUND)
-        if context.event.starts_at <= utcnow():
-            return update_text_response(raid_copy.RAID_STARTED)
+        refusal = signup_refusal(context.event, utcnow())
+        if refusal is not None:
+            return update_text_response(refusal)
         mine = await wow_raid_signup_repo.get(db, event_id=context.event.id, discord_user_id=interaction.user_id)
         if mine is None:
             return update_text_response(raid_copy.NOT_SIGNED_UP)
