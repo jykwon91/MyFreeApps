@@ -45,3 +45,32 @@ export const ZONE_ALIASES: Readonly<Record<string, readonly string[]>> = {
   "Western Plaguelands": ["WPL"],
   "Un'Goro Crater": ["Ungoro"],
 };
+
+/** Dungeon / raid name (classicDungeons.json) -> what players call it. */
+export const INSTANCE_ALIASES: Readonly<Record<string, readonly string[]>> = {
+  "Ragefire Chasm": ["RFC"],
+  "Wailing Caverns": ["WC"],
+  Deadmines: ["The Deadmines", "VC"],
+  "Shadowfang Keep": ["SFK"],
+  "Blackfathom Deeps": ["BFD"],
+  "Stormwind Stockade": ["The Stockade", "Stockades", "Stocks"],
+  "Razorfen Kraul": ["RFK"],
+  Gnomeregan: ["Gnomer"],
+  "Scarlet Monastery": ["SM"],
+  "Razorfen Downs": ["RFD"],
+  Uldaman: ["Ulda"],
+  "Zul'Farrak": ["ZF"],
+  Maraudon: ["Mara"],
+  "Sunken Temple": ["Temple of Atal'Hakkar", "ST"],
+  "Blackrock Depths": ["BRD"],
+  "Blackrock Spire": ["LBRS", "UBRS"],
+  "Dire Maul": ["DM"],
+  Stratholme: ["Strat"],
+  Scholomance: ["Scholo"],
+  "Molten Core": ["MC"],
+  "Onyxia's Lair": ["Ony"],
+  "Blackwing Lair": ["BWL"],
+  "Zul'Gurub": ["ZG"],
+  "Ahn'Qiraj Temple": ["AQ40", "AQ"],
+  Naxxramas: ["Naxx"],
+};

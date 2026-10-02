@@ -128,6 +128,8 @@ export interface MapPoi {
   levelMax?: number;
   /** Instances: the level the entrance lets you in at. */
   requiredLevel?: number;
+  /** Instances: the bosses inside, so a boss's name finds its dungeon. */
+  bosses?: readonly string[];
   /** Quest givers: the quests they start. */
   quests?: readonly QuestInfo[];
 }
