@@ -6,9 +6,11 @@ naming a verb, the player (a Discord id) and one argument (see
 ``raid_custom_id.MANAGE_VERBS``); the cards are
 :mod:`app.services.discord.raid_manage_views`.  This module moves between
 the cards; the taps that change a sign-up are in
-:mod:`app.services.discord.components.raid_manage_changes`, and the
+:mod:`app.services.discord.components.raid_manage_changes`, the
 status row ([Seat] [Late] [Tentative] [Bench]) is
-:mod:`app.services.discord.components.raid_manage_status`.
+:mod:`app.services.discord.components.raid_manage_status`, and the
+"say why" buttons' form is
+:mod:`app.services.discord.components.raid_manage_reason`.
 
 Each tap loads the raid and its rows again and answers in place (type 7),
 so a card left open, or two leaders at once, can't act on what's no longer
@@ -19,8 +21,8 @@ says why its sign-ups can't change.
 
 Leaders aren't held to the raid's limits (the cards say when a pick goes
 over one), and an add to a full raid joins the queue.  A DM goes out only
-on a real change, only from a "tell them" button, never to the leader
-themself and never past the player's DM opt-out.  The public post
+on a real change, only from a "tell them" or "say why" button, never to the
+leader themself and never past the player's DM opt-out.  The public post
 re-renders in the background.
 
 The member menu lists only people still in the server, so the hub also
@@ -37,7 +39,7 @@ from fastapi import BackgroundTasks
 from app.db.session import unit_of_work
 from app.repositories.wow import wow_raid_signup_repo
 from app.services.discord import emojis, raid_copy, raid_manage_copy
-from app.services.discord.components import raid_manage_changes, raid_manage_status
+from app.services.discord.components import raid_manage_changes, raid_manage_reason, raid_manage_status
 from app.services.discord.components.raid_manage_common import (
     Verb,
     card_for,
@@ -189,4 +191,5 @@ _VERBS: Final[dict[str, Verb]] = {
     "ask": _ask,
     **raid_manage_changes.VERBS,
     **raid_manage_status.VERBS,
+    **raid_manage_reason.VERBS,
 }

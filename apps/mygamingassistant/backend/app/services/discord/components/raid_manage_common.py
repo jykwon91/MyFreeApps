@@ -75,9 +75,18 @@ async def reach_of(db: AsyncSession, found: RaidContext, interaction: Interactio
 
 
 async def dm_for(
-    db: AsyncSession, found: RaidContext, interaction: Interaction, target: Target, *, tell: bool
+    db: AsyncSession,
+    found: RaidContext,
+    interaction: Interaction,
+    target: Target,
+    *,
+    tell: bool,
+    reason: str | None = None,
 ) -> tuple[ManageDm | None, str | None]:
-    """The DM a "tell them" change sends and the line saying so; a player who turned DMs off since gets none."""
+    """The DM a "tell them" or "say why" change sends, and the line saying so.
+
+    A player who turned DMs off since gets none.  *reason*: what a "say why" form held.
+    """
     if not tell:
         return None, None
     reach = await reach_of(db, found, interaction, target.user_id)
@@ -92,6 +101,7 @@ async def dm_for(
         who=target.who,
         application_id=interaction.application_id,
         token=interaction.token,
+        reason=reason,
     )
     return dm, raid_manage_copy.DM_SENDING
 

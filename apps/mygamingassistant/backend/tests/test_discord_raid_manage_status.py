@@ -128,10 +128,9 @@ def test_a_move_asks_first_when_it_gives_up_or_takes_a_seat(previous: str, reque
 
 def test_the_status_ids_round_trip_and_fit_at_their_longest() -> None:
     member = "9" * 20
-    for verb in ("mark", "markt", "markq"):
+    for verb in ("mark", "markt", "markq", "markr"):
         for status in MARK_STATUSES:
-            custom_id = manage(_EVENT_ID, verb, member, status)
-            assert parse(custom_id) == RaidCustomId("ml", _EVENT_ID, (verb, member, status))
+            assert parse(manage(_EVENT_ID, verb, member, status)) == RaidCustomId("ml", _EVENT_ID, (verb, member, status))
     assert len(manage(_EVENT_ID, "markt", member, "tentative")) == 84 <= MAX_CUSTOM_ID_LEN
 
 
@@ -219,6 +218,7 @@ def test_benching_a_seat_holder_with_a_queue_says_the_seat_goes_on() -> None:
     assert _buttons(data) == [
         ("Move and tell them", 1, f"{_ML}:markt:{_BOB_ID}:bench"),
         ("Move quietly", 2, f"{_ML}:markq:{_BOB_ID}:bench"),
+        ("Move and say why", 2, f"{_ML}:markr:{_BOB_ID}:bench"),
         ("Back", 2, f"{_ML}:card:{_BOB_ID}:-"),
     ]
     assert data["embeds"][0]["author"] == {"name": "Bob"}

@@ -1,10 +1,11 @@
 """Manage sign-ups — the status row: [Seat] [Late] [Tentative] [Bench] on a player's card.
 
 A move that gives up or takes a seat or a place in the queue asks first:
-[Move and tell them] / [Move quietly], or just [Move].  One that doesn't
-(a seat marked late or not, tentative to the bench and back) happens at
-once and tells nobody.  Every tap decides from the player's row as it is
-now, under the raid's row lock, so a card left open acts on the real move.
+[Move and tell them] / [Move quietly] / [Move and say why], or just
+[Move].  One that doesn't (a seat marked late or not, tentative to the
+bench and back) happens at once and tells nobody.  Every tap decides from
+the player's row as it is now, under the raid's row lock, so a card left
+open acts on the real move.
 
 A seat asked for on a full raid is a place in the queue.  A seat given up
 goes to the next player in the queue (the same role first), who gets the
@@ -57,6 +58,7 @@ async def move_player(
     *,
     ask: bool,
     tell: bool,
+    reason: str | None = None,
 ) -> dict[str, Any]:
     """Move the player to *status*: from the status row (*ask*) a move that needs a review gets one first."""
     async with unit_of_work() as db:
@@ -103,7 +105,7 @@ async def move_player(
             if hit is not None:
                 lines.append(raid_manage_copy.moved_over(hit))
             # A review made stale by another change may now be a move that moves nobody: that one's quiet.
-            dm, dm_line = await dm_for(db, found, interaction, target, tell=tell and reviewed)
+            dm, dm_line = await dm_for(db, found, interaction, target, tell=tell and reviewed, reason=reason)
             if dm_line is not None:
                 lines.append(dm_line)
         promoted = await raid_event_service.dm_recipients(db, guild=found.guild, user_ids=change.promoted)

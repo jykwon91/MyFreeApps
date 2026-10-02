@@ -48,6 +48,14 @@ BENCH: Final = "Bench"
 MOVE_TELL: Final = "Move and tell them"
 MOVE_QUIET: Final = "Move quietly"
 MOVE: Final = "Move"
+ADD_WHY: Final = "Add and say why"
+REMOVE_WHY: Final = "Remove and say why"
+MOVE_WHY: Final = "Move and say why"
+
+# The form a "say why" button opens: what the leader types goes in the player's DM.
+REASON_TITLE: Final = "Tell them why"
+REASON_LABEL: Final = "Reason"
+REASON_HINT: Final = "I'll add this to the DM."
 
 # What a seat given up, or a place in the queue left, does to the queue.
 SEAT_GOES_ON: Final = "Their seat goes to the next player in the queue."
@@ -262,6 +270,7 @@ def added_dm(
     link: str | None,
     *,
     signups_open: bool,
+    reason: str | None = None,
 ) -> str:
     """The leader shows as a mention: tappable, and nobody is pinged in a DM."""
     text = f"<@{leader_id}> added you to **{raid_label}** (<t:{unix}:F>, <t:{unix}:R>) as **{label}**. "
@@ -269,7 +278,7 @@ def added_dm(
         text += f"You have a seat. {_cant_make_it(leader_id, signups_open=signups_open)}"
     else:
         text += _queued_for_you(queue_position)
-    return text + _jump(link)
+    return text + _reason(reason) + _jump(link)
 
 
 def moved_dm(
@@ -282,6 +291,7 @@ def moved_dm(
     link: str | None,
     *,
     signups_open: bool,
+    reason: str | None = None,
 ) -> str:
     """A seat or the queue says what happens next; tentative and the bench send questions to the leader."""
     leader = f"<@{leader_id}>"
@@ -297,7 +307,7 @@ def moved_dm(
         if status == "late":
             text += " and marked you **late**"
         text += f". {_cant_make_it(leader_id, signups_open=signups_open)}"
-    return text + _jump(link)
+    return text + _reason(reason) + _jump(link)
 
 
 def _cant_make_it(leader_id: str, *, signups_open: bool) -> str:
@@ -318,8 +328,16 @@ def _jump(link: str | None) -> str:
     return ""
 
 
-def removed_dm(leader_id: str, raid_label: str, unix: int) -> str:
-    return f"<@{leader_id}> removed you from **{raid_label}** (<t:{unix}:F>). Questions? Ask them directly."
+def _reason(reason: str | None) -> str:
+    """The leader's "say why", on a line of its own (as a cancelled raid's reason is)."""
+    if reason:
+        return f"\nReason: {reason}"
+    return ""
+
+
+def removed_dm(leader_id: str, raid_label: str, unix: int, *, reason: str | None = None) -> str:
+    text = f"<@{leader_id}> removed you from **{raid_label}** (<t:{unix}:F>). Questions? Ask them directly."
+    return text + _reason(reason)
 
 
 def dm_failed(who: str) -> str:

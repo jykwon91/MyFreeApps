@@ -85,8 +85,7 @@ async def test_a_leader_adds_a_player_and_tells_them(post: Post, db: AsyncSessio
     review = await post(tap(event, "spec", _BOB, "warrior", on=specs, values=["warrior.fury"]))
     assert card_description(review) == "Add **Bob** to this raid as **Fury Warrior**?"
     assert custom_ids(review) == [
-        ml(event, "addt", _BOB, "warrior.fury"),
-        ml(event, "addq", _BOB, "warrior.fury"),
+        *(ml(event, verb, _BOB, "warrior.fury") for verb in ("addt", "addq", "addr")),
         ml(event, "card", _BOB),
     ]
     assert await signup_row(db, event, _BOB) is None
@@ -317,7 +316,7 @@ async def test_removing_a_seat_holder_moves_the_queue_up_and_tells_them_both(
     assert card_description(ask) == (
         "Remove **Bob** (**Fury Warrior**) from this raid? Their seat goes to the next player in the queue."
     )
-    assert custom_ids(ask) == [ml(event, "dropt", _BOB), ml(event, "dropq", _BOB), ml(event, "card", _BOB)]
+    assert custom_ids(ask) == [*(ml(event, v, _BOB) for v in ("dropt", "dropq", "dropr")), ml(event, "card", _BOB)]
 
     # --- [Keep them] goes back to his card
     back = await post(tap(event, "card", _BOB, on=ask))

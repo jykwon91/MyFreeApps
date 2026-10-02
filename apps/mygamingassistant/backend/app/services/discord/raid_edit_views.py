@@ -299,6 +299,19 @@ def cancel_modal(event: WowRaidEvent) -> dict[str, Any]:
     return _modal(event, "cancel", raid_copy.CANCEL_MODAL, field)
 
 
+def reason_modal(custom_id: str) -> dict[str, Any]:
+    """Manage sign-ups' "say why" form; it carries the custom_id of the button that opened it."""
+    field = _field(
+        raid_manage_copy.REASON_LABEL,
+        raid_manage_copy.REASON_HINT,
+        style=TEXT_INPUT_STYLE_SHORT,
+        value=None,
+        max_length=REASON_MAX,
+        required=True,
+    )
+    return modal_response(custom_id, raid_manage_copy.REASON_TITLE, [field])
+
+
 def role_limits_modal(event: WowRaidEvent) -> dict[str, Any]:
     """A box per role holding its limit; an empty box is no limit.  The hint goes on the first."""
     roles = Limits.of(event).roles

@@ -131,7 +131,7 @@ def clean_description(text: str) -> str | None:
 
 
 def clean_reason(text: str) -> str | None:
-    """A cancel reason to save, or None for none."""
+    """A cancel's or a "say why" form's reason, or None for none."""
     return " ".join(text.split())[:REASON_MAX] or None
 
 

@@ -285,6 +285,7 @@ def test_the_review_offers_to_tell_the_player() -> None:
     assert _buttons(data) == [
         ("Add and tell them", 1, f"{_ML}:addt:{_BOB_ID}:warrior.fury"),
         ("Add quietly", 2, f"{_ML}:addq:{_BOB_ID}:warrior.fury"),
+        ("Add and say why", 2, f"{_ML}:addr:{_BOB_ID}:warrior.fury"),
         ("Back", 2, f"{_ML}:card:{_BOB_ID}:-"),
     ]
 
@@ -299,10 +300,7 @@ def test_the_review_offers_to_tell_the_player() -> None:
 def test_the_review_just_adds_when_no_dm_can_go(reach: str, extra: list[str]) -> None:
     data = review_data(_event(), _BOB, _FURY, [], reach=reach)
     assert _embed(data)["description"].split("\n")[1:] == extra
-    assert _buttons(data) == [
-        ("Add", 1, f"{_ML}:addq:{_BOB_ID}:warrior.fury"),
-        ("Back", 2, f"{_ML}:card:{_BOB_ID}:-"),
-    ]
+    assert _buttons(data) == [("Add", 1, f"{_ML}:addq:{_BOB_ID}:warrior.fury"), ("Back", 2, f"{_ML}:card:{_BOB_ID}:-")]
 
 
 def test_the_review_warns_of_the_queue_and_a_limit_before_adding() -> None:
@@ -331,6 +329,7 @@ def test_removing_a_seat_holder_says_the_queue_moves_up() -> None:
     assert _buttons(data) == [
         ("Remove and tell them", 4, f"{_ML}:dropt:{_BOB_ID}:-"),
         ("Remove quietly", 2, f"{_ML}:dropq:{_BOB_ID}:-"),
+        ("Remove and say why", 2, f"{_ML}:dropr:{_BOB_ID}:-"),
         ("Keep them", 2, f"{_ML}:card:{_BOB_ID}:-"),
     ]
 

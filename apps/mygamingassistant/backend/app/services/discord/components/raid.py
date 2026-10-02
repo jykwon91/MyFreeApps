@@ -3,7 +3,8 @@
 Parses the custom_id defensively (``raid_custom_id.parse``); anything
 malformed or unknown gets the generic private error — never a 500.  A
 modal's submit carries ``raid:v1:m:<event>:<modal>`` and is routed by the
-modal's name.
+modal's name; a "say why" form carries the ``ml`` id of the Manage sign-ups
+button that opened it.
 """
 from __future__ import annotations
 
@@ -20,6 +21,7 @@ from app.services.discord.components import (
     raid_leader,
     raid_manage,
     raid_manage_open,
+    raid_manage_reason,
     raid_seat,
     raid_signup,
 )
@@ -94,10 +96,12 @@ async def handle_raid_component(interaction: Interaction, background: Background
 
 async def handle_raid_modal(interaction: Interaction, background: BackgroundTasks) -> dict[str, Any]:
     parsed = raid_custom_id.parse(interaction.custom_id)
-    if parsed is None or parsed.action != "m":
+    if parsed is None or parsed.action not in ("m", "ml"):
         return ephemeral_response(raid_copy.GENERIC_ERROR)
     if interaction.guild_id is None:
         return ephemeral_response(raid_copy.GUILD_ONLY)
+    if parsed.action == "ml":
+        return await raid_manage_reason.handle_submit(interaction, parsed, background)
     handler = _MODAL_HANDLERS.get(parsed.args[0])
     if handler is None:
         return ephemeral_response(raid_copy.GENERIC_ERROR)
