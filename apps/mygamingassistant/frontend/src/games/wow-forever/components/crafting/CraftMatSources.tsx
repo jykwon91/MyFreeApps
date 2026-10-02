@@ -4,9 +4,9 @@ import { describeDisenchant, describeSkinning, soldToYou, unknownMat } from "@/g
 import { makerOf } from "@/games/wow-forever/crafting/shoppingList";
 import { hasSources } from "@/games/wow-forever/food/recipeSources";
 
-/** Disenchant is a spell, not a recipe — it never shows in the Enchanting window. */
+/** Disenchant isn't a recipe or in the spellbook — Forever keeps it in the Professions window (K). */
 const DISENCHANT_HOW =
-  "Disenchant is a spell in your spellbook (P), not a recipe in the Enchanting window — cast it, then click the item in your bags.";
+  "Disenchant isn't in the Enchanting window or your spellbook: press K, drag Disenchant from the main tab to a bar, cast it, then click the green item in your bags.";
 
 interface CraftMatSourcesProps {
   itemId: number;

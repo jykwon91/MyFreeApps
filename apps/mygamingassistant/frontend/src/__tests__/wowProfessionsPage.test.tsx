@@ -97,7 +97,7 @@ describe("Professions page", () => {
     await user.click(within(soulDust).getByText("Soul Dust"));
     expect(soulDust.open).toBe(true);
     expect(within(soulDust).getByText(/^Disenchant green armor for level 21–30 \(about 75% each\)\./)).toBeInTheDocument();
-    expect(within(soulDust).getByText(/Disenchant is a spell in your spellbook/)).toBeInTheDocument();
+    expect(within(soulDust).getByText(/press K, drag Disenchant from the main tab/)).toBeInTheDocument();
     expect(shopping.getByText(/Open an item to see where to get it/)).toBeInTheDocument();
 
     const rowRod = route().getAllByText("1× Copper Rod")[0].closest("details") as HTMLDetailsElement;
