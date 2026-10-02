@@ -9,7 +9,8 @@ comes from the committed art and the app's public origin (``raid_banners``).
 
 Layout
 ------
-Author       "Onyxia's Lair · Leader: Thrall"      ("CANCELLED · " prefix when cancelled)
+Author       "Onyxia's Lair · Leader: Thrall"      ("CANCELLED · " prefix when cancelled;
+             the leader is whoever the raid was handed to, else its creator)
 Description  the title in letter tiles (else "## Onyxia's Lair")
              {date} <t:X:D>  {time} <t:X:t>  {signups} **14/40** confirmed (2 late) · 3 in queue
              {globe} Server time: Sat 8:00 PM EDT  {countdown} <t:X:R>
@@ -22,10 +23,12 @@ Fields       one inline column per button with anyone in it, "{icon} Warrior (3)
              then Tentative / Bench / Absence as "{spec icon} Name" lists.
              While sign-ups are open, "Nobody yet" names the empty columns, so
              every class button's icon is labelled somewhere on the post.
-Image        the raid's banner (``raid_banners``), until the raid is cancelled.
+Image        the leader's banner link, else the raid's banner (``raid_banners``),
+             until the raid is cancelled.
 Footer       "ID a1b2c3 · Tap your class to sign up. My sign-up changes your spec."
              ("Sign-ups are closed." once closed, "This raid was cancelled.")
-Colors       purple; grey once sign-ups close or the raid is cancelled.
+Colors       the leader's pick (``raid_colors``, purple by default); grey once
+             sign-ups close or the raid is cancelled.
 Buttons      [Tank] + one per class (icon + column count), then [Late]
              [Tentative] [Bench] [Absence] [My sign-up] — ``raid_post_buttons``.
 
@@ -63,6 +66,8 @@ from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.services.wow.raid_banners import banner_url
 from app.services.wow.raid_catalog import TANK_COLUMN, column_icon, column_label
+from app.services.wow.raid_colors import DEFAULT_COLOR
+from app.services.wow.raid_details import leader_name
 from app.services.wow.raid_post_buttons import build_signup_components
 from app.services.wow.raid_post_fit import FittedField, Lines
 from app.services.wow.raid_post_layout import (
@@ -93,7 +98,7 @@ from app.services.wow.raid_text import (
     status_heading,
 )
 
-COLOR_OPEN: Final = 0x7D3C98
+COLOR_OPEN: Final = DEFAULT_COLOR.value
 COLOR_CLOSED: Final = 0x95A5A6  # sign-ups closed, or the raid cancelled
 
 FIELD_VALUE_LIMIT: Final = 1024
@@ -284,9 +289,9 @@ def _first_fit(
 
 def _author(event: WowRaidEvent) -> str:
     text = " ".join(display_title(event).split())
-    if event.created_by_display_name:
-        leader = " ".join(event.created_by_display_name.split())[:MAX_NAME_CHARS]
-        text += f" · Leader: {leader}"
+    leader = leader_name(event)
+    if leader:
+        text += f" · Leader: {' '.join(leader.split())[:MAX_NAME_CHARS]}"
     if event.status == "cancelled":
         text = f"CANCELLED · {text}"
     return text[:AUTHOR_NAME_LIMIT]
@@ -356,17 +361,19 @@ def _footer(event: WowRaidEvent) -> str:
 
 
 def _banner(event: WowRaidEvent) -> str | None:
-    """The raid's banner; a cancelled post drops its art."""
+    """The leader's banner link, else the raid's banner; a cancelled post drops its art."""
     if event.status == "cancelled":
         return None
-    return banner_url(event.raid_key)
+    return event.image_url or banner_url(event.raid_key)
 
 
 def post_color(event: WowRaidEvent) -> int:
-    """Purple while the raid takes sign-ups; grey once they close or it's cancelled."""
+    """The leader's color (purple by default) while sign-ups are open; grey once they close or it's cancelled."""
     if event.status == "cancelled" or event.closed_at is not None:
         return COLOR_CLOSED
-    return COLOR_OPEN
+    if event.color is None:
+        return COLOR_OPEN
+    return event.color
 
 
 # ---------------------------------------------------------------------------

@@ -1,7 +1,9 @@
-"""Raid event lifecycle — draft → posted → edited → cancelled.
+"""Raid event lifecycle — draft → posted → edited → cancelled (or deleted).
 
 A posted raid's leader can also close and reopen its sign-ups (the raid
-stays ``scheduled``) and ping everyone on it, at most once per ``PING_EVERY``.
+stays ``scheduled``), ping everyone on it (at most once per ``PING_EVERY``),
+and change its details from Raid: Edit — title, leader, description, banner
+and color — or delete it outright.
 
 The caller owns the transaction (one per Discord interaction).  Mutations
 that touch seats expect the event row lock to be held
@@ -141,7 +143,8 @@ async def edit_event(
         event.starts_at = starts_at
     await db.flush()
 
-    if time_changed:
+    # A draft's notifications are scheduled when it's posted (``mark_posting``).
+    if time_changed and event.status == "scheduled":
         await wow_raid_notification_repo.cancel_pending_for_event(db, event.id)
         await wow_raid_notification_repo.schedule_for_event(
             db, event_id=event.id, starts_at=event.starts_at, guild_settings=guild.settings, now=now
@@ -151,6 +154,46 @@ async def edit_event(
     if size_cap is not None:
         promoted = await promote_from_queue(db, event)
     return EditOutcome(promoted=promoted, time_changed=time_changed)
+
+
+async def set_title(db: AsyncSession, event: WowRaidEvent, title: str | None) -> None:
+    """Raid: Edit → Title; None goes back to the raid's own name."""
+    event.title = title
+    await db.flush()
+
+
+async def set_leader(db: AsyncSession, event: WowRaidEvent, *, user_id: str, display_name: str) -> None:
+    """Raid: Edit → Leader: they get the raid's leader tools and the post names them."""
+    event.leader_user_id = user_id
+    event.leader_display_name = display_name
+    await db.flush()
+
+
+async def set_description(db: AsyncSession, event: WowRaidEvent, notes: str | None) -> None:
+    """Raid: Edit → Description; None removes it."""
+    event.notes = notes
+    await db.flush()
+
+
+async def set_banner(db: AsyncSession, event: WowRaidEvent, image_url: str | None) -> None:
+    """Raid: Edit → Image; None goes back to the raid's own banner."""
+    event.image_url = image_url
+    await db.flush()
+
+
+async def set_color(db: AsyncSession, event: WowRaidEvent, color: int | None) -> None:
+    """Raid: Edit → Color; None goes back to the default."""
+    event.color = color
+    await db.flush()
+
+
+async def delete_event(db: AsyncSession, event: WowRaidEvent) -> None:
+    """Raid: Edit → Delete raid: the raid, its sign-ups and its pending notifications go.
+
+    Sign-ups and notifications go with it (ON DELETE CASCADE).  Nobody is
+    told; removing the post is the caller's background work.
+    """
+    await wow_raid_event_repo.delete(db, event)
 
 
 async def set_cancel_reason(db: AsyncSession, event: WowRaidEvent, reason: str | None) -> None:

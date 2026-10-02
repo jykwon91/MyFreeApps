@@ -103,6 +103,18 @@ class Interaction:
     def resolved_role(self, role_id: str) -> dict[str, Any]:
         return _as_dict(_as_dict(self.resolved.get("roles")).get(role_id))
 
+    def resolved_display_name(self, user_id: str) -> str:
+        """The server name of a member picked in a user menu."""
+        member = _as_dict(_as_dict(self.resolved.get("members")).get(user_id))
+        return _display_name(member, self._resolved_user(user_id))
+
+    def resolved_is_bot(self, user_id: str) -> bool:
+        """Whether a user picked in a user menu is a bot."""
+        return self._resolved_user(user_id).get("bot") is True
+
+    def _resolved_user(self, user_id: str) -> dict[str, Any]:
+        return _as_dict(_as_dict(self.resolved.get("users")).get(user_id))
+
     def str_option(self, name: str) -> str | None:
         value = self.options.get(name)
         if isinstance(value, str):

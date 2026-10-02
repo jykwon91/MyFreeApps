@@ -3,7 +3,8 @@
 Every handler resolves the Discord guild to its ``wow_raid_guild`` row and
 loads events *scoped to that guild* — a custom_id or autocomplete value from
 one server can never reach another server's raid.  The raid post's
-right-click menu finds its raid by the post's message id, scoped the same way.
+right-click menu finds its raid by the post's message id, scoped the same way,
+and lets in only the raid's leader or someone with Manage Events.
 """
 from __future__ import annotations
 
@@ -19,6 +20,7 @@ from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.repositories.wow import wow_raid_event_repo, wow_raid_guild_repo
 from app.services.discord import raid_copy
 from app.services.discord.interaction import Interaction
+from app.services.wow.raid_details import leader_id
 
 
 @dataclass(frozen=True)
@@ -92,11 +94,40 @@ async def load_target(db: AsyncSession, interaction: Interaction, *, lock: bool)
     return RaidContext(guild=guild, event=event)
 
 
+async def load_led_post(db: AsyncSession, interaction: Interaction, *, lock: bool) -> RaidContext | str:
+    """The raid whose post a right-click menu command was used on, if this member leads it; else why not."""
+    if interaction.guild_id is None:
+        return raid_copy.GUILD_ONLY
+    context = await load_target(db, interaction, lock=lock)
+    if context is None:
+        return raid_copy.NOT_A_RAID
+    if not may_lead(interaction, context.event):
+        return raid_copy.NOT_LEADER
+    return context
+
+
+async def load_led_event(
+    db: AsyncSession,
+    interaction: Interaction,
+    event_id: uuid.UUID,
+    *,
+    lock: bool,
+    statuses: tuple[str, ...] = ("scheduled",),
+) -> RaidContext | str:
+    """A raid (in one of ``statuses``) this member leads, for a leader card's button or form; else why not."""
+    context = await load_event(db, interaction, event_id, lock=lock, statuses=statuses)
+    if context is None:
+        return raid_copy.NOT_FOUND
+    if not may_lead(interaction, context.event):
+        return raid_copy.NOT_LEADER
+    return context
+
+
 def may_lead(interaction: Interaction, event: WowRaidEvent) -> bool:
-    """The raid's leader (whoever created it) or anyone with Manage Events."""
+    """The raid's leader (whoever it was handed to, else its creator) or anyone with Manage Events."""
     if interaction.has_permission(MANAGE_EVENTS):
         return True
-    return bool(interaction.user_id) and interaction.user_id == event.created_by_user_id
+    return bool(interaction.user_id) and interaction.user_id == leader_id(event)
 
 
 def signup_refusal(event: WowRaidEvent, now: datetime) -> str | None:

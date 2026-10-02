@@ -212,6 +212,24 @@ def click(
     return _payload(TYPE_COMPONENT, data, user_id, permissions, display or f"Player{user_id[-3:]}")
 
 
+def pick_user(
+    custom_id: str,
+    picked_id: str,
+    *,
+    picked_name: str,
+    bot: bool = False,
+    user_id: str = ORGANISER,
+    permissions: int = ORGANISER_PERMS,
+) -> dict[str, Any]:
+    """A pick in a user menu: Discord sends the user (and their member) it resolved."""
+    resolved = {
+        "users": {picked_id: {"id": picked_id, "username": picked_name.lower(), "global_name": None, "bot": bot}},
+        "members": {picked_id: {"nick": picked_name, "roles": []}},
+    }
+    data = {"custom_id": custom_id, "component_type": 5, "values": [picked_id], "resolved": resolved}
+    return _payload(TYPE_COMPONENT, data, user_id, permissions, "Thrall")
+
+
 def modal_submit(
     custom_id: str,
     fields: dict[str, str],

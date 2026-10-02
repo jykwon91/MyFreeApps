@@ -18,7 +18,8 @@ Starlette runs right after the response is sent.  Each task:
   deferred/"Posting…" message, that message is edited with an explanation.
 
 Deleted public post (Discord error 10008) is handled by reposting for a
-scheduled raid, or clearing ``message_id`` for a cancelled one.
+scheduled raid, or clearing ``message_id`` for a cancelled one; a raid
+deleted from Raid: Edit has its post removed here too (``delete_post``).
 """
 from __future__ import annotations
 
@@ -53,7 +54,7 @@ from app.services.discord.interaction import NO_MENTIONS, ephemeral_data
 from app.services.discord.raid_views import preview_data, unix
 from app.services.wow import raid_event_service
 from app.services.wow.raid_embed import build_initial_post, build_signup_message
-from app.services.wow.raid_text import display_title, local_day_label
+from app.services.wow.raid_text import local_day_label, title_text
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +96,7 @@ async def _load(db: AsyncSession, event_id: uuid.UUID, *, initial_post: bool = F
         channel_id=event.channel_id,
         message_id=event.message_id,
         guild_discord_id=guild.discord_guild_id,
-        title=display_title(event),
+        title=title_text(event),
         day_label=local_day_label(event.starts_at, guild.timezone),
         starts_unix=unix(event.starts_at),
         cancel_reason=event.cancel_reason,
@@ -219,6 +220,13 @@ async def _edit_or_repost(client: DiscordRestClient, snapshot: _Snapshot) -> Non
         return
     except DiscordApiError as exc:
         if exc.code != UNKNOWN_MESSAGE:
+            # The post keeps what it showed before; say which raid it is.
+            logger.warning(
+                "Raid bot: Discord refused the edit of raid %s's post (status %s, code %s)",
+                snapshot.event_id,
+                exc.status,
+                exc.code,
+            )
             return
     except (TimeoutError, httpx.HTTPError) as exc:
         logger.warning(
@@ -226,24 +234,58 @@ async def _edit_or_repost(client: DiscordRestClient, snapshot: _Snapshot) -> Non
         )
         return
 
-    # 10008 — someone deleted the public post.
-    if snapshot.status != "scheduled":
-        async with unit_of_work() as db:
-            event = await wow_raid_event_repo.get_for_update(db, snapshot.event_id)
-            if event is not None:
-                event.message_id = None
-                await db.flush()
-        return
+    # 10008 — someone deleted the public post.  Decide on the raid as it is
+    # now: deleted meanwhile (Raid: Edit → Delete raid takes its post with it)
+    # or no longer scheduled, it isn't posted again.
+    async with unit_of_work() as db:
+        event = await wow_raid_event_repo.get_for_update(db, snapshot.event_id)
+        if event is None:
+            return
+        if event.status != "scheduled":
+            event.message_id = None
+            await db.flush()
+            return
     logger.info("Raid bot: raid post for %s was deleted; reposting", snapshot.event_id)
     try:
         created = await rest.bounded(client.create_message(snapshot.channel_id, snapshot.message))
     except (DiscordApiError, TimeoutError, httpx.HTTPError) as exc:
         logger.warning("Raid bot: reposting raid %s failed (%s)", snapshot.event_id, type(exc).__name__)
         return
+    message_id = str(created.get("id", ""))
     async with unit_of_work() as db:
         event = await wow_raid_event_repo.get_for_update(db, snapshot.event_id)
         if event is not None:
-            await wow_raid_event_repo.set_message_id(db, event, str(created.get("id", "")))
+            await wow_raid_event_repo.set_message_id(db, event, message_id)
+            return
+    # Deleted while the repost was on its way: take the new post down too.
+    await _delete_message(client, snapshot.channel_id, message_id)
+
+
+async def delete_post(channel_id: str, message_id: str | None, application_id: str, token: str) -> None:
+    """Raid: Edit → Delete raid: remove the post, then tell the leader whether it went."""
+    try:
+        async with rest.make_rest_client() as client:
+            outcome = raid_copy.DELETED
+            if message_id is not None and not await _delete_message(client, channel_id, message_id):
+                outcome = raid_copy.DELETE_POST_LEFT
+            await edit_original(client, application_id, token, ephemeral_data(outcome))
+    except Exception:
+        logger.exception("Raid bot: delete_post failed for message %s", message_id)
+
+
+async def _delete_message(client: DiscordRestClient, channel_id: str, message_id: str) -> bool:
+    """Delete a raid post; False when it may still be there.  Already gone (10008) counts as done."""
+    try:
+        await rest.bounded(client.delete_message(channel_id, message_id))
+    except DiscordApiError as exc:
+        if exc.code == UNKNOWN_MESSAGE:
+            return True
+        logger.warning("Raid bot: could not delete raid post %s (status %s, code %s)", message_id, exc.status, exc.code)
+        return False
+    except (TimeoutError, httpx.HTTPError) as exc:
+        logger.warning("Raid bot: deleting raid post %s got no answer from Discord (%s)", message_id, type(exc).__name__)
+        return False
+    return True
 
 
 async def send_ephemeral_followup(application_id: str, token: str, content: str) -> None:

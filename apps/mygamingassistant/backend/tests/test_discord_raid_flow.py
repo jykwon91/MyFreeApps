@@ -908,8 +908,14 @@ async def test_keep_raid_leaves_it_scheduled(post: Post, db: AsyncSession, fake_
     await db.refresh(event)
     assert event.status == "scheduled"
     assert event.cancel_reason is None
+    # --- neither its leader nor Manage Events: refused in place
     response = await post(click(custom_id_for(prompt, "cancel"), user_id="607", permissions=0))
-    assert content(response) == raid_copy.NOT_PERMITTED_EVENTS
+    assert response["type"] == 7
+    assert content(response) == raid_copy.NOT_LEADER
+    response = await post(click(custom_id_for(prompt, "keep"), user_id="607", permissions=0))
+    assert content(response) == raid_copy.NOT_LEADER
+    await db.refresh(event)
+    assert event.status == "scheduled"
 
 
 async def test_queued_player_changing_class_keeps_queue_position(

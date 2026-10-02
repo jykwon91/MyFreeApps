@@ -34,8 +34,9 @@ from app.services.discord.autocomplete.raid import handle_raid_autocomplete
 from app.services.discord.autocomplete.raid_admin import handle_raid_admin_autocomplete
 from app.services.discord.commands.raid import handle_raid
 from app.services.discord.commands.raid_admin import handle_raid_admin
-from app.services.discord.commands_spec import CLOSE_MENU, OPEN_MENU, SIGNED_MENU
+from app.services.discord.commands_spec import CLOSE_MENU, EDIT_MENU, OPEN_MENU, SIGNED_MENU
 from app.services.discord.components.raid import handle_raid_component, handle_raid_modal
+from app.services.discord.components.raid_edit import handle_edit_menu
 from app.services.discord.components.raid_leader import handle_close_menu, handle_open_menu, handle_signed_menu
 from app.services.discord.interaction import Interaction, autocomplete_response, ephemeral_response
 from app.services.wow.raid_custom_id import PREFIX as RAID_CUSTOM_ID_PREFIX
@@ -50,6 +51,7 @@ logger = logging.getLogger(__name__)
 _COMMAND_HANDLERS: dict[str, Any] = {
     "raid": handle_raid,
     "raid-admin": handle_raid_admin,
+    EDIT_MENU: handle_edit_menu,
     CLOSE_MENU: handle_close_menu,
     OPEN_MENU: handle_open_menu,
     SIGNED_MENU: handle_signed_menu,

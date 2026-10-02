@@ -63,13 +63,13 @@ from app.services.wow.raid_roster import (
 )
 from app.services.wow.raid_text import (
     display_title,
-    escape_markdown,
     escape_name,
     icon_text,
     local_day_label,
     seats_label,
     signup_icon,
     status_heading,
+    title_text,
 )
 
 EMBED_DESCRIPTION_LIMIT: Final = 4096
@@ -186,17 +186,21 @@ def release_confirm_data(event: WowRaidEvent, status: str) -> dict[str, Any]:
     return ephemeral_data(raid_copy.release_prompt(status), components=components)
 
 
-def cancel_confirm_data(event: WowRaidEvent) -> dict[str, Any]:
+def cancel_confirm_data(event: WowRaidEvent, *, from_edit: bool = False) -> dict[str, Any]:
+    """[Cancel raid] / [Keep raid]; from Raid: Edit, [Keep raid] goes back to the edit card."""
+    keep = raid_custom_id.encode("keep", event.id)
+    if from_edit:
+        keep = raid_custom_id.encode("ed", event.id, "keep")
     components = [
         action_row(
             button("Cancel raid", BUTTON_STYLE_DANGER, raid_custom_id.encode("cancel", event.id)),
-            button("Keep raid", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("keep", event.id)),
+            button("Keep raid", BUTTON_STYLE_SECONDARY, keep),
         )
     ]
-    content = raid_copy.cancel_prompt(display_title(event), unix(event.starts_at))
+    content = raid_copy.cancel_prompt(title_text(event), unix(event.starts_at))
     if event.cancel_reason:
         content += f"\nReason: {event.cancel_reason}"
-    return ephemeral_data(content, components=components)
+    return ephemeral_data(content, components=components, embeds=[])
 
 
 # ---------------------------------------------------------------------------
@@ -286,7 +290,7 @@ def my_signup_data(
         text = raid_copy.CLOSED if closed else raid_copy.NOT_SIGNED_UP
         return ephemeral_data(text, components=[action_row(roster)], embeds=[])
     lines = [
-        f"**Your sign-up** · {escape_markdown(display_title(event))} · <t:{unix(event.starts_at)}:F>",
+        f"**Your sign-up** · {title_text(event)} · <t:{unix(event.starts_at)}:F>",
         f"Status: {_status_text(signup, signups, emojis)}",
     ]
     buttons = [roster]
@@ -340,7 +344,7 @@ def roster_data(
             sections.append("\n".join([f"**{heading}**", *entries]))
 
     embed = {
-        "title": f"Roster — {display_title(event)} — {local_day_label(event.starts_at, guild.timezone)}",
+        "title": f"Roster — {title_text(event)} — {local_day_label(event.starts_at, guild.timezone)}",
         "description": clip_lines("\n\n".join(sections) or raid_copy.NOBODY_SIGNED_UP, EMBED_DESCRIPTION_LIMIT),
         "color": COLOR_OPEN,
         "footer": {"text": f"{seats_label(summary)} · Signed up {summary.signed_up_count}"},
@@ -379,7 +383,7 @@ def list_data(
     lines = ["**Upcoming raids**"]
     for event in events:
         summary = compute_roster_summary(signups_by_event.get(event.id, []), size_cap=event.size_cap)
-        line = f"**{display_title(event)}** — <t:{unix(event.starts_at)}:F> · {summary.seats_taken}/{event.size_cap} confirmed"
+        line = f"**{title_text(event)}** — <t:{unix(event.starts_at)}:F> · {summary.seats_taken}/{event.size_cap} confirmed"
         if event.closed_at is not None:
             line += " · sign-ups closed"
         if event.message_id:

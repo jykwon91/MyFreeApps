@@ -30,7 +30,7 @@ from app.services.wow.raid_catalog import CLASSES_BY_KEY, TANK_COLUMN, effective
 from app.services.wow.raid_embed import CLOSED_HINT, STATUS_LISTS, column_heading, post_color
 from app.services.wow.raid_post_layout import post_columns, with_status
 from app.services.wow.raid_roster import QUEUED_STATUS, compute_roster_summary, listed_user_ids
-from app.services.wow.raid_text import display_title, escape_markdown, escape_name, icon_text, status_heading
+from app.services.wow.raid_text import display_title, escape_name, icon_text, status_heading, title_text
 
 # The ping form's one input, and how long a message it takes.
 PING_FIELD: Final = "message"
@@ -42,7 +42,7 @@ _LINE_MARKERS: Final[dict[str, str]] = {"late": "late", QUEUED_STATUS: "queued"}
 
 def raid_line(event: WowRaidEvent) -> str:
     """'**Onyxia's Lair** · <t:X:F>' — which raid a card is about."""
-    return f"**{escape_markdown(display_title(event))}** · <t:{unix(event.starts_at)}:F>"
+    return f"**{title_text(event)}** · <t:{unix(event.starts_at)}:F>"
 
 
 # ---------------------------------------------------------------------------

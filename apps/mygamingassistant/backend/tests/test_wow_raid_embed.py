@@ -12,6 +12,7 @@ from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.services.wow import raid_custom_id
 from app.services.wow.raid_catalog import CLASSES, SPECS
+from app.services.wow.raid_details import DESCRIPTION_MAX
 from app.services.wow.raid_embed import (
     COLOR_CLOSED,
     COLOR_OPEN,
@@ -25,7 +26,14 @@ from app.services.wow.raid_embed import (
     roster_entry,
 )
 from app.services.wow.raid_roster import compute_roster_summary, order_numbers
-from app.services.wow.raid_text import class_icon, escape_name, seats_label, server_time_label, status_heading
+from app.services.wow.raid_text import (
+    class_icon,
+    escape_name,
+    seats_label,
+    server_time_label,
+    status_heading,
+    title_text,
+)
 
 # Sat Oct 10 2026, 20:00 America/New_York
 _STARTS = datetime(2026, 10, 11, 0, 0, tzinfo=timezone.utc)
@@ -263,12 +271,46 @@ def test_closed_sign_ups_grey_the_post_and_lock_all_but_my_sign_up() -> None:
     assert embed["footer"]["text"] == "ID a1b2c3 · Sign-ups are closed."
     assert NOBODY_YET not in _fields_by_name(embed)  # no button to tap, so no legend
     assert "Tanks (1)" in _fields_by_name(embed)  # the roster stays
+
     disabled = {c["label"]: c["disabled"] for row in message["components"] for c in row["components"]}
     assert disabled.pop("My sign-up") is False  # still shows where you stand
     assert all(disabled.values())
 
     lines = _embed(build_signup_message(event, [], _guild(), emojis=_ALL_ICONS))["description"].split("\n")
     assert lines[3] == f"{_ALL_ICONS.markup('info_lock')} **Sign-ups are closed.**"
+
+
+def test_the_post_shows_who_leads_the_banner_link_and_the_color_from_raid_edit() -> None:
+    event = _event(
+        leader_user_id="u9",
+        leader_display_name="Jaina  Proudmoore",
+        image_url="https://i.imgur.com/raid.png",
+        color=0x3498DB,
+    )
+    embed = _embed(build_signup_message(event, [], _guild(), emojis=EMPTY_EMOJIS))
+    assert embed["author"] == {"name": "Onyxia's Lair · Leader: Jaina Proudmoore"}
+    assert embed["image"] == {"url": "https://i.imgur.com/raid.png"}
+    assert embed["color"] == 0x3498DB
+
+    # --- handed to someone whose name wasn't captured: no leader rather than the creator
+    nameless = _embed(build_signup_message(_event(leader_user_id="u9"), [], _guild(), emojis=EMPTY_EMOJIS))
+    assert nameless["author"] == {"name": "Onyxia's Lair"}
+
+
+def test_closed_or_cancelled_still_greys_a_colored_post() -> None:
+    link = "https://i.imgur.com/raid.png"
+    closed = _embed(
+        build_signup_message(_event(closed_at=_T0, color=0xE74C3C, image_url=link), [], _guild(), emojis=EMPTY_EMOJIS)
+    )
+    assert closed["color"] == COLOR_CLOSED
+    assert closed["image"] == {"url": link}
+    cancelled = _embed(
+        build_signup_message(
+            _event(status="cancelled", color=0xE74C3C, image_url=link), [], _guild(), emojis=EMPTY_EMOJIS
+        )
+    )
+    assert cancelled["color"] == COLOR_CLOSED
+    assert "image" not in cancelled  # a cancelled post drops its art
 
 
 def test_completed_raid_closes_sign_ups() -> None:
@@ -341,6 +383,14 @@ def test_names_never_become_headings_lists_or_links() -> None:
     assert escape_name("> quote") == r"\> quote"
     assert escape_name("see https://x.example") == "see https:​//x.example"
     assert escape_name("Mid#dle-name 2.") == "Mid#dle-name 2."  # only a line's start is markdown
+
+
+def test_a_leaders_title_shows_as_typed_wherever_it_starts_a_line() -> None:
+    assert title_text(_event(title="# SIGN UP")) == r"\# SIGN UP"
+    assert title_text(_event(title="-# fine print")) == r"\-# fine print"
+    assert title_text(_event(title="1. Ony")) == r"1\. Ony"
+    assert title_text(_event(title="[Ony](https://x.example)")) == r"\[Ony\](https://x.example)"
+    assert title_text(_event()) == "Onyxia's Lair"
 
 
 def test_helpers() -> None:
@@ -487,7 +537,7 @@ def test_any_roster_size_fits(count: int) -> None:
         signups.append(
             _signup(f"[{i}]" + "|" * 28, status=statuses[i % len(statuses)], wow_class=cls.key, role=cls.roles[-1], minute=i)
         )
-    event = _event(notes="x" * 200, title="T" * 200, created_by_display_name="L" * 32)
+    event = _event(notes="x" * DESCRIPTION_MAX, title="T" * 200, created_by_display_name="L" * 32)
     embed = _embed(build_signup_message(event, signups, _guild(), emojis=EMPTY_EMOJIS))
     _assert_within_limits(embed)
 
@@ -510,7 +560,7 @@ def test_rosters_with_icons_stay_within_limits(count: int) -> None:
                 minute=i,
             )
         )
-    embed = _embed(build_signup_message(_event(notes="x" * 200), signups, _guild(), emojis=_WITH_TILES))
+    embed = _embed(build_signup_message(_event(notes="x" * DESCRIPTION_MAX), signups, _guild(), emojis=_WITH_TILES))
     _assert_within_limits(embed)
     for field in embed["fields"]:
         # An icon is never cut mid-markup.

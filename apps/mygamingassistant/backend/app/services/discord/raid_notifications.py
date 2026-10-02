@@ -179,8 +179,17 @@ def build_ping(text: str, signature: str, user_ids: list[str]) -> list[dict[str,
     more that carry only the mentions and the small print, so the channel
     reads the words once.
     """
+    return _announcement(leader_words(text), signature, user_ids)
+
+
+def build_move_notice(text: str, signature: str, user_ids: list[str]) -> list[dict[str, Any]]:
+    """Raid: Edit → [Tell them in channel]: the bot's own words about the new time, as a ping."""
+    return _announcement(text, signature, user_ids)
+
+
+def _announcement(text: str, signature: str, user_ids: list[str]) -> list[dict[str, Any]]:
     tail = f"\n{signature}"
-    chunks = chunk_user_mentions(f"{leader_words(text)}\n", tail, user_ids)
+    chunks = chunk_user_mentions(f"{text}\n", tail, user_ids)
     if len(chunks) > 1:
         spilled = [user_id for chunk in chunks[1:] for user_id in chunk.user_ids]
         chunks = [chunks[0], *chunk_user_mentions("", tail, spilled)]

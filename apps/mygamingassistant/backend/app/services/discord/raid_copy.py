@@ -326,6 +326,96 @@ def ping_signature(raid_label: str, unix: int, leader: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Raid: Edit (raid_edit)
+# ---------------------------------------------------------------------------
+
+EDIT_PROMPT: Final = "Pick what you want to change."
+EDIT_FOOTER: Final = "changes show on the raid post within a second"
+EDIT_SAVED: Final = "Saved."
+EDIT_GONE_PROMPT: Final = "This raid is cancelled or finished, so all you can do now is delete it."
+TITLE_OK: Final = "Title updated."
+TITLE_EMPTY: Final = "The title can't be empty."
+DESC_OK: Final = "Description updated."
+DESC_CLEARED: Final = "Description cleared."
+BANNER_OK: Final = "Banner updated."
+BANNER_RESET: Final = "Back to the raid's own banner."
+BANNER_BAD: Final = "That isn't a link I can use. It must start with https:// and point to an image."
+COLOR_OK: Final = "Color updated."
+COLOR_OK_CLOSED: Final = "Color updated. The post stays grey while sign-ups are closed."
+WHEN_SAME: Final = "That's already when the raid starts."
+LEADER_BOT: Final = "Pick a person, not a bot."
+# The right-click commands need Manage Events unless the server allows them
+# for others (Server Settings → Integrations), so a hand-over says so.
+LEADER_PROMPT: Final = (
+    "Who leads this raid? The post names them and they get its right-click tools. "
+    "Without Manage Events they only see those if the server allows it (Server Settings → Integrations)."
+)
+COLOR_PROMPT: Final = "Pick a color for the raid post."
+NOTIFY_BUTTON: Final = "Tell them in channel"
+DELETING: Final = "Deleting…"
+DELETED: Final = "Deleted."
+DELETE_POST_LEFT: Final = "Deleted the raid, but I couldn't remove its post. You can delete the post yourself."
+
+TITLE_MODAL: Final = "Edit title"
+TITLE_LABEL: Final = "Title"
+TITLE_HINT: Final = "Up to 19 letters and numbers show as letter tiles on the post."
+WHEN_MODAL: Final = "Change date and time"
+WHEN_HINT: Final = "e.g. sat 8pm, 10/14 8:00pm"
+DESC_MODAL: Final = "Edit description"
+DESC_LABEL: Final = "Description"
+DESC_HINT: Final = "Shown on the raid post. Leave it empty to remove it."
+IMAGE_MODAL: Final = "Banner image"
+IMAGE_LABEL: Final = "Image link"
+IMAGE_HINT: Final = "An https link to an image. Leave it empty for the raid's own banner."
+CANCEL_MODAL: Final = "Cancel this raid"
+CANCEL_LABEL: Final = "Reason (optional)"
+CANCEL_HINT: Final = "Shown to players on the raid post and in their DM."
+
+
+def when_label(tz_name: str) -> str:
+    """The time field's label, naming the server's timezone (≤ 45 characters)."""
+    return f"When ({tz_name})"[:45]
+
+
+def leader_ok(name: str) -> str:
+    return f"Leader is now {name}."
+
+
+def handed_over(name: str) -> str:
+    """The leader handed the raid to someone else and can't edit it any more."""
+    return f"{name} leads this raid now, so it's theirs to edit."
+
+
+def moved(unix: int) -> str:
+    return f"Moved to <t:{unix}:F>."
+
+
+def notify_offer(count: int) -> str:
+    """After a move, when anyone is on the raid."""
+    if count == 1:
+        return "1 person is signed up. Tell them about the new time?"
+    return f"{count} people are signed up. Tell them about the new time?"
+
+
+def notify_post(raid_label: str, unix: int) -> str:
+    """[Tell them in channel] — the reply to the raid post, pinging everyone on it."""
+    return f"{raid_label} has moved to <t:{unix}:F> (<t:{unix}:R>). Please check you can still make it."
+
+
+def delete_prompt(raid_label: str, signups: int, *, can_cancel: bool) -> str:
+    if signups == 0:
+        removes = "This removes the post."
+    elif signups == 1:
+        removes = "This removes the post and its 1 sign-up."
+    else:
+        removes = f"This removes the post and all {signups} sign-ups."
+    text = f"Delete **{raid_label}**? {removes} Nobody is notified."
+    if can_cancel:
+        text += " To tell people, use **Cancel raid** instead."
+    return text
+
+
+# ---------------------------------------------------------------------------
 # Scheduled notifications (raid_notification_worker)
 # ---------------------------------------------------------------------------
 

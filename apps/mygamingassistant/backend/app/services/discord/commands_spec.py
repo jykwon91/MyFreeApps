@@ -24,12 +24,12 @@ bitfield from the payload (Manage Events; Manage Server for ``setup``).
 
 The raid post's right-click menu
 --------------------------------
-Message commands (right-click a raid post → Apps): ``Raid: Close``,
-``Raid: Open`` and ``Raid: Signed``, Manage Events by default like
-``/raid-admin``.  Their handlers also let the raid's own leader in.  Discord
-allows five message commands per app; ``Raid: Edit`` and ``Raid: Unsigned``
-are to take the last two, so any further leader action is a button or a
-slash command.
+Message commands (right-click a raid post → Apps): ``Raid: Edit``,
+``Raid: Close``, ``Raid: Open`` and ``Raid: Signed``, Manage Events by
+default like ``/raid-admin``.  Their handlers also let the raid's own
+leader in.  Discord allows five message commands per app; ``Raid: Unsigned``
+is to take the last, so any further leader action is a button or a slash
+command.
 
 Design invariants
 -----------------
@@ -216,6 +216,7 @@ RAID_ADMIN_COMMAND: Final[dict[str, Any]] = {
 # The raid post's right-click menu (message commands)
 # ---------------------------------------------------------------------------
 
+EDIT_MENU: Final = "Raid: Edit"
 CLOSE_MENU: Final = "Raid: Close"
 OPEN_MENU: Final = "Raid: Open"
 SIGNED_MENU: Final = "Raid: Signed"
@@ -233,7 +234,7 @@ def _message_command(name: str) -> dict[str, Any]:
 
 
 MENU_COMMANDS: Final[list[dict[str, Any]]] = [
-    _message_command(name) for name in (CLOSE_MENU, OPEN_MENU, SIGNED_MENU)
+    _message_command(name) for name in (EDIT_MENU, CLOSE_MENU, OPEN_MENU, SIGNED_MENU)
 ]
 
 # ---------------------------------------------------------------------------
