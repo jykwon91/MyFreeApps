@@ -11,7 +11,7 @@ from typing import Any, Final
 from fastapi import BackgroundTasks
 
 from app.services.discord import raid_copy, raid_publisher
-from app.services.discord.components import raid_admin, raid_signup
+from app.services.discord.components import raid_admin, raid_card, raid_signup
 from app.services.discord.interaction import (
     Interaction,
     deferred_ephemeral_response,
@@ -30,15 +30,17 @@ async def _handle_test_dm(interaction: Interaction, parsed: RaidCustomId, backgr
 
 
 _HANDLERS: Final[dict[str, ComponentHandler]] = {
+    "cls": raid_signup.handle_class_button,
     "signup": raid_signup.handle_signup,
     "status": raid_signup.handle_status,
     "class": raid_signup.handle_class_pick,
     "spec": raid_signup.handle_spec_pick,
     "pickclass": raid_signup.handle_pick_class,
     "role": raid_signup.handle_role_pick,
-    "mine": raid_signup.handle_mine,
-    "change": raid_signup.handle_change,
-    "roster": raid_signup.handle_roster,
+    "mine": raid_card.handle_mine,
+    "card": raid_card.handle_card,
+    "change": raid_card.handle_change,
+    "roster": raid_card.handle_roster,
     "release": raid_signup.handle_release,
     "stay": raid_signup.handle_stay,
     "confirm": raid_admin.handle_confirm,

@@ -169,7 +169,7 @@ async def test_nudge_sent_once_with_role_ping(bound_unit_of_work: AsyncSession, 
 
     [post] = fake_discord.posts(CHANNEL)
     assert post.body is not None
-    assert post.body["content"].startswith(f"<@&{PING_ROLE}> **Onyxia is <t:")
+    assert post.body["content"].startswith(f"<@&{PING_ROLE}> **Onyxia's Lair is <t:")
     assert "1 of 10 confirmed. Still need: **2 tanks, 3 healers**. 9 spots open." in post.body["content"]
     assert f"[Sign up](https://discord.com/channels/5150/{CHANNEL}/{SIGNUP_MESSAGE})" in post.body["content"]
     assert post.body["allowed_mentions"] == {"parse": [], "roles": [PING_ROLE]}
@@ -198,7 +198,7 @@ async def test_ready_check_mentions_seated_players_only(
 
     [post] = fake_discord.posts(CHANNEL)
     assert post.body is not None
-    assert post.body["content"].startswith("**Ready check — Onyxia starts <t:")
+    assert post.body["content"].startswith("**Ready check — Onyxia's Lair starts <t:")
     assert post.body["allowed_mentions"] == {"parse": [], "users": ["21", "22"]}
     assert "<@&" not in post.body["content"]
 
@@ -240,14 +240,14 @@ async def test_consumables_dms_and_single_fallback_post(
     dm_31 = fake_discord.posts("dm-31")
     assert len(dm_31) == 1 and dm_31[0].body is not None
     [embed] = dm_31[0].body["embeds"]
-    assert embed["title"] == "Onyxia tomorrow — Priest (Healer)"
+    assert embed["title"] == "Onyxia's Lair tomorrow — Priest (Healer)"
     assert "*Classic advice, which may differ in Forever.*" in embed["description"]
     assert {f["name"] for f in embed["fields"]} <= {"Essential", "Recommended", "Tryhard"}
     assert "https://www.wowhead.com/classic/item=" in embed["fields"][0]["value"]
     assert embed["footer"]["text"] == "To stop these DMs, use /raid prefs dm_reminders:false"
 
     [balance] = fake_discord.posts("dm-38")
-    assert balance.body is not None and balance.body["embeds"][0]["title"] == "Onyxia tomorrow — Balance Druid"
+    assert balance.body is not None and balance.body["embeds"][0]["title"] == "Onyxia's Lair tomorrow — Balance Druid"
 
     [generic] = fake_discord.posts("dm-33")
     assert generic.body is not None and "/raid prefs" in generic.body["content"]

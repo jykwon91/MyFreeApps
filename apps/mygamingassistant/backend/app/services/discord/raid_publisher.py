@@ -192,7 +192,7 @@ async def _post_failed(
         guild = await db.get(WowRaidGuild, event.guild_id)
         if guild is None:
             return
-        preview = preview_data(event, guild, notice=notice)
+        preview = preview_data(event, guild, emojis=emojis.current(), notice=notice)
     await _edit_original(client, application_id, token, preview)
 
 

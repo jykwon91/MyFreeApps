@@ -60,6 +60,13 @@ class WowSpecInfo:
         return self.spec_role
 
     @property
+    def column(self) -> str:
+        """The raid-post column it shows in: every tank spec under Tanks, else its class."""
+        if self.spec_role == "tank":
+            return TANK_COLUMN
+        return self.class_key
+
+    @property
     def full_label(self) -> str:
         """'Fury Warrior', 'Feral Druid (tank)'."""
         class_label = CLASSES_BY_KEY[self.class_key].label
@@ -96,7 +103,7 @@ def _specs(class_key: str, *specs: tuple[str, str, SpecRole]) -> tuple[WowSpecIn
 RAIDS: Final[tuple[RaidInfo, ...]] = (
     RaidInfo("barrow_deeps", "Barrow Deeps", 10, "forever"),
     RaidInfo("hyjal_summit", "Hyjal Summit", 20, "forever"),
-    RaidInfo("onyxia", "Onyxia", 40, "forever"),
+    RaidInfo("onyxia", "Onyxia's Lair", 40, "forever"),
     RaidInfo("mc", "Molten Core", 40, "classic"),
     RaidInfo("bwl", "Blackwing Lair", 40, "classic"),
     RaidInfo("zg", "Zul'Gurub", 20, "classic"),
@@ -117,8 +124,10 @@ ROLE_DESCRIPTIONS: Final[dict[str, str]] = {
     "ranged": "Ranged DPS",
 }
 
-# In-game class order.  Survival Hunters are ranged and Discipline Priests
-# heal in Classic; Forever has one Feral tree, split here by role.
+# Raid-Helper's bar order: the order Classic raid leaders read sign-ups in
+# (the raid post's buttons and columns, and every class menu).  Survival
+# Hunters are ranged and Discipline Priests heal in Classic; Forever has one
+# Feral tree, split here by role.
 CLASSES: Final[tuple[WowClassInfo, ...]] = (
     WowClassInfo(
         "warrior",
@@ -129,6 +138,18 @@ CLASSES: Final[tuple[WowClassInfo, ...]] = (
             ("arms", "Arms", "melee"),
             ("fury", "Fury", "melee"),
             ("protection", "Protection", "tank"),
+        ),
+    ),
+    WowClassInfo(
+        "druid",
+        "Druid",
+        "DRU",
+        _specs(
+            "druid",
+            ("balance", "Balance", "caster"),
+            ("feral-damage", "Feral (damage)", "melee"),
+            ("feral-tank", "Feral (tank)", "tank"),
+            ("restoration", "Restoration", "healer"),
         ),
     ),
     WowClassInfo(
@@ -143,17 +164,6 @@ CLASSES: Final[tuple[WowClassInfo, ...]] = (
         ),
     ),
     WowClassInfo(
-        "hunter",
-        "Hunter",
-        "HUN",
-        _specs(
-            "hunter",
-            ("beast-mastery", "Beast Mastery", "ranged"),
-            ("marksmanship", "Marksmanship", "ranged"),
-            ("survival", "Survival", "ranged"),
-        ),
-    ),
-    WowClassInfo(
         "rogue",
         "Rogue",
         "ROG",
@@ -165,25 +175,14 @@ CLASSES: Final[tuple[WowClassInfo, ...]] = (
         ),
     ),
     WowClassInfo(
-        "priest",
-        "Priest",
-        "PRI",
+        "hunter",
+        "Hunter",
+        "HUN",
         _specs(
-            "priest",
-            ("discipline", "Discipline", "healer"),
-            ("holy", "Holy", "healer"),
-            ("shadow", "Shadow", "caster"),
-        ),
-    ),
-    WowClassInfo(
-        "shaman",
-        "Shaman",
-        "SHA",
-        _specs(
-            "shaman",
-            ("elemental", "Elemental", "caster"),
-            ("enhancement", "Enhancement", "melee"),
-            ("restoration", "Restoration", "healer"),
+            "hunter",
+            ("beast-mastery", "Beast Mastery", "ranged"),
+            ("marksmanship", "Marksmanship", "ranged"),
+            ("survival", "Survival", "ranged"),
         ),
     ),
     WowClassInfo(
@@ -209,14 +208,24 @@ CLASSES: Final[tuple[WowClassInfo, ...]] = (
         ),
     ),
     WowClassInfo(
-        "druid",
-        "Druid",
-        "DRU",
+        "priest",
+        "Priest",
+        "PRI",
         _specs(
-            "druid",
-            ("balance", "Balance", "caster"),
-            ("feral-damage", "Feral (damage)", "melee"),
-            ("feral-tank", "Feral (tank)", "tank"),
+            "priest",
+            ("discipline", "Discipline", "healer"),
+            ("holy", "Holy", "healer"),
+            ("shadow", "Shadow", "caster"),
+        ),
+    ),
+    WowClassInfo(
+        "shaman",
+        "Shaman",
+        "SHA",
+        _specs(
+            "shaman",
+            ("elemental", "Elemental", "caster"),
+            ("enhancement", "Enhancement", "melee"),
             ("restoration", "Restoration", "healer"),
         ),
     ),
@@ -224,6 +233,13 @@ CLASSES: Final[tuple[WowClassInfo, ...]] = (
 CLASSES_BY_KEY: Final[dict[str, WowClassInfo]] = {cls.key: cls for cls in CLASSES}
 SPECS: Final[tuple[WowSpecInfo, ...]] = tuple(spec for cls in CLASSES for spec in cls.specs)
 SPECS_BY_ID: Final[dict[tuple[str, str], WowSpecInfo]] = {(spec.class_key, spec.key): spec for spec in SPECS}
+
+# The raid post groups players into columns: one Tank column for every tank
+# spec, then one per class.  Each column has a button with the same count, so
+# a player is in exactly one column.
+TANK_COLUMN: Final = "tank"
+TANK_SPECS: Final[tuple[WowSpecInfo, ...]] = tuple(spec for spec in SPECS if spec.column == TANK_COLUMN)
+POST_COLUMNS: Final[tuple[str, ...]] = (TANK_COLUMN, *(cls.key for cls in CLASSES))
 
 # Sign-ups saved before specs existed carry only (class, role).  These Classic
 # defaults personalise their reminders; the bot asks for the real spec on the
@@ -246,6 +262,34 @@ _LEGACY_SPECS: Final[dict[tuple[str, str], str]] = {
     ("druid", "healer"): "restoration",
     ("druid", "dps"): "feral-damage",
 }
+
+
+def column_label(column: str) -> str:
+    """'Tanks', or the class name."""
+    if column == TANK_COLUMN:
+        return "Tanks"
+    return CLASSES_BY_KEY[column].label
+
+
+def column_icon(column: str) -> str:
+    """Application-emoji name for a column: the tank role icon, else the class icon."""
+    if column == TANK_COLUMN:
+        return "role_tank"
+    return column
+
+
+def column_tag(column: str) -> str:
+    """Short text tag for a column when its icon isn't uploaded: 'TANK', 'WAR'."""
+    if column == TANK_COLUMN:
+        return "TANK"
+    return CLASSES_BY_KEY[column].tag
+
+
+def column_specs(column: str) -> tuple[WowSpecInfo, ...]:
+    """The specs a column's spec select offers: every tank spec, or the class's specs."""
+    if column == TANK_COLUMN:
+        return TANK_SPECS
+    return CLASSES_BY_KEY[column].specs
 
 
 def raid_name(raid_key: str) -> str:

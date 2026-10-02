@@ -15,23 +15,27 @@ NOT_PERMITTED_GUILD: Final = "You need the Manage Server permission to set up th
 NOT_FOUND: Final = "I can't find that raid. It may have been cancelled. Try `/raid list`."
 GENERIC_ERROR: Final = "Something went wrong on my end. Nothing changed, so please try again."
 RAID_STARTED: Final = "This raid has already started."
-MENU_TIMEOUT: Final = "That menu timed out. Tap Sign up again."
+MENU_TIMEOUT: Final = "That menu timed out. Tap your class on the raid post again."
 GUILD_ONLY: Final = "Use this in a server channel, not in DMs."
 
 NEXT_TIME_ONE_TAP: Final = "Next time it's one tap."
 QUEUE_MOVES_UP: Final = "I'll move you up automatically when a seat opens."
 BENCH_NOTE: Final = (
     "Bench is for backups, so I won't move you into a seat automatically. "
-    "Tap **Sign up** on the raid post to ask for one."
+    "Tap your class on the raid post to ask for one."
 )
-TENTATIVE_NOTE: Final = "Tentative doesn't hold a seat. Tap **Sign up** on the raid post to take one."
+TENTATIVE_NOTE: Final = "Tentative doesn't hold a seat. Tap your class on the raid post to take one."
 SEAT_KEPT: Final = "Okay, you keep your seat."
 NO_SEAT_TO_FREE: Final = (
     "You don't hold a seat any more, so this question is out of date. Use the buttons on the raid post."
 )
-LEFT_QUEUE: Final = "You've left the queue. Tap **Sign up** on the raid post to rejoin it at the back."
-NOT_SIGNED_UP: Final = "You haven't signed up for this raid yet. Tap **Sign up** on the raid post."
+LEFT_QUEUE: Final = "You've left the queue. Tap your class on the raid post to rejoin it at the back."
+NOT_SIGNED_UP: Final = "You haven't signed up for this raid yet. Tap your class on the raid post."
+NOBODY_SIGNED_UP: Final = "Nobody has signed up yet."
 CLASS_PROMPT: Final = "Which class are you bringing? I'll remember it for next time."
+TANK_PROMPT: Final = "Which tank are you bringing? I'll remember it for next time."
+# A tank spec in a class's spec select: it shows in the Tanks column, not the class's.
+TANK_SPEC_NOTE: Final = "Tank (shows under Tanks)"
 
 EDIT_NEEDS_A_CHANGE: Final = "Tell me what to change: add `when`, `size` or `notes`."
 EDIT_DONE: Final = "Updated. The raid post now shows the new details."
@@ -59,8 +63,8 @@ _ALREADY: Final[dict[str, str]] = {
     "confirmed": "You're already signed up.",
     "late": "You're already marked **late**.",
     "tentative": "You're already marked **tentative**.",
-    "bench": "You're already on the **bench**. Tap **Sign up** if you want a seat.",
-    "absence": "You're already marked **absent**. Tap **Sign up** if your plans change.",
+    "bench": "You're already on the **bench**. Tap your class if you want a seat.",
+    "absence": "You're already marked **absent**. Tap your class if your plans change.",
 }
 
 _MARKED_WORDS: Final[dict[str, str]] = {"late": "late", "tentative": "tentative", "absence": "absent"}
@@ -87,7 +91,7 @@ def already_in_status(
             return late_while_queued(queue_position)
         return f"You're already **{queue_place(queue_position)}**. {QUEUE_MOVES_UP}"
     if status == "confirmed" and spec_label:
-        return f"You're already signed up as **{spec_label}**. To switch spec, tap **My signup**."
+        return f"You're already signed up as **{spec_label}**. To switch spec, tap **My sign-up**."
     return _ALREADY.get(status, "Nothing changed.")
 
 
@@ -126,6 +130,14 @@ def seat_released(status: str, *, handed_on: bool) -> str:
     if handed_on:
         text += " Your seat went to the next player in the queue."
     return text
+
+
+def preview_intro(channel_id: str, ping_role_id: str | None) -> str:
+    """Above the create preview: where the post goes and who it pings."""
+    where = f"<#{channel_id}>"
+    if ping_role_id:
+        where += f", pinging <@&{ping_role_id}>"
+    return f"**Preview.** This is how the raid will look in {where}. Does this look right?"
 
 
 def spec_prompt(class_label: str) -> str:

@@ -117,6 +117,7 @@ _UOW_CONSUMERS = (
     "app.services.discord.commands.raid",
     "app.services.discord.commands.raid_admin",
     "app.services.discord.components.raid_admin",
+    "app.services.discord.components.raid_card",
     "app.services.discord.components.raid_signup",
     "app.services.discord.raid_publisher",
     "app.services.game.fixture_loader",

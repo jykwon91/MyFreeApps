@@ -1,23 +1,26 @@
-"""Signup buttons on the public raid post + the private class and spec selects.
+"""Buttons on the public raid post + the private class and spec selects.
 
 Flows
 -----
-* **One tap** — [Sign up] / [Late] / [Tentative] / [Bench] / [Absence] with
-  a known class and spec (this raid's signup, else the remembered class's
-  saved spec) changes the status and answers UPDATE_MESSAGE (type 7) with
-  the rebuilt post.  Landing in the queue (raid full), on the bench, or
-  leaving the queue adds a private follow-up; players moved up from the
-  queue get a DM.
-* **Spec unknown** — the class is known (this raid's signup, else the
-  remembered class) but not its spec: a private spec select for that class,
-  with [Different class] for the class select.  Signups saved before specs
-  existed take this path once.
-* **First time** — no class known: a private class select, then the spec
-  select (skipped when that class already has a saved spec).  Finishing
-  saves prefs + the signup and edits the public post via REST.
-* **Change class or spec** (My signup) — the spec select for your class with
-  your spec preselected; picking your own class again does the same.  These
-  menus keep the status you have when you pick, however long they sat open.
+* **Class buttons** — [Tank] or a class signs you up in that column in one
+  tap, answering UPDATE_MESSAGE (type 7) with the rebuilt post.  The spec is
+  this raid's when you're in that column without a place in line (late,
+  tentative, bench, absent), else the one you saved for it ([Tank]: your
+  saved tank spec).  None saved: a private spec select for the column.  The
+  column you're already in line in (or your tank's class) opens that select
+  with your spec preselected, to switch.
+* **Status buttons** — [Late] / [Tentative] / [Bench] / [Absence] keep your
+  spec (this raid's, else the remembered class's saved spec) and change the
+  status in one tap; with no spec known, the spec select for the remembered
+  class, else the class select.  [Sign up] on posts from before the class
+  buttons asks for a seat the same way.
+* Landing in the queue (raid full), on the bench, or leaving the queue adds
+  a private follow-up; players moved up from the queue get a DM.
+* **Menus** — picking a spec saves it as the member's default and edits the
+  public post via REST.  [Different class] goes to the class select (Tank,
+  then the classes).  Menus opened from My sign-up keep the status you have
+  when you pick, however long they sat open, and offer [Back].
+* **My sign-up** — the private card lives in ``raid_card``.
 * **Seat confirm** — a seat holder tapping [Tentative] / [Bench] / [Absence]
   while players are queued gets a private "free my seat?" card first, since
   the seat goes to the queue at once: [Yes, free my seat] applies it (the
@@ -31,9 +34,11 @@ Flows
 from __future__ import annotations
 
 import uuid
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Final
 
 from fastapi import BackgroundTasks
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import unit_of_work
 from app.models.wow.wow_raid_event import WowRaidEvent
@@ -47,18 +52,13 @@ from app.services.discord.interaction import (
     update_response,
     update_text_response,
 )
-from app.services.discord.raid_context import load_event, utcnow
-from app.services.discord.raid_views import (
-    class_picker_data,
-    my_signup_data,
-    release_confirm_data,
-    roster_data,
-    spec_picker_data,
-)
+from app.services.discord.raid_context import RaidContext, load_event, utcnow
+from app.services.discord.raid_views import class_picker_data, release_confirm_data, spec_picker_data
 from app.services.wow import raid_event_service, raid_member_prefs_service, raid_signup_service
-from app.services.wow.raid_catalog import CLASSES_BY_KEY, WowSpecInfo, spec_info
+from app.services.wow.raid_catalog import CLASSES_BY_KEY, POST_COLUMNS, WowSpecInfo, column_specs, spec_info
 from app.services.wow.raid_custom_id import SAME_STATUS, RaidCustomId
 from app.services.wow.raid_embed import build_signup_message
+from app.services.wow.raid_member_prefs_service import PlayerPick
 from app.services.wow.raid_roster import (
     ABSENCE_STATUS,
     BENCH_STATUS,
@@ -69,8 +69,57 @@ from app.services.wow.raid_roster import (
 )
 from app.services.wow.raid_signup_service import StatusChange
 
+# Your own column while signed up or queued opens its specs (to switch);
+# from late, tentative, bench or absence it signs you straight back up.
+_SWITCHES_SPEC: Final = ("confirmed", QUEUED_STATUS)
+
+
+@dataclass(frozen=True)
+class _Tap:
+    """A status change made from a button on the post."""
+
+    change: StatusChange
+    spec: WowSpecInfo | None
+    dm_ids: list[str]
+    message: dict[str, Any] | None  # the rebuilt post; None when nothing changed
+
+
+async def handle_class_button(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
+    """[Tank] or a class on the post: one tap with a known spec, else the column's spec select."""
+    assert parsed.event_id is not None
+    column = parsed.args[0]
+    async with unit_of_work() as db:
+        context = await load_event(db, interaction, parsed.event_id, lock=True)
+        if context is None:
+            return ephemeral_response(raid_copy.NOT_FOUND)
+        event = context.event
+        if event.starts_at <= utcnow():
+            return ephemeral_response(raid_copy.RAID_STARTED)
+        mine = await wow_raid_signup_repo.get(db, event_id=event.id, discord_user_id=interaction.user_id)
+        current = _current_spec(mine)
+        if mine is not None and current is not None and column in (current.column, current.class_key):
+            if current.column != column or mine.status in _SWITCHES_SPEC:
+                return message_response(
+                    spec_picker_data(event, "confirmed", column, current=current, emojis=emojis.current())
+                )
+            spec = current
+        else:
+            pref = await raid_member_prefs_service.get(db, guild=context.guild, discord_user_id=interaction.user_id)
+            saved = raid_member_prefs_service.saved_spec_for_column(pref, column)
+            if saved is None:
+                return message_response(
+                    spec_picker_data(event, "confirmed", column, current=None, emojis=emojis.current())
+                )
+            spec = saved
+        await raid_member_prefs_service.remember_spec(
+            db, guild=context.guild, discord_user_id=interaction.user_id, spec=spec
+        )
+        tap = await _tap(db, context, interaction, "confirmed", PlayerPick(spec.class_key, spec.raid_role, spec.key))
+    return _tap_response(interaction, parsed.event_id, tap, "confirmed", background)
+
 
 async def handle_signup(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
+    """[Sign up] on posts from before the class buttons: ask for a seat."""
     assert parsed.event_id is not None
     return await _request_status(interaction, parsed.event_id, "confirmed", background)
 
@@ -101,30 +150,45 @@ async def _request_status(
         pick = raid_member_prefs_service.resolve_player(existing, pref)
         if requested != ABSENCE_STATUS and pick.known_spec is None:
             return message_response(_ask_for_spec(event, requested, pick.wow_class))
+        tap = await _tap(db, context, interaction, requested, pick)
+    return _tap_response(interaction, event_id, tap, requested, background)
 
-        change = await raid_signup_service.change_status(
-            db,
-            event=event,
-            discord_user_id=interaction.user_id,
-            display_name=interaction.display_name,
-            requested_status=requested,
-            wow_class=pick.wow_class,
-            role=pick.role,
-            spec=pick.spec,
-        )
-        if change.outcome == "unchanged":
-            return ephemeral_response(_already(change, requested, pick.known_spec))
-        dm_ids = await raid_event_service.dm_recipients(db, guild=context.guild, user_ids=change.promoted)
-        signups = await wow_raid_signup_repo.list_for_event(db, event.id)
-        message = build_signup_message(event, signups, context.guild, emojis=emojis.current())
 
-    background.add_task(raid_publisher.notify_promoted, event_id, dm_ids)
-    note = _private_note(change, requested)
+async def _tap(
+    db: AsyncSession, context: RaidContext, interaction: Interaction, requested: str, pick: PlayerPick
+) -> _Tap:
+    """Apply the request; rebuild the post when anything changed."""
+    change = await raid_signup_service.change_status(
+        db,
+        event=context.event,
+        discord_user_id=interaction.user_id,
+        display_name=interaction.display_name,
+        requested_status=requested,
+        wow_class=pick.wow_class,
+        role=pick.role,
+        spec=pick.spec,
+    )
+    if change.outcome == "unchanged":
+        return _Tap(change, pick.known_spec, [], None)
+    dm_ids = await raid_event_service.dm_recipients(db, guild=context.guild, user_ids=change.promoted)
+    signups = await wow_raid_signup_repo.list_for_event(db, context.event.id)
+    message = build_signup_message(context.event, signups, context.guild, emojis=emojis.current())
+    return _Tap(change, pick.known_spec, dm_ids, message)
+
+
+def _tap_response(
+    interaction: Interaction, event_id: uuid.UUID, tap: _Tap, requested: str, background: BackgroundTasks
+) -> dict[str, Any]:
+    """The rebuilt post (type 7) plus any private follow-up; nothing changed → a private "already"."""
+    if tap.message is None:
+        return ephemeral_response(_already(tap.change, requested, tap.spec))
+    background.add_task(raid_publisher.notify_promoted, event_id, tap.dm_ids)
+    note = _private_note(tap.change, requested)
     if note is not None:
         background.add_task(
             raid_publisher.send_ephemeral_followup, interaction.application_id, interaction.token, note
         )
-    return update_response(message)
+    return update_response(tap.message)
 
 
 def _private_note(change: StatusChange, requested: str) -> str | None:
@@ -161,12 +225,13 @@ def _ask_for_spec(event: WowRaidEvent, status: str, wow_class: str | None) -> di
 
 
 async def handle_class_pick(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
-    """Class select: a class with a saved spec signs up at once; otherwise ask its spec."""
+    """Class select (Tank or a class): a spec saved for it signs up at once; otherwise ask its spec."""
     assert parsed.event_id is not None
     status = parsed.args[0]
-    wow_class = interaction.values[0] if interaction.values else ""
-    if wow_class not in CLASSES_BY_KEY:
+    column = interaction.values[0] if interaction.values else ""
+    if column not in POST_COLUMNS:
         return update_text_response(raid_copy.MENU_TIMEOUT)
+    back = status == SAME_STATUS  # opened from My sign-up
     async with unit_of_work() as db:
         context = await load_event(db, interaction, parsed.event_id, lock=False)
         if context is None:
@@ -175,16 +240,16 @@ async def handle_class_pick(interaction: Interaction, parsed: RaidCustomId, back
             return update_text_response(raid_copy.RAID_STARTED)
         mine = await wow_raid_signup_repo.get(db, event_id=context.event.id, discord_user_id=interaction.user_id)
         current = _current_spec(mine)
-        if current is not None and current.class_key == wow_class:
-            # Your own class again: show its specs with yours preselected.
+        if current is not None and column in (current.column, current.class_key):
+            # Your own column again: show its specs with yours preselected.
             return update_response(
-                spec_picker_data(context.event, status, wow_class, current=current, emojis=emojis.current())
+                spec_picker_data(context.event, status, column, current=current, emojis=emojis.current(), back=back)
             )
         pref = await raid_member_prefs_service.get(db, guild=context.guild, discord_user_id=interaction.user_id)
-        saved = raid_member_prefs_service.saved_spec_for(pref, wow_class)
+        saved = raid_member_prefs_service.saved_spec_for_column(pref, column)
         if saved is None:
             return update_response(
-                spec_picker_data(context.event, status, wow_class, current=None, emojis=emojis.current())
+                spec_picker_data(context.event, status, column, current=None, emojis=emojis.current(), back=back)
             )
     return await _finish_pick(interaction, parsed.event_id, status, saved, background)
 
@@ -192,11 +257,11 @@ async def handle_class_pick(interaction: Interaction, parsed: RaidCustomId, back
 async def handle_spec_pick(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
     """Spec select (value ``<class>.<spec>``) — save it and sign up."""
     assert parsed.event_id is not None
-    wow_class, status = parsed.args
+    column, status = parsed.args
     value = interaction.values[0] if interaction.values else ""
     class_key, _, spec_key = value.partition(".")
     spec = spec_info(class_key, spec_key)
-    if spec is None or spec.class_key != wow_class:
+    if spec is None or spec not in column_specs(column):
         return update_text_response(raid_copy.MENU_TIMEOUT)
     return await _finish_pick(interaction, parsed.event_id, status, spec, background)
 
@@ -367,43 +432,3 @@ def _current_spec(signup: WowRaidSignup | None) -> WowSpecInfo | None:
     if signup is None:
         return None
     return spec_info(signup.wow_class, signup.spec)
-
-
-async def handle_mine(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
-    assert parsed.event_id is not None
-    async with unit_of_work() as db:
-        context = await load_event(db, interaction, parsed.event_id, lock=False)
-        if context is None:
-            return ephemeral_response(raid_copy.NOT_FOUND)
-        signups = await wow_raid_signup_repo.list_for_event(db, context.event.id)
-        mine = next((s for s in signups if s.discord_user_id == interaction.user_id), None)
-        return message_response(my_signup_data(context.event, mine, signups))
-
-
-async def handle_change(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
-    """[Change class or spec] on "My signup" — the spec select for your class, keeping the status."""
-    assert parsed.event_id is not None
-    async with unit_of_work() as db:
-        context = await load_event(db, interaction, parsed.event_id, lock=False)
-        if context is None:
-            return update_text_response(raid_copy.NOT_FOUND)
-        mine = await wow_raid_signup_repo.get(db, event_id=context.event.id, discord_user_id=interaction.user_id)
-        if mine is None:
-            return update_text_response(raid_copy.NOT_SIGNED_UP)
-        # The menus carry ``same``: you keep the status you have when you pick.
-        if mine.wow_class not in CLASSES_BY_KEY:
-            return update_response(class_picker_data(context.event, SAME_STATUS, emojis=emojis.current()))
-        current = _current_spec(mine)
-        return update_response(
-            spec_picker_data(context.event, SAME_STATUS, mine.wow_class, current=current, emojis=emojis.current())
-        )
-
-
-async def handle_roster(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
-    assert parsed.event_id is not None
-    async with unit_of_work() as db:
-        context = await load_event(db, interaction, parsed.event_id, lock=False)
-        if context is None:
-            return ephemeral_response(raid_copy.NOT_FOUND)
-        signups = await wow_raid_signup_repo.list_for_event(db, context.event.id)
-        return message_response(roster_data(context.event, signups, context.guild, emojis=emojis.current()))

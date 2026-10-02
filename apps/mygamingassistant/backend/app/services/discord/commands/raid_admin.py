@@ -19,7 +19,7 @@ from platform_shared.services.discord import MANAGE_EVENTS, MANAGE_GUILD
 
 from app.db.session import unit_of_work
 from app.repositories.wow import wow_raid_guild_repo
-from app.services.discord import raid_copy, raid_publisher
+from app.services.discord import emojis, raid_copy, raid_publisher
 from app.services.discord.interaction import (
     Interaction,
     deferred_ephemeral_response,
@@ -134,7 +134,7 @@ async def _create(interaction: Interaction) -> dict[str, Any]:
             created_by_user_id=interaction.user_id,
             created_by_display_name=interaction.display_name,
         )
-        return message_response(preview_data(event, guild))
+        return message_response(preview_data(event, guild, emojis=emojis.current()))
 
 
 async def _edit(interaction: Interaction, background: BackgroundTasks) -> dict[str, Any]:

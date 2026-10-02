@@ -20,7 +20,7 @@ from platform_shared.services.discord import MANAGE_EVENTS
 
 from app.db.session import unit_of_work
 from app.repositories.wow import wow_raid_event_repo
-from app.services.discord import raid_copy, raid_publisher
+from app.services.discord import emojis, raid_copy, raid_publisher
 from app.services.discord.interaction import (
     Interaction,
     ephemeral_response,
@@ -54,7 +54,7 @@ async def handle_confirm(interaction: Interaction, parsed: RaidCustomId, backgro
         if outcome == "gone":
             return update_text_response(raid_copy.NOT_FOUND)
         if outcome == "in_past":
-            return update_response(preview_data(event, guild, notice=PAST_MESSAGE))
+            return update_response(preview_data(event, guild, emojis=emojis.current(), notice=PAST_MESSAGE))
         channel_id = event.channel_id
 
     background.add_task(raid_publisher.post_raid, parsed.event_id, interaction.application_id, interaction.token)

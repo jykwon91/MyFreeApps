@@ -1,5 +1,6 @@
-"""Pure tests: raid catalog ↔ model constraints, custom_id scheme, timezone
-lookup, and the slash-command spec's Discord limits."""
+"""Pure tests: raid catalog ↔ model constraints, post columns, saved specs per
+column, custom_id scheme, timezone lookup, and the slash-command spec's
+Discord limits."""
 from __future__ import annotations
 
 import re
@@ -9,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from app.models.wow.wow_raid_event import RAID_KEYS
+from app.models.wow.wow_raid_member_pref import WowRaidMemberPref
 from app.models.wow.wow_raid_signup import RAID_ROLES, WOW_CLASSES, WOW_SPECS
 from app.services.discord.commands_spec import ALL_COMMANDS, RAID_ADMIN_COMMAND, RAID_COMMAND
 from app.services.discord.components.raid import _HANDLERS
@@ -16,18 +18,27 @@ from app.services.wow import raid_custom_id, raid_timezones
 from app.services.wow.raid_catalog import (
     _LEGACY_SPECS,
     CLASSES,
+    CLASSES_BY_KEY,
+    POST_COLUMNS,
     RAIDS,
     ROLE_ORDER,
     SPECS,
+    TANK_COLUMN,
     class_can_fill,
+    column_icon,
+    column_label,
+    column_specs,
+    column_tag,
     effective_spec,
     find_specs,
+    raid_name,
     search_specs,
     signup_label,
     spec_info,
     spec_list_text,
 )
-from app.services.wow.raid_custom_id import MAX_CUSTOM_ID_LEN, RELEASE_STATUSES, SAME_STATUS
+from app.services.wow.raid_custom_id import CARD_VIEWS, MAX_CUSTOM_ID_LEN, RELEASE_STATUSES, SAME_STATUS
+from app.services.wow.raid_member_prefs_service import saved_spec_for_column
 from app.services.wow.raid_roster import REQUESTABLE_STATUSES, SEAT_STATUSES
 
 _EVENT = uuid.UUID("ffffffff-ffff-4fff-bfff-ffffffffffff")
@@ -113,6 +124,62 @@ def test_search_specs_matches_every_typed_word() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Post columns
+# ---------------------------------------------------------------------------
+
+
+def test_post_columns_are_tanks_then_each_class_in_raid_helper_order() -> None:
+    assert [cls.key for cls in CLASSES] == [
+        "warrior", "druid", "paladin", "rogue", "hunter", "mage", "warlock", "priest", "shaman"
+    ]
+    assert POST_COLUMNS == (TANK_COLUMN, *(cls.key for cls in CLASSES))
+    assert [spec.choice_value for spec in column_specs(TANK_COLUMN)] == [
+        "warrior.protection",
+        "druid.feral-tank",
+        "paladin.protection",
+    ]
+    # A class's menu offers its tank spec too (it then shows under Tanks).
+    assert column_specs("warrior") == CLASSES_BY_KEY["warrior"].specs
+
+
+def test_every_spec_shows_in_exactly_one_column() -> None:
+    for spec in SPECS:
+        assert spec.column in POST_COLUMNS
+        assert (spec.column == TANK_COLUMN) == (spec.raid_role == "tank")
+    assert {spec.column for spec in SPECS} == set(POST_COLUMNS)  # no column without a spec
+
+
+def test_column_labels_icons_and_tags() -> None:
+    assert [column_label(column) for column in ("tank", "druid")] == ["Tanks", "Druid"]
+    assert [column_icon(column) for column in ("tank", "druid")] == ["role_tank", "druid"]
+    assert [column_tag(column) for column in ("tank", "druid")] == ["TANK", "DRU"]
+    assert raid_name("onyxia") == "Onyxia's Lair"
+
+
+def _pref(default_class: str | None, **saved: str) -> WowRaidMemberPref:
+    return WowRaidMemberPref(default_wow_class=default_class, saved_specs=saved, dm_opt_out=False)
+
+
+@pytest.mark.parametrize(
+    ("pref", "column", "expected"),
+    [
+        (None, "mage", None),
+        (_pref("mage", mage="frost"), "mage", "mage.frost"),
+        (_pref("mage", mage="frost", warrior="fury"), "warrior", "warrior.fury"),  # any class, not just the default
+        (_pref("warrior", warrior="protection"), "warrior", None),  # a tank spec belongs under Tanks: ask
+        (_pref("warrior", warrior="protection"), TANK_COLUMN, "warrior.protection"),
+        (_pref("mage", mage="frost", druid="feral-tank"), TANK_COLUMN, "druid.feral-tank"),  # the one saved tank
+        (_pref("mage", warrior="protection", paladin="protection"), TANK_COLUMN, None),  # two tanks: ask
+        (_pref("paladin", warrior="protection", paladin="protection"), TANK_COLUMN, "paladin.protection"),
+        (_pref("mage", mage="frost"), TANK_COLUMN, None),
+    ],
+)
+def test_saved_spec_for_column(pref: WowRaidMemberPref | None, column: str, expected: str | None) -> None:
+    spec = saved_spec_for_column(pref, column)
+    assert (spec.choice_value if spec is not None else None) == expected
+
+
+# ---------------------------------------------------------------------------
 # custom_id
 # ---------------------------------------------------------------------------
 
@@ -122,15 +189,18 @@ def test_router_covers_every_action() -> None:
 
 
 def test_longest_custom_id_fits() -> None:
-    longest = max(
-        (
-            raid_custom_id.encode("role", _EVENT, status, cls.key, role)
-            for status in REQUESTABLE_STATUSES
-            for cls in CLASSES
-            for role in cls.roles
-        ),
-        key=len,
-    )
+    legacy_roles = [
+        raid_custom_id.encode("role", _EVENT, status, cls.key, role)
+        for status in REQUESTABLE_STATUSES
+        for cls in CLASSES
+        for role in cls.roles
+    ]
+    spec_menus = [
+        raid_custom_id.encode("spec", _EVENT, column, status)
+        for column in POST_COLUMNS
+        for status in (*REQUESTABLE_STATUSES, SAME_STATUS)
+    ]
+    longest = max([*legacy_roles, *spec_menus], key=len)
     assert len(longest) <= MAX_CUSTOM_ID_LEN
     parsed = raid_custom_id.parse(longest)
     assert parsed is not None and parsed.event_id == _EVENT
@@ -151,6 +221,17 @@ def test_round_trip() -> None:
     assert raid_custom_id.parse(release_id) == raid_custom_id.RaidCustomId("release", _EVENT, ("absence",))
     stay_id = raid_custom_id.encode("stay", _EVENT)
     assert raid_custom_id.parse(stay_id) == raid_custom_id.RaidCustomId("stay", _EVENT)
+
+
+def test_class_buttons_tank_menus_and_card_round_trip() -> None:
+    for column in POST_COLUMNS:
+        custom_id = raid_custom_id.encode("cls", _EVENT, column)
+        assert raid_custom_id.parse(custom_id) == raid_custom_id.RaidCustomId("cls", _EVENT, (column,))
+    tank_menu = raid_custom_id.encode("spec", _EVENT, TANK_COLUMN, "confirmed")
+    assert raid_custom_id.parse(tank_menu) == raid_custom_id.RaidCustomId("spec", _EVENT, ("tank", "confirmed"))
+    for view in CARD_VIEWS:
+        custom_id = raid_custom_id.encode("card", _EVENT, view)
+        assert raid_custom_id.parse(custom_id) == raid_custom_id.RaidCustomId("card", _EVENT, (view,))
 
 
 def test_menus_from_my_signup_keep_the_status_you_have() -> None:
@@ -200,6 +281,13 @@ def test_encode_rejects_overlong() -> None:
         f"raid:v1:spec:{_EVENT}:necromancer:confirmed",
         f"raid:v1:spec:{_EVENT}:mage:queued",
         f"raid:v1:spec:{_EVENT}:mage:declined",  # only the status button keeps the old name
+        f"raid:v1:spec:{_EVENT}:none:confirmed",  # "No class yet" has no menu
+        f"raid:v1:cls:{_EVENT}",
+        f"raid:v1:cls:{_EVENT}:none",  # nor a button
+        f"raid:v1:cls:{_EVENT}:necromancer",
+        f"raid:v1:cls:{_EVENT}:mage:confirmed",
+        f"raid:v1:card:{_EVENT}",
+        f"raid:v1:card:{_EVENT}:edit",
         f"raid:v1:pickclass:{_EVENT}:yolo",
         f"raid:v1:pickclass:{_EVENT}",
         f"raid:v1:release:{_EVENT}",
