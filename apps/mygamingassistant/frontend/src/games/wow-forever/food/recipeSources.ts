@@ -2,10 +2,10 @@
  * Turns a food's sources (recipe + reagents) into what the detail page says:
  * who to see first, the one-line "Get it", the skill line and map links.
  */
-import { FACTION, type Faction, type PlayerFaction } from "@/games/wow-forever/types/worldMap";
+import { FACTION, TERRITORY, type Faction, type PlayerFaction, type Territory } from "@/games/wow-forever/types/worldMap";
 import { ENDPOINT_KIND, formatEndpoint } from "@/games/wow-forever/worldMap/trip";
 import type { FoodRecord } from "@/games/wow-forever/types/food";
-import type { DropSource, ItemSources, VendorSpot } from "@/games/wow-forever/types/recipeSources";
+import type { DropMob, DropSource, ItemSources, MobSpot, VendorSpot } from "@/games/wow-forever/types/recipeSources";
 
 /** Classic item ids stop well below this; Forever's new items start far above it. */
 export const FIRST_FOREVER_ITEM_ID = 100_000;
@@ -100,15 +100,44 @@ export function isRareDrop(drop: DropSource): boolean {
 /** This many kinds of mob dropping it = "drops from mobs level X–Y", not a mob to farm (cloth). */
 export const COMMON_DROP_MOBS = 50;
 
-/** Cloth and the like: hundreds of mobs drop it, so no one mob is worth naming. */
+/** Cloth and the like: hundreds of mobs drop it, so its mobs are a farm spot per zone. */
 export function isCommonDrop(drop: DropSource): boolean {
   return !drop.world && drop.mobs.length + drop.more >= COMMON_DROP_MOBS;
 }
 
-/** "Drops from 588 kinds of mobs, level 5–45 — most in The Barrens, Westfall." */
+/** "595 kinds of mobs drop it, level 14–60. The best one to farm in each zone:" */
 export function describeCommonDrop(drop: DropSource): string {
-  const where = drop.zones.length ? ` — most in ${drop.zones.join(", ")}` : "";
-  return `Drops from ${drop.mobs.length + drop.more} kinds of mobs, ${levelRange(drop.levels)}${where}.`;
+  return `${drop.mobs.length + drop.more} kinds of mobs drop it, ${levelRange(drop.levels)}. The best one to farm in each zone:`;
+}
+
+const HOSTILE_TERRITORY: Record<PlayerFaction, Territory> = {
+  [FACTION.alliance]: TERRITORY.horde,
+  [FACTION.horde]: TERRITORY.alliance,
+};
+
+/** The other faction's zone — farmable, but their guards and players are about. */
+export function isHostileGround(spot: Pick<MobSpot, "territory">, faction: PlayerFaction): boolean {
+  return spot.territory === HOSTILE_TERRITORY[faction];
+}
+
+/** "Horde territory" for a spot on the other faction's ground, else "". */
+export function hostileGroundLabel(spot: Pick<MobSpot, "territory">, faction: PlayerFaction): string {
+  if (!isHostileGround(spot, faction)) return "";
+  return faction === FACTION.alliance ? "Horde territory" : "Alliance territory";
+}
+
+/** Your zone, then your faction's zones, contested ones, the other faction's last. */
+function groundRank(spot: MobSpot | null, faction: PlayerFaction, zoneId: number | null): number {
+  if (!spot) return 4;
+  if (spot.zoneId === zoneId) return 0;
+  if (spot.territory === TERRITORY.contested || spot.territory === null) return 2;
+  return isHostileGround(spot, faction) ? 3 : 1;
+}
+
+/** Farm spots for a common drop, the closest-to-home and lowest-level first. */
+export function farmSpots(drop: DropSource, faction: PlayerFaction, zoneId: number | null): DropMob[] {
+  const rank = (m: DropMob) => groundRank(m.spot, faction, zoneId);
+  return [...drop.mobs].sort((a, b) => rank(a) - rank(b) || a.minLevel - b.minLevel || a.name.localeCompare(b.name));
 }
 
 /** "World drop from mobs level 10–30, mostly in The Barrens" / "Rare drop …". */

@@ -30,7 +30,7 @@ from scripts.wow_food.build import (
     load_trainer_skill,
     quest_details,
 )
-from scripts.wow_food.recipe_sources import MOB_COLUMNS, VENDOR_COLUMNS, ClassicSources
+from scripts.wow_food.recipe_sources import MOB_COLUMNS, VENDOR_COLUMNS, ClassicSources, territory_of
 from scripts.wow_professions.crafts import (
     ACQUIRE_ON_SKILL_LEARN,
     EFFECT_CREATE_ITEM,
@@ -289,7 +289,7 @@ def main() -> None:
             for rec in recipes[key]
             if rec["learn"]["source"] == "trainer" and rec["spell"] in classic_skill
         }
-    _, zone_bounds = load_zones()
+    zone_entries, zone_bounds = load_zones()
     classic = ClassicSources(zone_bounds, WorldMapArt())
     teaching = sorted({rec["learn"]["itemId"] for rows in recipes.values() for rec in rows if rec["learn"].get("itemId")})
     recipe_sources = {str(i): classic.recipe_sources(i) for i in teaching}
@@ -314,6 +314,7 @@ def main() -> None:
         "questGiverColumns": ["type", "entry", "name", "zone", "subzone", "x", "y", "faction"],
         "quests": quests,
         "zones": {str(k): v for k, v in sorted(classic.zone_names.items())},
+        "territory": territory_of(classic.zone_names, zone_entries),
         "recipes": {k: v for k, v in recipe_sources.items() if v},
         "reagents": {k: v for k, v in reagent_sources.items() if v},
         "disenchantColumns": DISENCHANT_COLUMNS,

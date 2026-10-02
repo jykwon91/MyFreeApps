@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.wow_food.recipe_sources import VENDOR_COLUMNS, _stock
+from scripts.wow_food.recipe_sources import MIN_FARM_CHANCE, VENDOR_COLUMNS, _stock, territory_of
 from scripts.wow_professions.build import DISENCHANT_COLUMNS, _best_giver, _disenchant_kind, _roll_chances
 from scripts.wow_professions.crafts import (
     ClientRecipes,
@@ -212,3 +212,29 @@ class TestVendorStock:
         assert data["vendorColumns"] == VENDOR_COLUMNS
         tilli = [v for v in data["reagents"]["10938"]["vendors"] if v[1] == "Tilli Thistlefuzz"]
         assert tilli and tilli[0][-2:] == [2, 120]  # Lesser Magic Essence: 2 at a time, every 2 hours
+
+
+class TestClothFarmSpots:
+    @pytest.fixture(scope="class")
+    def sources(self) -> dict:
+        return json.loads((CRAFTING_DATA / "classic" / "sources.json").read_text(encoding="utf-8"))
+
+    def test_wool_cloth_gets_a_farm_spot_per_zone(self, sources: dict) -> None:
+        drop = sources["reagents"]["2592"]["drop"]
+        zones = [m[4] for m in drop["mobs"]]
+        assert len(zones) >= 5 and len(set(zones)) == len(zones)
+        assert len({m[0] for m in drop["mobs"]}) == len(drop["mobs"])  # a different mob in each zone
+        assert all(m[3] >= MIN_FARM_CHANCE for m in drop["mobs"])
+
+    def test_spots_carry_territory(self, sources: dict) -> None:
+        territory = sources["territory"]
+        sides = {territory[str(m[4])] for m in sources["reagents"]["2589"]["drop"]["mobs"]}
+        assert sides >= {"alliance", "horde"}  # Linen Cloth: a starting zone for each side
+
+    def test_no_guards_or_elites(self, sources: dict) -> None:
+        names = {m[0] for i in ("2589", "2592", "4306", "4338", "14047") for m in sources["reagents"][i]["drop"]["mobs"]}
+        assert not names & {"Refuge Pointe Defender", "Nethergarde Soldier", "Horde Scout", "Felguard Elite"}
+
+    def test_territory_of_counts_capitals_as_their_faction(self) -> None:
+        zones = [{"id": 1, "territory": "contested"}, {"id": 2, "faction": "A"}, {"id": 3}]
+        assert territory_of([3, 2, 1], zones) == {"1": "contested", "2": "alliance"}

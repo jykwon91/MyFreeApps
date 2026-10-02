@@ -1,4 +1,4 @@
-import type { Faction } from "@/games/wow-forever/types/worldMap";
+import type { Faction, Territory } from "@/games/wow-forever/types/worldMap";
 
 /** A vendor who sells it, placed on the World Map. */
 export interface VendorSpot {
@@ -28,6 +28,8 @@ export interface MobSpot {
   subzone: string;
   x: number;
   y: number;
+  /** Whose ground the zone is (null when the client doesn't say). */
+  territory: Territory | null;
 }
 
 export interface DropMob {
