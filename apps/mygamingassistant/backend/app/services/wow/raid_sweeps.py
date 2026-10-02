@@ -40,7 +40,7 @@ import logging
 import uuid
 from collections.abc import Awaitable, Callable
 from contextlib import AbstractAsyncContextManager
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Final
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -49,13 +49,12 @@ from app.models.wow.wow_raid_event import WowRaidEvent
 from app.repositories.wow import wow_raid_event_repo, wow_raid_guild_repo
 from app.services.discord import raid_deadline_copy, raid_extras, raid_publisher, raid_repeat_publisher, rest
 from app.services.wow import raid_consumables_round, raid_event_service
+from app.services.wow.raid_deadline import COMPLETE_AFTER
 from app.services.wow.raid_details import leader_id
 from app.services.wow.raid_notification_outcomes import RunStats
 
 logger = logging.getLogger(__name__)
 
-# A scheduled raid this long past its start is marked completed.
-COMPLETE_AFTER: Final = timedelta(hours=6)
 # The most raids each sweep takes a tick; the rest wait for the next.
 SWEEP_CAP: Final = 25
 

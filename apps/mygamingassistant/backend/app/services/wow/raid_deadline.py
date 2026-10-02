@@ -36,6 +36,8 @@ from app.services.wow.raid_text import icon_text
 
 # The longest deadline, 7 days before the start (ck_wowraidevent_signup_deadline).
 MAX_MINUTES: Final = 10080
+# A scheduled raid this long past its start is marked completed (``raid_sweeps``).
+COMPLETE_AFTER: Final = timedelta(hours=6)
 STARTED_HINT: Final = "This raid has started."
 CLOSED_HINT: Final = "Sign-ups are closed."
 
