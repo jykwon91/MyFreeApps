@@ -22,6 +22,8 @@ SEND_MESSAGES: Final = 1 << 11
 EMBED_LINKS: Final = 1 << 14
 MENTION_EVERYONE: Final = 1 << 17
 MANAGE_EVENTS: Final = 1 << 33
+CREATE_PUBLIC_THREADS: Final = 1 << 35
+CREATE_EVENTS: Final = 1 << 44
 
 ALL_PERMISSIONS: Final = (1 << 64) - 1
 
@@ -34,6 +36,8 @@ PERMISSION_LABELS: Final[dict[int, str]] = {
     EMBED_LINKS: "Embed Links",
     MENTION_EVERYONE: "Mention @everyone, @here and All Roles",
     MANAGE_EVENTS: "Manage Events",
+    CREATE_PUBLIC_THREADS: "Create Public Threads",
+    CREATE_EVENTS: "Create Events",
 }
 
 # Overwrite types in a channel's ``permission_overwrites`` array.

@@ -20,7 +20,7 @@ from platform_shared.services.discord import MANAGE_EVENTS, MANAGE_GUILD
 
 from app.db.session import unit_of_work
 from app.repositories.wow import wow_raid_guild_repo
-from app.services.discord import emojis, raid_copy, raid_publisher
+from app.services.discord import emojis, raid_copy, raid_publisher, raid_setup_check
 from app.services.discord.components.raid_manage_open import open_from_command
 from app.services.discord.components.raid_repeat import list_repeats
 from app.services.discord.interaction import (
@@ -98,8 +98,8 @@ async def _setup(interaction: Interaction, background: BackgroundTasks) -> dict[
         await wow_raid_guild_repo.set_ping_role(db, guild, ping_role_id)
 
     background.add_task(
-        raid_publisher.verify_setup,
-        raid_publisher.SetupCheck(
+        raid_setup_check.verify_setup,
+        raid_setup_check.SetupCheck(
             application_id=interaction.application_id,
             token=interaction.token,
             guild_discord_id=interaction.guild_id,
