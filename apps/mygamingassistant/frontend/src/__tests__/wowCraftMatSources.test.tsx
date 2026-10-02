@@ -13,6 +13,8 @@ import { CRAFTING_ROUTES } from "@/games/wow-forever/data/professions/crafting/c
 import { createSourceLookup, type RawSourcesFile } from "@/games/wow-forever/data/sourceDecode";
 import { describeCommonDrop, hasSources, isCommonDrop, stockLabel } from "@/games/wow-forever/food/recipeSources";
 import { FACTION } from "@/games/wow-forever/types/worldMap";
+import { COOKING_ROUTE } from "@/games/wow-forever/data/professions/cooking";
+import { FOOD_SOURCES } from "@/games/wow-forever/data/food/recipeSourceData";
 import type { CraftingFile, CraftingProfession, TrainerSkills } from "@/games/wow-forever/types/crafting";
 
 const SOURCES = createSourceLookup(sourcesJson as unknown as RawSourcesFile);
@@ -107,6 +109,25 @@ describe("crafting material sources", () => {
         .buy.filter((l) => !l.madeBy && l.id < 100_000 && !hasSources(SOURCES.reagent(l.id)))
         .map((l) => l.name);
       expect(unknown, profession).toEqual([]);
+    }
+  });
+
+  it("names the lowest-level mob that drops a meat, with its level", () => {
+    const wolves = FOOD_SOURCES.reagent(2672).drop!.mobs;
+    const lowest = Math.min(...wolves.map((m) => m.minLevel));
+    const line = matSummary({ sources: FOOD_SOURCES.reagent(2672), madeBy: null }, FACTION.alliance, null, 1);
+    expect(line).toMatch(new RegExp(`^Drops from .+, level ${lowest}(–[0-9]+)?$`));
+  });
+
+  it("names every Cooking route material with an item that has known sources", () => {
+    for (const step of COOKING_ROUTE) {
+      if (step.kind !== "craft") continue;
+      const text = typeof step.materials === "string" ? step.materials : Object.values(step.materials).join(" ");
+      expect(step.mats?.length, step.name).toBeGreaterThan(0);
+      for (const m of step.mats ?? []) {
+        expect(text, step.name).toContain(m.name);
+        expect(hasSources(FOOD_SOURCES.reagent(m.id)), m.name).toBe(true);
+      }
     }
   });
 

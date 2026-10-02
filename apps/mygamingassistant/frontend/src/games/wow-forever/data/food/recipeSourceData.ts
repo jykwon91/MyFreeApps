@@ -1,5 +1,5 @@
 import sourcesJson from "@/games/wow-forever/data/food/classic/recipeSources.json";
-import { createSourceLookup, type RawSourcesFile } from "@/games/wow-forever/data/sourceDecode";
+import { createSourceLookup, type RawSourcesFile, type SourceLookup } from "@/games/wow-forever/data/sourceDecode";
 import type { ItemSources } from "@/games/wow-forever/types/recipeSources";
 
 /**
@@ -8,6 +8,9 @@ import type { ItemSources } from "@/games/wow-forever/types/recipeSources";
  * may differ in Forever) by `python -m scripts.wow_food.build`.
  */
 const SOURCES = createSourceLookup(sourcesJson as unknown as RawSourcesFile);
+
+/** The whole lookup, for components that take any profession's sources. */
+export const FOOD_SOURCES: SourceLookup = SOURCES;
 
 /** e.g. "cmangos/classic-db@ec4f596…". */
 export const RECIPE_SOURCE_DATA: string = SOURCES.source;

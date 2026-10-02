@@ -107,6 +107,22 @@ describe("Professions page", () => {
     expect(within(rowRod).queryByText(/ask a player with Blacksmithing/)).not.toBeInTheDocument();
   });
 
+  it("says where to get each material right in the route row, for crafting and Cooking", async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderAt("/wow-forever/professions?p=tailoring");
+    await screen.findByRole("heading", { name: "Leveling route" });
+    const thread = route().getAllByText("1× Coarse Thread")[0].closest("details") as HTMLElement;
+    expect(within(thread).getByText("Sold in most towns")).toBeInTheDocument();
+    unmount();
+
+    renderAt("/wow-forever/professions?p=cooking");
+    const spices = route().getAllByText("Mild Spices")[0].closest("details") as HTMLDetailsElement;
+    expect(within(spices).getByText("Sold in most towns")).toBeInTheDocument();
+    await user.click(within(spices).getByText("Mild Spices"));
+    expect(spices.open).toBe(true);
+    expect(within(spices).getByText("Sold by")).toBeInTheDocument();
+  });
+
   it("points at your row for ?skill= without overwriting the saved skill", async () => {
     window.localStorage.setItem(CRAFT_SKILL_STORAGE_KEY, JSON.stringify({ enchanting: 10 }));
     renderAt("/wow-forever/professions?p=enchanting&skill=120");

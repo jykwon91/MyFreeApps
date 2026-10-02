@@ -1,4 +1,5 @@
 import RouteRow from "@/games/wow-forever/components/professions/RouteRow";
+import type { MatPlace } from "@/games/wow-forever/components/professions/RouteMatList";
 import SkillColorLegend from "@/games/wow-forever/components/professions/SkillColorLegend";
 import type { RouteStep } from "@/games/wow-forever/data/professions/professionTypes";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
@@ -9,10 +10,12 @@ interface ProfessionRouteProps {
   /** Column names, e.g. "Materials"/"Recipe from" for Cooking, "Where"/"Spot" for Fishing. */
   columns: { name: string; materials: string; source: string };
   showLegend: boolean;
+  /** Where materials come from — Cooking; Fishing has none. */
+  matPlace?: MatPlace;
 }
 
 /** The leveling route as a list that stacks into cards on phones — no sideways scrolling. */
-export default function ProfessionRoute({ steps, faction, columns, showLegend }: ProfessionRouteProps) {
+export default function ProfessionRoute({ steps, faction, columns, showLegend, matPlace }: ProfessionRouteProps) {
   // When most rows are unconfirmed, a chip on each is noise — one caption says it.
   const unconfirmed = steps.filter((s) => s.confidence === "unconfirmed").length;
   const mostlyUnconfirmed = unconfirmed > steps.length / 2;
@@ -40,6 +43,7 @@ export default function ProfessionRoute({ steps, faction, columns, showLegend }:
               showChip={!mostlyUnconfirmed}
               materialsLabel={columns.materials}
               sourceLabel={columns.source}
+              matPlace={matPlace}
             />
           ))}
         </ol>

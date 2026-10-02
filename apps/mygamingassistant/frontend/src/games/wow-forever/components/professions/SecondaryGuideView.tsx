@@ -8,7 +8,17 @@ import GuideSection from "@/games/wow-forever/components/guide/GuideSection";
 import { COOKING_ROUTE, COOKING_STEPS } from "@/games/wow-forever/data/professions/cooking";
 import { FISHING_ROUTE, FISHING_STEPS } from "@/games/wow-forever/data/professions/fishing";
 import { PROFESSION, type Profession } from "@/games/wow-forever/data/professions/professionTypes";
+import { FOOD_SOURCES } from "@/games/wow-forever/data/food/recipeSourceData";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
+
+/** Cooking makes nothing another profession uses, so there's no made-by or own recipe to point at. */
+const NO_CRAFTS = { madeBy: {}, recipes: [] };
+
+interface SecondaryGuideViewProps {
+  profession: Profession;
+  faction: PlayerFaction;
+  zoneId: number | null;
+}
 
 const VIEWS = {
   cooking: {
@@ -26,8 +36,9 @@ const VIEWS = {
 } as const;
 
 /** Cooking and Fishing: trainers, the route table and what Forever changed. */
-export default function SecondaryGuideView({ profession, faction }: { profession: Profession; faction: PlayerFaction }) {
+export default function SecondaryGuideView({ profession, faction, zoneId }: SecondaryGuideViewProps) {
   const view = VIEWS[profession];
+  const matPlace = { place: { sources: FOOD_SOURCES, faction, zoneId, file: NO_CRAFTS }, professionLabel: "Cooking" };
   return (
     <>
       <GuideSection
@@ -40,7 +51,13 @@ export default function SecondaryGuideView({ profession, faction }: { profession
       </GuideSection>
 
       <GuideSection id="route" title="Leveling route" intro={view.routeIntro}>
-        <ProfessionRoute steps={view.route} faction={faction} columns={view.columns} showLegend={profession === PROFESSION.cooking} />
+        <ProfessionRoute
+          steps={view.route}
+          faction={faction}
+          columns={view.columns}
+          showLegend={profession === PROFESSION.cooking}
+          matPlace={matPlace}
+        />
         {profession === PROFESSION.fishing ? <FishRecipesList /> : null}
         {profession === PROFESSION.cooking ? <FoodPickerLink /> : null}
       </GuideSection>

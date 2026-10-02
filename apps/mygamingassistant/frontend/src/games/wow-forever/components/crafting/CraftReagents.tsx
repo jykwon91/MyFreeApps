@@ -11,7 +11,7 @@ interface CraftReagentsProps {
 /** "2× Bolt of Linen Cloth, 1× Coarse Thread" — per craft; each opens to where to get it. */
 export default function CraftReagents({ reagents, place, professionLabel }: CraftReagentsProps) {
   return (
-    <ul className="text-sm" aria-label="Materials per craft — open one to see where to get it">
+    <ul className="text-sm" aria-label="Materials per craft — open one for every place to get it">
       {reagents.map((r) => (
         <CraftMatItem
           key={r.id}
@@ -19,7 +19,7 @@ export default function CraftReagents({ reagents, place, professionLabel }: Craf
           label={`${r.count}× ${r.name}`}
           place={place}
           professionLabel={professionLabel}
-          showSummary={false}
+          summaryParts={1}
         />
       ))}
     </ul>
