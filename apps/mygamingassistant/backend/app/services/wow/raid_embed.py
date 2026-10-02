@@ -1,110 +1,166 @@
 """Public raid signup message — a PURE function of (event, signups, guild).
 
-Builds the embed + button rows for the signup post.  Used for the initial
-post (REST), every button click (UPDATE_MESSAGE, type 7) and every edit /
-cancellation (REST edit).  No I/O, no clock — ``starts_at`` is rendered with
-Discord ``<t:…>`` timestamps so every viewer sees their own local time.
+Builds the embed + button rows for the signup post, laid out like
+Raid-Helper's (in our own art).  Used for the initial post (REST), every
+button click (UPDATE_MESSAGE, type 7), every edit / cancellation (REST edit)
+and the create preview.  No I/O, no clock — times are Discord ``<t:…>``
+timestamps, so every viewer sees their own local time.
 
 Layout
 ------
-Title        "Onyxia — Sat Oct 10"               ("CANCELLED — " prefix when cancelled)
-Description  <t:X:F> (<t:X:R>) / notes /
-             "**Confirmed 15/40 (1 late)** · Tentative 3 · Queued 2 · Bench 1 · Absence 4"
-             (seats taken: late players hold seats too)
-Fields       Tanks (n) / Healers (n) / DPS (n): one line per class, e.g.
-             "<class icon> Warrior ×2: Alice, Bob"; then Late / Tentative /
-             "Queued (n) · waiting for a seat" (in line order) /
-             "Bench (n) · backups" / Absence.
-             Icons are the bot's application emojis; without them (before the
-             first emoji sync) the class shows as a text tag, "[WAR]".
-Footer       "Signed up: 20 · Created by Thrall · Raid ID a1b2"
-Colors       blurple open, orange full, grey cancelled.
+Author       "Onyxia's Lair · Leader: Thrall"      ("CANCELLED · " prefix when cancelled)
+Description  the title in letter tiles (else "## Onyxia's Lair")
+             {date} <t:X:D>  {time} <t:X:t>  {signups} **14/40** confirmed (2 late) · 3 in queue
+             {globe} Server time: Sat 8:00 PM EDT  {countdown} <t:X:R>
+             notes
+             {tank} Tanks **2**  {melee} Melee **6**  {ranged} Ranged **4**  {healer} Healers **2**
+Fields       one inline column per button with anyone in it, "{icon} Warrior (3)":
+             "{spec icon} `1` **Alice**" per line, in line order; late players
+             end with {late}, the queue is ~~struck~~ and ends with {queued};
+             then Tentative / Bench / Absence as "{spec icon} Name" lists.
+             While sign-ups are open, "Nobody yet" names the empty columns, so
+             every class button's icon is labelled somewhere on the post.
+Footer       "ID a1b2c3 · Tap your class to sign up. My sign-up changes your spec."
+Colors       purple; grey once cancelled.
+Buttons      [Tank] + one per class (icon + column count), then [Late]
+             [Tentative] [Bench] [Absence] [My sign-up] — ``raid_post_buttons``.
+
+Icons are the bot's application emojis.  Without them (before the first
+emoji sync) a class shows as a text tag ("[WAR]"), a class button as
+"WAR 3", the markers as "(late)" / "(queued)", and the title as plain text.
 
 Discord limits & degradation
 ----------------------------
 Each field value ≤ 1024 chars, the whole embed ≤ 6000 (we budget 5800).
-When the full roster doesn't fit, degrade in order until it does:
-  1. cap the names shown per line, the rest become "+N more";
-  2. the status fields become counts ("Tap Roster to see who.");
-  3. role lines drop names entirely ("[WAR] Warrior ×5").
-The [Roster] button always shows the complete list privately.
+When the post doesn't fit, it gives up detail in order until it does:
+  1. the order numbers;
+  2. the entry icons (markers become text; the Tanks column and the lists
+     keep a class tag);
+  3. the letter tiles (plain-text title);
+  4. names beyond 9 characters;
+  5. names past a cap per list, which become "+N more" (down to none).
+A column too long for its field takes the next steps on its own.  Each
+level's length comes from running totals (``raid_post_fit``), so the post
+is rendered once, however long its lists.
+My sign-up → [Full roster] always shows the complete list privately.
 """
 from __future__ import annotations
 
-import re
-from collections.abc import Sequence
-from dataclasses import dataclass
-from datetime import datetime
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass, replace
+from functools import partial
 from typing import Any, Final
-from zoneinfo import ZoneInfo
 
-from platform_shared.services.discord import (
-    BUTTON_STYLE_SECONDARY,
-    BUTTON_STYLE_SUCCESS,
-    COMPONENT_TYPE_ACTION_ROW,
-    COMPONENT_TYPE_BUTTON,
-    EmojiSet,
-)
+from platform_shared.services.discord import EmojiSet
 
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.models.wow.wow_raid_signup import WowRaidSignup
-from app.services.wow import raid_custom_id
-from app.services.wow.raid_catalog import (
-    CLASSES,
-    CLASSES_BY_KEY,
-    ROLE_FIELD_LABELS,
-    ROLE_ORDER,
-    raid_name,
-    spec_info,
+from app.services.wow.raid_catalog import TANK_COLUMN, column_icon, column_label
+from app.services.wow.raid_post_buttons import build_signup_components
+from app.services.wow.raid_post_fit import FittedField, Lines
+from app.services.wow.raid_post_layout import (
+    NO_CLASS_COLUMN,
+    NO_CLASS_LABEL,
+    ROLE_ROW,
+    post_columns,
+    role_counts,
+    tile_line,
+    with_status,
 )
-from app.services.wow.raid_roster import RosterSummary, compute_roster_summary, in_line_order
+from app.services.wow.raid_roster import (
+    QUEUED_STATUS,
+    RosterSummary,
+    compute_roster_summary,
+    order_numbers,
+)
+from app.services.wow.raid_text import (
+    MAX_NAME_CHARS,
+    class_tag,
+    display_title,
+    escape_markdown,
+    escape_name,
+    icon_text,
+    seats_detail,
+    server_time_label,
+    signup_icon,
+    status_heading,
+)
 
-COLOR_OPEN: Final = 0x5865F2
-COLOR_FULL: Final = 0xE67E22
+COLOR_OPEN: Final = 0x7D3C98
 COLOR_CANCELLED: Final = 0x95A5A6
 
 FIELD_VALUE_LIMIT: Final = 1024
+AUTHOR_NAME_LIMIT: Final = 256
 EMBED_TOTAL_BUDGET: Final = 5800  # Discord's hard cap is 6000; keep headroom.
-MAX_NAME_CHARS: Final = 32
+POST_NAME_CHARS: Final = 12  # three columns side by side on a desktop
+SHORT_NAME_CHARS: Final = 9
 
-NO_SIGNUPS_TEXT: Final = "No one yet. Be the first!"
-EMPTY_ROLE_TEXT: Final = "—"
-COLLAPSED_STATUS_TEXT: Final = "Tap **Roster** to see who."
+NOBODY_YET: Final = "Nobody yet"
+SIGN_UP_HINT: Final = "Tap your class to sign up. My sign-up changes your spec."
+EM_SPACE: Final = " "
 
 NO_MENTIONS: Final[dict[str, Any]] = {"parse": []}
 
-_MARKDOWN_SPECIALS: Final = re.compile(r"([\\*_~`|>\[\]])")
-_STATUS_FIELDS: Final = (
-    ("late", "Late"),
-    ("tentative", "Tentative"),
-    ("queued", "Queued"),
-    ("bench", "Bench"),
-    ("absence", "Absence"),
-)
-# Said after the count, so the queue and the bench aren't mistaken for each other.
-_STATUS_HINTS: Final[dict[str, str]] = {"queued": "waiting for a seat", "bench": "backups"}
-# Status buttons after [Sign up]: (status, label, icon).
-_STATUS_BUTTONS: Final = (
-    ("late", "Late", "status_late"),
+# Event statuses that still take sign-ups (a draft is the create preview).
+_OPEN_STATUSES: Final = ("draft", "scheduled")
+_FOOTER_HINTS: Final[dict[str, str]] = {
+    "cancelled": "This raid was cancelled.",
+    "completed": "Sign-ups are closed.",
+}
+# The lists under the columns: (status, label, icon).
+STATUS_LISTS: Final = (
     ("tentative", "Tentative", "status_tentative"),
     ("bench", "Bench", "status_bench"),
     ("absence", "Absence", "status_absence"),
 )
+# After a name in a column: (icon, text when the icon is missing or dropped).
+_MARKERS: Final[dict[str, tuple[str, str]]] = {
+    "late": ("status_late", "(late)"),
+    QUEUED_STATUS: ("status_queued", "(queued)"),
+}
 
 
 @dataclass(frozen=True)
-class _Entry:
-    name: str
-    wow_class: str | None
+class _Style:
+    """How much detail the post shows (see "degradation" above)."""
+
+    numbers: bool = True  # order numbers in the columns
+    icons: bool = True  # spec and marker icons on each entry
+    tiles: bool = True  # the title in letter tiles
+    name_chars: int = POST_NAME_CHARS
+    cap: int | None = None  # names shown per list; the rest are "+N more"
+
+    @property
+    def look(self) -> tuple[bool, bool, int]:
+        """What an entry's text depends on: not the cap, not the tiles."""
+        return (self.numbers, self.icons, self.name_chars)
 
 
 @dataclass(frozen=True)
-class _RenderMode:
-    """How aggressively to compress the roster (see module docstring)."""
+class _Roster:
+    """The post's lists, worked out once and rendered at each level of detail."""
 
-    names_per_line: int | None  # None = all names
-    collapse_status_fields: bool
+    columns: dict[str, list[WowRaidSignup]]  # columns with anyone in them, in post order
+    empty_columns: list[str]
+    lists: dict[str, list[WowRaidSignup]]  # tentative / bench / absence
+    numbers: dict[str, int]
+    roles: dict[str, int]
+
+    @classmethod
+    def of(cls, signups: Sequence[WowRaidSignup]) -> _Roster:
+        by_column = post_columns(signups)
+        return cls(
+            columns={column: players for column, players in by_column.items() if players},
+            empty_columns=[column for column, players in by_column.items() if not players],
+            lists={status: with_status(signups, status) for status, _, _ in STATUS_LISTS},
+            numbers=order_numbers(signups),
+            roles=role_counts(signups),
+        )
+
+    @property
+    def longest(self) -> int:
+        return max((len(players) for players in (*self.columns.values(), *self.lists.values())), default=0)
 
 
 # ---------------------------------------------------------------------------
@@ -126,7 +182,7 @@ def build_signup_message(
     """
     return {
         "embeds": [build_signup_embed(event, signups, guild, emojis=emojis)],
-        "components": build_signup_components(event, emojis=emojis),
+        "components": build_signup_components(event, signups, emojis=emojis),
         "allowed_mentions": NO_MENTIONS,
     }
 
@@ -152,32 +208,6 @@ def build_initial_post(
     return message
 
 
-def build_signup_components(event: WowRaidEvent, *, emojis: EmojiSet) -> list[dict[str, Any]]:
-    """Two button rows; every button is disabled once the raid is no longer open."""
-    disabled = event.status != "scheduled"
-    row1 = [
-        _button(
-            "Sign up", BUTTON_STYLE_SUCCESS, raid_custom_id.encode("signup", event.id), disabled,
-            emoji=emojis.component("status_signed"),
-        ),
-    ]
-    row1 += [
-        _button(
-            label, BUTTON_STYLE_SECONDARY, raid_custom_id.encode("status", event.id, status), disabled,
-            emoji=emojis.component(icon),
-        )
-        for status, label, icon in _STATUS_BUTTONS
-    ]
-    row2 = [
-        _button("My signup", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("mine", event.id), disabled),
-        _button("Roster", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("roster", event.id), disabled),
-    ]
-    return [
-        {"type": COMPONENT_TYPE_ACTION_ROW, "components": row1},
-        {"type": COMPONENT_TYPE_ACTION_ROW, "components": row2},
-    ]
-
-
 def build_signup_embed(
     event: WowRaidEvent,
     signups: Sequence[WowRaidSignup],
@@ -186,286 +216,235 @@ def build_signup_embed(
     emojis: EmojiSet,
 ) -> dict[str, Any]:
     summary = compute_roster_summary(signups, size_cap=event.size_cap)
-    title = _title(event, guild)
-    description = _description(event, summary)
-    footer = _footer(event, summary)
-
-    fields: list[dict[str, Any]] = []
-    if signups:
-        fields = _fit_fields(signups, emojis, fixed_len=len(title) + len(description) + len(footer))
-
+    roster = _Roster.of(signups)
+    ladder = _ladder(roster.longest)
+    fields = _fitted_fields(event, roster, ladder, emojis)
+    descriptions = {tiles: _description(event, guild, summary, roster, tiles, emojis) for tiles in (True, False)}
+    author, footer = _author(event), _footer(event)
+    level = _first_fit(ladder, len(author) + len(footer), descriptions, fields)
     embed: dict[str, Any] = {
-        "title": title,
-        "description": description,
-        "color": _color(event, summary),
+        "author": {"name": author},
+        "description": descriptions[ladder[level].tiles],
+        "color": _color(event),
         "footer": {"text": footer},
     }
     if fields:
-        embed["fields"] = fields
+        embed["fields"] = [field.field(level) for field in fields]
     return embed
 
 
 def embed_length(embed: dict[str, Any]) -> int:
     """Characters Discord counts toward the 6000 total."""
     total = len(embed.get("title", "")) + len(embed.get("description", ""))
+    total += len(embed.get("author", {}).get("name", ""))
     total += len(embed.get("footer", {}).get("text", ""))
     for embed_field in embed.get("fields", []):
         total += len(embed_field["name"]) + len(embed_field["value"])
     return total
 
 
-def display_title(event: WowRaidEvent) -> str:
-    """'Onyxia' — the event's custom title, else the raid's display name."""
-    return event.title or raid_name(event.raid_key)
-
-
-def local_day_label(starts_at: datetime, tz_name: str) -> str:
-    """'Sat Oct 10' in the guild's timezone (portable — no %-d)."""
-    local = starts_at.astimezone(ZoneInfo(tz_name))
-    return f"{local:%a %b} {local.day}"
-
-
-def escape_name(display_name: str) -> str:
-    """Trim to MAX_NAME_CHARS and escape Discord markdown so names render literally."""
-    name = " ".join(display_name.split())
-    if len(name) > MAX_NAME_CHARS:
-        name = name[: MAX_NAME_CHARS - 1] + "…"
-    return _MARKDOWN_SPECIALS.sub(r"\\\1", name)
-
-
-def class_tag(wow_class: str | None) -> str:
-    info = CLASSES_BY_KEY.get(wow_class or "")
-    if info is None:
-        return ""
-    return f"[{info.tag}]"
-
-
-def class_icon(wow_class: str | None, emojis: EmojiSet) -> str:
-    """The class's emoji markup, else its text tag ("[WAR]"); empty for no class."""
-    if wow_class is None or wow_class not in CLASSES_BY_KEY:
-        return ""
-    return emojis.markup(wow_class, class_tag(wow_class))
-
-
-def spec_icon(wow_class: str | None, spec: str | None, emojis: EmojiSet) -> str:
-    """The spec's emoji; else the class icon (a pre-spec signup, or the spec emoji is missing)."""
-    info = spec_info(wow_class, spec)
-    if info is None:
-        return class_icon(wow_class, emojis)
-    return emojis.markup(info.icon, class_icon(wow_class, emojis))
-
-
 # ---------------------------------------------------------------------------
-# Header / footer
+# Embed
 # ---------------------------------------------------------------------------
 
 
-def _title(event: WowRaidEvent, guild: WowRaidGuild) -> str:
-    title = f"{display_title(event)} — {local_day_label(event.starts_at, guild.timezone)}"
+def _ladder(longest_list: int) -> list[_Style]:
+    """Every level of detail, richest first; the last always fits."""
+    lean = _Style(numbers=False, icons=False, tiles=False, name_chars=SHORT_NAME_CHARS)
+    return [
+        _Style(),
+        _Style(numbers=False),
+        _Style(numbers=False, icons=False),
+        _Style(numbers=False, icons=False, tiles=False),
+        lean,
+        *(replace(lean, cap=cap) for cap in range(longest_list - 1, -1, -1)),
+    ]
+
+
+def _first_fit(
+    ladder: Sequence[_Style], base: int, descriptions: dict[bool, str], fields: Sequence[FittedField]
+) -> int:
+    """The richest level within the budget; else the leanest, which is bounded far below it."""
+    for level, style in enumerate(ladder):
+        total = base + len(descriptions[style.tiles]) + sum(field.length(level) for field in fields)
+        if total <= EMBED_TOTAL_BUDGET:
+            return level
+    return len(ladder) - 1
+
+
+def _author(event: WowRaidEvent) -> str:
+    text = " ".join(display_title(event).split())
+    if event.created_by_display_name:
+        leader = " ".join(event.created_by_display_name.split())[:MAX_NAME_CHARS]
+        text += f" · Leader: {leader}"
     if event.status == "cancelled":
-        return f"CANCELLED — {title}"
-    return title
+        text = f"CANCELLED · {text}"
+    return text[:AUTHOR_NAME_LIMIT]
 
 
-def _description(event: WowRaidEvent, summary: RosterSummary) -> str:
+def _description(
+    event: WowRaidEvent,
+    guild: WowRaidGuild,
+    summary: RosterSummary,
+    roster: _Roster,
+    tiles: bool,
+    emojis: EmojiSet,
+) -> str:
     unix = int(event.starts_at.timestamp())
-    lines: list[str] = []
+    lines = [_title_line(event, tiles, emojis)]
     if event.status == "cancelled":
+        lines.append(_cancel_line(event))
         lines.append(f"~~<t:{unix}:F>~~")
-        if event.cancel_reason:
-            lines.append(f"**Cancelled:** {event.cancel_reason}")
-        else:
-            lines.append("**This raid has been cancelled.**")
     else:
-        lines.append(f"<t:{unix}:F> (<t:{unix}:R>)")
+        when = (
+            icon_text(emojis, "info_date", f"<t:{unix}:D>"),
+            icon_text(emojis, "info_time", f"<t:{unix}:t>"),
+            icon_text(
+                emojis,
+                "info_signups",
+                f"**{summary.seats_taken}/{summary.size_cap}** confirmed{seats_detail(summary)}",
+            ),
+        )
+        server = (
+            icon_text(emojis, "info_globe", f"Server time: {server_time_label(event.starts_at, guild.timezone)}"),
+            icon_text(emojis, "info_countdown", f"<t:{unix}:R>"),
+        )
+        lines.append(EM_SPACE.join(when))
+        lines.append(EM_SPACE.join(server))
     if event.notes:
         lines.append(event.notes)
-
-    counts = [f"**{seats_label(summary)}**"]
-    optional_counts = (
-        ("Tentative", summary.tentative_count),
-        ("Queued", summary.queued_count),
-        ("Bench", summary.bench_count),
-        ("Absence", summary.absence_count),
+    lines.append(
+        EM_SPACE.join(
+            icon_text(emojis, icon, f"{label} **{roster.roles[role]}**") for role, label, icon in ROLE_ROW
+        )
     )
-    counts.extend(f"{label} {count}" for label, count in optional_counts if count)
-    lines.append(" · ".join(counts))
-
-    if summary.signed_up_count == 0:
-        lines.append(NO_SIGNUPS_TEXT)
     return "\n".join(lines)
 
 
-def seats_label(summary: RosterSummary) -> str:
-    """'Confirmed 40/40 (2 late)' — late players hold seats too."""
-    label = f"Confirmed {summary.seats_taken}/{summary.size_cap}"
-    if summary.late_count:
-        label += f" ({summary.late_count} late)"
-    return label
+def _title_line(event: WowRaidEvent, tiles: bool, emojis: EmojiSet) -> str:
+    title = display_title(event)
+    if tiles:
+        spelled = tile_line(title, emojis)
+        if spelled is not None:
+            return spelled
+    return f"## {escape_markdown(' '.join(title.split()))}"
 
 
-def status_heading(status: str, label: str, count: int) -> str:
-    """'Queued (3) · waiting for a seat' — the count, plus a hint for the queue and the bench."""
-    heading = f"{label} ({count})"
-    hint = _STATUS_HINTS.get(status)
-    if hint:
-        heading += f" · {hint}"
-    return heading
+def _cancel_line(event: WowRaidEvent) -> str:
+    if event.cancel_reason:
+        return f"**Cancelled:** {event.cancel_reason}"
+    return "**This raid has been cancelled.**"
 
 
-def _footer(event: WowRaidEvent, summary: RosterSummary) -> str:
-    parts = [f"Signed up: {summary.signed_up_count}"]
-    if event.created_by_display_name:
-        parts.append(f"Created by {' '.join(event.created_by_display_name.split())[:MAX_NAME_CHARS]}")
-    parts.append(f"Raid ID {str(event.id)[:4]}")
-    return " · ".join(parts)
+def _footer(event: WowRaidEvent) -> str:
+    hint = _FOOTER_HINTS.get(event.status, SIGN_UP_HINT)
+    return f"ID {str(event.id)[:6]} · {hint}"
 
 
-def _color(event: WowRaidEvent, summary: RosterSummary) -> int:
+def _color(event: WowRaidEvent) -> int:
     if event.status == "cancelled":
         return COLOR_CANCELLED
-    if summary.is_full:
-        return COLOR_FULL
     return COLOR_OPEN
 
 
 # ---------------------------------------------------------------------------
-# Fields + degradation
+# Fields
 # ---------------------------------------------------------------------------
 
 
-def _fit_fields(signups: Sequence[WowRaidSignup], emojis: EmojiSet, *, fixed_len: int) -> list[dict[str, Any]]:
-    ordered = in_line_order(signups)
-    role_groups = _role_groups(ordered)
-    status_groups = {
-        status: [_entry(s) for s in ordered if s.status == status] for status, _ in _STATUS_FIELDS
-    }
-    longest_line = max(
-        [len(entries) for groups in role_groups.values() for entries in groups.values()]
-        + [len(entries) for entries in status_groups.values()]
-        + [0]
-    )
-
-    modes: list[_RenderMode] = [_RenderMode(None, False)]
-    modes += [_RenderMode(limit, False) for limit in range(longest_line - 1, 0, -1)]
-    modes += [_RenderMode(None, True)]
-    modes += [_RenderMode(limit, True) for limit in range(longest_line - 1, -1, -1)]
-
-    fields: list[dict[str, Any]] = []
-    for mode in modes:
-        fields = _render_fields(role_groups, status_groups, mode, emojis)
-        if _fits(fields, fixed_len):
-            return fields
-    return fields  # mode (0, collapsed) is bounded far below the limits
-
-
-def _fits(fields: list[dict[str, Any]], fixed_len: int) -> bool:
-    if any(len(f["value"]) > FIELD_VALUE_LIMIT for f in fields):
-        return False
-    total = fixed_len + sum(len(f["name"]) + len(f["value"]) for f in fields)
-    return total <= EMBED_TOTAL_BUDGET
-
-
-def _entry(signup: WowRaidSignup) -> _Entry:
-    return _Entry(name=escape_name(signup.display_name), wow_class=signup.wow_class)
-
-
-def _role_groups(ordered: Sequence[WowRaidSignup]) -> dict[str, dict[str, list[_Entry]]]:
-    """role → class → entries, for confirmed signups.  Unknown roles → 'unknown'."""
-    groups: dict[str, dict[str, list[_Entry]]] = {role: {} for role in (*ROLE_ORDER, "unknown")}
-    for signup in ordered:
-        if signup.status != "confirmed":
-            continue
-        role = signup.role if signup.role in ROLE_ORDER else "unknown"
-        class_key = signup.wow_class if signup.wow_class in CLASSES_BY_KEY else ""
-        groups[role].setdefault(class_key, []).append(_entry(signup))
-    return groups
-
-
-def _render_fields(
-    role_groups: dict[str, dict[str, list[_Entry]]],
-    status_groups: dict[str, list[_Entry]],
-    mode: _RenderMode,
-    emojis: EmojiSet,
-) -> list[dict[str, Any]]:
-    fields: list[dict[str, Any]] = []
-    for role in ROLE_ORDER:
-        by_class = role_groups[role]
-        count = sum(len(entries) for entries in by_class.values())
-        lines = [
-            _class_line(class_key, by_class[class_key], mode.names_per_line, emojis)
-            for class_key in _class_order(by_class)
-        ]
-        fields.append(_field(f"{ROLE_FIELD_LABELS[role]} ({count})", "\n".join(lines) or EMPTY_ROLE_TEXT))
-
-    unknown = role_groups["unknown"]
-    unknown_entries = [entry for entries in unknown.values() for entry in entries]
-    if unknown_entries:
-        fields.append(
-            _field(
-                f"No role yet ({len(unknown_entries)})",
-                _tagged_names(unknown_entries, mode.names_per_line, emojis),
-            )
-        )
-
-    for status, label in _STATUS_FIELDS:
-        entries = status_groups[status]
-        if not entries:
-            continue
-        if mode.collapse_status_fields:
-            value = COLLAPSED_STATUS_TEXT
-        else:
-            value = _tagged_names(entries, mode.names_per_line, emojis)
-        fields.append(_field(status_heading(status, label, len(entries)), value))
+def _fitted_fields(
+    event: WowRaidEvent, roster: _Roster, ladder: Sequence[_Style], emojis: EmojiSet
+) -> list[FittedField]:
+    fields: list[FittedField] = []
+    for column, players in roster.columns.items():
+        entries = partial(_column_entries, column=column, players=players, numbers=roster.numbers, emojis=emojis)
+        fields.append(_fitted(column_heading(column, len(players), emojis), entries, "\n", ladder, inline=True))
+    for status, label, icon in STATUS_LISTS:
+        players = roster.lists[status]
+        if players:
+            name = icon_text(emojis, icon, status_heading(status, label, len(players)))
+            fields.append(_fitted(name, partial(_list_entries, players=players, emojis=emojis), ", ", ladder))
+    if roster.empty_columns and event.status in _OPEN_STATUSES:
+        legend = " · ".join(icon_text(emojis, column_icon(c), column_label(c)) for c in roster.empty_columns)
+        fields.append(FittedField.fixed(NOBODY_YET, legend, levels=len(ladder)))
     return fields
 
 
-def _class_order(by_class: dict[str, list[_Entry]]) -> list[str]:
-    known = [cls.key for cls in CLASSES if cls.key in by_class]
-    if "" in by_class:
-        known.append("")
-    return known
+def _fitted(
+    name: str,
+    entries: Callable[[_Style], list[str]],
+    sep: str,
+    ladder: Sequence[_Style],
+    *,
+    inline: bool = False,
+) -> FittedField:
+    """A list as a field at every level of *ladder*, rendering each look once."""
+    looks: dict[tuple[bool, bool, int], Lines] = {}
+    levels: list[tuple[Lines, int | None]] = []
+    for style in ladder:
+        if style.look not in looks:
+            looks[style.look] = Lines.of(entries(style), sep)
+        levels.append((looks[style.look], style.cap))
+    return FittedField.of(name, levels, limit=FIELD_VALUE_LIMIT, inline=inline)
 
 
-def _class_line(class_key: str, entries: list[_Entry], limit: int | None, emojis: EmojiSet) -> str:
-    info = CLASSES_BY_KEY.get(class_key)
-    if info is None:
-        head = f"Unknown class ×{len(entries)}"
+def column_heading(column: str, count: int, emojis: EmojiSet) -> str:
+    """'{icon} Warrior (3)' — 'No class yet (1)' for sign-ups without a class."""
+    if column == NO_CLASS_COLUMN:
+        return f"{NO_CLASS_LABEL} ({count})"
+    return icon_text(emojis, column_icon(column), f"{column_label(column)} ({count})")
+
+
+def roster_entry(signup: WowRaidSignup, number: int | None, emojis: EmojiSet) -> str:
+    """A column line with every detail and the full name, for the private roster."""
+    return _column_entry(signup, "", number, _Style(name_chars=MAX_NAME_CHARS), emojis)
+
+
+def _column_entries(
+    style: _Style,
+    *,
+    column: str,
+    players: Sequence[WowRaidSignup],
+    numbers: dict[str, int],
+    emojis: EmojiSet,
+) -> list[str]:
+    return [_column_entry(signup, column, numbers.get(signup.discord_user_id), style, emojis) for signup in players]
+
+
+def _column_entry(
+    signup: WowRaidSignup, column: str, number: int | None, style: _Style, emojis: EmojiSet
+) -> str:
+    """One column line: spec icon, order number, bold name; the queue struck through, late and queued marked."""
+    name = escape_name(signup.display_name, max_chars=style.name_chars)
+    parts: list[str] = []
+    if style.icons:
+        parts.append(signup_icon(signup, emojis))
+    elif column == TANK_COLUMN:
+        parts.append(class_tag(signup.wow_class))
+    if style.numbers and number is not None:
+        parts.append(f"`{number}`")
+    if signup.status == QUEUED_STATUS:
+        parts.append(f"~~{name}~~")
     else:
-        head = f"{class_icon(class_key, emojis)} {info.label} ×{len(entries)}"
-    if limit == 0:
-        return head
-    return f"{head}: {_names([entry.name for entry in entries], limit)}"
+        parts.append(f"**{name}**")
+    marker = _MARKERS.get(signup.status)
+    if marker is not None:
+        icon, text = marker
+        if style.icons:
+            text = emojis.markup(icon, text)
+        parts.append(text)
+    return " ".join(part for part in parts if part)
 
 
-def _tagged_names(entries: list[_Entry], limit: int | None, emojis: EmojiSet) -> str:
-    labels = [f"{class_icon(entry.wow_class, emojis)} {entry.name}".strip() for entry in entries]
-    return _names(labels, limit)
+def _list_entries(style: _Style, *, players: Sequence[WowRaidSignup], emojis: EmojiSet) -> list[str]:
+    """'{spec icon} Alice', '{spec icon} Bob' — no order numbers off the line."""
+    return [_list_entry(signup, style, emojis) for signup in players]
 
 
-def _names(names: list[str], limit: int | None) -> str:
-    if limit is None or len(names) <= limit:
-        return ", ".join(names)
-    hidden = len(names) - limit
-    if limit == 0:
-        return f"+{hidden} more"
-    return f"{', '.join(names[:limit])} +{hidden} more"
-
-
-def _field(name: str, value: str) -> dict[str, Any]:
-    return {"name": name, "value": value, "inline": False}
-
-
-def _button(
-    label: str, style: int, custom_id: str, disabled: bool, *, emoji: dict[str, str] | None = None
-) -> dict[str, Any]:
-    button: dict[str, Any] = {
-        "type": COMPONENT_TYPE_BUTTON,
-        "style": style,
-        "label": label,
-        "custom_id": custom_id,
-        "disabled": disabled,
-    }
-    if emoji is not None:
-        button["emoji"] = emoji
-    return button
+def _list_entry(signup: WowRaidSignup, style: _Style, emojis: EmojiSet) -> str:
+    name = escape_name(signup.display_name, max_chars=style.name_chars)
+    if style.icons:
+        tag = signup_icon(signup, emojis)
+    else:
+        tag = class_tag(signup.wow_class)
+    return f"{tag} {name}".strip()

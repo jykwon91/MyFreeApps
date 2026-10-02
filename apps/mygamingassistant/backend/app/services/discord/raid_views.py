@@ -2,8 +2,9 @@
 
 The public signup post lives in :mod:`app.services.wow.raid_embed`; this
 module renders everything only the clicking user sees: the create preview,
-the class and spec selects, "My signup", the full roster, /raid list,
-/raid prefs, the cancel confirmation and the "free my seat?" confirmation.
+the class and spec selects, the My sign-up card, the full roster,
+/raid list, /raid prefs, the cancel confirmation and the "free my seat?"
+confirmation.
 """
 from __future__ import annotations
 
@@ -34,47 +35,58 @@ from app.services.wow.raid_catalog import (
     CLASSES,
     CLASSES_BY_KEY,
     ROLE_DESCRIPTIONS,
-    ROLE_FIELD_LABELS,
-    ROLE_ORDER,
+    TANK_COLUMN,
+    TANK_SPECS,
     WowSpecInfo,
+    column_icon,
+    column_specs,
     saved_spec,
     signup_label,
 )
 from app.services.wow.raid_embed import (
     COLOR_OPEN,
-    display_title,
-    escape_name,
-    local_day_label,
-    seats_label,
-    spec_icon,
-    status_heading,
+    STATUS_LISTS,
+    build_signup_embed,
+    column_heading,
+    roster_entry,
 )
+from app.services.wow.raid_post_buttons import build_signup_components
+from app.services.wow.raid_post_layout import post_columns, with_status
 from app.services.wow.raid_roster import (
     ABSENCE_STATUS,
     BENCH_STATUS,
     QUEUED_STATUS,
     TENTATIVE_STATUS,
     compute_roster_summary,
-    in_line_order,
     order_numbers,
     queue_position,
+)
+from app.services.wow.raid_text import (
+    display_title,
+    escape_markdown,
+    escape_name,
+    icon_text,
+    local_day_label,
+    seats_label,
+    signup_icon,
+    status_heading,
 )
 
 EMBED_DESCRIPTION_LIMIT: Final = 4096
 
-# Second line on "My signup" for statuses that don't speak for themselves.
+# The My sign-up card's status line: (label, icon).  The queue shows its place instead.
+_STATUS_LINES: Final[dict[str, tuple[str, str]]] = {
+    "confirmed": ("Signed up", "status_signed"),
+    "late": ("Late", "status_late"),
+    TENTATIVE_STATUS: ("Tentative", "status_tentative"),
+    BENCH_STATUS: ("On the bench", "status_bench"),
+    ABSENCE_STATUS: ("Absent", "status_absence"),
+}
+# Second line on My sign-up for statuses that don't speak for themselves.
 _MY_SIGNUP_NOTES: Final[dict[str, str]] = {
     TENTATIVE_STATUS: raid_copy.TENTATIVE_NOTE,
     QUEUED_STATUS: raid_copy.QUEUE_MOVES_UP,
     BENCH_STATUS: raid_copy.BENCH_NOTE,
-}
-
-_STATUS_WORDS: Final[dict[str, str]] = {
-    "confirmed": "signed up",
-    "late": "coming late",
-    "tentative": "tentative",
-    "bench": "on the bench",
-    "absence": "absent",
 }
 
 
@@ -87,14 +99,8 @@ def unix(moment: datetime) -> int:
     return int(moment.timestamp())
 
 
-def local_clock_label(moment: datetime, tz_name: str) -> str:
-    """'8:00 PM' in the guild's timezone."""
-    local = moment.astimezone(ZoneInfo(tz_name))
-    return f"{local:%I:%M %p}".lstrip("0")
-
-
 def event_choice_label(event: WowRaidEvent, tz_name: str) -> str:
-    """Autocomplete label, e.g. 'Sat Oct 10 8pm Onyxia' (≤ 100 chars)."""
+    """Autocomplete label, e.g. 'Sat Oct 10 8pm Onyxia's Lair' (≤ 100 chars)."""
     local = event.starts_at.astimezone(ZoneInfo(tz_name))
     clock = f"{local:%I:%M%p}".lstrip("0").lower().replace(":00", "")
     return f"{local:%a %b} {local.day} {clock} {display_title(event)}"[:100]
@@ -105,6 +111,11 @@ def _button(label: str, style: int, custom_id: str, *, emoji: dict[str, str] | N
     if emoji is not None:
         button["emoji"] = emoji
     return button
+
+
+def _back_to_card(event: WowRaidEvent) -> dict[str, Any]:
+    """[Back] to the My sign-up card a menu or the roster was opened from."""
+    return _button("Back", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("card", event.id, "back"))
 
 
 def _option(
@@ -124,30 +135,44 @@ def _row(*components: dict[str, Any]) -> dict[str, Any]:
     return {"type": COMPONENT_TYPE_ACTION_ROW, "components": list(components)}
 
 
+def _select(custom_id: str, placeholder: str, options: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "type": COMPONENT_TYPE_STRING_SELECT,
+        "custom_id": custom_id,
+        "placeholder": placeholder,
+        "min_values": 1,
+        "max_values": 1,
+        "options": options,
+    }
+
+
+def _tank_label(spec: WowSpecInfo) -> str:
+    """'Feral Druid' — where every option is a tank, '(tank)' goes without saying."""
+    return spec.full_label.removesuffix(" (tank)")
+
+
 # ---------------------------------------------------------------------------
 # /raid-admin create preview, cancel confirmation, seat confirmation
 # ---------------------------------------------------------------------------
 
 
-def preview_data(event: WowRaidEvent, guild: WowRaidGuild, *, notice: str | None = None) -> dict[str, Any]:
-    stamp = unix(event.starts_at)
-    lines: list[str] = []
+def preview_data(
+    event: WowRaidEvent, guild: WowRaidGuild, *, emojis: EmojiSet, notice: str | None = None
+) -> dict[str, Any]:
+    """The post exactly as it will look (its buttons greyed out), then [Post raid] / [Cancel]."""
+    intro = raid_copy.preview_intro(event.channel_id, guild.ping_role_id)
     if notice:
-        lines.extend([notice, ""])
-    lines.append(f"**{display_title(event)} ({event.size_cap}-man)**")
-    lines.append(f"<t:{stamp}:F> (<t:{stamp}:R>)")
-    if event.notes:
-        lines.append(f"Notes: {event.notes}")
-    lines.append(
-        f"That's {local_clock_label(event.starts_at, guild.timezone)} {guild.timezone}. Does this look right?"
+        intro = f"{notice}\n\n{intro}"
+    actions = _row(
+        _button("Post raid", BUTTON_STYLE_SUCCESS, raid_custom_id.encode("confirm", event.id)),
+        _button("Cancel", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("discard", event.id)),
     )
-    components = [
-        _row(
-            _button("Post raid", BUTTON_STYLE_SUCCESS, raid_custom_id.encode("confirm", event.id)),
-            _button("Cancel", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("discard", event.id)),
-        )
-    ]
-    return ephemeral_data("\n".join(lines), components=components)
+    post_buttons = build_signup_components(event, [], emojis=emojis)  # disabled until it's posted
+    return ephemeral_data(
+        intro,
+        components=[*post_buttons, actions],
+        embeds=[build_signup_embed(event, [], guild, emojis=emojis)],
+    )
 
 
 def release_confirm_data(event: WowRaidEvent, status: str) -> dict[str, Any]:
@@ -179,122 +204,145 @@ def cancel_confirm_data(event: WowRaidEvent) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def class_picker_data(event: WowRaidEvent, status: str, *, emojis: EmojiSet) -> dict[str, Any]:
-    select = {
-        "type": COMPONENT_TYPE_STRING_SELECT,
-        "custom_id": raid_custom_id.encode("class", event.id, status),
-        "placeholder": "Pick your class",
-        "min_values": 1,
-        "max_values": 1,
-        "options": [_option(cls.label, cls.key, emojis.component(cls.key)) for cls in CLASSES],
-    }
-    return ephemeral_data(raid_copy.CLASS_PROMPT, components=[_row(select)])
+def class_picker_data(event: WowRaidEvent, status: str, *, emojis: EmojiSet, back: bool = False) -> dict[str, Any]:
+    """Tank, then the classes — the same columns as the buttons on the post.
+
+    *back* adds [Back] to the My sign-up card the menu was opened from.
+    """
+    tanks = [_tank_label(spec) for spec in TANK_SPECS]
+    tank = _option(
+        "Tank",
+        TANK_COLUMN,
+        emojis.component(column_icon(TANK_COLUMN)),
+        description=", ".join(tanks[:-1]) + f" or {tanks[-1]}",
+    )
+    classes = [_option(cls.label, cls.key, emojis.component(cls.key)) for cls in CLASSES]
+    select = _select(raid_custom_id.encode("class", event.id, status), "Pick your class", [tank, *classes])
+    rows = [_row(select)]
+    if back:
+        rows.append(_row(_back_to_card(event)))
+    return ephemeral_data(raid_copy.CLASS_PROMPT, components=rows)
 
 
 def spec_picker_data(
-    event: WowRaidEvent, status: str, wow_class: str, *, current: WowSpecInfo | None, emojis: EmojiSet
+    event: WowRaidEvent,
+    status: str,
+    column: str,
+    *,
+    current: WowSpecInfo | None,
+    emojis: EmojiSet,
+    back: bool = False,
 ) -> dict[str, Any]:
-    """The class's specs; *current* (the player's spec, never a guess) is preselected.
+    """The column's specs (a class's, or every tank spec); *current* is preselected.
 
-    Discord sends nothing when the preselected option is picked again, so
-    only the spec the player actually has may be marked default.
+    *current* is the player's spec, never a guess: Discord sends nothing
+    when the preselected option is picked again.  *back* adds [Back] to the
+    My sign-up card the menu was opened from.
     """
-    info = CLASSES_BY_KEY[wow_class]
-    options = [
-        _option(
-            spec.label,
-            spec.choice_value,
-            emojis.component(spec.icon) or emojis.component(wow_class),
-            description=ROLE_DESCRIPTIONS[spec.display_role],
-            default=spec == current,
-        )
-        for spec in info.specs
-    ]
-    select = {
-        "type": COMPONENT_TYPE_STRING_SELECT,
-        "custom_id": raid_custom_id.encode("spec", event.id, wow_class, status),
-        "placeholder": "Pick your spec",
-        "min_values": 1,
-        "max_values": 1,
-        "options": options,
-    }
-    other_class = _button("Different class", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("pickclass", event.id, status))
-    content = raid_copy.spec_prompt(info.label)
+    select = _select(
+        raid_custom_id.encode("spec", event.id, column, status),
+        "Pick your spec",
+        [_spec_option(spec, column, current, emojis) for spec in column_specs(column)],
+    )
+    buttons = [_button("Different class", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("pickclass", event.id, status))]
+    if back:
+        buttons.append(_back_to_card(event))
+    return ephemeral_data(_spec_prompt(column, current), components=[_row(select), _row(*buttons)])
+
+
+def _spec_option(spec: WowSpecInfo, column: str, current: WowSpecInfo | None, emojis: EmojiSet) -> dict[str, Any]:
+    emoji = emojis.component(spec.icon) or emojis.component(spec.class_key)
+    if column == TANK_COLUMN:
+        return _option(_tank_label(spec), spec.choice_value, emoji, default=spec == current)
+    description = ROLE_DESCRIPTIONS[spec.display_role]
+    if spec.column == TANK_COLUMN:
+        description = raid_copy.TANK_SPEC_NOTE
+    return _option(spec.label, spec.choice_value, emoji, description=description, default=spec == current)
+
+
+def _spec_prompt(column: str, current: WowSpecInfo | None) -> str:
     if current is not None:
-        content = raid_copy.spec_switch_prompt(current.full_label)
-    return ephemeral_data(content, components=[_row(select), _row(other_class)])
+        return raid_copy.spec_switch_prompt(current.full_label)
+    if column == TANK_COLUMN:
+        return raid_copy.TANK_PROMPT
+    return raid_copy.spec_prompt(CLASSES_BY_KEY[column].label)
 
 
 # ---------------------------------------------------------------------------
-# My signup / Roster
+# My sign-up card / Roster
 # ---------------------------------------------------------------------------
 
 
 def my_signup_data(
-    event: WowRaidEvent, signup: WowRaidSignup | None, signups: Sequence[WowRaidSignup]
+    event: WowRaidEvent, signup: WowRaidSignup | None, signups: Sequence[WowRaidSignup], *, emojis: EmojiSet
 ) -> dict[str, Any]:
+    """Your status and spec for this raid, with [Change spec] and [Full roster]."""
+    roster = _button("Full roster", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("card", event.id, "roster"))
     if signup is None:
-        return ephemeral_data(raid_copy.NOT_SIGNED_UP)
-    status_text = _STATUS_WORDS.get(signup.status, signup.status)
-    if signup.status == QUEUED_STATUS:
-        status_text = raid_copy.queue_place(queue_position(signups, signup.discord_user_id))
-    content = f"For **{display_title(event)}** you're **{status_text}**"
-    if signup.status == ABSENCE_STATUS:
-        return ephemeral_data(f"{content}.")
-    if signup.wow_class or signup.role:
-        content += f" as {signup_label(signup.wow_class, signup.role, signup.spec)}"
-    content += "."
+        return ephemeral_data(raid_copy.NOT_SIGNED_UP, components=[_row(roster)], embeds=[])
+    lines = [
+        f"**Your sign-up** · {escape_markdown(display_title(event))} · <t:{unix(event.starts_at)}:F>",
+        f"Status: {_status_text(signup, signups, emojis)}",
+    ]
+    buttons = [roster]
+    if signup.status != ABSENCE_STATUS:
+        if signup.wow_class is not None:
+            label = f"**{signup_label(signup.wow_class, signup.role, signup.spec)}**"
+            lines.append(" ".join(part for part in ("Spec:", signup_icon(signup, emojis), label) if part))
+        buttons.insert(0, _button("Change spec", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("change", event.id)))
     note = _MY_SIGNUP_NOTES.get(signup.status)
     if note is not None:
-        content += f"\n{note}"
-    change = _button("Change class or spec", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("change", event.id))
-    return ephemeral_data(content, components=[_row(change)])
+        lines.append(note)
+    return ephemeral_data("\n".join(lines), components=[_row(*buttons)], embeds=[])
+
+
+def _status_text(signup: WowRaidSignup, signups: Sequence[WowRaidSignup], emojis: EmojiSet) -> str:
+    """'{icon} **Late**' — the queue shows its place: '#2 in the queue'."""
+    if signup.status == QUEUED_STATUS:
+        place = raid_copy.queue_place(queue_position(signups, signup.discord_user_id))
+        return icon_text(emojis, "status_queued", f"**{place}**")
+    label, icon = _STATUS_LINES.get(signup.status, (signup.status, ""))
+    return icon_text(emojis, icon, f"**{label}**")
 
 
 def roster_data(
-    event: WowRaidEvent, signups: Sequence[WowRaidSignup], guild: WowRaidGuild, *, emojis: EmojiSet
+    event: WowRaidEvent,
+    signups: Sequence[WowRaidSignup],
+    guild: WowRaidGuild,
+    *,
+    emojis: EmojiSet,
+    back: bool = False,
 ) -> dict[str, Any]:
-    """Everyone, by role then status.
+    """Everyone, laid out like the post's columns, with full names.
 
-    Seat holders carry their order number (`12`); the queue lists each
-    player's place in it (#1 moves up first).
+    Seat holders and the queue carry their order number (`12`); the queue is
+    struck through.  Tentative, bench and absence follow, one per line.
+    *back* adds [Back] to the My sign-up card it was opened from.
     """
-    ordered = in_line_order(signups)
-    summary = compute_roster_summary(ordered, size_cap=event.size_cap)
-    seat_marks = {user_id: f"`{number}`" for user_id, number in order_numbers(ordered).items()}
-    queue_marks = {s.discord_user_id: f"#{place}" for place, s in enumerate(summary.queue, start=1)}
+    summary = compute_roster_summary(signups, size_cap=event.size_cap)
+    numbers = order_numbers(signups)
     sections: list[str] = []
+    for column, players in post_columns(signups).items():
+        if players:
+            entries = [roster_entry(player, numbers.get(player.discord_user_id), emojis) for player in players]
+            sections.append("\n".join([f"**{column_heading(column, len(players), emojis)}**", *entries]))
+    for status, label, icon in STATUS_LISTS:
+        players = with_status(signups, status)
+        if players:
+            heading = icon_text(emojis, icon, status_heading(status, label, len(players)))
+            entries = [f"{signup_icon(player, emojis)} {escape_name(player.display_name)}".strip() for player in players]
+            sections.append("\n".join([f"**{heading}**", *entries]))
 
-    for role in ROLE_ORDER:
-        players = [s for s in ordered if s.status == "confirmed" and s.role == role]
-        sections.append(_section(f"{ROLE_FIELD_LABELS[role]} ({len(players)})", players, emojis, seat_marks))
-    unassigned = [s for s in ordered if s.status == "confirmed" and s.role not in ROLE_ORDER]
-    if unassigned:
-        sections.append(_section(f"No role yet ({len(unassigned)})", unassigned, emojis, seat_marks))
-    late = [s for s in ordered if s.status == "late"]
-    if late:
-        sections.append(_section(status_heading("late", "Late", len(late)), late, emojis, seat_marks))
-    tentative = [s for s in ordered if s.status == TENTATIVE_STATUS]
-    if tentative:
-        sections.append(_section(status_heading(TENTATIVE_STATUS, "Tentative", len(tentative)), tentative, emojis, {}))
-    if summary.queue:
-        heading = status_heading(QUEUED_STATUS, "Queued", summary.queued_count)
-        sections.append(_section(heading, summary.queue, emojis, queue_marks))
-    bench = [s for s in ordered if s.status == BENCH_STATUS]
-    if bench:
-        sections.append(_section(status_heading(BENCH_STATUS, "Bench", len(bench)), bench, emojis, {}))
-    absent = [s for s in ordered if s.status == ABSENCE_STATUS]
-    if absent:
-        sections.append(f"**Absence ({len(absent)})**\n" + ", ".join(escape_name(s.display_name) for s in absent))
-
-    description = _clip_lines("\n\n".join(sections), EMBED_DESCRIPTION_LIMIT)
     embed = {
         "title": f"Roster — {display_title(event)} — {local_day_label(event.starts_at, guild.timezone)}",
-        "description": description,
+        "description": _clip_lines("\n\n".join(sections) or raid_copy.NOBODY_SIGNED_UP, EMBED_DESCRIPTION_LIMIT),
         "color": COLOR_OPEN,
         "footer": {"text": f"{seats_label(summary)} · Signed up {summary.signed_up_count}"},
     }
-    return ephemeral_data("", embeds=[embed])
+    components: list[dict[str, Any]] = []
+    if back:
+        components.append(_row(_back_to_card(event)))
+    return ephemeral_data("", components=components, embeds=[embed])
 
 
 def _clip_lines(text: str, limit: int) -> str:
@@ -308,23 +356,6 @@ def _clip_lines(text: str, limit: int) -> str:
     if cut <= 0:
         return text[: limit - 1] + "…"
     return text[:cut] + "\n…"
-
-
-def _section(
-    heading: str, players: Sequence[WowRaidSignup], emojis: EmojiSet, marks: dict[str, str]
-) -> str:
-    """One line per player: icon, their mark (order number or queue place) if any, name."""
-    if not players:
-        return f"**{heading}**\n—"
-    lines = []
-    for player in players:
-        parts = [
-            spec_icon(player.wow_class, player.spec, emojis),
-            marks.get(player.discord_user_id, ""),
-            escape_name(player.display_name),
-        ]
-        lines.append(" ".join(part for part in parts if part))
-    return f"**{heading}**\n" + "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
@@ -368,12 +399,12 @@ def prefs_data(pref: WowRaidMemberPref | None, *, heading: str | None = None) ->
 
 def _signing_up_as(pref: WowRaidMemberPref | None) -> str:
     if pref is None or pref.default_wow_class not in CLASSES_BY_KEY:
-        return "Signing up as: not set yet. I'll ask the first time you tap **Sign up**."
+        return "Signing up as: not set yet. I'll ask the first time you tap your class on a raid post."
     spec = saved_spec(pref.saved_specs, pref.default_wow_class)
     if spec is not None:
         return f"Signing up as: **{spec.full_label}**"
     class_label = CLASSES_BY_KEY[pref.default_wow_class].label
-    return f"Signing up as: **{class_label}**. I'll ask your spec the first time you tap **Sign up**."
+    return f"Signing up as: **{class_label}**. I'll ask your spec the first time you tap your class on a raid post."
 
 
 def _other_saved_specs(pref: WowRaidMemberPref | None) -> list[WowSpecInfo]:

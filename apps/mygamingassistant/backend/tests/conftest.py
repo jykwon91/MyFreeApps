@@ -11,8 +11,7 @@ import sys
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-from collections.abc import AsyncGenerator, Callable
-from typing import Any
+from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio
@@ -117,6 +116,7 @@ _UOW_CONSUMERS = (
     "app.services.discord.commands.raid",
     "app.services.discord.commands.raid_admin",
     "app.services.discord.components.raid_admin",
+    "app.services.discord.components.raid_card",
     "app.services.discord.components.raid_signup",
     "app.services.discord.raid_publisher",
     "app.services.game.fixture_loader",

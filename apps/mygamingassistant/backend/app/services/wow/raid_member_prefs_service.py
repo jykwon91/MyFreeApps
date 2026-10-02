@@ -16,7 +16,9 @@ from app.models.wow.wow_raid_member_pref import WowRaidMemberPref
 from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.repositories.wow import wow_raid_member_pref_repo
 from app.services.wow.raid_catalog import (
+    CLASSES,
     CLASSES_BY_KEY,
+    TANK_COLUMN,
     WowSpecInfo,
     find_specs,
     saved_spec,
@@ -64,10 +66,35 @@ def saved_spec_for(pref: WowRaidMemberPref | None, wow_class: str | None) -> Wow
 
 
 def one_tap_spec(pref: WowRaidMemberPref | None) -> WowSpecInfo | None:
-    """The spec [Sign up] uses without asking: the remembered class's saved spec."""
+    """The spec a status button uses without asking: the remembered class's saved spec."""
     if pref is None:
         return None
     return saved_spec_for(pref, pref.default_wow_class)
+
+
+def saved_spec_for_column(pref: WowRaidMemberPref | None, column: str) -> WowSpecInfo | None:
+    """The saved spec a class button on the post signs up with, or None to ask.
+
+    A class's column holds its damage and healing specs (its tank spec shows
+    under Tanks), so a saved tank spec doesn't count for the class's button.
+    [Tank] takes the remembered class's spec when it tanks, else the one
+    saved tank spec; with several, the player picks.
+    """
+    if pref is None:
+        return None
+    if column != TANK_COLUMN:
+        spec = saved_spec_for(pref, column)
+        if spec is not None and spec.column == column:
+            return spec
+        return None
+    default = one_tap_spec(pref)
+    if default is not None and default.column == TANK_COLUMN:
+        return default
+    tanks = [spec for spec in (saved_spec_for(pref, cls.key) for cls in CLASSES) if spec is not None]
+    tanks = [spec for spec in tanks if spec.column == TANK_COLUMN]
+    if len(tanks) == 1:
+        return tanks[0]
+    return None
 
 
 def resolve_player(signup: WowRaidSignup | None, pref: WowRaidMemberPref | None) -> PlayerPick:
