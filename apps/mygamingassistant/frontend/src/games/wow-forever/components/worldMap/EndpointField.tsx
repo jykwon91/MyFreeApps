@@ -2,6 +2,7 @@ import { useId, useMemo, useState, type ReactNode } from "react";
 import SearchCombobox, { type ComboGroup } from "@/games/wow-forever/components/worldMap/SearchCombobox";
 import type { WorldMapData } from "@/games/wow-forever/types/worldMap";
 import { areaLabel } from "@/games/wow-forever/worldMap/describeRank";
+import { defaultResultCount, type MapSearch } from "@/games/wow-forever/worldMap/mapSearch";
 import { placeLabel, PLACE_KIND, type Place } from "@/games/wow-forever/worldMap/places";
 import { searchMap, type SearchContext } from "@/games/wow-forever/worldMap/search";
 import { normalizeText } from "@/games/wow-forever/worldMap/searchText";
@@ -29,12 +30,15 @@ interface EndpointFieldProps {
   onChoose: (end: TripStart) => void;
   shortcuts?: readonly FieldShortcut[];
   onShortcut?: (id: string) => void;
+  /** "Show all on the map": every NPC the words match ("warlock trainer"). Without it the box only picks one. */
+  onShowAll?: (search: MapSearch) => void;
   icon?: ReactNode;
 }
 
 const NPC_PREFIX = "npc:";
 const PLACE_PREFIX = "place:";
 const SHORTCUT_PREFIX = "shortcut:";
+const SHOW_ALL_ID = "show-all";
 const HAS_DIGIT = /\d/;
 
 const PLACE_HINT: Readonly<Record<Place["kind"], string>> = {
@@ -53,18 +57,27 @@ const PLACE_HINT: Readonly<Record<Place["kind"], string>> = {
  * show a new chosen end.
  */
 export default function EndpointField(props: EndpointFieldProps) {
-  const { data, places, context, onChoose, shortcuts = [], onShortcut } = props;
+  const { data, places, context, onChoose, shortcuts = [], onShortcut, onShowAll } = props;
   const [text, setText] = useState(props.initialText);
   const [error, setError] = useState<string | null>(null);
   const errorId = useId();
   const edited = text !== props.initialText;
   const results = useMemo(
-    () => (edited ? searchMap(text, data, places, context) : { npcs: [], places: [] }),
+    () => (edited ? searchMap(text, data, places, context) : { npcs: [], allNpcs: [], places: [] }),
     [edited, text, data, places, context],
   );
 
+  // Two or more matches ("warlock trainer", "flight master"): offer them all as markers.
+  const canShowAll = onShowAll !== undefined && results.allNpcs.length > 1;
+  const showAllCount = defaultResultCount(results.allNpcs, context.faction);
   const groups: ComboGroup[] = [
     { label: "Quick picks", options: shortcuts.map((s) => ({ ...s, id: `${SHORTCUT_PREFIX}${s.id}` })) },
+    {
+      label: "On the map",
+      options: canShowAll
+        ? [{ id: SHOW_ALL_ID, primary: `Show all ${showAllCount} on the map`, secondary: `Every "${text.trim()}" match, listed and marked on the map` }]
+        : [],
+    },
     {
       label: "NPCs",
       options: results.npcs.map(({ poi, zone }) => ({
@@ -88,7 +101,16 @@ export default function EndpointField(props: EndpointFieldProps) {
     onChoose(end);
   }
 
+  function showAll() {
+    setError(null);
+    onShowAll?.({ query: text.trim(), hits: results.allNpcs });
+  }
+
   function pick(optionId: string) {
+    if (optionId === SHOW_ALL_ID) {
+      showAll();
+      return;
+    }
     if (optionId.startsWith(SHORTCUT_PREFIX)) {
       setText(props.initialText);
       onShortcut?.(optionId.slice(SHORTCUT_PREFIX.length));
@@ -125,7 +147,12 @@ export default function EndpointField(props: EndpointFieldProps) {
       choose({ kind: ENDPOINT_KIND.place, placeId: named.id });
       return;
     }
-    const first = groups.slice(1).flatMap((g) => g.options)[0];
+    // Words that describe a kind of NPC rather than name one ("warlock trainer"): all of them.
+    if (canShowAll && !results.allNpcs[0].byName) {
+      showAll();
+      return;
+    }
+    const first = groups.slice(2).flatMap((g) => g.options)[0];
     if (first) pick(first.id);
     else setError(`I don't know "${typed}". Try a town, an NPC name, or coordinates like 42.1, 65.9.`);
   }

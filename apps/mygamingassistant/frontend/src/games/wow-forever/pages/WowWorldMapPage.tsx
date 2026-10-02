@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { AlertBox, useIsAuthenticated } from "@platform/ui";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import AddonHelp from "@/games/wow-forever/components/worldMap/AddonHelp";
@@ -6,6 +6,7 @@ import CaptureImport from "@/games/wow-forever/components/worldMap/CaptureImport
 import FindServices from "@/games/wow-forever/components/worldMap/FindServices";
 import ForeverNotes from "@/games/wow-forever/components/worldMap/ForeverNotes";
 import InstanceList from "@/games/wow-forever/components/worldMap/InstanceList";
+import MapSearchResults from "@/games/wow-forever/components/worldMap/MapSearchResults";
 import QuestGivers from "@/games/wow-forever/components/worldMap/QuestGivers";
 import NearestServices from "@/games/wow-forever/components/worldMap/NearestServices";
 import PlayerStrip from "@/games/wow-forever/components/worldMap/PlayerStrip";
@@ -13,6 +14,7 @@ import RoutePlanner from "@/games/wow-forever/components/worldMap/RoutePlanner";
 import WorldMapPanel from "@/games/wow-forever/components/worldMap/WorldMapPanel";
 import WorldMapSkeleton from "@/games/wow-forever/components/worldMap/WorldMapSkeleton";
 import { useFindFilters } from "@/games/wow-forever/hooks/useFindFilters";
+import { useMapSearch } from "@/games/wow-forever/hooks/useMapSearch";
 import { useMapSelection } from "@/games/wow-forever/hooks/useMapSelection";
 import { useMapView } from "@/games/wow-forever/hooks/useMapView";
 import { usePlayerSettings, type PlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
@@ -64,6 +66,14 @@ export default function WowWorldMapPage() {
     () => ({ faction: settings.faction, player: model?.player ?? null }),
     [settings.faction, model?.player],
   );
+  // "warlock trainer" -> Show all on the map: every match, listed and marked at any zoom.
+  const mapSearch = useMapSearch({ data, faction: settings.faction, player: searchContext.player, goTo: view.goTo });
+  const { clearFit: clearSearchFit } = mapSearch;
+  const { clearFit: clearTripFit } = planner;
+  const clearFits = useCallback(() => {
+    clearSearchFit();
+    clearTripFit();
+  }, [clearSearchFit, clearTripFit]);
 
   /** The strip changing your zone brings the map back to it; browsing the map never changes your zone. */
   function changeSettings(patch: Partial<PlayerSettings>) {
@@ -115,6 +125,7 @@ export default function WowWorldMapPage() {
             travel={travel}
             currentZoneId={settings.zoneId}
             onShowMap={showMap}
+            onShowAll={mapSearch.show}
           />
           {planner.linkMissing && (
             <AlertBox variant="info">That link's destination isn't on the map. Search for it by name above.</AlertBox>
@@ -138,6 +149,23 @@ export default function WowWorldMapPage() {
           {model && training && <p className="text-sm">{training}</p>}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             <div className="space-y-8">
+              {mapSearch.search && mapSearch.view && (
+                <MapSearchResults
+                  key={`${mapSearch.search.query}-${mapSearch.includeOtherFaction}`}
+                  data={data}
+                  faction={settings.faction}
+                  search={mapSearch.search}
+                  view={mapSearch.view}
+                  measured={model !== null}
+                  includeOtherFaction={mapSearch.includeOtherFaction}
+                  onIncludeOtherFactionChange={mapSearch.setIncludeOtherFaction}
+                  selectedPoiId={selectedPoiId}
+                  onToggle={selection.toggle}
+                  onDirections={planner.directionsTo}
+                  onShowAll={mapSearch.fitAll}
+                  onClear={mapSearch.clear}
+                />
+              )}
               {!model && (
                 <AlertBox variant="info">
                   Say where you are above — a town like "Goldshire" or your coordinates — or open your zone on the map and click where you are, to see what's nearest to you.
@@ -178,8 +206,8 @@ export default function WowWorldMapPage() {
                   onFocusApplied={selection.clearFocus}
                   route={planner.route}
                   destinationZoneId={planner.to?.route.place.zoneId ?? null}
-                  fit={planner.fit}
-                  onFitApplied={planner.clearFit}
+                  fit={mapSearch.fit ?? planner.fit}
+                  onFitApplied={clearFits}
                   picking={planner.picking}
                   onPickPoint={planner.pickPoint}
                   onCancelPick={planner.cancelPick}
@@ -194,6 +222,7 @@ export default function WowWorldMapPage() {
                   onClearSelection={selection.clear}
                   layers={find.filters.layers}
                   onLayersChange={(layers) => find.update({ layers })}
+                  searchMarkers={mapSearch.markers}
                 />
               </div>
             )}

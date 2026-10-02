@@ -57,12 +57,20 @@ interface WorldMapPanelProps {
   /** Which optional layers are drawn (owned by the page so Reset filters can restore them). */
   layers: MapLayerChoice;
   onLayersChange: (layers: MapLayerChoice) => void;
+  /** "Show all on the map" results: drawn on every map level, in place of the usual results. */
+  searchMarkers: readonly MapMarker[] | null;
 }
 
 const PICK_PROMPT: Readonly<Record<PickTarget, string>> = {
   start: "Click the map to set your start. Esc to cancel.",
   destination: "Click the map to set your destination. Esc to cancel.",
 };
+
+/** The search's markers plus the chosen result when it isn't one of them (picked from another list). */
+function withSelected(search: readonly MapMarker[], selected: readonly MapMarker[]): MapMarker[] {
+  const ids = new Set(search.map((m) => m.id));
+  return [...search, ...selected.filter((m) => !ids.has(m.id))];
+}
 
 interface PendingSpot {
   mapId: number;
@@ -77,9 +85,11 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
   const map = data.maps.get(mapId) ?? data.maps.get(data.worldMapId);
   if (!map) return null;
   const zoneView = isZoneView(map);
-  // Results belong on zone maps; a continent or the world shows you, the route and the destination.
+  // Results belong on zone maps; a continent or the world shows you, the route and the destination —
+  // except a "Show all" search, whose matches show at any zoom so you can see where they all are.
   let markers: MapMarker[] = [];
-  if (zoneView && model) markers = resultMarkers(model, layers);
+  if (props.searchMarkers) markers = withSelected(props.searchMarkers, selectedOnlyMarkers(props.selectedPoiId, data));
+  else if (zoneView && model) markers = resultMarkers(model, layers);
   else if (zoneView) markers = selectedOnlyMarkers(props.selectedPoiId, data);
   const destinationZone = props.destinationZoneId === null ? undefined : data.zoneById.get(props.destinationZoneId);
 
@@ -130,7 +140,7 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
         <MapBreadcrumb path={mapPath(data, map.id)} onOpen={onOpen} />
         <ChildMapSelect maps={childrenOf(data, map.id)} onOpen={onOpen} />
       </div>
-      {zoneView && (
+      {zoneView && !props.searchMarkers && (
         <fieldset className="flex flex-wrap items-center gap-x-4 text-sm">
           <legend className="sr-only">Also show on the map</legend>
           <span className="text-muted-foreground">Also show:</span>

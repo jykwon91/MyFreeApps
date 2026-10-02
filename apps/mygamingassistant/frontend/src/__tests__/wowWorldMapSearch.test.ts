@@ -14,7 +14,8 @@ import { areaLabel } from "@/games/wow-forever/worldMap/describeRank";
 import { planDirections } from "@/games/wow-forever/worldMap/directions";
 import { zoneToWorld } from "@/games/wow-forever/worldMap/geometry";
 import { buildPlaces, findPlaces, nearestTown, placeLabel, PLACE_KIND } from "@/games/wow-forever/worldMap/places";
-import { findLinkedPoi, searchNpcs } from "@/games/wow-forever/worldMap/search";
+import { commonMapOf, defaultResultCount, fitResults, searchMarkers, viewMapSearch } from "@/games/wow-forever/worldMap/mapSearch";
+import { findLinkedPoi, MAX_NPC_RESULTS, searchAllNpcs, searchMap, searchNpcs } from "@/games/wow-forever/worldMap/search";
 import { ENDPOINT_KIND, resolveEndpoint } from "@/games/wow-forever/worldMap/trip";
 import { relatedMaps, resolveWhere, WHERE_RESULT } from "@/games/wow-forever/worldMap/where";
 
@@ -90,6 +91,70 @@ describe("NPC search", () => {
     const anyPoi = data.pois[0];
     expect(findLinkedPoi(anyPoi.id, data)).toBe(anyPoi);
     expect(findLinkedPoi("999999999", data)).toBeUndefined();
+  });
+});
+
+describe("Show all on the map", () => {
+  const alliance = { faction: FACTION.alliance, player: null };
+  const EASTERN_KINGDOMS = 1415;
+
+  it('"warlock trainer" finds every warlock trainer — not demon trainers, and not capped', () => {
+    const hits = searchAllNpcs("warlock trainer", data, alliance);
+    expect(hits.length).toBeGreaterThan(MAX_NPC_RESULTS);
+    expect(hits.every((h) => h.poi.title === "Warlock Trainer")).toBe(true);
+    expect(hits.map((h) => h.poi.name)).toEqual(expect.arrayContaining(["Maximillian Crowe", "Demisette Cloyce", "Briarthorn"]));
+    expect(hits.some((h) => !h.byName)).toBe(true);
+    // One word still finds everything a warlock needs, demon trainers too.
+    expect(searchAllNpcs("warlock", data, alliance).some((h) => h.poi.title === "Demon Trainer")).toBe(true);
+  });
+
+  it("the suggestions stay short, the show-all list has every match", () => {
+    const results = searchMap("flight master", data, places, alliance);
+    expect(results.npcs).toHaveLength(MAX_NPC_RESULTS);
+    expect(results.allNpcs.length).toBeGreaterThan(30);
+  });
+
+  it("shows your side by default, counts the other faction's, and fits the map to them all", () => {
+    const search = { query: "warlock trainer", hits: searchAllNpcs("warlock trainer", data, alliance) };
+    const view = viewMapSearch(search, data, FACTION.alliance, null, false);
+    expect(view.results.every((r) => r.poi.faction !== FACTION.horde)).toBe(true);
+    expect(view.otherFactionCount).toBeGreaterThan(0);
+    expect(view.results.length + view.otherFactionCount).toBe(search.hits.length);
+    expect(defaultResultCount(search.hits, FACTION.alliance)).toBe(view.results.length);
+    // Alliance warlock trainers are all in the Eastern Kingdoms: zoom out to that continent, a marker each.
+    const fit = fitResults(data, view.results);
+    expect(fit?.mapId).toBe(EASTERN_KINGDOMS);
+    expect(fit?.points).toHaveLength(view.results.length);
+    expect(searchMarkers(view.results)).toHaveLength(view.results.length);
+
+    const everyone = viewMapSearch(search, data, FACTION.alliance, null, true);
+    expect(everyone.results).toHaveLength(search.hits.length);
+    expect(fitResults(data, everyone.results)?.mapId).toBe(data.worldMapId);
+  });
+
+  it("nearest first once you've said where you are; by continent and zone before", () => {
+    const search = { query: "warlock trainer", hits: searchAllNpcs("warlock trainer", data, alliance) };
+    const near = viewMapSearch(search, data, FACTION.alliance, inGoldshire, false);
+    expect(near.results[0].poi.name).toBe("Maximillian Crowe");
+    expect(near.results[0].yards).not.toBeNull();
+    const unmeasured = viewMapSearch(search, data, FACTION.alliance, null, false);
+    expect(unmeasured.results.every((r) => r.yards === null)).toBe(true);
+    const zones = unmeasured.results.map((r) => r.zone.name);
+    expect(zones).toEqual([...zones].sort((a, b) => a.localeCompare(b)));
+  });
+
+  it("only the other faction's match: shows those rather than nothing", () => {
+    const hits = searchAllNpcs("orgrimmar flight master", data, alliance);
+    expect(hits.length).toBeGreaterThan(0);
+    const view = viewMapSearch({ query: "orgrimmar flight master", hits }, data, FACTION.alliance, null, false);
+    expect(view.results).toHaveLength(hits.length);
+    expect(view.otherFactionCount).toBe(0);
+  });
+
+  it("the common map is the zone, the continent or Azeroth", () => {
+    expect(commonMapOf(data, [STORMWIND])).toBe(STORMWIND);
+    expect(commonMapOf(data, [STORMWIND, ELWYNN])).toBe(EASTERN_KINGDOMS);
+    expect(commonMapOf(data, [STORMWIND, ORGRIMMAR])).toBe(data.worldMapId);
   });
 });
 

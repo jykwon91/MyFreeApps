@@ -27,10 +27,15 @@ export const MAX_PLACE_RESULTS = 3;
 export interface NpcHit {
   poi: MapPoi;
   zone: WorldZone;
+  /** Every word typed is in the NPC's name (not just their type or town). */
+  byName: boolean;
 }
 
 export interface MapSearchResults {
+  /** The best few, for the suggestions. */
   npcs: NpcHit[];
+  /** Every NPC that matches ("warlock trainer" -> all of them), for "Show all on the map". */
+  allNpcs: NpcHit[];
   places: Place[];
 }
 
@@ -47,7 +52,9 @@ function kindWords(poi: MapPoi): string {
   const words = [isServiceKind(poi.subkind) ? SERVICE_LABEL[poi.subkind] : "", "npc"];
   const profession = PROFESSION_LABEL[poi.tag];
   if (profession) words.push(`${profession} trainer`);
-  else if (poi.tag) words.push(`${poi.tag} trainer`);
+  // A class trainer is a "warlock trainer"; a warlock's demon trainer is only "warlock".
+  else if (poi.subkind === SERVICE_KIND.classTrainer) words.push(`${poi.tag} trainer`);
+  else if (poi.tag) words.push(poi.tag);
   return words.join(" ");
 }
 
@@ -68,6 +75,8 @@ interface Scored extends NpcHit {
   vendor: number;
   side: number;
   yards: number;
+  /** The words appear together, as typed. */
+  phrase: boolean;
 }
 
 function distance(poi: MapPoi, zone: WorldZone, player: PlayerLocation | null): number {
@@ -75,10 +84,12 @@ function distance(poi: MapPoi, zone: WorldZone, player: PlayerLocation | null): 
   return yardsBetween(player.world, zoneToWorld(zone, poi.x, poi.y));
 }
 
-export function searchNpcs(query: string, data: WorldMapData, context: SearchContext): NpcHit[] {
+/** Every matching NPC, best first, each once. */
+export function searchAllNpcs(query: string, data: WorldMapData, context: SearchContext): NpcHit[] {
   const tokens = queryTokens(query);
   if (!tokens.length) return [];
-  const scored: Scored[] = [];
+  const phrase = normalizeText(query);
+  let scored: Scored[] = [];
   for (const poi of [...data.pois, ...data.questGivers, ...data.instances]) {
     const zone = data.zoneById.get(poi.zone);
     if (!zone || !matchesAll(tokens, haystackFor(poi, zone))) continue;
@@ -86,12 +97,16 @@ export function searchNpcs(query: string, data: WorldMapData, context: SearchCon
     scored.push({
       poi,
       zone,
+      byName: nameMatches,
       name: nameMatches ? nameScore(poi.name, query) : 5,
       vendor: poi.subkind === SERVICE_KIND.vendor ? 1 : 0,
       side: usableBy(poi, context.faction, false) ? 0 : 1,
       yards: distance(poi, zone, context.player),
+      phrase: haystackFor(poi, zone).includes(phrase),
     });
   }
+  // Words typed together mean that thing: "warlock trainer" is the warlock trainers, not every warlock NPC who trains something.
+  if (tokens.length > 1 && scored.some((s) => s.phrase)) scored = scored.filter((s) => s.phrase);
   scored.sort(
     (a, b) =>
       a.name - b.name || a.vendor - b.vendor || a.side - b.side || a.yards - b.yards || a.poi.name.localeCompare(b.poi.name),
@@ -100,14 +115,18 @@ export function searchNpcs(query: string, data: WorldMapData, context: SearchCon
   // One row per NPC: a trainer who also gives quests shows once, as the trainer.
   const seen = new Set<string>();
   const hits: NpcHit[] = [];
-  for (const { poi, zone } of scored) {
+  for (const { poi, zone, byName } of scored) {
     const key = poi.npcId === undefined ? poi.id : `npc-${poi.npcId}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    hits.push({ poi, zone });
-    if (hits.length === MAX_NPC_RESULTS) break;
+    hits.push({ poi, zone, byName });
   }
   return hits;
+}
+
+/** The best few matching NPCs — the search box's suggestions. */
+export function searchNpcs(query: string, data: WorldMapData, context: SearchContext): NpcHit[] {
+  return searchAllNpcs(query, data, context).slice(0, MAX_NPC_RESULTS);
 }
 
 export function searchMap(
@@ -116,8 +135,10 @@ export function searchMap(
   places: readonly Place[],
   context: SearchContext,
 ): MapSearchResults {
+  const allNpcs = searchAllNpcs(query, data, context);
   return {
-    npcs: searchNpcs(query, data, context),
+    npcs: allNpcs.slice(0, MAX_NPC_RESULTS),
+    allNpcs,
     places: findPlaces(query, places, MAX_PLACE_RESULTS),
   };
 }

@@ -6,6 +6,7 @@ import { PLANNER_SEARCH_ID } from "@/games/wow-forever/components/worldMap/plann
 import type { TravelSettingsState } from "@/games/wow-forever/hooks/useTravelSettings";
 import type { TripPlanner } from "@/games/wow-forever/hooks/useTripPlanner";
 import type { PlayerFaction, WorldMapData } from "@/games/wow-forever/types/worldMap";
+import type { MapSearch } from "@/games/wow-forever/worldMap/mapSearch";
 import type { Place } from "@/games/wow-forever/worldMap/places";
 import type { SearchContext } from "@/games/wow-forever/worldMap/search";
 
@@ -19,13 +20,16 @@ interface RoutePlannerProps {
   /** The saved zone, for bare coordinates. */
   currentZoneId: number | null;
   onShowMap: () => void;
+  /** "Show all on the map" from the search box ("warlock trainer"). */
+  onShowAll: (search: MapSearch) => void;
 }
 
 /**
  * Search, then directions — like a maps app: find a place or NPC, see its
  * card, press Directions, and change where you start from if you like.
  */
-export default function RoutePlanner({ planner, data, places, context, faction, travel, currentZoneId, onShowMap }: RoutePlannerProps) {
+export default function RoutePlanner(props: RoutePlannerProps) {
+  const { planner, data, places, context, faction, travel, currentZoneId, onShowMap, onShowAll } = props;
   const { to } = planner;
   const fieldProps = { data, places, context, currentZoneId };
 
@@ -35,10 +39,11 @@ export default function RoutePlanner({ planner, data, places, context, faction, 
         <EndpointField
           id={PLANNER_SEARCH_ID}
           label="Find an NPC or place"
-          placeholder='Try "Ryback", "Goldshire" or "cooking trainer stormwind"'
+          placeholder='Try "Ryback", "Goldshire", "warlock trainer" or "flight master"'
           initialText=""
           {...fieldProps}
           onChoose={planner.setTo}
+          onShowAll={onShowAll}
           icon={<Search className="h-4 w-4" aria-hidden />}
         />
       )}
