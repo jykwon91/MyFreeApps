@@ -88,7 +88,7 @@ export default function WowProfessionsPage() {
       {crafting ? (
         <CraftingGuideView profession={profession} faction={player.faction} zoneId={player.zoneId} />
       ) : (
-        <SecondaryGuideView profession={profession} faction={player.faction} />
+        <SecondaryGuideView profession={profession} faction={player.faction} zoneId={player.zoneId} />
       )}
     </main>
   );

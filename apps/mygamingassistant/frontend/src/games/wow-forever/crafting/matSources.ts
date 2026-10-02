@@ -22,7 +22,8 @@ export const SOLD_IN_MOST_TOWNS = 5;
 /** A disenchant this likely is the way to get it; below, it's a lucky extra (shards from greens). */
 export const LIKELY_DISENCHANT_PERCENT = 50;
 
-const SUMMARY_PARTS = 2;
+/** Ways the shopping list's line under each material names. */
+export const SUMMARY_PARTS = 2;
 
 /** Where a material comes from, for one profession's guide. */
 export interface MatInfo {
@@ -80,7 +81,10 @@ function vendorPart(sources: ItemSources, faction: PlayerFaction, zoneId: number
 function dropPart(drop: DropSource): string {
   if (isRareDrop(drop)) return describeRareDrop(drop);
   if (isCommonDrop(drop)) return `Drops from mobs ${levelRange(drop.levels)}`;
-  return `Drops from ${drop.mobs[0]?.name ?? "mobs"}`;
+  // The lowest-level mob that drops it — a leveling guide sends you where you can fight.
+  const easiest = [...drop.mobs].sort((a, b) => a.minLevel - b.minLevel)[0];
+  if (!easiest) return "Drops from mobs";
+  return `Drops from ${easiest.name}, ${levelRange([easiest.minLevel, easiest.maxLevel])}`;
 }
 
 function disenchantPart(d: DisenchantSource): string {
@@ -99,7 +103,7 @@ export function soldToYou(sources: ItemSources, faction: PlayerFaction): boolean
  * The one-line answer for the shopping list: the easiest two ways to get it,
  * e.g. "Sold in most towns" or "Disenchant level 21–30 green armor · Made by …".
  */
-export function matSummary(info: MatInfo, faction: PlayerFaction, zoneId: number | null): string {
+export function matSummary(info: MatInfo, faction: PlayerFaction, zoneId: number | null, maxParts = SUMMARY_PARTS): string {
   const { sources, madeBy } = info;
   const vendor = vendorPart(sources, faction, zoneId);
   const parts: string[] = [];
@@ -115,7 +119,7 @@ export function matSummary(info: MatInfo, faction: PlayerFaction, zoneId: number
   if (sources.fishing.length) parts.push("Fishing");
   if (sources.vendors.length && !vendor) parts.push("Only the other faction's vendors sell it");
   if (!parts.length) return "Source not known";
-  return parts.slice(0, SUMMARY_PARTS).join(" · ");
+  return parts.slice(0, maxParts).join(" · ");
 }
 
 /** What the open panel says when nothing at all is known. */

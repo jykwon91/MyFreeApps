@@ -1,3 +1,4 @@
+import RouteMatList, { type MatPlace } from "@/games/wow-forever/components/professions/RouteMatList";
 import UnconfirmedChip from "@/games/wow-forever/components/professions/UnconfirmedChip";
 import { forFaction } from "@/games/wow-forever/lib/forFaction";
 import type { RouteStep } from "@/games/wow-forever/data/professions/professionTypes";
@@ -9,10 +10,12 @@ interface RouteRowProps {
   showChip: boolean;
   materialsLabel: string;
   sourceLabel: string;
+  /** Where materials come from; with it, each of a row's `mats` opens to its sources. */
+  matPlace?: MatPlace;
 }
 
 /** One route row: a card on phones, a table row from `sm` up. Milestones read as stage breaks. */
-export default function RouteRow({ step, faction, showChip, materialsLabel, sourceLabel }: RouteRowProps) {
+export default function RouteRow({ step, faction, showChip, materialsLabel, sourceLabel, matPlace }: RouteRowProps) {
   const chip = showChip && step.confidence === "unconfirmed" ? <UnconfirmedChip /> : null;
 
   if (step.kind === "milestone") {
@@ -39,10 +42,13 @@ export default function RouteRow({ step, faction, showChip, materialsLabel, sour
         </p>
         {step.note ? <p className="text-xs text-muted-foreground">{step.note}</p> : null}
       </div>
-      <p className="text-sm">
-        <span className="sm:hidden text-muted-foreground">{materialsLabel}: </span>
-        {forFaction(step.materials, faction)}
-      </p>
+      <div className="text-sm">
+        <p>
+          <span className="sm:hidden text-muted-foreground">{materialsLabel}: </span>
+          {forFaction(step.materials, faction)}
+        </p>
+        <RouteMatList mats={step.mats} matPlace={matPlace} />
+      </div>
       <p className="text-sm">
         <span className="sm:hidden text-muted-foreground">{sourceLabel}: </span>
         {forFaction(step.source, faction)}

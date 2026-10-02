@@ -12,11 +12,19 @@ export type Confidence = "confirmed" | "unconfirmed";
 /** Same text for both factions, or one per faction. */
 export type FactionText = string | Readonly<Record<PlayerFaction, string>>;
 
+/** A material the route needs, by item id, so it can open to where to get it. */
+export interface MatRef {
+  id: number;
+  name: string;
+}
+
 export interface CraftStep {
   kind: "craft";
   skill: string;
   name: string;
   materials: FactionText;
+  /** Every item named in `materials`, in the same order. */
+  mats?: readonly MatRef[];
   source: FactionText;
   note?: string;
   confidence: Confidence;
