@@ -195,14 +195,12 @@ async def set_mentions(db: AsyncSession, event: WowRaidEvent, role_ids: list[str
 
 async def set_role_limits(db: AsyncSession, event: WowRaidEvent, limits: dict[str, int]) -> None:
     """Raid: Edit → Role limits ({} = no limits, stored as null)."""
-    event.role_limits = limits or None
-    await db.flush()
+    await wow_raid_event_repo.set_role_limits(db, event, limits or None)
 
 
 async def set_class_limits(db: AsyncSession, event: WowRaidEvent, limits: dict[str, int]) -> None:
     """Raid: Edit → Class limits ({} = no limits, stored as null)."""
-    event.class_limits = limits or None
-    await db.flush()
+    await wow_raid_event_repo.set_class_limits(db, event, limits or None)
 
 
 async def delete_event(db: AsyncSession, event: WowRaidEvent) -> None:

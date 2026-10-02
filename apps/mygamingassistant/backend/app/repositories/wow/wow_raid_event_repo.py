@@ -150,6 +150,24 @@ async def set_message_id(
     return event
 
 
+async def set_role_limits(
+    db: AsyncSession, event: WowRaidEvent, limits: dict[str, int] | None
+) -> WowRaidEvent:
+    """Persist how many may come as each role; None = no limits (SQL NULL)."""
+    event.role_limits = limits
+    await db.flush()
+    return event
+
+
+async def set_class_limits(
+    db: AsyncSession, event: WowRaidEvent, limits: dict[str, int] | None
+) -> WowRaidEvent:
+    """Persist how many may come in each class column; None = no limits (SQL NULL)."""
+    event.class_limits = limits
+    await db.flush()
+    return event
+
+
 async def cancel(db: AsyncSession, event: WowRaidEvent) -> WowRaidEvent:
     """Transition event to 'cancelled'."""
     event.status = "cancelled"
