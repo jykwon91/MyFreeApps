@@ -1,25 +1,26 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import { MemoryRouter } from "react-router-dom";
 import WowGoldPage from "@/games/wow-forever/pages/WowGoldPage";
 import { GOLD_CHECKLIST_STORAGE_KEY } from "@/games/wow-forever/components/gold/GoldDontDoSection";
 import { WOW_CLASSES } from "@/games/wow-forever/data/classes";
 import { BAND_TIPS, CLASS_GOLD_TIPS, GOLD_DONT_DO, SELL_ITEMS, VENDOR_ITEMS } from "@/games/wow-forever/data/gold/goldTips";
-import { bandForLevel, parseBand } from "@/games/wow-forever/hooks/useGoldBand";
+import {
+  clothPerHour,
+  FARM_SORT,
+  farmsFor,
+  formatMoney,
+  goldFarms,
+  goldPerHour,
+} from "@/games/wow-forever/gold/goldFarms";
 import { CHECKLIST_STORAGE_KEY } from "@/games/wow-forever/hooks/useChecklist";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
-
-function LocationProbe() {
-  const location = useLocation();
-  return <p data-testid="search">{location.search}</p>;
-}
 
 function renderAt(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <WowGoldPage />
-      <LocationProbe />
     </MemoryRouter>,
   );
 }
@@ -37,49 +38,77 @@ function savePlayer(level: number | null, classId: string) {
   );
 }
 
-describe("bandForLevel / parseBand", () => {
-  it("maps a level to its band, starting at 1–20 with no level", () => {
-    expect(bandForLevel(null)).toBe("1-20");
-    expect(bandForLevel(19)).toBe("1-20");
-    expect(bandForLevel(20)).toBe("20-40");
-    expect(bandForLevel(39)).toBe("20-40");
-    expect(bandForLevel(60)).toBe("40-60");
+describe("goldFarms", () => {
+  const farms = goldFarms();
+
+  it("formats copper the way the game does", () => {
+    expect(formatMoney(45)).toBe("45c");
+    expect(formatMoney(320)).toBe("3s 20c");
+    expect(formatMoney(300)).toBe("3s");
+    expect(formatMoney(124_049)).toBe("12g 40s");
+    expect(formatMoney(19_999)).toBe("2g");
   });
 
-  it("accepts only known bands", () => {
-    expect(parseBand("all")).toBe("all");
-    expect(parseBand("40-60")).toBe("40-60");
-    expect(parseBand("70-80")).toBeNull();
-    expect(parseBand(null)).toBeNull();
+  it("puts mobs from 3 under to 1 over your level, one per place, best first", () => {
+    for (const level of [5, 15, 30, 45, 58]) {
+      const shown = farmsFor(farms, level, { skinning: false, sort: FARM_SORT.gold });
+      expect(shown.length).toBeGreaterThanOrEqual(3);
+      for (const f of shown) {
+        expect(f.maxLevel).toBeGreaterThanOrEqual(level - 3);
+        expect(f.minLevel).toBeLessThanOrEqual(level + 1);
+      }
+      const places = shown.map((f) => `${f.zoneId}:${f.subzone || f.npcId}`);
+      expect(new Set(places).size).toBe(places.length);
+      const gold = shown.map((f) => goldPerHour(f, false));
+      expect([...gold].sort((a, b) => b - a)).toEqual(gold);
+    }
+  });
+
+  it("finds Runecloth camps at 58 when sorted by cloth", () => {
+    const shown = farmsFor(farms, 58, { skinning: false, sort: FARM_SORT.cloth });
+    expect(shown[0].cloth).toBe("Runecloth");
+    expect(clothPerHour(shown[0])).toBeGreaterThan(20);
+  });
+
+  it("counts Skinning only when you have it", () => {
+    const beast = farms.find((f) => f.skinVendor > 0);
+    if (!beast) throw new Error("no skinnable farm");
+    expect(goldPerHour(beast, true)).toBeGreaterThan(goldPerHour(beast, false));
   });
 });
 
 describe("Making gold page", () => {
   beforeEach(() => window.localStorage.clear());
 
-  it("starts at 1–20 with three numbered tips and says there are no prices", () => {
+  it("starts at the 1–20 plan, says the numbers are vendor prices, and asks for a level to list farms", () => {
     renderAt("/wow-forever/gold");
     expect(screen.getByRole("heading", { name: "Making gold" })).toBeInTheDocument();
-    expect(screen.getByText(/No prices here/)).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "1–20" })).toBeChecked();
-    expect(section("now").getByText("Take two gathering professions")).toBeInTheDocument();
+    expect(screen.getByText(/vendor prices from Classic's loot tables/)).toBeInTheDocument();
+    expect(section("now").getByText("Quest, and loot every mob you kill")).toBeInTheDocument();
+    expect(section("farm").getByText(/Enter your level/)).toBeInTheDocument();
   });
 
-  it("seeds the band from the saved level and lets ?band= win", () => {
+  it("uses the saved level for the plan and the farm list, and saves a new one", async () => {
     savePlayer(45, "mage");
-    const { unmount } = renderAt("/wow-forever/gold");
-    expect(screen.getByRole("radio", { name: "40–60" })).toBeChecked();
-    expect(section("now").getByText("Farm high-end materials")).toBeInTheDocument();
-    unmount();
-    renderAt("/wow-forever/gold?band=20-40");
-    expect(screen.getByRole("radio", { name: "20–40" })).toBeChecked();
+    renderAt("/wow-forever/gold");
+    expect(section("now").getByRole("heading", { name: "Your plan for levels 40–60" })).toBeInTheDocument();
+    expect(section("farm").getAllByRole("link", { name: "Directions on the World Map" }).length).toBeGreaterThanOrEqual(3);
+    const level = screen.getByLabelText("Your level");
+    await userEvent.clear(level);
+    await userEvent.type(level, "25");
+    expect(section("now").getByRole("heading", { name: "Your plan for levels 20–40" })).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem(PLAYER_SETTINGS_STORAGE_KEY) ?? "{}")).toMatchObject({ level: 25 });
   });
 
-  it("puts the band in the URL and shows every band for All", async () => {
+  it("re-sorts the farm list by cloth and adds Skinning to gold an hour", async () => {
+    savePlayer(58, "warlock");
     renderAt("/wow-forever/gold");
-    await userEvent.click(screen.getByRole("radio", { name: "All" }));
-    expect(screen.getByTestId("search")).toHaveTextContent("band=all");
-    for (const b of BAND_TIPS) expect(section("now").getByRole("heading", { name: b.label })).toBeInTheDocument();
+    const farm = section("farm");
+    expect(farm.getAllByText(/Skinnable:/).length).toBeGreaterThan(0);
+    await userEvent.click(farm.getByLabelText("I have Skinning"));
+    expect(farm.queryByText(/Skinnable:/)).not.toBeInTheDocument();
+    await userEvent.click(farm.getByRole("radio", { name: "Most cloth" }));
+    expect(farm.getAllByText(/Runecloth/).length).toBeGreaterThan(0);
   });
 
   it("shows tips for the saved class, or every class", async () => {
@@ -103,7 +132,8 @@ describe("Making gold page", () => {
   });
 
   it("marks Forever-only and unknown tips", () => {
-    renderAt("/wow-forever/gold?band=20-40");
+    savePlayer(25, "mage");
+    renderAt("/wow-forever/gold");
     const now = section("now");
     expect(now.getByText("Unconfirmed")).toBeInTheDocument();
   });
