@@ -64,6 +64,20 @@ def signed_up_page(first: int, last: int, total: int) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Raid: Manage (right-click a member) — which raid, when they lead several
+# ---------------------------------------------------------------------------
+
+PICK_RAID: Final = "Pick a raid"
+# Under a raid in the menu: where the player stands on it (else their spec and status).
+NOT_SIGNED_UP: Final = "Not signed up"
+MARKED_ABSENT: Final = "Marked absent"
+
+
+def raid_pick_prompt(who: str) -> str:
+    return f"Pick the raid to manage {who} on."
+
+
+# ---------------------------------------------------------------------------
 # A player's card
 # ---------------------------------------------------------------------------
 

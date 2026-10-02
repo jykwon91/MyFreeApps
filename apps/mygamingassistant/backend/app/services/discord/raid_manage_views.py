@@ -476,11 +476,18 @@ def _card(
     content = raid_line(event)
     if notice:
         content = f"{content}\n{notice}"
-    embed: dict[str, Any] = {"description": text, "color": post_color(event)}
+    return ephemeral_data(content, components=rows, embeds=[player_embed(target, text, color=post_color(event))])
+
+
+def player_embed(target: Target, text: str, *, color: int | None = None) -> dict[str, Any]:
+    """*text* in an embed headed by the player's name and avatar."""
+    embed: dict[str, Any] = {"description": text}
+    if color is not None:
+        embed["color"] = color
     if target.name:
         # The author line is plain text (no markdown), so the name goes in as it is.
         author = {"name": target.name}
         if target.avatar_url:
             author["icon_url"] = target.avatar_url
         embed["author"] = author
-    return ephemeral_data(content, components=rows, embeds=[embed])
+    return embed

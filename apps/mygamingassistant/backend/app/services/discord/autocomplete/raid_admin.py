@@ -1,8 +1,9 @@
 """Autocomplete for /raid-admin options.
 
 * ``timezone`` (setup) — IANA zones + friendly aliases, no DB.
-* ``event`` (edit / cancel) — this guild's upcoming scheduled raids, labelled
-  "Sat Oct 10 8pm Onyxia"; the value is the event UUID.
+* ``event`` (edit / cancel / signup) — this guild's upcoming scheduled raids,
+  labelled "Sat Oct 10 8pm Onyxia"; the value is the event UUID.  For
+  ``signup``, raids that have started too, until they're finished.
 
 Autocomplete can't show errors, so every failure path returns no choices.
 """
@@ -36,7 +37,10 @@ async def _event_choices(interaction: Interaction, query: str) -> list[dict[str,
         guild = await load_configured_guild(db, interaction)
         if guild is None:
             return []
-        events = await wow_raid_event_repo.list_upcoming(db, guild.id, after=utcnow(), limit=MAX_CHOICES)
+        after = utcnow()
+        if interaction.subcommand == "signup":
+            after = None
+        events = await wow_raid_event_repo.list_upcoming(db, guild.id, after=after, limit=MAX_CHOICES)
         choices = []
         for event in events:
             label = event_choice_label(event, guild.timezone)
