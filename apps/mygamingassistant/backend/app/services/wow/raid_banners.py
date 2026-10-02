@@ -17,11 +17,14 @@ Local dev and tests post without them.
 from __future__ import annotations
 
 import hashlib
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 BANNER_DIR: Final = Path(__file__).resolve().parents[3] / "data" / "raid_banners"
 ROUTE_PREFIX: Final = "/discord/raid-banners"
@@ -67,3 +70,21 @@ def banner_url(raid_key: str) -> str | None:
     if banner is None or not origin.startswith("https://"):
         return None
     return f"{origin}{settings.backend_root_path}{ROUTE_PREFIX}/{banner.file_name}?v={banner.version}"
+
+
+def banners_off_reason() -> str | None:
+    """Why raid posts would go out without banners; None when they show them."""
+    if not BANNERS:
+        return f"no banner art in {BANNER_DIR}"
+    if not settings.frontend_url.rstrip("/").startswith("https://"):
+        return "FRONTEND_URL is not an https origin"
+    return None
+
+
+def log_if_off() -> None:
+    """Say at startup when posts will lack banners — a warning in production, where they should show."""
+    reason = banners_off_reason()
+    if reason is None:
+        return
+    level = logging.WARNING if settings.environment == "production" else logging.INFO
+    logger.log(level, "Raid posts will go out without banners: %s", reason)

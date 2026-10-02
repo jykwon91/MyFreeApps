@@ -1,4 +1,4 @@
-"""Discord bot startup: the boot guard, then the raid bot's icon warm-up.
+"""Discord bot startup: the boot guard, the raid bot's icon warm-up, and a banner check.
 
 Called once from ``app.main._on_startup``.
 """
@@ -8,6 +8,7 @@ import logging
 
 from app.core.config import settings
 from app.services.discord import emojis
+from app.services.wow import raid_banners
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,9 @@ def start_discord() -> None:
     """Run the boot guard, then warm the icon registry in the background.
 
     The warm-up never blocks boot: posts render text tags such as "[WAR]"
-    until the icons are listed.
+    until the icons are listed.  Posts without banners are logged here
+    rather than left to show up as plain posts.
     """
     check_discord_configured()
     emojis.start_refresh()
+    raid_banners.log_if_off()

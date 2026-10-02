@@ -7,6 +7,7 @@ of on a live post.
 from __future__ import annotations
 
 import io
+import logging
 import re
 import uuid
 from datetime import datetime, timezone
@@ -21,6 +22,7 @@ from app.api import discord_raid_banners
 from app.core.config import settings
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_guild import WowRaidGuild
+from app.services.wow import raid_banners
 from app.services.wow.raid_banners import BANNER_DIR, BANNERS, banner_url
 from app.services.wow.raid_catalog import RAIDS
 from app.services.wow.raid_embed import build_signup_message
@@ -33,6 +35,7 @@ _CACHE_OTHER = "public, max-age=3600"
 @pytest.fixture
 def public_origin(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "frontend_url", f"{_ORIGIN}/")
+    monkeypatch.setattr(settings, "backend_root_path", "/api")
 
 
 def _event(status: str = "scheduled") -> WowRaidEvent:
@@ -103,6 +106,29 @@ def test_no_banners_without_a_public_https_origin(monkeypatch: pytest.MonkeyPatc
     assert "image" not in _post_embed(_event())
 
 
+@pytest.mark.parametrize(
+    ("environment", "level"), [("production", logging.WARNING), ("development", logging.INFO)]
+)
+def test_startup_says_when_posts_will_lack_banners(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, environment: str, level: int
+) -> None:
+    monkeypatch.setattr(settings, "frontend_url", "http://localhost:5176")
+    monkeypatch.setattr(settings, "environment", environment)
+    with caplog.at_level(logging.INFO, logger=raid_banners.__name__):
+        raid_banners.log_if_off()
+    [record] = caplog.records
+    assert record.levelno == level
+    assert "FRONTEND_URL is not an https origin" in record.getMessage()
+
+
+@pytest.mark.usefixtures("public_origin")
+def test_startup_is_quiet_when_banners_show(caplog: pytest.LogCaptureFixture) -> None:
+    assert raid_banners.banners_off_reason() is None
+    with caplog.at_level(logging.INFO, logger=raid_banners.__name__):
+        raid_banners.log_if_off()
+    assert caplog.records == []
+
+
 @pytest.mark.usefixtures("public_origin")
 @pytest.mark.parametrize("status", ["draft", "scheduled", "completed"])
 def test_the_post_shows_its_raids_banner(status: str) -> None:
@@ -163,3 +189,10 @@ async def test_the_route_is_mounted_with_the_bot(monkeypatch: pytest.MonkeyPatch
     async with AsyncClient(transport=ASGITransport(app=create_app()), base_url="http://test") as client:
         response = await client.get("/discord/raid-banners/onyxia.png")
     assert response.status_code == status
+
+
+def test_the_api_docs_describe_the_route_as_a_png() -> None:
+    app = FastAPI()
+    app.include_router(discord_raid_banners.router)
+    responses = app.openapi()["paths"]["/discord/raid-banners/{file_name}"]["get"]["responses"]
+    assert set(responses["200"]["content"]) == {"image/png"}

@@ -33,10 +33,6 @@ class Glyph:
     author: str
     slug: str
 
-    @property
-    def credit(self) -> str:
-        return f"{self.slug} by {self.author}"
-
 
 # ---------------------------------------------------------------------------
 # Downloads

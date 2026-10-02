@@ -27,7 +27,7 @@ _CACHE_OTHER: Final = "public, max-age=3600"
 router = APIRouter(prefix=ROUTE_PREFIX, tags=["discord"])
 
 
-@router.get("/{file_name}")
+@router.get("/{file_name}", response_class=Response, responses={200: {"content": {"image/png": {}}}})
 async def get_raid_banner(file_name: str, v: str | None = None) -> Response:
     banner = banner_for_file(file_name)
     if banner is None:
