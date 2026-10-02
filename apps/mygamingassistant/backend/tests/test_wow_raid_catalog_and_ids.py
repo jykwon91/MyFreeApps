@@ -501,7 +501,7 @@ def test_command_split() -> None:
         "Raid: Edit",
         "Raid: Close",
         "Raid: Open",
-        "Raid: Signed",
+        "Raid: Signed", "Raid: Unsigned",
         "Raid: Manage",
     ]
     assert len(MENU_COMMANDS) <= 5  # Discord's cap on message commands per app
@@ -509,5 +509,5 @@ def test_command_split() -> None:
     assert RAID_ADMIN_COMMAND["default_member_permissions"] == str(1 << 33)
     assert [o["name"] for o in RAID_COMMAND["options"]] == ["ping", "list", "prefs", "attendance"]
     assert [o["name"] for o in RAID_ADMIN_COMMAND["options"]] == [
-        "setup", "create", "edit", "cancel", "signup", "repeats", "attendance", "export"
+        "setup", "raiders", "create", "edit", "cancel", "signup", "repeats", "attendance", "export"
     ]

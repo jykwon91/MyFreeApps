@@ -5,7 +5,7 @@ claims the raid's ping slot, answers "Pinging N people…" and schedules
 :func:`send_ping`, which runs after the response like the rest of the bot's
 background work (``raid_publisher``): its own transactions, every REST call
 bounded, never raises.  A caller already holding a REST client hands the job
-to :func:`deliver` instead.
+to :func:`deliver` instead: Raid: Unsigned's [Ping them] does, on its own slot.
 
 The messages go out in order — the first as a reply to the raid post — and
 stop at the first one Discord doesn't take.  The leader's card then says:
@@ -34,7 +34,7 @@ from app.repositories.wow import wow_raid_event_repo
 from app.services.discord import raid_copy, rest
 from app.services.discord.interaction import ephemeral_data
 from app.services.discord.raid_publisher import edit_original
-from app.services.wow import raid_event_service
+from app.services.wow import raid_event_service, raid_unsigned_service
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ class PingJob:
 
 
 # Each ping slot's release, keyed by ``PingJob.slot``.
-_RELEASE: Final = {"signed": raid_event_service.release_ping}
+_RELEASE: Final = {"signed": raid_event_service.release_ping, "unsigned": raid_unsigned_service.release_ping}
 
 
 @dataclass(frozen=True)

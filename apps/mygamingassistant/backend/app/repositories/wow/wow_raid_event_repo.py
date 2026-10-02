@@ -21,7 +21,7 @@ _MINUTE: Final = literal_column("interval '1 minute'", Interval())
 COPIED: Final = (
     "raid_key", "title", "size_cap", "notes", "leader_user_id", "leader_display_name", "image_url", "color",
     "mention_role_ids", "role_limits", "class_limits", "signup_deadline_minutes", "signup_notes_enabled",
-    "discord_event_enabled", "thread_enabled", "length_minutes",
+    "discord_event_enabled", "thread_enabled", "length_minutes", "raider_role_ids",
 )
 
 
@@ -439,6 +439,20 @@ async def set_attendance_recorded(db: AsyncSession, event: WowRaidEvent, at: dat
 async def set_attendance_counted(db: AsyncSession, event: WowRaidEvent, counted: bool) -> WowRaidEvent:
     """Persist whether the raid counts toward attendance."""
     event.attendance_counted = counted
+    await db.flush()
+    return event
+
+
+async def set_raider_role_ids(db: AsyncSession, event: WowRaidEvent, role_ids: list[str] | None) -> WowRaidEvent:
+    """Persist the roles Raid: Unsigned checks for this raid (None = the server's raider roles)."""
+    event.raider_role_ids = role_ids
+    await db.flush()
+    return event
+
+
+async def set_unsigned_pinged_at(db: AsyncSession, event: WowRaidEvent, at: datetime | None) -> WowRaidEvent:
+    """Persist when Unsigned's [Ping them] slot was claimed (None hands it back)."""
+    event.unsigned_pinged_at = at
     await db.flush()
     return event
 

@@ -25,7 +25,7 @@ from platform_shared.services.discord import (
 
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_signup import NOTE_MAX, WowRaidSignup
-from app.services.discord import raid_attendance_copy, raid_copy, raid_manage_copy, raid_member_copy
+from app.services.discord import raid_attendance_copy, raid_copy, raid_manage_copy, raid_member_copy, raid_unsigned_copy
 from app.services.discord.interaction import ephemeral_data, modal_response
 from app.services.discord.raid_views import EMBED_DESCRIPTION_LIMIT, action_row, button, clip_lines, unix
 from app.services.wow import raid_custom_id
@@ -83,8 +83,9 @@ def signed_data(
     Late and queued players say so after their spec; tentative, bench and
     absence follow with the full spec name.  While the raid takes notes,
     the players' notes follow the list.  While the raid is on, [Manage
-    sign-ups] shows, after [Ping signed members] once anyone is listed;
-    [Attendance] follows once it has started, and stands alone once it's done.
+    sign-ups] and [Not signed up] show, after [Ping signed members] once
+    anyone is listed; [Attendance] follows once it has started, and stands
+    alone once it's done.
     *notice* goes above the list, e.g. why a ping didn't go out.
     """
     summary = compute_roster_summary(signups, size_cap=event.size_cap)
@@ -113,7 +114,8 @@ def signed_data(
     components: list[dict[str, Any]] = []
     if event.status == "scheduled":
         manage = button(raid_manage_copy.SIGNED_BUTTON, BUTTON_STYLE_SECONDARY, raid_custom_id.manage(event.id, "open"))
-        buttons = [manage]
+        unsigned = raid_custom_id.encode("un", event.id, "open")
+        buttons = [manage, button(raid_unsigned_copy.SIGNED_BUTTON, BUTTON_STYLE_SECONDARY, unsigned)]
         if listed_user_ids(signups):
             ping = button("Ping signed members", BUTTON_STYLE_PRIMARY, raid_custom_id.encode("lc", event.id, "ping"))
             buttons.insert(0, ping)

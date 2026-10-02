@@ -50,6 +50,10 @@ class WowRaidGuild(Base):
             "char_length(discord_guild_id) >= 1",
             name="ck_wowraidguild_discord_guild_id_nonempty",
         ),
+        CheckConstraint(
+            "raider_role_ids IS NULL OR jsonb_typeof(raider_role_ids) = 'array'",
+            name="ck_wowraidguild_raider_role_ids",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -89,6 +93,10 @@ class WowRaidGuild(Base):
     # migration 0038).  Each raid copies them; its leader can change its own.
     default_discord_event: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     default_thread: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    # The roles Raid: Unsigned checks on every raid that hasn't picked its own
+    # (/raid-admin raiders; migration 0040); null = none set.  None is stored
+    # as SQL NULL, not JSON null, which the check constraint refuses.
+    raider_role_ids: Mapped[Optional[list[Any]]] = mapped_column(JSONB(none_as_null=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

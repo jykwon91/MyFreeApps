@@ -37,8 +37,8 @@ def test_single_head_is_0031(script_directory: ScriptDirectory) -> None:
         "Orphan heads usually mean a migration's down_revision is stale "
         "after a merge — rebase and re-point the down_revision."
     )
-    assert heads[0] == "0039", (
-        f"Expected head 0039 (wow raid attendance), "
+    assert heads[0] == "0040", (
+        f"Expected head 0040 (wow raid unsigned), "
         f"got {heads[0]}."
     )
 

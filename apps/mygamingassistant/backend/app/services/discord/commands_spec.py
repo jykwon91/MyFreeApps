@@ -14,22 +14,23 @@ Two top-level commands
 subcommand, so the raid bot is split:
 
 * ``/raid`` — everyone: ``list``, ``prefs``, ``attendance`` (and ``ping``).
-* ``/raid-admin`` — organisers: ``setup``, ``create``, ``edit``, ``cancel``,
-  ``signup``, ``repeats``, ``attendance``, ``export``.
+* ``/raid-admin`` — organisers: ``setup``, ``raiders``, ``create``, ``edit``,
+  ``cancel``, ``signup``, ``repeats``, ``attendance``, ``export``.
   ``default_member_permissions`` = Manage Events, so regular members never
   see organiser actions in their slash menu.  Server admins can still widen
   or narrow access per command in Server Settings → Integrations.
 
 The client-side gate is advisory: handlers re-check the member's permission
-bitfield from the payload (Manage Events; Manage Server for ``setup``).
+bitfield from the payload (Manage Events; Manage Server for ``setup`` and
+``raiders``).
 
 The raid post's right-click menu
 --------------------------------
 Message commands (right-click a raid post → Apps): ``Raid: Edit``,
-``Raid: Close``, ``Raid: Open`` and ``Raid: Signed``, Manage Events by
-default like ``/raid-admin``.  Their handlers also let the raid's own
-leader in.  Discord allows five message commands per app; ``Raid: Unsigned``
-is to take the last, so any further leader action is a button or a slash
+``Raid: Close``, ``Raid: Open``, ``Raid: Signed`` and ``Raid: Unsigned``,
+Manage Events by default like ``/raid-admin``.  Their handlers also let the
+raid's own leader in.  Discord allows five message commands per app and
+these take them all, so any further leader action is a button or a slash
 command.
 
 The member right-click menu
@@ -193,6 +194,7 @@ RAID_ADMIN_COMMAND: Final[dict[str, Any]] = {
                 },
             ],
         },
+        {"type": _SUB_COMMAND, "name": "raiders", "description": "Pick the roles Unsigned checks on every raid"},
         {
             "type": _SUB_COMMAND,
             "name": "create",
@@ -300,6 +302,7 @@ EDIT_MENU: Final = "Raid: Edit"
 CLOSE_MENU: Final = "Raid: Close"
 OPEN_MENU: Final = "Raid: Open"
 SIGNED_MENU: Final = "Raid: Signed"
+UNSIGNED_MENU: Final = "Raid: Unsigned"
 
 
 def _message_command(name: str) -> dict[str, Any]:
@@ -314,7 +317,7 @@ def _message_command(name: str) -> dict[str, Any]:
 
 
 MENU_COMMANDS: Final[list[dict[str, Any]]] = [
-    _message_command(name) for name in (EDIT_MENU, CLOSE_MENU, OPEN_MENU, SIGNED_MENU)
+    _message_command(name) for name in (EDIT_MENU, CLOSE_MENU, OPEN_MENU, SIGNED_MENU, UNSIGNED_MENU)
 ]
 
 # ---------------------------------------------------------------------------

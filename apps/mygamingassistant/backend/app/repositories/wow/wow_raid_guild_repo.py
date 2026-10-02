@@ -37,6 +37,13 @@ async def set_ping_role(db: AsyncSession, guild: WowRaidGuild, role_id: str | No
     return guild
 
 
+async def set_raider_role_ids(db: AsyncSession, guild: WowRaidGuild, role_ids: list[str] | None) -> WowRaidGuild:
+    """Set the roles Raid: Unsigned checks on every raid that hasn't picked its own; None = none."""
+    guild.raider_role_ids = role_ids
+    await db.flush()
+    return guild
+
+
 async def upsert_config(
     db: AsyncSession,
     *,
