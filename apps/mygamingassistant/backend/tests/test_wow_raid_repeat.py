@@ -18,12 +18,12 @@ from app.services.wow import raid_repeat
 NY = "America/New_York"
 _8PM = time(20, 0)
 
-# Never carried to a copy: where and when it is, its post, who made it, its state, its Discord event and thread.
+# Never carried to a copy: where and when it is, its post, who made it, its state, its Discord event and thread, attendance.
 _NOT_COPIED = {
     "id", "guild_id", "starts_at", "status", "channel_id", "message_id", "created_by_user_id",
     "created_by_display_name", "cancel_reason", "closed_at", "close_reason", "deadline_applied_at", "start_applied_at",
     "last_pinged_at", "series_id", "created_at", "updated_at", "discord_event_id", "discord_event_digest", "thread_id",
-} | {"discord_event_starts_at", "discord_event_claimed_at", "discord_event_error", "thread_name", "thread_error"}
+} | {"discord_event_starts_at", "discord_event_claimed_at", "discord_event_error", "thread_name", "thread_error"} | {"attendance_counted", "attendance_recorded_at"}
 
 
 def _utc(*args: int) -> datetime:

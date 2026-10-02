@@ -5,8 +5,9 @@ its sign-ups stand and offers the opposite ([Reopen sign-ups] / [Close
 sign-ups]).  Raid: Signed lists everyone on the raid for its leader, column
 by column like the post, then tentative, bench and absence, then the
 players' notes while the raid takes them, with [Ping signed members] and
-[Manage sign-ups] (``raid_manage_views``); the ping's message form lives
-here too.
+[Manage sign-ups] (``raid_manage_views``), then [Attendance]
+(``raid_attendance_views``) once the raid has started; the ping's message
+form lives here too.
 """
 from __future__ import annotations
 
@@ -24,7 +25,7 @@ from platform_shared.services.discord import (
 
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_signup import NOTE_MAX, WowRaidSignup
-from app.services.discord import raid_copy, raid_manage_copy, raid_member_copy
+from app.services.discord import raid_attendance_copy, raid_copy, raid_manage_copy, raid_member_copy
 from app.services.discord.interaction import ephemeral_data, modal_response
 from app.services.discord.raid_views import EMBED_DESCRIPTION_LIMIT, action_row, button, clip_lines, unix
 from app.services.wow import raid_custom_id
@@ -82,7 +83,8 @@ def signed_data(
     Late and queued players say so after their spec; tentative, bench and
     absence follow with the full spec name.  While the raid takes notes,
     the players' notes follow the list.  While the raid is on, [Manage
-    sign-ups] shows, after [Ping signed members] once anyone is listed.
+    sign-ups] shows, after [Ping signed members] once anyone is listed;
+    [Attendance] follows once it has started, and stands alone once it's done.
     *notice* goes above the list, e.g. why a ping didn't go out.
     """
     summary = compute_roster_summary(signups, size_cap=event.size_cap)
@@ -115,8 +117,17 @@ def signed_data(
         if listed_user_ids(signups):
             ping = button("Ping signed members", BUTTON_STYLE_PRIMARY, raid_custom_id.encode("lc", event.id, "ping"))
             buttons.insert(0, ping)
+        if event.start_applied_at is not None:
+            buttons.append(_attendance_button(event))
         components.append(action_row(*buttons))
+    elif event.status == "completed":
+        components.append(action_row(_attendance_button(event)))
     return ephemeral_data(notice or "", components=components, embeds=[embed])
+
+
+def _attendance_button(event: WowRaidEvent) -> dict[str, Any]:
+    attendance = raid_custom_id.attendance(event.id, "open")
+    return button(raid_attendance_copy.ATTENDANCE_BUTTON, BUTTON_STYLE_SECONDARY, attendance)
 
 
 def _with_notes(event: WowRaidEvent, signups: Sequence[WowRaidSignup], text: str) -> str:

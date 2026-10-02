@@ -7,6 +7,8 @@ Subcommands
   prefs   remembered class + per-class spec and character name + DM reminders;
           with no options shows the current settings and a [Send me a test DM]
           button (private).
+  attendance  the member's own raids over the last N counted ones (private;
+          see ``raid_attendance.py``).
 
 Organiser commands live under ``/raid-admin`` (see ``raid_admin.py``).
 Each handler runs in one transaction and returns the interaction response.
@@ -20,6 +22,7 @@ from fastapi import BackgroundTasks
 from app.db.session import unit_of_work
 from app.repositories.wow import wow_raid_event_repo, wow_raid_signup_repo
 from app.services.discord import raid_copy, raid_member_copy
+from app.services.discord.commands import raid_attendance
 from app.services.discord.interaction import (
     Interaction,
     ephemeral_response,
@@ -46,6 +49,8 @@ async def handle_raid(interaction: Interaction, background: BackgroundTasks) -> 
         return await _list(interaction)
     if subcommand == "prefs":
         return await _prefs(interaction)
+    if subcommand == "attendance":
+        return await raid_attendance.handle_own(interaction)
     return ephemeral_response("Unknown command.")
 
 

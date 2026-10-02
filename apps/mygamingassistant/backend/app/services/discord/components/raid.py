@@ -16,6 +16,7 @@ from fastapi import BackgroundTasks
 from app.services.discord import raid_copy, raid_publisher
 from app.services.discord.components import (
     raid_admin,
+    raid_attendance,
     raid_card,
     raid_duplicate,
     raid_edit,
@@ -74,6 +75,8 @@ _HANDLERS: Final[dict[str, ComponentHandler]] = {
     "xt": raid_extras.handle_extras,
     "ml": raid_manage.handle_manage,
     "mr": raid_manage_open.handle_raid_pick,
+    "at": raid_attendance.handle_attendance,
+    "as": raid_attendance.handle_summary,
     "testdm": _handle_test_dm,
 }
 

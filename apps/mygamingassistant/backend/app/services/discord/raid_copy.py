@@ -403,13 +403,15 @@ def notify_post(raid_label: str, unix: int) -> str:
     return f"{raid_label} has moved to <t:{unix}:F> (<t:{unix}:R>). Please check you can still make it."
 
 
-def delete_prompt(raid_label: str, signups: int, *, can_cancel: bool) -> str:
+def delete_prompt(raid_label: str, signups: int, *, can_cancel: bool, attendance: bool = False) -> str:
     if signups == 0:
         removes = "This removes the post."
     elif signups == 1:
         removes = "This removes the post and its 1 sign-up."
     else:
         removes = f"This removes the post and all {signups} sign-ups."
+    if attendance:
+        removes += " Its attendance record goes too."
     text = f"Delete **{raid_label}**? {removes} Nobody is notified."
     if can_cancel:
         text += " To tell people, use **Cancel raid** instead."

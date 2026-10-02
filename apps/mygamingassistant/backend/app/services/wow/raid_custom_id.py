@@ -55,6 +55,10 @@ ml       Manage sign-ups (a leader adds, changes,      raid:v1:ml:<event>:<verb>
 testdm   /raid prefs [Send me a test DM]              raid:v1:testdm
 mr       Raid: Manage's raid picker (the value is     raid:v1:mr
          ``<event>:<member>``: the raid, and the player to manage on it)
+at       the Attendance card (Raid: Signed's          raid:v1:at:<event>:<verb>:<member|->:<arg|->
+         [Attendance]) and its player card; see ``ATTENDANCE_VERBS``
+as       /raid-admin attendance's summary: [Previous]  raid:v1:as:<page|csv>:<raid|->:<count>:<0|1>:<page|->
+         / [Next] and [Export CSV], carrying the window (no raid: the guild is the interaction's)
 """
 from __future__ import annotations
 
@@ -63,6 +67,7 @@ from dataclasses import dataclass
 from typing import Final
 
 from app.models.wow.wow_raid_signup import RAID_ROLES, WOW_CLASSES
+from app.services.wow.raid_attendance import PLAYER_MENUS, SETTABLE_OUTCOMES, WindowQuery
 from app.services.wow.raid_catalog import POST_COLUMNS, SPECS
 from app.services.wow.raid_roster import (
     BENCH_STATUS,
@@ -103,12 +108,17 @@ _EVENT_ACTIONS: Final[dict[str, int]] = {
     "cp": 0,
     "rp": 1,
     "xt": 1,
+    "at": 3,
 }
 # Raid: Manage's raid picker; its option values carry the raid and the player.
 RAID_PICK: Final = "mr"
 # /raid-admin repeats' menu; its option values are a repeat's latest raid.
 REPEATS_PICK: Final = "rpl"
 _BARE_ACTIONS: Final = frozenset({"testdm", RAID_PICK, REPEATS_PICK})
+# action → number of args, with no event id: the attendance summary (``as``).
+_SERVER_ACTIONS: Final[dict[str, int]] = {"as": 5}
+# Every action a component can carry (the router's table matches it).
+ROUTED_ACTIONS: Final = frozenset(_EVENT_ACTIONS) | _BARE_ACTIONS | frozenset(_SERVER_ACTIONS)
 
 # A menu opened from My sign-up: keep whatever status you have when you pick.
 SAME_STATUS: Final = "same"
@@ -176,6 +186,20 @@ MARK_STATUSES: Final = (*SEAT_STATUSES, TENTATIVE_STATUS, BENCH_STATUS)
 # for that waits in the queue while the raid is full).
 _MOVE_STATUSES: Final = (*MARK_STATUSES, QUEUED_STATUS)
 NO_ARG: Final = "-"
+# The Attendance card (``at``): verb → what its <member> / <arg> hold.  The card's own verbs
+# name nobody (``-``):
+#   open  the card (Raid: Signed's [Attendance], the player card's [Back])
+#   add   its "Add people who came…" menu   record  [Record now]   csv  [Export CSV]
+#   count / nocount  [Count this raid] / [Don't count this raid]
+#   who   its player menus (arg = which menu, 1 to PLAYER_MENUS; the value is the member)
+# The player card's name the member:
+#   set   [Attended] [Late] [Standby] [No-show] [Absent] (arg = one of SETTABLE_OUTCOMES)
+#   drop  [Remove] (a walk-in a leader added)
+ATTENDANCE_HUB_VERBS: Final = ("open", "add", "record", "count", "nocount", "csv")
+ATTENDANCE_VERBS: Final = (*ATTENDANCE_HUB_VERBS, "who", "set", "drop")
+_PLAYER_MENU_ARGS: Final = tuple(str(menu) for menu in range(1, PLAYER_MENUS + 1))
+# The summary (``as``): [Previous] / [Next] (with the page) and [Export CSV] (page ``-``).
+SUMMARY_VERBS: Final = ("page", "csv")
 _SPEC_CHOICES: Final = frozenset(spec.choice_value for spec in SPECS)
 # Old status names still on buttons of posts not re-rendered since they changed.
 _LEGACY_STATUSES: Final[dict[str, str]] = {"declined": "absence"}
@@ -204,6 +228,16 @@ def manage(event_id: uuid.UUID, verb: str, member: str = NO_ARG, arg: str = NO_A
     return encode("ml", event_id, verb, member, arg)
 
 
+def attendance(event_id: uuid.UUID, verb: str, member: str = NO_ARG, arg: str = NO_ARG) -> str:
+    """An Attendance card custom_id: ``raid:v1:at:<event>:<verb>:<member>:<arg>``."""
+    return encode("at", event_id, verb, member, arg)
+
+
+def summary(verb: str, query: WindowQuery, page: str = NO_ARG) -> str:
+    """An attendance summary custom_id: ``raid:v1:as:<verb>:<raid|->:<count>:<0|1>:<page|->``."""
+    return encode("as", None, verb, *query.to_args(), page)
+
+
 def is_member_id(value: str) -> bool:
     """A Discord user id: 15–20 ASCII digits."""
     return value.isascii() and value.isdecimal() and 15 <= len(value) <= 20
@@ -222,6 +256,13 @@ def parse(custom_id: object) -> RaidCustomId | None:
         if len(parts) != 1:
             return None
         return RaidCustomId(action=action, event_id=None)
+
+    server_args = _SERVER_ACTIONS.get(action)
+    if server_args is not None:
+        args = tuple(parts[1:])
+        if len(args) != server_args or not _summary_args_valid(*args):
+            return None
+        return RaidCustomId(action=action, event_id=None, args=args)
 
     expected_args = _EVENT_ACTIONS.get(action)
     if expected_args is None or len(parts) != 2 + expected_args:
@@ -263,6 +304,8 @@ def _args_valid(action: str, args: tuple[str, ...]) -> bool:
         return args[0] in MODALS
     if action == "ml":
         return _manage_args_valid(*args)
+    if action == "at":
+        return _attendance_args_valid(*args)
     if action == "spec":
         column, status = args
         return column in POST_COLUMNS and status in _MENU_STATUSES
@@ -295,6 +338,28 @@ def _manage_args_valid(verb: str, member: str, arg: str) -> bool:
     if verb in _SWAP_VERBS:
         return is_member_id(arg) and arg != member
     return arg == NO_ARG
+
+
+def _attendance_args_valid(verb: str, member: str, arg: str) -> bool:
+    """The card's verbs name nobody (``who`` carries its menu); ``set`` and ``drop`` name a member."""
+    if verb in ATTENDANCE_HUB_VERBS:
+        return member == NO_ARG and arg == NO_ARG
+    if verb == "who":
+        return member == NO_ARG and arg in _PLAYER_MENU_ARGS
+    if verb not in ATTENDANCE_VERBS or not is_member_id(member):
+        return False
+    if verb == "set":
+        return arg in SETTABLE_OUTCOMES
+    return arg == NO_ARG
+
+
+def _summary_args_valid(verb: str, raid: str, count: str, bench: str, page: str) -> bool:
+    """A window ``WindowQuery`` reads back, then the page for [Previous] / [Next] or ``-`` for [Export CSV]."""
+    if verb not in SUMMARY_VERBS or WindowQuery.from_args(raid, count, bench) is None:
+        return False
+    if verb == "page":
+        return _is_page(page)
+    return page == NO_ARG
 
 
 def _is_page(value: str) -> bool:

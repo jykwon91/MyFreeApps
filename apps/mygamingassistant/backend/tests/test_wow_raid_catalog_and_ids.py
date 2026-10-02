@@ -201,7 +201,7 @@ def test_saved_spec_for_column(pref: WowRaidMemberPref | None, column: str, expe
 
 def test_router_covers_every_action() -> None:
     # ``m`` names a modal's submit, routed by the modal it came from.
-    components = set(raid_custom_id._EVENT_ACTIONS) | set(raid_custom_id._BARE_ACTIONS)
+    components = set(raid_custom_id.ROUTED_ACTIONS)
     assert set(_HANDLERS) == components - {"m"}
     assert set(_MODAL_HANDLERS) == set(MODALS)
 
@@ -507,7 +507,7 @@ def test_command_split() -> None:
     assert len(MENU_COMMANDS) <= 5  # Discord's cap on message commands per app
     assert "default_member_permissions" not in RAID_COMMAND
     assert RAID_ADMIN_COMMAND["default_member_permissions"] == str(1 << 33)
-    assert [o["name"] for o in RAID_COMMAND["options"]] == ["ping", "list", "prefs"]
+    assert [o["name"] for o in RAID_COMMAND["options"]] == ["ping", "list", "prefs", "attendance"]
     assert [o["name"] for o in RAID_ADMIN_COMMAND["options"]] == [
-        "setup", "create", "edit", "cancel", "signup", "repeats"
+        "setup", "create", "edit", "cancel", "signup", "repeats", "attendance", "export"
     ]

@@ -13,9 +13,9 @@ Two top-level commands
 ``default_member_permissions`` applies per top-level command, never per
 subcommand, so the raid bot is split:
 
-* ``/raid`` — everyone: ``list``, ``prefs`` (and ``ping``).
+* ``/raid`` — everyone: ``list``, ``prefs``, ``attendance`` (and ``ping``).
 * ``/raid-admin`` — organisers: ``setup``, ``create``, ``edit``, ``cancel``,
-  ``signup``, ``repeats``.
+  ``signup``, ``repeats``, ``attendance``, ``export``.
   ``default_member_permissions`` = Manage Events, so regular members never
   see organiser actions in their slash menu.  Server admins can still widen
   or narrow access per command in Server Settings → Integrations.
@@ -48,6 +48,7 @@ from typing import Any, Final
 from platform_shared.services.discord import COMMAND_TYPE_MESSAGE, COMMAND_TYPE_USER, MANAGE_EVENTS
 
 from app.models.wow.wow_raid_signup import CHARACTER_NAME_MAX
+from app.services.wow.raid_attendance import WINDOW_DEFAULT, WINDOW_MAX
 from app.services.wow.raid_catalog import CLASSES, RAIDS
 
 # Application command option types
@@ -66,6 +67,15 @@ _RAID_CHOICES: Final = [{"name": raid.choice_label, "value": raid.key} for raid 
 _CLASS_CHOICES: Final = [{"name": cls.label, "value": cls.key} for cls in CLASSES]
 
 _WHEN_DESCRIPTION: Final = "When it starts, in the server's timezone (e.g. sat 8pm, 10/14 8:00pm)"
+# Attendance's window: how many recent counted raids, and of which raid.
+_RAIDS_OPTION: Final = {
+    "type": _INTEGER,
+    "name": "raids",
+    "description": f"How many recent counted raids (default {WINDOW_DEFAULT})",
+    "min_value": 1,
+    "max_value": WINDOW_MAX,
+}
+_RAID_FILTER: Final = {"type": _STRING, "name": "raid", "description": "Only this raid", "choices": _RAID_CHOICES}
 
 
 def _event_option(description: str) -> dict[str, Any]:
@@ -122,6 +132,12 @@ RAID_COMMAND: Final[dict[str, Any]] = {
                     "description": "Get raid reminders by DM",
                 },
             ],
+        },
+        {
+            "type": _SUB_COMMAND,
+            "name": "attendance",
+            "description": "Your attendance in recent raids",
+            "options": [_RAIDS_OPTION],
         },
     ],
 }
@@ -247,6 +263,32 @@ RAID_ADMIN_COMMAND: Final[dict[str, Any]] = {
             ],
         },
         {"type": _SUB_COMMAND, "name": "repeats", "description": "See and change the raids that repeat"},
+        {
+            "type": _SUB_COMMAND,
+            "name": "attendance",
+            "description": "Attendance across recent raids, or one player's",
+            "options": [
+                {"type": _USER, "name": "player", "description": "One player's raid-by-raid history"},
+                _RAID_FILTER,
+                _RAIDS_OPTION,
+                {"type": _BOOLEAN, "name": "bench", "description": "Count standby (bench and waiting list) as present"},
+            ],
+        },
+        {
+            "type": _SUB_COMMAND,
+            "name": "export",
+            "description": "Download sign-ups and attendance as CSV",
+            "options": [
+                {
+                    "type": _STRING,
+                    "name": "event",
+                    "description": "One raid (empty = the recent raids)",
+                    "autocomplete": True,
+                },
+                _RAIDS_OPTION,
+                _RAID_FILTER,
+            ],
+        },
     ],
 }
 

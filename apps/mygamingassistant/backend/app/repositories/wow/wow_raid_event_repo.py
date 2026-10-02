@@ -406,3 +406,70 @@ async def _lock_first_scheduled(db: AsyncSession, *where: ColumnElement[bool]) -
         .execution_options(populate_existing=True)
     )
     return result.scalar_one_or_none()
+
+
+async def lock_attendance_due(db: AsyncSession, now: datetime) -> WowRaidEvent | None:
+    """The earliest completed raid whose attendance isn't recorded yet (ties by id), FOR UPDATE SKIP LOCKED.
+
+    The notification worker's attendance sweep (``raid_sweeps``) takes them one at a time.  Like every
+    sweep's lock it only sees raids due by *now* (here: started by then).
+    """
+    result = await db.execute(
+        select(WowRaidEvent)
+        .where(
+            WowRaidEvent.status == "completed",
+            WowRaidEvent.attendance_recorded_at.is_(None),
+            WowRaidEvent.starts_at <= now,
+        )
+        .order_by(WowRaidEvent.starts_at, WowRaidEvent.id)
+        .limit(1)
+        .with_for_update(skip_locked=True)
+        .execution_options(populate_existing=True)
+    )
+    return result.scalar_one_or_none()
+
+
+async def set_attendance_recorded(db: AsyncSession, event: WowRaidEvent, at: datetime) -> WowRaidEvent:
+    """Persist when the raid's sign-ups were frozen as its attendance."""
+    event.attendance_recorded_at = at
+    await db.flush()
+    return event
+
+
+async def set_attendance_counted(db: AsyncSession, event: WowRaidEvent, counted: bool) -> WowRaidEvent:
+    """Persist whether the raid counts toward attendance."""
+    event.attendance_counted = counted
+    await db.flush()
+    return event
+
+
+async def list_counted_window(
+    db: AsyncSession, guild_id: uuid.UUID, *, raid_key: str | None, limit: int
+) -> list[WowRaidEvent]:
+    """The guild's last *limit* completed raids that count and are recorded, newest first; *raid_key* = one raid's."""
+    stmt = (
+        select(WowRaidEvent)
+        .where(
+            WowRaidEvent.guild_id == guild_id,
+            WowRaidEvent.status == "completed",
+            WowRaidEvent.attendance_counted.is_(True),
+            WowRaidEvent.attendance_recorded_at.is_not(None),
+        )
+        .order_by(WowRaidEvent.starts_at.desc(), WowRaidEvent.id.desc())
+        .limit(limit)
+    )
+    if raid_key is not None:
+        stmt = stmt.where(WowRaidEvent.raid_key == raid_key)
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def list_recent(db: AsyncSession, guild_id: uuid.UUID, *, limit: int = 25) -> list[WowRaidEvent]:
+    """The guild's scheduled and completed raids, latest start first (``/raid-admin export``'s raid picker)."""
+    result = await db.execute(
+        select(WowRaidEvent)
+        .where(WowRaidEvent.guild_id == guild_id, WowRaidEvent.status.in_(("scheduled", "completed")))
+        .order_by(WowRaidEvent.starts_at.desc(), WowRaidEvent.id.desc())
+        .limit(limit)
+    )
+    return list(result.scalars().all())
