@@ -95,6 +95,7 @@ from app.services.wow.raid_text import (
     icon_text,
     seats_detail,
     server_time_label,
+    shown_name,
     signup_icon,
     status_heading,
 )
@@ -429,9 +430,12 @@ def column_heading(column: str, count: int, emojis: EmojiSet) -> str:
     return icon_text(emojis, column_icon(column), f"{column_label(column)} ({count})")
 
 
-def roster_entry(signup: WowRaidSignup, number: int | None, emojis: EmojiSet) -> str:
-    """A column line with every detail and the full name, for the private roster."""
-    return _column_entry(signup, "", number, _Style(name_chars=MAX_NAME_CHARS), emojis)
+def roster_entry(signup: WowRaidSignup, number: int | None, emojis: EmojiSet, *, also: str = "") -> str:
+    """A column line with every detail and the full name, for the private roster.
+
+    *also* follows the name: who plays a character another sign-up shares (``raid_text.told_apart``).
+    """
+    return _column_entry(signup, "", number, _Style(name_chars=MAX_NAME_CHARS), emojis, also=also)
 
 
 def _column_entries(
@@ -446,10 +450,10 @@ def _column_entries(
 
 
 def _column_entry(
-    signup: WowRaidSignup, column: str, number: int | None, style: _Style, emojis: EmojiSet
+    signup: WowRaidSignup, column: str, number: int | None, style: _Style, emojis: EmojiSet, *, also: str = ""
 ) -> str:
     """One column line: spec icon, order number, bold name; the queue struck through, late and queued marked."""
-    name = escape_name(signup.display_name, max_chars=style.name_chars)
+    name = escape_name(shown_name(signup), max_chars=style.name_chars)
     parts: list[str] = []
     if style.icons:
         parts.append(signup_icon(signup, emojis))
@@ -458,9 +462,9 @@ def _column_entry(
     if style.numbers and number is not None:
         parts.append(f"`{number}`")
     if signup.status == QUEUED_STATUS:
-        parts.append(f"~~{name}~~")
+        parts.append(f"~~{name}~~{also}")
     else:
-        parts.append(f"**{name}**")
+        parts.append(f"**{name}**{also}")
     marker = _MARKERS.get(signup.status)
     if marker is not None:
         icon, text = marker
@@ -476,7 +480,7 @@ def _list_entries(style: _Style, *, players: Sequence[WowRaidSignup], emojis: Em
 
 
 def _list_entry(signup: WowRaidSignup, style: _Style, emojis: EmojiSet) -> str:
-    name = escape_name(signup.display_name, max_chars=style.name_chars)
+    name = escape_name(shown_name(signup), max_chars=style.name_chars)
     if style.icons:
         tag = signup_icon(signup, emojis)
     else:

@@ -1,4 +1,4 @@
-"""Signup mutations for a raid — seat assignment, queue, promotion.
+"""Signup mutations for a raid — seat assignment, queue, promotion, character names.
 
 The caller owns the transaction and MUST hold the event's row lock
 (``wow_raid_event_repo.get_for_update``) so concurrent clicks serialise.
@@ -14,8 +14,10 @@ from typing import Literal
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.wow.wow_raid_event import WowRaidEvent
+from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.models.wow.wow_raid_signup import WowRaidSignup
-from app.repositories.wow import wow_raid_signup_repo
+from app.repositories.wow import wow_raid_member_pref_repo, wow_raid_signup_repo
+from app.services.wow import raid_member_prefs_service
 from app.services.wow.raid_roster import (
     LINE_STATUSES,
     QUEUED_STATUS,
@@ -44,6 +46,14 @@ class StatusChange:
     promoted: list[str] = field(default_factory=list)
     previous: str | None = None
     queue_position: int | None = None
+
+
+@dataclass(frozen=True)
+class NameChange:
+    """What a character-name save changed: the name the sign-up shows, the name saved for its class."""
+
+    shown: bool
+    remembered: bool
 
 
 async def change_status(
@@ -80,6 +90,12 @@ async def change_status(
             queue_position=queue_position(signups, discord_user_id),
         )
 
+    # A new sign-up, or a switch of class, shows the name saved for the class.
+    renamed = mine is None or mine.wow_class != wow_class
+    character = None
+    if renamed:
+        pref = await wow_raid_member_pref_repo.get(db, guild_id=event.guild_id, discord_user_id=discord_user_id)
+        character = raid_member_prefs_service.saved_name_for(pref, wow_class)
     await wow_raid_signup_repo.upsert_signup(
         db,
         event_id=event.id,
@@ -90,6 +106,8 @@ async def change_status(
         role=role,
         spec=spec,
         requeue=_goes_to_the_back(previous, status),
+        character_name=character,
+        set_character=renamed,
     )
     promoted = await promote_from_queue(db, event, prefer_role=seat_left_role)
     position = None
@@ -116,6 +134,24 @@ async def remove_signup(db: AsyncSession, *, event: WowRaidEvent, signup: WowRai
         seat_left_role = signup.role
     await wow_raid_signup_repo.delete(db, signup)
     return await promote_from_queue(db, event, prefer_role=seat_left_role)
+
+
+async def set_character_name(
+    db: AsyncSession, *, guild: WowRaidGuild, signup: WowRaidSignup, name: str | None
+) -> NameChange:
+    """Show *name* on this sign-up and save it for the sign-up's class (None: the Discord name).
+
+    *name* comes from ``raid_character.clean_name``; the sign-up has a class.
+    """
+    if signup.wow_class is None:
+        raise ValueError("A sign-up without a class can't show a character name")
+    shown = signup.character_name != name
+    if shown:
+        await wow_raid_signup_repo.set_character_name(db, signup, name)
+    remembered = await raid_member_prefs_service.set_character_name(
+        db, guild=guild, discord_user_id=signup.discord_user_id, wow_class=signup.wow_class, name=name
+    )
+    return NameChange(shown=shown, remembered=remembered)
 
 
 def _goes_to_the_back(previous: str | None, status: str) -> bool:

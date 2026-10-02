@@ -1,5 +1,5 @@
 """Per-member raid preferences — the remembered class, per-class saved specs
-and the DM opt-out.
+and character names, and the DM opt-out.
 
 The caller owns the transaction.  ``member_pref_repo.upsert`` replaces every
 field, so the saves read the current row first and carry the fields they
@@ -9,7 +9,9 @@ both land.
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Final
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +19,8 @@ from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.models.wow.wow_raid_member_pref import WowRaidMemberPref
 from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.repositories.wow import wow_raid_member_pref_repo
+from app.services.discord import raid_member_copy
+from app.services.wow.raid_character import CharacterNameError, clean_name, saved_name
 from app.services.wow.raid_catalog import (
     CLASSES,
     CLASSES_BY_KEY,
@@ -29,13 +33,28 @@ from app.services.wow.raid_catalog import (
     spec_list_text,
 )
 
+# ``/raid prefs character: -`` clears the name.
+_CLEAR_NAME: Final = "-"
+
+
+@dataclass(frozen=True)
+class NamedCharacter:
+    """The character name ``/raid prefs`` saved for a class (None: cleared it)."""
+
+    wow_class: str
+    name: str | None
+
 
 @dataclass(frozen=True)
 class PrefsUpdate:
-    """``error`` is a user-facing explanation when the update was rejected."""
+    """``error`` is a user-facing explanation when the update was rejected.
+
+    ``named`` is set when the update saved or cleared a character name.
+    """
 
     pref: WowRaidMemberPref | None
     error: str | None = None
+    named: NamedCharacter | None = None
 
 
 @dataclass(frozen=True)
@@ -65,6 +84,13 @@ def saved_spec_for(pref: WowRaidMemberPref | None, wow_class: str | None) -> Wow
     if pref is None:
         return None
     return saved_spec(pref.saved_specs, wow_class)
+
+
+def saved_name_for(pref: WowRaidMemberPref | None, wow_class: str | None) -> str | None:
+    """The character name the member saved for *wow_class*."""
+    if pref is None:
+        return None
+    return saved_name(pref.character_names, wow_class)
 
 
 def one_tap_spec(pref: WowRaidMemberPref | None) -> WowSpecInfo | None:
@@ -141,6 +167,23 @@ async def remember_spec(
     return first_save
 
 
+async def set_character_name(
+    db: AsyncSession, *, guild: WowRaidGuild, discord_user_id: str, wow_class: str, name: str | None
+) -> bool:
+    """Save *name* as the member's character for *wow_class* (None forgets it); True when that changed it.
+
+    Keeps everything else.  *name* comes from ``raid_character.clean_name``.
+    """
+    existing = await wow_raid_member_pref_repo.lock_or_create(
+        db, guild_id=guild.id, discord_user_id=discord_user_id
+    )
+    names = _renamed(existing.character_names, wow_class, name)
+    if names == existing.character_names:
+        return False
+    await wow_raid_member_pref_repo.set_character_names(db, existing, names)
+    return True
+
+
 async def update_prefs(
     db: AsyncSession,
     *,
@@ -149,12 +192,15 @@ async def update_prefs(
     wow_class: str | None,
     spec: str | None,
     dm_reminders: bool | None,
+    character: str | None = None,
 ) -> PrefsUpdate:
     """Apply ``/raid prefs`` options; any omitted option keeps its saved value.
 
     ``spec`` is free text (the autocomplete value, an id or a name) and
     implies its class.  A class without a spec is fine: the bot asks for the
-    spec the first time that class signs up.
+    spec the first time that class signs up.  ``character`` names the
+    character of the class the command leaves remembered (``-`` clears it);
+    sign-ups already made keep the name they show.
     """
     error = None
     picked = None
@@ -169,7 +215,18 @@ async def update_prefs(
         else:
             picked = matches[0]
     if error is not None:
-        return PrefsUpdate(pref=await get(db, guild=guild, discord_user_id=discord_user_id), error=error)
+        return await _refused(db, guild=guild, discord_user_id=discord_user_id, error=error)
+    name = None
+    if character is not None:
+        try:
+            name = _typed_name(character)
+        except CharacterNameError as problem:
+            refusal = raid_member_copy.name_refusal(problem.reason, problem.length)
+            return await _refused(db, guild=guild, discord_user_id=discord_user_id, error=refusal)
+        if wow_class is None and picked is None:
+            current = await get(db, guild=guild, discord_user_id=discord_user_id)
+            if current is None or current.default_wow_class is None:
+                return PrefsUpdate(pref=current, error=raid_member_copy.CHAR_PREFS_NEEDS_CLASS)
 
     existing = await wow_raid_member_pref_repo.lock_or_create(
         db, guild_id=guild.id, discord_user_id=discord_user_id
@@ -195,7 +252,36 @@ async def update_prefs(
         saved_specs=saved,
         dm_opt_out=dm_opt_out,
     )
-    return PrefsUpdate(pref=pref)
+    if character is None:
+        return PrefsUpdate(pref=pref)
+    if new_class is None:
+        # "Forget my specs" ran since the check above: no class to name the character for.
+        return PrefsUpdate(pref=pref, error=raid_member_copy.CHAR_PREFS_NEEDS_CLASS)
+    names = _renamed(pref.character_names, new_class, name)
+    if names != pref.character_names:
+        await wow_raid_member_pref_repo.set_character_names(db, pref, names)
+    return PrefsUpdate(pref=pref, named=NamedCharacter(new_class, name))
+
+
+async def _refused(db: AsyncSession, *, guild: WowRaidGuild, discord_user_id: str, error: str) -> PrefsUpdate:
+    """A rejected update: nothing saved, the card shows what's saved already."""
+    return PrefsUpdate(pref=await get(db, guild=guild, discord_user_id=discord_user_id), error=error)
+
+
+def _typed_name(character: str) -> str | None:
+    """The name ``character:`` asks for; ``-`` clears it."""
+    if character.strip() == _CLEAR_NAME:
+        return None
+    return clean_name(character)
+
+
+def _renamed(names: Mapping[str, object], wow_class: str, name: str | None) -> dict[str, object]:
+    """*names* with *wow_class*'s set to *name* (None removes it); a new dict, so the change is saved."""
+    renamed = dict(names)
+    renamed.pop(wow_class, None)
+    if name is not None:
+        renamed[wow_class] = name
+    return renamed
 
 
 def _default_role(existing: WowRaidMemberPref, new_class: str | None, saved: dict[str, str]) -> str | None:

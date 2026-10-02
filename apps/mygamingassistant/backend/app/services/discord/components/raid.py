@@ -22,6 +22,7 @@ from app.services.discord.components import (
     raid_manage,
     raid_manage_open,
     raid_manage_reason,
+    raid_member,
     raid_seat,
     raid_signup,
 )
@@ -79,6 +80,7 @@ _MODAL_HANDLERS: Final[dict[str, ComponentHandler]] = {
     "cancel": raid_edit.handle_cancel_submit,
     "role_limits": raid_edit.handle_role_limits_submit,
     "class_limits": raid_edit.handle_class_limits_submit,
+    "char": raid_member.handle_character_submit,
 }
 
 

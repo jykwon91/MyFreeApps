@@ -109,6 +109,16 @@ async def upsert(
     return row
 
 
+async def set_character_names(
+    db: AsyncSession, pref: WowRaidMemberPref, names: Mapping[str, object]
+) -> None:
+    """Replace a member's saved character names (class → name); read under ``lock_or_create``."""
+    # A new dict: JSONB columns don't track changes made in place.
+    pref.character_names = dict(names)
+    pref.updated_at = datetime.now(timezone.utc)
+    await db.flush()
+
+
 async def opted_out_user_ids(
     db: AsyncSession, *, guild_id: uuid.UUID, discord_user_ids: list[str]
 ) -> set[str]:

@@ -6,6 +6,7 @@ UNIQUE(guild_id, discord_user_id) — one preference row per player per guild.
 Remembers the class a player most recently signed up with plus, per class,
 the spec they play (``saved_specs``), so the next signup is one tap.
 ``default_role`` is the seat role of that class's saved spec.
+``character_names`` holds, per class, the in-game name the player goes by.
 dm_opt_out suppresses DM reminders for players who prefer channel-only notices.
 """
 import uuid
@@ -45,6 +46,10 @@ class WowRaidMemberPref(Base):
             f"default_role IS NULL OR default_role IN {RAID_ROLES!r}",
             name="ck_wowraidmemberpref_role",
         ),
+        CheckConstraint(
+            "jsonb_typeof(character_names) = 'object'",
+            name="ck_wowraidmemberpref_character_names",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -69,6 +74,11 @@ class WowRaidMemberPref(Base):
     # read (raid_catalog.saved_spec); always assign a new dict so the change
     # is detected.
     saved_specs: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
+    # class → character name, e.g. {"shaman": "Thrallbot"}.  Validated on read
+    # (raid_character.saved_name); always assign a new dict, like saved_specs.
+    character_names: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
     )
     # When true, the worker skips DM notifications for this player.

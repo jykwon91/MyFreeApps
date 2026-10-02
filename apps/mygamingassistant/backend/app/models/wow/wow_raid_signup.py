@@ -13,6 +13,10 @@ Statuses (Raid-Helper semantics, revision 0029): ``confirmed`` and ``late``
 hold a seat; ``queued`` is the bot's overflow line when the raid is full
 (moved up automatically); ``bench`` is a backup the member chose (never
 moved up automatically); ``tentative`` and ``absence`` hold no seat.
+
+``character_name`` (revision 0034) is the in-game name this sign-up shows
+instead of ``display_name``; copied from the member's saved names when they
+sign up or switch class.
 """
 import uuid
 from datetime import datetime, timezone
@@ -74,6 +78,9 @@ WOW_SPECS = (
     "survival",
 )
 SIGNUP_STATUSES = ("confirmed", "late", "tentative", "bench", "queued", "absence")
+# Character names are 2-12 letters (app.services.wow.raid_character.clean_name).
+CHARACTER_NAME_MIN = 2
+CHARACTER_NAME_MAX = 12
 
 
 class WowRaidSignup(Base):
@@ -97,6 +104,11 @@ class WowRaidSignup(Base):
         CheckConstraint(
             f"spec IS NULL OR spec IN {WOW_SPECS!r}",
             name="ck_wowraidsignup_spec",
+        ),
+        CheckConstraint(
+            "character_name IS NULL OR char_length(character_name) "
+            f"BETWEEN {CHARACTER_NAME_MIN} AND {CHARACTER_NAME_MAX}",
+            name="ck_wowraidsignup_character_name_len",
         ),
     )
 
@@ -122,6 +134,10 @@ class WowRaidSignup(Base):
     role: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     # Null for sign-ups saved before specs existed, and for absences without a class.
     spec: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    # The in-game name shown instead of display_name; null shows display_name.
+    character_name: Mapped[Optional[str]] = mapped_column(
+        String(CHARACTER_NAME_MAX), nullable=True
+    )
     status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,

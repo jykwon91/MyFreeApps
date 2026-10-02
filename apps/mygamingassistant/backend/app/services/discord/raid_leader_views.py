@@ -31,7 +31,7 @@ from app.services.wow.raid_catalog import CLASSES_BY_KEY, TANK_COLUMN, effective
 from app.services.wow.raid_embed import CLOSED_HINT, STATUS_LISTS, column_heading, post_color
 from app.services.wow.raid_post_layout import post_columns, with_status
 from app.services.wow.raid_roster import QUEUED_STATUS, compute_roster_summary, listed_user_ids
-from app.services.wow.raid_text import display_title, escape_name, icon_text, status_heading, title_text
+from app.services.wow.raid_text import display_title, icon_text, signed_name, status_heading, title_text
 
 # The ping form's one input, and how long a message it takes.
 PING_FIELD: Final = "message"
@@ -139,7 +139,7 @@ def _list_entry(signup: WowRaidSignup) -> str:
 
 
 def _entry(signup: WowRaidSignup, details: list[str]) -> str:
-    name = escape_name(signup.display_name)
+    name = signed_name(signup)
     if details:
         return f"{name} ({', '.join(details)})"
     return name

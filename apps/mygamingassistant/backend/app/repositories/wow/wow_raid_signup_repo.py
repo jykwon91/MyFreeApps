@@ -26,6 +26,8 @@ async def upsert_signup(
     role: Optional[str] = None,
     spec: Optional[str] = None,
     requeue: bool = False,
+    character_name: Optional[str] = None,
+    set_character: bool = False,
 ) -> WowRaidSignup:
     """Insert or update a player's signup for an event.
 
@@ -35,6 +37,8 @@ async def upsert_signup(
     order number and orders the queue) unless ``requeue`` is set — the
     signup service passes it when a player joins the queue, or takes a seat
     again after tentative, bench or absence.
+    A new row always takes ``character_name``; an existing one keeps its
+    own unless ``set_character`` is set (the player switched class).
     ``updated_at`` is refreshed.  Returns the post-upsert row.
     """
     now = datetime.now(timezone.utc)
@@ -48,6 +52,8 @@ async def upsert_signup(
     }
     if requeue:
         update_set["signed_up_at"] = now
+    if set_character:
+        update_set["character_name"] = character_name
     values = {
         "event_id": event_id,
         "discord_user_id": discord_user_id,
@@ -56,6 +62,7 @@ async def upsert_signup(
         "wow_class": wow_class,
         "role": role,
         "spec": spec,
+        "character_name": character_name,
     }
     stmt = (
         pg_insert(WowRaidSignup)
@@ -80,6 +87,12 @@ async def delete(db: AsyncSession, signup: WowRaidSignup) -> None:
 async def set_display_name(db: AsyncSession, signup: WowRaidSignup, display_name: str) -> None:
     """Rename a signup; its status and place in the order (``signed_up_at``) stay as they are."""
     signup.display_name = display_name
+    await db.flush()
+
+
+async def set_character_name(db: AsyncSession, signup: WowRaidSignup, name: str | None) -> None:
+    """Change the character name a signup shows (None shows the Discord name)."""
+    signup.character_name = name
     await db.flush()
 
 

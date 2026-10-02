@@ -143,7 +143,7 @@ async def test_close_then_reopen_sign_ups(post: Post, db: AsyncSession, fake_dis
     response = await post(click(f"raid:v1:mine:{event.id}", user_id="301"))
     assert_ephemeral(response)
     assert content(response).split("\n")[-1] == raid_copy.CLOSED
-    assert custom_ids(response) == [f"raid:v1:card:{event.id}:roster"]
+    assert custom_ids(response) == [f"raid:v1:card:{event.id}:char", f"raid:v1:card:{event.id}:roster"]
 
     # --- [Reopen sign-ups] on the card flips it back, in place
     fake_discord.clear()

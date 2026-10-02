@@ -40,7 +40,7 @@ from platform_shared.services.discord import (
 
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_signup import WowRaidSignup
-from app.services.discord import raid_manage_copy
+from app.services.discord import raid_manage_copy, raid_member_copy
 from app.services.discord.interaction import ephemeral_data
 from app.services.discord.raid_copy import queue_place
 from app.services.discord.raid_leader_views import raid_line
@@ -258,6 +258,8 @@ def player_data(
         select = class_select(manage(event.id, "class", uid), raid_manage_copy.PICK_CLASS, emojis=emojis)
         return _card(event, target, text, [action_row(select), action_row(back)], notice=notice)
     lines = [raid_manage_copy.on_raid(target.who, mine.status, spec_label(mine), queue_position(signups, uid))]
+    if mine.character_name is not None:
+        lines.append(raid_member_copy.character_line(escape_name(mine.character_name)))
     if mine.status == QUEUED_STATUS:
         lines.append(raid_manage_copy.QUEUE_WAITS)
     select = class_select(manage(event.id, "class", uid), raid_manage_copy.CHANGE_CLASS, emojis=emojis)

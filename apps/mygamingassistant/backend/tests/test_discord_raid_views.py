@@ -22,7 +22,6 @@ from app.services.discord.raid_views import (
     class_picker_data,
     clip_lines,
     list_data,
-    my_signup_data,
     release_confirm_data,
     roster_data,
     spec_picker_data,
@@ -308,100 +307,8 @@ def test_clip_lines(text: str, limit: int, expected: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# My sign-up card
+# Raid list
 # ---------------------------------------------------------------------------
-
-
-_CARD_HEADING = f"**Your sign-up** · Onyxia's Lair · <t:{_STAMP}:F>"
-_CHANGE = ("Change spec", f"raid:v1:change:{_EVENT_ID}")
-_FULL_ROSTER = ("Full roster", f"raid:v1:card:{_EVENT_ID}:roster")
-
-
-def test_my_sign_up_in_the_queue_shows_the_place_in_line() -> None:
-    seat = _signup("Seated")
-    first = _signup("First", status="queued", wow_class="rogue", role="dps", minute=5)
-    me = _signup("Me", status="queued", wow_class="mage", role="dps", spec="frost", minute=9)
-
-    data = my_signup_data(_event(), me, [seat, first, me], emojis=EMPTY_EMOJIS)
-
-    assert data["content"].split("\n") == [
-        _CARD_HEADING,
-        "Status: **#2 in the queue**",
-        "Spec: [MAG] **Frost Mage**",
-        raid_copy.QUEUE_MOVES_UP,
-    ]
-    assert data["flags"] == 64
-    assert data["embeds"] == []  # a card swapped back from the roster drops the roster embed
-    [row] = data["components"]
-    assert _buttons(row) == [_CHANGE, _FULL_ROSTER]
-
-
-def test_my_sign_up_uses_icons_once_uploaded() -> None:
-    icons = _icons("status_late", "mage_frost")
-    me = _signup("Me", status="late", wow_class="mage", role="dps", spec="frost")
-    lines = my_signup_data(_event(), me, [me], emojis=icons)["content"].split("\n")
-    assert lines[1:] == [
-        f"Status: {icons.markup('status_late')} **Late**",
-        f"Spec: {icons.markup('mage_frost')} **Frost Mage**",
-    ]
-
-
-@pytest.mark.parametrize(
-    ("status", "status_line", "note"),
-    [
-        ("confirmed", "Status: **Signed up**", None),
-        ("tentative", "Status: **Tentative**", raid_copy.TENTATIVE_NOTE),
-        ("bench", "Status: **On the bench**", raid_copy.BENCH_NOTE),
-    ],
-)
-def test_my_sign_up_says_what_each_status_means(status: str, status_line: str, note: str | None) -> None:
-    me = _signup("Me", status=status, wow_class="mage", role="dps", spec="frost")
-    lines = my_signup_data(_event(), me, [me], emojis=EMPTY_EMOJIS)["content"].split("\n")
-    expected = [_CARD_HEADING, status_line, "Spec: [MAG] **Frost Mage**"]
-    if note is not None:
-        expected.append(note)
-    assert lines == expected
-
-
-def test_my_sign_up_when_absent_has_no_spec_to_change() -> None:
-    me = _signup("Me", status="absence", wow_class="mage", role="dps", spec="frost")
-    data = my_signup_data(_event(), me, [me], emojis=EMPTY_EMOJIS)
-    assert data["content"].split("\n") == [_CARD_HEADING, "Status: **Absent**"]
-    [row] = data["components"]
-    assert _buttons(row) == [_FULL_ROSTER]
-
-
-def test_my_sign_up_without_a_class_still_offers_change() -> None:
-    me = _signup("Me", wow_class=None, role=None)
-    data = my_signup_data(_event(title="Ony *speedrun*"), me, [me], emojis=EMPTY_EMOJIS)
-    assert data["content"].split("\n") == [
-        rf"**Your sign-up** · Ony \*speedrun\* · <t:{_STAMP}:F>",
-        "Status: **Signed up**",
-    ]
-    [row] = data["components"]
-    assert _buttons(row) == [_CHANGE, _FULL_ROSTER]
-
-
-def test_my_sign_up_when_not_signed_up() -> None:
-    data = my_signup_data(_event(), None, [], emojis=EMPTY_EMOJIS)
-    assert data["content"] == raid_copy.NOT_SIGNED_UP
-    assert data["embeds"] == []
-    [row] = data["components"]
-    assert _buttons(row) == [_FULL_ROSTER]
-
-
-def test_my_sign_up_once_sign_ups_close_says_so_and_drops_change_spec() -> None:
-    me = _signup("Me", status="tentative", wow_class="mage", role="dps", spec="frost")
-    data = my_signup_data(_event(closed_at=_T0), me, [me], emojis=EMPTY_EMOJIS)
-    assert data["content"].split("\n") == [
-        _CARD_HEADING,
-        "Status: **Tentative**",
-        "Spec: [MAG] **Frost Mage**",
-        raid_copy.CLOSED,
-    ]
-    [row] = data["components"]
-    assert _buttons(row) == [_FULL_ROSTER]
-    assert my_signup_data(_event(closed_at=_T0), None, [], emojis=EMPTY_EMOJIS)["content"] == raid_copy.CLOSED
 
 
 def test_raid_list_marks_closed_sign_ups() -> None:
