@@ -16,6 +16,8 @@ Flows
   line (``raid_limit_forms``).  Whatever reads is saved and the rest is
   reported on the card; a limit set below the players already in line
   removes nobody, and the card says so.
+* **Deadline** — a form: how long before the start sign-ups close ("2h",
+  "1d 6h"; empty = at the start).  One that has passed closes them now.
 * **Notes: off / Notes: on** — members may leave the leader a note, or
   not; the card comes back saying which (the post doesn't change).  The
   button names the state it switches to, so a card that sat open says
@@ -62,12 +64,14 @@ from app.services.discord.interaction import (
     update_text_response,
 )
 from app.services.discord.raid_context import RaidContext, load_led_event, load_led_post, may_lead, utcnow
+from app.services.discord.raid_deadline_copy import deadline_notice, moved_notice
 from app.services.discord.raid_draft_views import MENTION_MAX, mentions_picker, options_data, preview_data
 from app.services.discord.raid_edit_views import (
     FIELD,
     cancel_modal,
     class_limits_modal,
     color_picker,
+    deadline_modal,
     delete_check,
     description_modal,
     edit_card,
@@ -206,6 +210,8 @@ def _open(action: str, found: RaidContext) -> dict[str, Any]:
         return title_modal(event)
     if action == "when":
         return when_modal(event, found.guild.timezone)
+    if action == "deadline":
+        return deadline_modal(event)
     if action == "desc":
         return description_modal(event)
     if action == "image":
@@ -319,6 +325,12 @@ async def handle_when_submit(interaction: Interaction, parsed: RaidCustomId, bac
     return await _submit(interaction, parsed, background, _apply_when)
 
 
+async def handle_deadline_submit(
+    interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks
+) -> dict[str, Any]:
+    return await _submit(interaction, parsed, background, _apply_deadline)
+
+
 async def handle_description_submit(
     interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks
 ) -> dict[str, Any]:
@@ -383,12 +395,17 @@ async def _apply_when(db: AsyncSession, found: RaidContext, fields: Mapping[str,
         return _Saved(_card(found, notice=exc.user_message), refresh=False)
     if starts_at == event.starts_at:
         return _Saved(_card(found, notice=raid_copy.WHEN_SAME), refresh=False)
-    await raid_event_service.edit_event(
+    outcome = await raid_event_service.edit_event(
         db, event=event, guild=found.guild, starts_at=starts_at, size_cap=None, notes=None, now=now
     )
     signups = await wow_raid_signup_repo.list_for_event(db, event.id)
-    notice = raid_copy.moved(unix(starts_at))
+    notice = moved_notice(raid_copy.moved(unix(starts_at)), outcome.deadline)
     return _Saved(_card(found, notice=notice, notify_count=len(listed_user_ids(signups))))
+
+
+async def _apply_deadline(db: AsyncSession, found: RaidContext, fields: Mapping[str, str]) -> _Saved:
+    saved = await raid_event_service.set_signup_deadline(db, found.event, _box(fields), now=utcnow())
+    return _Saved(_card(found, notice=deadline_notice(saved)), refresh=saved.changed)
 
 
 async def _apply_description(db: AsyncSession, found: RaidContext, fields: Mapping[str, str]) -> _Saved:

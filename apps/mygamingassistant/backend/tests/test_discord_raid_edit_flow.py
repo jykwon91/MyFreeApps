@@ -120,11 +120,9 @@ def _post_embed(fake_discord: FakeDiscord) -> dict[str, Any]:
 
 
 def _card_ids(event: WowRaidEvent) -> list[str]:
-    actions = (
-        "title", "leader", "when", "desc", "image", "color", "role_limits", "class_limits", "cancel", "delete", "done"
-    )
-    ids = [f"raid:v1:ed:{event.id}:{action}" for action in actions]
-    at = actions.index("class_limits") + 1
+    actions = ("title", "leader", "when", "deadline", "desc", "image", "color", "role_limits", "class_limits")
+    ids = [f"raid:v1:ed:{event.id}:{action}" for action in (*actions, "cancel", "delete", "done")]
+    at = len(actions)
     ids[at:at] = [f"raid:v1:ml:{event.id}:open:-:-", f"raid:v1:ed:{event.id}:notes_on"]  # [Sign-ups] [Notes: off]
     return ids
 
@@ -149,12 +147,12 @@ async def test_raid_edit_opens_the_card_for_its_leader_only(
     response = await post(menu_command(EDIT_MENU, "m1", **_MEMBER))
     assert_ephemeral(response)
     assert content(response) == raid_copy.NOT_LEADER
-    for action in ("title", "leader", "when", "desc", "image", "color", "cancel", "delete", "back", "keep"):
+    for action in ("title", "leader", "when", "deadline", "desc", "image", "color", "cancel", "delete", "back", "keep"):
         response = await post(_edit(event, action, **_MEMBER))
         assert response["type"] == 7
         assert content(response) == raid_copy.NOT_LEADER
         assert custom_ids(response) == []
-    for name in ("title", "when", "desc", "image", "cancel"):
+    for name in ("title", "when", "deadline", "desc", "image", "cancel"):
         response = await post(_form(event, name, "x", **_MEMBER))
         assert content(response) == raid_copy.NOT_LEADER
     for request in (

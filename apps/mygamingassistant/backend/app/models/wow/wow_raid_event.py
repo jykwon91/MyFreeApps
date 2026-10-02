@@ -46,6 +46,8 @@ RAID_KEYS = (
 # ``draft`` = created by /raid-admin create, shown only in the organiser's
 # private preview; flipped to ``scheduled`` when they press [Post raid].
 RAID_STATUSES = ("draft", "scheduled", "cancelled", "completed")
+# Why sign-ups are closed (``closed_at``): Raid: Close, or the sign-up deadline.
+CLOSE_REASONS = ("leader", "deadline")
 
 
 class WowRaidEvent(Base):
@@ -78,6 +80,14 @@ class WowRaidEvent(Base):
         CheckConstraint(
             "class_limits IS NULL OR jsonb_typeof(class_limits) = 'object'",
             name="ck_wowraidevent_class_limits",
+        ),
+        CheckConstraint(
+            "signup_deadline_minutes IS NULL OR signup_deadline_minutes BETWEEN 1 AND 10080",
+            name="ck_wowraidevent_signup_deadline",
+        ),
+        CheckConstraint(
+            f"close_reason IS NULL OR close_reason IN {CLOSE_REASONS!r}",
+            name="ck_wowraidevent_close_reason",
         ),
         # Efficiently list upcoming events per guild.
         Index("ix_wowraidevent_guild_starts_at", "guild_id", "starts_at"),
@@ -126,11 +136,24 @@ class WowRaidEvent(Base):
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     # Shown on the cancelled embed; written by /raid-admin cancel.
     cancel_reason: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
-    # Set by Raid: Close, cleared by Raid: Open (migration 0030).  A closed
-    # raid stays ``scheduled``; members just can't change their sign-up.
+    # Set by Raid: Close or by the deadline (0036), cleared by Raid: Open
+    # (migration 0030).  A closed raid stays ``scheduled``; members just can't
+    # change their sign-up.
     closed_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # Who closed them: 'leader' (Raid: Close) or 'deadline'; null while open (0036).
+    close_reason: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    # How long before the start sign-ups close (1–10080 minutes); null = at
+    # the start (migration 0036).  Read through raid_deadline.
+    signup_deadline_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # When the bot applied the deadline (closed sign-ups, or found them
+    # closed); null while it's ahead or unset.  Makes the worker's sweep
+    # once-only and a reopen after the deadline stick.
+    deadline_applied_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    # When the worker re-rendered the post as started; cleared if the raid
+    # moves into the future.
+    start_applied_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     # When Ping signed members last went out — at most one ping every few minutes.
     last_pinged_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True

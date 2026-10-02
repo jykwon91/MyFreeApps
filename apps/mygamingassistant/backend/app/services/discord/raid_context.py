@@ -20,6 +20,7 @@ from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.repositories.wow import wow_raid_event_repo, wow_raid_guild_repo
 from app.services.discord import raid_copy
 from app.services.discord.interaction import Interaction
+from app.services.wow.raid_deadline import deadline_due
 from app.services.wow.raid_details import leader_id
 
 
@@ -131,11 +132,14 @@ def may_lead(interaction: Interaction, event: WowRaidEvent) -> bool:
 
 
 def signup_refusal(event: WowRaidEvent, now: datetime) -> str | None:
-    """Why a member can't change their sign-up right now, or None when they can."""
+    """Why a member can't change their sign-up right now, or None when they can.
+
+    Sign-ups close at the deadline by the clock, before the worker's sweep records it.
+    """
     started = started_refusal(event, now)
     if started is not None:
         return started
-    if event.closed_at is not None:
+    if event.closed_at is not None or deadline_due(event, now):
         return raid_copy.CLOSED
     return None
 

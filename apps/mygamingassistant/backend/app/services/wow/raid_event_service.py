@@ -1,7 +1,8 @@
 """Raid event lifecycle — draft → posted → edited → cancelled (or deleted).
 
 A posted raid's leader can also close and reopen its sign-ups (the raid
-stays ``scheduled``), ping everyone on it (at most once per ``PING_EVERY``),
+stays ``scheduled``), set when they close by themselves (a deadline, in
+``raid_deadline``), ping everyone on it (at most once per ``PING_EVERY``),
 and change its details from Raid: Edit — title, leader, description, banner,
 color and its role and class limits — or delete it outright.
 
@@ -32,10 +33,24 @@ from app.repositories.wow import (
     wow_raid_notification_repo,
     wow_raid_signup_repo,
 )
+from app.services.wow.raid_deadline import (
+    DeadlineChange,
+    DeadlineError,
+    deadline_at,
+    deadline_passed,
+    parse_deadline,
+    reconcile,
+)
 from app.services.wow.raid_roster import compute_roster_summary, listed_user_ids
 from app.services.wow.raid_signup_service import promote_from_queue
 
-PostOutcome = Literal["posted", "already_posted", "in_past", "gone"]
+PostOutcome = Literal["posted", "already_posted", "in_past", "deadline_passed", "gone"]
+# What Raid: Edit → Deadline did; only the first five write anything.
+DeadlineKind = Literal[
+    "set", "cleared", "reopened", "closed_now", "draft_passed", "same", "format", "too_long", "started"
+]
+_DEADLINE_WRITES: Final = ("set", "cleared", "reopened", "closed_now", "draft_passed")
+_KIND_OF_CHANGE: Final[dict[DeadlineChange, DeadlineKind]] = {"closed": "closed_now", "reopened": "reopened"}
 
 # Ping signed members goes out at most once per raid this often.
 PING_EVERY: Final = timedelta(minutes=5)
@@ -43,11 +58,33 @@ PING_EVERY: Final = timedelta(minutes=5)
 
 @dataclass(frozen=True)
 class EditOutcome:
-    """``min_size`` is set when the requested size is below the seats taken."""
+    """``min_size`` is set when the requested size is below the seats taken.
+
+    ``deadline``: what a move did to sign-ups by the deadline (closed them, or reopened them).
+    """
 
     min_size: int | None = None
     promoted: list[str] = field(default_factory=list)
     time_changed: bool = False
+    deadline: DeadlineChange | None = None
+
+
+@dataclass(frozen=True)
+class DeadlineSaved:
+    """What Raid: Edit → Deadline did, the deadline now (minutes) and when it closes sign-ups (unix).
+
+    ``still_closed``: sign-ups stay closed — the leader's close, or the deadline's own.
+    """
+
+    kind: DeadlineKind
+    minutes: int | None = None
+    closes_unix: int | None = None
+    still_closed: bool = False
+
+    @property
+    def changed(self) -> bool:
+        """Whether anything was written (a posted raid's post then needs re-rendering)."""
+        return self.kind in _DEADLINE_WRITES
 
 
 async def create_draft(
@@ -91,6 +128,8 @@ async def mark_posting(
         return "gone"
     if event.starts_at <= now:
         return "in_past"
+    if deadline_passed(event, now):
+        return "deadline_passed"
     event.status = "scheduled"
     # Post into the guild's current raid channel (setup may have changed
     # since the preview was created).
@@ -143,17 +182,21 @@ async def edit_event(
         event.starts_at = starts_at
     await db.flush()
 
+    deadline: DeadlineChange | None = None
     # A draft's notifications are scheduled when it's posted (``mark_posting``).
     if time_changed and event.status == "scheduled":
         await wow_raid_notification_repo.cancel_pending_for_event(db, event.id)
         await wow_raid_notification_repo.schedule_for_event(
             db, event_id=event.id, starts_at=event.starts_at, guild_settings=guild.settings, now=now
         )
+        # Moved, always into the future: the post is live again and the deadline counts from the new start.
+        await wow_raid_event_repo.set_start_applied(db, event, None)
+        deadline = await apply_deadline(db, event, now)
 
     promoted: list[str] = []
     if size_cap is not None:
         promoted = await promote_from_queue(db, event)
-    return EditOutcome(promoted=promoted, time_changed=time_changed)
+    return EditOutcome(promoted=promoted, time_changed=time_changed, deadline=deadline)
 
 
 async def set_title(db: AsyncSession, event: WowRaidEvent, title: str | None) -> None:
@@ -242,12 +285,77 @@ async def set_signups_closed(db: AsyncSession, event: WowRaidEvent, *, closed: b
 
     A closed raid stays ``scheduled``: /raid list, edits, the ready check and
     consumables DMs carry on; only the sign-up nudge stops (the worker skips it).
+    A deadline that's due is applied first, so it closes them as the deadline's;
+    a reopen keeps it applied, so after the deadline it holds until the start.
     """
+    await apply_deadline(db, event, now)
     if (event.closed_at is not None) == closed:
         return False
-    event.closed_at = now if closed else None
-    await db.flush()
+    closed_at = None
+    reason = None
+    if closed:
+        closed_at = now
+        reason = "leader"
+    await wow_raid_event_repo.set_close_state(
+        db, event, closed_at=closed_at, close_reason=reason, applied_at=event.deadline_applied_at
+    )
     return True
+
+
+async def apply_deadline(db: AsyncSession, event: WowRaidEvent, now: datetime) -> DeadlineChange | None:
+    """Square a posted raid's sign-ups with its deadline (``raid_deadline.reconcile``).
+
+    ``"closed"`` when the deadline just closed them, ``"reopened"`` when a later
+    or cleared deadline undid its own close, else None.  A draft keeps its
+    deadline for when it's posted.
+    """
+    if event.status != "scheduled":
+        return None
+    result = reconcile(event, now)
+    if result is None:
+        return None
+    await wow_raid_event_repo.set_close_state(
+        db, event, closed_at=result.closed_at, close_reason=result.close_reason, applied_at=result.applied_at
+    )
+    return result.change
+
+
+async def set_signup_deadline(db: AsyncSession, event: WowRaidEvent, text: str, *, now: datetime) -> DeadlineSaved:
+    """Raid: Edit → Deadline (and More options): how long before the start sign-ups close.
+
+    Nothing is written when the form doesn't read, says what's there already,
+    or the raid has started.  A new deadline is applied afresh, so it replaces
+    a reopen after the old one; a leader's close stays.
+    """
+    try:
+        minutes = parse_deadline(text)
+    except DeadlineError as exc:
+        return DeadlineSaved(exc.kind)
+    if event.status == "scheduled" and event.starts_at <= now:
+        return DeadlineSaved("started", minutes)
+    if minutes == event.signup_deadline_minutes:
+        return DeadlineSaved("same", minutes)
+    await wow_raid_event_repo.set_signup_deadline(db, event, minutes)
+    kind = await _saved_kind(db, event, now)
+    closes = deadline_at(event)
+    closes_unix = None
+    if closes is not None:
+        closes_unix = int(closes.timestamp())
+    return DeadlineSaved(kind, minutes, closes_unix, still_closed=event.closed_at is not None)
+
+
+async def _saved_kind(db: AsyncSession, event: WowRaidEvent, now: datetime) -> DeadlineKind:
+    """What a new deadline did: a posted raid's sign-ups are squared with it; a draft only keeps it."""
+    if event.status == "draft":
+        if deadline_passed(event, now):
+            return "draft_passed"
+    else:
+        change = await apply_deadline(db, event, now)
+        if change is not None:
+            return _KIND_OF_CHANGE[change]
+    if event.signup_deadline_minutes is None:
+        return "cleared"
+    return "set"
 
 
 def ping_ready(event: WowRaidEvent, now: datetime) -> bool:

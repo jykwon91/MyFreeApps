@@ -5,9 +5,9 @@ raid as it stands — title, leader, date and time, description, banner,
 color and its role and class limits — with a button for each, then
 [Cancel raid] [Delete raid] [Done].
 
-* Title, Date & Time, Description, Image, Role limits, Class limits and
-  Cancel raid open a form (type 9) holding what's there now; its submit
-  shows the card again, saying what changed.
+* Title, Date & Time, Deadline, Description, Image, Role limits, Class
+  limits and Cancel raid open a form (type 9) holding what's there now;
+  its submit shows the card again, saying what changed.
 * Leader and Color swap the card for a menu (type 7) with [Back].
 * Sign-ups swaps it for Manage sign-ups (``raid_manage_views``).
 * Notes: off / Notes: on lets members leave the leader a note, or hides
@@ -35,7 +35,7 @@ from platform_shared.services.discord import (
 )
 
 from app.models.wow.wow_raid_event import WowRaidEvent
-from app.services.discord import raid_copy, raid_limit_copy, raid_manage_copy, raid_member_copy
+from app.services.discord import raid_copy, raid_deadline_copy, raid_limit_copy, raid_manage_copy, raid_member_copy
 from app.services.discord.interaction import ephemeral_data, modal_response
 # FIELD is re-exported: the forms' submit handlers read the box by it.
 from app.services.discord.raid_forms import FIELD as FIELD
@@ -45,6 +45,7 @@ from app.services.discord.raid_views import action_row, button, unix
 from app.services.wow import raid_custom_id
 from app.services.wow.raid_banners import banner_url
 from app.services.wow.raid_colors import RAID_COLORS, RaidColor, color_of
+from app.services.wow.raid_deadline import deadline_prefill
 from app.services.wow.raid_details import (
     DESCRIPTION_MAX,
     IMAGE_URL_MAX,
@@ -59,6 +60,7 @@ from app.services.wow.raid_limits import LIMIT_ROLES, Limits
 from app.services.wow.raid_text import display_title, escape_name, title_text
 
 WHEN_MAX: Final = 40
+DEADLINE_MAX: Final = 16
 ROLE_LIMIT_MAX: Final = 3
 CLASS_LIMITS_MAX: Final = 500
 
@@ -97,6 +99,7 @@ def edit_card(event: WowRaidEvent, *, notice: str | None = None, notify_count: i
             _edit_button(event, "Title", "title"),
             _edit_button(event, "Leader", "leader"),
             _edit_button(event, "Date & Time", "when"),
+            _edit_button(event, "Deadline", "deadline"),
         ),
         action_row(
             _edit_button(event, "Description", "desc"),
@@ -129,6 +132,7 @@ def _detail_lines(event: WowRaidEvent) -> list[str]:
         f"**Title:** {title_text(event)}",
         f"**Leader:** {leader_text(event)}",
         f"**Date & Time:** <t:{starts}:F> (<t:{starts}:R>)",
+        *raid_deadline_copy.deadline_lines(event),
         f"**Image:** {_image_text(event)}",
         f"**Color:** {_color_text(event)}",
         raid_limit_copy.role_limits_line(limits.roles),
@@ -272,6 +276,20 @@ def when_modal(event: WowRaidEvent, tz_name: str) -> dict[str, Any]:
         required=True,
     )
     return event_form(event, "when", raid_copy.WHEN_MODAL, field)
+
+
+def deadline_modal(event: WowRaidEvent) -> dict[str, Any]:
+    """How long before the start sign-ups close, starting from the raid's ('2h'); empty = at the start."""
+    field = text_box(
+        raid_deadline_copy.LABEL,
+        raid_deadline_copy.HINT,
+        style=TEXT_INPUT_STYLE_SHORT,
+        value=deadline_prefill(event.signup_deadline_minutes),
+        max_length=DEADLINE_MAX,
+        required=False,
+        placeholder=raid_deadline_copy.PLACEHOLDER,
+    )
+    return event_form(event, "deadline", raid_deadline_copy.MODAL_TITLE, field)
 
 
 def description_modal(event: WowRaidEvent) -> dict[str, Any]:

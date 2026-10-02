@@ -15,14 +15,14 @@ if Discord refused.  The public post never blocks the 3-second budget.
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Final
 
 from fastapi import BackgroundTasks
 from platform_shared.services.discord import MANAGE_EVENTS
 
 from app.db.session import unit_of_work
 from app.repositories.wow import wow_raid_event_repo
-from app.services.discord import emojis, raid_copy, raid_publisher
+from app.services.discord import emojis, raid_copy, raid_deadline_copy, raid_publisher
 from app.services.discord.interaction import (
     Interaction,
     ephemeral_response,
@@ -34,6 +34,9 @@ from app.services.discord.raid_draft_views import options_data
 from app.services.wow import raid_event_service
 from app.services.wow.raid_custom_id import RaidCustomId
 from app.services.wow.raid_time_parser import PAST_MESSAGE
+
+# [Post raid] refused for its timing: More options (with [Date & Time] and [Deadline]) says why.
+_REFUSED: Final[dict[str, str]] = {"in_past": PAST_MESSAGE, "deadline_passed": raid_deadline_copy.POST_PASSED}
 
 
 def _forbidden() -> dict[str, Any]:
@@ -55,9 +58,10 @@ async def handle_confirm(interaction: Interaction, parsed: RaidCustomId, backgro
             return update_text_response(raid_copy.already_posted(link))
         if outcome == "gone":
             return update_text_response(raid_copy.NOT_FOUND)
-        if outcome == "in_past":
-            # More options, where [Date & Time] is one tap away.
-            return update_response(options_data(event, guild, emojis=emojis.current(), notice=PAST_MESSAGE))
+        refused = _REFUSED.get(outcome)
+        if refused is not None:
+            # More options, where [Date & Time] and [Deadline] are one tap away.
+            return update_response(options_data(event, guild, emojis=emojis.current(), notice=refused))
         channel_id = event.channel_id
 
     background.add_task(raid_publisher.post_raid, parsed.event_id, interaction.application_id, interaction.token)

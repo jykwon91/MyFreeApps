@@ -75,6 +75,7 @@ _MODAL_HANDLERS: Final[dict[str, ComponentHandler]] = {
     "ping": raid_leader.handle_ping_submit,
     "title": raid_edit.handle_title_submit,
     "when": raid_edit.handle_when_submit,
+    "deadline": raid_edit.handle_deadline_submit,
     "desc": raid_edit.handle_description_submit,
     "image": raid_edit.handle_image_submit,
     "cancel": raid_edit.handle_cancel_submit,

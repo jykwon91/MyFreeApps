@@ -18,6 +18,9 @@ the scheduler:
 * **Bounded runs.**  At most ``RUN_ITEM_CAP`` claims and
   ``RUN_TIME_BUDGET_S`` seconds per run — well inside the 10-minute
   stale-claim window, so a slow run is never double-processed.
+* **Sweeps first.**  Before any claim, ``raid_sweeps.run_before_claims`` runs
+  the per-tick raid sweeps (see that module), each step isolated so a failure
+  never blocks the outbox.
 
 Kinds
 -----
@@ -45,8 +48,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from collections.abc import Callable
-from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Final
@@ -72,7 +73,7 @@ from app.repositories.wow import (
 )
 from app.services.discord import raid_copy, raid_notifications, rest
 from app.services.discord.raid_views import unix
-from app.services.wow import raid_consumables_round, raid_details
+from app.services.wow import raid_consumables_round, raid_details, raid_sweeps
 from app.services.wow.raid_member_prefs_service import resolve_player
 from app.services.wow.raid_limits import raid_gaps
 from app.services.wow.raid_consumables import UnknownRaidError, select_consumables
@@ -88,14 +89,12 @@ from app.services.wow.raid_notification_outcomes import (
     Undeliverable,
 )
 from app.services.wow.raid_roster import SEAT_STATUSES, compute_roster_summary, ordered_user_ids
+from app.services.wow.raid_sweeps import SessionScope
 
 logger = logging.getLogger(__name__)
 
 RUN_ITEM_CAP: Final = 100
 RUN_TIME_BUDGET_S: Final = 240.0
-
-# A scheduled raid this long past its start is marked completed.
-COMPLETE_AFTER: Final = timedelta(hours=6)
 
 # A channel post that couldn't go out within this long after its due time is
 # dropped — a 48h nudge delivered at 24h, or a ready check after the pull,
@@ -115,8 +114,6 @@ DM_FALLBACK_RECHECK: Final = timedelta(minutes=1)
 DM_FALLBACK_MAX_WAIT: Final = timedelta(minutes=45)
 
 _NONCE_LEN: Final = 25
-
-SessionScope = Callable[[], AbstractAsyncContextManager[AsyncSession]]
 
 
 # ---------------------------------------------------------------------------
@@ -213,22 +210,9 @@ async def process_due_notifications(
     def clock() -> datetime:
         return now or datetime.now(timezone.utc)
 
-    try:
-        async with scope() as db:
-            stats.completed_events = await wow_raid_event_repo.complete_started_events(
-                db, started_before=clock() - COMPLETE_AFTER
-            )
-    except Exception:
-        logger.exception("raid_notifications: completing finished raids failed")
-
-    try:
-        async with scope() as db:
-            stats.late_dms = await raid_consumables_round.schedule_late_dms(db, clock())
-    except Exception:
-        logger.exception("raid_notifications: scheduling late consumables DMs failed")
-
     loop = asyncio.get_running_loop()
     deadline = loop.time() + time_budget_s
+    await raid_sweeps.run_before_claims(scope, clock, stats, stop_at=deadline)
     try:
         async with rest.make_rest_client() as client:
             while stats.claimed < max_items and loop.time() < deadline:
@@ -243,13 +227,8 @@ async def process_due_notifications(
     except Exception:
         logger.exception("raid_notifications: run aborted")
 
-    if stats.claimed or stats.completed_events or stats.late_dms:
-        logger.info(
-            "raid_notifications: run done claimed=%d sent=%d skipped=%d failed=%d "
-            "undeliverable=%d deferred=%d completed_events=%d late_dms=%d",
-            stats.claimed, stats.sent, stats.skipped, stats.failed,
-            stats.undeliverable, stats.deferred, stats.completed_events, stats.late_dms,
-        )
+    if stats.busy:
+        logger.info("raid_notifications: run done %s", stats.summary())
     return stats
 
 

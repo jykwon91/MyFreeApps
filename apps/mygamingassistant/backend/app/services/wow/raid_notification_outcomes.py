@@ -6,7 +6,7 @@ re-checked later); ``RunStats`` tallies a run for its log line.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import astuple, dataclass, fields
 from datetime import datetime
 
 
@@ -40,14 +40,25 @@ Outcome = Sent | Skipped | Failed | Undeliverable | Deferred
 
 @dataclass
 class RunStats:
-    completed_events: int = 0
-    late_dms: int = 0
     claimed: int = 0
     sent: int = 0
     skipped: int = 0
     failed: int = 0
     undeliverable: int = 0
     deferred: int = 0
+    completed_events: int = 0
+    late_dms: int = 0
+    deadline_closed: int = 0
+    started: int = 0
+
+    @property
+    def busy(self) -> bool:
+        """Whether the run did anything — only then is its run-done line logged."""
+        return any(astuple(self))
+
+    def summary(self) -> str:
+        """``claimed=1 sent=1 …`` — every counter, for the run-done line."""
+        return " ".join(f"{f.name}={getattr(self, f.name)}" for f in fields(self))
 
     def count(self, outcome: Outcome) -> None:
         if isinstance(outcome, Sent):
