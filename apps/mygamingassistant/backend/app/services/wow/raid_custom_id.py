@@ -120,10 +120,13 @@ MODALS: Final = ("ping", "title", "when", "desc", "image", "cancel", "role_limit
 #   dropt / dropq  [Remove and tell them] / [Remove quietly]
 #   mark  the card's [Seat] [Late] [Tentative] [Bench] (arg = the status, one of MARK_STATUSES)
 #   markt / markq  [Move and tell them] / [Move quietly] (arg = the status)
+#   addr / dropr / markr  [Add / Remove / Move and say why]: the form, then the change (args as addt / dropt /
+#         markt; the form's custom_id is the button's own)
 MANAGE_HUB_VERBS: Final = ("open", "who", "done", "row", "list")
-_MARK_VERBS: Final = ("mark", "markt", "markq")
+_ADD_VERBS: Final = ("addt", "addq", "addr")
+_MARK_VERBS: Final = ("mark", "markt", "markq", "markr")
 MANAGE_VERBS: Final = (
-    *MANAGE_HUB_VERBS, "card", "class", "spec", "ask", "addt", "addq", "dropt", "dropq", *_MARK_VERBS
+    *MANAGE_HUB_VERBS, "card", "class", "spec", "ask", *_ADD_VERBS, "dropt", "dropq", "dropr", *_MARK_VERBS
 )
 MANAGE_MAX_PAGE: Final = 99
 # What a leader can move a player to; the queue is the bot's to give.
@@ -233,7 +236,7 @@ def _manage_args_valid(verb: str, member: str, arg: str) -> bool:
         return False
     if verb == "spec":
         return arg in POST_COLUMNS
-    if verb in ("addt", "addq"):
+    if verb in _ADD_VERBS:
         return arg in _SPEC_CHOICES
     if verb in _MARK_VERBS:
         return arg in MARK_STATUSES

@@ -93,6 +93,7 @@ async def add_player(
     background: BackgroundTasks,
     *,
     tell: bool,
+    reason: str | None = None,
 ) -> dict[str, Any]:
     """[Add and tell them] / [Add quietly] / [Add]: a seat, or the queue when the raid is full."""
     class_key, _, spec_key = choice.partition(".")
@@ -125,7 +126,7 @@ async def add_player(
             lines = [raid_manage_copy.added_queued(target.who, change.queue_position)]
         if hit is not None:
             lines.append(raid_manage_copy.added_over(hit))
-        dm, dm_line = await dm_for(db, found, interaction, target, tell=tell)
+        dm, dm_line = await dm_for(db, found, interaction, target, tell=tell, reason=reason)
         if dm_line is not None:
             lines.append(dm_line)
         promoted = await raid_event_service.dm_recipients(db, guild=found.guild, user_ids=change.promoted)
@@ -152,6 +153,7 @@ async def drop_player(
     background: BackgroundTasks,
     *,
     tell: bool,
+    reason: str | None = None,
 ) -> dict[str, Any]:
     """[Remove and tell them] / [Remove quietly] / [Remove]: off the raid; a seat goes to the queue."""
     async with unit_of_work() as db:
@@ -168,7 +170,7 @@ async def drop_player(
         promoted_ids = await raid_signup_service.remove_signup(db, event=event, signup=mine)
         signups = await wow_raid_signup_repo.list_for_event(db, event_id)
         lines = [raid_manage_copy.removed(target.who, names_of(signups, promoted_ids))]
-        dm, dm_line = await dm_for(db, found, interaction, target, tell=tell)
+        dm, dm_line = await dm_for(db, found, interaction, target, tell=tell, reason=reason)
         if dm_line is not None:
             lines.append(dm_line)
         promoted = await raid_event_service.dm_recipients(db, guild=found.guild, user_ids=promoted_ids)

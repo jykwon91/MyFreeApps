@@ -15,6 +15,8 @@ their card, which says where they stand and offers what fits:
   or just [Move]; and [Remove], which asks first: [Remove and tell them] /
   [Remove quietly], or just [Remove].
 
+Every "and tell them" has an "and say why" beside it (a reason for the DM).
+
 A player's cards carry an embed whose author line is the player (name and
 avatar).  A custom_id has no room for a name, so the next click reads it
 back off the card it came from (:class:`Target`).  Every card names the
@@ -370,12 +372,13 @@ def _add_lines(
 
 
 def _add_buttons(event: WowRaidEvent, user_id: str, spec: WowSpecInfo, reach: Reach) -> list[dict[str, Any]]:
-    """[Add and tell them] [Add quietly] when a DM can reach them; else just [Add]."""
+    """[Add and tell them] [Add quietly] [Add and say why] when a DM can reach them; else just [Add]."""
     choice = spec.choice_value
     if reach == "yes":
         return [
             button(raid_manage_copy.ADD_TELL, BUTTON_STYLE_PRIMARY, manage(event.id, "addt", user_id, choice)),
             button(raid_manage_copy.ADD_QUIET, BUTTON_STYLE_SECONDARY, manage(event.id, "addq", user_id, choice)),
+            button(raid_manage_copy.ADD_WHY, BUTTON_STYLE_SECONDARY, manage(event.id, "addr", user_id, choice)),
         ]
     return [button(raid_manage_copy.ADD, BUTTON_STYLE_PRIMARY, manage(event.id, "addq", user_id, choice))]
 
@@ -396,6 +399,7 @@ def remove_data(
         buttons = [
             button(raid_manage_copy.REMOVE_TELL, BUTTON_STYLE_DANGER, manage(event.id, "dropt", uid)),
             button(raid_manage_copy.REMOVE_QUIET, BUTTON_STYLE_SECONDARY, manage(event.id, "dropq", uid)),
+            button(raid_manage_copy.REMOVE_WHY, BUTTON_STYLE_SECONDARY, manage(event.id, "dropr", uid)),
         ]
     else:
         if reach == "off":
@@ -425,6 +429,7 @@ def mark_review_data(
         buttons = [
             button(raid_manage_copy.MOVE_TELL, BUTTON_STYLE_PRIMARY, manage(event.id, "markt", uid, status)),
             button(raid_manage_copy.MOVE_QUIET, BUTTON_STYLE_SECONDARY, manage(event.id, "markq", uid, status)),
+            button(raid_manage_copy.MOVE_WHY, BUTTON_STYLE_SECONDARY, manage(event.id, "markr", uid, status)),
         ]
     else:
         if reach == "off":

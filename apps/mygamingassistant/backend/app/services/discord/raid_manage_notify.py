@@ -30,7 +30,8 @@ class ManageDm:
     """A DM to a player a leader added, moved or removed.
 
     *who* names the player to the leader if the DM can't go out; the
-    leader's interaction token carries that follow-up.
+    leader's interaction token carries that follow-up.  *reason* is what
+    the leader typed in a "say why" form.
     """
 
     event_id: uuid.UUID
@@ -39,6 +40,7 @@ class ManageDm:
     who: str
     application_id: str
     token: str
+    reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -58,7 +60,14 @@ async def notify_added(dm: ManageDm, label: str, queue_position: int | None) -> 
         if raid is None:
             return
         content = raid_manage_copy.added_dm(
-            dm.leader_id, raid.title, raid.starts_unix, label, queue_position, raid.link, signups_open=raid.signups_open
+            dm.leader_id,
+            raid.title,
+            raid.starts_unix,
+            label,
+            queue_position,
+            raid.link,
+            signups_open=raid.signups_open,
+            reason=dm.reason,
         )
         await _send(dm, content)
     except Exception:
@@ -80,6 +89,7 @@ async def notify_moved(dm: ManageDm, status: str, label: str, queue_position: in
             queue_position,
             raid.link,
             signups_open=raid.signups_open,
+            reason=dm.reason,
         )
         await _send(dm, content)
     except Exception:
@@ -92,7 +102,7 @@ async def notify_removed(dm: ManageDm) -> None:
         raid = await _load_raid(dm.event_id)
         if raid is None:
             return
-        await _send(dm, raid_manage_copy.removed_dm(dm.leader_id, raid.title, raid.starts_unix))
+        await _send(dm, raid_manage_copy.removed_dm(dm.leader_id, raid.title, raid.starts_unix, reason=dm.reason))
     except Exception:
         logger.exception("Raid bot: notify_removed failed for event %s", dm.event_id)
 

@@ -98,7 +98,7 @@ async def test_benching_a_seat_holder_asks_first_then_the_queue_moves_up(
     assert card_description(review) == (
         "Move **Bob** (**Fury Warrior**) to the **bench**?\nTheir seat goes to the next player in the queue."
     )
-    assert custom_ids(review) == [ml(event, "markt", _BOB, "bench"), ml(event, "markq", _BOB, "bench"), ml(event, "card", _BOB)]
+    assert custom_ids(review) == [*(ml(event, v, _BOB, "bench") for v in ("markt", "markq", "markr")), ml(event, "card", _BOB)]
     bob = await signup_row(db, event, _BOB)
     assert bob is not None and bob.status == "confirmed"
     assert fake_discord.calls == []

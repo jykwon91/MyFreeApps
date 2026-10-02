@@ -42,10 +42,10 @@ async def _save(post: Post, user_id: str, spec: str | None, *, dm_reminders: boo
 
 
 def _offer_ids(event: WowRaidEvent, user_id: str, choice: str, *, tell: bool = True) -> list[str]:
-    """The offer card's ids: the class menu, [Add and tell them] (unless *tell* is off), [Add quietly], [Back]."""
+    """The offer card's ids: the class menu, [Add and tell them] [Add quietly] [Add and say why] or [Add], [Back]."""
     adds = [ml(event, "addq", user_id, choice)]
     if tell:
-        adds.insert(0, ml(event, "addt", user_id, choice))
+        adds = [ml(event, "addt", user_id, choice), *adds, ml(event, "addr", user_id, choice)]
     return [ml(event, "class", user_id), *adds, ml(event, "open")]
 
 
