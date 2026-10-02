@@ -21,11 +21,20 @@ from fastapi import BackgroundTasks
 
 from app.db.session import unit_of_work
 from app.repositories.wow import wow_raid_signup_repo
-from app.services.discord import emojis, raid_copy, raid_manage_copy, raid_publisher
-from app.services.discord.components.raid_manage_common import Verb, dm_for, load, log, names_of, reach_of, target_of
+from app.services.discord import raid_copy, raid_manage_copy, raid_publisher
+from app.services.discord.components.raid_manage_common import (
+    Verb,
+    card_for,
+    dm_for,
+    load,
+    log,
+    names_of,
+    reach_of,
+    target_of,
+)
 from app.services.discord.interaction import Interaction, update_response, update_text_response
 from app.services.discord.raid_manage_notify import notify_moved
-from app.services.discord.raid_manage_views import listed_signup, mark_review_data, over_limit, player_data, spec_label
+from app.services.discord.raid_manage_views import listed_signup, mark_review_data, over_limit, spec_label
 from app.services.wow import raid_event_service, raid_signup_service
 from app.services.wow.raid_roster import LINE_STATUSES, SEAT_STATUSES
 
@@ -60,14 +69,14 @@ async def move_player(
         mine = listed_signup(signups, member)
         if mine is None:
             notice = raid_manage_copy.gone_from_raid(target.who)
-            return update_response(player_data(event, target, signups, emojis=emojis.current(), notice=notice))
+            return update_response(await card_for(db, found, interaction, target, signups, notice=notice))
         label = spec_label(mine)
         if label is None:
             # The row is only on the card of a player with a class.
             return update_text_response(raid_copy.GENERIC_ERROR)
         if mine.status == status:
             notice = raid_manage_copy.status_unchanged(target.who, status, None)
-            return update_response(player_data(event, target, signups, emojis=emojis.current(), notice=notice))
+            return update_response(await card_for(db, found, interaction, target, signups, notice=notice))
         reviewed = needs_review(mine.status, status)
         if ask and reviewed:
             reach = await reach_of(db, found, interaction, member)
@@ -98,7 +107,7 @@ async def move_player(
             if dm_line is not None:
                 lines.append(dm_line)
         promoted = await raid_event_service.dm_recipients(db, guild=found.guild, user_ids=change.promoted)
-        card = player_data(event, target, signups, emojis=emojis.current(), notice="\n".join(lines))
+        card = await card_for(db, found, interaction, target, signups, notice="\n".join(lines))
 
     if changed:
         background.add_task(raid_publisher.refresh_public_message, event_id)

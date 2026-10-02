@@ -181,7 +181,7 @@ async def test_a_player_back_from_absence_goes_to_the_end_of_the_line(
     await place_in_line(db, event, _CY, _EARLY + timedelta(hours=1))
 
     card = await post(pick(event, _BOB, "Bob"))
-    assert card_description(card) == raid_manage_copy.absent("**Bob**")
+    assert card_description(card).split("\n")[0] == raid_manage_copy.absent_note("**Bob**")
     specs = await post(tap(event, "class", _BOB, on=card, values=["warrior"]))
     review = await post(tap(event, "spec", _BOB, "warrior", on=specs, values=["warrior.fury"]))
     assert card_description(review).split("\n")[1] == raid_manage_copy.would_queue(2)

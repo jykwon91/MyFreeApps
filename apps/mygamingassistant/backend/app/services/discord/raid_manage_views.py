@@ -6,7 +6,9 @@ hub: the raid, its seats, a member picker and a menu of who's signed up
 their card, which says where they stand and offers what fits:
 
 * not on the raid (or marked absent) → their class, then their spec, then
-  a review: [Add and tell them] / [Add quietly], or just [Add];
+  a review: [Add and tell them] / [Add quietly], or just [Add].  With a
+  spec on file (the one they marked absence as, else their saved one) the
+  card is that review already, with the class menu to pick another;
 * on it → a class and spec to switch them to; [Seat] [Late] [Tentative]
   [Bench] to move them, which asks first when the move gives up or takes
   a seat or a place in the queue: [Move and tell them] / [Move quietly],
@@ -90,6 +92,14 @@ class Target:
         if self.name:
             return f"**{escape_name(self.name)}**"
         return f"<@{self.user_id}>"
+
+
+@dataclass(frozen=True)
+class Offer:
+    """The spec a card offers to add a player as, and whether a DM reaches them."""
+
+    spec: WowSpecInfo
+    reach: Reach
 
 
 def signup_of(signups: Sequence[WowRaidSignup], user_id: str) -> WowRaidSignup | None:
@@ -223,12 +233,23 @@ def player_data(
     *,
     emojis: EmojiSet,
     notice: str | None = None,
+    offer: Offer | None = None,
 ) -> dict[str, Any]:
-    """Where the player stands and a class select; on the raid, the status row and [Remove] too."""
+    """Where the player stands and a class select; on the raid, the status row and [Remove] too.
+
+    Off the raid with a spec on file (*offer*), the card is the add review.
+    """
     uid = target.user_id
     back = button("Back", BUTTON_STYLE_SECONDARY, manage(event.id, "open"))
     mine = signup_of(signups, uid)
     if mine is None or mine.status not in LISTED_STATUSES:
+        if offer is not None:
+            lines = _add_lines(event, target, offer.spec, signups, reach=offer.reach)
+            if mine is not None:
+                lines.insert(0, raid_manage_copy.absent_note(target.who))
+            select = class_select(manage(event.id, "class", uid), raid_manage_copy.PICK_OTHER_CLASS, emojis=emojis)
+            buttons = [*_add_buttons(event, uid, offer.spec, offer.reach), back]
+            return _card(event, target, "\n".join(lines), [action_row(select), action_row(*buttons)], notice=notice)
         text = raid_manage_copy.not_on_raid(target.who)
         if mine is not None:
             text = raid_manage_copy.absent(target.who)
@@ -327,25 +348,36 @@ def review_data(
 ) -> dict[str, Any]:
     """Add the player as *spec*?  Says first if they'd be queued or go over a limit."""
     uid = target.user_id
+    lines = _add_lines(event, target, spec, signups, reach=reach)
+    buttons = [*_add_buttons(event, uid, spec, reach), _back_to_player(event, uid)]
+    return _card(event, target, "\n".join(lines), [action_row(*buttons)])
+
+
+def _add_lines(
+    event: WowRaidEvent, target: Target, spec: WowSpecInfo, signups: Sequence[WowRaidSignup], *, reach: Reach
+) -> list[str]:
+    """'Add **Bob** to this raid as **Fury Warrior**?', then if they'd be queued, go over a limit or get no DM."""
     lines = [raid_manage_copy.review(target.who, spec.full_label)]
     summary = compute_roster_summary(signups, size_cap=event.size_cap)
     if summary.is_full:
         lines.append(raid_manage_copy.would_queue(summary.queued_count + 1))
-    hit = LimitCheck(Limits.of(event), signups, uid, "confirmed").hit(spec)
+    hit = LimitCheck(Limits.of(event), signups, target.user_id, "confirmed").hit(spec)
     if hit is not None:
         lines.append(raid_manage_copy.over_limit_ok(hit))
+    if reach == "off":
+        lines.append(raid_manage_copy.dm_off(target.who))
+    return lines
+
+
+def _add_buttons(event: WowRaidEvent, user_id: str, spec: WowSpecInfo, reach: Reach) -> list[dict[str, Any]]:
+    """[Add and tell them] [Add quietly] when a DM can reach them; else just [Add]."""
     choice = spec.choice_value
     if reach == "yes":
-        buttons = [
-            button(raid_manage_copy.ADD_TELL, BUTTON_STYLE_PRIMARY, manage(event.id, "addt", uid, choice)),
-            button(raid_manage_copy.ADD_QUIET, BUTTON_STYLE_SECONDARY, manage(event.id, "addq", uid, choice)),
+        return [
+            button(raid_manage_copy.ADD_TELL, BUTTON_STYLE_PRIMARY, manage(event.id, "addt", user_id, choice)),
+            button(raid_manage_copy.ADD_QUIET, BUTTON_STYLE_SECONDARY, manage(event.id, "addq", user_id, choice)),
         ]
-    else:
-        if reach == "off":
-            lines.append(raid_manage_copy.dm_off(target.who))
-        buttons = [button(raid_manage_copy.ADD, BUTTON_STYLE_PRIMARY, manage(event.id, "addq", uid, choice))]
-    buttons.append(_back_to_player(event, uid))
-    return _card(event, target, "\n".join(lines), [action_row(*buttons)])
+    return [button(raid_manage_copy.ADD, BUTTON_STYLE_PRIMARY, manage(event.id, "addq", user_id, choice))]
 
 
 def remove_data(

@@ -15,9 +15,10 @@ from fastapi import BackgroundTasks
 
 from app.db.session import unit_of_work
 from app.repositories.wow import wow_raid_signup_repo
-from app.services.discord import emojis, raid_copy, raid_manage_copy, raid_publisher
+from app.services.discord import raid_copy, raid_manage_copy, raid_publisher
 from app.services.discord.components.raid_manage_common import (
     Verb,
+    card_for,
     dm_for,
     load,
     log,
@@ -28,7 +29,7 @@ from app.services.discord.components.raid_manage_common import (
 )
 from app.services.discord.interaction import UNKNOWN_PLAYER, Interaction, update_response, update_text_response
 from app.services.discord.raid_manage_notify import fill_display_name, notify_added, notify_removed
-from app.services.discord.raid_manage_views import hub_data, listed_signup, player_data, review_data
+from app.services.discord.raid_manage_views import hub_data, listed_signup, review_data
 from app.services.wow import raid_event_service, raid_signup_service
 from app.services.wow.raid_catalog import spec_info
 from app.services.wow.raid_limits import LimitCheck, Limits
@@ -75,7 +76,7 @@ async def switch_spec(
                 notice = f"{notice}\n{raid_manage_copy.switched_over(hit)}"
         promoted = await raid_event_service.dm_recipients(db, guild=found.guild, user_ids=change.promoted)
         signups = await wow_raid_signup_repo.list_for_event(db, event_id)
-        card = player_data(event, target, signups, emojis=emojis.current(), notice=notice)
+        card = await card_for(db, found, interaction, target, signups, notice=notice)
 
     if changed:
         background.add_task(raid_publisher.refresh_public_message, event_id)
@@ -107,7 +108,7 @@ async def add_player(
         target = target_of(interaction, member, signups)
         if listed_signup(signups, member) is not None:
             notice = raid_manage_copy.already_on(target.who)
-            return update_response(player_data(event, target, signups, emojis=emojis.current(), notice=notice))
+            return update_response(await card_for(db, found, interaction, target, signups, notice=notice))
         hit = LimitCheck(Limits.of(event), signups, member, "confirmed").hit(spec)
         change = await raid_signup_service.change_status(
             db,
