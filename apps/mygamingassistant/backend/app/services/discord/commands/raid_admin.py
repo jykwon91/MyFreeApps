@@ -1,11 +1,13 @@
-"""/raid-admin — organiser commands (setup, create, edit, cancel, signup, repeats,
-attendance, export; the last two in ``raid_attendance.py``).
+"""/raid-admin — organiser commands (setup, raiders, create, edit, cancel, signup,
+repeats, attendance, export; the last two in ``raid_attendance.py``, raiders in
+``components/raid_unsigned.py``).
 
 A separate top-level command so ``default_member_permissions`` (Manage
 Events) hides it from regular members' slash menu.  Discord only gates
 per top-level command, and the client-side gate is advisory, so every
 handler here also re-checks the member's permission bitfield from the
-payload: Manage Events for everything but setup, which takes Manage Server.
+payload: Manage Events for everything but setup and raiders, which take Manage
+Server.
 
 Every reply is private (ephemeral).  Anything that must touch Discord's
 REST API runs as a background task after the response (see
@@ -24,6 +26,7 @@ from app.services.discord import emojis, raid_copy, raid_publisher, raid_setup_c
 from app.services.discord.commands import raid_attendance
 from app.services.discord.components.raid_manage_open import open_from_command
 from app.services.discord.components.raid_repeat import list_repeats
+from app.services.discord.components.raid_unsigned import open_raiders
 from app.services.discord.interaction import (
     Interaction,
     deferred_ephemeral_response,
@@ -49,6 +52,8 @@ async def handle_raid_admin(interaction: Interaction, background: BackgroundTask
     subcommand = interaction.subcommand
     if subcommand == "setup":
         return await _setup(interaction, background)
+    if subcommand == "raiders":
+        return await open_raiders(interaction, background)
     if not interaction.has_permission(MANAGE_EVENTS):
         return ephemeral_response(raid_copy.NOT_PERMITTED_EVENTS)
     if subcommand == "create":

@@ -20,6 +20,9 @@ The Discord event and thread columns (0038) are written by
 Attendance (0039): ``attendance_counted`` is whether the raid counts toward
 attendance (a leader's toggle; never copied), ``attendance_recorded_at`` when
 its sign-ups were frozen into ``wow_raid_attendance`` (never cleared).
+
+Unsigned (0040): ``raider_role_ids`` are the roles Raid: Unsigned checks for
+this raid (copied), ``unsigned_pinged_at`` its [Ping them] slot (not copied).
 """
 import uuid
 from datetime import datetime, timezone
@@ -86,6 +89,10 @@ class WowRaidEvent(Base):
         CheckConstraint(
             "mention_role_ids IS NULL OR jsonb_typeof(mention_role_ids) = 'array'",
             name="ck_wowraidevent_mention_role_ids",
+        ),
+        CheckConstraint(
+            "raider_role_ids IS NULL OR jsonb_typeof(raider_role_ids) = 'array'",
+            name="ck_wowraidevent_raider_role_ids",
         ),
         CheckConstraint(
             "role_limits IS NULL OR jsonb_typeof(role_limits) = 'object'",
@@ -243,6 +250,11 @@ class WowRaidEvent(Base):
     attendance_counted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
     # When its sign-ups were frozen as its attendance (the sweep or [Record now]).
     attendance_recorded_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    # The roles Raid: Unsigned checks for this raid; null = the server's raider
+    # roles (0040).  Read through raid_unsigned.pool_for.  None is SQL NULL.
+    raider_role_ids: Mapped[Optional[list[Any]]] = mapped_column(JSONB(none_as_null=True), nullable=True)
+    # When Unsigned's [Ping them] last went out: its own slot, like last_pinged_at.
+    unsigned_pinged_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

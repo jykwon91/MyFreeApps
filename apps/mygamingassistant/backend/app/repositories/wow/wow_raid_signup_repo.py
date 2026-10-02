@@ -13,6 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_signup import WowRaidSignup
 
 
@@ -173,6 +174,27 @@ async def list_for_events(
     for signup in result.scalars().all():
         grouped[signup.event_id].append(signup)
     return grouped
+
+
+async def last_classes(db: AsyncSession, *, guild_id: uuid.UUID, user_ids: Sequence[str]) -> dict[str, str]:
+    """Each of *user_ids*' class on their latest sign-up with one, across the server's raids.
+
+    Someone who never picked a class there is missing from the answer.
+    """
+    if not user_ids:
+        return {}
+    result = await db.execute(
+        select(WowRaidSignup.discord_user_id, WowRaidSignup.wow_class)
+        .join(WowRaidEvent, WowRaidEvent.id == WowRaidSignup.event_id)
+        .where(
+            WowRaidEvent.guild_id == guild_id,
+            WowRaidSignup.wow_class.is_not(None),
+            WowRaidSignup.discord_user_id.in_(user_ids),
+        )
+        .distinct(WowRaidSignup.discord_user_id)
+        .order_by(WowRaidSignup.discord_user_id, WowRaidSignup.updated_at.desc())
+    )
+    return {user_id: wow_class for user_id, wow_class in result.all()}
 
 
 async def counts_by_role_status(

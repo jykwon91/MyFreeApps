@@ -4,7 +4,8 @@
 claims the raid's ping slot, answers "Pinging N people…" and schedules
 :func:`send_ping`, which runs after the response like the rest of the bot's
 background work (``raid_publisher``): its own transactions, every REST call
-bounded, never raises.
+bounded, never raises.  A caller already holding a REST client hands the job
+to :func:`deliver` instead: Raid: Unsigned's [Ping them] does, on its own slot.
 
 The messages go out in order — the first as a reply to the raid post — and
 stop at the first one Discord doesn't take.  The leader's card then says:
@@ -23,7 +24,7 @@ import logging
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Final
 
 import httpx
 from platform_shared.services.discord import CANNOT_REPLY_WITHOUT_READ_HISTORY, DiscordApiError, DiscordRestClient
@@ -33,7 +34,7 @@ from app.repositories.wow import wow_raid_event_repo
 from app.services.discord import raid_copy, rest
 from app.services.discord.interaction import ephemeral_data
 from app.services.discord.raid_publisher import edit_original
-from app.services.wow import raid_event_service
+from app.services.wow import raid_event_service, raid_unsigned_service
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,12 @@ class PingJob:
     messages: list[dict[str, Any]]  # ``raid_notifications.build_ping``
     application_id: str
     token: str  # the modal submit's: its card shows the outcome
-    claimed_at: datetime  # ``raid_event_service.claim_ping``'s slot
+    claimed_at: datetime  # when the slot below was claimed
+    slot: str = "signed"  # which of the raid's ping slots (``_RELEASE``)
+
+
+# Each ping slot's release, keyed by ``PingJob.slot``.
+_RELEASE: Final = {"signed": raid_event_service.release_ping, "unsigned": raid_unsigned_service.release_ping}
 
 
 @dataclass(frozen=True)
@@ -64,13 +70,18 @@ async def send_ping(job: PingJob) -> None:
     """Post the ping, then swap the leader's "Pinging…" card for the outcome."""
     try:
         async with rest.make_rest_client() as client:
-            stop = await _post_ping(client, job)
-            if stop is not None and stop.sent == 0 and not stop.unanswered:
-                await _release_slot(job)
-            await edit_original(client, job.application_id, job.token, ephemeral_data(_outcome(job, stop)))
+            await deliver(client, job)
     except Exception:
         logger.exception("Raid bot: send_ping failed for event %s", job.event_id)
         await _report_unconfirmed(job)
+
+
+async def deliver(client: DiscordRestClient, job: PingJob) -> None:
+    """:func:`send_ping`'s work on *client*; raises on a crash (the caller reports it)."""
+    stop = await _post_ping(client, job)
+    if stop is not None and stop.sent == 0 and not stop.unanswered:
+        await _release_slot(job)
+    await edit_original(client, job.application_id, job.token, ephemeral_data(_outcome(job, stop)))
 
 
 def _outcome(job: PingJob, stop: _Stop | None) -> str:
@@ -132,7 +143,7 @@ async def _release_slot(job: PingJob) -> None:
     async with unit_of_work() as db:
         event = await wow_raid_event_repo.get_for_update(db, job.event_id)
         if event is not None:
-            await raid_event_service.release_ping(db, event, claimed_at=job.claimed_at)
+            await _RELEASE[job.slot](db, event, claimed_at=job.claimed_at)
 
 
 async def _report_unconfirmed(job: PingJob) -> None:

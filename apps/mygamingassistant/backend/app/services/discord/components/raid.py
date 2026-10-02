@@ -29,6 +29,7 @@ from app.services.discord.components import (
     raid_repeat,
     raid_seat,
     raid_signup,
+    raid_unsigned,
 )
 from app.services.discord.interaction import (
     Interaction,
@@ -77,6 +78,8 @@ _HANDLERS: Final[dict[str, ComponentHandler]] = {
     "mr": raid_manage_open.handle_raid_pick,
     "at": raid_attendance.handle_attendance,
     "as": raid_attendance.handle_summary,
+    "un": raid_unsigned.handle_unsigned,
+    "rr": raid_unsigned.handle_raiders_pick,
     "testdm": _handle_test_dm,
 }
 
@@ -98,6 +101,7 @@ _MODAL_HANDLERS: Final[dict[str, ComponentHandler]] = {
     "repeat_days": raid_repeat.handle_repeat_days_submit,
     "repeat_next": raid_repeat.handle_repeat_next_submit,
     "length": raid_extras.handle_length_submit,
+    "uping": raid_unsigned.handle_ping_submit,
 }
 
 

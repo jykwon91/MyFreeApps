@@ -24,6 +24,7 @@ import httpx
 
 from .client_events import ScheduledEventsAndThreads
 from .client_files import InteractionFiles
+from .client_members import GuildMembers
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +71,7 @@ class DiscordApiError(Exception):
         self.message = message
 
 
-class DiscordRestClient(ScheduledEventsAndThreads, InteractionFiles):
+class DiscordRestClient(ScheduledEventsAndThreads, InteractionFiles, GuildMembers):
     """Async Discord REST API client.
 
     Manages a single ``httpx.AsyncClient`` for the lifetime of the context.

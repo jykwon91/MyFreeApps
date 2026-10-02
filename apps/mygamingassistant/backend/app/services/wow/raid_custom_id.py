@@ -49,7 +49,8 @@ xt       the Event & thread card (More options and   raid:v1:xt:<event>:<verb>  
 m        a modal's submit                             raid:v1:m:<event>:<ping|title|when|desc|image|cancel|
                                                                          role_limits|class_limits|char|
                                                                          note|reason|deadline|length|copy|
-                                                                         repeat_days|repeat_next>
+                                                                         repeat_days|repeat_next|uping>
+         (``uping`` = Raid: Unsigned's [Ping them] form)
 ml       Manage sign-ups (a leader adds, changes,      raid:v1:ml:<event>:<verb>:<member|->:<arg|->
          moves and removes players; see ``MANAGE_VERBS``)
 testdm   /raid prefs [Send me a test DM]              raid:v1:testdm
@@ -59,6 +60,9 @@ at       the Attendance card (Raid: Signed's          raid:v1:at:<event>:<verb>:
          [Attendance]) and its player card; see ``ATTENDANCE_VERBS``
 as       /raid-admin attendance's summary: [Previous]  raid:v1:as:<page|csv>:<raid|->:<count>:<0|1>:<page|->
          / [Next] and [Export CSV], carrying the window (no raid: the guild is the interaction's)
+un       Raid: Unsigned's list (Raid: Signed's        raid:v1:un:<event>:<verb>  (see ``UNSIGNED_VERBS``)
+         [Not signed up]): its role menu, [Ping them], [Refresh] and [Back]
+rr       /raid-admin raiders' role menu               raid:v1:rr
 """
 from __future__ import annotations
 
@@ -109,12 +113,15 @@ _EVENT_ACTIONS: Final[dict[str, int]] = {
     "rp": 1,
     "xt": 1,
     "at": 3,
+    "un": 1,
 }
 # Raid: Manage's raid picker; its option values carry the raid and the player.
 RAID_PICK: Final = "mr"
 # /raid-admin repeats' menu; its option values are a repeat's latest raid.
 REPEATS_PICK: Final = "rpl"
-_BARE_ACTIONS: Final = frozenset({"testdm", RAID_PICK, REPEATS_PICK})
+# /raid-admin raiders' role menu: the server's raider roles.
+RAIDERS_PICK: Final = "rr"
+_BARE_ACTIONS: Final = frozenset({"testdm", RAID_PICK, REPEATS_PICK, RAIDERS_PICK})
 # action → number of args, with no event id: the attendance summary (``as``).
 _SERVER_ACTIONS: Final[dict[str, int]] = {"as": 5}
 # Every action a component can carry (the router's table matches it).
@@ -147,12 +154,15 @@ REPEAT_VERBS: Final = ("open", "every", "ahead", "skip", "next", "stop", "back")
 # The Event & thread card: open it, its toggles (each naming the state it switches to),
 # [Length] (its form) and [Try again].  Its [Back] is Raid: Edit's ``back``.
 EXTRAS_VERBS: Final = ("open", "event_on", "event_off", "thread_on", "thread_off", "length", "retry")
+# Raid: Unsigned's list: open it ([Not signed up]), [Refresh], its role menu, [Ping them]
+# (the form) and [Back] (to Raid: Signed).
+UNSIGNED_VERBS: Final = ("open", "refresh", "roles", "ping", "back")
 # Raid: Edit's menus, and the create preview's role menu.
 PICKERS: Final = ("leader", "color", "mentions")
 # The modals the bot opens; a submit names which one it came from.
 MODALS: Final = (
     "ping", "title", "when", "desc", "image", "cancel", "role_limits", "class_limits", "char", "note", "reason",
-    "deadline", "length", "copy", "repeat_days", "repeat_next",
+    "deadline", "length", "copy", "repeat_days", "repeat_next", "uping",
 )
 # Manage sign-ups (``ml``): verb → what its <arg> holds.  The hub's verbs name no
 # member (``-``); every other verb names the member it's about.
@@ -300,6 +310,8 @@ def _args_valid(action: str, args: tuple[str, ...]) -> bool:
         return args[0] in REPEAT_VERBS
     if action == "xt":
         return args[0] in EXTRAS_VERBS
+    if action == "un":
+        return args[0] in UNSIGNED_VERBS
     if action == "m":
         return args[0] in MODALS
     if action == "ml":

@@ -23,6 +23,7 @@ _EVENT_ID = uuid.UUID("a1b2c3d4-0000-4000-8000-000000000000")
 _RAID_LINE = f"**Onyxia's Lair** · <t:{_STAMP}:F>"
 _PING = ("Ping signed members", 1, f"raid:v1:lc:{_EVENT_ID}:ping")
 _MANAGE = ("Manage sign-ups", 2, f"raid:v1:ml:{_EVENT_ID}:open:-:-")
+_UNSIGNED = ("Not signed up", 2, f"raid:v1:un:{_EVENT_ID}:open")
 
 
 def _event(**overrides: object) -> WowRaidEvent:
@@ -37,8 +38,7 @@ def _event(**overrides: object) -> WowRaidEvent:
         "created_by_user_id": "u0",
         "created_by_display_name": "Thrall",
         "notes": None,
-        "cancel_reason": None,
-        "title": None,
+        "cancel_reason": None, "title": None,
     }
     fields.update(overrides)
     return WowRaidEvent(**fields)
@@ -125,7 +125,7 @@ def test_signed_lists_everyone_column_by_column_then_the_lists() -> None:
     assert embed["color"] == COLOR_OPEN
     assert embed["footer"] == {"text": "Raid ID a1b2c3"}
     assert data["content"] == "" and data["flags"] == 64
-    assert _buttons(data) == [_PING, _MANAGE]
+    assert _buttons(data) == [_PING, _MANAGE, _UNSIGNED]
 
 
 def test_signed_once_closed_says_so_and_puts_a_notice_on_top() -> None:
@@ -134,17 +134,17 @@ def test_signed_once_closed_says_so_and_puts_a_notice_on_top() -> None:
     assert embed["description"].split("\n\n")[0] == f"{_RAID_LINE}\n**Sign-ups are closed.**"
     assert embed["color"] == COLOR_CLOSED
     assert data["content"] == raid_copy.PING_WAIT
-    assert _buttons(data) == [_PING, _MANAGE]  # a closed raid can still be pinged, and managed
+    assert _buttons(data) == [_PING, _MANAGE, _UNSIGNED]  # a closed raid can still be pinged, and managed
 
 
 def test_nobody_to_ping_means_no_ping_button() -> None:
     empty = signed_data(_event(), [], emojis=EMPTY_EMOJIS)
     assert empty["embeds"][0]["title"] == "Signed up (0/40)"
     assert empty["embeds"][0]["description"] == f"{_RAID_LINE}\n\n{raid_copy.NOBODY_SIGNED_UP}"
-    assert _buttons(empty) == [_MANAGE]  # the leader can still seat the first player
+    assert _buttons(empty) == [_MANAGE, _UNSIGNED]  # the leader can still seat the first player
 
     away = signed_data(_event(), [_signup("Dan", status="absence")], emojis=EMPTY_EMOJIS)
-    assert _buttons(away) == [_MANAGE]  # an absence isn't pinged
+    assert _buttons(away) == [_MANAGE, _UNSIGNED]  # an absence isn't pinged
 
     cancelled = signed_data(_event(status="cancelled"), _roster(), emojis=EMPTY_EMOJIS)
     assert cancelled["components"] == []
