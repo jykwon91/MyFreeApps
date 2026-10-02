@@ -35,7 +35,8 @@ ed       Raid: Edit's buttons                         raid:v1:ed:<event>:<proper
          ``mentions`` (who the raid pings) and its [No ping] (``noping``) are on drafts only)
 pick     Raid: Edit's leader / color menus            raid:v1:pick:<event>:<leader|color|mentions>
 del      [Delete raid] on Raid: Edit's delete check   raid:v1:del:<event>
-m        a modal's submit                             raid:v1:m:<event>:<ping|title|when|desc|image|cancel>
+m        a modal's submit                             raid:v1:m:<event>:<ping|title|when|desc|image|cancel|
+                                                                         role_limits|class_limits>
 testdm   /raid prefs [Send me a test DM]              raid:v1:testdm
 """
 from __future__ import annotations
@@ -94,12 +95,12 @@ LEADER_ACTIONS: Final = ("reopen", "close", "ping", "notify")
 # [Mentions] (who the raid pings) and its [No ping] are offered on drafts only.
 EDIT_ACTIONS: Final = (
     "title", "leader", "when", "desc", "image", "color", "cancel", "delete", "done", "back", "keep",
-    "more", "preview", "mentions", "noping",
+    "more", "preview", "mentions", "noping", "role_limits", "class_limits",
 )
 # Raid: Edit's menus, and the create preview's role menu.
 PICKERS: Final = ("leader", "color", "mentions")
 # The modals the bot opens; a submit names which one it came from.
-MODALS: Final = ("ping", "title", "when", "desc", "image", "cancel")
+MODALS: Final = ("ping", "title", "when", "desc", "image", "cancel", "role_limits", "class_limits")
 # Old status names still on buttons of posts not re-rendered since they changed.
 _LEGACY_STATUSES: Final[dict[str, str]] = {"declined": "absence"}
 

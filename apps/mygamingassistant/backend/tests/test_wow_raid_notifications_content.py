@@ -67,6 +67,34 @@ def test_role_gaps_never_negative() -> None:
     assert gaps == RoleGaps(tanks=0, healers=1, dps=5)
 
 
+def test_role_limits_cap_the_gaps() -> None:
+    # 10 players: 2 tanks, 3 healers and 5 DPS expected; 1 tank seated.
+    seated = compute_roster_summary(_seated(1, 0, 0), size_cap=10).role_counts
+    assert role_gaps(10, seated, {}) == RoleGaps(tanks=1, healers=3, dps=5)
+    # Room left under the limits caps each gap.
+    assert role_gaps(10, seated, {"tank": 0, "healer": 2}) == RoleGaps(tanks=0, healers=2, dps=5)
+    # The nudge never calls for DPS, so their limits leave the DPS gap alone.
+    assert role_gaps(10, seated, {"melee": 1, "ranged": 2}) == RoleGaps(tanks=1, healers=3, dps=5)
+    # Room never raises a gap.
+    assert role_gaps(10, seated, {"healer": 9}) == RoleGaps(tanks=1, healers=3, dps=5)
+
+
+def test_a_nudge_under_role_limits_asks_only_for_the_room_left() -> None:
+    signups = _seated(1, 1, 2)
+    summary = compute_roster_summary(signups, size_cap=10)
+    payload = raid_notifications.build_signup_nudge(
+        raid_label="Onyxia",
+        starts_unix=_UNIX,
+        summary=summary,
+        gaps=role_gaps(10, summary.role_counts, {"tank": 0, "healer": 1}),
+        early=True,
+        ping_role_ids=[_ROLE],
+        signup_link=_LINK,
+    )
+    assert payload is not None
+    assert "Still need: **1 healer**." in payload["content"]  # not the band's 1 tank and 2 healers
+
+
 # ---------------------------------------------------------------------------
 # Signup nudge
 # ---------------------------------------------------------------------------

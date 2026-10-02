@@ -352,6 +352,22 @@ def test_class_buttons_carry_column_counts_then_the_status_row() -> None:
             assert "emoji" not in button  # no icons before the first sync
 
 
+def test_limits_show_on_the_role_row_and_the_class_buttons() -> None:
+    event = _event(notes="Bring fire resist", role_limits={"tank": 2, "ranged": 2}, class_limits={"hunter": 1, "rogue": 0})
+    message = build_signup_message(event, _mixed_signups(), _guild(), emojis=EMPTY_EMOJIS)
+    # A limited role counts its players in line (Finn, queued, is ranged) over its limit.
+    assert _embed(message)["description"].split("\n")[4] == (
+        f"Tanks **1/2**{_EM}Melee **0**{_EM}Ranged **1/2**{_EM}Healers **1**"
+    )
+    labels = [[c["label"] for c in row["components"]] for row in message["components"][:2]]
+    assert labels == [
+        ["TANK 1/2", "WAR 0", "DRU 0", "PAL 0", "ROG 0/0"],  # [Tank] shows Max tanks
+        ["HUN 1/1", "MAG 0", "WLK 0", "PRI 1", "SHA 0"],
+    ]
+    with_icons = build_signup_message(event, _mixed_signups(), _guild(), emojis=_ALL_ICONS)
+    assert [c["label"] for c in with_icons["components"][1]["components"]] == ["1/1", "0", "0", "1", "0"]
+
+
 def test_initial_post_pings_only_the_configured_role() -> None:
     message = build_initial_post(_event(), [], _guild(ping_role_id="r9"), ping_role=True, emojis=EMPTY_EMOJIS)
     assert message["content"] == "<@&r9>"

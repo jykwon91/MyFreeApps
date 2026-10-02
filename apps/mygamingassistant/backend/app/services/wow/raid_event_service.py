@@ -2,8 +2,8 @@
 
 A posted raid's leader can also close and reopen its sign-ups (the raid
 stays ``scheduled``), ping everyone on it (at most once per ``PING_EVERY``),
-and change its details from Raid: Edit — title, leader, description, banner
-and color — or delete it outright.
+and change its details from Raid: Edit — title, leader, description, banner,
+color and its role and class limits — or delete it outright.
 
 The caller owns the transaction (one per Discord interaction).  Mutations
 that touch seats expect the event row lock to be held
@@ -190,6 +190,18 @@ async def set_color(db: AsyncSession, event: WowRaidEvent, color: int | None) ->
 async def set_mentions(db: AsyncSession, event: WowRaidEvent, role_ids: list[str]) -> None:
     """Create preview → Mentions: the roles the raid pings ([] = nobody)."""
     event.mention_role_ids = role_ids
+    await db.flush()
+
+
+async def set_role_limits(db: AsyncSession, event: WowRaidEvent, limits: dict[str, int]) -> None:
+    """Raid: Edit → Role limits ({} = no limits, stored as null)."""
+    event.role_limits = limits or None
+    await db.flush()
+
+
+async def set_class_limits(db: AsyncSession, event: WowRaidEvent, limits: dict[str, int]) -> None:
+    """Raid: Edit → Class limits ({} = no limits, stored as null)."""
+    event.class_limits = limits or None
     await db.flush()
 
 

@@ -25,11 +25,17 @@ Flows
 * **My sign-up** — the private card lives in ``raid_card``.
 * **Seat confirm** — a seat holder tapping [Tentative] / [Bench] / [Absence]
   while players are queued gets a private "free my seat?" card first, since
-  the seat goes to the queue at once: [Yes, free my seat] applies it (the
-  card becomes the result, the post refreshes via REST), [Keep my seat]
-  changes nothing.  A spec picked for one of those after a queue formed
-  asks the same way (the spec is saved, the seat kept until they answer).
-  Both answers re-check that the player still holds a seat.
+  the seat goes to the queue at once; its answers live in ``raid_seat``.  A
+  spec picked for one of those after a queue formed asks the same way (the
+  spec is saved, the seat kept until they answer).
+* **Limits** — the raid's role and class limits (``raid_limits``) refuse a
+  place in line past them, after the started / closed check and before
+  "You're already …".  A spec select for a place in line marks the specs
+  with no room.  A refused spec brings back its column's spec select, why
+  in place of the prompt; with no spec in the column left, why over the
+  class select — just why when the column's button on the post was tapped.
+  A refused spec is still saved as your spec when you're not on the list
+  yet, so [Tentative] is one tap; on the list, your saved spec stays.
 * [Absence] never asks for a class.  Same status again → private
   "You're already …" (no-op).  A raid that has started, or whose sign-ups
   the leader closed, refuses every change (menus left open included).
@@ -56,11 +62,17 @@ from app.services.discord.interaction import (
     update_text_response,
 )
 from app.services.discord.raid_context import RaidContext, load_event, signup_refusal, utcnow
-from app.services.discord.raid_views import class_picker_data, release_confirm_data, spec_picker_data
+from app.services.discord.raid_views import (
+    class_picker_data,
+    limit_refusal_data,
+    release_confirm_data,
+    spec_picker_data,
+)
 from app.services.wow import raid_event_service, raid_member_prefs_service, raid_signup_service
 from app.services.wow.raid_catalog import CLASSES_BY_KEY, POST_COLUMNS, WowSpecInfo, column_specs, spec_info
 from app.services.wow.raid_custom_id import SAME_STATUS, RaidCustomId
 from app.services.wow.raid_embed import build_signup_message
+from app.services.wow.raid_limits import LimitCheck, Limits
 from app.services.wow.raid_member_prefs_service import PlayerPick
 from app.services.wow.raid_roster import (
     ABSENCE_STATUS,
@@ -86,6 +98,7 @@ class _Tap:
 async def handle_class_button(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
     """[Tank] or a class on the post: one tap with a known spec, else the column's spec select."""
     assert parsed.event_id is not None
+    column = parsed.args[0]
     async with unit_of_work() as db:
         context = await load_event(db, interaction, parsed.event_id, lock=True)
         if context is None:
@@ -93,9 +106,16 @@ async def handle_class_button(interaction: Interaction, parsed: RaidCustomId, ba
         refusal = signup_refusal(context.event, utcnow())
         if refusal is not None:
             return ephemeral_response(refusal)
-        spec = await _spec_for_column(db, context, interaction.user_id, parsed.args[0], "confirmed", tapped=True)
-        if isinstance(spec, dict):  # a choice to make: the spec select
+        signups = await wow_raid_signup_repo.list_for_event(db, context.event.id)
+        check = LimitCheck(Limits.of(context.event), signups, interaction.user_id, "confirmed")
+        spec = await _spec_for_column(db, context, check, column, "confirmed", tapped=True)
+        if isinstance(spec, dict):  # a choice to make (the spec select), or no room in the column
             return message_response(spec)
+        refused = limit_refusal_data(
+            context.event, "confirmed", column, check, emojis=emojis.current(), spec=spec, tapped=True
+        )
+        if refused is not None:
+            return message_response(refused)
         await raid_member_prefs_service.remember_spec(
             db, guild=context.guild, discord_user_id=interaction.user_id, spec=spec
         )
@@ -134,8 +154,15 @@ async def _request_status(
         if existing is None or existing.wow_class is None:
             pref = await raid_member_prefs_service.get(db, guild=context.guild, discord_user_id=interaction.user_id)
         pick = raid_member_prefs_service.resolve_player(existing, pref)
+        check = LimitCheck(Limits.of(event), signups, interaction.user_id, requested)
         if requested != ABSENCE_STATUS and pick.known_spec is None:
-            return message_response(_ask_for_spec(event, requested, pick.wow_class))
+            return message_response(_ask_for_spec(event, requested, pick.wow_class, check))
+        if pick.known_spec is not None:
+            refused = limit_refusal_data(
+                event, requested, pick.known_spec.class_key, check, emojis=emojis.current(), spec=pick.known_spec
+            )
+            if refused is not None:
+                return message_response(refused)
         tap = await _tap(db, context, interaction, requested, pick)
     return _tap_response(interaction, event_id, tap, requested, background)
 
@@ -203,40 +230,56 @@ def _already(change: StatusChange, requested: str, spec: WowSpecInfo | None) -> 
     )
 
 
-def _ask_for_spec(event: WowRaidEvent, status: str, wow_class: str | None) -> dict[str, Any]:
-    """The spec select when the class is known, else the class select."""
-    if wow_class in CLASSES_BY_KEY:
-        return spec_picker_data(event, status, wow_class, current=None, emojis=emojis.current())
-    return class_picker_data(event, status, emojis=emojis.current())
+def _ask_for_spec(event: WowRaidEvent, status: str, wow_class: str | None, check: LimitCheck) -> dict[str, Any]:
+    """The spec select when the class is known (or why the limits leave it none), else the class select."""
+    if wow_class not in CLASSES_BY_KEY:
+        return class_picker_data(event, status, emojis=emojis.current())
+    closed = limit_refusal_data(event, status, wow_class, check, emojis=emojis.current())
+    if closed is not None:
+        return closed
+    return spec_picker_data(event, status, wow_class, current=None, emojis=emojis.current(), check=check)
 
 
 async def _spec_for_column(
-    db: AsyncSession, context: RaidContext, user_id: str, column: str, status: str, *, tapped: bool
+    db: AsyncSession, context: RaidContext, check: LimitCheck, column: str, status: str, *, tapped: bool
 ) -> WowSpecInfo | dict[str, Any]:
-    """The spec *column* signs you up with, else its spec select (a dict) to ask.
+    """The spec *column* signs you up with, else what to show instead (a dict).
 
-    Your own column (or your tank's class) opens its specs to switch.  When
-    picking your spec again would change your status, nothing is
-    preselected, since Discord sends nothing for a preselected pick, and
+    That's why the raid's limits leave you no spec in the column, if they
+    don't; else your own column (or your tank's class) opens its specs to
+    switch.  When picking your spec again would change your status, nothing
+    is preselected, since Discord sends nothing for a preselected pick, and
     the column's own button (*tapped*) just signs you back up with it.
-    Another column uses the spec you saved for it, else asks.
+    Another column uses the spec you saved for it, else asks.  *check* is
+    you asking for *status*; the spec select marks the specs it refuses.
     """
     event = context.event
+    closed = limit_refusal_data(event, status, column, check, emojis=emojis.current(), tapped=tapped)
+    if closed is not None:
+        return closed
     back = status == SAME_STATUS  # opened from My sign-up
-    mine = await wow_raid_signup_repo.get(db, event_id=event.id, discord_user_id=user_id)
+    mine = check.mine
     current = _current_spec(mine)
     if mine is not None and current is not None and column in (current.column, current.class_key):
-        shown = None
-        if _repick_changes_nothing(mine, status):
-            shown = current
-        elif tapped and column == current.column:
+        shown = _shown_spec(mine, column, status)
+        if shown is None and tapped and column == current.column:
             return current
-        return spec_picker_data(event, status, column, current=shown, emojis=emojis.current(), back=back)
-    pref = await raid_member_prefs_service.get(db, guild=context.guild, discord_user_id=user_id)
+        return spec_picker_data(event, status, column, current=shown, emojis=emojis.current(), back=back, check=check)
+    pref = await raid_member_prefs_service.get(db, guild=context.guild, discord_user_id=check.discord_user_id)
     saved = raid_member_prefs_service.saved_spec_for_column(pref, column)
     if saved is not None:
         return saved
-    return spec_picker_data(event, status, column, current=None, emojis=emojis.current(), back=back)
+    return spec_picker_data(event, status, column, current=None, emojis=emojis.current(), back=back, check=check)
+
+
+def _shown_spec(mine: WowRaidSignup | None, column: str, status: str) -> WowSpecInfo | None:
+    """Your spec, preselected in *column*'s select only when picking it again would change nothing."""
+    current = _current_spec(mine)
+    if mine is None or current is None or column not in (current.column, current.class_key):
+        return None
+    if not _repick_changes_nothing(mine, status):
+        return None
+    return current
 
 
 def _repick_changes_nothing(mine: WowRaidSignup, status: str) -> bool:
@@ -260,10 +303,16 @@ async def handle_class_pick(interaction: Interaction, parsed: RaidCustomId, back
         refusal = signup_refusal(context.event, utcnow())
         if refusal is not None:
             return update_text_response(refusal)
-        spec = await _spec_for_column(db, context, interaction.user_id, column, status, tapped=False)
+        signups = await wow_raid_signup_repo.list_for_event(db, context.event.id)
+        mine = next((s for s in signups if s.discord_user_id == interaction.user_id), None)
+        asked = _asked_status(status, mine)
+        if asked is None:
+            return update_text_response(raid_copy.NOT_SIGNED_UP)
+        check = LimitCheck(Limits.of(context.event), signups, interaction.user_id, asked)
+        spec = await _spec_for_column(db, context, check, column, status, tapped=False)
         if isinstance(spec, dict):
             return update_response(spec)
-    return await _finish_pick(interaction, parsed.event_id, status, spec, background)
+    return await _finish_pick(interaction, parsed.event_id, status, column, spec, background)
 
 
 async def handle_spec_pick(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
@@ -275,7 +324,7 @@ async def handle_spec_pick(interaction: Interaction, parsed: RaidCustomId, backg
     spec = spec_info(class_key, spec_key)
     if spec is None or spec not in column_specs(column):
         return update_text_response(raid_copy.MENU_TIMEOUT)
-    return await _finish_pick(interaction, parsed.event_id, status, spec, background)
+    return await _finish_pick(interaction, parsed.event_id, status, column, spec, background)
 
 
 async def handle_pick_class(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
@@ -314,6 +363,7 @@ async def _finish_pick(
     interaction: Interaction,
     event_id: uuid.UUID,
     status: str,
+    column: str,
     spec: WowSpecInfo,
     background: BackgroundTasks,
 ) -> dict[str, Any]:
@@ -322,6 +372,10 @@ async def _finish_pick(
     The menu may have sat open, so the status is checked against the raid as
     it is now: ``same`` keeps the status the player has, and giving a seat to
     a queue that formed meanwhile asks first, like the buttons on the post.
+    The raid's limits are checked against what the pick would change, and a
+    refusal brings *column*'s select back.  A refused spec is still saved
+    for a player off the list (it makes [Tentative] one tap), never over the
+    spec of one on it.
     """
     seat_card: dict[str, Any] | None = None
     async with unit_of_work() as db:
@@ -333,17 +387,31 @@ async def _finish_pick(
             return update_text_response(refusal)
         signups = await wow_raid_signup_repo.list_for_event(db, context.event.id)
         mine = next((s for s in signups if s.discord_user_id == interaction.user_id), None)
-        requested = status
-        if status == SAME_STATUS:
-            if mine is None:
-                return update_text_response(raid_copy.NOT_SIGNED_UP)
-            requested = _status_to_keep(mine)
+        requested = _asked_status(status, mine)
+        if requested is None:
+            return update_text_response(raid_copy.NOT_SIGNED_UP)
         applied = requested
         if mine is not None and hands_seat_to_queue(
             signups, discord_user_id=interaction.user_id, requested_status=requested
         ):
             applied = mine.status  # save the spec, keep the seat until they answer
             seat_card = release_confirm_data(context.event, requested)
+        check = LimitCheck(Limits.of(context.event), signups, interaction.user_id, applied)
+        refused = limit_refusal_data(
+            context.event,
+            status,
+            column,
+            check,
+            emojis=emojis.current(),
+            spec=spec,
+            current=_shown_spec(mine, column, status),
+        )
+        if refused is not None:
+            if not check.listed:
+                await raid_member_prefs_service.remember_spec(
+                    db, guild=context.guild, discord_user_id=interaction.user_id, spec=spec
+                )
+            return update_response(refused)
         first_save = await raid_member_prefs_service.remember_spec(
             db, guild=context.guild, discord_user_id=interaction.user_id, spec=spec
         )
@@ -367,8 +435,15 @@ async def _finish_pick(
     return update_text_response(_pick_result(change, requested, spec, first_save))
 
 
-def _status_to_keep(mine: WowRaidSignup) -> str:
-    """``same``: the status you have now — asking for a seat keeps a queued player's place."""
+def _asked_status(status: str, mine: WowRaidSignup | None) -> str | None:
+    """What a menu's *status* asks for: ``same`` is the status you have, None with none.
+
+    Asking for a seat keeps a queued player's place.
+    """
+    if status != SAME_STATUS:
+        return status
+    if mine is None:
+        return None
     if mine.status == QUEUED_STATUS:
         return "confirmed"
     return mine.status
@@ -393,58 +468,6 @@ def _pick_result(change: StatusChange, requested: str, spec: WowSpecInfo, first_
     if first_save:
         text = f"{text} {raid_copy.NEXT_TIME_ONE_TAP}"
     return text
-
-
-async def handle_release(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
-    """[Yes, free my seat] — apply the status; the queue moves up into the seat."""
-    assert parsed.event_id is not None
-    status = parsed.args[0]
-    async with unit_of_work() as db:
-        context = await load_event(db, interaction, parsed.event_id, lock=True)
-        if context is None:
-            return update_text_response(raid_copy.NOT_FOUND)
-        refusal = signup_refusal(context.event, utcnow())
-        if refusal is not None:
-            return update_text_response(refusal)
-        mine = await wow_raid_signup_repo.get(db, event_id=context.event.id, discord_user_id=interaction.user_id)
-        if mine is None:
-            return update_text_response(raid_copy.NOT_SIGNED_UP)
-        if mine.status == status:
-            return update_text_response(raid_copy.already_in_status(status))  # tapped twice
-        if mine.status not in SEAT_STATUSES:
-            return update_text_response(raid_copy.NO_SEAT_TO_FREE)  # the seat went some other way
-        change = await raid_signup_service.change_status(
-            db,
-            event=context.event,
-            discord_user_id=interaction.user_id,
-            display_name=interaction.display_name,
-            requested_status=status,
-            wow_class=mine.wow_class,
-            role=mine.role,
-            spec=mine.spec,
-        )
-        dm_ids = await raid_event_service.dm_recipients(db, guild=context.guild, user_ids=change.promoted)
-
-    background.add_task(raid_publisher.refresh_public_message, parsed.event_id)
-    background.add_task(raid_publisher.notify_promoted, parsed.event_id, dm_ids)
-    return update_text_response(raid_copy.seat_released(change.status, handed_on=bool(change.promoted)))
-
-
-async def handle_stay(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
-    """[Keep my seat] — nothing changes."""
-    assert parsed.event_id is not None
-    async with unit_of_work() as db:
-        context = await load_event(db, interaction, parsed.event_id, lock=False)
-        if context is None:
-            return update_text_response(raid_copy.NOT_FOUND)
-        if context.event.starts_at <= utcnow():
-            return update_text_response(raid_copy.RAID_STARTED)
-        mine = await wow_raid_signup_repo.get(db, event_id=context.event.id, discord_user_id=interaction.user_id)
-        if mine is None:
-            return update_text_response(raid_copy.NOT_SIGNED_UP)
-        if mine.status not in SEAT_STATUSES:
-            return update_text_response(raid_copy.NO_SEAT_TO_FREE)
-        return update_text_response(raid_copy.SEAT_KEPT)
 
 
 def _current_spec(signup: WowRaidSignup | None) -> WowSpecInfo | None:

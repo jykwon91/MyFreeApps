@@ -26,13 +26,14 @@ from platform_shared.services.discord import (
 
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_guild import WowRaidGuild
-from app.services.discord import raid_copy, raid_draft_copy
+from app.services.discord import raid_copy, raid_draft_copy, raid_limit_copy
 from app.services.discord.interaction import ephemeral_data
 from app.services.discord.raid_leader_views import raid_line
 from app.services.discord.raid_views import action_row, button
 from app.services.wow import raid_custom_id
 from app.services.wow.raid_details import mention_roles
 from app.services.wow.raid_embed import build_signup_embed
+from app.services.wow.raid_limits import Limits
 
 # The most roles one raid pings.
 MENTION_MAX: Final = 5
@@ -56,11 +57,18 @@ def preview_data(
 def options_data(
     event: WowRaidEvent, guild: WowRaidGuild, *, emojis: EmojiSet, notice: str | None = None
 ) -> dict[str, Any]:
-    """More options: what changed (else the prompt), where it posts, the embed, a button per thing to change."""
+    """More options: what changed (else the prompt), where it posts, the embed, a button per thing to change.
+
+    The embed's role row shows any role limits; class limits, shown on the
+    post's class buttons, get a line here while there are any.
+    """
     lines = [
         notice or raid_copy.EDIT_PROMPT,
         raid_draft_copy.preview_state(event.channel_id, mention_roles(event, guild)),
     ]
+    classes = Limits.of(event).classes
+    if classes:
+        lines.append(raid_limit_copy.class_limits_line(classes))
     rows = [
         action_row(
             _draft_button(event, "Title", "title"),
@@ -71,6 +79,10 @@ def options_data(
             _draft_button(event, "Description", "desc"),
             _draft_button(event, "Image", "image"),
             _draft_button(event, "Color", "color"),
+        ),
+        action_row(
+            _draft_button(event, "Role limits", "role_limits"),
+            _draft_button(event, "Class limits", "class_limits"),
         ),
         # [Post raid] first, as on the preview, and never beside [Back].
         action_row(

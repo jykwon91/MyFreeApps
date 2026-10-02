@@ -117,9 +117,10 @@ def test_more_options_shows_the_post_and_a_button_per_thing_to_change() -> None:
 
     assert data["content"] == f"{raid_copy.EDIT_PROMPT}\n**Preview.** Posts in <#c1>, pinging <@&r9>."
     assert data["embeds"] == [build_signup_embed(event, [], guild, emojis=_ICONS)]
-    first, second, actions = data["components"]
+    first, second, limits, actions = data["components"]
     assert _buttons(first) == [("Title", 2, _ed("title")), ("Leader", 2, _ed("leader")), ("Date & Time", 2, _ed("when"))]
     assert _buttons(second) == [("Description", 2, _ed("desc")), ("Image", 2, _ed("image")), ("Color", 2, _ed("color"))]
+    assert _buttons(limits) == [("Role limits", 2, _ed("role_limits")), ("Class limits", 2, _ed("class_limits"))]
     # [Post raid] first, as on the preview, and [Back] (to the preview) never beside it.
     assert _buttons(actions) == [_POST, ("Mentions", 2, _ed("mentions")), ("Back", 2, _ed("preview"))]
 
@@ -127,6 +128,15 @@ def test_more_options_shows_the_post_and_a_button_per_thing_to_change() -> None:
 def test_more_options_says_what_changed_first_and_still_who_it_pings() -> None:
     data = options_data(_draft(mention_role_ids=[]), _guild(ping_role_id="r9"), emojis=EMPTY_EMOJIS, notice="Done.")
     assert data["content"] == "Done.\n**Preview.** Posts in <#c1>, with no ping."
+
+
+def test_more_options_lists_class_limits_the_embed_cant_show() -> None:
+    # Role limits are on the embed's role row; class limits show only on the
+    # post's buttons, which the preview leaves out — so they get a line.
+    event = _draft(class_limits={"rogue": 3}, role_limits={"tank": 2})
+    data = options_data(event, _guild(), emojis=EMPTY_EMOJIS)
+    assert data["content"].split("\n")[2:] == ["**Class limits:** Rogue 3"]
+    assert options_data(_draft(role_limits={"tank": 2}), _guild(), emojis=EMPTY_EMOJIS)["content"].count("\n") == 1
 
 
 # ---------------------------------------------------------------------------
