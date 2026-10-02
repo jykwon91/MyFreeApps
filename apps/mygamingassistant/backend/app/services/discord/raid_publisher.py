@@ -51,9 +51,11 @@ from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.repositories.wow import wow_raid_event_repo, wow_raid_signup_repo
 from app.services.discord import emojis, raid_copy, rest
 from app.services.discord.interaction import NO_MENTIONS, ephemeral_data
+from app.services.discord.raid_context import signup_refusal, utcnow
 from app.services.discord.raid_draft_views import preview_data
 from app.services.discord.raid_views import unix
 from app.services.wow import raid_event_service
+from app.services.wow.raid_details import leader_id
 from app.services.wow.raid_embed import build_initial_post, build_signup_message
 from app.services.wow.raid_text import local_day_label, title_text
 
@@ -64,7 +66,11 @@ _POST_PERMISSIONS = (VIEW_CHANNEL, SEND_MESSAGES, EMBED_LINKS)
 
 @dataclass(frozen=True)
 class _Snapshot:
-    """Everything a task needs after its transaction closes (plain values)."""
+    """Everything a task needs after its transaction closes (plain values).
+
+    *ask_leader* is the raid's leader once members can't change their own
+    sign-up (closed, or started): DMs send a player who can't come to them.
+    """
 
     event_id: uuid.UUID
     status: str
@@ -75,6 +81,7 @@ class _Snapshot:
     day_label: str
     starts_unix: int
     cancel_reason: str | None
+    ask_leader: str | None
     message: dict[str, Any]
 
 
@@ -91,6 +98,9 @@ async def _load(db: AsyncSession, event_id: uuid.UUID, *, initial_post: bool = F
         message = build_initial_post(event, signups, guild, ping_role=True, emojis=icons)
     else:
         message = build_signup_message(event, signups, guild, emojis=icons)
+    ask_leader = None
+    if signup_refusal(event, utcnow()) is not None:
+        ask_leader = leader_id(event)
     return _Snapshot(
         event_id=event.id,
         status=event.status,
@@ -101,6 +111,7 @@ async def _load(db: AsyncSession, event_id: uuid.UUID, *, initial_post: bool = F
         day_label=local_day_label(event.starts_at, guild.timezone),
         starts_unix=unix(event.starts_at),
         cancel_reason=event.cancel_reason,
+        ask_leader=ask_leader,
         message=message,
     )
 
@@ -126,7 +137,8 @@ async def edit_original(client: DiscordRestClient, application_id: str, token: s
         logger.warning("Raid bot: could not edit the original interaction response (%s)", type(exc).__name__)
 
 
-async def _send_dm(client: DiscordRestClient, user_id: str, content: str) -> bool:
+async def send_dm(client: DiscordRestClient, user_id: str, content: str) -> bool:
+    """DM a player; False when it didn't go out (DMs closed, or Discord never answered)."""
     try:
         await rest.bounded(client.send_dm(user_id, {"content": content, "allowed_mentions": NO_MENTIONS}))
         return True
@@ -314,10 +326,12 @@ async def notify_promoted(event_id: uuid.UUID, user_ids: list[str]) -> None:
             snapshot = await _load(db, event_id)
         if snapshot is None:
             return
-        content = raid_copy.promoted_dm(snapshot.title, snapshot.starts_unix, _snapshot_link(snapshot))
+        content = raid_copy.promoted_dm(
+            snapshot.title, snapshot.starts_unix, _snapshot_link(snapshot), ask_leader=snapshot.ask_leader
+        )
         async with rest.make_rest_client() as client:
             for user_id in user_ids:
-                await _send_dm(client, user_id, content)
+                await send_dm(client, user_id, content)
     except Exception:
         logger.exception("Raid bot: notify_promoted failed for event %s", event_id)
 
@@ -343,7 +357,7 @@ async def announce_cancellation(event_id: uuid.UUID, dm_user_ids: list[str]) -> 
                 )
             dm_text = raid_copy.cancellation_dm(snapshot.title, snapshot.starts_unix, snapshot.cancel_reason)
             for user_id in dm_user_ids:
-                await _send_dm(client, user_id, dm_text)
+                await send_dm(client, user_id, dm_text)
     except Exception:
         logger.exception("Raid bot: announce_cancellation failed for event %s", event_id)
 

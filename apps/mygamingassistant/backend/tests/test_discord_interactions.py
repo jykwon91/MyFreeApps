@@ -33,7 +33,7 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from httpx import ASGITransport, AsyncClient
 
 from app.core.config import settings
-from app.services.discord.interaction import Interaction
+from app.services.discord.interaction import UNKNOWN_PLAYER, Interaction, member_display_name
 from app.services.discord.raid_copy import GENERIC_ERROR
 
 # ---------------------------------------------------------------------------
@@ -311,6 +311,76 @@ def test_modal_submit_fields_come_from_labels_and_old_action_rows() -> None:
 def test_malformed_payload_has_no_fields_or_target() -> None:
     interaction = Interaction.from_payload({"type": 5, "data": {"components": "nope", "target_id": None}})
     assert (interaction.fields, interaction.target_id) == ({}, "")
+
+
+# ---------------------------------------------------------------------------
+# The message a button was clicked on, and members picked in a user menu
+# ---------------------------------------------------------------------------
+
+_AUTHOR = {"name": "Bob", "icon_url": "https://cdn.discordapp.com/embed/avatars/1.png"}
+
+
+@pytest.mark.parametrize(
+    ("message", "author"),
+    [
+        ({"embeds": [{"author": _AUTHOR, "description": "x"}, {"author": {"name": "second"}}]}, _AUTHOR),
+        ({"embeds": [{"description": "no author"}]}, {}),
+        ({"embeds": []}, {}),
+        ({"embeds": "junk"}, {}),
+        ({"embeds": ["junk"]}, {}),
+        ("junk", {}),
+        (None, {}),
+    ],
+)
+def test_clicked_message_embed_author(message: Any, author: dict[str, Any]) -> None:
+    interaction = Interaction.from_payload({"type": 3, "data": {"custom_id": "x"}, "message": message})
+    assert interaction.message_embed_author() == author
+
+
+_HASH = "0123456789abcdef0123456789abcdef"
+_UID = "80351110224678912"
+
+
+def _picked(member: dict[str, Any], user: dict[str, Any], *, guild_id: str | None = "99") -> Interaction:
+    resolved = {"members": {_UID: member}, "users": {_UID: {"id": _UID, **user}}}
+    return Interaction.from_payload({"type": 3, "guild_id": guild_id, "data": {"resolved": resolved}})
+
+
+@pytest.mark.parametrize(
+    ("member", "user", "guild_id", "url"),
+    [
+        # Their server avatar wins over their own.
+        ({"avatar": _HASH}, {"avatar": f"a_{_HASH}"}, "99", f"/guilds/99/users/{_UID}/avatars/{_HASH}.png"),
+        ({}, {"avatar": f"a_{_HASH}"}, "99", f"/avatars/{_UID}/a_{_HASH}.png"),
+        # Neither: Discord's default for the id ((id >> 22) % 6).  A server avatar needs the server.
+        ({}, {}, "99", "/embed/avatars/5.png"),
+        ({"avatar": _HASH}, {"avatar": None}, None, "/embed/avatars/5.png"),
+        # Anything that isn't an avatar hash never goes into a URL.
+        ({"avatar": "../../evil"}, {"avatar": "ABC"}, "99", "/embed/avatars/5.png"),
+    ],
+)
+def test_picked_member_avatar(member: dict[str, Any], user: dict[str, Any], guild_id: str | None, url: str) -> None:
+    assert _picked(member, user, guild_id=guild_id).resolved_avatar_url(_UID) == f"https://cdn.discordapp.com{url}"
+
+
+def test_picked_member_with_no_usable_id_gets_the_first_default_avatar() -> None:
+    interaction = Interaction.from_payload({"type": 3, "data": {}})
+    assert interaction.resolved_avatar_url("not-an-id") == "https://cdn.discordapp.com/embed/avatars/0.png"
+
+
+@pytest.mark.parametrize(
+    ("member", "name"),
+    [
+        ({"nick": "Tanky", "user": {"global_name": "Bob", "username": "bob1"}}, "Tanky"),
+        ({"nick": "   ", "user": {"global_name": "Bob", "username": "bob1"}}, "Bob"),
+        ({"nick": None, "user": {"global_name": None, "username": "bob1"}}, "bob1"),
+        ({"user": {}}, UNKNOWN_PLAYER),
+        ({}, UNKNOWN_PLAYER),
+        ("junk", UNKNOWN_PLAYER),
+    ],
+)
+def test_member_display_name(member: Any, name: str) -> None:
+    assert member_display_name(member) == name
 
 
 async def _post_modal(discord_client: AsyncClient, data: dict[str, Any]) -> dict[str, Any]:

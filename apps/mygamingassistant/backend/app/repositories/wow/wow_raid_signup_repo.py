@@ -71,6 +71,18 @@ async def upsert_signup(
     return result.scalar_one()
 
 
+async def delete(db: AsyncSession, signup: WowRaidSignup) -> None:
+    """Remove a player's signup (a leader taking them off the raid)."""
+    await db.delete(signup)
+    await db.flush()
+
+
+async def set_display_name(db: AsyncSession, signup: WowRaidSignup, display_name: str) -> None:
+    """Rename a signup; its status and place in the order (``signed_up_at``) stay as they are."""
+    signup.display_name = display_name
+    await db.flush()
+
+
 async def list_for_event(
     db: AsyncSession, event_id: uuid.UUID
 ) -> list[WowRaidSignup]:

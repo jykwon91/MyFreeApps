@@ -4,7 +4,8 @@ Raid: Close / Raid: Open answer with a card that names the raid, says where
 its sign-ups stand and offers the opposite ([Reopen sign-ups] / [Close
 sign-ups]).  Raid: Signed lists everyone on the raid for its leader, column
 by column like the post, then tentative, bench and absence, with
-[Ping signed members]; the ping's message form lives here too.
+[Ping signed members] and [Manage sign-ups] (``raid_manage_views``); the
+ping's message form lives here too.
 """
 from __future__ import annotations
 
@@ -22,7 +23,7 @@ from platform_shared.services.discord import (
 
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_signup import WowRaidSignup
-from app.services.discord import raid_copy
+from app.services.discord import raid_copy, raid_manage_copy
 from app.services.discord.interaction import ephemeral_data, modal_response
 from app.services.discord.raid_views import EMBED_DESCRIPTION_LIMIT, action_row, button, clip_lines, unix
 from app.services.wow import raid_custom_id
@@ -74,9 +75,9 @@ def signed_data(
     """Everyone on the raid as 'Name (Spec)', column by column, for its leader.
 
     Late and queued players say so after their spec; tentative, bench and
-    absence follow with the full spec name.  [Ping signed members] shows
-    while the raid is on and anyone is listed.  *notice* goes above the
-    list, e.g. why a ping didn't go out.
+    absence follow with the full spec name.  While the raid is on,
+    [Manage sign-ups] shows, after [Ping signed members] once anyone is
+    listed.  *notice* goes above the list, e.g. why a ping didn't go out.
     """
     summary = compute_roster_summary(signups, size_cap=event.size_cap)
     head = [raid_line(event)]
@@ -102,9 +103,13 @@ def signed_data(
         "footer": {"text": f"Raid ID {str(event.id)[:6]}"},
     }
     components: list[dict[str, Any]] = []
-    if event.status == "scheduled" and listed_user_ids(signups):
-        ping = button("Ping signed members", BUTTON_STYLE_PRIMARY, raid_custom_id.encode("lc", event.id, "ping"))
-        components.append(action_row(ping))
+    if event.status == "scheduled":
+        manage = button(raid_manage_copy.SIGNED_BUTTON, BUTTON_STYLE_SECONDARY, raid_custom_id.manage(event.id, "open"))
+        buttons = [manage]
+        if listed_user_ids(signups):
+            ping = button("Ping signed members", BUTTON_STYLE_PRIMARY, raid_custom_id.encode("lc", event.id, "ping"))
+            buttons.insert(0, ping)
+        components.append(action_row(*buttons))
     return ephemeral_data(notice or "", components=components, embeds=[embed])
 
 

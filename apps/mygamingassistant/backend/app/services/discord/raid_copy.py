@@ -244,12 +244,16 @@ def cancellation_dm(raid_label: str, unix: int, reason: str | None) -> str:
     return base
 
 
-def promoted_dm(raid_label: str, unix: int, link: str | None) -> str:
+def promoted_dm(raid_label: str, unix: int, link: str | None, *, ask_leader: str | None = None) -> str:
+    """*ask_leader*: the raid's leader, once sign-ups have closed (the post's Absence button no longer works)."""
     text = (
         f"Good news: a seat opened up in **{raid_label}** (<t:{unix}:F>, <t:{unix}:R>), "
         "so I've moved you up from the queue. You're confirmed. "
-        "Can't make it any more? Tap **Absence** on the raid post so someone else can have the seat."
     )
+    if ask_leader is None:
+        text += "Can't make it any more? Tap **Absence** on the raid post so someone else can have the seat."
+    else:
+        text += f"Can't make it any more? Let <@{ask_leader}> know so someone else can have the seat."
     if link:
         return f"{text}\n[Jump to the raid]({link})"
     return text
