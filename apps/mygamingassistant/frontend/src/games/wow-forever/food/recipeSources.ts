@@ -59,7 +59,8 @@ export function directionsHref(spot: { zoneId: number; x: number; y: number }): 
   return `/wow-forever/map?to=${encodeURIComponent(to)}&dir=1`;
 }
 
-function levelRange([lo, hi]: readonly [number, number]): string {
+/** "level 5–45" / "level 60". */
+export function levelRange([lo, hi]: readonly [number, number]): string {
   return lo === hi ? `level ${lo}` : `level ${lo}–${hi}`;
 }
 
@@ -70,6 +71,20 @@ function bestChance(drop: DropSource): number {
 /** A drop with no mob worth farming for it. */
 export function isRareDrop(drop: DropSource): boolean {
   return drop.world || bestChance(drop) < RARE_DROP_PERCENT;
+}
+
+/** This many kinds of mob dropping it = "drops from mobs level X–Y", not a mob to farm (cloth). */
+export const COMMON_DROP_MOBS = 50;
+
+/** Cloth and the like: hundreds of mobs drop it, so no one mob is worth naming. */
+export function isCommonDrop(drop: DropSource): boolean {
+  return !drop.world && drop.mobs.length + drop.more >= COMMON_DROP_MOBS;
+}
+
+/** "Drops from 588 kinds of mobs, level 5–45 — most in The Barrens, Westfall." */
+export function describeCommonDrop(drop: DropSource): string {
+  const where = drop.zones.length ? ` — most in ${drop.zones.join(", ")}` : "";
+  return `Drops from ${drop.mobs.length + drop.more} kinds of mobs, ${levelRange(drop.levels)}${where}.`;
 }
 
 /** "World drop from mobs level 10–30, mostly in The Barrens" / "Rare drop …". */
@@ -96,7 +111,8 @@ export function skillLine(learnAt: number | null, greenAt: number | null, greyAt
 
 /** Anything known about the recipe (or reagent) at all. */
 export function hasSources(s: ItemSources): boolean {
-  return s.vendors.length + s.quests.length + s.fishing.length + s.containers.length > 0 || s.drop !== null;
+  const lists = s.vendors.length + s.quests.length + s.fishing.length + s.containers.length;
+  return lists > 0 || s.drop !== null || s.skinning !== null || s.disenchant !== null;
 }
 
 /** The one-line answer to "how do I get this recipe?" for the page header. */

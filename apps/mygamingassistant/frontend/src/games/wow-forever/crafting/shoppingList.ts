@@ -19,7 +19,7 @@ function add(tally: Tally, reagent: CraftReagent, times: number): void {
 }
 
 /** The recipe a profession makes an item with — the lowest-skill one. */
-function makerOf(itemId: number, recipes: readonly CraftRecipe[]): CraftRecipe | undefined {
+export function makerOf(itemId: number, recipes: readonly CraftRecipe[]): CraftRecipe | undefined {
   return recipes
     .filter((r) => r.creates?.id === itemId)
     .sort((a, b) => a.yellow - b.yellow)[0];
@@ -84,9 +84,14 @@ export function shoppingList(
   return { buy, make };
 }
 
-/** The list as plain text, for pasting into notes or chat. */
-export function shoppingListText(list: ShoppingList): string {
-  const lines = list.buy.map((l) => `${l.count}x ${l.name}${l.madeBy ? ` (${l.madeBy})` : ""}`);
+function madeByNote(line: ShoppingLine): string {
+  if (!line.madeBy) return "";
+  return ` (${line.madeBy})`;
+}
+
+/** The list as plain text, for pasting into notes or chat — with where to get each item when `where` is given. */
+export function shoppingListText(list: ShoppingList, where?: (line: ShoppingLine) => string): string {
+  const lines = list.buy.map((l) => `${l.count}x ${l.name}${where ? ` — ${where(l)}` : madeByNote(l)}`);
   for (const l of list.make) {
     const from = (l.makesFrom ?? []).map((r) => `${r.count}x ${r.name}`).join(", ");
     lines.push(`Make ${l.count}x ${l.name} (from ${from})`);

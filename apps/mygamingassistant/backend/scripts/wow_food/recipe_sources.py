@@ -1,6 +1,6 @@
 """Where a recipe and its reagents come from, per cmangos classic-db.
 
-Vendors, quest rewards, mob drops, fishing and containers are server-side, so
+Vendors, quest rewards, mob drops, skinning, fishing and containers are server-side, so
 the Forever client doesn't ship them. This reads them from the pinned cmangos
 dump — Classic data that may differ in Forever, and GPL-3.0: the output is
 written only to the ``classic/`` data folder that carries its own LICENSE.
@@ -47,6 +47,7 @@ _TABLES = {
     "creature_template",
     "creature_loot_template",
     "reference_loot_template",
+    "skinning_loot_template",
     "fishing_loot_template",
     "gameobject_loot_template",
     "gameobject_template",
@@ -128,6 +129,11 @@ class ClassicSources:
             if _i(npc["LootId"]):
                 self._loot_owners[_i(npc["LootId"])].append(_i(npc["Entry"]))
         self._creature_loot = LootIndex.build(t["creature_loot_template"], refs)
+        self._skin_owners: dict[int, list[int]] = defaultdict(list)
+        for npc in self._npcs.values():
+            if _i(npc["SkinningLootId"]):
+                self._skin_owners[_i(npc["SkinningLootId"])].append(_i(npc["Entry"]))
+        self._skinning = LootIndex.build(t["skinning_loot_template"], refs)
         self._fishing = LootIndex.build(t["fishing_loot_template"], refs)
         self._object_loot = LootIndex.build(t["gameobject_loot_template"], refs)
         self._item_loot = LootIndex.build(t["item_loot_template"], refs)
@@ -236,6 +242,32 @@ class ClassicSources:
         self.zone_names[zone] = best.zone.name
         return best.as_row()
 
+    def skinning(self, item: int) -> dict[str, object] | None:
+        """Leather and hides: the level band of the mobs that skin into it and the zones with the most of them."""
+        chances: dict[int, float] = {}
+        for loot_id, chance, _ in self._skinning.by_table.get(item, []):
+            for npc in self._skin_owners.get(loot_id, []):
+                if self._spawns.get(npc) and chance >= MIN_SHOWN_CHANCE:
+                    chances[npc] = max(chance, chances.get(npc, 0.0))
+        if not chances:
+            return None
+        zone_worth: Counter[int] = Counter()
+        for npc, chance in chances.items():
+            for s in self._spawns[npc]:
+                wx, wy = float(str(s["position_x"])), float(str(s["position_y"]))
+                spot = place(self._zones, self._art, _i(s["map"]), wx, wy, exclude=FOREVER_ONLY_ZONES)
+                if spot:
+                    zone_worth[spot.zone.ui_map_id] += chance
+                    self.zone_names.setdefault(spot.zone.ui_map_id, spot.zone.name)
+        if not zone_worth:
+            return None
+        levels = [(_i(self._npcs[n]["MinLevel"]), _i(self._npcs[n]["MaxLevel"])) for n in chances]
+        return {
+            "levels": [min(lo for lo, _ in levels), max(hi for _, hi in levels)],
+            "zones": [z for z, _ in sorted(zone_worth.items(), key=lambda kv: (-kv[1], kv[0]))[:SHOWN_ZONES]],
+            "mobs": len(chances),
+        }
+
     def fishing(self, item: int) -> list[str]:
         areas = {area for area, _, _ in self._fishing.by_table.get(item, [])}
         return sorted({self._area_names[a] for a in areas if a in self._area_names})
@@ -266,9 +298,17 @@ class ClassicSources:
         })
 
     def reagent_sources(self, item: int) -> dict[str, object]:
+        drop = self.drop(item)
+        skin = self.skinning(item)
+        # A few beasts that skin into what hundreds of mobs drop (sheep -> Wool Cloth) aren't the way to get it.
+        if skin and drop and int(str(skin["mobs"])) < len(drop["mobs"]) + int(str(drop["more"])):  # type: ignore[arg-type]
+            skin = None
+        if skin:
+            del skin["mobs"]
         return _compact({
             "vendors": self.vendors(item),
-            "drop": self.drop(item),
+            "drop": drop,
+            "skinning": skin,
             "fishing": self.fishing(item),
             "containers": self.containers(item),
             "quests": self.quests(item),

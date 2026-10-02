@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 
+from scripts.wow_professions.build import DISENCHANT_COLUMNS, _best_giver, _disenchant_kind, _roll_chances
 from scripts.wow_professions.crafts import (
     ClientRecipes,
     Items,
@@ -158,3 +159,43 @@ class TestCommittedData:
     def test_cmangos_license_kept(self) -> None:
         assert (CRAFTING_DATA / "classic" / "LICENSE").is_file()
         assert "cmangos" in (CRAFTING_DATA / "classic" / "README.md").read_text(encoding="utf-8")
+
+
+def _loot(item: int, chance: float, group: int = 1) -> dict:
+    return {"item": item, "ChanceOrQuestChance": chance, "groupid": group}
+
+
+class TestDisenchantSources:
+    def test_unset_chance_shares_what_the_group_leaves(self) -> None:
+        # Classic table 4 (level 21-25 green armour): 75% Soul Dust, 20% essence, the shard takes the rest.
+        chances = _roll_chances([_loot(11083, 75), _loot(11082, 20), _loot(11084, 0)])
+        assert chances == {11083: 75, 11082: 20, 11084: 5}
+
+    def test_shields_and_off_hands_count_with_weapons(self) -> None:
+        def kind(cls: int, subclass: int = 0, inventory: int = 0) -> str | None:
+            return _disenchant_kind({"class": cls, "subclass": subclass, "InventoryType": inventory})
+
+        assert kind(2) == "weapon"
+        assert kind(4, subclass=6) == "weapon"  # shield
+        assert kind(4, inventory=23) == "weapon"  # held in off-hand
+        assert kind(4, subclass=2, inventory=5) == "armor"
+        assert kind(7) is None
+
+    def test_best_giver_names_the_type_only_when_most_are_one(self) -> None:
+        assert _best_giver([("armor", 75), ("armor", 75), ("weapon", 20)]) == [75, "armor"]
+        assert _best_giver([("armor", 75), ("weapon", 75)]) == [75, None]
+
+    def test_committed_disenchant_bands(self) -> None:
+        data = json.loads((CRAFTING_DATA / "classic" / "sources.json").read_text(encoding="utf-8"))
+        assert data["disenchantColumns"] == DISENCHANT_COLUMNS
+        de = data["disenchant"]
+        assert de["11083"] == [21, 30, 75, "armor", False]  # Soul Dust
+        assert de["10938"][3] == "weapon"  # Lesser Magic Essence
+        assert de["11084"][4] is True  # Large Glimmering Shard: every blue gives one
+        for row in de.values():
+            assert 1 <= row[0] <= row[1] <= 60
+
+    def test_committed_skinning(self) -> None:
+        reagents = json.loads((CRAFTING_DATA / "classic" / "sources.json").read_text(encoding="utf-8"))["reagents"]
+        assert reagents["8170"]["skinning"]["levels"][0] >= 40  # Rugged Leather
+        assert "skinning" not in reagents["2592"]  # sheep don't make Wool Cloth a skinning mat

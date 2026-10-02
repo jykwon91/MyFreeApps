@@ -46,7 +46,7 @@ export default function CraftRouteRow({ entry, state, showChip, makesTool, profe
         </p>
         <div>
           <p className="sm:hidden text-xs text-muted-foreground">Each craft takes</p>
-          <CraftReagents reagents={recipe.reagents} />
+          <CraftReagents reagents={recipe.reagents} place={place} professionLabel={professionLabel} />
         </div>
         <div>
           <p className="sm:hidden text-xs text-muted-foreground">Learn</p>

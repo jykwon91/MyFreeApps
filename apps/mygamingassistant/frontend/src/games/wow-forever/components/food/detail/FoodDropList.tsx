@@ -1,5 +1,5 @@
 import FoodMobRow from "@/games/wow-forever/components/food/detail/FoodMobRow";
-import { describeRareDrop, isRareDrop } from "@/games/wow-forever/food/recipeSources";
+import { describeCommonDrop, describeRareDrop, isCommonDrop, isRareDrop } from "@/games/wow-forever/food/recipeSources";
 import type { DropSource } from "@/games/wow-forever/types/recipeSources";
 
 function otherMobs(more: number): string {
@@ -7,9 +7,10 @@ function otherMobs(more: number): string {
   return more === 1 ? " 1 other mob drops it too." : ` ${more} other mobs drop it too.`;
 }
 
-/** The best mobs to farm — or, for a rare / world drop, just the levels and where. */
+/** The best mobs to farm — or, for a rare / world drop or one hundreds of mobs share (cloth), just the levels and where. */
 export default function FoodDropList({ drop }: { drop: DropSource }) {
   if (isRareDrop(drop)) return <p className="text-sm">{describeRareDrop(drop)}.</p>;
+  if (isCommonDrop(drop)) return <p className="text-sm">{describeCommonDrop(drop)}</p>;
   // Lowest level first, so the list reads as a path you level along.
   const mobs = [...drop.mobs].sort((a, b) => a.minLevel - b.minLevel);
   const where = drop.zones.length ? `Mostly in ${drop.zones.join(", ")}.` : "";

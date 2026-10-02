@@ -34,7 +34,7 @@ export default function CraftRouteSections({ profession, faction, zoneId, data }
   const entries = resolveRoute(CRAFTING_ROUTES[profession], data.recipes, data.trainerSkills);
   const current = currentEntryIndex(entries, skill);
   const currentEntry = current === null ? undefined : entries[current];
-  const place = { sources: data.sources, faction, zoneId };
+  const place = { sources: data.sources, faction, zoneId, file: data.file };
   return (
     <>
       <GuideSection id="route" title="Leveling route" intro={`${guide.routeIntro} About ${totalCrafts(entries)} crafts in all.`}>
@@ -58,7 +58,7 @@ export default function CraftRouteSections({ profession, faction, zoneId, data }
         />
       </GuideSection>
       <GuideSection id="shopping" title="Shopping list" intro="Everything the route needs, so you can gather or buy it in one go.">
-        <CraftShoppingList entries={entries} skill={skill} file={data.file} professionLabel={guide.label} note={guide.shoppingNote} />
+        <CraftShoppingList entries={entries} skill={skill} place={place} professionLabel={guide.label} note={guide.shoppingNote} />
       </GuideSection>
     </>
   );

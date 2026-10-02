@@ -43,7 +43,7 @@ export default function CraftOptionsRow({ step, recipes, trainerSkills, state, p
             <p className="font-medium">{recipe.name}</p>
             <p className="text-xs text-muted-foreground">{step.options[i].detail}</p>
             <CraftColorsLine recipe={recipe} />
-            <CraftReagents reagents={recipe.reagents} />
+            <CraftReagents reagents={recipe.reagents} place={place} professionLabel={professionLabel} />
             <CraftLearnLine learn={learnAt(recipe, trainerSkills)} professionLabel={professionLabel} place={place} />
           </li>
         ))}
