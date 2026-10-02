@@ -1,9 +1,10 @@
 """Raid: Signed → [Ping signed members] — posting the leader's ping.
 
-``raid_leader.handle_ping_submit`` claims the raid's ping slot, answers
-"Pinging N people…" and schedules :func:`send_ping`, which runs after the
-response like the rest of the bot's background work (``raid_publisher``):
-its own transactions, every REST call bounded, never raises.
+``raid_leader.handle_ping_submit`` (and Raid: Edit's [Tell them in channel])
+claims the raid's ping slot, answers "Pinging N people…" and schedules
+:func:`send_ping`, which runs after the response like the rest of the bot's
+background work (``raid_publisher``): its own transactions, every REST call
+bounded, never raises.
 
 The messages go out in order — the first as a reply to the raid post — and
 stop at the first one Discord doesn't take.  The leader's card then says:

@@ -277,6 +277,15 @@ class DiscordRestClient:
         assert result is not None, "edit_message must return a message object"
         return result
 
+    async def delete_message(self, channel_id: str, message_id: str) -> None:
+        """DELETE /channels/{channel_id}/messages/{message_id}.
+
+        The bot may always delete its own messages; anyone else's needs
+        Manage Messages.  A message that's already gone raises
+        ``UNKNOWN_MESSAGE`` (10008).
+        """
+        await self._call("DELETE", f"/channels/{channel_id}/messages/{message_id}")
+
     async def create_dm_channel(self, user_id: str) -> dict[str, Any]:
         """POST /users/@me/channels — open or retrieve an existing DM channel.
 

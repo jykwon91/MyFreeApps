@@ -76,7 +76,7 @@ from app.services.wow import raid_consumables_round
 from app.services.wow.raid_member_prefs_service import resolve_player
 from app.services.wow.raid_composition import role_gaps
 from app.services.wow.raid_consumables import UnknownRaidError, select_consumables
-from app.services.wow.raid_text import display_title
+from app.services.wow.raid_text import title_text
 from app.services.wow.raid_consumables_round import DM_STATUSES
 from app.services.wow.raid_notification_outcomes import (
     Deferred,
@@ -169,7 +169,7 @@ class _Context:
 
     @property
     def label(self) -> str:
-        return display_title(self.event)
+        return title_text(self.event)
 
     @property
     def starts_unix(self) -> int:

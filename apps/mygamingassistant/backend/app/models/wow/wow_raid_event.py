@@ -62,6 +62,10 @@ class WowRaidEvent(Base):
             "size_cap >= 1 AND size_cap <= 40",
             name="ck_wowraidevent_size_cap",
         ),
+        CheckConstraint(
+            "color IS NULL OR (color >= 0 AND color <= 16777215)",
+            name="ck_wowraidevent_color",
+        ),
         # Efficiently list upcoming events per guild.
         Index("ix_wowraidevent_guild_starts_at", "guild_id", "starts_at"),
     )
@@ -118,6 +122,14 @@ class WowRaidEvent(Base):
     last_pinged_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # Who leads the raid once someone hands it over (Raid: Edit → Leader);
+    # null = whoever created it (migration 0031).
+    leader_user_id: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    leader_display_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    # A banner link replacing the raid's own banner (https only); null = the raid's.
+    image_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    # The post's color while sign-ups are open (0xRRGGBB); null = the default purple.
+    color: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

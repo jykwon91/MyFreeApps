@@ -2,8 +2,9 @@
 
 Right-click a raid post → Apps.  Each menu command finds its raid by the
 post's message id and answers privately (type 4).  Only the raid's leader
-(whoever created it) or someone with Manage Events gets past the checks;
-every button and the ping form check again, since a card can sit open.
+(whoever it was handed to, else whoever created it) or someone with Manage
+Events gets past the checks; every button and the ping form check again,
+since a card can sit open.  (Raid: Edit is ``raid_edit``.)
 
 Flows
 -----
@@ -21,6 +22,9 @@ Flows
   queue, tentative and bench (not absences); the card then shows the outcome.  A ping that
   can't go out (empty message, nobody listed, too soon) shows the list
   again with the reason.
+* **[Tell them in channel]** — on the Raid: Edit card after a move: the
+  same kind of ping, in the bot's words, with the new time.  It takes the
+  same slot; when it can't go out, the edit card comes back saying why.
 """
 from __future__ import annotations
 
@@ -43,7 +47,8 @@ from app.services.discord.interaction import (
     update_response,
     update_text_response,
 )
-from app.services.discord.raid_context import RaidContext, load_event, load_target, may_lead, utcnow
+from app.services.discord.raid_context import load_led_event, load_led_post, utcnow
+from app.services.discord.raid_edit_views import edit_card
 from app.services.discord.raid_leader_views import (
     PING_FIELD,
     PING_MAX_CHARS,
@@ -51,12 +56,12 @@ from app.services.discord.raid_leader_views import (
     ping_modal,
     signed_data,
 )
-from app.services.discord.raid_notifications import build_ping
+from app.services.discord.raid_notifications import build_move_notice, build_ping
 from app.services.discord.raid_views import unix
 from app.services.wow import raid_event_service
 from app.services.wow.raid_custom_id import RaidCustomId
 from app.services.wow.raid_roster import listed_user_ids
-from app.services.wow.raid_text import display_title, escape_markdown, escape_name
+from app.services.wow.raid_text import escape_name, title_text
 
 # (closing?, did it change?) → what the card says.
 _TOGGLE_TEXT: Final[dict[tuple[bool, bool], str]] = {
@@ -82,7 +87,7 @@ async def handle_open_menu(interaction: Interaction, background: BackgroundTasks
 
 async def handle_signed_menu(interaction: Interaction, background: BackgroundTasks) -> dict[str, Any]:
     async with unit_of_work() as db:
-        found = await _led_post(db, interaction, lock=False)
+        found = await load_led_post(db, interaction, lock=False)
         if isinstance(found, str):
             return ephemeral_response(found)
         signups = await wow_raid_signup_repo.list_for_event(db, found.event.id)
@@ -91,7 +96,7 @@ async def handle_signed_menu(interaction: Interaction, background: BackgroundTas
 
 async def _toggle_from_menu(interaction: Interaction, background: BackgroundTasks, *, closed: bool) -> dict[str, Any]:
     async with unit_of_work() as db:
-        found = await _led_post(db, interaction, lock=True)
+        found = await load_led_post(db, interaction, lock=True)
         if isinstance(found, str):
             return ephemeral_response(found)
         card, refresh = await _toggle(db, found.event, closed=closed)
@@ -99,18 +104,6 @@ async def _toggle_from_menu(interaction: Interaction, background: BackgroundTask
     if refresh:
         background.add_task(raid_publisher.refresh_public_message, event_id)
     return message_response(card)
-
-
-async def _led_post(db: AsyncSession, interaction: Interaction, *, lock: bool) -> RaidContext | str:
-    """The raid whose post the menu was used on, if this member leads it; else why not."""
-    if interaction.guild_id is None:
-        return raid_copy.GUILD_ONLY
-    context = await load_target(db, interaction, lock=lock)
-    if context is None:
-        return raid_copy.NOT_A_RAID
-    if not may_lead(interaction, context.event):
-        return raid_copy.NOT_LEADER
-    return context
 
 
 # ---------------------------------------------------------------------------
@@ -122,8 +115,10 @@ async def handle_leader_button(interaction: Interaction, parsed: RaidCustomId, b
     assert parsed.event_id is not None
     if parsed.args[0] == "ping":
         return await _open_ping_form(interaction, parsed.event_id)
+    if parsed.args[0] == "notify":
+        return await _notify_move(interaction, parsed.event_id, background)
     async with unit_of_work() as db:
-        found = await _led_event(db, interaction, parsed.event_id, lock=True)
+        found = await load_led_event(db, interaction, parsed.event_id, lock=True)
         if isinstance(found, str):
             return update_text_response(found)
         card, refresh = await _toggle(db, found.event, closed=parsed.args[0] == "close")
@@ -135,7 +130,7 @@ async def handle_leader_button(interaction: Interaction, parsed: RaidCustomId, b
 async def _open_ping_form(interaction: Interaction, event_id: uuid.UUID) -> dict[str, Any]:
     """The ping form, unless it couldn't go out — then the list again, saying why."""
     async with unit_of_work() as db:
-        found = await _led_event(db, interaction, event_id, lock=False)
+        found = await load_led_event(db, interaction, event_id, lock=False)
         if isinstance(found, str):
             return update_text_response(found)
         signups = await wow_raid_signup_repo.list_for_event(db, event_id)
@@ -147,18 +142,6 @@ async def _open_ping_form(interaction: Interaction, event_id: uuid.UUID) -> dict
         if notice is not None:
             return update_response(signed_data(found.event, signups, emojis=emojis.current(), notice=notice))
         return ping_modal(found.event)
-
-
-async def _led_event(
-    db: AsyncSession, interaction: Interaction, event_id: uuid.UUID, *, lock: bool
-) -> RaidContext | str:
-    """A scheduled raid this member leads; else why not."""
-    context = await load_event(db, interaction, event_id, lock=lock)
-    if context is None:
-        return raid_copy.NOT_FOUND
-    if not may_lead(interaction, context.event):
-        return raid_copy.NOT_LEADER
-    return context
 
 
 async def _toggle(db: AsyncSession, event: WowRaidEvent, *, closed: bool) -> tuple[dict[str, Any], bool]:
@@ -185,7 +168,7 @@ async def handle_ping_submit(interaction: Interaction, parsed: RaidCustomId, bac
     assert parsed.event_id is not None
     text = interaction.fields.get(PING_FIELD, "").strip()[:PING_MAX_CHARS]
     async with unit_of_work() as db:
-        found = await _led_event(db, interaction, parsed.event_id, lock=True)
+        found = await load_led_event(db, interaction, parsed.event_id, lock=True)
         if isinstance(found, str):
             return update_text_response(found)
         event = found.event
@@ -195,17 +178,44 @@ async def handle_ping_submit(interaction: Interaction, parsed: RaidCustomId, bac
         notice = await _claim_ping(db, event, text=text, user_ids=user_ids, now=now)
         if notice is not None:
             return update_response(signed_data(event, signups, emojis=emojis.current(), notice=notice))
-        job = raid_ping.PingJob(
-            event_id=event.id,
-            channel_id=event.channel_id,
-            post_id=event.message_id,
-            messages=build_ping(text, _signature(event, interaction), user_ids),
-            application_id=interaction.application_id,
-            token=interaction.token,
-            claimed_at=now,
-        )
+        job = _ping_job(event, interaction, build_ping(text, _signature(event, interaction), user_ids), now)
     background.add_task(raid_ping.send_ping, job)
     return update_text_response(raid_copy.pinging(len(user_ids)))
+
+
+async def _notify_move(interaction: Interaction, event_id: uuid.UUID, background: BackgroundTasks) -> dict[str, Any]:
+    """[Tell them in channel] after a move — a ping with the raid's new time."""
+    async with unit_of_work() as db:
+        found = await load_led_event(db, interaction, event_id, lock=True)
+        if isinstance(found, str):
+            return update_text_response(found)
+        event = found.event
+        signups = await wow_raid_signup_repo.list_for_event(db, event.id)
+        user_ids = listed_user_ids(signups)
+        now = utcnow()
+        text = raid_copy.notify_post(title_text(event), unix(event.starts_at))
+        notice = await _claim_ping(db, event, text=text, user_ids=user_ids, now=now)
+        if notice is not None:
+            return update_response(edit_card(event, notice=notice))
+        messages = build_move_notice(text, _signature(event, interaction), user_ids)
+        job = _ping_job(event, interaction, messages, now)
+    background.add_task(raid_ping.send_ping, job)
+    return update_text_response(raid_copy.pinging(len(user_ids)))
+
+
+def _ping_job(
+    event: WowRaidEvent, interaction: Interaction, messages: list[dict[str, Any]], claimed_at: datetime
+) -> raid_ping.PingJob:
+    """The ping to send after the response; its outcome replaces the card *interaction* came from."""
+    return raid_ping.PingJob(
+        event_id=event.id,
+        channel_id=event.channel_id,
+        post_id=event.message_id,
+        messages=messages,
+        application_id=interaction.application_id,
+        token=interaction.token,
+        claimed_at=claimed_at,
+    )
 
 
 async def _claim_ping(
@@ -223,5 +233,5 @@ async def _claim_ping(
 
 def _signature(event: WowRaidEvent, interaction: Interaction) -> str:
     return raid_copy.ping_signature(
-        escape_markdown(display_title(event)), unix(event.starts_at), escape_name(interaction.display_name)
+        title_text(event), unix(event.starts_at), escape_name(interaction.display_name)
     )

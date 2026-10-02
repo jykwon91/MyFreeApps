@@ -39,9 +39,11 @@ from app.services.wow.raid_catalog import (
 )
 from app.services.wow.raid_custom_id import (
     CARD_VIEWS,
+    EDIT_ACTIONS,
     LEADER_ACTIONS,
     MAX_CUSTOM_ID_LEN,
     MODALS,
+    PICKERS,
     RELEASE_STATUSES,
     SAME_STATUS,
 )
@@ -241,6 +243,20 @@ def test_leader_buttons_and_the_ping_form_round_trip() -> None:
     assert raid_custom_id.parse(form_id) == raid_custom_id.RaidCustomId("m", _EVENT, ("ping",))
 
 
+def test_edit_buttons_menus_and_forms_round_trip() -> None:
+    for action in EDIT_ACTIONS:
+        custom_id = raid_custom_id.encode("ed", _EVENT, action)
+        assert raid_custom_id.parse(custom_id) == raid_custom_id.RaidCustomId("ed", _EVENT, (action,))
+    for picker in PICKERS:
+        custom_id = raid_custom_id.encode("pick", _EVENT, picker)
+        assert raid_custom_id.parse(custom_id) == raid_custom_id.RaidCustomId("pick", _EVENT, (picker,))
+    for modal in MODALS:
+        custom_id = raid_custom_id.encode("m", _EVENT, modal)
+        assert raid_custom_id.parse(custom_id) == raid_custom_id.RaidCustomId("m", _EVENT, (modal,))
+    delete_id = raid_custom_id.encode("del", _EVENT)
+    assert raid_custom_id.parse(delete_id) == raid_custom_id.RaidCustomId("del", _EVENT)
+
+
 def test_class_buttons_tank_menus_and_card_round_trip() -> None:
     for column in POST_COLUMNS:
         custom_id = raid_custom_id.encode("cls", _EVENT, column)
@@ -318,6 +334,12 @@ def test_encode_rejects_overlong() -> None:
         f"raid:v1:lc:{_EVENT}:close:now",
         f"raid:v1:m:{_EVENT}",
         f"raid:v1:m:{_EVENT}:edit",
+        f"raid:v1:ed:{_EVENT}",
+        f"raid:v1:ed:{_EVENT}:size",
+        f"raid:v1:ed:{_EVENT}:title:now",
+        f"raid:v1:pick:{_EVENT}",
+        f"raid:v1:pick:{_EVENT}:title",
+        f"raid:v1:del:{_EVENT}:now",
         f"raid:v1:explode:{_EVENT}",
         "raid:v1:testdm:extra",
         "raid:v1:signup:" + "a" * 200,
@@ -403,7 +425,14 @@ def test_right_click_menu_commands(command: dict) -> None:
 
 
 def test_command_split() -> None:
-    assert [c["name"] for c in ALL_COMMANDS] == ["raid", "raid-admin", "Raid: Close", "Raid: Open", "Raid: Signed"]
+    assert [c["name"] for c in ALL_COMMANDS] == [
+        "raid",
+        "raid-admin",
+        "Raid: Edit",
+        "Raid: Close",
+        "Raid: Open",
+        "Raid: Signed",
+    ]
     assert len(MENU_COMMANDS) <= 5  # Discord's cap on message commands per app
     assert "default_member_permissions" not in RAID_COMMAND
     assert RAID_ADMIN_COMMAND["default_member_permissions"] == str(1 << 33)

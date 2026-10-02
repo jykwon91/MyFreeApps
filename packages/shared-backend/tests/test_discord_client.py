@@ -491,6 +491,35 @@ class TestReadEndpoints:
 
 
 # ---------------------------------------------------------------------------
+# Deleting a message
+# ---------------------------------------------------------------------------
+
+class TestDeleteMessage:
+    @pytest.mark.anyio
+    async def test_delete_hits_message_route(self) -> None:
+        seen: list[tuple[str, str]] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append((request.method, request.url.path))
+            return httpx.Response(204)
+
+        async with _make_client(handler) as client:
+            assert await client.delete_message("ch1", "msg1") is None
+
+        assert seen == [("DELETE", "/api/v10/channels/ch1/messages/msg1")]
+
+    @pytest.mark.anyio
+    async def test_delete_of_a_gone_message_raises_unknown_message(self) -> None:
+        def handler(_: httpx.Request) -> httpx.Response:
+            return _json_response({"code": UNKNOWN_MESSAGE, "message": "Unknown Message"}, status=404)
+
+        async with _make_client(handler) as client:
+            with pytest.raises(DiscordApiError) as exc_info:
+                await client.delete_message("ch1", "msg1")
+        assert exc_info.value.code == UNKNOWN_MESSAGE
+
+
+# ---------------------------------------------------------------------------
 # Application emojis
 # ---------------------------------------------------------------------------
 

@@ -91,7 +91,7 @@ async def get_by_message_id(
 
 
 async def delete(db: AsyncSession, event: WowRaidEvent) -> None:
-    """Hard-delete an event (used only for discarded drafts)."""
+    """Hard-delete an event: a discarded draft, or Raid: Edit → Delete raid."""
     await db.delete(event)
     await db.flush()
 

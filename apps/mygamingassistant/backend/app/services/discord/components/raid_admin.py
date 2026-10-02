@@ -1,8 +1,10 @@
 """Organiser buttons on private messages — create preview and cancel confirmation.
 
 [Post raid] / [Cancel] (preview) and [Cancel raid] / [Keep raid] (cancel
-confirmation).  Each re-checks Manage Events server-side — the buttons live
-on an ephemeral only the organiser saw, but custom_ids are client-supplied.
+confirmation).  Each re-checks permission server-side — the buttons live
+on an ephemeral only the organiser saw, but custom_ids are client-supplied:
+Manage Events for the preview, and for the cancel confirmation (which
+Raid: Edit opens too) Manage Events or the raid's leader.
 
 Posting design: [Post raid] flips the draft to ``scheduled`` (row-locked,
 idempotent) and schedules notifications inside the request, answers
@@ -27,7 +29,7 @@ from app.services.discord.interaction import (
     update_response,
     update_text_response,
 )
-from app.services.discord.raid_context import load_configured_guild, load_event, utcnow
+from app.services.discord.raid_context import load_configured_guild, load_event, load_led_event, utcnow
 from app.services.discord.raid_views import preview_data
 from app.services.wow import raid_event_service
 from app.services.wow.raid_custom_id import RaidCustomId
@@ -77,12 +79,10 @@ async def handle_discard(interaction: Interaction, parsed: RaidCustomId, backgro
 
 async def handle_cancel(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
     assert parsed.event_id is not None
-    if not interaction.has_permission(MANAGE_EVENTS):
-        return _forbidden()
     async with unit_of_work() as db:
-        context = await load_event(db, interaction, parsed.event_id, lock=True, statuses=("scheduled", "cancelled"))
-        if context is None:
-            return update_text_response(raid_copy.NOT_FOUND)
+        context = await load_led_event(db, interaction, parsed.event_id, lock=True, statuses=("scheduled", "cancelled"))
+        if isinstance(context, str):
+            return update_text_response(context)
         if context.event.status == "cancelled":
             return update_text_response(raid_copy.ALREADY_CANCELLED)
         dm_ids = await raid_event_service.cancel_event(db, event=context.event, guild=context.guild)
@@ -94,11 +94,10 @@ async def handle_cancel(interaction: Interaction, parsed: RaidCustomId, backgrou
 
 async def handle_keep(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
     assert parsed.event_id is not None
-    if not interaction.has_permission(MANAGE_EVENTS):
-        return _forbidden()
     async with unit_of_work() as db:
-        context = await load_event(db, interaction, parsed.event_id, lock=True)
-        if context is not None:
-            # Drop the staged reason so a later cancel doesn't reuse it silently.
-            await raid_event_service.set_cancel_reason(db, context.event, None)
+        context = await load_led_event(db, interaction, parsed.event_id, lock=True)
+        if isinstance(context, str):
+            return update_text_response(context)
+        # Drop the staged reason so a later cancel doesn't reuse it silently.
+        await raid_event_service.set_cancel_reason(db, context.event, None)
     return update_text_response(raid_copy.CANCEL_KEPT)

@@ -39,6 +39,11 @@ def display_title(event: WowRaidEvent) -> str:
     return event.title or raid_name(event.raid_key)
 
 
+def title_text(event: WowRaidEvent) -> str:
+    """The title for message text: a leader can set it (Raid: Edit), so its markdown shows as typed."""
+    return escape_markdown(display_title(event))
+
+
 def local_day_label(starts_at: datetime, tz_name: str) -> str:
     """'Sat Oct 10' in the guild's timezone (portable — no %-d)."""
     local = starts_at.astimezone(ZoneInfo(tz_name))

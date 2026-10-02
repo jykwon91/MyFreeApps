@@ -26,8 +26,13 @@ confirm  create preview [Post raid]                   raid:v1:confirm:<event>
 discard  create preview [Cancel]                      raid:v1:discard:<event>
 cancel   cancel flow [Cancel raid]                    raid:v1:cancel:<event>
 keep     cancel flow [Keep raid]                      raid:v1:keep:<event>
-lc       Raid: Close / Raid: Signed leader buttons    raid:v1:lc:<event>:<reopen|close|ping>
-m        a modal's submit (the ping message)          raid:v1:m:<event>:ping
+lc       Raid: Close / Raid: Signed leader buttons    raid:v1:lc:<event>:<reopen|close|ping|notify>
+         (``notify`` = [Tell them in channel] after Raid: Edit moved the raid)
+ed       Raid: Edit's buttons                         raid:v1:ed:<event>:<property|cancel|delete|done|back|keep>
+         (``keep`` = [Keep raid] on the cancel check opened from Raid: Edit)
+pick     Raid: Edit's leader / color menus            raid:v1:pick:<event>:<leader|color>
+del      [Delete raid] on Raid: Edit's delete check   raid:v1:del:<event>
+m        a modal's submit                             raid:v1:m:<event>:<ping|title|when|desc|image|cancel>
 testdm   /raid prefs [Send me a test DM]              raid:v1:testdm
 """
 from __future__ import annotations
@@ -63,6 +68,9 @@ _EVENT_ACTIONS: Final[dict[str, int]] = {
     "cancel": 0,
     "keep": 0,
     "lc": 1,
+    "ed": 1,
+    "pick": 1,
+    "del": 0,
     "m": 1,
 }
 _BARE_ACTIONS: Final = frozenset({"testdm"})
@@ -75,10 +83,17 @@ _MENU_STATUSES: Final = (*REQUESTABLE_STATUSES, SAME_STATUS)
 RELEASE_STATUSES: Final = ("tentative", "bench", "absence")
 # The My sign-up card's views: the full roster, and back to the card.
 CARD_VIEWS: Final = ("roster", "back")
-# The leader tools under Raid: Close / Raid: Signed.
-LEADER_ACTIONS: Final = ("reopen", "close", "ping")
+# The leader tools under Raid: Close / Raid: Signed (and [Tell them in channel] under Raid: Edit).
+LEADER_ACTIONS: Final = ("reopen", "close", "ping", "notify")
+# Raid: Edit's buttons: a property to change, cancel / delete the raid, close / return to
+# the card, or keep the raid after starting to cancel it.
+EDIT_ACTIONS: Final = (
+    "title", "leader", "when", "desc", "image", "color", "cancel", "delete", "done", "back", "keep",
+)
+# Raid: Edit's menus.
+PICKERS: Final = ("leader", "color")
 # The modals the bot opens; a submit names which one it came from.
-MODALS: Final = ("ping",)
+MODALS: Final = ("ping", "title", "when", "desc", "image", "cancel")
 # Old status names still on buttons of posts not re-rendered since they changed.
 _LEGACY_STATUSES: Final[dict[str, str]] = {"declined": "absence"}
 
@@ -143,6 +158,10 @@ def _args_valid(action: str, args: tuple[str, ...]) -> bool:
         return args[0] in RELEASE_STATUSES
     if action == "lc":
         return args[0] in LEADER_ACTIONS
+    if action == "ed":
+        return args[0] in EDIT_ACTIONS
+    if action == "pick":
+        return args[0] in PICKERS
     if action == "m":
         return args[0] in MODALS
     if action == "spec":
