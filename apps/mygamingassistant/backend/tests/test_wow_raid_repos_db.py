@@ -68,6 +68,18 @@ async def test_signup_upsert_updates_in_place_and_keeps_signed_up_at(db: AsyncSe
     assert len(await wow_raid_signup_repo.list_for_event(db, event.id)) == 1
 
 
+async def test_raid_post_lookup_is_scoped_to_its_guild(db: AsyncSession) -> None:
+    event = await _make_event(db, starts_at=_NOW + timedelta(days=3))
+    await wow_raid_event_repo.set_message_id(db, event, "555")
+    other = await wow_raid_guild_repo.upsert_config(db, discord_guild_id="101")
+
+    for lock in (False, True):
+        found = await wow_raid_event_repo.get_by_message_id(db, guild_id=event.guild_id, message_id="555", lock=lock)
+        assert found is event
+    assert await wow_raid_event_repo.get_by_message_id(db, guild_id=other.id, message_id="555") is None
+    assert await wow_raid_event_repo.get_by_message_id(db, guild_id=event.guild_id, message_id="556") is None
+
+
 async def test_schedule_is_idempotent_and_skips_past_due(db: AsyncSession) -> None:
     # Raid 20h out: the 48h + 24h nudges and the 24h consumables row are past.
     event = await _make_event(db, starts_at=_NOW + timedelta(hours=20))

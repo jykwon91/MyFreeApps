@@ -455,6 +455,26 @@ async def test_cancelled_event_and_cancel_kind_are_skipped(
     assert cancel_row.sent_at is not None and cancel_row.last_error is not None
 
 
+async def test_closed_sign_ups_drop_the_nudge_but_the_ready_check_still_goes_out(
+    bound_unit_of_work: AsyncSession, fake_discord: FakeDiscord
+) -> None:
+    db = bound_unit_of_work
+    event = await _raid(db, starts_at=_NOW + timedelta(minutes=55))
+    await _signup(db, event, "31")
+    event.closed_at = _NOW - timedelta(hours=1)
+    nudge = await _row(db, event, "signup_nudge", _NOW - timedelta(minutes=1))
+    await _row(db, event, "ready_check", _NOW - timedelta(minutes=1))
+
+    stats = await process_due_notifications(now=_NOW)
+    assert stats.skipped == 1 and stats.sent == 1
+    await db.refresh(nudge)
+    assert nudge.sent_at is not None and nudge.last_error == "skipped: sign-ups closed"
+    [post] = fake_discord.posts(CHANNEL)
+    assert post.body is not None
+    assert post.body["content"].startswith("**Ready check — Onyxia's Lair starts <t:")
+    assert post.body["allowed_mentions"] == {"parse": [], "users": ["31"]}
+
+
 async def test_finished_raids_are_completed_and_missed_windows_dropped(
     bound_unit_of_work: AsyncSession, fake_discord: FakeDiscord
 ) -> None:

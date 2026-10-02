@@ -2,7 +2,8 @@
 
 [My sign-up] on the post opens the card.  [Full roster] and [Back] swap it
 in place (UPDATE_MESSAGE, type 7).  [Change spec] opens your class's spec
-select, which keeps the status you have when you pick (see ``raid_signup``).
+select, which keeps the status you have when you pick (see ``raid_signup``);
+it's gone once sign-ups close, and refuses on a card opened before that.
 [Roster] on posts from before the class buttons opens the roster on its own.
 """
 from __future__ import annotations
@@ -24,7 +25,7 @@ from app.services.discord.interaction import (
     update_response,
     update_text_response,
 )
-from app.services.discord.raid_context import load_event
+from app.services.discord.raid_context import load_event, signup_refusal, utcnow
 from app.services.discord.raid_views import class_picker_data, my_signup_data, roster_data, spec_picker_data
 from app.services.wow.raid_catalog import CLASSES_BY_KEY, spec_info
 from app.services.wow.raid_custom_id import SAME_STATUS, RaidCustomId
@@ -69,6 +70,9 @@ async def handle_change(interaction: Interaction, parsed: RaidCustomId, backgrou
         context = await load_event(db, interaction, parsed.event_id, lock=False)
         if context is None:
             return update_text_response(raid_copy.NOT_FOUND)
+        refusal = signup_refusal(context.event, utcnow())  # a card opened before sign-ups closed
+        if refusal is not None:
+            return update_text_response(refusal)
         mine = await wow_raid_signup_repo.get(db, event_id=context.event.id, discord_user_id=interaction.user_id)
         if mine is None:
             return update_text_response(raid_copy.NOT_SIGNED_UP)

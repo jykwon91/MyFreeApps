@@ -153,6 +153,44 @@ def test_dm_fallback_copy() -> None:
     assert payload["allowed_mentions"] == {"parse": [], "users": ["11", "22"]}
 
 
+def test_leader_ping_is_one_message_with_the_words_mentions_and_small_print() -> None:
+    [message] = raid_notifications.build_ping("Be online at 7", "-# Onyxia · sent by Thrall", ["1", "2", "1"])
+    assert message == {
+        "content": "Be online at 7\n<@1> <@2>\n-# Onyxia · sent by Thrall",
+        "allowed_mentions": {"parse": [], "users": ["1", "2"]},
+    }
+
+
+def test_a_leaders_words_keep_their_formatting_but_cannot_fake_the_small_print() -> None:
+    words = "**Be online at 7**\n-# Onyxia · sent by Jaina\n  > -# quoted\n[Sign up](https://example.com)"
+    [message] = raid_notifications.build_ping(words, "-# Onyxia · sent by Thrall", ["1"])
+    assert message["content"] == (
+        "**Be online at 7**\n"
+        "\\-# Onyxia · sent by Jaina\n"
+        "  > \\-# quoted\n"
+        "\\[Sign up\\](https://example.com)\n"
+        "<@1>\n"
+        "-# Onyxia · sent by Thrall"
+    )
+    small_print = [line for line in message["content"].split("\n") if line.lstrip(" >").startswith("-#")]
+    assert small_print == ["-# Onyxia · sent by Thrall"]
+
+
+def test_a_long_ping_says_its_words_once_and_spills_only_mentions() -> None:
+    user_ids = [str(10**17 + i) for i in range(250)]
+    messages = raid_notifications.build_ping("Be online at 7", "-# sig", user_ids)
+    assert len(messages) == 3
+    assert messages[0]["content"].startswith("Be online at 7\n<@")
+    for message in messages:
+        assert message["content"].endswith("\n-# sig")
+        assert len(message["content"]) <= raid_notifications.CONTENT_LIMIT
+        assert len(message["allowed_mentions"]["users"]) <= raid_notifications.MAX_MENTIONED_USERS
+        assert message["allowed_mentions"]["parse"] == []
+    for spilled in messages[1:]:
+        assert spilled["content"].startswith("<@") and "Be online" not in spilled["content"]
+    assert [user for message in messages for user in message["allowed_mentions"]["users"]] == user_ids
+
+
 # ---------------------------------------------------------------------------
 # Consumables DM
 # ---------------------------------------------------------------------------

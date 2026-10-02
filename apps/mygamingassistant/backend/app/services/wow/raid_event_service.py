@@ -1,5 +1,8 @@
 """Raid event lifecycle — draft → posted → edited → cancelled.
 
+A posted raid's leader can also close and reopen its sign-ups (the raid
+stays ``scheduled``) and ping everyone on it, at most once per ``PING_EVERY``.
+
 The caller owns the transaction (one per Discord interaction).  Mutations
 that touch seats expect the event row lock to be held
 (``wow_raid_event_repo.get_for_update``).
@@ -14,8 +17,8 @@ worker that sends them is ``app/services/wow/raid_notification_worker.py``.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Literal
+from datetime import datetime, timedelta
+from typing import Final, Literal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,20 +30,13 @@ from app.repositories.wow import (
     wow_raid_notification_repo,
     wow_raid_signup_repo,
 )
-from app.services.wow.raid_roster import (
-    BENCH_STATUS,
-    QUEUED_STATUS,
-    SEAT_STATUSES,
-    TENTATIVE_STATUS,
-    compute_roster_summary,
-)
+from app.services.wow.raid_roster import compute_roster_summary, listed_user_ids
 from app.services.wow.raid_signup_service import promote_from_queue
 
 PostOutcome = Literal["posted", "already_posted", "in_past", "gone"]
 
-# Who hears about a cancellation by DM: everyone still on the list — seats,
-# maybes, the queue and backups (not absences).
-_CANCEL_DM_STATUSES = (*SEAT_STATUSES, TENTATIVE_STATUS, QUEUED_STATUS, BENCH_STATUS)
+# Ping signed members goes out at most once per raid this often.
+PING_EVERY: Final = timedelta(minutes=5)
 
 
 @dataclass(frozen=True)
@@ -168,8 +164,44 @@ async def cancel_event(db: AsyncSession, *, event: WowRaidEvent, guild: WowRaidG
     await wow_raid_event_repo.cancel(db, event)
     await wow_raid_notification_repo.cancel_pending_for_event(db, event.id)
     signups = await wow_raid_signup_repo.list_for_event(db, event.id)
-    recipients = [s.discord_user_id for s in signups if s.status in _CANCEL_DM_STATUSES]
-    return await dm_recipients(db, guild=guild, user_ids=recipients)
+    return await dm_recipients(db, guild=guild, user_ids=listed_user_ids(signups))
+
+
+async def set_signups_closed(db: AsyncSession, event: WowRaidEvent, *, closed: bool, now: datetime) -> bool:
+    """Close sign-ups (Raid: Close) or reopen them (Raid: Open); False when they already were.
+
+    A closed raid stays ``scheduled``: /raid list, edits, the ready check and
+    consumables DMs carry on; only the sign-up nudge stops (the worker skips it).
+    """
+    if (event.closed_at is not None) == closed:
+        return False
+    event.closed_at = now if closed else None
+    await db.flush()
+    return True
+
+
+def ping_ready(event: WowRaidEvent, now: datetime) -> bool:
+    """False while the raid's last ping is under ``PING_EVERY`` old."""
+    return event.last_pinged_at is None or now - event.last_pinged_at >= PING_EVERY
+
+
+async def claim_ping(db: AsyncSession, event: WowRaidEvent, *, now: datetime) -> bool:
+    """Record a ping going out now; False while the last one is too recent.
+
+    Expects the event row lock, so two leaders submitting at once send one ping.
+    """
+    if not ping_ready(event, now):
+        return False
+    event.last_pinged_at = now
+    await db.flush()
+    return True
+
+
+async def release_ping(db: AsyncSession, event: WowRaidEvent, *, claimed_at: datetime) -> None:
+    """Hand back a ping that never went out, unless a later one claimed the slot since."""
+    if event.last_pinged_at == claimed_at:
+        event.last_pinged_at = None
+        await db.flush()
 
 
 async def dm_recipients(db: AsyncSession, *, guild: WowRaidGuild, user_ids: list[str]) -> list[str]:

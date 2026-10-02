@@ -21,7 +21,8 @@ the scheduler:
 
 Kinds
 -----
-``signup_nudge`` (channel, 48h/24h), ``ready_check`` (channel, 1h),
+``signup_nudge`` (channel, 48h/24h; skipped while sign-ups are closed),
+``ready_check`` (channel, 1h),
 ``consumables_reminder`` (the channel-less trigger row fans out one DM row
 per player plus one ``dm_fallback`` row; each run's late pass DMs players
 who sign up afterwards — see ``raid_consumables_round``), ``dm_fallback``
@@ -77,6 +78,15 @@ from app.services.wow.raid_composition import role_gaps
 from app.services.wow.raid_consumables import UnknownRaidError, select_consumables
 from app.services.wow.raid_text import display_title
 from app.services.wow.raid_consumables_round import DM_STATUSES
+from app.services.wow.raid_notification_outcomes import (
+    Deferred,
+    Failed,
+    Outcome,
+    RunStats,
+    Sent,
+    Skipped,
+    Undeliverable,
+)
 from app.services.wow.raid_roster import SEAT_STATUSES, compute_roster_summary, ordered_user_ids
 
 logger = logging.getLogger(__name__)
@@ -107,63 +117,6 @@ DM_FALLBACK_MAX_WAIT: Final = timedelta(minutes=45)
 _NONCE_LEN: Final = 25
 
 SessionScope = Callable[[], AbstractAsyncContextManager[AsyncSession]]
-
-
-# ---------------------------------------------------------------------------
-# Outcomes
-# ---------------------------------------------------------------------------
-
-
-@dataclass(frozen=True)
-class Sent:
-    detail: str = ""
-
-
-@dataclass(frozen=True)
-class Skipped:
-    reason: str
-
-
-@dataclass(frozen=True)
-class Failed:
-    error: str
-
-
-@dataclass(frozen=True)
-class Undeliverable:
-    error: str
-
-
-@dataclass(frozen=True)
-class Deferred:
-    until: datetime
-
-
-Outcome = Sent | Skipped | Failed | Undeliverable | Deferred
-
-
-@dataclass
-class RunStats:
-    completed_events: int = 0
-    late_dms: int = 0
-    claimed: int = 0
-    sent: int = 0
-    skipped: int = 0
-    failed: int = 0
-    undeliverable: int = 0
-    deferred: int = 0
-
-    def count(self, outcome: Outcome) -> None:
-        if isinstance(outcome, Sent):
-            self.sent += 1
-        elif isinstance(outcome, Skipped):
-            self.skipped += 1
-        elif isinstance(outcome, Failed):
-            self.failed += 1
-        elif isinstance(outcome, Undeliverable):
-            self.undeliverable += 1
-        else:
-            self.deferred += 1
 
 
 # ---------------------------------------------------------------------------
@@ -386,6 +339,10 @@ def _is_early_nudge(ctx: _Context, claim: _Claim) -> bool:
 
 
 async def _plan_nudge(db: AsyncSession, ctx: _Context, claim: _Claim) -> _Plan:
+    if ctx.event.closed_at is not None:
+        # "N spots open — sign up" is wrong once the leader closed sign-ups;
+        # the ready check and consumables DMs still go out (the raid is on).
+        return Skipped("sign-ups closed")
     signups = await wow_raid_signup_repo.list_for_event(db, ctx.event.id)
     summary = compute_roster_summary(signups, size_cap=ctx.event.size_cap)
     payload = raid_notifications.build_signup_nudge(

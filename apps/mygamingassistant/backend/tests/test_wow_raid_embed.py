@@ -13,7 +13,7 @@ from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.services.wow import raid_custom_id
 from app.services.wow.raid_catalog import CLASSES, SPECS
 from app.services.wow.raid_embed import (
-    COLOR_CANCELLED,
+    COLOR_CLOSED,
     COLOR_OPEN,
     EMBED_TOTAL_BUDGET,
     FIELD_VALUE_LIMIT,
@@ -242,7 +242,7 @@ def test_cancelled_state() -> None:
     message = build_signup_message(event, [_signup("Alice")], _guild(), emojis=EMPTY_EMOJIS)
     embed = _embed(message)
     assert embed["author"]["name"] == "CANCELLED · Onyxia's Lair · Leader: Thrall"
-    assert embed["color"] == COLOR_CANCELLED
+    assert embed["color"] == COLOR_CLOSED
     assert embed["description"].split("\n")[:3] == [
         "## Onyxia's Lair",
         "**Cancelled:** Server maintenance",
@@ -252,6 +252,23 @@ def test_cancelled_state() -> None:
     assert NOBODY_YET not in _fields_by_name(embed)  # nothing left to sign up for
     buttons = [c for row in message["components"] for c in row["components"]]
     assert buttons and all(button["disabled"] for button in buttons)
+
+
+def test_closed_sign_ups_grey_the_post_and_lock_all_but_my_sign_up() -> None:
+    event = _event(closed_at=_T0)
+    message = build_signup_message(event, [_signup("Alice")], _guild(), emojis=EMPTY_EMOJIS)
+    embed = _embed(message)
+    assert embed["color"] == COLOR_CLOSED
+    assert embed["description"].split("\n")[3] == "**Sign-ups are closed.**"
+    assert embed["footer"]["text"] == "ID a1b2c3 · Sign-ups are closed."
+    assert NOBODY_YET not in _fields_by_name(embed)  # no button to tap, so no legend
+    assert "Tanks (1)" in _fields_by_name(embed)  # the roster stays
+    disabled = {c["label"]: c["disabled"] for row in message["components"] for c in row["components"]}
+    assert disabled.pop("My sign-up") is False  # still shows where you stand
+    assert all(disabled.values())
+
+    lines = _embed(build_signup_message(event, [], _guild(), emojis=_ALL_ICONS))["description"].split("\n")
+    assert lines[3] == f"{_ALL_ICONS.markup('info_lock')} **Sign-ups are closed.**"
 
 
 def test_completed_raid_closes_sign_ups() -> None:

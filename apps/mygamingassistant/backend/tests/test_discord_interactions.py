@@ -33,6 +33,8 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from httpx import ASGITransport, AsyncClient
 
 from app.core.config import settings
+from app.services.discord.interaction import Interaction
+from app.services.discord.raid_copy import GENERIC_ERROR
 
 # ---------------------------------------------------------------------------
 # Test Ed25519 keypair (generated once at module import, never hits the network)
@@ -273,6 +275,85 @@ async def test_handler_exception_returns_ephemeral_not_500(
     assert data["type"] == 4
     assert data["data"].get("flags") == 64  # ephemeral
     assert "wrong" in data["data"]["content"].lower() or "error" in data["data"]["content"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Right-click (message) commands and modal submits
+# ---------------------------------------------------------------------------
+
+
+def test_message_command_names_the_message_it_was_used_on() -> None:
+    interaction = Interaction.from_payload(
+        {"type": 2, "data": {"name": "Raid: Close", "type": 3, "target_id": "42", "resolved": {"messages": {}}}}
+    )
+    assert (interaction.command_name, interaction.target_id) == ("Raid: Close", "42")
+
+
+def test_modal_submit_fields_come_from_labels_and_old_action_rows() -> None:
+    interaction = Interaction.from_payload(
+        {
+            "type": 5,
+            "data": {
+                "custom_id": "raid:v1:m:x:ping",
+                "components": [
+                    {"type": 18, "component": {"type": 4, "custom_id": "message", "value": "Be on time"}},
+                    {"type": 1, "components": [{"type": 4, "custom_id": "note", "value": "old layout"}]},
+                    {"type": 10, "content": "just text"},
+                    "junk",
+                    {"type": 18, "component": {"type": 4, "custom_id": 7, "value": "not a custom_id"}},
+                ],
+            },
+        }
+    )
+    assert interaction.fields == {"message": "Be on time", "note": "old layout"}
+
+
+def test_malformed_payload_has_no_fields_or_target() -> None:
+    interaction = Interaction.from_payload({"type": 5, "data": {"components": "nope", "target_id": None}})
+    assert (interaction.fields, interaction.target_id) == ({}, "")
+
+
+async def _post_modal(discord_client: AsyncClient, data: dict[str, Any]) -> dict[str, Any]:
+    body = _discord_payload(type=5, data=data)
+    resp = await discord_client.post("/discord/interactions", content=body, headers=_discord_headers(body))
+    assert resp.status_code == 200
+    return resp.json()
+
+
+@pytest.mark.asyncio
+async def test_modal_submit_is_routed_by_custom_id(
+    discord_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.services.discord import dispatcher
+
+    seen: list[dict[str, str]] = []
+
+    async def _form(interaction: Interaction, background: Any) -> dict[str, Any]:
+        seen.append(interaction.fields)
+        return {"type": 7, "data": {"content": "ok"}}
+
+    monkeypatch.setitem(dispatcher._MODAL_HANDLERS, "raid:v1:", _form)
+    field = {"type": 18, "component": {"type": 4, "custom_id": "message", "value": "hi"}}
+    data = await _post_modal(discord_client, {"custom_id": "raid:v1:m:abc:ping", "components": [field]})
+    assert data == {"type": 7, "data": {"content": "ok"}}
+    assert seen == [{"message": "hi"}]
+
+
+@pytest.mark.asyncio
+async def test_unknown_or_failing_modal_answers_privately(
+    discord_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.services.discord import dispatcher
+
+    data = await _post_modal(discord_client, {"custom_id": "other:form"})
+    assert (data["type"], data["data"]["flags"], data["data"]["content"]) == (4, 64, "Unknown form.")
+
+    async def _boom(interaction: Interaction, background: Any) -> dict[str, Any]:
+        raise RuntimeError("simulated modal crash")
+
+    monkeypatch.setitem(dispatcher._MODAL_HANDLERS, "raid:v1:", _boom)
+    data = await _post_modal(discord_client, {"custom_id": "raid:v1:m:abc:ping"})
+    assert (data["type"], data["data"]["flags"], data["data"]["content"]) == (4, 64, GENERIC_ERROR)
 
 
 # ---------------------------------------------------------------------------

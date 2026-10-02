@@ -15,6 +15,7 @@ NOT_PERMITTED_GUILD: Final = "You need the Manage Server permission to set up th
 NOT_FOUND: Final = "I can't find that raid. It may have been cancelled. Try `/raid list`."
 GENERIC_ERROR: Final = "Something went wrong on my end. Nothing changed, so please try again."
 RAID_STARTED: Final = "This raid has already started."
+CLOSED: Final = "Sign-ups are closed for this raid."
 MENU_TIMEOUT: Final = "That menu timed out. Tap your class on the raid post again."
 GUILD_ONLY: Final = "Use this in a server channel, not in DMs."
 
@@ -255,6 +256,73 @@ def promoted_dm(raid_label: str, unix: int, link: str | None) -> str:
     if link:
         return f"{text}\n[Jump to the raid]({link})"
     return text
+
+
+# ---------------------------------------------------------------------------
+# The raid post's right-click menu (raid_leader)
+# ---------------------------------------------------------------------------
+
+NOT_LEADER: Final = "Only this raid's leader or someone with Manage Events can do that."
+NOT_A_RAID: Final = "That isn't one of my raid posts. Right-click a raid post and try again."
+CLOSED_OK: Final = (
+    "Sign-ups are **closed**. Nobody can sign up or change their sign-up until you reopen them."
+)
+OPENED_OK: Final = "Sign-ups are **open** again."
+ALREADY_CLOSED: Final = "Sign-ups are already closed."
+ALREADY_OPEN: Final = "Sign-ups are already open."
+PING_WAIT: Final = "I pinged them a moment ago. Try again in a few minutes."
+PING_NOBODY: Final = "There's nobody on the list to ping right now."
+PING_EMPTY: Final = "Type a message to go with the ping."
+PING_MODAL_TITLE: Final = "Ping signed members"
+PING_FIELD_LABEL: Final = "Message"
+PING_FIELD_HINT: Final = "Posted in the raid's channel as a reply to the raid post, pinging everyone on it."
+
+
+def ping_prefill(raid_label: str) -> str:
+    return f"Reminder: {raid_label} is coming up. Please be online and ready on time."
+
+
+def _people(count: int) -> str:
+    if count == 1:
+        return "1 person"
+    return f"{count} people"
+
+
+def pinging(count: int) -> str:
+    return f"Pinging {_people(count)}…"
+
+
+def ping_sent(count: int) -> str:
+    return f"Sent. I pinged {_people(count)}."
+
+
+def ping_partly_sent(sent: int, total: int) -> str:
+    return (
+        f"I pinged {sent} of {_people(total)} before Discord refused the rest. "
+        f"Pinging again in a few minutes reaches everyone, the {sent} already pinged included."
+    )
+
+
+def ping_unconfirmed(channel_id: str) -> str:
+    """Discord never answered (or the send broke): the ping may have gone out."""
+    return (
+        f"I couldn't confirm the ping went out. Check <#{channel_id}>: "
+        "if it isn't there, you can ping again in a few minutes."
+    )
+
+
+def ping_refused(channel_id: str, discord_code: int | None) -> str:
+    if discord_code in (50001, 50013):
+        return (
+            f"I can't post in <#{channel_id}>, so nobody was pinged. Give me View Channel and "
+            "Send Messages there, then try again."
+        )
+    return "Discord didn't take the ping, so nobody was pinged. Please try again."
+
+
+def ping_signature(raid_label: str, unix: int, leader: str) -> str:
+    """The small print under a ping: which raid, when, and who sent it."""
+    return f"-# {raid_label} · <t:{unix}:F> · sent by {leader}"
 
 
 # ---------------------------------------------------------------------------

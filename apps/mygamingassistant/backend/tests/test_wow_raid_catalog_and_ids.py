@@ -12,8 +12,8 @@ import pytest
 from app.models.wow.wow_raid_event import RAID_KEYS
 from app.models.wow.wow_raid_member_pref import WowRaidMemberPref
 from app.models.wow.wow_raid_signup import RAID_ROLES, WOW_CLASSES, WOW_SPECS
-from app.services.discord.commands_spec import ALL_COMMANDS, RAID_ADMIN_COMMAND, RAID_COMMAND
-from app.services.discord.components.raid import _HANDLERS
+from app.services.discord.commands_spec import ALL_COMMANDS, MENU_COMMANDS, RAID_ADMIN_COMMAND, RAID_COMMAND
+from app.services.discord.components.raid import _HANDLERS, _MODAL_HANDLERS
 from app.services.wow import raid_custom_id, raid_timezones
 from app.services.wow.raid_catalog import (
     _LEGACY_SPECS,
@@ -37,7 +37,14 @@ from app.services.wow.raid_catalog import (
     spec_info,
     spec_list_text,
 )
-from app.services.wow.raid_custom_id import CARD_VIEWS, MAX_CUSTOM_ID_LEN, RELEASE_STATUSES, SAME_STATUS
+from app.services.wow.raid_custom_id import (
+    CARD_VIEWS,
+    LEADER_ACTIONS,
+    MAX_CUSTOM_ID_LEN,
+    MODALS,
+    RELEASE_STATUSES,
+    SAME_STATUS,
+)
 from app.services.wow.raid_member_prefs_service import saved_spec_for_column
 from app.services.wow.raid_roster import REQUESTABLE_STATUSES, SEAT_STATUSES
 
@@ -185,7 +192,10 @@ def test_saved_spec_for_column(pref: WowRaidMemberPref | None, column: str, expe
 
 
 def test_router_covers_every_action() -> None:
-    assert set(_HANDLERS) == set(raid_custom_id._EVENT_ACTIONS) | set(raid_custom_id._BARE_ACTIONS)
+    # ``m`` names a modal's submit, routed by the modal it came from.
+    components = set(raid_custom_id._EVENT_ACTIONS) | set(raid_custom_id._BARE_ACTIONS)
+    assert set(_HANDLERS) == components - {"m"}
+    assert set(_MODAL_HANDLERS) == set(MODALS)
 
 
 def test_longest_custom_id_fits() -> None:
@@ -221,6 +231,14 @@ def test_round_trip() -> None:
     assert raid_custom_id.parse(release_id) == raid_custom_id.RaidCustomId("release", _EVENT, ("absence",))
     stay_id = raid_custom_id.encode("stay", _EVENT)
     assert raid_custom_id.parse(stay_id) == raid_custom_id.RaidCustomId("stay", _EVENT)
+
+
+def test_leader_buttons_and_the_ping_form_round_trip() -> None:
+    for action in LEADER_ACTIONS:
+        custom_id = raid_custom_id.encode("lc", _EVENT, action)
+        assert raid_custom_id.parse(custom_id) == raid_custom_id.RaidCustomId("lc", _EVENT, (action,))
+    form_id = raid_custom_id.encode("m", _EVENT, "ping")
+    assert raid_custom_id.parse(form_id) == raid_custom_id.RaidCustomId("m", _EVENT, ("ping",))
 
 
 def test_class_buttons_tank_menus_and_card_round_trip() -> None:
@@ -295,6 +313,11 @@ def test_encode_rejects_overlong() -> None:
         f"raid:v1:release:{_EVENT}:queued",
         f"raid:v1:release:{_EVENT}:same",
         f"raid:v1:stay:{_EVENT}:absence",
+        f"raid:v1:lc:{_EVENT}",
+        f"raid:v1:lc:{_EVENT}:delete",
+        f"raid:v1:lc:{_EVENT}:close:now",
+        f"raid:v1:m:{_EVENT}",
+        f"raid:v1:m:{_EVENT}:edit",
         f"raid:v1:explode:{_EVENT}",
         "raid:v1:testdm:extra",
         "raid:v1:signup:" + "a" * 200,
@@ -354,7 +377,7 @@ def _walk_options(options: list[dict]) -> list[dict]:
     return found
 
 
-@pytest.mark.parametrize("command", ALL_COMMANDS, ids=lambda c: c["name"])
+@pytest.mark.parametrize("command", [RAID_COMMAND, RAID_ADMIN_COMMAND], ids=lambda c: c["name"])
 def test_command_spec_respects_discord_limits(command: dict) -> None:
     assert 1 <= len(command["name"]) <= 32 and command["name"] == command["name"].lower()
     assert 1 <= len(command["description"]) <= 100
@@ -370,8 +393,18 @@ def test_command_spec_respects_discord_limits(command: dict) -> None:
         assert not (choices and option.get("autocomplete")), "choices and autocomplete are exclusive"
 
 
+@pytest.mark.parametrize("command", MENU_COMMANDS, ids=lambda c: c["name"])
+def test_right_click_menu_commands(command: dict) -> None:
+    # Message commands: no description or options, mixed case allowed, ≤ 32 chars.
+    assert command["type"] == 3 and 1 <= len(command["name"]) <= 32
+    assert "description" not in command and "options" not in command
+    assert command["dm_permission"] is False and command["contexts"] == [0]
+    assert command["default_member_permissions"] == str(1 << 33)  # Manage Events
+
+
 def test_command_split() -> None:
-    assert [c["name"] for c in ALL_COMMANDS] == ["raid", "raid-admin"]
+    assert [c["name"] for c in ALL_COMMANDS] == ["raid", "raid-admin", "Raid: Close", "Raid: Open", "Raid: Signed"]
+    assert len(MENU_COMMANDS) <= 5  # Discord's cap on message commands per app
     assert "default_member_permissions" not in RAID_COMMAND
     assert RAID_ADMIN_COMMAND["default_member_permissions"] == str(1 << 33)
     assert [o["name"] for o in RAID_COMMAND["options"]] == ["ping", "list", "prefs"]

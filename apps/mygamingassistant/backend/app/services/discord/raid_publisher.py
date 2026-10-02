@@ -3,9 +3,9 @@
 Interaction handlers must answer Discord within 3 seconds, so they only do
 local DB work and return the interaction response.  Anything that talks to
 Discord's REST API (posting the raid, editing the public post after a
-private flow, DMs, the setup permission check) is scheduled here via
-FastAPI ``BackgroundTasks``, which Starlette runs right after the response
-is sent.  Each task:
+private flow, DMs, the setup permission check — and the leader's ping, in
+``raid_ping``) is scheduled via FastAPI ``BackgroundTasks``, which
+Starlette runs right after the response is sent.  Each task:
 
 * opens its own short transaction(s) — the request's transaction has
   already committed;
@@ -116,7 +116,8 @@ def _edit_body(data: dict[str, Any]) -> dict[str, Any]:
     return body
 
 
-async def _edit_original(client: DiscordRestClient, application_id: str, token: str, data: dict[str, Any]) -> None:
+async def edit_original(client: DiscordRestClient, application_id: str, token: str, data: dict[str, Any]) -> None:
+    """Replace a deferred reply or "Posting…" card; a failure is logged, never raised."""
     try:
         await rest.bounded(client.edit_original_interaction_response(application_id, token, _edit_body(data)))
     except (DiscordApiError, TimeoutError, httpx.HTTPError) as exc:
@@ -165,7 +166,7 @@ async def post_raid(event_id: uuid.UUID, application_id: str, token: str) -> Non
                 if event is not None:
                     await wow_raid_event_repo.set_message_id(db, event, message_id)
             link = rest.message_link(snapshot.guild_discord_id, snapshot.channel_id, message_id)
-            await _edit_original(client, application_id, token, ephemeral_data(raid_copy.posted(snapshot.channel_id, link)))
+            await edit_original(client, application_id, token, ephemeral_data(raid_copy.posted(snapshot.channel_id, link)))
     except Exception:
         logger.exception("Raid bot: post_raid failed for event %s", event_id)
 
@@ -189,7 +190,7 @@ async def _post_failed(
         if guild is None:
             return
         preview = preview_data(event, guild, emojis=emojis.current(), notice=notice)
-    await _edit_original(client, application_id, token, preview)
+    await edit_original(client, application_id, token, preview)
 
 
 # ---------------------------------------------------------------------------
@@ -320,7 +321,7 @@ async def send_test_dm(user_id: str, application_id: str, token: str) -> None:
             except (TimeoutError, httpx.HTTPError) as exc:
                 logger.warning("Raid bot: test DM got no answer from Discord (%s)", type(exc).__name__)
                 result = raid_copy.TEST_DM_FAILED
-            await _edit_original(client, application_id, token, ephemeral_data(result))
+            await edit_original(client, application_id, token, ephemeral_data(result))
     except Exception:
         logger.exception("Raid bot: send_test_dm failed")
 
@@ -353,7 +354,7 @@ async def verify_setup(check: SetupCheck) -> None:
     try:
         async with rest.make_rest_client() as client:
             lines = await _setup_report(client, check)
-            await _edit_original(client, check.application_id, check.token, ephemeral_data("\n".join(lines)))
+            await edit_original(client, check.application_id, check.token, ephemeral_data("\n".join(lines)))
     except Exception:
         logger.exception("Raid bot: verify_setup failed")
 

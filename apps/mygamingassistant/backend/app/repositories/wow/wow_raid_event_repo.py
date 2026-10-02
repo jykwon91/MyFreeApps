@@ -72,6 +72,24 @@ async def get_for_update(
     return result.scalar_one_or_none()
 
 
+async def get_by_message_id(
+    db: AsyncSession, *, guild_id: uuid.UUID, message_id: str, lock: bool = False
+) -> WowRaidEvent | None:
+    """The guild's event whose raid post is *message_id*, or None.
+
+    How the raid post's right-click menu finds its raid.  ``lock=True``
+    takes the same row lock as :func:`get_for_update`.
+    """
+    stmt = select(WowRaidEvent).where(
+        WowRaidEvent.guild_id == guild_id,
+        WowRaidEvent.message_id == message_id,
+    )
+    if lock:
+        stmt = stmt.with_for_update().execution_options(populate_existing=True)
+    result = await db.execute(stmt)
+    return result.scalars().first()
+
+
 async def delete(db: AsyncSession, event: WowRaidEvent) -> None:
     """Hard-delete an event (used only for discarded drafts)."""
     await db.delete(event)

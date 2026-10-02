@@ -2,8 +2,9 @@
 
 Laid out like Raid-Helper's: each class button shows its column's icon and
 count ("WAR 3" until the icons are uploaded); then [Late] [Tentative]
-[Bench] [Absence] [My sign-up], five to a row.  Every button is disabled
-once the raid is no longer open.
+[Bench] [Absence] [My sign-up], five to a row.  Once the leader closes
+sign-ups, every button but [My sign-up] is disabled; once the raid is no
+longer scheduled, all of them are.
 """
 from __future__ import annotations
 
@@ -38,9 +39,11 @@ def build_signup_components(
 ) -> list[dict[str, Any]]:
     """Class buttons with their column counts, then the status buttons.
 
-    Every button is disabled once the raid is no longer open.
+    [My sign-up] still works while sign-ups are closed: it shows where you
+    stand and the full roster.
     """
-    disabled = event.status != "scheduled"
+    not_scheduled = event.status != "scheduled"
+    disabled = not_scheduled or event.closed_at is not None
     counts = column_counts(signups)
     class_buttons = [_class_button(event, column, counts[column], disabled, emojis) for column in POST_COLUMNS]
     status_buttons = [
@@ -48,7 +51,7 @@ def build_signup_components(
         for status, label, icon in _STATUS_BUTTONS
     ]
     status_buttons.append(
-        _button(raid_custom_id.encode("mine", event.id), "My sign-up", disabled, emojis.component("ui_gear"))
+        _button(raid_custom_id.encode("mine", event.id), "My sign-up", not_scheduled, emojis.component("ui_gear"))
     )
     rows = [class_buttons[i : i + _BUTTONS_PER_ROW] for i in range(0, len(class_buttons), _BUTTONS_PER_ROW)]
     rows.append(status_buttons)

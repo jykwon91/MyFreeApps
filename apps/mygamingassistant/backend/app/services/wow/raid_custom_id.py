@@ -26,6 +26,8 @@ confirm  create preview [Post raid]                   raid:v1:confirm:<event>
 discard  create preview [Cancel]                      raid:v1:discard:<event>
 cancel   cancel flow [Cancel raid]                    raid:v1:cancel:<event>
 keep     cancel flow [Keep raid]                      raid:v1:keep:<event>
+lc       Raid: Close / Raid: Signed leader buttons    raid:v1:lc:<event>:<reopen|close|ping>
+m        a modal's submit (the ping message)          raid:v1:m:<event>:ping
 testdm   /raid prefs [Send me a test DM]              raid:v1:testdm
 """
 from __future__ import annotations
@@ -60,6 +62,8 @@ _EVENT_ACTIONS: Final[dict[str, int]] = {
     "discard": 0,
     "cancel": 0,
     "keep": 0,
+    "lc": 1,
+    "m": 1,
 }
 _BARE_ACTIONS: Final = frozenset({"testdm"})
 
@@ -71,6 +75,10 @@ _MENU_STATUSES: Final = (*REQUESTABLE_STATUSES, SAME_STATUS)
 RELEASE_STATUSES: Final = ("tentative", "bench", "absence")
 # The My sign-up card's views: the full roster, and back to the card.
 CARD_VIEWS: Final = ("roster", "back")
+# The leader tools under Raid: Close / Raid: Signed.
+LEADER_ACTIONS: Final = ("reopen", "close", "ping")
+# The modals the bot opens; a submit names which one it came from.
+MODALS: Final = ("ping",)
 # Old status names still on buttons of posts not re-rendered since they changed.
 _LEGACY_STATUSES: Final[dict[str, str]] = {"declined": "absence"}
 
@@ -133,6 +141,10 @@ def _args_valid(action: str, args: tuple[str, ...]) -> bool:
         return args[0] in _MENU_STATUSES
     if action == "release":
         return args[0] in RELEASE_STATUSES
+    if action == "lc":
+        return args[0] in LEADER_ACTIONS
+    if action == "m":
+        return args[0] in MODALS
     if action == "spec":
         column, status = args
         return column in POST_COLUMNS and status in _MENU_STATUSES

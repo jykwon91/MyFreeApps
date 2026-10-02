@@ -1,45 +1,22 @@
 """End-to-end raid-signup flows through POST /discord/interactions.
 
-Every request is a real Ed25519-signed interaction payload; handlers run
-against the SAVEPOINT-bound ``db`` fixture (``bound_unit_of_work`` points
-every ``unit_of_work`` at it, including the background tasks).  Outbound
-Discord REST is a ``httpx.MockTransport`` behind a patched
-``app.services.discord.rest.make_rest_client`` — :class:`FakeDiscord`
-records each call so tests assert what the bot *sent*, not how.
-
-httpx's ASGITransport awaits the whole ASGI call, so FastAPI background
-tasks have finished by the time ``post`` returns.
+Signed payloads, the recorded fake Discord and the common steps live in
+``discord_raid_harness.py``; the ``fake_discord``, ``http`` and ``post``
+fixtures in ``conftest.py``.
 """
 from __future__ import annotations
 
 import json
 import logging
-import time
 import uuid
-from collections.abc import AsyncGenerator, Callable
-from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any
-from zoneinfo import ZoneInfo
 
-import httpx
 import pytest
-import pytest_asyncio
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
-from httpx import ASGITransport, AsyncClient
-from platform_shared.services.discord import (
-    EMBED_LINKS,
-    MANAGE_EVENTS,
-    MANAGE_GUILD,
-    SEND_MESSAGES,
-    VIEW_CHANNEL,
-    DiscordRestClient,
-)
+from platform_shared.services.discord import MANAGE_EVENTS, VIEW_CHANNEL
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_member_pref import WowRaidMemberPref
 from app.models.wow.wow_raid_notification import WowRaidNotification
@@ -50,266 +27,35 @@ from app.services.wow.raid_roster import order_numbers
 from app.services.wow.raid_text import server_time_label
 from app.services.wow.raid_time_parser import PAST_MESSAGE, UNREADABLE_MESSAGE
 
+from discord_raid_harness import (
+    APP_ID,
+    CHANNEL,
+    EPHEMERAL,
+    GUILD,
+    ORGANISER,
+    ORGANISER_PERMS,
+    ROLE,
+    TOKEN,
+    FakeDiscord,
+    Post,
+    assert_ephemeral,
+    autocomplete,
+    click,
+    command,
+    content,
+    create_and_post,
+    custom_id_for,
+    custom_ids,
+    future_when,
+    setup_guild,
+)
+
 pytestmark = pytest.mark.asyncio
 
-_PRIVATE_KEY = Ed25519PrivateKey.generate()
-_PUBLIC_KEY_HEX = _PRIVATE_KEY.public_key().public_bytes(encoding=Encoding.Raw, format=PublicFormat.Raw).hex()
-
-APP_ID = "900000000000000001"
-GUILD = "800000000000000001"
-CHANNEL = "700000000000000001"
-ROLE = "600000000000000001"
-ORGANISER = "500000000000000001"
-TOKEN = "tok"
-
-ORGANISER_PERMS = MANAGE_EVENTS | MANAGE_GUILD
-NY = ZoneInfo("America/New_York")
-
-_TYPE_COMMAND = 2
-_TYPE_COMPONENT = 3
-_TYPE_AUTOCOMPLETE = 4
-_EPHEMERAL = 64
-
 
 # ---------------------------------------------------------------------------
-# Fake Discord REST
+# Helpers
 # ---------------------------------------------------------------------------
-
-
-@dataclass
-class Call:
-    method: str
-    path: str
-    body: dict[str, Any] | None
-
-
-@dataclass
-class FakeDiscord:
-    calls: list[Call] = field(default_factory=list)
-    # (method, path) → (status, json body); consumed in order, falls back to default.
-    errors: dict[tuple[str, str], list[tuple[int, dict[str, Any]]]] = field(default_factory=dict)
-    # (method, path) → how many upcoming calls Discord never answers (httpx.ReadTimeout).
-    unanswered: dict[tuple[str, str], int] = field(default_factory=dict)
-    bot_channel_permissions: int = VIEW_CHANNEL | SEND_MESSAGES | EMBED_LINKS
-    _next_message: int = 0
-
-    def fail(self, method: str, path: str, status: int, code: int) -> None:
-        self.errors.setdefault((method, path), []).append((status, {"code": code, "message": "nope"}))
-
-    def time_out(self, method: str, path: str) -> None:
-        self.unanswered[(method, path)] = self.unanswered.get((method, path), 0) + 1
-
-    def handler(self, request: httpx.Request) -> httpx.Response:
-        path = request.url.path.removeprefix("/api/v10")
-        body = None
-        if request.content:
-            body = json.loads(request.content)
-        self.calls.append(Call(request.method, path, body))
-        if self.unanswered.get((request.method, path)):
-            self.unanswered[(request.method, path)] -= 1
-            raise httpx.ReadTimeout("Discord never answered", request=request)
-        queued = self.errors.get((request.method, path))
-        if queued:
-            status, payload = queued.pop(0)
-            return httpx.Response(status, json=payload)
-        return httpx.Response(200, json=self._ok(request.method, path, body))
-
-    def _ok(self, method: str, path: str, body: dict[str, Any] | None) -> Any:
-        if method == "POST" and path == "/users/@me/channels":
-            assert body is not None
-            return {"id": f"dm-{body['recipient_id']}"}
-        if method == "POST" and path.endswith("/messages"):
-            self._next_message += 1
-            return {"id": f"m{self._next_message}"}
-        if method == "GET" and path.startswith("/guilds/") and path.endswith("/roles"):
-            return [{"id": GUILD, "permissions": str(self.bot_channel_permissions)}]
-        if method == "GET" and "/members/" in path:
-            return {"roles": []}
-        if method == "GET" and path.startswith("/channels/"):
-            return {"id": CHANNEL, "permission_overwrites": []}
-        return {}
-
-    # -- assertion helpers -------------------------------------------------
-
-    def find(self, method: str, path: str) -> list[Call]:
-        return [c for c in self.calls if c.method == method and c.path == path]
-
-    def channel_posts(self) -> list[Call]:
-        return self.find("POST", f"/channels/{CHANNEL}/messages")
-
-    def public_edits(self) -> list[Call]:
-        return [c for c in self.calls if c.method == "PATCH" and c.path.startswith(f"/channels/{CHANNEL}/messages/")]
-
-    def original_edits(self) -> list[Call]:
-        return self.find("PATCH", f"/webhooks/{APP_ID}/{TOKEN}/messages/@original")
-
-    def dms_to(self, user_id: str) -> list[Call]:
-        return self.find("POST", f"/channels/dm-{user_id}/messages")
-
-    def clear(self) -> None:
-        self.calls.clear()
-
-
-# ---------------------------------------------------------------------------
-# Signed payloads
-# ---------------------------------------------------------------------------
-
-
-def _member(user_id: str, permissions: int, name: str) -> dict[str, Any]:
-    return {"user": {"id": user_id, "username": name.lower()}, "nick": name, "permissions": str(permissions)}
-
-
-def _base(kind: int, data: dict[str, Any], user_id: str, permissions: int, name: str) -> dict[str, Any]:
-    return {
-        "type": kind,
-        "id": str(uuid.uuid4().int)[:18],
-        "application_id": APP_ID,
-        "token": TOKEN,
-        "guild_id": GUILD,
-        "channel_id": CHANNEL,
-        "member": _member(user_id, permissions, name),
-        "data": data,
-    }
-
-
-def command(
-    name: str,
-    sub: str,
-    *,
-    user_id: str = ORGANISER,
-    permissions: int = ORGANISER_PERMS,
-    display: str = "Thrall",
-    resolved: dict[str, Any] | None = None,
-    **options: Any,
-) -> dict[str, Any]:
-    option_list = [{"name": key, "type": 3, "value": value} for key, value in options.items() if value is not None]
-    data: dict[str, Any] = {"name": name, "type": 1, "options": [{"type": 1, "name": sub, "options": option_list}]}
-    if resolved is not None:
-        data["resolved"] = resolved
-    return _base(_TYPE_COMMAND, data, user_id, permissions, display)
-
-
-def autocomplete(
-    sub: str, focused: str, value: str, *, user_id: str = ORGANISER, name: str = "raid-admin", **filled: Any
-) -> dict[str, Any]:
-    options = [{"name": key, "type": 3, "value": other} for key, other in filled.items()]
-    options.append({"name": focused, "type": 3, "value": value, "focused": True})
-    data = {"name": name, "type": 1, "options": [{"type": 1, "name": sub, "options": options}]}
-    return _base(_TYPE_AUTOCOMPLETE, data, user_id, ORGANISER_PERMS, "Thrall")
-
-
-def click(
-    custom_id: str,
-    *,
-    user_id: str,
-    permissions: int = 0,
-    display: str | None = None,
-    values: list[str] | None = None,
-) -> dict[str, Any]:
-    data: dict[str, Any] = {"custom_id": custom_id, "component_type": 2}
-    if values is not None:
-        data = {"custom_id": custom_id, "component_type": 3, "values": values}
-    return _base(_TYPE_COMPONENT, data, user_id, permissions, display or f"Player{user_id[-3:]}")
-
-
-def _signed(body: bytes) -> dict[str, str]:
-    ts = str(int(time.time()))
-    return {
-        "X-Signature-Ed25519": _PRIVATE_KEY.sign(ts.encode() + body).hex(),
-        "X-Signature-Timestamp": ts,
-        "Content-Type": "application/json",
-    }
-
-
-def custom_ids(response: dict[str, Any]) -> list[str]:
-    rows = response.get("data", {}).get("components", [])
-    return [c["custom_id"] for row in rows for c in row["components"] if "custom_id" in c]
-
-
-def custom_id_for(response: dict[str, Any], action: str) -> str:
-    matches = [cid for cid in custom_ids(response) if cid.startswith(f"raid:v1:{action}:")]
-    assert matches, f"no {action} component in {custom_ids(response)}"
-    return matches[0]
-
-
-def content(response: dict[str, Any]) -> str:
-    return response["data"]["content"]
-
-
-def assert_ephemeral(response: dict[str, Any]) -> None:
-    assert response["type"] == 4
-    assert response["data"]["flags"] & _EPHEMERAL
-    assert response["data"]["allowed_mentions"] == {"parse": []}
-
-
-def future_when(days: int = 10) -> str:
-    return (datetime.now(NY) + timedelta(days=days)).strftime("%Y-%m-%d") + " 20:00"
-
-
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
-
-
-Post = Callable[[dict[str, Any]], Any]
-
-
-@pytest.fixture
-def fake_discord(monkeypatch: pytest.MonkeyPatch) -> FakeDiscord:
-    fake = FakeDiscord()
-
-    async def _no_sleep(_seconds: float) -> None:
-        return None
-
-    def _factory() -> DiscordRestClient:
-        return DiscordRestClient("test-bot-token", transport=httpx.MockTransport(fake.handler), sleep=_no_sleep)
-
-    monkeypatch.setattr(rest, "make_rest_client", _factory)
-    return fake
-
-
-@pytest_asyncio.fixture
-async def http(
-    monkeypatch: pytest.MonkeyPatch, bound_unit_of_work: AsyncSession, fake_discord: FakeDiscord
-) -> AsyncGenerator[AsyncClient, None]:
-    monkeypatch.setattr(settings, "discord_enabled", True)
-    monkeypatch.setattr(settings, "discord_public_key", _PUBLIC_KEY_HEX)
-    monkeypatch.setattr(settings, "discord_application_id", APP_ID)
-    monkeypatch.setattr(settings, "discord_bot_token", "test-bot-token")
-
-    from app.main import create_app
-
-    async with AsyncClient(transport=ASGITransport(app=create_app()), base_url="http://test") as ac:
-        yield ac
-
-
-@pytest.fixture
-def post(http: AsyncClient) -> Post:
-    async def _post(payload: dict[str, Any]) -> dict[str, Any]:
-        body = json.dumps(payload).encode()
-        resp = await http.post("/discord/interactions", content=body, headers=_signed(body))
-        assert resp.status_code == 200, resp.text
-        return resp.json()
-
-    return _post
-
-
-async def _setup(post: Post, *, ping_role: str | None = ROLE) -> dict[str, Any]:
-    resolved = None
-    if ping_role is not None:
-        resolved = {"roles": {ping_role: {"id": ping_role, "mentionable": True}}}
-    return await post(
-        command("raid-admin", "setup", channel=CHANNEL, timezone="Eastern (US)", ping_role=ping_role, resolved=resolved)
-    )
-
-
-async def _create_and_post(post: Post, db: AsyncSession, *, size: int = 5) -> WowRaidEvent:
-    preview = await post(command("raid-admin", "create", raid="onyxia", when=future_when(), size=size, notes="Bring FR"))
-    response = await post(click(custom_id_for(preview, "confirm"), user_id=ORGANISER, permissions=ORGANISER_PERMS))
-    assert response["type"] == 7
-    event = (await db.execute(select(WowRaidEvent))).scalars().one()
-    await db.refresh(event)
-    return event
 
 
 async def _signups(db: AsyncSession, event: WowRaidEvent) -> dict[str, str]:
@@ -365,8 +111,8 @@ def _options(response: dict[str, Any]) -> list[dict[str, Any]]:
 
 async def test_full_raid_journey(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
     # --- setup: deferred reply, then the background permission check edits it
-    response = await _setup(post)
-    assert response == {"type": 5, "data": {"flags": _EPHEMERAL}}
+    response = await setup_guild(post)
+    assert response == {"type": 5, "data": {"flags": EPHEMERAL}}
     (setup_edit,) = fake_discord.original_edits()
     assert setup_edit.body is not None
     assert setup_edit.body["content"].startswith(f"All set. Raids will post in <#{CHANNEL}>, pinging <@&{ROLE}>.")
@@ -483,7 +229,7 @@ async def test_full_raid_journey(post: Post, db: AsyncSession, fake_discord: Fak
     (followup,) = fake_discord.find("POST", f"/webhooks/{APP_ID}/{TOKEN}")
     assert followup.body is not None
     assert followup.body["content"] == raid_copy.queued_note(1)
-    assert followup.body["flags"] == _EPHEMERAL
+    assert followup.body["flags"] == EPHEMERAL
     await _save_prefs(post, "107", "rogue.combat")
     await post(click(_class_id(event, "rogue"), user_id="107"))
     statuses = await _signups(db, event)
@@ -619,8 +365,8 @@ async def test_full_raid_journey(post: Post, db: AsyncSession, fake_discord: Fak
 
 
 async def test_started_raid_refuses_signups(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
-    await _setup(post)
-    event = await _create_and_post(post, db)
+    await setup_guild(post)
+    event = await create_and_post(post, db)
     event.starts_at = datetime.now(timezone.utc) - timedelta(minutes=1)
     await db.flush()
     await _save_prefs(post, "201")
@@ -642,8 +388,8 @@ async def test_started_raid_refuses_signups(post: Post, db: AsyncSession, fake_d
 
 
 async def test_first_late_signup_asks_class_then_spec(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
-    await _setup(post)
-    event = await _create_and_post(post, db)
+    await setup_guild(post)
+    event = await create_and_post(post, db)
     response = await post(click(f"raid:v1:status:{event.id}:late", user_id="301"))
     select_id = response["data"]["components"][0]["components"][0]["custom_id"]
     assert select_id == f"raid:v1:class:{event.id}:late"
@@ -656,8 +402,8 @@ async def test_first_late_signup_asks_class_then_spec(post: Post, db: AsyncSessi
 
 
 async def test_change_spec_then_switch_to_a_saved_class(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
-    await _setup(post)
-    event = await _create_and_post(post, db)
+    await setup_guild(post)
+    event = await create_and_post(post, db)
     await _save_prefs(post, "311", "Holy Priest")
     await _save_prefs(post, "311", "warrior.fury")
     response = await post(click(_class_id(event, "warrior"), user_id="311"))
@@ -688,8 +434,8 @@ async def test_change_spec_then_switch_to_a_saved_class(post: Post, db: AsyncSes
 async def test_pre_spec_signup_is_asked_for_its_spec_once(
     post: Post, db: AsyncSession, fake_discord: FakeDiscord
 ) -> None:
-    await _setup(post)
-    event = await _create_and_post(post, db)
+    await setup_guild(post)
+    event = await create_and_post(post, db)
     await wow_raid_signup_repo.upsert_signup(
         db, event_id=event.id, discord_user_id="321", display_name="Old", status="confirmed",
         wow_class="warrior", role="tank",
@@ -713,8 +459,8 @@ async def test_pre_spec_signup_is_asked_for_its_spec_once(
 
 
 async def test_absence_without_class_needs_no_picker(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
-    await _setup(post)
-    event = await _create_and_post(post, db)
+    await setup_guild(post)
+    event = await create_and_post(post, db)
     response = await post(click(f"raid:v1:status:{event.id}:absence", user_id="302"))
     assert response["type"] == 7
     assert (await _signups(db, event)) == {"302": "absence"}
@@ -727,8 +473,8 @@ async def test_absence_without_class_needs_no_picker(post: Post, db: AsyncSessio
 async def test_bench_is_a_backup_that_is_never_moved_up(
     post: Post, db: AsyncSession, fake_discord: FakeDiscord
 ) -> None:
-    await _setup(post)
-    event = await _create_and_post(post, db)
+    await setup_guild(post)
+    event = await create_and_post(post, db)
     await _save_prefs(post, "900")
     fake_discord.clear()
     response = await post(click(f"raid:v1:status:{event.id}:bench", user_id="900"))
@@ -771,7 +517,7 @@ async def test_bench_is_a_backup_that_is_never_moved_up(
     ],
 )
 async def test_malformed_custom_id_gets_generic_error(post: Post, fake_discord: FakeDiscord, custom_id: str) -> None:
-    await _setup(post)
+    await setup_guild(post)
     response = await post(click(custom_id, user_id="401"))
     assert_ephemeral(response)
     assert content(response) == raid_copy.GENERIC_ERROR
@@ -782,11 +528,11 @@ async def test_non_dict_component_data_is_handled(post: Post, fake_discord: Fake
     payload["data"] = ["not", "a", "dict"]
     response = await post(payload)
     assert response["type"] == 4
-    assert response["data"]["flags"] & _EPHEMERAL
+    assert response["data"]["flags"] & EPHEMERAL
 
 
 async def test_unknown_event_and_other_guild_event_not_found(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
-    await _setup(post)
+    await setup_guild(post)
     missing = uuid.uuid4()
     for custom_id in (f"raid:v1:cls:{missing}:mage", f"raid:v1:signup:{missing}", f"raid:v1:mine:{missing}"):
         response = await post(click(custom_id, user_id="402"))
@@ -801,7 +547,7 @@ async def test_not_configured(post: Post, fake_discord: FakeDiscord) -> None:
 
 
 async def test_admin_commands_recheck_permissions(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
-    response = await _setup(post)
+    response = await setup_guild(post)
     assert response["type"] == 5
     response = await post(command("raid-admin", "setup", permissions=MANAGE_EVENTS, channel=CHANNEL, timezone="UTC"))
     assert content(response) == raid_copy.NOT_PERMITTED_GUILD
@@ -818,7 +564,7 @@ async def test_admin_commands_recheck_permissions(post: Post, db: AsyncSession, 
 
 
 async def test_bad_time_and_bad_size(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
-    await _setup(post)
+    await setup_guild(post)
     response = await post(command("raid-admin", "create", raid="onyxia", when="whenever"))
     assert_ephemeral(response)
     assert content(response) == UNREADABLE_MESSAGE
@@ -830,7 +576,7 @@ async def test_bad_time_and_bad_size(post: Post, db: AsyncSession, fake_discord:
 
 
 async def test_discard_draft(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
-    await _setup(post)
+    await setup_guild(post)
     preview = await post(command("raid-admin", "create", raid="zg", when=future_when()))
     response = await post(click(custom_id_for(preview, "discard"), user_id=ORGANISER, permissions=ORGANISER_PERMS))
     assert content(response) == raid_copy.DRAFT_DISCARDED
@@ -839,7 +585,7 @@ async def test_discard_draft(post: Post, db: AsyncSession, fake_discord: FakeDis
 
 
 async def test_post_refused_reverts_to_draft(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
-    await _setup(post)
+    await setup_guild(post)
     fake_discord.fail("POST", f"/channels/{CHANNEL}/messages", 403, 50013)
     preview = await post(command("raid-admin", "create", raid="onyxia", when=future_when()))
     response = await post(click(custom_id_for(preview, "confirm"), user_id=ORGANISER, permissions=ORGANISER_PERMS))
@@ -865,7 +611,7 @@ async def test_post_refused_reverts_to_draft(post: Post, db: AsyncSession, fake_
 
 
 async def test_unanswered_post_reverts_to_draft(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
-    await _setup(post)
+    await setup_guild(post)
     fake_discord.time_out("POST", f"/channels/{CHANNEL}/messages")
     preview = await post(command("raid-admin", "create", raid="onyxia", when=future_when()))
     await post(click(custom_id_for(preview, "confirm"), user_id=ORGANISER, permissions=ORGANISER_PERMS))
@@ -879,8 +625,8 @@ async def test_unanswered_post_reverts_to_draft(post: Post, db: AsyncSession, fa
 
 
 async def test_deleted_public_post_is_reposted(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
-    await _setup(post)
-    event = await _create_and_post(post, db)
+    await setup_guild(post)
+    event = await create_and_post(post, db)
     assert event.message_id == "m1"
     fake_discord.fail("PATCH", f"/channels/{CHANNEL}/messages/m1", 404, 10008)
     fake_discord.clear()
@@ -895,7 +641,7 @@ async def test_deleted_public_post_is_reposted(post: Post, db: AsyncSession, fak
 
 async def test_setup_reports_missing_bot_permissions(post: Post, fake_discord: FakeDiscord) -> None:
     fake_discord.bot_channel_permissions = VIEW_CHANNEL
-    await _setup(post, ping_role=None)
+    await setup_guild(post, ping_role=None)
     (edit,) = fake_discord.original_edits()
     assert edit.body is not None
     assert edit.body["content"].startswith(f"Saved, but I can't post in <#{CHANNEL}> yet.")
@@ -904,8 +650,8 @@ async def test_setup_reports_missing_bot_permissions(post: Post, fake_discord: F
 
 async def test_setup_check_reports_when_discord_does_not_answer(post: Post, fake_discord: FakeDiscord) -> None:
     fake_discord.time_out("GET", f"/channels/{CHANNEL}")
-    response = await _setup(post, ping_role=None)
-    assert response == {"type": 5, "data": {"flags": _EPHEMERAL}}
+    response = await setup_guild(post, ping_role=None)
+    assert response == {"type": 5, "data": {"flags": EPHEMERAL}}
     (edit,) = fake_discord.original_edits()
     assert edit.body is not None
     assert edit.body["content"].endswith(raid_copy.SETUP_CHECK_FAILED)
@@ -916,7 +662,7 @@ async def test_unanswered_reply_edit_is_one_warning(
 ) -> None:
     fake_discord.time_out("PATCH", f"/webhooks/{APP_ID}/{TOKEN}/messages/@original")
     with caplog.at_level(logging.WARNING, logger="app.services.discord.raid_publisher"):
-        await _setup(post, ping_role=None)
+        await setup_guild(post, ping_role=None)
     records = [r for r in caplog.records if r.name == "app.services.discord.raid_publisher"]
     assert [(r.levelno, r.getMessage()) for r in records] == [
         (logging.WARNING, "Raid bot: could not edit the original interaction response (ReadTimeout)")
@@ -934,8 +680,8 @@ async def test_autocomplete(post: Post, db: AsyncSession, fake_discord: FakeDisc
     assert response["type"] == 8
     assert response["data"]["choices"][0]["value"] == "America/Chicago"
 
-    await _setup(post)
-    event = await _create_and_post(post, db)
+    await setup_guild(post)
+    event = await create_and_post(post, db)
     response = await post(autocomplete("edit", "event", "onyx"))
     assert response["type"] == 8
     assert [c["value"] for c in response["data"]["choices"]] == [str(event.id)]
@@ -952,17 +698,17 @@ async def test_autocomplete(post: Post, db: AsyncSession, fake_discord: FakeDisc
 
 
 async def test_list_shows_upcoming_raids(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
-    await _setup(post)
+    await setup_guild(post)
     response = await post(command("raid", "list", permissions=0))
     assert content(response) == raid_copy.NO_UPCOMING
-    await _create_and_post(post, db)
+    await create_and_post(post, db)
     response = await post(command("raid", "list", permissions=0))
     assert_ephemeral(response)
     assert "Onyxia" in json.dumps(response["data"])
 
 
 async def test_prefs_and_test_dm(post: Post, fake_discord: FakeDiscord) -> None:
-    await _setup(post)
+    await setup_guild(post)
     fake_discord.clear()
     response = await post(command("raid", "prefs", user_id="501", permissions=0))
     assert_ephemeral(response)
@@ -977,7 +723,7 @@ async def test_prefs_and_test_dm(post: Post, fake_discord: FakeDiscord) -> None:
     test_dm_id = "raid:v1:testdm"
     assert test_dm_id in custom_ids(await post(command("raid", "prefs", user_id="501", permissions=0)))
     response = await post(click(test_dm_id, user_id="501"))
-    assert response == {"type": 5, "data": {"flags": _EPHEMERAL}}
+    assert response == {"type": 5, "data": {"flags": EPHEMERAL}}
     (dm,) = fake_discord.dms_to("501")
     assert dm.body is not None and dm.body["content"] == raid_copy.TEST_DM_BODY
     assert fake_discord.original_edits()[-1].body["content"] == raid_copy.TEST_DM_SENT
@@ -994,8 +740,8 @@ async def test_prefs_and_test_dm(post: Post, fake_discord: FakeDiscord) -> None:
 async def test_cancellation_dms_continue_past_an_unanswered_one(
     post: Post, db: AsyncSession, fake_discord: FakeDiscord
 ) -> None:
-    await _setup(post)
-    event = await _create_and_post(post, db)
+    await setup_guild(post)
+    event = await create_and_post(post, db)
     for user_id in ("801", "802"):
         await _save_prefs(post, user_id)
         await post(click(_class_id(event, "mage"), user_id=user_id))
@@ -1009,8 +755,8 @@ async def test_cancellation_dms_continue_past_an_unanswered_one(
 
 
 async def test_dm_opt_out_skips_promotion_dm(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
-    await _setup(post)
-    event = await _create_and_post(post, db)
+    await setup_guild(post)
+    event = await create_and_post(post, db)
     for user_id in ("601", "602", "603", "604", "605"):
         await _save_prefs(post, user_id)
         await post(click(_class_id(event, "mage"), user_id=user_id))
@@ -1028,8 +774,8 @@ async def test_dm_opt_out_skips_promotion_dm(post: Post, db: AsyncSession, fake_
 
 
 async def test_keeping_the_seat_changes_nothing(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
-    await _setup(post)
-    event = await _create_and_post(post, db)
+    await setup_guild(post)
+    event = await create_and_post(post, db)
     players = ("1010", "1011", "1012", "1013", "1001", "1003")  # five seats, then 1003 is queued
     for user_id in players:
         await _save_prefs(post, user_id)
@@ -1062,8 +808,8 @@ async def test_keeping_the_seat_changes_nothing(post: Post, db: AsyncSession, fa
 async def test_an_old_seat_card_changes_nothing_once_the_seat_is_gone(
     post: Post, db: AsyncSession, fake_discord: FakeDiscord
 ) -> None:
-    await _setup(post)
-    event = await _create_and_post(post, db)
+    await setup_guild(post)
+    event = await create_and_post(post, db)
     for user_id in ("1110", "1111", "1112", "1113", "1101", "1103"):  # five seats, then 1103 is queued
         await _save_prefs(post, user_id)
         await post(click(_class_id(event, "mage"), user_id=user_id))
@@ -1089,8 +835,8 @@ async def test_an_old_seat_card_changes_nothing_once_the_seat_is_gone(
 async def test_an_old_change_menu_keeps_the_status_you_have_now(
     post: Post, db: AsyncSession, fake_discord: FakeDiscord
 ) -> None:
-    await _setup(post)
-    event = await _create_and_post(post, db)
+    await setup_guild(post)
+    event = await create_and_post(post, db)
     await _save_prefs(post, "1201")
     await post(click(f"raid:v1:status:{event.id}:bench", user_id="1201"))
     menu = await post(click(f"raid:v1:change:{event.id}", user_id="1201"))
@@ -1109,8 +855,8 @@ async def test_an_old_change_menu_keeps_the_status_you_have_now(
 async def test_a_spec_picked_after_a_queue_formed_asks_before_freeing_the_seat(
     post: Post, db: AsyncSession, fake_discord: FakeDiscord
 ) -> None:
-    await _setup(post)
-    event = await _create_and_post(post, db)
+    await setup_guild(post)
+    event = await create_and_post(post, db)
     # A seat from before the bot asked for classes.
     await wow_raid_signup_repo.upsert_signup(
         db, event_id=event.id, discord_user_id="1301", display_name="Old", status="confirmed"
@@ -1140,8 +886,8 @@ async def test_a_spec_picked_after_a_queue_formed_asks_before_freeing_the_seat(
 async def test_leaving_the_queue_needs_no_card_but_says_so(
     post: Post, db: AsyncSession, fake_discord: FakeDiscord
 ) -> None:
-    await _setup(post)
-    event = await _create_and_post(post, db)
+    await setup_guild(post)
+    event = await create_and_post(post, db)
     for user_id in ("1401", "1402", "1403", "1404", "1405", "1406"):  # 1406 is queued
         await _save_prefs(post, user_id)
         await post(click(_class_id(event, "mage"), user_id=user_id))
@@ -1154,8 +900,8 @@ async def test_leaving_the_queue_needs_no_card_but_says_so(
 
 
 async def test_keep_raid_leaves_it_scheduled(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
-    await _setup(post)
-    event = await _create_and_post(post, db)
+    await setup_guild(post)
+    event = await create_and_post(post, db)
     prompt = await post(command("raid-admin", "cancel", event=str(event.id), reason="maybe"))
     response = await post(click(custom_id_for(prompt, "keep"), user_id=ORGANISER, permissions=ORGANISER_PERMS))
     assert content(response) == raid_copy.CANCEL_KEPT
@@ -1169,8 +915,8 @@ async def test_keep_raid_leaves_it_scheduled(post: Post, db: AsyncSession, fake_
 async def test_queued_player_changing_class_keeps_queue_position(
     post: Post, db: AsyncSession, fake_discord: FakeDiscord
 ) -> None:
-    await _setup(post)
-    event = await _create_and_post(post, db)
+    await setup_guild(post)
+    event = await create_and_post(post, db)
     for user_id in ("701", "702", "703", "704", "705", "706", "707"):
         await _save_prefs(post, user_id)
         await post(click(_class_id(event, "mage"), user_id=user_id))
@@ -1200,8 +946,8 @@ async def test_queued_player_changing_class_keeps_queue_position(
 async def test_your_own_class_button_opens_its_specs_to_switch(
     post: Post, db: AsyncSession, fake_discord: FakeDiscord
 ) -> None:
-    await _setup(post)
-    event = await _create_and_post(post, db)
+    await setup_guild(post)
+    event = await create_and_post(post, db)
     await _save_prefs(post, "1501")
     await post(click(_class_id(event, "mage"), user_id="1501"))
 
@@ -1225,8 +971,8 @@ async def test_your_own_class_button_opens_its_specs_to_switch(
 async def test_the_tank_button_uses_your_saved_tank_spec_or_asks(
     post: Post, db: AsyncSession, fake_discord: FakeDiscord
 ) -> None:
-    await _setup(post)
-    event = await _create_and_post(post, db)
+    await setup_guild(post)
+    event = await create_and_post(post, db)
 
     # One tank spec saved: one tap, under Tanks.
     await _save_prefs(post, "1601", "druid.feral-tank")
@@ -1262,8 +1008,8 @@ async def test_the_tank_button_uses_your_saved_tank_spec_or_asks(
 async def test_a_tank_off_their_seat_takes_it_back_from_their_class(
     post: Post, db: AsyncSession, fake_discord: FakeDiscord
 ) -> None:
-    await _setup(post)
-    event = await _create_and_post(post, db)
+    await setup_guild(post)
+    event = await create_and_post(post, db)
     await _save_prefs(post, "1901", "warrior.protection")
     await post(click(_class_id(event, "tank"), user_id="1901"))
     await post(click(f"raid:v1:status:{event.id}:tentative", user_id="1901"))
@@ -1293,8 +1039,8 @@ async def test_a_tank_off_their_seat_takes_it_back_from_their_class(
 async def test_sign_up_on_an_old_post_asks_for_a_class_with_tank_first(
     post: Post, db: AsyncSession, fake_discord: FakeDiscord
 ) -> None:
-    await _setup(post)
-    event = await _create_and_post(post, db)
+    await setup_guild(post)
+    event = await create_and_post(post, db)
     response = await post(click(_signup_id(event), user_id="1701"))
     assert_ephemeral(response)
     class_id = custom_id_for(response, "class")
@@ -1310,8 +1056,8 @@ async def test_sign_up_on_an_old_post_asks_for_a_class_with_tank_first(
 
 
 async def test_my_sign_up_before_signing_up(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
-    await _setup(post)
-    event = await _create_and_post(post, db)
+    await setup_guild(post)
+    event = await create_and_post(post, db)
     response = await post(click(f"raid:v1:mine:{event.id}", user_id="1801"))
     assert_ephemeral(response)
     assert content(response) == raid_copy.NOT_SIGNED_UP

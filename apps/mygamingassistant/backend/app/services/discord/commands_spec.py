@@ -1,4 +1,5 @@
-"""Discord slash-command definitions for MyGamingAssistant.
+"""Discord command definitions for MyGamingAssistant — slash commands and the
+raid post's right-click menu.
 
 These are the payload shapes sent to the Discord API via
 ``overwrite_global_commands_preserving_entry_point`` (global — keeps the
@@ -21,6 +22,15 @@ subcommand, so the raid bot is split:
 The client-side gate is advisory: handlers re-check the member's permission
 bitfield from the payload (Manage Events; Manage Server for ``setup``).
 
+The raid post's right-click menu
+--------------------------------
+Message commands (right-click a raid post → Apps): ``Raid: Close``,
+``Raid: Open`` and ``Raid: Signed``, Manage Events by default like
+``/raid-admin``.  Their handlers also let the raid's own leader in.  Discord
+allows five message commands per app; ``Raid: Edit`` and ``Raid: Unsigned``
+are to take the last two, so any further leader action is a button or a
+slash command.
+
 Design invariants
 -----------------
 * ``dm_permission: false`` + ``contexts: [0]`` — guild-only.
@@ -28,7 +38,7 @@ Design invariants
 """
 from typing import Any, Final
 
-from platform_shared.services.discord import MANAGE_EVENTS
+from platform_shared.services.discord import COMMAND_TYPE_MESSAGE, MANAGE_EVENTS
 
 from app.services.wow.raid_catalog import CLASSES, RAIDS
 
@@ -203,7 +213,31 @@ RAID_ADMIN_COMMAND: Final[dict[str, Any]] = {
 }
 
 # ---------------------------------------------------------------------------
+# The raid post's right-click menu (message commands)
+# ---------------------------------------------------------------------------
+
+CLOSE_MENU: Final = "Raid: Close"
+OPEN_MENU: Final = "Raid: Open"
+SIGNED_MENU: Final = "Raid: Signed"
+
+
+def _message_command(name: str) -> dict[str, Any]:
+    """A right-click → Apps entry on messages (no description or options)."""
+    return {
+        "name": name,
+        "type": COMMAND_TYPE_MESSAGE,
+        "dm_permission": False,
+        "contexts": [0],
+        "default_member_permissions": str(MANAGE_EVENTS),
+    }
+
+
+MENU_COMMANDS: Final[list[dict[str, Any]]] = [
+    _message_command(name) for name in (CLOSE_MENU, OPEN_MENU, SIGNED_MENU)
+]
+
+# ---------------------------------------------------------------------------
 # Full command list — passed verbatim to bulk_overwrite_*_commands
 # ---------------------------------------------------------------------------
 
-ALL_COMMANDS: Final[list[dict[str, Any]]] = [RAID_COMMAND, RAID_ADMIN_COMMAND]
+ALL_COMMANDS: Final[list[dict[str, Any]]] = [RAID_COMMAND, RAID_ADMIN_COMMAND, *MENU_COMMANDS]
