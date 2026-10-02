@@ -138,3 +138,20 @@ test("coordinates read inside a city can be moved onto the city's map while goin
   await expect(page.getByText(/42\.1, 65\.9 on the Stormwind City map/)).toBeVisible();
   await expect(page.getByRole("region", { name: "Route planner" }).getByRole("list", { name: "Directions" })).toBeVisible();
 });
+
+test('"warlock trainer" marks every warlock trainer on the zoomed-out map', async ({ page }) => {
+  const search = page.getByRole("combobox", { name: "Find an NPC or place" });
+  await search.fill("warlock trainer");
+  await page.getByRole("option", { name: /Show all \d+ on the map/ }).click();
+
+  const results = page.getByRole("region", { name: /“warlock trainer” on the map/ });
+  await expect(results.getByText(/\d+ matches — every one is marked on the map/)).toBeVisible();
+  // Zoomed out to the continent: several points, one per trainer.
+  await expect(page.getByRole("img", { name: "Eastern Kingdoms map" })).toBeVisible();
+  const markers = page.getByTestId("zone-map").getByRole("button", { name: /<Warlock Trainer> — Class trainer$/ });
+  await expect(markers).toHaveCount(10);
+
+  // A marker picks its row.
+  await page.getByTestId("zone-map").getByRole("button", { name: /^Maximillian Crowe <Warlock Trainer>/ }).click();
+  await expect(results.getByRole("article", { name: "Maximillian Crowe" })).toHaveAttribute("aria-current", "true");
+});

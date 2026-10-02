@@ -75,8 +75,11 @@ export default function SearchCombobox(props: SearchComboboxProps) {
     if (e.key !== "Enter") return;
     e.preventDefault();
     if (expanded && active >= 0) choose(active);
-    else if (onSubmit) onSubmit();
-    else choose(0);
+    else if (onSubmit) {
+      setOpen(false);
+      setActive(-1);
+      onSubmit();
+    } else choose(0);
   }
 
   return (

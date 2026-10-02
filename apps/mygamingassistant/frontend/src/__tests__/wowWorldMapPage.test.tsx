@@ -484,6 +484,35 @@ describe("WoW Forever World Map page", () => {
       expect(within(planner).getByLabelText("From")).toHaveValue("Your location");
     });
 
+    it('"warlock trainer" shows every warlock trainer on the zoomed-out map, and a marker finds its row', async () => {
+      renderAt("/wow-forever/map");
+      const search = await screen.findByRole("combobox", { name: "Find an NPC or place" }, { timeout: 4000 });
+      await userEvent.type(search, "warlock trainer");
+      expect(screen.getByRole("option", { name: /Show all 10 on the map/ })).toBeInTheDocument();
+      // Enter on words that describe a kind of NPC shows them all.
+      await userEvent.keyboard("{Enter}");
+
+      const results = screen.getByRole("region", { name: /“warlock trainer” on the map/ });
+      expect(within(results).getByText(/10 matches — every one is marked on the map/)).toBeInTheDocument();
+      // Zoomed out to the continent, with a marker for each trainer.
+      expect(screen.getByRole("img", { name: "Eastern Kingdoms map" })).toBeInTheDocument();
+      const markers = screen.getAllByRole("button", { name: /<Warlock Trainer> — Class trainer$/ });
+      expect(markers).toHaveLength(10);
+
+      // A marker past the first page brings its row into the list.
+      await userEvent.click(screen.getByRole("button", { name: /^Thistleheart <Warlock Trainer>/ }));
+      expect(within(results).getByRole("article", { name: "Thistleheart" })).toHaveAttribute("aria-current", "true");
+
+      await userEvent.click(within(results).getByRole("checkbox", { name: /Include the other faction \(\d+ more\)/ }));
+      expect(screen.getByRole("img", { name: "Azeroth map" })).toBeInTheDocument();
+      expect(screen.getAllByRole("button", { name: /<Warlock Trainer> — Class trainer$/ }).length).toBeGreaterThan(10);
+
+      const everyone = screen.getByRole("region", { name: /“warlock trainer” on the map/ });
+      await userEvent.click(within(everyone).getByRole("button", { name: "Clear search" }));
+      expect(screen.queryByRole("region", { name: /“warlock trainer” on the map/ })).not.toBeInTheDocument();
+      expect(screen.queryAllByRole("button", { name: /<Warlock Trainer> — Class trainer$/ })).toHaveLength(0);
+    });
+
     it("keyboard: arrows + Enter pick a result; Directions routes from your location; swap and close", async () => {
       window.localStorage.setItem(
         PLAYER_SETTINGS_STORAGE_KEY,

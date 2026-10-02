@@ -13,9 +13,9 @@ export const GROUP_HEADING: Readonly<Record<NearGroup, string>> = {
 /** "~350 yd away" / "~6,400 yd away on Eastern Kingdoms" / "Kalimdor — boat or zeppelin needed". */
 export function distanceLabel(ranked: RankedPoi, data: WorldMapData): string {
   const continent = data.continentNames.get(ranked.world.continent) ?? "another continent";
-  if (ranked.group === NEAR_GROUP.otherContinent || ranked.yards === null) {
-    return `${continent} — boat or zeppelin needed`;
-  }
+  if (ranked.group === NEAR_GROUP.otherContinent) return `${continent} — boat or zeppelin needed`;
+  // Not measured: you haven't said where you are.
+  if (ranked.yards === null) return continent;
   if (ranked.group === NEAR_GROUP.sameArea) return `${formatYards(ranked.yards)} away`;
   return `${formatYards(ranked.yards)} away, elsewhere on ${continent}`;
 }
