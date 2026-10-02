@@ -53,8 +53,15 @@ test("Tailoring shows the route for your skill and a shopping list", async ({ pa
   await expect(route.locator('[aria-current="step"]')).toBeVisible();
   await expect(route.getByText("You are here")).toBeVisible();
 
-  await page.locator("#shopping summary").click();
-  await expect(page.locator("#shopping").getByRole("button", { name: /Copy list/ })).toBeVisible();
+  const shopping = page.locator("#shopping");
+  await shopping.locator("summary").first().click();
+  await expect(shopping.getByRole("button", { name: /Copy list/ })).toBeVisible();
+
+  // Each material opens to where to get it.
+  const fineThread = shopping.locator('details[data-mat="2321"]');
+  await expect(fineThread.getByText("Sold in most towns")).toBeVisible();
+  await fineThread.locator("summary").click();
+  await expect(fineThread.getByText("Sold by")).toBeVisible();
 });
 
 test("Enchanting sends you to Uldaman for Artisan", async ({ page }) => {
