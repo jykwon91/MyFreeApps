@@ -126,7 +126,8 @@ async def edit_original(client: DiscordRestClient, application_id: str, token: s
         logger.warning("Raid bot: could not edit the original interaction response (%s)", type(exc).__name__)
 
 
-async def _send_dm(client: DiscordRestClient, user_id: str, content: str) -> bool:
+async def send_dm(client: DiscordRestClient, user_id: str, content: str) -> bool:
+    """DM a player; False when it didn't go out (DMs closed, or Discord never answered)."""
     try:
         await rest.bounded(client.send_dm(user_id, {"content": content, "allowed_mentions": NO_MENTIONS}))
         return True
@@ -317,7 +318,7 @@ async def notify_promoted(event_id: uuid.UUID, user_ids: list[str]) -> None:
         content = raid_copy.promoted_dm(snapshot.title, snapshot.starts_unix, _snapshot_link(snapshot))
         async with rest.make_rest_client() as client:
             for user_id in user_ids:
-                await _send_dm(client, user_id, content)
+                await send_dm(client, user_id, content)
     except Exception:
         logger.exception("Raid bot: notify_promoted failed for event %s", event_id)
 
@@ -343,7 +344,7 @@ async def announce_cancellation(event_id: uuid.UUID, dm_user_ids: list[str]) -> 
                 )
             dm_text = raid_copy.cancellation_dm(snapshot.title, snapshot.starts_unix, snapshot.cancel_reason)
             for user_id in dm_user_ids:
-                await _send_dm(client, user_id, dm_text)
+                await send_dm(client, user_id, dm_text)
     except Exception:
         logger.exception("Raid bot: announce_cancellation failed for event %s", event_id)
 

@@ -282,7 +282,7 @@ async def test_signed_lists_the_raid_and_pings_everyone_on_it(
     assert embed["title"] == "Signed up (2/5)"
     for user_id in ("501", "502", "503", "504", "505"):
         assert f"Player{user_id}" in embed["description"]
-    assert custom_ids(response) == [f"raid:v1:lc:{event.id}:ping"]
+    assert custom_ids(response) == [f"raid:v1:lc:{event.id}:ping", f"raid:v1:ml:{event.id}:open:-:-"]
 
     # --- the button opens the form
     response = await post(_lead(event, "ping"))
@@ -419,9 +419,9 @@ async def test_nobody_to_ping_or_nothing_to_say_shows_the_list_again(
     event = await _raid(post, db, fake_discord)
     await _sign_up(db, event, "801", "absence")
 
-    # --- only an absence: no ping button, and an old one or an open form says why
+    # --- only an absence: no ping button (Manage sign-ups stays), and an old one or an open form says why
     response = await post(menu_command(SIGNED_MENU, "m1"))
-    assert custom_ids(response) == []
+    assert custom_ids(response) == [f"raid:v1:ml:{event.id}:open:-:-"]
     response = await post(_lead(event, "ping"))
     assert response["type"] == 7
     assert content(response) == raid_copy.PING_NOBODY
@@ -433,7 +433,7 @@ async def test_nobody_to_ping_or_nothing_to_say_shows_the_list_again(
     response = await post(_ping(event, "   "))
     assert response["type"] == 7
     assert content(response) == raid_copy.PING_EMPTY
-    assert custom_ids(response) == [f"raid:v1:lc:{event.id}:ping"]
+    assert custom_ids(response) == [f"raid:v1:lc:{event.id}:ping", f"raid:v1:ml:{event.id}:open:-:-"]
 
     await db.refresh(event)
     assert event.last_pinged_at is None

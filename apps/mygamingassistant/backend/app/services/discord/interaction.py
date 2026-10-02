@@ -7,6 +7,7 @@ with an explicit ``allowed_mentions`` on every message.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any, Final
 
@@ -23,6 +24,9 @@ from platform_shared.services.discord import (
 
 NO_MENTIONS: Final[dict[str, Any]] = {"parse": []}
 
+# A member's name when the payload carries none of nick, global name or username.
+UNKNOWN_PLAYER: Final = "Unknown player"
+
 # Option type for SUB_COMMAND — its nested ``options`` are the real inputs.
 _OPTION_TYPE_SUB_COMMAND: Final = 1
 
@@ -30,6 +34,11 @@ _OPTION_TYPE_SUB_COMMAND: Final = 1
 # (2015-01-01T00:00:00Z) in the bits above the low 22.
 _DISCORD_EPOCH_MS: Final = 1_420_070_400_000
 _SNOWFLAKE_TIME_SHIFT: Final = 22
+
+# Avatars: a member's server avatar, else their own, else one of Discord's six defaults.
+CDN_URL: Final = "https://cdn.discordapp.com"
+_AVATAR_HASH: Final = re.compile(r"(a_)?[0-9a-f]{32}")
+_DEFAULT_AVATARS: Final = 6
 
 
 @dataclass(frozen=True)
@@ -53,6 +62,8 @@ class Interaction:
     target_id: str = ""
     # A modal submit's text inputs: custom_id → what the member typed.
     fields: dict[str, str] = field(default_factory=dict)
+    # The message a component was clicked on (the bot's own, so it's sent whole).
+    message: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> "Interaction":
@@ -94,6 +105,7 @@ class Interaction:
             resolved=_as_dict(data.get("resolved")),
             target_id=str(data.get("target_id") or ""),
             fields=_modal_fields(data.get("components")),
+            message=_as_dict(payload.get("message")),
         )
 
     def has_permission(self, permission: int) -> bool:
@@ -112,8 +124,28 @@ class Interaction:
         """Whether a user picked in a user menu is a bot."""
         return self._resolved_user(user_id).get("bot") is True
 
+    def resolved_avatar_url(self, user_id: str) -> str:
+        """The avatar of a member picked in a user menu: their server one, else their own, else a default."""
+        member_hash = _as_dict(_as_dict(self.resolved.get("members")).get(user_id)).get("avatar")
+        if _is_avatar_hash(member_hash) and self.guild_id:
+            return f"{CDN_URL}/guilds/{self.guild_id}/users/{user_id}/avatars/{member_hash}.png"
+        user_hash = self._resolved_user(user_id).get("avatar")
+        if _is_avatar_hash(user_hash):
+            return f"{CDN_URL}/avatars/{user_id}/{user_hash}.png"
+        index = 0
+        if user_id.isascii() and user_id.isdecimal():
+            index = (int(user_id) >> _SNOWFLAKE_TIME_SHIFT) % _DEFAULT_AVATARS
+        return f"{CDN_URL}/embed/avatars/{index}.png"
+
     def _resolved_user(self, user_id: str) -> dict[str, Any]:
         return _as_dict(_as_dict(self.resolved.get("users")).get(user_id))
+
+    def message_embed_author(self) -> dict[str, Any]:
+        """The author line of the first embed on the message a component was clicked on."""
+        embeds = _as_list(self.message.get("embeds"))
+        if not embeds:
+            return {}
+        return _as_dict(_as_dict(embeds[0]).get("author"))
 
     def str_option(self, name: str) -> str | None:
         value = self.options.get(name)
@@ -132,6 +164,12 @@ class Interaction:
         if isinstance(value, bool):
             return value
         return None
+
+
+def member_display_name(member: Any) -> str:
+    """A guild member object's server name (as REST returns it): nick, else global name, else username."""
+    data = _as_dict(member)
+    return _display_name(data, _as_dict(data.get("user")))
 
 
 def snowflake_created_ms(snowflake: Any) -> int | None:
@@ -261,6 +299,10 @@ def _modal_fields(components: Any) -> dict[str, str]:
     return fields
 
 
+def _is_avatar_hash(value: Any) -> bool:
+    return isinstance(value, str) and _AVATAR_HASH.fullmatch(value) is not None
+
+
 def _optional_str(value: Any) -> str | None:
     if value is None:
         return None
@@ -271,4 +313,4 @@ def _display_name(member: dict[str, Any], user: dict[str, Any]) -> str:
     for candidate in (member.get("nick"), user.get("global_name"), user.get("username")):
         if isinstance(candidate, str) and candidate.strip():
             return candidate.strip()[:100]
-    return "Unknown player"
+    return UNKNOWN_PLAYER

@@ -105,6 +105,19 @@ async def change_status(
     )
 
 
+async def remove_signup(db: AsyncSession, *, event: WowRaidEvent, signup: WowRaidSignup) -> list[str]:
+    """Take a player off the raid (a leader's call): delete their row, then fill the seat it held.
+
+    The first queued player of the same role moves up, like when a seat
+    holder steps back.  Returns the promoted user IDs.
+    """
+    seat_left_role = None
+    if signup.status in SEAT_STATUSES:
+        seat_left_role = signup.role
+    await wow_raid_signup_repo.delete(db, signup)
+    return await promote_from_queue(db, event, prefer_role=seat_left_role)
+
+
 def _goes_to_the_back(previous: str | None, status: str) -> bool:
     """Reset ``signed_up_at`` (the order number) — Raid-Helper's ``preserve_order: half``.
 

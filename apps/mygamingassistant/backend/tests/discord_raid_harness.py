@@ -78,6 +78,8 @@ class FakeDiscord:
     # (method, path) → how many upcoming calls Discord never answers (httpx.ReadTimeout).
     unanswered: dict[tuple[str, str], int] = field(default_factory=dict)
     bot_channel_permissions: int = VIEW_CHANNEL | SEND_MESSAGES | EMBED_LINKS
+    # user id → the member object GET /guilds/{guild}/members/{user} returns (else just roles).
+    members: dict[str, dict[str, Any]] = field(default_factory=dict)
     _next_message: int = 0
 
     def fail(self, method: str, path: str, status: int, code: int) -> None:
@@ -111,7 +113,7 @@ class FakeDiscord:
         if method == "GET" and path.startswith("/guilds/") and path.endswith("/roles"):
             return [{"id": GUILD, "permissions": str(self.bot_channel_permissions)}]
         if method == "GET" and "/members/" in path:
-            return {"roles": []}
+            return self.members.get(path.rsplit("/", 1)[-1], {"roles": []})
         if method == "GET" and path.startswith("/channels/"):
             return {"id": CHANNEL, "permission_overwrites": []}
         return {}
@@ -205,11 +207,16 @@ def click(
     permissions: int = 0,
     display: str | None = None,
     values: list[str] | None = None,
+    message: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """A button (or, with *values*, a select) clicked on *message*: Discord sends the message along."""
     data: dict[str, Any] = {"custom_id": custom_id, "component_type": 2}
     if values is not None:
         data = {"custom_id": custom_id, "component_type": 3, "values": values}
-    return _payload(TYPE_COMPONENT, data, user_id, permissions, display or f"Player{user_id[-3:]}")
+    payload = _payload(TYPE_COMPONENT, data, user_id, permissions, display or f"Player{user_id[-3:]}")
+    if message is not None:
+        payload["message"] = message
+    return payload
 
 
 def pick_user(
@@ -220,12 +227,11 @@ def pick_user(
     bot: bool = False,
     user_id: str = ORGANISER,
     permissions: int = ORGANISER_PERMS,
+    avatar: str | None = None,
 ) -> dict[str, Any]:
     """A pick in a user menu: Discord sends the user (and their member) it resolved."""
-    resolved = {
-        "users": {picked_id: {"id": picked_id, "username": picked_name.lower(), "global_name": None, "bot": bot}},
-        "members": {picked_id: {"nick": picked_name, "roles": []}},
-    }
+    user = {"id": picked_id, "username": picked_name.lower(), "global_name": None, "bot": bot, "avatar": avatar}
+    resolved = {"users": {picked_id: user}, "members": {picked_id: {"nick": picked_name, "roles": []}}}
     data = {"custom_id": custom_id, "component_type": 5, "values": [picked_id], "resolved": resolved}
     return _payload(TYPE_COMPONENT, data, user_id, permissions, "Thrall")
 

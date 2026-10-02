@@ -1,0 +1,258 @@
+"""Manage sign-ups — a raid's leader adds, changes and removes players — pure builders.
+
+[Manage sign-ups] on Raid: Signed and [Sign-ups] on Raid: Edit open the
+hub: the raid, its seats and a member picker.  Picking someone opens their
+card, which says where they stand and offers what fits:
+
+* not on the raid (or marked absent) → their class, then their spec, then
+  a review: [Add and tell them] / [Add quietly], or just [Add];
+* on it → a class and spec to switch them to, and [Remove], which asks
+  first: [Remove and tell them] / [Remove quietly], or just [Remove].
+
+A player's cards carry an embed whose author line is the player (name and
+avatar).  A custom_id has no room for a name, so the next click reads it
+back off the card it came from (:class:`Target`).  Every card names the
+raid on top; a *notice* (what the last tap did) follows it.
+"""
+from __future__ import annotations
+
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import Any, Literal
+
+from platform_shared.services.discord import (
+    BUTTON_STYLE_DANGER,
+    BUTTON_STYLE_PRIMARY,
+    BUTTON_STYLE_SECONDARY,
+    COMPONENT_TYPE_USER_SELECT,
+    EmojiSet,
+)
+
+from app.models.wow.wow_raid_event import WowRaidEvent
+from app.models.wow.wow_raid_signup import WowRaidSignup
+from app.services.discord import raid_manage_copy
+from app.services.discord.interaction import ephemeral_data
+from app.services.discord.raid_leader_views import raid_line
+from app.services.discord.raid_views import action_row, button, class_select, spec_select
+from app.services.wow.raid_catalog import WowSpecInfo, column_specs, signup_label, spec_info
+from app.services.wow.raid_custom_id import manage
+from app.services.wow.raid_embed import post_color
+from app.services.wow.raid_limits import LimitCheck, Limits
+from app.services.wow.raid_roster import (
+    LISTED_STATUSES,
+    QUEUED_STATUS,
+    SEAT_STATUSES,
+    compute_roster_summary,
+    queue_position,
+)
+from app.services.wow.raid_text import escape_name, seats_label
+
+# Whether a DM can reach the player: yes; they're the leader themself; or they turned DMs off.
+Reach = Literal["yes", "self", "off"]
+
+
+@dataclass(frozen=True)
+class Target:
+    """The player a card is about: their Discord id, and their name and avatar when known."""
+
+    user_id: str
+    name: str | None = None
+    avatar_url: str | None = None
+
+    @property
+    def who(self) -> str:
+        """'**Bob**'; with no name, a mention (it shows their name and pings nobody)."""
+        if self.name:
+            return f"**{escape_name(self.name)}**"
+        return f"<@{self.user_id}>"
+
+
+def signup_of(signups: Sequence[WowRaidSignup], user_id: str) -> WowRaidSignup | None:
+    """The player's sign-up row, whatever its status."""
+    return next((s for s in signups if s.discord_user_id == user_id), None)
+
+
+def listed_signup(signups: Sequence[WowRaidSignup], user_id: str) -> WowRaidSignup | None:
+    """The player's sign-up while they're on the raid (anything but absence)."""
+    mine = signup_of(signups, user_id)
+    if mine is None or mine.status not in LISTED_STATUSES:
+        return None
+    return mine
+
+
+def spec_label(signup: WowRaidSignup) -> str | None:
+    """'Fury Warrior' ('Warrior (Tank)' from before specs); None with no class picked."""
+    if signup.wow_class is None:
+        return None
+    return signup_label(signup.wow_class, signup.role, signup.spec)
+
+
+# ---------------------------------------------------------------------------
+# The hub
+# ---------------------------------------------------------------------------
+
+
+def hub_data(event: WowRaidEvent, signups: Sequence[WowRaidSignup], *, notice: str | None = None) -> dict[str, Any]:
+    """The raid and its seats, with a member picker and [Done]."""
+    summary = compute_roster_summary(signups, size_cap=event.size_cap)
+    lines = [raid_line(event)]
+    if notice:
+        lines.append(notice)
+    lines += [f"**Seats:** {seats_label(summary)}", raid_manage_copy.HUB_PROMPT]
+    picker = {
+        "type": COMPONENT_TYPE_USER_SELECT,
+        "custom_id": manage(event.id, "who"),
+        "placeholder": raid_manage_copy.PICK_PLAYER,
+        "min_values": 1,
+        "max_values": 1,
+    }
+    done = button("Done", BUTTON_STYLE_PRIMARY, manage(event.id, "done"))
+    return ephemeral_data("\n".join(lines), components=[action_row(picker), action_row(done)], embeds=[])
+
+
+# ---------------------------------------------------------------------------
+# A player's cards
+# ---------------------------------------------------------------------------
+
+
+def player_data(
+    event: WowRaidEvent,
+    target: Target,
+    signups: Sequence[WowRaidSignup],
+    *,
+    emojis: EmojiSet,
+    notice: str | None = None,
+) -> dict[str, Any]:
+    """Where the player stands, a class select, and [Remove] while they're on the raid."""
+    uid = target.user_id
+    back = button("Back", BUTTON_STYLE_SECONDARY, manage(event.id, "open"))
+    mine = signup_of(signups, uid)
+    if mine is not None and mine.status in LISTED_STATUSES:
+        text = raid_manage_copy.on_raid(target.who, mine.status, spec_label(mine), queue_position(signups, uid))
+        placeholder = raid_manage_copy.CHANGE_CLASS
+        buttons = [button(raid_manage_copy.REMOVE, BUTTON_STYLE_DANGER, manage(event.id, "ask", uid)), back]
+    else:
+        text = raid_manage_copy.not_on_raid(target.who)
+        if mine is not None:
+            text = raid_manage_copy.absent(target.who)
+        placeholder = raid_manage_copy.PICK_CLASS
+        buttons = [back]
+    select = class_select(manage(event.id, "class", uid), placeholder, emojis=emojis)
+    return _card(event, target, text, [action_row(select), action_row(*buttons)], notice=notice)
+
+
+def spec_data(
+    event: WowRaidEvent,
+    target: Target,
+    column: str,
+    signups: Sequence[WowRaidSignup],
+    *,
+    emojis: EmojiSet,
+) -> dict[str, Any]:
+    """*column*'s specs; those over a limit are marked, and still picked (leaders may go over)."""
+    uid = target.user_id
+    mine = listed_signup(signups, uid)
+    status = "confirmed"
+    current = None
+    if mine is not None:
+        status = mine.status
+        spec = spec_info(mine.wow_class, mine.spec)
+        # Preselected only on the raid: picking it again then changes nothing (Discord sends nothing).
+        if spec is not None and spec in column_specs(column):
+            current = spec
+    blocks = LimitCheck(Limits.of(event), signups, uid, status).blocks(column)
+    select = spec_select(
+        manage(event.id, "spec", uid, column),
+        raid_manage_copy.PICK_SPEC,
+        column,
+        current=current,
+        emojis=emojis,
+        blocks=blocks,
+    )
+    text = raid_manage_copy.spec_prompt(target.who, column)
+    if blocks:
+        text = f"{text}\n{raid_manage_copy.SPEC_MARKS_NOTE}"
+    rows = [action_row(select), action_row(_back_to_player(event, uid))]
+    return _card(event, target, text, rows)
+
+
+def review_data(
+    event: WowRaidEvent,
+    target: Target,
+    spec: WowSpecInfo,
+    signups: Sequence[WowRaidSignup],
+    *,
+    reach: Reach,
+) -> dict[str, Any]:
+    """Add the player as *spec*?  Says first if they'd be queued or go over a limit."""
+    uid = target.user_id
+    lines = [raid_manage_copy.review(target.who, spec.full_label)]
+    summary = compute_roster_summary(signups, size_cap=event.size_cap)
+    if summary.is_full:
+        lines.append(raid_manage_copy.would_queue(summary.queued_count + 1))
+    hit = LimitCheck(Limits.of(event), signups, uid, "confirmed").hit(spec)
+    if hit is not None:
+        lines.append(raid_manage_copy.over_limit_ok(hit))
+    choice = spec.choice_value
+    if reach == "yes":
+        buttons = [
+            button(raid_manage_copy.ADD_TELL, BUTTON_STYLE_PRIMARY, manage(event.id, "addt", uid, choice)),
+            button(raid_manage_copy.ADD_QUIET, BUTTON_STYLE_SECONDARY, manage(event.id, "addq", uid, choice)),
+        ]
+    else:
+        if reach == "off":
+            lines.append(raid_manage_copy.dm_off(target.who))
+        buttons = [button(raid_manage_copy.ADD, BUTTON_STYLE_PRIMARY, manage(event.id, "addq", uid, choice))]
+    buttons.append(_back_to_player(event, uid))
+    return _card(event, target, "\n".join(lines), [action_row(*buttons)])
+
+
+def remove_data(
+    event: WowRaidEvent,
+    target: Target,
+    signup: WowRaidSignup,
+    signups: Sequence[WowRaidSignup],
+    *,
+    reach: Reach,
+) -> dict[str, Any]:
+    """Remove the player?  Says so when their seat goes to the queue."""
+    uid = target.user_id
+    frees_seat = signup.status in SEAT_STATUSES and any(s.status == QUEUED_STATUS for s in signups)
+    text = raid_manage_copy.remove_prompt(target.who, spec_label(signup), frees_seat=frees_seat)
+    if reach == "yes":
+        buttons = [
+            button(raid_manage_copy.REMOVE_TELL, BUTTON_STYLE_DANGER, manage(event.id, "dropt", uid)),
+            button(raid_manage_copy.REMOVE_QUIET, BUTTON_STYLE_SECONDARY, manage(event.id, "dropq", uid)),
+        ]
+    else:
+        if reach == "off":
+            text = f"{text}\n{raid_manage_copy.dm_off(target.who)}"
+        buttons = [button(raid_manage_copy.REMOVE, BUTTON_STYLE_DANGER, manage(event.id, "dropq", uid))]
+    buttons.append(button(raid_manage_copy.KEEP, BUTTON_STYLE_SECONDARY, manage(event.id, "card", uid)))
+    return _card(event, target, text, [action_row(*buttons)])
+
+
+def _back_to_player(event: WowRaidEvent, user_id: str) -> dict[str, Any]:
+    return button("Back", BUTTON_STYLE_SECONDARY, manage(event.id, "card", user_id))
+
+
+def _card(
+    event: WowRaidEvent,
+    target: Target,
+    text: str,
+    rows: list[dict[str, Any]],
+    *,
+    notice: str | None = None,
+) -> dict[str, Any]:
+    """The raid on top, then *notice*; *text* goes in an embed headed by the player."""
+    content = raid_line(event)
+    if notice:
+        content = f"{content}\n{notice}"
+    embed: dict[str, Any] = {"description": text, "color": post_color(event)}
+    if target.name:
+        # The author line is plain text (no markdown), so the name goes in as it is.
+        author = {"name": target.name}
+        if target.avatar_url:
+            author["icon_url"] = target.avatar_url
+        embed["author"] = author
+    return ephemeral_data(content, components=rows, embeds=[embed])

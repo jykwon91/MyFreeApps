@@ -41,6 +41,8 @@ from app.services.wow.raid_custom_id import (
     CARD_VIEWS,
     EDIT_ACTIONS,
     LEADER_ACTIONS,
+    MANAGE_HUB_VERBS,
+    MANAGE_VERBS,
     MAX_CUSTOM_ID_LEN,
     MODALS,
     PICKERS,
@@ -51,6 +53,8 @@ from app.services.wow.raid_member_prefs_service import saved_spec_for_column
 from app.services.wow.raid_roster import REQUESTABLE_STATUSES, SEAT_STATUSES
 
 _EVENT = uuid.UUID("ffffffff-ffff-4fff-bfff-ffffffffffff")
+# The longest Discord user id a Manage sign-ups custom_id carries.
+_MEMBER = "9" * 20
 _CLASSES_TS = Path(__file__).resolve().parents[2] / "frontend/src/games/wow-forever/data/classes.ts"
 
 # ---------------------------------------------------------------------------
@@ -212,7 +216,14 @@ def test_longest_custom_id_fits() -> None:
         for column in POST_COLUMNS
         for status in (*REQUESTABLE_STATUSES, SAME_STATUS)
     ]
-    longest = max([*legacy_roles, *spec_menus], key=len)
+    # Manage sign-ups: every spec a leader can add a player as, every column's spec menu.
+    manage_ids = [
+        raid_custom_id.manage(_EVENT, verb, _MEMBER, spec.choice_value) for verb in ("addt", "addq") for spec in SPECS
+    ]
+    manage_ids += [raid_custom_id.manage(_EVENT, "spec", _MEMBER, column) for column in POST_COLUMNS]
+    for custom_id in manage_ids:
+        assert raid_custom_id.parse(custom_id) is not None, custom_id
+    longest = max([*legacy_roles, *spec_menus, *manage_ids], key=len)
     assert len(longest) <= MAX_CUSTOM_ID_LEN
     parsed = raid_custom_id.parse(longest)
     assert parsed is not None and parsed.event_id == _EVENT
@@ -255,6 +266,38 @@ def test_edit_buttons_menus_and_forms_round_trip() -> None:
         assert raid_custom_id.parse(custom_id) == raid_custom_id.RaidCustomId("m", _EVENT, (modal,))
     delete_id = raid_custom_id.encode("del", _EVENT)
     assert raid_custom_id.parse(delete_id) == raid_custom_id.RaidCustomId("del", _EVENT)
+
+
+def test_manage_sign_ups_round_trip() -> None:
+    for verb in MANAGE_HUB_VERBS:
+        custom_id = raid_custom_id.manage(_EVENT, verb)
+        assert custom_id == f"raid:v1:ml:{_EVENT}:{verb}:-:-"
+        assert raid_custom_id.parse(custom_id) == raid_custom_id.RaidCustomId("ml", _EVENT, (verb, "-", "-"))
+    member = "123456789012345678"
+    for verb in ("card", "class", "ask", "dropt", "dropq"):
+        custom_id = raid_custom_id.manage(_EVENT, verb, member)
+        assert raid_custom_id.parse(custom_id) == raid_custom_id.RaidCustomId("ml", _EVENT, (verb, member, "-"))
+    spec_menu = raid_custom_id.manage(_EVENT, "spec", member, TANK_COLUMN)
+    assert raid_custom_id.parse(spec_menu) == raid_custom_id.RaidCustomId("ml", _EVENT, ("spec", member, "tank"))
+    add = raid_custom_id.manage(_EVENT, "addt", member, "warrior.fury")
+    assert raid_custom_id.parse(add) == raid_custom_id.RaidCustomId("ml", _EVENT, ("addt", member, "warrior.fury"))
+    assert set(MANAGE_VERBS) > set(MANAGE_HUB_VERBS)
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("123456789012345", True),
+        ("12345678901234567890", True),
+        ("12345678901234", False),  # too short for a Discord id
+        ("123456789012345678901", False),
+        ("12345678901234567x", False),
+        ("١٢٣٤٥٦٧٨٩٠١٢٣٤٥٦", False),  # digits, but not ASCII ones
+        ("", False),
+    ],
+)
+def test_is_member_id(value: str, expected: bool) -> None:
+    assert raid_custom_id.is_member_id(value) is expected
 
 
 def test_class_buttons_tank_menus_and_card_round_trip() -> None:
@@ -340,6 +383,20 @@ def test_encode_rejects_overlong() -> None:
         f"raid:v1:pick:{_EVENT}",
         f"raid:v1:pick:{_EVENT}:title",
         f"raid:v1:del:{_EVENT}:now",
+        f"raid:v1:ml:{_EVENT}:open",
+        f"raid:v1:ml:{_EVENT}:open:-",
+        f"raid:v1:ml:{_EVENT}:open:123456789012345678:-",  # the hub names nobody
+        f"raid:v1:ml:{_EVENT}:who:-:x",
+        f"raid:v1:ml:{_EVENT}:kick:123456789012345678:-",
+        f"raid:v1:ml:{_EVENT}:card:-:-",  # a player's card names the player
+        f"raid:v1:ml:{_EVENT}:card:12345:-",
+        f"raid:v1:ml:{_EVENT}:card:12345678901234567x:-",
+        f"raid:v1:ml:{_EVENT}:card:123456789012345678:warrior",
+        f"raid:v1:ml:{_EVENT}:spec:123456789012345678:-",
+        f"raid:v1:ml:{_EVENT}:spec:123456789012345678:necromancer",
+        f"raid:v1:ml:{_EVENT}:addt:123456789012345678:warrior",
+        f"raid:v1:ml:{_EVENT}:addq:123456789012345678:warrior.restoration",  # not a Warrior spec
+        f"raid:v1:ml:{_EVENT}:dropt:123456789012345678:warrior.fury",
         f"raid:v1:explode:{_EVENT}",
         "raid:v1:testdm:extra",
         "raid:v1:signup:" + "a" * 200,

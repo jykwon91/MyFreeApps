@@ -8,7 +8,7 @@ preview is :mod:`app.services.discord.raid_draft_views`.
 """
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import datetime
 from typing import Any, Final
 from zoneinfo import ZoneInfo
@@ -195,6 +195,15 @@ def class_picker_data(
     *back* adds [Back] to the My sign-up card the menu was opened from;
     *notice* (why the class picked has no room) replaces the prompt.
     """
+    select = class_select(raid_custom_id.encode("class", event.id, status), "Pick your class", emojis=emojis)
+    rows = [action_row(select)]
+    if back:
+        rows.append(action_row(_back_to_card(event)))
+    return ephemeral_data(notice or raid_copy.CLASS_PROMPT, components=rows)
+
+
+def class_select(custom_id: str, placeholder: str, *, emojis: EmojiSet) -> dict[str, Any]:
+    """Tank, then the classes: the same columns as the buttons on the post."""
     tanks = [_tank_label(spec) for spec in TANK_SPECS]
     tank = _option(
         "Tank",
@@ -203,11 +212,7 @@ def class_picker_data(
         description=", ".join(tanks[:-1]) + f" or {tanks[-1]}",
     )
     classes = [_option(cls.label, cls.key, emojis.component(cls.key)) for cls in CLASSES]
-    select = _select(raid_custom_id.encode("class", event.id, status), "Pick your class", [tank, *classes])
-    rows = [action_row(select)]
-    if back:
-        rows.append(action_row(_back_to_card(event)))
-    return ephemeral_data(notice or raid_copy.CLASS_PROMPT, components=rows)
+    return _select(custom_id, placeholder, [tank, *classes])
 
 
 def spec_picker_data(
@@ -232,10 +237,13 @@ def spec_picker_data(
     blocks: dict[WowSpecInfo, LimitHit] = {}
     if check is not None:
         blocks = check.blocks(column)
-    select = _select(
+    select = spec_select(
         raid_custom_id.encode("spec", event.id, column, status),
         "Pick your spec",
-        [_spec_option(spec, column, current, emojis, blocks.get(spec)) for spec in column_specs(column)],
+        column,
+        current=current,
+        emojis=emojis,
+        blocks=blocks,
     )
     buttons = [button("Different class", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("pickclass", event.id, status))]
     if back:
@@ -244,6 +252,20 @@ def spec_picker_data(
     if blocks and notice is None:
         content = f"{content}\n{raid_limit_copy.SPEC_MARKS_NOTE}"
     return ephemeral_data(content, components=[action_row(select), action_row(*buttons)])
+
+
+def spec_select(
+    custom_id: str,
+    placeholder: str,
+    column: str,
+    *,
+    current: WowSpecInfo | None,
+    emojis: EmojiSet,
+    blocks: Mapping[WowSpecInfo, LimitHit],
+) -> dict[str, Any]:
+    """*column*'s specs, *current* preselected, each one in *blocks* marked with why."""
+    options = [_spec_option(spec, column, current, emojis, blocks.get(spec)) for spec in column_specs(column)]
+    return _select(custom_id, placeholder, options)
 
 
 def _spec_option(

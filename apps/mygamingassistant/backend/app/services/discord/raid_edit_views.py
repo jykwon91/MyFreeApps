@@ -9,6 +9,7 @@ color and its role and class limits — with a button for each, then
   Cancel raid open a form (type 9) holding what's there now; its submit
   shows the card again, saying what changed.
 * Leader and Color swap the card for a menu (type 7) with [Back].
+* Sign-ups swaps it for Manage sign-ups (``raid_manage_views``).
 * Delete raid asks first: [Delete raid] [Keep it].
 * After a move, the card offers [Tell them in channel] while anyone is
   on the raid.
@@ -34,7 +35,7 @@ from platform_shared.services.discord import (
 )
 
 from app.models.wow.wow_raid_event import WowRaidEvent
-from app.services.discord import raid_copy, raid_limit_copy
+from app.services.discord import raid_copy, raid_limit_copy, raid_manage_copy
 from app.services.discord.interaction import ephemeral_data, modal_response
 from app.services.discord.raid_leader_views import raid_line
 from app.services.discord.raid_views import action_row, button, unix
@@ -104,6 +105,7 @@ def edit_card(event: WowRaidEvent, *, notice: str | None = None, notify_count: i
         action_row(
             _edit_button(event, "Role limits", "role_limits"),
             _edit_button(event, "Class limits", "class_limits"),
+            button(raid_manage_copy.EDIT_BUTTON, BUTTON_STYLE_SECONDARY, raid_custom_id.manage(event.id, "open")),
         ),
         action_row(
             _edit_button(event, "Cancel raid", "cancel", BUTTON_STYLE_DANGER),

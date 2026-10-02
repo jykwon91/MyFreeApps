@@ -37,6 +37,8 @@ pick     Raid: Edit's leader / color menus            raid:v1:pick:<event>:<lead
 del      [Delete raid] on Raid: Edit's delete check   raid:v1:del:<event>
 m        a modal's submit                             raid:v1:m:<event>:<ping|title|when|desc|image|cancel|
                                                                          role_limits|class_limits>
+ml       Manage sign-ups (a leader adds, changes and   raid:v1:ml:<event>:<verb>:<member|->:<arg|->
+         removes players; see ``MANAGE_VERBS``)
 testdm   /raid prefs [Send me a test DM]              raid:v1:testdm
 """
 from __future__ import annotations
@@ -46,7 +48,7 @@ from dataclasses import dataclass
 from typing import Final
 
 from app.models.wow.wow_raid_signup import RAID_ROLES, WOW_CLASSES
-from app.services.wow.raid_catalog import POST_COLUMNS
+from app.services.wow.raid_catalog import POST_COLUMNS, SPECS
 from app.services.wow.raid_roster import REQUESTABLE_STATUSES
 
 PREFIX: Final = "raid:v1:"
@@ -76,6 +78,7 @@ _EVENT_ACTIONS: Final[dict[str, int]] = {
     "pick": 1,
     "del": 0,
     "m": 1,
+    "ml": 3,
 }
 _BARE_ACTIONS: Final = frozenset({"testdm"})
 
@@ -101,6 +104,18 @@ EDIT_ACTIONS: Final = (
 PICKERS: Final = ("leader", "color", "mentions")
 # The modals the bot opens; a submit names which one it came from.
 MODALS: Final = ("ping", "title", "when", "desc", "image", "cancel", "role_limits", "class_limits")
+# Manage sign-ups (``ml``): verb → what its <arg> holds.  The hub's verbs name no
+# member (``-``); every other verb names the member it's about.
+#   open  the hub (Raid: Edit's [Sign-ups], Raid: Signed's [Manage sign-ups], [Back])
+#   who   the hub's member menu          done  the hub's [Done]
+#   card  [Back] to the member's card    class  the card's class menu
+#   spec  the spec menu (arg = column)   ask    the card's [Remove]
+#   addt / addq  [Add and tell them] / [Add quietly] (arg = <class>.<spec>)
+#   dropt / dropq  [Remove and tell them] / [Remove quietly]
+MANAGE_HUB_VERBS: Final = ("open", "who", "done")
+MANAGE_VERBS: Final = (*MANAGE_HUB_VERBS, "card", "class", "spec", "ask", "addt", "addq", "dropt", "dropq")
+NO_ARG: Final = "-"
+_SPEC_CHOICES: Final = frozenset(spec.choice_value for spec in SPECS)
 # Old status names still on buttons of posts not re-rendered since they changed.
 _LEGACY_STATUSES: Final[dict[str, str]] = {"declined": "absence"}
 
@@ -121,6 +136,16 @@ def encode(action: str, event_id: uuid.UUID | None = None, *args: str) -> str:
     if len(custom_id) > MAX_CUSTOM_ID_LEN:
         raise ValueError(f"custom_id too long ({len(custom_id)}): {custom_id!r}")
     return custom_id
+
+
+def manage(event_id: uuid.UUID, verb: str, member: str = NO_ARG, arg: str = NO_ARG) -> str:
+    """A Manage sign-ups custom_id: ``raid:v1:ml:<event>:<verb>:<member>:<arg>``."""
+    return encode("ml", event_id, verb, member, arg)
+
+
+def is_member_id(value: str) -> bool:
+    """A Discord user id: 15–20 ASCII digits."""
+    return value.isascii() and value.isdecimal() and 15 <= len(value) <= 20
 
 
 def parse(custom_id: object) -> RaidCustomId | None:
@@ -171,6 +196,8 @@ def _args_valid(action: str, args: tuple[str, ...]) -> bool:
         return args[0] in PICKERS
     if action == "m":
         return args[0] in MODALS
+    if action == "ml":
+        return _manage_args_valid(*args)
     if action == "spec":
         column, status = args
         return column in POST_COLUMNS and status in _MENU_STATUSES
@@ -178,3 +205,18 @@ def _args_valid(action: str, args: tuple[str, ...]) -> bool:
         status, wow_class, role = args
         return status in REQUESTABLE_STATUSES and wow_class in WOW_CLASSES and role in RAID_ROLES
     return True
+
+
+def _manage_args_valid(verb: str, member: str, arg: str) -> bool:
+    """The hub's verbs name nobody; the rest name a member (a Discord id)."""
+    if verb not in MANAGE_VERBS:
+        return False
+    if verb in MANAGE_HUB_VERBS:
+        return member == NO_ARG and arg == NO_ARG
+    if not is_member_id(member):
+        return False
+    if verb == "spec":
+        return arg in POST_COLUMNS
+    if verb in ("addt", "addq"):
+        return arg in _SPEC_CHOICES
+    return arg == NO_ARG

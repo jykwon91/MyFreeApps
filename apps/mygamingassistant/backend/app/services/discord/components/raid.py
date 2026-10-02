@@ -18,6 +18,7 @@ from app.services.discord.components import (
     raid_card,
     raid_edit,
     raid_leader,
+    raid_manage,
     raid_seat,
     raid_signup,
 )
@@ -60,6 +61,7 @@ _HANDLERS: Final[dict[str, ComponentHandler]] = {
     "ed": raid_edit.handle_edit_button,
     "pick": raid_edit.handle_pick,
     "del": raid_edit.handle_delete,
+    "ml": raid_manage.handle_manage,
     "testdm": _handle_test_dm,
 }
 
