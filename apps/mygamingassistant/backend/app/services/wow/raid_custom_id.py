@@ -39,9 +39,10 @@ ed       Raid: Edit's buttons                         raid:v1:ed:<event>:<proper
          ``notes_on`` / ``notes_off`` = [Notes: off] / [Notes: on], naming the state it switches to)
 pick     Raid: Edit's leader / color menus            raid:v1:pick:<event>:<leader|color|mentions>
 del      [Delete raid] on Raid: Edit's delete check   raid:v1:del:<event>
+cp       Raid: Edit's [Copy raid]                     raid:v1:cp:<event>
 m        a modal's submit                             raid:v1:m:<event>:<ping|title|when|desc|image|cancel|
                                                                          role_limits|class_limits|char|
-                                                                         note|reason|deadline>
+                                                                         note|reason|deadline|copy>
 ml       Manage sign-ups (a leader adds, changes,      raid:v1:ml:<event>:<verb>:<member|->:<arg|->
          moves and removes players; see ``MANAGE_VERBS``)
 testdm   /raid prefs [Send me a test DM]              raid:v1:testdm
@@ -92,6 +93,7 @@ _EVENT_ACTIONS: Final[dict[str, int]] = {
     "del": 0,
     "m": 1,
     "ml": 3,
+    "cp": 0,
 }
 # Raid: Manage's raid picker; its option values carry the raid and the player.
 RAID_PICK: Final = "mr"
@@ -123,7 +125,7 @@ PICKERS: Final = ("leader", "color", "mentions")
 # The modals the bot opens; a submit names which one it came from.
 MODALS: Final = (
     "ping", "title", "when", "desc", "image", "cancel", "role_limits", "class_limits", "char", "note", "reason",
-    "deadline",
+    "deadline", "copy",
 )
 # Manage sign-ups (``ml``): verb → what its <arg> holds.  The hub's verbs name no
 # member (``-``); every other verb names the member it's about.

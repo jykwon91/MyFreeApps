@@ -156,6 +156,16 @@ async def send_dm(client: DiscordRestClient, user_id: str, content: str) -> bool
 # ---------------------------------------------------------------------------
 
 
+async def create_post(client: DiscordRestClient, channel_id: str, message: dict[str, Any]) -> str:
+    """Post a raid's message in *channel_id* and return its id; Discord's refusal or silence is raised.
+
+    Every raid post goes out here: [Post raid], a repost after the post was deleted, and the
+    raids a repeat posts.
+    """
+    created = await rest.bounded(client.create_message(channel_id, message))
+    return str(created.get("id", ""))
+
+
 async def post_raid(event_id: uuid.UUID, application_id: str, token: str) -> None:
     """Post the public signup message, then update the organiser's preview."""
     try:
@@ -165,7 +175,7 @@ async def post_raid(event_id: uuid.UUID, application_id: str, token: str) -> Non
             return
         async with rest.make_rest_client() as client:
             try:
-                created = await rest.bounded(client.create_message(snapshot.channel_id, snapshot.message))
+                message_id = await create_post(client, snapshot.channel_id, snapshot.message)
             except DiscordApiError as exc:
                 await _post_failed(client, event_id, application_id, token, snapshot.channel_id, exc.code)
                 return
@@ -174,7 +184,6 @@ async def post_raid(event_id: uuid.UUID, application_id: str, token: str) -> Non
                 await _post_failed(client, event_id, application_id, token, snapshot.channel_id, None)
                 return
 
-            message_id = str(created.get("id", ""))
             async with unit_of_work() as db:
                 event = await wow_raid_event_repo.get_for_update(db, event_id)
                 if event is not None:
@@ -255,16 +264,14 @@ async def _edit_or_repost(client: DiscordRestClient, snapshot: _Snapshot) -> Non
         if event is None:
             return
         if event.status != "scheduled" or event.start_applied_at is not None:
-            event.message_id = None
-            await db.flush()
+            await wow_raid_event_repo.clear_message_id(db, event)
             return
     logger.info("Raid bot: raid post for %s was deleted; reposting", snapshot.event_id)
     try:
-        created = await rest.bounded(client.create_message(snapshot.channel_id, snapshot.message))
+        message_id = await create_post(client, snapshot.channel_id, snapshot.message)
     except (DiscordApiError, TimeoutError, httpx.HTTPError) as exc:
         logger.warning("Raid bot: reposting raid %s failed (%s)", snapshot.event_id, type(exc).__name__)
         return
-    message_id = str(created.get("id", ""))
     async with unit_of_work() as db:
         event = await wow_raid_event_repo.get_for_update(db, snapshot.event_id)
         if event is not None:

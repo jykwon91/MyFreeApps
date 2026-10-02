@@ -124,6 +124,7 @@ _UOW_CONSUMERS = (
     "app.services.discord.commands.raid_admin",
     "app.services.discord.components.raid_admin",
     "app.services.discord.components.raid_card",
+    "app.services.discord.components.raid_duplicate",
     "app.services.discord.components.raid_edit",
     "app.services.discord.components.raid_leader",
     "app.services.discord.components.raid_manage",

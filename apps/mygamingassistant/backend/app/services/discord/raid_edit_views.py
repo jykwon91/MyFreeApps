@@ -3,7 +3,7 @@
 Right-click a raid post → Apps → **Raid: Edit** opens the edit card: the
 raid as it stands — title, leader, date and time, description, banner,
 color and its role and class limits — with a button for each, then
-[Cancel raid] [Delete raid] [Done].
+[Copy raid] [Cancel raid] [Delete raid] [Done].
 
 * Title, Date & Time, Deadline, Description, Image, Role limits, Class
   limits and Cancel raid open a form (type 9) holding what's there now;
@@ -12,11 +12,13 @@ color and its role and class limits — with a button for each, then
 * Sign-ups swaps it for Manage sign-ups (``raid_manage_views``).
 * Notes: off / Notes: on lets members leave the leader a note, or hides
   the notes (``raid_note``); the card comes back saying which.
+* Copy raid opens a form for the copy's date and time, then shows the
+  copy on the create preview (``components/raid_duplicate``).
 * Delete raid asks first: [Delete raid] [Keep it].
 * After a move, the card offers [Tell them in channel] while anyone is
   on the raid.
 
-A raid that's cancelled or finished can only be deleted.
+A raid that's cancelled or finished can be copied or deleted.
 """
 from __future__ import annotations
 
@@ -90,7 +92,8 @@ def edit_card(event: WowRaidEvent, *, notice: str | None = None, notify_count: i
         embed["thumbnail"] = {"url": banner}
 
     if event.status != "scheduled":
-        rows = [action_row(_edit_button(event, "Delete raid", "delete", BUTTON_STYLE_DANGER), _done_button(event))]
+        delete = _edit_button(event, "Delete raid", "delete", BUTTON_STYLE_DANGER)
+        rows = [action_row(_copy_button(event), delete, _done_button(event))]
         return ephemeral_data(notice or raid_copy.EDIT_GONE_PROMPT, components=rows, embeds=[embed])
 
     content = notice or raid_copy.EDIT_PROMPT
@@ -113,6 +116,7 @@ def edit_card(event: WowRaidEvent, *, notice: str | None = None, notify_count: i
             notes_button(event),
         ),
         action_row(
+            _copy_button(event),
             _edit_button(event, "Cancel raid", "cancel", BUTTON_STYLE_DANGER),
             _edit_button(event, "Delete raid", "delete", BUTTON_STYLE_DANGER),
             _done_button(event),
@@ -184,6 +188,11 @@ def notes_button(event: WowRaidEvent) -> dict[str, Any]:
 
 def _done_button(event: WowRaidEvent) -> dict[str, Any]:
     return _edit_button(event, "Done", "done", BUTTON_STYLE_PRIMARY)
+
+
+def _copy_button(event: WowRaidEvent) -> dict[str, Any]:
+    """[Copy raid]: a new raid with this one's settings (``components/raid_duplicate``)."""
+    return button("Copy raid", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("cp", event.id))
 
 
 def _back_button(event: WowRaidEvent, label: str = "Back") -> dict[str, Any]:

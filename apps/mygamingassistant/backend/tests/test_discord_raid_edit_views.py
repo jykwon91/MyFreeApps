@@ -94,7 +94,8 @@ _PROPERTY_ROWS = [
     [("Description", 2, _id("ed", "desc")), ("Image", 2, _id("ed", "image")), ("Color", 2, _id("ed", "color"))],
     [("Role limits", 2, _id("ed", "role_limits")), ("Class limits", 2, _id("ed", "class_limits")),
      ("Sign-ups", 2, _id("ml", "open", "-", "-")), ("Notes: off", 2, _id("ed", "notes_on"))],
-    [("Cancel raid", 4, _id("ed", "cancel")), ("Delete raid", 4, _id("ed", "delete")), ("Done", 1, _id("ed", "done"))],
+    [("Copy raid", 2, _id("cp")), ("Cancel raid", 4, _id("ed", "cancel")), ("Delete raid", 4, _id("ed", "delete")),
+     ("Done", 1, _id("ed", "done"))],
 ]
 
 
@@ -171,10 +172,11 @@ def test_closed_sign_ups_grey_the_card_but_leave_everything_editable() -> None:
 
 
 @pytest.mark.parametrize("status", ["cancelled", "completed"])
-def test_a_raid_that_is_over_can_only_be_deleted(status: str) -> None:
+def test_a_raid_that_is_over_can_be_copied_or_deleted(status: str) -> None:
     data = edit_card(_event(status=status))
     assert data["content"] == raid_copy.EDIT_GONE_PROMPT
-    assert _rows(data) == [[("Delete raid", 4, _id("ed", "delete")), ("Done", 1, _id("ed", "done"))]]
+    over = [("Copy raid", 2, _id("cp")), ("Delete raid", 4, _id("ed", "delete")), ("Done", 1, _id("ed", "done"))]
+    assert _rows(data) == [over]
     assert _embed(data)["title"] == "Edit raid"
 
 
