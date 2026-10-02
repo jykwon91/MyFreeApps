@@ -113,6 +113,11 @@ def _button(label: str, style: int, custom_id: str, *, emoji: dict[str, str] | N
     return button
 
 
+def _back_to_card(event: WowRaidEvent) -> dict[str, Any]:
+    """[Back] to the My sign-up card a menu or the roster was opened from."""
+    return _button("Back", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("card", event.id, "back"))
+
+
 def _option(
     label: str, value: str, emoji: dict[str, str] | None, *, description: str | None = None, default: bool = False
 ) -> dict[str, Any]:
@@ -199,8 +204,11 @@ def cancel_confirm_data(event: WowRaidEvent) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def class_picker_data(event: WowRaidEvent, status: str, *, emojis: EmojiSet) -> dict[str, Any]:
-    """Tank, then the classes — the same columns as the buttons on the post."""
+def class_picker_data(event: WowRaidEvent, status: str, *, emojis: EmojiSet, back: bool = False) -> dict[str, Any]:
+    """Tank, then the classes — the same columns as the buttons on the post.
+
+    *back* adds [Back] to the My sign-up card the menu was opened from.
+    """
     tanks = [_tank_label(spec) for spec in TANK_SPECS]
     tank = _option(
         "Tank",
@@ -210,7 +218,10 @@ def class_picker_data(event: WowRaidEvent, status: str, *, emojis: EmojiSet) -> 
     )
     classes = [_option(cls.label, cls.key, emojis.component(cls.key)) for cls in CLASSES]
     select = _select(raid_custom_id.encode("class", event.id, status), "Pick your class", [tank, *classes])
-    return ephemeral_data(raid_copy.CLASS_PROMPT, components=[_row(select)])
+    rows = [_row(select)]
+    if back:
+        rows.append(_row(_back_to_card(event)))
+    return ephemeral_data(raid_copy.CLASS_PROMPT, components=rows)
 
 
 def spec_picker_data(
@@ -235,7 +246,7 @@ def spec_picker_data(
     )
     buttons = [_button("Different class", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("pickclass", event.id, status))]
     if back:
-        buttons.append(_button("Back", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("card", event.id, "back")))
+        buttons.append(_back_to_card(event))
     return ephemeral_data(_spec_prompt(column, current), components=[_row(select), _row(*buttons)])
 
 
@@ -330,7 +341,7 @@ def roster_data(
     }
     components: list[dict[str, Any]] = []
     if back:
-        components.append(_row(_button("Back", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("card", event.id, "back"))))
+        components.append(_row(_back_to_card(event)))
     return ephemeral_data("", components=components, embeds=[embed])
 
 

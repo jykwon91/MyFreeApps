@@ -39,7 +39,9 @@ When the post doesn't fit, it gives up detail in order until it does:
   3. the letter tiles (plain-text title);
   4. names beyond 9 characters;
   5. names past a cap per list, which become "+N more" (down to none).
-A column too long for its field takes the next steps on its own.
+A column too long for its field takes the next steps on its own.  Each
+level's length comes from running totals (``raid_post_fit``), so the post
+is rendered once, however long its lists.
 My sign-up → [Full roster] always shows the complete list privately.
 """
 from __future__ import annotations
@@ -56,6 +58,7 @@ from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.services.wow.raid_catalog import TANK_COLUMN, column_icon, column_label
 from app.services.wow.raid_post_buttons import build_signup_components
+from app.services.wow.raid_post_fit import FittedField, Lines
 from app.services.wow.raid_post_layout import (
     NO_CLASS_COLUMN,
     NO_CLASS_LABEL,
@@ -127,6 +130,11 @@ class _Style:
     tiles: bool = True  # the title in letter tiles
     name_chars: int = POST_NAME_CHARS
     cap: int | None = None  # names shown per list; the rest are "+N more"
+
+    @property
+    def look(self) -> tuple[bool, bool, int]:
+        """What an entry's text depends on: not the cap, not the tiles."""
+        return (self.numbers, self.icons, self.name_chars)
 
 
 @dataclass(frozen=True)
@@ -210,12 +218,19 @@ def build_signup_embed(
     summary = compute_roster_summary(signups, size_cap=event.size_cap)
     roster = _Roster.of(signups)
     ladder = _ladder(roster.longest)
-    embed: dict[str, Any] = {}
-    for level in range(len(ladder)):
-        embed = _render(event, guild, summary, roster, ladder[level:], emojis)
-        if embed_length(embed) <= EMBED_TOTAL_BUDGET:
-            break
-    return embed  # the leanest level is bounded far below the limits
+    fields = _fitted_fields(event, roster, ladder, emojis)
+    descriptions = {tiles: _description(event, guild, summary, roster, tiles, emojis) for tiles in (True, False)}
+    author, footer = _author(event), _footer(event)
+    level = _first_fit(ladder, len(author) + len(footer), descriptions, fields)
+    embed: dict[str, Any] = {
+        "author": {"name": author},
+        "description": descriptions[ladder[level].tiles],
+        "color": _color(event),
+        "footer": {"text": footer},
+    }
+    if fields:
+        embed["fields"] = [field.field(level) for field in fields]
+    return embed
 
 
 def embed_length(embed: dict[str, Any]) -> int:
@@ -246,25 +261,15 @@ def _ladder(longest_list: int) -> list[_Style]:
     ]
 
 
-def _render(
-    event: WowRaidEvent,
-    guild: WowRaidGuild,
-    summary: RosterSummary,
-    roster: _Roster,
-    styles: Sequence[_Style],
-    emojis: EmojiSet,
-) -> dict[str, Any]:
-    """The embed at ``styles[0]``; a field too long for it takes the later styles."""
-    embed: dict[str, Any] = {
-        "author": {"name": _author(event)},
-        "description": _description(event, guild, summary, roster, styles[0], emojis),
-        "color": _color(event),
-        "footer": {"text": _footer(event)},
-    }
-    fields = _fields(event, roster, styles, emojis)
-    if fields:
-        embed["fields"] = fields
-    return embed
+def _first_fit(
+    ladder: Sequence[_Style], base: int, descriptions: dict[bool, str], fields: Sequence[FittedField]
+) -> int:
+    """The richest level within the budget; else the leanest, which is bounded far below it."""
+    for level, style in enumerate(ladder):
+        total = base + len(descriptions[style.tiles]) + sum(field.length(level) for field in fields)
+        if total <= EMBED_TOTAL_BUDGET:
+            return level
+    return len(ladder) - 1
 
 
 def _author(event: WowRaidEvent) -> str:
@@ -282,11 +287,11 @@ def _description(
     guild: WowRaidGuild,
     summary: RosterSummary,
     roster: _Roster,
-    style: _Style,
+    tiles: bool,
     emojis: EmojiSet,
 ) -> str:
     unix = int(event.starts_at.timestamp())
-    lines = [_title_line(event, style, emojis)]
+    lines = [_title_line(event, tiles, emojis)]
     if event.status == "cancelled":
         lines.append(_cancel_line(event))
         lines.append(f"~~<t:{unix}:F>~~")
@@ -316,12 +321,12 @@ def _description(
     return "\n".join(lines)
 
 
-def _title_line(event: WowRaidEvent, style: _Style, emojis: EmojiSet) -> str:
+def _title_line(event: WowRaidEvent, tiles: bool, emojis: EmojiSet) -> str:
     title = display_title(event)
-    if style.tiles:
-        tiles = tile_line(title, emojis)
-        if tiles is not None:
-            return tiles
+    if tiles:
+        spelled = tile_line(title, emojis)
+        if spelled is not None:
+            return spelled
     return f"## {escape_markdown(' '.join(title.split()))}"
 
 
@@ -347,33 +352,40 @@ def _color(event: WowRaidEvent) -> int:
 # ---------------------------------------------------------------------------
 
 
-def _fields(
-    event: WowRaidEvent, roster: _Roster, styles: Sequence[_Style], emojis: EmojiSet
-) -> list[dict[str, Any]]:
-    fields: list[dict[str, Any]] = []
+def _fitted_fields(
+    event: WowRaidEvent, roster: _Roster, ladder: Sequence[_Style], emojis: EmojiSet
+) -> list[FittedField]:
+    fields: list[FittedField] = []
     for column, players in roster.columns.items():
-        render = partial(_column_value, column=column, players=players, numbers=roster.numbers, emojis=emojis)
-        fields.append(_field(column_heading(column, len(players), emojis), _fitted(styles, render), inline=True))
+        entries = partial(_column_entries, column=column, players=players, numbers=roster.numbers, emojis=emojis)
+        fields.append(_fitted(column_heading(column, len(players), emojis), entries, "\n", ladder, inline=True))
     for status, label, icon in STATUS_LISTS:
         players = roster.lists[status]
         if players:
-            render = partial(_list_value, players=players, emojis=emojis)
             name = icon_text(emojis, icon, status_heading(status, label, len(players)))
-            fields.append(_field(name, _fitted(styles, render)))
+            fields.append(_fitted(name, partial(_list_entries, players=players, emojis=emojis), ", ", ladder))
     if roster.empty_columns and event.status in _OPEN_STATUSES:
         legend = " · ".join(icon_text(emojis, column_icon(c), column_label(c)) for c in roster.empty_columns)
-        fields.append(_field(NOBODY_YET, legend))
+        fields.append(FittedField.fixed(NOBODY_YET, legend, levels=len(ladder)))
     return fields
 
 
-def _fitted(styles: Sequence[_Style], render: Callable[[_Style], str]) -> str:
-    """The richest rendering that fits a field (the leanest style always does)."""
-    value = ""
-    for style in styles:
-        value = render(style)
-        if len(value) <= FIELD_VALUE_LIMIT:
-            break
-    return value
+def _fitted(
+    name: str,
+    entries: Callable[[_Style], list[str]],
+    sep: str,
+    ladder: Sequence[_Style],
+    *,
+    inline: bool = False,
+) -> FittedField:
+    """A list as a field at every level of *ladder*, rendering each look once."""
+    looks: dict[tuple[bool, bool, int], Lines] = {}
+    levels: list[tuple[Lines, int | None]] = []
+    for style in ladder:
+        if style.look not in looks:
+            looks[style.look] = Lines.of(entries(style), sep)
+        levels.append((looks[style.look], style.cap))
+    return FittedField.of(name, levels, limit=FIELD_VALUE_LIMIT, inline=inline)
 
 
 def column_heading(column: str, count: int, emojis: EmojiSet) -> str:
@@ -388,19 +400,15 @@ def roster_entry(signup: WowRaidSignup, number: int | None, emojis: EmojiSet) ->
     return _column_entry(signup, "", number, _Style(name_chars=MAX_NAME_CHARS), emojis)
 
 
-def _column_value(
+def _column_entries(
     style: _Style,
     *,
     column: str,
     players: Sequence[WowRaidSignup],
     numbers: dict[str, int],
     emojis: EmojiSet,
-) -> str:
-    shown, hidden = _capped(players, style.cap)
-    lines = [_column_entry(signup, column, numbers.get(signup.discord_user_id), style, emojis) for signup in shown]
-    if hidden:
-        lines.append(f"+{hidden} more")
-    return "\n".join(lines)
+) -> list[str]:
+    return [_column_entry(signup, column, numbers.get(signup.discord_user_id), style, emojis) for signup in players]
 
 
 def _column_entry(
@@ -428,13 +436,9 @@ def _column_entry(
     return " ".join(part for part in parts if part)
 
 
-def _list_value(style: _Style, *, players: Sequence[WowRaidSignup], emojis: EmojiSet) -> str:
-    """'{spec icon} Alice, {spec icon} Bob +3 more' — no order numbers off the line."""
-    shown, hidden = _capped(players, style.cap)
-    entries = [_list_entry(signup, style, emojis) for signup in shown]
-    if hidden:
-        entries.append(f"+{hidden} more")
-    return ", ".join(entries)
+def _list_entries(style: _Style, *, players: Sequence[WowRaidSignup], emojis: EmojiSet) -> list[str]:
+    """'{spec icon} Alice', '{spec icon} Bob' — no order numbers off the line."""
+    return [_list_entry(signup, style, emojis) for signup in players]
 
 
 def _list_entry(signup: WowRaidSignup, style: _Style, emojis: EmojiSet) -> str:
@@ -444,13 +448,3 @@ def _list_entry(signup: WowRaidSignup, style: _Style, emojis: EmojiSet) -> str:
     else:
         tag = class_tag(signup.wow_class)
     return f"{tag} {name}".strip()
-
-
-def _capped(players: Sequence[WowRaidSignup], cap: int | None) -> tuple[Sequence[WowRaidSignup], int]:
-    if cap is None or len(players) <= cap:
-        return players, 0
-    return players[:cap], len(players) - cap
-
-
-def _field(name: str, value: str, *, inline: bool = False) -> dict[str, Any]:
-    return {"name": name, "value": value, "inline": inline}

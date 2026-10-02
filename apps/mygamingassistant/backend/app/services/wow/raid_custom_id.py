@@ -63,7 +63,7 @@ _EVENT_ACTIONS: Final[dict[str, int]] = {
 }
 _BARE_ACTIONS: Final = frozenset({"testdm"})
 
-# A menu opened from My signup: keep whatever status you have when you pick.
+# A menu opened from My sign-up: keep whatever status you have when you pick.
 SAME_STATUS: Final = "same"
 # What the class / spec menus can carry: the status asked for, or ``same``.
 _MENU_STATUSES: Final = (*REQUESTABLE_STATUSES, SAME_STATUS)

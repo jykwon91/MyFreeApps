@@ -163,6 +163,12 @@ def test_class_picker_has_plain_options_before_the_first_sync() -> None:
     assert all("emoji" not in option for option in row["components"][0]["options"])
 
 
+def test_class_picker_from_my_sign_up_keeps_the_status_and_has_back() -> None:
+    select_row, back_row = class_picker_data(_event(), SAME_STATUS, emojis=EMPTY_EMOJIS, back=True)["components"]
+    assert select_row["components"][0]["custom_id"] == f"raid:v1:class:{_EVENT_ID}:same"
+    assert _buttons(back_row) == [("Back", f"raid:v1:card:{_EVENT_ID}:back")]
+
+
 def _spec_options(data: dict) -> list[dict]:
     return data["components"][0]["components"][0]["options"]
 

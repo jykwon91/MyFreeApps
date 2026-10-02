@@ -19,17 +19,19 @@ MENU_TIMEOUT: Final = "That menu timed out. Tap your class on the raid post agai
 GUILD_ONLY: Final = "Use this in a server channel, not in DMs."
 
 NEXT_TIME_ONE_TAP: Final = "Next time it's one tap."
+# How to take a seat: the class buttons, or [Tank] for a tank (one tap with the saved tank spec).
+_TAP_FOR_A_SEAT: Final = "Tap your class (or **Tank**)"
 QUEUE_MOVES_UP: Final = "I'll move you up automatically when a seat opens."
 BENCH_NOTE: Final = (
     "Bench is for backups, so I won't move you into a seat automatically. "
-    "Tap your class on the raid post to ask for one."
+    f"{_TAP_FOR_A_SEAT} on the raid post to ask for one."
 )
-TENTATIVE_NOTE: Final = "Tentative doesn't hold a seat. Tap your class on the raid post to take one."
+TENTATIVE_NOTE: Final = f"Tentative doesn't hold a seat. {_TAP_FOR_A_SEAT} on the raid post to take one."
 SEAT_KEPT: Final = "Okay, you keep your seat."
 NO_SEAT_TO_FREE: Final = (
     "You don't hold a seat any more, so this question is out of date. Use the buttons on the raid post."
 )
-LEFT_QUEUE: Final = "You've left the queue. Tap your class on the raid post to rejoin it at the back."
+LEFT_QUEUE: Final = f"You've left the queue. {_TAP_FOR_A_SEAT} on the raid post to rejoin it at the back."
 NOT_SIGNED_UP: Final = "You haven't signed up for this raid yet. Tap your class on the raid post."
 NOBODY_SIGNED_UP: Final = "Nobody has signed up yet."
 CLASS_PROMPT: Final = "Which class are you bringing? I'll remember it for next time."
@@ -63,8 +65,8 @@ _ALREADY: Final[dict[str, str]] = {
     "confirmed": "You're already signed up.",
     "late": "You're already marked **late**.",
     "tentative": "You're already marked **tentative**.",
-    "bench": "You're already on the **bench**. Tap your class if you want a seat.",
-    "absence": "You're already marked **absent**. Tap your class if your plans change.",
+    "bench": f"You're already on the **bench**. {_TAP_FOR_A_SEAT} if you want a seat.",
+    "absence": f"You're already marked **absent**. {_TAP_FOR_A_SEAT} if your plans change.",
 }
 
 _MARKED_WORDS: Final[dict[str, str]] = {"late": "late", "tentative": "tentative", "absence": "absent"}

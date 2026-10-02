@@ -78,8 +78,6 @@ def post_columns(signups: Iterable[WowRaidSignup]) -> dict[str, list[WowRaidSign
     for signup in in_line_order(signups):
         if signup.status in LINE_STATUSES:
             columns.setdefault(column_of(signup), []).append(signup)
-    if not columns.get(NO_CLASS_COLUMN, True):
-        del columns[NO_CLASS_COLUMN]
     return columns
 
 

@@ -75,9 +75,10 @@ def one_tap_spec(pref: WowRaidMemberPref | None) -> WowSpecInfo | None:
 def saved_spec_for_column(pref: WowRaidMemberPref | None, column: str) -> WowSpecInfo | None:
     """The saved spec a class button on the post signs up with, or None to ask.
 
-    A class button lists that class's damage and healing specs, so a saved
-    tank spec doesn't count there.  [Tank] takes the remembered class's spec
-    when it tanks, else the one saved tank spec; with several, the player picks.
+    A class's column holds its damage and healing specs (its tank spec shows
+    under Tanks), so a saved tank spec doesn't count for the class's button.
+    [Tank] takes the remembered class's spec when it tanks, else the one
+    saved tank spec; with several, the player picks.
     """
     if pref is None:
         return None

@@ -24,8 +24,11 @@ from app.services.wow.raid_roster import RosterSummary
 MAX_NAME_CHARS: Final = 32
 
 _MARKDOWN_SPECIALS: Final = re.compile(r"([\\*_~`|>\[\]])")
-# Said after the count, so the queue and the bench aren't mistaken for each other.
-_STATUS_HINTS: Final[dict[str, str]] = {"queued": "waiting for a seat", "bench": "backups"}
+# A name can start a line: a heading, bullet or numbered list there shows as typed.
+_LEADING_MARK: Final = re.compile(r"^([#+-])")
+_LEADING_NUMBER: Final = re.compile(r"^(\d+)\.")
+# Said after the count, so the bench isn't mistaken for seats.
+_STATUS_HINTS: Final[dict[str, str]] = {"bench": "backups"}
 
 
 def display_title(event: WowRaidEvent) -> str:
@@ -51,11 +54,16 @@ def escape_markdown(text: str) -> str:
 
 
 def escape_name(display_name: str, *, max_chars: int = MAX_NAME_CHARS) -> str:
-    """Trim to *max_chars* and escape Discord markdown so names render literally."""
+    """Trim to *max_chars* and escape Discord markdown so names render literally.
+
+    A leading ``#``, ``-``, ``+`` or ``1.`` is escaped too, since a name can
+    start a line, and ``://`` gets a zero-width space so a name never links.
+    """
     name = " ".join(display_name.split())
     if len(name) > max_chars:
         name = name[: max_chars - 1] + "…"
-    return escape_markdown(name)
+    name = _LEADING_NUMBER.sub(r"\1\\.", _LEADING_MARK.sub(r"\\\1", escape_markdown(name)))
+    return name.replace("://", ":\u200b//")
 
 
 def seats_label(summary: RosterSummary) -> str:
@@ -74,7 +82,7 @@ def seats_detail(summary: RosterSummary) -> str:
 
 
 def status_heading(status: str, label: str, count: int) -> str:
-    """'Queued (3) · waiting for a seat' — the count, plus a hint for the queue and the bench."""
+    """'Bench (2) · backups' — the count, plus a hint for the bench."""
     heading = f"{label} ({count})"
     hint = _STATUS_HINTS.get(status)
     if hint:

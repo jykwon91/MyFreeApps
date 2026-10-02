@@ -115,7 +115,6 @@ RAIDS_BY_KEY: Final[dict[str, RaidInfo]] = {raid.key: raid for raid in RAIDS}
 
 ROLE_ORDER: Final[tuple[str, ...]] = ("tank", "healer", "dps")
 ROLE_LABELS: Final[dict[str, str]] = {"tank": "Tank", "healer": "Healer", "dps": "DPS"}
-ROLE_FIELD_LABELS: Final[dict[str, str]] = {"tank": "Tanks", "healer": "Healers", "dps": "DPS"}
 # Spec-select option descriptions, by display role.
 ROLE_DESCRIPTIONS: Final[dict[str, str]] = {
     "tank": "Tank",

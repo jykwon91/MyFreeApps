@@ -1180,6 +1180,7 @@ async def test_queued_player_changing_class_keeps_queue_position(
     response = await post(click(f"raid:v1:change:{event.id}", user_id="706"))
     assert response["type"] == 7
     response = await post(click(custom_id_for(response, "pickclass"), user_id="706"))
+    assert custom_id_for(response, "card") == f"raid:v1:card:{event.id}:back"  # opened from My sign-up
     response = await post(click(custom_id_for(response, "class"), user_id="706", values=["warlock"]))
     response = await post(click(custom_id_for(response, "spec"), user_id="706", values=["warlock.affliction"]))
     assert raid_copy.queued_note(1) in content(response)
@@ -1256,6 +1257,37 @@ async def test_the_tank_button_uses_your_saved_tank_spec_or_asks(
     response = await post(click(_class_id(event, "druid"), user_id="1601"))
     assert content(response) == raid_copy.spec_switch_prompt("Feral Druid (tank)")
     assert custom_id_for(response, "spec") == f"raid:v1:spec:{event.id}:druid:confirmed"
+
+
+async def test_a_tank_off_their_seat_takes_it_back_from_their_class(
+    post: Post, db: AsyncSession, fake_discord: FakeDiscord
+) -> None:
+    await _setup(post)
+    event = await _create_and_post(post, db)
+    await _save_prefs(post, "1901", "warrior.protection")
+    await post(click(_class_id(event, "tank"), user_id="1901"))
+    await post(click(f"raid:v1:status:{event.id}:tentative", user_id="1901"))
+
+    # Discord sends nothing for a preselected pick, so the tank spec isn't preselected.
+    response = await post(click(_class_id(event, "warrior"), user_id="1901"))
+    assert_ephemeral(response)
+    assert content(response) == raid_copy.spec_prompt("Warrior")
+    assert not any(o.get("default") for o in _options(response))
+    response = await post(click(custom_id_for(response, "spec"), user_id="1901", values=["warrior.protection"]))
+    assert content(response) == raid_copy.signed_up_as("Protection Warrior")
+    row = await _signup_row(db, event, "1901")
+    assert (row.status, row.role, row.spec) == ("confirmed", "tank", "protection")
+
+    # Picking Tank in the class select behaves the same.
+    await post(click(f"raid:v1:status:{event.id}:bench", user_id="1901"))
+    response = await post(click(_class_id(event, "warrior"), user_id="1901"))
+    response = await post(click(custom_id_for(response, "pickclass"), user_id="1901"))
+    response = await post(click(custom_id_for(response, "class"), user_id="1901", values=["tank"]))
+    assert content(response) == raid_copy.TANK_PROMPT
+    assert not any(o.get("default") for o in _options(response))
+    await post(click(custom_id_for(response, "spec"), user_id="1901", values=["warrior.protection"]))
+    row = await _signup_row(db, event, "1901")
+    assert (row.status, row.role, row.spec) == ("confirmed", "tank", "protection")
 
 
 async def test_sign_up_on_an_old_post_asks_for_a_class_with_tank_first(

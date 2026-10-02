@@ -7,11 +7,14 @@ select, which keeps the status you have when you pick (see ``raid_signup``).
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from fastapi import BackgroundTasks
 
 from app.db.session import unit_of_work
+from app.models.wow.wow_raid_event import WowRaidEvent
+from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.repositories.wow import wow_raid_signup_repo
 from app.services.discord import emojis, raid_copy
 from app.services.discord.interaction import (
@@ -35,8 +38,7 @@ async def handle_mine(interaction: Interaction, parsed: RaidCustomId, background
         if context is None:
             return ephemeral_response(raid_copy.NOT_FOUND)
         signups = await wow_raid_signup_repo.list_for_event(db, context.event.id)
-        mine = next((s for s in signups if s.discord_user_id == interaction.user_id), None)
-        return message_response(my_signup_data(context.event, mine, signups, emojis=emojis.current()))
+        return message_response(_card(context.event, signups, interaction.user_id))
 
 
 async def handle_card(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
@@ -51,8 +53,13 @@ async def handle_card(interaction: Interaction, parsed: RaidCustomId, background
             return update_response(
                 roster_data(context.event, signups, context.guild, emojis=emojis.current(), back=True)
             )
-        mine = next((s for s in signups if s.discord_user_id == interaction.user_id), None)
-        return update_response(my_signup_data(context.event, mine, signups, emojis=emojis.current()))
+        return update_response(_card(context.event, signups, interaction.user_id))
+
+
+def _card(event: WowRaidEvent, signups: Sequence[WowRaidSignup], user_id: str) -> dict[str, Any]:
+    """The My sign-up card for *user_id*."""
+    mine = next((s for s in signups if s.discord_user_id == user_id), None)
+    return my_signup_data(event, mine, signups, emojis=emojis.current())
 
 
 async def handle_change(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
@@ -67,7 +74,7 @@ async def handle_change(interaction: Interaction, parsed: RaidCustomId, backgrou
             return update_text_response(raid_copy.NOT_SIGNED_UP)
         # The menus carry ``same``: you keep the status you have when you pick.
         if mine.wow_class not in CLASSES_BY_KEY:
-            return update_response(class_picker_data(context.event, SAME_STATUS, emojis=emojis.current()))
+            return update_response(class_picker_data(context.event, SAME_STATUS, emojis=emojis.current(), back=True))
         current = spec_info(mine.wow_class, mine.spec)
         return update_response(
             spec_picker_data(

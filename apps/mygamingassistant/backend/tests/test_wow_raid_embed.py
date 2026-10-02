@@ -316,6 +316,16 @@ def test_title_override_and_guild_timezone() -> None:
     assert lines[2].startswith("Server time: Sun 9:00 AM JST")
 
 
+def test_names_never_become_headings_lists_or_links() -> None:
+    assert escape_name("# Big") == r"\# Big"
+    assert escape_name("-# small") == r"\-# small"
+    assert escape_name("+ item") == r"\+ item"
+    assert escape_name("1. first") == r"1\. first"
+    assert escape_name("> quote") == r"\> quote"
+    assert escape_name("see https://x.example") == "see https:​//x.example"
+    assert escape_name("Mid#dle-name 2.") == "Mid#dle-name 2."  # only a line's start is markdown
+
+
 def test_helpers() -> None:
     assert escape_name("a*b_c~d`e|f>g[h]") == r"a\*b\_c\~d\`e\|f\>g\[h\]"
     assert escape_name("x" * 50) == "x" * 31 + "…"
@@ -324,7 +334,7 @@ def test_helpers() -> None:
     assert server_time_label(_STARTS + timedelta(hours=15), "Europe/London") == "Sun 4:00 PM BST"
     summary = compute_roster_summary(_mixed_signups(), size_cap=40)
     assert seats_label(summary) == "2/40 confirmed (1 late) · 1 in queue"
-    assert status_heading("queued", "Queued", 3) == "Queued (3) · waiting for a seat"
+    assert status_heading("bench", "Bench", 3) == "Bench (3) · backups"
     assert status_heading("tentative", "Tentative", 1) == "Tentative (1)"
     assert column_heading("none", 2, _ALL_ICONS) == "No class yet (2)"
     assert column_heading("tank", 2, EMPTY_EMOJIS) == "Tanks (2)"
@@ -451,7 +461,7 @@ def test_forty_markdown_heavy_names_mixed_statuses_stays_within_limits() -> None
     _assert_within_limits(embed)
 
 
-@pytest.mark.parametrize("count", [1, 10, 25, 40, 120, 400])
+@pytest.mark.parametrize("count", [1, 10, 25, 40, 120, 400, 1000])
 def test_any_roster_size_fits(count: int) -> None:
     statuses = ["confirmed", "confirmed", "tentative", "late", "bench", "queued", "absence"]
     signups = []
@@ -465,7 +475,7 @@ def test_any_roster_size_fits(count: int) -> None:
     _assert_within_limits(embed)
 
 
-@pytest.mark.parametrize("count", [40, 120, 400])
+@pytest.mark.parametrize("count", [40, 120, 400, 1000])
 def test_rosters_with_icons_stay_within_limits(count: int) -> None:
     # Each icon is ~45 chars of <:name:id> markup — the degradation ladder must absorb it.
     statuses = ["confirmed", "confirmed", "tentative", "late", "bench", "queued", "absence"]
