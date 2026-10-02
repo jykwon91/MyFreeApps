@@ -1,16 +1,24 @@
 import type { ChecklistItem } from "@/games/wow-forever/data/guide/guideTypes";
-import type { BandTips, ClassGoldTips, GatheringTip, GoldTip } from "@/games/wow-forever/data/gold/goldTypes";
+import {
+  LEVEL_BAND,
+  type BandTips,
+  type ClassGoldTips,
+  type GatheringTip,
+  type GoldTip,
+  type LevelBand,
+} from "@/games/wow-forever/data/gold/goldTypes";
 
 /**
  * Making gold in Forever. Classic Era advice unless a tip says otherwise —
- * no prices: Forever's economy starts fresh at launch.
+ * no auction-house prices: Forever's economy starts fresh at launch. Where
+ * to farm (with vendor-price numbers) is generated: see `gold/goldFarms.ts`.
  *
  * AFTER LAUNCH (2026-11-04): re-check every `confidence: "unknown"` tip and
  * the Forever-only ones, then update `GOLD_DATA_STATUS`.
  */
 export const GOLD_DATA_STATUS = {
   stage: "Pre-launch",
-  checkedOn: "2026-10-01",
+  checkedOn: "2026-10-02",
 } as const;
 
 export const BAND_TIPS: readonly BandTips[] = [
@@ -19,35 +27,44 @@ export const BAND_TIPS: readonly BandTips[] = [
     label: "Levels 1–20",
     top: [
       {
-        id: "two-gathering",
-        title: "Take two gathering professions",
-        detail: "Skinning, Mining or Herbalism cost nothing to level and everything you pick up sells. Skin every beast you kill.",
+        id: "loot-everything",
+        title: "Quest, and loot every mob you kill",
+        detail:
+          "At this level most of your gold is quest rewards and what mobs drop. Never skip a corpse — grey junk is the vendor money that pays for your spells.",
         confidence: "classic",
       },
       {
-        id: "sell-trade-goods",
-        title: "Sell trade goods at the auction house, not the vendor",
-        detail: "Cloth, leather, ore, bars and herbs sell to players for far more than a vendor pays. Grey items are the only things to vendor without thinking.",
+        id: "skinning-plus-one",
+        title: "Take Skinning, plus Mining or Herbalism",
+        detail:
+          "Skinning pays from the first beast you kill, with no detour. Gather the ore or herbs you pass on the way to quests — don't go out of your way for them yet.",
         confidence: "classic",
       },
       {
-        id: "quest-dont-grind",
-        title: "Quest instead of grinding",
-        detail: "Quest gold and quest rewards you can sell beat killing mobs for drops at this level — and you level faster.",
+        id: "keep-cloth-leather",
+        title: "Keep cloth, leather, ore and herbs — vendor everything else",
+        detail:
+          "Linen and Wool Cloth, leather, ore and herbs sell to other players for more than a vendor pays. Grey items and white weapons and armour go straight to the vendor.",
         confidence: "classic",
       },
     ],
     more: [
       {
-        id: "keep-cloth",
-        title: "Keep linen and wool if you'll level First Aid or Tailoring",
-        detail: "Otherwise sell it — new characters always need cloth.",
+        id: "sell-every-town",
+        title: "Empty your bags in every town you hand quests in",
+        detail: "Sell junk whenever you pass a vendor so a full bag never makes you stop looting.",
+        confidence: "classic",
+      },
+      {
+        id: "bags-first",
+        title: "Bags before anything else you buy",
+        detail: "Every slot is more loot per trip. Buy bags, or ask a tailor, before gear upgrades.",
         confidence: "classic",
       },
       {
         id: "skip-ranks",
         title: "Don't buy spell ranks you won't use",
-        detail: "Training every rank of every spell adds up. Skip ranks of spells you don't cast while leveling.",
+        detail: "Train the ranks of the spells you actually cast while leveling; skip the rest until you need them.",
         confidence: "classic",
       },
       {
@@ -55,12 +72,6 @@ export const BAND_TIPS: readonly BandTips[] = [
         title: "Eat cooked food before you fight",
         detail: "Forever's Well Fed buff also gives +5% experience from kills — faster leveling means more gold per hour.",
         confidence: "forever",
-      },
-      {
-        id: "small-bags",
-        title: "Small bags sell",
-        detail: "Linen and Woolen bags from Tailoring, and bags that drop, always find a buyer — everyone needs bag space early.",
-        confidence: "classic",
       },
     ],
   },
@@ -71,33 +82,35 @@ export const BAND_TIPS: readonly BandTips[] = [
       {
         id: "save-for-mount",
         title: "Save for your first mount",
-        detail: "In Classic, riding at 40 is the biggest cost of leveling. Forever hasn't published its mount level or price yet — save anyway.",
+        detail:
+          "In Classic, riding is the biggest cost of leveling. Forever hasn't published its mount level or price yet — don't spend on auction-house gear you'll replace in a few levels.",
         confidence: "unknown",
       },
       {
-        id: "mid-mats",
-        title: "Gather what's in demand",
-        detail: "Iron Ore, Mithril Ore, Liferoot and Kingsblood sell well — crafters leveling their professions need them in bulk.",
+        id: "humanoids-or-beasts",
+        title: "Humanoids for cloth, beasts if you skin",
+        detail:
+          "Humanoids drop coin and cloth; beasts drop no coin, but their junk vendors well and you can skin them. The farm list below shows both — tick Skinning to see what it adds.",
         confidence: "classic",
       },
       {
         id: "check-greens",
-        title: "Check the auction house before you vendor a green",
-        detail: "Some green weapons and armour sell for many times their vendor price. Look before you sell.",
+        title: "Keep greens until you've seen the auction house",
+        detail: "Some green weapons and armour sell to players for many times their vendor price. Look before you sell.",
         confidence: "classic",
       },
     ],
     more: [
       {
         id: "elemental-pearls",
-        title: "Keep Elemental Earth and pearls",
-        detail: "Elementals and drops like Iridescent and Black Pearls sell to crafters.",
+        title: "Keep elementals and pearls",
+        detail: "Elemental Earth, Fire and Water, and Iridescent and Black Pearls, sell to crafters.",
         confidence: "classic",
       },
       {
         id: "repairs",
         title: "Avoid big repair bills",
-        detail: "Dying repeatedly costs real gold at this level. Pull carefully and use bandages and food.",
+        detail: "Every death costs repairs. Farm mobs at or below your level, not above it.",
         confidence: "classic",
       },
       {
@@ -113,21 +126,22 @@ export const BAND_TIPS: readonly BandTips[] = [
     label: "Levels 40–60",
     top: [
       {
-        id: "late-mats",
-        title: "Farm high-end materials",
-        detail: "Runecloth, Thorium Ore, Arcane Crystals and Black Lotus are what every max-level crafter and raider needs.",
+        id: "late-cloth",
+        title: "Farm humanoids for Mageweave, then Runecloth",
+        detail:
+          "Every max-level crafter needs Runecloth, and it drops from humanoids from about level 50. Switch the farm list below to Most cloth to find the camps.",
         confidence: "classic",
       },
       {
         id: "elementals",
-        title: "Collect elementals",
-        detail: "Essence of Fire, Earth, Water and Air sell steadily for crafting and raid gear.",
+        title: "Keep every elemental and Felcloth",
+        detail: "Essences, Elemental Fire and Felcloth sell steadily for crafting and raid gear.",
         confidence: "classic",
       },
       {
         id: "disenchant",
-        title: "Disenchant dungeon greens",
-        detail: "If you or a friend are an enchanter, dusts and essences from dungeon greens often sell for more than the item.",
+        title: "Keep dungeon blues and greens to check",
+        detail: "Some sell to players; an enchanter turns the rest into dust and essences that often sell for more.",
         confidence: "classic",
       },
     ],
@@ -147,12 +161,20 @@ export const BAND_TIPS: readonly BandTips[] = [
       {
         id: "new-zones",
         title: "New Forever zones",
-        detail: "What sells from Forever's new zones isn't known until people play them.",
+        detail: "Forever's new zones aren't in the farm list — what drops there isn't known until people play them.",
         confidence: "unknown",
       },
     ],
   },
 ];
+
+/** The tips for a level; no level = the start. */
+export function tipsForLevel(level: number | null): BandTips {
+  let band: LevelBand = LEVEL_BAND.early;
+  if (level !== null && level >= 40) band = LEVEL_BAND.late;
+  else if (level !== null && level >= 20) band = LEVEL_BAND.mid;
+  return BAND_TIPS.find((b) => b.band === band) ?? BAND_TIPS[0];
+}
 
 export const CLASS_GOLD_TIPS: readonly ClassGoldTips[] = [
   {
@@ -176,15 +198,34 @@ export const CLASS_GOLD_TIPS: readonly ClassGoldTips[] = [
     classId: "warlock",
     tips: [
       {
-        id: "warlock-drain",
-        title: "Let your pet tank and drain",
-        detail: "Warlocks lose little health and mana between fights, so they farm with almost no downtime or repair bills.",
+        id: "warlock-dots",
+        title: "DoT a pack, Drain Life the last one",
+        detail:
+          "Corruption and Curse of Agony on two or three mobs, your pet on another, then Drain Life to finish. You hardly stop between fights, so you kill more an hour than most classes.",
+        confidence: "classic",
+      },
+      {
+        id: "warlock-life-tap",
+        title: "Life Tap instead of drinking",
+        detail: "Life Tap turns health into mana and Drain Life puts it back — you buy almost no food or water, and that's gold you keep.",
+        confidence: "classic",
+      },
+      {
+        id: "warlock-soul-pouch",
+        title: "Get a Soul Pouch",
+        detail: "Soul Shards fill your bags. A Soul Pouch (made by tailors) holds them, freeing your bags for loot.",
+        confidence: "classic",
+      },
+      {
+        id: "warlock-felcloth",
+        title: "Felcloth from satyrs in Felwood",
+        detail: "From level 48, Felwood's satyrs drop Felcloth, which tailors and warlocks' own patterns need. Keep every piece.",
         confidence: "classic",
       },
       {
         id: "warlock-summon",
         title: "Summon players for tips",
-        detail: "Ritual of Summoning brings players to a dungeon or meeting stone — many tip for it.",
+        detail: "Ritual of Summoning needs two party members to help, so it's for when you're grouped, not farming alone.",
         confidence: "classic",
       },
     ],
@@ -195,7 +236,7 @@ export const CLASS_GOLD_TIPS: readonly ClassGoldTips[] = [
       {
         id: "rogue-pickpocket",
         title: "Pick pockets before you kill",
-        detail: "Humanoids drop extra coin and lockboxes when pickpocketed.",
+        detail: "Humanoids drop extra coin and lockboxes when pickpocketed — farm humanoid camps, not beasts.",
         confidence: "classic",
       },
       {
@@ -218,7 +259,7 @@ export const CLASS_GOLD_TIPS: readonly ClassGoldTips[] = [
       {
         id: "hunter-skinning",
         title: "Pair it with Skinning",
-        detail: "You kill beasts all day anyway — skin every one.",
+        detail: "You kill beasts all day anyway — skin every one, and tick Skinning in the farm list.",
         confidence: "classic",
       },
     ],
@@ -287,16 +328,23 @@ export const GATHERING_TIPS: readonly GatheringTip[] = [
 ];
 
 export const SELL_ITEMS: readonly GoldTip[] = [
-  { id: "sell-mats", title: "Crafting materials", detail: "Cloth, leather, ore, bars, herbs, elementals.", confidence: "classic" },
+  { id: "sell-cloth", title: "Every kind of cloth", detail: "Linen, Wool, Silk, Mageweave, Runecloth, Felcloth.", confidence: "classic" },
+  { id: "sell-mats", title: "Leather, ore, bars, herbs", detail: "Whatever your gathering profession brings in.", confidence: "classic" },
+  {
+    id: "sell-elementals",
+    title: "Elementals and pearls",
+    detail: "Elemental Earth, Fire, Water and Air; essences; Iridescent and Black Pearls.",
+    confidence: "classic",
+  },
   { id: "sell-recipes", title: "Recipes", detail: "Patterns, plans and formulas you can't use.", confidence: "classic" },
-  { id: "sell-greens", title: "Good greens and blues", detail: "Check the auction house first.", confidence: "classic" },
-  { id: "sell-bags", title: "Bags", detail: "Every new character needs them.", confidence: "classic" },
+  { id: "sell-greens", title: "Greens from level 20, and blues", detail: "Check the auction house first.", confidence: "classic" },
 ];
 
 export const VENDOR_ITEMS: readonly GoldTip[] = [
-  { id: "vendor-greys", title: "Grey items", detail: "Junk — vendor all of it.", confidence: "classic" },
-  { id: "vendor-cheap-greens", title: "Greens nobody buys", detail: "If the auction house has many unsold for less than vendor price, vendor yours.", confidence: "classic" },
-  { id: "vendor-food", title: "Low-level food and water", detail: "Rarely worth an auction-house deposit.", confidence: "classic" },
+  { id: "vendor-greys", title: "Grey items", detail: "Junk — vendor all of it, every time you pass a vendor.", confidence: "classic" },
+  { id: "vendor-whites", title: "White weapons and armour", detail: "Players don't buy them; the vendor does.", confidence: "classic" },
+  { id: "vendor-low-greens", title: "Greens under level 20", detail: "Rarely worth an auction-house deposit.", confidence: "classic" },
+  { id: "vendor-food", title: "Low-level food and water", detail: "Vendor what you won't eat.", confidence: "classic" },
 ];
 
 export const AH_BASICS: readonly string[] = [
@@ -316,6 +364,11 @@ export const GOLD_DONT_DO: readonly ChecklistItem[] = [
     id: "no-blind-vendoring",
     title: "Don't vendor greens without checking",
     detail: "Some sell for many times the vendor price.",
+  },
+  {
+    id: "no-elites",
+    title: "Don't farm elites, rares or dungeons alone for gold",
+    detail: "They're slow and you die; repairs eat the profit. Ordinary mobs in packs, at or below your level, pay best.",
   },
   {
     id: "no-dropping-profession",

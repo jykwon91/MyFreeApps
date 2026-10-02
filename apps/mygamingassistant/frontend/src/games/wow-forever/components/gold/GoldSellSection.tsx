@@ -5,10 +5,10 @@ import { AH_BASICS, SELL_ITEMS, VENDOR_ITEMS } from "@/games/wow-forever/data/go
 /** What to put on the auction house, what to vendor, and how to post. */
 export default function GoldSellSection() {
   return (
-    <GuideSection id="sell" title="Sell or vendor?">
+    <GuideSection id="sell" title="Keep or vendor?" intro="Keep means sell it to players at the auction house, or hold it until you can.">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <h3 className="font-semibold">Auction house</h3>
+          <h3 className="font-semibold">Keep</h3>
           <GoldTipList tips={SELL_ITEMS} />
         </div>
         <div className="space-y-2">

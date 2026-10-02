@@ -16,9 +16,8 @@ export interface GoldTip {
   confidence: GoldConfidence;
 }
 
-export const GOLD_BAND = { early: "1-20", mid: "20-40", late: "40-60", all: "all" } as const;
-export type GoldBand = (typeof GOLD_BAND)[keyof typeof GOLD_BAND];
-export type LevelBand = Exclude<GoldBand, "all">;
+export const LEVEL_BAND = { early: "1-20", mid: "20-40", late: "40-60" } as const;
+export type LevelBand = (typeof LEVEL_BAND)[keyof typeof LEVEL_BAND];
 
 export interface BandTips {
   band: LevelBand;

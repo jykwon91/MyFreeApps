@@ -1,29 +1,37 @@
 import { useState } from "react";
 import { AlertBox } from "@platform/ui";
-import GoldBandSection from "@/games/wow-forever/components/gold/GoldBandSection";
 import GoldClassSection from "@/games/wow-forever/components/gold/GoldClassSection";
 import GoldDontDoSection from "@/games/wow-forever/components/gold/GoldDontDoSection";
+import GoldFarmSection from "@/games/wow-forever/components/gold/GoldFarmSection";
 import GoldGatheringSection from "@/games/wow-forever/components/gold/GoldGatheringSection";
+import GoldPlanSection from "@/games/wow-forever/components/gold/GoldPlanSection";
 import GoldSellSection from "@/games/wow-forever/components/gold/GoldSellSection";
 import GuideSectionNav from "@/games/wow-forever/components/guide/GuideSectionNav";
+import NumberField from "@/games/wow-forever/components/shared/NumberField";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import { GOLD_DATA_STATUS } from "@/games/wow-forever/data/gold/goldTips";
-import { useGoldBand } from "@/games/wow-forever/hooks/useGoldBand";
-import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
+import { MAX_LEVEL, usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 
 const SECTIONS = [
-  { id: "now", label: "Right now" },
+  { id: "now", label: "Your plan" },
+  { id: "farm", label: "Where to farm" },
   { id: "class", label: "Your class" },
   { id: "gathering", label: "Gathering" },
-  { id: "sell", label: "Sell or vendor" },
+  { id: "sell", label: "Keep or vendor" },
   { id: "dont", label: "Things not to do" },
 ] as const;
 
-/** /wow-forever/gold — how to make gold while leveling, by level and class. */
+/** A whole level from 1 to 60, or nothing. */
+function playerLevel(value: number | null): number | null {
+  if (value === null) return null;
+  const level = Math.round(value);
+  return level >= 1 && level <= MAX_LEVEL ? level : null;
+}
+
+/** /wow-forever/gold — how to make gold while leveling: a plan, where to farm, and what to keep. */
 export default function WowGoldPage() {
   const [player, updatePlayer] = usePlayerSettings();
   const [showAllClasses, setShowAllClasses] = useState(false);
-  const [band, setBand] = useGoldBand(player.level);
   return (
     <main className="p-4 sm:p-8 space-y-8 max-w-4xl">
       <WowPageHeader
@@ -33,12 +41,21 @@ export default function WowGoldPage() {
         backLabel="Back to WoW Forever"
       />
       <AlertBox variant="info">
-        No prices here: Forever's economy starts fresh at launch, so what sells for how much isn't known yet. Tips
-        are from Classic unless marked <span className="font-medium">Forever</span> (published for Forever) or{" "}
+        Gold figures are vendor prices from Classic's loot tables — the floor, which holds on a new realm before anyone
+        knows what sells. Auction-house prices aren't known until Forever launches. Tips are from Classic unless marked{" "}
+        <span className="font-medium">Forever</span> (published for Forever) or{" "}
         <span className="font-medium">Unconfirmed</span> (not known yet).
       </AlertBox>
+      <NumberField
+        label="Your level"
+        value={player.level}
+        min={1}
+        onChange={(level) => updatePlayer({ level: playerLevel(level) })}
+        className="flex flex-col gap-1 w-32"
+      />
       <GuideSectionNav sections={SECTIONS} />
-      <GoldBandSection band={band} onBandChange={setBand} />
+      <GoldPlanSection level={player.level} />
+      <GoldFarmSection level={player.level} />
       <GoldClassSection
         classId={player.classId}
         showAll={showAllClasses}
