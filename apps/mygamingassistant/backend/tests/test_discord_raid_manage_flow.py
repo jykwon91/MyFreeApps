@@ -9,6 +9,8 @@ tests start from are written straight to the repository.
 from __future__ import annotations
 
 import json
+import uuid
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import pytest
@@ -16,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_signup import WowRaidSignup
-from app.repositories.wow import wow_raid_signup_repo
+from app.repositories.wow import wow_raid_guild_repo, wow_raid_signup_repo
 from app.services.discord import raid_copy, raid_manage_copy
 from app.services.discord.interaction import UNKNOWN_PLAYER
 from app.services.wow.raid_catalog import spec_info
@@ -43,6 +45,8 @@ pytestmark = pytest.mark.asyncio
 
 _BOB = "300000000000000001"
 _CY = "300000000000000003"
+_DI = "300000000000000004"
+_EARLY = datetime(2026, 1, 1, tzinfo=timezone.utc)
 _HASH = "0123456789abcdef0123456789abcdef"
 _LINK = f"https://discord.com/channels/{GUILD}/{CHANNEL}/m1"
 _RAID = "Onyxia's Lair"
@@ -91,6 +95,14 @@ async def _row(db: AsyncSession, event: WowRaidEvent, user_id: str) -> WowRaidSi
     if row is not None:
         await db.refresh(row)
     return row
+
+
+async def _place_in_line(db: AsyncSession, event: WowRaidEvent, user_id: str, when: datetime) -> None:
+    """Date *user_id*'s sign-up *when* (the order every list goes by)."""
+    row = await _row(db, event, user_id)
+    assert row is not None
+    row.signed_up_at = when
+    await db.flush()
 
 
 def _ml(event: WowRaidEvent, verb: str, member: str = "-", arg: str = "-") -> str:
@@ -214,7 +226,9 @@ async def test_a_leader_adds_a_player_and_tells_them(post: Post, db: AsyncSessio
     )
     (dm,) = fake_discord.dms_to(_BOB)
     assert dm.body == {
-        "content": raid_manage_copy.added_dm(ORGANISER, _RAID, _unix(event), "Fury Warrior", None, _LINK),
+        "content": raid_manage_copy.added_dm(
+            ORGANISER, _RAID, _unix(event), "Fury Warrior", None, _LINK, signups_open=True
+        ),
         "allowed_mentions": {"parse": []},
     }
     assert "Bob" in _post_now(fake_discord)
@@ -252,7 +266,9 @@ async def test_adding_to_a_full_raid_queues_the_player(post: Post, db: AsyncSess
     assert bob is not None and bob.status == "queued"
     (dm,) = fake_discord.dms_to(_BOB)
     assert dm.body is not None
-    assert dm.body["content"] == raid_manage_copy.added_dm(ORGANISER, _RAID, _unix(event), "Fury Warrior", 1, _LINK)
+    assert dm.body["content"] == raid_manage_copy.added_dm(
+        ORGANISER, _RAID, _unix(event), "Fury Warrior", 1, _LINK, signups_open=True
+    )
 
     # --- a queued player switched to another spec keeps their place
     queued_at = bob.signed_up_at
@@ -265,6 +281,29 @@ async def test_adding_to_a_full_raid_queues_the_player(post: Post, db: AsyncSess
     bob = await _row(db, event, _BOB)
     assert bob is not None
     assert (bob.status, bob.spec, bob.signed_up_at) == ("queued", "arms", queued_at)
+
+
+async def test_a_player_back_from_absence_goes_to_the_end_of_the_line(
+    post: Post, db: AsyncSession, fake_discord: FakeDiscord
+) -> None:
+    event = await _raid(post, db, fake_discord)
+    await _sign_up(db, event, _BOB, "Bob", "warrior.fury", status="absence")
+    await _fill(db, event, 5)
+    await _sign_up(db, event, _CY, "Cy", "rogue.combat", status="queued")
+    await _place_in_line(db, event, _BOB, _EARLY)  # Bob signed up before Cy did
+    await _place_in_line(db, event, _CY, _EARLY + timedelta(hours=1))
+
+    card = await post(_pick(event, _BOB, "Bob"))
+    assert _description(card) == raid_manage_copy.absent("**Bob**")
+    specs = await post(_tap(event, "class", _BOB, on=card, values=["warrior"]))
+    review = await post(_tap(event, "spec", _BOB, "warrior", on=specs, values=["warrior.fury"]))
+    assert _description(review).split("\n")[1] == raid_manage_copy.would_queue(2)
+
+    # --- added back: behind Cy, who was already waiting
+    hub = await post(_tap(event, "addq", _BOB, "warrior.fury", on=review))
+    assert _lines(hub)[1] == raid_manage_copy.added_queued("**Bob**", 2)
+    bob = await _row(db, event, _BOB)
+    assert bob is not None and bob.status == "queued"
 
 
 async def test_leaders_may_go_over_a_limit_and_are_told(
@@ -359,6 +398,19 @@ async def test_a_tap_without_its_card_names_the_player_from_discord_then_their_s
     assert _description(card) == "**Bobby** is in as **Frost Mage**."
 
 
+async def test_a_name_discord_wont_give_leaves_the_player_unnamed(
+    post: Post, db: AsyncSession, fake_discord: FakeDiscord
+) -> None:
+    event = await _raid(post, db, fake_discord)
+    fake_discord.fail("GET", f"/guilds/{GUILD}/members/{_BOB}", 404, 10007)
+    hub = await post(_tap(event, "addq", _BOB, "mage.frost"))  # no message came with the tap
+    assert _lines(hub)[1] == f"<@{_BOB}> is in as **Frost Mage**."
+    bob = await _row(db, event, _BOB)
+    assert bob is not None and bob.display_name == UNKNOWN_PLAYER
+    assert len(fake_discord.find("GET", f"/guilds/{GUILD}/members/{_BOB}")) == 1
+    _post_now(fake_discord)  # the post re-rendered all the same
+
+
 # ---------------------------------------------------------------------------
 # Removing
 # ---------------------------------------------------------------------------
@@ -402,6 +454,80 @@ async def test_removing_a_seat_holder_moves_the_queue_up_and_tells_them_both(
     assert promoted.body["content"] == raid_copy.promoted_dm(_RAID, _unix(event), _LINK)
     shown = _post_now(fake_discord)
     assert "Cy" in shown and "Bob" not in shown
+
+
+@pytest.mark.parametrize("status", ["queued", "tentative", "bench"])
+async def test_removing_a_player_without_a_seat_moves_nobody_up(
+    post: Post, db: AsyncSession, fake_discord: FakeDiscord, status: str
+) -> None:
+    event = await _raid(post, db, fake_discord)
+    await _fill(db, event, 5)
+    await _sign_up(db, event, _BOB, "Bob", "warrior.fury", status=status)
+    await _sign_up(db, event, _CY, "Cy", "rogue.combat", status="queued")
+
+    card = await post(_pick(event, _BOB, "Bob"))
+    ask = await post(_tap(event, "ask", _BOB, on=card))
+    assert _description(ask) == "Remove **Bob** (**Fury Warrior**) from this raid?"
+    hub = await post(_tap(event, "dropq", _BOB, on=ask))
+    assert _lines(hub)[1:3] == ["Removed **Bob**.", "**Seats:** 5/5 confirmed · 1 in queue"]
+    assert await _row(db, event, _BOB) is None
+    cy = await _row(db, event, _CY)
+    assert cy is not None and cy.status == "queued"
+    assert fake_discord.find("POST", "/users/@me/channels") == []
+
+
+async def test_a_freed_seat_goes_to_the_first_queued_player_of_its_role(
+    post: Post, db: AsyncSession, fake_discord: FakeDiscord
+) -> None:
+    event = await _raid(post, db, fake_discord)
+    await _sign_up(db, event, _BOB, "Bob", "warrior.fury")
+    await _fill(db, event, 4)
+    await _sign_up(db, event, _CY, "Cy", "priest.holy", status="queued")  # first in line, but a healer
+    await _sign_up(db, event, _DI, "Di", "rogue.combat", status="queued")
+    response = await post(command("raid", "prefs", user_id=_DI, permissions=0, dm_reminders=False))
+    assert "Saved." in content(response)
+    fake_discord.clear()
+
+    card = await post(_pick(event, _BOB, "Bob"))
+    ask = await post(_tap(event, "ask", _BOB, on=card))
+    hub = await post(_tap(event, "dropt", _BOB, on=ask))
+    assert _lines(hub)[1] == "Removed **Bob**. **Di** moved up from the queue."
+    di = await _row(db, event, _DI)
+    cy = await _row(db, event, _CY)
+    assert di is not None and di.status == "confirmed"
+    assert cy is not None and cy.status == "queued"
+    # Bob is told; Di turned DM reminders off, so isn't.
+    assert len(fake_discord.dms_to(_BOB)) == 1
+    assert fake_discord.dms_to(_DI) == []
+    assert fake_discord.dms_to(_CY) == []
+
+
+async def test_once_sign_ups_close_the_dms_point_players_at_the_leader(
+    post: Post, db: AsyncSession, fake_discord: FakeDiscord
+) -> None:
+    """The post's Absence button no longer works then."""
+    event = await _raid(post, db, fake_discord)
+    await _fill(db, event, 4)
+    event.closed_at = datetime.now(timezone.utc)
+    await db.flush()
+
+    review = await _review(post, event, _BOB, "Bob", "warrior.fury")
+    await post(_tap(event, "addt", _BOB, "warrior.fury", on=review))
+    (added,) = fake_discord.dms_to(_BOB)
+    assert added.body is not None
+    assert added.body["content"] == raid_manage_copy.added_dm(
+        ORGANISER, _RAID, _unix(event), "Fury Warrior", None, _LINK, signups_open=False
+    )
+
+    # --- Cy queued, then Bob's seat freed: Cy's DM points at the leader too
+    review = await _review(post, event, _CY, "Cy", "rogue.combat")
+    await post(_tap(event, "addq", _CY, "rogue.combat", on=review))
+    card = await post(_pick(event, _BOB, "Bob"))
+    ask = await post(_tap(event, "ask", _BOB, on=card))
+    await post(_tap(event, "dropq", _BOB, on=ask))
+    (promoted,) = fake_discord.dms_to(_CY)
+    assert promoted.body is not None
+    assert promoted.body["content"] == raid_copy.promoted_dm(_RAID, _unix(event), _LINK, ask_leader=ORGANISER)
 
 
 async def test_a_card_left_open_acts_on_the_raid_as_it_is_now(
@@ -463,5 +589,50 @@ async def test_only_the_raids_leader_manages_and_only_while_it_is_on(
     for verb, picked, arg in (("open", "-", "-"), ("addq", _BOB, "mage.frost")):
         response = await post(_tap(event, verb, picked, arg))
         assert (content(response), custom_ids(response)) == (raid_manage_copy.GONE, [])
+    assert await _row(db, event, _BOB) is None
+    assert fake_discord.calls == []
+
+
+async def test_the_raids_leader_needs_no_manage_events_until_it_is_handed_on(
+    post: Post, db: AsyncSession, fake_discord: FakeDiscord
+) -> None:
+    event = await _raid(post, db, fake_discord)
+    # The organiser created the raid, so leads it.
+    hub = await post(_tap(event, "open", permissions=0))
+    assert _lines(hub)[-1] == raid_manage_copy.HUB_PROMPT
+    card = await post(_pick(event, _BOB, "Bob", permissions=0))
+    hub = await post(_tap(event, "addq", _BOB, "mage.frost", on=card, permissions=0))
+    assert _lines(hub)[1] == "**Bob** is in as **Frost Mage**."
+
+    # --- handed to Cy: the organiser no longer gets in; Cy does
+    event.leader_user_id = _CY
+    await db.flush()
+    response = await post(_tap(event, "open", permissions=0))
+    assert (content(response), custom_ids(response)) == (raid_copy.NOT_LEADER, [])
+    hub = await post(_tap(event, "open", user_id=_CY, permissions=0))
+    assert _lines(hub)[-1] == raid_manage_copy.HUB_PROMPT
+
+
+async def test_a_raid_that_isnt_this_servers_or_isnt_up_yet_is_not_found(
+    post: Post, db: AsyncSession, fake_discord: FakeDiscord
+) -> None:
+    event = await _raid(post, db, fake_discord)
+    response = await post(click(f"raid:v1:ml:{uuid.uuid4()}:open:-:-", user_id=ORGANISER, permissions=ORGANISER_PERMS))
+    assert (content(response), custom_ids(response)) == (raid_copy.NOT_FOUND, [])
+
+    # --- a draft
+    event.status = "draft"
+    await db.flush()
+    response = await post(_tap(event, "open"))
+    assert (content(response), custom_ids(response)) == (raid_copy.NOT_FOUND, [])
+
+    # --- another server's raid
+    other = await wow_raid_guild_repo.upsert_config(db, discord_guild_id="800000000000000002")
+    event.status = "scheduled"
+    event.guild_id = other.id
+    await db.flush()
+    for verb, picked, arg in (("open", "-", "-"), ("addq", _BOB, "mage.frost")):
+        response = await post(_tap(event, verb, picked, arg))
+        assert (content(response), custom_ids(response)) == (raid_copy.NOT_FOUND, [])
     assert await _row(db, event, _BOB) is None
     assert fake_discord.calls == []

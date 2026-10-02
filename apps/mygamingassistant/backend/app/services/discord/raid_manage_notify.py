@@ -18,6 +18,7 @@ from app.db.session import unit_of_work
 from app.repositories.wow import wow_raid_event_repo, wow_raid_guild_repo, wow_raid_signup_repo
 from app.services.discord import raid_manage_copy, raid_publisher, rest
 from app.services.discord.interaction import UNKNOWN_PLAYER, member_display_name
+from app.services.discord.raid_context import signup_refusal, utcnow
 from app.services.discord.raid_views import unix
 from app.services.wow.raid_text import title_text
 
@@ -42,9 +43,12 @@ class ManageDm:
 
 @dataclass(frozen=True)
 class _Raid:
+    """*signups_open*: members can still change their own sign-up (the post's buttons work)."""
+
     title: str
     starts_unix: int
     link: str | None
+    signups_open: bool
 
 
 async def notify_added(dm: ManageDm, label: str, queue_position: int | None) -> None:
@@ -54,7 +58,7 @@ async def notify_added(dm: ManageDm, label: str, queue_position: int | None) -> 
         if raid is None:
             return
         content = raid_manage_copy.added_dm(
-            dm.leader_id, raid.title, raid.starts_unix, label, queue_position, raid.link
+            dm.leader_id, raid.title, raid.starts_unix, label, queue_position, raid.link, signups_open=raid.signups_open
         )
         await _send(dm, content)
     except Exception:
@@ -106,7 +110,8 @@ async def _load_raid(event_id: uuid.UUID) -> _Raid | None:
         if guild is None:
             return None
         link = raid_publisher.event_link(guild.discord_guild_id, event)
-        return _Raid(title=title_text(event), starts_unix=unix(event.starts_at), link=link)
+        signups_open = signup_refusal(event, utcnow()) is None
+        return _Raid(title=title_text(event), starts_unix=unix(event.starts_at), link=link, signups_open=signups_open)
 
 
 async def _send(dm: ManageDm, content: str) -> None:

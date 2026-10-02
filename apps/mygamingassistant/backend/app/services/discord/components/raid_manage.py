@@ -200,17 +200,21 @@ async def _spec(
             role=spec.raid_role,
             spec=spec.key,
         )
+        changed = change.outcome == "changed"
         notice = raid_manage_copy.unchanged(target.who, spec.full_label)
-        if change.outcome == "changed":
+        if changed:
             notice = raid_manage_copy.switched(target.who, spec.full_label)
             if hit is not None:
                 notice = f"{notice}\n{raid_manage_copy.switched_over(hit)}"
-            promoted = await raid_event_service.dm_recipients(db, guild=found.guild, user_ids=change.promoted)
-            background.add_task(raid_publisher.refresh_public_message, event_id)
-            background.add_task(raid_publisher.notify_promoted, event_id, promoted)
-            _log("switched", interaction, event_id, member, spec.full_label)
+        promoted = await raid_event_service.dm_recipients(db, guild=found.guild, user_ids=change.promoted)
         signups = await wow_raid_signup_repo.list_for_event(db, event_id)
-        return update_response(player_data(event, target, signups, emojis=emojis.current(), notice=notice))
+        card = player_data(event, target, signups, emojis=emojis.current(), notice=notice)
+
+    if changed:
+        background.add_task(raid_publisher.refresh_public_message, event_id)
+        background.add_task(raid_publisher.notify_promoted, event_id, promoted)
+        _log("switched", interaction, event_id, member, spec.full_label)
+    return update_response(card)
 
 
 async def _add(

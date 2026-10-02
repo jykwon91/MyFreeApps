@@ -168,12 +168,27 @@ def removed(who: str, moved_up: Sequence[str]) -> str:
 
 
 def added_dm(
-    leader_id: str, raid_label: str, unix: int, label: str, queue_position: int | None, link: str | None
+    leader_id: str,
+    raid_label: str,
+    unix: int,
+    label: str,
+    queue_position: int | None,
+    link: str | None,
+    *,
+    signups_open: bool,
 ) -> str:
-    """The leader shows as a mention: tappable, and nobody is pinged in a DM."""
+    """The leader shows as a mention: tappable, and nobody is pinged in a DM.
+
+    Once sign-ups close (or the raid starts) the post's Absence button no
+    longer works, so a player who can't come is sent to the leader.
+    """
     text = f"<@{leader_id}> added you to **{raid_label}** (<t:{unix}:F>, <t:{unix}:R>) as **{label}**. "
     if queue_position is None:
-        text += "You have a seat. Can't make it? Tap **Absence** on the raid post."
+        text += "You have a seat. Can't make it? "
+        if signups_open:
+            text += "Tap **Absence** on the raid post."
+        else:
+            text += f"Let <@{leader_id}> know."
     else:
         place = queue_place(queue_position)
         text += f"The raid is full, so you're **{place}**. I'll move you up automatically when a seat opens."

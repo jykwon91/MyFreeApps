@@ -1,4 +1,4 @@
-"""Unit tests for app.services.discord.raid_manage_views — Manage sign-ups' cards — and their copy.
+"""Unit tests for app.services.discord.raid_manage_views — Manage sign-ups' cards — their copy and verbs.
 
 Pure: no DB, no Discord.
 """
@@ -13,7 +13,8 @@ from platform_shared.services.discord import EMPTY_EMOJIS
 
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_signup import WowRaidSignup
-from app.services.discord import raid_manage_copy
+from app.services.discord import raid_copy, raid_manage_copy
+from app.services.discord.components import raid_manage
 from app.services.discord.raid_copy import TANK_SPEC_NOTE
 from app.services.discord.raid_limit_copy import spec_mark
 from app.services.discord.raid_manage_views import (
@@ -26,6 +27,7 @@ from app.services.discord.raid_manage_views import (
     spec_data,
 )
 from app.services.wow.raid_catalog import TANK_COLUMN, spec_info
+from app.services.wow.raid_custom_id import MANAGE_VERBS
 from app.services.wow.raid_embed import COLOR_CLOSED, COLOR_OPEN
 from app.services.wow.raid_limits import LimitHit
 
@@ -373,12 +375,35 @@ def test_removed_names_everyone_who_moved_up() -> None:
 
 def test_the_added_dm_gives_the_seat_or_the_queue_place_and_the_post() -> None:
     link = "https://discord.com/channels/1/2/3"
-    assert raid_manage_copy.added_dm("42", "Onyxia's Lair", 100, "Fury Warrior", None, link) == (
+    assert raid_manage_copy.added_dm("42", "Onyxia's Lair", 100, "Fury Warrior", None, link, signups_open=True) == (
         "<@42> added you to **Onyxia's Lair** (<t:100:F>, <t:100:R>) as **Fury Warrior**. "
         "You have a seat. Can't make it? Tap **Absence** on the raid post.\n"
         f"[Jump to the raid]({link})"
     )
-    assert raid_manage_copy.added_dm("42", "Onyxia's Lair", 100, "Fury Warrior", 3, None) == (
+    assert raid_manage_copy.added_dm("42", "Onyxia's Lair", 100, "Fury Warrior", 3, None, signups_open=True) == (
         "<@42> added you to **Onyxia's Lair** (<t:100:F>, <t:100:R>) as **Fury Warrior**. "
         "The raid is full, so you're **#3 in the queue**. I'll move you up automatically when a seat opens."
     )
+
+
+def test_once_sign_ups_close_the_dms_send_the_player_to_the_leader() -> None:
+    """The post's Absence button no longer works then."""
+    assert raid_manage_copy.added_dm("42", "Onyxia's Lair", 100, "Fury Warrior", None, None, signups_open=False) == (
+        "<@42> added you to **Onyxia's Lair** (<t:100:F>, <t:100:R>) as **Fury Warrior**. "
+        "You have a seat. Can't make it? Let <@42> know."
+    )
+    assert raid_copy.promoted_dm("Onyxia's Lair", 100, None, ask_leader="42") == (
+        "Good news: a seat opened up in **Onyxia's Lair** (<t:100:F>, <t:100:R>), "
+        "so I've moved you up from the queue. You're confirmed. "
+        "Can't make it any more? Let <@42> know so someone else can have the seat."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Verbs
+# ---------------------------------------------------------------------------
+
+
+def test_every_manage_verb_has_a_handler() -> None:
+    """[Done] is answered by ``handle_manage`` itself."""
+    assert set(raid_manage._VERBS) == set(MANAGE_VERBS) - {"done"}

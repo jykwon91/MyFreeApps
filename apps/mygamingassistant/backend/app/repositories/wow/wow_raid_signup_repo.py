@@ -78,7 +78,7 @@ async def delete(db: AsyncSession, signup: WowRaidSignup) -> None:
 
 
 async def set_display_name(db: AsyncSession, signup: WowRaidSignup, display_name: str) -> None:
-    """Rename a signup without touching its status or ``updated_at`` (a name isn't a sign-up change)."""
+    """Rename a signup; its status and place in the order (``signed_up_at``) stay as they are."""
     signup.display_name = display_name
     await db.flush()
 
