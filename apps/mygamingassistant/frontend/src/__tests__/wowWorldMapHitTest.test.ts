@@ -33,6 +33,14 @@ const DUSKWOOD = 1431;
 const STORMWIND = 1453;
 const ZEPHRAS_ISLE = 2521;
 const DUROTAR = 1411;
+const IRONFORGE = 1455;
+const DUN_MOROGH = 1426;
+const UNDERCITY = 1458;
+const TIRISFAL = 1420;
+const THUNDER_BLUFF = 1456;
+const MULGORE = 1412;
+const DARNASSUS = 1457;
+const TELDRASSIL = 1438;
 
 function map(id: number) {
   const found = data.maps.get(id);
@@ -114,6 +122,19 @@ describe("hit-testing a click", () => {
   it("Kalimdor's zones open from its continent map", () => {
     const { x, y } = onMap(KALIMDOR, DUROTAR, 50, 50);
     expect(hitTestMap(data, KALIMDOR, x, y).target?.id).toBe(DUROTAR);
+  });
+
+  it.each([
+    [STORMWIND, ELWYNN],
+    [IRONFORGE, DUN_MOROGH],
+    [UNDERCITY, TIRISFAL],
+    [THUNDER_BLUFF, MULGORE],
+    [DARNASSUS, TELDRASSIL],
+  ])("a click on capital %i drawn on its zone's map (%i) opens the city", (city, zone) => {
+    const { x, y } = onMap(zone, city, 50, 50);
+    const hit = hitTestMap(data, zone, x, y);
+    expect(hit.kind).toBe(HIT_KIND.goTo);
+    expect(hit.target?.id).toBe(city);
   });
 
   it("open sea is nothing", () => {

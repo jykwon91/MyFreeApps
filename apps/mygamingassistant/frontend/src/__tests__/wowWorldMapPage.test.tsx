@@ -496,21 +496,30 @@ describe("WoW Forever World Map page", () => {
       expect(within(results).getByText(/10 matches — every one is marked on the map/)).toBeInTheDocument();
       // Zoomed out to the continent, with a marker for each trainer.
       expect(screen.getByRole("img", { name: "Eastern Kingdoms map" })).toBeInTheDocument();
-      const markers = screen.getAllByRole("button", { name: /<Warlock Trainer> — Class trainer$/ });
-      expect(markers).toHaveLength(10);
+      // Trainers standing together (three in Ironforge, three in Stormwind) are one numbered marker.
+      const singles = screen.queryAllByRole("button", { name: /<Warlock Trainer> — Class trainer$/ });
+      const clusters = screen.getAllByTestId("marker-cluster");
+      const clustered = clusters.reduce((sum, c) => sum + Number(c.getAttribute("aria-label")?.split(" ")[0]), 0);
+      expect(singles.length + clustered).toBe(10);
+      const ironforge = screen.getByRole("button", { name: /^3 here: .*Briarthorn.*Thistleheart/ });
 
+      // The number opens the map they separate on.
+      await userEvent.click(ironforge);
+      expect(screen.getByRole("img", { name: "Ironforge map" })).toBeInTheDocument();
       // A marker past the first page brings its row into the list.
       await userEvent.click(screen.getByRole("button", { name: /^Thistleheart <Warlock Trainer>/ }));
       expect(within(results).getByRole("article", { name: "Thistleheart" })).toHaveAttribute("aria-current", "true");
 
       await userEvent.click(within(results).getByRole("checkbox", { name: /Include the other faction \(\d+ more\)/ }));
       expect(screen.getByRole("img", { name: "Azeroth map" })).toBeInTheDocument();
-      expect(screen.getAllByRole("button", { name: /<Warlock Trainer> — Class trainer$/ }).length).toBeGreaterThan(10);
+      const everywhere = screen.getAllByTestId("marker-cluster").reduce((sum, c) => sum + Number(c.getAttribute("aria-label")?.split(" ")[0]), 0);
+      expect(screen.queryAllByRole("button", { name: /<Warlock Trainer> — Class trainer$/ }).length + everywhere).toBeGreaterThan(10);
 
       const everyone = screen.getByRole("region", { name: /“warlock trainer” on the map/ });
       await userEvent.click(within(everyone).getByRole("button", { name: "Clear search" }));
       expect(screen.queryByRole("region", { name: /“warlock trainer” on the map/ })).not.toBeInTheDocument();
       expect(screen.queryAllByRole("button", { name: /<Warlock Trainer> — Class trainer$/ })).toHaveLength(0);
+      expect(screen.queryAllByTestId("marker-cluster")).toHaveLength(0);
     });
 
     it("keyboard: arrows + Enter pick a result; Directions routes from your location; swap and close", async () => {

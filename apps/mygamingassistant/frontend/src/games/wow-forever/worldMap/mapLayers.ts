@@ -17,6 +17,8 @@ export interface MapMarker {
   world: WorldPoint;
   label: string;
   className: string;
+  /** The zone the result is in, so a cluster of markers can open the map they separate on. */
+  zoneId?: number;
 }
 
 /** A numbered direction step drawn on the map, reached by `kind` (walk / fly / boat / zeppelin). */
@@ -49,6 +51,8 @@ export interface MapFit {
   mapId: number;
   points: readonly WorldPoint[];
   nonce: number;
+  /** How far the zoom may go to fit them (default: as far as "show on map"). */
+  maxScale?: number;
 }
 
 /**
@@ -74,7 +78,7 @@ export function resultMarkers(model: WorldMapModel, layers: MapLayerChoice): Map
   for (const r of ranked) {
     if (seen.has(r.poi.id)) continue;
     seen.add(r.poi.id);
-    markers.push({ id: r.poi.id, world: r.world, label: poiMarkerLabel(r.poi), className: poiMarkerClass(r.poi) });
+    markers.push({ id: r.poi.id, world: r.world, label: poiMarkerLabel(r.poi), className: poiMarkerClass(r.poi), zoneId: r.zone.id });
   }
   return markers;
 }
@@ -96,5 +100,7 @@ export function selectedOnlyMarkers(poiId: string | null, data: WorldMapData): M
   const poi = poiId === null ? undefined : data.poiById.get(poiId);
   const zone = poi && data.zoneById.get(poi.zone);
   if (!poi || !zone) return [];
-  return [{ id: poi.id, world: zoneToWorld(zone, poi.x, poi.y), label: poiMarkerLabel(poi), className: poiMarkerClass(poi) }];
+  return [
+    { id: poi.id, world: zoneToWorld(zone, poi.x, poi.y), label: poiMarkerLabel(poi), className: poiMarkerClass(poi), zoneId: zone.id },
+  ];
 }

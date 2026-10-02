@@ -97,6 +97,10 @@ export function hitTestMap(data: WorldMapData, viewedId: number, x: number, y: n
   if (zoneView && viewed.parent !== null) candidates = childrenOf(data, viewed.parent);
   const hits = candidates.filter((m) => covers(data, m, world));
 
+  // A capital drawn inside its zone (Stormwind on Elwynn Forest, Ironforge on Dun Morogh) opens on a click,
+  // as it does from the continent — the zone's own outline covers the city too.
+  const city = hits.find((m) => m !== viewed && m.kind === MAP_KIND.city);
+  if (zoneView && city) return { kind: HIT_KIND.goTo, target: city, world };
   // Inside its own outline, a zone keeps the click even where a neighbour's glow overlaps.
   if (zoneView && data.masks.has(viewed.id) && hits.includes(viewed)) return { kind: HIT_KIND.here, target: viewed, world };
   let best: MapView | null = null;

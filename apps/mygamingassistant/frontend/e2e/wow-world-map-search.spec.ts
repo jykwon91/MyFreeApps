@@ -146,12 +146,17 @@ test('"warlock trainer" marks every warlock trainer on the zoomed-out map', asyn
 
   const results = page.getByRole("region", { name: /“warlock trainer” on the map/ });
   await expect(results.getByText(/\d+ matches — every one is marked on the map/)).toBeVisible();
-  // Zoomed out to the continent: several points, one per trainer.
+  // Zoomed out to the continent: several points; trainers standing together are one numbered marker.
   await expect(page.getByRole("img", { name: "Eastern Kingdoms map" })).toBeVisible();
-  const markers = page.getByTestId("zone-map").getByRole("button", { name: /<Warlock Trainer> — Class trainer$/ });
-  await expect(markers).toHaveCount(10);
+  const map = page.getByTestId("zone-map");
+  await expect(map.getByRole("button", { name: /^3 here: .*Briarthorn/ })).toBeVisible();
+
+  // The number opens Ironforge, where the three stand apart.
+  await map.getByRole("button", { name: /^3 here: .*Briarthorn/ }).click();
+  await expect(page.getByRole("img", { name: "Ironforge map" })).toBeVisible();
+  await expect(map.getByRole("button", { name: /<Warlock Trainer> — Class trainer$/ })).toHaveCount(3);
 
   // A marker picks its row.
-  await page.getByTestId("zone-map").getByRole("button", { name: /^Maximillian Crowe <Warlock Trainer>/ }).click();
-  await expect(results.getByRole("article", { name: "Maximillian Crowe" })).toHaveAttribute("aria-current", "true");
+  await map.getByRole("button", { name: /^Thistleheart <Warlock Trainer>/ }).click();
+  await expect(results.getByRole("article", { name: "Thistleheart" })).toHaveAttribute("aria-current", "true");
 });

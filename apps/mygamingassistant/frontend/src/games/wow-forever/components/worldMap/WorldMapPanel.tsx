@@ -17,6 +17,7 @@ import {
   type MapMarker,
   type MapRoute,
 } from "@/games/wow-forever/worldMap/mapLayers";
+import { clusterFit } from "@/games/wow-forever/worldMap/markerClusters";
 import type { PickTarget } from "@/games/wow-forever/worldMap/trip";
 import type { WorldMapModel } from "@/games/wow-forever/worldMap/worldMapModel";
 
@@ -57,6 +58,8 @@ interface WorldMapPanelProps {
   /** Which optional layers are drawn (owned by the page so Reset filters can restore them). */
   layers: MapLayerChoice;
   onLayersChange: (layers: MapLayerChoice) => void;
+  /** Zoom the map to these points, on `fit.mapId` (opening it first). */
+  onZoomTo: (fit: MapFit) => void;
   /** "Show all on the map" results: drawn on every map level, in place of the usual results. */
   searchMarkers: readonly MapMarker[] | null;
 }
@@ -206,6 +209,8 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
         onZoomOut={() => map.parent !== null && onOpen(map.parent)}
         onPick={pick}
         onSelectMarker={props.onSelectMarker}
+        // Several results on one spot: open the map they separate on (Ironforge from the Eastern Kingdoms), zoomed in.
+        onOpenCluster={(members) => props.onZoomTo(clusterFit(data, map, members))}
         onClearSelection={props.onClearSelection}
       />
       <p className="text-xs text-muted-foreground">

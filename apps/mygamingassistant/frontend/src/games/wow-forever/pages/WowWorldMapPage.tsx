@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { AlertBox, useIsAuthenticated } from "@platform/ui";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import AddonHelp from "@/games/wow-forever/components/worldMap/AddonHelp";
@@ -23,6 +23,7 @@ import { useTripPlanner } from "@/games/wow-forever/hooks/useTripPlanner";
 import { useWorldMap } from "@/games/wow-forever/hooks/useWorldMap";
 import { LOAD_STATUS } from "@/games/wow-forever/hooks/useWorldMapData";
 import { isReadOnly } from "@/lib/readOnly";
+import type { MapFit } from "@/games/wow-forever/worldMap/mapLayers";
 import { buildPlaces } from "@/games/wow-forever/worldMap/places";
 import { nextWarlockTraining } from "@/games/wow-forever/worldMap/training";
 import { buildWorldMapModel } from "@/games/wow-forever/worldMap/worldMapModel";
@@ -70,10 +71,17 @@ export default function WowWorldMapPage() {
   const mapSearch = useMapSearch({ data, faction: settings.faction, player: searchContext.player, goTo: view.goTo });
   const { clearFit: clearSearchFit } = mapSearch;
   const { clearFit: clearTripFit } = planner;
+  // A numbered marker clicked: the view zooms in on what it stood for.
+  const [markerFit, setMarkerFit] = useState<MapFit | null>(null);
   const clearFits = useCallback(() => {
+    setMarkerFit(null);
     clearSearchFit();
     clearTripFit();
   }, [clearSearchFit, clearTripFit]);
+  function zoomTo(fit: MapFit) {
+    view.goTo(fit.mapId);
+    setMarkerFit(fit);
+  }
 
   /** The strip changing your zone brings the map back to it; browsing the map never changes your zone. */
   function changeSettings(patch: Partial<PlayerSettings>) {
@@ -206,7 +214,8 @@ export default function WowWorldMapPage() {
                   onFocusApplied={selection.clearFocus}
                   route={planner.route}
                   destinationZoneId={planner.to?.route.place.zoneId ?? null}
-                  fit={mapSearch.fit ?? planner.fit}
+                  fit={markerFit ?? mapSearch.fit ?? planner.fit}
+                  onZoomTo={zoomTo}
                   onFitApplied={clearFits}
                   picking={planner.picking}
                   onPickPoint={planner.pickPoint}
