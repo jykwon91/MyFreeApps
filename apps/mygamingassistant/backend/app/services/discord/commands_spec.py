@@ -14,8 +14,9 @@ Two top-level commands
 subcommand, so the raid bot is split:
 
 * ``/raid`` — everyone: ``list``, ``prefs``, ``attendance`` (and ``ping``).
-* ``/raid-admin`` — organisers: ``setup``, ``raiders``, ``create``, ``edit``,
-  ``cancel``, ``signup``, ``repeats``, ``attendance``, ``export``.
+* ``/raid-admin`` — organisers: ``setup``, ``raiders``, ``advanced``,
+  ``create``, ``edit``, ``cancel``, ``signup``, ``repeats``, ``attendance``,
+  ``export``.
   ``default_member_permissions`` = Manage Events, so regular members never
   see organiser actions in their slash menu.  Server admins can still widen
   or narrow access per command in Server Settings → Integrations.
@@ -195,6 +196,11 @@ RAID_ADMIN_COMMAND: Final[dict[str, Any]] = {
             ],
         },
         {"type": _SUB_COMMAND, "name": "raiders", "description": "Pick the roles Unsigned checks on every raid"},
+        {
+            "type": _SUB_COMMAND,
+            "name": "advanced",
+            "description": "Server defaults for raids — Raid: Edit → Advanced overrides them per raid",
+        },
         {
             "type": _SUB_COMMAND,
             "name": "create",

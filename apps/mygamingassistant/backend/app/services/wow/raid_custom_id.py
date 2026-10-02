@@ -49,8 +49,8 @@ xt       the Event & thread card (More options and   raid:v1:xt:<event>:<verb>  
 m        a modal's submit                             raid:v1:m:<event>:<ping|title|when|desc|image|cancel|
                                                                          role_limits|class_limits|char|
                                                                          note|reason|deadline|length|copy|
-                                                                         repeat_days|repeat_next|uping>
-         (``uping`` = Raid: Unsigned's [Ping them] form)
+                                                                         repeat_days|repeat_next|uping|advmin>
+         (``uping`` = Raid: Unsigned's [Ping them] form; ``advmin`` = Advanced's Minimum sign-ups form)
 ml       Manage sign-ups (a leader adds, changes,      raid:v1:ml:<event>:<verb>:<member|->:<arg|->
          moves and removes players; see ``MANAGE_VERBS``)
 testdm   /raid prefs [Send me a test DM]              raid:v1:testdm
@@ -63,6 +63,10 @@ as       /raid-admin attendance's summary: [Previous]  raid:v1:as:<page|csv>:<ra
 un       Raid: Unsigned's list (Raid: Signed's        raid:v1:un:<event>:<verb>  (see ``UNSIGNED_VERBS``)
          [Not signed up]): its role menu, [Ping them], [Refresh] and [Back]
 rr       /raid-admin raiders' role menu               raid:v1:rr
+adv      Raid: Edit's / More options' [Advanced]      raid:v1:adv:<event>:<verb>:<arg>  (see ``ADVANCED_ARGS``)
+         and its cards
+sadv     /raid-admin advanced's cards                 raid:v1:sadv:<verb>:<arg>  (see ``SERVER_ADVANCED_ARGS``)
+         (no raid: the guild is the interaction's)
 """
 from __future__ import annotations
 
@@ -114,6 +118,7 @@ _EVENT_ACTIONS: Final[dict[str, int]] = {
     "xt": 1,
     "at": 3,
     "un": 1,
+    "adv": 2,
 }
 # Raid: Manage's raid picker; its option values carry the raid and the player.
 RAID_PICK: Final = "mr"
@@ -122,8 +127,9 @@ REPEATS_PICK: Final = "rpl"
 # /raid-admin raiders' role menu: the server's raider roles.
 RAIDERS_PICK: Final = "rr"
 _BARE_ACTIONS: Final = frozenset({"testdm", RAID_PICK, REPEATS_PICK, RAIDERS_PICK})
-# action → number of args, with no event id: the attendance summary (``as``).
-_SERVER_ACTIONS: Final[dict[str, int]] = {"as": 5}
+# action → number of args, with no event id (the guild is the interaction's): the attendance
+# summary (``as``) and /raid-admin advanced's cards (``sadv``).
+_SERVER_ACTIONS: Final[dict[str, int]] = {"as": 5, "sadv": 2}
 # Every action a component can carry (the router's table matches it).
 ROUTED_ACTIONS: Final = frozenset(_EVENT_ACTIONS) | _BARE_ACTIONS | frozenset(_SERVER_ACTIONS)
 
@@ -162,7 +168,7 @@ PICKERS: Final = ("leader", "color", "mentions")
 # The modals the bot opens; a submit names which one it came from.
 MODALS: Final = (
     "ping", "title", "when", "desc", "image", "cancel", "role_limits", "class_limits", "char", "note", "reason",
-    "deadline", "length", "copy", "repeat_days", "repeat_next", "uping",
+    "deadline", "length", "copy", "repeat_days", "repeat_next", "uping", "advmin",
 )
 # Manage sign-ups (``ml``): verb → what its <arg> holds.  The hub's verbs name no
 # member (``-``); every other verb names the member it's about.
@@ -196,6 +202,20 @@ MARK_STATUSES: Final = (*SEAT_STATUSES, TENTATIVE_STATUS, BENCH_STATUS)
 # for that waits in the queue while the raid is full).
 _MOVE_STATUSES: Final = (*MARK_STATUSES, QUEUED_STATUS)
 NO_ARG: Final = "-"
+_NO_ARGS: Final = frozenset({NO_ARG})
+# Raid: Edit → [Advanced] (``adv``): verb → the args it takes (``-`` but for ``inherit``):
+#   open  the card ([Advanced], a sub-card's [Back])    pick  its "Change a setting…" menu
+#   allow / ban  the who card's role menus   all  [Everyone can sign up]
+#   inherit  [Use server default] (arg = the setting it's for)   ready  the ready check menu
+# The card's own [Back] is Raid: Edit's ``back``.
+ADVANCED_ARGS: Final[dict[str, frozenset[str]]] = {
+    "open": _NO_ARGS, "pick": _NO_ARGS, "allow": _NO_ARGS, "ban": _NO_ARGS, "all": _NO_ARGS, "ready": _NO_ARGS,
+    "inherit": frozenset({"who"}),
+}
+# /raid-admin advanced (``sadv``): the server's card and sub-cards — the same verbs, bar the raid's own.
+SERVER_ADVANCED_ARGS: Final[dict[str, frozenset[str]]] = {
+    "open": _NO_ARGS, "pick": _NO_ARGS, "allow": _NO_ARGS, "ban": _NO_ARGS, "ready": _NO_ARGS,
+}
 # The Attendance card (``at``): verb → what its <member> / <arg> hold.  The card's own verbs
 # name nobody (``-``):
 #   open  the card (Raid: Signed's [Attendance], the player card's [Back])
@@ -270,7 +290,7 @@ def parse(custom_id: object) -> RaidCustomId | None:
     server_args = _SERVER_ACTIONS.get(action)
     if server_args is not None:
         args = tuple(parts[1:])
-        if len(args) != server_args or not _summary_args_valid(*args):
+        if len(args) != server_args or not _server_args_valid(action, args):
             return None
         return RaidCustomId(action=action, event_id=None, args=args)
 
@@ -318,6 +338,8 @@ def _args_valid(action: str, args: tuple[str, ...]) -> bool:
         return _manage_args_valid(*args)
     if action == "at":
         return _attendance_args_valid(*args)
+    if action == "adv":
+        return _verb_arg_valid(ADVANCED_ARGS, *args)
     if action == "spec":
         column, status = args
         return column in POST_COLUMNS and status in _MENU_STATUSES
@@ -363,6 +385,17 @@ def _attendance_args_valid(verb: str, member: str, arg: str) -> bool:
     if verb == "set":
         return arg in SETTABLE_OUTCOMES
     return arg == NO_ARG
+
+
+def _server_args_valid(action: str, args: tuple[str, ...]) -> bool:
+    if action == "sadv":
+        return _verb_arg_valid(SERVER_ADVANCED_ARGS, *args)
+    return _summary_args_valid(*args)
+
+
+def _verb_arg_valid(verbs: dict[str, frozenset[str]], verb: str, arg: str) -> bool:
+    """An Advanced card's ``<verb>:<arg>``: a verb it knows, with an arg that verb takes."""
+    return arg in verbs.get(verb, frozenset())
 
 
 def _summary_args_valid(verb: str, raid: str, count: str, bench: str, page: str) -> bool:

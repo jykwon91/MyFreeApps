@@ -33,6 +33,7 @@ from app.repositories.wow import (
     wow_raid_notification_repo,
     wow_raid_signup_repo,
 )
+from app.services.wow import raid_advanced
 from app.services.wow.raid_deadline import (
     DeadlineChange,
     DeadlineError,
@@ -139,7 +140,8 @@ async def mark_posting(
         event.channel_id = guild.raid_channel_id
     await db.flush()
     await wow_raid_notification_repo.schedule_for_event(
-        db, event_id=event.id, starts_at=event.starts_at, guild_settings=guild.settings, now=now
+        db, event_id=event.id, starts_at=event.starts_at, now=now,
+        guild_settings=raid_advanced.notification_settings(event, guild),
     )
     return "posted"
 
@@ -189,7 +191,8 @@ async def edit_event(
     if time_changed and event.status == "scheduled":
         await wow_raid_notification_repo.cancel_pending_for_event(db, event.id)
         await wow_raid_notification_repo.schedule_for_event(
-            db, event_id=event.id, starts_at=event.starts_at, guild_settings=guild.settings, now=now
+            db, event_id=event.id, starts_at=event.starts_at, now=now,
+            guild_settings=raid_advanced.notification_settings(event, guild),
         )
         # Moved, always into the future: the post is live again and the deadline counts from the new start.
         await wow_raid_event_repo.set_start_applied(db, event, None)

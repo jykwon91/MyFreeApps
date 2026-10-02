@@ -94,10 +94,10 @@ _PROPERTY_ROWS = [
     [("Description", 2, _id("ed", "desc")), ("Image", 2, _id("ed", "image")), ("Color", 2, _id("ed", "color")),
      ("Event & thread", 2, _id("xt", "open"))],
     [("Role limits", 2, _id("ed", "role_limits")), ("Class limits", 2, _id("ed", "class_limits")),
-     ("Sign-ups", 2, _id("ml", "open", "-", "-")), ("Notes: off", 2, _id("ed", "notes_on"))],
+     ("Sign-ups", 2, _id("ml", "open", "-", "-")), ("Notes: off", 2, _id("ed", "notes_on")),
+     ("Advanced", 2, _id("adv", "open", "-"))],
     [("Copy raid", 2, _id("cp")), ("Cancel raid", 4, _id("ed", "cancel")), ("Delete raid", 4, _id("ed", "delete")),
-     ("Done", 1, _id("ed", "done"))],
-]
+     ("Done", 1, _id("ed", "done"))]]
 
 
 # ---------------------------------------------------------------------------

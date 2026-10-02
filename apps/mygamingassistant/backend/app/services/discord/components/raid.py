@@ -16,6 +16,7 @@ from fastapi import BackgroundTasks
 from app.services.discord import raid_copy, raid_publisher
 from app.services.discord.components import (
     raid_admin,
+    raid_advanced,
     raid_attendance,
     raid_card,
     raid_duplicate,
@@ -80,6 +81,8 @@ _HANDLERS: Final[dict[str, ComponentHandler]] = {
     "as": raid_attendance.handle_summary,
     "un": raid_unsigned.handle_unsigned,
     "rr": raid_unsigned.handle_raiders_pick,
+    "adv": raid_advanced.handle_advanced,
+    "sadv": raid_advanced.handle_server,
     "testdm": _handle_test_dm,
 }
 
@@ -102,6 +105,7 @@ _MODAL_HANDLERS: Final[dict[str, ComponentHandler]] = {
     "repeat_next": raid_repeat.handle_repeat_next_submit,
     "length": raid_extras.handle_length_submit,
     "uping": raid_unsigned.handle_ping_submit,
+    "advmin": raid_advanced.handle_minimum_submit,
 }
 
 

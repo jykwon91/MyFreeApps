@@ -62,7 +62,7 @@ from app.services.discord.interaction import (
     update_response,
     update_text_response,
 )
-from app.services.discord.raid_context import RaidContext, load_event, signup_refusal, utcnow
+from app.services.discord.raid_context import RaidContext, join_refusal, load_event, signup_refusal, utcnow
 from app.services.discord.raid_member_views import reason_row, reason_text
 from app.services.discord.raid_views import (
     class_picker_data,
@@ -111,6 +111,8 @@ async def handle_class_button(interaction: Interaction, parsed: RaidCustomId, ba
         if refusal is not None:
             return ephemeral_response(refusal)
         signups = await wow_raid_signup_repo.list_for_event(db, context.event.id)
+        if (gate := join_refusal(interaction, context, signups)) is not None:
+            return ephemeral_response(gate)
         check = LimitCheck(Limits.of(context.event), signups, interaction.user_id, "confirmed")
         spec = await _spec_for_column(db, context, check, column, "confirmed", tapped=True)
         if isinstance(spec, dict):  # a choice to make (the spec select), or no room in the column
@@ -151,6 +153,8 @@ async def _request_status(
             return ephemeral_response(refusal)
 
         signups = await wow_raid_signup_repo.list_for_event(db, event.id)
+        if (gate := join_refusal(interaction, context, signups)) is not None:
+            return ephemeral_response(gate)
         if hands_seat_to_queue(signups, discord_user_id=interaction.user_id, requested_status=requested):
             return message_response(release_confirm_data(event, requested))
         existing = next((s for s in signups if s.discord_user_id == interaction.user_id), None)
@@ -394,6 +398,8 @@ async def _finish_pick(
         if refusal is not None:
             return update_text_response(refusal)
         signups = await wow_raid_signup_repo.list_for_event(db, context.event.id)
+        if (gate := join_refusal(interaction, context, signups)) is not None:
+            return update_text_response(gate)
         mine = next((s for s in signups if s.discord_user_id == interaction.user_id), None)
         requested = _asked_status(status, mine)
         if requested is None:

@@ -64,6 +64,8 @@ class Interaction:
     fields: dict[str, str] = field(default_factory=dict)
     # The message a component was clicked on (the bot's own, so it's sent whole).
     message: dict[str, Any] = field(default_factory=dict)
+    # The invoking member's role ids (a server interaction's ``member.roles``).
+    member_role_ids: tuple[str, ...] = ()
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> "Interaction":
@@ -106,6 +108,7 @@ class Interaction:
             target_id=str(data.get("target_id") or ""),
             fields=_modal_fields(data.get("components")),
             message=_as_dict(payload.get("message")),
+            member_role_ids=tuple(str(role_id) for role_id in _as_list(member.get("roles"))),
         )
 
     def has_permission(self, permission: int) -> bool:

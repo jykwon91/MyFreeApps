@@ -509,5 +509,5 @@ def test_command_split() -> None:
     assert RAID_ADMIN_COMMAND["default_member_permissions"] == str(1 << 33)
     assert [o["name"] for o in RAID_COMMAND["options"]] == ["ping", "list", "prefs", "attendance"]
     assert [o["name"] for o in RAID_ADMIN_COMMAND["options"]] == [
-        "setup", "raiders", "create", "edit", "cancel", "signup", "repeats", "attendance", "export"
+        "setup", "raiders", "advanced", "create", "edit", "cancel", "signup", "repeats", "attendance", "export"
     ]

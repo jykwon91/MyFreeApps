@@ -1,6 +1,7 @@
 """/raid-admin — organiser commands (setup, raiders, create, edit, cancel, signup,
-repeats, attendance, export; the last two in ``raid_attendance.py``, raiders in
-``components/raid_unsigned.py``).
+repeats, attendance, export, advanced; attendance and export in
+``raid_attendance.py``, raiders in ``components/raid_unsigned.py``, advanced in
+``components/raid_advanced.py``).
 
 A separate top-level command so ``default_member_permissions`` (Manage
 Events) hides it from regular members' slash menu.  Discord only gates
@@ -24,6 +25,7 @@ from app.db.session import unit_of_work
 from app.repositories.wow import wow_raid_guild_repo
 from app.services.discord import emojis, raid_copy, raid_publisher, raid_setup_check
 from app.services.discord.commands import raid_attendance
+from app.services.discord.components.raid_advanced import open_advanced
 from app.services.discord.components.raid_manage_open import open_from_command
 from app.services.discord.components.raid_repeat import list_repeats
 from app.services.discord.components.raid_unsigned import open_raiders
@@ -70,6 +72,8 @@ async def handle_raid_admin(interaction: Interaction, background: BackgroundTask
         return await raid_attendance.handle_admin(interaction)
     if subcommand == "export":
         return await raid_attendance.handle_export(interaction, background)
+    if subcommand == "advanced":
+        return await open_advanced(interaction)
     return ephemeral_response("Unknown command.")
 
 
