@@ -4,6 +4,7 @@ App-agnostic building blocks for an HTTP-interactions Discord bot:
 
 - :mod:`~platform_shared.services.discord.signature` — Ed25519 request verification
 - :mod:`~platform_shared.services.discord.client` — async REST client with rate limiting
+- :mod:`~platform_shared.services.discord.client_events` — the client's scheduled-event and thread methods
 - :mod:`~platform_shared.services.discord.commands` — global command overwrite that keeps an Activity entry point
 - :mod:`~platform_shared.services.discord.emojis` — versioned application-emoji sync + per-process registry
 - :mod:`~platform_shared.services.discord.interactions` — interaction/response type constants
@@ -28,6 +29,17 @@ from .client import (
     UNKNOWN_MESSAGE,
     DiscordApiError,
     DiscordRestClient,
+)
+from .client_events import (
+    EVENT_FINISHED,
+    INVALID_FORM_BODY,
+    MAX_ACTIVE_THREADS,
+    MAX_SCHEDULED_EVENTS,
+    THREAD_ALREADY_CREATED,
+    THREAD_ARCHIVED,
+    THREAD_LOCKED,
+    UNKNOWN_GUILD_SCHEDULED_EVENT,
+    ScheduledEventsAndThreads,
 )
 from .commands import (
     COMMAND_TYPE_PRIMARY_ENTRY_POINT,
@@ -86,6 +98,8 @@ from .interactions import (
 )
 from .permissions import (
     ADMINISTRATOR,
+    CREATE_EVENTS,
+    CREATE_PUBLIC_THREADS,
     EMBED_LINKS,
     MANAGE_EVENTS,
     MANAGE_GUILD,
@@ -117,6 +131,16 @@ __all__ = [
     "UNKNOWN_CHANNEL",
     "UNKNOWN_INTERACTION",
     "UNKNOWN_MESSAGE",
+    # client_events
+    "EVENT_FINISHED",
+    "INVALID_FORM_BODY",
+    "MAX_ACTIVE_THREADS",
+    "MAX_SCHEDULED_EVENTS",
+    "THREAD_ALREADY_CREATED",
+    "THREAD_ARCHIVED",
+    "THREAD_LOCKED",
+    "UNKNOWN_GUILD_SCHEDULED_EVENT",
+    "ScheduledEventsAndThreads",
     # commands
     "COMMAND_TYPE_PRIMARY_ENTRY_POINT",
     "ENTRY_POINT_HANDLER_DISCORD_LAUNCH_ACTIVITY",
@@ -171,6 +195,8 @@ __all__ = [
     "TEXT_INPUT_STYLE_SHORT",
     # permissions
     "ADMINISTRATOR",
+    "CREATE_EVENTS",
+    "CREATE_PUBLIC_THREADS",
     "EMBED_LINKS",
     "MANAGE_EVENTS",
     "MANAGE_GUILD",

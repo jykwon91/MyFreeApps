@@ -20,7 +20,7 @@ from platform_shared.services.discord import MANAGE_EVENTS, MANAGE_GUILD
 
 from app.db.session import unit_of_work
 from app.repositories.wow import wow_raid_guild_repo
-from app.services.discord import emojis, raid_copy, raid_publisher
+from app.services.discord import emojis, raid_copy, raid_publisher, raid_setup_check
 from app.services.discord.components.raid_manage_open import open_from_command
 from app.services.discord.components.raid_repeat import list_repeats
 from app.services.discord.interaction import (
@@ -85,6 +85,8 @@ async def _setup(interaction: Interaction, background: BackgroundTasks) -> dict[
     if ping_role_id == interaction.guild_id:
         return ephemeral_response(raid_copy.SETUP_NO_EVERYONE)  # @everyone's role id is the server's own
     role_mentionable = bool(interaction.resolved_role(ping_role_id or "").get("mentionable"))
+    # Omitted = keep the server's default: turning these off by accident on a channel change would surprise people.
+    discord_events, threads = interaction.bool_option("discord_events"), interaction.bool_option("threads")
 
     async with unit_of_work() as db:
         guild = await wow_raid_guild_repo.upsert_config(
@@ -93,13 +95,16 @@ async def _setup(interaction: Interaction, background: BackgroundTasks) -> dict[
             raid_channel_id=channel_id,
             timezone=tz_name,
             configured_by_user_id=interaction.user_id,
+            default_discord_event=discord_events,
+            default_thread=threads,
         )
         # Setup states the complete config: no ping_role option = stop pinging.
         await wow_raid_guild_repo.set_ping_role(db, guild, ping_role_id)
+        events_default, threads_default = guild.default_discord_event, guild.default_thread
 
     background.add_task(
-        raid_publisher.verify_setup,
-        raid_publisher.SetupCheck(
+        raid_setup_check.verify_setup,
+        raid_setup_check.SetupCheck(
             application_id=interaction.application_id,
             token=interaction.token,
             guild_discord_id=interaction.guild_id,
@@ -107,6 +112,9 @@ async def _setup(interaction: Interaction, background: BackgroundTasks) -> dict[
             ping_role_id=ping_role_id,
             role_mentionable=role_mentionable,
             tz_name=tz_name,
+            discord_events=events_default,
+            threads=threads_default,
+            extras_given=discord_events is not None or threads is not None,
         ),
     )
     return deferred_ephemeral_response()

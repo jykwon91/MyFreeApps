@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from sqlalchemy import CheckConstraint, DateTime, String, UniqueConstraint, func, text
+from sqlalchemy import Boolean, CheckConstraint, DateTime, String, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -85,6 +85,10 @@ class WowRaidGuild(Base):
     configured_by_user_id: Mapped[Optional[str]] = mapped_column(
         String(32), nullable=True
     )
+    # Whether new raids get a Discord event and a thread (/raid-admin setup;
+    # migration 0038).  Each raid copies them; its leader can change its own.
+    default_discord_event: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    default_thread: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

@@ -21,6 +21,7 @@ _MINUTE: Final = literal_column("interval '1 minute'", Interval())
 COPIED: Final = (
     "raid_key", "title", "size_cap", "notes", "leader_user_id", "leader_display_name", "image_url", "color",
     "mention_role_ids", "role_limits", "class_limits", "signup_deadline_minutes", "signup_notes_enabled",
+    "discord_event_enabled", "thread_enabled", "length_minutes",
 )
 
 
@@ -37,11 +38,14 @@ async def create(
     notes: str | None = None,
     status: str = "scheduled",
     created_by_display_name: str | None = None,
+    discord_event_enabled: bool = False,
+    thread_enabled: bool = False,
 ) -> WowRaidEvent:
     """Insert a new raid event and flush.
 
     ``status="draft"`` is used by /raid-admin create: the row backs the
-    organiser's private preview until they press [Post raid].
+    organiser's private preview until they press [Post raid].  The extras'
+    toggles come from the server's defaults.
     """
     row = WowRaidEvent(
         guild_id=guild_id,
@@ -54,6 +58,8 @@ async def create(
         created_by_user_id=created_by_user_id,
         created_by_display_name=created_by_display_name,
         notes=notes,
+        discord_event_enabled=discord_event_enabled,
+        thread_enabled=thread_enabled,
     )
     db.add(row)
     await db.flush()
@@ -277,6 +283,55 @@ async def set_close_state(
 async def set_start_applied(db: AsyncSession, event: WowRaidEvent, at: datetime | None) -> WowRaidEvent:
     """Persist when the post was re-rendered as started; None once the raid moves into the future."""
     event.start_applied_at = at
+    await db.flush()
+    return event
+
+
+async def set_extras_options(
+    db: AsyncSession, event: WowRaidEvent, *, discord_event: bool, thread: bool, length_minutes: int | None
+) -> WowRaidEvent:
+    """Persist the leader's Event & thread choices: the two toggles and the length (None = 3 hours)."""
+    event.discord_event_enabled = discord_event
+    event.thread_enabled = thread
+    event.length_minutes = length_minutes
+    await db.flush()
+    return event
+
+
+async def claim_discord_event(db: AsyncSession, event: WowRaidEvent, now: datetime) -> WowRaidEvent:
+    """Mark a Discord event create in flight, so a second sync doesn't make another."""
+    event.discord_event_claimed_at = now
+    await db.flush()
+    return event
+
+
+async def set_discord_event_state(
+    db: AsyncSession,
+    event: WowRaidEvent,
+    *,
+    event_id: str | None,
+    digest: str | None,
+    starts_at: datetime | None,
+    error: int | None,
+    claimed_at: datetime | None = None,
+) -> WowRaidEvent:
+    """Persist the raid's Discord event: its id, the payload Discord took, its start, a refusal, a create in flight."""
+    event.discord_event_id = event_id
+    event.discord_event_digest = digest
+    event.discord_event_starts_at = starts_at
+    event.discord_event_error = error
+    event.discord_event_claimed_at = claimed_at
+    await db.flush()
+    return event
+
+
+async def set_thread_state(
+    db: AsyncSession, event: WowRaidEvent, *, thread_id: str | None, name: str | None, error: int | None
+) -> WowRaidEvent:
+    """Persist the raid's thread: its id, the name the bot gave it (None = not the bot's) and a refusal."""
+    event.thread_id = thread_id
+    event.thread_name = name
+    event.thread_error = error
     await db.flush()
     return event
 

@@ -41,6 +41,7 @@ from app.models.wow.wow_raid_event import WowRaidEvent
 from app.services.discord import (
     raid_copy,
     raid_deadline_copy,
+    raid_extras_copy,
     raid_limit_copy,
     raid_manage_copy,
     raid_member_copy,
@@ -48,6 +49,7 @@ from app.services.discord import (
 )
 from app.services.discord.interaction import ephemeral_data, modal_response
 # FIELD is re-exported: the forms' submit handlers read the box by it.
+from app.services.discord.raid_extras_views import extras_button
 from app.services.discord.raid_forms import FIELD as FIELD
 from app.services.discord.raid_forms import event_form, text_box
 from app.services.discord.raid_leader_views import raid_line
@@ -117,6 +119,7 @@ def edit_card(event: WowRaidEvent, *, notice: str | None = None, notify_count: i
             _edit_button(event, "Description", "desc"),
             _edit_button(event, "Image", "image"),
             _edit_button(event, "Color", "color"),
+            extras_button(event),
         ),
         action_row(
             _edit_button(event, "Role limits", "role_limits"),
@@ -147,6 +150,7 @@ def _detail_lines(event: WowRaidEvent) -> list[str]:
         f"**Date & Time:** <t:{starts}:F> (<t:{starts}:R>)",
         *raid_deadline_copy.deadline_lines(event),
         *raid_repeat_copy.repeat_lines(event),
+        *raid_extras_copy.detail_lines(event),
         f"**Image:** {_image_text(event)}",
         f"**Color:** {_color_text(event)}",
         raid_limit_copy.role_limits_line(limits.roles),

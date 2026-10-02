@@ -44,9 +44,11 @@ rp       the Repeat card (Raid: Edit's [Repeat],      raid:v1:rp:<event>:<verb> 
          the "Posted" message's [Repeat this raid])
 rpl      /raid-admin repeats' menu (the value is      raid:v1:rpl
          the repeat's latest raid)
+xt       the Event & thread card (More options and   raid:v1:xt:<event>:<verb>  (see ``EXTRAS_VERBS``)
+         Raid: Edit's [Event & thread])
 m        a modal's submit                             raid:v1:m:<event>:<ping|title|when|desc|image|cancel|
                                                                          role_limits|class_limits|char|
-                                                                         note|reason|deadline|copy|
+                                                                         note|reason|deadline|length|copy|
                                                                          repeat_days|repeat_next>
 ml       Manage sign-ups (a leader adds, changes,      raid:v1:ml:<event>:<verb>:<member|->:<arg|->
          moves and removes players; see ``MANAGE_VERBS``)
@@ -100,6 +102,7 @@ _EVENT_ACTIONS: Final[dict[str, int]] = {
     "ml": 3,
     "cp": 0,
     "rp": 1,
+    "xt": 1,
 }
 # Raid: Manage's raid picker; its option values carry the raid and the player.
 RAID_PICK: Final = "mr"
@@ -131,12 +134,15 @@ EDIT_ACTIONS: Final = (
 # The Repeat card: open it, its How often? and When should I post? menus, [Skip <date>],
 # [Change next date] (its form), [Stop repeating] and [Back] (to Raid: Edit's card).
 REPEAT_VERBS: Final = ("open", "every", "ahead", "skip", "next", "stop", "back")
+# The Event & thread card: open it, its toggles (each naming the state it switches to),
+# [Length] (its form) and [Try again].  Its [Back] is Raid: Edit's ``back``.
+EXTRAS_VERBS: Final = ("open", "event_on", "event_off", "thread_on", "thread_off", "length", "retry")
 # Raid: Edit's menus, and the create preview's role menu.
 PICKERS: Final = ("leader", "color", "mentions")
 # The modals the bot opens; a submit names which one it came from.
 MODALS: Final = (
     "ping", "title", "when", "desc", "image", "cancel", "role_limits", "class_limits", "char", "note", "reason",
-    "deadline", "copy", "repeat_days", "repeat_next",
+    "deadline", "length", "copy", "repeat_days", "repeat_next",
 )
 # Manage sign-ups (``ml``): verb → what its <arg> holds.  The hub's verbs name no
 # member (``-``); every other verb names the member it's about.
@@ -251,6 +257,8 @@ def _args_valid(action: str, args: tuple[str, ...]) -> bool:
         return args[0] in PICKERS
     if action == "rp":
         return args[0] in REPEAT_VERBS
+    if action == "xt":
+        return args[0] in EXTRAS_VERBS
     if action == "m":
         return args[0] in MODALS
     if action == "ml":

@@ -111,6 +111,8 @@ async def create_draft(
         created_by_display_name=created_by_display_name,
         notes=notes,
         status="draft",
+        discord_event_enabled=guild.default_discord_event,
+        thread_enabled=guild.default_thread,
     )
 
 

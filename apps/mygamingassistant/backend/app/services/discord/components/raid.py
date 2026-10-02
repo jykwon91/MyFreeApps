@@ -19,6 +19,7 @@ from app.services.discord.components import (
     raid_card,
     raid_duplicate,
     raid_edit,
+    raid_extras,
     raid_leader,
     raid_manage,
     raid_manage_open,
@@ -70,6 +71,7 @@ _HANDLERS: Final[dict[str, ComponentHandler]] = {
     "cp": raid_duplicate.handle_copy,
     "rp": raid_repeat.handle_repeat,
     "rpl": raid_repeat.handle_repeats_pick,
+    "xt": raid_extras.handle_extras,
     "ml": raid_manage.handle_manage,
     "mr": raid_manage_open.handle_raid_pick,
     "testdm": _handle_test_dm,
@@ -92,6 +94,7 @@ _MODAL_HANDLERS: Final[dict[str, ComponentHandler]] = {
     "copy": raid_duplicate.handle_copy_submit,
     "repeat_days": raid_repeat.handle_repeat_days_submit,
     "repeat_next": raid_repeat.handle_repeat_next_submit,
+    "length": raid_extras.handle_length_submit,
 }
 
 

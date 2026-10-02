@@ -206,7 +206,8 @@ def _listed(series: WowRaidSeries, latest: WowRaidEvent) -> dict[str, Any]:
     }
 
 
-def posted_data(channel_id: str, link: str, event_id: uuid.UUID) -> dict[str, Any]:
-    """[Post raid]'s "Posted" message with [Repeat this raid]."""
+def posted_data(channel_id: str, link: str, event_id: uuid.UUID, *, extra: str | None = None) -> dict[str, Any]:
+    """[Post raid]'s "Posted" message with [Repeat this raid]; *extra* (the event and thread) goes under it."""
     repeat = button(raid_repeat_copy.REPEAT_THIS, BUTTON_STYLE_SECONDARY, raid_custom_id.encode("rp", event_id, "open"))
-    return ephemeral_data(raid_copy.posted(channel_id, link), components=[action_row(repeat)])
+    lines = [raid_copy.posted(channel_id, link), extra]
+    return ephemeral_data("\n".join(line for line in lines if line), components=[action_row(repeat)])

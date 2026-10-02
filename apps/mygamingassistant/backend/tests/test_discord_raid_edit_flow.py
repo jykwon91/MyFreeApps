@@ -124,8 +124,8 @@ def _card_ids(event: WowRaidEvent) -> list[str]:
     ids = [f"raid:v1:ed:{event.id}:{action}" for action in (*actions, "cancel", "delete", "done")]
     at = len(actions)
     ids[at:at] = [f"raid:v1:ml:{event.id}:open:-:-", f"raid:v1:ed:{event.id}:notes_on", f"raid:v1:cp:{event.id}"]
-    ids.insert(4, f"raid:v1:rp:{event.id}:open")
-    return ids  # [Repeat] ends the first row; [Sign-ups] [Notes: off], then [Copy raid] starts the last row
+    ids[7:7], ids[4:4] = [f"raid:v1:xt:{event.id}:open"], [f"raid:v1:rp:{event.id}:open"]
+    return ids  # [Repeat] ends row 1, [Event & thread] row 2, [Notes: off] row 3; [Copy raid] starts row 4
 
 
 # ---------------------------------------------------------------------------

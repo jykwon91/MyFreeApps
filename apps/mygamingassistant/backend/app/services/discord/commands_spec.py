@@ -163,6 +163,18 @@ RAID_ADMIN_COMMAND: Final[dict[str, Any]] = {
                     "name": "ping_role",
                     "description": "Role to ping when a raid is posted",
                 },
+                {
+                    "type": _BOOLEAN,
+                    "name": "discord_events",
+                    "description": "Give new raids a Discord event in the Events tab (the bot needs Create Events)",
+                },
+                {
+                    "type": _BOOLEAN,
+                    "name": "threads",
+                    "description": (
+                        "Give new raids a chat thread under their post (the bot needs Create Public Threads)"
+                    ),
+                },
             ],
         },
         {

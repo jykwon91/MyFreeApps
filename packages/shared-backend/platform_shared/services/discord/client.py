@@ -22,6 +22,8 @@ from typing import Any, Final
 
 import httpx
 
+from .client_events import ScheduledEventsAndThreads
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -67,7 +69,7 @@ class DiscordApiError(Exception):
         self.message = message
 
 
-class DiscordRestClient:
+class DiscordRestClient(ScheduledEventsAndThreads):
     """Async Discord REST API client.
 
     Manages a single ``httpx.AsyncClient`` for the lifetime of the context.

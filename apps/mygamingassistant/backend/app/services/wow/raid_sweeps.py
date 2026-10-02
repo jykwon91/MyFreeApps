@@ -20,7 +20,8 @@ this tick, and the outbox drains as usual.
    get a DM row (``raid_consumables_round.schedule_late_dms``).
 5. **Repeats.**  Each repeat due posts its next raid
    (``raid_repeat_publisher.post_next``), one transaction each, at most one
-   raid per repeat a tick.  A post Discord refused stops that repeat and
+   raid per repeat a tick; its Discord event and thread follow after the
+   commit (``raid_extras.sync``).  A post Discord refused stops that repeat and
    DMs its creator; one it didn't answer is tried again next tick.  Last,
    because it waits on Discord while holding the repeat.
 
@@ -46,7 +47,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.repositories.wow import wow_raid_event_repo, wow_raid_guild_repo
-from app.services.discord import raid_deadline_copy, raid_publisher, raid_repeat_publisher, rest
+from app.services.discord import raid_deadline_copy, raid_extras, raid_publisher, raid_repeat_publisher, rest
 from app.services.wow import raid_consumables_round, raid_event_service
 from app.services.wow.raid_details import leader_id
 from app.services.wow.raid_notification_outcomes import RunStats
@@ -168,4 +169,7 @@ async def _repeat_one(scope: SessionScope, now: datetime, stats: RunStats, *, po
     if turn.kind == "posted":
         posted.add(turn.series_id)
         stats.repeats_posted += 1
+        assert turn.event_id is not None
+        async with rest.make_rest_client() as client:
+            await raid_extras.sync(client, turn.event_id)
     return True

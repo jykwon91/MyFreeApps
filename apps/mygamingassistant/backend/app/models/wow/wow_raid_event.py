@@ -12,10 +12,14 @@ overrides the default display name if set.
 
 series_id FK → wow_raid_series (ON DELETE SET NULL): the repeat the raid is
 in (migration 0037).
+
+The Discord event and thread columns (0038) are written by
+``raid_extras`` through the repo's setters; read them through
+``raid_extras_rules``.
 """
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Final, Optional
 
 from sqlalchemy import (
     Boolean,
@@ -51,6 +55,8 @@ RAID_KEYS = (
 RAID_STATUSES = ("draft", "scheduled", "cancelled", "completed")
 # Why sign-ups are closed (``closed_at``): Raid: Close, or the sign-up deadline.
 CLOSE_REASONS = ("leader", "deadline")
+# How long a raid can run, in minutes (Event & thread → Length); null = 3 hours.
+LENGTH_RANGE: Final = (15, 360)
 
 
 class WowRaidEvent(Base):
@@ -91,6 +97,10 @@ class WowRaidEvent(Base):
         CheckConstraint(
             f"close_reason IS NULL OR close_reason IN {CLOSE_REASONS!r}",
             name="ck_wowraidevent_close_reason",
+        ),
+        CheckConstraint(
+            f"length_minutes IS NULL OR length_minutes BETWEEN {LENGTH_RANGE[0]} AND {LENGTH_RANGE[1]}",
+            name="ck_wowraidevent_length_minutes",
         ),
         # Efficiently list upcoming events per guild.
         Index("ix_wowraidevent_guild_starts_at", "guild_id", "starts_at"),
@@ -192,6 +202,31 @@ class WowRaidEvent(Base):
         ForeignKey("wow_raid_series.id", ondelete="SET NULL", name="fk_wowraidevent_series"),
         nullable=True,
     )
+    # Discord event + thread (0038).  The leader's toggles, copied from the
+    # server's defaults when the raid is made.
+    discord_event_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    thread_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    # How long the raid runs (LENGTH_RANGE); null = 3 hours.  Sets the event's end.
+    length_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # The scheduled event the bot made or adopted, the sha256 of the last
+    # payload Discord took (an unchanged raid sends no PATCH) and the start
+    # Discord holds (passed = Discord has started the event).
+    discord_event_id: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    discord_event_digest: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    discord_event_starts_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    # A create in flight: one event per raid; stale after two minutes, when
+    # the next sync looks for it before making another.
+    discord_event_claimed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    # The code Discord refused the event with; nothing retries until the
+    # leader taps Try again or turns the event on.
+    discord_event_error: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # The thread on the post (its id is the post's message id) and the name
+    # the bot gave it; null name with an id = a member's thread, left alone.
+    thread_id: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    thread_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    thread_error: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
