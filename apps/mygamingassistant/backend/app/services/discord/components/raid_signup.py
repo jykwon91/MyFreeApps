@@ -54,6 +54,7 @@ from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.repositories.wow import wow_raid_signup_repo
 from app.services.discord import emojis, raid_copy, raid_publisher
+from app.services.discord.components.raid_member import reason_reply
 from app.services.discord.interaction import (
     Interaction,
     ephemeral_response,
@@ -62,6 +63,7 @@ from app.services.discord.interaction import (
     update_text_response,
 )
 from app.services.discord.raid_context import RaidContext, load_event, signup_refusal, utcnow
+from app.services.discord.raid_member_views import reason_row, reason_text
 from app.services.discord.raid_views import (
     class_picker_data,
     limit_refusal_data,
@@ -74,6 +76,7 @@ from app.services.wow.raid_custom_id import SAME_STATUS, RaidCustomId
 from app.services.wow.raid_embed import build_signup_message
 from app.services.wow.raid_limits import LimitCheck, Limits
 from app.services.wow.raid_member_prefs_service import PlayerPick
+from app.services.wow.raid_note import asks_reason
 from app.services.wow.raid_roster import (
     ABSENCE_STATUS,
     BENCH_STATUS,
@@ -93,6 +96,7 @@ class _Tap:
     spec: WowSpecInfo | None
     dm_ids: list[str]
     message: dict[str, Any] | None  # the rebuilt post; None when nothing changed
+    notes_on: bool = False  # the raid takes notes: a tap to late, tentative or absence asks why
 
 
 async def handle_class_button(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
@@ -186,21 +190,25 @@ async def _tap(
     dm_ids = await raid_event_service.dm_recipients(db, guild=context.guild, user_ids=change.promoted)
     signups = await wow_raid_signup_repo.list_for_event(db, context.event.id)
     message = build_signup_message(context.event, signups, context.guild, emojis=emojis.current())
-    return _Tap(change, pick.known_spec, dm_ids, message)
+    return _Tap(change, pick.known_spec, dm_ids, message, context.event.signup_notes_enabled)
 
 
 def _tap_response(
     interaction: Interaction, event_id: uuid.UUID, tap: _Tap, requested: str, background: BackgroundTasks
 ) -> dict[str, Any]:
-    """The rebuilt post (type 7) plus any private follow-up; nothing changed → a private "already"."""
+    """The rebuilt post (type 7) plus any private follow-up; nothing changed → a private "already".
+
+    The follow-up asks why, with [Add reason], after a tap to late, tentative or absence on a raid taking notes.
+    """
     if tap.message is None:
         return ephemeral_response(_already(tap.change, requested, tap.spec))
     background.add_task(raid_publisher.notify_promoted, event_id, tap.dm_ids)
     note = _private_note(tap.change, requested)
-    if note is not None:
-        background.add_task(
-            raid_publisher.send_ephemeral_followup, interaction.application_id, interaction.token, note
-        )
+    reply = (raid_publisher.send_ephemeral_followup, interaction.application_id, interaction.token)
+    if asks_reason(tap.notes_on, tap.change):
+        background.add_task(*reply, reason_text(note, tap.change.status), [reason_row(event_id)])
+    elif note is not None:
+        background.add_task(*reply, note)
     return update_response(tap.message)
 
 
@@ -426,13 +434,14 @@ async def _finish_pick(
             spec=spec.key,
         )
         dm_ids = await raid_event_service.dm_recipients(db, guild=context.guild, user_ids=change.promoted)
+        notes_on = context.event.signup_notes_enabled
 
     if change.outcome == "changed":
         background.add_task(raid_publisher.refresh_public_message, event_id)
     background.add_task(raid_publisher.notify_promoted, event_id, dm_ids)
     if seat_card is not None:
         return update_response(seat_card)
-    return update_text_response(_pick_result(change, requested, spec, first_save))
+    return reason_reply(event_id, _pick_result(change, requested, spec, first_save), change, notes_on)
 
 
 def _asked_status(status: str, mine: WowRaidSignup | None) -> str | None:

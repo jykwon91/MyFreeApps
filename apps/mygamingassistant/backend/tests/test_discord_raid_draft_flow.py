@@ -56,7 +56,7 @@ pytestmark = pytest.mark.asyncio
 _MEMBER = {"user_id": "401", "permissions": 0}
 _CARD_LABELS = [
     "Title", "Leader", "Date & Time", "Description", "Image", "Color",
-    "Role limits", "Class limits", "Post raid", "Mentions", "Back",
+    "Role limits", "Class limits", "Notes: off", "Post raid", "Mentions", "Back",
 ]
 _PREVIEW_LABELS = ["Post raid", "More options", "Cancel"]
 

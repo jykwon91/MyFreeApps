@@ -5,8 +5,8 @@ it goes and who it pings, then [Post raid] [More options] [Cancel].  The
 post's sign-up buttons aren't shown: they're the same on every raid.
 
 **More options** (type 7 over the preview).  The same embed, with a button
-per thing to change — the forms and menus Raid: Edit uses — and
-[Mentions], the roles the raid pings.  Each change answers with this card
+per thing to change — the forms, menus and notes switch Raid: Edit uses —
+and [Mentions], the roles the raid pings.  Each change answers with this card
 again, what changed on its first line, so the embed shows it straight
 away.  [Back] goes up one level (a menu → this card → the preview);
 changes are saved as they're made, so it never throws one away.  The
@@ -28,6 +28,7 @@ from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.services.discord import raid_copy, raid_draft_copy, raid_limit_copy
 from app.services.discord.interaction import ephemeral_data
+from app.services.discord.raid_edit_views import notes_button
 from app.services.discord.raid_leader_views import raid_line
 from app.services.discord.raid_views import action_row, button
 from app.services.wow import raid_custom_id
@@ -83,6 +84,7 @@ def options_data(
         action_row(
             _draft_button(event, "Role limits", "role_limits"),
             _draft_button(event, "Class limits", "class_limits"),
+            notes_button(event),
         ),
         # [Post raid] first, as on the preview, and never beside [Back].
         action_row(

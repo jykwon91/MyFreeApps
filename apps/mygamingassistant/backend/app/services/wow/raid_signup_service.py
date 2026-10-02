@@ -108,6 +108,8 @@ async def change_status(
         requeue=_goes_to_the_back(previous, status),
         character_name=character,
         set_character=renamed,
+        # The note was about the old status; a class or spec change keeps it.
+        clear_note=previous is not None and previous != status,
     )
     promoted = await promote_from_queue(db, event, prefer_role=seat_left_role)
     position = None
@@ -152,6 +154,17 @@ async def set_character_name(
         db, guild=guild, discord_user_id=signup.discord_user_id, wow_class=signup.wow_class, name=name
     )
     return NameChange(shown=shown, remembered=remembered)
+
+
+async def set_note(db: AsyncSession, *, signup: WowRaidSignup, note: str | None) -> bool:
+    """Save the member's note for the raid leader (None removes it); False when it already was.
+
+    *note* comes from ``raid_note.clean_note``.  Never log it: it's the member's own words.
+    """
+    if signup.note == note:
+        return False
+    await wow_raid_signup_repo.set_note(db, signup, note)
+    return True
 
 
 def _goes_to_the_back(previous: str | None, status: str) -> bool:

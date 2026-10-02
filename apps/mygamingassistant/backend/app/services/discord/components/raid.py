@@ -81,6 +81,8 @@ _MODAL_HANDLERS: Final[dict[str, ComponentHandler]] = {
     "role_limits": raid_edit.handle_role_limits_submit,
     "class_limits": raid_edit.handle_class_limits_submit,
     "char": raid_member.handle_character_submit,
+    "note": raid_member.handle_note_submit,
+    "reason": raid_member.handle_note_submit,
 }
 
 

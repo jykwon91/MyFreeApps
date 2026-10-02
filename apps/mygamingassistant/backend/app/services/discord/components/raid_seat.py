@@ -3,7 +3,8 @@
 A seat holder tapping [Tentative] / [Bench] / [Absence] while players are
 queued is asked first (see ``raid_signup``), since the seat goes to the
 queue at once.  [Yes, free my seat] applies it: the card becomes the
-result and the post refreshes via REST.  [Keep my seat] changes nothing.
+result (asking why, with [Add reason], on a raid taking notes) and the
+post refreshes via REST.  [Keep my seat] changes nothing.
 Both answers re-check that the player still holds a seat.
 """
 from __future__ import annotations
@@ -15,6 +16,7 @@ from fastapi import BackgroundTasks
 from app.db.session import unit_of_work
 from app.repositories.wow import wow_raid_signup_repo
 from app.services.discord import raid_copy, raid_publisher
+from app.services.discord.components.raid_member import reason_reply
 from app.services.discord.interaction import Interaction, update_text_response
 from app.services.discord.raid_context import load_event, signup_refusal, utcnow
 from app.services.wow import raid_event_service, raid_signup_service
@@ -51,10 +53,12 @@ async def handle_release(interaction: Interaction, parsed: RaidCustomId, backgro
             spec=mine.spec,
         )
         dm_ids = await raid_event_service.dm_recipients(db, guild=context.guild, user_ids=change.promoted)
+        notes_on = context.event.signup_notes_enabled
 
     background.add_task(raid_publisher.refresh_public_message, parsed.event_id)
     background.add_task(raid_publisher.notify_promoted, parsed.event_id, dm_ids)
-    return update_text_response(raid_copy.seat_released(change.status, handed_on=bool(change.promoted)))
+    released = raid_copy.seat_released(change.status, handed_on=bool(change.promoted))
+    return reason_reply(parsed.event_id, released, change, notes_on)
 
 
 async def handle_stay(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:

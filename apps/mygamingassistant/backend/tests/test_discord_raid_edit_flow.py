@@ -124,7 +124,8 @@ def _card_ids(event: WowRaidEvent) -> list[str]:
         "title", "leader", "when", "desc", "image", "color", "role_limits", "class_limits", "cancel", "delete", "done"
     )
     ids = [f"raid:v1:ed:{event.id}:{action}" for action in actions]
-    ids.insert(actions.index("class_limits") + 1, f"raid:v1:ml:{event.id}:open:-:-")  # [Sign-ups]
+    at = actions.index("class_limits") + 1
+    ids[at:at] = [f"raid:v1:ml:{event.id}:open:-:-", f"raid:v1:ed:{event.id}:notes_on"]  # [Sign-ups] [Notes: off]
     return ids
 
 

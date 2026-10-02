@@ -17,8 +17,9 @@ pickclass [Different class] under the spec select     raid:v1:pickclass:<event>:
          (menus opened from My sign-up carry ``same``: keep the status you have when you pick)
 change   [Change spec] on My sign-up                  raid:v1:change:<event>
 card     My sign-up's [Full roster] / [Back] /        raid:v1:card:<event>:<view>
-         [Character name] (its form) / [Forget my specs] and its [Yes, forget them]
-         (view = roster, back, char, forget or forgetyes)
+         [Character name] (its form) / [Forget my specs] and its [Yes, forget them] /
+         [Add note] / [Edit note] (its form) / [Add reason] (the note form, from the reply to a tap)
+         (view = roster, back, char, forget, forgetyes, note or reason)
 signup   [Sign up] on posts from before the class buttons   raid:v1:signup:<event>
 roster   [Roster] on posts from before the class buttons    raid:v1:roster:<event>
 role     role button from a pre-spec picker (legacy)  raid:v1:role:<event>:<status>:<class>:<role>
@@ -34,11 +35,13 @@ lc       Raid: Close / Raid: Signed leader buttons    raid:v1:lc:<event>:<reopen
 ed       Raid: Edit's buttons                         raid:v1:ed:<event>:<property|cancel|delete|done|back|keep|more|preview>
          (``keep`` = [Keep raid] on the cancel check opened from Raid: Edit;
          ``more`` / ``preview`` = the create preview's [More options] and its [Back];
-         ``mentions`` (who the raid pings) and its [No ping] (``noping``) are on drafts only)
+         ``mentions`` (who the raid pings) and its [No ping] (``noping``) are on drafts only;
+         ``notes_on`` / ``notes_off`` = [Notes: off] / [Notes: on], naming the state it switches to)
 pick     Raid: Edit's leader / color menus            raid:v1:pick:<event>:<leader|color|mentions>
 del      [Delete raid] on Raid: Edit's delete check   raid:v1:del:<event>
 m        a modal's submit                             raid:v1:m:<event>:<ping|title|when|desc|image|cancel|
-                                                                         role_limits|class_limits|char>
+                                                                         role_limits|class_limits|char|
+                                                                         note|reason>
 ml       Manage sign-ups (a leader adds, changes,      raid:v1:ml:<event>:<verb>:<member|->:<arg|->
          moves and removes players; see ``MANAGE_VERBS``)
 testdm   /raid prefs [Send me a test DM]              raid:v1:testdm
@@ -95,22 +98,26 @@ _MENU_STATUSES: Final = (*REQUESTABLE_STATUSES, SAME_STATUS)
 # What a seat holder can give their seat up for (the confirm card's [Yes]).
 RELEASE_STATUSES: Final = ("tentative", "bench", "absence")
 # The My sign-up card's views: the full roster, back to the card, the Character name form,
-# and Forget my specs (the card asking first, then its [Yes, forget them]).
-CARD_VIEWS: Final = ("roster", "back", "char", "forget", "forgetyes")
+# Forget my specs (the card asking first, then its [Yes, forget them]), and the note form
+# from the card ([Add note] / [Edit note]) or from the reply to a tap ([Add reason]).
+CARD_VIEWS: Final = ("roster", "back", "char", "forget", "forgetyes", "note", "reason")
 # The leader tools under Raid: Close / Raid: Signed (and [Tell them in channel] under Raid: Edit).
 LEADER_ACTIONS: Final = ("reopen", "close", "ping", "notify")
 # Raid: Edit's buttons: a property to change, cancel / delete the raid, close / return to
 # the card, or keep the raid after starting to cancel it.  The create preview uses them
 # too: [More options] opens its card, [Back] there goes back to the preview, and
-# [Mentions] (who the raid pings) and its [No ping] are offered on drafts only.
+# [Mentions] (who the raid pings) and its [No ping] are offered on drafts only.  The notes
+# switch names the state it turns notes to, so a card that sat open can't flip them back.
 EDIT_ACTIONS: Final = (
     "title", "leader", "when", "desc", "image", "color", "cancel", "delete", "done", "back", "keep",
-    "more", "preview", "mentions", "noping", "role_limits", "class_limits",
+    "more", "preview", "mentions", "noping", "role_limits", "class_limits", "notes_on", "notes_off",
 )
 # Raid: Edit's menus, and the create preview's role menu.
 PICKERS: Final = ("leader", "color", "mentions")
 # The modals the bot opens; a submit names which one it came from.
-MODALS: Final = ("ping", "title", "when", "desc", "image", "cancel", "role_limits", "class_limits", "char")
+MODALS: Final = (
+    "ping", "title", "when", "desc", "image", "cancel", "role_limits", "class_limits", "char", "note", "reason",
+)
 # Manage sign-ups (``ml``): verb → what its <arg> holds.  The hub's verbs name no
 # member (``-``); every other verb names the member it's about.
 #   open  the hub (Raid: Edit's [Sign-ups], Raid: Signed's [Manage sign-ups], [Back])

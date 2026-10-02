@@ -10,6 +10,8 @@ color and its role and class limits — with a button for each, then
   shows the card again, saying what changed.
 * Leader and Color swap the card for a menu (type 7) with [Back].
 * Sign-ups swaps it for Manage sign-ups (``raid_manage_views``).
+* Notes: off / Notes: on lets members leave the leader a note, or hides
+  the notes (``raid_note``); the card comes back saying which.
 * Delete raid asks first: [Delete raid] [Keep it].
 * After a move, the card offers [Tell them in channel] while anyone is
   on the raid.
@@ -33,7 +35,7 @@ from platform_shared.services.discord import (
 )
 
 from app.models.wow.wow_raid_event import WowRaidEvent
-from app.services.discord import raid_copy, raid_limit_copy, raid_manage_copy
+from app.services.discord import raid_copy, raid_limit_copy, raid_manage_copy, raid_member_copy
 from app.services.discord.interaction import ephemeral_data, modal_response
 # FIELD is re-exported: the forms' submit handlers read the box by it.
 from app.services.discord.raid_forms import FIELD as FIELD
@@ -105,6 +107,7 @@ def edit_card(event: WowRaidEvent, *, notice: str | None = None, notify_count: i
             _edit_button(event, "Role limits", "role_limits"),
             _edit_button(event, "Class limits", "class_limits"),
             button(raid_manage_copy.EDIT_BUTTON, BUTTON_STYLE_SECONDARY, raid_custom_id.manage(event.id, "open")),
+            notes_button(event),
         ),
         action_row(
             _edit_button(event, "Cancel raid", "cancel", BUTTON_STYLE_DANGER),
@@ -164,6 +167,15 @@ def _description_lines(event: WowRaidEvent) -> list[str]:
 
 def _edit_button(event: WowRaidEvent, label: str, action: str, style: int = BUTTON_STYLE_SECONDARY) -> dict[str, Any]:
     return button(label, style, raid_custom_id.encode("ed", event.id, action))
+
+
+def notes_button(event: WowRaidEvent) -> dict[str, Any]:
+    """[Notes: off] / [Notes: on] — where notes stand; a tap switches them (its id names the new state)."""
+    enabled = bool(event.signup_notes_enabled)
+    action = "notes_on"
+    if enabled:
+        action = "notes_off"
+    return _edit_button(event, raid_member_copy.notes_toggle_label(enabled), action)
 
 
 def _done_button(event: WowRaidEvent) -> dict[str, Any]:

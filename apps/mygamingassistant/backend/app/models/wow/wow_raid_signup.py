@@ -81,6 +81,8 @@ SIGNUP_STATUSES = ("confirmed", "late", "tentative", "bench", "queued", "absence
 # Character names are 2-12 letters (app.services.wow.raid_character.clean_name).
 CHARACTER_NAME_MIN = 2
 CHARACTER_NAME_MAX = 12
+# A note for the raid leader is 1-100 characters (app.services.wow.raid_note.clean_note).
+NOTE_MAX = 100
 
 
 class WowRaidSignup(Base):
@@ -110,6 +112,10 @@ class WowRaidSignup(Base):
             f"BETWEEN {CHARACTER_NAME_MIN} AND {CHARACTER_NAME_MAX}",
             name="ck_wowraidsignup_character_name_len",
         ),
+        CheckConstraint(
+            f"note IS NULL OR char_length(note) BETWEEN 1 AND {NOTE_MAX}",
+            name="ck_wowraidsignup_note_len",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -138,6 +144,9 @@ class WowRaidSignup(Base):
     character_name: Mapped[Optional[str]] = mapped_column(
         String(CHARACTER_NAME_MAX), nullable=True
     )
+    # The member's note for the raid leader, read while the raid takes notes
+    # (WowRaidEvent.signup_notes_enabled); cleared when their status changes.
+    note: Mapped[Optional[str]] = mapped_column(String(NOTE_MAX), nullable=True)
     status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,

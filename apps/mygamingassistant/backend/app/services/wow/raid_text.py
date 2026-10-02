@@ -20,7 +20,7 @@ from zoneinfo import ZoneInfo
 from platform_shared.services.discord import EmojiSet
 
 from app.models.wow.wow_raid_event import WowRaidEvent
-from app.models.wow.wow_raid_signup import WowRaidSignup
+from app.models.wow.wow_raid_signup import NOTE_MAX, WowRaidSignup
 from app.services.wow.raid_catalog import CLASSES_BY_KEY, effective_spec, raid_name, spec_info
 from app.services.wow.raid_roster import RosterSummary
 
@@ -79,6 +79,20 @@ def escape_name(display_name: str, *, max_chars: int = MAX_NAME_CHARS) -> str:
     if len(name) > max_chars:
         name = name[: max_chars - 1] + "…"
     return _escape_line_start(escape_markdown(name)).replace("://", ":\u200b//")
+
+
+def escape_note(note: str, *, max_chars: int = NOTE_MAX) -> str:
+    """A member's note as the leader reads it, in quotes: one line, trimmed to *max_chars*, markdown escaped.
+
+    A zero-width space after ``://``, ``<`` and ``@`` keeps it from linking,
+    mentioning or showing a timestamp.  It never starts a line, so line
+    starts aren't escaped.
+    """
+    text = " ".join(note.split())
+    if len(text) > max_chars:
+        text = text[: max_chars - 1] + "…"
+    text = escape_markdown(text).replace("://", ":\u200b//")
+    return text.replace("<", "<\u200b").replace("@", "@\u200b")
 
 
 def shown_name(signup: WowRaidSignup) -> str:

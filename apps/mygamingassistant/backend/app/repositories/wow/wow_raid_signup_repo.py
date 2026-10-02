@@ -28,6 +28,7 @@ async def upsert_signup(
     requeue: bool = False,
     character_name: Optional[str] = None,
     set_character: bool = False,
+    clear_note: bool = False,
 ) -> WowRaidSignup:
     """Insert or update a player's signup for an event.
 
@@ -39,7 +40,9 @@ async def upsert_signup(
     again after tentative, bench or absence.
     A new row always takes ``character_name``; an existing one keeps its
     own unless ``set_character`` is set (the player switched class).
-    ``updated_at`` is refreshed.  Returns the post-upsert row.
+    An existing row keeps its ``note`` unless ``clear_note`` is set (the
+    player's status changed).  ``updated_at`` is refreshed.  Returns the
+    post-upsert row.
     """
     now = datetime.now(timezone.utc)
     update_set: dict[str, object] = {
@@ -54,6 +57,8 @@ async def upsert_signup(
         update_set["signed_up_at"] = now
     if set_character:
         update_set["character_name"] = character_name
+    if clear_note:
+        update_set["note"] = None
     values = {
         "event_id": event_id,
         "discord_user_id": discord_user_id,
@@ -93,6 +98,12 @@ async def set_display_name(db: AsyncSession, signup: WowRaidSignup, display_name
 async def set_character_name(db: AsyncSession, signup: WowRaidSignup, name: str | None) -> None:
     """Change the character name a signup shows (None shows the Discord name)."""
     signup.character_name = name
+    await db.flush()
+
+
+async def set_note(db: AsyncSession, signup: WowRaidSignup, note: str | None) -> None:
+    """Change the note the member left the raid leader (None removes it)."""
+    signup.note = note
     await db.flush()
 
 

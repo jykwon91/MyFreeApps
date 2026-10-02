@@ -203,6 +203,17 @@ async def set_class_limits(db: AsyncSession, event: WowRaidEvent, limits: dict[s
     await wow_raid_event_repo.set_class_limits(db, event, limits or None)
 
 
+async def set_signup_notes_enabled(db: AsyncSession, event: WowRaidEvent, enabled: bool) -> bool:
+    """Raid: Edit → Notes: members may leave the leader a note, or not (off hides the notes, keeping them).
+
+    False when it already was, e.g. a second leader's card that sat open.
+    """
+    if event.signup_notes_enabled == enabled:
+        return False
+    await wow_raid_event_repo.set_signup_notes_enabled(db, event, enabled)
+    return True
+
+
 async def delete_event(db: AsyncSession, event: WowRaidEvent) -> None:
     """Raid: Edit → Delete raid: the raid, its sign-ups and its pending notifications go.
 
