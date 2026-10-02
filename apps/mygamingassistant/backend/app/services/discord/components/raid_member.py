@@ -1,4 +1,4 @@
-"""My sign-up's own changes: [Character name] and its form.
+"""My sign-up's own changes: [Character name] and its form, and [Forget my specs].
 
 [Character name] opens a one-box form (type 9) holding the name this
 sign-up shows, else the one saved for its class.  The submit checks the
@@ -8,6 +8,11 @@ good one, or an empty box (back to the Discord name), is saved on the
 sign-up and for its class, and the card comes back saying what changed
 (type 7); the raid post is redrawn when the name it shows changed.  Both
 refuse once the raid has started; closed sign-ups still take a name.
+
+[Forget my specs] asks first, listing what's saved; [Yes, forget them]
+forgets the remembered class and every saved spec, keeping sign-ups,
+character names and the DM setting, and brings the card back saying so
+(the raid post doesn't change, so it works on any raid still on).
 """
 from __future__ import annotations
 
@@ -23,7 +28,7 @@ from app.services.discord import emojis, raid_copy, raid_member_copy, raid_publi
 from app.services.discord.interaction import Interaction, ephemeral_response, update_response, update_text_response
 from app.services.discord.raid_context import RaidContext, load_event, started_refusal, utcnow
 from app.services.discord.raid_forms import FIELD
-from app.services.discord.raid_member_views import character_form, my_signup_data
+from app.services.discord.raid_member_views import character_form, forget_confirm_data, my_signup_data
 from app.services.wow import raid_member_prefs_service, raid_signup_service
 from app.services.wow.raid_character import CharacterNameError, clean_name
 from app.services.wow.raid_custom_id import RaidCustomId
@@ -34,7 +39,13 @@ async def my_card(db: AsyncSession, context: RaidContext, user_id: str, *, notic
     """The My sign-up card for *user_id*, *notice* (what the last tap did) on top."""
     signups = await wow_raid_signup_repo.list_for_event(db, context.event.id)
     mine = next((s for s in signups if s.discord_user_id == user_id), None)
-    return my_signup_data(context.event, mine, signups, emojis=emojis.current(), notice=notice)
+    can_forget = False
+    if mine is not None:
+        pref = await raid_member_prefs_service.get(db, guild=context.guild, discord_user_id=user_id)
+        can_forget = raid_member_prefs_service.has_saved_specs(pref)
+    return my_signup_data(
+        context.event, mine, signups, emojis=emojis.current(), can_forget=can_forget, notice=notice
+    )
 
 
 async def handle_character(
@@ -74,6 +85,38 @@ async def handle_character_submit(
     return update_response(card)
 
 
+async def handle_forget(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
+    """[Forget my specs] — the card asking first; with nothing saved (forgotten elsewhere) the card says so."""
+    assert parsed.event_id is not None
+    async with unit_of_work() as db:
+        context = await load_event(db, interaction, parsed.event_id, lock=False)
+        if context is None:
+            return update_text_response(raid_copy.NOT_FOUND)
+        pref = await raid_member_prefs_service.get(db, guild=context.guild, discord_user_id=interaction.user_id)
+        if not raid_member_prefs_service.has_saved_specs(pref):
+            notice = raid_member_copy.FORGET_NOTHING
+            return update_response(await my_card(db, context, interaction.user_id, notice=notice))
+        return update_response(forget_confirm_data(context.event, pref))
+
+
+async def handle_forget_yes(
+    interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks
+) -> dict[str, Any]:
+    """[Yes, forget them] — forget the saved class and specs; the card comes back saying so."""
+    assert parsed.event_id is not None
+    async with unit_of_work() as db:
+        context = await load_event(db, interaction, parsed.event_id, lock=False)
+        if context is None:
+            return update_text_response(raid_copy.NOT_FOUND)
+        forgot = await raid_member_prefs_service.forget_specs(
+            db, guild=context.guild, discord_user_id=interaction.user_id
+        )
+        notice = raid_member_copy.FORGET_NOTHING
+        if forgot:
+            notice = raid_member_copy.FORGET_DONE
+        return update_response(await my_card(db, context, interaction.user_id, notice=notice))
+
+
 async def _named_signup(
     db: AsyncSession, interaction: Interaction, parsed: RaidCustomId, *, lock: bool
 ) -> tuple[RaidContext, WowRaidSignup] | str:
@@ -94,4 +137,4 @@ async def _named_signup(
 
 
 # My sign-up's buttons this module answers (``raid:v1:card:<event>:<view>``); ``raid_card`` routes them here.
-CARD_BUTTONS: Final = {"char": handle_character}
+CARD_BUTTONS: Final = {"char": handle_character, "forget": handle_forget, "forgetyes": handle_forget_yes}

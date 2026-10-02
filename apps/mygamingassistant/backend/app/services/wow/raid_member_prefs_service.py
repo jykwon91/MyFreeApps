@@ -93,6 +93,13 @@ def saved_name_for(pref: WowRaidMemberPref | None, wow_class: str | None) -> str
     return saved_name(pref.character_names, wow_class)
 
 
+def has_saved_specs(pref: WowRaidMemberPref | None) -> bool:
+    """Whether Forget my specs has anything to forget: a remembered class or a saved spec."""
+    if pref is None:
+        return False
+    return pref.default_wow_class is not None or bool(pref.saved_specs)
+
+
 def one_tap_spec(pref: WowRaidMemberPref | None) -> WowSpecInfo | None:
     """The spec a status button uses without asking: the remembered class's saved spec."""
     if pref is None:
@@ -181,6 +188,31 @@ async def set_character_name(
     if names == existing.character_names:
         return False
     await wow_raid_member_pref_repo.set_character_names(db, existing, names)
+    return True
+
+
+async def forget_specs(db: AsyncSession, *, guild: WowRaidGuild, discord_user_id: str) -> bool:
+    """Forget the member's remembered class and saved specs; True when there was something to forget.
+
+    Keeps the DM setting and the character names, and never creates a row:
+    with nothing saved, nothing is written.
+    """
+    if not has_saved_specs(await get(db, guild=guild, discord_user_id=discord_user_id)):
+        return False
+    existing = await wow_raid_member_pref_repo.lock_or_create(
+        db, guild_id=guild.id, discord_user_id=discord_user_id
+    )
+    if not has_saved_specs(existing):  # forgotten by another tap while this one waited
+        return False
+    await wow_raid_member_pref_repo.upsert(
+        db,
+        guild_id=guild.id,
+        discord_user_id=discord_user_id,
+        default_wow_class=None,
+        default_role=None,
+        saved_specs={},
+        dm_opt_out=existing.dm_opt_out,
+    )
     return True
 
 

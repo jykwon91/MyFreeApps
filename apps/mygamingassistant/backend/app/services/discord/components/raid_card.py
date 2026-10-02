@@ -5,7 +5,7 @@ in place (UPDATE_MESSAGE, type 7).  [Change spec] opens your class's spec
 select, which keeps the status you have when you pick and marks the specs
 the raid's limits leave no room for (see ``raid_signup``); it's gone once
 sign-ups close, and refuses on a card opened before that.
-[Character name] is ``raid_member``'s.
+[Character name] and [Forget my specs] are ``raid_member``'s.
 [Roster] on posts from before the class buttons opens the roster on its own.
 """
 from __future__ import annotations

@@ -1,23 +1,30 @@
-"""My sign-up — the private card a member opens from the raid post — and its form; pure builders.
+"""My sign-up — the private card a member opens from the raid post — its form and asking card; pure builders.
 
 The card is text lines (no embed): what the last tap did, if anything, then
 the raid, your status, spec and character name, and a note for statuses
 that don't speak for themselves.  Its buttons come in two rows: what you
-can change ([Change spec] [Character name]), then [Full roster].
+can change ([Change spec] [Character name]), then [Full roster] and
+[Forget my specs].
 """
 from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import Any, Final
 
-from platform_shared.services.discord import BUTTON_STYLE_SECONDARY, TEXT_INPUT_STYLE_SHORT, EmojiSet
+from platform_shared.services.discord import (
+    BUTTON_STYLE_DANGER,
+    BUTTON_STYLE_SECONDARY,
+    TEXT_INPUT_STYLE_SHORT,
+    EmojiSet,
+)
 
 from app.models.wow.wow_raid_event import WowRaidEvent
+from app.models.wow.wow_raid_member_pref import WowRaidMemberPref
 from app.models.wow.wow_raid_signup import CHARACTER_NAME_MAX, WowRaidSignup
 from app.services.discord import raid_copy, raid_member_copy
 from app.services.discord.interaction import ephemeral_data
 from app.services.discord.raid_forms import event_form, text_box
-from app.services.discord.raid_views import action_row, button, unix
+from app.services.discord.raid_views import action_row, button, saved_labels, unix
 from app.services.wow import raid_custom_id
 from app.services.wow.raid_catalog import signup_label
 from app.services.wow.raid_roster import (
@@ -51,14 +58,16 @@ def my_signup_data(
     signups: Sequence[WowRaidSignup],
     *,
     emojis: EmojiSet,
+    can_forget: bool = False,
     notice: str | None = None,
 ) -> dict[str, Any]:
     """Your status, spec and character name for this raid, with what you can change.
 
     [Change spec] goes once the leader closes sign-ups, and the card says
     so; [Character name] stays until the raid starts.  Both need a class
-    and a status other than absence.  *notice* (what the last tap did) goes
-    on top.
+    and a status other than absence.  [Forget my specs] shows on a sign-up
+    when *can_forget* (a class or spec is saved).  *notice* (what the last
+    tap did) goes on top.
     """
     lines = []
     if notice is not None:
@@ -88,7 +97,11 @@ def my_signup_data(
     rows = []
     if changes:
         rows.append(action_row(*changes))
-    rows.append(action_row(roster))
+    bottom = [roster]
+    if can_forget:
+        forget = raid_custom_id.encode("card", event.id, "forget")
+        bottom.append(button(raid_member_copy.FORGET_BUTTON, BUTTON_STYLE_SECONDARY, forget))
+    rows.append(action_row(*bottom))
     return ephemeral_data("\n".join(lines), components=rows, embeds=[])
 
 
@@ -125,3 +138,19 @@ def character_form(event: WowRaidEvent, name: str | None) -> dict[str, Any]:
         placeholder=raid_member_copy.CHARACTER_PLACEHOLDER,
     )
     return event_form(event, "char", raid_member_copy.CHARACTER_TITLE, box)
+
+
+def forget_confirm_data(event: WowRaidEvent, pref: WowRaidMemberPref | None) -> dict[str, Any]:
+    """[Forget my specs] asks first: what's saved, then [Yes, forget them] / [Keep them] (back to the card)."""
+    lines = [
+        raid_member_copy.FORGET_PROMPT,
+        raid_member_copy.forget_saved(saved_labels(pref)),
+        raid_member_copy.FORGET_AFTER,
+    ]
+    yes = raid_custom_id.encode("card", event.id, "forgetyes")
+    keep = raid_custom_id.encode("card", event.id, "back")
+    row = action_row(
+        button(raid_member_copy.FORGET_YES, BUTTON_STYLE_DANGER, yes),
+        button(raid_member_copy.FORGET_KEEP, BUTTON_STYLE_SECONDARY, keep),
+    )
+    return ephemeral_data("\n".join(lines), components=[row], embeds=[])

@@ -273,7 +273,7 @@ async def test_full_raid_journey(post: Post, db: AsyncSession, fake_discord: Fak
         raid_copy.QUEUE_MOVES_UP,
     ]
     card = f"raid:v1:card:{event.id}"
-    assert custom_ids(response) == [f"raid:v1:change:{event.id}", f"{card}:char", f"{card}:roster"]
+    assert custom_ids(response) == [f"raid:v1:change:{event.id}", f"{card}:char", f"{card}:roster", f"{card}:forget"]
 
     # --- [Full roster] swaps the card for everyone, laid out like the post; [Back] returns.
     #     102 left, so the queued tank's number is 5 though 107 (promoted) is 6.

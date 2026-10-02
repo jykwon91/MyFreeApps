@@ -437,6 +437,21 @@ def _signing_up_as(pref: WowRaidMemberPref | None) -> str:
     return f"Signing up as: **{class_label}**. I'll ask your spec the first time you tap your class on a raid post."
 
 
+def saved_labels(pref: WowRaidMemberPref | None) -> list[str]:
+    """What Forget my specs forgets: the remembered class's spec (else the class), then the other saved specs."""
+    if pref is None:
+        return []
+    labels = []
+    if pref.default_wow_class in CLASSES_BY_KEY:
+        spec = saved_spec(pref.saved_specs, pref.default_wow_class)
+        if spec is None:
+            labels.append(CLASSES_BY_KEY[pref.default_wow_class].label)
+        else:
+            labels.append(spec.full_label)
+    labels.extend(other.full_label for other in _other_saved_specs(pref))
+    return labels
+
+
 def _character_names(pref: WowRaidMemberPref | None) -> list[str]:
     """'**Thrallbot** (Shaman)' for each class with a saved character name, in class order."""
     if pref is None:

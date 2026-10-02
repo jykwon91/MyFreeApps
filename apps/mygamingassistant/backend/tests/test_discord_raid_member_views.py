@@ -1,9 +1,9 @@
 """Unit tests for My sign-up — the private card a member opens from the raid post — and the names around it.
 
-Pure: no DB, no Discord.  The card and its Character name form
-(``raid_member_views``), what they say (``raid_member_copy``), and the other
-private surfaces that show a character name: the Full roster, Raid: Signed,
-the leader's player card and the /raid prefs card.
+Pure: no DB, no Discord.  The card, its Character name form and its Forget
+my specs card (``raid_member_views``), what they say (``raid_member_copy``),
+and the other private surfaces that show a character name: the Full roster,
+Raid: Signed, the leader's player card and the /raid prefs card.
 """
 from __future__ import annotations
 
@@ -20,9 +20,9 @@ from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.services.discord import raid_copy, raid_member_copy
 from app.services.discord.raid_leader_views import signed_data
 from app.services.discord.raid_manage_views import Target, player_data
-from app.services.discord.raid_member_views import character_form, my_signup_data
-from app.services.discord.raid_views import prefs_data, roster_data
-from app.services.wow import raid_custom_id
+from app.services.discord.raid_member_views import character_form, forget_confirm_data, my_signup_data
+from app.services.discord.raid_views import prefs_data, roster_data, saved_labels
+from app.services.wow import raid_custom_id, raid_member_prefs_service
 
 _STARTS = datetime(2026, 10, 11, 0, 0, tzinfo=timezone.utc)
 _STAMP = int(_STARTS.timestamp())
@@ -212,6 +212,62 @@ def test_my_sign_up_once_sign_ups_close_drops_change_spec_but_keeps_the_name() -
 
 
 # ---------------------------------------------------------------------------
+# Forget my specs
+# ---------------------------------------------------------------------------
+
+
+_FORGET = ("Forget my specs", f"raid:v1:card:{_EVENT_ID}:forget")
+
+
+def test_forget_my_specs_sits_beside_full_roster_on_a_sign_up_with_something_saved() -> None:
+    me = _signup("Me")
+
+    def rows(signup: WowRaidSignup, event: WowRaidEvent | None = None) -> list[list[tuple[str, str]]]:
+        return _rows(my_signup_data(event or _event(), signup, [signup], emojis=EMPTY_EMOJIS, can_forget=True))
+
+    assert rows(me) == [[_CHANGE, _CHARACTER], [_FULL_ROSTER, _FORGET]]
+    assert rows(me, _event(closed_at=_T0)) == [[_CHARACTER], [_FULL_ROSTER, _FORGET]]
+    assert rows(_signup("Me", status="absence")) == [[_FULL_ROSTER, _FORGET]]
+    # Nothing saved, or not signed up: no [Forget my specs].
+    assert _rows(my_signup_data(_event(), me, [me], emojis=EMPTY_EMOJIS)) == [[_CHANGE, _CHARACTER], [_FULL_ROSTER]]
+    assert _rows(my_signup_data(_event(), None, [], emojis=EMPTY_EMOJIS, can_forget=True)) == [[_FULL_ROSTER]]
+
+
+def test_forget_my_specs_asks_first_listing_what_is_saved() -> None:
+    pref = _pref(default_wow_class="shaman", saved_specs={"shaman": "restoration", "mage": "frost", "priest": "holy"})
+
+    data = forget_confirm_data(_event(), pref)
+
+    assert _lines(data) == [
+        "Forget what I've saved for you?",
+        "Saved: Restoration Shaman, Frost Mage, Holy Priest",
+        "Next time you sign up I'll ask for your class and spec again. "
+        "Your sign-ups, character names and DM reminders stay as they are.",
+    ]
+    [row] = data["components"]
+    assert [(button["label"], button["style"], button["custom_id"]) for button in row["components"]] == [
+        ("Yes, forget them", 4, f"raid:v1:card:{_EVENT_ID}:forgetyes"),
+        ("Keep them", 2, f"raid:v1:card:{_EVENT_ID}:back"),
+    ]
+    assert (data["flags"], data["embeds"]) == (64, [])
+
+
+@pytest.mark.parametrize(
+    ("pref", "labels"),
+    [
+        (_pref(default_wow_class="warrior", saved_specs={"mage": "frost"}), ["Warrior", "Frost Mage"]),
+        (_pref(saved_specs={"priest": "holy"}), ["Holy Priest"]),
+        (_pref(character_names={"mage": "Jaina"}, dm_opt_out=True), []),
+        (None, []),
+    ],
+    ids=["class-without-spec", "spec-only", "names-and-dms-only", "no-prefs"],
+)
+def test_what_forget_my_specs_would_forget(pref: WowRaidMemberPref | None, labels: list[str]) -> None:
+    assert saved_labels(pref) == labels
+    assert raid_member_prefs_service.has_saved_specs(pref) is bool(labels)
+
+
+# ---------------------------------------------------------------------------
 # The Character name form and what the card says after it
 # ---------------------------------------------------------------------------
 
@@ -237,13 +293,20 @@ def test_the_character_form_holds_the_name_it_shows() -> None:
     assert "value" not in character_form(_event(), None)["data"]["components"][0]["component"]
 
 
-def test_the_card_and_form_fit_discords_limits() -> None:
-    assert len(raid_member_copy.CHARACTER_TITLE) <= 45
-    assert len(raid_member_copy.CHARACTER_LABEL) <= 45
-    assert len(raid_member_copy.CHARACTER_BUTTON) <= 45
+def test_the_cards_and_form_fit_discords_limits() -> None:
+    labels = (
+        raid_member_copy.CHARACTER_TITLE,
+        raid_member_copy.CHARACTER_LABEL,
+        raid_member_copy.CHARACTER_BUTTON,
+        raid_member_copy.FORGET_BUTTON,
+        raid_member_copy.FORGET_YES,
+        raid_member_copy.FORGET_KEEP,
+    )
+    assert all(len(label) <= 45 for label in labels)
     assert len(raid_member_copy.CHARACTER_HINT) <= 100
     assert len(raid_member_copy.CHARACTER_PLACEHOLDER) <= 100
-    for custom_id in (raid_custom_id.encode("card", _EVENT_ID, "char"), raid_custom_id.encode("m", _EVENT_ID, "char")):
+    views = [raid_custom_id.encode("card", _EVENT_ID, view) for view in ("char", "forget", "forgetyes")]
+    for custom_id in (*views, raid_custom_id.encode("m", _EVENT_ID, "char")):
         assert len(custom_id) <= raid_custom_id.MAX_CUSTOM_ID_LEN
         assert raid_custom_id.parse(custom_id) is not None
 
