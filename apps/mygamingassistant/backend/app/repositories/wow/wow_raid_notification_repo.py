@@ -96,15 +96,16 @@ def _build_schedule_rows(
         }
     )
 
-    # ready_check — single channel post
-    rows.append(
-        {
-            "event_id": event_id,
-            "kind": "ready_check",
-            "target_user_id": None,
-            "due_at": starts_at - timedelta(minutes=ready_check_minutes),
-        }
-    )
+    # ready_check — single channel post; 0 = the raid has none
+    if ready_check_minutes > 0:
+        rows.append(
+            {
+                "event_id": event_id,
+                "kind": "ready_check",
+                "target_user_id": None,
+                "due_at": starts_at - timedelta(minutes=ready_check_minutes),
+            }
+        )
 
     return rows
 
@@ -146,6 +147,40 @@ async def schedule_for_event(
     result = await db.execute(stmt)
     await db.flush()
     return result.rowcount or 0
+
+
+async def replace_ready_check(
+    db: AsyncSession,
+    *,
+    event_id: uuid.UUID,
+    starts_at: datetime,
+    guild_settings: dict[str, Any],
+    now: datetime,
+) -> int:
+    """Move the raid's unsent ready check to what *guild_settings* say (none at 0).
+
+    Only the ``ready_check`` row changes: the nudges and the consumables round
+    (with any per-player rows it fanned out) stay as they are.  A time already
+    past schedules nothing.  Returns the number of rows inserted (0 or 1).
+    """
+    await db.execute(
+        delete(WowRaidNotification).where(
+            WowRaidNotification.event_id == event_id,
+            WowRaidNotification.kind == "ready_check",
+            WowRaidNotification.sent_at.is_(None),
+        )
+    )
+    rows = [
+        row
+        for row in _drop_past_due(_build_schedule_rows(event_id, starts_at, guild_settings), now=now)
+        if row["kind"] == "ready_check"
+    ]
+    inserted = 0
+    if rows:
+        result = await db.execute(pg_insert(WowRaidNotification).values(rows).on_conflict_do_nothing())
+        inserted = result.rowcount or 0
+    await db.flush()
+    return inserted
 
 
 async def claim_due(

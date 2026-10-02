@@ -4,11 +4,13 @@ Every handler resolves the Discord guild to its ``wow_raid_guild`` row and
 loads events *scoped to that guild* — a custom_id or autocomplete value from
 one server can never reach another server's raid.  The raid post's
 right-click menu finds its raid by the post's message id, scoped the same way,
-and lets in only the raid's leader or someone with Manage Events.
+and lets in only the raid's leader or someone with Manage Events.  A member
+joining a raid passes :func:`join_refusal` (Who can sign up).
 """
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -17,9 +19,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_guild import WowRaidGuild
+from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.repositories.wow import wow_raid_event_repo, wow_raid_guild_repo
-from app.services.discord import raid_copy
+from app.services.discord import raid_advanced_copy, raid_copy
 from app.services.discord.interaction import Interaction
+from app.services.wow.raid_advanced import access_refusal
 from app.services.wow.raid_deadline import deadline_due
 from app.services.wow.raid_details import leader_id
 
@@ -152,3 +156,19 @@ def started_refusal(event: WowRaidEvent, now: datetime) -> str | None:
     if event.starts_at <= now:
         return raid_copy.RAID_STARTED
     return None
+
+
+def join_refusal(interaction: Interaction, context: RaidContext, signups: Sequence[WowRaidSignup]) -> str | None:
+    """Why this member can't join the raid (Raid: Edit → Advanced → Who can sign up), or None when they may.
+
+    Its leaders (:func:`may_lead`) always may, and so does anyone already on
+    the list, in any status: who can sign up is checked as people join.
+    """
+    if may_lead(interaction, context.event):
+        return None
+    if any(signup.discord_user_id == interaction.user_id for signup in signups):
+        return None
+    refused = access_refusal(context.event, context.guild, interaction.member_role_ids)
+    if refused is None:
+        return None
+    return raid_advanced_copy.refusal(refused, leader_id(context.event))

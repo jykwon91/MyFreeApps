@@ -66,6 +66,7 @@ from platform_shared.services.discord import EmojiSet
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.models.wow.wow_raid_signup import WowRaidSignup
+from app.services.wow.raid_advanced import post_lines
 from app.services.wow.raid_banners import banner_url
 from app.services.wow.raid_catalog import TANK_COLUMN, column_icon, column_label
 from app.services.wow.raid_colors import DEFAULT_COLOR
@@ -334,6 +335,7 @@ def _description(
         lines.append(EM_SPACE.join(when))
         lines.append(EM_SPACE.join(server))
         lines.extend(status_lines(event, emojis))
+        lines.extend(post_lines(event, guild))
     if event.notes:
         lines.append(event.notes)
     lines.append(

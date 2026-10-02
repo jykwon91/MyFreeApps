@@ -23,7 +23,7 @@ from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.models.wow.wow_raid_series import WowRaidSeries
 from app.repositories.wow import wow_raid_event_repo, wow_raid_notification_repo, wow_raid_series_repo
-from app.services.wow import raid_repeat
+from app.services.wow import raid_advanced, raid_repeat
 
 
 @dataclass(frozen=True)
@@ -247,7 +247,8 @@ async def finish_posted(
     await wow_raid_event_repo.set_message_id(db, event, message_id)
     # The reminders raid_event_service.mark_posting schedules for [Post raid].
     await wow_raid_notification_repo.schedule_for_event(
-        db, event_id=event.id, starts_at=event.starts_at, guild_settings=guild.settings, now=now
+        db, event_id=event.id, starts_at=event.starts_at, now=now,
+        guild_settings=raid_advanced.notification_settings(event, guild),
     )
     slot = raid_repeat.following(event.starts_at, series.every_days, series.start_local, series.tz_name)
     await wow_raid_series_repo.set_next(db, series, slot)

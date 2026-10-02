@@ -54,8 +54,9 @@ from app.services.discord.raid_unsigned_views import checking_data, no_pool_data
 from app.services.discord.raid_views import unix
 from app.services.wow import raid_unsigned_service
 from app.services.wow.raid_custom_id import RaidCustomId
+from app.services.wow.raid_roles import picked_roles
 from app.services.wow.raid_text import escape_name, title_text
-from app.services.wow.raid_unsigned import default_pool, picked_roles, ping_ready, pool_for, raid_block
+from app.services.wow.raid_unsigned import default_pool, ping_ready, pool_for, raid_block
 
 # The raids whose list shows: one that's on, or done (who never answered).
 _SHOWN: Final = ("scheduled", "completed")

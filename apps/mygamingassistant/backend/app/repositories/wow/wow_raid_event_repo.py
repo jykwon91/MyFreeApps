@@ -22,6 +22,7 @@ COPIED: Final = (
     "raid_key", "title", "size_cap", "notes", "leader_user_id", "leader_display_name", "image_url", "color",
     "mention_role_ids", "role_limits", "class_limits", "signup_deadline_minutes", "signup_notes_enabled",
     "discord_event_enabled", "thread_enabled", "length_minutes", "raider_role_ids",
+    "min_signups", "signup_role_ids", "banned_role_ids", "ready_check_minutes",
 )
 
 

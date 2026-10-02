@@ -48,7 +48,8 @@ class RaidGuildSettings(BaseModel):
     ready_check_minutes: int = Field(
         default=60,
         ge=0,
-        description="Minutes before raid start to post the ready-check message.",
+        le=1440,
+        description="Minutes before raid start to post the ready-check message; 0 = no ready check.",
     )
 
     @field_validator("nudge_offsets_minutes")
@@ -56,6 +57,13 @@ class RaidGuildSettings(BaseModel):
     def _nudge_offsets_positive(cls, v: list[int]) -> list[int]:
         if any(x < 0 for x in v):
             raise ValueError("nudge_offsets_minutes must all be non-negative")
+        return v
+
+    @field_validator("ready_check_minutes")
+    @classmethod
+    def _ready_check_off_or_in_range(cls, v: int) -> int:
+        if 0 < v < 5:
+            raise ValueError("ready_check_minutes must be 0 (off) or 5 to 1440")
         return v
 
 

@@ -11,9 +11,14 @@ this tick, and the outbox drains as usual.
    is taken with SKIP LOCKED, ``apply_deadline`` re-checks it under the
    lock, and the stamp (``deadline_applied_at``) lands with the close.
    After the commit the post is greyed and the leader DMed (unless they've
-   opted out of DMs).  A raid its leader had closed is only stamped.
+   opted out of DMs).  A raid its leader had closed is only stamped.  A raid
+   short of its minimum sign-ups is cancelled instead
+   (``raid_advanced_service.cancel_if_short``): its post, channel line and
+   DMs — to everyone on it and its leader — replace the close's.
 2. **Start sweep.**  A raid past its start has its post re-rendered once as
    started (``start_applied_at``): grey, every button off.  No DMs.
+   Sign-ups still open close here, so a raid short of its minimum is
+   cancelled as at the deadline.
 3. **Completion.**  A ``scheduled`` raid ``COMPLETE_AFTER`` past its start is
    marked ``completed`` (``wow_raid_event_repo.complete_started_events``).
 4. **Attendance.**  Each completed raid not yet recorded has its sign-ups
@@ -30,12 +35,12 @@ this tick, and the outbox drains as usual.
    DMs its creator; one it didn't answer is tried again next tick.  Last,
    because it waits on Discord while holding the repeat.
 
-The sweeps write the new columns and ``closed_at``, never ``status``, and
-run before completion, so after downtime a raid already past it is still
-greyed first.  A refresh or DM that fails after the commit isn't retried:
-the post catches up on its next refresh, and the DM goes out at most once.
-With two workers, SKIP LOCKED and the stamps mean one refresh and at most
-one DM per raid.
+The sweeps write the new columns and ``closed_at``, never ``status`` —
+except the minimum's cancel — and run before completion, so after downtime
+a raid already past it is still greyed first.  A refresh or DM that fails
+after the commit isn't retried: the post catches up on its next refresh,
+and the DM goes out at most once.  With two workers, SKIP LOCKED and the
+stamps mean one refresh and at most one DM per raid.
 """
 from __future__ import annotations
 
@@ -51,9 +56,10 @@ from typing import Final
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.wow.wow_raid_event import WowRaidEvent
+from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.repositories.wow import wow_raid_event_repo, wow_raid_guild_repo
 from app.services.discord import raid_deadline_copy, raid_extras, raid_publisher, raid_repeat_publisher, rest
-from app.services.wow import raid_attendance_service, raid_consumables_round, raid_event_service
+from app.services.wow import raid_advanced_service, raid_attendance_service, raid_consumables_round, raid_event_service
 from app.services.wow.raid_deadline import COMPLETE_AFTER
 from app.services.wow.raid_details import leader_id
 from app.services.wow.raid_notification_outcomes import RunStats
@@ -119,7 +125,7 @@ async def _sweep(step: _Step, scope: SessionScope, clock: Clock, stats: RunStats
 
 
 async def _close_one(scope: SessionScope, now: datetime, stats: RunStats) -> bool:
-    """Record one raid's passed deadline; a close greys the post and DMs the leader."""
+    """Record one raid's passed deadline; a close greys the post and DMs the leader, or cancels a short raid."""
     async with scope() as db:
         event = await wow_raid_event_repo.lock_deadline_due(db, now)
         if event is None:
@@ -127,7 +133,14 @@ async def _close_one(scope: SessionScope, now: datetime, stats: RunStats) -> boo
         if await raid_event_service.apply_deadline(db, event, now) != "closed":
             return True  # only stamped: its leader had closed sign-ups already
         event_id = event.id
-        dm = await _leader_dm(db, event)
+        guild = await wow_raid_guild_repo.get(db, event.guild_id)
+        cancelled = await _cancel_if_short(db, event, guild)
+        dm = None
+        if cancelled is None:
+            dm = await _leader_dm(db, event, guild)
+    if cancelled is not None:
+        await _announce_short(event_id, cancelled, stats)
+        return True
     await raid_publisher.refresh_public_message(event_id)
     if dm is not None:
         async with rest.make_rest_client() as client:
@@ -136,9 +149,8 @@ async def _close_one(scope: SessionScope, now: datetime, stats: RunStats) -> boo
     return True
 
 
-async def _leader_dm(db: AsyncSession, event: WowRaidEvent) -> tuple[str, str] | None:
+async def _leader_dm(db: AsyncSession, event: WowRaidEvent, guild: WowRaidGuild | None) -> tuple[str, str] | None:
     """(the leader, the DM) for a close at the deadline; None when they've opted out of DMs."""
-    guild = await wow_raid_guild_repo.get(db, event.guild_id)
     if guild is None:
         return None
     recipients = await raid_event_service.dm_recipients(db, guild=guild, user_ids=[leader_id(event)])
@@ -149,16 +161,36 @@ async def _leader_dm(db: AsyncSession, event: WowRaidEvent) -> tuple[str, str] |
 
 
 async def _start_one(scope: SessionScope, now: datetime, stats: RunStats) -> bool:
-    """Grey one started raid's post: every button off, "This raid has started."."""
+    """Grey one started raid's post: every button off, "This raid has started." — unless sign-ups close short."""
     async with scope() as db:
         event = await wow_raid_event_repo.lock_start_due(db, now)
         if event is None:
             return False
+        cancelled = None
+        if event.closed_at is None:  # sign-ups were still open: they close now
+            guild = await wow_raid_guild_repo.get(db, event.guild_id)
+            cancelled = await _cancel_if_short(db, event, guild)
         await wow_raid_event_repo.set_start_applied(db, event, now)
         event_id = event.id
+    if cancelled is not None:
+        await _announce_short(event_id, cancelled, stats)
+        return True
     await raid_publisher.refresh_public_message(event_id)
     stats.started += 1
     return True
+
+
+async def _cancel_if_short(db: AsyncSession, event: WowRaidEvent, guild: WowRaidGuild | None) -> list[str] | None:
+    """As sign-ups close by themselves: cancel a raid short of its minimum (who to DM); None when it isn't."""
+    if guild is None:
+        return None
+    return await raid_advanced_service.cancel_if_short(db, event, guild)
+
+
+async def _announce_short(event_id: uuid.UUID, dm_ids: list[str], stats: RunStats) -> None:
+    """After the commit: the post, channel line and DMs of a raid its minimum cancelled."""
+    await raid_publisher.announce_cancellation(event_id, dm_ids)
+    stats.minimum_cancelled += 1
 
 
 async def _record_one(scope: SessionScope, now: datetime, stats: RunStats) -> bool:

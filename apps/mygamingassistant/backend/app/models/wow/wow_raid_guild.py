@@ -54,6 +54,14 @@ class WowRaidGuild(Base):
             "raider_role_ids IS NULL OR jsonb_typeof(raider_role_ids) = 'array'",
             name="ck_wowraidguild_raider_role_ids",
         ),
+        CheckConstraint(
+            "signup_role_ids IS NULL OR jsonb_typeof(signup_role_ids) = 'array'",
+            name="ck_wowraidguild_signup_role_ids",
+        ),
+        CheckConstraint(
+            "banned_role_ids IS NULL OR jsonb_typeof(banned_role_ids) = 'array'",
+            name="ck_wowraidguild_banned_role_ids",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -97,6 +105,11 @@ class WowRaidGuild(Base):
     # (/raid-admin raiders; migration 0040); null = none set.  None is stored
     # as SQL NULL, not JSON null, which the check constraint refuses.
     raider_role_ids: Mapped[Optional[list[Any]]] = mapped_column(JSONB(none_as_null=True), nullable=True)
+    # Who can sign up for raids that don't set their own (/raid-admin advanced;
+    # migration 0041): only these roles (null = everyone), never these (null =
+    # nobody).  None is SQL NULL.  The server's ready check is in ``settings``.
+    signup_role_ids: Mapped[Optional[list[Any]]] = mapped_column(JSONB(none_as_null=True), nullable=True)
+    banned_role_ids: Mapped[Optional[list[Any]]] = mapped_column(JSONB(none_as_null=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

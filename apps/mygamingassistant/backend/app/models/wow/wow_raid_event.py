@@ -23,6 +23,10 @@ its sign-ups were frozen into ``wow_raid_attendance`` (never cleared).
 
 Unsigned (0040): ``raider_role_ids`` are the roles Raid: Unsigned checks for
 this raid (copied), ``unsigned_pinged_at`` its [Ping them] slot (not copied).
+
+Advanced (0041, all copied): ``min_signups`` (raid-only), ``signup_role_ids``
+/ ``banned_role_ids`` (Who can sign up) and ``ready_check_minutes``; NULL =
+follow the server.  Read them through ``raid_advanced``.
 """
 import uuid
 from datetime import datetime, timezone
@@ -113,6 +117,22 @@ class WowRaidEvent(Base):
         CheckConstraint(
             f"length_minutes IS NULL OR length_minutes BETWEEN {LENGTH_RANGE[0]} AND {LENGTH_RANGE[1]}",
             name="ck_wowraidevent_length_minutes",
+        ),
+        CheckConstraint(
+            "min_signups IS NULL OR min_signups BETWEEN 1 AND 40",
+            name="ck_wowraidevent_min_signups",
+        ),
+        CheckConstraint(
+            "signup_role_ids IS NULL OR jsonb_typeof(signup_role_ids) = 'array'",
+            name="ck_wowraidevent_signup_role_ids",
+        ),
+        CheckConstraint(
+            "banned_role_ids IS NULL OR jsonb_typeof(banned_role_ids) = 'array'",
+            name="ck_wowraidevent_banned_role_ids",
+        ),
+        CheckConstraint(
+            "ready_check_minutes IS NULL OR ready_check_minutes = 0 OR ready_check_minutes BETWEEN 5 AND 1440",
+            name="ck_wowraidevent_ready_check_minutes",
         ),
         # Efficiently list upcoming events per guild.
         Index("ix_wowraidevent_guild_starts_at", "guild_id", "starts_at"),
@@ -255,6 +275,15 @@ class WowRaidEvent(Base):
     raider_role_ids: Mapped[Optional[list[Any]]] = mapped_column(JSONB(none_as_null=True), nullable=True)
     # When Unsigned's [Ping them] last went out: its own slot, like last_pinged_at.
     unsigned_pinged_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Advanced (0041).  Cancel the raid if fewer than this many have a seat
+    # when sign-ups close by themselves; null = no minimum (raid-only).
+    min_signups: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # Who can sign up: only these roles ([] = everyone), never these ([] =
+    # nobody); null = the server's.  None is SQL NULL.
+    signup_role_ids: Mapped[Optional[list[Any]]] = mapped_column(JSONB(none_as_null=True), nullable=True)
+    banned_role_ids: Mapped[Optional[list[Any]]] = mapped_column(JSONB(none_as_null=True), nullable=True)
+    # Minutes before the start the ready check goes out (0 = none); null = the server's.
+    ready_check_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

@@ -28,11 +28,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.repositories.wow import (
+    wow_raid_event_edit_repo,
     wow_raid_event_repo,
     wow_raid_member_pref_repo,
     wow_raid_notification_repo,
     wow_raid_signup_repo,
 )
+from app.services.wow import raid_advanced
 from app.services.wow.raid_deadline import (
     DeadlineChange,
     DeadlineError,
@@ -132,23 +134,19 @@ async def mark_posting(
         return "in_past"
     if deadline_passed(event, now):
         return "deadline_passed"
-    event.status = "scheduled"
     # Post into the guild's current raid channel (setup may have changed
     # since the preview was created).
-    if guild.raid_channel_id:
-        event.channel_id = guild.raid_channel_id
-    await db.flush()
+    await wow_raid_event_edit_repo.mark_scheduled(db, event, channel_id=guild.raid_channel_id)
     await wow_raid_notification_repo.schedule_for_event(
-        db, event_id=event.id, starts_at=event.starts_at, guild_settings=guild.settings, now=now
+        db, event_id=event.id, starts_at=event.starts_at, now=now,
+        guild_settings=raid_advanced.notification_settings(event, guild),
     )
     return "posted"
 
 
 async def revert_to_draft(db: AsyncSession, event: WowRaidEvent) -> None:
     """Undo ``mark_posting`` after Discord refused the public post."""
-    event.status = "draft"
-    event.message_id = None
-    await db.flush()
+    await wow_raid_event_edit_repo.mark_draft(db, event)
     await wow_raid_notification_repo.cancel_pending_for_event(db, event.id)
 
 
@@ -176,20 +174,16 @@ async def edit_event(
         seats_taken = compute_roster_summary(signups, size_cap=event.size_cap).seats_taken
         if size_cap < seats_taken:
             return EditOutcome(min_size=seats_taken)
-        event.size_cap = size_cap
-    if notes is not None:
-        event.notes = notes
     time_changed = starts_at is not None and starts_at != event.starts_at
-    if starts_at is not None:
-        event.starts_at = starts_at
-    await db.flush()
+    await wow_raid_event_edit_repo.apply_edit(db, event, starts_at=starts_at, size_cap=size_cap, notes=notes)
 
     deadline: DeadlineChange | None = None
     # A draft's notifications are scheduled when it's posted (``mark_posting``).
     if time_changed and event.status == "scheduled":
         await wow_raid_notification_repo.cancel_pending_for_event(db, event.id)
         await wow_raid_notification_repo.schedule_for_event(
-            db, event_id=event.id, starts_at=event.starts_at, guild_settings=guild.settings, now=now
+            db, event_id=event.id, starts_at=event.starts_at, now=now,
+            guild_settings=raid_advanced.notification_settings(event, guild),
         )
         # Moved, always into the future: the post is live again and the deadline counts from the new start.
         await wow_raid_event_repo.set_start_applied(db, event, None)
@@ -203,39 +197,32 @@ async def edit_event(
 
 async def set_title(db: AsyncSession, event: WowRaidEvent, title: str | None) -> None:
     """Raid: Edit → Title; None goes back to the raid's own name."""
-    event.title = title
-    await db.flush()
+    await wow_raid_event_edit_repo.set_title(db, event, title)
 
 
 async def set_leader(db: AsyncSession, event: WowRaidEvent, *, user_id: str, display_name: str) -> None:
     """Raid: Edit → Leader: they get the raid's leader tools and the post names them."""
-    event.leader_user_id = user_id
-    event.leader_display_name = display_name
-    await db.flush()
+    await wow_raid_event_edit_repo.set_leader(db, event, user_id=user_id, display_name=display_name)
 
 
 async def set_description(db: AsyncSession, event: WowRaidEvent, notes: str | None) -> None:
     """Raid: Edit → Description; None removes it."""
-    event.notes = notes
-    await db.flush()
+    await wow_raid_event_edit_repo.set_notes(db, event, notes)
 
 
 async def set_banner(db: AsyncSession, event: WowRaidEvent, image_url: str | None) -> None:
     """Raid: Edit → Image; None goes back to the raid's own banner."""
-    event.image_url = image_url
-    await db.flush()
+    await wow_raid_event_edit_repo.set_image_url(db, event, image_url)
 
 
 async def set_color(db: AsyncSession, event: WowRaidEvent, color: int | None) -> None:
     """Raid: Edit → Color; None goes back to the default."""
-    event.color = color
-    await db.flush()
+    await wow_raid_event_edit_repo.set_color(db, event, color)
 
 
 async def set_mentions(db: AsyncSession, event: WowRaidEvent, role_ids: list[str]) -> None:
     """Create preview → Mentions: the roles the raid pings ([] = nobody)."""
-    event.mention_role_ids = role_ids
-    await db.flush()
+    await wow_raid_event_edit_repo.set_mention_role_ids(db, event, role_ids)
 
 
 async def set_role_limits(db: AsyncSession, event: WowRaidEvent, limits: dict[str, int]) -> None:
@@ -270,8 +257,7 @@ async def delete_event(db: AsyncSession, event: WowRaidEvent) -> None:
 
 async def set_cancel_reason(db: AsyncSession, event: WowRaidEvent, reason: str | None) -> None:
     """Stage the reason shown on the cancelled embed (before the organiser confirms)."""
-    event.cancel_reason = reason
-    await db.flush()
+    await wow_raid_event_edit_repo.set_cancel_reason(db, event, reason)
 
 
 async def cancel_event(db: AsyncSession, *, event: WowRaidEvent, guild: WowRaidGuild) -> list[str]:
@@ -372,16 +358,14 @@ async def claim_ping(db: AsyncSession, event: WowRaidEvent, *, now: datetime) ->
     """
     if not ping_ready(event, now):
         return False
-    event.last_pinged_at = now
-    await db.flush()
+    await wow_raid_event_edit_repo.set_last_pinged_at(db, event, now)
     return True
 
 
 async def release_ping(db: AsyncSession, event: WowRaidEvent, *, claimed_at: datetime) -> None:
     """Hand back a ping that never went out, unless a later one claimed the slot since."""
     if event.last_pinged_at == claimed_at:
-        event.last_pinged_at = None
-        await db.flush()
+        await wow_raid_event_edit_repo.set_last_pinged_at(db, event, None)
 
 
 async def dm_recipients(db: AsyncSession, *, guild: WowRaidGuild, user_ids: list[str]) -> list[str]:

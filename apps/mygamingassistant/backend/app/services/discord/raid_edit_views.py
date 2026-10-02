@@ -13,6 +13,9 @@ opens the Repeat card (``raid_repeat_views``).
 * Sign-ups swaps it for Manage sign-ups (``raid_manage_views``).
 * Notes: off / Notes: on lets members leave the leader a note, or hides
   the notes (``raid_note``); the card comes back saying which.
+* Advanced opens the raid's settings that follow the server unless it sets
+  its own — Minimum sign-ups, Who can sign up, Ready check
+  (``raid_advanced_views``).
 * Copy raid opens a form for the copy's date and time, then shows the
   copy on the create preview (``components/raid_duplicate``).
 * Delete raid asks first: [Delete raid] [Keep it].
@@ -39,6 +42,7 @@ from platform_shared.services.discord import (
 
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.services.discord import (
+    raid_advanced_copy,
     raid_copy,
     raid_deadline_copy,
     raid_extras_copy,
@@ -48,6 +52,7 @@ from app.services.discord import (
     raid_repeat_copy,
 )
 from app.services.discord.interaction import ephemeral_data, modal_response
+from app.services.discord.raid_advanced_views import advanced_button
 # FIELD is re-exported: the forms' submit handlers read the box by it.
 from app.services.discord.raid_extras_views import extras_button
 from app.services.discord.raid_forms import FIELD as FIELD
@@ -126,6 +131,7 @@ def edit_card(event: WowRaidEvent, *, notice: str | None = None, notify_count: i
             _edit_button(event, "Class limits", "class_limits"),
             button(raid_manage_copy.EDIT_BUTTON, BUTTON_STYLE_SECONDARY, raid_custom_id.manage(event.id, "open")),
             notes_button(event),
+            advanced_button(event),
         ),
         action_row(
             _copy_button(event),
@@ -151,6 +157,7 @@ def _detail_lines(event: WowRaidEvent) -> list[str]:
         *raid_deadline_copy.deadline_lines(event),
         *raid_repeat_copy.repeat_lines(event),
         *raid_extras_copy.detail_lines(event),
+        *raid_advanced_copy.detail_lines(event),
         f"**Image:** {_image_text(event)}",
         f"**Color:** {_color_text(event)}",
         raid_limit_copy.role_limits_line(limits.roles),
