@@ -2,9 +2,10 @@
 
 The public signup post lives in :mod:`app.services.wow.raid_embed`; this
 module renders everything only the clicking user sees: the class and spec
-selects, the My sign-up card, the full roster, /raid list, /raid prefs, the
-cancel confirmation and the "free my seat?" confirmation.  The create
-preview is :mod:`app.services.discord.raid_draft_views`.
+selects, the full roster, /raid list, /raid prefs, the cancel confirmation
+and the "free my seat?" confirmation.  The My sign-up card is
+:mod:`app.services.discord.raid_member_views`; the create preview is
+:mod:`app.services.discord.raid_draft_views`.
 """
 from __future__ import annotations
 
@@ -30,6 +31,7 @@ from app.services.discord import raid_copy, raid_limit_copy
 from app.services.discord.interaction import ephemeral_data
 from app.services.discord.rest import message_link
 from app.services.wow import raid_custom_id
+from app.services.wow.raid_character import saved_name
 from app.services.wow.raid_catalog import (
     CLASSES,
     CLASSES_BY_KEY,
@@ -40,7 +42,6 @@ from app.services.wow.raid_catalog import (
     column_icon,
     column_specs,
     saved_spec,
-    signup_label,
 )
 from app.services.wow.raid_embed import (
     COLOR_OPEN,
@@ -50,42 +51,22 @@ from app.services.wow.raid_embed import (
 )
 from app.services.wow.raid_limits import LimitCheck, LimitHit
 from app.services.wow.raid_post_layout import post_columns, with_status
-from app.services.wow.raid_roster import (
-    ABSENCE_STATUS,
-    BENCH_STATUS,
-    QUEUED_STATUS,
-    TENTATIVE_STATUS,
-    compute_roster_summary,
-    order_numbers,
-    queue_position,
-)
+from app.services.wow.raid_roster import compute_roster_summary, order_numbers
 from app.services.wow.raid_text import (
     display_title,
     escape_name,
     icon_text,
     local_day_label,
     seats_label,
+    shown_name,
     signup_icon,
     status_heading,
     title_text,
+    told_apart,
+    twin_names,
 )
 
 EMBED_DESCRIPTION_LIMIT: Final = 4096
-
-# The My sign-up card's status line: (label, icon).  The queue shows its place instead.
-_STATUS_LINES: Final[dict[str, tuple[str, str]]] = {
-    "confirmed": ("Signed up", "status_signed"),
-    "late": ("Late", "status_late"),
-    TENTATIVE_STATUS: ("Tentative", "status_tentative"),
-    BENCH_STATUS: ("On the bench", "status_bench"),
-    ABSENCE_STATUS: ("Absent", "status_absence"),
-}
-# Second line on My sign-up for statuses that don't speak for themselves.
-_MY_SIGNUP_NOTES: Final[dict[str, str]] = {
-    TENTATIVE_STATUS: raid_copy.TENTATIVE_NOTE,
-    QUEUED_STATUS: raid_copy.QUEUE_MOVES_UP,
-    BENCH_STATUS: raid_copy.BENCH_NOTE,
-}
 
 
 # ---------------------------------------------------------------------------
@@ -334,46 +315,8 @@ def limit_refusal_data(
 
 
 # ---------------------------------------------------------------------------
-# My sign-up card / Roster
+# Roster
 # ---------------------------------------------------------------------------
-
-
-def my_signup_data(
-    event: WowRaidEvent, signup: WowRaidSignup | None, signups: Sequence[WowRaidSignup], *, emojis: EmojiSet
-) -> dict[str, Any]:
-    """Your status and spec for this raid, with [Change spec] and [Full roster].
-
-    Once the leader closes sign-ups, [Change spec] goes and the card says so.
-    """
-    roster = button("Full roster", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("card", event.id, "roster"))
-    closed = event.closed_at is not None
-    if signup is None:
-        text = raid_copy.CLOSED if closed else raid_copy.NOT_SIGNED_UP
-        return ephemeral_data(text, components=[action_row(roster)], embeds=[])
-    lines = [
-        f"**Your sign-up** · {title_text(event)} · <t:{unix(event.starts_at)}:F>",
-        f"Status: {_status_text(signup, signups, emojis)}",
-    ]
-    buttons = [roster]
-    if signup.status != ABSENCE_STATUS:
-        if signup.wow_class is not None:
-            label = f"**{signup_label(signup.wow_class, signup.role, signup.spec)}**"
-            lines.append(" ".join(part for part in ("Spec:", signup_icon(signup, emojis), label) if part))
-        if not closed:
-            buttons.insert(0, button("Change spec", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("change", event.id)))
-    note = raid_copy.CLOSED if closed else _MY_SIGNUP_NOTES.get(signup.status)
-    if note is not None:
-        lines.append(note)
-    return ephemeral_data("\n".join(lines), components=[action_row(*buttons)], embeds=[])
-
-
-def _status_text(signup: WowRaidSignup, signups: Sequence[WowRaidSignup], emojis: EmojiSet) -> str:
-    """'{icon} **Late**' — the queue shows its place: '#2 in the queue'."""
-    if signup.status == QUEUED_STATUS:
-        place = raid_copy.queue_place(queue_position(signups, signup.discord_user_id))
-        return icon_text(emojis, "status_queued", f"**{place}**")
-    label, icon = _STATUS_LINES.get(signup.status, (signup.status, ""))
-    return icon_text(emojis, icon, f"**{label}**")
 
 
 def roster_data(
@@ -387,21 +330,27 @@ def roster_data(
     """Everyone, laid out like the post's columns, with full names.
 
     Seat holders and the queue carry their order number (`12`); the queue is
-    struck through.  Tentative, bench and absence follow, one per line.
-    *back* adds [Back] to the My sign-up card it was opened from.
+    struck through.  Tentative, bench and absence follow, one per line.  A
+    name two sign-ups go by is followed by the Discord name of whoever plays
+    a character of that name ("Thrall / Jason").  *back* adds [Back] to the
+    My sign-up card it was opened from.
     """
     summary = compute_roster_summary(signups, size_cap=event.size_cap)
     numbers = order_numbers(signups)
+    twins = twin_names(signups)
     sections: list[str] = []
     for column, players in post_columns(signups).items():
         if players:
-            entries = [roster_entry(player, numbers.get(player.discord_user_id), emojis) for player in players]
+            entries = [
+                roster_entry(player, numbers.get(player.discord_user_id), emojis, also=told_apart(player, twins))
+                for player in players
+            ]
             sections.append("\n".join([f"**{column_heading(column, len(players), emojis)}**", *entries]))
     for status, label, icon in STATUS_LISTS:
         players = with_status(signups, status)
         if players:
             heading = icon_text(emojis, icon, status_heading(status, label, len(players)))
-            entries = [f"{signup_icon(player, emojis)} {escape_name(player.display_name)}".strip() for player in players]
+            entries = [_list_line(player, twins, emojis) for player in players]
             sections.append("\n".join([f"**{heading}**", *entries]))
 
     embed = {
@@ -414,6 +363,11 @@ def roster_data(
     if back:
         components.append(action_row(_back_to_card(event)))
     return ephemeral_data("", components=components, embeds=[embed])
+
+
+def _list_line(player: WowRaidSignup, twins: frozenset[str], emojis: EmojiSet) -> str:
+    """'{spec icon} Alice' in a status list; 'Thrall / Jason' for a shared name."""
+    return f"{signup_icon(player, emojis)} {escape_name(shown_name(player))}{told_apart(player, twins)}".strip()
 
 
 def clip_lines(text: str, limit: int) -> str:
@@ -464,8 +418,11 @@ def prefs_data(pref: WowRaidMemberPref | None, *, heading: str | None = None) ->
     reminder_state = "on"
     if pref is not None and pref.dm_opt_out:
         reminder_state = "off"
+    characters = _character_names(pref)
+    if characters:
+        lines.append(f"Characters: {', '.join(characters)}")
     lines.append(f"DM reminders: **{reminder_state}**")
-    lines.append("Change these with `/raid prefs class: spec: dm_reminders:`.")
+    lines.append("Change these with `/raid prefs class: spec: character: dm_reminders:`.")
     test_button = button("Send me a test DM", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("testdm"))
     return ephemeral_data("\n".join(lines), components=[action_row(test_button)])
 
@@ -478,6 +435,29 @@ def _signing_up_as(pref: WowRaidMemberPref | None) -> str:
         return f"Signing up as: **{spec.full_label}**"
     class_label = CLASSES_BY_KEY[pref.default_wow_class].label
     return f"Signing up as: **{class_label}**. I'll ask your spec the first time you tap your class on a raid post."
+
+
+def saved_labels(pref: WowRaidMemberPref | None) -> list[str]:
+    """What Forget my specs forgets: the remembered class's spec (else the class), then the other saved specs."""
+    if pref is None:
+        return []
+    labels = []
+    if pref.default_wow_class in CLASSES_BY_KEY:
+        spec = saved_spec(pref.saved_specs, pref.default_wow_class)
+        if spec is None:
+            labels.append(CLASSES_BY_KEY[pref.default_wow_class].label)
+        else:
+            labels.append(spec.full_label)
+    labels.extend(other.full_label for other in _other_saved_specs(pref))
+    return labels
+
+
+def _character_names(pref: WowRaidMemberPref | None) -> list[str]:
+    """'**Thrallbot** (Shaman)' for each class with a saved character name, in class order."""
+    if pref is None:
+        return []
+    names = [(saved_name(pref.character_names, cls.key), cls.label) for cls in CLASSES]
+    return [f"**{escape_name(name)}** ({label})" for name, label in names if name is not None]
 
 
 def _other_saved_specs(pref: WowRaidMemberPref | None) -> list[WowSpecInfo]:

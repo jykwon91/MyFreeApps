@@ -47,6 +47,7 @@ from typing import Any, Final
 
 from platform_shared.services.discord import COMMAND_TYPE_MESSAGE, COMMAND_TYPE_USER, MANAGE_EVENTS
 
+from app.models.wow.wow_raid_signup import CHARACTER_NAME_MAX
 from app.services.wow.raid_catalog import CLASSES, RAIDS
 
 # Application command option types
@@ -107,6 +108,13 @@ RAID_COMMAND: Final[dict[str, Any]] = {
                     "description": "Your spec (fill in class first for a shorter list)",
                     "autocomplete": True,
                     "max_length": 40,
+                },
+                {
+                    "type": _STRING,
+                    "name": "character",
+                    "description": "Your in-game name for your class (2-12 letters), or - to clear it",
+                    "min_length": 1,
+                    "max_length": CHARACTER_NAME_MAX,
                 },
                 {
                     "type": _BOOLEAN,

@@ -132,8 +132,19 @@ def may_lead(interaction: Interaction, event: WowRaidEvent) -> bool:
 
 def signup_refusal(event: WowRaidEvent, now: datetime) -> str | None:
     """Why a member can't change their sign-up right now, or None when they can."""
-    if event.starts_at <= now:
-        return raid_copy.RAID_STARTED
+    started = started_refusal(event, now)
+    if started is not None:
+        return started
     if event.closed_at is not None:
         return raid_copy.CLOSED
+    return None
+
+
+def started_refusal(event: WowRaidEvent, now: datetime) -> str | None:
+    """Why a member can't change a detail of their sign-up (its character name) now, or None.
+
+    Only a started raid refuses: unlike the sign-up itself, a detail can change after sign-ups close.
+    """
+    if event.starts_at <= now:
+        return raid_copy.RAID_STARTED
     return None

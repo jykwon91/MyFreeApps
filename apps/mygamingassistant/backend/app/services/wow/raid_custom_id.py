@@ -16,7 +16,9 @@ spec     spec select (value = <class>.<spec>)         raid:v1:spec:<event>:<colu
 pickclass [Different class] under the spec select     raid:v1:pickclass:<event>:<status>
          (menus opened from My sign-up carry ``same``: keep the status you have when you pick)
 change   [Change spec] on My sign-up                  raid:v1:change:<event>
-card     [Full roster] / [Back] on My sign-up         raid:v1:card:<event>:<roster|back>
+card     My sign-up's [Full roster] / [Back] /        raid:v1:card:<event>:<view>
+         [Character name] (its form) / [Forget my specs] and its [Yes, forget them]
+         (view = roster, back, char, forget or forgetyes)
 signup   [Sign up] on posts from before the class buttons   raid:v1:signup:<event>
 roster   [Roster] on posts from before the class buttons    raid:v1:roster:<event>
 role     role button from a pre-spec picker (legacy)  raid:v1:role:<event>:<status>:<class>:<role>
@@ -36,7 +38,7 @@ ed       Raid: Edit's buttons                         raid:v1:ed:<event>:<proper
 pick     Raid: Edit's leader / color menus            raid:v1:pick:<event>:<leader|color|mentions>
 del      [Delete raid] on Raid: Edit's delete check   raid:v1:del:<event>
 m        a modal's submit                             raid:v1:m:<event>:<ping|title|when|desc|image|cancel|
-                                                                         role_limits|class_limits>
+                                                                         role_limits|class_limits|char>
 ml       Manage sign-ups (a leader adds, changes,      raid:v1:ml:<event>:<verb>:<member|->:<arg|->
          moves and removes players; see ``MANAGE_VERBS``)
 testdm   /raid prefs [Send me a test DM]              raid:v1:testdm
@@ -92,8 +94,9 @@ SAME_STATUS: Final = "same"
 _MENU_STATUSES: Final = (*REQUESTABLE_STATUSES, SAME_STATUS)
 # What a seat holder can give their seat up for (the confirm card's [Yes]).
 RELEASE_STATUSES: Final = ("tentative", "bench", "absence")
-# The My sign-up card's views: the full roster, and back to the card.
-CARD_VIEWS: Final = ("roster", "back")
+# The My sign-up card's views: the full roster, back to the card, the Character name form,
+# and Forget my specs (the card asking first, then its [Yes, forget them]).
+CARD_VIEWS: Final = ("roster", "back", "char", "forget", "forgetyes")
 # The leader tools under Raid: Close / Raid: Signed (and [Tell them in channel] under Raid: Edit).
 LEADER_ACTIONS: Final = ("reopen", "close", "ping", "notify")
 # Raid: Edit's buttons: a property to change, cancel / delete the raid, close / return to
@@ -107,7 +110,7 @@ EDIT_ACTIONS: Final = (
 # Raid: Edit's menus, and the create preview's role menu.
 PICKERS: Final = ("leader", "color", "mentions")
 # The modals the bot opens; a submit names which one it came from.
-MODALS: Final = ("ping", "title", "when", "desc", "image", "cancel", "role_limits", "class_limits")
+MODALS: Final = ("ping", "title", "when", "desc", "image", "cancel", "role_limits", "class_limits", "char")
 # Manage sign-ups (``ml``): verb → what its <arg> holds.  The hub's verbs name no
 # member (``-``); every other verb names the member it's about.
 #   open  the hub (Raid: Edit's [Sign-ups], Raid: Signed's [Manage sign-ups], [Back])

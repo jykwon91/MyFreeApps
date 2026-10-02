@@ -26,9 +26,7 @@ from platform_shared.services.discord import (
     BUTTON_STYLE_DANGER,
     BUTTON_STYLE_PRIMARY,
     BUTTON_STYLE_SECONDARY,
-    COMPONENT_TYPE_LABEL,
     COMPONENT_TYPE_STRING_SELECT,
-    COMPONENT_TYPE_TEXT_INPUT,
     COMPONENT_TYPE_USER_SELECT,
     TEXT_INPUT_STYLE_PARAGRAPH,
     TEXT_INPUT_STYLE_SHORT,
@@ -37,6 +35,9 @@ from platform_shared.services.discord import (
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.services.discord import raid_copy, raid_limit_copy, raid_manage_copy
 from app.services.discord.interaction import ephemeral_data, modal_response
+# FIELD is re-exported: the forms' submit handlers read the box by it.
+from app.services.discord.raid_forms import FIELD as FIELD
+from app.services.discord.raid_forms import event_form, text_box
 from app.services.discord.raid_leader_views import raid_line
 from app.services.discord.raid_views import action_row, button, unix
 from app.services.wow import raid_custom_id
@@ -55,8 +56,6 @@ from app.services.wow.raid_limit_forms import class_form_prefill
 from app.services.wow.raid_limits import LIMIT_ROLES, Limits
 from app.services.wow.raid_text import display_title, escape_name, title_text
 
-# Each form's one input (Role limits has a box per role, named by the role).
-FIELD: Final = "value"
 WHEN_MAX: Final = 40
 ROLE_LIMIT_MAX: Final = 3
 CLASS_LIMITS_MAX: Final = 500
@@ -239,7 +238,7 @@ def delete_check(event: WowRaidEvent, signups: int) -> dict[str, Any]:
 
 
 def title_modal(event: WowRaidEvent) -> dict[str, Any]:
-    field = _field(
+    field = text_box(
         raid_copy.TITLE_LABEL,
         raid_copy.TITLE_HINT,
         style=TEXT_INPUT_STYLE_SHORT,
@@ -247,12 +246,12 @@ def title_modal(event: WowRaidEvent) -> dict[str, Any]:
         max_length=TITLE_MAX,
         required=True,
     )
-    return _modal(event, "title", raid_copy.TITLE_MODAL, field)
+    return event_form(event, "title", raid_copy.TITLE_MODAL, field)
 
 
 def when_modal(event: WowRaidEvent, tz_name: str) -> dict[str, Any]:
     """Date and time in the server's timezone, starting from the raid's."""
-    field = _field(
+    field = text_box(
         raid_copy.when_label(tz_name),
         raid_copy.WHEN_HINT,
         style=TEXT_INPUT_STYLE_SHORT,
@@ -260,11 +259,11 @@ def when_modal(event: WowRaidEvent, tz_name: str) -> dict[str, Any]:
         max_length=WHEN_MAX,
         required=True,
     )
-    return _modal(event, "when", raid_copy.WHEN_MODAL, field)
+    return event_form(event, "when", raid_copy.WHEN_MODAL, field)
 
 
 def description_modal(event: WowRaidEvent) -> dict[str, Any]:
-    field = _field(
+    field = text_box(
         raid_copy.DESC_LABEL,
         raid_copy.DESC_HINT,
         style=TEXT_INPUT_STYLE_PARAGRAPH,
@@ -272,11 +271,11 @@ def description_modal(event: WowRaidEvent) -> dict[str, Any]:
         max_length=DESCRIPTION_MAX,
         required=False,
     )
-    return _modal(event, "desc", raid_copy.DESC_MODAL, field)
+    return event_form(event, "desc", raid_copy.DESC_MODAL, field)
 
 
 def image_modal(event: WowRaidEvent) -> dict[str, Any]:
-    field = _field(
+    field = text_box(
         raid_copy.IMAGE_LABEL,
         raid_copy.IMAGE_HINT,
         style=TEXT_INPUT_STYLE_SHORT,
@@ -284,11 +283,11 @@ def image_modal(event: WowRaidEvent) -> dict[str, Any]:
         max_length=IMAGE_URL_MAX,
         required=False,
     )
-    return _modal(event, "image", raid_copy.IMAGE_MODAL, field)
+    return event_form(event, "image", raid_copy.IMAGE_MODAL, field)
 
 
 def cancel_modal(event: WowRaidEvent) -> dict[str, Any]:
-    field = _field(
+    field = text_box(
         raid_copy.CANCEL_LABEL,
         raid_copy.CANCEL_HINT,
         style=TEXT_INPUT_STYLE_SHORT,
@@ -296,12 +295,12 @@ def cancel_modal(event: WowRaidEvent) -> dict[str, Any]:
         max_length=REASON_MAX,
         required=False,
     )
-    return _modal(event, "cancel", raid_copy.CANCEL_MODAL, field)
+    return event_form(event, "cancel", raid_copy.CANCEL_MODAL, field)
 
 
 def reason_modal(custom_id: str) -> dict[str, Any]:
     """Manage sign-ups' "say why" form; it carries the custom_id of the button that opened it."""
-    field = _field(
+    field = text_box(
         raid_manage_copy.REASON_LABEL,
         raid_manage_copy.REASON_HINT,
         style=TEXT_INPUT_STYLE_SHORT,
@@ -324,7 +323,7 @@ def role_limits_modal(event: WowRaidEvent) -> dict[str, Any]:
         if role in roles:
             value = str(roles[role])
         fields.append(
-            _field(
+            text_box(
                 raid_limit_copy.ROLE_FIELD_LABELS[role],
                 hint,
                 style=TEXT_INPUT_STYLE_SHORT,
@@ -335,12 +334,12 @@ def role_limits_modal(event: WowRaidEvent) -> dict[str, Any]:
                 placeholder=raid_limit_copy.ROLE_PLACEHOLDER,
             )
         )
-    return _modal(event, "role_limits", raid_limit_copy.ROLE_MODAL, *fields)
+    return event_form(event, "role_limits", raid_limit_copy.ROLE_MODAL, *fields)
 
 
 def class_limits_modal(event: WowRaidEvent) -> dict[str, Any]:
     """Every class on its own line with its limit ('Rogue: 3', 'Warrior: no limit')."""
-    field = _field(
+    field = text_box(
         raid_limit_copy.CLASS_LABEL,
         raid_limit_copy.CLASS_HINT,
         style=TEXT_INPUT_STYLE_PARAGRAPH,
@@ -349,7 +348,7 @@ def class_limits_modal(event: WowRaidEvent) -> dict[str, Any]:
         required=False,
         placeholder=raid_limit_copy.CLASS_PLACEHOLDER,
     )
-    return _modal(event, "class_limits", raid_limit_copy.CLASS_MODAL, field)
+    return event_form(event, "class_limits", raid_limit_copy.CLASS_MODAL, field)
 
 
 def when_prefill(starts_at: datetime, tz_name: str) -> str:
@@ -357,37 +356,3 @@ def when_prefill(starts_at: datetime, tz_name: str) -> str:
     local = starts_at.astimezone(ZoneInfo(tz_name))
     clock = f"{local.hour % 12 or 12}:{local:%M}{local:%p}".lower()
     return f"{local.month}/{local.day}/{local.year} {clock}"
-
-
-def _field(
-    label: str,
-    hint: str | None,
-    *,
-    style: int,
-    value: str | None,
-    max_length: int,
-    required: bool,
-    custom_id: str = FIELD,
-    placeholder: str | None = None,
-) -> dict[str, Any]:
-    text_input: dict[str, Any] = {
-        "type": COMPONENT_TYPE_TEXT_INPUT,
-        "custom_id": custom_id,
-        "style": style,
-        "max_length": max_length,
-        "required": required,
-    }
-    if required:
-        text_input["min_length"] = 1
-    if value:
-        text_input["value"] = value[:max_length]
-    if placeholder is not None:
-        text_input["placeholder"] = placeholder
-    field: dict[str, Any] = {"type": COMPONENT_TYPE_LABEL, "label": label, "component": text_input}
-    if hint is not None:
-        field["description"] = hint
-    return field
-
-
-def _modal(event: WowRaidEvent, name: str, title: str, *fields: dict[str, Any]) -> dict[str, Any]:
-    return modal_response(raid_custom_id.encode("m", event.id, name), title, list(fields))

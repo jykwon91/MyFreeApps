@@ -1,24 +1,23 @@
-"""The private My sign-up card: your status and spec, [Change spec] and [Full roster].
+"""The private My sign-up card: your status, spec and character name, [Change spec] and [Full roster].
 
 [My sign-up] on the post opens the card.  [Full roster] and [Back] swap it
 in place (UPDATE_MESSAGE, type 7).  [Change spec] opens your class's spec
 select, which keeps the status you have when you pick and marks the specs
 the raid's limits leave no room for (see ``raid_signup``); it's gone once
 sign-ups close, and refuses on a card opened before that.
+[Character name] and [Forget my specs] are ``raid_member``'s.
 [Roster] on posts from before the class buttons opens the roster on its own.
 """
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import Any
 
 from fastapi import BackgroundTasks
 
 from app.db.session import unit_of_work
-from app.models.wow.wow_raid_event import WowRaidEvent
-from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.repositories.wow import wow_raid_signup_repo
 from app.services.discord import emojis, raid_copy
+from app.services.discord.components import raid_member
 from app.services.discord.interaction import (
     Interaction,
     ephemeral_response,
@@ -27,7 +26,7 @@ from app.services.discord.interaction import (
     update_text_response,
 )
 from app.services.discord.raid_context import load_event, signup_refusal, utcnow
-from app.services.discord.raid_views import class_picker_data, my_signup_data, roster_data, spec_picker_data
+from app.services.discord.raid_views import class_picker_data, roster_data, spec_picker_data
 from app.services.wow.raid_catalog import CLASSES_BY_KEY, spec_info
 from app.services.wow.raid_custom_id import SAME_STATUS, RaidCustomId
 from app.services.wow.raid_limits import LimitCheck, Limits
@@ -40,29 +39,25 @@ async def handle_mine(interaction: Interaction, parsed: RaidCustomId, background
         context = await load_event(db, interaction, parsed.event_id, lock=False)
         if context is None:
             return ephemeral_response(raid_copy.NOT_FOUND)
-        signups = await wow_raid_signup_repo.list_for_event(db, context.event.id)
-        return message_response(_card(context.event, signups, interaction.user_id))
+        return message_response(await raid_member.my_card(db, context, interaction.user_id))
 
 
 async def handle_card(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
-    """[Full roster] / [Back] — swap the card in place."""
+    """[Full roster] / [Back] — swap the card in place; the card's own changes go to ``raid_member``."""
     assert parsed.event_id is not None
+    change = raid_member.CARD_BUTTONS.get(parsed.args[0])
+    if change is not None:
+        return await change(interaction, parsed, background)
     async with unit_of_work() as db:
         context = await load_event(db, interaction, parsed.event_id, lock=False)
         if context is None:
             return update_text_response(raid_copy.NOT_FOUND)
-        signups = await wow_raid_signup_repo.list_for_event(db, context.event.id)
         if parsed.args[0] == "roster":
+            signups = await wow_raid_signup_repo.list_for_event(db, context.event.id)
             return update_response(
                 roster_data(context.event, signups, context.guild, emojis=emojis.current(), back=True)
             )
-        return update_response(_card(context.event, signups, interaction.user_id))
-
-
-def _card(event: WowRaidEvent, signups: Sequence[WowRaidSignup], user_id: str) -> dict[str, Any]:
-    """The My sign-up card for *user_id*."""
-    mine = next((s for s in signups if s.discord_user_id == user_id), None)
-    return my_signup_data(event, mine, signups, emojis=emojis.current())
+        return update_response(await raid_member.my_card(db, context, interaction.user_id))
 
 
 async def handle_change(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:

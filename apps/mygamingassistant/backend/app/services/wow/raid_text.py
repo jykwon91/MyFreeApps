@@ -3,13 +3,16 @@
 Pure helpers for the post (``raid_embed``), the private cards and roster
 (``raid_views``), the publisher and the notifications: the raid's title,
 its day and server time in the guild's timezone, Discord-markdown
-escaping and trimmed names, the seats summary, list headings, and the
+escaping and trimmed names, the name a sign-up goes by (its character
+name, else the Discord name), the seats summary, list headings, and the
 class / spec icons with their text fallback ("[WAR]") while the emojis
 aren't uploaded.
 """
 from __future__ import annotations
 
 import re
+from collections import Counter
+from collections.abc import Iterable
 from datetime import datetime
 from typing import Final
 from zoneinfo import ZoneInfo
@@ -22,6 +25,8 @@ from app.services.wow.raid_catalog import CLASSES_BY_KEY, effective_spec, raid_n
 from app.services.wow.raid_roster import RosterSummary
 
 MAX_NAME_CHARS: Final = 32
+# A player's Discord name, when it follows their character's ("Thrallbot / Jason").
+PLAYER_NAME_CHARS: Final = 16
 
 _MARKDOWN_SPECIALS: Final = re.compile(r"([\\*_~`|>\[\]])")
 # A name can start a line: a heading, bullet or numbered list there shows as typed.
@@ -74,6 +79,46 @@ def escape_name(display_name: str, *, max_chars: int = MAX_NAME_CHARS) -> str:
     if len(name) > max_chars:
         name = name[: max_chars - 1] + "…"
     return _escape_line_start(escape_markdown(name)).replace("://", ":\u200b//")
+
+
+def shown_name(signup: WowRaidSignup) -> str:
+    """The name a sign-up goes by: its character name, else the player's Discord name."""
+    return signup.character_name or signup.display_name
+
+
+def same_name(first: str, second: str) -> bool:
+    """Whether two names read the same, ignoring case and spacing."""
+    return _name_key(first) == _name_key(second)
+
+
+def signed_name(signup: WowRaidSignup) -> str:
+    """'Thrallbot / Jason' for the leader: the character, then who plays it, when the names differ."""
+    name = escape_name(shown_name(signup))
+    if signup.character_name is None or same_name(signup.character_name, signup.display_name):
+        return name
+    return name + _player_suffix(signup)
+
+
+def twin_names(signups: Iterable[WowRaidSignup]) -> frozenset[str]:
+    """The names more than one sign-up goes by (case-folded) — the Full roster tells those apart."""
+    counts = Counter(_name_key(shown_name(signup)) for signup in signups)
+    return frozenset(key for key, count in counts.items() if count > 1)
+
+
+def told_apart(signup: WowRaidSignup, twins: frozenset[str]) -> str:
+    """' / Jason' after a name another sign-up shares, when this player's Discord name differs."""
+    shown = shown_name(signup)
+    if _name_key(shown) not in twins or same_name(shown, signup.display_name):
+        return ""
+    return _player_suffix(signup)
+
+
+def _player_suffix(signup: WowRaidSignup) -> str:
+    return " / " + escape_name(signup.display_name, max_chars=PLAYER_NAME_CHARS)
+
+
+def _name_key(name: str) -> str:
+    return " ".join(name.split()).casefold()
 
 
 def _escape_line_start(text: str) -> str:

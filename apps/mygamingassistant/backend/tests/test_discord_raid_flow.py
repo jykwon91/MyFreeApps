@@ -23,7 +23,7 @@ from app.models.wow.wow_raid_member_pref import WowRaidMemberPref
 from app.models.wow.wow_raid_notification import WowRaidNotification
 from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.repositories.wow import wow_raid_signup_repo
-from app.services.discord import raid_copy, raid_draft_copy, rest
+from app.services.discord import raid_copy, raid_draft_copy, raid_member_copy, rest
 from app.services.wow.raid_roster import order_numbers
 from app.services.wow.raid_text import server_time_label
 from app.services.wow.raid_time_parser import PAST_MESSAGE, UNREADABLE_MESSAGE
@@ -269,9 +269,11 @@ async def test_full_raid_journey(post: Post, db: AsyncSession, fake_discord: Fak
         f"**Your sign-up** · Onyxia's Lair · <t:{int(event.starts_at.timestamp())}:F>",
         "Status: **#1 in the queue**",
         "Spec: [WAR] **Protection Warrior**",
+        raid_member_copy.CHARACTER_NOT_SET,
         raid_copy.QUEUE_MOVES_UP,
     ]
-    assert custom_ids(response) == [f"raid:v1:change:{event.id}", f"raid:v1:card:{event.id}:roster"]
+    card = f"raid:v1:card:{event.id}"
+    assert custom_ids(response) == [f"raid:v1:change:{event.id}", f"{card}:char", f"{card}:roster", f"{card}:forget"]
 
     # --- [Full roster] swaps the card for everyone, laid out like the post; [Back] returns.
     #     102 left, so the queued tank's number is 5 though 107 (promoted) is 6.
@@ -495,6 +497,7 @@ async def test_bench_is_a_backup_that_is_never_moved_up(
     assert content(response).split("\n")[1:] == [
         "Status: **On the bench**",
         "Spec: [MAG] **Frost Mage**",
+        raid_member_copy.CHARACTER_NOT_SET,
         raid_copy.BENCH_NOTE,
     ]
 
