@@ -40,9 +40,9 @@ function percent(raw: string): number | null {
   return value;
 }
 
-/** The spot a place stands for: a town's centre, else the middle of its map. */
+/** The spot a place stands for: a building's floor, a town's or area's centre, else the middle of its map. */
 export function placeSpot(place: Place): WhereSpot {
-  const approximate = place.kind === PLACE_KIND.town;
+  const approximate = place.kind === PLACE_KIND.town || place.kind === PLACE_KIND.area;
   return { zoneId: place.zoneId, position: place.spot, approximate, onCurrentZone: false };
 }
 

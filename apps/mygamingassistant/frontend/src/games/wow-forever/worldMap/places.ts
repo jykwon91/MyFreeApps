@@ -6,16 +6,27 @@
  * A town's spot is the middle of the NPCs, quest givers and flight masters
  * the data puts there, so it's approximate. A zone, city or district has no
  * spot of its own: we measure from the middle of its map.
+ *
+ * Buildings ("Deepwater Tavern") and named areas no NPC stands in ("Menethil
+ * Keep") come from the client's walk data (`areas.json`): a spot on their
+ * floor, with its height.
  */
 import { CITY_DISTRICTS, ZONE_ALIASES } from "@/games/wow-forever/data/worldMap/placeNames";
 import { ZONE_KIND, type WorldMapData, type WorldZone } from "@/games/wow-forever/types/worldMap";
 import { matchesAll, nameScore, normalizeText, queryTokens } from "@/games/wow-forever/worldMap/searchText";
 
-export const PLACE_KIND = { city: "city", zone: "zone", district: "district", town: "town" } as const;
+export const PLACE_KIND = {
+  city: "city",
+  zone: "zone",
+  district: "district",
+  town: "town",
+  building: "building",
+  area: "area",
+} as const;
 export type PlaceKind = (typeof PLACE_KIND)[keyof typeof PLACE_KIND];
 
-/** Cities before zones before towns before districts when names score the same. */
-const KIND_ORDER: Readonly<Record<PlaceKind, number>> = { city: 0, zone: 1, town: 2, district: 3 };
+/** Cities before zones before towns before districts before buildings and areas when names score the same. */
+const KIND_ORDER: Readonly<Record<PlaceKind, number>> = { city: 0, zone: 1, town: 2, district: 3, building: 4, area: 5 };
 
 export interface Place {
   id: string;
@@ -29,11 +40,16 @@ export interface Place {
   aliases: readonly string[];
   /** Towns: how many NPCs / quest givers / flight masters the data puts there (its "main town" weight). */
   size?: number;
+  /** Buildings and areas: the world height of the spot, so a route ends on its floor. */
+  z?: number;
+  /** Buildings and areas: the town they're in or next to ("Menethil Harbor"). */
+  town?: string;
 }
 
 /** "Goldshire, Elwynn Forest" / "Stormwind City". */
 export function placeLabel(place: Place): string {
   if (place.kind === PLACE_KIND.city || place.kind === PLACE_KIND.zone) return place.name;
+  if (place.town) return `${place.name}, ${place.town}, ${place.zoneName}`;
   return `${place.name}, ${place.zoneName}`;
 }
 
@@ -86,6 +102,31 @@ function townPlaces(data: WorldMapData, taken: ReadonlySet<string>): Place[] {
   });
 }
 
+/** Buildings and named areas from the walk data that aren't already a town, district or map. */
+function areaPlaces(data: WorldMapData, known: readonly Place[]): Place[] {
+  const taken = new Set(known.map((p) => `${p.zoneId}|${normalizeText(p.name)}`));
+  const out: Place[] = [];
+  for (const area of data.areas) {
+    const zone = data.zoneById.get(area.zone);
+    const key = `${area.zone}|${normalizeText(area.name)}`;
+    if (!zone || taken.has(key)) continue;
+    taken.add(key);
+    const town = nearestTown(known, zone.id, area.x, area.y);
+    out.push({
+      id: `area-${zone.id}-${normalizeText(area.name)}`,
+      name: area.name,
+      kind: area.indoor ? PLACE_KIND.building : PLACE_KIND.area,
+      zoneId: zone.id,
+      zoneName: zone.name,
+      spot: { x: area.x, y: area.y },
+      aliases: [],
+      z: area.z,
+      town: town?.name,
+    });
+  }
+  return out;
+}
+
 export function buildPlaces(data: WorldMapData): Place[] {
   const places: Place[] = [];
   const taken = new Set<string>();
@@ -107,7 +148,8 @@ export function buildPlaces(data: WorldMapData): Place[] {
       });
     }
   }
-  return [...places, ...townPlaces(data, taken).filter((town) => !mapNames.has(town.name))];
+  const known = [...places, ...townPlaces(data, taken).filter((town) => !mapNames.has(town.name))];
+  return [...known, ...areaPlaces(data, known)];
 }
 
 /** How well a place answers the query, or null when it doesn't. Lower is better. */
@@ -120,7 +162,9 @@ function placeScore(place: Place, query: string, tokens: readonly string[]): num
   const own = normalizeText(place.name);
   if (matchesAll(tokens, own)) return nameScore(place.name, query);
   // "old town stormwind", "goldshire elwynn": the rest of the words name the map.
-  if (matchesAll(tokens, `${own} ${normalizeText(place.zoneName)} ${aliases.join(" ")}`)) return 4;
+  // "tavern menethil": a building's town counts too.
+  const where = `${normalizeText(place.town ?? "")} ${normalizeText(place.zoneName)} ${aliases.join(" ")}`;
+  if (matchesAll(tokens, `${own} ${where}`)) return 4;
   return null;
 }
 

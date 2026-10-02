@@ -5,6 +5,7 @@ import servicesJson from "@/games/wow-forever/data/worldMap/classic/classicServi
 import questsJson from "@/games/wow-forever/data/worldMap/classic/classicQuests.json";
 import dungeonsJson from "@/games/wow-forever/data/worldMap/classic/classicDungeons.json";
 import masksJson from "@/games/wow-forever/data/worldMap/mapMasks.json";
+import areasJson from "@/games/wow-forever/data/worldMap/areas.json";
 import { CITY_TRAINERS, TOWN_TRAINERS } from "@/games/wow-forever/data/professions/trainers";
 import { CRAFTING_RANKS, CRAFTING_TRAINERS } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
 import { FACTION } from "@/games/wow-forever/types/worldMap";
@@ -14,6 +15,7 @@ import { planDirections } from "@/games/wow-forever/worldMap/directions";
 import { zoneToWorld } from "@/games/wow-forever/worldMap/geometry";
 import { buildPlaces, findPlaces, nearestTown, placeLabel, PLACE_KIND } from "@/games/wow-forever/worldMap/places";
 import { findLinkedPoi, searchNpcs } from "@/games/wow-forever/worldMap/search";
+import { ENDPOINT_KIND, resolveEndpoint } from "@/games/wow-forever/worldMap/trip";
 import { relatedMaps, resolveWhere, WHERE_RESULT } from "@/games/wow-forever/worldMap/where";
 
 const data = decodeWorldMap({
@@ -23,6 +25,7 @@ const data = decodeWorldMap({
   quests: questsJson,
   dungeons: dungeonsJson,
   masks: masksJson,
+  areas: areasJson,
 });
 const places = buildPlaces(data);
 
@@ -108,6 +111,30 @@ describe("places", () => {
     expect(findPlaces("sw", places)[0].zoneId).toBe(STORMWIND);
     expect(findPlaces("org", places)[0].zoneId).toBe(ORGRIMMAR);
     expect(placeLabel(findPlaces("goldshire", places)[0])).toBe("Goldshire, Elwynn Forest");
+  });
+
+  it("finds buildings and named areas no NPC stands in", () => {
+    const WETLANDS = 1437;
+    const [tavern] = findPlaces("deepwater tavern", places);
+    expect(tavern).toMatchObject({ name: "Deepwater Tavern", kind: PLACE_KIND.building, zoneId: WETLANDS, town: "Menethil Harbor" });
+    // Helbrek, the tavern's innkeeper, stands at about 10.7, 60.9.
+    expect(tavern.spot?.x).toBeCloseTo(10.7, 0);
+    expect(tavern.spot?.y).toBeCloseTo(60.9, 0);
+    expect(placeLabel(tavern)).toBe("Deepwater Tavern, Menethil Harbor, Wetlands");
+    expect(findPlaces("tavern menethil", places)[0].name).toBe("Deepwater Tavern");
+    expect(findPlaces("menethil keep", places)[0]).toMatchObject({ zoneId: WETLANDS });
+    // A town the NPCs already name stays one place, a town.
+    expect(places.filter((p) => p.name === "Goldshire" && p.zoneId === ELWYNN).map((p) => p.kind)).toEqual([PLACE_KIND.town]);
+    expect(resolveWhere("Deepwater Tavern", data, places, null)).toMatchObject({
+      kind: WHERE_RESULT.set,
+      zoneId: WETLANDS,
+      approximate: false,
+    });
+    // A route ends on the tavern's floor, labelled with its town.
+    const end = resolveEndpoint({ kind: ENDPOINT_KIND.place, placeId: tavern.id }, data, places, FACTION.alliance);
+    expect(end).toMatchObject({ title: "Deepwater Tavern, Menethil Harbor, Wetlands", note: "Routing to Deepwater Tavern.", pinpoint: true });
+    expect(end?.route.place.subzone).toBe("Menethil Harbor");
+    expect(end?.route.world.z).toBe(tavern.z);
   });
 
   it("names the town a spot is near", () => {

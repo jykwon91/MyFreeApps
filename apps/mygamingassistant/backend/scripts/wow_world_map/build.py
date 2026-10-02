@@ -37,6 +37,9 @@ import json
 from pathlib import Path
 
 from scripts.wow_world_map import sources
+from scripts.wow_world_map.areas import COLUMNS as AREA_COLUMNS
+from scripts.wow_world_map.areas import build_areas
+from scripts.wow_world_map.coords import ZoneBounds
 from scripts.wow_world_map.dungeons import COLUMNS as DUNGEON_COLUMNS
 from scripts.wow_world_map.dungeons import build_dungeons
 from scripts.wow_world_map.highlights import MASK_H, MASK_W, MapHighlights
@@ -145,6 +148,8 @@ def main() -> None:
         for map_id in sorted(CONTINENT_NAMES):
             build_walk(map_id, travel, WALK_DIR)
 
+    write_areas(zone_bounds, art)
+
     rows, counts = build_services(zone_bounds, art)
     write_json(CLASSIC_DIR / "classicServices.json", {
         "source": classic_source("FactionTemplate, UiMapAssignment, WorldMapOverlay, AreaTable"),
@@ -177,6 +182,16 @@ def main() -> None:
     if not args.no_walk:
         for map_id, interior in interiors.items():
             build_interior_walk(int(map_id), interior, WALK_DIR)
+
+
+def write_areas(zone_bounds: list[ZoneBounds], art: WorldMapArt) -> None:
+    rows = build_areas(WALK_DIR, sorted(CONTINENT_NAMES), zone_bounds, art)
+    write_json(DATA_DIR / "areas.json", {
+        "source": {**BLIZZARD_SOURCE, "tables": "AreaTable, WMOAreaTable (walk graph labels), UiMapAssignment"},
+        "columns": AREA_COLUMNS,
+        "rows": rows,
+    })
+    print(f"named areas / buildings: {len(rows)}")
 
 
 def write_interiors(dungeon_rows: list[list[object]]) -> dict[str, dict[str, list]]:

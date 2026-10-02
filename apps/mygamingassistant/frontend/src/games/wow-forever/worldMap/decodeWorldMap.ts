@@ -19,6 +19,7 @@ import {
   ZONE_KIND,
   type Faction,
   type FlightNode,
+  type NamedArea,
   type InstanceKind,
   type MapMask,
   type MapPoi,
@@ -338,6 +339,23 @@ function decodeTravel(raw: unknown): Pick<WorldMapData, "flightNodes" | "flightE
 }
 
 /** The generator's JSON files, as imported. */
+function decodeAreas(raw: unknown): NamedArea[] {
+  if (raw === undefined) return [];
+  const payload = record(raw, "areas");
+  const col = columnReader(payload.columns, "areas");
+  return list(payload.rows, "area rows").map((r) => {
+    const row = list(r, "area row");
+    return {
+      name: str(col(row, "name"), "area name"),
+      zone: num(col(row, "zone"), "area zone"),
+      x: num(col(row, "x"), "area x"),
+      y: num(col(row, "y"), "area y"),
+      z: num(col(row, "z"), "area z"),
+      indoor: num(col(row, "indoor"), "area indoor") === 1,
+    };
+  });
+}
+
 export interface WorldMapFiles {
   zones: unknown;
   travel: unknown;
@@ -345,6 +363,8 @@ export interface WorldMapFiles {
   quests: unknown;
   dungeons: unknown;
   masks: unknown;
+  /** `areas.json`; left out, the search knows no buildings. */
+  areas?: unknown;
 }
 
 export function decodeWorldMap(files: WorldMapFiles): WorldMapData {
@@ -370,5 +390,6 @@ export function decodeWorldMap(files: WorldMapFiles): WorldMapData {
     instances,
     poiById: new Map([...pois, ...questGivers, ...instances].map((p) => [p.id, p])),
     ...decodeTravel(files.travel),
+    areas: decodeAreas(files.areas),
   };
 }

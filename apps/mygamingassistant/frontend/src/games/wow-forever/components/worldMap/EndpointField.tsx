@@ -42,6 +42,8 @@ const PLACE_HINT: Readonly<Record<Place["kind"], string>> = {
   [PLACE_KIND.zone]: "Zone",
   [PLACE_KIND.district]: "District",
   [PLACE_KIND.town]: "Town",
+  [PLACE_KIND.building]: "Building",
+  [PLACE_KIND.area]: "Area",
 };
 
 /**
