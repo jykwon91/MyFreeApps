@@ -14,7 +14,8 @@ Two top-level commands
 subcommand, so the raid bot is split:
 
 * ``/raid`` — everyone: ``list``, ``prefs`` (and ``ping``).
-* ``/raid-admin`` — organisers: ``setup``, ``create``, ``edit``, ``cancel``.
+* ``/raid-admin`` — organisers: ``setup``, ``create``, ``edit``, ``cancel``,
+  ``signup``.
   ``default_member_permissions`` = Manage Events, so regular members never
   see organiser actions in their slash menu.  Server admins can still widen
   or narrow access per command in Server Settings → Integrations.
@@ -31,6 +32,12 @@ leader in.  Discord allows five message commands per app; ``Raid: Unsigned``
 is to take the last, so any further leader action is a button or a slash
 command.
 
+The member right-click menu
+---------------------------
+A user command (right-click a member → Apps): ``Raid: Manage``, the same
+default.  It opens Manage sign-ups on that member, like
+``/raid-admin signup``.  User commands have their own cap of five.
+
 Design invariants
 -----------------
 * ``dm_permission: false`` + ``contexts: [0]`` — guild-only.
@@ -38,7 +45,7 @@ Design invariants
 """
 from typing import Any, Final
 
-from platform_shared.services.discord import COMMAND_TYPE_MESSAGE, MANAGE_EVENTS
+from platform_shared.services.discord import COMMAND_TYPE_MESSAGE, COMMAND_TYPE_USER, MANAGE_EVENTS
 
 from app.services.wow.raid_catalog import CLASSES, RAIDS
 
@@ -47,6 +54,7 @@ _SUB_COMMAND: Final = 1
 _STRING: Final = 3
 _INTEGER: Final = 4
 _BOOLEAN: Final = 5
+_USER: Final = 6
 _CHANNEL: Final = 7
 _ROLE: Final = 8
 
@@ -209,6 +217,15 @@ RAID_ADMIN_COMMAND: Final[dict[str, Any]] = {
                 {"type": _STRING, "name": "reason", "description": "Why (shown to players)", "max_length": 200},
             ],
         },
+        {
+            "type": _SUB_COMMAND,
+            "name": "signup",
+            "description": "Add, change or remove a player on a raid",
+            "options": [
+                _event_option("Which raid"),
+                {"type": _USER, "name": "player", "description": "Who to add, change or remove", "required": True},
+            ],
+        },
     ],
 }
 
@@ -238,7 +255,27 @@ MENU_COMMANDS: Final[list[dict[str, Any]]] = [
 ]
 
 # ---------------------------------------------------------------------------
+# The member right-click menu (user commands)
+# ---------------------------------------------------------------------------
+
+MANAGE_MENU: Final = "Raid: Manage"
+
+
+def _user_command(name: str) -> dict[str, Any]:
+    """A right-click → Apps entry on members (no description or options)."""
+    return {
+        "name": name,
+        "type": COMMAND_TYPE_USER,
+        "dm_permission": False,
+        "contexts": [0],
+        "default_member_permissions": str(MANAGE_EVENTS),
+    }
+
+
+USER_COMMANDS: Final[list[dict[str, Any]]] = [_user_command(MANAGE_MENU)]
+
+# ---------------------------------------------------------------------------
 # Full command list — passed verbatim to bulk_overwrite_*_commands
 # ---------------------------------------------------------------------------
 
-ALL_COMMANDS: Final[list[dict[str, Any]]] = [RAID_COMMAND, RAID_ADMIN_COMMAND, *MENU_COMMANDS]
+ALL_COMMANDS: Final[list[dict[str, Any]]] = [RAID_COMMAND, RAID_ADMIN_COMMAND, *MENU_COMMANDS, *USER_COMMANDS]

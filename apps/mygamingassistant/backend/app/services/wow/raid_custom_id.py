@@ -40,6 +40,8 @@ m        a modal's submit                             raid:v1:m:<event>:<ping|ti
 ml       Manage sign-ups (a leader adds, changes,      raid:v1:ml:<event>:<verb>:<member|->:<arg|->
          moves and removes players; see ``MANAGE_VERBS``)
 testdm   /raid prefs [Send me a test DM]              raid:v1:testdm
+mr       Raid: Manage's raid picker (the value is     raid:v1:mr
+         ``<event>:<member>``: the raid, and the player to manage on it)
 """
 from __future__ import annotations
 
@@ -80,7 +82,9 @@ _EVENT_ACTIONS: Final[dict[str, int]] = {
     "m": 1,
     "ml": 3,
 }
-_BARE_ACTIONS: Final = frozenset({"testdm"})
+# Raid: Manage's raid picker; its option values carry the raid and the player.
+RAID_PICK: Final = "mr"
+_BARE_ACTIONS: Final = frozenset({"testdm", RAID_PICK})
 
 # A menu opened from My sign-up: keep whatever status you have when you pick.
 SAME_STATUS: Final = "same"

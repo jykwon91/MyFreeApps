@@ -191,6 +191,28 @@ def menu_command(
     return _payload(TYPE_COMMAND, data, user_id, permissions, display)
 
 
+def user_command(
+    name: str,
+    target_id: str,
+    *,
+    target_name: str,
+    bot: bool = False,
+    avatar: str | None = None,
+    user_id: str = ORGANISER,
+    permissions: int = ORGANISER_PERMS,
+) -> dict[str, Any]:
+    """A right-click → Apps command used on the member *target_id*: Discord sends the member it resolved."""
+    resolved = resolved_member(target_id, target_name, bot=bot, avatar=avatar)
+    data = {"name": name, "type": 2, "target_id": target_id, "resolved": resolved}
+    return _payload(TYPE_COMMAND, data, user_id, permissions, "Thrall")
+
+
+def resolved_member(user_id: str, name: str, *, bot: bool = False, avatar: str | None = None) -> dict[str, Any]:
+    """What Discord resolves a member picked (or right-clicked) to: their user and their server member."""
+    user = {"id": user_id, "username": name.lower(), "global_name": None, "bot": bot, "avatar": avatar}
+    return {"users": {user_id: user}, "members": {user_id: {"nick": name, "roles": []}}}
+
+
 def autocomplete(
     sub: str, focused: str, value: str, *, user_id: str = ORGANISER, name: str = "raid-admin", **filled: Any
 ) -> dict[str, Any]:
@@ -230,8 +252,7 @@ def pick_user(
     avatar: str | None = None,
 ) -> dict[str, Any]:
     """A pick in a user menu: Discord sends the user (and their member) it resolved."""
-    user = {"id": picked_id, "username": picked_name.lower(), "global_name": None, "bot": bot, "avatar": avatar}
-    resolved = {"users": {picked_id: user}, "members": {picked_id: {"nick": picked_name, "roles": []}}}
+    resolved = resolved_member(picked_id, picked_name, bot=bot, avatar=avatar)
     data = {"custom_id": custom_id, "component_type": 5, "values": [picked_id], "resolved": resolved}
     return _payload(TYPE_COMPONENT, data, user_id, permissions, "Thrall")
 
