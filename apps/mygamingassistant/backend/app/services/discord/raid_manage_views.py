@@ -1,8 +1,9 @@
 """Manage sign-ups — a raid's leader adds, changes and removes players — pure builders.
 
 [Manage sign-ups] on Raid: Signed and [Sign-ups] on Raid: Edit open the
-hub: the raid, its seats and a member picker.  Picking someone opens their
-card, which says where they stand and offers what fits:
+hub: the raid, its seats, a member picker and a menu of who's signed up
+(numbered as on the post, 25 to a page).  Picking someone in either opens
+their card, which says where they stand and offers what fits:
 
 * not on the raid (or marked absent) → their class, then their spec, then
   a review: [Add and tell them] / [Add quietly], or just [Add];
@@ -16,14 +17,16 @@ raid on top; a *notice* (what the last tap did) follows it.
 """
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Final, Literal
 
 from platform_shared.services.discord import (
     BUTTON_STYLE_DANGER,
     BUTTON_STYLE_PRIMARY,
     BUTTON_STYLE_SECONDARY,
+    COMPONENT_TYPE_STRING_SELECT,
     COMPONENT_TYPE_USER_SELECT,
     EmojiSet,
 )
@@ -32,23 +35,35 @@ from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.services.discord import raid_manage_copy
 from app.services.discord.interaction import ephemeral_data
+from app.services.discord.raid_copy import queue_place
 from app.services.discord.raid_leader_views import raid_line
 from app.services.discord.raid_views import action_row, button, class_select, spec_select
 from app.services.wow.raid_catalog import WowSpecInfo, column_specs, signup_label, spec_info
-from app.services.wow.raid_custom_id import manage
+from app.services.wow.raid_custom_id import MANAGE_MAX_PAGE, manage
 from app.services.wow.raid_embed import post_color
 from app.services.wow.raid_limits import LimitCheck, Limits
 from app.services.wow.raid_roster import (
+    BENCH_STATUS,
+    LINE_STATUSES,
     LISTED_STATUSES,
     QUEUED_STATUS,
     SEAT_STATUSES,
+    TENTATIVE_STATUS,
     compute_roster_summary,
+    in_line_order,
+    order_numbers,
     queue_position,
 )
 from app.services.wow.raid_text import escape_name, seats_label
 
 # Whether a DM can reach the player: yes; they're the leader themself; or they turned DMs off.
 Reach = Literal["yes", "self", "off"]
+
+# Discord's limits: a menu holds 25 options, and an option's label and description 100 characters each.
+ROSTER_PAGE: Final = 25
+_OPTION_CHARS: Final = 100
+# What the sign-up menu says of a player's status; a seat says nothing and the queue gives the place.
+_STATUS_WORDS: Final = {"late": "late", TENTATIVE_STATUS: "tentative", BENCH_STATUS: "bench"}
 
 
 @dataclass(frozen=True)
@@ -87,13 +102,30 @@ def spec_label(signup: WowRaidSignup) -> str | None:
     return signup_label(signup.wow_class, signup.role, signup.spec)
 
 
+def roster_description(signup: WowRaidSignup, signups: Sequence[WowRaidSignup]) -> str | None:
+    """'Fury Warrior · late', 'Arms Warrior · #2 in the queue'; a seat is just its spec (None with neither)."""
+    parts: list[str] = []
+    label = spec_label(signup)
+    if label:
+        parts.append(label)
+    if signup.status == QUEUED_STATUS:
+        parts.append(queue_place(queue_position(signups, signup.discord_user_id)))
+    elif signup.status in _STATUS_WORDS:
+        parts.append(_STATUS_WORDS[signup.status])
+    if not parts:
+        return None
+    return " · ".join(parts)[:_OPTION_CHARS]
+
+
 # ---------------------------------------------------------------------------
 # The hub
 # ---------------------------------------------------------------------------
 
 
-def hub_data(event: WowRaidEvent, signups: Sequence[WowRaidSignup], *, notice: str | None = None) -> dict[str, Any]:
-    """The raid and its seats, with a member picker and [Done]."""
+def hub_data(
+    event: WowRaidEvent, signups: Sequence[WowRaidSignup], *, notice: str | None = None, page: int = 1
+) -> dict[str, Any]:
+    """The raid and its seats, a member picker, the sign-up menu at *page* (kept in range) and [Done]."""
     summary = compute_roster_summary(signups, size_cap=event.size_cap)
     lines = [raid_line(event)]
     if notice:
@@ -106,8 +138,67 @@ def hub_data(event: WowRaidEvent, signups: Sequence[WowRaidSignup], *, notice: s
         "min_values": 1,
         "max_values": 1,
     }
-    done = button("Done", BUTTON_STYLE_PRIMARY, manage(event.id, "done"))
-    return ephemeral_data("\n".join(lines), components=[action_row(picker), action_row(done)], embeds=[])
+    rows = [action_row(picker)]
+    buttons = [button("Done", BUTTON_STYLE_PRIMARY, manage(event.id, "done"))]
+    listed = _listed_in_order(signups)
+    if listed:
+        pages = min(math.ceil(len(listed) / ROSTER_PAGE), MANAGE_MAX_PAGE)
+        page = min(max(page, 1), pages)
+        rows.append(action_row(_signed_up_select(event, listed, signups, page)))
+        if pages > 1:
+            buttons = [*_pager(event, page, pages), *buttons]
+    rows.append(action_row(*buttons))
+    return ephemeral_data("\n".join(lines), components=rows, embeds=[])
+
+
+def _listed_in_order(signups: Sequence[WowRaidSignup]) -> list[WowRaidSignup]:
+    """Everyone on the raid as the post lists them: the numbered line (seats and queue), tentative, bench."""
+    line = in_line_order(s for s in signups if s.status in LINE_STATUSES)
+    tentative = in_line_order(s for s in signups if s.status == TENTATIVE_STATUS)
+    bench = in_line_order(s for s in signups if s.status == BENCH_STATUS)
+    return [*line, *tentative, *bench]
+
+
+def _signed_up_select(
+    event: WowRaidEvent, listed: Sequence[WowRaidSignup], signups: Sequence[WowRaidSignup], page: int
+) -> dict[str, Any]:
+    """*page* of the sign-up menu; its placeholder says which part of a longer list it shows."""
+    first = (page - 1) * ROSTER_PAGE
+    shown = listed[first : first + ROSTER_PAGE]
+    placeholder = raid_manage_copy.PICK_SIGNED_UP
+    if len(listed) > ROSTER_PAGE:
+        placeholder = raid_manage_copy.signed_up_page(first + 1, first + len(shown), len(listed))
+    numbers = order_numbers(signups)
+    return {
+        "type": COMPONENT_TYPE_STRING_SELECT,
+        "custom_id": manage(event.id, "row"),
+        "placeholder": placeholder,
+        "min_values": 1,
+        "max_values": 1,
+        "options": [_signed_up_option(s, numbers.get(s.discord_user_id), signups) for s in shown],
+    }
+
+
+def _signed_up_option(signup: WowRaidSignup, number: int | None, signups: Sequence[WowRaidSignup]) -> dict[str, Any]:
+    """'12. Bob' over where they stand.  An option shows no markdown, so the name goes in as it is."""
+    label = signup.display_name
+    if number is not None:
+        label = f"{number}. {label}"
+    option = {"label": label[:_OPTION_CHARS], "value": signup.discord_user_id}
+    description = roster_description(signup, signups)
+    if description:
+        option["description"] = description
+    return option
+
+
+def _pager(event: WowRaidEvent, page: int, pages: int) -> list[dict[str, Any]]:
+    """[Previous] [Next]; at either end that one is greyed out (pointing at its own page, so no two ids clash)."""
+    back = manage(event.id, "list", arg=str(max(page - 1, 1)))
+    ahead = manage(event.id, "list", arg=str(min(page + 1, pages)))
+    return [
+        button(raid_manage_copy.PREV_PAGE, BUTTON_STYLE_SECONDARY, back, disabled=page == 1),
+        button(raid_manage_copy.NEXT_PAGE, BUTTON_STYLE_SECONDARY, ahead, disabled=page == pages),
+    ]
 
 
 # ---------------------------------------------------------------------------

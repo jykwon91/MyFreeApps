@@ -104,10 +104,14 @@ def event_choice_label(event: WowRaidEvent, tz_name: str) -> str:
     return f"{local:%a %b} {local.day} {clock} {display_title(event)}"[:100]
 
 
-def button(label: str, style: int, custom_id: str, *, emoji: dict[str, str] | None = None) -> dict[str, Any]:
+def button(
+    label: str, style: int, custom_id: str, *, emoji: dict[str, str] | None = None, disabled: bool = False
+) -> dict[str, Any]:
     component: dict[str, Any] = {"type": COMPONENT_TYPE_BUTTON, "style": style, "label": label, "custom_id": custom_id}
     if emoji is not None:
         component["emoji"] = emoji
+    if disabled:
+        component["disabled"] = True
     return component
 
 
