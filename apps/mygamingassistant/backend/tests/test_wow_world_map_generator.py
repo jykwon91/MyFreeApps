@@ -15,6 +15,8 @@ from pathlib import Path
 
 import pytest
 
+from scripts.wow_world_map.areas import COLUMNS as AREA_COLUMNS
+from scripts.wow_world_map.areas import read_walk_labels
 from scripts.wow_world_map.classify import classify
 from scripts.wow_world_map.coords import (
     ZoneBounds,
@@ -268,3 +270,28 @@ def test_committed_dungeon_data_is_consistent() -> None:
     # Forever levels (ContentTuning), not Classic's ranges.
     assert by_name["Wailing Caverns"][0]["minLevel"] == 17
     assert by_name["Blackwing Lair"][0]["wing"] == "Inside Blackrock Spire"
+
+
+def test_walk_labels_read_back_from_a_walk_file() -> None:
+    xyz, label, water, labels = read_walk_labels(FRONTEND_DATA.parents[4] / "public" / "wow-walk" / "0.walk")
+    assert xyz.shape == (len(label), 3) and water.shape == label.shape
+    assert int(label.max()) < len(labels)
+    assert ["Deepwater Tavern", "Wetlands", 1, 0] in labels
+
+
+def test_committed_area_data_is_consistent() -> None:
+    zones = json.loads((FRONTEND_DATA / "zones.json").read_text(encoding="utf-8"))
+    zone_ids = {z["id"] for z in zones["zones"]}
+    zone_names = {z["name"] for z in zones["zones"]}
+    areas = json.loads((FRONTEND_DATA / "areas.json").read_text(encoding="utf-8"))
+    assert areas["columns"] == AREA_COLUMNS
+    keys = set()
+    for name, zone, x, y, _z, indoor in areas["rows"]:
+        assert name and name not in zone_names
+        assert zone in zone_ids and 0 <= x <= 100 and 0 <= y <= 100 and indoor in (0, 1)
+        assert (name, zone) not in keys
+        keys.add((name, zone))
+    # Helbrek, Deepwater Tavern's innkeeper, is at about 10.7, 60.9 (warcraft.wiki.gg).
+    tavern = next(r for r in areas["rows"] if r[0] == "Deepwater Tavern")
+    assert tavern[1] == 1437 and tavern[5] == 1
+    assert tavern[2] == pytest.approx(10.7, abs=1) and tavern[3] == pytest.approx(60.9, abs=1)

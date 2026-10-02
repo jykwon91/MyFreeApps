@@ -284,7 +284,12 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   or `/way`. Places = zones + capitals (map tree), towns (subzone centroids of
   the NPC data) and capital districts / short names from the hand-written,
   names-only `data/worldMap/placeNames.ts`. A town puts you at its middle and
-  says so. Coordinates are shown only in an opened row and on the last
+  says so. Buildings ("Deepwater Tavern") and named areas no NPC stands in
+  ("Menethil Keep") come from `data/worldMap/areas.json` — the walk graphs'
+  room / sub-zone labels, a spot on the place's floor (with `z`), written by
+  `scripts/wow_world_map/areas.py` after the walk graphs (rebuild alone with
+  `python -m scripts.wow_world_map.areas`). A name an NPC town already has
+  stays the town. Coordinates are shown only in an opened row and on the last
   directions step.
 - Placement: a nested capital wins, then the flight-path name's zone, then the
   zone whose painted overlay covers the point. Classic NPCs never land on a

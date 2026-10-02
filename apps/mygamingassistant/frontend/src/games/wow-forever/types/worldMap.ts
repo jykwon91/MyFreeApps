@@ -168,6 +168,17 @@ export interface Transport {
   stopAt: readonly number[];
 }
 
+/** A named building room or area from the client's walk data ("Deepwater Tavern"). x/y are map percent on `zone`. */
+export interface NamedArea {
+  name: string;
+  zone: number;
+  x: number;
+  y: number;
+  /** World height of the spot, so a route ends on its floor. */
+  z: number;
+  indoor: boolean;
+}
+
 export interface WorldMapData {
   zones: readonly WorldZone[];
   zoneById: ReadonlyMap<number, WorldZone>;
@@ -191,6 +202,8 @@ export interface WorldMapData {
   /** Each flight route's in-game path, keyed `from>to`. */
   flightPaths: ReadonlyMap<string, readonly WorldPoint[]>;
   transports: readonly Transport[];
+  /** Named buildings and areas, for the place search. */
+  areas: readonly NamedArea[];
 }
 
 /** Where the player says they are. x/y are map percent on `zoneId`'s map. */

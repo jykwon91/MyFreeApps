@@ -16,7 +16,8 @@ export function loadWorldMap(): Promise<WorldMapData> {
       import("@/games/wow-forever/data/worldMap/classic/classicQuests.json"),
       import("@/games/wow-forever/data/worldMap/classic/classicDungeons.json"),
       import("@/games/wow-forever/data/worldMap/mapMasks.json"),
-    ]).then(([zones, travel, services, quests, dungeons, masks]) =>
+      import("@/games/wow-forever/data/worldMap/areas.json"),
+    ]).then(([zones, travel, services, quests, dungeons, masks, areas]) =>
       decodeWorldMap({
         zones: zones.default,
         travel: travel.default,
@@ -24,6 +25,7 @@ export function loadWorldMap(): Promise<WorldMapData> {
         quests: quests.default,
         dungeons: dungeons.default,
         masks: masks.default,
+        areas: areas.default,
       }),
     );
     // A failed load (offline, bad deploy) must be retryable.

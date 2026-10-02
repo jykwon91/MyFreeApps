@@ -97,18 +97,30 @@ function npcEnd(poi: MapPoi, zone: WorldZone): ResolvedEnd {
   };
 }
 
-/** Where a route to a place goes: a town's middle; a city's middle; a zone's flight master, else its main town. */
+/** The sub-zone a route end is labelled with: a town is its own, a building or area is in its town. */
+function placeSubzone(place: Place): string {
+  if (place.kind === PLACE_KIND.town) return place.name;
+  return place.town ?? "";
+}
+
+/** What the card says about a place with a spot. */
+function spotNote(place: Place): string {
+  if (place.kind === PLACE_KIND.building || place.kind === PLACE_KIND.area) return `Routing to ${place.name}.`;
+  return `Routing to the middle of ${place.name}.`;
+}
+
+/** Where a route to a place goes: a building's floor; a town's middle; a city's middle; a zone's flight master, else its main town. */
 function placeEnd(place: Place, zone: WorldZone, data: WorldMapData, places: readonly Place[], faction: PlayerFaction): ResolvedEnd {
   const title = placeLabel(place);
   const end = (x: number, y: number, note: string | null, pinpoint: boolean): ResolvedEnd => ({
-    route: routeEnd(zone, x, y, place.name, place.kind === PLACE_KIND.town ? place.name : ""),
+    route: routeEnd(zone, x, y, place.name, placeSubzone(place), place.z),
     title,
     subtitle: "",
     detail: pinpoint ? `${zone.name} · ${coords(x, y)}` : zone.name,
     note,
     pinpoint,
   });
-  if (place.spot) return end(place.spot.x, place.spot.y, `Routing to the middle of ${place.name}.`, true);
+  if (place.spot) return end(place.spot.x, place.spot.y, spotNote(place), true);
   if (place.kind !== PLACE_KIND.zone) return end(50, 50, `Routing to the middle of ${zone.name}.`, false);
 
   const flight = usableFlightNodes(data.flightNodes, faction).find((n) => n.zone === zone.id);
