@@ -38,13 +38,20 @@ from app.db.session import unit_of_work
 from app.repositories.wow import wow_raid_signup_repo
 from app.services.discord import emojis, raid_copy, raid_manage_copy
 from app.services.discord.components import raid_manage_changes, raid_manage_status
-from app.services.discord.components.raid_manage_common import Verb, known, load, one_value, reach_of, target_of
+from app.services.discord.components.raid_manage_common import (
+    Verb,
+    card_for,
+    known,
+    load,
+    one_value,
+    reach_of,
+    target_of,
+)
 from app.services.discord.interaction import Interaction, update_response, update_text_response
 from app.services.discord.raid_manage_views import (
     Target,
     hub_data,
     listed_signup,
-    player_data,
     remove_data,
     signup_of,
     spec_data,
@@ -89,7 +96,7 @@ async def _who(
             return update_response(hub_data(found.event, signups, notice=raid_copy.LEADER_BOT))
         name = known(interaction.resolved_display_name(picked))
         target = Target(picked, name, interaction.resolved_avatar_url(picked))
-        return update_response(player_data(found.event, target, signups, emojis=emojis.current()))
+        return update_response(await card_for(db, found, interaction, target, signups))
 
 
 async def _row(
@@ -110,7 +117,7 @@ async def _row(
             notice = raid_manage_copy.gone_from_raid(Target(picked).who)
             return update_response(hub_data(found.event, signups, notice=notice))
         target = Target(picked, known(mine.display_name))
-        return update_response(player_data(found.event, target, signups, emojis=emojis.current()))
+        return update_response(await card_for(db, found, interaction, target, signups))
 
 
 async def _list(
@@ -135,7 +142,7 @@ async def _card(
             return update_text_response(found)
         signups = await wow_raid_signup_repo.list_for_event(db, event_id)
         target = target_of(interaction, member, signups)
-        return update_response(player_data(found.event, target, signups, emojis=emojis.current()))
+        return update_response(await card_for(db, found, interaction, target, signups))
 
 
 async def _class(
@@ -167,7 +174,7 @@ async def _ask(
         mine = listed_signup(signups, member)
         if mine is None:
             notice = raid_manage_copy.gone_from_raid(target.who)
-            return update_response(player_data(found.event, target, signups, emojis=emojis.current(), notice=notice))
+            return update_response(await card_for(db, found, interaction, target, signups, notice=notice))
         reach = await reach_of(db, found, interaction, member)
         return update_response(remove_data(found.event, target, mine, signups, reach=reach))
 

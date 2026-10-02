@@ -25,6 +25,8 @@ PICK_SIGNED_UP: Final = "Or pick someone signed up"
 PREV_PAGE: Final = "Previous"
 NEXT_PAGE: Final = "Next"
 PICK_CLASS: Final = "Pick their class"
+# The class menu under a spec the bot offers (their saved one, or the one they marked absence as).
+PICK_OTHER_CLASS: Final = "Or pick a different class"
 CHANGE_CLASS: Final = "Change class or spec"
 PICK_SPEC: Final = "Pick their spec"
 SPEC_MARKS_NOTE: Final = "Marked specs are over a limit. You can still pick them."
@@ -70,8 +72,12 @@ def not_on_raid(who: str) -> str:
     return f"{who} isn't on this raid yet. Pick the class they're bringing."
 
 
+def absent_note(who: str) -> str:
+    return f"{who} marked themselves **absent**."
+
+
 def absent(who: str) -> str:
-    return f"{who} marked themselves **absent**. Pick a class to add them back."
+    return f"{absent_note(who)} Pick a class to add them back."
 
 
 def on_raid(who: str, status: str, label: str | None, queue_position: int | None) -> str:

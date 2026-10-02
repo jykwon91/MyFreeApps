@@ -293,7 +293,7 @@ async def test_a_pick_off_a_menu_drawn_before_a_change_goes_by_the_raid_as_it_is
     # --- Bob marked himself absent since: his card says so
     await sign_up(db, event, _BOB, "Bob", "warrior.fury", status="absence")
     card = await post(tap(event, "row", values=[_BOB], on=hub))
-    assert card_description(card) == raid_manage_copy.absent("**Bob**")
+    assert card_description(card).split("\n")[0] == raid_manage_copy.absent_note("**Bob**")
 
     # --- Cy left the raid since: the hub says so, and nobody's left to list
     cy = await signup_row(db, event, _CY)

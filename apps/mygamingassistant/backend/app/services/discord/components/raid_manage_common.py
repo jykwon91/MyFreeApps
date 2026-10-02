@@ -1,8 +1,9 @@
 """Manage sign-ups — what every verb shares.
 
 Loading the raid for its leader, reading the player back off the card a
-tap came from, whether a DM can reach them, and the menu values a tap
-carries.  None of these opens a transaction: each works in the verb's.
+tap came from, whether a DM can reach them, the player's card, and the
+menu values a tap carries.  None of these opens a transaction: each works
+in the verb's.
 """
 from __future__ import annotations
 
@@ -15,13 +16,14 @@ from fastapi import BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.wow.wow_raid_signup import WowRaidSignup
-from app.services.discord import raid_manage_copy
+from app.services.discord import emojis, raid_manage_copy
 from app.services.discord.interaction import CDN_URL, UNKNOWN_PLAYER, Interaction
 from app.services.discord.raid_context import RaidContext, load_led_event
 from app.services.discord.raid_manage_notify import ManageDm
-from app.services.discord.raid_manage_views import Reach, Target, signup_of
-from app.services.wow import raid_event_service
+from app.services.discord.raid_manage_views import Offer, Reach, Target, player_data, signup_of
+from app.services.wow import raid_event_service, raid_member_prefs_service
 from app.services.wow.raid_catalog import WowSpecInfo, column_specs, spec_info
+from app.services.wow.raid_roster import LISTED_STATUSES
 from app.services.wow.raid_text import escape_name
 
 logger = logging.getLogger(__name__)
@@ -92,6 +94,30 @@ async def dm_for(
         token=interaction.token,
     )
     return dm, raid_manage_copy.DM_SENDING
+
+
+async def card_for(
+    db: AsyncSession,
+    found: RaidContext,
+    interaction: Interaction,
+    target: Target,
+    signups: Sequence[WowRaidSignup],
+    *,
+    notice: str | None = None,
+) -> dict[str, Any]:
+    """The player's card.  Off the raid it offers the spec on file, as the post's buttons would sign them up.
+
+    That's the spec they marked absence as, else their saved one; the
+    member's preferences are only read here, never saved.
+    """
+    offer = None
+    mine = signup_of(signups, target.user_id)
+    if mine is None or mine.status not in LISTED_STATUSES:
+        pref = await raid_member_prefs_service.get(db, guild=found.guild, discord_user_id=target.user_id)
+        spec = raid_member_prefs_service.resolve_player(mine, pref).known_spec
+        if spec is not None:
+            offer = Offer(spec, await reach_of(db, found, interaction, target.user_id))
+    return player_data(found.event, target, signups, emojis=emojis.current(), notice=notice, offer=offer)
 
 
 def names_of(signups: Sequence[WowRaidSignup], user_ids: Sequence[str]) -> list[str]:
