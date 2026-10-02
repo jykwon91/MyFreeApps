@@ -15,6 +15,7 @@ from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.services.wow import raid_custom_id
 from app.services.wow.raid_custom_id import MAX_CUSTOM_ID_LEN, RAIDERS_PICK, UNSIGNED_VERBS, RaidCustomId
 from app.services.wow.raid_post_layout import NO_CLASS_COLUMN
+from app.services.wow.raid_roles import picked_roles
 from app.services.wow.raid_unsigned import (
     MAX_PING,
     Member,
@@ -22,7 +23,6 @@ from app.services.wow.raid_unsigned import (
     by_class,
     expected,
     known_pool,
-    picked_roles,
     ping_block,
     ping_ready,
     pool_for,

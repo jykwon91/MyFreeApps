@@ -18,7 +18,6 @@ from platform_shared.services.discord import (
     BUTTON_STYLE_PRIMARY,
     BUTTON_STYLE_SECONDARY,
     COMPONENT_TYPE_LABEL,
-    COMPONENT_TYPE_ROLE_SELECT,
     COMPONENT_TYPE_TEXT_INPUT,
     TEXT_INPUT_STYLE_PARAGRAPH,
     EmojiSet,
@@ -28,12 +27,12 @@ from app.models.wow.wow_raid_event import WowRaidEvent
 from app.services.discord import raid_unsigned_copy
 from app.services.discord.interaction import ephemeral_data, modal_response
 from app.services.discord.raid_leader_views import PING_FIELD, PING_MAX_CHARS, raid_line
-from app.services.discord.raid_views import EMBED_DESCRIPTION_LIMIT, action_row, button, clip_lines
+from app.services.discord.raid_views import EMBED_DESCRIPTION_LIMIT, action_row, button, clip_lines, role_menu
 from app.services.wow import raid_custom_id
 from app.services.wow.raid_deadline import CLOSED_HINT
 from app.services.wow.raid_embed import column_heading, post_color
 from app.services.wow.raid_text import display_title, escape_name, icon_text
-from app.services.wow.raid_unsigned import MAX_ROLES, Member, PingBlock, Pool
+from app.services.wow.raid_unsigned import Member, PingBlock, Pool
 
 
 def unsigned_data(
@@ -128,7 +127,7 @@ def raiders_data(role_ids: Sequence[str], *, notice: str | None = None) -> dict[
     if notice:
         lines.append(notice)
     custom_id = raid_custom_id.encode(raid_custom_id.RAIDERS_PICK)
-    menu = _role_menu(custom_id, raid_unsigned_copy.RAIDERS_PLACEHOLDER, role_ids)
+    menu = role_menu(custom_id, raid_unsigned_copy.RAIDERS_PLACEHOLDER, role_ids)
     return ephemeral_data("\n".join(lines), components=[action_row(menu)], embeds=[])
 
 
@@ -136,18 +135,7 @@ def _role_rows(event: WowRaidEvent, role_ids: Sequence[str]) -> list[dict[str, A
     """The raid's role menu while it's on; a raid that's done keeps the roles it had."""
     if event.status != "scheduled":
         return []
-    return [action_row(_role_menu(_verb(event, "roles"), raid_unsigned_copy.ROLE_PLACEHOLDER, role_ids))]
-
-
-def _role_menu(custom_id: str, placeholder: str, role_ids: Sequence[str]) -> dict[str, Any]:
-    return {
-        "type": COMPONENT_TYPE_ROLE_SELECT,
-        "custom_id": custom_id,
-        "placeholder": placeholder,
-        "min_values": 0,
-        "max_values": MAX_ROLES,
-        "default_values": [{"id": role_id, "type": "role"} for role_id in role_ids[:MAX_ROLES]],
-    }
+    return [action_row(role_menu(_verb(event, "roles"), raid_unsigned_copy.ROLE_PLACEHOLDER, role_ids))]
 
 
 def _verb(event: WowRaidEvent, verb: str) -> str:

@@ -19,6 +19,7 @@ from platform_shared.services.discord import (
     BUTTON_STYLE_SECONDARY,
     COMPONENT_TYPE_ACTION_ROW,
     COMPONENT_TYPE_BUTTON,
+    COMPONENT_TYPE_ROLE_SELECT,
     COMPONENT_TYPE_STRING_SELECT,
     EmojiSet,
 )
@@ -51,6 +52,7 @@ from app.services.wow.raid_embed import (
 )
 from app.services.wow.raid_limits import LimitCheck, LimitHit
 from app.services.wow.raid_post_layout import post_columns, with_status
+from app.services.wow.raid_roles import MAX_ROLES
 from app.services.wow.raid_roster import compute_roster_summary, order_numbers
 from app.services.wow.raid_text import (
     display_title,
@@ -126,6 +128,18 @@ def _select(custom_id: str, placeholder: str, options: list[dict[str, Any]]) -> 
         "min_values": 1,
         "max_values": 1,
         "options": options,
+    }
+
+
+def role_menu(custom_id: str, placeholder: str, role_ids: Sequence[str]) -> dict[str, Any]:
+    """A role menu of up to ``MAX_ROLES`` roles, *role_ids* checked; it may be emptied."""
+    return {
+        "type": COMPONENT_TYPE_ROLE_SELECT,
+        "custom_id": custom_id,
+        "placeholder": placeholder,
+        "min_values": 0,
+        "max_values": MAX_ROLES,
+        "default_values": [{"id": role_id, "type": "role"} for role_id in role_ids[:MAX_ROLES]],
     }
 
 

@@ -3,8 +3,9 @@
 "Who should" is everyone holding one of the raid's *pool* of roles: the
 roles picked for the raid, else the server's raider roles (``/raid-admin
 raiders``), else the roles the raid pings.  ``@everyone`` never counts (its
-id is the server's own), and a pool holds at most ``MAX_ROLES`` roles.  Bots
-and members still on the server's rules screening don't count either.
+id is the server's own), and a pool holds at most ``raid_roles.MAX_ROLES``
+roles.  Bots and members still on the server's rules screening don't count
+either.
 
 Anyone with a sign-up row has answered — Absence included — so the unsigned
 are the expected members without one.  Pure: the member list is read by
@@ -12,7 +13,7 @@ are the expected members without one.  Pure: the member list is read by
 """
 from __future__ import annotations
 
-from collections.abc import Collection, Iterable, Mapping, Sequence
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Final, Literal
@@ -24,9 +25,8 @@ from app.services.wow.raid_deadline import deadline_due
 from app.services.wow.raid_details import mention_roles
 from app.services.wow.raid_event_service import PING_EVERY
 from app.services.wow.raid_post_layout import NO_CLASS_COLUMN
+from app.services.wow.raid_roles import stored_roles
 
-# The most roles a pool holds (the role menus' limit too).
-MAX_ROLES: Final = 10
 # The most people one [Ping them] mentions; past it the leader picks narrower roles.
 MAX_PING: Final = 200
 # Members per page of Discord's member list, and the most pages read (10,000 members).
@@ -68,7 +68,7 @@ class Pool:
 
 def pool_for(event: WowRaidEvent, guild: WowRaidGuild) -> Pool:
     """The roles picked for the raid, else :func:`default_pool`."""
-    own = _cleaned(event.raider_role_ids or (), guild.discord_guild_id)
+    own = stored_roles(event.raider_role_ids or (), guild.discord_guild_id)
     if own:
         return Pool(own, "raid")
     return default_pool(event, guild)
@@ -76,10 +76,10 @@ def pool_for(event: WowRaidEvent, guild: WowRaidGuild) -> Pool:
 
 def default_pool(event: WowRaidEvent, guild: WowRaidGuild) -> Pool:
     """What a raid without roles of its own checks: the server's raider roles, else the roles it pings."""
-    server = _cleaned(guild.raider_role_ids or (), guild.discord_guild_id)
+    server = stored_roles(guild.raider_role_ids or (), guild.discord_guild_id)
     if server:
         return Pool(server, "server")
-    pings = _cleaned(mention_roles(event, guild), guild.discord_guild_id)
+    pings = stored_roles(mention_roles(event, guild), guild.discord_guild_id)
     if pings:
         return Pool(pings, "pings")
     return Pool((), None)
@@ -145,23 +145,3 @@ def ping_ready(event: WowRaidEvent, now: datetime) -> bool:
     """False while the raid's last Unsigned ping is under ``PING_EVERY`` old."""
     return event.unsigned_pinged_at is None or now - event.unsigned_pinged_at >= PING_EVERY
 
-
-def picked_roles(values: Sequence[str], *, everyone_id: str | None) -> tuple[list[str], bool]:
-    """The roles a role menu picked, up to ``MAX_ROLES``, and whether ``@everyone`` was among them (left out)."""
-    roles: list[str] = []
-    everyone = False
-    for value in values:
-        if value == everyone_id:
-            everyone = True
-        elif value.isascii() and value.isdigit() and value not in roles:
-            roles.append(value)
-    return roles[:MAX_ROLES], everyone
-
-
-def _cleaned(role_ids: Iterable[object], everyone_id: str) -> tuple[str, ...]:
-    """*role_ids* as strings, without ``@everyone`` or repeats, the first ``MAX_ROLES``."""
-    kept: list[str] = []
-    for role_id in map(str, role_ids):
-        if role_id != everyone_id and role_id not in kept:
-            kept.append(role_id)
-    return tuple(kept[:MAX_ROLES])
