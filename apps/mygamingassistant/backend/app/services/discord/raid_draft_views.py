@@ -26,9 +26,10 @@ from platform_shared.services.discord import (
 
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_guild import WowRaidGuild
-from app.services.discord import raid_copy, raid_draft_copy, raid_limit_copy
+from app.services.discord import raid_copy, raid_draft_copy, raid_extras_copy, raid_limit_copy
 from app.services.discord.interaction import ephemeral_data
 from app.services.discord.raid_edit_views import notes_button
+from app.services.discord.raid_extras_views import extras_button
 from app.services.discord.raid_leader_views import raid_line
 from app.services.discord.raid_views import action_row, button
 from app.services.wow import raid_custom_id
@@ -66,6 +67,7 @@ def options_data(
     lines = [
         notice or raid_copy.EDIT_PROMPT,
         raid_draft_copy.preview_state(event.channel_id, mention_roles(event, guild)),
+        *raid_extras_copy.detail_lines(event),
     ]
     classes = Limits.of(event).classes
     if classes:
@@ -81,6 +83,7 @@ def options_data(
             _draft_button(event, "Description", "desc"),
             _draft_button(event, "Image", "image"),
             _draft_button(event, "Color", "color"),
+            extras_button(event),
         ),
         action_row(
             _draft_button(event, "Role limits", "role_limits"),

@@ -96,7 +96,9 @@ async def test_delete_event_hits_the_event_route() -> None:
 
 @pytest.mark.anyio
 async def test_a_gone_event_raises_its_code() -> None:
-    recorder = _Recorder({"code": UNKNOWN_GUILD_SCHEDULED_EVENT, "message": "Unknown Guild Scheduled Event"}, status=404)
+    recorder = _Recorder(
+        {"code": UNKNOWN_GUILD_SCHEDULED_EVENT, "message": "Unknown Guild Scheduled Event"}, status=404
+    )
     async with _client(recorder) as client:
         with pytest.raises(DiscordApiError) as caught:
             await client.modify_guild_scheduled_event(_GUILD, _EVENT, {"name": "x"})

@@ -3,8 +3,9 @@
 Interaction handlers must answer Discord within 3 seconds, so they only do
 local DB work and return the interaction response.  Anything that talks to
 Discord's REST API (posting the raid, editing the public post after a
-private flow, DMs — and the leader's ping, in ``raid_ping``, and the setup
-permission check, in ``raid_setup_check``) is scheduled via FastAPI ``BackgroundTasks``, which
+private flow, DMs — and the leader's ping, in ``raid_ping``, the setup
+permission check, in ``raid_setup_check``, and the raid's Discord event and
+thread, in ``raid_extras``) is scheduled via FastAPI ``BackgroundTasks``, which
 Starlette runs right after the response is sent.  Each task:
 
 * opens its own short transaction(s) — the request's transaction has
@@ -41,7 +42,7 @@ from app.db.session import unit_of_work
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.repositories.wow import wow_raid_event_repo, wow_raid_signup_repo
-from app.services.discord import emojis, raid_copy, rest
+from app.services.discord import emojis, raid_copy, raid_extras, raid_extras_copy, rest
 from app.services.discord.interaction import NO_MENTIONS, ephemeral_data
 from app.services.discord.raid_context import signup_refusal, utcnow
 from app.services.discord.raid_draft_views import preview_data
@@ -50,6 +51,7 @@ from app.services.discord.raid_views import unix
 from app.services.wow import raid_event_service
 from app.services.wow.raid_details import leader_id
 from app.services.wow.raid_embed import build_initial_post, build_signup_message
+from app.services.wow.raid_extras_rules import Leftovers
 from app.services.wow.raid_text import local_day_label, title_text
 
 logger = logging.getLogger(__name__)
@@ -181,6 +183,10 @@ async def post_raid(event_id: uuid.UUID, application_id: str, token: str) -> Non
                     await wow_raid_event_repo.set_message_id(db, event, message_id)
             link = rest.message_link(snapshot.guild_discord_id, snapshot.channel_id, message_id)
             await edit_original(client, application_id, token, posted_data(snapshot.channel_id, link, event_id))
+            extra = raid_extras_copy.posted_line(await raid_extras.sync(client, event_id), snapshot.channel_id)
+            if extra is not None:
+                data = posted_data(snapshot.channel_id, link, event_id, extra=extra)
+                await edit_original(client, application_id, token, data)
     except Exception:
         logger.exception("Raid bot: post_raid failed for event %s", event_id)
 
@@ -222,6 +228,7 @@ async def refresh_public_message(event_id: uuid.UUID) -> None:
             return
         async with rest.make_rest_client() as client:
             await _edit_or_repost(client, snapshot)
+            await raid_extras.sync(client, event_id)
     except Exception:
         logger.exception("Raid bot: refresh_public_message failed for event %s", event_id)
 
@@ -272,13 +279,17 @@ async def _edit_or_repost(client: DiscordRestClient, snapshot: _Snapshot) -> Non
     await _delete_message(client, snapshot.channel_id, message_id)
 
 
-async def delete_post(channel_id: str, message_id: str | None, application_id: str, token: str) -> None:
-    """Raid: Edit → Delete raid: remove the post, then tell the leader whether it went."""
+async def delete_post(
+    channel_id: str, message_id: str | None, application_id: str, token: str, leftovers: Leftovers | None = None
+) -> None:
+    """Raid: Edit → Delete raid: remove the post and its Discord event, archive its thread, then say what's left."""
     try:
         async with rest.make_rest_client() as client:
             outcome = raid_copy.DELETED
             if message_id is not None and not await _delete_message(client, channel_id, message_id):
                 outcome = raid_copy.DELETE_POST_LEFT
+            if leftovers is not None and not await raid_extras.end(client, leftovers):
+                outcome = f"{outcome}\n{raid_extras_copy.END_LEFT}"
             await edit_original(client, application_id, token, ephemeral_data(outcome))
     except Exception:
         logger.exception("Raid bot: delete_post failed for message %s", message_id)
@@ -349,6 +360,7 @@ async def announce_cancellation(event_id: uuid.UUID, dm_user_ids: list[str]) -> 
         async with rest.make_rest_client() as client:
             if snapshot.message_id is not None:
                 await _edit_or_repost(client, snapshot)
+            await raid_extras.end_for(client, event_id)
             announcement = raid_copy.cancellation_announcement(snapshot.title, snapshot.day_label, snapshot.cancel_reason)
             try:
                 await rest.bounded(

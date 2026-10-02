@@ -82,7 +82,7 @@ from app.services.discord.raid_edit_views import (
     when_modal,
 )
 from app.services.discord.raid_views import cancel_confirm_data, unix
-from app.services.wow import raid_event_service
+from app.services.wow import raid_event_service, raid_extras_rules
 from app.services.wow.raid_colors import COLORS_BY_KEY, stored_value
 from app.services.wow.raid_custom_id import RaidCustomId
 from app.services.wow.raid_details import (
@@ -478,8 +478,9 @@ async def handle_delete(interaction: Interaction, parsed: RaidCustomId, backgrou
             return update_text_response(found)
         channel_id = found.event.channel_id
         message_id = found.event.message_id
+        leftovers = raid_extras_rules.leftovers(found.guild, found.event)
         await raid_event_service.delete_event(db, found.event)
     background.add_task(
-        raid_publisher.delete_post, channel_id, message_id, interaction.application_id, interaction.token
+        raid_publisher.delete_post, channel_id, message_id, interaction.application_id, interaction.token, leftovers
     )
     return update_text_response(raid_copy.DELETING)
