@@ -21,30 +21,24 @@ Run from apps/mygamingassistant/backend:
     python scripts/generate_discord_emojis.py
     python scripts/generate_discord_emojis.py --sheet sheet.png   # + preview
 
-Downloads (glyph PNGs, the font) are cached in the OS temp dir.  Output is
+The drawing helpers and the cached downloads (glyph PNGs, the font) are in
+``discord_art.py``, shared with ``generate_raid_banners.py``.  Output is
 byte-stable for the same inputs and Pillow version, so a re-run without art
 changes leaves git clean.
 """
 from __future__ import annotations
 
 import argparse
-import io
 import sys
-import tempfile
-import urllib.error
-import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
-from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
+
+from discord_art import Glyph, colorize, contrast, fit, load_font, load_glyph, luminance, mix, rgb, write_pngs
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 OUT_DIR = BACKEND_DIR / "data" / "discord_emojis"
-CACHE_DIR = Path(tempfile.gettempdir()) / "mga_discord_emoji_cache"
-
-GLYPH_URL = "https://game-icons.net/icons/ffffff/transparent/1x1/{author}/{slug}.png"
-FONT_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/cinzel/Cinzel%5Bwght%5D.ttf"
-FONT_WEIGHT = 900
 
 SIZE = 128
 TILE_MARGIN = 4
@@ -60,16 +54,6 @@ OUTLINE_INK = (30, 31, 34, 255)
 PARCHMENT = "#efe4cc"
 PARCHMENT_INK = (43, 29, 14, 255)
 PARCHMENT_EDGE = "#6b5233"
-
-
-@dataclass(frozen=True)
-class Glyph:
-    author: str
-    slug: str
-
-    @property
-    def credit(self) -> str:
-        return f"{self.slug} by {self.author}"
 
 
 @dataclass(frozen=True)
@@ -201,66 +185,8 @@ def tile_icons() -> list[TileIcon]:
 
 
 # ---------------------------------------------------------------------------
-# Downloads
-# ---------------------------------------------------------------------------
-
-
-def _download(url: str, target: Path) -> bytes:
-    if target.exists():
-        return target.read_bytes()
-    target.parent.mkdir(parents=True, exist_ok=True)
-    request = urllib.request.Request(url, headers={"User-Agent": "MyGamingAssistant emoji generator"})
-    try:
-        with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310 — fixed https URLs
-            data = response.read()
-    except urllib.error.HTTPError as exc:
-        raise SystemExit(f"Download failed ({exc.code}): {url}") from exc
-    target.write_bytes(data)
-    return data
-
-
-def load_glyph(glyph: Glyph) -> Image.Image:
-    data = _download(
-        GLYPH_URL.format(author=glyph.author, slug=glyph.slug),
-        CACHE_DIR / "glyphs" / glyph.author / f"{glyph.slug}.png",
-    )
-    return Image.open(io.BytesIO(data)).convert("RGBA")
-
-
-def load_font(size: int) -> ImageFont.FreeTypeFont:
-    path = CACHE_DIR / "Cinzel-wght.ttf"
-    _download(FONT_URL, path)
-    font = ImageFont.truetype(str(path), size)
-    font.set_variation_by_axes([FONT_WEIGHT])
-    return font
-
-
-# ---------------------------------------------------------------------------
 # Drawing
 # ---------------------------------------------------------------------------
-
-
-def _rgb(hex_color: str) -> tuple[int, int, int]:
-    value = hex_color.lstrip("#")
-    return int(value[0:2], 16), int(value[2:4], 16), int(value[4:6], 16)
-
-
-def _mix(color: tuple[int, int, int], other: tuple[int, int, int], amount: float) -> tuple[int, int, int]:
-    return tuple(round(c + (o - c) * amount) for c, o in zip(color, other))  # type: ignore[return-value]
-
-
-def _luminance(color: tuple[int, int, int]) -> float:
-    def channel(value: int) -> float:
-        s = value / 255
-        return s / 12.92 if s <= 0.03928 else ((s + 0.055) / 1.055) ** 2.4
-
-    r, g, b = (channel(v) for v in color)
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b
-
-
-def _contrast(a: float, b: float) -> float:
-    high, low = max(a, b), min(a, b)
-    return (high + 0.05) / (low + 0.05)
 
 
 def _tile_mask() -> Image.Image:
@@ -272,13 +198,13 @@ def _tile_mask() -> Image.Image:
 
 def draw_tile(base_hex: str, *, edge_hex: str | None = None) -> Image.Image:
     """A rounded tile: vertical gradient of the color, darker edge."""
-    base = _rgb(base_hex)
-    top = _mix(base, (255, 255, 255), 0.18)
-    bottom = _mix(base, (0, 0, 0), 0.22)
+    base = rgb(base_hex)
+    top = mix(base, (255, 255, 255), 0.18)
+    bottom = mix(base, (0, 0, 0), 0.22)
     gradient = Image.new("RGBA", (SIZE, SIZE))
     pixels = gradient.load()
     for y in range(SIZE):
-        row = _mix(top, bottom, y / (SIZE - 1))
+        row = mix(top, bottom, y / (SIZE - 1))
         for x in range(SIZE):
             pixels[x, y] = (*row, 255)
 
@@ -286,26 +212,10 @@ def draw_tile(base_hex: str, *, edge_hex: str | None = None) -> Image.Image:
     tile = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
     tile.paste(gradient, (0, 0), mask)
 
-    edge = _rgb(edge_hex) if edge_hex else _mix(base, (0, 0, 0), 0.5)
+    edge = rgb(edge_hex) if edge_hex else mix(base, (0, 0, 0), 0.5)
     box = (TILE_MARGIN, TILE_MARGIN, SIZE - 1 - TILE_MARGIN, SIZE - 1 - TILE_MARGIN)
     ImageDraw.Draw(tile).rounded_rectangle(box, radius=TILE_RADIUS, outline=(*edge, 255), width=4)
     return tile
-
-
-def _fit(glyph: Image.Image, box: int) -> Image.Image:
-    bbox = glyph.getbbox()
-    if bbox:
-        glyph = glyph.crop(bbox)
-    scale = box / max(glyph.size)
-    size = (max(1, round(glyph.width * scale)), max(1, round(glyph.height * scale)))
-    return glyph.resize(size, Image.Resampling.LANCZOS)
-
-
-def _colorize(glyph: Image.Image, ink: tuple[int, int, int, int]) -> Image.Image:
-    alpha = glyph.getchannel("A")
-    solid = Image.new("RGBA", glyph.size, ink)
-    solid.putalpha(ImageChops.multiply(alpha, Image.new("L", glyph.size, ink[3])))
-    return solid
 
 
 def _with_shadow(layer: Image.Image, ink: tuple[int, int, int, int]) -> Image.Image:
@@ -313,7 +223,7 @@ def _with_shadow(layer: Image.Image, ink: tuple[int, int, int, int]) -> Image.Im
     if ink != INK_LIGHT:
         return layer
     shadow = Image.new("RGBA", layer.size, (0, 0, 0, 0))
-    dark = _colorize(layer, (0, 0, 0, 150))
+    dark = colorize(layer, (0, 0, 0, 150))
     shadow.paste(dark, (2, 3), dark)
     shadow = shadow.filter(ImageFilter.GaussianBlur(2))
     return Image.alpha_composite(shadow, layer)
@@ -326,12 +236,12 @@ def _center(layer: Image.Image, piece: Image.Image) -> Image.Image:
 
 
 def render_tile_icon(icon: TileIcon) -> Image.Image:
-    tile_color = _rgb(icon.color)
-    tile_lum = _luminance(tile_color)
+    tile_color = rgb(icon.color)
+    tile_lum = luminance(tile_color)
     ink = INK_LIGHT
-    if _contrast(tile_lum, _luminance(INK_DARK[:3])) > _contrast(tile_lum, 1.0):
+    if contrast(tile_lum, luminance(INK_DARK[:3])) > contrast(tile_lum, 1.0):
         ink = INK_DARK
-    glyph = _colorize(_fit(load_glyph(icon.glyph), GLYPH_BOX), ink)
+    glyph = colorize(fit(load_glyph(icon.glyph), GLYPH_BOX), ink)
     glyph_layer = _center(Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0)), glyph)
     return Image.alpha_composite(draw_tile(icon.color), _with_shadow(glyph_layer, ink))
 
@@ -343,11 +253,11 @@ def _outlined(glyph: Image.Image, ink: tuple[int, int, int, int], width: int) ->
     halo = padded.getchannel("A").filter(ImageFilter.MaxFilter(2 * width + 1))
     outline = Image.new("RGBA", padded.size, OUTLINE_INK)
     outline.putalpha(halo)
-    return Image.alpha_composite(outline, _colorize(padded, ink))
+    return Image.alpha_composite(outline, colorize(padded, ink))
 
 
 def render_line_icon(icon: LineIcon) -> Image.Image:
-    glyph = _outlined(_fit(load_glyph(icon.glyph), LINE_GLYPH_BOX), INK_LIGHT, LINE_OUTLINE)
+    glyph = _outlined(fit(load_glyph(icon.glyph), LINE_GLYPH_BOX), INK_LIGHT, LINE_OUTLINE)
     return _center(Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0)), glyph)
 
 
@@ -403,12 +313,6 @@ def render_all() -> dict[str, Image.Image]:
     return images
 
 
-def _png_bytes(image: Image.Image) -> bytes:
-    buffer = io.BytesIO()
-    image.save(buffer, format="PNG", optimize=True)
-    return buffer.getvalue()
-
-
 def notice_text() -> str:
     glyph_rows = sorted(
         {(icon.name, icon.glyph) for icon in tile_icons()} | {(line.name, line.glyph) for line in LINE_ICONS}
@@ -461,20 +365,9 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
 
     images = render_all()
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    written = 0
-    for name, image in sorted(images.items()):
-        target = OUT_DIR / f"{name}.png"
-        data = _png_bytes(image)
-        if target.exists() and target.read_bytes() == data:
-            continue
-        target.write_bytes(data)
-        written += 1
-    stale = sorted(path.name for path in OUT_DIR.glob("*.png") if path.stem not in images)
-    for name in stale:
-        (OUT_DIR / name).unlink()
+    written, removed = write_pngs(OUT_DIR, images)
     (OUT_DIR / "NOTICE.md").write_text(notice_text(), encoding="utf-8", newline="\n")
-    print(f"{len(images)} emoji images: {written} written, {len(images) - written} unchanged, {len(stale)} removed")
+    print(f"{len(images)} emoji images: {written} written, {len(images) - written} unchanged, {removed} removed")
 
     if args.sheet:
         contact_sheet(images).save(args.sheet)

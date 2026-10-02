@@ -4,7 +4,8 @@ Builds the embed + button rows for the signup post, laid out like
 Raid-Helper's (in our own art).  Used for the initial post (REST), every
 button click (UPDATE_MESSAGE, type 7), every edit / cancellation (REST edit)
 and the create preview.  No I/O, no clock — times are Discord ``<t:…>``
-timestamps, so every viewer sees their own local time.
+timestamps, so every viewer sees their own local time.  The banner's URL
+comes from the committed art and the app's public origin (``raid_banners``).
 
 Layout
 ------
@@ -20,6 +21,7 @@ Fields       one inline column per button with anyone in it, "{icon} Warrior (3)
              then Tentative / Bench / Absence as "{spec icon} Name" lists.
              While sign-ups are open, "Nobody yet" names the empty columns, so
              every class button's icon is labelled somewhere on the post.
+Image        the raid's banner (``raid_banners``), until the raid is cancelled.
 Footer       "ID a1b2c3 · Tap your class to sign up. My sign-up changes your spec."
 Colors       purple; grey once cancelled.
 Buttons      [Tank] + one per class (icon + column count), then [Late]
@@ -31,7 +33,8 @@ emoji sync) a class shows as a text tag ("[WAR]"), a class button as
 
 Discord limits & degradation
 ----------------------------
-Each field value ≤ 1024 chars, the whole embed ≤ 6000 (we budget 5800).
+Each field value ≤ 1024 chars, the whole embed ≤ 6000 (we budget 5800; the
+banner's URL doesn't count).
 When the post doesn't fit, it gives up detail in order until it does:
   1. the order numbers;
   2. the entry icons (markers become text; the Tanks column and the lists
@@ -56,6 +59,7 @@ from platform_shared.services.discord import EmojiSet
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.models.wow.wow_raid_signup import WowRaidSignup
+from app.services.wow.raid_banners import banner_url
 from app.services.wow.raid_catalog import TANK_COLUMN, column_icon, column_label
 from app.services.wow.raid_post_buttons import build_signup_components
 from app.services.wow.raid_post_fit import FittedField, Lines
@@ -230,6 +234,9 @@ def build_signup_embed(
     }
     if fields:
         embed["fields"] = [field.field(level) for field in fields]
+    banner = _banner(event)
+    if banner:
+        embed["image"] = {"url": banner}
     return embed
 
 
@@ -339,6 +346,13 @@ def _cancel_line(event: WowRaidEvent) -> str:
 def _footer(event: WowRaidEvent) -> str:
     hint = _FOOTER_HINTS.get(event.status, SIGN_UP_HINT)
     return f"ID {str(event.id)[:6]} · {hint}"
+
+
+def _banner(event: WowRaidEvent) -> str | None:
+    """The raid's banner; a cancelled post drops its art."""
+    if event.status == "cancelled":
+        return None
+    return banner_url(event.raid_key)
 
 
 def _color(event: WowRaidEvent) -> int:
