@@ -1,6 +1,6 @@
 import FoodDirectionsLink from "@/games/wow-forever/components/food/detail/FoodDirectionsLink";
 import { DETAIL_CHIP } from "@/games/wow-forever/components/food/detail/detailStyles";
-import { placeLabel } from "@/games/wow-forever/food/recipeSources";
+import { placeLabel, stockLabel } from "@/games/wow-forever/food/recipeSources";
 import type { VendorSpot } from "@/games/wow-forever/types/recipeSources";
 
 /** "Kendor Kabonka · Master of Cooking Recipes — Stormwind City · 77.5, 52.7". */
@@ -14,7 +14,7 @@ export default function FoodVendorRow({ vendor }: { vendor: VendorSpot }) {
         </p>
         <p className="text-xs text-muted-foreground">
           {placeLabel(vendor)} · {vendor.x.toFixed(1)}, {vendor.y.toFixed(1)}
-          {vendor.limited ? <span className={`${DETAIL_CHIP} ml-2`}>Limited stock</span> : null}
+          {vendor.limited ? <span className={`${DETAIL_CHIP} ml-2`}>Limited: {stockLabel(vendor)}</span> : null}
         </p>
       </div>
       <FoodDirectionsLink spot={vendor} name={vendor.name} />

@@ -15,6 +15,10 @@ export interface VendorSpot {
   faction: Faction;
   /** Limited stock — it sells out and comes back later. */
   limited: boolean;
+  /** How many a limited vendor holds at once, shared by every player on the realm (0 = unlimited). */
+  stock: number;
+  /** Classic restock time, in minutes (0 = unlimited). */
+  restockMinutes: number;
 }
 
 /** Where on the World Map a mob is found. */

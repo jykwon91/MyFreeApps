@@ -28,7 +28,8 @@ from scripts.wow_world_map.services import CLASSIC_CONTINENTS, SAME_SPOT_YARDS
 from scripts.wow_world_map.sql_dump import SqlValue, read_dump
 from scripts.wow_world_map.zones import FOREVER_ONLY_ZONES
 
-VENDOR_COLUMNS = ["npcId", "name", "title", "zone", "subzone", "x", "y", "faction", "limited"]
+# stock = how many a limited vendor holds at once (0 = unlimited); restockMinutes = time to restock one.
+VENDOR_COLUMNS = ["npcId", "name", "title", "zone", "subzone", "x", "y", "faction", "stock", "restockMinutes"]
 MOB_COLUMNS = ["name", "minLevel", "maxLevel", "chance", "zone", "subzone", "x", "y"]
 
 # An item only on this many mobs' shared loot is a world drop, not a named mob's.
@@ -94,6 +95,14 @@ def _references(rows: Iterable[Row]) -> dict[int, list[tuple[int, float]]]:
     return refs
 
 
+
+def _stock(row: Row) -> tuple[int, int]:
+    """(how many a limited vendor holds, minutes to restock one) — (0, 0) for unlimited."""
+    stock = _i(row["maxcount"])
+    if not stock:
+        return 0, 0
+    return stock, round(_i(row["incrtime"]) / 60)
+
 class ClassicSources:
     """Answers "where does item X come from" from the cmangos dump."""
 
@@ -112,16 +121,16 @@ class ClassicSources:
             if _i(s["map"]) in CLASSIC_CONTINENTS and _i(s["guid"]) not in event_only:
                 self._spawns[_i(s["id"])].append(s)
 
-        self._sold: dict[int, dict[int, bool]] = defaultdict(dict)  # item -> npc -> limited stock
+        self._sold: dict[int, dict[int, tuple[int, int]]] = defaultdict(dict)  # item -> npc -> (stock, restock min)
         by_template: dict[int, list[int]] = defaultdict(list)
         for npc in self._npcs.values():
             if _i(npc["VendorTemplateId"]):
                 by_template[_i(npc["VendorTemplateId"])].append(_i(npc["Entry"]))
         for r in t["npc_vendor"]:
-            self._sold[_i(r["item"])][_i(r["entry"])] = _i(r["maxcount"]) > 0
+            self._sold[_i(r["item"])][_i(r["entry"])] = _stock(r)
         for r in t["npc_vendor_template"]:
             for npc in by_template[_i(r["entry"])]:
-                self._sold[_i(r["item"])][npc] = _i(r["maxcount"]) > 0
+                self._sold[_i(r["item"])][npc] = _stock(r)
 
         refs = _references(t["reference_loot_template"])
         self._loot_owners: dict[int, list[int]] = defaultdict(list)
@@ -155,7 +164,7 @@ class ClassicSources:
 
     def vendors(self, item: int) -> list[list[object]]:
         rows: list[list[object]] = []
-        for npc_id, limited in sorted(self._sold.get(item, {}).items()):
+        for npc_id, (stock, restock) in sorted(self._sold.get(item, {}).items()):
             npc = self._npcs.get(npc_id)
             if npc is None:
                 continue
@@ -164,7 +173,7 @@ class ClassicSources:
                 continue
             for spot in self._places(npc_id):
                 self.zone_names[spot.zone.ui_map_id] = spot.zone.name
-                rows.append([npc_id, str(npc["Name"]), str(npc["SubName"] or ""), *spot.as_row(), faction, limited])
+                rows.append([npc_id, str(npc["Name"]), str(npc["SubName"] or ""), *spot.as_row(), faction, stock, restock])
         rows.sort(key=lambda r: (str(r[1]), int(str(r[3]))))
         return rows
 

@@ -53,6 +53,30 @@ export function placeLabel(spot: { subzone: string; zoneName: string }): string 
   return spot.subzone ? `${spot.subzone}, ${spot.zoneName}` : spot.zoneName;
 }
 
+const MINUTES_PER_HOUR = 60;
+
+/** "2 hours" / "1 hour" / "30 minutes". */
+function duration(minutes: number): string {
+  if (minutes < MINUTES_PER_HOUR) return `${minutes} minutes`;
+  const hours = Math.round(minutes / MINUTES_PER_HOUR);
+  return hours === 1 ? "1 hour" : `${hours} hours`;
+}
+
+/** "2 at a time" — what a limited vendor holds. */
+export function stockSize(vendor: Pick<VendorSpot, "stock">): string {
+  return `${vendor.stock} at a time`;
+}
+
+/** "2 at a time · restocks about every 2 hours". */
+export function stockLabel(vendor: Pick<VendorSpot, "stock" | "restockMinutes">): string {
+  if (!vendor.restockMinutes) return stockSize(vendor);
+  return `${stockSize(vendor)} · restocks about every ${duration(vendor.restockMinutes)}`;
+}
+
+/** Shown under a vendor list with limited stock — why the item may be missing from the vendor's window. */
+export const SHARED_STOCK_NOTE =
+  "Limited stock is shared with every player on your realm. If it's not on the vendor's list, someone bought it — come back after the restock.";
+
 /** The World Map with directions open, to a spot. */
 export function directionsHref(spot: { zoneId: number; x: number; y: number }): string {
   const to = formatEndpoint({ kind: ENDPOINT_KIND.point, zoneId: spot.zoneId, x: spot.x, y: spot.y });

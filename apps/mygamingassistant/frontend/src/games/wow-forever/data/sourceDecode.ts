@@ -54,7 +54,7 @@ export function createSourceLookup(raw: RawSourcesFile): SourceLookup {
   }
 
   function vendor(r: Row): VendorSpot {
-    const [npcId, name, title, zoneId, subzone, x, y, faction, limited] = r;
+    const [npcId, name, title, zoneId, subzone, x, y, faction, stock, restockMinutes] = r;
     return {
       npcId: Number(npcId),
       name: String(name),
@@ -65,7 +65,9 @@ export function createSourceLookup(raw: RawSourcesFile): SourceLookup {
       x: Number(x),
       y: Number(y),
       faction: faction as Faction,
-      limited: Boolean(limited),
+      limited: Number(stock) > 0,
+      stock: Number(stock),
+      restockMinutes: Number(restockMinutes),
     };
   }
 
