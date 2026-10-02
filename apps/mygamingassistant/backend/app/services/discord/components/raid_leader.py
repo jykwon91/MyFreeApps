@@ -196,7 +196,8 @@ async def _notify_move(interaction: Interaction, event_id: uuid.UUID, background
         text = raid_copy.notify_post(title_text(event), unix(event.starts_at))
         notice = await _claim_ping(db, event, text=text, user_ids=user_ids, now=now)
         if notice is not None:
-            return update_response(edit_card(event, notice=notice))
+            # Still offered while anyone's on the raid: "try again in a few minutes".
+            return update_response(edit_card(event, notice=notice, notify_count=len(user_ids)))
         messages = build_move_notice(text, _signature(event, interaction), user_ids)
         job = _ping_job(event, interaction, messages, now)
     background.add_task(raid_ping.send_ping, job)

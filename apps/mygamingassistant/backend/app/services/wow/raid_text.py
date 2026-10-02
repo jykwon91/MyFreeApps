@@ -40,8 +40,11 @@ def display_title(event: WowRaidEvent) -> str:
 
 
 def title_text(event: WowRaidEvent) -> str:
-    """The title for message text: a leader can set it (Raid: Edit), so its markdown shows as typed."""
-    return escape_markdown(display_title(event))
+    """The title for message text: a leader can set it (Raid: Edit), so its markdown shows as typed.
+
+    It can start a line, so a leading ``#``, ``-``, ``+`` or ``1.`` is escaped too.
+    """
+    return _escape_line_start(escape_markdown(display_title(event)))
 
 
 def local_day_label(starts_at: datetime, tz_name: str) -> str:
@@ -70,8 +73,12 @@ def escape_name(display_name: str, *, max_chars: int = MAX_NAME_CHARS) -> str:
     name = " ".join(display_name.split())
     if len(name) > max_chars:
         name = name[: max_chars - 1] + "…"
-    name = _LEADING_NUMBER.sub(r"\1\\.", _LEADING_MARK.sub(r"\\\1", escape_markdown(name)))
-    return name.replace("://", ":\u200b//")
+    return _escape_line_start(escape_markdown(name)).replace("://", ":\u200b//")
+
+
+def _escape_line_start(text: str) -> str:
+    """Escape a leading heading, bullet or list number, so text starting a line shows as typed."""
+    return _LEADING_NUMBER.sub(r"\1\\.", _LEADING_MARK.sub(r"\\\1", text))
 
 
 def leader_words(text: str) -> str:

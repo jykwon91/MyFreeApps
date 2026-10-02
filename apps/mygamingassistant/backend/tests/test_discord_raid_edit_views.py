@@ -115,7 +115,8 @@ def test_the_card_shows_the_raid_as_it_stands_with_a_button_for_each_thing() -> 
     assert _rows(data) == _PROPERTY_ROWS
 
 
-def test_the_card_shows_what_the_leader_changed() -> None:
+def test_the_card_shows_what_the_leader_changed(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "frontend_url", "https://mga.example")
     event = _event(
         title="Ony *speedrun*",
         leader_user_id="u9",
@@ -136,7 +137,7 @@ def test_the_card_shows_what_the_leader_changed() -> None:
         "> Flasks on pull",
     ]
     assert embed["color"] == 0x3498DB
-    assert embed["thumbnail"] == {"url": _IMAGE}
+    assert embed["thumbnail"] == {"url": banner_url("onyxia")}  # never the leader's link
     assert edit_card(event, notice=raid_copy.TITLE_OK)["content"] == raid_copy.TITLE_OK
 
 

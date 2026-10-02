@@ -19,11 +19,12 @@ DESCRIPTION_MAX: Final = 500
 IMAGE_URL_MAX: Final = 512  # the column's size
 REASON_MAX: Final = 200
 
-# https, a dotted host name, an optional port, then only characters a link
-# may carry as they are (anything else must be %-encoded).
+# https, a dotted host name (no port), then only characters a link may carry
+# as they are, or %-encoded ones.  No brackets: a path can't hold them as
+# they are, and with none the link can't pass for a masked link either.
 _IMAGE_URL: Final = re.compile(
-    r"https://(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}(?::\d{1,5})?"
-    r"(?:[/?#][A-Za-z0-9\-._~:/?#\[\]@!$&'()*+,;=%]*)?"
+    r"https://(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}"
+    r"(?:[/?#](?:[A-Za-z0-9\-._~:/?#@!$&'()*+,;=]|%[0-9A-Fa-f]{2})*)?"
 )
 
 

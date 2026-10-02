@@ -26,7 +26,14 @@ from app.services.wow.raid_embed import (
     roster_entry,
 )
 from app.services.wow.raid_roster import compute_roster_summary, order_numbers
-from app.services.wow.raid_text import class_icon, escape_name, seats_label, server_time_label, status_heading
+from app.services.wow.raid_text import (
+    class_icon,
+    escape_name,
+    seats_label,
+    server_time_label,
+    status_heading,
+    title_text,
+)
 
 # Sat Oct 10 2026, 20:00 America/New_York
 _STARTS = datetime(2026, 10, 11, 0, 0, tzinfo=timezone.utc)
@@ -376,6 +383,14 @@ def test_names_never_become_headings_lists_or_links() -> None:
     assert escape_name("> quote") == r"\> quote"
     assert escape_name("see https://x.example") == "see https:​//x.example"
     assert escape_name("Mid#dle-name 2.") == "Mid#dle-name 2."  # only a line's start is markdown
+
+
+def test_a_leaders_title_shows_as_typed_wherever_it_starts_a_line() -> None:
+    assert title_text(_event(title="# SIGN UP")) == r"\# SIGN UP"
+    assert title_text(_event(title="-# fine print")) == r"\-# fine print"
+    assert title_text(_event(title="1. Ony")) == r"1\. Ony"
+    assert title_text(_event(title="[Ony](https://x.example)")) == r"\[Ony\](https://x.example)"
+    assert title_text(_event()) == "Onyxia's Lair"
 
 
 def test_helpers() -> None:

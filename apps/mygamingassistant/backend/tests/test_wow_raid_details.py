@@ -99,8 +99,9 @@ def test_a_cancel_reason_is_one_line_or_none() -> None:
     [
         "https://i.imgur.com/raid.png",
         "https://cdn.discordapp.com/attachments/1/2/banner.png?ex=66&is=67&hm=ab",
-        "https://example.com:8443/a/b%20c.webp",
+        "https://example.com/a/b%20c.webp",
         "https://sub-domain.example.co.uk/image#frag",
+        "https://upload.wikimedia.org/wikipedia/commons/a/a5/Onyxia_(model).jpg",
         "https://example.com",
     ],
 )
@@ -117,6 +118,10 @@ def test_https_image_links_are_kept(link: str) -> None:
         "https://localhost/a.png",  # no dotted host name
         "https://127.0.0.1/a.png",
         "https://-bad.example.com/a.png",
+        "https://example.com:8443/a.png",  # image hosts don't need a port
+        "https://example.com:99999/a.png",
+        "https://example.com/a[1].png",  # brackets must be %-encoded
+        "https://example.com/a%zz.png",  # not a %-encoding
         "https://example.com/a b.png",
         "https://example.com/<script>",
         "https://example.com/\"q\"",

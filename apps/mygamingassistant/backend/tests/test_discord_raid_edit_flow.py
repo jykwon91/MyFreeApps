@@ -8,9 +8,9 @@ their own flows.
 """
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from typing import Any
-from zoneinfo import ZoneInfo
 
 import pytest
 from platform_shared.services.discord import MANAGE_EVENTS
@@ -245,7 +245,7 @@ async def test_the_description_and_banner_forms(post: Post, db: AsyncSession, fa
 
     response = await post(_form(event, "image", f" {_IMAGE} "))
     assert content(response) == raid_copy.BANNER_OK
-    assert response["data"]["embeds"][0]["thumbnail"] == {"url": _IMAGE}
+    assert _card_lines(response)[3] == f"**Image:** [Your image]({_IMAGE})"
     await db.refresh(event)
     assert event.image_url == _IMAGE
     assert _post_embed(fake_discord)["image"] == {"url": _IMAGE}
@@ -325,10 +325,11 @@ async def test_moving_the_raid_reschedules_it_and_offers_to_tell_everyone(
     await db.refresh(event)
     assert event.last_pinged_at is not None
 
-    # --- it shares the ping's slot: straight away again, the card says to wait
+    # --- it shares the ping's slot: straight away again, the card says to wait and keeps the offer
     fake_discord.clear()
     response = await post(_notify(event))
-    assert content(response) == raid_copy.PING_WAIT
+    assert content(response) == f"{raid_copy.PING_WAIT}\n{raid_copy.notify_offer(2)}"
+    assert custom_ids(response) == [f"raid:v1:lc:{event.id}:notify", *_card_ids(event)]
     assert _card_lines(response)[0] == "**Title:** Onyxia's Lair"
     assert fake_discord.channel_posts() == []
 
@@ -392,6 +393,37 @@ async def test_handing_the_raid_to_another_leader(post: Post, db: AsyncSession, 
     assert content(response).endswith(raid_copy.CLOSED_OK)
     response = await post(menu_command(EDIT_MENU, "m1", **jaina))
     assert content(response) == raid_copy.NOT_LEADER
+
+
+async def test_a_handed_over_leader_without_manage_events_can_do_it_all(
+    post: Post, db: AsyncSession, fake_discord: FakeDiscord
+) -> None:
+    event = await _raid(post, db, fake_discord)
+    event_id = event.id
+    await post(_pick_leader(event, "777", "Jaina"))
+    jaina = {"user_id": "777", "permissions": 0}
+
+    response = await post(_form(event, "title", "Jaina's Ony", **jaina))
+    assert content(response) == raid_copy.TITLE_OK
+    await db.refresh(event)
+    assert event.title == "Jaina's Ony"
+
+    # --- the cancel check's buttons answer to her too
+    response = await post(_form(event, "cancel", "Wipe night", **jaina))
+    assert custom_ids(response) == [f"raid:v1:cancel:{event_id}", f"raid:v1:ed:{event_id}:keep"]
+    response = await post(_edit(event, "keep", **jaina))
+    assert content(response) == raid_copy.CANCEL_KEPT
+    await post(_form(event, "cancel", "Wipe night", **jaina))
+    response = await post(click(f"raid:v1:cancel:{event_id}", **jaina))
+    assert content(response) == raid_copy.cancelled_done(CHANNEL)
+    await db.refresh(event)
+    assert (event.status, event.cancel_reason) == ("cancelled", "Wipe night")
+
+    response = await post(_edit(event, "delete", **jaina))
+    assert content(response) == raid_copy.delete_prompt("Jaina's Ony", 0, can_cancel=False)
+    response = await post(click(f"raid:v1:del:{event_id}", **jaina))
+    assert content(response) == raid_copy.DELETING
+    assert (await db.execute(select(WowRaidEvent).where(WowRaidEvent.id == event_id))).scalars().all() == []
 
 
 async def test_the_color_menu_recolors_the_post(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
@@ -577,7 +609,11 @@ async def test_a_finished_raid_can_still_be_deleted(post: Post, db: AsyncSession
 
 
 async def test_a_refresh_that_finds_the_raid_deleted_never_posts_it_again(
-    post: Post, db: AsyncSession, fake_discord: FakeDiscord, monkeypatch: pytest.MonkeyPatch
+    post: Post,
+    db: AsyncSession,
+    fake_discord: FakeDiscord,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     event = await _raid(post, db, fake_discord)
     # A re-render read the raid just before it was deleted; its post is gone by the edit.
@@ -590,10 +626,28 @@ async def test_a_refresh_that_finds_the_raid_deleted_never_posts_it_again(
     monkeypatch.setattr(raid_publisher, "_load", stale_load)
     fake_discord.fail("PATCH", _POST, 404, 10008)
 
-    await raid_publisher.refresh_public_message(event.id)
+    with caplog.at_level(logging.INFO, logger=raid_publisher.__name__):
+        await raid_publisher.refresh_public_message(event.id)
 
     assert len(fake_discord.public_edits()) == 1
     assert fake_discord.channel_posts() == []
+    assert "refresh_public_message failed" not in caplog.text
+    assert "reposting" not in caplog.text
+
+
+async def test_a_refused_edit_names_the_raid_and_leaves_the_post(
+    post: Post, db: AsyncSession, fake_discord: FakeDiscord, caplog: pytest.LogCaptureFixture
+) -> None:
+    event = await _raid(post, db, fake_discord)
+    fake_discord.fail("PATCH", _POST, 400, 50035)  # e.g. an embed field Discord won't take
+
+    with caplog.at_level(logging.WARNING, logger=raid_publisher.__name__):
+        await raid_publisher.refresh_public_message(event.id)
+
+    assert f"refused the edit of raid {event.id}'s post (status 400, code 50035)" in caplog.text
+    assert fake_discord.channel_posts() == []  # not reposted
+    await db.refresh(event)
+    assert event.message_id == "m1"
 
 
 async def test_a_repost_that_lands_after_the_raid_was_deleted_is_taken_down(

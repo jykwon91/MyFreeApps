@@ -74,7 +74,9 @@ def edit_card(event: WowRaidEvent, *, notice: str | None = None, notify_count: i
         "color": post_color(event),
         "footer": {"text": f"ID {str(event.id)[:6]} · {raid_copy.EDIT_FOOTER}"},
     }
-    banner = event.image_url or banner_url(event.raid_key)
+    # The raid's own art, not the leader's link: should Discord ever refuse
+    # that link, the card that changes it must still open.
+    banner = banner_url(event.raid_key)
     if banner is not None:
         embed["thumbnail"] = {"url": banner}
 

@@ -220,6 +220,13 @@ async def _edit_or_repost(client: DiscordRestClient, snapshot: _Snapshot) -> Non
         return
     except DiscordApiError as exc:
         if exc.code != UNKNOWN_MESSAGE:
+            # The post keeps what it showed before; say which raid it is.
+            logger.warning(
+                "Raid bot: Discord refused the edit of raid %s's post (status %s, code %s)",
+                snapshot.event_id,
+                exc.status,
+                exc.code,
+            )
             return
     except (TimeoutError, httpx.HTTPError) as exc:
         logger.warning(
