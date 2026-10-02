@@ -1,4 +1,4 @@
-"""Signup mutations for a raid — seat assignment, queue, promotion, character names.
+"""Signup mutations for a raid — seat assignment, queue, promotion, a leader's swap, character names.
 
 The caller owns the transaction and MUST hold the event's row lock
 (``wow_raid_event_repo.get_for_update``) so concurrent clicks serialise.
@@ -8,7 +8,6 @@ this module applies them to the database.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from typing import Literal
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +18,7 @@ from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.repositories.wow import wow_raid_member_pref_repo, wow_raid_signup_repo
 from app.services.wow import raid_member_prefs_service
 from app.services.wow.raid_roster import (
+    BENCH_STATUS,
     LINE_STATUSES,
     QUEUED_STATUS,
     SEAT_STATUSES,
@@ -138,6 +138,20 @@ async def remove_signup(db: AsyncSession, *, event: WowRaidEvent, signup: WowRai
     return await promote_from_queue(db, event, prefer_role=seat_left_role)
 
 
+async def swap_seat(db: AsyncSession, *, player: WowRaidSignup, holder: WowRaidSignup) -> None:
+    """A leader's swap on a full raid: *holder* to the bench, *player* in as confirmed at *holder*'s number.
+
+    The seats taken stay the same, so nobody moves up.  Both notes are
+    cleared, as on any status change; the holder keeps their own
+    ``signed_up_at`` (the bench isn't numbered).
+    """
+    if holder.status not in SEAT_STATUSES or player.status in SEAT_STATUSES:
+        raise ValueError("A swap takes a seat holder's seat for a player without one")
+    seat_at = holder.signed_up_at
+    await wow_raid_signup_repo.set_status(db, holder, BENCH_STATUS)
+    await wow_raid_signup_repo.set_status(db, player, "confirmed", signed_up_at=seat_at)
+
+
 async def set_character_name(
     db: AsyncSession, *, guild: WowRaidGuild, signup: WowRaidSignup, name: str | None
 ) -> NameChange:
@@ -198,9 +212,5 @@ async def promote_from_queue(
     )
     if not to_promote:
         return []
-    now = datetime.now(timezone.utc)
-    for signup in to_promote:
-        signup.status = "confirmed"
-        signup.updated_at = now
-    await db.flush()
+    await wow_raid_signup_repo.promote(db, to_promote)
     return [signup.discord_user_id for signup in to_promote]

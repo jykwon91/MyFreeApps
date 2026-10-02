@@ -7,10 +7,12 @@ bench and back) happens at once and tells nobody.  Every tap decides from
 the player's row as it is now, under the raid's row lock, so a card left
 open acts on the real move.
 
-A seat asked for on a full raid is a place in the queue.  A seat given up
-goes to the next player in the queue (the same role first), who gets the
-usual moved-up DM.  Leaders aren't held to the raid's limits: the review
-and the notice say when a move goes over one.
+A seat asked for on a full raid is a swap: the menu of seat holders
+(:mod:`app.services.discord.components.raid_manage_swap`), whose [Queue
+them instead] is the review of a place in the queue (``queued``).  A seat
+given up goes to the next player in the queue (the same role first), who
+gets the usual moved-up DM.  Leaders aren't held to the raid's limits: the
+review and the notice say when a move goes over one.
 """
 from __future__ import annotations
 
@@ -35,9 +37,10 @@ from app.services.discord.components.raid_manage_common import (
 )
 from app.services.discord.interaction import Interaction, update_response, update_text_response
 from app.services.discord.raid_manage_notify import notify_moved
-from app.services.discord.raid_manage_views import listed_signup, mark_review_data, over_limit, spec_label
+from app.services.discord.raid_manage_swap_views import holders_data
+from app.services.discord.raid_manage_views import listed_signup, mark_review_data, needs_swap, over_limit, spec_label
 from app.services.wow import raid_event_service, raid_signup_service
-from app.services.wow.raid_roster import LINE_STATUSES, SEAT_STATUSES
+from app.services.wow.raid_roster import LINE_STATUSES, QUEUED_STATUS, SEAT_STATUSES, queue_position
 
 
 def needs_review(previous: str, requested: str) -> bool:
@@ -47,6 +50,16 @@ def needs_review(previous: str, requested: str) -> bool:
     happen at once.  Every other move changes who's on the line.
     """
     return (previous in LINE_STATUSES) != (requested in SEAT_STATUSES)
+
+
+def in_place(status: str, requested: str) -> bool:
+    """Whether a player at *status* is already where a move to *requested* puts them.
+
+    ``queued`` (the queue review's) asks for a place in line: a seat or the queue.
+    """
+    if requested == QUEUED_STATUS:
+        return status in LINE_STATUSES
+    return status == requested
 
 
 async def move_player(
@@ -76,20 +89,30 @@ async def move_player(
         if label is None:
             # The row is only on the card of a player with a class.
             return update_text_response(raid_copy.GENERIC_ERROR)
-        if mine.status == status:
-            notice = raid_manage_copy.status_unchanged(target.who, status, None)
+        if in_place(mine.status, status):
+            notice = raid_manage_copy.status_unchanged(target.who, mine.status, queue_position(signups, member))
             return update_response(await card_for(db, found, interaction, target, signups, notice=notice))
-        reviewed = needs_review(mine.status, status)
+        if status in SEAT_STATUSES and needs_swap(event, mine, signups):
+            # Someone gives up their seat for it.  A review drawn before the raid filled moves nobody.
+            notice = raid_manage_copy.NOBODY_MOVED
+            if ask:
+                notice = None
+            return update_response(holders_data(event, target, mine, label, signups, notice=notice))
+        # The queue review asks for a seat: the queue while the raid is full, else a seat (the queue's next).
+        requested = status
+        if status == QUEUED_STATUS:
+            requested = "confirmed"
+        reviewed = needs_review(mine.status, requested)
         if ask and reviewed:
             reach = await reach_of(db, found, interaction, member)
             return update_response(mark_review_data(event, target, mine, status, label, signups, reach=reach))
-        hit = over_limit(event, mine, status, signups)
+        hit = over_limit(event, mine, requested, signups)
         change = await raid_signup_service.change_status(
             db,
             event=event,
             discord_user_id=member,
             display_name=target.name or mine.display_name,
-            requested_status=status,
+            requested_status=requested,
             wow_class=mine.wow_class,
             role=mine.role,
             spec=mine.spec,

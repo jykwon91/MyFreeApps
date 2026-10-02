@@ -159,11 +159,11 @@ async def test_adding_to_a_full_raid_queues_the_player(post: Post, db: AsyncSess
     # --- a queued player switched to another spec keeps their place
     queued_at = bob.signed_up_at
     card = await post(pick(event, _BOB, "Bob"))
-    assert card_description(card) == f"**Bob** is **#1 in the queue** as **Fury Warrior**.\n{raid_manage_copy.QUEUE_WAITS}"
+    assert card_description(card) == f"**Bob** is **#1 in the queue** as **Fury Warrior**.\n{raid_manage_copy.SEAT_SWAPS}"
     specs = await post(tap(event, "class", _BOB, on=card, values=["warrior"]))
     card = await post(tap(event, "spec", _BOB, "warrior", on=specs, values=["warrior.arms"]))
     assert card_lines(card) == [raid_line_of(event), "Switched **Bob** to **Arms Warrior**."]
-    assert card_description(card) == f"**Bob** is **#1 in the queue** as **Arms Warrior**.\n{raid_manage_copy.QUEUE_WAITS}"
+    assert card_description(card) == f"**Bob** is **#1 in the queue** as **Arms Warrior**.\n{raid_manage_copy.SEAT_SWAPS}"
     bob = await signup_row(db, event, _BOB)
     assert bob is not None
     assert (bob.status, bob.spec, bob.signed_up_at) == ("queued", "arms", queued_at)

@@ -8,7 +8,9 @@ naming a verb, the player (a Discord id) and one argument (see
 the cards; the taps that change a sign-up are in
 :mod:`app.services.discord.components.raid_manage_changes`, the
 status row ([Seat] [Late] [Tentative] [Bench]) is
-:mod:`app.services.discord.components.raid_manage_status`, and the
+:mod:`app.services.discord.components.raid_manage_status`, a seat on a
+full raid (a seat holder benched for it) is
+:mod:`app.services.discord.components.raid_manage_swap`, and the
 "say why" buttons' form is
 :mod:`app.services.discord.components.raid_manage_reason`.
 
@@ -39,7 +41,12 @@ from fastapi import BackgroundTasks
 from app.db.session import unit_of_work
 from app.repositories.wow import wow_raid_signup_repo
 from app.services.discord import emojis, raid_copy, raid_manage_copy
-from app.services.discord.components import raid_manage_changes, raid_manage_reason, raid_manage_status
+from app.services.discord.components import (
+    raid_manage_changes,
+    raid_manage_reason,
+    raid_manage_status,
+    raid_manage_swap,
+)
 from app.services.discord.components.raid_manage_common import (
     Verb,
     card_for,
@@ -192,4 +199,5 @@ _VERBS: Final[dict[str, Verb]] = {
     **raid_manage_changes.VERBS,
     **raid_manage_status.VERBS,
     **raid_manage_reason.VERBS,
+    **raid_manage_swap.VERBS,
 }

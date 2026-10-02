@@ -27,7 +27,8 @@ Seat holders and the queue share one numbered line, earliest ``signed_up_at``
 first.  Switching spec, class, or between confirmed and late keeps your
 number; taking a seat again after tentative, bench or absence puts you at the
 end (Raid-Helper's ``preserve_order: half``) — the signup service resets
-``signed_up_at`` then.
+``signed_up_at`` then.  A leader's swap on a full raid seats a player at
+the number of the seat holder it benches.
 """
 from __future__ import annotations
 

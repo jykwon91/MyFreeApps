@@ -5,6 +5,7 @@ Standalone async functions; the caller owns the transaction.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -104,6 +105,31 @@ async def set_character_name(db: AsyncSession, signup: WowRaidSignup, name: str 
 async def set_note(db: AsyncSession, signup: WowRaidSignup, note: str | None) -> None:
     """Change the note the member left the raid leader (None removes it)."""
     signup.note = note
+    await db.flush()
+
+
+async def set_status(
+    db: AsyncSession, signup: WowRaidSignup, status: str, *, signed_up_at: datetime | None = None
+) -> None:
+    """Move a signup to *status* and clear its note (it was about the old status).
+
+    Its place in the order (``signed_up_at``) changes only when given: a
+    leader's swap seats a player at the benched seat holder's number.
+    """
+    signup.status = status
+    signup.note = None
+    signup.updated_at = datetime.now(timezone.utc)
+    if signed_up_at is not None:
+        signup.signed_up_at = signed_up_at
+    await db.flush()
+
+
+async def promote(db: AsyncSession, signups: Sequence[WowRaidSignup]) -> None:
+    """The queue moving up: each of *signups* gets a seat, keeping their note and place in the order."""
+    now = datetime.now(timezone.utc)
+    for signup in signups:
+        signup.status = "confirmed"
+        signup.updated_at = now
     await db.flush()
 
 

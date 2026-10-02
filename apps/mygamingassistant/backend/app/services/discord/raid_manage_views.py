@@ -46,7 +46,7 @@ from app.services.discord.raid_copy import queue_place
 from app.services.discord.raid_leader_views import raid_line
 from app.services.discord.raid_views import action_row, button, class_select, spec_select
 from app.services.wow.raid_catalog import WowSpecInfo, column_specs, effective_spec, signup_label, spec_info
-from app.services.wow.raid_custom_id import MANAGE_MAX_PAGE, MARK_STATUSES, manage
+from app.services.wow.raid_custom_id import MANAGE_MAX_PAGE, MARK_STATUSES, NO_ARG, manage
 from app.services.wow.raid_embed import post_color
 from app.services.wow.raid_limits import LimitCheck, LimitHit, Limits
 from app.services.wow.raid_roster import (
@@ -168,7 +168,7 @@ def hub_data(
         page = min(max(page, 1), pages)
         rows.append(action_row(_signed_up_select(event, listed, signups, page)))
         if pages > 1:
-            buttons = [*_pager(event, page, pages), *buttons]
+            buttons = [*pager(event, page, pages), *buttons]
     rows.append(action_row(*buttons))
     return ephemeral_data("\n".join(lines), components=rows, embeds=[])
 
@@ -197,11 +197,11 @@ def _signed_up_select(
         "placeholder": placeholder,
         "min_values": 1,
         "max_values": 1,
-        "options": [_signed_up_option(s, numbers.get(s.discord_user_id), signups) for s in shown],
+        "options": [signed_up_option(s, numbers.get(s.discord_user_id), signups) for s in shown],
     }
 
 
-def _signed_up_option(signup: WowRaidSignup, number: int | None, signups: Sequence[WowRaidSignup]) -> dict[str, Any]:
+def signed_up_option(signup: WowRaidSignup, number: int | None, signups: Sequence[WowRaidSignup]) -> dict[str, Any]:
     """'12. Bob' over where they stand.  An option shows no markdown, so the name goes in as it is."""
     label = signup.display_name
     if number is not None:
@@ -213,10 +213,10 @@ def _signed_up_option(signup: WowRaidSignup, number: int | None, signups: Sequen
     return option
 
 
-def _pager(event: WowRaidEvent, page: int, pages: int) -> list[dict[str, Any]]:
+def pager(event: WowRaidEvent, page: int, pages: int, verb: str = "list", member: str = NO_ARG) -> list[dict[str, Any]]:
     """[Previous] [Next]; at either end that one is greyed out (pointing at its own page, so no two ids clash)."""
-    back = manage(event.id, "list", arg=str(max(page - 1, 1)))
-    ahead = manage(event.id, "list", arg=str(min(page + 1, pages)))
+    back = manage(event.id, verb, member, str(max(page - 1, 1)))
+    ahead = manage(event.id, verb, member, str(min(page + 1, pages)))
     return [
         button(raid_manage_copy.PREV_PAGE, BUTTON_STYLE_SECONDARY, back, disabled=page == 1),
         button(raid_manage_copy.NEXT_PAGE, BUTTON_STYLE_SECONDARY, ahead, disabled=page == pages),
@@ -251,27 +251,25 @@ def player_data(
                 lines[:0] = [raid_manage_copy.absent_note(target.who), *raid_member_views.note_lines(event, mine)]
             select = class_select(manage(event.id, "class", uid), raid_manage_copy.PICK_OTHER_CLASS, emojis=emojis)
             buttons = [*_add_buttons(event, uid, offer.spec, offer.reach), back]
-            return _card(event, target, "\n".join(lines), [action_row(select), action_row(*buttons)], notice=notice)
+            return card_data(event, target, "\n".join(lines), [action_row(select), action_row(*buttons)], notice=notice)
         text = raid_manage_copy.not_on_raid(target.who)
         if mine is not None:
             text = "\n".join([raid_manage_copy.absent(target.who), *raid_member_views.note_lines(event, mine)])
         select = class_select(manage(event.id, "class", uid), raid_manage_copy.PICK_CLASS, emojis=emojis)
-        return _card(event, target, text, [action_row(select), action_row(back)], notice=notice)
+        return card_data(event, target, text, [action_row(select), action_row(back)], notice=notice)
     lines = [raid_manage_copy.on_raid(target.who, mine.status, spec_label(mine), queue_position(signups, uid))]
     if mine.character_name is not None:
         lines.append(raid_member_copy.character_line(escape_name(mine.character_name)))
     lines.extend(raid_member_views.note_lines(event, mine))
-    if mine.status == QUEUED_STATUS:
-        lines.append(raid_manage_copy.QUEUE_WAITS)
     select = class_select(manage(event.id, "class", uid), raid_manage_copy.CHANGE_CLASS, emojis=emojis)
     rows = [action_row(select)]
     if mine.wow_class is not None:
         # Without a class (a tentative sign-up may have none) there's nothing to seat them as.
         rows.append(status_row(event, mine, signups, emojis=emojis))
-        if _seat_queues(event, mine, signups):
-            lines.append(raid_manage_copy.SEAT_QUEUES)
+        if needs_swap(event, mine, signups):
+            lines.append(raid_manage_copy.SEAT_SWAPS)
     rows.append(action_row(button(raid_manage_copy.REMOVE, BUTTON_STYLE_DANGER, manage(event.id, "ask", uid)), back))
-    return _card(event, target, "\n".join(lines), rows, notice=notice)
+    return card_data(event, target, "\n".join(lines), rows, notice=notice)
 
 
 def status_row(
@@ -295,17 +293,15 @@ def status_row(
 
 
 def _greyed_marks(event: WowRaidEvent, signup: WowRaidSignup, signups: Sequence[WowRaidSignup]) -> tuple[str, ...]:
-    """What the row can't move them to: a queued player already waits for a seat, and late needs one."""
-    if signup.status == QUEUED_STATUS:
-        return SEAT_STATUSES
-    if _seat_queues(event, signup, signups):
+    """What the row can't move them to: on a full raid, late needs a seat first ([Seat] asks who gives one up)."""
+    if needs_swap(event, signup, signups):
         return ("late",)
     return ()
 
 
-def _seat_queues(event: WowRaidEvent, signup: WowRaidSignup, signups: Sequence[WowRaidSignup]) -> bool:
-    """A seat asked for now would queue them: they're tentative or on the bench, and the raid is full."""
-    return signup.status not in LINE_STATUSES and compute_roster_summary(signups, size_cap=event.size_cap).is_full
+def needs_swap(event: WowRaidEvent, signup: WowRaidSignup, signups: Sequence[WowRaidSignup]) -> bool:
+    """A seat for them now is a seat holder's: they hold none (tentative, bench or queued), and the raid is full."""
+    return signup.status not in SEAT_STATUSES and compute_roster_summary(signups, size_cap=event.size_cap).is_full
 
 
 def spec_data(
@@ -339,8 +335,8 @@ def spec_data(
     text = raid_manage_copy.spec_prompt(target.who, column)
     if blocks:
         text = f"{text}\n{raid_manage_copy.SPEC_MARKS_NOTE}"
-    rows = [action_row(select), action_row(_back_to_player(event, uid))]
-    return _card(event, target, text, rows)
+    rows = [action_row(select), action_row(back_to_player(event, uid))]
+    return card_data(event, target, text, rows)
 
 
 def review_data(
@@ -354,8 +350,8 @@ def review_data(
     """Add the player as *spec*?  Says first if they'd be queued or go over a limit."""
     uid = target.user_id
     lines = _add_lines(event, target, spec, signups, reach=reach)
-    buttons = [*_add_buttons(event, uid, spec, reach), _back_to_player(event, uid)]
-    return _card(event, target, "\n".join(lines), [action_row(*buttons)])
+    buttons = [*_add_buttons(event, uid, spec, reach), back_to_player(event, uid)]
+    return card_data(event, target, "\n".join(lines), [action_row(*buttons)])
 
 
 def _add_lines(
@@ -409,7 +405,7 @@ def remove_data(
             text = f"{text}\n{raid_manage_copy.dm_off(target.who)}"
         buttons = [button(raid_manage_copy.REMOVE, BUTTON_STYLE_DANGER, manage(event.id, "dropq", uid))]
     buttons.append(button(raid_manage_copy.KEEP, BUTTON_STYLE_SECONDARY, manage(event.id, "card", uid)))
-    return _card(event, target, text, [action_row(*buttons)])
+    return card_data(event, target, text, [action_row(*buttons)])
 
 
 def mark_review_data(
@@ -421,8 +417,12 @@ def mark_review_data(
     signups: Sequence[WowRaidSignup],
     *,
     reach: Reach,
+    back: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Move the player (as *label*) to *status*?  Says what it does to the queue, and if it goes over a limit."""
+    """Move the player (as *label*) to *status*?  Says what it does to the queue, and if it goes over a limit.
+
+    ``queued`` is [Queue them instead]'s review: a seat asked for, so a place in the queue (*back*: its [Back]).
+    """
     uid = target.user_id
     lines = [raid_manage_copy.move_prompt(target.who, label, status), *_move_effects(event, signup, status, signups)]
     hit = over_limit(event, signup, status, signups)
@@ -438,8 +438,8 @@ def mark_review_data(
         if reach == "off":
             lines.append(raid_manage_copy.dm_off(target.who))
         buttons = [button(raid_manage_copy.MOVE, BUTTON_STYLE_PRIMARY, manage(event.id, "markq", uid, status))]
-    buttons.append(_back_to_player(event, uid))
-    return _card(event, target, "\n".join(lines), [action_row(*buttons)])
+    buttons.append(back or back_to_player(event, uid))
+    return card_data(event, target, "\n".join(lines), [action_row(*buttons)])
 
 
 def over_limit(
@@ -455,11 +455,11 @@ def over_limit(
 def _move_effects(
     event: WowRaidEvent, signup: WowRaidSignup, status: str, signups: Sequence[WowRaidSignup]
 ) -> list[str]:
-    """What a move does to the line: a seat on a full raid is a place in the queue; a seat given up goes to it."""
+    """What a move does to the line: [Queue them instead] is a place in the queue; a seat given up goes to it."""
     queued = compute_roster_summary(signups, size_cap=event.size_cap).queued_count
+    if status == QUEUED_STATUS:
+        return [raid_manage_copy.would_queue(queued + 1)]
     if status in SEAT_STATUSES:
-        if _seat_queues(event, signup, signups):
-            return [raid_manage_copy.would_queue(queued + 1)]
         return []
     if signup.status in SEAT_STATUSES and queued:
         return [raid_manage_copy.SEAT_GOES_ON]
@@ -468,11 +468,11 @@ def _move_effects(
     return []
 
 
-def _back_to_player(event: WowRaidEvent, user_id: str) -> dict[str, Any]:
+def back_to_player(event: WowRaidEvent, user_id: str) -> dict[str, Any]:
     return button("Back", BUTTON_STYLE_SECONDARY, manage(event.id, "card", user_id))
 
 
-def _card(
+def card_data(
     event: WowRaidEvent,
     target: Target,
     text: str,

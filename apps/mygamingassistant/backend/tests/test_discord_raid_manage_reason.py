@@ -214,4 +214,4 @@ def test_the_say_why_ids_round_trip_and_fit_at_their_longest() -> None:
         assert parse(manage(event_id, verb, member, arg)) == RaidCustomId("ml", event_id, (verb, member, arg))
     assert len(manage(event_id, "addr", member, "hunter.beast-mastery")) == 94 <= MAX_CUSTOM_ID_LEN
     assert parse(manage(event_id, "dropr", member, "warrior.fury")) is None
-    assert parse(manage(event_id, "markr", member, "queued")) is None
+    assert parse(manage(event_id, "markr", member, "absence")) is None

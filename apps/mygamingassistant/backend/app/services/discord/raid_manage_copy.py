@@ -60,10 +60,10 @@ REASON_HINT: Final = "I'll add this to the DM."
 # What a seat given up, or a place in the queue left, does to the queue.
 SEAT_GOES_ON: Final = "Their seat goes to the next player in the queue."
 QUEUE_PLACE_LOST: Final = "They lose their place in the queue."
-# A queued player's card, and an add that queued them.
+# An add that queued them.
 QUEUE_WAITS: Final = "Raise the size with `/raid-admin edit`, or free a seat, and I'll move them up."
-# A tentative or benched player's card on a full raid, where [Late] is greyed out.
-SEAT_QUEUES: Final = "The raid is full, so **Seat** puts them in the queue."
+# A tentative, benched or queued player's card on a full raid, where [Late] is greyed out.
+SEAT_SWAPS: Final = "The raid is full, so **Seat** asks who goes to the bench. **Late** needs a seat first."
 
 
 def signed_up_page(first: int, last: int, total: int) -> str:
@@ -254,6 +254,55 @@ def status_unchanged(who: str, status: str, queue_position: int | None) -> str:
 
 def moved_over(hit: LimitHit) -> str:
     return f"{hit_text(hit)} Leaders can go over limits, so I moved them anyway."
+
+
+# ---------------------------------------------------------------------------
+# A seat on a full raid: a seat holder goes to the bench to make room
+# ---------------------------------------------------------------------------
+
+RAISE_INSTEAD: Final = "Or raise the size with `/raid-admin edit` to add a seat."
+PICK_HOLDER: Final = "Pick who goes to the bench"
+QUEUE_INSTEAD: Final = "Queue them instead"
+SWAP_TELL: Final = "Swap and tell them"
+SWAP_QUIET: Final = "Swap quietly"
+SWAP_WHY: Final = "Swap and say why"
+SWAP: Final = "Swap"
+# Under the reason box of [Swap and say why]'s form (its title and label are the other forms').
+SWAP_REASON_HINT: Final = "Only the player going to the bench gets this."
+# A card from before a seat opened (nobody has to be benched now) or before the raid filled (nobody moved).
+SEAT_OPENED: Final = "A seat is free now, so nobody has to give theirs up."
+NOBODY_MOVED: Final = "The raid is full now, so nobody moved."
+
+
+def holder_page(first: int, last: int, total: int) -> str:
+    """The holder menu on one page of two: 'Pick who goes to the bench (26 to 40 of 40)'."""
+    return f"{PICK_HOLDER} ({first} to {last} of {total})"
+
+
+def holders_prompt(who: str, label: str) -> str:
+    """'The raid is full. Pick who goes to the **bench** to make room for **Bob** (**Fury Warrior**).'"""
+    return f"The raid is full. Pick who goes to the **bench** to make room for {who} (**{label}**)."
+
+
+def swap_prompt(who: str, label: str, holder_who: str, holder_label: str | None) -> str:
+    """'Give **Bob** a seat as **Fury Warrior**? **Al** (**Frost Mage**) goes to the **bench**.'"""
+    holder = holder_who
+    if holder_label:
+        holder = f"{holder_who} (**{holder_label}**)"
+    return f"Give {who} a seat as **{label}**? {holder} goes to the **bench**."
+
+
+def holder_note(who: str, note: str) -> str:
+    """The seat holder's note (escaped), which the swap clears: '**Al**'s note: "Leaving at 9"'."""
+    return f'{who}\'s note: "{note}"'
+
+
+def swapped(who: str, holder_who: str) -> str:
+    return f"{who} has a seat. {holder_who} is on the **bench**."
+
+
+def holder_lost_seat(who: str) -> str:
+    return f"{who} doesn't have a seat any more."
 
 
 # ---------------------------------------------------------------------------

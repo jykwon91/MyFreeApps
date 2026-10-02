@@ -328,11 +328,11 @@ def cancel_modal(event: WowRaidEvent) -> dict[str, Any]:
     return event_form(event, "cancel", raid_copy.CANCEL_MODAL, field)
 
 
-def reason_modal(custom_id: str) -> dict[str, Any]:
-    """Manage sign-ups' "say why" form; it carries the custom_id of the button that opened it."""
+def reason_modal(custom_id: str, *, hint: str = raid_manage_copy.REASON_HINT) -> dict[str, Any]:
+    """Manage sign-ups' "say why" form, *hint* under its box; it carries the custom_id of the button that opened it."""
     field = text_box(
         raid_manage_copy.REASON_LABEL,
-        raid_manage_copy.REASON_HINT,
+        hint,
         style=TEXT_INPUT_STYLE_SHORT,
         value=None,
         max_length=REASON_MAX,

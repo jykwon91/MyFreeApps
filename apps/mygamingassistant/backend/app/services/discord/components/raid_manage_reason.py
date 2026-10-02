@@ -1,4 +1,4 @@
-"""Manage sign-ups — [Add and say why] / [Remove and say why] / [Move and say why].
+"""Manage sign-ups — [Add / Remove / Move / Swap and say why].
 
 Each opens a form (type 9) for the reason, and the form's custom_id is the
 button's own.  Opening it is one read: a card gone stale (the player got on
@@ -23,7 +23,8 @@ from app.repositories.wow import wow_raid_signup_repo
 from app.services.discord import raid_copy, raid_manage_copy
 from app.services.discord.components.raid_manage_changes import add_player, drop_player
 from app.services.discord.components.raid_manage_common import Verb, card_for, load, target_of
-from app.services.discord.components.raid_manage_status import move_player
+from app.services.discord.components.raid_manage_status import in_place, move_player
+from app.services.discord.components.raid_manage_swap import swap_players
 from app.services.discord.interaction import (
     Interaction,
     ephemeral_response,
@@ -66,8 +67,8 @@ def _stale(verb: str, target: Target, mine: WowRaidSignup | None, arg: str) -> s
         return None
     if mine is None:
         return raid_manage_copy.gone_from_raid(target.who)
-    if verb == "markr" and mine.status == arg:
-        return raid_manage_copy.status_unchanged(target.who, arg, None)
+    if verb == "markr" and in_place(mine.status, arg):
+        return raid_manage_copy.status_unchanged(target.who, mine.status, None)
     return None
 
 
@@ -93,4 +94,5 @@ _APPLY: Final = {
     "addr": partial(add_player, tell=True),
     "dropr": partial(drop_player, tell=True),
     "markr": partial(move_player, ask=False, tell=True),
+    "swapr": partial(swap_players, tell=True),
 }
