@@ -27,7 +27,8 @@ from app.services.discord.interaction import (
     message_response,
 )
 from app.services.discord.raid_context import load_event, parse_event_id, utcnow
-from app.services.discord.raid_views import cancel_confirm_data, preview_data
+from app.services.discord.raid_draft_views import preview_data
+from app.services.discord.raid_views import cancel_confirm_data
 from app.services.wow import raid_event_service, raid_timezones
 from app.services.wow.raid_catalog import RAIDS_BY_KEY
 from app.services.wow.raid_time_parser import RaidTimeError, parse_raid_time
@@ -74,6 +75,8 @@ async def _setup(interaction: Interaction, background: BackgroundTasks) -> dict[
     if tz_name is None:
         return ephemeral_response(raid_copy.unknown_timezone(tz_input))
     ping_role_id = interaction.str_option("ping_role")
+    if ping_role_id == interaction.guild_id:
+        return ephemeral_response(raid_copy.SETUP_NO_EVERYONE)  # @everyone's role id is the server's own
     role_mentionable = bool(interaction.resolved_role(ping_role_id or "").get("mentionable"))
 
     async with unit_of_work() as db:

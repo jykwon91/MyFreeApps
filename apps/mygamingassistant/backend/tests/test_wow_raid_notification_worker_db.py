@@ -183,6 +183,24 @@ async def test_nudge_sent_once_with_role_ping(bound_unit_of_work: AsyncSession, 
     assert len(fake_discord.posts(CHANNEL)) == 1
 
 
+async def test_nudge_pings_the_roles_picked_for_the_raid(
+    bound_unit_of_work: AsyncSession, fake_discord: FakeDiscord
+) -> None:
+    db = bound_unit_of_work
+    event = await _raid(db, starts_at=_NOW + timedelta(hours=47, minutes=59))
+    event.mention_role_ids = ["11", "12"]  # create preview → More options → Mentions
+    await _signup(db, event, "10", role="dps", wow_class="rogue")
+    await _row(db, event, "signup_nudge", _NOW - timedelta(minutes=1))
+
+    stats = await process_due_notifications(now=_NOW)
+    assert stats.sent == 1
+
+    [post] = fake_discord.posts(CHANNEL)
+    assert post.body is not None
+    assert post.body["content"].startswith("<@&11> <@&12> **Onyxia's Lair is <t:")
+    assert post.body["allowed_mentions"] == {"parse": [], "roles": ["11", "12"]}
+
+
 async def test_ready_check_mentions_seated_players_only(
     bound_unit_of_work: AsyncSession, fake_discord: FakeDiscord
 ) -> None:

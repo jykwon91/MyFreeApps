@@ -23,15 +23,12 @@ from app.services.discord.raid_views import (
     clip_lines,
     list_data,
     my_signup_data,
-    preview_data,
     release_confirm_data,
     roster_data,
     spec_picker_data,
 )
 from app.services.wow.raid_catalog import CLASSES, CLASSES_BY_KEY, spec_info
 from app.services.wow.raid_custom_id import SAME_STATUS
-from app.services.wow.raid_embed import build_signup_embed
-from app.services.wow.raid_post_buttons import build_signup_components
 
 _STARTS = datetime(2026, 10, 11, 0, 0, tzinfo=timezone.utc)
 _STAMP = int(_STARTS.timestamp())
@@ -103,36 +100,6 @@ _CLASS_ICONS = _icons(*(cls.key for cls in CLASSES), "role_tank", "role_healer",
 
 def _buttons(row: dict) -> list[tuple[str, str]]:
     return [(button["label"], button["custom_id"]) for button in row["components"]]
-
-
-# ---------------------------------------------------------------------------
-# Create preview
-# ---------------------------------------------------------------------------
-
-
-def test_preview_is_the_post_with_its_buttons_greyed_out_then_post_and_cancel() -> None:
-    event = _event(status="draft")
-    guild = _guild(ping_role_id="r9")
-
-    data = preview_data(event, guild, emojis=_CLASS_ICONS)
-
-    assert data["content"] == (
-        "**Preview.** This is how the raid will look in <#c1>, pinging <@&r9>. Does this look right?"
-    )
-    assert data["flags"] == 64  # only the leader sees it
-    assert data["embeds"] == [build_signup_embed(event, [], guild, emojis=_CLASS_ICONS)]
-    *post_rows, actions = data["components"]
-    assert post_rows == build_signup_components(event, [], emojis=_CLASS_ICONS)
-    assert all(button["disabled"] for row in post_rows for button in row["components"])
-    assert [(b["label"], b["style"], b["custom_id"]) for b in actions["components"]] == [
-        ("Post raid", 3, f"raid:v1:confirm:{_EVENT_ID}"),
-        ("Cancel", 2, f"raid:v1:discard:{_EVENT_ID}"),
-    ]
-
-
-def test_preview_puts_a_notice_above_the_intro() -> None:
-    data = preview_data(_event(status="draft"), _guild(), emojis=EMPTY_EMOJIS, notice="Heads up.")
-    assert data["content"] == "Heads up.\n\n**Preview.** This is how the raid will look in <#c1>. Does this look right?"
 
 
 # ---------------------------------------------------------------------------

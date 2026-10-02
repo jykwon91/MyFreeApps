@@ -1,7 +1,8 @@
 """User-facing copy for the raid bot (fixed strings from the UX spec).
 
 Strings that interpolate values live as small functions next to the
-constants so the wording stays in one place.
+constants so the wording stays in one place.  The create preview's own
+copy is in ``raid_draft_copy``.
 """
 from __future__ import annotations
 
@@ -57,6 +58,10 @@ TEST_DM_BLOCKED: Final = (
 )
 TEST_DM_FAILED: Final = "I couldn't reach Discord just now. Please try again in a minute."
 
+SETUP_NO_EVERYONE: Final = (
+    "I don't ping `@everyone`. Pick a role for your raiders, or leave `ping_role` out "
+    "so raids post without a ping."
+)
 SETUP_CHECK_FAILED: Final = (
     "I couldn't double-check my permissions there just now. If the first raid doesn't appear, "
     "give me View Channel, Send Messages and Embed Links in that channel."
@@ -133,14 +138,6 @@ def seat_released(status: str, *, handed_on: bool) -> str:
     if handed_on:
         text += " Your seat went to the next player in the queue."
     return text
-
-
-def preview_intro(channel_id: str, ping_role_id: str | None) -> str:
-    """Above the create preview: where the post goes and who it pings."""
-    where = f"<#{channel_id}>"
-    if ping_role_id:
-        where += f", pinging <@&{ping_role_id}>"
-    return f"**Preview.** This is how the raid will look in {where}. Does this look right?"
 
 
 def spec_prompt(class_label: str) -> str:

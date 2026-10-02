@@ -366,6 +366,20 @@ def test_repost_and_no_role_never_ping() -> None:
     assert no_role["allowed_mentions"] == {"parse": []}
 
 
+def test_initial_post_pings_the_roles_picked_for_the_raid() -> None:
+    event = _event(mention_role_ids=["r1", "r2"])
+    message = build_initial_post(event, [], _guild(ping_role_id="r9"), ping_role=True, emojis=EMPTY_EMOJIS)
+    assert message["content"] == "<@&r1> <@&r2>"
+    assert message["allowed_mentions"] == {"parse": [], "roles": ["r1", "r2"]}
+
+
+def test_a_raid_that_picked_nobody_posts_without_a_ping() -> None:
+    event = _event(mention_role_ids=[])
+    message = build_initial_post(event, [], _guild(ping_role_id="r9"), ping_role=True, emojis=EMPTY_EMOJIS)
+    assert "content" not in message
+    assert message["allowed_mentions"] == {"parse": []}
+
+
 def test_title_override_and_guild_timezone() -> None:
     event = _event(title="Ony *speedrun*", created_by_display_name=None)
     embed = _embed(build_signup_message(event, [], _guild(timezone="Asia/Tokyo"), emojis=EMPTY_EMOJIS))
