@@ -21,8 +21,9 @@ on a real change, only from a "tell them" button, never to the leader
 themself and never past the player's DM opt-out.  The public post
 re-renders in the background.
 
-Members who left the server can't be picked in the member menu, so a seat
-of theirs stays until they come back or the raid's size goes up.
+The member menu lists only people still in the server, so the hub also
+lists the raid's own sign-ups (numbered as on the post, a page of 25 at a
+time): a seat held by someone who left can still be changed or freed.
 """
 from __future__ import annotations
 
@@ -37,7 +38,15 @@ from app.services.discord import emojis, raid_copy, raid_manage_copy
 from app.services.discord.components import raid_manage_changes
 from app.services.discord.components.raid_manage_common import Verb, known, load, one_value, reach_of, target_of
 from app.services.discord.interaction import Interaction, update_response, update_text_response
-from app.services.discord.raid_manage_views import Target, hub_data, listed_signup, player_data, remove_data, spec_data
+from app.services.discord.raid_manage_views import (
+    Target,
+    hub_data,
+    listed_signup,
+    player_data,
+    remove_data,
+    signup_of,
+    spec_data,
+)
 from app.services.wow.raid_catalog import POST_COLUMNS
 from app.services.wow.raid_custom_id import RaidCustomId, is_member_id
 
@@ -79,6 +88,39 @@ async def _who(
         name = known(interaction.resolved_display_name(picked))
         target = Target(picked, name, interaction.resolved_avatar_url(picked))
         return update_response(player_data(found.event, target, signups, emojis=emojis.current()))
+
+
+async def _row(
+    interaction: Interaction, event_id: uuid.UUID, member: str, arg: str, background: BackgroundTasks
+) -> dict[str, Any]:
+    """Someone picked in the hub's sign-up menu: their card, named from their sign-up (the menu has no avatar)."""
+    picked = one_value(interaction)
+    if not is_member_id(picked):
+        return update_text_response(raid_copy.GENERIC_ERROR)
+    async with unit_of_work() as db:
+        found = await load(db, interaction, event_id, lock=False)
+        if isinstance(found, str):
+            return update_text_response(found)
+        signups = await wow_raid_signup_repo.list_for_event(db, event_id)
+        mine = signup_of(signups, picked)
+        if mine is None:
+            # Removed since the menu was drawn.
+            notice = raid_manage_copy.gone_from_raid(Target(picked).who)
+            return update_response(hub_data(found.event, signups, notice=notice))
+        target = Target(picked, known(mine.display_name))
+        return update_response(player_data(found.event, target, signups, emojis=emojis.current()))
+
+
+async def _list(
+    interaction: Interaction, event_id: uuid.UUID, member: str, page: str, background: BackgroundTasks
+) -> dict[str, Any]:
+    """[Previous] / [Next]: that page of the sign-up menu (the last one, should the list have shrunk)."""
+    async with unit_of_work() as db:
+        found = await load(db, interaction, event_id, lock=False)
+        if isinstance(found, str):
+            return update_text_response(found)
+        signups = await wow_raid_signup_repo.list_for_event(db, event_id)
+        return update_response(hub_data(found.event, signups, page=int(page)))
 
 
 async def _card(
@@ -131,6 +173,8 @@ async def _ask(
 _VERBS: Final[dict[str, Verb]] = {
     "open": _open,
     "who": _who,
+    "row": _row,
+    "list": _list,
     "card": _card,
     "class": _class,
     "ask": _ask,

@@ -108,12 +108,15 @@ MODALS: Final = ("ping", "title", "when", "desc", "image", "cancel", "role_limit
 # member (``-``); every other verb names the member it's about.
 #   open  the hub (Raid: Edit's [Sign-ups], Raid: Signed's [Manage sign-ups], [Back])
 #   who   the hub's member menu          done  the hub's [Done]
+#   row   the hub's menu of the raid's sign-ups (its value is the member)
+#   list  the hub's [Previous] / [Next] (arg = the page, 1 to MANAGE_MAX_PAGE)
 #   card  [Back] to the member's card    class  the card's class menu
 #   spec  the spec menu (arg = column)   ask    the card's [Remove]
 #   addt / addq  [Add and tell them] / [Add quietly] (arg = <class>.<spec>)
 #   dropt / dropq  [Remove and tell them] / [Remove quietly]
-MANAGE_HUB_VERBS: Final = ("open", "who", "done")
+MANAGE_HUB_VERBS: Final = ("open", "who", "done", "row", "list")
 MANAGE_VERBS: Final = (*MANAGE_HUB_VERBS, "card", "class", "spec", "ask", "addt", "addq", "dropt", "dropq")
+MANAGE_MAX_PAGE: Final = 99
 NO_ARG: Final = "-"
 _SPEC_CHOICES: Final = frozenset(spec.choice_value for spec in SPECS)
 # Old status names still on buttons of posts not re-rendered since they changed.
@@ -208,9 +211,11 @@ def _args_valid(action: str, args: tuple[str, ...]) -> bool:
 
 
 def _manage_args_valid(verb: str, member: str, arg: str) -> bool:
-    """The hub's verbs name nobody; the rest name a member (a Discord id)."""
+    """The hub's verbs name nobody (``list`` carries a page); the rest name a member (a Discord id)."""
     if verb not in MANAGE_VERBS:
         return False
+    if verb == "list":
+        return member == NO_ARG and _is_page(arg)
     if verb in MANAGE_HUB_VERBS:
         return member == NO_ARG and arg == NO_ARG
     if not is_member_id(member):
@@ -220,3 +225,8 @@ def _manage_args_valid(verb: str, member: str, arg: str) -> bool:
     if verb in ("addt", "addq"):
         return arg in _SPEC_CHOICES
     return arg == NO_ARG
+
+
+def _is_page(value: str) -> bool:
+    """'1' up to MANAGE_MAX_PAGE, in ASCII digits with no leading zero."""
+    return value.isascii() and value.isdecimal() and not value.startswith("0") and int(value) <= MANAGE_MAX_PAGE

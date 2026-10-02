@@ -21,6 +21,9 @@ EDIT_BUTTON: Final = "Sign-ups"
 
 HUB_PROMPT: Final = "Pick a player to add, change or remove."
 PICK_PLAYER: Final = "Pick a player"
+PICK_SIGNED_UP: Final = "Or pick someone signed up"
+PREV_PAGE: Final = "Previous"
+NEXT_PAGE: Final = "Next"
 PICK_CLASS: Final = "Pick their class"
 CHANGE_CLASS: Final = "Change class or spec"
 PICK_SPEC: Final = "Pick their spec"
@@ -36,6 +39,11 @@ REMOVE: Final = "Remove"
 REMOVE_TELL: Final = "Remove and tell them"
 REMOVE_QUIET: Final = "Remove quietly"
 KEEP: Final = "Keep them"
+
+
+def signed_up_page(first: int, last: int, total: int) -> str:
+    """The sign-up menu on one page of several: 'Or pick someone signed up (26 to 50 of 61)'."""
+    return f"{PICK_SIGNED_UP} ({first} to {last} of {total})"
 
 
 # ---------------------------------------------------------------------------

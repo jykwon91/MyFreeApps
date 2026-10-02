@@ -269,7 +269,7 @@ def test_edit_buttons_menus_and_forms_round_trip() -> None:
 
 
 def test_manage_sign_ups_round_trip() -> None:
-    for verb in MANAGE_HUB_VERBS:
+    for verb in ("open", "who", "done", "row"):
         custom_id = raid_custom_id.manage(_EVENT, verb)
         assert custom_id == f"raid:v1:ml:{_EVENT}:{verb}:-:-"
         assert raid_custom_id.parse(custom_id) == raid_custom_id.RaidCustomId("ml", _EVENT, (verb, "-", "-"))
