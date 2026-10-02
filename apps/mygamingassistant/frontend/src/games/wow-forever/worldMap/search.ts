@@ -8,7 +8,7 @@
  * NPCs your faction can use, then the nearest, then A–Z.
  */
 import { PROFESSION_LABEL, SERVICE_KIND, SERVICE_LABEL, isServiceKind } from "@/games/wow-forever/data/worldMap/serviceKinds";
-import { ZONE_ALIASES } from "@/games/wow-forever/data/worldMap/placeNames";
+import { INSTANCE_ALIASES, ZONE_ALIASES } from "@/games/wow-forever/data/worldMap/placeNames";
 import {
   POI_KIND,
   type MapPoi,
@@ -29,6 +29,8 @@ export interface NpcHit {
   zone: WorldZone;
   /** Every word typed is in the NPC's name (not just their type or town). */
   byName: boolean;
+  /** A dungeon found by one of its bosses ("Targorr" -> Stormwind Stockade): that boss. */
+  boss?: string;
 }
 
 export interface MapSearchResults {
@@ -58,13 +60,19 @@ function kindWords(poi: MapPoi): string {
   return words.join(" ");
 }
 
+/** What it's called: its name, then what players call it (dungeons: "The Stockade", "VC"). */
+function namesOf(poi: MapPoi): string[] {
+  return [poi.name, ...(poi.kind === POI_KIND.instance ? (INSTANCE_ALIASES[poi.name] ?? []) : [])];
+}
+
 const haystacks = new WeakMap<MapPoi, string>();
 
 function haystackFor(poi: MapPoi, zone: WorldZone): string {
   let text = haystacks.get(poi);
   if (text === undefined) {
     const aliases = (ZONE_ALIASES[zone.name] ?? []).join(" ");
-    text = normalizeText(`${poi.name} ${poi.title} ${poi.subzone} ${zone.name} ${aliases} ${kindWords(poi)}`);
+    const names = [...namesOf(poi), ...(poi.bosses ?? [])].join(" ");
+    text = normalizeText(`${names} ${poi.title} ${poi.subzone} ${zone.name} ${aliases} ${kindWords(poi)}`);
     haystacks.set(poi, text);
   }
   return text;
@@ -93,12 +101,15 @@ export function searchAllNpcs(query: string, data: WorldMapData, context: Search
   for (const poi of [...data.pois, ...data.questGivers, ...data.instances]) {
     const zone = data.zoneById.get(poi.zone);
     if (!zone || !matchesAll(tokens, haystackFor(poi, zone))) continue;
-    const nameMatches = matchesAll(tokens, normalizeText(poi.name));
+    const names = namesOf(poi).filter((n) => matchesAll(tokens, normalizeText(n)));
+    const boss = names.length ? undefined : poi.bosses?.find((b) => matchesAll(tokens, normalizeText(b)));
+    if (boss) names.push(boss);
     scored.push({
       poi,
       zone,
-      byName: nameMatches,
-      name: nameMatches ? nameScore(poi.name, query) : 5,
+      byName: names.length > 0,
+      boss,
+      name: names.length ? Math.min(...names.map((n) => nameScore(n, query))) : 5,
       vendor: poi.subkind === SERVICE_KIND.vendor ? 1 : 0,
       side: usableBy(poi, context.faction, false) ? 0 : 1,
       yards: distance(poi, zone, context.player),
@@ -115,11 +126,11 @@ export function searchAllNpcs(query: string, data: WorldMapData, context: Search
   // One row per NPC: a trainer who also gives quests shows once, as the trainer.
   const seen = new Set<string>();
   const hits: NpcHit[] = [];
-  for (const { poi, zone, byName } of scored) {
+  for (const { poi, zone, byName, boss } of scored) {
     const key = poi.npcId === undefined ? poi.id : `npc-${poi.npcId}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    hits.push({ poi, zone, byName });
+    hits.push(boss ? { poi, zone, byName, boss } : { poi, zone, byName });
   }
   return hits;
 }

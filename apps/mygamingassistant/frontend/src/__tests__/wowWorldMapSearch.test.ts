@@ -6,6 +6,7 @@ import questsJson from "@/games/wow-forever/data/worldMap/classic/classicQuests.
 import dungeonsJson from "@/games/wow-forever/data/worldMap/classic/classicDungeons.json";
 import masksJson from "@/games/wow-forever/data/worldMap/mapMasks.json";
 import areasJson from "@/games/wow-forever/data/worldMap/areas.json";
+import interiorsJson from "@/games/wow-forever/data/worldMap/classic/classicInteriors.json";
 import { CITY_TRAINERS, TOWN_TRAINERS } from "@/games/wow-forever/data/professions/trainers";
 import { CRAFTING_RANKS, CRAFTING_TRAINERS } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
 import { FACTION } from "@/games/wow-forever/types/worldMap";
@@ -27,6 +28,7 @@ const data = decodeWorldMap({
   dungeons: dungeonsJson,
   masks: masksJson,
   areas: areasJson,
+  interiors: interiorsJson,
 });
 const places = buildPlaces(data);
 
@@ -84,6 +86,26 @@ describe("NPC search", () => {
     expect(searchNpcs("LAUTIKI", data, { faction: FACTION.horde, player: null })[0].poi.name).toBe("Lau'Tiki");
     expect(searchNpcs("zzqqxx", data, { faction: FACTION.alliance, player: null })).toEqual([]);
     expect(searchNpcs("   ", data, { faction: FACTION.alliance, player: null })).toEqual([]);
+  });
+
+  it("finds a dungeon by what players call it", () => {
+    const alliance = { faction: FACTION.alliance, player: null };
+    for (const q of ["stockade", "the stockade", "stocks", "Stormwind Stockade"]) {
+      expect(searchNpcs(q, data, alliance)[0].poi.name, q).toBe("Stormwind Stockade");
+    }
+    expect(searchNpcs("vc", data, alliance)[0].poi.name).toBe("Deadmines");
+    expect(searchNpcs("the deadmines", data, alliance)[0].poi.name).toBe("Deadmines");
+    expect(searchNpcs("sfk", data, alliance)[0].poi.name).toBe("Shadowfang Keep");
+  });
+
+  it("finds a dungeon by one of its bosses, and says which", () => {
+    const [stockade] = searchNpcs("targorr", data, { faction: FACTION.alliance, player: null });
+    expect(stockade).toMatchObject({ byName: true, boss: "Targorr the Dread" });
+    expect(stockade.poi.name).toBe("Stormwind Stockade");
+    const [deadmines] = searchNpcs("van cleef", data, { faction: FACTION.alliance, player: null });
+    expect(deadmines.poi.name).toBe("Deadmines");
+    // Searched by the dungeon's own name, no boss is named.
+    expect(searchNpcs("deadmines", data, { faction: FACTION.alliance, player: null })[0].boss).toBeUndefined();
   });
 
   it("reads ?npc= as a creature id, else a map result id", () => {

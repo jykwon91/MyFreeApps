@@ -160,3 +160,13 @@ test('"warlock trainer" marks every warlock trainer on the zoomed-out map', asyn
   await map.getByRole("button", { name: /^Thistleheart <Warlock Trainer>/ }).click();
   await expect(results.getByRole("article", { name: "Thistleheart" })).toHaveAttribute("aria-current", "true");
 });
+
+test("a dungeon is found by its nickname or one of its bosses", async ({ page }) => {
+  const search = page.getByRole("combobox", { name: "Find an NPC or place" });
+  await search.fill("the stockade");
+  await expect(page.getByRole("option", { name: /^Stormwind Stockade/ })).toBeVisible();
+
+  await search.fill("targorr");
+  await page.getByRole("option", { name: /^Targorr the Dread — boss in Stormwind Stockade/ }).click();
+  await expect(page.getByRole("img", { name: "Stormwind City map" })).toBeVisible();
+});

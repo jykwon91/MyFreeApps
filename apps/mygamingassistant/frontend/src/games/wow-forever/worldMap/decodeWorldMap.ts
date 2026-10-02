@@ -36,6 +36,7 @@ import {
   type WorldZone,
   type ZoneKind,
 } from "@/games/wow-forever/types/worldMap";
+import { decodeInteriors, type InteriorsFile } from "@/games/wow-forever/worldMap/interiors";
 
 type Row = readonly unknown[];
 
@@ -272,6 +273,16 @@ function decodeInstances(raw: unknown): MapPoi[] {
   });
 }
 
+/** Each dungeon's boss names, from the interiors file (keyed by instance map id, as the dungeon's tag). */
+function withBosses(instances: MapPoi[], raw: unknown): MapPoi[] {
+  if (raw === undefined) return instances;
+  const interiors = decodeInteriors(raw as InteriorsFile);
+  return instances.map((poi) => {
+    const bosses = interiors.get(Number(poi.tag))?.bosses.map((b) => b.name);
+    return bosses?.length ? { ...poi, bosses } : poi;
+  });
+}
+
 function decodeTravel(raw: unknown): Pick<WorldMapData, "flightNodes" | "flightEdges" | "flightPaths" | "transports"> {
   const payload = record(raw, "travel");
   const nodeCol = columnReader(payload.nodeColumns, "flight nodes");
@@ -365,6 +376,8 @@ export interface WorldMapFiles {
   masks: unknown;
   /** `areas.json`; left out, the search knows no buildings. */
   areas?: unknown;
+  /** `classicInteriors.json`; left out, a boss's name doesn't find its dungeon. */
+  interiors?: unknown;
 }
 
 export function decodeWorldMap(files: WorldMapFiles): WorldMapData {
@@ -377,7 +390,7 @@ export function decodeWorldMap(files: WorldMapFiles): WorldMapData {
   );
   const pois = decodeServices(files.services);
   const questGivers = decodeQuestGivers(files.quests);
-  const instances = decodeInstances(files.dungeons);
+  const instances = withBosses(decodeInstances(files.dungeons), files.interiors);
   return {
     zones,
     zoneById: new Map(zones.map((z) => [z.id, z])),

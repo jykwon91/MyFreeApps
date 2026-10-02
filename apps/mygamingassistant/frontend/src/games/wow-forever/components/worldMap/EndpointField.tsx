@@ -80,9 +80,9 @@ export default function EndpointField(props: EndpointFieldProps) {
     },
     {
       label: "NPCs",
-      options: results.npcs.map(({ poi, zone }) => ({
+      options: results.npcs.map(({ poi, zone, boss }) => ({
         id: `${NPC_PREFIX}${poi.id}`,
-        primary: [poi.name, poi.title].filter(Boolean).join(" — "),
+        primary: boss ? `${boss} — boss in ${poi.name}` : [poi.name, poi.title].filter(Boolean).join(" — "),
         secondary: areaLabel(poi, zone),
       })),
     },
