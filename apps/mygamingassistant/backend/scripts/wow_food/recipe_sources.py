@@ -8,7 +8,9 @@ written only to the ``classic/`` data folder that carries its own LICENSE.
 A source summary stays small on purpose: vendors are listed (the page shows
 the player's faction first), but a mob drop is summarised as the three best
 mobs to farm (drop chance x how many are spawned), the zones they live in and
-their level range — not every mob. An item that only drops through many mobs'
+their level range — not every mob. Cloth and the like, which hundreds of mobs
+drop, instead get one farm spot per zone (the best mob there), so a player of
+either faction at any level has somewhere named to go. An item that only drops through many mobs'
 shared (reference) loot tables is a "world drop". A container (clam, herb
 node) is listed only when it reliably holds the item — not a random chest.
 """
@@ -21,7 +23,7 @@ from dataclasses import dataclass, field
 
 from scripts.wow_world_map import sources
 from scripts.wow_world_map.coords import ZoneBounds
-from scripts.wow_world_map.factions import FactionTemplate, usable_by
+from scripts.wow_world_map.factions import ALLIANCE, HORDE, FactionTemplate, usable_by
 from scripts.wow_world_map.map_art import WorldMapArt
 from scripts.wow_world_map.placement import Placement, place
 from scripts.wow_world_map.services import CLASSIC_CONTINENTS, SAME_SPOT_YARDS
@@ -38,6 +40,16 @@ WORLD_DROP_MOBS = 25
 MIN_CONTAINER_CHANCE = 20.0
 SHOWN_MOBS = 3
 SHOWN_ZONES = 3
+# This many kinds of mob dropping it = cloth-like: a farm spot per zone, in this many zones.
+COMMON_DROP_MOBS = 50
+COMMON_SHOWN_ZONES = 10
+# A farm spot's mob must drop it at least this often, and have this many spawns in the zone (not a lone rare).
+MIN_FARM_CHANCE = 5.0
+MIN_FARM_SPAWNS = 4
+# creature_template.Rank of an ordinary mob (1+ = elite, rare, boss): what a solo player farms.
+NORMAL_RANK = 0
+# A capital is its faction's ground (zones.json gives capitals a faction, not a territory).
+CAPITAL_TERRITORY = {"A": "alliance", "H": "horde"}
 # Drops rarer than this are noise next to a likelier mob (the expert's cut).
 MIN_SHOWN_CHANCE = 1.0
 # Spawns this close (yards) count as one pack when picking where to farm a mob.
@@ -217,14 +229,16 @@ class ClassicSources:
                     mob_worth[npc] += chances[npc]
                     placed[npc].append((wx, wy, spot))
         world = not direct and len(chances) >= WORLD_DROP_MOBS
-        best = sorted(chances, key=lambda n: (-mob_worth[n], str(self._npcs[n]["Name"])))
-        shown = [n for n in best if chances[n] >= MIN_SHOWN_CHANCE][:SHOWN_MOBS] or best[:1]
-        mobs = [] if world else [
-            [str(self._npcs[n]["Name"]), _i(self._npcs[n]["MinLevel"]), _i(self._npcs[n]["MaxLevel"]),
-             round(chances[n], 1), *self._farm_spot(placed[n])]
-            for n in shown
-        ]
-        zones = [z for z, _ in sorted(zone_worth.items(), key=lambda kv: (-kv[1], kv[0]))[:SHOWN_ZONES]]
+        ranked_zones = [z for z, _ in sorted(zone_worth.items(), key=lambda kv: (-kv[1], kv[0]))]
+        mobs: list[list[object]] = []
+        if not world and len(chances) >= COMMON_DROP_MOBS:
+            mobs = self._farm_spots(chances, placed, ranked_zones[:COMMON_SHOWN_ZONES])
+        if not world and not mobs:
+            # Too rare anywhere to be a farm spot: the likeliest mobs, so the page can say it's a rare drop.
+            best = sorted(chances, key=lambda n: (-mob_worth[n], str(self._npcs[n]["Name"])))
+            shown = [n for n in best if chances[n] >= MIN_SHOWN_CHANCE][:SHOWN_MOBS] or best[:1]
+            mobs = [self._mob_row(n, chances[n], placed[n]) for n in shown]
+        zones = ranked_zones[:SHOWN_ZONES]
         for spots in placed.values():
             for _, _, spot in spots:
                 if spot.zone.ui_map_id in zones:
@@ -236,6 +250,37 @@ class ClassicSources:
             "more": len(chances) - len(mobs),
             "zones": zones,
         }
+
+    def _mob_row(self, npc: int, chance: float, spots: list[tuple[float, float, Placement]]) -> list[object]:
+        row = self._npcs[npc]
+        return [str(row["Name"]), _i(row["MinLevel"]), _i(row["MaxLevel"]), round(chance, 1), *self._farm_spot(spots)]
+
+    def _farm_spots(
+        self,
+        chances: dict[int, float],
+        placed: dict[int, list[tuple[float, float, Placement]]],
+        zones: list[int],
+    ) -> list[list[object]]:
+        """Cloth and the like: the best mob to farm in each zone (most drops on offer), a different mob per zone."""
+        rows: list[list[object]] = []
+        used: set[int] = set()
+        for zone in zones:
+            here = {
+                n: [s for s in placed[n] if s[2].zone.ui_map_id == zone]
+                for n in chances
+                if n not in used and chances[n] >= MIN_FARM_CHANCE and self._fair_game(n)
+            }
+            ranked = sorted((n for n, s in here.items() if len(s) >= MIN_FARM_SPAWNS), key=lambda n: (-chances[n] * len(here[n]), str(self._npcs[n]["Name"])))
+            if ranked:
+                used.add(ranked[0])
+                rows.append(self._mob_row(ranked[0], chances[ranked[0]], here[ranked[0]]))
+        return rows
+
+    def _fair_game(self, npc: int) -> bool:
+        """A solo player of either faction can farm it — not an elite, nor a guard only the other side may attack."""
+        if _i(self._npcs[npc]["Rank"]) != NORMAL_RANK:
+            return False
+        return usable_by(_i(self._npcs[npc]["Faction"]), self._reactions) not in (ALLIANCE, HORDE)
 
     def _farm_spot(self, spots: list[tuple[float, float, Placement]]) -> list[object]:
         """Where to farm a mob: the spawn with the most others nearby, in its busiest zone."""
@@ -322,6 +367,16 @@ class ClassicSources:
             "containers": self.containers(item),
             "quests": self.quests(item),
         })
+
+
+def territory_of(zone_ids: Iterable[int], zones: Iterable[dict[str, object]]) -> dict[str, str]:
+    """Zone id -> "alliance" / "horde" / "contested" for the zones named, from the zones.json entries; a capital is its faction's."""
+    sides: dict[int, str] = {}
+    for z in zones:
+        side = z.get("territory") or CAPITAL_TERRITORY.get(str(z.get("faction", "")))
+        if side:
+            sides[int(str(z["id"]))] = str(side)
+    return {str(i): sides[i] for i in sorted(zone_ids) if i in sides}
 
 
 def _compact(record: dict[str, object]) -> dict[str, object]:

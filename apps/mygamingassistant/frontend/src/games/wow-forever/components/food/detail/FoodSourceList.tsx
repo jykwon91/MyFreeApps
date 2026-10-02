@@ -53,7 +53,7 @@ export default function FoodSourceList({ sources, faction, zoneId, preferEasySou
           <span className="font-medium">Found in</span> {sources.containers.join(", ")}.
         </p>
       ) : null}
-      {drop ? <FoodDropList drop={drop} /> : null}
+      {drop ? <FoodDropList drop={drop} faction={faction} zoneId={zoneId} /> : null}
     </div>
   );
 }

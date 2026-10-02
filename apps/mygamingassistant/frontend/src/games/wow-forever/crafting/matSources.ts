@@ -5,6 +5,7 @@
  */
 import {
   describeRareDrop,
+  farmSpots,
   isCommonDrop,
   isRareDrop,
   levelRange,
@@ -78,9 +79,14 @@ function vendorPart(sources: ItemSources, faction: PlayerFaction, zoneId: number
   return { text: `Sold by ${yours[0].name}, ${placeLabel(yours[0])}${stock}`, limited };
 }
 
-function dropPart(drop: DropSource): string {
+function dropPart(drop: DropSource, faction: PlayerFaction, zoneId: number | null): string {
   if (isRareDrop(drop)) return describeRareDrop(drop);
-  if (isCommonDrop(drop)) return `Drops from mobs ${levelRange(drop.levels)}`;
+  if (isCommonDrop(drop)) {
+    // Cloth: the nearest farm spot, by name — "drops from mobs" doesn't tell you where to go.
+    const spot = farmSpots(drop, faction, zoneId)[0];
+    if (!spot?.spot) return `Drops from mobs ${levelRange(drop.levels)}`;
+    return `Drops from ${spot.name}, ${levelRange([spot.minLevel, spot.maxLevel])}, ${spot.spot.zoneName}`;
+  }
   // The lowest-level mob that drops it — a leveling guide sends you where you can fight.
   const easiest = [...drop.mobs].sort((a, b) => a.minLevel - b.minLevel)[0];
   if (!easiest) return "Drops from mobs";
@@ -110,7 +116,7 @@ export function matSummary(info: MatInfo, faction: PlayerFaction, zoneId: number
   if (vendor && !vendor.limited) parts.push(vendor.text);
   if (sources.disenchant) parts.push(disenchantPart(sources.disenchant));
   if (sources.skinning) parts.push(`Skin beasts ${levelRange(sources.skinning.levels)}`);
-  if (sources.drop) parts.push(dropPart(sources.drop));
+  if (sources.drop) parts.push(dropPart(sources.drop, faction, zoneId));
   if (madeBy) parts.push(`Made by ${madeBy}`);
   if (vendor?.limited) parts.push(vendor.text);
   // A chest that happens to hold cloth isn't worth naming next to the mobs that drop it.

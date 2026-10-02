@@ -24,7 +24,7 @@ import shutil
 from collections import defaultdict
 from pathlib import Path
 
-from scripts.wow_food.recipe_sources import MOB_COLUMNS, VENDOR_COLUMNS, ClassicSources
+from scripts.wow_food.recipe_sources import MOB_COLUMNS, VENDOR_COLUMNS, ClassicSources, territory_of
 from scripts.wow_food.foods import COOKING_SKILL_LINE, EFFECT_LEARN_SPELL, Tables, build_foods
 from scripts.wow_food.tooltip import Effect, SpellBook
 from scripts.wow_world_map.sources import (
@@ -217,7 +217,7 @@ def main() -> None:
         "source": f"wago.tools DB2 {WAGO_BRANCH} {WAGO_BUILD}",
         "foods": foods,
     })
-    _, zone_bounds = load_zones()
+    zone_entries, zone_bounds = load_zones()
     classic = ClassicSources(zone_bounds, WorldMapArt())
     recipe_sources = {
         str(f["id"]): classic.recipe_sources(f["learn"]["recipeItem"])
@@ -245,6 +245,7 @@ def main() -> None:
         "questGiverColumns": QUEST_GIVER_COLUMNS,
         "quests": quests,
         "zones": {str(k): v for k, v in sorted(classic.zone_names.items())},
+        "territory": territory_of(classic.zone_names, zone_entries),
         "recipes": {k: v for k, v in recipe_sources.items() if v},
         "reagents": {k: v for k, v in reagent_sources.items() if v},
     })

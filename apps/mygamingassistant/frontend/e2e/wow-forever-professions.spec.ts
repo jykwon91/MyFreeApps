@@ -45,7 +45,7 @@ test("Tailoring shows the route for your skill and a shopping list", async ({ pa
   await page.goto("/wow-forever/professions");
   await page.getByRole("radio", { name: "Tailoring" }).click();
   await expect(page).toHaveURL(/\?p=tailoring$/);
-  await expect(page.getByText("Georgio Bolero")).toBeVisible();
+  await expect(page.getByLabel("Get started: train it first").getByText("Georgio Bolero")).toBeVisible();
 
   const route = page.locator("#route");
   await route.getByLabel("Your skill").fill("120");

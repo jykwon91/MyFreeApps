@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { render } from "@testing-library/react";
+import { fireEvent, render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import FoodSourceList from "@/games/wow-forever/components/food/detail/FoodSourceList";
 import sourcesJson from "@/games/wow-forever/data/professions/crafting/classic/sources.json";
@@ -11,8 +11,8 @@ import { describeDisenchant, describeSkinning, matSummary, soldToYou } from "@/g
 import { shoppingList, shoppingListText } from "@/games/wow-forever/crafting/shoppingList";
 import { CRAFTING_ROUTES } from "@/games/wow-forever/data/professions/crafting/craftingRoutes";
 import { createSourceLookup, type RawSourcesFile } from "@/games/wow-forever/data/sourceDecode";
-import { describeCommonDrop, hasSources, isCommonDrop, stockLabel } from "@/games/wow-forever/food/recipeSources";
-import { FACTION } from "@/games/wow-forever/types/worldMap";
+import { describeCommonDrop, farmSpots, hasSources, isCommonDrop, isHostileGround, isRareDrop, stockLabel } from "@/games/wow-forever/food/recipeSources";
+import { FACTION, TERRITORY } from "@/games/wow-forever/types/worldMap";
 import { COOKING_ROUTE } from "@/games/wow-forever/data/professions/cooking";
 import { FOOD_SOURCES } from "@/games/wow-forever/data/food/recipeSourceData";
 import type { CraftingFile, CraftingProfession, TrainerSkills } from "@/games/wow-forever/types/crafting";
@@ -33,24 +33,62 @@ const LARGE_GLIMMERING_SHARD = 11084;
 const RUGGED_LEATHER = 8170;
 const WOOL_CLOTH = 2592;
 const COPPER_ROD = 6217;
+// Linen, Wool, Silk, Mageweave, Runecloth.
+const CLOTH = [LINEN_CLOTH, WOOL_CLOTH, 4306, 4338, 14047];
 
 function summary(itemId: number, madeBy: string | null = null): string {
   return matSummary({ sources: SOURCES.reagent(itemId), madeBy }, FACTION.alliance, null);
 }
 
 describe("crafting material sources", () => {
-  it("sums up cloth as a drop from mobs in a level band, not three named mobs", () => {
-    const drop = SOURCES.reagent(LINEN_CLOTH).drop;
-    expect(drop && isCommonDrop(drop)).toBe(true);
-    expect(summary(LINEN_CLOTH)).toMatch(/^Drops from mobs level \d+–\d+$/);
-    expect(describeCommonDrop(drop!)).toMatch(/^Drops from \d+ kinds of mobs, level \d+–\d+ — most in /);
+  it("names a farm spot for cloth on your own side, not just a level band", () => {
+    const drop = SOURCES.reagent(LINEN_CLOTH).drop!;
+    expect(isCommonDrop(drop)).toBe(true);
+    expect(describeCommonDrop(drop)).toMatch(/^\d+ kinds of mobs drop it, level \d+–\d+\. The best one to farm in each zone:$/);
+    const alliance = farmSpots(drop, FACTION.alliance, null)[0];
+    const horde = farmSpots(drop, FACTION.horde, null)[0];
+    expect(alliance.spot?.territory).toBe(TERRITORY.alliance);
+    expect(horde.spot?.territory).toBe(TERRITORY.horde);
+    expect(summary(LINEN_CLOTH)).toBe(
+      `Drops from ${alliance.name}, level ${alliance.minLevel}–${alliance.maxLevel}, ${alliance.spot?.zoneName}`,
+    );
   });
 
-  it("still lists the cloth drop when a chest also holds it", () => {
-    const { container } = render(
-      <FoodSourceList sources={SOURCES.reagent(LINEN_CLOTH)} faction={FACTION.alliance} zoneId={null} preferEasySources />,
+  it("puts your zone's farm spot first and the other faction's zones last", () => {
+    const drop = SOURCES.reagent(WOOL_CLOTH).drop!;
+    const spots = farmSpots(drop, FACTION.alliance, null);
+    const hostile = spots.map((m) => isHostileGround(m.spot!, FACTION.alliance));
+    expect(hostile.indexOf(true)).toBeGreaterThan(0);
+    expect(hostile.slice(hostile.indexOf(true)).every(Boolean)).toBe(true);
+    const ashenvale = spots.find((m) => m.spot?.zoneName === "Ashenvale")!;
+    expect(farmSpots(drop, FACTION.alliance, ashenvale.spot!.zoneId)[0]).toBe(ashenvale);
+  });
+
+  it("gives every cloth-like drop a farm spot, and each cloth several with a place and coordinates", () => {
+    for (const lookup of [SOURCES, FOOD_SOURCES]) {
+      for (const id of Object.keys(sourcesJson.reagents)) {
+        const drop = lookup.reagent(Number(id)).drop;
+        if (!drop || isRareDrop(drop) || !isCommonDrop(drop)) continue;
+        expect(drop.mobs.length, id).toBeGreaterThanOrEqual(CLOTH.includes(Number(id)) ? 5 : 1);
+        for (const m of drop.mobs) expect(m.spot?.zoneName, `${id} ${m.name}`).toBeTruthy();
+      }
+    }
+  });
+
+  it("lists the cloth farm spots with directions, warning about the other faction's ground", () => {
+    const { container, getByRole } = render(
+      <MemoryRouter>
+        <FoodSourceList sources={SOURCES.reagent(WOOL_CLOTH)} faction={FACTION.alliance} zoneId={null} preferEasySources />
+      </MemoryRouter>,
     );
-    expect(container.textContent).toMatch(/Drops from \d+ kinds of mobs, level/);
+    const list = getByRole("list", { name: "Where to farm it" });
+    expect(list.querySelectorAll("li").length).toBe(5);
+    expect(list.querySelectorAll("a").length).toBe(5);
+    expect(container.textContent).not.toContain("Horde territory");
+    fireEvent.click(getByRole("button", { name: /^Show \d+ more farm spots$/ }));
+    expect(list.querySelectorAll("li").length).toBe(SOURCES.reagent(WOOL_CLOTH).drop!.mobs.length);
+    expect(container.textContent).toContain("Thistlefur Village, Ashenvale");
+    expect(container.textContent).toContain("Horde territory");
   });
 
   it("says vendor goods are sold in most towns", () => {
@@ -136,7 +174,7 @@ describe("crafting material sources", () => {
     const entries = resolveRoute(CRAFTING_ROUTES.tailoring, new Map(file.recipes.map((r) => [r.spell, r])), TRAINER_SKILLS.tailoring);
     const list = shoppingList(entries, null, file, "Tailoring");
     const text = shoppingListText(list, (l) => summary(l.id, l.madeBy ?? null));
-    expect(text).toMatch(/^\d+x Linen Cloth — Drops from mobs level/m);
+    expect(text).toMatch(/^\d+x Linen Cloth — Drops from [^,]+, level \d+–\d+, /m);
     expect(text).toMatch(/^\d+x Coarse Thread — Sold in most towns$/m);
   });
 });

@@ -1,4 +1,4 @@
-import type { Faction } from "@/games/wow-forever/types/worldMap";
+import { TERRITORY, type Faction, type Territory } from "@/games/wow-forever/types/worldMap";
 import type {
   DisenchantFrom,
   DisenchantSource,
@@ -32,6 +32,8 @@ export interface RawSources {
 export interface RawSourcesFile {
   source: string;
   zones: Record<string, string>;
+  /** Zone id -> "alliance" / "horde" / "contested". */
+  territory?: Record<string, string>;
   quests: Record<string, Row>;
   recipes: Record<string, RawSources>;
   reagents: Record<string, RawSources>;
@@ -51,6 +53,11 @@ export interface SourceLookup {
 export function createSourceLookup(raw: RawSourcesFile): SourceLookup {
   function zoneName(zoneId: number): string {
     return raw.zones[String(zoneId)] ?? "";
+  }
+
+  function territory(zoneId: number): Territory | null {
+    const side = raw.territory?.[String(zoneId)];
+    return Object.values(TERRITORY).find((t) => t === side) ?? null;
   }
 
   function vendor(r: Row): VendorSpot {
@@ -107,7 +114,14 @@ export function createSourceLookup(raw: RawSourcesFile): SourceLookup {
       spot:
         zoneId === null || zoneId === undefined
           ? null
-          : { zoneId: Number(zoneId), zoneName: zoneName(Number(zoneId)), subzone: String(subzone ?? ""), x: Number(x), y: Number(y) },
+          : {
+              zoneId: Number(zoneId),
+              zoneName: zoneName(Number(zoneId)),
+              subzone: String(subzone ?? ""),
+              x: Number(x),
+              y: Number(y),
+              territory: territory(Number(zoneId)),
+            },
     };
   }
 
