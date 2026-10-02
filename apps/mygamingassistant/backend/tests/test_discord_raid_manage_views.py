@@ -160,14 +160,14 @@ def test_a_player_on_the_raid_can_be_switched_or_removed() -> None:
     select = _select(data)
     assert (select["custom_id"], select["placeholder"]) == (f"{_ML}:class:{_BOB_ID}:-", raid_manage_copy.CHANGE_CLASS)
     assert [option["value"] for option in select["options"]][:2] == [TANK_COLUMN, "warrior"]
-    assert _buttons(data) == [("Remove", 4, f"{_ML}:ask:{_BOB_ID}:-"), ("Back", 2, f"{_ML}:open:-:-")]
+    assert _buttons(data)[-2:] == [("Remove", 4, f"{_ML}:ask:{_BOB_ID}:-"), ("Back", 2, f"{_ML}:open:-:-")]
 
 
 @pytest.mark.parametrize(
     ("fields", "text"),
     [
         ({"status": "late"}, "**Bob** is in as **Fury Warrior** and marked **late**."),
-        ({"status": "queued"}, "**Bob** is **#2 in the queue** as **Fury Warrior**."),
+        ({"status": "queued"}, f"**Bob** is **#2 in the queue** as **Fury Warrior**.\n{raid_manage_copy.QUEUE_WAITS}"),
         ({"status": "bench"}, "**Bob** is on the **bench** as **Fury Warrior**."),
         ({"status": "tentative", "wow_class": None, "role": None, "spec": None}, "**Bob** is **tentative**."),
         # A sign-up from before specs.
@@ -178,7 +178,7 @@ def test_the_card_says_where_the_player_stands(fields: dict[str, Any], text: str
     signups = [_signup("Al", status="queued", minute=1), _bob(**fields)]
     data = player_data(_event(), _BOB, signups, emojis=EMPTY_EMOJIS)
     assert _embed(data)["description"] == text
-    assert _buttons(data)[0][0] == raid_manage_copy.REMOVE
+    assert _buttons(data)[-2][0] == raid_manage_copy.REMOVE
 
 
 @pytest.mark.parametrize(

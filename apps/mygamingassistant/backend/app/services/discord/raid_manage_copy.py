@@ -1,4 +1,4 @@
-"""What Manage sign-ups says: a raid's leader adding, changing and removing players.
+"""What Manage sign-ups says: a raid's leader adding, changing, moving and removing players.
 
 *who* is the player as a card names them: '**Bob**' (escaped), or a
 mention when the card no longer carries their name.  Labels arrive as
@@ -39,6 +39,21 @@ REMOVE: Final = "Remove"
 REMOVE_TELL: Final = "Remove and tell them"
 REMOVE_QUIET: Final = "Remove quietly"
 KEEP: Final = "Keep them"
+SEAT: Final = "Seat"
+LATE: Final = "Late"
+TENTATIVE: Final = "Tentative"
+BENCH: Final = "Bench"
+MOVE_TELL: Final = "Move and tell them"
+MOVE_QUIET: Final = "Move quietly"
+MOVE: Final = "Move"
+
+# What a seat given up, or a place in the queue left, does to the queue.
+SEAT_GOES_ON: Final = "Their seat goes to the next player in the queue."
+QUEUE_PLACE_LOST: Final = "They lose their place in the queue."
+# A queued player's card, and an add that queued them.
+QUEUE_WAITS: Final = "Raise the size with `/raid-admin edit`, or free a seat, and I'll move them up."
+# A tentative or benched player's card on a full raid, where [Late] is greyed out.
+SEAT_QUEUES: Final = "The raid is full, so **Seat** puts them in the queue."
 
 
 def signed_up_page(first: int, last: int, total: int) -> str:
@@ -115,11 +130,12 @@ def added(who: str, label: str) -> str:
     return f"{who} is in as **{label}**."
 
 
+def queued_full(who: str, position: int | None) -> str:
+    return f"The raid is full, so {who} is **{queue_place(position)}**."
+
+
 def added_queued(who: str, position: int | None) -> str:
-    return (
-        f"The raid is full, so {who} is **{queue_place(position)}**. "
-        "Raise the size with `/raid-admin edit`, or free a seat, and I'll move them up."
-    )
+    return f"{queued_full(who, position)} {QUEUE_WAITS}"
 
 
 def added_over(hit: LimitHit) -> str:
@@ -158,16 +174,58 @@ def remove_prompt(who: str, label: str | None, *, frees_seat: bool) -> str:
     if label:
         text = f"Remove {who} (**{label}**) from this raid?"
     if frees_seat:
-        text += " Their seat goes to the next player in the queue."
+        text += f" {SEAT_GOES_ON}"
     return text
 
 
-def removed(who: str, moved_up: Sequence[str]) -> str:
+def removed(who: str, promoted: Sequence[str]) -> str:
     """'Removed **Bob**. **Carol** moved up from the queue.'"""
     text = f"Removed {who}."
-    if moved_up:
-        text += f" {_joined(moved_up)} moved up from the queue."
+    if promoted:
+        text += f" {moved_up(promoted)}"
     return text
+
+
+def moved_up(names: Sequence[str]) -> str:
+    """'**Carol** moved up from the queue.'"""
+    return f"{_joined(names)} moved up from the queue."
+
+
+# ---------------------------------------------------------------------------
+# Moving: a seat, late, tentative or the bench
+# ---------------------------------------------------------------------------
+
+
+def move_prompt(who: str, label: str, status: str) -> str:
+    """'Give **Bob** a seat as **Fury Warrior**?' and the like, by the status asked for."""
+    if status == "late":
+        return f"Give {who} a seat as **{label}** and mark them **late**?"
+    if status == TENTATIVE_STATUS:
+        return f"Mark {who} (**{label}**) as **tentative**?"
+    if status == BENCH_STATUS:
+        return f"Move {who} (**{label}**) to the **bench**?"
+    return f"Give {who} a seat as **{label}**?"
+
+
+def moved(who: str, status: str, queue_position: int | None) -> str:
+    """Where a move left the player: '**Bob** has a seat.'; a seat asked for on a full raid queued them."""
+    if status == QUEUED_STATUS:
+        return queued_full(who, queue_position)
+    if status == "late":
+        return f"{who} has a seat and is marked **late**."
+    if status == TENTATIVE_STATUS:
+        return f"{who} is **tentative**."
+    if status == BENCH_STATUS:
+        return f"{who} is on the **bench**."
+    return f"{who} has a seat."
+
+
+def status_unchanged(who: str, status: str, queue_position: int | None) -> str:
+    return f"Nothing changed. {moved(who, status, queue_position)}"
+
+
+def moved_over(hit: LimitHit) -> str:
+    return f"{hit_text(hit)} Leaders can go over limits, so I moved them anyway."
 
 
 # ---------------------------------------------------------------------------
@@ -185,24 +243,59 @@ def added_dm(
     *,
     signups_open: bool,
 ) -> str:
-    """The leader shows as a mention: tappable, and nobody is pinged in a DM.
-
-    Once sign-ups close (or the raid starts) the post's Absence button no
-    longer works, so a player who can't come is sent to the leader.
-    """
+    """The leader shows as a mention: tappable, and nobody is pinged in a DM."""
     text = f"<@{leader_id}> added you to **{raid_label}** (<t:{unix}:F>, <t:{unix}:R>) as **{label}**. "
     if queue_position is None:
-        text += "You have a seat. Can't make it? "
-        if signups_open:
-            text += "Tap **Absence** on the raid post."
-        else:
-            text += f"Let <@{leader_id}> know."
+        text += f"You have a seat. {_cant_make_it(leader_id, signups_open=signups_open)}"
     else:
-        place = queue_place(queue_position)
-        text += f"The raid is full, so you're **{place}**. I'll move you up automatically when a seat opens."
+        text += _queued_for_you(queue_position)
+    return text + _jump(link)
+
+
+def moved_dm(
+    leader_id: str,
+    raid_label: str,
+    unix: int,
+    label: str,
+    status: str,
+    queue_position: int | None,
+    link: str | None,
+    *,
+    signups_open: bool,
+) -> str:
+    """A seat or the queue says what happens next; tentative and the bench send questions to the leader."""
+    leader = f"<@{leader_id}>"
+    if status == TENTATIVE_STATUS:
+        text = f"{leader} marked you **tentative** for **{raid_label}** (<t:{unix}:F>). Questions? Ask them directly."
+    elif status == BENCH_STATUS:
+        text = f"{leader} moved you to the **bench** for **{raid_label}** (<t:{unix}:F>). Questions? Ask them directly."
+    elif status == QUEUED_STATUS:
+        text = f"{leader} put you in the queue for **{raid_label}** (<t:{unix}:F>, <t:{unix}:R>) as **{label}**. "
+        text += _queued_for_you(queue_position)
+    else:
+        text = f"{leader} gave you a seat on **{raid_label}** (<t:{unix}:F>, <t:{unix}:R>) as **{label}**"
+        if status == "late":
+            text += " and marked you **late**"
+        text += f". {_cant_make_it(leader_id, signups_open=signups_open)}"
+    return text + _jump(link)
+
+
+def _cant_make_it(leader_id: str, *, signups_open: bool) -> str:
+    """Once sign-ups close (or the raid starts) the post's Absence button no longer works: ask the leader."""
+    if signups_open:
+        return "Can't make it? Tap **Absence** on the raid post."
+    return f"Can't make it? Let <@{leader_id}> know."
+
+
+def _queued_for_you(queue_position: int | None) -> str:
+    place = queue_place(queue_position)
+    return f"The raid is full, so you're **{place}**. I'll move you up automatically when a seat opens."
+
+
+def _jump(link: str | None) -> str:
     if link:
-        text += f"\n[Jump to the raid]({link})"
-    return text
+        return f"\n[Jump to the raid]({link})"
+    return ""
 
 
 def removed_dm(leader_id: str, raid_label: str, unix: int) -> str:

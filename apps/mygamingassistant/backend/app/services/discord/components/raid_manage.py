@@ -1,4 +1,4 @@
-"""Manage sign-ups — a raid's leader adds, changes and removes players.
+"""Manage sign-ups — a raid's leader adds, changes, moves and removes players.
 
 [Manage sign-ups] on Raid: Signed and [Sign-ups] on Raid: Edit open the hub
 (``raid:v1:ml:<event>:open``).  Every tap after that is an ``ml`` custom_id
@@ -6,7 +6,9 @@ naming a verb, the player (a Discord id) and one argument (see
 ``raid_custom_id.MANAGE_VERBS``); the cards are
 :mod:`app.services.discord.raid_manage_views`.  This module moves between
 the cards; the taps that change a sign-up are in
-:mod:`app.services.discord.components.raid_manage_changes`.
+:mod:`app.services.discord.components.raid_manage_changes`, and the
+status row ([Seat] [Late] [Tentative] [Bench]) is
+:mod:`app.services.discord.components.raid_manage_status`.
 
 Each tap loads the raid and its rows again and answers in place (type 7),
 so a card left open, or two leaders at once, can't act on what's no longer
@@ -35,7 +37,7 @@ from fastapi import BackgroundTasks
 from app.db.session import unit_of_work
 from app.repositories.wow import wow_raid_signup_repo
 from app.services.discord import emojis, raid_copy, raid_manage_copy
-from app.services.discord.components import raid_manage_changes
+from app.services.discord.components import raid_manage_changes, raid_manage_status
 from app.services.discord.components.raid_manage_common import Verb, known, load, one_value, reach_of, target_of
 from app.services.discord.interaction import Interaction, update_response, update_text_response
 from app.services.discord.raid_manage_views import (
@@ -179,4 +181,5 @@ _VERBS: Final[dict[str, Verb]] = {
     "class": _class,
     "ask": _ask,
     **raid_manage_changes.VERBS,
+    **raid_manage_status.VERBS,
 }

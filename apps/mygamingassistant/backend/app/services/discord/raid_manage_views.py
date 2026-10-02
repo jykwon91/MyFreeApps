@@ -1,4 +1,4 @@
-"""Manage sign-ups — a raid's leader adds, changes and removes players — pure builders.
+"""Manage sign-ups — a raid's leader adds, changes, moves and removes players — pure builders.
 
 [Manage sign-ups] on Raid: Signed and [Sign-ups] on Raid: Edit open the
 hub: the raid, its seats, a member picker and a menu of who's signed up
@@ -7,8 +7,11 @@ their card, which says where they stand and offers what fits:
 
 * not on the raid (or marked absent) → their class, then their spec, then
   a review: [Add and tell them] / [Add quietly], or just [Add];
-* on it → a class and spec to switch them to, and [Remove], which asks
-  first: [Remove and tell them] / [Remove quietly], or just [Remove].
+* on it → a class and spec to switch them to; [Seat] [Late] [Tentative]
+  [Bench] to move them, which asks first when the move gives up or takes
+  a seat or a place in the queue: [Move and tell them] / [Move quietly],
+  or just [Move]; and [Remove], which asks first: [Remove and tell them] /
+  [Remove quietly], or just [Remove].
 
 A player's cards carry an embed whose author line is the player (name and
 avatar).  A custom_id has no room for a name, so the next click reads it
@@ -38,10 +41,10 @@ from app.services.discord.interaction import ephemeral_data
 from app.services.discord.raid_copy import queue_place
 from app.services.discord.raid_leader_views import raid_line
 from app.services.discord.raid_views import action_row, button, class_select, spec_select
-from app.services.wow.raid_catalog import WowSpecInfo, column_specs, signup_label, spec_info
-from app.services.wow.raid_custom_id import MANAGE_MAX_PAGE, manage
+from app.services.wow.raid_catalog import WowSpecInfo, column_specs, effective_spec, signup_label, spec_info
+from app.services.wow.raid_custom_id import MANAGE_MAX_PAGE, MARK_STATUSES, manage
 from app.services.wow.raid_embed import post_color
-from app.services.wow.raid_limits import LimitCheck, Limits
+from app.services.wow.raid_limits import LimitCheck, LimitHit, Limits
 from app.services.wow.raid_roster import (
     BENCH_STATUS,
     LINE_STATUSES,
@@ -64,6 +67,13 @@ ROSTER_PAGE: Final = 25
 _OPTION_CHARS: Final = 100
 # What the sign-up menu says of a player's status; a seat says nothing and the queue gives the place.
 _STATUS_WORDS: Final = {"late": "late", TENTATIVE_STATUS: "tentative", BENCH_STATUS: "bench"}
+# The status row, a button per ``MARK_STATUSES``: its label and icon (a seat needs none).
+_MARK_BUTTONS: Final[dict[str, tuple[str, str | None]]] = {
+    "confirmed": (raid_manage_copy.SEAT, None),
+    "late": (raid_manage_copy.LATE, "status_late"),
+    TENTATIVE_STATUS: (raid_manage_copy.TENTATIVE, "status_tentative"),
+    BENCH_STATUS: (raid_manage_copy.BENCH, "status_bench"),
+}
 
 
 @dataclass(frozen=True)
@@ -214,22 +224,62 @@ def player_data(
     emojis: EmojiSet,
     notice: str | None = None,
 ) -> dict[str, Any]:
-    """Where the player stands, a class select, and [Remove] while they're on the raid."""
+    """Where the player stands and a class select; on the raid, the status row and [Remove] too."""
     uid = target.user_id
     back = button("Back", BUTTON_STYLE_SECONDARY, manage(event.id, "open"))
     mine = signup_of(signups, uid)
-    if mine is not None and mine.status in LISTED_STATUSES:
-        text = raid_manage_copy.on_raid(target.who, mine.status, spec_label(mine), queue_position(signups, uid))
-        placeholder = raid_manage_copy.CHANGE_CLASS
-        buttons = [button(raid_manage_copy.REMOVE, BUTTON_STYLE_DANGER, manage(event.id, "ask", uid)), back]
-    else:
+    if mine is None or mine.status not in LISTED_STATUSES:
         text = raid_manage_copy.not_on_raid(target.who)
         if mine is not None:
             text = raid_manage_copy.absent(target.who)
-        placeholder = raid_manage_copy.PICK_CLASS
-        buttons = [back]
-    select = class_select(manage(event.id, "class", uid), placeholder, emojis=emojis)
-    return _card(event, target, text, [action_row(select), action_row(*buttons)], notice=notice)
+        select = class_select(manage(event.id, "class", uid), raid_manage_copy.PICK_CLASS, emojis=emojis)
+        return _card(event, target, text, [action_row(select), action_row(back)], notice=notice)
+    lines = [raid_manage_copy.on_raid(target.who, mine.status, spec_label(mine), queue_position(signups, uid))]
+    if mine.status == QUEUED_STATUS:
+        lines.append(raid_manage_copy.QUEUE_WAITS)
+    select = class_select(manage(event.id, "class", uid), raid_manage_copy.CHANGE_CLASS, emojis=emojis)
+    rows = [action_row(select)]
+    if mine.wow_class is not None:
+        # Without a class (a tentative sign-up may have none) there's nothing to seat them as.
+        rows.append(status_row(event, mine, signups, emojis=emojis))
+        if _seat_queues(event, mine, signups):
+            lines.append(raid_manage_copy.SEAT_QUEUES)
+    rows.append(action_row(button(raid_manage_copy.REMOVE, BUTTON_STYLE_DANGER, manage(event.id, "ask", uid)), back))
+    return _card(event, target, "\n".join(lines), rows, notice=notice)
+
+
+def status_row(
+    event: WowRaidEvent, signup: WowRaidSignup, signups: Sequence[WowRaidSignup], *, emojis: EmojiSet
+) -> dict[str, Any]:
+    """[Seat] [Late] [Tentative] [Bench]: where they are now in blue; that, and what can't be had, greyed out."""
+    greyed = _greyed_marks(event, signup, signups)
+    buttons: list[dict[str, Any]] = []
+    for status in MARK_STATUSES:
+        label, icon = _MARK_BUTTONS[status]
+        emoji = None
+        if icon is not None:
+            emoji = emojis.component(icon)
+        style = BUTTON_STYLE_SECONDARY
+        if status == signup.status:
+            style = BUTTON_STYLE_PRIMARY
+        custom_id = manage(event.id, "mark", signup.discord_user_id, status)
+        disabled = status == signup.status or status in greyed
+        buttons.append(button(label, style, custom_id, emoji=emoji, disabled=disabled))
+    return action_row(*buttons)
+
+
+def _greyed_marks(event: WowRaidEvent, signup: WowRaidSignup, signups: Sequence[WowRaidSignup]) -> tuple[str, ...]:
+    """What the row can't move them to: a queued player already waits for a seat, and late needs one."""
+    if signup.status == QUEUED_STATUS:
+        return SEAT_STATUSES
+    if _seat_queues(event, signup, signups):
+        return ("late",)
+    return ()
+
+
+def _seat_queues(event: WowRaidEvent, signup: WowRaidSignup, signups: Sequence[WowRaidSignup]) -> bool:
+    """A seat asked for now would queue them: they're tentative or on the bench, and the raid is full."""
+    return signup.status not in LINE_STATUSES and compute_roster_summary(signups, size_cap=event.size_cap).is_full
 
 
 def spec_data(
@@ -321,6 +371,61 @@ def remove_data(
         buttons = [button(raid_manage_copy.REMOVE, BUTTON_STYLE_DANGER, manage(event.id, "dropq", uid))]
     buttons.append(button(raid_manage_copy.KEEP, BUTTON_STYLE_SECONDARY, manage(event.id, "card", uid)))
     return _card(event, target, text, [action_row(*buttons)])
+
+
+def mark_review_data(
+    event: WowRaidEvent,
+    target: Target,
+    signup: WowRaidSignup,
+    status: str,
+    label: str,
+    signups: Sequence[WowRaidSignup],
+    *,
+    reach: Reach,
+) -> dict[str, Any]:
+    """Move the player (as *label*) to *status*?  Says what it does to the queue, and if it goes over a limit."""
+    uid = target.user_id
+    lines = [raid_manage_copy.move_prompt(target.who, label, status), *_move_effects(event, signup, status, signups)]
+    hit = over_limit(event, signup, status, signups)
+    if hit is not None:
+        lines.append(raid_manage_copy.over_limit_ok(hit))
+    if reach == "yes":
+        buttons = [
+            button(raid_manage_copy.MOVE_TELL, BUTTON_STYLE_PRIMARY, manage(event.id, "markt", uid, status)),
+            button(raid_manage_copy.MOVE_QUIET, BUTTON_STYLE_SECONDARY, manage(event.id, "markq", uid, status)),
+        ]
+    else:
+        if reach == "off":
+            lines.append(raid_manage_copy.dm_off(target.who))
+        buttons = [button(raid_manage_copy.MOVE, BUTTON_STYLE_PRIMARY, manage(event.id, "markq", uid, status))]
+    buttons.append(_back_to_player(event, uid))
+    return _card(event, target, "\n".join(lines), [action_row(*buttons)])
+
+
+def over_limit(
+    event: WowRaidEvent, signup: WowRaidSignup, status: str, signups: Sequence[WowRaidSignup]
+) -> LimitHit | None:
+    """The limit a move to *status* goes over.  Only a move onto the line can: one off it, or along it, never does."""
+    spec = effective_spec(signup.wow_class, signup.role, signup.spec)
+    if spec is None:
+        return None
+    return LimitCheck(Limits.of(event), signups, signup.discord_user_id, status).hit(spec)
+
+
+def _move_effects(
+    event: WowRaidEvent, signup: WowRaidSignup, status: str, signups: Sequence[WowRaidSignup]
+) -> list[str]:
+    """What a move does to the line: a seat on a full raid is a place in the queue; a seat given up goes to it."""
+    queued = compute_roster_summary(signups, size_cap=event.size_cap).queued_count
+    if status in SEAT_STATUSES:
+        if _seat_queues(event, signup, signups):
+            return [raid_manage_copy.would_queue(queued + 1)]
+        return []
+    if signup.status in SEAT_STATUSES and queued:
+        return [raid_manage_copy.SEAT_GOES_ON]
+    if signup.status == QUEUED_STATUS:
+        return [raid_manage_copy.QUEUE_PLACE_LOST]
+    return []
 
 
 def _back_to_player(event: WowRaidEvent, user_id: str) -> dict[str, Any]:
