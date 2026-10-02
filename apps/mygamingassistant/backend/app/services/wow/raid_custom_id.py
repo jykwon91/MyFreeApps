@@ -37,8 +37,8 @@ pick     Raid: Edit's leader / color menus            raid:v1:pick:<event>:<lead
 del      [Delete raid] on Raid: Edit's delete check   raid:v1:del:<event>
 m        a modal's submit                             raid:v1:m:<event>:<ping|title|when|desc|image|cancel|
                                                                          role_limits|class_limits>
-ml       Manage sign-ups (a leader adds, changes and   raid:v1:ml:<event>:<verb>:<member|->:<arg|->
-         removes players; see ``MANAGE_VERBS``)
+ml       Manage sign-ups (a leader adds, changes,      raid:v1:ml:<event>:<verb>:<member|->:<arg|->
+         moves and removes players; see ``MANAGE_VERBS``)
 testdm   /raid prefs [Send me a test DM]              raid:v1:testdm
 """
 from __future__ import annotations
@@ -49,7 +49,7 @@ from typing import Final
 
 from app.models.wow.wow_raid_signup import RAID_ROLES, WOW_CLASSES
 from app.services.wow.raid_catalog import POST_COLUMNS, SPECS
-from app.services.wow.raid_roster import REQUESTABLE_STATUSES
+from app.services.wow.raid_roster import BENCH_STATUS, REQUESTABLE_STATUSES, SEAT_STATUSES, TENTATIVE_STATUS
 
 PREFIX: Final = "raid:v1:"
 MAX_CUSTOM_ID_LEN: Final = 100
@@ -114,9 +114,16 @@ MODALS: Final = ("ping", "title", "when", "desc", "image", "cancel", "role_limit
 #   spec  the spec menu (arg = column)   ask    the card's [Remove]
 #   addt / addq  [Add and tell them] / [Add quietly] (arg = <class>.<spec>)
 #   dropt / dropq  [Remove and tell them] / [Remove quietly]
+#   mark  the card's [Seat] [Late] [Tentative] [Bench] (arg = the status, one of MARK_STATUSES)
+#   markt / markq  [Move and tell them] / [Move quietly] (arg = the status)
 MANAGE_HUB_VERBS: Final = ("open", "who", "done", "row", "list")
-MANAGE_VERBS: Final = (*MANAGE_HUB_VERBS, "card", "class", "spec", "ask", "addt", "addq", "dropt", "dropq")
+_MARK_VERBS: Final = ("mark", "markt", "markq")
+MANAGE_VERBS: Final = (
+    *MANAGE_HUB_VERBS, "card", "class", "spec", "ask", "addt", "addq", "dropt", "dropq", *_MARK_VERBS
+)
 MANAGE_MAX_PAGE: Final = 99
+# What a leader can move a player to; the queue is the bot's to give.
+MARK_STATUSES: Final = (*SEAT_STATUSES, TENTATIVE_STATUS, BENCH_STATUS)
 NO_ARG: Final = "-"
 _SPEC_CHOICES: Final = frozenset(spec.choice_value for spec in SPECS)
 # Old status names still on buttons of posts not re-rendered since they changed.
@@ -224,6 +231,8 @@ def _manage_args_valid(verb: str, member: str, arg: str) -> bool:
         return arg in POST_COLUMNS
     if verb in ("addt", "addq"):
         return arg in _SPEC_CHOICES
+    if verb in _MARK_VERBS:
+        return arg in MARK_STATUSES
     return arg == NO_ARG
 
 

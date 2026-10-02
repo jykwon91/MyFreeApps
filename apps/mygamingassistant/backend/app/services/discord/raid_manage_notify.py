@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class ManageDm:
-    """A DM to a player a leader added or removed.
+    """A DM to a player a leader added, moved or removed.
 
     *who* names the player to the leader if the DM can't go out; the
     leader's interaction token carries that follow-up.
@@ -63,6 +63,27 @@ async def notify_added(dm: ManageDm, label: str, queue_position: int | None) -> 
         await _send(dm, content)
     except Exception:
         logger.exception("Raid bot: notify_added failed for event %s", dm.event_id)
+
+
+async def notify_moved(dm: ManageDm, status: str, label: str, queue_position: int | None) -> None:
+    """'<leader> gave you a seat on <raid>', put you in the queue, marked you tentative or benched you."""
+    try:
+        raid = await _load_raid(dm.event_id)
+        if raid is None:
+            return
+        content = raid_manage_copy.moved_dm(
+            dm.leader_id,
+            raid.title,
+            raid.starts_unix,
+            label,
+            status,
+            queue_position,
+            raid.link,
+            signups_open=raid.signups_open,
+        )
+        await _send(dm, content)
+    except Exception:
+        logger.exception("Raid bot: notify_moved failed for event %s", dm.event_id)
 
 
 async def notify_removed(dm: ManageDm) -> None:
