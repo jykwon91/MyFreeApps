@@ -168,6 +168,13 @@ async def set_class_limits(
     return event
 
 
+async def set_signup_notes_enabled(db: AsyncSession, event: WowRaidEvent, enabled: bool) -> WowRaidEvent:
+    """Persist whether members can leave the leader a note (off hides the notes, keeping them)."""
+    event.signup_notes_enabled = enabled
+    await db.flush()
+    return event
+
+
 async def cancel(db: AsyncSession, event: WowRaidEvent) -> WowRaidEvent:
     """Transition event to 'cancelled'."""
     event.status = "cancelled"

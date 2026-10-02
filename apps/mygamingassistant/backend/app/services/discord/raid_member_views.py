@@ -1,13 +1,16 @@
-"""My sign-up — the private card a member opens from the raid post — its form and asking card; pure builders.
+"""My sign-up — the private card a member opens from the raid post — its forms and asking card; pure builders.
 
 The card is text lines (no embed): what the last tap did, if anything, then
-the raid, your status, spec and character name, and a note for statuses
-that don't speak for themselves.  Its buttons come in two rows: what you
-can change ([Change spec] [Character name]), then [Full roster] and
-[Forget my specs].
+the raid, your status, spec and character name, your note for the leader
+while the raid takes notes, and a hint for statuses that don't speak for
+themselves.  Its buttons come in two rows: what you can change ([Change
+spec] [Character name] [Add note]), then [Full roster] and [Forget my
+specs].  The reply to a tap that made you late, tentative or absent asks
+why, with [Add reason] (the same note form).
 """
 from __future__ import annotations
 
+import uuid
 from collections.abc import Sequence
 from typing import Any, Final
 
@@ -20,13 +23,14 @@ from platform_shared.services.discord import (
 
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_member_pref import WowRaidMemberPref
-from app.models.wow.wow_raid_signup import CHARACTER_NAME_MAX, WowRaidSignup
+from app.models.wow.wow_raid_signup import CHARACTER_NAME_MAX, NOTE_MAX, WowRaidSignup
 from app.services.discord import raid_copy, raid_member_copy
 from app.services.discord.interaction import ephemeral_data
 from app.services.discord.raid_forms import event_form, text_box
 from app.services.discord.raid_views import action_row, button, saved_labels, unix
 from app.services.wow import raid_custom_id
 from app.services.wow.raid_catalog import signup_label
+from app.services.wow.raid_note import shown_note
 from app.services.wow.raid_roster import (
     ABSENCE_STATUS,
     BENCH_STATUS,
@@ -34,7 +38,7 @@ from app.services.wow.raid_roster import (
     TENTATIVE_STATUS,
     queue_position,
 )
-from app.services.wow.raid_text import escape_name, icon_text, signup_icon, title_text
+from app.services.wow.raid_text import escape_name, escape_note, icon_text, signup_icon, title_text
 
 # The card's status line: (label, icon).  The queue shows its place instead.
 _STATUS_LINES: Final[dict[str, tuple[str, str]]] = {
@@ -65,9 +69,10 @@ def my_signup_data(
 
     [Change spec] goes once the leader closes sign-ups, and the card says
     so; [Character name] stays until the raid starts.  Both need a class
-    and a status other than absence.  [Forget my specs] shows on a sign-up
-    when *can_forget* (a class or spec is saved).  *notice* (what the last
-    tap did) goes on top.
+    and a status other than absence.  While the raid takes notes, any
+    sign-up shows its note and [Add note] / [Edit note].  [Forget my specs]
+    shows on a sign-up when *can_forget* (a class or spec is saved).
+    *notice* (what the last tap did) goes on top.
     """
     lines = []
     if notice is not None:
@@ -89,6 +94,9 @@ def my_signup_data(
             lines.append(_character_line(signup))
             custom_id = raid_custom_id.encode("card", event.id, "char")
             changes.append(button(raid_member_copy.CHARACTER_BUTTON, BUTTON_STYLE_SECONDARY, custom_id))
+    if event.signup_notes_enabled:
+        lines.append(_note_line(signup))
+        changes.append(_note_button(event, signup))
     note = _MY_SIGNUP_NOTES.get(signup.status)
     if closed:
         note = raid_copy.CLOSED
@@ -124,6 +132,57 @@ def _character_line(signup: WowRaidSignup) -> str:
     if signup.character_name is None:
         return raid_member_copy.CHARACTER_NOT_SET
     return raid_member_copy.character_line(escape_name(signup.character_name))
+
+
+def _note_line(signup: WowRaidSignup) -> str:
+    if signup.note is None:
+        return raid_member_copy.NOTE_NOT_SET
+    return raid_member_copy.note_line(escape_note(signup.note))
+
+
+def _note_button(event: WowRaidEvent, signup: WowRaidSignup) -> dict[str, Any]:
+    label = raid_member_copy.NOTE_EDIT
+    if signup.note is None:
+        label = raid_member_copy.NOTE_ADD
+    return button(label, BUTTON_STYLE_SECONDARY, raid_custom_id.encode("card", event.id, "note"))
+
+
+def note_lines(event: WowRaidEvent, signup: WowRaidSignup) -> list[str]:
+    """The leader's player card: 'Note: "..."' while the raid takes notes and there's one, else nothing."""
+    note = shown_note(event, signup)
+    if note is None:
+        return []
+    return [raid_member_copy.note_line(escape_note(note))]
+
+
+def note_form(event: WowRaidEvent, name: str, signup: WowRaidSignup) -> dict[str, Any]:
+    """The note form (type 9) holding the note there now; *name* says where it opened (``note`` / ``reason``)."""
+    box = text_box(
+        raid_member_copy.NOTE_LABEL,
+        raid_member_copy.NOTE_HINT,
+        style=TEXT_INPUT_STYLE_SHORT,
+        value=signup.note,
+        max_length=NOTE_MAX,
+        required=False,
+        placeholder=raid_member_copy.note_placeholder(signup.status),
+    )
+    return event_form(event, name, raid_member_copy.NOTE_TITLE, box)
+
+
+def reason_row(event_id: uuid.UUID) -> dict[str, Any]:
+    """[Add reason] under the reply to a tap: the note form."""
+    custom_id = raid_custom_id.encode("card", event_id, "reason")
+    return action_row(button(raid_member_copy.REASON_BUTTON, BUTTON_STYLE_SECONDARY, custom_id))
+
+
+def reason_text(text: str | None, status: str) -> str:
+    """The reply so far (if anything), then 'You're marked **late**. Want to tell the raid leader why?'."""
+    return "\n".join(part for part in (text, raid_member_copy.reason_prompt(status)) if part)
+
+
+def reason_offer_data(event_id: uuid.UUID, text: str) -> dict[str, Any]:
+    """A private reply asking why (*text* from ``reason_text``), with [Add reason]."""
+    return ephemeral_data(text, components=[reason_row(event_id)], embeds=[])
 
 
 def character_form(event: WowRaidEvent, name: str | None) -> dict[str, Any]:

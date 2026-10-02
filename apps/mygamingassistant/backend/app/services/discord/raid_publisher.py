@@ -301,11 +301,16 @@ async def _delete_message(client: DiscordRestClient, channel_id: str, message_id
     return True
 
 
-async def send_ephemeral_followup(application_id: str, token: str, content: str) -> None:
-    """A private note after an UPDATE_MESSAGE response (e.g. 'you're #2 in the queue')."""
+async def send_ephemeral_followup(
+    application_id: str, token: str, content: str, components: list[dict[str, Any]] | None = None
+) -> None:
+    """A private note after an UPDATE_MESSAGE response (e.g. 'you're #2 in the queue'), with *components* if any."""
+    data = ephemeral_data(content)
+    if components is not None:
+        data = ephemeral_data(content, components=components)
     try:
         async with rest.make_rest_client() as client:
-            await rest.bounded(client.create_followup_message(application_id, token, ephemeral_data(content)))
+            await rest.bounded(client.create_followup_message(application_id, token, data))
     except (DiscordApiError, TimeoutError, httpx.HTTPError) as exc:
         logger.warning("Raid bot: follow-up message failed (%s)", type(exc).__name__)
     except Exception:

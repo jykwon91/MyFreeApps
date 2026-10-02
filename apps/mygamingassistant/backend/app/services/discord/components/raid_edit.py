@@ -16,6 +16,10 @@ Flows
   line (``raid_limit_forms``).  Whatever reads is saved and the rest is
   reported on the card; a limit set below the players already in line
   removes nobody, and the card says so.
+* **Notes: off / Notes: on** — members may leave the leader a note, or
+  not; the card comes back saying which (the post doesn't change).  The
+  button names the state it switches to, so a card that sat open says
+  "already" instead of flipping notes back.
 * **Leader / Color** — a menu in place of the card, with [Back].  A leader
   who hands the raid to someone else gets a closing note instead of the
   card when they can't edit it any more.
@@ -48,7 +52,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import unit_of_work
 from app.repositories.wow import wow_raid_signup_repo
-from app.services.discord import emojis, raid_copy, raid_draft_copy, raid_limit_copy, raid_publisher
+from app.services.discord import emojis, raid_copy, raid_draft_copy, raid_limit_copy, raid_member_copy, raid_publisher
 from app.services.discord.interaction import (
     Interaction,
     ephemeral_data,
@@ -101,6 +105,8 @@ _OPENABLE: Final = ("draft", *_POSTED)
 _CHANGEABLE: Final = ("draft", "scheduled")
 # The create preview's buttons; a posted raid's card answers them with itself.
 _DRAFT_ONLY: Final = ("more", "preview", "mentions", "noping")
+# What the card's buttons change under the row lock.
+_LOCKED: Final = ("keep", "noping", "notes_on", "notes_off")
 # What a draft doesn't offer: [Cancel] on the preview throws it away instead.
 _POSTED_ONLY: Final = ("cancel", "delete", "keep", "done")
 
@@ -142,11 +148,15 @@ async def handle_edit_button(interaction: Interaction, parsed: RaidCustomId, bac
         return update_text_response(raid_copy.EDIT_SAVED)
     async with unit_of_work() as db:
         found = await load_led_event(
-            db, interaction, parsed.event_id, lock=action in ("keep", "noping"), statuses=_OPENABLE
+            db, interaction, parsed.event_id, lock=action in _LOCKED, statuses=_OPENABLE
         )
         if isinstance(found, str):
             return update_text_response(found)
         event = found.event
+        if action in ("notes_on", "notes_off") and event.status in _CHANGEABLE:
+            enabled = action == "notes_on"
+            changed = await raid_event_service.set_signup_notes_enabled(db, event, enabled)
+            return update_response(_card(found, notice=raid_member_copy.notes_toggled(enabled, changed)))
         if event.status == "draft":
             if action == "noping":
                 await raid_event_service.set_mentions(db, event, [])

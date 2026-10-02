@@ -3,9 +3,10 @@
 Raid: Close / Raid: Open answer with a card that names the raid, says where
 its sign-ups stand and offers the opposite ([Reopen sign-ups] / [Close
 sign-ups]).  Raid: Signed lists everyone on the raid for its leader, column
-by column like the post, then tentative, bench and absence, with
-[Ping signed members] and [Manage sign-ups] (``raid_manage_views``); the
-ping's message form lives here too.
+by column like the post, then tentative, bench and absence, then the
+players' notes while the raid takes them, with [Ping signed members] and
+[Manage sign-ups] (``raid_manage_views``); the ping's message form lives
+here too.
 """
 from __future__ import annotations
 
@@ -22,20 +23,23 @@ from platform_shared.services.discord import (
 )
 
 from app.models.wow.wow_raid_event import WowRaidEvent
-from app.models.wow.wow_raid_signup import WowRaidSignup
-from app.services.discord import raid_copy, raid_manage_copy
+from app.models.wow.wow_raid_signup import NOTE_MAX, WowRaidSignup
+from app.services.discord import raid_copy, raid_manage_copy, raid_member_copy
 from app.services.discord.interaction import ephemeral_data, modal_response
 from app.services.discord.raid_views import EMBED_DESCRIPTION_LIMIT, action_row, button, clip_lines, unix
 from app.services.wow import raid_custom_id
 from app.services.wow.raid_catalog import CLASSES_BY_KEY, TANK_COLUMN, effective_spec
 from app.services.wow.raid_embed import CLOSED_HINT, STATUS_LISTS, column_heading, post_color
+from app.services.wow.raid_note import shown_note
 from app.services.wow.raid_post_layout import post_columns, with_status
 from app.services.wow.raid_roster import QUEUED_STATUS, compute_roster_summary, listed_user_ids
-from app.services.wow.raid_text import display_title, icon_text, signed_name, status_heading, title_text
+from app.services.wow.raid_text import display_title, escape_note, icon_text, signed_name, status_heading, title_text
 
 # The ping form's one input, and how long a message it takes.
 PING_FIELD: Final = "message"
 PING_MAX_CHARS: Final = 500
+# How long each note runs on Raid: Signed when they don't all fit in full.
+SHORT_NOTE_CHARS: Final = 40
 
 # Said after the spec of a line player who isn't simply confirmed.
 _LINE_MARKERS: Final[dict[str, str]] = {"late": "late", QUEUED_STATUS: "queued"}
@@ -75,9 +79,10 @@ def signed_data(
     """Everyone on the raid as 'Name (Spec)', column by column, for its leader.
 
     Late and queued players say so after their spec; tentative, bench and
-    absence follow with the full spec name.  While the raid is on,
-    [Manage sign-ups] shows, after [Ping signed members] once anyone is
-    listed.  *notice* goes above the list, e.g. why a ping didn't go out.
+    absence follow with the full spec name.  While the raid takes notes,
+    the players' notes follow the list.  While the raid is on, [Manage
+    sign-ups] shows, after [Ping signed members] once anyone is listed.
+    *notice* goes above the list, e.g. why a ping didn't go out.
     """
     summary = compute_roster_summary(signups, size_cap=event.size_cap)
     head = [raid_line(event)]
@@ -98,7 +103,7 @@ def signed_data(
 
     embed = {
         "title": f"Signed up ({summary.seats_taken}/{summary.size_cap})",
-        "description": clip_lines("\n\n".join(sections), EMBED_DESCRIPTION_LIMIT),
+        "description": clip_lines(_with_notes(event, signups, "\n\n".join(sections)), EMBED_DESCRIPTION_LIMIT),
         "color": post_color(event),
         "footer": {"text": f"Raid ID {str(event.id)[:6]}"},
     }
@@ -111,6 +116,25 @@ def signed_data(
             buttons.insert(0, ping)
         components.append(action_row(*buttons))
     return ephemeral_data(notice or "", components=components, embeds=[embed])
+
+
+def _with_notes(event: WowRaidEvent, signups: Sequence[WowRaidSignup], text: str) -> str:
+    """*text* (the list), then '**Notes (2)**' and a line per note in sign-up order: 'Alice - "Running late"'.
+
+    Notes never push players off the list: when they don't fit in full,
+    each is cut to ``SHORT_NOTE_CHARS``, and when that doesn't fit either a
+    line says where to read them.  Nothing follows while notes are off.
+    """
+    noted = [(signed_name(signup), note) for signup in signups if (note := shown_note(event, signup)) is not None]
+    if not noted:
+        return text
+    heading = f"{text}\n\n**Notes ({len(noted)})**"
+    for max_chars in (NOTE_MAX, SHORT_NOTE_CHARS):
+        lines = [f'{name} - "{escape_note(note, max_chars=max_chars)}"' for name, note in noted]
+        described = "\n".join([heading, *lines])
+        if len(described) <= EMBED_DESCRIPTION_LIMIT:
+            return described
+    return f"{heading}\n{raid_member_copy.NOTES_DID_NOT_FIT}"
 
 
 def _column_entry(signup: WowRaidSignup, column: str) -> str:

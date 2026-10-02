@@ -40,7 +40,7 @@ from platform_shared.services.discord import (
 
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_signup import WowRaidSignup
-from app.services.discord import raid_manage_copy, raid_member_copy
+from app.services.discord import raid_manage_copy, raid_member_copy, raid_member_views
 from app.services.discord.interaction import ephemeral_data
 from app.services.discord.raid_copy import queue_place
 from app.services.discord.raid_leader_views import raid_line
@@ -248,18 +248,19 @@ def player_data(
         if offer is not None:
             lines = _add_lines(event, target, offer.spec, signups, reach=offer.reach)
             if mine is not None:
-                lines.insert(0, raid_manage_copy.absent_note(target.who))
+                lines[:0] = [raid_manage_copy.absent_note(target.who), *raid_member_views.note_lines(event, mine)]
             select = class_select(manage(event.id, "class", uid), raid_manage_copy.PICK_OTHER_CLASS, emojis=emojis)
             buttons = [*_add_buttons(event, uid, offer.spec, offer.reach), back]
             return _card(event, target, "\n".join(lines), [action_row(select), action_row(*buttons)], notice=notice)
         text = raid_manage_copy.not_on_raid(target.who)
         if mine is not None:
-            text = raid_manage_copy.absent(target.who)
+            text = "\n".join([raid_manage_copy.absent(target.who), *raid_member_views.note_lines(event, mine)])
         select = class_select(manage(event.id, "class", uid), raid_manage_copy.PICK_CLASS, emojis=emojis)
         return _card(event, target, text, [action_row(select), action_row(back)], notice=notice)
     lines = [raid_manage_copy.on_raid(target.who, mine.status, spec_label(mine), queue_position(signups, uid))]
     if mine.character_name is not None:
         lines.append(raid_member_copy.character_line(escape_name(mine.character_name)))
+    lines.extend(raid_member_views.note_lines(event, mine))
     if mine.status == QUEUED_STATUS:
         lines.append(raid_manage_copy.QUEUE_WAITS)
     select = class_select(manage(event.id, "class", uid), raid_manage_copy.CHANGE_CLASS, emojis=emojis)
