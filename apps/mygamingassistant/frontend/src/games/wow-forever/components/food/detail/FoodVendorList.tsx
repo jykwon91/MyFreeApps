@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@platform/ui";
 import FoodVendorRow from "@/games/wow-forever/components/food/detail/FoodVendorRow";
 import { FACTION_NAME } from "@/games/wow-forever/components/food/detail/detailStyles";
-import { splitVendors } from "@/games/wow-forever/food/recipeSources";
+import { SHARED_STOCK_NOTE, splitVendors } from "@/games/wow-forever/food/recipeSources";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 import type { VendorSpot } from "@/games/wow-forever/types/recipeSources";
 
@@ -40,6 +40,7 @@ export default function FoodVendorList({ vendors, faction, zoneId }: FoodVendorL
       ) : (
         <p className="text-sm text-muted-foreground">Only {otherName} vendors sell it.</p>
       )}
+      {shown.some((v) => v.limited) ? <p className="text-xs text-muted-foreground">{SHARED_STOCK_NOTE}</p> : null}
       {expanded && hidden > 0 ? (
         <p className="text-xs text-muted-foreground">…and {hidden} more across the world.</p>
       ) : null}

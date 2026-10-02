@@ -11,6 +11,7 @@ import {
   placeLabel,
   questsFor,
   splitVendors,
+  stockSize,
   unknownSource,
 } from "@/games/wow-forever/food/recipeSources";
 import type { DisenchantFrom, DisenchantSource, DropSource, ItemSources, SkinningSource } from "@/games/wow-forever/types/recipeSources";
@@ -71,7 +72,7 @@ function vendorPart(sources: ItemSources, faction: PlayerFaction, zoneId: number
   const yours = splitVendors(sources.vendors, faction, zoneId).yours;
   if (!yours.length) return null;
   const limited = yours.every((v) => v.limited);
-  const stock = limited ? " (limited stock)" : "";
+  const stock = limited ? ` (limited, ${stockSize(yours[0])})` : "";
   if (yours.length >= SOLD_IN_MOST_TOWNS) return { text: `Sold in most towns${stock}`, limited };
   return { text: `Sold by ${yours[0].name}, ${placeLabel(yours[0])}${stock}`, limited };
 }

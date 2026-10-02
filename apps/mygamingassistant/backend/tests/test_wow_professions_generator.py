@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 
+from scripts.wow_food.recipe_sources import VENDOR_COLUMNS, _stock
 from scripts.wow_professions.build import DISENCHANT_COLUMNS, _best_giver, _disenchant_kind, _roll_chances
 from scripts.wow_professions.crafts import (
     ClientRecipes,
@@ -199,3 +200,15 @@ class TestDisenchantSources:
         reagents = json.loads((CRAFTING_DATA / "classic" / "sources.json").read_text(encoding="utf-8"))["reagents"]
         assert reagents["8170"]["skinning"]["levels"][0] >= 40  # Rugged Leather
         assert "skinning" not in reagents["2592"]  # sheep don't make Wool Cloth a skinning mat
+
+
+class TestVendorStock:
+    def test_stock_and_restock_from_maxcount_and_incrtime(self) -> None:
+        assert _stock({"maxcount": 2, "incrtime": 7200}) == (2, 120)
+        assert _stock({"maxcount": 0, "incrtime": 0}) == (0, 0)
+
+    def test_committed_enchanting_supplier_stock(self) -> None:
+        data = json.loads((CRAFTING_DATA / "classic" / "sources.json").read_text(encoding="utf-8"))
+        assert data["vendorColumns"] == VENDOR_COLUMNS
+        tilli = [v for v in data["reagents"]["10938"]["vendors"] if v[1] == "Tilli Thistlefuzz"]
+        assert tilli and tilli[0][-2:] == [2, 120]  # Lesser Magic Essence: 2 at a time, every 2 hours

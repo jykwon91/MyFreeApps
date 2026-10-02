@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import FoodSourceList from "@/games/wow-forever/components/food/detail/FoodSourceList";
 import sourcesJson from "@/games/wow-forever/data/professions/crafting/classic/sources.json";
 import tailoringJson from "@/games/wow-forever/data/professions/crafting/tailoring.json";
@@ -10,7 +11,7 @@ import { describeDisenchant, describeSkinning, matSummary, soldToYou } from "@/g
 import { shoppingList, shoppingListText } from "@/games/wow-forever/crafting/shoppingList";
 import { CRAFTING_ROUTES } from "@/games/wow-forever/data/professions/crafting/craftingRoutes";
 import { createSourceLookup, type RawSourcesFile } from "@/games/wow-forever/data/sourceDecode";
-import { describeCommonDrop, hasSources, isCommonDrop } from "@/games/wow-forever/food/recipeSources";
+import { describeCommonDrop, hasSources, isCommonDrop, stockLabel } from "@/games/wow-forever/food/recipeSources";
 import { FACTION } from "@/games/wow-forever/types/worldMap";
 import type { CraftingFile, CraftingProfession, TrainerSkills } from "@/games/wow-forever/types/crafting";
 
@@ -69,7 +70,20 @@ describe("crafting material sources", () => {
   });
 
   it("puts a limited-stock vendor after disenchanting", () => {
-    expect(summary(STRANGE_DUST)).toMatch(/^Disenchant level 5–20 green armor · Sold .*\(limited stock\)$/);
+    expect(summary(STRANGE_DUST)).toMatch(/^Disenchant level 5–20 green armor · Sold .*\(limited, 4 at a time\)$/);
+  });
+
+  it("says how many a limited vendor holds and how often it restocks", () => {
+    const tilli = SOURCES.reagent(LESSER_MAGIC_ESSENCE).vendors.find((v) => v.name === "Tilli Thistlefuzz")!;
+    expect(tilli).toMatchObject({ limited: true, stock: 2, restockMinutes: 120 });
+    expect(stockLabel(tilli)).toBe("2 at a time · restocks about every 2 hours");
+    const { container } = render(
+      <MemoryRouter>
+        <FoodSourceList sources={SOURCES.reagent(LESSER_MAGIC_ESSENCE)} faction={FACTION.alliance} zoneId={null} />
+      </MemoryRouter>,
+    );
+    expect(container.textContent).toContain("Limited: 2 at a time · restocks about every 2 hours");
+    expect(container.textContent).toContain("shared with every player on your realm");
   });
 
   it("says where to skin leather, but not sheep for Wool Cloth", () => {

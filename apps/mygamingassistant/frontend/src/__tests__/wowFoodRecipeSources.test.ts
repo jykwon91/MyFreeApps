@@ -20,7 +20,7 @@ function food(name: string): FoodRecord {
 }
 
 function vendor(name: string, faction: VendorSpot["faction"], zoneId = 1453): VendorSpot {
-  return { npcId: name.length, name, title: "", zoneId, zoneName: "Z", subzone: "", x: 1, y: 2, faction, limited: false };
+  return { npcId: name.length, name, title: "", zoneId, zoneName: "Z", subzone: "", x: 1, y: 2, faction, limited: false, stock: 0, restockMinutes: 0 };
 }
 
 const DROP: DropSource = { world: false, levels: [10, 30], mobs: [], more: 0, zones: ["The Barrens"] };
