@@ -56,7 +56,13 @@ from typing import Final
 
 from app.models.wow.wow_raid_signup import RAID_ROLES, WOW_CLASSES
 from app.services.wow.raid_catalog import POST_COLUMNS, SPECS
-from app.services.wow.raid_roster import BENCH_STATUS, REQUESTABLE_STATUSES, SEAT_STATUSES, TENTATIVE_STATUS
+from app.services.wow.raid_roster import (
+    BENCH_STATUS,
+    QUEUED_STATUS,
+    REQUESTABLE_STATUSES,
+    SEAT_STATUSES,
+    TENTATIVE_STATUS,
+)
 
 PREFIX: Final = "raid:v1:"
 MAX_CUSTOM_ID_LEN: Final = 100
@@ -130,18 +136,26 @@ MODALS: Final = (
 #   addt / addq  [Add and tell them] / [Add quietly] (arg = <class>.<spec>)
 #   dropt / dropq  [Remove and tell them] / [Remove quietly]
 #   mark  the card's [Seat] [Late] [Tentative] [Bench] (arg = the status, one of MARK_STATUSES)
-#   markt / markq  [Move and tell them] / [Move quietly] (arg = the status)
+#   markt / markq  [Move and tell them] / [Move quietly] (arg = the status, or ``queued`` on the queue review)
 #   addr / dropr / markr  [Add / Remove / Move and say why]: the form, then the change (args as addt / dropt /
 #         markt; the form's custom_id is the button's own)
+#   swap  [Seat] on a full raid: the menu of seat holders (its value is the one to bench)
+#   hold  that menu's [Previous] / [Next] (arg = the page)   queue  its [Queue them instead]
+#   swapt / swapq / swapr  [Swap and tell them] / [Swap quietly] / [Swap and say why] (arg = the seat holder)
 MANAGE_HUB_VERBS: Final = ("open", "who", "done", "row", "list")
 _ADD_VERBS: Final = ("addt", "addq", "addr")
 _MARK_VERBS: Final = ("mark", "markt", "markq", "markr")
+_SWAP_VERBS: Final = ("swapt", "swapq", "swapr")
 MANAGE_VERBS: Final = (
-    *MANAGE_HUB_VERBS, "card", "class", "spec", "ask", *_ADD_VERBS, "dropt", "dropq", "dropr", *_MARK_VERBS
+    *MANAGE_HUB_VERBS, "card", "class", "spec", "ask", *_ADD_VERBS, "dropt", "dropq", "dropr", *_MARK_VERBS,
+    "swap", "hold", "queue", *_SWAP_VERBS,
 )
 MANAGE_MAX_PAGE: Final = 99
 # What a leader can move a player to; the queue is the bot's to give.
 MARK_STATUSES: Final = (*SEAT_STATUSES, TENTATIVE_STATUS, BENCH_STATUS)
+# What a review's [Move ...] can carry: those, or ``queued`` from [Queue them instead] (a seat asked
+# for that waits in the queue while the raid is full).
+_MOVE_STATUSES: Final = (*MARK_STATUSES, QUEUED_STATUS)
 NO_ARG: Final = "-"
 _SPEC_CHOICES: Final = frozenset(spec.choice_value for spec in SPECS)
 # Old status names still on buttons of posts not re-rendered since they changed.
@@ -249,8 +263,14 @@ def _manage_args_valid(verb: str, member: str, arg: str) -> bool:
         return arg in POST_COLUMNS
     if verb in _ADD_VERBS:
         return arg in _SPEC_CHOICES
-    if verb in _MARK_VERBS:
+    if verb == "mark":
         return arg in MARK_STATUSES
+    if verb in _MARK_VERBS:
+        return arg in _MOVE_STATUSES
+    if verb == "hold":
+        return _is_page(arg)
+    if verb in _SWAP_VERBS:
+        return is_member_id(arg) and arg != member
     return arg == NO_ARG
 
 

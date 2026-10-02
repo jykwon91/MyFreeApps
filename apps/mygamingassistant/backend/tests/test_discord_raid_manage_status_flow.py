@@ -116,7 +116,7 @@ async def test_benching_a_seat_holder_asks_first_then_the_queue_moves_up(
     ]
     assert card_description(moved).split("\n") == [
         "**Bob** is on the **bench** as **Fury Warrior**.",
-        raid_manage_copy.SEAT_QUEUES,
+        raid_manage_copy.SEAT_SWAPS,
     ]
     bob = await signup_row(db, event, _BOB)
     cy = await signup_row(db, event, _CY)
@@ -131,38 +131,6 @@ async def test_benching_a_seat_holder_asks_first_then_the_queue_moves_up(
     assert promoted.body is not None
     assert promoted.body["content"] == raid_copy.promoted_dm(RAID_NAME, starts_unix(event), POST_LINK)
     assert fake_discord.public_edits()
-
-
-async def test_a_seat_on_a_full_raid_is_reviewed_as_the_queue_and_queues(
-    post: Post, db: AsyncSession, fake_discord: FakeDiscord
-) -> None:
-    event = await posted_raid(post, db, fake_discord)
-    await fill_seats(db, event, 5)
-    await sign_up(db, event, _CY, "Cy", "rogue.combat", status="queued")
-    await sign_up(db, event, _BOB, "Bob", "warrior.fury", status="bench")
-
-    # --- the card says [Seat] queues him; [Late] is greyed out
-    card = await post(pick(event, _BOB, "Bob"))
-    assert card_description(card).split("\n") == [
-        "**Bob** is on the **bench** as **Fury Warrior**.",
-        raid_manage_copy.SEAT_QUEUES,
-    ]
-    review = await post(tap(event, "mark", _BOB, "confirmed", on=card))
-    assert card_description(review) == (
-        "Give **Bob** a seat as **Fury Warrior**?\nThe raid is full, so they'd be **#2 in the queue**."
-    )
-
-    # --- [Move and tell them]: second in the queue, and his DM says so
-    queued = await post(tap(event, "markt", _BOB, "confirmed", on=review))
-    assert card_lines(queued)[1:] == ["The raid is full, so **Bob** is **#2 in the queue**.", raid_manage_copy.DM_SENDING]
-    assert card_description(queued) == f"**Bob** is **#2 in the queue** as **Fury Warrior**.\n{raid_manage_copy.QUEUE_WAITS}"
-    bob = await signup_row(db, event, _BOB)
-    assert bob is not None and bob.status == "queued"
-    (dm,) = fake_discord.dms_to(_BOB)
-    assert dm.body is not None
-    assert dm.body["content"] == raid_manage_copy.moved_dm(
-        ORGANISER, RAID_NAME, starts_unix(event), "Fury Warrior", "queued", 2, POST_LINK, signups_open=True
-    )
 
 
 async def test_a_move_over_a_limit_says_so_and_still_happens(

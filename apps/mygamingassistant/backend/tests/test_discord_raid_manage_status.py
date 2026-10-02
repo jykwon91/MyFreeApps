@@ -28,8 +28,7 @@ _EVENT_ID = uuid.UUID("a1b2c3d4-0000-4000-8000-000000000000")
 _ML = f"raid:v1:ml:{_EVENT_ID}"
 _BOB_ID = "123456789012345678"
 _BOB = Target(_BOB_ID, "Bob")
-_SEAT_QUEUES = [raid_manage_copy.SEAT_QUEUES]
-_QUEUE_WAITS = [raid_manage_copy.QUEUE_WAITS]
+_SEAT_SWAPS = [raid_manage_copy.SEAT_SWAPS]
 
 
 def _event(**overrides: object) -> WowRaidEvent:
@@ -161,11 +160,11 @@ def test_a_status_id_out_of_shape_is_turned_away(tail: str) -> None:
         ("confirmed", 40, {"confirmed"}, []),
         ("late", 2, {"late"}, []),
         ("tentative", 40, {"tentative"}, []),
-        # On a full raid a seat is a place in the queue, and late needs a seat.
-        ("tentative", 2, {"tentative", "late"}, _SEAT_QUEUES),
-        ("bench", 2, {"bench", "late"}, _SEAT_QUEUES),
-        # Queued already waits for a seat: no current button, and the leader is told how they move up.
-        ("queued", 2, {"confirmed", "late"}, _QUEUE_WAITS),
+        # On a full raid a seat is a seat holder's ([Seat] asks who goes to the bench), and late needs a seat.
+        ("tentative", 2, {"tentative", "late"}, _SEAT_SWAPS),
+        ("bench", 2, {"bench", "late"}, _SEAT_SWAPS),
+        # Queued too (no button is where they are): [Seat] is that swap.
+        ("queued", 2, {"late"}, _SEAT_SWAPS),
     ],
 )
 def test_the_row_greys_out_where_they_are_and_what_cant_be_had(
@@ -222,15 +221,6 @@ def test_benching_a_seat_holder_with_a_queue_says_the_seat_goes_on() -> None:
         ("Back", 2, f"{_ML}:card:{_BOB_ID}:-"),
     ]
     assert data["embeds"][0]["author"] == {"name": "Bob"}
-
-
-def test_a_seat_on_a_full_raid_says_where_in_the_queue_they_would_be() -> None:
-    signups = [*_seats(2), _signup("Cy", status="queued", minute=40), _bob(status="bench")]
-    data = mark_review_data(_event(size_cap=2), _BOB, signups[-1], "confirmed", "Fury Warrior", signups, reach="yes")
-    assert _description(data) == [
-        "Give **Bob** a seat as **Fury Warrior**?",
-        "The raid is full, so they'd be **#2 in the queue**.",
-    ]
 
 
 def test_a_queued_player_moved_off_the_line_loses_their_place_and_dms_off_says_so() -> None:

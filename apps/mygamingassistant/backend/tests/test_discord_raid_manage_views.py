@@ -167,7 +167,7 @@ def test_a_player_on_the_raid_can_be_switched_or_removed() -> None:
     ("fields", "text"),
     [
         ({"status": "late"}, "**Bob** is in as **Fury Warrior** and marked **late**."),
-        ({"status": "queued"}, f"**Bob** is **#2 in the queue** as **Fury Warrior**.\n{raid_manage_copy.QUEUE_WAITS}"),
+        ({"status": "queued"}, "**Bob** is **#2 in the queue** as **Fury Warrior**."),
         ({"status": "bench"}, "**Bob** is on the **bench** as **Fury Warrior**."),
         ({"status": "tentative", "wow_class": None, "role": None, "spec": None}, "**Bob** is **tentative**."),
         # A sign-up from before specs.

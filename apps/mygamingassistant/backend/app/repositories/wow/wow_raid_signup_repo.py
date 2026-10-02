@@ -107,6 +107,22 @@ async def set_note(db: AsyncSession, signup: WowRaidSignup, note: str | None) ->
     await db.flush()
 
 
+async def set_status(
+    db: AsyncSession, signup: WowRaidSignup, status: str, *, signed_up_at: datetime | None = None
+) -> None:
+    """Move a signup to *status* and clear its note (it was about the old status).
+
+    Its place in the order (``signed_up_at``) changes only when given: a
+    leader's swap seats a player at the benched seat holder's number.
+    """
+    signup.status = status
+    signup.note = None
+    signup.updated_at = datetime.now(timezone.utc)
+    if signed_up_at is not None:
+        signup.signed_up_at = signed_up_at
+    await db.flush()
+
+
 async def list_for_event(
     db: AsyncSession, event_id: uuid.UUID
 ) -> list[WowRaidSignup]:
