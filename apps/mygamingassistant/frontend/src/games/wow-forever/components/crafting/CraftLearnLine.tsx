@@ -1,13 +1,16 @@
 import FoodSourceList from "@/games/wow-forever/components/food/detail/FoodSourceList";
 import { hasSources, unknownSource } from "@/games/wow-forever/food/recipeSources";
 import type { SourceLookup } from "@/games/wow-forever/data/sourceDecode";
-import type { LearnAt } from "@/games/wow-forever/types/crafting";
+import type { CraftingFile, LearnAt } from "@/games/wow-forever/types/crafting";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 
+/** Where the player is, and what the guide knows about where things come from. */
 export interface CraftPlace {
   sources: SourceLookup;
   faction: PlayerFaction;
   zoneId: number | null;
+  /** Which profession makes a material, and the recipes to make this profession's own (bolts). */
+  file: Pick<CraftingFile, "madeBy" | "recipes">;
 }
 
 interface CraftLearnLineProps {

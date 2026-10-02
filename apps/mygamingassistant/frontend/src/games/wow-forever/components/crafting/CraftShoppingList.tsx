@@ -3,8 +3,10 @@ import CopyButton from "@/games/wow-forever/components/worldMap/CopyButton";
 import SegmentedToggle from "@/games/wow-forever/components/shared/SegmentedToggle";
 import CraftMakeLines from "@/games/wow-forever/components/crafting/CraftMakeLines";
 import CraftShoppingLines from "@/games/wow-forever/components/crafting/CraftShoppingLines";
+import type { CraftPlace } from "@/games/wow-forever/components/crafting/CraftLearnLine";
+import { matSummary, soldToYou } from "@/games/wow-forever/crafting/matSources";
 import { shoppingList, shoppingListText } from "@/games/wow-forever/crafting/shoppingList";
-import type { CraftingFile, ResolvedRouteEntry } from "@/games/wow-forever/types/crafting";
+import type { ResolvedRouteEntry, ShoppingLine } from "@/games/wow-forever/types/crafting";
 
 const SCOPE = { mine: "mine", all: "all" } as const;
 type Scope = (typeof SCOPE)[keyof typeof SCOPE];
@@ -14,16 +16,20 @@ const SUMMARY_ITEMS = 3;
 interface CraftShoppingListProps {
   entries: readonly ResolvedRouteEntry[];
   skill: number | null;
-  file: Pick<CraftingFile, "madeBy" | "recipes">;
+  place: CraftPlace;
   professionLabel: string;
   note?: string;
 }
 
 /** Everything the route still needs, as one list to shop or farm from — collapsed under its top items. */
-export default function CraftShoppingList({ entries, skill, file, professionLabel, note }: CraftShoppingListProps) {
+export default function CraftShoppingList({ entries, skill, place, professionLabel, note }: CraftShoppingListProps) {
   const [scope, setScope] = useState<Scope>(SCOPE.mine);
   const fromSkill = scope === SCOPE.mine ? skill : null;
-  const list = shoppingList(entries, fromSkill, file, professionLabel);
+  const list = shoppingList(entries, fromSkill, place.file, professionLabel);
+  // A vendor near you beats the auction house, even for what a profession can make (Copper Rod).
+  const bought = (l: ShoppingLine) => !l.madeBy || soldToYou(place.sources.reagent(l.id), place.faction);
+  const summary = (l: ShoppingLine) =>
+    matSummary({ sources: place.sources.reagent(l.id), madeBy: l.madeBy ?? null }, place.faction, place.zoneId);
   const end = entries.reduce((max, e) => Math.max(max, e.kind === "craft" ? e.step.to : 0), 0);
   const top = list.buy.slice(0, SUMMARY_ITEMS).map((l) => `${l.count} ${l.name}`).join(", ");
   const past = fromSkill !== null && fromSkill >= end;
@@ -47,14 +53,22 @@ export default function CraftShoppingList({ entries, skill, file, professionLabe
               onChange={setScope}
             />
           ) : null}
-          {past ? null : <CopyButton text={shoppingListText(list)} label="Copy list" title="Copy the shopping list" />}
+          {past ? null : <CopyButton text={shoppingListText(list, summary)} label="Copy list" title="Copy the shopping list" />}
         </div>
         {past ? (
           <p className="text-sm">You're past the end of this route ({end}). See the last row for what to craft next.</p>
         ) : (
           <>
-            <CraftShoppingLines title="Buy or farm" lines={list.buy.filter((l) => !l.madeBy)} />
-            <CraftShoppingLines title="Made by other professions (buy at the auction house)" lines={list.buy.filter((l) => l.madeBy)} />
+            <p className="text-sm text-muted-foreground">
+              Open an item to see where to get it. Everything here is also on the auction house.
+            </p>
+            <CraftShoppingLines title="Buy or farm" lines={list.buy.filter(bought)} place={place} professionLabel={professionLabel} />
+            <CraftShoppingLines
+              title="Made by other professions (buy at the auction house)"
+              lines={list.buy.filter((l) => !bought(l))}
+              place={place}
+              professionLabel={professionLabel}
+            />
             <CraftMakeLines lines={list.make} />
           </>
         )}

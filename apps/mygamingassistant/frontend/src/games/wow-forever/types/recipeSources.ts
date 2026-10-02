@@ -67,11 +67,36 @@ export interface QuestSource {
   givers: QuestGiver[];
 }
 
-/** Everything known about where an item comes from. Empty lists = not a source. */
+/** Leather and hides: skinned from beasts. */
+export interface SkinningSource {
+  levels: [number, number];
+  /** Where the most of them are, best first. */
+  zones: string[];
+}
+
+export const DISENCHANT_FROM = { weapon: "weapon", armor: "armor" } as const;
+export type DisenchantFrom = (typeof DISENCHANT_FROM)[keyof typeof DISENCHANT_FROM];
+
+/** Dusts, essences and shards: what to disenchant for them. */
+export interface DisenchantSource {
+  /** "Requires level" band of the green items that can give it. */
+  minLevel: number;
+  maxLevel: number;
+  /** Best percent per disenchant of a green item. */
+  chance: number;
+  /** Green weapons (with shields and off-hands) or worn armour give it most; null = both. */
+  mostlyFrom: DisenchantFrom | null;
+  /** Blue items give it (shards — every time). */
+  fromBlue: boolean;
+}
+
+/** Everything known about where an item comes from. Empty lists / null = not a source. */
 export interface ItemSources {
   vendors: VendorSpot[];
   quests: QuestSource[];
   drop: DropSource | null;
+  skinning: SkinningSource | null;
+  disenchant: DisenchantSource | null;
   fishing: string[];
   containers: string[];
 }

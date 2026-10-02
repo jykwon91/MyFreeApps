@@ -1,5 +1,15 @@
 import type { Faction } from "@/games/wow-forever/types/worldMap";
-import type { DropMob, DropSource, ItemSources, QuestGiver, QuestSource, VendorSpot } from "@/games/wow-forever/types/recipeSources";
+import type {
+  DisenchantFrom,
+  DisenchantSource,
+  DropMob,
+  DropSource,
+  ItemSources,
+  QuestGiver,
+  QuestSource,
+  SkinningSource,
+  VendorSpot,
+} from "@/games/wow-forever/types/recipeSources";
 
 /**
  * Decodes the compact "where does it come from" files written by
@@ -14,6 +24,7 @@ export interface RawSources {
   vendors?: Row[];
   quests?: number[];
   drop?: { world: boolean; levels: number[]; mobs: Row[]; more: number; zones: number[] };
+  skinning?: { levels: number[]; zones: number[] };
   fishing?: string[];
   containers?: string[];
 }
@@ -24,6 +35,8 @@ export interface RawSourcesFile {
   quests: Record<string, Row>;
   recipes: Record<string, RawSources>;
   reagents: Record<string, RawSources>;
+  /** Item id -> `[minLevel, maxLevel, chance, mostlyFrom, fromBlue]` (the crafting file only). */
+  disenchant?: Record<string, Row>;
 }
 
 export interface SourceLookup {
@@ -107,11 +120,31 @@ export function createSourceLookup(raw: RawSourcesFile): SourceLookup {
     };
   }
 
-  function decode(r: RawSources | undefined): ItemSources {
+  function skinning(s: RawSources["skinning"]): SkinningSource | null {
+    if (!s) return null;
+    return { levels: [s.levels[0], s.levels[1]], zones: s.zones.map(zoneName).filter(Boolean) };
+  }
+
+  function disenchant(itemId: number): DisenchantSource | null {
+    const row = raw.disenchant?.[String(itemId)];
+    if (!row) return null;
+    const [minLevel, maxLevel, chance, mostlyFrom, fromBlue] = row;
+    return {
+      minLevel: Number(minLevel),
+      maxLevel: Number(maxLevel),
+      chance: Number(chance),
+      mostlyFrom: (mostlyFrom ?? null) as DisenchantFrom | null,
+      fromBlue: Boolean(fromBlue),
+    };
+  }
+
+  function decode(r: RawSources | undefined, itemId: number | null): ItemSources {
     return {
       vendors: (r?.vendors ?? []).map(vendor),
       quests: (r?.quests ?? []).map(quest).filter((q): q is QuestSource => q !== null),
       drop: drop(r?.drop),
+      skinning: skinning(r?.skinning),
+      disenchant: itemId === null ? null : disenchant(itemId),
       fishing: r?.fishing ?? [],
       containers: r?.containers ?? [],
     };
@@ -119,7 +152,7 @@ export function createSourceLookup(raw: RawSourcesFile): SourceLookup {
 
   return {
     source: raw.source,
-    recipe: (id) => decode(raw.recipes[String(id)]),
-    reagent: (itemId) => decode(raw.reagents[String(itemId)]),
+    recipe: (id) => decode(raw.recipes[String(id)], null),
+    reagent: (itemId) => decode(raw.reagents[String(itemId)], itemId),
   };
 }

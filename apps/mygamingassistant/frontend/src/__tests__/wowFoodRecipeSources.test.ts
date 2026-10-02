@@ -93,7 +93,7 @@ describe("recipe source data", () => {
     expect(reagentSourcesFor(5503).containers).toContain("Small Barnacled Clam");
   });
   it("has nothing for an unknown item", () => {
-    expect(recipeSourcesFor(1)).toEqual({ vendors: [], quests: [], drop: null, fishing: [], containers: [] });
+    expect(recipeSourcesFor(1)).toEqual({ vendors: [], quests: [], drop: null, skinning: null, disenchant: null, fishing: [], containers: [] });
   });
   it("explains unknown Classic and Forever items differently", () => {
     expect(unknownSource(250000, "it")).toMatch(/^New in Forever/);

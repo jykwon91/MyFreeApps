@@ -87,6 +87,26 @@ describe("Professions page", () => {
     expect(screen.getByText(/Forever adds 180 Tailoring recipes/)).toBeInTheDocument();
   });
 
+  it("says where to get each material, in the shopping list and on the route rows", async () => {
+    const user = userEvent.setup();
+    renderAt("/wow-forever/professions?p=enchanting");
+    await screen.findByRole("heading", { name: "Leveling route" });
+    const shopping = within(document.getElementById("shopping") as HTMLElement);
+    const soulDust = document.querySelector('#shopping details[data-mat="11083"]') as HTMLDetailsElement;
+    expect(within(soulDust).getByText("Disenchant level 21–30 green armor")).toBeInTheDocument();
+    await user.click(within(soulDust).getByText("Soul Dust"));
+    expect(soulDust.open).toBe(true);
+    expect(within(soulDust).getByText(/^Disenchant green armor for level 21–30 \(about 75% each\)\./)).toBeInTheDocument();
+    expect(within(soulDust).getByText(/press K, drag Disenchant from the main tab/)).toBeInTheDocument();
+    expect(shopping.getByText(/Open an item to see where to get it/)).toBeInTheDocument();
+
+    const rowRod = route().getAllByText("1× Copper Rod")[0].closest("details") as HTMLDetailsElement;
+    await user.click(within(rowRod).getByText("1× Copper Rod"));
+    expect(rowRod.open).toBe(true);
+    expect(within(rowRod).getByText("Sold by")).toBeInTheDocument();
+    expect(within(rowRod).queryByText(/ask a player with Blacksmithing/)).not.toBeInTheDocument();
+  });
+
   it("points at your row for ?skill= without overwriting the saved skill", async () => {
     window.localStorage.setItem(CRAFT_SKILL_STORAGE_KEY, JSON.stringify({ enchanting: 10 }));
     renderAt("/wow-forever/professions?p=enchanting&skill=120");
