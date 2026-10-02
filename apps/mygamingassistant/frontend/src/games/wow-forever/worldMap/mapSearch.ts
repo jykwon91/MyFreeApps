@@ -60,7 +60,13 @@ export function defaultResultCount(hits: readonly NpcHit[], faction: PlayerFacti
 }
 
 export function searchMarkers(results: readonly RankedPoi[]): MapMarker[] {
-  return results.map((r) => ({ id: r.poi.id, world: r.world, label: poiMarkerLabel(r.poi), className: poiMarkerClass(r.poi) }));
+  return results.map((r) => ({
+    id: r.poi.id,
+    world: r.world,
+    label: poiMarkerLabel(r.poi),
+    className: poiMarkerClass(r.poi),
+    zoneId: r.zone.id,
+  }));
 }
 
 /** The deepest map every result's zone sits on: their zone, a continent, or Azeroth. */

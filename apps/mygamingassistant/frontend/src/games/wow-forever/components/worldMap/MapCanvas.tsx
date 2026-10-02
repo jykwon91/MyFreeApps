@@ -47,6 +47,8 @@ interface MapCanvasProps {
   /** A click on the viewed zone itself, in its map percent. */
   onPick: (x: number, y: number) => void;
   onSelectMarker: (id: string) => void;
+  /** A numbered marker (several overlapping results) was clicked. */
+  onOpenCluster: (members: readonly MapMarker[]) => void;
   /** Clear the selected result. */
   onClearSelection: () => void;
 }
@@ -97,7 +99,7 @@ export default function MapCanvas(props: MapCanvasProps) {
     const span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
     const centre = { x: (Math.max(...xs) + Math.min(...xs)) / 2, y: (Math.max(...ys) + Math.min(...ys)) / 2 };
     if (!points.length) setView(UNZOOMED);
-    else focusOn(centre.x, centre.y, Math.max(1, Math.min(FOCUS_SCALE, FIT_FILL / span)));
+    else focusOn(centre.x, centre.y, Math.max(1, Math.min(fit.maxScale ?? FOCUS_SCALE, FIT_FILL / span)));
     onFitApplied();
   }, [fit, map, focusOn, setView, onFitApplied]);
 
@@ -216,6 +218,7 @@ export default function MapCanvas(props: MapCanvasProps) {
                 selectedId={props.selectedId}
                 route={props.route}
                 onSelectMarker={props.onSelectMarker}
+                onOpenCluster={props.onOpenCluster}
                 scale={zoom.scale}
               />
             </svg>

@@ -1,11 +1,13 @@
-import { memo, type KeyboardEvent, type ReactNode } from "react";
+import { memo, type KeyboardEvent } from "react";
 import clsx from "clsx";
+import MapPinned from "@/games/wow-forever/components/worldMap/MapPinned";
 import MapPointLabel from "@/games/wow-forever/components/worldMap/MapPointLabel";
 import TripEndMarker from "@/games/wow-forever/components/worldMap/TripEndMarker";
 import type { MapView, WorldPoint } from "@/games/wow-forever/types/worldMap";
 import { mapShows, worldToMap } from "@/games/wow-forever/worldMap/mapGeometry";
 import type { StepKind } from "@/games/wow-forever/worldMap/directions";
 import type { MapMarker, MapRoute } from "@/games/wow-forever/worldMap/mapLayers";
+import { clusterLabel, clusterMarkers, type MarkerPx } from "@/games/wow-forever/worldMap/markerClusters";
 
 /** The client's world-map canvas size — the art in /public/wow-maps is drawn at this size. */
 export const MAP_W = 1002;
@@ -20,6 +22,8 @@ interface MapMarkerLayerProps {
   /** The trip: destination (B), and once directions are open the start (A) and the stops between. */
   route: MapRoute | null;
   onSelectMarker: (id: string) => void;
+  /** A numbered marker standing for several that overlap at this zoom: show them apart. */
+  onOpenCluster: (members: readonly MapMarker[]) => void;
   /** The map's zoom: markers, labels and lines are drawn this much smaller so they keep their size on screen. */
   scale?: number;
 }
@@ -48,12 +52,6 @@ const LEG_DASH: Readonly<Record<StepKind, string | undefined>> = {
 /** Scales a "1 2" dash pattern to the zoom. */
 function scaledDash(dash: string | undefined, scale: number): string | undefined {
   return dash?.split(" ").map((n) => Number(n) / scale).join(" ");
-}
-
-/** Keeps what's inside the same size on screen however far the map is zoomed, around its point. */
-function Pinned({ at, scale, children }: { at: Px; scale: number; children: ReactNode }) {
-  if (scale === 1) return <>{children}</>;
-  return <g transform={`translate(${at.px} ${at.py}) scale(${1 / scale}) translate(${-at.px} ${-at.py})`}>{children}</g>;
 }
 
 function toPx(map: MapView, p: WorldPoint): Px | null {
@@ -90,7 +88,7 @@ function pointList(points: readonly Px[]): string {
  * pulsing, named), you, and the trip's A and B. Memoised: hovering the map
  * re-renders the canvas, not every marker.
  */
-function MapMarkerLayer({ map, player, markers, selectedId, route, onSelectMarker, scale = 1 }: MapMarkerLayerProps) {
+function MapMarkerLayer({ map, player, markers, selectedId, route, onSelectMarker, onOpenCluster, scale = 1 }: MapMarkerLayerProps) {
   const shown = (p: WorldPoint | null | undefined): p is WorldPoint => !!p && mapShows(map, p);
   const you = shown(player) ? toPx(map, player) : null;
   const destination = route?.destination ?? null;
@@ -102,15 +100,22 @@ function MapMarkerLayer({ map, player, markers, selectedId, route, onSelectMarke
   const legs = routeLegs(map, route).sort((a, b) => Number(a.number === highlight) - Number(b.number === highlight));
   // B stands on the last stop; its own marker names it.
   const stops = (route?.stops ?? []).filter((s) => shown(s.world) && !(destination && samePoint(s.world, destination.world)));
-  const visible = markers.filter((m) => shown(m.world));
-  const selectedMarker = visible.find((m) => m.id === selectedId);
+  const placed = markers.flatMap((m): MarkerPx[] => {
+    const at = shown(m.world) ? toPx(map, m.world) : null;
+    return at ? [{ marker: m, ...at }] : [];
+  });
+  // Markers on top of each other at this zoom are one numbered marker; the chosen one always stands alone.
+  const groups = clusterMarkers(placed, scale, selectedId);
+  const clusters = groups.filter((g) => g.members.length > 1);
+  const singles = groups.filter((g) => g.members.length === 1).map((g) => g.members[0]);
+  const selectedMarker = singles.find((m) => m.id === selectedId);
   // The chosen result is drawn last so nothing covers it.
-  const ordered = [...visible.filter((m) => m !== selectedMarker), ...(selectedMarker ? [selectedMarker] : [])];
+  const ordered = [...singles.filter((m) => m !== selectedMarker), ...(selectedMarker ? [selectedMarker] : [])];
 
-  function markerKey(e: KeyboardEvent, id: string) {
+  function activateKey(e: KeyboardEvent, activate: () => void) {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      onSelectMarker(id);
+      activate();
     }
   }
 
@@ -149,12 +154,38 @@ function MapMarkerLayer({ map, player, markers, selectedId, route, onSelectMarke
         if (!at) return null;
         return (
           <g key={`stop-${s.number}`} aria-label={`Step ${s.number}: ${s.label}`}>
-            <Pinned at={at} scale={scale}>
+            <MapPinned at={at} scale={scale}>
               <circle cx={at.px} cy={at.py} r={14} strokeWidth={3} className="fill-amber-400 stroke-black/70" />
               <text x={at.px} y={at.py + 6} textAnchor="middle" className="fill-black text-[18px] font-bold">
                 {s.number}
               </text>
-            </Pinned>
+            </MapPinned>
+          </g>
+        );
+      })}
+      {clusters.map((c) => {
+        const at = { px: c.px, py: c.py };
+        const label = clusterLabel(c.members);
+        return (
+          <g
+            key={`cluster-${c.id}`}
+            role="button"
+            tabIndex={0}
+            aria-label={label}
+            data-testid="marker-cluster"
+            className="cursor-pointer focus:outline-none"
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
+            onClick={() => onOpenCluster(c.members)}
+            onKeyDown={(e) => activateKey(e, () => onOpenCluster(c.members))}
+          >
+            <title>{label}</title>
+            <MapPinned at={at} scale={scale}>
+              <circle cx={at.px} cy={at.py} r={14} strokeWidth={3} className={clsx(c.members[0].className, "stroke-white")} />
+              <text x={at.px} y={at.py + 6} textAnchor="middle" className="pointer-events-none fill-white text-[17px] font-bold [paint-order:stroke] stroke-black/70 [stroke-width:3px]">
+                {c.members.length}
+              </text>
+            </MapPinned>
           </g>
         );
       })}
@@ -173,10 +204,10 @@ function MapMarkerLayer({ map, player, markers, selectedId, route, onSelectMarke
             onPointerDown={(e) => e.stopPropagation()}
             onPointerUp={(e) => e.stopPropagation()}
             onClick={() => onSelectMarker(m.id)}
-            onKeyDown={(e) => markerKey(e, m.id)}
+            onKeyDown={(e) => activateKey(e, () => onSelectMarker(m.id))}
           >
             <title>{m.label}</title>
-            <Pinned at={at} scale={scale}>
+            <MapPinned at={at} scale={scale}>
             {selected && (
               <circle
                 cx={at.px}
@@ -189,27 +220,27 @@ function MapMarkerLayer({ map, player, markers, selectedId, route, onSelectMarke
             {selected && <circle cx={at.px} cy={at.py} r={21} strokeWidth={5} className="fill-black/25 stroke-white" />}
             <circle cx={at.px} cy={at.py} r={selected ? 14 : 9} strokeWidth={3} className={clsx(m.className, "stroke-white")} />
               {selected && !b && <MapPointLabel x={at.px} y={at.py} text={m.label} />}
-            </Pinned>
+            </MapPinned>
           </g>
         );
       })}
       {you && (
         <g aria-label="You" className="pointer-events-none">
-          <Pinned at={you} scale={scale}>
+          <MapPinned at={you} scale={scale}>
             <circle cx={you.px} cy={you.py} r={16} className="fill-blue-500/30" />
             <circle cx={you.px} cy={you.py} r={8} strokeWidth={3} className="fill-blue-600 stroke-white" />
-          </Pinned>
+          </MapPinned>
         </g>
       )}
       {a && origin && (
-        <Pinned at={a} scale={scale}>
+        <MapPinned at={a} scale={scale}>
           <TripEndMarker at={a} letter="A" label={`Start: ${origin.label}`} name={origin.label} start />
-        </Pinned>
+        </MapPinned>
       )}
       {b && destination && (
-        <Pinned at={b} scale={scale}>
+        <MapPinned at={b} scale={scale}>
           <TripEndMarker at={b} letter="B" label={`Destination: ${destination.label}`} name={destination.label} />
-        </Pinned>
+        </MapPinned>
       )}
     </>
   );

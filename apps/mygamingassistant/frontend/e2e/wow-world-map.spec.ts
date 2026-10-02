@@ -349,3 +349,18 @@ test("markers keep their size when the map zooms in", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Reset zoom" })).toBeVisible();
   await expect.poll(async () => Math.abs(((await you.boundingBox())?.width ?? 0) - before)).toBeLessThan(2);
 });
+
+test("a capital drawn on its zone's map opens on a click", async ({ page }) => {
+  await page.goto("/wow-forever/map?m=1426");
+  const map = page.getByTestId("zone-map");
+  await expect(page.getByRole("img", { name: "Dun Morogh map" })).toBeVisible();
+  // Ironforge sits at about 59, 29 on the Dun Morogh map.
+  await map.click({ position: await mapPoint(page, 59.1, 29.1) });
+  await expect(page.getByRole("img", { name: "Ironforge map" })).toBeVisible();
+
+  // Stormwind sits at about 20, 27 on the Elwynn Forest map.
+  await page.goto("/wow-forever/map?m=1429");
+  await expect(page.getByRole("img", { name: "Elwynn Forest map" })).toBeVisible();
+  await map.click({ position: await mapPoint(page, 19.6, 27.5) });
+  await expect(page.getByRole("img", { name: "Stormwind City map" })).toBeVisible();
+});
