@@ -272,7 +272,12 @@ def delete_check(event: WowRaidEvent, signups: int) -> dict[str, Any]:
             _back_button(event, "Keep it"),
         )
     ]
-    text = raid_copy.delete_prompt(title_text(event), signups, can_cancel=event.status == "scheduled")
+    text = raid_copy.delete_prompt(
+        title_text(event),
+        signups,
+        can_cancel=event.status == "scheduled",
+        attendance=event.attendance_recorded_at is not None,
+    )
     if event.series_id is not None:
         text = f"{text}\n\n{raid_repeat_copy.DELETE_NOTE}"
     return ephemeral_data(text, components=rows, embeds=[])

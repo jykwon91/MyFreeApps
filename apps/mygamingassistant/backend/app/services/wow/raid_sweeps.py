@@ -16,9 +16,14 @@ this tick, and the outbox drains as usual.
    started (``start_applied_at``): grey, every button off.  No DMs.
 3. **Completion.**  A ``scheduled`` raid ``COMPLETE_AFTER`` past its start is
    marked ``completed`` (``wow_raid_event_repo.complete_started_events``).
-4. **Late consumables DMs.**  Players eligible after their raid's round opened
+4. **Attendance.**  Each completed raid not yet recorded has its sign-ups
+   frozen as its attendance (``raid_attendance_service.record``), so a raid
+   completed this tick is recorded this tick.  One transaction each, taken
+   with SKIP LOCKED; the stamp (``attendance_recorded_at``) lands with the
+   rows.  No Discord calls.
+5. **Late consumables DMs.**  Players eligible after their raid's round opened
    get a DM row (``raid_consumables_round.schedule_late_dms``).
-5. **Repeats.**  Each repeat due posts its next raid
+6. **Repeats.**  Each repeat due posts its next raid
    (``raid_repeat_publisher.post_next``), one transaction each, at most one
    raid per repeat a tick; its Discord event and thread follow after the
    commit (``raid_extras.sync``).  A post Discord refused stops that repeat and
@@ -48,7 +53,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.repositories.wow import wow_raid_event_repo, wow_raid_guild_repo
 from app.services.discord import raid_deadline_copy, raid_extras, raid_publisher, raid_repeat_publisher, rest
-from app.services.wow import raid_consumables_round, raid_event_service
+from app.services.wow import raid_attendance_service, raid_consumables_round, raid_event_service
 from app.services.wow.raid_deadline import COMPLETE_AFTER
 from app.services.wow.raid_details import leader_id
 from app.services.wow.raid_notification_outcomes import RunStats
@@ -87,6 +92,11 @@ async def run_before_claims(scope: SessionScope, clock: Clock, stats: RunStats, 
             )
     except Exception:
         logger.exception("raid_notifications: completing finished raids failed")
+
+    try:
+        await _sweep(_record_one, scope, clock, stats, stop_at)
+    except Exception:
+        logger.exception("raid_notifications: recording attendance failed")
 
     try:
         async with scope() as db:
@@ -148,6 +158,17 @@ async def _start_one(scope: SessionScope, now: datetime, stats: RunStats) -> boo
         event_id = event.id
     await raid_publisher.refresh_public_message(event_id)
     stats.started += 1
+    return True
+
+
+async def _record_one(scope: SessionScope, now: datetime, stats: RunStats) -> bool:
+    """Freeze one finished raid's sign-ups as its attendance."""
+    async with scope() as db:
+        event = await wow_raid_event_repo.lock_attendance_due(db, now)
+        if event is None:
+            return False
+        await raid_attendance_service.record(db, event, now)
+    stats.attendance_recorded += 1
     return True
 
 

@@ -16,6 +16,10 @@ in (migration 0037).
 The Discord event and thread columns (0038) are written by
 ``raid_extras`` through the repo's setters; read them through
 ``raid_extras_rules``.
+
+Attendance (0039): ``attendance_counted`` is whether the raid counts toward
+attendance (a leader's toggle; never copied), ``attendance_recorded_at`` when
+its sign-ups were frozen into ``wow_raid_attendance`` (never cleared).
 """
 import uuid
 from datetime import datetime, timezone
@@ -31,6 +35,7 @@ from sqlalchemy import (
     String,
     Text,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -106,6 +111,12 @@ class WowRaidEvent(Base):
         Index("ix_wowraidevent_guild_starts_at", "guild_id", "starts_at"),
         # A repeat's latest raid (raid_series_service.template).
         Index("ix_wowraidevent_series_id", "series_id"),
+        # Finished raids whose attendance isn't recorded yet (the worker's sweep).
+        Index(
+            "ix_wowraidevent_attendance_due",
+            "starts_at",
+            postgresql_where=text("status = 'completed' AND attendance_recorded_at IS NULL"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -227,6 +238,11 @@ class WowRaidEvent(Base):
     thread_id: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     thread_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     thread_error: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # Whether the raid counts toward attendance (0039); raids finished before
+    # it were set to false.  Not copied: every new raid counts.
+    attendance_counted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    # When its sign-ups were frozen as its attendance (the sweep or [Record now]).
+    attendance_recorded_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
