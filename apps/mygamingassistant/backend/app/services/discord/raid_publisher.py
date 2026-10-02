@@ -53,6 +53,7 @@ from app.services.discord import emojis, raid_copy, rest
 from app.services.discord.interaction import NO_MENTIONS, ephemeral_data
 from app.services.discord.raid_context import signup_refusal, utcnow
 from app.services.discord.raid_draft_views import preview_data
+from app.services.discord.raid_repeat_views import posted_data
 from app.services.discord.raid_views import unix
 from app.services.wow import raid_event_service
 from app.services.wow.raid_details import leader_id
@@ -189,7 +190,7 @@ async def post_raid(event_id: uuid.UUID, application_id: str, token: str) -> Non
                 if event is not None:
                     await wow_raid_event_repo.set_message_id(db, event, message_id)
             link = rest.message_link(snapshot.guild_discord_id, snapshot.channel_id, message_id)
-            await edit_original(client, application_id, token, ephemeral_data(raid_copy.posted(snapshot.channel_id, link)))
+            await edit_original(client, application_id, token, posted_data(snapshot.channel_id, link, event_id))
     except Exception:
         logger.exception("Raid bot: post_raid failed for event %s", event_id)
 

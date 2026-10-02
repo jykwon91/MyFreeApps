@@ -124,7 +124,8 @@ def _card_ids(event: WowRaidEvent) -> list[str]:
     ids = [f"raid:v1:ed:{event.id}:{action}" for action in (*actions, "cancel", "delete", "done")]
     at = len(actions)
     ids[at:at] = [f"raid:v1:ml:{event.id}:open:-:-", f"raid:v1:ed:{event.id}:notes_on", f"raid:v1:cp:{event.id}"]
-    return ids  # [Sign-ups] [Notes: off], then [Copy raid] starts the last row
+    ids.insert(4, f"raid:v1:rp:{event.id}:open")
+    return ids  # [Repeat] ends the first row; [Sign-ups] [Notes: off], then [Copy raid] starts the last row
 
 
 # ---------------------------------------------------------------------------
@@ -516,10 +517,10 @@ async def test_cancelling_from_the_card_asks_first_and_keep_comes_back(
     (announcement,) = fake_discord.channel_posts()
     assert announcement.body is not None and "Server down" in announcement.body["content"]
 
-    # --- a cancelled raid can only be copied or deleted; an old card or form left open changes nothing
+    # --- a cancelled raid can only be repeated, copied or deleted; an old card or form left open changes nothing
     response = await post(menu_command(EDIT_MENU, "m1"))
     assert content(response) == raid_copy.EDIT_GONE_PROMPT
-    over = (f"cp:{event.id}", f"ed:{event.id}:delete", f"ed:{event.id}:done")
+    over = (f"rp:{event.id}:open", f"cp:{event.id}", f"ed:{event.id}:delete", f"ed:{event.id}:done")
     assert custom_ids(response) == [f"raid:v1:{action}" for action in over]
     response = await post(_edit(event, "title"))
     assert response["type"] == 7

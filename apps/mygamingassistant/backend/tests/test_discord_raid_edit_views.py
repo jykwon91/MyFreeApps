@@ -12,7 +12,7 @@ import pytest
 
 from app.core.config import settings
 from app.models.wow.wow_raid_event import WowRaidEvent
-from app.services.discord import raid_copy, raid_limit_copy
+from app.services.discord import raid_copy, raid_limit_copy, raid_repeat_copy
 from app.services.discord.raid_edit_views import (
     CLASS_LIMITS_MAX,
     FIELD,
@@ -90,7 +90,7 @@ def _input(modal: dict[str, Any]) -> dict[str, Any]:
 
 _PROPERTY_ROWS = [
     [("Title", 2, _id("ed", "title")), ("Leader", 2, _id("ed", "leader")), ("Date & Time", 2, _id("ed", "when")),
-     ("Deadline", 2, _id("ed", "deadline"))],
+     ("Deadline", 2, _id("ed", "deadline")), ("Repeat", 2, _id("rp", "open"))],
     [("Description", 2, _id("ed", "desc")), ("Image", 2, _id("ed", "image")), ("Color", 2, _id("ed", "color"))],
     [("Role limits", 2, _id("ed", "role_limits")), ("Class limits", 2, _id("ed", "class_limits")),
      ("Sign-ups", 2, _id("ml", "open", "-", "-")), ("Notes: off", 2, _id("ed", "notes_on"))],
@@ -172,10 +172,13 @@ def test_closed_sign_ups_grey_the_card_but_leave_everything_editable() -> None:
 
 
 @pytest.mark.parametrize("status", ["cancelled", "completed"])
-def test_a_raid_that_is_over_can_be_copied_or_deleted(status: str) -> None:
+def test_a_raid_that_is_over_can_be_repeated_copied_or_deleted(status: str) -> None:
     data = edit_card(_event(status=status))
     assert data["content"] == raid_copy.EDIT_GONE_PROMPT
-    over = [("Copy raid", 2, _id("cp")), ("Delete raid", 4, _id("ed", "delete")), ("Done", 1, _id("ed", "done"))]
+    over = [
+        ("Repeat", 2, _id("rp", "open")), ("Copy raid", 2, _id("cp")), ("Delete raid", 4, _id("ed", "delete")),
+        ("Done", 1, _id("ed", "done")),
+    ]
     assert _rows(data) == [over]
     assert _embed(data)["title"] == "Edit raid"
 
@@ -261,6 +264,13 @@ def test_deleting_asks_first_and_points_at_cancel_while_it_can() -> None:
 
     over = delete_check(_event(status="cancelled", title="*Ony*"), 0)
     assert over["content"] == raid_copy.delete_prompt(r"\*Ony\*", 0, can_cancel=False)
+
+
+def test_a_repeating_raids_card_says_so_and_deleting_it_says_the_repeat_goes_on() -> None:
+    repeating = _event(series_id=uuid.uuid4())
+    assert "**Repeat:** on" in _embed(edit_card(repeating))["description"].split("\n")
+    prompt = raid_copy.delete_prompt("Onyxia's Lair", 0, can_cancel=True)
+    assert delete_check(repeating, 0)["content"] == f"{prompt}\n\n{raid_repeat_copy.DELETE_NOTE}"
 
 
 # ---------------------------------------------------------------------------

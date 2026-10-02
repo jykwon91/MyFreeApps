@@ -15,7 +15,7 @@ subcommand, so the raid bot is split:
 
 * ``/raid`` — everyone: ``list``, ``prefs`` (and ``ping``).
 * ``/raid-admin`` — organisers: ``setup``, ``create``, ``edit``, ``cancel``,
-  ``signup``.
+  ``signup``, ``repeats``.
   ``default_member_permissions`` = Manage Events, so regular members never
   see organiser actions in their slash menu.  Server admins can still widen
   or narrow access per command in Server Settings → Integrations.
@@ -234,6 +234,7 @@ RAID_ADMIN_COMMAND: Final[dict[str, Any]] = {
                 {"type": _USER, "name": "player", "description": "Who to add, change or remove", "required": True},
             ],
         },
+        {"type": _SUB_COMMAND, "name": "repeats", "description": "See and change the raids that repeat"},
     ],
 }
 

@@ -37,8 +37,8 @@ def test_single_head_is_0031(script_directory: ScriptDirectory) -> None:
         "Orphan heads usually mean a migration's down_revision is stale "
         "after a merge — rebase and re-point the down_revision."
     )
-    assert heads[0] == "0036", (
-        f"Expected head 0036 (wow raid sign-up deadline), "
+    assert heads[0] == "0037", (
+        f"Expected head 0037 (wow raid series), "
         f"got {heads[0]}."
     )
 
@@ -267,9 +267,10 @@ def test_0033_down_revision_points_at_0032(
     assert rev.down_revision == "0032"
 
 
-def test_0034_to_0036_down_revisions(
+def test_0034_to_0037_down_revisions(
     script_directory: ScriptDirectory,
 ) -> None:
-    """0034 chains off 0033 (character names), 0035 off 0034 (sign-up notes), 0036 off 0035 (deadline)."""
-    revs = [script_directory.get_revision(rev) for rev in ("0034", "0035", "0036")]
-    assert [rev.down_revision for rev in revs] == ["0033", "0034", "0035"]
+    """0034 chains off 0033 (character names), 0035 off 0034 (sign-up notes), 0036 off 0035 (deadline),
+    0037 off 0036 (repeating raids)."""
+    revs = [script_directory.get_revision(rev) for rev in ("0034", "0035", "0036", "0037")]
+    assert [rev.down_revision for rev in revs] == ["0033", "0034", "0035", "0036"]

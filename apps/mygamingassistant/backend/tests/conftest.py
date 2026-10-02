@@ -134,6 +134,7 @@ _UOW_CONSUMERS = (
     "app.services.discord.components.raid_manage_status",
     "app.services.discord.components.raid_manage_swap",
     "app.services.discord.components.raid_member",
+    "app.services.discord.components.raid_repeat",
     "app.services.discord.components.raid_seat",
     "app.services.discord.components.raid_signup",
     "app.services.discord.raid_manage_notify",

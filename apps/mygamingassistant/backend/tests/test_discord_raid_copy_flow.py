@@ -95,6 +95,9 @@ async def test_copy_raid_makes_a_draft_with_the_raids_settings_and_nobody_on_it(
         db, event_id=event.id, discord_user_id="501", display_name="Player501", status="confirmed",
         wow_class="mage", role="dps", spec="frost",
     )
+    # It repeats; its copy doesn't.
+    await post(click(f"raid:v1:rp:{event.id}:every", user_id=ORGANISER, permissions=ORGANISER_PERMS, values=["7"]))
+    assert event.series_id is not None
 
     # --- the form: the raid's time a week on
     response = await post(_copy(event))
@@ -122,7 +125,7 @@ async def test_copy_raid_makes_a_draft_with_the_raids_settings_and_nobody_on_it(
         event.guild_id, new_start, CHANNEL, None
     )
     assert (draft.created_by_user_id, draft.created_by_display_name) == ("402", "Sylvanas")
-    assert (draft.closed_at, draft.close_reason, draft.last_pinged_at) == (None, None, None)
+    assert (draft.closed_at, draft.close_reason, draft.last_pinged_at, draft.series_id) == (None, None, None, None)
     signups = (await db.execute(select(WowRaidSignup).where(WowRaidSignup.event_id == draft.id))).scalars()
     assert list(signups) == []
     await db.refresh(event)

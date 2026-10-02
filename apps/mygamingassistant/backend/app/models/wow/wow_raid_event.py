@@ -9,6 +9,9 @@ completed.  Migration 0026 added ``draft``.
 
 raid_key is a short slug identifying the instance (mc, onyxia, etc.).  title
 overrides the default display name if set.
+
+series_id FK → wow_raid_series (ON DELETE SET NULL): the repeat the raid is
+in (migration 0037).
 """
 import uuid
 from datetime import datetime, timezone
@@ -91,6 +94,8 @@ class WowRaidEvent(Base):
         ),
         # Efficiently list upcoming events per guild.
         Index("ix_wowraidevent_guild_starts_at", "guild_id", "starts_at"),
+        # A repeat's latest raid (raid_series_service.template).
+        Index("ix_wowraidevent_series_id", "series_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -179,6 +184,13 @@ class WowRaidEvent(Base):
     # 0035).  Off hides the notes already written; they stay on the sign-ups.
     signup_notes_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
+    )
+    # The repeat the raid is in: the raid it was turned on from, and each one
+    # it posted; null = not in one, or the repeat stopped (migration 0037).
+    series_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("wow_raid_series.id", ondelete="SET NULL", name="fk_wowraidevent_series"),
+        nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

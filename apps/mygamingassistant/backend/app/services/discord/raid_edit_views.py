@@ -3,7 +3,8 @@
 Right-click a raid post → Apps → **Raid: Edit** opens the edit card: the
 raid as it stands — title, leader, date and time, description, banner,
 color and its role and class limits — with a button for each, then
-[Copy raid] [Cancel raid] [Delete raid] [Done].
+[Copy raid] [Cancel raid] [Delete raid] [Done].  [Repeat] (by Deadline)
+opens the Repeat card (``raid_repeat_views``).
 
 * Title, Date & Time, Deadline, Description, Image, Role limits, Class
   limits and Cancel raid open a form (type 9) holding what's there now;
@@ -18,7 +19,7 @@ color and its role and class limits — with a button for each, then
 * After a move, the card offers [Tell them in channel] while anyone is
   on the raid.
 
-A raid that's cancelled or finished can be copied or deleted.
+A raid that's cancelled or finished can be repeated, copied or deleted.
 """
 from __future__ import annotations
 
@@ -37,7 +38,14 @@ from platform_shared.services.discord import (
 )
 
 from app.models.wow.wow_raid_event import WowRaidEvent
-from app.services.discord import raid_copy, raid_deadline_copy, raid_limit_copy, raid_manage_copy, raid_member_copy
+from app.services.discord import (
+    raid_copy,
+    raid_deadline_copy,
+    raid_limit_copy,
+    raid_manage_copy,
+    raid_member_copy,
+    raid_repeat_copy,
+)
 from app.services.discord.interaction import ephemeral_data, modal_response
 # FIELD is re-exported: the forms' submit handlers read the box by it.
 from app.services.discord.raid_forms import FIELD as FIELD
@@ -93,7 +101,7 @@ def edit_card(event: WowRaidEvent, *, notice: str | None = None, notify_count: i
 
     if event.status != "scheduled":
         delete = _edit_button(event, "Delete raid", "delete", BUTTON_STYLE_DANGER)
-        rows = [action_row(_copy_button(event), delete, _done_button(event))]
+        rows = [action_row(_repeat_button(event), _copy_button(event), delete, _done_button(event))]
         return ephemeral_data(notice or raid_copy.EDIT_GONE_PROMPT, components=rows, embeds=[embed])
 
     content = notice or raid_copy.EDIT_PROMPT
@@ -103,6 +111,7 @@ def edit_card(event: WowRaidEvent, *, notice: str | None = None, notify_count: i
             _edit_button(event, "Leader", "leader"),
             _edit_button(event, "Date & Time", "when"),
             _edit_button(event, "Deadline", "deadline"),
+            _repeat_button(event),
         ),
         action_row(
             _edit_button(event, "Description", "desc"),
@@ -137,6 +146,7 @@ def _detail_lines(event: WowRaidEvent) -> list[str]:
         f"**Leader:** {leader_text(event)}",
         f"**Date & Time:** <t:{starts}:F> (<t:{starts}:R>)",
         *raid_deadline_copy.deadline_lines(event),
+        *raid_repeat_copy.repeat_lines(event),
         f"**Image:** {_image_text(event)}",
         f"**Color:** {_color_text(event)}",
         raid_limit_copy.role_limits_line(limits.roles),
@@ -193,6 +203,11 @@ def _done_button(event: WowRaidEvent) -> dict[str, Any]:
 def _copy_button(event: WowRaidEvent) -> dict[str, Any]:
     """[Copy raid]: a new raid with this one's settings (``components/raid_duplicate``)."""
     return button("Copy raid", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("cp", event.id))
+
+
+def _repeat_button(event: WowRaidEvent) -> dict[str, Any]:
+    """[Repeat]: post this raid again every few days (``components/raid_repeat``)."""
+    return button(raid_repeat_copy.REPEAT_BUTTON, BUTTON_STYLE_SECONDARY, raid_custom_id.encode("rp", event.id, "open"))
 
 
 def _back_button(event: WowRaidEvent, label: str = "Back") -> dict[str, Any]:
@@ -254,6 +269,8 @@ def delete_check(event: WowRaidEvent, signups: int) -> dict[str, Any]:
         )
     ]
     text = raid_copy.delete_prompt(title_text(event), signups, can_cancel=event.status == "scheduled")
+    if event.series_id is not None:
+        text = f"{text}\n\n{raid_repeat_copy.DELETE_NOTE}"
     return ephemeral_data(text, components=rows, embeds=[])
 
 

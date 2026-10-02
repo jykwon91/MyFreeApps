@@ -69,11 +69,13 @@ async def create_copy(
     channel_id: str,
     created_by_user_id: str,
     created_by_display_name: str | None,
+    series_id: uuid.UUID | None = None,
 ) -> WowRaidEvent:
     """Insert a raid with *source*'s settings (``COPIED``) at *starts_at* and flush; nobody is signed up.
 
     JSON values are deep-copied.  A None is left out so its column stays SQL
     NULL: plain JSONB would store JSON null, which the check constraints refuse.
+    *series_id* puts it in a repeat (the raids a repeat posts).
     """
     kept = {name: copy.deepcopy(value) for name in COPIED if (value := getattr(source, name)) is not None}
     row = WowRaidEvent(
@@ -83,6 +85,7 @@ async def create_copy(
         channel_id=channel_id,
         created_by_user_id=created_by_user_id,
         created_by_display_name=created_by_display_name,
+        series_id=series_id,
         **kept,
     )
     db.add(row)
@@ -195,6 +198,30 @@ async def clear_message_id(db: AsyncSession, event: WowRaidEvent) -> WowRaidEven
     """Forget the raid's post: it was deleted, and the raid isn't posted again."""
     event.message_id = None
     await db.flush()
+    return event
+
+
+async def latest_in_series(db: AsyncSession, series_id: uuid.UUID) -> WowRaidEvent | None:
+    """The repeat's latest raid (by start, ties by id, any status): what its next raid copies."""
+    result = await db.execute(
+        select(WowRaidEvent)
+        .where(WowRaidEvent.series_id == series_id)
+        .order_by(WowRaidEvent.starts_at.desc(), WowRaidEvent.id.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+async def set_series(db: AsyncSession, event: WowRaidEvent, series_id: uuid.UUID) -> WowRaidEvent:
+    """Put the raid in a repeat: the raid a repeat is turned on from."""
+    event.series_id = series_id
+    await db.flush()
+    return event
+
+
+async def refresh_series(db: AsyncSession, event: WowRaidEvent) -> WowRaidEvent:
+    """Re-read the raid's series_id: deleting its repeat cleared it in the database (ON DELETE SET NULL)."""
+    await db.refresh(event, attribute_names=["series_id"])
     return event
 
 

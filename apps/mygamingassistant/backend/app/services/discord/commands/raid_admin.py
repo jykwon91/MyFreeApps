@@ -1,10 +1,11 @@
-"""/raid-admin — organiser commands (setup, create, edit, cancel, signup).
+"""/raid-admin — organiser commands (setup, create, edit, cancel, signup, repeats).
 
 A separate top-level command so ``default_member_permissions`` (Manage
 Events) hides it from regular members' slash menu.  Discord only gates
 per top-level command, and the client-side gate is advisory, so every
 handler here also re-checks the member's permission bitfield from the
-payload: Manage Events for create/edit/cancel/signup, Manage Server for setup.
+payload: Manage Events for create/edit/cancel/signup/repeats, Manage Server
+for setup.
 
 Every reply is private (ephemeral).  Anything that must touch Discord's
 REST API runs as a background task after the response (see
@@ -21,6 +22,7 @@ from app.db.session import unit_of_work
 from app.repositories.wow import wow_raid_guild_repo
 from app.services.discord import emojis, raid_copy, raid_publisher
 from app.services.discord.components.raid_manage_open import open_from_command
+from app.services.discord.components.raid_repeat import list_repeats
 from app.services.discord.interaction import (
     Interaction,
     deferred_ephemeral_response,
@@ -56,6 +58,8 @@ async def handle_raid_admin(interaction: Interaction, background: BackgroundTask
         return await _cancel(interaction)
     if subcommand == "signup":
         return await open_from_command(interaction)
+    if subcommand == "repeats":
+        return await list_repeats(interaction)
     return ephemeral_response("Unknown command.")
 
 
@@ -91,8 +95,7 @@ async def _setup(interaction: Interaction, background: BackgroundTasks) -> dict[
             configured_by_user_id=interaction.user_id,
         )
         # Setup states the complete config: no ping_role option = stop pinging.
-        guild.ping_role_id = ping_role_id
-        await db.flush()
+        await wow_raid_guild_repo.set_ping_role(db, guild, ping_role_id)
 
     background.add_task(
         raid_publisher.verify_setup,

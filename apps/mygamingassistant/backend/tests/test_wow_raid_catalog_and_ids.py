@@ -47,6 +47,8 @@ from app.services.wow.raid_custom_id import (
     MODALS,
     PICKERS,
     RELEASE_STATUSES,
+    REPEAT_VERBS,
+    REPEATS_PICK,
     SAME_STATUS,
 )
 from app.services.wow.raid_member_prefs_service import saved_spec_for_column
@@ -268,6 +270,13 @@ def test_edit_buttons_menus_and_forms_round_trip() -> None:
     assert raid_custom_id.parse(delete_id) == raid_custom_id.RaidCustomId("del", _EVENT)
 
 
+def test_the_repeat_card_and_raid_admin_repeats_round_trip() -> None:
+    for verb in REPEAT_VERBS:
+        custom_id = raid_custom_id.encode("rp", _EVENT, verb)
+        assert raid_custom_id.parse(custom_id) == raid_custom_id.RaidCustomId("rp", _EVENT, (verb,))
+    assert raid_custom_id.parse("raid:v1:rpl") == raid_custom_id.RaidCustomId(REPEATS_PICK, None)
+
+
 def test_manage_sign_ups_round_trip() -> None:
     for verb in ("open", "who", "done", "row"):
         custom_id = raid_custom_id.manage(_EVENT, verb)
@@ -397,6 +406,10 @@ def test_encode_rejects_overlong() -> None:
         f"raid:v1:ml:{_EVENT}:addt:123456789012345678:warrior",
         f"raid:v1:ml:{_EVENT}:addq:123456789012345678:warrior.restoration",  # not a Warrior spec
         f"raid:v1:ml:{_EVENT}:dropt:123456789012345678:warrior.fury",
+        f"raid:v1:rp:{_EVENT}",
+        f"raid:v1:rp:{_EVENT}:weekly",
+        f"raid:v1:rp:{_EVENT}:open:now",
+        "raid:v1:rpl:extra",
         f"raid:v1:explode:{_EVENT}",
         "raid:v1:testdm:extra",
         "raid:v1:signup:" + "a" * 200,
@@ -495,4 +508,6 @@ def test_command_split() -> None:
     assert "default_member_permissions" not in RAID_COMMAND
     assert RAID_ADMIN_COMMAND["default_member_permissions"] == str(1 << 33)
     assert [o["name"] for o in RAID_COMMAND["options"]] == ["ping", "list", "prefs"]
-    assert [o["name"] for o in RAID_ADMIN_COMMAND["options"]] == ["setup", "create", "edit", "cancel", "signup"]
+    assert [o["name"] for o in RAID_ADMIN_COMMAND["options"]] == [
+        "setup", "create", "edit", "cancel", "signup", "repeats"
+    ]
