@@ -136,9 +136,11 @@ def test_the_create_preview_says_when_sign_ups_will_close() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_both_cards_end_their_first_row_with_deadline() -> None:
+def test_both_cards_put_deadline_after_date_and_time() -> None:
     deadline = ("Deadline", f"raid:v1:ed:{_EVENT_ID}:deadline")
-    assert _row_one(edit_card(_event()))[-1] == deadline
+    # The edit card's [Repeat] comes after it (a draft isn't posted yet, so it can't repeat).
+    repeat = ("Repeat", f"raid:v1:rp:{_EVENT_ID}:open")
+    assert _row_one(edit_card(_event()))[-2:] == [deadline, repeat]
     assert _row_one(options_data(_event(status="draft"), _guild(), emojis=EMPTY_EMOJIS))[-1] == deadline
 
 

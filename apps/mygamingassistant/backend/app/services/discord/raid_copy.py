@@ -333,7 +333,7 @@ def ping_signature(raid_label: str, unix: int, leader: str) -> str:
 EDIT_PROMPT: Final = "Pick what you want to change."
 EDIT_FOOTER: Final = "changes show on the raid post within a second"
 EDIT_SAVED: Final = "Saved."
-EDIT_GONE_PROMPT: Final = "This raid is cancelled or finished, so all you can do now is delete it."
+EDIT_GONE_PROMPT: Final = "This raid is cancelled or finished. You can copy it to a new date, repeat it, or delete it."
 TITLE_OK: Final = "Title updated."
 TITLE_EMPTY: Final = "The title can't be empty."
 DESC_OK: Final = "Description updated."

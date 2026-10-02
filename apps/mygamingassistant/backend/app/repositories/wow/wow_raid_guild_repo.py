@@ -30,6 +30,13 @@ async def get_by_discord_id(
     return result.scalar_one_or_none()
 
 
+async def set_ping_role(db: AsyncSession, guild: WowRaidGuild, role_id: str | None) -> WowRaidGuild:
+    """Set the role a new raid's post pings; None = ping nobody."""
+    guild.ping_role_id = role_id
+    await db.flush()
+    return guild
+
+
 async def upsert_config(
     db: AsyncSession,
     *,

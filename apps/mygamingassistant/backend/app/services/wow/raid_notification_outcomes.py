@@ -47,6 +47,8 @@ class RunStats:
     undeliverable: int = 0
     deferred: int = 0
     completed_events: int = 0
+    repeats_posted: int = 0
+    repeats_stopped: int = 0
     late_dms: int = 0
     deadline_closed: int = 0
     started: int = 0

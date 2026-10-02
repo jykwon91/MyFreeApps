@@ -4,6 +4,7 @@ Standalone async functions; the caller owns the transaction.
 """
 from __future__ import annotations
 
+import copy
 import uuid
 from datetime import datetime
 from typing import Final
@@ -15,6 +16,12 @@ from app.models.wow.wow_raid_event import WowRaidEvent
 
 # A sign-up deadline is stored in minutes: it falls at starts_at - minutes * this.
 _MINUTE: Final = literal_column("interval '1 minute'", Interval())
+# What a copy of a raid keeps (Copy raid): its settings.  Never its sign-ups, post,
+# start, status or state (closed, cancelled, the sweeps' stamps), nor who made it.
+COPIED: Final = (
+    "raid_key", "title", "size_cap", "notes", "leader_user_id", "leader_display_name", "image_url", "color",
+    "mention_role_ids", "role_limits", "class_limits", "signup_deadline_minutes", "signup_notes_enabled",
+)
 
 
 async def create(
@@ -47,6 +54,39 @@ async def create(
         created_by_user_id=created_by_user_id,
         created_by_display_name=created_by_display_name,
         notes=notes,
+    )
+    db.add(row)
+    await db.flush()
+    return row
+
+
+async def create_copy(
+    db: AsyncSession,
+    source: WowRaidEvent,
+    *,
+    starts_at: datetime,
+    status: str,
+    channel_id: str,
+    created_by_user_id: str,
+    created_by_display_name: str | None,
+    series_id: uuid.UUID | None = None,
+) -> WowRaidEvent:
+    """Insert a raid with *source*'s settings (``COPIED``) at *starts_at* and flush; nobody is signed up.
+
+    JSON values are deep-copied.  A None is left out so its column stays SQL
+    NULL: plain JSONB would store JSON null, which the check constraints refuse.
+    *series_id* puts it in a repeat (the raids a repeat posts).
+    """
+    kept = {name: copy.deepcopy(value) for name in COPIED if (value := getattr(source, name)) is not None}
+    row = WowRaidEvent(
+        guild_id=source.guild_id,
+        starts_at=starts_at,
+        status=status,
+        channel_id=channel_id,
+        created_by_user_id=created_by_user_id,
+        created_by_display_name=created_by_display_name,
+        series_id=series_id,
+        **kept,
     )
     db.add(row)
     await db.flush()
@@ -151,6 +191,37 @@ async def set_message_id(
     """Persist the Discord message ID of the signup embed."""
     event.message_id = message_id
     await db.flush()
+    return event
+
+
+async def clear_message_id(db: AsyncSession, event: WowRaidEvent) -> WowRaidEvent:
+    """Forget the raid's post: it was deleted, and the raid isn't posted again."""
+    event.message_id = None
+    await db.flush()
+    return event
+
+
+async def latest_in_series(db: AsyncSession, series_id: uuid.UUID) -> WowRaidEvent | None:
+    """The repeat's latest raid (by start, ties by id, any status): what its next raid copies."""
+    result = await db.execute(
+        select(WowRaidEvent)
+        .where(WowRaidEvent.series_id == series_id)
+        .order_by(WowRaidEvent.starts_at.desc(), WowRaidEvent.id.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+async def set_series(db: AsyncSession, event: WowRaidEvent, series_id: uuid.UUID) -> WowRaidEvent:
+    """Put the raid in a repeat: the raid a repeat is turned on from."""
+    event.series_id = series_id
+    await db.flush()
+    return event
+
+
+async def refresh_series(db: AsyncSession, event: WowRaidEvent) -> WowRaidEvent:
+    """Re-read the raid's series_id: deleting its repeat cleared it in the database (ON DELETE SET NULL)."""
+    await db.refresh(event, attribute_names=["series_id"])
     return event
 
 

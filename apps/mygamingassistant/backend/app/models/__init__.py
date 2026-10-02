@@ -21,6 +21,7 @@ from app.models.wow.map_capture import WowMapCapture  # noqa: F401
 # Order: guild first (no deps), then event (fk→guild), signup (fk→event),
 # member_pref (fk→guild), notification (fk→event).
 from app.models.wow.wow_raid_guild import WowRaidGuild  # noqa: F401
+from app.models.wow.wow_raid_series import WowRaidSeries  # noqa: F401
 from app.models.wow.wow_raid_event import WowRaidEvent  # noqa: F401
 from app.models.wow.wow_raid_signup import WowRaidSignup  # noqa: F401
 from app.models.wow.wow_raid_member_pref import WowRaidMemberPref  # noqa: F401

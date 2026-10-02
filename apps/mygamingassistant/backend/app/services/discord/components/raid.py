@@ -17,12 +17,14 @@ from app.services.discord import raid_copy, raid_publisher
 from app.services.discord.components import (
     raid_admin,
     raid_card,
+    raid_duplicate,
     raid_edit,
     raid_leader,
     raid_manage,
     raid_manage_open,
     raid_manage_reason,
     raid_member,
+    raid_repeat,
     raid_seat,
     raid_signup,
 )
@@ -65,6 +67,9 @@ _HANDLERS: Final[dict[str, ComponentHandler]] = {
     "ed": raid_edit.handle_edit_button,
     "pick": raid_edit.handle_pick,
     "del": raid_edit.handle_delete,
+    "cp": raid_duplicate.handle_copy,
+    "rp": raid_repeat.handle_repeat,
+    "rpl": raid_repeat.handle_repeats_pick,
     "ml": raid_manage.handle_manage,
     "mr": raid_manage_open.handle_raid_pick,
     "testdm": _handle_test_dm,
@@ -84,6 +89,9 @@ _MODAL_HANDLERS: Final[dict[str, ComponentHandler]] = {
     "char": raid_member.handle_character_submit,
     "note": raid_member.handle_note_submit,
     "reason": raid_member.handle_note_submit,
+    "copy": raid_duplicate.handle_copy_submit,
+    "repeat_days": raid_repeat.handle_repeat_days_submit,
+    "repeat_next": raid_repeat.handle_repeat_next_submit,
 }
 
 

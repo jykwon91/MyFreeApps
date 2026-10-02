@@ -18,6 +18,11 @@ this tick, and the outbox drains as usual.
    marked ``completed`` (``wow_raid_event_repo.complete_started_events``).
 4. **Late consumables DMs.**  Players eligible after their raid's round opened
    get a DM row (``raid_consumables_round.schedule_late_dms``).
+5. **Repeats.**  Each repeat due posts its next raid
+   (``raid_repeat_publisher.post_next``), one transaction each, at most one
+   raid per repeat a tick.  A post Discord refused stops that repeat and
+   DMs its creator; one it didn't answer is tried again next tick.  Last,
+   because it waits on Discord while holding the repeat.
 
 The sweeps write the new columns and ``closed_at``, never ``status``, and
 run before completion, so after downtime a raid already past it is still
@@ -29,7 +34,9 @@ one DM per raid.
 from __future__ import annotations
 
 import asyncio
+import functools
 import logging
+import uuid
 from collections.abc import Awaitable, Callable
 from contextlib import AbstractAsyncContextManager
 from datetime import datetime, timedelta
@@ -39,7 +46,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.repositories.wow import wow_raid_event_repo, wow_raid_guild_repo
-from app.services.discord import raid_deadline_copy, raid_publisher, rest
+from app.services.discord import raid_deadline_copy, raid_publisher, raid_repeat_publisher, rest
 from app.services.wow import raid_consumables_round, raid_event_service
 from app.services.wow.raid_details import leader_id
 from app.services.wow.raid_notification_outcomes import RunStats
@@ -86,6 +93,11 @@ async def run_before_claims(scope: SessionScope, clock: Clock, stats: RunStats, 
             stats.late_dms = await raid_consumables_round.schedule_late_dms(db, clock())
     except Exception:
         logger.exception("raid_notifications: scheduling late consumables DMs failed")
+
+    try:
+        await _sweep(functools.partial(_repeat_one, posted=set()), scope, clock, stats, stop_at)
+    except Exception:
+        logger.exception("raid_notifications: posting repeating raids failed")
 
 
 async def _sweep(step: _Step, scope: SessionScope, clock: Clock, stats: RunStats, stop_at: float) -> None:
@@ -136,4 +148,24 @@ async def _start_one(scope: SessionScope, now: datetime, stats: RunStats) -> boo
         event_id = event.id
     await raid_publisher.refresh_public_message(event_id)
     stats.started += 1
+    return True
+
+
+async def _repeat_one(scope: SessionScope, now: datetime, stats: RunStats, *, posted: set[uuid.UUID]) -> bool:
+    """Post one repeat's next raid; *posted* holds the repeats this tick already posted."""
+    try:
+        async with scope() as db:
+            turn = await raid_repeat_publisher.post_next(db, now, skip=posted)
+    except raid_repeat_publisher.RepeatFailed as failed:
+        if await raid_repeat_publisher.stop_after_failure(scope, failed):
+            stats.repeats_stopped += 1
+        return True
+    except raid_repeat_publisher.RepeatDeferred as deferred:
+        logger.warning("raid_notifications: Discord didn't take a repeat's post (%s); trying next tick", deferred)
+        return False
+    if turn is None:
+        return False
+    if turn.kind == "posted":
+        posted.add(turn.series_id)
+        stats.repeats_posted += 1
     return True

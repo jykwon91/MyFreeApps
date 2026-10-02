@@ -39,9 +39,15 @@ ed       Raid: Edit's buttons                         raid:v1:ed:<event>:<proper
          ``notes_on`` / ``notes_off`` = [Notes: off] / [Notes: on], naming the state it switches to)
 pick     Raid: Edit's leader / color menus            raid:v1:pick:<event>:<leader|color|mentions>
 del      [Delete raid] on Raid: Edit's delete check   raid:v1:del:<event>
+cp       Raid: Edit's [Copy raid]                     raid:v1:cp:<event>
+rp       the Repeat card (Raid: Edit's [Repeat],      raid:v1:rp:<event>:<verb>  (see ``REPEAT_VERBS``)
+         the "Posted" message's [Repeat this raid])
+rpl      /raid-admin repeats' menu (the value is      raid:v1:rpl
+         the repeat's latest raid)
 m        a modal's submit                             raid:v1:m:<event>:<ping|title|when|desc|image|cancel|
                                                                          role_limits|class_limits|char|
-                                                                         note|reason|deadline>
+                                                                         note|reason|deadline|copy|
+                                                                         repeat_days|repeat_next>
 ml       Manage sign-ups (a leader adds, changes,      raid:v1:ml:<event>:<verb>:<member|->:<arg|->
          moves and removes players; see ``MANAGE_VERBS``)
 testdm   /raid prefs [Send me a test DM]              raid:v1:testdm
@@ -92,10 +98,14 @@ _EVENT_ACTIONS: Final[dict[str, int]] = {
     "del": 0,
     "m": 1,
     "ml": 3,
+    "cp": 0,
+    "rp": 1,
 }
 # Raid: Manage's raid picker; its option values carry the raid and the player.
 RAID_PICK: Final = "mr"
-_BARE_ACTIONS: Final = frozenset({"testdm", RAID_PICK})
+# /raid-admin repeats' menu; its option values are a repeat's latest raid.
+REPEATS_PICK: Final = "rpl"
+_BARE_ACTIONS: Final = frozenset({"testdm", RAID_PICK, REPEATS_PICK})
 
 # A menu opened from My sign-up: keep whatever status you have when you pick.
 SAME_STATUS: Final = "same"
@@ -118,12 +128,15 @@ EDIT_ACTIONS: Final = (
     "title", "leader", "when", "desc", "image", "color", "cancel", "delete", "done", "back", "keep",
     "more", "preview", "mentions", "noping", "role_limits", "class_limits", "notes_on", "notes_off", "deadline",
 )
+# The Repeat card: open it, its How often? and When should I post? menus, [Skip <date>],
+# [Change next date] (its form), [Stop repeating] and [Back] (to Raid: Edit's card).
+REPEAT_VERBS: Final = ("open", "every", "ahead", "skip", "next", "stop", "back")
 # Raid: Edit's menus, and the create preview's role menu.
 PICKERS: Final = ("leader", "color", "mentions")
 # The modals the bot opens; a submit names which one it came from.
 MODALS: Final = (
     "ping", "title", "when", "desc", "image", "cancel", "role_limits", "class_limits", "char", "note", "reason",
-    "deadline",
+    "deadline", "copy", "repeat_days", "repeat_next",
 )
 # Manage sign-ups (``ml``): verb → what its <arg> holds.  The hub's verbs name no
 # member (``-``); every other verb names the member it's about.
@@ -236,6 +249,8 @@ def _args_valid(action: str, args: tuple[str, ...]) -> bool:
         return args[0] in EDIT_ACTIONS
     if action == "pick":
         return args[0] in PICKERS
+    if action == "rp":
+        return args[0] in REPEAT_VERBS
     if action == "m":
         return args[0] in MODALS
     if action == "ml":
