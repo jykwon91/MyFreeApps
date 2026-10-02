@@ -347,7 +347,7 @@ async def test_more_options_sets_limits_on_a_draft(post: Post, db: AsyncSession,
         preview_state(CHANNEL, [ROLE]),
         "**Class limits:** Rogue 3",
     ]
-    assert _labels(response)[7:9] == ["Role limits", "Class limits"]  # after [Deadline] in row 1
+    assert _labels(response)[8:10] == ["Role limits", "Class limits"]  # row 3; [Event & thread] ends row 2
     await db.refresh(event)
     assert (event.status, event.class_limits) == ("draft", {"rogue": 3})
     assert fake_discord.public_edits() == [] and fake_discord.channel_posts() == []
