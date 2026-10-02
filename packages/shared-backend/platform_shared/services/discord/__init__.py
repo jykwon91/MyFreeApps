@@ -6,6 +6,7 @@ App-agnostic building blocks for an HTTP-interactions Discord bot:
 - :mod:`~platform_shared.services.discord.client` — async REST client with rate limiting
 - :mod:`~platform_shared.services.discord.client_events` — the client's scheduled-event and thread methods
 - :mod:`~platform_shared.services.discord.client_files` — the client's file uploads (an interaction reply's attachments)
+- :mod:`~platform_shared.services.discord.client_members` — the client's member list (needs the Server Members intent)
 - :mod:`~platform_shared.services.discord.commands` — global command overwrite that keeps an Activity entry point
 - :mod:`~platform_shared.services.discord.emojis` — versioned application-emoji sync + per-process registry
 - :mod:`~platform_shared.services.discord.interactions` — interaction/response type constants
@@ -43,6 +44,7 @@ from .client_events import (
     ScheduledEventsAndThreads,
 )
 from .client_files import DiscordFile, InteractionFiles
+from .client_members import GuildMembers
 from .commands import (
     COMMAND_TYPE_PRIMARY_ENTRY_POINT,
     ENTRY_POINT_HANDLER_DISCORD_LAUNCH_ACTIVITY,
@@ -146,6 +148,8 @@ __all__ = [
     # client_files
     "DiscordFile",
     "InteractionFiles",
+    # client_members
+    "GuildMembers",
     # commands
     "COMMAND_TYPE_PRIMARY_ENTRY_POINT",
     "ENTRY_POINT_HANDLER_DISCORD_LAUNCH_ACTIVITY",
