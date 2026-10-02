@@ -1,7 +1,7 @@
 # MyGamingAssistant - Tech Debt Log
 
 > Last scanned: 2026-06-01 (serve-only PR — logged 1 pre-existing test failure + extended the ORM-in-routes entry to include totp.py; prior findings preserved)
-> Issues: 0 critical, 6 high, 11 medium, 15 low (open entries, recounted 2026-10-01 with the Discord Activity PR)
+> Issues: 0 critical, 6 high, 11 medium, 16 low (open entries, recounted 2026-10-01 with the raid post look PR)
 
 mode: log-only - fix only Critical items that block the current feature; log everything else here.
 
@@ -550,6 +550,17 @@ Found while building the Discord Activity and left out of that PR: either the we
 - **Location:** app.yaml `csp` (frame-src), rendered into docker/Caddyfile.docker
 - **Problem:** No page embeds a YouTube player (lineups play R2 clips), so the allowance widens the CSP for no feature. Found while auditing hosts for the Activity's URL mappings; the host was deliberately left unmapped (see constants/discordActivity.ts).
 - **Recommendation:** Drop it from `frame-src` and re-render (`python -m platform_shared.infra.render --app mygamingassistant`). Re-add it, and map it for the Activity, when an embed ships.
+
+---
+
+## Raid post look (deferred from the PR4 review - 2026-10-01)
+
+### [Backend] Raid member prefs - concurrent saves for one member race
+- **Severity:** Low
+- **Effort:** S
+- **Location:** backend/app/services/wow/raid_member_prefs_service.py (`remember_spec`, `update_prefs`), backend/app/repositories/wow/wow_raid_member_pref_repo.py (`upsert`)
+- **Problem:** Saving a member's default spec reads their row, edits `saved_specs`, then writes it back, with no row lock. Taps on the same post are serialised by the event lock, but two taps by one member on two different posts at the same moment are not. With no row yet, both insert and the second fails the unique constraint, so that tap errors ("This interaction failed"; tapping again works). With a row, the second write replaces `saved_specs` and drops the class the first tap just saved, so that class asks for its spec again next time.
+- **Recommendation:** In `upsert`, `INSERT ... ON CONFLICT (guild_id, discord_user_id) DO NOTHING`, then `SELECT ... FOR UPDATE` the row before the read-modify-write in `remember_spec` / `update_prefs`, so one member's saves run one after another and merge.
 
 ---
 
