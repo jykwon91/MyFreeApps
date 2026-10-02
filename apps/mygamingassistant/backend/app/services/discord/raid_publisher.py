@@ -18,7 +18,7 @@ Starlette runs right after the response is sent.  Each task:
   deferred/"Posting…" message, that message is edited with an explanation.
 
 Deleted public post (Discord error 10008) is handled by reposting for a
-scheduled raid, or clearing ``message_id`` for a cancelled one; a raid
+scheduled raid not yet started, else clearing ``message_id``; a raid
 deleted from Raid: Edit has its post removed here too (``delete_post``).
 """
 from __future__ import annotations
@@ -249,12 +249,12 @@ async def _edit_or_repost(client: DiscordRestClient, snapshot: _Snapshot) -> Non
 
     # 10008 — someone deleted the public post.  Decide on the raid as it is
     # now: deleted meanwhile (Raid: Edit → Delete raid takes its post with it)
-    # or no longer scheduled, it isn't posted again.
+    # or no longer scheduled (or started: its post is final), it isn't posted again.
     async with unit_of_work() as db:
         event = await wow_raid_event_repo.get_for_update(db, snapshot.event_id)
         if event is None:
             return
-        if event.status != "scheduled":
+        if event.status != "scheduled" or event.start_applied_at is not None:
             event.message_id = None
             await db.flush()
             return

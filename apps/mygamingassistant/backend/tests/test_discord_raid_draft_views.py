@@ -118,7 +118,7 @@ def test_more_options_shows_the_post_and_a_button_per_thing_to_change() -> None:
     assert data["content"] == f"{raid_copy.EDIT_PROMPT}\n**Preview.** Posts in <#c1>, pinging <@&r9>."
     assert data["embeds"] == [build_signup_embed(event, [], guild, emojis=_ICONS)]
     first, second, limits, actions = data["components"]
-    assert _buttons(first) == [("Title", 2, _ed("title")), ("Leader", 2, _ed("leader")), ("Date & Time", 2, _ed("when"))]
+    assert _buttons(first)[:3] == [("Title", 2, _ed("title")), ("Leader", 2, _ed("leader")), ("Date & Time", 2, _ed("when"))]
     assert _buttons(second) == [("Description", 2, _ed("desc")), ("Image", 2, _ed("image")), ("Color", 2, _ed("color"))]
     assert _buttons(limits)[:2] == [("Role limits", 2, _ed("role_limits")), ("Class limits", 2, _ed("class_limits"))]
     # [Post raid] first, as on the preview, and [Back] (to the preview) never beside it.

@@ -508,7 +508,7 @@ async def test_finished_raids_are_completed_and_missed_windows_dropped(
     assert finished.status == "completed" and upcoming.status == "scheduled"
     await db.refresh(stale)
     assert stale.last_error == "skipped: missed its window"
-    assert fake_discord.calls == []
+    assert [c.method for c in fake_discord.calls] == ["PATCH"]  # the start sweep greys the post
 
 
 async def test_noop_when_discord_disabled(

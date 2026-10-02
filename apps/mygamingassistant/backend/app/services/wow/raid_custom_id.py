@@ -41,7 +41,7 @@ pick     Raid: Edit's leader / color menus            raid:v1:pick:<event>:<lead
 del      [Delete raid] on Raid: Edit's delete check   raid:v1:del:<event>
 m        a modal's submit                             raid:v1:m:<event>:<ping|title|when|desc|image|cancel|
                                                                          role_limits|class_limits|char|
-                                                                         note|reason>
+                                                                         note|reason|deadline>
 ml       Manage sign-ups (a leader adds, changes,      raid:v1:ml:<event>:<verb>:<member|->:<arg|->
          moves and removes players; see ``MANAGE_VERBS``)
 testdm   /raid prefs [Send me a test DM]              raid:v1:testdm
@@ -110,13 +110,14 @@ LEADER_ACTIONS: Final = ("reopen", "close", "ping", "notify")
 # switch names the state it turns notes to, so a card that sat open can't flip them back.
 EDIT_ACTIONS: Final = (
     "title", "leader", "when", "desc", "image", "color", "cancel", "delete", "done", "back", "keep",
-    "more", "preview", "mentions", "noping", "role_limits", "class_limits", "notes_on", "notes_off",
+    "more", "preview", "mentions", "noping", "role_limits", "class_limits", "notes_on", "notes_off", "deadline",
 )
 # Raid: Edit's menus, and the create preview's role menu.
 PICKERS: Final = ("leader", "color", "mentions")
 # The modals the bot opens; a submit names which one it came from.
 MODALS: Final = (
     "ping", "title", "when", "desc", "image", "cancel", "role_limits", "class_limits", "char", "note", "reason",
+    "deadline",
 )
 # Manage sign-ups (``ml``): verb → what its <arg> holds.  The hub's verbs name no
 # member (``-``); every other verb names the member it's about.

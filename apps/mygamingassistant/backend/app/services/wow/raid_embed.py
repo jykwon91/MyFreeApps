@@ -14,7 +14,8 @@ Author       "Onyxia's Lair · Leader: Thrall"      ("CANCELLED · " prefix when
 Description  the title in letter tiles (else "## Onyxia's Lair")
              {date} <t:X:D>  {time} <t:X:t>  {signups} **14/40** confirmed (2 late) · 3 in queue
              {globe} Server time: Sat 8:00 PM EDT  {countdown} <t:X:R>
-             {lock} **Sign-ups are closed.**        (once the leader closes them)
+             {lock} **Sign-ups are closed.**        (once closed; "Sign-ups close <t:R>" before a
+             deadline, "**This raid has started.**" once the worker marks it started)
              notes
              {tank} Tanks **2**  {melee} Melee **6**  {ranged} Ranged **4**  {healer} Healers **2**
              (a role the raid limits shows its players in line over the limit: Tanks **2/2**)
@@ -27,9 +28,9 @@ Fields       one inline column per button with anyone in it, "{icon} Warrior (3)
 Image        the leader's banner link, else the raid's banner (``raid_banners``),
              until the raid is cancelled.
 Footer       "ID a1b2c3 · Tap your class to sign up. My sign-up changes your spec."
-             ("Sign-ups are closed." once closed, "This raid was cancelled.")
+             ("Sign-ups are closed." once closed, "This raid has started.", "This raid was cancelled.")
 Colors       the leader's pick (``raid_colors``, purple by default); grey once
-             sign-ups close or the raid is cancelled.
+             sign-ups close, the raid starts or it's cancelled.
 Buttons      [Tank] + one per class (icon + column count, "3/4" under a limit), then [Late]
              [Tentative] [Bench] [Absence] [My sign-up] — ``raid_post_buttons``.
 
@@ -68,6 +69,7 @@ from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.services.wow.raid_banners import banner_url
 from app.services.wow.raid_catalog import TANK_COLUMN, column_icon, column_label
 from app.services.wow.raid_colors import DEFAULT_COLOR
+from app.services.wow.raid_deadline import CLOSED_HINT, STARTED_HINT, is_started, status_lines
 from app.services.wow.raid_details import leader_name, mention_roles
 from app.services.wow.raid_limits import Limits, role_row
 from app.services.wow.raid_post_buttons import build_signup_components
@@ -111,7 +113,6 @@ SHORT_NAME_CHARS: Final = 9
 
 NOBODY_YET: Final = "Nobody yet"
 SIGN_UP_HINT: Final = "Tap your class to sign up. My sign-up changes your spec."
-CLOSED_HINT: Final = "Sign-ups are closed."
 EM_SPACE: Final = " "
 
 NO_MENTIONS: Final[dict[str, Any]] = {"parse": []}
@@ -332,8 +333,7 @@ def _description(
         )
         lines.append(EM_SPACE.join(when))
         lines.append(EM_SPACE.join(server))
-        if event.closed_at is not None:
-            lines.append(icon_text(emojis, "info_lock", f"**{CLOSED_HINT}**"))
+        lines.extend(status_lines(event, emojis))
     if event.notes:
         lines.append(event.notes)
     lines.append(
@@ -361,7 +361,9 @@ def _cancel_line(event: WowRaidEvent) -> str:
 
 def _footer(event: WowRaidEvent) -> str:
     hint = _FOOTER_HINTS.get(event.status, SIGN_UP_HINT)
-    if event.closed_at is not None and event.status == "scheduled":
+    if is_started(event):
+        hint = STARTED_HINT
+    elif event.closed_at is not None and event.status == "scheduled":
         hint = CLOSED_HINT
     return f"ID {str(event.id)[:6]} · {hint}"
 
@@ -374,8 +376,8 @@ def _banner(event: WowRaidEvent) -> str | None:
 
 
 def post_color(event: WowRaidEvent) -> int:
-    """The leader's color (purple by default) while sign-ups are open; grey once they close or it's cancelled."""
-    if event.status == "cancelled" or event.closed_at is not None:
+    """The leader's color (purple by default) while sign-ups are open; grey once closed, started or cancelled."""
+    if event.status == "cancelled" or event.closed_at is not None or is_started(event):
         return COLOR_CLOSED
     if event.color is None:
         return COLOR_OPEN
@@ -399,7 +401,7 @@ def _fitted_fields(
         if players:
             name = icon_text(emojis, icon, status_heading(status, label, len(players)))
             fields.append(_fitted(name, partial(_list_entries, players=players, emojis=emojis), ", ", ladder))
-    if roster.empty_columns and event.status in _OPEN_STATUSES and event.closed_at is None:
+    if roster.empty_columns and event.status in _OPEN_STATUSES and event.closed_at is None and not is_started(event):
         legend = " · ".join(icon_text(emojis, column_icon(c), column_label(c)) for c in roster.empty_columns)
         fields.append(FittedField.fixed(NOBODY_YET, legend, levels=len(ladder)))
     return fields

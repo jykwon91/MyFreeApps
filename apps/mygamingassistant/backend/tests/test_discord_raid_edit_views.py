@@ -89,12 +89,11 @@ def _input(modal: dict[str, Any]) -> dict[str, Any]:
 
 
 _PROPERTY_ROWS = [
-    [("Title", 2, _id("ed", "title")), ("Leader", 2, _id("ed", "leader")), ("Date & Time", 2, _id("ed", "when"))],
+    [("Title", 2, _id("ed", "title")), ("Leader", 2, _id("ed", "leader")), ("Date & Time", 2, _id("ed", "when")),
+     ("Deadline", 2, _id("ed", "deadline"))],
     [("Description", 2, _id("ed", "desc")), ("Image", 2, _id("ed", "image")), ("Color", 2, _id("ed", "color"))],
-    [
-        ("Role limits", 2, _id("ed", "role_limits")), ("Class limits", 2, _id("ed", "class_limits")),
-        ("Sign-ups", 2, _id("ml", "open", "-", "-")), ("Notes: off", 2, _id("ed", "notes_on")),
-    ],
+    [("Role limits", 2, _id("ed", "role_limits")), ("Class limits", 2, _id("ed", "class_limits")),
+     ("Sign-ups", 2, _id("ml", "open", "-", "-")), ("Notes: off", 2, _id("ed", "notes_on"))],
     [("Cancel raid", 4, _id("ed", "cancel")), ("Delete raid", 4, _id("ed", "delete")), ("Done", 1, _id("ed", "done"))],
 ]
 

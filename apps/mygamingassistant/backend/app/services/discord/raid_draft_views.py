@@ -75,6 +75,7 @@ def options_data(
             _draft_button(event, "Title", "title"),
             _draft_button(event, "Leader", "leader"),
             _draft_button(event, "Date & Time", "when"),
+            _draft_button(event, "Deadline", "deadline"),
         ),
         action_row(
             _draft_button(event, "Description", "desc"),

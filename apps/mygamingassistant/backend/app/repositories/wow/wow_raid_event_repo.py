@@ -6,11 +6,15 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Final
 
-from sqlalchemy import func, select, update
+from sqlalchemy import ColumnElement, Interval, func, literal_column, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.wow.wow_raid_event import WowRaidEvent
+
+# A sign-up deadline is stored in minutes: it falls at starts_at - minutes * this.
+_MINUTE: Final = literal_column("interval '1 minute'", Interval())
 
 
 async def create(
@@ -175,6 +179,37 @@ async def set_signup_notes_enabled(db: AsyncSession, event: WowRaidEvent, enable
     return event
 
 
+async def set_signup_deadline(db: AsyncSession, event: WowRaidEvent, minutes: int | None) -> WowRaidEvent:
+    """Persist how long before the start sign-ups close (None = at the start), to be applied afresh."""
+    event.signup_deadline_minutes = minutes
+    event.deadline_applied_at = None
+    await db.flush()
+    return event
+
+
+async def set_close_state(
+    db: AsyncSession,
+    event: WowRaidEvent,
+    *,
+    closed_at: datetime | None,
+    close_reason: str | None,
+    applied_at: datetime | None,
+) -> WowRaidEvent:
+    """Persist whether sign-ups are closed, who closed them, and when the deadline was applied."""
+    event.closed_at = closed_at
+    event.close_reason = close_reason
+    event.deadline_applied_at = applied_at
+    await db.flush()
+    return event
+
+
+async def set_start_applied(db: AsyncSession, event: WowRaidEvent, at: datetime | None) -> WowRaidEvent:
+    """Persist when the post was re-rendered as started; None once the raid moves into the future."""
+    event.start_applied_at = at
+    await db.flush()
+    return event
+
+
 async def cancel(db: AsyncSession, event: WowRaidEvent) -> WowRaidEvent:
     """Transition event to 'cancelled'."""
     event.status = "cancelled"
@@ -208,3 +243,40 @@ async def complete_started_events(db: AsyncSession, *, started_before: datetime)
     )
     await db.flush()
     return result.rowcount or 0
+
+
+async def lock_deadline_due(db: AsyncSession, now: datetime) -> WowRaidEvent | None:
+    """The soonest scheduled raid whose sign-up deadline has passed unapplied, before its start; row-locked.
+
+    The notification worker's deadline sweep (``raid_sweeps``) takes them one at a time.
+    """
+    deadline = WowRaidEvent.starts_at - WowRaidEvent.signup_deadline_minutes * _MINUTE
+    return await _lock_first_scheduled(
+        db,
+        WowRaidEvent.signup_deadline_minutes.is_not(None),
+        WowRaidEvent.deadline_applied_at.is_(None),
+        WowRaidEvent.starts_at > now,
+        deadline <= now,
+    )
+
+
+async def lock_start_due(db: AsyncSession, now: datetime) -> WowRaidEvent | None:
+    """The soonest scheduled raid that has started but whose post isn't shown as started yet; row-locked."""
+    return await _lock_first_scheduled(db, WowRaidEvent.start_applied_at.is_(None), WowRaidEvent.starts_at <= now)
+
+
+async def _lock_first_scheduled(db: AsyncSession, *where: ColumnElement[bool]) -> WowRaidEvent | None:
+    """The soonest-starting ``scheduled`` event matching *where* (ties by id), FOR UPDATE SKIP LOCKED.
+
+    A row another transaction holds (a sign-up, another worker) is skipped and
+    taken on a later tick.  ``populate_existing`` refreshes a loaded instance.
+    """
+    result = await db.execute(
+        select(WowRaidEvent)
+        .where(WowRaidEvent.status == "scheduled", *where)
+        .order_by(WowRaidEvent.starts_at, WowRaidEvent.id)
+        .limit(1)
+        .with_for_update(skip_locked=True)
+        .execution_options(populate_existing=True)
+    )
+    return result.scalar_one_or_none()

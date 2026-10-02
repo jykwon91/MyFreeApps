@@ -14,6 +14,7 @@ Flows
   greys out and its buttons, all but [My sign-up], stop working.  The post
   is re-rendered over REST in the background — even when doing it twice
   changes nothing (and says so), which brings a stale post back in line.
+  A reopen after the sign-up deadline holds until the raid starts.
 * **Raid: Signed** — everyone on the raid, column by column, with
   [Ping signed members]: a form (type 9) prefilled with a reminder.  Its
   submit claims the raid's ping slot under the row lock (one ping per raid
@@ -38,7 +39,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import unit_of_work
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.repositories.wow import wow_raid_signup_repo
-from app.services.discord import emojis, raid_copy, raid_ping, raid_publisher
+from app.services.discord import emojis, raid_copy, raid_deadline_copy, raid_ping, raid_publisher
 from app.services.discord.interaction import (
     Interaction,
     ephemeral_data,
@@ -63,11 +64,10 @@ from app.services.wow.raid_custom_id import RaidCustomId
 from app.services.wow.raid_roster import listed_user_ids
 from app.services.wow.raid_text import escape_name, title_text
 
-# (closing?, did it change?) → what the card says.
+# (closing?, did it change?) → what the card says; a reopen says how long they stay open.
 _TOGGLE_TEXT: Final[dict[tuple[bool, bool], str]] = {
     (True, True): raid_copy.CLOSED_OK,
     (True, False): raid_copy.ALREADY_CLOSED,
-    (False, True): raid_copy.OPENED_OK,
     (False, False): raid_copy.ALREADY_OPEN,
 }
 
@@ -156,6 +156,8 @@ async def _toggle(db: AsyncSession, event: WowRaidEvent, *, closed: bool) -> tup
     if event.status != "scheduled" or event.starts_at <= now:
         return ephemeral_data(raid_copy.RAID_STARTED), False
     changed = await raid_event_service.set_signups_closed(db, event, closed=closed, now=now)
+    if changed and not closed:
+        return closed_card(event, raid_deadline_copy.opened(event, now)), True
     return closed_card(event, _TOGGLE_TEXT[(closed, changed)]), True
 
 

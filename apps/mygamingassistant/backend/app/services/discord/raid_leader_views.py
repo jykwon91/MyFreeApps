@@ -29,7 +29,8 @@ from app.services.discord.interaction import ephemeral_data, modal_response
 from app.services.discord.raid_views import EMBED_DESCRIPTION_LIMIT, action_row, button, clip_lines, unix
 from app.services.wow import raid_custom_id
 from app.services.wow.raid_catalog import CLASSES_BY_KEY, TANK_COLUMN, effective_spec
-from app.services.wow.raid_embed import CLOSED_HINT, STATUS_LISTS, column_heading, post_color
+from app.services.wow.raid_deadline import CLOSED_HINT
+from app.services.wow.raid_embed import STATUS_LISTS, column_heading, post_color
 from app.services.wow.raid_note import shown_note
 from app.services.wow.raid_post_layout import post_columns, with_status
 from app.services.wow.raid_roster import QUEUED_STATUS, compute_roster_summary, listed_user_ids

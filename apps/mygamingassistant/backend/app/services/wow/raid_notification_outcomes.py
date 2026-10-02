@@ -48,6 +48,8 @@ class RunStats:
     deferred: int = 0
     completed_events: int = 0
     late_dms: int = 0
+    deadline_closed: int = 0
+    started: int = 0
 
     @property
     def busy(self) -> bool:
