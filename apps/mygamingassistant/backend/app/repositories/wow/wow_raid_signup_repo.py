@@ -5,6 +5,7 @@ Standalone async functions; the caller owns the transaction.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -120,6 +121,15 @@ async def set_status(
     signup.updated_at = datetime.now(timezone.utc)
     if signed_up_at is not None:
         signup.signed_up_at = signed_up_at
+    await db.flush()
+
+
+async def promote(db: AsyncSession, signups: Sequence[WowRaidSignup]) -> None:
+    """The queue moving up: each of *signups* gets a seat, keeping their note and place in the order."""
+    now = datetime.now(timezone.utc)
+    for signup in signups:
+        signup.status = "confirmed"
+        signup.updated_at = now
     await db.flush()
 
 

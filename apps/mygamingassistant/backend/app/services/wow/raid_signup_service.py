@@ -8,7 +8,6 @@ this module applies them to the database.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from typing import Literal
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -213,9 +212,5 @@ async def promote_from_queue(
     )
     if not to_promote:
         return []
-    now = datetime.now(timezone.utc)
-    for signup in to_promote:
-        signup.status = "confirmed"
-        signup.updated_at = now
-    await db.flush()
+    await wow_raid_signup_repo.promote(db, to_promote)
     return [signup.discord_user_id for signup in to_promote]
