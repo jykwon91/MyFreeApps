@@ -51,7 +51,8 @@ from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.repositories.wow import wow_raid_event_repo, wow_raid_signup_repo
 from app.services.discord import emojis, raid_copy, rest
 from app.services.discord.interaction import NO_MENTIONS, ephemeral_data
-from app.services.discord.raid_views import preview_data, unix
+from app.services.discord.raid_draft_views import preview_data
+from app.services.discord.raid_views import unix
 from app.services.wow import raid_event_service
 from app.services.wow.raid_embed import build_initial_post, build_signup_message
 from app.services.wow.raid_text import local_day_label, title_text

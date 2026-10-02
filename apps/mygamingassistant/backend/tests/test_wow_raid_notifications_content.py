@@ -34,7 +34,7 @@ def _seated(tanks: int, healers: int, dps: int, *, extra_status: str = "confirme
     return rows
 
 
-def _nudge(seated: list[WowRaidSignup], *, size: int = 40, early: bool, role: str | None = _ROLE):
+def _nudge(seated: list[WowRaidSignup], *, size: int = 40, early: bool, roles: tuple[str, ...] = (_ROLE,)):
     summary = compute_roster_summary(seated, size_cap=size)
     return raid_notifications.build_signup_nudge(
         raid_label="Onyxia",
@@ -42,7 +42,7 @@ def _nudge(seated: list[WowRaidSignup], *, size: int = 40, early: bool, role: st
         summary=summary,
         gaps=role_gaps(size, summary.role_counts),
         early=early,
-        ping_role_id=role,
+        ping_role_ids=list(roles),
         signup_link=_LINK,
     )
 
@@ -108,11 +108,18 @@ def test_late_nudge_pings_only_under_70_percent() -> None:
 
 
 def test_nudge_without_ping_role_is_silent_and_singular_copy() -> None:
-    payload = _nudge(_seated(1, 3, 5), size=10, early=True, role=None)
+    payload = _nudge(_seated(1, 3, 5), size=10, early=True, roles=())
     assert payload is not None
     assert "9 of 10 confirmed. Still need: **1 tank**. 1 spot open." in payload["content"]
     assert payload["flags"] == MESSAGE_FLAG_SUPPRESS_NOTIFICATIONS
     assert payload["allowed_mentions"] == {"parse": []}
+
+
+def test_nudge_pings_every_role_the_raid_picked() -> None:
+    payload = _nudge(_seated(2, 4, 8), early=True, roles=("1", "2"))
+    assert payload is not None
+    assert payload["content"].startswith(f"<@&1> <@&2> **Onyxia is <t:{_UNIX}:R>.**")
+    assert payload["allowed_mentions"] == {"parse": [], "roles": ["1", "2"]}
 
 
 def test_late_signups_hold_seats_in_the_count() -> None:

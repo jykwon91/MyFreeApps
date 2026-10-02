@@ -24,13 +24,16 @@ release  [Yes, free my seat] on the seat confirm      raid:v1:release:<event>:<s
 stay     [Keep my seat] on the seat confirm           raid:v1:stay:<event>
 confirm  create preview [Post raid]                   raid:v1:confirm:<event>
 discard  create preview [Cancel]                      raid:v1:discard:<event>
+         (its [More options] are Raid: Edit's ``ed`` / ``pick`` / ``m`` on the draft)
 cancel   cancel flow [Cancel raid]                    raid:v1:cancel:<event>
 keep     cancel flow [Keep raid]                      raid:v1:keep:<event>
 lc       Raid: Close / Raid: Signed leader buttons    raid:v1:lc:<event>:<reopen|close|ping|notify>
          (``notify`` = [Tell them in channel] after Raid: Edit moved the raid)
-ed       Raid: Edit's buttons                         raid:v1:ed:<event>:<property|cancel|delete|done|back|keep>
-         (``keep`` = [Keep raid] on the cancel check opened from Raid: Edit)
-pick     Raid: Edit's leader / color menus            raid:v1:pick:<event>:<leader|color>
+ed       Raid: Edit's buttons                         raid:v1:ed:<event>:<property|cancel|delete|done|back|keep|more|preview>
+         (``keep`` = [Keep raid] on the cancel check opened from Raid: Edit;
+         ``more`` / ``preview`` = the create preview's [More options] and its [Back];
+         ``mentions`` (who the raid pings) and its [No ping] (``noping``) are on drafts only)
+pick     Raid: Edit's leader / color menus            raid:v1:pick:<event>:<leader|color|mentions>
 del      [Delete raid] on Raid: Edit's delete check   raid:v1:del:<event>
 m        a modal's submit                             raid:v1:m:<event>:<ping|title|when|desc|image|cancel>
 testdm   /raid prefs [Send me a test DM]              raid:v1:testdm
@@ -86,12 +89,15 @@ CARD_VIEWS: Final = ("roster", "back")
 # The leader tools under Raid: Close / Raid: Signed (and [Tell them in channel] under Raid: Edit).
 LEADER_ACTIONS: Final = ("reopen", "close", "ping", "notify")
 # Raid: Edit's buttons: a property to change, cancel / delete the raid, close / return to
-# the card, or keep the raid after starting to cancel it.
+# the card, or keep the raid after starting to cancel it.  The create preview uses them
+# too: [More options] opens its card, [Back] there goes back to the preview, and
+# [Mentions] (who the raid pings) and its [No ping] are offered on drafts only.
 EDIT_ACTIONS: Final = (
     "title", "leader", "when", "desc", "image", "color", "cancel", "delete", "done", "back", "keep",
+    "more", "preview", "mentions", "noping",
 )
-# Raid: Edit's menus.
-PICKERS: Final = ("leader", "color")
+# Raid: Edit's menus, and the create preview's role menu.
+PICKERS: Final = ("leader", "color", "mentions")
 # The modals the bot opens; a submit names which one it came from.
 MODALS: Final = ("ping", "title", "when", "desc", "image", "cancel")
 # Old status names still on buttons of posts not re-rendered since they changed.

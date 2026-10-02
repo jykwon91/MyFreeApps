@@ -10,18 +10,22 @@ from datetime import datetime, timezone
 import pytest
 
 from app.models.wow.wow_raid_event import WowRaidEvent
+from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.services.wow.raid_colors import COLORS_BY_KEY, DEFAULT_COLOR, RAID_COLORS, color_of, stored_value
 from app.services.wow.raid_details import (
     DESCRIPTION_MAX,
     IMAGE_URL_MAX,
     REASON_MAX,
     TITLE_MAX,
+    MentionPick,
     clean_description,
     clean_reason,
     clean_title,
     image_link,
     leader_id,
     leader_name,
+    mention_pick,
+    mention_roles,
     stored_title,
 )
 from app.services.wow.raid_embed import COLOR_CLOSED, COLOR_OPEN
@@ -59,6 +63,67 @@ def test_a_handed_over_leader_without_a_name_never_shows_the_creators() -> None:
     event = _event(leader_user_id="u9", leader_display_name=None)
     assert leader_id(event) == "u9"
     assert leader_name(event) is None
+
+
+# ---------------------------------------------------------------------------
+# Who it pings
+# ---------------------------------------------------------------------------
+
+
+def test_a_raid_pings_the_servers_role_until_its_own_are_picked() -> None:
+    guild = WowRaidGuild(discord_guild_id="g1", ping_role_id="r9")
+    assert mention_roles(_event(), guild) == ["r9"]
+    assert mention_roles(_event(mention_role_ids=["r1", "r2"]), guild) == ["r1", "r2"]
+    assert mention_roles(_event(mention_role_ids=[]), guild) == []
+    assert mention_roles(_event(), WowRaidGuild(discord_guild_id="g1", ping_role_id=None)) == []
+
+
+def test_a_raid_never_pings_everyone() -> None:
+    # @everyone's role id is the server's own, saved as the server's role or the raid's.
+    assert mention_roles(_event(), WowRaidGuild(discord_guild_id="g1", ping_role_id="g1")) == []
+    guild = WowRaidGuild(discord_guild_id="g1", ping_role_id="r9")
+    assert mention_roles(_event(mention_role_ids=["g1", "r1"]), guild) == ["r1"]
+
+
+def _pick(
+    picked: list[str],
+    *,
+    mentionable: dict[str, bool] | None = None,
+    allowed: tuple[str, ...] = (),
+    may_ping_any: bool = False,
+    limit: int = 5,
+) -> MentionPick:
+    """A Mentions pick in server "g1", every picked role mentionable unless *mentionable* says."""
+    if mentionable is None:
+        mentionable = {role_id: True for role_id in picked}
+    return mention_pick(
+        picked, mentionable=mentionable, everyone_id="g1", allowed=allowed, may_ping_any=may_ping_any, limit=limit
+    )
+
+
+def test_a_mentions_pick_keeps_the_roles_discord_resolved_up_to_the_limit() -> None:
+    assert _pick(["r1", "r2"]) == MentionPick(roles=["r1", "r2"])
+    assert _pick(["r1", "r2", "r3"], limit=2) == MentionPick(roles=["r1", "r2"])
+    assert _pick(["r1", "x9"], mentionable={"r1": True}) == MentionPick(roles=["r1"])  # x9: not a role
+    assert _pick([]) == MentionPick(roles=[])
+
+
+def test_a_mentions_pick_never_keeps_everyone() -> None:
+    assert _pick(["g1", "r1"]) == MentionPick(roles=["r1"], everyone=True)
+    assert _pick(["g1"]) == MentionPick(roles=[], everyone=True)
+    # Not even for someone who may ping any role, nor when it's allowed already.
+    assert _pick(["g1", "r1"], may_ping_any=True) == MentionPick(roles=["r1"], everyone=True)
+    assert _pick(["g1"], mentionable={"g1": False}, may_ping_any=True, allowed=("g1",)) == MentionPick(
+        roles=[], everyone=True
+    )
+
+
+def test_a_role_that_isnt_mentionable_is_kept_only_for_someone_who_could_ping_it() -> None:
+    roles = {"r1": True, "r2": False}
+    assert _pick(["r1", "r2"], mentionable=roles) == MentionPick(roles=["r1"], left_out=["r2"])
+    assert _pick(["r1", "r2"], mentionable=roles, may_ping_any=True) == MentionPick(roles=["r1", "r2"], muted=["r2"])
+    # One the raid pings already (the server's ping role, say) stays as it is.
+    assert _pick(["r1", "r2"], mentionable=roles, allowed=("r2",)) == MentionPick(roles=["r1", "r2"])
 
 
 # ---------------------------------------------------------------------------

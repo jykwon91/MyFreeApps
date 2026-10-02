@@ -12,7 +12,7 @@ overrides the default display name if set.
 """
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Optional
 
 from sqlalchemy import (
     CheckConstraint,
@@ -24,7 +24,7 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -65,6 +65,10 @@ class WowRaidEvent(Base):
         CheckConstraint(
             "color IS NULL OR (color >= 0 AND color <= 16777215)",
             name="ck_wowraidevent_color",
+        ),
+        CheckConstraint(
+            "mention_role_ids IS NULL OR jsonb_typeof(mention_role_ids) = 'array'",
+            name="ck_wowraidevent_mention_role_ids",
         ),
         # Efficiently list upcoming events per guild.
         Index("ix_wowraidevent_guild_starts_at", "guild_id", "starts_at"),
@@ -130,6 +134,9 @@ class WowRaidEvent(Base):
     image_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
     # The post's color while sign-ups are open (0xRRGGBB); null = the default purple.
     color: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # The roles the raid pings (first post, nudges); null = the server's ping
+    # role, [] = nobody (migration 0032).  Read through raid_details.mention_roles.
+    mention_role_ids: Mapped[Optional[list[Any]]] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

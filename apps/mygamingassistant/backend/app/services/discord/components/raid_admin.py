@@ -30,7 +30,7 @@ from app.services.discord.interaction import (
     update_text_response,
 )
 from app.services.discord.raid_context import load_configured_guild, load_event, load_led_event, utcnow
-from app.services.discord.raid_views import preview_data
+from app.services.discord.raid_draft_views import options_data
 from app.services.wow import raid_event_service
 from app.services.wow.raid_custom_id import RaidCustomId
 from app.services.wow.raid_time_parser import PAST_MESSAGE
@@ -56,7 +56,8 @@ async def handle_confirm(interaction: Interaction, parsed: RaidCustomId, backgro
         if outcome == "gone":
             return update_text_response(raid_copy.NOT_FOUND)
         if outcome == "in_past":
-            return update_response(preview_data(event, guild, emojis=emojis.current(), notice=PAST_MESSAGE))
+            # More options, where [Date & Time] is one tap away.
+            return update_response(options_data(event, guild, emojis=emojis.current(), notice=PAST_MESSAGE))
         channel_id = event.channel_id
 
     background.add_task(raid_publisher.post_raid, parsed.event_id, interaction.application_id, interaction.token)

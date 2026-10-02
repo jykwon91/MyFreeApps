@@ -67,7 +67,7 @@ from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.services.wow.raid_banners import banner_url
 from app.services.wow.raid_catalog import TANK_COLUMN, column_icon, column_label
 from app.services.wow.raid_colors import DEFAULT_COLOR
-from app.services.wow.raid_details import leader_name
+from app.services.wow.raid_details import leader_name, mention_roles
 from app.services.wow.raid_post_buttons import build_signup_components
 from app.services.wow.raid_post_fit import FittedField, Lines
 from app.services.wow.raid_post_layout import (
@@ -207,16 +207,20 @@ def build_initial_post(
     ping_role: bool,
     emojis: EmojiSet,
 ) -> dict[str, Any]:
-    """The first post of a raid: same message, plus the guild's role ping.
+    """The first post of a raid: same message, plus the raid's role pings.
 
-    ``allowed_mentions`` names exactly that one role — never @everyone/@here,
-    never users.  Reposts (after the original was deleted) pass
-    ``ping_role=False``.
+    The roles are those picked for the raid, else the server's ping role
+    (``mention_roles``).  ``allowed_mentions`` names exactly those roles —
+    never @everyone/@here, never users.  ``ping_role=False`` posts it
+    without a ping.
     """
     message = build_signup_message(event, signups, guild, emojis=emojis)
-    if ping_role and guild.ping_role_id:
-        message["content"] = f"<@&{guild.ping_role_id}>"
-        message["allowed_mentions"] = {"parse": [], "roles": [guild.ping_role_id]}
+    if not ping_role:
+        return message
+    roles = mention_roles(event, guild)
+    if roles:
+        message["content"] = " ".join(f"<@&{role_id}>" for role_id in roles)
+        message["allowed_mentions"] = {"parse": [], "roles": roles}
     return message
 
 

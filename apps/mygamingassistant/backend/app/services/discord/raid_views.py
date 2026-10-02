@@ -1,10 +1,10 @@
 """Private (ephemeral) message bodies for the raid bot — pure builders.
 
 The public signup post lives in :mod:`app.services.wow.raid_embed`; this
-module renders everything only the clicking user sees: the create preview,
-the class and spec selects, the My sign-up card, the full roster,
-/raid list, /raid prefs, the cancel confirmation and the "free my seat?"
-confirmation.
+module renders everything only the clicking user sees: the class and spec
+selects, the My sign-up card, the full roster, /raid list, /raid prefs, the
+cancel confirmation and the "free my seat?" confirmation.  The create
+preview is :mod:`app.services.discord.raid_draft_views`.
 """
 from __future__ import annotations
 
@@ -16,7 +16,6 @@ from zoneinfo import ZoneInfo
 from platform_shared.services.discord import (
     BUTTON_STYLE_DANGER,
     BUTTON_STYLE_SECONDARY,
-    BUTTON_STYLE_SUCCESS,
     COMPONENT_TYPE_ACTION_ROW,
     COMPONENT_TYPE_BUTTON,
     COMPONENT_TYPE_STRING_SELECT,
@@ -46,11 +45,9 @@ from app.services.wow.raid_catalog import (
 from app.services.wow.raid_embed import (
     COLOR_OPEN,
     STATUS_LISTS,
-    build_signup_embed,
     column_heading,
     roster_entry,
 )
-from app.services.wow.raid_post_buttons import build_signup_components
 from app.services.wow.raid_post_layout import post_columns, with_status
 from app.services.wow.raid_roster import (
     ABSENCE_STATUS,
@@ -154,25 +151,6 @@ def _tank_label(spec: WowSpecInfo) -> str:
 # ---------------------------------------------------------------------------
 # /raid-admin create preview, cancel confirmation, seat confirmation
 # ---------------------------------------------------------------------------
-
-
-def preview_data(
-    event: WowRaidEvent, guild: WowRaidGuild, *, emojis: EmojiSet, notice: str | None = None
-) -> dict[str, Any]:
-    """The post exactly as it will look (its buttons greyed out), then [Post raid] / [Cancel]."""
-    intro = raid_copy.preview_intro(event.channel_id, guild.ping_role_id)
-    if notice:
-        intro = f"{notice}\n\n{intro}"
-    actions = action_row(
-        button("Post raid", BUTTON_STYLE_SUCCESS, raid_custom_id.encode("confirm", event.id)),
-        button("Cancel", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("discard", event.id)),
-    )
-    post_buttons = build_signup_components(event, [], emojis=emojis)  # disabled until it's posted
-    return ephemeral_data(
-        intro,
-        components=[*post_buttons, actions],
-        embeds=[build_signup_embed(event, [], guild, emojis=emojis)],
-    )
 
 
 def release_confirm_data(event: WowRaidEvent, status: str) -> dict[str, Any]:

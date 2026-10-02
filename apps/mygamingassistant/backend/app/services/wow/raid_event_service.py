@@ -187,6 +187,12 @@ async def set_color(db: AsyncSession, event: WowRaidEvent, color: int | None) ->
     await db.flush()
 
 
+async def set_mentions(db: AsyncSession, event: WowRaidEvent, role_ids: list[str]) -> None:
+    """Create preview → Mentions: the roles the raid pings ([] = nobody)."""
+    event.mention_role_ids = role_ids
+    await db.flush()
+
+
 async def delete_event(db: AsyncSession, event: WowRaidEvent) -> None:
     """Raid: Edit → Delete raid: the raid, its sign-ups and its pending notifications go.
 

@@ -18,11 +18,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.wow.wow_raid_event import WowRaidEvent
+from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.models.wow.wow_raid_member_pref import WowRaidMemberPref
 from app.models.wow.wow_raid_notification import WowRaidNotification
 from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.repositories.wow import wow_raid_signup_repo
-from app.services.discord import raid_copy, rest
+from app.services.discord import raid_copy, raid_draft_copy, rest
 from app.services.wow.raid_roster import order_numbers
 from app.services.wow.raid_text import server_time_label
 from app.services.wow.raid_time_parser import PAST_MESSAGE, UNREADABLE_MESSAGE
@@ -123,7 +124,7 @@ async def test_full_raid_journey(post: Post, db: AsyncSession, fake_discord: Fak
     # --- create: a private preview of the post itself, nothing posted, no notifications yet
     preview = await post(command("raid-admin", "create", raid="onyxia", when=future_when(), size=5, notes="Bring FR"))
     assert_ephemeral(preview)
-    assert content(preview) == raid_copy.preview_intro(CHANNEL, ROLE)
+    assert content(preview) == raid_draft_copy.preview_intro(CHANNEL, [ROLE])
     event = (await db.execute(select(WowRaidEvent))).scalars().one()
     assert event.status == "draft"
     assert event.created_by_display_name == "Thrall"
@@ -134,9 +135,8 @@ async def test_full_raid_journey(post: Post, db: AsyncSession, fake_discord: Fak
     assert description[1].endswith("**0/5** confirmed")
     assert description[2].startswith(f"Server time: {server_time_label(event.starts_at, 'America/New_York')}")
     assert description[3] == "Bring FR"
-    *post_rows, actions = preview["data"]["components"]
-    assert all(button.get("disabled") for row in post_rows for button in row["components"])  # live once posted
-    assert [button["label"] for button in actions["components"]] == ["Post raid", "Cancel"]
+    [actions] = preview["data"]["components"]  # the sign-up buttons come with the post
+    assert [button["label"] for button in actions["components"]] == ["Post raid", "More options", "Cancel"]
     assert fake_discord.calls == []
 
     # --- confirm: UPDATE_MESSAGE "Posting…", public post with the role ping, preview edited to a link
@@ -672,6 +672,13 @@ async def test_unanswered_reply_edit_is_one_warning(
 async def test_setup_rejects_unknown_timezone(post: Post, fake_discord: FakeDiscord) -> None:
     response = await post(command("raid-admin", "setup", channel=CHANNEL, timezone="Mars/Olympus"))
     assert content(response) == raid_copy.unknown_timezone("Mars/Olympus")
+    assert fake_discord.calls == []
+
+
+async def test_setup_refuses_everyone_as_the_ping_role(post: Post, db: AsyncSession, fake_discord: FakeDiscord) -> None:
+    response = await setup_guild(post, ping_role=GUILD)  # @everyone's role id is the server's own
+    assert content(response) == raid_copy.SETUP_NO_EVERYONE
+    assert (await db.execute(select(WowRaidGuild))).scalars().all() == []  # nothing saved
     assert fake_discord.calls == []
 
 

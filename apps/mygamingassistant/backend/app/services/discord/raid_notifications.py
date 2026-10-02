@@ -82,7 +82,7 @@ def build_signup_nudge(
     summary: RosterSummary,
     gaps: RoleGaps,
     early: bool,
-    ping_role_id: str | None,
+    ping_role_ids: list[str],
     signup_link: str | None,
 ) -> dict[str, Any] | None:
     """The nudge message payload, or None when the raid is full (no nudge)."""
@@ -100,10 +100,11 @@ def build_signup_nudge(
         sentences.append(f"[Sign up]({signup_link})")
     content = " ".join(sentences)
 
-    if ping_role_id and should_ping_nudge(early=early, summary=summary, gaps=gaps):
+    if ping_role_ids and should_ping_nudge(early=early, summary=summary, gaps=gaps):
+        pings = " ".join(f"<@&{role_id}>" for role_id in ping_role_ids)
         return {
-            "content": f"<@&{ping_role_id}> {content}",
-            "allowed_mentions": {"parse": [], "roles": [ping_role_id]},
+            "content": f"{pings} {content}",
+            "allowed_mentions": {"parse": [], "roles": ping_role_ids},
         }
     return {
         "content": content,

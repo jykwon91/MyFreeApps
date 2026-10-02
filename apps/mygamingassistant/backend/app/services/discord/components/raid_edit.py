@@ -23,6 +23,14 @@ Flows
 * **Done** — the card closes.
 
 A raid that's cancelled or finished can only be deleted.
+
+Create preview → More options
+-----------------------------
+``/raid-admin create``'s preview offers [More options]: the same buttons,
+forms and menus on the draft, answering with the draft's card (the post as
+it will look, a button per thing to change) instead of the edit card, plus
+**Mentions** — the roles the raid pings, or [No ping].  [Back] there goes
+back to the preview; a draft has no public post to re-render.
 """
 from __future__ import annotations
 
@@ -31,11 +39,12 @@ from dataclasses import dataclass
 from typing import Any, Final
 
 from fastapi import BackgroundTasks
+from platform_shared.services.discord import MENTION_EVERYONE
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import unit_of_work
 from app.repositories.wow import wow_raid_signup_repo
-from app.services.discord import raid_copy, raid_publisher
+from app.services.discord import emojis, raid_copy, raid_draft_copy, raid_publisher
 from app.services.discord.interaction import (
     Interaction,
     ephemeral_data,
@@ -45,6 +54,7 @@ from app.services.discord.interaction import (
     update_text_response,
 )
 from app.services.discord.raid_context import RaidContext, load_led_event, load_led_post, may_lead, utcnow
+from app.services.discord.raid_draft_views import MENTION_MAX, mentions_picker, options_data, preview_data
 from app.services.discord.raid_edit_views import (
     FIELD,
     cancel_modal,
@@ -66,6 +76,9 @@ from app.services.wow.raid_details import (
     clean_reason,
     clean_title,
     image_link,
+    mention_pick,
+    mention_roles,
+    server_ping_roles,
     stored_title,
 )
 from app.services.wow.raid_roster import listed_user_ids
@@ -74,6 +87,14 @@ from app.services.wow.raid_time_parser import RaidTimeError, parse_raid_time
 
 # A posted raid in any state: one that's over can still be deleted.
 _POSTED: Final = ("scheduled", "cancelled", "completed")
+# What the card's buttons open on: a posted raid, or a draft's More options.
+_OPENABLE: Final = ("draft", *_POSTED)
+# What the forms and menus change: a raid still on, or a draft.
+_CHANGEABLE: Final = ("draft", "scheduled")
+# The create preview's buttons; a posted raid's card answers them with itself.
+_DRAFT_ONLY: Final = ("more", "preview", "mentions", "noping")
+# What a draft doesn't offer: [Cancel] on the preview throws it away instead.
+_POSTED_ONLY: Final = ("cancel", "delete", "keep", "done")
 
 
 @dataclass(frozen=True)
@@ -111,10 +132,17 @@ async def handle_edit_button(interaction: Interaction, parsed: RaidCustomId, bac
     if action == "done":
         return update_text_response(raid_copy.EDIT_SAVED)
     async with unit_of_work() as db:
-        found = await load_led_event(db, interaction, parsed.event_id, lock=action == "keep", statuses=_POSTED)
+        found = await load_led_event(
+            db, interaction, parsed.event_id, lock=action in ("keep", "noping"), statuses=_OPENABLE
+        )
         if isinstance(found, str):
             return update_text_response(found)
         event = found.event
+        if event.status == "draft":
+            if action == "noping":
+                await raid_event_service.set_mentions(db, event, [])
+                return update_response(_card(found, notice=raid_draft_copy.MENTIONS_NONE))
+            return _open_draft(action, found)
         if action == "delete":
             signups = await wow_raid_signup_repo.list_for_event(db, event.id)
             return update_response(delete_check(event, len(signups)))
@@ -124,7 +152,32 @@ async def handle_edit_button(interaction: Interaction, parsed: RaidCustomId, bac
             # Drop the reason staged by the cancel form, so a later cancel doesn't reuse it.
             await raid_event_service.set_cancel_reason(db, event, None)
             return update_response(edit_card(event, notice=raid_copy.CANCEL_KEPT))
+        if action in _DRAFT_ONLY:
+            return update_response(edit_card(event))
         return _open(action, found)
+
+
+def _open_draft(action: str, found: RaidContext) -> dict[str, Any]:
+    """The create preview's More options: the preview, the draft's card, or what a button there opens."""
+    if action == "preview":
+        return update_response(preview_data(found.event, found.guild, emojis=emojis.current()))
+    if action == "mentions":
+        return update_response(mentions_picker(found.event, found.guild))
+    if action in _POSTED_ONLY:
+        return update_response(_card(found))
+    return _open(action, found)
+
+
+def _card(found: RaidContext, *, notice: str | None = None, notify_count: int = 0) -> dict[str, Any]:
+    """Where a change lands: the draft's card under the create preview, else the edit card."""
+    if found.event.status == "draft":
+        return options_data(found.event, found.guild, emojis=emojis.current(), notice=notice)
+    return edit_card(found.event, notice=notice, notify_count=notify_count)
+
+
+def _has_post(found: RaidContext) -> bool:
+    """A posted raid's post shows a change; a draft has none to re-render yet."""
+    return found.event.status != "draft"
 
 
 def _open(action: str, found: RaidContext) -> dict[str, Any]:
@@ -144,7 +197,7 @@ def _open(action: str, found: RaidContext) -> dict[str, Any]:
         return update_response(leader_picker(event))
     if action == "color":
         return update_response(color_picker(event))
-    return update_response(edit_card(event))
+    return update_response(_card(found))
 
 
 # ---------------------------------------------------------------------------
@@ -154,18 +207,22 @@ def _open(action: str, found: RaidContext) -> dict[str, Any]:
 
 async def handle_pick(interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks) -> dict[str, Any]:
     assert parsed.event_id is not None
-    if not interaction.values:
+    picker = parsed.args[0]
+    # Mentions may be emptied (no ping); the leader and color menus always send one.
+    if not interaction.values and picker != "mentions":
         return update_text_response(raid_copy.GENERIC_ERROR)
-    choice = interaction.values[0]
     async with unit_of_work() as db:
-        found = await load_led_event(db, interaction, parsed.event_id, lock=True)
+        found = await load_led_event(db, interaction, parsed.event_id, lock=True, statuses=_CHANGEABLE)
         if isinstance(found, str):
             return update_text_response(found)
-        if parsed.args[0] == "leader":
-            saved = await _pick_leader(db, interaction, found, choice)
+        if picker == "mentions":
+            saved = await _pick_mentions(db, interaction, found)
+        elif picker == "leader":
+            saved = await _pick_leader(db, interaction, found, interaction.values[0])
         else:
-            saved = await _pick_color(db, found, choice)
-    if saved.refresh:
+            saved = await _pick_color(db, found, interaction.values[0])
+        refresh = saved.refresh and _has_post(found)
+    if refresh:
         background.add_task(raid_publisher.refresh_public_message, parsed.event_id)
     return update_response(saved.card)
 
@@ -178,7 +235,7 @@ async def _pick_leader(db: AsyncSession, interaction: Interaction, found: RaidCo
     await raid_event_service.set_leader(db, event, user_id=user_id, display_name=name)
     if not may_lead(interaction, event):
         return _Saved(ephemeral_data(raid_copy.handed_over(escape_name(name)), embeds=[]))
-    return _Saved(edit_card(event, notice=raid_copy.leader_ok(escape_name(name))))
+    return _Saved(_card(found, notice=raid_copy.leader_ok(escape_name(name))))
 
 
 async def _pick_color(db: AsyncSession, found: RaidContext, key: str) -> _Saved:
@@ -190,7 +247,40 @@ async def _pick_color(db: AsyncSession, found: RaidContext, key: str) -> _Saved:
     notice = raid_copy.COLOR_OK
     if event.closed_at is not None:
         notice = raid_copy.COLOR_OK_CLOSED
-    return _Saved(edit_card(event, notice=notice))
+    return _Saved(_card(found, notice=notice))
+
+
+async def _pick_mentions(db: AsyncSession, interaction: Interaction, found: RaidContext) -> _Saved:
+    """Who the raid pings: the roles picked, as far as the picker may ping them; nobody when emptied."""
+    event = found.event
+    if event.status != "draft":
+        # A menu left open after posting: the ping has gone out.
+        return _Saved(_card(found), refresh=False)
+    resolved = {role_id: interaction.resolved_role(role_id) for role_id in interaction.values}
+    pick = mention_pick(
+        interaction.values,
+        mentionable={role_id: role.get("mentionable") is True for role_id, role in resolved.items() if role},
+        everyone_id=interaction.guild_id,
+        allowed=[*mention_roles(event, found.guild), *server_ping_roles(found.guild)],
+        may_ping_any=interaction.has_permission(MENTION_EVERYONE),
+        limit=MENTION_MAX,
+    )
+    notes: list[str] = []
+    if pick.everyone:
+        notes.append(raid_draft_copy.EVERYONE_LEFT_OUT)
+    if pick.left_out:
+        notes.append(raid_draft_copy.mentions_left_out(pick.left_out))
+    if interaction.values and not pick.roles:
+        # Nothing picked can be pinged: the raid keeps the roles it had.
+        notice = " ".join([raid_draft_copy.NOTHING_CHANGED, *notes])
+        return _Saved(mentions_picker(event, found.guild, notice=notice), refresh=False)
+    await raid_event_service.set_mentions(db, event, pick.roles)
+    if pick.muted:
+        notes.append(raid_draft_copy.mentions_heads_up(pick.muted))
+    done = raid_draft_copy.MENTIONS_OK
+    if not pick.roles:
+        done = raid_draft_copy.MENTIONS_NONE
+    return _Saved(_card(found, notice=" ".join([done, *notes])), refresh=False)
 
 
 # ---------------------------------------------------------------------------
@@ -225,11 +315,12 @@ async def _submit(
 ) -> dict[str, Any]:
     assert parsed.event_id is not None
     async with unit_of_work() as db:
-        found = await load_led_event(db, interaction, parsed.event_id, lock=True)
+        found = await load_led_event(db, interaction, parsed.event_id, lock=True, statuses=_CHANGEABLE)
         if isinstance(found, str):
             return update_text_response(found)
         saved = await apply(db, found, interaction.fields.get(FIELD, ""))
-    if saved.refresh:
+        refresh = saved.refresh and _has_post(found)
+    if refresh:
         background.add_task(raid_publisher.refresh_public_message, parsed.event_id)
     return update_response(saved.card)
 
@@ -238,9 +329,9 @@ async def _apply_title(db: AsyncSession, found: RaidContext, text: str) -> _Save
     event = found.event
     title = clean_title(text)
     if not title:
-        return _Saved(edit_card(event, notice=raid_copy.TITLE_EMPTY), refresh=False)
+        return _Saved(_card(found, notice=raid_copy.TITLE_EMPTY), refresh=False)
     await raid_event_service.set_title(db, event, stored_title(event.raid_key, title))
-    return _Saved(edit_card(event, notice=raid_copy.TITLE_OK))
+    return _Saved(_card(found, notice=raid_copy.TITLE_OK))
 
 
 async def _apply_when(db: AsyncSession, found: RaidContext, text: str) -> _Saved:
@@ -249,15 +340,15 @@ async def _apply_when(db: AsyncSession, found: RaidContext, text: str) -> _Saved
     try:
         starts_at = parse_raid_time(text, tz_name=found.guild.timezone, now=now)
     except RaidTimeError as exc:
-        return _Saved(edit_card(event, notice=exc.user_message), refresh=False)
+        return _Saved(_card(found, notice=exc.user_message), refresh=False)
     if starts_at == event.starts_at:
-        return _Saved(edit_card(event, notice=raid_copy.WHEN_SAME), refresh=False)
+        return _Saved(_card(found, notice=raid_copy.WHEN_SAME), refresh=False)
     await raid_event_service.edit_event(
         db, event=event, guild=found.guild, starts_at=starts_at, size_cap=None, notes=None, now=now
     )
     signups = await wow_raid_signup_repo.list_for_event(db, event.id)
     notice = raid_copy.moved(unix(starts_at))
-    return _Saved(edit_card(event, notice=notice, notify_count=len(listed_user_ids(signups))))
+    return _Saved(_card(found, notice=notice, notify_count=len(listed_user_ids(signups))))
 
 
 async def _apply_description(db: AsyncSession, found: RaidContext, text: str) -> _Saved:
@@ -266,19 +357,19 @@ async def _apply_description(db: AsyncSession, found: RaidContext, text: str) ->
     notice = raid_copy.DESC_OK
     if notes is None:
         notice = raid_copy.DESC_CLEARED
-    return _Saved(edit_card(found.event, notice=notice))
+    return _Saved(_card(found, notice=notice))
 
 
 async def _apply_image(db: AsyncSession, found: RaidContext, text: str) -> _Saved:
     try:
         link = image_link(text)
     except ValueError:
-        return _Saved(edit_card(found.event, notice=raid_copy.BANNER_BAD), refresh=False)
+        return _Saved(_card(found, notice=raid_copy.BANNER_BAD), refresh=False)
     await raid_event_service.set_banner(db, found.event, link)
     notice = raid_copy.BANNER_OK
     if link is None:
         notice = raid_copy.BANNER_RESET
-    return _Saved(edit_card(found.event, notice=notice))
+    return _Saved(_card(found, notice=notice))
 
 
 async def _apply_cancel(db: AsyncSession, found: RaidContext, text: str) -> _Saved:

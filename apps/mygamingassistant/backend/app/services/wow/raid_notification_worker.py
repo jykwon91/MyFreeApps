@@ -72,7 +72,7 @@ from app.repositories.wow import (
 )
 from app.services.discord import raid_copy, raid_notifications, rest
 from app.services.discord.raid_views import unix
-from app.services.wow import raid_consumables_round
+from app.services.wow import raid_consumables_round, raid_details
 from app.services.wow.raid_member_prefs_service import resolve_player
 from app.services.wow.raid_composition import role_gaps
 from app.services.wow.raid_consumables import UnknownRaidError, select_consumables
@@ -351,7 +351,7 @@ async def _plan_nudge(db: AsyncSession, ctx: _Context, claim: _Claim) -> _Plan:
         summary=summary,
         gaps=role_gaps(ctx.event.size_cap, summary.role_counts),
         early=_is_early_nudge(ctx, claim),
-        ping_role_id=ctx.guild.ping_role_id,
+        ping_role_ids=raid_details.mention_roles(ctx.event, ctx.guild),
         signup_link=ctx.signup_link,
     )
     if payload is None:

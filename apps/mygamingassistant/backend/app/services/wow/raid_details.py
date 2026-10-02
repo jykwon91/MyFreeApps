@@ -1,17 +1,20 @@
 """A raid's editable details — the rules Raid: Edit applies, pure.
 
-Who leads the raid (whoever created it, until someone hands it over), and
-how a title, description, banner link and cancel reason are cleaned before
-they're saved.  A banner link must be one Discord will take: a post whose
-embed carries a link Discord rejects can't be edited any more, so anything
-unusual is refused rather than passed on.
+Who leads the raid (whoever created it, until someone hands it over), who
+it pings (and which roles a Mentions pick may add), and how a title,
+description, banner link and cancel reason are cleaned before they're saved.  A banner link must be one Discord will
+take: a post whose embed carries a link Discord rejects can't be edited
+any more, so anything unusual is refused rather than passed on.
 """
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
 from typing import Final
 
 from app.models.wow.wow_raid_event import WowRaidEvent
+from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.services.wow.raid_catalog import raid_name
 
 TITLE_MAX: Final = 60
@@ -38,6 +41,76 @@ def leader_name(event: WowRaidEvent) -> str | None:
     if event.leader_user_id is not None:
         return event.leader_display_name
     return event.created_by_display_name
+
+
+def mention_roles(event: WowRaidEvent, guild: WowRaidGuild) -> list[str]:
+    """The roles the raid pings: those picked for it, else the server's ping role.
+
+    Never ``@everyone`` (the role whose id is the server's own), whatever was saved.
+    """
+    if event.mention_role_ids is None:
+        roles = server_ping_roles(guild)
+    else:
+        roles = [str(role_id) for role_id in event.mention_role_ids]
+    return [role_id for role_id in roles if role_id != guild.discord_guild_id]
+
+
+def server_ping_roles(guild: WowRaidGuild) -> list[str]:
+    """The ping role ``/raid-admin setup`` chose, if any."""
+    if guild.ping_role_id:
+        return [guild.ping_role_id]
+    return []
+
+
+@dataclass(frozen=True)
+class MentionPick:
+    """A Mentions pick sorted out: the roles kept, and why any others weren't."""
+
+    roles: list[str]
+    everyone: bool = False  # @everyone was picked: never pinged
+    left_out: list[str] = field(default_factory=list)  # not mentionable, and the picker can't ping them
+    muted: list[str] = field(default_factory=list)  # kept, but not mentionable: may not ping
+
+
+def mention_pick(
+    picked: Sequence[str],
+    *,
+    mentionable: Mapping[str, bool],
+    everyone_id: str | None,
+    allowed: Sequence[str],
+    may_ping_any: bool,
+    limit: int,
+) -> MentionPick:
+    """The roles a Mentions pick keeps, so nobody gets the bot to ping a role they couldn't.
+
+    Only roles Discord resolved for the pick count (*mentionable*: id →
+    whether anyone may ping it), the first *limit* of them.  ``@everyone``
+    (its id is the server's own) is never kept.  A role that isn't
+    mentionable stays when it's *allowed* (the roles the raid pings now,
+    and the server's ping role, which the raid pings by default anyway) or
+    when the picker may ping any role themselves; else it's left out.
+
+    *may_ping_any* comes from the picker's permissions in the channel they
+    picked in, which Discord sends with the click; the raid may post in
+    another channel, whose overwrites aren't known here.
+    """
+    roles: list[str] = []
+    left_out: list[str] = []
+    muted: list[str] = []
+    everyone = False
+    for role_id in picked[:limit]:
+        if role_id not in mentionable:
+            continue
+        if role_id == everyone_id:
+            everyone = True
+        elif mentionable[role_id] or role_id in allowed:
+            roles.append(role_id)
+        elif may_ping_any:
+            roles.append(role_id)
+            muted.append(role_id)
+        else:
+            left_out.append(role_id)
+    return MentionPick(roles=roles, everyone=everyone, left_out=left_out, muted=muted)
 
 
 def clean_title(text: str) -> str:

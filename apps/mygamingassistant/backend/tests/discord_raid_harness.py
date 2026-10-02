@@ -230,6 +230,19 @@ def pick_user(
     return _payload(TYPE_COMPONENT, data, user_id, permissions, "Thrall")
 
 
+def pick_roles(
+    custom_id: str,
+    roles: dict[str, bool],
+    *,
+    user_id: str = ORGANISER,
+    permissions: int = ORGANISER_PERMS,
+) -> dict[str, Any]:
+    """A pick in a role menu (role id → mentionable): Discord sends the roles it resolved."""
+    resolved = {"roles": {role_id: {"id": role_id, "mentionable": able} for role_id, able in roles.items()}}
+    data = {"custom_id": custom_id, "component_type": 6, "values": list(roles), "resolved": resolved}
+    return _payload(TYPE_COMPONENT, data, user_id, permissions, "Thrall")
+
+
 def modal_submit(
     custom_id: str,
     fields: dict[str, str],
