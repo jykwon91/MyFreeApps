@@ -75,7 +75,7 @@ from app.services.wow import raid_consumables_round
 from app.services.wow.raid_member_prefs_service import resolve_player
 from app.services.wow.raid_composition import role_gaps
 from app.services.wow.raid_consumables import UnknownRaidError, select_consumables
-from app.services.wow.raid_embed import display_title
+from app.services.wow.raid_text import display_title
 from app.services.wow.raid_consumables_round import DM_STATUSES
 from app.services.wow.raid_roster import SEAT_STATUSES, compute_roster_summary, ordered_user_ids
 

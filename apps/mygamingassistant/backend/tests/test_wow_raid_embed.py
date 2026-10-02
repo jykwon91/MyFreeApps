@@ -20,16 +20,12 @@ from app.services.wow.raid_embed import (
     NOBODY_YET,
     build_initial_post,
     build_signup_message,
-    class_icon,
     column_heading,
     embed_length,
-    escape_name,
     roster_entry,
-    seats_label,
-    server_time_label,
-    status_heading,
 )
 from app.services.wow.raid_roster import compute_roster_summary, order_numbers
+from app.services.wow.raid_text import class_icon, escape_name, seats_label, server_time_label, status_heading
 
 # Sat Oct 10 2026, 20:00 America/New_York
 _STARTS = datetime(2026, 10, 11, 0, 0, tzinfo=timezone.utc)

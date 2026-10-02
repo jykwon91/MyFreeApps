@@ -52,12 +52,8 @@ from app.services.discord import emojis, raid_copy, rest
 from app.services.discord.interaction import NO_MENTIONS, ephemeral_data
 from app.services.discord.raid_views import preview_data, unix
 from app.services.wow import raid_event_service
-from app.services.wow.raid_embed import (
-    build_initial_post,
-    build_signup_message,
-    display_title,
-    local_day_label,
-)
+from app.services.wow.raid_embed import build_initial_post, build_signup_message
+from app.services.wow.raid_text import display_title, local_day_label
 
 logger = logging.getLogger(__name__)
 

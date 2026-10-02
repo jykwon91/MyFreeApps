@@ -29,7 +29,8 @@ from app.services.discord.raid_views import (
 )
 from app.services.wow.raid_catalog import CLASSES, CLASSES_BY_KEY, spec_info
 from app.services.wow.raid_custom_id import SAME_STATUS
-from app.services.wow.raid_embed import build_signup_components, build_signup_embed
+from app.services.wow.raid_embed import build_signup_embed
+from app.services.wow.raid_post_buttons import build_signup_components
 
 _STARTS = datetime(2026, 10, 11, 0, 0, tzinfo=timezone.utc)
 _STAMP = int(_STARTS.timestamp())

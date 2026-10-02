@@ -23,7 +23,7 @@ Fields       one inline column per button with anyone in it, "{icon} Warrior (3)
 Footer       "ID a1b2c3 · Tap your class to sign up. My sign-up changes your spec."
 Colors       purple; grey once cancelled.
 Buttons      [Tank] + one per class (icon + column count), then [Late]
-             [Tentative] [Bench] [Absence] [My sign-up].
+             [Tentative] [Bench] [Absence] [My sign-up] — ``raid_post_buttons``.
 
 Icons are the bot's application emojis.  Without them (before the first
 emoji sync) a class shows as a text tag ("[WAR]"), a class button as
@@ -44,41 +44,22 @@ My sign-up → [Full roster] always shows the complete list privately.
 """
 from __future__ import annotations
 
-import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
-from datetime import datetime
 from functools import partial
 from typing import Any, Final
-from zoneinfo import ZoneInfo
 
-from platform_shared.services.discord import (
-    BUTTON_STYLE_SECONDARY,
-    COMPONENT_TYPE_ACTION_ROW,
-    COMPONENT_TYPE_BUTTON,
-    EmojiSet,
-)
+from platform_shared.services.discord import EmojiSet
 
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.models.wow.wow_raid_signup import WowRaidSignup
-from app.services.wow import raid_custom_id
-from app.services.wow.raid_catalog import (
-    CLASSES_BY_KEY,
-    POST_COLUMNS,
-    TANK_COLUMN,
-    column_icon,
-    column_label,
-    column_tag,
-    effective_spec,
-    raid_name,
-    spec_info,
-)
+from app.services.wow.raid_catalog import TANK_COLUMN, column_icon, column_label
+from app.services.wow.raid_post_buttons import build_signup_components
 from app.services.wow.raid_post_layout import (
     NO_CLASS_COLUMN,
     NO_CLASS_LABEL,
     ROLE_ROW,
-    column_counts,
     post_columns,
     role_counts,
     tile_line,
@@ -90,6 +71,18 @@ from app.services.wow.raid_roster import (
     compute_roster_summary,
     order_numbers,
 )
+from app.services.wow.raid_text import (
+    MAX_NAME_CHARS,
+    class_tag,
+    display_title,
+    escape_markdown,
+    escape_name,
+    icon_text,
+    seats_detail,
+    server_time_label,
+    signup_icon,
+    status_heading,
+)
 
 COLOR_OPEN: Final = 0x7D3C98
 COLOR_CANCELLED: Final = 0x95A5A6
@@ -97,7 +90,6 @@ COLOR_CANCELLED: Final = 0x95A5A6
 FIELD_VALUE_LIMIT: Final = 1024
 AUTHOR_NAME_LIMIT: Final = 256
 EMBED_TOTAL_BUDGET: Final = 5800  # Discord's hard cap is 6000; keep headroom.
-MAX_NAME_CHARS: Final = 32
 POST_NAME_CHARS: Final = 12  # three columns side by side on a desktop
 SHORT_NAME_CHARS: Final = 9
 
@@ -107,7 +99,6 @@ EM_SPACE: Final = " "
 
 NO_MENTIONS: Final[dict[str, Any]] = {"parse": []}
 
-_MARKDOWN_SPECIALS: Final = re.compile(r"([\\*_~`|>\[\]])")
 # Event statuses that still take sign-ups (a draft is the create preview).
 _OPEN_STATUSES: Final = ("draft", "scheduled")
 _FOOTER_HINTS: Final[dict[str, str]] = {
@@ -120,21 +111,11 @@ STATUS_LISTS: Final = (
     ("bench", "Bench", "status_bench"),
     ("absence", "Absence", "status_absence"),
 )
-# Said after the count, so the queue and the bench aren't mistaken for each other.
-_STATUS_HINTS: Final[dict[str, str]] = {"queued": "waiting for a seat", "bench": "backups"}
 # After a name in a column: (icon, text when the icon is missing or dropped).
 _MARKERS: Final[dict[str, tuple[str, str]]] = {
     "late": ("status_late", "(late)"),
     QUEUED_STATUS: ("status_queued", "(queued)"),
 }
-# The status buttons under the class buttons: (status, label, icon).
-_STATUS_BUTTONS: Final = (
-    ("late", "Late", "status_late"),
-    ("tentative", "Tentative", "status_tentative"),
-    ("bench", "Bench", "status_bench"),
-    ("absence", "Absence", "status_absence"),
-)
-_BUTTONS_PER_ROW: Final = 5
 
 
 @dataclass(frozen=True)
@@ -219,28 +200,6 @@ def build_initial_post(
     return message
 
 
-def build_signup_components(
-    event: WowRaidEvent, signups: Sequence[WowRaidSignup], *, emojis: EmojiSet
-) -> list[dict[str, Any]]:
-    """Class buttons with their column counts, then the status buttons.
-
-    Every button is disabled once the raid is no longer open.
-    """
-    disabled = event.status != "scheduled"
-    counts = column_counts(signups)
-    class_buttons = [_class_button(event, column, counts[column], disabled, emojis) for column in POST_COLUMNS]
-    status_buttons = [
-        _button(raid_custom_id.encode("status", event.id, status), label, disabled, emojis.component(icon))
-        for status, label, icon in _STATUS_BUTTONS
-    ]
-    status_buttons.append(
-        _button(raid_custom_id.encode("mine", event.id), "My sign-up", disabled, emojis.component("ui_gear"))
-    )
-    rows = [class_buttons[i : i + _BUTTONS_PER_ROW] for i in range(0, len(class_buttons), _BUTTONS_PER_ROW)]
-    rows.append(status_buttons)
-    return [{"type": COMPONENT_TYPE_ACTION_ROW, "components": row} for row in rows]
-
-
 def build_signup_embed(
     event: WowRaidEvent,
     signups: Sequence[WowRaidSignup],
@@ -267,94 +226,6 @@ def embed_length(embed: dict[str, Any]) -> int:
     for embed_field in embed.get("fields", []):
         total += len(embed_field["name"]) + len(embed_field["value"])
     return total
-
-
-def display_title(event: WowRaidEvent) -> str:
-    """The event's custom title, else the raid's display name ("Onyxia's Lair")."""
-    return event.title or raid_name(event.raid_key)
-
-
-def local_day_label(starts_at: datetime, tz_name: str) -> str:
-    """'Sat Oct 10' in the guild's timezone (portable — no %-d)."""
-    local = starts_at.astimezone(ZoneInfo(tz_name))
-    return f"{local:%a %b} {local.day}"
-
-
-def server_time_label(starts_at: datetime, tz_name: str) -> str:
-    """'Sat 8:00 PM EDT' — the start in the guild's timezone (portable — no %-I)."""
-    local = starts_at.astimezone(ZoneInfo(tz_name))
-    return f"{local:%a} {local.hour % 12 or 12}:{local:%M %p %Z}"
-
-
-def escape_markdown(text: str) -> str:
-    """Escape Discord markdown so text renders literally."""
-    return _MARKDOWN_SPECIALS.sub(r"\\\1", text)
-
-
-def escape_name(display_name: str, *, max_chars: int = MAX_NAME_CHARS) -> str:
-    """Trim to *max_chars* and escape Discord markdown so names render literally."""
-    name = " ".join(display_name.split())
-    if len(name) > max_chars:
-        name = name[: max_chars - 1] + "…"
-    return escape_markdown(name)
-
-
-def seats_label(summary: RosterSummary) -> str:
-    """'14/40 confirmed (2 late) · 3 in queue' — late players hold seats too."""
-    return f"{summary.seats_taken}/{summary.size_cap} confirmed{_seats_detail(summary)}"
-
-
-def _seats_detail(summary: RosterSummary) -> str:
-    detail = ""
-    if summary.late_count:
-        detail += f" ({summary.late_count} late)"
-    if summary.queued_count:
-        detail += f" · {summary.queued_count} in queue"
-    return detail
-
-
-def status_heading(status: str, label: str, count: int) -> str:
-    """'Queued (3) · waiting for a seat' — the count, plus a hint for the queue and the bench."""
-    heading = f"{label} ({count})"
-    hint = _STATUS_HINTS.get(status)
-    if hint:
-        heading += f" · {hint}"
-    return heading
-
-
-def class_tag(wow_class: str | None) -> str:
-    info = CLASSES_BY_KEY.get(wow_class or "")
-    if info is None:
-        return ""
-    return f"[{info.tag}]"
-
-
-def class_icon(wow_class: str | None, emojis: EmojiSet) -> str:
-    """The class's emoji markup, else its text tag ("[WAR]"); empty for no class."""
-    if wow_class is None or wow_class not in CLASSES_BY_KEY:
-        return ""
-    return emojis.markup(wow_class, class_tag(wow_class))
-
-
-def spec_icon(wow_class: str | None, spec: str | None, emojis: EmojiSet) -> str:
-    """The spec's emoji; else the class icon (no spec, or the spec emoji is missing)."""
-    info = spec_info(wow_class, spec)
-    if info is None:
-        return class_icon(wow_class, emojis)
-    return emojis.markup(info.icon, class_icon(wow_class, emojis))
-
-
-def signup_icon(signup: WowRaidSignup, emojis: EmojiSet) -> str:
-    """The icon of the spec a sign-up shows as (a pre-spec one: its default spec)."""
-    spec = effective_spec(signup.wow_class, signup.role, signup.spec)
-    if spec is None:
-        return class_icon(signup.wow_class, emojis)
-    return spec_icon(spec.class_key, spec.key, emojis)
-
-
-def icon_text(emojis: EmojiSet, icon: str, text: str) -> str:
-    """'{icon} text', or just the text while the icon isn't uploaded."""
-    return f"{emojis.markup(icon)} {text}".strip()
 
 
 # ---------------------------------------------------------------------------
@@ -426,7 +297,7 @@ def _description(
             icon_text(
                 emojis,
                 "info_signups",
-                f"**{summary.seats_taken}/{summary.size_cap}** confirmed{_seats_detail(summary)}",
+                f"**{summary.seats_taken}/{summary.size_cap}** confirmed{seats_detail(summary)}",
             ),
         )
         server = (
@@ -583,32 +454,3 @@ def _capped(players: Sequence[WowRaidSignup], cap: int | None) -> tuple[Sequence
 
 def _field(name: str, value: str, *, inline: bool = False) -> dict[str, Any]:
     return {"name": name, "value": value, "inline": inline}
-
-
-# ---------------------------------------------------------------------------
-# Buttons
-# ---------------------------------------------------------------------------
-
-
-def _class_button(
-    event: WowRaidEvent, column: str, count: int, disabled: bool, emojis: EmojiSet
-) -> dict[str, Any]:
-    """The column's icon and count ("WAR 3" until the icons are uploaded)."""
-    emoji = emojis.component(column_icon(column))
-    label = str(count)
-    if emoji is None:
-        label = f"{column_tag(column)} {count}"
-    return _button(raid_custom_id.encode("cls", event.id, column), label, disabled, emoji)
-
-
-def _button(custom_id: str, label: str, disabled: bool, emoji: dict[str, str] | None) -> dict[str, Any]:
-    button: dict[str, Any] = {
-        "type": COMPONENT_TYPE_BUTTON,
-        "style": BUTTON_STYLE_SECONDARY,
-        "label": label,
-        "custom_id": custom_id,
-        "disabled": disabled,
-    }
-    if emoji is not None:
-        button["emoji"] = emoji
-    return button

@@ -46,8 +46,8 @@ from app.models.wow.wow_raid_notification import WowRaidNotification
 from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.repositories.wow import wow_raid_signup_repo
 from app.services.discord import raid_copy, rest
-from app.services.wow.raid_embed import server_time_label
 from app.services.wow.raid_roster import order_numbers
+from app.services.wow.raid_text import server_time_label
 from app.services.wow.raid_time_parser import PAST_MESSAGE, UNREADABLE_MESSAGE
 
 pytestmark = pytest.mark.asyncio

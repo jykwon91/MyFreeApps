@@ -46,19 +46,11 @@ from app.services.wow.raid_catalog import (
 from app.services.wow.raid_embed import (
     COLOR_OPEN,
     STATUS_LISTS,
-    build_signup_components,
     build_signup_embed,
     column_heading,
-    display_title,
-    escape_markdown,
-    escape_name,
-    icon_text,
-    local_day_label,
     roster_entry,
-    seats_label,
-    signup_icon,
-    status_heading,
 )
+from app.services.wow.raid_post_buttons import build_signup_components
 from app.services.wow.raid_post_layout import post_columns, with_status
 from app.services.wow.raid_roster import (
     ABSENCE_STATUS,
@@ -68,6 +60,16 @@ from app.services.wow.raid_roster import (
     compute_roster_summary,
     order_numbers,
     queue_position,
+)
+from app.services.wow.raid_text import (
+    display_title,
+    escape_markdown,
+    escape_name,
+    icon_text,
+    local_day_label,
+    seats_label,
+    signup_icon,
+    status_heading,
 )
 
 EMBED_DESCRIPTION_LIMIT: Final = 4096
