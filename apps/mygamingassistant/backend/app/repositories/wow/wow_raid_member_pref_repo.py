@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.wow.wow_raid_member_pref import WowRaidMemberPref
@@ -28,6 +29,36 @@ async def get(
     return result.scalar_one_or_none()
 
 
+async def lock_or_create(
+    db: AsyncSession, *, guild_id: uuid.UUID, discord_user_id: str
+) -> WowRaidMemberPref:
+    """The player's preference row, locked until the transaction ends (created empty if missing).
+
+    Saves read the row, change a field, then write every field back
+    (``upsert``), so one member's saves must run one after another: two taps
+    on two raid posts at once would otherwise both insert (the second fails
+    the unique constraint) or both write, the second dropping what the first
+    saved.  ``ON CONFLICT DO NOTHING`` waits for a concurrent insert of the
+    same row, and ``FOR UPDATE`` then waits for its writer and reads what it
+    committed.  ``populate_existing`` refreshes an already-loaded instance.
+    """
+    await db.execute(
+        pg_insert(WowRaidMemberPref)
+        .values(guild_id=guild_id, discord_user_id=discord_user_id)
+        .on_conflict_do_nothing(index_elements=["guild_id", "discord_user_id"])
+    )
+    result = await db.execute(
+        select(WowRaidMemberPref)
+        .where(
+            WowRaidMemberPref.guild_id == guild_id,
+            WowRaidMemberPref.discord_user_id == discord_user_id,
+        )
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    return result.scalar_one()
+
+
 async def upsert(
     db: AsyncSession,
     *,
@@ -41,7 +72,8 @@ async def upsert(
     """Insert or update a member's preferences.
 
     All fields are replaced on conflict — callers should pass the complete
-    desired state each time (``saved_specs=None`` means none saved).
+    desired state each time (``saved_specs=None`` means none saved), read
+    under ``lock_or_create``.
     """
     specs = dict(saved_specs or {})
     existing = await get(db, guild_id=guild_id, discord_user_id=discord_user_id)

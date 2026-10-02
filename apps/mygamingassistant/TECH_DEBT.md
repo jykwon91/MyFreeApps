@@ -553,17 +553,6 @@ Found while building the Discord Activity and left out of that PR: either the we
 
 ---
 
-## Raid post look (deferred from the PR4 review - 2026-10-01)
-
-### [Backend] Raid member prefs - concurrent saves for one member race
-- **Severity:** Low
-- **Effort:** S
-- **Location:** backend/app/services/wow/raid_member_prefs_service.py (`remember_spec`, `update_prefs`), backend/app/repositories/wow/wow_raid_member_pref_repo.py (`upsert`)
-- **Problem:** Saving a member's default spec reads their row, edits `saved_specs`, then writes it back, with no row lock. Taps on the same post are serialised by the event lock, but two taps by one member on two different posts at the same moment are not. With no row yet, both insert and the second fails the unique constraint, so that tap errors ("This interaction failed"; tapping again works). With a row, the second write replaces `saved_specs` and drops the class the first tap just saved, so that class asks for its spec again next time.
-- **Recommendation:** In `upsert`, `INSERT ... ON CONFLICT (guild_id, discord_user_id) DO NOTHING`, then `SELECT ... FOR UPDATE` the row before the read-modify-write in `remember_spec` / `update_prefs`, so one member's saves run one after another and merge.
-
----
-
 ## Suggested Agent Update
 
 When auditing long files, distinguish between bloat (god-modules where unrelated concerns share a file) and scaffolding duplication (parallel files repeating a 4-line pattern N times). The latter looks like several files of legitimate size, but the total surface area is the real cost. For MGA clip generators (3 files, ~530 LOC each), each file is individually defensible - the cumulative duplication is what justifies extracting a clip_pipeline helper. A future audit pass should report aggregate scaffolding cost when N>=3 sibling files share a structural skeleton, not just per-file LOC. Consider adding scaffolding cluster detection to the long-files pass: if N files in the same directory share roughly 70 plus of their top-level function shape, flag the cluster.
