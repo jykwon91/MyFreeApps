@@ -126,6 +126,7 @@ _UOW_CONSUMERS = (
     "app.services.discord.components.raid_card",
     "app.services.discord.components.raid_edit",
     "app.services.discord.components.raid_leader",
+    "app.services.discord.components.raid_seat",
     "app.services.discord.components.raid_signup",
     "app.services.discord.raid_ping",
     "app.services.discord.raid_publisher",

@@ -12,17 +12,21 @@ import pytest
 
 from app.core.config import settings
 from app.models.wow.wow_raid_event import WowRaidEvent
-from app.services.discord import raid_copy
+from app.services.discord import raid_copy, raid_limit_copy
 from app.services.discord.raid_edit_views import (
+    CLASS_LIMITS_MAX,
     FIELD,
+    ROLE_LIMIT_MAX,
     WHEN_MAX,
     cancel_modal,
+    class_limits_modal,
     color_picker,
     delete_check,
     description_modal,
     edit_card,
     image_modal,
     leader_picker,
+    role_limits_modal,
     title_modal,
     when_modal,
     when_prefill,
@@ -87,6 +91,7 @@ def _input(modal: dict[str, Any]) -> dict[str, Any]:
 _PROPERTY_ROWS = [
     [("Title", 2, _id("ed", "title")), ("Leader", 2, _id("ed", "leader")), ("Date & Time", 2, _id("ed", "when"))],
     [("Description", 2, _id("ed", "desc")), ("Image", 2, _id("ed", "image")), ("Color", 2, _id("ed", "color"))],
+    [("Role limits", 2, _id("ed", "role_limits")), ("Class limits", 2, _id("ed", "class_limits"))],
     [("Cancel raid", 4, _id("ed", "cancel")), ("Delete raid", 4, _id("ed", "delete")), ("Done", 1, _id("ed", "done"))],
 ]
 
@@ -108,6 +113,8 @@ def test_the_card_shows_the_raid_as_it_stands_with_a_button_for_each_thing() -> 
         f"**Date & Time:** <t:{_STAMP}:F> (<t:{_STAMP}:R>)",
         "**Image:** The raid's own banner",
         "**Color:** \U0001F7E3 Purple",
+        "**Role limits:** *none*",
+        "**Class limits:** *none*",
         "**Description:** *none*",
     ]
     assert embed["color"] == COLOR_OPEN
@@ -124,6 +131,8 @@ def test_the_card_shows_what_the_leader_changed(monkeypatch: pytest.MonkeyPatch)
         image_url=_IMAGE,
         color=0x3498DB,
         notes="Bring FR\nFlasks on pull",
+        role_limits={"healer": 4, "tank": 2},
+        class_limits={"rogue": 3, "warrior": 0},
     )
     embed = _embed(edit_card(event, notice=raid_copy.TITLE_OK))
     assert embed["description"].split("\n") == [
@@ -132,6 +141,8 @@ def test_the_card_shows_what_the_leader_changed(monkeypatch: pytest.MonkeyPatch)
         f"**Date & Time:** <t:{_STAMP}:F> (<t:{_STAMP}:R>)",
         f"**Image:** [Your image]({_IMAGE})",
         "**Color:** \U0001F535 Blue",
+        "**Role limits:** Tanks 2 · Healers 4",  # role-row order, whatever order they were saved in
+        "**Class limits:** Warrior 0 · Rogue 3",  # the post's class order
         "**Description:**",
         "> Bring FR",
         "> Flasks on pull",
@@ -311,6 +322,72 @@ def test_the_optional_forms_can_be_left_empty() -> None:
 def test_a_prefilled_value_never_exceeds_the_inputs_limit() -> None:
     # Discord refuses a form whose value is longer than its max_length.
     assert len(_input(description_modal(_event(notes="x" * 900)))["value"]) == DESCRIPTION_MAX
+
+
+def test_the_role_limits_form_has_a_box_per_role_holding_its_limit() -> None:
+    modal = role_limits_modal(_event(role_limits={"healer": 4, "tank": 0}))
+    assert modal["type"] == 9
+    assert modal["data"]["custom_id"] == _id("m", "role_limits")
+    assert modal["data"]["title"] == raid_limit_copy.ROLE_MODAL
+    labels = modal["data"]["components"]
+    assert [(label["type"], label["label"]) for label in labels] == [
+        (18, "Max tanks"),
+        (18, "Max melee DPS"),
+        (18, "Max ranged DPS"),
+        (18, "Max healers"),
+    ]
+    assert labels[0]["description"] == raid_limit_copy.ROLE_HINT
+    assert all("description" not in label for label in labels[1:])  # the hint once, on the first box
+    boxes = [label["component"] for label in labels]
+    assert boxes[0] == {
+        "type": 4,
+        "custom_id": "tank",
+        "style": 1,
+        "max_length": ROLE_LIMIT_MAX,
+        "required": False,
+        "value": "0",  # 0 is a limit (nobody), not an empty box
+        "placeholder": raid_limit_copy.ROLE_PLACEHOLDER,
+    }
+    assert [(box["custom_id"], box.get("value")) for box in boxes] == [
+        ("tank", "0"),
+        ("melee", None),
+        ("ranged", None),
+        ("healer", "4"),
+    ]
+    assert all("value" not in box for box in (b["component"] for b in role_limits_modal(_event())["data"]["components"]))
+
+
+def test_the_class_limits_form_lists_every_class_with_its_limit() -> None:
+    modal = class_limits_modal(_event(class_limits={"rogue": 3, "warrior": 0}))
+    assert modal["data"]["custom_id"] == _id("m", "class_limits")
+    assert modal["data"]["title"] == raid_limit_copy.CLASS_MODAL
+    [label] = modal["data"]["components"]
+    assert (label["label"], label["description"]) == (raid_limit_copy.CLASS_LABEL, raid_limit_copy.CLASS_HINT)
+    box = _input(modal)
+    assert (box["custom_id"], box["style"], box["max_length"], box["required"]) == (FIELD, 2, CLASS_LIMITS_MAX, False)
+    assert box["placeholder"] == raid_limit_copy.CLASS_PLACEHOLDER
+    assert box["value"].split("\n") == [
+        "Warrior: 0",
+        "Druid: no limit",
+        "Paladin: no limit",
+        "Rogue: 3",
+        "Hunter: no limit",
+        "Mage: no limit",
+        "Warlock: no limit",
+        "Priest: no limit",
+        "Shaman: no limit",
+    ]
+
+
+def test_the_limits_forms_fit_discords_caps() -> None:
+    # A Label's text is at most 45 characters and its description 100; a placeholder 100.
+    for modal in (role_limits_modal(_event()), class_limits_modal(_event())):
+        assert len(modal["data"]["title"]) <= 45
+        for label in modal["data"]["components"]:
+            assert len(label["label"]) <= 45
+            assert len(label.get("description", "")) <= 100
+            assert len(label["component"]["placeholder"]) <= 100
+    assert len(_input(class_limits_modal(_event()))["value"]) <= CLASS_LIMITS_MAX
 
 
 @pytest.mark.parametrize(

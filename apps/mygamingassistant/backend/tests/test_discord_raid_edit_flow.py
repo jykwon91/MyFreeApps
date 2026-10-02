@@ -120,7 +120,9 @@ def _post_embed(fake_discord: FakeDiscord) -> dict[str, Any]:
 
 
 def _card_ids(event: WowRaidEvent) -> list[str]:
-    actions = ("title", "leader", "when", "desc", "image", "color", "cancel", "delete", "done")
+    actions = (
+        "title", "leader", "when", "desc", "image", "color", "role_limits", "class_limits", "cancel", "delete", "done"
+    )
     return [f"raid:v1:ed:{event.id}:{action}" for action in actions]
 
 

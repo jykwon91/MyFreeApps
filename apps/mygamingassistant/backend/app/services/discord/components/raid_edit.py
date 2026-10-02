@@ -12,6 +12,10 @@ Flows
   post is re-rendered in the background.  A move reschedules the raid's
   reminders and, while anyone is on the raid, the card offers
   [Tell them in channel] (``raid_leader``: a ping with the new time).
+* **Role limits / Class limits** — a form: a box per role, or a class per
+  line (``raid_limit_forms``).  Whatever reads is saved and the rest is
+  reported on the card; a limit set below the players already in line
+  removes nobody, and the card says so.
 * **Leader / Color** — a menu in place of the card, with [Back].  A leader
   who hands the raid to someone else gets a closing note instead of the
   card when they can't edit it any more.
@@ -34,7 +38,7 @@ back to the preview; a draft has no public post to re-render.
 """
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any, Final
 
@@ -44,7 +48,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import unit_of_work
 from app.repositories.wow import wow_raid_signup_repo
-from app.services.discord import emojis, raid_copy, raid_draft_copy, raid_publisher
+from app.services.discord import emojis, raid_copy, raid_draft_copy, raid_limit_copy, raid_publisher
 from app.services.discord.interaction import (
     Interaction,
     ephemeral_data,
@@ -58,12 +62,14 @@ from app.services.discord.raid_draft_views import MENTION_MAX, mentions_picker, 
 from app.services.discord.raid_edit_views import (
     FIELD,
     cancel_modal,
+    class_limits_modal,
     color_picker,
     delete_check,
     description_modal,
     edit_card,
     image_modal,
     leader_picker,
+    role_limits_modal,
     title_modal,
     when_modal,
 )
@@ -81,6 +87,8 @@ from app.services.wow.raid_details import (
     server_ping_roles,
     stored_title,
 )
+from app.services.wow.raid_limit_forms import read_class_form, read_role_form
+from app.services.wow.raid_limits import LimitHit, Limits, changed_keys, over_limit
 from app.services.wow.raid_roster import listed_user_ids
 from app.services.wow.raid_text import escape_name
 from app.services.wow.raid_time_parser import RaidTimeError, parse_raid_time
@@ -105,7 +113,8 @@ class _Saved:
     refresh: bool = True
 
 
-_Apply = Callable[[AsyncSession, RaidContext, str], Awaitable[_Saved]]
+# A form's submit: what its boxes hold, by custom_id.
+_Apply = Callable[[AsyncSession, RaidContext, Mapping[str, str]], Awaitable[_Saved]]
 
 
 # ---------------------------------------------------------------------------
@@ -193,6 +202,10 @@ def _open(action: str, found: RaidContext) -> dict[str, Any]:
         return image_modal(event)
     if action == "cancel":
         return cancel_modal(event)
+    if action == "role_limits":
+        return role_limits_modal(event)
+    if action == "class_limits":
+        return class_limits_modal(event)
     if action == "leader":
         return update_response(leader_picker(event))
     if action == "color":
@@ -310,6 +323,18 @@ async def handle_cancel_submit(interaction: Interaction, parsed: RaidCustomId, b
     return await _submit(interaction, parsed, background, _apply_cancel)
 
 
+async def handle_role_limits_submit(
+    interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks
+) -> dict[str, Any]:
+    return await _submit(interaction, parsed, background, _apply_role_limits)
+
+
+async def handle_class_limits_submit(
+    interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks
+) -> dict[str, Any]:
+    return await _submit(interaction, parsed, background, _apply_class_limits)
+
+
 async def _submit(
     interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks, apply: _Apply
 ) -> dict[str, Any]:
@@ -318,27 +343,32 @@ async def _submit(
         found = await load_led_event(db, interaction, parsed.event_id, lock=True, statuses=_CHANGEABLE)
         if isinstance(found, str):
             return update_text_response(found)
-        saved = await apply(db, found, interaction.fields.get(FIELD, ""))
+        saved = await apply(db, found, interaction.fields)
         refresh = saved.refresh and _has_post(found)
     if refresh:
         background.add_task(raid_publisher.refresh_public_message, parsed.event_id)
     return update_response(saved.card)
 
 
-async def _apply_title(db: AsyncSession, found: RaidContext, text: str) -> _Saved:
+def _box(fields: Mapping[str, str]) -> str:
+    """A one-box form's box."""
+    return fields.get(FIELD, "")
+
+
+async def _apply_title(db: AsyncSession, found: RaidContext, fields: Mapping[str, str]) -> _Saved:
     event = found.event
-    title = clean_title(text)
+    title = clean_title(_box(fields))
     if not title:
         return _Saved(_card(found, notice=raid_copy.TITLE_EMPTY), refresh=False)
     await raid_event_service.set_title(db, event, stored_title(event.raid_key, title))
     return _Saved(_card(found, notice=raid_copy.TITLE_OK))
 
 
-async def _apply_when(db: AsyncSession, found: RaidContext, text: str) -> _Saved:
+async def _apply_when(db: AsyncSession, found: RaidContext, fields: Mapping[str, str]) -> _Saved:
     event = found.event
     now = utcnow()
     try:
-        starts_at = parse_raid_time(text, tz_name=found.guild.timezone, now=now)
+        starts_at = parse_raid_time(_box(fields), tz_name=found.guild.timezone, now=now)
     except RaidTimeError as exc:
         return _Saved(_card(found, notice=exc.user_message), refresh=False)
     if starts_at == event.starts_at:
@@ -351,8 +381,8 @@ async def _apply_when(db: AsyncSession, found: RaidContext, text: str) -> _Saved
     return _Saved(_card(found, notice=notice, notify_count=len(listed_user_ids(signups))))
 
 
-async def _apply_description(db: AsyncSession, found: RaidContext, text: str) -> _Saved:
-    notes = clean_description(text)
+async def _apply_description(db: AsyncSession, found: RaidContext, fields: Mapping[str, str]) -> _Saved:
+    notes = clean_description(_box(fields))
     await raid_event_service.set_description(db, found.event, notes)
     notice = raid_copy.DESC_OK
     if notes is None:
@@ -360,9 +390,9 @@ async def _apply_description(db: AsyncSession, found: RaidContext, text: str) ->
     return _Saved(_card(found, notice=notice))
 
 
-async def _apply_image(db: AsyncSession, found: RaidContext, text: str) -> _Saved:
+async def _apply_image(db: AsyncSession, found: RaidContext, fields: Mapping[str, str]) -> _Saved:
     try:
-        link = image_link(text)
+        link = image_link(_box(fields))
     except ValueError:
         return _Saved(_card(found, notice=raid_copy.BANNER_BAD), refresh=False)
     await raid_event_service.set_banner(db, found.event, link)
@@ -372,10 +402,40 @@ async def _apply_image(db: AsyncSession, found: RaidContext, text: str) -> _Save
     return _Saved(_card(found, notice=notice))
 
 
-async def _apply_cancel(db: AsyncSession, found: RaidContext, text: str) -> _Saved:
+async def _apply_cancel(db: AsyncSession, found: RaidContext, fields: Mapping[str, str]) -> _Saved:
     """Stage the reason and ask once more; [Cancel raid] there does the cancelling."""
-    await raid_event_service.set_cancel_reason(db, found.event, clean_reason(text))
+    await raid_event_service.set_cancel_reason(db, found.event, clean_reason(_box(fields)))
     return _Saved(cancel_confirm_data(found.event, from_edit=True), refresh=False)
+
+
+async def _apply_role_limits(db: AsyncSession, found: RaidContext, fields: Mapping[str, str]) -> _Saved:
+    old = dict(Limits.of(found.event).roles)
+    form = read_role_form(fields, old)
+    over: list[LimitHit] = []
+    if form.limits != old:
+        await raid_event_service.set_role_limits(db, found.event, form.limits)
+        over = await _past_limits(db, found, changed_keys(old, form.limits))
+    notice = raid_limit_copy.role_notice(old, form.limits, form.bad, over)
+    return _Saved(_card(found, notice=notice), refresh=form.limits != old)
+
+
+async def _apply_class_limits(db: AsyncSession, found: RaidContext, fields: Mapping[str, str]) -> _Saved:
+    if FIELD not in fields:  # no box came back; an empty one clears the limits
+        return _Saved(_card(found, notice=raid_draft_copy.NOTHING_CHANGED), refresh=False)
+    old = dict(Limits.of(found.event).classes)
+    form = read_class_form(fields[FIELD], old)
+    over: list[LimitHit] = []
+    if form.limits != old:
+        await raid_event_service.set_class_limits(db, found.event, form.limits)
+        over = await _past_limits(db, found, changed_keys(old, form.limits))
+    notice = raid_limit_copy.class_notice(old, form.limits, form.errors, over)
+    return _Saved(_card(found, notice=notice), refresh=form.limits != old)
+
+
+async def _past_limits(db: AsyncSession, found: RaidContext, keys: Iterable[str]) -> list[LimitHit]:
+    """Of the limits named by *keys*, those the players in line are already past (nobody is removed)."""
+    signups = await wow_raid_signup_repo.list_for_event(db, found.event.id)
+    return over_limit(signups, Limits.of(found.event), keys)
 
 
 # ---------------------------------------------------------------------------

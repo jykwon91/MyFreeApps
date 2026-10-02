@@ -37,8 +37,8 @@ def test_single_head_is_0031(script_directory: ScriptDirectory) -> None:
         "Orphan heads usually mean a migration's down_revision is stale "
         "after a merge — rebase and re-point the down_revision."
     )
-    assert heads[0] == "0032", (
-        f"Expected head 0032 (wow raid event mention roles), "
+    assert heads[0] == "0033", (
+        f"Expected head 0033 (wow raid event role and class limits), "
         f"got {heads[0]}."
     )
 
@@ -257,3 +257,11 @@ def test_0032_down_revision_points_at_0031(
     """0032 must chain directly off 0031 (the roles a raid pings, from the create preview)."""
     rev = script_directory.get_revision("0032")
     assert rev.down_revision == "0031"
+
+
+def test_0033_down_revision_points_at_0032(
+    script_directory: ScriptDirectory,
+) -> None:
+    """0033 must chain directly off 0032 (a raid's role and class limits, from Raid: Edit)."""
+    rev = script_directory.get_revision("0033")
+    assert rev.down_revision == "0032"

@@ -10,6 +10,7 @@ them.
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Final
 
@@ -64,11 +65,23 @@ def expected_composition(size: int) -> Composition:
     return Composition(tanks=tanks, healers=healers, dps=max(size - tanks - healers, 0))
 
 
-def role_gaps(size: int, seated: RoleCounts) -> RoleGaps:
-    """Roles still missing from the seat holders (signups without a role don't count)."""
+def role_gaps(size: int, seated: RoleCounts, room: Mapping[str, int] | None = None) -> RoleGaps:
+    """Roles still missing from the seat holders (signups without a role don't count).
+
+    *room* — how many more players each limited role still takes
+    (``raid_limits.role_room``) — caps the tank and healer gaps, so the
+    nudge never calls for players the raid's limits would turn away.
+    """
     expected = expected_composition(size)
+    room = room or {}
     return RoleGaps(
-        tanks=max(expected.tanks - seated.tank, 0),
-        healers=max(expected.healers - seated.healer, 0),
+        tanks=_capped(expected.tanks - seated.tank, room.get("tank")),
+        healers=_capped(expected.healers - seated.healer, room.get("healer")),
         dps=max(expected.dps - seated.dps, 0),
     )
+
+
+def _capped(gap: int, room: int | None) -> int:
+    if room is not None:
+        gap = min(gap, room)
+    return max(gap, 0)

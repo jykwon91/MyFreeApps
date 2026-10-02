@@ -26,7 +26,7 @@ from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.models.wow.wow_raid_member_pref import WowRaidMemberPref
 from app.models.wow.wow_raid_signup import WowRaidSignup
-from app.services.discord import raid_copy
+from app.services.discord import raid_copy, raid_limit_copy
 from app.services.discord.interaction import ephemeral_data
 from app.services.discord.rest import message_link
 from app.services.wow import raid_custom_id
@@ -48,6 +48,7 @@ from app.services.wow.raid_embed import (
     column_heading,
     roster_entry,
 )
+from app.services.wow.raid_limits import LimitCheck, LimitHit
 from app.services.wow.raid_post_layout import post_columns, with_status
 from app.services.wow.raid_roster import (
     ABSENCE_STATUS,
@@ -186,10 +187,13 @@ def cancel_confirm_data(event: WowRaidEvent, *, from_edit: bool = False) -> dict
 # ---------------------------------------------------------------------------
 
 
-def class_picker_data(event: WowRaidEvent, status: str, *, emojis: EmojiSet, back: bool = False) -> dict[str, Any]:
+def class_picker_data(
+    event: WowRaidEvent, status: str, *, emojis: EmojiSet, back: bool = False, notice: str | None = None
+) -> dict[str, Any]:
     """Tank, then the classes — the same columns as the buttons on the post.
 
-    *back* adds [Back] to the My sign-up card the menu was opened from.
+    *back* adds [Back] to the My sign-up card the menu was opened from;
+    *notice* (why the class picked has no room) replaces the prompt.
     """
     tanks = [_tank_label(spec) for spec in TANK_SPECS]
     tank = _option(
@@ -203,7 +207,7 @@ def class_picker_data(event: WowRaidEvent, status: str, *, emojis: EmojiSet, bac
     rows = [action_row(select)]
     if back:
         rows.append(action_row(_back_to_card(event)))
-    return ephemeral_data(raid_copy.CLASS_PROMPT, components=rows)
+    return ephemeral_data(notice or raid_copy.CLASS_PROMPT, components=rows)
 
 
 def spec_picker_data(
@@ -214,32 +218,47 @@ def spec_picker_data(
     current: WowSpecInfo | None,
     emojis: EmojiSet,
     back: bool = False,
+    check: LimitCheck | None = None,
+    notice: str | None = None,
 ) -> dict[str, Any]:
     """The column's specs (a class's, or every tank spec); *current* is preselected.
 
     *current* is the player's spec, never a guess: Discord sends nothing
     when the preselected option is picked again.  *back* adds [Back] to the
-    My sign-up card the menu was opened from.
+    My sign-up card the menu was opened from.  With *check*, the specs the
+    raid's limits leave no room for are marked with why; *notice* (why a
+    pick had no room) replaces the prompt.
     """
+    blocks: dict[WowSpecInfo, LimitHit] = {}
+    if check is not None:
+        blocks = check.blocks(column)
     select = _select(
         raid_custom_id.encode("spec", event.id, column, status),
         "Pick your spec",
-        [_spec_option(spec, column, current, emojis) for spec in column_specs(column)],
+        [_spec_option(spec, column, current, emojis, blocks.get(spec)) for spec in column_specs(column)],
     )
     buttons = [button("Different class", BUTTON_STYLE_SECONDARY, raid_custom_id.encode("pickclass", event.id, status))]
     if back:
         buttons.append(_back_to_card(event))
-    return ephemeral_data(_spec_prompt(column, current), components=[action_row(select), action_row(*buttons)])
+    content = notice or _spec_prompt(column, current)
+    if blocks and notice is None:
+        content = f"{content}\n{raid_limit_copy.SPEC_MARKS_NOTE}"
+    return ephemeral_data(content, components=[action_row(select), action_row(*buttons)])
 
 
-def _spec_option(spec: WowSpecInfo, column: str, current: WowSpecInfo | None, emojis: EmojiSet) -> dict[str, Any]:
+def _spec_option(
+    spec: WowSpecInfo, column: str, current: WowSpecInfo | None, emojis: EmojiSet, hit: LimitHit | None
+) -> dict[str, Any]:
     emoji = emojis.component(spec.icon) or emojis.component(spec.class_key)
+    label = spec.label
+    description: str | None = ROLE_DESCRIPTIONS[spec.display_role]
     if column == TANK_COLUMN:
-        return _option(_tank_label(spec), spec.choice_value, emoji, default=spec == current)
-    description = ROLE_DESCRIPTIONS[spec.display_role]
-    if spec.column == TANK_COLUMN:
+        label, description = _tank_label(spec), None
+    elif spec.column == TANK_COLUMN:
         description = raid_copy.TANK_SPEC_NOTE
-    return _option(spec.label, spec.choice_value, emoji, description=description, default=spec == current)
+    if hit is not None:
+        description = raid_limit_copy.spec_mark(spec, hit, column)
+    return _option(label, spec.choice_value, emoji, description=description, default=spec == current)
 
 
 def _spec_prompt(column: str, current: WowSpecInfo | None) -> str:
@@ -248,6 +267,44 @@ def _spec_prompt(column: str, current: WowSpecInfo | None) -> str:
     if column == TANK_COLUMN:
         return raid_copy.TANK_PROMPT
     return raid_copy.spec_prompt(CLASSES_BY_KEY[column].label)
+
+
+def limit_refusal_data(
+    event: WowRaidEvent,
+    status: str,
+    column: str,
+    check: LimitCheck,
+    *,
+    emojis: EmojiSet,
+    spec: WowSpecInfo | None = None,
+    current: WowSpecInfo | None = None,
+    tapped: bool = False,
+) -> dict[str, Any] | None:
+    """Why the raid's limits refuse *spec* (none given: every spec) in *column*; None when they don't.
+
+    No spec in the column left: why, over the class select — just why when
+    the player *tapped* the column on the post, which is the class picker.
+    Only *spec* refused: the column's spec select again, why in place of
+    its prompt, *current* preselected.
+    """
+    back = status == raid_custom_id.SAME_STATUS
+    closed = check.closed(column)
+    if closed:
+        end = raid_limit_copy.refusal_end(listed=check.listed, spec_select=False)
+        text = raid_limit_copy.refusal(closed, column, end)
+        if tapped:
+            return ephemeral_data(text)
+        return class_picker_data(event, status, emojis=emojis, back=back, notice=text)
+    hit = None
+    if spec is not None:
+        hit = check.hit(spec)
+    if hit is None:
+        return None
+    end = raid_limit_copy.refusal_end(listed=check.listed, spec_select=True)
+    notice = raid_limit_copy.refusal([hit], column, end)
+    return spec_picker_data(
+        event, status, column, current=current, emojis=emojis, back=back, check=check, notice=notice
+    )
 
 
 # ---------------------------------------------------------------------------

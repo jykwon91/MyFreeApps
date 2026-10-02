@@ -1,7 +1,8 @@
 """The raid post's buttons — [Tank] and one per class, then the statuses.
 
 Laid out like Raid-Helper's: each class button shows its column's icon and
-count ("WAR 3" until the icons are uploaded); then [Late] [Tentative]
+count ("WAR 3" until the icons are uploaded), over its limit when the raid
+has one ("3/4"; [Tank] shows Max tanks); then [Late] [Tentative]
 [Bench] [Absence] [My sign-up], five to a row.  Once the leader closes
 sign-ups, every button but [My sign-up] is disabled; once the raid is no
 longer scheduled, all of them are.
@@ -22,6 +23,7 @@ from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.services.wow import raid_custom_id
 from app.services.wow.raid_catalog import POST_COLUMNS, column_icon, column_tag
+from app.services.wow.raid_limits import Limits, count_label
 from app.services.wow.raid_post_layout import column_counts
 
 # The status buttons under the class buttons: (status, label, icon).
@@ -45,7 +47,11 @@ def build_signup_components(
     not_scheduled = event.status != "scheduled"
     disabled = not_scheduled or event.closed_at is not None
     counts = column_counts(signups)
-    class_buttons = [_class_button(event, column, counts[column], disabled, emojis) for column in POST_COLUMNS]
+    limits = Limits.of(event)
+    class_buttons = [
+        _class_button(event, column, count_label(counts[column], limits.for_column(column)), disabled, emojis)
+        for column in POST_COLUMNS
+    ]
     status_buttons = [
         _button(raid_custom_id.encode("status", event.id, status), label, disabled, emojis.component(icon))
         for status, label, icon in _STATUS_BUTTONS
@@ -59,11 +65,11 @@ def build_signup_components(
 
 
 def _class_button(
-    event: WowRaidEvent, column: str, count: int, disabled: bool, emojis: EmojiSet
+    event: WowRaidEvent, column: str, count: str, disabled: bool, emojis: EmojiSet
 ) -> dict[str, Any]:
     """The column's icon and count ("WAR 3" until the icons are uploaded)."""
     emoji = emojis.component(column_icon(column))
-    label = str(count)
+    label = count
     if emoji is None:
         label = f"{column_tag(column)} {count}"
     return _button(raid_custom_id.encode("cls", event.id, column), label, disabled, emoji)

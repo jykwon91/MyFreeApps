@@ -17,6 +17,7 @@ Description  the title in letter tiles (else "## Onyxia's Lair")
              {lock} **Sign-ups are closed.**        (once the leader closes them)
              notes
              {tank} Tanks **2**  {melee} Melee **6**  {ranged} Ranged **4**  {healer} Healers **2**
+             (a role the raid limits shows its players in line over the limit: Tanks **2/2**)
 Fields       one inline column per button with anyone in it, "{icon} Warrior (3)":
              "{spec icon} `1` **Alice**" per line, in line order; late players
              end with {late}, the queue is ~~struck~~ and ends with {queued};
@@ -29,7 +30,7 @@ Footer       "ID a1b2c3 · Tap your class to sign up. My sign-up changes your sp
              ("Sign-ups are closed." once closed, "This raid was cancelled.")
 Colors       the leader's pick (``raid_colors``, purple by default); grey once
              sign-ups close or the raid is cancelled.
-Buttons      [Tank] + one per class (icon + column count), then [Late]
+Buttons      [Tank] + one per class (icon + column count, "3/4" under a limit), then [Late]
              [Tentative] [Bench] [Absence] [My sign-up] — ``raid_post_buttons``.
 
 Icons are the bot's application emojis.  Without them (before the first
@@ -68,6 +69,7 @@ from app.services.wow.raid_banners import banner_url
 from app.services.wow.raid_catalog import TANK_COLUMN, column_icon, column_label
 from app.services.wow.raid_colors import DEFAULT_COLOR
 from app.services.wow.raid_details import leader_name, mention_roles
+from app.services.wow.raid_limits import Limits, role_row
 from app.services.wow.raid_post_buttons import build_signup_components
 from app.services.wow.raid_post_fit import FittedField, Lines
 from app.services.wow.raid_post_layout import (
@@ -75,7 +77,6 @@ from app.services.wow.raid_post_layout import (
     NO_CLASS_LABEL,
     ROLE_ROW,
     post_columns,
-    role_counts,
     tile_line,
     with_status,
 )
@@ -157,17 +158,17 @@ class _Roster:
     empty_columns: list[str]
     lists: dict[str, list[WowRaidSignup]]  # tentative / bench / absence
     numbers: dict[str, int]
-    roles: dict[str, int]
+    roles: dict[str, str]  # the role row: seat holders, or "3/4" under a limit
 
     @classmethod
-    def of(cls, signups: Sequence[WowRaidSignup]) -> _Roster:
+    def of(cls, signups: Sequence[WowRaidSignup], limits: Limits) -> _Roster:
         by_column = post_columns(signups)
         return cls(
             columns={column: players for column, players in by_column.items() if players},
             empty_columns=[column for column, players in by_column.items() if not players],
             lists={status: with_status(signups, status) for status, _, _ in STATUS_LISTS},
             numbers=order_numbers(signups),
-            roles=role_counts(signups),
+            roles=role_row(signups, limits),
         )
 
     @property
@@ -232,7 +233,7 @@ def build_signup_embed(
     emojis: EmojiSet,
 ) -> dict[str, Any]:
     summary = compute_roster_summary(signups, size_cap=event.size_cap)
-    roster = _Roster.of(signups)
+    roster = _Roster.of(signups, Limits.of(event))
     ladder = _ladder(roster.longest)
     fields = _fitted_fields(event, roster, ladder, emojis)
     descriptions = {tiles: _description(event, guild, summary, roster, tiles, emojis) for tiles in (True, False)}

@@ -70,6 +70,14 @@ class WowRaidEvent(Base):
             "mention_role_ids IS NULL OR jsonb_typeof(mention_role_ids) = 'array'",
             name="ck_wowraidevent_mention_role_ids",
         ),
+        CheckConstraint(
+            "role_limits IS NULL OR jsonb_typeof(role_limits) = 'object'",
+            name="ck_wowraidevent_role_limits",
+        ),
+        CheckConstraint(
+            "class_limits IS NULL OR jsonb_typeof(class_limits) = 'object'",
+            name="ck_wowraidevent_class_limits",
+        ),
         # Efficiently list upcoming events per guild.
         Index("ix_wowraidevent_guild_starts_at", "guild_id", "starts_at"),
     )
@@ -137,6 +145,12 @@ class WowRaidEvent(Base):
     # The roles the raid pings (first post, nudges); null = the server's ping
     # role, [] = nobody (migration 0032).  Read through raid_details.mention_roles.
     mention_role_ids: Mapped[Optional[list[Any]]] = mapped_column(JSONB, nullable=True)
+    # How many players may come as each role ({"tank": 2, …}) and in each class
+    # column ({"rogue": 3, …}); a missing key or null = no limit (migration 0033).
+    # Read through raid_limits.Limits.of.  None is stored as SQL NULL, not JSON
+    # null, which the check constraints refuse.
+    role_limits: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB(none_as_null=True), nullable=True)
+    class_limits: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB(none_as_null=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

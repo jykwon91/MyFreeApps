@@ -13,7 +13,14 @@ from typing import Any, Final
 from fastapi import BackgroundTasks
 
 from app.services.discord import raid_copy, raid_publisher
-from app.services.discord.components import raid_admin, raid_card, raid_edit, raid_leader, raid_signup
+from app.services.discord.components import (
+    raid_admin,
+    raid_card,
+    raid_edit,
+    raid_leader,
+    raid_seat,
+    raid_signup,
+)
 from app.services.discord.interaction import (
     Interaction,
     deferred_ephemeral_response,
@@ -43,8 +50,8 @@ _HANDLERS: Final[dict[str, ComponentHandler]] = {
     "card": raid_card.handle_card,
     "change": raid_card.handle_change,
     "roster": raid_card.handle_roster,
-    "release": raid_signup.handle_release,
-    "stay": raid_signup.handle_stay,
+    "release": raid_seat.handle_release,
+    "stay": raid_seat.handle_stay,
     "confirm": raid_admin.handle_confirm,
     "discard": raid_admin.handle_discard,
     "cancel": raid_admin.handle_cancel,
@@ -64,6 +71,8 @@ _MODAL_HANDLERS: Final[dict[str, ComponentHandler]] = {
     "desc": raid_edit.handle_description_submit,
     "image": raid_edit.handle_image_submit,
     "cancel": raid_edit.handle_cancel_submit,
+    "role_limits": raid_edit.handle_role_limits_submit,
+    "class_limits": raid_edit.handle_class_limits_submit,
 }
 
 
