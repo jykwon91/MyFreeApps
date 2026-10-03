@@ -92,13 +92,15 @@
             raid if too few sign up. They can also set a raid to repeat, add a Discord event and
             thread, pin the post and clear it away after the raid, track attendance with a CSV
             export, and see who hasn't signed up yet. Each raid also gets a web page, linked from
-            its post, that mirrors its sign-ups.
+            its post, that mirrors its sign-ups, and the leader can arrange the raid's groups in a
+            drag-and-drop planner that also works from the keyboard.
           </p>
           <p>
             The bot runs on Discord's HTTP interactions, with no always-on gateway connection: each
             Ed25519-signed request is verified and answered within Discord's 3-second limit, slower
             work runs in the background, and a row lock on the raid means two players can't take
-            the last seat.
+            the last seat. Planner saves are version-checked, so two leaders editing at once can't
+            overwrite each other.
           </p>
           <p>
             The lineups come from YouTube tutorials. A computer-vision pipeline reads the video
