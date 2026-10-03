@@ -124,7 +124,7 @@ pluggy==1.6.0
     # via pytest
 psycopg2-binary==2.9.13
     # via mylanguagetutor-backend
-pwdlib==0.3.0
+pwdlib==0.3.1
     # via fastapi-users
 pycparser==3.0 ; implementation_name != 'PyPy'
     # via cffi
@@ -137,7 +137,7 @@ pydantic==2.13.5
     #   mylanguagetutor-backend
     #   platform-shared
     #   pydantic-settings
-pydantic-core==2.46.5
+pydantic-core==2.49.0
     # via pydantic
 pydantic-settings==2.15.0
     # via
