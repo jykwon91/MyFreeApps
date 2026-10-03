@@ -24,6 +24,7 @@ MENTION_EVERYONE: Final = 1 << 17
 MANAGE_EVENTS: Final = 1 << 33
 CREATE_PUBLIC_THREADS: Final = 1 << 35
 CREATE_EVENTS: Final = 1 << 44
+PIN_MESSAGES: Final = 1 << 51
 
 ALL_PERMISSIONS: Final = (1 << 64) - 1
 
@@ -38,6 +39,7 @@ PERMISSION_LABELS: Final[dict[int, str]] = {
     MANAGE_EVENTS: "Manage Events",
     CREATE_PUBLIC_THREADS: "Create Public Threads",
     CREATE_EVENTS: "Create Events",
+    PIN_MESSAGES: "Pin Messages",
 }
 
 # Overwrite types in a channel's ``permission_overwrites`` array.

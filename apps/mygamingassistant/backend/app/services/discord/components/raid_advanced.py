@@ -8,11 +8,14 @@ answer replaces the card (type 7), apart from the Minimum form (type 9).
   pending ready-check row in the same transaction.
 * A change to who can sign up re-renders a posted raid's post in the
   background (its "Open to" line).
+* Pin the post, Voice channel and Delete the post are
+  ``components.raid_post_options``'s.
 
 **The server's card** (``raid:v1:sadv:…``, from ``/raid-admin advanced``):
 Manage Events, checked again on every tap.  A change to the server's allowed
 roles re-renders, in the background, the posts of the open raids that follow
-it (``raid_advanced_publish``); the banned roles aren't on any post.
+it (``raid_advanced_publish``); the banned roles aren't on any post.  Its pin
+and voice channel are ``components.raid_post_options``'s.
 
 A menu value the cards never offer (an old card) is ``raid_copy.GENERIC_ERROR``.
 """
@@ -27,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import unit_of_work
 from app.models.wow.wow_raid_guild import WowRaidGuild
 from app.services.discord import raid_advanced_copy, raid_advanced_publish, raid_copy, raid_publisher
+from app.services.discord.components import raid_post_options
 from app.services.discord.interaction import (
     Interaction,
     ephemeral_response,
@@ -36,11 +40,16 @@ from app.services.discord.interaction import (
 )
 from app.services.discord.raid_advanced_views import (
     advanced_card,
+    delete_card,
     minimum_modal,
+    pin_card,
     ready_card,
     server_card,
+    server_pin_card,
     server_ready_card,
+    server_voice_card,
     server_who_card,
+    voice_card,
     who_card,
 )
 from app.services.discord.raid_context import RaidContext, load_configured_guild, load_led_event, utcnow
@@ -52,7 +61,7 @@ from app.services.wow.raid_custom_id import RaidCustomId
 # The raids whose settings can change: a draft, or a raid still to come.
 _OPEN: Final = ("draft", "scheduled")
 # The verbs that write, under the raid's row lock.
-_WRITES: Final = ("allow", "ban", "all", "inherit", "ready")
+_WRITES: Final = ("allow", "ban", "all", "inherit", "ready", "on", "off", "voice", "del")
 # A role menu's verb → the list it sets.
 _WHICH: Final[dict[str, RoleList]] = {"allow": "signup", "ban": "banned"}
 
@@ -60,9 +69,9 @@ _WHICH: Final[dict[str, RoleList]] = {"allow": "signup", "ban": "banned"}
 async def handle_advanced(
     interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks
 ) -> dict[str, Any]:
-    """[Advanced] and the card's menu, then the who card's menus and buttons and the Ready check menu."""
+    """[Advanced] and the card's menu, then its sub-cards' menus and buttons."""
     assert parsed.event_id is not None
-    verb = parsed.args[0]
+    verb, arg = parsed.args[0], parsed.args[1]
     async with unit_of_work() as db:
         found = await load_led_event(db, interaction, parsed.event_id, lock=verb in _WRITES, statuses=_OPEN)
         if isinstance(found, str):
@@ -73,6 +82,12 @@ async def handle_advanced(
             return _picked(found, _value(interaction))
         if verb == "ready":
             return await _set_ready(db, found, _value(interaction))
+        if verb == "del":
+            return await raid_post_options.set_delete(db, found, _value(interaction))
+        if arg == "pin":
+            return await raid_post_options.set_pin(db, found, verb, interaction, background)
+        if "voice" in (verb, arg):
+            return await raid_post_options.set_voice(db, found, verb, interaction, background)
         notice, changed = await _set_who(db, found, interaction, verb)
         card = who_card(found.event, found.guild, notice=notice)
         posted = found.event.status == "scheduled"
@@ -98,10 +113,10 @@ async def handle_minimum_submit(
 async def handle_server(
     interaction: Interaction, parsed: RaidCustomId, background: BackgroundTasks
 ) -> dict[str, Any]:
-    """/raid-admin advanced's card: its menu, the who card's role menus, the Ready check menu."""
+    """/raid-admin advanced's card: its menu, then its sub-cards' menus and buttons."""
     if not interaction.has_permission(MANAGE_EVENTS):
         return update_text_response(raid_copy.NOT_PERMITTED_EVENTS)
-    verb = parsed.args[0]
+    verb, arg = parsed.args[0], parsed.args[1]
     async with unit_of_work() as db:
         guild = await load_configured_guild(db, interaction)
         if guild is None:
@@ -112,6 +127,10 @@ async def handle_server(
             return _server_picked(guild, _value(interaction))
         if verb == "ready":
             return await _set_server_ready(db, guild, _value(interaction))
+        if arg == "pin":
+            return await raid_post_options.set_server_pin(db, guild, verb, background)
+        if "voice" in (verb, arg):
+            return await raid_post_options.set_server_voice(db, guild, verb, interaction, background)
         which = _WHICH[verb]
         saved = await raid_advanced_service.set_server_roles(db, guild, which, interaction.values)
         card = server_who_card(guild, notice=raid_advanced_copy.roles_notice(which, saved, server=True))
@@ -131,13 +150,19 @@ async def open_advanced(interaction: Interaction) -> dict[str, Any]:
 
 
 def _picked(found: RaidContext, key: str) -> dict[str, Any]:
-    """The card's menu: the Minimum form, or the who or Ready check card."""
+    """The card's menu: the Minimum form, or a setting's card."""
     if key == "min":
         return minimum_modal(found.event)
     if key == "who":
         return update_response(who_card(found.event, found.guild))
     if key == "ready":
         return update_response(ready_card(found.event, found.guild))
+    if key == "pin":
+        return update_response(pin_card(found.event, found.guild))
+    if key == "voice":
+        return update_response(voice_card(found.event, found.guild))
+    if key == "del":
+        return update_response(delete_card(found.event, found.guild))
     return update_text_response(raid_copy.GENERIC_ERROR)
 
 
@@ -170,11 +195,15 @@ async def _set_who(db: AsyncSession, found: RaidContext, interaction: Interactio
 
 
 def _server_picked(guild: WowRaidGuild, key: str) -> dict[str, Any]:
-    """/raid-admin advanced's menu: the who or Ready check card."""
+    """/raid-admin advanced's menu: a setting's card."""
     if key == "who":
         return update_response(server_who_card(guild))
     if key == "ready":
         return update_response(server_ready_card(guild))
+    if key == "pin":
+        return update_response(server_pin_card(guild))
+    if key == "voice":
+        return update_response(server_voice_card(guild))
     return update_text_response(raid_copy.GENERIC_ERROR)
 
 

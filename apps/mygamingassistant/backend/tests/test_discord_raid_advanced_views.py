@@ -119,6 +119,9 @@ def test_the_card_says_each_setting_and_that_the_server_sets_it(status: str) -> 
         "Who can sign up: everyone (server default)",
         "Can't sign up: nobody (server default)",
         "Ready check: **1 hour** before the start (server default)",
+        "Pin the post: **off** (server default)",
+        "Voice channel: none (server default)",
+        "Delete the post: **never**",
     ]
     [[menu], [back]] = _rows(data)
     assert (menu["custom_id"], menu["placeholder"]) == (_id("pick"), "Change a setting…")
@@ -126,43 +129,74 @@ def test_the_card_says_each_setting_and_that_the_server_sets_it(status: str) -> 
         ("Minimum sign-ups", "min", "No minimum"),
         ("Who can sign up", "who", "Open to everyone (server default)"),
         ("Ready check", "ready", "1 hour before the start (server default)"),
+        ("Pin the post", "pin", "Not pinned (server default)"),
+        ("Voice channel", "voice", "None (server default)"),
+        ("Delete the post", "del", "Never"),
     ]
     # Back is Raid: Edit's own: More options for a draft, the edit card otherwise.
     assert (back["label"], back["custom_id"]) == ("Back", f"raid:v1:ed:{_EV}:back")
 
 
 def test_the_card_with_the_raids_own_settings() -> None:
-    guild = _guild(signup_role_ids=["609"], settings={"ready_check_minutes": 30})
-    event = _event(min_signups=10, signup_role_ids=["601", "602"], banned_role_ids=["603"], ready_check_minutes=0)
+    guild = _guild(
+        signup_role_ids=["609"], settings={"ready_check_minutes": 30}, voice_channel_id="710000000000000009"
+    )
+    event = _event(
+        min_signups=10,
+        signup_role_ids=["601", "602"],
+        banned_role_ids=["603"],
+        ready_check_minutes=0,
+        pin_post=True,
+        voice_channel_id="0",
+        delete_post_after_hours=24,
+    )
     data = advanced_card(event, guild, notice="Saved.")
     assert _lines(data)[1:] == [
         "Minimum sign-ups: **10** — below that when sign-ups close, the raid is cancelled",
         "Who can sign up: <@&601> <@&602>",
         "Can't sign up: <@&603>",
         "Ready check: **off**",
+        "Pin the post: **on** until the raid starts",
+        # The raid's own "none", although the server has a voice channel.
+        "Voice channel: none",
+        "Delete the post: **1 day** after the raid",
         "-# Saved.",
     ]
     assert [o["description"] for o in _rows(data)[0][0]["options"]] == [
         "10 seats, or the raid is cancelled when sign-ups close",
         "Open to 2 roles · 1 role blocked",
         "Off",
+        "Pinned until the raid starts",
+        "None",
+        "1 day after the raid",
     ]
 
 
 def test_the_card_mixes_the_raids_settings_with_the_servers() -> None:
-    guild = _guild(banned_role_ids=["603"], settings={"ready_check_minutes": 30})
-    event = _event(size_cap=10, min_signups=12, signup_role_ids=[])
+    guild = _guild(
+        banned_role_ids=["603"],
+        settings={"ready_check_minutes": 30},
+        pin_posts=True,
+        voice_channel_id="710000000000000009",
+    )
+    event = _event(size_cap=10, min_signups=12, signup_role_ids=[], pin_post=False, delete_post_after_hours=168)
     data = advanced_card(event, guild)
     assert _lines(data)[1:] == [
         "Minimum sign-ups: **12** — the raid has 10 seats, so all 10 must be filled",
         "Who can sign up: everyone",
         "Can't sign up: <@&603> (server default)",
         "Ready check: **30 minutes** before the start (server default)",
+        "Pin the post: **off**",
+        "Voice channel: <#710000000000000009> (server default)",
+        "Delete the post: **1 week** after the raid",
     ]
     assert [o["description"] for o in _rows(data)[0][0]["options"]] == [
         "All 10 seats, or the raid is cancelled when sign-ups close",
         "Open to everyone · 1 role blocked",
         "30 minutes before the start (server default)",
+        "Not pinned",
+        "Linked on the post (server default)",
+        "1 week after the raid",
     ]
 
 
@@ -265,6 +299,8 @@ def test_the_server_card_says_the_servers_own_settings() -> None:
         "Who can sign up: everyone",
         "Can't sign up: nobody",
         "Ready check: **1 hour** before the start",
+        "Pin the post: **off**",
+        "Voice channel: none",
         SERVER_FOOTNOTE,
     ]
     [[menu]] = _rows(data)
@@ -272,12 +308,22 @@ def test_the_server_card_says_the_servers_own_settings() -> None:
     assert [(o["label"], o["value"], o["description"]) for o in menu["options"]] == [
         ("Who can sign up", "who", "Open to everyone"),
         ("Ready check", "ready", "1 hour before the start"),
+        ("Pin the post", "pin", "Not pinned"),
+        ("Voice channel", "voice", "None"),
     ]
-    set_up = _guild(signup_role_ids=["601"], banned_role_ids=["603", "604"], settings={"ready_check_minutes": 0})
+    set_up = _guild(
+        signup_role_ids=["601"],
+        banned_role_ids=["603", "604"],
+        settings={"ready_check_minutes": 0},
+        pin_posts=True,
+        voice_channel_id="710000000000000009",
+    )
     assert _lines(server_card(set_up, notice="Saved."))[2:] == [
         "Who can sign up: <@&601>",
         "Can't sign up: <@&603> <@&604>",
         "Ready check: **off**",
+        "Pin the post: **on** until the raid starts",
+        "Voice channel: <#710000000000000009>",
         SERVER_FOOTNOTE,
         "-# Saved.",
     ]

@@ -122,6 +122,31 @@ async def set_server_ready_check(db: AsyncSession, guild: WowRaidGuild, minutes:
     )
 
 
+async def set_pin(db: AsyncSession, event: WowRaidEvent, value: bool | None) -> None:
+    """Pin the raid's post, or not; None = the server's.  The pin follows after the commit (``raid_pin``)."""
+    await wow_raid_advanced_repo.set_pin_post(db, event, value)
+
+
+async def set_server_pin(db: AsyncSession, guild: WowRaidGuild, value: bool) -> None:
+    """Pin the posts of the raids that don't set their own."""
+    await wow_raid_advanced_repo.set_guild_pin_posts(db, guild, value)
+
+
+async def set_voice(db: AsyncSession, event: WowRaidEvent, channel_id: str | None) -> None:
+    """The voice channel the raid's post links: ``NO_VOICE`` = none; None = the server's."""
+    await wow_raid_advanced_repo.set_voice_channel(db, event, channel_id)
+
+
+async def set_server_voice(db: AsyncSession, guild: WowRaidGuild, channel_id: str | None) -> None:
+    """The voice channel the posts of the raids that don't set their own link; None = none."""
+    await wow_raid_advanced_repo.set_guild_voice_channel(db, guild, channel_id)
+
+
+async def set_delete_after(db: AsyncSession, event: WowRaidEvent, hours: int | None) -> None:
+    """Delete the raid's post this long after the raid ends (``raid_sweeps``); None = keep it."""
+    await wow_raid_advanced_repo.set_delete_after(db, event, hours)
+
+
 async def cancel_if_short(db: AsyncSession, event: WowRaidEvent, guild: WowRaidGuild) -> list[str] | None:
     """As sign-ups close: cancel the raid if fewer than its minimum have a seat.
 

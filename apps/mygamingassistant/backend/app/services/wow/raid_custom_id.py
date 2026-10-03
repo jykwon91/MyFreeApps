@@ -203,18 +203,22 @@ MARK_STATUSES: Final = (*SEAT_STATUSES, TENTATIVE_STATUS, BENCH_STATUS)
 _MOVE_STATUSES: Final = (*MARK_STATUSES, QUEUED_STATUS)
 NO_ARG: Final = "-"
 _NO_ARGS: Final = frozenset({NO_ARG})
-# Raid: Edit → [Advanced] (``adv``): verb → the args it takes (``-`` but for ``inherit``):
+# Raid: Edit → [Advanced] (``adv``): verb → the args it takes (``-`` but where a setting is named):
 #   open  the card ([Advanced], a sub-card's [Back])    pick  its "Change a setting…" menu
 #   allow / ban  the who card's role menus   all  [Everyone can sign up]
-#   inherit  [Use server default] (arg = the setting it's for)   ready  the ready check menu
+#   inherit  [Use server default] / [Server default] (arg = the setting it's for)   ready  the ready check menu
+#   on / off  [Pin it] / [Don't pin], and [No voice channel] (arg = the setting)
+#   voice  the voice channel menu   del  the Delete the post menu
 # The card's own [Back] is Raid: Edit's ``back``.
 ADVANCED_ARGS: Final[dict[str, frozenset[str]]] = {
     "open": _NO_ARGS, "pick": _NO_ARGS, "allow": _NO_ARGS, "ban": _NO_ARGS, "all": _NO_ARGS, "ready": _NO_ARGS,
-    "inherit": frozenset({"who"}),
+    "voice": _NO_ARGS, "del": _NO_ARGS,
+    "inherit": frozenset({"who", "pin", "voice"}), "on": frozenset({"pin"}), "off": frozenset({"pin", "voice"}),
 }
 # /raid-admin advanced (``sadv``): the server's card and sub-cards — the same verbs, bar the raid's own.
 SERVER_ADVANCED_ARGS: Final[dict[str, frozenset[str]]] = {
     "open": _NO_ARGS, "pick": _NO_ARGS, "allow": _NO_ARGS, "ban": _NO_ARGS, "ready": _NO_ARGS,
+    "voice": _NO_ARGS, "on": frozenset({"pin"}), "off": frozenset({"pin", "voice"}),
 }
 # The Attendance card (``at``): verb → what its <member> / <arg> hold.  The card's own verbs
 # name nobody (``-``):

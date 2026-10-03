@@ -80,6 +80,8 @@ class FakeDiscord:
     bot_channel_permissions: int = VIEW_CHANNEL | SEND_MESSAGES | EMBED_LINKS
     # user id → the member object GET /guilds/{guild}/members/{user} returns (else just roles).
     members: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # A new message's id: this, then a count (m1, m2…); digits where a test needs snowflake-shaped ids.
+    message_prefix: str = "m"
     _next_message: int = 0
 
     def fail(self, method: str, path: str, status: int, code: int) -> None:
@@ -109,7 +111,7 @@ class FakeDiscord:
             return {"id": f"dm-{body['recipient_id']}"}
         if method == "POST" and path.endswith("/messages"):
             self._next_message += 1
-            return {"id": f"m{self._next_message}"}
+            return {"id": f"{self.message_prefix}{self._next_message}"}
         if method == "GET" and path.startswith("/guilds/") and path.endswith("/roles"):
             return [{"id": GUILD, "permissions": str(self.bot_channel_permissions)}]
         if method == "GET" and "/members/" in path:

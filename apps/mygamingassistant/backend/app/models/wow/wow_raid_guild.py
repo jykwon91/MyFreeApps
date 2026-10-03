@@ -62,6 +62,10 @@ class WowRaidGuild(Base):
             "banned_role_ids IS NULL OR jsonb_typeof(banned_role_ids) = 'array'",
             name="ck_wowraidguild_banned_role_ids",
         ),
+        CheckConstraint(
+            "voice_channel_id IS NULL OR voice_channel_id ~ '^[0-9]{15,20}$'",
+            name="ck_wowraidguild_voice_channel_id",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -110,6 +114,11 @@ class WowRaidGuild(Base):
     # nobody).  None is SQL NULL.  The server's ready check is in ``settings``.
     signup_role_ids: Mapped[Optional[list[Any]]] = mapped_column(JSONB(none_as_null=True), nullable=True)
     banned_role_ids: Mapped[Optional[list[Any]]] = mapped_column(JSONB(none_as_null=True), nullable=True)
+    # Post options for raids that don't set their own (/raid-admin advanced;
+    # migration 0042): pin their posts, and the voice channel the posts name
+    # (null = none).
+    pin_posts: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    voice_channel_id: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

@@ -5,7 +5,8 @@ sub-cards' prompts, the notices after a change, the Minimum form, the
 refusal a member gets when Who can sign up keeps them out
 (``raid_context.join_refusal``), and the detail line on More options and
 Raid: Edit.  The post's "Open to" line and a minimum's cancel reason are
-``raid_advanced``'s.
+``raid_advanced``'s; the post options' own words (pin, voice channel,
+delete) are ``raid_post_options_copy``'s.
 
 A value the raid takes from the server is tagged " (server default)".
 """
@@ -16,6 +17,7 @@ from typing import Final
 
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_guild import WowRaidGuild
+from app.services.discord import raid_post_options_copy
 from app.services.discord.raid_draft_copy import role_list
 from app.services.wow import raid_advanced
 from app.services.wow.raid_advanced import AccessRefusal, MinimumProblem, RoleList, Source
@@ -25,7 +27,14 @@ from app.services.wow.raid_text import local_day_label, title_text
 BUTTON: Final = "Advanced"
 PLACEHOLDER: Final = "Change a setting…"
 # The cards' menu: a label per setting (``raid_advanced.SETTING_KEYS``).
-LABELS: Final = {"min": "Minimum sign-ups", "who": "Who can sign up", "ready": "Ready check"}
+LABELS: Final = {
+    "min": "Minimum sign-ups",
+    "who": "Who can sign up",
+    "ready": "Ready check",
+    "pin": "Pin the post",
+    "voice": "Voice channel",
+    "del": "Delete the post",
+}
 INHERITED: Final = " (server default)"
 
 MINIMUM_TITLE: Final = "Minimum sign-ups"
@@ -48,7 +57,7 @@ _READY_WHAT: Final = "the bot posts in the raid channel and mentions everyone wi
 
 SERVER_TITLE: Final = "**Server defaults**"
 SERVER_INTRO: Final = "Every raid follows these unless it sets its own (Raid: Edit → **Advanced**)."
-SERVER_FOOTNOTE: Final = "Raids already posted keep their ready check; sign-ups follow new roles right away."
+SERVER_FOOTNOTE: Final = "Raids already posted keep their ready check; the rest reaches them right away."
 SERVER_WHO_PROMPT: Final = "Who can sign up for raids that don't set their own?"
 SERVER_READY_PROMPT: Final = f"Ready check for raids that don't set their own — {_READY_WHAT}"
 
@@ -63,13 +72,25 @@ def title(event: WowRaidEvent, guild: WowRaidGuild) -> str:
 
 
 def setting_lines(event: WowRaidEvent, guild: WowRaidGuild) -> list[str]:
-    """The card's lines: the minimum, who can and can't sign up, the ready check."""
-    return [minimum_line(event), *who_lines(event, guild), ready_line(event, guild)]
+    """The card's lines: the minimum, who can and can't sign up, the ready check, then the post's options."""
+    return [
+        minimum_line(event),
+        *who_lines(event, guild),
+        ready_line(event, guild),
+        pin_line(event, guild),
+        voice_line(event, guild),
+        raid_post_options_copy.delete_value_line(event.delete_post_after_hours),
+    ]
 
 
 def server_lines(guild: WowRaidGuild) -> list[str]:
-    """/raid-admin advanced's lines: who can and can't sign up, the ready check."""
-    return [*server_who_lines(guild), server_ready_line(raid_advanced.server_ready_check(guild))]
+    """/raid-admin advanced's lines: who can and can't sign up, the ready check, the pin, the voice channel."""
+    return [
+        *server_who_lines(guild),
+        server_ready_line(raid_advanced.server_ready_check(guild)),
+        raid_post_options_copy.pin_value_line(bool(guild.pin_posts)),
+        raid_post_options_copy.voice_value_line(guild.voice_channel_id),
+    ]
 
 
 def minimum_line(event: WowRaidEvent) -> str:
@@ -184,6 +205,18 @@ def server_ready_line(minutes: int) -> str:
     return f"Ready check: **{ready_words(minutes)}** before the start"
 
 
+def pin_line(event: WowRaidEvent, guild: WowRaidGuild) -> str:
+    """'Pin the post: **on** until the raid starts (server default)' / 'Pin the post: **off**'."""
+    found = raid_advanced.pin_setting(event, guild)
+    return raid_post_options_copy.pin_value_line(bool(found.value)) + _tag(found.source)
+
+
+def voice_line(event: WowRaidEvent, guild: WowRaidGuild) -> str:
+    """'Voice channel: <#id> (server default)' / 'Voice channel: none'."""
+    found = raid_advanced.voice_channel(event, guild)
+    return raid_post_options_copy.voice_value_line(found.value) + _tag(found.source)
+
+
 def ready_prompt(event: WowRaidEvent, guild: WowRaidGuild) -> str:
     return f"Ready check for **{label(event, guild)}** — {_READY_WHAT}"
 
@@ -247,13 +280,27 @@ def summaries(event: WowRaidEvent, guild: WowRaidGuild) -> list[tuple[str, str]]
     if event.signup_role_ids is None and event.banned_role_ids is None:
         who += INHERITED
     ready = raid_advanced.ready_check(event, guild)
-    return [("min", _minimum_summary(event)), ("who", who), ("ready", _ready_summary(ready.value) + _tag(ready.source))]
+    pin = raid_advanced.pin_setting(event, guild)
+    voice = raid_advanced.voice_channel(event, guild)
+    return [
+        ("min", _minimum_summary(event)),
+        ("who", who),
+        ("ready", _ready_summary(ready.value) + _tag(ready.source)),
+        ("pin", raid_post_options_copy.pin_summary(bool(pin.value)) + _tag(pin.source)),
+        ("voice", raid_post_options_copy.voice_summary(voice.value) + _tag(voice.source)),
+        ("del", raid_post_options_copy.delete_summary(event.delete_post_after_hours)),
+    ]
 
 
 def server_summaries(guild: WowRaidGuild) -> list[tuple[str, str]]:
     """(setting, its value in words) for /raid-admin advanced's menu."""
     who = _who_summary(raid_advanced.server_roles(guild, "signup"), raid_advanced.server_roles(guild, "banned"))
-    return [("who", who), ("ready", _ready_summary(raid_advanced.server_ready_check(guild)))]
+    return [
+        ("who", who),
+        ("ready", _ready_summary(raid_advanced.server_ready_check(guild))),
+        ("pin", raid_post_options_copy.pin_summary(bool(guild.pin_posts))),
+        ("voice", raid_post_options_copy.voice_summary(guild.voice_channel_id)),
+    ]
 
 
 def _minimum_summary(event: WowRaidEvent) -> str:
@@ -288,7 +335,7 @@ def _roles(count: int) -> str:
 
 
 def detail_lines(event: WowRaidEvent) -> list[str]:
-    """'**Advanced:** minimum 10 · open to 2 roles · ready check off' — the raid's own values only."""
+    """'**Advanced:** minimum 10 · open to 2 roles · ready check off · pinned' — the raid's own values only."""
     parts: list[str] = []
     if event.min_signups is not None:
         parts.append(f"minimum {event.min_signups}")
@@ -298,6 +345,9 @@ def detail_lines(event: WowRaidEvent) -> list[str]:
         parts.append(_blocked(event.banned_role_ids))
     if event.ready_check_minutes is not None:
         parts.append(f"ready check {_ready_detail(event.ready_check_minutes)}")
+    parts.extend(
+        raid_post_options_copy.detail_parts(event.pin_post, event.voice_channel_id, event.delete_post_after_hours)
+    )
     if not parts:
         return []
     return ["**Advanced:** " + " · ".join(parts)]

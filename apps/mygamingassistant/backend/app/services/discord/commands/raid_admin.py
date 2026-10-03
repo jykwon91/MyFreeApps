@@ -115,6 +115,7 @@ async def _setup(interaction: Interaction, background: BackgroundTasks) -> dict[
         # Setup states the complete config: no ping_role option = stop pinging.
         await wow_raid_guild_repo.set_ping_role(db, guild, ping_role_id)
         events_default, threads_default = guild.default_discord_event, guild.default_thread
+        pin_posts = guild.pin_posts
 
     background.add_task(
         raid_setup_check.verify_setup,
@@ -129,6 +130,7 @@ async def _setup(interaction: Interaction, background: BackgroundTasks) -> dict[
             discord_events=events_default,
             threads=threads_default,
             extras_given=discord_events is not None or threads is not None,
+            pin_posts=pin_posts,
         ),
     )
     return deferred_ephemeral_response()
