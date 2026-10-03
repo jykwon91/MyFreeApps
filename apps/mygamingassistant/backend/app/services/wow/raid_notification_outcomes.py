@@ -51,6 +51,7 @@ class RunStats:
     repeats_stopped: int = 0
     attendance_recorded: int = 0
     minimum_cancelled: int = 0
+    posts_deleted: int = 0
     late_dms: int = 0
     deadline_closed: int = 0
     started: int = 0

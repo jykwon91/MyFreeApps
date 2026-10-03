@@ -18,6 +18,7 @@ from platform_shared.services.discord import (
     EMBED_LINKS,
     MANAGE_EVENTS,
     MENTION_EVERYONE,
+    PIN_MESSAGES,
     SEND_MESSAGES,
     VIEW_CHANNEL,
     DiscordApiError,
@@ -29,7 +30,7 @@ from platform_shared.services.discord import (
     permission_labels,
 )
 
-from app.services.discord import raid_copy, raid_extras_copy, rest
+from app.services.discord import raid_copy, raid_extras_copy, raid_post_options_copy, rest
 from app.services.discord.interaction import ephemeral_data
 from app.services.discord.raid_publisher import edit_original
 
@@ -40,7 +41,8 @@ _POST_PERMISSIONS = (VIEW_CHANNEL, SEND_MESSAGES, EMBED_LINKS)
 
 @dataclass(frozen=True)
 class SetupCheck:
-    """*discord_events* and *threads* are the server's defaults as stored; *extras_given*: setup named either."""
+    """*discord_events*, *threads* and *pin_posts* are the server's defaults as stored; *extras_given*: setup named
+    the first two."""
 
     application_id: str
     token: str
@@ -52,6 +54,7 @@ class SetupCheck:
     discord_events: bool = False
     threads: bool = False
     extras_given: bool = False
+    pin_posts: bool = False
 
 
 async def verify_setup(check: SetupCheck) -> None:
@@ -116,7 +119,8 @@ def _defaults_line(check: SetupCheck) -> list[str]:
 def _extras_lines(
     check: SetupCheck, channel_perms: int, server_perms: int, overwrites: list[dict[str, Any]]
 ) -> list[str]:
-    """The defaults, then what the bot needs for them: Create Events in the server, Create Public Threads here."""
+    """The defaults, then what the bot needs for them: Create Events in the server, Create Public Threads and
+    (while raid posts are pinned) Pin Messages here."""
     lines = _defaults_line(check)
     can_make_events = has_permission(server_perms, CREATE_EVENTS) or has_permission(server_perms, MANAGE_EVENTS)
     if check.discord_events and not can_make_events:
@@ -125,6 +129,8 @@ def _extras_lines(
         lines.append(raid_extras_copy.setup_no_threads(check.channel_id))
     if check.discord_events and _hidden_from_everyone(check.guild_discord_id, overwrites):
         lines.append(raid_extras_copy.setup_private(check.channel_id))
+    if check.pin_posts and not has_permission(channel_perms, PIN_MESSAGES):
+        lines.append(raid_post_options_copy.setup_no_pins(check.channel_id))
     return lines
 
 

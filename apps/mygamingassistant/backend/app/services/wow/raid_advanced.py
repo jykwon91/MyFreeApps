@@ -1,4 +1,4 @@
-"""Raid: Edit → Advanced — who can sign up, a minimum, the ready check: the rules (pure).
+"""Raid: Edit → Advanced — who can sign up, a minimum, the ready check, the post's options: the rules (pure).
 
 Every setting reads raid → server → built-in, every time (:func:`resolve`):
 a raid column that's NULL follows the server, and any value — "everyone",
@@ -17,6 +17,14 @@ change reaches every raid that follows it.
 * **Ready check** — minutes before the start (0 = none).  The server's is
   ``wow_raid_guild.settings["ready_check_minutes"]``; the scheduler reads the
   raid's through :func:`notification_settings`.
+* **Pin the post** — pinned while the raid is still to start, unpinned at
+  the start or a cancel (:func:`pin_step`).  Only the bot's own pin is ever
+  undone, so a member's pin stays.
+* **Voice channel** — the post links it ("Voice: <#id>"); a raid's
+  ``NO_VOICE`` is its own "none" although the server has one.
+* **Delete the post** — raid-only, like the minimum, since it deletes: this
+  many hours after the raid ends, once it's completed or cancelled
+  (``raid_sweeps``).  The raid itself stays.
 """
 from __future__ import annotations
 
@@ -40,8 +48,15 @@ READY_CHOICES: Final = (0, 15, 30, 45, 60, 90, 120, 180)
 # A raid's Ready check menu value for "follow the server".
 INHERIT: Final = "inherit"
 # The settings on a raid's Advanced card, and on /raid-admin advanced.
-SETTING_KEYS: Final = ("min", "who", "ready")
-SERVER_KEYS: Final = ("who", "ready")
+SETTING_KEYS: Final = ("min", "who", "ready", "pin", "voice", "del")
+SERVER_KEYS: Final = ("who", "ready", "pin", "voice")
+# A raid's voice channel "none", although the server has one.
+NO_VOICE: Final = "0"
+# The Delete the post menu's delays, in hours after the raid ends; ``keep`` keeps the post.
+DELETE_CHOICES: Final = (3, 6, 12, 24, 48, 168)
+KEEP: Final = "keep"
+# What the post's pin needs: pin it, undo the bot's pin, or forget the pin of a post that's gone.
+PinStep = Literal["pin", "unpin", "forget"]
 
 
 @dataclass(frozen=True)
@@ -135,11 +150,58 @@ def access_refusal(event: WowRaidEvent, guild: WowRaidGuild, member_role_ids: Se
 
 
 def post_lines(event: WowRaidEvent, guild: WowRaidGuild) -> list[str]:
-    """The post's "Open to: <@&a> <@&b>" while an allowed list applies (embeds never ping)."""
+    """The post's "Open to: <@&a> <@&b>" while an allowed list applies, then "Voice: <#id>" (embeds never ping)."""
+    lines: list[str] = []
     allowed = signup_roles(event, guild).value
-    if not allowed:
-        return []
-    return ["Open to: " + " ".join(f"<@&{role_id}>" for role_id in allowed)]
+    if allowed:
+        lines.append("Open to: " + " ".join(f"<@&{role_id}>" for role_id in allowed))
+    channel = voice_channel(event, guild).value
+    if channel is not None:
+        lines.append(f"Voice: <#{channel}>")
+    return lines
+
+
+@dataclass(frozen=True)
+class PinResult:
+    """What a pin sync's call came to: ``done``, or why not — no Pin Messages, a full pin list, no answer."""
+
+    step: Literal["pin", "unpin"]
+    kind: Literal["done", "permission", "full", "failed"]
+    channel_id: str
+
+
+def pin_setting(event: WowRaidEvent, guild: WowRaidGuild) -> Effective[bool]:
+    """Whether the raid's post is pinned while the raid is still to start (off unless set)."""
+    return resolve(event.pin_post, guild.pin_posts, False)
+
+
+def pin_wanted(event: WowRaidEvent, guild: WowRaidGuild) -> bool:
+    """The post is to be pinned: the setting is on, and the raid is posted and still to start."""
+    return bool(pin_setting(event, guild).value) and event.status == "scheduled" and event.start_applied_at is None
+
+
+def pin_step(event: WowRaidEvent, guild: WowRaidGuild) -> PinStep | None:
+    """What the post's pin needs now; None when nothing.  Only the bot's own pin is undone.
+
+    ``forget``: the bot's pin is of a post that's gone (deleted, or reposted);
+    after it, the new post may still need its ``pin``.
+    """
+    pinned = event.pinned_message_id
+    if pinned is not None and pinned != event.message_id:
+        return "forget"
+    wanted = pin_wanted(event, guild)
+    if pinned is None and event.message_id is not None and wanted:
+        return "pin"
+    if pinned is not None and not wanted:
+        return "unpin"
+    return None
+
+
+def voice_channel(event: WowRaidEvent, guild: WowRaidGuild) -> Effective[str | None]:
+    """The voice channel the post links; None = none.  A raid's ``NO_VOICE`` is its own "none"."""
+    if event.voice_channel_id == NO_VOICE:
+        return Effective(None, "raid")
+    return resolve(event.voice_channel_id, guild.voice_channel_id, None)
 
 
 def needed(event: WowRaidEvent) -> int | None:
@@ -196,3 +258,18 @@ def ready_choice(value: str, *, raid: bool) -> int | Literal["inherit"] | None:
     if raid and value == INHERIT:
         return INHERIT
     return next((minutes for minutes in READY_CHOICES if str(minutes) == value), None)
+
+
+def delete_choice(value: str) -> int | Literal["keep"] | None:
+    """A Delete the post menu value: hours after the raid, ``keep``, or None when it isn't one."""
+    if value == KEEP:
+        return KEEP
+    return next((hours for hours in DELETE_CHOICES if str(hours) == value), None)
+
+
+def voice_choice(values: Sequence[str]) -> str | None:
+    """The voice channel a channel menu picked (a Discord id); None when it holds none."""
+    picked = next(iter(values), "")
+    if picked.isascii() and picked.isdecimal() and 15 <= len(picked) <= 20:
+        return picked
+    return None

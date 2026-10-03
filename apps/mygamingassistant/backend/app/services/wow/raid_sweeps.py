@@ -16,24 +16,29 @@ this tick, and the outbox drains as usual.
    (``raid_advanced_service.cancel_if_short``): its post, channel line and
    DMs — to everyone on it and its leader — replace the close's.
 2. **Start sweep.**  A raid past its start has its post re-rendered once as
-   started (``start_applied_at``): grey, every button off.  No DMs.
-   Sign-ups still open close here, so a raid short of its minimum is
-   cancelled as at the deadline.
+   started (``start_applied_at``): grey, every button off, the bot's pin
+   undone.  No DMs.  Sign-ups still open close here, so a raid short of its
+   minimum is cancelled as at the deadline.
 3. **Completion.**  A ``scheduled`` raid ``COMPLETE_AFTER`` past its start is
    marked ``completed`` (``wow_raid_event_repo.complete_started_events``).
-4. **Attendance.**  Each completed raid not yet recorded has its sign-ups
+4. **Post deletion.**  A completed or cancelled raid whose leader set its post
+   to go (Raid: Edit → Advanced → Delete the post) has it deleted that long
+   after its end, once: the stamp (``post_deleted_at``) lands first, the
+   DELETE follows the commit, and a post already gone counts as done.  The
+   raid row stays.
+5. **Attendance.**  Each completed raid not yet recorded has its sign-ups
    frozen as its attendance (``raid_attendance_service.record``), so a raid
    completed this tick is recorded this tick.  One transaction each, taken
    with SKIP LOCKED; the stamp (``attendance_recorded_at``) lands with the
    rows.  No Discord calls.
-5. **Late consumables DMs.**  Players eligible after their raid's round opened
+6. **Late consumables DMs.**  Players eligible after their raid's round opened
    get a DM row (``raid_consumables_round.schedule_late_dms``).
-6. **Repeats.**  Each repeat due posts its next raid
+7. **Repeats.**  Each repeat due posts its next raid
    (``raid_repeat_publisher.post_next``), one transaction each, at most one
-   raid per repeat a tick; its Discord event and thread follow after the
-   commit (``raid_extras.sync``).  A post Discord refused stops that repeat and
-   DMs its creator; one it didn't answer is tried again next tick.  Last,
-   because it waits on Discord while holding the repeat.
+   raid per repeat a tick; its Discord event, thread and pin follow after the
+   commit (``raid_extras.sync``, ``raid_pin.sync``).  A post Discord refused
+   stops that repeat and DMs its creator; one it didn't answer is tried again
+   next tick.  Last, because it waits on Discord while holding the repeat.
 
 The sweeps write the new columns and ``closed_at``, never ``status`` —
 except the minimum's cancel — and run before completion, so after downtime
@@ -57,11 +62,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.wow.wow_raid_event import WowRaidEvent
 from app.models.wow.wow_raid_guild import WowRaidGuild
-from app.repositories.wow import wow_raid_event_repo, wow_raid_guild_repo
-from app.services.discord import raid_deadline_copy, raid_extras, raid_publisher, raid_repeat_publisher, rest
+from app.repositories.wow import wow_raid_advanced_repo, wow_raid_event_repo, wow_raid_guild_repo
+from app.services.discord import raid_deadline_copy, raid_extras, raid_pin, raid_publisher, raid_repeat_publisher, rest
 from app.services.wow import raid_advanced_service, raid_attendance_service, raid_consumables_round, raid_event_service
 from app.services.wow.raid_deadline import COMPLETE_AFTER
 from app.services.wow.raid_details import leader_id
+from app.services.wow.raid_extras_rules import DEFAULT_LENGTH
 from app.services.wow.raid_notification_outcomes import RunStats
 
 logger = logging.getLogger(__name__)
@@ -98,6 +104,11 @@ async def run_before_claims(scope: SessionScope, clock: Clock, stats: RunStats, 
             )
     except Exception:
         logger.exception("raid_notifications: completing finished raids failed")
+
+    try:
+        await _sweep(_delete_post_one, scope, clock, stats, stop_at)
+    except Exception:
+        logger.exception("raid_notifications: deleting finished raids' posts failed")
 
     try:
         await _sweep(_record_one, scope, clock, stats, stop_at)
@@ -193,6 +204,23 @@ async def _announce_short(event_id: uuid.UUID, dm_ids: list[str], stats: RunStat
     stats.minimum_cancelled += 1
 
 
+async def _delete_post_one(scope: SessionScope, now: datetime, stats: RunStats) -> bool:
+    """Delete one finished raid's post, its delay after the end passed: stamped first, then the DELETE."""
+    async with scope() as db:
+        event = await wow_raid_advanced_repo.lock_post_delete_due(db, now, default_length=DEFAULT_LENGTH)
+        if event is None:
+            return False
+        channel_id, message_id = event.channel_id, event.message_id
+        await wow_raid_advanced_repo.mark_post_deleted(db, event, now)
+    if message_id is None:
+        return True
+    async with rest.make_rest_client() as client:
+        deleted = await raid_publisher.delete_message(client, channel_id, message_id)
+    if deleted:
+        stats.posts_deleted += 1
+    return True
+
+
 async def _record_one(scope: SessionScope, now: datetime, stats: RunStats) -> bool:
     """Freeze one finished raid's sign-ups as its attendance."""
     async with scope() as db:
@@ -224,4 +252,5 @@ async def _repeat_one(scope: SessionScope, now: datetime, stats: RunStats, *, po
         assert turn.event_id is not None
         async with rest.make_rest_client() as client:
             await raid_extras.sync(client, turn.event_id)
+            await raid_pin.sync(client, turn.event_id)
     return True

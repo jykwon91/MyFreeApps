@@ -27,6 +27,11 @@ this raid (copied), ``unsigned_pinged_at`` its [Ping them] slot (not copied).
 Advanced (0041, all copied): ``min_signups`` (raid-only), ``signup_role_ids``
 / ``banned_role_ids`` (Who can sign up) and ``ready_check_minutes``; NULL =
 follow the server.  Read them through ``raid_advanced``.
+
+Post options (0042): ``pin_post`` and ``voice_channel_id`` (copied; NULL =
+the server's, ``'0'`` = no voice channel) and ``delete_post_after_hours``
+(copied, raid-only).  ``pinned_message_id`` (the post the bot pinned) and
+``post_deleted_at`` (when the bot deleted the post) are never copied.
 """
 import uuid
 from datetime import datetime, timezone
@@ -134,6 +139,18 @@ class WowRaidEvent(Base):
             "ready_check_minutes IS NULL OR ready_check_minutes = 0 OR ready_check_minutes BETWEEN 5 AND 1440",
             name="ck_wowraidevent_ready_check_minutes",
         ),
+        CheckConstraint(
+            "pinned_message_id IS NULL OR pinned_message_id ~ '^[0-9]{15,20}$'",
+            name="ck_wowraidevent_pinned_message_id",
+        ),
+        CheckConstraint(
+            "voice_channel_id IS NULL OR voice_channel_id ~ '^(0|[0-9]{15,20})$'",
+            name="ck_wowraidevent_voice_channel_id",
+        ),
+        CheckConstraint(
+            "delete_post_after_hours IS NULL OR delete_post_after_hours BETWEEN 1 AND 168",
+            name="ck_wowraidevent_delete_post_after_hours",
+        ),
         # Efficiently list upcoming events per guild.
         Index("ix_wowraidevent_guild_starts_at", "guild_id", "starts_at"),
         # A repeat's latest raid (raid_series_service.template).
@@ -143,6 +160,12 @@ class WowRaidEvent(Base):
             "ix_wowraidevent_attendance_due",
             "starts_at",
             postgresql_where=text("status = 'completed' AND attendance_recorded_at IS NULL"),
+        ),
+        # Raids whose post is still to be deleted after the raid (the worker's sweep).
+        Index(
+            "ix_wowraidevent_post_delete_due",
+            "starts_at",
+            postgresql_where=text("delete_post_after_hours IS NOT NULL AND post_deleted_at IS NULL"),
         ),
     )
 
@@ -284,6 +307,16 @@ class WowRaidEvent(Base):
     banned_role_ids: Mapped[Optional[list[Any]]] = mapped_column(JSONB(none_as_null=True), nullable=True)
     # Minutes before the start the ready check goes out (0 = none); null = the server's.
     ready_check_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # Post options (0042).  Pin the post while the raid is still to start; null = the server's.
+    pin_post: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    # The post the bot pinned; a member's own pin (null here) is never undone.
+    pinned_message_id: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    # The voice channel the post names: '0' = none on this raid, null = the server's.
+    voice_channel_id: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    # Delete the post this many hours after the raid ends; null = keep it (raid-only).
+    delete_post_after_hours: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # When the bot deleted the post: the once-only stamp (the raid row stays).
+    post_deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
