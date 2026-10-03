@@ -28,6 +28,8 @@ export interface PricedRouteState {
   useDefault: boolean;
   setUseDefault: (useDefault: boolean) => void;
   total: number;
+  /** Skill `total` gets you to. */
+  reach: number;
   unknown: boolean;
   /** Prices you entered for this guide's materials. */
   pricesEntered: number;
@@ -105,13 +107,13 @@ function pickShown(
   canCompare: boolean,
   book: PriceBook,
   start: number,
-): Pick<PricedRouteState, "entries" | "cheapest" | "total" | "unknown"> {
-  if (!canCompare) return { entries: defaults, cheapest: false, total: 0, unknown: true };
+): Pick<PricedRouteState, "entries" | "cheapest" | "total" | "reach" | "unknown"> {
+  if (!canCompare) return { entries: defaults, cheapest: false, total: 0, reach: start, unknown: true };
   if (computed && computed.priced && !useDefault) {
-    return { entries: computed.entries, cheapest: true, total: computed.total, unknown: computed.unknown };
+    return { entries: computed.entries, cheapest: true, total: computed.total, reach: computed.reach, unknown: computed.unknown };
   }
   // The default route, with what each row would cost at your prices — so the two compare.
   const entries = annotateRoute(defaults, book, start);
-  const { total, unknown } = routeTotal(entries, start);
-  return { entries, cheapest: false, total, unknown };
+  const { total, reach, unknown } = routeTotal(entries, start);
+  return { entries, cheapest: false, total, reach, unknown };
 }

@@ -10,14 +10,16 @@ interface CraftRouteHeaderProps {
   onUseDefault: (useDefault: boolean) => void;
   pricesEntered: number;
   total: number;
+  /** Skill the total gets you to. */
+  reach: number;
   unknown: boolean;
 }
 
-/** "~48g 10s", "~48g + unknown", or nothing known at all. */
-function totalText(total: number, unknown: boolean): string {
-  if (!unknown) return formatCost(total);
-  if (total > 0) return `${formatCost(total)} + unknown`;
-  return "unknown";
+/** "Estimated cost to 300: ~48g", "… to reach skill 175: ~12g", or what's missing. */
+function totalText(total: number, reach: number, unknown: boolean): string {
+  if (!unknown) return `Estimated cost to ${reach}: ${formatCost(total)}`;
+  if (total > 0) return `Estimated cost to reach skill ${reach}: ${formatCost(total)}. Past that, rows need more prices.`;
+  return "Your next row needs more prices to estimate a cost.";
 }
 
 /** Which route is showing, the switch back to the default, and what it should cost from here. */
@@ -28,6 +30,7 @@ export default function CraftRouteHeader({
   onUseDefault,
   pricesEntered,
   total,
+  reach,
   unknown,
 }: CraftRouteHeaderProps) {
   const label = cheapest ? "Cheapest for your prices" : "Default route";
@@ -35,7 +38,7 @@ export default function CraftRouteHeader({
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-3" aria-live="polite">
         <Badge label={label} color={cheapest ? "green" : "gray"} />
-        {canCompare ? <span className="text-sm">Estimated cost from here: {totalText(total, unknown)}</span> : null}
+        {canCompare ? <span className="text-sm">{totalText(total, reach, unknown)}</span> : null}
       </div>
       {canCompare ? (
         <>

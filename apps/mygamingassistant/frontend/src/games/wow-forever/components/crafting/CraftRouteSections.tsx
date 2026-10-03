@@ -67,6 +67,7 @@ export default function CraftRouteSections({ profession, faction, zoneId, data }
           onUseDefault={priced.setUseDefault}
           pricesEntered={priced.pricesEntered}
           total={priced.total}
+          reach={priced.reach}
           unknown={priced.unknown}
         />
         <a href="#shopping" className="inline-flex items-center text-sm text-primary underline-offset-2 hover:underline min-h-[44px] sm:min-h-0">

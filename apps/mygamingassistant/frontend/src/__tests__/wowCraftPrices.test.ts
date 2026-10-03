@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import tailoringJson from "@/games/wow-forever/data/professions/crafting/tailoring.json";
 import enchantingJson from "@/games/wow-forever/data/professions/crafting/enchanting.json";
 import trainerSkillsJson from "@/games/wow-forever/data/professions/crafting/classic/trainerSkills.json";
-import { learnSkill, MAX_CRAFT_SKILL } from "@/games/wow-forever/crafting/craftRoute";
+import { learnSkill, MAX_CRAFT_SKILL, skillColors } from "@/games/wow-forever/crafting/craftRoute";
 import {
   cheapestRoute,
   enchantSlot,
@@ -44,6 +44,7 @@ const GREATER_MAGIC = 10939;
 const LESSER_ASTRAL = 10998;
 const GREATER_ASTRAL = 11082;
 const SMALL_SHARD = 10978;
+const DREAM_DUST = 11176;
 const LINEN_CLOTH = 2589;
 const BOLT_OF_LINEN = 2996;
 const CLOAK_MINOR_AGILITY = 13419;
@@ -170,6 +171,10 @@ function expectValid(profession: CraftingProfession, entries: readonly ResolvedR
     if (entry.recipe.tool && entry.step.to > start) {
       expect(made.get(entry.recipe.tool.id) ?? Infinity, `${name} needs its rod`).toBeLessThanOrEqual(entry.step.from);
     }
+    if (entry.source === "priced") {
+      // A picked row never runs into green ("green — move on").
+      expect(entry.step.to, `${name} stays orange/yellow`).toBeLessThanOrEqual(skillColors(entry.recipe).green);
+    }
     if (entry.source === "priced" && entry.recipe.learn.source === "item") {
       expect(choices.knownFormulas.has(entry.recipe.spell), name).toBe(true);
     }
@@ -258,7 +263,19 @@ describe("cheapestRoute — Enchanting", () => {
       expectValid("enchanting", route.entries, start, NO_CHOICES);
       expect(route.unknown).toBe(false);
       expect(route.total).toBeGreaterThan(0);
+      expect(route.reach).toBe(MAX_CRAFT_SKILL);
     }
+  });
+
+  it("totals only up to the first row without a cost, and says where that is", () => {
+    // The player's own case: four prices entered at 117.
+    const book = createPriceBook({ [STRANGE_DUST]: 8 * SILVER, [SMALL_SHARD]: 25 * SILVER, [LESSER_MAGIC]: 15 * SILVER, [LESSER_ASTRAL]: GOLD }, ctx.file, ctx.professionLabel);
+    const route = cheapestRoute(ctx, 117, book, NO_CHOICES);
+    const firstUnknown = route.entries.find((e) => e.step.to > 117 && (e.kind === "options" || e.cost === undefined));
+    expect(route.unknown).toBe(true);
+    expect(route.reach).toBe(firstUnknown?.step.from);
+    const upTo = route.entries.filter((e) => e.kind === "craft" && e.step.to > 117 && e.step.to <= route.reach);
+    expect(route.total).toBeCloseTo(upTo.reduce((sum, e) => sum + (e.kind === "craft" ? (e.cost ?? 0) : 0), 0));
   });
 });
 
@@ -277,11 +294,19 @@ describe("cheapestRoute — Tailoring", () => {
 });
 
 describe("priceItems and formulaChoices", () => {
-  it("lists raw materials only, the default route's most-needed first", () => {
+  it("lists raw materials only, in the order the default route first needs them", () => {
     const items = priceItems(context("tailoring"), 1, NO_CHOICES);
     expect(items.main.some((i) => i.id === BOLT_OF_LINEN)).toBe(false);
     expect(items.more.some((i) => i.id === BOLT_OF_LINEN)).toBe(false);
-    for (let i = 1; i < items.main.length; i++) expect(items.main[i - 1].need).toBeGreaterThanOrEqual(items.main[i].need);
+    expect(items.main[0].id).toBe(LINEN_CLOTH);
+  });
+
+  it("puts what you need next first — Strange Dust before the 300-skill dusts at Enchanting 117", () => {
+    const ids = priceItems(context("enchanting"), 117, NO_CHOICES).main.map((i) => i.id);
+    expect(ids.indexOf(STRANGE_DUST)).toBeLessThan(ids.indexOf(DREAM_DUST));
+    // The two essences you're choosing between at 117 are both asked for up front.
+    expect(ids).toContain(LESSER_MAGIC);
+    expect(ids).toContain(LESSER_ASTRAL);
   });
 
   it("adds the other half of an essence pair", () => {
