@@ -7,6 +7,8 @@ export interface CraftingGuide {
   routeIntro: string;
   /** Under the shopping list. */
   shoppingNote?: string;
+  /** In the prices panel: what isn't asked for because you make it yourself. */
+  pricedFromMaterials: string;
   forever: readonly ForeverChange[];
 }
 
@@ -38,6 +40,7 @@ export const CRAFTING_GUIDES: Readonly<Record<CraftingProfession, CraftingGuide>
       },
     ],
     routeIntro: "Craft each recipe from the first skill to the second, then move to the next row.",
+    pricedFromMaterials: "Bolts of cloth and Mooncloth are priced from the cloth they're made of.",
     forever: [
       {
         text: "Forever lowered the skill of many Tailoring recipes — e.g. Heavy Linen Gloves turns yellow at 50 instead of 60. The route uses Forever's numbers.",
@@ -78,6 +81,7 @@ export const CRAFTING_GUIDES: Readonly<Record<CraftingProfession, CraftingGuide>
       },
     ],
     routeIntro: "Enchant from the first skill to the second, then move to the next row. Rod rows are one craft each — make the rod and move on.",
+    pricedFromMaterials: "Motes of Magic and Enchanted Leather are priced from their materials.",
     shoppingNote: "Enchanting materials come from disenchanting green items. Tailoring and Leatherworking greens work.",
     forever: [
       {

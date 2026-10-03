@@ -36,18 +36,22 @@ export const ENCHANTING_ROUTE: readonly CraftRouteEntry[] = [
     confidence: "confirmed",
   },
   { kind: "craft", spell: 14807, from: 101, to: 110, confidence: "confirmed" },
+  // Trainer recipes only through here: a Forever player at 115 was offered Cloak - Lesser
+  // Protection, as our data says. The old 110–130 row (Cloak - Minor Agility) needed a
+  // limited-stock formula and Lesser Astral Essence, which is dear on the auction house.
+  { kind: "craft", spell: 7779, from: 110, to: 115, confidence: "confirmed" },
   {
     kind: "craft",
-    spell: 13419,
-    from: 110,
-    to: 130,
-    note: "Lesser Astral Essence comes from disenchanting level 16–20 green items.",
+    spell: 13421,
+    from: 115,
+    to: 140,
+    note: "Trained at 115. Small Glimmering Shards come from disenchanting level 11–20 blue items (greens give one only about 10% of the time) — or buy them at the auction house.",
     confidence: "confirmed",
   },
   {
     kind: "craft",
     spell: 13501,
-    from: 130,
+    from: 140,
     to: 155,
     note: "Soul Dust comes from disenchanting level 21–30 green items.",
     confidence: "confirmed",

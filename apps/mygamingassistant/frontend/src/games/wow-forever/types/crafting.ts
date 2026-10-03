@@ -79,12 +79,21 @@ export type LearnAt =
   | { kind: "trainer"; skill: number; estimated: boolean }
   | { kind: "item"; skill: number; itemId: number; item: string };
 
+/** Where a shown row came from: picked for your prices, or the hand-written route. */
+export type RouteRowSource = "priced" | "default";
+
 /** A route step joined to its recipe, with how many times to craft it. */
 export interface ResolvedCraftStep {
   step: CraftRouteStep;
   recipe: CraftRecipe;
   crafts: number;
   learn: LearnAt;
+  /** Set once you've entered prices: which route this row is from. */
+  source?: RouteRowSource;
+  /** Expected copper for the row from your skill on; absent when a material has no price. */
+  cost?: number;
+  /** The materials that still need a price before this row has a cost. */
+  missing?: readonly { id: number; name: string }[];
 }
 
 export type ResolvedRouteEntry =
