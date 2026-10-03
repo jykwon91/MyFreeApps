@@ -133,7 +133,7 @@ httpx2==2.12.0
     # via anthropic
 httpx2-jsfetch==1.0 ; sys_platform == 'emscripten'
     # via httpx2
-huggingface-hub==1.19.0
+huggingface-hub==2.0.0
     # via
     #   fastembed
     #   tokenizers
