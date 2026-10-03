@@ -101,7 +101,7 @@ fastapi-users-db-sqlalchemy==7.0.0
     # via fastapi-users
 fastembed==0.8.0
     # via myjobhunter-backend
-filelock==3.29.4
+filelock==4.0.4
     # via huggingface-hub
 flatbuffers==25.12.19
     # via onnxruntime
