@@ -24,7 +24,7 @@ _NOT_COPIED = {
     "created_by_display_name", "cancel_reason", "closed_at", "close_reason", "deadline_applied_at", "start_applied_at",
     "last_pinged_at", "series_id", "created_at", "updated_at", "discord_event_id", "discord_event_digest", "thread_id",
 } | {"discord_event_starts_at", "discord_event_claimed_at", "discord_event_error", "thread_name", "thread_error"} | {"attendance_counted", "attendance_recorded_at"} | {"unsigned_pinged_at"}
-_NOT_COPIED |= {"pinned_message_id", "post_deleted_at"}  # the bot's pin; when it deleted the post
+_NOT_COPIED |= {"pinned_message_id", "post_deleted_at", "web_id"}  # the bot's pin; when it deleted the post; page
 
 
 def _utc(*args: int) -> datetime:

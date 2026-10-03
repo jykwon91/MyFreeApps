@@ -41,6 +41,7 @@ def public_origin(monkeypatch: pytest.MonkeyPatch) -> None:
 def _event(status: str = "scheduled") -> WowRaidEvent:
     return WowRaidEvent(
         id=uuid.uuid4(),
+        web_id=uuid.uuid4(),
         guild_id=uuid.uuid4(),
         raid_key="onyxia",
         starts_at=datetime(2026, 10, 11, tzinfo=timezone.utc),

@@ -142,6 +142,12 @@ async def get_by_message_id(
     return result.scalars().first()
 
 
+async def get_by_web_id(db: AsyncSession, web_id: uuid.UUID) -> WowRaidEvent | None:
+    """The event whose web page is *web_id* (``/wow-forever/raids/<hex>``), or None."""
+    result = await db.execute(select(WowRaidEvent).where(WowRaidEvent.web_id == web_id))
+    return result.scalar_one_or_none()
+
+
 async def delete(db: AsyncSession, event: WowRaidEvent) -> None:
     """Hard-delete an event: a discarded draft, or Raid: Edit → Delete raid."""
     await db.delete(event)

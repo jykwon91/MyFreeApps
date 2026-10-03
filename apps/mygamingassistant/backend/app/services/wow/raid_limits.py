@@ -166,16 +166,21 @@ def count_label(count: int, limit: int | None) -> str:
     return f"{count}/{limit}"
 
 
-def role_row(signups: Sequence[WowRaidSignup], limits: Limits) -> dict[str, str]:
-    """The post's role row: a limited role's players in line over its limit, else its seat holders."""
+def role_tally(signups: Sequence[WowRaidSignup], limits: Limits) -> dict[str, tuple[int, int | None]]:
+    """Each role's (count, limit): a limited role's players in line, else its seat holders."""
     seated = role_counts(signups)
     in_line = role_line_counts(signups)
-    row: dict[str, str] = {}
+    tally: dict[str, tuple[int, int | None]] = {}
     for role in LIMIT_ROLES:
-        row[role] = str(seated[role])
+        tally[role] = (seated[role], None)
         if role in limits.roles:
-            row[role] = count_label(in_line[role], limits.roles[role])
-    return row
+            tally[role] = (in_line[role], limits.roles[role])
+    return tally
+
+
+def role_row(signups: Sequence[WowRaidSignup], limits: Limits) -> dict[str, str]:
+    """The post's role row: a limited role's players in line over its limit, else its seat holders."""
+    return {role: count_label(count, limit) for role, (count, limit) in role_tally(signups, limits).items()}
 
 
 def role_room(signups: Iterable[WowRaidSignup], limits: Limits) -> dict[str, int]:

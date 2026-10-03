@@ -32,6 +32,10 @@ Post options (0042): ``pin_post`` and ``voice_channel_id`` (copied; NULL =
 the server's, ``'0'`` = no voice channel) and ``delete_post_after_hours``
 (copied, raid-only).  ``pinned_message_id`` (the post the bot pinned) and
 ``post_deleted_at`` (when the bot deleted the post) are never copied.
+
+Web page (0043): ``web_id`` is the raid's public page id
+(``/wow-forever/raids/<hex>``, ``raid_web_links``): random, unique, never
+copied (a copy or a repeat gets its own).
 """
 import uuid
 from datetime import datetime, timezone
@@ -46,6 +50,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     func,
     text,
 )
@@ -167,11 +172,20 @@ class WowRaidEvent(Base):
             "starts_at",
             postgresql_where=text("delete_post_after_hours IS NOT NULL AND post_deleted_at IS NULL"),
         ),
+        # The raid's public web page (``raid_web_links``): a random capability id.
+        UniqueConstraint("web_id", name="uq_wowraidevent_web_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
+        default=uuid.uuid4,
+        server_default=func.gen_random_uuid(),
+    )
+    # The raid's web page id (0043): random, never copied.
+    web_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        nullable=False,
         default=uuid.uuid4,
         server_default=func.gen_random_uuid(),
     )
