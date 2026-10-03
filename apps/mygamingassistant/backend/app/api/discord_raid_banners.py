@@ -32,5 +32,12 @@ async def get_raid_banner(file_name: str, v: str | None = None) -> Response:
     banner = banner_for_file(file_name)
     if banner is None:
         raise HTTPException(status_code=404, detail="Not Found")
-    cache = _CACHE_CURRENT if v == banner.version else _CACHE_OTHER
-    return Response(content=banner.png, media_type="image/png", headers={"Cache-Control": cache})
+    return versioned_png(banner.png, current=v == banner.version)
+
+
+def versioned_png(png: bytes, *, current: bool) -> Response:
+    """A PNG at a versioned URL: a year at the current version, else an hour (the raid icons too)."""
+    cache = _CACHE_OTHER
+    if current:
+        cache = _CACHE_CURRENT
+    return Response(content=png, media_type="image/png", headers={"Cache-Control": cache})

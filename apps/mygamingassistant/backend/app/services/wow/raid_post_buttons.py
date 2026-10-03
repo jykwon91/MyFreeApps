@@ -6,6 +6,10 @@ has one ("3/4"; [Tank] shows Max tanks); then [Late] [Tentative]
 [Bench] [Absence] [My sign-up], five to a row.  Once sign-ups close (the
 leader, or the deadline), every button but [My sign-up] is disabled; once
 the raid has started or is no longer scheduled, all of them are.
+
+Row 4 is [Web view], a link to the raid's web page (``raid_web_links``):
+never disabled, and there once the raid is posted from a public https
+origin (production).
 """
 from __future__ import annotations
 
@@ -13,6 +17,7 @@ from collections.abc import Sequence
 from typing import Any, Final
 
 from platform_shared.services.discord import (
+    BUTTON_STYLE_LINK,
     BUTTON_STYLE_SECONDARY,
     COMPONENT_TYPE_ACTION_ROW,
     COMPONENT_TYPE_BUTTON,
@@ -26,6 +31,7 @@ from app.services.wow.raid_catalog import POST_COLUMNS, column_icon, column_tag
 from app.services.wow.raid_deadline import is_started
 from app.services.wow.raid_limits import Limits, count_label
 from app.services.wow.raid_post_layout import column_counts
+from app.services.wow.raid_web_links import raid_page_url
 
 # The status buttons under the class buttons: (status, label, icon).
 _STATUS_BUTTONS: Final = (
@@ -40,7 +46,7 @@ _BUTTONS_PER_ROW: Final = 5
 def build_signup_components(
     event: WowRaidEvent, signups: Sequence[WowRaidSignup], *, emojis: EmojiSet
 ) -> list[dict[str, Any]]:
-    """Class buttons with their column counts, then the status buttons.
+    """Class buttons with their column counts, then the status buttons, then [Web view].
 
     [My sign-up] still works while sign-ups are closed, until the raid
     starts: it shows where you stand and the full roster.
@@ -62,6 +68,9 @@ def build_signup_components(
     )
     rows = [class_buttons[i : i + _BUTTONS_PER_ROW] for i in range(0, len(class_buttons), _BUTTONS_PER_ROW)]
     rows.append(status_buttons)
+    page = raid_page_url(event)
+    if page is not None:
+        rows.append([_link_button("Web view", page, emojis.component("info_globe"))])
     return [{"type": COMPONENT_TYPE_ACTION_ROW, "components": row} for row in rows]
 
 
@@ -84,6 +93,14 @@ def _button(custom_id: str, label: str, disabled: bool, emoji: dict[str, str] | 
         "custom_id": custom_id,
         "disabled": disabled,
     }
+    if emoji is not None:
+        button["emoji"] = emoji
+    return button
+
+
+def _link_button(label: str, url: str, emoji: dict[str, str] | None) -> dict[str, Any]:
+    """A link button: Discord opens *url*; no custom_id, so no interaction comes back."""
+    button: dict[str, Any] = {"type": COMPONENT_TYPE_BUTTON, "style": BUTTON_STYLE_LINK, "label": label, "url": url}
     if emoji is not None:
         button["emoji"] = emoji
     return button

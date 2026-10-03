@@ -12,7 +12,8 @@ serves the bytes, loaded once at import.
 
 Discord can only fetch a public https URL, so posts carry banners only when
 the app's public origin (``settings.frontend_url``) is https — production.
-Local dev and tests post without them.
+Local dev and tests post without them.  The raid's web page shows the same
+art from this site by path (``banner_path``), so it shows it locally too.
 """
 from __future__ import annotations
 
@@ -23,6 +24,7 @@ from pathlib import Path
 from typing import Final
 
 from app.core.config import settings
+from app.services.wow.raid_web_links import public_origin
 
 logger = logging.getLogger(__name__)
 
@@ -60,23 +62,31 @@ def banner_for_file(file_name: str) -> Banner | None:
     return _BY_FILE_NAME.get(file_name)
 
 
+def banner_path(raid_key: str) -> str | None:
+    """A raid's banner as a path on this site (``/api/discord/raid-banners/…``); None without art."""
+    banner = BANNERS.get(raid_key)
+    if banner is None:
+        return None
+    return f"{settings.backend_root_path}{ROUTE_PREFIX}/{banner.file_name}?v={banner.version}"
+
+
 def banner_url(raid_key: str) -> str | None:
     """The public URL of a raid's banner, for a post's embed.
 
     None when the raid has no banner or the app has no public https origin.
     """
-    banner = BANNERS.get(raid_key)
-    origin = settings.frontend_url.rstrip("/")
-    if banner is None or not origin.startswith("https://"):
+    origin = public_origin()
+    path = banner_path(raid_key)
+    if origin is None or path is None:
         return None
-    return f"{origin}{settings.backend_root_path}{ROUTE_PREFIX}/{banner.file_name}?v={banner.version}"
+    return f"{origin}{path}"
 
 
 def banners_off_reason() -> str | None:
     """Why raid posts would go out without banners; None when they show them."""
     if not BANNERS:
         return f"no banner art in {BANNER_DIR}"
-    if not settings.frontend_url.rstrip("/").startswith("https://"):
+    if public_origin() is None:
         return "FRONTEND_URL is not an https origin"
     return None
 

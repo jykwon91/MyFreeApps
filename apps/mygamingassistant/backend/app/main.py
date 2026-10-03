@@ -31,8 +31,7 @@ from platform_shared.api.transparency_router import build_transparency_router
 from app.api import (
     account,
     admin,
-    discord_interactions,
-    discord_raid_banners,
+    discord_public,
     games,
     health,
     lineup_packages,
@@ -285,8 +284,8 @@ def _mount_public_routes(app: FastAPI) -> None:
     (Turnstile + per-IP limit + durable daily cap). Nothing here requires auth,
     so it is identical in both modes. version is a public deploy probe.
 
-    Discord routes (interactions — Ed25519-gated; the raid posts' banner art;
-    Activity config — the public client id) mount only when
+    Discord routes (``discord_public``: interactions, the raid art, the raid web
+    page; Activity config — the public client id) mount only when
     ``discord_enabled=True``; else absent (404).
     """
     app.include_router(health.router, tags=["health"])
@@ -298,8 +297,7 @@ def _mount_public_routes(app: FastAPI) -> None:
 
     # Disabled = absent (404), not present-but-broken.
     if settings.discord_enabled:
-        app.include_router(discord_interactions.router)
-        app.include_router(discord_raid_banners.router)
+        app.include_router(discord_public.router)
     if settings.discord_enabled and settings.discord_application_id:
         app.include_router(build_discord_activity_router(client_id=settings.discord_application_id))
 

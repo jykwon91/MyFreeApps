@@ -9,7 +9,7 @@ import { defineConfig, devices } from "@playwright/test";
  * default full-auth config can't exercise it. This config boots a dedicated
  * Vite dev server on port 5177 (NOT the default 5176, so it never reuses or
  * collides with a full-auth dev server already running) with
- * VITE_SERVE_ONLY=true, and runs ONLY the serve-only spec.
+ * VITE_SERVE_ONLY=true, and runs ONLY the serve-only specs (serve-only*.spec.ts).
  *
  * Run: npm run test:e2e:serve-only
  *
@@ -22,7 +22,7 @@ const BASE_URL = process.env.SERVE_ONLY_BASE_URL ?? `http://localhost:${SERVE_ON
 
 export default defineConfig({
   testDir: "./",
-  testMatch: "**/serve-only.spec.ts",
+  testMatch: "**/serve-only*.spec.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
