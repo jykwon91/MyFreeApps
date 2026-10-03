@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import WowRaidPage from "@/games/wow-forever/pages/WowRaidPage";
 import { DISPLAY_ROLE, LIST_STATUS, RAID_STATE, SEGMENT_KIND, TIME_STYLE } from "@/games/wow-forever/data/raidPage";
 import {
+  NO_RESPONSE_MESSAGE,
   NOT_FOUND_MESSAGE,
   RATE_LIMITED_MESSAGE,
   SERVER_PROBLEM_MESSAGE,
@@ -275,7 +276,8 @@ describe("raid web page", () => {
 
   it.each([
     [{ status: 500, data: "<html>Bad gateway</html>" }, SERVER_PROBLEM_MESSAGE],
-    [{ status: undefined, data: "Network Error" }, "Network Error"],
+    [{ status: undefined, data: "Network Error" }, NO_RESPONSE_MESSAGE],
+    [{ status: undefined, data: "timeout of 30000ms exceeded" }, NO_RESPONSE_MESSAGE],
     [{ status: 400, data: { detail: "Something specific" } }, "Something specific"],
   ])("explains a failed read in plain words (%o)", (error, message) => {
     setQuery({ error });

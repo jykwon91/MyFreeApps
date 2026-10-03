@@ -128,9 +128,9 @@ test("with no sign-ups yet, it sends raiders to the post in Discord", async ({ p
   await discord.close();
 });
 
-test("on a phone it never scrolls sideways", async ({ page }, testInfo) => {
+test("on a phone it never scrolls sideways, and Refresh is a tap away", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 375, height: 800 });
-  await routeRaid(page, (route) => fulfillJson(route, 200, raidFixture()));
+  const routes = await routeRaid(page, (route) => fulfillJson(route, 200, raidFixture()));
   await openRaid(page);
   await page.getByRole("heading", { level: 2, name: "Tentative · Bench · Absence" }).scrollIntoViewIfNeeded();
 
@@ -141,6 +141,16 @@ test("on a phone it never scrolls sideways", async ({ page }, testInfo) => {
     return Math.max(document.documentElement.scrollWidth - window.innerWidth, inside);
   });
   expect(overflow).toBeLessThanOrEqual(0);
+
+  // At the foot of the page: a 44 px target, and a tap re-reads the raid.
+  const refresh = page.getByRole("button", { name: "Refresh" });
+  await refresh.scrollIntoViewIfNeeded();
+  const box = await refresh.boundingBox();
+  expect(box?.height).toBeGreaterThanOrEqual(44);
+  await refresh.click();
+  await expect.poll(routes.reads).toBe(2);
+  await expect(page.getByText("Updated just now")).toBeVisible();
+
   // The whole page in one picture, to look at: the app scrolls inside its shell, not the window.
   await page.setViewportSize({ width: 375, height: 3200 });
   await page.locator("main").first().evaluate((shell) => shell.scrollTo(0, 0));
