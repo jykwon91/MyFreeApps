@@ -3,6 +3,7 @@ import UnconfirmedChip from "@/games/wow-forever/components/professions/Unconfir
 import CraftColorsLine from "@/games/wow-forever/components/crafting/CraftColorsLine";
 import CraftLearnLine, { type CraftPlace } from "@/games/wow-forever/components/crafting/CraftLearnLine";
 import CraftReagents from "@/games/wow-forever/components/crafting/CraftReagents";
+import CraftRowCost from "@/games/wow-forever/components/crafting/CraftRowCost";
 import { CRAFT_ROW_GRID, rowStateClass, type RowState } from "@/games/wow-forever/components/crafting/craftRowStyles";
 import type { ResolvedCraftStep } from "@/games/wow-forever/types/crafting";
 
@@ -53,6 +54,8 @@ export default function CraftRouteRow({ entry, state, showChip, makesTool, profe
           <CraftLearnLine learn={learn} professionLabel={professionLabel} place={place} />
         </div>
       </div>
+      {/* Done rows are history — what they cost no longer matters. */}
+      {state === "done" ? null : <CraftRowCost entry={entry} />}
       {recipe.tool || makesTool || step.note ? (
         <div className="space-y-1 text-xs text-muted-foreground">
           {makesTool ? <p className="font-medium text-foreground">Tool — make one, keep it in your bags.</p> : null}

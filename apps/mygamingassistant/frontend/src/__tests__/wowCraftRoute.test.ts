@@ -15,7 +15,12 @@ import { shoppingList, shoppingListText } from "@/games/wow-forever/crafting/sho
 import { CRAFTING_GUIDES } from "@/games/wow-forever/data/professions/crafting/craftingGuide";
 import { CRAFTING_ROUTES } from "@/games/wow-forever/data/professions/crafting/craftingRoutes";
 import { CRAFTING_RANKS } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
+import { createSourceLookup, type RawSourcesFile } from "@/games/wow-forever/data/sourceDecode";
+import sourcesJson from "@/games/wow-forever/data/professions/crafting/classic/sources.json";
+import { hasSources } from "@/games/wow-forever/food/recipeSources";
 import type { CraftingFile, CraftingProfession, CraftRecipe, TrainerSkills } from "@/games/wow-forever/types/crafting";
+
+const SOURCES = createSourceLookup(sourcesJson as unknown as RawSourcesFile);
 
 const FILES: Record<CraftingProfession, CraftingFile> = {
   tailoring: tailoringJson as unknown as CraftingFile,
@@ -111,6 +116,14 @@ describe("shoppingList", () => {
   });
 });
 
+describe("Enchanting 110–140", () => {
+  it("uses trainer recipes, not a limited-stock formula", () => {
+    const rows = resolved("enchanting").filter((e) => e.kind === "craft" && e.step.from >= 110 && e.step.to <= 140);
+    expect(rows.map((e) => e.kind === "craft" && e.recipe.spell)).toEqual([7779, 13421]);
+    for (const row of rows) expect(row.kind === "craft" && row.recipe.learn.source).toBe("trainer");
+  });
+});
+
 describe.each(PROFESSIONS)("%s route data", (profession) => {
   const file = FILES[profession];
   const entries = resolved(profession);
@@ -149,6 +162,21 @@ describe.each(PROFESSIONS)("%s route data", (profession) => {
       const rank = reached[reached.length - 1];
       if (rank) cap = rank.cap;
       expect(entry.step.to, `${entry.step.from}-${entry.step.to}`).toBeLessThanOrEqual(cap);
+    }
+  });
+
+  // A hand-route row that needs a Pattern / Formula must say where to get it —
+  // the data's vendor / drop list, or a note. Else the guide routes you
+  // through a recipe you can't find (the old Enchanting 110–130 row).
+  it("says where to get every pattern or formula it needs", () => {
+    for (const entry of entries) {
+      if (entry.kind !== "craft" || entry.recipe.learn.source !== "item") continue;
+      const known = hasSources(SOURCES.recipe(entry.recipe.learn.itemId));
+      expect(known || Boolean(entry.step.note), `${entry.step.from}-${entry.step.to} ${entry.recipe.learn.item}`).toBe(true);
+    }
+    for (const entry of entries) {
+      if (entry.kind !== "options") continue;
+      for (const option of entry.step.options) expect(option.detail, `option ${option.spell}`).not.toBe("");
     }
   });
 
