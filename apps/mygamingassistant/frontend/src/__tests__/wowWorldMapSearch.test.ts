@@ -88,6 +88,16 @@ describe("NPC search", () => {
     expect(searchNpcs("   ", data, { faction: FACTION.alliance, player: null })).toEqual([]);
   });
 
+  it("asks \"did you mean\" for a misspelt name, with that spelling's results", () => {
+    const alliance = { faction: FACTION.alliance, player: null };
+    const briar = searchMap("briarthron", data, places, alliance);
+    expect(briar.didYouMean).toBe("Briarthorn");
+    expect(briar.npcs[0].poi.name).toBe("Briarthorn");
+    const targorr = searchMap("tagorr", data, places, alliance);
+    expect(targorr.didYouMean).toBe("targorr");
+    expect(targorr.npcs[0].boss).toBe("Targorr the Dread");
+  });
+
   it("finds a dungeon by what players call it", () => {
     const alliance = { faction: FACTION.alliance, player: null };
     for (const q of ["stockade", "the stockade", "stocks", "Stormwind Stockade"]) {
@@ -198,6 +208,23 @@ describe("places", () => {
     expect(findPlaces("sw", places)[0].zoneId).toBe(STORMWIND);
     expect(findPlaces("org", places)[0].zoneId).toBe(ORGRIMMAR);
     expect(placeLabel(findPlaces("goldshire", places)[0])).toBe("Goldshire, Elwynn Forest");
+  });
+
+  it("suggests the right spelling when nothing matches, like a web search", () => {
+    const TIRISFAL = 1420;
+    const horde = { faction: FACTION.horde, player: null };
+    const tirisfal = searchMap("tristfal glades", data, places, horde);
+    expect(tirisfal.didYouMean).toBe("Tirisfal Glades");
+    expect(tirisfal.places[0]).toMatchObject({ name: "Tirisfal Glades", zoneId: TIRISFAL });
+    expect(searchMap("tristfal", data, places, horde).places[0].zoneId).toBe(TIRISFAL);
+    expect(searchMap("stranglethron", data, places, horde).didYouMean).toBe("Stranglethorn");
+    expect(searchMap("goldshrie", data, places, horde).didYouMean).toBe("Goldshire");
+    // Spelt right (or half typed): no suggestion.
+    expect(searchMap("tirisfal", data, places, horde).didYouMean).toBeUndefined();
+    expect(searchMap("tiris", data, places, horde).didYouMean).toBeUndefined();
+    // Short words must be spelt right; gibberish gets nothing.
+    expect(searchMap("orx", data, places, horde)).toMatchObject({ npcs: [], places: [] });
+    expect(searchMap("qwxzvbnm", data, places, horde).didYouMean).toBeUndefined();
   });
 
   it("finds buildings and named areas no NPC stands in", () => {

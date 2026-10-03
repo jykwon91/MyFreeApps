@@ -170,3 +170,26 @@ test("a dungeon is found by its nickname or one of its bosses", async ({ page })
   await page.getByRole("option", { name: /^Targorr the Dread — boss in Stormwind Stockade/ }).click();
   await expect(page.getByRole("img", { name: "Stormwind City map" })).toBeVisible();
 });
+
+test('a misspelling asks "Did you mean …?" like a web search', async ({ page }) => {
+  const search = page.getByRole("combobox", { name: "Find an NPC or place" });
+  await search.fill("tristfal glades");
+  const suggestion = page.getByRole("option", { name: /Did you mean Tirisfal Glades\?/ });
+  await expect(suggestion).toBeVisible();
+  // The results are already for the right spelling.
+  await expect(page.getByRole("option", { name: "Tirisfal Glades Zone" })).toBeVisible();
+  await suggestion.click();
+  await expect(search).toHaveValue("Tirisfal Glades");
+  await expect(page.getByRole("option", { name: /Did you mean/ })).toHaveCount(0);
+  await page.getByRole("option", { name: "Tirisfal Glades Zone" }).click();
+  await expect(page.getByRole("img", { name: "Tirisfal Glades map" })).toBeVisible();
+});
+
+test('"Where are you?" fixes a misspelt place too, keeping the coordinates', async ({ page }) => {
+  const where = page.getByRole("combobox", { name: "Where are you?" });
+  await where.fill("goldshrie 42.1, 65.9");
+  await page.getByRole("option", { name: /Did you mean Goldshire\?/ }).click();
+  await expect(where).toHaveValue("Goldshire 42.1, 65.9");
+  await page.getByRole("button", { name: "Set", exact: true }).click();
+  await expect(page.getByText(/Goldshire, Elwynn Forest/).first()).toBeVisible();
+});

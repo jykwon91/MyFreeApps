@@ -5,6 +5,8 @@ export interface ComboOption {
   id: string;
   primary: string;
   secondary?: string;
+  /** Picking it changes the search (a spelling fix) rather than choosing a result, so the list stays open. */
+  keepOpen?: boolean;
 }
 
 export interface ComboGroup {
@@ -51,7 +53,7 @@ export default function SearchCombobox(props: SearchComboboxProps) {
   function choose(index: number) {
     const option = flat[index];
     if (!option) return;
-    setOpen(false);
+    setOpen(option.keepOpen === true);
     setActive(-1);
     onPick(option.id);
   }
