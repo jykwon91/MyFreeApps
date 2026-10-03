@@ -240,14 +240,33 @@ test("when someone else saved first, it says so and shows their groups", async (
   expect(routes.saves()[0].version).toBe(3);
 });
 
-test("an expired link shows how to get a new one", async ({ page }) => {
-  await routePlan(page, smallPlanFixture(), {
-    read: (route) => fulfillJson(route, 403, { detail: "plan_link_expired" }),
+test("a link that runs out while planning: Save, then reopening it, show how to get a new one", async ({ page }) => {
+  let expired = false;
+  const routes = await routePlan(page, smallPlanFixture(), {
+    read: (route) => {
+      if (expired) return fulfillJson(route, 403, { detail: "plan_link_expired" });
+      return fulfillJson(route, 200, smallPlanFixture());
+    },
+    save: (route) => {
+      expired = true;
+      return fulfillJson(route, 403, { detail: "plan_link_expired" });
+    },
   });
-  await page.goto(PLANNER_LINK);
+  await openPlanner(page);
+  await page.getByRole("combobox", { name: "Move Fenn to" }).selectOption("slot:1:4");
+  await page.getByRole("button", { name: "Save" }).click();
+
   await expect(page.getByRole("heading", { level: 1, name: LINK_PROBLEM })).toBeVisible();
   await expect(page).toHaveTitle(`${LINK_PROBLEM} · ${SITE_TITLE}`);
   await expect(page.getByText(/open Apps → Raid: Edit/)).toBeVisible();
+  expect(routes.saves()).toHaveLength(1);
+
+  // Reopened later, the expired link is refused before any groups show.
+  const reads = routes.reads();
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 1, name: LINK_PROBLEM })).toBeVisible();
+  expect(routes.reads()).toBeGreaterThan(reads);
+  await expect(page.getByRole("button", { name: "Save" })).toHaveCount(0);
 });
 
 test("with no token at all, it asks for a new link without asking the API", async ({ page }) => {
