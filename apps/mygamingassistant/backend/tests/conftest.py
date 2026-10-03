@@ -130,6 +130,7 @@ _UOW_CONSUMERS = (
     "app.services.discord.components.raid_duplicate",
     "app.services.discord.components.raid_edit",
     "app.services.discord.components.raid_extras",
+    "app.services.discord.components.raid_groups",
     "app.services.discord.components.raid_leader",
     "app.services.discord.components.raid_manage",
     "app.services.discord.components.raid_manage_changes",

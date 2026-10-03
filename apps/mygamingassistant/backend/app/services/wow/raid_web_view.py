@@ -12,7 +12,8 @@ built from the post's own helpers, so the two can't disagree:
   grey once they close, the raid starts or it's cancelled;
 * the banner: the raid's built-in art, served by this site.  Never the
   leader's own image link, which would hand every viewer's address to that
-  host; none once the raid is cancelled.
+  host; none once the raid is cancelled;
+* the groups, while the leader shares them (``raid_groups.groups_view``).
 
 ``state`` reads the clock as the sign-up buttons do (``raid_context``): a raid
 past its start or its deadline shows as started or closed before the sweep
@@ -32,6 +33,8 @@ from app.models.wow.wow_raid_signup import WowRaidSignup
 from app.schemas.wow.raid_web import (
     RaidColumn,
     RaidEntry,
+    RaidGroup,
+    RaidGroups,
     RaidPage,
     RaidRoleCount,
     RaidState,
@@ -42,6 +45,7 @@ from app.services.wow.raid_catalog import CLASSES_BY_KEY, column_icon, column_la
 from app.services.wow.raid_deadline import closes_at, deadline_due, is_started
 from app.services.wow.raid_details import leader_name
 from app.services.wow.raid_embed import COLOR_CLOSED, STATUS_LISTS, post_color
+from app.services.wow.raid_groups import groups_view
 from app.services.wow.raid_icon_files import ICONS_VERSION
 from app.services.wow.raid_limits import Limits, role_tally
 from app.services.wow.raid_post_layout import NO_CLASS_COLUMN, NO_CLASS_LABEL, ROLE_ROW, post_columns, with_status
@@ -82,6 +86,7 @@ def build_page(
         roles=_roles(signups, limits),
         columns=_columns(signups, limits),
         lists=_lists(signups),
+        groups=_groups(event, signups),
         icons_version=ICONS_VERSION,
     )
 
@@ -147,7 +152,7 @@ def _columns(signups: Sequence[WowRaidSignup], limits: Limits) -> list[RaidColum
                 icon=_column_icon(column),
                 count=len(players),
                 limit=limits.for_column(column),
-                entries=[_entry(signup, numbers.get(signup.discord_user_id)) for signup in players],
+                entries=[page_entry(signup, numbers.get(signup.discord_user_id)) for signup in players],
             )
         )
     return columns
@@ -171,12 +176,24 @@ def _lists(signups: Sequence[WowRaidSignup]) -> list[RaidStatusList]:
     for status, label, icon in STATUS_LISTS:
         players = with_status(signups, status)
         if players:
-            entries = [_entry(signup, None) for signup in players]
+            entries = [page_entry(signup, None) for signup in players]
             lists.append(RaidStatusList(status=status, label=label, icon=icon, entries=entries))
     return lists
 
 
-def _entry(signup: WowRaidSignup, number: int | None) -> RaidEntry:
+def _groups(event: WowRaidEvent, signups: Sequence[WowRaidSignup]) -> RaidGroups | None:
+    """The groups with anyone in them, while the leader shares them (``groups_published_at``)."""
+    if event.groups_published_at is None:
+        return None
+    view = groups_view(event, signups)
+    groups = [
+        RaidGroup(number=group.number, entries=[page_entry(signup, None) for signup in group.members])
+        for group in view.groups
+    ]
+    return RaidGroups(groups=groups, unplaced=view.unplaced, updated_at=event.groups_updated_at)
+
+
+def page_entry(signup: WowRaidSignup, number: int | None) -> RaidEntry:
     """A player as the post shows them: the spec they show as (a pre-spec sign-up: its default), else the class."""
     entry = RaidEntry(
         id=signup.id,

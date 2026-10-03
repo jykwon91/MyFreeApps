@@ -24,6 +24,7 @@ from app.models.wow.wow_raid_guild import WowRaidGuild  # noqa: F401
 from app.models.wow.wow_raid_series import WowRaidSeries  # noqa: F401
 from app.models.wow.wow_raid_event import WowRaidEvent  # noqa: F401
 from app.models.wow.wow_raid_signup import WowRaidSignup  # noqa: F401
+from app.models.wow.wow_raid_plan_link import WowRaidPlanLink  # noqa: F401
 from app.models.wow.wow_raid_attendance import WowRaidAttendance  # noqa: F401
 from app.models.wow.wow_raid_member_pref import WowRaidMemberPref  # noqa: F401
 from app.models.wow.wow_raid_notification import WowRaidNotification  # noqa: F401

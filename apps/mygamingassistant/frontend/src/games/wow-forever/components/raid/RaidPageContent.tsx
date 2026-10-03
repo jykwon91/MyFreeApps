@@ -1,6 +1,7 @@
 import RaidClassColumns from "@/games/wow-forever/components/raid/RaidClassColumns";
 import RaidCredits from "@/games/wow-forever/components/raid/RaidCredits";
 import RaidDescription from "@/games/wow-forever/components/raid/RaidDescription";
+import RaidGroupsView from "@/games/wow-forever/components/raid/RaidGroupsView";
 import RaidHeader from "@/games/wow-forever/components/raid/RaidHeader";
 import RaidPageMeta from "@/games/wow-forever/components/raid/RaidPageMeta";
 import RaidRoleSummary from "@/games/wow-forever/components/raid/RaidRoleSummary";
@@ -21,7 +22,10 @@ interface RaidPageContentProps {
   onRefresh: () => void;
 }
 
-/** The raid as its Discord post shows it: header, description, role row, columns, then the lists. */
+/**
+ * The raid as its Discord post shows it: header, description, role row, columns, then the lists — and the
+ * leader's groups above the columns, while they share them.
+ */
 export default function RaidPageContent({
   page,
   now,
@@ -35,6 +39,7 @@ export default function RaidPageContent({
       <RaidPageMeta title={page.title} />
       <RaidHeader page={page} now={now} />
       <RaidDescription segments={page.description} now={now} />
+      {page.groups && <RaidGroupsView groups={page.groups} iconsVersion={page.icons_version} />}
       <section aria-labelledby="raid-signups" className="space-y-3">
         <h2 id="raid-signups" className={RAID_SECTION_HEADING_CLASS}>
           Sign-ups

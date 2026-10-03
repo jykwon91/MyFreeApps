@@ -7,9 +7,10 @@ has one ("3/4"; [Tank] shows Max tanks); then [Late] [Tentative]
 leader, or the deadline), every button but [My sign-up] is disabled; once
 the raid has started or is no longer scheduled, all of them are.
 
-Row 4 is [Web view], a link to the raid's web page (``raid_web_links``):
-never disabled, and there once the raid is posted from a public https
-origin (production).
+Row 4 is [Web view], a link to the raid's web page (``raid_web_links``),
+there once the raid is posted from a public https origin (production), and
+[Groups] while the leader shares the raid's groups (``gp:view``: they come
+back privately).  Neither is ever disabled.
 """
 from __future__ import annotations
 
@@ -46,7 +47,7 @@ _BUTTONS_PER_ROW: Final = 5
 def build_signup_components(
     event: WowRaidEvent, signups: Sequence[WowRaidSignup], *, emojis: EmojiSet
 ) -> list[dict[str, Any]]:
-    """Class buttons with their column counts, then the status buttons, then [Web view].
+    """Class buttons with their column counts, then the status buttons, then [Web view] [Groups].
 
     [My sign-up] still works while sign-ups are closed, until the raid
     starts: it shows where you stand and the full roster.
@@ -68,9 +69,15 @@ def build_signup_components(
     )
     rows = [class_buttons[i : i + _BUTTONS_PER_ROW] for i in range(0, len(class_buttons), _BUTTONS_PER_ROW)]
     rows.append(status_buttons)
+    links: list[dict[str, Any]] = []
     page = raid_page_url(event)
     if page is not None:
-        rows.append([_link_button("Web view", page, emojis.component("info_globe"))])
+        links.append(link_button("Web view", page, emojis.component("info_globe")))
+    if event.groups_published_at is not None:
+        groups = raid_custom_id.encode("gp", event.id, "view")
+        links.append(_button(groups, "Groups", False, emojis.component("info_signups")))
+    if links:
+        rows.append(links)
     return [{"type": COMPONENT_TYPE_ACTION_ROW, "components": row} for row in rows]
 
 
@@ -98,7 +105,7 @@ def _button(custom_id: str, label: str, disabled: bool, emoji: dict[str, str] | 
     return button
 
 
-def _link_button(label: str, url: str, emoji: dict[str, str] | None) -> dict[str, Any]:
+def link_button(label: str, url: str, emoji: dict[str, str] | None) -> dict[str, Any]:
     """A link button: Discord opens *url*; no custom_id, so no interaction comes back."""
     button: dict[str, Any] = {"type": COMPONENT_TYPE_BUTTON, "style": BUTTON_STYLE_LINK, "label": label, "url": url}
     if emoji is not None:

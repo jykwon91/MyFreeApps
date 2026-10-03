@@ -84,6 +84,22 @@ export interface RaidStatusList {
   entries: RaidEntry[];
 }
 
+/** A group with anyone in it: its players in seat order, without order numbers. */
+export interface RaidGroup {
+  number: number;
+  entries: RaidEntry[];
+}
+
+/** The leader's groups, while they share them. */
+export interface RaidGroups {
+  /** Each group with anyone in it, in order. */
+  groups: RaidGroup[];
+  /** Seated players in no group yet. */
+  unplaced: number;
+  /** ISO 8601: the last save. */
+  updated_at: string | null;
+}
+
 /** A posted raid, as its web page shows it. */
 export interface RaidPage {
   web_id: string;
@@ -112,6 +128,8 @@ export interface RaidPage {
   roles: RaidRoleCount[];
   columns: RaidColumn[];
   lists: RaidStatusList[];
+  /** The leader's groups while they share them (the planner's "Visible to raiders"), else null. */
+  groups: RaidGroups | null;
   /** The `?v=` of the icon URLs. */
   icons_version: string;
 }

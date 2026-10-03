@@ -7,6 +7,7 @@
  * them; the page leaves them out (the browser's own).
  */
 import { TIME_STYLE } from "@/games/wow-forever/data/raidPage";
+import { LINK_WARNING_MS } from "@/games/wow-forever/data/raidPlanner";
 import type { TimeStyle } from "@/games/wow-forever/types/raid";
 
 export interface TimeOptions {
@@ -92,6 +93,25 @@ export function fromNow(iso: string, nowMs: number, options: TimeOptions = {}): 
 export function updatedLabel(fetchedAtMs: number, nowMs: number, options: TimeOptions = {}): string {
   if (nowMs - fetchedAtMs < JUST_NOW_MS) return "Updated just now";
   return `Updated ${relativeTime(fetchedAtMs, nowMs, options)}`;
+}
+
+/** "Link expires in 1 h 52 m", "… in 52 m", "… in less than a minute", then "Link expired"; "" for no time. */
+export function linkExpiryLabel(expiresAt: string, nowMs: number): string {
+  const left = Date.parse(expiresAt) - nowMs;
+  if (Number.isNaN(left)) return "";
+  if (left <= 0) return "Link expired";
+  const minutes = Math.floor(left / MINUTE_MS);
+  if (minutes < 1) return "Link expires in less than a minute";
+  const hours = Math.floor(minutes / 60);
+  const parts: string[] = [];
+  if (hours > 0) parts.push(`${hours} h`);
+  if (minutes % 60 > 0) parts.push(`${minutes % 60} m`);
+  return `Link expires in ${parts.join(" ")}`;
+}
+
+/** Whether the link stops working within `LINK_WARNING_MS` — or already has. */
+export function isLinkExpiring(expiresAt: string, nowMs: number): boolean {
+  return Date.parse(expiresAt) - nowMs < LINK_WARNING_MS;
 }
 
 function formatIso(iso: string, format: Intl.DateTimeFormatOptions, options: TimeOptions): string {

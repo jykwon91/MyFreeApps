@@ -17,6 +17,11 @@ moved up automatically); ``tentative`` and ``absence`` hold no seat.
 ``character_name`` (revision 0034) is the in-game name this sign-up shows
 instead of ``display_name``; copied from the member's saved names when they
 sign up or switch class.
+
+Groups (revision 0044): ``raid_group`` / ``group_slot`` are the player's
+place in the leader's planned groups (Raid: Edit → [Groups]), both null
+outside one.  Read them through ``raid_groups``, which ignores a place whose
+player has no seat; only a planner save writes them.
 """
 import uuid
 from datetime import datetime, timezone
@@ -26,9 +31,12 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Index,
+    SmallInteger,
     String,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -83,6 +91,9 @@ CHARACTER_NAME_MIN = 2
 CHARACTER_NAME_MAX = 12
 # A note for the raid leader is 1-100 characters (app.services.wow.raid_note.clean_note).
 NOTE_MAX = 100
+# The planned groups are groups of five, at most eight (a 40-man raid): app.services.wow.raid_groups.
+GROUP_SIZE = 5
+MAX_GROUPS = 8
 
 
 class WowRaidSignup(Base):
@@ -116,6 +127,28 @@ class WowRaidSignup(Base):
             f"note IS NULL OR char_length(note) BETWEEN 1 AND {NOTE_MAX}",
             name="ck_wowraidsignup_note_len",
         ),
+        # A place in the planned groups: both or neither.
+        CheckConstraint(
+            "(raid_group IS NULL) = (group_slot IS NULL)",
+            name="ck_wowraidsignup_group_pair",
+        ),
+        CheckConstraint(
+            f"raid_group IS NULL OR raid_group BETWEEN 1 AND {MAX_GROUPS}",
+            name="ck_wowraidsignup_raid_group",
+        ),
+        CheckConstraint(
+            f"group_slot IS NULL OR group_slot BETWEEN 1 AND {GROUP_SIZE}",
+            name="ck_wowraidsignup_group_slot",
+        ),
+        # One player per slot.
+        Index(
+            "uq_wowraidsignup_group_slot",
+            "event_id",
+            "raid_group",
+            "group_slot",
+            unique=True,
+            postgresql_where=text("raid_group IS NOT NULL"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -147,6 +180,9 @@ class WowRaidSignup(Base):
     # The member's note for the raid leader, read while the raid takes notes
     # (WowRaidEvent.signup_notes_enabled); cleared when their status changes.
     note: Mapped[Optional[str]] = mapped_column(String(NOTE_MAX), nullable=True)
+    # The group the leader planned them in (1–8) and their slot in it (1–5).
+    raid_group: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)
+    group_slot: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)
     status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,

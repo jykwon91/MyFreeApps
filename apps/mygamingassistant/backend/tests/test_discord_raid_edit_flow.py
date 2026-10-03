@@ -122,10 +122,10 @@ def _post_embed(fake_discord: FakeDiscord) -> dict[str, Any]:
 def _card_ids(event: WowRaidEvent) -> list[str]:
     actions = ("title", "leader", "when", "deadline", "desc", "image", "color", "role_limits", "class_limits")
     ids = [f"raid:v1:ed:{event.id}:{action}" for action in (*actions, "cancel", "delete", "done")]
-    at, ev = len(actions), event.id
-    ids[at:at] = [f"raid:v1:ml:{ev}:open:-:-", f"raid:v1:ed:{ev}:notes_on", f"raid:v1:adv:{ev}:open:-"]
-    ids[12:12], ids[7:7], ids[4:4] = [f"raid:v1:cp:{ev}"], [f"raid:v1:xt:{ev}:open"], [f"raid:v1:rp:{ev}:open"]
-    return ids  # [Repeat] ends row 1, [Event & thread] row 2, [Advanced] row 3; [Copy raid] starts row 4
+    ev, row_2_end = event.id, [f"raid:v1:xt:{event.id}:open", f"raid:v1:gp:{event.id}:plan"]
+    ids[9:9] = [f"raid:v1:ml:{ev}:open:-:-", f"raid:v1:ed:{ev}:notes_on", f"raid:v1:adv:{ev}:open:-"]
+    ids[12:12], ids[7:7], ids[4:4] = [f"raid:v1:cp:{ev}"], row_2_end, [f"raid:v1:rp:{ev}:open"]
+    return ids  # [Repeat] ends row 1, [Event & thread] [Groups] row 2, [Advanced] row 3; [Copy raid] starts row 4
 
 
 # ---------------------------------------------------------------------------

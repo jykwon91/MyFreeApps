@@ -11,7 +11,7 @@ import {
   SERVER_PROBLEM_MESSAGE,
 } from "@/games/wow-forever/lib/raidPageError";
 import { formatDiscordTime } from "@/games/wow-forever/lib/raidTime";
-import type { RaidEntry, RaidPage } from "@/games/wow-forever/types/raid";
+import type { RaidEntry, RaidGroups, RaidPage } from "@/games/wow-forever/types/raid";
 
 const mockQuery = vi.fn();
 const mockRefetch = vi.fn();
@@ -128,6 +128,7 @@ function raid(fields: Partial<RaidPage> = {}): RaidPage {
       },
       { status: LIST_STATUS.BENCH, label: "Bench", icon: "status_bench", entries: [entry({ id: "s6", name: "Pell" })] },
     ],
+    groups: null,
     icons_version: "v1",
     ...fields,
   };
@@ -148,9 +149,9 @@ function showRaid(fields: Partial<RaidPage> = {}): void {
   setQuery({ currentData: raid(fields), fulfilledTimeStamp: Date.now() });
 }
 
-function tree() {
+function tree(path = `/wow-forever/raids/${WEB_ID}`) {
   return (
-    <MemoryRouter initialEntries={[`/wow-forever/raids/${WEB_ID}`]}>
+    <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route path="/wow-forever/raids/:webId" element={<WowRaidPage />} />
         <Route path="/wow-forever" element={<p>WoW Forever home</p>} />
@@ -159,8 +160,42 @@ function tree() {
   );
 }
 
-function renderPage() {
-  return render(tree());
+function renderPage(path?: string) {
+  return render(tree(path));
+}
+
+/** The groups as the leader shares them — Group 1 and Group 3, in seat order, without order numbers — and two seated
+ * players in neither. */
+function sharedGroups(): RaidGroups {
+  return {
+    groups: [
+      {
+        number: 1,
+        entries: [
+          entry({
+            id: "s1",
+            name: "Brannoc",
+            wow_class: "warrior",
+            spec: "Protection Warrior",
+            icon: "warrior_protection",
+            role_group: DISPLAY_ROLE.TANK,
+          }),
+          entry({
+            id: "s2",
+            name: "Dorn",
+            wow_class: "warrior",
+            spec: "Fury Warrior",
+            icon: "warrior_fury",
+            role_group: DISPLAY_ROLE.MELEE,
+            late: true,
+          }),
+        ],
+      },
+      { number: 3, entries: [entry({ id: "s7", name: "Mabel" })] },
+    ],
+    unplaced: 2,
+    updated_at: "2026-10-08T18:00:00.000Z",
+  };
 }
 
 function textsOf(elements: HTMLElement[]): (string | null)[] {
@@ -351,5 +386,46 @@ describe("raid web page", () => {
     view.unmount();
     expect(document.title).toBe(SITE_TITLE);
     expect(document.head.querySelector('meta[name="robots"]')).toBeNull();
+  });
+
+  it("shows no groups until the leader shares them", () => {
+    showRaid();
+    renderPage();
+    expect(screen.queryByRole("region", { name: "Groups" })).not.toBeInTheDocument();
+  });
+
+  it("shows the leader's groups in seat order, and how many seated players are in none", () => {
+    showRaid({ groups: sharedGroups() });
+    renderPage();
+    const section = screen.getByRole("region", { name: "Groups" });
+    expect(section).toHaveAttribute("id", "groups");
+    expect(textsOf(within(section).getAllByRole("heading", { level: 3 }))).toEqual(["Group 12/5", "Group 31/5"]);
+    const [brannoc, dorn] = within(within(section).getByRole("list", { name: /^Group 1/ })).getAllByRole("listitem");
+    expect(brannoc).toHaveTextContent("Brannoc");
+    expect(dorn).toHaveTextContent("Dorn");
+    expect(within(dorn).getByText("late")).toHaveClass("sr-only");
+    expect(within(section).getByText("Not in a group yet: 2 seated players")).toBeInTheDocument();
+  });
+
+  it("says so while the shared groups are still empty", () => {
+    showRaid({ groups: { groups: [], unplaced: 5, updated_at: null } });
+    renderPage();
+    const section = screen.getByRole("region", { name: "Groups" });
+    expect(within(section).getByText("Nobody is in a group yet.")).toBeInTheDocument();
+    expect(within(section).getByText("Not in a group yet: 5 seated players")).toBeInTheDocument();
+  });
+
+  it("goes to the groups when the post's [Groups] link opens the page", () => {
+    // jsdom has no scrolling.
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      showRaid({ groups: sharedGroups() });
+      renderPage(`/wow-forever/raids/${WEB_ID}#groups`);
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" });
+      expect(scrollIntoView.mock.contexts[0]).toBe(screen.getByRole("region", { name: "Groups" }));
+    } finally {
+      delete (Element.prototype as Partial<Element>).scrollIntoView;
+    }
   });
 });

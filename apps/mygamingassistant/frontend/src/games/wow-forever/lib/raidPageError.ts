@@ -41,7 +41,8 @@ function loadFailedMessage(status: number | undefined, error: unknown): string {
   return extractErrorMessage(error);
 }
 
-function statusOf(error: unknown): number | undefined {
+/** An RTK Query error's HTTP status; undefined when no answer came (offline, a timeout). */
+export function statusOf(error: unknown): number | undefined {
   if (typeof error !== "object" || error === null) return undefined;
   const status: unknown = (error as { status?: unknown }).status;
   if (typeof status === "number") return status;

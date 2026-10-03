@@ -92,7 +92,7 @@ _PROPERTY_ROWS = [
     [("Title", 2, _id("ed", "title")), ("Leader", 2, _id("ed", "leader")), ("Date & Time", 2, _id("ed", "when")),
      ("Deadline", 2, _id("ed", "deadline")), ("Repeat", 2, _id("rp", "open"))],
     [("Description", 2, _id("ed", "desc")), ("Image", 2, _id("ed", "image")), ("Color", 2, _id("ed", "color")),
-     ("Event & thread", 2, _id("xt", "open"))],
+     ("Event & thread", 2, _id("xt", "open")), ("Groups", 2, _id("gp", "plan"))],
     [("Role limits", 2, _id("ed", "role_limits")), ("Class limits", 2, _id("ed", "class_limits")),
      ("Sign-ups", 2, _id("ml", "open", "-", "-")), ("Notes: off", 2, _id("ed", "notes_on")),
      ("Advanced", 2, _id("adv", "open", "-"))],

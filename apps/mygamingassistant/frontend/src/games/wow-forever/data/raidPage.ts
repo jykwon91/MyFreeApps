@@ -73,6 +73,8 @@ export const RAID_SKELETON = { CARDS: 4, ROWS: 5 } as const;
 
 export const SITE_NAME = "MyGamingAssistant";
 export const WOW_FOREVER_HOME = "/wow-forever";
+/** The groups' place on the page: the Discord [Groups] reply links to it (`raid_groups_views.GROUPS_ANCHOR`). */
+export const RAID_GROUPS_ANCHOR = "groups";
 
 /** 16 px gutters on a phone. */
 export const RAID_MAIN_CLASS = "p-4 sm:p-8 space-y-6 max-w-5xl";
