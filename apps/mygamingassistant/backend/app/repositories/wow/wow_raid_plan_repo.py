@@ -1,8 +1,9 @@
 """Group-planner repository — planner links, the sign-ups' group places and a raid's groups state.
 
-Standalone async functions; the caller owns the transaction.  Only a
-planner save writes the group places: the sign-up writers
-(``wow_raid_signup_repo``) never touch them.
+Standalone async functions; the caller owns the transaction, apart from
+a planner save's commit (``commit_plan_save``).  Only a planner save
+writes the group places: the sign-up writers (``wow_raid_signup_repo``)
+never touch them.
 """
 from __future__ import annotations
 
@@ -119,3 +120,18 @@ async def set_groups_state(
     event.groups_updated_at = now
     await db.flush()
     return event
+
+
+async def commit_plan_save(db: AsyncSession) -> None:
+    """Commit a planner save: its flushed places (``replace_assignments``) and groups state.
+
+    Transaction ownership for ``PUT /wow/raids/{web_id}/plan`` lives here in
+    the repo layer — the route and service must NOT commit.  It lands before
+    the response, so the post's background re-render reads the saved groups.
+    On failure the transaction is rolled back and the error re-raised.
+    """
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise

@@ -119,7 +119,6 @@ async def save_raid_plan(
     outcome = await raid_plan_service.save_plan(db, access, body, now)
     if isinstance(outcome, str):
         raise _refused(outcome)
-    await db.commit()
     if outcome.visibility_changed:
         background.add_task(raid_publisher.refresh_public_message, access.event.id)
     response.headers.update(PAGE_HEADERS)
