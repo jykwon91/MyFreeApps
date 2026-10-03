@@ -39,6 +39,7 @@ const NPC_PREFIX = "npc:";
 const PLACE_PREFIX = "place:";
 const SHORTCUT_PREFIX = "shortcut:";
 const SHOW_ALL_ID = "show-all";
+const SPELLING_ID = "did-you-mean";
 const HAS_DIGIT = /\d/;
 
 const PLACE_HINT: Readonly<Record<Place["kind"], string>> = {
@@ -70,12 +71,21 @@ export default function EndpointField(props: EndpointFieldProps) {
   // Two or more matches ("warlock trainer", "flight master"): offer them all as markers.
   const canShowAll = onShowAll !== undefined && results.allNpcs.length > 1;
   const showAllCount = defaultResultCount(results.allNpcs, context.faction);
+  // A misspelling ("tristfal glades"): the results are for the fixed spelling, and saying so comes first.
+  const searched = results.didYouMean ?? text.trim();
+  const spelling: ComboGroup = {
+    label: "Spelling",
+    options: results.didYouMean
+      ? [{ id: SPELLING_ID, keepOpen: true, primary: `Did you mean ${results.didYouMean}?`, secondary: `Nothing matches "${text.trim()}" — showing results for "${results.didYouMean}"` }]
+      : [],
+  };
   const groups: ComboGroup[] = [
+    spelling,
     { label: "Quick picks", options: shortcuts.map((s) => ({ ...s, id: `${SHORTCUT_PREFIX}${s.id}` })) },
     {
       label: "On the map",
       options: canShowAll
-        ? [{ id: SHOW_ALL_ID, primary: `Show all ${showAllCount} on the map`, secondary: `Every "${text.trim()}" match, listed and marked on the map` }]
+        ? [{ id: SHOW_ALL_ID, primary: `Show all ${showAllCount} on the map`, secondary: `Every "${searched}" match, listed and marked on the map` }]
         : [],
     },
     {
@@ -103,10 +113,14 @@ export default function EndpointField(props: EndpointFieldProps) {
 
   function showAll() {
     setError(null);
-    onShowAll?.({ query: text.trim(), hits: results.allNpcs });
+    onShowAll?.({ query: searched, hits: results.allNpcs });
   }
 
   function pick(optionId: string) {
+    if (optionId === SPELLING_ID && results.didYouMean) {
+      setText(results.didYouMean);
+      return;
+    }
     if (optionId === SHOW_ALL_ID) {
       showAll();
       return;
@@ -141,7 +155,7 @@ export default function EndpointField(props: EndpointFieldProps) {
       return;
     }
     // A place typed by its name ("Goldshire") beats the NPCs who live there.
-    const key = normalizeText(typed);
+    const key = normalizeText(searched);
     const named = results.places.find((place) => [place.name, ...place.aliases].some((n) => normalizeText(n) === key));
     if (named) {
       choose({ kind: ENDPOINT_KIND.place, placeId: named.id });
@@ -152,7 +166,7 @@ export default function EndpointField(props: EndpointFieldProps) {
       showAll();
       return;
     }
-    const first = groups.slice(2).flatMap((g) => g.options)[0];
+    const first = groups.slice(3).flatMap((g) => g.options)[0];
     if (first) pick(first.id);
     else setError(`I don't know "${typed}". Try a town, an NPC name, or coordinates like 42.1, 65.9.`);
   }

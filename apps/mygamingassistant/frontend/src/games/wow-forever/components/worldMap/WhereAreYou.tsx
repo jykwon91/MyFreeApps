@@ -5,6 +5,7 @@ import WhereSummary from "@/games/wow-forever/components/worldMap/WhereSummary";
 import type { WorldMapData } from "@/games/wow-forever/types/worldMap";
 import { parseCoords } from "@/games/wow-forever/worldMap/parseCoords";
 import { findPlaces, placeLabel, type Place } from "@/games/wow-forever/worldMap/places";
+import { correctPlaceName } from "@/games/wow-forever/worldMap/search";
 import {
   WHERE_RESULT,
   placeSpot,
@@ -20,6 +21,8 @@ interface WhereAreYouProps {
   position: { x: number; y: number } | null;
   onSet: (zoneId: number, position: { x: number; y: number } | null) => void;
 }
+
+const SPELLING_ID = "did-you-mean";
 
 interface Choice {
   options: readonly Place[];
@@ -38,11 +41,17 @@ export default function WhereAreYou({ data, places, zoneId, position, onSet }: W
   const [lastSet, setLastSet] = useState<WhereSpot | null>(null);
 
   const typed = useMemo(() => {
-    if (parseCoords(text)) return { suggestions: [], position: null };
+    const none = { suggestions: [], position: null, didYouMean: null, fixedText: "" };
+    if (parseCoords(text)) return none;
     const split = splitPlaceAndCoords(text);
-    if (!split) return { suggestions: [], position: null };
-    return { suggestions: findPlaces(split.name, places), position: split.position };
-  }, [text, places]);
+    if (!split) return none;
+    const suggestions = findPlaces(split.name, places);
+    // A misspelt place ("tristfal"): like a web search, offer the right spelling and its places.
+    const fix = suggestions.length || !split.name ? null : correctPlaceName(split.name, data, places);
+    if (!fix) return { ...none, suggestions, position: split.position };
+    const fixedText = text.trim().replace(split.name, fix.didYouMean);
+    return { suggestions: fix.places, position: split.position, didYouMean: fix.didYouMean, fixedText };
+  }, [text, data, places]);
 
   function apply(spot: WhereSpot) {
     setText("");
@@ -58,7 +67,8 @@ export default function WhereAreYou({ data, places, zoneId, position, onSet }: W
   }
 
   function submit() {
-    const result = resolveWhere(text, data, places, zoneId);
+    // Its places are for the fixed spelling, so Set means that spelling.
+    const result = resolveWhere(typed.didYouMean ? typed.fixedText : text, data, places, zoneId);
     if (result.kind === WHERE_RESULT.error) {
       setError(result.message);
       setChoice(null);
@@ -73,6 +83,10 @@ export default function WhereAreYou({ data, places, zoneId, position, onSet }: W
   }
 
   function pick(id: string) {
+    if (id === SPELLING_ID) {
+      setText(typed.fixedText);
+      return;
+    }
     const place = places.find((p) => p.id === id);
     if (place) choosePlace(place, typed.position);
   }
@@ -92,6 +106,12 @@ export default function WhereAreYou({ data, places, zoneId, position, onSet }: W
           setError(null);
         }}
         groups={[
+          {
+            label: "Spelling",
+            options: typed.didYouMean
+              ? [{ id: SPELLING_ID, keepOpen: true, primary: `Did you mean ${typed.didYouMean}?`, secondary: `Nothing matches — showing places for "${typed.didYouMean}"` }]
+              : [],
+          },
           {
             label: "Places",
             options: typed.suggestions.map((place) => ({ id: place.id, primary: placeLabel(place) })),

@@ -20,6 +20,7 @@ import { yardsBetween, zoneToWorld } from "@/games/wow-forever/worldMap/geometry
 import { usableBy, type PlayerLocation } from "@/games/wow-forever/worldMap/nearest";
 import { findPlaces, type Place } from "@/games/wow-forever/worldMap/places";
 import { matchesAll, nameScore, normalizeText, queryTokens } from "@/games/wow-forever/worldMap/searchText";
+import { correctSpelling, vocabularyFor } from "@/games/wow-forever/worldMap/spelling";
 
 export const MAX_NPC_RESULTS = 6;
 export const MAX_PLACE_RESULTS = 3;
@@ -39,6 +40,8 @@ export interface MapSearchResults {
   /** Every NPC that matches ("warlock trainer" -> all of them), for "Show all on the map". */
   allNpcs: NpcHit[];
   places: Place[];
+  /** Nothing matched what was typed, so these are the results for this spelling ("Tirisfal Glades"). */
+  didYouMean?: string;
 }
 
 export interface SearchContext {
@@ -140,18 +143,57 @@ export function searchNpcs(query: string, data: WorldMapData, context: SearchCon
   return searchAllNpcs(query, data, context).slice(0, MAX_NPC_RESULTS);
 }
 
+function resultsFor(query: string, data: WorldMapData, places: readonly Place[], context: SearchContext): MapSearchResults {
+  const allNpcs = searchAllNpcs(query, data, context);
+  return { npcs: allNpcs.slice(0, MAX_NPC_RESULTS), allNpcs, places: findPlaces(query, places, MAX_PLACE_RESULTS) };
+}
+
+/** Every word an NPC, dungeon or boss is called by, for the spelling suggestions. */
+function* npcTexts(data: WorldMapData): Generator<string> {
+  for (const poi of [...data.pois, ...data.questGivers, ...data.instances]) {
+    yield* namesOf(poi);
+    yield* poi.bosses ?? [];
+    yield poi.title;
+    yield poi.subzone;
+    yield kindWords(poi);
+  }
+}
+
+/** The corrected words as the thing is really written ("Tirisfal Glades"), when one result is called exactly that. */
+function properName(corrected: string, results: MapSearchResults): string {
+  const names = [
+    ...results.places.flatMap((p) => [p.name, ...p.aliases]),
+    ...results.npcs.flatMap(({ poi, boss }) => [...namesOf(poi), boss ?? ""]),
+  ];
+  return names.find((n) => normalizeText(n) === corrected) ?? corrected;
+}
+
+/** NPCs and places for the search box — and, like a web search, "Did you mean …?" when nothing matches a misspelling. */
 export function searchMap(
   query: string,
   data: WorldMapData,
   places: readonly Place[],
   context: SearchContext,
 ): MapSearchResults {
-  const allNpcs = searchAllNpcs(query, data, context);
-  return {
-    npcs: allNpcs.slice(0, MAX_NPC_RESULTS),
-    allNpcs,
-    places: findPlaces(query, places, MAX_PLACE_RESULTS),
-  };
+  const results = resultsFor(query, data, places, context);
+  if (results.allNpcs.length || results.places.length) return results;
+  const corrected = correctSpelling(query, vocabularyFor(places, () => npcTexts(data)));
+  if (!corrected) return results;
+  const fixed = resultsFor(corrected, data, places, context);
+  if (!fixed.allNpcs.length && !fixed.places.length) return results;
+  return { ...fixed, didYouMean: properName(corrected, fixed) };
+}
+
+/** "Did you mean Tirisfal Glades?" for a misspelt place nobody's places match, with those places. */
+export function correctPlaceName(
+  name: string,
+  data: WorldMapData,
+  places: readonly Place[],
+): { didYouMean: string; places: Place[] } | null {
+  const corrected = correctSpelling(name, vocabularyFor(places, () => npcTexts(data)));
+  const found = corrected ? findPlaces(corrected, places) : [];
+  if (!corrected || !found.length) return null;
+  return { didYouMean: properName(corrected, { npcs: [], allNpcs: [], places: found }), places: found };
 }
 
 /** The NPC a `?npc=` link names: a creature id (a service NPC wins over a quest giver), else a map id. */
