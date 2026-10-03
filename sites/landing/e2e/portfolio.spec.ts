@@ -25,6 +25,7 @@ test("renders under the production CSP with every screenshot loaded", async ({ p
   await expect(page.locator(".stat")).toHaveCount(4);
   await expect(page.locator(".project")).toHaveCount(3);
   await expect(page.locator(".job")).toHaveCount(5);
+  await expect(page.locator(".featured-body")).toContainText("Discord bot");
 
   const screenshots = page.locator("main img");
   await expect(screenshots).toHaveCount(4);
