@@ -46,6 +46,8 @@ rpl      /raid-admin repeats' menu (the value is      raid:v1:rpl
          the repeat's latest raid)
 xt       the Event & thread card (More options and   raid:v1:xt:<event>:<verb>  (see ``EXTRAS_VERBS``)
          Raid: Edit's [Event & thread])
+gp       the post's [Groups] (the shared groups) and  raid:v1:gp:<event>:<view|plan>
+         Raid: Edit's [Groups] (a group-planner link)
 m        a modal's submit                             raid:v1:m:<event>:<ping|title|when|desc|image|cancel|
                                                                          role_limits|class_limits|char|
                                                                          note|reason|deadline|length|copy|
@@ -119,6 +121,7 @@ _EVENT_ACTIONS: Final[dict[str, int]] = {
     "at": 3,
     "un": 1,
     "adv": 2,
+    "gp": 1,
 }
 # Raid: Manage's raid picker; its option values carry the raid and the player.
 RAID_PICK: Final = "mr"
@@ -163,6 +166,8 @@ EXTRAS_VERBS: Final = ("open", "event_on", "event_off", "thread_on", "thread_off
 # Raid: Unsigned's list: open it ([Not signed up]), [Refresh], its role menu, [Ping them]
 # (the form) and [Back] (to Raid: Signed).
 UNSIGNED_VERBS: Final = ("open", "refresh", "roles", "ping", "back")
+# [Groups]: the post's shows the groups the leader shares, Raid: Edit's hands the leader a planner link.
+GROUP_ACTIONS: Final = ("view", "plan")
 # Raid: Edit's menus, and the create preview's role menu.
 PICKERS: Final = ("leader", "color", "mentions")
 # The modals the bot opens; a submit names which one it came from.
@@ -336,6 +341,8 @@ def _args_valid(action: str, args: tuple[str, ...]) -> bool:
         return args[0] in EXTRAS_VERBS
     if action == "un":
         return args[0] in UNSIGNED_VERBS
+    if action == "gp":
+        return args[0] in GROUP_ACTIONS
     if action == "m":
         return args[0] in MODALS
     if action == "ml":

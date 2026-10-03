@@ -12,6 +12,7 @@ const WowFoodPickerPage = lazy(() => import("@/games/wow-forever/pages/WowFoodPi
 const WowFoodDetailPage = lazy(() => import("@/games/wow-forever/pages/WowFoodDetailPage"));
 const WowGoldPage = lazy(() => import("@/games/wow-forever/pages/WowGoldPage"));
 const WowRaidPage = lazy(() => import("@/games/wow-forever/pages/WowRaidPage"));
+const WowRaidPlannerPage = lazy(() => import("@/games/wow-forever/pages/WowRaidPlannerPage"));
 
 function withSuspense(page: ReactElement): ReactElement {
   return <Suspense fallback={<WowPageSkeleton />}>{page}</Suspense>;
@@ -31,4 +32,5 @@ export const wowForeverRoutes: RouteObject[] = [
   { path: "/wow-forever/food/:foodId", element: withSuspense(<WowFoodDetailPage />) },
   { path: "/wow-forever/gold", element: withSuspense(<WowGoldPage />) },
   { path: "/wow-forever/raids/:webId", element: withSuspense(<WowRaidPage />) },
+  { path: "/wow-forever/raids/:webId/plan", element: withSuspense(<WowRaidPlannerPage />) },
 ];

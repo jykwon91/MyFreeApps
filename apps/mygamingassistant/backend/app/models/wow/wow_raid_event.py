@@ -36,6 +36,11 @@ the server's, ``'0'`` = no voice channel) and ``delete_post_after_hours``
 Web page (0043): ``web_id`` is the raid's public page id
 (``/wow-forever/raids/<hex>``, ``raid_web_links``): random, unique, never
 copied (a copy or a repeat gets its own).
+
+Groups (0044, never copied): ``groups_version`` (+1 on every planner save,
+its optimistic lock), ``groups_published_at`` (when the leader shared them;
+null = hidden) and ``groups_updated_at`` (the last save).  The places are on
+the sign-ups; read them through ``raid_groups``.
 """
 import uuid
 from datetime import datetime, timezone
@@ -331,6 +336,11 @@ class WowRaidEvent(Base):
     delete_post_after_hours: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     # When the bot deleted the post: the once-only stamp (the raid row stays).
     post_deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Groups (0044).  +1 on every planner save: a save planned on an older version is refused.
+    groups_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default=text("0"))
+    # When the leader shared the groups (the page, [Groups] on the post); null = hidden.
+    groups_published_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    groups_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

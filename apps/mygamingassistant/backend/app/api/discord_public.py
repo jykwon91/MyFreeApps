@@ -7,7 +7,8 @@ so the raid's web page lives and dies with it.
 * ``POST /discord/interactions``: Discord's calls (Ed25519-gated);
 * ``GET /discord/raid-banners/<raid key>.png``: the posts' banner art;
 * ``GET /discord/raid-icons/<name>.png``: the web page's icons;
-* ``GET /wow/raids/<web_id>``: the raid's web page.
+* ``GET /wow/raids/<web_id>``: the raid's web page;
+* ``GET`` / ``PUT /wow/raids/<web_id>/plan``: the leader's group planner.
 """
 from __future__ import annotations
 

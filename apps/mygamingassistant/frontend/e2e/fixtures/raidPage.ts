@@ -217,6 +217,7 @@ export function raidFixture(overrides: Partial<RaidPage> = {}): RaidPage {
         entries: [toEntry({ name: "Brisa", spec: COMBAT }, "list-brisa", null)],
       },
     ],
+    groups: null,
     icons_version: "e2e",
     ...overrides,
   };
@@ -254,7 +255,20 @@ export async function routeRaid(
   respond: (route: Route, read: number) => Promise<void>,
 ): Promise<RaidRoutes> {
   let reads = 0;
-  // Registered first, so it only answers what the routes below don't.
+  await routeRaidArt(page);
+  await page.route(
+    (url) => url.pathname.startsWith("/api/wow/raids/"),
+    (route) => {
+      reads += 1;
+      return respond(route, reads);
+    },
+  );
+  return { reads: () => reads };
+}
+
+/** Serve the bot's icons and banners from disk, and 404 anything else under `/api/` the routes after it don't. */
+export async function routeRaidArt(page: Page): Promise<void> {
+  // Registered first, so it only answers what the routes after it don't.
   await page.route(
     (url) => url.pathname.startsWith("/api/"),
     (route) => fulfillJson(route, 404, { detail: "Not Found" }),
@@ -267,14 +281,6 @@ export async function routeRaid(
     (url) => url.pathname.startsWith("/api/discord/raid-banners/"),
     (route) => servePng(route, BANNERS_DIR),
   );
-  await page.route(
-    (url) => url.pathname.startsWith("/api/wow/raids/"),
-    (route) => {
-      reads += 1;
-      return respond(route, reads);
-    },
-  );
-  return { reads: () => reads };
 }
 
 async function servePng(route: Route, dir: URL): Promise<void> {

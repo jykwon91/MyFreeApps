@@ -198,12 +198,12 @@ def test_every_id_fits_discords_100() -> None:
     assert max(len(custom_id) for custom_id in ids) == len(_id("thread_off")) == 58
 
 
-def test_row_two_of_more_options_and_raid_edit_ends_with_event_and_thread() -> None:
+def test_event_and_thread_ends_row_two_of_more_options_and_precedes_groups_on_raid_edit() -> None:
     open_card = ("Event & thread", 2, _id("open"))
     draft = _event(status="draft", message_id=None)
 
     assert _rows(options_data(draft, _GUILD, emojis=EMPTY_EMOJIS))[1][-1] == open_card
-    assert _rows(edit_card(_made()))[1][-1] == open_card
+    assert _rows(edit_card(_made()))[1][-2] == open_card
 
 
 # ---------------------------------------------------------------------------

@@ -3,7 +3,7 @@
 Built by ``raid_web_view.build_page`` from the same helpers as the raid's
 Discord post, so the two can't disagree.  It carries only what the post
 shows: names, classes and specs, order numbers, statuses and the
-description.  It never carries a Discord user id, a sign-up note, the
+description, and the leader's groups while they share them.  It never carries a Discord user id, a sign-up note, the
 leader's image link, a role id, or the id of who made or leads the raid
 (``test_wow_raid_web_view``).
 
@@ -93,6 +93,21 @@ class RaidStatusList(BaseModel):
     entries: list[RaidEntry]
 
 
+class RaidGroup(BaseModel):
+    """A planned group with anyone in it: its number and its players in slot order."""
+
+    number: int
+    entries: list[RaidEntry]  # no order numbers
+
+
+class RaidGroups(BaseModel):
+    """The leader's groups, while they share them (``raid_groups.groups_view``)."""
+
+    groups: list[RaidGroup]  # each group with anyone in it, in order
+    unplaced: int  # seated players in no group yet
+    updated_at: datetime | None  # the last save
+
+
 class RaidPage(BaseModel):
     """A posted raid, as its web page shows it."""
 
@@ -116,4 +131,5 @@ class RaidPage(BaseModel):
     roles: list[RaidRoleCount]
     columns: list[RaidColumn]
     lists: list[RaidStatusList]
+    groups: RaidGroups | None  # the leader's groups while they share them, else None
     icons_version: str  # the ``?v=`` of the icon URLs

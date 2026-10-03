@@ -10,9 +10,10 @@ const api = axios.create({
 // Storage reads go through safeStorage: in a third-party iframe (a Discord
 // Activity) a browser that blocks storage throws on access, and an unguarded
 // read here would fail every request instead of sending it unauthenticated.
+// A request that names its own Authorization (another scheme) keeps it.
 api.interceptors.request.use((config) => {
   const token = readLocalStorage("token");
-  if (token) {
+  if (token && !config.headers.Authorization) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 

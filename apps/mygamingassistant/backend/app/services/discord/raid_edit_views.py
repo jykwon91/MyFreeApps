@@ -13,6 +13,8 @@ opens the Repeat card (``raid_repeat_views``).
 * Sign-ups swaps it for Manage sign-ups (``raid_manage_views``).
 * Notes: off / Notes: on lets members leave the leader a note, or hides
   the notes (``raid_note``); the card comes back saying which.
+* Groups hands the leader a 2-hour link to the group planner in the
+  browser, privately (``raid_groups_views``).
 * Advanced opens the raid's settings that follow the server unless it sets
   its own — Minimum sign-ups, Who can sign up, Ready check
   (``raid_advanced_views``).
@@ -57,6 +59,7 @@ from app.services.discord.raid_advanced_views import advanced_button
 from app.services.discord.raid_extras_views import extras_button
 from app.services.discord.raid_forms import FIELD as FIELD
 from app.services.discord.raid_forms import event_form, text_box
+from app.services.discord.raid_groups_views import groups_button
 from app.services.discord.raid_leader_views import raid_line
 from app.services.discord.raid_views import action_row, button, unix
 from app.services.wow import raid_custom_id
@@ -125,6 +128,7 @@ def edit_card(event: WowRaidEvent, *, notice: str | None = None, notify_count: i
             _edit_button(event, "Image", "image"),
             _edit_button(event, "Color", "color"),
             extras_button(event),
+            groups_button(event),
         ),
         action_row(
             _edit_button(event, "Role limits", "role_limits"),

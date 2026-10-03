@@ -5,6 +5,8 @@ import {
   formatRaidClock,
   formatRaidDay,
   fromNow,
+  isLinkExpiring,
+  linkExpiryLabel,
   relativeTime,
   unixIso,
   updatedLabel,
@@ -111,5 +113,28 @@ describe("updatedLabel", () => {
     [5 * MINUTE, "Updated 5 minutes ago"],
   ])("%d ms after the read reads %s", (sinceRead, expected) => {
     expect(updatedLabel(PULL_MS - sinceRead, PULL_MS, EN_UTC)).toBe(expected);
+  });
+});
+
+describe("the planner link's countdown", () => {
+  it.each([
+    [2 * HOUR + 30 * SECOND, "Link expires in 2 h"],
+    [HOUR + 52 * MINUTE + 59 * SECOND, "Link expires in 1 h 52 m"],
+    [52 * MINUTE, "Link expires in 52 m"],
+    [59 * SECOND, "Link expires in less than a minute"],
+    [0, "Link expired"],
+    [-5 * MINUTE, "Link expired"],
+  ])("%d ms before the link stops working reads %s", (left, expected) => {
+    expect(linkExpiryLabel(PULL_ISO, PULL_MS - left)).toBe(expected);
+  });
+
+  it("is empty for a time that isn't one", () => {
+    expect(linkExpiryLabel("soon", PULL_MS)).toBe("");
+  });
+
+  it("warns for the link's last ten minutes, and once it has stopped working", () => {
+    expect(isLinkExpiring(PULL_ISO, PULL_MS - 10 * MINUTE)).toBe(false);
+    expect(isLinkExpiring(PULL_ISO, PULL_MS - 10 * MINUTE + SECOND)).toBe(true);
+    expect(isLinkExpiring(PULL_ISO, PULL_MS + MINUTE)).toBe(true);
   });
 });

@@ -25,6 +25,7 @@ _NOT_COPIED = {
     "last_pinged_at", "series_id", "created_at", "updated_at", "discord_event_id", "discord_event_digest", "thread_id",
 } | {"discord_event_starts_at", "discord_event_claimed_at", "discord_event_error", "thread_name", "thread_error"} | {"attendance_counted", "attendance_recorded_at"} | {"unsigned_pinged_at"}
 _NOT_COPIED |= {"pinned_message_id", "post_deleted_at", "web_id"}  # the bot's pin; when it deleted the post; page
+_NOT_COPIED |= {"groups_version", "groups_published_at", "groups_updated_at"}  # the leader's groups (0044)
 
 
 def _utc(*args: int) -> datetime:
