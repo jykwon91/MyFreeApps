@@ -111,8 +111,12 @@ describe("Professions page", () => {
     const user = userEvent.setup();
     const { unmount } = renderAt("/wow-forever/professions?p=tailoring");
     await screen.findByRole("heading", { name: "Leveling route" });
-    const thread = route().getAllByText("1× Coarse Thread")[0].closest("details") as HTMLElement;
+    const COARSE_THREAD = 2320;
+    const thread = document.querySelector(`[aria-label^="Materials in all"] [data-mat="${COARSE_THREAD}"]`) as HTMLElement;
     expect(within(thread).getByText("Sold in most towns")).toBeInTheDocument();
+    // A step made many times says how many of each material it takes in all.
+    expect(within(thread).getByText(/^\d+×$/)).toBeInTheDocument();
+    expect(within(thread).getByText("· 1 each")).toBeInTheDocument();
     unmount();
 
     renderAt("/wow-forever/professions?p=cooking");
