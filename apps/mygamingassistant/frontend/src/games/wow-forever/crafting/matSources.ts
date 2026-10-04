@@ -105,6 +105,12 @@ export function soldToYou(sources: ItemSources, faction: PlayerFaction): boolean
   return splitVendors(sources.vendors, faction, null).yours.length > 0;
 }
 
+/** "Found in Giant Clam (Stranglethorn Vale)" — where the most of them are, when they lie on the ground. */
+function containerPart(sources: ItemSources): string {
+  const [spot] = sources.objectSpots;
+  return spot ? `Found in ${spot.name} (${spot.spot.zoneName})` : `Found in ${sources.containers[0]}`;
+}
+
 /**
  * The one-line answer for the shopping list: the easiest two ways to get it,
  * e.g. "Sold in most towns" or "Disenchant level 21–30 green armor · Made by …".
@@ -120,7 +126,7 @@ export function matSummary(info: MatInfo, faction: PlayerFaction, zoneId: number
   if (madeBy) parts.push(`Made by ${madeBy}`);
   if (vendor?.limited) parts.push(vendor.text);
   // A chest that happens to hold cloth isn't worth naming next to the mobs that drop it.
-  if (sources.containers.length && !sources.drop) parts.push(`Found in ${sources.containers[0]}`);
+  if (sources.containers.length && !sources.drop) parts.push(containerPart(sources));
   if (questsFor(sources.quests, faction).length) parts.push("Quest reward");
   if (sources.fishing.length) parts.push("Fishing");
   if (sources.vendors.length && !vendor) parts.push("Only the other faction's vendors sell it");

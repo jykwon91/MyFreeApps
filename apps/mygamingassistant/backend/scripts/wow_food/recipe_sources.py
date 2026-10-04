@@ -52,11 +52,14 @@ NORMAL_RANK = 0
 CAPITAL_TERRITORY = {"A": "alliance", "H": "horde"}
 # Drops rarer than this are noise next to a likelier mob (the expert's cut).
 MIN_SHOWN_CHANCE = 1.0
+# A clam bed or crate on the ground: where to go, in at most this many zones (most spawns first).
+SHOWN_OBJECT_ZONES = 3
 # Spawns this close (yards) count as one pack when picking where to farm a mob.
 PACK_YARDS = 150.0
 
 _TABLES = {
     "creature",
+    "gameobject",
     "creature_template",
     "creature_loot_template",
     "reference_loot_template",
@@ -160,9 +163,18 @@ class ClassicSources:
         self._item_loot = LootIndex.build(t["item_loot_template"], refs)
         # A chest-type object (type 3) names its loot table in data1.
         self._object_names: dict[int, set[str]] = defaultdict(set)
+        self._objects_by_loot: dict[int, list[int]] = defaultdict(list)
+        object_name: dict[int, str] = {}
         for o in t["gameobject_template"]:
             if _i(o["type"]) == 3 and _i(o["data1"]):
                 self._object_names[_i(o["data1"])].add(str(o["name"]))
+                self._objects_by_loot[_i(o["data1"])].append(_i(o["entry"]))
+                object_name[_i(o["entry"])] = str(o["name"])
+        self._object_name = object_name
+        self._object_spawns: dict[int, list[Row]] = defaultdict(list)
+        for g in sorted(t["gameobject"], key=lambda r: _i(r["guid"])):
+            if _i(g["map"]) in CLASSIC_CONTINENTS and _i(g["id"]) in object_name:
+                self._object_spawns[_i(g["id"])].append(g)
         self._item_names = {_i(r["entry"]): str(r["name"]) for r in t["item_template"]}
         self._rewarded: dict[int, list[int]] = defaultdict(list)
         for q in t["quest_template"]:
@@ -338,6 +350,40 @@ class ClassicSources:
                 names |= self._object_names.get(loot_id, set())
         return sorted(names)
 
+    def object_spots(self, item: int) -> list[list[object]]:
+        """Where the clams / crates holding it lie: per zone with the most of them, the spawn with the most others nearby.
+
+        Row: [object name, spawns in that zone, zone, subzone, x, y].
+        """
+        spots: dict[str, list[tuple[float, float, Placement]]] = defaultdict(list)
+        for loot_id, chance, _ in self._object_loot.by_table.get(item, []):
+            if chance < MIN_CONTAINER_CHANCE:
+                continue
+            for entry in self._objects_by_loot.get(loot_id, []):
+                for g in self._object_spawns.get(entry, []):
+                    wx, wy = float(str(g["position_x"])), float(str(g["position_y"]))
+                    spot = place(self._zones, self._art, _i(g["map"]), wx, wy, exclude=FOREVER_ONLY_ZONES)
+                    if spot:
+                        spots[self._object_name[entry]].append((wx, wy, spot))
+        rows: list[list[object]] = []
+        for name, placed in sorted(spots.items()):
+            per_zone = Counter(spot.zone.ui_map_id for _, _, spot in placed)
+            for zone, count in sorted(per_zone.items(), key=lambda kv: (-kv[1], kv[0]))[:SHOWN_OBJECT_ZONES]:
+                here = [s for s in placed if s[2].zone.ui_map_id == zone]
+                rows.append([name, count, *self._farm_spot(here)])
+        return rows
+
+    def container_drops(self, item: int) -> list[list[object]]:
+        """Clams that are items (Small Barnacled Clam): which mobs drop the clam. Row: [clam name, drop summary]."""
+        rows: list[list[object]] = []
+        for container, chance, _ in self._item_loot.by_table.get(item, []):
+            if container not in self._item_names or chance < MIN_CONTAINER_CHANCE:
+                continue
+            drop = self.drop(container)
+            if drop:
+                rows.append([self._item_names[container], drop])
+        return sorted(rows, key=lambda r: str(r[0]))
+
     def quests(self, item: int) -> list[int]:
         return sorted(set(self._rewarded.get(item, [])))
 
@@ -365,6 +411,8 @@ class ClassicSources:
             "skinning": skin,
             "fishing": self.fishing(item),
             "containers": self.containers(item),
+            "objectSpots": self.object_spots(item),
+            "containerDrops": self.container_drops(item),
             "quests": self.quests(item),
         })
 

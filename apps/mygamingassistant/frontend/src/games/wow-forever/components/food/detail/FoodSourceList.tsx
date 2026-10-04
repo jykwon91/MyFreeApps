@@ -1,3 +1,4 @@
+import FoodContainerList from "@/games/wow-forever/components/food/detail/FoodContainerList";
 import FoodDropList from "@/games/wow-forever/components/food/detail/FoodDropList";
 import FoodQuestRow from "@/games/wow-forever/components/food/detail/FoodQuestRow";
 import FoodVendorList from "@/games/wow-forever/components/food/detail/FoodVendorList";
@@ -48,11 +49,7 @@ export default function FoodSourceList({ sources, faction, zoneId, preferEasySou
           <span className="font-medium">Fish for it in</span> {joinCapped(sources.fishing, SHOWN_WATERS)}.
         </p>
       ) : null}
-      {sources.containers.length ? (
-        <p className="text-sm">
-          <span className="font-medium">Found in</span> {sources.containers.join(", ")}.
-        </p>
-      ) : null}
+      {sources.containers.length ? <FoodContainerList sources={sources} faction={faction} zoneId={zoneId} /> : null}
       {drop ? <FoodDropList drop={drop} faction={faction} zoneId={zoneId} /> : null}
     </div>
   );

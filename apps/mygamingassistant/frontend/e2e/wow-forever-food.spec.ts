@@ -106,3 +106,13 @@ test("a mob that drops an ingredient links to directions on the World Map", asyn
   await expect(page.getByRole("heading", { name: "Directions" })).toBeVisible();
   await expect(page.getByRole("combobox", { name: "To" })).toHaveValue(/Westfall/);
 });
+
+test("an ingredient found in clams says where the clams are, with directions", async ({ page }) => {
+  await page.goto("/wow-forever/food/6038");
+  const need = page.locator("section", { has: page.getByRole("heading", { name: "What you need" }) });
+  await expect(need.getByText("73 in Stranglethorn Vale")).toBeVisible();
+  await expect(need.getByText("Most at The Vile Reef, Stranglethorn Vale · 26.3, 27.9")).toBeVisible();
+  await need.getByRole("link", { name: "Directions to Giant Clam, Stranglethorn Vale" }).click();
+  await expect(page).toHaveURL(/\/wow-forever\/map\?to=pt%3A1434%2C26\.3%2C27\.9/);
+  await expect(page.getByRole("combobox", { name: "To" })).toHaveValue(/Grom'gol/);
+});

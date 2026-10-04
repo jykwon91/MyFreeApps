@@ -235,6 +235,19 @@ class TestRecipeSources:
         assert subzone == "Moonbrook"
         assert 0 <= x <= 100 and 0 <= y <= 100
 
+    def test_giant_clams_say_where_they_lie(self, recipe_sources: dict) -> None:
+        """"Found in Giant Clam" alone sends nobody anywhere: each container on the ground has a placed spot."""
+        name, count, zone, subzone, x, y = recipe_sources["reagents"]["4655"]["objectSpots"][0]
+        assert (name, recipe_sources["zones"][str(zone)], subzone) == ("Giant Clam", "Stranglethorn Vale", "The Vile Reef")
+        assert count > 1 and 0 <= x <= 100 and 0 <= y <= 100
+        for record in recipe_sources["reagents"].values():
+            for spot in record.get("objectSpots", []):
+                assert spot[0] in record["containers"] and str(spot[2]) in recipe_sources["zones"]
+
+    def test_a_clam_item_says_which_mobs_drop_it(self, recipe_sources: dict) -> None:
+        drops = dict(recipe_sources["reagents"]["5503"]["containerDrops"])
+        assert drops["Small Barnacled Clam"]["mobs"]
+
     def test_savory_deviate_delight_is_a_rare_drop(self, foods: dict[str, dict], recipe_sources: dict) -> None:
         drop = recipe_sources["recipes"][str(foods["Savory Deviate Delight"]["id"])]["drop"]
         assert max(mob[3] for mob in drop["mobs"]) < 1
