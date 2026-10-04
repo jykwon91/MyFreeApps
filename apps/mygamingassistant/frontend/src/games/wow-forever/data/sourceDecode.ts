@@ -1,10 +1,13 @@
 import { TERRITORY, type Faction, type Territory } from "@/games/wow-forever/types/worldMap";
 import type {
+  ContainerDrop,
   DisenchantFrom,
   DisenchantSource,
   DropMob,
   DropSource,
   ItemSources,
+  MobSpot,
+  ObjectSpot,
   QuestGiver,
   QuestSource,
   SkinningSource,
@@ -27,6 +30,9 @@ export interface RawSources {
   skinning?: { levels: number[]; zones: number[] };
   fishing?: string[];
   containers?: string[];
+  /** `[name, count, zone, subzone, x, y]`. */
+  objectSpots?: Row[];
+  containerDrops?: [string, NonNullable<RawSources["drop"]>][];
 }
 
 export interface RawSourcesFile {
@@ -104,6 +110,18 @@ export function createSourceLookup(raw: RawSourcesFile): SourceLookup {
     };
   }
 
+  function spotAt(zoneId: Row[number], subzone: Row[number], x: Row[number], y: Row[number]): MobSpot | null {
+    if (zoneId === null || zoneId === undefined) return null;
+    return {
+      zoneId: Number(zoneId),
+      zoneName: zoneName(Number(zoneId)),
+      subzone: String(subzone ?? ""),
+      x: Number(x),
+      y: Number(y),
+      territory: territory(Number(zoneId)),
+    };
+  }
+
   function mob(r: Row): DropMob {
     const [name, minLevel, maxLevel, chance, zoneId, subzone, x, y] = r;
     return {
@@ -111,18 +129,14 @@ export function createSourceLookup(raw: RawSourcesFile): SourceLookup {
       minLevel: Number(minLevel),
       maxLevel: Number(maxLevel),
       chance: Number(chance),
-      spot:
-        zoneId === null || zoneId === undefined
-          ? null
-          : {
-              zoneId: Number(zoneId),
-              zoneName: zoneName(Number(zoneId)),
-              subzone: String(subzone ?? ""),
-              x: Number(x),
-              y: Number(y),
-              territory: territory(Number(zoneId)),
-            },
+      spot: spotAt(zoneId, subzone, x, y),
     };
+  }
+
+  function objectSpot(r: Row): ObjectSpot | null {
+    const [name, count, zoneId, subzone, x, y] = r;
+    const spot = spotAt(zoneId, subzone, x, y);
+    return spot ? { name: String(name), count: Number(count), spot } : null;
   }
 
   function drop(d: RawSources["drop"]): DropSource | null {
@@ -163,6 +177,11 @@ export function createSourceLookup(raw: RawSourcesFile): SourceLookup {
       disenchant: itemId === null ? null : disenchant(itemId),
       fishing: r?.fishing ?? [],
       containers: r?.containers ?? [],
+      objectSpots: (r?.objectSpots ?? []).map(objectSpot).filter((s): s is ObjectSpot => s !== null),
+      containerDrops: (r?.containerDrops ?? []).flatMap(([name, d]): ContainerDrop[] => {
+        const decoded = drop(d);
+        return decoded ? [{ name, drop: decoded }] : [];
+      }),
     };
   }
 

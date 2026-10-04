@@ -92,8 +92,18 @@ describe("recipe source data", () => {
   it("knows a clam holds Clam Meat", () => {
     expect(reagentSourcesFor(5503).containers).toContain("Small Barnacled Clam");
   });
+  it("says where the Giant Clams that hold Giant Clam Meat lie, not just their name", () => {
+    const [clams] = reagentSourcesFor(4655).objectSpots;
+    expect(clams).toMatchObject({ name: "Giant Clam", count: 73 });
+    expect(clams.spot).toMatchObject({ zoneName: "Stranglethorn Vale", subzone: "The Vile Reef", x: 26.3, y: 27.9 });
+  });
+  it("says which mobs drop a clam that's an item", () => {
+    const [barnacled] = reagentSourcesFor(5503).containerDrops;
+    expect(barnacled.name).toBe("Small Barnacled Clam");
+    expect(barnacled.drop.mobs.length).toBeGreaterThan(0);
+  });
   it("has nothing for an unknown item", () => {
-    expect(recipeSourcesFor(1)).toEqual({ vendors: [], quests: [], drop: null, skinning: null, disenchant: null, fishing: [], containers: [] });
+    expect(recipeSourcesFor(1)).toEqual({ vendors: [], quests: [], drop: null, skinning: null, disenchant: null, fishing: [], containers: [], objectSpots: [], containerDrops: [] });
   });
   it("explains unknown Classic and Forever items differently", () => {
     expect(unknownSource(250000, "it")).toMatch(/^New in Forever/);

@@ -96,6 +96,21 @@ export interface DisenchantSource {
   fromBlue: boolean;
 }
 
+/** Clams, herbs or crates on the ground that hold it, in one zone: the spot with the most of them nearby. */
+export interface ObjectSpot {
+  /** "Giant Clam". */
+  name: string;
+  /** How many spawn in this zone. */
+  count: number;
+  spot: MobSpot;
+}
+
+/** A clam that's an item (Small Barnacled Clam): open it — and these mobs drop it. */
+export interface ContainerDrop {
+  name: string;
+  drop: DropSource;
+}
+
 /** Everything known about where an item comes from. Empty lists / null = not a source. */
 export interface ItemSources {
   vendors: VendorSpot[];
@@ -105,4 +120,8 @@ export interface ItemSources {
   disenchant: DisenchantSource | null;
   fishing: string[];
   containers: string[];
+  /** Where the clams / herbs / crates in `containers` lie on the map. */
+  objectSpots: ObjectSpot[];
+  /** Which mobs drop the clams in `containers` that are items. */
+  containerDrops: ContainerDrop[];
 }
