@@ -2,10 +2,12 @@ import { AlertBox, Button } from "@platform/ui";
 import CraftRouteSections from "@/games/wow-forever/components/crafting/CraftRouteSections";
 import CraftRouteSkeleton from "@/games/wow-forever/components/crafting/CraftRouteSkeleton";
 import CraftingTrainerList from "@/games/wow-forever/components/crafting/CraftingTrainerList";
+import DisenchantOrSell from "@/games/wow-forever/components/crafting/DisenchantOrSell";
 import ForeverChangesBox from "@/games/wow-forever/components/professions/ForeverChangesBox";
 import HowToSteps from "@/games/wow-forever/components/professions/HowToSteps";
 import GuideSection from "@/games/wow-forever/components/guide/GuideSection";
 import { CRAFTING_GUIDES } from "@/games/wow-forever/data/professions/crafting/craftingGuide";
+import { LOOT_RULES_INTRO, LOOT_RULES_TIP, LOOT_SECTION_ID } from "@/games/wow-forever/data/professions/crafting/disenchantOrSell";
 import { CRAFTING_TRAINERS } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
 import { useCraftingData } from "@/games/wow-forever/hooks/useCraftingData";
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
@@ -31,6 +33,13 @@ export default function CraftingGuideView({ profession, faction, zoneId }: Craft
         <CraftingTrainerList trainers={CRAFTING_TRAINERS[profession]} faction={faction} />
         <HowToSteps steps={guide.steps} />
       </GuideSection>
+
+      {guide.lootRules ? (
+        <GuideSection id={LOOT_SECTION_ID} title="Disenchant or sell?" intro={LOOT_RULES_INTRO}>
+          <DisenchantOrSell rules={guide.lootRules} />
+          <p className="text-sm text-muted-foreground">{LOOT_RULES_TIP}</p>
+        </GuideSection>
+      ) : null}
 
       {state.status === "loading" ? <CraftRouteSkeleton /> : null}
       {state.status === "error" ? (

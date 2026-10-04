@@ -127,6 +127,23 @@ describe("Professions page", () => {
     expect(within(spices).getByText("Sold by")).toBeInTheDocument();
   });
 
+  it("says when to disenchant and when to sell, for Enchanting only", async () => {
+    const { unmount } = renderAt("/wow-forever/professions?p=enchanting");
+    const section = within(screen.getByRole("region", { name: "Disenchant or sell?" }));
+    expect(screen.getByRole("link", { name: "Disenchant or sell?" })).toHaveAttribute("href", "#disenchant");
+    const gray = document.querySelector('[data-rule="gray-white"]') as HTMLElement;
+    expect(within(gray).getByText("Vendor it")).toBeInTheDocument();
+    const monkey = document.querySelector('[data-rule="stat-green"]') as HTMLElement;
+    expect(within(monkey).getByText(/^Green weapon, or green “of the Monkey”/)).toBeInTheDocument();
+    expect(within(monkey).getByText("Check the price first")).toBeInTheDocument();
+    expect(section.getByText(/Disenchant weapons/)).toBeInTheDocument();
+    unmount();
+
+    renderAt("/wow-forever/professions?p=tailoring");
+    expect(screen.queryByRole("region", { name: "Disenchant or sell?" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Disenchant or sell?" })).not.toBeInTheDocument();
+  });
+
   it("points at your row for ?skill= without overwriting the saved skill", async () => {
     window.localStorage.setItem(CRAFT_SKILL_STORAGE_KEY, JSON.stringify({ enchanting: 10 }));
     renderAt("/wow-forever/professions?p=enchanting&skill=120");

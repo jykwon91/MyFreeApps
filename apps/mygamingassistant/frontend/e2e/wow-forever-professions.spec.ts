@@ -71,6 +71,15 @@ test("Enchanting sends you to Uldaman for Artisan", async ({ page }) => {
   await expect(route.getByRole("link", { name: /Uldaman/ }).first()).toHaveAttribute("href", /npc=classic-i-286/);
 });
 
+test("Enchanting says when to disenchant and when to sell", async ({ page }) => {
+  await page.goto("/wow-forever/professions?p=enchanting");
+  await page.getByRole("link", { name: "Disenchant or sell?" }).click();
+  await expect(page).toHaveURL(/#disenchant$/);
+  const rules = page.locator("#disenchant");
+  await expect(rules.locator('[data-rule="blue"]').getByText("Check the price first")).toBeInViewport();
+  await expect(rules.locator('[data-rule="gray-white"]').getByText("Vendor it")).toBeVisible();
+});
+
 test("the crafting guides never scroll sideways on a phone", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   for (const p of ["tailoring", "enchanting"]) {
