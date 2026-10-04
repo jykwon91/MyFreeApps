@@ -1,5 +1,6 @@
 import type { ForeverChange, HowToStep } from "@/games/wow-forever/data/professions/professionTypes";
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
+import { ENCHANTING_LOOT_RULES, type LootRule } from "@/games/wow-forever/data/professions/crafting/disenchantOrSell";
 
 export interface CraftingGuide {
   label: string;
@@ -10,6 +11,8 @@ export interface CraftingGuide {
   /** In the prices panel: what isn't asked for because you make it yourself. */
   pricedFromMaterials: string;
   forever: readonly ForeverChange[];
+  /** "Disenchant or sell?" — only for professions that break loot into materials. */
+  lootRules?: readonly LootRule[];
 }
 
 export const CRAFTING_GUIDES: Readonly<Record<CraftingProfession, CraftingGuide>> = {
@@ -62,8 +65,8 @@ export const CRAFTING_GUIDES: Readonly<Record<CraftingProfession, CraftingGuide>
       },
       {
         id: "disenchant",
-        title: "Disenchant green items instead of selling them",
-        detail: "Disenchant breaks a green (or better) weapon or armour piece into dust and essences — the materials every enchant uses.",
+        title: "Disenchant the green items you loot",
+        detail: "Disenchant breaks a green (or better) weapon or armour piece into dust and essences — the materials every enchant uses. Any Enchanting skill can disenchant any green. A few greens and blues are worth more sold — see Disenchant or sell? below.",
         command: "/cast Disenchant",
         stuck: "Nothing to disenchant yet? Green items drop from mobs and quest rewards. Tailoring's green crafts disenchant too.",
       },
@@ -83,6 +86,7 @@ export const CRAFTING_GUIDES: Readonly<Record<CraftingProfession, CraftingGuide>
     routeIntro: "Enchant from the first skill to the second, then move to the next row. Rod rows are one craft each — make the rod and move on.",
     pricedFromMaterials: "Motes of Magic and Enchanted Leather are priced from their materials.",
     shoppingNote: "Enchanting materials come from disenchanting green items. Tailoring and Leatherworking greens work.",
+    lootRules: ENCHANTING_LOOT_RULES,
     forever: [
       {
         text: "New in Forever: Mote of Magic. Dust to Motes turns 1 Strange Dust into 3 Motes; the Runed Copper Rod and the first enchants use them.",
@@ -94,6 +98,10 @@ export const CRAFTING_GUIDES: Readonly<Record<CraftingProfession, CraftingGuide>
       },
       {
         text: "Beta players report Motes of Magic are sold by Enchanting Supplies vendors.",
+        confidence: "unconfirmed",
+      },
+      {
+        text: "In Classic Era any Enchanting skill can disenchant any item. Whether Forever adds a skill requirement isn't known yet.",
         confidence: "unconfirmed",
       },
       {

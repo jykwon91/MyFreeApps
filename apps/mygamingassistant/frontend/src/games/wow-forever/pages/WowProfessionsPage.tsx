@@ -5,6 +5,8 @@ import GuideSectionNav from "@/games/wow-forever/components/guide/GuideSectionNa
 import SegmentedToggle from "@/games/wow-forever/components/shared/SegmentedToggle";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import { PROFESSION, type Profession } from "@/games/wow-forever/data/professions/professionTypes";
+import { CRAFTING_GUIDES } from "@/games/wow-forever/data/professions/crafting/craftingGuide";
+import { LOOT_SECTION_ID } from "@/games/wow-forever/data/professions/crafting/disenchantOrSell";
 import { PROFESSIONS_DATA_STATUS } from "@/games/wow-forever/data/professions/professionsStatus";
 import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { CRAFTING_PROFESSION, type CraftingProfession } from "@/games/wow-forever/types/crafting";
@@ -38,6 +40,13 @@ const CRAFTING_SECTIONS = [
   { id: "shopping", label: "Shopping list" },
   { id: "forever", label: "What's different in Forever" },
 ] as const;
+
+/** Crafting sections, with "Disenchant or sell?" after Get started for a profession that has it. */
+function craftingSections(profession: CraftingProfession): readonly { id: string; label: string }[] {
+  if (!CRAFTING_GUIDES[profession].lootRules) return CRAFTING_SECTIONS;
+  const [start, ...rest] = CRAFTING_SECTIONS;
+  return [start, { id: LOOT_SECTION_ID, label: "Disenchant or sell?" }, ...rest];
+}
 
 function parseProfession(raw: string | null): GuideProfession {
   return PROFESSION_OPTIONS.find((o) => o.id === raw)?.id ?? PROFESSION.cooking;
@@ -82,7 +91,7 @@ export default function WowProfessionsPage() {
             onChange={(faction) => updatePlayer({ faction })}
           />
         </div>
-        <GuideSectionNav sections={crafting ? CRAFTING_SECTIONS : SECTIONS} />
+        <GuideSectionNav sections={crafting ? craftingSections(profession) : SECTIONS} />
       </div>
 
       {crafting ? (
