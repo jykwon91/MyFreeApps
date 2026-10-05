@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from scripts.wow_world_map import sources
-from scripts.wow_world_map.walk import models, terrain
+from scripts.wow_world_map.walk import models, roads, terrain
 from scripts.wow_world_map.walk.client_files import client_file, prefetch
 from scripts.wow_world_map.walk.geometry import MARGIN, Box, m2_mesh, mesh_box, tile_soup
 from scripts.wow_world_map.walk.terrain import TILE_SIZE, Placement, TileFiles
@@ -36,6 +36,7 @@ class MapScene:
     tiles: dict[tuple[int, int], TileFiles]
     buildings: list[tuple[Placement, Box]]
     props: list[tuple[Placement, Box]]
+    road: frozenset[tuple[int, int]] = frozenset()  # road quads (``roads.py``); none in a dungeon
 
 
 def _tiles_touching(box: Box) -> list[tuple[int, int]]:
@@ -109,7 +110,7 @@ def _geometry_job(args: tuple[tuple[int, int], str]) -> int:
     assert _SCENE is not None
     tile = _SCENE.tiles[key]
     buildings, props = _BY_TILE.get(key, ([], []))
-    soup = tile_soup(tile, _SCENE.tiles, buildings, props)
+    soup = tile_soup(tile, _SCENE.tiles, buildings, props, _SCENE.road)
     from scripts.wow_world_map.walk.geometry import tile_box
     return soup.write(Path(out), tile_box(tile))
 
@@ -122,6 +123,8 @@ def build_navmesh(map_id: int, wdt_file_data_id: int, fine: bool = False) -> tup
     root = work_dir(map_id)
     geo_dir, nav_dir = root / "geometry", root / ("nav-fine" if fine else "nav")
     scene = load_scene(wdt_file_data_id)
+    if not fine:
+        scene.road = roads.road_map(scene.tiles.values(), wdt_file_data_id)
     todo = [(k, str(geo_dir / f"{k[0]}_{k[1]}.bin")) for k in scene.tiles
             if not (geo_dir / f"{k[0]}_{k[1]}.bin").exists()]
     if todo:

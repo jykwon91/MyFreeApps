@@ -33,6 +33,7 @@ class TileFiles:
     col: int  # grid column: world Y falls as it grows
     root: int
     obj0: int
+    tex0: int = 0  # ground textures (``roads.py``)
 
 
 @dataclass(frozen=True)
@@ -77,9 +78,9 @@ def map_tiles(wdt_file_data_id: int) -> list[TileFiles]:
     maid = chunk_map(client_file(wdt_file_data_id)).get("MAID", b"")
     tiles = []
     for i in range(len(maid) // 32):
-        root, obj0 = struct.unpack_from("<2I", maid, i * 32)
+        root, obj0, _obj1, tex0 = struct.unpack_from("<4I", maid, i * 32)
         if root:
-            tiles.append(TileFiles(i // 64, i % 64, root, obj0))
+            tiles.append(TileFiles(i // 64, i % 64, root, obj0, tex0))
     return tiles
 
 

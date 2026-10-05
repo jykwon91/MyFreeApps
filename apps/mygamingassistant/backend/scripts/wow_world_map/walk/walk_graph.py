@@ -41,6 +41,7 @@ class PolyGraph:
     centroid: np.ndarray  # (n, 3) world X, Y, Z
     area: np.ndarray  # (n,) yd²
     water: np.ndarray  # (n,) bool
+    road: np.ndarray  # (n,) bool: ground painted as road (``roads.py``)
     indptr: np.ndarray  # CSR neighbour lists
     indices: np.ndarray
     # With ``load_polys(..., ledges=True)`` (a dungeon): the open edges — a
@@ -118,7 +119,7 @@ def _open_edges(mesh, base: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, np
 
 
 def load_polys(nav_dir: Path, ledges: bool = False) -> PolyGraph:
-    centroids, areas, waters, links = [], [], [], []
+    centroids, areas, waters, on_road, links = [], [], [], [], []
     opens: list[tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]] = []
     # Border edges by shared line: key -> [(side, lo, hi, z at lo, z at hi, poly)]
     borders: dict[tuple, list[tuple[int, int, int, float, float, int]]] = defaultdict(list)
@@ -129,6 +130,7 @@ def load_polys(nav_dir: Path, ledges: bool = False) -> PolyGraph:
             centroids.append(centroid)
             areas.append(area)
             waters.append(mesh.water)
+            on_road.append(mesh.road)
             present = mesh.neis != NULL_INDEX
             border = present & ((mesh.neis & BORDER_FLAG) != 0)
             inner = present & ~border
@@ -162,7 +164,7 @@ def load_polys(nav_dir: Path, ledges: bool = False) -> PolyGraph:
     indptr = np.concatenate([[0], np.cumsum(counts)])
     print(f"  polygons: {base}, links: {len(pairs) // 2}, across tile borders: {len(joined) // 2}")
     graph = PolyGraph(np.concatenate(centroids), np.concatenate(areas), np.concatenate(waters),
-                      indptr, pairs[:, 1].copy())
+                      np.concatenate(on_road), indptr, pairs[:, 1].copy())
     if ledges:
         graph.ledge, graph.ledge_poly, graph.corner, graph.corner_poly = (
             np.concatenate([o[i] for o in opens]) for i in range(4))

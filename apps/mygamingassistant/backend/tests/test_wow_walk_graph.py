@@ -18,6 +18,7 @@ from scripts.wow_world_map import sources
 from scripts.wow_world_map.walk import links
 from scripts.wow_world_map.walk.clusters import (
     DOCK_HEADROOM,
+    OFFROAD_FACTOR,
     Anchor,
     WalkGraph,
     cluster,
@@ -35,7 +36,7 @@ from scripts.wow_world_map.walk.export import (
 from scripts.wow_world_map.walk.floors import Floors, Triangles, floor_under
 from scripts.wow_world_map.walk.drops import DROP_COST_YARDS, find_drops
 from scripts.wow_world_map.walk.links import EDGE_DROP, EDGE_LIFT, EDGE_PORTAL, EDGE_TELEPORT, PORTAL_COST_YARDS
-from scripts.wow_world_map.walk.navfile import BORDER_FLAG, NULL_INDEX, read_nav
+from scripts.wow_world_map.walk.navfile import BORDER_FLAG, NULL_INDEX, RECAST_ROAD_AREA, read_nav
 from scripts.wow_world_map.walk.terrain import global_wmo
 from scripts.wow_world_map.walk.walk_graph import (
     CELLS,
@@ -50,7 +51,7 @@ NVP = 6
 
 # --- tile border joins ------------------------------------------------------
 
-def _quad_part(sx: int, border_side: int, border_edge: int, by: float) -> bytes:
+def _quad_part(sx: int, border_side: int, border_edge: int, by: float, area: int = 0) -> bytes:
     """One Recast tile holding a single square polygon with one edge on a tile border.
 
     Vertices go (0,0) -> (0,256) -> (256,256) -> (256,0) in cells (x east, z
@@ -64,7 +65,7 @@ def _quad_part(sx: int, border_side: int, border_edge: int, by: float) -> bytes:
         struct.pack("<2H3f2I", sx, 0, sx * CELLS * 0.5, by, 0.0, len(cells), 1),
         struct.pack(f"<{len(cells) * 3}H", *[c for v in cells for c in v]),
         struct.pack(f"<{NVP * 2}H", *verts, *neis),
-        bytes([0]),
+        bytes([area]),
     ])
 
 
@@ -98,6 +99,14 @@ def test_a_dungeon_load_keeps_the_open_edges_and_corners(tmp_path: Path) -> None
     assert polys.ledge_poly.tolist() == [0, 0, 0]
     assert len(polys.corner) == 4
     assert load_polys(tmp_path).ledge is None
+
+
+def test_a_polygon_carved_as_road_is_flagged(tmp_path: Path) -> None:
+    _write_nav(tmp_path / "0_0.nav", [_quad_part(0, 2, 2, by=10.0, area=RECAST_ROAD_AREA),
+                                      _quad_part(1, 0, 0, by=10.0, area=63)])
+    polys = load_polys(tmp_path)
+    assert polys.road.tolist() == [True, False]
+    assert polys.water.tolist() == [False, False]
 
 
 def test_a_border_with_a_ledge_is_not_joined(tmp_path: Path) -> None:
@@ -258,7 +267,7 @@ def test_a_one_way_edge_has_no_way_back_in_the_hub_matrix() -> None:
 # --- clustering -------------------------------------------------------------
 
 def _poly_graph(centroid: list[tuple[float, float, float]], pairs: list[tuple[int, int]],
-                area: float = 400.0) -> PolyGraph:
+                area: float = 400.0, road: list[int] = ()) -> PolyGraph:
     n = len(centroid)
     adj: list[list[int]] = [[] for _ in range(n)]
     for a, b in pairs:
@@ -266,7 +275,7 @@ def _poly_graph(centroid: list[tuple[float, float, float]], pairs: list[tuple[in
         adj[b].append(a)
     indptr = np.concatenate([[0], np.cumsum([len(x) for x in adj])])
     return PolyGraph(np.array(centroid, dtype=float), np.full(n, area), np.zeros(n, dtype=bool),
-                     indptr, np.array([v for x in adj for v in x], dtype=np.int64))
+                     np.isin(np.arange(n), road), indptr, np.array([v for x in adj for v in x], dtype=np.int64))
 
 
 def test_clustering_keeps_only_ground_joined_to_a_hub() -> None:
@@ -279,6 +288,27 @@ def test_clustering_keeps_only_ground_joined_to_a_hub() -> None:
     assert graph.edges.tolist() == [[0, 1], [1, 2]]
     assert graph.cost.tolist() == [50.0, 50.0]
     assert graph.anchor_node == [0, None]
+
+
+def test_the_road_keeps_its_own_clusters_and_costs_less_to_walk() -> None:
+    # 0-1-2 along a road, 3-4 beside it: close enough to share a cluster,
+    # but road and verge never mix, and a yard off the road costs more.
+    polys = _poly_graph([(0, 0, 0), (10, 0, 0), (20, 0, 0), (0, 10, 0), (10, 10, 0)],
+                        [(0, 1), (1, 2), (0, 3), (1, 4), (3, 4)], road=[0, 1, 2])
+    labels = [Label("Kolkar Village", "Desolace", False, False)]
+    graph = cluster(polys, np.zeros(5, dtype=np.int32), labels, [], [Anchor(0, 0, 0)], road=polys.road)
+    assert len(graph.position) == 2
+    (edge,) = graph.edges.tolist()
+    # Poly 1 (the road's centre) -> 0 along the road, then a step half on it to 3.
+    assert graph.cost[0] == pytest.approx(10 + 10 * (1 + OFFROAD_FACTOR) / 2)
+    assert sorted(graph.position[edge, 1].tolist()) == [0, 10]
+
+
+def test_without_roads_every_yard_costs_the_same() -> None:
+    polys = _poly_graph([(0, 0, 0), (50, 0, 0)], [(0, 1)], road=[0])
+    labels = [Label("Goldshire", "Elwynn Forest", False, False)]
+    graph = cluster(polys, np.zeros(2, dtype=np.int32), labels, [], [Anchor(0, 0, 0)])
+    assert graph.cost.tolist() == [50.0]
 
 
 def test_a_lift_becomes_an_edge_between_its_floors() -> None:
