@@ -1,7 +1,7 @@
 """Group the navmesh polygons into the page's walk graph nodes.
 
 Neighbouring polygons with the same label (room / sub-area) and medium
-(ground or water) are grouped around a seed, at most :data:`OUTDOOR_RADIUS`
+(ground or water), on or off the road alike, are grouped around a seed, at most :data:`OUTDOOR_RADIUS`
 yards out (:data:`INDOOR_RADIUS` indoors and in capital cities, where the
 directions turn by turn). A cluster edge costs the travel
 time between the two clusters' centre polygons over the polygon graph, in
@@ -30,6 +30,9 @@ from scripts.wow_world_map.walk.walk_graph import Label, PolyGraph
 RUN_SPEED = 7.0
 SWIM_SPEED = 4.72
 SWIM_FACTOR = RUN_SPEED / SWIM_SPEED
+# Off the road, a yard costs this many: directions keep to the roads a
+# player would follow (``roads.py``) unless leaving them saves real time.
+OFFROAD_FACTOR = 1.4
 OUTDOOR_RADIUS = 32.0
 INDOOR_RADIUS = 12.0
 CLUSTER_MAX_DZ = 6.0
@@ -147,17 +150,21 @@ def components(indptr: list[int], indices: list[int], n: int, extra: dict[int, l
 class _StepCost:
     """Ground-yard cost between two adjacent polygons' centres."""
 
-    def __init__(self, cx: list[float], cy: list[float], cz: list[float], water: list[bool]) -> None:
-        self.cx, self.cy, self.cz, self.water = cx, cy, cz, water
+    def __init__(self, cx: list[float], cy: list[float], cz: list[float], water: list[bool],
+                 road: list[bool] | None) -> None:
+        self.cx, self.cy, self.cz, self.water, self.road = cx, cy, cz, water, road
+
+    def _factor(self, p: int) -> float:
+        if self.water[p]:
+            return SWIM_FACTOR
+        return 1.0 if self.road is None or self.road[p] else OFFROAD_FACTOR
 
     def distance(self, a: int, b: int) -> float:
         return math.sqrt((self.cx[a] - self.cx[b]) ** 2 + (self.cy[a] - self.cy[b]) ** 2
                          + (self.cz[a] - self.cz[b]) ** 2)
 
     def __call__(self, a: int, b: int) -> float:
-        fa = SWIM_FACTOR if self.water[a] else 1.0
-        fb = SWIM_FACTOR if self.water[b] else 1.0
-        return self.distance(a, b) * (fa + fb) / 2
+        return self.distance(a, b) * (self._factor(a) + self._factor(b)) / 2
 
 
 def _local_cost(indptr: list[int], indices: list[int], owner: list[int], step: _StepCost,
@@ -210,8 +217,9 @@ def _components(polys: PolyGraph, indptr: list[int], indices: list[int],
 
 
 def _grow(seed: int, radius2: float, indptr: list[int], indices: list[int], owner: list[int], k: int,
-          cx: list[float], cy: list[float], cz: list[float], lab: list[int], water: list[bool]) -> list[int]:
-    sx, sy, sz, sl, sw = cx[seed], cy[seed], cz[seed], lab[seed], water[seed]
+          cx: list[float], cy: list[float], cz: list[float], lab: list[int], water: list[bool],
+          road: list[bool]) -> list[int]:
+    sx, sy, sz, sl, sw, sr = cx[seed], cy[seed], cz[seed], lab[seed], water[seed], road[seed]
     owner[seed] = k
     group = [seed]
     stack = [seed]
@@ -219,7 +227,7 @@ def _grow(seed: int, radius2: float, indptr: list[int], indices: list[int], owne
         u = stack.pop()
         for i in range(indptr[u], indptr[u + 1]):
             v = indices[i]
-            if (owner[v] < 0 and lab[v] == sl and water[v] == sw and abs(cz[v] - sz) <= CLUSTER_MAX_DZ
+            if (owner[v] < 0 and lab[v] == sl and water[v] == sw and road[v] == sr and abs(cz[v] - sz) <= CLUSTER_MAX_DZ
                     and (cx[v] - sx) ** 2 + (cy[v] - sy) ** 2 <= radius2):
                 owner[v] = k
                 group.append(v)
@@ -228,13 +236,15 @@ def _grow(seed: int, radius2: float, indptr: list[int], indices: list[int], owne
 
 
 def cluster(polys: PolyGraph, poly_label: np.ndarray, labels: list[Label], links: list[Link],
-            anchors: list[Anchor], fine: bool = False) -> WalkGraph:
-    """``fine``: small clusters everywhere (a dungeon, told turn by turn throughout)."""
+            anchors: list[Anchor], fine: bool = False, road: np.ndarray | None = None) -> WalkGraph:
+    """``fine``: small clusters everywhere (a dungeon, told turn by turn throughout).
+    ``road``: each polygon on a road (``roads.py``); None: no roads (a dungeon)."""
     n = len(polys)
     indptr, indices = polys.indptr.tolist(), polys.indices.tolist()
     cx, cy, cz = (polys.centroid[:, k].tolist() for k in range(3))
     water = polys.water.tolist()
     lab = poly_label.tolist()
+    on_road = road.tolist() if road is not None else None
     special = _snap_links(polys, indptr, indices, links)
     comp, comp_area = _components(polys, indptr, indices, special)
     if fine:
@@ -262,7 +272,7 @@ def cluster(polys: PolyGraph, poly_label: np.ndarray, labels: list[Label], links
             label = labels[lab[seed]]
             radius = INDOOR_RADIUS if fine or label.indoor or label.city else OUTDOOR_RADIUS
             members.append(_grow(seed, radius * radius, indptr, indices, owner, len(members),
-                                 cx, cy, cz, lab, water))
+                                 cx, cy, cz, lab, water, on_road if on_road is not None else [False] * n))
     reps = []
     for group in members:
         g = np.array(group)
@@ -278,7 +288,7 @@ def cluster(polys: PolyGraph, poly_label: np.ndarray, labels: list[Label], links
             ov = owner[indices[i]]
             if ov >= 0 and ov != ou:
                 pairs.add((ou, ov) if ou < ov else (ov, ou))
-    step = _StepCost(cx, cy, cz, water)
+    step = _StepCost(cx, cy, cz, water, on_road)
     edges, costs, kinds = [], [], []
     for a, b in sorted(pairs):
         cost = _local_cost(indptr, indices, owner, step, reps[a], reps[b], a, b)

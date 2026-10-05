@@ -58,6 +58,8 @@ const WALKABLE_RADIUS = Math.max(1, Math.round(AGENT_RADIUS / CS)); // whole cel
 const BORDER = WALKABLE_RADIUS + 3;
 const MAX_EDGE_LEN = Math.round(12 / CS);
 const MAX_SIMPLIFICATION_ERROR = 1.3;
+// geometry.py area (1 ground, 2 water, 3 road) -> Recast area id.
+const RECAST_AREA = { 1: 63, 2: 1, 3: 2 };
 const MIN_REGION_AREA = 8 * 8;
 const MERGE_REGION_AREA = 20 * 20;
 const NVP = 6;
@@ -106,8 +108,9 @@ function buildSubtile(ctx, geo, bmin, bmax) {
   const triArr = new IntArray();
   triArr.copy(Int32Array.from(picked.flatMap((t) => [tris[t * 3], tris[t * 3 + 1], tris[t * 3 + 2]])));
   const areaArr = new UnsignedCharArray();
-  // Recast walkable area ids: ground 63 (RC_WALKABLE_AREA), water 1; 0 = obstacle.
-  areaArr.copy(Uint8Array.from(picked.map((t) => (areas[t] === 1 ? 63 : areas[t] === 2 ? 1 : 0))));
+  // Recast walkable area ids: ground 63 (RC_WALKABLE_AREA), water 1, road 2; 0 = obstacle.
+  // Regions never cross an area change, so polygons split along a road's edges.
+  areaArr.copy(Uint8Array.from(picked.map((t) => RECAST_AREA[areas[t]] ?? 0)));
   const ok = rasterizeTriangles(ctx, geo.vertArr, verts.length / 3, triArr, areaArr, picked.length, hf, WALKABLE_CLIMB);
   triArr.destroy();
   areaArr.destroy();

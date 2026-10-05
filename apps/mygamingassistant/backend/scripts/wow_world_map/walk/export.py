@@ -15,7 +15,8 @@ inside, the layout is (little-endian)::
     nodes:  i16 x[n], i16 y[n], i16 z[n]      world yards (X north, Y west)
             u16 label[n]                      index into json "labels"
             u8  flags[n]                      1 = water (swim)
-    edges:  u32 a[m], u32 b[m], u16 cost[m]   cost in yards at run speed
+    edges:  u32 a[m], u32 b[m], u16 cost[m]   cost in yards at run speed, off-road yards
+                                              weighted (clusters.OFFROAD_FACTOR)
             u8  kind[m]                       0 = walk / swim, 1 = lift, 2 = portal,
                                               3 = drop, 4 = teleport (3+ go a -> b only)
     hubs:   u32 node[h], u16 matrix[h*h]      hub-to-hub cost; 65535 = no path

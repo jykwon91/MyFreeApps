@@ -3,6 +3,8 @@
 Per tile (plus a small margin so neighbouring navmesh tiles join up):
 
 * terrain quads, minus holes (cave mouths, building entrances);
+* road: a terrain quad painted with a road texture (``roads.py``) is
+  AREA_ROAD, so the navmesh's polygons split along the road's edges;
 * water: a quad under more than :data:`WADE_DEPTH` of water becomes the water
   surface (swimmable), shallower water is waded like ground; lava and slime
   quads are dropped;
@@ -11,7 +13,7 @@ Per tile (plus a small margin so neighbouring navmesh tiles join up):
 
 Triangles are written in Recast's y-up frame — (x, y, z) = (-Y, Z, -X) of
 world (X north, Y west, Z up) — with an area per triangle: AREA_NONE
-(obstacle), AREA_GROUND or AREA_WATER.
+(obstacle), AREA_GROUND, AREA_WATER or AREA_ROAD.
 """
 from __future__ import annotations
 
@@ -26,12 +28,13 @@ import numpy as np
 from scripts.wow_world_map import sources
 from scripts.wow_world_map.walk import models, terrain
 from scripts.wow_world_map.walk.client_files import client_file
-from scripts.wow_world_map.walk.terrain import CHUNK_SIZE, TILE_SIZE, UNIT, Placement, TileFiles
+from scripts.wow_world_map.walk.terrain import CHUNK_SIZE, MAP_ORIGIN, TILE_SIZE, UNIT, Placement, TileFiles
 from scripts.wow_world_map.walk.transform import apply, placement_matrix, quaternion_matrix
 
 AREA_NONE = 0
 AREA_GROUND = 1
 AREA_WATER = 2
+AREA_ROAD = 3
 MAX_SLOPE_DEGREES = 55.0
 MIN_UP = math.cos(math.radians(MAX_SLOPE_DEGREES))
 WADE_DEPTH = 1.5  # yards of water a player walks through rather than swims
@@ -133,8 +136,9 @@ def _water_levels(chunk: terrain.Chunk) -> list[list[tuple[float, int] | None]]:
     return grid
 
 
-def _chunk_mesh(chunk: terrain.Chunk) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Terrain (ground) and deep-water surface triangles of one chunk."""
+def _chunk_mesh(chunk: terrain.Chunk, road: frozenset[tuple[int, int]]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Terrain (ground or road) and deep-water surface triangles of one chunk.
+    ``road``: the road quads, by global ``(row, col)`` (``roads.road_map``)."""
     i, j = np.mgrid[0:9, 0:9]
     outer = np.stack([chunk.north - i * UNIT, chunk.west - j * UNIT, chunk.outer], axis=-1).reshape(-1, 3)
     i, j = np.mgrid[0:8, 0:8]
@@ -142,8 +146,10 @@ def _chunk_mesh(chunk: terrain.Chunk) -> tuple[np.ndarray, np.ndarray, np.ndarra
                      axis=-1).reshape(-1, 3)
     verts = [*np.concatenate([outer, inner])]
     ground: list[tuple[int, int, int]] = []
+    on_road: list[bool] = []
     water: list[tuple[int, int, int]] = []
     levels = _water_levels(chunk)
+    row0, col0 = round((MAP_ORIGIN - chunk.north) / UNIT), round((MAP_ORIGIN - chunk.west) / UNIT)
     for qi in range(8):
         for qj in range(8):
             nw, ne = qi * 9 + qj, qi * 9 + qj + 1
@@ -169,11 +175,13 @@ def _chunk_mesh(chunk: terrain.Chunk) -> tuple[np.ndarray, np.ndarray, np.ndarra
                 continue
             # Counter-clockwise seen from above: west is +Y, north is +X.
             ground += [(centre, nw, sw), (centre, sw, se), (centre, se, ne), (centre, ne, nw)]
+            on_road += [(row0 + qi, col0 + qj) in road] * 4
     v = np.array(verts, dtype=np.float64)
     g = np.array(ground, dtype=np.int32).reshape(-1, 3)
     w = np.array(water, dtype=np.int32).reshape(-1, 3)
-    areas = np.concatenate([_slope_areas(v, g) if len(g) else np.zeros(0, np.uint8),
-                            np.full(len(w), AREA_WATER, np.uint8)])
+    ground_areas = _slope_areas(v, g) if len(g) else np.zeros(0, np.uint8)
+    ground_areas[np.array(on_road, dtype=bool) & (ground_areas == AREA_GROUND)] = AREA_ROAD
+    areas = np.concatenate([ground_areas, np.full(len(w), AREA_WATER, np.uint8)])
     return v, np.concatenate([g, w]), areas
 
 
@@ -200,7 +208,8 @@ def mesh_box(matrix: np.ndarray, mesh: models.Mesh) -> Box | None:
 
 
 def tile_soup(tile: TileFiles, tiles: dict[tuple[int, int], TileFiles],
-              buildings: list[tuple[Placement, Box]], props: list[tuple[Placement, Box]]) -> Soup:
+              buildings: list[tuple[Placement, Box]], props: list[tuple[Placement, Box]],
+              road: frozenset[tuple[int, int]] = frozenset()) -> Soup:
     box = tile_box(tile)
     soup = Soup()
     for dr in (-1, 0, 1):
@@ -211,7 +220,7 @@ def tile_soup(tile: TileFiles, tiles: dict[tuple[int, int], TileFiles],
             for chunk in _terrain(other.root):
                 cbox = Box(chunk.north - CHUNK_SIZE, chunk.west - CHUNK_SIZE, chunk.north, chunk.west)
                 if cbox.overlaps(box):
-                    soup.add(*_chunk_mesh(chunk))
+                    soup.add(*_chunk_mesh(chunk, road))
     for placement, pbox in buildings:
         if not pbox.overlaps(box):
             continue
