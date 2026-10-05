@@ -57,6 +57,29 @@ function towerGraph(): WalkGraph {
 }
 
 describe("walk graph file", () => {
+  it("keeps to the road but times the walk by the yards walked", () => {
+    // 0 -> 1 -> 2 along a road (2 x 60 yd), or 0 -> 3 -> 2 across the field
+    // (2 x 50 yd, costing 70 a stretch off the road).
+    const nodes: TestNode[] = [
+      { x: 0, y: 0, z: 0, label: 0 },
+      { x: 60, y: 0, z: 0, label: 0 },
+      { x: 120, y: 0, z: 0, label: 0 },
+      { x: 60, y: 30, z: 0, label: 0 },
+    ];
+    const edges: TestEdge[] = [
+      [0, 1, 60],
+      [1, 2, 60],
+      [0, 3, 70, WALK_EDGE.walk, 50],
+      [3, 2, 70, WALK_EDGE.walk, 50],
+    ];
+    const graph = decodeWalkGraph(encode(0, nodes, edges, LABELS));
+    const search = searchFrom(graph, 0);
+    expect(walkPath(graph, 0, 2)?.map((h) => h.node)).toEqual([0, 1, 2]);
+    expect(search.dist[2]).toBe(120);
+    expect(search.yards[2]).toBe(120);
+    expect(search.yards[3]).toBe(50);
+  });
+
   it("decodes the generator's layout", () => {
     const g = towerGraph();
     expect(g.mapId).toBe(0);

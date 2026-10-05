@@ -323,7 +323,7 @@ export function walkLeg(graph: WalkGraph, a: number, b: number, from: WorldPoint
   }
   const steps = walkSteps(graph, hops);
   return {
-    cost: searchFrom(graph, a).dist[b],
+    cost: searchFrom(graph, a).yards[b],
     yards,
     path,
     detail: steps.length < 2 ? [] : steps.map((s) => s.text),
