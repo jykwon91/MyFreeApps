@@ -5,7 +5,9 @@ Neighbouring polygons with the same label (room / sub-area) and medium
 yards out (:data:`INDOOR_RADIUS` indoors and in capital cities, where the
 directions turn by turn). A cluster edge costs the travel
 time between the two clusters' centre polygons over the polygon graph, in
-"ground yards" (yards at run speed); lifts and portals add their own edges,
+"ground yards" (yards at run speed), off-road yards weighted by
+:data:`OFFROAD_FACTOR` so routes keep to the roads; each edge also carries
+the ground yards actually walked, unweighted, for walking times. Lifts and portals add their own edges,
 and in a dungeon so do one-way teleports and drops (``drops.py``) — edges of
 the kinds in ``links.ONE_WAY`` go a -> b only.
 
@@ -57,6 +59,9 @@ class WalkGraph:
     # The node each anchor (travel hub) stands on, snapped against the polygons
     # before clustering — a cluster's centre can be well off the pier it covers.
     anchor_node: list[int | None]
+    # (m,) ground yards actually walked along each edge: ``cost`` without the
+    # road preference, for walking *times*. None: the same as ``cost``.
+    yards: np.ndarray | None = None
 
 
 def _snap_score(position: np.ndarray, water: np.ndarray, x: float, y: float, z: float) -> np.ndarray:
@@ -154,28 +159,34 @@ class _StepCost:
                  road: list[bool] | None) -> None:
         self.cx, self.cy, self.cz, self.water, self.road = cx, cy, cz, water, road
 
-    def _factor(self, p: int) -> float:
+    def _factor(self, p: int, prefer_road: bool) -> float:
         if self.water[p]:
             return SWIM_FACTOR
-        return 1.0 if self.road is None or self.road[p] else OFFROAD_FACTOR
+        return 1.0 if not prefer_road or self.road is None or self.road[p] else OFFROAD_FACTOR
 
     def distance(self, a: int, b: int) -> float:
         return math.sqrt((self.cx[a] - self.cx[b]) ** 2 + (self.cy[a] - self.cy[b]) ** 2
                          + (self.cz[a] - self.cz[b]) ** 2)
 
     def __call__(self, a: int, b: int) -> float:
-        return self.distance(a, b) * (self._factor(a) + self._factor(b)) / 2
+        return self.distance(a, b) * (self._factor(a, True) + self._factor(b, True)) / 2
+
+    def yards(self, a: int, b: int) -> float:
+        """The ground yards walked: the cost without the road preference."""
+        return self.distance(a, b) * (self._factor(a, False) + self._factor(b, False)) / 2
 
 
 def _local_cost(indptr: list[int], indices: list[int], owner: list[int], step: _StepCost,
-                src: int, dst: int, ca: int, cb: int) -> float | None:
-    """Cheapest polygon path src -> dst that stays inside clusters ca and cb."""
+                src: int, dst: int, ca: int, cb: int) -> tuple[float, float] | None:
+    """Cheapest polygon path src -> dst that stays inside clusters ca and cb: its cost
+    and the ground yards walked along it."""
     dist = {src: 0.0}
+    walked = {src: 0.0}
     heap = [(0.0, src)]
     while heap:
         d, u = heapq.heappop(heap)
         if u == dst:
-            return d
+            return d, walked[u]
         if d > dist[u]:
             continue
         for i in range(indptr[u], indptr[u + 1]):
@@ -185,6 +196,7 @@ def _local_cost(indptr: list[int], indices: list[int], owner: list[int], step: _
             nd = d + step(u, v)
             if nd < dist.get(v, math.inf):
                 dist[v] = nd
+                walked[v] = walked[u] + step.yards(u, v)
                 heapq.heappush(heap, (nd, v))
     return None
 
@@ -289,17 +301,19 @@ def cluster(polys: PolyGraph, poly_label: np.ndarray, labels: list[Label], links
             if ov >= 0 and ov != ou:
                 pairs.add((ou, ov) if ou < ov else (ov, ou))
     step = _StepCost(cx, cy, cz, water, on_road)
-    edges, costs, kinds = [], [], []
+    edges, costs, walked, kinds = [], [], [], []
     for a, b in sorted(pairs):
-        cost = _local_cost(indptr, indices, owner, step, reps[a], reps[b], a, b)
-        if cost is not None:
+        found = _local_cost(indptr, indices, owner, step, reps[a], reps[b], a, b)
+        if found is not None:
             edges.append((a, b))
-            costs.append(cost)
+            costs.append(found[0])
+            walked.append(found[1])
             kinds.append(EDGE_WALK)
     for pa, pb, cost, kind in special:
         if owner[pa] >= 0 and owner[pb] >= 0:
             edges.append((owner[pa], owner[pb]))
             costs.append(cost + step.distance(reps[owner[pa]], pa) + step.distance(reps[owner[pb]], pb))
+            walked.append(costs[-1])
             kinds.append(kind)
     anchor_node = [None if p is None or owner[p] < 0 else owner[p] for p in snapped]
     rep = np.array(reps, dtype=np.int64)
@@ -307,4 +321,4 @@ def cluster(polys: PolyGraph, poly_label: np.ndarray, labels: list[Label], links
           f"kept {keep.mean():.0%} of polygons")
     return WalkGraph(polys.centroid[rep], poly_label[rep], polys.water[rep],
                      np.array(edges, dtype=np.int64).reshape(-1, 2), np.array(costs),
-                     np.array(kinds, dtype=np.uint8), labels, anchor_node)
+                     np.array(kinds, dtype=np.uint8), labels, anchor_node, np.array(walked))

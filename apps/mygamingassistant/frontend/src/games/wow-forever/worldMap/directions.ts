@@ -214,7 +214,7 @@ class Walking {
     }
     // Search from the trip's start / end (index 0 / 1): the same two searches serve every hub.
     const [src, dst] = v <= 1 ? [ends.b, ends.a] : [ends.a, ends.b];
-    const d = searchFrom(ends.wg, src).dist[dst];
+    const d = searchFrom(ends.wg, src).yards[dst];
     return Number.isFinite(d) ? d : null;
   }
 

@@ -9,7 +9,8 @@ export interface TestNode {
   water?: boolean;
 }
 
-export type TestEdge = [a: number, b: number, cost: number, kind?: number];
+/** `yards` (walked) defaults to the cost: no road preference. */
+export type TestEdge = [a: number, b: number, cost: number, kind?: number, yards?: number];
 
 /** Writes the generator's layout (`backend/scripts/wow_world_map/walk/export.py`). */
 export function encode(
@@ -26,11 +27,11 @@ export function encode(
   const n = nodes.length;
   const m = edges.length;
   const h = hubs.length;
-  const size = 24 + 9 * n + 11 * m + 4 * h + 2 * h * h + json.length;
+  const size = 24 + 9 * n + 13 * m + 4 * h + 2 * h * h + json.length;
   const buf = new ArrayBuffer(size);
   const view = new DataView(buf);
   [..."MGWK"].forEach((c, i) => view.setUint8(i, c.charCodeAt(0)));
-  view.setUint16(4, 1, true);
+  view.setUint16(4, 2, true);
   view.setUint16(6, mapId, true);
   view.setUint32(8, n, true);
   view.setUint32(12, m, true);
@@ -58,6 +59,10 @@ export function encode(
   }
   for (const e of edges) {
     view.setUint16(at, e[2], true);
+    at += 2;
+  }
+  for (const e of edges) {
+    view.setUint16(at, e[4] ?? e[2], true);
     at += 2;
   }
   for (const e of edges) view.setUint8(at++, e[3] ?? WALK_EDGE.walk);

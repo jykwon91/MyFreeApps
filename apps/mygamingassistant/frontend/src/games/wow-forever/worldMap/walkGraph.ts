@@ -5,14 +5,16 @@
  *
  * Nodes are patches of walkable ground (or water) a few yards to ~30 yd
  * across, each labelled with the room / sub-area it lies in ("The Great
- * Forge", "Kharanos"). Edge costs are in "ground yards" — yards at run speed,
- * so swimming costs more than its length. The file also carries the walk
- * cost between every pair of travel hubs (flight masters, docks, the tram).
+ * Forge", "Kharanos"). Edges carry "ground yards" — yards at run speed, so
+ * swimming counts more than its length — twice: the cost, where a yard off
+ * the road counts more so routes keep to the roads, and the yards actually
+ * walked, which time the walk. The file also carries the yards walked between
+ * every pair of travel hubs (flight masters, docks, the tram).
  */
 import type { WorldPoint } from "@/games/wow-forever/types/worldMap";
 
 const MAGIC = "MGWK";
-const VERSION = 1;
+const VERSION = 2;
 const UNREACHABLE = 0xffff;
 const GZIP_MAGIC = [0x1f, 0x8b];
 const HEADER_BYTES = 24;
@@ -52,7 +54,10 @@ export interface WalkGraph {
   /** CSR adjacency: node i's edges are `[start[i], start[i + 1])`. */
   start: Uint32Array;
   to: Uint32Array;
+  /** What picks the path: ground yards, a yard off the road counting more. */
   cost: Uint16Array;
+  /** Ground yards actually walked: what a walk takes. */
+  yards: Uint16Array;
   kind: Uint8Array;
   labels: readonly WalkLabel[];
   /** A dungeon's graph: its hubs are entrances (`e<trigger>`) and bosses (`b<encounter>`). */
@@ -60,7 +65,7 @@ export interface WalkGraph {
   /** Travel hub key (`t<flight node id>`, `s<transport id>.<stop>`) -> hub row. */
   hubRow: ReadonlyMap<string, number>;
   hubNode: Uint32Array;
-  /** Hub-to-hub ground yards, row-major; `UNREACHABLE` = no path. */
+  /** Hub-to-hub ground yards walked along the cheapest path, row-major; `UNREACHABLE` = no path. */
   hubCost: Uint16Array;
 }
 
@@ -96,6 +101,7 @@ export function decodeWalkGraph(buffer: ArrayBuffer): WalkGraph {
   const a = take(4 * m, (b) => new Uint32Array(b));
   const bEnd = take(4 * m, (b) => new Uint32Array(b));
   const edgeCost = take(2 * m, (b) => new Uint16Array(b));
+  const edgeYards = take(2 * m, (b) => new Uint16Array(b));
   const edgeKind = take(m, (b) => new Uint8Array(b));
   const hubNode = take(4 * h, (b) => new Uint32Array(b));
   const hubCost = take(2 * h * h, (b) => new Uint16Array(b));
@@ -117,6 +123,7 @@ export function decodeWalkGraph(buffer: ArrayBuffer): WalkGraph {
   const slots = start[n];
   const to = new Uint32Array(slots);
   const cost = new Uint16Array(slots);
+  const yards = new Uint16Array(slots);
   const kind = new Uint8Array(slots);
   for (let i = 0; i < m; i++) {
     const ways: [number, number][] = [[a[i], bEnd[i]]];
@@ -125,6 +132,7 @@ export function decodeWalkGraph(buffer: ArrayBuffer): WalkGraph {
       const slot = fill[u]++;
       to[slot] = v;
       cost[slot] = edgeCost[i];
+      yards[slot] = edgeYards[i];
       kind[slot] = edgeKind[i];
     }
   }
@@ -142,6 +150,7 @@ export function decodeWalkGraph(buffer: ArrayBuffer): WalkGraph {
     start,
     to,
     cost,
+    yards,
     kind,
     labels: meta.labels.map(([name, zone, indoor, city]) => ({ name, zone, indoor: indoor === 1, city: city === 1 })),
     instance: meta.instance === 1,
@@ -195,8 +204,10 @@ export function snapToGraph(graph: WalkGraph, point: WorldPoint): number | null 
 
 export interface WalkSearch {
   source: number;
-  /** Ground yards from the source; Infinity = unreachable. */
+  /** Cost from the source; Infinity = unreachable. */
   dist: Float64Array;
+  /** Ground yards walked from the source along the cheapest path. */
+  yards: Float64Array;
   /** The edge slot each node was reached by (-1 at the source / unreached). */
   via: Int32Array;
   /** The node each node was reached from. */
@@ -266,9 +277,11 @@ export function searchFrom(graph: WalkGraph, source: number): WalkSearch {
   if (known) return known;
 
   const dist = new Float64Array(graph.size).fill(Number.POSITIVE_INFINITY);
+  const yards = new Float64Array(graph.size).fill(Number.POSITIVE_INFINITY);
   const via = new Int32Array(graph.size).fill(-1);
   const prev = new Int32Array(graph.size).fill(-1);
   dist[source] = 0;
+  yards[source] = 0;
   const heap = new Heap();
   heap.push(0, source);
   while (heap.size) {
@@ -279,19 +292,20 @@ export function searchFrom(graph: WalkGraph, source: number): WalkSearch {
       const nd = d + graph.cost[s];
       if (nd < dist[v]) {
         dist[v] = nd;
+        yards[v] = yards[u] + graph.yards[s];
         via[v] = s;
         prev[v] = u;
         heap.push(nd, v);
       }
     }
   }
-  const search = { source, dist, via, prev };
+  const search = { source, dist, yards, via, prev };
   if (cache.size >= SEARCH_CACHE) cache.delete(cache.keys().next().value as number);
   cache.set(source, search);
   return search;
 }
 
-/** Ground yards between two hubs, or null when the file has no path between them. */
+/** Ground yards walked between two hubs, or null when the file has no path between them. */
 export function hubToHub(graph: WalkGraph, from: string, to: string): number | null {
   const i = graph.hubRow.get(from);
   const j = graph.hubRow.get(to);

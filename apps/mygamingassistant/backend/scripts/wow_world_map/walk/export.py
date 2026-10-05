@@ -16,10 +16,12 @@ inside, the layout is (little-endian)::
             u16 label[n]                      index into json "labels"
             u8  flags[n]                      1 = water (swim)
     edges:  u32 a[m], u32 b[m], u16 cost[m]   cost in yards at run speed, off-road yards
-                                              weighted (clusters.OFFROAD_FACTOR)
+                                              weighted (clusters.OFFROAD_FACTOR): picks the path
+            u16 yards[m]                      yards at run speed actually walked: the time
             u8  kind[m]                       0 = walk / swim, 1 = lift, 2 = portal,
                                               3 = drop, 4 = teleport (3+ go a -> b only)
-    hubs:   u32 node[h], u16 matrix[h*h]      hub-to-hub cost; 65535 = no path
+    hubs:   u32 node[h], u16 matrix[h*h]      hub-to-hub yards walked along the cheapest
+                                              path; 65535 = no path
     json:   {"labels": [[name, zone, indoor, city]], "hubs": [key], "instance": 0 | 1}
 
 Hub keys match ``travel.json``: ``t<taxi node id>`` and ``s<transport id>.<stop index>``.
@@ -44,7 +46,7 @@ from scripts.wow_world_map.walk.clusters import Anchor, WalkGraph
 from scripts.wow_world_map.walk.links import ONE_WAY
 
 MAGIC = b"MGWK"
-VERSION = 1
+VERSION = 2
 UNREACHABLE = 0xFFFF
 
 
@@ -98,17 +100,25 @@ def travel_hubs(travel: dict, map_id: int) -> list[Hub]:
     return hubs
 
 
-def _adjacency(graph: WalkGraph) -> list[list[tuple[int, float]]]:
-    adj: list[list[tuple[int, float]]] = [[] for _ in range(len(graph.position))]
-    for (a, b), c, kind in zip(graph.edges.tolist(), graph.cost.tolist(), graph.kind.tolist()):
-        adj[a].append((b, c))
+def _yards(graph: WalkGraph) -> np.ndarray:
+    return graph.cost if graph.yards is None else graph.yards
+
+
+def _adjacency(graph: WalkGraph) -> list[list[tuple[int, float, float]]]:
+    """Each node's (neighbour, cost, yards walked)."""
+    adj: list[list[tuple[int, float, float]]] = [[] for _ in range(len(graph.position))]
+    edges = zip(graph.edges.tolist(), graph.cost.tolist(), _yards(graph).tolist(), graph.kind.tolist())
+    for (a, b), c, y, kind in edges:
+        adj[a].append((b, c, y))
         if kind not in ONE_WAY:
-            adj[b].append((a, c))
+            adj[b].append((a, c, y))
     return adj
 
 
-def _dijkstra(adj: list[list[tuple[int, float]]], src: int, targets: set[int]) -> dict[int, float]:
+def _dijkstra(adj: list[list[tuple[int, float, float]]], src: int, targets: set[int]) -> dict[int, float]:
+    """The yards walked along the cheapest path from ``src`` to each reachable target."""
     dist = {src: 0.0}
+    walked = {src: 0.0}
     found: dict[int, float] = {}
     heap = [(0.0, src)]
     while heap and len(found) < len(targets):
@@ -116,17 +126,18 @@ def _dijkstra(adj: list[list[tuple[int, float]]], src: int, targets: set[int]) -
         if d > dist[u]:
             continue
         if u in targets:
-            found[u] = d
-        for v, c in adj[u]:
+            found[u] = walked[u]
+        for v, c, y in adj[u]:
             nd = d + c
             if nd < dist.get(v, math.inf):
                 dist[v] = nd
+                walked[v] = walked[u] + y
                 heapq.heappush(heap, (nd, v))
     return found
 
 
 def hub_matrix(graph: WalkGraph, hubs: list[Hub]) -> tuple[list[Hub], list[int], np.ndarray]:
-    """The hubs on the graph, their nodes, and the walk cost between every pair.
+    """The hubs on the graph, their nodes, and the yards walked between every pair.
 
     ``hubs`` must be the anchors :func:`clusters.cluster` was given, in order.
     """
@@ -170,6 +181,7 @@ def write_walk(path: Path, map_id: int, graph: WalkGraph, hubs: list[Hub], hub_n
         graph.label.astype("<u2").tobytes(), graph.water.astype(np.uint8).tobytes(),
         graph.edges[:, 0].astype("<u4").tobytes(), graph.edges[:, 1].astype("<u4").tobytes(),
         np.minimum(np.round(graph.cost), UNREACHABLE - 1).astype("<u2").tobytes(),
+        np.minimum(np.round(_yards(graph)), UNREACHABLE - 1).astype("<u2").tobytes(),
         graph.kind.astype(np.uint8).tobytes(),
         np.array(hub_nodes, dtype="<u4").tobytes(), matrix.astype("<u2").tobytes(),
         meta,

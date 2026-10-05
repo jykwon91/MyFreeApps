@@ -301,6 +301,8 @@ def test_the_road_keeps_its_own_clusters_and_costs_less_to_walk() -> None:
     (edge,) = graph.edges.tolist()
     # Poly 1 (the road's centre) -> 0 along the road, then a step half on it to 3.
     assert graph.cost[0] == pytest.approx(10 + 10 * (1 + OFFROAD_FACTOR) / 2)
+    # The preference picks the path; the time is the yards actually walked.
+    assert graph.yards[0] == pytest.approx(20)
     assert sorted(graph.position[edge, 1].tolist()) == [0, 10]
 
 
@@ -345,18 +347,19 @@ def test_the_walk_file_has_the_layout_the_page_reads(tmp_path: Path) -> None:
         kind=np.array([0, 1], dtype=np.uint8),
         labels=[Label("Kharanos", "Dun Morogh", False, False), Label("The Great Forge", "Ironforge", True, True)],
         anchor_node=[0, 1, None],
+        yards=np.array([25.0, 42.0]),
     )
     hubs = [Hub("t6", 10, -20, 3), Hub("s10.0", 40, -20, 5, dock=True), Hub("t99", 0, 0, 0)]
     kept, nodes, matrix = hub_matrix(graph, hubs)
     assert [h.key for h in kept] == ["t6", "s10.0"]
     assert nodes == [0, 1]
-    assert matrix.tolist() == [[0, 30], [30, 0]]
+    assert matrix.tolist() == [[0, 25], [25, 0]]  # yards walked, not the road-weighted cost
 
     write_walk(tmp_path / "0.walk", 0, graph, kept, nodes, matrix)
     data = gzip.decompress((tmp_path / "0.walk").read_bytes())
     assert data[:4] == b"MGWK"
     version, map_id, n, m, h, json_bytes = struct.unpack_from("<2H4I", data, 4)
-    assert (version, map_id, n, m, h) == (1, 0, 3, 2, 2)
+    assert (version, map_id, n, m, h) == (2, 0, 3, 2, 2)
     at = 24
     x, y, z = (np.frombuffer(data, "<i2", n, at + 2 * n * k).tolist() for k in range(3))
     assert (x, y, z) == ([10, 40, 70], [-21, -20, -20], [3, 5, -1])
@@ -367,10 +370,11 @@ def test_the_walk_file_has_the_layout_the_page_reads(tmp_path: Path) -> None:
     assert np.frombuffer(data, "<u4", m, at).tolist() == [0, 1]
     assert np.frombuffer(data, "<u4", m, at + 4 * m).tolist() == [1, 2]
     assert np.frombuffer(data, "<u2", m, at + 8 * m).tolist() == [30, 42]
-    assert np.frombuffer(data, "u1", m, at + 10 * m).tolist() == [0, 1]
-    at += 11 * m
+    assert np.frombuffer(data, "<u2", m, at + 10 * m).tolist() == [25, 42]
+    assert np.frombuffer(data, "u1", m, at + 12 * m).tolist() == [0, 1]
+    at += 13 * m
     assert np.frombuffer(data, "<u4", h, at).tolist() == [0, 1]
-    assert np.frombuffer(data, "<u2", h * h, at + 4 * h).tolist() == [0, 30, 30, 0]
+    assert np.frombuffer(data, "<u2", h * h, at + 4 * h).tolist() == [0, 25, 25, 0]
     at += 4 * h + 2 * h * h
     assert json.loads(data[at:at + json_bytes]) == {
         "labels": [["Kharanos", "Dun Morogh", 0, 0], ["The Great Forge", "Ironforge", 1, 1]],
