@@ -186,6 +186,7 @@ class Walking {
   constructor(
     private readonly graph: readonly GraphNode[],
     private readonly walk: WalkGraphs,
+    private readonly walker: PlayerFaction,
   ) {
     this.pinned = graph.map((g) => {
       const wg = walk.get(g.end.world.continent);
@@ -203,25 +204,28 @@ class Walking {
     return wg && a !== null && b !== null ? { wg, a, b } : null;
   }
 
-  /** Ground yards on foot, or null when the walk graph can't join them. */
-  yards(u: number, v: number): number | null {
+  /**
+   * Ground yards on foot, a yard on the other faction's ground counting more
+   * (`WalkSearch.effort`), or null when the walk graph can't join them.
+   */
+  effort(u: number, v: number): number | null {
     const ends = this.ends(u, v);
     if (!ends) return null;
     const hu = this.graph[u].hub;
     const hv = this.graph[v].hub;
     if (hu !== undefined && hv !== undefined && ends.wg.hubRow.has(hu) && ends.wg.hubRow.has(hv)) {
-      return hubToHub(ends.wg, hu, hv);
+      return hubToHub(ends.wg, hu, hv, this.walker);
     }
     // Search from the trip's start / end (index 0 / 1): the same two searches serve every hub.
     const [src, dst] = v <= 1 ? [ends.b, ends.a] : [ends.a, ends.b];
-    const d = searchFrom(ends.wg, src).yards[dst];
+    const d = searchFrom(ends.wg, src, this.walker).effort[dst];
     return Number.isFinite(d) ? d : null;
   }
 
   seconds(u: number, v: number): number {
-    const yards = this.yards(u, v);
+    const effort = this.effort(u, v);
     const straight = yardsBetween(this.graph[u].end.world, this.graph[v].end.world);
-    return (yards ?? straight * STRAIGHT_WALK_DETOUR) / RUN_YARDS_PER_SECOND;
+    return (effort ?? straight * STRAIGHT_WALK_DETOUR) / RUN_YARDS_PER_SECOND;
   }
 
   step(u: number, v: number): DirectionStep {
@@ -233,7 +237,7 @@ class Walking {
       return { kind: STEP_KIND.walk, text: `${to.place.label} is right here — ${place}`, place: to.place };
     }
     const ends = this.ends(u, v);
-    const leg = ends && walkLeg(ends.wg, ends.a, ends.b, from.world, to.world);
+    const leg = ends && walkLeg(ends.wg, ends.a, ends.b, from.world, to.world, this.walker);
     if (!leg) {
       this.straightUsed = true;
       const heading = compassDirection(from.world, to.world);
@@ -322,7 +326,7 @@ export function planDirections(
   walk: WalkGraphs = NO_WALK_GRAPHS,
 ): Directions | null {
   const graph = buildGraph(start, end, faction, data, options);
-  const walking = new Walking(graph, walk);
+  const walking = new Walking(graph, walk, faction);
   const flightIndex = new Map<number, number>();
   graph.forEach((g, i) => {
     if (g.flight) flightIndex.set(g.flight.id, i);

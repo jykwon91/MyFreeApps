@@ -32,8 +32,8 @@ from scripts.wow_world_map.walk.walk_graph import Label, PolyGraph
 RUN_SPEED = 7.0
 SWIM_SPEED = 4.72
 SWIM_FACTOR = RUN_SPEED / SWIM_SPEED
-# Off the road, a yard costs this many: directions keep to the roads a
-# player would follow (``roads.py``) unless leaving them saves real time.
+# Off the road (on land or in water), a yard costs this many: directions keep
+# to the roads a player would follow (``roads.py``) unless leaving them saves real time.
 OFFROAD_FACTOR = 1.4
 OUTDOOR_RADIUS = 32.0
 INDOOR_RADIUS = 12.0
@@ -62,6 +62,9 @@ class WalkGraph:
     # (m,) ground yards actually walked along each edge: ``cost`` without the
     # road preference, for walking *times*. None: the same as ``cost``.
     yards: np.ndarray | None = None
+    # (n,) u8 hostile.HOSTILE_TO / ENEMY_TERRITORY bits: the other faction's towns
+    # and home zones. None: none.
+    hostile: np.ndarray | None = None
 
 
 def _snap_score(position: np.ndarray, water: np.ndarray, x: float, y: float, z: float) -> np.ndarray:
@@ -160,9 +163,10 @@ class _StepCost:
         self.cx, self.cy, self.cz, self.water, self.road = cx, cy, cz, water, road
 
     def _factor(self, p: int, prefer_road: bool) -> float:
-        if self.water[p]:
-            return SWIM_FACTOR
-        return 1.0 if not prefer_road or self.road is None or self.road[p] else OFFROAD_FACTOR
+        # Water is off the road too: without the road weighting on top, a long
+        # swim would look nearly as cheap as walking the land beside it.
+        offroad = OFFROAD_FACTOR if prefer_road and self.road is not None and not self.road[p] else 1.0
+        return offroad * SWIM_FACTOR if self.water[p] else offroad
 
     def distance(self, a: int, b: int) -> float:
         return math.sqrt((self.cx[a] - self.cx[b]) ** 2 + (self.cy[a] - self.cy[b]) ** 2

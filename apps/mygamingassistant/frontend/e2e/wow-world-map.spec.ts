@@ -364,3 +364,25 @@ test("a capital drawn on its zone's map opens on a click", async ({ page }) => {
   await map.click({ position: await mapPoint(page, 19.6, 27.5) });
   await expect(page.getByRole("img", { name: "Stormwind City map" })).toBeVisible();
 });
+
+test("an Alliance walker in Darkshore reaches Desolace by Stonetalon, not through Horde ground", async ({ page }) => {
+  // Only Auberdine's flight path known: no flight helps, so the planner walks.
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "mga.wowForever.worldMap.player.v1",
+      JSON.stringify({ faction: "A", classId: "warlock", zoneId: 1439, level: 26, position: { x: 36.8, y: 44.6 } }),
+    );
+    localStorage.setItem("mga.wowForever.worldMap.travel.v1", JSON.stringify({ flights: "known", knownFlightIds: [26] }));
+  });
+  await page.goto("/wow-forever/map?to=pt%3A1443%2C71.7%2C59.4&dir=1&m=1442");
+
+  const planner = page.getByRole("region", { name: "Route planner" });
+  await expect(planner).toContainText("keep clear of the other faction's towns");
+  const steps = planner.getByRole("list", { name: "Directions" });
+  await expect(steps).toContainText(/Walk ~[\d,]+ yd to Desolace/);
+  await steps.getByText(/Step by step/).click();
+  await expect(steps).toContainText("The Talondeep Path");
+  await expect(steps).toContainText("The Charred Vale");
+  await expect(steps).not.toContainText("Mulgore");
+  await expect(steps).not.toContainText("The Barrens");
+});
