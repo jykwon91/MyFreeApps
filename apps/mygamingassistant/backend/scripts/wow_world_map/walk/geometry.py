@@ -161,6 +161,8 @@ def _chunk_mesh(chunk: terrain.Chunk, road: frozenset[tuple[int, int]]) -> tuple
                 if liquid[1] not in LIQUID_WATER_BANKS:
                     continue  # under lava / slime: not walkable
                 if top < liquid[0] - WADE_DEPTH:
+                    if chunk.deep[qi, qj]:
+                        continue  # open sea: fatigue drowns a swimmer
                     # The swim plane sits at wading depth, level with the wadeable
                     # ground next to it, so walking into the water joins up.
                     swim = liquid[0] - WADE_DEPTH

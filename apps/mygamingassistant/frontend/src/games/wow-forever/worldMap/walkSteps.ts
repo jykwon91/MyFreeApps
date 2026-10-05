@@ -8,7 +8,7 @@
  * ~300 yd" would walk you into a wall, a stretch goes turn by turn: "Turn
  * left and head south, ~80 yd".
  */
-import type { WorldPoint } from "@/games/wow-forever/types/worldMap";
+import type { PlayerFaction, WorldPoint } from "@/games/wow-forever/types/worldMap";
 import { compassDirection, formatYards } from "@/games/wow-forever/worldMap/geometry";
 import {
   isJump,
@@ -312,8 +312,15 @@ export function describeWalk(graph: WalkGraph, hops: readonly WalkHop[]): string
  * The walking leg between two graph nodes (`from` / `to` are the exact end
  * points, drawn at the path's ends), or null when nothing joins them.
  */
-export function walkLeg(graph: WalkGraph, a: number, b: number, from: WorldPoint, to: WorldPoint): WalkLeg | null {
-  const hops = walkPath(graph, a, b);
+export function walkLeg(
+  graph: WalkGraph,
+  a: number,
+  b: number,
+  from: WorldPoint,
+  to: WorldPoint,
+  walker?: PlayerFaction,
+): WalkLeg | null {
+  const hops = walkPath(graph, a, b, walker);
   if (!hops) return null;
   const path = [from, ...hops.map((h) => nodePoint(graph, h.node)), to];
   let yards = 0;
@@ -323,7 +330,7 @@ export function walkLeg(graph: WalkGraph, a: number, b: number, from: WorldPoint
   }
   const steps = walkSteps(graph, hops);
   return {
-    cost: searchFrom(graph, a).yards[b],
+    cost: searchFrom(graph, a, walker).yards[b],
     yards,
     path,
     detail: steps.length < 2 ? [] : steps.map((s) => s.text),

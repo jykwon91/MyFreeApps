@@ -6,6 +6,13 @@ from pathlib import Path
 
 from scripts.wow_world_map import sources
 from scripts.wow_world_map.walk import clusters, export, walk_graph
+from scripts.wow_world_map.walk.hostile import (
+    ENEMY_TERRITORY,
+    HOSTILE_TO,
+    hostile_flags,
+    hostile_spawns,
+    territory_flags,
+)
 from scripts.wow_world_map.walk.links import map_links
 from scripts.wow_world_map.walk.navbuild import build_navmesh
 
@@ -24,9 +31,16 @@ def _build(map_id: int, hubs: list[export.Hub], out_dir: Path, instance: bool) -
     road = None if instance else polys.road
     graph = clusters.cluster(polys, labels, names, map_links(map_id, instance), [h.anchor for h in hubs],
                              fine=instance, road=road)
-    hubs, hub_nodes, matrix = export.hub_matrix(graph, hubs)
+    if not instance:
+        zones = territory_flags([lab.zone for lab in graph.labels], map_id)
+        graph.hostile = hostile_flags(graph.position, hostile_spawns(map_id)) | zones[graph.label]
+        for name, bits in (("near guards", HOSTILE_TO), ("enemy territory", ENEMY_TERRITORY)):
+            counts = {f: int((graph.hostile & bit > 0).sum()) for f, bit in bits.items()}
+            print(f"  {name} (nodes): {counts}")
+    matrices = [export.hub_matrix(graph, hubs, faction) for faction in export.FACTIONS]
+    hubs, hub_nodes, _ = matrices[0]
     path = out_dir / f"{map_id}.walk"
-    size = export.write_walk(path, map_id, graph, hubs, hub_nodes, matrix, instance)
+    size = export.write_walk(path, map_id, graph, hubs, hub_nodes, [m for _, _, m in matrices], instance)
     print(f"  {path.name}: {size / 1e6:.2f} MB, {len(hubs)} hubs, {time.time() - start:.0f} s")
     return path
 

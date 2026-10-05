@@ -8,17 +8,34 @@
  * Forge", "Kharanos"). Edges carry "ground yards" — yards at run speed, so
  * swimming counts more than its length — twice: the cost, where a yard off
  * the road counts more so routes keep to the roads, and the yards actually
- * walked, which time the walk. The file also carries the yards walked between
- * every pair of travel hubs (flight masters, docks, the tram).
+ * walked, which time the walk. Ground near the other faction's guards, and in
+ * its home zones, is dangerous to a walker of yours: a yard there counts
+ * `HOSTILE_FACTOR` / `TERRITORY_FACTOR` times, both for the path and for the
+ * walk's "effort" the trip planner weighs against a boat or a flight — so a
+ * route goes around a town and keeps to your side's ground, but still reaches
+ * a spot inside one. The file also carries the effort between every pair of
+ * travel hubs (flight masters, docks, the tram), for an Alliance and for a
+ * Horde walker.
  */
-import type { WorldPoint } from "@/games/wow-forever/types/worldMap";
+import type { PlayerFaction, WorldPoint } from "@/games/wow-forever/types/worldMap";
+import { FACTION } from "@/games/wow-forever/types/worldMap";
 
 const MAGIC = "MGWK";
-const VERSION = 2;
+const VERSION = 3;
 const UNREACHABLE = 0xffff;
 const GZIP_MAGIC = [0x1f, 0x8b];
 const HEADER_BYTES = 24;
 const FLAG_WATER = 1;
+/** Node flags, for that faction's walker (`backend/.../walk/hostile.py`): near the other faction's guards ... */
+const FLAG_HOSTILE: Record<PlayerFaction, number> = { [FACTION.alliance]: 2, [FACTION.horde]: 4 };
+/** ... and in the other faction's home zone. */
+const FLAG_ENEMY_TERRITORY: Record<PlayerFaction, number> = { [FACTION.alliance]: 8, [FACTION.horde]: 16 };
+const DANGER_FLAGS = 2 | 4 | 8 | 16;
+/** What a yard near hostile guards / in the other faction's home zone counts (`hostile.py`). */
+export const HOSTILE_FACTOR = 10;
+export const TERRITORY_FACTOR = 3;
+/** The order of the file's hub matrices (`export.FACTIONS`). */
+const MATRIX_FACTIONS: readonly PlayerFaction[] = [FACTION.alliance, FACTION.horde];
 
 /** Kinds from `drop` up go one way only, a -> b (a dungeon's ledges and one-way teleports). */
 export const WALK_EDGE = { walk: 0, lift: 1, portal: 2, drop: 3, teleport: 4 } as const;
@@ -51,6 +68,8 @@ export interface WalkGraph {
   z: Int16Array;
   label: Uint16Array;
   water: Uint8Array;
+  /** `FLAG_HOSTILE` / `FLAG_ENEMY_TERRITORY` bits: the other faction's towns and home zones. */
+  danger: Uint8Array;
   /** CSR adjacency: node i's edges are `[start[i], start[i + 1])`. */
   start: Uint32Array;
   to: Uint32Array;
@@ -65,8 +84,8 @@ export interface WalkGraph {
   /** Travel hub key (`t<flight node id>`, `s<transport id>.<stop>`) -> hub row. */
   hubRow: ReadonlyMap<string, number>;
   hubNode: Uint32Array;
-  /** Hub-to-hub ground yards walked along the cheapest path, row-major; `UNREACHABLE` = no path. */
-  hubCost: Uint16Array;
+  /** Hub-to-hub effort (see `WalkSearch`) along each faction's cheapest path, row-major; `UNREACHABLE` = no path. */
+  hubCost: Record<PlayerFaction, Uint16Array>;
 }
 
 function copy<T>(bytes: Uint8Array, offset: number, length: number, make: (b: ArrayBuffer) => T): T {
@@ -104,7 +123,7 @@ export function decodeWalkGraph(buffer: ArrayBuffer): WalkGraph {
   const edgeYards = take(2 * m, (b) => new Uint16Array(b));
   const edgeKind = take(m, (b) => new Uint8Array(b));
   const hubNode = take(4 * h, (b) => new Uint32Array(b));
-  const hubCost = take(2 * h * h, (b) => new Uint16Array(b));
+  const [allianceHubCost, hordeHubCost] = MATRIX_FACTIONS.map(() => take(2 * h * h, (b) => new Uint16Array(b)));
   const meta = JSON.parse(new TextDecoder().decode(bytes.subarray(at, at + jsonBytes))) as {
     labels: [string, string, number, number?][];
     hubs: string[];
@@ -137,7 +156,11 @@ export function decodeWalkGraph(buffer: ArrayBuffer): WalkGraph {
     }
   }
   const water = new Uint8Array(n);
-  for (let i = 0; i < n; i++) water[i] = flags[i] & FLAG_WATER;
+  const danger = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    water[i] = flags[i] & FLAG_WATER;
+    danger[i] = flags[i] & DANGER_FLAGS;
+  }
 
   return {
     mapId,
@@ -147,6 +170,7 @@ export function decodeWalkGraph(buffer: ArrayBuffer): WalkGraph {
     z,
     label,
     water,
+    danger,
     start,
     to,
     cost,
@@ -156,7 +180,7 @@ export function decodeWalkGraph(buffer: ArrayBuffer): WalkGraph {
     instance: meta.instance === 1,
     hubRow: new Map(meta.hubs.map((key, i) => [key, i])),
     hubNode,
-    hubCost,
+    hubCost: { [FACTION.alliance]: allianceHubCost, [FACTION.horde]: hordeHubCost },
   };
 }
 
@@ -208,6 +232,8 @@ export interface WalkSearch {
   dist: Float64Array;
   /** Ground yards walked from the source along the cheapest path. */
   yards: Float64Array;
+  /** The same yards, a yard on dangerous ground counting more: what the trip planner weighs. */
+  effort: Float64Array;
   /** The edge slot each node was reached by (-1 at the source / unreached). */
   via: Int32Array;
   /** The node each node was reached from. */
@@ -263,25 +289,44 @@ class Heap {
   }
 }
 
-const searches = new WeakMap<WalkGraph, Map<number, WalkSearch>>();
+/** What a yard on each node counts for a `walker` (none: 1 everywhere). */
+function dangerFactors(graph: WalkGraph, walker?: PlayerFaction): Float32Array {
+  const factor = new Float32Array(graph.size).fill(1);
+  if (!walker) return factor;
+  for (let i = 0; i < graph.size; i++) {
+    if (graph.danger[i] & FLAG_HOSTILE[walker]) factor[i] = HOSTILE_FACTOR;
+    else if (graph.danger[i] & FLAG_ENEMY_TERRITORY[walker]) factor[i] = TERRITORY_FACTOR;
+  }
+  return factor;
+}
+
+const searches = new WeakMap<WalkGraph, Map<string, WalkSearch>>();
 const SEARCH_CACHE = 12;
 
-/** Cheapest walk from `source` to every node (cached: a trip's planning asks for the same few sources). */
-export function searchFrom(graph: WalkGraph, source: number): WalkSearch {
+/**
+ * Cheapest walk from `source` to every node for a `walker` of that faction
+ * (none: no ground is dangerous — a dungeon). Cached: a trip's planning asks
+ * for the same few sources.
+ */
+export function searchFrom(graph: WalkGraph, source: number, walker?: PlayerFaction): WalkSearch {
   let cache = searches.get(graph);
   if (!cache) {
     cache = new Map();
     searches.set(graph, cache);
   }
-  const known = cache.get(source);
+  const key = `${walker ?? ""}${source}`;
+  const known = cache.get(key);
   if (known) return known;
+  const factor = dangerFactors(graph, walker);
 
   const dist = new Float64Array(graph.size).fill(Number.POSITIVE_INFINITY);
   const yards = new Float64Array(graph.size).fill(Number.POSITIVE_INFINITY);
+  const effort = new Float64Array(graph.size).fill(Number.POSITIVE_INFINITY);
   const via = new Int32Array(graph.size).fill(-1);
   const prev = new Int32Array(graph.size).fill(-1);
   dist[source] = 0;
   yards[source] = 0;
+  effort[source] = 0;
   const heap = new Heap();
   heap.push(0, source);
   while (heap.size) {
@@ -289,28 +334,34 @@ export function searchFrom(graph: WalkGraph, source: number): WalkSearch {
     if (d > dist[u]) continue;
     for (let s = graph.start[u]; s < graph.start[u + 1]; s++) {
       const v = graph.to[s];
-      const nd = d + graph.cost[s];
+      const danger = Math.max(factor[u], factor[v]);
+      const nd = d + graph.cost[s] * danger;
       if (nd < dist[v]) {
         dist[v] = nd;
         yards[v] = yards[u] + graph.yards[s];
+        effort[v] = effort[u] + graph.yards[s] * danger;
         via[v] = s;
         prev[v] = u;
         heap.push(nd, v);
       }
     }
   }
-  const search = { source, dist, yards, via, prev };
-  if (cache.size >= SEARCH_CACHE) cache.delete(cache.keys().next().value as number);
-  cache.set(source, search);
+  const search = { source, dist, yards, effort, via, prev };
+  if (cache.size >= SEARCH_CACHE) cache.delete(cache.keys().next().value as string);
+  cache.set(key, search);
   return search;
 }
 
-/** Ground yards walked between two hubs, or null when the file has no path between them. */
-export function hubToHub(graph: WalkGraph, from: string, to: string): number | null {
+/**
+ * A `walker`'s effort between two hubs (see `WalkSearch`), or null when the
+ * file has no path between them. Without a walker (a dungeon, where no ground
+ * is dangerous) both factions' tables are the same: the yards walked.
+ */
+export function hubToHub(graph: WalkGraph, from: string, to: string, walker: PlayerFaction = FACTION.alliance): number | null {
   const i = graph.hubRow.get(from);
   const j = graph.hubRow.get(to);
   if (i === undefined || j === undefined) return null;
-  const c = graph.hubCost[i * graph.hubNode.length + j];
+  const c = graph.hubCost[walker][i * graph.hubNode.length + j];
   return c === UNREACHABLE ? null : c;
 }
 
@@ -325,9 +376,9 @@ export interface WalkHop {
   kind: WalkEdgeKind;
 }
 
-/** The nodes of the cheapest walk, source first; null when unreachable. */
-export function walkPath(graph: WalkGraph, from: number, to: number): WalkHop[] | null {
-  const search = searchFrom(graph, from);
+/** The nodes of the cheapest walk for a `walker` (see `searchFrom`), source first; null when unreachable. */
+export function walkPath(graph: WalkGraph, from: number, to: number, walker?: PlayerFaction): WalkHop[] | null {
+  const search = searchFrom(graph, from, walker);
   if (!Number.isFinite(search.dist[to])) return null;
   const hops: WalkHop[] = [];
   for (let v = to; v >= 0; v = search.prev[v]) {

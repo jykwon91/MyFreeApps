@@ -14,6 +14,7 @@ import {
   inflateWalkFile,
   searchFrom,
   snapToGraph,
+  TERRITORY_FACTOR,
   walkPath,
   WALK_EDGE,
   type WalkGraph,
@@ -78,6 +79,67 @@ describe("walk graph file", () => {
     expect(search.dist[2]).toBe(120);
     expect(search.yards[2]).toBe(120);
     expect(search.yards[3]).toBe(50);
+  });
+
+  it("goes around the other faction's town, but walks through its own", () => {
+    // 0 -> 1 -> 2 through a Horde town (2 x 60 yd), or 0 -> 3 -> 2 around it (2 x 150 yd).
+    const nodes: TestNode[] = [
+      { x: 0, y: 0, z: 0, label: 0 },
+      { x: 60, y: 0, z: 0, label: 0, hostile: 2 },
+      { x: 120, y: 0, z: 0, label: 0 },
+      { x: 60, y: 140, z: 0, label: 0 },
+    ];
+    const edges: TestEdge[] = [
+      [0, 1, 60],
+      [1, 2, 60],
+      [0, 3, 150],
+      [3, 2, 150],
+    ];
+    const graph = decodeWalkGraph(encode(0, nodes, edges, LABELS));
+    expect(walkPath(graph, 0, 2, FACTION.alliance)?.map((h) => h.node)).toEqual([0, 3, 2]);
+    expect(searchFrom(graph, 0, FACTION.alliance).yards[2]).toBe(300);
+    expect(walkPath(graph, 0, 2, FACTION.horde)?.map((h) => h.node)).toEqual([0, 1, 2]);
+    // Into the town itself: still a way in, the short one.
+    expect(walkPath(graph, 0, 1, FACTION.alliance)?.map((h) => h.node)).toEqual([0, 1]);
+  });
+
+  it("keeps to its own side's ground, and the planner weighs the other side's yards more", () => {
+    // 0 -> 1 -> 2 across a Horde home zone (2 x 60 yd), or 0 -> 3 -> 2 on open ground (2 x 150 yd).
+    const nodes: TestNode[] = [
+      { x: 0, y: 0, z: 0, label: 0 },
+      { x: 60, y: 0, z: 0, label: 0, hostile: 8 },
+      { x: 120, y: 0, z: 0, label: 0 },
+      { x: 60, y: 140, z: 0, label: 0 },
+    ];
+    const edges: TestEdge[] = [
+      [0, 1, 60],
+      [1, 2, 60],
+      [0, 3, 150],
+      [3, 2, 150],
+    ];
+    const graph = decodeWalkGraph(encode(0, nodes, edges, LABELS));
+    // Across: 120 yd x TERRITORY_FACTOR = 360 > 300 around.
+    expect(walkPath(graph, 0, 2, FACTION.alliance)?.map((h) => h.node)).toEqual([0, 3, 2]);
+    expect(walkPath(graph, 0, 2, FACTION.horde)?.map((h) => h.node)).toEqual([0, 1, 2]);
+    // Into the zone: the yards shown are the yards walked, the effort counts them TERRITORY_FACTOR times.
+    const search = searchFrom(graph, 0, FACTION.alliance);
+    expect(search.yards[1]).toBe(60);
+    expect(search.effort[1]).toBe(60 * TERRITORY_FACTOR);
+    expect(searchFrom(graph, 0, FACTION.horde).effort[1]).toBe(60);
+  });
+
+  it("reads each faction's hub-to-hub table", () => {
+    const nodes: TestNode[] = [
+      { x: 0, y: 0, z: 0, label: 0 },
+      { x: 60, y: 0, z: 0, label: 0 },
+    ];
+    const hubs = [
+      { key: "t1", node: 0 },
+      { key: "t2", node: 1 },
+    ];
+    const graph = decodeWalkGraph(encode(0, nodes, [[0, 1, 60]], LABELS, hubs, [0, 300, 300, 0], false, [0, 60, 60, 0]));
+    expect(hubToHub(graph, "t1", "t2", FACTION.alliance)).toBe(300);
+    expect(hubToHub(graph, "t1", "t2", FACTION.horde)).toBe(60);
   });
 
   it("decodes the generator's layout", () => {

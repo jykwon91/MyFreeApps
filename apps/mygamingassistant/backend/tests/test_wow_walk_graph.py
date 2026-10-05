@@ -19,6 +19,7 @@ from scripts.wow_world_map.walk import links
 from scripts.wow_world_map.walk.clusters import (
     DOCK_HEADROOM,
     OFFROAD_FACTOR,
+    SWIM_FACTOR,
     Anchor,
     WalkGraph,
     cluster,
@@ -26,12 +27,24 @@ from scripts.wow_world_map.walk.clusters import (
     snap_hub,
     snap_inside,
 )
+from scripts.wow_world_map.factions import ALLIANCE, HORDE
 from scripts.wow_world_map.walk.export import (
     UNREACHABLE,
     Hub,
+    edge_danger,
     hub_matrix,
     interior_hubs,
     write_walk,
+)
+from scripts.wow_world_map.walk.hostile import (
+    ENEMY_TERRITORY,
+    HOSTILE_FACTOR,
+    HOSTILE_RADIUS,
+    HOSTILE_TO,
+    TERRITORY_FACTOR,
+    danger_factor,
+    hostile_flags,
+    territory_flags,
 )
 from scripts.wow_world_map.walk.floors import Floors, Triangles, floor_under
 from scripts.wow_world_map.walk.drops import DROP_COST_YARDS, find_drops
@@ -267,14 +280,14 @@ def test_a_one_way_edge_has_no_way_back_in_the_hub_matrix() -> None:
 # --- clustering -------------------------------------------------------------
 
 def _poly_graph(centroid: list[tuple[float, float, float]], pairs: list[tuple[int, int]],
-                area: float = 400.0, road: list[int] = ()) -> PolyGraph:
+                area: float = 400.0, road: list[int] = (), water: list[int] = ()) -> PolyGraph:
     n = len(centroid)
     adj: list[list[int]] = [[] for _ in range(n)]
     for a, b in pairs:
         adj[a].append(b)
         adj[b].append(a)
     indptr = np.concatenate([[0], np.cumsum([len(x) for x in adj])])
-    return PolyGraph(np.array(centroid, dtype=float), np.full(n, area), np.zeros(n, dtype=bool),
+    return PolyGraph(np.array(centroid, dtype=float), np.full(n, area), np.isin(np.arange(n), water),
                      np.isin(np.arange(n), road), indptr, np.array([v for x in adj for v in x], dtype=np.int64))
 
 
@@ -311,6 +324,24 @@ def test_without_roads_every_yard_costs_the_same() -> None:
     labels = [Label("Goldshire", "Elwynn Forest", False, False)]
     graph = cluster(polys, np.zeros(2, dtype=np.int32), labels, [], [Anchor(0, 0, 0)])
     assert graph.cost.tolist() == [50.0]
+
+
+def test_a_swim_off_the_road_costs_the_swim_and_the_detour() -> None:
+    # Swimming past a road is off the road too: else a long swim down a coast
+    # looks cheaper than walking the road beside it.
+    polys = _poly_graph([(0, 0, 0), (50, 0, 0)], [(0, 1)], road=[0], water=[1])
+    labels = [Label("The Veiled Sea", "Darkshore", False, False)]
+    graph = cluster(polys, np.zeros(2, dtype=np.int32), labels, [], [Anchor(0, 0, 0)], road=polys.road)
+    # Half the step on the road, half swum off it.
+    assert graph.cost[0] == pytest.approx(25 + 25 * OFFROAD_FACTOR * SWIM_FACTOR)
+    assert graph.yards[0] == pytest.approx(25 + 25 * SWIM_FACTOR)
+
+
+def test_without_roads_a_swim_costs_only_the_swim() -> None:
+    polys = _poly_graph([(0, 0, 0), (50, 0, 0)], [(0, 1)], water=[1])
+    labels = [Label("Lake Everstill", "Redridge Mountains", False, False)]
+    graph = cluster(polys, np.zeros(2, dtype=np.int32), labels, [], [Anchor(0, 0, 0)])
+    assert graph.cost[0] == pytest.approx(25 + 25 * SWIM_FACTOR)
 
 
 def test_a_lift_becomes_an_edge_between_its_floors() -> None:
@@ -355,17 +386,19 @@ def test_the_walk_file_has_the_layout_the_page_reads(tmp_path: Path) -> None:
     assert nodes == [0, 1]
     assert matrix.tolist() == [[0, 25], [25, 0]]  # yards walked, not the road-weighted cost
 
-    write_walk(tmp_path / "0.walk", 0, graph, kept, nodes, matrix)
+    graph.hostile = np.array([0, HOSTILE_TO[ALLIANCE], 0], dtype=np.uint8)
+    horde = np.array([[0, 7], [7, 0]])
+    write_walk(tmp_path / "0.walk", 0, graph, kept, nodes, [matrix, horde])
     data = gzip.decompress((tmp_path / "0.walk").read_bytes())
     assert data[:4] == b"MGWK"
     version, map_id, n, m, h, json_bytes = struct.unpack_from("<2H4I", data, 4)
-    assert (version, map_id, n, m, h) == (2, 0, 3, 2, 2)
+    assert (version, map_id, n, m, h) == (3, 0, 3, 2, 2)
     at = 24
     x, y, z = (np.frombuffer(data, "<i2", n, at + 2 * n * k).tolist() for k in range(3))
     assert (x, y, z) == ([10, 40, 70], [-21, -20, -20], [3, 5, -1])
     at += 6 * n
     assert np.frombuffer(data, "<u2", n, at).tolist() == [0, 1, 1]
-    assert np.frombuffer(data, "u1", n, at + 2 * n).tolist() == [0, 0, 1]
+    assert np.frombuffer(data, "u1", n, at + 2 * n).tolist() == [0, HOSTILE_TO[ALLIANCE], 1]
     at += 3 * n
     assert np.frombuffer(data, "<u4", m, at).tolist() == [0, 1]
     assert np.frombuffer(data, "<u4", m, at + 4 * m).tolist() == [1, 2]
@@ -374,12 +407,80 @@ def test_the_walk_file_has_the_layout_the_page_reads(tmp_path: Path) -> None:
     assert np.frombuffer(data, "u1", m, at + 12 * m).tolist() == [0, 1]
     at += 13 * m
     assert np.frombuffer(data, "<u4", h, at).tolist() == [0, 1]
-    assert np.frombuffer(data, "<u2", h * h, at + 4 * h).tolist() == [0, 25, 25, 0]
-    at += 4 * h + 2 * h * h
+    assert np.frombuffer(data, "<u2", 2 * h * h, at + 4 * h).tolist() == [0, 25, 25, 0, 0, 7, 7, 0]
+    at += 4 * h + 4 * h * h
     assert json.loads(data[at:at + json_bytes]) == {
         "labels": [["Kharanos", "Dun Morogh", 0, 0], ["The Great Forge", "Ironforge", 1, 1]],
         "hubs": ["t6", "s10.0"],
     }
+
+
+def _town_graph() -> WalkGraph:
+    # 0 -> 1 -> 2 through a Horde town at node 1 (2 x 60 yd), or 0 -> 3 -> 2 around it (2 x 150 yd).
+    return WalkGraph(
+        position=np.array([[0.0, 0, 0], [60, 0, 0], [120, 0, 0], [60, 140, 0]]),
+        label=np.zeros(4, dtype=int),
+        water=np.zeros(4, dtype=bool),
+        edges=np.array([[0, 1], [1, 2], [0, 3], [3, 2]]),
+        cost=np.array([60.0, 60.0, 150.0, 150.0]),
+        kind=np.zeros(4, dtype=np.uint8),
+        labels=[Label("", "Mulgore", False, False)],
+        anchor_node=[0, 2],
+        hostile=np.array([0, HOSTILE_TO[ALLIANCE], 0, 0], dtype=np.uint8),
+    )
+
+
+def test_a_town_counts_more_than_a_home_zone_and_only_for_the_other_faction() -> None:
+    a_town, a_zone = HOSTILE_TO[ALLIANCE], ENEMY_TERRITORY[ALLIANCE]
+    flags = np.array([0, a_zone, a_town | a_zone, HOSTILE_TO[HORDE]], dtype=np.uint8)
+    assert danger_factor(flags, ALLIANCE).tolist() == [1, TERRITORY_FACTOR, HOSTILE_FACTOR, 1]
+    assert danger_factor(flags, HORDE).tolist() == [1, 1, 1, HOSTILE_FACTOR]
+    assert danger_factor(flags, None).tolist() == [1, 1, 1, 1]
+
+
+def test_an_edge_is_as_dangerous_as_its_worse_end() -> None:
+    graph = _town_graph()
+    assert edge_danger(graph, ALLIANCE).tolist() == [HOSTILE_FACTOR, HOSTILE_FACTOR, 1, 1]
+    assert edge_danger(graph, HORDE).tolist() == [1, 1, 1, 1]
+
+
+def test_each_faction_walks_its_own_way_between_hubs() -> None:
+    hubs = [Hub("t1", 0, 0, 0), Hub("t2", 120, 0, 0)]
+    # Around the town for the Alliance, through it for the Horde.
+    assert hub_matrix(_town_graph(), hubs, ALLIANCE)[2].tolist() == [[0, 300], [300, 0]]
+    assert hub_matrix(_town_graph(), hubs, HORDE)[2].tolist() == [[0, 120], [120, 0]]
+
+
+def test_the_hub_matrix_weighs_yards_on_the_other_factions_ground() -> None:
+    # The only way runs through the other faction's home zone: the planner sees it
+    # as TERRITORY_FACTOR times as long, so a boat or a flight can win.
+    graph = _town_graph()
+    graph.hostile = np.full(4, ENEMY_TERRITORY[ALLIANCE], dtype=np.uint8)
+    hubs = [Hub("t1", 0, 0, 0), Hub("t2", 120, 0, 0)]
+    assert hub_matrix(graph, hubs, ALLIANCE)[2].tolist() == [[0, 120 * TERRITORY_FACTOR], [120 * TERRITORY_FACTOR, 0]]
+    assert hub_matrix(graph, hubs, HORDE)[2].tolist() == [[0, 120], [120, 0]]
+
+
+def test_a_zone_belongs_to_the_faction_its_area_row_names(monkeypatch: pytest.MonkeyPatch) -> None:
+    rows = [
+        {"AreaName_lang": "Mulgore", "ParentAreaID": "0", "ContinentID": "1", "FactionGroupMask": "4"},
+        {"AreaName_lang": "Darkshore", "ParentAreaID": "0", "ContinentID": "1", "FactionGroupMask": "2"},
+        {"AreaName_lang": "Desolace", "ParentAreaID": "0", "ContinentID": "1", "FactionGroupMask": "0"},
+        {"AreaName_lang": "Mulgore", "ParentAreaID": "0", "ContinentID": "0", "FactionGroupMask": "2"},
+    ]
+    monkeypatch.setattr(sources, "wago_table", lambda name, **_: rows)
+    flags = territory_flags(["Mulgore", "Darkshore", "Desolace", ""], 1)
+    assert flags.tolist() == [ENEMY_TERRITORY[ALLIANCE], ENEMY_TERRITORY[HORDE], 0, 0]
+
+
+def test_ground_near_a_hostile_spawn_is_marked_for_that_faction() -> None:
+    position = np.array([[0.0, 0, 0], [HOSTILE_RADIUS - 1, 0, 0], [HOSTILE_RADIUS + 1, 0, 0], [0, 0, 80],
+                         [500, 500, 0]])
+    spawns = {ALLIANCE: np.array([[0.0, 0.0, 0.0]]), HORDE: np.array([[500.0, 500.0, 0.0]])}
+    flags = hostile_flags(position, spawns)
+    a, h = HOSTILE_TO[ALLIANCE], HOSTILE_TO[HORDE]
+    # In reach, out of reach, and a cliff top far above the camp.
+    assert flags.tolist() == [a, a, 0, 0, h]
 
 
 def test_hubs_the_graph_cannot_join_are_marked_unreachable() -> None:
@@ -489,7 +590,7 @@ def test_a_dungeon_walk_file_says_so(tmp_path: Path) -> None:
     graph = WalkGraph(np.array([[0.0, 0, 0]]), np.zeros(1, dtype=int), np.zeros(1, dtype=bool),
                       np.zeros((0, 2), dtype=np.int64), np.zeros(0), np.zeros(0, dtype=np.uint8),
                       [Label("", "The Deadmines", True, False)], [0])
-    write_walk(tmp_path / "36.walk", 36, graph, [Hub("e78", 0, 0, 0)], [0], np.zeros((1, 1)), instance=True)
+    write_walk(tmp_path / "36.walk", 36, graph, [Hub("e78", 0, 0, 0)], [0], [np.zeros((1, 1))] * 2, instance=True)
     data = gzip.decompress((tmp_path / "36.walk").read_bytes())
     *_, json_bytes = struct.unpack_from("<2H4I", data, 4)
     assert json.loads(data[-json_bytes:])["instance"] == 1

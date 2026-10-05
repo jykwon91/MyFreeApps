@@ -98,7 +98,7 @@ export default function DirectionsPanel({ directions, walk }: DirectionsPanelPro
         {directions.straightWalks ? (
           <li>Some walks are straight lines — go around hills, water and hostile camps.</li>
         ) : (
-          <li>Walks follow the ground from the game's own map data — watch for hostile camps on the way.</li>
+          <li>Walks follow the ground from the game's own map data and keep clear of the other faction's towns — monsters on the way are still yours to watch.</li>
         )}
         {directions.usesFlight && (
           <li>Flight paths must be discovered first: talk to each flight master once on foot before you can fly there.</li>

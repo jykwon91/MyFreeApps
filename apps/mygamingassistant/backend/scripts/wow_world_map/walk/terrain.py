@@ -72,6 +72,8 @@ class Chunk:
     inner: np.ndarray  # (8, 8) world Z
     holes: np.ndarray  # (8, 8) bool: quad is a hole in the terrain
     liquids: list[Liquid] = field(default_factory=list)
+    # (8, 8) bool: open water that brings on fatigue — a swimmer drowns there.
+    deep: np.ndarray = field(default_factory=lambda: np.zeros((8, 8), dtype=bool))
 
 
 def map_tiles(wdt_file_data_id: int) -> list[TileFiles]:
@@ -141,6 +143,16 @@ def _holes(header: bytes, flags: int) -> np.ndarray:
     return holes
 
 
+def _deep(mh2o: bytes, index: int) -> np.ndarray:
+    """The chunk's fatigue quads: the ``deep`` mask of its MH2O attributes
+    (``u64 fishable, u64 deep``, one bit a quad, row by row)."""
+    ofs_instances, layer_count, ofs_attr = struct.unpack_from("<3I", mh2o, index * 12)
+    if not layer_count or not ofs_attr:
+        return np.zeros((8, 8), dtype=bool)
+    (bits,) = struct.unpack_from("<Q", mh2o, ofs_attr + 8)
+    return np.array([bits >> i & 1 for i in range(64)], dtype=bool).reshape(8, 8)
+
+
 def _liquids(mh2o: bytes, index: int) -> list[Liquid]:
     ofs_instances, layer_count, _ofs_attr = struct.unpack_from("<3I", mh2o, index * 12)
     out = []
@@ -178,6 +190,7 @@ def terrain_chunks(root: bytes) -> list[Chunk]:
         chunk = Chunk(north, west, area_id, outer, inner, _holes(data, flags))
         if mh2o:
             chunk.liquids = _liquids(mh2o, index)
+            chunk.deep = _deep(mh2o, index)
         out.append(chunk)
     return out
 
