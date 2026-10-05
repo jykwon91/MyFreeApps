@@ -51,7 +51,15 @@ export interface WalkLeg {
   inside: InsideRun[];
 }
 
-type StretchKind = "walk" | "swim" | "lift" | "portal" | "drop" | "teleport";
+const STRETCH_KIND = {
+  walk: "walk",
+  swim: "swim",
+  lift: "lift",
+  portal: "portal",
+  drop: "drop",
+  teleport: "teleport",
+} as const;
+type StretchKind = (typeof STRETCH_KIND)[keyof typeof STRETCH_KIND];
 
 /** A straight piece of a walk. */
 interface Piece {
@@ -80,11 +88,11 @@ function distance(a: WorldPoint, b: WorldPoint): number {
 }
 
 function hopKind(graph: WalkGraph, hop: WalkHop): StretchKind {
-  if (hop.kind === WALK_EDGE.lift) return "lift";
-  if (hop.kind === WALK_EDGE.portal) return "portal";
-  if (hop.kind === WALK_EDGE.drop) return "drop";
-  if (hop.kind === WALK_EDGE.teleport) return "teleport";
-  return graph.water[hop.node] ? "swim" : "walk";
+  if (hop.kind === WALK_EDGE.lift) return STRETCH_KIND.lift;
+  if (hop.kind === WALK_EDGE.portal) return STRETCH_KIND.portal;
+  if (hop.kind === WALK_EDGE.drop) return STRETCH_KIND.drop;
+  if (hop.kind === WALK_EDGE.teleport) return STRETCH_KIND.teleport;
+  return graph.water[hop.node] ? STRETCH_KIND.swim : STRETCH_KIND.walk;
 }
 
 function sameArea(graph: WalkGraph, a: number, b: number): boolean {
@@ -94,7 +102,7 @@ function sameArea(graph: WalkGraph, a: number, b: number): boolean {
 }
 
 function isMove(s: Stretch): boolean {
-  return s.kind === "walk" || s.kind === "swim";
+  return s.kind === STRETCH_KIND.walk || s.kind === STRETCH_KIND.swim;
 }
 
 /** `s` carried on to the end of `next`. */
@@ -226,7 +234,7 @@ function pieces(s: Stretch): Piece[] {
 /** Pieces to tell for a stretch: turn by turn indoors, in capital cities and inside dungeons. */
 function legsOf(graph: WalkGraph, s: Stretch): Piece[] {
   const label = graph.labels[s.label];
-  if (s.kind !== "walk" || !(label.indoor || label.city || graph.instance)) return [s];
+  if (s.kind !== STRETCH_KIND.walk || !(label.indoor || label.city || graph.instance)) return [s];
   return pieces(s);
 }
 
@@ -269,15 +277,15 @@ function stretchText(
 ): string {
   const name = areaName(graph, s.label);
   const heading = compassDirection(head.from, head.to);
-  if (s.kind === "lift") return `Ride the lift ${arrival(graph, s, before, after)}`;
-  if (s.kind === "portal") {
+  if (s.kind === STRETCH_KIND.lift) return `Ride the lift ${arrival(graph, s, before, after)}`;
+  if (s.kind === STRETCH_KIND.portal) {
     const near = Math.hypot(s.to.wx - s.from.wx, s.to.wy - s.from.wy) < TELEPORTER_YARDS;
     return near ? `Step on the teleporter ${arrival(graph, s, before, after)}` : `Take the portal to ${name}`;
   }
   // One way: there's no way back up the ledge or back through the teleporter.
-  if (s.kind === "drop") return `Drop down from the ledge${destination(graph, before, after)} (no way back up)`;
-  if (s.kind === "teleport") return `Step on the teleporter${destination(graph, before, after)} (one way)`;
-  if (s.kind === "swim") return `Swim ${heading}, ${formatYards(head.yards)}${name ? ` across ${name}` : ""}`;
+  if (s.kind === STRETCH_KIND.drop) return `Drop down from the ledge${destination(graph, before, after)} (no way back up)`;
+  if (s.kind === STRETCH_KIND.teleport) return `Step on the teleporter${destination(graph, before, after)} (one way)`;
+  if (s.kind === STRETCH_KIND.swim) return `Swim ${heading}, ${formatYards(head.yards)}${name ? ` across ${name}` : ""}`;
   const move = `head ${heading}, ${formatYards(head.yards)}`;
   const through = `${move}${name ? `, through ${name}` : ""}${climb(head)}`;
   // Off a lift / out of a portal / after a drop, the step before already named where you are.
