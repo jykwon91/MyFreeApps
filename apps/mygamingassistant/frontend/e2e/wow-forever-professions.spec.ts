@@ -99,3 +99,18 @@ test("your level is kept, so material drops are ranked for it", async ({ page })
   await page.reload();
   await expect(level).toHaveValue("20");
 });
+
+test("cloth points at a farm spot you can handle at your level", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-10-05T12:00:00Z"));
+  await page.goto("/wow-forever/professions?p=tailoring&skill=150");
+  await page.getByRole("spinbutton", { name: "Your level" }).fill("30");
+  const shopping = page.locator("#shopping");
+  await shopping.locator("summary").first().click();
+  const silk = shopping.locator('details[data-mat="4306"]').first();
+  const line = (await silk.locator("summary").textContent()) ?? "";
+  const [, , top] = line.match(/Drops from [^,]+, level (\d+)–(\d+)/) ?? [];
+  expect(Number(top)).toBeLessThanOrEqual(32);
+  await silk.locator("summary").click();
+  await silk.getByRole("button", { name: /^Show \d+ more farm spots$/ }).click();
+  await expect(silk.getByText("Too high for level 30").first()).toBeVisible();
+});

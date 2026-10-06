@@ -7,6 +7,7 @@ import {
   farmSpots,
   hostileGroundLabel,
   isCommonDrop,
+  canFarm,
   isRareDrop,
   mobsForLevel,
 } from "@/games/wow-forever/food/recipeSources";
@@ -42,14 +43,19 @@ export default function FoodDropList({ drop, faction, zoneId, level }: FoodDropL
   const [showAll, setShowAll] = useState(false);
   if (isRareDrop(drop)) return <p className="text-sm">{describeRareDrop(drop)}.</p>;
   if (isCommonDrop(drop)) {
-    const spots = farmSpots(drop, faction, zoneId);
+    const spots = farmSpots(drop, faction, zoneId, level);
     const hidden = showAll ? 0 : Math.max(0, spots.length - SHOWN_FARM_SPOTS);
     return (
       <div className="space-y-2">
         <p className="text-sm">{describeCommonDrop(drop)}</p>
         <ul className="space-y-2" aria-label="Where to farm it">
           {spots.slice(0, spots.length - hidden).map((m) => (
-            <FoodMobRow key={m.name} mob={m} warning={m.spot ? hostileGroundLabel(m.spot, faction) : ""} />
+            <FoodMobRow
+              key={m.name}
+              mob={m}
+              warning={m.spot ? hostileGroundLabel(m.spot, faction) : ""}
+              note={level !== null && !canFarm(m, level) ? `Too high for level ${level}` : ""}
+            />
           ))}
         </ul>
         {hidden > 0 ? (
