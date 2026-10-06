@@ -38,7 +38,6 @@ MOB_COLUMNS = ["name", "minLevel", "maxLevel", "chance", "zone", "subzone", "x",
 WORLD_DROP_MOBS = 25
 # A clam / herb node / crate is a source only if it holds the item this often.
 MIN_CONTAINER_CHANCE = 20.0
-SHOWN_MOBS = 3
 SHOWN_ZONES = 3
 # This many kinds of mob dropping it = cloth-like: a farm spot per zone, in this many zones.
 COMMON_DROP_MOBS = 50
@@ -246,9 +245,11 @@ class ClassicSources:
         if not world and len(chances) >= COMMON_DROP_MOBS:
             mobs = self._farm_spots(chances, placed, ranked_zones[:COMMON_SHOWN_ZONES])
         if not world and not mobs:
-            # Too rare anywhere to be a farm spot: the likeliest mobs, so the page can say it's a rare drop.
+            # Every mob that drops it, best to farm first (chance x how many there are): each has
+            # its own drop chance, so the page lists them all. Drops under MIN_SHOWN_CHANCE are noise
+            # next to a likelier mob, unless nothing drops it more often.
             best = sorted(chances, key=lambda n: (-mob_worth[n], str(self._npcs[n]["Name"])))
-            shown = [n for n in best if chances[n] >= MIN_SHOWN_CHANCE][:SHOWN_MOBS] or best[:1]
+            shown = [n for n in best if chances[n] >= MIN_SHOWN_CHANCE] or best[:1]
             mobs = [self._mob_row(n, chances[n], placed[n]) for n in shown]
         zones = ranked_zones[:SHOWN_ZONES]
         for spots in placed.values():

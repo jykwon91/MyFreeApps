@@ -12,6 +12,8 @@ interface FoodSourceListProps {
   sources: ItemSources;
   faction: PlayerFaction;
   zoneId: number | null;
+  /** The player's level, to rank the mobs they can farm first. Null = not set. */
+  level: number | null;
   /**
    * A reagent you can buy, fish or open from a clam doesn't need a list of mobs that happen to drop it —
    * unless half the world drops it (cloth), which is the main way to get it.
@@ -25,7 +27,7 @@ function joinCapped(names: readonly string[], cap: number): string {
 }
 
 /** Every known source, in the order a player would try them: buy, quest, fish, open, farm. */
-export default function FoodSourceList({ sources, faction, zoneId, preferEasySources = false }: FoodSourceListProps) {
+export default function FoodSourceList({ sources, faction, zoneId, level, preferEasySources = false }: FoodSourceListProps) {
   const quests = questsFor(sources.quests, faction);
   const sold = splitVendors(sources.vendors, faction, zoneId).yours.length > 0;
   const easy = sold || sources.fishing.length > 0 || sources.containers.length > 0;
@@ -49,8 +51,8 @@ export default function FoodSourceList({ sources, faction, zoneId, preferEasySou
           <span className="font-medium">Fish for it in</span> {joinCapped(sources.fishing, SHOWN_WATERS)}.
         </p>
       ) : null}
-      {sources.containers.length ? <FoodContainerList sources={sources} faction={faction} zoneId={zoneId} /> : null}
-      {drop ? <FoodDropList drop={drop} faction={faction} zoneId={zoneId} /> : null}
+      {sources.containers.length ? <FoodContainerList sources={sources} faction={faction} zoneId={zoneId} level={level} /> : null}
+      {drop ? <FoodDropList drop={drop} faction={faction} zoneId={zoneId} level={level} /> : null}
     </div>
   );
 }

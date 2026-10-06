@@ -18,6 +18,8 @@ interface SecondaryGuideViewProps {
   profession: Profession;
   faction: PlayerFaction;
   zoneId: number | null;
+  /** The player's level, to rank the mobs they can farm first. Null = not set. */
+  level: number | null;
 }
 
 const VIEWS = {
@@ -36,9 +38,9 @@ const VIEWS = {
 } as const;
 
 /** Cooking and Fishing: trainers, the route table and what Forever changed. */
-export default function SecondaryGuideView({ profession, faction, zoneId }: SecondaryGuideViewProps) {
+export default function SecondaryGuideView({ profession, faction, zoneId, level }: SecondaryGuideViewProps) {
   const view = VIEWS[profession];
-  const matPlace = { place: { sources: FOOD_SOURCES, faction, zoneId, file: NO_CRAFTS }, professionLabel: "Cooking" };
+  const matPlace = { place: { sources: FOOD_SOURCES, faction, zoneId, level, file: NO_CRAFTS }, professionLabel: "Cooking" };
   return (
     <>
       <GuideSection

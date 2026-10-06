@@ -14,6 +14,8 @@ interface FoodRecipeSectionProps {
   cookingSkill: number | null;
   faction: PlayerFaction;
   zoneId: number | null;
+  /** The player's level, to rank the mobs they can farm first. Null = not set. */
+  level: number | null;
 }
 
 /** "You have 60 — 15 to go." */
@@ -23,7 +25,7 @@ function yourSkill(cookingSkill: number, learnAt: number | null): string {
 }
 
 /** How to learn the recipe: the skill it takes and where the recipe comes from. */
-export default function FoodRecipeSection({ food, sources, learnAt, cookingSkill, faction, zoneId }: FoodRecipeSectionProps) {
+export default function FoodRecipeSection({ food, sources, learnAt, cookingSkill, faction, zoneId, level }: FoodRecipeSectionProps) {
   const { learn } = food;
   return (
     <section aria-labelledby="food-recipe" className={DETAIL_SECTION}>
@@ -45,7 +47,7 @@ export default function FoodRecipeSection({ food, sources, learnAt, cookingSkill
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">Needs the item {learn.recipe}.</p>
           {hasSources(sources) ? (
-            <FoodSourceList sources={sources} faction={faction} zoneId={zoneId} />
+            <FoodSourceList sources={sources} faction={faction} zoneId={zoneId} level={level} />
           ) : (
             <p className="text-sm">{unknownSource(learn.recipeItem ?? food.id, "the recipe")}</p>
           )}

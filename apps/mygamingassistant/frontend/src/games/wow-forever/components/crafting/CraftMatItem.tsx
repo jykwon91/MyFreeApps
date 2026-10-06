@@ -16,7 +16,7 @@ interface CraftMatItemProps {
 function summaryOf(itemId: number, place: CraftPlace, professionLabel: string, parts: number): string {
   const madeBy = place.file.madeBy[String(itemId)] ?? null;
   if (madeBy === professionLabel) return `You make this (${professionLabel})`;
-  return matSummary({ sources: place.sources.reagent(itemId), madeBy }, place.faction, place.zoneId, parts);
+  return matSummary({ sources: place.sources.reagent(itemId), madeBy }, place, parts);
 }
 
 /** A material with the easiest way to get it underneath its name; opens to every source. */

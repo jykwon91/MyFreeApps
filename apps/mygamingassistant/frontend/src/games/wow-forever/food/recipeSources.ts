@@ -147,6 +147,34 @@ export function describeRareDrop(drop: DropSource): string {
   return `${what} from mobs ${levelRange(drop.levels)}${where}`;
 }
 
+/** Mobs up to this many levels above you still go down fast enough to farm. */
+export const FARM_LEVELS_ABOVE = 2;
+
+/** A mob you can farm at this level: grey and green ones too — they die faster. */
+export function canFarm(mob: Pick<DropMob, "maxLevel">, level: number): boolean {
+  return mob.maxLevel <= level + FARM_LEVELS_ABOVE;
+}
+
+/** A drop's mobs in the order to farm them, each saying whether it's beyond the level. */
+export interface RankedMob {
+  mob: DropMob;
+  tooHigh: boolean;
+}
+
+/**
+ * With a level: the mobs you can farm, best drop chance first, then the ones
+ * too high for you yet, lowest level first. Without: the data's order (chance
+ * x how many there are).
+ */
+export function mobsForLevel(mobs: readonly DropMob[], level: number | null): RankedMob[] {
+  if (level === null) return mobs.map((mob) => ({ mob, tooHigh: false }));
+  const farmable = mobs.filter((m) => canFarm(m, level));
+  const tooHigh = mobs.filter((m) => !canFarm(m, level));
+  farmable.sort((a, b) => b.chance - a.chance || a.minLevel - b.minLevel || a.name.localeCompare(b.name));
+  tooHigh.sort((a, b) => a.minLevel - b.minLevel || b.chance - a.chance || a.name.localeCompare(b.name));
+  return [...farmable.map((mob) => ({ mob, tooHigh: false })), ...tooHigh.map((mob) => ({ mob, tooHigh: true }))];
+}
+
 /** "Fleshripper (level 16–17) · 55%". */
 export function describeMob(mob: { name: string; minLevel: number; maxLevel: number; chance: number }): string {
   return `${mob.name} (${levelRange([mob.minLevel, mob.maxLevel])}) · ${mob.chance}%`;

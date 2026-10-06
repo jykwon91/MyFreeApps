@@ -9,6 +9,8 @@ export interface CraftPlace {
   sources: SourceLookup;
   faction: PlayerFaction;
   zoneId: number | null;
+  /** The player's level, to rank the mobs they can farm first. Null = not set. */
+  level: number | null;
   /** Which profession makes a material, and the recipes to make this profession's own (bolts). */
   file: Pick<CraftingFile, "madeBy" | "recipes">;
 }
@@ -37,7 +39,7 @@ export default function CraftLearnLine({ learn, professionLabel, place }: CraftL
       </summary>
       <div className="pt-2">
         {hasSources(sources) ? (
-          <FoodSourceList sources={sources} faction={place.faction} zoneId={place.zoneId} />
+          <FoodSourceList sources={sources} faction={place.faction} zoneId={place.zoneId} level={place.level} />
         ) : (
           <p className="text-sm text-muted-foreground">{unknownSource(learn.itemId, "it")}</p>
         )}

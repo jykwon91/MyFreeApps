@@ -89,3 +89,13 @@ test("the crafting guides never scroll sideways on a phone", async ({ page }) =>
     expect(overflow, p).toBeLessThanOrEqual(0);
   }
 });
+
+test("your level is kept, so material drops are ranked for it", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-10-05T12:00:00Z"));
+  await page.goto("/wow-forever/professions?p=tailoring");
+  const level = page.getByRole("spinbutton", { name: "Your level" });
+  await level.fill("20");
+  await expect(page.getByText("The beta stops at level 30 — 60 from launch on Nov 4.")).toBeVisible();
+  await page.reload();
+  await expect(level).toHaveValue("20");
+});

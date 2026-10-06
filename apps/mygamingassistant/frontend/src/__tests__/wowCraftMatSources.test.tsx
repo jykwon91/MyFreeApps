@@ -11,7 +11,17 @@ import { describeDisenchant, describeSkinning, matSummary, soldToYou } from "@/g
 import { shoppingList, shoppingListText } from "@/games/wow-forever/crafting/shoppingList";
 import { CRAFTING_ROUTES } from "@/games/wow-forever/data/professions/crafting/craftingRoutes";
 import { createSourceLookup, type RawSourcesFile } from "@/games/wow-forever/data/sourceDecode";
-import { describeCommonDrop, farmSpots, hasSources, isCommonDrop, isHostileGround, isRareDrop, stockLabel } from "@/games/wow-forever/food/recipeSources";
+import {
+  canFarm,
+  describeCommonDrop,
+  farmSpots,
+  hasSources,
+  isCommonDrop,
+  isHostileGround,
+  isRareDrop,
+  mobsForLevel,
+  stockLabel,
+} from "@/games/wow-forever/food/recipeSources";
 import { FACTION, TERRITORY } from "@/games/wow-forever/types/worldMap";
 import { COOKING_ROUTE } from "@/games/wow-forever/data/professions/cooking";
 import { FOOD_SOURCES } from "@/games/wow-forever/data/food/recipeSourceData";
@@ -33,11 +43,12 @@ const LARGE_GLIMMERING_SHARD = 11084;
 const RUGGED_LEATHER = 8170;
 const WOOL_CLOTH = 2592;
 const COPPER_ROD = 6217;
+const SPIDERS_SILK = 3182;
 // Linen, Wool, Silk, Mageweave, Runecloth.
 const CLOTH = [LINEN_CLOTH, WOOL_CLOTH, 4306, 4338, 14047];
 
-function summary(itemId: number, madeBy: string | null = null): string {
-  return matSummary({ sources: SOURCES.reagent(itemId), madeBy }, FACTION.alliance, null);
+function summary(itemId: number, madeBy: string | null = null, level: number | null = null): string {
+  return matSummary({ sources: SOURCES.reagent(itemId), madeBy }, { faction: FACTION.alliance, zoneId: null, level });
 }
 
 describe("crafting material sources", () => {
@@ -78,7 +89,7 @@ describe("crafting material sources", () => {
   it("lists the cloth farm spots with directions, warning about the other faction's ground", () => {
     const { container, getByRole } = render(
       <MemoryRouter>
-        <FoodSourceList sources={SOURCES.reagent(WOOL_CLOTH)} faction={FACTION.alliance} zoneId={null} preferEasySources />
+        <FoodSourceList sources={SOURCES.reagent(WOOL_CLOTH)} faction={FACTION.alliance} zoneId={null} level={null} preferEasySources />
       </MemoryRouter>,
     );
     const list = getByRole("list", { name: "Where to farm it" });
@@ -119,7 +130,7 @@ describe("crafting material sources", () => {
     expect(stockLabel(tilli)).toBe("2 at a time · restocks about every 2 hours");
     const { container } = render(
       <MemoryRouter>
-        <FoodSourceList sources={SOURCES.reagent(LESSER_MAGIC_ESSENCE)} faction={FACTION.alliance} zoneId={null} />
+        <FoodSourceList sources={SOURCES.reagent(LESSER_MAGIC_ESSENCE)} faction={FACTION.alliance} zoneId={null} level={null} />
       </MemoryRouter>,
     );
     expect(container.textContent).toContain("Limited: 2 at a time · restocks about every 2 hours");
@@ -153,7 +164,7 @@ describe("crafting material sources", () => {
   it("names the lowest-level mob that drops a meat, with its level", () => {
     const wolves = FOOD_SOURCES.reagent(2672).drop!.mobs;
     const lowest = Math.min(...wolves.map((m) => m.minLevel));
-    const line = matSummary({ sources: FOOD_SOURCES.reagent(2672), madeBy: null }, FACTION.alliance, null, 1);
+    const line = matSummary({ sources: FOOD_SOURCES.reagent(2672), madeBy: null }, { faction: FACTION.alliance, zoneId: null, level: null }, 1);
     expect(line).toMatch(new RegExp(`^Drops from .+, level ${lowest}(–[0-9]+)?$`));
   });
 
@@ -176,5 +187,53 @@ describe("crafting material sources", () => {
     const text = shoppingListText(list, (l) => summary(l.id, l.madeBy ?? null));
     expect(text).toMatch(/^\d+x Linen Cloth — Drops from [^,]+, level \d+–\d+, /m);
     expect(text).toMatch(/^\d+x Coarse Thread — Sold in most towns$/m);
+  });
+
+  it("lists every mob that drops Spider's Silk, each with its own chance", () => {
+    const drop = SOURCES.reagent(SPIDERS_SILK).drop!;
+    expect(isRareDrop(drop) || isCommonDrop(drop)).toBe(false);
+    expect(drop.mobs.length).toBeGreaterThan(20);
+    expect(drop.mobs.every((m) => m.chance >= 1)).toBe(true);
+  });
+
+  it("ranks the mobs you can farm at your level by drop chance, then the ones too high", () => {
+    const ranked = mobsForLevel(SOURCES.reagent(SPIDERS_SILK).drop!.mobs, 20);
+    const farmable = ranked.filter((r) => !r.tooHigh).map((r) => r.mob);
+    const tooHigh = ranked.filter((r) => r.tooHigh).map((r) => r.mob);
+    expect(farmable.length).toBeGreaterThan(0);
+    expect(farmable.every((m) => m.maxLevel <= 22)).toBe(true);
+    expect(farmable.map((m) => m.chance)).toEqual([...farmable.map((m) => m.chance)].sort((a, b) => b - a));
+    expect(tooHigh.every((m) => !canFarm(m, 20))).toBe(true);
+    expect(tooHigh.map((m) => m.minLevel)).toEqual([...tooHigh.map((m) => m.minLevel)].sort((a, b) => a - b));
+    expect(ranked.slice(0, farmable.length).every((r) => !r.tooHigh)).toBe(true);
+  });
+
+  it("keeps the data's order when no level is set", () => {
+    const mobs = SOURCES.reagent(SPIDERS_SILK).drop!.mobs;
+    expect(mobsForLevel(mobs, null).map((r) => r.mob)).toEqual(mobs);
+  });
+
+  it("names the best drop chance you can farm at your level in the one-liner", () => {
+    const best = mobsForLevel(SOURCES.reagent(SPIDERS_SILK).drop!.mobs, 30)[0].mob;
+    expect(summary(SPIDERS_SILK, null, 30)).toBe(`Drops from ${best.name}, level ${best.minLevel}–${best.maxLevel}, ${best.chance}%`);
+    // Too low to farm any of them: the lowest-level mob, as without a level.
+    expect(summary(SPIDERS_SILK, null, 5)).toBe(summary(SPIDERS_SILK));
+  });
+
+  it("shows five mobs, then all of them, marking the ones too high for you", () => {
+    const drop = SOURCES.reagent(SPIDERS_SILK).drop!;
+    const { container, getByRole, getByText } = render(
+      <MemoryRouter>
+        <FoodSourceList sources={SOURCES.reagent(SPIDERS_SILK)} faction={FACTION.alliance} zoneId={null} level={20} />
+      </MemoryRouter>,
+    );
+    expect(getByText(`Drops from ${drop.mobs.length} mobs, highest drop chance you can farm at level 20 first`)).toBeInTheDocument();
+    const list = getByRole("list", { name: "Mobs that drop it" });
+    expect(list.querySelectorAll("li").length).toBe(5);
+    const best = mobsForLevel(drop.mobs, 20)[0].mob;
+    expect(list.querySelector("li")!.textContent).toContain(`${best.name} (level ${best.minLevel}–${best.maxLevel}) · ${best.chance}%`);
+    fireEvent.click(getByRole("button", { name: `Show ${drop.mobs.length - 5} more mobs` }));
+    expect(list.querySelectorAll("li").length).toBe(drop.mobs.length);
+    expect(container.textContent).toContain("Too high for level 20");
   });
 });

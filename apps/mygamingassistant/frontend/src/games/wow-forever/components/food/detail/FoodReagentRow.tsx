@@ -8,10 +8,12 @@ interface FoodReagentRowProps {
   reagent: FoodReagent;
   faction: PlayerFaction;
   zoneId: number | null;
+  /** The player's level, to rank the mobs they can farm first. Null = not set. */
+  level: number | null;
 }
 
 /** "1× Stringy Vulture Meat" and where to get it. */
-export default function FoodReagentRow({ reagent, faction, zoneId }: FoodReagentRowProps) {
+export default function FoodReagentRow({ reagent, faction, zoneId, level }: FoodReagentRowProps) {
   const sources = reagentSourcesFor(reagent.id);
   return (
     <li className="space-y-2 border-t pt-3 first:border-t-0 first:pt-0">
@@ -19,7 +21,7 @@ export default function FoodReagentRow({ reagent, faction, zoneId }: FoodReagent
         {reagent.count}× {reagent.name}
       </h3>
       {hasSources(sources) ? (
-        <FoodSourceList sources={sources} faction={faction} zoneId={zoneId} preferEasySources />
+        <FoodSourceList sources={sources} faction={faction} zoneId={zoneId} level={level} preferEasySources />
       ) : (
         <p className="text-sm text-muted-foreground">{unknownSource(reagent.id, "it")}</p>
       )}

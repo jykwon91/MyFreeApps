@@ -8,6 +8,8 @@ interface FoodContainerListProps {
   sources: Pick<ItemSources, "containers" | "objectSpots" | "containerDrops">;
   faction: PlayerFaction;
   zoneId: number | null;
+  /** The player's level, to rank the mobs they can farm first. Null = not set. */
+  level: number | null;
 }
 
 /**
@@ -15,7 +17,7 @@ interface FoodContainerListProps {
  * of them on the ground, or the mobs that drop the clam. A chest with no
  * fixed spot is only named.
  */
-export default function FoodContainerList({ sources, faction, zoneId }: FoodContainerListProps) {
+export default function FoodContainerList({ sources, faction, zoneId, level }: FoodContainerListProps) {
   const { containers, objectSpots, containerDrops } = sources;
   const severalKinds = containers.length > 1;
   return (
@@ -36,7 +38,7 @@ export default function FoodContainerList({ sources, faction, zoneId }: FoodCont
             <span className="font-medium">{name}</span>{" "}
             <span className="text-muted-foreground">— open it from your bags.</span>
           </p>
-          <FoodDropList drop={drop} faction={faction} zoneId={zoneId} />
+          <FoodDropList drop={drop} faction={faction} zoneId={zoneId} level={level} />
         </div>
       ))}
     </div>
