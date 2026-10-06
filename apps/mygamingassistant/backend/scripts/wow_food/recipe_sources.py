@@ -32,7 +32,7 @@ from scripts.wow_world_map.zones import FOREVER_ONLY_ZONES
 
 # stock = how many a limited vendor holds at once (0 = unlimited); restockMinutes = time to restock one.
 VENDOR_COLUMNS = ["npcId", "name", "title", "zone", "subzone", "x", "y", "faction", "stock", "restockMinutes"]
-MOB_COLUMNS = ["name", "minLevel", "maxLevel", "chance", "zone", "subzone", "x", "y"]
+MOB_COLUMNS = ["name", "minLevel", "maxLevel", "chance", "zone", "subzone", "x", "y", "kind"]
 
 # An item only on this many mobs' shared loot is a world drop, not a named mob's.
 WORLD_DROP_MOBS = 25
@@ -47,6 +47,12 @@ MIN_FARM_CHANCE = 5.0
 MIN_FARM_SPAWNS = 4
 # creature_template.Rank of an ordinary mob (1+ = elite, rare, boss): what a solo player farms.
 NORMAL_RANK = 0
+# creature_template.Rank: 2 = rare elite, 4 = rare (a lone spawn on a long timer); 1 = elite, 3 = boss.
+RARE_RANKS = frozenset({2, 4})
+# A mob's "kind" column: why it isn't a farm target, or "" when it is.
+MOB_KIND_RARE = "rare"
+MOB_KIND_ELITE = "elite"
+MOB_KIND_FEW = "few"
 # A capital is its faction's ground (zones.json gives capitals a faction, not a territory).
 CAPITAL_TERRITORY = {"A": "alliance", "H": "horde"}
 # Drops rarer than this are noise next to a likelier mob (the expert's cut).
@@ -266,7 +272,23 @@ class ClassicSources:
 
     def _mob_row(self, npc: int, chance: float, spots: list[tuple[float, float, Placement]]) -> list[object]:
         row = self._npcs[npc]
-        return [str(row["Name"]), _i(row["MinLevel"]), _i(row["MaxLevel"]), round(chance, 1), *self._farm_spot(spots)]
+        return [
+            str(row["Name"]),
+            _i(row["MinLevel"]),
+            _i(row["MaxLevel"]),
+            round(chance, 1),
+            *self._farm_spot(spots),
+            self._mob_kind(npc),
+        ]
+
+    def _mob_kind(self, npc: int) -> str:
+        """Why a solo player can't farm it — a rare, an elite, or too few spawns — or "" when they can."""
+        rank = _i(self._npcs[npc]["Rank"])
+        if rank in RARE_RANKS:
+            return MOB_KIND_RARE
+        if rank != NORMAL_RANK:
+            return MOB_KIND_ELITE
+        return MOB_KIND_FEW if len(self._spawns.get(npc, [])) < MIN_FARM_SPAWNS else ""
 
     def _farm_spots(
         self,

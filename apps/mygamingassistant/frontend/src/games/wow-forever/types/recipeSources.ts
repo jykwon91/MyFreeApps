@@ -32,6 +32,10 @@ export interface MobSpot {
   territory: Territory | null;
 }
 
+/** Why a mob isn't a farm target: a rare, an elite, or too few spawns. */
+export const MOB_KIND = { farm: "", rare: "rare", elite: "elite", few: "few" } as const;
+export type MobKind = (typeof MOB_KIND)[keyof typeof MOB_KIND];
+
 export interface DropMob {
   name: string;
   minLevel: number;
@@ -40,6 +44,7 @@ export interface DropMob {
   chance: number;
   /** Its biggest pack, in the zone it's most common in. */
   spot: MobSpot | null;
+  kind: MobKind;
 }
 
 export interface DropSource {

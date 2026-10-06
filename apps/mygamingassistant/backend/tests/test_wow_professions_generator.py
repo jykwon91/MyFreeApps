@@ -232,6 +232,12 @@ class TestClothFarmSpots:
         assert len(drop["mobs"]) > 20
         assert all(m[3] >= 1.0 for m in drop["mobs"])
 
+    def test_mobs_say_why_they_are_no_farm(self, sources: dict) -> None:
+        kinds = {m[0]: m[8] for m in sources["reagents"]["3182"]["drop"]["mobs"]}
+        assert kinds["Creepthess"] == "rare" and kinds["Plains Creeper"] == ""
+        cloth = sources["reagents"]["2592"]["drop"]["mobs"]
+        assert all(m[8] == "" for m in cloth)  # cloth farm spots are packs, never a rare
+
     def test_spots_carry_territory(self, sources: dict) -> None:
         territory = sources["territory"]
         sides = {territory[str(m[4])] for m in sources["reagents"]["2589"]["drop"]["mobs"]}

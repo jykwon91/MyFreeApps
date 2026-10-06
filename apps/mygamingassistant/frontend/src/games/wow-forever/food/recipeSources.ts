@@ -5,7 +5,7 @@
 import { FACTION, TERRITORY, type Faction, type PlayerFaction, type Territory } from "@/games/wow-forever/types/worldMap";
 import { ENDPOINT_KIND, formatEndpoint } from "@/games/wow-forever/worldMap/trip";
 import type { FoodRecord } from "@/games/wow-forever/types/food";
-import type { DropMob, DropSource, ItemSources, MobSpot, VendorSpot } from "@/games/wow-forever/types/recipeSources";
+import { MOB_KIND, type DropMob, type DropSource, type ItemSources, type MobKind, type MobSpot, type VendorSpot } from "@/games/wow-forever/types/recipeSources";
 
 /** Classic item ids stop well below this; Forever's new items start far above it. */
 export const FIRST_FOREVER_ITEM_ID = 100_000;
@@ -157,8 +157,11 @@ export function describeRareDrop(drop: DropSource): string {
   return `${what} from mobs ${levelRange(drop.levels)}${where}`;
 }
 
-/** Mobs up to this many levels above you still go down fast enough to farm. */
-export const FARM_LEVELS_ABOVE = 2;
+/**
+ * Mobs up to this many levels above you are still worth farming: +3/+4 con
+ * orange, slower but fine for a farm. +5 and up con red — too slow and risky.
+ */
+export const FARM_LEVELS_ABOVE = 4;
 
 /** A mob you can farm at this level: grey and green ones too — they die faster. */
 export function canFarm(mob: Pick<DropMob, "maxLevel">, level: number): boolean {
@@ -171,18 +174,37 @@ export interface RankedMob {
   tooHigh: boolean;
 }
 
+/** A mob there's a pack of to farm — not a lone rare, an elite, or a handful of spawns. */
+export function isFarmMob(mob: Pick<DropMob, "kind">): boolean {
+  return mob.kind === MOB_KIND.farm;
+}
+
+const NOT_A_FARM: Record<Exclude<MobKind, typeof MOB_KIND.farm>, string> = {
+  [MOB_KIND.rare]: "Rare spawn",
+  [MOB_KIND.elite]: "Elite",
+  [MOB_KIND.few]: "Only a few spawns",
+};
+
+/** Why a mob is no farm target ("Rare spawn"), else "". */
+export function notAFarmLabel(mob: Pick<DropMob, "kind">): string {
+  return mob.kind === MOB_KIND.farm ? "" : NOT_A_FARM[mob.kind];
+}
+
 /**
  * With a level: the mobs you can farm, best drop chance first, then the ones
  * too high for you yet, lowest level first. Without: the data's order (chance
- * x how many there are).
+ * x how many there are). Rares, elites and mobs with a few spawns come last
+ * either way — there's nothing to farm.
  */
 export function mobsForLevel(mobs: readonly DropMob[], level: number | null): RankedMob[] {
-  if (level === null) return mobs.map((mob) => ({ mob, tooHigh: false }));
-  const farmable = mobs.filter((m) => canFarm(m, level));
-  const tooHigh = mobs.filter((m) => !canFarm(m, level));
+  const farms = mobs.filter(isFarmMob);
+  const others = mobs.filter((m) => !isFarmMob(m)).map((mob) => ({ mob, tooHigh: level !== null && !canFarm(mob, level) }));
+  if (level === null) return [...farms.map((mob) => ({ mob, tooHigh: false })), ...others];
+  const farmable = farms.filter((m) => canFarm(m, level));
+  const tooHigh = farms.filter((m) => !canFarm(m, level));
   farmable.sort((a, b) => b.chance - a.chance || a.minLevel - b.minLevel || a.name.localeCompare(b.name));
   tooHigh.sort((a, b) => a.minLevel - b.minLevel || b.chance - a.chance || a.name.localeCompare(b.name));
-  return [...farmable.map((mob) => ({ mob, tooHigh: false })), ...tooHigh.map((mob) => ({ mob, tooHigh: true }))];
+  return [...farmable.map((mob) => ({ mob, tooHigh: false })), ...tooHigh.map((mob) => ({ mob, tooHigh: true })), ...others];
 }
 
 /** "Fleshripper (level 16–17) · 55%". */

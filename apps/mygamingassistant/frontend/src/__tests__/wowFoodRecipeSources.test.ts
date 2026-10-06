@@ -11,7 +11,7 @@ import {
   unknownSource,
 } from "@/games/wow-forever/food/recipeSources";
 import type { FoodRecord } from "@/games/wow-forever/types/food";
-import type { DropSource, VendorSpot } from "@/games/wow-forever/types/recipeSources";
+import { MOB_KIND, type DropSource, type VendorSpot } from "@/games/wow-forever/types/recipeSources";
 
 function food(name: string): FoodRecord {
   const found = FOODS.find((f) => f.name === name);
@@ -49,8 +49,8 @@ describe("skillLine", () => {
 
 describe("drops", () => {
   it("calls a drop under 1% rare", () => {
-    expect(isRareDrop({ ...DROP, mobs: [{ name: "a", minLevel: 1, maxLevel: 2, chance: 0.1, spot: null }] })).toBe(true);
-    expect(isRareDrop({ ...DROP, mobs: [{ name: "a", minLevel: 1, maxLevel: 2, chance: 30, spot: null }] })).toBe(false);
+    expect(isRareDrop({ ...DROP, mobs: [{ name: "a", minLevel: 1, maxLevel: 2, chance: 0.1, spot: null, kind: MOB_KIND.farm }] })).toBe(true);
+    expect(isRareDrop({ ...DROP, mobs: [{ name: "a", minLevel: 1, maxLevel: 2, chance: 30, spot: null, kind: MOB_KIND.farm }] })).toBe(false);
     expect(describeRareDrop({ ...DROP, world: true })).toBe("World drop from mobs level 10–30, mostly in The Barrens");
   });
 });

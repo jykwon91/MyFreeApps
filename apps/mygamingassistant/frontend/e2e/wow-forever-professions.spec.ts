@@ -109,7 +109,7 @@ test("cloth points at a farm spot you can handle at your level", async ({ page }
   const silk = shopping.locator('details[data-mat="4306"]').first();
   const line = (await silk.locator("summary").textContent()) ?? "";
   const [, , top] = line.match(/Drops from [^,]+, level (\d+)–(\d+)/) ?? [];
-  expect(Number(top)).toBeLessThanOrEqual(32);
+  expect(Number(top)).toBeLessThanOrEqual(34);
   await silk.locator("summary").click();
   await silk.getByRole("button", { name: /^Show \d+ more farm spots$/ }).click();
   await expect(silk.getByText("Too high for level 30").first()).toBeVisible();
