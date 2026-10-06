@@ -230,9 +230,9 @@ class TestRecipeSources:
 
     def test_each_farmable_mob_has_a_spot_on_the_map(self, recipe_sources: dict) -> None:
         goretusk = next(m for m in recipe_sources["reagents"]["731"]["drop"]["mobs"] if m[0] == "Goretusk")
-        _, _, _, _, zone, subzone, x, y = goretusk
+        _, _, _, _, zone, subzone, x, y, kind = goretusk
         assert recipe_sources["zones"][str(zone)] == "Westfall"
-        assert subzone == "Moonbrook"
+        assert subzone == "Moonbrook" and kind == ""
         assert 0 <= x <= 100 and 0 <= y <= 100
 
     def test_giant_clams_say_where_they_lie(self, recipe_sources: dict) -> None:

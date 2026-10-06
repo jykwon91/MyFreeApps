@@ -9,6 +9,7 @@ import {
   isCommonDrop,
   isRareDrop,
   levelRange,
+  isFarmMob,
   mobsForLevel,
   placeLabel,
   questsFor,
@@ -97,11 +98,12 @@ function dropPart(drop: DropSource, { faction, zoneId, level }: MatPlace): strin
   }
   // With a level: the best drop chance you can farm at it.
   const [best] = mobsForLevel(drop.mobs, level);
-  if (best && !best.tooHigh && level !== null) {
+  if (best && !best.tooHigh && isFarmMob(best.mob) && level !== null) {
     return `Drops from ${best.mob.name}, ${levelRange([best.mob.minLevel, best.mob.maxLevel])}, ${best.mob.chance}%`;
   }
   // Else the lowest-level mob that drops it — a leveling guide sends you where you can fight.
-  const easiest = [...drop.mobs].sort((a, b) => a.minLevel - b.minLevel)[0];
+  const farms = drop.mobs.filter(isFarmMob);
+  const easiest = [...(farms.length ? farms : drop.mobs)].sort((a, b) => a.minLevel - b.minLevel)[0];
   if (!easiest) return "Drops from mobs";
   return `Drops from ${easiest.name}, ${levelRange([easiest.minLevel, easiest.maxLevel])}`;
 }

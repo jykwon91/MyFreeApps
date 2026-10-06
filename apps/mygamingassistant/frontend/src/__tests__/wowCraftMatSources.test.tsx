@@ -14,6 +14,8 @@ import { createSourceLookup, type RawSourcesFile } from "@/games/wow-forever/dat
 import {
   canFarm,
   describeCommonDrop,
+  describeMob,
+  isFarmMob,
   farmSpots,
   hasSources,
   isCommonDrop,
@@ -86,7 +88,7 @@ describe("crafting material sources", () => {
     expect(summary(SILK_CLOTH, null, 30)).toContain(`Drops from ${spots[0].name}, level ${spots[0].minLevel}–${spots[0].maxLevel}`);
     // Without a level, home comes first whatever its level.
     expect(farmSpots(drop, FACTION.alliance, STRANGLETHORN)[0].spot?.zoneId).toBe(STRANGLETHORN);
-    expect(spots[firstTooHigh - 1].maxLevel).toBeLessThanOrEqual(32);
+    expect(spots[firstTooHigh - 1].maxLevel).toBeLessThanOrEqual(34);
   });
 
   it("with no cloth spot low enough, lists them lowest level first", () => {
@@ -229,20 +231,40 @@ describe("crafting material sources", () => {
   });
 
   it("ranks the mobs you can farm at your level by drop chance, then the ones too high", () => {
-    const ranked = mobsForLevel(SOURCES.reagent(SPIDERS_SILK).drop!.mobs, 20);
+    const ranked = mobsForLevel(SOURCES.reagent(SPIDERS_SILK).drop!.mobs, 20).filter((r) => isFarmMob(r.mob));
     const farmable = ranked.filter((r) => !r.tooHigh).map((r) => r.mob);
     const tooHigh = ranked.filter((r) => r.tooHigh).map((r) => r.mob);
     expect(farmable.length).toBeGreaterThan(0);
-    expect(farmable.every((m) => m.maxLevel <= 22)).toBe(true);
+    expect(farmable.every((m) => m.maxLevel <= 24)).toBe(true);
     expect(farmable.map((m) => m.chance)).toEqual([...farmable.map((m) => m.chance)].sort((a, b) => b - a));
     expect(tooHigh.every((m) => !canFarm(m, 20))).toBe(true);
     expect(tooHigh.map((m) => m.minLevel)).toEqual([...tooHigh.map((m) => m.minLevel)].sort((a, b) => a - b));
     expect(ranked.slice(0, farmable.length).every((r) => !r.tooHigh)).toBe(true);
   });
 
+  it("counts orange mobs, up to 4 levels above you, as farmable", () => {
+    // Level 30: Plains Creeper (32–33) has the best Spider's Silk chance you can farm.
+    const [best] = mobsForLevel(SOURCES.reagent(SPIDERS_SILK).drop!.mobs, 30);
+    expect(best.mob.name).toBe("Plains Creeper");
+    expect(best.tooHigh).toBe(false);
+    expect(canFarm({ maxLevel: 34 }, 30)).toBe(true);
+    expect(canFarm({ maxLevel: 35 }, 30)).toBe(false);
+  });
+
+  it("puts rares and elites last, labelled, whatever your level", () => {
+    const ranked = mobsForLevel(SOURCES.reagent(SPIDERS_SILK).drop!.mobs, 24);
+    const firstNotFarm = ranked.findIndex((r) => !isFarmMob(r.mob));
+    expect(firstNotFarm).toBeGreaterThan(0);
+    expect(ranked.slice(firstNotFarm).every((r) => !isFarmMob(r.mob))).toBe(true);
+    expect(ranked.find((r) => r.mob.name === "Creepthess")?.mob.kind).toBe("rare");
+    // Creepthess (24, 12.2%) beats most farmable spiders at 24 on chance alone, but there's only one.
+    expect(summary(SPIDERS_SILK, null, 24)).not.toContain("Creepthess");
+  });
+
   it("keeps the data's order when no level is set", () => {
     const mobs = SOURCES.reagent(SPIDERS_SILK).drop!.mobs;
-    expect(mobsForLevel(mobs, null).map((r) => r.mob)).toEqual(mobs);
+    const inOrder = [...mobs.filter(isFarmMob), ...mobs.filter((m) => !isFarmMob(m))];
+    expect(mobsForLevel(mobs, null).map((r) => r.mob)).toEqual(inOrder);
   });
 
   it("names the best drop chance you can farm at your level in the one-liner", () => {
@@ -263,7 +285,7 @@ describe("crafting material sources", () => {
     const list = getByRole("list", { name: "Mobs that drop it" });
     expect(list.querySelectorAll("li").length).toBe(5);
     const best = mobsForLevel(drop.mobs, 20)[0].mob;
-    expect(list.querySelector("li")!.textContent).toContain(`${best.name} (level ${best.minLevel}–${best.maxLevel}) · ${best.chance}%`);
+    expect(list.querySelector("li")!.textContent).toContain(describeMob(best));
     fireEvent.click(getByRole("button", { name: `Show ${drop.mobs.length - 5} more mobs` }));
     expect(list.querySelectorAll("li").length).toBe(drop.mobs.length);
     expect(container.textContent).toContain("Too high for level 20");

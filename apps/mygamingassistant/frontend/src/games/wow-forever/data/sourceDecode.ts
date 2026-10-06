@@ -1,4 +1,5 @@
 import { TERRITORY, type Faction, type Territory } from "@/games/wow-forever/types/worldMap";
+import { MOB_KIND } from "@/games/wow-forever/types/recipeSources";
 import type {
   ContainerDrop,
   DisenchantFrom,
@@ -6,6 +7,7 @@ import type {
   DropMob,
   DropSource,
   ItemSources,
+  MobKind,
   MobSpot,
   ObjectSpot,
   QuestGiver,
@@ -54,6 +56,13 @@ export interface SourceLookup {
   recipe(id: number): ItemSources;
   /** Where to get a reagent. */
   reagent(itemId: number): ItemSources;
+}
+
+const MOB_KINDS: readonly string[] = Object.values(MOB_KIND);
+
+/** The data's "kind" column; anything unknown (or missing, in older rows) is a mob to farm. */
+function mobKind(value: unknown): MobKind {
+  return MOB_KINDS.includes(String(value)) ? (String(value) as MobKind) : MOB_KIND.farm;
 }
 
 export function createSourceLookup(raw: RawSourcesFile): SourceLookup {
@@ -123,13 +132,14 @@ export function createSourceLookup(raw: RawSourcesFile): SourceLookup {
   }
 
   function mob(r: Row): DropMob {
-    const [name, minLevel, maxLevel, chance, zoneId, subzone, x, y] = r;
+    const [name, minLevel, maxLevel, chance, zoneId, subzone, x, y, kind] = r;
     return {
       name: String(name),
       minLevel: Number(minLevel),
       maxLevel: Number(maxLevel),
       chance: Number(chance),
       spot: spotAt(zoneId, subzone, x, y),
+      kind: mobKind(kind),
     };
   }
 

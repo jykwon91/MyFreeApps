@@ -10,8 +10,10 @@ import {
   canFarm,
   isRareDrop,
   mobsForLevel,
+  notAFarmLabel,
+  isFarmMob,
 } from "@/games/wow-forever/food/recipeSources";
-import type { DropSource } from "@/games/wow-forever/types/recipeSources";
+import type { DropMob, DropSource } from "@/games/wow-forever/types/recipeSources";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 
 interface FoodDropListProps {
@@ -37,6 +39,13 @@ function mobsHeading(count: number, farmable: number, level: number | null): str
   if (level === null) return `Drops from ${count} mobs, best to farm first`;
   if (farmable === 0) return `Drops from ${count} mobs, none you can farm at level ${level} yet`;
   return `Drops from ${count} mobs, highest drop chance you can farm at level ${level} first`;
+}
+
+/** "Rare spawn" / "Too high for level 20" / "". */
+function mobNote(mob: DropMob, tooHigh: boolean, level: number | null): string {
+  const notAFarm = notAFarmLabel(mob);
+  if (notAFarm) return notAFarm;
+  return tooHigh ? `Too high for level ${level}` : "";
 }
 
 export default function FoodDropList({ drop, faction, zoneId, level }: FoodDropListProps) {
@@ -67,7 +76,7 @@ export default function FoodDropList({ drop, faction, zoneId, level }: FoodDropL
     );
   }
   const ranked = mobsForLevel(drop.mobs, level);
-  const farmable = ranked.filter((r) => !r.tooHigh).length;
+  const farmable = ranked.filter((r) => !r.tooHigh && isFarmMob(r.mob)).length;
   const hidden = showAll ? 0 : Math.max(0, ranked.length - SHOWN_MOBS);
   return (
     <div className="space-y-2">
@@ -78,7 +87,7 @@ export default function FoodDropList({ drop, faction, zoneId, level }: FoodDropL
             key={mob.name}
             mob={mob}
             warning={mob.spot ? hostileGroundLabel(mob.spot, faction) : ""}
-            note={tooHigh ? `Too high for level ${level}` : ""}
+            note={mobNote(mob, tooHigh, level)}
           />
         ))}
       </ul>
