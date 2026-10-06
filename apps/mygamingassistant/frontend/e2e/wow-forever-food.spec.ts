@@ -133,3 +133,15 @@ test("in the beta, a level past 30 reads as 30 and nothing past the cap is promi
   await expect(page.getByText(/Best food for a level 30 Warlock leveling/)).toBeVisible();
   await expect(page.getByText(/Next upgrade at level/)).toHaveCount(0);
 });
+
+test("an ingredient lists every mob that drops it, the best you can farm at your level first", async ({ page }) => {
+  await page.goto("/wow-forever/food/1082?lvl=20&class=warlock");
+  const meat = page.locator("li", { has: page.getByRole("heading", { name: /Crisp Spider Meat/ }) });
+  await expect(meat.getByText(/^Drops from \d+ mobs, highest drop chance you can farm at level 20 first$/)).toBeVisible();
+  const mobs = meat.getByRole("list", { name: "Mobs that drop it" });
+  await expect(mobs.locator("li")).toHaveCount(5);
+  await expect(mobs.getByText("Too high for level 20")).toHaveCount(0);
+  await meat.getByRole("button", { name: /^Show \d+ more mobs$/ }).click();
+  expect(await mobs.locator("li").count()).toBeGreaterThan(20);
+  await expect(mobs.getByText(/Plains Creeper \(level 32–33\).*Too high for level 20/)).toBeVisible();
+});

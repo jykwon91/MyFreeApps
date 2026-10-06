@@ -17,6 +17,8 @@ interface CraftRouteSectionsProps {
   profession: CraftingProfession;
   faction: PlayerFaction;
   zoneId: number | null;
+  /** The player's level, to rank the mobs they can farm first. Null = not set. */
+  level: number | null;
   data: CraftingData;
 }
 
@@ -30,14 +32,14 @@ function statusLine(entries: readonly ResolvedRouteEntry[], current: number | nu
 }
 
 /** The "Leveling route" and "Shopping list" sections, once the recipe data has loaded. */
-export default function CraftRouteSections({ profession, faction, zoneId, data }: CraftRouteSectionsProps) {
+export default function CraftRouteSections({ profession, faction, zoneId, level, data }: CraftRouteSectionsProps) {
   const guide = CRAFTING_GUIDES[profession];
   const [skill, setSkill] = useCraftingSkill(profession);
   const priced = usePricedRoute(profession, data, skill);
   const entries = priced.entries;
   const current = currentEntryIndex(entries, skill);
   const currentEntry = current === null ? undefined : entries[current];
-  const place = { sources: data.sources, faction, zoneId, file: data.file };
+  const place = { sources: data.sources, faction, zoneId, level, file: data.file };
   const slots = profession === CRAFTING_PROFESSION.enchanting ? { excluded: priced.excludedSlots, onToggle: priced.setSlot } : null;
   return (
     <>

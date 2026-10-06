@@ -7,10 +7,12 @@ interface FoodReagentsSectionProps {
   reagents: readonly FoodReagent[];
   faction: PlayerFaction;
   zoneId: number | null;
+  /** The player's level, to rank the mobs they can farm first. Null = not set. */
+  level: number | null;
 }
 
 /** What goes into one — each ingredient with where to get it. */
-export default function FoodReagentsSection({ reagents, faction, zoneId }: FoodReagentsSectionProps) {
+export default function FoodReagentsSection({ reagents, faction, zoneId, level }: FoodReagentsSectionProps) {
   if (reagents.length === 0) return null;
   return (
     <section aria-labelledby="food-reagents" className={DETAIL_SECTION}>
@@ -19,7 +21,7 @@ export default function FoodReagentsSection({ reagents, faction, zoneId }: FoodR
       </h2>
       <ul className="space-y-3">
         {reagents.map((r) => (
-          <FoodReagentRow key={r.id} reagent={r} faction={faction} zoneId={zoneId} />
+          <FoodReagentRow key={r.id} reagent={r} faction={faction} zoneId={zoneId} level={level} />
         ))}
       </ul>
     </section>

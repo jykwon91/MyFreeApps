@@ -19,7 +19,8 @@ const KIND_LABEL: Record<FoodKind, string> = { food: "Food", drink: "Drink", fea
 export default function WowFoodDetailPage() {
   const { foodId } = useParams();
   const { search } = useLocation();
-  const [{ cookingSkill }] = useFoodPickerSettings();
+  // The level asked about on What should I eat? — maybe someone else's: farm for that level.
+  const [{ cookingSkill, level }] = useFoodPickerSettings();
   const [{ faction, zoneId }] = usePlayerSettings();
   const backTo = `/wow-forever/food${search}`;
   const food = FOODS.find((f) => String(f.id) === foodId);
@@ -58,8 +59,9 @@ export default function WowFoodDetailPage() {
         cookingSkill={cookingSkill}
         faction={faction}
         zoneId={zoneId}
+        level={level}
       />
-      <FoodReagentsSection reagents={food.reagents} faction={faction} zoneId={zoneId} />
+      <FoodReagentsSection reagents={food.reagents} faction={faction} zoneId={zoneId} level={level} />
       <FoodCookingSpot focus={food.focus} />
       <aside className="rounded-xl border bg-card p-4 space-y-2 text-xs text-muted-foreground">
         <p>

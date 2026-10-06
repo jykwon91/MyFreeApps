@@ -23,7 +23,7 @@ const DATA: CraftingData = {
 function renderSections() {
   return render(
     <MemoryRouter initialEntries={["/wow-forever/professions?p=enchanting"]}>
-      <CraftRouteSections profession="enchanting" faction={FACTION.alliance} zoneId={null} data={DATA} />
+      <CraftRouteSections profession="enchanting" faction={FACTION.alliance} zoneId={null} level={null} data={DATA} />
     </MemoryRouter>,
   );
 }

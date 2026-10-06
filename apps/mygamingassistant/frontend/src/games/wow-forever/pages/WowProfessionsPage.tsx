@@ -2,12 +2,15 @@ import { useSearchParams } from "react-router-dom";
 import CraftingGuideView from "@/games/wow-forever/components/crafting/CraftingGuideView";
 import SecondaryGuideView from "@/games/wow-forever/components/professions/SecondaryGuideView";
 import GuideSectionNav from "@/games/wow-forever/components/guide/GuideSectionNav";
+import LevelCapNote from "@/games/wow-forever/components/shared/LevelCapNote";
+import NumberField from "@/games/wow-forever/components/shared/NumberField";
 import SegmentedToggle from "@/games/wow-forever/components/shared/SegmentedToggle";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import { PROFESSION, type Profession } from "@/games/wow-forever/data/professions/professionTypes";
 import { CRAFTING_GUIDES } from "@/games/wow-forever/data/professions/crafting/craftingGuide";
 import { LOOT_SECTION_ID } from "@/games/wow-forever/data/professions/crafting/disenchantOrSell";
 import { PROFESSIONS_DATA_STATUS } from "@/games/wow-forever/data/professions/professionsStatus";
+import { levelCap, playerLevel } from "@/games/wow-forever/data/levelCap";
 import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { CRAFTING_PROFESSION, type CraftingProfession } from "@/games/wow-forever/types/crafting";
 import { FACTION, type PlayerFaction } from "@/games/wow-forever/types/worldMap";
@@ -90,14 +93,23 @@ export default function WowProfessionsPage() {
             value={player.faction}
             onChange={(faction) => updatePlayer({ faction })}
           />
+          <NumberField
+            label="Your level"
+            value={player.level}
+            min={1}
+            max={levelCap()}
+            onChange={(level) => updatePlayer({ level: playerLevel(level) })}
+            className="flex flex-col gap-1 w-32"
+          />
         </div>
+        <LevelCapNote />
         <GuideSectionNav sections={crafting ? craftingSections(profession) : SECTIONS} />
       </div>
 
       {crafting ? (
-        <CraftingGuideView profession={profession} faction={player.faction} zoneId={player.zoneId} />
+        <CraftingGuideView profession={profession} faction={player.faction} zoneId={player.zoneId} level={player.level} />
       ) : (
-        <SecondaryGuideView profession={profession} faction={player.faction} zoneId={player.zoneId} />
+        <SecondaryGuideView profession={profession} faction={player.faction} zoneId={player.zoneId} level={player.level} />
       )}
     </main>
   );

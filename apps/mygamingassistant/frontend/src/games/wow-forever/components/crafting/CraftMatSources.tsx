@@ -47,7 +47,7 @@ export default function CraftMatSources({ itemId, place, professionLabel }: Craf
           Made by {madeBy} — buy it at the auction house, or ask a player with {madeBy} to make it.
         </p>
       ) : null}
-      <FoodSourceList sources={sources} faction={place.faction} zoneId={place.zoneId} preferEasySources />
+      <FoodSourceList sources={sources} faction={place.faction} zoneId={place.zoneId} level={place.level} preferEasySources />
       {known ? null : <p className="text-sm text-muted-foreground">{unknownMat(itemId)}</p>}
     </div>
   );

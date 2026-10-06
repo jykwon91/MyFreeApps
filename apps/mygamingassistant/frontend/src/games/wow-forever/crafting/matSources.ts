@@ -9,6 +9,7 @@ import {
   isCommonDrop,
   isRareDrop,
   levelRange,
+  mobsForLevel,
   placeLabel,
   questsFor,
   splitVendors,
@@ -79,7 +80,14 @@ function vendorPart(sources: ItemSources, faction: PlayerFaction, zoneId: number
   return { text: `Sold by ${yours[0].name}, ${placeLabel(yours[0])}${stock}`, limited };
 }
 
-function dropPart(drop: DropSource, faction: PlayerFaction, zoneId: number | null): string {
+/** Where the player is and their level (null = not set) — what the one-liners are picked for. */
+export interface MatPlace {
+  faction: PlayerFaction;
+  zoneId: number | null;
+  level: number | null;
+}
+
+function dropPart(drop: DropSource, { faction, zoneId, level }: MatPlace): string {
   if (isRareDrop(drop)) return describeRareDrop(drop);
   if (isCommonDrop(drop)) {
     // Cloth: the nearest farm spot, by name — "drops from mobs" doesn't tell you where to go.
@@ -87,7 +95,12 @@ function dropPart(drop: DropSource, faction: PlayerFaction, zoneId: number | nul
     if (!spot?.spot) return `Drops from mobs ${levelRange(drop.levels)}`;
     return `Drops from ${spot.name}, ${levelRange([spot.minLevel, spot.maxLevel])}, ${spot.spot.zoneName}`;
   }
-  // The lowest-level mob that drops it — a leveling guide sends you where you can fight.
+  // With a level: the best drop chance you can farm at it.
+  const [best] = mobsForLevel(drop.mobs, level);
+  if (best && !best.tooHigh && level !== null) {
+    return `Drops from ${best.mob.name}, ${levelRange([best.mob.minLevel, best.mob.maxLevel])}, ${best.mob.chance}%`;
+  }
+  // Else the lowest-level mob that drops it — a leveling guide sends you where you can fight.
   const easiest = [...drop.mobs].sort((a, b) => a.minLevel - b.minLevel)[0];
   if (!easiest) return "Drops from mobs";
   return `Drops from ${easiest.name}, ${levelRange([easiest.minLevel, easiest.maxLevel])}`;
@@ -115,14 +128,15 @@ function containerPart(sources: ItemSources): string {
  * The one-line answer for the shopping list: the easiest two ways to get it,
  * e.g. "Sold in most towns" or "Disenchant level 21–30 green armor · Made by …".
  */
-export function matSummary(info: MatInfo, faction: PlayerFaction, zoneId: number | null, maxParts = SUMMARY_PARTS): string {
+export function matSummary(info: MatInfo, place: MatPlace, maxParts = SUMMARY_PARTS): string {
   const { sources, madeBy } = info;
+  const { faction, zoneId } = place;
   const vendor = vendorPart(sources, faction, zoneId);
   const parts: string[] = [];
   if (vendor && !vendor.limited) parts.push(vendor.text);
   if (sources.disenchant) parts.push(disenchantPart(sources.disenchant));
   if (sources.skinning) parts.push(`Skin beasts ${levelRange(sources.skinning.levels)}`);
-  if (sources.drop) parts.push(dropPart(sources.drop, faction, zoneId));
+  if (sources.drop) parts.push(dropPart(sources.drop, place));
   if (madeBy) parts.push(`Made by ${madeBy}`);
   if (vendor?.limited) parts.push(vendor.text);
   // A chest that happens to hold cloth isn't worth naming next to the mobs that drop it.

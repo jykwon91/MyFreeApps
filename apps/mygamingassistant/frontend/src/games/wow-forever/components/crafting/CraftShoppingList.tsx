@@ -32,7 +32,7 @@ export default function CraftShoppingList({ entries, skill, place, professionLab
   // A vendor near you beats the auction house, even for what a profession can make (Copper Rod).
   const bought = (l: ShoppingLine) => !l.madeBy || soldToYou(place.sources.reagent(l.id), place.faction);
   const summary = (l: ShoppingLine) =>
-    matSummary({ sources: place.sources.reagent(l.id), madeBy: l.madeBy ?? null }, place.faction, place.zoneId);
+    matSummary({ sources: place.sources.reagent(l.id), madeBy: l.madeBy ?? null }, place);
   const end = entries.reduce((max, e) => Math.max(max, e.kind === "craft" ? e.step.to : 0), 0);
   const top = list.buy.slice(0, SUMMARY_ITEMS).map((l) => `${l.count} ${l.name}`).join(", ");
   const past = fromSkill !== null && fromSkill >= end;

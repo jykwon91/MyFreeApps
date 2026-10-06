@@ -17,7 +17,7 @@ function learnLine(recipe: CraftRecipe, place: CraftPlace): string {
   const skill = `Skill ${recipe.learn.skill}`;
   const sources = place.sources.recipe(recipe.learn.itemId);
   if (!hasSources(sources)) return `${skill} · Where it's sold isn't known yet`;
-  return `${skill} · ${matSummary({ sources, madeBy: null }, place.faction, place.zoneId)}`;
+  return `${skill} · ${matSummary({ sources, madeBy: null }, place)}`;
 }
 
 function formulaName(recipe: CraftRecipe): string {

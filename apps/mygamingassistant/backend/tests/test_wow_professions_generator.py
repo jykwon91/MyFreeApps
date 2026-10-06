@@ -226,6 +226,12 @@ class TestClothFarmSpots:
         assert len({m[0] for m in drop["mobs"]}) == len(drop["mobs"])  # a different mob in each zone
         assert all(m[3] >= MIN_FARM_CHANCE for m in drop["mobs"])
 
+    def test_every_mob_for_a_non_cloth_drop(self, sources: dict) -> None:
+        # Spider's Silk: each mob has its own chance, so all of them are listed, not the top 3.
+        drop = sources["reagents"]["3182"]["drop"]
+        assert len(drop["mobs"]) > 20
+        assert all(m[3] >= 1.0 for m in drop["mobs"])
+
     def test_spots_carry_territory(self, sources: dict) -> None:
         territory = sources["territory"]
         sides = {territory[str(m[4])] for m in sources["reagents"]["2589"]["drop"]["mobs"]}
