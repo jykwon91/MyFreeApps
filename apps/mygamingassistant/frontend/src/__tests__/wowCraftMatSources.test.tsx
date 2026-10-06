@@ -44,6 +44,8 @@ const RUGGED_LEATHER = 8170;
 const WOOL_CLOTH = 2592;
 const COPPER_ROD = 6217;
 const SPIDERS_SILK = 3182;
+const SILK_CLOTH = 4306;
+const STRANGLETHORN = 1434;
 // Linen, Wool, Silk, Mageweave, Runecloth.
 const CLOTH = [LINEN_CLOTH, WOOL_CLOTH, 4306, 4338, 14047];
 
@@ -73,6 +75,36 @@ describe("crafting material sources", () => {
     expect(hostile.slice(hostile.indexOf(true)).every(Boolean)).toBe(true);
     const ashenvale = spots.find((m) => m.spot?.zoneName === "Ashenvale")!;
     expect(farmSpots(drop, FACTION.alliance, ashenvale.spot!.zoneId)[0]).toBe(ashenvale);
+  });
+
+  it("with a level, puts the cloth spots you can farm first, even when your zone's is too high", () => {
+    const drop = SOURCES.reagent(SILK_CLOTH).drop!;
+    const spots = farmSpots(drop, FACTION.alliance, STRANGLETHORN, 30);
+    const firstTooHigh = spots.findIndex((m) => !canFarm(m, 30));
+    expect(firstTooHigh).toBeGreaterThan(0);
+    expect(spots.slice(firstTooHigh).every((m) => !canFarm(m, 30))).toBe(true);
+    expect(summary(SILK_CLOTH, null, 30)).toContain(`Drops from ${spots[0].name}, level ${spots[0].minLevel}–${spots[0].maxLevel}`);
+    // Without a level, home comes first whatever its level.
+    expect(farmSpots(drop, FACTION.alliance, STRANGLETHORN)[0].spot?.zoneId).toBe(STRANGLETHORN);
+    expect(spots[firstTooHigh - 1].maxLevel).toBeLessThanOrEqual(32);
+  });
+
+  it("with no cloth spot low enough, lists them lowest level first", () => {
+    const spots = farmSpots(SOURCES.reagent(SILK_CLOTH).drop!, FACTION.alliance, STRANGLETHORN, 20);
+    expect(spots.every((m) => !canFarm(m, 20))).toBe(true);
+    expect(spots.map((m) => m.minLevel)).toEqual([...spots.map((m) => m.minLevel)].sort((x, y) => x - y));
+  });
+
+  it("marks the cloth spots too high for your level", () => {
+    const { getByRole, getAllByText } = render(
+      <MemoryRouter>
+        <FoodSourceList sources={SOURCES.reagent(SILK_CLOTH)} faction={FACTION.alliance} zoneId={STRANGLETHORN} level={30} />
+      </MemoryRouter>,
+    );
+    const list = getByRole("list", { name: "Where to farm it" });
+    expect(list.querySelector("li")!.textContent).not.toContain("Too high");
+    fireEvent.click(getByRole("button", { name: /^Show \d+ more farm spots$/ }));
+    expect(getAllByText(/Too high for level 30/).length).toBeGreaterThan(0);
   });
 
   it("gives every cloth-like drop a farm spot, and each cloth several with a place and coordinates", () => {

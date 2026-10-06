@@ -134,10 +134,20 @@ function groundRank(spot: MobSpot | null, faction: PlayerFaction, zoneId: number
   return isHostileGround(spot, faction) ? 3 : 1;
 }
 
-/** Farm spots for a common drop, the closest-to-home and lowest-level first. */
-export function farmSpots(drop: DropSource, faction: PlayerFaction, zoneId: number | null): DropMob[] {
+/**
+ * Farm spots for a common drop, the closest-to-home and lowest-level first.
+ * With a level, the spots you can farm come first (closest to home, then the
+ * best drop chance), then the ones too high for you, lowest level first.
+ */
+export function farmSpots(drop: DropSource, faction: PlayerFaction, zoneId: number | null, level: number | null = null): DropMob[] {
   const rank = (m: DropMob) => groundRank(m.spot, faction, zoneId);
-  return [...drop.mobs].sort((a, b) => rank(a) - rank(b) || a.minLevel - b.minLevel || a.name.localeCompare(b.name));
+  const byName = (a: DropMob, b: DropMob) => a.name.localeCompare(b.name);
+  if (level === null) return [...drop.mobs].sort((a, b) => rank(a) - rank(b) || a.minLevel - b.minLevel || byName(a, b));
+  const farmable = drop.mobs.filter((m) => canFarm(m, level));
+  const tooHigh = drop.mobs.filter((m) => !canFarm(m, level));
+  farmable.sort((a, b) => rank(a) - rank(b) || b.chance - a.chance || byName(a, b));
+  tooHigh.sort((a, b) => a.minLevel - b.minLevel || rank(a) - rank(b) || byName(a, b));
+  return [...farmable, ...tooHigh];
 }
 
 /** "World drop from mobs level 10–30, mostly in The Barrens" / "Rare drop …". */

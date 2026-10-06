@@ -91,7 +91,7 @@ function dropPart(drop: DropSource, { faction, zoneId, level }: MatPlace): strin
   if (isRareDrop(drop)) return describeRareDrop(drop);
   if (isCommonDrop(drop)) {
     // Cloth: the nearest farm spot, by name — "drops from mobs" doesn't tell you where to go.
-    const spot = farmSpots(drop, faction, zoneId)[0];
+    const spot = farmSpots(drop, faction, zoneId, level)[0];
     if (!spot?.spot) return `Drops from mobs ${levelRange(drop.levels)}`;
     return `Drops from ${spot.name}, ${levelRange([spot.minLevel, spot.maxLevel])}, ${spot.spot.zoneName}`;
   }
