@@ -3,7 +3,9 @@ import SegmentedToggle from "@/games/wow-forever/components/shared/SegmentedTogg
 import WhereAreYou from "@/games/wow-forever/components/worldMap/WhereAreYou";
 import ZoneSelect from "@/games/wow-forever/components/worldMap/ZoneSelect";
 import { WOW_CLASSES, findClass } from "@/games/wow-forever/data/classes";
-import { MAX_LEVEL, type PlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
+import LevelCapNote from "@/games/wow-forever/components/shared/LevelCapNote";
+import { levelCap, playerLevel } from "@/games/wow-forever/data/levelCap";
+import type { PlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { FACTION, type PlayerFaction, type WorldMapData } from "@/games/wow-forever/types/worldMap";
 import type { Place } from "@/games/wow-forever/worldMap/places";
 
@@ -20,9 +22,7 @@ interface PlayerStripProps {
 }
 
 function parseLevel(raw: string): number | null {
-  const n = Number.parseInt(raw, 10);
-  if (!Number.isFinite(n) || n < 1) return null;
-  return Math.min(n, MAX_LEVEL);
+  return playerLevel(Number.parseInt(raw, 10));
 }
 
 /** "You": where you are (a place or coordinates), then faction -> class -> zone (+ level). */
@@ -94,11 +94,12 @@ export default function PlayerStrip({ data, settings, places, onChange }: Player
             type="number"
             inputMode="numeric"
             min={1}
-            max={MAX_LEVEL}
+            max={levelCap()}
             value={settings.level ?? ""}
             onChange={(e) => onChange({ level: parseLevel(e.target.value) })}
             className="w-full rounded-md border bg-card px-3 text-sm min-h-[44px]"
           />
+          <LevelCapNote />
         </div>
       </div>
     </section>

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
@@ -77,8 +77,29 @@ describe("goldFarms", () => {
   });
 });
 
+/** These tests pick levels past the beta cap: run them after launch. */
+const AFTER_LAUNCH = new Date("2026-11-05T12:00:00Z");
+const IN_BETA = new Date("2026-10-05T12:00:00Z");
+
+function at(date: Date) {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(date);
+}
+
 describe("Making gold page", () => {
-  beforeEach(() => window.localStorage.clear());
+  beforeEach(() => {
+    window.localStorage.clear();
+    at(AFTER_LAUNCH);
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it("in the beta, reads a saved level past 30 as 30", () => {
+    at(IN_BETA);
+    savePlayer(45, "warlock");
+    renderAt("/wow-forever/gold");
+    expect(screen.getByLabelText("Your level")).toHaveValue(30);
+    expect(screen.getByText(/The beta stops at level 30/)).toBeInTheDocument();
+  });
 
   it("starts at the 1–20 plan, says the numbers are vendor prices, and asks for a level to list farms", () => {
     renderAt("/wow-forever/gold");

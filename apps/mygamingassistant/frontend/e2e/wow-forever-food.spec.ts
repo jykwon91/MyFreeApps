@@ -5,13 +5,21 @@
  */
 import { test, expect } from "@playwright/test";
 
+// Most checks pick levels past the beta cap of 30, so they run after launch.
+const AFTER_LAUNCH = new Date("2026-11-05T12:00:00Z");
+const IN_BETA = new Date("2026-10-05T12:00:00Z");
+
+test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(AFTER_LAUNCH);
+});
+
 test("from the landing card: enter a level and class, get a pick", async ({ page }) => {
   await page.goto("/wow-forever");
   await page.getByRole("link", { name: /What should I eat\?/ }).click();
   await expect(page).toHaveURL(/\/wow-forever\/food/);
-  await expect(page.getByText("Enter your level to see what to cook.")).toBeVisible();
+  await expect(page.getByText("Enter a level to see what to cook.")).toBeVisible();
 
-  await page.getByLabel("Your level").fill("45");
+  await page.getByLabel("Level", { exact: true }).fill("45");
   await page.getByLabel("Class").selectOption("mage");
   await page.getByLabel("Spec").selectOption("fire");
   await page.getByRole("radio", { name: "Raid" }).click();
@@ -22,7 +30,7 @@ test("from the landing card: enter a level and class, get a pick", async ({ page
 
 test("answers for a level, class and activity and keeps it in the URL", async ({ page }) => {
   await page.goto("/wow-forever/food");
-  await page.getByLabel("Your level").fill("35");
+  await page.getByLabel("Level", { exact: true }).fill("35");
   await page.getByLabel("Class").selectOption("warrior");
   await expect(page.locator("#food-top-pick")).toHaveText("Poached Sunscale Salmon");
   await expect(page.getByText(/Next upgrade at level 55/)).toBeVisible();
@@ -47,7 +55,7 @@ test("from the Cooking guide: pick Just healing and see the biggest heal", async
   await page.getByRole("link", { name: /Try the food picker/ }).click();
   await expect(page).toHaveURL(/\/wow-forever\/food/);
 
-  await page.getByLabel("Your level").fill("5");
+  await page.getByLabel("Level", { exact: true }).fill("5");
   await page.getByRole("radio", { name: "Just healing" }).click();
   await expect(page.locator("#food-top-pick")).toHaveText("Longjaw Mud Snapper");
   await expect(page.getByText(/Heals the most of what you can eat: 552 health over 24 sec/)).toBeVisible();
@@ -63,7 +71,7 @@ test("the phone layout never scrolls sideways", async ({ page }) => {
 
 test("click a food to see where to get the recipe, then get directions to the vendor", async ({ page }) => {
   await page.goto("/wow-forever/food");
-  await page.getByLabel("Your level").fill("20");
+  await page.getByLabel("Level", { exact: true }).fill("20");
   await page.getByLabel("Class").selectOption("warlock");
   await page.getByRole("link", { name: "Gooey Spider Cake" }).click();
 
@@ -115,4 +123,13 @@ test("an ingredient found in clams says where the clams are, with directions", a
   await need.getByRole("link", { name: "Directions to Giant Clam, Stranglethorn Vale" }).click();
   await expect(page).toHaveURL(/\/wow-forever\/map\?to=pt%3A1434%2C26\.3%2C27\.9/);
   await expect(page.getByRole("combobox", { name: "To" })).toHaveValue(/Grom'gol/);
+});
+
+test("in the beta, a level past 30 reads as 30 and nothing past the cap is promised", async ({ page }) => {
+  await page.clock.setFixedTime(IN_BETA);
+  await page.goto("/wow-forever/food?lvl=45&class=warlock&skill=175");
+  await expect(page.getByLabel("Level", { exact: true })).toHaveValue("30");
+  await expect(page.getByText("The beta stops at level 30 — 60 from launch on Nov 4.")).toBeVisible();
+  await expect(page.getByText(/Best food for a level 30 Warlock leveling/)).toBeVisible();
+  await expect(page.getByText(/Next upgrade at level/)).toHaveCount(0);
 });

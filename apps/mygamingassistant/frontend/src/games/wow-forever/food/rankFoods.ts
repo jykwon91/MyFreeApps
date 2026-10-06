@@ -5,6 +5,8 @@ import type { FoodRecord } from "@/games/wow-forever/types/food";
 
 export interface FoodPickerInput {
   level: number;
+  /** The highest level anyone can be right now (`levelCap()`): no upgrade is promised past it. */
+  levelCap: number;
   classId: WowClassId;
   specId: string;
   activity: FoodActivity;
@@ -86,14 +88,26 @@ function rankCandidates(foods: readonly FoodRecord[], activity: FoodActivity, fw
   return [...groups.values()];
 }
 
+/**
+ * The highest Cooking skill a level can train to (Classic ranks: Journeyman
+ * at 10, Expert at 20, Artisan at 35 — see data/professions/cooking.ts).
+ */
+export function cookingCapAt(level: number): number {
+  if (level >= 35) return 300;
+  if (level >= 20) return 225;
+  if (level >= 10) return 150;
+  return 75;
+}
+
 function canCook(pick: FoodPick, cookingSkill: number | null): boolean {
   return cookingSkill === null || pick.skillNeeded === null || pick.skillNeeded <= cookingSkill;
 }
 
 /**
  * The best food for a situation. Level caps what you can eat; Cooking skill
- * (if given) caps what you can cook — anything better beyond it becomes
- * "worth training for".
+ * (if given) caps what you can cook — anything better beyond it, that the
+ * level can still train to, becomes "worth training for". The next upgrade
+ * stops at the level cap.
  */
 export function rankFoods(foods: readonly FoodRecord[], input: FoodPickerInput, trainerSkills: TrainerSkills): FoodPickerResult {
   const fw = foodWeights(input.classId, input.specId, input.activity);
@@ -101,10 +115,14 @@ export function rankFoods(foods: readonly FoodRecord[], input: FoodPickerInput, 
   const ranked = rankCandidates(edible, input.activity, fw, trainerSkills);
   const cookable = ranked.filter((p) => canCook(p, input.cookingSkill));
   const top = cookable[0] ?? null;
-  const trainFor = ranked.find((p) => !canCook(p, input.cookingSkill) && (!top || p.score > top.score)) ?? null;
+  const trainable = cookingCapAt(input.level);
+  const trainFor =
+    ranked.find(
+      (p) => !canCook(p, input.cookingSkill) && canCook(p, trainable) && (!top || p.score > top.score),
+    ) ?? null;
 
   const later = rankCandidates(
-    foods.filter((f) => f.level > input.level),
+    foods.filter((f) => f.level > input.level && f.level <= input.levelCap),
     input.activity,
     fw,
     trainerSkills,

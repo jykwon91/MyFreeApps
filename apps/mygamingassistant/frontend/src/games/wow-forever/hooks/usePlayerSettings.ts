@@ -1,11 +1,10 @@
 import { useCallback, useState } from "react";
 import { findClass, type WowClassId } from "@/games/wow-forever/data/classes";
+import { MAX_LEVEL, playerLevel } from "@/games/wow-forever/data/levelCap";
 import { readStored, writeStored } from "@/games/wow-forever/lib/safeLocalStorage";
 import { FACTION, type PlayerFaction } from "@/games/wow-forever/types/worldMap";
 
 export const PLAYER_SETTINGS_STORAGE_KEY = "mga.wowForever.worldMap.player.v1";
-
-export const MAX_LEVEL = 60;
 
 /** Who the player is and where they stand. Remembered between visits. */
 export interface PlayerSettings {
@@ -39,7 +38,7 @@ export function parsePlayerSettings(raw: unknown): PlayerSettings | null {
   let zoneId: number | null = null;
   if (typeof r.zoneId === "number" && Number.isInteger(r.zoneId)) zoneId = r.zoneId;
   let level: number | null = null;
-  if (typeof r.level === "number" && Number.isInteger(r.level) && r.level >= 1 && r.level <= MAX_LEVEL) level = r.level;
+  if (typeof r.level === "number" && Number.isInteger(r.level) && r.level >= 1 && r.level <= MAX_LEVEL) level = playerLevel(r.level);
   let position: PlayerSettings["position"] = null;
   const p = r.position as Record<string, unknown> | null | undefined;
   if (zoneId !== null && p && isPercent(p.x) && isPercent(p.y)) position = { x: p.x, y: p.y };

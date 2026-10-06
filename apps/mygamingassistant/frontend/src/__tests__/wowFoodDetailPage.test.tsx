@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -28,7 +28,13 @@ function section(name: string) {
 }
 
 describe("food detail page", () => {
-  beforeEach(() => window.localStorage.clear());
+  beforeEach(() => {
+    window.localStorage.clear();
+    // The questions here pick levels past the beta cap of 30: ask them after launch.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-05T12:00:00Z"));
+  });
+  afterEach(() => vi.useRealTimers());
 
   it("opens from the picker, carrying the question, and Back returns to it", async () => {
     const user = userEvent.setup();
@@ -101,7 +107,13 @@ describe("food detail page", () => {
 });
 
 describe("Worth training for, when just healing", () => {
-  beforeEach(() => window.localStorage.clear());
+  beforeEach(() => {
+    window.localStorage.clear();
+    // The questions here pick levels past the beta cap of 30: ask them after launch.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-05T12:00:00Z"));
+  });
+  afterEach(() => vi.useRealTimers());
 
   it("describes the heal, not a stat buff", () => {
     renderAt("/wow-forever/food?lvl=60&class=warrior&act=healing&skill=1");

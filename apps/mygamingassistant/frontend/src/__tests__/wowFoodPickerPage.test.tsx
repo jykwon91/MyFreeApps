@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -33,12 +33,34 @@ function topPick() {
   return screen.getByRole("heading", { level: 2, name: (_, el) => el.id === "food-top-pick" });
 }
 
+/** These tests pick levels past the beta cap: run them after launch. */
+const AFTER_LAUNCH = new Date("2026-11-05T12:00:00Z");
+const IN_BETA = new Date("2026-10-05T12:00:00Z");
+
+function at(date: Date) {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(date);
+}
+
 describe("What should I eat? page", () => {
-  beforeEach(() => window.localStorage.clear());
+  beforeEach(() => {
+    window.localStorage.clear();
+    at(AFTER_LAUNCH);
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it("in the beta, stops at level 30 and says why", () => {
+    at(IN_BETA);
+    renderAt("/wow-forever/food?lvl=45&class=warlock&act=leveling");
+    expect(screen.getByLabelText("Level")).toHaveValue(30);
+    expect(screen.getByText(/Best food for a level 30 Warlock leveling\./)).toBeInTheDocument();
+    expect(screen.getByText(/The beta stops at level 30/)).toBeInTheDocument();
+    expect(screen.queryByText(/Next upgrade at level/)).not.toBeInTheDocument();
+  });
 
   it("asks for a level first", () => {
     renderAt("/wow-forever/food");
-    expect(screen.getByText("Enter your level to see what to cook.")).toBeInTheDocument();
+    expect(screen.getByText("Enter a level to see what to cook.")).toBeInTheDocument();
   });
 
   it("answers from the URL", () => {
@@ -69,7 +91,7 @@ describe("What should I eat? page", () => {
       JSON.stringify({ faction: "H", classId: "mage", zoneId: null, level: 20, position: null }),
     );
     renderAt("/wow-forever/food");
-    expect(screen.getByLabelText("Your level")).toHaveValue(20);
+    expect(screen.getByLabelText("Level")).toHaveValue(20);
     expect(screen.getByLabelText("Class")).toHaveValue("mage");
   });
 });
