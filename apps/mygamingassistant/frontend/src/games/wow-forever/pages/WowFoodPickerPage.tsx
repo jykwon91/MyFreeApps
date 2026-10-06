@@ -11,6 +11,7 @@ import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import { findClass, findSpec } from "@/games/wow-forever/data/classes";
 import { FOODS, TRAINER_SKILLS } from "@/games/wow-forever/data/food/foodData";
 import { ACTIVITY_PHRASE } from "@/games/wow-forever/food/foodActivities";
+import { levelCap } from "@/games/wow-forever/data/levelCap";
 import { rankFoods } from "@/games/wow-forever/food/rankFoods";
 import { useFoodPickerSettings, type FoodPickerSettings } from "@/games/wow-forever/hooks/useFoodPickerSettings";
 
@@ -26,12 +27,12 @@ export default function WowFoodPickerPage() {
   const [settings, update] = useFoodPickerSettings();
   const { level, activity, cookingSkill } = settings;
   const result = useMemo(
-    () => (level === null ? null : rankFoods(FOODS, { ...settings, level }, TRAINER_SKILLS)),
+    () => (level === null ? null : rankFoods(FOODS, { ...settings, level, levelCap: levelCap() }, TRAINER_SKILLS)),
     [settings, level],
   );
   const who = level === null ? "" : describeWho(settings, level);
 
-  let status = "Enter your level to see the best food.";
+  let status = "Enter a level to see the best food.";
   if (result?.top) status = `Best pick: ${result.top.food.name}.`;
   else if (result) status = "Nothing fits yet.";
 
@@ -47,7 +48,7 @@ export default function WowFoodPickerPage() {
       <FoodResultStatus message={status} />
 
       {result === null || level === null ? (
-        <FoodEmptyState message="Enter your level to see what to cook." />
+        <FoodEmptyState message="Enter a level to see what to cook." />
       ) : (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">

@@ -1,6 +1,6 @@
 import type { WowClassId } from "@/games/wow-forever/data/classes";
 
-const MAX_LEVEL = 60;
+import { MAX_LEVEL } from "@/games/wow-forever/data/levelCap";
 
 /**
  * Forever trains Warlock spells on even levels (foreverchanges.pro). Other

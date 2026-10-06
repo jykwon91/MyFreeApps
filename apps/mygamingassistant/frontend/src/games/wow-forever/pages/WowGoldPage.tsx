@@ -10,7 +10,9 @@ import GuideSectionNav from "@/games/wow-forever/components/guide/GuideSectionNa
 import NumberField from "@/games/wow-forever/components/shared/NumberField";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import { GOLD_DATA_STATUS } from "@/games/wow-forever/data/gold/goldTips";
-import { MAX_LEVEL, usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
+import LevelCapNote from "@/games/wow-forever/components/shared/LevelCapNote";
+import { levelCap, playerLevel } from "@/games/wow-forever/data/levelCap";
+import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 
 const SECTIONS = [
   { id: "now", label: "Your plan" },
@@ -20,13 +22,6 @@ const SECTIONS = [
   { id: "sell", label: "Keep or vendor" },
   { id: "dont", label: "Things not to do" },
 ] as const;
-
-/** A whole level from 1 to 60, or nothing. */
-function playerLevel(value: number | null): number | null {
-  if (value === null) return null;
-  const level = Math.round(value);
-  return level >= 1 && level <= MAX_LEVEL ? level : null;
-}
 
 /** /wow-forever/gold — how to make gold while leveling: a plan, where to farm, and what to keep. */
 export default function WowGoldPage() {
@@ -46,13 +41,17 @@ export default function WowGoldPage() {
         <span className="font-medium">Forever</span> (published for Forever) or{" "}
         <span className="font-medium">Unconfirmed</span> (not known yet).
       </AlertBox>
-      <NumberField
-        label="Your level"
-        value={player.level}
-        min={1}
-        onChange={(level) => updatePlayer({ level: playerLevel(level) })}
-        className="flex flex-col gap-1 w-32"
-      />
+      <div className="space-y-1">
+        <NumberField
+          label="Your level"
+          value={player.level}
+          min={1}
+          max={levelCap()}
+          onChange={(level) => updatePlayer({ level: playerLevel(level) })}
+          className="flex flex-col gap-1 w-32"
+        />
+        <LevelCapNote />
+      </div>
       <GuideSectionNav sections={SECTIONS} />
       <GoldPlanSection level={player.level} />
       <GoldFarmSection level={player.level} />

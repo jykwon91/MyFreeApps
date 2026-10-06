@@ -2,7 +2,8 @@ import { useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { findClass, findSpec, LEVELING_SPEC_ID, type WowClassId } from "@/games/wow-forever/data/classes";
 import { findActivity, type FoodActivity } from "@/games/wow-forever/food/foodActivities";
-import { MAX_LEVEL, PLAYER_SETTINGS_STORAGE_KEY, parsePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
+import { MAX_LEVEL, playerLevel } from "@/games/wow-forever/data/levelCap";
+import { PLAYER_SETTINGS_STORAGE_KEY, parsePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { readStored, writeStored } from "@/games/wow-forever/lib/safeLocalStorage";
 
 export const FOOD_SETTINGS_STORAGE_KEY = "mga.wowForever.food.settings.v1";
@@ -33,6 +34,13 @@ function intIn(raw: unknown, min: number, max: number): number | null {
   return n;
 }
 
+/** A level to look food up for; above the cap reads as the cap (nobody can be higher yet). */
+function levelFrom(raw: unknown): number | null {
+  const n = typeof raw === "string" ? Number(raw) : raw;
+  if (typeof n !== "number" || !Number.isInteger(n) || n < 1 || n > MAX_LEVEL) return null;
+  return playerLevel(n);
+}
+
 function validSpec(classId: WowClassId, specId: unknown): string {
   if (typeof specId === "string" && findSpec(classId, specId)) return specId;
   return LEVELING_SPEC_ID;
@@ -44,7 +52,7 @@ export function parseFoodSettings(raw: Record<string, unknown>, fallback: FoodPi
   const classId = cls?.id ?? fallback.classId;
   const specSource = cls ? raw.specId : (raw.specId ?? fallback.specId);
   return {
-    level: raw.level === undefined ? fallback.level : intIn(raw.level, 1, MAX_LEVEL),
+    level: raw.level === undefined ? fallback.level : levelFrom(raw.level),
     classId,
     specId: validSpec(classId, specSource),
     activity: findActivity(typeof raw.activity === "string" ? raw.activity : null) ?? fallback.activity,

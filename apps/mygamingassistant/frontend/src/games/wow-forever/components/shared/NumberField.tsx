@@ -6,6 +6,7 @@ interface NumberFieldProps {
   onChange: (value: number | null) => void;
   step?: number;
   min?: number;
+  max?: number;
   /** Visually hide the label (still read by screen readers). */
   hideLabel?: boolean;
   className?: string;
@@ -28,7 +29,7 @@ function parse(text: string): number | null {
  * Numeric input that keeps what the user is typing ("1.", "-") while still
  * following outside changes (e.g. after a tooltip is read into the item).
  */
-export default function NumberField({ label, value, onChange, step = 1, min, hideLabel = false, className }: NumberFieldProps) {
+export default function NumberField({ label, value, onChange, step = 1, min, max, hideLabel = false, className }: NumberFieldProps) {
   const [text, setText] = useState(toText(value));
   const [lastValue, setLastValue] = useState(value);
   if (value !== lastValue) {
@@ -44,6 +45,7 @@ export default function NumberField({ label, value, onChange, step = 1, min, hid
         inputMode="decimal"
         step={step}
         min={min}
+        max={max}
         value={text}
         onChange={(e) => {
           setText(e.target.value);

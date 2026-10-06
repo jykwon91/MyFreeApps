@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FOODS, TRAINER_SKILLS } from "@/games/wow-forever/data/food/foodData";
 import { buffValue, foodWeights, partValue } from "@/games/wow-forever/food/foodScore";
 import { describeBuff, learnLabel } from "@/games/wow-forever/food/foodText";
-import { rankFoods, type FoodPickerInput } from "@/games/wow-forever/food/rankFoods";
+import { BETA_LEVEL_CAP, levelCap } from "@/games/wow-forever/data/levelCap";
+import { cookingCapAt, rankFoods, type FoodPickerInput } from "@/games/wow-forever/food/rankFoods";
 import { DEFAULT_FOOD_SETTINGS, parseFoodSettings } from "@/games/wow-forever/hooks/useFoodPickerSettings";
 import type { FoodBuffPart, FoodRecord } from "@/games/wow-forever/types/food";
 
@@ -15,9 +16,18 @@ function food(name: string): FoodRecord {
 function rank(input: Partial<FoodPickerInput>) {
   return rankFoods(
     FOODS,
-    { level: 35, classId: "warrior", specId: "leveling", activity: "leveling", cookingSkill: null, ...input },
+    { level: 35, levelCap: 60, classId: "warrior", specId: "leveling", activity: "leveling", cookingSkill: null, ...input },
     TRAINER_SKILLS,
   );
+}
+
+/** These tests pick levels past the beta cap: run them after launch. */
+const AFTER_LAUNCH = new Date("2026-11-05T12:00:00Z");
+const IN_BETA = new Date("2026-10-05T12:00:00Z");
+
+function at(date: Date) {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(date);
 }
 
 const AP: FoodBuffPart = { amount: 10, percent: false, label: "Attack Power", stats: ["attack_power", "ranged_attack_power"] };
@@ -131,6 +141,20 @@ describe("rankFoods", () => {
     expect(learnLabel(result.trainFor!)).toBe("Needs a recipe · Cooking 250");
   });
 
+  it("promises no upgrade past the level cap", () => {
+    // At the beta cap of 30, the level-35 Spotted Yellowtail is out of reach.
+    const result = rank({ level: 30, levelCap: 30, classId: "warlock", cookingSkill: 175 });
+    expect(result.nextUpgrade).toBeNull();
+    expect(rank({ level: 30, levelCap: 60, classId: "warlock" }).nextUpgrade?.level).toBe(35);
+  });
+
+  it("only says a recipe is worth training for when the level can train that far", () => {
+    // Cooking past 225 needs Artisan, which needs level 35.
+    const result = rank({ level: 30, levelCap: 30, classId: "warlock", cookingSkill: 175 });
+    expect(result.trainFor?.skillNeeded ?? 0).toBeLessThanOrEqual(225);
+    expect([cookingCapAt(9), cookingCapAt(10), cookingCapAt(20), cookingCapAt(34), cookingCapAt(35)]).toEqual([75, 150, 225, 225, 300]);
+  });
+
   it("returns nothing for a level with nothing that helps", () => {
     const result = rank({ activity: "fishing", level: 1 });
     expect(result.top).toBeNull();
@@ -138,7 +162,27 @@ describe("rankFoods", () => {
   });
 });
 
+describe("level cap", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("is 30 in the beta and 60 from launch day", () => {
+    expect(levelCap(IN_BETA.getTime())).toBe(BETA_LEVEL_CAP);
+    expect(levelCap(Date.UTC(2026, 10, 3, 23, 59))).toBe(30);
+    expect(levelCap(Date.UTC(2026, 10, 4))).toBe(60);
+  });
+
+  it("reads a level past the cap as the cap", () => {
+    at(IN_BETA);
+    expect(parseFoodSettings({ level: "45" }, DEFAULT_FOOD_SETTINGS).level).toBe(30);
+    at(AFTER_LAUNCH);
+    expect(parseFoodSettings({ level: "45" }, DEFAULT_FOOD_SETTINGS).level).toBe(45);
+  });
+});
+
 describe("parseFoodSettings", () => {
+  beforeEach(() => at(AFTER_LAUNCH));
+  afterEach(() => vi.useRealTimers());
+
   it("reads URL values and ignores bad ones field by field", () => {
     const s = parseFoodSettings({ level: "35", classId: "rogue", specId: "combat", activity: "pvp", cookingSkill: "abc" }, DEFAULT_FOOD_SETTINGS);
     expect(s).toEqual({ level: 35, classId: "rogue", specId: "combat", activity: "pvp", cookingSkill: null });
