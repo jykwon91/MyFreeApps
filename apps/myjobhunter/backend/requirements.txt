@@ -154,7 +154,7 @@ lxml==6.1.1
     # via myjobhunter-backend
 makefun==1.16.0
     # via fastapi-users
-mako==1.3.12
+mako==1.4.2
     # via alembic
 mammoth==1.12.0
     # via myjobhunter-backend
