@@ -120,7 +120,7 @@ minio==7.2.20
     # via
     #   mypizzatracker-backend
     #   platform-shared
-multidict==6.7.1
+multidict==6.9.1
     # via
     #   aiohttp
     #   yarl
@@ -200,7 +200,7 @@ sqlalchemy==2.0.54
     #   platform-shared
 starlette==1.7.0
     # via fastapi
-twilio==9.11.1
+twilio==9.11.2
     # via mypizzatracker-backend
 typing-extensions==4.16.0
     # via
