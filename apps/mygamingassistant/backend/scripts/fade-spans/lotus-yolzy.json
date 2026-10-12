@@ -1,0 +1,549 @@
+{
+ "video_id": "noBoH0o5vRY",
+ "map_slug": "lotus",
+ "game_slug": "valorant",
+ "author": "Yolzy",
+ "lineups": [
+  {
+   "cs": 12,
+   "title": "A Main Haunt 1 \u2014 Defender Haunt from behind the A Main spawn barrier over the",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     12.0,
+     13.6
+    ],
+    "aim": [
+     16.05,
+     16.66
+    ],
+    "throw": [
+     16.68,
+     17.28
+    ],
+    "landing": [
+     19.25,
+     19.87
+    ]
+   }
+  },
+  {
+   "cs": 27,
+   "title": "A Main Haunt 2 \u2014 Defender Haunt from A Tree trunk onto the A Tree canopy",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     27.8,
+     29.0
+    ],
+    "aim": [
+     33.0,
+     33.95
+    ],
+    "throw": [
+     33.9,
+     34.5
+    ],
+    "landing": [
+     36.0,
+     36.48
+    ]
+   }
+  },
+  {
+   "cs": 53,
+   "title": "A Main Haunt 3 \u2014 Defender Haunt from A Main (location readout 'A Main')",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     53.0,
+     55.3
+    ],
+    "aim": [
+     56.5,
+     57.4
+    ],
+    "throw": [
+     57.35,
+     57.95
+    ],
+    "landing": [
+     58.85,
+     60.15
+    ]
+   }
+  },
+  {
+   "cs": 71,
+   "title": "A Site Haunt 1 \u2014 Defender-side A retake Haunt: stand tucked against the",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     71.5,
+     74.0
+    ],
+    "aim": [
+     75.45,
+     76.0
+    ],
+    "throw": [
+     76.0,
+     76.6
+    ],
+    "landing": [
+     78.2,
+     78.9
+    ]
+   }
+  },
+  {
+   "cs": 92,
+   "title": "A Site Haunt 2 \u2014 Defender Haunt from A Top toward A Hut",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     92.8,
+     94.1
+    ],
+    "aim": [
+     96.95,
+     97.55
+    ],
+    "throw": [
+     97.55,
+     98.15
+    ],
+    "landing": [
+     99.65,
+     100.25
+    ]
+   }
+  },
+  {
+   "cs": 123,
+   "title": "B Site Haunt 1 \u2014 Defender-side Haunt thrown high over a wall toward the",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     123.0,
+     125.0
+    ],
+    "aim": [
+     131.55,
+     132.2
+    ],
+    "throw": [
+     132.2,
+     132.8
+    ],
+    "landing": [
+     134.3,
+     135.2
+    ]
+   }
+  },
+  {
+   "cs": 147,
+   "title": "A Main Haunt 4 \u2014 Defender Haunt thrown from B Site: stand by the B Site wall",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     147.4,
+     149.9
+    ],
+    "aim": [
+     152.5,
+     153.1
+    ],
+    "throw": [
+     153.05,
+     153.65
+    ],
+    "landing": [
+     155.55,
+     156.25
+    ]
+   }
+  },
+  {
+   "cs": 164,
+   "title": "C Main Haunt 1 \u2014 Defender Haunt from B Site roof hole into C Main",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     164.5,
+     166.0
+    ],
+    "aim": [
+     170.9,
+     171.65
+    ],
+    "throw": [
+     171.65,
+     172.3
+    ],
+    "landing": [
+     174.25,
+     175.05
+    ]
+   }
+  },
+  {
+   "cs": 184,
+   "title": "C Site Haunt 1 \u2014 Defender Haunt over the C wall onto C Site",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     184.65,
+     185.25
+    ],
+    "aim": [
+     187.2,
+     188.4
+    ],
+    "throw": [
+     188.4,
+     189.0
+    ],
+    "landing": [
+     190.98,
+     191.8
+    ]
+   }
+  },
+  {
+   "cs": 208,
+   "title": "C Main Haunt 2 \u2014 Defender Haunt from C Waterfall over C Main",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     208.0,
+     210.5
+    ],
+    "aim": [
+     211.8,
+     212.27
+    ],
+    "throw": [
+     212.27,
+     212.87
+    ],
+    "landing": [
+     214.8,
+     215.3
+    ]
+   }
+  },
+  {
+   "cs": 232,
+   "title": "C Site Haunt 2 \u2014 Defender-side Fade Haunt thrown in a high arc from a stand on",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     232.0,
+     233.7
+    ],
+    "aim": [
+     234.0,
+     234.8
+    ],
+    "throw": [
+     234.8,
+     235.4
+    ],
+    "landing": [
+     236.0,
+     236.2
+    ]
+   }
+  },
+  {
+   "cs": 258,
+   "title": "C Site Haunt 3 \u2014 Defender Haunt from C Hall onto C Site",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     258.0,
+     259.2
+    ],
+    "aim": [
+     262.85,
+     263.65
+    ],
+    "throw": [
+     263.65,
+     264.25
+    ],
+    "landing": [
+     266.05,
+     266.75
+    ]
+   }
+  },
+  {
+   "cs": 276,
+   "title": "C Site Haunt 4 \u2014 Defender C retake Haunt from C Hall (readout 'C Hall'): stand",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     276.5,
+     278.5
+    ],
+    "aim": [
+     283.0,
+     283.85
+    ],
+    "throw": [
+     283.83,
+     284.43
+    ],
+    "landing": [
+     285.9,
+     287.0
+    ]
+   }
+  },
+  {
+   "cs": 296,
+   "title": "C Main Haunt 3 \u2014 Defender Fade Haunt thrown from C Link (near the C",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     296.5,
+     298.4
+    ],
+    "aim": [
+     300.85,
+     301.45
+    ],
+    "throw": [
+     301.45,
+     302.05
+    ],
+    "landing": [
+     303.4,
+     304.05
+    ]
+   }
+  },
+  {
+   "cs": 317,
+   "title": "C Main Haunt 4 \u2014 Defender-side Haunt thrown from beside a tall sandstone",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     317.5,
+     319.5
+    ],
+    "aim": [
+     321.0,
+     321.53
+    ],
+    "throw": [
+     321.5,
+     322.1
+    ],
+    "landing": [
+     323.85,
+     324.5
+    ]
+   }
+  },
+  {
+   "cs": 338,
+   "title": "A Main Haunt 5 \u2014 Fade Haunt from A Root A Lobby exit: she stands against the",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     338.4,
+     340.4
+    ],
+    "aim": [
+     340.75,
+     341.85
+    ],
+    "throw": [
+     341.85,
+     342.45
+    ],
+    "landing": [
+     343.6,
+     344.8
+    ]
+   }
+  },
+  {
+   "cs": 359,
+   "title": "A Site Haunt 3 \u2014 Attacker Haunt from A Root (stand against the wall), aimed",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     359.4,
+     361.0
+    ],
+    "aim": [
+     363.0,
+     363.65
+    ],
+    "throw": [
+     363.6,
+     364.2
+    ],
+    "landing": [
+     365.84,
+     366.44
+    ]
+   }
+  },
+  {
+   "cs": 431,
+   "title": "A Site Haunt 4 \u2014 Attacker-side haunt from a corner in the A approach",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     431.0,
+     432.5
+    ],
+    "aim": [
+     432.8,
+     433.42
+    ],
+    "throw": [
+     433.4,
+     434.0
+    ],
+    "landing": [
+     435.2,
+     436.45
+    ]
+   }
+  },
+  {
+   "cs": 457,
+   "title": "A Site Haunt 5 \u2014 Attacker post-plant A site reveal: from A Door (readout",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     457.0,
+     458.2
+    ],
+    "aim": [
+     460.25,
+     461.25
+    ],
+    "throw": [
+     461.28,
+     461.88
+    ],
+    "landing": [
+     463.85,
+     464.45
+    ]
+   }
+  },
+  {
+   "cs": 484,
+   "title": "C Main Haunt 5 \u2014 Attacker-side Haunt thrown from C Lobby (location readout",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     484.5,
+     486.5
+    ],
+    "aim": [
+     488.85,
+     489.8
+    ],
+    "throw": [
+     489.75,
+     490.35
+    ],
+    "landing": [
+     492.55,
+     493.5
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
