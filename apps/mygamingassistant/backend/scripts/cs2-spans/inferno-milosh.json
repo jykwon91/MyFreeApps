@@ -1,0 +1,576 @@
+{
+ "video_id": "5y43zuQjGSc",
+ "map_slug": "inferno",
+ "game_slug": "cs2",
+ "author": "Milosh0vskY",
+ "lineups": [
+  {
+   "cs": 6,
+   "title": "Banana Smoke 1 \u2014 T-side Banana smoke: stand in the corner beside the orange",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "banana",
+   "stand": "banana",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     6.35,
+     7.15
+    ],
+    "aim": [
+     9.6,
+     10.2
+    ],
+    "throw": [
+     10.85,
+     11.45
+    ],
+    "landing": [
+     18.3,
+     19.1
+    ]
+   }
+  },
+  {
+   "cs": 52,
+   "title": "B Site Smoke 1 \u2014 T-side smoke for a B rush: walk from a T-side stand beside an",
+   "ability": "smoke",
+   "technique": "running",
+   "target": "b-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     52.9,
+     54.9
+    ],
+    "aim": [
+     59.05,
+     60.05
+    ],
+    "throw": [
+     60.75,
+     61.35
+    ],
+    "landing": [
+     68.25,
+     68.95
+    ]
+   }
+  },
+  {
+   "cs": 79,
+   "title": "B Site Smoke 2 \u2014 T-side Ruins rush smoke: stand in the T-side alley by the",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "banana",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     79.8,
+     81.4
+    ],
+    "aim": [
+     86.2,
+     87.05
+    ],
+    "throw": [
+     87.1,
+     87.7
+    ],
+    "landing": [
+     95.25,
+     96.45
+    ]
+   }
+  },
+  {
+   "cs": 119,
+   "title": "A Site Smoke 1 \u2014 T-side smoke thrown from the yellow-garage/stairs corner near",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "second-mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     119.3,
+     120.8
+    ],
+    "aim": [
+     120.0,
+     120.9
+    ],
+    "throw": [
+     121.05,
+     121.65
+    ],
+    "landing": [
+     127.15,
+     128.35
+    ]
+   }
+  },
+  {
+   "cs": 133,
+   "title": "Mid Smoke 1 \u2014 T-side smoke thrown from under the stone arch beside a",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "second-mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     133.3,
+     133.72
+    ],
+    "aim": [
+     134.9,
+     135.8
+    ],
+    "throw": [
+     136.3,
+     136.86
+    ],
+    "landing": [
+     144.1,
+     144.65
+    ]
+   }
+  },
+  {
+   "cs": 155,
+   "title": "A Long Smoke 1 \u2014 T-side Long smoke (first of the pair): stand tucked into the",
+   "ability": "smoke",
+   "technique": "running",
+   "target": "a-long",
+   "stand": "second-mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     155.95,
+     156.75
+    ],
+    "aim": [
+     158.7,
+     159.7
+    ],
+    "throw": [
+     160.3,
+     160.9
+    ],
+    "landing": [
+     168.35,
+     169.45
+    ]
+   }
+  },
+  {
+   "cs": 176,
+   "title": "A Site Smoke 2 \u2014 T-side Moto smoke (second of the pair): same stand area under",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "second-mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     176.7,
+     178.2
+    ],
+    "aim": [
+     179.6,
+     180.65
+    ],
+    "throw": [
+     181.15,
+     181.75
+    ],
+    "landing": [
+     192.1,
+     193.7
+    ]
+   }
+  },
+  {
+   "cs": 202,
+   "title": "A Site Smoke 3 \u2014 Arch smoke (first of the pair): walk up in Second Mid to the",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "second-mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     202.05,
+     202.9
+    ],
+    "aim": [
+     202.95,
+     203.85
+    ],
+    "throw": [
+     204.13,
+     204.73
+    ],
+    "landing": [
+     226.53,
+     227.2
+    ]
+   }
+  },
+  {
+   "cs": 215,
+   "title": "A Site Smoke 4 \u2014 Library smoke (second of the pair): from about the same",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "second-mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     215.3,
+     217.3
+    ],
+    "aim": [
+     218.3,
+     219.4
+    ],
+    "throw": [
+     219.62,
+     220.22
+    ],
+    "landing": [
+     226.0,
+     226.9
+    ]
+   }
+  },
+  {
+   "cs": 231,
+   "title": "A Long Smoke 2 \u2014 Long smoke thrown from Under Boiler (red 'A' painted wall)",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-long",
+   "stand": "apartments",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     231.9,
+     233.5
+    ],
+    "aim": [
+     234.2,
+     234.95
+    ],
+    "throw": [
+     234.93,
+     235.53
+    ],
+    "landing": [
+     241.45,
+     242.95
+    ]
+   }
+  },
+  {
+   "cs": 244,
+   "title": "A Site Smoke 5 \u2014 Under Boiler stand: line up on the grated window, then look",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "apartments",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     244.3,
+     244.98
+    ],
+    "aim": [
+     246.2,
+     247.15
+    ],
+    "throw": [
+     247.42,
+     248.02
+    ],
+    "landing": [
+     258.0,
+     258.75
+    ]
+   }
+  },
+  {
+   "cs": 249,
+   "title": "A Site Smoke 6 \u2014 Same Under Boiler area, second spot: aim up at the corner",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "apartments",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     249.35,
+     249.87
+    ],
+    "aim": [
+     251.8,
+     252.85
+    ],
+    "throw": [
+     252.87,
+     253.47
+    ],
+    "landing": [
+     257.98,
+     258.62
+    ]
+   }
+  },
+  {
+   "cs": 266,
+   "title": "A Site Smoke 7 \u2014 Mid stand tight against the wall beside the lamp post (walks",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     266.0,
+     267.6
+    ],
+    "aim": [
+     268.75,
+     269.75
+    ],
+    "throw": [
+     269.85,
+     270.45
+    ],
+    "landing": [
+     280.45,
+     281.45
+    ]
+   }
+  },
+  {
+   "cs": 270,
+   "title": "A Site Smoke 8 \u2014 Same mid stand by the wall lamp",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     270.6,
+     271.9
+    ],
+    "aim": [
+     271.5,
+     272.28
+    ],
+    "throw": [
+     272.2,
+     272.8
+    ],
+    "landing": [
+     280.55,
+     281.6
+    ]
+   }
+  },
+  {
+   "cs": 282,
+   "title": "A Site Smoke 9 \u2014 T-side smoke onto Moto, thrown from Mid",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     282.7,
+     284.6
+    ],
+    "aim": [
+     286.0,
+     287.05
+    ],
+    "throw": [
+     287.05,
+     287.65
+    ],
+    "landing": [
+     295.0,
+     296.3
+    ]
+   }
+  },
+  {
+   "cs": 299,
+   "title": "A Long Smoke 3 \u2014 T smoke for Long thrown from Mexico",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-long",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     299.6,
+     300.2
+    ],
+    "aim": [
+     301.9,
+     302.8
+    ],
+    "throw": [
+     302.85,
+     303.35
+    ],
+    "landing": [
+     311.65,
+     312.2
+    ]
+   }
+  },
+  {
+   "cs": 327,
+   "title": "B Site Smoke 3 \u2014 T smoke for CT from upper Banana: stand by the wall near the",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "banana",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     327.6,
+     329.05
+    ],
+    "aim": [
+     330.25,
+     331.45
+    ],
+    "throw": [
+     331.55,
+     332.15
+    ],
+    "landing": [
+     340.2,
+     341.3
+    ]
+   }
+  },
+  {
+   "cs": 334,
+   "title": "B Site Smoke 4 \u2014 T smoke for Ruins from the same upper Banana spot by the",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "banana",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     334.6,
+     336.4
+    ],
+    "aim": [
+     336.45,
+     337.4
+    ],
+    "throw": [
+     337.55,
+     338.15
+    ],
+    "landing": [
+     343.1,
+     344.0
+    ]
+   }
+  },
+  {
+   "cs": 352,
+   "title": "B Site Smoke 5 \u2014 Normal CT smoke for B: thrown from the T-side alley at the",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "banana",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     352.25,
+     353.1
+    ],
+    "aim": [
+     353.1,
+     353.85
+    ],
+    "throw": [
+     353.8,
+     354.4
+    ],
+    "landing": [
+     358.2,
+     359.4
+    ]
+   }
+  },
+  {
+   "cs": 364,
+   "title": "B Site Smoke 6 \u2014 T-side Ruins smoke from Banana: stand by the barrels and",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "banana",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     364.2,
+     365.8
+    ],
+    "aim": [
+     365.8,
+     366.55
+    ],
+    "throw": [
+     366.55,
+     367.15
+    ],
+    "landing": [
+     372.9,
+     374.0
+    ]
+   }
+  },
+  {
+   "cs": 392,
+   "title": "Apartments Smoke 1 \u2014 T smoke thrown from inside upper Apartments (hallway by the",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "apartments",
+   "stand": "apartments",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     392.55,
+     393.2
+    ],
+    "aim": [
+     393.3,
+     394.2
+    ],
+    "throw": [
+     394.22,
+     394.82
+    ],
+    "landing": [
+     398.22,
+     399.0
+    ]
+   }
+  }
+ ],
+ "note": ""
+}

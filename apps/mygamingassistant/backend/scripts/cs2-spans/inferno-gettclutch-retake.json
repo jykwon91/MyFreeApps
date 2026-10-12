@@ -1,0 +1,306 @@
+{
+ "video_id": "-kthqL2Rnc0",
+ "map_slug": "inferno",
+ "game_slug": "cs2",
+ "author": "GettClutch",
+ "lineups": [
+  {
+   "cs": 7,
+   "title": "A Site Smoke 1 \u2014 Smoke thrown from the Short side of A (stand looking up the",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     7.5,
+     9.5
+    ],
+    "aim": [
+     9.6,
+     10.6
+    ],
+    "throw": [
+     10.8,
+     11.4
+    ],
+    "landing": [
+     18.0,
+     19.0
+    ]
+   }
+  },
+  {
+   "cs": 31,
+   "title": "A Site Molly 1 \u2014 CT incendiary from under the pillared porch/stair portico on",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     31.3,
+     33.3
+    ],
+    "aim": [
+     36.6,
+     37.6
+    ],
+    "throw": [
+     37.75,
+     38.35
+    ],
+    "landing": [
+     39.9,
+     41.4
+    ]
+   }
+  },
+  {
+   "cs": 53,
+   "title": "A Site Molly 2 \u2014 CT incendiary from beside the arched stone wall with the",
+   "ability": "molotov",
+   "technique": "running",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     53.7,
+     55.7
+    ],
+    "aim": [
+     56.95,
+     57.65
+    ],
+    "throw": [
+     57.8,
+     58.4
+    ],
+    "landing": [
+     60.15,
+     61.55
+    ]
+   }
+  },
+  {
+   "cs": 69,
+   "title": "A Site Flash 1 \u2014 Flashbang from the same arched-wall/mailbox corner",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     69.45,
+     70.05
+    ],
+    "aim": [
+     73.35,
+     74.35
+    ],
+    "throw": [
+     74.42,
+     75.0
+    ],
+    "landing": [
+     76.41,
+     77.0
+    ]
+   }
+  },
+  {
+   "cs": 87,
+   "title": "A Site Flash 2 \u2014 Second flashbang from the mailbox/arch corner",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     87.6,
+     87.75
+    ],
+    "aim": [
+     88.25,
+     88.85
+    ],
+    "throw": [
+     88.9,
+     89.45
+    ],
+    "landing": [
+     90.68,
+     90.8
+    ]
+   }
+  },
+  {
+   "cs": 122,
+   "title": "A Site Smoke 2 \u2014 Smoke thrown from inside the Apps upper hallway (standing",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "apartments",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     122.85,
+     124.6
+    ],
+    "aim": [
+     129.2,
+     130.1
+    ],
+    "throw": [
+     130.15,
+     130.75
+    ],
+    "landing": [
+     134.45,
+     135.45
+    ]
+   }
+  },
+  {
+   "cs": 145,
+   "title": "A Site Molly 3 \u2014 CT incendiary (red canister) thrown from the Apps upper",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "apartments",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     145.8,
+     147.6
+    ],
+    "aim": [
+     148.15,
+     149.2
+    ],
+    "throw": [
+     149.15,
+     149.8
+    ],
+    "landing": [
+     151.43,
+     152.6
+    ]
+   }
+  },
+  {
+   "cs": 190,
+   "title": "A Site Molly 4 \u2014 From the end of the Long alley: hug the wall corner by the",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-long",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     190.0,
+     192.2
+    ],
+    "aim": [
+     196.95,
+     197.9
+    ],
+    "throw": [
+     197.92,
+     198.52
+    ],
+    "landing": [
+     201.15,
+     202.35
+    ]
+   }
+  },
+  {
+   "cs": 208,
+   "title": "A Site Molly 5 \u2014 From Long, standing under the overhang by the Il Monaco",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-long",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     208.45,
+     210.5
+    ],
+    "aim": [
+     215.95,
+     216.95
+    ],
+    "throw": [
+     217.0,
+     217.6
+    ],
+    "landing": [
+     219.1,
+     220.9
+    ]
+   }
+  },
+  {
+   "cs": 223,
+   "title": "A Site Smoke 3 \u2014 From Long, facing the A-sign building and its wooden door",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-long",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     223.7,
+     226.0
+    ],
+    "aim": [
+     233.2,
+     234.15
+    ],
+    "throw": [
+     234.45,
+     235.05
+    ],
+    "landing": [
+     238.4,
+     239.6
+    ]
+   }
+  },
+  {
+   "cs": 248,
+   "title": "A Site Smoke 4 \u2014 From Long, standing under the Il Monaco Ubriaco overhang",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-long",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     248.5,
+     250.5
+    ],
+    "aim": [
+     252.0,
+     253.0
+    ],
+    "throw": [
+     253.1,
+     253.75
+    ],
+    "landing": [
+     258.0,
+     260.0
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
