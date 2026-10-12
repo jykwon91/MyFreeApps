@@ -1,0 +1,603 @@
+{
+ "video_id": "wJ7FwDO9VkA",
+ "map_slug": "lotus",
+ "game_slug": "valorant",
+ "author": "maxWELL Lineup-Larry",
+ "lineups": [
+  {
+   "cs": 30,
+   "title": "A Site Knife 1",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     30.92,
+     32.62
+    ],
+    "aim": [
+     37.25,
+     37.79
+    ],
+    "throw": [
+     40.17,
+     40.75
+    ],
+    "landing": [
+     41.75,
+     42.54
+    ]
+   }
+  },
+  {
+   "cs": 51,
+   "title": "B Site Knife 1 \u2014 From B Main, standing by the wall at B Pillars: line up with",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     51.25,
+     53.0
+    ],
+    "aim": [
+     60.3,
+     61.33
+    ],
+    "throw": [
+     63.62,
+     64.25
+    ],
+    "landing": [
+     69.0,
+     69.75
+    ]
+   }
+  },
+  {
+   "cs": 79,
+   "title": "C Main Knife 1 \u2014 From C Lobby, KAY/O ZERO/point blade thrown onto the C Mound",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     79.35,
+     80.55
+    ],
+    "aim": [
+     92.72,
+     93.08
+    ],
+    "throw": [
+     95.24,
+     95.84
+    ],
+    "landing": [
+     96.7,
+     97.58
+    ]
+   }
+  },
+  {
+   "cs": 165,
+   "title": "B Site Flash 1 \u2014 Attacker flash from the B Pillars B Main stand: the creator",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     165.0,
+     166.75
+    ],
+    "aim": [
+     170.0,
+     170.7
+    ],
+    "throw": [
+     171.05,
+     171.65
+    ],
+    "landing": [
+     172.5,
+     173.5
+    ]
+   }
+  },
+  {
+   "cs": 202,
+   "title": "C Site Flash 1 \u2014 Stand tucked against the C Main wall corner (location readout",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     202.5,
+     204.6
+    ],
+    "aim": [
+     214.2,
+     215.08
+    ],
+    "throw": [
+     215.04,
+     215.65
+    ],
+    "landing": [
+     216.78,
+     217.6
+    ]
+   }
+  },
+  {
+   "cs": 224,
+   "title": "A Site Frag 1 \u2014 Post-plant frag from A Main (location readout reads 'A",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     224.3,
+     226.3
+    ],
+    "aim": [
+     233.25,
+     234.25
+    ],
+    "throw": [
+     236.58,
+     237.2
+    ],
+    "landing": [
+     241.3,
+     242.7
+    ]
+   }
+  },
+  {
+   "cs": 246,
+   "title": "A Site Frag 2 \u2014 KAY/O FRAG/ment from the A Main wall corner under the",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     246.1,
+     248.2
+    ],
+    "aim": [
+     254.95,
+     255.6
+    ],
+    "throw": [
+     257.8,
+     258.4
+    ],
+    "landing": [
+     260.3,
+     261.5
+    ]
+   }
+  },
+  {
+   "cs": 265,
+   "title": "A Site Frag 3 \u2014 Stand near A Tree against the wall/pillar, aim at a reference",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     265.5,
+     267.3
+    ],
+    "aim": [
+     272.96,
+     273.34
+    ],
+    "throw": [
+     273.3,
+     273.9
+    ],
+    "landing": [
+     275.04,
+     276.3
+    ]
+   }
+  },
+  {
+   "cs": 281,
+   "title": "B Site Frag 1 \u2014 Attacker B Lobby stand against the wall/vine pillar: an",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     281.1,
+     283.1
+    ],
+    "aim": [
+     291.5,
+     292.3
+    ],
+    "throw": [
+     294.67,
+     295.25
+    ],
+    "landing": [
+     301.1,
+     302.4
+    ]
+   }
+  },
+  {
+   "cs": 305,
+   "title": "C Main Frag 1 \u2014 Attacker KAY/O FRAG/ment from C Bend (readout 'C Bend')",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     305.4,
+     307.3
+    ],
+    "aim": [
+     313.42,
+     314.01
+    ],
+    "throw": [
+     313.92,
+     314.55
+    ],
+    "landing": [
+     316.45,
+     317.6
+    ]
+   }
+  },
+  {
+   "cs": 325,
+   "title": "C Main Knife 2 \u2014 Stand on A Heaven (A Top) against the tall wall, aim the",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     325.5,
+     328.0
+    ],
+    "aim": [
+     337.29,
+     337.67
+    ],
+    "throw": [
+     339.88,
+     340.5
+    ],
+    "landing": [
+     343.7,
+     344.7
+    ]
+   }
+  },
+  {
+   "cs": 354,
+   "title": "C Main Knife 3 \u2014 Defender-side KAY/O ZERO/point thrown from A Site, lined up on",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     354.8,
+     356.6
+    ],
+    "aim": [
+     364.3,
+     365.35
+    ],
+    "throw": [
+     367.93,
+     368.55
+    ],
+    "landing": [
+     373.65,
+     374.75
+    ]
+   }
+  },
+  {
+   "cs": 383,
+   "title": "A Main Knife 1 \u2014 KAY/O ZERO/point from the C Main C-Entrance side: stand",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     383.5,
+     384.75
+    ],
+    "aim": [
+     388.83,
+     389.25
+    ],
+    "throw": [
+     391.42,
+     392.05
+    ],
+    "landing": [
+     397.0,
+     398.0
+    ]
+   }
+  },
+  {
+   "cs": 403,
+   "title": "A Main Knife 2 \u2014 Stand in the C Entrance C Main archway (defender side)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     403.75,
+     405.4
+    ],
+    "aim": [
+     412.7,
+     413.42
+    ],
+    "throw": [
+     415.71,
+     416.35
+    ],
+    "landing": [
+     421.12,
+     422.08
+    ]
+   }
+  },
+  {
+   "cs": 435,
+   "title": "B Main Knife 1 \u2014 Defender zero-point from C Bend/C Site side wall: stand",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     435.75,
+     437.25
+    ],
+    "aim": [
+     438.0,
+     439.1
+    ],
+    "throw": [
+     441.48,
+     442.08
+    ],
+    "landing": [
+     447.05,
+     447.85
+    ]
+   }
+  },
+  {
+   "cs": 521,
+   "title": "B Site Flash 2 \u2014 From A Link, stand in the A Link corridor and aim at the",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     521.0,
+     523.25
+    ],
+    "aim": [
+     529.5,
+     530.18
+    ],
+    "throw": [
+     530.18,
+     530.8
+    ],
+    "landing": [
+     531.76,
+     532.6
+    ]
+   }
+  },
+  {
+   "cs": 545,
+   "title": "B Site Flash 3 \u2014 Defender KAY/O flashdrive from B Upper thrown over the B",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     545.8,
+     546.29
+    ],
+    "aim": [
+     546.75,
+     547.45
+    ],
+    "throw": [
+     549.04,
+     549.6
+    ],
+    "landing": [
+     550.37,
+     550.69
+    ]
+   }
+  },
+  {
+   "cs": 580,
+   "title": "C Main Flash 1 \u2014 Defender-side KAY/O flashdrive thrown from the C Main C",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     580.6,
+     582.1
+    ],
+    "aim": [
+     582.65,
+     583.55
+    ],
+    "throw": [
+     583.55,
+     584.15
+    ],
+    "landing": [
+     585.2,
+     586.0
+    ]
+   }
+  },
+  {
+   "cs": 590,
+   "title": "C Main Flash 2 \u2014 Defender KAY/O stands tight against the wall at C Waterfall",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     590.5,
+     592.2
+    ],
+    "aim": [
+     599.95,
+     600.78
+    ],
+    "throw": [
+     600.7,
+     601.12
+    ],
+    "landing": [
+     602.27,
+     602.72
+    ]
+   }
+  },
+  {
+   "cs": 610,
+   "title": "A Main Frag 1 \u2014 KAY/O FRAG/ment thrown from A Main (against the A Main wall",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     610.6,
+     612.6
+    ],
+    "aim": [
+     620.9,
+     621.55
+    ],
+    "throw": [
+     621.4,
+     621.91
+    ],
+    "landing": [
+     623.28,
+     624.5
+    ]
+   }
+  },
+  {
+   "cs": 636,
+   "title": "A Site Frag 4 \u2014 Defender side: from A Heaven, KAY/O throws the FRAG/ment",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     636.1,
+     636.6
+    ],
+    "aim": [
+     636.6,
+     637.15
+    ],
+    "throw": [
+     639.19,
+     639.79
+    ],
+    "landing": [
+     641.25,
+     642.45
+    ]
+   }
+  },
+  {
+   "cs": 646,
+   "title": "C Site Frag 1 \u2014 Defender at C Hall: Operator scope places a small red circle",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     646.5,
+     647.9
+    ],
+    "aim": [
+     655.13,
+     655.5
+    ],
+    "throw": [
+     657.48,
+     658.08
+    ],
+    "landing": [
+     662.38,
+     663.7
+    ]
+   }
+  }
+ ],
+ "note": ""
+}

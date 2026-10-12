@@ -53,6 +53,7 @@ AGENTS = {
             "y8XT-7jCBLA": "ItsFlameBTW",
             "6PbBfx6EuzM": "Season 1 Act 1 Gold Cypher",
             "mLtLqWULAqQ": "ItsFlameBTW",
+            "oXi8SvpXrSw": "ItsFlameBTW",
         },
         "placed": {"trapwire", "spycam"},
         # Maps whose shipped packs were built against legacy_pack_zones.ZONES, so a re-run must
@@ -72,24 +73,33 @@ AGENTS = {
     "viper": {
         "sources": {"XfRvdsxx1P8": "Frost LIVE", "X8erN-c1kyE": "CoachCow",
                     "KrlfJElQex4": "Locked", "LbcPQO_AdJI": "nAts",
-                    "1IHb4QNlEBI": "Raion", "Y4EW7dlWmrM": "inuis!"},
+                    "1IHb4QNlEBI": "Raion", "Y4EW7dlWmrM": "inuis!",
+                    "hpN32V33POA": "Valomate | VALORANT Lineups App"},
         # None is placed: the toxic screen's THROW beat is its placement confirm.
         "placed": set(),
         "legacy_zone_maps": set(),
         "short": {"snake-bite": "Molly", "poison-cloud": "Orb", "toxic-screen": "Wall"},
     },
     "sova": {
-        "sources": {"liTRXcUDWus": "Yolzy", "KKfmFMV-Yas": "Valomate | VALORANT Lineups App"},
+        "sources": {"liTRXcUDWus": "Yolzy", "KKfmFMV-Yas": "Valomate | VALORANT Lineups App",
+                    "K8b5qR-bTek": "maxWELL Lineup-Larry"},
         # Both are fired from the bow (the fixture's recon / shock), so both keep a THROW.
         "placed": set(),
         "legacy_zone_maps": set(),
         "short": {"recon": "Recon", "shock": "Shock"},
     },
     "fade": {
-        "sources": {"7N1Q4SFvaHE": "LNX", "5yqNa4HIq5Q": "Frost LIVE"},
+        "sources": {"7N1Q4SFvaHE": "LNX", "5yqNa4HIq5Q": "Frost LIVE", "noBoH0o5vRY": "Yolzy"},
         "placed": set(),
         "legacy_zone_maps": set(),
         "short": {"haunt": "Haunt", "seize": "Seize"},
+    },
+    "kay-o": {
+        "sources": {"wJ7FwDO9VkA": "maxWELL Lineup-Larry"},
+        # All three are hand-thrown, so all keep a THROW. NULL/cmd (ult) is out of scope.
+        "placed": set(),
+        "legacy_zone_maps": set(),
+        "short": {"zero-point": "Knife", "flashdrive": "Flash", "fragment": "Frag"},
     },
     "phoenix": {
         "sources": {"suTAk5BOVnc": "NRG mada"},

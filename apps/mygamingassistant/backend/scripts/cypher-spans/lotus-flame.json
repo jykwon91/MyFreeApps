@@ -1,0 +1,1056 @@
+{
+ "video_id": "oXi8SvpXrSw",
+ "map_slug": "lotus",
+ "game_slug": "valorant",
+ "author": "ItsFlameBTW",
+ "lineups": [
+  {
+   "cs": 15,
+   "title": "A Site Cam 1 \u2014 Location readout 'A Top': spycam thrown onto the top of the",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     15.6,
+     16.4
+    ],
+    "aim": [
+     18.4,
+     19.28
+    ],
+    "landing": [
+     19.87,
+     20.05
+    ]
+   }
+  },
+  {
+   "cs": 35,
+   "title": "A Site Cam 2 \u2014 Location readout 'A Site': spycam thrown onto the high",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     35.25,
+     36.5
+    ],
+    "aim": [
+     38.75,
+     39.7
+    ],
+    "landing": [
+     40.25,
+     40.6
+    ]
+   }
+  },
+  {
+   "cs": 61,
+   "title": "A Site Cam 3 \u2014 Location readout 'A Tree': spycam stuck high on the wall",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     61.3,
+     63.25
+    ],
+    "aim": [
+     64.0,
+     64.4
+    ],
+    "landing": [
+     64.48,
+     65.5
+    ]
+   }
+  },
+  {
+   "cs": 97,
+   "title": "A Site Cam 4 \u2014 Location readout 'A Top': spycam thrown up onto the stone",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     97.6,
+     98.65
+    ],
+    "aim": [
+     99.4,
+     99.92
+    ],
+    "landing": [
+     99.99,
+     101.2
+    ]
+   }
+  },
+  {
+   "cs": 133,
+   "title": "A Site Trip 1 \u2014 Trapwire anchored on the A Site pillar by the A Main exit",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     133.0,
+     134.55
+    ],
+    "aim": [
+     135.55,
+     136.18
+    ],
+    "landing": [
+     137.72,
+     138.45
+    ]
+   }
+  },
+  {
+   "cs": 148,
+   "title": "A Site Trip 2 \u2014 Trapwire strung across the arched doorway into A Site (anchor",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     148.0,
+     148.6
+    ],
+    "aim": [
+     148.6,
+     149.17
+    ],
+    "landing": [
+     150.55,
+     151.45
+    ]
+   }
+  },
+  {
+   "cs": 186,
+   "title": "A Site Trip 3 \u2014 Trapwire from the lotus crate (under the Buddha relief)",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     186.1,
+     186.9
+    ],
+    "aim": [
+     186.9,
+     187.5
+    ],
+    "landing": [
+     187.6,
+     188.09
+    ]
+   }
+  },
+  {
+   "cs": 189,
+   "title": "A Site Trip 4 \u2014 Trapwire anchored at the base of the A Site pillar, wire",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     189.2,
+     190.45
+    ],
+    "aim": [
+     191.4,
+     191.94
+    ],
+    "landing": [
+     193.7,
+     194.03
+    ]
+   }
+  },
+  {
+   "cs": 198,
+   "title": "A Site Cage 1 \u2014 One-way cyber cage thrown onto the top of the tall",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     198.5,
+     200.2
+    ],
+    "aim": [
+     206.3,
+     206.95
+    ],
+    "throw": [
+     206.99,
+     207.6
+    ],
+    "landing": [
+     214.72,
+     215.7
+    ]
+   }
+  },
+  {
+   "cs": 231,
+   "title": "A Site Trip 5 \u2014 Trapwire from the lotus crate by the Buddha relief across to",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     231.65,
+     232.3
+    ],
+    "aim": [
+     232.03,
+     232.3
+    ],
+    "landing": [
+     234.5,
+     235.5
+    ]
+   }
+  },
+  {
+   "cs": 251,
+   "title": "A Site Trip 6 \u2014 A Tree trapwire placed through the spawn barrier during buy",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     251.2,
+     253.0
+    ],
+    "aim": [
+     254.0,
+     254.95
+    ],
+    "landing": [
+     255.3,
+     257.2
+    ]
+   }
+  },
+  {
+   "cs": 278,
+   "title": "A Site Trip 7 \u2014 Trapwire anchor hidden low on the teal glyph wall at A Tree",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     278.7,
+     279.35
+    ],
+    "aim": [
+     279.35,
+     279.88
+    ],
+    "landing": [
+     280.2,
+     281.8
+    ]
+   }
+  },
+  {
+   "cs": 298,
+   "title": "A Site Trip 8 \u2014 Trapwire from the A Site pillar toward the lotus crate (seen",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     298.85,
+     299.35
+    ],
+    "aim": [
+     299.4,
+     299.86
+    ],
+    "landing": [
+     301.52,
+     301.82
+    ]
+   }
+  },
+  {
+   "cs": 314,
+   "title": "A Site Cage 2 \u2014 Cyber cage thrown down the A Site alley toward the arched",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     314.9,
+     315.5
+    ],
+    "aim": [
+     315.15,
+     315.58
+    ],
+    "throw": [
+     315.5,
+     316.1
+    ],
+    "landing": [
+     316.35,
+     317.35
+    ]
+   }
+  },
+  {
+   "cs": 322,
+   "title": "A Site Trip 9 \u2014 A Tree trapwire, wire from the left wall across to the tree",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     322.5,
+     323.15
+    ],
+    "aim": [
+     323.3,
+     323.8
+    ],
+    "landing": [
+     327.5,
+     328.45
+    ]
+   }
+  },
+  {
+   "cs": 337,
+   "title": "A Main Trip 1 \u2014 A Main trapwire anchored on the left wall, wire across the A",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     337.9,
+     339.15
+    ],
+    "aim": [
+     339.2,
+     340.28
+    ],
+    "landing": [
+     341.8,
+     342.85
+    ]
+   }
+  },
+  {
+   "cs": 411,
+   "title": "B Site Cam 1 \u2014 B Site: Cypher stands in the open B site room and throws a",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     411.1,
+     412.3
+    ],
+    "aim": [
+     413.3,
+     413.78
+    ],
+    "landing": [
+     413.87,
+     414.5
+    ]
+   }
+  },
+  {
+   "cs": 429,
+   "title": "B Site Cam 2 \u2014 B Site: Cypher stands at the corner by the wooden",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     429.6,
+     430.6
+    ],
+    "aim": [
+     431.25,
+     431.85
+    ],
+    "landing": [
+     431.92,
+     432.7
+    ]
+   }
+  },
+  {
+   "cs": 440,
+   "title": "A Site Cam 5 \u2014 Location readout reads 'A Link' (not B): a camera is thrown",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     440.5,
+     441.9
+    ],
+    "aim": [
+     444.47,
+     445.08
+    ],
+    "landing": [
+     445.25,
+     446.0
+    ]
+   }
+  },
+  {
+   "cs": 466,
+   "title": "B Site Trip 1 \u2014 B Site, standing on the stairs side of site and aiming at the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     466.5,
+     467.4
+    ],
+    "aim": [
+     472.8,
+     473.28
+    ],
+    "landing": [
+     476.4,
+     477.25
+    ]
+   }
+  },
+  {
+   "cs": 492,
+   "title": "B Site Trip 2 \u2014 B Site, same stand as the first wire, also anchored on the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     492.52,
+     493.5
+    ],
+    "aim": [
+     496.2,
+     496.95
+    ],
+    "landing": [
+     498.48,
+     499.05
+    ]
+   }
+  },
+  {
+   "cs": 511,
+   "title": "B Site Trip 3 \u2014 B Site, by the stairs: anchored on the small crate on the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     511.0,
+     511.55
+    ],
+    "aim": [
+     511.55,
+     512.05
+    ],
+    "landing": [
+     512.08,
+     513.02
+    ]
+   }
+  },
+  {
+   "cs": 529,
+   "title": "B Main Trip 1 \u2014 B Main (location readout 'B Main'), green corridor: anchored",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     529.25,
+     530.15
+    ],
+    "aim": [
+     529.7,
+     530.18
+    ],
+    "landing": [
+     530.62,
+     531.4
+    ]
+   }
+  },
+  {
+   "cs": 542,
+   "title": "B Site Trip 4 \u2014 B Main into B Site entrance doorway (readout switches to 'B",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     542.2,
+     543.4
+    ],
+    "aim": [
+     542.22,
+     542.7
+    ],
+    "landing": [
+     544.23,
+     545.0
+    ]
+   }
+  },
+  {
+   "cs": 617,
+   "title": "C Main Cam 1 \u2014 C Main: spycam stuck high on the wall just above/left of the",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     617.0,
+     619.25
+    ],
+    "aim": [
+     620.28,
+     620.8
+    ],
+    "landing": [
+     620.93,
+     621.8
+    ]
+   }
+  },
+  {
+   "cs": 639,
+   "title": "C Site Cam 1 \u2014 C Site: spycam stuck high on the wall beside the",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     639.7,
+     640.4
+    ],
+    "aim": [
+     640.62,
+     641.1
+    ],
+    "landing": [
+     641.28,
+     642.12
+    ]
+   }
+  },
+  {
+   "cs": 659,
+   "title": "C Main Cam 2 \u2014 C Main: spycam thrown from under the arch onto the far wall",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     659.35,
+     660.03
+    ],
+    "aim": [
+     659.55,
+     660.03
+    ],
+    "landing": [
+     660.2,
+     661.0
+    ]
+   }
+  },
+  {
+   "cs": 686,
+   "title": "C Main Trip 1 \u2014 C Main: trapwire strung across the arched doorway that leads",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     686.95,
+     687.6
+    ],
+    "aim": [
+     687.55,
+     687.97
+    ],
+    "landing": [
+     688.5,
+     689.3
+    ]
+   }
+  },
+  {
+   "cs": 697,
+   "title": "C Main Trip 2 \u2014 C Main lily-pond area by the low box: low wire close to the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     697.0,
+     698.5
+    ],
+    "aim": [
+     699.6,
+     699.85
+    ],
+    "landing": [
+     700.3,
+     700.34
+    ]
+   }
+  },
+  {
+   "cs": 700,
+   "title": "C Main Trip 3 \u2014 C Main lily-pond area: second low diagonal wire crossing the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     700.85,
+     701.3
+    ],
+    "aim": [
+     702.6,
+     702.9
+    ],
+    "landing": [
+     703.4,
+     703.45
+    ]
+   }
+  },
+  {
+   "cs": 728,
+   "title": "C Main Trip 4 \u2014 C Main: wire anchored on the crate corner, strung across the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     728.25,
+     729.6
+    ],
+    "aim": [
+     730.05,
+     730.85
+    ],
+    "landing": [
+     730.95,
+     732.9
+    ]
+   }
+  },
+  {
+   "cs": 739,
+   "title": "C Main Trip 5 \u2014 C Main: wire anchored low on the box/crate edge, run right",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     739.2,
+     740.3
+    ],
+    "aim": [
+     740.45,
+     741.45
+    ],
+    "landing": [
+     741.5,
+     743.7
+    ]
+   }
+  },
+  {
+   "cs": 756,
+   "title": "C Main Trip 6 \u2014 C Main: wire picked up at 756 and placed again from the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     756.6,
+     757.5
+    ],
+    "aim": [
+     757.52,
+     757.95
+    ],
+    "landing": [
+     758.25,
+     759.0
+    ]
+   }
+  },
+  {
+   "cs": 879,
+   "title": "C Main Trip 7 \u2014 C Main: wire anchored on the inside corner of the low wall by",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     879.75,
+     880.55
+    ],
+    "aim": [
+     880.8,
+     881.25
+    ],
+    "landing": [
+     881.35,
+     882.4
+    ]
+   }
+  },
+  {
+   "cs": 913,
+   "title": "C Site Trip 1 \u2014 C Bend/C Site arch: wire anchored on the pillar left of the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     913.6,
+     914.05
+    ],
+    "aim": [
+     914.28,
+     914.58
+    ],
+    "landing": [
+     916.87,
+     917.95
+    ]
+   }
+  },
+  {
+   "cs": 950,
+   "title": "C Main Trip 8 \u2014 C Main: deliberate wire, anchor held on the far stone pillar",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     950.72,
+     951.05
+    ],
+    "aim": [
+     959.8,
+     960.8
+    ],
+    "landing": [
+     960.82,
+     960.87
+    ]
+   }
+  },
+  {
+   "cs": 972,
+   "title": "C Main Trip 9 \u2014 C Main: deliberate wire, aim held on the pillar beside the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     972.12,
+     973.12
+    ],
+    "aim": [
+     973.2,
+     974.2
+    ],
+    "landing": [
+     974.43,
+     974.85
+    ]
+   }
+  },
+  {
+   "cs": 978,
+   "title": "C Main Cam 3 \u2014 C Main: Spycam thrown up onto the high ledge/pillar above the",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     978.9,
+     980.0
+    ],
+    "aim": [
+     980.1,
+     981.2
+    ],
+    "landing": [
+     981.4,
+     982.03
+    ]
+   }
+  },
+  {
+   "cs": 1019,
+   "title": "C Main Trip 10 \u2014 Outer C Main by the lotus door: wire anchored left of the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1019.3,
+     1020.6
+    ],
+    "aim": [
+     1020.8,
+     1021.55
+    ],
+    "landing": [
+     1022.08,
+     1022.48
+    ]
+   }
+  },
+  {
+   "cs": 1025,
+   "title": "C Main Cage 1 \u2014 Outer C Main: cage puck tossed onto the floor in front of the",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1025.4,
+     1026.15
+    ],
+    "aim": [
+     1025.7,
+     1026.2
+    ],
+    "throw": [
+     1026.15,
+     1026.75
+    ],
+    "landing": [
+     1031.1,
+     1032.3
+    ]
+   }
+  },
+  {
+   "cs": 1044,
+   "title": "C Main Trip 11 \u2014 Outer C Main: wire anchored on the carved door-frame pillar",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1044.5,
+     1045.4
+    ],
+    "aim": [
+     1045.4,
+     1046.43
+    ],
+    "landing": [
+     1047.95,
+     1048.95
+    ]
+   }
+  },
+  {
+   "cs": 1059,
+   "title": "C Main Trip 12 \u2014 Outer C Main: wire from the sandstone pillar across the sand",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1059.7,
+     1060.7
+    ],
+    "aim": [
+     1061.0,
+     1061.98
+    ],
+    "landing": [
+     1062.53,
+     1063.85
+    ]
+   }
+  },
+  {
+   "cs": 1086,
+   "title": "C Main Trip 13 \u2014 C Bend/C Main: wire anchored on the crate-side wall by the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1086.55,
+     1087.1
+    ],
+    "aim": [
+     1087.1,
+     1087.6
+    ],
+    "landing": [
+     1089.15,
+     1090.0
+    ]
+   }
+  },
+  {
+   "cs": 1094,
+   "title": "C Site Trip 2 \u2014 C Site wooden walkway: wire anchored on the wall and run",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1094.0,
+     1095.0
+    ],
+    "aim": [
+     1097.3,
+     1098.15
+    ],
+    "landing": [
+     1099.68,
+     1100.15
+    ]
+   }
+  },
+  {
+   "cs": 1110,
+   "title": "C Site Trip 3 \u2014 C Site wooden walkway: wire anchored on the far wall across",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1110.0,
+     1111.0
+    ],
+    "aim": [
+     1111.55,
+     1112.08
+    ],
+    "landing": [
+     1112.1,
+     1113.0
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
