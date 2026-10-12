@@ -124,6 +124,8 @@ def _liquid_banks() -> dict[int, int]:
 def _water_levels(chunk: terrain.Chunk) -> list[list[tuple[float, int] | None]]:
     """Per quad: (surface height, LiquidType sound bank) or None."""
     grid: list[list[tuple[float, int] | None]] = [[None] * 8 for _ in range(8)]
+    if not chunk.liquids:
+        return grid  # a dry chunk needs no LiquidType table (and no download to fetch it)
     banks = _liquid_banks()
     for liquid in chunk.liquids:
         h, w = liquid.exists.shape
