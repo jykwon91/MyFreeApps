@@ -1,0 +1,414 @@
+{
+ "video_id": "mt0m8f39-f4",
+ "map_slug": "mirage",
+ "game_slug": "cs2",
+ "author": "Tigerr",
+ "lineups": [
+  {
+   "cs": 63,
+   "title": "Window Smoke 1 \u2014 T Spawn (T Start, by the trash can/door corner) jump-throw",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "window",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     63.0,
+     65.1
+    ],
+    "aim": [
+     71.5,
+     72.35
+    ],
+    "throw": [
+     72.3,
+     72.9
+    ],
+    "landing": [
+     79.9,
+     81.4
+    ]
+   }
+  },
+  {
+   "cs": 99,
+   "title": "Connector Smoke 1 \u2014 T Spawn (corner by the trash can) smoke landing at Connector",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "connector",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     99.8,
+     101.8
+    ],
+    "aim": [
+     112.25,
+     112.82
+    ],
+    "throw": [
+     112.72,
+     113.32
+    ],
+    "landing": [
+     117.25,
+     118.45
+    ]
+   }
+  },
+  {
+   "cs": 166,
+   "title": "Mid Smoke 1 \u2014 T Spawn (by the trash can) smoke landing in Mid as a cross",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     166.75,
+     168.25
+    ],
+    "aim": [
+     172.3,
+     173.09
+    ],
+    "throw": [
+     173.09,
+     173.69
+    ],
+    "landing": [
+     178.15,
+     179.35
+    ]
+   }
+  },
+  {
+   "cs": 217,
+   "title": "Connector Smoke 2 \u2014 T smoke from the Top Mid cart corner (crouched inside the",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "connector",
+   "stand": "top-mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     217.25,
+     219.75
+    ],
+    "aim": [
+     244.25,
+     245.35
+    ],
+    "throw": [
+     245.45,
+     246.05
+    ],
+    "landing": [
+     250.0,
+     251.4
+    ]
+   }
+  },
+  {
+   "cs": 387,
+   "title": "Window Molly 1 \u2014 T molotov from behind the Top Mid cart/boxes, lobbed down mid",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "window",
+   "stand": "top-mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     387.6,
+     389.2
+    ],
+    "aim": [
+     391.3,
+     392.4
+    ],
+    "throw": [
+     392.38,
+     392.98
+    ],
+    "landing": [
+     396.8,
+     398.6
+    ]
+   }
+  },
+  {
+   "cs": 465,
+   "title": "Stairs Smoke 1 \u2014 A Site Stairs smoke (Tigerr card SMOKE #6)",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "stairs",
+   "stand": "a-palace",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     465.0,
+     467.0
+    ],
+    "aim": [
+     477.8,
+     478.85
+    ],
+    "throw": [
+     479.4,
+     480.0
+    ],
+    "landing": [
+     489.33,
+     490.9
+    ]
+   }
+  },
+  {
+   "cs": 541,
+   "title": "Jungle Smoke 1 \u2014 A Site Jungle smoke (card SMOKE #7)",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "jungle",
+   "stand": "a-palace",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     541.0,
+     543.2
+    ],
+    "aim": [
+     548.8,
+     549.8
+    ],
+    "throw": [
+     554.95,
+     555.55
+    ],
+    "landing": [
+     563.4,
+     565.0
+    ]
+   }
+  },
+  {
+   "cs": 620,
+   "title": "Ticket Booth Smoke 1 \u2014 A Site CT smoke (card SMOKE #8)",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "ticket-booth",
+   "stand": "a-palace",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     620.8,
+     622.8
+    ],
+    "aim": [
+     626.0,
+     627.0
+    ],
+    "throw": [
+     627.45,
+     628.05
+    ],
+    "landing": [
+     636.55,
+     638.3
+    ]
+   }
+  },
+  {
+   "cs": 714,
+   "title": "A Site Molly 1 \u2014 A Site Under Palace molotov (card MOLOTOV #2)",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-palace",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     714.4,
+     716.9
+    ],
+    "aim": [
+     719.2,
+     720.35
+    ],
+    "throw": [
+     720.3,
+     720.95
+    ],
+    "landing": [
+     722.0,
+     723.3
+    ]
+   }
+  },
+  {
+   "cs": 749,
+   "title": "A Site Flash 1 \u2014 A Site Ramp flash (card FLASH #1)",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-palace",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     749.5,
+     752.0
+    ],
+    "aim": [
+     754.0,
+     755.0
+    ],
+    "throw": [
+     755.35,
+     755.95
+    ],
+    "landing": [
+     784.74,
+     785.1
+    ]
+   }
+  },
+  {
+   "cs": 864,
+   "title": "Catwalk Smoke 1 \u2014 T smoke from Back Alley (aimed up past the tower) landing",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "catwalk",
+   "stand": "b-apts",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     864.0,
+     866.5
+    ],
+    "aim": [
+     873.6,
+     874.6
+    ],
+    "throw": [
+     874.65,
+     875.25
+    ],
+    "landing": [
+     879.35,
+     880.55
+    ]
+   }
+  },
+  {
+   "cs": 921,
+   "title": "B Site Flash 1 \u2014 T pop-flash from Back Alley aimed at the red wall with the",
+   "ability": "flash",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-apts",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     921.2,
+     923.4
+    ],
+    "aim": [
+     924.8,
+     925.8
+    ],
+    "throw": [
+     925.85,
+     926.45
+    ],
+    "landing": [
+     938.25,
+     938.95
+    ]
+   }
+  },
+  {
+   "cs": 975,
+   "title": "A Site Molly 2 \u2014 CT-side molotov thrown from beside the crates near Ticket",
+   "ability": "molotov",
+   "technique": "running",
+   "target": "a-site",
+   "stand": "ticket-booth",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     975.5,
+     977.1
+    ],
+    "aim": [
+     979.95,
+     980.37
+    ],
+    "throw": [
+     980.33,
+     980.93
+    ],
+    "landing": [
+     982.8,
+     984.6
+    ]
+   }
+  },
+  {
+   "cs": 1000,
+   "title": "A Ramp Molly 1 \u2014 CT-side A Ramp molotov",
+   "ability": "molotov",
+   "technique": "running",
+   "target": "a-ramp",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1000.2,
+     1002.4
+    ],
+    "aim": [
+     1003.5,
+     1004.6
+    ],
+    "throw": [
+     1004.72,
+     1005.32
+    ],
+    "landing": [
+     1006.8,
+     1008.8
+    ]
+   }
+  },
+  {
+   "cs": 1057,
+   "title": "Window HE 1 \u2014 CT-side HE thrown from inside the Window room (Sniper's",
+   "ability": "grenade",
+   "technique": "standing",
+   "target": "window",
+   "stand": "window",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1057.5,
+     1059.3
+    ],
+    "aim": [
+     1059.4,
+     1060.4
+    ],
+    "throw": [
+     1060.45,
+     1061.05
+    ],
+    "landing": [
+     1062.95,
+     1063.9
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
