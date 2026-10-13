@@ -44,7 +44,7 @@ CACHE_CALLOUTS = [
     # keyed, because bare "heaven" means B (below).
     ("balcony", "a-site"), ("a balcony", "a-site"), ("a heaven", "a-site"),
     ("ct truck", "a-site"), ("a new box", "a-site"), ("ebox", "a-site"), ("e box", "a-site"),
-    ("e-box", "a-site"), ("electro", "a-site"), ("electric box", "a-site"),
+    ("electro", "a-site"), ("electric box", "a-site"),
     # --- Mid: Garage (T end) -> Mid -> White Box / Z / Connector (CT end) -----------------------------
     ("mid", "mid"), ("middle", "mid"), ("t mid", "mid"), ("ct mid", "mid"), ("top mid", "mid"),
     # Garage is the T-side building leading into Mid, NOT on A. Red is the container inside it; Dumpster
