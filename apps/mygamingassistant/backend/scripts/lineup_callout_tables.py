@@ -17,6 +17,7 @@ from callouts_ancient import ANCIENT_CALLOUTS
 from callouts_anubis import ANUBIS_CALLOUTS
 from callouts_ascent import ASCENT_CALLOUTS
 from callouts_breeze import BREEZE_CALLOUTS
+from callouts_cache import CACHE_CALLOUTS
 from callouts_dust2 import DUST2_CALLOUTS
 from callouts_haven import HAVEN_CALLOUTS
 from callouts_inferno import INFERNO_CALLOUTS
@@ -34,6 +35,7 @@ CALLOUTS_BY_MAP = {
     "ancient": ANCIENT_CALLOUTS,
     "ascent": ASCENT_CALLOUTS,
     "breeze": BREEZE_CALLOUTS,
+    "cache": CACHE_CALLOUTS,
     "haven": HAVEN_CALLOUTS,
     "inferno": INFERNO_CALLOUTS,
     "anubis": ANUBIS_CALLOUTS,

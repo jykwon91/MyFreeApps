@@ -1,0 +1,306 @@
+{
+ "video_id": "z2OtECDTxFI",
+ "map_slug": "cache",
+ "game_slug": "cs2",
+ "author": "Tigerr",
+ "lineups": [
+  {
+   "cs": 49,
+   "title": "Mid Smoke 1 \u2014 CT side: stand inside Connector at the green sliding door",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     49.45,
+     50.2
+    ],
+    "aim": [
+     49.98,
+     50.27
+    ],
+    "throw": [
+     50.88,
+     51.55
+    ],
+    "landing": [
+     54.25,
+     55.6
+    ]
+   }
+  },
+  {
+   "cs": 115,
+   "title": "Mid Molly 1 \u2014 CT incendiary from Mid (stand beside the long building with",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     115.0,
+     117.4
+    ],
+    "aim": [
+     118.8,
+     119.85
+    ],
+    "throw": [
+     119.9,
+     120.5
+    ],
+    "landing": [
+     130.03,
+     130.9
+    ]
+   }
+  },
+  {
+   "cs": 194,
+   "title": "A Main Smoke 1 \u2014 CT smoke thrown from beside the green truck on A Site",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     194.75,
+     196.25
+    ],
+    "aim": [
+     199.25,
+     200.3
+    ],
+    "throw": [
+     200.75,
+     201.4
+    ],
+    "landing": [
+     205.25,
+     206.5
+    ]
+   }
+  },
+  {
+   "cs": 252,
+   "title": "B Main Smoke 1 \u2014 CT B Main smoke thrown from Rafters on B (HUD location reads",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     252.5,
+     254.5
+    ],
+    "aim": [
+     255.05,
+     255.8
+    ],
+    "throw": [
+     255.82,
+     256.42
+    ],
+    "landing": [
+     260.4,
+     261.3
+    ]
+   }
+  },
+  {
+   "cs": 341,
+   "title": "Mid Smoke 2 \u2014 T Spawn mid smoke: stand tight against the corner of the blue",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     341.1,
+     342.6
+    ],
+    "aim": [
+     341.6,
+     342.6
+    ],
+    "throw": [
+     343.6,
+     344.15
+    ],
+    "landing": [
+     349.4,
+     350.1
+    ]
+   }
+  },
+  {
+   "cs": 409,
+   "title": "A Site Molly 1 \u2014 Molotov thrown from inside A Main (window/doorway looking out",
+   "ability": "molotov",
+   "technique": "running",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     409.0,
+     411.5
+    ],
+    "aim": [
+     413.25,
+     413.85
+    ],
+    "throw": [
+     414.47,
+     415.07
+    ],
+    "landing": [
+     416.75,
+     418.0
+    ]
+   }
+  },
+  {
+   "cs": 425,
+   "title": "A Site Molly 2 \u2014 Molotov thrown from the same inside-A-Main area to the Quad",
+   "ability": "molotov",
+   "technique": "running",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     425.6,
+     427.6
+    ],
+    "aim": [
+     428.0,
+     429.1
+    ],
+    "throw": [
+     429.3,
+     429.9
+    ],
+    "landing": [
+     431.75,
+     433.0
+    ]
+   }
+  },
+  {
+   "cs": 464,
+   "title": "A Main Flash 1 \u2014 T-side pop-flash thrown from inside A Main (the windowed",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     464.0,
+     466.5
+    ],
+    "aim": [
+     480.1,
+     481.1
+    ],
+    "throw": [
+     481.1,
+     481.7
+    ],
+    "landing": [
+     482.82,
+     482.99
+    ]
+   }
+  },
+  {
+   "cs": 560,
+   "title": "A Site Smoke 1 \u2014 T-side A Main (by the '04' garage wall) aligned smoke lobbed",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     560.6,
+     562.55
+    ],
+    "aim": [
+     574.4,
+     575.55
+    ],
+    "throw": [
+     575.65,
+     576.25
+    ],
+    "landing": [
+     581.6,
+     583.4
+    ]
+   }
+  },
+  {
+   "cs": 601,
+   "title": "A Site Smoke 2 \u2014 T-side A Main (same '04' garage wall area, a different",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     601.9,
+     603.9
+    ],
+    "aim": [
+     617.35,
+     618.38
+    ],
+    "throw": [
+     618.38,
+     618.98
+    ],
+    "landing": [
+     621.6,
+     622.6
+    ]
+   }
+  },
+  {
+   "cs": 693,
+   "title": "B Site Smoke 1 \u2014 T smoke from the same Sun Room stand (grid-aligned on the",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "sun-room",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     693.6,
+     696.4
+    ],
+    "aim": [
+     701.8,
+     702.8
+    ],
+    "throw": [
+     702.88,
+     703.48
+    ],
+    "landing": [
+     705.8,
+     707.3
+    ]
+   }
+  }
+ ],
+ "note": ""
+}

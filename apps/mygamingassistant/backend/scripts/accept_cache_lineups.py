@@ -17,13 +17,15 @@ b-main = left. side: side_a = T (attacker execute), side_b = CT (defender/retake
 
 Zones are COARSE best-fit approximations (reversible post-accept on the glance
 board). Two flags from STATE were resolved here:
-  * A-Cross courtyard (6ba60fd2/96144c18/2536d287/3c40df31/b1e4fddb) -> a-site
-    target (the "block A Cross" / Tree family all land at the A site). 7ba223c8
+  * A-Cross courtyard (6ba60fd2/96144c18/2536d287/3c40df31) -> a-site target
+    (the "block A Cross" family lands at the A site). The Tree smokes
+    (b1e4fddb, 0a747b59) were first filed here too, but Tree is on B (the
+    corner of Hell, the CT approach onto B) -> b-site since 2026-10-13. 7ba223c8
     "A Cross Waterfall Smoke" is the DISTINCT alt to 96144c18 (SAME A-site
     result, different Long-A/Highway stand) -> a-site target, highway stand.
   * 85b7fdcb "B Utility Combo": the chapter is a 3-util B execute, but the
     SMOKE we localized is actually a Tree smoke FROM SUN ROOM (radar "Sun Room";
-    on-screen card "Tree smoke, HS Molotov, B Flash") -> target a-site (Tree),
+    on-screen card "Tree smoke, HS Molotov, B Flash") -> target b-site (Tree),
     stand sun-room. Name/zone mismatch is intentional; operator eyeball/rename.
 
 Idempotent: re-accepting an already-accepted lineup just re-sets the same
@@ -58,7 +60,7 @@ from app.repositories.game.lineup.lifecycle import accept_lineup  # noqa: E402
 # scripts/cache_spans.md). The original 2026-06-01 zones were coarse best-fit and
 # the clips were mis-localized; this pass replaces both. Zones/side are the
 # localizer-verified STAND->TARGET readings (radar callouts + destination).
-# Zones with no fixture slug were mapped to the nearest: Connector->vents,
+# Zones with no fixture slug were mapped to the nearest: Connector->mid (2026-10-13 fix; was vents),
 # Garage-callout->a-main, Heaven->b-site, T-Yard/Bus-Stop->highway/a-main.
 #
 # Operator-flagged at eyeball (2026-07-16):
@@ -71,7 +73,7 @@ from app.repositories.game.lineup.lifecycle import accept_lineup  # noqa: E402
 #     the stored "B Main->B site"; landing off-cam. Zones best-effort.
 # Ordered by native chapter start.
 MAPPING: dict[str, tuple[str, str, str, str | None]] = {
-    "8bca9356": ("t-spawn",  "vents",    "side_a", None),      #  10 Connector
+    "8bca9356": ("t-spawn",  "mid",      "side_a", None),      #  10 Connector (CT end of Mid, not Vents)
     "33bbc4d1": ("highway",  "mid",      "side_a", None),      #  17 Criss Cross (Garage throw of the criss-cross pair)
     "8405d54f": ("a-main",   "highway",  "side_a", None),      #  46 Highway
     "6ba60fd2": ("a-main",   "a-site",   "side_a", None),      #  63 A Cross
@@ -79,8 +81,8 @@ MAPPING: dict[str, tuple[str, str, str, str | None]] = {
     "7ba223c8": ("highway",  "a-site",   "side_a", None),      #  97 A Cross Waterfall Smoke
     "2536d287": ("a-main",   "a-site",   "side_a", None),      # 110 Fast A Cross  (WEAK — no release/bloom filmed)
     "3c40df31": ("a-main",   "a-site",   "side_a", None),      # 121 A Backsite
-    "b1e4fddb": ("b-main",   "a-site",   "side_a", None),      # 134 Tree  (stand radar=B Main; target off-screen)
-    "0a747b59": ("sun-room", "a-site",   "side_a", None),      # 144 Tree From Sunroom (jumpthrow)
+    "b1e4fddb": ("b-main",   "b-site",   "side_a", None),      # 134 Tree  (Tree is on B, in Hell; stand radar=B Main)
+    "0a747b59": ("sun-room", "b-site",   "side_a", None),      # 144 Tree From Sunroom (jumpthrow; Tree is on B)
     "85b7fdcb": ("sun-room", "b-site",   "side_a", "molotov"), # 156 B Utility Combo -> MOLOTOV (re-type)
     "dbcc5cc3": ("b-main",   "b-site",   "side_a", None),      # 178 Heaven
     "db24c221": ("sun-room", "b-site",   "side_a", "molotov"), # 191 Heaven From Sunroom -> MOLOTOV (mis-typed smoke)
