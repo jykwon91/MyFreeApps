@@ -1,0 +1,387 @@
+{
+ "video_id": "hPFae0bNUFk",
+ "map_slug": "nuke",
+ "game_slug": "cs2",
+ "author": "GettClutch",
+ "lineups": [
+  {
+   "cs": 1,
+   "title": "Upper A Smoke 1 \u2014 T-side fast Heaven smoke: stand in the T alley near the red",
+   "ability": "smoke",
+   "technique": "running",
+   "target": "upper-a",
+   "stand": "outside",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     1.9,
+     3.3
+    ],
+    "aim": [
+     4.6,
+     5.8
+    ],
+    "throw": [
+     9.75,
+     10.35
+    ],
+    "landing": [
+     18.6,
+     19.9
+    ]
+   }
+  },
+  {
+   "cs": 20,
+   "title": "Outside Smoke 1 \u2014 T-side Outside smoke wall: stand tucked into the corner of",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "outside",
+   "stand": "outside",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     20.5,
+     23.0
+    ],
+    "aim": [
+     25.4,
+     26.5
+    ],
+    "throw": [
+     26.55,
+     27.15
+    ],
+    "landing": [
+     34.4,
+     36.0
+    ]
+   }
+  },
+  {
+   "cs": 42,
+   "title": "Outside Smoke 2 \u2014 T-side 'Secret smoke wall': stand tucked against the red/blue",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "outside",
+   "stand": "outside",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     42.9,
+     44.3
+    ],
+    "aim": [
+     47.3,
+     48.3
+    ],
+    "throw": [
+     48.72,
+     49.32
+    ],
+    "landing": [
+     53.9,
+     55.6
+    ]
+   }
+  },
+  {
+   "cs": 57,
+   "title": "CT Spawn Smoke 1 \u2014 T-side jumpthrow smoke into Locker Room",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "ct-spawn",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     57.3,
+     58.7
+    ],
+    "aim": [
+     59.6,
+     60.7
+    ],
+    "throw": [
+     60.73,
+     61.33
+    ],
+    "landing": [
+     68.75,
+     69.95
+    ]
+   }
+  },
+  {
+   "cs": 71,
+   "title": "Upper A Smoke 2 \u2014 T-side jump-throw smoke for the Squeaky lurk",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "upper-a",
+   "stand": "outside",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     71.6,
+     72.3
+    ],
+    "aim": [
+     72.5,
+     73.3
+    ],
+    "throw": [
+     73.72,
+     74.32
+    ],
+    "landing": [
+     80.75,
+     81.3
+    ]
+   }
+  },
+  {
+   "cs": 85,
+   "title": "Upper A Molly 1 \u2014 T side, standing on T Roof (near the top of the yellow",
+   "ability": "molotov",
+   "technique": "running",
+   "target": "upper-a",
+   "stand": "outside",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     85.98,
+     86.4
+    ],
+    "aim": [
+     87.3,
+     88.15
+    ],
+    "throw": [
+     88.3,
+     88.9
+    ],
+    "landing": [
+     90.6,
+     91.9
+    ]
+   }
+  },
+  {
+   "cs": 108,
+   "title": "Upper A Flash 1 \u2014 T-side A execute from the same T Roof spot, aiming lower at",
+   "ability": "flash",
+   "technique": "jump",
+   "target": "upper-a",
+   "stand": "outside",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     108.85,
+     109.4
+    ],
+    "aim": [
+     109.4,
+     109.88
+    ],
+    "throw": [
+     109.89,
+     110.45
+    ],
+    "landing": [
+     111.74,
+     112.34
+    ]
+   }
+  },
+  {
+   "cs": 115,
+   "title": "Upper A HE 1 \u2014 T Roof (by the yellow stairs and roof vents above A)",
+   "ability": "grenade",
+   "technique": "jump",
+   "target": "upper-a",
+   "stand": "outside",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     115.4,
+     116.62
+    ],
+    "aim": [
+     120.2,
+     120.82
+    ],
+    "throw": [
+     120.93,
+     121.55
+    ],
+    "landing": [
+     122.68,
+     123.5
+    ]
+   }
+  },
+  {
+   "cs": 141,
+   "title": "Outside Molly 1 \u2014 Molotov from the T-side lobby/outside-entrance spot beside",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "outside",
+   "stand": "lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     141.4,
+     144.0
+    ],
+    "aim": [
+     145.4,
+     146.45
+    ],
+    "throw": [
+     146.45,
+     147.05
+    ],
+    "landing": [
+     148.15,
+     149.5
+    ]
+   }
+  },
+  {
+   "cs": 162,
+   "title": "Outside Molly 2 \u2014 T Outside, same stand: a molotov held 162.5-166 and thrown",
+   "ability": "molotov",
+   "technique": "running",
+   "target": "outside",
+   "stand": "outside",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     162.7,
+     163.45
+    ],
+    "aim": [
+     163.55,
+     164.45
+    ],
+    "throw": [
+     165.0,
+     165.6
+    ],
+    "landing": [
+     168.05,
+     168.85
+    ]
+   }
+  },
+  {
+   "cs": 173,
+   "title": "Outside Smoke 3 \u2014 T smoke from Outside, jumping onto the white box and",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "outside",
+   "stand": "outside",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     173.25,
+     174.4
+    ],
+    "aim": [
+     174.1,
+     174.75
+    ],
+    "throw": [
+     174.74,
+     175.34
+    ],
+    "landing": [
+     179.3,
+     181.3
+    ]
+   }
+  },
+  {
+   "cs": 184,
+   "title": "A Ramp Molly 1 \u2014 T molotov thrown from the Lobby-side doorway down the",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "a-ramp",
+   "stand": "lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     184.85,
+     185.2
+    ],
+    "aim": [
+     185.35,
+     186.05
+    ],
+    "throw": [
+     186.07,
+     186.57
+    ],
+    "landing": [
+     189.35,
+     190.0
+    ]
+   }
+  },
+  {
+   "cs": 186,
+   "title": "A Ramp Flash 1 \u2014 T flashbang thrown right after the molly from the same stand",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "a-ramp",
+   "stand": "lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     186.45,
+     186.9
+    ],
+    "aim": [
+     186.9,
+     187.33
+    ],
+    "throw": [
+     187.33,
+     187.93
+    ],
+    "landing": [
+     195.8,
+     196.3
+    ]
+   }
+  },
+  {
+   "cs": 197,
+   "title": "A Ramp Flash 2 \u2014 T flash into Ramp from Lobby: stand against the Lobby wall by",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "a-ramp",
+   "stand": "lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     197.0,
+     199.1
+    ],
+    "aim": [
+     202.0,
+     202.95
+    ],
+    "throw": [
+     202.95,
+     203.4
+    ],
+    "landing": [
+     206.95,
+     207.6
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
