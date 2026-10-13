@@ -1,0 +1,441 @@
+{
+ "video_id": "_PQZiwcdZt4",
+ "map_slug": "cache",
+ "game_slug": "cs2",
+ "author": "GettClutch",
+ "lineups": [
+  {
+   "cs": 6,
+   "title": "A Main Flash 1 \u2014 From the same yellow-crate stand on the A-site side, a second",
+   "ability": "flash",
+   "technique": "jump",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     6.85,
+     8.75
+    ],
+    "aim": [
+     8.95,
+     9.78
+    ],
+    "throw": [
+     9.78,
+     10.38
+    ],
+    "landing": [
+     11.55,
+     11.73
+    ]
+   }
+  },
+  {
+   "cs": 20,
+   "title": "Mid Flash 1 \u2014 T-side mid flash: same spot, stepped up against the",
+   "ability": "flash",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     20.15,
+     20.85
+    ],
+    "aim": [
+     20.85,
+     21.45
+    ],
+    "throw": [
+     21.48,
+     22.08
+    ],
+    "landing": [
+     23.18,
+     23.58
+    ]
+   }
+  },
+  {
+   "cs": 33,
+   "title": "Mid Molly 1 \u2014 T-side molotov thrown from outside A Main (blue doors '02'",
+   "ability": "molotov",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     33.6,
+     35.0
+    ],
+    "aim": [
+     35.95,
+     36.58
+    ],
+    "throw": [
+     36.57,
+     37.17
+    ],
+    "landing": [
+     38.7,
+     40.3
+    ]
+   }
+  },
+  {
+   "cs": 42,
+   "title": "Mid Smoke 1 \u2014 T-side fast Connector smoke: stand beside the blue",
+   "ability": "smoke",
+   "technique": "running",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     42.6,
+     42.68
+    ],
+    "aim": [
+     43.6,
+     44.25
+    ],
+    "throw": [
+     44.3,
+     44.85
+    ],
+    "landing": [
+     50.2,
+     51.3
+    ]
+   }
+  },
+  {
+   "cs": 68,
+   "title": "Vents Molly 1 \u2014 T jump-throw molotov from the graffiti-mural wall corner near",
+   "ability": "molotov",
+   "technique": "jump",
+   "target": "vents",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     68.5,
+     70.0
+    ],
+    "aim": [
+     70.8,
+     71.85
+    ],
+    "throw": [
+     71.9,
+     72.5
+    ],
+    "landing": [
+     74.0,
+     75.2
+    ]
+   }
+  },
+  {
+   "cs": 79,
+   "title": "A Site Smoke 1 \u2014 T run-throw smoke from inside the A Main hall (yellow-striped",
+   "ability": "smoke",
+   "technique": "running",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     79.25,
+     79.7
+    ],
+    "aim": [
+     79.7,
+     80.25
+    ],
+    "throw": [
+     80.2,
+     80.8
+    ],
+    "landing": [
+     92.25,
+     94.5
+    ]
+   }
+  },
+  {
+   "cs": 84,
+   "title": "A Main Flash 2 \u2014 T crouched pop-flash thrown up toward the ceiling or windows",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     84.5,
+     86.3
+    ],
+    "aim": [
+     86.3,
+     87.25
+    ],
+    "throw": [
+     87.27,
+     87.87
+    ],
+    "landing": [
+     89.02,
+     89.22
+    ]
+   }
+  },
+  {
+   "cs": 106,
+   "title": "A Site Smoke 2 \u2014 T-side A smoke thrown from the doorway corner of the",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     106.12,
+     106.9
+    ],
+    "aim": [
+     106.95,
+     107.5
+    ],
+    "throw": [
+     107.95,
+     108.6
+    ],
+    "landing": [
+     114.55,
+     115.7
+    ]
+   }
+  },
+  {
+   "cs": 108,
+   "title": "A Site Smoke 3 \u2014 Second A smoke from about the same '04' doorway stand, aimed",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     108.75,
+     109.45
+    ],
+    "aim": [
+     109.0,
+     109.65
+    ],
+    "throw": [
+     109.7,
+     110.3
+    ],
+    "landing": [
+     117.75,
+     118.75
+    ]
+   }
+  },
+  {
+   "cs": 119,
+   "title": "B Site Smoke 1 \u2014 T-side B Main approach alley (by the green door brick wall)",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     119.4,
+     121.0
+    ],
+    "aim": [
+     122.4,
+     123.3
+    ],
+    "throw": [
+     123.33,
+     123.93
+    ],
+    "landing": [
+     128.2,
+     129.0
+    ]
+   }
+  },
+  {
+   "cs": 124,
+   "title": "B Site Smoke 2 \u2014 Same B Main alley stand: second B-site smoke, aimed at the",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     124.0,
+     124.5
+    ],
+    "aim": [
+     124.45,
+     125.02
+    ],
+    "throw": [
+     124.98,
+     125.58
+    ],
+    "landing": [
+     128.2,
+     128.8
+    ]
+   }
+  },
+  {
+   "cs": 125,
+   "title": "B Site Flash 1 \u2014 Same B Main alley stand: pop-flash thrown high over the wall",
+   "ability": "flash",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     125.5,
+     126.25
+    ],
+    "aim": [
+     126.35,
+     127.05
+    ],
+    "throw": [
+     127.0,
+     127.6
+    ],
+    "landing": [
+     131.65,
+     132.55
+    ]
+   }
+  },
+  {
+   "cs": 133,
+   "title": "B Site Molly 1 \u2014 T-side B approach (fenced alley near the yellow WP crate)",
+   "ability": "molotov",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     133.65,
+     134.5
+    ],
+    "aim": [
+     134.1,
+     134.79
+    ],
+    "throw": [
+     134.76,
+     135.36
+    ],
+    "landing": [
+     138.76,
+     140.2
+    ]
+   }
+  },
+  {
+   "cs": 136,
+   "title": "B Site Smoke 3 \u2014 Same stand spot, aim a little higher on the far building",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     136.0,
+     136.75
+    ],
+    "aim": [
+     136.55,
+     137.1
+    ],
+    "throw": [
+     137.05,
+     137.65
+    ],
+    "landing": [
+     142.45,
+     143.45
+    ]
+   }
+  },
+  {
+   "cs": 149,
+   "title": "B Site Molly 2 \u2014 T-side molotov from the same B Main alley spot, aimed high at",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     149.75,
+     150.5
+    ],
+    "aim": [
+     150.5,
+     151.22
+    ],
+    "throw": [
+     151.25,
+     151.85
+    ],
+    "landing": [
+     154.2,
+     155.5
+    ]
+   }
+  },
+  {
+   "cs": 158,
+   "title": "Mid Molly 2 \u2014 CT mid incendiary: same stand as the smoke, red incendiary",
+   "ability": "molotov",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     158.95,
+     159.55
+    ],
+    "aim": [
+     159.2,
+     159.78
+    ],
+    "throw": [
+     159.75,
+     160.35
+    ],
+    "landing": [
+     161.93,
+     162.93
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
