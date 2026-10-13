@@ -1,0 +1,1062 @@
+{
+ "video_id": "MJ-dtTYTUS8",
+ "map_slug": "mirage",
+ "game_slug": "cs2",
+ "author": "NartOutHere",
+ "lineups": [
+  {
+   "cs": 52,
+   "title": "Window Smoke 1 \u2014 T Spawn, standing at the trash can by the wall: aim up at the",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "window",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     52.86,
+     53.02
+    ],
+    "aim": [
+     54.45,
+     55.45
+    ],
+    "throw": [
+     56.28,
+     56.68
+    ],
+    "landing": [
+     58.8,
+     59.75
+    ]
+   }
+  },
+  {
+   "cs": 67,
+   "title": "Window Smoke 2 \u2014 T Spawn, at the cart and box stack beside the blue building",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "window",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     67.9,
+     69.4
+    ],
+    "aim": [
+     70.35,
+     71.03
+    ],
+    "throw": [
+     71.03,
+     71.6
+    ],
+    "landing": [
+     73.9,
+     75.8
+    ]
+   }
+  },
+  {
+   "cs": 106,
+   "title": "Connector Smoke 1 \u2014 Connector smoke from T Spawn: same stand at the A/B arrow",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "connector",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     106.0,
+     107.3
+    ],
+    "aim": [
+     108.2,
+     109.05
+    ],
+    "throw": [
+     108.95,
+     109.55
+    ],
+    "landing": [
+     113.65,
+     114.6
+    ]
+   }
+  },
+  {
+   "cs": 115,
+   "title": "Top Mid Smoke 1 \u2014 Top Mid smoke from T Spawn: stand at the T Spawn A/B arrow",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "top-mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     115.9,
+     116.45
+    ],
+    "aim": [
+     116.6,
+     117.0
+    ],
+    "throw": [
+     116.92,
+     117.5
+    ],
+    "landing": [
+     120.14,
+     121.4
+    ]
+   }
+  },
+  {
+   "cs": 123,
+   "title": "Connector Smoke 2 \u2014 T-side Bottom Connector smoke: stand next to the trash bin at",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "connector",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     123.45,
+     125.0
+    ],
+    "aim": [
+     125.35,
+     126.35
+    ],
+    "throw": [
+     127.0,
+     127.6
+    ],
+    "landing": [
+     128.55,
+     129.5
+    ]
+   }
+  },
+  {
+   "cs": 142,
+   "title": "Connector Molly 1 \u2014 Close-range molotov thrown by a player standing in Mid, next",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "connector",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     142.3,
+     144.0
+    ],
+    "aim": [
+     144.25,
+     144.95
+    ],
+    "throw": [
+     144.93,
+     145.5
+    ],
+    "landing": [
+     146.8,
+     148.0
+    ]
+   }
+  },
+  {
+   "cs": 155,
+   "title": "Connector Smoke 3 \u2014 NiKo (T, minimap label 'Underpass') at the foot of the stairs",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "connector",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     155.3,
+     156.65
+    ],
+    "aim": [
+     156.65,
+     157.25
+    ],
+    "throw": [
+     157.2,
+     157.8
+    ],
+    "landing": [
+     160.0,
+     160.4
+    ]
+   }
+  },
+  {
+   "cs": 157,
+   "title": "Connector Molly 2 \u2014 The same player at the same Underpass stand",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "connector",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     157.6,
+     158.5
+    ],
+    "aim": [
+     158.45,
+     159.05
+    ],
+    "throw": [
+     159.07,
+     159.67
+    ],
+    "landing": [
+     160.3,
+     161.5
+    ]
+   }
+  },
+  {
+   "cs": 164,
+   "title": "Connector Smoke 4 \u2014 A different player and round (mONESY, minimap 'Top of Mid')",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "connector",
+   "stand": "top-mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     164.25,
+     164.85
+    ],
+    "aim": [
+     165.1,
+     165.85
+    ],
+    "throw": [
+     165.88,
+     166.48
+    ],
+    "landing": [
+     168.6,
+     169.6
+    ]
+   }
+  },
+  {
+   "cs": 178,
+   "title": "Stairs Smoke 1 \u2014 T-side A Stairs smoke thrown from Palace Alley (minimap label",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "stairs",
+   "stand": "a-palace",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     178.6,
+     180.2
+    ],
+    "aim": [
+     183.1,
+     184.03
+    ],
+    "throw": [
+     183.9,
+     184.5
+    ],
+    "landing": [
+     185.45,
+     187.0
+    ]
+   }
+  },
+  {
+   "cs": 188,
+   "title": "Jungle Smoke 1 \u2014 T-side Jungle smoke thrown from Palace Alley: the player",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "jungle",
+   "stand": "a-palace",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     188.5,
+     190.5
+    ],
+    "aim": [
+     192.7,
+     193.5
+    ],
+    "throw": [
+     193.4,
+     193.97
+    ],
+    "landing": [
+     195.0,
+     196.2
+    ]
+   }
+  },
+  {
+   "cs": 199,
+   "title": "Stairs Smoke 2 \u2014 T smoke 1 from Palace Alley (minimap label 'Palace Alley'",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "stairs",
+   "stand": "a-palace",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     199.7,
+     200.4
+    ],
+    "aim": [
+     201.6,
+     202.45
+    ],
+    "throw": [
+     202.5,
+     203.1
+    ],
+    "landing": [
+     206.35,
+     207.3
+    ]
+   }
+  },
+  {
+   "cs": 203,
+   "title": "A Site Smoke 1 \u2014 T smoke 2 from the same Palace Alley spot: the aim zooms in",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-palace",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     203.25,
+     203.85
+    ],
+    "aim": [
+     204.5,
+     205.2
+    ],
+    "throw": [
+     205.2,
+     205.8
+    ],
+    "landing": [
+     206.42,
+     207.2
+    ]
+   }
+  },
+  {
+   "cs": 211,
+   "title": "A Site Smoke 2 \u2014 T side, Palace Alley (minimap label), stand facing the wall",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-palace",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     211.75,
+     213.15
+    ],
+    "aim": [
+     213.2,
+     214.05
+    ],
+    "throw": [
+     214.05,
+     214.53
+    ],
+    "landing": [
+     218.3,
+     219.3
+    ]
+   }
+  },
+  {
+   "cs": 214,
+   "title": "Stairs Smoke 3 \u2014 T side, same Palace Alley stand",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "stairs",
+   "stand": "a-palace",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     214.6,
+     216.0
+    ],
+    "aim": [
+     216.0,
+     217.0
+    ],
+    "throw": [
+     217.0,
+     217.6
+    ],
+    "landing": [
+     218.75,
+     219.75
+    ]
+   }
+  },
+  {
+   "cs": 221,
+   "title": "A Site Smoke 3 \u2014 T-side smoke from Palace Alley (Palace), first of a two-smoke",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-palace",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     221.5,
+     224.0
+    ],
+    "aim": [
+     227.0,
+     228.1
+    ],
+    "throw": [
+     228.1,
+     228.72
+    ],
+    "landing": [
+     233.95,
+     234.85
+    ]
+   }
+  },
+  {
+   "cs": 244,
+   "title": "A Site Smoke 4 \u2014 T Spawn smoke onto A Site: from T Spawn (minimap label 'T",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     244.75,
+     246.05
+    ],
+    "aim": [
+     246.05,
+     246.68
+    ],
+    "throw": [
+     246.68,
+     247.28
+    ],
+    "landing": [
+     248.88,
+     249.5
+    ]
+   }
+  },
+  {
+   "cs": 251,
+   "title": "Jungle Smoke 2 \u2014 T Spawn: first smoke",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "jungle",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     251.25,
+     252.75
+    ],
+    "aim": [
+     253.2,
+     254.2
+    ],
+    "throw": [
+     254.2,
+     254.8
+    ],
+    "landing": [
+     259.58,
+     260.6
+    ]
+   }
+  },
+  {
+   "cs": 254,
+   "title": "Connector Smoke 5 \u2014 T Spawn, same area: second smoke",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "connector",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     254.7,
+     255.45
+    ],
+    "aim": [
+     255.6,
+     256.5
+    ],
+    "throw": [
+     256.45,
+     257.0
+    ],
+    "landing": [
+     260.25,
+     261.4
+    ]
+   }
+  },
+  {
+   "cs": 266,
+   "title": "CT Spawn Smoke 1 \u2014 T side, standing in Palace Alley (minimap label 'Palace",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "ct-spawn",
+   "stand": "a-palace",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     266.15,
+     267.15
+    ],
+    "aim": [
+     269.93,
+     270.03
+    ],
+    "throw": [
+     270.04,
+     270.6
+    ],
+    "landing": [
+     278.3,
+     279.4
+    ]
+   }
+  },
+  {
+   "cs": 280,
+   "title": "A Site Smoke 5 \u2014 T side, standing under the stone arch at T Ramp (minimap",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-ramp",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     280.5,
+     282.1
+    ],
+    "aim": [
+     282.9,
+     283.9
+    ],
+    "throw": [
+     283.95,
+     284.25
+    ],
+    "landing": [
+     287.25,
+     288.3
+    ]
+   }
+  },
+  {
+   "cs": 284,
+   "title": "A Site Molly 1 \u2014 Same T Ramp arch stand",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-ramp",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     284.0,
+     285.15
+    ],
+    "aim": [
+     284.6,
+     285.15
+    ],
+    "throw": [
+     285.82,
+     286.35
+    ],
+    "landing": [
+     286.5,
+     287.2
+    ]
+   }
+  },
+  {
+   "cs": 307,
+   "title": "Jungle Smoke 3 \u2014 T-side Jungle smoke from the T Start A-approach alley: stands",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "jungle",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     307.15,
+     307.7
+    ],
+    "aim": [
+     309.3,
+     310.1
+    ],
+    "throw": [
+     310.09,
+     310.69
+    ],
+    "landing": [
+     316.65,
+     317.65
+    ]
+   }
+  },
+  {
+   "cs": 310,
+   "title": "Stairs Molly 1 \u2014 T-side Stairs molotov from the narrow alley near T Start",
+   "ability": "molotov",
+   "technique": "jump",
+   "target": "stairs",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     310.8,
+     312.5
+    ],
+    "aim": [
+     313.67,
+     314.23
+    ],
+    "throw": [
+     314.2,
+     314.8
+    ],
+    "landing": [
+     315.85,
+     316.65
+    ]
+   }
+  },
+  {
+   "cs": 320,
+   "title": "Jungle Smoke 4 \u2014 T-side smoke thrown from T Ramp (inside the archway at the",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "jungle",
+   "stand": "a-ramp",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     320.6,
+     321.7
+    ],
+    "aim": [
+     321.8,
+     322.6
+    ],
+    "throw": [
+     322.6,
+     323.2
+    ],
+    "landing": [
+     324.65,
+     325.5
+    ]
+   }
+  },
+  {
+   "cs": 327,
+   "title": "Connector Smoke 6 \u2014 Smoke thrown from the Palace-side wall edge looking toward",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "connector",
+   "stand": "a-palace",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     327.55,
+     328.05
+    ],
+    "aim": [
+     329.27,
+     329.45
+    ],
+    "throw": [
+     329.45,
+     330.02
+    ],
+    "landing": [
+     332.53,
+     333.15
+    ]
+   }
+  },
+  {
+   "cs": 329,
+   "title": "Jungle Molly 1 \u2014 Molotov from the same Palace-side stand as the 328 smoke",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "jungle",
+   "stand": "a-palace",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     329.5,
+     330.3
+    ],
+    "aim": [
+     330.25,
+     330.84
+    ],
+    "throw": [
+     330.8,
+     331.35
+    ],
+    "landing": [
+     332.05,
+     333.0
+    ]
+   }
+  },
+  {
+   "cs": 334,
+   "title": "Connector Smoke 7 \u2014 Top Connector smoke (the titled apEX smoke): walk from T Ramp",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "connector",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     334.38,
+     334.6
+    ],
+    "aim": [
+     334.75,
+     335.2
+    ],
+    "throw": [
+     335.87,
+     336.17
+    ],
+    "landing": [
+     337.12,
+     338.2
+    ]
+   }
+  },
+  {
+   "cs": 353,
+   "title": "Market Smoke 1 \u2014 T-side Kitchen smoke thrown from Back Alley (minimap label",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "market",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     353.2,
+     354.4
+    ],
+    "aim": [
+     354.5,
+     355.32
+    ],
+    "throw": [
+     355.33,
+     355.93
+    ],
+    "landing": [
+     359.25,
+     360.35
+    ]
+   }
+  },
+  {
+   "cs": 360,
+   "title": "Market Smoke 2 \u2014 T-side Market (B) window smoke: stand in Back Alley by the",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "market",
+   "stand": "stairs",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     360.55,
+     361.65
+    ],
+    "aim": [
+     363.3,
+     364.35
+    ],
+    "throw": [
+     364.48,
+     365.1
+    ],
+    "landing": [
+     365.7,
+     366.9
+    ]
+   }
+  },
+  {
+   "cs": 371,
+   "title": "Market Smoke 3 \u2014 T smoke thrown from Back Alley (HUD location label), aimed up",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "market",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     371.25,
+     371.95
+    ],
+    "aim": [
+     371.55,
+     372.1
+    ],
+    "throw": [
+     373.67,
+     374.27
+    ],
+    "landing": [
+     379.8,
+     381.3
+    ]
+   }
+  },
+  {
+   "cs": 383,
+   "title": "Catwalk Smoke 1 \u2014 T smoke for Short/Catwalk thrown from the Apartments side",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "catwalk",
+   "stand": "b-apts",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     383.9,
+     384.9
+    ],
+    "aim": [
+     386.1,
+     387.08
+    ],
+    "throw": [
+     387.08,
+     387.58
+    ],
+    "landing": [
+     390.2,
+     391.5
+    ]
+   }
+  },
+  {
+   "cs": 443,
+   "title": "A Ramp Smoke 1 \u2014 CT Ramp smoke from A Site: stand tucked by the A-site boxes",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-ramp",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     443.5,
+     443.93
+    ],
+    "aim": [
+     444.05,
+     444.8
+    ],
+    "throw": [
+     444.79,
+     445.27
+    ],
+    "landing": [
+     446.4,
+     447.4
+    ]
+   }
+  },
+  {
+   "cs": 449,
+   "title": "A Ramp Smoke 2 \u2014 CT Ramp smoke from CT Spawn: stand against the pipes/barrels",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-ramp",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     449.52,
+     450.1
+    ],
+    "aim": [
+     450.1,
+     450.72
+    ],
+    "throw": [
+     450.72,
+     451.08
+    ],
+    "landing": [
+     452.2,
+     453.0
+    ]
+   }
+  },
+  {
+   "cs": 450,
+   "title": "A Ramp Smoke 3 \u2014 CT ramp smoke: from CT Start, tucked against the",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-ramp",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     449.6,
+     450.15
+    ],
+    "aim": [
+     450.15,
+     450.73
+    ],
+    "throw": [
+     450.7,
+     451.25
+    ],
+    "landing": [
+     452.35,
+     453.4
+    ]
+   }
+  },
+  {
+   "cs": 455,
+   "title": "A Ramp Smoke 4 \u2014 T-side smoke from T Spawn (blue houses), crosshair on the",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-ramp",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     455.38,
+     455.76
+    ],
+    "aim": [
+     455.85,
+     456.48
+    ],
+    "throw": [
+     456.68,
+     457.28
+    ],
+    "landing": [
+     458.32,
+     458.9
+    ]
+   }
+  },
+  {
+   "cs": 456,
+   "title": "A Palace Smoke 1 \u2014 CT smoke from outside Market (CT Start area, looking up at",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-palace",
+   "stand": "market",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     455.32,
+     455.75
+    ],
+    "aim": [
+     455.85,
+     456.65
+    ],
+    "throw": [
+     456.65,
+     457.25
+    ],
+    "landing": [
+     458.3,
+     458.92
+    ]
+   }
+  },
+  {
+   "cs": 460,
+   "title": "A Palace Smoke 2 \u2014 CT smoke thrown from Ticket Booth (by the 'Billets Ticket",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-palace",
+   "stand": "ticket-booth",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     460.28,
+     460.64
+    ],
+    "aim": [
+     460.75,
+     461.45
+    ],
+    "throw": [
+     461.72,
+     462.06
+    ],
+    "landing": [
+     464.9,
+     465.66
+    ]
+   }
+  },
+  {
+   "cs": 468,
+   "title": "A Site Smoke 6 \u2014 CT AWPer on A site, tucked against the stacked pipes/barrels",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ticket-booth",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     468.36,
+     469.0
+    ],
+    "aim": [
+     468.85,
+     469.42
+    ],
+    "throw": [
+     469.4,
+     470.0
+    ],
+    "landing": [
+     471.8,
+     472.1
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
