@@ -1,0 +1,360 @@
+{
+ "video_id": "i9a8FcZ63Es",
+ "map_slug": "nuke",
+ "game_slug": "cs2",
+ "author": "Tigerr",
+ "lineups": [
+  {
+   "cs": 143,
+   "title": "Outside Smoke 1 \u2014 Outside second wall smoke: same red-container/truck stand",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "outside",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     143.45,
+     145.05
+    ],
+    "aim": [
+     145.3,
+     146.15
+    ],
+    "throw": [
+     146.3,
+     146.9
+    ],
+    "landing": [
+     148.25,
+     149.6
+    ]
+   }
+  },
+  {
+   "cs": 207,
+   "title": "Outside Smoke 2 \u2014 A Site Mini smoke: T stands by the big blue dumpster on",
+   "ability": "smoke",
+   "technique": "running",
+   "target": "outside",
+   "stand": "outside",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     207.0,
+     209.5
+    ],
+    "aim": [
+     216.75,
+     217.45
+    ],
+    "throw": [
+     217.62,
+     218.2
+    ],
+    "landing": [
+     222.5,
+     223.6
+    ]
+   }
+  },
+  {
+   "cs": 326,
+   "title": "Upper A Smoke 1 \u2014 T smoke from Outside, standing facing the garage-door",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "upper-a",
+   "stand": "outside",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     326.1,
+     328.6
+    ],
+    "aim": [
+     331.0,
+     332.1
+    ],
+    "throw": [
+     332.25,
+     332.85
+    ],
+    "landing": [
+     335.85,
+     337.35
+    ]
+   }
+  },
+  {
+   "cs": 345,
+   "title": "Upper A HE 1 \u2014 T HE grenade thrown freehand from Lobby down the Squeaky",
+   "ability": "grenade",
+   "technique": "running",
+   "target": "upper-a",
+   "stand": "lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     345.82,
+     345.98
+    ],
+    "aim": [
+     345.98,
+     346.17
+    ],
+    "throw": [
+     346.2,
+     346.8
+    ],
+    "landing": [
+     348.18,
+     348.9
+    ]
+   }
+  },
+  {
+   "cs": 468,
+   "title": "Upper A Smoke 2 \u2014 T-side smoke into Heaven, thrown from A Site floor beside the",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "upper-a",
+   "stand": "upper-a",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     468.9,
+     469.85
+    ],
+    "aim": [
+     470.8,
+     471.42
+    ],
+    "throw": [
+     471.4,
+     472.05
+    ],
+    "landing": [
+     475.65,
+     477.2
+    ]
+   }
+  },
+  {
+   "cs": 490,
+   "title": "Upper A Molly 1 \u2014 T-side molotov into Heaven, thrown from A Site floor next to",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "upper-a",
+   "stand": "upper-a",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     490.5,
+     493.0
+    ],
+    "aim": [
+     494.9,
+     495.85
+    ],
+    "throw": [
+     495.92,
+     496.5
+    ],
+    "landing": [
+     497.7,
+     500.5
+    ]
+   }
+  },
+  {
+   "cs": 519,
+   "title": "A Ramp Smoke 1 \u2014 T smoke from inside Ramp room (near the crates by the orange",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-ramp",
+   "stand": "a-ramp",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     519.25,
+     519.55
+    ],
+    "aim": [
+     519.3,
+     519.62
+    ],
+    "throw": [
+     519.6,
+     520.2
+    ],
+    "landing": [
+     522.6,
+     523.8
+    ]
+   }
+  },
+  {
+   "cs": 534,
+   "title": "A Ramp Molly 1 \u2014 T molotov from Ramp room thrown through the Ramp doorway",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "a-ramp",
+   "stand": "a-ramp",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     534.45,
+     535.4
+    ],
+    "aim": [
+     535.4,
+     536.03
+    ],
+    "throw": [
+     535.95,
+     536.6
+    ],
+    "landing": [
+     539.6,
+     541.0
+    ]
+   }
+  },
+  {
+   "cs": 549,
+   "title": "A Ramp Molly 2 \u2014 T molotov from a second Ramp room spot (left side by red",
+   "ability": "molotov",
+   "technique": "running",
+   "target": "a-ramp",
+   "stand": "a-ramp",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     549.9,
+     550.75
+    ],
+    "aim": [
+     550.88,
+     551.45
+    ],
+    "throw": [
+     552.42,
+     553.02
+    ],
+    "landing": [
+     554.1,
+     555.2
+    ]
+   }
+  },
+  {
+   "cs": 566,
+   "title": "A Ramp Smoke 2 \u2014 T smoke from Ramp room (by red crates, looking at the Ramp",
+   "ability": "smoke",
+   "technique": "running",
+   "target": "a-ramp",
+   "stand": "a-ramp",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     566.2,
+     568.7
+    ],
+    "aim": [
+     569.2,
+     570.25
+    ],
+    "throw": [
+     570.25,
+     570.85
+    ],
+    "landing": [
+     573.85,
+     575.1
+    ]
+   }
+  },
+  {
+   "cs": 608,
+   "title": "Lower B HE 1 \u2014 T HE grenade at lower B Site (B Site double doors): stand on",
+   "ability": "grenade",
+   "technique": "standing",
+   "target": "lower-b",
+   "stand": "lower-b",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     608.9,
+     610.8
+    ],
+    "aim": [
+     610.9,
+     611.5
+    ],
+    "throw": [
+     611.45,
+     612.05
+    ],
+    "landing": [
+     613.8,
+     614.5
+    ]
+   }
+  },
+  {
+   "cs": 656,
+   "title": "Outside Molly 1 \u2014 CT-side molotov thrown from Outside (beside the grey",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "outside",
+   "stand": "outside",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     656.0,
+     657.6
+    ],
+    "aim": [
+     663.0,
+     664.0
+    ],
+    "throw": [
+     664.0,
+     664.6
+    ],
+    "landing": [
+     666.6,
+     668.8
+    ]
+   }
+  },
+  {
+   "cs": 693,
+   "title": "Outside HE 1 \u2014 CT-side HE grenade thrown from the same Outside spot right",
+   "ability": "grenade",
+   "technique": "standing",
+   "target": "outside",
+   "stand": "outside",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     693.7,
+     695.0
+    ],
+    "aim": [
+     694.6,
+     695.18
+    ],
+    "throw": [
+     695.15,
+     695.75
+    ],
+    "landing": [
+     696.92,
+     698.2
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
