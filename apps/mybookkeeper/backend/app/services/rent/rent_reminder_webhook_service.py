@@ -38,7 +38,7 @@ from app.core.rent_reminder_constants import (
 )
 from app.db.session import unit_of_work
 from app.repositories.rent import rent_reminder_send_repo
-from app.services.rent import rent_reminder_dispatch_service as dispatch
+from app.services.rent import rent_reminder_alert_service as alerts
 from app.services.system import sms_service
 
 logger = logging.getLogger(__name__)
@@ -141,5 +141,5 @@ async def handle_event(payload: dict[str, Any], *, event_type_header: str | None
         alert_id = row.id
 
     if alert_id is not None:
-        await dispatch.alert_operator(alert_id)
+        await alerts.alert_operator(alert_id)
     return True

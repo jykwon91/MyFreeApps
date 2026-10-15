@@ -19,7 +19,7 @@ sits at ``sent_to_phone`` until the phone confirms through the signed webhook
 (``rent_reminder_webhook_service``), or the watchdog fails it.
 
 **Failures** of any kind mark the row ``failed`` with a short code and email
-the operator once.
+the operator once (``rent_reminder_alert_service``).
 
 All data access goes through repositories; this module never imports SQLAlchemy.
 """
@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import asyncio
 import datetime as _dt
-import html
 import logging
 import uuid
 from dataclasses import dataclass
@@ -41,7 +40,6 @@ from app.core.rent_reminder_constants import (
     ERROR_NO_PHONE_CONFIRMATION,
     ERROR_NO_RECIPIENT,
     ERROR_SEND_INTERRUPTED,
-    ERROR_SMS_EXPIRED,
     ERROR_SMS_NOT_CONFIGURED,
     SMS_CONFIRMATION_TIMEOUT_MINUTES,
 )
@@ -49,10 +47,9 @@ from app.db.session import unit_of_work
 from app.repositories.applicants import applicant_repo
 from app.repositories.rent import rent_reminder_plan_repo, rent_reminder_send_repo
 from app.repositories.rent.rent_reminder_send_repo import ReminderAlreadyClaimedError
-from app.repositories.user import user_repo
 from app.schemas.rent.rent_reminder_send_response import RentReminderSendResponse
+from app.services.rent import rent_reminder_alert_service as alerts
 from app.services.rent import rent_reminder_math as math
-from app.services.rent import rent_reminder_message as message
 from app.services.rent import rent_reminder_planner as planner
 from app.services.rent.rent_reminder_service import (
     PlanNotFoundError,
@@ -73,19 +70,6 @@ _ALREADY_SENT_MESSAGE = (
 )
 _ERROR_EMAIL_NOT_CONFIGURED = "email_not_configured"
 _ERROR_EMAIL_SEND_FAILED = "email_send_failed"
-_ERROR_UNEXPECTED = "unexpected_error"
-
-# Failures that mean "the phone never got it out", where the fix is on the
-# phone itself rather than in the tenant's contact details.
-PHONE_SIDE_ERRORS: frozenset[str] = frozenset({
-    ERROR_NO_PHONE_CONFIRMATION,
-    ERROR_SMS_EXPIRED,
-})
-_PHONE_CHECKLIST = (
-    "Check the Android phone is on, online, and that httpSMS isn't "
-    "battery-optimized (Settings > Apps > httpSMS > Battery > Unrestricted)."
-)
-
 
 class NoUpcomingRentError(LookupError):
     """There is no upcoming rent charge to remind about."""
@@ -139,15 +123,6 @@ async def _existing_rows(db, *, plan_id: uuid.UUID, due_date: _dt.date) -> dict:
     return rows
 
 
-async def _operator_email(db, user_id: uuid.UUID) -> str | None:
-    user = await user_repo.get_by_id(db, user_id)
-    return user.email if user is not None else None
-
-
-def _email_html(body: str) -> str:
-    return f"<p>{html.escape(body)}</p>"
-
-
 # --------------------------------------------------------------------------
 # Delivery
 # --------------------------------------------------------------------------
@@ -163,7 +138,7 @@ async def _send(outbound: _Outbound) -> str | None:
             email_service.send_email_or_raise,
             [recipient],
             outbound.subject,
-            _email_html(outbound.body),
+            alerts.email_html(outbound.body),
             reply_to=outbound.operator_email,
         )
         return None
@@ -190,7 +165,7 @@ def _failure_code(exc: Exception) -> str:
         return _ERROR_EMAIL_NOT_CONFIGURED
     if isinstance(exc, EmailSendError):
         return _ERROR_EMAIL_SEND_FAILED
-    return _ERROR_UNEXPECTED
+    return alerts.ERROR_UNEXPECTED
 
 
 async def _deliver(outbound: _Outbound) -> RentReminderSendResponse:
@@ -201,7 +176,7 @@ async def _deliver(outbound: _Outbound) -> RentReminderSendResponse:
         provider_id = await _send(outbound)
     except Exception as exc:  # noqa: BLE001 — every failure is recorded on the row + alerted
         error_code = _failure_code(exc)
-        if error_code == _ERROR_UNEXPECTED:
+        if error_code == alerts.ERROR_UNEXPECTED:
             logger.exception("Rent reminder %s crashed while sending", outbound.send_id)
         else:
             logger.warning(
@@ -226,68 +201,13 @@ async def _deliver(outbound: _Outbound) -> RentReminderSendResponse:
         response = RentReminderSendResponse.model_validate(row)
 
     if error_code is not None:
-        await alert_operator(outbound.send_id)
+        await alerts.alert_operator(outbound.send_id)
     return response
 
 
 # --------------------------------------------------------------------------
 # Operator alerts
 # --------------------------------------------------------------------------
-
-
-def _alert_text(*, tenant: str, channel: str, code: str) -> tuple[str, str]:
-    what = "rent text" if channel == _SMS else "rent reminder email"
-    subject = f"{tenant}'s {what} didn't go out"
-    if code in PHONE_SIDE_ERRORS:
-        detail = _PHONE_CHECKLIST
-    elif code == ERROR_NO_RECIPIENT:
-        detail = f"The tenant record has no {'phone number' if channel == _SMS else 'email address'}."
-    elif code == ERROR_INVALID_PHONE:
-        detail = "The tenant's phone number couldn't be read. Re-enter it with the area code."
-    elif code == ERROR_SMS_NOT_CONFIGURED:
-        detail = "Text reminders are switched on but httpSMS isn't configured on the server."
-    else:
-        detail = f"Reason: {code}."
-    body = (
-        f"{subject}. {detail} You can retry it from the tenant's Rent reminders "
-        "card with Send now."
-    )
-    return subject, body
-
-
-async def alert_operator(send_id: uuid.UUID) -> bool:
-    """Email the operator about a failed reminder, at most once per row."""
-    async with unit_of_work() as db:
-        row = await rent_reminder_send_repo.get(db, send_id=send_id)
-        if row is None or row.status != "failed" or row.operator_alerted_at is not None:
-            return False
-        applicant = await applicant_repo.get(
-            db,
-            applicant_id=row.applicant_id,
-            organization_id=row.organization_id,
-            user_id=row.user_id,
-            include_deleted=True,
-        )
-        legal_name = applicant.legal_name if applicant is not None else None
-        tenant = message.first_name(legal_name) if (legal_name or "").strip() else "A tenant"
-        operator = await _operator_email(db, row.user_id)
-        subject, body = _alert_text(
-            tenant=tenant, channel=row.channel, code=row.error_code or _ERROR_UNEXPECTED,
-        )
-    if not operator:
-        logger.warning("Rent reminder %s failed and the operator has no email", send_id)
-        return False
-    delivered = await asyncio.to_thread(
-        email_service.send_email, [operator], subject, _email_html(body),
-    )
-    if not delivered:
-        logger.warning("Could not email the operator about failed reminder %s", send_id)
-        return False
-    async with unit_of_work() as db:
-        row = await rent_reminder_send_repo.get(db, send_id=send_id)
-        if row is not None:
-            await rent_reminder_send_repo.mark_operator_alerted(db, row=row)
-    return True
 
 
 # --------------------------------------------------------------------------
@@ -348,7 +268,7 @@ async def _process_plan(plan_id: uuid.UUID, now: _dt.datetime) -> int:
             "user_id": plan.user_id,
             "tenant_email": applicant.contact_email,
             "tenant_phone": applicant.contact_phone,
-            "operator_email": await _operator_email(db, plan.user_id),
+            "operator_email": await alerts.operator_email(db, plan.user_id),
         }
 
     sent = 0
@@ -436,7 +356,7 @@ async def run_watchdog(now: _dt.datetime | None = None) -> int:
             failed.append(row.id)
     for send_id in failed:
         try:
-            await alert_operator(send_id)
+            await alerts.alert_operator(send_id)
         except Exception:  # noqa: BLE001 — one alert failing must not stop the rest
             logger.exception("Could not alert the operator about reminder %s", send_id)
     return len(failed)
@@ -497,7 +417,7 @@ async def send_now(
         existing = await _existing_rows(db, plan_id=plan.id, due_date=due.due_date)
         if any(row.status != "failed" for row in existing.values()):
             raise ReminderAlreadySentError(_ALREADY_SENT_MESSAGE)
-        operator_email = await _operator_email(db, user_id)
+        operator_email = await alerts.operator_email(db, user_id)
         outbounds: list[_Outbound] = []
         for channel in channels:
             if channel in existing:

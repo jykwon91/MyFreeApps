@@ -26,6 +26,7 @@ from app.models.rent.rent_reminder_send import RentReminderSend
 from app.models.rent.rent_schedule import RentSchedule
 from app.services.rent import (
     rent_ledger_service,
+    rent_reminder_alert_service as alerts,
     rent_reminder_dispatch_service as dispatch,
     rent_reminder_math as math,
     rent_reminder_planner as planner,
@@ -59,13 +60,14 @@ def wired(db: AsyncSession):
     sms_send = MagicMock(return_value="httpsms-msg-1")
     with ExitStack() as stack:
         for target in (
+            "app.services.rent.rent_reminder_alert_service.unit_of_work",
             "app.services.rent.rent_reminder_dispatch_service.unit_of_work",
             "app.services.rent.rent_reminder_service.unit_of_work",
             "app.services.rent.rent_reminder_webhook_service.unit_of_work",
         ):
             stack.enter_context(patch(target, fake))
         stack.enter_context(
-            patch.object(dispatch, "_operator_email", AsyncMock(return_value="jason@example.com")),
+            patch.object(alerts, "operator_email", AsyncMock(return_value="jason@example.com")),
         )
         stack.enter_context(patch.object(email_service, "send_email_or_raise", send_email_or_raise))
         stack.enter_context(patch.object(email_service, "send_email", send_email))
