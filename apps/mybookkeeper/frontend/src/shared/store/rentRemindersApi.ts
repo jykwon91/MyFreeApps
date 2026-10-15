@@ -1,5 +1,4 @@
 import { baseApi } from "./baseApi";
-import type { RentReminderChannel } from "@/shared/types/rent/rent-reminder-channel";
 import type { RentReminderOverview } from "@/shared/types/rent/rent-reminder-overview";
 import type { RentReminderPlan } from "@/shared/types/rent/rent-reminder-plan";
 import type { RentReminderPlanRequest } from "@/shared/types/rent/rent-reminder-plan-request";
@@ -12,7 +11,6 @@ export interface RentReminderPlanArgs extends RentReminderPlanRequest {
 
 export interface RentReminderSendNowArgs {
   applicantId: string;
-  channel: RentReminderChannel;
 }
 
 const reminderTag = (applicantId: string) => ({
@@ -79,11 +77,12 @@ const rentRemindersApi = baseApi.injectEndpoints({
       invalidatesTags: (_r, _e, applicantId) => [reminderTag(applicantId)],
     }),
 
-    sendRentReminderNow: builder.mutation<RentReminderSend, RentReminderSendNowArgs>({
-      query: ({ applicantId, channel }) => ({
+    /** Sends every enabled channel together — email and text never go out
+     *  at different times. */
+    sendRentReminderNow: builder.mutation<RentReminderSend[], RentReminderSendNowArgs>({
+      query: ({ applicantId }) => ({
         url: `/rent-reminders/tenants/${applicantId}/send-now`,
         method: "POST",
-        data: { channel },
       }),
       invalidatesTags: (_r, _e, { applicantId }) => [reminderTag(applicantId)],
     }),

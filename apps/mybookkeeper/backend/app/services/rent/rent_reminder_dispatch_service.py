@@ -8,13 +8,18 @@ cost is that a crash between claim and delivery leaves a ``queued`` row with
 nothing sent — the watchdog fails it (``send_interrupted``) and tells the
 operator, rather than risking a double text.
 
+**Channels go together.** Email and text for one due date are sent in the
+same pass or not at all. A channel switched on after the reminder already
+went out on the other one waits for the next due date instead of trailing
+behind on its own, and "send now" sends every enabled channel at once.
+
 **Delivery.** Email goes straight to the tenant with ``Reply-To`` set to the
 operator. SMS is handed to the operator's Android phone via httpSMS; the row
 sits at ``sent_to_phone`` until the phone confirms through the signed webhook
 (``rent_reminder_webhook_service``), or the watchdog fails it.
 
 **Failures** of any kind mark the row ``failed`` with a short code and email
-the operator once.
+the operator once (``rent_reminder_alert_service``).
 
 All data access goes through repositories; this module never imports SQLAlchemy.
 """
@@ -22,7 +27,6 @@ from __future__ import annotations
 
 import asyncio
 import datetime as _dt
-import html
 import logging
 import uuid
 from dataclasses import dataclass
@@ -36,7 +40,6 @@ from app.core.rent_reminder_constants import (
     ERROR_NO_PHONE_CONFIRMATION,
     ERROR_NO_RECIPIENT,
     ERROR_SEND_INTERRUPTED,
-    ERROR_SMS_EXPIRED,
     ERROR_SMS_NOT_CONFIGURED,
     SMS_CONFIRMATION_TIMEOUT_MINUTES,
 )
@@ -44,10 +47,9 @@ from app.db.session import unit_of_work
 from app.repositories.applicants import applicant_repo
 from app.repositories.rent import rent_reminder_plan_repo, rent_reminder_send_repo
 from app.repositories.rent.rent_reminder_send_repo import ReminderAlreadyClaimedError
-from app.repositories.user import user_repo
 from app.schemas.rent.rent_reminder_send_response import RentReminderSendResponse
+from app.services.rent import rent_reminder_alert_service as alerts
 from app.services.rent import rent_reminder_math as math
-from app.services.rent import rent_reminder_message as message
 from app.services.rent import rent_reminder_planner as planner
 from app.services.rent.rent_reminder_service import (
     PlanNotFoundError,
@@ -61,32 +63,20 @@ logger = logging.getLogger(__name__)
 
 _EMAIL = "email"
 _SMS = "sms"
+_ALL_CHANNELS = (_EMAIL, _SMS)
+_ALREADY_SENT_MESSAGE = (
+    "This reminder already went out. Email and text always go together, "
+    "so nothing more is sent until the next due date."
+)
 _ERROR_EMAIL_NOT_CONFIGURED = "email_not_configured"
 _ERROR_EMAIL_SEND_FAILED = "email_send_failed"
-_ERROR_UNEXPECTED = "unexpected_error"
-
-# Failures that mean "the phone never got it out", where the fix is on the
-# phone itself rather than in the tenant's contact details.
-PHONE_SIDE_ERRORS: frozenset[str] = frozenset({
-    ERROR_NO_PHONE_CONFIRMATION,
-    ERROR_SMS_EXPIRED,
-})
-_PHONE_CHECKLIST = (
-    "Check the Android phone is on, online, and that httpSMS isn't "
-    "battery-optimized (Settings > Apps > httpSMS > Battery > Unrestricted)."
-)
-
-
-class ChannelDisabledError(ValueError):
-    """Send-now on a channel the plan has switched off."""
-
 
 class NoUpcomingRentError(LookupError):
     """There is no upcoming rent charge to remind about."""
 
 
 class ReminderAlreadySentError(ValueError):
-    """That reminder already went out (or is in flight) on that channel."""
+    """That reminder already went out (or is in flight)."""
 
 
 class _Undeliverable(Exception):
@@ -121,13 +111,16 @@ def _enabled_channels(plan) -> list[str]:
     return channels
 
 
-async def _operator_email(db, user_id: uuid.UUID) -> str | None:
-    user = await user_repo.get_by_id(db, user_id)
-    return user.email if user is not None else None
-
-
-def _email_html(body: str) -> str:
-    return f"<p>{html.escape(body)}</p>"
+async def _existing_rows(db, *, plan_id: uuid.UUID, due_date: _dt.date) -> dict:
+    """Send rows already recorded for this due date, keyed by channel."""
+    rows = {}
+    for channel in _ALL_CHANNELS:
+        row = await rent_reminder_send_repo.get_by_key(
+            db, plan_id=plan_id, due_date=due_date, channel=channel,
+        )
+        if row is not None:
+            rows[channel] = row
+    return rows
 
 
 # --------------------------------------------------------------------------
@@ -145,7 +138,7 @@ async def _send(outbound: _Outbound) -> str | None:
             email_service.send_email_or_raise,
             [recipient],
             outbound.subject,
-            _email_html(outbound.body),
+            alerts.email_html(outbound.body),
             reply_to=outbound.operator_email,
         )
         return None
@@ -172,7 +165,7 @@ def _failure_code(exc: Exception) -> str:
         return _ERROR_EMAIL_NOT_CONFIGURED
     if isinstance(exc, EmailSendError):
         return _ERROR_EMAIL_SEND_FAILED
-    return _ERROR_UNEXPECTED
+    return alerts.ERROR_UNEXPECTED
 
 
 async def _deliver(outbound: _Outbound) -> RentReminderSendResponse:
@@ -183,7 +176,7 @@ async def _deliver(outbound: _Outbound) -> RentReminderSendResponse:
         provider_id = await _send(outbound)
     except Exception as exc:  # noqa: BLE001 — every failure is recorded on the row + alerted
         error_code = _failure_code(exc)
-        if error_code == _ERROR_UNEXPECTED:
+        if error_code == alerts.ERROR_UNEXPECTED:
             logger.exception("Rent reminder %s crashed while sending", outbound.send_id)
         else:
             logger.warning(
@@ -208,68 +201,13 @@ async def _deliver(outbound: _Outbound) -> RentReminderSendResponse:
         response = RentReminderSendResponse.model_validate(row)
 
     if error_code is not None:
-        await alert_operator(outbound.send_id)
+        await alerts.alert_operator(outbound.send_id)
     return response
 
 
 # --------------------------------------------------------------------------
 # Operator alerts
 # --------------------------------------------------------------------------
-
-
-def _alert_text(*, tenant: str, channel: str, code: str) -> tuple[str, str]:
-    what = "rent text" if channel == _SMS else "rent reminder email"
-    subject = f"{tenant}'s {what} didn't go out"
-    if code in PHONE_SIDE_ERRORS:
-        detail = _PHONE_CHECKLIST
-    elif code == ERROR_NO_RECIPIENT:
-        detail = f"The tenant record has no {'phone number' if channel == _SMS else 'email address'}."
-    elif code == ERROR_INVALID_PHONE:
-        detail = "The tenant's phone number couldn't be read. Re-enter it with the area code."
-    elif code == ERROR_SMS_NOT_CONFIGURED:
-        detail = "Text reminders are switched on but httpSMS isn't configured on the server."
-    else:
-        detail = f"Reason: {code}."
-    body = (
-        f"{subject}. {detail} You can retry it from the tenant's Rent reminders "
-        "card with Send now."
-    )
-    return subject, body
-
-
-async def alert_operator(send_id: uuid.UUID) -> bool:
-    """Email the operator about a failed reminder, at most once per row."""
-    async with unit_of_work() as db:
-        row = await rent_reminder_send_repo.get(db, send_id=send_id)
-        if row is None or row.status != "failed" or row.operator_alerted_at is not None:
-            return False
-        applicant = await applicant_repo.get(
-            db,
-            applicant_id=row.applicant_id,
-            organization_id=row.organization_id,
-            user_id=row.user_id,
-            include_deleted=True,
-        )
-        legal_name = applicant.legal_name if applicant is not None else None
-        tenant = message.first_name(legal_name) if (legal_name or "").strip() else "A tenant"
-        operator = await _operator_email(db, row.user_id)
-        subject, body = _alert_text(
-            tenant=tenant, channel=row.channel, code=row.error_code or _ERROR_UNEXPECTED,
-        )
-    if not operator:
-        logger.warning("Rent reminder %s failed and the operator has no email", send_id)
-        return False
-    delivered = await asyncio.to_thread(
-        email_service.send_email, [operator], subject, _email_html(body),
-    )
-    if not delivered:
-        logger.warning("Could not email the operator about failed reminder %s", send_id)
-        return False
-    async with unit_of_work() as db:
-        row = await rent_reminder_send_repo.get(db, send_id=send_id)
-        if row is not None:
-            await rent_reminder_send_repo.mark_operator_alerted(db, row=row)
-    return True
 
 
 # --------------------------------------------------------------------------
@@ -307,23 +245,22 @@ async def _process_plan(plan_id: uuid.UUID, now: _dt.datetime) -> int:
         )
         # A row that failed BEFORE the scheduled moment came from an early
         # manual "Send now" (e.g. before the tenant's email was on file). It
-        # must not swallow the scheduled send, so it gets one retry here. A
-        # failure at or after the scheduled moment is final — retrying it every
-        # hourly tick would spam the operator's failure alert.
+        # must not swallow the scheduled send, so it gets one retry here. Any
+        # other row means this reminder was already attempted at its moment:
+        # a failure then is final (retrying every hourly tick would spam the
+        # operator's alert), and a channel switched on since must not trail
+        # behind on its own — email and text go together or not at all.
         scheduled_at = math.send_at(terms, due.due_date)
-        pending: list[str] = []
-        retry_rows: dict[str, uuid.UUID] = {}
-        for channel in _enabled_channels(plan):
-            existing = await rent_reminder_send_repo.get_by_key(
-                db, plan_id=plan.id, due_date=due.due_date, channel=channel,
-            )
-            if existing is None:
-                pending.append(channel)
-            elif existing.status == "failed" and _as_utc(existing.updated_at) < scheduled_at:
-                pending.append(channel)
-                retry_rows[channel] = existing.id
-        if not pending:
+        existing = await _existing_rows(db, plan_id=plan.id, due_date=due.due_date)
+        if any(
+            not (row.status == "failed" and _as_utc(row.updated_at) < scheduled_at)
+            for row in existing.values()
+        ):
             return 0
+        pending = _enabled_channels(plan)
+        retry_rows = {
+            channel: existing[channel].id for channel in pending if channel in existing
+        }
         snapshot = {
             "plan_id": plan.id,
             "applicant_id": plan.applicant_id,
@@ -331,7 +268,7 @@ async def _process_plan(plan_id: uuid.UUID, now: _dt.datetime) -> int:
             "user_id": plan.user_id,
             "tenant_email": applicant.contact_email,
             "tenant_phone": applicant.contact_phone,
-            "operator_email": await _operator_email(db, plan.user_id),
+            "operator_email": await alerts.operator_email(db, plan.user_id),
         }
 
     sent = 0
@@ -419,7 +356,7 @@ async def run_watchdog(now: _dt.datetime | None = None) -> int:
             failed.append(row.id)
     for send_id in failed:
         try:
-            await alert_operator(send_id)
+            await alerts.alert_operator(send_id)
         except Exception:  # noqa: BLE001 — one alert failing must not stop the rest
             logger.exception("Could not alert the operator about reminder %s", send_id)
     return len(failed)
@@ -448,14 +385,14 @@ async def send_now(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
     applicant_id: uuid.UUID,
-    channel: str,
     now: _dt.datetime | None = None,
-) -> RentReminderSendResponse:
-    """Send the next reminder right away on one channel.
+) -> list[RentReminderSendResponse]:
+    """Send the next reminder right away on every enabled channel, together.
 
     Ignores the send time and daytime window — the operator asked for it.
-    A reminder that already failed on this channel is retried; one that went
-    out (or is in flight) is refused.
+    Channels that failed before are retried alongside the rest. Once the
+    reminder went out (or is in flight) on any channel it is refused: a
+    second channel never follows later on its own.
     """
     moment = now or _now()
     async with unit_of_work() as db:
@@ -467,9 +404,8 @@ async def send_now(
         )
         if plan is None:
             raise PlanNotFoundError(str(applicant_id))
-        if channel not in _enabled_channels(plan):
-            raise ChannelDisabledError(f"{channel} reminders are switched off for this tenant")
-        if channel == _SMS and not sms_service.is_configured():
+        channels = _enabled_channels(plan)
+        if _SMS in channels and not sms_service.is_configured():
             raise SmsUnavailableError(SMS_UNAVAILABLE_MESSAGE)
         today = math.local_now(planner.plan_terms(plan), moment).date()
         due = await planner.next_due_for_plan(db, plan=plan, from_date=today)
@@ -478,41 +414,40 @@ async def send_now(
         rendered = planner.render(
             plan, due=due, tenant_legal_name=applicant.legal_name, now=moment,
         )
-        existing = await rent_reminder_send_repo.get_by_key(
-            db, plan_id=plan.id, due_date=due.due_date, channel=channel,
-        )
-        if existing is not None:
-            if existing.status != "failed":
-                raise ReminderAlreadySentError(
-                    "That reminder already went out on this channel.",
+        existing = await _existing_rows(db, plan_id=plan.id, due_date=due.due_date)
+        if any(row.status != "failed" for row in existing.values()):
+            raise ReminderAlreadySentError(_ALREADY_SENT_MESSAGE)
+        operator_email = await alerts.operator_email(db, user_id)
+        outbounds: list[_Outbound] = []
+        for channel in channels:
+            if channel in existing:
+                row = await rent_reminder_send_repo.requeue(
+                    db, row=existing[channel], amount=due.amount, message_body=rendered.body,
                 )
-            row = await rent_reminder_send_repo.requeue(
-                db, row=existing, amount=due.amount, message_body=rendered.body,
-            )
-        else:
-            try:
-                row = await rent_reminder_send_repo.claim(
-                    db,
-                    plan_id=plan.id,
-                    applicant_id=plan.applicant_id,
-                    organization_id=plan.organization_id,
-                    user_id=plan.user_id,
-                    due_date=due.due_date,
+            else:
+                try:
+                    row = await rent_reminder_send_repo.claim(
+                        db,
+                        plan_id=plan.id,
+                        applicant_id=plan.applicant_id,
+                        organization_id=plan.organization_id,
+                        user_id=plan.user_id,
+                        due_date=due.due_date,
+                        channel=channel,
+                        amount=due.amount,
+                        message_body=rendered.body,
+                    )
+                except ReminderAlreadyClaimedError as exc:
+                    raise ReminderAlreadySentError(_ALREADY_SENT_MESSAGE) from exc
+            outbounds.append(
+                _Outbound(
+                    send_id=row.id,
                     channel=channel,
-                    amount=due.amount,
-                    message_body=rendered.body,
-                )
-            except ReminderAlreadyClaimedError as exc:
-                raise ReminderAlreadySentError(
-                    "That reminder already went out on this channel.",
-                ) from exc
-        outbound = _Outbound(
-            send_id=row.id,
-            channel=channel,
-            subject=rendered.subject,
-            body=rendered.body,
-            tenant_email=applicant.contact_email,
-            tenant_phone=applicant.contact_phone,
-            operator_email=await _operator_email(db, user_id),
-        )
-    return await _deliver(outbound)
+                    subject=rendered.subject,
+                    body=rendered.body,
+                    tenant_email=applicant.contact_email,
+                    tenant_phone=applicant.contact_phone,
+                    operator_email=operator_email,
+                ),
+            )
+    return [await _deliver(outbound) for outbound in outbounds]

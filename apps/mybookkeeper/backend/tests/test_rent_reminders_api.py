@@ -23,6 +23,7 @@ from app.models.organization.organization_member import OrgRole
 from app.schemas.rent.rent_reminder_overview_response import RentReminderOverviewResponse
 from app.schemas.rent.rent_reminder_send_response import RentReminderSendResponse
 from app.schemas.rent.rent_reminder_sms_status import RentReminderSmsStatus
+from app.services.rent import rent_reminder_dispatch_service
 from app.services.system import sms_service
 
 _SIGNING_KEY = "test-signing-key-0123456789abcdefghij"
@@ -126,25 +127,30 @@ class TestSendNow:
             )
             with patch(
                 "app.api.rent_reminders.rent_reminder_dispatch_service.send_now",
-                AsyncMock(return_value=sent),
-            ):
+                AsyncMock(return_value=[sent, sent.model_copy(update={"channel": "sms", "status": "sent_to_phone"})]),
+            ) as send_now:
                 response = TestClient(app).post(
                     f"/rent-reminders/tenants/{uuid.uuid4()}/send-now",
-                    json={"channel": "email"},
                 )
             assert response.status_code == 200
-            assert response.json()["status"] == "sent"
+            assert [(r["channel"], r["status"]) for r in response.json()] == [
+                ("email", "sent"), ("sms", "sent_to_phone"),
+            ]
+            assert "channel" not in send_now.call_args.kwargs
         finally:
             app.dependency_overrides.clear()
 
-    def test_unknown_channel_rejected(self) -> None:
+    def test_already_sent_is_409(self) -> None:
         _override_auth()
         try:
-            response = TestClient(app).post(
-                f"/rent-reminders/tenants/{uuid.uuid4()}/send-now",
-                json={"channel": "pigeon"},
-            )
-            assert response.status_code == 422
+            with patch(
+                "app.api.rent_reminders.rent_reminder_dispatch_service.send_now",
+                AsyncMock(side_effect=rent_reminder_dispatch_service.ReminderAlreadySentError("went out")),
+            ):
+                response = TestClient(app).post(
+                    f"/rent-reminders/tenants/{uuid.uuid4()}/send-now",
+                )
+            assert response.status_code == 409
         finally:
             app.dependency_overrides.clear()
 

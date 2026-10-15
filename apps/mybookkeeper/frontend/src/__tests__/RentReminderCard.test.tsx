@@ -12,7 +12,7 @@ const mockPreview = vi.fn();
 const mockSends = vi.fn();
 const mockCreate = vi.fn();
 const mockSendNow = vi.fn();
-const sendNowState = { isLoading: false, originalArgs: undefined as unknown };
+const sendNowState = { isLoading: false };
 
 vi.mock("@/shared/store/rentRemindersApi", () => ({
   useGetRentReminderOverviewQuery: (...args: unknown[]) => mockOverview(...args),
@@ -168,23 +168,37 @@ describe("RentReminderCard", () => {
     );
     expect(screen.getByTestId("rent-reminder-send-at")).toHaveTextContent("Sat, Oct 31");
 
-    // Email already went out for this due date; the text has not.
-    expect(screen.getByTestId("rent-reminder-send-now-email")).toBeDisabled();
-    expect(screen.getByTestId("rent-reminder-send-now-sms")).toBeEnabled();
+    // Email already went out for this due date, so the text waits for the
+    // next one — the two never go out at different times.
+    expect(screen.getByTestId("rent-reminder-send-now")).toBeDisabled();
+    expect(screen.getByTestId("rent-reminder-send-now")).toHaveTextContent(
+      "Sent for this due date",
+    );
 
     const row = screen.getByTestId("rent-reminder-history-row");
     expect(row).toHaveTextContent("Failed");
     expect(row).toHaveTextContent("battery-optimized");
   });
 
-  it("sends a text now", () => {
+  it("sends email and text together with one button", () => {
     mockOverview.mockReturnValue({ data: SONU_PLAN, isLoading: false, isError: false });
+    mockPreview.mockReturnValue({
+      data: { ...PREVIEW, sent_channels: [] },
+      isLoading: false,
+      isError: false,
+    });
     mockSendNow.mockReturnValue({
-      unwrap: () => Promise.resolve({ ...FAILED_TEXT, status: "sent_to_phone" }),
+      unwrap: () =>
+        Promise.resolve([
+          { ...FAILED_TEXT, channel: "email", status: "sent" },
+          { ...FAILED_TEXT, status: "sent_to_phone" },
+        ]),
     });
     renderCard();
-    fireEvent.click(screen.getByTestId("rent-reminder-send-now-sms"));
-    expect(mockSendNow).toHaveBeenCalledWith({ applicantId: "app-1", channel: "sms" });
+    const button = screen.getByTestId("rent-reminder-send-now");
+    expect(button).toHaveTextContent("Send email and text now");
+    fireEvent.click(button);
+    expect(mockSendNow).toHaveBeenCalledWith({ applicantId: "app-1" });
   });
 
   it("shows a retry on error", () => {

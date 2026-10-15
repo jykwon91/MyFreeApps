@@ -26,6 +26,7 @@ from app.models.rent.rent_reminder_send import RentReminderSend
 from app.models.rent.rent_schedule import RentSchedule
 from app.services.rent import (
     rent_ledger_service,
+    rent_reminder_alert_service as alerts,
     rent_reminder_dispatch_service as dispatch,
     rent_reminder_math as math,
     rent_reminder_planner as planner,
@@ -59,13 +60,14 @@ def wired(db: AsyncSession):
     sms_send = MagicMock(return_value="httpsms-msg-1")
     with ExitStack() as stack:
         for target in (
+            "app.services.rent.rent_reminder_alert_service.unit_of_work",
             "app.services.rent.rent_reminder_dispatch_service.unit_of_work",
             "app.services.rent.rent_reminder_service.unit_of_work",
             "app.services.rent.rent_reminder_webhook_service.unit_of_work",
         ):
             stack.enter_context(patch(target, fake))
         stack.enter_context(
-            patch.object(dispatch, "_operator_email", AsyncMock(return_value="jason@example.com")),
+            patch.object(alerts, "operator_email", AsyncMock(return_value="jason@example.com")),
         )
         stack.enter_context(patch.object(email_service, "send_email_or_raise", send_email_or_raise))
         stack.enter_context(patch.object(email_service, "send_email", send_email))
@@ -373,43 +375,85 @@ class TestWatchdog:
         assert (row.status, row.error_code) == ("sent", None)
 
 
+class TestChannelsGoTogether:
+    @pytest.mark.asyncio
+    async def test_both_channels_go_in_the_same_pass(self, db: AsyncSession, wired) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id, sms_enabled=True)
+
+        assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 2
+        assert sorted(r.channel for r in await _sends(db)) == ["email", "sms"]
+
+    @pytest.mark.asyncio
+    async def test_text_switched_on_after_email_went_waits_for_next_due_date(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        """Nicole, 2026-10-15: email went at its moment, text enabled an hour
+        later. The text must not trail behind alone — it starts next time."""
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        plan = await _plan(db, applicant_id)
+        assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 1
+
+        plan.sms_enabled = True
+        await db.flush()
+        assert await dispatch.run_due_reminders(SATURDAY_EVENING + _dt.timedelta(hours=1)) == 0
+        wired["sms"].assert_not_called()
+
+        # Next Sunday's reminder goes out on both (6:30pm CST, after DST ends).
+        assert await dispatch.run_due_reminders(_dt.datetime(2026, 11, 8, 0, 30, tzinfo=UTC)) == 2
+        wired["sms"].assert_called_once()
+
+
 class TestSendNow:
-    @pytest.mark.asyncio
-    async def test_send_now_then_refuses_a_duplicate(self, db: AsyncSession, wired) -> None:
-        applicant_id = await _tenant(db)
-        await _schedule(db, applicant_id)
-        await _plan(db, applicant_id)
-        now = _dt.datetime(2026, 10, 27, 15, 0, tzinfo=UTC)  # Tuesday morning
+    _NOW = _dt.datetime(2026, 10, 27, 15, 0, tzinfo=UTC)  # Tuesday morning
 
-        result = await dispatch.send_now(
-            organization_id=ORG, user_id=USER, applicant_id=applicant_id,
-            channel="email", now=now,
+    async def _send_now(self, applicant_id: uuid.UUID):
+        return await dispatch.send_now(
+            organization_id=ORG, user_id=USER, applicant_id=applicant_id, now=self._NOW,
         )
-        assert result.status == "sent"
-        assert result.due_date == _dt.date(2026, 11, 1)
-        with pytest.raises(dispatch.ReminderAlreadySentError):
-            await dispatch.send_now(
-                organization_id=ORG, user_id=USER, applicant_id=applicant_id,
-                channel="email", now=now,
-            )
 
     @pytest.mark.asyncio
-    async def test_send_now_retries_a_failed_row(self, db: AsyncSession, wired) -> None:
+    async def test_sends_every_enabled_channel_then_refuses_a_duplicate(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id, sms_enabled=True)
+
+        results = await self._send_now(applicant_id)
+        assert [(r.channel, r.status) for r in results] == [
+            ("email", "sent"), ("sms", "sent_to_phone"),
+        ]
+        assert {r.due_date for r in results} == {_dt.date(2026, 11, 1)}
+        with pytest.raises(dispatch.ReminderAlreadySentError):
+            await self._send_now(applicant_id)
+
+    @pytest.mark.asyncio
+    async def test_refused_once_any_channel_went_out(self, db: AsyncSession, wired) -> None:
+        """Email already went; switching text on must not let send-now send it alone."""
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        plan = await _plan(db, applicant_id)
+        await self._send_now(applicant_id)
+
+        plan.sms_enabled = True
+        await db.flush()
+        with pytest.raises(dispatch.ReminderAlreadySentError):
+            await self._send_now(applicant_id)
+        wired["sms"].assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_retries_a_failed_row(self, db: AsyncSession, wired) -> None:
         applicant_id = await _tenant(db)
         await _schedule(db, applicant_id)
         await _plan(db, applicant_id)
-        now = _dt.datetime(2026, 10, 27, 15, 0, tzinfo=UTC)
         wired["email"].side_effect = [RuntimeError("smtp down"), None]
 
-        first = await dispatch.send_now(
-            organization_id=ORG, user_id=USER, applicant_id=applicant_id,
-            channel="email", now=now,
-        )
+        [first] = await self._send_now(applicant_id)
         assert first.status == "failed"
-        retry = await dispatch.send_now(
-            organization_id=ORG, user_id=USER, applicant_id=applicant_id,
-            channel="email", now=now,
-        )
+        [retry] = await self._send_now(applicant_id)
         assert (retry.status, retry.id) == ("sent", first.id)
 
     @pytest.mark.asyncio

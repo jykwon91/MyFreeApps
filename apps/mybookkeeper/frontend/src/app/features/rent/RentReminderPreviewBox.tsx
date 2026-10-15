@@ -11,6 +11,7 @@ import { formatDueDate, formatSendMoment } from "./rent-reminder-format";
 import { RENT_REMINDER_CHANNEL_LABEL } from "./rent-reminder-labels";
 import type { RentReminderChannel } from "@/shared/types/rent/rent-reminder-channel";
 import type { RentReminderPlan } from "@/shared/types/rent/rent-reminder-plan";
+import type { RentReminderSend } from "@/shared/types/rent/rent-reminder-send";
 
 export interface RentReminderPreviewBoxProps {
   applicantId: string;
@@ -25,9 +26,23 @@ function enabledChannels(plan: RentReminderPlan): RentReminderChannel[] {
   return channels;
 }
 
+function channelList(channels: RentReminderChannel[]): string {
+  return channels.map((c) => RENT_REMINDER_CHANNEL_LABEL[c].toLowerCase()).join(" and ");
+}
+
+function reportResults(results: RentReminderSend[]) {
+  const failed = results.filter((r) => r.status === "failed").map((r) => r.channel);
+  if (failed.length > 0) {
+    showError(`The ${channelList(failed)} didn't go out — see history below.`);
+    return;
+  }
+  showSuccess(`Reminder sent by ${channelList(results.map((r) => r.channel))}.`);
+}
+
 /**
  * The next reminder exactly as the tenant will read it, when it goes out, and
- * a Send-now button per channel for when the host would rather not wait.
+ * one Send-now button that sends every enabled channel together — email and
+ * text never go out at different times.
  */
 export default function RentReminderPreviewBox({
   applicantId,
@@ -35,18 +50,11 @@ export default function RentReminderPreviewBox({
   canWrite,
 }: RentReminderPreviewBoxProps) {
   const { data: preview, isLoading, isError } = useGetRentReminderPreviewQuery(applicantId);
-  const [sendNow, { isLoading: isSending, originalArgs }] = useSendRentReminderNowMutation();
+  const [sendNow, { isLoading: isSending }] = useSendRentReminderNowMutation();
 
-  async function handleSend(channel: RentReminderChannel) {
+  async function handleSend() {
     try {
-      const result = await sendNow({ applicantId, channel }).unwrap();
-      if (result.status === "failed") {
-        showError(`The ${RENT_REMINDER_CHANNEL_LABEL[channel].toLowerCase()} didn't go out — see history below.`);
-      } else if (channel === "sms") {
-        showSuccess("Text handed to your phone.");
-      } else {
-        showSuccess("Reminder email sent.");
-      }
+      reportResults(await sendNow({ applicantId }).unwrap());
     } catch (error) {
       showError(extractErrorMessage(error));
     }
@@ -74,6 +82,9 @@ export default function RentReminderPreviewBox({
     );
   }
 
+  const channels = enabledChannels(plan);
+  const alreadySent = preview.sent_channels.length > 0;
+
   return (
     <div className="rounded-lg border p-4 space-y-3 bg-card" data-testid="rent-reminder-preview">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -94,31 +105,20 @@ export default function RentReminderPreviewBox({
         {preview.message}
       </blockquote>
 
-      {canWrite ? (
-        <div className="flex flex-col sm:flex-row gap-2">
-          {enabledChannels(plan).map((channel) => {
-            const alreadySent = preview.sent_channels.includes(channel);
-            const isThisOne = isSending && originalArgs?.channel === channel;
-            return (
-              <LoadingButton
-                key={channel}
-                type="button"
-                variant="secondary"
-                size="sm"
-                isLoading={isThisOne}
-                loadingText="Sending..."
-                disabled={isSending || alreadySent}
-                onClick={() => void handleSend(channel)}
-                className="min-h-[44px]"
-                data-testid={`rent-reminder-send-now-${channel}`}
-              >
-                {alreadySent
-                  ? `${RENT_REMINDER_CHANNEL_LABEL[channel]} sent`
-                  : `Send ${RENT_REMINDER_CHANNEL_LABEL[channel].toLowerCase()} now`}
-              </LoadingButton>
-            );
-          })}
-        </div>
+      {canWrite && channels.length > 0 ? (
+        <LoadingButton
+          type="button"
+          variant="secondary"
+          size="sm"
+          isLoading={isSending}
+          loadingText="Sending..."
+          disabled={isSending || alreadySent}
+          onClick={() => void handleSend()}
+          className="min-h-[44px] w-full sm:w-auto"
+          data-testid="rent-reminder-send-now"
+        >
+          {alreadySent ? "Sent for this due date" : `Send ${channelList(channels)} now`}
+        </LoadingButton>
       ) : null}
     </div>
   );
