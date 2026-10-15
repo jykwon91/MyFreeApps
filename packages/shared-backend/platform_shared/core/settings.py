@@ -137,12 +137,20 @@ class BaseAppSettings(BaseSettings):
     # ------------------------------------------------------------------
     # SMS delivery (opt-in per app via create_app_lifespan(sms_required=True))
     # sms_backend = "console" prints to stdout (dev/CI default);
-    # "twilio" sends via Twilio's REST API.
+    # "twilio" sends via Twilio's REST API; "httpsms" sends from an
+    # Android phone running the httpSMS app (platform_shared.services.
+    # httpsms_service). httpsms_encryption_key is optional — when set,
+    # bodies are end-to-end encrypted so the relay never reads them, and
+    # the same passphrase must be entered in the phone app.
     # ------------------------------------------------------------------
     sms_backend: str = "console"
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
     twilio_from_number: str = ""
+    httpsms_api_key: str = ""
+    httpsms_from_number: str = ""
+    httpsms_webhook_signing_key: str = ""
+    httpsms_encryption_key: str = ""
 
     # ------------------------------------------------------------------
     # MinIO object storage

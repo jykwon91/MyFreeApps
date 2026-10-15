@@ -62,16 +62,29 @@ class SmsNotConfiguredError(RuntimeError):
 
 
 class SmsSendError(RuntimeError):
-    """Raised when Twilio rejects a send (invalid number, unsubscribed
+    """Raised when an SMS provider rejects a send (invalid number, unsubscribed
     recipient, carrier filtered, etc.). Distinct from SmsNotConfiguredError —
     this is a transient or addressee-specific failure, not a deploy
-    misconfiguration. The Twilio error code is embedded in the message.
+    misconfiguration. The provider error code is embedded in the message.
+
+    ``code`` is Twilio's numeric error code; ``provider_code`` is the string
+    form used by providers whose codes are not numeric (httpSMS reports
+    ``http_<status>`` for API rejections). Every sender sets ``status`` to the
+    provider's HTTP status when one exists.
     """
 
-    def __init__(self, message: str, *, code: int | None = None, status: int | None = None) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: int | None = None,
+        status: int | None = None,
+        provider_code: str | None = None,
+    ) -> None:
         super().__init__(message)
         self.code = code
         self.status = status
+        self.provider_code = provider_code
 
 
 @dataclass

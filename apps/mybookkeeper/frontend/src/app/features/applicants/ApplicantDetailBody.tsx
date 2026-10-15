@@ -23,6 +23,7 @@ import LinkedLeaseDocuments from "./LinkedLeaseDocuments";
 import LinkedLeaseReceipts from "./LinkedLeaseReceipts";
 import TenantPayments from "./TenantPayments";
 import RentLedgerPanel from "@/app/features/rent/RentLedgerPanel";
+import RentReminderCard from "@/app/features/rent/RentReminderCard";
 import ScreeningSection from "@/app/features/screening/ScreeningSection";
 import EndTenancyDialog from "@/app/features/tenants/EndTenancyDialog";
 
@@ -318,6 +319,18 @@ export default function ApplicantDetailBody({ applicant }: ApplicantDetailBodyPr
         >
           <h2 className="text-sm font-medium">Rent</h2>
           <RentLedgerPanel applicantId={applicant.id} />
+        </section>
+      ) : null}
+
+      {/* Rent reminders — a heads-up before each due date, quoting the amount
+          from the rent schedule above. Reminders only; no payment tracking. */}
+      {applicant.stage === "lease_signed" ? (
+        <section
+          className="border rounded-lg p-4 space-y-3"
+          data-testid="rent-reminders-section"
+        >
+          <h2 className="text-sm font-medium">Rent reminders</h2>
+          <RentReminderCard applicantId={applicant.id} />
         </section>
       ) : null}
 

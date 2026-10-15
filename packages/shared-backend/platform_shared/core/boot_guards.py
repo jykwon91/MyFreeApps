@@ -136,6 +136,9 @@ def check_sms_configured(
     twilio_auth_token: str,
     twilio_from_number: str,
     environment: str,
+    httpsms_api_key: str = "",
+    httpsms_from_number: str = "",
+    httpsms_webhook_signing_key: str = "",
 ) -> None:
     """Fail loud at boot if SMS isn't usable in a non-dev environment.
 
@@ -143,7 +146,7 @@ def check_sms_configured(
     invoke this guard; apps that never text users (MBK, MJH) skip it
     entirely so they don't need to set Twilio env vars.
 
-    Two failure modes guarded:
+    Three failure modes guarded:
 
     1. ``sms_backend == "console"`` in production / staging. Console-mode
        SMS goes to stdout — useful for dev where the operator wants to
@@ -154,6 +157,10 @@ def check_sms_configured(
        ``SmsService`` raises ``SmsNotConfiguredError`` on send when any
        credential is empty — an operator who forgot one would only
        notice when the first customer never gets their ready-text.
+    3. ``sms_backend == "httpsms"`` with any of ``HTTPSMS_API_KEY`` /
+       ``HTTPSMS_FROM_NUMBER`` / ``HTTPSMS_WEBHOOK_SIGNING_KEY`` empty.
+       The signing key is required because delivery is only ever
+       confirmed by a signed webhook.
 
     Args:
         sms_backend: ``"console"`` (dev/CI default — log to stdout) or
@@ -193,6 +200,16 @@ def check_sms_configured(
             "non-development environments. Without them the SmsService "
             "raises on every send and customers never receive ready-texts. "
             "Set the credentials or set ENVIRONMENT=development."
+        )
+    if sms_backend == "httpsms" and not (
+        httpsms_api_key and httpsms_from_number and httpsms_webhook_signing_key
+    ):
+        raise SmsNotConfiguredError(
+            "SMS_BACKEND='httpsms' requires HTTPSMS_API_KEY, HTTPSMS_FROM_NUMBER, "
+            "and HTTPSMS_WEBHOOK_SIGNING_KEY to all be set in non-development "
+            "environments. Without the signing key no delivery report can be "
+            "verified, so every text would be reported as failed. Set the "
+            "credentials or set ENVIRONMENT=development."
         )
 
 

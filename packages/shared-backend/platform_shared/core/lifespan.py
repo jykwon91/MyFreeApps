@@ -213,6 +213,9 @@ def create_app_lifespan(
                 twilio_auth_token=settings.twilio_auth_token,
                 twilio_from_number=settings.twilio_from_number,
                 environment=settings.environment,
+                httpsms_api_key=settings.httpsms_api_key,
+                httpsms_from_number=settings.httpsms_from_number,
+                httpsms_webhook_signing_key=settings.httpsms_webhook_signing_key,
             )
         # Transparency writer guard — self-gating: a no-op unless this app is
         # the primary (the single Ko-fi webhook receiver) in a non-dev env.

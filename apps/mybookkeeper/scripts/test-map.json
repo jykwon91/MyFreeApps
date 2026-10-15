@@ -634,6 +634,35 @@
         "rent-ledger.spec.ts"
       ]
     },
+    "rent_reminders": {
+      "source_paths": [
+        "backend/app/models/rent/rent_reminder_plan.py",
+        "backend/app/models/rent/rent_reminder_send.py",
+        "backend/app/repositories/rent/rent_reminder_plan_repo.py",
+        "backend/app/repositories/rent/rent_reminder_send_repo.py",
+        "backend/app/schemas/rent/",
+        "backend/app/services/rent/",
+        "backend/app/services/system/sms_service.py",
+        "backend/app/api/rent_reminders.py",
+        "backend/app/core/rent_reminder_enums.py",
+        "backend/app/core/rent_reminder_constants.py",
+        "backend/app/workers/scheduler_worker.py",
+        "backend/alembic/versions/rentrem261015_add_rent_reminder_plans_and_sends.py",
+        "frontend/src/app/features/rent/",
+        "frontend/src/shared/types/rent/",
+        "frontend/src/shared/store/rentRemindersApi.ts",
+        "frontend/src/app/features/applicants/ApplicantDetailBody.tsx"
+      ],
+      "backend_tests": [
+        "test_rent_reminder_math.py",
+        "test_rent_reminder_dispatch.py",
+        "test_rent_reminders_api.py"
+      ],
+      "frontend_tests": [
+        "RentReminderCard.test.tsx"
+      ],
+      "e2e_specs": []
+    },
     "insurance": {
       "source_paths": [
         "backend/app/models/insurance/",
