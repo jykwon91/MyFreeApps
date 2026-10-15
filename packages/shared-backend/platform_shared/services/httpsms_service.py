@@ -77,6 +77,10 @@ class HttpSmsWebhookAuthError(ValueError):
 
 
 def _derive_key(passphrase: str) -> bytes:
+    # SHA-256(passphrase) is the httpSMS wire format — the Android app derives
+    # the AES key the same way, so a slow KDF here would make every text
+    # undecryptable on the phone. The passphrase is therefore required to be
+    # high-entropy (generated, e.g. a 6-word diceware phrase), not memorable.
     return hashlib.sha256(passphrase.encode()).digest()
 
 
