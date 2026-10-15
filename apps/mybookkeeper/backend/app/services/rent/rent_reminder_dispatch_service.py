@@ -277,6 +277,13 @@ async def alert_operator(send_id: uuid.UUID) -> bool:
 # --------------------------------------------------------------------------
 
 
+def _as_utc(moment: _dt.datetime) -> _dt.datetime:
+    """Timestamps are stored UTC; some drivers hand them back naive."""
+    if moment.tzinfo is None:
+        return moment.replace(tzinfo=_dt.timezone.utc)
+    return moment
+
+
 async def _process_plan(plan_id: uuid.UUID, now: _dt.datetime) -> int:
     async with unit_of_work() as db:
         plan = await rent_reminder_plan_repo.get_by_id(db, plan_id=plan_id)
@@ -298,13 +305,23 @@ async def _process_plan(plan_id: uuid.UUID, now: _dt.datetime) -> int:
         rendered = planner.render(
             plan, due=due, tenant_legal_name=applicant.legal_name, now=now,
         )
-        pending = [
-            channel
-            for channel in _enabled_channels(plan)
-            if await rent_reminder_send_repo.get_by_key(
+        # A row that failed BEFORE the scheduled moment came from an early
+        # manual "Send now" (e.g. before the tenant's email was on file). It
+        # must not swallow the scheduled send, so it gets one retry here. A
+        # failure at or after the scheduled moment is final — retrying it every
+        # hourly tick would spam the operator's failure alert.
+        scheduled_at = math.send_at(terms, due.due_date)
+        pending: list[str] = []
+        retry_rows: dict[str, uuid.UUID] = {}
+        for channel in _enabled_channels(plan):
+            existing = await rent_reminder_send_repo.get_by_key(
                 db, plan_id=plan.id, due_date=due.due_date, channel=channel,
-            ) is None
-        ]
+            )
+            if existing is None:
+                pending.append(channel)
+            elif existing.status == "failed" and _as_utc(existing.updated_at) < scheduled_at:
+                pending.append(channel)
+                retry_rows[channel] = existing.id
         if not pending:
             return 0
         snapshot = {
@@ -321,17 +338,25 @@ async def _process_plan(plan_id: uuid.UUID, now: _dt.datetime) -> int:
     for channel in pending:
         try:
             async with unit_of_work() as db:
-                row = await rent_reminder_send_repo.claim(
-                    db,
-                    plan_id=snapshot["plan_id"],
-                    applicant_id=snapshot["applicant_id"],
-                    organization_id=snapshot["organization_id"],
-                    user_id=snapshot["user_id"],
-                    due_date=due.due_date,
-                    channel=channel,
-                    amount=due.amount,
-                    message_body=rendered.body,
-                )
+                if channel in retry_rows:
+                    row = await rent_reminder_send_repo.get(db, send_id=retry_rows[channel])
+                    if row is None or row.status != "failed":
+                        continue
+                    row = await rent_reminder_send_repo.requeue(
+                        db, row=row, amount=due.amount, message_body=rendered.body,
+                    )
+                else:
+                    row = await rent_reminder_send_repo.claim(
+                        db,
+                        plan_id=snapshot["plan_id"],
+                        applicant_id=snapshot["applicant_id"],
+                        organization_id=snapshot["organization_id"],
+                        user_id=snapshot["user_id"],
+                        due_date=due.due_date,
+                        channel=channel,
+                        amount=due.amount,
+                        message_body=rendered.body,
+                    )
                 send_id = row.id
         except ReminderAlreadyClaimedError:
             continue

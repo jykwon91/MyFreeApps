@@ -212,6 +212,49 @@ class TestScheduledSend:
         [row] = await _sends(db)
         assert (row.due_date, row.amount) == (_dt.date(2026, 11, 1), Decimal("1500.00"))
 
+    async def _failed_row(
+        self, db: AsyncSession, plan: RentReminderPlan, *, failed_at: _dt.datetime,
+    ) -> None:
+        db.add(
+            RentReminderSend(
+                id=uuid.uuid4(), plan_id=plan.id, applicant_id=plan.applicant_id,
+                organization_id=ORG, user_id=USER, due_date=_dt.date(2026, 11, 1),
+                channel="email", status="failed", amount=Decimal("300.00"),
+                message_body="early attempt", error_code="no_contact",
+                created_at=failed_at, updated_at=failed_at,
+            ),
+        )
+        await db.flush()
+
+    @pytest.mark.asyncio
+    async def test_early_manual_failure_does_not_swallow_scheduled_send(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        """A "Send now" that failed on Thursday (e.g. no email on file yet) is
+        retried when Saturday's scheduled moment arrives."""
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        plan = await _plan(db, applicant_id)
+        await self._failed_row(db, plan, failed_at=_dt.datetime(2026, 10, 29, 15, 0, tzinfo=UTC))
+
+        assert await dispatch.run_due_reminders(SATURDAY_EVENING) == 1
+        wired["email"].assert_called_once()
+        [row] = await _sends(db)
+        assert (row.status, row.error_code) == ("sent", None)
+
+    @pytest.mark.asyncio
+    async def test_failure_after_scheduled_moment_is_not_retried(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        """The scheduled attempt itself failing is final — no hourly retry loop."""
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        plan = await _plan(db, applicant_id)
+        await self._failed_row(db, plan, failed_at=SATURDAY_EVENING)
+
+        assert await dispatch.run_due_reminders(SATURDAY_EVENING + _dt.timedelta(hours=1)) == 0
+        wired["email"].assert_not_called()
+
     @pytest.mark.asyncio
     async def test_one_bad_plan_does_not_stop_the_sweep(self, db: AsyncSession, wired) -> None:
         first = await _tenant(db)
