@@ -9,7 +9,7 @@ export const tagTypes = [
   "Vendor", "Screening", "Channel", "ChannelListing", "Calendar", "BlackoutAttachments",
   "LeaseTemplate", "SignedLease", "ReviewQueue", "InsurancePolicy", "AttributionQueue",
   "WelcomeManual", "WelcomeManualSend", "UtilityPlan", "MarketRateBenchmark",
-  "InsuranceBenchmark", "Mortgage", "RentLedger",
+  "InsuranceBenchmark", "Mortgage", "RentLedger", "RentReminder",
 ] as const;
 
 export type AppTag = (typeof tagTypes)[number];

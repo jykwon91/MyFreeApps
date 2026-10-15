@@ -29,6 +29,9 @@ def _settings(
     twilio_account_sid: str = "",
     twilio_auth_token: str = "",
     twilio_from_number: str = "",
+    httpsms_api_key: str = "",
+    httpsms_from_number: str = "",
+    httpsms_webhook_signing_key: str = "",
     transparency_primary: bool = False,
     kofi_verification_token: str = "",
 ) -> SimpleNamespace:
@@ -44,6 +47,9 @@ def _settings(
         twilio_account_sid=twilio_account_sid,
         twilio_auth_token=twilio_auth_token,
         twilio_from_number=twilio_from_number,
+        httpsms_api_key=httpsms_api_key,
+        httpsms_from_number=httpsms_from_number,
+        httpsms_webhook_signing_key=httpsms_webhook_signing_key,
         transparency_primary=transparency_primary,
         kofi_verification_token=kofi_verification_token,
     )

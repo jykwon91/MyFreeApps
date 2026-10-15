@@ -123,6 +123,42 @@ class TestCheckEmailConfigured:
         assert issubclass(EmailNotConfiguredError, RuntimeError)
 
 
+class TestCheckSmsConfiguredHttpSms:
+    def test_production_with_full_httpsms_config_passes(self) -> None:
+        check_sms_configured(
+            sms_backend="httpsms",
+            twilio_account_sid="",
+            twilio_auth_token="",
+            twilio_from_number="",
+            environment="production",
+            httpsms_api_key="k",
+            httpsms_from_number="+15551234567",
+            httpsms_webhook_signing_key="s",
+        )
+
+    def test_production_with_httpsms_and_no_signing_key_raises(self) -> None:
+        with pytest.raises(SmsNotConfiguredError) as exc:
+            check_sms_configured(
+                sms_backend="httpsms",
+                twilio_account_sid="",
+                twilio_auth_token="",
+                twilio_from_number="",
+                environment="production",
+                httpsms_api_key="k",
+                httpsms_from_number="+15551234567",
+            )
+        assert "HTTPSMS_WEBHOOK_SIGNING_KEY" in str(exc.value)
+
+    def test_dev_with_httpsms_and_empty_creds_passes(self) -> None:
+        check_sms_configured(
+            sms_backend="httpsms",
+            twilio_account_sid="",
+            twilio_auth_token="",
+            twilio_from_number="",
+            environment="development",
+        )
+
+
 class TestCheckSmsConfigured:
     def test_dev_with_console_passes(self) -> None:
         check_sms_configured(

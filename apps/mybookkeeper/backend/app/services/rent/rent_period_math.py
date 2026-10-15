@@ -163,3 +163,31 @@ def prorated_amount(
         return full_amount.quantize(_CENTS, rounding=ROUND_HALF_UP)
     scaled = full_amount * Decimal(billed_days) / Decimal(whole_days)
     return scaled.quantize(_CENTS, rounding=ROUND_HALF_UP)
+
+
+def billed_periods(
+    schedule_start: _dt.date,
+    cadence: str,
+    full_amount: Decimal,
+    through: _dt.date,
+    end_date: _dt.date | None = None,
+) -> list[tuple[int, _dt.date, _dt.date, Decimal]]:
+    """Every begun period with the amount it bills: ``(index, start, end, amount)``.
+
+    The single definition of "what a schedule charges, period by period". The
+    ledger's charge generator writes exactly these rows; rent reminders call it
+    with a future ``through`` to *project* a period that has not begun yet,
+    without materializing a charge for it. Keeping both on this one function is
+    what guarantees a reminder quotes the amount the ledger will later charge.
+    """
+    return [
+        (
+            index,
+            begin,
+            finish,
+            prorated_amount(full_amount, begin, finish, schedule_start, cadence, index),
+        )
+        for index, begin, finish in periods_through(
+            schedule_start, cadence, through, end_date,
+        )
+    ]

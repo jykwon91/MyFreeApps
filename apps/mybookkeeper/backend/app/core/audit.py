@@ -59,6 +59,9 @@ MBK_SENSITIVE_FIELDS: frozenset[str] = frozenset({
     # (``recipient_*``) so the audit listener doesn't mask unrelated columns.
     "recipient_email",
     "recipient_name",
+    # Rent-reminder send log — the rendered reminder names the tenant, and is
+    # encrypted at rest via EncryptedString.
+    "message_body",
     # Insurance domain PII — policy numbers are PII-adjacent (can identify
     # individuals with insurers), encrypted at rest via EncryptedString.
     "policy_number",

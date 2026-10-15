@@ -91,6 +91,8 @@ from app.models.email.email_types import (
 )
 from app.models.rent.rent_schedule import RentSchedule
 from app.models.rent.rent_charge import RentCharge
+from app.models.rent.rent_reminder_plan import RentReminderPlan
+from app.models.rent.rent_reminder_send import RentReminderSend
 from app.models.classification.classification_rule import ClassificationRule
 from app.models.system.system_event import SystemEvent
 from app.models.system.audit_log import AuditLog

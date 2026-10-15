@@ -94,8 +94,9 @@ async def _generate_charges_for_schedule(
 
     Returns the number of rows inserted.
     """
-    periods = period_math.periods_through(
-        schedule.start_date, schedule.cadence, through, schedule.end_date,
+    periods = period_math.billed_periods(
+        schedule.start_date, schedule.cadence, schedule.amount, through,
+        schedule.end_date,
     )
     existing = {
         c.period_start: c
@@ -104,12 +105,8 @@ async def _generate_charges_for_schedule(
 
     created = 0
     wanted: set[_dt.date] = set()
-    for index, begin, finish in periods:
+    for _index, begin, finish, amount in periods:
         wanted.add(begin)
-        amount = period_math.prorated_amount(
-            schedule.amount, begin, finish, schedule.start_date,
-            schedule.cadence, index,
-        )
         current = existing.get(begin)
         if current is None:
             await rent_charge_repo.create(
