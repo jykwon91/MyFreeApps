@@ -1,0 +1,711 @@
+{
+ "video_id": "HY85NcZMrAg",
+ "map_slug": "dust2",
+ "game_slug": "cs2",
+ "author": "NartOutHere",
+ "lineups": [
+  {
+   "cs": 45,
+   "title": "Mid Smoke 1 \u2014 T Spawn (minimap 'T Start') smoke into Mid Doors: crosshair",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     45.8,
+     46.5
+    ],
+    "aim": [
+     47.25,
+     47.95
+    ],
+    "throw": [
+     47.97,
+     48.48
+    ],
+    "landing": [
+     50.15,
+     50.88
+    ]
+   }
+  },
+  {
+   "cs": 69,
+   "title": "A Long Smoke 1 \u2014 Alternate T stand for the same Long Doors (top door) smoke",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-long",
+   "stand": "a-long",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     69.25,
+     69.58
+    ],
+    "aim": [
+     71.55,
+     71.78
+    ],
+    "throw": [
+     71.8,
+     72.22
+    ],
+    "landing": [
+     73.25,
+     74.4
+    ]
+   }
+  },
+  {
+   "cs": 76,
+   "title": "Mid Smoke 2 \u2014 T Spawn (T Start, lower ramp by the red-white curb) aligned",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     76.35,
+     77.6
+    ],
+    "aim": [
+     77.0,
+     77.88
+    ],
+    "throw": [
+     77.85,
+     78.45
+    ],
+    "landing": [
+     80.45,
+     81.45
+    ]
+   }
+  },
+  {
+   "cs": 90,
+   "title": "Mid Smoke 3 \u2014 T side, Mid (Middle readout) by the tarp-covered crates near",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     90.75,
+     91.5
+    ],
+    "aim": [
+     91.5,
+     92.28
+    ],
+    "throw": [
+     93.6,
+     94.25
+    ],
+    "landing": [
+     95.7,
+     96.7
+    ]
+   }
+  },
+  {
+   "cs": 97,
+   "title": "Mid Smoke 4 \u2014 T side, Mid by the same tarp/crate stack: second variant",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     97.55,
+     98.4
+    ],
+    "aim": [
+     98.4,
+     99.2
+    ],
+    "throw": [
+     100.95,
+     101.55
+    ],
+    "landing": [
+     103.35,
+     104.4
+    ]
+   }
+  },
+  {
+   "cs": 105,
+   "title": "Mid Smoke 5 \u2014 T smoke thrown from Catwalk/Short (minimap label 'Catwalk'",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "catwalk",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     105.4,
+     106.9
+    ],
+    "aim": [
+     107.95,
+     108.82
+    ],
+    "throw": [
+     108.82,
+     109.42
+    ],
+    "landing": [
+     110.25,
+     111.3
+    ]
+   }
+  },
+  {
+   "cs": 112,
+   "title": "Mid Smoke 6 \u2014 Stand in Mid by Mid Doors (minimap readout 'Mid Doors')",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     112.0,
+     113.8
+    ],
+    "aim": [
+     114.2,
+     115.2
+    ],
+    "throw": [
+     115.3,
+     115.9
+    ],
+    "landing": [
+     117.35,
+     118.5
+    ]
+   }
+  },
+  {
+   "cs": 119,
+   "title": "Mid Smoke 7 \u2014 T smoke from Outside Tunnels (standing near the Outside",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "b-tunnels",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     119.6,
+     121.1
+    ],
+    "aim": [
+     122.0,
+     123.15
+    ],
+    "throw": [
+     124.48,
+     124.96
+    ],
+    "landing": [
+     126.15,
+     127.3
+    ]
+   }
+  },
+  {
+   "cs": 128,
+   "title": "Mid Smoke 8 \u2014 T-side smoke thrown from Outside Tunnels (minimap label",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "b-tunnels",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     128.8,
+     129.42
+    ],
+    "aim": [
+     132.2,
+     133.2
+    ],
+    "throw": [
+     133.28,
+     133.84
+    ],
+    "landing": [
+     134.95,
+     135.45
+    ]
+   }
+  },
+  {
+   "cs": 174,
+   "title": "B Site Smoke 1 \u2014 T smoke from Outside Tunnels (by the stairs, ZywOo POV): aim",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-tunnels",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     174.3,
+     175.7
+    ],
+    "aim": [
+     177.4,
+     178.28
+    ],
+    "throw": [
+     178.9,
+     179.27
+    ],
+    "landing": [
+     185.4,
+     186.5
+    ]
+   }
+  },
+  {
+   "cs": 187,
+   "title": "B Site Smoke 2 \u2014 T smoke for B Window, thrown from Outside Tunnels (minimap",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-tunnels",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     187.5,
+     188.5
+    ],
+    "aim": [
+     188.5,
+     189.3
+    ],
+    "throw": [
+     189.3,
+     189.9
+    ],
+    "landing": [
+     194.2,
+     195.2
+    ]
+   }
+  },
+  {
+   "cs": 188,
+   "title": "B Site Smoke 3 \u2014 T smoke for B Doors from the same Outside Tunnels stand",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-tunnels",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     187.5,
+     189.0
+    ],
+    "aim": [
+     190.25,
+     190.9
+    ],
+    "throw": [
+     190.98,
+     191.58
+    ],
+    "landing": [
+     195.75,
+     197.0
+    ]
+   }
+  },
+  {
+   "cs": 211,
+   "title": "B Site Smoke 4 \u2014 T post-plant smoke from inside B Site (stand by the",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     211.2,
+     212.5
+    ],
+    "aim": [
+     212.5,
+     213.3
+    ],
+    "throw": [
+     213.2,
+     213.85
+    ],
+    "landing": [
+     214.3,
+     215.3
+    ]
+   }
+  },
+  {
+   "cs": 222,
+   "title": "B Site Smoke 5 \u2014 T smoke thrown from inside Upper Tunnels (near the B-site",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-tunnels",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     222.68,
+     223.25
+    ],
+    "aim": [
+     223.25,
+     223.9
+    ],
+    "throw": [
+     223.85,
+     224.45
+    ],
+    "landing": [
+     224.88,
+     225.9
+    ]
+   }
+  },
+  {
+   "cs": 228,
+   "title": "A Long Smoke 2 \u2014 T Spawn: stand against the wall, aim up at the rooftop edge",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-long",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     228.9,
+     229.0
+    ],
+    "aim": [
+     229.18,
+     229.78
+    ],
+    "throw": [
+     230.75,
+     231.35
+    ],
+    "landing": [
+     234.05,
+     234.9
+    ]
+   }
+  },
+  {
+   "cs": 249,
+   "title": "A Long Smoke 3 \u2014 T-side smoke from the Outside Long corner by the tires",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-long",
+   "stand": "a-long",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     249.5,
+     250.15
+    ],
+    "aim": [
+     250.6,
+     251.8
+    ],
+    "throw": [
+     251.85,
+     252.45
+    ],
+    "landing": [
+     257.2,
+     258.4
+    ]
+   }
+  },
+  {
+   "cs": 260,
+   "title": "A Long Smoke 4 \u2014 T A Cross smoke from Outside Long, standing beside the blue",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-long",
+   "stand": "a-long",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     260.85,
+     262.0
+    ],
+    "aim": [
+     261.2,
+     262.0
+    ],
+    "throw": [
+     263.0,
+     263.5
+    ],
+    "landing": [
+     264.55,
+     265.5
+    ]
+   }
+  },
+  {
+   "cs": 266,
+   "title": "A Long Smoke 5 \u2014 Second T A Cross smoke variant from Outside Long, tucked",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-long",
+   "stand": "a-long",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     266.5,
+     268.1
+    ],
+    "aim": [
+     268.3,
+     269.2
+    ],
+    "throw": [
+     269.25,
+     269.85
+    ],
+    "landing": [
+     271.92,
+     273.2
+    ]
+   }
+  },
+  {
+   "cs": 274,
+   "title": "A Long Smoke 6 \u2014 T-side A Cross smoke from the Long Doors/house area",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-long",
+   "stand": "a-long",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     274.4,
+     275.6
+    ],
+    "aim": [
+     275.6,
+     276.55
+    ],
+    "throw": [
+     276.55,
+     277.0
+    ],
+    "landing": [
+     278.05,
+     279.3
+    ]
+   }
+  },
+  {
+   "cs": 285,
+   "title": "A Site Smoke 1 \u2014 T smoke thrown from Short Stairs (minimap label 'Short",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "catwalk",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     285.25,
+     287.0
+    ],
+    "aim": [
+     288.5,
+     289.35
+    ],
+    "throw": [
+     289.33,
+     289.93
+    ],
+    "landing": [
+     292.15,
+     293.0
+    ]
+   }
+  },
+  {
+   "cs": 309,
+   "title": "A Site Smoke 2 \u2014 T smoke thrown from Short/Catwalk (minimap reads 'Catwalk')",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "catwalk",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     309.75,
+     311.25
+    ],
+    "aim": [
+     311.05,
+     312.05
+    ],
+    "throw": [
+     311.97,
+     312.57
+    ],
+    "landing": [
+     314.1,
+     315.0
+    ]
+   }
+  },
+  {
+   "cs": 317,
+   "title": "A Site Smoke 3 \u2014 T smoke thrown from the base of Short Stairs (minimap label",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "catwalk",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     317.7,
+     319.2
+    ],
+    "aim": [
+     318.75,
+     319.32
+    ],
+    "throw": [
+     319.25,
+     319.82
+    ],
+    "landing": [
+     329.83,
+     331.5
+    ]
+   }
+  },
+  {
+   "cs": 333,
+   "title": "CT Spawn Smoke 1 \u2014 T-side long-range smoke onto the CT-side tunnel/archway",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "ct-spawn",
+   "stand": "catwalk",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     333.5,
+     335.4
+    ],
+    "aim": [
+     338.75,
+     339.7
+    ],
+    "throw": [
+     339.65,
+     340.0
+    ],
+    "landing": [
+     343.05,
+     344.1
+    ]
+   }
+  },
+  {
+   "cs": 346,
+   "title": "A Long Smoke 7 \u2014 CT smoke from CT Spawn Under A (minimap label goes from 'CT",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-long",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     346.4,
+     347.5
+    ],
+    "aim": [
+     346.75,
+     347.6
+    ],
+    "throw": [
+     347.58,
+     348.1
+    ],
+    "landing": [
+     349.4,
+     350.6
+    ]
+   }
+  },
+  {
+   "cs": 360,
+   "title": "A Long Smoke 8 \u2014 CT defensive Long A smoke: stand at the Under A corner (CT",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-long",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     360.1,
+     362.1
+    ],
+    "aim": [
+     362.95,
+     363.32
+    ],
+    "throw": [
+     363.32,
+     363.46
+    ],
+    "landing": [
+     366.45,
+     367.3
+    ]
+   }
+  },
+  {
+   "cs": 403,
+   "title": "Mid Smoke 9 \u2014 Mid Doors smoke thrown from the A Ramp A Site side (stand",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     403.4,
+     405.0
+    ],
+    "aim": [
+     405.4,
+     406.2
+    ],
+    "throw": [
+     406.15,
+     406.75
+    ],
+    "landing": [
+     407.7,
+     409.2
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
