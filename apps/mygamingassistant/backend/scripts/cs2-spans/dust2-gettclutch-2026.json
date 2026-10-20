@@ -1,0 +1,387 @@
+{
+ "video_id": "m8-yvzJTB18",
+ "map_slug": "dust2",
+ "game_slug": "cs2",
+ "author": "GettClutch",
+ "lineups": [
+  {
+   "cs": 2,
+   "title": "A Long Smoke 1 \u2014 Outside Long, T-side approach to Long Doors: stand by the",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-long",
+   "stand": "a-long",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     2.68,
+     3.35
+    ],
+    "aim": [
+     3.38,
+     4.02
+    ],
+    "throw": [
+     4.02,
+     4.6
+    ],
+    "landing": [
+     15.05,
+     15.8
+    ]
+   }
+  },
+  {
+   "cs": 20,
+   "title": "Mid Molly 1 \u2014 Molotov from the same Top Mid crate spot, aimed at the",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     20.84,
+     21.3
+    ],
+    "aim": [
+     20.9,
+     21.36
+    ],
+    "throw": [
+     21.34,
+     21.94
+    ],
+    "landing": [
+     24.88,
+     25.6
+    ]
+   }
+  },
+  {
+   "cs": 32,
+   "title": "B Site Smoke 1 \u2014 T-side B smoke from the Outside Tunnels T-side",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-tunnels",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     32.3,
+     33.6
+    ],
+    "aim": [
+     34.9,
+     35.85
+    ],
+    "throw": [
+     36.15,
+     36.75
+    ],
+    "landing": [
+     42.35,
+     43.45
+    ]
+   }
+  },
+  {
+   "cs": 36,
+   "title": "B Site Smoke 2 \u2014 Second T-side B smoke from the same stand spot with a higher",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-tunnels",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     36.55,
+     37.0
+    ],
+    "aim": [
+     37.0,
+     37.6
+    ],
+    "throw": [
+     37.62,
+     38.25
+    ],
+    "landing": [
+     42.38,
+     43.2
+    ]
+   }
+  },
+  {
+   "cs": 49,
+   "title": "Mid Smoke 1 \u2014 T Spawn (by the Mecanique Generale garage near the spawn",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     49.35,
+     51.3
+    ],
+    "aim": [
+     51.35,
+     52.45
+    ],
+    "throw": [
+     52.4,
+     53.0
+    ],
+    "landing": [
+     57.7,
+     59.1
+    ]
+   }
+  },
+  {
+   "cs": 62,
+   "title": "Mid Smoke 2 \u2014 T side, stand in the narrow crate alley off T Spawn that",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     62.88,
+     63.55
+    ],
+    "aim": [
+     63.2,
+     63.82
+    ],
+    "throw": [
+     63.76,
+     64.36
+    ],
+    "landing": [
+     70.9,
+     72.9
+    ]
+   }
+  },
+  {
+   "cs": 63,
+   "title": "Mid Molly 2 \u2014 T side, same crate alley spot right after the smoke",
+   "ability": "molotov",
+   "technique": "running",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     63.6,
+     65.0
+    ],
+    "aim": [
+     65.1,
+     65.88
+    ],
+    "throw": [
+     65.88,
+     66.45
+    ],
+    "landing": [
+     70.4,
+     72.4
+    ]
+   }
+  },
+  {
+   "cs": 75,
+   "title": "A Site Smoke 1 \u2014 T stands crouched in the corner at the bottom of the",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "catwalk",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     75.75,
+     77.25
+    ],
+    "aim": [
+     77.85,
+     78.95
+    ],
+    "throw": [
+     78.93,
+     79.55
+    ],
+    "landing": [
+     82.63,
+     83.5
+    ]
+   }
+  },
+  {
+   "cs": 79,
+   "title": "A Site Smoke 2 \u2014 Same corner at the bottom of the Short stairs: the player",
+   "ability": "smoke",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "catwalk",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     79.6,
+     80.08
+    ],
+    "aim": [
+     80.08,
+     80.5
+    ],
+    "throw": [
+     80.8,
+     81.26
+    ],
+    "landing": [
+     82.62,
+     83.6
+    ]
+   }
+  },
+  {
+   "cs": 83,
+   "title": "A Site Molly 1 \u2014 From the top of Short, next to the A sign, the player throws",
+   "ability": "molotov",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "catwalk",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     83.9,
+     85.3
+    ],
+    "aim": [
+     84.75,
+     85.55
+    ],
+    "throw": [
+     85.55,
+     86.15
+    ],
+    "landing": [
+     88.75,
+     89.6
+    ]
+   }
+  },
+  {
+   "cs": 117,
+   "title": "A Site Smoke 3 \u2014 CT smoke thrown from the A Site platform (beside the",
+   "ability": "smoke",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     117.3,
+     117.9
+    ],
+    "aim": [
+     117.7,
+     118.3
+    ],
+    "throw": [
+     118.28,
+     118.88
+    ],
+    "landing": [
+     122.04,
+     122.5
+    ]
+   }
+  },
+  {
+   "cs": 134,
+   "title": "A Long Flash 1 \u2014 T-side Long pop flash: thrown from near the teal-tarp crates",
+   "ability": "flash",
+   "technique": "jump",
+   "target": "a-long",
+   "stand": "a-long",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     134.25,
+     134.85
+    ],
+    "aim": [
+     134.5,
+     134.95
+    ],
+    "throw": [
+     134.95,
+     135.55
+    ],
+    "landing": [
+     136.83,
+     137.6
+    ]
+   }
+  },
+  {
+   "cs": 148,
+   "title": "B Site Flash 1 \u2014 CT side, standing just outside B Doors (CT Spawn side, by the",
+   "ability": "flash",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     148.05,
+     148.65
+    ],
+    "aim": [
+     148.55,
+     149.12
+    ],
+    "throw": [
+     149.15,
+     149.75
+    ],
+    "landing": [
+     153.95,
+     154.55
+    ]
+   }
+  },
+  {
+   "cs": 151,
+   "title": "B Site Flash 2 \u2014 CT side, outside B Doors from a third stand by the left wall",
+   "ability": "flash",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     151.8,
+     152.2
+    ],
+    "aim": [
+     152.2,
+     152.55
+    ],
+    "throw": [
+     152.58,
+     153.18
+    ],
+    "landing": [
+     154.25,
+     154.85
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
