@@ -1,0 +1,387 @@
+{
+ "video_id": "ftRFbSVJg3s",
+ "map_slug": "sunset",
+ "game_slug": "valorant",
+ "author": "Yolzy",
+ "lineups": [
+  {
+   "cs": 11,
+   "title": "A Site Haunt 1 \u2014 Attacker A Lobby: stand against the pillar/door corner by the",
+   "ability": "haunt",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     11.8,
+     13.4
+    ],
+    "aim": [
+     18.4,
+     19.2
+    ],
+    "throw": [
+     19.22,
+     19.8
+    ],
+    "landing": [
+     21.25,
+     22.3
+    ]
+   }
+  },
+  {
+   "cs": 31,
+   "title": "A Site Haunt 2 \u2014 Attacker-side Haunt from A Lobby: stand against the pink wall",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     31.55,
+     33.5
+    ],
+    "aim": [
+     38.08,
+     38.52
+    ],
+    "throw": [
+     38.53,
+     39.13
+    ],
+    "landing": [
+     40.7,
+     41.4
+    ]
+   }
+  },
+  {
+   "cs": 55,
+   "title": "A Site Seize 1 \u2014 Attacker Seize thrown from outside A Lobby (behind a tan",
+   "ability": "seize",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     55.5,
+     58.0
+    ],
+    "aim": [
+     60.8,
+     61.75
+    ],
+    "throw": [
+     61.83,
+     62.43
+    ],
+    "landing": [
+     63.9,
+     65.0
+    ]
+   }
+  },
+  {
+   "cs": 75,
+   "title": "A Site Haunt 3 \u2014 Attacker-side Haunt reveal of A Site, thrown from near A Elbow",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     75.5,
+     77.5
+    ],
+    "aim": [
+     79.0,
+     79.9
+    ],
+    "throw": [
+     79.9,
+     80.5
+    ],
+    "landing": [
+     82.0,
+     83.2
+    ]
+   }
+  },
+  {
+   "cs": 124,
+   "title": "A Main Haunt 1 \u2014 Defender Haunt thrown from the A Main side (location readout",
+   "ability": "haunt",
+   "technique": "jump",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     124.0,
+     126.5
+    ],
+    "aim": [
+     127.4,
+     127.98
+    ],
+    "throw": [
+     128.0,
+     128.6
+    ],
+    "landing": [
+     129.9,
+     130.9
+    ]
+   }
+  },
+  {
+   "cs": 145,
+   "title": "A Main Seize 1 \u2014 Defender-side Seize from the elevated A Site A Link side",
+   "ability": "seize",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     145.5,
+     148.0
+    ],
+    "aim": [
+     149.9,
+     150.7
+    ],
+    "throw": [
+     150.72,
+     151.32
+    ],
+    "landing": [
+     152.85,
+     154.0
+    ]
+   }
+  },
+  {
+   "cs": 161,
+   "title": "A Site Haunt 4 \u2014 Defender A Site retake reveal: stand at the 'Good Trades'",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     161.5,
+     163.5
+    ],
+    "aim": [
+     167.0,
+     168.08
+    ],
+    "throw": [
+     168.08,
+     168.7
+    ],
+    "landing": [
+     170.3,
+     170.95
+    ]
+   }
+  },
+  {
+   "cs": 184,
+   "title": "A Site Seize 2 \u2014 Defender Seize from A Link, standing against a wall and aimed",
+   "ability": "seize",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     184.5,
+     186.5
+    ],
+    "aim": [
+     189.4,
+     190.0
+    ],
+    "throw": [
+     190.0,
+     190.6
+    ],
+    "landing": [
+     192.0,
+     193.2
+    ]
+   }
+  },
+  {
+   "cs": 211,
+   "title": "A Site Haunt 5 \u2014 Haunt thrown in a high arc from Defender Side Spawn (standing",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     211.1,
+     212.1
+    ],
+    "aim": [
+     212.9,
+     213.15
+    ],
+    "throw": [
+     213.15,
+     213.6
+    ],
+    "landing": [
+     215.4,
+     216.05
+    ]
+   }
+  },
+  {
+   "cs": 251,
+   "title": "Mid Haunt 1 \u2014 Defender Haunt for a Mid reveal: line up on a wall edge on",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     251.8,
+     252.45
+    ],
+    "aim": [
+     255.6,
+     256.25
+    ],
+    "throw": [
+     256.35,
+     256.95
+    ],
+    "landing": [
+     258.85,
+     259.3
+    ]
+   }
+  },
+  {
+   "cs": 271,
+   "title": "Mid Haunt 2 \u2014 Defender-side Mid Reveal: stand tucked into a wall corner",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     271.45,
+     272.6
+    ],
+    "aim": [
+     277.5,
+     278.4
+    ],
+    "throw": [
+     278.4,
+     278.95
+    ],
+    "landing": [
+     280.75,
+     281.75
+    ]
+   }
+  },
+  {
+   "cs": 296,
+   "title": "B Site Haunt 1 \u2014 Defender B Site hold reveal: from inside B Site near the",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     296.8,
+     297.85
+    ],
+    "aim": [
+     303.75,
+     304.67
+    ],
+    "throw": [
+     304.69,
+     305.27
+    ],
+    "landing": [
+     306.27,
+     307.4
+    ]
+   }
+  },
+  {
+   "cs": 342,
+   "title": "B Site Haunt 2 \u2014 Defender-side Haunt from Market, thrown up over the",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "market",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     342.5,
+     344.5
+    ],
+    "aim": [
+     345.4,
+     346.2
+    ],
+    "throw": [
+     346.15,
+     346.75
+    ],
+    "landing": [
+     348.4,
+     349.6
+    ]
+   }
+  },
+  {
+   "cs": 364,
+   "title": "B Site Haunt 3 \u2014 Defender-side Haunt thrown from the Defender Side Spawn (CT)",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     364.45,
+     365.62
+    ],
+    "aim": [
+     369.35,
+     369.98
+    ],
+    "throw": [
+     370.0,
+     370.6
+    ],
+    "landing": [
+     372.5,
+     373.1
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
