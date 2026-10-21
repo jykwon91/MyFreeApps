@@ -1,0 +1,657 @@
+{
+ "video_id": "Aj9czhyt7Tc",
+ "map_slug": "sunset",
+ "game_slug": "valorant",
+ "author": "HEHE XD",
+ "lineups": [
+  {
+   "cs": 32,
+   "title": "B Site Molly 1 \u2014 Brimstone stands against the brick wall outside B Lobby",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     32.2,
+     33.15
+    ],
+    "aim": [
+     45.4,
+     46.48
+    ],
+    "throw": [
+     46.47,
+     46.97
+    ],
+    "landing": [
+     54.7,
+     55.8
+    ]
+   }
+  },
+  {
+   "cs": 66,
+   "title": "B Site Molly 2 \u2014 Brimstone stands in Mid Bottom by the wooden crate/stairs",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     66.0,
+     68.5
+    ],
+    "aim": [
+     77.0,
+     77.8
+    ],
+    "throw": [
+     77.75,
+     78.35
+    ],
+    "landing": [
+     84.65,
+     85.8
+    ]
+   }
+  },
+  {
+   "cs": 94,
+   "title": "B Site Molly 3 \u2014 Brimstone stands in Market by the 'INFO' wall (next to the",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "market",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     94.7,
+     95.2
+    ],
+    "aim": [
+     103.0,
+     104.0
+    ],
+    "throw": [
+     104.07,
+     104.47
+    ],
+    "landing": [
+     111.85,
+     113.0
+    ]
+   }
+  },
+  {
+   "cs": 126,
+   "title": "B Site Molly 4 \u2014 Retake molly onto the B Default plant, in front of the B Site",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     126.2,
+     128.7
+    ],
+    "aim": [
+     140.0,
+     141.15
+    ],
+    "throw": [
+     141.05,
+     141.65
+    ],
+    "landing": [
+     150.77,
+     152.0
+    ]
+   }
+  },
+  {
+   "cs": 174,
+   "title": "B Site Molly 5 \u2014 Post-plant Brimstone incendiary from the outdoor B Lobby",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     174.5,
+     176.5
+    ],
+    "aim": [
+     181.2,
+     182.15
+    ],
+    "throw": [
+     182.1,
+     182.75
+    ],
+    "landing": [
+     187.93,
+     189.1
+    ]
+   }
+  },
+  {
+   "cs": 207,
+   "title": "B Site Molly 6 \u2014 Post-plant Brimstone incendiary from Mid Bottom (stand",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     207.0,
+     208.6
+    ],
+    "aim": [
+     215.6,
+     216.5
+    ],
+    "throw": [
+     216.47,
+     217.07
+    ],
+    "landing": [
+     222.25,
+     222.85
+    ]
+   }
+  },
+  {
+   "cs": 239,
+   "title": "B Site Molly 7 \u2014 Defender-side (from CT) retake molly onto the B site default",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     239.3,
+     241.3
+    ],
+    "aim": [
+     246.9,
+     248.05
+    ],
+    "throw": [
+     247.95,
+     248.55
+    ],
+    "landing": [
+     255.65,
+     256.75
+    ]
+   }
+  },
+  {
+   "cs": 276,
+   "title": "B Site Molly 8 \u2014 Brimstone stands at Mid Bottom against the wall near the",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     276.5,
+     278.8
+    ],
+    "aim": [
+     282.9,
+     283.88
+    ],
+    "throw": [
+     283.82,
+     284.46
+    ],
+    "landing": [
+     291.6,
+     292.7
+    ]
+   }
+  },
+  {
+   "cs": 305,
+   "title": "B Site Molly 9 \u2014 Defender-side retake molly onto B Backsite plant (base of the",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     305.0,
+     307.0
+    ],
+    "aim": [
+     313.2,
+     314.2
+    ],
+    "throw": [
+     314.15,
+     314.75
+    ],
+    "landing": [
+     319.6,
+     320.8
+    ]
+   }
+  },
+  {
+   "cs": 336,
+   "title": "A Site Molly 1 \u2014 Brimstone incendiary lobbed from an A Elbow stand spot",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     336.1,
+     337.9
+    ],
+    "aim": [
+     351.3,
+     352.36
+    ],
+    "throw": [
+     352.25,
+     352.85
+    ],
+    "landing": [
+     360.1,
+     361.4
+    ]
+   }
+  },
+  {
+   "cs": 371,
+   "title": "A Site Molly 2 \u2014 A Default post-plant molly thrown from A Lobby: start at the",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     371.6,
+     373.2
+    ],
+    "aim": [
+     383.55,
+     384.05
+    ],
+    "throw": [
+     384.04,
+     384.24
+    ],
+    "landing": [
+     390.5,
+     391.6
+    ]
+   }
+  },
+  {
+   "cs": 401,
+   "title": "A Site Molly 3 \u2014 Brimstone stands in a corner of Mid Tiles next to the wooden",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     401.8,
+     403.2
+    ],
+    "aim": [
+     409.6,
+     410.45
+    ],
+    "throw": [
+     410.32,
+     410.92
+    ],
+    "landing": [
+     416.7,
+     417.8
+    ]
+   }
+  },
+  {
+   "cs": 428,
+   "title": "A Site Molly 4 \u2014 Brimstone incendiary onto the A Default plant spot (by the",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     428.9,
+     430.4
+    ],
+    "aim": [
+     435.0,
+     435.88
+    ],
+    "throw": [
+     435.75,
+     436.35
+    ],
+    "landing": [
+     439.3,
+     440.6
+    ]
+   }
+  },
+  {
+   "cs": 451,
+   "title": "A Site Molly 5 \u2014 Brimstone stands against the Defender Side Spawn wall beside",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     451.2,
+     452.5
+    ],
+    "aim": [
+     461.2,
+     462.1
+    ],
+    "throw": [
+     462.08,
+     462.58
+    ],
+    "landing": [
+     470.92,
+     472.0
+    ]
+   }
+  },
+  {
+   "cs": 488,
+   "title": "A Site Molly 6 \u2014 Jump molly from the A Elbow side: stand against the tan",
+   "ability": "brim-incendiary",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     488.8,
+     491.2
+    ],
+    "aim": [
+     498.3,
+     499.15
+    ],
+    "throw": [
+     499.15,
+     499.75
+    ],
+    "landing": [
+     505.35,
+     506.6
+    ]
+   }
+  },
+  {
+   "cs": 516,
+   "title": "A Site Molly 7 \u2014 Attacker post-plant jump molly from A Lobby: stand by the",
+   "ability": "brim-incendiary",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     516.12,
+     516.85
+    ],
+    "aim": [
+     524.6,
+     525.7
+    ],
+    "throw": [
+     525.85,
+     526.4
+    ],
+    "landing": [
+     533.89,
+     535.0
+    ]
+   }
+  },
+  {
+   "cs": 548,
+   "title": "A Site Molly 8 \u2014 Defender-side (CT) jump-molly retake: Brimstone stands by a",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     548.0,
+     550.5
+    ],
+    "aim": [
+     554.3,
+     555.2
+    ],
+    "throw": [
+     555.2,
+     555.75
+    ],
+    "landing": [
+     559.35,
+     560.5
+    ]
+   }
+  },
+  {
+   "cs": 576,
+   "title": "A Site Molly 9 \u2014 Attacker post-plant Brimstone incendiary from A Lobby onto",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     576.95,
+     578.25
+    ],
+    "aim": [
+     589.1,
+     590.21
+    ],
+    "throw": [
+     590.1,
+     590.7
+    ],
+    "landing": [
+     597.55,
+     598.7
+    ]
+   }
+  },
+  {
+   "cs": 608,
+   "title": "A Site Molly 10 \u2014 Defender-side retake molly from the Defender Side Spawn CT",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     608.5,
+     612.0
+    ],
+    "aim": [
+     622.0,
+     623.55
+    ],
+    "throw": [
+     623.4,
+     624.05
+    ],
+    "landing": [
+     631.2,
+     632.4
+    ]
+   }
+  },
+  {
+   "cs": 646,
+   "title": "A Site Molly 11 \u2014 Brimstone stands in A Elbow against the tan wall (the one",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     646.0,
+     648.0
+    ],
+    "aim": [
+     656.4,
+     657.4
+    ],
+    "throw": [
+     657.27,
+     657.87
+    ],
+    "landing": [
+     662.05,
+     663.3
+    ]
+   }
+  },
+  {
+   "cs": 675,
+   "title": "A Site Molly 12 \u2014 Brimstone stands at the top of the A Link stairs facing the",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     675.5,
+     678.5
+    ],
+    "aim": [
+     684.55,
+     685.3
+    ],
+    "throw": [
+     685.25,
+     685.85
+    ],
+    "landing": [
+     688.55,
+     689.75
+    ]
+   }
+  },
+  {
+   "cs": 709,
+   "title": "A Site Molly 13 \u2014 Attacker post-plant Brimstone incendiary from A Elbow onto",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     709.0,
+     712.5
+    ],
+    "aim": [
+     719.5,
+     720.38
+    ],
+    "throw": [
+     720.35,
+     720.95
+    ],
+    "landing": [
+     724.75,
+     725.75
+    ]
+   }
+  },
+  {
+   "cs": 736,
+   "title": "A Site Molly 14 \u2014 Brimstone stands against the double doors in A Lobby",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     736.4,
+     737.3
+    ],
+    "aim": [
+     749.9,
+     751.1
+    ],
+    "throw": [
+     751.1,
+     751.7
+    ],
+    "landing": [
+     758.6,
+     759.6
+    ]
+   }
+  },
+  {
+   "cs": 773,
+   "title": "A Site Molly 15 \u2014 Defender-side retake molly onto a spike planted at the base",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     773.2,
+     775.6
+    ],
+    "aim": [
+     781.0,
+     782.12
+    ],
+    "throw": [
+     782.06,
+     782.54
+    ],
+    "landing": [
+     789.72,
+     790.9
+    ]
+   }
+  }
+ ],
+ "note": ""
+}

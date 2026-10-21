@@ -54,6 +54,7 @@ AGENTS = {
             "6PbBfx6EuzM": "Season 1 Act 1 Gold Cypher",
             "mLtLqWULAqQ": "ItsFlameBTW",
             "oXi8SvpXrSw": "ItsFlameBTW",
+            "AqbapzWItwU": "ItsFlameBTW",
         },
         "placed": {"trapwire", "spycam"},
         # Maps whose shipped packs were built against legacy_pack_zones.ZONES, so a re-run must
@@ -82,24 +83,33 @@ AGENTS = {
     },
     "sova": {
         "sources": {"liTRXcUDWus": "Yolzy", "KKfmFMV-Yas": "Valomate | VALORANT Lineups App",
-                    "K8b5qR-bTek": "maxWELL Lineup-Larry"},
+                    "K8b5qR-bTek": "maxWELL Lineup-Larry", "rfEYg_5YvoQ": "Yolzy"},
         # Both are fired from the bow (the fixture's recon / shock), so both keep a THROW.
         "placed": set(),
         "legacy_zone_maps": set(),
         "short": {"recon": "Recon", "shock": "Shock"},
     },
     "fade": {
-        "sources": {"7N1Q4SFvaHE": "LNX", "5yqNa4HIq5Q": "Frost LIVE", "noBoH0o5vRY": "Yolzy"},
+        "sources": {"7N1Q4SFvaHE": "LNX", "5yqNa4HIq5Q": "Frost LIVE", "noBoH0o5vRY": "Yolzy",
+                    "ftRFbSVJg3s": "Yolzy"},
         "placed": set(),
         "legacy_zone_maps": set(),
         "short": {"haunt": "Haunt", "seize": "Seize"},
     },
     "kay-o": {
-        "sources": {"wJ7FwDO9VkA": "maxWELL Lineup-Larry"},
+        "sources": {"wJ7FwDO9VkA": "maxWELL Lineup-Larry", "zL9ZP3JjR5Q": "maxWELL Lineup-Larry"},
         # All three are hand-thrown, so all keep a THROW. NULL/cmd (ult) is out of scope.
         "placed": set(),
         "legacy_zone_maps": set(),
         "short": {"zero-point": "Knife", "flashdrive": "Flash", "fragment": "Frag"},
+    },
+    "brimstone": {
+        "sources": {"Aj9czhyt7Tc": "HEHE XD"},
+        # The incendiary is launched on an arc, so it keeps a THROW. Sky Smoke, Stim Beacon and
+        # the ultimate are out of scope.
+        "placed": set(),
+        "legacy_zone_maps": set(),
+        "short": {"brim-incendiary": "Molly"},
     },
     "phoenix": {
         "sources": {"suTAk5BOVnc": "NRG mada"},

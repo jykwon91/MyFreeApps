@@ -1,0 +1,684 @@
+{
+ "video_id": "zL9ZP3JjR5Q",
+ "map_slug": "sunset",
+ "game_slug": "valorant",
+ "author": "maxWELL Lineup-Larry",
+ "lineups": [
+  {
+   "cs": 6,
+   "title": "A Main Knife 1 \u2014 Zero-point thrown from A Lobby (Attacker Side Spawn readout)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     6.42,
+     8.9
+    ],
+    "aim": [
+     11.55,
+     12.21
+    ],
+    "throw": [
+     12.21,
+     12.79
+    ],
+    "landing": [
+     13.94,
+     14.5
+    ]
+   }
+  },
+  {
+   "cs": 20,
+   "title": "A Site Knife 1 \u2014 From A Lobby (attacker side), aim up at the A Lobby building",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     20.2,
+     21.1
+    ],
+    "aim": [
+     26.0,
+     26.25
+    ],
+    "throw": [
+     29.15,
+     29.75
+    ],
+    "landing": [
+     34.55,
+     35.85
+    ]
+   }
+  },
+  {
+   "cs": 44,
+   "title": "Mid Knife 1 \u2014 Attacker KAY/O ZERO/point from Mid Tiles thrown up through",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     44.7,
+     46.2
+    ],
+    "aim": [
+     48.45,
+     49.1
+    ],
+    "throw": [
+     49.1,
+     49.62
+    ],
+    "landing": [
+     50.95,
+     51.65
+    ]
+   }
+  },
+  {
+   "cs": 59,
+   "title": "Market Knife 1 \u2014 From B Lobby: stand in B Lobby, look up-left at the tall",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "market",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     59.1,
+     60.6
+    ],
+    "aim": [
+     66.2,
+     67.0
+    ],
+    "throw": [
+     69.96,
+     70.56
+    ],
+    "landing": [
+     74.8,
+     76.0
+    ]
+   }
+  },
+  {
+   "cs": 82,
+   "title": "A Main Flash 1 \u2014 Attacker stands in A Lobby facing the courtyard wall, aims at",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     82.0,
+     84.5
+    ],
+    "aim": [
+     89.6,
+     90.06
+    ],
+    "throw": [
+     90.0,
+     90.6
+    ],
+    "landing": [
+     91.4,
+     92.45
+    ]
+   }
+  },
+  {
+   "cs": 159,
+   "title": "Mid Flash 1 \u2014 Attacker FLASH/drive thrown from Mid Courtyard, standing by",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     159.5,
+     162.0
+    ],
+    "aim": [
+     166.88,
+     167.42
+    ],
+    "throw": [
+     167.38,
+     167.98
+    ],
+    "landing": [
+     169.06,
+     169.35
+    ]
+   }
+  },
+  {
+   "cs": 179,
+   "title": "B Site Flash 1 \u2014 Attacker flash from B Main thrown over the wall toward B",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     179.6,
+     182.4
+    ],
+    "aim": [
+     189.55,
+     190.25
+    ],
+    "throw": [
+     190.21,
+     190.81
+    ],
+    "landing": [
+     191.89,
+     192.27
+    ]
+   }
+  },
+  {
+   "cs": 222,
+   "title": "A Site Frag 1 \u2014 From A Main (readout 'A Lobby'), standing against the left",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     222.5,
+     225.0
+    ],
+    "aim": [
+     231.0,
+     231.83
+    ],
+    "throw": [
+     234.88,
+     235.46
+    ],
+    "landing": [
+     239.88,
+     241.0
+    ]
+   }
+  },
+  {
+   "cs": 247,
+   "title": "A Site Frag 2 \u2014 Attacker FRAG/ment from A Elbow, standing pressed against the",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     247.0,
+     249.5
+    ],
+    "aim": [
+     254.3,
+     254.84
+    ],
+    "throw": [
+     254.82,
+     255.42
+    ],
+    "landing": [
+     259.8,
+     260.9
+    ]
+   }
+  },
+  {
+   "cs": 264,
+   "title": "B Site Frag 1 \u2014 Attacker ZERO/point from B Main, standing by the wooden",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     264.0,
+     266.0
+    ],
+    "aim": [
+     270.5,
+     271.5
+    ],
+    "throw": [
+     271.57,
+     272.2
+    ],
+    "landing": [
+     273.65,
+     274.95
+    ]
+   }
+  },
+  {
+   "cs": 281,
+   "title": "B Site Frag 2 \u2014 Stand in B Main hugging the left wall by the windows, facing",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     281.9,
+     283.9
+    ],
+    "aim": [
+     285.9,
+     286.75
+    ],
+    "throw": [
+     289.75,
+     290.35
+    ],
+    "landing": [
+     291.95,
+     293.2
+    ]
+   }
+  },
+  {
+   "cs": 312,
+   "title": "A Site Knife 2 \u2014 Defender-side Zero/point from A Link (location readout reads",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     312.0,
+     313.5
+    ],
+    "aim": [
+     314.4,
+     315.4
+    ],
+    "throw": [
+     315.4,
+     316.0
+    ],
+    "landing": [
+     316.85,
+     317.8
+    ]
+   }
+  },
+  {
+   "cs": 326,
+   "title": "B Main Knife 1 \u2014 Defender-side ZERO/point from A Site (by the A Site boxes",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     326.6,
+     329.4
+    ],
+    "aim": [
+     336.08,
+     336.8
+    ],
+    "throw": [
+     336.84,
+     337.46
+    ],
+    "landing": [
+     339.71,
+     340.95
+    ]
+   }
+  },
+  {
+   "cs": 346,
+   "title": "A Site Knife 3 \u2014 Defender stand in A Link, ZERO/point blade thrown onto the",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     346.7,
+     348.1
+    ],
+    "aim": [
+     354.44,
+     354.84
+    ],
+    "throw": [
+     354.8,
+     355.4
+    ],
+    "landing": [
+     356.1,
+     357.1
+    ]
+   }
+  },
+  {
+   "cs": 369,
+   "title": "A Main Knife 2 \u2014 Defender side, standing at Mid Top (the location readout says",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     369.5,
+     370.9
+    ],
+    "aim": [
+     373.9,
+     375.0
+    ],
+    "throw": [
+     377.88,
+     378.5
+    ],
+    "landing": [
+     383.6,
+     384.7
+    ]
+   }
+  },
+  {
+   "cs": 391,
+   "title": "A Site Knife 4 \u2014 Defender stands at B Backsite (on-screen plate reads 'From",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     391.6,
+     393.9
+    ],
+    "aim": [
+     396.8,
+     397.42
+    ],
+    "throw": [
+     400.44,
+     401.02
+    ],
+    "landing": [
+     406.15,
+     407.15
+    ]
+   }
+  },
+  {
+   "cs": 415,
+   "title": "B Main Knife 2 \u2014 Defender stands against the tall back wall/boxes at B Site",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     415.0,
+     416.25
+    ],
+    "aim": [
+     432.45,
+     433.13
+    ],
+    "throw": [
+     433.05,
+     433.65
+    ],
+    "landing": [
+     436.1,
+     436.9
+    ]
+   }
+  },
+  {
+   "cs": 450,
+   "title": "A Main Flash 2 \u2014 Defender flashdrive from A Short (stand by the round pillar",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     450.38,
+     451.0
+    ],
+    "aim": [
+     451.25,
+     451.79
+    ],
+    "throw": [
+     451.75,
+     452.33
+    ],
+    "landing": [
+     453.29,
+     454.17
+    ]
+   }
+  },
+  {
+   "cs": 462,
+   "title": "A Main Flash 3 \u2014 Defender on A Site, back by the wall with the wall lamp",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     462.6,
+     464.6
+    ],
+    "aim": [
+     469.92,
+     470.54
+    ],
+    "throw": [
+     470.5,
+     471.1
+    ],
+    "landing": [
+     472.34,
+     472.7
+    ]
+   }
+  },
+  {
+   "cs": 504,
+   "title": "B Main Flash 1 \u2014 Defender stands in B Site facing the B Main entrance under",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     504.0,
+     506.5
+    ],
+    "aim": [
+     513.95,
+     514.75
+    ],
+    "throw": [
+     514.72,
+     515.12
+    ],
+    "landing": [
+     516.1,
+     517.1
+    ]
+   }
+  },
+  {
+   "cs": 525,
+   "title": "B Site Flash 2 \u2014 Defender flashdrive thrown from B Boba (behind the Boba",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     525.0,
+     526.8
+    ],
+    "aim": [
+     529.96,
+     530.6
+    ],
+    "throw": [
+     530.58,
+     531.2
+    ],
+    "landing": [
+     532.29,
+     533.1
+    ]
+   }
+  },
+  {
+   "cs": 549,
+   "title": "A Site Frag 3 \u2014 Defender A Link: stand tight against the left wall at A Link",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     549.5,
+     550.9
+    ],
+    "aim": [
+     551.2,
+     552.3
+    ],
+    "throw": [
+     555.5,
+     556.1
+    ],
+    "landing": [
+     558.8,
+     560.1
+    ]
+   }
+  },
+  {
+   "cs": 563,
+   "title": "A Site Frag 4 \u2014 Defender-side KAY/O FRAG/ment from A Alley (location readout",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     563.5,
+     565.2
+    ],
+    "aim": [
+     570.55,
+     571.55
+    ],
+    "throw": [
+     574.55,
+     575.15
+    ],
+    "landing": [
+     579.43,
+     580.6
+    ]
+   }
+  },
+  {
+   "cs": 584,
+   "title": "Mid Knife 2 \u2014 Defender-side ZERO/point from Mid Top: aim up at a",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     584.45,
+     586.45
+    ],
+    "aim": [
+     589.38,
+     589.93
+    ],
+    "throw": [
+     592.93,
+     593.55
+    ],
+    "landing": [
+     597.68,
+     598.68
+    ]
+   }
+  },
+  {
+   "cs": 605,
+   "title": "B Site Frag 3 \u2014 Defender KAY/O stands in B Boba facing the 'Mercado Mejor'",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     605.0,
+     607.5
+    ],
+    "aim": [
+     611.07,
+     611.78
+    ],
+    "throw": [
+     611.7,
+     612.3
+    ],
+    "landing": [
+     614.25,
+     615.45
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
