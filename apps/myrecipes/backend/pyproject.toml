@@ -23,7 +23,7 @@ dependencies = [
     # AI photo import: Claude vision extraction (consumed via platform_shared.extraction)
     "anthropic==1.8.0",
     # Downscale/normalize uploaded photos to Anthropic's vision target before send
-    "pillow==12.3.0",
+    "pillow==13.0.0",
     "platform-shared",
     # Sentry -- fail-loud production enforcement. See app/core/observability.py.
     "sentry-sdk[fastapi]==2.70.0",
