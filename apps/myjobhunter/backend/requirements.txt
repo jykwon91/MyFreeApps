@@ -177,7 +177,7 @@ passlib==1.7.4
     # via myjobhunter-backend
 pgvector==0.5.1
     # via myjobhunter-backend
-pillow==12.3.0
+pillow==13.0.0
     # via
     #   fastembed
     #   weasyprint
