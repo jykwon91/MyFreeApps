@@ -73,7 +73,7 @@ export default function WowFoodDetailPage() {
         </p>
         <p>
           Vendors, quests, drops and drop chances are Classic data ({RECIPE_SOURCE_DATA.split("@")[0]}) and may differ in
-          Forever. The recipe, ingredients and effect are read from the Forever beta client (build {FOOD_DATA_BUILD}).
+          Forever. The recipe, ingredients and effect are read from the Forever client (build {FOOD_DATA_BUILD}).
         </p>
       </aside>
     </main>

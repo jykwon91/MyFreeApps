@@ -29,14 +29,13 @@ CMANGOS_DUMP_URL = (
     f"https://raw.githubusercontent.com/{CMANGOS_REPO}/{CMANGOS_COMMIT}/{CMANGOS_DUMP}"
 )
 
-WAGO_BRANCH = "wow_classic_beta"  # WoW Forever beta client builds (1.60.x)
-WAGO_BUILD = "1.60.1.69977"
+WAGO_BRANCH = "wowf"  # WoW Forever's own client product (1.60.x). `python -m scripts.wow_refresh` moves the build.
+WAGO_BUILD = "1.60.1.70707"
 
-# The Forever client no longer ships instance-entrance area triggers (they
-# are server-side now), so their positions come from the Classic Era client:
-# the same 1.x world, where the entrances haven't moved.
+# The Forever client ships only some instance-entrance area triggers. The rest
+# come from the Classic Era client: see `area_triggers`.
 WAGO_ERA_BRANCH = "wow_classic_era"
-WAGO_ERA_BUILD = "1.15.9.69722"
+WAGO_ERA_BUILD = "1.15.9.70576"
 
 _USER_AGENT = "MyGamingAssistant world-map generator (github.com/jykwon91/MyFreeApps)"
 
@@ -66,6 +65,16 @@ def wago_table(
     url = f"https://wago.tools/db2/{name}/csv?branch={branch}&build={build}"
     path = _fetch(url, CACHE_DIR / build / f"{name}.csv")
     return list(csv.DictReader(io.StringIO(path.read_text(encoding="utf-8"))))
+
+
+def area_triggers() -> list[dict[str, str]]:
+    """Forever's area triggers, with Classic Era's only for the ones it doesn't ship.
+
+    Forever's rows win, so an entrance moved in a new build moves here too.
+    """
+    rows = {r["ID"]: r for r in wago_table("AreaTrigger", branch=WAGO_ERA_BRANCH, build=WAGO_ERA_BUILD)}
+    rows.update({r["ID"]: r for r in wago_table("AreaTrigger")})
+    return list(rows.values())
 
 
 def wago_file(file_data_id: int) -> bytes:

@@ -58,7 +58,7 @@ export const TAILORING_ROUTE: readonly CraftRouteEntry[] = [
     to: 300,
     title: "265–300: pick what you can get",
     intro:
-      "No one recipe is a safe pick here yet — Artisan can't be tested in the beta, and Forever's new patterns have no known source. Use whichever of these you have.",
+      "No one recipe is a safe pick here yet — Artisan couldn't be tested in the beta, and Forever's new patterns have no known source. Use whichever of these you have.",
     options: [
       { spell: 23664, detail: "Pattern from the Argent Dawn quartermaster (needs reputation)." },
       { spell: 18560, detail: "Pattern from Qia in Everlook. Mooncloth sells well, but each one costs 2 Felcloth." },

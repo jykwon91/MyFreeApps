@@ -85,7 +85,7 @@ def travel_hubs(travel: dict, map_id: int) -> list[Hub]:
         if int(r["Delay"]) > 0:
             path_nodes.setdefault(int(r["PathID"]), []).append(r)
     triggers = [
-        r for r in sources.wago_table("AreaTrigger", branch=sources.WAGO_ERA_BRANCH, build=sources.WAGO_ERA_BUILD)
+        r for r in sources.area_triggers()
         if int(r["ID"]) in TRAM_ENTRANCES
     ]
     cols = travel["nodeColumns"]

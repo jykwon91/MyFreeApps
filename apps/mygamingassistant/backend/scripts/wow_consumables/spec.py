@@ -7,7 +7,7 @@ against the Forever client's ``ItemSparse`` table and writes the committed
 ``backend/data/wow/raid_consumables.json``.
 
 Rules:
-* All ids must exist in the Forever beta client (1.60.1.69977).
+* All ids must exist in the Forever client (the build pinned in sources.py).
 * Display names come from the Forever ``ItemSparse`` at build time —
   the ``name`` fields here are annotations only, not shipped.
 * Item 21546 is BLOCKED until verified by a subject-matter expert.

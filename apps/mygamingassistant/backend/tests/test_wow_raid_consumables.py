@@ -20,6 +20,8 @@ from pathlib import Path
 
 import pytest
 
+from scripts.wow_world_map.sources import WAGO_BUILD
+
 from app.services.wow.raid_consumables import (
     ConsumableChecklist,
     UnknownRaidError,
@@ -71,7 +73,7 @@ class TestDatasetIntegrity:
             assert key in data, f"Missing key: {key!r}"
 
     def test_client_build_is_forever(self, data: dict) -> None:
-        assert data["client_build"] == "1.60.1.69977"
+        assert data["client_build"] == WAGO_BUILD
 
     def test_all_item_ids_are_integers(self, data: dict) -> None:
         for item in _all_items_in_data(data):

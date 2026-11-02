@@ -2,7 +2,7 @@
 changes, the trainer learn-skill estimate, and sanity checks on the committed
 data it produced.
 
-Known values are from the Forever beta client (1.60.1.69977): Bolt of Linen
+Known values are from the Forever client: Bolt of Linen
 Cloth is yellow at 25 and grey at 50; Heavy Linen Gloves moved from Classic's
 60 / 95 to 50 / 85; Dust to Motes is new and needs a Runed Copper Rod.
 """

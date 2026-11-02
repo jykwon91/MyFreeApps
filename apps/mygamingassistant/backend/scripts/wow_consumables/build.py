@@ -7,8 +7,8 @@ Usage (from ``apps/mygamingassistant/backend``)::
 Writes ``backend/data/wow/raid_consumables.json`` — the committed dataset
 consumed at runtime by ``app/services/wow/raid_consumables.py``.
 
-Item display names are resolved from the WoW Forever beta client's
-``ItemSparse`` table (build 1.60.1.69977) via wago.tools.  The build FAILS
+Item display names are resolved from the WoW Forever client's
+``ItemSparse`` table (the build pinned in sources.py) via wago.tools.  The build FAILS
 loudly if any item id listed in the spec is absent from the client — that
 indicates either a typo in the spec or a genuine Forever item-id divergence
 that must be handled explicitly.
@@ -39,7 +39,7 @@ OUT_PATH = BACKEND_DIR / "data" / "wow" / "raid_consumables.json"
 WOWHEAD_BASE = "https://www.wowhead.com/classic/item="
 
 ATTRIBUTION = (
-    "Item names sourced from WoW Forever beta client "
+    "Item names sourced from WoW Forever client "
     f"(build {WAGO_BUILD}) via wago.tools DB2 export. "
     "Game data © Blizzard Entertainment."
 )

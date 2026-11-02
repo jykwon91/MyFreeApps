@@ -23,11 +23,11 @@ World Map generator) and complete in under a second.
 |---|---|
 | Spec verified by | wow-forever-expert |
 | Spec verified date | 2026-10-01 |
-| WoW Forever client build | 1.60.1.69977 (`wow_classic_beta` branch) |
-| Classic Era client build | 1.15.9.69722 (`wow_classic_era` branch) |
+| WoW Forever client build | `WAGO_BUILD` in `scripts/wow_world_map/sources.py` |
+| Classic Era client build | `WAGO_ERA_BUILD` in the same file |
 | Item source | wago.tools DB2 CSV export |
 
-All item IDs must exist in the Forever beta client (`1.60.1.69977`).  The
+All item IDs must exist in the pinned Forever client.  The
 build fails loudly if any ID is missing.
 
 ## Blocked items
@@ -80,5 +80,5 @@ returned checklist for this purpose.
 
 ## Attribution
 
-Item display names: WoW Forever beta client (build 1.60.1.69977), accessed
+Item display names: WoW Forever client (build recorded in the JSON), accessed
 via wago.tools DB2 export.  Game data © Blizzard Entertainment.

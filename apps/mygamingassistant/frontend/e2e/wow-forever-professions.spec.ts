@@ -95,7 +95,7 @@ test("your level is kept, so material drops are ranked for it", async ({ page })
   await page.goto("/wow-forever/professions?p=tailoring");
   const level = page.getByRole("spinbutton", { name: "Your level" });
   await level.fill("20");
-  await expect(page.getByText("The beta stops at level 30 — 60 from launch on Nov 4.")).toBeVisible();
+  await expect(page.getByText("Stops at level 30 until launch — 60 from Nov 4.")).toBeVisible();
   await page.reload();
   await expect(level).toHaveValue("20");
 });

@@ -167,8 +167,8 @@ describe("level cap", () => {
 
   it("is 30 in the beta and 60 from launch day", () => {
     expect(levelCap(IN_BETA.getTime())).toBe(BETA_LEVEL_CAP);
-    expect(levelCap(Date.UTC(2026, 10, 3, 23, 59))).toBe(30);
-    expect(levelCap(Date.UTC(2026, 10, 4))).toBe(60);
+    expect(levelCap(Date.UTC(2026, 10, 4, 22, 59))).toBe(30);
+    expect(levelCap(Date.UTC(2026, 10, 4, 23))).toBe(60);
   });
 
   it("reads a level past the cap as the cap", () => {

@@ -4,7 +4,7 @@
 
 Writes, under ``frontend/src/games/wow-forever/data/food/``:
 
-* ``foods.json`` — every cooked food / drink in the Forever beta client:
+* ``foods.json`` — every cooked food / drink in the Forever client:
   level to eat, heal / mana, the Well Fed buff (from the client's tooltip
   text), the Well Fed XP boost, and the recipe item that teaches it.
   Game data © Blizzard Entertainment.

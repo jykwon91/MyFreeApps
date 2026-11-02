@@ -6,7 +6,7 @@ export default function FoodDataNote({ weightsLabel }: { weightsLabel: string })
   return (
     <aside className="rounded-xl border bg-card p-4 space-y-2 text-xs text-muted-foreground">
       <p>
-        Food effects are read from the Forever beta client (build {FOOD_DATA_BUILD}) and may change. Stat buffs are
+        Food effects are read from the Forever client (build {FOOD_DATA_BUILD}) and may change. Stat buffs are
         ranked with {weightsLabel}. Only one Well Fed buff is active at a time (the Classic rule).
       </p>
       <p>
