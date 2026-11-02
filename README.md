@@ -13,7 +13,8 @@ Monorepo of small web apps sharing a common backend and frontend platform.
 MyFreeApps/
 ├── packages/
 │   ├── shared-backend/      # Python: "platform_shared" — auth, DB, encryption, audit, storage, TOTP
-│   └── shared-frontend/     # npm: "@platform/ui" — React components, hooks, Redux store base
+│   ├── shared-core/         # npm: "@platform/core" — platform-neutral API client, auth, Redux store base
+│   └── shared-frontend/     # npm: "@platform/ui" — React components, hooks, browser wiring for shared-core
 ├── apps/
 │   ├── myjobhunter/         # Job application tracker
 │   └── mybookkeeper/        # Personal bookkeeping + AI invoice extraction

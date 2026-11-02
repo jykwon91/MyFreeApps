@@ -26,7 +26,8 @@
 # All COPY paths are relative to MyFreeApps/, not apps/mypizzatracker/.
 #
 # Workspace-aware build: each app imports from `@platform/ui`
-# (packages/shared-frontend), so the build stage must install the entire
+# (packages/shared-frontend), which imports `@platform/core`
+# (packages/shared-core), so the build stage must install the entire
 # workspace closure, not just the per-app package-lock.json. The root
 # package-lock.json is the source of truth for `npm ci`; per-app
 # lockfiles are kept in sync for IDE compatibility but NOT used here.
@@ -34,9 +35,11 @@
 FROM node:20-alpine AS frontend-build
 WORKDIR /repo
 COPY package.json package-lock.json ./
+COPY packages/shared-core/package.json ./packages/shared-core/
 COPY packages/shared-frontend/package.json ./packages/shared-frontend/
 COPY apps/mypizzatracker/frontend/package.json ./apps/mypizzatracker/frontend/
 RUN npm ci --ignore-scripts
+COPY packages/shared-core ./packages/shared-core
 COPY packages/shared-frontend ./packages/shared-frontend
 COPY apps/mypizzatracker/frontend ./apps/mypizzatracker/frontend
 

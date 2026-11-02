@@ -1445,3 +1445,118 @@ class TestAppDeclaresItsThirdPartyImports:
                 f"requirements-txt --no-hashes --no-emit-project --output-file "
                 f"requirements.txt`."
             )
+
+
+def _js_workspace_packages() -> list[str]:
+    """The `packages/*` npm workspaces every app's frontend build depends on."""
+    workspaces = json.loads(_read("package.json"))["workspaces"]
+    return [w for w in workspaces if w.startswith("packages/")]
+
+
+class TestCaddyBuildCopiesSharedPackages:
+    """A workspace missing from the build stage doesn't fail `npm ci`: the lockfile
+    still links it, dangling. The failure only surfaces later, at `npm run build`."""
+
+    @pytest.mark.parametrize(
+        "dockerfile",
+        [("apps", app, "docker", "caddy.Dockerfile") for app in _APPS]
+        + [("infra", "templates", "docker", "caddy.Dockerfile.j2")],
+        ids="/".join,
+    )
+    def test_manifest_before_install_and_source_before_build(
+        self, dockerfile: tuple[str, ...]
+    ) -> None:
+        src = _read(*dockerfile)
+        install = src.index("RUN npm ci")
+        build = src.index("RUN npm run build")
+        for package in _js_workspace_packages():
+            manifest = src.find(f"COPY {package}/package.json ./{package}/")
+            assert -1 < manifest < install, (
+                f"{'/'.join(dockerfile)} must COPY {package}/package.json before "
+                f"`npm ci`. Edit infra/templates/docker/caddy.Dockerfile.j2 and re-render."
+            )
+            source = src.find(f"COPY {package} ./{package}")
+            assert install < source < build, (
+                f"{'/'.join(dockerfile)} must COPY {package} between `npm ci` and "
+                f"`npm run build`. Edit infra/templates/docker/caddy.Dockerfile.j2 and re-render."
+            )
+
+
+class TestSharedCoreStaysPlatformNeutral:
+    """@platform/core runs on web and React Native, so it can't reach for either.
+    Its own vitest and tsc checks say the same, but no CI job runs those."""
+
+    _SRC = _REPO_ROOT / "packages" / "shared-core" / "src"
+    _FORBIDDEN_IMPORT = re.compile(
+        r"""(?:from\s+|import\s+|import\(\s*|require\(\s*)["']"""
+        r"""((?:react-dom|react-native|expo|@react-native|@expo|@platform/ui)(?:[/-][^"']*)?|node:[^"']*)["']"""
+    )
+    _BROWSER_GLOBAL = re.compile(
+        r"(?<![.\w])(window|document|navigator|location|localStorage|sessionStorage|StorageEvent)\b"
+    )
+    _COMMENT = re.compile(r"/\*.*?\*/|//[^\n]*", re.DOTALL)
+
+    def _sources(self) -> list[Path]:
+        files = [p for p in self._SRC.rglob("*.ts") if "__tests__" not in p.parts]
+        assert files, f"no sources found under {self._SRC}"
+        return files
+
+    def test_imports_no_platform_package(self) -> None:
+        for path in self._sources():
+            match = self._FORBIDDEN_IMPORT.search(path.read_text(encoding="utf-8"))
+            assert match is None, (
+                f"{path.relative_to(_REPO_ROOT)} imports {match.group(1)}. Move the "
+                f"platform-specific part behind configurePlatform()."
+            )
+
+    def test_uses_no_browser_global(self) -> None:
+        for path in self._sources():
+            code = self._COMMENT.sub("", path.read_text(encoding="utf-8"))
+            match = self._BROWSER_GLOBAL.search(code)
+            assert match is None, (
+                f"{path.relative_to(_REPO_ROOT)} uses {match.group(1)}. Move it behind "
+                f"configurePlatform(); the web side lives in "
+                f"packages/shared-frontend/src/lib/webPlatform.ts."
+            )
+
+    def test_tsconfig_excludes_the_dom(self) -> None:
+        options = json.loads(_read("packages", "shared-core", "tsconfig.json"))["compilerOptions"]
+        assert not [lib for lib in options["lib"] if lib.lower().startswith("dom")], (
+            "packages/shared-core/tsconfig.json must not include the DOM in `lib`."
+        )
+        assert options["types"] == [], (
+            "packages/shared-core/tsconfig.json must keep `types: []`, or ambient "
+            "@types packages decide which globals the package can see."
+        )
+
+    def test_react_range_matches_root_override(self) -> None:
+        pinned = json.loads(_read("package.json"))["overrides"]["react"]
+        declared = json.loads(_read("packages", "shared-core", "package.json"))["devDependencies"]
+        assert declared["react"] == f"^{pinned}", (
+            f"packages/shared-core declares react {declared['react']!r}; root overrides "
+            f"pin {pinned}. Update the range to ^{pinned}."
+        )
+
+
+class TestWebConfiguresSharedCoreFirst:
+    """Requests throw until the platform is configured, so every module an app can
+    import first has to configure it before handing over @platform/core."""
+
+    _SRC = _REPO_ROOT / "packages" / "shared-frontend" / "src"
+
+    def test_behaviour_reexports_load_web_platform_first(self) -> None:
+        shims = [
+            p
+            for p in self._SRC.rglob("*.ts")
+            if "__tests__" not in p.parts
+            and p.name != "webPlatform.ts"
+            and "auth/errors" not in p.as_posix()
+            and re.search(r'^export (?!type )[^\n]*"@platform/core', p.read_text(encoding="utf-8"), re.M)
+        ]
+        assert shims, f"no @platform/core re-exports found under {self._SRC}"
+        for path in shims:
+            first_line = path.read_text(encoding="utf-8").splitlines()[0]
+            assert re.fullmatch(r'import "(\./|\.\./lib/)webPlatform";', first_line), (
+                f"{path.relative_to(_REPO_ROOT)} re-exports @platform/core, so its first "
+                f'line must be `import "../lib/webPlatform";`.'
+            )
