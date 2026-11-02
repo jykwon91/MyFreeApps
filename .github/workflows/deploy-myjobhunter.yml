@@ -16,7 +16,9 @@ on:
     branches: [main]
     paths:
       - 'apps/myjobhunter/**'
+      - '!apps/myjobhunter/mobile/**'
       - 'packages/**'
+      - '!packages/shared-mobile/**'
 
 concurrency:
   group: deploy-myjobhunter

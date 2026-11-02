@@ -16,7 +16,9 @@ on:
     branches: [main]
     paths:
       - 'apps/mybookkeeper/**'
+      - '!apps/mybookkeeper/mobile/**'
       - 'packages/**'
+      - '!packages/shared-mobile/**'
 
 concurrency:
   group: deploy-mybookkeeper

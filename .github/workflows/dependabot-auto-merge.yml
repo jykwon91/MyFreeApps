@@ -3,7 +3,8 @@ name: Dependabot auto-merge
 # Auto-merges Dependabot PRs once EVERYTHING on the head commit is green — EXCEPT
 # major bumps, which are labelled and held for manual review. Effect: patch /
 # minor / security updates flow through invisibly; only a breaking-change major
-# ever needs your attention.
+# ever needs your attention. React is the exception: dependabot.yml ignores it
+# because the Expo SDK pins it, so a React CVE needs a manual bump.
 #
 # The job waits until every workflow run on the PR's head commit has finished
 # green, then approves that exact commit (github-actions[bot]) and enables
