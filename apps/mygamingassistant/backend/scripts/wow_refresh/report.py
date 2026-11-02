@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 WOW_DATA = "frontend/src/games/wow-forever/data"
+GENERATED_JSON = (f":(glob){WOW_DATA}/**/*.json", ":(glob)backend/data/wow/*.json")
 SHOWN_PER_SECTION = 40
 # Records where the data came from, which a new build always changes.
 PROVENANCE_KEYS = frozenset({"source", "generated_at", "client_build", "attribution"})
@@ -80,18 +81,29 @@ def _strip_provenance(document: Any) -> Any:
     return document
 
 
-def _changed_generated_files(app_dir: Path) -> list[str]:
-    """Every changed JSON data file whose content moved beyond its provenance."""
+def _git_paths(app_dir: Path, *command: str) -> list[str]:
     listed = subprocess.run(
-        ["git", "diff", "--name-only", "--relative", "HEAD", "--", "*.json"],
+        ["git", *command, "--", *GENERATED_JSON],
         cwd=app_dir, capture_output=True, text=True, check=True,
     )
-    moved = []
-    for path in listed.stdout.split():
-        current = json.loads((app_dir / path).read_text(encoding="utf-8"))
-        if _strip_provenance(_committed(app_dir, path)) != _strip_provenance(current):
+    return listed.stdout.split()
+
+
+def _changed_generated_files(app_dir: Path) -> list[str]:
+    """Every generated JSON file whose content moved beyond its provenance,
+    including ones a refresh added or deleted."""
+    changed = _git_paths(app_dir, "diff", "--name-only", "--relative", "HEAD")
+    added = _git_paths(app_dir, "ls-files", "--others", "--exclude-standard")
+    moved = list(added)
+    for path in changed:
+        file = app_dir / path
+        if not file.exists():
             moved.append(path)
-    return moved
+        elif _strip_provenance(_committed(app_dir, path)) != _strip_provenance(
+            json.loads(file.read_text(encoding="utf-8"))
+        ):
+            moved.append(path)
+    return sorted(moved)
 
 
 def render_report(app_dir: Path) -> str:
