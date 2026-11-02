@@ -106,7 +106,9 @@ hand-picked route in `data/professions/crafting/*Route.ts`; don't loosen the tes
 2. Set `notes_reviewed_through` in `state.json` to the newest post you read.
 3. Open a PR whose body has the report, each hand-written change with its source,
    and anything left for a person.
-4. Merge on green CI with a squash merge. Merging deploys MyGamingAssistant.
+4. Once CI is green, merge with `gh pr merge <number> --squash --admin`. The repo requires a
+   review that the operator has waived for this repo. Never merge with failing checks.
+   Merging deploys MyGamingAssistant.
 
 Leave the PR open and say why, instead of merging, when:
 
