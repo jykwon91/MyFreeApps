@@ -14,6 +14,7 @@ MyFreeApps/
 ├── apps/
 │   ├── mybookkeeper/        # Personal bookkeeping + AI invoice extraction
 │   └── (future apps)
+├── mobile/                  # iPhone and Android apps (React Native / Expo); see mobile/README.md
 ├── sites/
 │   └── landing/public/      # myfreeapps.org — static page linking every deployed app
 │                            # (served by host Caddy; deploy-landing.yml; keep in sync

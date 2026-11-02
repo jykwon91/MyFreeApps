@@ -914,18 +914,26 @@ class TestReactVersionAlignment:
         )
 
 
-class TestMobileOnlyChangesDontDeployWeb:
-    """A change that only touches a mobile app can't alter the web bundle or API
-    image, so it must not trigger a production deploy."""
+class TestMobileIsOutsideDeployPaths:
+    """Mobile apps live in the top-level mobile/ directory so they can't trigger a
+    web deploy. An exact list also fails on any pattern broad enough to reach it."""
 
     @pytest.mark.parametrize("app", sorted(set(_APPS) - _NO_AUTO_DEPLOY))
-    def test_deploy_paths_exclude_mobile(self, app: str) -> None:
-        wf = _read(".github", "workflows", f"deploy-{app}.yml")
-        for excluded in (f"!apps/{app}/mobile/**", "!packages/shared-mobile/**"):
-            assert f"'{excluded}'" in wf, (
-                f"deploy-{app}.yml must exclude {excluded}. Edit "
-                f"infra/templates/.github/workflows/deploy.yml.j2 and re-render."
-            )
+    def test_deploy_paths_are_only_app_and_packages(self, app: str) -> None:
+        block = re.search(
+            r"^    paths:\n((?:      - .+\n)+)",
+            _read(".github", "workflows", f"deploy-{app}.yml"),
+            re.M,
+        )
+        assert block, f"deploy-{app}.yml has no push paths block."
+        patterns = [
+            line.removeprefix("      - ").strip("'\"")
+            for line in block.group(1).splitlines()
+        ]
+        assert patterns == [f"apps/{app}/**", "packages/**"], (
+            f"deploy-{app}.yml push paths are {patterns}. Only the app and "
+            f"packages/ may deploy it; mobile/ must stay outside these paths."
+        )
 
 
 class TestAutomatedDeployExclusion:

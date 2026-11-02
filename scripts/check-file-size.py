@@ -59,7 +59,7 @@ EXCLUDED_FILENAME_PREFIXES = ("test_",)
 EXCLUDED_FILENAME_SUBSTRINGS = ("_test.", ".spec.", ".test.")
 
 # Roots to scan, relative to the repo root.
-SCAN_ROOTS = ("apps", "packages")
+SCAN_ROOTS = ("apps", "packages", "mobile")
 
 ALLOWLIST_PATH = Path("scripts/file-size-allowlist.yml")
 
