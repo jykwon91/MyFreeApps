@@ -28,9 +28,10 @@ export const FACTIONS: readonly { id: Faction; label: string }[] = [
   { id: "horde", label: "Horde" },
 ];
 
-/** Only zones shown for Forever so far. Beta details — may change before launch. */
+/** The new zones Blizzard has named for Forever. */
 export const FOREVER_BETA_ZONES: readonly BetaZone[] = [
   { name: "Zephras Isle", detail: "Levels 1–12 — the Skyborne starting zone." },
   { name: "Riverglades", detail: "Eastern Kingdoms, roughly levels 30–45." },
   { name: "Mount Hyjal", detail: "Level 60." },
+  { name: "Shen'dralas", detail: "Kalimdor, between Mulgore and Desolace." },
 ];

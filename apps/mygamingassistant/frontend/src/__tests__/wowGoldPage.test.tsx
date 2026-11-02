@@ -98,7 +98,7 @@ describe("Making gold page", () => {
     savePlayer(45, "warlock");
     renderAt("/wow-forever/gold");
     expect(screen.getByLabelText("Your level")).toHaveValue(30);
-    expect(screen.getByText(/The beta stops at level 30/)).toBeInTheDocument();
+    expect(screen.getByText(/Stops at level 30 until launch/)).toBeInTheDocument();
   });
 
   it("starts at the 1–20 plan, says the numbers are vendor prices, and asks for a level to list farms", () => {

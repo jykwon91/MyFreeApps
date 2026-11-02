@@ -108,9 +108,7 @@ def build_dungeons(zones: list[ZoneBounds], art: WorldMapArt) -> list[list[objec
     maps = {int(r["ID"]): r for r in sources.wago_table("Map")}
     triggers = {
         int(r["ID"]): r
-        for r in sources.wago_table(
-            "AreaTrigger", branch=sources.WAGO_ERA_BRANCH, build=sources.WAGO_ERA_BUILD
-        )
+        for r in sources.area_triggers()
     }
     tuning = {r["ID"]: r for r in sources.wago_table("ContentTuning")}
     lfg: dict[str, tuple[int, int]] = {}

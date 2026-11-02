@@ -57,7 +57,7 @@ test("in the beta, your level stops at 30", async ({ page }) => {
   await page.goto("/wow-forever/gold");
   const level = page.getByRole("spinbutton", { name: "Your level" });
   await level.fill("45");
-  await expect(page.getByText("The beta stops at level 30 — 60 from launch on Nov 4.")).toBeVisible();
+  await expect(page.getByText("Stops at level 30 until launch — 60 from Nov 4.")).toBeVisible();
   await page.reload();
   await expect(level).toHaveValue("30");
 });

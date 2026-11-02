@@ -71,7 +71,7 @@ export const BAND_TIPS: readonly BandTips[] = [
         id: "well-fed",
         title: "Eat cooked food before you fight",
         detail: "Forever's Well Fed buff also gives +5% experience from kills — faster leveling means more gold per hour.",
-        confidence: "forever",
+        confidence: "unknown",
       },
     ],
   },
@@ -156,7 +156,7 @@ export const BAND_TIPS: readonly BandTips[] = [
         id: "black-market",
         title: "The Black Market auction house is a gold sink",
         detail: "Forever adds one in Powderfuse Port. Treat it as somewhere to spend gold, not to make it.",
-        confidence: "forever",
+        confidence: "unknown",
       },
       {
         id: "new-zones",
@@ -201,7 +201,7 @@ export const CLASS_GOLD_TIPS: readonly ClassGoldTips[] = [
         id: "warlock-dots",
         title: "DoT a pack, Drain Life the last one",
         detail:
-          "Corruption and Curse of Agony on two or three mobs, your pet on another, then Drain Life to finish. You hardly stop between fights, so you kill more an hour than most classes.",
+          "Corruption and Bane of Agony on two or three mobs, your pet on another, then Drain Life to finish. You hardly stop between fights, so you kill more an hour than most classes.",
         confidence: "classic",
       },
       {

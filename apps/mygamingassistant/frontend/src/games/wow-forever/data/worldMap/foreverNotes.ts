@@ -20,7 +20,7 @@ export const FOREVER_NOTES: readonly ForeverNote[] = [
   },
   {
     id: "summoning-stones",
-    text: "Meeting stones don't summon during the beta — travel to the dungeon yourself.",
+    text: "Meeting stones didn't summon in the beta, so plan to travel to the dungeon yourself.",
   },
   {
     id: "warlock-even-levels",

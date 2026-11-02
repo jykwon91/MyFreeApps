@@ -115,7 +115,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `?skill=` (wins for that visit) and `mga.wowForever.professions.skill.v1`.
   **Recipe data is GENERATED** — `python -m scripts.wow_professions.build`
   (from `backend/`) writes `data/professions/crafting/{tailoring,enchanting}.json`
-  from the Forever beta client, plus `classic/trainerSkills.json` and
+  from the Forever client, plus `classic/trainerSkills.json` and
   `classic/sources.json` (cmangos GPL — keep LICENSE + README).
   `tests/test_wow_professions_generator.py`. A route row that names a spell
   missing from the data throws, so re-run the route test after regenerating.
@@ -165,7 +165,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `mga.wowForever.food.settings.v1`; first visit seeds level/class from the
   World Map player settings.
 - **Data is GENERATED** — `python -m scripts.wow_food.build` (from `backend/`)
-  writes `data/food/foods.json` from the Forever beta client (SkillLine 185
+  writes `data/food/foods.json` from the Forever client (SkillLine 185
   recipes → created item → its use spell → Food/Drink + Well Fed spell). Buffs
   are parsed from the client's evaluated tooltip text (`scripts/wow_food/tooltip.py`
   evaluates `$s/$o/$t/$d/$@spelldesc` tokens), never from aura codes.
@@ -201,7 +201,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   only, never world data.
 - **Data is GENERATED — never hand-edit the JSON.** Re-run from `backend/`:
   `python -m scripts.wow_world_map.build [--no-art]`. Sources are pinned in
-  `scripts/wow_world_map/sources.py` (wago.tools DB2 export of the Forever beta
+  `scripts/wow_world_map/sources.py` (wago.tools DB2 export of the Forever
   client for zones/flight paths/map art/factions; cmangos classic-db at a
   pinned commit for NPCs). `tests/test_wow_world_map_generator.py` checks the
   coordinate conversion against wiki NPC positions and the committed output.

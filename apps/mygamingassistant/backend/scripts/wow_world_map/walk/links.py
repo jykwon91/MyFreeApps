@@ -73,7 +73,7 @@ def _lift_links(map_id: int, tables: dict) -> list[Link]:
 def _portal_links(map_id: int, tables: dict, one_way: bool) -> list[Link]:
     triggers = {
         int(r["ID"]): (float(r["Pos_0"]), float(r["Pos_1"]), float(r["Pos_2"]))
-        for r in sources.wago_table("AreaTrigger", branch=sources.WAGO_ERA_BRANCH, build=sources.WAGO_ERA_BUILD)
+        for r in sources.area_triggers()
         if int(r["ContinentID"]) == map_id
     }
     teleports = {

@@ -1,5 +1,5 @@
 /**
- * Forever's level cap: 30 while the beta runs, 60 from launch (2026-11-04).
+ * Forever's level cap: 30 until launch (3pm PT, 2026-11-04), then 60.
  *
  * Every level field, and anything picked "for your level", stops at
  * `levelCap()` — food you can't eat yet, or a level you can't reach, is no
@@ -7,8 +7,8 @@
  */
 export const MAX_LEVEL = 60;
 export const BETA_LEVEL_CAP = 30;
-/** Launch day, midnight UTC. */
-const LAUNCH = Date.UTC(2026, 10, 4);
+/** 3pm PT on Nov 4 is 23:00 UTC, per Blizzard's launch post. */
+const LAUNCH = Date.UTC(2026, 10, 4, 23);
 
 export function levelCap(now: number = Date.now()): number {
   return now >= LAUNCH ? MAX_LEVEL : BETA_LEVEL_CAP;

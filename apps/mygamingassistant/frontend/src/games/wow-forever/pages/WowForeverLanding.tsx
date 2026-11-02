@@ -16,7 +16,7 @@ export default function WowForeverLanding() {
         backLabel="Back to games"
       />
       <AlertBox variant="info">
-        Forever is in beta. Much of this is based on Classic Era and may change as Forever's details are published.
+        Much of this is based on Classic Era and may differ in Forever.
       </AlertBox>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {features.map((f) => (

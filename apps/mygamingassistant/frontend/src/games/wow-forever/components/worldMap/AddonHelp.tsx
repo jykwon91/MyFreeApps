@@ -42,7 +42,7 @@ export default function AddonHelp() {
       <h3 className="font-semibold">Where the locations come from</h3>
       <p className="text-muted-foreground">
         Other NPC locations are from the Classic 1.12 world (cmangos classic-db, GPL-3.0) and may differ in Forever — each row says so.
-        Maps, flight paths, boats and zeppelins are from the WoW Forever beta client data (via wago.tools). World of Warcraft and its
+        Maps, flight paths, boats and zeppelins are from the WoW Forever client data (via wago.tools). World of Warcraft and its
         maps are © Blizzard Entertainment; this is a free fan tool.
       </p>
     </section>

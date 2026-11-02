@@ -68,7 +68,7 @@ export default function CraftRouteList({ entries, ranks, current, trainerSkills,
       <SkillColorLegend />
       <p className="text-xs text-muted-foreground">
         "Make about" counts the extra crafts while a recipe is yellow or green, when a point isn't certain. Unconfirmed =
-        not yet checked in Forever (Artisan can't be tested in the beta).
+        not yet checked in Forever. Where to buy or farm materials is Classic data and may differ in Forever.
       </p>
       <div className="rounded-xl border bg-card overflow-hidden">
         <div className={`hidden sm:grid ${CRAFT_ROW_GRID} p-3 border-b text-sm font-medium`} aria-hidden>

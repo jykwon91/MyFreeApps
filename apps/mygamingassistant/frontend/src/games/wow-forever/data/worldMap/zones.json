@@ -1,4 +1,4 @@
-{"source":{"publisher":"Blizzard Entertainment (World of Warcraft: Forever client data)","via":"wago.tools DB2 export","branch":"wow_classic_beta","build":"1.60.1.69977","tables":"UiMap, UiMapAssignment, UiMapArt, AreaTable"},"continents":{"0":"Eastern Kingdoms","1":"Kalimdor","2991":"Zephras Isle","2997":"Darkspear Islands"},"world":{"id":947,"name":"Azeroth","regions":[{"continent":1,"ui":[0.0399,0.0855,0.4083,0.9234],"bounds":[-12800.0,12266.7,-9600.0,6933.3]},
+{"source":{"publisher":"Blizzard Entertainment (World of Warcraft: Forever client data)","via":"wago.tools DB2 export","branch":"wowf","build":"1.60.1.70707","tables":"UiMap, UiMapAssignment, UiMapArt, AreaTable"},"continents":{"0":"Eastern Kingdoms","1":"Kalimdor","2991":"Zephras Isle","2997":"Darkspear Islands"},"world":{"id":947,"name":"Azeroth","regions":[{"continent":1,"ui":[0.0399,0.0855,0.4083,0.9234],"bounds":[-12800.0,12266.7,-9600.0,6933.3]},
 {"continent":0,"ui":[0.5505,0.0994,0.8966,0.8691],"bounds":[-16000.0,6933.3,-7466.7,8000.0]}]},"zones":[{"id":1415,"name":"Eastern Kingdoms","kind":"continent","continent":0,"parent":947,"bounds":[-16000.0,7466.6,-19199.9,16000.0],"highlight":true},
 {"id":1414,"name":"Kalimdor","kind":"continent","continent":1,"parent":947,"bounds":[-11733.3,12799.9,-19733.21,17066.6],"highlight":true},
 {"id":1416,"name":"Alterac Mountains","kind":"zone","continent":0,"parent":1415,"bounds":[-366.67,1500.0,-2016.67,783.33],"territory":"contested","levels":[27,39],"highlight":true},
@@ -9,7 +9,6 @@
 {"id":1419,"name":"Blasted Lands","kind":"zone","continent":0,"parent":1415,"bounds":[-12800.0,-10566.67,-4591.67,-1241.67],"territory":"contested","levels":[46,60],"highlight":true},
 {"id":1428,"name":"Burning Steppes","kind":"zone","continent":0,"parent":1415,"bounds":[-8983.33,-7031.25,-3195.83,-266.67],"territory":"contested","levels":[52,59],"highlight":true},
 {"id":1439,"name":"Darkshore","kind":"zone","continent":1,"parent":1414,"bounds":[3966.67,8333.33,-3608.33,2941.67],"territory":"alliance","levels":[11,19],"highlight":true},
-{"id":2524,"name":"Darkspear Islands","kind":"zone","continent":2997,"parent":947,"bounds":[-835.42,447.92,993.75,2918.75],"foreverOnly":true},
 {"id":1457,"name":"Darnassus","kind":"city","continent":1,"parent":1414,"bounds":[9532.59,10238.32,1880.03,2938.36],"faction":"A","territory":"alliance"},
 {"id":1430,"name":"Deadwind Pass","kind":"zone","continent":0,"parent":1415,"bounds":[-11533.33,-9866.67,-3333.33,-833.33],"territory":"contested","levels":[50,60],"highlight":true},
 {"id":1443,"name":"Desolace","kind":"zone","continent":1,"parent":1414,"bounds":[-2545.83,452.08,-262.5,4233.33],"territory":"contested","levels":[30,39],"highlight":true},

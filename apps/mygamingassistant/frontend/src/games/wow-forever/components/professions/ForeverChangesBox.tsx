@@ -13,7 +13,7 @@ export default function ForeverChangesBox({ changes = FOREVER_CHANGES }: { chang
           </li>
         ))}
       </ul>
-      <p className="mt-2">Forever is in beta — details can still change before launch.</p>
+      <p className="mt-2">Checked before launch — details can still change.</p>
     </AlertBox>
   );
 }

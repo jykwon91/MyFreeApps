@@ -94,9 +94,7 @@ def _zone_hint(node_name: str) -> str | None:
 def _tram(zones: list[ZoneBounds], art: WorldMapArt) -> dict[str, object]:
     triggers = {
         int(r["ID"]): r
-        for r in sources.wago_table(
-            "AreaTrigger", branch=sources.WAGO_ERA_BRANCH, build=sources.WAGO_ERA_BUILD
-        )
+        for r in sources.area_triggers()
     }
     stops: list[list[object]] = []
     for trigger_id, label in TRAM_ENTRANCES.items():

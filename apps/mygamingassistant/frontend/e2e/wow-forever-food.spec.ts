@@ -129,7 +129,7 @@ test("in the beta, a level past 30 reads as 30 and nothing past the cap is promi
   await page.clock.setFixedTime(IN_BETA);
   await page.goto("/wow-forever/food?lvl=45&class=warlock&skill=175");
   await expect(page.getByLabel("Level", { exact: true })).toHaveValue("30");
-  await expect(page.getByText("The beta stops at level 30 — 60 from launch on Nov 4.")).toBeVisible();
+  await expect(page.getByText("Stops at level 30 until launch — 60 from Nov 4.")).toBeVisible();
   await expect(page.getByText(/Best food for a level 30 Warlock leveling/)).toBeVisible();
   await expect(page.getByText(/Next upgrade at level/)).toHaveCount(0);
 });

@@ -54,7 +54,7 @@ describe("What should I eat? page", () => {
     renderAt("/wow-forever/food?lvl=45&class=warlock&act=leveling");
     expect(screen.getByLabelText("Level")).toHaveValue(30);
     expect(screen.getByText(/Best food for a level 30 Warlock leveling\./)).toBeInTheDocument();
-    expect(screen.getByText(/The beta stops at level 30/)).toBeInTheDocument();
+    expect(screen.getByText(/Stops at level 30 until launch/)).toBeInTheDocument();
     expect(screen.queryByText(/Next upgrade at level/)).not.toBeInTheDocument();
   });
 

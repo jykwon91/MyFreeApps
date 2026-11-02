@@ -1,7 +1,7 @@
 """WoW Forever food picker generator — tooltip evaluation, buff parsing, and
 sanity checks on the committed data it produced.
 
-Known values are from the Forever beta client (1.60.1.69977): Monster Omelet
+Known values are from the Forever client: Monster Omelet
 is level 35, heals 1392 over 30 sec and gives 15 Stamina; Westfall Stew's
 speed only works in Westfall; Prowler Steak gives two stats.
 """
