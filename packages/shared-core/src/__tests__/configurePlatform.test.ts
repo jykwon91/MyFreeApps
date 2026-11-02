@@ -10,6 +10,7 @@ import {
   _resetPlatformForTests,
   configurePlatform,
   getPlatform,
+  onPlatformConfigured,
 } from "../platform/configurePlatform";
 import type { PlatformConfig } from "../platform/types/PlatformConfig";
 import { axiosBaseQuery } from "../store/baseQuery";
@@ -190,6 +191,25 @@ describe("401 handling", () => {
   });
 });
 
+describe("a listener that throws", () => {
+  it("still configures everything else, then surfaces the failure", () => {
+    let shouldThrow = true;
+    onPlatformConfigured(() => {
+      if (shouldThrow) throw new Error("boom");
+    });
+    const later = vi.fn();
+    onPlatformConfigured(later);
+    const { config } = fakePlatform();
+
+    expect(() => configurePlatform(config)).toThrow("boom");
+    shouldThrow = false;
+
+    expect(later).toHaveBeenCalledWith(config);
+    expect(getPlatform()).toBe(config);
+    expect(api.defaults.baseURL).toBe("https://api.test");
+  });
+});
+
 describe("onUnload", () => {
   it("cancels an open step-up prompt when the injected signal fires", async () => {
     const { config, fireUnload } = fakePlatform();
@@ -205,6 +225,16 @@ describe("onUnload", () => {
     configurePlatform(config);
     fireUnload();
     expect(getState().pending).toBeNull();
+  });
+
+  it("is optional, and dropping it removes the previous listener", () => {
+    const first = fakePlatform();
+    configurePlatform(first.config);
+    expect(first.unloadListeners.size).toBe(1);
+
+    const { config } = fakePlatform({ onUnload: undefined });
+    expect(() => configurePlatform(config)).not.toThrow();
+    expect(first.unloadListeners.size).toBe(0);
   });
 
   it("removes the previous listener on a later configurePlatform()", () => {

@@ -7,7 +7,17 @@ const _listeners = new Set<ConfiguredListener>();
 
 export function configurePlatform(config: PlatformConfig): void {
   _config = config;
-  _listeners.forEach((listener) => listener(config));
+  // One failing listener must not leave the others unconfigured, such as the
+  // API client without its baseURL. Everything runs, then the failure surfaces.
+  const errors: unknown[] = [];
+  _listeners.forEach((listener) => {
+    try {
+      listener(config);
+    } catch (error) {
+      errors.push(error);
+    }
+  });
+  if (errors.length > 0) throw errors[0];
 }
 
 export function getPlatform(): PlatformConfig {

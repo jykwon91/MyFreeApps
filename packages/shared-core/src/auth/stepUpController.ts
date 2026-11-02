@@ -189,6 +189,8 @@ let _removeUnloadListener: (() => void) | null = null;
 
 onPlatformConfigured(({ onUnload }) => {
   _removeUnloadListener?.();
+  _removeUnloadListener = null;
+  if (!onUnload) return;
   _removeUnloadListener = onUnload(() => {
     if (_resolvers.length > 0) {
       cancel("tab_closed");

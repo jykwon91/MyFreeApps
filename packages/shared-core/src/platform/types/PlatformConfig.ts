@@ -10,7 +10,8 @@ export interface PlatformConfig {
   isOnLogin: () => boolean;
   /**
    * Run `listener` when the app is going away, cancelling any open step-up
-   * prompt. Returns a function that removes the listener.
+   * prompt. Returns a function that removes the listener. Leave it out on a
+   * platform with no unload event.
    */
-  onUnload: (listener: () => void) => () => void;
+  onUnload?: (listener: () => void) => () => void;
 }
