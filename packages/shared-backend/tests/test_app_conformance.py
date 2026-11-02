@@ -14,6 +14,7 @@ in the per-test allow-list with a comment explaining the divergence.
 """
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -880,6 +881,51 @@ class TestPostDeployCommands:
 # - mypizzatracker: paused until it is converted to a mobile app.
 # - myrecipes: paused until local development is complete.
 _NO_AUTO_DEPLOY = {"mypizzatracker", "myrecipes"}
+
+
+class TestReactVersionAlignment:
+    """Web and mobile share one hoisted React. Expo pins an exact version, so
+    the root override owns it and every web range must ask for that version.
+
+    Deploy paths exclude root package.json and the lockfile, so a web range left
+    behind would change what ships without triggering that app's deploy.
+    """
+
+    @pytest.mark.parametrize(
+        "manifest",
+        [("apps", app, "frontend", "package.json") for app in _APPS]
+        + [
+            ("infra", "templates", "scaffold", "frontend", "package.json"),
+            ("packages", "shared-frontend", "package.json"),
+        ],
+        ids="/".join,
+    )
+    @pytest.mark.parametrize("package", ["react", "react-dom"])
+    def test_range_matches_root_override(self, manifest: tuple[str, ...], package: str) -> None:
+        pinned = json.loads(_read("package.json"))["overrides"][package]
+        assert re.fullmatch(r"\d+\.\d+\.\d+", pinned), (
+            f"root overrides.{package} must be an exact version, got {pinned!r}."
+        )
+        data = json.loads(_read(*manifest))
+        declared = {**data.get("dependencies", {}), **data.get("devDependencies", {})}
+        assert declared[package] == f"^{pinned}", (
+            f"{'/'.join(manifest)} declares {package} {declared[package]!r}; "
+            f"root overrides pin {pinned}. Update the range to ^{pinned}."
+        )
+
+
+class TestMobileOnlyChangesDontDeployWeb:
+    """A change that only touches a mobile app can't alter the web bundle or API
+    image, so it must not trigger a production deploy."""
+
+    @pytest.mark.parametrize("app", sorted(set(_APPS) - _NO_AUTO_DEPLOY))
+    def test_deploy_paths_exclude_mobile(self, app: str) -> None:
+        wf = _read(".github", "workflows", f"deploy-{app}.yml")
+        for excluded in (f"!apps/{app}/mobile/**", "!packages/shared-mobile/**"):
+            assert f"'{excluded}'" in wf, (
+                f"deploy-{app}.yml must exclude {excluded}. Edit "
+                f"infra/templates/.github/workflows/deploy.yml.j2 and re-render."
+            )
 
 
 class TestAutomatedDeployExclusion:

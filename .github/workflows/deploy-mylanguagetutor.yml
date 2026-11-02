@@ -16,7 +16,9 @@ on:
     branches: [main]
     paths:
       - 'apps/mylanguagetutor/**'
+      - '!apps/mylanguagetutor/mobile/**'
       - 'packages/**'
+      - '!packages/shared-mobile/**'
 
 concurrency:
   group: deploy-mylanguagetutor

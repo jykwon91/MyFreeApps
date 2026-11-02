@@ -17,7 +17,9 @@ on:
     branches: [main]
     paths:
       - 'apps/{{ app_slug }}/**'
+      - '!apps/{{ app_slug }}/mobile/**'
       - 'packages/**'
+      - '!packages/shared-mobile/**'
 {%- endif %}
 
 concurrency:

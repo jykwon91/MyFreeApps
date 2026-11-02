@@ -48,6 +48,13 @@ updates:
       npm-minor-patch:
         update-types: ["minor", "patch"]
     ignore:
+      # react/react-dom are pinned to the exact version the current Expo SDK
+      # requires, via root package.json overrides. Web and mobile share one
+      # copy, so these move together with an Expo upgrade (expo install --fix).
+      # `ignore` also stops Dependabot security PRs for them: a React CVE shows
+      # up as an alert and needs a manual bump of the override and the ranges.
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
       # @types/node must track the Node runtime, not leap ahead. Major bumps
       # (e.g. 25 -> 26) desync the lock / break tsc against the version we
       # actually run. Allow minor+patch; hold majors until the runtime moves.
@@ -64,6 +71,13 @@ updates:
       npm-minor-patch:
         update-types: ["minor", "patch"]
     ignore:
+      # react/react-dom are pinned to the exact version the current Expo SDK
+      # requires, via root package.json overrides. Web and mobile share one
+      # copy, so these move together with an Expo upgrade (expo install --fix).
+      # `ignore` also stops Dependabot security PRs for them: a React CVE shows
+      # up as an alert and needs a manual bump of the override and the ranges.
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
       # @types/node must track the Node runtime, not leap ahead. Major bumps
       # (e.g. 25 -> 26) desync the lock / break tsc against the version we
       # actually run. Allow minor+patch; hold majors until the runtime moves.
@@ -114,6 +128,13 @@ updates:
       npm-minor-patch:
         update-types: ["minor", "patch"]
     ignore:
+      # react/react-dom are pinned to the exact version the current Expo SDK
+      # requires, via root package.json overrides. Web and mobile share one
+      # copy, so these move together with an Expo upgrade (expo install --fix).
+      # `ignore` also stops Dependabot security PRs for them: a React CVE shows
+      # up as an alert and needs a manual bump of the override and the ranges.
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
       # @types/node must track the Node runtime, not leap ahead. Major bumps
       # (e.g. 25 -> 26) desync the lock / break tsc against the version we
       # actually run. Allow minor+patch; hold majors until the runtime moves.
@@ -163,6 +184,13 @@ updates:
       npm-minor-patch:
         update-types: ["minor", "patch"]
     ignore:
+      # react/react-dom are pinned to the exact version the current Expo SDK
+      # requires, via root package.json overrides. Web and mobile share one
+      # copy, so these move together with an Expo upgrade (expo install --fix).
+      # `ignore` also stops Dependabot security PRs for them: a React CVE shows
+      # up as an alert and needs a manual bump of the override and the ranges.
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
       # @types/node must track the Node runtime, not leap ahead. Major bumps
       # (e.g. 25 -> 26) desync the lock / break tsc against the version we
       # actually run. Allow minor+patch; hold majors until the runtime moves.
@@ -212,6 +240,13 @@ updates:
       npm-minor-patch:
         update-types: ["minor", "patch"]
     ignore:
+      # react/react-dom are pinned to the exact version the current Expo SDK
+      # requires, via root package.json overrides. Web and mobile share one
+      # copy, so these move together with an Expo upgrade (expo install --fix).
+      # `ignore` also stops Dependabot security PRs for them: a React CVE shows
+      # up as an alert and needs a manual bump of the override and the ranges.
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
       # @types/node must track the Node runtime, not leap ahead. Major bumps
       # (e.g. 25 -> 26) desync the lock / break tsc against the version we
       # actually run. Allow minor+patch; hold majors until the runtime moves.
@@ -257,6 +292,13 @@ updates:
       npm-minor-patch:
         update-types: ["minor", "patch"]
     ignore:
+      # react/react-dom are pinned to the exact version the current Expo SDK
+      # requires, via root package.json overrides. Web and mobile share one
+      # copy, so these move together with an Expo upgrade (expo install --fix).
+      # `ignore` also stops Dependabot security PRs for them: a React CVE shows
+      # up as an alert and needs a manual bump of the override and the ranges.
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
       # @types/node must track the Node runtime, not leap ahead. Major bumps
       # (e.g. 25 -> 26) desync the lock / break tsc against the version we
       # actually run. Allow minor+patch; hold majors until the runtime moves.
@@ -300,6 +342,13 @@ updates:
       npm-minor-patch:
         update-types: ["minor", "patch"]
     ignore:
+      # react/react-dom are pinned to the exact version the current Expo SDK
+      # requires, via root package.json overrides. Web and mobile share one
+      # copy, so these move together with an Expo upgrade (expo install --fix).
+      # `ignore` also stops Dependabot security PRs for them: a React CVE shows
+      # up as an alert and needs a manual bump of the override and the ranges.
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
       # @types/node must track the Node runtime, not leap ahead. Major bumps
       # (e.g. 25 -> 26) desync the lock / break tsc against the version we
       # actually run. Allow minor+patch; hold majors until the runtime moves.
