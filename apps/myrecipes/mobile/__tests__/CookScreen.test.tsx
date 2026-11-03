@@ -2,12 +2,13 @@ import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
-import { AccessibilityInfo, StyleSheet } from "react-native";
+import { AccessibilityInfo, AppState, Platform, StyleSheet } from "react-native";
 import { Provider } from "react-redux";
 import { recipesApi } from "@myrecipes/api-client/store/recipesApi";
 import { COOK_SESSION_MAX_AGE_MS } from "../src/constants/cook";
 import { pageChanged } from "../src/features/cook/cookSessionsSlice";
 import CookScreen from "../src/features/cook/CookScreen";
+import { timersRestored } from "../src/features/cook/cookTimersSlice";
 import { makeStore } from "../src/lib/store";
 
 const mockBack = jest.fn();
@@ -27,6 +28,35 @@ jest.mock("expo-router", () => ({
   },
   useLocalSearchParams: () => ({ id: "r1" }),
   useRouter: () => ({ back: mockBack, canGoBack: () => mockCanGoBack, replace: mockReplace }),
+}));
+
+const mockNotifications = {
+  getPermissionsAsync: jest.fn(),
+  requestPermissionsAsync: jest.fn(),
+  scheduleNotificationAsync: jest.fn(),
+  cancelScheduledNotificationAsync: jest.fn(),
+  getAllScheduledNotificationsAsync: jest.fn(),
+  getPresentedNotificationsAsync: jest.fn(),
+  setNotificationChannelAsync: jest.fn(),
+  getExactAlarmPermissionsAsync: jest.fn(),
+  requestExactAlarmPermissionsAsync: jest.fn(),
+  dismissNotificationAsync: jest.fn(),
+};
+
+jest.mock("expo-notifications", () => ({
+  __esModule: true,
+  AndroidImportance: { HIGH: 4 },
+  SchedulableTriggerInputTypes: { DATE: "date" },
+  getPermissionsAsync: (...args: unknown[]) => mockNotifications.getPermissionsAsync(...args),
+  requestPermissionsAsync: (...args: unknown[]) => mockNotifications.requestPermissionsAsync(...args),
+  scheduleNotificationAsync: (...args: unknown[]) => mockNotifications.scheduleNotificationAsync(...args),
+  cancelScheduledNotificationAsync: (...args: unknown[]) => mockNotifications.cancelScheduledNotificationAsync(...args),
+  getAllScheduledNotificationsAsync: (...args: unknown[]) => mockNotifications.getAllScheduledNotificationsAsync(...args),
+  getPresentedNotificationsAsync: (...args: unknown[]) => mockNotifications.getPresentedNotificationsAsync(...args),
+  setNotificationChannelAsync: (...args: unknown[]) => mockNotifications.setNotificationChannelAsync(...args),
+  getExactAlarmPermissionsAsync: (...args: unknown[]) => mockNotifications.getExactAlarmPermissionsAsync(...args),
+  requestExactAlarmPermissionsAsync: (...args: unknown[]) => mockNotifications.requestExactAlarmPermissionsAsync(...args),
+  dismissNotificationAsync: (...args: unknown[]) => mockNotifications.dismissNotificationAsync(...args),
 }));
 
 jest.mock("expo-keep-awake", () => {
@@ -143,6 +173,16 @@ beforeEach(() => {
   gate = Promise.resolve();
   requestCount = 0;
   reply = { status: 200, data: SOUP };
+  mockNotifications.getPermissionsAsync.mockResolvedValue({ granted: true, canAskAgain: true });
+  mockNotifications.requestPermissionsAsync.mockResolvedValue({ granted: true, canAskAgain: true });
+  mockNotifications.scheduleNotificationAsync.mockResolvedValue("id");
+  mockNotifications.cancelScheduledNotificationAsync.mockResolvedValue(undefined);
+  mockNotifications.getAllScheduledNotificationsAsync.mockResolvedValue([]);
+  mockNotifications.getPresentedNotificationsAsync.mockResolvedValue([]);
+  mockNotifications.setNotificationChannelAsync.mockResolvedValue(null);
+  mockNotifications.getExactAlarmPermissionsAsync.mockResolvedValue({ granted: true });
+  mockNotifications.requestExactAlarmPermissionsAsync.mockResolvedValue({ granted: true });
+  mockNotifications.dismissNotificationAsync.mockResolvedValue(undefined);
   jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
   jest.spyOn(AccessibilityInfo, "isScreenReaderEnabled").mockResolvedValue(false);
 });
@@ -456,5 +496,525 @@ describe("CookScreen", () => {
 
     await fireEvent(screen.getByTestId("cook-ingredients-sheet"), "requestClose");
     expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+  });
+
+  describe("timers", () => {
+    const TIMED = {
+      ...SOUP,
+      latest_version: {
+        ...VERSION,
+        steps: [
+          { id: "s1", position: 0, instruction: "Simmer 10 minutes, then rest 5 minutes." },
+          { id: "s2", position: 1, instruction: "Serve." },
+        ],
+      },
+    };
+
+    const RUNNING_10 = "10 min timer, about 10 minutes left. Cancel";
+
+    async function openTimed() {
+      jest.spyOn(Date, "now").mockReturnValue(1_000_000);
+      reply = { status: 200, data: TIMED };
+      await open();
+      await press("Start cooking");
+    }
+
+    async function startTen() {
+      await press("Start 10 min timer");
+      await waitFor(() => expect(store.getState().cookTimers.items[0]?.alert).not.toBe("pending"));
+    }
+
+    function setPlatform(os: "android" | "ios") {
+      Object.defineProperty(Platform, "OS", { configurable: true, get: () => os });
+    }
+
+    afterEach(() => setPlatform("ios"));
+
+    it("offers a timer for each wait in a step, and none where there isn't one", async () => {
+      await openTimed();
+      expect(screen.getByRole("button", { name: "Start 10 min timer" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Start 5 min timer" })).toBeTruthy();
+      expect(screen.getAllByRole("button", { name: /^Start \d/, includeHiddenElements: true })).toHaveLength(2);
+    });
+
+    it("schedules an alert for the end time and shows it from every page", async () => {
+      await openTimed();
+      await startTen();
+
+      const request = mockNotifications.scheduleNotificationAsync.mock.calls[0]![0];
+      expect(request).toMatchObject({
+        identifier: "s1-600",
+        content: {
+          title: "10 min timer is done",
+          body: "Tomato soup, step 1",
+          data: { timer: { id: "s1-600", recipeId: "r1", endsAt: 1_600_000 } },
+        },
+        trigger: { type: "date", date: new Date(1_600_000), channelId: "cook-timers" },
+      });
+      expect(screen.getByText("10:00 left", { includeHiddenElements: true })).toBeTruthy();
+      expect(screen.getByRole("button", { name: RUNNING_10 })).toBeTruthy();
+      expect(mockNotifications.setNotificationChannelAsync).not.toHaveBeenCalled();
+
+      await press("Next");
+      expect(screen.getByText("Step 1 timer: 10:00")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Step 1, 10 min timer, about 10 minutes left" })).toBeTruthy();
+    });
+
+    it("what it schedules can be restored", async () => {
+      await openTimed();
+      await startTen();
+      const { content } = mockNotifications.scheduleNotificationAsync.mock.calls[0]![0];
+      mockNotifications.getAllScheduledNotificationsAsync.mockResolvedValue([{ content }]);
+
+      await act(async () => {
+        store.dispatch(baseApi.util.resetApiState());
+      });
+      store = makeStore();
+      await mount();
+
+      expect(await screen.findByText("Step 1 timer: 10:00")).toBeTruthy();
+    });
+
+    it("cancels only on a second tap, removing the timer and its alert", async () => {
+      await openTimed();
+      await startTen();
+
+      await press(RUNNING_10);
+      expect(store.getState().cookTimers.items).toHaveLength(1);
+      expect(mockNotifications.cancelScheduledNotificationAsync).not.toHaveBeenCalled();
+
+      await press("Tap again to cancel the 10 min timer");
+      expect(mockNotifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith("s1-600");
+      await waitFor(() => expect(mockNotifications.dismissNotificationAsync).toHaveBeenCalledWith("s1-600"));
+      expect(screen.getByRole("button", { name: "Start 10 min timer" })).toBeTruthy();
+      expect(screen.queryByRole("button", { name: /^Step 1, / })).toBeNull();
+    });
+
+    it("cancels the alert if the timer was cancelled during the permission prompt", async () => {
+      let answer: (value: object) => void = () => {};
+      mockNotifications.getPermissionsAsync.mockResolvedValue({ granted: false, canAskAgain: true });
+      mockNotifications.requestPermissionsAsync.mockReturnValue(
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+      );
+      await openTimed();
+      await press("Start 10 min timer");
+      await press(RUNNING_10);
+      await press("Tap again to cancel the 10 min timer");
+      mockNotifications.cancelScheduledNotificationAsync.mockClear();
+
+      await act(async () => answer({ granted: true }));
+
+      await waitFor(() => expect(mockNotifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith("s1-600"));
+      expect(store.getState().cookTimers.items).toEqual([]);
+    });
+
+    it("still runs in the app when notifications are off, and says so on every page", async () => {
+      mockNotifications.getPermissionsAsync.mockResolvedValue({ granted: false, canAskAgain: false });
+      await openTimed();
+      await startTen();
+
+      expect(screen.getByText(/Notifications are off/)).toBeTruthy();
+      expect(mockNotifications.requestPermissionsAsync).not.toHaveBeenCalled();
+      expect(mockNotifications.scheduleNotificationAsync).not.toHaveBeenCalled();
+      expect(screen.getByRole("button", { name: RUNNING_10 })).toBeTruthy();
+      await press("Next");
+      expect(screen.getByText(/Notifications are off/)).toBeTruthy();
+    });
+
+    it("says so when an alert can't be set, without blaming permissions", async () => {
+      mockNotifications.scheduleNotificationAsync.mockRejectedValue(new Error("no"));
+      await openTimed();
+      await startTen();
+
+      expect(screen.getByText(/Couldn't set an alert/)).toBeTruthy();
+      expect(screen.queryByText(/Notifications are off/)).toBeNull();
+    });
+
+    it("asks once, only when a timer starts, even if the answer was no", async () => {
+      mockNotifications.getPermissionsAsync.mockResolvedValue({ granted: false, canAskAgain: true });
+      mockNotifications.requestPermissionsAsync.mockResolvedValue({ granted: false });
+      await openTimed();
+      expect(mockNotifications.requestPermissionsAsync).not.toHaveBeenCalled();
+
+      await startTen();
+      await press("Start 5 min timer");
+      await waitFor(() => expect(store.getState().cookTimers.items).toHaveLength(2));
+      await act(async () => {});
+
+      expect(mockNotifications.requestPermissionsAsync).toHaveBeenCalledTimes(1);
+    });
+
+    it("doesn't schedule a timer that ran out during the prompt", async () => {
+      let answer: (value: object) => void = () => {};
+      mockNotifications.getPermissionsAsync.mockResolvedValue({ granted: false, canAskAgain: true });
+      mockNotifications.requestPermissionsAsync.mockReturnValue(
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+      );
+      await openTimed();
+      await press("Start 10 min timer");
+      jest.spyOn(Date, "now").mockReturnValue(2_000_000);
+
+      await act(async () => answer({ granted: true }));
+
+      expect(mockNotifications.scheduleNotificationAsync).not.toHaveBeenCalled();
+      expect(screen.queryByText(/Couldn't set an alert/)).toBeNull();
+    });
+
+    it("on Android, sets a channel and warns when alerts may be late, until exact ones are allowed", async () => {
+      setPlatform("android");
+      mockNotifications.getExactAlarmPermissionsAsync.mockResolvedValue({ granted: false });
+      await openTimed();
+      await startTen();
+
+      expect(mockNotifications.setNotificationChannelAsync).toHaveBeenCalledWith(
+        "cook-timers",
+        expect.objectContaining({ importance: 4 }),
+      );
+      expect(screen.getByText(/may alert you late/)).toBeTruthy();
+
+      mockNotifications.getExactAlarmPermissionsAsync.mockResolvedValue({ granted: true });
+      await press("Allow exact alerts");
+
+      await waitFor(() => expect(mockNotifications.scheduleNotificationAsync).toHaveBeenCalledTimes(2));
+      await waitFor(() => expect(screen.queryByText(/may alert you late/)).toBeNull());
+    });
+
+    it("leaves the warning up if exact alerts aren't allowed", async () => {
+      setPlatform("android");
+      mockNotifications.getExactAlarmPermissionsAsync.mockResolvedValue({ granted: false });
+      mockNotifications.requestExactAlarmPermissionsAsync.mockResolvedValue({ granted: false });
+      await openTimed();
+      await startTen();
+      await press("Allow exact alerts");
+
+      expect(screen.getByText(/may alert you late/)).toBeTruthy();
+      expect(mockNotifications.scheduleNotificationAsync).toHaveBeenCalledTimes(1);
+    });
+
+    it("announces a finished timer once, and not again when another is dismissed", async () => {
+      const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+      await openTimed();
+      await startTen();
+      await press("Start 5 min timer");
+
+      jest.spyOn(Date, "now").mockReturnValue(1_000_000 + 700_000);
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 1100));
+      });
+      await waitFor(() => expect(announce).toHaveBeenCalledWith("Step 1, 10 min timer is done"));
+      announce.mockClear();
+
+      await press("Dismiss 5 min timer, done");
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 1100));
+      });
+
+      expect(announce).not.toHaveBeenCalledWith("Step 1, 10 min timer is done");
+      expect(store.getState().cookTimers.items).toHaveLength(1);
+    });
+
+    it("doesn't repeat the news about a timer already done when reopening", async () => {
+      const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+      const timer = { id: "s1-600", recipeId: "r1", recipeTitle: "Tomato soup", stepNumber: 1, seconds: 600, endsAt: 500_000 };
+      mockNotifications.getAllScheduledNotificationsAsync.mockResolvedValue([{ content: { data: { timer } } }]);
+      jest.spyOn(Date, "now").mockReturnValue(1_000_000);
+      reply = { status: 200, data: TIMED };
+      store = makeStore();
+      store.dispatch(timersRestored([timer as never]));
+      await mount();
+      await screen.findByText("Step 1 timer: done");
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 1100));
+      });
+
+      expect(announce).not.toHaveBeenCalledWith("Step 1, 10 min timer is done");
+    });
+
+    it("shows a running timer in the bar ahead of a finished one", async () => {
+      await openTimed();
+      await press("Start 5 min timer");
+      jest.spyOn(Date, "now").mockReturnValue(1_000_000 + 400_000);
+      await startTen();
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 1100));
+      });
+
+      expect(screen.getByText("Step 1 timer: 10:00, 2 timers")).toBeTruthy();
+    });
+
+    it("lists timers in a sheet, soonest first, closing it from the back button", async () => {
+      await openTimed();
+      await startTen();
+      await press("Start 5 min timer");
+      await act(async () => {});
+
+      await press("Step 1, 5 min timer, about 5 minutes left, 2 timers");
+      const rows = screen.getAllByText(/^Step 1, /).map((row) => row.props.children.join(""));
+      expect(rows).toEqual(["Step 1, 5 min", "Step 1, 10 min"]);
+      await fireEvent(screen.getByTestId("cook-timers-sheet"), "requestClose");
+      expect(screen.queryByTestId("cook-timers-sheet")).toBeNull();
+    });
+
+    it("closes the sheet with the last timer, and doesn't reopen it for the next", async () => {
+      await openTimed();
+      await startTen();
+      await press("Step 1, 10 min timer, about 10 minutes left");
+      const inSheet = screen.getAllByRole("button", { name: RUNNING_10 }).at(-1)!;
+      await fireEvent.press(inSheet);
+      await fireEvent.press(screen.getByRole("button", { name: "Tap again to cancel the 10 min timer" }));
+      expect(screen.queryByTestId("cook-timers-sheet")).toBeNull();
+
+      await startTen();
+      expect(screen.queryByTestId("cook-timers-sheet")).toBeNull();
+    });
+
+    it("restores timers still scheduled, ignoring anything else", async () => {
+      const timer = { id: "s1-600", recipeId: "r1", recipeTitle: "Tomato soup", stepNumber: 1, seconds: 600, endsAt: 1_120_000 };
+      mockNotifications.getAllScheduledNotificationsAsync.mockResolvedValue([
+        { content: { data: { timer } } },
+        { content: { data: {} } },
+        { content: { data: { timer: { id: "broken" } } } },
+      ]);
+      jest.spyOn(Date, "now").mockReturnValue(1_000_000);
+      reply = { status: 200, data: TIMED };
+      store = makeStore();
+      await mount();
+
+      expect(await screen.findByText("Step 1 timer: 2:00")).toBeTruthy();
+      expect(store.getState().cookTimers.items).toEqual([{ ...timer, alert: "scheduled" }]);
+    });
+
+    it("doesn't show another recipe's timer", async () => {
+      const timer = { id: "x", recipeId: "other", recipeTitle: "Bread", stepNumber: 1, seconds: 60, endsAt: Date.now() + 60_000 };
+      mockNotifications.getAllScheduledNotificationsAsync.mockResolvedValue([{ content: { data: { timer } } }]);
+      await open();
+      await waitFor(() => expect(store.getState().cookTimers.items).toHaveLength(1));
+      expect(screen.queryByText(/timer:/)).toBeNull();
+    });
+
+    it("shows a timer that finished while the app was closed, from its alert", async () => {
+      const timer = { id: "s1-600", recipeId: "r1", recipeTitle: "Tomato soup", stepNumber: 1, seconds: 600, endsAt: 500_000 };
+      mockNotifications.getPresentedNotificationsAsync.mockResolvedValue([
+        { request: { content: { data: { timer } } } },
+        { request: { content: { data: {} } } },
+      ]);
+      jest.spyOn(Date, "now").mockReturnValue(1_000_000);
+      reply = { status: 200, data: TIMED };
+      store = makeStore();
+      await mount();
+
+      expect(await screen.findByText("Step 1 timer: done")).toBeTruthy();
+      expect(mockNotifications.scheduleNotificationAsync).not.toHaveBeenCalled();
+    });
+
+    it("doesn't list a timer twice when it's both scheduled and showing", async () => {
+      const timer = { id: "s1-600", recipeId: "r1", recipeTitle: "Tomato soup", stepNumber: 1, seconds: 600, endsAt: 1_120_000 };
+      mockNotifications.getAllScheduledNotificationsAsync.mockResolvedValue([{ content: { data: { timer } } }]);
+      mockNotifications.getPresentedNotificationsAsync.mockResolvedValue([{ request: { content: { data: { timer } } } }]);
+      jest.spyOn(Date, "now").mockReturnValue(1_000_000);
+      reply = { status: 200, data: TIMED };
+      store = makeStore();
+      await mount();
+
+      await screen.findByText("Step 1 timer: 2:00");
+      expect(store.getState().cookTimers.items).toHaveLength(1);
+    });
+
+    it("keeps the late warning on a timer restored after the app was closed", async () => {
+      setPlatform("android");
+      mockNotifications.getExactAlarmPermissionsAsync.mockResolvedValue({ granted: false });
+      const timer = { id: "s1-600", recipeId: "r1", recipeTitle: "Tomato soup", stepNumber: 1, seconds: 600, endsAt: 1_120_000 };
+      mockNotifications.getAllScheduledNotificationsAsync.mockResolvedValue([{ content: { data: { timer } } }]);
+      jest.spyOn(Date, "now").mockReturnValue(1_000_000);
+      reply = { status: 200, data: TIMED };
+      store = makeStore();
+      await mount();
+
+      expect(await screen.findByText(/may alert you late/)).toBeTruthy();
+    });
+
+    it("says notifications are off on a restored timer once they've been turned off", async () => {
+      mockNotifications.getPermissionsAsync.mockResolvedValue({ granted: false, canAskAgain: false });
+      const timer = { id: "s1-600", recipeId: "r1", recipeTitle: "Tomato soup", stepNumber: 1, seconds: 600, endsAt: 1_120_000 };
+      mockNotifications.getAllScheduledNotificationsAsync.mockResolvedValue([{ content: { data: { timer } } }]);
+      jest.spyOn(Date, "now").mockReturnValue(1_000_000);
+      reply = { status: 200, data: TIMED };
+      store = makeStore();
+      await mount();
+
+      expect(await screen.findByText(/Notifications are off/)).toBeTruthy();
+    });
+
+    function captureAppState() {
+      const listeners: Array<(state: string) => void> = [];
+      jest.spyOn(AppState, "addEventListener").mockImplementation(((_: string, listener: (state: string) => void) => {
+        listeners.push(listener);
+        return { remove: jest.fn() };
+      }) as never);
+      return () => act(async () => listeners.forEach((listener) => listener("active")));
+    }
+
+    it("sets the alert after someone allows notifications in Settings and comes back", async () => {
+      const comeBack = captureAppState();
+      mockNotifications.getPermissionsAsync.mockResolvedValue({ granted: false, canAskAgain: false });
+      await openTimed();
+      await startTen();
+      expect(screen.getByText(/Notifications are off/)).toBeTruthy();
+
+      mockNotifications.getPermissionsAsync.mockResolvedValue({ granted: true });
+      await comeBack();
+
+      await waitFor(() => expect(screen.queryByText(/Notifications are off/)).toBeNull());
+      expect(mockNotifications.scheduleNotificationAsync.mock.calls[0]![0]).toMatchObject({ identifier: "s1-600" });
+    });
+
+    it("updates a running timer's time on coming back to the app", async () => {
+      const comeBack = captureAppState();
+      await openTimed();
+      await startTen();
+
+      jest.spyOn(Date, "now").mockReturnValue(1_000_000 + 300_000);
+      await comeBack();
+
+      expect(await screen.findByText("5:00 left", { includeHiddenElements: true })).toBeTruthy();
+    });
+
+    it("sets the alert for a timer started while the permission prompt was coming up", async () => {
+      let answer: (value: object) => void = () => {};
+      mockNotifications.getPermissionsAsync.mockResolvedValue({ granted: false, canAskAgain: true });
+      mockNotifications.requestPermissionsAsync.mockReturnValue(
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+      );
+      await openTimed();
+      await press("Start 10 min timer");
+      await press("Start 5 min timer");
+      await waitFor(() => expect(store.getState().cookTimers.items.map((timer) => timer.alert)).toContain("off"));
+
+      mockNotifications.getPermissionsAsync.mockResolvedValue({ granted: true });
+      await act(async () => answer({ granted: true }));
+
+      await waitFor(() =>
+        expect(store.getState().cookTimers.items.map((timer) => timer.alert)).toEqual(["scheduled", "scheduled"]),
+      );
+    });
+
+    it("doesn't cancel the alert of a timer restarted before its first alert was set", async () => {
+      let answer: (value: object) => void = () => {};
+      mockNotifications.getPermissionsAsync.mockResolvedValue({ granted: false, canAskAgain: true });
+      mockNotifications.requestPermissionsAsync.mockReturnValue(
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+      );
+      await openTimed();
+      await press("Start 10 min timer");
+      await press(RUNNING_10);
+      await press("Tap again to cancel the 10 min timer");
+      jest.spyOn(Date, "now").mockReturnValue(1_000_500);
+      await press("Start 10 min timer");
+      mockNotifications.cancelScheduledNotificationAsync.mockClear();
+      mockNotifications.getPermissionsAsync.mockResolvedValue({ granted: true });
+
+      await act(async () => answer({ granted: true }));
+
+      await waitFor(() => expect(store.getState().cookTimers.items[0]?.alert).toBe("scheduled"));
+      expect(store.getState().cookTimers.items[0]?.endsAt).toBe(1_600_500);
+      expect(mockNotifications.cancelScheduledNotificationAsync).not.toHaveBeenCalled();
+    });
+
+    it("still removes a timer when cancelling its alert fails", async () => {
+      mockNotifications.cancelScheduledNotificationAsync.mockRejectedValue(new Error("no"));
+      await openTimed();
+      await startTen();
+      await press(RUNNING_10);
+      await press("Tap again to cancel the 10 min timer");
+
+      expect(store.getState().cookTimers.items).toEqual([]);
+      expect(mockNotifications.dismissNotificationAsync).toHaveBeenCalledWith("s1-600");
+    });
+
+    it("warns rather than blames the alert when the exact alarm check fails", async () => {
+      setPlatform("android");
+      mockNotifications.getExactAlarmPermissionsAsync.mockRejectedValue(new Error("no"));
+      await openTimed();
+      await startTen();
+
+      expect(screen.getByText(/may alert you late/)).toBeTruthy();
+      expect(screen.queryByText(/Couldn't set an alert/)).toBeNull();
+    });
+
+    it("drops the cancel prompt after a while, and allows longer with a screen reader", async () => {
+      const after = jest.spyOn(globalThis, "setTimeout");
+      await openTimed();
+      await startTen();
+      await press(RUNNING_10);
+      const reset = after.mock.calls.find((call) => call[1] === 4000)!;
+      await act(async () => (reset[0] as () => void)());
+      expect(screen.getByRole("button", { name: RUNNING_10 })).toBeTruthy();
+
+      await act(async () => {
+        await store.dispatch(timersRestored([]));
+      });
+      jest.spyOn(AccessibilityInfo, "isScreenReaderEnabled").mockResolvedValue(true);
+      await act(async () => {
+        await screen.unmount();
+      });
+      after.mockClear();
+      await mount();
+      await screen.findByRole("button", { name: RUNNING_10 });
+      await press(RUNNING_10);
+      expect(after.mock.calls.some((call) => call[1] === 10000)).toBe(true);
+    });
+
+    it("tells a screen reader what each press did", async () => {
+      const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+      await openTimed();
+      await startTen();
+      expect(announce).toHaveBeenCalledWith("10 min timer started");
+
+      await press(RUNNING_10);
+      expect(announce).toHaveBeenCalledWith("Tap again to cancel");
+
+      await press("Tap again to cancel the 10 min timer");
+      expect(announce).toHaveBeenCalledWith("Timer removed");
+    });
+
+    it("tells a screen reader when an alert can't be relied on", async () => {
+      const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+      mockNotifications.getPermissionsAsync.mockResolvedValue({ granted: false, canAskAgain: false });
+      await openTimed();
+      await startTen();
+
+      expect(announce).toHaveBeenCalledWith(expect.stringMatching(/^Notifications are off/));
+    });
+
+    it("drops the alert note once the timer it's about has finished", async () => {
+      mockNotifications.getPermissionsAsync.mockResolvedValue({ granted: false, canAskAgain: false });
+      await openTimed();
+      await startTen();
+
+      jest.spyOn(Date, "now").mockReturnValue(1_000_000 + 700_000);
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 1100));
+      });
+
+      expect(screen.getByText("Step 1 timer: done")).toBeTruthy();
+      expect(screen.queryByText(/Notifications are off/)).toBeNull();
+    });
+
+    it("leaves timers and alerts alone on leaving the cook screen", async () => {
+      await openTimed();
+      await startTen();
+      await screen.unmount();
+
+      expect(store.getState().cookTimers.items).toHaveLength(1);
+      expect(mockNotifications.cancelScheduledNotificationAsync).not.toHaveBeenCalled();
+    });
   });
 });

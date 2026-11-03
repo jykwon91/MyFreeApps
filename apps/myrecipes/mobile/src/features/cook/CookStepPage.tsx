@@ -1,4 +1,5 @@
 import { useTheme } from "@platform/mobile";
+import type { ReactNode } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { COOK_STEP_LINE_HEIGHT } from "../../constants/cook";
 
@@ -6,11 +7,13 @@ function ignoreLongPress(): void {}
 
 export default function CookStepPage({
   areTapZonesEnabled,
+  children,
   instruction,
   onBack,
   onNext,
 }: {
   areTapZonesEnabled: boolean;
+  children?: ReactNode;
   instruction: string;
   onBack: () => void;
   onNext: () => void;
@@ -54,6 +57,11 @@ export default function CookStepPage({
             {instruction}
           </Text>
         </View>
+        {children ? (
+          <View pointerEvents="box-none" style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
+            {children}
+          </View>
+        ) : null}
       </View>
     </ScrollView>
   );

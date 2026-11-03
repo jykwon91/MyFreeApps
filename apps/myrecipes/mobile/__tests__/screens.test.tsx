@@ -42,8 +42,8 @@ describe("buildCookPages", () => {
     });
     expect(pages).toEqual([
       { kind: "ingredients" },
-      { kind: "step", id: "a", instruction: "First", number: 1, total: 2 },
-      { kind: "step", id: "b", instruction: "Second", number: 2, total: 2 },
+      { kind: "step", id: "a", instruction: "First", number: 1, timers: [], total: 2 },
+      { kind: "step", id: "b", instruction: "Second", number: 2, timers: [], total: 2 },
       { kind: "done" },
     ]);
   });
