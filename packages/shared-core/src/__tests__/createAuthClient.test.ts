@@ -150,12 +150,12 @@ describe("registerWithDisplayName", () => {
     );
   });
 
-  it.each([[undefined], [""], ["   "]])("sends null for a display name of %j", async (name) => {
+  it.each([[undefined], [""], ["   "]])("sends a blank string, which the backend requires, for a display name of %j", async (name) => {
     respondWith({ id: "1" });
     await client.registerWithDisplayName("u@e.com", "pw", name);
     expect(post).toHaveBeenCalledWith(
       "/auth/register",
-      { email: "u@e.com", password: "pw", display_name: null },
+      { email: "u@e.com", password: "pw", display_name: "" },
       { headers: {} },
     );
     expect(setToken).not.toHaveBeenCalled();
