@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from platform_shared.infra import render
+from platform_shared.infra import new_app, new_mobile, render
 from platform_shared.infra.new_app import ScaffoldError
 from platform_shared.infra.new_mobile import scaffold_mobile
 from platform_shared.infra.screen_map import check_app
@@ -163,6 +163,167 @@ class TestRender:
         app_yaml.write_text(app_yaml.read_text("utf-8") + 'mobile: "true"\n', "utf-8")
         with pytest.raises(ValueError, match="mobile must be true/false"):
             render.render_app(repo, _SLUG, write=False)
+
+
+class TestDisplayNameEscaping:
+    _NAME = """Bob's "Apps" \\ <x> {y} é"""
+
+    @pytest.fixture
+    def generated(self, repo: Path) -> Path:
+        app_yaml = repo / "apps" / _SLUG / "app.yaml"
+        config = yaml.safe_load(app_yaml.read_text("utf-8"))
+        config["app_display_name"] = self._NAME
+        app_yaml.write_text(yaml.safe_dump(config, allow_unicode=True), "utf-8")
+        _generate(repo)
+        return _mobile_dir(repo)
+
+    def test_app_json_keeps_the_name(self, generated: Path) -> None:
+        assert json.loads((generated / "app.json").read_text("utf-8"))["expo"]["name"] == self._NAME
+
+    @pytest.mark.parametrize("file", ["app/index.tsx", "__tests__/index.test.tsx"])
+    def test_source_holds_it_as_one_js_string(self, generated: Path, file: str) -> None:
+        # A JSON string is a valid JS string, so this reads it back the way JS would.
+        source = (generated / file).read_text("utf-8")
+        strings = [json.loads(m) for m in re.findall(r'"(?:[^"\\]|\\.)*"', source)]
+        assert self._NAME in strings
+
+    def test_template_only_uses_the_name_where_escaping_applies(self) -> None:
+        index = (_TEMPLATES / "scaffold-mobile" / "app" / "index.tsx").read_text("utf-8")
+        assert 'heading={"__APP_DISPLAY_NAME__"}' in index
+
+
+class TestFailureLeavesNothingBehind:
+    def _tree(self, repo: Path) -> dict[str, bytes]:
+        return {
+            p.relative_to(repo).as_posix(): p.read_bytes()
+            for root in (repo / "apps", repo / ".github")
+            if root.exists()
+            for p in root.rglob("*")
+            if p.is_file()
+        }
+
+    def _assert_unchanged(self, repo: Path, before: dict[str, bytes]) -> None:
+        assert self._tree(repo) == before
+        leftovers = [p.name for p in (repo / "apps" / _SLUG).iterdir() if "mobile" in p.name]
+        assert leftovers == []
+
+    def test_incomplete_app_yaml_at_render(self, repo: Path) -> None:
+        app_yaml = repo / "apps" / _SLUG / "app.yaml"
+        app_yaml.write_text(f"# Keep.\napp_slug: {_SLUG}\napp_display_name: X\n", "utf-8")
+        before = self._tree(repo)
+
+        with pytest.raises(ScaffoldError, match="nothing changed.*is undefined"):
+            _generate(repo, skip_render=False)
+
+        self._assert_unchanged(repo, before)
+
+    def test_writing_a_workflow_fails_partway(
+        self, repo: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Every workflow is written, then this fails: the rollback has real work to do.
+        _generate(repo, skip_render=False)
+        shutil.rmtree(_mobile_dir(repo))
+        app_yaml = repo / "apps" / _SLUG / "app.yaml"
+        app_yaml.write_text(app_yaml.read_text("utf-8").replace("mobile: true\n", ""), "utf-8")
+        (repo / ".github" / "workflows" / f"ci-mobile-{_SLUG}.yml").unlink()
+        before = self._tree(repo)
+        real_render = render.render_app
+
+        def fail_after_writing(root: Path, slug: str, *, write: bool) -> dict[str, tuple[str, str]]:
+            results = real_render(root, slug, write=write)
+            if write:
+                raise OSError("disk full")
+            return results
+
+        monkeypatch.setattr(render, "render_app", fail_after_writing)
+        with pytest.raises(ScaffoldError, match="disk full"):
+            _generate(repo, skip_render=False)
+
+        self._assert_unchanged(repo, before)
+
+    def test_copying_the_template_fails_partway(
+        self, repo: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        before = self._tree(repo)
+
+        def fail(*_args: object, **_kwargs: object) -> int:
+            raise OSError("disk full")
+
+        monkeypatch.setattr(new_app, "_walk_and_copy", fail)
+        with pytest.raises(ScaffoldError, match="disk full"):
+            _generate(repo)
+
+        self._assert_unchanged(repo, before)
+
+    def test_unreadable_web_routes(self, repo: Path) -> None:
+        routes = repo / "apps" / _SLUG / "frontend" / "src" / "routes.tsx"
+        routes.write_text("<Route path={route.path} />", "utf-8")
+        before = self._tree(repo)
+
+        with pytest.raises(ScaffoldError, match="route.path"):
+            _generate(repo)
+
+        self._assert_unchanged(repo, before)
+
+    def test_missing_display_name_says_so(self, repo: Path) -> None:
+        app_yaml = repo / "apps" / _SLUG / "app.yaml"
+        app_yaml.write_text(f"app_slug: {_SLUG}\n", "utf-8")
+        before = self._tree(repo)
+
+        with pytest.raises(ScaffoldError, match="must set `app_display_name`"):
+            _generate(repo)
+
+        self._assert_unchanged(repo, before)
+
+    def test_app_yaml_for_another_slug(self, repo: Path) -> None:
+        (repo / "apps" / _SLUG / "app.yaml").write_text("app_slug: other\n", "utf-8")
+        with pytest.raises(ScaffoldError, match="Can't read"):
+            _generate(repo)
+
+
+class TestIdentifiers:
+    def _add_app(self, repo: Path, slug: str) -> None:
+        app_dir = repo / "apps" / slug
+        app_dir.mkdir(parents=True)
+        (app_dir / "app.yaml").write_text(f"app_slug: {slug}\napp_display_name: X\n", "utf-8")
+
+    def test_rejects_a_slug_that_shares_a_bundle_id(self, repo: Path) -> None:
+        self._add_app(repo, "myrecipes")
+        scaffold_mobile(slug="myrecipes", repo_root=repo, skip_render=True, skip_npm=True)
+        with pytest.raises(ScaffoldError, match="share the bundle ID org.myfreeapps.myrecipes"):
+            _generate(repo)
+        assert not _mobile_dir(repo).exists()
+
+    def test_allows_that_slug_if_the_other_app_has_no_mobile_code(self, repo: Path) -> None:
+        self._add_app(repo, "myrecipes")
+        _generate(repo)
+        assert _mobile_dir(repo).is_dir()
+
+    @pytest.mark.parametrize("slug", ["class", "new", "cl-ass", "pack-age"])
+    def test_rejects_a_java_keyword(self, repo: Path, slug: str) -> None:
+        self._add_app(repo, slug)
+        with pytest.raises(ScaffoldError, match="reserved word in Java"):
+            scaffold_mobile(slug=slug, repo_root=repo, skip_render=True, skip_npm=True)
+        assert not (repo / "apps" / slug / "mobile").exists()
+
+    def test_rejects_a_keyword_only_after_removing_hyphens(self) -> None:
+        assert new_mobile._scheme_for("cl-ass") == "class"
+
+
+class TestTokens:
+    def test_a_token_with_no_value_raises(self) -> None:
+        with pytest.raises(KeyError, match="__API_PORT__"):
+            new_app._substitute("x", {"__APP_DISPLAY_NAME__": "a", "__APP_SLUG__": "b"})
+
+    def test_a_mobile_token_with_no_value_raises(self) -> None:
+        with pytest.raises(KeyError, match="__APP_SCHEME__"):
+            new_app._substitute(
+                "x", {"__APP_DISPLAY_NAME__": "a", "__APP_SLUG__": "b"}, new_mobile._TOKENS
+            )
+
+    def test_the_web_scaffold_still_substitutes_every_token(self) -> None:
+        replacements = {token: "v" for token in new_app._TOKEN_ORDER}
+        assert new_app._substitute(" ".join(new_app._TOKEN_ORDER), replacements) == "v v v v v"
 
 
 class TestRefusals:

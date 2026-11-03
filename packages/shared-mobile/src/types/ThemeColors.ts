@@ -12,6 +12,8 @@ export interface ThemeColors {
   input: string;
   destructive: string;
   destructiveForeground: string;
+  /** For text and borders on `background` or `card`. `destructive` is a button fill. */
+  destructiveText: string;
   toastSuccessBackground: string;
   toastSuccessBorder: string;
   toastSuccessForeground: string;

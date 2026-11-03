@@ -1,17 +1,16 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Pressable, Text, View } from "react-native";
+import { TOAST_DEFAULT_DURATION_MS } from "../constants/toast";
+import { useAnnouncement } from "../hooks/useAnnouncement";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 import { useTheme } from "../theme/useTheme";
 import type { ToastProps } from "../types/ToastProps";
-
-// Same as the web Toaster.
-const DEFAULT_DURATION_MS = 6000;
 
 export default function Toast({
   message,
   variant,
   onDismiss,
-  durationMs = DEFAULT_DURATION_MS,
+  durationMs = TOAST_DEFAULT_DURATION_MS,
   style,
 }: ToastProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
@@ -25,10 +24,23 @@ export default function Toast({
     latestOnDismiss.current = onDismiss;
   }, [onDismiss]);
 
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const isDismissed = useRef(false);
+
+  const dismiss = useCallback((): void => {
+    if (isDismissed.current) return;
+    isDismissed.current = true;
+    clearTimeout(timer.current);
+    latestOnDismiss.current();
+  }, []);
+
   useEffect(() => {
-    const timer = setTimeout(() => latestOnDismiss.current(), durationMs);
-    return () => clearTimeout(timer);
-  }, [durationMs, message]);
+    isDismissed.current = false;
+    timer.current = setTimeout(dismiss, durationMs);
+    return () => clearTimeout(timer.current);
+  }, [dismiss, durationMs, message]);
+
+  useAnnouncement(message);
 
   return (
     <View
@@ -47,7 +59,6 @@ export default function Toast({
       ]}
     >
       <Text
-        accessibilityLiveRegion="polite"
         accessibilityRole="alert"
         style={{ flex: 1, color: foreground, fontSize: fontSize.sm, paddingVertical: spacing.md }}
       >
@@ -56,7 +67,7 @@ export default function Toast({
       <Pressable
         accessibilityLabel="Dismiss notification"
         accessibilityRole="button"
-        onPress={onDismiss}
+        onPress={dismiss}
         style={{
           minHeight: MIN_TOUCH_TARGET,
           minWidth: MIN_TOUCH_TARGET,

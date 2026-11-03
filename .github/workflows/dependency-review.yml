@@ -28,4 +28,7 @@ jobs:
           # Timing-side-channel attack — requires precise local timing measurements;
           # not exploitable over typical noisy network conditions. Tracked for proper
           # mitigation via python-jose → PyJWT migration in MyBookkeeper.
-          allow-ghsas: GHSA-wj6h-64fc-37mp
+          # GHSA-3g3m-2fjr-6pw4 (glob) and GHSA-g3hv-75wg-m249 (minimatch): reached through
+          # @expo/cli, which is developer and CI tooling only. Their fixes are major versions
+          # Expo hasn't adopted. Tracked in #1489.
+          allow-ghsas: GHSA-wj6h-64fc-37mp, GHSA-3g3m-2fjr-6pw4, GHSA-g3hv-75wg-m249

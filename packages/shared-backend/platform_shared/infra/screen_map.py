@@ -14,8 +14,9 @@ contents changed: the route is the same, so this has nothing to compare.
 
 Routes are read from source rather than by running the router, so they are the paths
 as written: a nested ``transactions`` is ``/transactions``, whatever its parents are.
-A path that isn't a literal keys on its source expression (``ADMIN_ROUTES.DASHBOARD``),
-and every index route is ``/``.
+A path that isn't a literal keys on its constant (``ADMIN_ROUTES.DASHBOARD``), and every
+index route is ``/``. Anything that can't be read fails the check instead of being
+skipped, and so does a frontend with no routes at all.
 
 Apps without ``mobile: true`` in app.yaml are not checked.
 
@@ -28,23 +29,17 @@ CLI::
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 from pathlib import Path
 
 import yaml
 
 from platform_shared.infra import render as _render
+from platform_shared.infra import route_source as _route_source
 
 SCREEN_MAP_FILENAME = "screen-map.yaml"
 
-_ROUTE_FILE_MARKER = re.compile(r"<Route\b|\bRouteObject\b")
-_COMMENT = re.compile(r"/\*.*?\*/|(?<![:\"'`])//[^\n]*", re.DOTALL)
-_PATH = re.compile(
-    r"""\bpath\s*(?:=\s*\{?|:)\s*(?:"([^"]+)"|'([^']+)'|`([^`]+)`|([A-Za-z_][\w.]*))"""
-)
-_INDEX = re.compile(r"<Route\s+index\b|\bindex:\s*true\b")
-_CATCH_ALL = "*"
+_SOURCE_SUFFIXES = frozenset({".ts", ".tsx", ".js", ".jsx"})
 _ALLOWED_KEYS = frozenset({"screen", "not_on_mobile"})
 
 
@@ -60,31 +55,41 @@ def _is_test_file(path: Path) -> bool:
     )
 
 
-def _normalize_route(raw: str) -> str:
-    return "/" + raw.strip().lstrip("/")
-
-
 def web_routes(repo_root: Path, slug: str) -> set[str]:
-    """Return every route the app's web frontend declares."""
+    """Return every route the app's web frontend declares.
+
+    Raises :class:`ScreenMapError` if a route can't be read or the frontend has none. An
+    app with no web frontend has no routes to map, so that's an empty set.
+    """
     src = repo_root / "apps" / slug / "frontend" / "src"
+    if not src.is_dir():
+        return set()
+
     routes: set[str] = set()
-    for path in src.rglob("*.ts*"):
-        if path.suffix not in {".ts", ".tsx"} or _is_test_file(path.relative_to(src)):
+    problems: list[str] = []
+    for path in sorted(src.rglob("*")):
+        rel = path.relative_to(src)
+        if path.suffix not in _SOURCE_SUFFIXES or not path.is_file() or _is_test_file(rel):
             continue
         source = path.read_text(encoding="utf-8")
-        if not _ROUTE_FILE_MARKER.search(source):
+        if not _route_source.ROUTE_FILE_MARKER.search(source):
             continue
-        source = _COMMENT.sub("", source)
-        for match in _PATH.finditer(source):
-            double, single, template, expression = match.groups()
-            literal = double or single or template
-            if literal is not None:
-                if literal != _CATCH_ALL:
-                    routes.add(_normalize_route(literal))
-            else:
-                routes.add(expression)
-        if _INDEX.search(source):
-            routes.add("/")
+        location = f"apps/{slug}/frontend/src/{rel.as_posix()}"
+        try:
+            found, unreadable = _route_source.read_routes(source)
+        except _route_source.RouteSourceError as exc:
+            problems.append(f"{location}: {exc}")
+            continue
+        routes |= found
+        problems += [f"{location}: {problem}" for problem in unreadable]
+
+    if problems:
+        raise ScreenMapError("\n".join(problems))
+    if not routes:
+        raise ScreenMapError(
+            f"apps/{slug}/frontend/src has no routes this check can read, so nothing would be "
+            f"checked. If its routes are declared some new way, teach route_source.py to read it."
+        )
     return routes
 
 
@@ -133,10 +138,10 @@ def check_app(repo_root: Path, slug: str) -> list[str]:
         return [f"{map_rel} is missing. Every app with `mobile: true` needs one."]
     try:
         entries = _load_map(map_path)
+        declared = web_routes(repo_root, slug)
     except (ScreenMapError, yaml.YAMLError) as exc:
         return [str(exc)]
 
-    declared = web_routes(repo_root, slug)
     errors = [
         f"{map_rel}: web route {route!r} has no entry. Add `screen:` or `not_on_mobile:`."
         for route in sorted(declared - set(entries))

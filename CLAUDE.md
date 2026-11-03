@@ -62,7 +62,8 @@ python -m platform_shared.infra.screen_map --app <slug>
 ```
 Then add a Dependabot entry for `/apps/<slug>/mobile`. `apps/<slug>/mobile/screen-map.yaml`
 gives every web route a `screen:` or a `not_on_mobile:` reason, and CI fails on a web route
-with no entry. It catches added, renamed and removed pages, not edits to an existing page.
+with no entry, a route it can't read, or a frontend with no routes (those last two for every
+app, `mobile` or not). It catches added, renamed and removed pages, not edits to an existing page.
 
 Mobile versions move only with an Expo SDK upgrade (`expo install --fix`), and react and
 react-native stay exact. Web Dockerfiles leave `packages/shared-mobile` out on purpose: that

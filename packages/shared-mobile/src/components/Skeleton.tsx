@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
 import { Animated } from "react-native";
+import {
+  SKELETON_DEFAULT_HEIGHT,
+  SKELETON_MIN_OPACITY,
+  SKELETON_PULSE_MS,
+} from "../constants/skeleton";
+import { useReduceMotion } from "../hooks/useReduceMotion";
 import { useTheme } from "../theme/useTheme";
 import type { SkeletonProps } from "../types/SkeletonProps";
 
-const DEFAULT_HEIGHT = 16;
-const MIN_OPACITY = 0.4;
-const PULSE_MS = 800;
-
 export default function Skeleton({
   width = "100%",
-  height = DEFAULT_HEIGHT,
+  height = SKELETON_DEFAULT_HEIGHT,
   borderRadius,
   style,
   testID,
@@ -17,16 +19,26 @@ export default function Skeleton({
   const { colors, radius } = useTheme();
   const [opacity] = useState(() => new Animated.Value(1));
 
+  const reduceMotion = useReduceMotion();
+
   useEffect(() => {
+    if (reduceMotion !== false) return;
     const pulse = Animated.loop(
       Animated.sequence([
-        Animated.timing(opacity, { toValue: MIN_OPACITY, duration: PULSE_MS, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 1, duration: PULSE_MS, useNativeDriver: true }),
+        Animated.timing(opacity, {
+          toValue: SKELETON_MIN_OPACITY,
+          duration: SKELETON_PULSE_MS,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, { toValue: 1, duration: SKELETON_PULSE_MS, useNativeDriver: true }),
       ]),
     );
     pulse.start();
-    return () => pulse.stop();
-  }, [opacity]);
+    return () => {
+      pulse.stop();
+      opacity.setValue(1);
+    };
+  }, [opacity, reduceMotion]);
 
   return (
     <Animated.View

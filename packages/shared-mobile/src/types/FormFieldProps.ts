@@ -3,7 +3,7 @@ import type { StyleProp, TextInput, TextInputProps, ViewStyle } from "react-nati
 
 export interface FormFieldProps extends Omit<TextInputProps, "style"> {
   label: string;
-  /** Replaces `hint` and is announced by screen readers when it appears. */
+  /** Replaces `hint`. Screen readers announce it when it appears or changes, on iOS and Android. */
   error?: string;
   hint?: string;
   required?: boolean;

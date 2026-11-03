@@ -62,9 +62,9 @@ jobs:
           SLUG: ${{ inputs.scaffold-slug }}
         # A bare app.yaml is all new_mobile reads. --skip-render because that isn't
         # enough to render from, and the app is gone when the job ends. The template's
-        # dependencies are already locked, so installing may add entries for the new
-        # workspace but must not change any others. If it does, the scaffold and the
-        # lockfile have drifted, and this job wouldn't be testing what's locked.
+        # dependencies are already locked, so installing may only add copies of the
+        # template's own entries. Anything else means the scaffold and the lockfile have
+        # drifted, and this job wouldn't be testing what's locked.
         run: |
           python -m pip install jinja2 pyyaml
           mkdir -p "apps/$SLUG"
@@ -72,7 +72,7 @@ jobs:
           (cd packages/shared-backend && python -m platform_shared.infra.new_mobile "$SLUG" --skip-render --skip-npm)
           cp package-lock.json "$RUNNER_TEMP/package-lock.before.json"
           npm install --no-audit --no-fund
-          node scripts/check-lockfile-only-added.js "$RUNNER_TEMP/package-lock.before.json" package-lock.json "$SLUG"
+          (cd packages/shared-backend && python -m platform_shared.infra.mobile_lock "$RUNNER_TEMP/package-lock.before.json" "$GITHUB_WORKSPACE/package-lock.json" "$SLUG")
 
       - name: Typecheck
         working-directory: ${{ inputs.project }}

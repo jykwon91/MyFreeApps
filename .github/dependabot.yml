@@ -75,6 +75,7 @@ updates:
     ignore:
       # Same holds as packages/shared-frontend below, for the same reasons.
       - dependency-name: "react"
+      - dependency-name: "@types/react"
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
 

@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { StyleSheet } from "react-native";
 import LoadingButton from "../components/LoadingButton";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
+import { DISABLED_OPACITY } from "../constants/loadingButton";
 
 interface Deferred {
   promise: Promise<void>;
@@ -79,6 +80,87 @@ describe("LoadingButton", () => {
       work.resolve();
       await work.promise;
     });
+  });
+
+  it("ignores a second press in the same tick when the work is synchronous", async () => {
+    const onPress = jest.fn();
+    await render(<LoadingButton onPress={onPress}>Save</LoadingButton>);
+    const button = screen.getByRole("button");
+
+    await act(async () => {
+      button.props.onClick();
+      button.props.onClick();
+    });
+
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it("can be pressed again once synchronous work is done", async () => {
+    const onPress = jest.fn();
+    await render(<LoadingButton onPress={onPress}>Save</LoadingButton>);
+
+    await fireEvent.press(screen.getByRole("button"));
+    await fireEvent.press(screen.getByRole("button"));
+
+    expect(onPress).toHaveBeenCalledTimes(2);
+  });
+
+  it("can be pressed again once async work is done", async () => {
+    const work = deferred();
+    const onPress = jest.fn(() => work.promise);
+    await render(<LoadingButton onPress={onPress}>Save</LoadingButton>);
+
+    await fireEvent.press(screen.getByRole("button"));
+    await act(async () => {
+      work.resolve();
+      await work.promise;
+    });
+    await fireEvent.press(screen.getByRole("button"));
+
+    expect(onPress).toHaveBeenCalledTimes(2);
+  });
+
+  it("can be pressed again after onPress throws", async () => {
+    const onPress = jest.fn(() => {
+      throw new Error("boom");
+    });
+    await render(<LoadingButton onPress={onPress}>Save</LoadingButton>);
+    const button = screen.getByRole("button");
+
+    expect(() => button.props.onClick()).toThrow("boom");
+    expect(() => button.props.onClick()).toThrow("boom");
+
+    expect(onPress).toHaveBeenCalledTimes(2);
+  });
+
+  it("disables the Pressable itself, so a loading button gives no press feedback", async () => {
+    const { rerender } = await render(<LoadingButton onPress={jest.fn()}>Save</LoadingButton>);
+    expect(screen.getByRole("button").props.onStartShouldSetResponder()).toBe(true);
+
+    await rerender(
+      <LoadingButton isLoading onPress={jest.fn()}>
+        Save
+      </LoadingButton>,
+    );
+    expect(screen.getByRole("button").props.onStartShouldSetResponder()).toBe(false);
+  });
+
+  it("dims when disabled but stays readable while busy", async () => {
+    const opacity = () => StyleSheet.flatten(screen.getByRole("button").props.style).opacity;
+
+    const { rerender } = await render(
+      <LoadingButton disabled onPress={jest.fn()}>
+        Save
+      </LoadingButton>,
+    );
+    expect(opacity()).toBe(DISABLED_OPACITY);
+
+    await rerender(
+      <LoadingButton disabled isLoading onPress={jest.fn()}>
+        Save
+      </LoadingButton>,
+    );
+    expect(opacity()).toBe(1);
   });
 
   it("recovers after the work rejects and doesn't swallow the rejection", async () => {

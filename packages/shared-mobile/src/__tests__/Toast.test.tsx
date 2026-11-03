@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
-import { StyleSheet } from "react-native";
+import { AccessibilityInfo, StyleSheet } from "react-native";
 import Toast from "../components/Toast";
 import { darkColors, lightColors } from "../theme/colors";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
@@ -10,10 +10,23 @@ describe("Toast", () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
 
-  it("announces the message", async () => {
-    await render(<Toast message="Saved" onDismiss={jest.fn()} variant="success" />);
+  it("announces the message to screen readers, once per message", async () => {
+    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+    announce.mockClear();
+    const { rerender } = await render(
+      <Toast message="Saved" onDismiss={jest.fn()} variant="success" />,
+    );
 
     expect(screen.getByRole("alert", { name: "Saved" })).toBeTruthy();
+    expect(announce).toHaveBeenCalledTimes(1);
+    expect(announce).toHaveBeenLastCalledWith("Saved");
+
+    await rerender(<Toast message="Saved" onDismiss={jest.fn()} variant="success" />);
+    expect(announce).toHaveBeenCalledTimes(1);
+
+    await rerender(<Toast message="Sent" onDismiss={jest.fn()} variant="success" />);
+    expect(announce).toHaveBeenCalledTimes(2);
+    expect(announce).toHaveBeenLastCalledWith("Sent");
   });
 
   it("dismisses on press, with a touch target of at least the minimum", async () => {
@@ -66,6 +79,46 @@ describe("Toast", () => {
     await act(async () => jest.advanceTimersByTime(600));
 
     expect(onDismiss).not.toHaveBeenCalled();
+  });
+
+  it("doesn't dismiss again when the timer runs out after a press", async () => {
+    const schedule = jest.spyOn(globalThis, "setTimeout");
+    const cancel = jest.spyOn(globalThis, "clearTimeout");
+    const onDismiss = jest.fn();
+    await render(<Toast durationMs={1000} message="Saved" onDismiss={onDismiss} variant="success" />);
+    const countdown = schedule.mock.results[schedule.mock.calls.findIndex((call) => call[1] === 1000)];
+
+    await fireEvent.press(screen.getByRole("button", DISMISS));
+    expect(cancel).toHaveBeenCalledWith(countdown.value);
+    await act(async () => jest.advanceTimersByTime(2000));
+
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it("doesn't dismiss twice on two presses", async () => {
+    const onDismiss = jest.fn();
+    await render(<Toast message="Saved" onDismiss={onDismiss} variant="success" />);
+    const button = screen.getByRole("button", DISMISS);
+
+    await act(async () => {
+      button.props.onClick();
+      button.props.onClick();
+    });
+
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it("can dismiss again after a press when the message changes", async () => {
+    const onDismiss = jest.fn();
+    const { rerender } = await render(
+      <Toast durationMs={1000} message="One" onDismiss={onDismiss} variant="success" />,
+    );
+
+    await fireEvent.press(screen.getByRole("button", DISMISS));
+    await rerender(<Toast durationMs={1000} message="Two" onDismiss={onDismiss} variant="success" />);
+    await act(async () => jest.advanceTimersByTime(1000));
+
+    expect(onDismiss).toHaveBeenCalledTimes(2);
   });
 
   it("doesn't fire after unmount", async () => {

@@ -1,11 +1,13 @@
 """platform_shared.infra.screen_map: web routes vs a mobile app's screen map."""
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import pytest
 
-from platform_shared.infra.screen_map import check_app, render_seed, web_routes
+from platform_shared.infra.route_source import RouteSourceError, read_routes, strip_comments
+from platform_shared.infra.screen_map import ScreenMapError, check_app, render_seed, web_routes
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -44,7 +46,131 @@ def _complete_map() -> str:
     return render_seed(_ROUTES, "Not built yet.")
 
 
+class TestStripComments:
+    @pytest.mark.parametrize(
+        "source",
+        [
+            '<Route path="/docs/*" element={<D />} />',
+            "const glob = '/a/*';",
+            'const url = "https://x/y";',
+            "const t = `/a/* ${b} */`;",
+            "<a>https://example.org</a>",
+            "const r = /\\/*$/;",
+            "<p>don't /x</p>",
+        ],
+    )
+    def test_leaves_strings_and_non_comments_alone(self, source: str) -> None:
+        assert strip_comments(source) == source
+
+    @pytest.mark.parametrize(
+        ("source", "expected"),
+        [
+            ("a // b", "a "),
+            ("a /* b */ c", "a  c"),
+            ("{/* <Route path='/x' /> */}", "{}"),
+            ("a /* b\nc */ d", "a \n d"),
+        ],
+    )
+    def test_removes_comments_and_keeps_line_numbers(self, source: str, expected: str) -> None:
+        assert strip_comments(source) == expected
+
+
+class TestReadRoutes:
+    @pytest.mark.parametrize(
+        ("source", "expected"),
+        [
+            ('<Route path="/docs/*" element={<D />} />\n<Route path="/after" />', {"/docs/*", "/after"}),
+            ('<Route element={<Home />} index />', {"/"}),
+            ('<Route index element={<Home />} />', {"/"}),
+            ('<Route index={false} path="/a" />', {"/a"}),
+            ('<Route path={"/braced"} />', {"/braced"}),
+            ("<Route path={`/template`} />", {"/template"}),
+            ("<Route path={ADMIN_ROUTES.DASHBOARD} />", {"ADMIN_ROUTES.DASHBOARD"}),
+            ('<Route element={<Layout />}><Route path="/inner" /></Route>', {"/inner"}),
+            ('<Route path="/a" element={<p>don\'t</p>} />\n<Route path="/b" />', {"/a", "/b"}),
+            ('<Route path="/a" element={<X render={() => <Y z="}" />} />} />', {"/a"}),
+            ('<Route path="*" element={<NotFound />} />\n<Route path="/a" />', {"/a"}),
+            ('createBrowserRouter([{ path: "/plain", element: <A /> }]);', {"/plain"}),
+            ('[{ index: true, element: <A /> }, { path: "/b", Component: B }]', {"/", "/b"}),
+            ('[{ path: ROUTES.A, lazy: load }];', {"ROUTES.A"}),
+            ('interface R { path: string; other: number }\nfunction f(path: Foo) {}', set()),
+            ("// <Route path='/gone' />\n/* { path: '/gone2' } */", set()),
+            ('import { Route } from "lucide-react";\n<Route className="x" />', set()),
+            ('import { Route as Icon } from "lucide-react";\n<Route path="/a" />', {"/a"}),
+            ("<Routes><Link to='/x' /></Routes>", set()),
+        ],
+    )
+    def test_reads(self, source: str, expected: set[str]) -> None:
+        assert read_routes(source) == (expected, [])
+
+    @pytest.mark.parametrize(
+        "source",
+        [
+            "<Route path={route.path} />",
+            "<Route path={getPath()} />",
+            "<Route path={a ? '/b' : '/c'} />",
+            "<Route path />",
+            "<Route element={<X />} />",
+            'import { Route } from "./my-router";\n<Route element={<X />} />',
+            "[{ path: route.path, element: <X /> }]",
+            "[{ path: getPath(), element: <X /> }]",
+            "[{ path: a ? '/b' : '/c', element: <X /> }]",
+            "[{ path: '/a' + suffix, element: <X /> }]",
+            "[{ path, element: <X /> }]",
+        ],
+    )
+    def test_reports_what_it_cant_read(self, source: str) -> None:
+        assert read_routes(source)[1]
+
+    @pytest.mark.parametrize(
+        "source",
+        [
+            "<Route {...props} />",
+            '<Route path="/a',
+            "<Route path={unbalanced />",
+            "/* never closed\n<Route path='/a' />",
+            "const t = `never closed\n<Route path='/a' />",
+        ],
+    )
+    def test_raises_on_source_it_cant_scan(self, source: str) -> None:
+        with pytest.raises(RouteSourceError):
+            read_routes(source)
+
+
 class TestWebRoutes:
+    def test_no_frontend_has_no_routes(self, tmp_path: Path) -> None:
+        assert web_routes(tmp_path, "demo") == set()
+
+    def test_a_frontend_with_no_routes_fails(self, tmp_path: Path) -> None:
+        _make_app(tmp_path, routes="export const x = 1;")
+        with pytest.raises(ScreenMapError, match="no routes this check can read"):
+            web_routes(tmp_path, "demo")
+
+    def test_a_route_it_cant_read_fails_and_says_where(self, tmp_path: Path) -> None:
+        _make_app(tmp_path, routes='<Route path="/a" />\n<Route path={route.path} />')
+        with pytest.raises(ScreenMapError, match=r"src/routes.tsx: line 2: .*route\.path"):
+            web_routes(tmp_path, "demo")
+
+    def test_source_it_cant_scan_fails_and_says_where(self, tmp_path: Path) -> None:
+        _make_app(tmp_path, routes='<Route path="/a" />\n/* never closed')
+        with pytest.raises(ScreenMapError, match=r"src/routes.tsx: line 2: unterminated"):
+            web_routes(tmp_path, "demo")
+
+    def test_finds_a_router_with_no_route_type_or_tag(self, tmp_path: Path) -> None:
+        _make_app(tmp_path, routes='createBrowserRouter([{ path: "/plain", element: <A /> }]);')
+        assert web_routes(tmp_path, "demo") == {"/plain"}
+
+    def test_finds_a_route_array_declared_apart_from_the_router(self, tmp_path: Path) -> None:
+        _make_app(tmp_path, routes='export const routes = [{ path: "/a", Component: A }];')
+        assert web_routes(tmp_path, "demo") == {"/a"}
+
+    def test_reads_new_apps_from_the_web_scaffold(self, tmp_path: Path) -> None:
+        shutil.copytree(
+            _REPO_ROOT / "infra/templates/scaffold/frontend/src",
+            tmp_path / "apps/demo/frontend/src",
+        )
+        assert web_routes(tmp_path, "demo")
+
     def test_reads_object_routes(self, tmp_path: Path) -> None:
         _make_app(tmp_path)
         assert web_routes(tmp_path, "demo") == _ROUTES
@@ -204,6 +330,16 @@ class TestCheckApp:
         _write_map(tmp_path, "routes:\n  /recipes/:id: {screen: 'recipes/[id]'}\n")
         _write(tmp_path / "apps/demo/mobile/app" / file, "export default null;")
         assert check_app(tmp_path, "demo") == []
+
+    def test_unreadable_routes_fail_the_check(self, tmp_path: Path) -> None:
+        _make_app(tmp_path, routes="<Route path={route.path} />")
+        _write_map(tmp_path, "routes: {}\n")
+        assert "route.path" in check_app(tmp_path, "demo")[0]
+
+    def test_a_frontend_with_no_routes_fails_the_check(self, tmp_path: Path) -> None:
+        _make_app(tmp_path, routes="export const x = 1;")
+        _write_map(tmp_path, "routes: {}\n")
+        assert "no routes" in check_app(tmp_path, "demo")[0]
 
     @pytest.mark.parametrize("body", ["[]", "routes: []", "other: {}", "routes: {unclosed"])
     def test_malformed_map_fails(self, tmp_path: Path, body: str) -> None:

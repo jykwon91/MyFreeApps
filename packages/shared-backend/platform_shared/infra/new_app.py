@@ -44,6 +44,16 @@ import yaml
 
 from platform_shared.infra import render as _render
 
+# Tokens substituted in template content. ORDER MATTERS -- longer keys first
+# so __APP_DISPLAY_NAME__ does not get partially matched by __APP_.
+_TOKEN_ORDER: tuple[str, ...] = (
+    "__APP_DISPLAY_NAME__",
+    "__APP_SLUG__",
+    "__API_PORT__",
+    "__FRONTEND_DEV_PORT__",
+    "__CADDY_HOST_PORT__",
+)
+
 # Slug regex -- lowercase letters, numbers, hyphens; must start with a letter;
 # no trailing hyphen; reasonable length.
 _SLUG_RE = re.compile(r"^[a-z][a-z0-9-]{1,38}[a-z0-9]$")
@@ -86,9 +96,13 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[4]
 
 
-def _substitute(text: str, replacements: dict[str, str]) -> str:
-    for token, value in replacements.items():
-        text = text.replace(token, value)
+def _substitute(
+    text: str,
+    replacements: dict[str, str],
+    tokens: tuple[str, ...] = _TOKEN_ORDER,
+) -> str:
+    for token in tokens:
+        text = text.replace(token, replacements[token])
     return text
 
 
@@ -97,6 +111,7 @@ def _walk_and_copy(
     dst_root: Path,
     replacements: dict[str, str],
     *,
+    tokens: tuple[str, ...] = _TOKEN_ORDER,
     skip_dirs: frozenset[str] = frozenset(),
 ) -> int:
     """Copy every file under ``src_root`` to ``dst_root`` with token substitution.
@@ -120,7 +135,7 @@ def _walk_and_copy(
         except UnicodeDecodeError:
             shutil.copy2(src, dst)
         else:
-            dst.write_text(_substitute(text, replacements), encoding="utf-8", newline="\n")
+            dst.write_text(_substitute(text, replacements, tokens), encoding="utf-8", newline="\n")
         count += 1
     return count
 

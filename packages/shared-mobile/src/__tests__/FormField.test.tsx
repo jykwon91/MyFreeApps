@@ -1,6 +1,6 @@
 import { type ComponentRef, createRef } from "react";
 import { fireEvent, render, screen } from "@testing-library/react-native";
-import { StyleSheet, TextInput } from "react-native";
+import { AccessibilityInfo, StyleSheet, TextInput } from "react-native";
 import FormField from "../components/FormField";
 import { lightColors } from "../theme/colors";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
@@ -57,6 +57,30 @@ describe("FormField", () => {
 
     const input = screen.getByLabelText("Email");
     expect(input.props.accessibilityHint).toBe("Enter a valid email.");
-    expect(StyleSheet.flatten(input.props.style).borderColor).toBe(lightColors.destructive);
+    expect(StyleSheet.flatten(input.props.style).borderColor).toBe(lightColors.destructiveText);
+    expect(StyleSheet.flatten(screen.getByRole("alert").props.style).color).toBe(
+      lightColors.destructiveText,
+    );
+  });
+
+  it("announces an error to screen readers when it appears or changes, and only then", async () => {
+    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+    announce.mockClear();
+
+    const { rerender } = await render(<FormField hint="We never share it." label="Email" />);
+    expect(announce).not.toHaveBeenCalled();
+
+    await rerender(<FormField error="Enter a valid email." label="Email" />);
+    expect(announce).toHaveBeenCalledTimes(1);
+    expect(announce).toHaveBeenLastCalledWith("Enter a valid email.");
+
+    await rerender(<FormField error="Enter a valid email." label="Email" value="a" />);
+    expect(announce).toHaveBeenCalledTimes(1);
+
+    await rerender(<FormField error="That email is taken." label="Email" />);
+    expect(announce).toHaveBeenCalledTimes(2);
+
+    await rerender(<FormField label="Email" />);
+    expect(announce).toHaveBeenCalledTimes(2);
   });
 });

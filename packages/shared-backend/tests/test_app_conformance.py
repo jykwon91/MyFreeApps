@@ -1001,10 +1001,35 @@ class TestMobileManifestsGetDependabotUpdates:
             )
 
 
+class TestReactTypesHeldWithReact:
+    """Root overrides pin @types/react alongside react, so a Dependabot entry holding one
+    has to hold the other, or it opens PRs the override makes meaningless."""
+
+    @pytest.mark.parametrize(
+        "entry",
+        [
+            update
+            for update in yaml.safe_load(_read(".github", "dependabot.yml"))["updates"]
+            if update["package-ecosystem"] == "npm"
+            and any(rule["dependency-name"] == "react" for rule in update.get("ignore", []))
+        ],
+        ids=lambda update: update["directory"],
+    )
+    def test_entry_holds_both(self, entry: dict[str, object]) -> None:
+        ignored = {rule["dependency-name"] for rule in entry["ignore"]}
+        assert "@types/react" in ignored, f"{entry['directory']} must ignore @types/react."
+
+
 class TestWebMobileScreenMap:
     """A web route with no decision about mobile fails here. This suite runs in
     `shared-backend-tests`, which is required and never path-filtered, so a change
     to a web app can't skip it. Apps without `mobile: true` are not checked."""
+
+    @pytest.mark.parametrize("app", _ALL_APPS)
+    def test_routes_are_readable_in_every_app(self, app: str) -> None:
+        """Runs for apps without `mobile` too: those are the ones new_mobile reads next,
+        and a frontend reading as zero routes would make the check below mean nothing."""
+        assert _screen_map.web_routes(_REPO_ROOT, app), f"Found no web routes in {app}."
 
     @pytest.mark.parametrize("app", _ALL_APPS)
     def test_every_web_route_has_an_entry(self, app: str) -> None:
@@ -1049,23 +1074,41 @@ class TestWebStaysOffSharedMobile:
     """shared-mobile isn't in the web Docker build, and that's what keeps react-native
     out of it. A web package that imported it would pass `npm ci` and fail at build."""
 
-    @pytest.mark.parametrize(
-        "manifest",
-        [("apps", app, "frontend", "package.json") for app in _APPS]
-        + [
-            ("infra", "templates", "scaffold", "frontend", "package.json"),
-            ("packages", "shared-frontend", "package.json"),
-            ("packages", "shared-core", "package.json"),
-        ],
-        ids="/".join,
-    )
-    def test_web_manifest_excludes_shared_mobile(self, manifest: tuple[str, ...]) -> None:
-        data = json.loads(_read(*manifest))
+    _WEB_PACKAGES = [
+        *(("apps", app, "frontend") for app in _ALL_APPS),
+        ("infra", "templates", "scaffold", "frontend"),
+        ("packages", "shared-frontend"),
+        ("packages", "shared-core"),
+    ]
+    _SOURCE_SUFFIXES = frozenset({".ts", ".tsx", ".mts", ".js", ".jsx", ".mjs", ".cjs", ".json"})
+    _REFERENCE = re.compile(r"""["'`][^"'`\n]*(?:@platform/mobile|shared-mobile)""")
+
+    @pytest.mark.parametrize("package", _WEB_PACKAGES, ids="/".join)
+    def test_manifest_excludes_shared_mobile(self, package: tuple[str, ...]) -> None:
+        data = json.loads(_read(*package, "package.json"))
         for section in ("dependencies", "devDependencies", "peerDependencies"):
             assert "@platform/mobile" not in data.get(section, {}), (
-                f"{'/'.join(manifest)} must not depend on @platform/mobile. Logic shared "
-                f"with mobile belongs in @platform/core."
+                f"{'/'.join(package)}/package.json must not depend on @platform/mobile. "
+                f"Logic shared with mobile belongs in @platform/core."
             )
+
+    @pytest.mark.parametrize("package", _WEB_PACKAGES, ids="/".join)
+    def test_source_doesnt_import_shared_mobile(self, package: tuple[str, ...]) -> None:
+        """Workspace hoisting would let an import resolve with no manifest entry, and the
+        same goes for a config file's alias, so this reads the whole package."""
+        root = _REPO_ROOT.joinpath(*package)
+        offenders = [
+            path.relative_to(_REPO_ROOT).as_posix()
+            for path in root.rglob("*")
+            if path.suffix in self._SOURCE_SUFFIXES
+            and path.is_file()
+            and not {"node_modules", "dist"} & set(path.relative_to(root).parts)
+            and self._REFERENCE.search(path.read_text(encoding="utf-8"))
+        ]
+        assert not offenders, (
+            f"These must not import @platform/mobile: {offenders}. Logic shared with mobile "
+            f"belongs in @platform/core."
+        )
 
 
 class TestDisplayNameValidation:

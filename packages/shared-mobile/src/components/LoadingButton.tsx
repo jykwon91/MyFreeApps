@@ -1,39 +1,11 @@
 import { useRef, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { DISABLED_OPACITY, PRESSED_OPACITY } from "../constants/loadingButton";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 import { useTheme } from "../theme/useTheme";
-import type { ButtonVariant } from "../types/ButtonVariant";
 import type { LoadingButtonProps } from "../types/LoadingButtonProps";
-import type { ThemeColors } from "../types/ThemeColors";
+import { buttonBackground, buttonForeground } from "../utils/buttonColors";
 import { isPromise } from "../utils/isPromise";
-
-const DISABLED_OPACITY = 0.5;
-const PRESSED_OPACITY = 0.8;
-
-function backgroundFor(variant: ButtonVariant, colors: ThemeColors): string {
-  switch (variant) {
-    case "primary":
-      return colors.primary;
-    case "destructive":
-      return colors.destructive;
-    case "secondary":
-    case "ghost":
-      return "transparent";
-  }
-}
-
-function foregroundFor(variant: ButtonVariant, colors: ThemeColors): string {
-  switch (variant) {
-    case "primary":
-      return colors.primaryForeground;
-    case "destructive":
-      return colors.destructiveForeground;
-    case "secondary":
-      return colors.foreground;
-    case "ghost":
-      return colors.mutedForeground;
-  }
-}
 
 export default function LoadingButton({
   children,
@@ -53,17 +25,24 @@ export default function LoadingButton({
 
   const isBusy = isLoading || isPending;
   const isDisabled = disabled || isBusy;
-  const foreground = foregroundFor(variant, colors);
+  const foreground = buttonForeground(variant, colors);
 
   const handlePress = (): void => {
     if (inFlight.current || isDisabled) return;
-    const result = onPress();
-    if (!isPromise(result)) return;
     inFlight.current = true;
-    setIsPending(true);
+    let result: void | Promise<void>;
+    try {
+      result = onPress();
+    } catch (error) {
+      inFlight.current = false;
+      throw error;
+    }
+    const isAsync = isPromise(result);
+    if (isAsync) setIsPending(true);
+    // Sync work settles on the next microtask, which still stops a second press in this tick.
     void Promise.resolve(result).finally(() => {
       inFlight.current = false;
-      setIsPending(false);
+      if (isAsync) setIsPending(false);
     });
   };
 
@@ -83,10 +62,11 @@ export default function LoadingButton({
           justifyContent: "center",
           paddingHorizontal: spacing.lg,
           borderRadius: radius.md,
-          backgroundColor: backgroundFor(variant, colors),
+          backgroundColor: buttonBackground(variant, colors),
           borderWidth: variant === "secondary" ? 1 : 0,
           borderColor: colors.border,
-          opacity: isDisabled ? DISABLED_OPACITY : pressed ? PRESSED_OPACITY : 1,
+          // Busy stays at full opacity so the "Saving..." label remains readable.
+          opacity: isBusy ? 1 : isDisabled ? DISABLED_OPACITY : pressed ? PRESSED_OPACITY : 1,
         },
         style,
       ]}

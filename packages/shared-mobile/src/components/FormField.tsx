@@ -1,4 +1,5 @@
 import { Text, TextInput, View } from "react-native";
+import { useAnnouncement } from "../hooks/useAnnouncement";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 import { useTheme } from "../theme/useTheme";
 import type { FormFieldProps } from "../types/FormFieldProps";
@@ -14,6 +15,7 @@ export default function FormField({
   ...inputProps
 }: FormFieldProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
+  useAnnouncement(error);
 
   return (
     <View style={[{ gap: spacing.xs }, style]}>
@@ -23,7 +25,7 @@ export default function FormField({
         style={{ color: colors.foreground, fontSize: fontSize.xs, fontWeight: "500" }}
       >
         {label}
-        {required ? <Text style={{ color: colors.destructive }}> *</Text> : null}
+        {required ? <Text style={{ color: colors.destructiveText }}> *</Text> : null}
       </Text>
       <TextInput
         placeholderTextColor={colors.mutedForeground}
@@ -35,16 +37,15 @@ export default function FormField({
           paddingHorizontal: spacing.md,
           borderWidth: 1,
           borderRadius: radius.md,
-          borderColor: error ? colors.destructive : colors.input,
+          borderColor: error ? colors.destructiveText : colors.input,
           color: colors.foreground,
           fontSize: fontSize.md,
         }}
       />
       {error ? (
         <Text
-          accessibilityLiveRegion="polite"
           accessibilityRole="alert"
-          style={{ color: colors.destructive, fontSize: fontSize.xs }}
+          style={{ color: colors.destructiveText, fontSize: fontSize.xs }}
         >
           {error}
         </Text>
