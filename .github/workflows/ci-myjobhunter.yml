@@ -156,6 +156,7 @@ jobs:
               tests/test_audit.py
               tests/test_email_verification.py
               tests/test_config_key_validation.py
+              tests/test_update_display_name.py
           - name: crud
             # Phase 2 CRUD tests. Covers applications full CRUD, contacts,
             # events, list filters, company writes + name search, and profiles.

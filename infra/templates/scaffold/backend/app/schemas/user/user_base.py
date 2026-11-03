@@ -2,6 +2,7 @@
 import uuid
 
 from fastapi_users import schemas
+from platform_shared.schemas.display_name import DisplayName
 
 
 class UserRead(schemas.BaseUser[uuid.UUID]):
@@ -10,8 +11,9 @@ class UserRead(schemas.BaseUser[uuid.UUID]):
 
 
 class UserCreate(schemas.BaseUserCreate):
-    display_name: str = ""
+    display_name: DisplayName = ""
 
 
 class UserUpdate(schemas.BaseUserUpdate):
-    display_name: str | None = None
+    # create_update_dict() drops unset fields, so this default never overwrites a saved name.
+    display_name: DisplayName = ""

@@ -1,4 +1,4 @@
-import { signIn, register } from "@/lib/auth";
+import { signIn } from "@/lib/auth";
 import { showError } from "@platform/ui";
 import type { LoginResult } from "@platform/ui";
 
@@ -8,12 +8,6 @@ interface UseSignInResult {
     password: string,
     totpCode?: string,
   ) => Promise<LoginResult>;
-  handleRegister: (
-    email: string,
-    password: string,
-    displayName?: string,
-    turnstileToken?: string,
-  ) => Promise<void>;
 }
 
 /**
@@ -59,23 +53,5 @@ export function useSignIn(): UseSignInResult {
     }
   }
 
-  async function handleRegister(
-    email: string,
-    password: string,
-    displayName?: string,
-    turnstileToken = "",
-  ): Promise<void> {
-    try {
-      await register(email, password, displayName, turnstileToken);
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Couldn't create your account — please try again.";
-      showError(message);
-      throw err;
-    }
-  }
-
-  return { handleSignIn, handleRegister };
+  return { handleSignIn };
 }

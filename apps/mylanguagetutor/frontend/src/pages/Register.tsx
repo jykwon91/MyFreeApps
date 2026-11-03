@@ -123,6 +123,7 @@ export default function Register() {
                 placeholder="Optional"
                 className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
                 autoComplete="name"
+                maxLength={100}
               />
             </div>
             <div>
