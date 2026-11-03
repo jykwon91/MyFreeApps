@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "MyRecipes",
+    "slug": "myrecipes",
+    "scheme": "myrecipes",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "platforms": ["ios", "android"],
+    "ios": {
+      "bundleIdentifier": "org.myfreeapps.myrecipes"
+    },
+    "android": {
+      "package": "org.myfreeapps.myrecipes"
+    },
+    "plugins": ["expo-router"]
+  }
+}

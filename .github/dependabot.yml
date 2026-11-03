@@ -248,6 +248,31 @@ updates:
         versions: [">=2.1"]
 
   - package-ecosystem: "npm"
+    directory: "/apps/myrecipes/mobile"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "npm", "myrecipes"]
+    groups:
+      npm-minor-patch:
+        update-types: ["minor", "patch"]
+    ignore:
+      # The Expo SDK pins all of these together. A bump to one alone fails
+      # expo-doctor, so they only move in an Expo upgrade (expo install --fix).
+      # `ignore` also stops Dependabot security PRs for them: a CVE shows up as
+      # an alert and needs that upgrade.
+      - dependency-name: "expo"
+      - dependency-name: "expo-*"
+      - dependency-name: "jest-expo"
+      - dependency-name: "react"
+      - dependency-name: "react-native"
+      - dependency-name: "react-native-*"
+      - dependency-name: "@react-native/*"
+      - dependency-name: "@react-native-masked-view/*"
+      - dependency-name: "@types/react"
+      - dependency-name: "typescript"
+
+  - package-ecosystem: "npm"
     directory: "/apps/myrecipes/api-client"
     schedule:
       interval: "monthly"

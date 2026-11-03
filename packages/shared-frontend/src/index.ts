@@ -107,6 +107,7 @@ export { default as KofiButton } from "./components/widgets/KofiButton";
 export { default as YouTubeEmbed } from "./components/embed/YouTubeEmbed";
 
 // Hooks
+export { useDebouncedValue } from "./hooks/useDebouncedValue";
 export { useMediaQuery } from "./hooks/useMediaQuery";
 export { useTheme } from "./hooks/useTheme";
 export { useToast } from "./hooks/useToast";

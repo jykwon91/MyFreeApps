@@ -8,13 +8,13 @@ import {
   showError,
   showSuccess,
   extractErrorMessage,
+  useDebouncedValue,
 } from "@platform/ui";
 import { Check, Pencil, Phone, Search, X } from "lucide-react";
 import {
   useListCustomersQuery,
   useUpdateCustomerNotesMutation,
 } from "@/store/customersApi";
-import { useDebouncedValue } from "@/features/public-order/useDebouncedValue";
 import type { CustomerListItem } from "@/types/customer/customer";
 
 /**

@@ -9,6 +9,7 @@ import {
   FormField,
   showError,
   extractErrorMessage,
+  useDebouncedValue,
 } from "@platform/ui";
 import { Plus, Trash2, Pizza, ArrowRight, Sparkles } from "lucide-react";
 import {
@@ -38,7 +39,6 @@ import {
   countPhoneDigits,
   selectOrderableTheUsual,
 } from "@/features/public-order/applyTheUsual";
-import { useDebouncedValue } from "@/features/public-order/useDebouncedValue";
 
 /**
  * Customer-facing order placement page (mounted at /order, no auth).

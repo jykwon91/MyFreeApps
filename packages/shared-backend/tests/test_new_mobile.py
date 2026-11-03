@@ -38,6 +38,8 @@ _REQUIRED_FILES = (
 def repo(tmp_path: Path) -> Path:
     shutil.copytree(_TEMPLATES, tmp_path / "infra" / "templates")
     config = yaml.safe_load((_REPO_ROOT / "apps" / "myrecipes" / "app.yaml").read_text("utf-8"))
+    # The fixture app hasn't been given a mobile version, whatever MyRecipes has.
+    config.pop("mobile", None)
     config.update(app_slug=_SLUG, app_display_name="My Recipes")
     app_dir = tmp_path / "apps" / _SLUG
     app_dir.mkdir(parents=True)

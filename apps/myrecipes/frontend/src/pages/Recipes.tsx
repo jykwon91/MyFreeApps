@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Camera, ChefHat, Compass, Plus, Search } from "lucide-react";
 import { EmptyState, cn, useIsAuthenticated } from "@platform/ui";
 import { useListRecipesQuery } from "@myrecipes/api-client/store/recipesApi";
-import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useDebouncedValue } from "@platform/ui";
 import RecipeCard from "@/features/recipes/RecipeCard";
 import RecipesListSkeleton from "@/features/recipes/RecipesListSkeleton";
 import { RECIPES_EMPTY_STATE, RECIPES_SEARCH_EMPTY } from "@/constants/empty-states";
