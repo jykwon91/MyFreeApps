@@ -157,7 +157,7 @@ test.describe("Documents — re-extract a failed document", () => {
       .toBe("POST");
 
     // (b) The conversational success toast confirms the action.
-    await expect(page.getByText("take another look at this one")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("take another look at this one").first()).toBeVisible({ timeout: 10000 });
 
     // (c) The document leaves the failed state — the re-extract action and the
     // failed banner disappear while it reprocesses...
@@ -213,6 +213,6 @@ test.describe("Documents — re-extract a failed document", () => {
     await expect
       .poll(() => reExtractMethod, { timeout: 10000, message: "re-extract request was never sent from mobile" })
       .toBe("POST");
-    await expect(page.getByText("take another look at this one")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("take another look at this one").first()).toBeVisible({ timeout: 10000 });
   });
 });
