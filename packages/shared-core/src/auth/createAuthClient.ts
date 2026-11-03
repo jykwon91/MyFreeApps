@@ -81,7 +81,7 @@ export function createAuthClient(store: AuthClientStore) {
     ): Promise<void> {
       await api.post(
         "/auth/register",
-        { email, password, display_name: displayName?.trim() || null },
+        { email, password, display_name: displayName?.trim() ?? "" },
         { headers: turnstileHeaders(turnstileToken) },
       );
     },
