@@ -8,7 +8,7 @@ routes:
   /login:
     not_on_mobile: Not built yet.
   /recipes/:id:
-    not_on_mobile: Not built yet.
+    screen: recipes/[id]
   /recipes/:id/tweak:
     not_on_mobile: Not built yet.
   /recipes/:id/versions/:vid/diff:

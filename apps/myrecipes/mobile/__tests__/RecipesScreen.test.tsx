@@ -62,6 +62,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  // React Native's preset makes the announce function a shared mock, so its calls carry over.
+  jest.clearAllMocks();
   // Clears the cache's expiry timers, which would otherwise outlive the test.
   store.dispatch(baseApi.util.resetApiState());
 });
