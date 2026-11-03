@@ -76,7 +76,6 @@ def _patch_totp_service(db: AsyncSession):
 
     with (
         patch("app.services.user.totp_service.unit_of_work", _fake_session),
-        patch("app.services.user.totp_service.AsyncSessionLocal", _fake_session),
     ):
         yield
 

@@ -37,7 +37,7 @@ Output of two parallel scans (backend + frontend) for code that should live in `
 **Partially resolved:** PR #497 (2026-05-08).
 - ✅ `app/services/system/auth_event_service.py` — was a single-line passthrough stub. Deleted; 5 consumers now import from `platform_shared.services.auth_event_service` directly.
 - ✅ `app/services/system/admin_user_service_factory.py` — was a 3-line DI wiring singleton. Deleted; the singleton instantiation moved into `app/services/system/admin_service.py` (the primary consumer); 3 consumers updated.
-- ❌ `app/services/user/totp_service.py` — **NOT a duplicate.** The audit was wrong. The file owns the DB-coupled orchestration tier (`_TOTP_ISSUER`, `_encrypt`/`_decrypt` bound to `settings.encryption_key`, plus 5 async DB coordinators using `unit_of_work` + `user_repo`). The shared module's own docstring explicitly states the DB-coupled half stays in MBK. Consolidating this would require promoting the DB coordinators into a shared pattern (per-app issuer injection + per-app key binding), a separate design decision. Keeping the file as-is is correct.
+- ✅ `app/services/user/totp_service.py` — the database half moved to `platform_shared.services.totp_account_service`. The file now only binds MyBookkeeper's issuer and per-user encryption.
 
 158 targeted tests passed (100 in totp/auth_event/admin_user, 58 in auth smoke). No mocks needed updating.
 

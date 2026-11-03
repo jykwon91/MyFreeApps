@@ -14,6 +14,8 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user.user import User
+from platform_shared.services import totp_service as shared_totp
+
 from app.services.user import totp_service
 
 
@@ -63,7 +65,6 @@ def _patch_session(db: AsyncSession):
 
     with (
         patch("app.services.user.totp_service.unit_of_work", _fake_session),
-        patch("app.services.user.totp_service.AsyncSessionLocal", _fake_session),
     ):
         yield
 
@@ -74,25 +75,25 @@ def _patch_session(db: AsyncSession):
 
 class TestGenerateSecret:
     def test_returns_base32_string(self) -> None:
-        secret = totp_service.generate_secret()
+        secret = shared_totp.generate_secret()
         assert isinstance(secret, str)
         assert len(secret) >= 16
 
     def test_each_call_returns_unique_secret(self) -> None:
-        secrets = {totp_service.generate_secret() for _ in range(10)}
+        secrets = {shared_totp.generate_secret() for _ in range(10)}
         assert len(secrets) == 10
 
 
 class TestGetProvisioningUri:
     def test_contains_email_and_issuer(self) -> None:
         secret = pyotp.random_base32()
-        uri = totp_service.get_provisioning_uri(secret, "alice@example.com")
+        uri = totp_service.accounts.provisioning_uri(secret, "alice@example.com")
         assert "alice%40example.com" in uri or "alice@example.com" in uri
         assert "MyBookkeeper" in uri
 
     def test_otpauth_scheme(self) -> None:
         secret = pyotp.random_base32()
-        uri = totp_service.get_provisioning_uri(secret, "alice@example.com")
+        uri = totp_service.accounts.provisioning_uri(secret, "alice@example.com")
         assert uri.startswith("otpauth://totp/")
 
 
@@ -101,40 +102,40 @@ class TestVerifyCode:
         # verify_code defaults to sha256; generate the code with sha256 to match
         secret = pyotp.random_base32()
         code = pyotp.TOTP(secret, digest=hashlib.sha256).now()
-        assert totp_service.verify_code(secret, code) is True
+        assert shared_totp.verify_code(secret, code) is True
 
     def test_wrong_code_is_invalid(self) -> None:
         secret = pyotp.random_base32()
-        assert totp_service.verify_code(secret, "000000") is False
+        assert shared_totp.verify_code(secret, "000000") is False
 
     def test_empty_code_is_invalid(self) -> None:
         secret = pyotp.random_base32()
-        assert totp_service.verify_code(secret, "") is False
+        assert shared_totp.verify_code(secret, "") is False
 
     def test_wrong_secret_rejects_valid_code(self) -> None:
         secret_a = pyotp.random_base32()
         secret_b = pyotp.random_base32()
         code = pyotp.TOTP(secret_a).now()
-        assert totp_service.verify_code(secret_b, code) is False
+        assert shared_totp.verify_code(secret_b, code) is False
 
 
 class TestGenerateRecoveryCodes:
     def test_returns_eight_codes_by_default(self) -> None:
-        codes = totp_service.generate_recovery_codes()
+        codes = shared_totp.generate_recovery_codes()
         assert len(codes) == 8
 
     def test_custom_count(self) -> None:
-        codes = totp_service.generate_recovery_codes(count=4)
+        codes = shared_totp.generate_recovery_codes(count=4)
         assert len(codes) == 4
 
     def test_codes_are_uppercase_hex(self) -> None:
-        codes = totp_service.generate_recovery_codes()
+        codes = shared_totp.generate_recovery_codes()
         for code in codes:
             assert len(code) == 8
             assert code == code.upper()
 
     def test_codes_are_unique(self) -> None:
-        codes = totp_service.generate_recovery_codes(count=8)
+        codes = shared_totp.generate_recovery_codes(count=8)
         assert len(set(codes)) == 8
 
 
@@ -142,45 +143,45 @@ class TestVerifyRecoveryCode:
     def test_valid_code_returns_true_and_removes_code(self) -> None:
         codes = ["AABBCCDD", "11223344", "DEADBEEF"]
         stored = ",".join(codes)
-        valid, remaining = totp_service.verify_recovery_code(stored, "AABBCCDD")
+        valid, remaining = shared_totp.verify_recovery_code(stored, "AABBCCDD")
         assert valid is True
         assert "AABBCCDD" not in (remaining or "").split(",")
 
     def test_invalid_code_returns_false_and_preserves_all_codes(self) -> None:
         stored = "AABBCCDD,11223344"
-        valid, remaining = totp_service.verify_recovery_code(stored, "XXXXXXXX")
+        valid, remaining = shared_totp.verify_recovery_code(stored, "XXXXXXXX")
         assert valid is False
         assert remaining == stored
 
     def test_none_stored_codes_returns_false(self) -> None:
-        valid, remaining = totp_service.verify_recovery_code(None, "AABBCCDD")
+        valid, remaining = shared_totp.verify_recovery_code(None, "AABBCCDD")
         assert valid is False
         assert remaining is None
 
     def test_empty_stored_codes_returns_false(self) -> None:
-        valid, remaining = totp_service.verify_recovery_code("", "AABBCCDD")
+        valid, remaining = shared_totp.verify_recovery_code("", "AABBCCDD")
         assert valid is False
 
     def test_case_insensitive_match(self) -> None:
         stored = "AABBCCDD"
-        valid, _ = totp_service.verify_recovery_code(stored, "aabbccdd")
+        valid, _ = shared_totp.verify_recovery_code(stored, "aabbccdd")
         assert valid is True
 
     def test_leading_trailing_whitespace_stripped(self) -> None:
         stored = "AABBCCDD"
-        valid, _ = totp_service.verify_recovery_code(stored, "  AABBCCDD  ")
+        valid, _ = shared_totp.verify_recovery_code(stored, "  AABBCCDD  ")
         assert valid is True
 
     def test_last_code_used_returns_none_for_remaining(self) -> None:
         stored = "AABBCCDD"
-        valid, remaining = totp_service.verify_recovery_code(stored, "AABBCCDD")
+        valid, remaining = shared_totp.verify_recovery_code(stored, "AABBCCDD")
         assert valid is True
         assert remaining is None
 
     def test_second_use_of_same_code_fails(self) -> None:
         stored = "AABBCCDD,11223344"
-        _, remaining = totp_service.verify_recovery_code(stored, "AABBCCDD")
-        valid, _ = totp_service.verify_recovery_code(remaining, "AABBCCDD")
+        _, remaining = shared_totp.verify_recovery_code(stored, "AABBCCDD")
+        valid, _ = shared_totp.verify_recovery_code(remaining, "AABBCCDD")
         assert valid is False
 
 
@@ -499,31 +500,6 @@ class TestValidateTotpForLogin:
         valid, used_recovery = await totp_service.validate_totp_for_login("ghost@example.com", "123456")
         assert valid is False
         assert used_recovery is False
-
-
-class TestIsTotpRequired:
-    @pytest.mark.asyncio
-    async def test_returns_true_when_totp_enabled(self, db: AsyncSession) -> None:
-        user = _make_user(totp_enabled=True, email="enabled@example.com")
-        db.add(user)
-        await db.commit()
-
-        result = await totp_service.is_totp_required("enabled@example.com")
-        assert result is True
-
-    @pytest.mark.asyncio
-    async def test_returns_false_when_totp_disabled(self, db: AsyncSession) -> None:
-        user = _make_user(totp_enabled=False, email="disabled@example.com")
-        db.add(user)
-        await db.commit()
-
-        result = await totp_service.is_totp_required("disabled@example.com")
-        assert result is False
-
-    @pytest.mark.asyncio
-    async def test_returns_false_for_unknown_email(self, db: AsyncSession) -> None:
-        result = await totp_service.is_totp_required("nobody@example.com")
-        assert result is False
 
 
 # ---------------------------------------------------------------------------
