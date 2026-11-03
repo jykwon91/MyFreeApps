@@ -23,4 +23,4 @@ def test_name_the_column_cannot_store_is_rejected(schema: type, raw: str) -> Non
 
 
 def test_omitting_name_leaves_it_unchanged_on_update() -> None:
-    assert "name" not in UserUpdate(password="pw").create_update_dict()
+    assert "name" not in UserUpdate().create_update_dict()

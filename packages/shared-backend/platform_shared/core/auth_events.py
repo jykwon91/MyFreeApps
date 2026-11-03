@@ -12,7 +12,6 @@ class AuthEventType:
     EMAIL_VERIFY_RESEND = "email_verify.resend"
     PASSWORD_RESET_REQUEST = "password_reset.request"
     PASSWORD_RESET_SUCCESS = "password_reset.success"
-    PASSWORD_CHANGE_SUCCESS = "password_change.success"
     TOTP_ENABLED = "totp.enabled"
     TOTP_DISABLED = "totp.disabled"
     TOTP_VERIFY_SUCCESS = "totp.verify.success"

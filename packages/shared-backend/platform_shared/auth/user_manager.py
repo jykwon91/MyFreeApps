@@ -30,7 +30,6 @@ Subclasses MUST override:
 Subclasses MAY override:
 
   * ``on_after_reset_password`` — e.g. to disable TOTP after password reset
-  * ``on_after_update`` — e.g. to log password-change auth events
   * ``on_after_verify`` — e.g. to log EMAIL_VERIFY_SUCCESS
 
 The shared ``authenticate`` enforces account-level lockout, blocks
@@ -281,9 +280,8 @@ class PlatformBaseUserManager(
     async def _update(self, user: UP, update_dict: dict[str, Any]) -> UP:
         """End every existing session when the password changes.
 
-        Here rather than in ``on_after_reset_password`` or ``on_after_update``,
-        which subclasses override without calling ``super()``: both the reset and
-        update flows pass through this method.
+        Here rather than in ``on_after_reset_password``, which subclasses override
+        without calling ``super()``. Password reset passes through this method.
 
         The cutoff is taken after validating and hashing, which can take seconds.
         Taken before, a login with the old password during that wait would issue
