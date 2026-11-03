@@ -21,7 +21,7 @@ dependencies = [
     "anyio==4.15.1",
     "minio==7.2.20",
     # AI photo import: Claude vision extraction (consumed via platform_shared.extraction)
-    "anthropic==1.8.0",
+    "anthropic==2.3.0",
     # Downscale/normalize uploaded photos to Anthropic's vision target before send
     "pillow==13.0.0",
     "platform-shared",
