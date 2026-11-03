@@ -15,7 +15,7 @@ export default function DisplayNameForm({ initialName, disabled = false }: Displ
   async function handleSave() {
     try {
       const trimmed = name.trim();
-      await updateCurrentUser({ display_name: trimmed || null }).unwrap();
+      await updateCurrentUser({ display_name: trimmed }).unwrap();
       setSavedName(trimmed);
       showSuccess("Display name saved.");
     } catch {

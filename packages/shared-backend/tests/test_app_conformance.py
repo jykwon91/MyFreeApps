@@ -914,6 +914,24 @@ class TestReactVersionAlignment:
         )
 
 
+class TestDisplayNameValidation:
+    """A display name the column can't store must be a 422, not a 500."""
+
+    @pytest.mark.parametrize(
+        "backend",
+        [("apps", app, "backend") for app in _APPS if app != "mybookkeeper"]
+        + [("infra", "templates", "scaffold", "backend")],
+        ids="/".join,
+    )
+    def test_user_schemas_use_shared_type(self, backend: tuple[str, ...]) -> None:
+        source = _read(*backend, "app", "schemas", "user", "user_base.py")
+        for schema in ("UserCreate", "UserUpdate"):
+            body = source.split(f"class {schema}(", 1)[1].split("\nclass ", 1)[0]
+            assert re.search(r"^\s+display_name: DisplayName\b", body, re.M), (
+                f"{schema}.display_name must use platform_shared DisplayName."
+            )
+
+
 class TestMobileOnlyChangesDontDeployWeb:
     """A change that only touches a mobile app can't alter the web bundle or API
     image, so it must not trigger a production deploy."""

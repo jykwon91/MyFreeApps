@@ -115,7 +115,7 @@ describe("DisplayNameSetting", () => {
     await user.click(screen.getByRole("button", { name: /Save/i }));
 
     await waitFor(() => {
-      expect(trigger).toHaveBeenCalledWith({ display_name: null });
+      expect(trigger).toHaveBeenCalledWith({ display_name: "" });
     });
   });
 
