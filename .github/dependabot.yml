@@ -55,6 +55,8 @@ updates:
       # up as an alert and needs a manual bump of the override and the ranges.
       - dependency-name: "react"
       - dependency-name: "react-dom"
+      # Root overrides pin this to what the Expo SDK expects, for the same reason.
+      - dependency-name: "@types/react"
       # @types/node must track the Node runtime, not leap ahead. Major bumps
       # (e.g. 25 -> 26) desync the lock / break tsc against the version we
       # actually run. Allow minor+patch; hold majors until the runtime moves.
@@ -93,11 +95,64 @@ updates:
       # up as an alert and needs a manual bump of the override and the ranges.
       - dependency-name: "react"
       - dependency-name: "react-dom"
+      # Root overrides pin this to what the Expo SDK expects, for the same reason.
+      - dependency-name: "@types/react"
       # @types/node must track the Node runtime, not leap ahead. Major bumps
       # (e.g. 25 -> 26) desync the lock / break tsc against the version we
       # actually run. Allow minor+patch; hold majors until the runtime moves.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+
+  # Mobile. Every apps/<slug>/mobile needs an entry like these.
+  - package-ecosystem: "npm"
+    directory: "/packages/shared-mobile"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "npm", "shared"]
+    groups:
+      npm-minor-patch:
+        update-types: ["minor", "patch"]
+    ignore:
+      # The Expo SDK pins all of these together. A bump to one alone fails
+      # expo-doctor, so they only move in an Expo upgrade (expo install --fix).
+      # `ignore` also stops Dependabot security PRs for them: a CVE shows up as
+      # an alert and needs that upgrade.
+      - dependency-name: "expo"
+      - dependency-name: "expo-*"
+      - dependency-name: "jest-expo"
+      - dependency-name: "react"
+      - dependency-name: "react-native"
+      - dependency-name: "react-native-*"
+      - dependency-name: "@react-native/*"
+      - dependency-name: "@react-native-masked-view/*"
+      - dependency-name: "@types/react"
+      - dependency-name: "typescript"
+
+  - package-ecosystem: "npm"
+    directory: "/infra/templates/scaffold-mobile"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "npm", "shared"]
+    groups:
+      npm-minor-patch:
+        update-types: ["minor", "patch"]
+    ignore:
+      # The Expo SDK pins all of these together. A bump to one alone fails
+      # expo-doctor, so they only move in an Expo upgrade (expo install --fix).
+      # `ignore` also stops Dependabot security PRs for them: a CVE shows up as
+      # an alert and needs that upgrade.
+      - dependency-name: "expo"
+      - dependency-name: "expo-*"
+      - dependency-name: "jest-expo"
+      - dependency-name: "react"
+      - dependency-name: "react-native"
+      - dependency-name: "react-native-*"
+      - dependency-name: "@react-native/*"
+      - dependency-name: "@react-native-masked-view/*"
+      - dependency-name: "@types/react"
+      - dependency-name: "typescript"
 
   # GitHub Actions versions
   - package-ecosystem: "github-actions"
@@ -150,6 +205,8 @@ updates:
       # up as an alert and needs a manual bump of the override and the ranges.
       - dependency-name: "react"
       - dependency-name: "react-dom"
+      # Root overrides pin this to what the Expo SDK expects, for the same reason.
+      - dependency-name: "@types/react"
       # @types/node must track the Node runtime, not leap ahead. Major bumps
       # (e.g. 25 -> 26) desync the lock / break tsc against the version we
       # actually run. Allow minor+patch; hold majors until the runtime moves.
@@ -206,6 +263,8 @@ updates:
       # up as an alert and needs a manual bump of the override and the ranges.
       - dependency-name: "react"
       - dependency-name: "react-dom"
+      # Root overrides pin this to what the Expo SDK expects, for the same reason.
+      - dependency-name: "@types/react"
       # @types/node must track the Node runtime, not leap ahead. Major bumps
       # (e.g. 25 -> 26) desync the lock / break tsc against the version we
       # actually run. Allow minor+patch; hold majors until the runtime moves.
@@ -262,6 +321,8 @@ updates:
       # up as an alert and needs a manual bump of the override and the ranges.
       - dependency-name: "react"
       - dependency-name: "react-dom"
+      # Root overrides pin this to what the Expo SDK expects, for the same reason.
+      - dependency-name: "@types/react"
       # @types/node must track the Node runtime, not leap ahead. Major bumps
       # (e.g. 25 -> 26) desync the lock / break tsc against the version we
       # actually run. Allow minor+patch; hold majors until the runtime moves.
@@ -314,6 +375,8 @@ updates:
       # up as an alert and needs a manual bump of the override and the ranges.
       - dependency-name: "react"
       - dependency-name: "react-dom"
+      # Root overrides pin this to what the Expo SDK expects, for the same reason.
+      - dependency-name: "@types/react"
       # @types/node must track the Node runtime, not leap ahead. Major bumps
       # (e.g. 25 -> 26) desync the lock / break tsc against the version we
       # actually run. Allow minor+patch; hold majors until the runtime moves.
@@ -364,6 +427,8 @@ updates:
       # up as an alert and needs a manual bump of the override and the ranges.
       - dependency-name: "react"
       - dependency-name: "react-dom"
+      # Root overrides pin this to what the Expo SDK expects, for the same reason.
+      - dependency-name: "@types/react"
       # @types/node must track the Node runtime, not leap ahead. Major bumps
       # (e.g. 25 -> 26) desync the lock / break tsc against the version we
       # actually run. Allow minor+patch; hold majors until the runtime moves.

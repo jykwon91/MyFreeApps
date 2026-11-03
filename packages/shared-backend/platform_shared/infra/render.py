@@ -43,6 +43,10 @@ Boolean flags (optional, all default false/disabled when absent):
                                  ``DISCORD_ACTIVITY_FRAME_ANCESTORS`` (and no
                                  X-Frame-Options); the API handler keeps XFO DENY + the
                                  app's ``csp``. Apps without the flag render unchanged.
+  mobile                  bool   True when apps/<slug>/mobile exists. Renders the app's
+                                 mobile CI workflow and turns on the screen map check
+                                 (see platform_shared.infra.screen_map). Set by
+                                 platform_shared.infra.new_mobile.
 
 Permissions-Policy (optional):
   permissions_policy_self  list[str]   Features to allow for the app's own origin.
@@ -194,12 +198,25 @@ TEMPLATE_MAP: list[tuple[str, str]] = [
     (".github/workflows/deploy.yml.j2", ".github/workflows/deploy-{app_slug}.yml"),
 ]
 
+# Same shape as TEMPLATE_MAP, rendered only for apps with `mobile: true`.
+MOBILE_TEMPLATE_MAP: list[tuple[str, str]] = [
+    (".github/workflows/ci-mobile.yml.j2", ".github/workflows/ci-mobile-{app_slug}.yml"),
+]
+
 
 def _repo_root() -> Path:
     """Return the monorepo root (the dir containing `infra/`, `apps/`, `.github/`)."""
     here = Path(__file__).resolve()
     # platform_shared/infra/render.py → up 4 = monorepo root
     return here.parents[4]
+
+
+def is_mobile_app(config: dict[str, Any]) -> bool:
+    """Read the ``mobile`` flag. Absent means false; anything but a bool is a typo."""
+    enabled = config.get("mobile", False)
+    if not isinstance(enabled, bool):
+        raise ValueError(f"mobile must be true/false, got {enabled!r}")
+    return enabled
 
 
 def _load_app_config(repo_root: Path, app_slug: str) -> dict[str, Any]:
@@ -257,7 +274,8 @@ def render_app(repo_root: Path, app_slug: str, *, write: bool) -> dict[str, tupl
     )
 
     results: dict[str, tuple[str, str]] = {}
-    for tmpl_rel, dest_pattern in TEMPLATE_MAP:
+    template_map = TEMPLATE_MAP + (MOBILE_TEMPLATE_MAP if is_mobile_app(ctx) else [])
+    for tmpl_rel, dest_pattern in template_map:
         dest_rel = dest_pattern.format(app_slug=app_slug)
         dest = repo_root / dest_rel
         rendered = _render_one(env, tmpl_rel, ctx)

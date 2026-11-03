@@ -1,0 +1,42 @@
+# GENERATED FROM infra/templates/.github/workflows/ci-mobile.yml.j2 — DO NOT EDIT.
+# Edit the template + apps/<app>/app.yaml; re-render via:
+#   python -m platform_shared.infra.render --app {{ app_slug }}
+
+name: {{ app_display_name }} Mobile CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/{{ app_slug }}/mobile/**'
+      - 'packages/shared-core/**'
+      - 'packages/shared-mobile/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/_mobile-checks.yml'
+      - '.github/workflows/ci-mobile-{{ app_slug }}.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/{{ app_slug }}/mobile/**'
+      - 'packages/shared-core/**'
+      - 'packages/shared-mobile/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/_mobile-checks.yml'
+      - '.github/workflows/ci-mobile-{{ app_slug }}.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-mobile-{{ app_slug }}-${{ '{{' }} github.ref {{ '}}' }}
+  cancel-in-progress: ${{ '{{' }} github.event_name == 'pull_request' {{ '}}' }}
+
+jobs:
+  mobile:
+    name: mobile-checks / {{ app_slug }}
+    uses: ./.github/workflows/_mobile-checks.yml
+    with:
+      project: apps/{{ app_slug }}/mobile
+      expo-app: true

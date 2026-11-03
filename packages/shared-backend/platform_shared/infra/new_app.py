@@ -44,16 +44,6 @@ import yaml
 
 from platform_shared.infra import render as _render
 
-# Tokens substituted in template content. ORDER MATTERS -- longer keys first
-# so __APP_DISPLAY_NAME__ does not get partially matched by __APP_.
-_TOKEN_ORDER: tuple[str, ...] = (
-    "__APP_DISPLAY_NAME__",
-    "__APP_SLUG__",
-    "__API_PORT__",
-    "__FRONTEND_DEV_PORT__",
-    "__CADDY_HOST_PORT__",
-)
-
 # Slug regex -- lowercase letters, numbers, hyphens; must start with a letter;
 # no trailing hyphen; reasonable length.
 _SLUG_RE = re.compile(r"^[a-z][a-z0-9-]{1,38}[a-z0-9]$")
@@ -97,13 +87,21 @@ def _repo_root() -> Path:
 
 
 def _substitute(text: str, replacements: dict[str, str]) -> str:
-    for token in _TOKEN_ORDER:
-        text = text.replace(token, replacements[token])
+    for token, value in replacements.items():
+        text = text.replace(token, value)
     return text
 
 
-def _walk_and_copy(src_root: Path, dst_root: Path, replacements: dict[str, str]) -> int:
+def _walk_and_copy(
+    src_root: Path,
+    dst_root: Path,
+    replacements: dict[str, str],
+    *,
+    skip_dirs: frozenset[str] = frozenset(),
+) -> int:
     """Copy every file under ``src_root`` to ``dst_root`` with token substitution.
+
+    Directories named in ``skip_dirs`` are left out, at any depth.
 
     Returns the number of files written.
     """
@@ -112,6 +110,8 @@ def _walk_and_copy(src_root: Path, dst_root: Path, replacements: dict[str, str])
         if not src.is_file():
             continue
         rel = src.relative_to(src_root)
+        if skip_dirs & set(rel.parts[:-1]):
+            continue
         dst = dst_root / rel
         dst.parent.mkdir(parents=True, exist_ok=True)
 

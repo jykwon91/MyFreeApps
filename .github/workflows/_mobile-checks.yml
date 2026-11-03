@@ -1,0 +1,97 @@
+name: Mobile checks
+
+# Reusable. Runs one mobile project's checks; the callers are ci-mobile.yml (shared
+# package and scaffold) and the rendered ci-mobile-<app>.yml (each mobile app).
+#
+# Node 22 because react-native 0.88 and expo 58 need ^22.13 or newer. The web Docker
+# builds stay on app.yaml's node_version; they don't install react-native.
+
+on:
+  workflow_call:
+    inputs:
+      project:
+        description: Repo-relative directory of the npm workspace to check.
+        required: true
+        type: string
+      expo-app:
+        description: Also run expo-doctor and expo export. Only an app has a bundle.
+        required: false
+        type: boolean
+        default: false
+      scaffold-slug:
+        description: >-
+          Generate apps/<slug>/mobile with new_mobile first, so the checks prove what
+          the scaffold produces. `project` must be that directory.
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: ${{ inputs.project }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXPO_NO_TELEMETRY: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Set up Python
+        if: ${{ inputs.scaffold-slug != '' }}
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Generate a throwaway app from the scaffold
+        if: ${{ inputs.scaffold-slug != '' }}
+        env:
+          SLUG: ${{ inputs.scaffold-slug }}
+        # A bare app.yaml is all new_mobile reads. --skip-render because that isn't
+        # enough to render from, and the app is gone when the job ends. The template's
+        # dependencies are already locked, so installing may add entries for the new
+        # workspace but must not change any others. If it does, the scaffold and the
+        # lockfile have drifted, and this job wouldn't be testing what's locked.
+        run: |
+          python -m pip install jinja2 pyyaml
+          mkdir -p "apps/$SLUG"
+          printf 'app_slug: %s\napp_display_name: Scaffold Check\n' "$SLUG" > "apps/$SLUG/app.yaml"
+          (cd packages/shared-backend && python -m platform_shared.infra.new_mobile "$SLUG" --skip-render --skip-npm)
+          cp package-lock.json "$RUNNER_TEMP/package-lock.before.json"
+          npm install --no-audit --no-fund
+          node scripts/check-lockfile-only-added.js "$RUNNER_TEMP/package-lock.before.json" package-lock.json "$SLUG"
+
+      - name: Typecheck
+        working-directory: ${{ inputs.project }}
+        run: npm run typecheck
+
+      - name: Lint
+        working-directory: ${{ inputs.project }}
+        run: npm run lint
+
+      - name: Test
+        working-directory: ${{ inputs.project }}
+        run: npm test
+
+      - name: Expo doctor
+        if: ${{ inputs.expo-app }}
+        working-directory: ${{ inputs.project }}
+        run: npm run doctor
+
+      - name: Export iOS and Android bundles
+        if: ${{ inputs.expo-app }}
+        working-directory: ${{ inputs.project }}
+        run: npm run export

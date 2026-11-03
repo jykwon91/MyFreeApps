@@ -4,8 +4,12 @@
   "workspaces": [
     "packages/shared-core",
     "packages/shared-frontend",
+    "packages/shared-mobile",
     "apps/*/frontend",
-    "apps/*/desktop"
+    "apps/*/desktop",
+    "apps/*/mobile",
+    "apps/*/api-client",
+    "infra/templates/scaffold-mobile"
   ],
   "devDependencies": {
     "vitest": "^5.0.3"
@@ -13,7 +17,7 @@
   "overrides": {
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "@types/react": "^19.2.14",
+    "@types/react": "~19.3.0",
     "@types/react-dom": "^19.2.3",
     "@babel/core": "^7.29.6"
   }

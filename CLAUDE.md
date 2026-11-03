@@ -10,10 +10,16 @@
 MyFreeApps/
 ├── packages/
 │   ├── shared-backend/      # Python: "platform_shared" — auth, DB, encryption, audit, storage
-│   └── shared-frontend/     # npm: "@platform/ui" — React components, hooks, utils
+│   ├── shared-core/         # npm: "@platform/core" — logic shared by web and mobile
+│   ├── shared-frontend/     # npm: "@platform/ui" — React components, hooks, utils
+│   └── shared-mobile/       # npm: "@platform/mobile" — React Native theme + components
 ├── apps/
 │   ├── mybookkeeper/        # Personal bookkeeping + AI invoice extraction
 │   └── (future apps)
+├── infra/templates/
+│   ├── scaffold/            # new_app's template (web + backend)
+│   └── scaffold-mobile/     # new_mobile's template (Expo). An npm workspace, so its
+│                            # dependencies are locked before any app uses them
 ├── sites/
 │   └── landing/public/      # myfreeapps.org — static page linking every deployed app
 │                            # (served by host Caddy; deploy-landing.yml; keep in sync
@@ -43,6 +49,24 @@ pytest                 # Run shared package tests
 ```bash
 npm install            # Install via workspaces (run from monorepo root)
 ```
+
+**Shared mobile package** (from `packages/shared-mobile/`; needs Node 22):
+```bash
+npm run typecheck && npm run lint && npm test
+```
+
+**Add mobile to an existing app** (from `packages/shared-backend/`):
+```bash
+python -m platform_shared.infra.new_mobile <slug>     # apps/<slug>/mobile, mobile: true, CI workflow
+python -m platform_shared.infra.screen_map --app <slug>
+```
+Then add a Dependabot entry for `/apps/<slug>/mobile`. `apps/<slug>/mobile/screen-map.yaml`
+gives every web route a `screen:` or a `not_on_mobile:` reason, and CI fails on a web route
+with no entry. It catches added, renamed and removed pages, not edits to an existing page.
+
+Mobile versions move only with an Expo SDK upgrade (`expo install --fix`), and react and
+react-native stay exact. Web Dockerfiles leave `packages/shared-mobile` out on purpose: that
+keeps react-native out of their `npm ci`. Web code must not import `@platform/mobile`.
 
 **Per-app commands**: See each app's own CLAUDE.md.
 

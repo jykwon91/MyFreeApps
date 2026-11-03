@@ -1,0 +1,47 @@
+import type { ThemeColors } from "../types/ThemeColors";
+
+// Same values as the `:root` and `.dark` variables in apps/*/frontend/src/index.css,
+// and the Tailwind green/red shades the web Toaster uses.
+export const lightColors: ThemeColors = {
+  background: "hsl(0, 0%, 100%)",
+  foreground: "hsl(222.2, 84%, 4.9%)",
+  card: "hsl(0, 0%, 100%)",
+  primary: "hsl(221.2, 83.2%, 53.3%)",
+  primaryForeground: "hsl(210, 40%, 98%)",
+  secondary: "hsl(210, 40%, 96.1%)",
+  secondaryForeground: "hsl(222.2, 47.4%, 11.2%)",
+  muted: "hsl(210, 40%, 96.1%)",
+  mutedForeground: "hsl(215.4, 16.3%, 46.9%)",
+  border: "hsl(214.3, 31.8%, 91.4%)",
+  input: "hsl(214.3, 31.8%, 91.4%)",
+  destructive: "hsl(0, 84.2%, 60.2%)",
+  destructiveForeground: "hsl(210, 40%, 98%)",
+  toastSuccessBackground: "#f0fdf4",
+  toastSuccessBorder: "#bbf7d0",
+  toastSuccessForeground: "#166534",
+  toastErrorBackground: "#fef2f2",
+  toastErrorBorder: "#fecaca",
+  toastErrorForeground: "#991b1b",
+};
+
+export const darkColors: ThemeColors = {
+  background: "hsl(222.2, 84%, 4.9%)",
+  foreground: "hsl(210, 40%, 98%)",
+  card: "hsl(222.2, 84%, 4.9%)",
+  primary: "hsl(217.2, 91.2%, 59.8%)",
+  primaryForeground: "hsl(222.2, 47.4%, 11.2%)",
+  secondary: "hsl(217.2, 32.6%, 17.5%)",
+  secondaryForeground: "hsl(210, 40%, 98%)",
+  muted: "hsl(217.2, 32.6%, 17.5%)",
+  mutedForeground: "hsl(215, 20.2%, 65.1%)",
+  border: "hsl(217.2, 32.6%, 17.5%)",
+  input: "hsl(217.2, 32.6%, 17.5%)",
+  destructive: "hsl(0, 62.8%, 30.6%)",
+  destructiveForeground: "hsl(210, 40%, 98%)",
+  toastSuccessBackground: "#052e16",
+  toastSuccessBorder: "#166534",
+  toastSuccessForeground: "#bbf7d0",
+  toastErrorBackground: "#450a0a",
+  toastErrorBorder: "#991b1b",
+  toastErrorForeground: "#fecaca",
+};
