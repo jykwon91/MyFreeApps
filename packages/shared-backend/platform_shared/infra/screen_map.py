@@ -10,7 +10,7 @@ A mobile app checks in ``apps/<slug>/mobile/screen-map.yaml``::
 
 Every web route needs exactly one entry, so adding, renaming or removing a page fails
 CI until someone decides what happens on mobile. It can't tell that an existing page's
-contents changed: the route is the same, so this has nothing to compare.
+contents changed, because the route is the same. mobile_sync.py covers that.
 
 Routes are read from source rather than by running the router, so they are the paths
 as written: a nested ``transactions`` is ``/transactions``, whatever its parents are.

@@ -64,6 +64,9 @@ Then add a Dependabot entry for `/apps/<slug>/mobile`. `apps/<slug>/mobile/scree
 gives every web route a `screen:` or a `not_on_mobile:` reason, and CI fails on a web route
 with no entry, a route it can't read, or a frontend with no routes (those last two for every
 app, `mobile` or not). It catches added, renamed and removed pages, not edits to an existing page.
+For those, the `mobile-sync` check fails a PR that changes `apps/<slug>/frontend/src` once that
+app has a built screen, unless the PR also changes `apps/<slug>/mobile` or its description has a
+`Mobile: <why not>` line. It proves a decision was made, not that the two apps match.
 
 Mobile versions move only with an Expo SDK upgrade (`expo install --fix`), so CI's `expo-doctor`
 skips its version check, which would otherwise fail on every Expo patch release. React and

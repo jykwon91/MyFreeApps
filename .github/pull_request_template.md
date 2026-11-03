@@ -18,6 +18,10 @@
 - [ ] No new data-flow crossing the user/tenant isolation boundary
 - [ ] Dependencies are pinned and lockfiles updated
 
+## Mobile
+
+<!-- If this edits a web app that has mobile screens and doesn't change its mobile code, add a line starting "Mobile:" saying why not. Otherwise delete this section. -->
+
 ## Security notes
 
 <!-- If this PR touches auth, session handling, encryption, data isolation, or third-party integrations, describe the threat model impact here. Otherwise write "N/A". -->
