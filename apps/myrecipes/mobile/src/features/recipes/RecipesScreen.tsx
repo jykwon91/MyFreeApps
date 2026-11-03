@@ -4,7 +4,8 @@ import { useDebouncedValue } from "@platform/core/hooks/useDebouncedValue";
 import { EmptyState, SearchField, Toast, useAnnouncement, useTheme } from "@platform/mobile";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { FlatList, RefreshControl, View } from "react-native";
+import { FlatList, View } from "react-native";
+import { useRefresh } from "../../hooks/useRefresh";
 import { countLabel } from "../../utils/countLabel";
 import RecipeCard from "./RecipeCard";
 import RecipeListSeparator from "./RecipeListSeparator";
@@ -16,8 +17,6 @@ export default function RecipesScreen() {
   // `clears` counts each time the field empties, so a term still waiting on the debounce
   // can be told apart from what's in the field now and can't come back after clearing.
   const [search, setSearch] = useState({ text: "", clears: 0 });
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [dismissedError, setDismissedError] = useState<unknown>();
 
   const trimmed = search.text.trim();
   const debounced = useDebouncedValue(search);
@@ -28,10 +27,12 @@ export default function RecipesScreen() {
     term ? { search: term } : undefined,
   );
 
+  const { dismissError, isErrorDismissed, isRefreshing, refreshControl } = useRefresh(refetch, error);
+
   // While loading, `data` keeps the previous rows on screen, dimmed. After a failure it
   // could be another search's rows, so only this search's own are shown.
   const rows = isError ? currentData : data;
-  const hasFailedOverRows = isError && !!currentData?.length && error !== dismissedError;
+  const hasFailedOverRows = isError && !!currentData?.length && !isErrorDismissed;
   const isSearchSettled = term === trimmed && !isFetching && !isError;
   useAnnouncement(
     isError && !rows?.length
@@ -47,15 +48,6 @@ export default function RecipesScreen() {
 
   function clearSearch(): void {
     changeSearch("");
-  }
-
-  async function refresh(): Promise<void> {
-    setIsRefreshing(true);
-    try {
-      await refetch();
-    } finally {
-      setIsRefreshing(false);
-    }
   }
 
   function renderEmpty() {
@@ -104,7 +96,7 @@ export default function RecipesScreen() {
       {hasFailedOverRows ? (
         <Toast
           message="Couldn't update the list. Check your connection and try again."
-          onDismiss={() => setDismissedError(error)}
+          onDismiss={dismissError}
           style={{ marginHorizontal: spacing.lg, marginBottom: spacing.sm }}
           variant="error"
         />
@@ -117,15 +109,7 @@ export default function RecipesScreen() {
         keyExtractor={(recipe) => recipe.id}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
-        refreshControl={
-          <RefreshControl
-            colors={[colors.primary]}
-            onRefresh={refresh}
-            progressBackgroundColor={colors.card}
-            refreshing={isRefreshing}
-            tintColor={colors.mutedForeground}
-          />
-        }
+        refreshControl={refreshControl}
         renderItem={({ item }) => <RecipeCard onPress={() => openRecipe(item)} recipe={item} />}
         testID="recipe-list"
         style={{ opacity: isFetching && !isRefreshing && rows?.length ? 0.6 : 1 }}

@@ -4,7 +4,7 @@ import { ArrowLeft, GitCompare } from "lucide-react";
 import { EmptyState, LoadingButton, Skeleton } from "@platform/ui";
 import { useGetDiffQuery, useGetRecipeQuery } from "@myrecipes/api-client/store/recipesApi";
 import DiffRow from "@/features/recipes/DiffRow";
-import { formatIngredientLine } from "@/features/recipes/IngredientLine";
+import { formatIngredientLine } from "@myrecipes/api-client/utils/formatIngredientLine";
 import type { IngredientChange } from "@myrecipes/api-client/types/recipe/diff";
 
 function ingredientLine(change: IngredientChange, side: "before" | "after"): string | null {
