@@ -1,0 +1,13 @@
+"""The app-level TOTP operations the shared ``/auth/totp`` routes call."""
+import uuid
+from typing import Protocol
+
+
+class TotpRouteService(Protocol):
+    async def setup_totp(self, user_id: uuid.UUID) -> tuple[str, str]: ...
+
+    async def confirm_totp(self, user_id: uuid.UUID, code: str) -> tuple[bool, list[str]]: ...
+
+    async def disable_totp(self, user_id: uuid.UUID, code: str) -> bool: ...
+
+    async def validate_totp_for_login(self, email: str, code: str) -> tuple[bool, bool]: ...

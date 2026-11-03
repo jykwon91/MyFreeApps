@@ -261,9 +261,6 @@ app.include_router(build_transparency_router(settings))
 # UserManager.authenticate_password rather than as a route-level dependency,
 # because check_account_not_locked consumes a form-encoded
 # OAuth2PasswordRequestForm body and the TOTP login endpoint accepts JSON.
-for _route in totp.router.routes:
-    if getattr(_route, "path", None) == "/auth/totp/login":
-        _route.dependencies.append(Depends(check_login_rate_limit))
 app.include_router(totp.router)
 
 # Test-only helpers — mounted only when MYJOBHUNTER_ENABLE_TEST_HELPERS=1.

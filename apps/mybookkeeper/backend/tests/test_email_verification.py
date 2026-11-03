@@ -356,8 +356,8 @@ class TestTotpLoginUnverified:
 
         try:
             with (
-                patch("app.api.totp.UserManager.authenticate_password", new=AsyncMock(return_value=unverified_user)),
-                patch("app.api.totp.log_auth_event", new=AsyncMock(return_value=None)),
+                patch("app.core.auth.UserManager.authenticate_password", new=AsyncMock(return_value=unverified_user)),
+                patch("platform_shared.api.totp_router.log_auth_event", new=AsyncMock(return_value=None)),
             ):
                 async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
                     resp = await client.post(

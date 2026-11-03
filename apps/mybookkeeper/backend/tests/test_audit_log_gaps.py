@@ -17,6 +17,7 @@ Four contracts pinned here:
    case (Fix 4, CWE-778).
 """
 import uuid
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -26,7 +27,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.core.auth_events import AuthEventType
+from platform_shared.schemas.totp.totp_login_request import TotpLoginRequest
+from platform_shared.schemas.totp.totp_login_response import TotpLoginResponse
 
+from app.api.totp import router as totp_router
 from app.core.rate_limit import RateLimiter, check_totp_rate_limit
 from app.models.system.auth_event import AuthEvent
 
@@ -34,6 +38,10 @@ from app.models.system.auth_event import AuthEvent
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _totp_login_endpoint() -> Callable[..., Awaitable[TotpLoginResponse]]:
+    return next(route.endpoint for route in totp_router.routes if route.path == "/auth/totp/login")
 
 
 def _make_request(ip: str = "1.2.3.4") -> MagicMock:
@@ -342,8 +350,7 @@ class TestInactiveUserTotpLoginAudit:
 
         Before Fix 4, the collapsed condition wrote user_id=None and
         reason='bad_credentials' for the inactive case."""
-        from app.api.totp import totp_login
-        from app.schemas.user.totp import TotpLoginRequest
+        totp_login = _totp_login_endpoint()
 
         inactive_user = _make_active_user(is_active=False)
         request = _make_request()
@@ -389,8 +396,7 @@ class TestInactiveUserTotpLoginAudit:
         """When authenticate_password returns None, the LOGIN_FAILURE row
         must have user_id=None and reason='bad_credentials'.
         This verifies the None branch wasn't broken by the split."""
-        from app.api.totp import totp_login
-        from app.schemas.user.totp import TotpLoginRequest
+        totp_login = _totp_login_endpoint()
 
         request = _make_request()
 

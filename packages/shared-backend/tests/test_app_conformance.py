@@ -1173,6 +1173,22 @@ class TestProfileUpdateCantChangeCredentials:
         assert "model_config" not in update_body, "UserUpdate must keep refusing unknown fields."
 
 
+class TestTotpRoutesAreShared:
+    """A fix to two-factor login must reach every app, so no app keeps its own copy."""
+
+    @pytest.mark.parametrize(
+        "backend",
+        [("apps", app, "backend") for app in _APPS] + [("infra", "templates", "scaffold", "backend")],
+        ids="/".join,
+    )
+    def test_app_uses_the_shared_router_with_every_login_check(self, backend: tuple[str, ...]) -> None:
+        source = _read(*backend, "app", "api", "totp.py")
+        assert "build_totp_router(" in source
+        assert "@router." not in source
+        for check in ("check_login_rate_limit", "check_totp_rate_limit", "check_totp_account_not_locked"):
+            assert f"Depends({check})" in source, f"TOTP login must keep {check}."
+
+
 class TestMobileOnlyChangesDontDeployWeb:
     """A change that only touches a mobile app can't alter the web bundle or API
     image, so it must not trigger a production deploy."""

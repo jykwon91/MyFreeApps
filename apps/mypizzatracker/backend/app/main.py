@@ -236,9 +236,6 @@ app.include_router(
 app.include_router(build_transparency_router(settings))
 
 # TOTP routes -- /auth/totp/login gets the per-IP throttle.
-for _route in totp.router.routes:
-    if getattr(_route, "path", None) == "/auth/totp/login":
-        _route.dependencies.append(Depends(check_login_rate_limit))
 app.include_router(totp.router)
 
 
