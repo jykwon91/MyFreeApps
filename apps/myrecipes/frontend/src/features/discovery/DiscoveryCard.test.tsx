@@ -12,7 +12,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import DiscoveryCard from "@/features/discovery/DiscoveryCard";
-import type { DiscoveredRecipe } from "@/types/recipe/discovery";
+import type { DiscoveredRecipe } from "@myrecipes/api-client/types/recipe/discovery";
 
 function makeResult(overrides: Partial<DiscoveredRecipe> = {}): DiscoveredRecipe {
   return {

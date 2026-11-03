@@ -10,13 +10,13 @@ import RecipeEditorForm from "@/features/recipes/RecipeEditorForm";
 import {
   useReadWebRecipeMutation,
   useSearchWebRecipesMutation,
-} from "@/store/discoveryApi";
+} from "@myrecipes/api-client/store/discoveryApi";
 import { DISCOVER_EMPTY_STATE, DISCOVER_SUGGESTIONS } from "@/constants/empty-states";
 import type {
   DiscoveredDetail,
   DiscoveredRecipe,
   DiscoveryResults,
-} from "@/types/recipe/discovery";
+} from "@myrecipes/api-client/types/recipe/discovery";
 
 const SEARCH_STAGES = [
   "Searching the web for versions of this dish...",

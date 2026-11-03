@@ -7,7 +7,7 @@ import {
   hostLabel,
 } from "@/features/discovery/discovery-display";
 import { formatIngredientLine } from "@/features/recipes/IngredientLine";
-import type { DiscoveredDetail } from "@/types/recipe/discovery";
+import type { DiscoveredDetail } from "@myrecipes/api-client/types/recipe/discovery";
 
 interface Props {
   detail: DiscoveredDetail;

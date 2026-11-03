@@ -1,8 +1,8 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { LoadingButton, Button, FormField, showError, showSuccess } from "@platform/ui";
-import { useUpdateRecipeMutation } from "@/store/recipesApi";
-import type { RecipeDetailResponse } from "@/types/recipe/recipe";
+import { useUpdateRecipeMutation } from "@myrecipes/api-client/store/recipesApi";
+import type { RecipeDetailResponse } from "@myrecipes/api-client/types/recipe/recipe";
 
 interface Props {
   open: boolean;

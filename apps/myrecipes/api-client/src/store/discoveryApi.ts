@@ -1,5 +1,5 @@
-import { baseApi } from "@platform/ui";
-import type { DiscoveredDetail, DiscoveryResults } from "@/types/recipe/discovery";
+import { baseApi } from "@platform/core/store/baseApi";
+import type { DiscoveredDetail, DiscoveryResults } from "../types/recipe/discovery";
 
 /**
  * Web recipe discovery.

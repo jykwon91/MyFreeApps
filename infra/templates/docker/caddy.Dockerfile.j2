@@ -37,10 +37,16 @@ WORKDIR /repo
 COPY package.json package-lock.json ./
 COPY packages/shared-core/package.json ./packages/shared-core/
 COPY packages/shared-frontend/package.json ./packages/shared-frontend/
+{%- if has_api_client %}
+COPY apps/{{ app_slug }}/api-client/package.json ./apps/{{ app_slug }}/api-client/
+{%- endif %}
 COPY apps/{{ app_slug }}/frontend/package.json ./apps/{{ app_slug }}/frontend/
 RUN npm ci --ignore-scripts
 COPY packages/shared-core ./packages/shared-core
 COPY packages/shared-frontend ./packages/shared-frontend
+{%- if has_api_client %}
+COPY apps/{{ app_slug }}/api-client ./apps/{{ app_slug }}/api-client
+{%- endif %}
 COPY apps/{{ app_slug }}/frontend ./apps/{{ app_slug }}/frontend
 
 # Frontend build-time public env. Vite inlines anything prefixed with

@@ -8,7 +8,7 @@ import {
   formatTotalMinutes,
   hostLabel,
 } from "@/features/discovery/discovery-display";
-import type { DiscoveredRecipe } from "@/types/recipe/discovery";
+import type { DiscoveredRecipe } from "@myrecipes/api-client/types/recipe/discovery";
 
 interface Props {
   recipe: DiscoveredRecipe;

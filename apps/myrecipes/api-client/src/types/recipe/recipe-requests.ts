@@ -1,5 +1,5 @@
-import type { IngredientInput } from "@/types/recipe/ingredient";
-import type { StepInput } from "@/types/recipe/step";
+import type { IngredientInput } from "./ingredient";
+import type { StepInput } from "./step";
 
 /** Create a recipe together with its first version (v1) in one call. */
 export interface RecipeCreateRequest {

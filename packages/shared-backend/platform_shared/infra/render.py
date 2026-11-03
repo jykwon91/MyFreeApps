@@ -265,6 +265,8 @@ def render_app(repo_root: Path, app_slug: str, *, write: bool) -> dict[str, tupl
     permissions_policy_self: list[str] = ctx.get("permissions_policy_self") or []
     ctx["permissions_policy"] = _build_permissions_policy(permissions_policy_self)
     _apply_discord_activity(ctx)
+    # The web image builds from a subset of the workspace, so it has to copy this.
+    ctx["has_api_client"] = (repo_root / "apps" / app_slug / "api-client" / "package.json").is_file()
 
     env = Environment(
         loader=FileSystemLoader(str(repo_root / "infra" / "templates")),

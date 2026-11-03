@@ -14,9 +14,9 @@ import { useRecipeEditorForm } from "@/features/recipes/useRecipeEditorForm";
 import {
   useCreateRecipeMutation,
   useCreateVersionMutation,
-} from "@/store/recipesApi";
-import type { RecipeExtractionDraft } from "@/types/recipe/extraction";
-import type { VersionResponse } from "@/types/recipe/version";
+} from "@myrecipes/api-client/store/recipesApi";
+import type { RecipeExtractionDraft } from "@myrecipes/api-client/types/recipe/extraction";
+import type { VersionResponse } from "@myrecipes/api-client/types/recipe/version";
 
 interface CreateProps {
   mode: "create";

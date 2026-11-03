@@ -2,10 +2,10 @@ import { useMemo } from "react";
 import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
 import { ArrowLeft, GitCompare } from "lucide-react";
 import { EmptyState, LoadingButton, Skeleton } from "@platform/ui";
-import { useGetDiffQuery, useGetRecipeQuery } from "@/store/recipesApi";
+import { useGetDiffQuery, useGetRecipeQuery } from "@myrecipes/api-client/store/recipesApi";
 import DiffRow from "@/features/recipes/DiffRow";
 import { formatIngredientLine } from "@/features/recipes/IngredientLine";
-import type { IngredientChange } from "@/types/recipe/diff";
+import type { IngredientChange } from "@myrecipes/api-client/types/recipe/diff";
 
 function ingredientLine(change: IngredientChange, side: "before" | "after"): string | null {
   const snapshot = change[side];

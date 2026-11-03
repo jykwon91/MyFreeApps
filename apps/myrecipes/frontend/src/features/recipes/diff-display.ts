@@ -1,4 +1,4 @@
-import type { DiffChangeKind } from "@/types/recipe/diff";
+import type { DiffChangeKind } from "@myrecipes/api-client/types/recipe/diff";
 
 interface ChangeStyle {
   /** Container border + background tint. */

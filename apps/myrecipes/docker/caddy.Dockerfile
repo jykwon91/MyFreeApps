@@ -37,10 +37,12 @@ WORKDIR /repo
 COPY package.json package-lock.json ./
 COPY packages/shared-core/package.json ./packages/shared-core/
 COPY packages/shared-frontend/package.json ./packages/shared-frontend/
+COPY apps/myrecipes/api-client/package.json ./apps/myrecipes/api-client/
 COPY apps/myrecipes/frontend/package.json ./apps/myrecipes/frontend/
 RUN npm ci --ignore-scripts
 COPY packages/shared-core ./packages/shared-core
 COPY packages/shared-frontend ./packages/shared-frontend
+COPY apps/myrecipes/api-client ./apps/myrecipes/api-client
 COPY apps/myrecipes/frontend ./apps/myrecipes/frontend
 
 # Frontend build-time public env. Vite inlines anything prefixed with

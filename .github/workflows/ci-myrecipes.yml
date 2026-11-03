@@ -146,6 +146,15 @@ jobs:
       - name: Build frontend
         run: npm run build --workspace=myrecipes-frontend
 
+      - name: Check API client
+        # The frontend's tests include the one that proves its store and the client
+        # share a single baseApi.
+        run: |
+          npm run typecheck --workspace=@myrecipes/api-client
+          npm run lint --workspace=@myrecipes/api-client
+          npm test --workspace=@myrecipes/api-client
+          npm test --workspace=myrecipes-frontend
+
   caddy-image:
     name: caddy-image / myrecipes
     runs-on: ubuntu-latest

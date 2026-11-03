@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { GitBranch } from "lucide-react";
 import { Badge, formatDate } from "@platform/ui";
 import StarRating from "@/features/recipes/StarRating";
-import type { RecipeSummary } from "@/types/recipe/recipe";
+import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 
 interface Props {
   recipe: RecipeSummary;
