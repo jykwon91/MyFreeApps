@@ -11,8 +11,9 @@
       "bundleIdentifier": "org.myfreeapps.myrecipes"
     },
     "android": {
-      "package": "org.myfreeapps.myrecipes"
+      "package": "org.myfreeapps.myrecipes",
+      "permissions": ["android.permission.SCHEDULE_EXACT_ALARM"]
     },
-    "plugins": ["expo-router"]
+    "plugins": ["expo-router", ["expo-notifications", { "enableRemoteNotifications": false }]]
   }
 }
