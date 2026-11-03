@@ -221,7 +221,7 @@ async def record_failed_login(
     now: Optional[datetime] = None,
     log_event: LogEvent = log_auth_event,
 ) -> dict[str, Any]:
-    """Compute the next lockout state after a failed password attempt.
+    """Compute the next lockout state after a wrong password or 2FA code.
 
     Returns the update dict the caller must persist
     (``failed_login_count``, ``last_failed_login_at``, and

@@ -27,11 +27,11 @@ from types import SimpleNamespace
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.params import Depends as DependsParam
 from fastapi_users.authentication import Strategy
-from fastapi_users.manager import BaseUserManager
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.auth.totp_route_service import TotpRouteService
 from platform_shared.auth.totp_route_user import TotpRouteUser
+from platform_shared.auth.user_manager import PlatformBaseUserManager
 from platform_shared.core.auth_events import AuthEventType
 from platform_shared.schemas.totp.totp_disable_request import TotpDisableRequest
 from platform_shared.schemas.totp.totp_disable_response import TotpDisableResponse
@@ -47,7 +47,7 @@ from platform_shared.services.auth_event_service import log_auth_event
 def build_totp_router(
     *,
     current_active_user: Callable[..., Awaitable[TotpRouteUser]],
-    get_user_manager: Callable[..., AsyncIterator[BaseUserManager]],
+    get_user_manager: Callable[..., AsyncIterator[PlatformBaseUserManager]],
     get_db: Callable[..., AsyncIterator[AsyncSession]],
     get_jwt_strategy: Callable[[], Strategy],
     totp_service: TotpRouteService,
@@ -138,7 +138,7 @@ def build_totp_router(
     async def totp_login(
         request: Request,
         body: TotpLoginRequest,
-        user_manager: BaseUserManager = Depends(get_user_manager),
+        user_manager: PlatformBaseUserManager = Depends(get_user_manager),
         db: AsyncSession = Depends(get_db),
     ) -> TotpLoginResponse:
         """Email + password + optional code.
@@ -193,6 +193,7 @@ def build_totp_router(
                 user.email, body.totp_code,
             )
             if not valid:
+                await user_manager.count_failed_second_factor(user)
                 await log_auth_event(
                     db,
                     event_type=AuthEventType.TOTP_VERIFY_FAILURE,
@@ -203,6 +204,7 @@ def build_totp_router(
                 await db.commit()
                 raise HTTPException(status_code=401, detail="invalid_totp")
 
+            await user_manager.clear_failed_logins(user)
             await log_auth_event(
                 db,
                 event_type=(

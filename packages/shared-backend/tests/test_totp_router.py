@@ -40,6 +40,8 @@ class _Harness:
         )
         self.manager = MagicMock()
         self.manager.authenticate_password = AsyncMock(return_value=user)
+        self.manager.count_failed_second_factor = AsyncMock()
+        self.manager.clear_failed_logins = AsyncMock()
         self.strategy = MagicMock()
         self.strategy.write_token = AsyncMock(return_value="a-token")
 
@@ -104,6 +106,8 @@ def test_user_with_2fa_and_no_code_is_asked_for_one_and_gets_no_token(events: As
     assert resp.status_code == 200
     assert resp.json() == {"detail": "totp_required"}
     harness.strategy.write_token.assert_not_awaited()
+    harness.manager.clear_failed_logins.assert_not_awaited()
+    harness.manager.count_failed_second_factor.assert_not_awaited()
 
 
 def test_correct_code_gets_a_token(events: AsyncMock) -> None:
@@ -114,6 +118,8 @@ def test_correct_code_gets_a_token(events: AsyncMock) -> None:
     assert resp.json()["access_token"] == "a-token"
     harness.service.validate_totp_for_login.assert_awaited_once_with(LOGIN["email"], "123456")
     assert _logged_types(events) == [AuthEventType.TOTP_VERIFY_SUCCESS, AuthEventType.LOGIN_SUCCESS]
+    harness.manager.clear_failed_logins.assert_awaited_once_with(harness.user)
+    harness.manager.count_failed_second_factor.assert_not_awaited()
 
 
 def test_recovery_code_is_logged_as_one(events: AsyncMock) -> None:
@@ -134,6 +140,8 @@ def test_wrong_code_gets_no_token(events: AsyncMock) -> None:
     assert resp.status_code == 401
     assert resp.json()["detail"] == "invalid_totp"
     assert _logged_types(events) == [AuthEventType.TOTP_VERIFY_FAILURE]
+    harness.manager.count_failed_second_factor.assert_awaited_once_with(harness.user)
+    harness.manager.clear_failed_logins.assert_not_awaited()
     harness.strategy.write_token.assert_not_awaited()
     harness.db.commit.assert_awaited()
 
