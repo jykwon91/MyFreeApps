@@ -170,15 +170,15 @@ class _StrictSuperuserUser(Protocol):
     is_superuser: bool
 
 
-def make_decode_token_iat(
+def make_decode_token_auth_time(
     *,
     secret_key: str,
     audience: str = "fastapi-users:auth",
     algorithms: tuple[str, ...] = ("HS256",),
 ) -> Callable[[Request], Optional[float]]:
-    """Build a callable that returns the JWT iat from a request, or None.
+    """Build a callable that returns the JWT auth_time from a request, or None.
 
-    Used as the ``decode_token_iat`` dependency of
+    Used as the ``decode_token_auth_time`` dependency of
     :func:`make_strict_superuser_gate`. Each app calls this once at
     module-import time with its own ``settings.secret_key`` and stores
     the resulting callable as a module-level value.
@@ -198,7 +198,7 @@ def make_decode_token_iat(
 
     Returns:
         A pure-function callable suitable for the gate's
-        ``decode_token_iat`` parameter.
+        ``decode_token_auth_time`` parameter.
     """
 
     def _decode(request: Request) -> Optional[float]:
@@ -216,13 +216,13 @@ def make_decode_token_iat(
                 audience=audience,
             )
         except PyJWTError as exc:
-            _iat_logger.debug("decode_token_iat: jwt decode failed: %s", exc)
+            _iat_logger.debug("decode_token_auth_time: jwt decode failed: %s", exc)
             return None
-        iat = payload.get("iat")
-        if iat is None:
+        auth_time = payload.get("auth_time")
+        if auth_time is None:
             return None
         try:
-            return float(iat)
+            return float(auth_time)
         except (TypeError, ValueError):
             return None
 
@@ -234,7 +234,7 @@ def make_strict_superuser_gate(
     current_active_user: Callable[..., Awaitable[_StrictSuperuserUser]],
     get_db: Callable[..., AsyncIterator[AsyncSession]],
     verify_totp_step_up: Callable[[AsyncSession, uuid.UUID, str], Awaitable[None]],
-    decode_token_iat: Callable[[Request], Optional[float]],
+    decode_token_auth_time: Callable[[Request], Optional[float]],
     max_token_age_seconds: int = 900,
 ) -> Callable[..., Awaitable[_StrictSuperuserUser]]:
     """Build a hardened FastAPI dependency for superuser-only routes.
@@ -243,7 +243,7 @@ def make_strict_superuser_gate(
 
     1. ``user.is_superuser`` — the JWT-bound role check (weakest gate; a
        stolen JWT alone passes this).
-    2. **Recent re-auth** — JWT's ``iat`` claim must be within
+    2. **Recent re-auth** — JWT's ``auth_time`` claim must be within
        ``max_token_age_seconds`` of now. Default 15 minutes. Forces the
        user to log in again before issuing destructive admin actions.
     3. **TOTP step-up** — the request must include an ``X-TOTP-Code``
@@ -270,9 +270,9 @@ def make_strict_superuser_gate(
         verify_totp_step_up: A callable taking ``(db, user_id, totp_code)``
             that raises ``HTTPException`` if the code is invalid. Apps wire
             their own implementation against the shared totp service.
-        decode_token_iat: A callable taking ``(request)`` that returns the
-            JWT's ``iat`` claim (Unix timestamp) or ``None`` if the JWT
-            cannot be decoded or has no iat. The gate uses this to enforce
+        decode_token_auth_time: A callable taking ``(request)`` that returns the
+            JWT's ``auth_time`` claim (Unix timestamp) or ``None`` if the JWT
+            cannot be decoded or has no auth_time. The gate uses this to enforce
             the recent-auth window.
         max_token_age_seconds: The recent-auth window. Default 900s
             (15 minutes). Tokens older than this are rejected with 401.
@@ -314,9 +314,9 @@ def make_strict_superuser_gate(
             )
             raise HTTPException(status_code=403, detail="Superuser access required")
 
-        # Gate 2: recent re-auth (JWT iat must be within window)
-        iat = decode_token_iat(request)
-        if iat is None:
+        # Gate 2: recent re-auth (JWT auth_time must be within window)
+        auth_time = decode_token_auth_time(request)
+        if auth_time is None:
             await log_auth_event(
                 db,
                 event_type=AuthEventType.SUPERUSER_GATE_DENIED_TOKEN_NO_IAT,
@@ -326,10 +326,10 @@ def make_strict_superuser_gate(
                 metadata={"path": path},
             )
             raise HTTPException(
-                status_code=401, detail="Token missing or unreadable iat claim"
+                status_code=401, detail="Token missing or unreadable auth_time claim"
             )
 
-        age_seconds = int(time.time() - iat)
+        age_seconds = int(time.time() - auth_time)
         if age_seconds > max_token_age_seconds:
             await log_auth_event(
                 db,

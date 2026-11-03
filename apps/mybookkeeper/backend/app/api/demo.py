@@ -2,7 +2,7 @@
 
 Write endpoints (create / delete / reset) are gated by the strict
 superuser gate (PR F1) — three-check defense-in-depth (is_superuser +
-recent JWT iat + X-TOTP-Code header). The list endpoint stays on
+recent JWT auth_time + X-TOTP-Code header). The list endpoint stays on
 ``current_admin`` so opening the demo admin page does not require a
 TOTP step-up — same convention as ``GET /admin/users`` in the shared
 admin router.

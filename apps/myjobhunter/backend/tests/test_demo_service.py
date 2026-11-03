@@ -260,7 +260,7 @@ def _bypass_strict_gate():
     """Override the strict-superuser dependency so HTTP-layer demo tests
     don't have to enroll TOTP + generate a fresh code on every run.
 
-    The strict-gate's three checks (is_superuser + recent iat +
+    The strict-gate's three checks (is_superuser + recent auth_time +
     X-TOTP-Code) are exhaustively tested at the unit level in
     ``packages/shared-backend/tests/test_permissions.py`` and at the
     router-wiring level in ``test_admin_router_stepup.py``. Re-testing

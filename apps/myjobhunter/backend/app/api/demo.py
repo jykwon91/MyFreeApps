@@ -1,7 +1,7 @@
 """Superuser demo-management routes.
 
 Write routes (create, delete) are gated by ``current_strict_superuser``
-(PR F1) — three-check defense-in-depth (is_superuser + recent JWT iat +
+(PR F1) — three-check defense-in-depth (is_superuser + recent JWT auth_time +
 X-TOTP-Code header). The list endpoint stays on ``current_superuser``
 so opening the demo admin page does not require a TOTP step-up — same
 convention as ``GET /admin/users`` in the shared admin router. Demo

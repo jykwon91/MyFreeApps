@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.core.permissions import (
     make_current_superuser,
-    make_decode_token_iat,
+    make_decode_token_auth_time,
     make_strict_superuser_gate,
 )
 
@@ -34,13 +34,13 @@ async def _verify_totp_step_up(
         raise HTTPException(status_code=403, detail="invalid_totp")
 
 
-_decode_token_iat = make_decode_token_iat(secret_key=settings.secret_key)
+_decode_token_auth_time = make_decode_token_auth_time(secret_key=settings.secret_key)
 
 # 60-min recent-auth window — mirrors MJH.
 current_strict_superuser = make_strict_superuser_gate(
     current_active_user=current_active_user,
     get_db=get_db,
     verify_totp_step_up=_verify_totp_step_up,
-    decode_token_iat=_decode_token_iat,
+    decode_token_auth_time=_decode_token_auth_time,
     max_token_age_seconds=3600,
 )

@@ -33,15 +33,20 @@ from platform_shared.auth.session_invalidation import is_issued_before_cutoff
 
 
 class IatJWTStrategy(JWTStrategy[models.UP, models.ID], Generic[models.UP, models.ID]):
-    """JWTStrategy that always emits an ``iat`` (issued-at) claim.
+    """JWTStrategy that adds ``iat`` and ``auth_time`` claims.
 
     fastapi-users 15.x ``JWTStrategy.write_token`` emits only ``sub``,
-    ``aud``, and ``exp``. The platform's strict-superuser gate
-    (``platform_shared.core.permissions.make_strict_superuser_gate``)
-    enforces a recent-auth window by reading ``iat`` — without it,
-    every gated endpoint fails with 401 "Token missing or unreadable
-    iat claim". This subclass closes that gap so the gate works against
-    real platform-issued tokens, not just hand-crafted test tokens.
+    ``aud``, and ``exp``. The platform needs two more:
+
+    - ``iat``, when this token was issued. A token issued before the user's
+      session cutoff stops working.
+    - ``auth_time``, when the user last proved who they are. The strict-superuser
+      gate (``platform_shared.core.permissions.make_strict_superuser_gate``)
+      reads it to enforce a recent-auth window.
+
+    They're separate because a token renewed without a login would get a new
+    ``iat`` while the user's proof of identity stays as old as it was. Every
+    token written here comes from a login, so today they're equal.
     """
 
     async def read_token(
@@ -62,10 +67,12 @@ class IatJWTStrategy(JWTStrategy[models.UP, models.ID], Generic[models.UP, model
         return user
 
     async def write_token(self, user: models.UP) -> str:
+        now = int(time.time())
         data = {
             "sub": str(user.id),
             "aud": self.token_audience,
-            "iat": int(time.time()),
+            "iat": now,
+            "auth_time": now,
         }
         return generate_jwt(
             data, self.encode_key, self.lifetime_seconds, algorithm=self.algorithm,
