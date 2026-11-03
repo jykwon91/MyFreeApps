@@ -284,10 +284,21 @@ class PlatformBaseUserManager(
         Here rather than in ``on_after_reset_password`` or ``on_after_update``,
         which subclasses override without calling ``super()``: both the reset and
         update flows pass through this method.
+
+        The cutoff is taken after validating and hashing, which can take seconds.
+        Taken before, a login with the old password during that wait would issue
+        a token newer than the cutoff, which would survive the change.
         """
-        if update_dict.get("password") is not None:
-            update_dict = {**update_dict, "auth_valid_after": session_cutoff_now()}
-        return await super()._update(user, update_dict)
+        password = update_dict.get("password")
+        if password is None:
+            return await super()._update(user, update_dict)
+        await self.validate_password(password, user)
+        hashed_password = self.password_helper.hash(password)
+        others = {field: value for field, value in update_dict.items() if field != "password"}
+        return await super()._update(
+            user,
+            {**others, "hashed_password": hashed_password, "auth_valid_after": session_cutoff_now()},
+        )
 
     async def validate_password(
         self, password: str, user: Union[schemas.UC, models.UP],
