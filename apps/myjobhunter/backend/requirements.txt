@@ -36,11 +36,11 @@ bcrypt==5.0.0
     #   pwdlib
 beautifulsoup4==4.15.0
     # via myjobhunter-backend
-brotli==1.2.0 ; platform_python_implementation == 'CPython'
+brotli==1.2.1 ; platform_python_implementation == 'CPython'
     # via fonttools
-brotlicffi==1.2.0.2 ; platform_python_implementation != 'CPython'
+brotlicffi==1.2.1.0 ; platform_python_implementation != 'CPython'
     # via fonttools
-certifi==2026.7.22
+certifi==2026.10.23
     # via
     #   httpcore
     #   httpx
@@ -74,7 +74,7 @@ cryptography==50.0.1
     #   pyjwt
 cssselect2==0.10.1
     # via weasyprint
-dnspython==2.8.0
+dnspython==2.9.1
     # via email-validator
 docstring-parser==0.18.0
     # via anthropic
@@ -95,9 +95,9 @@ fastapi-users==15.0.5
     #   myjobhunter-backend
 fastapi-users-db-sqlalchemy==7.0.0
     # via fastapi-users
-fastembed==0.9.0
+fastembed==0.9.1
     # via myjobhunter-backend
-filelock==4.1.0
+filelock==4.2.7
     # via huggingface-hub
 flatbuffers==25.12.19
     # via onnxruntime
@@ -177,7 +177,7 @@ passlib==1.7.4
     # via myjobhunter-backend
 pgvector==0.5.1
     # via myjobhunter-backend
-pillow==12.3.0
+pillow==13.0.0
     # via
     #   fastembed
     #   weasyprint
@@ -219,7 +219,7 @@ pyjwt==2.15.0
     #   platform-shared
 pyotp==2.10.0
     # via platform-shared
-pypdf==6.20.0
+pypdf==6.21.4
     # via myjobhunter-backend
 pyphen==0.18.1
     # via weasyprint
