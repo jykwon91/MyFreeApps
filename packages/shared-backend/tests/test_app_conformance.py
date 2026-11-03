@@ -1153,6 +1153,26 @@ class TestSessionInvalidation:
         assert any("auth_valid_after" in path.read_text(encoding="utf-8") for path in versions.glob("*.py"))
 
 
+class TestProfileUpdateCantChangeCredentials:
+    """``BaseUserUpdate`` accepts email and password, so a stolen token could take over the account."""
+
+    @pytest.mark.parametrize(
+        "schema_file",
+        [
+            ("apps", app, "backend", "app", "schemas", "user", "user.py" if app == "mybookkeeper" else "user_base.py")
+            for app in _APPS
+        ]
+        + [("infra", "templates", "scaffold", "backend", "app", "schemas", "user", "user_base.py")],
+        ids="/".join,
+    )
+    def test_user_update_is_limited_to_profile_fields(self, schema_file: tuple[str, ...]) -> None:
+        source = _read(*schema_file)
+        assert "class UserUpdate(SelfServiceUserUpdate):" in source
+        update_body = source.split("class UserUpdate(SelfServiceUserUpdate):", 1)[1]
+        assert not re.search(r"^\s+(email|password|is_superuser|is_active|is_verified)\s*:", update_body, re.M)
+        assert "model_config" not in update_body, "UserUpdate must keep refusing unknown fields."
+
+
 class TestMobileOnlyChangesDontDeployWeb:
     """A change that only touches a mobile app can't alter the web bundle or API
     image, so it must not trigger a production deploy."""

@@ -18,7 +18,6 @@ class TestAuthEventTypeConstants:
     def test_password_constants(self) -> None:
         assert AuthEventType.PASSWORD_RESET_REQUEST == "password_reset.request"
         assert AuthEventType.PASSWORD_RESET_SUCCESS == "password_reset.success"
-        assert AuthEventType.PASSWORD_CHANGE_SUCCESS == "password_change.success"
 
     def test_totp_constants(self) -> None:
         assert AuthEventType.TOTP_ENABLED == "totp.enabled"

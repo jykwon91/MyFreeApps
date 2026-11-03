@@ -1,7 +1,7 @@
 import logging
 import uuid
 from datetime import timedelta
-from typing import Any, Optional
+from typing import Optional
 
 from fastapi import Depends, Request
 from fastapi_users import FastAPIUsers
@@ -146,19 +146,6 @@ class UserManager(PlatformBaseUserManager[User]):
             request=request,
             succeeded=True,
         )
-
-    async def on_after_update(
-        self, user: User, update_dict: dict[str, Any], request: Optional[Request] = None,
-    ) -> None:
-        """Log password changes (profile updates that include hashed_password)."""
-        if "hashed_password" in update_dict:
-            await log_auth_event(
-                self.user_db.session,
-                event_type=AuthEventType.PASSWORD_CHANGE_SUCCESS,
-                user_id=user.id,
-                request=request,
-                succeeded=True,
-            )
 
     async def on_after_verify(
         self, user: User, request=None,

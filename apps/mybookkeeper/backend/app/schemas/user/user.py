@@ -1,6 +1,7 @@
 import uuid
 
 from fastapi_users import schemas
+from platform_shared.schemas.self_service_user_update import SelfServiceUserUpdate
 from pydantic import BaseModel
 
 from app.models.user.user import Role
@@ -16,7 +17,7 @@ class UserCreate(schemas.BaseUserCreate):
     name: UserName = None
 
 
-class UserUpdate(schemas.BaseUserUpdate):
+class UserUpdate(SelfServiceUserUpdate):
     name: UserName = None
 
 
