@@ -2,22 +2,37 @@ import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
-import { AccessibilityInfo } from "react-native";
+import { AccessibilityInfo, AppState } from "react-native";
 import { Provider } from "react-redux";
 import RecipeDetailScreen from "../src/features/recipes/RecipeDetailScreen";
+import { pageChanged } from "../src/features/cook/cookSessionsSlice";
+import { COOK_SESSION_MAX_AGE_MS } from "../src/constants/cook";
 import { makeStore } from "../src/lib/store";
 
 const mockBack = jest.fn();
+const mockPush = jest.fn();
+const mockFocus = new Set<() => void>();
 const mockReplace = jest.fn();
 let mockCanGoBack = true;
 let mockParams: { id: string; title?: string; owner?: string };
 jest.mock("expo-router", () => ({
   Stack: { Screen: () => null },
+  useFocusEffect: (callback: () => void) => {
+    const { useEffect } = jest.requireActual("react");
+    useEffect(() => {
+      mockFocus.add(callback);
+      callback();
+      return () => {
+        mockFocus.delete(callback);
+      };
+    }, [callback]);
+  },
   useLocalSearchParams: () => mockParams,
-  useRouter: () => ({ back: mockBack, canGoBack: () => mockCanGoBack, replace: mockReplace }),
+  useRouter: () => ({ back: mockBack, canGoBack: () => mockCanGoBack, push: mockPush, replace: mockReplace }),
 }));
 
 const VERSION = {
+  id: "v1",
   version_number: 1,
   change_note: null,
   servings: "4",
@@ -91,6 +106,7 @@ async function pullToRefresh() {
 beforeEach(() => {
   api.defaults.adapter = adapter;
   mockBack.mockClear();
+  mockPush.mockClear();
   mockReplace.mockClear();
   mockCanGoBack = true;
   mockParams = { id: "r1", title: "Tomato soup", owner: "Sam" };
@@ -102,6 +118,7 @@ beforeEach(() => {
 afterEach(async () => {
   // React Native's preset makes the announce function a shared mock, so its calls carry over.
   jest.clearAllMocks();
+  jest.restoreAllMocks();
   await act(async () => {
     store.dispatch(baseApi.util.resetApiState());
   });
@@ -155,6 +172,76 @@ describe("RecipeDetailScreen", () => {
     expect(lines).toEqual(["2 cans tomatoes (crushed)", "basil"]);
     expect(screen.getByLabelText("Step 1. Open the cans.").props.accessible).toBe(true);
     expect(screen.getByLabelText("Step 2. Simmer it.").props.accessible).toBe(true);
+  });
+
+  it("offers cooking when there are steps, and opens the cook screen", async () => {
+    await show();
+
+    const start = await screen.findByRole("button", { name: "Start cooking" });
+    expect(start.props.accessibilityHint).toMatch(/keeps your screen on/);
+    await fireEvent.press(start);
+    expect(mockPush).toHaveBeenCalledWith({ pathname: "/recipes/[id]/cook", params: { id: "r1" } });
+  });
+
+  it("offers to resume when there's progress on this version", async () => {
+    await show();
+    await screen.findByRole("button", { name: "Start cooking" });
+
+    await act(async () => {
+      store.dispatch(pageChanged({ recipeId: "r1", versionId: "v1", pageIndex: 1, now: Date.now() }));
+    });
+
+    expect(await screen.findByRole("button", { name: "Resume cooking" })).toBeTruthy();
+  });
+
+  it("opens the cook screen once for a double tap, and again after coming back", async () => {
+    await show();
+    const start = await screen.findByRole("button", { name: "Start cooking" });
+
+    await fireEvent.press(start);
+    await fireEvent.press(start);
+    expect(mockPush).toHaveBeenCalledTimes(1);
+
+    await act(async () => mockFocus.forEach((callback) => callback()));
+    await fireEvent.press(start);
+    expect(mockPush).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops offering to resume once the progress has gone stale", async () => {
+    const onAppState: Array<(state: string) => void> = [];
+    jest.spyOn(AppState, "addEventListener").mockImplementation(((_: string, listener: (state: string) => void) => {
+      onAppState.push(listener);
+      return { remove: jest.fn() };
+    }) as never);
+    await show();
+    await screen.findByRole("button", { name: "Start cooking" });
+    await act(async () => {
+      store.dispatch(pageChanged({ recipeId: "r1", versionId: "v1", pageIndex: 1, now: Date.now() }));
+    });
+    expect(await screen.findByRole("button", { name: "Resume cooking" })).toBeTruthy();
+
+    const later = Date.now() + COOK_SESSION_MAX_AGE_MS + 1;
+    jest.spyOn(Date, "now").mockReturnValue(later);
+    await act(async () => onAppState.forEach((listener) => listener("active")));
+
+    expect(screen.getByRole("button", { name: "Start cooking" })).toBeTruthy();
+  });
+
+  it("doesn't offer cooking with no version", async () => {
+    reply = { status: 200, data: { ...SOUP, latest_version: null } };
+    await show();
+    await screen.findByText("This recipe has no ingredients or steps yet.");
+    expect(screen.queryByRole("button", { name: "Start cooking" })).toBeNull();
+  });
+
+  it("doesn't offer cooking with no steps, or while loading", async () => {
+    const open = holdResponses();
+    reply = { status: 200, data: { ...SOUP, latest_version: { ...VERSION, steps: [] } } };
+    await show();
+    expect(screen.queryByRole("button", { name: "Start cooking" })).toBeNull();
+    open();
+    await screen.findByText("No steps.");
+    expect(screen.queryByRole("button", { name: "Start cooking" })).toBeNull();
   });
 
   it("says when a list is empty or the recipe has no version", async () => {

@@ -1,6 +1,9 @@
 import type { RecipeDetailResponse } from "@myrecipes/api-client/types/recipe/recipe";
 import { useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
+import StartCookingButton from "../cook/StartCookingButton";
+import { buildCookPages } from "../../utils/buildCookPages";
+import { hasCookSteps } from "../../utils/hasCookSteps";
 import RecipeFacts from "./RecipeFacts";
 import RecipeIngredients from "./RecipeIngredients";
 import RecipeSteps from "./RecipeSteps";
@@ -19,6 +22,13 @@ export default function RecipeContent({ recipe }: { recipe: RecipeDetailResponse
       {version ? (
         <>
           <RecipeFacts version={version} />
+          {hasCookSteps(version) ? (
+            <StartCookingButton
+              lastPage={buildCookPages(version).length - 1}
+              recipeId={recipe.id}
+              versionId={version.id}
+            />
+          ) : null}
           {version.version_number > 1 ? (
             <Text style={muted}>
               Version {version.version_number}
