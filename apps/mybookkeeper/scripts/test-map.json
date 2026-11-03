@@ -70,9 +70,12 @@
         "backend/app/services/user/account_service.py",
         "backend/app/services/system/verification_email.py",
         "backend/app/api/account.py",
-        "backend/app/schemas/user/account.py"
+        "backend/app/schemas/user/account.py",
+        "backend/app/schemas/user/user.py",
+        "backend/app/schemas/user/user_name.py"
       ],
       "backend_tests": [
+        "test_user_name_schema.py",
         "test_account_lockout.py",
         "test_account_deletion.py",
         "test_data_export.py",

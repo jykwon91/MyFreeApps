@@ -78,6 +78,11 @@ describe("Register \u2014 rendering", () => {
     expect(nameInput(container)).toBeInTheDocument();
   });
 
+  it("limits the name input to the settings form's length", () => {
+    const { container } = renderRegister();
+    expect(nameInput(container)).toHaveAttribute("maxLength", "120");
+  });
+
   it("renders the email input", () => {
     const { container } = renderRegister();
     expect(emailInput(container)).toBeInTheDocument();

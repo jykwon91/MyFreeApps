@@ -263,3 +263,5 @@ export const SUPPORTED_EXTENSIONS = new Set([".pdf", ".jpg", ".jpeg", ".png", ".
 export const POLLING_OPTIONS = { pollingInterval: 3000 } as const;
 
 export const EMPTY_QUEUE: readonly EmailQueueItem[] = [];
+
+export const USER_NAME_INPUT_MAX_LENGTH = 120;

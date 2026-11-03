@@ -8,6 +8,7 @@ import { LoadingButton } from "@platform/ui";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import TurnstileWidget from "@/shared/components/ui/TurnstileWidget";
 import api from "@/shared/lib/api";
+import { USER_NAME_INPUT_MAX_LENGTH } from "@/shared/lib/constants";
 
 function roleLabel(role: string): string {
   return role.charAt(0).toUpperCase() + role.slice(1);
@@ -250,6 +251,7 @@ export default function InviteAccept() {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              maxLength={USER_NAME_INPUT_MAX_LENGTH}
               placeholder="Optional"
               className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               disabled={isSubmitting}

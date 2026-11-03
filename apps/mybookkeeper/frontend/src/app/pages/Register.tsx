@@ -5,6 +5,7 @@ import { extractErrorMessage } from "@/shared/utils/errorMessage";
 import { AuthPageFooter, LoadingButton } from "@platform/ui";
 import TurnstileWidget from "@/shared/components/ui/TurnstileWidget";
 import LegalFooter from "@/app/components/LegalFooter";
+import { USER_NAME_INPUT_MAX_LENGTH } from "@/shared/lib/constants";
 
 export default function Register() {
   const [searchParams] = useSearchParams();
@@ -91,6 +92,7 @@ export default function Register() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                maxLength={USER_NAME_INPUT_MAX_LENGTH}
                 placeholder="Optional"
                 className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
