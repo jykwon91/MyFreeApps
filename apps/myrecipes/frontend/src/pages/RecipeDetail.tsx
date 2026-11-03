@@ -15,7 +15,7 @@ import {
   useGetVersionQuery,
   useListRecipeCooksQuery,
   useDeleteRecipeMutation,
-} from "@/store/recipesApi";
+} from "@myrecipes/api-client/store/recipesApi";
 import RecipeDetailSkeleton from "@/features/recipes/RecipeDetailSkeleton";
 import VersionTimeline from "@/features/recipes/VersionTimeline";
 import VersionBody from "@/features/recipes/VersionBody";

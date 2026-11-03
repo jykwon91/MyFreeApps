@@ -2,7 +2,7 @@ import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { LoadingButton, Button, showError, showSuccess } from "@platform/ui";
 import StarRatingInput from "@/features/recipes/StarRatingInput";
-import { useLogCookMutation } from "@/store/recipesApi";
+import { useLogCookMutation } from "@myrecipes/api-client/store/recipesApi";
 
 interface Props {
   open: boolean;

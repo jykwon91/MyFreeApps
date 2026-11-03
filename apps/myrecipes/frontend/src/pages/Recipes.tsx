@@ -2,12 +2,12 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Camera, ChefHat, Compass, Plus, Search } from "lucide-react";
 import { EmptyState, cn, useIsAuthenticated } from "@platform/ui";
-import { useListRecipesQuery } from "@/store/recipesApi";
+import { useListRecipesQuery } from "@myrecipes/api-client/store/recipesApi";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import RecipeCard from "@/features/recipes/RecipeCard";
 import RecipesListSkeleton from "@/features/recipes/RecipesListSkeleton";
 import { RECIPES_EMPTY_STATE, RECIPES_SEARCH_EMPTY } from "@/constants/empty-states";
-import type { RecipeSummary } from "@/types/recipe/recipe";
+import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 
 function errorBody(error: unknown): string {
   if (error && typeof error === "object" && "status" in error) {

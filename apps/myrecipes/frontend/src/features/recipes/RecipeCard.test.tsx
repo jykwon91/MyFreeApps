@@ -11,7 +11,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import RecipeCard from "@/features/recipes/RecipeCard";
-import type { RecipeSummary } from "@/types/recipe/recipe";
+import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 
 function makeRecipe(overrides: Partial<RecipeSummary> = {}): RecipeSummary {
   return {

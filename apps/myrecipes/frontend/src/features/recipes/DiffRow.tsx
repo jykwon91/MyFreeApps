@@ -1,5 +1,5 @@
 import { ArrowRight } from "lucide-react";
-import type { DiffChangeKind } from "@/types/recipe/diff";
+import type { DiffChangeKind } from "@myrecipes/api-client/types/recipe/diff";
 import { CHANGE_STYLES } from "@/features/recipes/diff-display";
 
 interface Props {

@@ -1,7 +1,7 @@
 import { GitCompare } from "lucide-react";
 import { Button, formatDate } from "@platform/ui";
 import StarRating from "@/features/recipes/StarRating";
-import type { VersionSummary } from "@/types/recipe/version";
+import type { VersionSummary } from "@myrecipes/api-client/types/recipe/version";
 
 interface Props {
   versions: VersionSummary[];

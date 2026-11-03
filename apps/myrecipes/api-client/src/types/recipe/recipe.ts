@@ -1,4 +1,4 @@
-import type { VersionResponse } from "@/types/recipe/version";
+import type { VersionResponse } from "./version";
 
 /**
  * List-view recipe: identity plus rollups, no version bodies.

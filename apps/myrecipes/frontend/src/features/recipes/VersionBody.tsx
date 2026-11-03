@@ -1,5 +1,5 @@
 import { Clock, Soup, Users } from "lucide-react";
-import type { VersionResponse } from "@/types/recipe/version";
+import type { VersionResponse } from "@myrecipes/api-client/types/recipe/version";
 import { formatIngredientLine } from "@/features/recipes/IngredientLine";
 
 interface Props {

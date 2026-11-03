@@ -10,7 +10,7 @@
  * `SourceType` mirrors the backend `Literal` in
  * app/schemas/recipe/discovery_schemas.py — the two move together.
  */
-import type { RecipeExtractionDraft } from "@/types/recipe/extraction";
+import type { RecipeExtractionDraft } from "./extraction";
 
 export type DiscoverySourceType =
   | "website"

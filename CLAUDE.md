@@ -73,6 +73,8 @@ skips its version check, which would otherwise fail on every Expo patch release.
 react-native stay exact. Web Dockerfiles leave `packages/shared-mobile` out on purpose: that
 keeps react-native out of their `npm ci`. Web code must not import `@platform/mobile`.
 
+An app with a mobile version keeps its API types and endpoints in `apps/<slug>/api-client`, shared by its web and mobile code and held to the same platform-neutral rules as `@platform/core`. The render step copies it into the web image when `package.json` is present.
+
 **Per-app commands**: See each app's own CLAUDE.md.
 
 ## Workflow

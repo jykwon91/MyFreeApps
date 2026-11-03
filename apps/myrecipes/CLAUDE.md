@@ -37,6 +37,13 @@ Before adding any infrastructure feature, open the matching MBK file first.
 | Frontend | React 19, Vite, TypeScript, Tailwind, Redux Toolkit + RTK Query, @platform/ui |
 | Shared infra | `packages/shared-backend/platform_shared`, `packages/shared-frontend/@platform/ui` |
 
+## API client
+
+`apps/myrecipes/api-client` (`@myrecipes/api-client`) holds the recipe types and RTK
+Query endpoints. The web app imports them today, and the mobile app will too. It has to
+run on both, so it can't use `@platform/ui`, React Native, or browser globals; a conformance test
+enforces that. Add new endpoints and API types here, not under `frontend/src`.
+
 ## Domain model (Tier 3)
 
 ```
@@ -87,6 +94,9 @@ npm run build --workspace=apps/myrecipes/frontend
 npm run typecheck --workspace=apps/myrecipes/frontend
 npm run lint --workspace=apps/myrecipes/frontend
 npm test --workspace=apps/myrecipes/frontend
+npm run typecheck --workspace=@myrecipes/api-client
+npm run lint --workspace=@myrecipes/api-client
+npm test --workspace=@myrecipes/api-client
 ```
 
 ## Architecture Rules

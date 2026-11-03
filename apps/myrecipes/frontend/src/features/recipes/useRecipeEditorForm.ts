@@ -3,10 +3,10 @@ import type {
   EditableIngredientRow,
   EditableStepRow,
 } from "@/features/recipes/editor-types";
-import type { IngredientInput } from "@/types/recipe/ingredient";
-import type { StepInput } from "@/types/recipe/step";
-import type { RecipeExtractionDraft } from "@/types/recipe/extraction";
-import type { VersionResponse } from "@/types/recipe/version";
+import type { IngredientInput } from "@myrecipes/api-client/types/recipe/ingredient";
+import type { StepInput } from "@myrecipes/api-client/types/recipe/step";
+import type { RecipeExtractionDraft } from "@myrecipes/api-client/types/recipe/extraction";
+import type { VersionResponse } from "@myrecipes/api-client/types/recipe/version";
 
 function makeKey(): string {
   return crypto.randomUUID();

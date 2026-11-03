@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { ConfirmDialog, formatDate, showError, showSuccess } from "@platform/ui";
 import StarRating from "@/features/recipes/StarRating";
-import { useDeleteCookMutation } from "@/store/recipesApi";
-import type { CookLogResponse } from "@/types/recipe/cook-log";
+import { useDeleteCookMutation } from "@myrecipes/api-client/store/recipesApi";
+import type { CookLogResponse } from "@myrecipes/api-client/types/recipe/cook-log";
 
 interface Props {
   recipeId: string;

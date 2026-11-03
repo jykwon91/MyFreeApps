@@ -1,15 +1,16 @@
-import { baseApi } from "@platform/ui";
-import type { RecipeSummary, RecipeDetailResponse } from "@/types/recipe/recipe";
-import type { VersionResponse, VersionSummary } from "@/types/recipe/version";
-import type { DiffResponse } from "@/types/recipe/diff";
-import type { CookLogResponse } from "@/types/recipe/cook-log";
+import { baseApi } from "@platform/core/store/baseApi";
+import type { RecipeSummary, RecipeDetailResponse } from "../types/recipe/recipe";
+import type { VersionResponse, VersionSummary } from "../types/recipe/version";
+import type { DiffResponse } from "../types/recipe/diff";
+import type { CookLogResponse } from "../types/recipe/cook-log";
 import type {
   RecipeCreateRequest,
   RecipeUpdateRequest,
   VersionCreateRequest,
-} from "@/types/recipe/recipe-requests";
-import type { CookLogCreateRequest } from "@/types/recipe/cook-log";
-import type { RecipeExtractionDraft } from "@/types/recipe/extraction";
+} from "../types/recipe/recipe-requests";
+import type { CookLogCreateRequest } from "../types/recipe/cook-log";
+import type { RecipeExtractionDraft } from "../types/recipe/extraction";
+import type { ListRecipesArgs } from "../types/recipe/list-recipes-args";
 
 /**
  * Cache tags scoped to one recipe id so a tweak / cook / metadata edit
@@ -28,19 +29,7 @@ const apiWithTags = baseApi.enhanceEndpoints({
   addTagTypes: ["Recipe", "Version", "CookLog"],
 });
 
-/**
- * Arguments for the recipes list query.
- *
- * Public-read / auth-write: ``search`` free-text filters the public library;
- * ``owner: "me"`` narrows to the signed-in user's own recipes (the "My recipes"
- * filter chip, rendered only when authenticated).
- */
-export interface ListRecipesArgs {
-  search?: string;
-  owner?: "me";
-}
-
-const recipesApi = apiWithTags.injectEndpoints({
+export const recipesApi = apiWithTags.injectEndpoints({
   endpoints: (build) => ({
     // ---- Recipes -------------------------------------------------------
     listRecipes: build.query<RecipeSummary[], ListRecipesArgs | void>({

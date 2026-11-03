@@ -5,6 +5,7 @@
     "packages/shared-core",
     "packages/shared-frontend",
     "packages/shared-mobile",
+    "apps/*/api-client",
     "apps/*/frontend",
     "apps/*/desktop",
     "apps/*/mobile",

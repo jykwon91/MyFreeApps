@@ -1,5 +1,5 @@
-import type { IngredientResponse } from "@/types/recipe/ingredient";
-import type { StepResponse } from "@/types/recipe/step";
+import type { IngredientResponse } from "./ingredient";
+import type { StepResponse } from "./step";
 
 /** Full version: metadata plus the snapshot of ingredients and steps. */
 export interface VersionResponse {

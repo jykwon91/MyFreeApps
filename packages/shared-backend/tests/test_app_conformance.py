@@ -1706,10 +1706,14 @@ class TestCaddyBuildCopiesSharedPackages:
 
 
 class TestSharedCoreStaysPlatformNeutral:
-    """@platform/core runs on web and React Native, so it can't reach for either.
-    Its own vitest and tsc checks say the same, but no CI job runs those."""
+    """@platform/core and each app's API client run on web and React Native, so they
+    can't reach for either. Core's own vitest and tsc checks say the same, but no CI
+    job runs those."""
 
-    _SRC = _REPO_ROOT / "packages" / "shared-core" / "src"
+    _PACKAGES = [
+        _REPO_ROOT / "packages" / "shared-core",
+        *sorted((_REPO_ROOT / "apps").glob("*/api-client")),
+    ]
     _FORBIDDEN_IMPORT = re.compile(
         r"""(?:from\s+|import\s+|import\(\s*|require\(\s*)["']"""
         r"""((?:react-dom|react-native|expo|@react-native|@expo|@platform/ui)(?:[/-][^"']*)?|node:[^"']*)["']"""
@@ -1720,8 +1724,11 @@ class TestSharedCoreStaysPlatformNeutral:
     _COMMENT = re.compile(r"/\*.*?\*/|//[^\n]*", re.DOTALL)
 
     def _sources(self) -> list[Path]:
-        files = [p for p in self._SRC.rglob("*.ts") if "__tests__" not in p.parts]
-        assert files, f"no sources found under {self._SRC}"
+        files = []
+        for package in self._PACKAGES:
+            found = [p for p in (package / "src").rglob("*.ts") if "__tests__" not in p.parts]
+            assert found, f"no sources found under {package}"
+            files += found
         return files
 
     def test_imports_no_platform_package(self) -> None:
@@ -1743,21 +1750,48 @@ class TestSharedCoreStaysPlatformNeutral:
             )
 
     def test_tsconfig_excludes_the_dom(self) -> None:
-        options = json.loads(_read("packages", "shared-core", "tsconfig.json"))["compilerOptions"]
-        assert not [lib for lib in options["lib"] if lib.lower().startswith("dom")], (
-            "packages/shared-core/tsconfig.json must not include the DOM in `lib`."
-        )
-        assert options["types"] == [], (
-            "packages/shared-core/tsconfig.json must keep `types: []`, or ambient "
-            "@types packages decide which globals the package can see."
-        )
+        for package in self._PACKAGES:
+            name = package.relative_to(_REPO_ROOT)
+            config = json.loads((package / "tsconfig.json").read_text(encoding="utf-8"))
+            options = config["compilerOptions"]
+            assert not [lib for lib in options["lib"] if lib.lower().startswith("dom")], (
+                f"{name}/tsconfig.json must not include the DOM in `lib`."
+            )
+            assert options["types"] == [], (
+                f"{name}/tsconfig.json must keep `types: []`, or ambient "
+                "@types packages decide which globals the package can see."
+            )
 
     def test_react_range_matches_root_override(self) -> None:
         pinned = json.loads(_read("package.json"))["overrides"]["react"]
-        declared = json.loads(_read("packages", "shared-core", "package.json"))["devDependencies"]
-        assert declared["react"] == f"^{pinned}", (
-            f"packages/shared-core declares react {declared['react']!r}; root overrides "
-            f"pin {pinned}. Update the range to ^{pinned}."
+        for package in self._PACKAGES:
+            manifest = json.loads((package / "package.json").read_text(encoding="utf-8"))
+            declared = manifest["devDependencies"]["react"]
+            assert declared == f"^{pinned}", (
+                f"{package.relative_to(_REPO_ROOT)} declares react {declared!r}; root "
+                f"overrides pin {pinned}. Update the range to ^{pinned}."
+            )
+
+
+class TestApiClientsReachTheWebImage:
+    """The web image installs a subset of the workspace, so a client it doesn't copy
+    breaks the production build while `npm run build` still passes in CI."""
+
+    @pytest.mark.parametrize(
+        "client", sorted((_REPO_ROOT / "apps").glob("*/api-client")), ids=lambda p: p.parent.name
+    )
+    def test_dockerfile_copies_the_client(self, client: Path) -> None:
+        slug = client.parent.name
+        dockerfile = _read("apps", slug, "docker", "caddy.Dockerfile")
+        manifest = f"COPY apps/{slug}/api-client/package.json"
+        source = f"COPY apps/{slug}/api-client ./"
+        assert manifest in dockerfile and source in dockerfile, (
+            f"apps/{slug}/docker/caddy.Dockerfile doesn't copy its API client. Re-render "
+            f"with python -m platform_shared.infra.render --app {slug}."
+        )
+        assert dockerfile.index(manifest) < dockerfile.index("RUN npm ci")
+        assert dockerfile.index("RUN npm ci") < dockerfile.index(source) < dockerfile.index(
+            "RUN npm run build"
         )
 
 

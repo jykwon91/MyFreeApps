@@ -5,8 +5,8 @@ import EditorHeader from "@/features/recipes/EditorHeader";
 import RecipeEditorForm from "@/features/recipes/RecipeEditorForm";
 import RecipeExtractionProgress from "@/features/recipes/RecipeExtractionProgress";
 import RecipeImportUploadStep from "@/features/recipes/RecipeImportUploadStep";
-import { useExtractRecipeFromPhotoMutation } from "@/store/recipesApi";
-import type { RecipeExtractionDraft } from "@/types/recipe/extraction";
+import { useExtractRecipeFromPhotoMutation } from "@myrecipes/api-client/store/recipesApi";
+import type { RecipeExtractionDraft } from "@myrecipes/api-client/types/recipe/extraction";
 
 type ImportStep = "upload" | "extracting" | "review";
 

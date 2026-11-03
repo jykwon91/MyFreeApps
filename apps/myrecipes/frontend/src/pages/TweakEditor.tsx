@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { ChefHat } from "lucide-react";
 import { EmptyState, Skeleton } from "@platform/ui";
-import { useGetRecipeQuery } from "@/store/recipesApi";
+import { useGetRecipeQuery } from "@myrecipes/api-client/store/recipesApi";
 import EditorHeader from "@/features/recipes/EditorHeader";
 import RecipeEditorForm from "@/features/recipes/RecipeEditorForm";
 

@@ -2,7 +2,7 @@ import type { BadgeColor } from "@platform/ui/components/ui/Badge";
 import type {
   DiscoveryDifficulty,
   DiscoverySourceType,
-} from "@/types/recipe/discovery";
+} from "@myrecipes/api-client/types/recipe/discovery";
 
 /**
  * Display maps for the discovery enums. Exhaustive `Record`s on purpose: add a
