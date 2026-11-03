@@ -10,6 +10,8 @@ export { default as Skeleton } from "./components/Skeleton";
 export { default as Toast } from "./components/Toast";
 
 export { useAnnouncement } from "./hooks/useAnnouncement";
+export { useReduceMotion } from "./hooks/useReduceMotion";
+export { useScreenReaderEnabled } from "./hooks/useScreenReaderEnabled";
 
 export { darkColors, lightColors } from "./theme/colors";
 export { radius } from "./theme/radius";

@@ -1,22 +1,23 @@
 import type { StepResponse } from "@myrecipes/api-client/types/recipe/step";
 import { useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
-import { byPosition } from "../../utils/byPosition";
+import { nonBlankSteps } from "../../utils/nonBlankSteps";
 import RecipeSectionHeading from "./RecipeSectionHeading";
 
 export default function RecipeSteps({ steps }: { steps: StepResponse[] }) {
   const { colors, spacing, radius, fontSize } = useTheme();
+  const visibleSteps = nonBlankSteps(steps);
 
   return (
     <View style={{ gap: spacing.sm }}>
       <RecipeSectionHeading>Steps</RecipeSectionHeading>
-      {steps.length === 0 ? (
+      {visibleSteps.length === 0 ? (
         <Text style={{ color: colors.mutedForeground, fontSize: fontSize.sm, fontStyle: "italic" }}>
           No steps.
         </Text>
       ) : (
         <View style={{ gap: spacing.md }}>
-          {byPosition(steps).map((step, index) => (
+          {visibleSteps.map((step, index) => (
             <View
               accessibilityLabel={`Step ${index + 1}. ${step.instruction}`}
               accessible

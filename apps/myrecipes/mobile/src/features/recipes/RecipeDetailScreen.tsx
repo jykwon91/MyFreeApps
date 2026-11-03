@@ -1,8 +1,8 @@
 import { useGetRecipeQuery } from "@myrecipes/api-client/store/recipesApi";
 import { EmptyState, Toast, useAnnouncement, useTheme } from "@platform/mobile";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
 import { ScrollView, View } from "react-native";
+import { useErrorSinceOpening } from "../../hooks/useErrorSinceOpening";
 import { useRefresh } from "../../hooks/useRefresh";
 import { isNotFoundError } from "../../utils/isNotFoundError";
 import RecipeContent from "./RecipeContent";
@@ -20,9 +20,7 @@ export default function RecipeDetailScreen() {
   });
   const { dismissError, isErrorDismissed, refreshControl } = useRefresh(refetch, error);
 
-  // The first render still reads that cached failure, so only a later one counts.
-  const [errorOnOpening] = useState(error);
-  const hasFailed = isError && error !== errorOnOpening;
+  const hasFailed = useErrorSinceOpening(error, isError);
   const isGone = hasFailed && isNotFoundError(error);
   const isLoadFailed = hasFailed && !isGone && !recipe;
   useAnnouncement(isGone ? "Recipe not found" : isLoadFailed ? "Can't load this recipe" : undefined);
