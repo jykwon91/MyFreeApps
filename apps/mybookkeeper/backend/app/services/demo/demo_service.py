@@ -5,6 +5,7 @@ import uuid
 
 from fastapi_users.password import PasswordHelper
 
+from platform_shared.auth.session_invalidation import session_cutoff_now
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.repositories.demo import demo_repo
@@ -156,6 +157,7 @@ async def reset_demo_user(user_id: uuid.UUID) -> DemoResetResponse:
         existing_user = await demo_repo.get_user_by_id(db, user_id)
         if existing_user:
             existing_user.hashed_password = hashed
+            existing_user.auth_valid_after = session_cutoff_now()
         property_ids = await demo_repo.create_properties(db, user_id, org_id, DEMO_PROPERTIES)
         transactions = await demo_repo.create_transactions(
             db, user_id, org_id, property_ids, DEMO_TRANSACTIONS,

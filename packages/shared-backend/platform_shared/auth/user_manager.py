@@ -45,7 +45,7 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Generic, Optional, TypeVar, Union
+from typing import Any, Generic, Optional, TypeVar, Union
 
 from fastapi import Request
 from fastapi.security import OAuth2PasswordRequestForm
@@ -58,6 +58,7 @@ from fastapi_users import (
     schemas,
 )
 
+from platform_shared.auth.session_invalidation import session_cutoff_now
 from platform_shared.core.auth_events import AuthEventType
 from platform_shared.services.account_lockout import (
     autoreset_update_if_stale,
@@ -276,6 +277,28 @@ class PlatformBaseUserManager(
             await self.user_db.update(result, clear_update)
 
         return result
+
+    async def _update(self, user: UP, update_dict: dict[str, Any]) -> UP:
+        """End every existing session when the password changes.
+
+        Here rather than in ``on_after_reset_password`` or ``on_after_update``,
+        which subclasses override without calling ``super()``: both the reset and
+        update flows pass through this method.
+
+        The cutoff is taken after validating and hashing, which can take seconds.
+        Taken before, a login with the old password during that wait would issue
+        a token newer than the cutoff, which would survive the change.
+        """
+        password = update_dict.get("password")
+        if password is None:
+            return await super()._update(user, update_dict)
+        await self.validate_password(password, user)
+        hashed_password = self.password_helper.hash(password)
+        others = {field: value for field, value in update_dict.items() if field != "password"}
+        return await super()._update(
+            user,
+            {**others, "hashed_password": hashed_password, "auth_valid_after": session_cutoff_now()},
+        )
 
     async def validate_password(
         self, password: str, user: Union[schemas.UC, models.UP],

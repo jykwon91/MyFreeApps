@@ -19,13 +19,17 @@ from __future__ import annotations
 import time
 from typing import Generic, NamedTuple
 
+import jwt
 from fastapi_users import models
 from fastapi_users.authentication import (
     AuthenticationBackend,
     BearerTransport,
     JWTStrategy,
 )
-from fastapi_users.jwt import generate_jwt
+from fastapi_users.jwt import decode_jwt, generate_jwt
+from fastapi_users.manager import BaseUserManager
+
+from platform_shared.auth.session_invalidation import is_issued_before_cutoff
 
 
 class IatJWTStrategy(JWTStrategy[models.UP, models.ID], Generic[models.UP, models.ID]):
@@ -39,6 +43,23 @@ class IatJWTStrategy(JWTStrategy[models.UP, models.ID], Generic[models.UP, model
     iat claim". This subclass closes that gap so the gate works against
     real platform-issued tokens, not just hand-crafted test tokens.
     """
+
+    async def read_token(
+        self, token: str | None, user_manager: BaseUserManager[models.UP, models.ID],
+    ) -> models.UP | None:
+        """Reject a valid token issued before the user's session cutoff."""
+        user = await super().read_token(token, user_manager)
+        if user is None or user.auth_valid_after is None:
+            return user
+        try:
+            issued_at = decode_jwt(
+                token, self.decode_key, self.token_audience, algorithms=[self.algorithm],
+            ).get("iat")
+        except jwt.PyJWTError:
+            return None
+        if not isinstance(issued_at, int) or is_issued_before_cutoff(issued_at, user.auth_valid_after):
+            return None
+        return user
 
     async def write_token(self, user: models.UP) -> str:
         data = {

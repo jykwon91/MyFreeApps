@@ -1,11 +1,13 @@
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from google_auth_oauthlib.flow import Flow
 import jwt
 from jwt.exceptions import PyJWTError as JWTError
 
+from platform_shared.auth.session_invalidation import is_issued_before_cutoff
 from platform_shared.core.auth_events import AuthEventType
 
 from app.core.config import settings
@@ -15,7 +17,7 @@ from app.models.responses.integration_info import IntegrationInfo
 from app.models.responses.queue_item_info import QueueItemInfo
 from app.models.responses.retry_result import RetryResult
 from app.models.responses.sync_log_info import SyncLogInfo
-from app.repositories import email_queue_repo, integration_repo, sync_log_repo
+from app.repositories import email_queue_repo, integration_repo, sync_log_repo, user_repo
 from platform_shared.services.auth_event_service import log_auth_event
 
 logger = logging.getLogger(__name__)
@@ -69,6 +71,7 @@ def _create_oauth_state(user_id: str, organization_id: str, code_verifier: str) 
             # JWT keeps the OAuth handshake stateless on the server side.
             "cv": code_verifier,
             "type": "oauth_state",
+            "iat": datetime.now(timezone.utc),
             "exp": datetime.now(timezone.utc) + timedelta(minutes=10),
         },
         settings.secret_key,
@@ -76,17 +79,18 @@ def _create_oauth_state(user_id: str, organization_id: str, code_verifier: str) 
     )
 
 
-def _verify_oauth_state(state: str) -> tuple[str, str, str | None]:
-    """Returns (user_id, organization_id, code_verifier) from state token.
+def _verify_oauth_state(state: str) -> tuple[str, str, str | None, int]:
+    """Returns (user_id, organization_id, code_verifier, issued_at) from state token.
     Raises ValueError on invalid/expired state. ``code_verifier`` may be None
     on legacy state tokens minted before the PKCE fix; the caller falls back
     to the Flow's own auto-generated verifier in that case (which Google
     rejects, but we surface a clean ValueError instead of a 500)."""
     try:
-        payload: dict[str, str] = jwt.decode(state, settings.secret_key, algorithms=["HS256"])
+        payload: dict[str, Any] = jwt.decode(state, settings.secret_key, algorithms=["HS256"])
         if payload.get("type") != "oauth_state":
             raise ValueError("Invalid OAuth state")
-        return payload["sub"], payload["org_id"], payload.get("cv")
+        # A state minted before ``iat`` was added counts as older than any cutoff.
+        return payload["sub"], payload["org_id"], payload.get("cv"), payload.get("iat", 0)
     except JWTError:
         raise ValueError("Invalid or expired OAuth state")
 
@@ -119,11 +123,23 @@ def get_gmail_connect_url(ctx: RequestContext) -> str:
     return auth_url
 
 
+async def _require_state_outlives_session_cutoff(user_id: uuid.UUID, issued_at: int) -> None:
+    """The callback has no signed-in user, so the state stands in for the session
+    that started the connection and must end when that session would."""
+    async with AsyncSessionLocal() as db:
+        user = await user_repo.get_by_id(db, user_id)
+    if user is None:
+        raise ValueError("Invalid OAuth state")
+    if user.auth_valid_after is not None and is_issued_before_cutoff(issued_at, user.auth_valid_after):
+        raise ValueError("OAuth state predates a password change — restart the connection flow")
+
+
 async def handle_gmail_callback(code: str, state: str) -> None:
     """Exchange OAuth code for tokens, upsert integration. Raises ValueError on bad state."""
-    user_id_str, org_id_str, code_verifier = _verify_oauth_state(state)
+    user_id_str, org_id_str, code_verifier, issued_at = _verify_oauth_state(state)
     if not code_verifier:
         raise ValueError("OAuth state missing PKCE verifier — restart the connection flow")
+    await _require_state_outlives_session_cutoff(uuid.UUID(user_id_str), issued_at)
 
     flow = _get_flow()
     # Reuse the original code_verifier generated at auth-start. Without this,

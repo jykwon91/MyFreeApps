@@ -24,7 +24,7 @@ def script_directory() -> ScriptDirectory:
     return ScriptDirectory.from_config(cfg)
 
 
-def test_single_head_is_0031(script_directory: ScriptDirectory) -> None:
+def test_single_head_is_the_latest_revision(script_directory: ScriptDirectory) -> None:
     """The DAG must resolve to exactly one head and it must be 0031.
 
     Bump this pin (and add a down_revision assertion below) in the same PR
@@ -37,8 +37,8 @@ def test_single_head_is_0031(script_directory: ScriptDirectory) -> None:
         "Orphan heads usually mean a migration's down_revision is stale "
         "after a merge — rebase and re-point the down_revision."
     )
-    assert heads[0] == "0044", (
-        f"Expected head 0044 (wow raid groups), "
+    assert heads[0] == "0045", (
+        f"Expected head 0045 (session cutoff), "
         f"got {heads[0]}."
     )
 
@@ -274,6 +274,15 @@ def test_0034_to_0037_down_revisions(
     0037 off 0036 (repeating raids)."""
     revs = [script_directory.get_revision(rev) for rev in ("0034", "0035", "0036", "0037")]
     assert [rev.down_revision for rev in revs] == ["0033", "0034", "0035", "0036"]
+
+
+def test_0045_down_revision_points_at_0044(
+    script_directory: ScriptDirectory,
+) -> None:
+    """0045 (session cutoff) must chain directly off 0044."""
+    rev = script_directory.get_revision("0045")
+    assert rev is not None
+    assert rev.down_revision == "0044"
 
 
 def test_0044_down_revision_points_at_0043(

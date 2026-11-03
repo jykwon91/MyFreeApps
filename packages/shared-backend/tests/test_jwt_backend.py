@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import time
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 import jwt
@@ -27,8 +28,32 @@ SECRET = "test-secret-key-for-jwt-backend-tests-32bytes"
 
 
 class _FakeUser:
-    def __init__(self) -> None:
+    def __init__(self, auth_valid_after: datetime | None = None) -> None:
         self.id = uuid.uuid4()
+        self.auth_valid_after = auth_valid_after
+
+
+class _FakeManager:
+    def __init__(self, user: _FakeUser) -> None:
+        self.user = user
+
+    def parse_id(self, value: str) -> uuid.UUID:
+        return uuid.UUID(value)
+
+    async def get(self, _user_id: uuid.UUID) -> _FakeUser:
+        return self.user
+
+
+def _strategy() -> IatJWTStrategy:
+    return build_jwt_auth_backend(secret_key=SECRET, lifetime_seconds=3600).get_jwt_strategy()
+
+
+async def _token_issued_at(user: _FakeUser, issued_at: int) -> str:
+    return jwt.encode(
+        {"sub": str(user.id), "aud": "fastapi-users:auth", "iat": issued_at, "exp": int(time.time()) + 3600},
+        SECRET,
+        algorithm="HS256",
+    )
 
 
 def _decode_unchecked(token: str) -> dict[str, Any]:
@@ -106,3 +131,52 @@ async def test_iat_roundtrips_through_decode_token_iat() -> None:
     iat = decode(request)
     assert iat is not None, "decode_token_iat returned None on a freshly-issued token"
     assert abs(iat - time.time()) < 5
+
+
+@pytest.mark.asyncio
+async def test_token_works_when_user_has_no_cutoff() -> None:
+    """NULL means no cutoff: nobody is signed out when this first deploys."""
+    user = _FakeUser()
+    token = await _token_issued_at(user, int(time.time()) - 1000)
+    assert await _strategy().read_token(token, _FakeManager(user)) is user
+
+
+@pytest.mark.asyncio
+async def test_token_from_before_the_cutoff_is_rejected() -> None:
+    cutoff = 1_700_000_000
+    user = _FakeUser(datetime.fromtimestamp(cutoff, timezone.utc))
+    token = await _token_issued_at(user, cutoff - 1)
+    assert await _strategy().read_token(token, _FakeManager(user)) is None
+
+
+@pytest.mark.asyncio
+async def test_token_from_the_same_second_as_the_cutoff_works() -> None:
+    """The token issued right after a password change mustn't sign someone out."""
+    cutoff = 1_700_000_000
+    user = _FakeUser(datetime.fromtimestamp(cutoff + 0.9, timezone.utc))
+    token = await _token_issued_at(user, cutoff)
+    assert await _strategy().read_token(token, _FakeManager(user)) is user
+
+
+@pytest.mark.asyncio
+async def test_token_after_the_cutoff_works() -> None:
+    cutoff = 1_700_000_000
+    user = _FakeUser(datetime.fromtimestamp(cutoff, timezone.utc))
+    token = await _token_issued_at(user, cutoff + 1)
+    assert await _strategy().read_token(token, _FakeManager(user)) is user
+
+
+@pytest.mark.asyncio
+async def test_token_with_no_iat_is_rejected_once_there_is_a_cutoff() -> None:
+    user = _FakeUser(datetime.fromtimestamp(1_700_000_000, timezone.utc))
+    token = jwt.encode(
+        {"sub": str(user.id), "aud": "fastapi-users:auth", "exp": int(time.time()) + 3600},
+        SECRET,
+        algorithm="HS256",
+    )
+    assert await _strategy().read_token(token, _FakeManager(user)) is None
+
+
+@pytest.mark.asyncio
+async def test_missing_token_still_reads_as_no_user() -> None:
+    assert await _strategy().read_token(None, _FakeManager(_FakeUser())) is None

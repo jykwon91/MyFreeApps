@@ -133,7 +133,11 @@ class TestHandleGmailCallbackServiceLogging:
             with patch.object(
                 integration_service,
                 "_verify_oauth_state",
-                return_value=(str(uuid.uuid4()), str(uuid.uuid4()), "test-code-verifier"),
+                return_value=(str(uuid.uuid4()), str(uuid.uuid4()), "test-code-verifier", 0),
+            ), patch.object(
+                integration_service,
+                "_require_state_outlives_session_cutoff",
+                new=AsyncMock(),
             ):
                 with caplog.at_level(
                     logging.ERROR,
@@ -172,7 +176,11 @@ class TestHandleGmailCallbackServiceLogging:
             with patch.object(
                 integration_service,
                 "_verify_oauth_state",
-                return_value=(str(uuid.uuid4()), str(uuid.uuid4()), "test-code-verifier"),
+                return_value=(str(uuid.uuid4()), str(uuid.uuid4()), "test-code-verifier", 0),
+            ), patch.object(
+                integration_service,
+                "_require_state_outlives_session_cutoff",
+                new=AsyncMock(),
             ):
                 with patch.object(
                     integration_service.integration_repo,
