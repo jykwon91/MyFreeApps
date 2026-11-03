@@ -1,127 +1,126 @@
-"""platform_shared.infra.mobile_lock: what generating a mobile app may do to the lockfile."""
+"""platform_shared.infra.mobile_lock: a new app starts at the versions already locked."""
 from __future__ import annotations
 
-import copy
 import json
-import subprocess
-import sys
 from pathlib import Path
 
 import pytest
 
-from platform_shared.infra.mobile_lock import lock_problems
+from platform_shared.infra import mobile_lock, render
+from platform_shared.infra.new_app import ScaffoldError
 
 _TEMPLATE = "infra/templates/scaffold-mobile"
 _APP = "apps/demo/mobile"
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _NESTED = {"version": "1.0.0", "integrity": "sha512-a", "dev": True}
-_TEMPLATE_DEPS = {"dependencies": {"expo": "~58"}, "devDependencies": {"jest": "^30"}}
+_PACKAGES = {
+    "": {"workspaces": ["apps/*/mobile"]},
+    "node_modules/react": {"version": "19.3.0", "integrity": "sha512-r"},
+    _TEMPLATE: {"name": "scaffold-mobile-template", "version": "0.0.1", "dependencies": {"expo": "~58"}},
+    f"{_TEMPLATE}/node_modules/jest-expo": _NESTED,
+    f"{_TEMPLATE}/node_modules/jest-expo/node_modules/test-renderer": _NESTED,
+    "infra/templates/scaffold-mobile-other/node_modules/x": _NESTED,
+}
 
 
-@pytest.fixture
-def before() -> dict[str, object]:
-    return {
-        "": {"workspaces": ["apps/*/mobile"]},
-        "node_modules/react": {"version": "19.3.0", "integrity": "sha512-r"},
-        _TEMPLATE: {"name": "scaffold-mobile-template", "version": "0.0.1", **_TEMPLATE_DEPS},
-        f"{_TEMPLATE}/node_modules/jest-expo": _NESTED,
-        f"{_TEMPLATE}/node_modules/jest-expo/node_modules/test-renderer": _NESTED,
-    }
+class TestWithApp:
+    def test_adds_the_workspace_its_link_and_copies_of_the_nested_entries(self) -> None:
+        added = {k: v for k, v in mobile_lock.with_app(_PACKAGES, "demo").items() if k not in _PACKAGES}
+        assert added == {
+            _APP: {"name": "demo-mobile", "version": "0.0.1", "dependencies": {"expo": "~58"}},
+            "node_modules/demo-mobile": {"resolved": _APP, "link": True},
+            f"{_APP}/node_modules/jest-expo": _NESTED,
+            f"{_APP}/node_modules/jest-expo/node_modules/test-renderer": _NESTED,
+        }
+
+    def test_changes_nothing_already_there(self) -> None:
+        result = mobile_lock.with_app(_PACKAGES, "demo")
+        assert {k: result[k] for k in _PACKAGES} == _PACKAGES
+
+    def test_a_lockfile_without_the_template_fails(self) -> None:
+        with pytest.raises(ScaffoldError, match="npm install"):
+            mobile_lock.with_app({"": {}}, "demo")
+
+    def test_the_real_lockfile_has_nested_entries_to_copy(self) -> None:
+        """Those are the packages npm would resolve again, which is what this exists for."""
+        packages = json.loads((_REPO_ROOT / "package-lock.json").read_text("utf-8"))["packages"]
+        result = mobile_lock.with_app(packages, "demo")
+        assert result[f"{_APP}/node_modules/expo-router"] == packages[f"{_TEMPLATE}/node_modules/expo-router"]
 
 
-@pytest.fixture
-def after(before: dict[str, object]) -> dict[str, object]:
-    """A correct result: the app's workspace, its link and copies of the nested entries."""
-    return {
-        **copy.deepcopy(before),
-        _APP: {"name": "demo-mobile", "version": "0.0.1", **_TEMPLATE_DEPS},
-        "node_modules/demo-mobile": {"resolved": _APP, "link": True},
-        f"{_APP}/node_modules/jest-expo": _NESTED,
-        f"{_APP}/node_modules/jest-expo/node_modules/test-renderer": _NESTED,
-    }
+class TestAddAppToLockfile:
+    @pytest.fixture
+    def lockfile(self, tmp_path: Path) -> Path:
+        path = tmp_path / "package-lock.json"
+        path.write_text(json.dumps({"lockfileVersion": 3, "packages": _PACKAGES}), "utf-8")
+        self._manifest(tmp_path, {"name": "demo-mobile", "dependencies": {"expo": "~58"}})
+        return path
 
+    def _manifest(self, root: Path, manifest: dict[str, object]) -> None:
+        mobile = root / _APP
+        mobile.mkdir(parents=True, exist_ok=True)
+        (mobile / "package.json").write_text(json.dumps(manifest), "utf-8")
 
-class TestLockProblems:
-    def test_accepts_the_real_shape(self, before: dict, after: dict) -> None:
-        assert lock_problems(before, after, "demo") == []
-
-    def test_accepts_no_change_for_another_slug(self, before: dict) -> None:
-        assert lock_problems(before, copy.deepcopy(before), "other") == []
-
-    def test_rejects_a_nested_package_the_template_doesnt_have(self, before: dict, after: dict) -> None:
-        after[f"{_APP}/node_modules/evil"] = {"version": "1.0.0", "resolved": "https://evil.example/x.tgz"}
-        problems = lock_problems(before, after, "demo")
-        assert len(problems) == 1
-        assert "node_modules/evil" in problems[0]
-
-    def test_rejects_a_nested_copy_with_other_content(self, before: dict, after: dict) -> None:
-        after[f"{_APP}/node_modules/jest-expo"] = {**_NESTED, "integrity": "sha512-evil"}
-        assert "jest-expo" in lock_problems(before, after, "demo")[0]
-
-    def test_rejects_a_path_outside_node_modules(self, before: dict, after: dict) -> None:
-        after[f"{_APP}/anything"] = {"version": "1.0.0"}
-        assert "anything" in lock_problems(before, after, "demo")[0]
+    def test_writes_the_entries_and_keeps_the_rest(self, tmp_path: Path, lockfile: Path) -> None:
+        mobile_lock.add_app_to_lockfile(tmp_path, "demo")
+        lock = json.loads(lockfile.read_text("utf-8"))
+        assert lock["lockfileVersion"] == 3
+        assert lock["packages"][_APP]["name"] == "demo-mobile"
 
     @pytest.mark.parametrize(
         "manifest",
         [
-            {"name": "demo-mobile", "dependencies": {"expo": "~58", "evil": "1"}, "devDependencies": {"jest": "^30"}},
-            {"name": "demo-mobile", "dependencies": {"expo": "~58"}, "devDependencies": {}},
-            {"name": "demo-mobile", "dependencies": {"expo": "~58"}, "devDependencies": {"jest": "^30"}, "peerDependencies": {"x": "1"}},
+            {"name": "demo-mobile"},
+            {"name": "demo-mobile", "dependencies": {"expo": "^58"}},
+            {"name": "demo-mobile", "dependencies": {"expo": "~58"}, "devDependencies": {"x": "1"}},
+            {"name": "demo-mobile", "devDependencies": {"expo": "~58"}},
         ],
     )
-    def test_rejects_an_app_whose_dependencies_differ(self, before: dict, after: dict, manifest: dict) -> None:
-        after[_APP] = manifest
-        assert "dependencies differ" in lock_problems(before, after, "demo")[0]
+    def test_a_manifest_that_differs_from_the_lock_fails_and_writes_nothing(
+        self, tmp_path: Path, lockfile: Path, manifest: dict[str, object]
+    ) -> None:
+        self._manifest(tmp_path, manifest)
+        before = lockfile.read_text("utf-8")
+        with pytest.raises(ScaffoldError, match="differs"):
+            mobile_lock.add_app_to_lockfile(tmp_path, "demo")
+        assert lockfile.read_text("utf-8") == before
 
-    def test_rejects_a_link_pointing_elsewhere(self, before: dict, after: dict) -> None:
-        after["node_modules/demo-mobile"] = {"resolved": "somewhere/else", "link": True}
-        assert "not a link" in lock_problems(before, after, "demo")[0]
+    @pytest.mark.parametrize("content", ["<<<<<<< HEAD\n{", "{}", '{"packages": []}'])
+    def test_an_unusable_lockfile_is_a_scaffold_error(self, tmp_path: Path, lockfile: Path, content: str) -> None:
+        lockfile.write_text(content, "utf-8")
+        with pytest.raises(ScaffoldError):
+            mobile_lock.add_app_to_lockfile(tmp_path, "demo")
 
-    def test_rejects_a_bumped_package(self, before: dict, after: dict) -> None:
-        after["node_modules/react"] = {"version": "19.2.0", "integrity": "sha512-r"}
-        assert lock_problems(before, after, "demo") == ["node_modules/react: changed."]
-
-    def test_rejects_a_removed_package(self, before: dict, after: dict) -> None:
-        del after["node_modules/react"]
-        assert lock_problems(before, after, "demo") == ["node_modules/react: changed."]
-
-    @pytest.mark.parametrize(
-        "key",
-        ["node_modules/new-thing", "apps/demo2/mobile/node_modules/x", "apps/demo/mobile2/x"],
-    )
-    def test_rejects_an_addition_outside_the_app(self, before: dict, after: dict, key: str) -> None:
-        after[key] = {"version": "1.0.0"}
-        assert lock_problems(before, after, "demo") == [f"{key}: changed."]
-
-    def test_rejects_a_change_to_the_root_entry(self, before: dict, after: dict) -> None:
-        after[""] = {"workspaces": ["apps/*/mobile"], "devDependencies": {"evil": "1"}}
-        assert lock_problems(before, after, "demo") == [": changed."]
-
-    def test_rejects_a_change_to_the_template_itself(self, before: dict, after: dict) -> None:
-        after[f"{_TEMPLATE}/node_modules/jest-expo"] = {**_NESTED, "integrity": "sha512-evil"}
-        problems = lock_problems(before, after, "demo")
-        assert f"{_TEMPLATE}/node_modules/jest-expo: changed." in problems
+    def test_a_missing_lockfile_is_a_scaffold_error(self, tmp_path: Path) -> None:
+        with pytest.raises(ScaffoldError):
+            mobile_lock.add_app_to_lockfile(tmp_path, "demo")
 
 
 class TestCli:
-    def _run(self, tmp_path: Path, before: dict, after: dict) -> subprocess.CompletedProcess[str]:
-        (tmp_path / "before.json").write_text(json.dumps({"packages": before}), "utf-8")
-        (tmp_path / "after.json").write_text(json.dumps({"packages": after}), "utf-8")
-        return subprocess.run(
-            [sys.executable, "-m", "platform_shared.infra.mobile_lock",
-             str(tmp_path / "before.json"), str(tmp_path / "after.json"), "demo"],
-            capture_output=True,
-            text=True,
-            cwd=_REPO_ROOT / "packages" / "shared-backend",
-            check=False,
-        )
+    def _run(self, root: Path, monkeypatch: pytest.MonkeyPatch, slug: str) -> int:
+        monkeypatch.setattr(render, "_repo_root", lambda: root)
+        monkeypatch.setattr("sys.argv", ["mobile_lock", slug])
+        return mobile_lock._cli()
 
-    def test_exits_zero_when_clean(self, tmp_path: Path, before: dict, after: dict) -> None:
-        assert self._run(tmp_path, before, after).returncode == 0
+    def test_uses_the_repo_root(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        path = tmp_path / "package-lock.json"
+        path.write_text(json.dumps({"packages": _PACKAGES}), "utf-8")
+        (tmp_path / _APP).mkdir(parents=True)
+        (tmp_path / _APP / "package.json").write_text(json.dumps({"dependencies": {"expo": "~58"}}), "utf-8")
+        assert self._run(tmp_path, monkeypatch, "demo") == 0
+        assert _APP in json.loads(path.read_text("utf-8"))["packages"]
 
-    def test_exits_one_and_names_the_package(self, tmp_path: Path, before: dict, after: dict) -> None:
-        after[f"{_APP}/node_modules/evil"] = {"version": "1.0.0"}
-        result = self._run(tmp_path, before, after)
-        assert result.returncode == 1
-        assert "node_modules/evil" in result.stderr
+    def test_failure_is_a_message_not_a_traceback(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        assert self._run(tmp_path, monkeypatch, "demo") == 2
+        assert capsys.readouterr().err.startswith("error:")
+
+    def test_rejects_a_slug_that_would_escape_apps(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        path = tmp_path / "package-lock.json"
+        path.write_text(json.dumps({"packages": _PACKAGES}), "utf-8")
+        before = path.read_text("utf-8")
+        assert self._run(tmp_path, monkeypatch, "../../evil") == 2
+        assert path.read_text("utf-8") == before

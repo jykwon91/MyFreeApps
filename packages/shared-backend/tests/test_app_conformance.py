@@ -1062,6 +1062,10 @@ class TestMobileChecksWorkflow:
         expected = "npm test" if script == "test" else f"npm run {script}"
         assert expected in commands, f"_mobile-checks.yml must run `{expected}` as its own step."
 
+    def test_doctor_result_doesnt_depend_on_what_expo_published_today(self) -> None:
+        doctor = next(s for s in self._STEPS["steps"] if s.get("run", "").strip() == "npm run doctor")
+        assert doctor["env"]["EXPO_DOCTOR_SKIP_DEPENDENCY_VERSION_CHECK"] == "1"
+
     @pytest.mark.parametrize("script", ["typecheck", "lint", "test"])
     def test_every_project_has_the_script(self, script: str) -> None:
         for manifest in _mobile_manifests():
