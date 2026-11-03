@@ -65,7 +65,8 @@ gives every web route a `screen:` or a `not_on_mobile:` reason, and CI fails on 
 with no entry, a route it can't read, or a frontend with no routes (those last two for every
 app, `mobile` or not). It catches added, renamed and removed pages, not edits to an existing page.
 
-Mobile versions move only with an Expo SDK upgrade (`expo install --fix`), and react and
+Mobile versions move only with an Expo SDK upgrade (`expo install --fix`), so CI's `expo-doctor`
+skips its version check, which would otherwise fail on every Expo patch release. React and
 react-native stay exact. Web Dockerfiles leave `packages/shared-mobile` out on purpose: that
 keeps react-native out of their `npm ci`. Web code must not import `@platform/mobile`.
 

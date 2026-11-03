@@ -88,6 +88,11 @@ jobs:
       - name: Expo doctor
         if: ${{ inputs.expo-app }}
         working-directory: ${{ inputs.project }}
+        env:
+          # This check compares against Expo's live list of latest patches, so every Expo
+          # release would fail PRs that changed nothing mobile. Versions move with an SDK
+          # upgrade (`expo install --fix`), and Dependabot alerts still flag vulnerable ones.
+          EXPO_DOCTOR_SKIP_DEPENDENCY_VERSION_CHECK: '1'
         run: npm run doctor
 
       - name: Export iOS and Android bundles
