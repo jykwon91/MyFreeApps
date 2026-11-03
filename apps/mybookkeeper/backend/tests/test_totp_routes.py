@@ -19,6 +19,8 @@ from app.core.auth import current_active_user
 from app.db.session import get_db
 from app.main import app
 from app.models.user.user import User
+from platform_shared.services.totp_service import generate_recovery_codes
+
 from app.services.user import totp_service
 
 
@@ -62,7 +64,6 @@ def _patch_session(db: AsyncSession):
 
     with (
         patch("app.services.user.totp_service.unit_of_work", _fake_session),
-        patch("app.services.user.totp_service.AsyncSessionLocal", _fake_session),
     ):
         yield
 
@@ -85,7 +86,7 @@ async def user_with_totp(db: AsyncSession) -> tuple[User, str]:
     user_id = uuid.uuid4()
     secret = pyotp.random_base32()
     encrypted_secret = totp_service._encrypt(secret, user_id)
-    recovery = totp_service.generate_recovery_codes()
+    recovery = generate_recovery_codes()
     encrypted_recovery = totp_service._encrypt(",".join(recovery), user_id)
     user = User(
         id=user_id,

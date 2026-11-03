@@ -1188,6 +1188,16 @@ class TestTotpRoutesAreShared:
         for check in ("check_login_rate_limit", "check_totp_rate_limit", "check_totp_account_not_locked"):
             assert f"Depends({check})" in source, f"TOTP login must keep {check}."
 
+    @pytest.mark.parametrize(
+        "backend",
+        [("apps", app, "backend") for app in _APPS] + [("infra", "templates", "scaffold", "backend")],
+        ids="/".join,
+    )
+    def test_app_binds_the_shared_two_factor_service(self, backend: tuple[str, ...]) -> None:
+        source = _read(*backend, "app", "services", "user", "totp_service.py")
+        assert "TotpAccountService(" in source
+        assert "async def " not in source, "Two-factor logic belongs in TotpAccountService."
+
 
 class TestMobileOnlyChangesDontDeployWeb:
     """A change that only touches a mobile app can't alter the web bundle or API
