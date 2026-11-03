@@ -1,4 +1,4 @@
-"""Tests for TOTP API endpoints (app/api/totp.py).
+"""Tests for TOTP API endpoints (platform_shared/api/totp_router.py).
 
 Uses FastAPI AsyncClient with dependency overrides for auth.
 The /auth/totp/login endpoint is tested by mocking UserManager.authenticate_password
@@ -271,7 +271,7 @@ class TestTotpLogin:
         app.dependency_overrides[check_totp_rate_limit] = lambda: None
         try:
             with patch(
-                "app.api.totp.UserManager.authenticate_password",
+                "app.core.auth.UserManager.authenticate_password",
                 new_callable=AsyncMock,
                 return_value=None,
             ):
@@ -296,7 +296,7 @@ class TestTotpLogin:
         app.dependency_overrides[check_totp_rate_limit] = lambda: None
         try:
             with patch(
-                "app.api.totp.UserManager.authenticate_password",
+                "app.core.auth.UserManager.authenticate_password",
                 new_callable=AsyncMock,
                 return_value=user_no_totp,
             ):
@@ -323,7 +323,7 @@ class TestTotpLogin:
         app.dependency_overrides[check_totp_rate_limit] = lambda: None
         try:
             with patch(
-                "app.api.totp.UserManager.authenticate_password",
+                "app.core.auth.UserManager.authenticate_password",
                 new_callable=AsyncMock,
                 return_value=user,
             ):
@@ -349,7 +349,7 @@ class TestTotpLogin:
         app.dependency_overrides[check_totp_rate_limit] = lambda: None
         try:
             with patch(
-                "app.api.totp.UserManager.authenticate_password",
+                "app.core.auth.UserManager.authenticate_password",
                 new_callable=AsyncMock,
                 return_value=user,
             ):
@@ -376,7 +376,7 @@ class TestTotpLogin:
         app.dependency_overrides[check_totp_rate_limit] = lambda: None
         try:
             with patch(
-                "app.api.totp.UserManager.authenticate_password",
+                "app.core.auth.UserManager.authenticate_password",
                 new_callable=AsyncMock,
                 return_value=user,
             ):
@@ -403,7 +403,7 @@ class TestTotpLogin:
         app.dependency_overrides[check_totp_rate_limit] = lambda: None
         try:
             with patch(
-                "app.api.totp.UserManager.authenticate_password",
+                "app.core.auth.UserManager.authenticate_password",
                 new_callable=AsyncMock,
                 return_value=user,
             ):
@@ -430,7 +430,7 @@ class TestTotpLogin:
         app.dependency_overrides[check_totp_rate_limit] = lambda: None
         try:
             with patch(
-                "app.api.totp.UserManager.authenticate_password",
+                "app.core.auth.UserManager.authenticate_password",
                 new_callable=AsyncMock,
                 return_value=user,
             ):
@@ -559,7 +559,7 @@ class TestTotpLoginAccountLockout:
         app.dependency_overrides[check_totp_rate_limit] = lambda: None
         try:
             with patch(
-                "app.api.totp.UserManager.authenticate_password",
+                "app.core.auth.UserManager.authenticate_password",
                 new_callable=AsyncMock,
                 return_value=user_no_totp,
             ):

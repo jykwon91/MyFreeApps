@@ -17,6 +17,7 @@ a separate TOTP-specific per-IP rate-limit gate. The shared
 check_login_rate_limit already applies on /auth/totp/login in MJH.
 """
 import uuid
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -26,12 +27,20 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.core.auth_events import AuthEventType
+from platform_shared.schemas.totp.totp_login_request import TotpLoginRequest
+from platform_shared.schemas.totp.totp_login_response import TotpLoginResponse
 from platform_shared.db.models.auth_event import AuthEvent
+
+from app.api.totp import router as totp_router
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _totp_login_endpoint() -> Callable[..., Awaitable[TotpLoginResponse]]:
+    return next(route.endpoint for route in totp_router.routes if route.path == "/auth/totp/login")
 
 
 def _make_request(ip: str = "1.2.3.4") -> MagicMock:
@@ -288,8 +297,7 @@ class TestInactiveUserTotpLoginAudit:
         authenticate_password, it must write a LOGIN_FAILURE row with:
           - user_id = the inactive user's UUID (not None)
           - metadata.reason = 'account_inactive'"""
-        from app.api.totp import totp_login
-        from app.schemas.totp import TotpLoginRequest
+        totp_login = _totp_login_endpoint()
 
         inactive_user = _make_active_user(is_active=False)
         # Use a unique IP to identify rows written by this exact test invocation.
@@ -339,8 +347,7 @@ class TestInactiveUserTotpLoginAudit:
     ) -> None:
         """When authenticate_password returns None, the LOGIN_FAILURE row
         must have user_id=None and reason='bad_credentials'."""
-        from app.api.totp import totp_login
-        from app.schemas.totp import TotpLoginRequest
+        totp_login = _totp_login_endpoint()
 
         # Use a unique IP to identify rows written by this exact test invocation.
         unique_ip = f"192.168.201.{id(db) % 256}"

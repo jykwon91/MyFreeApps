@@ -233,7 +233,7 @@ async def test_totp_login_success_creates_event(db: AsyncSession) -> None:
     app.dependency_overrides[check_totp_rate_limit] = lambda: None
     try:
         with patch(
-            "app.api.totp.UserManager.authenticate_password",
+            "app.core.auth.UserManager.authenticate_password",
             new_callable=AsyncMock,
             return_value=user,
         ):
@@ -266,7 +266,7 @@ async def test_totp_login_failure_creates_event(db: AsyncSession) -> None:
     app.dependency_overrides[check_totp_rate_limit] = lambda: None
     try:
         with patch(
-            "app.api.totp.UserManager.authenticate_password",
+            "app.core.auth.UserManager.authenticate_password",
             new_callable=AsyncMock,
             return_value=None,
         ):
