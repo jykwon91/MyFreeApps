@@ -58,6 +58,7 @@ def upgrade() -> None:
         sa.Column("display_name", sa.String(100), nullable=False, server_default=""),
         sa.Column("role", user_role, nullable=False, server_default="user"),
         sa.Column("totp_secret", sa.String(500), nullable=True),
+        sa.Column("auth_valid_after", sa.DateTime(timezone=True), nullable=True),
         sa.Column("totp_enabled", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("totp_recovery_codes", sa.String(1000), nullable=True),
         sa.Column("totp_algorithm", sa.String(10), nullable=False, server_default="sha1"),

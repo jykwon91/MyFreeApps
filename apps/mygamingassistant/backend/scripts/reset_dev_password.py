@@ -10,6 +10,7 @@ Usage:
 import asyncio
 import sys
 
+from platform_shared.auth.session_invalidation import session_cutoff_now
 from fastapi_users.password import PasswordHelper
 from sqlalchemy import select
 
@@ -27,6 +28,7 @@ async def main(email: str, new_password: str) -> None:
             print(f"NO USER: {email!r} not found")
             sys.exit(1)
         user.hashed_password = new_hash
+        user.auth_valid_after = session_cutoff_now()
         user.is_active = True
         user.is_verified = True
         await db.flush()

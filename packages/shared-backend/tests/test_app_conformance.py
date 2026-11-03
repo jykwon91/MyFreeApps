@@ -1133,6 +1133,26 @@ class TestDisplayNameValidation:
             )
 
 
+class TestSessionInvalidation:
+    """Token checks read ``auth_valid_after``, so every user model and schema needs it."""
+
+    @pytest.mark.parametrize(
+        "backend",
+        [("apps", app, "backend") for app in _APPS] + [("infra", "templates", "scaffold", "backend")],
+        ids="/".join,
+    )
+    def test_user_model_has_the_session_cutoff(self, backend: tuple[str, ...]) -> None:
+        source = _read(*backend, "app", "models", "user", "user.py")
+        assert re.search(r"class User\(\s*SessionInvalidationMixin\b", source), (
+            "User must inherit SessionInvalidationMixin, or every token check fails."
+        )
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_a_migration_adds_the_session_cutoff(self, app: str) -> None:
+        versions = _REPO_ROOT / "apps" / app / "backend" / "alembic" / "versions"
+        assert any("auth_valid_after" in path.read_text(encoding="utf-8") for path in versions.glob("*.py"))
+
+
 class TestMobileOnlyChangesDontDeployWeb:
     """A change that only touches a mobile app can't alter the web bundle or API
     image, so it must not trigger a production deploy."""

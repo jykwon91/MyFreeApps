@@ -45,7 +45,7 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Generic, Optional, TypeVar, Union
+from typing import Any, Generic, Optional, TypeVar, Union
 
 from fastapi import Request
 from fastapi.security import OAuth2PasswordRequestForm
@@ -58,6 +58,7 @@ from fastapi_users import (
     schemas,
 )
 
+from platform_shared.auth.session_invalidation import session_cutoff_now
 from platform_shared.core.auth_events import AuthEventType
 from platform_shared.services.account_lockout import (
     autoreset_update_if_stale,
@@ -276,6 +277,17 @@ class PlatformBaseUserManager(
             await self.user_db.update(result, clear_update)
 
         return result
+
+    async def _update(self, user: UP, update_dict: dict[str, Any]) -> UP:
+        """End every existing session when the password changes.
+
+        Here rather than in ``on_after_reset_password`` or ``on_after_update``,
+        which subclasses override without calling ``super()``: both the reset and
+        update flows pass through this method.
+        """
+        if update_dict.get("password") is not None:
+            update_dict = {**update_dict, "auth_valid_after": session_cutoff_now()}
+        return await super()._update(user, update_dict)
 
     async def validate_password(
         self, password: str, user: Union[schemas.UC, models.UP],

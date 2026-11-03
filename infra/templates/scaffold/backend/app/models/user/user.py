@@ -5,6 +5,7 @@ from fastapi_users.db import SQLAlchemyBaseUserTableUUID
 from sqlalchemy import Boolean, DateTime, Enum as SAEnum, SmallInteger, String
 from sqlalchemy.orm import Mapped, mapped_column
 
+from platform_shared.auth.session_invalidation import SessionInvalidationMixin
 from platform_shared.core.permissions import Role
 
 from app.core.encrypted_string_type import EncryptedString
@@ -13,7 +14,7 @@ from app.db.base import Base
 __all__ = ["User", "Role"]
 
 
-class User(SQLAlchemyBaseUserTableUUID, Base):
+class User(SessionInvalidationMixin, SQLAlchemyBaseUserTableUUID, Base):
     # Singular table name — single-user app convention. Multi-user apps use
     # the plural "users" (MyBookkeeper + MyJobHunter + the shared register test
     # factory); rename this when converting to multi-user.
