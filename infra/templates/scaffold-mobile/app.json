@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "__APP_DISPLAY_NAME__",
+    "slug": "__APP_SLUG__",
+    "scheme": "__APP_SCHEME__",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "platforms": ["ios", "android"],
+    "ios": {
+      "bundleIdentifier": "org.myfreeapps.__APP_SCHEME__"
+    },
+    "android": {
+      "package": "org.myfreeapps.__APP_SCHEME__"
+    },
+    "plugins": ["expo-router"]
+  }
+}

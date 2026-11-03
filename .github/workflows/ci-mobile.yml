@@ -1,0 +1,60 @@
+name: Mobile Foundation CI
+
+# Checks what every mobile app is built from. Each app's own code is covered by its
+# rendered ci-mobile-<app>.yml.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/shared-core/**'
+      - 'packages/shared-mobile/**'
+      - 'infra/templates/scaffold-mobile/**'
+      - 'packages/shared-backend/platform_shared/infra/new_app.py'
+      - 'packages/shared-backend/platform_shared/infra/mobile_lock.py'
+      - 'packages/shared-backend/platform_shared/infra/new_mobile.py'
+      - 'packages/shared-backend/platform_shared/infra/render.py'
+      - 'packages/shared-backend/platform_shared/infra/route_source.py'
+      - 'packages/shared-backend/platform_shared/infra/screen_map.py'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/_mobile-checks.yml'
+      - '.github/workflows/ci-mobile.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'packages/shared-core/**'
+      - 'packages/shared-mobile/**'
+      - 'infra/templates/scaffold-mobile/**'
+      - 'packages/shared-backend/platform_shared/infra/new_app.py'
+      - 'packages/shared-backend/platform_shared/infra/mobile_lock.py'
+      - 'packages/shared-backend/platform_shared/infra/new_mobile.py'
+      - 'packages/shared-backend/platform_shared/infra/render.py'
+      - 'packages/shared-backend/platform_shared/infra/route_source.py'
+      - 'packages/shared-backend/platform_shared/infra/screen_map.py'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/_mobile-checks.yml'
+      - '.github/workflows/ci-mobile.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-mobile-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  shared-mobile:
+    name: mobile-checks / shared-mobile
+    uses: ./.github/workflows/_mobile-checks.yml
+    with:
+      project: packages/shared-mobile
+
+  scaffold:
+    name: mobile-checks / scaffold
+    uses: ./.github/workflows/_mobile-checks.yml
+    with:
+      project: apps/scaffold-check/mobile
+      expo-app: true
+      scaffold-slug: scaffold-check

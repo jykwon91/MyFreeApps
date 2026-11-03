@@ -19,6 +19,10 @@ import re
 from pathlib import Path
 
 import pytest
+import yaml
+
+from platform_shared.infra import render as _render
+from platform_shared.infra import screen_map as _screen_map
 
 # Repo root, relative to this test file: tests/ -> shared-backend/ -> packages/ -> repo/
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -65,8 +69,31 @@ _APPS = [
 _SENTRY_EXEMPT = {"mygamingassistant", "mylanguagetutor"}
 
 
+# Discovered rather than listed, so a new app can't dodge the mobile checks.
+_ALL_APPS = _render._list_apps(_REPO_ROOT)
+
+
 def _read(*parts: str) -> str:
     return (_REPO_ROOT.joinpath(*parts)).read_text(encoding="utf-8")
+
+
+def _mobile_manifests() -> list[Path]:
+    """Every package.json that resolves against react-native."""
+    return [
+        _REPO_ROOT / "packages" / "shared-mobile" / "package.json",
+        _REPO_ROOT / "infra" / "templates" / "scaffold-mobile" / "package.json",
+        *sorted(_REPO_ROOT.glob("apps/*/mobile/package.json")),
+    ]
+
+
+def _mobile_react_native_versions() -> set[str]:
+    versions: set[str] = set()
+    for manifest in _mobile_manifests():
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        for section in ("dependencies", "devDependencies", "peerDependencies"):
+            if "react-native" in data.get(section, {}):
+                versions.add(data[section]["react-native"])
+    return versions
 
 
 def _uses_registry_images(app: str) -> bool:
@@ -913,6 +940,176 @@ class TestReactVersionAlignment:
             f"root overrides pin {pinned}. Update the range to ^{pinned}."
         )
 
+    @pytest.mark.parametrize(
+        "manifest", _mobile_manifests(), ids=lambda path: path.relative_to(_REPO_ROOT).as_posix()
+    )
+    def test_mobile_manifest_pins_exact_versions(self, manifest: Path) -> None:
+        """Expo pins react and react-native exactly, and a range would let npm pick
+        something else. Every place a mobile manifest names them has to be exact."""
+        root = json.loads(_read("package.json"))
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        sections = [data.get(key, {}) for key in ("dependencies", "devDependencies", "peerDependencies")]
+        rel = manifest.relative_to(_REPO_ROOT).as_posix()
+
+        declared_react = [section["react"] for section in sections if "react" in section]
+        assert declared_react, f"{rel} must declare react."
+        assert set(declared_react) == {root["overrides"]["react"]}, (
+            f"{rel} declares react {declared_react}; it must be exactly "
+            f"{root['overrides']['react']}, the root override."
+        )
+
+        native = [section["react-native"] for section in sections if "react-native" in section]
+        assert native, f"{rel} must declare react-native."
+        for version in native:
+            assert re.fullmatch(r"\d+\.\d+\.\d+", version), (
+                f"{rel} declares react-native {version!r}; it must be an exact version."
+            )
+        assert set(native) == _mobile_react_native_versions(), (
+            f"Mobile manifests disagree on react-native: {sorted(_mobile_react_native_versions())}."
+        )
+
+        for section in sections:
+            if "react-dom" in section:
+                assert section["react-dom"] == root["overrides"]["react-dom"], (
+                    f"{rel} declares react-dom {section['react-dom']!r}; it must be exactly "
+                    f"{root['overrides']['react-dom']}, the root override."
+                )
+
+
+class TestMobileManifestsGetDependabotUpdates:
+    """Dependabot only updates directories it's told about, so an app's mobile code
+    with no entry would never get a dependency update and nothing would say so."""
+
+    _CONFIG = yaml.safe_load(_read(".github", "dependabot.yml"))
+
+    @pytest.mark.parametrize(
+        "manifest", _mobile_manifests(), ids=lambda path: path.relative_to(_REPO_ROOT).as_posix()
+    )
+    def test_manifest_has_an_entry_holding_the_expo_pins(self, manifest: Path) -> None:
+        directory = "/" + manifest.parent.relative_to(_REPO_ROOT).as_posix()
+        entries = [
+            update
+            for update in self._CONFIG["updates"]
+            if update["package-ecosystem"] == "npm" and update["directory"] == directory
+        ]
+        assert entries, f".github/dependabot.yml has no npm entry for {directory}."
+        ignored = {rule["dependency-name"] for rule in entries[0]["ignore"]}
+        for pinned in ("expo", "expo-*", "jest-expo", "react", "react-native", "react-native-*"):
+            assert pinned in ignored, (
+                f".github/dependabot.yml must ignore {pinned} for {directory}: the Expo SDK "
+                f"pins it, so a Dependabot bump to it alone would fail expo-doctor."
+            )
+
+
+class TestReactTypesHeldWithReact:
+    """Root overrides pin @types/react alongside react, so a Dependabot entry holding one
+    has to hold the other, or it opens PRs the override makes meaningless."""
+
+    @pytest.mark.parametrize(
+        "entry",
+        [
+            update
+            for update in yaml.safe_load(_read(".github", "dependabot.yml"))["updates"]
+            if update["package-ecosystem"] == "npm"
+            and any(rule["dependency-name"] == "react" for rule in update.get("ignore", []))
+        ],
+        ids=lambda update: update["directory"],
+    )
+    def test_entry_holds_both(self, entry: dict[str, object]) -> None:
+        ignored = {rule["dependency-name"] for rule in entry["ignore"]}
+        assert "@types/react" in ignored, f"{entry['directory']} must ignore @types/react."
+
+
+class TestWebMobileScreenMap:
+    """A web route with no decision about mobile fails here. This suite runs in
+    `shared-backend-tests`, which is required and never path-filtered, so a change
+    to a web app can't skip it. Apps without `mobile: true` are not checked."""
+
+    @pytest.mark.parametrize("app", _ALL_APPS)
+    def test_routes_are_readable_in_every_app(self, app: str) -> None:
+        """Runs for apps without `mobile` too: those are the ones new_mobile reads next,
+        and a frontend reading as zero routes would make the check below mean nothing."""
+        assert _screen_map.web_routes(_REPO_ROOT, app), f"Found no web routes in {app}."
+
+    @pytest.mark.parametrize("app", _ALL_APPS)
+    def test_every_web_route_has_an_entry(self, app: str) -> None:
+        errors = _screen_map.check_app(_REPO_ROOT, app)
+        assert not errors, "\n".join(errors)
+
+    @pytest.mark.parametrize("app", _ALL_APPS)
+    def test_mobile_workflow_exists_only_for_mobile_apps(self, app: str) -> None:
+        config = yaml.safe_load(_read("apps", app, "app.yaml"))
+        workflow = _REPO_ROOT / ".github" / "workflows" / f"ci-mobile-{app}.yml"
+        assert workflow.exists() == _render.is_mobile_app(config), (
+            f"{workflow.name} must exist exactly when apps/{app}/app.yaml sets `mobile: true`. "
+            f"Re-render with `python -m platform_shared.infra.render --app {app}`, and delete "
+            f"the workflow if the flag was removed."
+        )
+
+
+class TestMobileChecksWorkflow:
+    """The reusable workflow is the only thing running the mobile toolchain in CI, and
+    dropping a step from it would turn every caller's check quietly weaker."""
+
+    _STEPS = yaml.safe_load(_read(".github", "workflows", "_mobile-checks.yml"))["jobs"]["checks"]
+
+    def test_runs_on_ubuntu(self) -> None:
+        assert self._STEPS["runs-on"] == "ubuntu-latest"
+
+    @pytest.mark.parametrize("script", ["typecheck", "lint", "test", "doctor", "export"])
+    def test_runs_each_check(self, script: str) -> None:
+        commands = [step.get("run", "").strip() for step in self._STEPS["steps"]]
+        expected = "npm test" if script == "test" else f"npm run {script}"
+        assert expected in commands, f"_mobile-checks.yml must run `{expected}` as its own step."
+
+    @pytest.mark.parametrize("script", ["typecheck", "lint", "test"])
+    def test_every_project_has_the_script(self, script: str) -> None:
+        for manifest in _mobile_manifests():
+            assert script in json.loads(manifest.read_text(encoding="utf-8"))["scripts"], (
+                f"{manifest.relative_to(_REPO_ROOT).as_posix()} has no `{script}` script."
+            )
+
+
+class TestWebStaysOffSharedMobile:
+    """shared-mobile isn't in the web Docker build, and that's what keeps react-native
+    out of it. A web package that imported it would pass `npm ci` and fail at build."""
+
+    _WEB_PACKAGES = [
+        *(("apps", app, "frontend") for app in _ALL_APPS),
+        ("infra", "templates", "scaffold", "frontend"),
+        ("packages", "shared-frontend"),
+        ("packages", "shared-core"),
+    ]
+    _SOURCE_SUFFIXES = frozenset({".ts", ".tsx", ".mts", ".js", ".jsx", ".mjs", ".cjs", ".json"})
+    _REFERENCE = re.compile(r"""["'`][^"'`\n]*(?:@platform/mobile|shared-mobile)""")
+
+    @pytest.mark.parametrize("package", _WEB_PACKAGES, ids="/".join)
+    def test_manifest_excludes_shared_mobile(self, package: tuple[str, ...]) -> None:
+        data = json.loads(_read(*package, "package.json"))
+        for section in ("dependencies", "devDependencies", "peerDependencies"):
+            assert "@platform/mobile" not in data.get(section, {}), (
+                f"{'/'.join(package)}/package.json must not depend on @platform/mobile. "
+                f"Logic shared with mobile belongs in @platform/core."
+            )
+
+    @pytest.mark.parametrize("package", _WEB_PACKAGES, ids="/".join)
+    def test_source_doesnt_import_shared_mobile(self, package: tuple[str, ...]) -> None:
+        """Workspace hoisting would let an import resolve with no manifest entry, and the
+        same goes for a config file's alias, so this reads the whole package."""
+        root = _REPO_ROOT.joinpath(*package)
+        offenders = [
+            path.relative_to(_REPO_ROOT).as_posix()
+            for path in root.rglob("*")
+            if path.suffix in self._SOURCE_SUFFIXES
+            and path.is_file()
+            and not {"node_modules", "dist"} & set(path.relative_to(root).parts)
+            and self._REFERENCE.search(path.read_text(encoding="utf-8"))
+        ]
+        assert not offenders, (
+            f"These must not import @platform/mobile: {offenders}. Logic shared with mobile "
+            f"belongs in @platform/core."
+        )
+
 
 class TestDisplayNameValidation:
     """A display name the column can't store must be a 422, not a 500."""
@@ -1466,9 +1663,13 @@ class TestAppDeclaresItsThirdPartyImports:
 
 
 def _js_workspace_packages() -> list[str]:
-    """The `packages/*` npm workspaces every app's frontend build depends on."""
+    """The `packages/*` npm workspaces every app's frontend build depends on.
+
+    shared-mobile is the exception: leaving it out of the Docker build keeps
+    react-native out of `npm ci`. TestWebStaysOffSharedMobile holds up the other end.
+    """
     workspaces = json.loads(_read("package.json"))["workspaces"]
-    return [w for w in workspaces if w.startswith("packages/")]
+    return [w for w in workspaces if w.startswith("packages/") and w != "packages/shared-mobile"]
 
 
 class TestCaddyBuildCopiesSharedPackages:
