@@ -55,7 +55,7 @@ vi.mock("@/hooks/useIsSuperuser", () => ({
   useIsSuperuser: () => ({ isSuperuser: false }),
 }));
 
-vi.mock("@/lib/userApi", () => ({
+vi.mock("@platform/ui/store/userApi", () => ({
   useGetCurrentUserQuery: () => ({ data: undefined }),
 }));
 

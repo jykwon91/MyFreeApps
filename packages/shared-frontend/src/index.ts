@@ -11,6 +11,11 @@
 //   @platform/ui/discord-activity — Discord Activity support. Re-exporting it
 //   from this index would pull the Embedded App SDK into every app's build
 //   output; see src/discord-activity/index.ts.
+//   @platform/ui/store/totpApi, userApi, accountApi — loading one injects its
+//   endpoints into baseApi. Re-exported here, that would happen in every app that
+//   imports this index, and pull the code out of lazily loaded chunks.
+//   @platform/ui/lib/authClient — an app binds it to its store in lib/auth.ts.
+//   Many app tests replace this index wholesale, so it has to stay out of it.
 
 // Re-export key utilities for convenience
 export { cn } from "./utils/cn";
@@ -25,6 +30,9 @@ export type { ToastEvent, ToastVariant } from "./lib/toast-store";
 export { notifyAuthChange, useIsAuthenticated } from "./lib/auth-store";
 export { baseApi } from "./store/baseApi";
 export { axiosBaseQuery } from "./store/baseQuery";
+export type { LoginResult } from "@platform/core/types/security/login-result";
+export type { TotpSetup } from "@platform/core/types/security/totp-setup";
+export type { CurrentUser } from "@platform/core/types/user/current-user";
 
 // UI components
 export { default as EmptyState } from "./components/ui/EmptyState";

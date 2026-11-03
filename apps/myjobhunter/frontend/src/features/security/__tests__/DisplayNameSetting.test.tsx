@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-vi.mock("@/lib/userApi", () => ({
+vi.mock("@platform/ui/store/userApi", () => ({
   useGetCurrentUserQuery: vi.fn(),
   useUpdateCurrentUserMutation: vi.fn(),
 }));
@@ -17,7 +17,7 @@ vi.mock("@platform/ui", async (importOriginal) => {
 });
 
 import DisplayNameSetting from "@/features/security/DisplayNameSetting";
-import { useGetCurrentUserQuery, useUpdateCurrentUserMutation } from "@/lib/userApi";
+import { useGetCurrentUserQuery, useUpdateCurrentUserMutation } from "@platform/ui/store/userApi";
 import { showSuccess, showError } from "@platform/ui";
 
 const mockUseGetCurrentUserQuery = vi.mocked(useGetCurrentUserQuery);

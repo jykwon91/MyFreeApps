@@ -1,5 +1,5 @@
 import { useIsAuthenticated } from "@platform/ui";
-import { useGetCurrentUserQuery } from "@/lib/userApi";
+import { useGetCurrentUserQuery } from "@platform/ui/store/userApi";
 
 interface UseIsSuperuserResult {
   /** True only when the loaded user has is_superuser=true. False during loading. */

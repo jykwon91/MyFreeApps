@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { showError, showSuccess } from "@platform/ui";
-import { useUpdateCurrentUserMutation } from "@/lib/userApi";
+import { useUpdateCurrentUserMutation } from "@platform/ui/store/userApi";
 
 export interface DisplayNameFormProps {
   initialName: string;

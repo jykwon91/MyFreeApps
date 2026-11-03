@@ -7,13 +7,13 @@ import {
   showSuccess,
 } from "@platform/ui";
 import type { Step } from "@/types/security/totp-step";
-import type { TotpSetup } from "@/types/security/totp-setup";
+import type { TotpSetup } from "@platform/ui";
 import {
   useGetTotpStatusQuery,
   useSetupTotpMutation,
   useVerifyTotpMutation,
   useDisableTotpMutation,
-} from "@/store/totpApi";
+} from "@platform/ui/store/totpApi";
 
 /**
  * Two-factor authentication enrollment + disable flow.

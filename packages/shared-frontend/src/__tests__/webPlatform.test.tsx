@@ -15,6 +15,10 @@ const ENTRY_POINTS: readonly (readonly [string, () => Promise<unknown>])[] = [
   ["lib/auth-store", () => import("../lib/auth-store")],
   ["auth/stepUpInterceptor", () => import("../auth/stepUpInterceptor")],
   ["auth/stepUpController", () => import("../auth/stepUpController")],
+  ["lib/authClient", () => import("../lib/authClient")],
+  ["store/totpApi", () => import("../store/totpApi")],
+  ["store/userApi", () => import("../store/userApi")],
+  ["store/accountApi", () => import("../store/accountApi")],
   ["index", () => import("../index")],
 ];
 
@@ -74,6 +78,54 @@ describe("import order", () => {
     expect(seen[0].baseURL).toBe("/api");
     expect(seen[0].headers.Authorization).toBe("Bearer jwt-123");
     expect(seen[0].headers["X-Organization-Id"]).toBe("org-456");
+  });
+});
+
+describe("the index", () => {
+  it("injects no endpoints into baseApi: only the subpath imports do", async () => {
+    const { baseApi } = await import("../index");
+    expect(Object.keys(baseApi.endpoints)).toEqual([]);
+  });
+});
+
+describe("the auth client on the web", () => {
+  async function loadClient() {
+    const { createAuthClient } = await import("../lib/authClient");
+    const { default: api } = await import("@platform/core/lib/api");
+    return { client: createAuthClient({ dispatch: () => undefined }), api };
+  }
+
+  const tokenResponse: AxiosAdapter = async (config) => ({
+    data: { access_token: "jwt-123" },
+    status: 200,
+    statusText: "OK",
+    headers: {},
+    config,
+  });
+
+  it("keeps the token from a sign-in in localStorage", async () => {
+    const { client, api } = await loadClient();
+    api.defaults.adapter = tokenResponse;
+    await expect(client.signIn("u@e.com", "pw")).resolves.toEqual({ status: "ok" });
+    expect(localStorage.getItem("token")).toBe("jwt-123");
+  });
+
+  it("fails the sign-in when localStorage can't keep the token", async () => {
+    const { client, api } = await loadClient();
+    api.defaults.adapter = tokenResponse;
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("Blocked", "SecurityError");
+    });
+    await expect(client.signIn("u@e.com", "pw")).rejects.toThrow("Blocked");
+    setItem.mockRestore();
+    expect(localStorage.getItem("token")).toBeNull();
+  });
+
+  it("removes the token from localStorage on sign-out", async () => {
+    localStorage.setItem("token", "jwt-123");
+    const { client } = await loadClient();
+    client.signOut();
+    expect(localStorage.getItem("token")).toBeNull();
   });
 });
 

@@ -13,12 +13,16 @@ const { mockResetApiState, mockResetApiStateAction, mockDispatch } = vi.hoisted(
   };
 });
 
-// Mock axios and @platform/ui auth-store before importing auth.ts
-vi.mock("@platform/ui", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@platform/ui")>();
+// The auth logic lives in @platform/core, so its collaborators are mocked there.
+vi.mock("@platform/core/lib/auth-store", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/core/lib/auth-store")>()),
+  notifyAuthChange: vi.fn(),
+}));
+
+vi.mock("@platform/core/store/baseApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@platform/core/store/baseApi")>();
   return {
     ...actual,
-    notifyAuthChange: vi.fn(),
     baseApi: {
       ...actual.baseApi,
       util: {
@@ -37,7 +41,7 @@ vi.mock("@/lib/store", () => ({
 }));
 
 // Mock the api module to control HTTP calls
-vi.mock("@/lib/api", () => ({
+vi.mock("@platform/core/lib/api", () => ({
   default: {
     post: vi.fn(),
   },

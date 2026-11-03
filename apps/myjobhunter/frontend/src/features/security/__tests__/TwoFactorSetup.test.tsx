@@ -33,7 +33,7 @@ vi.mock("@platform/ui", async (importOriginal) => {
   };
 });
 
-vi.mock("@/store/totpApi", () => ({
+vi.mock("@platform/ui/store/totpApi", () => ({
   useGetTotpStatusQuery: vi.fn(),
   useSetupTotpMutation: vi.fn(() => [mockSetupTotp, { isLoading: false }]),
   useVerifyTotpMutation: vi.fn(() => [mockVerifyTotp, { isLoading: false }]),
@@ -45,7 +45,7 @@ import {
   useSetupTotpMutation,
   useVerifyTotpMutation,
   useDisableTotpMutation,
-} from "@/store/totpApi";
+} from "@platform/ui/store/totpApi";
 
 function renderComponent() {
   // A minimal store that wires the baseApi reducer; the component never
