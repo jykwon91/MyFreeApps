@@ -86,7 +86,7 @@ export default function UsersTable({
                 <tr key={u.id} className="border-b last:border-b-0">
                   <td className="px-4 py-3">{u.email}</td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {u.name ?? "\u2014"}
+                    {u.name || "\u2014"}
                   </td>
                   <td className="px-4 py-3">
                     {isSelf ? (

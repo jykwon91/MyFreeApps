@@ -68,7 +68,7 @@ export default function MemberList({ onError, onSuccess }: MemberListProps) {
               return (
                 <tr key={member.id} className="border-b last:border-b-0">
                   <td className="px-4 py-3">
-                    <div className="font-medium">{member.user_name ?? member.user_email ?? "Unnamed"}</div>
+                    <div className="font-medium">{member.user_name || member.user_email || "Unnamed"}</div>
                     <div className="text-xs text-muted-foreground">{member.user_email}</div>
                   </td>
                   <td className="px-4 py-3">

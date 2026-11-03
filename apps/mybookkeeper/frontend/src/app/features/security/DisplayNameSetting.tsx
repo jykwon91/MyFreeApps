@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import api from "@/shared/lib/api";
+import { USER_NAME_INPUT_MAX_LENGTH } from "@/shared/lib/constants";
 
 interface CurrentUser {
   id: string;
@@ -74,7 +75,7 @@ export default function DisplayNameSetting() {
           placeholder="e.g. Jane Smith"
           disabled={loading}
           className="flex-1 px-3 py-2 text-sm border rounded-md disabled:opacity-50"
-          maxLength={120}
+          maxLength={USER_NAME_INPUT_MAX_LENGTH}
         />
         <button
           type="button"

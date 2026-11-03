@@ -111,10 +111,10 @@ export default function AdminLayout() {
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="h-7 w-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium shrink-0">
-                    {(user.name ?? user.email)[0].toUpperCase()}
+                    {(user.name || user.email)[0].toUpperCase()}
                   </div>
                   <div className="min-w-0 text-left">
-                    <div className="text-xs font-medium truncate">{user.name ?? user.email.split("@")[0]}</div>
+                    <div className="text-xs font-medium truncate">{user.name || user.email.split("@")[0]}</div>
                     <div className="text-xs text-muted-foreground capitalize">{user.role}</div>
                   </div>
                 </div>

@@ -4,6 +4,7 @@ from fastapi_users import schemas
 from pydantic import BaseModel
 
 from app.models.user.user import Role
+from app.schemas.user.user_name import UserName
 
 
 class UserRead(schemas.BaseUser[uuid.UUID]):
@@ -12,11 +13,11 @@ class UserRead(schemas.BaseUser[uuid.UUID]):
 
 
 class UserCreate(schemas.BaseUserCreate):
-    name: str | None = None
+    name: UserName = None
 
 
 class UserUpdate(schemas.BaseUserUpdate):
-    name: str | None = None
+    name: UserName = None
 
 
 class AdminUserRoleUpdate(BaseModel):

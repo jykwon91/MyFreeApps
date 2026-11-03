@@ -49,6 +49,17 @@ describe("MemberList", () => {
     vi.clearAllMocks();
   });
 
+  it("falls back to the email when a member's name is blank", () => {
+    vi.mocked(useListMembersQuery).mockReturnValue({
+      data: [makeMember({ user_email: "blank@test.com", user_name: "" })],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useListMembersQuery>);
+
+    render(<MemberList onError={onError} onSuccess={onSuccess} />);
+
+    expect(screen.getAllByText("blank@test.com").length).toBeGreaterThan(0);
+  });
+
   it("renders members table with name and email", () => {
     const members = [
       makeMember({ user_id: "user-1", user_email: "me@test.com", user_name: "Me", org_role: "owner" }),
