@@ -12,7 +12,7 @@ import io
 
 import pytest
 from httpx import AsyncClient
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 from app.core.config import settings
 from app.services.recipe import photo_extraction_service as pes
@@ -189,6 +189,39 @@ class TestExtractRecipePhoto:
         async with await as_user(user) as authed:
             resp = await authed.post("/recipes/extract", files=_files())
         assert resp.status_code == 422
+
+
+class TestPhotoFormats:
+    @pytest.mark.parametrize("fmt", ["JPEG", "PNG", "WEBP"])
+    def test_supported_formats_become_jpeg(self, fmt: str) -> None:
+        result = Image.open(io.BytesIO(pes._normalize_image(_image_bytes(fmt))))
+        assert result.format == "JPEG"
+
+    def test_multi_frame_phone_jpeg_is_accepted(self) -> None:
+        """Many phones save these. Pillow calls them MPO, but reads them through JPEG."""
+        buf = io.BytesIO()
+        Image.new("RGB", (48, 48), "white").save(
+            buf, format="MPO", save_all=True, append_images=[Image.new("RGB", (48, 48), "black")]
+        )
+        assert Image.open(io.BytesIO(buf.getvalue())).format == "MPO"
+        assert Image.open(io.BytesIO(pes._normalize_image(buf.getvalue()))).format == "JPEG"
+
+    @pytest.mark.parametrize("fmt", ["TIFF", "GIF", "BMP"])
+    def test_other_formats_are_not_decoded(self, fmt: str) -> None:
+        with pytest.raises(UnidentifiedImageError):
+            pes._normalize_image(_image_bytes(fmt))
+
+    @pytest.mark.asyncio
+    async def test_other_format_declared_as_png_returns_422(
+        self, user_factory, as_user, monkeypatch
+    ) -> None:
+        _mock_extraction(monkeypatch, data=_GOOD_RECIPE)
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            resp = await authed.post(
+                "/recipes/extract", files=_files(content=_image_bytes("TIFF"), ctype="image/png")
+            )
+        assert resp.status_code == 422, resp.text
 
 
 class TestCoerceDraft:

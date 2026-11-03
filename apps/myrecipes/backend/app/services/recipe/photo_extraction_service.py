@@ -59,6 +59,10 @@ _JPEG_QUALITY = 90
 # (HEIC from iPhones is converted to JPEG by the browser on upload.) Everything
 # is re-encoded to JPEG by _normalize_image before the API call regardless.
 SUPPORTED_MEDIA_TYPES = frozenset({"image/jpeg", "image/png", "image/webp"})
+# The declared type is whatever the client sent, so decoding is limited too. Otherwise
+# Pillow tries every format it knows on the bytes, including ones that hand off to
+# Ghostscript or have had memory-safety bugs.
+_DECODABLE_FORMATS = ("JPEG", "PNG", "WEBP")
 
 _extraction = ExtractionService(
     api_key=settings.anthropic_api_key,
@@ -90,7 +94,7 @@ def _normalize_image(file_bytes: bytes) -> bytes:
     Raises on bytes PIL cannot decode (i.e. not a usable image) — the caller
     maps that to "unreadable".
     """
-    with Image.open(io.BytesIO(file_bytes)) as img:
+    with Image.open(io.BytesIO(file_bytes), formats=_DECODABLE_FORMATS) as img:
         img = ImageOps.exif_transpose(img)  # apply camera rotation
         img = img.convert("RGB")  # flatten alpha / palette -> JPEG-safe
         img.thumbnail((_MAX_EDGE_PX, _MAX_EDGE_PX))  # in-place, keeps aspect ratio
