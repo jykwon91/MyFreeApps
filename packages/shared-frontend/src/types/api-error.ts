@@ -1,4 +1,1 @@
-export type ApiError = {
-  status?: number;
-  data: unknown;
-};
+export type * from "@platform/core/types/api-error";

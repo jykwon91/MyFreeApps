@@ -176,6 +176,47 @@ that scrolls `<main>`, navigates, and asserts it is back at 0.
 
 ---
 
+## MEDIUM — CI runs no frontend unit tests, and the suites have started failing
+
+**Logged:** 2026-11-02
+**Scope:** `.github/workflows/ci-*.yml`, `packages/shared-frontend`, `packages/shared-core`, `apps/*/frontend`
+
+### Problem
+
+No workflow runs vitest for an app or shared package; CI only runs each app's
+production build and, for MBK, its mocked layout E2E specs. So shared-package
+tests can't block a merge, and failures have built up unnoticed. At 86d6f7eb:
+MBK 6 tests, MGA 1, MJH 18 tests plus 2 files that fail to load, shared-frontend
+2 (`InlineBoldText`). `shared-core`'s platform-neutrality tests have a counterpart
+in `test_app_conformance.py` for this reason.
+
+### Recommended fix
+
+Fix or remove the failing tests, then add a required job that runs the shared
+packages' and apps' vitest suites.
+
+---
+
+## MEDIUM — `useIsAuthenticated` decodes the JWT payload with `atob`
+
+**Logged:** 2026-11-02
+**Scope:** `packages/shared-core/src/lib/auth-store.ts`
+
+### Problem
+
+JWT payloads are base64url, and `atob` throws on `-` and `_`. The surrounding
+`catch` turns that into "signed out". A plain ASCII payload rarely encodes to those
+characters, but a claim containing `>`, `?`, `~` or a non-ASCII character can, so
+that user would read as signed out while their token is valid. Moved unchanged from
+`shared-frontend` in the shared-core extraction; not reproduced with a real token.
+
+### Recommended fix
+
+Translate base64url to base64 before decoding, and add a test with a payload that
+encodes to `-` and `_`.
+
+---
+
 ## LOW — index.html theme scripts read localStorage unguarded
 
 **Logged:** 2026-10-01

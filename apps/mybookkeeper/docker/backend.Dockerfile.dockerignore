@@ -24,7 +24,8 @@ apps/mybookkeeper/.claude
 # Other apps in the monorepo — never bundled into the MBK image
 apps/myjobhunter
 
-# Shared frontend is unused by MBK's backend image
+# Shared frontend packages are unused by MBK's backend image
+packages/shared-core
 packages/shared-frontend
 
 # Dev artefacts found anywhere in the tree
