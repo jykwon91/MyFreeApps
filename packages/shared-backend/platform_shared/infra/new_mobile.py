@@ -2,9 +2,9 @@
 
 The web side of the app must already exist: this reads ``apps/<slug>/app.yaml`` and the
 web routes, and writes ``apps/<slug>/mobile``. Then it sets ``mobile: true`` in app.yaml,
-renders the app's mobile CI workflow and adds the workspace to the root lockfile. If any
-step before the lockfile fails, everything it did is undone. A failed ``npm install`` only
-warns: the generated app is complete, and needs that command run again.
+renders the app's mobile CI workflow and copies the template's locked versions into the
+root lockfile. If any of that fails, everything it did is undone. A failed ``npm install``
+only warns: the generated app is complete, and needs that command run again.
 
 CLI::
 
@@ -13,7 +13,7 @@ CLI::
 Optional flags::
 
     --skip-render   Don't render the mobile CI workflow (needs a complete app.yaml).
-    --skip-npm      Don't run `npm install` at the monorepo root.
+    --skip-npm      Don't touch the root lockfile or run `npm install`.
 """
 
 from __future__ import annotations
@@ -28,6 +28,7 @@ from pathlib import Path
 
 import yaml
 
+from platform_shared.infra import mobile_lock as _mobile_lock
 from platform_shared.infra import new_app as _new_app
 from platform_shared.infra import render as _render
 from platform_shared.infra import screen_map as _screen_map
@@ -183,6 +184,9 @@ def scaffold_mobile(
             rendered = list(_render.render_app(root, slug, write=False))
             saved.update({root / dest: _read_or_none(root / dest) for dest in rendered})
             _render.render_app(root, slug, write=True)
+        if not skip_npm:
+            # Last, so nothing after it can fail and leave the lockfile to undo.
+            _mobile_lock.add_app_to_lockfile(root, slug)
     except Exception as exc:
         shutil.rmtree(staging, ignore_errors=True)
         shutil.rmtree(mobile_dir, ignore_errors=True)
@@ -210,7 +214,7 @@ def _cli() -> int:
     parser.add_argument("--skip-render", action="store_true",
                         help="Don't render the mobile CI workflow (needs a complete app.yaml).")
     parser.add_argument("--skip-npm", action="store_true",
-                        help="Don't run `npm install` at the monorepo root.")
+                        help="Don't touch the root lockfile or run `npm install`.")
     args = parser.parse_args()
 
     try:
@@ -231,11 +235,17 @@ def _cli() -> int:
         "/infra/templates/scaffold-mobile in .github/dependabot.yml), and fill in "
         f"apps/{args.slug}/mobile/screen-map.yaml as screens get built."
     )
-    if not summary["npm_install_succeeded"]:
+    if args.skip_npm:
         print(
-            "WARNING: npm install at monorepo root was skipped or failed.\n"
-            "  Run `npm install` from the monorepo root before pushing, or CI fails "
-            "on `npm ci EUSAGE` for the new workspace."
+            "WARNING: the root lockfile wasn't updated. From packages/shared-backend, run\n"
+            f"  python -m platform_shared.infra.mobile_lock {args.slug}\n"
+            "then `npm install` from the monorepo root, in that order: without the first, npm "
+            "picks whatever was published since the template was locked."
+        )
+    elif not summary["npm_install_succeeded"]:
+        print(
+            "WARNING: npm install at the monorepo root failed. The locked versions are already "
+            "in the lockfile, so run `npm install` again before pushing."
         )
     return 0
 

@@ -1,13 +1,16 @@
-"""Check what generating a mobile app did to the root lockfile.
+"""Add a generated mobile app to the root lockfile, at the versions already locked.
 
-The scaffold is an npm workspace, so everything an app needs is already locked. The only
-allowed changes are the app's own workspace entry and link, with the template's
-dependencies, and copies of the template's nested packages under the app's directory.
-So a generated app can't bring in a package the template doesn't have.
+The scaffold is an npm workspace, so everything an app needs is locked under the template.
+But npm doesn't reuse those entries for a new workspace: `npm install` resolves its nested
+packages again, and takes whatever was published since. So a new app could get versions
+nothing has tested, and an Expo patch release could fail CI on a PR that didn't change
+anything mobile. Copying the template's entries first gives npm nothing to resolve. The
+app's package.json must list the same dependencies as those entries, because `npm ci` only
+notices a mismatch the lockfile can't satisfy, not a dropped dependency.
 
 CLI::
 
-    python -m platform_shared.infra.mobile_lock <before.json> <after.json> <app-slug>
+    python -m platform_shared.infra.mobile_lock <app-slug>
 """
 
 from __future__ import annotations
@@ -16,50 +19,66 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
+
+from platform_shared.infra import new_app as _new_app
+from platform_shared.infra import render as _render
+from platform_shared.infra.new_app import ScaffoldError
 
 _TEMPLATE_DIR = "infra/templates/scaffold-mobile"
+_LOCKFILE = "package-lock.json"
 _MANIFEST_KEYS = ("dependencies", "devDependencies", "peerDependencies")
 
 
-def lock_problems(before: dict[str, object], after: dict[str, object], slug: str) -> list[str]:
-    """Return every lockfile change generating ``slug`` shouldn't have made."""
+def with_app(packages: dict[str, Any], slug: str) -> dict[str, Any]:
+    """Return lockfile ``packages`` with copies of the template's entries for ``slug``."""
+    template = packages.get(_TEMPLATE_DIR)
+    if template is None:
+        raise ScaffoldError(f"{_LOCKFILE} has no entry for {_TEMPLATE_DIR}. Run `npm install` at the repo root.")
+
     app_dir = f"apps/{slug}/mobile"
-    link = f"node_modules/{slug}-mobile"
-    template = before.get(_TEMPLATE_DIR, {})
-    problems: list[str] = []
-
-    for key in sorted({*before, *after}):
-        old, new = before.get(key), after.get(key)
-        if key == link:
-            if new != {"resolved": app_dir, "link": True}:
-                problems.append(f"{key}: not a link to {app_dir}.")
-        elif key == app_dir:
-            if new is None or any(new.get(k) != template.get(k) for k in _MANIFEST_KEYS):
-                problems.append(f"{key}: dependencies differ from {_TEMPLATE_DIR}.")
-        elif key.startswith(f"{app_dir}/"):
-            copied_from = _TEMPLATE_DIR + key.removeprefix(app_dir)
-            if new != before.get(copied_from):
-                problems.append(f"{key}: not a copy of an entry in {_TEMPLATE_DIR}.")
-        elif old != new:
-            problems.append(f"{key}: changed.")
-    return problems
+    name = f"{slug}-mobile"
+    added = {
+        app_dir + key.removeprefix(_TEMPLATE_DIR): entry
+        for key, entry in packages.items()
+        if key.startswith(f"{_TEMPLATE_DIR}/")
+    }
+    added[app_dir] = {**template, "name": name}
+    added[f"node_modules/{name}"] = {"resolved": app_dir, "link": True}
+    return {**packages, **added}
 
 
-def _load_packages(path: str) -> dict[str, object]:
-    return json.loads(Path(path).read_text(encoding="utf-8"))["packages"]
+def _check_manifest(repo_root: Path, slug: str, template: dict[str, Any]) -> None:
+    manifest_path = f"apps/{slug}/mobile/package.json"
+    manifest = json.loads((repo_root / manifest_path).read_text(encoding="utf-8"))
+    for key in _MANIFEST_KEYS:
+        if manifest.get(key) != template.get(key):
+            raise ScaffoldError(f"{manifest_path}: {key} differs from {_TEMPLATE_DIR} in {_LOCKFILE}.")
+
+
+def add_app_to_lockfile(repo_root: Path, slug: str) -> None:
+    path = repo_root / _LOCKFILE
+    try:
+        lock = json.loads(path.read_text(encoding="utf-8"))
+        packages = with_app(lock["packages"], slug)
+        _check_manifest(repo_root, slug, lock["packages"][_TEMPLATE_DIR])
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+        raise ScaffoldError(f"Couldn't read what {_LOCKFILE} needs for {slug}: {exc!r}") from exc
+    lock["packages"] = packages
+    path.write_text(json.dumps(lock, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
 
 
 def _cli() -> int:
     parser = argparse.ArgumentParser(prog="platform_shared.infra.mobile_lock")
-    parser.add_argument("before")
-    parser.add_argument("after")
     parser.add_argument("slug")
     args = parser.parse_args()
-
-    problems = lock_problems(_load_packages(args.before), _load_packages(args.after), args.slug)
-    for problem in problems:
-        print(problem, file=sys.stderr)
-    return 1 if problems else 0
+    try:
+        _new_app._validate_slug(args.slug)
+        add_app_to_lockfile(_render._repo_root(), args.slug)
+    except ScaffoldError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    return 0
 
 
 if __name__ == "__main__":

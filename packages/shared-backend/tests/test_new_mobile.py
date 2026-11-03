@@ -347,3 +347,63 @@ class TestRefusals:
         shutil.rmtree(repo / "infra" / "templates" / "scaffold-mobile")
         with pytest.raises(ScaffoldError, match="templates missing"):
             _generate(repo)
+
+
+class TestLockfileStep:
+    def _lock(self, repo: Path) -> None:
+        manifest = json.loads((_TEMPLATES / "scaffold-mobile" / "package.json").read_text("utf-8"))
+        entry = {"name": manifest["name"], "version": manifest["version"]}
+        entry.update({k: manifest[k] for k in ("dependencies", "devDependencies")})
+        (repo / "package-lock.json").write_text(
+            json.dumps({"packages": {"infra/templates/scaffold-mobile": entry}}), "utf-8"
+        )
+
+    def test_copies_locked_versions_before_npm_runs(
+        self, repo: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """npm must find the entries already there, or it resolves newer versions."""
+        self._lock(repo)
+        seen: list[bool] = []
+
+        def fake_install(root: Path) -> bool:
+            packages = json.loads((root / "package-lock.json").read_text("utf-8"))["packages"]
+            seen.append(f"apps/{_SLUG}/mobile" in packages)
+            return True
+
+        monkeypatch.setattr(new_app, "_maybe_npm_install", fake_install)
+        summary = scaffold_mobile(slug=_SLUG, repo_root=repo, skip_render=True, skip_npm=False)
+        assert seen == [True]
+        assert summary["npm_install_succeeded"] is True
+
+    @pytest.mark.parametrize("content", [None, "<<<<<<< HEAD", '{"packages": {}}'])
+    def test_a_bad_lockfile_undoes_everything_so_a_rerun_works(
+        self, repo: Path, monkeypatch: pytest.MonkeyPatch, content: str | None
+    ) -> None:
+        app_yaml = repo / "apps" / _SLUG / "app.yaml"
+        before = app_yaml.read_text("utf-8")
+        monkeypatch.setattr(new_app, "_maybe_npm_install", lambda root: True)
+        if content is not None:
+            (repo / "package-lock.json").write_text(content, "utf-8")
+
+        with pytest.raises(ScaffoldError, match="nothing changed"):
+            scaffold_mobile(slug=_SLUG, repo_root=repo, skip_render=True, skip_npm=False)
+        assert not _mobile_dir(repo).exists()
+        assert app_yaml.read_text("utf-8") == before
+
+        self._lock(repo)
+        scaffold_mobile(slug=_SLUG, repo_root=repo, skip_render=True, skip_npm=False)
+        assert _mobile_dir(repo).is_dir()
+
+
+class TestLockfileWarnings:
+    def _run(self, repo: Path, monkeypatch: pytest.MonkeyPatch, *flags: str) -> int:
+        monkeypatch.setattr("sys.argv", ["new_mobile", _SLUG, "--skip-render", *flags])
+        monkeypatch.setattr(new_app, "_repo_root", lambda: repo)
+        return new_mobile._cli()
+
+    def test_skip_npm_says_to_copy_locked_versions_first(
+        self, repo: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        assert self._run(repo, monkeypatch, "--skip-npm") == 0
+        out = capsys.readouterr().out
+        assert out.index("platform_shared.infra.mobile_lock") < out.index("npm install")

@@ -48,6 +48,8 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install workspace dependencies
+        # The scaffold job installs after generating its app, below.
+        if: ${{ inputs.scaffold-slug == '' }}
         run: npm ci
 
       - name: Set up Python
@@ -61,18 +63,15 @@ jobs:
         env:
           SLUG: ${{ inputs.scaffold-slug }}
         # A bare app.yaml is all new_mobile reads. --skip-render because that isn't
-        # enough to render from, and the app is gone when the job ends. The template's
-        # dependencies are already locked, so installing may only add copies of the
-        # template's own entries. Anything else means the scaffold and the lockfile have
-        # drifted, and this job wouldn't be testing what's locked.
+        # enough to render from, and the app is gone when the job ends. mobile_lock fails
+        # if the generated package.json differs from the entries it copies.
         run: |
           python -m pip install jinja2 pyyaml
           mkdir -p "apps/$SLUG"
           printf 'app_slug: %s\napp_display_name: Scaffold Check\n' "$SLUG" > "apps/$SLUG/app.yaml"
           (cd packages/shared-backend && python -m platform_shared.infra.new_mobile "$SLUG" --skip-render --skip-npm)
-          cp package-lock.json "$RUNNER_TEMP/package-lock.before.json"
-          npm install --no-audit --no-fund
-          (cd packages/shared-backend && python -m platform_shared.infra.mobile_lock "$RUNNER_TEMP/package-lock.before.json" "$GITHUB_WORKSPACE/package-lock.json" "$SLUG")
+          (cd packages/shared-backend && python -m platform_shared.infra.mobile_lock "$SLUG")
+          npm ci --no-audit --no-fund
 
       - name: Typecheck
         working-directory: ${{ inputs.project }}
