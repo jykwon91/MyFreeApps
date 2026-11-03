@@ -4,7 +4,7 @@
 The router gates ``PATCH /admin/users/{id}/superuser`` on the app's
 ``current_strict_superuser`` dependency (built from
 ``make_strict_superuser_gate``). The gate's own three-check semantics
-(is_superuser + recent iat + valid X-TOTP-Code) are tested in
+(is_superuser + recent auth_time + valid X-TOTP-Code) are tested in
 ``test_permissions.py``. This file verifies only the router-level
 contract: gate failure → 401/403 surface, gate pass → service runs.
 """

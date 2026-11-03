@@ -136,7 +136,7 @@ export function signalSuccess(): void {
 
 /**
  * Called by the interceptor when the retry returned
- * ``X-Require-Step-Up: reauth`` — the JWT iat is past the recent-auth
+ * ``X-Require-Step-Up: reauth`` — the JWT auth_time is past the recent-auth
  * window. Closes the modal and rejects any queued resolvers; the
  * interceptor itself handles the redirect-to-login.
  */

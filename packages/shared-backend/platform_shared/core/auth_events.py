@@ -28,6 +28,7 @@ class AuthEventType:
     # defense-in-depth rationale.
     SUPERUSER_GATE_PASSED = "superuser.gate.passed"
     SUPERUSER_GATE_DENIED_NOT_SUPERUSER = "superuser.gate.denied.not_superuser"
+    # Now means the token has no auth_time. The stored value stays, to keep past rows queryable.
     SUPERUSER_GATE_DENIED_TOKEN_NO_IAT = "superuser.gate.denied.token_no_iat"
     SUPERUSER_GATE_DENIED_TOKEN_STALE = "superuser.gate.denied.token_stale"
     SUPERUSER_GATE_DENIED_MISSING_TOTP = "superuser.gate.denied.missing_totp"

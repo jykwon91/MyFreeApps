@@ -21,7 +21,7 @@ Step-up verification (PR F1, 2026-05-10):
 The ``toggle_superuser`` endpoint is gated by ``current_strict_superuser``
 — the shared ``make_strict_superuser_gate`` from ``platform_shared.core
 .permissions``. The gate enforces three independent checks: is_superuser,
-recent JWT iat (re-auth window), and a fresh ``X-TOTP-Code`` header.
+recent JWT auth_time (re-auth window), and a fresh ``X-TOTP-Code`` header.
 TOTP code travels in the request HEADER (not the body) so the same gate
 can be applied uniformly to GET / PATCH / DELETE endpoints across the
 admin surface — including endpoints that have no natural body shape.
@@ -63,7 +63,7 @@ def build_admin_router(
             mutations (role / activate / deactivate).
         current_strict_superuser: The app's FastAPI dependency built by
             ``make_strict_superuser_gate`` — yields a User after passing
-            the three-gate strict check (is_superuser + recent iat +
+            the three-gate strict check (is_superuser + recent auth_time +
             X-TOTP-Code header). Used for the highest-risk endpoints
             (superuser toggle today, more in PR F2). REQUIRED — the
             router refuses to flip ``is_superuser`` without it.

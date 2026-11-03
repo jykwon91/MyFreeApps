@@ -6,7 +6,10 @@ emits only ``sub``/``aud``/``exp``. The result was every gated endpoint
 (Demo create, toggle_superuser, etc.) returning 401 "Token missing or
 unreadable iat claim" against real platform-issued tokens. These tests
 lock in that platform-issued tokens are loadable by the gate's
-``decode_token_iat`` callable.
+``decode_token_auth_time`` callable.
+
+The gate has since moved from ``iat`` to ``auth_time``, so that a token renewed
+without a login can't pass as a recent login.
 """
 from __future__ import annotations
 
@@ -17,12 +20,13 @@ from typing import Any
 
 import jwt
 import pytest
+from fastapi import Request
 
 from platform_shared.auth.jwt_backend import (
     IatJWTStrategy,
     build_jwt_auth_backend,
 )
-from platform_shared.core.permissions import make_decode_token_iat
+from platform_shared.core.permissions import make_decode_token_auth_time
 
 SECRET = "test-secret-key-for-jwt-backend-tests-32bytes"
 
@@ -56,6 +60,23 @@ async def _token_issued_at(user: _FakeUser, issued_at: int) -> str:
     )
 
 
+def _signed_token(**claims: int) -> str:
+    return jwt.encode(
+        {"sub": str(uuid.uuid4()), "aud": "fastapi-users:auth", "exp": int(time.time()) + 60, **claims},
+        SECRET,
+        algorithm="HS256",
+    )
+
+
+def _request_with(token: str) -> Request:
+    return Request(
+        {
+            "type": "http",
+            "headers": [(b"authorization", f"Bearer {token}".encode())],
+        }
+    )
+
+
 def _decode_unchecked(token: str) -> dict[str, Any]:
     return jwt.decode(
         token,
@@ -78,6 +99,16 @@ async def test_write_token_includes_iat_claim() -> None:
     assert "iat" in payload, "iat claim missing — strict-superuser gate will 401"
     assert isinstance(payload["iat"], int)
     assert before <= payload["iat"] <= int(time.time())
+
+
+@pytest.mark.asyncio
+async def test_a_login_token_records_the_login_time() -> None:
+    before = int(time.time())
+
+    payload = _decode_unchecked(await _strategy().write_token(_FakeUser()))
+
+    assert isinstance(payload["auth_time"], int)
+    assert before <= payload["auth_time"] <= int(time.time())
 
 
 @pytest.mark.asyncio
@@ -108,29 +139,36 @@ async def test_factory_returns_iat_strategy() -> None:
 
 
 @pytest.mark.asyncio
-async def test_iat_roundtrips_through_decode_token_iat() -> None:
-    """The gate's iat reader MUST see the value the strategy writes.
+async def test_auth_time_roundtrips_through_decode_token_auth_time() -> None:
+    """The gate's reader MUST see the value the strategy writes.
 
     Catches mismatches in audience, algorithm, or secret-key plumbing
     between issue-side and verify-side.
     """
-    from fastapi import Request
-
     backend = build_jwt_auth_backend(secret_key=SECRET, lifetime_seconds=3600)
     strategy = backend.get_jwt_strategy()
     token = await strategy.write_token(_FakeUser())
 
-    decode = make_decode_token_iat(secret_key=SECRET)
-    request = Request(
-        {
-            "type": "http",
-            "headers": [(b"authorization", f"Bearer {token}".encode())],
-        }
-    )
+    decode = make_decode_token_auth_time(secret_key=SECRET)
 
-    iat = decode(request)
-    assert iat is not None, "decode_token_iat returned None on a freshly-issued token"
-    assert abs(iat - time.time()) < 5
+    auth_time = decode(_request_with(token))
+    assert auth_time is not None, "decode_token_auth_time returned None on a freshly-issued token"
+    assert auth_time == _decode_unchecked(token)["auth_time"]
+    assert abs(auth_time - time.time()) < 5
+
+
+def test_gate_reads_the_login_time_not_the_issue_time() -> None:
+    """A token renewed long after the login must not pass as a recent login."""
+    logged_in_at = int(time.time()) - 7200
+    token = _signed_token(iat=int(time.time()), auth_time=logged_in_at)
+
+    assert make_decode_token_auth_time(secret_key=SECRET)(_request_with(token)) == logged_in_at
+
+
+def test_gate_does_not_fall_back_to_the_issue_time() -> None:
+    token = _signed_token(iat=int(time.time()))
+
+    assert make_decode_token_auth_time(secret_key=SECRET)(_request_with(token)) is None
 
 
 @pytest.mark.asyncio

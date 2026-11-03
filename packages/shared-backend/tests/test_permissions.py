@@ -128,7 +128,7 @@ class TestMakeStrictSuperuserGate:
         self,
         *,
         is_superuser: bool,
-        token_iat: float | None,
+        token_auth_time: float | None,
         good_totp: str | None = "123456",
         max_token_age_seconds: int = 900,
     ):
@@ -170,14 +170,14 @@ class TestMakeStrictSuperuserGate:
             if code != good_totp:
                 raise HTTPException(status_code=401, detail="Invalid TOTP code")
 
-        def fake_decode_iat(_request) -> float | None:
-            return token_iat
+        def fake_decode_auth_time(_request) -> float | None:
+            return token_auth_time
 
         gate = make_strict_superuser_gate(
             current_active_user=fake_current_active_user,
             get_db=fake_get_db,
             verify_totp_step_up=fake_verify_totp,
-            decode_token_iat=fake_decode_iat,
+            decode_token_auth_time=fake_decode_auth_time,
             max_token_age_seconds=max_token_age_seconds,
         )
 
@@ -193,7 +193,7 @@ class TestMakeStrictSuperuserGate:
         from platform_shared.core.auth_events import AuthEventType
 
         app, events, user_id = self._build_app(
-            is_superuser=True, token_iat=time.time() - 60
+            is_superuser=True, token_auth_time=time.time() - 60
         )
         client = TestClient(app)
         resp = client.delete("/superuser-action", headers={"X-TOTP-Code": "123456"})
@@ -208,7 +208,7 @@ class TestMakeStrictSuperuserGate:
         from platform_shared.core.auth_events import AuthEventType
 
         app, events, _user_id = self._build_app(
-            is_superuser=False, token_iat=time.time() - 60
+            is_superuser=False, token_auth_time=time.time() - 60
         )
         client = TestClient(app)
         resp = client.delete("/superuser-action", headers={"X-TOTP-Code": "123456"})
@@ -221,16 +221,16 @@ class TestMakeStrictSuperuserGate:
         )
         assert events[0]["succeeded"] is False
 
-    def test_blocks_when_token_has_no_iat(self) -> None:
+    def test_blocks_when_token_has_no_auth_time(self) -> None:
         from platform_shared.core.auth_events import AuthEventType
 
         app, events, _user_id = self._build_app(
-            is_superuser=True, token_iat=None
+            is_superuser=True, token_auth_time=None
         )
         client = TestClient(app)
         resp = client.delete("/superuser-action", headers={"X-TOTP-Code": "123456"})
         assert resp.status_code == 401
-        assert "iat" in resp.json()["detail"].lower()
+        assert "auth_time" in resp.json()["detail"].lower()
         assert len(events) == 1
         assert (
             events[0]["event_type"]
@@ -243,7 +243,7 @@ class TestMakeStrictSuperuserGate:
         # Token issued 30 minutes ago, window is default 15 minutes
         app, events, _user_id = self._build_app(
             is_superuser=True,
-            token_iat=time.time() - 1800,
+            token_auth_time=time.time() - 1800,
             max_token_age_seconds=900,
         )
         client = TestClient(app)
@@ -263,7 +263,7 @@ class TestMakeStrictSuperuserGate:
         from platform_shared.core.auth_events import AuthEventType
 
         app, events, _user_id = self._build_app(
-            is_superuser=True, token_iat=time.time() - 60
+            is_superuser=True, token_auth_time=time.time() - 60
         )
         client = TestClient(app)
         resp = client.delete("/superuser-action")  # no X-TOTP-Code
@@ -280,7 +280,7 @@ class TestMakeStrictSuperuserGate:
         from platform_shared.core.auth_events import AuthEventType
 
         app, events, _user_id = self._build_app(
-            is_superuser=True, token_iat=time.time() - 60
+            is_superuser=True, token_auth_time=time.time() - 60
         )
         client = TestClient(app)
         resp = client.delete(
@@ -305,7 +305,7 @@ class TestMakeStrictSuperuserGate:
         # Non-superuser, AND no token, AND no TOTP — should fail on gate 1
         # (NOT_SUPERUSER), not token-iat or missing-TOTP.
         app, events, _user_id = self._build_app(
-            is_superuser=False, token_iat=None
+            is_superuser=False, token_auth_time=None
         )
         client = TestClient(app)
         resp = client.delete("/superuser-action")
@@ -323,7 +323,7 @@ class TestMakeStrictSuperuserGate:
         # (TOKEN_STALE), not gate 3 (MISSING_TOTP).
         app, events, _user_id = self._build_app(
             is_superuser=True,
-            token_iat=time.time() - 3600,
+            token_auth_time=time.time() - 3600,
             max_token_age_seconds=900,
         )
         client = TestClient(app)
@@ -339,7 +339,7 @@ class TestMakeStrictSuperuserGate:
         unrelated routes.
         """
         app, events, _user_id = self._build_app(
-            is_superuser=True, token_iat=time.time() - 60
+            is_superuser=True, token_auth_time=time.time() - 60
         )
 
         @app.get("/public")
@@ -357,7 +357,7 @@ class TestMakeStrictSuperuserGate:
 
         app, events, _user_id = self._build_app(
             is_superuser=True,
-            token_iat=time.time() - 899,  # 899s old, 900s window
+            token_auth_time=time.time() - 899,  # 899s old, 900s window
             max_token_age_seconds=900,
         )
         client = TestClient(app)
