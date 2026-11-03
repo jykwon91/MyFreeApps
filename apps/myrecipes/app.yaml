@@ -25,3 +25,4 @@ csp: 'default-src ''self''; script-src ''self'' https://challenges.cloudflare.co
   ''self''; object-src ''none''; upgrade-insecure-requests'
 workers: []
 post_deploy_commands: []
+mobile: true

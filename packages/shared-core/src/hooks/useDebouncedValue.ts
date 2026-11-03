@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 
 /**
- * Returns a debounced copy of `value` that only updates after `delayMs` has
- * elapsed without a further change. Used to throttle the recipes search box so
- * each keystroke does not fire a request.
+ * Returns a copy of `value` that only updates after `delayMs` passes without a
+ * further change, so a lookup driven by typing doesn't fire on every keystroke.
  */
 export function useDebouncedValue<T>(value: T, delayMs = 300): T {
   const [debounced, setDebounced] = useState(value);

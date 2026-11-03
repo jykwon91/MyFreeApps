@@ -4,7 +4,7 @@ Issues discovered during development. New entries are appended; resolved entries
 are removed. Project policy is **log-only** (see `CLAUDE.md` → Tech Debt Policy):
 fix only Critical items that block the current feature.
 
-**Open issues: 1 (Critical: 0 / High: 1 / Medium: 0 / Low: 0)**
+**Open issues: 2 (Critical: 0 / High: 1 / Medium: 1 / Low: 0)**
 
 ---
 
@@ -34,3 +34,16 @@ inside the `<label>` element. Roughly ten lines.
 so the change belongs in its own PR with a sweep of each app's forms, not folded
 into a feature PR (one feature per PR). Pre-existing — not introduced by any
 recent work here.
+
+## Medium
+
+### The recipe list silently stops at 50
+
+**Where:** `apps/myrecipes/backend` list route (`limit` defaults to 50, max 200,
+with `offset`). Neither `apps/myrecipes/frontend/src/pages/Recipes.tsx` nor
+`apps/myrecipes/mobile/src/features/recipes/RecipesScreen.tsx` asks for more.
+
+**Impact:** someone with more than 50 recipes can't see the rest, and nothing
+says the list was cut short. Search still reaches them.
+
+**Fix:** page through results on both clients (`onEndReached` on mobile).

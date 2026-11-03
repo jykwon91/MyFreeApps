@@ -5,8 +5,11 @@
 export { default as EmptyState } from "./components/EmptyState";
 export { default as FormField } from "./components/FormField";
 export { default as LoadingButton } from "./components/LoadingButton";
+export { default as SearchField } from "./components/SearchField";
 export { default as Skeleton } from "./components/Skeleton";
 export { default as Toast } from "./components/Toast";
+
+export { useAnnouncement } from "./hooks/useAnnouncement";
 
 export { darkColors, lightColors } from "./theme/colors";
 export { radius } from "./theme/radius";
@@ -20,6 +23,7 @@ export type { EmptyStateAction } from "./types/EmptyStateAction";
 export type { EmptyStateProps } from "./types/EmptyStateProps";
 export type { FormFieldProps } from "./types/FormFieldProps";
 export type { LoadingButtonProps } from "./types/LoadingButtonProps";
+export type { SearchFieldProps } from "./types/SearchFieldProps";
 export type { SkeletonProps } from "./types/SkeletonProps";
 export type { Theme } from "./types/Theme";
 export type { ThemeColors } from "./types/ThemeColors";

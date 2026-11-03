@@ -1,0 +1,31 @@
+routes:
+  /:
+    screen: (tabs)/index
+  /discover:
+    not_on_mobile: Not built yet.
+  /forgot-password:
+    not_on_mobile: Not built yet.
+  /login:
+    not_on_mobile: Not built yet.
+  /recipes/:id:
+    not_on_mobile: Not built yet.
+  /recipes/:id/tweak:
+    not_on_mobile: Not built yet.
+  /recipes/:id/versions/:vid/diff:
+    not_on_mobile: Not built yet.
+  /recipes/import:
+    not_on_mobile: Not built yet.
+  /recipes/new:
+    not_on_mobile: Not built yet.
+  /register:
+    not_on_mobile: Not built yet.
+  /reset-password:
+    not_on_mobile: Not built yet.
+  /security:
+    not_on_mobile: Not built yet.
+  /settings:
+    not_on_mobile: Not built yet.
+  /support-myfreeapps:
+    not_on_mobile: Not built yet.
+  /verify-email:
+    not_on_mobile: Not built yet.
