@@ -38,7 +38,7 @@ function fakePlatform(overrides: Partial<PlatformConfig> = {}): Fakes {
     fireUnload: () => unloadListeners.forEach((l) => l()),
     config: {
       baseURL: "https://api.test",
-      tokenStore: { get: () => "jwt-123", clear: clearToken },
+      tokenStore: { get: () => "jwt-123", set: () => {}, clear: clearToken },
       orgStore: { get: () => "org-456" },
       isOnLogin: () => false,
       onUnload: (listener) => {
@@ -103,7 +103,7 @@ describe("request headers and base URL", () => {
   it("are read on every request, not cached at configure time", async () => {
     let token: string | null = "first";
     configurePlatform(
-      fakePlatform({ tokenStore: { get: () => token, clear: () => {} } }).config,
+      fakePlatform({ tokenStore: { get: () => token, set: () => {}, clear: () => {} } }).config,
     );
     const seen: InternalAxiosRequestConfig[] = [];
     await api.get("/things", { adapter: okAdapter(seen) });
@@ -115,7 +115,7 @@ describe("request headers and base URL", () => {
   it("are left off when the stores are empty", async () => {
     configurePlatform(
       fakePlatform({
-        tokenStore: { get: () => null, clear: () => {} },
+        tokenStore: { get: () => null, set: () => {}, clear: () => {} },
         orgStore: { get: () => null },
       }).config,
     );

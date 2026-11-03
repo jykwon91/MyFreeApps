@@ -4,8 +4,8 @@ import { AppShell, RequireAuth, StepUpModal, Toaster, useIsAuthenticated } from 
 import { buildNav } from "@/constants/nav";
 import { signOut } from "@/lib/auth";
 import { useIsSuperuser } from "@/hooks/useIsSuperuser";
-import { useGetCurrentUserQuery } from "@/lib/userApi";
-import type { CurrentUser } from "@/lib/userApi";
+import { useGetCurrentUserQuery } from "@platform/ui/store/userApi";
+import type { CurrentUser } from "@platform/ui";
 
 const ANONYMOUS_USER = { name: "You", email: "" };
 

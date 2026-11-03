@@ -4,8 +4,8 @@ import { AlertTriangle } from "lucide-react";
 import { Button, extractErrorMessage, showError } from "@platform/ui";
 
 import { signOut } from "@/lib/auth";
-import { useDeleteAccountMutation } from "@/lib/accountApi";
-import { useGetCurrentUserQuery } from "@/lib/userApi";
+import { useDeleteAccountMutation } from "@platform/ui/store/accountApi";
+import { useGetCurrentUserQuery } from "@platform/ui/store/userApi";
 
 export interface DeleteAccountModalProps {
   open: boolean;

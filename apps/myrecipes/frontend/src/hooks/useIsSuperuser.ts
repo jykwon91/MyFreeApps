@@ -1,4 +1,4 @@
-import { useGetCurrentUserQuery } from "@/lib/userApi";
+import { useGetCurrentUserQuery } from "@platform/ui/store/userApi";
 import { useIsAuthenticated } from "@platform/ui";
 
 export function useIsSuperuser(): { isSuperuser: boolean } {

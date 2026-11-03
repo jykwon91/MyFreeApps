@@ -1,11 +1,10 @@
-import { baseApi } from "@platform/ui";
-import type { TotpSetup } from "@/types/security/totp-setup";
-import type { TotpStatus } from "@/types/security/totp-status";
-import type { TotpVerifyResponse } from "@/types/security/totp-verify-response";
+import type { TotpSetup } from "../types/security/totp-setup";
+import type { TotpStatus } from "../types/security/totp-status";
+import type { TotpVerifyResponse } from "../types/security/totp-verify-response";
+import { baseApi } from "./baseApi";
 
-// The shared baseApi declares an empty tagTypes list. Enhance it with the
-// MJH-specific "Totp" tag so cache invalidation between mutations and
-// the status query is correctly scoped.
+// The shared baseApi declares an empty tagTypes list. Add the "Totp" tag so cache
+// invalidation between the mutations and the status query is correctly scoped.
 const apiWithTags = baseApi.enhanceEndpoints({ addTagTypes: ["Totp"] });
 
 const totpApi = apiWithTags.injectEndpoints({

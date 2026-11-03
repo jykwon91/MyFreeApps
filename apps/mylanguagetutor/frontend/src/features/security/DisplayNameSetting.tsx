@@ -1,4 +1,4 @@
-import { useGetCurrentUserQuery } from "@/lib/userApi";
+import { useGetCurrentUserQuery } from "@platform/ui/store/userApi";
 import DisplayNameForm from "@/features/security/DisplayNameForm";
 
 /**

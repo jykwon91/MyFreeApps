@@ -6,11 +6,11 @@ vi.mock("@/lib/auth", () => ({
   signOut: vi.fn(),
 }));
 
-vi.mock("@/lib/accountApi", () => ({
+vi.mock("@platform/ui/store/accountApi", () => ({
   useDeleteAccountMutation: vi.fn(),
 }));
 
-vi.mock("@/lib/userApi", () => ({
+vi.mock("@platform/ui/store/userApi", () => ({
   useGetCurrentUserQuery: vi.fn(),
 }));
 
@@ -27,8 +27,8 @@ vi.mock("@platform/ui", async (importOriginal) => {
 
 import DeleteAccountModal from "@/features/security/DeleteAccountModal";
 import { signOut } from "@/lib/auth";
-import { useDeleteAccountMutation } from "@/lib/accountApi";
-import { useGetCurrentUserQuery } from "@/lib/userApi";
+import { useDeleteAccountMutation } from "@platform/ui/store/accountApi";
+import { useGetCurrentUserQuery } from "@platform/ui/store/userApi";
 import { showError } from "@platform/ui";
 
 const mockSignOut = vi.mocked(signOut);

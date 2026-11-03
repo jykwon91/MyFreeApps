@@ -170,8 +170,8 @@ See `packages/shared-frontend/src/index.ts` for the full export list. Key compon
 ## Auth flow
 
 1. `LoginForm` calls `onSignIn` / `onRegister` props
-2. `src/lib/auth.ts` posts to fastapi-users endpoints (`application/x-www-form-urlencoded` for login)
-3. Token stored in `localStorage["token"]`
+2. `src/lib/auth.ts` binds the shared auth client (`createAuthClient` in `@platform/core`) to the store; it posts JSON to `/auth/totp/login`
+3. Token stored in `localStorage["token"]` through the platform's token store (`packages/shared-frontend/src/lib/webPlatform.ts`)
 4. `notifyAuthChange()` from `@platform/ui` triggers `useIsAuthenticated` re-render
 5. `RequireAuth` in `RootLayout` redirects unauthenticated users to `/login`
 6. 401 responses handled by the shared axios interceptor in `@platform/ui/lib/api`

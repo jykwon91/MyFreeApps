@@ -18,6 +18,8 @@ configurePlatform({
   baseURL: "/api",
   tokenStore: {
     get: () => readLocalStorage(TOKEN_KEY),
+    // Not safeStorage: a blocked or full store has to fail the sign-in.
+    set: (token) => window.localStorage.setItem(TOKEN_KEY, token),
     clear: () => removeLocalStorage(TOKEN_KEY),
   },
   orgStore: {

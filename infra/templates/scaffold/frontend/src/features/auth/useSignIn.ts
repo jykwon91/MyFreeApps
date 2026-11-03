@@ -1,6 +1,6 @@
 import { signIn } from "@/lib/auth";
 import { showError } from "@platform/ui";
-import type { LoginResult } from "@/types/security/login-result";
+import type { LoginResult } from "@platform/ui";
 
 interface UseSignInResult {
   handleSignIn: (
