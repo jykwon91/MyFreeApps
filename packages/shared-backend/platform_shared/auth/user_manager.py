@@ -123,7 +123,8 @@ class PlatformBaseUserManager(
         3. Auto-reset stale failure counter (no activity in >24 h).
         4. Delegate to parent for password verification.
         5. On failure: increment counter, apply exponential lock at threshold.
-        6. On success: clear counter and lock state.
+        6. On success: clear counter and lock state, unless the user has 2FA,
+           whose count clears only once the code has passed too.
         7. Block unverified users (LOGIN_BLOCKED_UNVERIFIED).
         8. Block TOTP-enabled users — they must use /auth/totp/login.
         9. Log LOGIN_SUCCESS for the standard JWT path only.
@@ -171,22 +172,13 @@ class PlatformBaseUserManager(
         result = await super().authenticate(credentials)
 
         if result is None:
-            update = await record_failed_login(
-                user, db=db, user_id=user.id,
-                lockout_threshold=self.lockout_threshold,
-                metadata={"reason": "bad_password"}, now=now,
-            )
-            if "locked_until" in update:
-                logger.warning(
-                    "Account locked: user_id=%s until %s (consecutive failures: %d)",
-                    user.id, update["locked_until"], update["failed_login_count"],
-                )
-            await self.user_db.update(user, update)
+            await self._count_failed_login(user, reason="bad_password", now=now)
             return None
 
-        clear_update = record_successful_login_update(result)
-        if clear_update is not None:
-            await self.user_db.update(result, clear_update)
+        # A password alone doesn't finish a 2FA login, or anyone who knows it could
+        # keep clearing the count between guesses at the code.
+        if not getattr(result, "totp_enabled", False):
+            await self.clear_failed_logins(result)
 
         # Block unverified users from the standard JWT login.
         # Defense-in-depth alongside `current_active_user(verified=True)`.
@@ -221,7 +213,8 @@ class PlatformBaseUserManager(
         TOTP validation + verified-user check itself after this returns.
         Re-runs the lockout flow (lookup → lock check → auto-reset →
         password verify → counter update) so the 2FA login path enjoys the
-        same brute-force protection as the standard one.
+        same brute-force protection as the standard one. A user with 2FA keeps
+        their count here; the route clears it once the code has passed.
 
         Pass ``request`` so ``emit_locked_login_event`` captures
         ``ip_address`` and ``user_agent`` in the audit row.
@@ -258,24 +251,42 @@ class PlatformBaseUserManager(
         result = await super().authenticate(credentials)
 
         if result is None:
-            update = await record_failed_login(
-                user, db=db, user_id=user.id,
-                lockout_threshold=self.lockout_threshold,
-                metadata={"reason": "bad_password"}, now=now,
-            )
-            if "locked_until" in update:
-                logger.warning(
-                    "Account locked: user_id=%s until %s (consecutive failures: %d)",
-                    user.id, update["locked_until"], update["failed_login_count"],
-                )
-            await self.user_db.update(user, update)
+            await self._count_failed_login(user, reason="bad_password", now=now)
             return None
 
-        clear_update = record_successful_login_update(result)
-        if clear_update is not None:
-            await self.user_db.update(result, clear_update)
+        # A password alone doesn't finish a 2FA login, or anyone who knows it could
+        # keep clearing the count between guesses at the code.
+        if not getattr(result, "totp_enabled", False):
+            await self.clear_failed_logins(result)
 
         return result
+
+    async def count_failed_second_factor(self, user: models.UP) -> None:
+        """Count a wrong 2FA code toward the same lockout as a wrong password."""
+        await self._count_failed_login(
+            user, reason="bad_totp", now=datetime.now(tz=timezone.utc),
+        )
+
+    async def clear_failed_logins(self, user: models.UP) -> None:
+        """Clear the lockout count once the whole login has succeeded."""
+        clear_update = record_successful_login_update(user)
+        if clear_update is not None:
+            await self.user_db.update(user, clear_update)
+
+    async def _count_failed_login(
+        self, user: models.UP, *, reason: str, now: datetime,
+    ) -> None:
+        update = await record_failed_login(
+            user, db=self.user_db.session, user_id=user.id,
+            lockout_threshold=self.lockout_threshold,
+            metadata={"reason": reason}, now=now,
+        )
+        if "locked_until" in update:
+            logger.warning(
+                "Account locked: user_id=%s until %s (consecutive failures: %d)",
+                user.id, update["locked_until"], update["failed_login_count"],
+            )
+        await self.user_db.update(user, update)
 
     async def _update(self, user: UP, update_dict: dict[str, Any]) -> UP:
         """End every existing session when the password changes.
