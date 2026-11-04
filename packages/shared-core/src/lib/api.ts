@@ -5,6 +5,7 @@ import { getPlatform, onPlatformConfigured } from "../platform/configurePlatform
 import { NO_REFRESH_URL_PARTS } from "../constants/sessionRefresh";
 import { notifyAuthChange } from "./auth-store";
 import { isRefreshCoolingDown, refreshSessionOnce } from "./session-refresh";
+import { isExemptFromSignOut } from "./signOutExemptions";
 import type { SessionRetryConfig } from "./types/SessionRetryConfig";
 
 const api = axios.create();
@@ -64,7 +65,7 @@ function _hasStepUpHeader(headers: unknown): boolean {
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
-    if (err.response?.status === 401) {
+    if (err.response?.status === 401 && !isExemptFromSignOut(err.config?.url)) {
       // Step-up 401s (X-Require-Step-Up: totp | reauth) are owned by
       // the step-up interceptor — do NOT clear the token here. Without
       // this exclusion the existing logout-on-401 path would clobber

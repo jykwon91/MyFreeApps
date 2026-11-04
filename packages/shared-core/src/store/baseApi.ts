@@ -13,5 +13,8 @@ export const baseApi = createApi({
   reducerPath: "api",
   baseQuery: axiosBaseQuery,
   tagTypes: [],
+  // Inert until an app calls setupListeners().
+  refetchOnFocus: true,
+  refetchOnReconnect: true,
   endpoints: () => ({}),
 });

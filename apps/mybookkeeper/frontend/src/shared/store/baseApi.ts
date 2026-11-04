@@ -1,5 +1,6 @@
-import { createApi } from "@reduxjs/toolkit/query/react";
-import { axiosBaseQuery } from "./baseQuery";
+import { baseApi as platformBaseApi } from "@platform/ui/store/baseApi";
+// Registers the URLs whose 401 must not sign out, before any query can run.
+import "@/shared/lib/api";
 
 export const tagTypes = [
   "Document", "Property", "Summary", "Integration", "Auth", "AdminUsers", "AdminStats",
@@ -14,15 +15,8 @@ export const tagTypes = [
 
 export type AppTag = (typeof tagTypes)[number];
 
-export const baseApi = createApi({
-  reducerPath: "api",
-  baseQuery: axiosBaseQuery,
-  tagTypes,
-  // Background work (Gmail sync, extraction) mutates server data while the user
-  // is on another page or another tab. Refetching subscribed queries when the
-  // window regains focus or the network reconnects is the safety net for any
-  // invalidation we fail to wire explicitly. Requires setupListeners() in main.tsx.
-  refetchOnFocus: true,
-  refetchOnReconnect: true,
-  endpoints: () => ({}),
-});
+// Background work (Gmail sync, extraction) mutates server data while the user is on
+// another page or tab. The base API refetches subscribed queries when the window regains
+// focus or the network reconnects, as the safety net for any invalidation we fail to
+// wire explicitly. That requires setupListeners() in main.tsx.
+export const baseApi = platformBaseApi.enhanceEndpoints({ addTagTypes: tagTypes });

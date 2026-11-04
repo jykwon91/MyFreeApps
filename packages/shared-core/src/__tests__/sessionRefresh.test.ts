@@ -7,6 +7,7 @@ import { REFRESH_COOLDOWN_MS } from "../constants/sessionRefresh";
 import api from "../lib/api";
 import { notifyAuthChange } from "../lib/auth-store";
 import { _resetSessionRefreshForTests, refreshSessionOnce } from "../lib/session-refresh";
+import { exemptFromSignOut, isExemptFromSignOut } from "../lib/signOutExemptions";
 import { _resetPlatformForTests, configurePlatform } from "../platform/configurePlatform";
 import type { PlatformConfig } from "../platform/types/PlatformConfig";
 import type { SessionRefreshResult } from "../platform/types/SessionRefreshResult";
@@ -396,5 +397,31 @@ describe("a platform with no refresh", () => {
     });
     await expect(api.get("/recipes")).rejects.toBeDefined();
     expect(clear).toHaveBeenCalledOnce();
+  });
+});
+
+describe("URLs exempt from sign-out", () => {
+  afterEach(() => {
+    api.defaults.adapter = originalAdapter;
+    _resetPlatformForTests();
+  });
+
+  it("hands a 401 to the caller without refreshing or signing out", async () => {
+    const refreshSession = vi.fn<() => Promise<SessionRefreshResult>>();
+    const clear = vi.fn();
+    configurePlatform({
+      baseURL: "/api",
+      tokenStore: { get: () => "token", set: vi.fn(), clear },
+      orgStore: { get: () => null },
+      isOnLogin: () => false,
+      refreshSession,
+    });
+    exemptFromSignOut(["/integrations/gmail/sync"]);
+    api.defaults.adapter = (config) => respond(config, 401);
+
+    await expect(api.post("/integrations/gmail/sync")).rejects.toMatchObject({ response: { status: 401 } });
+    expect(refreshSession).not.toHaveBeenCalled();
+    expect(clear).not.toHaveBeenCalled();
+    expect(isExemptFromSignOut("/users/me")).toBe(false);
   });
 });

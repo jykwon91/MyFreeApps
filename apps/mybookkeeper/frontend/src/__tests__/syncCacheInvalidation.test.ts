@@ -5,7 +5,7 @@ import { EMAIL_DERIVED_TAGS } from "@/shared/store/emailDerivedTags";
 import { rentReceiptsApi } from "@/shared/store/rentReceiptsApi";
 import { integrationsApi } from "@/shared/store/integrationsApi";
 
-vi.mock("@/shared/lib/api", () => ({ default: vi.fn() }));
+vi.mock("@platform/core/lib/api", () => ({ default: vi.fn() }));
 import api from "@/shared/lib/api";
 
 const mockedApi = api as unknown as ReturnType<typeof vi.fn>;

@@ -1,77 +1,9 @@
-import axios from "axios";
-import { installStepUpInterceptor, notifyAuthChange } from "@platform/ui";
+import { exemptFromSignOut } from "@platform/ui";
+import api from "@platform/ui/lib/api";
 
-const api = axios.create({
-  baseURL: "/api",
-});
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-
-  const orgId = localStorage.getItem("v1_activeOrgId");
-  if (orgId) {
-    config.headers["X-Organization-Id"] = orgId;
-  }
-
-  return config;
-});
-
-// Endpoints that may return 401 for reasons OTHER than JWT expiry (e.g. a
-// third-party integration refresh token that has been revoked). A 401 from
-// these routes must NOT force a logout — it should surface as a normal error
-// so the user can self-serve (e.g. disconnect and reconnect Gmail).
-//
-// `/public/welcome-manuals` is the guest PIN gate: a wrong PIN returns 401.
-// Those requests carry no JWT (public page), but a host previewing their own
-// share link in the same browser IS authed — without this exclusion a
-// mistyped PIN would wipe their token and navigate them away before the
-// inline "Incorrect code" error could render, breaking the retry UX.
-const BUSINESS_401_URL_PREFIXES: readonly string[] = [
-  "/integrations/gmail/sync",
-  "/public/welcome-manuals",
-];
-
-function isBusinessLevel401(url: string | undefined): boolean {
-  if (!url) return false;
-  return BUSINESS_401_URL_PREFIXES.some((prefix) => url.startsWith(prefix));
-}
-
-function _hasStepUpHeader(headers: unknown): boolean {
-  if (!headers || typeof headers !== "object") return false;
-  const value =
-    (headers as Record<string, unknown>)["x-require-step-up"] ??
-    (headers as Record<string, unknown>)["X-Require-Step-Up"];
-  return value === "totp" || value === "reauth";
-}
-
-api.interceptors.response.use(
-  (res) => res,
-  (err) => {
-    if (err.response?.status === 401 && !isBusinessLevel401(err.config?.url)) {
-      // Step-up 401s (X-Require-Step-Up: totp | reauth) are owned by
-      // the step-up interceptor — do NOT clear the token here. Without
-      // this exclusion the existing logout-on-401 path would clobber
-      // the JWT before the step-up retry could fire.
-      if (_hasStepUpHeader(err.response?.headers)) {
-        return Promise.reject(err);
-      }
-      const isLoginRequest = err.config?.url?.includes("/auth/");
-      const isAlreadyOnLogin = window.location.pathname === "/login";
-      if (!isLoginRequest && !isAlreadyOnLogin) {
-        localStorage.removeItem("token");
-        notifyAuthChange();
-      }
-    }
-    if (err.response?.status === 403) {
-      err.message = err.response?.data?.detail ?? "You don't have permission to do that.";
-    }
-    return Promise.reject(err);
-  }
-);
-
-installStepUpInterceptor(api);
+// `/integrations/gmail/sync`: a revoked Gmail token, which the user fixes by reconnecting.
+// `/public/welcome-manuals`: the guest PIN gate. A host previewing their own share link
+// while signed in would otherwise be signed out by a mistyped PIN.
+exemptFromSignOut(["/integrations/gmail/sync", "/public/welcome-manuals"]);
 
 export default api;
