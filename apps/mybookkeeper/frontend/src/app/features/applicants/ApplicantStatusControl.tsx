@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { APPLICANT_STAGE_LABELS } from "@mybookkeeper/api-client/constants/applicantLabels";
+import { APPLICANT_STAGE_NOTE_MAX_LENGTH } from "@mybookkeeper/api-client/constants/applicantStageNote";
 import { APPLICANT_STAGE_BADGE_COLORS } from "@/shared/lib/applicant-badge-colors";
 import { getAllowedTransitions } from "@mybookkeeper/api-client/utils/applicantStageTransitions";
 import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
@@ -9,8 +10,6 @@ import { Button, LoadingButton } from "@platform/ui";
 import { useToast } from "@/shared/hooks/useToast";
 import { useTransitionApplicantStageMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
-
-const NOTE_MAX_LENGTH = 500;
 
 const COLOR_CLASSES: Record<BadgeColor, string> = {
   gray: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
@@ -162,13 +161,13 @@ export default function ApplicantStatusControl({ applicantId, currentStage }: Ap
               data-testid="applicant-status-note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              maxLength={NOTE_MAX_LENGTH}
+              maxLength={APPLICANT_STAGE_NOTE_MAX_LENGTH}
               rows={3}
               placeholder="e.g. References checked separately"
               className="w-full rounded border bg-background px-2 py-1.5 text-sm resize-none"
             />
             <p className="text-right text-xs text-muted-foreground">
-              {note.length}/{NOTE_MAX_LENGTH}
+              {note.length}/{APPLICANT_STAGE_NOTE_MAX_LENGTH}
             </p>
           </div>
 
