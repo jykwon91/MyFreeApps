@@ -6,7 +6,7 @@ import { store } from "@/shared/store";
 
 const uploadMock = vi.fn();
 
-vi.mock("@/shared/store/screeningApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/screeningApi", () => ({
   useUploadScreeningResultMutation: () => [uploadMock, { isLoading: false }],
 }));
 
@@ -99,12 +99,11 @@ describe("UploadScreeningResultModal", () => {
     await userEvent.selectOptions(screen.getByTestId("upload-screening-status"), "pass");
     await userEvent.click(screen.getByTestId("upload-screening-submit"));
     await waitFor(() => {
-      expect(uploadMock).toHaveBeenCalledWith({
-        applicantId: "app-1",
-        file: f,
-        status: "pass",
-        adverseActionSnippet: null,
-      });
+      const { applicantId, form } = uploadMock.mock.calls[0][0];
+      expect(applicantId).toBe("app-1");
+      expect(form.get("file")).toEqual(f);
+      expect(form.get("status")).toBe("pass");
+      expect(form.has("adverse_action_snippet")).toBe(false);
       expect(showSuccessMock).toHaveBeenCalled();
       expect(onClose).toHaveBeenCalled();
     });
@@ -124,12 +123,9 @@ describe("UploadScreeningResultModal", () => {
     );
     await userEvent.click(screen.getByTestId("upload-screening-submit"));
     await waitFor(() => {
-      expect(uploadMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status: "fail",
-          adverseActionSnippet: "Credit score below threshold",
-        }),
-      );
+      const { form } = uploadMock.mock.calls[0][0];
+      expect(form.get("status")).toBe("fail");
+      expect(form.get("adverse_action_snippet")).toBe("Credit score below threshold");
     });
   });
 });

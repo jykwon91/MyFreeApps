@@ -6,7 +6,7 @@ import { store } from "@/shared/store";
 const eligibilityMock = vi.fn();
 const resultsMock = vi.fn();
 
-vi.mock("@/shared/store/screeningApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/screeningApi", () => ({
   useGetScreeningEligibilityQuery: () => eligibilityMock(),
   useGetScreeningResultsQuery: () => resultsMock(),
   useGetScreeningProvidersQuery: () => ({ isLoading: false, isError: false, data: undefined }),

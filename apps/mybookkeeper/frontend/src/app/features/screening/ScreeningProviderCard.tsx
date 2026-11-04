@@ -1,6 +1,6 @@
 import { Clock, DollarSign, ExternalLink } from "lucide-react";
 import { LoadingButton } from "@platform/ui";
-import type { ScreeningProviderInfo } from "@/shared/store/screeningApi";
+import type { ScreeningProviderInfo } from "@mybookkeeper/api-client/types/applicant/screening-provider-info";
 
 export interface ScreeningProviderCardProps {
   provider: ScreeningProviderInfo;

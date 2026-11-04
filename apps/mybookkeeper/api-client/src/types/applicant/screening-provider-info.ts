@@ -12,7 +12,3 @@ export interface ScreeningProviderInfo {
   turnaround_label: string;
   external_url: string;
 }
-
-export interface ScreeningProvidersResponse {
-  providers: ScreeningProviderInfo[];
-}

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import ScreeningEligibilityGate from "@/app/features/screening/ScreeningEligibilityGate";
-import type { ScreeningEligibilityResponse } from "@/shared/types/screening/screening-eligibility-response";
+import type { ScreeningEligibilityResponse } from "@mybookkeeper/api-client/types/applicant/screening-eligibility-response";
 
 function makeEligibility(overrides: Partial<ScreeningEligibilityResponse> = {}): ScreeningEligibilityResponse {
   return {
