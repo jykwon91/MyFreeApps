@@ -143,6 +143,34 @@ describe("tenants", () => {
   });
 
   describe("an active tenant", () => {
+    it("reloads their payments when the page is pulled", async () => {
+      const server = startApplicantServer([aTenant()]);
+      await renderDetail();
+      await screen.findByText("Payments");
+      await waitFor(() => expect(server.requests.filter((request) => request.url === "/transactions")).toHaveLength(1));
+
+      const scroller = screen.getByTestId("applicant-detail");
+      await act(async () => scroller.props.refreshControl.props.onRefresh());
+
+      await waitFor(() => expect(server.requests.filter((request) => request.url === "/transactions")).toHaveLength(2));
+    });
+
+    it("shows their payments, which someone still applying doesn't have", async () => {
+      const consoleError = jest.spyOn(console, "error");
+      startApplicantServer([aTenant()]);
+      await renderDetail();
+      expect(await screen.findByText("Payments")).toBeTruthy();
+      expect(consoleError.mock.calls.flat().join(" ")).not.toContain("same key");
+      consoleError.mockRestore();
+      await screen.unmount();
+
+      store.dispatch(baseApi.util.resetApiState());
+      startApplicantServer([aTenant({ stage: "approved" })]);
+      await renderDetail();
+      await screen.findByText("Details");
+      expect(screen.queryByText("Payments")).toBeNull();
+    });
+
     it("shows the state first and hides what's only for applicants", async () => {
       startApplicantServer([aTenant()]);
       await renderDetail();
