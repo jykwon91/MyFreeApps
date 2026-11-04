@@ -1,3 +1,4 @@
+import { PROMOTE_MESSAGES } from "../../constants/promote";
 import { httpStatus } from "../transactions/transactionMessages";
 
 /** The server's own wording can be a developer string, so it's never shown. */
@@ -19,4 +20,12 @@ export function contractStartFailure(error: unknown): string {
   const status = httpStatus(error);
   if (status === 409) return "The lease is signed, so this date is locked.";
   return commonFailure(status) ?? "I couldn't save that date. Want to try again?";
+}
+
+export function promoteFailure(error: unknown): string {
+  const status = httpStatus(error);
+  if (status === 403) return PROMOTE_MESSAGES.viewOnly;
+  // The form caps every length, so what's left is the server's own age check, which runs on its clock.
+  if (status === 422) return PROMOTE_MESSAGES.tooYoung;
+  return status === 404 ? PROMOTE_MESSAGES.inquiryGone : PROMOTE_MESSAGES.retry;
 }

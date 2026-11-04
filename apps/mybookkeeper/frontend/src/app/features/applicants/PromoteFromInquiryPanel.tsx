@@ -17,8 +17,8 @@ import {
 } from "@mybookkeeper/api-client/constants/applicantPromote";
 import { usePromoteFromInquiryMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 import type { ApplicantPromoteRequest } from "@mybookkeeper/api-client/types/applicant/applicant-promote-request";
-import type { ApplicantPromoteConflictDetail } from "@mybookkeeper/api-client/types/applicant/applicant-promote-conflict";
 import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
+import { promoteConflictDetail } from "@mybookkeeper/api-client/utils/applicantPromoteConflict";
 
 export interface PromoteFromInquiryPanelProps {
   inquiry: InquiryResponse;
@@ -132,7 +132,7 @@ export default function PromoteFromInquiryPanel({ inquiry, onClose }: PromoteFro
    * inside an error banner, and our toast-store is intentionally
    * action-free to keep the API surface minimal. */
   function handlePromoteError(err: unknown): void {
-    const detail = extractConflictDetail(err);
+    const detail = promoteConflictDetail(err);
     if (detail?.code === "already_promoted") {
       showError(PROMOTE_TOAST_MESSAGES.alreadyPromoted);
       navigate(`/applicants/${detail.applicant_id}`);
@@ -300,20 +300,4 @@ export default function PromoteFromInquiryPanel({ inquiry, onClose }: PromoteFro
       </div>
     </Panel>
   );
-}
-
-/** Narrow an unknown error from RTK Query into the typed conflict shape. */
-function extractConflictDetail(
-  err: unknown,
-): ApplicantPromoteConflictDetail | null {
-  if (!err || typeof err !== "object") return null;
-  const errObj = err as { status?: number; data?: { detail?: unknown } };
-  if (errObj.status !== 409) return null;
-  const detail = errObj.data?.detail;
-  if (!detail || typeof detail !== "object") return null;
-  const code = (detail as { code?: unknown }).code;
-  if (code === "already_promoted" || code === "not_promotable") {
-    return detail as ApplicantPromoteConflictDetail;
-  }
-  return null;
 }

@@ -11,7 +11,9 @@ export function stageOptions(inquiry: InquiryResponse): { value: string; label: 
 
 export function moreOptions(inquiry: InquiryResponse): { value: InquiryMoreAction; label: string }[] {
   const looksLikeSpam = inquiry.spam_status === "flagged" || inquiry.spam_status === "spam";
+  const canPromote = !inquiry.linked_applicant_id && inquiry.stage !== "declined" && inquiry.stage !== "archived";
   return [
+    ...(canPromote ? [{ value: "promote" as const, label: "Promote to applicant" }] : []),
     looksLikeSpam ? { value: "notSpam", label: "Not spam" } : { value: "spam", label: "Mark as spam" },
     ...(inquiry.stage === "declined" ? [] : [{ value: "decline" as const, label: "Decline" }]),
     { value: "archive", label: "Archive" },

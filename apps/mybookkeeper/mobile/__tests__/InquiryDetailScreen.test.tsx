@@ -428,6 +428,30 @@ describe("InquiryDetailScreen", () => {
     expect(screen.getByText("✓ Employer given")).toBeTruthy();
   });
 
+  it("offers promotion from More, and opens the form once More has closed", async () => {
+    startInquiryServer([anInquiry()]);
+    await renderScreen();
+    await fireEvent.press(await screen.findByRole("button", { name: "More" }));
+    await fireEvent.press(await screen.findByRole("radio", { name: "Promote to applicant" }));
+    expect(mockPush).not.toHaveBeenCalled();
+    await act(async () => {
+      mockModal.onDismiss?.();
+    });
+    expect(mockPush).toHaveBeenCalledWith("/inquiries/i1/promote");
+  });
+
+  it.each([
+    ["declined", { stage: "declined" as const }],
+    ["archived", { stage: "archived" as const }],
+    ["already promoted", { linked_applicant_id: "a1" }],
+  ])("doesn't offer promotion when %s", async (_case, change) => {
+    startInquiryServer([anInquiry(change)]);
+    await renderScreen();
+    await fireEvent.press(await screen.findByRole("button", { name: "More" }));
+    expect(await screen.findByRole("radio", { name: "Archive" })).toBeTruthy();
+    expect(screen.queryByRole("radio", { name: "Promote to applicant" })).toBeNull();
+  });
+
   it("opens the applicant once they've been promoted", async () => {
     startInquiryServer([anInquiry({ linked_applicant_id: "a1" })]);
     await renderScreen();

@@ -112,9 +112,6 @@ describe("PromoteFromInquiryPanel", () => {
     expect(
       (screen.getByTestId("promote-form-contract-start") as HTMLInputElement).value,
     ).toBe("2026-06-01");
-    expect(
-      (screen.getByTestId("promote-form-contract-end") as HTMLInputElement).value,
-    ).toBe("2026-12-01");
   });
 
   it("shows an orange warning hint next to fields the inquiry didn't supply", () => {
@@ -125,10 +122,9 @@ describe("PromoteFromInquiryPanel", () => {
       desired_end_date: null,
     });
     renderPanel(sparse);
-    // The dob, vehicle, smoker, referred_by, and pets fields always show the hint
-    // (no inquiry source). Plus employer + 2 dates. Total ≥ 5.
-    const hints = screen.getAllByTestId("promote-missing-hint");
-    expect(hints.length).toBeGreaterThanOrEqual(5);
+    // Date of birth and vehicle have no inquiry source, so they always show it.
+    // Plus employer and contract start here. The end date comes from the signed lease.
+    expect(screen.getAllByTestId("promote-missing-hint")).toHaveLength(4);
   });
 
   it("does not show a missing-hint next to inquiry-supplied fields", () => {
@@ -138,23 +134,6 @@ describe("PromoteFromInquiryPanel", () => {
     const legalNameInput = screen.getByTestId("promote-form-legal-name");
     const wrapper = legalNameInput.parentElement!;
     expect(wrapper.querySelector('[data-testid="promote-missing-hint"]')).toBeNull();
-  });
-
-  it("blocks submission and shows an inline error when end date is before start", async () => {
-    const user = userEvent.setup();
-    renderPanel(buildInquiry());
-
-    // Set end before start.
-    const endInput = screen.getByTestId("promote-form-contract-end") as HTMLInputElement;
-    await user.clear(endInput);
-    await user.type(endInput, "2026-05-01");
-
-    await user.click(screen.getByTestId("promote-form-submit"));
-
-    expect(
-      await screen.findByTestId("promote-form-contract-end-error"),
-    ).toHaveTextContent(/end date can't be before start date/i);
-    expect(promoteMutation).not.toHaveBeenCalled();
   });
 
   it("calls the promote mutation on submit and navigates to the new applicant", async () => {

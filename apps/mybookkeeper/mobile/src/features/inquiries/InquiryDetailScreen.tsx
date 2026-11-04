@@ -72,6 +72,7 @@ export default function InquiryDetailScreen({ id }: { id: string }) {
   function runChosenAction(): void {
     const action = chosenAction.current;
     chosenAction.current = null;
+    if (action === "promote") router.push(`/inquiries/${id}/promote`);
     if (action === "spam") void actions.markSpam();
     if (action === "notSpam") void actions.markNotSpam();
     if (action === "decline") actions.confirmDecline();
