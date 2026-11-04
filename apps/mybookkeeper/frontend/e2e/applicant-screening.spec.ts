@@ -71,14 +71,20 @@ test.describe("Applicant screening (PR 3.3 — KeyCheck redirect-only)", () => {
         timeout: 10000,
       });
 
-      // The "Run KeyCheck" button is visible (auth fixture is OWNER role).
-      await expect(page.getByTestId("run-screening-button")).toBeVisible();
+      // The upload button is visible (auth fixture is OWNER role).
+      await expect(page.getByTestId("screening-upload-button")).toBeVisible();
 
       // Empty state until we upload — sometimes the API hasn't returned yet
       // by the time we land, so wait for either the list or the empty marker.
       await expect(
         page.getByTestId("screening-results-empty"),
       ).toBeVisible({ timeout: 5000 });
+
+      // Opening a provider doesn't create a pending result, so the form has to be
+      // reachable from here.
+      await page.getByTestId("screening-upload-button").click();
+      await expect(page.getByTestId("upload-screening-modal")).toBeVisible();
+      await page.keyboard.press("Escape");
 
       // Upload via the API (skips the modal — we verify the modal in
       // unit tests; this is the behavioural E2E for the upload pipeline +
@@ -110,7 +116,7 @@ test.describe("Applicant screening (PR 3.3 — KeyCheck redirect-only)", () => {
       const list = page.getByTestId("screening-results-list");
       await expect(list).toBeVisible({ timeout: 10000 });
       await expect(
-        page.getByTestId(`screening-result-${uploadBody.id}`),
+        page.getByTestId(`screening-result-card-${uploadBody.id}`),
       ).toBeVisible();
     } finally {
       for (const id of seededScreeningIds) await deleteScreeningResult(api, id);

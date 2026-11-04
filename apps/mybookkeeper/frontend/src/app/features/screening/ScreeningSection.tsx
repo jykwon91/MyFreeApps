@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Button } from "@platform/ui";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import { useGetScreeningEligibilityQuery, useGetScreeningResultsQuery } from "@mybookkeeper/api-client/store/screeningApi";
 import type { ScreeningReport } from "@mybookkeeper/api-client/types/applicant/screening-report";
@@ -44,8 +45,9 @@ function ScreeningSectionSkeleton() {
  * Flow:
  *   1. Fetch eligibility — not eligible → show gate with missing-field list.
  *   2. Eligible + has_pending → show pending panel (with upload CTA for writers).
- *   3. Eligible + no pending → show provider grid (writers only — readers see
- *      "no screening initiated yet" placeholder).
+ *   3. Eligible + no pending → show provider grid and upload button (writers only —
+ *      readers see "no screening initiated yet" placeholder). Opening a provider
+ *      doesn't create a pending result, so this is the usual way to reach the upload.
  *   4. After grid action: results list appears below (always visible when results exist).
  *
  * Results list is always shown when results exist, regardless of current state.
@@ -100,10 +102,24 @@ export default function ScreeningSection({ applicantId, canWrite, reports, openW
             canWrite={canWrite}
           />
         ) : canWrite ? (
-          <ScreeningProviderGrid
-            applicantId={applicantId}
-            openWindow={openWindow}
-          />
+          <div className="space-y-3">
+            <ScreeningProviderGrid
+              applicantId={applicantId}
+              openWindow={openWindow}
+            />
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">Got the report? Upload it here to record the outcome.</p>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setUploadModalOpen(true)}
+                data-testid="screening-upload-button"
+              >
+                Upload report
+              </Button>
+            </div>
+          </div>
         ) : (
           <p
             data-testid="screening-no-results-viewer"
