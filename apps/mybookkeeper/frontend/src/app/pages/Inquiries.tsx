@@ -34,7 +34,7 @@ function parseStageParam(value: string | null): InquiryStage | null {
     : null;
 }
 
-// "Clean" is the default tab when no spam param is present — it matches the
+// "Inbox" is the default tab when no spam param is present — it matches the
 // most common operator workflow (review legitimate inquiries first).
 const DEFAULT_SPAM_FILTER: InquirySpamStatus = "clean";
 
@@ -56,7 +56,11 @@ export default function Inquiries() {
   const queryArgs = useMemo(
     () => ({
       ...(stage ? { stage } : {}),
-      ...(spamFilter ? { spam_status: spamFilter } : {}),
+      ...(spamFilter === DEFAULT_SPAM_FILTER
+        ? { inbox_only: true }
+        : spamFilter
+          ? { spam_status: spamFilter }
+          : {}),
       limit: INQUIRY_PAGE_SIZE * pageCount,
       offset: 0,
     }),

@@ -1,10 +1,11 @@
 import type { InquirySpamStatus } from "@mybookkeeper/api-client/types/inquiry/inquiry-spam-status";
 
 /**
- * Tab filter above the inquiry inbox — Clean / All / Flagged / Spam.
+ * Tab filter above the inquiry inbox — Inbox / All / Flagged / Spam.
  *
- * "Clean" is the default tab so the operator's primary view excludes spam by
- * default. ``null`` means "no spam filter — show everything" and corresponds
+ * "Inbox" is the default tab so the operator's primary view excludes spam by
+ * default. It also shows email inquiries, which are never scored, and those
+ * marked not spam. ``null`` means "no spam filter — show everything" and corresponds
  * to the "All" tab.
  */
 interface TabConfig {
@@ -15,7 +16,7 @@ interface TabConfig {
 }
 
 const TABS: ReadonlyArray<TabConfig> = [
-  { key: "clean", label: "Clean", value: "clean" },
+  { key: "clean", label: "Inbox", value: "clean" },
   { key: "all", label: "All", value: null },
   { key: "flagged", label: "Flagged", value: "flagged" },
   { key: "spam", label: "Spam", value: "spam" },

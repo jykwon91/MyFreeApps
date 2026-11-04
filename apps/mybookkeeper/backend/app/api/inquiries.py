@@ -41,13 +41,14 @@ async def list_inbox(
     spam_status: str | None = Query(
         None, description="Optional spam-triage filter (clean / flagged / spam / unscored / manually_cleared)",
     ),
+    inbox_only: bool = Query(False, description="Leave out flagged and spam inquiries"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     ctx: RequestContext = Depends(current_org_member),
 ) -> InquiryListResponse:
     return await inquiry_service.list_inbox(
         ctx.organization_id, ctx.user_id,
-        stage=stage, spam_status=spam_status,
+        stage=stage, spam_status=spam_status, inbox_only=inbox_only,
         limit=limit, offset=offset,
     )
 

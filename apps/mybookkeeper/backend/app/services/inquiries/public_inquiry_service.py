@@ -311,7 +311,7 @@ async def submit_public_inquiry(
             )
             # Graceful degradation — operator still sees the inquiry, just
             # without an AI score. Treat as ``unscored`` so it shows in
-            # the All / Clean tab default view (not buried in Spam).
+            # the All / Inbox tab default view (not buried in Spam).
             final_status = "unscored"
             await inquiry_repo.update_spam_triage(
                 db, inquiry.id, spam_status=final_status, spam_score=None,

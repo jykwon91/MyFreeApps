@@ -590,3 +590,60 @@ class TestInquiryTenantIsolation:
         # Cross-org get returns None.
         assert await inquiry_repo.get_by_id(db, b.id, test_org.id) is None
         assert await inquiry_repo.get_by_id(db, a.id, org_b.id) is None
+
+
+class TestInboxOnly:
+    @pytest.mark.asyncio
+    async def test_keeps_everything_except_flagged_and_spam(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        for status in ("unscored", "clean", "manually_cleared", "flagged", "spam"):
+            inquiry = _make_inquiry(
+                organization_id=test_org.id, user_id=test_user.id, inquirer_name=status,
+            )
+            inquiry.spam_status = status
+            db.add(inquiry)
+        await db.commit()
+
+        rows = await inquiry_repo.list_with_last_message(db, test_org.id, inbox_only=True)
+        total = await inquiry_repo.count_by_organization(db, test_org.id, inbox_only=True)
+
+        assert {r.inquirer_name for r in rows} == {"unscored", "clean", "manually_cleared"}
+        assert total == 3
+
+    @pytest.mark.asyncio
+    async def test_off_by_default_so_all_shows_everything(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        inquiry = _make_inquiry(organization_id=test_org.id, user_id=test_user.id)
+        inquiry.spam_status = "spam"
+        db.add(inquiry)
+        await db.commit()
+
+        assert await inquiry_repo.count_by_organization(db, test_org.id) == 1
+
+    @pytest.mark.asyncio
+    async def test_combines_with_a_stage(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        for name, stage, status in (
+            ("new-unscored", "new", "unscored"),
+            ("replied-unscored", "replied", "unscored"),
+            ("new-spam", "new", "spam"),
+        ):
+            inquiry = _make_inquiry(
+                organization_id=test_org.id, user_id=test_user.id, inquirer_name=name, stage=stage,
+            )
+            inquiry.spam_status = status
+            db.add(inquiry)
+        await db.commit()
+
+        rows = await inquiry_repo.list_with_last_message(
+            db, test_org.id, stage="new", inbox_only=True,
+        )
+        total = await inquiry_repo.count_by_organization(
+            db, test_org.id, stage="new", inbox_only=True,
+        )
+
+        assert [r.inquirer_name for r in rows] == ["new-unscored"]
+        assert total == 1

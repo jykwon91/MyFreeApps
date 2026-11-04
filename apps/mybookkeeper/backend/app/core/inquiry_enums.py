@@ -34,6 +34,11 @@ INQUIRY_SPAM_STATUSES: tuple[str, ...] = (
     "manually_cleared",
 )
 
+# What the inbox leaves out. Everything else belongs there: email inquiries are
+# never scored, so they stay ``unscored``, and ``manually_cleared`` is the host
+# saying a message is real.
+INQUIRY_SPAM_STATUSES_OUTSIDE_INBOX: tuple[str, ...] = ("flagged", "spam")
+
 # Employment categories collected on the public inquiry form (T0).
 INQUIRY_EMPLOYMENT_STATUSES: tuple[str, ...] = (
     "employed",
