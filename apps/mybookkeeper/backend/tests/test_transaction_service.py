@@ -124,8 +124,40 @@ class TestGetTransaction:
             found = await transaction_service.get_transaction(ctx, uuid.uuid4())
         assert found is None
 
+    @pytest.mark.asyncio
+    async def test_deleted_is_not_found(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        ctx = _make_ctx(test_org, test_user)
+        txn = await _seed(db, test_org, test_user)
+        await transaction_repo.mark_deleted(db, txn)
+        await db.commit()
+
+        @asynccontextmanager
+        async def _fake():
+            yield db
+
+        with patch("app.services.transactions.transaction_service.AsyncSessionLocal", _fake), patch("app.services.transactions.transaction_service.unit_of_work", _fake):
+            assert await transaction_service.get_transaction(ctx, txn.id) is None
+
 
 class TestUpdateTransaction:
+    @pytest.mark.asyncio
+    async def test_deleted_is_not_found(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        ctx = _make_ctx(test_org, test_user)
+        txn = await _seed(db, test_org, test_user)
+        await transaction_repo.mark_deleted(db, txn)
+        await db.commit()
+
+        @asynccontextmanager
+        async def _fake():
+            yield db
+
+        with patch("app.services.transactions.transaction_service.AsyncSessionLocal", _fake), patch("app.services.transactions.transaction_service.unit_of_work", _fake):
+            assert await transaction_service.update_transaction(ctx, txn.id, {"vendor": "New Vendor"}) is None
+
     @pytest.mark.asyncio
     async def test_updates_allowed_field(
         self, db: AsyncSession, test_user: User, test_org: Organization,
