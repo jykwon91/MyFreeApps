@@ -1,4 +1,5 @@
 """Refresh sessions against the real table: what fakes can't show."""
+import uuid
 from datetime import datetime, timezone
 
 import pytest
@@ -12,9 +13,16 @@ from platform_shared.services.refresh_session_service import RefreshSessionServi
 _SERVICE = RefreshSessionService(session_model=RefreshSession, user_model=User)
 
 
+async def _new_user(db: AsyncSession, user_factory) -> User:
+    registered = await user_factory()
+    user = await db.get(User, uuid.UUID(str(registered["id"])))
+    assert user is not None
+    return user
+
+
 @pytest.mark.asyncio
 async def test_a_session_rotates_and_lists_through_the_database(db: AsyncSession, user_factory) -> None:
-    user = await user_factory()
+    user = await _new_user(db, user_factory)
     issued = await _SERVICE.issue(db, user, auth_time=datetime.now(timezone.utc), device_name="Phone")
     await db.flush()
 
@@ -27,7 +35,7 @@ async def test_a_session_rotates_and_lists_through_the_database(db: AsyncSession
 
 @pytest.mark.asyncio
 async def test_presenting_an_abandoned_secret_deletes_the_session(db: AsyncSession, user_factory) -> None:
-    user = await user_factory()
+    user = await _new_user(db, user_factory)
     issued = await _SERVICE.issue(db, user, auth_time=datetime.now(timezone.utc))
     await db.flush()
     session_id = issued.session.id
@@ -44,8 +52,8 @@ async def test_presenting_an_abandoned_secret_deletes_the_session(db: AsyncSessi
 
 @pytest.mark.asyncio
 async def test_only_the_owner_can_revoke_a_session(db: AsyncSession, user_factory) -> None:
-    owner = await user_factory()
-    other = await user_factory()
+    owner = await _new_user(db, user_factory)
+    other = await _new_user(db, user_factory)
     issued = await _SERVICE.issue(db, owner, auth_time=datetime.now(timezone.utc))
     await db.flush()
     session_id = issued.session.id
@@ -57,7 +65,7 @@ async def test_only_the_owner_can_revoke_a_session(db: AsyncSession, user_factor
 
 @pytest.mark.asyncio
 async def test_deleting_a_user_deletes_their_sessions(db: AsyncSession, user_factory) -> None:
-    user = await user_factory()
+    user = await _new_user(db, user_factory)
     await _SERVICE.issue(db, user, auth_time=datetime.now(timezone.utc))
     await db.flush()
     user_id = user.id
