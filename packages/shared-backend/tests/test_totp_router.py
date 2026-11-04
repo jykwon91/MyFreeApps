@@ -70,7 +70,11 @@ class _Harness:
 
 @pytest.fixture
 def events() -> Any:
-    with patch("platform_shared.api.totp_router.log_auth_event", new=AsyncMock()) as logged:
+    logged = AsyncMock()
+    with (
+        patch("platform_shared.api.totp_router.log_auth_event", new=logged),
+        patch("platform_shared.auth.verified_login.log_auth_event", new=logged),
+    ):
         yield logged
 
 

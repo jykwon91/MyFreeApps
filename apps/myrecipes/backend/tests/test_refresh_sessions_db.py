@@ -38,7 +38,7 @@ async def new_user(db: AsyncSession, user_factory) -> AsyncGenerator[Callable[[]
 @pytest.mark.asyncio
 async def test_a_session_rotates_and_lists_through_the_database(db: AsyncSession, new_user) -> None:
     user = await new_user()
-    issued = await _SERVICE.issue(db, user, auth_time=datetime.now(timezone.utc), device_name="Phone")
+    issued = await _SERVICE.issue(db, user, device_name="Phone")
     await db.flush()
 
     rotated = await _SERVICE.rotate(db, issued.refresh_token)
@@ -51,7 +51,7 @@ async def test_a_session_rotates_and_lists_through_the_database(db: AsyncSession
 @pytest.mark.asyncio
 async def test_presenting_a_replaced_secret_deletes_the_session(db: AsyncSession, new_user) -> None:
     user = await new_user()
-    issued = await _SERVICE.issue(db, user, auth_time=datetime.now(timezone.utc))
+    issued = await _SERVICE.issue(db, user)
     await db.flush()
     session_id = issued.session.id
 
@@ -71,8 +71,8 @@ async def test_presenting_a_replaced_secret_deletes_the_session(db: AsyncSession
 async def test_a_token_only_touches_its_own_session(db: AsyncSession, new_user) -> None:
     user = await new_user()
     now = datetime.now(timezone.utc)
-    phone = await _SERVICE.issue(db, user, auth_time=now, device_name="Phone")
-    tablet = await _SERVICE.issue(db, user, auth_time=now, device_name="Tablet")
+    phone = await _SERVICE.issue(db, user, device_name="Phone")
+    tablet = await _SERVICE.issue(db, user, device_name="Tablet")
     await db.flush()
     tablet_hash = tablet.session.current_secret_hash
 
@@ -87,7 +87,7 @@ async def test_a_token_only_touches_its_own_session(db: AsyncSession, new_user) 
 async def test_only_the_owner_can_revoke_a_session(db: AsyncSession, new_user) -> None:
     owner = await new_user()
     other = await new_user()
-    issued = await _SERVICE.issue(db, owner, auth_time=datetime.now(timezone.utc))
+    issued = await _SERVICE.issue(db, owner)
     await db.flush()
     session_id = issued.session.id
 
@@ -99,7 +99,7 @@ async def test_only_the_owner_can_revoke_a_session(db: AsyncSession, new_user) -
 @pytest.mark.asyncio
 async def test_deleting_a_user_deletes_their_sessions(db: AsyncSession, new_user) -> None:
     user = await new_user()
-    await _SERVICE.issue(db, user, auth_time=datetime.now(timezone.utc))
+    await _SERVICE.issue(db, user)
     await db.flush()
     user_id = user.id
 

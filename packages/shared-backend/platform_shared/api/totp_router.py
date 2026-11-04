@@ -22,7 +22,6 @@ tokens for users without 2FA.
 route commits its own audit rows.
 """
 from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
-from types import SimpleNamespace
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.params import Depends as DependsParam
@@ -32,6 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from platform_shared.auth.totp_route_service import TotpRouteService
 from platform_shared.auth.totp_route_user import TotpRouteUser
 from platform_shared.auth.user_manager import PlatformBaseUserManager
+from platform_shared.auth.verified_login import verify_login
 from platform_shared.core.auth_events import AuthEventType
 from platform_shared.schemas.totp.totp_disable_request import TotpDisableRequest
 from platform_shared.schemas.totp.totp_disable_response import TotpDisableResponse
@@ -146,84 +146,18 @@ def build_totp_router(
         A TOTP-enabled user with no code gets ``{"detail": "totp_required"}``
         with HTTP 200. Otherwise the response carries the access token.
         """
-        # authenticate_password reads .username and .password, like the OAuth2 form.
-        credentials = SimpleNamespace(username=body.email, password=body.password)
-        user = await user_manager.authenticate_password(credentials, request)
-
-        if user is None:
-            await log_auth_event(
-                db,
-                event_type=AuthEventType.LOGIN_FAILURE,
-                user_id=None,
-                request=request,
-                succeeded=False,
-                metadata={"reason": "bad_credentials"},
-            )
-            await db.commit()
-            raise HTTPException(status_code=400, detail="LOGIN_BAD_CREDENTIALS")
-
-        if not user.is_active:
-            await log_auth_event(
-                db,
-                event_type=AuthEventType.LOGIN_FAILURE,
-                user_id=user.id,
-                request=request,
-                succeeded=False,
-                metadata={"reason": "account_inactive"},
-            )
-            await db.commit()
-            raise HTTPException(status_code=400, detail="LOGIN_BAD_CREDENTIALS")
-
-        # Mirrors the check on /auth/jwt/login, or unverified users could get a token here.
-        if not user.is_verified:
-            await log_auth_event(
-                db,
-                event_type=AuthEventType.LOGIN_BLOCKED_UNVERIFIED,
-                user_id=user.id,
-                request=request,
-                succeeded=False,
-            )
-            await db.commit()
-            raise HTTPException(status_code=400, detail="LOGIN_USER_NOT_VERIFIED")
-
-        if user.totp_enabled:
-            if not body.totp_code:
-                return TotpLoginResponse(detail="totp_required")
-            valid, used_recovery = await totp_service.validate_totp_for_login(
-                user.email, body.totp_code,
-            )
-            if not valid:
-                await user_manager.count_failed_second_factor(user)
-                await log_auth_event(
-                    db,
-                    event_type=AuthEventType.TOTP_VERIFY_FAILURE,
-                    user_id=user.id,
-                    request=request,
-                    succeeded=False,
-                )
-                await db.commit()
-                raise HTTPException(status_code=401, detail="invalid_totp")
-
-            await user_manager.clear_failed_logins(user)
-            await log_auth_event(
-                db,
-                event_type=(
-                    AuthEventType.TOTP_RECOVERY_USED if used_recovery
-                    else AuthEventType.TOTP_VERIFY_SUCCESS
-                ),
-                user_id=user.id,
-                request=request,
-                succeeded=True,
-            )
-
-        token = await get_jwt_strategy().write_token(user)
-        await log_auth_event(
-            db,
-            event_type=AuthEventType.LOGIN_SUCCESS,
-            user_id=user.id,
+        user = await verify_login(
+            email=body.email,
+            password=body.password,
+            totp_code=body.totp_code,
             request=request,
-            succeeded=True,
+            user_manager=user_manager,
+            totp_service=totp_service,
+            db=db,
         )
+        if user is None:
+            return TotpLoginResponse(detail="totp_required")
+        token = await get_jwt_strategy().write_token(user)
         await db.commit()
         return TotpLoginResponse(access_token=token, token_type="bearer")
 

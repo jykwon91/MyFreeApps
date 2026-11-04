@@ -17,6 +17,7 @@ from each app's ``app.core.auth`` continue to resolve unchanged.
 from __future__ import annotations
 
 import time
+from datetime import datetime
 from typing import Generic, NamedTuple
 
 import jwt
@@ -45,8 +46,7 @@ class IatJWTStrategy(JWTStrategy[models.UP, models.ID], Generic[models.UP, model
       reads it to enforce a recent-auth window.
 
     They're separate because a token renewed without a login would get a new
-    ``iat`` while the user's proof of identity stays as old as it was. Every
-    token written here comes from a login, so today they're equal.
+    ``iat`` while the user's proof of identity stays as old as it was.
     """
 
     async def read_token(
@@ -68,11 +68,18 @@ class IatJWTStrategy(JWTStrategy[models.UP, models.ID], Generic[models.UP, model
 
     async def write_token(self, user: models.UP) -> str:
         now = int(time.time())
+        return self._write(user, issued_at=now, auth_time=now)
+
+    async def write_session_token(self, user: models.UP, *, auth_time: datetime) -> str:
+        """A token for a session that proved who the user is at ``auth_time``."""
+        return self._write(user, issued_at=int(time.time()), auth_time=int(auth_time.timestamp()))
+
+    def _write(self, user: models.UP, *, issued_at: int, auth_time: int) -> str:
         data = {
             "sub": str(user.id),
             "aud": self.token_audience,
-            "iat": now,
-            "auth_time": now,
+            "iat": issued_at,
+            "auth_time": auth_time,
         }
         return generate_jwt(
             data, self.encode_key, self.lifetime_seconds, algorithm=self.algorithm,

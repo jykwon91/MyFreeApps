@@ -22,9 +22,6 @@ from platform_shared.core.refresh_session_limits import REFRESH_SESSION_PREVIOUS
 from platform_shared.repositories.refresh_session_repo import _locked_select
 from platform_shared.services.refresh_session_service import RefreshSessionService
 
-_AUTH_TIME = datetime(2026, 1, 1, tzinfo=timezone.utc)
-
-
 class _Base(DeclarativeBase):
     pass
 
@@ -58,7 +55,7 @@ class _Device:
         self.row: _Session | None = None
 
     async def sign_in(self) -> str:
-        issued = await _SERVICE.issue(self.db, self.user, auth_time=_AUTH_TIME, device_name="Phone")
+        issued = await _SERVICE.issue(self.db, self.user, device_name="Phone")
         self.row = issued.session
         return issued.refresh_token
 
@@ -291,8 +288,10 @@ def test_token_parsing_refuses_anything_but_what_was_issued() -> None:
 @pytest.mark.asyncio
 async def test_refreshing_keeps_the_original_login_time() -> None:
     device = _Device()
-    await device.refresh(await device.sign_in())
-    assert device.row.auth_time == _AUTH_TIME
+    token = await device.sign_in()
+    login_time = device.row.auth_time
+    assert await device.refresh(token) is not None
+    assert device.row.auth_time == login_time
 
 
 @pytest.mark.asyncio
