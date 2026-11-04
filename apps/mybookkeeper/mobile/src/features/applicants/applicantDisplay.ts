@@ -52,6 +52,10 @@ export function smokerLabel(smoker: boolean | null): string {
   return smoker ? "Yes" : "No";
 }
 
+export function screeningOutcomeLabel(status: string): string {
+  return SCREENING_STATUSES[status] ?? status;
+}
+
 export function screeningLine(result: ScreeningResult): string {
   return `${SCREENING_PROVIDERS[result.provider] ?? result.provider}: ${SCREENING_STATUSES[result.status] ?? result.status}`;
 }

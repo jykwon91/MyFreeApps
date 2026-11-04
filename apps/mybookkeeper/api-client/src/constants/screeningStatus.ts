@@ -32,3 +32,6 @@ export const SCREENING_STATUS_LABELS: Record<ScreeningStatus, string> = {
   fail: "Failed",
   inconclusive: "Inconclusive",
 };
+
+/** Without one, a dead connection leaves the upload spinning forever. */
+export const SCREENING_UPLOAD_TIMEOUT_MS = 5 * 60 * 1000;
