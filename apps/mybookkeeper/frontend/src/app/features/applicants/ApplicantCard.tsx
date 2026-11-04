@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import {
   formatDesiredDates,
   formatRelativeTime,
-} from "@/shared/lib/inquiry-date-format";
+} from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
 import ApplicantStageBadge from "./ApplicantStageBadge";
 

@@ -9,14 +9,14 @@ import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   useDeleteInquiryMutation,
   useUpdateInquiryMutation,
-} from "@/shared/store/inquiriesApi";
+} from "@mybookkeeper/api-client/store/inquiriesApi";
 import {
   formatAbsoluteTime,
   formatLongDate,
   formatRelativeTime,
-} from "@/shared/lib/inquiry-date-format";
+} from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import type { InquiryDetailMode } from "@/shared/types/inquiry/inquiry-detail-mode";
-import type { InquiryResponse } from "@/shared/types/inquiry/inquiry-response";
+import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
 import InquiryStageBadge from "./InquiryStageBadge";
 import InquiryStageDropdown from "./InquiryStageDropdown";
 import InquiryDetailSkeleton from "./InquiryDetailSkeleton";

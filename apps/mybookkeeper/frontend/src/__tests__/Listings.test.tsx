@@ -5,8 +5,8 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import Listings from "@/app/pages/Listings";
-import type { ListingSummary } from "@/shared/types/listing/listing-summary";
-import type { ListingListResponse } from "@/shared/types/listing/listing-list-response";
+import type { ListingSummary } from "@mybookkeeper/api-client/types/listing/listing-summary";
+import type { ListingListResponse } from "@mybookkeeper/api-client/types/listing/listing-list-response";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 
 const mockListings: ListingSummary[] = [
@@ -75,8 +75,6 @@ const defaultPropertiesState = {
 const createListingMock = vi.fn(() => ({ unwrap: () => Promise.resolve(mockListings[0]) }));
 
 vi.mock("@/shared/store/listingsApi", () => ({
-  useGetListingsQuery: vi.fn(() => defaultListingsState),
-  useGetListingByIdQuery: vi.fn(() => ({ data: undefined, isLoading: false })),
   useCreateListingMutation: vi.fn(() => [createListingMock, { isLoading: false }]),
   useUpdateListingMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDeleteListingMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
@@ -85,11 +83,16 @@ vi.mock("@/shared/store/listingsApi", () => ({
   useUpdateListingPhotoMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
+vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
+  useGetListingsQuery: vi.fn(() => defaultListingsState),
+  useGetListingByIdQuery: vi.fn(() => ({ data: undefined, isLoading: false })),
+}));
+
 vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(() => defaultPropertiesState),
 }));
 
-import { useGetListingsQuery } from "@/shared/store/listingsApi";
+import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 
 function renderListings(initialEntries: string[] = ["/listings"]) {
   return render(

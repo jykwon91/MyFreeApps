@@ -1,6 +1,6 @@
-import type { ListingRoomType } from "@/shared/types/listing/listing-room-type";
-import type { ListingSource } from "@/shared/types/listing/listing-source";
-import type { ListingStatus } from "@/shared/types/listing/listing-status";
+import type { ListingRoomType } from "@mybookkeeper/api-client/types/listing/listing-room-type";
+import type { ListingSource } from "@mybookkeeper/api-client/types/listing/listing-source";
+import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listing-status";
 import type { BadgeColor } from "@/shared/components/ui/Badge";
 
 export const LISTING_STATUSES: readonly ListingStatus[] = [

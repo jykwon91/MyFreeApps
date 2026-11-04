@@ -1,6 +1,6 @@
 import JSZip from "jszip";
 import { showError } from "@/shared/lib/toast-store";
-import type { ListingPhoto } from "@/shared/types/listing/listing-photo";
+import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
 
 /**
  * Fetches each selected photo's presigned URL, bundles them into a zip, and

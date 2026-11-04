@@ -1,4 +1,4 @@
-import type { EmploymentStatus } from "./employment-status";
+import type { EmploymentStatus } from "@mybookkeeper/api-client/types/inquiry/employment-status";
 
 /**
  * Body for ``POST /api/inquiries/public``. Mirrors backend

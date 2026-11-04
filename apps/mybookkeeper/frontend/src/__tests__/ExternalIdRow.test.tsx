@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ExternalIdRow from "@/app/features/listings/ExternalIdRow";
-import type { ListingExternalId } from "@/shared/types/listing/listing-external-id";
+import type { ListingExternalId } from "@mybookkeeper/api-client/types/listing/listing-external-id";
 
 const baseExternalId: ListingExternalId = {
   id: "ext-1",

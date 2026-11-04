@@ -6,8 +6,8 @@ import {
   useGetInquirySpamAssessmentsQuery,
   useMarkInquiryNotSpamMutation,
   useMarkInquirySpamMutation,
-} from "@/shared/store/inquiriesApi";
-import type { InquirySpamStatus } from "@/shared/types/inquiry/inquiry-spam-status";
+} from "@mybookkeeper/api-client/store/inquiriesApi";
+import type { InquirySpamStatus } from "@mybookkeeper/api-client/types/inquiry/inquiry-spam-status";
 import InquirySpamBadge from "./InquirySpamBadge";
 import InquiryAuditTrailBody from "./InquiryAuditTrailBody";
 import { useInquiryAuditTrailMode } from "./useInquiryAuditTrailMode";

@@ -4,38 +4,15 @@ import type { ChannelListing } from "@/shared/types/listing/channel-listing";
 import type { ChannelListingCreateRequest } from "@/shared/types/listing/channel-listing-create-request";
 import type { ChannelListingUpdateRequest } from "@/shared/types/listing/channel-listing-update-request";
 import type { ListingCreateRequest } from "@/shared/types/listing/listing-create-request";
-import type { ListingExternalId } from "@/shared/types/listing/listing-external-id";
+import type { ListingExternalId } from "@mybookkeeper/api-client/types/listing/listing-external-id";
 import type { ListingExternalIdCreateRequest } from "@/shared/types/listing/listing-external-id-create-request";
 import type { ListingExternalIdUpdateRequest } from "@/shared/types/listing/listing-external-id-update-request";
-import type { ListingListArgs } from "@/shared/types/listing/listing-list-args";
-import type { ListingListResponse } from "@/shared/types/listing/listing-list-response";
-import type { ListingPhoto } from "@/shared/types/listing/listing-photo";
-import type { ListingResponse } from "@/shared/types/listing/listing-response";
+import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
+import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/listing-response";
 import type { ListingUpdateRequest } from "@/shared/types/listing/listing-update-request";
 
 const listingsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getListings: builder.query<ListingListResponse, ListingListArgs | void>({
-      query: (args) => ({
-        url: "/listings",
-        params: {
-          ...(args?.status ? { status: args.status } : {}),
-          ...(args?.limit !== undefined ? { limit: args.limit } : {}),
-          ...(args?.offset !== undefined ? { offset: args.offset } : {}),
-        },
-      }),
-      providesTags: (result) =>
-        result
-          ? [
-              ...result.items.map((listing) => ({ type: "Listing" as const, id: listing.id })),
-              { type: "Listing" as const, id: "LIST" },
-            ]
-          : [{ type: "Listing" as const, id: "LIST" }],
-    }),
-    getListingById: builder.query<ListingResponse, string>({
-      query: (id) => ({ url: `/listings/${id}` }),
-      providesTags: (_result, _error, id) => [{ type: "Listing", id }],
-    }),
     createListing: builder.mutation<ListingResponse, ListingCreateRequest>({
       query: (body) => ({ url: "/listings", method: "POST", data: body }),
       invalidatesTags: [{ type: "Listing", id: "LIST" }],
@@ -213,8 +190,6 @@ const listingsApi = baseApi.injectEndpoints({
 });
 
 export const {
-  useGetListingsQuery,
-  useGetListingByIdQuery,
   useCreateListingMutation,
   useUpdateListingMutation,
   useDeleteListingMutation,

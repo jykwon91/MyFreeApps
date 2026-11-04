@@ -243,6 +243,8 @@
         "frontend/src/app/pages/Integrations.tsx",
         "frontend/src/app/features/integrations/",
         "frontend/src/shared/store/integrationsApi.ts",
+        "api-client/src/store/integrationsApi.ts",
+        "api-client/src/types/integration/",
         "frontend/src/shared/hooks/useInvalidateOnExtractionComplete.ts"
       ],
       "backend_tests": [
@@ -350,6 +352,8 @@
         "frontend/src/app/features/listings/",
         "frontend/src/shared/types/listing/",
         "frontend/src/shared/store/listingsApi.ts",
+        "api-client/src/store/listingsApi.ts",
+        "api-client/src/types/listing/",
         "frontend/src/shared/lib/listing-labels.ts",
         "frontend/src/shared/lib/channel-labels.ts",
         "frontend/src/shared/lib/external-id-form.ts",
@@ -478,10 +482,12 @@
         "frontend/src/app/pages/ReplyTemplates.tsx",
         "frontend/src/app/features/inquiries/",
         "frontend/src/shared/types/inquiry/",
-        "frontend/src/shared/store/inquiriesApi.ts",
-        "frontend/src/shared/lib/inquiry-labels.ts",
-        "frontend/src/shared/lib/inquiry-quality.ts",
-        "frontend/src/shared/lib/inquiry-date-format.ts"
+        "api-client/src/types/inquiry/",
+        "api-client/src/store/inquiriesApi.ts",
+        "api-client/src/constants/inquiryLabels.ts",
+        "frontend/src/shared/lib/inquiry-badge-colors.ts",
+        "api-client/src/utils/inquiryQuality.ts",
+        "api-client/src/utils/inquiryDateFormat.ts"
       ],
       "backend_tests": [
         "test_encrypted_string_type.py",
@@ -514,7 +520,6 @@
         "InquirySpamBadge.test.tsx",
         "PublicInquiryForm.test.tsx",
         "ReplyTemplatesManager.test.tsx",
-        "inquiry-quality.test.ts",
         "reply-template-renderer.test.ts",
         "usePageListModes.test.ts"
       ],

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ExternalIdSection from "@/app/features/listings/ExternalIdSection";
-import type { ListingExternalId } from "@/shared/types/listing/listing-external-id";
+import type { ListingExternalId } from "@mybookkeeper/api-client/types/listing/listing-external-id";
 
 const deleteMutationMock = vi.fn();
 

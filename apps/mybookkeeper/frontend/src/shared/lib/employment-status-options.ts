@@ -1,14 +1,4 @@
-/**
- * Employment categories collected on the public inquiry form. Mirrors
- * backend ``INQUIRY_EMPLOYMENT_STATUSES``.
- */
-export type EmploymentStatus =
-  | "employed"
-  | "student"
-  | "self_employed"
-  | "between_jobs"
-  | "retired"
-  | "other";
+import type { EmploymentStatus } from "@mybookkeeper/api-client/types/inquiry/employment-status";
 
 export const EMPLOYMENT_STATUS_OPTIONS: ReadonlyArray<{
   value: EmploymentStatus;

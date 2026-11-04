@@ -1,15 +1,11 @@
 import { baseApi } from "./baseApi";
 import { SYNC_INVALIDATED_TAGS } from "./emailDerivedTags";
-import type { Integration } from "@/shared/types/integration/integration";
+import type { Integration } from "@mybookkeeper/api-client/types/integration/integration";
 import type { SyncLog } from "@/shared/types/integration/sync-log";
 import type { EmailQueueItem } from "@/shared/types/integration/email-queue";
 
 export const integrationsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getIntegrations: builder.query<Integration[], void>({
-      query: () => ({ url: "/integrations" }),
-      providesTags: ["Integration"],
-    }),
     connectGmail: builder.mutation<{ auth_url: string }, void>({
       query: () => ({ url: "/integrations/gmail/connect" }),
     }),
@@ -61,7 +57,6 @@ export const integrationsApi = baseApi.injectEndpoints({
 });
 
 export const {
-  useGetIntegrationsQuery,
   useConnectGmailMutation,
   useDisconnectGmailMutation,
   useSyncGmailMutation,

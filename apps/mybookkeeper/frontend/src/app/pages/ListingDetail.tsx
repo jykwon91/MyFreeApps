@@ -6,10 +6,8 @@ import AlertBox from "@/shared/components/ui/AlertBox";
 import Markdown from "@/shared/components/ui/Markdown";
 import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import {
-  useDeleteListingMutation,
-  useGetListingByIdQuery,
-} from "@/shared/store/listingsApi";
+import { useDeleteListingMutation } from "@/shared/store/listingsApi";
+import { useGetListingByIdQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import {
   LISTING_ROOM_TYPE_LABELS,

@@ -1,6 +1,5 @@
-import type { BadgeColor } from "@/shared/components/ui/Badge";
-import type { InquirySource } from "@/shared/types/inquiry/inquiry-source";
-import type { InquiryStage } from "@/shared/types/inquiry/inquiry-stage";
+import type { InquirySource } from "../types/inquiry/inquiry-source";
+import type { InquiryStage } from "../types/inquiry/inquiry-stage";
 
 /**
  * Source / stage label & color tables for the Inquiries domain.
@@ -46,14 +45,6 @@ export const INQUIRY_SOURCE_SHORT_LABELS: Record<InquirySource, string> = {
   public_form: "Form",
 };
 
-export const INQUIRY_SOURCE_BADGE_COLORS: Record<InquirySource, BadgeColor> = {
-  FF: "blue",
-  TNH: "purple",
-  direct: "gray",
-  other: "orange",
-  public_form: "green",
-};
-
 export const INQUIRY_STAGE_LABELS: Record<InquiryStage, string> = {
   new: "New",
   triaged: "Triaged",
@@ -65,22 +56,3 @@ export const INQUIRY_STAGE_LABELS: Record<InquiryStage, string> = {
   converted: "Converted",
   archived: "Archived",
 };
-
-/**
- * Stage badge colors per RENTALS_PLAN.md §9.1: gray for new/triaged (early),
- * blue for in-progress (replied/screening/scheduled), green for positive
- * outcomes (approved/converted), red for declined, gray-muted for archived.
- */
-export const INQUIRY_STAGE_BADGE_COLORS: Record<InquiryStage, BadgeColor> = {
-  new: "gray",
-  triaged: "gray",
-  replied: "blue",
-  screening_requested: "blue",
-  video_call_scheduled: "blue",
-  approved: "green",
-  declined: "red",
-  converted: "green",
-  archived: "gray",
-};
-
-export const INQUIRY_PAGE_SIZE = 25;

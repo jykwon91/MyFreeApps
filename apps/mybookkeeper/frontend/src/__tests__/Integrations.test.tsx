@@ -5,7 +5,7 @@ import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import Integrations from "@/app/pages/Integrations";
-import type { Integration } from "@/shared/types/integration/integration";
+import type { Integration } from "@mybookkeeper/api-client/types/integration/integration";
 import type { SyncLog } from "@/shared/types/integration/sync-log";
 
 const mockGmailIntegration: Integration = {
@@ -47,7 +47,6 @@ const mockRunningSyncLog: SyncLog = {
 };
 
 vi.mock("@/shared/store/integrationsApi", () => ({
-  useGetIntegrationsQuery: vi.fn(() => ({ data: [], isLoading: false, refetch: vi.fn() })),
   useConnectGmailMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDisconnectGmailMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useSyncGmailMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
@@ -61,6 +60,10 @@ vi.mock("@/shared/store/integrationsApi", () => ({
   useUpdateGmailLabelMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
+vi.mock("@mybookkeeper/api-client/store/integrationsApi", () => ({
+  useGetIntegrationsQuery: vi.fn(() => ({ data: [], isLoading: false, refetch: vi.fn() })),
+}));
+
 vi.mock("@/shared/hooks/useToast", () => ({
   useToast: () => ({ showSuccess: vi.fn(), showError: vi.fn() }),
 }));
@@ -69,12 +72,8 @@ vi.mock("@/shared/hooks/useOrgRole", () => ({
   useCanWrite: vi.fn(() => true),
 }));
 
-import {
-  useGetIntegrationsQuery,
-  useGetSyncLogsQuery,
-  useGetEmailQueueQuery,
-  useDisconnectGmailMutation,
-} from "@/shared/store/integrationsApi";
+import { useGetSyncLogsQuery, useGetEmailQueueQuery, useDisconnectGmailMutation } from "@/shared/store/integrationsApi";
+import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 
 function renderWithProviders(ui: React.ReactElement) {

@@ -3,8 +3,8 @@ import SourceBadge from "@/shared/components/ui/SourceBadge";
 import {
   formatDesiredDates,
   formatRelativeTime,
-} from "@/shared/lib/inquiry-date-format";
-import type { InquirySummary } from "@/shared/types/inquiry/inquiry-summary";
+} from "@mybookkeeper/api-client/utils/inquiryDateFormat";
+import type { InquirySummary } from "@mybookkeeper/api-client/types/inquiry/inquiry-summary";
 import InquiryQualityBadge from "./InquiryQualityBadge";
 import InquirySpamBadge from "./InquirySpamBadge";
 import InquiryStageBadge from "./InquiryStageBadge";

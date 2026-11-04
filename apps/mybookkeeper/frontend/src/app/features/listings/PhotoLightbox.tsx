@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
-import type { ListingPhoto } from "@/shared/types/listing/listing-photo";
+import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
 import PhotoLightboxImage from "./PhotoLightboxImage";
 import PhotoLightboxControls from "./PhotoLightboxControls";
 import { usePhotoLightboxMode } from "./usePhotoLightboxMode";

@@ -1,6 +1,6 @@
 import { Pencil, Archive } from "lucide-react";
 import { Button } from "@platform/ui";
-import type { ReplyTemplate } from "@/shared/types/inquiry/reply-template";
+import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 
 export interface ReplyTemplatesListProps {
   templates: readonly ReplyTemplate[];

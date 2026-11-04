@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { formatAbsoluteTime } from "@/shared/lib/inquiry-date-format";
-import type { InquiryMessage } from "@/shared/types/inquiry/inquiry-message";
+import { formatAbsoluteTime } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
+import type { InquiryMessage } from "@mybookkeeper/api-client/types/inquiry/inquiry-message";
 
 export interface InquiryMessageThreadProps {
   messages: InquiryMessage[];

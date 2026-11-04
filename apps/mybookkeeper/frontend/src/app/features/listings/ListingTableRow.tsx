@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import ListingStatusBadge from "./ListingStatusBadge";
 import { LISTING_ROOM_TYPE_LABELS, formatRate } from "@/shared/lib/listing-labels";
-import type { ListingSummary } from "@/shared/types/listing/listing-summary";
+import type { ListingSummary } from "@mybookkeeper/api-client/types/listing/listing-summary";
 
 export interface ListingTableRowProps {
   listing: ListingSummary;

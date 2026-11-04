@@ -10,7 +10,7 @@ import type { SignedLeaseSummary } from "@/shared/types/lease/signed-lease-summa
 import SignedLeaseStatusBadge from "@/app/features/leases/SignedLeaseStatusBadge";
 import AttachmentViewer from "@/app/features/leases/AttachmentViewer";
 import { ConfirmDialog } from "@platform/ui";
-import { formatLongDate } from "@/shared/lib/inquiry-date-format";
+import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import LinkedLeaseDocumentsBody from "./LinkedLeaseDocumentsBody";
 import { useLinkedLeaseDocumentsMode } from "./useLinkedLeaseDocumentsMode";
 

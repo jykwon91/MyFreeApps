@@ -5,7 +5,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import ListingPhotoManager from "@/app/features/listings/ListingPhotoManager";
-import type { ListingPhoto } from "@/shared/types/listing/listing-photo";
+import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
 
 const uploadMock = vi.fn(() => ({ unwrap: () => Promise.resolve([]) }));
 const deleteMock = vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) }));

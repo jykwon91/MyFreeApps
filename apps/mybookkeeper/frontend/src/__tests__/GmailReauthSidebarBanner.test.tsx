@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import GmailReauthSidebarBanner from "@/app/components/GmailReauthSidebarBanner";
-import type { Integration } from "@/shared/types/integration/integration";
+import type { Integration } from "@mybookkeeper/api-client/types/integration/integration";
 
-vi.mock("@/shared/store/integrationsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/integrationsApi", () => ({
   useGetIntegrationsQuery: vi.fn(() => ({ data: [], isLoading: false })),
 }));
 
-import { useGetIntegrationsQuery } from "@/shared/store/integrationsApi";
+import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
 
 const mockNeedsReauth: Integration = {
   provider: "gmail",

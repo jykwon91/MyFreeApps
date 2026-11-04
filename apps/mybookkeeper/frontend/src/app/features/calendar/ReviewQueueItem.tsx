@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { ReviewQueueItem as ReviewQueueItemType } from "@/shared/types/calendar/review-queue-item";
 import { LoadingButton } from "@platform/ui";
-import { useGetListingsQuery } from "@/shared/store/listingsApi";
+import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import {
   useResolveQueueItemMutation,
   useIgnoreQueueItemMutation,

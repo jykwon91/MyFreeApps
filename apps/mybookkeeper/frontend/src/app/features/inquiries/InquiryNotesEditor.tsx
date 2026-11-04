@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import { useUpdateInquiryMutation } from "@/shared/store/inquiriesApi";
+import { useUpdateInquiryMutation } from "@mybookkeeper/api-client/store/inquiriesApi";
 
 export interface InquiryNotesEditorProps {
   inquiryId: string;

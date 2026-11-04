@@ -53,7 +53,7 @@ vi.mock("@/shared/store/applicantsApi", () => ({
   })),
 }));
 
-vi.mock("@/shared/store/listingsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   useGetListingsQuery: vi.fn(() => ({
     data: { items: [], total: 0, has_more: false },
     isLoading: false,

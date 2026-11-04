@@ -1,5 +1,5 @@
 import type { InquiryReplyMode } from "@/shared/types/inquiry/inquiry-reply-mode";
-import type { ReplyTemplate } from "@/shared/types/inquiry/reply-template";
+import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 import type { GmailReconnectBannerProps } from "./GmailReconnectBanner";
 import InquiryReplyCustomBody from "./InquiryReplyCustomBody";
 import InquiryReplyReconnectBody from "./InquiryReplyReconnectBody";

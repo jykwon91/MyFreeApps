@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useGetApplicantsQuery } from "@/shared/store/applicantsApi";
-import { useGetListingsQuery } from "@/shared/store/listingsApi";
+import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useImportSignedLeaseMutation } from "@/shared/store/signedLeasesApi";
 
 export interface LeaseImportDialogProps {

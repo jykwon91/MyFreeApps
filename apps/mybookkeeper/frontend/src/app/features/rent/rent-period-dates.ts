@@ -1,4 +1,4 @@
-import { formatShortDate } from "@/shared/lib/inquiry-date-format";
+import { formatShortDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import type { RentPeriodSummary } from "@/shared/types/rent/rent-period-summary";
 
 /**

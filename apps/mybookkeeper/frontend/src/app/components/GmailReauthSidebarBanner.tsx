@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { AlertTriangle } from "lucide-react";
-import { useGetIntegrationsQuery } from "@/shared/store/integrationsApi";
+import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
 
 /**
  * Persistent sidebar warning shown when the user's Gmail refresh token has

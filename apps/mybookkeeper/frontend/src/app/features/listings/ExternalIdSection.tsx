@@ -7,8 +7,8 @@ import {
   LISTING_SOURCE_LABELS,
 } from "@/shared/lib/listing-labels";
 import { useDeleteListingExternalIdMutation } from "@/shared/store/listingsApi";
-import type { ListingExternalId } from "@/shared/types/listing/listing-external-id";
-import type { ListingSource } from "@/shared/types/listing/listing-source";
+import type { ListingExternalId } from "@mybookkeeper/api-client/types/listing/listing-external-id";
+import type { ListingSource } from "@mybookkeeper/api-client/types/listing/listing-source";
 import ExternalIdForm from "./ExternalIdForm";
 import ExternalIdRow from "./ExternalIdRow";
 

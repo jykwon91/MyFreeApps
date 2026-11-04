@@ -1,5 +1,5 @@
 import type { InquiriesListMode } from "@/shared/types/inquiry/inquiries-list-mode";
-import type { InquirySummary } from "@/shared/types/inquiry/inquiry-summary";
+import type { InquirySummary } from "@mybookkeeper/api-client/types/inquiry/inquiry-summary";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import { LoadingButton } from "@platform/ui";
 import InquiriesSkeleton from "./InquiriesSkeleton";

@@ -1,6 +1,6 @@
 import { cn } from "@/shared/utils/cn";
 import { LISTING_STATUSES, LISTING_STATUS_LABELS } from "@/shared/lib/listing-labels";
-import type { ListingStatus } from "@/shared/types/listing/listing-status";
+import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listing-status";
 
 export interface ListingStatusFilterProps {
   value: ListingStatus | null;

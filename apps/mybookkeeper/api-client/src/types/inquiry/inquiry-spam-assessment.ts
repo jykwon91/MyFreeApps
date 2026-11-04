@@ -1,16 +1,9 @@
+import type { InquirySpamAssessmentType } from "./inquiry-spam-assessment-type";
+
 /**
  * Audit-trail entry for the operator's spam triage panel. Mirrors backend
  * ``InquirySpamAssessmentResponse``.
  */
-export type InquirySpamAssessmentType =
-  | "turnstile"
-  | "honeypot"
-  | "submit_timing"
-  | "disposable_email"
-  | "rate_limit"
-  | "claude_score"
-  | "manual_override";
-
 export interface InquirySpamAssessment {
   id: string;
   inquiry_id: string;

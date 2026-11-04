@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, X } from "lucide-react";
-import type { ListingPhoto } from "@/shared/types/listing/listing-photo";
+import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
 import PhotoSelectionCheckbox from "@/app/features/listings/PhotoSelectionCheckbox";
 import { reportMissingStorageObject } from "@/shared/lib/storage-observability";
 

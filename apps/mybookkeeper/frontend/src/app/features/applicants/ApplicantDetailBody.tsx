@@ -9,7 +9,7 @@ import {
   formatAbsoluteTime,
   formatLongDate,
   formatRelativeTime,
-} from "@/shared/lib/inquiry-date-format";
+} from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import type { ApplicantDetailResponse } from "@/shared/types/applicant/applicant-detail-response";
 import type { SignedLeaseSummary } from "@/shared/types/lease/signed-lease-summary";
 import { Button, LoadingButton } from "@platform/ui";

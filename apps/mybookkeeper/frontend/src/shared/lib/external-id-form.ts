@@ -1,4 +1,4 @@
-import type { ListingSource } from "@/shared/types/listing/listing-source";
+import type { ListingSource } from "@mybookkeeper/api-client/types/listing/listing-source";
 
 /**
  * Per-source helper text for the external_id field.

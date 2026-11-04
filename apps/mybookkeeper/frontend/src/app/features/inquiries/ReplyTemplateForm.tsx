@@ -5,8 +5,8 @@ import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   useCreateReplyTemplateMutation,
   useUpdateReplyTemplateMutation,
-} from "@/shared/store/inquiriesApi";
-import type { ReplyTemplate } from "@/shared/types/inquiry/reply-template";
+} from "@mybookkeeper/api-client/store/inquiriesApi";
+import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 
 export interface ReplyTemplateFormProps {
   template: ReplyTemplate | null;

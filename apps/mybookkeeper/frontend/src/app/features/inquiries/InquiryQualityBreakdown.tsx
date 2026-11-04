@@ -1,8 +1,8 @@
 import { Check, X } from "lucide-react";
 import {
   computeInquiryQualityScore,
-  type InquiryQualitySignals,
-} from "@/shared/lib/inquiry-quality";
+} from "@mybookkeeper/api-client/utils/inquiryQuality";
+import type { InquiryQualitySignals } from "@mybookkeeper/api-client/types/inquiry/inquiry-quality-signals";
 
 export interface InquiryQualityBreakdownProps {
   signals: InquiryQualitySignals;
@@ -20,7 +20,7 @@ const BODY_LENGTH_THRESHOLD = 100;
  *
  * Surfaces what's missing so the host can chase it (per RENTALS_PLAN.md
  * §9.1 detail-page hierarchy: "what's missing"). Mirrors the heuristic in
- * ``shared/lib/inquiry-quality.ts``.
+ * ``api-client/src/utils/inquiryQuality.ts``.
  */
 export default function InquiryQualityBreakdown({ signals }: InquiryQualityBreakdownProps) {
   const score = computeInquiryQualityScore(signals);

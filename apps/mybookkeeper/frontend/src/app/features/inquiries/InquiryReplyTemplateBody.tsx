@@ -1,4 +1,4 @@
-import type { ReplyTemplate } from "@/shared/types/inquiry/reply-template";
+import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 import RenderedReplyEditor from "./RenderedReplyEditor";
 import ReplyTemplatePicker from "./ReplyTemplatePicker";
 

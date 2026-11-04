@@ -1,4 +1,4 @@
-import type { InquirySpamStatus } from "@/shared/types/inquiry/inquiry-spam-status";
+import type { InquirySpamStatus } from "@mybookkeeper/api-client/types/inquiry/inquiry-spam-status";
 
 /**
  * Color-coded triage badge for an inquiry. Surfaces the score + status with

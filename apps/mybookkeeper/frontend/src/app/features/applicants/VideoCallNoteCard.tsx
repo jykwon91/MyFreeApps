@@ -2,7 +2,7 @@ import { Star } from "lucide-react";
 import {
   formatAbsoluteTime,
   formatRelativeTime,
-} from "@/shared/lib/inquiry-date-format";
+} from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import type { VideoCallNote } from "@/shared/types/applicant/video-call-note";
 
 export interface VideoCallNoteCardProps {

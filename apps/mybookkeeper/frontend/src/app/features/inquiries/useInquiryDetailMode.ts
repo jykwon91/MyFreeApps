@@ -1,5 +1,5 @@
 import type { InquiryDetailMode } from "@/shared/types/inquiry/inquiry-detail-mode";
-import type { InquiryResponse } from "@/shared/types/inquiry/inquiry-response";
+import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
 
 interface UseInquiryDetailModeArgs {
   isLoading: boolean;

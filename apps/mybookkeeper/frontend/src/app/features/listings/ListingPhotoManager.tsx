@@ -24,7 +24,7 @@ import {
   useUpdateListingPhotoMutation,
   useUploadListingPhotosMutation,
 } from "@/shared/store/listingsApi";
-import type { ListingPhoto } from "@/shared/types/listing/listing-photo";
+import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
 import type { PhotoLightboxTarget } from "@/shared/types/listing/photo-lightbox-target";
 import ListingPhotoCard from "@/app/features/listings/ListingPhotoCard";
 import PhotoSelectionToolbar from "@/app/features/listings/PhotoSelectionToolbar";

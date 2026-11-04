@@ -5,8 +5,8 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import InquiryReplyPanel from "@/app/features/inquiries/InquiryReplyPanel";
-import type { Integration } from "@/shared/types/integration/integration";
-import type { ReplyTemplate } from "@/shared/types/inquiry/reply-template";
+import type { Integration } from "@mybookkeeper/api-client/types/integration/integration";
+import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 
 // ----- Default mock state -----
 const mockTemplate: ReplyTemplate = {
@@ -52,13 +52,13 @@ let renderState: { data: { subject: string; body: string } | undefined; isFetchi
 };
 let sendState = { isLoading: false };
 
-vi.mock("@/shared/store/inquiriesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/inquiriesApi", () => ({
   useGetReplyTemplatesQuery: vi.fn(() => templateState),
   useLazyRenderReplyTemplateQuery: vi.fn(() => [triggerRender, renderState]),
   useSendInquiryReplyMutation: vi.fn(() => [sendReply, sendState]),
 }));
 
-vi.mock("@/shared/store/integrationsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/integrationsApi", () => ({
   useGetIntegrationsQuery: vi.fn(() => integrationsState),
 }));
 

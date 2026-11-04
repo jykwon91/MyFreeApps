@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   computeInquiryQualityScore,
   getQualityTier,
-} from "@/shared/lib/inquiry-quality";
+} from "../utils/inquiryQuality";
 
 describe("computeInquiryQualityScore", () => {
   it("returns 0 when no signals are present", () => {

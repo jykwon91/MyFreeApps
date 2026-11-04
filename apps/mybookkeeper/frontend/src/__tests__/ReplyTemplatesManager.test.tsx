@@ -5,7 +5,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import ReplyTemplatesManager from "@/app/features/inquiries/ReplyTemplatesManager";
-import type { ReplyTemplate } from "@/shared/types/inquiry/reply-template";
+import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 
 const t1: ReplyTemplate = {
   id: "tpl-1",
@@ -29,7 +29,7 @@ let listState: { data: ReplyTemplate[]; isLoading: boolean } = {
   isLoading: false,
 };
 
-vi.mock("@/shared/store/inquiriesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/inquiriesApi", () => ({
   useGetReplyTemplatesQuery: vi.fn(() => listState),
   useCreateReplyTemplateMutation: vi.fn(() => [create, { isLoading: false }]),
   useUpdateReplyTemplateMutation: vi.fn(() => [update, { isLoading: false }]),

@@ -18,7 +18,7 @@ import {
 import { usePromoteFromInquiryMutation } from "@/shared/store/applicantsApi";
 import type { ApplicantPromoteRequest } from "@/shared/types/applicant/applicant-promote-request";
 import type { ApplicantPromoteConflictDetail } from "@/shared/types/applicant/applicant-promote-conflict";
-import type { InquiryResponse } from "@/shared/types/inquiry/inquiry-response";
+import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
 
 export interface PromoteFromInquiryPanelProps {
   inquiry: InquiryResponse;
