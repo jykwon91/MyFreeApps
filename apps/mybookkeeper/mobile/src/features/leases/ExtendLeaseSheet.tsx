@@ -1,28 +1,45 @@
+import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useExtendSignedLeaseMutation, useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { Banner, FormField, LoadingButton, useTheme, useToast } from "@platform/mobile";
+import { Banner, FormField, LoadingButton, MIN_TOUCH_TARGET, useTheme, useToast } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
-import { KeyboardAvoidingView, Modal, Platform, ScrollView, type ScrollViewInstance, Text } from "react-native";
-import { alreadyEnds, extendContext, extendedTo, EXTENSION_NOTE_MAX_LENGTH, LEASE_MESSAGES, pickDateAfter } from "../../constants/leases";
+import { Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, type ScrollViewInstance, Switch, Text, View } from "react-native";
+import {
+  alreadyEnds,
+  emailAddendumLabel,
+  extendAndEmailBody,
+  extendAndEmailTitle,
+  extendContext,
+  extendedAndEmailing,
+  extendedEmailUnknown,
+  extendedTo,
+  EXTENSION_NOTE_MAX_LENGTH,
+  LEASE_MESSAGES,
+  pickDateAfter,
+} from "../../constants/leases";
 import DatePicker from "../shell/DatePicker";
 import { confirmDiscard } from "../uploads/confirmDiscard";
 import { httpStatus } from "../transactions/transactionMessages";
-import { extendLeaseFailure } from "./extendLeaseFailure";
+import { extendLeaseFailure, isMissingTenantEmail } from "./extendLeaseFailure";
 
 interface ExtendLeaseSheetProps {
   leaseId: string;
+  applicantId: string;
+  tenantName: string | null;
   endsOn: string;
   onClose: () => void;
 }
 
-export default function ExtendLeaseSheet({ leaseId, endsOn, onClose }: ExtendLeaseSheetProps) {
+export default function ExtendLeaseSheet({ leaseId, applicantId, tenantName, endsOn, onClose }: ExtendLeaseSheetProps) {
   const { colors, spacing, fontSize } = useTheme();
   const { showToast } = useToast();
   const [extendLease] = useExtendSignedLeaseMutation();
   const { refetch } = useGetSignedLeaseByIdQuery(leaseId);
+  const { currentData: applicant, refetch: refetchApplicant } = useGetApplicantByIdQuery(applicantId);
   // Stays null until something's picked: an addendum is a legal record, so no date is assumed.
   const [picked, setPicked] = useState<string | null>(null);
   const [note, setNote] = useState("");
+  const [emailTenant, setEmailTenant] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const isSubmitting = useRef(false);
@@ -40,9 +57,9 @@ export default function ExtendLeaseSheet({ leaseId, endsOn, onClose }: ExtendLea
     else onClose();
   }
 
-  function finish(newEndsOn: string): void {
+  function finish(message: string): void {
     onClose();
-    showToast(extendedTo(formatLongDate(newEndsOn)));
+    showToast(message);
   }
 
   /** The server commits before it answers, so a failed answer doesn't mean nothing happened. */
@@ -51,7 +68,8 @@ export default function ExtendLeaseSheet({ leaseId, endsOn, onClose }: ExtendLea
     if (latest.isError || !latest.data) {
       setFailure(LEASE_MESSAGES.extendUnsure);
     } else if (latest.data.ends_on === newEndsOn) {
-      finish(newEndsOn);
+      const longDate = formatLongDate(newEndsOn);
+      finish(emailTenant ? extendedEmailUnknown(longDate) : extendedTo(longDate));
     } else if (latest.data.ends_on && latest.data.ends_on > endsOn) {
       setFailure(alreadyEnds(formatLongDate(latest.data.ends_on)));
     } else {
@@ -60,18 +78,43 @@ export default function ExtendLeaseSheet({ leaseId, endsOn, onClose }: ExtendLea
     }
   }
 
-  async function submit(): Promise<void> {
+  function submit(): void {
     if (!isLater || isSubmitting.current) return;
+    if (!emailTenant) {
+      void send(picked);
+      return;
+    }
+    isSubmitting.current = true;
+    const release = () => {
+      isSubmitting.current = false;
+    };
+    Alert.alert(
+      extendAndEmailTitle(tenantName),
+      extendAndEmailBody(formatLongDate(picked)),
+      [
+        { text: LEASE_MESSAGES.cancel, style: "cancel", onPress: release },
+        { text: LEASE_MESSAGES.extendAndEmail, onPress: () => void send(picked) },
+      ],
+      { cancelable: true, onDismiss: release },
+    );
+  }
+
+  async function send(newEndsOn: string): Promise<void> {
     isSubmitting.current = true;
     setIsBusy(true);
     setFailure(null);
     try {
-      await extendLease({ leaseId, data: { new_ends_on: picked, notes: note.trim() || undefined, email_tenant: false } }).unwrap();
-      finish(picked);
+      await extendLease({ leaseId, data: { new_ends_on: newEndsOn, notes: note.trim() || undefined, email_tenant: emailTenant } }).unwrap();
+      const longDate = formatLongDate(newEndsOn);
+      finish(emailTenant ? extendedAndEmailing(longDate) : extendedTo(longDate));
     } catch (error) {
       const known = extendLeaseFailure(error);
+      if (isMissingTenantEmail(error)) {
+        setEmailTenant(false);
+        void refetchApplicant();
+      }
       if (known) setFailure(known);
-      else await checkWhatHappened(picked, httpStatus(error) !== undefined);
+      else await checkWhatHappened(newEndsOn, httpStatus(error) !== undefined);
     } finally {
       isSubmitting.current = false;
       setIsBusy(false);
@@ -116,7 +159,15 @@ export default function ExtendLeaseSheet({ leaseId, endsOn, onClose }: ExtendLea
             value={note}
           />
 
-          <LoadingButton disabled={!isLater} isLoading={isBusy} loadingText={LEASE_MESSAGES.extending} onPress={() => void submit()}>
+          {applicant?.has_contact_email ? (
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md, minHeight: MIN_TOUCH_TARGET }}>
+              <Text style={{ flex: 1, fontSize: fontSize.sm, color: colors.foreground }}>{emailAddendumLabel(tenantName)}</Text>
+              <Switch accessibilityLabel={emailAddendumLabel(tenantName)} disabled={isBusy} onValueChange={setEmailTenant} value={emailTenant} />
+            </View>
+          ) : null}
+          {applicant?.has_contact_email === false ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{LEASE_MESSAGES.noEmailOnFile}</Text> : null}
+
+          <LoadingButton disabled={!isLater} isLoading={isBusy} loadingText={LEASE_MESSAGES.extending} onPress={submit}>
             {LEASE_MESSAGES.extend}
           </LoadingButton>
           <LoadingButton disabled={isBusy} onPress={close} variant="ghost">

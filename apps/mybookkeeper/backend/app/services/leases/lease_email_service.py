@@ -32,9 +32,11 @@ import datetime as _dt
 import html as html_mod
 import logging
 import uuid
+from collections.abc import Callable
 
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
+from app.models.leases.signed_lease_attachment import SignedLeaseAttachment
 from app.repositories.applicants import applicant_repo
 from app.repositories.leases import (
     signed_lease_attachment_repo,
@@ -72,6 +74,13 @@ def build_subject(*, applicant_legal_name: str | None) -> str:
     return "Your lease"
 
 
+def build_extension_subject(*, applicant_legal_name: str | None) -> str:
+    """Pure helper. Same fallback as ``build_subject``."""
+    if applicant_legal_name:
+        return f"Your lease extension — {applicant_legal_name}"
+    return "Your lease extension"
+
+
 def build_body_html(*, listing_title: str | None) -> str:
     """Pure helper. Builds the HTML body shown to the tenant.
 
@@ -79,9 +88,35 @@ def build_body_html(*, listing_title: str | None) -> str:
     attached; this is just the cover note. A signing flow is out of
     scope for this PR.
     """
+    return _cover_note(
+        heading="Your lease is ready",
+        document="lease",
+        listing_title=listing_title,
+        request=(
+            "Please review the attached document(s) and reply to this email\n"
+            "          with any questions. We&rsquo;ll send signing instructions in a\n"
+            "          follow-up."
+        ),
+    )
+
+
+def build_extension_body_html(*, listing_title: str | None) -> str:
+    """Pure helper. Cover note for an extension addendum."""
+    return _cover_note(
+        heading="Your lease has been extended",
+        document="extension addendum",
+        listing_title=listing_title,
+        request=(
+            "The addendum with the new end date is attached. Please review it\n"
+            "          and reply to this email with any questions."
+        ),
+    )
+
+
+def _cover_note(*, heading: str, document: str, listing_title: str | None, request: str) -> str:
     address_line = (
         f"<p style=\"margin: 0 0 12px 0; font-size: 15px; color: #374151;\">"
-        f"This is the lease for <strong>{html_mod.escape(listing_title)}</strong>."
+        f"This is the {document} for <strong>{html_mod.escape(listing_title)}</strong>."
         f"</p>"
         if listing_title
         else ""
@@ -89,12 +124,10 @@ def build_body_html(*, listing_title: str | None) -> str:
     return f"""
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto;">
       <div style="border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px;">
-        <h2 style="margin: 0 0 12px 0; font-size: 18px; color: #111827;">Your lease is ready</h2>
+        <h2 style="margin: 0 0 12px 0; font-size: 18px; color: #111827;">{heading}</h2>
         {address_line}
         <p style="margin: 0 0 12px 0; font-size: 15px; color: #374151;">
-          Please review the attached document(s) and reply to this email
-          with any questions. We&rsquo;ll send signing instructions in a
-          follow-up.
+          {request}
         </p>
         <p style="margin: 16px 0 0 0; font-size: 13px; color: #6b7280;">
           Sent automatically from MyBookkeeper on behalf of your host.
@@ -169,6 +202,47 @@ async def send_lease_to_tenant(
     Manual re-send also stamps this column — the column is "the most
     recent successful tenant email", not strictly "the first one".
     """
+    return await _send_to_tenant(
+        lease_id=lease_id,
+        user_id=user_id,
+        organization_id=organization_id,
+        is_eligible=lambda a: a.kind in LEASE_EMAIL_ATTACHMENT_KINDS,
+        subject_for=build_subject,
+        body_for=build_body_html,
+    )
+
+
+async def send_extension_addendum_to_tenant(
+    *,
+    lease_id: uuid.UUID,
+    addendum_attachment_id: uuid.UUID,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+) -> bool:
+    """Send one extension's addendum, and nothing else, to the tenant.
+
+    Same best-effort contract and stamp as ``send_lease_to_tenant``. A tenant
+    already holds the lease; an earlier addendum would state an old end date.
+    """
+    return await _send_to_tenant(
+        lease_id=lease_id,
+        user_id=user_id,
+        organization_id=organization_id,
+        is_eligible=lambda a: a.id == addendum_attachment_id,
+        subject_for=build_extension_subject,
+        body_for=build_extension_body_html,
+    )
+
+
+async def _send_to_tenant(
+    *,
+    lease_id: uuid.UUID,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    is_eligible: Callable[[SignedLeaseAttachment], bool],
+    subject_for: Callable[..., str],
+    body_for: Callable[..., str],
+) -> bool:
     # Load the lease + applicant + attachments in one short transaction.
     async with unit_of_work() as db:
         lease = await signed_lease_repo.get(
@@ -238,7 +312,7 @@ async def send_lease_to_tenant(
         )
         return False
 
-    eligible = [a for a in attachments if a.kind in LEASE_EMAIL_ATTACHMENT_KINDS]
+    eligible = [a for a in attachments if is_eligible(a)]
     if not eligible:
         logger.warning(
             "lease_email.skipped reason=no_eligible_attachments lease_id=%s",
@@ -248,7 +322,7 @@ async def send_lease_to_tenant(
             organization_id,
             "lease_email_skipped",
             "warning",
-            "Tenant email skipped: no rendered or signed-lease attachments to send.",
+            "Tenant email skipped: no documents to send.",
             {"lease_id": str(lease_id), "reason": "no_eligible_attachments"},
         )
         return False
@@ -301,8 +375,8 @@ async def send_lease_to_tenant(
             )
         )
 
-    subject = build_subject(applicant_legal_name=applicant_legal_name)
-    body_html = build_body_html(listing_title=listing_title)
+    subject = subject_for(applicant_legal_name=applicant_legal_name)
+    body_html = body_for(listing_title=listing_title)
 
     sent = email_service.send_email(
         [contact_email], subject, body_html, attachments=email_attachments,

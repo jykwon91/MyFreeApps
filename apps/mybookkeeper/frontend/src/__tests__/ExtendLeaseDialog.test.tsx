@@ -21,12 +21,19 @@ vi.mock("@/shared/lib/toast-store", () => ({
 import { useExtendSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { showSuccess, showError } from "@/shared/lib/toast-store";
 
-function renderDialog(onClose = vi.fn(), currentEndsOn = "2026-12-31") {
+function renderDialog(
+  onClose = vi.fn(),
+  currentEndsOn = "2026-12-31",
+  tenantHasEmail = true,
+  onTenantEmailMissing = vi.fn(),
+) {
   return render(
     <Provider store={store}>
       <ExtendLeaseDialog
         leaseId="lease-1"
         currentEndsOn={currentEndsOn}
+        tenantHasEmail={tenantHasEmail}
+        onTenantEmailMissing={onTenantEmailMissing}
         onClose={onClose}
       />
     </Provider>,
@@ -177,6 +184,33 @@ describe("ExtendLeaseDialog", () => {
       );
       expect(onClose).not.toHaveBeenCalled();
     });
+  });
+
+  it("won't offer the email when the tenant has no address", () => {
+    renderDialog(vi.fn(), "2026-12-31", false);
+    expect(screen.getByTestId("extend-lease-email-tenant")).toBeDisabled();
+    expect(screen.getByTestId("extend-lease-no-email")).toBeInTheDocument();
+  });
+
+  it("says nothing changed when the address has gone since the page loaded", async () => {
+    const onClose = vi.fn();
+    const onTenantEmailMissing = vi.fn();
+    mockExtendLease.mockReturnValueOnce({
+      unwrap: () => Promise.reject({ status: 422, data: { detail: "applicant_email_missing" } }),
+    });
+    renderDialog(onClose, "2026-12-31", true, onTenantEmailMissing);
+    fireEvent.change(screen.getByTestId("extend-lease-new-end"), {
+      target: { value: "2027-06-30" },
+    });
+    fireEvent.click(screen.getByTestId("extend-lease-email-tenant"));
+    fireEvent.click(screen.getByTestId("extend-lease-confirm"));
+
+    await waitFor(() => {
+      expect(showError).toHaveBeenCalledWith("This tenant has no email on file. Nothing was changed.");
+    });
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onTenantEmailMissing).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("extend-lease-email-tenant")).not.toBeChecked();
   });
 
   it("surfaces a generic error toast on unknown failure", async () => {

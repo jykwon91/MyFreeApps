@@ -26,7 +26,10 @@ from fastapi import (
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
 from app.services.leases import lease_email_service, lease_extension_service
-from app.services.leases.lease_email_service import send_lease_to_tenant
+from app.services.leases.lease_email_service import (
+    send_extension_addendum_to_tenant,
+    send_lease_to_tenant,
+)
 from app.schemas.leases.extend_lease_request import ExtendLeaseRequest
 from app.schemas.leases.signed_lease_create_request import (
     SignedLeaseCreateRequest,
@@ -330,6 +333,18 @@ async def email_lease_to_tenant(
     applicant record before retrying. 404 if the lease isn't visible
     to the caller.
     """
+    await _require_tenant_email(lease_id, ctx)
+
+    background_tasks.add_task(
+        send_lease_to_tenant,
+        lease_id=lease_id,
+        user_id=ctx.user_id,
+        organization_id=ctx.organization_id,
+    )
+    return {"queued": True}
+
+
+async def _require_tenant_email(lease_id: uuid.UUID, ctx: RequestContext) -> None:
     try:
         await lease_email_service.assert_can_email_tenant(
             lease_id=lease_id,
@@ -342,14 +357,6 @@ async def email_lease_to_tenant(
         raise HTTPException(
             status_code=422, detail="applicant_email_missing",
         ) from exc
-
-    background_tasks.add_task(
-        send_lease_to_tenant,
-        lease_id=lease_id,
-        user_id=ctx.user_id,
-        organization_id=ctx.organization_id,
-    )
-    return {"queued": True}
 
 
 @router.post("/{lease_id}/extend", response_model=SignedLeaseResponse)
@@ -364,7 +371,7 @@ async def extend_lease(
     Renders an extension addendum PDF from the system-default boilerplate,
     attaches it to the lease as ``signed_addendum``, appends a
     ``lease_term_versions`` row, and updates ``signed_leases.ends_on``.
-    Optionally schedules a best-effort tenant email after commit.
+    Optionally emails that addendum to the tenant, best-effort, after commit.
 
     Errors:
         404 — lease not found / not in the calling tenant.
@@ -372,10 +379,14 @@ async def extend_lease(
               strictly after the current ``ends_on``, or the lease has no
               current end date set.
         422 — request body validation (missing date, bad format, ``notes``
-              over the length cap, unknown field).
+              over the length cap, unknown field), or ``email_tenant`` with no
+              email on file (``applicant_email_missing``; nothing is extended).
     """
+    if payload.email_tenant:
+        await _require_tenant_email(lease_id, ctx)
+
     try:
-        detail, _extended_at = await lease_extension_service.extend_lease(
+        detail, addendum_attachment_id = await lease_extension_service.extend_lease(
             user_id=ctx.user_id,
             organization_id=ctx.organization_id,
             lease_id=lease_id,
@@ -402,8 +413,9 @@ async def extend_lease(
 
     if payload.email_tenant:
         background_tasks.add_task(
-            send_lease_to_tenant,
+            send_extension_addendum_to_tenant,
             lease_id=lease_id,
+            addendum_attachment_id=addendum_attachment_id,
             user_id=ctx.user_id,
             organization_id=ctx.organization_id,
         )
