@@ -1,16 +1,25 @@
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
-import { Banner, EmptyState, LoadingButton, Skeleton, useRefresh, useTheme } from "@platform/mobile";
+import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
+import { getAllowedTransitions } from "@mybookkeeper/api-client/utils/applicantStageTransitions";
+import { Banner, EmptyState, LoadingButton, OptionSheet, Skeleton, useRefresh, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
+import { useRef, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WEB_BASE_URL } from "../../constants/api";
+import { CONTRACT_LOCKED_STAGE, STAGES_READY_FOR_LEASE } from "../../constants/applicants";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import InquiryChip from "../inquiries/InquiryChip";
 import InquirySection from "../inquiries/InquirySection";
 import { useOpenLink } from "../inquiries/useOpenLink";
 import TransactionFact from "../transactions/TransactionFact";
 import { httpStatus } from "../transactions/transactionMessages";
+import { useCanWrite } from "../workspace/useCanWrite";
 import { applicantName, applicantStageLabel, contractDates, promotedAgo, smokerLabel } from "./applicantDisplay";
 import ApplicantHistory from "./ApplicantHistory";
+import ApplicantStageSheet from "./ApplicantStageSheet";
+import ContractStartSheet from "./ContractStartSheet";
+import { useMoveApplicantStage } from "./useMoveApplicantStage";
 
 export default function ApplicantDetailScreen({ id }: { id: string }) {
   const { colors, spacing, fontSize } = useTheme();
@@ -18,6 +27,16 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
   const { currentData: applicant, error, isFetching, refetch } = useGetApplicantByIdQuery(id);
   const { refresh, refreshControl } = useRefresh(refetch, error);
   const isGone = httpStatus(error) === 404;
+  const insets = useSafeAreaInsets();
+  const canWrite = useCanWrite();
+  const { showToast } = useToast();
+  const move = useMoveApplicantStage(id, refetch);
+  const [openSheet, setOpenSheet] = useState<"stage" | "contract" | null>(null);
+  // Outlives the note sheet closing, so it doesn't slide away empty.
+  const [noteForStage, setNoteForStage] = useState<ApplicantStage | null>(null);
+  const [isNoteOpen, setIsNoteOpen] = useState(false);
+  // iOS can't raise one sheet while another is still closing, so the note waits for the list to go.
+  const chosenStage = useRef<ApplicantStage | null>(null);
 
   if (!isGone && !applicant && (isFetching || !error)) {
     return (
@@ -40,42 +59,117 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
   }
 
   const dates = contractDates(applicant.contract_start, applicant.contract_end);
+  const moves = getAllowedTransitions(applicant.stage);
+  const isContractLocked = applicant.stage === CONTRACT_LOCKED_STAGE;
+  const isReadyForLease = STAGES_READY_FOR_LEASE.includes(applicant.stage);
+
+  async function moveAndConfirm(stage: ApplicantStage, note: string): Promise<string | null> {
+    const problem = await move(stage, note);
+    if (!problem) showToast(`Moved to ${applicantStageLabel(stage)}.`);
+    return problem;
+  }
 
   return (
-    <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl}>
-      {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
-      <View style={{ gap: spacing.xs }}>
-        <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
-          {applicantName(applicant.legal_name)}
-        </Text>
-        <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{`Promoted ${promotedAgo(applicant.created_at)}`}</Text>
-        <InquiryChip label={applicantStageLabel(applicant.stage)} />
-      </View>
+    <View style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl}>
+        {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+        <View style={{ gap: spacing.xs }}>
+          <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
+            {applicantName(applicant.legal_name)}
+          </Text>
+          <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{`Promoted ${promotedAgo(applicant.created_at)}`}</Text>
+          <InquiryChip label={applicantStageLabel(applicant.stage)} />
+        </View>
 
-      {applicant.inquiry_id ? (
-        <LoadingButton onPress={() => router.push(`/inquiries/${applicant.inquiry_id}`)} variant="secondary">
-          See the original inquiry
-        </LoadingButton>
+        {applicant.inquiry_id ? (
+          <LoadingButton onPress={() => router.push(`/inquiries/${applicant.inquiry_id}`)} variant="secondary">
+            See the original inquiry
+          </LoadingButton>
+        ) : null}
+
+        <InquirySection title="Details">
+          {applicant.employer_or_hospital?.trim() ? <TransactionFact label="Employer" value={applicant.employer_or_hospital.trim()} /> : null}
+          {dates ? <TransactionFact label="Contract" value={dates} /> : null}
+          {canWrite && !isContractLocked ? (
+            <LoadingButton onPress={() => setOpenSheet("contract")} variant="ghost">
+              {applicant.contract_start ? "Change contract start" : "Add contract start"}
+            </LoadingButton>
+          ) : null}
+          {isContractLocked ? (
+            <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>The start date is locked because the lease is signed.</Text>
+          ) : null}
+          <TransactionFact label="Smoker" value={smokerLabel(applicant.smoker)} />
+          {applicant.pets?.trim() ? <TransactionFact label="Pets" value={applicant.pets.trim()} /> : null}
+          {applicant.referred_by?.trim() ? <TransactionFact label="Referred by" value={applicant.referred_by.trim()} /> : null}
+        </InquirySection>
+
+        <InquirySection title="Private details">
+          <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+            Date of birth, vehicle, contact details, ID and screening reports are on the website for now.
+          </Text>
+          <LoadingButton onPress={() => void openLink(`${WEB_BASE_URL}/applicants/${id}`)} variant="ghost">
+            Open on the website
+          </LoadingButton>
+        </InquirySection>
+
+        <ApplicantHistory applicant={applicant} />
+        {canWrite ? null : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>You have view-only access.</Text>}
+      </ScrollView>
+
+      {canWrite && moves.length > 0 ? (
+        <View
+          style={{
+            flexDirection: "row",
+            gap: spacing.sm,
+            paddingHorizontal: spacing.lg,
+            paddingTop: spacing.md,
+            paddingBottom: insets.bottom + spacing.md,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+            backgroundColor: colors.background,
+          }}
+        >
+          {isReadyForLease ? (
+            <LoadingButton onPress={() => void openLink(`${WEB_BASE_URL}/leases/new?applicant_id=${id}`)} style={{ flex: 1 }}>
+              Generate lease
+            </LoadingButton>
+          ) : null}
+          <LoadingButton
+            accessibilityHint="Choose where to move them"
+            onPress={() => setOpenSheet("stage")}
+            style={{ flex: 1 }}
+            variant={isReadyForLease ? "secondary" : "primary"}
+          >
+            {`Stage: ${applicantStageLabel(applicant.stage)}`}
+          </LoadingButton>
+        </View>
       ) : null}
 
-      <InquirySection title="Details">
-        {applicant.employer_or_hospital?.trim() ? <TransactionFact label="Employer" value={applicant.employer_or_hospital.trim()} /> : null}
-        {dates ? <TransactionFact label="Contract" value={dates} /> : null}
-        <TransactionFact label="Smoker" value={smokerLabel(applicant.smoker)} />
-        {applicant.pets?.trim() ? <TransactionFact label="Pets" value={applicant.pets.trim()} /> : null}
-        {applicant.referred_by?.trim() ? <TransactionFact label="Referred by" value={applicant.referred_by.trim()} /> : null}
-      </InquirySection>
-
-      <InquirySection title="Private details">
-        <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
-          Date of birth, vehicle, contact details, ID and screening reports are on the website for now.
-        </Text>
-        <LoadingButton onPress={() => void openLink(`${WEB_BASE_URL}/applicants/${id}`)} variant="ghost">
-          Open on the website
-        </LoadingButton>
-      </InquirySection>
-
-      <ApplicantHistory applicant={applicant} />
-    </ScrollView>
+      <OptionSheet
+        isOpen={openSheet === "stage"}
+        onClose={() => setOpenSheet(null)}
+        onClosed={() => {
+          if (!chosenStage.current) return;
+          setNoteForStage(chosenStage.current);
+          setIsNoteOpen(true);
+          chosenStage.current = null;
+        }}
+        onSelect={(stage) => {
+          chosenStage.current = stage;
+          setOpenSheet(null);
+        }}
+        options={moves.map((stage) => ({ value: stage, label: applicantStageLabel(stage) }))}
+        title="Move to which stage?"
+        value={null}
+      />
+      <ApplicantStageSheet
+        isOpen={isNoteOpen}
+        name={applicantName(applicant.legal_name)}
+        onClose={() => setIsNoteOpen(false)}
+        onMove={moveAndConfirm}
+        stage={noteForStage}
+      />
+      <ContractStartSheet applicantId={id} isOpen={openSheet === "contract"} onClose={() => setOpenSheet(null)} value={applicant.contract_start} />
+    </View>
   );
 }

@@ -1,0 +1,1 @@
+export const APPLICANT_STAGE_NOTE_MAX_LENGTH = 500;
