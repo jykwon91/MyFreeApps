@@ -59,6 +59,11 @@ export function leaseFileLine(file: SignedLeaseAttachment): string {
 }
 
 /** The newest signed copy, then everything else a host would open. Rent receipts have their own home. */
+/** The same kinds the server attaches, so the button never promises an empty email. */
+export function leaseHasEmailableFile(files: readonly SignedLeaseAttachment[]): boolean {
+  return files.some((file) => file.kind === "rendered_original" || file.kind === "signed_lease");
+}
+
 export function sortLeaseFiles(files: readonly SignedLeaseAttachment[]): {
   signedCopy: SignedLeaseAttachment | null;
   others: SignedLeaseAttachment[];

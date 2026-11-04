@@ -7,14 +7,16 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { WEB_BASE_URL } from "../../constants/api";
-import { extendedLine, LEASE_MESSAGES } from "../../constants/leases";
+import { extendedLine, lastEmailed, LEASE_MESSAGES } from "../../constants/leases";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import InquiryChip from "../inquiries/InquiryChip";
 import InquirySection from "../inquiries/InquirySection";
 import { useOpenLink } from "../inquiries/useOpenLink";
 import { httpStatus } from "../transactions/transactionMessages";
 import { useCanWrite } from "../workspace/useCanWrite";
-import { leaseCountdown, leaseIsInEffect, leaseStatusLabel, leaseTerm, sortLeaseFiles } from "./leaseDisplay";
+import { leaseCountdown, leaseHasEmailableFile, leaseIsInEffect, leaseStatusLabel, leaseTerm, sortLeaseFiles } from "./leaseDisplay";
+import DeleteLeaseButton from "./DeleteLeaseButton";
+import EmailLeaseButton from "./EmailLeaseButton";
 import LeaseDetailSkeleton from "./LeaseDetailSkeleton";
 import ExtendLeaseSheet from "./ExtendLeaseSheet";
 import LeaseFileRow from "./LeaseFileRow";
@@ -95,6 +97,10 @@ export default function LeaseDetailScreen({ id }: { id: string }) {
               {LEASE_MESSAGES.addSignedCopy}
             </LoadingButton>
           ) : null}
+          {canWrite && leaseHasEmailableFile(lease.attachments) ? (
+            <EmailLeaseButton applicantId={lease.applicant_id} leaseId={lease.id} tenantName={lease.applicant_legal_name} />
+          ) : null}
+          {lease.last_emailed_to_tenant_at ? <Text style={mutedText}>{lastEmailed(formatLongDate(lease.last_emailed_to_tenant_at))}</Text> : null}
         </InquirySection>
   
         {others.length > 0 || canWrite ? (
@@ -128,6 +134,11 @@ export default function LeaseDetailScreen({ id }: { id: string }) {
           <LoadingButton accessibilityHint="Opens your browser" onPress={() => void openLink(`${WEB_BASE_URL}/leases/${lease.id}`)} variant="secondary">
             {LEASE_MESSAGES.manageOnWebsite}
           </LoadingButton>
+        ) : null}
+        {canWrite ? (
+          <View style={{ marginTop: spacing.xl }}>
+            <DeleteLeaseButton leaseId={lease.id} parentLeaseId={lease.parent_lease_id} successorLeaseId={lease.successor_lease_id} tenantName={lease.applicant_legal_name} />
+          </View>
         ) : null}
       </ScrollView>
       {isExtending && lease.ends_on ? <ExtendLeaseSheet applicantId={lease.applicant_id} endsOn={lease.ends_on} leaseId={lease.id} onClose={() => setIsExtending(false)} tenantName={lease.applicant_legal_name} /> : null}
