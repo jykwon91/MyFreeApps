@@ -19,6 +19,7 @@ In-process state — ``_buckets`` is a module-local dict on each
 ``RateLimiter`` instance, so the limiter is per-worker. Multi-worker /
 multi-host coordination (Redis backend) is intentionally out of scope.
 """
+import json
 import logging
 import time
 import threading
@@ -262,3 +263,54 @@ def make_check_account_not_locked(
             )
 
     return _check_account_not_locked
+
+
+async def _login_email_from_body(request: Request) -> str | None:
+    """Read ``email`` out of a JSON login body, or ``None`` if there isn't one.
+
+    A dependency runs before FastAPI validates the route's body, so it sees whatever
+    the client sent: no body, a truncated upload, a JSON scalar, or ``{"email": 7}``.
+    None of those names an account, and the route's own validation owes the caller a
+    422. Letting the parse raise here would turn that 422 into a 500.
+
+    Starlette caches the body on the request, so the route can still read it.
+    """
+    try:
+        body = await request.json()
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    if not isinstance(body, dict):
+        return None
+    email = body.get("email")
+    return email if isinstance(email, str) and email else None
+
+
+def make_check_json_login_not_locked(
+    user_lookup: UserLookup,
+) -> Callable[[Request, AsyncSession], Awaitable[None]]:
+    """Build the lockout check for logins that send JSON instead of the OAuth2 form.
+
+    On block, it records ``LOGIN_BLOCKED_LOCKED`` and raises the same 429 as every
+    other gate, so callers can't tell which one fired.
+    """
+
+    async def _check(request: Request, db: AsyncSession) -> None:
+        email = await _login_email_from_body(request)
+        if email is None:
+            return
+        user = await user_lookup(db, email)
+        if user is None:
+            return
+        locked_until = getattr(user, "locked_until", None)
+        if locked_until and locked_until > datetime.now(tz=timezone.utc):
+            await log_auth_event(
+                db,
+                event_type=AuthEventType.LOGIN_BLOCKED_LOCKED,
+                user_id=user.id,
+                request=request,
+                succeeded=False,
+            )
+            await db.commit()
+            raise HTTPException(status_code=429, detail=RATE_LIMIT_GENERIC_DETAIL)
+
+    return _check
