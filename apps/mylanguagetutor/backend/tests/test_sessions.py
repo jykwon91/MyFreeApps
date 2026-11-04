@@ -7,6 +7,7 @@ user cascades every tutor row.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import uuid
 
@@ -17,9 +18,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.testing.factories import _FastPasswordHelper
 
+from app.core.config import settings
 from app.domain.turn_status import TurnStatus
 from app.models.tutor.tutor_session import TutorSession
 from app.models.tutor.tutor_turn import TutorTurn
+from app.models.user.user import User
 from app.repositories.tutor import tutor_turn_repository
 
 
@@ -272,6 +275,42 @@ class TestAccountDataLifecycle:
         async with await as_user(bob) as b:
             export = (await b.get("/users/me/export")).json()
         assert export["tutor_sessions"] == []
+
+    @pytest.mark.asyncio
+    async def test_wrong_password_on_account_deletion_counts_toward_the_lockout(
+        self, user_factory, as_user, db: AsyncSession,
+    ) -> None:
+        # Signed in for real, so the route counts on the session that loaded the user.
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            resp = await authed.request(
+                "DELETE",
+                "/users/me",
+                json={"password": "not-the-password", "confirm_email": user["email"]},
+            )
+        assert resp.status_code == 403, resp.text
+        count = await db.scalar(
+            select(User.failed_login_count).where(User.id == uuid.UUID(user["id"])),
+        )
+        assert count == 1
+
+    @pytest.mark.asyncio
+    async def test_guesses_sent_together_get_no_more_than_the_lockout_allows(
+        self, user_factory, as_user,
+    ) -> None:
+        user = await user_factory()
+        guesses = 12
+        async with await as_user(user) as authed:
+            answers = await asyncio.gather(*(
+                authed.request(
+                    "DELETE",
+                    "/users/me",
+                    json={"password": "not-the-password", "confirm_email": user["email"]},
+                )
+                for _ in range(guesses)
+            ))
+        codes = sorted(answer.status_code for answer in answers)
+        assert codes == [403] * settings.lockout_threshold + [429] * (guesses - settings.lockout_threshold)
 
     @pytest.mark.asyncio
     async def test_account_deletion_cascades_tutor_rows(

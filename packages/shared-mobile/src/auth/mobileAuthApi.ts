@@ -92,6 +92,7 @@ function classifyDeleteError(error: unknown): DeleteAccountResult {
   const { status, data } = error.response;
   const detail: unknown = (data as { detail?: unknown } | undefined)?.detail;
   if (status === 401) return { outcome: "unknown" };
+  if (status === 429) return { outcome: "rate_limited" };
   if (status === 409 && typeof detail === "string") return { outcome: "refused", message: detail };
   if (detail === "Incorrect password") return { outcome: "wrong_password" };
   if (detail === "Email confirmation does not match") return { outcome: "email_mismatch" };

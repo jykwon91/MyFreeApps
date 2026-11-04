@@ -16,13 +16,19 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
+from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi_users.password import PasswordHelper
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from platform_shared.core.auth_messages import RATE_LIMIT_GENERIC_DETAIL
 from platform_shared.schemas.account import DeleteAccountRequest
+from platform_shared.services.account_lockout import (
+    emit_locked_login_event,
+    is_locked as account_is_locked,
+)
 from platform_shared.services.account_deletion import (
     AccountDeletionBlockedError,
     delete_account,
@@ -32,6 +38,7 @@ from platform_shared.services.account_deletion import (
 def build_account_deletion_router(
     *,
     current_active_user: Callable[..., Awaitable[Any]],
+    get_user_manager: Callable[..., Any],
     get_db_dependency: Callable[..., AsyncIterator[AsyncSession]],
     verify_totp_step_up: Callable[
         [AsyncSession, uuid.UUID, str], Awaitable[bool]
@@ -44,6 +51,9 @@ def build_account_deletion_router(
     Args:
         current_active_user: The app's fastapi-users
             ``current_active_user`` dependency.
+        get_user_manager: The app's ``get_user_manager`` dependency. Wrong
+            passwords and codes count toward the same lockout as login,
+            or a stolen token could guess the password here without limit.
         get_db_dependency: The app's ``get_db`` async-generator
             dependency. Used by the TOTP-verify call inside the
             request gate.
@@ -71,8 +81,10 @@ def build_account_deletion_router(
     async def delete_my_account(
         body: DeleteAccountRequest,
         background_tasks: BackgroundTasks,
+        request: Request,
         db: AsyncSession = Depends(get_db_dependency),
         current_user: Any = Depends(current_active_user),
+        user_manager: Any = Depends(get_user_manager),
     ) -> None:
         """Permanently delete the authenticated user's account and all their data.
 
@@ -81,13 +93,29 @@ def build_account_deletion_router(
         - Email address matching the account (typed confirmation)
         - TOTP code if 2FA is enabled
         """
+        async def refuse_as_locked() -> None:
+            await emit_locked_login_event(db=db, user_id=current_user.id, request=request)
+            await db.commit()
+            raise HTTPException(status_code=429, detail=RATE_LIMIT_GENERIC_DETAIL)
+
+        if account_is_locked(current_user, now=datetime.now(tz=timezone.utc)):
+            await refuse_as_locked()
+        await user_manager.reset_stale_failed_logins(current_user)
+
         # Re-verify password to prevent CSRF and accidental deletion.
         helper = PasswordHelper()
         verified, _ = helper.verify_and_update(
             body.password, current_user.hashed_password
         )
+        # Asked whichever way the guess went, so once locked a right guess
+        # and a wrong one get the same answer.
+        if await user_manager.is_locked_now(current_user):
+            await refuse_as_locked()
         if not verified:
+            await user_manager.count_failed_password(current_user)
             raise HTTPException(status_code=403, detail="Incorrect password")
+        # Release the row: the delete below runs on another connection.
+        await db.commit()
 
         # Email confirmation must exactly match the account email
         # (case-insensitive).
@@ -100,8 +128,13 @@ def build_account_deletion_router(
         if current_user.totp_enabled:
             if not body.totp_code:
                 raise HTTPException(status_code=400, detail="TOTP_CODE_REQUIRED")
-            if not await verify_totp_step_up(db, current_user.id, body.totp_code):
+            code_ok = await verify_totp_step_up(db, current_user.id, body.totp_code)
+            if await user_manager.is_locked_now(current_user):
+                await refuse_as_locked()
+            if not code_ok:
+                await user_manager.count_failed_second_factor(current_user)
                 raise HTTPException(status_code=403, detail="Invalid TOTP code")
+            await db.commit()
 
         try:
             async with unit_of_work_factory() as txn_db:

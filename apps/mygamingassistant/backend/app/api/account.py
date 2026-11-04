@@ -19,7 +19,7 @@ from platform_shared.api.account_deletion_router import (
     build_account_deletion_router,
 )
 
-from app.core.auth import current_active_user
+from app.core.auth import current_active_user, get_user_manager
 from app.db.session import get_db, unit_of_work
 from app.models.user.user import User
 from app.services.user import account_service
@@ -36,6 +36,7 @@ async def _verify_totp_late_lookup(db, user_id, code):
 router.include_router(
     build_account_deletion_router(
         current_active_user=current_active_user,
+        get_user_manager=get_user_manager,
         get_db_dependency=get_db,
         verify_totp_step_up=_verify_totp_late_lookup,
         # Lambda for late lookup so tests patching `unit_of_work` take effect.

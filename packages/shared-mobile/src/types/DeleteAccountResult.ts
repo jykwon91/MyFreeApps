@@ -4,4 +4,4 @@ export type DeleteAccountResult =
   | { outcome: "unknown" }
   /** `message` is the server's, and says what's stopping it. */
   | { outcome: "refused"; message: string }
-  | { outcome: "wrong_password" | "email_mismatch" | "code_required" | "invalid_code" | "failed" };
+  | { outcome: "wrong_password" | "email_mismatch" | "code_required" | "invalid_code" | "rate_limited" | "failed" };

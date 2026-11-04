@@ -177,6 +177,14 @@ it("clears this phone if the session stops working while checking, without claim
   expect(accountDeleted).toHaveBeenCalledWith("unconfirmed");
 });
 
+it("says when there have been too many attempts", async () => {
+  await open();
+  deleteAccount.mockResolvedValue({ outcome: "rate_limited" });
+  await fillIn();
+  await press();
+  expect(screen.getByText("Your account wasn't deleted. Too many attempts. Please try again later.")).toBeTruthy();
+});
+
 it("won't guess whether two-factor is on", async () => {
   twoFactorEnabled.mockRejectedValueOnce(new Error("offline"));
   twoFactorEnabled.mockResolvedValue(false);
