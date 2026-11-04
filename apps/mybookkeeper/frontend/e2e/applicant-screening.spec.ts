@@ -71,8 +71,8 @@ test.describe("Applicant screening (PR 3.3 — KeyCheck redirect-only)", () => {
         timeout: 10000,
       });
 
-      // The "Run KeyCheck" button is visible (auth fixture is OWNER role).
-      await expect(page.getByTestId("run-screening-button")).toBeVisible();
+      // The upload button is visible (auth fixture is OWNER role).
+      await expect(page.getByTestId("screening-upload-button")).toBeVisible();
 
       // Empty state until we upload — sometimes the API hasn't returned yet
       // by the time we land, so wait for either the list or the empty marker.
