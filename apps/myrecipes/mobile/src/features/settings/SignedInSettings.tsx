@@ -1,5 +1,5 @@
 import { type AccountMessage, AccountSection, useDevices } from "@platform/mobile";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useCallback } from "react";
 
 export default function SignedInSettings({ onMessage }: { onMessage: (message: AccountMessage) => void }) {
@@ -12,5 +12,10 @@ export default function SignedInSettings({ onMessage }: { onMessage: (message: A
     }, [reload]),
   );
 
-  return <AccountSection appName="MyRecipes" devices={devices} onMessage={onMessage} />;
+  return <AccountSection
+      appName="MyRecipes"
+      devices={devices}
+      onDeleteAccount={() => router.push("/delete-account")}
+      onMessage={onMessage}
+    />;
 }

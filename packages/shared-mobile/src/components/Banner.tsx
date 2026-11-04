@@ -5,8 +5,10 @@ import { useTheme } from "../theme/useTheme";
 import type { BannerProps } from "../types/BannerProps";
 
 /** For a message the user mustn't miss. It stays until the situation changes, unlike a Toast. */
-export default function Banner({ message, actions = [], style }: BannerProps) {
+export default function Banner({ message, tone = "error", actions = [], style }: BannerProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
+  const isError = tone === "error";
+  const foreground = isError ? colors.toastErrorForeground : colors.toastSuccessForeground;
   useAnnouncement(message);
 
   return (
@@ -17,15 +19,15 @@ export default function Banner({ message, actions = [], style }: BannerProps) {
           gap: spacing.xs,
           borderRadius: radius.md,
           borderWidth: 1,
-          backgroundColor: colors.toastErrorBackground,
-          borderColor: colors.toastErrorBorder,
+          backgroundColor: isError ? colors.toastErrorBackground : colors.toastSuccessBackground,
+          borderColor: isError ? colors.toastErrorBorder : colors.toastSuccessBorder,
         },
         style,
       ]}
     >
       <Text
         accessibilityRole="alert"
-        style={{ color: colors.toastErrorForeground, fontSize: fontSize.sm }}
+        style={{ color: foreground, fontSize: fontSize.sm }}
       >
         {message}
       </Text>
@@ -41,7 +43,7 @@ export default function Banner({ message, actions = [], style }: BannerProps) {
             >
               <Text
                 style={{
-                  color: colors.toastErrorForeground,
+                  color: foreground,
                   fontSize: fontSize.sm,
                   fontWeight: "600",
                   textDecorationLine: "underline",

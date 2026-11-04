@@ -1,6 +1,8 @@
 import api from "@platform/core/lib/api";
 import { isAxiosError } from "axios";
-import { AUTH_REQUEST_TIMEOUT_MS, LOGOUT_TIMEOUT_MS } from "../constants/session";
+import { AUTH_REQUEST_TIMEOUT_MS, DELETE_ACCOUNT_TIMEOUT_MS, LOGOUT_TIMEOUT_MS } from "../constants/session";
+import type { DeleteAccountDetails } from "../types/DeleteAccountDetails";
+import type { DeleteAccountResult } from "../types/DeleteAccountResult";
 import type { MobileTokens } from "../types/MobileTokens";
 import type { SignedInDevice } from "../types/SignedInDevice";
 import type { SignInCredentials } from "../types/SignInCredentials";
@@ -77,4 +79,35 @@ export async function fetchDevices(): Promise<SignedInDevice[]> {
 
 export async function revokeDevice(id: string): Promise<void> {
   await api.delete(`/auth/mobile/sessions/${encodeURIComponent(id)}`);
+}
+
+export async function fetchTwoFactorEnabled(): Promise<boolean> {
+  const { data } = await api.get<{ enabled: boolean }>("/auth/totp/status");
+  return data.enabled;
+}
+
+function classifyDeleteError(error: unknown): DeleteAccountResult {
+  // No answer, or a server failing part-way: the delete may have gone through.
+  if (!isAxiosError(error) || !error.response || error.response.status >= 500) return { outcome: "unknown" };
+  const { status, data } = error.response;
+  const detail: unknown = (data as { detail?: unknown } | undefined)?.detail;
+  if (status === 401) return { outcome: "unknown" };
+  if (status === 409 && typeof detail === "string") return { outcome: "refused", message: detail };
+  if (detail === "Incorrect password") return { outcome: "wrong_password" };
+  if (detail === "Email confirmation does not match") return { outcome: "email_mismatch" };
+  if (detail === "TOTP_CODE_REQUIRED") return { outcome: "code_required" };
+  if (detail === "Invalid TOTP code") return { outcome: "invalid_code" };
+  return { outcome: "failed" };
+}
+
+export async function requestDeleteAccount({ email, password, code }: DeleteAccountDetails): Promise<DeleteAccountResult> {
+  try {
+    await api.delete("/users/me", {
+      data: { password, confirm_email: email, totp_code: code },
+      timeout: DELETE_ACCOUNT_TIMEOUT_MS,
+    });
+    return { outcome: "deleted" };
+  } catch (error) {
+    return classifyDeleteError(error);
+  }
 }

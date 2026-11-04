@@ -1,7 +1,14 @@
 import api from "@platform/core/lib/api";
 import { _resetPlatformForTests, configurePlatform } from "@platform/core/platform/configurePlatform";
 import type { AxiosAdapter } from "axios";
-import { fetchDevices, requestLogin, requestLogout, requestRefresh, revokeDevice } from "../auth/mobileAuthApi";
+import {
+  fetchDevices,
+  requestDeleteAccount,
+  requestLogin,
+  requestLogout,
+  requestRefresh,
+  revokeDevice,
+} from "../auth/mobileAuthApi";
 
 const originalAdapter = api.defaults.adapter;
 
@@ -100,5 +107,38 @@ describe("the rest", () => {
     };
     await revokeDevice("a/b");
     expect(seen).toEqual(["delete /auth/mobile/sessions/a%2Fb"]);
+  });
+});
+
+describe("requestDeleteAccount", () => {
+  const details = { email: "me@example.com", password: "pw", code: null };
+
+  it.each([
+    [403, "Incorrect password", { outcome: "wrong_password" }],
+    [400, "Email confirmation does not match", { outcome: "email_mismatch" }],
+    [400, "TOTP_CODE_REQUIRED", { outcome: "code_required" }],
+    [403, "Invalid TOTP code", { outcome: "invalid_code" }],
+    [409, "Remove them first.", { outcome: "refused", message: "Remove them first." }],
+    [422, "Nope", { outcome: "failed" }],
+    [500, "Oops", { outcome: "unknown" }],
+    [401, "Unauthorized", { outcome: "unknown" }],
+  ])("reads a %i %s", async (status, detail, expected) => {
+    api.defaults.adapter = answering(status, { detail });
+    await expect(requestDeleteAccount(details)).resolves.toEqual(expected);
+  });
+
+  it("can't tell what happened when no answer comes back", async () => {
+    api.defaults.adapter = offline;
+    await expect(requestDeleteAccount(details)).resolves.toEqual({ outcome: "unknown" });
+  });
+
+  it("sends what the route asks for", async () => {
+    let sent: unknown;
+    api.defaults.adapter = async (config) => {
+      sent = [config.method, config.url, JSON.parse(config.data as string)];
+      return { status: 204, data: "", statusText: "", headers: {}, config };
+    };
+    await expect(requestDeleteAccount({ ...details, code: "123456" })).resolves.toEqual({ outcome: "deleted" });
+    expect(sent).toEqual(["delete", "/users/me", { password: "pw", confirm_email: "me@example.com", totp_code: "123456" }]);
   });
 });

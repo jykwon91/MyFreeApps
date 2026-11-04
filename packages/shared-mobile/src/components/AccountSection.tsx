@@ -14,6 +14,7 @@ interface AccountSectionProps {
   appName: string;
   devices: ReturnType<typeof useDevices>;
   onMessage: (message: AccountMessage) => void;
+  onDeleteAccount: () => void;
 }
 
 /** This phone first, then the others by how recently they were used. */
@@ -25,7 +26,7 @@ function inDisplayOrder(devices: SignedInDevice[], thisSessionId: string): Signe
   });
 }
 
-export default function AccountSection({ appName, devices, onMessage }: AccountSectionProps) {
+export default function AccountSection({ appName, devices, onMessage, onDeleteAccount }: AccountSectionProps) {
   const { colors, spacing, fontSize } = useTheme();
   const { session, state } = useSession();
   const [signingOutId, setSigningOutId] = useState<string | null>(null);
@@ -110,6 +111,9 @@ export default function AccountSection({ appName, devices, onMessage }: AccountS
             ))
           : null}
       </View>
+      <LoadingButton onPress={onDeleteAccount} variant="destructive">
+        Delete account
+      </LoadingButton>
     </View>
   );
 }

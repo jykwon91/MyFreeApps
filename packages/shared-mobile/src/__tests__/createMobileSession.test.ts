@@ -414,6 +414,20 @@ describe("signing out", () => {
     expect(session.getState()).toEqual({ status: "signedOut", endedByServer: true, lastEmail: "a@example.com" });
   });
 
+  it("forgets everything when the account is deleted, without calling a server that has no session", async () => {
+    const session = await signedIn();
+    session.accountDeleted("confirmed");
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(session.getState()).toEqual({ status: "signedOut", endedByServer: false, lastEmail: null, accountDeleted: "confirmed" });
+    expect(session.tokenStore.get()).toBeNull();
+    expect(session.currentAccount()).toBeNull();
+    expect(deleteItem).toHaveBeenCalled();
+    expect(logout).not.toHaveBeenCalled();
+
+    session.dismissEndedNotice();
+    expect(session.getState()).toEqual({ status: "signedOut", endedByServer: false, lastEmail: null });
+  });
+
   it("clears the notice when dismissed, keeping the email", async () => {
     const session = await signedIn();
     session.tokenStore.clear();

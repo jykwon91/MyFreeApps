@@ -2,6 +2,7 @@ import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../hooks/useSession";
 import { useTheme } from "../theme/useTheme";
+import AccountDeletedBanner from "./AccountDeletedBanner";
 import Banner from "./Banner";
 import SignInScreen from "./SignInScreen";
 
@@ -19,6 +20,7 @@ export default function RequiredSignInScreen({ appName, webBaseUrl }: { appName:
           style={{ marginHorizontal: spacing.lg, marginTop: spacing.md }}
         />
       ) : null}
+      <AccountDeletedBanner style={{ marginHorizontal: spacing.lg, marginTop: spacing.md }} />
       <SignInScreen appName={appName} webBaseUrl={webBaseUrl} />
     </View>
   );
