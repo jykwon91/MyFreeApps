@@ -1,6 +1,6 @@
-import { useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { RefreshControl } from "react-native";
+import { useTheme } from "../theme/useTheme";
 
 /** Pull to refresh for a query, and whether its latest error has been dismissed. */
 export function useRefresh(refetch: () => unknown, error: unknown) {
@@ -21,6 +21,7 @@ export function useRefresh(refetch: () => unknown, error: unknown) {
     dismissError: () => setDismissedError(error),
     isErrorDismissed: error === dismissedError,
     isRefreshing,
+    refresh,
     refreshControl: (
       <RefreshControl
         colors={[colors.primary]}

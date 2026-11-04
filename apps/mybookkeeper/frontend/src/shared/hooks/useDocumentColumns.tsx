@@ -5,7 +5,7 @@ import { type AppTableFeatures } from "@/shared/lib/table-features";
 import { FileCheck } from "lucide-react";
 import { formatDate, timeAgo } from "@/shared/utils/date";
 import { DOCUMENT_TYPE_LABELS } from "@/shared/lib/constants";
-import type { Document } from "@/shared/types/document/document";
+import type { Document } from "@mybookkeeper/api-client/types/document/document";
 import StatusBadge from "@/app/features/documents/StatusBadge";
 import DocumentRowActions from "@/app/features/documents/DocumentRowActions";
 import IndeterminateCheckbox from "@/shared/components/ui/IndeterminateCheckbox";

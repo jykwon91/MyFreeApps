@@ -17,7 +17,7 @@ const mockCancelBatch = vi.fn(() => ({
   unwrap: () => Promise.resolve({ cancelled: 1 }),
 }));
 
-vi.mock("@/shared/store/documentsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/documentsApi", () => ({
   useUploadDocumentMutation: vi.fn(() => [mockUploadDocument, { isLoading: false }]),
   useGetBatchStatusQuery: vi.fn(() => ({ data: undefined })),
   useGetSingleUploadStatusQuery: vi.fn(() => ({ data: undefined })),
@@ -75,7 +75,8 @@ describe("DocumentUploadZone", () => {
 
     await user.upload(input, file);
 
-    expect(mockUploadDocument).toHaveBeenCalledWith({ file });
+    const form = (mockUploadDocument.mock.calls as unknown as [FormData][])[0][0];
+    expect(form.get("file")).toBe(file);
   });
 
   it("rejects empty file (size 0)", async () => {

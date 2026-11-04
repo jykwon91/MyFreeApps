@@ -18,7 +18,7 @@ routes:
   /demo:
     not_on_mobile: Operator tool, for the website.
   /documents:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/(tabs)/money
   /forbidden:
     not_on_mobile: A web-only error page.
   /forgot-password:

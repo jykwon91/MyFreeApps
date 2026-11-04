@@ -8,7 +8,7 @@ import {
 import { appTableFeatures, type AppTableFeatures } from "@/shared/lib/table-features";
 import { useDocumentColumns } from "@/shared/hooks/useDocumentColumns";
 import { DOCUMENT_TYPE_LABELS, DOCUMENT_TYPES } from "@/shared/lib/constants";
-import type { Document } from "@/shared/types/document/document";
+import type { Document } from "@mybookkeeper/api-client/types/document/document";
 
 interface ColumnWithFilter {
   filterFn: (row: { getValue: () => unknown }, columnId: string, filterValue: string[]) => boolean;

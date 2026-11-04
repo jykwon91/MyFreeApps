@@ -1,7 +1,8 @@
+import { documentUploadForm } from "@/shared/lib/document-upload-form";
 import { useEffect, useRef } from "react";
 import { Loader2, CheckCircle2, XCircle, Upload, RotateCcw, Camera } from "lucide-react";
 import { useMediaQuery } from "@/shared/hooks/useMediaQuery";
-import { useUploadDocumentMutation, useGetBatchStatusQuery, useGetSingleUploadStatusQuery, useGetDocumentsQuery, useCancelBatchMutation } from "@/shared/store/documentsApi";
+import { useUploadDocumentMutation, useGetBatchStatusQuery, useGetSingleUploadStatusQuery, useGetDocumentsQuery, useCancelBatchMutation } from "@mybookkeeper/api-client/store/documentsApi";
 import { baseApi } from "@/shared/store/baseApi";
 import { isSupportedFile } from "@/shared/utils/file-upload";
 import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
@@ -180,7 +181,7 @@ export default function DocumentUploadZone() {
 
     dispatch(startUpload(file.name));
 
-    uploadDocument({ file })
+    uploadDocument(documentUploadForm(file))
       .unwrap()
       .then(({ document_id, batch_id, batch_total }) => {
         dispatch(uploadSucceeded({ documentId: document_id, batchId: batch_id, batchTotal: batch_total }));
@@ -202,7 +203,7 @@ export default function DocumentUploadZone() {
 
     for (const file of supported) {
       try {
-        await uploadDocument({ file }).unwrap();
+        await uploadDocument(documentUploadForm(file)).unwrap();
         dispatch(multiUploadFileCompleted());
       } catch {
         dispatch(multiUploadFileFailed());

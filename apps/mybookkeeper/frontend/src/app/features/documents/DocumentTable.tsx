@@ -7,7 +7,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
-import type { Document } from "@/shared/types/document/document";
+import type { Document } from "@mybookkeeper/api-client/types/document/document";
 import { PAGE_SIZE_OPTIONS, DOCUMENT_TYPE_LABELS } from "@/shared/lib/constants";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import { SortIndicator, ColumnFilter } from "@/shared/components/table";

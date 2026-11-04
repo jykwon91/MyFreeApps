@@ -204,6 +204,12 @@ jobs:
       - name: Build frontend
         run: npm run build --workspace=mybookkeeper-frontend
 
+      - name: Check API client
+        run: |
+          npm run typecheck --workspace=@mybookkeeper/api-client
+          npm run lint --workspace=@mybookkeeper/api-client
+          npm test --workspace=@mybookkeeper/api-client
+
   # The `frontend-lockfile-drift` job was removed 2026-05-11 (PR 6 of React 19
   # migration). MBK's caddy.Dockerfile now uses the workspace pattern (mirrors
   # apps/myjobhunter/docker/caddy.Dockerfile) and consumes the root

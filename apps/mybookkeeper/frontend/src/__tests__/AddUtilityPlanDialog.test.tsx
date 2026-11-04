@@ -35,7 +35,7 @@ vi.mock("@/shared/store/propertiesApi", () => ({
   })),
 }));
 
-vi.mock("@/shared/store/documentsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/documentsApi", () => ({
   useGetDocumentsQuery: vi.fn(() => ({
     data: [{ id: "doc-1", file_name: "constellation-efl.pdf" }],
   })),

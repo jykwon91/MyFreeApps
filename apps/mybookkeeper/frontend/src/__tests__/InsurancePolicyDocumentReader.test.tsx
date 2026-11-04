@@ -38,7 +38,7 @@ vi.mock("@/shared/store/insurancePoliciesApi", () => ({
   ]),
 }));
 
-vi.mock("@/shared/store/documentsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/documentsApi", () => ({
   useGetDocumentsQuery: (...args: unknown[]) => mockUseGetDocuments(...args),
 }));
 

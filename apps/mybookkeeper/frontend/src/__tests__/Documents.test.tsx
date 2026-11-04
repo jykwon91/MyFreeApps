@@ -7,7 +7,7 @@ import { createColumnHelper, type CellContext } from '@tanstack/react-table';
 import type { AppTableFeatures } from '@/shared/lib/table-features';
 import { store } from '@/shared/store';
 import Documents from '@/app/pages/Documents';
-import type { Document } from '@/shared/types/document/document';
+import type { Document } from '@mybookkeeper/api-client/types/document/document';
 
 const mockDocuments: Document[] = [
   {
@@ -59,7 +59,7 @@ const mockToggleEscrow = vi.fn(() => ({
 }));
 const mockReExtract = vi.fn(() => ({ unwrap: () => Promise.resolve({ status: "processing" }) }));
 
-vi.mock('@/shared/store/documentsApi', () => ({
+vi.mock('@mybookkeeper/api-client/store/documentsApi', () => ({
   useGetDocumentsQuery: vi.fn(() => ({ data: mockDocuments, isLoading: false })),
   useDeleteDocumentMutation: vi.fn(() => [mockDeleteDocument, { isLoading: false }]),
   useBulkDeleteDocumentsMutation: vi.fn(() => [mockBulkDelete, { isLoading: false }]),
@@ -114,7 +114,7 @@ vi.mock('@/shared/hooks/useOrgRole', () => ({
   useCanWrite: vi.fn(() => true),
 }));
 
-import { useGetDocumentsQuery } from '@/shared/store/documentsApi';
+import { useGetDocumentsQuery } from '@mybookkeeper/api-client/store/documentsApi';
 import { useCanWrite } from '@/shared/hooks/useOrgRole';
 
 function renderWithProviders(ui: React.ReactElement) {

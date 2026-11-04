@@ -35,7 +35,7 @@ vi.mock("@/shared/store/utilityPlansApi", () => ({
   useExtractUtilityPlanFromUploadMutation: vi.fn(() => [mockExtractUpload, uploadState]),
 }));
 
-vi.mock("@/shared/store/documentsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/documentsApi", () => ({
   useGetDocumentsQuery: (...args: unknown[]) => mockUseGetDocuments(...args),
 }));
 

@@ -1,25 +1,12 @@
-import { baseApi } from "./baseApi";
-import type { Document } from "@/shared/types/document/document";
+import { baseApi } from "@platform/core/store/baseApi";
+import type { BatchStatusResponse } from "../types/document/BatchStatusResponse";
+import type { Document } from "../types/document/document";
+import type { SingleStatusResponse } from "../types/document/SingleStatusResponse";
+import type { UploadResponse } from "../types/document/UploadResponse";
 
-export interface UploadResponse {
-  document_id: string;
-  batch_id: string | null;
-  batch_total: number;
-}
-
-export interface BatchStatusResponse {
-  batch_id: string;
-  total: number;
-  completed: number;
-  failed: number;
-  status: "processing" | "done";
-}
-
-export interface SingleStatusResponse {
-  status: string;
-}
-
-const documentsApi = baseApi.injectEndpoints({
+const documentsApi = baseApi.enhanceEndpoints({
+  addTagTypes: ["Document", "Summary", "Transaction"],
+}).injectEndpoints({
   endpoints: (builder) => ({
     getDocuments: builder.query<Document[], { status?: string; propertyId?: string; excludeProcessing?: boolean }>({
       query: ({ status, propertyId, excludeProcessing } = {}) => ({
@@ -31,13 +18,9 @@ const documentsApi = baseApi.injectEndpoints({
           ? [...result.map((d) => ({ type: "Document" as const, id: d.id })), { type: "Document", id: "LIST" }]
           : [{ type: "Document", id: "LIST" }],
     }),
-    uploadDocument: builder.mutation<UploadResponse, { file: File; propertyId?: string }>({
-      query: ({ file, propertyId }) => {
-        const form = new FormData();
-        form.append("file", file);
-        if (propertyId) form.append("property_id", propertyId);
-        return { url: "/documents/upload", method: "POST", data: form };
-      },
+    // The caller builds the form: a browser appends a File, a phone a { uri, name, type }.
+    uploadDocument: builder.mutation<UploadResponse, FormData>({
+      query: (form) => ({ url: "/documents/upload", method: "POST", data: form }),
       invalidatesTags: ["Document", "Summary", "Transaction"],
     }),
     getBatchStatus: builder.query<BatchStatusResponse, string>({
@@ -56,14 +39,6 @@ const documentsApi = baseApi.injectEndpoints({
     }),
     bulkDeleteDocuments: builder.mutation<{ deleted: number }, string[]>({
       query: (ids) => ({ url: "/documents/bulk-delete", method: "POST", data: { ids } }),
-      invalidatesTags: ["Document", "Summary", "Transaction"],
-    }),
-    replaceFile: builder.mutation<{ status: string }, { id: string; file: File }>({
-      query: ({ id, file }) => {
-        const form = new FormData();
-        form.append("file", file);
-        return { url: `/documents/${id}/file`, method: "PUT", data: form };
-      },
       invalidatesTags: ["Document", "Summary", "Transaction"],
     }),
     reExtractDocument: builder.mutation<{ status: string }, string>({
@@ -93,10 +68,10 @@ export const {
   useUploadDocumentMutation,
   useGetBatchStatusQuery,
   useGetSingleUploadStatusQuery,
+  useGetDocumentQuery,
   useDeleteDocumentMutation,
   useBulkDeleteDocumentsMutation,
   useReExtractDocumentMutation,
-  useReplaceFileMutation,
   useToggleEscrowPaidMutation,
   useCancelBatchMutation,
 } = documentsApi;

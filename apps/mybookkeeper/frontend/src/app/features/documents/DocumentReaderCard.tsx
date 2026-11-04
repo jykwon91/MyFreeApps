@@ -2,7 +2,7 @@ import { useState } from "react";
 import { LoadingButton } from "@platform/ui";
 import { showError } from "@/shared/lib/toast-store";
 import { readDocumentErrorMessage } from "@/shared/lib/document-read-errors";
-import { useGetDocumentsQuery } from "@/shared/store/documentsApi";
+import { useGetDocumentsQuery } from "@mybookkeeper/api-client/store/documentsApi";
 import type { DocumentSource } from "@/shared/types/document/document-source";
 import ChosenDocument from "./ChosenDocument";
 import DocumentFileDropzone from "./DocumentFileDropzone";
