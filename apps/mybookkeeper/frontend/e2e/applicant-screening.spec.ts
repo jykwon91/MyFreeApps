@@ -116,7 +116,7 @@ test.describe("Applicant screening (PR 3.3 — KeyCheck redirect-only)", () => {
       const list = page.getByTestId("screening-results-list");
       await expect(list).toBeVisible({ timeout: 10000 });
       await expect(
-        page.getByTestId(`screening-result-${uploadBody.id}`),
+        page.getByTestId(`screening-result-card-${uploadBody.id}`),
       ).toBeVisible();
     } finally {
       for (const id of seededScreeningIds) await deleteScreeningResult(api, id);
