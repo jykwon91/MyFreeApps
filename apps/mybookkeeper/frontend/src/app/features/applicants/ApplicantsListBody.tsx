@@ -1,5 +1,5 @@
-import type { ApplicantsListMode } from "@/shared/types/applicant/applicants-list-mode";
-import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
+import type { ApplicantsListMode } from "@mybookkeeper/api-client/types/applicant/applicants-list-mode";
+import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 import ApplicantsListSkeleton from "./ApplicantsListSkeleton";
 import ApplicantsEmptyState from "./ApplicantsEmptyState";
 import ApplicantsList from "./ApplicantsList";

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
-import type { ScreeningResult } from "@/shared/types/applicant/screening-result";
+import type { ScreeningResult } from "@mybookkeeper/api-client/types/applicant/screening-result";
 
 const useGetScreeningResultsQueryMock = vi.fn();
 

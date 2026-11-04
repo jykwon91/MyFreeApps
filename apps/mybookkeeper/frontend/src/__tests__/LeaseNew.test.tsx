@@ -19,7 +19,7 @@ import LeaseNew from "@/app/pages/LeaseNew";
 import MultiTemplatePicker from "@/app/features/leases/MultiTemplatePicker";
 import ApplicantPicker from "@/app/features/leases/ApplicantPicker";
 import type { LeaseTemplateSummary } from "@/shared/types/lease/lease-template-summary";
-import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
+import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -44,7 +44,7 @@ vi.mock("@/shared/store/leaseTemplatesApi", () => ({
     mockUseGetMultiGenerateDefaultsQuery(args, opts),
 }));
 
-vi.mock("@/shared/store/applicantsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
   useGetApplicantsQuery: () => mockUseGetApplicantsQuery(),
   useGetApplicantByIdQuery: (id: unknown, opts: unknown) =>
     mockUseGetApplicantByIdQuery(id, opts),

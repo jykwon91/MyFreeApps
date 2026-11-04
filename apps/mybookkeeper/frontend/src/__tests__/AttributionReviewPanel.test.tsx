@@ -76,7 +76,7 @@ vi.mock("@/shared/store/attributionApi", () => ({
   ]),
 }));
 
-vi.mock("@/shared/store/applicantsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
   useGetTenantsQuery: vi.fn(() => ({
     data: { items: [{ id: "applicant-9", legal_name: "Bob Tenant" }], total: 1, has_more: false },
     isLoading: false,

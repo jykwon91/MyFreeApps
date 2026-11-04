@@ -11,7 +11,7 @@ vi.mock("@/shared/store/attributionApi", () => ({
   useRejectAttributionReviewMutation: vi.fn(),
   useAttributeTransactionManuallyMutation: vi.fn(),
 }));
-vi.mock("@/shared/store/applicantsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
   useGetTenantsQuery: vi.fn(),
 }));
 vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
@@ -27,7 +27,7 @@ import {
   useRejectAttributionReviewMutation,
   useAttributeTransactionManuallyMutation,
 } from "@/shared/store/attributionApi";
-import { useGetTenantsQuery } from "@/shared/store/applicantsApi";
+import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 
 function makeItem(overrides: Partial<ReviewItemType> = {}): ReviewItemType {

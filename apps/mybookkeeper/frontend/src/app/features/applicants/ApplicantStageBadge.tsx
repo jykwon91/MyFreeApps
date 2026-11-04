@@ -1,8 +1,6 @@
-import {
-  APPLICANT_STAGE_BADGE_COLORS,
-  APPLICANT_STAGE_LABELS,
-} from "@/shared/lib/applicant-labels";
-import type { ApplicantStage } from "@/shared/types/applicant/applicant-stage";
+import { APPLICANT_STAGE_LABELS } from "@mybookkeeper/api-client/constants/applicantLabels";
+import { APPLICANT_STAGE_BADGE_COLORS } from "@/shared/lib/applicant-badge-colors";
+import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 import type { BadgeColor } from "@/shared/components/ui/Badge";
 
 const COLOR_CLASSES: Record<BadgeColor, string> = {

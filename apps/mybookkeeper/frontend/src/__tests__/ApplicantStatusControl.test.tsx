@@ -3,9 +3,9 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import ApplicantStatusControl from "@/app/features/applicants/ApplicantStatusControl";
-import { APPLICANT_STAGE_LABELS } from "@/shared/lib/applicant-labels";
-import { getAllowedTransitions } from "@/shared/lib/applicant-stage-transitions";
-import type { ApplicantStage } from "@/shared/types/applicant/applicant-stage";
+import { APPLICANT_STAGE_LABELS } from "@mybookkeeper/api-client/constants/applicantLabels";
+import { getAllowedTransitions } from "@mybookkeeper/api-client/utils/applicantStageTransitions";
+import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 
 // --- mocks ---
 
@@ -14,7 +14,7 @@ vi.mock("@/shared/hooks/useOrgRole", () => ({
 }));
 
 const mockTransitionStage = vi.fn();
-vi.mock("@/shared/store/applicantsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
   useTransitionApplicantStageMutation: vi.fn(() => [mockTransitionStage, { isLoading: false }]),
 }));
 

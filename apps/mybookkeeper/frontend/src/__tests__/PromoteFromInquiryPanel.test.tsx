@@ -5,7 +5,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import PromoteFromInquiryPanel from "@/app/features/applicants/PromoteFromInquiryPanel";
-import type { ApplicantPromoteRequest } from "@/shared/types/applicant/applicant-promote-request";
+import type { ApplicantPromoteRequest } from "@mybookkeeper/api-client/types/applicant/applicant-promote-request";
 import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
 
 interface PromoteArgs {
@@ -21,7 +21,7 @@ const navigateMock = vi.fn();
 const showErrorMock = vi.fn();
 const showSuccessMock = vi.fn();
 
-vi.mock("@/shared/store/applicantsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
   usePromoteFromInquiryMutation: () => [promoteMutation, { isLoading: false }],
 }));
 

@@ -4,10 +4,10 @@ import {
   formatAbsoluteTime,
   formatRelativeTime,
 } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { APPLICANT_STAGE_LABELS } from "@/shared/lib/applicant-labels";
-import type { ApplicantEvent } from "@/shared/types/applicant/applicant-event";
-import type { ApplicantEventActor } from "@/shared/types/applicant/applicant-event-actor";
-import type { ApplicantStage } from "@/shared/types/applicant/applicant-stage";
+import { APPLICANT_STAGE_LABELS } from "@mybookkeeper/api-client/constants/applicantLabels";
+import type { ApplicantEvent } from "@mybookkeeper/api-client/types/applicant/applicant-event";
+import type { ApplicantEventActor } from "@mybookkeeper/api-client/types/applicant/applicant-event-actor";
+import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 
 const ACTOR_ICONS: Record<ApplicantEventActor, typeof User> = {
   host: User,

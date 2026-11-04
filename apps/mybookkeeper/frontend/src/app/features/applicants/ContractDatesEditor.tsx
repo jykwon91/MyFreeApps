@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import { Lock } from "lucide-react";
 import { useToast } from "@/shared/hooks/useToast";
-import { useUpdateApplicantContractDatesMutation } from "@/shared/store/applicantsApi";
-import type { ApplicantStage } from "@/shared/types/applicant/applicant-stage";
+import { useUpdateApplicantContractDatesMutation } from "@mybookkeeper/api-client/store/applicantsApi";
+import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 
 const DEBOUNCE_MS = 600;
 const LOCKED_STAGE: ApplicantStage = "lease_signed";

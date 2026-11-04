@@ -8,7 +8,7 @@ import {
   useRejectAttributionReviewMutation,
   useAttributeTransactionManuallyMutation,
 } from "@/shared/store/attributionApi";
-import { useGetTenantsQuery } from "@/shared/store/applicantsApi";
+import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { buildTenantOptions } from "@/shared/lib/tenant-status";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { showError, showSuccess } from "@/shared/lib/toast-store";

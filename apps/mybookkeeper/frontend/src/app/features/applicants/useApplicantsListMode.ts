@@ -1,4 +1,4 @@
-import type { ApplicantsListMode } from "@/shared/types/applicant/applicants-list-mode";
+import type { ApplicantsListMode } from "@mybookkeeper/api-client/types/applicant/applicants-list-mode";
 
 interface UseApplicantsListModeArgs {
   isLoading: boolean;

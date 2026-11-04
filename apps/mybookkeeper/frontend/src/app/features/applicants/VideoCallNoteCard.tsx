@@ -3,7 +3,7 @@ import {
   formatAbsoluteTime,
   formatRelativeTime,
 } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import type { VideoCallNote } from "@/shared/types/applicant/video-call-note";
+import type { VideoCallNote } from "@mybookkeeper/api-client/types/applicant/video-call-note";
 
 export interface VideoCallNoteCardProps {
   note: VideoCallNote;

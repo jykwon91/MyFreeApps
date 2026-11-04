@@ -3,7 +3,7 @@ import {
   formatDesiredDates,
   formatRelativeTime,
 } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
+import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 import ApplicantStageBadge from "./ApplicantStageBadge";
 
 export interface ApplicantCardProps {

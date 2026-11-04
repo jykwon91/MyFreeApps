@@ -1,4 +1,4 @@
-import type { ApplicantStage } from "@/shared/types/applicant/applicant-stage";
+import type { ApplicantStage } from "../types/applicant/applicant-stage";
 
 /**
  * Allowed stage transitions for manual host overrides.

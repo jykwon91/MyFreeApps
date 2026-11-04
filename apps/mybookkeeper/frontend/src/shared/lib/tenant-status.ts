@@ -1,4 +1,4 @@
-import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
+import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 
 type TenantEndFields = Pick<ApplicantSummary, "tenant_ended_at" | "contract_end">;
 

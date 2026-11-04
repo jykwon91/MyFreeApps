@@ -35,7 +35,7 @@ vi.mock("@/shared/store/signedLeasesApi", () => ({
     useGetSignedLeaseByIdQueryMock(...args),
 }));
 
-vi.mock("@/shared/store/applicantsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
   useGetApplicantByIdQuery: () => ({ data: undefined }),
 }));
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { useApplicantDetailMode } from "@/app/features/applicants/useApplicantDetailMode";
-import type { ApplicantDetailResponse } from "@/shared/types/applicant/applicant-detail-response";
+import type { ApplicantDetailResponse } from "@mybookkeeper/api-client/types/applicant/applicant-detail-response";
 
 const mockApplicant: ApplicantDetailResponse = {
   id: "app-1",

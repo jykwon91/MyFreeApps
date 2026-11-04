@@ -1,5 +1,5 @@
-import type { ApplicantDetailMode } from "@/shared/types/applicant/applicant-detail-mode";
-import type { ApplicantDetailResponse } from "@/shared/types/applicant/applicant-detail-response";
+import type { ApplicantDetailMode } from "@mybookkeeper/api-client/types/applicant/applicant-detail-mode";
+import type { ApplicantDetailResponse } from "@mybookkeeper/api-client/types/applicant/applicant-detail-response";
 
 interface UseApplicantDetailModeArgs {
   isLoading: boolean;

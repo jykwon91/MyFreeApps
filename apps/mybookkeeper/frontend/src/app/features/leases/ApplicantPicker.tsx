@@ -1,9 +1,9 @@
 import AlertBox from "@/shared/components/ui/AlertBox";
 import { LoadingButton } from "@platform/ui";
 import Skeleton from "@/shared/components/ui/Skeleton";
-import { useGetApplicantsQuery } from "@/shared/store/applicantsApi";
-import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
-import type { ApplicantStage } from "@/shared/types/applicant/applicant-stage";
+import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
+import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
+import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 
 /**
  * Stages where generating a new lease makes sense:

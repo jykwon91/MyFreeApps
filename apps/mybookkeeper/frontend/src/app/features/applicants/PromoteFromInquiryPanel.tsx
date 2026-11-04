@@ -14,10 +14,10 @@ import {
   APPLICANT_VEHICLE_MAX,
   MISSING_FIELD_TOOLTIP,
   PROMOTE_TOAST_MESSAGES,
-} from "@/shared/lib/applicant-promote-constants";
-import { usePromoteFromInquiryMutation } from "@/shared/store/applicantsApi";
-import type { ApplicantPromoteRequest } from "@/shared/types/applicant/applicant-promote-request";
-import type { ApplicantPromoteConflictDetail } from "@/shared/types/applicant/applicant-promote-conflict";
+} from "@mybookkeeper/api-client/constants/applicantPromote";
+import { usePromoteFromInquiryMutation } from "@mybookkeeper/api-client/store/applicantsApi";
+import type { ApplicantPromoteRequest } from "@mybookkeeper/api-client/types/applicant/applicant-promote-request";
+import type { ApplicantPromoteConflictDetail } from "@mybookkeeper/api-client/types/applicant/applicant-promote-conflict";
 import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
 
 export interface PromoteFromInquiryPanelProps {

@@ -2,7 +2,7 @@ import { Link, useLocation, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import { LoadingButton } from "@platform/ui";
-import { useGetApplicantByIdQuery } from "@/shared/store/applicantsApi";
+import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import ApplicantDetailSkeleton from "@/app/features/applicants/ApplicantDetailSkeleton";
 import ApplicantDetailBody from "@/app/features/applicants/ApplicantDetailBody";
 import { useApplicantDetailMode } from "@/app/features/applicants/useApplicantDetailMode";

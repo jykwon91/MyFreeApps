@@ -1,15 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import {
-  APPLICANT_STAGE_BADGE_COLORS,
-  APPLICANT_STAGE_LABELS,
-} from "@/shared/lib/applicant-labels";
-import { getAllowedTransitions } from "@/shared/lib/applicant-stage-transitions";
-import type { ApplicantStage } from "@/shared/types/applicant/applicant-stage";
+import { APPLICANT_STAGE_LABELS } from "@mybookkeeper/api-client/constants/applicantLabels";
+import { APPLICANT_STAGE_BADGE_COLORS } from "@/shared/lib/applicant-badge-colors";
+import { getAllowedTransitions } from "@mybookkeeper/api-client/utils/applicantStageTransitions";
+import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 import type { BadgeColor } from "@/shared/components/ui/Badge";
 import { Button, LoadingButton } from "@platform/ui";
 import { useToast } from "@/shared/hooks/useToast";
-import { useTransitionApplicantStageMutation } from "@/shared/store/applicantsApi";
+import { useTransitionApplicantStageMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 
 const NOTE_MAX_LENGTH = 500;

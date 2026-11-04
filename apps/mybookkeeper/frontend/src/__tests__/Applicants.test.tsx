@@ -4,8 +4,8 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import Applicants from "@/app/pages/Applicants";
-import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
-import type { ApplicantListResponse } from "@/shared/types/applicant/applicant-list-response";
+import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
+import type { ApplicantListResponse } from "@mybookkeeper/api-client/types/applicant/applicant-list-response";
 
 const mockApplicants: ApplicantSummary[] = [
   {
@@ -54,12 +54,12 @@ const defaultApplicantsState = {
   refetch: vi.fn(),
 };
 
-vi.mock("@/shared/store/applicantsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
   useGetApplicantsQuery: vi.fn(() => defaultApplicantsState),
   useGetApplicantByIdQuery: vi.fn(() => ({ data: undefined, isLoading: false })),
 }));
 
-import { useGetApplicantsQuery } from "@/shared/store/applicantsApi";
+import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 
 type ListQueryReturn = ReturnType<typeof useGetApplicantsQuery>;
 

@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import { LoadingButton } from "@platform/ui";
-import { useGetTenantsQuery } from "@/shared/store/applicantsApi";
-import { APPLICANT_PAGE_SIZE } from "@/shared/lib/applicant-labels";
+import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
+import { APPLICANT_PAGE_SIZE } from "@mybookkeeper/api-client/constants/applicantLabels";
 import { useTenantsListMode } from "@/app/features/tenants/useTenantsListMode";
 import TenantsListBody from "@/app/features/tenants/TenantsListBody";
 

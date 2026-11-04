@@ -6,7 +6,7 @@ import EndTenancyDialog from "@/app/features/tenants/EndTenancyDialog";
 
 const mockEndTenancy = vi.fn();
 
-vi.mock("@/shared/store/applicantsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
   useEndTenancyMutation: vi.fn(() => [mockEndTenancy, { isLoading: false }]),
 }));
 
@@ -15,7 +15,7 @@ vi.mock("@/shared/lib/toast-store", () => ({
   showError: vi.fn(),
 }));
 
-import { useEndTenancyMutation } from "@/shared/store/applicantsApi";
+import { useEndTenancyMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 import { showSuccess, showError } from "@/shared/lib/toast-store";
 
 function renderDialog(onClose = vi.fn()) {

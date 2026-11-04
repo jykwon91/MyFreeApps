@@ -4,8 +4,8 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import Tenants from "@/app/pages/Tenants";
-import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
-import type { TenantListResponse } from "@/shared/types/applicant/tenant-list-response";
+import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
+import type { TenantListResponse } from "@mybookkeeper/api-client/types/applicant/tenant-list-response";
 
 const mockTenants: ApplicantSummary[] = [
   {
@@ -54,11 +54,11 @@ const defaultQueryState = {
   refetch: vi.fn(),
 };
 
-vi.mock("@/shared/store/applicantsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
   useGetTenantsQuery: vi.fn(() => defaultQueryState),
 }));
 
-import { useGetTenantsQuery } from "@/shared/store/applicantsApi";
+import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 
 type QueryReturn = ReturnType<typeof useGetTenantsQuery>;
 

@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import { useGetApplicantsQuery } from "@/shared/store/applicantsApi";
+import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useImportSignedLeaseMutation } from "@/shared/store/signedLeasesApi";
 
