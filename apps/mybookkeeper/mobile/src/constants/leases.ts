@@ -53,6 +53,14 @@ export const LEASE_MESSAGES = {
   earlierLease: "See the earlier lease",
   newerLease: "See the newer lease",
   unnamedTenant: "Tenant",
+  changeStatus: "Change status",
+  changingStatus: "Changing…",
+  statusSheetTitle: "Move to which status?",
+  finalStatusBody: "This is final. You can't change it back.",
+  notNow: "Not now",
+  statusFailed: "I couldn't change the status. Want to try again?",
+  statusMovedOn: "This lease's status changed somewhere else. Here's the latest.",
+  goneWhileChanging: "That lease is gone.",
 } as const;
 
 /** The rendered original and rent receipts come from the app itself. */
@@ -79,6 +87,14 @@ export const LEASE_PHOTO_NAME = "lease-photo.jpg";
 
 export function addedFile(name: string): string {
   return `Added ${name}.`;
+}
+
+export function markAs(label: string): string {
+  return `Mark as ${label.toLowerCase()}`;
+}
+
+export function markedAs(label: string): string {
+  return `Marked as ${label.toLowerCase()}.`;
 }
 
 export function noLeaseFor(name: string): string {

@@ -1,10 +1,7 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ChevronDown } from "lucide-react";
-import { SIGNED_LEASE_STATUS_LABELS } from "@mybookkeeper/api-client/constants/leaseLabels";
-import {
-  SIGNED_LEASE_STATUS_BADGE_COLORS,
-  SIGNED_LEASE_STATUS_NEXT,
-} from "@/shared/lib/lease-labels";
+import { SIGNED_LEASE_STATUS_LABELS, SIGNED_LEASE_STATUS_NEXT } from "@mybookkeeper/api-client/constants/leaseLabels";
+import { SIGNED_LEASE_STATUS_BADGE_COLORS } from "@/shared/lib/lease-labels";
 import type { SignedLeaseStatus } from "@mybookkeeper/api-client/types/lease/signed-lease-status";
 import type { BadgeColor } from "@/shared/components/ui/Badge";
 import SignedLeaseStatusBadge from "./SignedLeaseStatusBadge";

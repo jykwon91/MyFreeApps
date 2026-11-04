@@ -17,6 +17,7 @@ import { useCanWrite } from "../workspace/useCanWrite";
 import { leaseCountdown, leaseStatusLabel, leaseTerm, sortLeaseFiles } from "./leaseDisplay";
 import LeaseDetailSkeleton from "./LeaseDetailSkeleton";
 import LeaseFileRow from "./LeaseFileRow";
+import LeaseStatusControl from "./LeaseStatusControl";
 import LeaseUploadSheet from "./LeaseUploadSheet";
 import { useOpenLeaseFile } from "./useOpenLeaseFile";
 
@@ -69,6 +70,7 @@ export default function LeaseDetailScreen({ id }: { id: string }) {
             </Text>
           </Pressable>
           <InquiryChip label={leaseStatusLabel(lease.status)} />
+          {canWrite ? <LeaseStatusControl leaseId={lease.id} status={lease.status} /> : null}
         </View>
   
         <InquirySection title={LEASE_MESSAGES.term}>

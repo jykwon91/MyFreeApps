@@ -33,28 +33,6 @@ export const LEASE_PLACEHOLDER_INPUT_TYPE_LABELS: Record<
 };
 
 /**
- * Allowed status transitions for a signed lease.
- *
- * Mirrors ``_ALLOWED_TRANSITIONS`` in
- * ``backend/app/services/leases/signed_lease_service.py``. Keep both in sync
- * — the backend rejects any transition not on the matching set.
- *
- * Each entry's value lists the statuses that ARE valid next states from that
- * key, INCLUDING the same-status idempotent case (e.g. ``signed`` → ``signed``
- * is allowed). The picker excludes the current status from the menu since
- * "transition to current" is a no-op.
- */
-export const SIGNED_LEASE_STATUS_NEXT: Record<SignedLeaseStatus, readonly SignedLeaseStatus[]> = {
-  draft: ["generated"],
-  generated: ["sent", "signed"],
-  sent: ["signed"],
-  signed: ["active"],
-  active: ["ended", "terminated"],
-  ended: [],
-  terminated: [],
-};
-
-/**
  * Human-friendly labels for the ``provenance`` field on
  * ``SignedLeaseTemplatePrefillItem``. Mirrors the backend
  * ``ProvenanceLabel`` type in ``default_source_resolver.py``. Unknown
