@@ -111,6 +111,22 @@ async def get_latest_extension(
     return result.scalar_one_or_none()
 
 
+async def attachment_backs_live_version(
+    db: AsyncSession,
+    *,
+    lease_id: uuid.UUID,
+    attachment_id: uuid.UUID,
+) -> bool:
+    result = await db.execute(
+        select(LeaseTermVersion.id).where(
+            LeaseTermVersion.lease_id == lease_id,
+            LeaseTermVersion.source_attachment_id == attachment_id,
+            LeaseTermVersion.deleted_at.is_(None),
+        ),
+    )
+    return result.first() is not None
+
+
 async def soft_delete(
     db: AsyncSession,
     *,

@@ -36,8 +36,14 @@ export default function LeaseAttachmentsSection({ leaseId, attachments, canWrite
       await deleteAttachment({ leaseId, attachmentId: att.id }).unwrap();
       showSuccess("Attachment removed.");
       setPendingDelete(null);
-    } catch {
-      showError("Couldn't remove that file.");
+    } catch (err) {
+      const code = (err as { data?: { detail?: { code?: unknown } } } | null)?.data?.detail?.code;
+      if (code === "ATTACHMENT_BACKS_EXTENSION") {
+        setPendingDelete(null);
+        showError("This addendum is the record of an extension. Undo the extension to remove it.");
+      } else {
+        showError("Couldn't remove that file.");
+      }
     }
   }
 

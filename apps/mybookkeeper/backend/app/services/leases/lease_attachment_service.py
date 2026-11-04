@@ -11,12 +11,17 @@ import uuid
 
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
-from app.repositories.leases import signed_lease_attachment_repo, signed_lease_repo
+from app.repositories.leases import (
+    lease_term_version_repo,
+    signed_lease_attachment_repo,
+    signed_lease_repo,
+)
 from app.schemas.leases.signed_lease_attachment_response import (
     SignedLeaseAttachmentResponse,
 )
 from app.services.leases._lease_helpers import (
     ALLOWED_ATTACHMENT_MIME_TYPES,
+    AttachmentBacksExtensionError,
     AttachmentNotFoundError,
     AttachmentTooLargeError,
     AttachmentTypeRejectedError,
@@ -233,6 +238,14 @@ async def delete_attachment(
         )
         if lease is None:
             raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
+        # The foreign key would null this out, and a term version with no
+        # attachment reads as the lease's original term.
+        if await lease_term_version_repo.attachment_backs_live_version(
+            db, lease_id=lease_id, attachment_id=attachment_id,
+        ):
+            raise AttachmentBacksExtensionError(
+                f"Attachment {attachment_id} backs a live extension",
+            )
         deleted = await signed_lease_attachment_repo.delete_by_id_scoped_to_lease(
             db, attachment_id, lease_id,
         )

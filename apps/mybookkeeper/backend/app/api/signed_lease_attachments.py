@@ -151,4 +151,9 @@ async def delete_attachment(
         signed_lease_service.AttachmentNotFoundError,
     ) as exc:
         raise HTTPException(status_code=404, detail="Not found") from exc
+    except signed_lease_service.AttachmentBacksExtensionError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "ATTACHMENT_BACKS_EXTENSION", "message": str(exc)},
+        ) from exc
     return Response(status_code=204)
