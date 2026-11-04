@@ -3,9 +3,9 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import RentReminderCard from "@/app/features/rent/RentReminderCard";
-import type { RentReminderOverview } from "@/shared/types/rent/rent-reminder-overview";
-import type { RentReminderPreview } from "@/shared/types/rent/rent-reminder-preview";
-import type { RentReminderSend } from "@/shared/types/rent/rent-reminder-send";
+import type { RentReminderOverview } from "@mybookkeeper/api-client/types/rent/rent-reminder-overview";
+import type { RentReminderPreview } from "@mybookkeeper/api-client/types/rent/rent-reminder-preview";
+import type { RentReminderSend } from "@mybookkeeper/api-client/types/rent/rent-reminder-send";
 
 const mockOverview = vi.fn();
 const mockPreview = vi.fn();
@@ -14,7 +14,7 @@ const mockCreate = vi.fn();
 const mockSendNow = vi.fn();
 const sendNowState = { isLoading: false };
 
-vi.mock("@/shared/store/rentRemindersApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/rentRemindersApi", () => ({
   useGetRentReminderOverviewQuery: (...args: unknown[]) => mockOverview(...args),
   useGetRentReminderPreviewQuery: (...args: unknown[]) => mockPreview(...args),
   useGetRentReminderSendsQuery: (...args: unknown[]) => mockSends(...args),

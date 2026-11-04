@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { AlertBox, Button } from "@platform/ui";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
-import { useGetRentReminderOverviewQuery } from "@/shared/store/rentRemindersApi";
-import { describePlan } from "./rent-reminder-format";
+import { useGetRentReminderOverviewQuery } from "@mybookkeeper/api-client/store/rentRemindersApi";
+import { describePlan } from "@mybookkeeper/api-client/utils/rentReminderFormat";
 import RentReminderForm from "./RentReminderForm";
 import RentReminderHistory from "./RentReminderHistory";
 import RentReminderPreviewBox from "./RentReminderPreviewBox";

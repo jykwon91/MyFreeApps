@@ -1,9 +1,7 @@
 import { StatusBadge } from "@platform/ui";
-import {
-  RENT_REMINDER_STATUS_LABEL,
-  RENT_REMINDER_STATUS_TONE,
-} from "./rent-reminder-labels";
-import type { RentReminderSendStatus } from "@/shared/types/rent/rent-reminder-send-status";
+import { RENT_REMINDER_STATUS_LABEL } from "@mybookkeeper/api-client/constants/rentReminderLabels";
+import { RENT_REMINDER_STATUS_TONE } from "./rent-reminder-labels";
+import type { RentReminderSendStatus } from "@mybookkeeper/api-client/types/rent/rent-reminder-send-status";
 
 export interface RentReminderStatusBadgeProps {
   status: RentReminderSendStatus;

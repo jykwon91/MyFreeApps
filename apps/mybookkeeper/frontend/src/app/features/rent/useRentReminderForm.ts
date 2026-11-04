@@ -3,7 +3,7 @@ import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   useCreateRentReminderPlanMutation,
   useUpdateRentReminderPlanMutation,
-} from "@/shared/store/rentRemindersApi";
+} from "@mybookkeeper/api-client/store/rentRemindersApi";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
 import {
   DEFAULT_SEND_DAYS_BEFORE,
@@ -14,9 +14,9 @@ import {
   SEND_TIME_MIN,
   SUNDAY,
 } from "./rent-reminder-labels";
-import { toTimeInputValue } from "./rent-reminder-format";
-import type { RentReminderFrequency } from "@/shared/types/rent/rent-reminder-frequency";
-import type { RentReminderPlan } from "@/shared/types/rent/rent-reminder-plan";
+import { toTimeInputValue } from "@mybookkeeper/api-client/utils/rentReminderFormat";
+import type { RentReminderFrequency } from "@mybookkeeper/api-client/types/rent/rent-reminder-frequency";
+import type { RentReminderPlan } from "@mybookkeeper/api-client/types/rent/rent-reminder-plan";
 
 export interface UseRentReminderFormArgs {
   applicantId: string;

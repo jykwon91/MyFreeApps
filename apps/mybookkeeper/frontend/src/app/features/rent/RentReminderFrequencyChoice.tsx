@@ -1,7 +1,7 @@
 import Select from "@/shared/components/ui/Select";
 import { RENT_INPUT_CLASS } from "./rent-input-class";
-import { WEEKDAY_NAMES } from "./rent-reminder-labels";
-import type { RentReminderFrequency } from "@/shared/types/rent/rent-reminder-frequency";
+import { WEEKDAY_NAMES } from "@mybookkeeper/api-client/constants/rentReminderLabels";
+import type { RentReminderFrequency } from "@mybookkeeper/api-client/types/rent/rent-reminder-frequency";
 
 export interface RentReminderFrequencyChoiceProps {
   frequency: RentReminderFrequency;

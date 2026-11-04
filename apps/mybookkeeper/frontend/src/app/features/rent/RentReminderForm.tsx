@@ -4,7 +4,7 @@ import { MAX_SEND_DAYS_BEFORE, SEND_TIME_MAX, SEND_TIME_MIN } from "./rent-remin
 import RentReminderChannelFields from "./RentReminderChannelFields";
 import RentReminderFrequencyChoice from "./RentReminderFrequencyChoice";
 import { useRentReminderForm } from "./useRentReminderForm";
-import type { RentReminderOverview } from "@/shared/types/rent/rent-reminder-overview";
+import type { RentReminderOverview } from "@mybookkeeper/api-client/types/rent/rent-reminder-overview";
 
 export interface RentReminderFormProps {
   applicantId: string;
