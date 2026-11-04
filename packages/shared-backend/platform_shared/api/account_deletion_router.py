@@ -18,7 +18,7 @@ import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi_users.password import PasswordHelper
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,7 +37,7 @@ def build_account_deletion_router(
         [AsyncSession, uuid.UUID, str], Awaitable[bool]
     ],
     unit_of_work_factory: Callable[..., Any],
-    prepare_deletion: Callable[[AsyncSession, Any], Awaitable[None]] | None = None,
+    prepare_deletion: Callable[[AsyncSession, Any], Awaitable[Callable[[], None]]] | None = None,
 ) -> APIRouter:
     """Build a router exposing ``DELETE /users/me``.
 
@@ -57,7 +57,9 @@ def build_account_deletion_router(
             atomically.
         prepare_deletion: Runs in that same transaction first, for rows
             the user's cascade can't remove. Raises
-            ``AccountDeletionBlockedError`` to refuse with a 409.
+            ``AccountDeletionBlockedError`` to refuse with a 409. Returns
+            work to run after the commit and the response, for what a
+            rollback couldn't undo.
 
     Returns:
         An ``APIRouter`` with a single DELETE route at ``/users/me``.
@@ -68,6 +70,7 @@ def build_account_deletion_router(
     @router.delete("/users/me", status_code=204)
     async def delete_my_account(
         body: DeleteAccountRequest,
+        background_tasks: BackgroundTasks,
         db: AsyncSession = Depends(get_db_dependency),
         current_user: Any = Depends(current_active_user),
     ) -> None:
@@ -102,10 +105,11 @@ def build_account_deletion_router(
 
         try:
             async with unit_of_work_factory() as txn_db:
-                if prepare_deletion is not None:
-                    await prepare_deletion(txn_db, current_user)
+                after_commit = await prepare_deletion(txn_db, current_user) if prepare_deletion else None
                 await delete_account(txn_db, current_user)
         except AccountDeletionBlockedError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
+        if after_commit is not None:
+            background_tasks.add_task(after_commit)
 
     return router
