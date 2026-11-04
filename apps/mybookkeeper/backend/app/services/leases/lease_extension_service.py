@@ -28,6 +28,7 @@ import uuid
 
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
+from app.models.applicants.applicant_event import ApplicantEvent
 from app.repositories.applicants import applicant_event_repo, applicant_repo
 from app.repositories.leases import (
     lease_term_version_repo,
@@ -231,7 +232,7 @@ async def extend_lease(
                     created_at=now,
                 )
 
-            await lease_term_version_repo.create(
+            extension = await lease_term_version_repo.create(
                 db,
                 lease_id=lease.id,
                 starts_on=original_starts_on,
@@ -251,7 +252,13 @@ async def extend_lease(
 
             if applicant is not None:
                 tenancy_restarted = applicant.tenant_ended_at is not None
+                ended_tenancy = None
                 if tenancy_restarted:
+                    # Undo needs these to put the end back; clearing wipes them.
+                    ended_tenancy = {
+                        "ended_at": applicant.tenant_ended_at.isoformat(),
+                        "reason": applicant.tenant_ended_reason,
+                    }
                     await applicant_repo.clear_tenancy_ended(
                         db, applicant=applicant, now=now,
                     )
@@ -266,6 +273,8 @@ async def extend_lease(
                         "previous_ends_on": original_ends_on.isoformat(),
                         "new_ends_on": new_ends_on.isoformat(),
                         "tenancy_restarted": tenancy_restarted,
+                        "lease_term_version_id": str(extension.id),
+                        "ended_tenancy": ended_tenancy,
                     },
                 )
         except Exception:
@@ -320,6 +329,7 @@ async def undo_extension(
             lease_id=lease_id,
             user_id=user_id,
             organization_id=organization_id,
+            for_update=True,
         )
         if lease is None:
             raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
@@ -370,6 +380,28 @@ async def undo_extension(
             fields={"ends_on": new_ends_on, "updated_at": now},
         )
 
+        applicant = await applicant_repo.get(
+            db,
+            applicant_id=lease.applicant_id,
+            organization_id=organization_id,
+            user_id=user_id,
+        )
+        tenancy_end_restored = False
+        if applicant is not None and applicant.tenant_ended_at is None:
+            changes = await applicant_event_repo.list_tenancy_changes(
+                db, applicant_id=applicant.id,
+            )
+            ended_tenancy = _ended_tenancy_to_restore(changes, version_id=version.id)
+            if ended_tenancy is not None:
+                await applicant_repo.restore_tenancy_ended(
+                    db,
+                    applicant=applicant,
+                    ended_at=_dt.datetime.fromisoformat(ended_tenancy["ended_at"]),
+                    reason=ended_tenancy["reason"],
+                    now=now,
+                )
+                tenancy_end_restored = True
+
         await applicant_event_repo.append(
             db,
             applicant_id=lease.applicant_id,
@@ -380,6 +412,7 @@ async def undo_extension(
                 "lease_id": str(lease_id),
                 "undone_version_id": str(version_id),
                 "new_ends_on": new_ends_on.isoformat(),
+                "tenancy_end_restored": tenancy_end_restored,
             },
         )
 
@@ -388,6 +421,25 @@ async def undo_extension(
         organization_id=organization_id,
         lease_id=lease_id,
     )
+
+
+def _ended_tenancy_to_restore(
+    changes: list[ApplicantEvent],
+    *,
+    version_id: uuid.UUID,
+) -> dict[str, str | None] | None:
+    """The end this extension cleared, unless the host has restarted by hand since.
+
+    Extensions from before this was recorded have nothing saved, so they return None.
+    """
+    saved: dict[str, str | None] | None = None
+    for change in changes:
+        if saved is not None and change.event_type == "tenancy_restarted":
+            return None
+        payload = change.payload or {}
+        if payload.get("lease_term_version_id") == str(version_id):
+            saved = payload.get("ended_tenancy")
+    return saved
 
 
 def _addendum_filename(new_ends_on: _dt.date) -> str:

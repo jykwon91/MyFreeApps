@@ -332,6 +332,20 @@ async def clear_tenancy_ended(
     applicant.updated_at = now
 
 
+async def restore_tenancy_ended(
+    db: AsyncSession,
+    *,
+    applicant: Applicant,
+    ended_at: _dt.datetime,
+    reason: str | None,
+    now: _dt.datetime,
+) -> None:
+    """Put back an end that a since-undone change cleared. Caller has already verified scope."""
+    applicant.tenant_ended_at = ended_at
+    applicant.tenant_ended_reason = reason
+    applicant.updated_at = now
+
+
 def is_ended(applicant: Applicant, today: _dt.date) -> bool:
     """Compute whether a tenant's tenancy has ended.
 

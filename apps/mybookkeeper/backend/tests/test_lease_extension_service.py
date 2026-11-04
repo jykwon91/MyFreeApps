@@ -564,3 +564,140 @@ async def test_extend_locks_the_lease_while_checking_the_end_date(db: AsyncSessi
         )
 
     assert spy.call_args_list[0].kwargs["for_update"] is True
+
+
+ENDED_AT = _dt.datetime(2026, 10, 1, 12, tzinfo=_dt.timezone.utc)
+
+
+async def _extend_an_ended_tenancy(db: AsyncSession) -> tuple[SignedLease, Applicant, uuid.UUID, uuid.UUID]:
+    org_id, user_id = uuid.uuid4(), uuid.uuid4()
+    lease = await _seed_signed_lease(db, user_id=user_id, org_id=org_id)
+    applicant = await db.get(Applicant, lease.applicant_id)
+    applicant.tenant_ended_at = ENDED_AT
+    applicant.tenant_ended_reason = "Moved out"
+    await db.flush()
+    await extend_lease(
+        user_id=user_id, organization_id=org_id, lease_id=lease.id,
+        new_ends_on=_dt.date(2027, 6, 30), notes=None,
+    )
+    assert applicant.tenant_ended_at is None
+    return lease, applicant, user_id, org_id
+
+
+async def _undo_latest(db: AsyncSession, lease: SignedLease, user_id: uuid.UUID, org_id: uuid.UUID) -> None:
+    latest = await lease_term_version_repo.get_latest_extension(db, lease_id=lease.id)
+    await undo_extension(
+        user_id=user_id, organization_id=org_id, lease_id=lease.id, version_id=latest.id,
+    )
+
+
+def _storage_stub() -> AsyncMock:
+    storage = AsyncMock()
+    storage.upload_file = lambda *a, **kw: None
+    return storage
+
+
+async def _undone_event(db: AsyncSession, applicant: Applicant) -> ApplicantEvent:
+    return (
+        await db.execute(
+            select(ApplicantEvent).where(
+                ApplicantEvent.applicant_id == applicant.id,
+                ApplicantEvent.event_type == "extension_undone",
+            )
+        )
+    ).scalar_one()
+
+
+@pytest.mark.asyncio
+async def test_undo_puts_back_the_tenancy_end_the_extension_cleared(db: AsyncSession) -> None:
+    with _patch_service(db, storage_mock=_storage_stub()):
+        lease, applicant, user_id, org_id = await _extend_an_ended_tenancy(db)
+        await _undo_latest(db, lease, user_id, org_id)
+
+    await db.refresh(applicant)
+    assert applicant.tenant_ended_at.replace(tzinfo=_dt.timezone.utc) == ENDED_AT
+    assert applicant.tenant_ended_reason == "Moved out"
+    assert (await _undone_event(db, applicant)).payload["tenancy_end_restored"] is True
+
+
+@pytest.mark.asyncio
+async def test_undo_keeps_a_later_end(db: AsyncSession) -> None:
+    later = _dt.datetime(2026, 10, 20, 12, tzinfo=_dt.timezone.utc)
+    with _patch_service(db, storage_mock=_storage_stub()):
+        lease, applicant, user_id, org_id = await _extend_an_ended_tenancy(db)
+        applicant.tenant_ended_at = later
+        applicant.tenant_ended_reason = "Second end"
+        await db.flush()
+        await _undo_latest(db, lease, user_id, org_id)
+
+    await db.refresh(applicant)
+    assert applicant.tenant_ended_at.replace(tzinfo=_dt.timezone.utc) == later
+    assert applicant.tenant_ended_reason == "Second end"
+    assert (await _undone_event(db, applicant)).payload["tenancy_end_restored"] is False
+
+
+@pytest.mark.asyncio
+async def test_undo_respects_a_restart_done_by_hand_since(db: AsyncSession) -> None:
+    with _patch_service(db, storage_mock=_storage_stub()):
+        lease, applicant, user_id, org_id = await _extend_an_ended_tenancy(db)
+        db.add(ApplicantEvent(
+            applicant_id=applicant.id,
+            event_type="tenancy_restarted",
+            actor="host",
+            occurred_at=_dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(minutes=1),
+        ))
+        await db.flush()
+        await _undo_latest(db, lease, user_id, org_id)
+
+    await db.refresh(applicant)
+    assert applicant.tenant_ended_at is None
+
+
+@pytest.mark.asyncio
+async def test_undo_of_an_extension_with_nothing_saved_leaves_the_tenancy_alone(db: AsyncSession) -> None:
+    with _patch_service(db, storage_mock=_storage_stub()):
+        lease, applicant, user_id, org_id = await _extend_an_ended_tenancy(db)
+        extended = (
+            await db.execute(
+                select(ApplicantEvent).where(ApplicantEvent.event_type == "tenancy_extended")
+            )
+        ).scalar_one()
+        extended.payload = {"lease_id": str(lease.id), "tenancy_restarted": True}
+        await db.flush()
+        await _undo_latest(db, lease, user_id, org_id)
+
+    await db.refresh(applicant)
+    assert applicant.tenant_ended_at is None
+
+
+@pytest.mark.asyncio
+async def test_undo_still_restores_when_the_only_restart_came_before_the_extension(db: AsyncSession) -> None:
+    with _patch_service(db, storage_mock=_storage_stub()):
+        lease, applicant, user_id, org_id = await _extend_an_ended_tenancy(db)
+        db.add(ApplicantEvent(
+            applicant_id=applicant.id,
+            event_type="tenancy_restarted",
+            actor="host",
+            occurred_at=ENDED_AT - _dt.timedelta(days=30),
+        ))
+        await db.flush()
+        await _undo_latest(db, lease, user_id, org_id)
+
+    await db.refresh(applicant)
+    assert applicant.tenant_ended_reason == "Moved out"
+
+
+@pytest.mark.asyncio
+async def test_only_undoing_the_extension_that_cleared_the_end_restores_it(db: AsyncSession) -> None:
+    with _patch_service(db, storage_mock=_storage_stub()):
+        lease, applicant, user_id, org_id = await _extend_an_ended_tenancy(db)
+        await extend_lease(
+            user_id=user_id, organization_id=org_id, lease_id=lease.id,
+            new_ends_on=_dt.date(2027, 12, 31), notes=None,
+        )
+        await _undo_latest(db, lease, user_id, org_id)
+        assert applicant.tenant_ended_at is None
+        await _undo_latest(db, lease, user_id, org_id)
+
+    await db.refresh(applicant)
+    assert applicant.tenant_ended_reason == "Moved out"

@@ -73,3 +73,20 @@ async def list_for_applicant(
         .order_by(asc(ApplicantEvent.occurred_at))
     )
     return list(result.scalars().all())
+
+
+async def list_tenancy_changes(
+    db: AsyncSession,
+    *,
+    applicant_id: uuid.UUID,
+) -> list[ApplicantEvent]:
+    """Extensions and restarts, oldest first. Caller has already verified scope."""
+    result = await db.execute(
+        select(ApplicantEvent)
+        .where(
+            ApplicantEvent.applicant_id == applicant_id,
+            ApplicantEvent.event_type.in_(("tenancy_extended", "tenancy_restarted")),
+        )
+        .order_by(asc(ApplicantEvent.occurred_at))
+    )
+    return list(result.scalars().all())
