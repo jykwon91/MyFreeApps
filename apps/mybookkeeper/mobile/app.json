@@ -27,7 +27,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "I need camera access to read your receipts.",
+          "cameraPermission": "I need camera access to read your receipts and screening reports.",
           "microphonePermission": false,
           "recordAudioAndroid": false
         }

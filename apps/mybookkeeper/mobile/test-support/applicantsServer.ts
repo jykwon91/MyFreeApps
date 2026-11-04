@@ -1,5 +1,6 @@
 import api from "@platform/core/lib/api";
 import type { ApplicantDetailResponse } from "@mybookkeeper/api-client/types/applicant/applicant-detail-response";
+import type { ScreeningEligibilityResponse } from "@mybookkeeper/api-client/types/applicant/screening-eligibility-response";
 import type { ApplicantSensitive } from "@mybookkeeper/api-client/types/applicant/applicant-sensitive";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 
@@ -39,8 +40,21 @@ export interface FakeApplicantServer {
   loseNextAnswer: boolean;
   requests: AxiosRequestConfig[];
   sensitive: ApplicantSensitive;
+  eligibility: ScreeningEligibilityResponse;
+  eligibilityFailure: number | null;
+  redirectFailure: number | null;
+  uploadFailure: number | null;
   revealFailure: number | null;
 }
+
+export const SAMPLE_PROVIDER = {
+  name: "keycheck",
+  label: "KeyCheck",
+  description: "Credit and background checks.",
+  cost_label: "$35",
+  turnaround_label: "1-2 days",
+  external_url: "https://keycheck.example/dashboard",
+};
 
 export function noPrivateDetails(overrides: Partial<ApplicantSensitive> = {}): ApplicantSensitive {
   return {
@@ -54,8 +68,17 @@ export function noPrivateDetails(overrides: Partial<ApplicantSensitive> = {}): A
   };
 }
 
+/** React Native's FormData only offers getParts. */
+export function formParts(form: unknown): { fieldName: string; name?: string; type?: string; string?: string }[] {
+  return (form as { getParts: () => { fieldName: string; name?: string; type?: string; string?: string }[] }).getParts();
+}
+
+export function formValue(form: unknown, field: string): string | undefined {
+  return formParts(form).find((part) => part.fieldName === field)?.string;
+}
+
 export function startApplicantServer(applicants: ApplicantDetailResponse[]): FakeApplicantServer {
-  const server: FakeApplicantServer = { applicants, offline: false, failListFromOffset: null, role: "owner", writeFailure: null, loseNextAnswer: false, requests: [], sensitive: noPrivateDetails(), revealFailure: null };
+  const server: FakeApplicantServer = { applicants, offline: false, failListFromOffset: null, role: "owner", writeFailure: null, loseNextAnswer: false, requests: [], sensitive: noPrivateDetails(), revealFailure: null, eligibility: { eligible: true, missing_fields: [], has_pending: false }, eligibilityFailure: null, redirectFailure: null, uploadFailure: null };
   const adapter: AxiosAdapter = (config) => {
     const respond = (data: unknown, status = 200) => {
       const response = { data: JSON.parse(JSON.stringify(data)), status, statusText: "", headers: {}, config };
@@ -67,6 +90,24 @@ export function startApplicantServer(applicants: ApplicantDetailResponse[]): Fak
     if (config.url === "/organizations") return respond([{ id: "w1", name: "Mine", org_role: server.role }]);
     if (config.method === "post" && config.url?.endsWith("/sensitive")) {
       return server.revealFailure ? respond({ detail: "nope" }, server.revealFailure) : respond(server.sensitive);
+    }
+    if (config.url?.endsWith("/screening/eligibility")) {
+      return server.eligibilityFailure ? respond({ detail: "nope" }, server.eligibilityFailure) : respond(server.eligibility);
+    }
+    if (config.url?.endsWith("/screening/providers")) return respond({ providers: [SAMPLE_PROVIDER] });
+    if (config.url?.includes("/screening/redirect")) {
+      return server.redirectFailure ? respond({ detail: "nope" }, server.redirectFailure) : respond({ redirect_url: SAMPLE_PROVIDER.external_url, provider: "keycheck" });
+    }
+    if (config.url?.endsWith("/screening/upload-result")) {
+      if (server.uploadFailure) return respond({ detail: "A developer's message" }, server.uploadFailure);
+      const row = server.applicants.find((candidate) => config.url?.startsWith(`/applicants/${candidate.id}/`));
+      const form = config.data as FormData;
+      const result = {
+        id: `s${server.requests.length}`, applicant_id: row?.id ?? "", provider: "keycheck", status: formValue(form, "status") ?? "", has_report: true, notes: null,
+        requested_at: "2026-11-03T12:00:00Z", completed_at: "2026-11-03T12:00:00Z", uploaded_at: "2026-11-03T12:00:00Z", uploaded_by_user_id: "u1", created_at: "2026-11-03T12:00:00Z",
+      };
+      row?.screening_results.push(result);
+      return respond(result, 201);
     }
     if (config.method === "patch") {
       if (server.writeFailure) return respond({ detail: "A developer's message" }, server.writeFailure);

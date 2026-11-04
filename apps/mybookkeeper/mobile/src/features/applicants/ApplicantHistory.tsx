@@ -6,21 +6,14 @@ import CollapsibleSection from "../inquiries/CollapsibleSection";
 import InquiryLine from "../inquiries/InquiryLine";
 import InquirySection from "../inquiries/InquirySection";
 import TransactionFact from "../transactions/TransactionFact";
-import { screeningLine, shortDate } from "./applicantDisplay";
+import { shortDate } from "./applicantDisplay";
 
 export default function ApplicantHistory({ applicant }: { applicant: ApplicantDetailResponse }) {
   const { spacing } = useTheme();
-  const { screening_results: screening, references, video_call_notes: calls, events } = applicant;
+  const { references, video_call_notes: calls, events } = applicant;
 
   return (
     <View style={{ gap: spacing.lg }}>
-      <InquirySection title="Screening">
-        {screening.length === 0 ? <InquiryLine left="No screening yet." muted /> : null}
-        {screening.map((result) => (
-          <InquiryLine key={result.id} left={screeningLine(result)} right={shortDate(result.completed_at ?? result.requested_at)} />
-        ))}
-      </InquirySection>
-
       {references.length > 0 ? (
         <InquirySection title="References">
           {references.map((reference) => (

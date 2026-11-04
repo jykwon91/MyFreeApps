@@ -18,6 +18,7 @@ import { useCanWrite } from "../workspace/useCanWrite";
 import { applicantName, applicantStageLabel, contractDates, promotedAgo, smokerLabel } from "./applicantDisplay";
 import ApplicantHistory from "./ApplicantHistory";
 import ApplicantPrivateDetails from "./ApplicantPrivateDetails";
+import ApplicantScreening from "./ApplicantScreening";
 import ApplicantStageSheet from "./ApplicantStageSheet";
 import ContractStartSheet from "./ContractStartSheet";
 import { useMoveApplicantStage } from "./useMoveApplicantStage";
@@ -103,6 +104,8 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
           {applicant.pets?.trim() ? <TransactionFact label="Pets" value={applicant.pets.trim()} /> : null}
           {applicant.referred_by?.trim() ? <TransactionFact label="Referred by" value={applicant.referred_by.trim()} /> : null}
         </InquirySection>
+
+        <ApplicantScreening applicant={applicant} />
 
         <ApplicantPrivateDetails applicant={applicant} key={applicant.id} />
 

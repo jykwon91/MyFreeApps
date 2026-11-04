@@ -1,4 +1,5 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { SCREENING_UPLOAD_TIMEOUT_MS } from "../constants/screeningStatus";
 import type { ScreeningEligibilityResponse } from "../types/applicant/screening-eligibility-response";
 import type { ScreeningProvidersResponse } from "../types/applicant/screening-providers-response";
 import type { ScreeningResult } from "../types/applicant/screening-result";
@@ -58,6 +59,7 @@ const screeningApi = baseApi.enhanceEndpoints({
         url: `/applicants/${applicantId}/screening/upload-result`,
         method: "POST",
         data: form,
+        timeout: SCREENING_UPLOAD_TIMEOUT_MS,
       }),
       invalidatesTags: (_result, _err, arg) => [
         { type: "Screening" as const, id: arg.applicantId },
