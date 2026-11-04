@@ -4,7 +4,7 @@ import type { Document } from "../types/document/document";
 import type { SingleStatusResponse } from "../types/document/SingleStatusResponse";
 import type { UploadResponse } from "../types/document/UploadResponse";
 
-const documentsApi = baseApi.enhanceEndpoints({
+export const documentsApi = baseApi.enhanceEndpoints({
   addTagTypes: ["Document", "Summary", "Transaction"],
 }).injectEndpoints({
   endpoints: (builder) => ({

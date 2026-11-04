@@ -1,8 +1,10 @@
 import { useTheme } from "@platform/mobile";
-import { Tabs } from "expo-router";
+import { router, Tabs } from "expo-router";
+import { useCanWrite } from "../../../src/features/workspace/useCanWrite";
 
 export default function TabsLayout() {
   const { colors } = useTheme();
+  const canWrite = useCanWrite();
   return (
     <Tabs
       screenOptions={{
@@ -17,6 +19,16 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="index" options={{ title: "Home" }} />
       <Tabs.Screen name="money" options={{ title: "Money" }} />
+      <Tabs.Screen
+        listeners={{
+          tabPress: (event) => {
+            event.preventDefault();
+            router.push("/camera");
+          },
+        }}
+        name="capture"
+        options={{ title: "Capture", href: canWrite ? undefined : null }}
+      />
       <Tabs.Screen name="people" options={{ title: "People" }} />
       <Tabs.Screen name="more" options={{ title: "More" }} />
     </Tabs>

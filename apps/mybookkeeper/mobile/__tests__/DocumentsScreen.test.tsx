@@ -1,7 +1,6 @@
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
-import { Linking } from "react-native";
 import { Provider } from "react-redux";
 import DocumentsScreen from "../src/features/documents/DocumentsScreen";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
@@ -76,22 +75,19 @@ describe("DocumentsScreen", () => {
     expect(screen.getByText("Nothing matches that.")).toBeTruthy();
   });
 
-  it("sends someone who can add documents to the website when there are none", async () => {
-    const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+  it("offers someone who can add documents the camera when there are none", async () => {
     startFakeServer([]);
     await renderScreen();
     await screen.findByText("No documents yet");
-    await screen.findByRole("button", { name: "Open the website" });
-    await fireEvent.press(screen.getByRole("button", { name: "Open the website" }));
-    expect(openURL.mock.calls[0][0]).toContain("/documents");
-    openURL.mockRestore();
+    await fireEvent.press(await screen.findByRole("button", { name: "Take a photo" }));
+    expect(mockPush).toHaveBeenCalledWith("/camera");
   });
 
   it("offers a viewer no way to add one", async () => {
     startFakeServer([], "viewer");
     await renderScreen();
     await screen.findByText("They'll show up here once someone adds one.");
-    expect(screen.queryByRole("button", { name: "Open the website" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Take a photo" })).toBeNull();
   });
 
   it("recovers when the first load fails", async () => {
