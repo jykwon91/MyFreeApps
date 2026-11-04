@@ -16,7 +16,7 @@ import type { InquiryQualityTier } from "../types/inquiry/inquiry-quality-tier";
  *   - 4   → green "complete inquiry" badge (everything we need to triage)
  */
 
-const BODY_LENGTH_THRESHOLD = 100;
+export const BODY_LENGTH_THRESHOLD = 100;
 const COMPLETE_SCORE = 4;
 const SPARSE_SCORE_MAX = 1;
 

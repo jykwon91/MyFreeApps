@@ -1,7 +1,16 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
-import { StyleSheet } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 import OptionSheet from "../components/OptionSheet";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
+
+const mockModal: { onDismiss?: () => void } = {};
+jest.mock("react-native/Libraries/Modal/Modal", () => ({
+  __esModule: true,
+  default: ({ visible, onDismiss, children }: { visible: boolean; onDismiss?: () => void; children: unknown }) => {
+    if (onDismiss) mockModal.onDismiss = onDismiss;
+    return visible ? children : null;
+  },
+}));
 
 const OPTIONS = [
   { value: "oak", label: "Oak St" },
@@ -44,5 +53,34 @@ describe("OptionSheet", () => {
       <OptionSheet emptyText="Add a property on the website first." isOpen onClose={jest.fn()} onSelect={jest.fn()} options={[]} title="Property" value={null} />,
     );
     expect(screen.getByText("Add a property on the website first.")).toBeTruthy();
+  });
+
+  describe("onClosed", () => {
+    const openOrClosed = (isOpen: boolean, onClosed: () => void) => (
+      <OptionSheet isOpen={isOpen} onClose={jest.fn()} onClosed={onClosed} onSelect={jest.fn()} options={OPTIONS} title="Property" value="elm" />
+    );
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it("waits for the Modal to say it's gone on iOS", async () => {
+      jest.replaceProperty(Platform, "OS", "ios");
+      const onClosed = jest.fn();
+      const { rerender } = await render(openOrClosed(true, onClosed));
+      await rerender(openOrClosed(false, onClosed));
+      expect(onClosed).not.toHaveBeenCalled();
+      mockModal.onDismiss?.();
+      expect(onClosed).toHaveBeenCalledTimes(1);
+    });
+
+    it("fires as soon as it closes on Android, which has no such signal", async () => {
+      jest.replaceProperty(Platform, "OS", "android");
+      const onClosed = jest.fn();
+      const { rerender } = await render(openOrClosed(true, onClosed));
+      expect(onClosed).not.toHaveBeenCalled();
+      await rerender(openOrClosed(false, onClosed));
+      expect(onClosed).toHaveBeenCalledTimes(1);
+    });
   });
 });
