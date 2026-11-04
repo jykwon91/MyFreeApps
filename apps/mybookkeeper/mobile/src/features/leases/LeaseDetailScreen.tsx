@@ -1,8 +1,10 @@
 import { useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
+import type { LeaseAttachmentKind } from "@mybookkeeper/api-client/types/lease/lease-attachment-kind";
 import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import { Banner, EmptyState, LoadingButton, MIN_TOUCH_TARGET, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
+import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { WEB_BASE_URL } from "../../constants/api";
 import { extendedLine, LEASE_MESSAGES } from "../../constants/leases";
@@ -15,6 +17,7 @@ import { useCanWrite } from "../workspace/useCanWrite";
 import { leaseCountdown, leaseStatusLabel, leaseTerm, sortLeaseFiles } from "./leaseDisplay";
 import LeaseDetailSkeleton from "./LeaseDetailSkeleton";
 import LeaseFileRow from "./LeaseFileRow";
+import LeaseUploadSheet from "./LeaseUploadSheet";
 import { useOpenLeaseFile } from "./useOpenLeaseFile";
 
 export default function LeaseDetailScreen({ id }: { id: string }) {
@@ -24,6 +27,7 @@ export default function LeaseDetailScreen({ id }: { id: string }) {
   const { currentData: lease, error, isLoading, refetch } = useGetSignedLeaseByIdQuery(id);
   const { openingId, open } = useOpenLeaseFile(id);
   const { refresh, refreshControl } = useRefresh(refetch, error);
+  const [uploadingKind, setUploadingKind] = useState<LeaseAttachmentKind | null | undefined>(undefined);
 
   if (isLoading) return <LeaseDetailSkeleton />;
   if (!lease) {
@@ -44,61 +48,78 @@ export default function LeaseDetailScreen({ id }: { id: string }) {
   );
 
   return (
-    <ScrollView
-      contentContainerStyle={{ gap: spacing.xl, padding: spacing.lg }}
-      contentInsetAdjustmentBehavior="automatic"
-      refreshControl={refreshControl}
-      style={{ flex: 1 }}
-      testID="lease-detail"
-    >
-      {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
-      <View style={{ gap: spacing.sm, alignItems: "flex-start" }}>
-        <Pressable
-          accessibilityHint="Opens their page"
-          accessibilityRole="button"
-          onPress={() => router.push(`/applicants/${lease.applicant_id}`)}
-          style={{ minHeight: MIN_TOUCH_TARGET, justifyContent: "center" }}
-        >
-          <Text style={{ fontSize: fontSize.xl, fontWeight: "700", color: colors.primary }}>
-            {name}
-          </Text>
-        </Pressable>
-        <InquiryChip label={leaseStatusLabel(lease.status)} />
-      </View>
-
-      <InquirySection title={LEASE_MESSAGES.term}>
-        <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>{leaseTerm(lease.starts_on, lease.ends_on)}</Text>
-        {countdown ? <Text style={mutedText}>{countdown}</Text> : null}
-        {extension ? <Text style={mutedText}>{extendedLine(formatLongDate(extension.ends_on), formatLongDate(extension.created_at))}</Text> : null}
-      </InquirySection>
-
-      <InquirySection title={LEASE_MESSAGES.signedCopy}>
-        {signedCopy ? fileRow(signedCopy) : <Text style={mutedText}>{LEASE_MESSAGES.noSignedCopy}</Text>}
-      </InquirySection>
-
-      {others.length > 0 ? <InquirySection title={LEASE_MESSAGES.otherFiles}>{others.map(fileRow)}</InquirySection> : null}
-
-      {lease.notes?.trim() ? (
-        <InquirySection title={LEASE_MESSAGES.notes}>
-          <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>{lease.notes.trim()}</Text>
+    <>
+      <ScrollView
+        contentContainerStyle={{ gap: spacing.xl, padding: spacing.lg }}
+        contentInsetAdjustmentBehavior="automatic"
+        refreshControl={refreshControl}
+        style={{ flex: 1 }}
+        testID="lease-detail"
+      >
+        {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+        <View style={{ gap: spacing.sm, alignItems: "flex-start" }}>
+          <Pressable
+            accessibilityHint="Opens their page"
+            accessibilityRole="button"
+            onPress={() => router.push(`/applicants/${lease.applicant_id}`)}
+            style={{ minHeight: MIN_TOUCH_TARGET, justifyContent: "center" }}
+          >
+            <Text style={{ fontSize: fontSize.xl, fontWeight: "700", color: colors.primary }}>
+              {name}
+            </Text>
+          </Pressable>
+          <InquiryChip label={leaseStatusLabel(lease.status)} />
+        </View>
+  
+        <InquirySection title={LEASE_MESSAGES.term}>
+          <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>{leaseTerm(lease.starts_on, lease.ends_on)}</Text>
+          {countdown ? <Text style={mutedText}>{countdown}</Text> : null}
+          {extension ? <Text style={mutedText}>{extendedLine(formatLongDate(extension.ends_on), formatLongDate(extension.created_at))}</Text> : null}
         </InquirySection>
-      ) : null}
-
-      {lease.parent_lease_id ? (
-        <LoadingButton onPress={() => router.push(`/leases/${lease.parent_lease_id}`)} variant="ghost">
-          {LEASE_MESSAGES.earlierLease}
-        </LoadingButton>
-      ) : null}
-      {lease.successor_lease_id ? (
-        <LoadingButton onPress={() => router.push(`/leases/${lease.successor_lease_id}`)} variant="ghost">
-          {LEASE_MESSAGES.newerLease}
-        </LoadingButton>
-      ) : null}
-      {canWrite ? (
-        <LoadingButton accessibilityHint="Opens your browser" onPress={() => void openLink(`${WEB_BASE_URL}/leases/${lease.id}`)} variant="secondary">
-          {LEASE_MESSAGES.manageOnWebsite}
-        </LoadingButton>
-      ) : null}
-    </ScrollView>
+  
+        <InquirySection title={LEASE_MESSAGES.signedCopy}>
+          {signedCopy ? fileRow(signedCopy) : <Text style={mutedText}>{LEASE_MESSAGES.noSignedCopy}</Text>}
+          {!signedCopy && canWrite ? (
+            <LoadingButton onPress={() => setUploadingKind("signed_lease")} variant="secondary">
+              {LEASE_MESSAGES.addSignedCopy}
+            </LoadingButton>
+          ) : null}
+        </InquirySection>
+  
+        {others.length > 0 || canWrite ? (
+          <InquirySection title={LEASE_MESSAGES.otherFiles}>
+            {others.map(fileRow)}
+            {canWrite ? (
+              <LoadingButton onPress={() => setUploadingKind(null)} variant="secondary">
+                {LEASE_MESSAGES.addFile}
+              </LoadingButton>
+            ) : null}
+          </InquirySection>
+        ) : null}
+  
+        {lease.notes?.trim() ? (
+          <InquirySection title={LEASE_MESSAGES.notes}>
+            <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>{lease.notes.trim()}</Text>
+          </InquirySection>
+        ) : null}
+  
+        {lease.parent_lease_id ? (
+          <LoadingButton onPress={() => router.push(`/leases/${lease.parent_lease_id}`)} variant="ghost">
+            {LEASE_MESSAGES.earlierLease}
+          </LoadingButton>
+        ) : null}
+        {lease.successor_lease_id ? (
+          <LoadingButton onPress={() => router.push(`/leases/${lease.successor_lease_id}`)} variant="ghost">
+            {LEASE_MESSAGES.newerLease}
+          </LoadingButton>
+        ) : null}
+        {canWrite ? (
+          <LoadingButton accessibilityHint="Opens your browser" onPress={() => void openLink(`${WEB_BASE_URL}/leases/${lease.id}`)} variant="secondary">
+            {LEASE_MESSAGES.manageOnWebsite}
+          </LoadingButton>
+        ) : null}
+      </ScrollView>
+      {uploadingKind !== undefined ? <LeaseUploadSheet initialKind={uploadingKind} leaseId={lease.id} onClose={() => setUploadingKind(undefined)} /> : null}
+    </>
   );
 }

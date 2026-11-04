@@ -5,10 +5,10 @@ import { configureStore } from "@reduxjs/toolkit";
 import { API_BASE_URL } from "../constants/api";
 import { clearUploadQueue } from "../features/capture/uploadQueueFiles";
 import uploads, { uploadStatusDismissed } from "../features/capture/uploadsSlice";
-import { clearHeldReports } from "../features/applicants/screeningReportFile";
 import { clearDocumentFiles } from "../features/documents/openDocumentFile";
 import { clearReplyDrafts } from "../features/inquiries/replyDrafts";
 import workspace, { workspaceChosen } from "../features/workspace/workspaceSlice";
+import { clearHeldFiles } from "../features/uploads/heldFile";
 import { refetchOnForeground } from "./refetchOnForeground";
 import { session } from "./session";
 
@@ -48,7 +48,7 @@ onAccountLeft(session, () => {
       try {
         clearReplyDrafts();
       } finally {
-        clearHeldReports();
+        clearHeldFiles();
       }
     }
   }

@@ -1,3 +1,4 @@
+import type { LeaseAttachmentKind } from "@mybookkeeper/api-client/types/lease/lease-attachment-kind";
 import type { LeaseFilter } from "../types/LeaseFilter";
 
 export const LEASE_FILTERS: readonly { value: LeaseFilter; label: string }[] = [
@@ -17,6 +18,7 @@ export const LEASE_MESSAGES = {
   tryAgain: "Try again",
   goneHeading: "That lease is gone",
   goneBody: "It may have been deleted.",
+  goneWhileAdding: "That lease is gone, so I couldn't add the file.",
   goBack: "Go back",
   noCurrentHeading: "No current leases",
   noCurrentBody: "Signed and active leases show up here.",
@@ -31,16 +33,53 @@ export const LEASE_MESSAGES = {
   term: "Term",
   noDates: "No dates yet",
   signedCopy: "Signed copy",
-  noSignedCopy: "No signed copy yet. Add one on the website.",
+  noSignedCopy: "No signed copy yet.",
+  addSignedCopy: "Add the signed copy",
+  addFile: "Add a file",
+  fileKind: "What is it?",
+  takePhoto: "Take a photo of the paper copy",
+  saveFile: "Add file",
+  uploading: "Uploading…",
+  cancel: "Cancel",
+  uploadFailed: "I couldn't upload that. Want me to try again?",
+  tooBig: "That file is too big. Try a smaller PDF or a lower-resolution photo.",
+  badFile: "I can't read that kind of file. Use a PDF, Word file, JPEG, PNG or WebP.",
+  storageDown: "I couldn't save the file just now. It's still here, so try again in a bit.",
   otherFiles: "Other files",
   notes: "Notes",
   open: "Open",
-  fileMissing: "This file is missing. Upload it again on the website.",
+  fileMissing: "This file is missing.",
   couldntOpen: "I couldn't open that file. Want to try again?",
   earlierLease: "See the earlier lease",
   newerLease: "See the newer lease",
   unnamedTenant: "Tenant",
 } as const;
+
+/** The rendered original and rent receipts come from the app itself. */
+export const LEASE_UPLOAD_KINDS: readonly LeaseAttachmentKind[] = [
+  "signed_lease",
+  "signed_addendum",
+  "move_in_inspection",
+  "move_out_inspection",
+  "insurance_proof",
+  "amendment",
+  "notice",
+  "other",
+];
+
+export const LEASE_FILE_TYPES = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
+
+export const LEASE_PHOTO_NAME = "lease-photo.jpg";
+
+export function addedFile(name: string): string {
+  return `Added ${name}.`;
+}
 
 export function noLeaseFor(name: string): string {
   return `No lease for ${name} yet.`;
