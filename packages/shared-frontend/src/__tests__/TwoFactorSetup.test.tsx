@@ -3,8 +3,8 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
-import { baseApi } from "@platform/ui";
-import TwoFactorSetup from "@/features/security/TwoFactorSetup";
+import { baseApi } from "../store/baseApi";
+import TwoFactorSetup from "../components/auth/TwoFactorSetup";
 
 // Stub the QR component so jsdom doesn't have to render an SVG.
 vi.mock("qrcode.react", () => ({
@@ -23,17 +23,13 @@ const { mockShowSuccess, mockSetupTotp, mockVerifyTotp, mockDisableTotp } =
     mockDisableTotp: vi.fn(),
   }));
 
-// Stub the toast lib (resolved through @platform/ui) so we can assert on it.
-vi.mock("@platform/ui", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@platform/ui")>();
-  return {
-    ...actual,
-    showSuccess: mockShowSuccess,
-    showError: vi.fn(),
-  };
-});
+// Stub the toast lib so we can assert on it.
+vi.mock("../lib/toast-store", () => ({
+  showSuccess: mockShowSuccess,
+  showError: vi.fn(),
+}));
 
-vi.mock("@platform/ui/store/totpApi", () => ({
+vi.mock("../store/totpApi", () => ({
   useGetTotpStatusQuery: vi.fn(),
   useSetupTotpMutation: vi.fn(() => [mockSetupTotp, { isLoading: false }]),
   useVerifyTotpMutation: vi.fn(() => [mockVerifyTotp, { isLoading: false }]),
@@ -45,7 +41,7 @@ import {
   useSetupTotpMutation,
   useVerifyTotpMutation,
   useDisableTotpMutation,
-} from "@platform/ui/store/totpApi";
+} from "../store/totpApi";
 
 function renderComponent() {
   // A minimal store that wires the baseApi reducer; the component never

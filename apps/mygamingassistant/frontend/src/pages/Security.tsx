@@ -3,7 +3,7 @@ import { X, Trash2 } from "lucide-react";
 import { AlertBox } from "@platform/ui";
 
 import { useDismissable } from "@/hooks/useDismissable";
-import TwoFactorSetup from "@/features/security/TwoFactorSetup";
+import TwoFactorSetup from "@platform/ui/components/auth/TwoFactorSetup";
 import DisplayNameSetting from "@/features/security/DisplayNameSetting";
 import DataExportButton from "@/features/security/DataExportButton";
 import DeleteAccountModal from "@/features/security/DeleteAccountModal";

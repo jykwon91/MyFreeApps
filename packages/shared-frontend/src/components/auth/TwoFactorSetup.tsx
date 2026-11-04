@@ -1,19 +1,17 @@
 import { useState } from "react";
 import { Shield, ShieldCheck, ShieldOff, Copy, Check } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import {
-  LoadingButton,
-  extractErrorMessage,
-  showSuccess,
-} from "@platform/ui";
-import type { Step } from "@/types/security/totp-step";
-import type { TotpSetup } from "@platform/ui";
+import type { TotpSetup } from "@platform/core/types/security/totp-setup";
+import LoadingButton from "../ui/LoadingButton";
+import { showSuccess } from "../../lib/toast-store";
+import type { TotpStep } from "../../types/totp-step";
+import { extractErrorMessage } from "../../utils/errorMessage";
 import {
   useGetTotpStatusQuery,
   useSetupTotpMutation,
   useVerifyTotpMutation,
   useDisableTotpMutation,
-} from "@platform/ui/store/totpApi";
+} from "../../store/totpApi";
 
 /**
  * Two-factor authentication enrollment + disable flow.
@@ -25,11 +23,11 @@ import {
  *
  * Disable: separate "disable" step requiring a current TOTP code.
  *
- * Mirrors MyJobHunter's `TwoFactorSetup.tsx` structure 1:1 so the apps
- * have identical 2FA UX.
+ * Import it from this path, not the package index: loading it injects the
+ * two-factor endpoints into baseApi.
  */
 export default function TwoFactorSetup() {
-  const [step, setStep] = useState<Step>("status");
+  const [step, setStep] = useState<TotpStep>("status");
   const [setup, setSetup] = useState<TotpSetup | null>(null);
   const [code, setCode] = useState("");
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);

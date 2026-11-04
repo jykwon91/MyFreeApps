@@ -14,6 +14,7 @@
 //   @platform/ui/store/totpApi, userApi, accountApi — loading one injects its
 //   endpoints into baseApi. Re-exported here, that would happen in every app that
 //   imports this index, and pull the code out of lazily loaded chunks.
+//   @platform/ui/components/auth/TwoFactorSetup — loads totpApi, for the same reason.
 //   @platform/ui/lib/authClient — an app binds it to its store in lib/auth.ts.
 //   Many app tests replace this index wholesale, so it has to stay out of it.
 
