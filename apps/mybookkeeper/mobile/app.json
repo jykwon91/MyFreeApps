@@ -22,7 +22,8 @@
       "package": "org.myfreeapps.mybookkeeper"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-sharing"
     ],
     "extra": {
       "router": {

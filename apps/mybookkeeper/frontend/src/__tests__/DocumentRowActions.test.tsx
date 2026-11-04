@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import DocumentRowActions from "@/app/features/documents/DocumentRowActions";
-import type { Document } from "@/shared/types/document/document";
+import type { Document } from "@mybookkeeper/api-client/types/document/document";
 
 // Pass-through Button so the className/aria-label/onClick land directly on a
 // real <button>, keeping assertions about touch-target classes deterministic.

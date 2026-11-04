@@ -1,5 +1,5 @@
-import ComingToAppScreen from "../../../src/features/shell/ComingToAppScreen";
+import MoneyScreen from "../../../src/features/money/MoneyScreen";
 
 export default function Money() {
-  return <ComingToAppScreen title="Money" webPath="/transactions" />;
+  return <MoneyScreen />;
 }

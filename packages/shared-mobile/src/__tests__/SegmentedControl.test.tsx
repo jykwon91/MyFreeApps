@@ -1,0 +1,35 @@
+import { fireEvent, render, screen } from "@testing-library/react-native";
+import { StyleSheet } from "react-native";
+import SegmentedControl from "../components/SegmentedControl";
+import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
+
+const SEGMENTS = [
+  { value: "one", label: "One" },
+  { value: "two", label: "Two" },
+] as const;
+
+async function setup() {
+  const onChange = jest.fn();
+  await render(<SegmentedControl accessibilityLabel="Pick" onChange={onChange} segments={SEGMENTS} value="one" />);
+  return onChange;
+}
+
+describe("SegmentedControl", () => {
+  it("tells a screen reader which segment is selected", async () => {
+    await setup();
+    expect(screen.getByRole("tab", { name: "One", selected: true })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Two", selected: false })).toBeTruthy();
+  });
+
+  it("reports the segment that was pressed", async () => {
+    const onChange = await setup();
+    fireEvent.press(screen.getByRole("tab", { name: "Two" }));
+    expect(onChange).toHaveBeenCalledWith("two");
+  });
+
+  it("is big enough to tap", async () => {
+    await setup();
+    const style = StyleSheet.flatten(screen.getByRole("tab", { name: "One" }).props.style);
+    expect(style.minHeight).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+  });
+});

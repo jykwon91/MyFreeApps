@@ -1,9 +1,8 @@
 import { useGetRecipeQuery } from "@myrecipes/api-client/store/recipesApi";
-import { EmptyState, Toast, useAnnouncement, useTheme } from "@platform/mobile";
+import { EmptyState, Toast, useAnnouncement, useRefresh, useTheme } from "@platform/mobile";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { ScrollView, View } from "react-native";
 import { useErrorSinceOpening } from "../../hooks/useErrorSinceOpening";
-import { useRefresh } from "../../hooks/useRefresh";
 import { isNotFoundError } from "../../utils/isNotFoundError";
 import RecipeContent from "./RecipeContent";
 import RecipeDetailSkeleton from "./RecipeDetailSkeleton";

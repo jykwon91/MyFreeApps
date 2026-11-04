@@ -1832,7 +1832,11 @@ class TestSharedCoreStaysPlatformNeutral:
     _BROWSER_GLOBAL = re.compile(
         r"(?<![.\w])(window|document|navigator|location|localStorage|sessionStorage|StorageEvent)\b"
     )
-    _COMMENT = re.compile(r"/\*.*?\*/|//[^\n]*", re.DOTALL)
+    # Import paths name things too: types/document/document isn't the browser's document.
+    # One pass, so a // inside a string isn't taken for a comment hiding the rest of the line.
+    _STRING_OR_COMMENT = re.compile(
+        r"\"(?:\\.|[^\"\\\n])*\"|'(?:\\.|[^'\\\n])*'|/\*.*?\*/|//[^\n]*", re.DOTALL
+    )
 
     def _sources(self) -> list[Path]:
         files = []
@@ -1852,7 +1856,7 @@ class TestSharedCoreStaysPlatformNeutral:
 
     def test_uses_no_browser_global(self) -> None:
         for path in self._sources():
-            code = self._COMMENT.sub("", path.read_text(encoding="utf-8"))
+            code = self._STRING_OR_COMMENT.sub("", path.read_text(encoding="utf-8"))
             match = self._BROWSER_GLOBAL.search(code)
             assert match is None, (
                 f"{path.relative_to(_REPO_ROOT)} uses {match.group(1)}. Move it behind "

@@ -1,4 +1,4 @@
-import type { Document } from "@/shared/types/document/document";
+import type { Document } from "@mybookkeeper/api-client/types/document/document";
 
 export interface DocumentLibraryPickerProps {
   documents: Document[];

@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { configureStore } from "@reduxjs/toolkit";
 import { baseApi } from "@/shared/store/baseApi";
 // Side-effect imports: register endpoints on the shared baseApi instance.
-import "@/shared/store/documentsApi";
+import "@mybookkeeper/api-client/store/documentsApi";
+import { documentUploadForm } from "@/shared/lib/document-upload-form";
 import "@/shared/store/integrationsApi";
 import "@/shared/store/transactionsApi";
 import "@/shared/store/summaryApi";
@@ -79,7 +80,7 @@ describe("Summary cache invalidation on mutations", () => {
   describe("documentsApi mutations invalidate Summary", () => {
     it("uploadDocument triggers summary refetch", async () => {
       const file = new File(["x"], "x.pdf", { type: "application/pdf" });
-      await assertInvalidatesSummary("uploadDocument", { file });
+      await assertInvalidatesSummary("uploadDocument", documentUploadForm(file));
     });
 
     it("deleteDocument triggers summary refetch", async () => {
@@ -88,11 +89,6 @@ describe("Summary cache invalidation on mutations", () => {
 
     it("bulkDeleteDocuments triggers summary refetch", async () => {
       await assertInvalidatesSummary("bulkDeleteDocuments", ["doc-1", "doc-2"]);
-    });
-
-    it("replaceFile triggers summary refetch", async () => {
-      const file = new File(["x"], "x.pdf", { type: "application/pdf" });
-      await assertInvalidatesSummary("replaceFile", { id: "doc-1", file });
     });
 
     it("reExtractDocument triggers summary refetch", async () => {

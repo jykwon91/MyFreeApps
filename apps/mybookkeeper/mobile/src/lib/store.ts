@@ -3,6 +3,7 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { assertSecureApiUrl, onAccountLeft, resetCacheOnAccountChange } from "@platform/mobile";
 import { configureStore } from "@reduxjs/toolkit";
 import { API_BASE_URL } from "../constants/api";
+import { clearDocumentFiles } from "../features/documents/openDocumentFile";
 import workspace, { workspaceChosen } from "../features/workspace/workspaceSlice";
 import { session } from "./session";
 
@@ -28,7 +29,10 @@ export function makeStore() {
 export const store = makeStore();
 
 // In this order: a reset makes a mounted gate request again, and that request must not carry the old workspace.
-onAccountLeft(session, () => store.dispatch(workspaceChosen(null)));
+onAccountLeft(session, () => {
+  store.dispatch(workspaceChosen(null));
+  clearDocumentFiles();
+});
 resetCacheOnAccountChange(session, () => store.dispatch(baseApi.util.resetApiState()));
 
 export type AppStore = ReturnType<typeof makeStore>;

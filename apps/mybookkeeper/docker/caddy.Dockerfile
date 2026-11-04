@@ -37,10 +37,12 @@ WORKDIR /repo
 COPY package.json package-lock.json ./
 COPY packages/shared-core/package.json ./packages/shared-core/
 COPY packages/shared-frontend/package.json ./packages/shared-frontend/
+COPY apps/mybookkeeper/api-client/package.json ./apps/mybookkeeper/api-client/
 COPY apps/mybookkeeper/frontend/package.json ./apps/mybookkeeper/frontend/
 RUN npm ci --ignore-scripts
 COPY packages/shared-core ./packages/shared-core
 COPY packages/shared-frontend ./packages/shared-frontend
+COPY apps/mybookkeeper/api-client ./apps/mybookkeeper/api-client
 COPY apps/mybookkeeper/frontend ./apps/mybookkeeper/frontend
 
 # Frontend build-time public env. Vite inlines anything prefixed with

@@ -13,7 +13,7 @@ import {
   useDeleteDocumentMutation,
   useReExtractDocumentMutation,
   useToggleEscrowPaidMutation,
-} from "@/shared/store/documentsApi";
+} from "@mybookkeeper/api-client/store/documentsApi";
 import { useDocumentColumns } from "@/shared/hooks/useDocumentColumns";
 import { useToast } from "@/shared/hooks/useToast";
 import { useAppSelector } from "@/shared/store/hooks";

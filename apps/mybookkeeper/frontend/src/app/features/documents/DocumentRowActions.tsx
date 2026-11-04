@@ -1,6 +1,6 @@
 import { FileCheck, RotateCw, Trash2 } from "lucide-react";
 import { Button } from "@platform/ui";
-import type { Document } from "@/shared/types/document/document";
+import type { Document } from "@mybookkeeper/api-client/types/document/document";
 
 interface DocumentRowActionsProps {
   doc: Document;
