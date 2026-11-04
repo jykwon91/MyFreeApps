@@ -2,44 +2,31 @@ import { useUploadScreeningResultMutation } from "@mybookkeeper/api-client/store
 import { ADVERSE_OUTCOMES, SCREENING_UPLOAD_OUTCOMES } from "@mybookkeeper/api-client/constants/screeningStatus";
 import type { ScreeningStatus } from "@mybookkeeper/api-client/types/applicant/screening-status";
 import { Banner, FormField, LoadingButton, OptionRow, useTheme, useToast } from "@platform/mobile";
-import { useEffect, useRef, useState } from "react";
-import { Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, View } from "react-native";
-import { SCREENING_MESSAGES, SCREENING_REASON_MAX_LENGTH } from "../../constants/applicantScreening";
+import { useRef, useState } from "react";
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text, View } from "react-native";
+import { SCREENING_MESSAGES, SCREENING_PHOTO_NAME, SCREENING_REASON_MAX_LENGTH, SCREENING_REPORT_FILE_TYPES } from "../../constants/applicantScreening";
 import { filePart } from "../../lib/filePart";
-import type { FileForUpload } from "../../types/FileForUpload";
 import { screeningOutcomeLabel } from "./applicantDisplay";
-import { discardFile } from "../capture/uploadQueueFiles";
-import { chooseReportFile, chooseReportPhoto, takeReportPhoto } from "./pickScreeningReport";
-import { clearHeldReports } from "./screeningReportFile";
+import { confirmDiscard } from "../uploads/confirmDiscard";
+import HeldFileButtons from "../uploads/HeldFileButtons";
+import { useHeldFile } from "../uploads/useHeldFile";
 import { screeningUploadFailure } from "./screeningUploadFailure";
 
 export default function ScreeningUploadSheet({ applicantId, isOpen, onClose }: { applicantId: string; isOpen: boolean; onClose: () => void }) {
   const { colors, spacing, fontSize } = useTheme();
   const { showToast } = useToast();
   const [upload, { isLoading: isUploading }] = useUploadScreeningResultMutation();
-  const [file, setFile] = useState<FileForUpload | null>(null);
   const [outcome, setOutcome] = useState<ScreeningStatus | null>(null);
   const [reason, setReason] = useState("");
   const [failure, setFailure] = useState<string | null>(null);
   const isSubmitting = useRef(false);
-  const [isPicking, setIsPicking] = useState(false);
-  const isMounted = useRef(true);
-
-  // Losing write access or leaving the page can take the sheet away with a report still held.
-  useEffect(() => {
-    isMounted.current = true;
-    return () => {
-      isMounted.current = false;
-      clearHeldReports();
-    };
-  }, []);
+  const { file, isPicking, pick, forget: forgetFile } = useHeldFile(setFailure);
 
   const needsReason = outcome !== null && ADVERSE_OUTCOMES.includes(outcome);
   const isReady = file !== null && outcome !== null && (!needsReason || reason.trim().length > 0);
 
   function forget(): void {
-    clearHeldReports();
-    setFile(null);
+    forgetFile();
     setOutcome(null);
     setReason("");
     setFailure(null);
@@ -52,41 +39,14 @@ export default function ScreeningUploadSheet({ applicantId, isOpen, onClose }: {
       onClose();
       return;
     }
-    Alert.alert(SCREENING_MESSAGES.discardTitle, undefined, [
-      { text: SCREENING_MESSAGES.keepEditing, style: "cancel" },
-      {
-        text: SCREENING_MESSAGES.discard,
-        style: "destructive",
-        onPress: () => {
-          forget();
-          onClose();
-        },
-      },
-    ]);
-  }
-
-  async function pick(from: () => Promise<FileForUpload | "denied" | null>): Promise<void> {
-    setFailure(null);
-    setIsPicking(true);
-    try {
-      const picked = await from();
-      if (!isMounted.current) {
-        clearHeldReports();
-      } else if (picked === "denied") {
-        setFailure(SCREENING_MESSAGES.cameraDenied);
-      } else if (picked) {
-        if (file) discardFile(file.uri);
-        setFile(picked);
-      }
-    } catch {
-      setFailure(SCREENING_MESSAGES.pickFailed);
-    } finally {
-      setIsPicking(false);
-    }
+    confirmDiscard(() => {
+      forget();
+      onClose();
+    });
   }
 
   async function submit(): Promise<void> {
-    if (!file || !outcome || isSubmitting.current) return;
+    if (!file || !outcome || isPicking || isSubmitting.current) return;
     isSubmitting.current = true;
     setFailure(null);
     const form = new FormData();
@@ -114,18 +74,15 @@ export default function ScreeningUploadSheet({ applicantId, isOpen, onClose }: {
           </Text>
           {failure ? <Banner message={failure} /> : null}
 
-          {file ? (
-            <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>{file.name}</Text>
-          ) : null}
-          <LoadingButton disabled={isUploading || isPicking} onPress={() => void pick(chooseReportFile)} variant="secondary">
-            {file ? SCREENING_MESSAGES.chooseDifferentFile : SCREENING_MESSAGES.chooseFile}
-          </LoadingButton>
-          <LoadingButton disabled={isUploading || isPicking} onPress={() => void pick(takeReportPhoto)} variant="secondary">
-            {SCREENING_MESSAGES.takePhoto}
-          </LoadingButton>
-          <LoadingButton disabled={isUploading || isPicking} onPress={() => void pick(chooseReportPhoto)} variant="secondary">
-            {SCREENING_MESSAGES.photoLibrary}
-          </LoadingButton>
+          <HeldFileButtons
+            file={file}
+            fileTypes={SCREENING_REPORT_FILE_TYPES}
+            isDisabled={isUploading}
+            isPicking={isPicking}
+            onPick={(from) => void pick(from)}
+            photoName={SCREENING_PHOTO_NAME}
+            takePhotoLabel={SCREENING_MESSAGES.takePhoto}
+          />
 
           <View accessibilityLabel={SCREENING_MESSAGES.outcome} accessibilityRole="radiogroup" style={{ gap: spacing.xs }}>
             <Text style={{ fontSize: fontSize.sm, fontWeight: "600", color: colors.foreground }}>{SCREENING_MESSAGES.outcome}</Text>
@@ -154,7 +111,7 @@ export default function ScreeningUploadSheet({ applicantId, isOpen, onClose }: {
             />
           ) : null}
 
-          <LoadingButton disabled={!isReady} isLoading={isUploading} loadingText={SCREENING_MESSAGES.saving} onPress={() => void submit()}>
+          <LoadingButton disabled={!isReady || isPicking} isLoading={isUploading} loadingText={SCREENING_MESSAGES.saving} onPress={() => void submit()}>
             {SCREENING_MESSAGES.save}
           </LoadingButton>
           <LoadingButton disabled={isUploading || isPicking} onPress={close} variant="ghost">

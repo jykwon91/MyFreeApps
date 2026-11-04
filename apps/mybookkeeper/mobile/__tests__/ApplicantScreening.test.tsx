@@ -11,7 +11,7 @@ import { Provider } from "react-redux";
 import { SCREENING_UPLOAD_TIMEOUT_MS } from "@mybookkeeper/api-client/constants/screeningStatus";
 import type { ScreeningResult } from "@mybookkeeper/api-client/types/applicant/screening-result";
 import ApplicantDetailScreen from "../src/features/applicants/ApplicantDetailScreen";
-import { clearHeldReports } from "../src/features/applicants/screeningReportFile";
+import { clearHeldFiles } from "../src/features/uploads/heldFile";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
@@ -100,7 +100,7 @@ function uploads(server: FakeApplicantServer) {
 }
 
 function heldFiles(): string[] {
-  return fakeFiles().filter((uri) => uri.includes("screening-reports"));
+  return fakeFiles().filter((uri) => uri.includes("held-uploads"));
 }
 
 describe("screening on the applicant page", () => {
@@ -481,10 +481,10 @@ describe("screening on the applicant page", () => {
   });
 
   it("clears anything left over", () => {
-    const directory = new Directory(Paths.cache, "screening-reports");
+    const directory = new Directory(Paths.cache, "held-uploads");
     directory.create();
     new File(directory, "left.pdf").write("pdf");
-    clearHeldReports();
+    clearHeldFiles();
     expect(heldFiles()).toHaveLength(0);
   });
 });

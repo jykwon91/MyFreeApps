@@ -295,7 +295,7 @@ describe("leases", () => {
     it("says when there's no signed copy", async () => {
       startServer([aLease()]);
       await renderIn(<LeaseDetailScreen id="l1" />);
-      expect(await screen.findByText("No signed copy yet. Add one on the website.")).toBeTruthy();
+      expect(await screen.findByText("No signed copy yet.")).toBeTruthy();
     });
 
     it("opens a file on a fresh link, keeping its extension but not its name, and removes the copy", async () => {
@@ -323,7 +323,7 @@ describe("leases", () => {
     it("says a missing file is missing rather than offering to open it", async () => {
       startServer([aLease({ attachments: [aFile({ is_available: false, presigned_url: null })] })]);
       await renderIn(<LeaseDetailScreen id="l1" />);
-      expect(await screen.findByText("This file is missing. Upload it again on the website.")).toBeTruthy();
+      expect(await screen.findByText("This file is missing.")).toBeTruthy();
       expect(screen.queryByRole("button", { name: "Open Signed lease.pdf" })).toBeNull();
     });
 

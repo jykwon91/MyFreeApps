@@ -1,5 +1,3 @@
-export const SCREENING_REPORT_DIRECTORY = "screening-reports";
-
 export const SCREENING_MESSAGES = {
   nothingYet: "No screening yet.",
   needsMoreDetails: "I need a few more details before screening.",
@@ -18,16 +16,8 @@ export const SCREENING_MESSAGES = {
   badFile: "I can't read that kind of file. Use a PDF, JPEG, or PNG.",
   needsReason: "I need a reason for that outcome.",
   storageDown: "I couldn't save the file just now. Your report is still here, so try again in a bit.",
-  cameraDenied: "I need camera access for that. You can turn it on in Settings.",
-  pickFailed: "I couldn't get that file. Want me to try again?",
-  discardTitle: "Discard this upload?",
-  discard: "Discard",
-  keepEditing: "Keep editing",
   sheetTitle: "Upload a screening result",
-  chooseFile: "Choose a file",
   takePhoto: "Take a photo of a paper report",
-  photoLibrary: "Photo library",
-  chooseDifferentFile: "Choose a different file",
   outcome: "Outcome",
   reason: "Reason",
   reasonHint: "Used on the adverse action notice.",
@@ -37,6 +27,8 @@ export const SCREENING_MESSAGES = {
 } as const;
 
 export const SCREENING_REASON_MAX_LENGTH = 2000;
+
+export const SCREENING_PHOTO_NAME = "screening-report.jpg";
 
 export const SCREENING_REPORT_FILE_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 
