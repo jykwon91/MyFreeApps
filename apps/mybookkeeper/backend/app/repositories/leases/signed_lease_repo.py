@@ -5,7 +5,7 @@ import datetime as _dt
 import uuid
 from typing import Any
 
-from sqlalchemy import desc, func, select, update
+from sqlalchemy import delete, desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -279,3 +279,8 @@ async def soft_delete(
         .values(deleted_at=_dt.datetime.now(_dt.timezone.utc))
     )
     return (result.rowcount or 0) > 0
+
+
+async def hard_delete_for_organization(db: AsyncSession, organization_id: uuid.UUID) -> None:
+    """For deleting an account. Everywhere else a lease is soft-deleted."""
+    await db.execute(delete(SignedLease).where(SignedLease.organization_id == organization_id))

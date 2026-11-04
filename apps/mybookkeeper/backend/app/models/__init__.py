@@ -116,3 +116,5 @@ from app.models.requests.property_create import PropertyCreate
 from app.models.requests.property_update import PropertyUpdate
 from app.models.requests.tenant_create import TenantCreate
 from app.models.requests.lease_create import LeaseCreate
+from app.models.leases.pending_rent_receipt import PendingRentReceipt  # noqa: F401
+from app.models.leases.rent_receipt_sequence import RentReceiptSequence  # noqa: F401

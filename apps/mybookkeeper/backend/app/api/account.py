@@ -20,7 +20,7 @@ from app.core.context import RequestContext
 from app.core.permissions import current_org_member
 from app.db.session import get_db, unit_of_work
 from app.models.user.user import User
-from app.services.user import account_service
+from app.services.user import account_deletion_service, account_service
 from app.services.user import totp_service
 
 router = APIRouter(tags=["account"])
@@ -47,6 +47,7 @@ router.include_router(
         verify_totp_step_up=_verify_totp_late_lookup,
         # Lambda for late lookup so tests patching `unit_of_work` take effect.
         unit_of_work_factory=lambda: unit_of_work(),
+        prepare_deletion=account_deletion_service.prepare_deletion,
     )
 )
 
