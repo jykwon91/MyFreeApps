@@ -7,8 +7,8 @@ import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useUploadScreeningResultMutation } from "@mybookkeeper/api-client/store/screeningApi";
 import {
   ADVERSE_OUTCOMES,
-  SCREENING_STATUSES,
   SCREENING_STATUS_LABELS,
+  SCREENING_UPLOAD_OUTCOMES,
 } from "@mybookkeeper/api-client/constants/screeningStatus";
 import type { ScreeningStatus } from "@mybookkeeper/api-client/types/applicant/screening-status";
 
@@ -148,7 +148,7 @@ export default function UploadScreeningResultModal({
                 className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[44px]"
               >
                 <option value="">— Choose outcome —</option>
-                {SCREENING_STATUSES.map((s) => (
+                {SCREENING_UPLOAD_OUTCOMES.map((s) => (
                   <option key={s} value={s}>
                     {SCREENING_STATUS_LABELS[s]}
                   </option>

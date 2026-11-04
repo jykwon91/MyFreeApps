@@ -20,6 +20,9 @@ export const SCREENING_STATUSES = [
   "inconclusive",
 ] as const satisfies readonly ScreeningStatus[];
 
+/** "pending" is for a report that hasn't come back, so it isn't an outcome you can upload. */
+export const SCREENING_UPLOAD_OUTCOMES: readonly ScreeningStatus[] = ["pass", "fail", "inconclusive"];
+
 /** Statuses that REQUIRE an ``adverse_action_snippet`` on upload. */
 export const ADVERSE_OUTCOMES: readonly ScreeningStatus[] = ["fail", "inconclusive"] as const;
 

@@ -80,6 +80,12 @@ test.describe("Applicant screening (PR 3.3 — KeyCheck redirect-only)", () => {
         page.getByTestId("screening-results-empty"),
       ).toBeVisible({ timeout: 5000 });
 
+      // Opening a provider doesn't create a pending result, so the form has to be
+      // reachable from here.
+      await page.getByTestId("screening-upload-button").click();
+      await expect(page.getByTestId("upload-screening-modal")).toBeVisible();
+      await page.keyboard.press("Escape");
+
       // Upload via the API (skips the modal — we verify the modal in
       // unit tests; this is the behavioural E2E for the upload pipeline +
       // list refresh).

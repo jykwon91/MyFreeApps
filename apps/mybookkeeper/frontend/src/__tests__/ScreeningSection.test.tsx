@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 
@@ -126,6 +127,31 @@ describe("ScreeningSection", () => {
     });
     renderSection();
     expect(screen.getByTestId("screening-results-empty")).toBeInTheDocument();
+  });
+
+  it("lets a writer upload a report without a pending result", async () => {
+    eligibilityMock.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: { eligible: true, missing_fields: [], has_pending: false },
+    });
+    resultsMock.mockReturnValue({ isLoading: false, isError: false, data: [], isFetching: false, refetch: vi.fn() });
+    renderSection(true);
+    await userEvent.click(screen.getByTestId("screening-upload-button"));
+    expect(screen.getByTestId("upload-screening-modal")).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Pending" })).toBeNull();
+    expect(screen.getByRole("option", { name: "Passed" })).toBeInTheDocument();
+  });
+
+  it("offers no upload to a viewer", () => {
+    eligibilityMock.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: { eligible: true, missing_fields: [], has_pending: false },
+    });
+    resultsMock.mockReturnValue({ isLoading: false, isError: false, data: [], isFetching: false, refetch: vi.fn() });
+    renderSection(false);
+    expect(screen.queryByTestId("screening-upload-button")).toBeNull();
   });
 
   it("shows placeholder text for viewers with no results", () => {
