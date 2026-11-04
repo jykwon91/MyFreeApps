@@ -66,6 +66,7 @@ def _make_manager(user: MagicMock | None) -> UserManager:
     user_db = MagicMock()
     user_db.update = AsyncMock()
     user_db.session = MagicMock()
+    user_db.session.refresh = AsyncMock()
 
     if user is None:
         from fastapi_users import exceptions as fu_exceptions

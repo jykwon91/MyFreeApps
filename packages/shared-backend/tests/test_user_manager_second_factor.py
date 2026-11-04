@@ -44,7 +44,7 @@ def _manager(user: SimpleNamespace, *, password_is_right: bool = True) -> _Manag
     user_db = AsyncMock()
     user_db.update.side_effect = persist
     user_db.session = MagicMock()
-    user_db.session.flush = AsyncMock()
+    user_db.session.refresh = AsyncMock()
     manager = _Manager(user_db)
     manager.get_by_email = AsyncMock(return_value=user)  # type: ignore[method-assign]
     manager.password_helper = MagicMock()
@@ -126,3 +126,21 @@ async def test_finishing_the_login_clears_the_count_and_the_lock_state() -> None
     assert user.failed_login_count == 0
     assert user.last_failed_login_at is None
     assert user.locked_until is None
+
+
+@pytest.mark.asyncio
+async def test_a_failure_counts_from_the_locked_fresh_value() -> None:
+    """Another request's failure, committed since this one loaded the user, still counts."""
+    user = _user(totp_enabled=True, failed_login_count=1)
+    manager = _manager(user)
+
+    async def committed_elsewhere(target: SimpleNamespace, *_: Any, **__: Any) -> None:
+        target.failed_login_count = manager.lockout_threshold - 1
+
+    manager.user_db.session.refresh.side_effect = committed_elsewhere
+
+    await manager.count_failed_second_factor(user)
+
+    assert manager.user_db.session.refresh.await_args.kwargs == {"with_for_update": True}
+    assert user.failed_login_count == manager.lockout_threshold
+    assert user.locked_until is not None
