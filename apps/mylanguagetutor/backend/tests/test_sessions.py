@@ -278,8 +278,12 @@ class TestAccountDataLifecycle:
 
     @pytest.mark.asyncio
     async def test_wrong_password_on_account_deletion_counts_toward_the_lockout(
-        self, user_factory, as_user, db: AsyncSession,
+        self, user_factory, as_user, db: AsyncSession, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        monkeypatch.setattr(
+            "platform_shared.api.account_deletion_router.PasswordHelper",
+            _FastPasswordHelper,
+        )
         # Signed in for real, so the route counts on the session that loaded the user.
         user = await user_factory()
         async with await as_user(user) as authed:
@@ -296,8 +300,12 @@ class TestAccountDataLifecycle:
 
     @pytest.mark.asyncio
     async def test_guesses_sent_together_get_no_more_than_the_lockout_allows(
-        self, user_factory, as_user,
+        self, user_factory, as_user, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        monkeypatch.setattr(
+            "platform_shared.api.account_deletion_router.PasswordHelper",
+            _FastPasswordHelper,
+        )
         user = await user_factory()
         guesses = 12
         async with await as_user(user) as authed:
