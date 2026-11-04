@@ -12,6 +12,21 @@ export const SIGNED_LEASE_STATUS_LABELS: Record<SignedLeaseStatus, string> = {
   terminated: "Terminated",
 };
 
+/**
+ * The statuses a lease can move to. Mirrors ``_ALLOWED_TRANSITIONS`` in
+ * ``backend/app/services/leases/_lease_helpers.py``: the server refuses anything else.
+ * Staying on the same status is a no-op, so it isn't listed.
+ */
+export const SIGNED_LEASE_STATUS_NEXT: Record<SignedLeaseStatus, readonly SignedLeaseStatus[]> = {
+  draft: ["generated"],
+  generated: ["sent", "signed"],
+  sent: ["signed"],
+  signed: ["active"],
+  active: ["ended", "terminated"],
+  ended: [],
+  terminated: [],
+};
+
 export const LEASE_ATTACHMENT_KIND_LABELS: Record<LeaseAttachmentKind, string> = {
   rendered_original: "Rendered original",
   signed_lease: "Signed lease",

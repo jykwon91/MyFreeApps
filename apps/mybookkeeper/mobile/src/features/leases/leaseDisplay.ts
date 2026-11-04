@@ -1,4 +1,4 @@
-import { LEASE_ATTACHMENT_KIND_LABELS, SIGNED_LEASE_STATUS_LABELS } from "@mybookkeeper/api-client/constants/leaseLabels";
+import { LEASE_ATTACHMENT_KIND_LABELS, SIGNED_LEASE_STATUS_LABELS, SIGNED_LEASE_STATUS_NEXT } from "@mybookkeeper/api-client/constants/leaseLabels";
 import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
 import type { SignedLeaseStatus } from "@mybookkeeper/api-client/types/lease/signed-lease-status";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
@@ -33,6 +33,21 @@ export function leaseCountdown(status: SignedLeaseStatus, endsOn: string | null,
   if (days === 1) return status === "ended" ? null : "Ends tomorrow";
   if (days === 0) return "Ends today";
   return days === -1 ? "Ended yesterday" : `Ended ${-days} days ago`;
+}
+
+/**
+ * Generating the document is website-only, and a draft's values lock once it leaves draft. Marking
+ * one generated from the phone would lock it with no document, so a draft offers no moves here.
+ */
+export function leaseStatusMoves(status: SignedLeaseStatus): readonly SignedLeaseStatus[] {
+  if (status === "draft") return [];
+  // An installed app can be older than the server, and a status it doesn't know offers no moves.
+  return SIGNED_LEASE_STATUS_NEXT[status] ?? [];
+}
+
+/** Nothing moves on from these, so a wrong tap couldn't be put right. */
+export function leaseStatusIsFinal(status: SignedLeaseStatus): boolean {
+  return SIGNED_LEASE_STATUS_NEXT[status].length === 0;
 }
 
 export function leaseStatusLabel(status: SignedLeaseStatus): string {

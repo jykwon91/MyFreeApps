@@ -91,6 +91,16 @@ const signedLeasesApi = baseApi.enhanceEndpoints({
         method: "PATCH",
         data,
       }),
+      // The response is the whole lease, so a screen shows the change straight
+      // away rather than the old value until the refetch lands.
+      async onQueryStarted({ leaseId }, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(signedLeasesApi.util.updateQueryData("getSignedLeaseById", leaseId, () => data));
+        } catch {
+          // The caller reports the failure, and the cache still holds the old value.
+        }
+      },
       invalidatesTags: (_r, _e, { leaseId }) => [
         { type: "SignedLease", id: leaseId },
         { type: "SignedLease", id: "LIST" },
