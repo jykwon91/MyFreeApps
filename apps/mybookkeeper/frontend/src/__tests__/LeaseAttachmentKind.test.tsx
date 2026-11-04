@@ -160,6 +160,26 @@ describe("LeaseAttachmentsSection — kind picker", () => {
 });
 
 describe("LeaseAttachmentsSection — delete", () => {
+  it("explains why an extension's addendum can't change kind", async () => {
+    updateMock.mockReset();
+    updateMock.mockReturnValue({
+      unwrap: () => Promise.reject({ status: 409, data: { detail: { code: "ATTACHMENT_BACKS_EXTENSION" } } }),
+    });
+    render(
+      <Provider store={store}>
+        <LeaseAttachmentsSection leaseId="lease-1" attachments={[ATTACHMENT]} canWrite />
+      </Provider>,
+    );
+    fireEvent.change(screen.getByTestId(`lease-attachment-kind-picker-${ATTACHMENT.id}`), {
+      target: { value: "notice" },
+    });
+    await waitFor(() => {
+      expect(showError).toHaveBeenCalledWith(
+        "This addendum is the record of an extension. Undo the extension to change it.",
+      );
+    });
+  });
+
   it("explains why an extension's addendum can't go, and closes the question", async () => {
     deleteMock.mockReset();
     deleteMock.mockReturnValue({

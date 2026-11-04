@@ -138,6 +138,42 @@ async def test_other_files_on_the_lease_still_delete(db: AsyncSession) -> None:
     storage.delete_file.assert_called_once_with(notice.storage_key)
 
 
+@pytest.mark.asyncio
+async def test_kind_cant_change_while_the_extension_is_live(db: AsyncSession) -> None:
+    """Regenerate deletes every rendered_original, so this would delete it anyway."""
+    lease, addendum, _version = await _lease_with_extension(db)
+
+    with _patches(db, MagicMock()), pytest.raises(signed_lease_service.AttachmentBacksExtensionError):
+        await lease_attachment_service.update_attachment_kind(
+            user_id=lease.user_id,
+            organization_id=lease.organization_id,
+            lease_id=lease.id,
+            attachment_id=addendum.id,
+            kind="rendered_original",
+        )
+
+    assert addendum.kind == "signed_addendum"
+
+
+def test_kind_route_answers_409_with_a_code() -> None:
+    lease_id, attachment_id = uuid.uuid4(), uuid.uuid4()
+    ctx = RequestContext(organization_id=uuid.uuid4(), user_id=uuid.uuid4(), org_role=OrgRole.OWNER)
+    app.dependency_overrides[require_write_access] = lambda: ctx
+    try:
+        with patch(
+            "app.api.signed_lease_attachments.signed_lease_service.update_attachment_kind",
+            AsyncMock(side_effect=signed_lease_service.AttachmentBacksExtensionError("live")),
+        ):
+            response = TestClient(app).patch(
+                f"/signed-leases/{lease_id}/attachments/{attachment_id}",
+                json={"kind": "notice"},
+            )
+        assert response.status_code == 409
+        assert response.json()["detail"]["code"] == "ATTACHMENT_BACKS_EXTENSION"
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_route_answers_409_with_a_code() -> None:
     lease_id, attachment_id = uuid.uuid4(), uuid.uuid4()
     ctx = RequestContext(organization_id=uuid.uuid4(), user_id=uuid.uuid4(), org_role=OrgRole.OWNER)

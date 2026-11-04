@@ -10,6 +10,7 @@ import AttachmentViewer from "@/app/features/leases/AttachmentViewer";
 import LeaseAttachmentDropzone from "@/app/features/leases/LeaseAttachmentDropzone";
 import LeaseAttachmentRow from "@/app/features/leases/LeaseAttachmentRow";
 import { ConfirmDialog } from "@platform/ui";
+import { attachmentBacksExtension } from "./attachmentBacksExtension";
 
 export interface LeaseAttachmentsSectionProps {
   leaseId: string;
@@ -37,8 +38,7 @@ export default function LeaseAttachmentsSection({ leaseId, attachments, canWrite
       showSuccess("Attachment removed.");
       setPendingDelete(null);
     } catch (err) {
-      const code = (err as { data?: { detail?: { code?: unknown } } } | null)?.data?.detail?.code;
-      if (code === "ATTACHMENT_BACKS_EXTENSION") {
+      if (attachmentBacksExtension(err)) {
         setPendingDelete(null);
         showError("This addendum is the record of an extension. Undo the extension to remove it.");
       } else {
@@ -51,8 +51,12 @@ export default function LeaseAttachmentsSection({ leaseId, attachments, canWrite
     try {
       await updateAttachment({ leaseId, attachmentId: att.id, kind }).unwrap();
       showSuccess("Kind updated.");
-    } catch {
-      showError("Couldn't update the kind.");
+    } catch (err) {
+      showError(
+        attachmentBacksExtension(err)
+          ? "This addendum is the record of an extension. Undo the extension to change it."
+          : "Couldn't update the kind.",
+      );
     }
   }
 
