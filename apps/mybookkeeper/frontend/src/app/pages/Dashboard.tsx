@@ -4,7 +4,7 @@ import { formatCurrency } from "@/shared/utils/currency";
 import { formatTag } from "@/shared/utils/tag";
 import { useGetSummaryQuery, useGetSummaryYearsQuery } from "@/shared/store/summaryApi";
 import { useGetHealthSummaryQuery } from "@/shared/store/healthApi";
-import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
+import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import { useDashboardFilter } from "@/shared/hooks/useDashboardFilter";
 import { useSelectedYear } from "@/shared/hooks/useSelectedYear";

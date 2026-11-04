@@ -1,6 +1,6 @@
 import type { TileOption } from "@/shared/components/ui/TilePicker";
-import type { PropertyClassification } from "@/shared/types/property/property-classification";
-import type { PropertyType } from "@/shared/types/property/property-type";
+import type { PropertyClassification } from "@mybookkeeper/api-client/types/property/PropertyClassification";
+import type { PropertyType } from "@mybookkeeper/api-client/types/property/PropertyType";
 
 export const CLASSIFICATION_LABELS: Record<PropertyClassification, string> = {
   investment: "Investment Property",

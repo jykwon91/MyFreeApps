@@ -1,9 +1,11 @@
-import { baseApi } from "./baseApi";
-import type { Property } from "@/shared/types/property/property";
-import type { PropertyClassification } from "@/shared/types/property/property-classification";
-import type { PropertyType } from "@/shared/types/property/property-type";
+import { baseApi } from "@platform/core/store/baseApi";
+import type { Property } from "../types/property/property";
+import type { PropertyClassification } from "../types/property/PropertyClassification";
+import type { PropertyType } from "../types/property/PropertyType";
 
-const propertiesApi = baseApi.injectEndpoints({
+export const propertiesApi = baseApi.enhanceEndpoints({
+  addTagTypes: ["Property"],
+}).injectEndpoints({
   endpoints: (builder) => ({
     getProperties: builder.query<Property[], void>({
       query: () => ({ url: "/properties" }),

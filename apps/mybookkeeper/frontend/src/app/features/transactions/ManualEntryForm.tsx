@@ -2,14 +2,14 @@ import { useForm } from "react-hook-form";
 import { getYear, format } from "date-fns";
 import { formatTag } from "@/shared/utils/tag";
 import { EXPENSE_CATEGORY_LIST, INCOME_CATEGORIES, PAYMENT_METHODS, CHANNELS } from "@/shared/lib/constants";
-import type { Property } from "@/shared/types/property/property";
-import type { Transaction } from "@/shared/types/transaction/transaction";
+import type { Property } from "@mybookkeeper/api-client/types/property/property";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionFormValues } from "@/shared/types/transaction/transaction-form-values";
 import Panel from "@/shared/components/ui/Panel";
 import FormField from "@/shared/components/ui/FormField";
 import Select from "@/shared/components/ui/Select";
 import { LoadingButton } from "@platform/ui";
-import { useCreateTransactionMutation } from "@/shared/store/transactionsApi";
+import { useCreateTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 
 export interface ManualEntryFormProps {
   properties: readonly Property[];

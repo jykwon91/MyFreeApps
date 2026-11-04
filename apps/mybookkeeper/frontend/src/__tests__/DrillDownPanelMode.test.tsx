@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { useDrillDownBodyMode } from "@/app/features/dashboard/useDrillDownBodyMode";
 import { useDashboardHeaderMode } from "@/app/features/dashboard/useDashboardHeaderMode";
-import type { Transaction } from "@/shared/types/transaction/transaction";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { HealthSummary } from "@/shared/types/health/health-summary";
 import type { DateRange } from "@/shared/types/dashboard/date-range";
 

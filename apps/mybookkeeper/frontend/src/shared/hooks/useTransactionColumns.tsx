@@ -9,7 +9,7 @@ import { formatDate } from "@/shared/utils/date";
 import { formatTag } from "@/shared/utils/tag";
 import { TAG_COLORS } from "@/shared/lib/constants";
 import { APPROVABLE_STATUSES } from "@/shared/lib/transaction-config";
-import type { Transaction } from "@/shared/types/transaction/transaction";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import { Button } from "@platform/ui";
 import Badge from "@/shared/components/ui/Badge";
 import TransactionStatusBadge from "@/app/features/transactions/TransactionStatusBadge";

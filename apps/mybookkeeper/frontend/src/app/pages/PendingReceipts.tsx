@@ -8,7 +8,7 @@ import {
   useGetPendingReceiptsQuery,
   useDismissReceiptMutation,
 } from "@/shared/store/rentReceiptsApi";
-import { useGetTransactionQuery } from "@/shared/store/transactionsApi";
+import { useGetTransactionQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 import SendReceiptDialog from "@/app/features/receipts/SendReceiptDialog";
 import PendingReceiptsSkeleton from "@/app/features/receipts/PendingReceiptsSkeleton";
 import type { PendingReceipt } from "@/shared/types/lease/pending-receipt";

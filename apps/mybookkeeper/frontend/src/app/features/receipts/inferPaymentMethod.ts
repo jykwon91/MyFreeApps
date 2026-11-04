@@ -1,4 +1,4 @@
-import type { Transaction } from "@/shared/types/transaction/transaction";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 
 /**
  * Best-effort inference of a receipt's payment method when the

@@ -1,34 +1,14 @@
-import { baseApi } from "./baseApi";
-import type { Transaction } from "@/shared/types/transaction/transaction";
-import type { DuplicatePairsResponse, MergeDuplicatesRequest, MergeDuplicatesResponse } from "@/shared/types/transaction/duplicate";
+import { baseApi } from "@platform/core/store/baseApi";
+import type { DuplicatePairsResponse } from "../types/transaction/DuplicatePairsResponse";
+import type { MergeDuplicatesRequest } from "../types/transaction/MergeDuplicatesRequest";
+import type { MergeDuplicatesResponse } from "../types/transaction/MergeDuplicatesResponse";
+import type { ScheduleEReport } from "../types/transaction/ScheduleEReport";
+import type { Transaction } from "../types/transaction/transaction";
+import type { TransactionListParams } from "../types/transaction/TransactionListParams";
 
-export interface TransactionListParams {
-  property_id?: string;
-  unassigned?: boolean;
-  applicant_id?: string;
-  status?: string;
-  transaction_type?: string;
-  category?: string;
-  vendor?: string;
-  start_date?: string;
-  end_date?: string;
-  tax_year?: number;
-  reconciled?: boolean;
-}
-
-export interface ScheduleEReport {
-  tax_year: number;
-  properties: ScheduleEProperty[];
-  totals: Record<string, string>;
-}
-
-export interface ScheduleEProperty {
-  property_id: string;
-  property_name: string;
-  lines: Record<string, string>;
-}
-
-const transactionsApi = baseApi.injectEndpoints({
+export const transactionsApi = baseApi.enhanceEndpoints({
+  addTagTypes: ["Summary", "Transaction"],
+}).injectEndpoints({
   endpoints: (builder) => ({
     listTransactions: builder.query<Transaction[], TransactionListParams>({
       query: (params = {}) => ({ url: "/transactions", params: { ...params } }),

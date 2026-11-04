@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListTransactionsQuery } from "@/shared/store/transactionsApi";
+import { useListTransactionsQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 import { useGetRentLedgerQuery } from "@/shared/store/rentLedgerApi";
 import DocumentViewer from "@/app/features/documents/DocumentViewer";
 import type { DocumentViewTarget } from "@/shared/types/document/document-view-target";

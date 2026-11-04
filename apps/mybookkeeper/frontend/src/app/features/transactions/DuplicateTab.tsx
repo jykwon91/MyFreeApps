@@ -1,8 +1,8 @@
 import DuplicateCard from "@/app/features/transactions/DuplicateCard";
 import DuplicateReviewSkeleton from "@/app/features/transactions/DuplicateReviewSkeleton";
 import EmptyState from "@/shared/components/ui/EmptyState";
-import type { DuplicatePair } from "@/shared/types/transaction/duplicate";
-import type { MergeFieldSide } from "@/shared/types/transaction/duplicate";
+import type { DuplicatePair } from "@mybookkeeper/api-client/types/transaction/DuplicatePair";
+import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
 
 interface DuplicateTabProps {
   duplicatePairs: DuplicatePair[];

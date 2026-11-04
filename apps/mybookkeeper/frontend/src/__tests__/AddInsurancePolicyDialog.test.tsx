@@ -30,7 +30,7 @@ vi.mock("@/shared/store/insurancePoliciesApi", () => ({
   ]),
 }));
 
-vi.mock("@/shared/store/propertiesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(() => ({
     data: [
       { id: "property-1", name: "6734 Peerless St" },

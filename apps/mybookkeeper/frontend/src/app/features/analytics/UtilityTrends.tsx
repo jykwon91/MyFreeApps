@@ -1,7 +1,7 @@
 import { useSearchParams, Link } from "react-router-dom";
 import { subMonths, format, startOfMonth, endOfMonth } from "date-fns";
 import { useGetUtilityTrendsQuery } from "@/shared/store/analyticsApi";
-import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
+import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import AnalyticsSkeleton from "./AnalyticsSkeleton";
 import AnalyticsFilters from "./AnalyticsFilters";
 import UtilityTrendsChart from "./UtilityTrendsChart";

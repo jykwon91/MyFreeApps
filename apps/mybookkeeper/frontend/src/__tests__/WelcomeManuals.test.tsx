@@ -37,7 +37,7 @@ vi.mock("@/shared/store/welcomeManualsApi", () => ({
   useCreateWelcomeManualMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
-vi.mock("@/shared/store/propertiesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(() => ({ data: [] })),
 }));
 

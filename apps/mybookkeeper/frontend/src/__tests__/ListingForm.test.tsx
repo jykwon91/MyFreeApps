@@ -6,7 +6,7 @@ import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import ListingForm from "@/app/features/listings/ListingForm";
 import type { ListingResponse } from "@/shared/types/listing/listing-response";
-import type { Property } from "@/shared/types/property/property";
+import type { Property } from "@mybookkeeper/api-client/types/property/property";
 
 const properties: Property[] = [
   {

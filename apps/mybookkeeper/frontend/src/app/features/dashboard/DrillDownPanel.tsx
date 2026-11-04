@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
 import { ArrowLeft, ChevronRight } from "lucide-react";
-import { useListTransactionsQuery } from "@/shared/store/transactionsApi";
-import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
+import { useListTransactionsQuery } from "@mybookkeeper/api-client/store/transactionsApi";
+import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { UNASSIGNED_PROPERTY_ID } from "@/shared/lib/constants";
 import { useToast } from "@/shared/hooks/useToast";
 import { formatCurrency } from "@/shared/utils/currency";
 import Panel, { PanelCloseButton } from "@/shared/components/ui/Panel";
 import type { DrillDownFilter } from "@/shared/types/dashboard/drill-down-filter";
-import type { Transaction } from "@/shared/types/transaction/transaction";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import { useDrillDownBodyMode } from "./useDrillDownBodyMode";
 import DrillDownPanelBody from "./DrillDownPanelBody";
 

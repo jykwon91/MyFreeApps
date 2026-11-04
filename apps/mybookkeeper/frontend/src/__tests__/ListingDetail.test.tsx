@@ -6,7 +6,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { store } from "@/shared/store";
 import ListingDetail from "@/app/pages/ListingDetail";
 import type { ListingResponse } from "@/shared/types/listing/listing-response";
-import type { Property } from "@/shared/types/property/property";
+import type { Property } from "@mybookkeeper/api-client/types/property/property";
 
 const mockListing: ListingResponse = {
   id: "listing-1",
@@ -78,7 +78,7 @@ vi.mock("@/shared/store/listingsApi", () => ({
   useDeleteChannelListingMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
 }));
 
-vi.mock("@/shared/store/propertiesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(() => ({ data: mockProperties, isLoading: false })),
 }));
 

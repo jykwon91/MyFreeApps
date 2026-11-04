@@ -1,4 +1,4 @@
-import type { Transaction } from "@/shared/types/transaction/transaction";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { DocumentBlob } from "@/shared/services/documentService";
 import PaymentDocumentCard from "./PaymentDocumentCard";
 import SourceEmailFrame from "./SourceEmailFrame";

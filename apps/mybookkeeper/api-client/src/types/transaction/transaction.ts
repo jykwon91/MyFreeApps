@@ -1,10 +1,7 @@
-import type { UsageUnit } from "../utility/utility-usage-unit";
-
-export type TransactionType = "income" | "expense";
-
-export type TransactionStatus = "pending" | "approved" | "needs_review" | "duplicate" | "unverified";
-
-export type SubCategory = "electricity" | "water" | "gas" | "internet" | "trash" | "sewer";
+import type { SubCategory } from "./SubCategory";
+import type { TransactionStatus } from "./TransactionStatus";
+import type { TransactionType } from "./TransactionType";
+import type { UsageUnit } from "./UsageUnit";
 
 export interface Transaction {
   id: string;

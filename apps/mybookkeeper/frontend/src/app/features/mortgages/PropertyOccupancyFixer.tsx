@@ -8,9 +8,9 @@ import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   useGetPropertiesQuery,
   useUpdatePropertyMutation,
-} from "@/shared/store/propertiesApi";
-import type { PropertyClassification } from "@/shared/types/property/property-classification";
-import type { PropertyType } from "@/shared/types/property/property-type";
+} from "@mybookkeeper/api-client/store/propertiesApi";
+import type { PropertyClassification } from "@mybookkeeper/api-client/types/property/PropertyClassification";
+import type { PropertyType } from "@mybookkeeper/api-client/types/property/PropertyType";
 
 export interface PropertyOccupancyFixerProps {
   propertyId: string;

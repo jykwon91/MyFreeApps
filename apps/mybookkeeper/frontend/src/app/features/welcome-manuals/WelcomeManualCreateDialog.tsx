@@ -5,7 +5,7 @@ import FormField from "@/shared/components/ui/FormField";
 import { LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useCreateWelcomeManualMutation } from "@/shared/store/welcomeManualsApi";
-import type { Property } from "@/shared/types/property/property";
+import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { WelcomeManualCreateFormValues } from "@/shared/types/welcome-manual/welcome-manual-create-form-values";
 import type { WelcomeManualCreateRequest } from "@/shared/types/welcome-manual/welcome-manual-create-request";
 import type { WelcomeManualResponse } from "@/shared/types/welcome-manual/welcome-manual-response";

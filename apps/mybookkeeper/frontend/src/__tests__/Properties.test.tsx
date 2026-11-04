@@ -5,7 +5,7 @@ import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import Properties from "@/app/pages/Properties";
-import type { Property } from "@/shared/types/property/property";
+import type { Property } from "@mybookkeeper/api-client/types/property/property";
 
 const mockProperties: Property[] = [
   {
@@ -30,7 +30,7 @@ const mockProperties: Property[] = [
   },
 ];
 
-vi.mock("@/shared/store/propertiesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(() => ({
     data: mockProperties,
     isLoading: false,
@@ -44,7 +44,7 @@ vi.mock("@/shared/hooks/useOrgRole", () => ({
   useCanWrite: vi.fn(() => true),
 }));
 
-import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
+import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 
 function renderWithProviders(ui: React.ReactElement) {

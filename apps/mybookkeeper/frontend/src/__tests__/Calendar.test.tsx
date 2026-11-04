@@ -5,7 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import Calendar from "@/app/pages/Calendar";
 import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
-import type { Property } from "@/shared/types/property/property";
+import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { ListingListResponse } from "@/shared/types/listing/listing-list-response";
 
 // ---------------------------------------------------------------------------
@@ -108,7 +108,7 @@ vi.mock("@/shared/store/calendarApi", () => ({
   useDismissQueueItemMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
-vi.mock("@/shared/store/propertiesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(() => ({ data: mockProperties, isLoading: false })),
 }));
 

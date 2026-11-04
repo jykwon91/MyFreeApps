@@ -1,5 +1,5 @@
 import { Badge } from "@platform/ui";
-import type { TransactionStatus } from "@/shared/types/transaction/transaction";
+import type { TransactionStatus } from "@mybookkeeper/api-client/types/transaction/TransactionStatus";
 
 export default function TransactionStatusBadge({ status }: { status: TransactionStatus }) {
   switch (status) {

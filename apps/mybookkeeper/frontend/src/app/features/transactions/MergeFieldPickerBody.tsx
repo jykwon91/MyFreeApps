@@ -1,5 +1,6 @@
 import type { MergeFieldPickerMode } from "@/shared/types/transaction/merge-field-picker-mode";
-import type { DuplicateTransaction, MergeFieldSide } from "@/shared/types/transaction/duplicate";
+import type { DuplicateTransaction } from "@mybookkeeper/api-client/types/transaction/DuplicateTransaction";
+import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
 import type { MergeableField } from "./merge-defaults";
 import MergeNoConflictsState from "./MergeNoConflictsState";
 import MergeDateOnlyState from "./MergeDateOnlyState";

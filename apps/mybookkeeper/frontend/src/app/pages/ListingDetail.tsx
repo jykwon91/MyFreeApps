@@ -10,7 +10,7 @@ import {
   useDeleteListingMutation,
   useGetListingByIdQuery,
 } from "@/shared/store/listingsApi";
-import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
+import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import {
   LISTING_ROOM_TYPE_LABELS,
   formatRate,

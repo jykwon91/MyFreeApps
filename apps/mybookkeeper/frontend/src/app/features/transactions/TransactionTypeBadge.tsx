@@ -1,4 +1,4 @@
-import type { TransactionType } from "@/shared/types/transaction/transaction";
+import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
 
 export default function TransactionTypeBadge({ type }: { type: TransactionType }) {
   return type === "income" ? (

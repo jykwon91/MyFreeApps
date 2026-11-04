@@ -2,7 +2,7 @@ import { useState } from "react";
 import { SlidersHorizontal, X } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
 import PropertyMultiSelect from "@/shared/components/PropertyMultiSelect";
-import type { Property } from "@/shared/types/property/property";
+import type { Property } from "@mybookkeeper/api-client/types/property/property";
 
 type Granularity = "monthly" | "quarterly";
 

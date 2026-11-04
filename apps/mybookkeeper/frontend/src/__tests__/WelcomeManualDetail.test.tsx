@@ -59,7 +59,7 @@ vi.mock("@/shared/store/welcomeManualsApi", () => ({
   useDeletePlaceMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
-vi.mock("@/shared/store/propertiesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(() => ({ data: [] })),
 }));
 

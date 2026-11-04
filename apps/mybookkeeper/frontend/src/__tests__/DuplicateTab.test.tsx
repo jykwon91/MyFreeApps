@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import DuplicateTab from "@/app/features/transactions/DuplicateTab";
-import type { DuplicatePair } from "@/shared/types/transaction/duplicate";
+import type { DuplicatePair } from "@mybookkeeper/api-client/types/transaction/DuplicatePair";
 
 const mockPair: DuplicatePair = {
   id: "txn-1_txn-2",

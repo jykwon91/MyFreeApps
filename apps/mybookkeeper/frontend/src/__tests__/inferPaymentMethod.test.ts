@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { inferPaymentMethod } from "@/app/features/receipts/inferPaymentMethod";
-import type { Transaction } from "@/shared/types/transaction/transaction";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 
 function txn(overrides: Partial<Transaction>): Transaction {
   return {
