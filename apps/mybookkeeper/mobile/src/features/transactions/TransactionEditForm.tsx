@@ -98,7 +98,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
     changes.property_id && vendor && original.address ? `I'll move other ${vendor} transactions at this address too.` : undefined;
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={100} style={{ flex: 1 }}>
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
       <ScrollView
         contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }}
         contentInsetAdjustmentBehavior="automatic"

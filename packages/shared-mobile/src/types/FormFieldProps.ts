@@ -11,4 +11,6 @@ export interface FormFieldProps extends Omit<TextInputProps, "style"> {
   trailing?: ReactNode;
   ref?: Ref<ComponentRef<typeof TextInput>>;
   style?: StyleProp<ViewStyle>;
+  /** For the box you type in, where `style` is for the whole field. */
+  inputStyle?: TextInputProps["style"];
 }

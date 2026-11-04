@@ -8,14 +8,18 @@ import InquiryDetailScreen from "../src/features/inquiries/InquiryDetailScreen";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
+import { saveReplyDraft } from "../src/features/inquiries/replyDrafts";
+import { resetFakeFiles } from "../test-support/fakeFileSystem";
 import { aMessage, anInquiry, lastInquiryWrite, startInquiryServer } from "../test-support/inquiriesServer";
 
 const mockBack = jest.fn();
+const mockPush = jest.fn();
 const mockDispatch = jest.fn();
 const mockPreventRemove: { active: boolean; callback: ((event: { data: { action: unknown } }) => void) | null } = { active: false, callback: null };
 jest.mock("expo-router", () => ({
-  router: { back: () => mockBack() },
+  router: { back: () => mockBack(), push: (path: string) => mockPush(path) },
   useNavigation: () => ({ dispatch: (action: unknown) => mockDispatch(action) }),
+  useFocusEffect: (effect: () => void) => jest.requireActual<typeof import("react")>("react").useEffect(effect, [effect]),
   usePreventRemove: (active: boolean, callback: (event: { data: { action: unknown } }) => void) => {
     mockPreventRemove.active = active;
     mockPreventRemove.callback = callback;
@@ -28,6 +32,7 @@ jest.mock("expo-router", () => ({
     );
   },
 }));
+jest.mock("expo-file-system", () => jest.requireActual("../test-support/fakeFileSystem"));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 
 const mockModal: { onDismiss?: () => void } = {};
@@ -46,6 +51,7 @@ beforeEach(() => {
   store.dispatch(baseApi.util.resetApiState());
   store.dispatch(workspaceChosen("w1"));
   jest.clearAllMocks();
+  resetFakeFiles();
   jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
 });
 
@@ -277,6 +283,21 @@ describe("InquiryDetailScreen", () => {
     });
     await screen.findByText("Marked as not spam.");
     expect(server.requests.filter((request) => request.method === "post")).toHaveLength(1);
+  });
+
+  it("opens the reply screen, and says when there's a draft to come back to", async () => {
+    startInquiryServer([anInquiry()]);
+    await renderScreen();
+    await fireEvent.press(await screen.findByRole("button", { name: "Reply" }));
+    expect(mockPush).toHaveBeenCalledWith("/inquiries/i1/reply");
+  });
+
+  it("offers to continue a draft", async () => {
+    startInquiryServer([anInquiry()]);
+    jest.spyOn(session, "getState").mockReturnValue({ status: "signedIn", email: "me@example.com" } as never);
+    saveReplyDraft("i1", { subject: "Hi", body: "", templateId: null });
+    await renderScreen();
+    expect(await screen.findByRole("button", { name: "Continue draft" })).toBeTruthy();
   });
 
   it("stays put if archiving fails", async () => {

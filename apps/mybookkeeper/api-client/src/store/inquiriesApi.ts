@@ -1,5 +1,6 @@
 import { baseApi } from "@platform/core/store/baseApi";
 import { INQUIRY_PAGE_SIZE } from "../constants/inquiryPaging";
+import { INQUIRY_SEND_TIMEOUT_MS } from "../constants/inquiryRequests";
 import type { InquiryCreateRequest } from "../types/inquiry/inquiry-create-request";
 import type { InquiryListArgs } from "../types/inquiry/inquiry-list-args";
 import type { InquiryListResponse } from "../types/inquiry/inquiry-list-response";
@@ -64,7 +65,7 @@ const inquiriesApi = baseApi.enhanceEndpoints({
       ],
     }),
     getInquiryById: builder.query<InquiryResponse, string>({
-      query: (id) => ({ url: `/inquiries/${id}` }),
+      query: (id) => ({ url: `/inquiries/${id}`, timeout: INQUIRY_SEND_TIMEOUT_MS }),
       providesTags: (_result, _error, id) => [{ type: "Inquiry", id }],
     }),
     createInquiry: builder.mutation<InquiryResponse, InquiryCreateRequest>({
@@ -153,6 +154,7 @@ const inquiriesApi = baseApi.enhanceEndpoints({
         url: `/inquiries/${inquiryId}/reply`,
         method: "POST",
         data,
+        timeout: INQUIRY_SEND_TIMEOUT_MS,
       }),
       invalidatesTags: (_result, _err, arg) => [
         { type: "Inquiry", id: arg.inquiryId },

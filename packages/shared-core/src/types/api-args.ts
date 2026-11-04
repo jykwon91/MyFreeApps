@@ -9,4 +9,6 @@ export type Args = {
    * shared axios instance defaults; auth headers are still added by its
    * request interceptor. */
   headers?: Record<string, string>;
+  /** Milliseconds. Unset means none, and a phone's connection can then hang forever. */
+  timeout?: number;
 };

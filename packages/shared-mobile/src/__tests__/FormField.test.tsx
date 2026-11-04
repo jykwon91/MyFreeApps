@@ -27,6 +27,14 @@ describe("FormField", () => {
     expect(onChangeText).toHaveBeenCalledWith("ab");
   });
 
+  it("lets a caller adjust the input without losing its minimum size", async () => {
+    await render(<FormField inputStyle={{ paddingTop: 12 }} label="Message" />);
+
+    const style = StyleSheet.flatten(screen.getByLabelText("Message").props.style);
+    expect(style.paddingTop).toBe(12);
+    expect(style.minHeight).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+  });
+
   it("leaves room for something at the end of the input", async () => {
     await render(<FormField label="Password" trailing={<Text>Show</Text>} />);
 

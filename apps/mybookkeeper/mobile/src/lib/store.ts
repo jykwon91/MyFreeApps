@@ -6,6 +6,7 @@ import { API_BASE_URL } from "../constants/api";
 import { clearUploadQueue } from "../features/capture/uploadQueueFiles";
 import uploads, { uploadStatusDismissed } from "../features/capture/uploadsSlice";
 import { clearDocumentFiles } from "../features/documents/openDocumentFile";
+import { clearReplyDrafts } from "../features/inquiries/replyDrafts";
 import workspace, { workspaceChosen } from "../features/workspace/workspaceSlice";
 import { refetchOnForeground } from "./refetchOnForeground";
 import { session } from "./session";
@@ -40,7 +41,11 @@ onAccountLeft(session, () => {
   try {
     clearDocumentFiles();
   } finally {
-    clearUploadQueue();
+    try {
+      clearUploadQueue();
+    } finally {
+      clearReplyDrafts();
+    }
   }
 });
 resetCacheOnAccountChange(session, () => store.dispatch(baseApi.util.resetApiState()));

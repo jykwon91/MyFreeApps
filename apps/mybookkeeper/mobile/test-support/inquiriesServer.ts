@@ -1,6 +1,8 @@
 import api from "@platform/core/lib/api";
 import type { InquiryMessage } from "@mybookkeeper/api-client/types/inquiry/inquiry-message";
 import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
+import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
+import type { Integration } from "@mybookkeeper/api-client/types/integration/integration";
 import type { InquirySpamAssessment } from "@mybookkeeper/api-client/types/inquiry/inquiry-spam-assessment";
 import type { InquirySummary } from "@mybookkeeper/api-client/types/inquiry/inquiry-summary";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
@@ -61,6 +63,11 @@ export interface FakeInquiryServer {
   failWritesWith: number | null;
   /** Fails list requests at or past this offset, while set. */
   failListFromOffset: number | null;
+  integrations: Partial<Integration>[];
+  templates: Partial<ReplyTemplate>[];
+  failTemplateRender: boolean;
+  /** How the next send ends. A number is a failure with that status. */
+  sendOutcome: { status: number; detail?: string } | "lostAfterSending" | "lostBeforeSending" | null;
   requests: AxiosRequestConfig[];
 }
 
@@ -74,6 +81,10 @@ export function startInquiryServer(inquiries: InquiryResponse[]): FakeInquirySer
     offline: false,
     failWritesWith: null,
     failListFromOffset: null,
+    integrations: [{ provider: "gmail", has_send_scope: true, needs_reauth: false }],
+    templates: [],
+    failTemplateRender: false,
+    sendOutcome: null,
     requests: [],
   };
   const adapter: AxiosAdapter = (config) => {
@@ -86,6 +97,8 @@ export function startInquiryServer(inquiries: InquiryResponse[]): FakeInquirySer
     if (config.url === "/organizations") return respond([{ id: "w1", name: "Mine", org_role: server.role }]);
     server.requests.push(config);
     if (server.offline) return Promise.reject(Object.assign(new Error("Network Error"), { config }));
+    if (config.url === "/integrations") return respond(server.integrations);
+    if (config.url === "/reply-templates") return respond(server.templates);
     if (config.url === "/inquiries") {
       const params = (config.params ?? {}) as Record<string, string | number | boolean | undefined>;
       const offset = Number(params.offset ?? 0);
@@ -108,6 +121,24 @@ export function startInquiryServer(inquiries: InquiryResponse[]): FakeInquirySer
     if (config.method !== "get" && server.failWritesWith) return respond({ detail: "nope" }, server.failWritesWith);
     if (!inquiry) return respond({ detail: "Inquiry not found" }, 404);
     if (action === "spam-assessments") return respond(server.assessments);
+    if (action === "render-template") {
+      if (server.failTemplateRender) return respond({ detail: "nope" }, 500);
+      return respond({ subject: `Subject from ${config.url?.split("/").pop()}`, body: "Hello from the template" });
+    }
+    if (action === "reply") {
+      const outcome = server.sendOutcome;
+      if (outcome && typeof outcome === "object") return respond({ detail: outcome.detail ?? "nope" }, outcome.status);
+      if (outcome === "lostBeforeSending") return Promise.reject(Object.assign(new Error("Network Error"), { config }));
+      const sent = JSON.parse(String(config.data)) as { body: string };
+      const message = aMessage({
+        id: `sent${inquiry.messages.length}`,
+        direction: "outbound",
+        parsed_body: `Pet disclosure.\n\n${sent.body}`,
+      });
+      inquiry.messages = [...inquiry.messages, message];
+      if (outcome === "lostAfterSending") return Promise.reject(Object.assign(new Error("Network Error"), { config }));
+      return respond(message, 201);
+    }
     if (action === "mark-spam" || action === "mark-not-spam") {
       inquiry.spam_status = action === "mark-spam" ? "spam" : "manually_cleared";
       return respond(inquiry);

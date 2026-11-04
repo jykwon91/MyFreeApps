@@ -58,6 +58,7 @@ describe("inquiries endpoints", () => {
     );
     expect(sent[0].method).toBe("post");
     expect(sent[0].url).toBe("/inquiries/i1/reply");
+    expect(sent[0].timeout).toBe(60000);
   });
 
   it("marks an inquiry as spam", async () => {
