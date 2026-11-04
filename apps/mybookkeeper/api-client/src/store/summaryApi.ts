@@ -2,6 +2,7 @@ import { baseApi } from "@platform/core/store/baseApi";
 import type { SummaryParams } from "../types/summary/SummaryParams";
 import type { SummaryResponse } from "../types/summary/summary";
 import type { TaxSummaryResponse } from "../types/summary/TaxSummaryResponse";
+import { queryString } from "../utils/queryString";
 
 export const summaryApi = baseApi.enhanceEndpoints({
   addTagTypes: ["Summary"],
@@ -9,14 +10,9 @@ export const summaryApi = baseApi.enhanceEndpoints({
   endpoints: (builder) => ({
     getSummary: builder.query<SummaryResponse, SummaryParams | void>({
       query: (params) => {
-        if (!params) return { url: "/summary" };
-        const sp = new URLSearchParams();
-        if (params.startDate) sp.append("start_date", params.startDate);
-        if (params.endDate) sp.append("end_date", params.endDate);
-        if (params.propertyIds?.length) {
-          params.propertyIds.forEach((id) => sp.append("property_ids", id));
-        }
-        const qs = sp.toString();
+        const qs = params
+          ? queryString({ start_date: params.startDate, end_date: params.endDate, property_ids: params.propertyIds })
+          : "";
         return { url: qs ? `/summary?${qs}` : "/summary" };
       },
       providesTags: ["Summary"],
