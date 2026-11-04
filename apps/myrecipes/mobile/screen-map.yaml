@@ -4,9 +4,9 @@ routes:
   /discover:
     not_on_mobile: Not built yet.
   /forgot-password:
-    not_on_mobile: Not built yet.
+    not_on_mobile: Done on the website, which the sign-in screen links to.
   /login:
-    not_on_mobile: Not built yet.
+    screen: sign-in
   /recipes/:id:
     screen: recipes/[id]
   /recipes/:id/tweak:
@@ -18,14 +18,14 @@ routes:
   /recipes/new:
     not_on_mobile: Not built yet.
   /register:
-    not_on_mobile: Not built yet.
+    not_on_mobile: Done on the website, which the sign-in screen links to.
   /reset-password:
-    not_on_mobile: Not built yet.
+    not_on_mobile: Done on the website, which the sign-in screen links to.
   /security:
     not_on_mobile: Not built yet.
   /settings:
-    not_on_mobile: Not built yet.
+    screen: (tabs)/settings
   /support-myfreeapps:
     not_on_mobile: Not built yet.
   /verify-email:
-    not_on_mobile: Not built yet.
+    not_on_mobile: Done on the website, which the sign-in screen links to.

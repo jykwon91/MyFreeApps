@@ -35,8 +35,11 @@ const cookSessionsSlice = createSlice({
     sessionFinished(state, { payload }: PayloadAction<string>) {
       delete state[payload];
     },
+    sessionsCleared() {
+      return initialState;
+    },
   },
 });
 
-export const { ingredientToggled, pageChanged, sessionFinished, sessionOpened } = cookSessionsSlice.actions;
+export const { ingredientToggled, pageChanged, sessionFinished, sessionOpened, sessionsCleared } = cookSessionsSlice.actions;
 export default cookSessionsSlice.reducer;

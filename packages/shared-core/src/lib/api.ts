@@ -16,6 +16,8 @@ async function retryWithNewSession(config: SessionRetryConfig): Promise<AxiosRes
     if (isRefreshCoolingDown()) return null;
     if ((await refreshSessionOnce()) !== "refreshed") return null;
   }
+  const { currentAccount } = getPlatform();
+  if (currentAccount && currentAccount() !== config._sentAccount) return null;
   config._sessionRetried = true;
   return api.request(config);
 }
@@ -29,7 +31,9 @@ onPlatformConfigured(({ baseURL }) => {
 // A request that names its own Authorization keeps it. One this client attached is
 // replaced when the request is sent again, since the token may have changed.
 api.interceptors.request.use((config: SessionRetryConfig) => {
-  const { tokenStore, orgStore } = getPlatform();
+  const { tokenStore, orgStore, currentAccount } = getPlatform();
+
+  if (!config._sessionRetried) config._sentAccount = currentAccount?.();
 
   if (!config.headers.Authorization || config._sentToken !== undefined) {
     const token = tokenStore.get();

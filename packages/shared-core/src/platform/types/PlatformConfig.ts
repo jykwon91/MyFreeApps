@@ -21,4 +21,9 @@ export interface PlatformConfig {
    * signs the user out. Never call this directly: use `refreshSessionOnce`.
    */
   refreshSession?: () => Promise<SessionRefreshResult>;
+  /**
+   * Who is signed in, so a rejected request isn't sent again as someone else who has
+   * signed in since. Leave it out where another account can't sign in during a request.
+   */
+  currentAccount?: () => string | null;
 }

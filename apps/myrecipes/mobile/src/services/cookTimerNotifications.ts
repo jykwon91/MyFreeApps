@@ -69,6 +69,13 @@ export async function cancelCookTimerAlert(timerId: string): Promise<void> {
   ]);
 }
 
+export async function cancelAllCookTimerAlerts(): Promise<void> {
+  await Promise.allSettled([
+    Notifications.cancelAllScheduledNotificationsAsync(),
+    Notifications.dismissAllNotificationsAsync(),
+  ]);
+}
+
 function cookTimerIn(content: Notifications.NotificationContent): CookTimer[] {
   const timer = content.data?.timer;
   return isCookTimer(timer) ? [timer] : [];

@@ -1,17 +1,23 @@
 import { configurePlatform } from "@platform/core/platform/configurePlatform";
 import { baseApi } from "@platform/core/store/baseApi";
+import { assertSecureApiUrl, onAccountLeft, resetCacheOnAccountChange } from "@platform/mobile";
 import { configureStore } from "@reduxjs/toolkit";
 import { API_BASE_URL } from "../constants/api";
-import cookSessions from "../features/cook/cookSessionsSlice";
-import cookTimers from "../features/cook/cookTimersSlice";
+import cookSessions, { sessionsCleared } from "../features/cook/cookSessionsSlice";
+import cookTimers, { timersCleared } from "../features/cook/cookTimersSlice";
+import { cancelAllCookTimerAlerts } from "../services/cookTimerNotifications";
+import { session } from "./session";
 
-// Requests throw until the platform is configured, and nothing sends one without the
-// store. Signing in comes with the backend's mobile token work, so there's no token yet.
+assertSecureApiUrl(API_BASE_URL);
+
+// Requests throw until the platform is configured, and nothing sends one without the store.
 configurePlatform({
   baseURL: API_BASE_URL,
-  tokenStore: { get: () => null, set: () => {}, clear: () => {} },
+  tokenStore: session.tokenStore,
   orgStore: { get: () => null },
   isOnLogin: () => false,
+  refreshSession: session.refreshSession,
+  currentAccount: session.currentAccount,
 });
 
 export function makeStore() {
@@ -22,6 +28,15 @@ export function makeStore() {
 }
 
 export const store = makeStore();
+
+resetCacheOnAccountChange(session, () => store.dispatch(baseApi.util.resetApiState()));
+
+// A timer's alert names the recipe, so it shouldn't go off for the next person.
+onAccountLeft(session, () => {
+  store.dispatch(timersCleared());
+  store.dispatch(sessionsCleared());
+  void cancelAllCookTimerAlerts();
+});
 
 export type AppStore = ReturnType<typeof makeStore>;
 export type RootState = ReturnType<typeof store.getState>;

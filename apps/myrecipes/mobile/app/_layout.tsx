@@ -1,8 +1,10 @@
-import { useTheme } from "@platform/mobile";
+import { SessionProvider, useTheme } from "@platform/mobile";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Provider } from "react-redux";
+import AccountNotice from "../src/features/account/AccountNotice";
 import { useCookTimerAlertTaps } from "../src/features/cook/useCookTimerAlertTaps";
+import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { showCookTimerAlertsInForeground } from "../src/services/cookTimerNotifications";
 
@@ -17,16 +19,20 @@ export default function RootLayout() {
 
   return (
     <Provider store={store}>
-      <StatusBar style="auto" />
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: colors.card },
-          headerTintColor: colors.foreground,
-          contentStyle: { backgroundColor: colors.background },
-        }}
-      >
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
+      <SessionProvider session={session}>
+        <StatusBar style="auto" />
+        <Stack
+          screenOptions={{
+            headerStyle: { backgroundColor: colors.card },
+            headerTintColor: colors.foreground,
+            contentStyle: { backgroundColor: colors.background },
+          }}
+        >
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="sign-in" options={{ presentation: "modal", title: "" }} />
+        </Stack>
+        <AccountNotice />
+      </SessionProvider>
     </Provider>
   );
 }
