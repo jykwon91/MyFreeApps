@@ -1,4 +1,5 @@
 import type { OrgStore } from "./OrgStore";
+import type { SessionRefreshResult } from "./SessionRefreshResult";
 import type { TokenStore } from "./TokenStore";
 
 /** Everything this package needs from the platform it runs on. */
@@ -14,4 +15,10 @@ export interface PlatformConfig {
    * platform with no unload event.
    */
   onUnload?: (listener: () => void) => () => void;
+  /**
+   * Get a new access token when one is rejected, writing it to `tokenStore` before
+   * resolving. Leave it out on a platform with no refresh token, where a rejected token
+   * signs the user out. Never call this directly: use `refreshSessionOnce`.
+   */
+  refreshSession?: () => Promise<SessionRefreshResult>;
 }

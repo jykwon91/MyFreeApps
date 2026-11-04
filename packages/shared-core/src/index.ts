@@ -5,9 +5,11 @@
 export { configurePlatform, getPlatform } from "./platform/configurePlatform";
 export type { OrgStore } from "./platform/types/OrgStore";
 export type { PlatformConfig } from "./platform/types/PlatformConfig";
+export type { SessionRefreshResult } from "./platform/types/SessionRefreshResult";
 export type { TokenStore } from "./platform/types/TokenStore";
 
 export { default as api } from "./lib/api";
+export { refreshSessionOnce } from "./lib/session-refresh";
 export { notifyAuthChange, useIsAuthenticated } from "./lib/auth-store";
 export { baseApi } from "./store/baseApi";
 export { axiosBaseQuery } from "./store/baseQuery";

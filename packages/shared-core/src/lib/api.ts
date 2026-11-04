@@ -1,9 +1,24 @@
 import axios from "axios";
+import type { AxiosResponse } from "axios";
 import { installStepUpInterceptor } from "../auth/stepUpInterceptor";
 import { getPlatform, onPlatformConfigured } from "../platform/configurePlatform";
+import { NO_REFRESH_URL_PARTS } from "../constants/sessionRefresh";
 import { notifyAuthChange } from "./auth-store";
+import { isRefreshCoolingDown, refreshSessionOnce } from "./session-refresh";
+import type { SessionRetryConfig } from "./types/SessionRetryConfig";
 
 const api = axios.create();
+
+async function retryWithNewSession(config: SessionRetryConfig): Promise<AxiosResponse | null> {
+  const token = getPlatform().tokenStore.get();
+  // A request sent before the last refresh only needs the token that refresh got.
+  if (token === null || config._sentToken === token) {
+    if (isRefreshCoolingDown()) return null;
+    if ((await refreshSessionOnce()) !== "refreshed") return null;
+  }
+  config._sessionRetried = true;
+  return api.request(config);
+}
 
 onPlatformConfigured(({ baseURL }) => {
   api.defaults.baseURL = baseURL;
@@ -11,13 +26,19 @@ onPlatformConfigured(({ baseURL }) => {
 
 // The stores must not throw: a read that throws would fail every request
 // instead of sending it unauthenticated.
-// A request that names its own Authorization (another scheme) keeps it.
-api.interceptors.request.use((config) => {
+// A request that names its own Authorization keeps it. One this client attached is
+// replaced when the request is sent again, since the token may have changed.
+api.interceptors.request.use((config: SessionRetryConfig) => {
   const { tokenStore, orgStore } = getPlatform();
 
-  const token = tokenStore.get();
-  if (token && !config.headers.Authorization) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (!config.headers.Authorization || config._sentToken !== undefined) {
+    const token = tokenStore.get();
+    config._sentToken = token;
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      config.headers.delete("Authorization");
+    }
   }
 
   const orgId = orgStore.get();
@@ -38,7 +59,7 @@ function _hasStepUpHeader(headers: unknown): boolean {
 
 api.interceptors.response.use(
   (res) => res,
-  (err) => {
+  async (err) => {
     if (err.response?.status === 401) {
       // Step-up 401s (X-Require-Step-Up: totp | reauth) are owned by
       // the step-up interceptor — do NOT clear the token here. Without
@@ -47,8 +68,22 @@ api.interceptors.response.use(
       if (_hasStepUpHeader(err.response?.headers)) {
         return Promise.reject(err);
       }
+      const { isOnLogin, tokenStore, refreshSession } = getPlatform();
+      if (refreshSession) {
+        const url: string = err.config?.url ?? "";
+        const config: SessionRetryConfig | undefined = err.config;
+        if (
+          !config ||
+          config._sessionRetried ||
+          config._sentToken === undefined ||
+          NO_REFRESH_URL_PARTS.some((part) => url.includes(part))
+        ) {
+          return Promise.reject(err);
+        }
+        const retried = await retryWithNewSession(config);
+        return retried ?? Promise.reject(err);
+      }
       const isLoginRequest = err.config?.url?.includes("/auth/");
-      const { isOnLogin, tokenStore } = getPlatform();
       if (!isLoginRequest && !isOnLogin()) {
         tokenStore.clear();
         notifyAuthChange();

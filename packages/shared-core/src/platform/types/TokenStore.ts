@@ -11,6 +11,10 @@ export interface TokenStore {
    * reporting success and then reading as signed out.
    */
   set(token: string): void;
-  /** Must not throw: unavailable storage has nothing to clear. */
+  /**
+   * Must not throw: unavailable storage has nothing to clear. Called when the user must
+   * sign in again, so a platform with `refreshSession` drops its refresh token here too.
+   * Otherwise the next rejected request would quietly restore the session.
+   */
   clear(): void;
 }
