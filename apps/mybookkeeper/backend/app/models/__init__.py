@@ -1,4 +1,5 @@
 from app.models.user.user import User, Role
+from app.models.user.refresh_session import RefreshSession  # noqa: F401
 from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrganizationMember, OrgRole
 from app.models.organization.organization_invite import OrganizationInvite

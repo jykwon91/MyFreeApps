@@ -104,6 +104,7 @@ MBK_SENSITIVE_FIELDS: frozenset[str] = frozenset({
 # (``audit_logs`` itself is added by platform_shared as a recursion guard.)
 MBK_SKIP_TABLES: frozenset[str] = frozenset({
     "auth_events",
+    "refresh_sessions",
     "processed_emails",
     "usage_logs",
     "sync_logs",

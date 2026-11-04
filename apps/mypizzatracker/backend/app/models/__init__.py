@@ -2,6 +2,7 @@
 # Order matters for forward references -- declare referenced tables before referencing ones.
 
 from app.models.user.user import User  # noqa: F401
+from app.models.user.refresh_session import RefreshSession  # noqa: F401
 
 # Shared models from platform_shared. Importing them here registers their
 # tables with ``Base.metadata`` so Alembic autogenerate sees them.
