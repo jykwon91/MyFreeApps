@@ -4,7 +4,7 @@ import uuid
 from collections.abc import Sequence
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select, and_
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -42,6 +42,25 @@ async def update(db: AsyncSession, org: Organization, name: str) -> Organization
 
 async def delete(db: AsyncSession, org: Organization) -> None:
     await db.delete(org)
+
+
+async def list_created_by(db: AsyncSession, user_id: uuid.UUID) -> Sequence[Organization]:
+    result = await db.execute(select(Organization).where(Organization.created_by == user_id))
+    return result.scalars().all()
+
+
+async def created_workspace_has_other_members(db: AsyncSession, user_id: uuid.UUID) -> bool:
+    """Whether anyone else belongs to a workspace this user created."""
+    created = select(Organization.id).where(Organization.created_by == user_id)
+    result = await db.execute(
+        select(OrganizationMember.id)
+        .where(
+            OrganizationMember.user_id != user_id,
+            OrganizationMember.organization_id.in_(created),
+        )
+        .limit(1)
+    )
+    return result.first() is not None
 
 
 async def list_for_user(db: AsyncSession, user_id: uuid.UUID) -> Sequence[OrganizationMember]:

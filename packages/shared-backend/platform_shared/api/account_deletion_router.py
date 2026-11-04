@@ -23,7 +23,10 @@ from fastapi_users.password import PasswordHelper
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.schemas.account import DeleteAccountRequest
-from platform_shared.services.account_deletion import delete_account
+from platform_shared.services.account_deletion import (
+    AccountDeletionBlockedError,
+    delete_account,
+)
 
 
 def build_account_deletion_router(
@@ -34,6 +37,7 @@ def build_account_deletion_router(
         [AsyncSession, uuid.UUID, str], Awaitable[bool]
     ],
     unit_of_work_factory: Callable[..., Any],
+    prepare_deletion: Callable[[AsyncSession, Any], Awaitable[None]] | None = None,
 ) -> APIRouter:
     """Build a router exposing ``DELETE /users/me``.
 
@@ -51,6 +55,9 @@ def build_account_deletion_router(
             manager. The route opens this scope around the
             cascade-delete + audit-event write so they commit
             atomically.
+        prepare_deletion: Runs in that same transaction first, for rows
+            the user's cascade can't remove. Raises
+            ``AccountDeletionBlockedError`` to refuse with a 409.
 
     Returns:
         An ``APIRouter`` with a single DELETE route at ``/users/me``.
@@ -93,7 +100,12 @@ def build_account_deletion_router(
             if not await verify_totp_step_up(db, current_user.id, body.totp_code):
                 raise HTTPException(status_code=403, detail="Invalid TOTP code")
 
-        async with unit_of_work_factory() as txn_db:
-            await delete_account(txn_db, current_user)
+        try:
+            async with unit_of_work_factory() as txn_db:
+                if prepare_deletion is not None:
+                    await prepare_deletion(txn_db, current_user)
+                await delete_account(txn_db, current_user)
+        except AccountDeletionBlockedError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     return router

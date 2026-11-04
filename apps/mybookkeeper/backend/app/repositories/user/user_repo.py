@@ -1,7 +1,7 @@
 import uuid
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only
 
@@ -10,6 +10,8 @@ from platform_shared.repositories.user_repo import (
     get_by_id as _shared_get_by_id,
 )
 
+from app.core.account_deletion_constants import TABLES_NOT_HOLDING_SHARED_RECORDS
+from app.db.base import Base
 from app.models.user.user import Role, User
 
 
@@ -41,3 +43,20 @@ async def update_role(db: AsyncSession, user: User, role: Role) -> User:
 async def set_active(db: AsyncSession, user: User, *, is_active: bool) -> User:
     user.is_active = is_active
     return user
+
+
+async def holds_shared_records(db: AsyncSession, user_id: uuid.UUID) -> bool:
+    """Whether any row a user's deletion would remove or be blocked by remains.
+
+    Reads the schema rather than a list of tables, so a table added later counts
+    until someone decides otherwise. Columns that go to NULL lose nothing.
+    """
+    for table in Base.metadata.sorted_tables:
+        if table.name in TABLES_NOT_HOLDING_SHARED_RECORDS:
+            continue
+        for fk in table.foreign_keys:
+            if fk.column.table.name != "users" or fk.ondelete == "SET NULL":
+                continue
+            if await db.scalar(select(exists().where(fk.parent == user_id))):
+                return True
+    return False

@@ -31,6 +31,10 @@ from platform_shared.services.auth_event_service import log_auth_event
 logger = logging.getLogger(__name__)
 
 
+class AccountDeletionBlockedError(Exception):
+    """Deleting this account would take something from someone else."""
+
+
 async def delete_account(db: AsyncSession, user: Any) -> None:
     """Hard-delete ``user``; all related rows cascade-delete via FK.
 
