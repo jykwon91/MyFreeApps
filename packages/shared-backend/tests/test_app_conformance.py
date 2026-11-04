@@ -1207,6 +1207,17 @@ class TestTotpRoutesAreShared:
         source = _read(*backend, "app", "models", "user", "user.py")
         assert "TotpReplayGuardMixin" in source, "Every two-factor check reads totp_last_used_step."
 
+    @pytest.mark.parametrize(
+        "backend",
+        [("apps", app, "backend") for app in _APPS] + [("infra", "templates", "scaffold", "backend")],
+        ids="/".join,
+    )
+    def test_user_delete_is_behind_the_strict_gate(self, backend: tuple[str, ...]) -> None:
+        source = _read(*backend, "app", "main.py")
+        assert "build_users_router(" in source
+        assert "current_strict_superuser=current_strict_superuser," in source
+        assert "get_users_router" not in source, "Its delete route takes a superuser token alone."
+
     @pytest.mark.parametrize("app", _APPS)
     def test_a_migration_adds_the_replay_marker(self, app: str) -> None:
         versions = _REPO_ROOT / "apps" / app / "backend" / "alembic" / "versions"
