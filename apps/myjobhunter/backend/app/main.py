@@ -13,10 +13,12 @@ from platform_shared.core.lifespan import create_app_lifespan
 from platform_shared.core.openapi import docs_kwargs
 from platform_shared.core.logging_safety import install_crlf_safe_logging
 from platform_shared.api.transparency_router import build_transparency_router
+from platform_shared.api.users_router import build_users_router
 
 from app.api import account, admin, admin_invites, applications, companies, demo, discover, documents, health, integrations, job_analysis, profile, resume_refinement, resumes, totp
 from app.core.audit import current_user_id
 from app.core.auth import auth_backend, fastapi_users
+from app.core.permissions import current_admin, current_strict_superuser
 from app.core.config import settings
 from app.core.observability import init_sentry
 from app.core.rate_limit import (
@@ -207,11 +209,16 @@ app.include_router(
 )
 
 # Register account self-service routes BEFORE fastapi-users users router so that
-# DELETE /users/me is matched here rather than by fastapi-users' DELETE /users/{id}.
+# DELETE /users/me is matched here rather than by DELETE /users/{id}.
 app.include_router(account.router)
 
 app.include_router(
-    fastapi_users.get_users_router(UserRead, UserUpdate),
+    build_users_router(
+        fastapi_users=fastapi_users,
+        user_read=UserRead,
+        user_update=UserUpdate,
+        current_strict_superuser=current_strict_superuser,
+    ),
     prefix="/users",
     tags=["users"],
 )
@@ -237,7 +244,6 @@ app.include_router(discover.router)
 # app-specific admin endpoints today; if any are added later they
 # mount alongside this under the same /admin prefix.
 from platform_shared.api.admin_router import build_admin_router
-from app.core.permissions import current_admin, current_strict_superuser
 from app.services.system.admin_user_service_factory import shared_admin_user_service
 
 

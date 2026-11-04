@@ -15,12 +15,14 @@ from platform_shared.core.lifespan import create_app_lifespan
 from platform_shared.core.openapi import docs_kwargs
 from platform_shared.core.logging_safety import install_crlf_safe_logging
 from platform_shared.api.transparency_router import build_transparency_router
+from platform_shared.api.users_router import build_users_router
 from platform_shared.services.transparency.scheduler import (
     maybe_start_transparency_sync,
     stop_transparency_sync,
 )
 
 from app.core.auth import fastapi_users, auth_backend
+from app.core.permissions import current_admin, current_strict_superuser
 from app.core.config import settings
 from app.core.observability import init_sentry
 
@@ -180,9 +182,18 @@ app.include_router(
     tags=["auth"],
 )
 # Register account self-service routes BEFORE the fastapi-users users router so that
-# DELETE /users/me is matched here rather than by fastapi-users' DELETE /users/{id}.
+# DELETE /users/me is matched here rather than by DELETE /users/{id}.
 app.include_router(account.router)
-app.include_router(fastapi_users.get_users_router(UserRead, UserUpdate), prefix="/users", tags=["users"])
+app.include_router(
+    build_users_router(
+        fastapi_users=fastapi_users,
+        user_read=UserRead,
+        user_update=UserUpdate,
+        current_strict_superuser=current_strict_superuser,
+    ),
+    prefix="/users",
+    tags=["users"],
+)
 
 # App routes
 app.include_router(documents.router)
@@ -238,7 +249,6 @@ app.include_router(audit.router)
 # the MBK-specific admin router so both sets of routes live under
 # /admin without path collisions.
 from platform_shared.api.admin_router import build_admin_router
-from app.core.permissions import current_admin, current_strict_superuser
 from app.services.system.admin_service import shared_admin_user_service
 
 

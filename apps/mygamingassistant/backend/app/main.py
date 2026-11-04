@@ -27,6 +27,7 @@ from platform_shared.core.lifespan import create_app_lifespan
 from platform_shared.core.openapi import docs_kwargs
 from platform_shared.core.logging_safety import install_crlf_safe_logging
 from platform_shared.api.transparency_router import build_transparency_router
+from platform_shared.api.users_router import build_users_router
 
 from app.api import (
     account,
@@ -345,11 +346,15 @@ def _mount_auth_routes(app: FastAPI) -> None:
     )
 
     # Register account self-service routes BEFORE the fastapi-users users router
-    # so that DELETE /users/me is matched here rather than by fastapi-users'
-    # DELETE /users/{id}.
+    # so that DELETE /users/me is matched here rather than by DELETE /users/{id}.
     app.include_router(account.router)
     app.include_router(
-        fastapi_users.get_users_router(UserRead, UserUpdate),
+        build_users_router(
+            fastapi_users=fastapi_users,
+            user_read=UserRead,
+            user_update=UserUpdate,
+            current_strict_superuser=current_strict_superuser,
+        ),
         prefix="/users",
         tags=["users"],
     )
