@@ -55,7 +55,7 @@ export default function LeaseDetail() {
   const [emailLeaseToTenant, { isLoading: isEmailing }] =
     useEmailSignedLeaseToTenantMutation();
 
-  const { data: applicant } = useGetApplicantByIdQuery(
+  const { data: applicant, refetch: refetchApplicant } = useGetApplicantByIdQuery(
     lease?.applicant_id ?? "",
     { skip: !lease?.applicant_id },
   );
@@ -296,6 +296,8 @@ export default function LeaseDetail() {
             <ExtendLeaseDialog
               leaseId={lease.id}
               currentEndsOn={lease.ends_on}
+              tenantHasEmail={tenantHasEmail}
+              onTenantEmailMissing={() => void refetchApplicant()}
               onClose={() => setShowExtendDialog(false)}
             />
           ) : null}

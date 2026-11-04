@@ -8,6 +8,8 @@ const NOTES_MAX_LENGTH = 2000;
 export interface ExtendLeaseDialogProps {
   leaseId: string;
   currentEndsOn: string;
+  tenantHasEmail: boolean;
+  onTenantEmailMissing: () => void;
   onClose: () => void;
 }
 
@@ -36,6 +38,11 @@ function extractConflictDetail(err: unknown): ConflictDetail | null {
   return null;
 }
 
+function isMissingTenantEmail(err: unknown): boolean {
+  const e = err as { status?: number; data?: { detail?: unknown } } | null;
+  return e?.status === 422 && e.data?.detail === "applicant_email_missing";
+}
+
 function describeConflict(detail: ConflictDetail): string {
   switch (detail.code) {
     case "INVALID_STATUS_FOR_EXTENSION":
@@ -57,6 +64,8 @@ function describeConflict(detail: ConflictDetail): string {
 export default function ExtendLeaseDialog({
   leaseId,
   currentEndsOn,
+  tenantHasEmail,
+  onTenantEmailMissing,
   onClose,
 }: ExtendLeaseDialogProps) {
   const [newEndsOn, setNewEndsOn] = useState("");
@@ -90,6 +99,12 @@ export default function ExtendLeaseDialog({
       const conflict = extractConflictDetail(err);
       if (conflict) {
         showError(describeConflict(conflict));
+        return;
+      }
+      if (isMissingTenantEmail(err)) {
+        setEmailTenant(false);
+        onTenantEmailMissing();
+        showError("This tenant has no email on file. Nothing was changed.");
         return;
       }
       showError("Couldn't extend the lease. Please try again.");
@@ -168,11 +183,17 @@ export default function ExtendLeaseDialog({
             type="checkbox"
             data-testid="extend-lease-email-tenant"
             checked={emailTenant}
+            disabled={!tenantHasEmail}
             onChange={(e) => setEmailTenant(e.target.checked)}
             className="h-4 w-4"
           />
           <span>Email the tenant the rendered addendum</span>
         </label>
+        {tenantHasEmail ? null : (
+          <p className="text-xs text-muted-foreground" data-testid="extend-lease-no-email">
+            The applicant has no email on file. Add one on the applicant page first.
+          </p>
+        )}
 
         <div className="flex items-center justify-end gap-2 pt-1">
           <Button

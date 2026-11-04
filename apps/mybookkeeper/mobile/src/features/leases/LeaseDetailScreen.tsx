@@ -130,7 +130,7 @@ export default function LeaseDetailScreen({ id }: { id: string }) {
           </LoadingButton>
         ) : null}
       </ScrollView>
-      {isExtending && lease.ends_on ? <ExtendLeaseSheet endsOn={lease.ends_on} leaseId={lease.id} onClose={() => setIsExtending(false)} /> : null}
+      {isExtending && lease.ends_on ? <ExtendLeaseSheet applicantId={lease.applicant_id} endsOn={lease.ends_on} leaseId={lease.id} onClose={() => setIsExtending(false)} tenantName={lease.applicant_legal_name} /> : null}
       {uploadingKind !== undefined ? <LeaseUploadSheet initialKind={uploadingKind} leaseId={lease.id} onClose={() => setUploadingKind(undefined)} /> : null}
     </>
   );

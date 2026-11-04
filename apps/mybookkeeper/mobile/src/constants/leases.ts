@@ -72,6 +72,9 @@ export const LEASE_MESSAGES = {
   extendWrongStatus: "This lease is no longer signed or active, so it can't be extended.",
   extendNoEndDate: "This lease has no end date yet. Add the original term on the website, then extend.",
   extendCheckFields: "Check the date and note, then try again.",
+  extendNoEmail: "This tenant has no email on file. Nothing was changed.",
+  noEmailOnFile: "This tenant has no email on file, so I can't email them the addendum.",
+  extendAndEmail: "Extend and email",
   undoExtension: "Undo extension",
   undoingExtension: "Undoing…",
   undoTitle: "Undo this extension?",
@@ -129,6 +132,26 @@ export function extendedTo(endsOn: string): string {
   return `Lease extended to ${endsOn}.`;
 }
 
+export function extendedAndEmailing(endsOn: string): string {
+  return `Lease extended to ${endsOn}. I'll email the addendum shortly.`;
+}
+
+export function extendedEmailUnknown(endsOn: string): string {
+  return `Lease extended to ${endsOn}. I can't tell if the email went out.`;
+}
+
+export function emailAddendumLabel(name: string | null): string {
+  return `Email ${name ?? "the tenant"} the addendum`;
+}
+
+export function extendAndEmailTitle(name: string | null): string {
+  return `Extend and email ${name ?? "the tenant"}?`;
+}
+
+export function extendAndEmailBody(endsOn: string): string {
+  return `The lease will end ${endsOn}. The addendum goes out by email, and an email can't be unsent.`;
+}
+
 export function alreadyEnds(endsOn: string): string {
   return `The lease already ends ${endsOn}. It may have been changed elsewhere. Pick a later date.`;
 }
@@ -137,7 +160,6 @@ export function undoUntil(date: string): string {
   return `You can undo this until ${date}.`;
 }
 
-/** The email line goes once the extension can email the tenant the addendum. */
 export function undoBody(from: string, to: string | null): string {
   const move = to ? `The end date goes back from ${from} to ${to}.` : `The end date goes back from ${from}.`;
   return `${move} The addendum PDF stays attached to the lease. If you sent it to the tenant, let them know yourself.`;

@@ -126,11 +126,11 @@ async def extend_lease(
     lease_id: uuid.UUID,
     new_ends_on: _dt.date,
     notes: str | None,
-) -> tuple[SignedLeaseResponse, _dt.datetime]:
+) -> tuple[SignedLeaseResponse, uuid.UUID]:
     """Extend a signed/active lease's end date.
 
-    Returns ``(detail, extended_at)``. The route uses ``extended_at`` to
-    schedule a post-commit email best-effort to the tenant.
+    Returns ``(detail, addendum_attachment_id)``. The route uses the id to
+    email that addendum to the tenant after commit.
 
     Raises:
         SignedLeaseNotFoundError: lease not in (user_id, organization_id).
@@ -141,11 +141,14 @@ async def extend_lease(
     now = _dt.datetime.now(_dt.timezone.utc)
 
     async with unit_of_work() as db:
+        # Locked so two overlapping requests can't both pass the end-date check,
+        # which would write two addenda and email the tenant twice.
         lease = await signed_lease_repo.get(
             db,
             lease_id=lease_id,
             user_id=user_id,
             organization_id=organization_id,
+            for_update=True,
         )
         if lease is None:
             raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
@@ -283,7 +286,7 @@ async def extend_lease(
         organization_id=organization_id,
         lease_id=lease_id,
     )
-    return detail, now
+    return detail, attachment_id
 
 
 async def undo_extension(

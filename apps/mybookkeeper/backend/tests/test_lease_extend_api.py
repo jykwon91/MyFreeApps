@@ -19,7 +19,10 @@ from app.core.permissions import require_write_access
 from app.main import app
 from app.models.organization.organization_member import OrgRole
 from app.schemas.leases.signed_lease_response import SignedLeaseResponse
-from app.services.leases import lease_extension_service
+from app.services.leases import lease_email_service, lease_extension_service
+
+
+ADDENDUM_ID = uuid.uuid4()
 
 
 def _ctx(org_id: uuid.UUID, user_id: uuid.UUID) -> RequestContext:
@@ -59,7 +62,7 @@ class TestExtendLeaseRoute:
             with patch(
                 "app.api.signed_leases.lease_extension_service.extend_lease",
                 new_callable=AsyncMock,
-                return_value=(detail, _dt.datetime.now(_dt.timezone.utc)),
+                return_value=(detail, ADDENDUM_ID),
             ) as mock_svc:
                 client = TestClient(app)
                 response = client.post(
@@ -197,7 +200,7 @@ class TestExtendLeaseRoute:
         finally:
             app.dependency_overrides.clear()
 
-    def test_email_tenant_true_schedules_background_task(self) -> None:
+    def test_email_tenant_true_sends_this_extensions_addendum(self) -> None:
         org_id, user_id = uuid.uuid4(), uuid.uuid4()
         lease_id = uuid.uuid4()
         detail = _stub_detail(lease_id, _dt.date(2027, 6, 30))
@@ -207,29 +210,61 @@ class TestExtendLeaseRoute:
             with patch(
                 "app.api.signed_leases.lease_extension_service.extend_lease",
                 new_callable=AsyncMock,
-                return_value=(detail, _dt.datetime.now(_dt.timezone.utc)),
+                return_value=(detail, ADDENDUM_ID),
             ), patch(
+                "app.api.signed_leases.lease_email_service.assert_can_email_tenant",
+                new_callable=AsyncMock,
+            ), patch(
+                "app.api.signed_leases.send_extension_addendum_to_tenant",
+                new_callable=AsyncMock,
+            ) as mock_send, patch(
                 "app.api.signed_leases.send_lease_to_tenant",
                 new_callable=AsyncMock,
-            ) as mock_send:
+            ) as mock_send_lease:
                 client = TestClient(app)
                 response = client.post(
                     f"/signed-leases/{lease_id}/extend",
                     json={"new_ends_on": "2027-06-30", "email_tenant": True},
                 )
             assert response.status_code == 200
-            # TestClient runs background tasks synchronously after the response;
-            # the send_lease_to_tenant patch should have been awaited once.
+            # TestClient runs background tasks synchronously after the response.
             assert mock_send.await_count == 1
             assert mock_send.await_args.kwargs == {
                 "lease_id": lease_id,
+                "addendum_attachment_id": ADDENDUM_ID,
                 "user_id": user_id,
                 "organization_id": org_id,
             }
+            assert mock_send_lease.await_count == 0
         finally:
             app.dependency_overrides.clear()
 
-    def test_email_tenant_false_skips_background_task(self) -> None:
+    def test_email_tenant_with_no_address_refuses_before_extending(self) -> None:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        lease_id = uuid.uuid4()
+
+        app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
+        try:
+            with patch(
+                "app.api.signed_leases.lease_extension_service.extend_lease",
+                new_callable=AsyncMock,
+            ) as mock_extend, patch(
+                "app.api.signed_leases.lease_email_service.assert_can_email_tenant",
+                new_callable=AsyncMock,
+                side_effect=lease_email_service.ApplicantEmailMissingError("none"),
+            ):
+                client = TestClient(app)
+                response = client.post(
+                    f"/signed-leases/{lease_id}/extend",
+                    json={"new_ends_on": "2027-06-30", "email_tenant": True},
+                )
+            assert response.status_code == 422
+            assert response.json()["detail"] == "applicant_email_missing"
+            assert mock_extend.await_count == 0
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_email_tenant_false_sends_nothing(self) -> None:
         org_id, user_id = uuid.uuid4(), uuid.uuid4()
         lease_id = uuid.uuid4()
         detail = _stub_detail(lease_id, _dt.date(2027, 6, 30))
@@ -239,9 +274,12 @@ class TestExtendLeaseRoute:
             with patch(
                 "app.api.signed_leases.lease_extension_service.extend_lease",
                 new_callable=AsyncMock,
-                return_value=(detail, _dt.datetime.now(_dt.timezone.utc)),
+                return_value=(detail, ADDENDUM_ID),
             ), patch(
-                "app.api.signed_leases.send_lease_to_tenant",
+                "app.api.signed_leases.lease_email_service.assert_can_email_tenant",
+                new_callable=AsyncMock,
+            ) as mock_check, patch(
+                "app.api.signed_leases.send_extension_addendum_to_tenant",
                 new_callable=AsyncMock,
             ) as mock_send:
                 client = TestClient(app)
@@ -251,6 +289,7 @@ class TestExtendLeaseRoute:
                 )
             assert response.status_code == 200
             assert mock_send.await_count == 0
+            assert mock_check.await_count == 0
         finally:
             app.dependency_overrides.clear()
 

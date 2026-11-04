@@ -39,6 +39,7 @@ interface FakeServer {
   readsFail: boolean;
   writes: AxiosRequestConfig[];
   workspaceReads: number;
+  tenantHasEmail: boolean | null;
 }
 
 function anExtension(overrides: Partial<LeaseExtensionSummary> = {}): LeaseExtensionSummary {
@@ -87,7 +88,7 @@ function aLease(overrides: Partial<SignedLeaseDetail> = {}): SignedLeaseDetail {
 }
 
 function startServer(lease: SignedLeaseDetail = aLease()): FakeServer {
-  const server: FakeServer = { lease, role: "owner", writeFailure: null, commitsThenFails: false, readsFail: false, writes: [], workspaceReads: 0 };
+  const server: FakeServer = { lease, role: "owner", writeFailure: null, commitsThenFails: false, readsFail: false, writes: [], workspaceReads: 0, tenantHasEmail: true };
   const adapter: AxiosAdapter = async (config) => {
     const respond = (data: unknown, status = 200) => {
       const response = { data, status, statusText: "", headers: {}, config };
@@ -98,6 +99,9 @@ function startServer(lease: SignedLeaseDetail = aLease()): FakeServer {
     if (config.url === "/organizations") {
       server.workspaceReads += 1;
       return respond([{ id: "w1", name: "Mine", org_role: server.role }]);
+    }
+    if (config.url === "/applicants/a1") {
+      return server.tenantHasEmail === null ? offline() : respond({ id: "a1", has_contact_email: server.tenantHasEmail });
     }
     if (config.method !== "post") return server.readsFail ? offline() : respond(server.lease);
 
@@ -242,7 +246,7 @@ describe("extending a lease", () => {
       expect(submitButton()).toBeDisabled();
     });
 
-    it("extends with the date and trimmed note, and never emails from here", async () => {
+    it("extends with the date and trimmed note, and emails nobody unless asked", async () => {
       const server = startServer();
       await renderScreen();
       await openSheet();
@@ -285,6 +289,83 @@ describe("extending a lease", () => {
       expect(screen.getByTestId("date-picker")).toBeTruthy();
       await act(async () => alertButtons()[1].onPress?.());
       expect(screen.queryByTestId("date-picker")).toBeNull();
+    });
+  });
+
+  describe("emailing the tenant", () => {
+    const SWITCH = "Email Dana Reed the addendum";
+
+    async function pickDateAndSwitchOn() {
+      await pickDate(2027, 8, 31);
+      await fireEvent(await screen.findByLabelText(SWITCH), "valueChange", true);
+    }
+
+    it("asks first, then sends it and says so", async () => {
+      const server = startServer();
+      await renderScreen();
+      await openSheet();
+      await pickDateAndSwitchOn();
+      await fireEvent.press(submitButton());
+      expect(server.writes).toHaveLength(0);
+      expect(jest.mocked(Alert.alert).mock.calls[0][0]).toBe("Extend and email Dana Reed?");
+      expect(jest.mocked(Alert.alert).mock.calls[0][1]).toContain("August 31, 2027");
+      await act(async () => alertButtons()[1].onPress?.());
+      expect(await screen.findByText("Lease extended to August 31, 2027. I'll email the addendum shortly.")).toBeTruthy();
+      expect(JSON.parse(String(server.writes[0].data)).email_tenant).toBe(true);
+    });
+
+    it("sends nothing when the question is cancelled, and can be asked again", async () => {
+      const server = startServer();
+      await renderScreen();
+      await openSheet();
+      await pickDateAndSwitchOn();
+      await fireEvent.press(submitButton());
+      await act(async () => alertButtons()[0].onPress?.());
+      expect(server.writes).toHaveLength(0);
+      await fireEvent.press(submitButton());
+      expect(jest.mocked(Alert.alert)).toHaveBeenCalledTimes(2);
+    });
+
+    it("explains when there's no address, with no switch", async () => {
+      const server = startServer();
+      server.tenantHasEmail = false;
+      await renderScreen();
+      await openSheet();
+      expect(await screen.findByText("This tenant has no email on file, so I can't email them the addendum.")).toBeTruthy();
+      expect(screen.queryByLabelText(SWITCH)).toBeNull();
+    });
+
+    it("offers neither when it can't tell", async () => {
+      const server = startServer();
+      server.tenantHasEmail = null;
+      await renderScreen();
+      await openSheet();
+      await waitFor(() => expect(screen.queryByLabelText(SWITCH)).toBeNull());
+      expect(screen.queryByText(/no email on file/)).toBeNull();
+    });
+
+    it("says nothing changed when the address has gone since the sheet opened", async () => {
+      const server = startServer();
+      await renderScreen();
+      await openSheet();
+      await pickDateAndSwitchOn();
+      server.writeFailure = { status: 422, detail: "applicant_email_missing" };
+      server.tenantHasEmail = false;
+      await fireEvent.press(submitButton());
+      await act(async () => alertButtons()[1].onPress?.());
+      expect(await screen.findByText("This tenant has no email on file. Nothing was changed.")).toBeTruthy();
+      await waitFor(() => expect(screen.queryByLabelText(SWITCH)).toBeNull());
+    });
+
+    it("doesn't claim the email went out when only the extension can be confirmed", async () => {
+      const server = startServer();
+      server.commitsThenFails = true;
+      await renderScreen();
+      await openSheet();
+      await pickDateAndSwitchOn();
+      await fireEvent.press(submitButton());
+      await act(async () => alertButtons()[1].onPress?.());
+      expect(await screen.findByText("Lease extended to August 31, 2027. I can't tell if the email went out.")).toBeTruthy();
     });
   });
 

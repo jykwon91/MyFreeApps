@@ -16,7 +16,7 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 from contextlib import asynccontextmanager
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from sqlalchemy import select
@@ -27,7 +27,8 @@ from app.models.applicants.applicant_event import ApplicantEvent
 from app.models.leases.lease_term_version import LeaseTermVersion
 from app.models.leases.signed_lease import SignedLease
 from app.models.leases.signed_lease_attachment import SignedLeaseAttachment
-from app.repositories.leases import lease_term_version_repo
+from app.repositories.leases import lease_term_version_repo, signed_lease_repo
+from app.services.leases.lease_email_service import send_extension_addendum_to_tenant
 from app.services.leases.lease_extension_service import (
     undo_extension,
     InvalidLeaseStatusForExtensionError,
@@ -112,7 +113,7 @@ async def test_happy_path_extends_signed_lease(db: AsyncSession) -> None:
         "app.services.leases.lease_extension_service.get_lease",
         AsyncMock(return_value=detail_stub),
     ):
-        detail, extended_at = await extend_lease(
+        detail, addendum_id = await extend_lease(
             user_id=user_id,
             organization_id=org_id,
             lease_id=lease_id,
@@ -121,7 +122,6 @@ async def test_happy_path_extends_signed_lease(db: AsyncSession) -> None:
         )
 
     assert detail is detail_stub
-    assert isinstance(extended_at, _dt.datetime)
 
     # Lease's ends_on now reflects the new date.
     await db.refresh(lease)
@@ -137,6 +137,7 @@ async def test_happy_path_extends_signed_lease(db: AsyncSession) -> None:
     ).scalars().all()
     assert len(attachments) == 1
     assert attachments[0].kind == "signed_addendum"
+    assert attachments[0].id == addendum_id
     assert attachments[0].content_type == "application/pdf"
     assert attachments[0].size_bytes > 0
     assert attachments[0].storage_key == f"signed-leases/{lease_id}/{attachments[0].id}"
@@ -492,3 +493,74 @@ async def test_lease_extended_without_a_seed_does_not_record_its_extended_date_a
     ).scalars().all()
     assert len(versions) == 2
     assert all(v.source_attachment_id is not None for v in versions)
+
+
+@pytest.mark.asyncio
+async def test_extension_email_sends_only_that_addendum(db: AsyncSession) -> None:
+    org_id, user_id = uuid.uuid4(), uuid.uuid4()
+    lease = await _seed_signed_lease(db, user_id=user_id, org_id=org_id)
+    applicant = await db.get(Applicant, lease.applicant_id)
+    applicant.contact_email = "tenant@example.com"
+
+    def attach(kind: str) -> SignedLeaseAttachment:
+        return SignedLeaseAttachment(
+            lease_id=lease.id,
+            storage_key=f"signed-leases/{lease.id}/{uuid.uuid4()}",
+            filename=f"{kind}.pdf",
+            content_type="application/pdf",
+            size_bytes=1,
+            kind=kind,
+            uploaded_by_user_id=user_id,
+        )
+
+    original, older, wanted = attach("signed_lease"), attach("signed_addendum"), attach("signed_addendum")
+    db.add_all([original, older, wanted])
+    await db.flush()
+
+    storage = MagicMock()
+    storage.download_file.side_effect = lambda key: key.encode()
+    send_email = MagicMock(return_value=True)
+
+    with patch(
+        "app.services.leases.lease_email_service.unit_of_work", _fake_uow_for(db),
+    ), patch(
+        "app.services.leases.lease_email_service.get_storage", lambda: storage,
+    ), patch(
+        "app.services.leases.lease_email_service.record_event", AsyncMock(),
+    ), patch(
+        "app.services.leases.lease_email_service.email_service.is_configured", lambda: True,
+    ), patch(
+        "app.services.leases.lease_email_service.email_service.send_email", send_email,
+    ):
+        sent = await send_extension_addendum_to_tenant(
+            lease_id=lease.id,
+            addendum_attachment_id=wanted.id,
+            user_id=user_id,
+            organization_id=org_id,
+        )
+
+    assert sent is True
+    (recipients, subject, body), kwargs = send_email.call_args
+    assert recipients == ["tenant@example.com"]
+    assert subject == "Your lease extension — Tenant Test"
+    assert "Your lease has been extended" in body
+    assert [a.content for a in kwargs["attachments"]] == [wanted.storage_key.encode()]
+
+
+@pytest.mark.asyncio
+async def test_extend_locks_the_lease_while_checking_the_end_date(db: AsyncSession) -> None:
+    org_id, user_id = uuid.uuid4(), uuid.uuid4()
+    lease = await _seed_signed_lease(db, user_id=user_id, org_id=org_id)
+    storage = AsyncMock()
+    storage.upload_file = lambda *a, **kw: None
+
+    with _patch_service(db, storage_mock=storage), patch(
+        "app.services.leases.lease_extension_service.signed_lease_repo.get",
+        wraps=signed_lease_repo.get,
+    ) as spy:
+        await extend_lease(
+            user_id=user_id, organization_id=org_id, lease_id=lease.id,
+            new_ends_on=_dt.date(2027, 6, 30), notes=None,
+        )
+
+    assert spy.call_args_list[0].kwargs["for_update"] is True
