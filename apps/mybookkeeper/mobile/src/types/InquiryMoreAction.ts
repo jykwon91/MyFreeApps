@@ -1,1 +1,1 @@
-export type InquiryMoreAction = "spam" | "notSpam" | "decline" | "archive";
+export type InquiryMoreAction = "promote" | "spam" | "notSpam" | "decline" | "archive";
