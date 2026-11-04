@@ -8,6 +8,7 @@ import type { ApplicantPageArgs } from "../types/applicant/applicant-page-args";
 import type { ApplicantPromoteRequest } from "../types/applicant/applicant-promote-request";
 import type { ApplicantUpdateRequest } from "../types/applicant/applicant-update-request";
 import type { StageTransitionRequest } from "../types/applicant/stage-transition-request";
+import type { TenantPageArgs } from "../types/applicant/tenant-page-args";
 import type { TenancyEndRequest } from "../types/applicant/tenancy-end-request";
 import type { TenantListArgs } from "../types/applicant/tenant-list-args";
 import type { TenantListResponse } from "../types/applicant/tenant-list-response";
@@ -112,6 +113,7 @@ const applicantsApi = baseApi.enhanceEndpoints({
           ...(args?.include_ended !== undefined
             ? { include_ended: args.include_ended }
             : {}),
+          ...(args?.today !== undefined ? { today: args.today } : {}),
           ...(args?.limit !== undefined ? { limit: args.limit } : {}),
           ...(args?.offset !== undefined ? { offset: args.offset } : {}),
         },
@@ -126,6 +128,22 @@ const applicantsApi = baseApi.enhanceEndpoints({
               { type: "Applicant" as const, id: "TENANT_LIST" },
             ]
           : [{ type: "Applicant" as const, id: "TENANT_LIST" }],
+    }),
+
+    listTenantPages: builder.infiniteQuery<TenantListResponse, TenantPageArgs, number>({
+      infiniteQueryOptions: {
+        initialPageParam: 0,
+        getNextPageParam: (lastPage, _allPages, lastOffset) =>
+          lastPage.has_more ? lastOffset + APPLICANT_PAGE_SIZE : undefined,
+      },
+      query: ({ queryArg, pageParam }) => ({
+        url: "/applicants/tenants",
+        params: { ...queryArg, limit: APPLICANT_PAGE_SIZE, offset: pageParam },
+      }),
+      providesTags: (result) => [
+        ...(result?.pages.flatMap((page) => page.items).map((tenant) => ({ type: "Applicant" as const, id: tenant.id })) ?? []),
+        { type: "Applicant" as const, id: "TENANT_LIST" },
+      ],
     }),
 
     endTenancy: builder.mutation<
@@ -179,6 +197,7 @@ export const {
   useTransitionApplicantStageMutation,
   useUpdateApplicantContractDatesMutation,
   useGetTenantsQuery,
+  useListTenantPagesInfiniteQuery,
   useEndTenancyMutation,
   useRestartTenancyMutation,
 } = applicantsApi;

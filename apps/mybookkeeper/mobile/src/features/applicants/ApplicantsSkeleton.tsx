@@ -14,9 +14,9 @@ export function ApplicantSkeletonRow() {
   );
 }
 
-export default function ApplicantsSkeleton() {
+export default function ApplicantsSkeleton({ label = "Loading your applicants" }: { label?: string }) {
   return (
-    <View accessibilityLabel="Loading your applicants" testID="applicants-skeleton">
+    <View accessibilityLabel={label} testID="applicants-skeleton">
       {ROWS.map((row) => (
         <ApplicantSkeletonRow key={row} />
       ))}

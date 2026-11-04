@@ -1,0 +1,1 @@
+export const TENANCY_END_REASON_MAX_LENGTH = 500;

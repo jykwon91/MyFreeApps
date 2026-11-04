@@ -1,9 +1,8 @@
 import { useRef, useState } from "react";
 import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { TENANCY_END_REASON_MAX_LENGTH } from "@mybookkeeper/api-client/constants/tenancy";
 import { useEndTenancyMutation } from "@mybookkeeper/api-client/store/applicantsApi";
-
-const REASON_MAX_LENGTH = 500;
 
 export interface EndTenancyDialogProps {
   applicantId: string;
@@ -28,7 +27,12 @@ export default function EndTenancyDialog({ applicantId, tenantName, onClose }: E
       }).unwrap();
       showSuccess(`Tenancy ended for ${tenantName}.`);
       onClose();
-    } catch {
+    } catch (error) {
+      if ((error as { status?: number }).status === 409) {
+        showError("That tenancy changed since you opened it.");
+        onClose();
+        return;
+      }
       showError("Couldn't end the tenancy. Please try again.");
     }
   }
@@ -62,13 +66,13 @@ export default function EndTenancyDialog({ applicantId, tenantName, onClose }: E
             data-testid="end-tenancy-reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            maxLength={REASON_MAX_LENGTH}
+            maxLength={TENANCY_END_REASON_MAX_LENGTH}
             rows={3}
             placeholder="e.g. Lease not renewed, moved out on schedule"
             className="w-full px-3 py-2 text-sm border rounded-md resize-none"
           />
           <p className="text-right text-xs text-muted-foreground">
-            {reason.length}/{REASON_MAX_LENGTH}
+            {reason.length}/{TENANCY_END_REASON_MAX_LENGTH}
           </p>
         </div>
 

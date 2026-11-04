@@ -1,3 +1,4 @@
+import { tenancyState } from "@mybookkeeper/api-client/utils/tenancyState";
 import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 
 type TenantEndFields = Pick<ApplicantSummary, "tenant_ended_at" | "contract_end">;
@@ -12,9 +13,7 @@ export interface TenantOption {
  * ended when the host ended it manually, or the latest lease has expired.
  */
 export function isTenantEnded(tenant: TenantEndFields, today?: string): boolean {
-  const todayStr = today ?? new Date().toISOString().slice(0, 10);
-  if (tenant.tenant_ended_at) return true;
-  return Boolean(tenant.contract_end && tenant.contract_end < todayStr);
+  return tenancyState(tenant, today) !== "active";
 }
 
 /**

@@ -112,6 +112,20 @@ describe("EndTenancyDialog", () => {
     });
   });
 
+  it("closes and explains when the tenancy has already ended", async () => {
+    mockEndTenancy.mockReturnValueOnce({
+      unwrap: () => Promise.reject({ status: 409, data: { detail: "This tenancy has already ended." } }),
+    });
+    const onClose = vi.fn();
+    renderDialog(onClose);
+    fireEvent.click(screen.getByTestId("end-tenancy-confirm"));
+
+    await waitFor(() => {
+      expect(showError).toHaveBeenCalledWith("That tenancy changed since you opened it.");
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+  });
+
   it("updates character counter as reason is typed", () => {
     renderDialog();
     const textarea = screen.getByTestId("end-tenancy-reason");

@@ -94,9 +94,9 @@ routes:
   /tax-review:
     not_on_mobile: Not on the phone yet. More links to it on the website.
   /tenants:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/(tabs)/people
   /tenants/:applicantId:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/applicants/[id]
   /terms:
     not_on_mobile: Opens on the website.
   # On the website only: duplicates, bulk actions, import and export, adding by hand,

@@ -8,6 +8,7 @@ import { applicantStageFromParam } from "../applicants/applicantDisplay";
 import ApplicantsScreen from "../applicants/ApplicantsScreen";
 import InquiriesScreen from "../inquiries/InquiriesScreen";
 import { stageFromParam, viewFromParam } from "../inquiries/inquiryFilters";
+import TenantsScreen from "../tenants/TenantsScreen";
 
 function sectionFromParam(param: string | undefined): PeopleSection {
   return PEOPLE_SECTIONS.find((section) => section.value === param)?.value ?? "inquiries";
@@ -22,13 +23,19 @@ export default function PeopleScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
         <SegmentedControl
-          accessibilityLabel="Inquiries or applicants"
-          onChange={(next) => router.setParams({ section: next, stage: undefined, view: undefined })}
+          accessibilityLabel="Inquiries, applicants or tenants"
+          onChange={(next) => router.setParams({ section: next, stage: undefined, tenancy: undefined, view: undefined })}
           segments={PEOPLE_SECTIONS}
           value={section}
         />
       </View>
-      {section === "applicants" ? (
+      {section === "tenants" ? (
+        <TenantsScreen
+          filter={params.tenancy === "everyone" ? "everyone" : "current"}
+          onFilterChange={(tenancy) => router.setParams({ tenancy })}
+          onSeeApplicants={() => router.setParams({ section: "applicants", tenancy: undefined })}
+        />
+      ) : section === "applicants" ? (
         <ApplicantsScreen
           onSeeInquiries={() => router.setParams({ section: "inquiries", stage: undefined, view: undefined })}
           onStageChange={(stage) => router.setParams({ stage: stage ?? undefined })}

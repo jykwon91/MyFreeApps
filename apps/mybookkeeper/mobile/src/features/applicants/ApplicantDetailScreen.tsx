@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WEB_BASE_URL } from "../../constants/api";
 import { CONTRACT_LOCKED_STAGE, STAGES_READY_FOR_LEASE } from "../../constants/applicants";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
+import TenancySection from "../tenants/TenancySection";
 import InquiryChip from "../inquiries/InquiryChip";
 import InquirySection from "../inquiries/InquirySection";
 import { useOpenLink } from "../inquiries/useOpenLink";
@@ -64,6 +65,7 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
   const moves = getAllowedTransitions(applicant.stage);
   const isContractLocked = applicant.stage === CONTRACT_LOCKED_STAGE;
   const isReadyForLease = STAGES_READY_FOR_LEASE.includes(applicant.stage);
+  const isTenant = applicant.stage === CONTRACT_LOCKED_STAGE;
 
   async function moveAndConfirm(stage: ApplicantStage, note: string): Promise<string | null> {
     const problem = await move(stage, note);
@@ -79,9 +81,11 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
           <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
             {applicantName(applicant.legal_name)}
           </Text>
-          <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{`Promoted ${promotedAgo(applicant.created_at)}`}</Text>
-          <InquiryChip label={applicantStageLabel(applicant.stage)} />
+          {isTenant ? null : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{`Promoted ${promotedAgo(applicant.created_at)}`}</Text>}
+          {isTenant ? null : <InquiryChip label={applicantStageLabel(applicant.stage)} />}
         </View>
+
+        {isTenant ? <TenancySection applicant={applicant} /> : null}
 
         {applicant.inquiry_id ? (
           <LoadingButton onPress={() => router.push(`/inquiries/${applicant.inquiry_id}`)} variant="secondary">
@@ -105,9 +109,11 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
           {applicant.referred_by?.trim() ? <TransactionFact label="Referred by" value={applicant.referred_by.trim()} /> : null}
         </InquirySection>
 
-        <ApplicantScreening applicant={applicant} />
+        {isTenant ? null : <ApplicantScreening applicant={applicant} />}
 
         <ApplicantPrivateDetails applicant={applicant} key={applicant.id} />
+
+        {isTenant ? <ApplicantScreening applicant={applicant} /> : null}
 
         <ApplicantHistory applicant={applicant} />
         {canWrite ? null : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>You have view-only access.</Text>}
