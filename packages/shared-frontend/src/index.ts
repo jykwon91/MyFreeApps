@@ -30,6 +30,7 @@ export { showError, showSuccess, subscribe } from "./lib/toast-store";
 export type { ToastEvent, ToastVariant } from "./lib/toast-store";
 export { notifyAuthChange, useIsAuthenticated } from "./lib/auth-store";
 export { baseApi } from "./store/baseApi";
+export { exemptFromSignOut } from "./lib/signOutExemptions";
 export { axiosBaseQuery } from "./store/baseQuery";
 export type { LoginResult } from "@platform/core/types/security/login-result";
 export type { TotpSetup } from "@platform/core/types/security/totp-setup";

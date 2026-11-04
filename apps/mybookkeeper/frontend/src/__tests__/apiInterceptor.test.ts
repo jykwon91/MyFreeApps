@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { AxiosError } from "axios";
 
-vi.mock("@platform/ui", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@platform/ui")>();
+vi.mock("@platform/core/lib/auth-store", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@platform/core/lib/auth-store")>();
   return {
     ...actual,
     notifyAuthChange: vi.fn(),
@@ -36,7 +36,7 @@ describe("api axios interceptor — 401 handling", () => {
   }
 
   it("logs the user out on 401 from a normal authenticated endpoint", async () => {
-    const { notifyAuthChange } = await import("@platform/ui");
+    const { notifyAuthChange } = await import("@platform/core/lib/auth-store");
 
     await triggerInterceptor({
       response: { status: 401, data: {}, headers: {}, statusText: "", config: {} as never },
@@ -48,7 +48,7 @@ describe("api axios interceptor — 401 handling", () => {
   });
 
   it("does NOT log the user out on 401 from /integrations/gmail/sync (business-level 401)", async () => {
-    const { notifyAuthChange } = await import("@platform/ui");
+    const { notifyAuthChange } = await import("@platform/core/lib/auth-store");
 
     await triggerInterceptor({
       response: {
@@ -66,7 +66,7 @@ describe("api axios interceptor — 401 handling", () => {
   });
 
   it("does not log out on 403 errors", async () => {
-    const { notifyAuthChange } = await import("@platform/ui");
+    const { notifyAuthChange } = await import("@platform/core/lib/auth-store");
 
     await triggerInterceptor({
       response: {
@@ -84,7 +84,7 @@ describe("api axios interceptor — 401 handling", () => {
   });
 
   it("does not log out on 401 from /auth/* endpoints (login flow)", async () => {
-    const { notifyAuthChange } = await import("@platform/ui");
+    const { notifyAuthChange } = await import("@platform/core/lib/auth-store");
 
     await triggerInterceptor({
       response: { status: 401, data: {}, headers: {}, statusText: "", config: {} as never },
