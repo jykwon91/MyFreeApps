@@ -1,10 +1,13 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { TRANSACTION_PAGE_SIZE } from "../constants/transactionPaging";
 import type { DuplicatePairsResponse } from "../types/transaction/DuplicatePairsResponse";
 import type { MergeDuplicatesRequest } from "../types/transaction/MergeDuplicatesRequest";
 import type { MergeDuplicatesResponse } from "../types/transaction/MergeDuplicatesResponse";
 import type { ScheduleEReport } from "../types/transaction/ScheduleEReport";
 import type { Transaction } from "../types/transaction/transaction";
 import type { TransactionListParams } from "../types/transaction/TransactionListParams";
+import type { TransactionReviewCount } from "../types/transaction/TransactionReviewCount";
+import type { TransactionUpdateResult } from "../types/transaction/TransactionUpdateResult";
 
 export const transactionsApi = baseApi.enhanceEndpoints({
   addTagTypes: ["Summary", "Transaction"],
@@ -17,6 +20,26 @@ export const transactionsApi = baseApi.enhanceEndpoints({
           ? [...result.map((t) => ({ type: "Transaction" as const, id: t.id })), { type: "Transaction", id: "LIST" }]
           : [{ type: "Transaction", id: "LIST" }],
     }),
+    // The server sends no total, so a short page is how the list knows it reached the end.
+    listTransactionPages: builder.infiniteQuery<Transaction[], TransactionListParams, number>({
+      infiniteQueryOptions: {
+        initialPageParam: 0,
+        getNextPageParam: (lastPage, _allPages, lastOffset) =>
+          lastPage.length < TRANSACTION_PAGE_SIZE ? undefined : lastOffset + TRANSACTION_PAGE_SIZE,
+      },
+      query: ({ queryArg, pageParam }) => ({
+        url: "/transactions",
+        params: { ...queryArg, limit: TRANSACTION_PAGE_SIZE, offset: pageParam },
+      }),
+      providesTags: (result) => [
+        ...(result?.pages.flat().map((t) => ({ type: "Transaction" as const, id: t.id })) ?? []),
+        { type: "Transaction", id: "LIST" },
+      ],
+    }),
+    getTransactionReviewCount: builder.query<TransactionReviewCount, void>({
+      query: () => ({ url: "/transactions/review-count" }),
+      providesTags: [{ type: "Transaction", id: "REVIEW_COUNT" }],
+    }),
     getTransaction: builder.query<Transaction, string>({
       query: (id) => ({ url: `/transactions/${id}` }),
       providesTags: (_result, _err, id) => [{ type: "Transaction", id }],
@@ -25,7 +48,7 @@ export const transactionsApi = baseApi.enhanceEndpoints({
       query: (data) => ({ url: "/transactions", method: "POST", data }),
       invalidatesTags: ["Transaction", "Summary"],
     }),
-    updateTransaction: builder.mutation<Transaction & { retroactive_count?: number }, { id: string; data: Partial<Transaction> }>({
+    updateTransaction: builder.mutation<TransactionUpdateResult, { id: string; data: Partial<Transaction> }>({
       query: ({ id, data }) => ({ url: `/transactions/${id}`, method: "PATCH", data }),
       invalidatesTags: ["Transaction", "Summary"],
     }),
@@ -66,6 +89,8 @@ export const transactionsApi = baseApi.enhanceEndpoints({
 
 export const {
   useListTransactionsQuery,
+  useListTransactionPagesInfiniteQuery,
+  useGetTransactionReviewCountQuery,
   useGetTransactionQuery,
   useCreateTransactionMutation,
   useUpdateTransactionMutation,

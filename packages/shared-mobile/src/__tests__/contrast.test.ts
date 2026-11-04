@@ -35,6 +35,8 @@ const TEXT_PAIRS: [Token, Token][] = [
   ["destructiveForeground", "destructive"],
   ["destructiveText", "background"],
   ["destructiveText", "card"],
+  ["positiveText", "background"],
+  ["positiveText", "card"],
   ["toastSuccessForeground", "toastSuccessBackground"],
   ["toastErrorForeground", "toastErrorBackground"],
 ];

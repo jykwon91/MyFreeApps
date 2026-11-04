@@ -99,6 +99,8 @@ routes:
     not_on_mobile: Not on the phone yet. More links to it on the website.
   /terms:
     not_on_mobile: Opens on the website.
+  # On the website only: duplicates, bulk actions, import and export, adding by hand,
+  # vendor rules, and changing a date. Editing a date there also moves the tax year.
   /transactions:
     screen: (app)/(tabs)/money
   /user-activity:

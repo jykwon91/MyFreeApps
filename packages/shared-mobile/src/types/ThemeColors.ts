@@ -14,6 +14,8 @@ export interface ThemeColors {
   destructiveForeground: string;
   /** For text and borders on `background` or `card`. `destructive` is a button fill. */
   destructiveText: string;
+  /** For money coming in, on `background` or `card`. Never the only sign of it. */
+  positiveText: string;
   toastSuccessBackground: string;
   toastSuccessBorder: string;
   toastSuccessForeground: string;
