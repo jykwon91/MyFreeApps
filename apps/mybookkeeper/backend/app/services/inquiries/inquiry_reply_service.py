@@ -18,7 +18,8 @@ Disclosure rule (RENTALS_PLAN.md §9.3):
     The inquirer must hear about pets on the premises before anything else,
     whether the host used a template, wrote their own reply or edited the
     disclosure out. It's added here, at the last step every reply passes
-    through, unless this reply or an earlier one already says it.
+    through, unless this reply or an earlier one already says it. New wording
+    on the listing counts as something new to tell them.
 
 Stage transition rule (per the plan):
     The reply advances the inquiry from 'new' or 'triaged' to 'replied'.
@@ -124,22 +125,23 @@ async def send_reply(
         body = request.body
         if inquiry.listing_id is not None:
             listing = await listing_repo.get_by_id(db, inquiry.listing_id, organization_id)
-            disclosure = (
-                reply_template_renderer.applicable_disclosure(
+            if listing is None:
+                logger.warning(
+                    "Inquiry %s points at a listing that's gone, so no pet disclosure can be added",
+                    inquiry_id,
+                )
+            else:
+                disclosure = reply_template_renderer.applicable_disclosure(
                     bool(listing.pets_on_premises), listing.large_dog_disclosure,
                 )
-                if listing is not None
-                else None
-            )
-            if disclosure:
-                earlier_messages = await inquiry_message_repo.list_by_inquiry(db, inquiry_id)
-                already_told = any(
-                    message.direction == "outbound"
-                    and reply_template_renderer.contains_disclosure(disclosure, message.parsed_body or "")
-                    for message in earlier_messages
-                )
-                if not already_told and not reply_template_renderer.contains_disclosure(disclosure, body):
-                    body = reply_template_renderer.prepend_disclosure(disclosure, body)
+                if disclosure:
+                    earlier_replies = await inquiry_message_repo.list_outbound_bodies(db, inquiry_id)
+                    already_told = any(
+                        reply_template_renderer.contains_disclosure(disclosure, text)
+                        for text in [body, *earlier_replies]
+                    )
+                    if not already_told:
+                        body = reply_template_renderer.prepend_disclosure(disclosure, body)
 
     # ----- Phase 2: send via Gmail (network call, no DB) -----
     try:

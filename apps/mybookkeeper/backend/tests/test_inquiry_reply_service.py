@@ -32,7 +32,7 @@ from app.models.listings.listing import Listing
 from app.models.properties.property import Property, PropertyType
 from app.models.organization.organization import Organization
 from app.models.user.user import User
-from app.repositories.inquiries import inquiry_repo
+from app.repositories.inquiries import inquiry_message_repo, inquiry_repo
 from app.schemas.inquiries.inquiry_reply_request import InquiryReplyRequest
 from app.services.email import app_sent_email_service
 from app.services.email.constants import APP_SENT_INQUIRY_REPLY_FILTER_REASON
@@ -589,3 +589,84 @@ async def test_inquiry_without_a_listing_sends_as_written(
     _, sent_body = await _send(test_org, test_user, inquiry, "Hi Alice")
 
     assert sent_body == "Hi Alice"
+
+
+async def _add_message(db: AsyncSession, inquiry: Inquiry, *, direction: str, body: str | None) -> None:
+    await inquiry_message_repo.create(
+        db,
+        inquiry_id=inquiry.id,
+        direction=direction,
+        channel="email",
+        from_address="a@example.com",
+        to_address="b@example.com",
+        subject="Re: Cozy Room",
+        parsed_body=body,
+    )
+    await db.flush()
+
+
+@pytest.mark.asyncio
+async def test_inquirer_quoting_the_disclosure_doesnt_count_as_being_told(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    await _seed_integration(db, org=test_org, user=test_user)
+    listing = await _seed_listing(db, org=test_org, user=test_user)
+    inquiry = await _seed_inquiry(db, org=test_org, user=test_user, listing_id=listing.id)
+    await _add_message(db, inquiry, direction="inbound", body=f"Saw this: {DISCLOSURE}")
+
+    _, sent_body = await _send(test_org, test_user, inquiry, "Hi Alice")
+
+    assert sent_body == f"{DISCLOSURE}\n\nHi Alice"
+
+
+@pytest.mark.asyncio
+async def test_earlier_reply_counts_whatever_its_line_breaks_and_empty_ones_dont_break_it(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    await _seed_integration(db, org=test_org, user=test_user)
+    listing = await _seed_listing(db, org=test_org, user=test_user)
+    inquiry = await _seed_inquiry(db, org=test_org, user=test_user, listing_id=listing.id)
+    await _add_message(db, inquiry, direction="outbound", body=None)
+    await _add_message(db, inquiry, direction="outbound", body=DISCLOSURE.replace(" ", "\r\n"))
+
+    _, sent_body = await _send(test_org, test_user, inquiry, "Hi Alice")
+
+    assert sent_body == "Hi Alice"
+
+
+@pytest.mark.asyncio
+async def test_retry_after_gmail_rejects_still_carries_the_disclosure_once(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    await _seed_integration(db, org=test_org, user=test_user)
+    listing = await _seed_listing(db, org=test_org, user=test_user)
+    inquiry = await _seed_inquiry(db, org=test_org, user=test_user, listing_id=listing.id)
+
+    with patch(
+        "app.services.inquiries.inquiry_reply_service.gmail_service.send_message",
+        side_effect=GmailSendError("nope"),
+    ), pytest.raises(inquiry_reply_service.InquiryReplySendFailedError):
+        await inquiry_reply_service.send_reply(
+            test_org.id, test_user.id, inquiry.id, InquiryReplyRequest(subject="Re: Cozy Room", body="Hi"),
+        )
+
+    _, sent_body = await _send(test_org, test_user, inquiry, "Hi")
+
+    assert sent_body == f"{DISCLOSURE}\n\nHi"
+
+
+@pytest.mark.asyncio
+async def test_listing_thats_gone_still_sends_and_says_why_nothing_was_added(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session, caplog: pytest.LogCaptureFixture,
+) -> None:
+    await _seed_integration(db, org=test_org, user=test_user)
+    listing = await _seed_listing(db, org=test_org, user=test_user)
+    inquiry = await _seed_inquiry(db, org=test_org, user=test_user, listing_id=listing.id)
+
+    with patch(
+        "app.services.inquiries.inquiry_reply_service.listing_repo.get_by_id", return_value=None,
+    ):
+        _, sent_body = await _send(test_org, test_user, inquiry, "Hi Alice")
+
+    assert sent_body == "Hi Alice"
+    assert "no pet disclosure" in caplog.text

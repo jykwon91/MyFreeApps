@@ -66,6 +66,18 @@ async def list_by_inquiry(
     return list(result.scalars().all())
 
 
+async def list_outbound_bodies(db: AsyncSession, inquiry_id: uuid.UUID) -> list[str]:
+    """Return the text of everything the host has sent on an inquiry."""
+    result = await db.execute(
+        select(InquiryMessage.parsed_body).where(
+            InquiryMessage.inquiry_id == inquiry_id,
+            InquiryMessage.direction == "outbound",
+            InquiryMessage.parsed_body.is_not(None),
+        )
+    )
+    return list(result.scalars().all())
+
+
 async def find_by_email_message_id(
     db: AsyncSession,
     email_message_id: str,
