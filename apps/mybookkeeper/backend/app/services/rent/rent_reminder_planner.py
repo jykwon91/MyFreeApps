@@ -67,6 +67,29 @@ async def next_due_for_plan(db, *, plan, from_date: _dt.date) -> math.DueReminde
     )
 
 
+def render_for_send_now(
+    plan, *, due: math.DueReminder, tenant_legal_name: str | None, now: _dt.datetime,
+) -> RenderedReminder:
+    """The reminder text if the operator sends it right now.
+
+    Unlike ``render``, this reads relative to today: sent on a Tuesday, a
+    reminder for Sunday must not say "due tomorrow".
+    """
+    terms = plan_terms(plan)
+    return RenderedReminder(
+        due=due,
+        send_at=math.send_at(terms, due.due_date),
+        body=message.render_reminder(
+            tenant_legal_name=tenant_legal_name,
+            amount=due.amount,
+            due_date=due.due_date,
+            sent_on=math.local_now(terms, now).date(),
+            payment_instructions=plan.payment_instructions,
+        ),
+        subject=message.reminder_subject(due.amount, due.due_date),
+    )
+
+
 def render(
     plan, *, due: math.DueReminder, tenant_legal_name: str | None, now: _dt.datetime,
 ) -> RenderedReminder:

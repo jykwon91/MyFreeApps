@@ -194,6 +194,9 @@ async def get_preview(
             period_start=due.period.period_start,
             period_end=due.period.period_end,
             message=rendered.body,
+            send_now_message=planner.render_for_send_now(
+                plan, due=due, tenant_legal_name=applicant.legal_name, now=moment,
+            ).body,
             sent_channels=sent_channels,
         )
 

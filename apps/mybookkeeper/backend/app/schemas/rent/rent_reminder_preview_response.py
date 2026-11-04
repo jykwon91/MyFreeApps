@@ -15,7 +15,10 @@ class RentReminderPreviewResponse(BaseModel):
     # The rent charge period the amount comes from.
     period_start: _dt.date
     period_end: _dt.date
+    # As it will read on the day it goes out on schedule.
     message: str
+    # As it would read if the operator sent it right now.
+    send_now_message: str
     # Channels that already went out (or are in flight) for this due date.
     # A failed send is not listed: it can be retried with send-now.
     sent_channels: list[str]

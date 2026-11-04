@@ -21,6 +21,7 @@ from app.schemas.rent.rent_reminder_overview_response import RentReminderOvervie
 from app.schemas.rent.rent_reminder_plan_request import RentReminderPlanRequest
 from app.schemas.rent.rent_reminder_plan_response import RentReminderPlanResponse
 from app.schemas.rent.rent_reminder_preview_response import RentReminderPreviewResponse
+from app.schemas.rent.rent_reminder_send_now_request import RentReminderSendNowRequest
 from app.schemas.rent.rent_reminder_send_response import RentReminderSendResponse
 from app.services.rent import (
     rent_reminder_dispatch_service,
@@ -139,6 +140,7 @@ async def get_preview(
 )
 async def send_now(
     applicant_id: uuid.UUID,
+    body: RentReminderSendNowRequest,
     ctx: RequestContext = Depends(reject_demo_org_write),
 ) -> list[RentReminderSendResponse]:
     """Send the next reminder now on every enabled channel — always together."""
@@ -148,6 +150,10 @@ async def send_now(
             organization_id=ctx.organization_id,
             user_id=ctx.user_id,
             applicant_id=applicant_id,
+            expected_due_date=body.due_date,
+            expected_amount=body.amount,
+            expected_message=body.message,
+            expected_channels=body.channels,
         )
     except rent_reminder_service.TenantNotFoundError as exc:
         raise HTTPException(status_code=404, detail=_TENANT_NOT_FOUND) from exc
@@ -156,10 +162,13 @@ async def send_now(
     except (
         rent_reminder_service.SmsUnavailableError,
         rent_reminder_dispatch_service.NoUpcomingRentError,
+        rent_reminder_dispatch_service.TenancyEndedError,
     ) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except rent_reminder_dispatch_service.ReminderAlreadySentError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except rent_reminder_dispatch_service.ReminderChangedError as exc:
+        raise HTTPException(status_code=412, detail=str(exc)) from exc
 
 
 @router.get(

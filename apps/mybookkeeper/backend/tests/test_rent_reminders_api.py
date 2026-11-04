@@ -11,9 +11,11 @@ from __future__ import annotations
 import datetime as _dt
 import time
 import uuid
+from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 
 import jwt
+import pytest
 from fastapi.testclient import TestClient
 
 from app.core.context import RequestContext
@@ -131,12 +133,82 @@ class TestSendNow:
             ) as send_now:
                 response = TestClient(app).post(
                     f"/rent-reminders/tenants/{uuid.uuid4()}/send-now",
+                    json=_SHOWN,
                 )
             assert response.status_code == 200
             assert [(r["channel"], r["status"]) for r in response.json()] == [
                 ("email", "sent"), ("sms", "sent_to_phone"),
             ]
             assert "channel" not in send_now.call_args.kwargs
+            assert send_now.call_args.kwargs["expected_due_date"] == _dt.date(2026, 11, 1)
+            assert send_now.call_args.kwargs["expected_amount"] == Decimal("300.00")
+            assert send_now.call_args.kwargs["expected_message"] == _SHOWN["message"]
+            assert send_now.call_args.kwargs["expected_channels"] == ["email", "sms"]
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_a_changed_reminder_is_412(self) -> None:
+        _override_auth()
+        try:
+            with patch(
+                "app.api.rent_reminders.rent_reminder_dispatch_service.send_now",
+                AsyncMock(side_effect=rent_reminder_dispatch_service.ReminderChangedError("changed")),
+            ):
+                response = TestClient(app).post(
+                    f"/rent-reminders/tenants/{uuid.uuid4()}/send-now",
+                    json=_SHOWN,
+                )
+            assert response.status_code == 412
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_an_ended_tenancy_is_422(self) -> None:
+        _override_auth()
+        try:
+            with patch(
+                "app.api.rent_reminders.rent_reminder_dispatch_service.send_now",
+                AsyncMock(side_effect=rent_reminder_dispatch_service.TenancyEndedError("ended")),
+            ):
+                response = TestClient(app).post(
+                    f"/rent-reminders/tenants/{uuid.uuid4()}/send-now",
+                    json=_SHOWN,
+                )
+            assert response.status_code == 422
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.parametrize(
+        "change",
+        [{"channels": []}, {"channels": ["pigeon"]}, {"amount": "NaN"}, {"amount": "1.234"}],
+    )
+    def test_nonsense_is_refused(self, change) -> None:
+        _override_auth()
+        try:
+            with patch(
+                "app.api.rent_reminders.rent_reminder_dispatch_service.send_now",
+                AsyncMock(),
+            ) as send_now:
+                response = TestClient(app).post(
+                    f"/rent-reminders/tenants/{uuid.uuid4()}/send-now",
+                    json={**_SHOWN, **change},
+                )
+            assert response.status_code == 422
+            send_now.assert_not_called()
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_sending_without_saying_what_was_shown_is_refused(self) -> None:
+        _override_auth()
+        try:
+            with patch(
+                "app.api.rent_reminders.rent_reminder_dispatch_service.send_now",
+                AsyncMock(),
+            ) as send_now:
+                response = TestClient(app).post(
+                    f"/rent-reminders/tenants/{uuid.uuid4()}/send-now",
+                )
+            assert response.status_code == 422
+            send_now.assert_not_called()
         finally:
             app.dependency_overrides.clear()
 
@@ -149,10 +221,19 @@ class TestSendNow:
             ):
                 response = TestClient(app).post(
                     f"/rent-reminders/tenants/{uuid.uuid4()}/send-now",
+                    json=_SHOWN,
                 )
             assert response.status_code == 409
         finally:
             app.dependency_overrides.clear()
+
+
+_SHOWN = {
+    "due_date": "2026-11-01",
+    "amount": "300.00",
+    "message": "Hi Sonu, reminder: rent of $300 is due on Sunday, Nov 1.",
+    "channels": ["email", "sms"],
+}
 
 
 def _token(*, key: str = _SIGNING_KEY, audience: str = _WEBHOOK_URL) -> str:

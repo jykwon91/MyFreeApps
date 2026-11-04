@@ -71,6 +71,8 @@ const PREVIEW: RentReminderPreview = {
   period_end: "2026-11-30",
   message:
     "Hi Sonu, reminder: rent of $300 is due tomorrow (Sunday). Pay via Zelle to jason@example.com.",
+  send_now_message:
+    "Hi Sonu, reminder: rent of $300 is due on Sunday, Nov 1. Pay via Zelle to jason@example.com.",
   sent_channels: ["email"],
 };
 
@@ -195,10 +197,19 @@ describe("RentReminderCard", () => {
         ]),
     });
     renderCard();
+    expect(screen.getByTestId("rent-reminder-send-now-message")).toHaveTextContent(
+      PREVIEW.send_now_message,
+    );
     const button = screen.getByTestId("rent-reminder-send-now");
     expect(button).toHaveTextContent("Send email and text now");
     fireEvent.click(button);
-    expect(mockSendNow).toHaveBeenCalledWith({ applicantId: "app-1" });
+    expect(mockSendNow).toHaveBeenCalledWith({
+      applicantId: "app-1",
+      due_date: "2026-11-01",
+      amount: "300.00",
+      message: PREVIEW.send_now_message,
+      channels: ["email", "sms"],
+    });
   });
 
   it("shows a retry on error", () => {
