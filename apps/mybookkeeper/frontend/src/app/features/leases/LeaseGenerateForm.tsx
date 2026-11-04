@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import { useCreateSignedLeaseMutation } from "@/shared/store/signedLeasesApi";
+import { useCreateSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import {
   useGetGenerateDefaultsQuery,
   useGetMultiGenerateDefaultsQuery,

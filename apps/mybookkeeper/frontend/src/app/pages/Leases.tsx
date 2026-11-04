@@ -7,12 +7,12 @@ import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import {
   useGetSignedLeasesQuery,
   useDeleteSignedLeaseMutation,
-} from "@/shared/store/signedLeasesApi";
+} from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import LeaseImportDialog from "@/app/features/leases/LeaseImportDialog";
 import { useLeasesListMode } from "@/app/features/leases/useLeasesListMode";
 import LeasesListBody from "@/app/features/leases/LeasesListBody";
-import type { SignedLeaseSummary } from "@/shared/types/lease/signed-lease-summary";
+import type { SignedLeaseSummary } from "@mybookkeeper/api-client/types/lease/signed-lease-summary";
 
 export default function Leases() {
   const canWrite = useCanWrite();

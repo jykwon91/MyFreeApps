@@ -15,8 +15,8 @@ import { Provider } from "react-redux";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { store } from "@/shared/store";
 import LeaseDetail from "@/app/pages/LeaseDetail";
-import type { SignedLeaseDetail } from "@/shared/types/lease/signed-lease-detail";
-import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
+import type { SignedLeaseDetail } from "@mybookkeeper/api-client/types/lease/signed-lease-detail";
+import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
 
 const generateMock = vi.fn(() => ({ unwrap: () => Promise.resolve() }));
 const updateMock = vi.fn(() => ({ unwrap: () => Promise.resolve() }));
@@ -24,7 +24,7 @@ const updateMock = vi.fn(() => ({ unwrap: () => Promise.resolve() }));
 let mockLease: SignedLeaseDetail | undefined;
 const useGetSignedLeaseByIdQueryMock = vi.fn();
 
-vi.mock("@/shared/store/signedLeasesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/signedLeasesApi", () => ({
   useGenerateSignedLeaseMutation: () => [generateMock, { isLoading: false }],
   useUpdateSignedLeaseMutation: () => [updateMock, { isLoading: false }],
   useEmailSignedLeaseToTenantMutation: () => [vi.fn(() => ({ unwrap: () => Promise.resolve() })), { isLoading: false }],
@@ -58,6 +58,7 @@ function buildLease(overrides: Partial<SignedLeaseDetail> = {}): SignedLeaseDeta
       { id: "tpl-1", name: "Lease Agreement", version: 1, display_order: 0 },
     ],
     applicant_id: "app-1",
+    applicant_legal_name: null,
     listing_id: null,
     kind: "generated",
     values: {},

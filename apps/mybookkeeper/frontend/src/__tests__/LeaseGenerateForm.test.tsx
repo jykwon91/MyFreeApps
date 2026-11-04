@@ -28,7 +28,7 @@ vi.mock("@/shared/store/leaseTemplatesApi", () => ({
     mockUseGetMultiGenerateDefaultsQuery(args, opts),
 }));
 
-vi.mock("@/shared/store/signedLeasesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/signedLeasesApi", () => ({
   useCreateSignedLeaseMutation: () => mockUseCreateSignedLeaseMutation(),
 }));
 

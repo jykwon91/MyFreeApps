@@ -161,6 +161,7 @@ def _to_detail(
     template_links: list[SignedLeaseTemplateLink],
     latest_extension: "LeaseExtensionSummary | None" = None,
     successor_lease_id: uuid.UUID | None = None,
+    applicant_legal_name: str | None = None,
 ) -> SignedLeaseResponse:
     return SignedLeaseResponse(
         id=lease.id,
@@ -168,6 +169,7 @@ def _to_detail(
         organization_id=lease.organization_id,
         templates=template_links,
         applicant_id=lease.applicant_id,
+        applicant_legal_name=applicant_legal_name,
         listing_id=lease.listing_id,
         kind=lease.kind,
         values=dict(lease.values or {}),

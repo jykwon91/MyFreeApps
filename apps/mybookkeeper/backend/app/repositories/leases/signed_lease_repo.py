@@ -163,9 +163,11 @@ async def list_for_tenant(
     applicant_id: uuid.UUID | None = None,
     listing_id: uuid.UUID | None = None,
     status: str | None = None,
+    statuses: tuple[str, ...] | None = None,
     starts_after: _dt.date | None = None,
     starts_before: _dt.date | None = None,
     include_deleted: bool = False,
+    soonest_end_first: bool = False,
     limit: int = 50,
     offset: int = 0,
 ) -> list[SignedLease]:
@@ -181,11 +183,20 @@ async def list_for_tenant(
         stmt = stmt.where(SignedLease.listing_id == listing_id)
     if status is not None:
         stmt = stmt.where(SignedLease.status == status)
+    if statuses is not None:
+        stmt = stmt.where(SignedLease.status.in_(statuses))
     if starts_after is not None:
         stmt = stmt.where(SignedLease.starts_on >= starts_after)
     if starts_before is not None:
         stmt = stmt.where(SignedLease.starts_on <= starts_before)
-    stmt = stmt.order_by(desc(SignedLease.created_at)).limit(limit).offset(offset)
+    # id breaks ties: rows sharing a date would otherwise repeat or go missing
+    # between pages.
+    order = (
+        (SignedLease.ends_on.asc().nulls_last(), SignedLease.id)
+        if soonest_end_first
+        else (desc(SignedLease.created_at), desc(SignedLease.id))
+    )
+    stmt = stmt.order_by(*order).limit(limit).offset(offset)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
@@ -198,6 +209,9 @@ async def count_for_tenant(
     applicant_id: uuid.UUID | None = None,
     listing_id: uuid.UUID | None = None,
     status: str | None = None,
+    statuses: tuple[str, ...] | None = None,
+    starts_after: _dt.date | None = None,
+    starts_before: _dt.date | None = None,
     include_deleted: bool = False,
 ) -> int:
     stmt = select(func.count()).select_from(SignedLease).where(
@@ -212,6 +226,12 @@ async def count_for_tenant(
         stmt = stmt.where(SignedLease.listing_id == listing_id)
     if status is not None:
         stmt = stmt.where(SignedLease.status == status)
+    if statuses is not None:
+        stmt = stmt.where(SignedLease.status.in_(statuses))
+    if starts_after is not None:
+        stmt = stmt.where(SignedLease.starts_on >= starts_after)
+    if starts_before is not None:
+        stmt = stmt.where(SignedLease.starts_on <= starts_before)
     result = await db.execute(stmt)
     return int(result.scalar_one())
 

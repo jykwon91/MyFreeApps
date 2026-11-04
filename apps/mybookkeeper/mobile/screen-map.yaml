@@ -42,9 +42,9 @@ routes:
   /lease-templates/:templateId:
     not_on_mobile: A template editor needs a bigger screen. The list stays.
   /leases:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/leases/index
   /leases/:leaseId:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/leases/[id]
   /leases/new:
     not_on_mobile: Not on the phone yet. More links to it on the website.
   /listings:

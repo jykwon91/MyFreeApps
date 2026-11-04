@@ -3,10 +3,10 @@ import { Trash2 } from "lucide-react";
 import {
   useGetSignedLeaseByIdQuery,
   useDeleteSignedLeaseMutation,
-} from "@/shared/store/signedLeasesApi";
+} from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
-import type { SignedLeaseSummary } from "@/shared/types/lease/signed-lease-summary";
+import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
+import type { SignedLeaseSummary } from "@mybookkeeper/api-client/types/lease/signed-lease-summary";
 import SignedLeaseStatusBadge from "@/app/features/leases/SignedLeaseStatusBadge";
 import AttachmentViewer from "@/app/features/leases/AttachmentViewer";
 import { ConfirmDialog } from "@platform/ui";

@@ -22,7 +22,7 @@ import {
   useGenerateSignedLeaseMutation,
   useGetSignedLeaseByIdQuery,
   useUpdateSignedLeaseMutation,
-} from "@/shared/store/signedLeasesApi";
+} from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import SignedLeaseStatusBadge from "@/app/features/leases/SignedLeaseStatusBadge";
 import SignedLeaseStatusPicker from "@/app/features/leases/SignedLeaseStatusPicker";
@@ -30,7 +30,7 @@ import ExtendLeaseDialog from "@/app/features/leases/ExtendLeaseDialog";
 import LeaseAttachmentsSection from "@/app/features/leases/LeaseAttachmentsSection";
 import LeaseAddTemplateModal from "@/app/features/leases/LeaseAddTemplateModal";
 import UndoExtensionDialog from "@/app/features/leases/UndoExtensionDialog";
-import type { SignedLeaseStatus } from "@/shared/types/lease/signed-lease-status";
+import type { SignedLeaseStatus } from "@mybookkeeper/api-client/types/lease/signed-lease-status";
 
 type Tab = "files" | "details" | "notes";
 

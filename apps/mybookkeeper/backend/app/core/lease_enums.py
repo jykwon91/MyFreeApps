@@ -27,6 +27,12 @@ SIGNED_LEASE_STATUSES: tuple[str, ...] = (
     "terminated",
 )
 
+# How the Leases list groups those states. A lease being prepared is in neither.
+LEASE_STATUS_GROUPS: dict[str, tuple[str, ...]] = {
+    "current": ("signed", "active"),
+    "ended": ("ended", "terminated"),
+}
+
 # Allowed input types for placeholder spec.
 LEASE_PLACEHOLDER_INPUT_TYPES: tuple[str, ...] = (
     "text",
@@ -51,12 +57,6 @@ LEASE_ATTACHMENT_KINDS: tuple[str, ...] = (
     "rent_receipt",
     "other",
 )
-
-# How the signed_lease record was created.
-# 'generated' = created from a lease template (Phase 1 flow).
-# 'imported'  = uploaded externally-signed PDFs with no template involved.
-LEASE_KINDS: tuple[str, ...] = ("generated", "imported")
-
 
 # How the signed_lease record was created.
 # 'generated' = created from a lease template (Phase 1 flow).

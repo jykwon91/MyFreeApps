@@ -111,6 +111,7 @@ export function startApplicantServer(applicants: ApplicantDetailResponse[]): Fak
       row?.screening_results.push(result);
       return respond(result, 201);
     }
+    if (config.url === "/signed-leases") return respond({ items: [], total: 0, has_more: false });
     if (config.url === "/applicants/tenants") {
       if (server.tenantListFailure) return respond({ detail: "nope" }, server.tenantListFailure);
       const params = config.params as { include_ended: boolean; today: string; limit: number; offset: number };

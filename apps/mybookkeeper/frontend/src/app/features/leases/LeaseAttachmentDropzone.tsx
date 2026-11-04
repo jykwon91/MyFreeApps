@@ -4,9 +4,10 @@ import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   LEASE_ATTACHMENT_KINDS,
   type LeaseAttachmentKind,
-} from "@/shared/types/lease/lease-attachment-kind";
-import { LEASE_ATTACHMENT_KIND_LABELS } from "@/shared/lib/lease-labels";
-import { useUploadSignedLeaseAttachmentMutation } from "@/shared/store/signedLeasesApi";
+} from "@mybookkeeper/api-client/types/lease/lease-attachment-kind";
+import { LEASE_ATTACHMENT_KIND_LABELS } from "@mybookkeeper/api-client/constants/leaseLabels";
+import { leaseAttachmentForm } from "@/shared/lib/lease-upload-form";
+import { useUploadSignedLeaseAttachmentMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { inferKindsForFiles } from "@/shared/lib/infer-attachment-kind";
 
 const ALLOWED_MIME = [
@@ -57,7 +58,7 @@ export default function LeaseAttachmentDropzone({
       const file = validFiles[i];
       const kind = kinds[i];
       try {
-        await uploadAttachment({ leaseId, file, kind }).unwrap();
+        await uploadAttachment({ leaseId, form: leaseAttachmentForm(file, kind) }).unwrap();
         showSuccess(`${file.name} uploaded.`);
         successCount++;
       } catch (e: unknown) {

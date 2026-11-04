@@ -1,7 +1,7 @@
 import { StatusBadge } from "@platform/ui";
 import type { BadgeTone } from "@platform/ui";
-import { SIGNED_LEASE_STATUS_LABELS } from "@/shared/lib/lease-labels";
-import type { SignedLeaseStatus } from "@/shared/types/lease/signed-lease-status";
+import { SIGNED_LEASE_STATUS_LABELS } from "@mybookkeeper/api-client/constants/leaseLabels";
+import type { SignedLeaseStatus } from "@mybookkeeper/api-client/types/lease/signed-lease-status";
 
 const STATUS_TONES: Record<SignedLeaseStatus, BadgeTone> = {
   draft: "neutral",

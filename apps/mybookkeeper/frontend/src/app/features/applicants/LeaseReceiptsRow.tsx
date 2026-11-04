@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Download, FileText } from "lucide-react";
-import { useGetSignedLeaseByIdQuery } from "@/shared/store/signedLeasesApi";
-import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
+import { useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
+import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
 import { reportMissingStorageObject } from "@/shared/lib/storage-observability";
 
 export interface LeaseReceiptsRowProps {

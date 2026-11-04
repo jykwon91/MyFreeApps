@@ -4,8 +4,8 @@ import SignedLeaseStatusBadge from "@/app/features/leases/SignedLeaseStatusBadge
 import {
   SIGNED_LEASE_STATUSES,
   type SignedLeaseStatus,
-} from "@/shared/types/lease/signed-lease-status";
-import { SIGNED_LEASE_STATUS_LABELS } from "@/shared/lib/lease-labels";
+} from "@mybookkeeper/api-client/types/lease/signed-lease-status";
+import { SIGNED_LEASE_STATUS_LABELS } from "@mybookkeeper/api-client/constants/leaseLabels";
 
 describe("SignedLeaseStatusBadge", () => {
   it.each(SIGNED_LEASE_STATUSES)("renders the label for status '%s'", (status) => {

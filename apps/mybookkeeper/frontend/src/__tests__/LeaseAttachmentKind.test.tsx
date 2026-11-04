@@ -9,7 +9,7 @@ import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import { inferKindFromFilename, inferKindsForFiles } from "@/shared/lib/infer-attachment-kind";
 import LeaseAttachmentsSection from "@/app/features/leases/LeaseAttachmentsSection";
-import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
+import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
 
 // ---------------------------------------------------------------------------
 // inferKindFromFilename unit tests
@@ -74,7 +74,7 @@ const updateMock = vi.fn();
 const deleteMock = vi.fn();
 const uploadMock = vi.fn();
 
-vi.mock("@/shared/store/signedLeasesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/signedLeasesApi", () => ({
   useUploadSignedLeaseAttachmentMutation: () => [uploadMock, { isLoading: false }],
   useDeleteSignedLeaseAttachmentMutation: () => [deleteMock, {}],
   useUpdateLeaseAttachmentMutation: () => [updateMock, {}],

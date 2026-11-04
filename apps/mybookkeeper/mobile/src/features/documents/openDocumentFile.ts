@@ -17,12 +17,27 @@ export async function openDocumentFile(
   documentId: string,
   headers: Record<string, string>,
 ): Promise<void> {
+  await openCopy(url, `${documentId}.pdf`, { headers, idempotent: true }, { mimeType: PDF_MIME_TYPE, UTI: PDF_UTI });
+}
+
+/** The same for a file on a signed link, which needs no sign-in. The extension tells the viewer what it is. */
+export async function openAttachmentFile(url: string, file: { id: string; filename: string; content_type: string }): Promise<void> {
+  const extension = /\.[a-z0-9]{1,8}$/i.exec(file.filename)?.[0] ?? "";
+  await openCopy(url, `${file.id}${extension}`, { idempotent: true }, { mimeType: file.content_type });
+}
+
+async function openCopy(
+  url: string,
+  fileName: string,
+  download: { headers?: Record<string, string>; idempotent: boolean },
+  share: Sharing.SharingOptions,
+): Promise<void> {
   const directory = documentFiles();
   directory.create({ idempotent: true, intermediates: true });
-  const destination = new File(directory, `${documentId}.pdf`);
+  const destination = new File(directory, fileName);
   try {
-    await File.downloadFileAsync(url, destination, { headers, idempotent: true });
-    await Sharing.shareAsync(destination.uri, { mimeType: PDF_MIME_TYPE, UTI: PDF_UTI });
+    await File.downloadFileAsync(url, destination, download);
+    await Sharing.shareAsync(destination.uri, share);
   } finally {
     if (destination.exists) destination.delete();
   }

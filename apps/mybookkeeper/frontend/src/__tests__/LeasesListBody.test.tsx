@@ -18,7 +18,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import LeasesListBody from "@/app/features/leases/LeasesListBody";
-import type { SignedLeaseSummary } from "@/shared/types/lease/signed-lease-summary";
+import type { SignedLeaseSummary } from "@mybookkeeper/api-client/types/lease/signed-lease-summary";
 
 // ---------------------------------------------------------------------------
 // Mocks — the quick-upload modal renders LeaseAttachmentDropzone which needs
@@ -26,7 +26,7 @@ import type { SignedLeaseSummary } from "@/shared/types/lease/signed-lease-summa
 // ---------------------------------------------------------------------------
 
 const mockUpload = vi.fn();
-vi.mock("@/shared/store/signedLeasesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/signedLeasesApi", () => ({
   useUploadSignedLeaseAttachmentMutation: () => [mockUpload, { isLoading: false }],
   useDeleteSignedLeaseAttachmentMutation: () => [vi.fn(), {}],
   useUpdateLeaseAttachmentMutation: () => [vi.fn(), {}],

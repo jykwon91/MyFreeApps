@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import uuid
+from typing import Literal
 
 from fastapi import (
     APIRouter,
@@ -156,6 +157,7 @@ async def list_leases(
     applicant_id: uuid.UUID | None = Query(None),
     listing_id: uuid.UUID | None = Query(None),
     status: str | None = Query(None),
+    group: Literal["current", "ended"] | None = Query(None),
     starts_after: _dt.date | None = Query(None),
     starts_before: _dt.date | None = Query(None),
     limit: int = Query(50, ge=1, le=100),
@@ -168,6 +170,7 @@ async def list_leases(
         applicant_id=applicant_id,
         listing_id=listing_id,
         status=status,
+        group=group,
         starts_after=starts_after,
         starts_before=starts_before,
         limit=limit,

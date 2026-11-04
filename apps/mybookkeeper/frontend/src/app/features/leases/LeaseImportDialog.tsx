@@ -4,7 +4,8 @@ import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
-import { useImportSignedLeaseMutation } from "@/shared/store/signedLeasesApi";
+import { leaseImportForm } from "@/shared/lib/lease-upload-form";
+import { useImportSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 
 export interface LeaseImportDialogProps {
   onClose: () => void;
@@ -53,7 +54,7 @@ export default function LeaseImportDialog({ onClose }: LeaseImportDialogProps) {
     if (!isValid) return;
 
     try {
-      const result = await importLease({
+      const result = await importLease(leaseImportForm({
         applicant_id: applicantId,
         listing_id: listingId || undefined,
         starts_on: startsOn || undefined,
@@ -61,7 +62,7 @@ export default function LeaseImportDialog({ onClose }: LeaseImportDialogProps) {
         notes: notes || undefined,
         status: "signed",
         files,
-      }).unwrap();
+      })).unwrap();
 
       const count = result.attachments.length;
       showSuccess(

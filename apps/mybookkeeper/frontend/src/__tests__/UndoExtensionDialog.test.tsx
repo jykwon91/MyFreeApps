@@ -6,7 +6,7 @@ import UndoExtensionDialog from "@/app/features/leases/UndoExtensionDialog";
 
 const mockUndoExtension = vi.fn();
 
-vi.mock("@/shared/store/signedLeasesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/signedLeasesApi", () => ({
   useUndoSignedLeaseExtensionMutation: vi.fn(() => [
     mockUndoExtension,
     { isLoading: false },
@@ -18,7 +18,7 @@ vi.mock("@/shared/lib/toast-store", () => ({
   showError: vi.fn(),
 }));
 
-import { useUndoSignedLeaseExtensionMutation } from "@/shared/store/signedLeasesApi";
+import { useUndoSignedLeaseExtensionMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { showSuccess, showError } from "@/shared/lib/toast-store";
 
 function renderDialog(onClose = vi.fn()) {

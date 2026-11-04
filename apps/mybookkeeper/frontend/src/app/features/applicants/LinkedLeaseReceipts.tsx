@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
-import type { SignedLeaseSummary } from "@/shared/types/lease/signed-lease-summary";
+import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
+import type { SignedLeaseSummary } from "@mybookkeeper/api-client/types/lease/signed-lease-summary";
 import AttachmentViewer from "@/app/features/leases/AttachmentViewer";
 import LeaseReceiptsRow from "./LeaseReceiptsRow";
 

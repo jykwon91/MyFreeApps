@@ -1,5 +1,5 @@
 import type { LinkedLeaseDocumentsMode } from "@mybookkeeper/api-client/types/applicant/linked-lease-documents-mode";
-import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
+import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
 
 interface UseLinkedLeaseDocumentsModeArgs {
   isLoading: boolean;
