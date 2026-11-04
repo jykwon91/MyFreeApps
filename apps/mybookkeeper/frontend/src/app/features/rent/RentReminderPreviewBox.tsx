@@ -11,6 +11,7 @@ import { formatDueDate, formatSendMoment } from "./rent-reminder-format";
 import { RENT_REMINDER_CHANNEL_LABEL } from "./rent-reminder-labels";
 import type { RentReminderChannel } from "@/shared/types/rent/rent-reminder-channel";
 import type { RentReminderPlan } from "@/shared/types/rent/rent-reminder-plan";
+import type { RentReminderPreview } from "@/shared/types/rent/rent-reminder-preview";
 import type { RentReminderSend } from "@/shared/types/rent/rent-reminder-send";
 
 export interface RentReminderPreviewBoxProps {
@@ -52,9 +53,17 @@ export default function RentReminderPreviewBox({
   const { data: preview, isLoading, isError } = useGetRentReminderPreviewQuery(applicantId);
   const [sendNow, { isLoading: isSending }] = useSendRentReminderNowMutation();
 
-  async function handleSend() {
+  async function handleSend(shown: RentReminderPreview) {
     try {
-      reportResults(await sendNow({ applicantId }).unwrap());
+      reportResults(
+        await sendNow({
+          applicantId,
+          due_date: shown.due_date,
+          amount: shown.amount,
+          message: shown.send_now_message,
+          channels: enabledChannels(plan),
+        }).unwrap(),
+      );
     } catch (error) {
       showError(extractErrorMessage(error));
     }
@@ -105,6 +114,12 @@ export default function RentReminderPreviewBox({
         {preview.message}
       </blockquote>
 
+      {canWrite && !alreadySent && preview.send_now_message !== preview.message ? (
+        <p className="text-xs text-muted-foreground" data-testid="rent-reminder-send-now-message">
+          If you send it now, it will read: {preview.send_now_message}
+        </p>
+      ) : null}
+
       {canWrite && channels.length > 0 ? (
         <LoadingButton
           type="button"
@@ -113,7 +128,7 @@ export default function RentReminderPreviewBox({
           isLoading={isSending}
           loadingText="Sending..."
           disabled={isSending || alreadySent}
-          onClick={() => void handleSend()}
+          onClick={() => void handleSend(preview)}
           className="min-h-[44px] w-full sm:w-auto"
           data-testid="rent-reminder-send-now"
         >

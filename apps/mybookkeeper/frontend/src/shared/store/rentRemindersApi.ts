@@ -1,4 +1,5 @@
 import { baseApi } from "./baseApi";
+import type { RentReminderChannel } from "@/shared/types/rent/rent-reminder-channel";
 import type { RentReminderOverview } from "@/shared/types/rent/rent-reminder-overview";
 import type { RentReminderPlan } from "@/shared/types/rent/rent-reminder-plan";
 import type { RentReminderPlanRequest } from "@/shared/types/rent/rent-reminder-plan-request";
@@ -9,8 +10,13 @@ export interface RentReminderPlanArgs extends RentReminderPlanRequest {
   applicantId: string;
 }
 
+/** What the operator was shown. The server sends nothing if it has changed. */
 export interface RentReminderSendNowArgs {
   applicantId: string;
+  due_date: string;
+  amount: string;
+  message: string;
+  channels: RentReminderChannel[];
 }
 
 const reminderTag = (applicantId: string) => ({
@@ -80,9 +86,10 @@ const rentRemindersApi = baseApi.injectEndpoints({
     /** Sends every enabled channel together — email and text never go out
      *  at different times. */
     sendRentReminderNow: builder.mutation<RentReminderSend[], RentReminderSendNowArgs>({
-      query: ({ applicantId }) => ({
+      query: ({ applicantId, ...data }) => ({
         url: `/rent-reminders/tenants/${applicantId}/send-now`,
         method: "POST",
+        data,
       }),
       invalidatesTags: (_r, _e, { applicantId }) => [reminderTag(applicantId)],
     }),

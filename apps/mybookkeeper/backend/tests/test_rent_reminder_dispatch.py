@@ -24,6 +24,7 @@ from app.models.rent.rent_charge import RentCharge
 from app.models.rent.rent_reminder_plan import RentReminderPlan
 from app.models.rent.rent_reminder_send import RentReminderSend
 from app.models.rent.rent_schedule import RentSchedule
+from app.repositories.rent import rent_reminder_send_repo
 from app.services.rent import (
     rent_ledger_service,
     rent_reminder_alert_service as alerts,
@@ -409,9 +410,30 @@ class TestChannelsGoTogether:
 class TestSendNow:
     _NOW = _dt.datetime(2026, 10, 27, 15, 0, tzinfo=UTC)  # Tuesday morning
 
-    async def _send_now(self, applicant_id: uuid.UUID):
+    async def _send_now(self, applicant_id: uuid.UUID, **changes):
+        """Send what the preview shows, as a client does."""
+        preview = await rent_reminder_service.get_preview(
+            organization_id=ORG, user_id=USER, applicant_id=applicant_id, now=self._NOW,
+        )
+        overview = await rent_reminder_service.get_overview(
+            organization_id=ORG, user_id=USER, applicant_id=applicant_id,
+        )
+        shown = {
+            "expected_due_date": preview.due_date,
+            "expected_amount": preview.amount,
+            "expected_message": preview.send_now_message,
+            "expected_channels": [
+                channel
+                for channel, enabled in (
+                    ("email", overview.plan.email_enabled),
+                    ("sms", overview.plan.sms_enabled),
+                )
+                if enabled
+            ],
+        }
         return await dispatch.send_now(
             organization_id=ORG, user_id=USER, applicant_id=applicant_id, now=self._NOW,
+            **{**shown, **changes},
         )
 
     @pytest.mark.asyncio
@@ -445,6 +467,187 @@ class TestSendNow:
         wired["sms"].assert_not_called()
 
     @pytest.mark.asyncio
+    async def test_says_when_rent_is_due_counting_from_today(self, db: AsyncSession, wired) -> None:
+        """Sent on a Tuesday, a reminder for Sunday must not say "due tomorrow"."""
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id)
+
+        [sent] = await self._send_now(applicant_id)
+
+        row = await rent_reminder_send_repo.get(db, send_id=sent.id)
+        assert row.message_body == (
+            "Hi Sonu, reminder: rent of $300 is due on Sunday, Nov 1. "
+            "Pay via Zelle to jason@example.com."
+        )
+        assert "tomorrow" not in str(wired["email"].call_args)
+
+    @pytest.mark.parametrize(
+        "change",
+        [
+            {"expected_due_date": _dt.date(2026, 10, 25)},
+            {"expected_amount": Decimal("299.00")},
+            {"expected_message": "Something else."},
+            {"expected_channels": ["email", "sms"]},
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_sends_nothing_if_it_is_not_what_was_shown(
+        self, db: AsyncSession, wired, change,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id)
+
+        with pytest.raises(dispatch.ReminderChangedError):
+            await self._send_now(applicant_id, **change)
+
+        wired["email"].assert_not_called()
+        history = await rent_reminder_service.list_history(
+            organization_id=ORG, user_id=USER, applicant_id=applicant_id,
+        )
+        assert history == []
+
+    @pytest.mark.asyncio
+    async def test_a_retry_after_a_lost_answer_hears_it_already_went(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id)
+        await self._send_now(applicant_id)
+
+        with pytest.raises(dispatch.ReminderAlreadySentError):
+            await self._send_now(applicant_id, expected_message="What the phone was shown before.")
+        wired["email"].assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_a_retry_hears_it_went_even_if_they_have_since_moved_out(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id)
+        await self._send_now(applicant_id)
+        applicant = await db.get(Applicant, applicant_id)
+        applicant.tenant_ended_at = self._NOW
+        await db.flush()
+
+        with pytest.raises(dispatch.ReminderAlreadySentError):
+            await self._send_now(applicant_id)
+
+    @pytest.mark.asyncio
+    async def test_sends_nothing_if_midnight_changed_the_wording(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        """Shown late on Friday as "on Sunday", it would read "tomorrow" by Saturday."""
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id)
+        friday_night = _dt.datetime(2026, 10, 31, 4, 58, tzinfo=UTC)
+        saturday = _dt.datetime(2026, 10, 31, 5, 2, tzinfo=UTC)
+        preview = await rent_reminder_service.get_preview(
+            organization_id=ORG, user_id=USER, applicant_id=applicant_id, now=friday_night,
+        )
+
+        with pytest.raises(dispatch.ReminderChangedError):
+            await dispatch.send_now(
+                organization_id=ORG, user_id=USER, applicant_id=applicant_id, now=saturday,
+                expected_due_date=preview.due_date,
+                expected_amount=preview.amount,
+                expected_message=preview.send_now_message,
+                expected_channels=["email"],
+            )
+        wired["email"].assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_a_lost_race_to_retry_sends_nothing(self, db: AsyncSession, wired) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id)
+        wired["email"].side_effect = [RuntimeError("smtp down"), None]
+        await self._send_now(applicant_id)
+        wired["email"].reset_mock()
+
+        with patch.object(
+            rent_reminder_send_repo, "requeue",
+            AsyncMock(side_effect=rent_reminder_send_repo.ReminderAlreadyClaimedError("x")),
+        ), pytest.raises(dispatch.ReminderAlreadySentError):
+            await self._send_now(applicant_id)
+        wired["email"].assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_a_retried_old_row_does_not_look_stuck(self, db: AsyncSession, wired) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id)
+        wired["email"].side_effect = RuntimeError("smtp down")
+        [first] = await self._send_now(applicant_id)
+        row = await rent_reminder_send_repo.get(db, send_id=first.id)
+        row.created_at = _dt.datetime(2026, 1, 1, tzinfo=UTC)
+        await db.flush()
+
+        await rent_reminder_send_repo.requeue(
+            db, row=row, amount=row.amount, message_body=row.message_body,
+        )
+
+        stuck = await rent_reminder_send_repo.list_unconfirmed(
+            db, older_than=_dt.datetime.now(UTC) - _dt.timedelta(minutes=5),
+        )
+        assert row.id not in [candidate.id for candidate in stuck]
+
+    @pytest.mark.asyncio
+    async def test_a_failed_alert_does_not_stop_the_other_channel(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id, sms_enabled=True)
+        wired["email"].side_effect = RuntimeError("smtp down")
+
+        with patch.object(alerts, "alert_operator", AsyncMock(side_effect=RuntimeError("db"))):
+            results = await self._send_now(applicant_id)
+
+        assert [(r.channel, r.status) for r in results] == [
+            ("email", "failed"), ("sms", "sent_to_phone"),
+        ]
+
+    @pytest.mark.asyncio
+    async def test_refuses_a_tenant_who_has_moved_out(self, db: AsyncSession, wired) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id)
+        applicant = await db.get(Applicant, applicant_id)
+        applicant.tenant_ended_at = self._NOW
+        await db.flush()
+
+        with pytest.raises(dispatch.TenancyEndedError):
+            await self._send_now(applicant_id)
+        wired["email"].assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_two_retries_of_a_failed_send_only_send_once(
+        self, db: AsyncSession, wired,
+    ) -> None:
+        applicant_id = await _tenant(db)
+        await _schedule(db, applicant_id)
+        await _plan(db, applicant_id)
+        wired["email"].side_effect = [RuntimeError("smtp down"), None]
+        [first] = await self._send_now(applicant_id)
+        row = await rent_reminder_send_repo.get(db, send_id=first.id)
+        assert row.status == "failed"
+
+        await rent_reminder_send_repo.requeue(
+            db, row=row, amount=row.amount, message_body=row.message_body,
+        )
+
+        # The second retry read the row while it was still failed.
+        with pytest.raises(rent_reminder_send_repo.ReminderAlreadyClaimedError):
+            await rent_reminder_send_repo.requeue(
+                db, row=row, amount=row.amount, message_body=row.message_body,
+            )
+
+    @pytest.mark.asyncio
     async def test_retries_a_failed_row(self, db: AsyncSession, wired) -> None:
         applicant_id = await _tenant(db)
         await _schedule(db, applicant_id)
@@ -471,6 +674,10 @@ class TestSendNow:
         assert preview.amount == Decimal("300.00")
         assert preview.message == (
             "Hi Sonu, reminder: rent of $300 is due tomorrow (Sunday). "
+            "Pay via Zelle to jason@example.com."
+        )
+        assert preview.send_now_message == (
+            "Hi Sonu, reminder: rent of $300 is due on Sunday, Nov 1. "
             "Pay via Zelle to jason@example.com."
         )
         assert preview.sent_channels == []

@@ -10,6 +10,7 @@ from app.core.rent_reminder_constants import (
     ERROR_INVALID_PHONE,
     ERROR_NO_PHONE_CONFIRMATION,
     ERROR_NO_RECIPIENT,
+    ERROR_SEND_INTERRUPTED,
     ERROR_SMS_EXPIRED,
     ERROR_SMS_NOT_CONFIGURED,
 )
@@ -30,6 +31,11 @@ ERROR_UNEXPECTED = "unexpected_error"
 PHONE_SIDE_ERRORS: frozenset[str] = frozenset({
     ERROR_NO_PHONE_CONFIRMATION,
     ERROR_SMS_EXPIRED,
+})
+# Sending may have got further than we know, so a retry can double up.
+_MAY_STILL_ARRIVE: frozenset[str] = frozenset({
+    ERROR_NO_PHONE_CONFIRMATION,
+    ERROR_SEND_INTERRUPTED,
 })
 _PHONE_CHECKLIST = (
     "Check the Android phone is on, online, and that httpSMS isn't "
@@ -59,10 +65,15 @@ def _alert_text(*, tenant: str, channel: str, code: str) -> tuple[str, str]:
         detail = "Text reminders are switched on but httpSMS isn't configured on the server."
     else:
         detail = f"Reason: {code}."
-    body = (
-        f"{subject}. {detail} You can retry it from the tenant's Rent reminders "
-        "card with Send now."
+    retry = (
+        "If nothing else went out for this due date, you can retry from the "
+        "tenant's Rent reminders card with Send now. If the other channel did go "
+        "out, Send now won't resend this one, so contact the tenant yourself if "
+        "they still need it."
     )
+    if code in _MAY_STILL_ARRIVE:
+        retry = f"It may still reach them, so check before sending again. {retry}"
+    body = f"{subject}. {detail} {retry}"
     return subject, body
 
 

@@ -6,7 +6,7 @@ import uuid
 from decimal import Decimal
 from typing import Sequence
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -80,16 +80,32 @@ async def claim(
 async def requeue(
     db: AsyncSession, *, row: RentReminderSend, amount: Decimal, message_body: str,
 ) -> RentReminderSend:
-    """Reset a failed row for a manual retry (the unique key forbids a new row)."""
-    row.status = "queued"
-    row.amount = amount
-    row.message_body = message_body
-    row.error_code = None
-    row.provider_message_id = None
-    row.sent_at = None
-    row.confirmed_at = None
-    row.operator_alerted_at = None
-    await db.flush()
+    """Reset a failed row for a retry (the unique key forbids a new row).
+
+    Conditional on the row still being failed, because two retries can both
+    have read it as failed, and only one of them may send.
+    """
+    result = await db.execute(
+        update(RentReminderSend)
+        .where(RentReminderSend.id == row.id, RentReminderSend.status == "failed")
+        .values(
+            status="queued",
+            amount=amount,
+            message_body=message_body,
+            error_code=None,
+            provider_message_id=None,
+            sent_at=None,
+            confirmed_at=None,
+            operator_alerted_at=None,
+            # The watchdog ages queued rows from here. A retry of an old row
+            # must not look stuck while it is still sending.
+            created_at=_dt.datetime.now(_dt.timezone.utc),
+        )
+        .execution_options(synchronize_session=False)
+    )
+    if result.rowcount != 1:
+        raise ReminderAlreadyClaimedError(str(row.id))
+    await db.refresh(row)
     return row
 
 
