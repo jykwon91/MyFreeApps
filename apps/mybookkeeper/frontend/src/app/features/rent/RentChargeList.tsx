@@ -1,5 +1,5 @@
 import RentChargeRow from "./RentChargeRow";
-import type { RentCharge } from "@/shared/types/rent/rent-charge";
+import type { RentCharge } from "@mybookkeeper/api-client/types/rent/rent-charge";
 
 export interface RentChargeListProps {
   charges: readonly RentCharge[];

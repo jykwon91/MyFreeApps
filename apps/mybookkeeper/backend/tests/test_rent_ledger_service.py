@@ -560,6 +560,40 @@ class TestScheduleInvariants:
         assert after.balance == Decimal("0.00")
 
     @pytest.mark.asyncio
+    async def test_payment_names_a_one_off_charge_rather_than_its_one_day_span(
+        self, db: AsyncSession,
+    ) -> None:
+        applicant_id = await _make_tenant(db)
+        await _create_monthly_schedule(db, applicant_id, start=_dt.date(2026, 8, 1))
+
+        _, schedule_patch = _patch_uow(db)
+        with schedule_patch:
+            await rent_schedule_service.add_charge(
+                organization_id=ORG, user_id=USER, applicant_id=applicant_id,
+                amount=Decimal("75.00"), due_date=_dt.date(2026, 8, 6),
+                charge_type="late_fee", description=None,
+            )
+            await rent_schedule_service.add_charge(
+                organization_id=ORG, user_id=USER, applicant_id=applicant_id,
+                amount=Decimal("25.00"), due_date=_dt.date(2026, 8, 7),
+                charge_type="other", description="Lost key",
+            )
+        await _make_payment(
+            db, applicant_id=applicant_id,
+            on=_dt.date(2026, 8, 8), amount="1600.00",
+        )
+
+        ledger_patch, _ = _patch_uow(db)
+        with ledger_patch:
+            ledger = await rent_ledger_service.get_ledger(
+                organization_id=ORG, user_id=USER,
+                applicant_id=applicant_id, as_of=_dt.date(2026, 8, 20),
+            )
+
+        assert ledger.payments[0].applied_to == [
+            "August 2026", "Late fee (Aug 6, 2026)", "Lost key (Aug 7, 2026)",
+        ]
+
     async def test_one_off_charge_adds_to_the_balance(
         self, db: AsyncSession,
     ) -> None:

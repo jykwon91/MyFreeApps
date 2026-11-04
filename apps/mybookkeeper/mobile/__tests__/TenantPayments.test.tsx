@@ -1,4 +1,5 @@
 import { transactionsApi } from "@mybookkeeper/api-client/store/transactionsApi";
+import type { RentLedgerResponse } from "@mybookkeeper/api-client/types/rent/rent-ledger-response";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
@@ -8,11 +9,13 @@ import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { router } from "expo-router";
 import { Provider } from "react-redux";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
+import { RENT_MESSAGES } from "../src/constants/rent";
 import TenantPayments from "../src/features/applicants/TenantPayments";
 import { tenantPaymentTotals } from "../src/features/applicants/tenantPaymentTotals";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
+import { aRentLedger, aRentPayment, aRentSchedule } from "../test-support/aRentLedger";
 import { aTransaction } from "../test-support/transactionsServer";
 
 jest.mock("expo-router", () => ({ router: { push: jest.fn() } }));
@@ -25,9 +28,13 @@ function aPayment(overrides: Partial<Transaction> = {}): Transaction {
   return aTransaction({ id: "t1", transaction_type: "income", category: "rental_revenue", amount: "1200.00", status: "approved", payer_name: "Dana Reed", vendor: null, transaction_date: "2026-03-01", ...overrides });
 }
 
-function startServer(payments: Transaction[] | "offline") {
-  const server = { payments, requests: [] as AxiosRequestConfig[] };
+function startServer(payments: Transaction[] | "offline", ledger: RentLedgerResponse | "offline" = aRentLedger()) {
+  const server = { payments, ledger, requests: [] as AxiosRequestConfig[] };
   const adapter: AxiosAdapter = async (config) => {
+    if (config.url?.startsWith("/rent-ledger/")) {
+      if (server.ledger === "offline") return Promise.reject(Object.assign(new Error("Network Error"), { config }));
+      return { data: server.ledger, status: 200, statusText: "", headers: {}, config } as never;
+    }
     server.requests.push(config);
     if (server.payments === "offline") return Promise.reject(Object.assign(new Error("Network Error"), { config }));
     return { data: server.payments, status: 200, statusText: "", headers: {}, config } as never;
@@ -46,18 +53,18 @@ async function renderSection() {
   );
 }
 
+beforeEach(async () => {
+  jest.clearAllMocks();
+  await session.tokenStore.set("token");
+  store.dispatch(baseApi.util.resetApiState());
+  store.dispatch(workspaceChosen("w1"));
+});
+
+afterEach(() => {
+  api.defaults.adapter = originalAdapter;
+});
+
 describe("a tenant's payments", () => {
-  beforeEach(async () => {
-    jest.clearAllMocks();
-    await session.tokenStore.set("token");
-    store.dispatch(baseApi.util.resetApiState());
-    store.dispatch(workspaceChosen("w1"));
-  });
-
-  afterEach(() => {
-    api.defaults.adapter = originalAdapter;
-  });
-
   it("asks for this tenant's money in", async () => {
     const server = startServer([aPayment()]);
     await renderSection();
@@ -173,5 +180,32 @@ describe("the total", () => {
     const payments = [aPayment({ amount: "0.10" }), aPayment({ amount: "0.20" })];
 
     expect(tenantPaymentTotals(payments).received).toBe(0.3);
+  });
+});
+
+describe("how payments applied to rent", () => {
+  it("says on each row where the money went", async () => {
+    startServer([aPayment()], aRentLedger({ schedules: [aRentSchedule()], payments: [aRentPayment({ transaction_id: "t1", unapplied: "50.00" })] }));
+    await renderSection();
+
+    expect(await screen.findByText("Applied to March 2026 · $50.00 held as credit")).toBeTruthy();
+  });
+
+  it("leaves a payment the ledger doesn't know about alone", async () => {
+    startServer([aPayment({ id: "deposit", category: "security_deposit" })], aRentLedger({ schedules: [aRentSchedule()], payments: [aRentPayment({ transaction_id: "t1" })] }));
+    await renderSection();
+
+    await screen.findByText("Dana Reed");
+    expect(screen.queryByText(/Applied to/)).toBeNull();
+    expect(screen.queryByText(RENT_MESSAGES.heldAsCredit)).toBeNull();
+  });
+
+  it("still lists payments when the ledger can't load, and says what's missing once", async () => {
+    startServer([aPayment(), aPayment({ id: "t2" })], "offline");
+    await renderSection();
+
+    expect(await screen.findByText(RENT_MESSAGES.couldntLoadApplied)).toBeTruthy();
+    expect(screen.getAllByText("Dana Reed")).toHaveLength(2);
+    expect(screen.queryByText(/Applied to/)).toBeNull();
   });
 });

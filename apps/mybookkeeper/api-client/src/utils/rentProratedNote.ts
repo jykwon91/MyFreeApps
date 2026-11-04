@@ -1,4 +1,4 @@
-import { formatCurrency } from "@/shared/utils/currency";
+import { formatCurrency } from "@platform/core/utils/currency";
 
 /**
  * Why this period costs less than the schedule says.
@@ -10,5 +10,5 @@ import { formatCurrency } from "@/shared/utils/currency";
  */
 export function proratedNote(fullAmount: string | null): string | null {
   if (!fullAmount) return null;
-  return `Prorated from ${formatCurrency(fullAmount)} for a partial month`;
+  return `Prorated from ${formatCurrency(fullAmount)} for a partial period`;
 }

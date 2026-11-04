@@ -20,6 +20,7 @@ import logging
 import uuid
 from decimal import Decimal
 
+from app.core.rent_ledger_enums import RENT_CHARGE_TYPE_LABELS
 from app.db.session import unit_of_work
 from app.repositories.applicants import applicant_repo
 from app.repositories.rent import rent_charge_repo, rent_schedule_repo
@@ -292,10 +293,7 @@ async def get_ledger(
     applied_labels: dict[uuid.UUID, list[str]] = {}
     for settlement in result.settlements:
         charge = charges_by_id[settlement.charge_id]
-        label = _period_label(
-            charge.period_start, charge.period_end,
-            cadence_by_charge.get(charge.id),
-        )
+        label = _applied_to_label(charge, cadence_by_charge.get(charge.id))
         for app in settlement.applications:
             applied_labels.setdefault(app.payment_id, []).append(label)
 
@@ -332,6 +330,19 @@ async def get_ledger(
         balance=result.balance,
         unapplied_credit=result.total_unapplied,
     )
+
+
+def _applied_to_label(charge, cadence: str | None) -> str:
+    """What a payment went towards.
+
+    A one-off has no period worth naming: its span usually collapses to the due
+    date, which would read as "Mar 5 – Mar 5, 2026".
+    """
+    if charge.charge_type == "rent":
+        return _period_label(charge.period_start, charge.period_end, cadence)
+    name = charge.description or RENT_CHARGE_TYPE_LABELS[charge.charge_type]
+    due = charge.due_date
+    return f"{name} ({due.strftime('%b')} {due.day}, {due.year})"
 
 
 def _current_period(

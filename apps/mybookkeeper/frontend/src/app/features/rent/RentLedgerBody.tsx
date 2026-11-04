@@ -4,9 +4,9 @@ import RentBalanceLine from "./RentBalanceLine";
 import RentChargeList from "./RentChargeList";
 import RentCurrentPeriodCard from "./RentCurrentPeriodCard";
 import RentScheduleSummary from "./RentScheduleSummary";
-import type { RentCharge } from "@/shared/types/rent/rent-charge";
-import type { RentLedgerResponse } from "@/shared/types/rent/rent-ledger-response";
-import type { RentSchedule } from "@/shared/types/rent/rent-schedule";
+import type { RentCharge } from "@mybookkeeper/api-client/types/rent/rent-charge";
+import type { RentLedgerResponse } from "@mybookkeeper/api-client/types/rent/rent-ledger-response";
+import type { RentSchedule } from "@mybookkeeper/api-client/types/rent/rent-schedule";
 
 export interface RentLedgerBodyProps {
   ledger: RentLedgerResponse;

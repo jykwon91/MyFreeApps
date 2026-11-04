@@ -5,9 +5,9 @@ import { formatShortDate } from "@mybookkeeper/api-client/utils/inquiryDateForma
 import RentChargeStatusBadge from "./RentChargeStatusBadge";
 import RentChargeApplications from "./RentChargeApplications";
 import RentChargeRowActions from "./RentChargeRowActions";
-import { RENT_CHARGE_TYPE_LABEL } from "./rent-labels";
-import { proratedNote } from "./rent-prorated-note";
-import type { RentCharge } from "@/shared/types/rent/rent-charge";
+import { RENT_CHARGE_TYPE_LABEL } from "@mybookkeeper/api-client/constants/rentLabels";
+import { proratedNote } from "@mybookkeeper/api-client/utils/rentProratedNote";
+import type { RentCharge } from "@mybookkeeper/api-client/types/rent/rent-charge";
 
 export interface RentChargeRowProps {
   charge: RentCharge;

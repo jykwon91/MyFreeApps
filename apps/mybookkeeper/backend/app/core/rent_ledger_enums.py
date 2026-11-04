@@ -38,6 +38,14 @@ RENT_CHARGE_TYPES: tuple[str, ...] = (
     "other",
 )
 
+RENT_CHARGE_TYPE_LABELS: dict[str, str] = {
+    "rent": "Rent",
+    "late_fee": "Late fee",
+    "utility_reimbursement": "Utilities",
+    "deposit": "Deposit",
+    "other": "Other",
+}
+
 # Derived per-charge settlement state. Never stored — computed by the FIFO
 # allocator on read, because it is a pure function of (charges, payments) and
 # storing it would go stale the moment a payment is edited or deleted.

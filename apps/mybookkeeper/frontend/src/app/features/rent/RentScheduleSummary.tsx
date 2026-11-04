@@ -2,8 +2,8 @@ import { Pencil } from "lucide-react";
 import { Button } from "@platform/ui";
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { RENT_CADENCE_LABEL } from "./rent-labels";
-import type { RentSchedule } from "@/shared/types/rent/rent-schedule";
+import { RENT_CADENCE_LABEL } from "@mybookkeeper/api-client/constants/rentLabels";
+import type { RentSchedule } from "@mybookkeeper/api-client/types/rent/rent-schedule";
 
 export interface RentScheduleSummaryProps {
   schedule: RentSchedule;

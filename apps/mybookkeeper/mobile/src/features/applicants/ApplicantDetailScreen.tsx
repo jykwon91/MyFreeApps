@@ -12,6 +12,7 @@ import { WEB_BASE_URL } from "../../constants/api";
 import { CONTRACT_LOCKED_STAGE, STAGES_READY_FOR_LEASE } from "../../constants/applicants";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import TenantLeases from "../leases/TenantLeases";
+import TenantRent from "../rent/TenantRent";
 import TenantPayments from "./TenantPayments";
 import TenancySection from "../tenants/TenancySection";
 import InquiryChip from "../inquiries/InquiryChip";
@@ -123,6 +124,8 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
         </InquirySection>
 
         <TenantLeases applicantId={applicant.id} isTenant={isTenant} name={applicant.legal_name ?? "them"} />
+
+        {isTenant ? <TenantRent applicantId={applicant.id} key={`rent-${applicant.id}`} /> : null}
 
         {isTenant ? <TenantPayments applicantId={applicant.id} key={`payments-${applicant.id}`} name={applicant.legal_name ?? "them"} /> : null}
 

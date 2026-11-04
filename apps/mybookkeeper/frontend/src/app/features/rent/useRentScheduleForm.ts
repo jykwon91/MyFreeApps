@@ -4,10 +4,10 @@ import {
   useCreateRentScheduleMutation,
   useDeleteRentScheduleMutation,
   useUpdateRentScheduleMutation,
-} from "@/shared/store/rentLedgerApi";
+} from "@mybookkeeper/api-client/store/rentLedgerApi";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
-import type { RentCadence } from "@/shared/types/rent/rent-cadence";
-import type { RentSchedule } from "@/shared/types/rent/rent-schedule";
+import type { RentCadence } from "@mybookkeeper/api-client/types/rent/rent-cadence";
+import type { RentSchedule } from "@mybookkeeper/api-client/types/rent/rent-schedule";
 
 export interface UseRentScheduleFormArgs {
   applicantId: string;

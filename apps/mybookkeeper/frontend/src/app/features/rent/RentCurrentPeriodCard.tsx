@@ -1,9 +1,9 @@
 import { ProgressBar } from "@platform/ui";
 import { formatCurrency } from "@/shared/utils/currency";
 import RentChargeStatusBadge from "./RentChargeStatusBadge";
-import { proratedNote } from "./rent-prorated-note";
-import { periodDateRange } from "./rent-period-dates";
-import type { RentPeriodSummary } from "@/shared/types/rent/rent-period-summary";
+import { proratedNote } from "@mybookkeeper/api-client/utils/rentProratedNote";
+import { periodDateRange } from "@mybookkeeper/api-client/utils/rentPeriodDates";
+import type { RentPeriodSummary } from "@mybookkeeper/api-client/types/rent/rent-period-summary";
 import type { ProgressTone } from "@platform/ui";
 
 export interface RentCurrentPeriodCardProps {

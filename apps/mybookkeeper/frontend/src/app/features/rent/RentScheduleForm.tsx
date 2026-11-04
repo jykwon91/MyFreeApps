@@ -1,11 +1,11 @@
 import { Button, LoadingButton } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 import { RENT_INPUT_CLASS } from "./rent-input-class";
-import { RENT_CADENCE_LABEL, RENT_START_HINT } from "./rent-labels";
+import { RENT_CADENCE_LABEL, RENT_START_HINT } from "@mybookkeeper/api-client/constants/rentLabels";
 import RentScheduleFixedTerms from "./RentScheduleFixedTerms";
 import { useRentScheduleForm } from "./useRentScheduleForm";
-import type { RentCadence } from "@/shared/types/rent/rent-cadence";
-import type { RentSchedule } from "@/shared/types/rent/rent-schedule";
+import type { RentCadence } from "@mybookkeeper/api-client/types/rent/rent-cadence";
+import type { RentSchedule } from "@mybookkeeper/api-client/types/rent/rent-schedule";
 
 export interface RentScheduleFormProps {
   applicantId: string;

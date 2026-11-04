@@ -1,6 +1,6 @@
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatShortDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import type { RentPaymentApplication } from "@/shared/types/rent/rent-payment-application";
+import type { RentPaymentApplication } from "@mybookkeeper/api-client/types/rent/rent-payment-application";
 
 export interface RentChargeApplicationsProps {
   applications: readonly RentPaymentApplication[];

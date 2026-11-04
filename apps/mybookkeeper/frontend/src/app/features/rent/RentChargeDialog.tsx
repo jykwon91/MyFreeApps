@@ -4,10 +4,10 @@ import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import Select from "@/shared/components/ui/Select";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
-import { useCreateRentChargeMutation } from "@/shared/store/rentLedgerApi";
+import { useCreateRentChargeMutation } from "@mybookkeeper/api-client/store/rentLedgerApi";
 import { RENT_INPUT_CLASS } from "./rent-input-class";
-import { RENT_CHARGE_TYPE_LABEL, RENT_MANUAL_CHARGE_TYPES } from "./rent-labels";
-import type { RentChargeType } from "@/shared/types/rent/rent-charge-type";
+import { RENT_CHARGE_TYPE_LABEL, RENT_MANUAL_CHARGE_TYPES } from "@mybookkeeper/api-client/constants/rentLabels";
+import type { RentChargeType } from "@mybookkeeper/api-client/types/rent/rent-charge-type";
 
 export interface RentChargeDialogProps {
   applicantId: string;

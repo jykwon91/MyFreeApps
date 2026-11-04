@@ -4,6 +4,7 @@ import type { ScreeningEligibilityResponse } from "@mybookkeeper/api-client/type
 import type { ApplicantSensitive } from "@mybookkeeper/api-client/types/applicant/applicant-sensitive";
 import { tenancyState } from "@mybookkeeper/api-client/utils/tenancyState";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
+import { aRentLedger } from "./aRentLedger";
 
 export function anApplicant(overrides: Partial<ApplicantDetailResponse> = {}): ApplicantDetailResponse {
   return {
@@ -113,6 +114,7 @@ export function startApplicantServer(applicants: ApplicantDetailResponse[]): Fak
     }
     if (config.url === "/signed-leases") return respond({ items: [], total: 0, has_more: false });
     if (config.url === "/transactions") return respond([]);
+    if (config.url?.startsWith("/rent-ledger/tenants/")) return respond(aRentLedger());
     if (config.url === "/applicants/tenants") {
       if (server.tenantListFailure) return respond({ detail: "nope" }, server.tenantListFailure);
       const params = config.params as { include_ended: boolean; today: string; limit: number; offset: number };

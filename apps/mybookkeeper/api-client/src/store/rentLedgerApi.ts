@@ -1,19 +1,10 @@
-import { baseApi } from "./baseApi";
-import type { RentChargeCreateRequest } from "@/shared/types/rent/rent-charge-create-request";
-import type { RentLedgerResponse } from "@/shared/types/rent/rent-ledger-response";
-import type { RentSchedule } from "@/shared/types/rent/rent-schedule";
-import type { RentScheduleCreateRequest } from "@/shared/types/rent/rent-schedule-create-request";
-import type { RentScheduleUpdateRequest } from "@/shared/types/rent/rent-schedule-update-request";
-
-export interface RentLedgerArgs {
-  applicantId: string;
-  /** Evaluate the ledger as of this date instead of today. */
-  asOf?: string;
-}
-
-export interface RentScheduleUpdateArgs extends RentScheduleUpdateRequest {
-  scheduleId: string;
-}
+import { baseApi } from "@platform/core/store/baseApi";
+import type { RentLedgerArgs } from "../types/rent/rent-ledger-args";
+import type { RentScheduleUpdateArgs } from "../types/rent/rent-schedule-update-args";
+import type { RentChargeCreateRequest } from "../types/rent/rent-charge-create-request";
+import type { RentLedgerResponse } from "../types/rent/rent-ledger-response";
+import type { RentSchedule } from "../types/rent/rent-schedule";
+import type { RentScheduleCreateRequest } from "../types/rent/rent-schedule-create-request";
 
 /**
  * RTK Query slice for the tenant rent ledger.
@@ -26,15 +17,19 @@ export interface RentScheduleUpdateArgs extends RentScheduleUpdateRequest {
  * always has — a schedule mutation carries `applicantId` alongside the
  * schedule id purely so the right ledger gets invalidated.
  */
-const rentLedgerApi = baseApi.injectEndpoints({
+const rentLedgerApi = baseApi.enhanceEndpoints({
+  addTagTypes: ["RentLedger", "Transaction"],
+}).injectEndpoints({
   endpoints: (builder) => ({
     getRentLedger: builder.query<RentLedgerResponse, RentLedgerArgs>({
       query: ({ applicantId, asOf }) => ({
         url: `/rent-ledger/tenants/${applicantId}`,
         params: asOf ? { as_of: asOf } : undefined,
       }),
+      // Payments are transactions, so changing one changes what's owed.
       providesTags: (_r, _e, { applicantId }) => [
         { type: "RentLedger" as const, id: applicantId },
+        { type: "Transaction" as const, id: "LIST" },
       ],
     }),
 
@@ -131,5 +126,3 @@ export const {
   useUnwaiveRentChargeMutation,
   useDeleteRentChargeMutation,
 } = rentLedgerApi;
-
-export default rentLedgerApi;

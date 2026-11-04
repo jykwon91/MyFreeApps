@@ -1,9 +1,7 @@
 import { StatusBadge } from "@platform/ui";
-import {
-  RENT_CHARGE_STATUS_LABEL,
-  RENT_CHARGE_STATUS_TONE,
-} from "./rent-charge-status-tone";
-import type { RentChargeStatus } from "@/shared/types/rent/rent-charge-status";
+import { RENT_CHARGE_STATUS_LABEL } from "@mybookkeeper/api-client/constants/rentLabels";
+import { RENT_CHARGE_STATUS_TONE } from "./rent-charge-status-tone";
+import type { RentChargeStatus } from "@mybookkeeper/api-client/types/rent/rent-charge-status";
 
 export interface RentChargeStatusBadgeProps {
   status: RentChargeStatus;

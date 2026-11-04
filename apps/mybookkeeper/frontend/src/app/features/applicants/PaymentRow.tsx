@@ -1,6 +1,6 @@
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { DocumentViewTarget } from "@/shared/types/document/document-view-target";
-import type { RentPayment } from "@/shared/types/rent/rent-payment";
+import type { RentPayment } from "@mybookkeeper/api-client/types/rent/rent-payment";
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatDate } from "@/shared/utils/date";
 import OpenSourceButton from "./OpenSourceButton";
@@ -17,7 +17,7 @@ export interface PaymentRowProps {
  *  deposit is held, not earned, and labelling it would be wrong. */
 function rentLabel(rent: RentPayment | undefined): string | null {
   if (!rent) return null;
-  if (rent.applied_to.length > 0) return `Applied to ${rent.applied_to.join(", ")}`;
+  if (rent.applied_to.length > 0) return `Applied to ${rent.applied_to.join(" and ")}`;
   return "Held as credit";
 }
 
