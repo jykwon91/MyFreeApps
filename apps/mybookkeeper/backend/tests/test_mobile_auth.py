@@ -1,7 +1,11 @@
-"""Mobile sign-in reaches MyBookkeeper's own bearer check and session cutoff."""
+"""MyBookkeeper mounts phone sign-in, and its tokens pass the app's bearer check.
+
+This suite runs on SQLite, which returns timestamps without a timezone, so session
+rows are exercised on Postgres in MyRecipes' copy of these tests instead.
+"""
 import uuid
 from collections.abc import AsyncGenerator
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import pytest
 import pytest_asyncio
@@ -11,13 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.db.session import get_db
 from app.main import app
-from app.models.user.refresh_session import RefreshSession
 from app.models.user.user import User
-from platform_shared.services.refresh_session_service import RefreshSessionService
-
-_SERVICE = RefreshSessionService(
-    session_model=RefreshSession, user_model=User, signing_key=settings.secret_key,
-)
+from platform_shared.auth.jwt_backend import IatJWTStrategy
+from platform_shared.core.refresh_session_limits import MOBILE_ACCESS_TOKEN_SECONDS
 
 
 @pytest_asyncio.fixture()
@@ -31,7 +31,17 @@ async def client(db: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     app.dependency_overrides.pop(get_db, None)
 
 
-async def _user(db: AsyncSession) -> User:
+def test_every_route_is_mounted() -> None:
+    paths = app.openapi()["paths"]
+    assert {"post"} <= set(paths["/auth/mobile/login"])
+    assert {"post"} <= set(paths["/auth/mobile/refresh"])
+    assert {"post"} <= set(paths["/auth/mobile/logout"])
+    assert {"get"} <= set(paths["/auth/mobile/sessions"])
+    assert {"delete"} <= set(paths["/auth/mobile/sessions/{session_id}"])
+
+
+@pytest.mark.asyncio
+async def test_a_phone_access_token_passes_the_normal_bearer_check(client: AsyncClient, db: AsyncSession) -> None:
     user = User(
         id=uuid.uuid4(),
         email=f"mobile-{uuid.uuid4().hex[:8]}@example.com",
@@ -42,38 +52,18 @@ async def _user(db: AsyncSession) -> User:
     )
     db.add(user)
     await db.commit()
-    return user
+    strategy = IatJWTStrategy(secret=settings.secret_key, lifetime_seconds=MOBILE_ACCESS_TOKEN_SECONDS)
+    token = await strategy.write_session_token(user, auth_time=datetime.now(timezone.utc))
 
-
-async def _refresh_token(db: AsyncSession, user: User) -> str:
-    issued = await _SERVICE.issue(db, user, device_name="Phone")
-    await db.commit()
-    return issued.refresh_token
+    response = await client.get("/auth/mobile/sessions", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200
+    assert response.json() == []
 
 
 @pytest.mark.asyncio
-async def test_a_refreshed_token_passes_the_normal_bearer_check(client: AsyncClient, db: AsyncSession) -> None:
-    user = await _user(db)
+async def test_a_token_this_app_did_not_issue_is_refused(client: AsyncClient) -> None:
     response = await client.post(
-        "/auth/mobile/refresh", json={"refresh_token": await _refresh_token(db, user)},
+        "/auth/mobile/refresh", json={"refresh_token": f"{uuid.uuid4()}.guess.signature"},
     )
-    assert response.status_code == 200, response.text
-    assert response.json()["expires_in"] == 30 * 60
-
-    listed = await client.get(
-        "/auth/mobile/sessions", headers={"Authorization": f"Bearer {response.json()['access_token']}"},
-    )
-    assert listed.status_code == 200
-    assert [row["device_name"] for row in listed.json()] == ["Phone"]
-
-
-@pytest.mark.asyncio
-async def test_a_session_cutoff_ends_the_device(client: AsyncClient, db: AsyncSession) -> None:
-    user = await _user(db)
-    token = await _refresh_token(db, user)
-    user.auth_valid_after = datetime.now(timezone.utc) + timedelta(seconds=1)
-    await db.commit()
-
-    response = await client.post("/auth/mobile/refresh", json={"refresh_token": token})
     assert response.status_code == 401
     assert response.json()["detail"] == "refresh_invalid"
