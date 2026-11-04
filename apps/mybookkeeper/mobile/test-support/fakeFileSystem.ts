@@ -1,10 +1,16 @@
 /** Just enough of expo-file-system, kept in memory. */
 const files = new Set<string>();
 const contents = new Map<string, string>();
+const downloads: string[] = [];
 
 export function resetFakeFiles(paths: string[] = []): void {
   files.clear();
+  downloads.length = 0;
   paths.forEach((path) => files.add(path));
+}
+
+export function fakeDownloads(): string[] {
+  return [...downloads];
 }
 
 export function fakeFiles(): string[] {
@@ -19,6 +25,12 @@ function joined(parent: string | Directory, name?: string): string {
 }
 
 export class File {
+  static async downloadFileAsync(url: string, destination: File): Promise<File> {
+    downloads.push(url);
+    files.add(destination.uri);
+    return destination;
+  }
+
   uri: string;
   constructor(parent: string | Directory, name?: string) {
     this.uri = joined(parent, name);

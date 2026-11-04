@@ -1,14 +1,23 @@
-import { baseApi } from "./baseApi";
-import type { ExtendLeaseRequest } from "@/shared/types/lease/extend-lease-request";
-import type { LeaseAttachmentKind } from "@/shared/types/lease/lease-attachment-kind";
-import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
-import type { SignedLeaseCreateRequest } from "@/shared/types/lease/signed-lease-create-request";
-import type { SignedLeaseDetail } from "@/shared/types/lease/signed-lease-detail";
-import type { SignedLeaseImportRequest } from "@/shared/types/lease/signed-lease-import-request";
-import type { SignedLeaseListArgs } from "@/shared/types/lease/signed-lease-list-args";
-import type { SignedLeaseListResponse } from "@/shared/types/lease/signed-lease-list-response";
-import type { SignedLeaseTemplatePrefillResponse } from "@/shared/types/lease/signed-lease-template-prefill";
-import type { SignedLeaseUpdateRequest } from "@/shared/types/lease/signed-lease-update-request";
+import { baseApi } from "@platform/core/store/baseApi";
+import type { ExtendLeaseRequest } from "../types/lease/extend-lease-request";
+import type { LeaseAttachmentKind } from "../types/lease/lease-attachment-kind";
+import type { SignedLeaseAttachmentUploadRequest } from "../types/lease/signed-lease-attachment-upload-request";
+import type { SignedLeaseAttachment } from "../types/lease/signed-lease-attachment";
+import type { SignedLeaseCreateRequest } from "../types/lease/signed-lease-create-request";
+import type { SignedLeaseDetail } from "../types/lease/signed-lease-detail";
+import { LEASE_PAGE_SIZE } from "../constants/leaseLabels";
+import type { SignedLeasePageArgs } from "../types/lease/signed-lease-page-args";
+import type { SignedLeaseListArgs } from "../types/lease/signed-lease-list-args";
+import type { SignedLeaseListResponse } from "../types/lease/signed-lease-list-response";
+import type { SignedLeaseTemplatePrefillResponse } from "../types/lease/signed-lease-template-prefill";
+import type { SignedLeaseUpdateRequest } from "../types/lease/signed-lease-update-request";
+
+/** A new lease also changes the one it follows, which now has a successor. */
+function tagsAfterNewLease(lease: SignedLeaseDetail | undefined) {
+  const tags: { type: "SignedLease"; id: string }[] = [{ type: "SignedLease", id: "LIST" }];
+  if (lease?.parent_lease_id) tags.push({ type: "SignedLease", id: lease.parent_lease_id });
+  return tags;
+}
 
 /**
  * RTK Query slice for the Signed Leases domain.
@@ -17,7 +26,9 @@ import type { SignedLeaseUpdateRequest } from "@/shared/types/lease/signed-lease
  * shared ``SignedLease:LIST``. Generate / upload / delete attachment all
  * invalidate the parent lease tag.
  */
-const signedLeasesApi = baseApi.injectEndpoints({
+const signedLeasesApi = baseApi.enhanceEndpoints({
+  addTagTypes: ["SignedLease"],
+}).injectEndpoints({
   endpoints: (builder) => ({
     getSignedLeases: builder.query<
       SignedLeaseListResponse,
@@ -45,6 +56,22 @@ const signedLeasesApi = baseApi.injectEndpoints({
           : [{ type: "SignedLease" as const, id: "LIST" }],
     }),
 
+    listSignedLeasePages: builder.infiniteQuery<SignedLeaseListResponse, SignedLeasePageArgs, number>({
+      infiniteQueryOptions: {
+        initialPageParam: 0,
+        getNextPageParam: (lastPage, _allPages, lastOffset) =>
+          lastPage.has_more ? lastOffset + LEASE_PAGE_SIZE : undefined,
+      },
+      query: ({ queryArg, pageParam }) => ({
+        url: "/signed-leases",
+        params: { ...queryArg, limit: LEASE_PAGE_SIZE, offset: pageParam },
+      }),
+      providesTags: (result) => [
+        ...(result?.pages.flatMap((page) => page.items).map((lease) => ({ type: "SignedLease" as const, id: lease.id })) ?? []),
+        { type: "SignedLease" as const, id: "LIST" },
+      ],
+    }),
+
     getSignedLeaseById: builder.query<SignedLeaseDetail, string>({
       query: (id) => ({ url: `/signed-leases/${id}` }),
       providesTags: (_r, _e, id) => [{ type: "SignedLease", id }],
@@ -52,7 +79,7 @@ const signedLeasesApi = baseApi.injectEndpoints({
 
     createSignedLease: builder.mutation<SignedLeaseDetail, SignedLeaseCreateRequest>({
       query: (data) => ({ url: "/signed-leases", method: "POST", data }),
-      invalidatesTags: [{ type: "SignedLease", id: "LIST" }],
+      invalidatesTags: tagsAfterNewLease,
     }),
 
     updateSignedLease: builder.mutation<
@@ -126,18 +153,13 @@ const signedLeasesApi = baseApi.injectEndpoints({
 
     uploadSignedLeaseAttachment: builder.mutation<
       SignedLeaseAttachment,
-      { leaseId: string; file: File; kind: LeaseAttachmentKind }
+      SignedLeaseAttachmentUploadRequest
     >({
-      query: ({ leaseId, file, kind }) => {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("kind", kind);
-        return {
-          url: `/signed-leases/${leaseId}/attachments`,
-          method: "POST",
-          data: formData,
-        };
-      },
+      query: ({ leaseId, form }) => ({
+        url: `/signed-leases/${leaseId}/attachments`,
+        method: "POST",
+        data: form,
+      }),
       invalidatesTags: (_r, _e, { leaseId }) => [
         { type: "SignedLease", id: leaseId },
       ],
@@ -156,25 +178,9 @@ const signedLeasesApi = baseApi.injectEndpoints({
       ],
     }),
 
-    importSignedLease: builder.mutation<SignedLeaseDetail, SignedLeaseImportRequest>({
-      query: (data) => {
-        const formData = new FormData();
-        formData.append("applicant_id", data.applicant_id);
-        if (data.listing_id) formData.append("listing_id", data.listing_id);
-        if (data.starts_on) formData.append("starts_on", data.starts_on);
-        if (data.ends_on) formData.append("ends_on", data.ends_on);
-        if (data.notes) formData.append("notes", data.notes);
-        if (data.status) formData.append("status", data.status);
-        for (const file of data.files) {
-          formData.append("files", file);
-        }
-        return {
-          url: "/signed-leases/import",
-          method: "POST",
-          data: formData,
-        };
-      },
-      invalidatesTags: [{ type: "SignedLease", id: "LIST" }],
+    importSignedLease: builder.mutation<SignedLeaseDetail, FormData>({
+      query: (form) => ({ url: "/signed-leases/import", method: "POST", data: form }),
+      invalidatesTags: tagsAfterNewLease,
     }),
 
     updateLeaseAttachment: builder.mutation<
@@ -228,6 +234,8 @@ const signedLeasesApi = baseApi.injectEndpoints({
 
 export const {
   useGetSignedLeasesQuery,
+  useListSignedLeasePagesInfiniteQuery,
+  useLazyGetSignedLeaseByIdQuery,
   useGetSignedLeaseByIdQuery,
   useCreateSignedLeaseMutation,
   useUpdateSignedLeaseMutation,

@@ -3,9 +3,9 @@ import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   useDeleteSignedLeaseAttachmentMutation,
   useUpdateLeaseAttachmentMutation,
-} from "@/shared/store/signedLeasesApi";
-import type { LeaseAttachmentKind } from "@/shared/types/lease/lease-attachment-kind";
-import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
+} from "@mybookkeeper/api-client/store/signedLeasesApi";
+import type { LeaseAttachmentKind } from "@mybookkeeper/api-client/types/lease/lease-attachment-kind";
+import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
 import AttachmentViewer from "@/app/features/leases/AttachmentViewer";
 import LeaseAttachmentDropzone from "@/app/features/leases/LeaseAttachmentDropzone";
 import LeaseAttachmentRow from "@/app/features/leases/LeaseAttachmentRow";

@@ -23,7 +23,7 @@ import LeaseAttachmentDropzone from "@/app/features/leases/LeaseAttachmentDropzo
 
 const mockUpload = vi.fn();
 
-vi.mock("@/shared/store/signedLeasesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/signedLeasesApi", () => ({
   useUploadSignedLeaseAttachmentMutation: vi.fn(() => [mockUpload, { isLoading: false }]),
 }));
 
@@ -77,9 +77,11 @@ describe("LeaseAttachmentDropzone", () => {
     await userEvent.upload(input!, file);
 
     await waitFor(() => {
-      expect(mockUpload).toHaveBeenCalledWith(
-        expect.objectContaining({ leaseId: "lease-1", file, kind: "signed_lease" }),
-      );
+      expect(mockUpload).toHaveBeenCalledOnce();
+      const { leaseId, form } = mockUpload.mock.calls[0][0];
+      expect(leaseId).toBe("lease-1");
+      expect(form.get("file")).toEqual(file);
+      expect(form.get("kind")).toBe("signed_lease");
     });
   });
 
@@ -153,9 +155,7 @@ describe("LeaseAttachmentDropzone", () => {
     await userEvent.upload(input!, makeFile("inspection.pdf"));
 
     await waitFor(() => {
-      expect(mockUpload).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: "move_in_inspection" }),
-      );
+      expect(mockUpload.mock.calls[0][0].form.get("kind")).toBe("move_in_inspection");
     });
   });
 
@@ -173,15 +173,9 @@ describe("LeaseAttachmentDropzone", () => {
     await waitFor(() => {
       expect(mockUpload).toHaveBeenCalledTimes(2);
       // First file: "Lease Agreement.pdf" → signed_lease
-      expect(mockUpload).toHaveBeenNthCalledWith(
-        1,
-        expect.objectContaining({ kind: "signed_lease" }),
-      );
+      expect(mockUpload.mock.calls[0][0].form.get("kind")).toBe("signed_lease");
       // Second file: "House Rules.pdf" → signed_addendum
-      expect(mockUpload).toHaveBeenNthCalledWith(
-        2,
-        expect.objectContaining({ kind: "signed_addendum" }),
-      );
+      expect(mockUpload.mock.calls[1][0].form.get("kind")).toBe("signed_addendum");
     });
   });
 

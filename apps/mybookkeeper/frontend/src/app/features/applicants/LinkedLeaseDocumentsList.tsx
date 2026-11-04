@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { Download, FileText } from "lucide-react";
-import { LEASE_ATTACHMENT_KIND_LABELS } from "@/shared/lib/lease-labels";
-import type { LeaseAttachmentKind } from "@/shared/types/lease/lease-attachment-kind";
-import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
+import { LEASE_ATTACHMENT_KIND_LABELS } from "@mybookkeeper/api-client/constants/leaseLabels";
+import type { LeaseAttachmentKind } from "@mybookkeeper/api-client/types/lease/lease-attachment-kind";
+import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
 import { reportMissingStorageObject } from "@/shared/lib/storage-observability";
 
 export interface LinkedLeaseDocumentsListProps {

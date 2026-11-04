@@ -5,9 +5,9 @@ import { useGetLeaseTemplatesQuery } from "@/shared/store/leaseTemplatesApi";
 import {
   useAddSignedLeaseTemplatesMutation,
   usePrefillAddendumPlaceholdersMutation,
-} from "@/shared/store/signedLeasesApi";
+} from "@mybookkeeper/api-client/store/signedLeasesApi";
 import type { LeaseTemplateSummary } from "@/shared/types/lease/lease-template-summary";
-import type { SignedLeaseTemplatePrefillItem } from "@/shared/types/lease/signed-lease-template-prefill";
+import type { SignedLeaseTemplatePrefillItem } from "@mybookkeeper/api-client/types/lease/signed-lease-template-prefill";
 import LeaseAddTemplatePickStep from "./LeaseAddTemplatePickStep";
 import LeaseAddTemplateValuesStep from "./LeaseAddTemplateValuesStep";
 

@@ -50,7 +50,7 @@ vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
     mockUseGetApplicantByIdQuery(id, opts),
 }));
 
-vi.mock("@/shared/store/signedLeasesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/signedLeasesApi", () => ({
   useCreateSignedLeaseMutation: () => mockUseCreateSignedLeaseMutation(),
 }));
 

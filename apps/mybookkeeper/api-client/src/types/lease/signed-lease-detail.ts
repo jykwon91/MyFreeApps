@@ -1,7 +1,7 @@
-import type { LeaseExtensionSummary } from "@/shared/types/lease/lease-extension-summary";
-import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
-import type { SignedLeaseStatus } from "@/shared/types/lease/signed-lease-status";
-import type { SignedLeaseTemplateLink } from "@/shared/types/lease/signed-lease-template-link";
+import type { LeaseExtensionSummary } from "./lease-extension-summary";
+import type { SignedLeaseAttachment } from "./signed-lease-attachment";
+import type { SignedLeaseStatus } from "./signed-lease-status";
+import type { SignedLeaseTemplateLink } from "./signed-lease-template-link";
 
 export interface SignedLeaseDetail {
   id: string;
@@ -10,6 +10,8 @@ export interface SignedLeaseDetail {
   /** Resolved list of templates contributing to this lease, ordered by pick order. Empty for imported leases. */
   templates: SignedLeaseTemplateLink[];
   applicant_id: string;
+  /** Decrypted applicant name from applicants.legal_name. Null if not set. */
+  applicant_legal_name: string | null;
   listing_id: string | null;
   kind: "generated" | "imported";
   values: Record<string, unknown>;

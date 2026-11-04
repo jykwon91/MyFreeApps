@@ -1,4 +1,4 @@
-import type { LeaseAttachmentKind } from "@/shared/types/lease/lease-attachment-kind";
+import type { LeaseAttachmentKind } from "./lease-attachment-kind";
 
 /**
  * A file attached to a signed lease.

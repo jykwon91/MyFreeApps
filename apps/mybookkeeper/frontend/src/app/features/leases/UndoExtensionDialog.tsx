@@ -1,6 +1,6 @@
 import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import { useUndoSignedLeaseExtensionMutation } from "@/shared/store/signedLeasesApi";
+import { useUndoSignedLeaseExtensionMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 
 export interface UndoExtensionDialogProps {
   leaseId: string;

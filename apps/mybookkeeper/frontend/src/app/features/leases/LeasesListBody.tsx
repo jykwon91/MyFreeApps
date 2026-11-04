@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Trash2, Upload } from "lucide-react";
 import type { LeasesListMode } from "@/shared/types/lease/leases-list-mode";
-import type { SignedLeaseSummary } from "@/shared/types/lease/signed-lease-summary";
+import type { SignedLeaseSummary } from "@mybookkeeper/api-client/types/lease/signed-lease-summary";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import { ConfirmDialog } from "@platform/ui";
 import LeasesListSkeleton from "./LeasesListSkeleton";

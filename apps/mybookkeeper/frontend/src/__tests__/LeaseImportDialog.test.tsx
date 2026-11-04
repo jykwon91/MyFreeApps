@@ -22,7 +22,7 @@ vi.mock("@/shared/lib/toast-store", () => ({
 }));
 
 const mockImportMutation = vi.fn();
-vi.mock("@/shared/store/signedLeasesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/signedLeasesApi", () => ({
   useImportSignedLeaseMutation: vi.fn(() => [mockImportMutation, { isLoading: false }]),
 }));
 
@@ -166,13 +166,11 @@ describe("LeaseImportDialog", () => {
     fireEvent.submit(form);
 
     await waitFor(() => {
-      expect(mockImportMutation).toHaveBeenCalledWith(
-        expect.objectContaining({
-          applicant_id: "app-1",
-          status: "signed",
-          files: expect.arrayContaining([file]),
-        }),
-      );
+      expect(mockImportMutation).toHaveBeenCalledOnce();
+      const form = mockImportMutation.mock.calls[0][0] as FormData;
+      expect(form.get("applicant_id")).toBe("app-1");
+      expect(form.get("status")).toBe("signed");
+      expect(form.getAll("files")).toEqual([file]);
     });
   });
 

@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WEB_BASE_URL } from "../../constants/api";
 import { CONTRACT_LOCKED_STAGE, STAGES_READY_FOR_LEASE } from "../../constants/applicants";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
+import TenantLeases from "../leases/TenantLeases";
 import TenancySection from "../tenants/TenancySection";
 import InquiryChip from "../inquiries/InquiryChip";
 import InquirySection from "../inquiries/InquirySection";
@@ -108,6 +109,8 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
           {applicant.pets?.trim() ? <TransactionFact label="Pets" value={applicant.pets.trim()} /> : null}
           {applicant.referred_by?.trim() ? <TransactionFact label="Referred by" value={applicant.referred_by.trim()} /> : null}
         </InquirySection>
+
+        <TenantLeases applicantId={applicant.id} isTenant={isTenant} name={applicant.legal_name ?? "them"} />
 
         {isTenant ? null : <ApplicantScreening applicant={applicant} />}
 

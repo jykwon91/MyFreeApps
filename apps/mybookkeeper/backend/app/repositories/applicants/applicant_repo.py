@@ -204,6 +204,24 @@ async def count_for_user(
     return int(result.scalar_one())
 
 
+async def get_legal_name(
+    db: AsyncSession,
+    *,
+    applicant_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> str | None:
+    result = await db.execute(
+        select(Applicant.legal_name).where(
+            Applicant.id == applicant_id,
+            Applicant.organization_id == organization_id,
+            Applicant.user_id == user_id,
+            Applicant.deleted_at.is_(None),
+        )
+    )
+    return result.scalar_one_or_none()
+
+
 async def get_by_inquiry(
     db: AsyncSession,
     *,

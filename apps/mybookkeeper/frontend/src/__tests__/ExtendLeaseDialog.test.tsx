@@ -6,7 +6,7 @@ import ExtendLeaseDialog from "@/app/features/leases/ExtendLeaseDialog";
 
 const mockExtendLease = vi.fn();
 
-vi.mock("@/shared/store/signedLeasesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/signedLeasesApi", () => ({
   useExtendSignedLeaseMutation: vi.fn(() => [
     mockExtendLease,
     { isLoading: false },
@@ -18,7 +18,7 @@ vi.mock("@/shared/lib/toast-store", () => ({
   showError: vi.fn(),
 }));
 
-import { useExtendSignedLeaseMutation } from "@/shared/store/signedLeasesApi";
+import { useExtendSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { showSuccess, showError } from "@/shared/lib/toast-store";
 
 function renderDialog(onClose = vi.fn(), currentEndsOn = "2026-12-31") {

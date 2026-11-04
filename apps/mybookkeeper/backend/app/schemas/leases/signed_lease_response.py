@@ -22,6 +22,7 @@ class SignedLeaseResponse(BaseModel):
     # the host's pick order via display_order). Empty for imported leases.
     templates: list[SignedLeaseTemplateLink]
     applicant_id: uuid.UUID
+    applicant_legal_name: str | None = None
     listing_id: uuid.UUID | None = None
     kind: str
     values: dict[str, Any]

@@ -1,7 +1,7 @@
 import { ArrowLeft, Plus } from "lucide-react";
 import { Button, LoadingButton } from "@platform/ui";
 import { PREFILL_PROVENANCE_LABELS } from "@/shared/lib/lease-labels";
-import type { SignedLeaseTemplatePrefillItem } from "@/shared/types/lease/signed-lease-template-prefill";
+import type { SignedLeaseTemplatePrefillItem } from "@mybookkeeper/api-client/types/lease/signed-lease-template-prefill";
 
 export interface LeaseAddTemplateValuesStepProps {
   items: SignedLeaseTemplatePrefillItem[];

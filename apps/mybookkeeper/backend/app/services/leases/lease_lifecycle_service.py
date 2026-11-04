@@ -9,7 +9,11 @@ import datetime as _dt
 import uuid
 from typing import Any
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.lease_enums import LEASE_STATUS_GROUPS
 from app.db.session import unit_of_work
+from app.models.leases.signed_lease import SignedLease
 from app.repositories.applicants import applicant_repo
 from app.services.leases.listing_resolution import default_listing_id
 from app.repositories.leases import (
@@ -148,14 +152,25 @@ async def create_lease(
         template_links = await _resolve_template_links(db, lease_id=lease.id)
         latest_extension = await _resolve_latest_extension(db, lease_id=lease.id)
         successor_lease_id = await _resolve_successor_lease_id(db, lease_id=lease.id)
+        applicant_legal_name = await _applicant_legal_name(db, lease)
     return _to_detail(
         lease, attachments, template_links, latest_extension, successor_lease_id,
+        applicant_legal_name,
     )
 
 
 # ---------------------------------------------------------------------------
 # List + get
 # ---------------------------------------------------------------------------
+
+async def _applicant_legal_name(db: AsyncSession, lease: SignedLease) -> str | None:
+    return await applicant_repo.get_legal_name(
+        db,
+        applicant_id=lease.applicant_id,
+        organization_id=lease.organization_id,
+        user_id=lease.user_id,
+    )
+
 
 async def list_leases(
     *,
@@ -164,11 +179,13 @@ async def list_leases(
     applicant_id: uuid.UUID | None = None,
     listing_id: uuid.UUID | None = None,
     status: str | None = None,
+    group: str | None = None,
     starts_after: _dt.date | None = None,
     starts_before: _dt.date | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> SignedLeaseListResponse:
+    statuses = LEASE_STATUS_GROUPS[group] if group else None
     async with unit_of_work() as db:
         rows = await signed_lease_repo.list_for_tenant(
             db,
@@ -177,8 +194,10 @@ async def list_leases(
             applicant_id=applicant_id,
             listing_id=listing_id,
             status=status,
+            statuses=statuses,
             starts_after=starts_after,
             starts_before=starts_before,
+            soonest_end_first=group == "current",
             limit=limit,
             offset=offset,
         )
@@ -189,6 +208,9 @@ async def list_leases(
             applicant_id=applicant_id,
             listing_id=listing_id,
             status=status,
+            statuses=statuses,
+            starts_after=starts_after,
+            starts_before=starts_before,
         )
 
         applicant_ids = [aid for aid in {r.applicant_id for r in rows} if aid is not None]
@@ -236,8 +258,10 @@ async def get_lease(
         template_links = await _resolve_template_links(db, lease_id=lease.id)
         latest_extension = await _resolve_latest_extension(db, lease_id=lease.id)
         successor_lease_id = await _resolve_successor_lease_id(db, lease_id=lease.id)
+        applicant_legal_name = await _applicant_legal_name(db, lease)
     return _to_detail(
         lease, attachments, template_links, latest_extension, successor_lease_id,
+        applicant_legal_name,
     )
 
 
@@ -314,8 +338,10 @@ async def update_lease(
         template_links = await _resolve_template_links(db, lease_id=lease_id)
         latest_extension = await _resolve_latest_extension(db, lease_id=lease_id)
         successor_lease_id = await _resolve_successor_lease_id(db, lease_id=lease_id)
+        applicant_legal_name = await _applicant_legal_name(db, lease)
     return _to_detail(
         lease, attachments, template_links, latest_extension, successor_lease_id,
+        applicant_legal_name,
     )
 
 

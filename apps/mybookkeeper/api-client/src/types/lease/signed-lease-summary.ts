@@ -1,4 +1,4 @@
-import type { SignedLeaseStatus } from "@/shared/types/lease/signed-lease-status";
+import type { SignedLeaseStatus } from "./signed-lease-status";
 
 export interface SignedLeaseSummary {
   id: string;

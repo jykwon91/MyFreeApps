@@ -1,4 +1,4 @@
-import type { SignedLeaseSummary } from "@/shared/types/lease/signed-lease-summary";
+import type { SignedLeaseSummary } from "./signed-lease-summary";
 
 export interface SignedLeaseListResponse {
   items: SignedLeaseSummary[];

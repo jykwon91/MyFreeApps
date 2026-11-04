@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import { useExtendSignedLeaseMutation } from "@/shared/store/signedLeasesApi";
+import { useExtendSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 
 const NOTES_MAX_LENGTH = 2000;
 

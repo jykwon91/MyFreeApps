@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { useLinkedLeaseDocumentsMode } from "@/app/features/applicants/useLinkedLeaseDocumentsMode";
-import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
+import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
 
 const mockAttachment: SignedLeaseAttachment = {
   id: "att-1",
