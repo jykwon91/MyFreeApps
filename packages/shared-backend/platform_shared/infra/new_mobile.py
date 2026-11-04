@@ -235,6 +235,11 @@ def _cli() -> int:
         "/infra/templates/scaffold-mobile in .github/dependabot.yml), and fill in "
         f"apps/{args.slug}/mobile/screen-map.yaml as screens get built."
     )
+    print(
+        "Before the first TestFlight build: add a 1024x1024 assets/icon.png with no "
+        'transparency, point "icon" at it in app.json (Apple rejects an app with no '
+        "icon), and run `npx eas-cli init` in the mobile directory."
+    )
     if args.skip_npm:
         print(
             "WARNING: the root lockfile wasn't updated. From packages/shared-backend, run\n"

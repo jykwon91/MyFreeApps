@@ -6,6 +6,7 @@ const ES_MODULE_PACKAGES = "(?:react-redux|@reduxjs/toolkit|immer|reselect|redux
 
 module.exports = {
   preset: "jest-expo",
+  setupFiles: ["<rootDir>/../../../packages/shared-mobile/jest/animationFrame.js"],
   // The preset turns this on, which would pass a project whose tests all went missing.
   passWithNoTests: false,
   // The first test in each file also pays for loading React Native, which is slow on CI.

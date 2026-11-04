@@ -33,7 +33,7 @@ export default function SignInScreen({ appName, webBaseUrl, onSignedIn }: SignIn
     closeRef.current = onSignedIn;
   }, [onSignedIn]);
   useEffect(() => {
-    if (isSignedIn) closeRef.current();
+    if (isSignedIn) closeRef.current?.();
   }, [isSignedIn]);
 
   useEffect(() => {

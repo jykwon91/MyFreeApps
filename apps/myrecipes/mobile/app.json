@@ -8,6 +8,7 @@
     "userInterfaceStyle": "automatic",
     "platforms": ["ios", "android"],
     "ios": {
+      "config": { "usesNonExemptEncryption": false },
       "bundleIdentifier": "org.myfreeapps.myrecipes"
     },
     "android": {

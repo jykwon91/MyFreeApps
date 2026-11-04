@@ -28,7 +28,10 @@ _REQUIRED_FILES = (
     "tsconfig.json",
     ".gitignore",
     "app/_layout.tsx",
-    "app/index.tsx",
+    "app/sign-in.tsx",
+    "app/(app)/index.tsx",
+    "eas.json",
+    "src/lib/store.ts",
     "__tests__/index.test.tsx",
     "screen-map.yaml",
 )
@@ -92,7 +95,7 @@ class TestGeneratedFiles:
         assert expo["android"]["package"] == "org.myfreeapps.myrecipes"
         assert expo["ios"]["bundleIdentifier"] == "org.myfreeapps.myrecipes"
 
-        assert "My Recipes" in (generated / "app" / "index.tsx").read_text("utf-8")
+        assert "My Recipes" in (generated / "app" / "(app)" / "index.tsx").read_text("utf-8")
 
     def test_skips_directories_left_in_the_template(self, repo: Path) -> None:
         template = repo / "infra" / "templates" / "scaffold-mobile"
@@ -182,7 +185,7 @@ class TestDisplayNameEscaping:
     def test_app_json_keeps_the_name(self, generated: Path) -> None:
         assert json.loads((generated / "app.json").read_text("utf-8"))["expo"]["name"] == self._NAME
 
-    @pytest.mark.parametrize("file", ["app/index.tsx", "__tests__/index.test.tsx"])
+    @pytest.mark.parametrize("file", ["app/(app)/index.tsx", "app/sign-in.tsx", "__tests__/index.test.tsx"])
     def test_source_holds_it_as_one_js_string(self, generated: Path, file: str) -> None:
         # A JSON string is a valid JS string, so this reads it back the way JS would.
         source = (generated / file).read_text("utf-8")
@@ -190,7 +193,7 @@ class TestDisplayNameEscaping:
         assert self._NAME in strings
 
     def test_template_only_uses_the_name_where_escaping_applies(self) -> None:
-        index = (_TEMPLATES / "scaffold-mobile" / "app" / "index.tsx").read_text("utf-8")
+        index = (_TEMPLATES / "scaffold-mobile" / "app" / "(app)" / "index.tsx").read_text("utf-8")
         assert 'heading={"__APP_DISPLAY_NAME__"}' in index
 
 
