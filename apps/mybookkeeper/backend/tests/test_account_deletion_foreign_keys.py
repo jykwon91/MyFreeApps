@@ -25,11 +25,14 @@ from app.core.account_deletion_constants import (
 from app.core.auth import current_active_user
 from app.db.base import Base
 from app.main import app as fastapi_app
+from app.models.documents.document import Document
 from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrganizationMember
 from app.models.properties.property import Property
 from app.models.inquiries.reply_template import ReplyTemplate
 from app.models.user.user import User
+from app.repositories.user import account_files_repo
+from app.services.user.account_deletion_service import remove_stored_files
 
 # Each is checked by Postgres the moment a row goes, so deleting a workspace or
 # a user has to clear these first. A new one needs the same look: run the delete
@@ -92,6 +95,11 @@ async def _workspace(db: AsyncSession, creator: User, *members: User) -> Organiz
 
 async def _record_in(db: AsyncSession, org: Organization, writer: User) -> None:
     db.add(Property(id=uuid.uuid4(), organization_id=org.id, user_id=writer.id, name="Elm St"))
+    await db.flush()
+
+
+async def _file_in(db: AsyncSession, org: Organization, writer: User, key: str) -> None:
+    db.add(Document(organization_id=org.id, user_id=writer.id, file_storage_key=key))
     await db.flush()
 
 
@@ -196,6 +204,71 @@ async def test_being_removed_from_a_workspace_does_not_take_their_records_out_of
     assert response.status_code == 409
     assert response.json()["detail"] == HOLDS_SHARED_RECORDS_MESSAGE
     assert await _exists(db, User, former.id)
+
+
+@pytest.mark.asyncio
+async def test_deleting_an_account_removes_its_stored_files_and_nobody_elses(db: AsyncSession) -> None:
+    owner, other = await _users(db, "owner@example.com", "other@example.com")
+    org = await _workspace(db, owner)
+    elsewhere = await _workspace(db, other)
+    await _file_in(db, org, owner, "mine.pdf")
+    await _file_in(db, elsewhere, other, "theirs.pdf")
+
+    # Foreign keys are off here, so the workspace's rows outlive it and would look shared.
+    with (
+        patch("app.services.user.account_deletion_service.get_storage") as get_storage,
+        patch("app.services.user.account_deletion_service.user_repo.holds_shared_records", return_value=False),
+    ):
+        response = await _delete_account(owner)
+
+    assert response.status_code == 204
+    get_storage.return_value.delete_file.assert_called_once_with("mine.pdf")
+
+
+@pytest.mark.asyncio
+async def test_a_refused_delete_leaves_stored_files_alone(db: AsyncSession) -> None:
+    owner, member = await _users(db, "owner@example.com", "member@example.com")
+    shared = await _workspace(db, owner, member)
+    own = await _workspace(db, member)
+    await _record_in(db, shared, member)
+    await _file_in(db, own, member, "mine.pdf")
+
+    with patch("app.services.user.account_deletion_service.get_storage") as get_storage:
+        response = await _delete_account(member)
+
+    assert response.status_code == 409
+    get_storage.return_value.delete_file.assert_not_called()
+
+
+def test_one_stored_file_failing_does_not_stop_the_rest() -> None:
+    with patch("app.services.user.account_deletion_service.get_storage") as get_storage:
+        get_storage.return_value.delete_file.side_effect = [ConnectionError("down"), None]
+        remove_stored_files(["a.pdf", "b.pdf"])
+
+    assert get_storage.return_value.delete_file.call_count == 2
+
+
+def test_unreachable_storage_logs_every_key_left_behind(caplog: pytest.LogCaptureFixture) -> None:
+    with patch("app.services.user.account_deletion_service.get_storage", side_effect=RuntimeError("no storage")):
+        remove_stored_files(["a.pdf", "b.pdf"])
+
+    assert "key=a.pdf" in caplog.text
+    assert "key=b.pdf" in caplog.text
+
+
+def test_every_stored_file_column_is_covered_by_the_cleanup() -> None:
+    columns = {
+        f"{table.name}.{column.name}"
+        for table in Base.metadata.sorted_tables
+        for column in table.columns
+        if column.name.endswith("storage_key")
+    }
+    covered = {
+        f"{column['expr'].table.name}.{column['expr'].name}"
+        for query in account_files_repo._queries([uuid.uuid4()])
+        for column in query.column_descriptions
+    }
+    assert covered == columns
 
 
 def test_every_table_is_loaded_with_the_models_package() -> None:
