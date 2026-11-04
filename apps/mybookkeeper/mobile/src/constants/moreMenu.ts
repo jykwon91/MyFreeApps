@@ -1,0 +1,50 @@
+import type { MoreMenuGroup } from "../types/MoreMenuGroup";
+
+export const MORE_MENU: readonly MoreMenuGroup[] = [
+  {
+    title: "Rentals",
+    items: [
+      { label: "Calendar", webPath: "/calendar" },
+      { label: "Listings", webPath: "/listings" },
+      { label: "Properties", webPath: "/properties" },
+      { label: "Welcome Manuals", webPath: "/welcome-manuals" },
+      { label: "Reply Templates", webPath: "/reply-templates" },
+    ],
+  },
+  {
+    title: "Leasing",
+    items: [
+      { label: "Leases", webPath: "/leases" },
+      { label: "Lease Templates", webPath: "/lease-templates" },
+      { label: "Payment Review", webPath: "/payment-review" },
+    ],
+  },
+  {
+    title: "Money tools",
+    items: [
+      { label: "Reconciliation", webPath: "/reconciliation" },
+      { label: "Vendors", webPath: "/vendors" },
+      { label: "Analytics", webPath: "/analytics" },
+      { label: "Insurance", webPath: "/insurance-policies" },
+      { label: "Mortgages", webPath: "/mortgages" },
+      { label: "Utility Plans", webPath: "/utility-plans" },
+    ],
+  },
+  {
+    title: "Tax",
+    items: [
+      { label: "Tax Report", webPath: "/tax" },
+      { label: "Tax Documents", webPath: "/tax-documents" },
+      { label: "Tax Returns", webPath: "/tax-returns" },
+      { label: "Tax Review", webPath: "/tax-review" },
+    ],
+  },
+  {
+    title: "Account",
+    items: [
+      { label: "Integrations", webPath: "/integrations" },
+      { label: "Members", webPath: "/members", adminOnly: true },
+      { label: "Security", webPath: "/security" },
+    ],
+  },
+];

@@ -1,0 +1,117 @@
+routes:
+  /:
+    screen: (app)/(tabs)/index
+  /admin:
+    not_on_mobile: Operator dashboards, for the website.
+  /analytics:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /applicants:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /applicants/:applicantId:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /apply/:slug:
+    not_on_mobile: A public page for applicants, on the website.
+  /calendar:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /costs:
+    not_on_mobile: Operator dashboards, for the website.
+  /demo:
+    not_on_mobile: Operator tool, for the website.
+  /documents:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /forbidden:
+    not_on_mobile: A web-only error page.
+  /forgot-password:
+    not_on_mobile: Done on the website, which the sign-in screen links to.
+  /guide/:token:
+    not_on_mobile: A public page for guests, on the website.
+  /inquiries:
+    screen: (app)/(tabs)/people
+  /inquiries/:inquiryId:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /insurance-policies:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /insurance-policies/:policyId:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /integrations:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /invite/:token:
+    not_on_mobile: Opened from an email, on the website.
+  /lease-templates:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /lease-templates/:templateId:
+    not_on_mobile: A template editor needs a bigger screen. The list stays.
+  /leases:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /leases/:leaseId:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /leases/new:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /listings:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /listings/:listingId:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /login:
+    screen: sign-in
+  /members:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /mortgages:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /oauth-callback:
+    not_on_mobile: Part of connecting Gmail on the website.
+  /onboarding:
+    not_on_mobile: First-time setup is done once, on the website.
+  /payment-review:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /privacy:
+    not_on_mobile: Opens on the website.
+  /properties:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /receipts:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /reconciliation:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /register:
+    not_on_mobile: Done on the website, which the sign-in screen links to.
+  /reply-templates:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /reset-password:
+    not_on_mobile: Done on the website, which the sign-in screen links to.
+  /security:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /support-myfreeapps:
+    not_on_mobile: Opens on the website.
+  /system-health:
+    not_on_mobile: Operator dashboards, for the website.
+  /tax:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /tax-documents:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /tax-returns:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /tax-returns/:id:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /tax-review:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /tenants:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /tenants/:applicantId:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /terms:
+    not_on_mobile: Opens on the website.
+  /transactions:
+    screen: (app)/(tabs)/money
+  /user-activity:
+    not_on_mobile: Operator dashboards, for the website.
+  /utility-plans:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /vendors:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /vendors/:vendorId:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /verify-email:
+    not_on_mobile: Done on the website, which the sign-in screen links to.
+  /welcome-manuals:
+    not_on_mobile: Not on the phone yet. More links to it on the website.
+  /welcome-manuals/:manualId:
+    not_on_mobile: Not on the phone yet. More links to it on the website.

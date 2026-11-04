@@ -1,0 +1,44 @@
+# GENERATED FROM infra/templates/.github/workflows/ci-mobile.yml.j2 — DO NOT EDIT.
+# Edit the template + apps/<app>/app.yaml; re-render via:
+#   python -m platform_shared.infra.render --app mybookkeeper
+
+name: MyBookkeeper Mobile CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/mybookkeeper/mobile/**'
+      - 'apps/mybookkeeper/api-client/**'
+      - 'packages/shared-core/**'
+      - 'packages/shared-mobile/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/_mobile-checks.yml'
+      - '.github/workflows/ci-mobile-mybookkeeper.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mybookkeeper/mobile/**'
+      - 'apps/mybookkeeper/api-client/**'
+      - 'packages/shared-core/**'
+      - 'packages/shared-mobile/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/_mobile-checks.yml'
+      - '.github/workflows/ci-mobile-mybookkeeper.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-mobile-mybookkeeper-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  mobile:
+    name: mobile-checks / mybookkeeper
+    uses: ./.github/workflows/_mobile-checks.yml
+    with:
+      project: apps/mybookkeeper/mobile
+      expo-app: true

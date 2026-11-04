@@ -3,6 +3,7 @@ import {
   LoadingButton,
   Skeleton,
   Toast,
+  UnreadableSession,
   useSession,
   useTheme,
 } from "@platform/mobile";
@@ -14,7 +15,7 @@ import SignedInSettings from "./SignedInSettings";
 
 export default function SettingsScreen() {
   const { colors, spacing, fontSize } = useTheme();
-  const { session, state } = useSession();
+  const { state } = useSession();
   const router = useRouter();
   const [message, setMessage] = useState<AccountMessage | null>(null);
   const version = Constants.expoConfig?.version;
@@ -26,26 +27,7 @@ export default function SettingsScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg }}>
         {state.status === "restoring" ? <Skeleton height={120} testID="account-skeleton" /> : null}
-        {state.status === "unreadable" ? (
-          <View style={{ gap: spacing.sm }}>
-            <Text accessibilityRole="header" style={headingStyle}>
-              Can't open your account yet
-            </Text>
-            <Text style={bodyStyle}>Your phone may still be locked or busy. You haven't been signed out.</Text>
-            <LoadingButton loadingText="Trying again..." onPress={session.retryRestore}>
-              Try again
-            </LoadingButton>
-            <LoadingButton
-              onPress={() => {
-                session.skipRestore();
-                router.push("/sign-in");
-              }}
-              variant="ghost"
-            >
-              Sign in with your password
-            </LoadingButton>
-          </View>
-        ) : null}
+        {state.status === "unreadable" ? <UnreadableSession onSignInInstead={() => router.push("/sign-in")} /> : null}
         {state.status === "signedOut" ? (
           <View style={{ gap: spacing.sm }}>
             <Text accessibilityRole="header" style={headingStyle}>
