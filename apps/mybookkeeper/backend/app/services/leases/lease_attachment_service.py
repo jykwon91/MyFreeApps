@@ -9,14 +9,21 @@ import datetime as _dt
 import logging
 import uuid
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
-from app.repositories.leases import signed_lease_attachment_repo, signed_lease_repo
+from app.repositories.leases import (
+    lease_term_version_repo,
+    signed_lease_attachment_repo,
+    signed_lease_repo,
+)
 from app.schemas.leases.signed_lease_attachment_response import (
     SignedLeaseAttachmentResponse,
 )
 from app.services.leases._lease_helpers import (
     ALLOWED_ATTACHMENT_MIME_TYPES,
+    AttachmentBacksExtensionError,
     AttachmentNotFoundError,
     AttachmentTooLargeError,
     AttachmentTypeRejectedError,
@@ -177,6 +184,21 @@ async def update_attachment_signing_state(
     return attach_presigned_urls_to_attachments([response])[0]
 
 
+async def _refuse_if_backing_extension(
+    db: AsyncSession,
+    *,
+    lease_id: uuid.UUID,
+    attachment_id: uuid.UUID,
+) -> None:
+    """Deleting nulls the foreign key, and a term version with no attachment reads as the original term."""
+    if await lease_term_version_repo.attachment_backs_live_version(
+        db, lease_id=lease_id, attachment_id=attachment_id,
+    ):
+        raise AttachmentBacksExtensionError(
+            f"Attachment {attachment_id} backs a live extension",
+        )
+
+
 async def update_attachment_kind(
     *,
     user_id: uuid.UUID,
@@ -202,6 +224,10 @@ async def update_attachment_kind(
         )
         if lease is None:
             raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
+
+        # Regenerate deletes every rendered_original, so a new kind could
+        # delete an addendum by the back door.
+        await _refuse_if_backing_extension(db, lease_id=lease_id, attachment_id=attachment_id)
 
         row = await signed_lease_attachment_repo.update_kind_scoped_to_lease(
             db,
@@ -233,6 +259,7 @@ async def delete_attachment(
         )
         if lease is None:
             raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
+        await _refuse_if_backing_extension(db, lease_id=lease_id, attachment_id=attachment_id)
         deleted = await signed_lease_attachment_repo.delete_by_id_scoped_to_lease(
             db, attachment_id, lease_id,
         )

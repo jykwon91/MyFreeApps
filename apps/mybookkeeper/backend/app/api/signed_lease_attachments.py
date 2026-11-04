@@ -96,6 +96,11 @@ async def update_attachment(
         raise HTTPException(status_code=404, detail="Not found") from exc
     except signed_lease_service.InvalidAttachmentKindError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except signed_lease_service.AttachmentBacksExtensionError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "ATTACHMENT_BACKS_EXTENSION", "message": str(exc)},
+        ) from exc
 
 
 @router.patch(
@@ -151,4 +156,9 @@ async def delete_attachment(
         signed_lease_service.AttachmentNotFoundError,
     ) as exc:
         raise HTTPException(status_code=404, detail="Not found") from exc
+    except signed_lease_service.AttachmentBacksExtensionError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "ATTACHMENT_BACKS_EXTENSION", "message": str(exc)},
+        ) from exc
     return Response(status_code=204)

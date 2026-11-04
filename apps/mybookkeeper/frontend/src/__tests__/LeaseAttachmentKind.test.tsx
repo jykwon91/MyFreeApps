@@ -9,6 +9,7 @@ import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import { inferKindFromFilename, inferKindsForFiles } from "@/shared/lib/infer-attachment-kind";
 import LeaseAttachmentsSection from "@/app/features/leases/LeaseAttachmentsSection";
+import { showError } from "@/shared/lib/toast-store";
 import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
 
 // ---------------------------------------------------------------------------
@@ -155,5 +156,48 @@ describe("LeaseAttachmentsSection — kind picker", () => {
       </Provider>,
     );
     expect(screen.queryByTestId(`lease-attachment-kind-picker-${ATTACHMENT.id}`)).toBeNull();
+  });
+});
+
+describe("LeaseAttachmentsSection — delete", () => {
+  it("explains why an extension's addendum can't change kind", async () => {
+    updateMock.mockReset();
+    updateMock.mockReturnValue({
+      unwrap: () => Promise.reject({ status: 409, data: { detail: { code: "ATTACHMENT_BACKS_EXTENSION" } } }),
+    });
+    render(
+      <Provider store={store}>
+        <LeaseAttachmentsSection leaseId="lease-1" attachments={[ATTACHMENT]} canWrite />
+      </Provider>,
+    );
+    fireEvent.change(screen.getByTestId(`lease-attachment-kind-picker-${ATTACHMENT.id}`), {
+      target: { value: "notice" },
+    });
+    await waitFor(() => {
+      expect(showError).toHaveBeenCalledWith(
+        "This addendum is the record of an extension. Undo the extension to change it.",
+      );
+    });
+  });
+
+  it("explains why an extension's addendum can't go, and closes the question", async () => {
+    deleteMock.mockReset();
+    deleteMock.mockReturnValue({
+      unwrap: () => Promise.reject({ status: 409, data: { detail: { code: "ATTACHMENT_BACKS_EXTENSION" } } }),
+    });
+    render(
+      <Provider store={store}>
+        <LeaseAttachmentsSection leaseId="lease-1" attachments={[ATTACHMENT]} canWrite />
+      </Provider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: `Delete ${ATTACHMENT.filename}` }));
+    fireEvent.click(await screen.findByRole("button", { name: "Remove" }));
+
+    await waitFor(() => {
+      expect(showError).toHaveBeenCalledWith(
+        "This addendum is the record of an extension. Undo the extension to remove it.",
+      );
+    });
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Remove" })).toBeNull());
   });
 });

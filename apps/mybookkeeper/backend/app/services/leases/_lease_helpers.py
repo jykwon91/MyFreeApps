@@ -52,6 +52,10 @@ class AttachmentNotFoundError(LookupError):
     pass
 
 
+class AttachmentBacksExtensionError(ValueError):
+    """The addendum is the record of a live extension; undo that first."""
+
+
 class MissingRequiredValuesError(ValueError):
     pass
 

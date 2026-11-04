@@ -16,6 +16,7 @@ from __future__ import annotations
 
 # Exceptions (from helpers — shared across all modules)
 from app.services.leases._lease_helpers import (
+    AttachmentBacksExtensionError,
     AttachmentNotFoundError,
     AttachmentTooLargeError,
     AttachmentTypeRejectedError,
@@ -72,6 +73,7 @@ from app.services.leases.lease_attachment_service import (
 
 __all__ = [
     # Exceptions
+    "AttachmentBacksExtensionError",
     "AttachmentNotFoundError",
     "AttachmentTooLargeError",
     "AttachmentTypeRejectedError",
