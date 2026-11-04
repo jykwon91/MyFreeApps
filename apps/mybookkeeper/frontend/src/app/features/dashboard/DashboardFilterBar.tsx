@@ -6,7 +6,7 @@ import PropertyMultiSelect from "@/shared/components/PropertyMultiSelect";
 import CategoryChip from "@/app/features/dashboard/CategoryChip";
 import YearFilter from "@/shared/components/ui/YearFilter";
 import type { CategoryFilterPreset, CategoryFilterState } from "@/shared/types/dashboard/category-filter";
-import type { Property } from "@/shared/types/property/property";
+import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { YearOption } from "@/shared/types/dashboard/year-option";
 
 export interface DashboardFilterBarProps {

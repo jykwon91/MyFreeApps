@@ -2,10 +2,10 @@ import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { X, Trash2 } from "lucide-react";
 import { formatDate } from "@/shared/utils/date";
-import type { Transaction } from "@/shared/types/transaction/transaction";
-import type { Property } from "@/shared/types/property/property";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
+import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { TransactionFormValues } from "@/shared/types/transaction/transaction-form-values";
-import type { DuplicatePair } from "@/shared/types/transaction/duplicate";
+import type { DuplicatePair } from "@mybookkeeper/api-client/types/transaction/DuplicatePair";
 import Panel from "@/shared/components/ui/Panel";
 import { LoadingButton } from "@platform/ui";
 import { ConfirmDialog } from "@platform/ui";
@@ -13,7 +13,7 @@ import TransactionStatusBadge from "@/app/features/transactions/TransactionStatu
 import TransactionTypeBadge from "@/app/features/transactions/TransactionTypeBadge";
 import TransactionForm from "@/app/features/transactions/TransactionForm";
 import AttributeTenantPicker from "@/app/features/transactions/AttributeTenantPicker";
-import { useUpdateTransactionMutation, useDeleteTransactionMutation } from "@/shared/store/transactionsApi";
+import { useUpdateTransactionMutation, useDeleteTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 
 export interface TransactionPanelProps {
   transaction: Transaction;

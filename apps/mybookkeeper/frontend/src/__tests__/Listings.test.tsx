@@ -7,7 +7,7 @@ import { store } from "@/shared/store";
 import Listings from "@/app/pages/Listings";
 import type { ListingSummary } from "@/shared/types/listing/listing-summary";
 import type { ListingListResponse } from "@/shared/types/listing/listing-list-response";
-import type { Property } from "@/shared/types/property/property";
+import type { Property } from "@mybookkeeper/api-client/types/property/property";
 
 const mockListings: ListingSummary[] = [
   {
@@ -85,7 +85,7 @@ vi.mock("@/shared/store/listingsApi", () => ({
   useUpdateListingPhotoMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
-vi.mock("@/shared/store/propertiesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(() => defaultPropertiesState),
 }));
 

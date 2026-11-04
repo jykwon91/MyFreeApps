@@ -5,7 +5,7 @@ import {
   useCreatePropertyMutation,
   useUpdatePropertyMutation,
   useDeletePropertyMutation,
-} from "@/shared/store/propertiesApi";
+} from "@mybookkeeper/api-client/store/propertiesApi";
 import type { PropertyForm } from "@/shared/types/property/property-form";
 import { useToast } from "@/shared/hooks/useToast";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
@@ -16,7 +16,7 @@ import FormField from "@/shared/components/ui/FormField";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { ConfirmDialog } from "@platform/ui";
 import AlertBox from "@/shared/components/ui/AlertBox";
-import type { PropertyClassification } from "@/shared/types/property/property-classification";
+import type { PropertyClassification } from "@mybookkeeper/api-client/types/property/PropertyClassification";
 import { CLASSIFICATION_OPTIONS } from "@/shared/lib/property-labels";
 import { blankForm, addressComplete, toAddress } from "@/app/features/properties/propertyForm";
 import AddressInputs from "@/app/features/properties/AddressInputs";

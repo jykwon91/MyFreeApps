@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { Upload, FileSpreadsheet, X, Loader2 } from "lucide-react";
 import api from "@/shared/lib/api";
-import type { Property } from "@/shared/types/property/property";
+import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { ImportResult } from "@/shared/types/transaction/import-result";
 import { Button } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";

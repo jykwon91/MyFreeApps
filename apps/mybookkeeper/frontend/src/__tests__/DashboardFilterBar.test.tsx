@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import DashboardFilterBar from "@/app/features/dashboard/DashboardFilterBar";
 import { ALL_DASHBOARD_CATEGORIES } from "@/shared/lib/dashboard-filter-config";
 import type { CategoryFilterState } from "@/shared/types/dashboard/category-filter";
-import type { Property } from "@/shared/types/property/property";
+import type { Property } from "@mybookkeeper/api-client/types/property/property";
 
 const mockProperties: Property[] = [
   { id: "p1", name: "Property A", address: null, classification: "investment", type: "short_term", is_active: true, activity_periods: [], created_at: "2025-01-01" },

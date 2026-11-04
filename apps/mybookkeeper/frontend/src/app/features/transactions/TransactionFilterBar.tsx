@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Filter } from "lucide-react";
 import { formatTag } from "@/shared/utils/tag";
-import type { Property } from "@/shared/types/property/property";
+import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { Filters } from "@/shared/types/transaction/transaction-filters";
 import { STATUS_OPTIONS, TYPE_OPTIONS, ALL_CATEGORIES } from "@/shared/lib/transaction-config";
 import Select from "@/shared/components/ui/Select";

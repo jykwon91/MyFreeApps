@@ -1,6 +1,6 @@
 import type { DocumentBlob } from "@/shared/services/documentService";
 import type { DocumentViewMode } from "@/shared/types/document/document-view-mode";
-import type { Transaction } from "@/shared/types/transaction/transaction";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import EmptyState from "./EmptyState";
 import ErrorState from "./ErrorState";
 import GenericBlobBody from "./GenericBlobBody";

@@ -1,11 +1,6 @@
-import type { PropertyClassification } from "./property-classification";
-import type { PropertyType } from "./property-type";
-
-export interface ActivityPeriod {
-  id: number;
-  active_from: string;
-  active_until: string;
-}
+import type { ActivityPeriod } from "./ActivityPeriod";
+import type { PropertyClassification } from "./PropertyClassification";
+import type { PropertyType } from "./PropertyType";
 
 export interface Property {
   id: string;

@@ -4,8 +4,8 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import Transactions from "@/app/pages/Transactions";
-import type { DuplicatePairsResponse } from "@/shared/types/transaction/duplicate";
-import type { Property } from "@/shared/types/property/property";
+import type { DuplicatePairsResponse } from "@mybookkeeper/api-client/types/transaction/DuplicatePairsResponse";
+import type { Property } from "@mybookkeeper/api-client/types/property/property";
 
 const mockDuplicateData: DuplicatePairsResponse = {
   pairs: [
@@ -72,8 +72,8 @@ const mockProperties: Property[] = [
   },
 ];
 
-vi.mock("@/shared/store/transactionsApi", async () => {
-  const actual = await vi.importActual("@/shared/store/transactionsApi");
+vi.mock("@mybookkeeper/api-client/store/transactionsApi", async () => {
+  const actual = await vi.importActual("@mybookkeeper/api-client/store/transactionsApi");
   return {
     ...actual,
     useListTransactionsQuery: vi.fn(() => ({ data: [], isLoading: false })),
@@ -88,8 +88,8 @@ vi.mock("@/shared/store/transactionsApi", async () => {
   };
 });
 
-vi.mock("@/shared/store/propertiesApi", async () => {
-  const actual = await vi.importActual("@/shared/store/propertiesApi");
+vi.mock("@mybookkeeper/api-client/store/propertiesApi", async () => {
+  const actual = await vi.importActual("@mybookkeeper/api-client/store/propertiesApi");
   return {
     ...actual,
     useGetPropertiesQuery: vi.fn(() => ({ data: mockProperties, isLoading: false })),
@@ -102,8 +102,8 @@ import {
   useKeepDuplicateMutation,
   useDismissDuplicateMutation,
   useMergeDuplicatesMutation,
-} from "@/shared/store/transactionsApi";
-import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
+} from "@mybookkeeper/api-client/store/transactionsApi";
+import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 
 function renderPage() {
   return render(

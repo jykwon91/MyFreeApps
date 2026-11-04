@@ -27,7 +27,7 @@ import {
   useDeleteWelcomeManualMutation,
   useGetWelcomeManualByIdQuery,
 } from "@/shared/store/welcomeManualsApi";
-import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
+import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { WelcomeManualSectionResponse } from "@/shared/types/welcome-manual/welcome-manual-section-response";
 import WelcomeManualDetailSkeleton from "@/app/features/welcome-manuals/WelcomeManualDetailSkeleton";
 import WelcomeManualSectionCard from "@/app/features/welcome-manuals/WelcomeManualSectionCard";

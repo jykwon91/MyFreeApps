@@ -1,6 +1,6 @@
 import { EXPENSE_CATEGORY_LIST } from "@/shared/lib/constants";
 import type { Filters } from "@/shared/types/transaction/transaction-filters";
-import type { TransactionStatus } from "@/shared/types/transaction/transaction";
+import type { TransactionStatus } from "@mybookkeeper/api-client/types/transaction/TransactionStatus";
 
 export const EMPTY_FILTERS: Filters = {
   property_id: "",

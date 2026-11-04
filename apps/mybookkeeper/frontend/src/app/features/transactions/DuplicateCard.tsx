@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { X, ArrowRight, AlertTriangle, AlertCircle, CheckCircle, GitMerge, ChevronUp } from "lucide-react";
-import type { DuplicatePair, DuplicateTransaction, MergeFieldSide } from "@/shared/types/transaction/duplicate";
+import type { DuplicatePair } from "@mybookkeeper/api-client/types/transaction/DuplicatePair";
+import type { DuplicateTransaction } from "@mybookkeeper/api-client/types/transaction/DuplicateTransaction";
+import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
 import Badge from "@/shared/components/ui/Badge";
 import { LoadingButton } from "@platform/ui";
 import TransactionSide from "@/app/features/transactions/TransactionSide";

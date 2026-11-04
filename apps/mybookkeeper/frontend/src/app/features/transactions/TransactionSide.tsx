@@ -1,6 +1,6 @@
 import { format, parseISO } from "date-fns";
 import { FileText, Eye } from "lucide-react";
-import type { DuplicateTransaction } from "@/shared/types/transaction/duplicate";
+import type { DuplicateTransaction } from "@mybookkeeper/api-client/types/transaction/DuplicateTransaction";
 import Badge from "@/shared/components/ui/Badge";
 import { formatTag } from "@/shared/utils/tag";
 

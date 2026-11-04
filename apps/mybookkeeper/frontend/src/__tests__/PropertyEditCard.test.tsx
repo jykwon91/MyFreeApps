@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import PropertyEditCard from "@/app/features/properties/PropertyEditCard";
-import type { Property } from "@/shared/types/property/property";
+import type { Property } from "@mybookkeeper/api-client/types/property/property";
 
 const rental: Property = {
   id: "prop-1",
@@ -21,7 +21,7 @@ const updateProperty = vi.fn();
 const showError = vi.fn();
 const showSuccess = vi.fn();
 
-vi.mock("@/shared/store/propertiesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useUpdatePropertyMutation: vi.fn(() => [updateProperty, { isLoading: false }]),
 }));
 

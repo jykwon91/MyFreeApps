@@ -4,12 +4,12 @@ import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import TenantPayments from "@/app/features/applicants/TenantPayments";
 import type { RentLedgerResponse } from "@/shared/types/rent/rent-ledger-response";
-import type { Transaction } from "@/shared/types/transaction/transaction";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 
 const mockListTransactions = vi.fn();
 const mockGetLedger = vi.fn();
 
-vi.mock("@/shared/store/transactionsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/transactionsApi", () => ({
   useListTransactionsQuery: (...args: unknown[]) => mockListTransactions(...args),
 }));
 

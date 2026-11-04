@@ -5,7 +5,7 @@ import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import { LoadingButton } from "@platform/ui";
 import { useGetListingsQuery } from "@/shared/store/listingsApi";
-import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
+import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { LISTING_PAGE_SIZE, LISTING_STATUSES } from "@/shared/lib/listing-labels";
 import type { ListingStatus } from "@/shared/types/listing/listing-status";
 import type { ListingSummary } from "@/shared/types/listing/listing-summary";

@@ -3,7 +3,7 @@ import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useSendReceiptMutation } from "@/shared/store/rentReceiptsApi";
 import api from "@/shared/lib/api";
-import type { Transaction } from "@/shared/types/transaction/transaction";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import { inferPaymentMethod } from "./inferPaymentMethod";
 import ReceiptPreviewPane from "./ReceiptPreviewPane";
 

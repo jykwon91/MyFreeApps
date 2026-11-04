@@ -5,8 +5,8 @@ import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import Transactions from "@/app/pages/Transactions";
-import type { Transaction } from "@/shared/types/transaction/transaction";
-import type { Property } from "@/shared/types/property/property";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
+import type { Property } from "@mybookkeeper/api-client/types/property/property";
 
 const mockTransactions: Transaction[] = [
   {
@@ -118,7 +118,7 @@ const mockProperties: Property[] = [
   },
 ];
 
-vi.mock("@/shared/store/transactionsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/transactionsApi", () => ({
   useListTransactionsQuery: vi.fn(() => ({
     data: mockTransactions,
     isLoading: false,
@@ -134,7 +134,7 @@ vi.mock("@/shared/store/transactionsApi", () => ({
   useMergeDuplicatesMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
-vi.mock("@/shared/store/propertiesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(() => ({
     data: mockProperties,
     isLoading: false,
@@ -171,7 +171,7 @@ import {
   useListTransactionsQuery,
   useUpdateTransactionMutation,
   useBulkApproveTransactionsMutation,
-} from "@/shared/store/transactionsApi";
+} from "@mybookkeeper/api-client/store/transactionsApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 
 function renderWithProviders(ui: React.ReactElement) {

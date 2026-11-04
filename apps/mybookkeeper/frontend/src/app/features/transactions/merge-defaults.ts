@@ -1,4 +1,5 @@
-import type { DuplicateTransaction, MergeFieldSide } from "@/shared/types/transaction/duplicate";
+import type { DuplicateTransaction } from "@mybookkeeper/api-client/types/transaction/DuplicateTransaction";
+import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
 
 export type MergeableField =
   | "transaction_date"

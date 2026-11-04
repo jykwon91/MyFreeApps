@@ -1,6 +1,7 @@
 import { format, parseISO } from "date-fns";
 import { formatTag } from "@/shared/utils/tag";
-import type { DuplicateTransaction, MergeFieldSide } from "@/shared/types/transaction/duplicate";
+import type { DuplicateTransaction } from "@mybookkeeper/api-client/types/transaction/DuplicateTransaction";
+import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
 import {
   MERGEABLE_FIELDS,
   FIELD_LABELS,

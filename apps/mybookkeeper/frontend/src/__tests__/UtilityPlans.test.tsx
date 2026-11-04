@@ -58,7 +58,7 @@ vi.mock("@/shared/store/utilityPlansApi", () => ({
   useGetUtilityPlanRenewalAlertsQuery: vi.fn(() => ({ data: undefined })),
 }));
 
-vi.mock("@/shared/store/propertiesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(() => ({ data: [{ id: "prop-1", name: "6738 Peerless St" }] })),
 }));
 

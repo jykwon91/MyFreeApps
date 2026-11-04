@@ -4,7 +4,7 @@ import {
   useListClassificationRulesQuery,
   useDeleteClassificationRuleMutation,
 } from "@/shared/store/classificationRulesApi";
-import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
+import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import Panel from "@/shared/components/ui/Panel";
 import { ConfirmDialog } from "@platform/ui";
 import { useClassificationRulesPanelMode } from "./useClassificationRulesPanelMode";

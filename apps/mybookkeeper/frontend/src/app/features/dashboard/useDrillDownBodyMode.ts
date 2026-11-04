@@ -1,4 +1,4 @@
-import type { Transaction } from "@/shared/types/transaction/transaction";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { DrillDownBodyMode } from "@/shared/types/dashboard/drill-down-body-mode";
 
 interface UseDrillDownBodyModeArgs {

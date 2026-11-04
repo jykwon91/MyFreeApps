@@ -3,18 +3,18 @@ import { render, screen } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import DrillDownPanel from "@/app/features/dashboard/DrillDownPanel";
-import type { Transaction } from "@/shared/types/transaction/transaction";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { DrillDownFilter } from "@/shared/types/dashboard/drill-down-filter";
 
-vi.mock("@/shared/store/transactionsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/transactionsApi", () => ({
   useListTransactionsQuery: vi.fn(),
 }));
 
-vi.mock("@/shared/store/propertiesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(() => ({ data: [], isLoading: false })),
 }));
 
-import { useListTransactionsQuery } from "@/shared/store/transactionsApi";
+import { useListTransactionsQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 import { UNASSIGNED_PROPERTY_ID } from "@/shared/lib/constants";
 
 function makeTxn(overrides: Partial<Transaction> = {}): Transaction {

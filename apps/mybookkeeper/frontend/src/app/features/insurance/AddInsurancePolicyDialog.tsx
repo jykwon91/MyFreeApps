@@ -5,7 +5,7 @@ import { applyDraftToForm } from "@/shared/lib/insurance-policy-draft";
 import { EMPTY_POLICY_FORM, toPolicyPayload } from "@/shared/lib/insurance-policy-form";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useCreateInsurancePolicyMutation } from "@/shared/store/insurancePoliciesApi";
-import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
+import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { InsurancePolicyDraft } from "@/shared/types/insurance/insurance-policy-draft";
 import type { InsurancePolicyFormValues } from "@/shared/types/insurance/insurance-policy-form-values";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";

@@ -11,7 +11,7 @@ import AnalyticsFilters from '@/app/features/analytics/AnalyticsFilters';
 import AnalyticsSkeleton from '@/app/features/analytics/AnalyticsSkeleton';
 import PropertyMultiSelect from '@/shared/components/PropertyMultiSelect';
 import type { UtilityTrendsResponse } from '@/shared/types/analytics';
-import type { Property } from '@/shared/types/property/property';
+import type { Property } from '@mybookkeeper/api-client/types/property/property';
 
 vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
@@ -34,7 +34,7 @@ vi.mock('@/shared/store/analyticsApi', () => ({
   })),
 }));
 
-vi.mock('@/shared/store/propertiesApi', () => ({
+vi.mock('@mybookkeeper/api-client/store/propertiesApi', () => ({
   useGetPropertiesQuery: vi.fn(() => ({ data: [], isLoading: false })),
   useCreatePropertyMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useUpdatePropertyMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
@@ -42,7 +42,7 @@ vi.mock('@/shared/store/propertiesApi', () => ({
 }));
 
 import { useGetUtilityTrendsQuery } from '@/shared/store/analyticsApi';
-import { useGetPropertiesQuery } from '@/shared/store/propertiesApi';
+import { useGetPropertiesQuery } from '@mybookkeeper/api-client/store/propertiesApi';
 
 const mockProperties: Property[] = [
   { id: 'prop-1', name: 'Beach House', address: '123 Ocean Dr', classification: 'investment', type: 'short_term', is_active: true, activity_periods: [], created_at: '2024-01-01T00:00:00Z' },

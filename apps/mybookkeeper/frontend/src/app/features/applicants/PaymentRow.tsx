@@ -1,4 +1,4 @@
-import type { Transaction } from "@/shared/types/transaction/transaction";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { DocumentViewTarget } from "@/shared/types/document/document-view-target";
 import type { RentPayment } from "@/shared/types/rent/rent-payment";
 import { formatCurrency } from "@/shared/utils/currency";

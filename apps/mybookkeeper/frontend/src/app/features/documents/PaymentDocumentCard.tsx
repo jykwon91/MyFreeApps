@@ -1,5 +1,5 @@
 import { DollarSign } from "lucide-react";
-import type { Transaction } from "@/shared/types/transaction/transaction";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import { formatCurrency } from "@/shared/utils/currency";
 
 export interface PaymentDocumentCardProps {

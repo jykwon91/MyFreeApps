@@ -11,7 +11,7 @@ vi.mock("@/shared/store/rentReceiptsApi", () => ({
   useDismissReceiptMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
-vi.mock("@/shared/store/transactionsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/transactionsApi", () => ({
   useGetTransactionQuery: vi.fn(),
 }));
 
@@ -29,7 +29,7 @@ vi.mock("@/shared/lib/toast-store", () => ({
 }));
 
 import { useGetPendingReceiptsQuery } from "@/shared/store/rentReceiptsApi";
-import { useGetTransactionQuery } from "@/shared/store/transactionsApi";
+import { useGetTransactionQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 
 const mockTransaction = {
   id: "txn-123",

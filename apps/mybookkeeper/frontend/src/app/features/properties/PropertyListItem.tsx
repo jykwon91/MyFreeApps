@@ -1,5 +1,5 @@
 import { Pencil, Trash2 } from "lucide-react";
-import type { Property } from "@/shared/types/property/property";
+import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import { formatDate } from "@/shared/utils/date";
 import { CLASSIFICATION_LABELS, TYPE_LABELS } from "@/shared/lib/property-labels";
 import { Button } from "@platform/ui";

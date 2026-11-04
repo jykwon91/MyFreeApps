@@ -5,8 +5,8 @@ import { formatDate } from "@/shared/utils/date";
 import { formatTag } from "@/shared/utils/tag";
 import TransactionPanel from "@/app/features/transactions/TransactionPanel";
 import type { DrillDownBodyMode } from "@/shared/types/dashboard/drill-down-body-mode";
-import type { Transaction } from "@/shared/types/transaction/transaction";
-import type { Property } from "@/shared/types/property/property";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
+import type { Property } from "@mybookkeeper/api-client/types/property/property";
 
 export interface DrillDownPanelBodyProps {
   mode: DrillDownBodyMode;

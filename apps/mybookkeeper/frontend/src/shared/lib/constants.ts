@@ -92,30 +92,6 @@ export const CURRENCY_FIELDS = new Set([
   "monthly_rent", "security_deposit", "coverage_amount", "premium", "contract_value",
 ]);
 
-export const EXPENSE_CATEGORY_LIST = [
-  "utilities",
-  "maintenance",
-  "management_fee",
-  "insurance",
-  "mortgage_interest",
-  "mortgage_principal",
-  "taxes",
-  "cleaning_expense",
-  "channel_fee",
-  "advertising",
-  "legal_professional",
-  "travel",
-  "other_expense",
-  "contract_work",
-  "furnishings",
-  "supplies",
-  "home_office",
-  "meals",
-  "vehicle_expenses",
-  "health_insurance",
-  "education_training",
-] as const;
-
 export const RECONCILIATION_STATUS_STYLES: Record<string, string> = {
   matched: "text-green-700 bg-green-50",
   confirmed: "text-green-700 bg-green-50",
@@ -153,7 +129,6 @@ export const TRANSACTION_CATEGORIES = [
   "uncategorized",
 ] as const;
 
-export const INCOME_CATEGORIES = ["rental_revenue", "cleaning_fee_revenue", "business_income", "uncategorized"] as const;
 export const PAYMENT_METHODS = ["check", "credit_card", "bank_transfer", "cash", "platform_payout", "other"] as const;
 export const CHANNELS = ["airbnb", "vrbo", "booking.com", "direct"] as const;
 
@@ -222,3 +197,5 @@ export const POLLING_OPTIONS = { pollingInterval: 3000 } as const;
 export const EMPTY_QUEUE: readonly EmailQueueItem[] = [];
 
 export const USER_NAME_INPUT_MAX_LENGTH = 120;
+
+export { EXPENSE_CATEGORY_LIST, INCOME_CATEGORIES } from "@mybookkeeper/api-client/constants/transactionCategories";

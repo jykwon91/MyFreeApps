@@ -1,5 +1,5 @@
-export type { Property } from "./property";
-export type { PropertyClassification } from "./property-classification";
-export type { PropertyType } from "./property-type";
+export type { Property } from "@mybookkeeper/api-client/types/property/property";
+export type { PropertyClassification } from "@mybookkeeper/api-client/types/property/PropertyClassification";
+export type { PropertyType } from "@mybookkeeper/api-client/types/property/PropertyType";
 export type { AddressFields } from "./address-fields";
 export type { PropertyForm } from "./property-form";

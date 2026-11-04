@@ -12,13 +12,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import PropertyOccupancyFixer from "@/app/features/mortgages/PropertyOccupancyFixer";
-import type { Property } from "@/shared/types/property/property";
+import type { Property } from "@mybookkeeper/api-client/types/property/property";
 
 const mockUnwrap = vi.fn(() => Promise.resolve({}));
 const mockUpdateProperty = vi.fn(() => ({ unwrap: mockUnwrap }));
 let mockProperties: Property[] = [];
 
-vi.mock("@/shared/store/propertiesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(() => ({ data: mockProperties })),
   useUpdatePropertyMutation: vi.fn(() => [mockUpdateProperty, { isLoading: false }]),
 }));

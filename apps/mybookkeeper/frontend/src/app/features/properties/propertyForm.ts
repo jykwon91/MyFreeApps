@@ -1,4 +1,4 @@
-import type { Property } from "@/shared/types/property/property";
+import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { AddressFields } from "@/shared/types/property/address-fields";
 import type { PropertyForm } from "@/shared/types/property/property-form";
 

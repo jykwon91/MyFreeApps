@@ -14,7 +14,7 @@ vi.mock("@/shared/store/attributionApi", () => ({
 vi.mock("@/shared/store/applicantsApi", () => ({
   useGetTenantsQuery: vi.fn(),
 }));
-vi.mock("@/shared/store/propertiesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(),
 }));
 vi.mock("@/shared/lib/toast-store", () => ({
@@ -28,7 +28,7 @@ import {
   useAttributeTransactionManuallyMutation,
 } from "@/shared/store/attributionApi";
 import { useGetTenantsQuery } from "@/shared/store/applicantsApi";
-import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
+import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 
 function makeItem(overrides: Partial<ReviewItemType> = {}): ReviewItemType {
   return {

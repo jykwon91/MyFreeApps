@@ -7,7 +7,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
-import type { Transaction } from "@/shared/types/transaction/transaction";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { FilterOptions } from "@/shared/types/transaction/filter-options";
 import { PAGE_SIZE_OPTIONS, TAG_COLORS } from "@/shared/lib/constants";
 import EmptyState from "@/shared/components/ui/EmptyState";

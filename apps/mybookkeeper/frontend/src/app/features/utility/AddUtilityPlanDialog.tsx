@@ -6,7 +6,7 @@ import {
   validateUtilityPlanForm,
 } from "@/shared/lib/utility-plan-form";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
+import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useCreateUtilityPlanMutation } from "@/shared/store/utilityPlansApi";
 import type { UtilityPlanDraft } from "@/shared/types/utility/utility-plan-draft";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";

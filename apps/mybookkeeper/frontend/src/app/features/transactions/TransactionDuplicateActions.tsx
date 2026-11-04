@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Copy, Check, XCircle } from "lucide-react";
 import { formatDate } from "@/shared/utils/date";
-import type { DuplicateTransaction } from "@/shared/types/transaction/duplicate";
+import type { DuplicateTransaction } from "@mybookkeeper/api-client/types/transaction/DuplicateTransaction";
 
 export interface TransactionDuplicateActionsProps {
   transactionId: string;

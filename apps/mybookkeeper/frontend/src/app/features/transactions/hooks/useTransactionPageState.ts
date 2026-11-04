@@ -10,18 +10,19 @@ import {
   useKeepDuplicateMutation,
   useDismissDuplicateMutation,
   useMergeDuplicatesMutation,
-} from "@/shared/store/transactionsApi";
-import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
-import type { Property } from "@/shared/types/property/property";
+} from "@mybookkeeper/api-client/store/transactionsApi";
+import type { TransactionListParams } from "@mybookkeeper/api-client/types/transaction/TransactionListParams";
+import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
+import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import { useToast } from "@/shared/hooks/useToast";
 import { EMPTY_FILTERS } from "@/shared/lib/transaction-config";
 import { downloadFile } from "@/shared/utils/download";
 import { formatTag } from "@/shared/utils/tag";
-import type { Transaction } from "@/shared/types/transaction/transaction";
-import type { TransactionListParams } from "@/shared/store/transactionsApi";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { Tab } from "@/shared/types/transaction/transaction-tab";
 import type { Filters } from "@/shared/types/transaction/transaction-filters";
-import type { DuplicatePair, MergeFieldSide } from "@/shared/types/transaction/duplicate";
+import type { DuplicatePair } from "@mybookkeeper/api-client/types/transaction/DuplicatePair";
+import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
 
 export interface TransactionPageState {
   // Tab

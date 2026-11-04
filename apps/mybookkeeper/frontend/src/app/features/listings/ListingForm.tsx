@@ -20,7 +20,7 @@ import type { ListingCreateRequest } from "@/shared/types/listing/listing-create
 import type { ListingFormValues } from "@/shared/types/listing/listing-form-values";
 import type { ListingResponse } from "@/shared/types/listing/listing-response";
 import type { ListingUpdateRequest } from "@/shared/types/listing/listing-update-request";
-import type { Property } from "@/shared/types/property/property";
+import type { Property } from "@mybookkeeper/api-client/types/property/property";
 
 export interface ListingFormProps {
   listing?: ListingResponse;
