@@ -19,6 +19,8 @@ class AuthEventType:
     TOTP_RECOVERY_USED = "totp.recovery.used"
     OAUTH_CONNECT = "oauth.connect"
     OAUTH_DISCONNECT = "oauth.disconnect"
+    REFRESH_TOKEN_REPLAYED = "refresh_token.replayed"
+    DEVICE_SIGNED_OUT = "device.signed_out"
     ACCOUNT_DELETED = "account.deleted"
     DATA_EXPORTED = "data.exported"
     # Strict superuser-gate evaluations. Every gate hit emits one of these,

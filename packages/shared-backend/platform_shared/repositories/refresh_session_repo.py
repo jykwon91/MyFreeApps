@@ -71,5 +71,22 @@ async def delete_expired_for_user(
         )
     )
 
+async def delete_all_but_newest(
+    db: AsyncSession, session_model: type[Any], user_id: uuid.UUID, *, keep: int,
+) -> None:
+    surplus = (
+        select(session_model.id)
+        .where(session_model.user_id == user_id)
+        .order_by(session_model.last_used_at.desc())
+        .offset(keep)
+    )
+    await db.execute(delete(session_model).where(session_model.id.in_(surplus)))
 
-__all__ = ["delete_expired_for_user", "delete_owned", "delete_session", "list_for_user", "lock_by_id"]
+
+async def delete_by_id(db: AsyncSession, session_model: type[Any], session_id: uuid.UUID) -> None:
+    await db.execute(delete(session_model).where(session_model.id == session_id))
+
+
+__all__ = ["delete_all_but_newest",
+    "delete_by_id",
+    "delete_expired_for_user", "delete_owned", "delete_session", "list_for_user", "lock_by_id"]

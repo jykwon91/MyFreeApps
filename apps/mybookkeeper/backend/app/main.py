@@ -36,7 +36,7 @@ from app.db.session import AsyncSessionLocal
 from app.schemas.user.user import UserRead, UserCreate, UserUpdate
 from app.services.storage.bucket_initializer import ensure_bucket
 from app.workers.upload_processor_worker import main as worker_main
-from app.api import account, activities, analytics, applicants, attribution, blackouts, booking_statements, calendar, classification_rules, costs, db_admin, demo, documents, frontend_errors, inquiries, insurance_benchmarks, insurance_market, insurance_policies, lease_templates, listings, market_rate_benchmarks, mortgage_market, mortgages, properties, public_inquiries, public_welcome_manuals, rent_ledger, rent_receipts, rent_reminders, reply_templates, signed_leases, tenants, summary, integrations, audit, prompts, admin, organizations, transactions, reconciliation, screening, tax_completeness, tax_documents, tax_profile, tax_returns, tax_year_profiles, vendors, exports, imports, health_dashboard, totp, taxpayer_profiles, utility_plans, welcome_manual_places, welcome_manual_rooms, welcome_manuals
+from app.api import account, activities, admin, analytics, applicants, attribution, audit, blackouts, booking_statements, calendar, classification_rules, costs, db_admin, demo, documents, exports, frontend_errors, health_dashboard, imports, inquiries, insurance_benchmarks, insurance_market, insurance_policies, integrations, lease_templates, listings, market_rate_benchmarks, mobile_auth, mortgage_market, mortgages, organizations, prompts, properties, public_inquiries, public_welcome_manuals, reconciliation, rent_ledger, rent_receipts, rent_reminders, reply_templates, screening, signed_leases, summary, tax_completeness, tax_documents, tax_profile, tax_returns, tax_year_profiles, taxpayer_profiles, tenants, totp, transactions, utility_plans, vendors, welcome_manual_places, welcome_manual_rooms, welcome_manuals
 
 logging.basicConfig(
     level=logging.INFO,
@@ -287,6 +287,7 @@ app.include_router(costs.router)
 app.include_router(health_dashboard.router)
 app.include_router(frontend_errors.router)
 app.include_router(totp.router)
+app.include_router(mobile_auth.router)
 app.include_router(taxpayer_profiles.router)
 app.include_router(demo.router)
 app.include_router(analytics.router)

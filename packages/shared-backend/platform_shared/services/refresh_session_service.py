@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.auth.refresh_token import (
@@ -25,12 +26,15 @@ from platform_shared.auth.refresh_token import (
     refresh_secret_matches,
 )
 from platform_shared.auth.refreshed_session import RefreshedSession
+from platform_shared.core.auth_events import AuthEventType
 from platform_shared.core.refresh_session_limits import (
     REFRESH_SESSION_ABSOLUTE_SECONDS,
     REFRESH_SESSION_IDLE_SECONDS,
+    REFRESH_SESSION_MAX_PER_USER,
     REFRESH_SESSION_PREVIOUS_SECRET_SECONDS,
 )
 from platform_shared.repositories import refresh_session_repo, user_repo
+from platform_shared.services.auth_event_service import log_auth_event
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +51,7 @@ class RefreshSessionService:
     idle_seconds: int = REFRESH_SESSION_IDLE_SECONDS
     absolute_seconds: int = REFRESH_SESSION_ABSOLUTE_SECONDS
     previous_secret_seconds: int = REFRESH_SESSION_PREVIOUS_SECRET_SECONDS
+    max_per_user: int = REFRESH_SESSION_MAX_PER_USER
 
     def __post_init__(self) -> None:
         if not self.signing_key:
@@ -67,9 +72,9 @@ class RefreshSessionService:
         return cutoff is None or session.created_at >= cutoff
 
     async def issue(
-        self, db: AsyncSession, user: Any, *, auth_time: datetime, device_name: str | None = None,
+        self, db: AsyncSession, user: Any, *, device_name: str | None = None,
     ) -> RefreshedSession:
-        """Start a session after a login. ``auth_time`` is when that login happened."""
+        """Start a session for a login that just succeeded."""
         now = _now()
         await refresh_session_repo.delete_expired_for_user(
             db,
@@ -78,6 +83,9 @@ class RefreshSessionService:
             now=now,
             last_used_before=now - timedelta(seconds=self.idle_seconds),
         )
+        await refresh_session_repo.delete_all_but_newest(
+            db, self.session_model, user.id, keep=self.max_per_user - 1,
+        )
         session_id = uuid.uuid4()
         secret = generate_refresh_secret()
         session = self.session_model(
@@ -85,7 +93,7 @@ class RefreshSessionService:
             user_id=user.id,
             current_secret_hash=hash_refresh_secret(secret),
             device_name=device_name,
-            auth_time=auth_time,
+            auth_time=now,
             created_at=now,
             last_used_at=now,
             expires_at=now + timedelta(seconds=self.absolute_seconds),
@@ -95,7 +103,20 @@ class RefreshSessionService:
             user=user, session=session, refresh_token=format_refresh_token(session_id, secret, self.signing_key),
         )
 
-    async def rotate(self, db: AsyncSession, token: str) -> RefreshedSession | None:
+    def session_id_of(self, token: str) -> uuid.UUID | None:
+        """The session a token this server issued belongs to, otherwise None."""
+        parsed = parse_refresh_token(token, self.signing_key)
+        return None if parsed is None else parsed[0]
+
+    async def end(self, db: AsyncSession, token: str) -> None:
+        """Sign out the device holding this token. Doing it twice is fine."""
+        session_id = self.session_id_of(token)
+        if session_id is not None:
+            await refresh_session_repo.delete_by_id(db, self.session_model, session_id)
+
+    async def rotate(
+        self, db: AsyncSession, token: str, *, request: Request | None = None,
+    ) -> RefreshedSession | None:
         """Swap a refresh token for a new one, or None if it can't be used.
 
         - A token this server didn't sign changes nothing, so knowing a session id
@@ -128,6 +149,14 @@ class RefreshSessionService:
                 "Refresh session ended, replaced token presented: session_id=%s user_id=%s",
                 session.id,
                 session.user_id,
+            )
+            await log_auth_event(
+                db,
+                event_type=AuthEventType.REFRESH_TOKEN_REPLAYED,
+                user_id=session.user_id,
+                request=request,
+                succeeded=False,
+                metadata={"session_id": str(session.id)},
             )
             await refresh_session_repo.delete_session(db, session)
             return None
