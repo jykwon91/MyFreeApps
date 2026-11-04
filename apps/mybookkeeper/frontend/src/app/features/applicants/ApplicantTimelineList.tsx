@@ -4,10 +4,9 @@ import {
   formatAbsoluteTime,
   formatRelativeTime,
 } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { APPLICANT_STAGE_LABELS } from "@mybookkeeper/api-client/constants/applicantLabels";
+import { applicantEventLabel } from "@mybookkeeper/api-client/utils/applicantEvents";
 import type { ApplicantEvent } from "@mybookkeeper/api-client/types/applicant/applicant-event";
 import type { ApplicantEventActor } from "@mybookkeeper/api-client/types/applicant/applicant-event-actor";
-import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 
 const ACTOR_ICONS: Record<ApplicantEventActor, typeof User> = {
   host: User,
@@ -21,19 +20,6 @@ const ACTOR_LABELS: Record<ApplicantEventActor, string> = {
   applicant: "Applicant",
 };
 
-const NON_STAGE_EVENT_LABELS: Record<string, string> = {
-  note_added: "Note added",
-  screening_initiated: "Screening initiated",
-  screening_completed: "Screening completed",
-  reference_contacted: "Reference contacted",
-  stage_changed: "Stage changed",
-  contract_dates_changed: "Contract dates changed",
-  tenancy_ended: "Tenancy ended",
-  tenancy_restarted: "Tenancy restarted",
-  tenancy_extended: "Lease extended",
-  extension_undone: "Extension undone",
-};
-
 export interface ApplicantTimelineListProps {
   events: ApplicantEvent[];
   /**
@@ -41,16 +27,6 @@ export interface ApplicantTimelineListProps {
    * timeline is reference data, not the primary task.
    */
   defaultOpen?: boolean;
-}
-
-function formatEventType(eventType: string): string {
-  if (eventType in APPLICANT_STAGE_LABELS) {
-    return `Moved to ${APPLICANT_STAGE_LABELS[eventType as ApplicantStage]}`;
-  }
-  if (eventType in NON_STAGE_EVENT_LABELS) {
-    return NON_STAGE_EVENT_LABELS[eventType];
-  }
-  return eventType.charAt(0).toUpperCase() + eventType.slice(1);
 }
 
 /**
@@ -87,7 +63,7 @@ export default function ApplicantTimelineList({ events, defaultOpen = false }: A
                 <div className="min-w-0 flex-1">
                   <p className="text-sm">
                     <span className="font-medium">{ACTOR_LABELS[evt.actor]}</span>{" "}
-                    <span className="text-muted-foreground">— {formatEventType(evt.event_type)}</span>
+                    <span className="text-muted-foreground">— {applicantEventLabel(evt.event_type)}</span>
                   </p>
                   {evt.notes ? (
                     <p className="text-xs text-muted-foreground mt-0.5">{evt.notes}</p>

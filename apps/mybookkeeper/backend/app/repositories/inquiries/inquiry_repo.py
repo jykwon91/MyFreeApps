@@ -311,7 +311,7 @@ async def list_with_last_message(
         stmt = stmt.where(Inquiry.spam_status == spam_status)
     if inbox_only:
         stmt = stmt.where(Inquiry.spam_status.not_in(INQUIRY_SPAM_STATUSES_OUTSIDE_INBOX))
-    stmt = stmt.order_by(desc(Inquiry.received_at)).limit(limit).offset(offset)
+    stmt = stmt.order_by(desc(Inquiry.received_at), desc(Inquiry.id)).limit(limit).offset(offset)
 
     result = await db.execute(stmt)
     rows = result.all()

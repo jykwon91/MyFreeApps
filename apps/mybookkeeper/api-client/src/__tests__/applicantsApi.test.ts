@@ -44,6 +44,11 @@ describe("applicantsApi", () => {
     expect(sent[0].params).toEqual({ stage: "approved", limit: 25, offset: 50 });
   });
 
+  it("asks for one page at a time", async () => {
+    await makeStore().dispatch(endpoints.listApplicantPages.initiate({ stage: "approved" }));
+    expect(sent[0].params).toEqual({ stage: "approved", limit: 25, offset: 0 });
+  });
+
   it("promotes an inquiry", async () => {
     await makeStore().dispatch(endpoints.promoteFromInquiry.initiate({ inquiryId: "i1", data: {} }));
     expect(sent[0].method).toBe("post");

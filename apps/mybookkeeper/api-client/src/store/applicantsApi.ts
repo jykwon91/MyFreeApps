@@ -1,7 +1,9 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { APPLICANT_PAGE_SIZE } from "../constants/applicantLabels";
 import type { ApplicantDetailResponse } from "../types/applicant/applicant-detail-response";
 import type { ApplicantListArgs } from "../types/applicant/applicant-list-args";
 import type { ApplicantListResponse } from "../types/applicant/applicant-list-response";
+import type { ApplicantPageArgs } from "../types/applicant/applicant-page-args";
 import type { ApplicantPromoteRequest } from "../types/applicant/applicant-promote-request";
 import type { ApplicantUpdateRequest } from "../types/applicant/applicant-update-request";
 import type { StageTransitionRequest } from "../types/applicant/stage-transition-request";
@@ -46,6 +48,21 @@ const applicantsApi = baseApi.enhanceEndpoints({
               { type: "Applicant" as const, id: "LIST" },
             ]
           : [{ type: "Applicant" as const, id: "LIST" }],
+    }),
+    listApplicantPages: builder.infiniteQuery<ApplicantListResponse, ApplicantPageArgs, number>({
+      infiniteQueryOptions: {
+        initialPageParam: 0,
+        getNextPageParam: (lastPage, _allPages, lastOffset) =>
+          lastPage.has_more ? lastOffset + APPLICANT_PAGE_SIZE : undefined,
+      },
+      query: ({ queryArg, pageParam }) => ({
+        url: "/applicants",
+        params: { ...queryArg, limit: APPLICANT_PAGE_SIZE, offset: pageParam },
+      }),
+      providesTags: (result) => [
+        ...(result?.pages.flatMap((page) => page.items).map((applicant) => ({ type: "Applicant" as const, id: applicant.id })) ?? []),
+        { type: "Applicant" as const, id: "LIST" },
+      ],
     }),
     getApplicantById: builder.query<ApplicantDetailResponse, string>({
       query: (id) => ({ url: `/applicants/${id}` }),
@@ -149,6 +166,7 @@ const applicantsApi = baseApi.enhanceEndpoints({
 
 export const {
   useGetApplicantsQuery,
+  useListApplicantPagesInfiniteQuery,
   useGetApplicantByIdQuery,
   usePromoteFromInquiryMutation,
   useTransitionApplicantStageMutation,

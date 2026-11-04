@@ -400,6 +400,28 @@ class TestListWithLastMessage:
         assert [r.inquirer_name for r in results] == ["NEW", "MID", "OLD"]
 
 
+class TestListWithLastMessagePaging:
+    @pytest.mark.asyncio
+    async def test_pages_stay_stable_when_received_at_ties(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        received_at = _dt.datetime(2026, 1, 1, tzinfo=_dt.timezone.utc)
+        inquiries = [
+            _make_inquiry(organization_id=test_org.id, user_id=test_user.id, received_at=received_at)
+            for _ in range(5)
+        ]
+        db.add_all(inquiries)
+        await db.commit()
+
+        pages = [
+            await inquiry_repo.list_with_last_message(db, test_org.id, limit=2, offset=offset)
+            for offset in (0, 2, 4)
+        ]
+
+        listed = [row.id for page in pages for row in page]
+        assert listed == sorted((row.id for row in inquiries), reverse=True)
+
+
 class TestInquiryDedupHelpers:
     """The PR 2.2 reconciler relies on these — they MUST scope by tenant
     or else two orgs forwarding the same FF email would collide in dedup."""

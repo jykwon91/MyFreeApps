@@ -7,7 +7,6 @@ import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { WEB_BASE_URL } from "../../constants/api";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import type { InquiryMoreAction } from "../../types/InquiryMoreAction";
 import TransactionFact from "../transactions/TransactionFact";
@@ -24,7 +23,6 @@ import InquiryNotes from "./InquiryNotes";
 import InquirySection from "./InquirySection";
 import { useInquiryActions } from "./useInquiryActions";
 import { useHasReplyDraft } from "./useHasReplyDraft";
-import { useOpenLink } from "./useOpenLink";
 
 export default function InquiryDetailScreen({ id }: { id: string }) {
   const { colors, spacing, fontSize } = useTheme();
@@ -35,7 +33,6 @@ export default function InquiryDetailScreen({ id }: { id: string }) {
   const actions = useInquiryActions(id);
   const [openSheet, setOpenSheet] = useState<"stage" | "more" | null>(null);
   const { refresh, refreshControl } = useRefresh(refetch, error);
-  const openLink = useOpenLink();
   const hasDraft = useHasReplyDraft(id);
   // iOS drops an Alert raised while a sheet is still closing, so More's choice waits for it to go.
   const chosenAction = useRef<InquiryMoreAction | null>(null);
@@ -129,8 +126,8 @@ export default function InquiryDetailScreen({ id }: { id: string }) {
         {inquiry.linked_applicant_id ? (
           <View style={{ gap: spacing.xs }}>
             <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>Promoted to an applicant</Text>
-            <LoadingButton onPress={() => void openLink(`${WEB_BASE_URL}/applicants/${inquiry.linked_applicant_id}`)} variant="ghost">
-              Open on the website
+            <LoadingButton onPress={() => router.push(`/applicants/${inquiry.linked_applicant_id}`)} variant="ghost">
+              Open applicant
             </LoadingButton>
           </View>
         ) : null}

@@ -1,14 +1,15 @@
 import { INQUIRY_STAGES } from "@mybookkeeper/api-client/constants/inquiryLabels";
 import { useListInquiryPagesInfiniteQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
-import type { InquirySummary } from "@mybookkeeper/api-client/types/inquiry/inquiry-summary";
 import { Banner, EmptyState, LoadingButton, OptionSheet, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
 import { ALL_STAGES_OPTION, INQUIRY_EMPTY_WORDS, INQUIRY_VIEWS } from "../../constants/inquiries";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
+import { uniqueById } from "../../lib/uniqueById";
 import type { InquiryView } from "../../types/InquiryView";
+import LoadMoreFailed from "../shell/LoadMoreFailed";
 import InquiriesSkeleton, { InquirySkeletonRow } from "./InquiriesSkeleton";
 import { stageLabel } from "./inquiryDisplay";
 import { toPageArgs } from "./inquiryFilters";
@@ -44,18 +45,7 @@ export default function InquiriesScreen({
     await refetch();
   }, error);
 
-  // A new inquiry arriving between pages moves the rest down, so a row can come back twice.
-  const rows = useMemo(() => {
-    const seen = new Set<string>();
-    const unique: InquirySummary[] = [];
-    for (const inquiry of currentData?.pages.flatMap((page) => page.items) ?? []) {
-      if (!seen.has(inquiry.id)) {
-        seen.add(inquiry.id);
-        unique.push(inquiry);
-      }
-    }
-    return unique;
-  }, [currentData]);
+  const rows = useMemo(() => uniqueById(currentData?.pages.flatMap((page) => page.items) ?? []), [currentData]);
 
   async function loadMore(): Promise<void> {
     const result = await fetchNextPage();
@@ -75,12 +65,7 @@ export default function InquiriesScreen({
   const footer = isFetchingNextPage ? (
     <InquirySkeletonRow />
   ) : loadMoreFailed ? (
-    <View style={{ gap: spacing.sm, padding: spacing.lg }}>
-      <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>I couldn't load more.</Text>
-      <LoadingButton onPress={loadMore} variant="secondary">
-        Try again
-      </LoadingButton>
-    </View>
+    <LoadMoreFailed onRetry={() => void loadMore()} />
   ) : undefined;
 
   return (
