@@ -18,6 +18,7 @@ from platform_shared.auth.refresh_token import (
     hash_refresh_secret,
     parse_refresh_token,
 )
+from platform_shared.core.refresh_session_limits import REFRESH_SESSION_PREVIOUS_SECRET_SECONDS
 from platform_shared.repositories.refresh_session_repo import _locked_select
 from platform_shared.services.refresh_session_service import RefreshSessionService
 
@@ -213,6 +214,81 @@ async def test_a_retry_after_a_lost_response_ends_nothing() -> None:
 
 
 @pytest.mark.asyncio
+async def test_the_grace_period_starts_at_the_refresh_and_retries_dont_extend_it() -> None:
+    device = _Device()
+    first = await device.sign_in()
+    before = datetime.now(timezone.utc)
+    await device.refresh(first)
+    valid_until = device.row.previous_valid_until
+    assert valid_until - before == pytest.approx(
+        timedelta(seconds=REFRESH_SESSION_PREVIOUS_SECRET_SECONDS), abs=timedelta(seconds=5),
+    )
+    await device.refresh(first)
+    assert device.row.previous_valid_until == valid_until
+
+
+@pytest.mark.asyncio
+async def test_a_thief_who_refreshed_first_is_shut_out_when_the_owner_retries() -> None:
+    device = _Device()
+    stolen = await device.sign_in()
+    thiefs_token = await device.refresh(stolen)
+    assert await device.refresh(stolen) is not None
+    device.db.delete.assert_not_awaited()
+
+    assert await device.refresh(thiefs_token) is None
+    device.db.delete.assert_awaited_once_with(device.row)
+
+
+@pytest.mark.asyncio
+async def test_a_replaced_token_ends_a_session_that_is_already_unusable() -> None:
+    device = _Device(_user(is_active=False))
+    first = await device.sign_in()
+    device.user.is_active = True
+    second = await device.refresh(first)
+    await device.refresh(second)
+    device.user.is_active = False
+
+    assert await device.refresh(first) is None
+    device.db.delete.assert_awaited_once_with(device.row)
+
+
+@pytest.mark.asyncio
+async def test_a_valid_token_on_an_unusable_session_changes_nothing() -> None:
+    device = _Device(_user(is_active=False))
+    token = await device.sign_in()
+    before = device.row.current_secret_hash
+
+    assert await device.refresh(token) is None
+    assert device.row.current_secret_hash == before
+    device.db.delete.assert_not_awaited()
+
+
+def test_a_service_needs_a_signing_key() -> None:
+    with pytest.raises(ValueError):
+        RefreshSessionService(session_model=_Session, user_model=_User, signing_key="")
+
+
+def test_token_parsing_refuses_anything_but_what_was_issued() -> None:
+    session_id = uuid.uuid4()
+    token = format_refresh_token(session_id, "secret", _KEY)
+    assert parse_refresh_token(token, _KEY) == (session_id, "secret")
+    head, secret, signature = token.split(".")
+    for bad in (
+        f"{token}.extra",
+        f"{head}.{secret}.{signature[:-1]}x",
+        f"{head}.other.{signature}",
+        f"{uuid.uuid4()}.{secret}.{signature}",
+        f"{head}.\ud800.{signature}",
+        f"{head}.{secret}.\ud800",
+        f"{head}.{secret}.caf\u00e9",
+        f"{{{head}}}.{secret}.{signature}",
+        f"{head.upper()}.{secret}.{signature}",
+        "",
+    ):
+        assert parse_refresh_token(bad, _KEY) is None, bad
+
+
+@pytest.mark.asyncio
 async def test_refreshing_keeps_the_original_login_time() -> None:
     device = _Device()
     await device.refresh(await device.sign_in())
@@ -225,6 +301,7 @@ async def test_a_malformed_token_is_refused(token: str) -> None:
     device = _Device()
     await device.sign_in()
     assert await device.refresh(token) is None
+    device.db.delete.assert_not_awaited()
 
 
 @pytest.mark.asyncio

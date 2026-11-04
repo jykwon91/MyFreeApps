@@ -48,11 +48,16 @@ class RefreshSessionService:
     absolute_seconds: int = REFRESH_SESSION_ABSOLUTE_SECONDS
     previous_secret_seconds: int = REFRESH_SESSION_PREVIOUS_SECRET_SECONDS
 
+    def __post_init__(self) -> None:
+        if not self.signing_key:
+            raise ValueError("RefreshSessionService needs a signing key")
+
     def _is_usable(self, session: Any, user: Any, now: datetime) -> bool:
         """Expired, idle, disabled, or from before the user's session cutoff: not usable.
 
-        The cutoff is the revocation: every path that ends a user's sessions already
-        sets it, so a password change can't miss a device.
+        The cutoff is the revocation: a password change sets it, so it can't miss a
+        device. Disabling a user only pauses their sessions: within the limits, they
+        work again if the user is re-enabled.
         """
         if not user.is_active or now >= session.expires_at:
             return False

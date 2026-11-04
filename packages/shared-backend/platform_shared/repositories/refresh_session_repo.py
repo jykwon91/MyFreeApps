@@ -11,7 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 def _locked_select(session_model: type[Any], session_id: uuid.UUID) -> Any:
-    return select(session_model).where(session_model.id == session_id).with_for_update()
+    return (
+        select(session_model)
+        .where(session_model.id == session_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
 
 
 async def lock_by_id(

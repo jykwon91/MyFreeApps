@@ -68,6 +68,22 @@ async def test_presenting_a_replaced_secret_deletes_the_session(db: AsyncSession
 
 
 @pytest.mark.asyncio
+async def test_a_token_only_touches_its_own_session(db: AsyncSession, new_user) -> None:
+    user = await new_user()
+    now = datetime.now(timezone.utc)
+    phone = await _SERVICE.issue(db, user, auth_time=now, device_name="Phone")
+    tablet = await _SERVICE.issue(db, user, auth_time=now, device_name="Tablet")
+    await db.flush()
+    tablet_hash = tablet.session.current_secret_hash
+
+    rotated = await _SERVICE.rotate(db, phone.refresh_token)
+    await db.flush()
+
+    assert rotated.session.id == phone.session.id
+    assert tablet.session.current_secret_hash == tablet_hash
+
+
+@pytest.mark.asyncio
 async def test_only_the_owner_can_revoke_a_session(db: AsyncSession, new_user) -> None:
     owner = await new_user()
     other = await new_user()

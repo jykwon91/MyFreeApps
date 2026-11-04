@@ -48,9 +48,13 @@ def parse_refresh_token(token: str, signing_key: str) -> tuple[uuid.UUID, str] |
     raw_session_id, secret, signature = parts
     try:
         session_id = uuid.UUID(raw_session_id)
-    except ValueError:
-        return None
-    if not hmac.compare_digest(signature.encode(), _signature(session_id, secret, signing_key).encode()):
+        expected = _signature(session_id, secret, signing_key)
+        # One spelling per token, so a token is a stable thing to rate limit or log.
+        if str(session_id) != raw_session_id:
+            return None
+        if not hmac.compare_digest(signature.encode(), expected.encode()):
+            return None
+    except (ValueError, UnicodeError):
         return None
     return session_id, secret
 
