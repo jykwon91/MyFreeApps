@@ -1,10 +1,10 @@
 import { Banner, EmptyState, SearchField, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
-import { FlatList, Linking, Text, View } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
+import { FlatList, Text, View } from "react-native";
 import { STILL_READING_MESSAGE } from "../../constants/documents";
 import { DOCUMENT_FILTERS, type DocumentFilter } from "../../constants/documentFilters";
+import UploadStatus from "../capture/UploadStatus";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { documentName, needsALook } from "./documentDisplay";
 import DocumentRow from "./DocumentRow";
@@ -27,23 +27,35 @@ export default function DocumentsScreen() {
       .filter((document) => !term || documentName(document).toLowerCase().includes(term));
   }, [data, filter, search]);
 
+  const uploadStatus = (
+    <View style={{ padding: spacing.lg }}>
+      <UploadStatus />
+    </View>
+  );
+
   if (isLoading) return <DocumentsSkeleton />;
   if (error && !data) {
     return (
-      <EmptyState
-        action={{ label: "Try again", onPress: refresh }}
-        body="Want me to try again?"
-        heading="I couldn't load your documents."
-      />
+      <View style={{ flex: 1 }}>
+        {uploadStatus}
+        <EmptyState
+          action={{ label: "Try again", onPress: refresh }}
+          body="Want me to try again?"
+          heading="I couldn't load your documents."
+        />
+      </View>
     );
   }
   if (data?.length === 0) {
     return (
-      <EmptyState
-        action={canWrite ? { label: "Open the website", onPress: () => Linking.openURL(`${WEB_BASE_URL}/documents`) } : undefined}
-        body={canWrite ? "Upload a receipt or invoice on the website and I'll read it for you." : "They'll show up here once someone adds one."}
+      <View style={{ flex: 1 }}>
+        {uploadStatus}
+        <EmptyState
+        action={canWrite ? { label: "Take a photo", onPress: () => router.push("/camera") } : undefined}
+        body={canWrite ? "Snap a receipt or invoice and I'll read it for you." : "They'll show up here once someone adds one."}
         heading="No documents yet"
-      />
+        />
+      </View>
     );
   }
 
@@ -56,6 +68,7 @@ export default function DocumentsScreen() {
       }
       ListHeaderComponent={
         <View style={{ gap: spacing.md, padding: spacing.lg }}>
+          <UploadStatus />
           {error ? <Banner message="You're offline, or I can't reach the server. This is what I last loaded." /> : null}
           {gaveUp ? (
             <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>

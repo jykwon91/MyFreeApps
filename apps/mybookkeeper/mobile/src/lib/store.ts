@@ -3,6 +3,8 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { assertSecureApiUrl, onAccountLeft, resetCacheOnAccountChange } from "@platform/mobile";
 import { configureStore } from "@reduxjs/toolkit";
 import { API_BASE_URL } from "../constants/api";
+import { clearUploadQueue } from "../features/capture/uploadQueueFiles";
+import uploads, { uploadStatusDismissed } from "../features/capture/uploadsSlice";
 import { clearDocumentFiles } from "../features/documents/openDocumentFile";
 import workspace, { workspaceChosen } from "../features/workspace/workspaceSlice";
 import { session } from "./session";
@@ -21,7 +23,7 @@ configurePlatform({
 
 export function makeStore() {
   return configureStore({
-    reducer: { [baseApi.reducerPath]: baseApi.reducer, workspace },
+    reducer: { [baseApi.reducerPath]: baseApi.reducer, uploads, workspace },
     middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(baseApi.middleware),
   });
 }
@@ -31,9 +33,16 @@ export const store = makeStore();
 // In this order: a reset makes a mounted gate request again, and that request must not carry the old workspace.
 onAccountLeft(session, () => {
   store.dispatch(workspaceChosen(null));
-  clearDocumentFiles();
+  store.dispatch(uploadStatusDismissed());
+  // Whatever the first does, the second still has to run: these are someone's records.
+  try {
+    clearDocumentFiles();
+  } finally {
+    clearUploadQueue();
+  }
 });
 resetCacheOnAccountChange(session, () => store.dispatch(baseApi.util.resetApiState()));
 
 export type AppStore = ReturnType<typeof makeStore>;
 export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
