@@ -14,6 +14,12 @@ Send-then-persist ordering rationale:
     can be alerted, but this is preferable to "DB record exists for a
     message that was never sent" — the latter is a worse trust violation.
 
+Disclosure rule (RENTALS_PLAN.md §9.3):
+    The inquirer must hear about pets on the premises before anything else,
+    whether the host used a template, wrote their own reply or edited the
+    disclosure out. It's added here, at the last step every reply passes
+    through, unless this reply or an earlier one already says it.
+
 Stage transition rule (per the plan):
     The reply advances the inquiry from 'new' or 'triaged' to 'replied'.
     Later stages (screening_requested, video_call_scheduled, approved,
@@ -33,6 +39,7 @@ from app.repositories import (
     inquiry_repo,
     integration_repo,
 )
+from app.repositories.listings import listing_repo
 from app.repositories.user import user_repo
 from app.schemas.inquiries.inquiry_message_response import InquiryMessageResponse
 from app.schemas.inquiries.inquiry_reply_request import InquiryReplyRequest
@@ -40,6 +47,7 @@ from app.services.email import gmail_service
 from app.services.email.app_sent_email_service import record_app_sent_email
 from app.services.email.constants import APP_SENT_INQUIRY_REPLY_FILTER_REASON
 from app.services.email.exceptions import GmailReauthRequiredError, GmailSendError, GmailSendScopeError
+from app.services.inquiries import reply_template_renderer
 from app.services.integrations import integration_service
 
 logger = logging.getLogger(__name__)
@@ -113,6 +121,26 @@ async def send_reply(
         from_address = user.email
         original_email_message_id = inquiry.email_message_id
 
+        body = request.body
+        if inquiry.listing_id is not None:
+            listing = await listing_repo.get_by_id(db, inquiry.listing_id, organization_id)
+            disclosure = (
+                reply_template_renderer.applicable_disclosure(
+                    bool(listing.pets_on_premises), listing.large_dog_disclosure,
+                )
+                if listing is not None
+                else None
+            )
+            if disclosure:
+                earlier_messages = await inquiry_message_repo.list_by_inquiry(db, inquiry_id)
+                already_told = any(
+                    message.direction == "outbound"
+                    and reply_template_renderer.contains_disclosure(disclosure, message.parsed_body or "")
+                    for message in earlier_messages
+                )
+                if not already_told and not reply_template_renderer.contains_disclosure(disclosure, body):
+                    body = reply_template_renderer.prepend_disclosure(disclosure, body)
+
     # ----- Phase 2: send via Gmail (network call, no DB) -----
     try:
         sent_message_id = await gmail_service.send_message(
@@ -120,7 +148,7 @@ async def send_reply(
             from_address=from_address,
             to_address=to_address,
             subject=request.subject,
-            body=request.body,
+            body=body,
             in_reply_to_message_id=original_email_message_id,
         )
     except GmailReauthRequiredError as exc:
@@ -156,7 +184,7 @@ async def send_reply(
             from_address=from_address,
             to_address=to_address,
             subject=request.subject,
-            parsed_body=request.body,
+            parsed_body=body,
             email_message_id=sent_message_id,
             sent_at=now,
         )

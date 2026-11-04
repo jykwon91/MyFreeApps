@@ -150,12 +150,27 @@ def render_template(
     rendered_subject = _substitute(template_subject, substitutions)
     rendered_body = _substitute(template_body, substitutions)
 
-    if listing_pets_on_premises and listing_large_dog_disclosure:
-        disclosure = listing_large_dog_disclosure.strip()
-        if disclosure:
-            rendered_body = f"{disclosure}\n\n{rendered_body}"
+    disclosure = applicable_disclosure(listing_pets_on_premises, listing_large_dog_disclosure)
+    if disclosure:
+        rendered_body = prepend_disclosure(disclosure, rendered_body)
 
     return rendered_subject, rendered_body
+
+
+def applicable_disclosure(pets_on_premises: bool, large_dog_disclosure: str | None) -> str | None:
+    """The disclosure an inquirer must be told about, if this listing has one."""
+    if not pets_on_premises or not large_dog_disclosure:
+        return None
+    return large_dog_disclosure.strip() or None
+
+
+def prepend_disclosure(disclosure: str, body: str) -> str:
+    return f"{disclosure}\n\n{body}"
+
+
+def contains_disclosure(disclosure: str, text: str) -> bool:
+    """Whether ``text`` already says it, ignoring how line breaks or spacing changed in transit."""
+    return " ".join(disclosure.split()) in " ".join(text.split())
 
 
 __all__ = ["render_template", "REPLY_TEMPLATE_VARIABLES"]
