@@ -41,7 +41,7 @@ function tagsAfterTermChange(
  * shared ``SignedLease:LIST``. Generate / upload / delete attachment all
  * invalidate the parent lease tag.
  */
-const signedLeasesApi = baseApi.enhanceEndpoints({
+export const signedLeasesApi = baseApi.enhanceEndpoints({
   addTagTypes: ["SignedLease", "Applicant"],
 }).injectEndpoints({
   endpoints: (builder) => ({

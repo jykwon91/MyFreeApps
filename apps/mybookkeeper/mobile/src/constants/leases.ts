@@ -82,6 +82,19 @@ export const LEASE_MESSAGES = {
   undoNotLatest: "A newer extension was added. Open the lease again to undo the latest one.",
   undoAlreadyDone: "That extension was already undone.",
   undoFailed: "I couldn't undo the extension. Want to try again?",
+  emailLeaseHint: "Sends the lease files to their email on file",
+  emailLeaseBody: "I'll send the lease files to the email on file. An email can't be unsent.",
+  sendEmail: "Send email",
+  emailing: "Sending…",
+  emailFailed: "I couldn't send that. Want to try again?",
+  emailUnsure: "I can't reach the server, so I'm not sure that went out. Check \"Last emailed\" before trying again.",
+  deleteLease: "Delete lease",
+  deleteLeaseHint: "Asks you to confirm first",
+  deleteLeaseBody: "Their signed copy and all attached files go too. This can't be undone.",
+  deleting: "Deleting…",
+  deleted: "Lease deleted.",
+  deleteFailed: "I couldn't delete this lease. Nothing was changed. Want to try again?",
+  deleteUnsure: "I can't reach the server, so I can't tell if that went through. Trying again is safe.",
 } as const;
 
 /** The rendered original and rent receipts come from the app itself. */
@@ -167,6 +180,34 @@ export function undoBody(from: string, to: string | null): string {
 
 export function undoDone(to: string | null): string {
   return to ? `Extension undone. The lease ends ${to} again.` : "Extension undone.";
+}
+
+export function emailLeaseLabel(name: string | null): string {
+  return `Email lease to ${name ?? "the tenant"}`;
+}
+
+export function emailLeaseTitle(name: string | null): string {
+  return `Email the lease to ${name ?? "the tenant"}?`;
+}
+
+export function emailingLease(name: string | null): string {
+  return `I'm emailing the lease to ${name ?? "the tenant"} now.`;
+}
+
+export function noEmailForLease(name: string | null): string {
+  return `${name ?? "This tenant"} has no email on file, so I can't email them the lease.`;
+}
+
+export function lastEmailed(date: string): string {
+  return `Last emailed ${date}`;
+}
+
+export function deleteLeaseLabel(name: string | null): string {
+  return `Delete lease for ${name ?? "this tenant"}`;
+}
+
+export function deleteLeaseTitle(name: string | null): string {
+  return `Delete this lease for ${name ?? "this tenant"}?`;
 }
 
 export function noLeaseFor(name: string): string {
