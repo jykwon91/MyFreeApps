@@ -23,17 +23,13 @@ class RefreshSessionMixin:
         server_default=text("gen_random_uuid()"),
     )
     current_secret_hash: Mapped[str] = mapped_column(String(64), nullable=False)
-    # The secret replaced by the last refresh, accepted briefly until the client
+    # The secret replaced by the last refresh, accepted for a while until the client
     # proves it received the new one. Without it, a response lost on a bad
     # connection would sign the user out.
     previous_secret_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     previous_valid_until: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
     )
-    # A secret replaced because the previous one was presented again. A client that
-    # really lost it can never present it, so seeing it means two parties hold this
-    # session.
-    abandoned_secret_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     device_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     # When the user last proved who they are. Refreshing never moves it, so a
     # renewed token can't pass the strict gate's recent-login check.

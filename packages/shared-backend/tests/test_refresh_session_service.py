@@ -38,7 +38,8 @@ class _Session(RefreshSessionMixin, _Base):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
 
 
-_SERVICE = RefreshSessionService(session_model=_Session, user_model=_User)
+_KEY = "test-signing-key"
+_SERVICE = RefreshSessionService(session_model=_Session, user_model=_User, signing_key=_KEY)
 
 
 def _user(**overrides: Any) -> SimpleNamespace:
@@ -79,7 +80,7 @@ class _Device:
 async def test_signing_in_stores_only_a_hash_of_the_secret() -> None:
     device = _Device()
     token = await device.sign_in()
-    parsed = parse_refresh_token(token)
+    parsed = parse_refresh_token(token, _KEY)
     assert parsed is not None
     assert parsed[0] == device.row.id
     assert parsed[1] not in (device.row.current_secret_hash, device.row.previous_secret_hash)
@@ -115,12 +116,13 @@ async def test_a_token_stops_working_once_the_client_uses_its_replacement() -> N
 
 
 @pytest.mark.asyncio
-async def test_a_replaced_token_stops_working_after_the_grace_period() -> None:
+async def test_a_replaced_token_ends_the_session_after_the_grace_period() -> None:
     device = _Device()
     first = await device.sign_in()
     assert await device.refresh(first) is not None
     device.row.previous_valid_until = datetime.now(timezone.utc) - timedelta(seconds=1)
     assert await device.refresh(first) is None
+    device.db.delete.assert_awaited_once_with(device.row)
 
 
 @pytest.mark.asyncio
@@ -147,6 +149,61 @@ async def test_detection_survives_the_thief_refreshing_again() -> None:
 
 
 @pytest.mark.asyncio
+async def test_replaying_the_stolen_token_cannot_erase_the_evidence() -> None:
+    device = _Device()
+    stolen = await device.sign_in()
+    owners_token = await device.refresh(stolen)
+    assert await device.refresh(stolen) is not None
+    assert await device.refresh(stolen) is not None
+
+    assert await device.refresh(owners_token) is None
+    device.db.delete.assert_awaited_once_with(device.row)
+
+
+@pytest.mark.asyncio
+async def test_evidence_survives_a_replay_of_a_later_token() -> None:
+    device = _Device()
+    stolen = await device.sign_in()
+    owners_token = await device.refresh(stolen)
+    thiefs_token = await device.refresh(stolen)
+    assert await device.refresh(thiefs_token) is not None
+    assert await device.refresh(thiefs_token) is not None
+
+    assert await device.refresh(owners_token) is None
+    device.db.delete.assert_awaited_once_with(device.row)
+
+
+@pytest.mark.asyncio
+async def test_a_thief_refreshing_twice_is_caught_when_the_owner_returns() -> None:
+    device = _Device()
+    owners_token = await device.sign_in()
+    assert await device.refresh(await device.refresh(owners_token)) is not None
+
+    assert await device.refresh(owners_token) is None
+    device.db.delete.assert_awaited_once_with(device.row)
+
+
+@pytest.mark.asyncio
+async def test_many_lost_responses_never_end_a_session() -> None:
+    device = _Device()
+    first = await device.sign_in()
+    await device.refresh(first)
+    for _ in range(100):
+        assert await device.refresh(first) is not None
+    device.db.delete.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_a_token_we_did_not_sign_changes_nothing() -> None:
+    device = _Device()
+    await device.sign_in()
+    forged = format_refresh_token(device.row.id, "guess", "not-our-key")
+    assert await device.refresh(forged) is None
+    assert await device.refresh(f"{device.row.id}.guess") is None
+    device.db.delete.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_a_retry_after_a_lost_response_ends_nothing() -> None:
     device = _Device()
     first = await device.sign_in()
@@ -160,16 +217,6 @@ async def test_refreshing_keeps_the_original_login_time() -> None:
     device = _Device()
     await device.refresh(await device.sign_in())
     assert device.row.auth_time == _AUTH_TIME
-
-
-@pytest.mark.asyncio
-async def test_a_wrong_secret_changes_nothing() -> None:
-    device = _Device()
-    token = await device.sign_in()
-    before = device.row.current_secret_hash
-    assert await device.refresh(format_refresh_token(device.row.id, "guess")) is None
-    assert device.row.current_secret_hash == before
-    assert await device.refresh(token) is not None
 
 
 @pytest.mark.asyncio

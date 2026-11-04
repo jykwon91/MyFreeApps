@@ -82,7 +82,6 @@ def upgrade() -> None:
         sa.Column("current_secret_hash", sa.String(64), nullable=False),
         sa.Column("previous_secret_hash", sa.String(64), nullable=True),
         sa.Column("previous_valid_until", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("abandoned_secret_hash", sa.String(64), nullable=True),
         sa.Column("device_name", sa.String(100), nullable=True),
         sa.Column("auth_time", sa.DateTime(timezone=True), nullable=False),
         sa.Column(

@@ -4,7 +4,7 @@ Nothing here commits. The caller commits on every outcome, including a refused
 refresh, because refusing can end the session.
 
 Clients must send one refresh at a time. Parallel refreshes with one secret look
-like a lost response followed by a second holder.
+like a lost response followed by a stolen token.
 """
 from __future__ import annotations
 
@@ -43,6 +43,7 @@ def _now() -> datetime:
 class RefreshSessionService:
     session_model: type[Any]
     user_model: type[Any]
+    signing_key: str
     idle_seconds: int = REFRESH_SESSION_IDLE_SECONDS
     absolute_seconds: int = REFRESH_SESSION_ABSOLUTE_SECONDS
     previous_secret_seconds: int = REFRESH_SESSION_PREVIOUS_SECRET_SECONDS
@@ -86,23 +87,22 @@ class RefreshSessionService:
         )
         db.add(session)
         return RefreshedSession(
-            user=user, session=session, refresh_token=format_refresh_token(session_id, secret),
+            user=user, session=session, refresh_token=format_refresh_token(session_id, secret, self.signing_key),
         )
 
     async def rotate(self, db: AsyncSession, token: str) -> RefreshedSession | None:
         """Swap a refresh token for a new one, or None if it can't be used.
 
-        - The current secret proves the client received it. The one before it stops
-          working.
-        - The previous secret, shortly after it was replaced, means the last response
-          never arrived. The client gets a new secret, and the one it never received
-          is remembered as abandoned.
-        - An abandoned secret was received after all, so two parties hold this
-          session: a stolen token was used. The session ends for both.
-        - Any other secret changes nothing, because anyone who knows a session id
-          could otherwise sign that device out.
+        - A token this server didn't sign changes nothing, so knowing a session id
+          isn't enough to end that session.
+        - The current secret proves the client received it.
+        - The previous secret, within its grace period, means the last response never
+          arrived. The client gets a new secret.
+        - Any other signed token was issued for this session and has been replaced.
+          A client only goes back to its previous token, so two parties hold this
+          session, and the session ends for both.
         """
-        parsed = parse_refresh_token(token)
+        parsed = parse_refresh_token(token, self.signing_key)
         if parsed is None:
             return None
         session_id, presented = parsed
@@ -111,15 +111,6 @@ class RefreshSessionService:
             return None
 
         now = _now()
-        if refresh_secret_matches(presented, session.abandoned_secret_hash):
-            logger.warning(
-                "Refresh session ended, abandoned secret presented: session_id=%s user_id=%s",
-                session.id,
-                session.user_id,
-            )
-            await refresh_session_repo.delete_session(db, session)
-            return None
-
         is_current = refresh_secret_matches(presented, session.current_secret_hash)
         is_previous = (
             not is_current
@@ -128,6 +119,12 @@ class RefreshSessionService:
             and now < session.previous_valid_until
         )
         if not is_current and not is_previous:
+            logger.warning(
+                "Refresh session ended, replaced token presented: session_id=%s user_id=%s",
+                session.id,
+                session.user_id,
+            )
+            await refresh_session_repo.delete_session(db, session)
             return None
 
         user = await user_repo.get_by_id(db, session.user_id, user_model=self.user_model)
@@ -138,12 +135,10 @@ class RefreshSessionService:
         if is_current:
             session.previous_secret_hash = session.current_secret_hash
             session.previous_valid_until = now + timedelta(seconds=self.previous_secret_seconds)
-        else:
-            session.abandoned_secret_hash = session.current_secret_hash
         session.current_secret_hash = hash_refresh_secret(secret)
         session.last_used_at = now
         return RefreshedSession(
-            user=user, session=session, refresh_token=format_refresh_token(session.id, secret),
+            user=user, session=session, refresh_token=format_refresh_token(session.id, secret, self.signing_key),
         )
 
     async def list_active(self, db: AsyncSession, user: Any) -> Sequence[Any]:

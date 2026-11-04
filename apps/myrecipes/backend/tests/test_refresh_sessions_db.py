@@ -12,7 +12,9 @@ from app.models.user.refresh_session import RefreshSession
 from app.models.user.user import User
 from platform_shared.services.refresh_session_service import RefreshSessionService
 
-_SERVICE = RefreshSessionService(session_model=RefreshSession, user_model=User)
+_SERVICE = RefreshSessionService(
+    session_model=RefreshSession, user_model=User, signing_key="test-signing-key",
+)
 
 
 @pytest_asyncio.fixture
@@ -47,7 +49,7 @@ async def test_a_session_rotates_and_lists_through_the_database(db: AsyncSession
 
 
 @pytest.mark.asyncio
-async def test_presenting_an_abandoned_secret_deletes_the_session(db: AsyncSession, new_user) -> None:
+async def test_presenting_a_replaced_secret_deletes_the_session(db: AsyncSession, new_user) -> None:
     user = await new_user()
     issued = await _SERVICE.issue(db, user, auth_time=datetime.now(timezone.utc))
     await db.flush()
@@ -55,8 +57,10 @@ async def test_presenting_an_abandoned_secret_deletes_the_session(db: AsyncSessi
 
     owners = await _SERVICE.rotate(db, issued.refresh_token)
     await db.flush()
-    assert await _SERVICE.rotate(db, issued.refresh_token) is not None
-    await db.flush()
+    for _ in range(2):
+        assert await _SERVICE.rotate(db, issued.refresh_token) is not None
+        await db.flush()
+        db.expire_all()
 
     assert await _SERVICE.rotate(db, owners.refresh_token) is None
     await db.flush()

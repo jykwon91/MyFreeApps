@@ -1,7 +1,11 @@
-"""The refresh token a client holds: ``<session id>.<secret>``.
+"""The refresh token a client holds: ``<session id>.<secret>.<signature>``.
 
 Only a hash of the secret is stored. The secret is random and long, so a plain
 SHA-256 is enough: there's nothing to guess that a slow hash would protect.
+
+The signature shows the server issued this token for this session. That's how an
+old token is told apart from a guess without keeping every old secret, and why
+knowing a session id isn't enough to end that session.
 """
 from __future__ import annotations
 
@@ -27,19 +31,28 @@ def refresh_secret_matches(secret: str, stored_hash: str | None) -> bool:
     )
 
 
-def format_refresh_token(session_id: uuid.UUID, secret: str) -> str:
-    return f"{session_id}.{secret}"
+def _signature(session_id: uuid.UUID, secret: str, signing_key: str) -> str:
+    message = f"refresh-session.{session_id}.{secret}".encode()
+    return hmac.new(signing_key.encode(), message, hashlib.sha256).hexdigest()
 
 
-def parse_refresh_token(token: str) -> tuple[uuid.UUID, str] | None:
-    """Split a token into its session id and secret, or None if it's malformed."""
-    session_id, separator, secret = token.partition(".")
-    if not separator or not secret:
+def format_refresh_token(session_id: uuid.UUID, secret: str, signing_key: str) -> str:
+    return f"{session_id}.{secret}.{_signature(session_id, secret, signing_key)}"
+
+
+def parse_refresh_token(token: str, signing_key: str) -> tuple[uuid.UUID, str] | None:
+    """The session id and secret of a token this server issued, otherwise None."""
+    parts = token.split(".")
+    if len(parts) != 3:
         return None
+    raw_session_id, secret, signature = parts
     try:
-        return uuid.UUID(session_id), secret
+        session_id = uuid.UUID(raw_session_id)
     except ValueError:
         return None
+    if not hmac.compare_digest(signature.encode(), _signature(session_id, secret, signing_key).encode()):
+        return None
+    return session_id, secret
 
 
 __all__ = [
