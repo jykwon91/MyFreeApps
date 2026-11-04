@@ -219,4 +219,4 @@ Action buttons in DuplicateCard should be full-width stacked on mobile with 44px
 - `frontend/src/app/lib/nav.ts` — conditional visibility based on count
 - `frontend/src/shared/types/transaction/transaction.ts` — add `linked_document_ids`
 - `frontend/src/shared/types/transaction/duplicate.ts` — add `confidence`
-- `frontend/src/shared/store/transactionsApi.ts` — add auto-resolved log query
+- `api-client/src/store/transactionsApi.ts` — add auto-resolved log query

@@ -1,0 +1,1 @@
+export const OPTION_SHEET_ROW_HEIGHT = 48;
