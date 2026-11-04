@@ -4,12 +4,12 @@ import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import RentChargeDialog from "@/app/features/rent/RentChargeDialog";
 import RentWaiveDialog from "@/app/features/rent/RentWaiveDialog";
-import type { RentCharge } from "@/shared/types/rent/rent-charge";
+import type { RentCharge } from "@mybookkeeper/api-client/types/rent/rent-charge";
 
 const mockCreateCharge = vi.fn();
 const mockWaive = vi.fn();
 
-vi.mock("@/shared/store/rentLedgerApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/rentLedgerApi", () => ({
   useCreateRentChargeMutation: () => [mockCreateCharge, { isLoading: false }],
   useWaiveRentChargeMutation: () => [mockWaive, { isLoading: false }],
 }));

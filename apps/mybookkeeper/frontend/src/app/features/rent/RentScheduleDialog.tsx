@@ -1,6 +1,6 @@
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import RentScheduleForm from "./RentScheduleForm";
-import type { RentSchedule } from "@/shared/types/rent/rent-schedule";
+import type { RentSchedule } from "@mybookkeeper/api-client/types/rent/rent-schedule";
 
 export interface RentScheduleDialogProps {
   applicantId: string;

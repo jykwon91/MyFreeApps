@@ -3,13 +3,13 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import RentScheduleForm from "@/app/features/rent/RentScheduleForm";
-import type { RentSchedule } from "@/shared/types/rent/rent-schedule";
+import type { RentSchedule } from "@mybookkeeper/api-client/types/rent/rent-schedule";
 
 const mockCreate = vi.fn();
 const mockUpdate = vi.fn();
 const mockRemove = vi.fn();
 
-vi.mock("@/shared/store/rentLedgerApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/rentLedgerApi", () => ({
   useCreateRentScheduleMutation: () => [mockCreate, { isLoading: false }],
   useUpdateRentScheduleMutation: () => [mockUpdate, { isLoading: false }],
   useDeleteRentScheduleMutation: () => [mockRemove, { isLoading: false }],

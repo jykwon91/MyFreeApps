@@ -4,8 +4,8 @@ import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   useDeleteRentChargeMutation,
   useUnwaiveRentChargeMutation,
-} from "@/shared/store/rentLedgerApi";
-import type { RentCharge } from "@/shared/types/rent/rent-charge";
+} from "@mybookkeeper/api-client/store/rentLedgerApi";
+import type { RentCharge } from "@mybookkeeper/api-client/types/rent/rent-charge";
 
 export interface RentChargeRowActionsProps {
   charge: RentCharge;

@@ -3,11 +3,11 @@ import { Button, LoadingButton } from "@platform/ui";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
-import { useWaiveRentChargeMutation } from "@/shared/store/rentLedgerApi";
+import { useWaiveRentChargeMutation } from "@mybookkeeper/api-client/store/rentLedgerApi";
 import { RENT_INPUT_CLASS } from "./rent-input-class";
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatShortDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import type { RentCharge } from "@/shared/types/rent/rent-charge";
+import type { RentCharge } from "@mybookkeeper/api-client/types/rent/rent-charge";
 
 export interface RentWaiveDialogProps {
   charge: RentCharge;

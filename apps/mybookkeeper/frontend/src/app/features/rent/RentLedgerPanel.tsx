@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { AlertBox, Button } from "@platform/ui";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
-import { useGetRentLedgerQuery } from "@/shared/store/rentLedgerApi";
+import { useGetRentLedgerQuery } from "@mybookkeeper/api-client/store/rentLedgerApi";
 import RentChargeDialog from "./RentChargeDialog";
 import RentLedgerBody from "./RentLedgerBody";
 import RentLedgerEmpty from "./RentLedgerEmpty";
 import RentLedgerSkeleton from "./RentLedgerSkeleton";
 import RentScheduleDialog from "./RentScheduleDialog";
 import RentWaiveDialog from "./RentWaiveDialog";
-import type { RentCharge } from "@/shared/types/rent/rent-charge";
-import type { RentSchedule } from "@/shared/types/rent/rent-schedule";
+import type { RentCharge } from "@mybookkeeper/api-client/types/rent/rent-charge";
+import type { RentSchedule } from "@mybookkeeper/api-client/types/rent/rent-schedule";
 
 export interface RentLedgerPanelProps {
   applicantId: string;

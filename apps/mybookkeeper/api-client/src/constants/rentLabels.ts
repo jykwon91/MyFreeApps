@@ -1,5 +1,6 @@
-import type { RentCadence } from "@/shared/types/rent/rent-cadence";
-import type { RentChargeType } from "@/shared/types/rent/rent-charge-type";
+import type { RentCadence } from "../types/rent/rent-cadence";
+import type { RentChargeStatus } from "../types/rent/rent-charge-status";
+import type { RentChargeType } from "../types/rent/rent-charge-type";
 
 export const RENT_CADENCE_LABEL: Record<RentCadence, string> = {
   monthly: "monthly",
@@ -13,6 +14,14 @@ export const RENT_CHARGE_TYPE_LABEL: Record<RentChargeType, string> = {
   utility_reimbursement: "Utilities",
   deposit: "Deposit",
   other: "Other",
+};
+
+export const RENT_CHARGE_STATUS_LABEL: Record<RentChargeStatus, string> = {
+  paid: "Paid",
+  partial: "Partly paid",
+  open: "Open",
+  overdue: "Overdue",
+  waived: "Waived",
 };
 
 /** Charge types a host can raise by hand. `rent` is absent on purpose — a rent

@@ -1,5 +1,5 @@
 import type { BadgeTone } from "@platform/ui";
-import type { RentChargeStatus } from "@/shared/types/rent/rent-charge-status";
+import type { RentChargeStatus } from "@mybookkeeper/api-client/types/rent/rent-charge-status";
 
 /** Status → badge tone.
  *
@@ -14,12 +14,4 @@ export const RENT_CHARGE_STATUS_TONE: Record<RentChargeStatus, BadgeTone> = {
   open: "neutral",
   overdue: "danger",
   waived: "neutral",
-};
-
-export const RENT_CHARGE_STATUS_LABEL: Record<RentChargeStatus, string> = {
-  paid: "Paid",
-  partial: "Partly paid",
-  open: "Open",
-  overdue: "Overdue",
-  waived: "Waived",
 };

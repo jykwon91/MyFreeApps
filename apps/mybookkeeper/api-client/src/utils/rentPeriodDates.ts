@@ -1,5 +1,5 @@
-import { formatShortDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import type { RentPeriodSummary } from "@/shared/types/rent/rent-period-summary";
+import { formatShortDate } from "./inquiryDateFormat";
+import type { RentPeriodSummary } from "../types/rent/rent-period-summary";
 
 /**
  * The period's explicit dates, or null when the label already states them.

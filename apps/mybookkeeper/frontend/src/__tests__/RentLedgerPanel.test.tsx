@@ -3,12 +3,12 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import RentLedgerPanel from "@/app/features/rent/RentLedgerPanel";
-import type { RentLedgerResponse } from "@/shared/types/rent/rent-ledger-response";
+import type { RentLedgerResponse } from "@mybookkeeper/api-client/types/rent/rent-ledger-response";
 
 const mockGetLedger = vi.fn();
 const mockRefetch = vi.fn();
 
-vi.mock("@/shared/store/rentLedgerApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/rentLedgerApi", () => ({
   useGetRentLedgerQuery: (...args: unknown[]) => mockGetLedger(...args),
   useCreateRentScheduleMutation: () => [vi.fn(), { isLoading: false }],
   useUpdateRentScheduleMutation: () => [vi.fn(), { isLoading: false }],
@@ -168,7 +168,7 @@ describe("RentLedgerPanel", () => {
     });
     renderPanel();
     expect(screen.getByTestId("rent-current-prorated")).toHaveTextContent(
-      "Prorated from $1,500.00 for a partial month",
+      "Prorated from $1,500.00 for a partial period",
     );
   });
 

@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import TenantPayments from "@/app/features/applicants/TenantPayments";
-import type { RentLedgerResponse } from "@/shared/types/rent/rent-ledger-response";
+import type { RentLedgerResponse } from "@mybookkeeper/api-client/types/rent/rent-ledger-response";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 
 const mockListTransactions = vi.fn();
@@ -13,7 +13,7 @@ vi.mock("@mybookkeeper/api-client/store/transactionsApi", () => ({
   useListTransactionsQuery: (...args: unknown[]) => mockListTransactions(...args),
 }));
 
-vi.mock("@/shared/store/rentLedgerApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/rentLedgerApi", () => ({
   useGetRentLedgerQuery: (...args: unknown[]) => mockGetLedger(...args),
 }));
 

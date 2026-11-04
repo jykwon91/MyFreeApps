@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useListTransactionsQuery } from "@mybookkeeper/api-client/store/transactionsApi";
-import { useGetRentLedgerQuery } from "@/shared/store/rentLedgerApi";
+import { useGetRentLedgerQuery } from "@mybookkeeper/api-client/store/rentLedgerApi";
 import DocumentViewer from "@/app/features/documents/DocumentViewer";
 import type { DocumentViewTarget } from "@/shared/types/document/document-view-target";
-import type { RentPayment } from "@/shared/types/rent/rent-payment";
+import type { RentPayment } from "@mybookkeeper/api-client/types/rent/rent-payment";
 import TenantPaymentsSkeleton from "./TenantPaymentsSkeleton";
 import TenantPaymentsEmpty from "./TenantPaymentsEmpty";
 import TenantPaymentsHeader from "./TenantPaymentsHeader";
