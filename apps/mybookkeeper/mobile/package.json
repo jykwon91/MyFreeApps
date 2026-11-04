@@ -12,6 +12,7 @@
     "export": "expo export --platform ios --platform android"
   },
   "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
     "@mybookkeeper/api-client": "*",
     "@platform/core": "*",
     "@platform/mobile": "*",

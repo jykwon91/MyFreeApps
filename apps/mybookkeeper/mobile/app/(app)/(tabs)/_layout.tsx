@@ -1,6 +1,8 @@
 import { useTheme } from "@platform/mobile";
 import { router, Tabs } from "expo-router";
+import { newInquiryBadge, peopleTabLabel } from "../../../src/features/inquiries/newInquiryBadge";
 import { useNewInquiryCount } from "../../../src/features/inquiries/useNewInquiryCount";
+import { tabBarIcon } from "../../../src/features/shell/tabBarIcon";
 import { useCanWrite } from "../../../src/features/workspace/useCanWrite";
 
 export default function TabsLayout() {
@@ -15,12 +17,11 @@ export default function TabsLayout() {
         tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.border },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
-        tabBarIconStyle: { display: "none" },
         sceneStyle: { backgroundColor: colors.background },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: "Home" }} />
-      <Tabs.Screen name="money" options={{ title: "Money" }} />
+      <Tabs.Screen name="index" options={{ title: "Home", tabBarIcon: tabBarIcon("home", "home-outline") }} />
+      <Tabs.Screen name="money" options={{ title: "Money", tabBarIcon: tabBarIcon("wallet", "wallet-outline") }} />
       <Tabs.Screen
         listeners={{
           tabPress: (event) => {
@@ -29,10 +30,23 @@ export default function TabsLayout() {
           },
         }}
         name="capture"
-        options={{ title: "Capture", href: canWrite ? undefined : null }}
+        options={{
+          title: "Capture",
+          href: canWrite ? undefined : null,
+          tabBarAccessibilityLabel: "Capture, opens the camera",
+          tabBarIcon: tabBarIcon("camera"),
+        }}
       />
-      <Tabs.Screen name="people" options={{ title: "People", tabBarBadge: newInquiries || undefined }} />
-      <Tabs.Screen name="more" options={{ title: "More" }} />
+      <Tabs.Screen
+        name="people"
+        options={{
+          title: "People",
+          tabBarAccessibilityLabel: peopleTabLabel(newInquiries),
+          tabBarBadge: newInquiryBadge(newInquiries),
+          tabBarIcon: tabBarIcon("people", "people-outline"),
+        }}
+      />
+      <Tabs.Screen name="more" options={{ title: "More", tabBarIcon: tabBarIcon("ellipsis-horizontal") }} />
     </Tabs>
   );
 }

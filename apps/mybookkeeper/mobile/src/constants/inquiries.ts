@@ -33,3 +33,5 @@ export const INQUIRY_EMPTY_WORDS: Record<InquiryView, { heading: string; body: s
   spam: { heading: "No spam", body: "Anything I'm sure is spam goes here." },
   all: { heading: "No inquiries yet", body: "When someone asks about a room, it'll show up here." },
 };
+
+export const MAX_NEW_INQUIRY_BADGE = 99;
