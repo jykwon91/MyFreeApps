@@ -16,6 +16,7 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 from contextlib import asynccontextmanager
+from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
@@ -27,9 +28,11 @@ from app.models.inquiries.inquiry import Inquiry
 from app.models.inquiries.inquiry_event import InquiryEvent
 from app.models.inquiries.inquiry_message import InquiryMessage
 from app.models.integrations.integration import Integration
+from app.models.listings.listing import Listing
+from app.models.properties.property import Property, PropertyType
 from app.models.organization.organization import Organization
 from app.models.user.user import User
-from app.repositories.inquiries import inquiry_repo
+from app.repositories.inquiries import inquiry_message_repo, inquiry_repo
 from app.schemas.inquiries.inquiry_reply_request import InquiryReplyRequest
 from app.services.email import app_sent_email_service
 from app.services.email.constants import APP_SENT_INQUIRY_REPLY_FILTER_REASON
@@ -94,6 +97,7 @@ async def _seed_inquiry(
     user: User,
     stage: str = "new",
     inquirer_email: str | None = "alice@example.com",
+    listing_id: uuid.UUID | None = None,
 ) -> Inquiry:
     inquiry = await inquiry_repo.create(
         db,
@@ -103,6 +107,7 @@ async def _seed_inquiry(
         received_at=_dt.datetime.now(_dt.timezone.utc),
         inquirer_name="Alice",
         inquirer_email=inquirer_email,
+        listing_id=listing_id,
     )
     if stage != "new":
         inquiry.stage = stage
@@ -468,3 +473,200 @@ async def test_integration_clear_reauth_state_on_oauth_callback() -> None:
         await handle_gmail_callback("oauth-code", "state-jwt")
 
     mock_clear.assert_awaited_once()
+
+
+DISCLOSURE = "I have a 90lb golden retriever on the premises."
+
+
+async def _seed_listing(
+    db: AsyncSession,
+    *,
+    org: Organization,
+    user: User,
+    pets_on_premises: bool = True,
+    large_dog_disclosure: str | None = DISCLOSURE,
+) -> Listing:
+    prop = Property(id=uuid.uuid4(), organization_id=org.id, user_id=user.id, name="Oak", type=PropertyType.LONG_TERM)
+    db.add(prop)
+    await db.flush()
+    listing = Listing(
+        id=uuid.uuid4(),
+        organization_id=org.id,
+        user_id=user.id,
+        property_id=prop.id,
+        title="Cozy Room",
+        monthly_rate=Decimal("1500"),
+        room_type="private_room",
+        status="active",
+        pets_on_premises=pets_on_premises,
+        large_dog_disclosure=large_dog_disclosure,
+    )
+    db.add(listing)
+    await db.flush()
+    return listing
+
+
+async def _send(org: Organization, user: User, inquiry: Inquiry, body: str):
+    with patch(
+        "app.services.inquiries.inquiry_reply_service.gmail_service.send_message",
+        return_value=f"<gmail-{uuid.uuid4()}>",
+    ) as mock_send:
+        result = await inquiry_reply_service.send_reply(
+            org.id, user.id, inquiry.id, InquiryReplyRequest(subject="Re: Cozy Room", body=body),
+        )
+    return result, mock_send.call_args.kwargs["body"]
+
+
+@pytest.mark.asyncio
+async def test_custom_reply_gets_the_disclosure_in_the_email_and_the_record(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    await _seed_integration(db, org=test_org, user=test_user)
+    listing = await _seed_listing(db, org=test_org, user=test_user)
+    inquiry = await _seed_inquiry(db, org=test_org, user=test_user, listing_id=listing.id)
+
+    result, sent_body = await _send(test_org, test_user, inquiry, "Hi Alice")
+
+    assert sent_body == f"{DISCLOSURE}\n\nHi Alice"
+    assert result.parsed_body == sent_body
+
+
+@pytest.mark.asyncio
+async def test_reply_that_already_says_it_is_not_doubled_even_with_changed_line_breaks(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    await _seed_integration(db, org=test_org, user=test_user)
+    listing = await _seed_listing(db, org=test_org, user=test_user)
+    inquiry = await _seed_inquiry(db, org=test_org, user=test_user, listing_id=listing.id)
+    rewrapped = DISCLOSURE.replace("golden retriever", "golden\r\nretriever")
+
+    _, sent_body = await _send(test_org, test_user, inquiry, f"{rewrapped}\n\nHi Alice")
+
+    assert sent_body == f"{rewrapped}\n\nHi Alice"
+
+
+@pytest.mark.asyncio
+async def test_inquirer_is_told_once_across_a_conversation(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    await _seed_integration(db, org=test_org, user=test_user)
+    listing = await _seed_listing(db, org=test_org, user=test_user)
+    inquiry = await _seed_inquiry(db, org=test_org, user=test_user, listing_id=listing.id)
+
+    await _send(test_org, test_user, inquiry, "First")
+    _, second_body = await _send(test_org, test_user, inquiry, "Second")
+
+    assert second_body == "Second"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("pets_on_premises", "disclosure"),
+    [(False, DISCLOSURE), (True, None), (True, "   ")],
+)
+async def test_no_disclosure_to_add(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+    pets_on_premises: bool, disclosure: str | None,
+) -> None:
+    await _seed_integration(db, org=test_org, user=test_user)
+    listing = await _seed_listing(
+        db, org=test_org, user=test_user, pets_on_premises=pets_on_premises, large_dog_disclosure=disclosure,
+    )
+    inquiry = await _seed_inquiry(db, org=test_org, user=test_user, listing_id=listing.id)
+
+    _, sent_body = await _send(test_org, test_user, inquiry, "Hi Alice")
+
+    assert sent_body == "Hi Alice"
+
+
+@pytest.mark.asyncio
+async def test_inquiry_without_a_listing_sends_as_written(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    await _seed_integration(db, org=test_org, user=test_user)
+    inquiry = await _seed_inquiry(db, org=test_org, user=test_user)
+
+    _, sent_body = await _send(test_org, test_user, inquiry, "Hi Alice")
+
+    assert sent_body == "Hi Alice"
+
+
+async def _add_message(db: AsyncSession, inquiry: Inquiry, *, direction: str, body: str | None) -> None:
+    await inquiry_message_repo.create(
+        db,
+        inquiry_id=inquiry.id,
+        direction=direction,
+        channel="email",
+        from_address="a@example.com",
+        to_address="b@example.com",
+        subject="Re: Cozy Room",
+        parsed_body=body,
+    )
+    await db.flush()
+
+
+@pytest.mark.asyncio
+async def test_inquirer_quoting_the_disclosure_doesnt_count_as_being_told(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    await _seed_integration(db, org=test_org, user=test_user)
+    listing = await _seed_listing(db, org=test_org, user=test_user)
+    inquiry = await _seed_inquiry(db, org=test_org, user=test_user, listing_id=listing.id)
+    await _add_message(db, inquiry, direction="inbound", body=f"Saw this: {DISCLOSURE}")
+
+    _, sent_body = await _send(test_org, test_user, inquiry, "Hi Alice")
+
+    assert sent_body == f"{DISCLOSURE}\n\nHi Alice"
+
+
+@pytest.mark.asyncio
+async def test_earlier_reply_counts_whatever_its_line_breaks_and_empty_ones_dont_break_it(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    await _seed_integration(db, org=test_org, user=test_user)
+    listing = await _seed_listing(db, org=test_org, user=test_user)
+    inquiry = await _seed_inquiry(db, org=test_org, user=test_user, listing_id=listing.id)
+    await _add_message(db, inquiry, direction="outbound", body=None)
+    await _add_message(db, inquiry, direction="outbound", body=DISCLOSURE.replace(" ", "\r\n"))
+
+    _, sent_body = await _send(test_org, test_user, inquiry, "Hi Alice")
+
+    assert sent_body == "Hi Alice"
+
+
+@pytest.mark.asyncio
+async def test_retry_after_gmail_rejects_still_carries_the_disclosure_once(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    await _seed_integration(db, org=test_org, user=test_user)
+    listing = await _seed_listing(db, org=test_org, user=test_user)
+    inquiry = await _seed_inquiry(db, org=test_org, user=test_user, listing_id=listing.id)
+
+    with patch(
+        "app.services.inquiries.inquiry_reply_service.gmail_service.send_message",
+        side_effect=GmailSendError("nope"),
+    ), pytest.raises(inquiry_reply_service.InquiryReplySendFailedError):
+        await inquiry_reply_service.send_reply(
+            test_org.id, test_user.id, inquiry.id, InquiryReplyRequest(subject="Re: Cozy Room", body="Hi"),
+        )
+
+    _, sent_body = await _send(test_org, test_user, inquiry, "Hi")
+
+    assert sent_body == f"{DISCLOSURE}\n\nHi"
+
+
+@pytest.mark.asyncio
+async def test_listing_thats_gone_still_sends_and_says_why_nothing_was_added(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session, caplog: pytest.LogCaptureFixture,
+) -> None:
+    await _seed_integration(db, org=test_org, user=test_user)
+    listing = await _seed_listing(db, org=test_org, user=test_user)
+    inquiry = await _seed_inquiry(db, org=test_org, user=test_user, listing_id=listing.id)
+
+    with patch(
+        "app.services.inquiries.inquiry_reply_service.listing_repo.get_by_id", return_value=None,
+    ):
+        _, sent_body = await _send(test_org, test_user, inquiry, "Hi Alice")
+
+    assert sent_body == "Hi Alice"
+    assert "no pet disclosure" in caplog.text
