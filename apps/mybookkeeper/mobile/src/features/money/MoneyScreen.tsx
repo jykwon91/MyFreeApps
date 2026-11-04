@@ -26,9 +26,16 @@ export default function MoneyScreen() {
       </View>
       <View style={{ flex: 1 }}>
         {segment === "documents" ? (
-          <DocumentsScreen />
+          <DocumentsScreen
+            filter={params.filter === "needsALook" ? "needsALook" : "all"}
+            onFilterChange={(filter) => router.setParams({ filter })}
+          />
         ) : (
-          <TransactionsScreen filters={filters} onFiltersChange={(next) => router.setParams(filtersToParams(next))} />
+          <TransactionsScreen
+            filters={filters}
+            onFiltersChange={(next) => router.setParams(filtersToParams(next))}
+            onVendorChange={(vendor) => router.setParams({ vendor })}
+          />
         )}
       </View>
     </View>

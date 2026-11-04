@@ -1,4 +1,4 @@
-import type { MonthSummary } from "./month-summary";
+import type { MonthSummary } from "./MonthSummary";
 
 export interface PropertyMonthlySummary {
   property_id: string;

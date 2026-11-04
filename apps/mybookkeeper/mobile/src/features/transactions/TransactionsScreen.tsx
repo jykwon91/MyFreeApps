@@ -1,34 +1,38 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useListTransactionPagesInfiniteQuery } from "@mybookkeeper/api-client/store/transactionsApi";
-import { useDebouncedValue } from "@platform/core/hooks/useDebouncedValue";
 import { Banner, EmptyState, LoadingButton, SearchField, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
-import { NO_FILTERS, SEARCH_DEBOUNCE_MS, TRANSACTION_PERIODS, TRANSACTION_VIEWS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
+import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
+import { NO_FILTERS, TRANSACTION_PERIODS, TRANSACTION_VIEWS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
 import type { TransactionFilters } from "../../types/TransactionFilters";
+import { useToday } from "../../lib/useToday";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { categoryLabel, propertyLabel } from "./transactionDisplay";
 import TransactionFilterSheet from "./TransactionFilterSheet";
 import { activeFilterCount, reviewLink, toListParams } from "./transactionFilters";
 import TransactionRow from "./TransactionRow";
+import { useVendorSearch } from "./useVendorSearch";
 import TransactionsSkeleton, { TransactionSkeletonRow } from "./TransactionsSkeleton";
 
 export default function TransactionsScreen({
   filters,
   onFiltersChange,
+  onVendorChange,
 }: {
   filters: TransactionFilters;
   onFiltersChange: (filters: TransactionFilters) => void;
+  onVendorChange: (vendor: string) => void;
 }) {
   const { colors, spacing, fontSize } = useTheme();
   const canWrite = useCanWrite();
-  const [search, setSearch] = useState("");
+  const today = useToday();
+  const { search, changeSearch, clearSearch } = useVendorSearch(filters.vendor, onVendorChange);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const [listThatFailedToLoadMore, setListThatFailedToLoadMore] = useState<string | null>(null);
-  const vendor = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
 
-  const params = useMemo(() => toListParams(filters, vendor, new Date()), [filters, vendor]);
+  const params = useMemo(() => toListParams(filters, today), [filters, today]);
   const {
     currentData,
     error,
@@ -51,7 +55,7 @@ export default function TransactionsScreen({
   const rows = useMemo(() => currentData?.pages.flat() ?? [], [currentData]);
 
   const filterCount = activeFilterCount(filters);
-  const isNarrowed = filterCount > 0 || vendor.trim() !== "";
+  const isNarrowed = filterCount > 0 || filters.vendor.trim() !== "";
   const summary = [
     filters.propertyId === UNASSIGNED_PROPERTY ? "No property" : filters.propertyId ? propertyLabel(filters.propertyId, properties) : null,
     filters.category ? categoryLabel(filters.category) : null,
@@ -59,6 +63,7 @@ export default function TransactionsScreen({
     filters.period !== "all" && filters.view !== "review"
       ? TRANSACTION_PERIODS.find((option) => option.value === filters.period)?.label
       : null,
+    filters.approvedOnly && filters.view !== "review" ? "Approved" : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -69,7 +74,7 @@ export default function TransactionsScreen({
   }
 
   function clearNarrowing(): void {
-    setSearch("");
+    clearSearch();
     onFiltersChange({ ...NO_FILTERS, view: filters.view });
   }
 
@@ -120,11 +125,11 @@ export default function TransactionsScreen({
         ListFooterComponent={footer}
         ListHeaderComponent={
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
-            {error && rows.length > 0 && !loadMoreFailed ? <Banner message="You're offline, or I can't reach the server. This is what I last loaded." /> : null}
+            {error && rows.length > 0 && !loadMoreFailed ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
             <SearchField
               accessibilityLabel="Search transactions by vendor"
-              onChangeText={setSearch}
-              onClear={() => setSearch("")}
+              onChangeText={changeSearch}
+              onClear={() => changeSearch("")}
               placeholder="Search by vendor"
               value={search}
             />
@@ -163,7 +168,7 @@ export default function TransactionsScreen({
         refreshControl={refreshControl}
         renderItem={({ item }) => (
           <TransactionRow
-            onPress={() => router.push(filters.view === "review" ? reviewLink(item.id, filters, vendor) : `/transactions/${item.id}`)}
+            onPress={() => router.push(filters.view === "review" ? reviewLink(item.id, filters) : `/transactions/${item.id}`)}
             propertyName={item.property_id ? (propertyNames.get(item.property_id) ?? null) : null}
             transaction={item}
           />

@@ -9,4 +9,7 @@ export interface TransactionFilters {
   /** A property's id, or UNASSIGNED_PROPERTY for rows with none. */
   propertyId: string | null;
   category: string | null;
+  vendor: string;
+  /** Only rows that count towards the money totals. */
+  approvedOnly: boolean;
 }

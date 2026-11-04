@@ -1,7 +1,7 @@
-import type { MonthSummary } from "./month-summary";
-import type { MonthExpenseSummary } from "./month-expense-summary";
-import type { PropertySummary } from "./property-summary";
-import type { PropertyMonthlySummary } from "./property-monthly-summary";
+import type { MonthSummary } from "./MonthSummary";
+import type { MonthExpenseSummary } from "./MonthExpenseSummary";
+import type { PropertySummary } from "./PropertySummary";
+import type { PropertyMonthlySummary } from "./PropertyMonthlySummary";
 
 export interface SummaryResponse {
   revenue: number;

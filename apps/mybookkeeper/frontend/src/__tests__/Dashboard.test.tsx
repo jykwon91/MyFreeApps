@@ -5,7 +5,7 @@ import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import Dashboard from "@/app/pages/Dashboard";
-import type { SummaryResponse } from "@/shared/types/summary/summary";
+import type { SummaryResponse } from "@mybookkeeper/api-client/types/summary/summary";
 
 const mockSummaryWithData: SummaryResponse = {
   revenue: 5000,
@@ -43,7 +43,7 @@ const mockEmptySummary: SummaryResponse = {
   by_property_month: [],
 };
 
-vi.mock("@/shared/store/summaryApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/summaryApi", () => ({
   useGetSummaryQuery: vi.fn(() => ({
     data: mockSummaryWithData,
     isLoading: false,
@@ -92,7 +92,7 @@ vi.mock("recharts", () => ({
   ReferenceArea: () => <div data-testid="reference-area" />,
 }));
 
-import { useGetSummaryQuery, useGetSummaryYearsQuery } from "@/shared/store/summaryApi";
+import { useGetSummaryQuery, useGetSummaryYearsQuery } from "@mybookkeeper/api-client/store/summaryApi";
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(

@@ -1216,7 +1216,7 @@
         "frontend/src/features/dashboard/",
         "frontend/src/shared/types/dashboard/",
         "frontend/src/shared/components/ui/YearFilter.tsx",
-        "frontend/src/shared/store/summaryApi.ts",
+        "api-client/src/store/summaryApi.ts",
         "frontend/src/shared/hooks/useSelectedYear.ts",
         "frontend/src/shared/hooks/useDashboardYears.ts",
         "frontend/src/shared/types/transaction/",

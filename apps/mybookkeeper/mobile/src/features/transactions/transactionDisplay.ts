@@ -63,10 +63,18 @@ export function isMoneyIn(transaction: Transaction): boolean {
   return signedAmount(transaction) > 0;
 }
 
+/** Goes by whole cents: a total can carry a rounding residue that would read as "−$0.00". */
+export function moneySign(value: number): number {
+  return Math.sign(Math.round(value * 100));
+}
+
+export function signedMoney(value: number): string {
+  const sign = moneySign(value) > 0 ? "+" : moneySign(value) < 0 ? "\u2212" : "";
+  return `${sign}${formatCurrency(Math.abs(value))}`;
+}
+
 export function displayAmount(transaction: Transaction): string {
-  const signed = signedAmount(transaction);
-  const sign = signed > 0 ? "+" : signed < 0 ? "\u2212" : "";
-  return `${sign}${formatCurrency(Math.abs(signed))}`;
+  return signedMoney(signedAmount(transaction));
 }
 
 export function spokenMoney(value: number): string {
@@ -75,6 +83,10 @@ export function spokenMoney(value: number): string {
   const rest = cents % 100;
   const dollarWords = `${dollars.toLocaleString("en-US")} ${dollars === 1 ? "dollar" : "dollars"}`;
   return rest === 0 ? dollarWords : `${dollarWords} and ${rest} ${rest === 1 ? "cent" : "cents"}`;
+}
+
+export function spokenSignedMoney(value: number): string {
+  return `${moneySign(value) < 0 ? "minus " : ""}${spokenMoney(value)}`;
 }
 
 /** Only negative income is money going out of income: a negative expense is said as a refund. */

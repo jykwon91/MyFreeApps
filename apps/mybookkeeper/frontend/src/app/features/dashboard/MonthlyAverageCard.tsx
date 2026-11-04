@@ -1,6 +1,6 @@
 import { formatCurrency } from "@/shared/utils/currency";
 import Card from "@/shared/components/ui/Card";
-import type { MonthSummary } from "@/shared/types/summary/month-summary";
+import type { MonthSummary } from "@mybookkeeper/api-client/types/summary/MonthSummary";
 
 export interface MonthlyAverageCardProps {
   byMonth: MonthSummary[];

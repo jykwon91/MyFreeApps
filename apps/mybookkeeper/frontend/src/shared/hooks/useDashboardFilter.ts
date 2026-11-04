@@ -2,10 +2,10 @@ import { useState, useMemo, useCallback } from "react";
 import { REVENUE_TAGS, EXPENSE_TAGS } from "@/shared/lib/constants";
 import { ALL_DASHBOARD_CATEGORIES, getCategoriesForPreset } from "@/shared/lib/dashboard-filter-config";
 import type { CategoryFilterPreset, CategoryFilterState } from "@/shared/types/dashboard/category-filter";
-import type { SummaryResponse } from "@/shared/types/summary/summary";
-import type { MonthSummary } from "@/shared/types/summary/month-summary";
-import type { MonthExpenseSummary } from "@/shared/types/summary/month-expense-summary";
-import type { PropertySummary } from "@/shared/types/summary/property-summary";
+import type { SummaryResponse } from "@mybookkeeper/api-client/types/summary/summary";
+import type { MonthSummary } from "@mybookkeeper/api-client/types/summary/MonthSummary";
+import type { MonthExpenseSummary } from "@mybookkeeper/api-client/types/summary/MonthExpenseSummary";
+import type { PropertySummary } from "@mybookkeeper/api-client/types/summary/PropertySummary";
 
 export interface FilteredSummary {
   revenue: number;

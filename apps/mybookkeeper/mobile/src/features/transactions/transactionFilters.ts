@@ -27,25 +27,26 @@ export function periodRange(period: TransactionPeriod, today: Date): { start_dat
   }
 }
 
-export function toListParams(filters: TransactionFilters, vendor: string, today: Date): TransactionListParams {
+export function toListParams(filters: TransactionFilters, today: Date): TransactionListParams {
   const params: TransactionListParams = {};
   if (filters.view === "review") {
     // Something waiting for review is waiting whatever month it's from.
     params.to_review = true;
   } else {
     Object.assign(params, periodRange(filters.period, today));
+    if (filters.approvedOnly) params.status = "approved";
   }
   if (filters.type) params.transaction_type = filters.type;
   if (filters.category) params.category = filters.category;
   if (filters.propertyId === UNASSIGNED_PROPERTY) params.unassigned = true;
   else if (filters.propertyId) params.property_id = filters.propertyId;
-  const term = vendor.trim();
+  const term = filters.vendor.trim();
   if (term) params.vendor = term;
   return params;
 }
 
 export function activeFilterCount(filters: TransactionFilters): number {
-  return [filters.view !== "review" && filters.period !== "all", filters.type, filters.propertyId, filters.category].filter(Boolean).length;
+  return [filters.view !== "review" && filters.period !== "all", filters.view !== "review" && filters.approvedOnly, filters.type, filters.propertyId, filters.category].filter(Boolean).length;
 }
 
 export function filtersFromParams(params: Partial<MoneyParams>): TransactionFilters {
@@ -56,33 +57,43 @@ export function filtersFromParams(params: Partial<MoneyParams>): TransactionFilt
     type: params.type === "income" || params.type === "expense" ? params.type : null,
     propertyId: params.property || null,
     category: params.category || null,
+    vendor: params.vendor ?? "",
+    approvedOnly: params.status === "approved",
   };
 }
 
-export function filtersToParams(filters: TransactionFilters): Omit<MoneyParams, "segment"> {
+export function filtersToParams(filters: TransactionFilters): Omit<MoneyParams, "segment" | "filter"> {
   return {
     view: filters.view,
     period: filters.period,
     type: filters.type ?? "",
     property: filters.propertyId ?? "",
     category: filters.category ?? "",
+    vendor: filters.vendor,
+    status: filters.approvedOnly ? "approved" : "",
   };
 }
 
 /** What the detail screen needs to walk the same filtered list the person is looking at. */
-export function reviewLink(id: string, filters: TransactionFilters, vendor: string): string {
+export function reviewLink(id: string, filters: TransactionFilters): string {
   const query = new URLSearchParams({ review: "1" });
   if (filters.type) query.set("type", filters.type);
   if (filters.propertyId) query.set("property", filters.propertyId);
   if (filters.category) query.set("category", filters.category);
-  if (vendor.trim()) query.set("vendor", vendor.trim());
+  if (filters.vendor.trim()) query.set("vendor", filters.vendor.trim());
   return `/transactions/${id}?${query.toString()}`;
 }
 
-export function reviewQueueParams(params: Partial<MoneyParams> & { vendor?: string }, today: Date): TransactionListParams {
-  return toListParams({ ...filtersFromParams(params), view: "review" }, params.vendor ?? "", today);
+export function reviewQueueParams(params: Partial<MoneyParams>, today: Date): TransactionListParams {
+  return toListParams({ ...filtersFromParams(params), view: "review" }, today);
 }
 
 export function isWholeReviewQueue(params: TransactionListParams): boolean {
   return Object.keys(params).length === 1;
+}
+
+/** Every filter is spelled out, so a link never inherits what the Money tab last showed. */
+export function transactionsLink(filters: TransactionFilters): string {
+  const query = new URLSearchParams({ segment: "transactions", ...filtersToParams(filters) });
+  return `/money?${query.toString()}`;
 }

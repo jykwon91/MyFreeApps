@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
 import { STILL_READING_MESSAGE } from "../../constants/documents";
+import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { DOCUMENT_FILTERS, type DocumentFilter } from "../../constants/documentFilters";
 import UploadStatus from "../capture/UploadStatus";
 import { useCanWrite } from "../workspace/useCanWrite";
@@ -11,11 +12,16 @@ import DocumentRow from "./DocumentRow";
 import DocumentsSkeleton from "./DocumentsSkeleton";
 import { useDocumentsWithPolling } from "./useDocumentsWithPolling";
 
-export default function DocumentsScreen() {
+export default function DocumentsScreen({
+  filter,
+  onFilterChange,
+}: {
+  filter: DocumentFilter;
+  onFilterChange: (filter: DocumentFilter) => void;
+}) {
   const { colors, spacing, fontSize } = useTheme();
   const canWrite = useCanWrite();
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<DocumentFilter>("all");
 
   const { data, error, gaveUp, isLoading, refetch } = useDocumentsWithPolling();
   const { refresh, refreshControl } = useRefresh(refetch, error);
@@ -69,7 +75,7 @@ export default function DocumentsScreen() {
       ListHeaderComponent={
         <View style={{ gap: spacing.md, padding: spacing.lg }}>
           <UploadStatus />
-          {error ? <Banner message="You're offline, or I can't reach the server. This is what I last loaded." /> : null}
+          {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
           {gaveUp ? (
             <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
               {STILL_READING_MESSAGE}
@@ -84,7 +90,7 @@ export default function DocumentsScreen() {
           />
           <SegmentedControl
             accessibilityLabel="Which documents to show"
-            onChange={setFilter}
+            onChange={onFilterChange}
             segments={DOCUMENT_FILTERS}
             value={filter}
           />

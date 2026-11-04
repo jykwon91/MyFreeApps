@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatTag } from "@/shared/utils/tag";
-import { useGetSummaryQuery, useGetSummaryYearsQuery } from "@/shared/store/summaryApi";
+import { useGetSummaryQuery, useGetSummaryYearsQuery } from "@mybookkeeper/api-client/store/summaryApi";
 import { useGetHealthSummaryQuery } from "@/shared/store/healthApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
