@@ -209,7 +209,7 @@ docker compose -f apps/myjobhunter/docker-compose.yml exec postgres \
 
 ## Phase 1 Scope
 
-**Implemented:** models, migrations, auth endpoints, 6 smoke read endpoints, tests, Docker, CI, HIBP password-breach check at registration / reset (`platform_shared.services.hibp_service`, fail-open on outage), TOTP 2FA enrollment + login challenge + disable + status (`backend/app/api/totp.py`, frontend `features/security/TwoFactorSetup.tsx`)
+**Implemented:** models, migrations, auth endpoints, 6 smoke read endpoints, tests, Docker, CI, HIBP password-breach check at registration / reset (`platform_shared.services.hibp_service`, fail-open on outage), TOTP 2FA enrollment + login challenge + disable + status (`backend/app/api/totp.py`, frontend `@platform/ui/components/auth/TwoFactorSetup`)
 **Phase 2:** Full CRUD for all domains, file upload, resume parse trigger
 **Phase 3:** Dramatiq workers, Gmail OAuth, Chrome extension integration
 **Phase 4:** Tavily company research, Claude JD parsing, cover letter generation
