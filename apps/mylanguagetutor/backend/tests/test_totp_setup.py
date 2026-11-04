@@ -19,6 +19,7 @@ a 6-digit code must use ``pyotp.TOTP(secret, digest=hashlib.sha256).now()``
 to generate a code that the server will accept.
 """
 import hashlib
+import time
 
 import pyotp
 import pytest
@@ -199,7 +200,7 @@ async def test_disable_requires_current_totp_code(
         status_after_bad = await authed.get("/auth/totp/status")
 
         # Correct code disables
-        good = await authed.post("/auth/totp/disable", json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).now()})
+        good = await authed.post("/auth/totp/disable", json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).at(time.time() + 30)})
         status_after_good = await authed.get("/auth/totp/status")
 
     assert bad.status_code == 400
@@ -220,7 +221,7 @@ async def test_disable_clears_totp_secret_and_recovery_codes(
         setup = await authed.post("/auth/totp/setup")
         secret = setup.json()["secret"]
         await authed.post("/auth/totp/verify", json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).now()})
-        await authed.post("/auth/totp/disable", json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).now()})
+        await authed.post("/auth/totp/disable", json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).at(time.time() + 30)})
 
     # Read raw row to confirm fields are cleared
     eng = create_async_engine(settings.database_url, poolclass=NullPool)

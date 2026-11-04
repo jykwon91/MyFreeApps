@@ -13,6 +13,7 @@ SHA-256 TOTP secrets. Tests that verify 6-digit codes use
 ``pyotp.TOTP(secret, digest=hashlib.sha256).now()`` to generate matching codes.
 """
 import hashlib
+import time
 
 import pyotp
 import pytest
@@ -97,7 +98,7 @@ async def test_login_with_valid_totp_returns_jwt(
         json={
             "email": user["email"],
             "password": user["password"],
-            "totp_code": pyotp.TOTP(secret, digest=hashlib.sha256).now(),
+            "totp_code": pyotp.TOTP(secret, digest=hashlib.sha256).at(time.time() + 30),
         },
     )
     assert resp.status_code == 200, resp.text
@@ -221,7 +222,7 @@ async def test_auth_events_written_on_totp_login_success(
         json={
             "email": user["email"],
             "password": user["password"],
-            "totp_code": pyotp.TOTP(secret, digest=hashlib.sha256).now(),
+            "totp_code": pyotp.TOTP(secret, digest=hashlib.sha256).at(time.time() + 30),
         },
     )
     events = await _read_auth_events(user["id"])

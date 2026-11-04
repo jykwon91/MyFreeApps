@@ -62,6 +62,7 @@ def upgrade() -> None:
         sa.Column("totp_enabled", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("totp_recovery_codes", sa.String(1000), nullable=True),
         sa.Column("totp_algorithm", sa.String(10), nullable=False, server_default="sha1"),
+        sa.Column("totp_last_used_step", sa.BigInteger(), nullable=True),
         sa.Column("failed_login_count", sa.SmallInteger(), nullable=False, server_default="0"),
         sa.Column("locked_until", sa.DateTime(timezone=True), nullable=True),
         sa.Column("last_failed_login_at", sa.DateTime(timezone=True), nullable=True),

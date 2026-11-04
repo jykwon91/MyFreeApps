@@ -6,6 +6,7 @@ from sqlalchemy import Boolean, DateTime, Enum as SAEnum, SmallInteger, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from platform_shared.auth.session_invalidation import SessionInvalidationMixin
+from platform_shared.auth.totp_replay_guard import TotpReplayGuardMixin
 from platform_shared.core.permissions import Role
 
 from app.core.encrypted_string_type import EncryptedString
@@ -16,7 +17,7 @@ from app.db.base import Base
 __all__ = ["User", "Role"]
 
 
-class User(SessionInvalidationMixin, SQLAlchemyBaseUserTableUUID, Base):
+class User(SessionInvalidationMixin, TotpReplayGuardMixin, SQLAlchemyBaseUserTableUUID, Base):
     # Intentional divergence from MBK (which uses singular ``user``): MJH was
     # scaffolded with the plural form before the parity audit and migrating
     # the table now would require a multi-step rename across every FK,

@@ -4,6 +4,7 @@ Exercises every function in app/services/user/totp_service.py with
 real pyotp calls -- no mocked TOTP codes.
 """
 import hashlib
+import time
 import uuid
 from contextlib import asynccontextmanager
 from unittest.mock import patch
@@ -644,7 +645,7 @@ class TestNewUserEnrollmentEndToEnd:
         assert len(recovery_codes) == 8
 
         # 3. Login: SHA-256 code accepted
-        login_code = pyotp.TOTP(secret, digest=hashlib.sha256).now()
+        login_code = pyotp.TOTP(secret, digest=hashlib.sha256).at(time.time() + 30)
         valid, used_recovery = await totp_service.validate_totp_for_login(
             "newsha256@example.com", login_code
         )

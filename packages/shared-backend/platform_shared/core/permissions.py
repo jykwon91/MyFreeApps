@@ -233,7 +233,7 @@ def make_strict_superuser_gate(
     *,
     current_active_user: Callable[..., Awaitable[_StrictSuperuserUser]],
     get_db: Callable[..., AsyncIterator[AsyncSession]],
-    verify_totp_step_up: Callable[[AsyncSession, uuid.UUID, str], Awaitable[None]],
+    verify_totp_step_up: Callable[[AsyncSession, uuid.UUID, str], Awaitable[bool]],
     decode_token_auth_time: Callable[[Request], Optional[float]],
     max_token_age_seconds: int = 900,
 ) -> Callable[..., Awaitable[_StrictSuperuserUser]]:
@@ -265,11 +265,11 @@ def make_strict_superuser_gate(
     Args:
         current_active_user: The app's fastapi-users ``current_active_user``
             dependency. Resolves the JWT to a User-shaped object.
-        get_db: The app's ``get_db`` dependency. The gate uses it to
-            write auth_event rows; the caller's transaction commits.
+        get_db: The app's ``get_db`` dependency. The gate writes and commits
+            auth_event rows on it.
         verify_totp_step_up: A callable taking ``(db, user_id, totp_code)``
-            that raises ``HTTPException`` if the code is invalid. Apps wire
-            their own implementation against the shared totp service.
+            that spends the code and returns whether it was valid: the app's
+            ``totp_service.verify_totp_code``.
         decode_token_auth_time: A callable taking ``(request)`` that returns the
             JWT's ``auth_time`` claim (Unix timestamp) or ``None`` if the JWT
             cannot be decoded or has no auth_time. The gate uses this to enforce
@@ -300,48 +300,41 @@ def make_strict_superuser_gate(
         x_totp_code: Optional[str] = Header(default=None, alias="X-TOTP-Code"),
         db: AsyncSession = Depends(get_db),
     ) -> _StrictSuperuserUser:
-        path = request.url.path
+        user_id = user.id
+
+        async def _record(event_type: AuthEventType, *, succeeded: bool, **details: int) -> None:
+            # Committed here: nothing else commits a denied request, and an
+            # exception would otherwise discard the row.
+            await log_auth_event(
+                db,
+                event_type=event_type,
+                user_id=user_id,
+                request=request,
+                succeeded=succeeded,
+                metadata={"path": request.url.path, **details},
+            )
+            await db.commit()
 
         # Gate 1: is_superuser
         if not user.is_superuser:
-            await log_auth_event(
-                db,
-                event_type=AuthEventType.SUPERUSER_GATE_DENIED_NOT_SUPERUSER,
-                user_id=user.id,
-                request=request,
-                succeeded=False,
-                metadata={"path": path},
-            )
+            await _record(AuthEventType.SUPERUSER_GATE_DENIED_NOT_SUPERUSER, succeeded=False)
             raise HTTPException(status_code=403, detail="Superuser access required")
 
         # Gate 2: recent re-auth (JWT auth_time must be within window)
         auth_time = decode_token_auth_time(request)
         if auth_time is None:
-            await log_auth_event(
-                db,
-                event_type=AuthEventType.SUPERUSER_GATE_DENIED_TOKEN_NO_IAT,
-                user_id=user.id,
-                request=request,
-                succeeded=False,
-                metadata={"path": path},
-            )
+            await _record(AuthEventType.SUPERUSER_GATE_DENIED_TOKEN_NO_IAT, succeeded=False)
             raise HTTPException(
                 status_code=401, detail="Token missing or unreadable auth_time claim"
             )
 
         age_seconds = int(time.time() - auth_time)
         if age_seconds > max_token_age_seconds:
-            await log_auth_event(
-                db,
-                event_type=AuthEventType.SUPERUSER_GATE_DENIED_TOKEN_STALE,
-                user_id=user.id,
-                request=request,
+            await _record(
+                AuthEventType.SUPERUSER_GATE_DENIED_TOKEN_STALE,
                 succeeded=False,
-                metadata={
-                    "path": path,
-                    "age_s": age_seconds,
-                    "max_age_s": max_token_age_seconds,
-                },
+                age_s=age_seconds,
+                max_age_s=max_token_age_seconds,
             )
             raise HTTPException(
                 status_code=401,
@@ -351,42 +344,23 @@ def make_strict_superuser_gate(
 
         # Gate 3: TOTP step-up
         if not x_totp_code:
-            await log_auth_event(
-                db,
-                event_type=AuthEventType.SUPERUSER_GATE_DENIED_MISSING_TOTP,
-                user_id=user.id,
-                request=request,
-                succeeded=False,
-                metadata={"path": path},
-            )
+            await _record(AuthEventType.SUPERUSER_GATE_DENIED_MISSING_TOTP, succeeded=False)
             raise HTTPException(
                 status_code=401,
                 detail="TOTP step-up required",
                 headers={"X-Require-Step-Up": "totp"},
             )
 
-        try:
-            await verify_totp_step_up(db, user.id, x_totp_code)
-        except HTTPException:
-            await log_auth_event(
-                db,
-                event_type=AuthEventType.SUPERUSER_GATE_DENIED_BAD_TOTP,
-                user_id=user.id,
-                request=request,
-                succeeded=False,
-                metadata={"path": path},
+        if not await verify_totp_step_up(db, user_id, x_totp_code):
+            await _record(AuthEventType.SUPERUSER_GATE_DENIED_BAD_TOTP, succeeded=False)
+            raise HTTPException(
+                status_code=401,
+                detail="invalid_totp",
+                headers={"X-Require-Step-Up": "totp"},
             )
-            raise
 
         # All three gates passed — emit pass event and admit
-        await log_auth_event(
-            db,
-            event_type=AuthEventType.SUPERUSER_GATE_PASSED,
-            user_id=user.id,
-            request=request,
-            succeeded=True,
-            metadata={"path": path},
-        )
+        await _record(AuthEventType.SUPERUSER_GATE_PASSED, succeeded=True)
         return user
 
     return _check

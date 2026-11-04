@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 
 import pytest
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
 from platform_shared.core.permissions import (
@@ -151,7 +151,10 @@ class TestMakeStrictSuperuserGate:
             return user
 
         class _FakeDb:
-            """Stand-in for AsyncSession — only ``add`` is exercised."""
+            """Stand-in for AsyncSession — ``add`` and ``commit`` are exercised."""
+
+            async def commit(self) -> None:
+                events[-1]["committed"] = True
 
             def add(self, obj: object) -> None:
                 events.append(
@@ -166,9 +169,8 @@ class TestMakeStrictSuperuserGate:
         async def fake_get_db():
             yield _FakeDb()
 
-        async def fake_verify_totp(_db, _uid, code: str) -> None:
-            if code != good_totp:
-                raise HTTPException(status_code=401, detail="Invalid TOTP code")
+        async def fake_verify_totp(_db, _uid, code: str) -> bool:
+            return code == good_totp
 
         def fake_decode_auth_time(_request) -> float | None:
             return token_auth_time
@@ -287,11 +289,14 @@ class TestMakeStrictSuperuserGate:
             "/superuser-action", headers={"X-TOTP-Code": "000000"}
         )
         assert resp.status_code == 401
-        assert resp.json()["detail"] == "Invalid TOTP code"
+        assert resp.json()["detail"] == "invalid_totp"
+        # The web client asks for another code only when it sees this header.
+        assert resp.headers["X-Require-Step-Up"] == "totp"
         assert len(events) == 1
         assert (
             events[0]["event_type"] == AuthEventType.SUPERUSER_GATE_DENIED_BAD_TOTP
         )
+        assert events[0]["committed"] is True
 
     def test_evaluates_gates_in_order_is_superuser_first(self) -> None:
         """Non-superuser short-circuits before token/TOTP evaluation.

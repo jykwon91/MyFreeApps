@@ -35,7 +35,7 @@ def fake_user(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
 
     monkeypatch.setattr(totp_service, "unit_of_work", _uow)
     monkeypatch.setattr(
-        totp_account_service, "get_by_id", AsyncMock(return_value=user),
+        totp_account_service, "lock_by_id", AsyncMock(return_value=user),
     )
     return user
 
@@ -72,7 +72,7 @@ async def test_setup_totp_unknown_user_raises_value_error(
 
     monkeypatch.setattr(totp_service, "unit_of_work", _uow)
     monkeypatch.setattr(
-        totp_account_service, "get_by_id", AsyncMock(return_value=None),
+        totp_account_service, "lock_by_id", AsyncMock(return_value=None),
     )
     with pytest.raises(ValueError):
         await totp_service.setup_totp(uuid.uuid4())
