@@ -69,15 +69,13 @@ def _build_response(
         applicant_id=applicant_id,
         provider="keycheck",
         status=status,
-        report_storage_key="screening/abc/def.pdf",
-        adverse_action_snippet=None,
+        has_report=True,
         notes=None,
         requested_at=now,
         completed_at=now,
         uploaded_at=now,
         uploaded_by_user_id=user_id,
         created_at=now,
-        presigned_url="https://storage.example.com/signed",
     )
 
 
@@ -312,7 +310,7 @@ class TestUploadEndpoint:
                 body = response.json()
                 assert body["provider"] == "keycheck"
                 assert body["status"] == "pass"
-                assert body["presigned_url"] == "https://storage.example.com/signed"
+                assert "presigned_url" not in body
                 kwargs = mock_record.call_args.kwargs
                 assert kwargs["applicant_id"] == applicant_id
                 assert kwargs["organization_id"] == org_id
@@ -476,21 +474,17 @@ class TestListEndpoint:
         now = _dt.datetime.now(_dt.timezone.utc)
         new = ScreeningResultResponse(
             id=uuid.uuid4(), applicant_id=applicant_id, provider="keycheck",
-            status="pass", report_storage_key="screening/a/b.pdf",
-            adverse_action_snippet=None, notes=None,
+            status="pass", has_report=True, notes=None,
             requested_at=now, completed_at=now, uploaded_at=now,
             uploaded_by_user_id=user_id, created_at=now,
-            presigned_url="https://x.example/new",
         )
         old = ScreeningResultResponse(
             id=uuid.uuid4(), applicant_id=applicant_id, provider="keycheck",
-            status="fail", report_storage_key="screening/a/c.pdf",
-            adverse_action_snippet="Credit score below threshold",
+            status="fail", has_report=True,
             notes=None,
             requested_at=now, completed_at=now,
             uploaded_at=now - _dt.timedelta(days=1),
             uploaded_by_user_id=user_id, created_at=now,
-            presigned_url="https://x.example/old",
         )
 
         app.dependency_overrides[current_org_member] = lambda: _ctx(org_id, user_id)
@@ -505,7 +499,9 @@ class TestListEndpoint:
                 body = response.json()
                 assert len(body) == 2
                 assert body[0]["status"] == "pass"
-                assert body[0]["presigned_url"] == "https://x.example/new"
+                assert body[0]["has_report"] is True
+                for private in ("presigned_url", "report_storage_key", "adverse_action_snippet"):
+                    assert private not in body[0]
                 assert body[1]["status"] == "fail"
         finally:
             app.dependency_overrides.clear()

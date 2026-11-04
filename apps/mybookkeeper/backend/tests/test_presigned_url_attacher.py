@@ -25,9 +25,7 @@ import pytest
 from app.schemas.leases.signed_lease_attachment_response import (
     SignedLeaseAttachmentResponse,
 )
-from app.schemas.applicants.screening_result_response import (
-    ScreeningResultResponse,
-)
+from app.schemas.applicants.screening_report_response import ScreeningReportResponse
 from app.services.storage.presigned_url_attacher import (
     attach_presigned_url_with_head_check,
     build_attachment_disposition,
@@ -52,20 +50,13 @@ def _row(**overrides) -> SignedLeaseAttachmentResponse:
     return SignedLeaseAttachmentResponse(**base)
 
 
-def _screening_row(**overrides) -> ScreeningResultResponse:
+def _screening_row(**overrides) -> ScreeningReportResponse:
     base = {
         "id": uuid.uuid4(),
-        "applicant_id": uuid.uuid4(),
-        "provider": "keycheck",
-        "status": "pass",
         "report_storage_key": f"screening/{uuid.uuid4()}.pdf",
-        "uploaded_at": _dt.datetime.now(_dt.timezone.utc),
-        "uploaded_by_user_id": uuid.uuid4(),
-        "created_at": _dt.datetime.now(_dt.timezone.utc),
-        "requested_at": _dt.datetime.now(_dt.timezone.utc),
     }
     base.update(overrides)
-    return ScreeningResultResponse(**base)
+    return ScreeningReportResponse(**base)
 
 
 def _mock_storage(*, exists: bool = True, raise_exc: Exception | None = None) -> MagicMock:

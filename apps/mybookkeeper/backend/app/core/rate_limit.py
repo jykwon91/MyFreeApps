@@ -77,6 +77,8 @@ totp_limiter = RateLimiter(max_attempts=20, window_seconds=300)
 register_limiter = RateLimiter(max_attempts=5, window_seconds=3600)
 password_reset_limiter = RateLimiter(max_attempts=5, window_seconds=3600)
 export_limiter = RateLimiter(max_attempts=20, window_seconds=3600)
+# Above what working through a day's applicants takes, re-hiding included.
+reveal_limiter = RateLimiter(max_attempts=60, window_seconds=3600)
 # Each call is a paid model request against a document the caller already has.
 # The daily upload cap bounds how many distinct documents exist but not how
 # many times one is re-read, so this bounds the re-reads.

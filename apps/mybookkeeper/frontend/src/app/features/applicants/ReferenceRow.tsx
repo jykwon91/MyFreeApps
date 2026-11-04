@@ -7,6 +7,8 @@ import type { ApplicantReference } from "@mybookkeeper/api-client/types/applican
 
 export interface ReferenceRowProps {
   reference: ApplicantReference;
+  /** Present once the host has shown sensitive data. */
+  contact?: string;
 }
 
 const RELATIONSHIP_LABELS: Record<string, string> = {
@@ -19,13 +21,13 @@ const RELATIONSHIP_LABELS: Record<string, string> = {
 };
 
 /**
- * Single reference row. Shows relationship, name, and contact, plus a
+ * Single reference row. Shows relationship, name, and contact if shown, plus a
  * "Contacted" badge with timestamp if the host has marked it contacted.
  *
  * Per RENTALS_PLAN.md §9.1: contacted_at is the actionable signal — the
  * host should know at a glance which references they've already chased.
  */
-export default function ReferenceRow({ reference }: ReferenceRowProps) {
+export default function ReferenceRow({ reference, contact }: ReferenceRowProps) {
   const relationship =
     RELATIONSHIP_LABELS[reference.relationship] ?? reference.relationship;
 
@@ -37,7 +39,7 @@ export default function ReferenceRow({ reference }: ReferenceRowProps) {
       <div className="min-w-0">
         <p className="text-sm font-medium truncate">{reference.reference_name}</p>
         <p className="text-xs text-muted-foreground truncate">
-          {relationship} · {reference.reference_contact}
+          {contact ? `${relationship} · ${contact}` : relationship}
         </p>
         {reference.notes ? (
           <p className="text-xs text-muted-foreground mt-1 italic">{reference.notes}</p>

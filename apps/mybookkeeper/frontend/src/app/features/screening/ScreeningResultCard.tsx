@@ -7,6 +7,7 @@ import {
   formatRelativeTime,
 } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import type { ScreeningResult } from "@mybookkeeper/api-client/types/applicant/screening-result";
+import type { ScreeningReport } from "@mybookkeeper/api-client/types/applicant/screening-report";
 
 interface StatusMeta {
   label: string;
@@ -44,6 +45,8 @@ const PROVIDER_LABELS: Record<string, string> = {
 
 export interface ScreeningResultCardProps {
   result: ScreeningResult;
+  /** Present once the host has shown sensitive data. */
+  report?: ScreeningReport;
 }
 
 /**
@@ -52,9 +55,9 @@ export interface ScreeningResultCardProps {
  * - Pending results are rendered separately in ``ScreeningPendingPanel``.
  * - Adverse-action snippet is collapsed by default (FCRA-relevant — the host
  *   expands it intentionally to read the reason for their records).
- * - Download link uses the per-row ``presigned_url`` minted by the backend.
+ * - Download link uses the ``presigned_url`` the audited reveal minted, by the backend.
  */
-export default function ScreeningResultCard({ result }: ScreeningResultCardProps) {
+export default function ScreeningResultCard({ result, report }: ScreeningResultCardProps) {
   const [snippetOpen, setSnippetOpen] = useState(false);
   const meta = STATUS_META[result.status] ?? {
     label: result.status,
@@ -87,9 +90,9 @@ export default function ScreeningResultCard({ result }: ScreeningResultCardProps
           <span title={formatAbsoluteTime(result.uploaded_at)}>
             Uploaded {formatRelativeTime(result.uploaded_at)}
           </span>
-          {result.presigned_url ? (
+          {report?.presigned_url ? (
             <a
-              href={result.presigned_url}
+              href={report.presigned_url}
               target="_blank"
               rel="noopener noreferrer"
               data-testid={`screening-download-${result.id}`}
@@ -98,12 +101,16 @@ export default function ScreeningResultCard({ result }: ScreeningResultCardProps
               <Download className="h-3.5 w-3.5" aria-hidden="true" />
               Report
             </a>
+          ) : report?.is_available === false ? (
+            <span data-testid={`screening-report-missing-${result.id}`}>Report missing</span>
+          ) : result.has_report && !report ? (
+            <span data-testid={`screening-report-hidden-${result.id}`}>Report hidden</span>
           ) : null}
         </div>
       </div>
 
       {/* Adverse-action snippet — collapsed by default */}
-      {result.adverse_action_snippet ? (
+      {report?.adverse_action_snippet ? (
         <div className="text-xs border-t pt-2">
           <button
             type="button"
@@ -124,7 +131,7 @@ export default function ScreeningResultCard({ result }: ScreeningResultCardProps
               data-testid={`screening-snippet-text-${result.id}`}
               className="mt-1 ml-5 text-muted-foreground whitespace-pre-wrap leading-relaxed"
             >
-              {result.adverse_action_snippet}
+              {report.adverse_action_snippet}
             </p>
           ) : null}
         </div>

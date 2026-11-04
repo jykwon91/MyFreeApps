@@ -197,8 +197,8 @@ async def list_screening_results(
 ) -> list[ScreeningResultResponse]:
     """Return every screening result for an applicant, newest-uploaded first.
 
-    Each row includes a short-lived presigned download URL when storage is
-    configured. Returns 404 when the applicant doesn't exist in the calling
+    Reports and adverse action reasons come from the audited
+    ``POST /applicants/{id}/sensitive``. Returns 404 when the applicant doesn't exist in the calling
     tenant.
     """
     try:

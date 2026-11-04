@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import { useGetScreeningEligibilityQuery, useGetScreeningResultsQuery } from "@/shared/store/screeningApi";
+import type { ScreeningReport } from "@mybookkeeper/api-client/types/applicant/screening-report";
 import ScreeningEligibilityGate from "./ScreeningEligibilityGate";
 import ScreeningPendingPanel from "./ScreeningPendingPanel";
 import ScreeningProviderGrid from "./ScreeningProviderGrid";
@@ -10,6 +11,8 @@ import UploadScreeningResultModal from "./UploadScreeningResultModal";
 export interface ScreeningSectionProps {
   applicantId: string;
   canWrite: boolean;
+  /** Present once the host has shown sensitive data. */
+  reports?: readonly ScreeningReport[];
   /** Override window.open — only used by tests. */
   openWindow?: (url: string) => void;
 }
@@ -48,7 +51,7 @@ function ScreeningSectionSkeleton() {
  * Results list is always shown when results exist, regardless of current state.
  * This lets the host see historical results while a new one is pending.
  */
-export default function ScreeningSection({ applicantId, canWrite, openWindow }: ScreeningSectionProps) {
+export default function ScreeningSection({ applicantId, canWrite, reports, openWindow }: ScreeningSectionProps) {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
   const {
@@ -131,7 +134,11 @@ export default function ScreeningSection({ applicantId, canWrite, openWindow }: 
           className="space-y-3"
         >
           {completedResults.map((result) => (
-            <ScreeningResultCard key={result.id} result={result} />
+            <ScreeningResultCard
+              key={result.id}
+              result={result}
+              report={reports?.find((report) => report.id === result.id)}
+            />
           ))}
         </div>
       ) : !pendingResult && eligibility?.eligible && !canWrite ? null : (

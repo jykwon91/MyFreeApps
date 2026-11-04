@@ -15,6 +15,7 @@ import uuid
 from sqlalchemy import asc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.applicant_enums import APPLICANT_AUDIT_ONLY_EVENT_TYPES
 from app.models.applicants.applicant import Applicant
 from app.models.applicants.applicant_event import ApplicantEvent
 
@@ -55,9 +56,9 @@ async def list_for_applicant(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
 ) -> list[ApplicantEvent]:
-    """Return events for an applicant in chronological (occurred_at asc) order.
+    """Return the applicant's history in chronological (occurred_at asc) order.
 
-    Tenant-scoped through Applicant — returns [] if the applicant doesn't
+    Leaves out audit-only events. Tenant-scoped through Applicant — returns [] if the applicant doesn't
     belong to (organization_id, user_id).
     """
     result = await db.execute(
@@ -67,6 +68,7 @@ async def list_for_applicant(
             ApplicantEvent.applicant_id == applicant_id,
             Applicant.organization_id == organization_id,
             Applicant.user_id == user_id,
+            ApplicantEvent.event_type.not_in(APPLICANT_AUDIT_ONLY_EVENT_TYPES),
         )
         .order_by(asc(ApplicantEvent.occurred_at))
     )

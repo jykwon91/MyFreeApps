@@ -27,23 +27,20 @@ const PENDING_RESULT = {
   applicant_id: "app-1",
   provider: "keycheck",
   status: "pending",
-  report_storage_key: null,
-  adverse_action_snippet: null,
+  has_report: false,
   notes: null,
   requested_at: "2026-05-01T10:00:00Z",
   completed_at: null,
   uploaded_at: "2026-05-01T10:00:00Z",
   uploaded_by_user_id: "user-1",
   created_at: "2026-05-01T10:00:00Z",
-  presigned_url: null,
 };
 
 const PASS_RESULT = {
   ...PENDING_RESULT,
   id: "r-pass",
   status: "pass",
-  report_storage_key: "screening/app-1/r.pdf",
-  presigned_url: "https://storage.example.com/signed",
+  has_report: true,
 };
 
 function renderSection(canWrite = true) {

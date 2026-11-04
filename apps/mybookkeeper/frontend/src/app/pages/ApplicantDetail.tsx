@@ -48,7 +48,7 @@ export default function ApplicantDetail() {
       ) : null}
 
       {mode === "loading" ? <ApplicantDetailSkeleton /> : null}
-      {mode === "content" ? <ApplicantDetailBody applicant={applicant!} /> : null}
+      {mode === "content" ? <ApplicantDetailBody key={applicant!.id} applicant={applicant!} /> : null}
     </main>
   );
 }

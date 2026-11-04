@@ -1,6 +1,7 @@
 import { baseApi } from "@platform/core/store/baseApi";
 import { APPLICANT_PAGE_SIZE } from "../constants/applicantLabels";
 import type { ApplicantDetailResponse } from "../types/applicant/applicant-detail-response";
+import type { ApplicantSensitive } from "../types/applicant/applicant-sensitive";
 import type { ApplicantListArgs } from "../types/applicant/applicant-list-args";
 import type { ApplicantListResponse } from "../types/applicant/applicant-list-response";
 import type { ApplicantPageArgs } from "../types/applicant/applicant-page-args";
@@ -67,6 +68,11 @@ const applicantsApi = baseApi.enhanceEndpoints({
     getApplicantById: builder.query<ApplicantDetailResponse, string>({
       query: (id) => ({ url: `/applicants/${id}` }),
       providesTags: (_result, _error, id) => [{ type: "Applicant", id }],
+    }),
+    // A mutation so nothing caches the answer: it lasts as long as the screen
+    // that asked, and every request is recorded on the server.
+    revealApplicantSensitive: builder.mutation<ApplicantSensitive, string>({
+      query: (id) => ({ url: `/applicants/${id}/sensitive`, method: "POST" }),
     }),
     promoteFromInquiry: builder.mutation<
       ApplicantDetailResponse,
@@ -168,6 +174,7 @@ export const {
   useGetApplicantsQuery,
   useListApplicantPagesInfiniteQuery,
   useGetApplicantByIdQuery,
+  useRevealApplicantSensitiveMutation,
   usePromoteFromInquiryMutation,
   useTransitionApplicantStageMutation,
   useUpdateApplicantContractDatesMutation,

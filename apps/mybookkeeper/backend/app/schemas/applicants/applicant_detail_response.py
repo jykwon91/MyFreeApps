@@ -28,12 +28,9 @@ class ApplicantDetailResponse(BaseModel):
     inquiry_id: uuid.UUID | None = None
 
     legal_name: str | None = None
-    dob: str | None = None
     employer_or_hospital: str | None = None
-    vehicle_make_model: str | None = None
-    contact_email: str | None = None
-    contact_phone: str | None = None
-    id_document_storage_key: str | None = None
+    # The address itself comes from POST /applicants/{id}/sensitive.
+    has_contact_email: bool = False
 
     contract_start: _dt.date | None = None
     contract_end: _dt.date | None = None

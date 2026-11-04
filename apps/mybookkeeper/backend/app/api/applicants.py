@@ -11,19 +11,22 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
+from app.core.rate_limit import reveal_limiter
 from app.schemas.applicants.applicant_detail_response import ApplicantDetailResponse
 from app.schemas.applicants.applicant_list_response import ApplicantListResponse
 from app.schemas.applicants.applicant_promote_request import ApplicantPromoteRequest
+from app.schemas.applicants.applicant_sensitive_response import ApplicantSensitiveResponse
 from app.schemas.applicants.applicant_update_request import ApplicantUpdateRequest
 from app.schemas.applicants.stage_transition_request import StageTransitionRequest
 from app.schemas.applicants.tenancy_end_request import TenancyEndRequest
 from app.schemas.applicants.tenant_list_response import TenantListResponse
 from app.services.applicants import (
     applicant_contract_service,
+    applicant_sensitive_service,
     applicant_service,
     applicant_stage_service,
     promote_service,
@@ -134,6 +137,26 @@ async def list_applicants(
         limit=limit,
         offset=offset,
     )
+
+
+@router.post("/{applicant_id}/sensitive", response_model=ApplicantSensitiveResponse)
+async def reveal_applicant_sensitive(
+    applicant_id: uuid.UUID,
+    response: Response,
+    ctx: RequestContext = Depends(current_org_member),
+) -> ApplicantSensitiveResponse:
+    """Return an applicant's private details and record that this user asked.
+
+    POST so it stays out of URL logs, caches and prefetching.
+    """
+    reveal_limiter.check(f"reveal:{ctx.user_id}")
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return await applicant_sensitive_service.reveal(
+            ctx.organization_id, ctx.user_id, applicant_id,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Applicant not found") from exc
 
 
 @router.get("/{applicant_id}", response_model=ApplicantDetailResponse)

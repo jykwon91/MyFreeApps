@@ -60,7 +60,7 @@ export default function LeaseDetail() {
     { skip: !lease?.applicant_id },
   );
 
-  const tenantHasEmail = Boolean(applicant?.contact_email);
+  const tenantHasEmail = Boolean(applicant?.has_contact_email);
   // Show "Email to tenant" whenever the lease has a renderable attachment
   // (rendered_original from a template flow, or signed_lease from import).
   // Imported leases with addenda generated post-#415 also qualify — the

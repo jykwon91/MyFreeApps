@@ -170,6 +170,10 @@ class Applicant(Base):
     )
 
     @property
+    def has_contact_email(self) -> bool:
+        return bool(self.contact_email)
+
+    @property
     def contract_end(self) -> _dt.date | None:
         """Latest non-deleted signed lease's ``ends_on`` for this applicant.
 

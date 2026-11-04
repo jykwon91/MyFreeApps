@@ -60,6 +60,7 @@ def attach_presigned_url_with_head_check(
     sentry_event_name: str,
     extra_sentry_tags: dict[str, str] | None = None,
     download_filename_resolver: Callable[[_T], str | None] | None = None,
+    expires_in_seconds: int | None = None,
 ) -> list[_T]:
     """Attach a presigned URL + is_available flag to each item in-place
     (returns new model copies — Pydantic models are immutable).
@@ -87,6 +88,8 @@ def attach_presigned_url_with_head_check(
             file under that name instead of the storage-key GUID.
             Returning ``None`` skips the disposition for that row (used
             by inline-displayed assets like listing photos).
+        expires_in_seconds: how long the URL lasts. Defaults to
+            ``settings.presigned_url_ttl_seconds``.
 
     Returns:
         New list of model copies with the two fields set. Items whose
@@ -135,7 +138,7 @@ def attach_presigned_url_with_head_check(
                 disposition = build_attachment_disposition(resolved)
         url = storage.generate_presigned_url(
             key,
-            settings.presigned_url_ttl_seconds,
+            expires_in_seconds or settings.presigned_url_ttl_seconds,
             response_content_disposition=disposition,
         )
         out.append(item.model_copy(update={

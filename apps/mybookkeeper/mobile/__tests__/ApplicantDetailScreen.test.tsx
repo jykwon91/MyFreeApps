@@ -65,19 +65,17 @@ describe("ApplicantDetailScreen", () => {
     expect(screen.getByText("No")).toBeTruthy();
   });
 
-  it("never shows private details, though the response carries them", async () => {
+  it("shows a screening result without its private note", async () => {
     startApplicantServer([anApplicant({
       screening_results: [{
-        id: "s1", applicant_id: "a1", provider: "keycheck", status: "fail", report_storage_key: "reports/k", adverse_action_snippet: "Eviction on record",
+        id: "s1", applicant_id: "a1", provider: "keycheck", status: "fail", has_report: true,
         notes: "Private screening note", requested_at: "2026-11-01T12:00:00Z", completed_at: "2026-11-02T12:00:00Z", uploaded_at: "2026-11-02T12:00:00Z",
-        uploaded_by_user_id: "u1", created_at: "2026-11-02T12:00:00Z", presigned_url: "https://files.example.com/signed",
+        uploaded_by_user_id: "u1", created_at: "2026-11-02T12:00:00Z",
       }],
     })]);
     await renderScreen();
     expect(await screen.findByText("KeyCheck: Didn't pass")).toBeTruthy();
-    for (const hidden of [/1990/, /Subaru/, /dana@example\.com/, /555-010/, /secret-key/, /Eviction/, /Private screening note/, /signed/]) {
-      expect(screen.queryByText(hidden)).toBeNull();
-    }
+    expect(screen.queryByText(/Private screening note/)).toBeNull();
   });
 
   it("points to the website for private details", async () => {
@@ -112,13 +110,12 @@ describe("ApplicantDetailScreen", () => {
 
   it("shows references, calls and activity, the last folded away", async () => {
     startApplicantServer([anApplicant({
-      references: [{ id: "r1", applicant_id: "a1", relationship: "Landlord", reference_name: "Pat Lee", reference_contact: "pat@example.com", notes: null, contacted_at: null, created_at: "2026-11-01T12:00:00Z", updated_at: "2026-11-01T12:00:00Z" }],
-      video_call_notes: [{ id: "v1", applicant_id: "a1", scheduled_at: "2026-11-02T12:00:00Z", completed_at: null, notes: "Friendly", gut_rating: 4, transcript_storage_key: null, created_at: "2026-11-01T12:00:00Z", updated_at: "2026-11-01T12:00:00Z" }],
+      references: [{ id: "r1", applicant_id: "a1", relationship: "Landlord", reference_name: "Pat Lee", notes: null, contacted_at: null, created_at: "2026-11-01T12:00:00Z", updated_at: "2026-11-01T12:00:00Z" }],
+      video_call_notes: [{ id: "v1", applicant_id: "a1", scheduled_at: "2026-11-02T12:00:00Z", completed_at: null, notes: "Friendly", gut_rating: 4, created_at: "2026-11-01T12:00:00Z", updated_at: "2026-11-01T12:00:00Z" }],
       events: [{ id: "e1", applicant_id: "a1", event_type: "approved", actor: "host", notes: null, payload: null, occurred_at: "2026-11-02T12:00:00Z", created_at: "2026-11-02T12:00:00Z" }],
     })]);
     await renderScreen();
     expect(await screen.findByText("Pat Lee")).toBeTruthy();
-    expect(screen.queryByText(/pat@example\.com/)).toBeNull();
     expect(screen.getByText("Friendly")).toBeTruthy();
     const activity = screen.getByRole("button", { name: "Activity, Moved to Approved" });
     expect(screen.getByText("No screening yet.")).toBeTruthy();

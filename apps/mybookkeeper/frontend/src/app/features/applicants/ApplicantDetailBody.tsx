@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ExternalLink } from "lucide-react";
 import { useGetSignedLeasesQuery } from "@/shared/store/signedLeasesApi";
-import { useRestartTenancyMutation } from "@mybookkeeper/api-client/store/applicantsApi";
+import { useRestartTenancyMutation, useRevealApplicantSensitiveMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
@@ -18,6 +18,7 @@ import ApplicantTimelineList from "./ApplicantTimelineList";
 import ContractDatesEditor from "./ContractDatesEditor";
 import ReferenceRow from "./ReferenceRow";
 import VideoCallNoteCard from "./VideoCallNoteCard";
+import { applicantRevealFailure } from "@mybookkeeper/api-client/utils/applicantRevealFailure";
 import SensitiveDataUnlock from "./SensitiveDataUnlock";
 import LinkedLeaseDocuments from "./LinkedLeaseDocuments";
 import LinkedLeaseReceipts from "./LinkedLeaseReceipts";
@@ -41,6 +42,10 @@ export default function ApplicantDetailBody({ applicant }: ApplicantDetailBodyPr
     { applicant_id: applicant.id },
   );
   const linkedLeases: readonly SignedLeaseSummary[] = leasesResponse?.items ?? [];
+
+  // The parent keys this component by applicant, so leaving one forgets its details.
+  const [reveal, { data: sensitive, error: revealError, isLoading: isRevealing, reset: resetReveal }] =
+    useRevealApplicantSensitiveMutation();
 
   return (
     <>
@@ -229,30 +234,17 @@ export default function ApplicantDetailBody({ applicant }: ApplicantDetailBodyPr
             <dt className="text-xs text-muted-foreground">Referred by</dt>
             <dd>{applicant.referred_by ?? "—"}</dd>
           </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">ID document</dt>
-            <dd>
-              {applicant.id_document_storage_key ? (
-                <a
-                  href={`/api/storage/${applicant.id_document_storage_key}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  data-testid="applicant-id-document-link"
-                  className="inline-flex items-center gap-1 text-primary hover:underline"
-                >
-                  <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                  View document
-                </a>
-              ) : (
-                "Not uploaded"
-              )}
-            </dd>
-          </div>
         </div>
       </section>
 
       {/* Sensitive data — gated behind explicit unlock per RENTALS_PLAN.md §9.1 */}
-      <SensitiveDataUnlock>
+      <SensitiveDataUnlock
+        errorMessage={revealError ? applicantRevealFailure(revealError) : null}
+        isLoading={isRevealing}
+        isRevealed={Boolean(sensitive)}
+        onHide={resetReveal}
+        onShow={() => void reveal(applicant.id)}
+      >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <div>
             <dt className="text-xs text-muted-foreground">Legal name</dt>
@@ -262,7 +254,7 @@ export default function ApplicantDetailBody({ applicant }: ApplicantDetailBodyPr
           </div>
           <div>
             <dt className="text-xs text-muted-foreground">Date of birth</dt>
-            <dd data-testid="sensitive-dob">{applicant.dob ?? "—"}</dd>
+            <dd data-testid="sensitive-dob">{sensitive?.dob ?? "—"}</dd>
           </div>
           <div>
             <dt className="text-xs text-muted-foreground">Employer / hospital</dt>
@@ -273,18 +265,18 @@ export default function ApplicantDetailBody({ applicant }: ApplicantDetailBodyPr
           <div>
             <dt className="text-xs text-muted-foreground">Vehicle</dt>
             <dd data-testid="sensitive-vehicle">
-              {applicant.vehicle_make_model ?? "—"}
+              {sensitive?.vehicle_make_model ?? "—"}
             </dd>
           </div>
           <div>
             <dt className="text-xs text-muted-foreground">Email</dt>
             <dd data-testid="sensitive-contact-email">
-              {applicant.contact_email ? (
+              {sensitive?.contact_email ? (
                 <a
-                  href={`mailto:${applicant.contact_email}`}
+                  href={`mailto:${sensitive.contact_email}`}
                   className="text-primary hover:underline"
                 >
-                  {applicant.contact_email}
+                  {sensitive.contact_email}
                 </a>
               ) : (
                 "—"
@@ -294,12 +286,12 @@ export default function ApplicantDetailBody({ applicant }: ApplicantDetailBodyPr
           <div>
             <dt className="text-xs text-muted-foreground">Phone</dt>
             <dd data-testid="sensitive-contact-phone">
-              {applicant.contact_phone ? (
+              {sensitive?.contact_phone ? (
                 <a
-                  href={`tel:${applicant.contact_phone}`}
+                  href={`tel:${sensitive.contact_phone}`}
                   className="text-primary hover:underline"
                 >
-                  {applicant.contact_phone}
+                  {sensitive.contact_phone}
                 </a>
               ) : (
                 "—"
@@ -357,6 +349,7 @@ export default function ApplicantDetailBody({ applicant }: ApplicantDetailBodyPr
         <ScreeningSection
           applicantId={applicant.id}
           canWrite={canWrite}
+          reports={sensitive?.screening_reports}
         />
       </section>
 
@@ -373,7 +366,11 @@ export default function ApplicantDetailBody({ applicant }: ApplicantDetailBodyPr
         ) : (
           <ul className="divide-y" data-testid="references-list">
             {applicant.references.map((reference) => (
-              <ReferenceRow key={reference.id} reference={reference} />
+              <ReferenceRow
+                key={reference.id}
+                reference={reference}
+                contact={sensitive?.references.find((r) => r.id === reference.id)?.reference_contact}
+              />
             ))}
           </ul>
         )}

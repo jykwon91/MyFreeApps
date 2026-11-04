@@ -15,6 +15,8 @@ class Settings(BaseAppSettings):
     # MBK-specific overrides of base defaults
     # ------------------------------------------------------------------
     jwt_lifetime_seconds: int = 60 * 60 * 24  # 24 hours
+    # A report link from the audited reveal is useless soon after it was asked for.
+    applicant_reveal_url_ttl_seconds: int = 300
     frontend_url: str = "http://localhost:5173"
     cors_origins: list[str] = ["http://localhost:5173"]
     minio_bucket: str = "mybookkeeper-files"
