@@ -1,9 +1,9 @@
 import { parse, format, startOfMonth, endOfMonth } from "date-fns";
 import { formatTag } from "@/shared/utils/tag";
 import { EXPENSE_CATEGORY_LIST } from "@/shared/lib/constants";
-import type { MonthSummary } from "@/shared/types/summary/month-summary";
-import type { MonthExpenseSummary } from "@/shared/types/summary/month-expense-summary";
-import type { PropertyMonthlySummary } from "@/shared/types/summary/property-monthly-summary";
+import type { MonthSummary } from "@mybookkeeper/api-client/types/summary/MonthSummary";
+import type { MonthExpenseSummary } from "@mybookkeeper/api-client/types/summary/MonthExpenseSummary";
+import type { PropertyMonthlySummary } from "@mybookkeeper/api-client/types/summary/PropertyMonthlySummary";
 import type { DrillDownFilter } from "@/shared/types/dashboard/drill-down-filter";
 import type { MergedRow } from "@/shared/types/dashboard/merged-row";
 

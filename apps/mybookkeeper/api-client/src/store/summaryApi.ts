@@ -1,14 +1,11 @@
-import { baseApi } from "./baseApi";
-import type { SummaryResponse } from "@/shared/types/summary/summary";
-import type { TaxSummaryResponse } from "@/shared/types/summary/tax-summary";
+import { baseApi } from "@platform/core/store/baseApi";
+import type { SummaryParams } from "../types/summary/SummaryParams";
+import type { SummaryResponse } from "../types/summary/summary";
+import type { TaxSummaryResponse } from "../types/summary/TaxSummaryResponse";
 
-export interface SummaryParams {
-  startDate?: string;
-  endDate?: string;
-  propertyIds?: string[];
-}
-
-const summaryApi = baseApi.injectEndpoints({
+export const summaryApi = baseApi.enhanceEndpoints({
+  addTagTypes: ["Summary"],
+}).injectEndpoints({
   endpoints: (builder) => ({
     getSummary: builder.query<SummaryResponse, SummaryParams | void>({
       query: (params) => {

@@ -59,12 +59,12 @@ describe("filters", () => {
   });
 
   it("ignores the period when showing what's waiting for review", () => {
-    expect(toListParams({ ...NO_FILTERS, view: "review", period: "lastYear" }, "", today)).toEqual({ to_review: true });
+    expect(toListParams({ ...NO_FILTERS, view: "review", period: "lastYear" }, today)).toEqual({ to_review: true });
   });
 
   it("sends no-property as its own flag", () => {
-    expect(toListParams({ ...NO_FILTERS, propertyId: UNASSIGNED_PROPERTY }, "", today)).toEqual({ unassigned: true });
-    expect(toListParams({ ...NO_FILTERS, propertyId: "p1" }, " depot ", today)).toEqual({ property_id: "p1", vendor: "depot" });
+    expect(toListParams({ ...NO_FILTERS, propertyId: UNASSIGNED_PROPERTY }, today)).toEqual({ unassigned: true });
+    expect(toListParams({ ...NO_FILTERS, propertyId: "p1", vendor: " depot " }, today)).toEqual({ property_id: "p1", vendor: "depot" });
   });
 
   it("ignores made-up values in a link", () => {
@@ -77,12 +77,12 @@ describe("filters", () => {
 
   it("builds the same list for review whether it starts in the app or a link", () => {
     expect(reviewQueueParams({ property: UNASSIGNED_PROPERTY, vendor: "acme" }, today)).toEqual(
-      toListParams({ ...NO_FILTERS, view: "review", propertyId: UNASSIGNED_PROPERTY }, "acme", today),
+      toListParams({ ...NO_FILTERS, view: "review", propertyId: UNASSIGNED_PROPERTY, vendor: "acme" }, today),
     );
   });
 
   it("carries only what's set into a review link", () => {
-    expect(reviewLink("t1", { ...NO_FILTERS, view: "review" }, " ")).toBe("/transactions/t1?review=1");
+    expect(reviewLink("t1", { ...NO_FILTERS, view: "review", vendor: " " })).toBe("/transactions/t1?review=1");
   });
 
   it("counts filters but not the view", () => {

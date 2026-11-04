@@ -12,6 +12,8 @@ export const NO_FILTERS: TransactionFilters = {
   type: null,
   propertyId: null,
   category: null,
+  vendor: "",
+  approvedOnly: false,
 };
 
 export const TRANSACTION_VIEWS: readonly { value: TransactionView; label: string }[] = [

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useDashboardFilter } from "@/shared/hooks/useDashboardFilter";
 import { REVENUE_TAGS } from "@/shared/lib/constants";
-import type { SummaryResponse } from "@/shared/types/summary/summary";
+import type { SummaryResponse } from "@mybookkeeper/api-client/types/summary/summary";
 
 const mockSummary: SummaryResponse = {
   revenue: 5000,

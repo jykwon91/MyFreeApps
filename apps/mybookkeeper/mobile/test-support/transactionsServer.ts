@@ -1,5 +1,6 @@
 import api from "@platform/core/lib/api";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
+import type { SummaryResponse } from "@mybookkeeper/api-client/types/summary/summary";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 
@@ -36,6 +37,11 @@ export interface FakeTransactionServer {
   /** Fails list requests at or past this offset, while set. */
   failListFromOffset: number | null;
   retroactiveCount: number;
+  summary: Partial<SummaryResponse>;
+  summaryYears: number[];
+  documents: { id: string; status: string }[];
+  /** Fails summary requests while set. */
+  failSummary: boolean;
   requests: AxiosRequestConfig[];
 }
 
@@ -51,6 +57,10 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     failWritesWith: null,
     failListFromOffset: null,
     retroactiveCount: 0,
+    summary: { revenue: 0, expenses: 0, profit: 0, by_property: [] },
+    summaryYears: [2026],
+    documents: [],
+    failSummary: false,
     requests: [],
   };
   const adapter: AxiosAdapter = (config) => {
@@ -63,6 +73,9 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     server.requests.push(config);
     if (server.offline) return Promise.reject(Object.assign(new Error("Network Error"), { config }));
     if (config.url === "/properties") return respond(server.properties);
+    if (config.url === "/documents") return respond(server.documents);
+    if (config.url === "/summary/years") return respond(server.summaryYears);
+    if (config.url?.startsWith("/summary")) return server.failSummary ? respond({ detail: "nope" }, 500) : respond(server.summary);
     if (config.url === "/transactions/review-count") {
       return respond({ count: server.transactions.filter((row) => REVIEWABLE.includes(row.status)).length });
     }
@@ -73,6 +86,7 @@ export function startTransactionServer(transactions: Transaction[], properties: 
       const matches = server.transactions.filter(
         (row) =>
           (!params.to_review || REVIEWABLE.includes(row.status)) &&
+          (!params.status || row.status === params.status) &&
           (!params.vendor || (row.vendor ?? "").toLowerCase().includes(String(params.vendor).toLowerCase())),
       );
       return respond(matches.slice(offset, offset + Number(params.limit ?? 1000)));

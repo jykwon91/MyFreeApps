@@ -3,6 +3,7 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { useState } from "react";
+import { Pressable } from "react-native";
 import { Provider } from "react-redux";
 import { NO_FILTERS } from "../src/constants/transactionFilters";
 import TransactionsScreen from "../src/features/transactions/TransactionsScreen";
@@ -13,7 +14,13 @@ import { store } from "../src/lib/store";
 import { aProperty, aTransaction, startTransactionServer } from "../test-support/transactionsServer";
 
 const mockPush = jest.fn();
-jest.mock("expo-router", () => ({ router: { push: (path: string) => mockPush(path) } }));
+jest.mock("expo-router", () => ({
+  router: { push: (path: string) => mockPush(path) },
+  useFocusEffect: (callback: () => void) => {
+    const { useEffect } = jest.requireActual("react");
+    useEffect(callback, [callback]);
+  },
+}));
 
 const originalAdapter = api.defaults.adapter;
 
@@ -30,7 +37,27 @@ afterEach(() => {
 
 function Harness({ initial }: { initial: TransactionFilters }) {
   const [filters, setFilters] = useState(initial);
-  return <TransactionsScreen filters={filters} onFiltersChange={setFilters} />;
+  return (
+    <TransactionsScreen
+      filters={filters}
+      onFiltersChange={setFilters}
+      onVendorChange={(vendor) => setFilters((current) => ({ ...current, vendor }))}
+    />
+  );
+}
+
+function ControlledFromOutside() {
+  const [filters, setFilters] = useState<TransactionFilters>({ ...NO_FILTERS, vendor: "acme" });
+  return (
+    <>
+      <Pressable accessibilityLabel="follow a link" accessibilityRole="button" onPress={() => setFilters(NO_FILTERS)} />
+      <TransactionsScreen
+        filters={filters}
+        onFiltersChange={setFilters}
+        onVendorChange={(vendor) => setFilters((current) => ({ ...current, vendor }))}
+      />
+    </>
+  );
 }
 
 async function renderScreen(initial: TransactionFilters = NO_FILTERS) {
@@ -210,5 +237,33 @@ describe("TransactionsScreen", () => {
     server.offline = false;
     await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByText("Home Depot")).toBeTruthy();
+  });
+
+  it("empties the search box when a link clears the vendor", async () => {
+    startTransactionServer([aTransaction({ id: "t1", vendor: "Acme" }), aTransaction({ id: "t2", vendor: "Lowes" })]);
+    await render(
+      <Provider store={store}>
+        <ToastProvider bottomOffset={0}>
+          <ControlledFromOutside />
+        </ToastProvider>
+      </Provider>,
+    );
+    await screen.findByText("Acme");
+    expect(screen.queryByText("Lowes")).toBeNull();
+    expect(screen.getByLabelText("Search transactions by vendor").props.value).toBe("acme");
+    await fireEvent.press(screen.getByRole("button", { name: "follow a link" }));
+    await waitFor(() => expect(screen.getByLabelText("Search transactions by vendor").props.value).toBe(""));
+    expect(await screen.findByText("Lowes")).toBeTruthy();
+  });
+
+  it("can show approved rows only, says so, and clears it", async () => {
+    startTransactionServer([aTransaction({ id: "t1", vendor: "Acme", status: "approved" }), aTransaction({ id: "t2", vendor: "Lowes", status: "pending" })]);
+    await renderScreen({ ...NO_FILTERS, approvedOnly: true });
+    await screen.findByText("Acme");
+    expect(screen.queryByText("Lowes")).toBeNull();
+    expect(screen.getByText("Approved")).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "Clear" }));
+    expect(await screen.findByText("Lowes")).toBeTruthy();
+    expect(screen.queryByText("Approved")).toBeNull();
   });
 });

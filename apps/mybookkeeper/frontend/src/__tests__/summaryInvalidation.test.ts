@@ -6,7 +6,7 @@ import "@mybookkeeper/api-client/store/documentsApi";
 import { documentUploadForm } from "@/shared/lib/document-upload-form";
 import "@/shared/store/integrationsApi";
 import "@mybookkeeper/api-client/store/transactionsApi";
-import "@/shared/store/summaryApi";
+import "@mybookkeeper/api-client/store/summaryApi";
 
 // Mock the axios instance used by the baseQuery so mutations and queries can
 // "succeed" without a network. The baseQuery calls `api({ url, method, ... })`.

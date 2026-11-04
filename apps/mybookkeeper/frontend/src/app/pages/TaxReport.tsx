@@ -4,7 +4,7 @@ import { Download, X } from "lucide-react";
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatTag } from "@/shared/utils/tag";
 import { downloadFile } from "@/shared/utils/download";
-import { useGetTaxSummaryQuery } from "@/shared/store/summaryApi";
+import { useGetTaxSummaryQuery } from "@mybookkeeper/api-client/store/summaryApi";
 import { useToast } from "@/shared/hooks/useToast";
 import Select from "@/shared/components/ui/Select";
 import { Button } from "@platform/ui";

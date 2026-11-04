@@ -1,7 +1,7 @@
 import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { parse, format, startOfMonth, endOfMonth } from "date-fns";
 import { formatCurrency } from "@/shared/utils/currency";
-import type { MonthSummary } from "@/shared/types/summary/month-summary";
+import type { MonthSummary } from "@mybookkeeper/api-client/types/summary/MonthSummary";
 
 interface ChartRow extends MonthSummary {
   displayMonth: string;

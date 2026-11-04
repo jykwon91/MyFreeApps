@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import MonthlyAverageCard from "@/app/features/dashboard/MonthlyAverageCard";
-import type { MonthSummary } from "@/shared/types/summary/month-summary";
+import type { MonthSummary } from "@mybookkeeper/api-client/types/summary/MonthSummary";
 
 describe("MonthlyAverageCard", () => {
   it("renders nothing when there are no months with data", () => {

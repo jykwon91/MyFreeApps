@@ -1,7 +1,9 @@
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { useState } from "react";
 import { Provider } from "react-redux";
+import type { DocumentFilter } from "../src/constants/documentFilters";
 import DocumentsScreen from "../src/features/documents/DocumentsScreen";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
@@ -22,10 +24,15 @@ const OLD = aDocument({ id: "old", file_name: "old.pdf", created_at: "2026-10-01
 const NEW = aDocument({ id: "new", file_name: "new.pdf", created_at: "2026-11-01T00:00:00Z" });
 const FAILED = aDocument({ id: "bad", file_name: "bad.pdf", status: "failed", created_at: "2026-09-01T00:00:00Z" });
 
-async function renderScreen() {
+function Harness({ initial = "all" }: { initial?: DocumentFilter }) {
+  const [filter, setFilter] = useState<DocumentFilter>(initial);
+  return <DocumentsScreen filter={filter} onFilterChange={setFilter} />;
+}
+
+async function renderScreen(initial?: DocumentFilter) {
   await render(
     <Provider store={store}>
-      <DocumentsScreen />
+      <Harness initial={initial} />
     </Provider>,
   );
 }
@@ -62,6 +69,13 @@ describe("DocumentsScreen", () => {
     await fireEvent.press(screen.getByRole("tab", { name: "Needs a look" }));
     expect(screen.queryByText("new.pdf")).toBeNull();
     expect(screen.getByText("bad.pdf")).toBeTruthy();
+  });
+
+  it("opens already narrowed when a link asks for it", async () => {
+    startFakeServer([NEW, FAILED]);
+    await renderScreen("needsALook");
+    expect(await screen.findByText("bad.pdf")).toBeTruthy();
+    expect(screen.queryByText("new.pdf")).toBeNull();
   });
 
   it("searches by file name", async () => {

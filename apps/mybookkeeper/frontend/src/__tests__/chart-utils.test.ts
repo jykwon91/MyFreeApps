@@ -5,8 +5,8 @@ import {
   formatMonthLabel,
   type PropertyBarKey,
 } from "@/shared/utils/chart-utils";
-import type { MonthSummary } from "@/shared/types/summary/month-summary";
-import type { MonthExpenseSummary } from "@/shared/types/summary/month-expense-summary";
+import type { MonthSummary } from "@mybookkeeper/api-client/types/summary/MonthSummary";
+import type { MonthExpenseSummary } from "@mybookkeeper/api-client/types/summary/MonthExpenseSummary";
 
 describe("formatMonthLabel", () => {
   it("formats a yyyy-MM string to abbreviated month and 2-digit year", () => {

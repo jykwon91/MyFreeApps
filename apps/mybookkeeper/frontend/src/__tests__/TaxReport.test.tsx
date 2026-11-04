@@ -5,7 +5,7 @@ import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
 import { store } from '@/shared/store';
 import TaxReport from '@/app/pages/TaxReport';
-import type { TaxSummaryResponse } from '@/shared/types/summary/tax-summary';
+import type { TaxSummaryResponse } from '@mybookkeeper/api-client/types/summary/TaxSummaryResponse';
 
 const currentYear = new Date().getFullYear();
 
@@ -55,7 +55,7 @@ const mockTaxSummary: TaxSummaryResponse = {
 };
 
 
-vi.mock('@/shared/store/summaryApi', () => ({
+vi.mock('@mybookkeeper/api-client/store/summaryApi', () => ({
   useGetTaxSummaryQuery: vi.fn(() => ({ data: mockTaxSummary, isLoading: false })),
 }));
 
@@ -67,7 +67,7 @@ vi.mock('@/shared/hooks/useToast', () => ({
   useToast: vi.fn(() => ({ showError: vi.fn(), showSuccess: vi.fn() })),
 }));
 
-import { useGetTaxSummaryQuery } from '@/shared/store/summaryApi';
+import { useGetTaxSummaryQuery } from '@mybookkeeper/api-client/store/summaryApi';
 import { downloadFile } from '@/shared/utils/download';
 
 function renderWithProviders(ui: React.ReactElement) {

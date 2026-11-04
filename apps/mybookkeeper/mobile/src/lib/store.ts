@@ -7,6 +7,7 @@ import { clearUploadQueue } from "../features/capture/uploadQueueFiles";
 import uploads, { uploadStatusDismissed } from "../features/capture/uploadsSlice";
 import { clearDocumentFiles } from "../features/documents/openDocumentFile";
 import workspace, { workspaceChosen } from "../features/workspace/workspaceSlice";
+import { refetchOnForeground } from "./refetchOnForeground";
 import { session } from "./session";
 
 assertSecureApiUrl(API_BASE_URL);
@@ -29,6 +30,7 @@ export function makeStore() {
 }
 
 export const store = makeStore();
+refetchOnForeground(store.dispatch);
 
 // In this order: a reset makes a mounted gate request again, and that request must not carry the old workspace.
 onAccountLeft(session, () => {
