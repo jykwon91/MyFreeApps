@@ -8,6 +8,8 @@ import type { InquiryStage } from "./inquiry-stage";
 export interface InquiryListArgs {
   stage?: InquiryStage;
   spam_status?: InquirySpamStatus;
+  /** Everything except flagged and spam, which includes email inquiries, never scored. */
+  inbox_only?: boolean;
   limit?: number;
   offset?: number;
 }

@@ -163,17 +163,18 @@ async def list_inbox(
     *,
     stage: str | None = None,
     spam_status: str | None = None,
+    inbox_only: bool = False,
     limit: int = 50,
     offset: int = 0,
 ) -> InquiryListResponse:
     async with AsyncSessionLocal() as db:
         rows = await inquiry_repo.list_with_last_message(
             db, organization_id,
-            stage=stage, spam_status=spam_status,
+            stage=stage, spam_status=spam_status, inbox_only=inbox_only,
             limit=limit, offset=offset,
         )
         total = await inquiry_repo.count_by_organization(
-            db, organization_id, stage=stage, spam_status=spam_status,
+            db, organization_id, stage=stage, spam_status=spam_status, inbox_only=inbox_only,
         )
     items = [_to_summary(r) for r in rows]
     has_more = (offset + len(items)) < total

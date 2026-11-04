@@ -14,6 +14,7 @@ from typing import Any
 from sqlalchemy import delete, desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.inquiry_enums import INQUIRY_SPAM_STATUSES_OUTSIDE_INBOX
 from app.models.inquiries.inquiry import Inquiry
 from app.models.inquiries.inquiry_message import InquiryMessage
 from app.schemas.inquiries.inquiry_with_last_message import InquiryWithLastMessage
@@ -223,10 +224,11 @@ async def count_by_organization(
     *,
     stage: str | None = None,
     spam_status: str | None = None,
+    inbox_only: bool = False,
 ) -> int:
     """Count active (non-deleted) inquiries for the inbox total.
 
-    ``spam_status`` is used by the inbox tabs ("All" / "Clean" / "Flagged" /
+    ``spam_status`` and ``inbox_only`` are used by the inbox tabs ("All" / "Inbox" / "Flagged" /
     "Spam") so each tab's count reflects its filtered subset.
     """
     stmt = select(func.count(Inquiry.id)).where(
@@ -237,6 +239,8 @@ async def count_by_organization(
         stmt = stmt.where(Inquiry.stage == stage)
     if spam_status is not None:
         stmt = stmt.where(Inquiry.spam_status == spam_status)
+    if inbox_only:
+        stmt = stmt.where(Inquiry.spam_status.not_in(INQUIRY_SPAM_STATUSES_OUTSIDE_INBOX))
     result = await db.execute(stmt)
     return int(result.scalar_one() or 0)
 
@@ -247,6 +251,7 @@ async def list_with_last_message(
     *,
     stage: str | None = None,
     spam_status: str | None = None,
+    inbox_only: bool = False,
     limit: int = 50,
     offset: int = 0,
 ) -> list[InquiryWithLastMessage]:
@@ -304,6 +309,8 @@ async def list_with_last_message(
         stmt = stmt.where(Inquiry.stage == stage)
     if spam_status is not None:
         stmt = stmt.where(Inquiry.spam_status == spam_status)
+    if inbox_only:
+        stmt = stmt.where(Inquiry.spam_status.not_in(INQUIRY_SPAM_STATUSES_OUTSIDE_INBOX))
     stmt = stmt.order_by(desc(Inquiry.received_at)).limit(limit).offset(offset)
 
     result = await db.execute(stmt)

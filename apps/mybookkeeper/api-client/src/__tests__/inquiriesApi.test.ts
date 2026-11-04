@@ -47,6 +47,11 @@ describe("inquiries endpoints", () => {
     expect(sent[0].params).toMatchObject({ stage: "new", spam_status: "flagged", limit: 25, offset: 50 });
   });
 
+  it("asks for the inbox", async () => {
+    await makeStore().dispatch(endpoints.getInquiries.initiate({ inbox_only: true }));
+    expect(sent[0].params).toMatchObject({ inbox_only: true });
+  });
+
   it("sends a reply to that inquiry", async () => {
     await makeStore().dispatch(
       endpoints.sendInquiryReply.initiate({ inquiryId: "i1", data: { subject: "Hi", body: "Hello" } }),

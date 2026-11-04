@@ -123,6 +123,22 @@ describe("Inquiries page", () => {
     createInquiryMock.mockClear();
   });
 
+  it("asks for the inbox by default, so email inquiries with no spam score show", () => {
+    renderInquiries();
+    expect(vi.mocked(useGetInquiriesQuery).mock.lastCall?.[0]).toMatchObject({ inbox_only: true });
+    expect(vi.mocked(useGetInquiriesQuery).mock.lastCall?.[0]).not.toHaveProperty("spam_status");
+  });
+
+  it("asks for one spam status on the Flagged tab, and none on All", () => {
+    const { unmount } = renderInquiries(["/inquiries?spam=flagged"]);
+    expect(vi.mocked(useGetInquiriesQuery).mock.lastCall?.[0]).toMatchObject({ spam_status: "flagged" });
+    unmount();
+    renderInquiries(["/inquiries?spam=all"]);
+    const args = vi.mocked(useGetInquiriesQuery).mock.lastCall?.[0];
+    expect(args).not.toHaveProperty("spam_status");
+    expect(args).not.toHaveProperty("inbox_only");
+  });
+
   it("renders inquiries on both mobile and desktop layouts", () => {
     renderInquiries();
     expect(screen.getByTestId("inquiries-mobile")).toBeInTheDocument();
