@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.repositories import soft_delete as _soft_delete
 
+from app.core.transaction_statuses import REVIEWABLE_STATUSES
 from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
 from app.models.extraction.extraction import Extraction
@@ -20,7 +21,7 @@ async def bulk_approve(
             Transaction.id.in_(transaction_ids),
             Transaction.organization_id == organization_id,
             Transaction.property_id.isnot(None),
-            Transaction.status.in_(["pending", "needs_review", "unverified"]),
+            Transaction.status.in_(REVIEWABLE_STATUSES),
             Transaction.deleted_at.is_(None),
         )
         .values(status="approved")

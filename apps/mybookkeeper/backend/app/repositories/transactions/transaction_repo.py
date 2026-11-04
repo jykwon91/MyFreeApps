@@ -20,6 +20,7 @@ from app.models.transactions.transaction_document import TransactionDocument
 
 # -- re-exports for back-compat ------------------------------------------
 from app.repositories.transactions.transaction_list_repo import (
+    count_to_review,
     find_by_vendor_for_retroactive,
     list_by_activity_ids,
     list_by_user,
@@ -68,6 +69,7 @@ __all__ = [
     "mark_deleted",
     "flush",
     # list
+    "count_to_review",
     "find_by_vendor_for_retroactive",
     "list_by_activity_ids",
     "list_by_user",

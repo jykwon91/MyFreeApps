@@ -21,6 +21,7 @@ from app.models.properties.property import Property, PropertyType
 from app.models.transactions.transaction import Transaction
 from app.models.user.user import User
 from app.repositories import transaction_repo
+from app.repositories.classification import classification_rule_repo
 
 
 @pytest_asyncio.fixture()
@@ -158,6 +159,54 @@ class TestListTransactions:
         assert all(t["status"] == "approved" for t in data)
 
 
+class TestToReview:
+    @pytest.mark.asyncio
+    async def test_filter_and_count_cover_the_same_rows(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User,
+    ) -> None:
+        for status in ("pending", "needs_review", "unverified"):
+            await _seed_transaction(db, org, owner, status=status)
+        await _seed_transaction(db, org, owner, status="approved")
+        await _seed_transaction(db, org, owner, status="duplicate")
+        deleted = await _seed_transaction(db, org, owner, status="pending")
+        deleted.deleted_at = datetime.now(timezone.utc)
+        await db.commit()
+
+        rows = (await client.get("/transactions", params={"to_review": True})).json()
+        assert sorted(t["status"] for t in rows) == ["needs_review", "pending", "unverified"]
+
+        count = await client.get("/transactions/review-count")
+        assert count.status_code == 200
+        assert count.json() == {"count": 3}
+
+    @pytest.mark.asyncio
+    async def test_count_is_per_organization(
+        self, client: AsyncClient, db: AsyncSession, owner: User,
+    ) -> None:
+        from app.repositories import organization_repo
+
+        other = await organization_repo.create(db, "Other Org", owner.id)
+        await db.commit()
+        await _seed_transaction(db, other, owner, status="pending")
+
+        assert (await client.get("/transactions/review-count")).json() == {"count": 0}
+
+
+class TestPaging:
+    @pytest.mark.asyncio
+    async def test_rows_sharing_a_date_never_repeat_or_vanish_between_pages(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User,
+    ) -> None:
+        seeded = [await _seed_transaction(db, org, owner) for _ in range(5)]
+
+        seen: list[str] = []
+        for offset in range(0, 5, 2):
+            page = await client.get("/transactions", params={"limit": 2, "offset": offset})
+            seen.extend(t["id"] for t in page.json())
+
+        assert sorted(seen) == sorted(str(t.id) for t in seeded)
+
+
 class TestCreateTransaction:
     @pytest.mark.asyncio
     async def test_creates_manual_transaction(
@@ -211,6 +260,100 @@ class TestUpdateTransaction:
             f"/transactions/{uuid.uuid4()}", json={"vendor": "Nope"},
         )
         assert resp.status_code == 404
+
+
+class TestClearingFields:
+    @pytest.mark.asyncio
+    async def test_explicit_null_clears_property_vendor_and_description(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User, prop: Property,
+    ) -> None:
+        txn = await _seed_transaction(db, org, owner, property_id=prop.id)
+        txn.description = "Sink repair"
+        await db.commit()
+
+        resp = await client.patch(
+            f"/transactions/{txn.id}",
+            json={"property_id": None, "vendor": None, "description": None},
+        )
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["property_id"] is None
+        assert body["vendor"] is None
+        assert body["description"] is None
+
+    @pytest.mark.asyncio
+    async def test_omitting_a_field_keeps_it(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User, prop: Property,
+    ) -> None:
+        txn = await _seed_transaction(db, org, owner, property_id=prop.id)
+
+        resp = await client.patch(f"/transactions/{txn.id}", json={"status": "approved"})
+
+        assert resp.json()["property_id"] == str(prop.id)
+        assert resp.json()["vendor"] == "Test Vendor"
+
+    @pytest.mark.asyncio
+    async def test_clearing_a_property_leaves_other_rows_alone(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User, prop: Property,
+    ) -> None:
+        cleared = await _seed_transaction(db, org, owner, property_id=prop.id)
+        sibling = await _seed_transaction(db, org, owner, property_id=prop.id)
+        cleared.address = "1 Oak St"
+        sibling.address = "1 Oak St"
+        await db.commit()
+
+        resp = await client.patch(f"/transactions/{cleared.id}", json={"property_id": None})
+
+        assert resp.status_code == 200
+        assert resp.json()["retroactive_count"] == 0
+        await db.refresh(sibling)
+        assert sibling.property_id == prop.id
+
+
+class TestLearnedRuleAssignment:
+    @pytest.mark.asyncio
+    async def test_category_fix_on_a_row_with_no_property_keeps_the_rules_property(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User, prop: Property,
+    ) -> None:
+        rule = await classification_rule_repo.upsert_rule(
+            db,
+            organization_id=org.id,
+            match_type="vendor",
+            pattern="Test Vendor",
+            category="maintenance",
+            created_by=owner.id,
+            property_id=prop.id,
+        )
+        await db.commit()
+        txn = await _seed_transaction(db, org, owner, property_id=prop.id)
+
+        resp = await client.patch(
+            f"/transactions/{txn.id}",
+            json={"category": "utilities", "property_id": None},
+        )
+
+        assert resp.status_code == 200
+        await db.refresh(rule)
+        assert rule.category == "utilities"
+        assert rule.property_id == prop.id
+
+
+class TestCategoriesTheDatabaseAllows:
+    @pytest.mark.asyncio
+    async def test_a_supplies_row_reads_back_and_can_be_chosen(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User,
+    ) -> None:
+        supplies = await _seed_transaction(db, org, owner, category="supplies")
+        other = await _seed_transaction(db, org, owner)
+
+        listed = await client.get("/transactions")
+        chosen = await client.patch(f"/transactions/{other.id}", json={"category": "meals"})
+
+        assert listed.status_code == 200
+        assert {t["id"] for t in listed.json()} == {str(supplies.id), str(other.id)}
+        assert chosen.status_code == 200
+        assert chosen.json()["category"] == "meals"
 
 
 class TestDeleteTransaction:

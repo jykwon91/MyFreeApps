@@ -42,6 +42,9 @@ async def learn_from_correction(
         source="user_correction",
         property_id=transaction.property_id,
         activity_id=transaction.activity_id,
+        # This corrects a category. A row with no property says nothing about
+        # where the vendor's other rows belong.
+        keep_assignment_when_unset=True,
     )
 
     retroactive_count = await _retroactive_category_fix(
