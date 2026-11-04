@@ -7,7 +7,9 @@ export { onAccountLeft } from "./auth/onAccountLeft";
 export { resetCacheOnAccountChange } from "./auth/resetCacheOnAccountChange";
 export { assertSecureApiUrl } from "./utils/assertSecureApiUrl";
 
+export { default as AccountDeletedBanner } from "./components/AccountDeletedBanner";
 export { default as AccountSection } from "./components/AccountSection";
+export { default as DeleteAccountScreen } from "./components/DeleteAccountScreen";
 export { default as Banner } from "./components/Banner";
 export { default as EmptyState } from "./components/EmptyState";
 export { default as FormField } from "./components/FormField";

@@ -1,6 +1,6 @@
 import { type AccountMessage, AccountSection, Toast, useDevices, useTheme } from "@platform/mobile";
 import Constants from "expo-constants";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { MORE_MENU } from "../../constants/moreMenu";
@@ -40,7 +40,12 @@ export default function MoreScreen() {
               ))}
           </View>
         ))}
-        <AccountSection appName="MyBookkeeper" devices={devices} onMessage={setMessage} />
+        <AccountSection
+          appName="MyBookkeeper"
+          devices={devices}
+          onDeleteAccount={() => router.push("/delete-account")}
+          onMessage={setMessage}
+        />
         {version ? <Text style={{ color: colors.mutedForeground, fontSize: fontSize.xs }}>Version {version}</Text> : null}
       </ScrollView>
       {message ? <Toast message={message.message} onDismiss={() => setMessage(null)} variant={message.variant} /> : null}

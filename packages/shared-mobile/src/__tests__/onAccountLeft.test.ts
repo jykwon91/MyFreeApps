@@ -53,6 +53,14 @@ describe("onAccountLeft", () => {
     expect(left).toHaveBeenCalledTimes(1);
   });
 
+  it("fires when a session the server ended turns out to be a deleted account", () => {
+    const { left, moveTo } = setUp();
+    moveTo(signedIn("a"));
+    moveTo(signedOut(true));
+    moveTo({ status: "signedOut", endedByServer: false, lastEmail: null, accountDeleted: "unconfirmed" });
+    expect(left).toHaveBeenCalledTimes(1);
+  });
+
   it("stays quiet for someone signing in from signed out", () => {
     const { left, moveTo } = setUp();
     moveTo(signedOut(false));

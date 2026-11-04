@@ -211,12 +211,20 @@ export function createMobileSession(): MobileSession {
     },
     signIn,
     signOut,
+    accountDeleted: (certainty) => {
+      const wasStored = stored !== null;
+      generation += 1;
+      accessToken = null;
+      stored = null;
+      if (wasStored) forgetStoredSession();
+      setState({ status: "signedOut", endedByServer: false, lastEmail: null, accountDeleted: certainty });
+    },
     skipRestore: () => {
       generation += 1;
       setState({ status: "signedOut", endedByServer: false, lastEmail: null });
     },
     dismissEndedNotice: () => {
-      if (state.status === "signedOut") setState({ ...state, endedByServer: false });
+      if (state.status === "signedOut") setState({ ...state, endedByServer: false, accountDeleted: undefined });
     },
   };
 }

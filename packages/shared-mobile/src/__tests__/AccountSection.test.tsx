@@ -33,12 +33,14 @@ function setUp(overrides: Partial<ReturnType<typeof useDevices>> = {}, signOut =
     subscribe: () => () => {},
   } as unknown as MobileSession;
   const onMessage = jest.fn();
+  const onDeleteAccount = jest.fn();
   return {
     devices,
+    onDeleteAccount,
     onMessage,
     view: (
       <SessionContext.Provider value={session}>
-        <AccountSection appName="MyRecipes" devices={devices} onMessage={onMessage} />
+        <AccountSection appName="MyRecipes" devices={devices} onDeleteAccount={onDeleteAccount} onMessage={onMessage} />
       </SessionContext.Provider>
     ),
   };
@@ -142,4 +144,13 @@ describe("AccountSection", () => {
       expect.objectContaining({ message: expect.stringContaining("may still appear in your device list") }),
     );
   });
+});
+
+it("opens the delete account screen", async () => {
+  const { view, onDeleteAccount } = setUp();
+  await render(view);
+
+  await fireEvent.press(screen.getByRole("button", { name: "Delete account" }));
+
+  expect(onDeleteAccount).toHaveBeenCalledTimes(1);
 });

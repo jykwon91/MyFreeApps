@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react-native";
 import { AccessibilityInfo, StyleSheet } from "react-native";
 import { SessionContext } from "../auth/SessionContext";
 import Banner from "../components/Banner";
+import AccountDeletedBanner from "../components/AccountDeletedBanner";
 import SessionEndedBanner from "../components/SessionEndedBanner";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 import type { MobileSession } from "../types/MobileSession";
@@ -18,6 +19,49 @@ describe("Banner", () => {
     expect(StyleSheet.flatten(action.props.style).minHeight).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     await fireEvent.press(action);
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("AccountDeletedBanner", () => {
+  it("doesn't claim a deletion it couldn't confirm", async () => {
+    await render(
+      <SessionContext.Provider
+        value={
+          {
+            getState: () => ({ status: "signedOut", endedByServer: false, lastEmail: null, accountDeleted: "unconfirmed" }),
+            subscribe: () => () => {},
+          } as unknown as MobileSession
+        }
+      >
+        <AccountDeletedBanner />
+      </SessionContext.Provider>,
+    );
+    expect(screen.getByText(/probably deleted/)).toBeTruthy();
+    expect(screen.queryByText("Your account has been deleted.")).toBeNull();
+  });
+
+  it("shows only after the account is deleted, and can be dismissed", async () => {
+    const dismissEndedNotice = jest.fn();
+    const asSession = (state: SessionState) =>
+      ({ getState: () => state, subscribe: () => () => {}, dismissEndedNotice }) as unknown as MobileSession;
+
+    await render(
+      <SessionContext.Provider value={asSession({ status: "signedOut", endedByServer: false, lastEmail: null })}>
+        <AccountDeletedBanner />
+      </SessionContext.Provider>,
+    );
+    expect(screen.queryByText("Your account has been deleted.")).toBeNull();
+
+    await render(
+      <SessionContext.Provider
+        value={asSession({ status: "signedOut", endedByServer: false, lastEmail: null, accountDeleted: "confirmed" })}
+      >
+        <AccountDeletedBanner />
+      </SessionContext.Provider>,
+    );
+    expect(screen.getByText("Your account has been deleted.")).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "OK" }));
+    expect(dismissEndedNotice).toHaveBeenCalledTimes(1);
   });
 });
 

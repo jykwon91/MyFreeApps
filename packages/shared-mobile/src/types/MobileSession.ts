@@ -1,5 +1,5 @@
 import type { SessionRefreshResult, TokenStore } from "@platform/core";
-import type { SessionState } from "./SessionState";
+import type { AccountDeletion, SessionState } from "./SessionState";
 import type { SignInCredentials } from "./SignInCredentials";
 import type { SignInResult } from "./SignInResult";
 
@@ -18,6 +18,8 @@ export interface MobileSession {
   signIn: (credentials: SignInCredentials) => Promise<SignInResult>;
   /** Always signs this phone out. `serverReached` is false if the server wasn't told. */
   signOut: () => Promise<{ serverReached: boolean }>;
+  /** The account is gone, and its sessions with it, so there's nothing to tell the server. */
+  accountDeleted: (certainty: AccountDeletion) => void;
   /** Stops waiting for an unreadable session, so the user can sign in over it. */
   skipRestore: () => void;
   dismissEndedNotice: () => void;

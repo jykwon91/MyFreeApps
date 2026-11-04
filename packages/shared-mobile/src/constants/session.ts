@@ -5,3 +5,6 @@ export const LOGOUT_TIMEOUT_MS = 5000;
 
 /** A refresh that never answers would hold up every request waiting for it. */
 export const AUTH_REQUEST_TIMEOUT_MS = 15000;
+
+/** Clearing years of records takes a while, and giving up early leaves the answer unknown. */
+export const DELETE_ACCOUNT_TIMEOUT_MS = 60000;
