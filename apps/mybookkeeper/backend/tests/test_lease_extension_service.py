@@ -27,7 +27,9 @@ from app.models.applicants.applicant_event import ApplicantEvent
 from app.models.leases.lease_term_version import LeaseTermVersion
 from app.models.leases.signed_lease import SignedLease
 from app.models.leases.signed_lease_attachment import SignedLeaseAttachment
+from app.repositories.leases import lease_term_version_repo
 from app.services.leases.lease_extension_service import (
+    undo_extension,
     InvalidLeaseStatusForExtensionError,
     MissingCurrentEndDateError,
     NewEndDateNotAfterCurrentError,
@@ -145,11 +147,13 @@ async def test_happy_path_extends_signed_lease(db: AsyncSession) -> None:
             select(LeaseTermVersion).where(LeaseTermVersion.lease_id == lease_id)
         )
     ).scalars().all()
-    assert len(versions) == 1
-    v = versions[0]
+    extensions = [v for v in versions if v.source_attachment_id is not None]
+    assert len(extensions) == 1
+    v = extensions[0]
     assert v.starts_on == _dt.date(2026, 1, 1)
     assert v.ends_on == _dt.date(2027, 6, 30)
     assert v.source_attachment_id == attachments[0].id
+    assert len(versions) == 2
 
 
 @pytest.mark.asyncio
@@ -411,3 +415,80 @@ async def test_extend_with_active_tenancy_writes_event_without_clearing(
     assert events[0].payload["tenancy_restarted"] is False
 
 
+@pytest.mark.asyncio
+async def test_first_extension_records_the_original_term_so_it_can_be_undone(
+    db: AsyncSession,
+) -> None:
+    """A lease made after the backfill has no seed until its first extension."""
+    org_id, user_id = uuid.uuid4(), uuid.uuid4()
+    lease = await _seed_signed_lease(db, user_id=user_id, org_id=org_id)
+    storage = AsyncMock()
+    storage.upload_file = lambda *a, **kw: None
+
+    with _patch_service(db, storage_mock=storage):
+        for new_ends_on in (_dt.date(2027, 6, 30), _dt.date(2027, 12, 31)):
+            await extend_lease(
+                user_id=user_id, organization_id=org_id, lease_id=lease.id,
+                new_ends_on=new_ends_on, notes=None,
+            )
+
+        versions = (
+            await db.execute(select(LeaseTermVersion).where(LeaseTermVersion.lease_id == lease.id))
+        ).scalars().all()
+        seeds = [v for v in versions if v.source_attachment_id is None]
+        assert [v.ends_on for v in seeds] == [_dt.date(2026, 12, 31)]
+        assert len(versions) == 3
+
+        latest = await lease_term_version_repo.get_latest_extension(db, lease_id=lease.id)
+        await undo_extension(
+            user_id=user_id, organization_id=org_id, lease_id=lease.id, version_id=latest.id,
+        )
+        assert lease.ends_on == _dt.date(2027, 6, 30)
+
+        latest = await lease_term_version_repo.get_latest_extension(db, lease_id=lease.id)
+        await undo_extension(
+            user_id=user_id, organization_id=org_id, lease_id=lease.id, version_id=latest.id,
+        )
+    assert lease.ends_on == _dt.date(2026, 12, 31)
+
+
+@pytest.mark.asyncio
+async def test_lease_extended_without_a_seed_does_not_record_its_extended_date_as_the_original(
+    db: AsyncSession,
+) -> None:
+    org_id, user_id = uuid.uuid4(), uuid.uuid4()
+    lease = await _seed_signed_lease(db, user_id=user_id, org_id=org_id)
+    attachment = SignedLeaseAttachment(
+        lease_id=lease.id,
+        storage_key=f"signed-leases/{lease.id}/old",
+        filename="old-addendum.pdf",
+        content_type="application/pdf",
+        size_bytes=1,
+        kind="signed_addendum",
+        uploaded_by_user_id=user_id,
+    )
+    db.add(attachment)
+    await db.flush()
+    db.add(LeaseTermVersion(
+        lease_id=lease.id,
+        starts_on=lease.starts_on,
+        ends_on=lease.ends_on,
+        source_attachment_id=attachment.id,
+        created_by_user_id=user_id,
+        created_at=_dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=1),
+    ))
+    await db.flush()
+    storage = AsyncMock()
+    storage.upload_file = lambda *a, **kw: None
+
+    with _patch_service(db, storage_mock=storage):
+        await extend_lease(
+            user_id=user_id, organization_id=org_id, lease_id=lease.id,
+            new_ends_on=_dt.date(2027, 6, 30), notes=None,
+        )
+
+    versions = (
+        await db.execute(select(LeaseTermVersion).where(LeaseTermVersion.lease_id == lease.id))
+    ).scalars().all()
+    assert len(versions) == 2
+    assert all(v.source_attachment_id is not None for v in versions)

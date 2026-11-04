@@ -10,7 +10,7 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 
 class LeaseExtensionSummary(BaseModel):
@@ -19,5 +19,8 @@ class LeaseExtensionSummary(BaseModel):
     starts_on: _dt.date
     ends_on: _dt.date
     source_attachment_id: uuid.UUID
-
-    model_config = ConfigDict(from_attributes=True)
+    # Where the end date goes back to if this extension is undone.
+    previous_ends_on: _dt.date | None
+    # The server owns the undo window, so a phone with the wrong clock can't disagree.
+    undo_expires_at: _dt.datetime
+    can_undo: bool

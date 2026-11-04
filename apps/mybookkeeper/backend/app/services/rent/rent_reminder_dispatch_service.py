@@ -35,6 +35,7 @@ from platform_shared.services.email_service import EmailNotConfiguredError, Emai
 from platform_shared.services.phone_number import to_e164
 from platform_shared.services.sms_service import SmsNotConfiguredError, SmsSendError
 
+from app.core.datetime_utils import as_utc
 from app.core.rent_reminder_constants import (
     ERROR_INVALID_PHONE,
     ERROR_NO_PHONE_CONFIRMATION,
@@ -215,13 +216,6 @@ async def _deliver(outbound: _Outbound) -> RentReminderSendResponse:
 # --------------------------------------------------------------------------
 
 
-def _as_utc(moment: _dt.datetime) -> _dt.datetime:
-    """Timestamps are stored UTC; some drivers hand them back naive."""
-    if moment.tzinfo is None:
-        return moment.replace(tzinfo=_dt.timezone.utc)
-    return moment
-
-
 async def _process_plan(plan_id: uuid.UUID, now: _dt.datetime) -> int:
     async with unit_of_work() as db:
         plan = await rent_reminder_plan_repo.get_by_id(db, plan_id=plan_id)
@@ -253,7 +247,7 @@ async def _process_plan(plan_id: uuid.UUID, now: _dt.datetime) -> int:
         scheduled_at = math.send_at(terms, due.due_date)
         existing = await _existing_rows(db, plan_id=plan.id, due_date=due.due_date)
         if any(
-            not (row.status == "failed" and _as_utc(row.updated_at) < scheduled_at)
+            not (row.status == "failed" and as_utc(row.updated_at) < scheduled_at)
             for row in existing.values()
         ):
             return 0

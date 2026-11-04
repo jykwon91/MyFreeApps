@@ -14,11 +14,13 @@ import InquirySection from "../inquiries/InquirySection";
 import { useOpenLink } from "../inquiries/useOpenLink";
 import { httpStatus } from "../transactions/transactionMessages";
 import { useCanWrite } from "../workspace/useCanWrite";
-import { leaseCountdown, leaseStatusLabel, leaseTerm, sortLeaseFiles } from "./leaseDisplay";
+import { leaseCountdown, leaseIsInEffect, leaseStatusLabel, leaseTerm, sortLeaseFiles } from "./leaseDisplay";
 import LeaseDetailSkeleton from "./LeaseDetailSkeleton";
+import ExtendLeaseSheet from "./ExtendLeaseSheet";
 import LeaseFileRow from "./LeaseFileRow";
 import LeaseStatusControl from "./LeaseStatusControl";
 import LeaseUploadSheet from "./LeaseUploadSheet";
+import UndoExtensionButton from "./UndoExtensionButton";
 import { useOpenLeaseFile } from "./useOpenLeaseFile";
 
 export default function LeaseDetailScreen({ id }: { id: string }) {
@@ -29,6 +31,7 @@ export default function LeaseDetailScreen({ id }: { id: string }) {
   const { openingId, open } = useOpenLeaseFile(id);
   const { refresh, refreshControl } = useRefresh(refetch, error);
   const [uploadingKind, setUploadingKind] = useState<LeaseAttachmentKind | null | undefined>(undefined);
+  const [isExtending, setIsExtending] = useState(false);
 
   if (isLoading) return <LeaseDetailSkeleton />;
   if (!lease) {
@@ -77,6 +80,12 @@ export default function LeaseDetailScreen({ id }: { id: string }) {
           <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>{leaseTerm(lease.starts_on, lease.ends_on)}</Text>
           {countdown ? <Text style={mutedText}>{countdown}</Text> : null}
           {extension ? <Text style={mutedText}>{extendedLine(formatLongDate(extension.ends_on), formatLongDate(extension.created_at))}</Text> : null}
+          {canWrite && leaseIsInEffect(lease.status) && lease.ends_on ? (
+            <LoadingButton onPress={() => setIsExtending(true)} variant="secondary">
+              {LEASE_MESSAGES.extend}
+            </LoadingButton>
+          ) : null}
+          {canWrite && leaseIsInEffect(lease.status) && extension?.can_undo ? <UndoExtensionButton extension={extension} leaseId={lease.id} /> : null}
         </InquirySection>
   
         <InquirySection title={LEASE_MESSAGES.signedCopy}>
@@ -121,6 +130,7 @@ export default function LeaseDetailScreen({ id }: { id: string }) {
           </LoadingButton>
         ) : null}
       </ScrollView>
+      {isExtending && lease.ends_on ? <ExtendLeaseSheet endsOn={lease.ends_on} leaseId={lease.id} onClose={() => setIsExtending(false)} /> : null}
       {uploadingKind !== undefined ? <LeaseUploadSheet initialKind={uploadingKind} leaseId={lease.id} onClose={() => setUploadingKind(undefined)} /> : null}
     </>
   );

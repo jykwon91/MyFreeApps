@@ -26,9 +26,11 @@ from app.models.applicants.applicant import Applicant
 from app.models.applicants.applicant_event import ApplicantEvent
 from app.models.leases.lease_term_version import LeaseTermVersion
 from app.models.leases.signed_lease import SignedLease
+from app.services.leases._lease_helpers import _resolve_latest_extension
 from app.services.leases.lease_extension_service import (
     CannotUndoSeedRowError,
     ExtensionNotFoundError,
+    NoEarlierTermError,
     NotLatestExtensionError,
     SignedLeaseNotFoundError,
     UNDO_WINDOW_DAYS,
@@ -347,3 +349,93 @@ async def test_undo_writes_extension_undone_event(db: AsyncSession) -> None:
     assert evt.payload["lease_id"] == str(lease.id)
     assert evt.payload["undone_version_id"] == str(version.id)
     assert evt.payload["new_ends_on"] == "2026-12-31"
+
+
+@pytest.mark.asyncio
+async def test_summary_says_where_undo_goes_back_to_and_until_when(db: AsyncSession) -> None:
+    user_id = uuid.uuid4()
+    lease = await _seed_lease_with_seed_version(db, user_id=user_id, org_id=uuid.uuid4())
+
+    assert await _resolve_latest_extension(db, lease_id=lease.id) is None
+
+    first = await _seed_extension(
+        db, lease=lease, user_id=user_id, ends_on=_dt.date(2027, 6, 30), age_days=5,
+    )
+    summary = await _resolve_latest_extension(db, lease_id=lease.id)
+    assert summary is not None
+    assert summary.id == first.id
+    assert summary.previous_ends_on == _dt.date(2026, 12, 31)
+    assert summary.undo_expires_at == first.created_at + _dt.timedelta(days=UNDO_WINDOW_DAYS)
+    assert summary.can_undo is True
+
+    second = await _seed_extension(
+        db, lease=lease, user_id=user_id, ends_on=_dt.date(2027, 12, 31),
+    )
+    summary = await _resolve_latest_extension(db, lease_id=lease.id)
+    assert summary is not None
+    assert summary.id == second.id
+    assert summary.previous_ends_on == _dt.date(2027, 6, 30)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("age_days", "expected"),
+    [(UNDO_WINDOW_DAYS - 1, True), (UNDO_WINDOW_DAYS, False), (UNDO_WINDOW_DAYS + 1, False)],
+)
+async def test_summary_can_undo_matches_what_undo_accepts(
+    db: AsyncSession, age_days: int, expected: bool,
+) -> None:
+    org_id, user_id = uuid.uuid4(), uuid.uuid4()
+    lease = await _seed_lease_with_seed_version(db, user_id=user_id, org_id=org_id)
+    version = await _seed_extension(
+        db, lease=lease, user_id=user_id, ends_on=_dt.date(2027, 6, 30), age_days=age_days,
+    )
+    summary = await _resolve_latest_extension(db, lease_id=lease.id)
+    assert summary is not None
+    assert summary.can_undo is expected
+
+    with patch(
+        "app.services.leases.lease_extension_service.unit_of_work",
+        _fake_uow_for(db),
+    ), patch(
+        "app.services.leases.lease_extension_service.get_lease",
+        AsyncMock(return_value=object()),
+    ):
+        if expected:
+            await undo_extension(
+                user_id=user_id, organization_id=org_id, lease_id=lease.id, version_id=version.id,
+            )
+        else:
+            with pytest.raises(UndoWindowExpiredError):
+                await undo_extension(
+                    user_id=user_id, organization_id=org_id, lease_id=lease.id, version_id=version.id,
+                )
+
+
+@pytest.mark.asyncio
+async def test_lease_with_no_seed_refuses_undo_rather_than_keeping_the_extended_date(
+    db: AsyncSession,
+) -> None:
+    org_id, user_id = uuid.uuid4(), uuid.uuid4()
+    lease = await _seed_lease_with_seed_version(db, user_id=user_id, org_id=org_id)
+    for row in (await db.execute(select(LeaseTermVersion))).scalars().all():
+        await db.delete(row)
+    await db.flush()
+    version = await _seed_extension(
+        db, lease=lease, user_id=user_id, ends_on=_dt.date(2027, 6, 30),
+    )
+
+    summary = await _resolve_latest_extension(db, lease_id=lease.id)
+    assert summary is not None
+    assert summary.previous_ends_on is None
+    assert summary.can_undo is False
+
+    with patch(
+        "app.services.leases.lease_extension_service.unit_of_work",
+        _fake_uow_for(db),
+    ), pytest.raises(NoEarlierTermError):
+        await undo_extension(
+            user_id=user_id, organization_id=org_id, lease_id=lease.id, version_id=version.id,
+        )
+    assert version.deleted_at is None
+    assert lease.ends_on == _dt.date(2027, 6, 30)

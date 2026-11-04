@@ -213,6 +213,26 @@ describe("LeaseDetail — New lease (successor) button", () => {
     );
   });
 
+  it.each([
+    [true, 1],
+    [false, 0],
+  ])("offers undoing an extension by what the server says (can_undo %s)", (canUndo, count) => {
+    mockLease = buildLease({
+      latest_extension: {
+        id: "ext-1",
+        created_at: "2020-01-01T00:00:00Z",
+        starts_on: "2026-01-01",
+        ends_on: "2026-12-31",
+        source_attachment_id: "file-1",
+        previous_ends_on: "2026-06-30",
+        undo_expires_at: "2020-01-31T00:00:00Z",
+        can_undo: canUndo,
+      },
+    });
+    renderDetail();
+    expect(screen.queryAllByTestId("lease-undo-extension-button")).toHaveLength(count);
+  });
+
   it("renders parent breadcrumb when this lease IS a successor", () => {
     mockLease = buildLease({ parent_lease_id: "parent-99" });
     mockApplicant = buildApplicant();
