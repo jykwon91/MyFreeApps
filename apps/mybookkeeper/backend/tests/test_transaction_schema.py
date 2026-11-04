@@ -1,12 +1,15 @@
 """Tests for transaction schema Literal type validation."""
+import re
 import uuid
 from datetime import date
 from decimal import Decimal
+from typing import get_args
 
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.transactions.transaction import TransactionCreate, TransactionUpdate
+from app.models.transactions.transaction import Transaction
+from app.schemas.transactions.transaction import TransactionCategory, TransactionCreate, TransactionUpdate
 
 
 class TestTransactionCreateValidation:
@@ -111,17 +114,32 @@ class TestTransactionUpdateVendorId:
         payload = txn.to_update_dict()
         assert payload["vendor_id"] == vid
 
-    def test_other_none_fields_still_dropped(self) -> None:
-        # Sanity check — historical behaviour (None == omitted) preserved
-        # for every field except vendor_id.
+    def test_explicit_null_clears_the_clearable_fields(self) -> None:
         txn = TransactionUpdate(
-            vendor_id=None, property_id=None, status=None,
+            property_id=None, vendor_id=None, vendor=None, description=None,
         )
-        payload = txn.to_update_dict()
-        assert "vendor_id" in payload  # explicit
-        assert payload["vendor_id"] is None
-        assert "property_id" not in payload
-        assert "status" not in payload
+        assert txn.to_update_dict() == {
+            "property_id": None, "vendor_id": None, "vendor": None, "description": None,
+        }
+
+    def test_null_on_a_required_column_is_dropped(self) -> None:
+        # These columns are NOT NULL: a null must not reach the database.
+        txn = TransactionUpdate(
+            amount=None, category=None, status=None, transaction_date=None,
+        )
+        assert txn.to_update_dict() == {}
+
+
+class TestCategoryList:
+    def test_accepts_every_category_the_database_accepts(self) -> None:
+        check = next(
+            constraint
+            for constraint in Transaction.__table__.constraints
+            if constraint.name == "chk_txn_category"
+        )
+        database_categories = set(re.findall(r"'(\w+)'", str(check.sqltext)))
+
+        assert set(get_args(TransactionCategory)) == database_categories
 
 
 class TestMeteredUsageValidation:

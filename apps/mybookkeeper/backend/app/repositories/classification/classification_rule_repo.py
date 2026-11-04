@@ -99,6 +99,7 @@ async def upsert_rule(
     context: str | None = None,
     property_id: uuid.UUID | None = None,
     activity_id: uuid.UUID | None = None,
+    keep_assignment_when_unset: bool = False,
 ) -> ClassificationRule:
     normalized = _normalize_pattern(match_type, pattern)
     norm_ctx = _normalize_context(match_type, context)
@@ -106,8 +107,10 @@ async def upsert_rule(
     existing = await _find_exact_rule(db, organization_id, match_type, normalized, norm_ctx)
     if existing:
         existing.category = category
-        existing.property_id = property_id
-        existing.activity_id = activity_id
+        if property_id is not None or not keep_assignment_when_unset:
+            existing.property_id = property_id
+        if activity_id is not None or not keep_assignment_when_unset:
+            existing.activity_id = activity_id
         existing.source = source
         existing.updated_at = datetime.now(timezone.utc)
         await db.flush()

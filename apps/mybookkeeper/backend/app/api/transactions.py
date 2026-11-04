@@ -15,6 +15,7 @@ from app.schemas.transactions.operation_responses import (
     KeepDuplicateResponse,
     MergeDuplicatesResponse,
 )
+from app.schemas.transactions.review_count import TransactionReviewCount
 from app.schemas.transactions.transaction import ScheduleELineItem, TransactionCreate, TransactionRead, TransactionUpdate, TransactionUpdateResponse
 from app.services.transactions import transaction_service
 
@@ -27,6 +28,7 @@ async def list_transactions(
     unassigned: bool = False,
     applicant_id: Optional[uuid.UUID] = None,
     status: Optional[str] = None,
+    to_review: bool = False,
     transaction_type: Optional[str] = None,
     category: Optional[str] = None,
     vendor: Optional[str] = None,
@@ -43,6 +45,7 @@ async def list_transactions(
         unassigned=unassigned,
         applicant_id=applicant_id,
         status=status,
+        to_review=to_review,
         transaction_type=transaction_type,
         category=category,
         vendor=vendor,
@@ -52,6 +55,13 @@ async def list_transactions(
         limit=limit,
         offset=offset,
     )
+
+
+@router.get("/review-count", response_model=TransactionReviewCount)
+async def review_count(
+    ctx: RequestContext = Depends(current_org_member),
+) -> TransactionReviewCount:
+    return TransactionReviewCount(count=await transaction_service.count_to_review(ctx))
 
 
 @router.post("", response_model=TransactionRead, status_code=201)

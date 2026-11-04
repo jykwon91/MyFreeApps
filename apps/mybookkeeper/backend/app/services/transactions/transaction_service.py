@@ -53,6 +53,7 @@ async def list_transactions(
     unassigned: bool = False,
     applicant_id: uuid.UUID | None = None,
     status: str | None = None,
+    to_review: bool = False,
     transaction_type: str | None = None,
     category: str | None = None,
     vendor: str | None = None,
@@ -70,6 +71,7 @@ async def list_transactions(
             unassigned=unassigned,
             applicant_id=applicant_id,
             status=status,
+            to_review=to_review,
             transaction_type=transaction_type,
             category=category,
             vendor=vendor,
@@ -79,6 +81,11 @@ async def list_transactions(
             limit=limit,
             offset=offset,
         )
+
+
+async def count_to_review(ctx: RequestContext) -> int:
+    async with AsyncSessionLocal() as db:
+        return await transaction_repo.count_to_review(db, ctx.organization_id)
 
 
 async def create_manual_transaction(
@@ -138,7 +145,10 @@ async def update_transaction(
                 old_category=old_category,
             )
 
-        if "property_id" in updates and updates["property_id"] != old_property_id:
+        # Clearing a property teaches nothing: a rule with no property would take
+        # the property off every other row from this vendor at this address.
+        new_property_id = updates.get("property_id")
+        if new_property_id is not None and new_property_id != old_property_id:
             property_retroactive = await rule_learning_service.learn_from_property_correction(
                 db,
                 organization_id=ctx.organization_id,

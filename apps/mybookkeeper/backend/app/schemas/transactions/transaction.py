@@ -27,12 +27,16 @@ def _reject_half_a_usage_pair(model: "TransactionCreate | TransactionUpdate"):
 
 TransactionType = Literal["income", "expense"]
 TransactionStatus = Literal["pending", "approved", "needs_review", "duplicate", "unverified"]
+# Same values as the chk_txn_category constraint: a row the database accepts has
+# to survive being read back.
 TransactionCategory = Literal[
-    "rental_revenue", "cleaning_fee_revenue",
+    "rental_revenue", "cleaning_fee_revenue", "business_income", "security_deposit",
     "maintenance", "contract_work", "cleaning_expense", "utilities",
     "management_fee", "insurance", "mortgage_interest", "mortgage_principal",
     "taxes", "channel_fee", "advertising", "legal_professional", "travel",
     "furnishings", "other_expense", "uncategorized",
+    "supplies", "home_office", "meals", "vehicle_expenses",
+    "health_insurance", "education_training",
 ]
 SubCategory = Literal["electricity", "water", "gas", "internet", "trash", "sewer"]
 UsageUnit = Literal["kwh", "therm", "ccf", "mcf", "gallon", "kgal"]
@@ -147,11 +151,13 @@ class ScheduleELineItem(BaseModel):
     total_amount: float
 
 
+# Optional on the row and meaningful when empty: no property, no vendor name.
+_CLEARABLE_FIELDS = ("property_id", "vendor_id", "vendor", "description")
+
+
 class TransactionUpdate(BaseModel):
     property_id: uuid.UUID | None = None
-    # Host-curated link to a Vendors rolodex row (PR 4.2). Explicit null is
-    # supported via ``to_update_dict()`` below — the "(none)" option in the
-    # frontend dropdown sends ``vendor_id: null`` to detach the link.
+    # Host-curated link to a Vendors rolodex row (PR 4.2).
     vendor_id: uuid.UUID | None = None
     transaction_date: date | None = None
     tax_year: int | None = None
@@ -183,16 +189,14 @@ class TransactionUpdate(BaseModel):
     def to_update_dict(self) -> dict[str, object]:
         """Return the patch payload for the service layer.
 
-        Most fields drop ``None`` (treating null as "not provided") to
-        preserve historical behaviour. ``vendor_id`` is special: an explicit
-        ``null`` from the client must reach the service so the FK can be
-        unset (PR 4.2 — the Transaction edit page's "Assign vendor" dropdown
-        has a "(none)" option that sends ``vendor_id: null``). We detect the
-        explicit-null case via ``model_fields_set``.
+        ``None`` means "not provided" for most fields. For the fields in
+        ``_CLEARABLE_FIELDS`` an explicit ``null`` from the client clears the
+        value, detected through ``model_fields_set``.
         """
         payload = self.model_dump(exclude_none=True)
-        if "vendor_id" in self.model_fields_set and self.vendor_id is None:
-            payload["vendor_id"] = None
+        for field in _CLEARABLE_FIELDS:
+            if field in self.model_fields_set and getattr(self, field) is None:
+                payload[field] = None
         return payload
 
 

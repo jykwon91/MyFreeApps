@@ -6,6 +6,7 @@ from sqlalchemy import Row, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.transaction_statuses import REVIEWABLE_STATUSES
 from app.models.extraction.extraction import Extraction
 from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
@@ -19,6 +20,7 @@ async def list_filtered(
     unassigned: bool = False,
     applicant_id: uuid.UUID | None = None,
     status: str | None = None,
+    to_review: bool = False,
     transaction_type: str | None = None,
     category: str | None = None,
     vendor: str | None = None,
@@ -48,6 +50,8 @@ async def list_filtered(
         stmt = stmt.where(Transaction.applicant_id == applicant_id)
     if status is not None:
         stmt = stmt.where(Transaction.status == status)
+    if to_review:
+        stmt = stmt.where(Transaction.status.in_(REVIEWABLE_STATUSES))
     if transaction_type is not None:
         stmt = stmt.where(Transaction.transaction_type == transaction_type)
     if category is not None:
@@ -61,7 +65,9 @@ async def list_filtered(
     if tax_year is not None:
         stmt = stmt.where(Transaction.tax_year == tax_year)
 
-    stmt = stmt.order_by(Transaction.transaction_date.desc())
+    # id breaks ties: rows sharing a date would otherwise repeat or go missing
+    # between pages.
+    stmt = stmt.order_by(Transaction.transaction_date.desc(), Transaction.id.desc())
 
     if offset is not None:
         stmt = stmt.offset(offset)
@@ -70,6 +76,19 @@ async def list_filtered(
 
     result = await db.execute(stmt)
     return result.scalars().all()
+
+
+async def count_to_review(db: AsyncSession, organization_id: uuid.UUID) -> int:
+    result = await db.execute(
+        select(func.count())
+        .select_from(Transaction)
+        .where(
+            Transaction.organization_id == organization_id,
+            Transaction.deleted_at.is_(None),
+            Transaction.status.in_(REVIEWABLE_STATUSES),
+        )
+    )
+    return result.scalar_one()
 
 
 async def list_by_user(
