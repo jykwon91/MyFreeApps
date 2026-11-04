@@ -24,15 +24,10 @@ describe("Banner", () => {
 
 describe("AccountDeletedBanner", () => {
   it("doesn't claim a deletion it couldn't confirm", async () => {
+    const state: SessionState = { status: "signedOut", endedByServer: false, lastEmail: null, accountDeleted: "unconfirmed" };
+    const session = { getState: () => state, subscribe: () => () => {} } as unknown as MobileSession;
     await render(
-      <SessionContext.Provider
-        value={
-          {
-            getState: () => ({ status: "signedOut", endedByServer: false, lastEmail: null, accountDeleted: "unconfirmed" }),
-            subscribe: () => () => {},
-          } as unknown as MobileSession
-        }
-      >
+      <SessionContext.Provider value={session}>
         <AccountDeletedBanner />
       </SessionContext.Provider>,
     );
