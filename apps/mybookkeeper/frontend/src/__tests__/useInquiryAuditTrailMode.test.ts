@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { useInquiryAuditTrailMode } from "@/app/features/inquiries/useInquiryAuditTrailMode";
-import type { InquirySpamAssessment } from "@/shared/types/inquiry/inquiry-spam-assessment";
+import type { InquirySpamAssessment } from "@mybookkeeper/api-client/types/inquiry/inquiry-spam-assessment";
 
 const ASSESSMENT: InquirySpamAssessment = {
   id: "a-1",

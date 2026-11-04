@@ -1,5 +1,5 @@
 import type { ListingsListMode } from "@/shared/types/listing/listings-list-mode";
-import type { ListingSummary } from "@/shared/types/listing/listing-summary";
+import type { ListingSummary } from "@mybookkeeper/api-client/types/listing/listing-summary";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import { LoadingButton } from "@platform/ui";
 import ListingsSkeleton from "./ListingsSkeleton";

@@ -3,11 +3,11 @@ import { ChevronDown, ChevronRight, User, Server, Mail } from "lucide-react";
 import {
   formatAbsoluteTime,
   formatRelativeTime,
-} from "@/shared/lib/inquiry-date-format";
-import { INQUIRY_STAGE_LABELS } from "@/shared/lib/inquiry-labels";
-import type { InquiryEvent } from "@/shared/types/inquiry/inquiry-event";
-import type { InquiryEventActor } from "@/shared/types/inquiry/inquiry-event-actor";
-import type { InquiryStage } from "@/shared/types/inquiry/inquiry-stage";
+} from "@mybookkeeper/api-client/utils/inquiryDateFormat";
+import { INQUIRY_STAGE_LABELS } from "@mybookkeeper/api-client/constants/inquiryLabels";
+import type { InquiryEvent } from "@mybookkeeper/api-client/types/inquiry/inquiry-event";
+import type { InquiryEventActor } from "@mybookkeeper/api-client/types/inquiry/inquiry-event-actor";
+import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
 
 const ACTOR_ICONS: Record<InquiryEventActor, typeof User> = {
   host: User,

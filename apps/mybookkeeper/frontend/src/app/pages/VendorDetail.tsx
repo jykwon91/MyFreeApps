@@ -12,7 +12,7 @@ import {
 import {
   formatAbsoluteTime,
   formatRelativeTime,
-} from "@/shared/lib/inquiry-date-format";
+} from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import VendorCategoryBadge from "@/app/features/vendors/VendorCategoryBadge";
 import VendorDetailSkeleton from "@/app/features/vendors/VendorDetailSkeleton";
 import VendorForm from "@/app/features/vendors/VendorForm";

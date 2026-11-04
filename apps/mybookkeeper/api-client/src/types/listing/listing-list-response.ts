@@ -1,4 +1,4 @@
-import type { ListingSummary } from "@/shared/types/listing/listing-summary";
+import type { ListingSummary } from "./listing-summary";
 
 /**
  * Paginated envelope returned by GET /listings.

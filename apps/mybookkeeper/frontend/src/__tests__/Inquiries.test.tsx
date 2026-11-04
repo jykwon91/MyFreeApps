@@ -5,9 +5,9 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import Inquiries from "@/app/pages/Inquiries";
-import type { InquirySummary } from "@/shared/types/inquiry/inquiry-summary";
-import type { InquiryListResponse } from "@/shared/types/inquiry/inquiry-list-response";
-import type { ListingListResponse } from "@/shared/types/listing/listing-list-response";
+import type { InquirySummary } from "@mybookkeeper/api-client/types/inquiry/inquiry-summary";
+import type { InquiryListResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-list-response";
+import type { ListingListResponse } from "@mybookkeeper/api-client/types/listing/listing-list-response";
 
 const mockInquiries: InquirySummary[] = [
   {
@@ -89,7 +89,7 @@ const createInquiryMock = vi.fn(() => ({
   unwrap: () => Promise.resolve(mockInquiries[0]),
 }));
 
-vi.mock("@/shared/store/inquiriesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/inquiriesApi", () => ({
   useGetInquiriesQuery: vi.fn(() => defaultInquiriesState),
   useGetInquiryByIdQuery: vi.fn(() => ({ data: undefined, isLoading: false })),
   useCreateInquiryMutation: vi.fn(() => [createInquiryMock, { isLoading: false }]),
@@ -97,11 +97,11 @@ vi.mock("@/shared/store/inquiriesApi", () => ({
   useDeleteInquiryMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
-vi.mock("@/shared/store/listingsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   useGetListingsQuery: vi.fn(() => defaultListingsState),
 }));
 
-import { useGetInquiriesQuery } from "@/shared/store/inquiriesApi";
+import { useGetInquiriesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 
 type InquiriesQueryReturn = ReturnType<typeof useGetInquiriesQuery>;
 

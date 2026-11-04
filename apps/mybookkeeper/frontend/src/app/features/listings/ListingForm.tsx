@@ -18,7 +18,7 @@ import {
 } from "@/shared/store/listingsApi";
 import type { ListingCreateRequest } from "@/shared/types/listing/listing-create-request";
 import type { ListingFormValues } from "@/shared/types/listing/listing-form-values";
-import type { ListingResponse } from "@/shared/types/listing/listing-response";
+import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/listing-response";
 import type { ListingUpdateRequest } from "@/shared/types/listing/listing-update-request";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 

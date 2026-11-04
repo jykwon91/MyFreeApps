@@ -1,16 +1,16 @@
-import { baseApi } from "./baseApi";
-import type { InquiryCreateRequest } from "@/shared/types/inquiry/inquiry-create-request";
-import type { InquiryListArgs } from "@/shared/types/inquiry/inquiry-list-args";
-import type { InquiryListResponse } from "@/shared/types/inquiry/inquiry-list-response";
-import type { InquiryMessage } from "@/shared/types/inquiry/inquiry-message";
-import type { InquiryReplyRequest } from "@/shared/types/inquiry/inquiry-reply-request";
-import type { InquiryResponse } from "@/shared/types/inquiry/inquiry-response";
-import type { InquirySpamAssessment } from "@/shared/types/inquiry/inquiry-spam-assessment";
-import type { InquiryUpdateRequest } from "@/shared/types/inquiry/inquiry-update-request";
-import type { RenderedTemplate } from "@/shared/types/inquiry/rendered-template";
-import type { ReplyTemplate } from "@/shared/types/inquiry/reply-template";
-import type { ReplyTemplateCreateRequest } from "@/shared/types/inquiry/reply-template-create-request";
-import type { ReplyTemplateUpdateRequest } from "@/shared/types/inquiry/reply-template-update-request";
+import { baseApi } from "@platform/core/store/baseApi";
+import type { InquiryCreateRequest } from "../types/inquiry/inquiry-create-request";
+import type { InquiryListArgs } from "../types/inquiry/inquiry-list-args";
+import type { InquiryListResponse } from "../types/inquiry/inquiry-list-response";
+import type { InquiryMessage } from "../types/inquiry/inquiry-message";
+import type { InquiryReplyRequest } from "../types/inquiry/inquiry-reply-request";
+import type { InquiryResponse } from "../types/inquiry/inquiry-response";
+import type { InquirySpamAssessment } from "../types/inquiry/inquiry-spam-assessment";
+import type { InquiryUpdateRequest } from "../types/inquiry/inquiry-update-request";
+import type { RenderedTemplate } from "../types/inquiry/rendered-template";
+import type { ReplyTemplate } from "../types/inquiry/reply-template";
+import type { ReplyTemplateCreateRequest } from "../types/inquiry/reply-template-create-request";
+import type { ReplyTemplateUpdateRequest } from "../types/inquiry/reply-template-update-request";
 
 /**
  * RTK Query slice for the Inquiries domain.
@@ -23,7 +23,9 @@ import type { ReplyTemplateUpdateRequest } from "@/shared/types/inquiry/reply-te
  * Reply templates use a parallel ``ReplyTemplate`` tag family — separate
  * from inquiries because templates and inquiries refresh independently.
  */
-const inquiriesApi = baseApi.injectEndpoints({
+const inquiriesApi = baseApi.enhanceEndpoints({
+  addTagTypes: ["Inquiry", "ReplyTemplate"],
+}).injectEndpoints({
   endpoints: (builder) => ({
     getInquiries: builder.query<InquiryListResponse, InquiryListArgs | void>({
       query: (args) => ({

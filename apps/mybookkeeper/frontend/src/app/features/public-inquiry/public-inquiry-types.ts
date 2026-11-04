@@ -1,4 +1,4 @@
-import type { EmploymentStatus } from "@/shared/types/inquiry/employment-status";
+import type { EmploymentStatus } from "@mybookkeeper/api-client/types/inquiry/employment-status";
 
 export interface FormState {
   name: string;

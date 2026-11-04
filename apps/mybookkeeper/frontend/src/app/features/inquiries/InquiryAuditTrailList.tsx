@@ -1,4 +1,4 @@
-import type { InquirySpamAssessment } from "@/shared/types/inquiry/inquiry-spam-assessment";
+import type { InquirySpamAssessment } from "@mybookkeeper/api-client/types/inquiry/inquiry-spam-assessment";
 
 export interface InquiryAuditTrailListProps {
   assessments: readonly InquirySpamAssessment[];

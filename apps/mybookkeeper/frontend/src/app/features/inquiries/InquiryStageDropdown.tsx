@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import { useUpdateInquiryMutation } from "@/shared/store/inquiriesApi";
-import { INQUIRY_STAGES, INQUIRY_STAGE_LABELS } from "@/shared/lib/inquiry-labels";
-import type { InquiryStage } from "@/shared/types/inquiry/inquiry-stage";
+import { useUpdateInquiryMutation } from "@mybookkeeper/api-client/store/inquiriesApi";
+import { INQUIRY_STAGES, INQUIRY_STAGE_LABELS } from "@mybookkeeper/api-client/constants/inquiryLabels";
+import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
 
 export interface InquiryStageDropdownProps {
   inquiryId: string;

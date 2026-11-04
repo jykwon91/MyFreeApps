@@ -1,6 +1,6 @@
 import { Loader2, Upload } from "lucide-react";
 import { Button } from "@platform/ui";
-import { formatRelativeTime } from "@/shared/lib/inquiry-date-format";
+import { formatRelativeTime } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import type { ScreeningResult } from "@/shared/types/applicant/screening-result";
 
 export interface ScreeningPendingPanelProps {

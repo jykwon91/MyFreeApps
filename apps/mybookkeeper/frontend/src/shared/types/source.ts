@@ -1,5 +1,5 @@
-import type { InquirySource } from "@/shared/types/inquiry/inquiry-source";
-import type { ListingSource } from "@/shared/types/listing/listing-source";
+import type { InquirySource } from "@mybookkeeper/api-client/types/inquiry/inquiry-source";
+import type { ListingSource } from "@mybookkeeper/api-client/types/listing/listing-source";
 
 /**
  * Union of every external platform a Listing or Inquiry can come from.

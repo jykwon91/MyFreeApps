@@ -1,5 +1,5 @@
 import type { ReplyTemplatesListMode } from "@/shared/types/inquiry/reply-templates-list-mode";
-import type { ReplyTemplate } from "@/shared/types/inquiry/reply-template";
+import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 
 interface UseReplyTemplatesListModeArgs {
   isLoading: boolean;

@@ -1,6 +1,6 @@
 import { cn } from "@/shared/utils/cn";
-import { INQUIRY_STAGES, INQUIRY_STAGE_LABELS } from "@/shared/lib/inquiry-labels";
-import type { InquiryStage } from "@/shared/types/inquiry/inquiry-stage";
+import { INQUIRY_STAGES, INQUIRY_STAGE_LABELS } from "@mybookkeeper/api-client/constants/inquiryLabels";
+import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
 
 export interface InquiryStageFilterProps {
   value: InquiryStage | null;

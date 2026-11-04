@@ -1,4 +1,4 @@
-import type { InquirySpamAssessment } from "@/shared/types/inquiry/inquiry-spam-assessment";
+import type { InquirySpamAssessment } from "@mybookkeeper/api-client/types/inquiry/inquiry-spam-assessment";
 import type { InquiryAuditTrailMode } from "@/shared/types/inquiry/inquiry-audit-trail-mode";
 import InquiryAuditTrailEmpty from "./InquiryAuditTrailEmpty";
 import InquiryAuditTrailList from "./InquiryAuditTrailList";

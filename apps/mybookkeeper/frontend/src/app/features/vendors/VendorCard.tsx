@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Star } from "lucide-react";
-import { formatRelativeTime } from "@/shared/lib/inquiry-date-format";
+import { formatRelativeTime } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import { formatHourlyRate } from "@/shared/utils/hourly-rate";
 import type { VendorSummary } from "@/shared/types/vendor/vendor-summary";
 import VendorCategoryBadge from "./VendorCategoryBadge";

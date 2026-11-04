@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { LoadingButton } from "@platform/ui";
-import type { Integration } from "@/shared/types/integration/integration";
+import type { Integration } from "@mybookkeeper/api-client/types/integration/integration";
 
 export interface GmailHeaderActionsProps {
   gmail: Integration | undefined;

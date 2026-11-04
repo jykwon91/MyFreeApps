@@ -75,7 +75,7 @@ vi.mock("@/shared/store/calendarApi", () => ({
   ]),
 }));
 
-vi.mock("@/shared/store/listingsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   useGetListingsQuery: vi.fn(() => ({
     data: {
       items: [

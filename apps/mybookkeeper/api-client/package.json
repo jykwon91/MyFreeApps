@@ -11,7 +11,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@platform/core": "*"
+    "@platform/core": "*",
+    "date-fns": "^4.1.0"
   },
   "peerDependencies": {
     "@reduxjs/toolkit": "^2",

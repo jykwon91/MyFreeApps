@@ -5,13 +5,13 @@ import Panel from "@/shared/components/ui/Panel";
 import { LoadingButton } from "@platform/ui";
 import FormField from "@/shared/components/ui/FormField";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import { INQUIRY_SOURCES, INQUIRY_SOURCE_LABELS } from "@/shared/lib/inquiry-labels";
-import { useCreateInquiryMutation } from "@/shared/store/inquiriesApi";
-import type { InquiryCreateRequest } from "@/shared/types/inquiry/inquiry-create-request";
+import { INQUIRY_SOURCES, INQUIRY_SOURCE_LABELS } from "@mybookkeeper/api-client/constants/inquiryLabels";
+import { useCreateInquiryMutation } from "@mybookkeeper/api-client/store/inquiriesApi";
+import type { InquiryCreateRequest } from "@mybookkeeper/api-client/types/inquiry/inquiry-create-request";
 import type { InquiryFormValues } from "@/shared/types/inquiry/inquiry-form-values";
-import type { InquiryResponse } from "@/shared/types/inquiry/inquiry-response";
-import type { InquirySource } from "@/shared/types/inquiry/inquiry-source";
-import type { ListingSummary } from "@/shared/types/listing/listing-summary";
+import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
+import type { InquirySource } from "@mybookkeeper/api-client/types/inquiry/inquiry-source";
+import type { ListingSummary } from "@mybookkeeper/api-client/types/listing/listing-summary";
 
 export interface InquiryFormProps {
   listings: readonly ListingSummary[];

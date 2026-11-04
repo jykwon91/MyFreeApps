@@ -2,8 +2,8 @@ import { CheckCircle2, Circle } from "lucide-react";
 import {
   computeInquiryQualityScore,
   getQualityTier,
-  type InquiryQualitySignals,
-} from "@/shared/lib/inquiry-quality";
+} from "@mybookkeeper/api-client/utils/inquiryQuality";
+import type { InquiryQualitySignals } from "@mybookkeeper/api-client/types/inquiry/inquiry-quality-signals";
 
 export interface InquiryQualityBadgeProps {
   signals: InquiryQualitySignals;

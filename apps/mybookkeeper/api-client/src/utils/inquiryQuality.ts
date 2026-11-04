@@ -1,3 +1,6 @@
+import type { InquiryQualitySignals } from "../types/inquiry/inquiry-quality-signals";
+import type { InquiryQualityTier } from "../types/inquiry/inquiry-quality-tier";
+
 /**
  * Client-side inquiry quality heuristic per RENTALS_PLAN.md §9.2.
  *
@@ -16,18 +19,6 @@
 const BODY_LENGTH_THRESHOLD = 100;
 const COMPLETE_SCORE = 4;
 const SPARSE_SCORE_MAX = 1;
-
-export type InquiryQualityTier = "sparse" | "standard" | "complete";
-
-export interface InquiryQualitySignals {
-  desired_start_date: string | null;
-  desired_end_date: string | null;
-  inquirer_employer: string | null;
-  // For inbox cards we pass last_message_preview (truncated to 120 chars
-  // server-side, so this max-out at 120). For the detail view we pass the
-  // full last inbound message body (uncapped).
-  last_message_body: string | null;
-}
 
 export function computeInquiryQualityScore(
   signals: InquiryQualitySignals,

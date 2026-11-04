@@ -1,4 +1,4 @@
-import { formatShortDate } from "@/shared/lib/inquiry-date-format";
+import { formatShortDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import { WEEKDAY_NAMES } from "./rent-reminder-labels";
 import type { RentReminderPlan } from "@/shared/types/rent/rent-reminder-plan";
 

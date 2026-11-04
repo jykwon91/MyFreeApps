@@ -1,5 +1,5 @@
 import { formatCurrency } from "@/shared/utils/currency";
-import { formatLongDate } from "@/shared/lib/inquiry-date-format";
+import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import { RENT_CADENCE_LABEL } from "./rent-labels";
 import type { RentSchedule } from "@/shared/types/rent/rent-schedule";
 

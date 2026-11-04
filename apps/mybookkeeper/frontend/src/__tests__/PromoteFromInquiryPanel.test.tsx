@@ -6,7 +6,7 @@ import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import PromoteFromInquiryPanel from "@/app/features/applicants/PromoteFromInquiryPanel";
 import type { ApplicantPromoteRequest } from "@/shared/types/applicant/applicant-promote-request";
-import type { InquiryResponse } from "@/shared/types/inquiry/inquiry-response";
+import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
 
 interface PromoteArgs {
   inquiryId: string;

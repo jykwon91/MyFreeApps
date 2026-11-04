@@ -3,7 +3,7 @@ import { ChevronDown, ChevronRight, Mail, Server, User } from "lucide-react";
 import {
   formatAbsoluteTime,
   formatRelativeTime,
-} from "@/shared/lib/inquiry-date-format";
+} from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import { APPLICANT_STAGE_LABELS } from "@/shared/lib/applicant-labels";
 import type { ApplicantEvent } from "@/shared/types/applicant/applicant-event";
 import type { ApplicantEventActor } from "@/shared/types/applicant/applicant-event-actor";

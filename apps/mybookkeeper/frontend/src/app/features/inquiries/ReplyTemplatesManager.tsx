@@ -6,8 +6,8 @@ import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   useArchiveReplyTemplateMutation,
   useGetReplyTemplatesQuery,
-} from "@/shared/store/inquiriesApi";
-import type { ReplyTemplate } from "@/shared/types/inquiry/reply-template";
+} from "@mybookkeeper/api-client/store/inquiriesApi";
+import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 import ReplyTemplateForm from "./ReplyTemplateForm";
 import ReplyTemplatesListBody from "./ReplyTemplatesListBody";
 import { useReplyTemplatesListMode } from "./useReplyTemplatesListMode";

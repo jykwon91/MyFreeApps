@@ -5,7 +5,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { store } from "@/shared/store";
 import InquiryDetail from "@/app/pages/InquiryDetail";
-import type { InquiryResponse } from "@/shared/types/inquiry/inquiry-response";
+import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
 
 const mockInquiry: InquiryResponse = {
   id: "inq-1",
@@ -90,7 +90,7 @@ const defaultDetailState: DetailQueryState = {
   refetch: vi.fn(),
 };
 
-vi.mock("@/shared/store/inquiriesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/inquiriesApi", () => ({
   useGetInquiryByIdQuery: vi.fn(() => defaultDetailState),
   useGetInquiriesQuery: vi.fn(() => ({ data: undefined, isLoading: false, isFetching: false, isError: false, refetch: vi.fn() })),
   useUpdateInquiryMutation: vi.fn(() => [updateMutation, { isLoading: false }]),
@@ -111,11 +111,11 @@ vi.mock("@/shared/store/inquiriesApi", () => ({
   useMarkInquirySpamMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
-vi.mock("@/shared/store/integrationsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/integrationsApi", () => ({
   useGetIntegrationsQuery: vi.fn(() => ({ data: [], isLoading: false })),
 }));
 
-import { useGetInquiryByIdQuery } from "@/shared/store/inquiriesApi";
+import { useGetInquiryByIdQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 
 type DetailQueryReturn = ReturnType<typeof useGetInquiryByIdQuery>;
 

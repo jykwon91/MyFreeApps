@@ -1,7 +1,5 @@
-import {
-  EMPLOYMENT_STATUS_OPTIONS,
-  type EmploymentStatus,
-} from "@/shared/types/inquiry/employment-status";
+import type { EmploymentStatus } from "@mybookkeeper/api-client/types/inquiry/employment-status";
+import { EMPLOYMENT_STATUS_OPTIONS } from "@/shared/lib/employment-status-options";
 import { COUNTRY_OPTIONS } from "@/shared/types/inquiry/country";
 import { US_STATE_OPTIONS } from "@/shared/types/inquiry/us-state";
 import type { FieldErrors, FormState, ValidatedField } from "./public-inquiry-types";

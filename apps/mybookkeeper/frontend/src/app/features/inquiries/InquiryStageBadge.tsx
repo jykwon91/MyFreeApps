@@ -1,8 +1,6 @@
-import {
-  INQUIRY_STAGE_BADGE_COLORS,
-  INQUIRY_STAGE_LABELS,
-} from "@/shared/lib/inquiry-labels";
-import type { InquiryStage } from "@/shared/types/inquiry/inquiry-stage";
+import { INQUIRY_STAGE_LABELS } from "@mybookkeeper/api-client/constants/inquiryLabels";
+import { INQUIRY_STAGE_BADGE_COLORS } from "@/shared/lib/inquiry-badge-colors";
+import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
 import type { BadgeColor } from "@/shared/components/ui/Badge";
 
 const COLOR_CLASSES: Record<BadgeColor, string> = {

@@ -14,8 +14,8 @@ import {
   EXTERNAL_ID_SOURCE_HINTS,
   ExternalIdRequestErrorShape,
 } from "@/shared/lib/external-id-form";
-import type { ListingExternalId } from "@/shared/types/listing/listing-external-id";
-import type { ListingSource } from "@/shared/types/listing/listing-source";
+import type { ListingExternalId } from "@mybookkeeper/api-client/types/listing/listing-external-id";
+import type { ListingSource } from "@mybookkeeper/api-client/types/listing/listing-source";
 
 export interface ExternalIdFormProps {
   listingId: string;

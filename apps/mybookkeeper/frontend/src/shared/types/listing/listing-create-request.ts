@@ -1,5 +1,5 @@
-import type { ListingRoomType } from "@/shared/types/listing/listing-room-type";
-import type { ListingStatus } from "@/shared/types/listing/listing-status";
+import type { ListingRoomType } from "@mybookkeeper/api-client/types/listing/listing-room-type";
+import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listing-status";
 
 /**
  * Request body for POST /listings.

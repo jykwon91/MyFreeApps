@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import api from "@/shared/lib/api";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
-import type { EmploymentStatus } from "@/shared/types/inquiry/employment-status";
+import type { EmploymentStatus } from "@mybookkeeper/api-client/types/inquiry/employment-status";
 import type { PublicListing } from "@/shared/types/inquiry/public-listing";
 import type { PublicInquiryRequest } from "@/shared/types/inquiry/public-inquiry-request";
 import type { FieldErrors, FormState, TouchedFields, ValidatedField } from "./public-inquiry-types";

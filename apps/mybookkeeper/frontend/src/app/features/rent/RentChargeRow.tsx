@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/shared/utils/currency";
-import { formatShortDate } from "@/shared/lib/inquiry-date-format";
+import { formatShortDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import RentChargeStatusBadge from "./RentChargeStatusBadge";
 import RentChargeApplications from "./RentChargeApplications";
 import RentChargeRowActions from "./RentChargeRowActions";

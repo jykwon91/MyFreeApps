@@ -1,7 +1,7 @@
 import { StatusBadge } from "@platform/ui";
 import type { BadgeTone } from "@platform/ui";
 import { LISTING_STATUS_LABELS } from "@/shared/lib/listing-labels";
-import type { ListingStatus } from "@/shared/types/listing/listing-status";
+import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listing-status";
 
 const STATUS_TONES: Record<ListingStatus, BadgeTone> = {
   active: "success",

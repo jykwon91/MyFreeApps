@@ -2,13 +2,13 @@ import { useState } from "react";
 import Panel, { PanelCloseButton } from "@/shared/components/ui/Panel";
 import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import { useGetIntegrationsQuery } from "@/shared/store/integrationsApi";
+import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
 import {
   useGetReplyTemplatesQuery,
   useLazyRenderReplyTemplateQuery,
   useSendInquiryReplyMutation,
-} from "@/shared/store/inquiriesApi";
-import type { ReplyTemplate } from "@/shared/types/inquiry/reply-template";
+} from "@mybookkeeper/api-client/store/inquiriesApi";
+import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 import InquiryReplyPanelBody from "./InquiryReplyPanelBody";
 import { useInquiryReplyMode } from "./useInquiryReplyMode";
 

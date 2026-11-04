@@ -1,4 +1,4 @@
-import type { InquirySpamStatus } from "@/shared/types/inquiry/inquiry-spam-status";
+import type { InquirySpamStatus } from "@mybookkeeper/api-client/types/inquiry/inquiry-spam-status";
 
 /**
  * Tab filter above the inquiry inbox — Clean / All / Flagged / Spam.

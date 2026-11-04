@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { useReplyTemplatesListMode } from "@/app/features/inquiries/useReplyTemplatesListMode";
-import type { ReplyTemplate } from "@/shared/types/inquiry/reply-template";
+import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 
 const TEMPLATE: ReplyTemplate = {
   id: "tpl-1",

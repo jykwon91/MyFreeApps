@@ -6,7 +6,7 @@ import { store } from "@/shared/store";
 import Calendar from "@/app/pages/Calendar";
 import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
-import type { ListingListResponse } from "@/shared/types/listing/listing-list-response";
+import type { ListingListResponse } from "@mybookkeeper/api-client/types/listing/listing-list-response";
 
 // ---------------------------------------------------------------------------
 // Mock data
@@ -112,12 +112,12 @@ vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(() => ({ data: mockProperties, isLoading: false })),
 }));
 
-vi.mock("@/shared/store/listingsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   useGetListingsQuery: vi.fn(() => ({ data: mockListings, isLoading: false })),
 }));
 
 import { useGetCalendarEventsQuery } from "@/shared/store/calendarApi";
-import { useGetListingsQuery } from "@/shared/store/listingsApi";
+import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 
 /**
  * The month grid is the default view, so any assertion about the

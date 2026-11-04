@@ -5,7 +5,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { store } from "@/shared/store";
 import ListingDetail from "@/app/pages/ListingDetail";
-import type { ListingResponse } from "@/shared/types/listing/listing-response";
+import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/listing-response";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 
 const mockListing: ListingResponse = {
@@ -60,8 +60,6 @@ const mockProperties: Property[] = [
 const deleteListingMock = vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) }));
 
 vi.mock("@/shared/store/listingsApi", () => ({
-  useGetListingByIdQuery: vi.fn(),
-  useGetListingsQuery: vi.fn(() => ({ data: { items: [], total: 0, has_more: false }, isLoading: false })),
   useCreateListingMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useUpdateListingMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDeleteListingMutation: vi.fn(() => [deleteListingMock, { isLoading: false }]),
@@ -78,11 +76,16 @@ vi.mock("@/shared/store/listingsApi", () => ({
   useDeleteChannelListingMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
 }));
 
+vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
+  useGetListingByIdQuery: vi.fn(),
+  useGetListingsQuery: vi.fn(() => ({ data: { items: [], total: 0, has_more: false }, isLoading: false })),
+}));
+
 vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(() => ({ data: mockProperties, isLoading: false })),
 }));
 
-import { useGetListingByIdQuery } from "@/shared/store/listingsApi";
+import { useGetListingByIdQuery } from "@mybookkeeper/api-client/store/listingsApi";
 
 function renderDetail(listing: ListingResponse | undefined = mockListing, overrides: Partial<{ isLoading: boolean; isError: boolean; refetch: () => void }> = {}) {
   vi.mocked(useGetListingByIdQuery).mockReturnValue({

@@ -1,19 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
-import {
-  useGetIntegrationsQuery,
-  useConnectGmailMutation,
-  useDisconnectGmailMutation,
-  useSyncGmailMutation,
-  useGetSyncLogsQuery,
-  useCancelGmailSyncMutation,
-  useGetEmailQueueQuery,
-  useExtractAllMutation,
-  useDismissQueueItemMutation,
-  useRetryQueueItemMutation,
-  useRetryAllFailedMutation,
-  useUpdateGmailLabelMutation,
-} from "@/shared/store/integrationsApi";
+import { useConnectGmailMutation, useDisconnectGmailMutation, useSyncGmailMutation, useGetSyncLogsQuery, useCancelGmailSyncMutation, useGetEmailQueueQuery, useExtractAllMutation, useDismissQueueItemMutation, useRetryQueueItemMutation, useRetryAllFailedMutation, useUpdateGmailLabelMutation } from "@/shared/store/integrationsApi";
+import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
 import type { EmailQueueItem } from "@/shared/types/integration/email-queue";
 import { POLLING_OPTIONS, EMPTY_QUEUE } from "@/shared/lib/constants";
 import { timeAgo } from "@/shared/utils/date";

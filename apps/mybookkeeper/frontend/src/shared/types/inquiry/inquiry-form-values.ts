@@ -1,4 +1,4 @@
-import type { InquirySource } from "./inquiry-source";
+import type { InquirySource } from "@mybookkeeper/api-client/types/inquiry/inquiry-source";
 
 /**
  * Shape of the InquiryForm's react-hook-form state. All fields are strings

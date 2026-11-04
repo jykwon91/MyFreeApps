@@ -6,7 +6,7 @@ import { extractErrorMessage } from "@/shared/utils/errorMessage";
 import { useWaiveRentChargeMutation } from "@/shared/store/rentLedgerApi";
 import { RENT_INPUT_CLASS } from "./rent-input-class";
 import { formatCurrency } from "@/shared/utils/currency";
-import { formatShortDate } from "@/shared/lib/inquiry-date-format";
+import { formatShortDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import type { RentCharge } from "@/shared/types/rent/rent-charge";
 
 export interface RentWaiveDialogProps {

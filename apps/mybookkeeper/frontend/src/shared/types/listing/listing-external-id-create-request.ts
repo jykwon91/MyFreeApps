@@ -1,4 +1,4 @@
-import type { ListingSource } from "./listing-source";
+import type { ListingSource } from "@mybookkeeper/api-client/types/listing/listing-source";
 
 /**
  * Request body for POST /listings/{listing_id}/external-ids.

@@ -11,7 +11,7 @@ import { useInquiryDetailMode } from "@/app/features/inquiries/useInquiryDetailM
 import { useMortgagesListMode } from "@/app/features/mortgages/useMortgagesListMode";
 import { useMortgageRateWatchMode } from "@/app/features/mortgages/useMortgageRateWatchMode";
 import type { InsurancePolicyDetail } from "@/shared/types/insurance/insurance-policy-detail";
-import type { InquiryResponse } from "@/shared/types/inquiry/inquiry-response";
+import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // useVendorsListMode

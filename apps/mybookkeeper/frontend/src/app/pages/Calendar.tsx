@@ -8,7 +8,7 @@ import { LoadingButton } from "@platform/ui";
 import PropertyMultiSelect from "@/shared/components/PropertyMultiSelect";
 import { useGetCalendarEventsQuery, useGetReviewQueueCountQuery } from "@/shared/store/calendarApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { useGetListingsQuery } from "@/shared/store/listingsApi";
+import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import {
   CALENDAR_DEFAULT_WINDOW_DAYS,
   parseCalendarView,
