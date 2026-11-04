@@ -112,9 +112,10 @@ async def get_transaction(
     ctx: RequestContext, transaction_id: uuid.UUID
 ) -> Transaction | None:
     async with AsyncSessionLocal() as db:
-        return await transaction_repo.get_by_id(
+        txn = await transaction_repo.get_by_id(
             db, transaction_id, ctx.organization_id,
         )
+        return None if txn is None or txn.deleted_at is not None else txn
 
 
 async def update_transaction(
@@ -126,7 +127,7 @@ async def update_transaction(
         txn = await transaction_repo.get_by_id(
             db, transaction_id, ctx.organization_id,
         )
-        if not txn:
+        if not txn or txn.deleted_at is not None:
             return None
         old_category = txn.category
         old_property_id = txn.property_id
