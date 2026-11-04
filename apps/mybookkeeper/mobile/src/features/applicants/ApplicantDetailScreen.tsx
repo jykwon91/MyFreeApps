@@ -1,3 +1,5 @@
+import { signedLeasesApi } from "@mybookkeeper/api-client/store/signedLeasesApi";
+import { transactionsApi } from "@mybookkeeper/api-client/store/transactionsApi";
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 import { getAllowedTransitions } from "@mybookkeeper/api-client/utils/applicantStageTransitions";
@@ -10,6 +12,7 @@ import { WEB_BASE_URL } from "../../constants/api";
 import { CONTRACT_LOCKED_STAGE, STAGES_READY_FOR_LEASE } from "../../constants/applicants";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import TenantLeases from "../leases/TenantLeases";
+import TenantPayments from "./TenantPayments";
 import TenancySection from "../tenants/TenancySection";
 import InquiryChip from "../inquiries/InquiryChip";
 import InquirySection from "../inquiries/InquirySection";
@@ -24,12 +27,21 @@ import ApplicantScreening from "./ApplicantScreening";
 import ApplicantStageSheet from "./ApplicantStageSheet";
 import ContractStartSheet from "./ContractStartSheet";
 import { useMoveApplicantStage } from "./useMoveApplicantStage";
+import { useDispatch } from "react-redux";
+import type { AppDispatch } from "../../lib/store";
 
 export default function ApplicantDetailScreen({ id }: { id: string }) {
   const { colors, spacing, fontSize } = useTheme();
   const openLink = useOpenLink();
   const { currentData: applicant, error, isFetching, refetch } = useGetApplicantByIdQuery(id);
-  const { refresh, refreshControl } = useRefresh(refetch, error);
+  const dispatch = useDispatch<AppDispatch>();
+  // Its leases and payments are their own queries, and a pull should reload the whole page.
+  const reloadPage = () => {
+    dispatch(signedLeasesApi.util.invalidateTags([{ type: "SignedLease", id: "LIST" }]));
+    dispatch(transactionsApi.util.invalidateTags([{ type: "Transaction", id: "LIST" }]));
+    return refetch();
+  };
+  const { refresh, refreshControl } = useRefresh(reloadPage, error);
   const isGone = httpStatus(error) === 404;
   const insets = useSafeAreaInsets();
   const canWrite = useCanWrite();
@@ -76,7 +88,7 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl}>
+      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl} testID="applicant-detail">
         {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
         <View style={{ gap: spacing.xs }}>
           <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
@@ -111,6 +123,8 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
         </InquirySection>
 
         <TenantLeases applicantId={applicant.id} isTenant={isTenant} name={applicant.legal_name ?? "them"} />
+
+        {isTenant ? <TenantPayments applicantId={applicant.id} key={`payments-${applicant.id}`} name={applicant.legal_name ?? "them"} /> : null}
 
         {isTenant ? null : <ApplicantScreening applicant={applicant} />}
 
