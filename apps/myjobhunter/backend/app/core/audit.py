@@ -40,6 +40,7 @@ MJH_SENSITIVE_FIELDS: frozenset[str] = frozenset({
 # - ``resume_upload_jobs``: worker job state churn, not user-facing data
 MJH_SKIP_TABLES: frozenset[str] = frozenset({
     "auth_events",
+    "refresh_sessions",
     "extraction_logs",
     "resume_upload_jobs",
 })

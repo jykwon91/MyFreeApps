@@ -28,6 +28,7 @@ APP_SENSITIVE_FIELDS: frozenset[str] = frozenset({
 # Skip-tables -- high-volume / secret-bearing tables we don't audit.
 APP_SKIP_TABLES: frozenset[str] = frozenset({
     "auth_events",
+    "refresh_sessions",
 })
 
 APP_SKIP_FIELDS: frozenset[str] = frozenset()

@@ -32,6 +32,7 @@ MGA_SENSITIVE_FIELDS: frozenset[str] = frozenset({
 # MGA skip-tables — high-volume / secret-bearing tables we don't audit.
 MGA_SKIP_TABLES: frozenset[str] = frozenset({
     "auth_events",
+    "refresh_sessions",
 })
 
 MGA_SKIP_FIELDS: frozenset[str] = frozenset()

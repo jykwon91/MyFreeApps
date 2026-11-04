@@ -2,6 +2,7 @@
 # Order matters for forward references — declare referenced tables before referencing ones.
 
 from app.models.user.user import User  # noqa: F401
+from app.models.user.refresh_session import RefreshSession  # noqa: F401
 
 from app.models.profile.profile import Profile  # noqa: F401
 from app.models.profile.work_history import WorkHistory  # noqa: F401

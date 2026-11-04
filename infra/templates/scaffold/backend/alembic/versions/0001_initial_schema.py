@@ -69,6 +69,34 @@ def upgrade() -> None:
     )
     op.create_index("ix_user_email", "user", ["email"], unique=True)
 
+    op.create_table(
+        "refresh_sessions",
+        sa.Column(
+            "id", postgresql.UUID(as_uuid=True), primary_key=True,
+            server_default=sa.text("gen_random_uuid()"),
+        ),
+        sa.Column(
+            "user_id", postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("user.id", ondelete="CASCADE"), nullable=False,
+        ),
+        sa.Column("current_secret_hash", sa.String(64), nullable=False),
+        sa.Column("previous_secret_hash", sa.String(64), nullable=True),
+        sa.Column("previous_valid_until", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("abandoned_secret_hash", sa.String(64), nullable=True),
+        sa.Column("device_name", sa.String(100), nullable=True),
+        sa.Column("auth_time", sa.DateTime(timezone=True), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.Column(
+            "last_used_at", sa.DateTime(timezone=True), nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+    )
+    op.create_index("ix_refresh_sessions_user_id", "refresh_sessions", ["user_id"])
+
     # --------------------------------------------------------------- audit_logs
     # Matches platform_shared.db.models.audit_log.AuditLog (the shape
     # platform_shared.core.audit's listener writes).
@@ -124,6 +152,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_table("refresh_sessions")
     op.drop_table("auth_events")
     op.drop_table("audit_logs")
     op.drop_table("user")

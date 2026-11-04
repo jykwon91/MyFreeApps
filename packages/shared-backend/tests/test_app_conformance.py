@@ -1218,6 +1218,22 @@ class TestTotpRoutesAreShared:
         assert "current_strict_superuser=current_strict_superuser," in source
         assert "get_users_router" not in source, "Its delete route takes a superuser token alone."
 
+    @pytest.mark.parametrize(
+        "backend",
+        [("apps", app, "backend") for app in _APPS] + [("infra", "templates", "scaffold", "backend")],
+        ids="/".join,
+    )
+    def test_refresh_sessions_are_registered_and_never_audited(self, backend: tuple[str, ...]) -> None:
+        assert "RefreshSession" in _read(*backend, "app", "models", "__init__.py")
+        assert '"refresh_sessions"' in _read(*backend, "app", "core", "audit.py"), (
+            "An audit row would copy the secret hashes."
+        )
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_a_migration_creates_refresh_sessions(self, app: str) -> None:
+        versions = _REPO_ROOT / "apps" / app / "backend" / "alembic" / "versions"
+        assert any('"refresh_sessions"' in path.read_text(encoding="utf-8") for path in versions.glob("*.py"))
+
     @pytest.mark.parametrize("app", _APPS)
     def test_a_migration_adds_the_replay_marker(self, app: str) -> None:
         versions = _REPO_ROOT / "apps" / app / "backend" / "alembic" / "versions"
