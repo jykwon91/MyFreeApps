@@ -10,15 +10,13 @@ function makePendingResult(overrides: Partial<ScreeningResult> = {}): ScreeningR
     applicant_id: "app-1",
     provider: "keycheck",
     status: "pending",
-    report_storage_key: null,
-    adverse_action_snippet: null,
+    has_report: false,
     notes: null,
     requested_at: "2026-05-01T10:00:00Z",
     completed_at: null,
     uploaded_at: "2026-05-01T10:00:00Z",
     uploaded_by_user_id: "user-1",
     created_at: "2026-05-01T10:00:00Z",
-    presigned_url: null,
     ...overrides,
   };
 }

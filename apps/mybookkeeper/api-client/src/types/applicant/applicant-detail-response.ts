@@ -8,11 +8,8 @@ import type { VideoCallNote } from "./video-call-note";
  * Mirrors backend ``ApplicantDetailResponse`` — the full applicant detail
  * shape with all 1:N children nested.
  *
- * PII fields (``legal_name``, ``dob``, ``employer_or_hospital``,
- * ``vehicle_make_model``, ``contact_email``, ``contact_phone``) come over the
- * wire as plaintext — the backend's ``EncryptedString`` TypeDecorator decrypts
- * on read. The frontend renders them behind a sensitive-unlock toggle so
- * they're hidden by default per RENTALS_PLAN.md §9.1.
+ * Date of birth, vehicle, contact details and screening reports aren't here:
+ * they come from ``revealApplicantSensitive``, which records who asked.
  */
 export interface ApplicantDetailResponse {
   id: string;
@@ -21,12 +18,8 @@ export interface ApplicantDetailResponse {
   inquiry_id: string | null;
 
   legal_name: string | null;
-  dob: string | null;
   employer_or_hospital: string | null;
-  vehicle_make_model: string | null;
-  contact_email: string | null;
-  contact_phone: string | null;
-  id_document_storage_key: string | null;
+  has_contact_email: boolean;
 
   contract_start: string | null;
   contract_end: string | null;

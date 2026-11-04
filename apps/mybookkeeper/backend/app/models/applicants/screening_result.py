@@ -109,3 +109,7 @@ class ScreeningResult(Base):
             postgresql_where=text("status = 'pending'"),
         ),
     )
+
+    @property
+    def has_report(self) -> bool:
+        return self.report_storage_key is not None

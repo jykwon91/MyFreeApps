@@ -35,7 +35,12 @@ APPLICANT_EVENT_TYPES: tuple[str, ...] = APPLICANT_STAGES + (
     "tenancy_restarted",
     "tenancy_extended",
     "extension_undone",
+    "sensitive_revealed",
 )
+
+# Written for the audit trail, never shown on the applicant's history: looking
+# at someone's details is not something that happened to their application.
+APPLICANT_AUDIT_ONLY_EVENT_TYPES: tuple[str, ...] = ("sensitive_revealed",)
 
 APPLICANT_EVENT_ACTORS: tuple[str, ...] = ("host", "system", "applicant")
 

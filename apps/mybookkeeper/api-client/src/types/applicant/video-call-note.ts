@@ -8,7 +8,6 @@ export interface VideoCallNote {
   completed_at: string | null;
   notes: string | null;
   gut_rating: number | null;
-  transcript_storage_key: string | null;
   created_at: string;
   updated_at: string;
 }

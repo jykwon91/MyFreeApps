@@ -1,8 +1,12 @@
-import { useState } from "react";
-import { Eye, EyeOff, ShieldAlert } from "lucide-react";
+import { Eye, EyeOff, LoaderCircle, ShieldAlert } from "lucide-react";
 
 export interface SensitiveDataUnlockProps {
   children: React.ReactNode;
+  errorMessage?: string | null;
+  isLoading?: boolean;
+  isRevealed: boolean;
+  onHide: () => void;
+  onShow: () => void;
   /**
    * Optional override label for the toggle button. Defaults to a generic
    * "Show sensitive data" / "Hide sensitive data".
@@ -12,21 +16,24 @@ export interface SensitiveDataUnlockProps {
 }
 
 /**
- * Wrapper that hides PII (legal_name, dob, employer_or_hospital,
- * vehicle_make_model) behind a "Show sensitive data" toggle.
+ * Hides private applicant details until the host asks for them. The parent
+ * fetches them from the audited reveal on ``onShow``, so they aren't in the
+ * browser until then, and each request is recorded.
  *
  * Per RENTALS_PLAN.md §9.1: the applicant detail page must NOT render PII
- * by default. The host clicks to reveal — a deliberate, audit-friendly
- * action that protects against shoulder-surfing and accidental screen-share
- * leaks.
+ * by default. This protects against shoulder-surfing and accidental
+ * screen-share leaks.
  */
 export default function SensitiveDataUnlock({
   children,
+  errorMessage,
+  isLoading = false,
+  isRevealed,
+  onHide,
+  onShow,
   showLabel = "Show sensitive data",
   hideLabel = "Hide sensitive data",
 }: SensitiveDataUnlockProps) {
-  const [revealed, setRevealed] = useState(false);
-
   return (
     <section
       className="border rounded-lg p-4 space-y-3"
@@ -39,12 +46,19 @@ export default function SensitiveDataUnlock({
         </h2>
         <button
           type="button"
-          onClick={() => setRevealed((p) => !p)}
-          aria-pressed={revealed}
+          onClick={isRevealed ? onHide : onShow}
+          disabled={isLoading}
+          aria-busy={isLoading}
+          aria-pressed={isRevealed}
           data-testid="sensitive-data-toggle"
-          className="inline-flex items-center gap-1 text-sm text-primary hover:underline min-h-[44px] px-3"
+          className="inline-flex items-center gap-1 text-sm text-primary hover:underline min-h-[44px] px-3 disabled:opacity-60"
         >
-          {revealed ? (
+          {isLoading ? (
+            <>
+              <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+              Loading...
+            </>
+          ) : isRevealed ? (
             <>
               <EyeOff className="h-4 w-4" aria-hidden="true" />
               {hideLabel}
@@ -57,7 +71,12 @@ export default function SensitiveDataUnlock({
           )}
         </button>
       </div>
-      {revealed ? (
+      {errorMessage ? (
+        <p className="text-xs text-destructive" role="alert" data-testid="sensitive-data-error">
+          {errorMessage}
+        </p>
+      ) : null}
+      {isRevealed ? (
         <div data-testid="sensitive-data-revealed">{children}</div>
       ) : (
         <p

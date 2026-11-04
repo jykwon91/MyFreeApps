@@ -18,7 +18,6 @@ class VideoCallNoteResponse(BaseModel):
     completed_at: _dt.datetime | None = None
     notes: str | None = None
     gut_rating: int | None = None
-    transcript_storage_key: str | None = None
     created_at: _dt.datetime
     updated_at: _dt.datetime
 

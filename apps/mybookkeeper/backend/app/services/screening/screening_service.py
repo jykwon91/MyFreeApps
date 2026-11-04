@@ -48,7 +48,6 @@ from app.services.screening.report_processor import (
     ReportRejected,
     process_report,
 )
-from app.services.screening.screening_response_builder import attach_presigned_urls
 
 logger = logging.getLogger(__name__)
 
@@ -369,7 +368,7 @@ async def record_result(
             )
         raise
 
-    return attach_presigned_urls([response])[0]
+    return response
 
 
 async def list_results(
@@ -399,8 +398,7 @@ async def list_results(
             organization_id=organization_id,
             user_id=user_id,
         )
-    responses = [ScreeningResultResponse.model_validate(r) for r in rows]
-    return attach_presigned_urls(responses)
+        return [ScreeningResultResponse.model_validate(r) for r in rows]
 
 
 def list_providers() -> ScreeningProvidersResponse:

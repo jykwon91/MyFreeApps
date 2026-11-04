@@ -117,12 +117,8 @@ function buildApplicant(
     user_id: "user-1",
     inquiry_id: null,
     legal_name: "Jane Doe",
-    dob: null,
     employer_or_hospital: null,
-    vehicle_make_model: null,
-    contact_email: "tenant@example.com",
-    contact_phone: null,
-    id_document_storage_key: null,
+    has_contact_email: true,
     contract_start: null,
     contract_end: null,
     smoker: null,
@@ -181,7 +177,7 @@ describe("LeaseDetail — Email to tenant button", () => {
   it("renders disabled when applicant has no contact_email", () => {
     canWriteValue = true;
     mockLease = buildLease();
-    mockApplicant = buildApplicant({ contact_email: null });
+    mockApplicant = buildApplicant({ has_contact_email: false });
     renderDetail();
     const button = screen.getByTestId("lease-email-tenant-button");
     expect(button).toBeDisabled();

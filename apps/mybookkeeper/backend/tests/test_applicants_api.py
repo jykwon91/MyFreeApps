@@ -75,10 +75,8 @@ def _build_detail(
         user_id=user_id,
         inquiry_id=None,
         legal_name="Jane Doe",
-        dob="1990-01-15",
         employer_or_hospital="Memorial Hermann",
-        vehicle_make_model="Toyota Camry 2020",
-        id_document_storage_key="docs/abc.pdf",
+        has_contact_email=True,
         smoker=False,
         pets="1 small cat",
         referred_by=None,
@@ -104,7 +102,6 @@ def _build_detail(
                 applicant_id=applicant_id,
                 relationship="employer",
                 reference_name="Reference R",
-                reference_contact="ref@example.com",
                 contacted_at=None,
                 created_at=now,
                 updated_at=now,
@@ -118,7 +115,6 @@ def _build_detail(
                 completed_at=None,
                 gut_rating=4,
                 notes="A note",
-                transcript_storage_key=None,
                 created_at=now,
                 updated_at=now,
             ),
@@ -239,7 +235,10 @@ class TestApplicantsDetailEndpoint:
         body = response.json()
         assert body["id"] == str(applicant_id)
         assert body["legal_name"] == "Jane Doe"
-        assert body["dob"] == "1990-01-15"
+        assert body["has_contact_email"] is True
+        for private in ("dob", "vehicle_make_model", "contact_email", "contact_phone"):
+            assert private not in body
+        assert "reference_contact" not in body["references"][0]
         # Nested arrays — every child section should round-trip.
         assert len(body["screening_results"]) == 1
         assert body["screening_results"][0]["provider"] == "keycheck"
