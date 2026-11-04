@@ -40,7 +40,14 @@
           "microphonePermission": false
         }
       ],
-      "@react-native-community/datetimepicker"
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "I use Face ID to confirm it's you before showing an applicant's private details."
+        }
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-web-browser"
     ],
     "extra": {
       "router": {
