@@ -1,5 +1,6 @@
 import api from "@platform/core/lib/api";
 import type { ApplicantDetailResponse } from "@mybookkeeper/api-client/types/applicant/applicant-detail-response";
+import type { ApplicantSensitive } from "@mybookkeeper/api-client/types/applicant/applicant-sensitive";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 
 export function anApplicant(overrides: Partial<ApplicantDetailResponse> = {}): ApplicantDetailResponse {
@@ -37,10 +38,24 @@ export interface FakeApplicantServer {
   writeFailure: number | null;
   loseNextAnswer: boolean;
   requests: AxiosRequestConfig[];
+  sensitive: ApplicantSensitive;
+  revealFailure: number | null;
+}
+
+export function noPrivateDetails(overrides: Partial<ApplicantSensitive> = {}): ApplicantSensitive {
+  return {
+    dob: null,
+    vehicle_make_model: null,
+    contact_email: null,
+    contact_phone: null,
+    references: [],
+    screening_reports: [],
+    ...overrides,
+  };
 }
 
 export function startApplicantServer(applicants: ApplicantDetailResponse[]): FakeApplicantServer {
-  const server: FakeApplicantServer = { applicants, offline: false, failListFromOffset: null, role: "owner", writeFailure: null, loseNextAnswer: false, requests: [] };
+  const server: FakeApplicantServer = { applicants, offline: false, failListFromOffset: null, role: "owner", writeFailure: null, loseNextAnswer: false, requests: [], sensitive: noPrivateDetails(), revealFailure: null };
   const adapter: AxiosAdapter = (config) => {
     const respond = (data: unknown, status = 200) => {
       const response = { data: JSON.parse(JSON.stringify(data)), status, statusText: "", headers: {}, config };
@@ -50,6 +65,9 @@ export function startApplicantServer(applicants: ApplicantDetailResponse[]): Fak
     server.requests.push(config);
     if (server.offline) return Promise.reject(Object.assign(new Error("Network Error"), { config }));
     if (config.url === "/organizations") return respond([{ id: "w1", name: "Mine", org_role: server.role }]);
+    if (config.method === "post" && config.url?.endsWith("/sensitive")) {
+      return server.revealFailure ? respond({ detail: "nope" }, server.revealFailure) : respond(server.sensitive);
+    }
     if (config.method === "patch") {
       if (server.writeFailure) return respond({ detail: "A developer's message" }, server.writeFailure);
       const body = JSON.parse(String(config.data)) as { new_stage?: ApplicantDetailResponse["stage"]; contract_start?: string | null };

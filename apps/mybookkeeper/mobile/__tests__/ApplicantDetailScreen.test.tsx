@@ -12,7 +12,7 @@ import { anApplicant, startApplicantServer } from "../test-support/applicantsSer
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
-jest.mock("expo-router", () => ({ router: { push: (path: string) => mockPush(path), back: () => mockBack() } }));
+jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: (path: string) => mockPush(path), back: () => mockBack() } }));
 
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 
@@ -78,20 +78,11 @@ describe("ApplicantDetailScreen", () => {
     expect(screen.queryByText(/Private screening note/)).toBeNull();
   });
 
-  it("points to the website for private details", async () => {
-    startApplicantServer([anApplicant()]);
-    const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+  it("keeps private details hidden until asked", async () => {
+    const server = startApplicantServer([anApplicant()]);
     await renderScreen();
-    await fireEvent.press(await screen.findByRole("button", { name: "Open on the website" }));
-    expect(openURL.mock.calls[0][0]).toMatch(/\/applicants\/a1$/);
-  });
-
-  it("says when the website link can't open", async () => {
-    startApplicantServer([anApplicant()]);
-    jest.spyOn(Linking, "openURL").mockRejectedValue(new Error("no"));
-    await renderScreen();
-    await fireEvent.press(await screen.findByRole("button", { name: "Open on the website" }));
-    expect(await screen.findByText("I couldn't open that on this phone.")).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Show private details" })).toBeTruthy();
+    expect(server.requests.some((request) => request.url?.endsWith("/sensitive"))).toBe(false);
   });
 
   it("links to the inquiry they came from, when there is one", async () => {
@@ -258,6 +249,14 @@ describe("ApplicantDetailScreen", () => {
       await renderScreen();
       await fireEvent.press(await screen.findByRole("button", { name: "Generate lease" }));
       expect(openURL.mock.calls[0][0]).toMatch(/\/leases\/new\?applicant_id=a1$/);
+    });
+
+    it("says when the website link can't open", async () => {
+      startApplicantServer([anApplicant({ stage: "approved" })]);
+      jest.spyOn(Linking, "openURL").mockRejectedValue(new Error("no"));
+      await renderScreen();
+      await fireEvent.press(await screen.findByRole("button", { name: "Generate lease" }));
+      expect(await screen.findByText("I couldn't open that on this phone.")).toBeTruthy();
     });
 
     it("doesn't offer it before they're approved", async () => {

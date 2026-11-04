@@ -17,6 +17,7 @@ import { httpStatus } from "../transactions/transactionMessages";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { applicantName, applicantStageLabel, contractDates, promotedAgo, smokerLabel } from "./applicantDisplay";
 import ApplicantHistory from "./ApplicantHistory";
+import ApplicantPrivateDetails from "./ApplicantPrivateDetails";
 import ApplicantStageSheet from "./ApplicantStageSheet";
 import ContractStartSheet from "./ContractStartSheet";
 import { useMoveApplicantStage } from "./useMoveApplicantStage";
@@ -103,14 +104,7 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
           {applicant.referred_by?.trim() ? <TransactionFact label="Referred by" value={applicant.referred_by.trim()} /> : null}
         </InquirySection>
 
-        <InquirySection title="Private details">
-          <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
-            Date of birth, vehicle, contact details, ID and screening reports are on the website for now.
-          </Text>
-          <LoadingButton onPress={() => void openLink(`${WEB_BASE_URL}/applicants/${id}`)} variant="ghost">
-            Open on the website
-          </LoadingButton>
-        </InquirySection>
+        <ApplicantPrivateDetails applicant={applicant} key={applicant.id} />
 
         <ApplicantHistory applicant={applicant} />
         {canWrite ? null : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>You have view-only access.</Text>}
