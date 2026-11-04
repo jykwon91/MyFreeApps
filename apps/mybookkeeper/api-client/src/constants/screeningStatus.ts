@@ -1,3 +1,5 @@
+import type { ScreeningStatus } from "../types/applicant/screening-status";
+
 /**
  * Canonical screening result status values.
  *
@@ -16,9 +18,7 @@ export const SCREENING_STATUSES = [
   "pass",
   "fail",
   "inconclusive",
-] as const;
-
-export type ScreeningStatus = (typeof SCREENING_STATUSES)[number];
+] as const satisfies readonly ScreeningStatus[];
 
 /** Statuses that REQUIRE an ``adverse_action_snippet`` on upload. */
 export const ADVERSE_OUTCOMES: readonly ScreeningStatus[] = ["fail", "inconclusive"] as const;

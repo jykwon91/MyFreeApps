@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Skeleton from "@/shared/components/ui/Skeleton";
-import { useGetScreeningEligibilityQuery, useGetScreeningResultsQuery } from "@/shared/store/screeningApi";
+import { useGetScreeningEligibilityQuery, useGetScreeningResultsQuery } from "@mybookkeeper/api-client/store/screeningApi";
 import type { ScreeningReport } from "@mybookkeeper/api-client/types/applicant/screening-report";
 import ScreeningEligibilityGate from "./ScreeningEligibilityGate";
 import ScreeningPendingPanel from "./ScreeningPendingPanel";

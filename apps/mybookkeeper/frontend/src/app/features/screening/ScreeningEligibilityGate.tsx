@@ -1,5 +1,5 @@
 import { AlertCircle } from "lucide-react";
-import type { ScreeningEligibilityResponse } from "@/shared/types/screening/screening-eligibility-response";
+import type { ScreeningEligibilityResponse } from "@mybookkeeper/api-client/types/applicant/screening-eligibility-response";
 
 export interface ScreeningEligibilityGateProps {
   eligibility: ScreeningEligibilityResponse;

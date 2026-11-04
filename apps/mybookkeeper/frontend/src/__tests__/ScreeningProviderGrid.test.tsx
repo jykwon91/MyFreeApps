@@ -7,7 +7,7 @@ import { store } from "@/shared/store";
 const getProvidersMock = vi.fn();
 const triggerRedirectMock = vi.fn();
 
-vi.mock("@/shared/store/screeningApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/screeningApi", () => ({
   useGetScreeningProvidersQuery: () => getProvidersMock(),
   useLazyGetScreeningRedirectQuery: () => [triggerRedirectMock, {}],
 }));

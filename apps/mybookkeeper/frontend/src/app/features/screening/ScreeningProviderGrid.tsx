@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import { showError } from "@/shared/lib/toast-store";
-import { useGetScreeningProvidersQuery, useLazyGetScreeningRedirectQuery } from "@/shared/store/screeningApi";
+import { useGetScreeningProvidersQuery, useLazyGetScreeningRedirectQuery } from "@mybookkeeper/api-client/store/screeningApi";
 import ScreeningProviderCard from "./ScreeningProviderCard";
 
 export interface ScreeningProviderGridProps {

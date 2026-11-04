@@ -4,13 +4,13 @@ import { X } from "lucide-react";
 import { Button, LoadingButton } from "@platform/ui";
 import FormField from "@/shared/components/ui/FormField";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import { useUploadScreeningResultMutation } from "@/shared/store/screeningApi";
+import { useUploadScreeningResultMutation } from "@mybookkeeper/api-client/store/screeningApi";
 import {
   ADVERSE_OUTCOMES,
   SCREENING_STATUSES,
   SCREENING_STATUS_LABELS,
-  type ScreeningStatus,
-} from "@/shared/types/screening/screening-status";
+} from "@mybookkeeper/api-client/constants/screeningStatus";
+import type { ScreeningStatus } from "@mybookkeeper/api-client/types/applicant/screening-status";
 
 export interface UploadScreeningResultModalProps {
   applicantId: string;
@@ -81,14 +81,13 @@ export default function UploadScreeningResultModal({
     }
 
     try {
-      await uploadResult({
-        applicantId,
-        file,
-        status,
-        adverseActionSnippet: isAdverseOutcome(status)
-          ? adverseSnippet.trim()
-          : null,
-      }).unwrap();
+      const form = new FormData();
+      form.append("file", file);
+      form.append("status", status);
+      if (isAdverseOutcome(status)) {
+        form.append("adverse_action_snippet", adverseSnippet.trim());
+      }
+      await uploadResult({ applicantId, form }).unwrap();
       showSuccess("Report uploaded.");
       reset();
       onClose();

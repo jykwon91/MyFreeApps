@@ -1,9 +1,9 @@
-import { baseApi } from "./baseApi";
-import type { ScreeningEligibilityResponse } from "@/shared/types/screening/screening-eligibility-response";
-import type { ScreeningProviderInfo, ScreeningProvidersResponse } from "@/shared/types/screening/screening-provider-info";
-import type { ScreeningResult } from "@mybookkeeper/api-client/types/applicant/screening-result";
-import type { ScreeningRedirectResponse } from "@/shared/types/screening/screening-redirect-response";
-import type { ScreeningUploadRequest } from "@/shared/types/screening/screening-upload-request";
+import { baseApi } from "@platform/core/store/baseApi";
+import type { ScreeningEligibilityResponse } from "../types/applicant/screening-eligibility-response";
+import type { ScreeningProvidersResponse } from "../types/applicant/screening-providers-response";
+import type { ScreeningResult } from "../types/applicant/screening-result";
+import type { ScreeningRedirectResponse } from "../types/applicant/screening-redirect-response";
+import type { ScreeningUploadRequest } from "../types/applicant/screening-upload-request";
 
 /**
  * RTK Query slice for the screening sub-domain (rentals Phase 3, PR 3.3 +
@@ -22,7 +22,9 @@ import type { ScreeningUploadRequest } from "@/shared/types/screening/screening-
  * Eligibility uses ``Screening:<id>`` so it re-fetches when a result is
  * uploaded (the pending state changes).
  */
-const screeningApi = baseApi.injectEndpoints({
+const screeningApi = baseApi.enhanceEndpoints({
+  addTagTypes: ["Screening", "Applicant"],
+}).injectEndpoints({
   endpoints: (builder) => ({
     getScreeningEligibility: builder.query<ScreeningEligibilityResponse, string>({
       query: (applicantId) => ({
@@ -52,19 +54,11 @@ const screeningApi = baseApi.injectEndpoints({
       ],
     }),
     uploadScreeningResult: builder.mutation<ScreeningResult, ScreeningUploadRequest>({
-      query: ({ applicantId, file, status, adverseActionSnippet }) => {
-        const form = new FormData();
-        form.append("file", file);
-        form.append("status", status);
-        if (adverseActionSnippet) {
-          form.append("adverse_action_snippet", adverseActionSnippet);
-        }
-        return {
-          url: `/applicants/${applicantId}/screening/upload-result`,
-          method: "POST",
-          data: form,
-        };
-      },
+      query: ({ applicantId, form }) => ({
+        url: `/applicants/${applicantId}/screening/upload-result`,
+        method: "POST",
+        data: form,
+      }),
       invalidatesTags: (_result, _err, arg) => [
         { type: "Screening" as const, id: arg.applicantId },
         { type: "Screening" as const, id: `${arg.applicantId}-eligibility` },
@@ -73,8 +67,6 @@ const screeningApi = baseApi.injectEndpoints({
     }),
   }),
 });
-
-export type { ScreeningProviderInfo };
 
 export const {
   useGetScreeningEligibilityQuery,
