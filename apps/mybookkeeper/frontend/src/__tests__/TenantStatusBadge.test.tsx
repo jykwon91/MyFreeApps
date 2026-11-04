@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import TenantStatusBadge from "@/app/features/tenants/TenantStatusBadge";
-import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
+import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 
 const base: ApplicantSummary = {
   id: "app-1",

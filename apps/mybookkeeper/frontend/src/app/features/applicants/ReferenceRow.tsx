@@ -3,7 +3,7 @@ import {
   formatAbsoluteTime,
   formatRelativeTime,
 } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import type { ApplicantReference } from "@/shared/types/applicant/applicant-reference";
+import type { ApplicantReference } from "@mybookkeeper/api-client/types/applicant/applicant-reference";
 
 export interface ReferenceRowProps {
   reference: ApplicantReference;

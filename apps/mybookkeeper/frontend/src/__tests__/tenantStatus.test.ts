@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildTenantOptions, isTenantEnded } from "@/shared/lib/tenant-status";
-import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
+import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 
 const TODAY = "2026-09-19";
 

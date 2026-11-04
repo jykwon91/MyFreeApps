@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ScreeningResultRow from "@/app/features/screening/ScreeningResultRow";
-import type { ScreeningResult } from "@/shared/types/applicant/screening-result";
+import type { ScreeningResult } from "@mybookkeeper/api-client/types/applicant/screening-result";
 
 function makeResult(overrides: Partial<ScreeningResult> = {}): ScreeningResult {
   return {

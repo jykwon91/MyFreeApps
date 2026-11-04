@@ -3,12 +3,9 @@ import { useSearchParams } from "react-router-dom";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import { LoadingButton } from "@platform/ui";
-import { useGetApplicantsQuery } from "@/shared/store/applicantsApi";
-import {
-  APPLICANT_PAGE_SIZE,
-  APPLICANT_STAGES,
-} from "@/shared/lib/applicant-labels";
-import type { ApplicantStage } from "@/shared/types/applicant/applicant-stage";
+import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
+import { APPLICANT_PAGE_SIZE, APPLICANT_STAGES } from "@mybookkeeper/api-client/constants/applicantLabels";
+import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 import ApplicantStageFilter from "@/app/features/applicants/ApplicantStageFilter";
 import ApplicantsListBody from "@/app/features/applicants/ApplicantsListBody";
 import { useApplicantsListMode } from "@/app/features/applicants/useApplicantsListMode";

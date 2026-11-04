@@ -1,13 +1,13 @@
-import { baseApi } from "./baseApi";
-import type { ApplicantDetailResponse } from "@/shared/types/applicant/applicant-detail-response";
-import type { ApplicantListArgs } from "@/shared/types/applicant/applicant-list-args";
-import type { ApplicantListResponse } from "@/shared/types/applicant/applicant-list-response";
-import type { ApplicantPromoteRequest } from "@/shared/types/applicant/applicant-promote-request";
-import type { ApplicantUpdateRequest } from "@/shared/types/applicant/applicant-update-request";
-import type { StageTransitionRequest } from "@/shared/types/applicant/stage-transition-request";
-import type { TenancyEndRequest } from "@/shared/types/applicant/tenancy-end-request";
-import type { TenantListArgs } from "@/shared/types/applicant/tenant-list-args";
-import type { TenantListResponse } from "@/shared/types/applicant/tenant-list-response";
+import { baseApi } from "@platform/core/store/baseApi";
+import type { ApplicantDetailResponse } from "../types/applicant/applicant-detail-response";
+import type { ApplicantListArgs } from "../types/applicant/applicant-list-args";
+import type { ApplicantListResponse } from "../types/applicant/applicant-list-response";
+import type { ApplicantPromoteRequest } from "../types/applicant/applicant-promote-request";
+import type { ApplicantUpdateRequest } from "../types/applicant/applicant-update-request";
+import type { StageTransitionRequest } from "../types/applicant/stage-transition-request";
+import type { TenancyEndRequest } from "../types/applicant/tenancy-end-request";
+import type { TenantListArgs } from "../types/applicant/tenant-list-args";
+import type { TenantListResponse } from "../types/applicant/tenant-list-response";
 
 /**
  * RTK Query slice for the Applicants domain.
@@ -20,7 +20,9 @@ import type { TenantListResponse } from "@/shared/types/applicant/tenant-list-re
  *
  * Screening (PR 3.3) and video-call notes (PR 3.4) land in subsequent PRs.
  */
-const applicantsApi = baseApi.injectEndpoints({
+const applicantsApi = baseApi.enhanceEndpoints({
+  addTagTypes: ["Applicant", "Inquiry"],
+}).injectEndpoints({
   endpoints: (builder) => ({
     getApplicants: builder.query<ApplicantListResponse, ApplicantListArgs | void>({
       query: (args) => ({

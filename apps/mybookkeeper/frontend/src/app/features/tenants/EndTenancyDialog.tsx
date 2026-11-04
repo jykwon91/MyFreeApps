@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import { useEndTenancyMutation } from "@/shared/store/applicantsApi";
+import { useEndTenancyMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 
 const REASON_MAX_LENGTH = 500;
 

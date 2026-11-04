@@ -1,11 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import ApplicantStageBadge from "@/app/features/applicants/ApplicantStageBadge";
-import {
-  APPLICANT_STAGES,
-  APPLICANT_STAGE_LABELS,
-} from "@/shared/lib/applicant-labels";
-import type { ApplicantStage } from "@/shared/types/applicant/applicant-stage";
+import { APPLICANT_STAGES, APPLICANT_STAGE_LABELS } from "@mybookkeeper/api-client/constants/applicantLabels";
+import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 
 describe("ApplicantStageBadge", () => {
   it.each(APPLICANT_STAGES)("renders the label for stage '%s'", (stage) => {

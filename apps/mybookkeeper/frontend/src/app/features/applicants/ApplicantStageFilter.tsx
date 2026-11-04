@@ -1,9 +1,6 @@
 import { cn } from "@/shared/utils/cn";
-import {
-  APPLICANT_STAGES,
-  APPLICANT_STAGE_LABELS,
-} from "@/shared/lib/applicant-labels";
-import type { ApplicantStage } from "@/shared/types/applicant/applicant-stage";
+import { APPLICANT_STAGES, APPLICANT_STAGE_LABELS } from "@mybookkeeper/api-client/constants/applicantLabels";
+import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 
 export interface ApplicantStageFilterProps {
   value: ApplicantStage | null;

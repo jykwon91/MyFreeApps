@@ -6,12 +6,12 @@ import AlertBox from "@/shared/components/ui/AlertBox";
 import { LoadingButton } from "@platform/ui";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import { useGetLeaseTemplatesQuery } from "@/shared/store/leaseTemplatesApi";
-import { useGetApplicantByIdQuery } from "@/shared/store/applicantsApi";
+import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import MultiTemplatePicker from "@/app/features/leases/MultiTemplatePicker";
 import ApplicantPicker from "@/app/features/leases/ApplicantPicker";
 import LeaseGenerateForm from "@/app/features/leases/LeaseGenerateForm";
 import type { LeaseTemplateSummary } from "@/shared/types/lease/lease-template-summary";
-import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
+import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 
 /**
  * /leases/new — wires the full generate-lease flow:

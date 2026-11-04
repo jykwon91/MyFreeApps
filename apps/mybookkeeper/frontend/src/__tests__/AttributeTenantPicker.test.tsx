@@ -4,7 +4,7 @@ import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import AttributeTenantPicker from "@/app/features/transactions/AttributeTenantPicker";
 
-vi.mock("@/shared/store/applicantsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
   useGetTenantsQuery: vi.fn(),
 }));
 vi.mock("@/shared/store/attributionApi", () => ({
@@ -15,7 +15,7 @@ vi.mock("@/shared/lib/toast-store", () => ({
   showSuccess: vi.fn(),
 }));
 
-import { useGetTenantsQuery } from "@/shared/store/applicantsApi";
+import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useAttributeTransactionManuallyMutation } from "@/shared/store/attributionApi";
 import { showSuccess } from "@/shared/lib/toast-store";
 

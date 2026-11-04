@@ -141,7 +141,7 @@ vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   })),
 }));
 
-vi.mock("@/shared/store/applicantsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
   useGetTenantsQuery: vi.fn(() => ({
     data: { items: [], total: 0, has_more: false },
     isLoading: false,

@@ -18,12 +18,12 @@ import { render, screen, fireEvent, act } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import ContractDatesEditor from "@/app/features/applicants/ContractDatesEditor";
-import type { ApplicantStage } from "@/shared/types/applicant/applicant-stage";
+import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 
 // --- mocks ---
 
 const mockUpdateDates = vi.fn();
-vi.mock("@/shared/store/applicantsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
   useUpdateApplicantContractDatesMutation: vi.fn(() => [
     mockUpdateDates,
     { isLoading: false },

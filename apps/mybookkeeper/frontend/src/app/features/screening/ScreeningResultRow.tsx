@@ -6,7 +6,7 @@ import {
   formatAbsoluteTime,
   formatRelativeTime,
 } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import type { ScreeningResult } from "@/shared/types/applicant/screening-result";
+import type { ScreeningResult } from "@mybookkeeper/api-client/types/applicant/screening-result";
 import { reportMissingStorageObject } from "@/shared/lib/storage-observability";
 
 const STATUS_BADGE: Record<string, { label: string; color: BadgeColor }> = {

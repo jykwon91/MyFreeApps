@@ -1,7 +1,7 @@
 import { baseApi } from "./baseApi";
 import type { ScreeningEligibilityResponse } from "@/shared/types/screening/screening-eligibility-response";
 import type { ScreeningProviderInfo, ScreeningProvidersResponse } from "@/shared/types/screening/screening-provider-info";
-import type { ScreeningResult } from "@/shared/types/applicant/screening-result";
+import type { ScreeningResult } from "@mybookkeeper/api-client/types/applicant/screening-result";
 import type { ScreeningRedirectResponse } from "@/shared/types/screening/screening-redirect-response";
 import type { ScreeningUploadRequest } from "@/shared/types/screening/screening-upload-request";
 

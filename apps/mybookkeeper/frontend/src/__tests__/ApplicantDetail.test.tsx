@@ -4,7 +4,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { store } from "@/shared/store";
 import ApplicantDetail from "@/app/pages/ApplicantDetail";
-import type { ApplicantDetailResponse } from "@/shared/types/applicant/applicant-detail-response";
+import type { ApplicantDetailResponse } from "@mybookkeeper/api-client/types/applicant/applicant-detail-response";
 
 // --- mock applicant data ---
 
@@ -44,7 +44,7 @@ const defaultQueryState = {
   refetch: vi.fn(),
 };
 
-vi.mock("@/shared/store/applicantsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
   useGetApplicantByIdQuery: vi.fn(() => defaultQueryState),
   useRestartTenancyMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useTransitionApplicantStageMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
@@ -69,7 +69,7 @@ vi.mock("@/app/features/screening/ScreeningSection", () => ({
   ),
 }));
 
-import { useGetApplicantByIdQuery } from "@/shared/store/applicantsApi";
+import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 
 type QueryReturn = ReturnType<typeof useGetApplicantByIdQuery>;

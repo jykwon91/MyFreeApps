@@ -16,7 +16,7 @@
 import { useState } from "react";
 import { UserCheck } from "lucide-react";
 import { LoadingButton } from "@platform/ui";
-import { useGetTenantsQuery } from "@/shared/store/applicantsApi";
+import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useAttributeTransactionManuallyMutation } from "@/shared/store/attributionApi";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { buildTenantOptions } from "@/shared/lib/tenant-status";

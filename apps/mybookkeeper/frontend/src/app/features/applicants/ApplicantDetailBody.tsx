@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ExternalLink } from "lucide-react";
 import { useGetSignedLeasesQuery } from "@/shared/store/signedLeasesApi";
-import { useRestartTenancyMutation } from "@/shared/store/applicantsApi";
+import { useRestartTenancyMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
@@ -10,7 +10,7 @@ import {
   formatLongDate,
   formatRelativeTime,
 } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import type { ApplicantDetailResponse } from "@/shared/types/applicant/applicant-detail-response";
+import type { ApplicantDetailResponse } from "@mybookkeeper/api-client/types/applicant/applicant-detail-response";
 import type { SignedLeaseSummary } from "@/shared/types/lease/signed-lease-summary";
 import { Button, LoadingButton } from "@platform/ui";
 import ApplicantStatusControl from "./ApplicantStatusControl";

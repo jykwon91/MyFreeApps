@@ -1,5 +1,5 @@
-import type { TenantsListMode } from "@/shared/types/applicant/tenants-list-mode";
-import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
+import type { TenantsListMode } from "@mybookkeeper/api-client/types/applicant/tenants-list-mode";
+import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import { LoadingButton } from "@platform/ui";
 import TenantsListSkeleton from "./TenantsListSkeleton";

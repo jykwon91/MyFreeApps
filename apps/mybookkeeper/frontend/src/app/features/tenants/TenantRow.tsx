@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { formatDesiredDates, formatRelativeTime } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
+import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 import TenantStatusBadge from "./TenantStatusBadge";
 
 export interface TenantRowProps {

@@ -542,9 +542,12 @@
         "frontend/src/app/pages/Applicants.tsx",
         "frontend/src/app/pages/ApplicantDetail.tsx",
         "frontend/src/app/features/applicants/",
-        "frontend/src/shared/types/applicant/",
-        "frontend/src/shared/store/applicantsApi.ts",
-        "frontend/src/shared/lib/applicant-labels.ts"
+        "api-client/src/types/applicant/",
+        "api-client/src/store/applicantsApi.ts",
+        "api-client/src/constants/applicantLabels.ts",
+        "api-client/src/constants/applicantPromote.ts",
+        "api-client/src/utils/applicantStageTransitions.ts",
+        "frontend/src/shared/lib/applicant-badge-colors.ts"
       ],
       "backend_tests": [
         "test_applicant_repo.py",
@@ -591,9 +594,9 @@
         "backend/alembic/versions/tenend260503_add_tenant_ended_columns.py",
         "frontend/src/app/pages/Tenants.tsx",
         "frontend/src/app/features/tenants/",
-        "frontend/src/shared/types/applicant/tenant-list-args.ts",
-        "frontend/src/shared/types/applicant/tenant-list-response.ts",
-        "frontend/src/shared/types/applicant/tenancy-end-request.ts"
+        "api-client/src/types/applicant/tenant-list-args.ts",
+        "api-client/src/types/applicant/tenant-list-response.ts",
+        "api-client/src/types/applicant/tenancy-end-request.ts"
       ],
       "backend_tests": [
         "test_tenancy_api.py",
@@ -1095,7 +1098,7 @@
         "frontend/src/app/features/screening/",
         "frontend/src/shared/store/screeningApi.ts",
         "frontend/src/shared/types/screening/",
-        "frontend/src/shared/types/applicant/screening-result.ts"
+        "api-client/src/types/applicant/screening-result.ts"
       ],
       "backend_tests": [
         "test_screening.py",

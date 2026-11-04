@@ -23,7 +23,7 @@ import {
   useGetSignedLeaseByIdQuery,
   useUpdateSignedLeaseMutation,
 } from "@/shared/store/signedLeasesApi";
-import { useGetApplicantByIdQuery } from "@/shared/store/applicantsApi";
+import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import SignedLeaseStatusBadge from "@/app/features/leases/SignedLeaseStatusBadge";
 import SignedLeaseStatusPicker from "@/app/features/leases/SignedLeaseStatusPicker";
 import ExtendLeaseDialog from "@/app/features/leases/ExtendLeaseDialog";

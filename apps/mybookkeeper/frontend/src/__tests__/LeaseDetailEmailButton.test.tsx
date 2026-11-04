@@ -19,7 +19,7 @@ import { store } from "@/shared/store";
 import LeaseDetail from "@/app/pages/LeaseDetail";
 import type { SignedLeaseDetail } from "@/shared/types/lease/signed-lease-detail";
 import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
-import type { ApplicantDetailResponse } from "@/shared/types/applicant/applicant-detail-response";
+import type { ApplicantDetailResponse } from "@mybookkeeper/api-client/types/applicant/applicant-detail-response";
 
 const emailMock = vi.fn(() => ({ unwrap: () => Promise.resolve() }));
 const showSuccessMock = vi.fn();
@@ -47,7 +47,7 @@ vi.mock("@/shared/store/signedLeasesApi", () => ({
     useGetSignedLeaseByIdQueryMock(...args),
 }));
 
-vi.mock("@/shared/store/applicantsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
   useGetApplicantByIdQuery: (...args: unknown[]) =>
     useGetApplicantByIdQueryMock(...args),
 }));

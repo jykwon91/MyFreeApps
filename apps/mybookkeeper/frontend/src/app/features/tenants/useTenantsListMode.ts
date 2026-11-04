@@ -1,4 +1,4 @@
-import type { TenantsListMode } from "@/shared/types/applicant/tenants-list-mode";
+import type { TenantsListMode } from "@mybookkeeper/api-client/types/applicant/tenants-list-mode";
 
 interface UseTenantsListModeArgs {
   isLoading: boolean;
