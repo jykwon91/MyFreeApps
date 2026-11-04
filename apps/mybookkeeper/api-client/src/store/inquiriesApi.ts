@@ -1,8 +1,10 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { INQUIRY_PAGE_SIZE } from "../constants/inquiryPaging";
 import type { InquiryCreateRequest } from "../types/inquiry/inquiry-create-request";
 import type { InquiryListArgs } from "../types/inquiry/inquiry-list-args";
 import type { InquiryListResponse } from "../types/inquiry/inquiry-list-response";
 import type { InquiryMessage } from "../types/inquiry/inquiry-message";
+import type { InquiryPageArgs } from "../types/inquiry/inquiry-page-args";
 import type { InquiryReplyRequest } from "../types/inquiry/inquiry-reply-request";
 import type { InquiryResponse } from "../types/inquiry/inquiry-response";
 import type { InquirySpamAssessment } from "../types/inquiry/inquiry-spam-assessment";
@@ -46,6 +48,21 @@ const inquiriesApi = baseApi.enhanceEndpoints({
             ]
           : [{ type: "Inquiry" as const, id: "LIST" }],
     }),
+    listInquiryPages: builder.infiniteQuery<InquiryListResponse, InquiryPageArgs, number>({
+      infiniteQueryOptions: {
+        initialPageParam: 0,
+        getNextPageParam: (lastPage, _allPages, lastOffset) =>
+          lastPage.has_more ? lastOffset + INQUIRY_PAGE_SIZE : undefined,
+      },
+      query: ({ queryArg, pageParam }) => ({
+        url: "/inquiries",
+        params: { ...queryArg, limit: INQUIRY_PAGE_SIZE, offset: pageParam },
+      }),
+      providesTags: (result) => [
+        ...(result?.pages.flatMap((page) => page.items).map((inquiry) => ({ type: "Inquiry" as const, id: inquiry.id })) ?? []),
+        { type: "Inquiry" as const, id: "LIST" },
+      ],
+    }),
     getInquiryById: builder.query<InquiryResponse, string>({
       query: (id) => ({ url: `/inquiries/${id}` }),
       providesTags: (_result, _error, id) => [{ type: "Inquiry", id }],
@@ -59,6 +76,16 @@ const inquiriesApi = baseApi.enhanceEndpoints({
       { id: string; data: InquiryUpdateRequest }
     >({
       query: ({ id, data }) => ({ url: `/inquiries/${id}`, method: "PATCH", data }),
+      // The response is the whole inquiry, so a screen shows the change straight
+      // away rather than the old value until the refetch lands.
+      async onQueryStarted({ id }, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(inquiriesApi.util.updateQueryData("getInquiryById", id, () => data));
+        } catch {
+          // The caller reports the failure, and the cache still holds the old value.
+        }
+      },
       invalidatesTags: (_result, _err, arg) => [
         { type: "Inquiry", id: arg.id },
         { type: "Inquiry", id: "LIST" },
@@ -167,6 +194,7 @@ const inquiriesApi = baseApi.enhanceEndpoints({
 
 export const {
   useGetInquiriesQuery,
+  useListInquiryPagesInfiniteQuery,
   useGetInquiryByIdQuery,
   useCreateInquiryMutation,
   useUpdateInquiryMutation,

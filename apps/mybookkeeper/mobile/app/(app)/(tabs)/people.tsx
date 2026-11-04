@@ -1,5 +1,5 @@
-import ComingToAppScreen from "../../../src/features/shell/ComingToAppScreen";
+import PeopleScreen from "../../../src/features/people/PeopleScreen";
 
 export default function People() {
-  return <ComingToAppScreen title="People" webPath="/inquiries" />;
+  return <PeopleScreen />;
 }

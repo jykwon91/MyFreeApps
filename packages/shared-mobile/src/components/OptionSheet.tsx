@@ -1,4 +1,5 @@
-import { FlatList, Modal, Pressable, Text, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { FlatList, Modal, Platform, Pressable, Text, View } from "react-native";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 import { useTheme } from "../theme/useTheme";
 import type { OptionSheetProps } from "../types/OptionSheetProps";
@@ -14,11 +15,19 @@ export default function OptionSheet<Value extends string>({
   onSelect,
   onClose,
   emptyText,
+  onClosed,
 }: OptionSheetProps<Value>) {
   const { colors, spacing, fontSize } = useTheme();
+  const wasOpen = useRef(isOpen);
+
+  // Only iOS tells a Modal it has finished closing. Android has nothing to wait for.
+  useEffect(() => {
+    if (Platform.OS !== "ios" && wasOpen.current && !isOpen) onClosed?.();
+    wasOpen.current = isOpen;
+  }, [isOpen, onClosed]);
 
   return (
-    <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={isOpen}>
+    <Modal animationType="slide" onDismiss={Platform.OS === "ios" ? onClosed : undefined} onRequestClose={onClose} presentationStyle="pageSheet" visible={isOpen}>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <View style={{ flexDirection: "row", alignItems: "center", paddingLeft: spacing.lg, paddingTop: spacing.sm }}>
           <Text accessibilityRole="header" style={{ flex: 1, fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>

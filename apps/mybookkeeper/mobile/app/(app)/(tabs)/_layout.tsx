@@ -1,10 +1,12 @@
 import { useTheme } from "@platform/mobile";
 import { router, Tabs } from "expo-router";
+import { useNewInquiryCount } from "../../../src/features/inquiries/useNewInquiryCount";
 import { useCanWrite } from "../../../src/features/workspace/useCanWrite";
 
 export default function TabsLayout() {
   const { colors } = useTheme();
   const canWrite = useCanWrite();
+  const newInquiries = useNewInquiryCount();
   return (
     <Tabs
       screenOptions={{
@@ -29,7 +31,7 @@ export default function TabsLayout() {
         name="capture"
         options={{ title: "Capture", href: canWrite ? undefined : null }}
       />
-      <Tabs.Screen name="people" options={{ title: "People" }} />
+      <Tabs.Screen name="people" options={{ title: "People", tabBarBadge: newInquiries || undefined }} />
       <Tabs.Screen name="more" options={{ title: "More" }} />
     </Tabs>
   );

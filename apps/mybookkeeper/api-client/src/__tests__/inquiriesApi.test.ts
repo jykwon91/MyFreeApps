@@ -79,3 +79,24 @@ describe("read endpoints shared with the phone", () => {
     expect(sent[0].params).toMatchObject({ limit: 100 });
   });
 });
+
+describe("updateInquiry", () => {
+  it("shows the saved inquiry at once, without waiting for the refetch", async () => {
+    const originalAdapter = api.defaults.adapter;
+    const answers: unknown[] = [{ id: "i1", stage: "new" }, { id: "i1", stage: "replied" }];
+    const adapter: AxiosAdapter = (config) => {
+      const answer = answers.shift();
+      // Anything after the save is the refetch, which never lands in this test.
+      if (!answer) return new Promise(() => {});
+      return Promise.resolve({ data: answer, status: 200, statusText: "", headers: {}, config });
+    };
+    api.defaults.adapter = adapter;
+    const store = makeStore();
+    const read = store.dispatch(endpoints.getInquiryById.initiate("i1"));
+    await read;
+    await store.dispatch(endpoints.updateInquiry.initiate({ id: "i1", data: { stage: "replied" } }));
+    const state = store.getState()[baseApi.reducerPath].queries['getInquiryById("i1")'];
+    expect(state?.data).toEqual({ id: "i1", stage: "replied" });
+    api.defaults.adapter = originalAdapter;
+  });
+});

@@ -28,7 +28,7 @@ routes:
   /inquiries:
     screen: (app)/(tabs)/people
   /inquiries/:inquiryId:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/inquiries/[id]/index
   /insurance-policies:
     not_on_mobile: Not on the phone yet. More links to it on the website.
   /insurance-policies/:policyId:

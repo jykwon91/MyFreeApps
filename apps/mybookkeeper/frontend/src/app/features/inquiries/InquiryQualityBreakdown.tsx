@@ -1,5 +1,6 @@
 import { Check, X } from "lucide-react";
 import {
+  BODY_LENGTH_THRESHOLD,
   computeInquiryQualityScore,
 } from "@mybookkeeper/api-client/utils/inquiryQuality";
 import type { InquiryQualitySignals } from "@mybookkeeper/api-client/types/inquiry/inquiry-quality-signals";
@@ -12,8 +13,6 @@ interface Factor {
   label: string;
   satisfied: boolean;
 }
-
-const BODY_LENGTH_THRESHOLD = 100;
 
 /**
  * Renders the 4-factor inquiry quality breakdown for the detail page.

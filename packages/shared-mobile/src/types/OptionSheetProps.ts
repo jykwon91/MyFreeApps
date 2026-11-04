@@ -11,4 +11,6 @@ export interface OptionSheetProps<Value extends string> {
   onClose: () => void;
   /** Shown when there is nothing to choose from. */
   emptyText?: string;
+  /** After it has finished closing. An Alert raised before then can be lost on iOS. */
+  onClosed?: () => void;
 }
