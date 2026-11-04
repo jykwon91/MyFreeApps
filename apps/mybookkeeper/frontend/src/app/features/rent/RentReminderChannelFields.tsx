@@ -1,4 +1,4 @@
-import type { RentReminderOverview } from "@/shared/types/rent/rent-reminder-overview";
+import type { RentReminderOverview } from "@mybookkeeper/api-client/types/rent/rent-reminder-overview";
 
 export interface RentReminderChannelFieldsProps {
   emailEnabled: boolean;

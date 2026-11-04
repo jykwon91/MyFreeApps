@@ -1,4 +1,5 @@
 import { signedLeasesApi } from "@mybookkeeper/api-client/store/signedLeasesApi";
+import rentRemindersApi from "@mybookkeeper/api-client/store/rentRemindersApi";
 import { transactionsApi } from "@mybookkeeper/api-client/store/transactionsApi";
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
@@ -13,6 +14,7 @@ import { CONTRACT_LOCKED_STAGE, STAGES_READY_FOR_LEASE } from "../../constants/a
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import TenantLeases from "../leases/TenantLeases";
 import TenantRent from "../rent/TenantRent";
+import TenantRentReminders from "../rent/TenantRentReminders";
 import TenantPayments from "./TenantPayments";
 import TenancySection from "../tenants/TenancySection";
 import InquiryChip from "../inquiries/InquiryChip";
@@ -40,6 +42,7 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
   const reloadPage = () => {
     dispatch(signedLeasesApi.util.invalidateTags([{ type: "SignedLease", id: "LIST" }]));
     dispatch(transactionsApi.util.invalidateTags([{ type: "Transaction", id: "LIST" }]));
+    dispatch(rentRemindersApi.util.invalidateTags([{ type: "RentReminder", id }]));
     return refetch();
   };
   const { refresh, refreshControl } = useRefresh(reloadPage, error);
@@ -126,6 +129,8 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
         <TenantLeases applicantId={applicant.id} isTenant={isTenant} name={applicant.legal_name ?? "them"} />
 
         {isTenant ? <TenantRent applicantId={applicant.id} key={`rent-${applicant.id}`} /> : null}
+
+        {isTenant ? <TenantRentReminders applicantId={applicant.id} hasEnded={applicant.tenant_ended_at !== null} key={`reminders-${applicant.id}`} name={applicant.legal_name} /> : null}
 
         {isTenant ? <TenantPayments applicantId={applicant.id} key={`payments-${applicant.id}`} name={applicant.legal_name ?? "them"} /> : null}
 

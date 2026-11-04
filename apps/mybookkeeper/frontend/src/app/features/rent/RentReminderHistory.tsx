@@ -1,9 +1,10 @@
 import { AlertBox } from "@platform/ui";
 import Skeleton from "@/shared/components/ui/Skeleton";
-import { useGetRentReminderSendsQuery } from "@/shared/store/rentRemindersApi";
+import { useGetRentReminderSendsQuery } from "@mybookkeeper/api-client/store/rentRemindersApi";
 import { formatCurrency } from "@/shared/utils/currency";
-import { formatDueDate } from "./rent-reminder-format";
-import { describeReminderError, RENT_REMINDER_CHANNEL_LABEL } from "./rent-reminder-labels";
+import { formatDueDate } from "@mybookkeeper/api-client/utils/rentReminderFormat";
+import { RENT_REMINDER_CHANNEL_LABEL } from "@mybookkeeper/api-client/constants/rentReminderLabels";
+import { describeReminderError } from "@mybookkeeper/api-client/utils/rentReminderError";
 import RentReminderStatusBadge from "./RentReminderStatusBadge";
 
 export interface RentReminderHistoryProps {

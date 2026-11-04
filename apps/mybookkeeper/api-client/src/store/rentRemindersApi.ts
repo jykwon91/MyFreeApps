@@ -1,23 +1,10 @@
-import { baseApi } from "./baseApi";
-import type { RentReminderChannel } from "@/shared/types/rent/rent-reminder-channel";
-import type { RentReminderOverview } from "@/shared/types/rent/rent-reminder-overview";
-import type { RentReminderPlan } from "@/shared/types/rent/rent-reminder-plan";
-import type { RentReminderPlanRequest } from "@/shared/types/rent/rent-reminder-plan-request";
-import type { RentReminderPreview } from "@/shared/types/rent/rent-reminder-preview";
-import type { RentReminderSend } from "@/shared/types/rent/rent-reminder-send";
-
-export interface RentReminderPlanArgs extends RentReminderPlanRequest {
-  applicantId: string;
-}
-
-/** What the operator was shown. The server sends nothing if it has changed. */
-export interface RentReminderSendNowArgs {
-  applicantId: string;
-  due_date: string;
-  amount: string;
-  message: string;
-  channels: RentReminderChannel[];
-}
+import { baseApi } from "@platform/core/store/baseApi";
+import type { RentReminderOverview } from "../types/rent/rent-reminder-overview";
+import type { RentReminderPlan } from "../types/rent/rent-reminder-plan";
+import type { RentReminderPlanArgs } from "../types/rent/rent-reminder-plan-args";
+import type { RentReminderPreview } from "../types/rent/rent-reminder-preview";
+import type { RentReminderSend } from "../types/rent/rent-reminder-send";
+import type { RentReminderSendNowArgs } from "../types/rent/rent-reminder-send-now-args";
 
 const reminderTag = (applicantId: string) => ({
   type: "RentReminder" as const,
@@ -33,7 +20,9 @@ const reminderTag = (applicantId: string) => ({
  * tenant's `RentLedger` tag, because the amount it quotes comes from the rent
  * schedule — editing the schedule must refresh it.
  */
-const rentRemindersApi = baseApi.injectEndpoints({
+const rentRemindersApi = baseApi.enhanceEndpoints({
+  addTagTypes: ["RentReminder", "RentLedger"],
+}).injectEndpoints({
   endpoints: (builder) => ({
     getRentReminderOverview: builder.query<RentReminderOverview, string>({
       query: (applicantId) => ({ url: `/rent-reminders/tenants/${applicantId}` }),

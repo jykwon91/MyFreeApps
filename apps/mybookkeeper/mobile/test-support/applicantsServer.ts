@@ -5,6 +5,7 @@ import type { ApplicantSensitive } from "@mybookkeeper/api-client/types/applican
 import { tenancyState } from "@mybookkeeper/api-client/utils/tenancyState";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { aRentLedger } from "./aRentLedger";
+import { aReminderOverview } from "./aRentReminder";
 
 export function anApplicant(overrides: Partial<ApplicantDetailResponse> = {}): ApplicantDetailResponse {
   return {
@@ -115,6 +116,9 @@ export function startApplicantServer(applicants: ApplicantDetailResponse[]): Fak
     if (config.url === "/signed-leases") return respond({ items: [], total: 0, has_more: false });
     if (config.url === "/transactions") return respond([]);
     if (config.url?.startsWith("/rent-ledger/tenants/")) return respond(aRentLedger());
+    if (config.url?.endsWith("/preview") && config.url.startsWith("/rent-reminders/")) return respond(null);
+    if (config.url?.endsWith("/sends") && config.url.startsWith("/rent-reminders/")) return respond([]);
+    if (config.url?.startsWith("/rent-reminders/tenants/")) return respond(aReminderOverview({ plan: null }));
     if (config.url === "/applicants/tenants") {
       if (server.tenantListFailure) return respond({ detail: "nope" }, server.tenantListFailure);
       const params = config.params as { include_ended: boolean; today: string; limit: number; offset: number };

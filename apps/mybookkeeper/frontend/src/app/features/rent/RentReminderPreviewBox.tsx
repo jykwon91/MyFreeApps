@@ -4,15 +4,15 @@ import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   useGetRentReminderPreviewQuery,
   useSendRentReminderNowMutation,
-} from "@/shared/store/rentRemindersApi";
+} from "@mybookkeeper/api-client/store/rentRemindersApi";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
 import { formatCurrency } from "@/shared/utils/currency";
-import { formatDueDate, formatSendMoment } from "./rent-reminder-format";
-import { RENT_REMINDER_CHANNEL_LABEL } from "./rent-reminder-labels";
-import type { RentReminderChannel } from "@/shared/types/rent/rent-reminder-channel";
-import type { RentReminderPlan } from "@/shared/types/rent/rent-reminder-plan";
-import type { RentReminderPreview } from "@/shared/types/rent/rent-reminder-preview";
-import type { RentReminderSend } from "@/shared/types/rent/rent-reminder-send";
+import { formatDueDate, formatSendMoment } from "@mybookkeeper/api-client/utils/rentReminderFormat";
+import { RENT_REMINDER_CHANNEL_LABEL } from "@mybookkeeper/api-client/constants/rentReminderLabels";
+import type { RentReminderChannel } from "@mybookkeeper/api-client/types/rent/rent-reminder-channel";
+import type { RentReminderPlan } from "@mybookkeeper/api-client/types/rent/rent-reminder-plan";
+import type { RentReminderPreview } from "@mybookkeeper/api-client/types/rent/rent-reminder-preview";
+import type { RentReminderSend } from "@mybookkeeper/api-client/types/rent/rent-reminder-send";
 
 export interface RentReminderPreviewBoxProps {
   applicantId: string;

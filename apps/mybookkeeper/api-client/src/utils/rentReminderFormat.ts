@@ -1,6 +1,6 @@
-import { formatShortDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { WEEKDAY_NAMES } from "./rent-reminder-labels";
-import type { RentReminderPlan } from "@/shared/types/rent/rent-reminder-plan";
+import { WEEKDAY_NAMES } from "../constants/rentReminderLabels";
+import type { RentReminderPlan } from "../types/rent/rent-reminder-plan";
+import { formatShortDate } from "./inquiryDateFormat";
 
 /** "18:00" or "18:00:00" → "6:00 PM". */
 export function formatSendTime(time: string): string {
