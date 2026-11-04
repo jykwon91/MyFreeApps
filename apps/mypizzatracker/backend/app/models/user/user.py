@@ -6,6 +6,7 @@ from sqlalchemy import Boolean, DateTime, Enum as SAEnum, SmallInteger, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from platform_shared.auth.session_invalidation import SessionInvalidationMixin
+from platform_shared.auth.totp_replay_guard import TotpReplayGuardMixin
 from platform_shared.core.permissions import Role
 
 from app.core.encrypted_string_type import EncryptedString
@@ -14,7 +15,7 @@ from app.db.base import Base
 __all__ = ["User", "Role"]
 
 
-class User(SessionInvalidationMixin, SQLAlchemyBaseUserTableUUID, Base):
+class User(SessionInvalidationMixin, TotpReplayGuardMixin, SQLAlchemyBaseUserTableUUID, Base):
     # Singular table name — consistent with MBK convention.
     __tablename__ = "user"
 

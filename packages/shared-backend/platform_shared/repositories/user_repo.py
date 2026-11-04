@@ -103,3 +103,36 @@ async def apply_seed_admin_promotion(
     for field, value in updates.items():
         setattr(user, field, value)
     await db.flush()
+
+
+async def lock_by_id(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    user_model: Any,
+) -> Any | None:
+    """Return the user row with ``user_id``, locked until the transaction ends.
+
+    Reads current values even if this session already loaded the user.
+    """
+    result = await db.execute(_locked_select(user_model).where(user_model.id == user_id))
+    return result.scalar_one_or_none()
+
+
+async def lock_by_email(
+    db: AsyncSession,
+    email: str,
+    *,
+    user_model: Any,
+) -> Any | None:
+    """Return the user row with ``email``, locked until the transaction ends."""
+    result = await db.execute(_locked_select(user_model).where(user_model.email == email))
+    return result.scalar_one_or_none()
+
+
+def _locked_select(user_model: Any) -> Any:
+    return (
+        select(user_model)
+        .with_for_update(of=user_model)
+        .execution_options(populate_existing=True)
+    )

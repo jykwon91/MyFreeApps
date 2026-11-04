@@ -57,6 +57,7 @@ def _user(
         totp_enabled=enabled,
         totp_recovery_codes=recovery,
         totp_algorithm=algorithm,
+        totp_last_used_step=None,
     )
 
 
@@ -67,8 +68,8 @@ def _code(secret: str, algorithm: str = "sha256") -> str:
 @pytest.fixture
 def stored(monkeypatch: pytest.MonkeyPatch) -> Any:
     def _store(user: SimpleNamespace | None) -> None:
-        monkeypatch.setattr(totp_account_service, "get_by_id", AsyncMock(return_value=user))
-        monkeypatch.setattr(totp_account_service, "get_by_email", AsyncMock(return_value=user))
+        monkeypatch.setattr(totp_account_service, "lock_by_id", AsyncMock(return_value=user))
+        monkeypatch.setattr(totp_account_service, "lock_by_email", AsyncMock(return_value=user))
 
     return _store
 
@@ -76,6 +77,7 @@ def stored(monkeypatch: pytest.MonkeyPatch) -> Any:
 @pytest.mark.asyncio
 async def test_setup_stores_a_new_secret_and_leaves_2fa_off(stored: Any) -> None:
     user = _user(secret="OLD", enabled=False, recovery="STALE", algorithm="sha1")
+    user.totp_last_used_step = 99
     stored(user)
 
     secret, uri = await _service().setup_totp(user.id)
@@ -83,6 +85,7 @@ async def test_setup_stores_a_new_secret_and_leaves_2fa_off(stored: Any) -> None
     assert user.totp_secret == secret
     assert user.totp_recovery_codes is None
     assert user.totp_algorithm == "sha256"
+    assert user.totp_last_used_step is None
     assert user.totp_enabled is False
     assert uri.startswith("otpauth://totp/")
     assert "issuer=MyApp" in uri
@@ -145,6 +148,7 @@ async def test_disable_with_the_right_code_clears_everything(stored: Any) -> Non
     assert user.totp_secret is None
     assert user.totp_recovery_codes is None
     assert user.totp_algorithm == "sha1"
+    assert user.totp_last_used_step is None
 
 
 @pytest.mark.asyncio
@@ -194,16 +198,88 @@ async def test_login_rejects_without_enrolled_2fa(stored: Any, user: SimpleNames
 
 
 @pytest.mark.asyncio
-async def test_step_up_accepts_a_code_and_a_recovery_code(stored: Any) -> None:
+async def test_login_refuses_a_code_it_has_already_accepted(stored: Any) -> None:
     secret = generate_secret()
-    user = _user(secret=secret, recovery="AAAA1111")
+    user = _user(secret=secret)
     stored(user)
+    code = _code(secret)
     service = _service()
 
-    assert await service.verify_totp_code(MagicMock(), user.id, _code(secret)) is True
-    assert await service.verify_totp_code(MagicMock(), user.id, "AAAA1111") is True
-    assert await service.verify_totp_code(MagicMock(), user.id, "000000") is False
-    assert await service.verify_totp_code(MagicMock(), user.id, "") is False
+    assert await service.validate_totp_for_login(user.email, code) == (True, False)
+    assert await service.validate_totp_for_login(user.email, code) == (False, False)
+
+
+@pytest.mark.asyncio
+async def test_a_code_spent_at_login_cant_pass_the_step_up_check(stored: Any) -> None:
+    secret = generate_secret()
+    user = _user(secret=secret)
+    stored(user)
+    code = _code(secret)
+    service = _service()
+
+    await service.validate_totp_for_login(user.email, code)
+
+    assert await service.verify_totp_code(AsyncMock(), user.id, code) is False
+
+
+@pytest.mark.asyncio
+async def test_a_code_spent_confirming_cant_disable_2fa(stored: Any) -> None:
+    secret = generate_secret()
+    user = _user(secret=secret, enabled=False)
+    stored(user)
+    code = _code(secret)
+    service = _service()
+
+    await service.confirm_totp(user.id, code)
+
+    assert await service.disable_totp(user.id, code) is False
+    assert user.totp_enabled is True
+
+
+@pytest.mark.asyncio
+async def test_step_up_spends_a_code_and_commits(stored: Any) -> None:
+    secret = generate_secret()
+    user = _user(secret=secret)
+    stored(user)
+    code = _code(secret)
+    db = AsyncMock()
+    service = _service()
+
+    assert await service.verify_totp_code(db, user.id, code) is True
+    assert user.totp_last_used_step is not None
+    db.commit.assert_awaited_once()
+    assert await service.verify_totp_code(db, user.id, code) is False
+
+
+@pytest.mark.asyncio
+async def test_step_up_spends_a_recovery_code(stored: Any) -> None:
+    user = _user(secret=generate_secret(), recovery="AAAA1111,BBBB2222")
+    stored(user)
+    db = AsyncMock()
+    service = _service()
+
+    assert await service.verify_totp_code(db, user.id, "AAAA1111") is True
+    assert user.totp_recovery_codes == "BBBB2222"
+    assert await service.verify_totp_code(db, user.id, "AAAA1111") is False
+
+
+@pytest.mark.asyncio
+async def test_step_up_rejects_a_wrong_code_and_still_releases_the_lock(stored: Any) -> None:
+    user = _user(secret=generate_secret())
+    stored(user)
+    db = AsyncMock()
+
+    assert await _service().verify_totp_code(db, user.id, "000000") is False
+    assert await _service().verify_totp_code(db, user.id, "") is False
+    db.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("user", [None, _user(secret="X", enabled=False), _user(secret=None)])
+async def test_step_up_rejects_without_enrolled_2fa(stored: Any, user: SimpleNamespace | None) -> None:
+    stored(user)
+
+    assert await _service().verify_totp_code(AsyncMock(), uuid.uuid4(), "123456") is False
 
 
 @pytest.mark.asyncio
@@ -223,4 +299,5 @@ async def test_encrypted_values_are_written_and_read_through_the_codec(stored: A
 
     assert await service.validate_totp_for_login(user.email, recovery[0]) == (True, True)
     assert _decrypt(user.totp_recovery_codes, user.id) == ",".join(recovery[1:])
+    user.totp_last_used_step = None
     assert await service.validate_totp_for_login(user.email, _code(secret)) == (True, False)

@@ -1198,6 +1198,20 @@ class TestTotpRoutesAreShared:
         assert "TotpAccountService(" in source
         assert "async def " not in source, "Two-factor logic belongs in TotpAccountService."
 
+    @pytest.mark.parametrize(
+        "backend",
+        [("apps", app, "backend") for app in _APPS] + [("infra", "templates", "scaffold", "backend")],
+        ids="/".join,
+    )
+    def test_user_model_has_the_replay_marker(self, backend: tuple[str, ...]) -> None:
+        source = _read(*backend, "app", "models", "user", "user.py")
+        assert "TotpReplayGuardMixin" in source, "Every two-factor check reads totp_last_used_step."
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_a_migration_adds_the_replay_marker(self, app: str) -> None:
+        versions = _REPO_ROOT / "apps" / app / "backend" / "alembic" / "versions"
+        assert any("totp_last_used_step" in path.read_text(encoding="utf-8") for path in versions.glob("*.py"))
+
 
 class TestMobileOnlyChangesDontDeployWeb:
     """A change that only touches a mobile app can't alter the web bundle or API

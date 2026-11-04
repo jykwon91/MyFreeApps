@@ -50,7 +50,7 @@ interface StepUpRetryConfig extends AxiosRequestConfig {
 }
 
 const WRONG_CODE_MESSAGE =
-  "That code didn't match. Check your authenticator app and try again.";
+  "That code didn't work. Codes work once, so wait for a new one in your authenticator app and try again.";
 
 function _stepUpHeader(headers: unknown): "totp" | "reauth" | null {
   if (!headers || typeof headers !== "object") return null;

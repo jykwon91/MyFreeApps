@@ -5,6 +5,7 @@ from sqlalchemy import Boolean, DateTime, SmallInteger, String, Text, Enum as SA
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from platform_shared.auth.session_invalidation import SessionInvalidationMixin
+from platform_shared.auth.totp_replay_guard import TotpReplayGuardMixin
 from platform_shared.core.permissions import Role
 
 from app.db.base import Base
@@ -15,7 +16,7 @@ from app.db.base import Base
 __all__ = ["User", "Role"]
 
 
-class User(SessionInvalidationMixin, SQLAlchemyBaseUserTableUUID, Base):
+class User(SessionInvalidationMixin, TotpReplayGuardMixin, SQLAlchemyBaseUserTableUUID, Base):
     __tablename__ = "users"
 
     name: Mapped[str | None] = mapped_column(String(255))

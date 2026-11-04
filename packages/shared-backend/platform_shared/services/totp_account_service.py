@@ -3,6 +3,9 @@
 The pure code and crypto helpers are in :mod:`platform_shared.services.totp_service`.
 This module loads the user row, calls them, and writes the result. Each app binds
 one instance to its user model, issuer and session factory.
+
+A code works once. Every check locks the user row, so two requests with the same
+code can't both pass.
 """
 import uuid
 from collections.abc import Callable
@@ -12,14 +15,14 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from platform_shared.repositories.user_repo import get_by_email, get_by_id
+from platform_shared.repositories.user_repo import lock_by_email, lock_by_id
 from platform_shared.services.totp_service import (
     DEFAULT_TOTP_ALGORITHM,
     TotpAlgorithm,
     generate_recovery_codes,
     generate_secret,
     get_provisioning_uri,
-    verify_code,
+    matching_time_step,
     verify_recovery_code,
 )
 
@@ -58,13 +61,14 @@ class TotpAccountService:
         proves the authenticator works.
         """
         async with self.unit_of_work_factory() as db:
-            user = await get_by_id(db, user_id, user_model=self.user_model)
+            user = await lock_by_id(db, user_id, user_model=self.user_model)
             if user is None:
                 raise ValueError("User not found")
             secret = generate_secret()
             user.totp_secret = self.encrypt(secret, user_id)
             user.totp_recovery_codes = None
             user.totp_algorithm = DEFAULT_TOTP_ALGORITHM
+            user.totp_last_used_step = None
             return secret, self.provisioning_uri(
                 secret, user.email, algorithm=DEFAULT_TOTP_ALGORITHM,
             )
@@ -72,10 +76,10 @@ class TotpAccountService:
     async def confirm_totp(self, user_id: uuid.UUID, code: str) -> tuple[bool, list[str]]:
         """Turn 2FA on if ``code`` is right. Returns ``(verified, recovery_codes)``."""
         async with self.unit_of_work_factory() as db:
-            user = await get_by_id(db, user_id, user_model=self.user_model)
+            user = await lock_by_id(db, user_id, user_model=self.user_model)
             if user is None or not user.totp_secret:
                 return False, []
-            if not self._code_matches(user, code):
+            if not self._spend_time_code(user, code):
                 return False, []
             recovery = generate_recovery_codes()
             user.totp_enabled = True
@@ -85,53 +89,64 @@ class TotpAccountService:
     async def disable_totp(self, user_id: uuid.UUID, code: str) -> bool:
         """Turn 2FA off if ``code`` is right."""
         async with self.unit_of_work_factory() as db:
-            user = await get_by_id(db, user_id, user_model=self.user_model)
+            user = await lock_by_id(db, user_id, user_model=self.user_model)
             if user is None or not user.totp_enabled or not user.totp_secret:
                 return False
-            if not self._code_matches(user, code):
+            if not self._spend_time_code(user, code):
                 return False
             user.totp_enabled = False
             user.totp_secret = None
             user.totp_recovery_codes = None
             user.totp_algorithm = _ALGORITHM_WHEN_DISABLED
+            user.totp_last_used_step = None
             return True
 
     async def validate_totp_for_login(self, email: str, code: str) -> tuple[bool, bool]:
-        """Check a code at login. Returns ``(valid, used_recovery_code)``.
-
-        A recovery code that matches is removed.
-        """
+        """Spend a code or recovery code at login. Returns ``(valid, used_recovery_code)``."""
         async with self.unit_of_work_factory() as db:
-            user = await get_by_email(db, email, user_model=self.user_model)
+            user = await lock_by_email(db, email, user_model=self.user_model)
             if user is None or not user.totp_enabled or not user.totp_secret:
                 return False, False
-            if self._code_matches(user, code):
+            if self._spend_time_code(user, code):
                 return True, False
-            if user.totp_recovery_codes:
-                stored = self.decrypt(user.totp_recovery_codes, user.id)
-                valid, remaining = verify_recovery_code(stored, code)
-                if valid:
-                    user.totp_recovery_codes = (
-                        self.encrypt(remaining, user.id) if remaining else None
-                    )
-                    return True, True
-            return False, False
+            used_recovery_code = self._spend_recovery_code(user, code)
+            return used_recovery_code, used_recovery_code
 
     async def verify_totp_code(self, db: AsyncSession, user_id: uuid.UUID, code: str) -> bool:
-        """Check a code or recovery code for account deletion and the superuser gate."""
+        """Spend a code or recovery code for account deletion or the superuser gate.
+
+        Commits on the caller's session, so a spent code stays spent if the action
+        then fails, and the row lock is gone before the action starts.
+        """
         if not code:
             return False
-        user = await get_by_id(db, user_id, user_model=self.user_model)
-        if user is None or not user.totp_enabled or not user.totp_secret:
-            return False
-        if self._code_matches(user, code):
-            return True
-        if user.totp_recovery_codes:
-            stored = self.decrypt(user.totp_recovery_codes, user_id)
-            valid, _ = verify_recovery_code(stored, code)
-            return valid
-        return False
+        user = await lock_by_id(db, user_id, user_model=self.user_model)
+        valid = (
+            user is not None
+            and user.totp_enabled
+            and bool(user.totp_secret)
+            and (self._spend_time_code(user, code) or self._spend_recovery_code(user, code))
+        )
+        await db.commit()
+        return valid
 
-    def _code_matches(self, user: Any, code: str) -> bool:
-        secret = self.decrypt(user.totp_secret, user.id)
-        return verify_code(secret, code, algorithm=user.totp_algorithm)
+    def _spend_time_code(self, user: Any, code: str) -> bool:
+        step = matching_time_step(
+            self.decrypt(user.totp_secret, user.id),
+            code,
+            algorithm=user.totp_algorithm,
+            after_step=user.totp_last_used_step,
+        )
+        if step is None:
+            return False
+        user.totp_last_used_step = step
+        return True
+
+    def _spend_recovery_code(self, user: Any, code: str) -> bool:
+        if not user.totp_recovery_codes:
+            return False
+        stored = self.decrypt(user.totp_recovery_codes, user.id)
+        valid, remaining = verify_recovery_code(stored, code)
+        if valid:
+            user.totp_recovery_codes = self.encrypt(remaining, user.id) if remaining else None
+        return valid

@@ -50,6 +50,7 @@ import base64
 import hashlib
 import secrets
 import uuid
+from datetime import datetime, timezone
 from typing import Final, Literal
 
 import pyotp
@@ -127,6 +128,33 @@ def get_provisioning_uri(
     return totp.provisioning_uri(name=label, issuer_name=issuer)
 
 
+def matching_time_step(
+    secret: str,
+    code: str,
+    *,
+    algorithm: TotpAlgorithm = DEFAULT_TOTP_ALGORITHM,
+    after_step: int | None = None,
+) -> int | None:
+    """Return the time step ``code`` belongs to, or ``None`` if it doesn't match.
+
+    Checks the current step ±``VERIFY_WINDOW``. Pass the last step a user spent as
+    ``after_step`` to refuse that step and older ones, so a code works only once
+    (RFC 6238 section 5.2) even though it stays in the window for up to 90 seconds.
+    """
+    if not code:
+        return None
+    totp = pyotp.TOTP(secret, digest=_digest_for(algorithm))
+    current = totp.timecode(datetime.now(tz=timezone.utc))
+    matched: int | None = None
+    # Every step is compared, so timing doesn't reveal which one matched.
+    for step in range(current - VERIFY_WINDOW, current + VERIFY_WINDOW + 1):
+        if pyotp.utils.strings_equal(code, totp.generate_otp(step)):
+            matched = step
+    if matched is None or (after_step is not None and matched <= after_step):
+        return None
+    return matched
+
+
 def verify_code(
     secret: str,
     code: str,
@@ -139,10 +167,7 @@ def verify_code(
     read it from ``users.totp_algorithm``. SHA-1 grandfathered users pass
     ``algorithm="sha1"``; all new users use the default SHA-256.
     """
-    if not code:
-        return False
-    totp = pyotp.TOTP(secret, digest=_digest_for(algorithm))
-    return totp.verify(code, valid_window=VERIFY_WINDOW)
+    return matching_time_step(secret, code, algorithm=algorithm) is not None
 
 
 def generate_recovery_codes(count: int = DEFAULT_RECOVERY_CODE_COUNT) -> list[str]:

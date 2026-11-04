@@ -37,8 +37,8 @@ def test_single_head_is_the_latest_revision(script_directory: ScriptDirectory) -
         "Orphan heads usually mean a migration's down_revision is stale "
         "after a merge — rebase and re-point the down_revision."
     )
-    assert heads[0] == "0045", (
-        f"Expected head 0045 (session cutoff), "
+    assert heads[0] == "0046", (
+        f"Expected head 0046 (two-factor replay marker), "
         f"got {heads[0]}."
     )
 
@@ -274,6 +274,15 @@ def test_0034_to_0037_down_revisions(
     0037 off 0036 (repeating raids)."""
     revs = [script_directory.get_revision(rev) for rev in ("0034", "0035", "0036", "0037")]
     assert [rev.down_revision for rev in revs] == ["0033", "0034", "0035", "0036"]
+
+
+def test_0046_down_revision_points_at_0045(
+    script_directory: ScriptDirectory,
+) -> None:
+    """0046 (two-factor replay marker) must chain directly off 0045."""
+    rev = script_directory.get_revision("0046")
+    assert rev is not None
+    assert rev.down_revision == "0045"
 
 
 def test_0045_down_revision_points_at_0044(
