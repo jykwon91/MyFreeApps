@@ -1,3 +1,4 @@
+import LoadMoreFailed from "../shell/LoadMoreFailed";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useListTransactionPagesInfiniteQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 import { Banner, EmptyState, LoadingButton, SearchField, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
@@ -110,12 +111,7 @@ export default function TransactionsScreen({
   const footer = isFetchingNextPage ? (
     <TransactionSkeletonRow />
   ) : loadMoreFailed ? (
-    <View style={{ gap: spacing.sm, padding: spacing.lg }}>
-      <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>I couldn't load more.</Text>
-      <LoadingButton onPress={loadMore} variant="secondary">
-        Try again
-      </LoadingButton>
-    </View>
+    <LoadMoreFailed onRetry={() => void loadMore()} />
   ) : undefined;
 
   return (

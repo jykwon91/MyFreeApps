@@ -145,14 +145,6 @@ describe("InquiryDetailScreen", () => {
     expect(openURL).toHaveBeenLastCalledWith("tel:+15550102030");
   });
 
-  it("says when the website link can't open", async () => {
-    startInquiryServer([anInquiry({ linked_applicant_id: "a1" })]);
-    jest.spyOn(Linking, "openURL").mockRejectedValue(new Error("no"));
-    await renderScreen();
-    await fireEvent.press(await screen.findByRole("button", { name: "Open on the website" }));
-    expect(await screen.findByText("I couldn't open that on this phone.")).toBeTruthy();
-  });
-
   it("says when there's no way to reach them", async () => {
     startInquiryServer([anInquiry({ inquirer_email: null, inquirer_phone: null })]);
     await renderScreen();
@@ -436,13 +428,12 @@ describe("InquiryDetailScreen", () => {
     expect(screen.getByText("✓ Employer given")).toBeTruthy();
   });
 
-  it("points to the website once they're an applicant", async () => {
+  it("opens the applicant once they've been promoted", async () => {
     startInquiryServer([anInquiry({ linked_applicant_id: "a1" })]);
-    const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
     await renderScreen();
     expect(await screen.findByText("Promoted to an applicant")).toBeTruthy();
-    await fireEvent.press(screen.getByRole("button", { name: "Open on the website" }));
-    expect(openURL.mock.calls[0][0]).toMatch(/\/applicants\/a1$/);
+    await fireEvent.press(screen.getByRole("button", { name: "Open applicant" }));
+    expect(mockPush).toHaveBeenCalledWith("/applicants/a1");
   });
 
   it("is read-only for a viewer", async () => {

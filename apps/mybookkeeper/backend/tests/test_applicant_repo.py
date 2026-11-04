@@ -235,6 +235,31 @@ class TestApplicantRepoList:
         assert len(leads) == 2
 
     @pytest.mark.asyncio
+    async def test_list_pages_stay_stable_when_created_at_ties(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        created_at = _dt.datetime(2026, 1, 1, tzinfo=_dt.timezone.utc)
+        applicants = [
+            _make_applicant(organization_id=test_org.id, user_id=test_user.id)
+            for _ in range(5)
+        ]
+        for applicant in applicants:
+            applicant.created_at = created_at
+        db.add_all(applicants)
+        await db.commit()
+
+        pages = [
+            await applicant_repo.list_for_user(
+                db, organization_id=test_org.id, user_id=test_user.id,
+                limit=2, offset=offset,
+            )
+            for offset in (0, 2, 4)
+        ]
+
+        listed = [row.id for page in pages for row in page]
+        assert listed == sorted((row.id for row in applicants), reverse=True)
+
+    @pytest.mark.asyncio
     async def test_list_excludes_soft_deleted_by_default(
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:

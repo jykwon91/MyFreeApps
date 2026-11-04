@@ -143,7 +143,7 @@ async def list_for_user(
         stmt = stmt.where(Applicant.stage != exclude_stage)
     stmt = (
         stmt.options(selectinload(Applicant.signed_leases))
-        .order_by(desc(Applicant.created_at))
+        .order_by(desc(Applicant.created_at), desc(Applicant.id))
         .limit(limit)
         .offset(offset)
     )
@@ -360,7 +360,7 @@ async def list_tenants(
         )
     stmt = (
         stmt.options(selectinload(Applicant.signed_leases))
-        .order_by(desc(Applicant.created_at))
+        .order_by(desc(Applicant.created_at), desc(Applicant.id))
         .limit(limit)
         .offset(offset)
     )
