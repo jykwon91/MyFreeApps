@@ -2,6 +2,7 @@ import api from "@platform/core/lib/api";
 import type { ApplicantDetailResponse } from "@mybookkeeper/api-client/types/applicant/applicant-detail-response";
 import type { ScreeningEligibilityResponse } from "@mybookkeeper/api-client/types/applicant/screening-eligibility-response";
 import type { ApplicantSensitive } from "@mybookkeeper/api-client/types/applicant/applicant-sensitive";
+import { tenancyState } from "@mybookkeeper/api-client/utils/tenancyState";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 
 export function anApplicant(overrides: Partial<ApplicantDetailResponse> = {}): ApplicantDetailResponse {
@@ -45,6 +46,7 @@ export interface FakeApplicantServer {
   redirectFailure: number | null;
   uploadFailure: number | null;
   revealFailure: number | null;
+  tenantListFailure: number | null;
 }
 
 export const SAMPLE_PROVIDER = {
@@ -78,7 +80,7 @@ export function formValue(form: unknown, field: string): string | undefined {
 }
 
 export function startApplicantServer(applicants: ApplicantDetailResponse[]): FakeApplicantServer {
-  const server: FakeApplicantServer = { applicants, offline: false, failListFromOffset: null, role: "owner", writeFailure: null, loseNextAnswer: false, requests: [], sensitive: noPrivateDetails(), revealFailure: null, eligibility: { eligible: true, missing_fields: [], has_pending: false }, eligibilityFailure: null, redirectFailure: null, uploadFailure: null };
+  const server: FakeApplicantServer = { tenantListFailure: null, applicants, offline: false, failListFromOffset: null, role: "owner", writeFailure: null, loseNextAnswer: false, requests: [], sensitive: noPrivateDetails(), revealFailure: null, eligibility: { eligible: true, missing_fields: [], has_pending: false }, eligibilityFailure: null, redirectFailure: null, uploadFailure: null };
   const adapter: AxiosAdapter = (config) => {
     const respond = (data: unknown, status = 200) => {
       const response = { data: JSON.parse(JSON.stringify(data)), status, statusText: "", headers: {}, config };
@@ -108,6 +110,23 @@ export function startApplicantServer(applicants: ApplicantDetailResponse[]): Fak
       };
       row?.screening_results.push(result);
       return respond(result, 201);
+    }
+    if (config.url === "/applicants/tenants") {
+      if (server.tenantListFailure) return respond({ detail: "nope" }, server.tenantListFailure);
+      const params = config.params as { include_ended: boolean; today: string; limit: number; offset: number };
+      const today = params.today;
+      const rows = server.applicants.filter((row) => row.stage === "lease_signed" && (params.include_ended || tenancyState(row, today) === "active"));
+      const items = rows.slice(params.offset, params.offset + params.limit);
+      return respond({ items, total: rows.length, has_more: params.offset + items.length < rows.length });
+    }
+    if (config.url?.endsWith("/tenancy/end") || config.url?.endsWith("/tenancy/restart")) {
+      if (server.writeFailure) return respond({ detail: "A developer's message" }, server.writeFailure);
+      const row = server.applicants.find((candidate) => config.url?.startsWith(`/applicants/${candidate.id}/`));
+      if (!row) return respond({ detail: "Applicant not found" }, 404);
+      const isEnding = config.url.endsWith("/end");
+      row.tenant_ended_at = isEnding ? "2026-11-04T12:00:00Z" : null;
+      row.tenant_ended_reason = isEnding ? (JSON.parse(String(config.data)) as { reason: string | null }).reason : null;
+      return respond(row);
     }
     if (config.method === "patch") {
       if (server.writeFailure) return respond({ detail: "A developer's message" }, server.writeFailure);

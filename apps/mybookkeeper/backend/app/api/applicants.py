@@ -9,6 +9,7 @@ decorator on the model — routes interact with plaintext only.
 """
 from __future__ import annotations
 
+import datetime as _dt
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
@@ -39,6 +40,7 @@ router = APIRouter(prefix="/applicants", tags=["applicants"])
 @router.get("/tenants", response_model=TenantListResponse)
 async def list_tenants(
     include_ended: bool = Query(False, description="Include ended tenants"),
+    today: _dt.date | None = Query(None, description="The host's date, for deciding which leases have run out"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     ctx: RequestContext = Depends(current_org_member),
@@ -52,6 +54,7 @@ async def list_tenants(
         ctx.organization_id,
         ctx.user_id,
         include_ended=include_ended,
+        today=today,
         limit=limit,
         offset=offset,
     )
@@ -73,7 +76,7 @@ async def end_tenancy(
 
     Errors:
         404 — applicant not found in the calling tenant.
-        409 — applicant is not at stage=lease_signed.
+        409 — applicant is not at stage=lease_signed, or the tenancy already ended.
     """
     try:
         return await tenancy_service.end_tenancy(
@@ -84,7 +87,10 @@ async def end_tenancy(
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Applicant not found") from exc
-    except tenancy_service.NotATenantError as exc:
+    except (
+        tenancy_service.NotATenantError,
+        tenancy_service.TenancyAlreadyEndedError,
+    ) as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 

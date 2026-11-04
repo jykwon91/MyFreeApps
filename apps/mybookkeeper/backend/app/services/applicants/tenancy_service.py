@@ -40,6 +40,7 @@ async def list_tenants(
     user_id: uuid.UUID,
     *,
     include_ended: bool = False,
+    today: _dt.date | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> TenantListResponse:
@@ -50,6 +51,7 @@ async def list_tenants(
             organization_id=organization_id,
             user_id=user_id,
             include_ended=include_ended,
+            today=today,
             limit=limit,
             offset=offset,
         )
@@ -58,6 +60,7 @@ async def list_tenants(
             organization_id=organization_id,
             user_id=user_id,
             include_ended=include_ended,
+            today=today,
         )
     items = [ApplicantSummary.model_validate(row) for row in rows]
     has_more = (offset + len(items)) < total
@@ -76,6 +79,7 @@ async def end_tenancy(
     Raises:
         LookupError: applicant not found in the calling tenant.
         NotATenantError: applicant is not at stage=lease_signed.
+        TenancyAlreadyEndedError: already ended; the original date and reason stay.
     """
     now = _dt.datetime.now(_dt.timezone.utc)
 
@@ -94,6 +98,9 @@ async def end_tenancy(
                 f"Applicant is at stage '{applicant.stage}', not 'lease_signed'. "
                 "Only tenants (stage=lease_signed) can have their tenancy ended."
             )
+
+        if applicant.tenant_ended_at is not None:
+            raise TenancyAlreadyEndedError("This tenancy has already ended.")
 
         await applicant_repo.set_tenancy_ended(
             db,

@@ -126,6 +126,30 @@ class TestListTenantsEndpoint:
         finally:
             app.dependency_overrides.clear()
 
+    @pytest.mark.parametrize(
+        ("query", "expected"),
+        [("", None), ("?today=2026-11-04", _dt.date(2026, 11, 4))],
+    )
+    def test_list_tenants_passes_the_hosts_date(
+        self, query: str, expected: _dt.date | None,
+    ) -> None:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        response_obj = TenantListResponse(items=[], total=0, has_more=False)
+
+        app.dependency_overrides[current_org_member] = lambda: _ctx(org_id, user_id)
+        try:
+            with patch(
+                "app.api.applicants.tenancy_service.list_tenants",
+                new_callable=AsyncMock,
+                return_value=response_obj,
+            ) as mock_svc:
+                resp = TestClient(app).get(f"/applicants/tenants{query}")
+
+            assert resp.status_code == 200
+            assert mock_svc.call_args.kwargs["today"] == expected
+        finally:
+            app.dependency_overrides.clear()
+
     def test_unauthenticated_returns_401(self) -> None:
         client = TestClient(app)
         resp = client.get("/applicants/tenants")
@@ -238,6 +262,27 @@ class TestEndTenancyEndpoint:
 
             assert resp.status_code == 409
             assert "lease_signed" in resp.json()["detail"]
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_already_ended_returns_409(self) -> None:
+        from app.services.applicants.tenancy_service import TenancyAlreadyEndedError
+
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
+        try:
+            with patch(
+                "app.api.applicants.tenancy_service.end_tenancy",
+                new_callable=AsyncMock,
+                side_effect=TenancyAlreadyEndedError("This tenancy has already ended."),
+            ):
+                resp = TestClient(app).patch(
+                    f"/applicants/{uuid.uuid4()}/tenancy/end",
+                    json={"reason": "second try"},
+                )
+
+            assert resp.status_code == 409
+            assert resp.json()["detail"] == "This tenancy has already ended."
         finally:
             app.dependency_overrides.clear()
 

@@ -1,1 +1,1 @@
-export type PeopleSection = "inquiries" | "applicants";
+export type PeopleSection = "inquiries" | "applicants" | "tenants";
