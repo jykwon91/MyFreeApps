@@ -19,6 +19,21 @@ function tagsAfterNewLease(lease: SignedLeaseDetail | undefined) {
   return tags;
 }
 
+/** Extending or undoing can restart or re-end the tenancy, which lives on the applicant. */
+function tagsAfterTermChange(
+  lease: SignedLeaseDetail | undefined,
+  _error: unknown,
+  { leaseId }: { leaseId: string },
+) {
+  return [
+    { type: "SignedLease" as const, id: leaseId },
+    { type: "SignedLease" as const, id: "LIST" },
+    ...(lease
+      ? [{ type: "Applicant" as const, id: lease.applicant_id }, { type: "Applicant" as const, id: "LIST" }]
+      : []),
+  ];
+}
+
 /**
  * RTK Query slice for the Signed Leases domain.
  *
@@ -27,7 +42,7 @@ function tagsAfterNewLease(lease: SignedLeaseDetail | undefined) {
  * invalidate the parent lease tag.
  */
 const signedLeasesApi = baseApi.enhanceEndpoints({
-  addTagTypes: ["SignedLease"],
+  addTagTypes: ["SignedLease", "Applicant"],
 }).injectEndpoints({
   endpoints: (builder) => ({
     getSignedLeases: builder.query<
@@ -151,10 +166,7 @@ const signedLeasesApi = baseApi.enhanceEndpoints({
           // The caller reports the failure, and the cache still holds the old value.
         }
       },
-      invalidatesTags: (_r, _e, { leaseId }) => [
-        { type: "SignedLease", id: leaseId },
-        { type: "SignedLease", id: "LIST" },
-      ],
+      invalidatesTags: tagsAfterTermChange,
     }),
 
     undoSignedLeaseExtension: builder.mutation<
@@ -175,10 +187,7 @@ const signedLeasesApi = baseApi.enhanceEndpoints({
           // The caller reports the failure, and the cache still holds the old value.
         }
       },
-      invalidatesTags: (_r, _e, { leaseId }) => [
-        { type: "SignedLease", id: leaseId },
-        { type: "SignedLease", id: "LIST" },
-      ],
+      invalidatesTags: tagsAfterTermChange,
     }),
 
     uploadSignedLeaseAttachment: builder.mutation<

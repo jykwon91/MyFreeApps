@@ -4,6 +4,7 @@ import { configurePlatform } from "@platform/core/platform/configurePlatform";
 import { configureStore } from "@reduxjs/toolkit";
 import type { AxiosAdapter } from "axios";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import "../store/applicantsApi";
 import "../store/signedLeasesApi";
 
 const reads: string[] = [];
@@ -27,7 +28,7 @@ beforeAll(() => {
   });
   const adapter: AxiosAdapter = (config) => {
     if (config.method === "get") reads.push(config.url ?? "");
-    return Promise.resolve({ data: { id: "new", parent_lease_id: "old" }, status: 200, statusText: "", headers: {}, config });
+    return Promise.resolve({ data: { id: "new", parent_lease_id: "old", applicant_id: "a1" }, status: 200, statusText: "", headers: {}, config });
   };
   api.defaults.adapter = adapter;
 });
@@ -48,5 +49,17 @@ describe("signedLeasesApi", () => {
     await store.dispatch(endpoints[endpoint].initiate(arg));
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(reads).toEqual(["/signed-leases/old"]);
+  });
+
+  it.each([
+    ["extendSignedLease", { leaseId: "l1", data: { new_ends_on: "2027-01-01" } }],
+    ["undoSignedLeaseExtension", { leaseId: "l1", versionId: "v1" }],
+  ])("%s reloads the tenant, whose tenancy it can change", async (endpoint, arg) => {
+    const store = makeStore();
+    await store.dispatch(endpoints.getApplicantById.initiate("a1"));
+    reads.length = 0;
+    await store.dispatch(endpoints[endpoint].initiate(arg));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(reads).toEqual(["/applicants/a1"]);
   });
 });
