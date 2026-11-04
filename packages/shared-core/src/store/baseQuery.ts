@@ -10,9 +10,10 @@ export const axiosBaseQuery: BaseQueryFn<Args, unknown, ApiError> = async ({
   data,
   params,
   headers,
+  timeout,
 }) => {
   try {
-    const result = await api({ url, method, data, params, headers });
+    const result = await api({ url, method, data, params, headers, timeout });
     return { data: result.data };
   } catch (err) {
     const error = err as AxiosError;

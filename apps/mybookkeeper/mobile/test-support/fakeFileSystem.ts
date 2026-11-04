@@ -1,5 +1,6 @@
 /** Just enough of expo-file-system, kept in memory. */
 const files = new Set<string>();
+const contents = new Map<string, string>();
 
 export function resetFakeFiles(paths: string[] = []): void {
   files.clear();
@@ -31,6 +32,17 @@ export class File {
   move(destination: File): void {
     if (!files.delete(this.uri)) throw new Error(`no such file: ${this.uri}`);
     files.add(destination.uri);
+  }
+  create(): void {
+    files.add(this.uri);
+  }
+  write(text: string): void {
+    files.add(this.uri);
+    contents.set(this.uri, text);
+  }
+  textSync(): string {
+    if (!files.has(this.uri)) throw new Error(`no such file: ${this.uri}`);
+    return contents.get(this.uri) ?? "";
   }
   /** Throws on a missing file, like the real one. */
   delete(): void {

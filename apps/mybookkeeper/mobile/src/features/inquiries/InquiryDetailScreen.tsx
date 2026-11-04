@@ -13,6 +13,7 @@ import type { InquiryMoreAction } from "../../types/InquiryMoreAction";
 import TransactionFact from "../transactions/TransactionFact";
 import { httpStatus } from "../transactions/transactionMessages";
 import { useCanWrite } from "../workspace/useCanWrite";
+import { deleteReplyDraft } from "./replyDrafts";
 import { moreOptions, stageOptions } from "./inquiryActionOptions";
 import InquiryChip from "./InquiryChip";
 import InquiryContact from "./InquiryContact";
@@ -22,6 +23,7 @@ import InquiryMessages from "./InquiryMessages";
 import InquiryNotes from "./InquiryNotes";
 import InquirySection from "./InquirySection";
 import { useInquiryActions } from "./useInquiryActions";
+import { useHasReplyDraft } from "./useHasReplyDraft";
 import { useOpenLink } from "./useOpenLink";
 
 export default function InquiryDetailScreen({ id }: { id: string }) {
@@ -34,13 +36,17 @@ export default function InquiryDetailScreen({ id }: { id: string }) {
   const [openSheet, setOpenSheet] = useState<"stage" | "more" | null>(null);
   const { refresh, refreshControl } = useRefresh(refetch, error);
   const openLink = useOpenLink();
+  const hasDraft = useHasReplyDraft(id);
   // iOS drops an Alert raised while a sheet is still closing, so More's choice waits for it to go.
   const chosenAction = useRef<InquiryMoreAction | null>(null);
   const isGone = httpStatus(error) === 404;
 
   useEffect(() => {
-    if (actions.hasArchived) router.back();
-  }, [actions.hasArchived]);
+    if (actions.hasArchived) {
+      deleteReplyDraft(id);
+      router.back();
+    }
+  }, [actions.hasArchived, id]);
 
   if (actions.hasArchived) return <View style={{ flex: 1 }} />;
   if (!isGone && !inquiry && (isFetching || !error)) {
@@ -144,8 +150,19 @@ export default function InquiryDetailScreen({ id }: { id: string }) {
             backgroundColor: colors.background,
           }}
         >
-          <LoadingButton disabled={actions.isBusy} isLoading={actions.isUpdating} loadingText="Moving…" onPress={() => setOpenSheet("stage")} style={{ flex: 2 }} variant="secondary">
-            {`Stage: ${stageLabel(inquiry.stage)}`}
+          <LoadingButton disabled={actions.isBusy} onPress={() => router.push(`/inquiries/${id}/reply`)} style={{ flex: 2 }}>
+            {hasDraft ? "Continue draft" : "Reply"}
+          </LoadingButton>
+          <LoadingButton
+            accessibilityLabel={`Stage: ${stageLabel(inquiry.stage)}`}
+            disabled={actions.isBusy}
+            isLoading={actions.isUpdating}
+            loadingText="Moving…"
+            onPress={() => setOpenSheet("stage")}
+            style={{ flex: 2 }}
+            variant="secondary"
+          >
+            {stageLabel(inquiry.stage)}
           </LoadingButton>
           <LoadingButton disabled={actions.isBusy} onPress={() => setOpenSheet("more")} style={{ flex: 1 }} variant="secondary">
             More
