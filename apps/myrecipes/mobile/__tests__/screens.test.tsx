@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react-native";
 import DiscoverScreen from "../src/features/placeholders/DiscoverScreen";
-import SettingsScreen from "../src/features/placeholders/SettingsScreen";
 import { COOK_SESSION_MAX_AGE_MS } from "../src/constants/cook";
 import reducer, { ingredientToggled, pageChanged, sessionFinished, sessionOpened } from "../src/features/cook/cookSessionsSlice";
 import { buildCookPages } from "../src/utils/buildCookPages";
@@ -12,11 +11,6 @@ describe("placeholder screens", () => {
     await render(<DiscoverScreen />);
     expect(screen.getByRole("header", { name: "Discover" })).toBeTruthy();
     expect(screen.getByText(/isn't available in the app yet/)).toBeTruthy();
-  });
-
-  it("names Settings", async () => {
-    await render(<SettingsScreen />);
-    expect(screen.getByRole("header", { name: "Settings" })).toBeTruthy();
   });
 });
 

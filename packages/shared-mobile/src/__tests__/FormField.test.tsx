@@ -1,6 +1,6 @@
 import { type ComponentRef, createRef } from "react";
 import { fireEvent, render, screen } from "@testing-library/react-native";
-import { AccessibilityInfo, StyleSheet, TextInput } from "react-native";
+import { AccessibilityInfo, StyleSheet, Text, TextInput } from "react-native";
 import FormField from "../components/FormField";
 import { lightColors } from "../theme/colors";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
@@ -25,6 +25,15 @@ describe("FormField", () => {
 
     await fireEvent.changeText(input, "ab");
     expect(onChangeText).toHaveBeenCalledWith("ab");
+  });
+
+  it("leaves room for something at the end of the input", async () => {
+    await render(<FormField label="Password" trailing={<Text>Show</Text>} />);
+
+    expect(screen.getByText("Show")).toBeTruthy();
+    expect(StyleSheet.flatten(screen.getByLabelText("Password").props.style).paddingRight).toBeGreaterThanOrEqual(
+      MIN_TOUCH_TARGET,
+    );
   });
 
   it("forwards a ref to the input", async () => {

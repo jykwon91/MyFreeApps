@@ -11,6 +11,7 @@
       "bundleIdentifier": "org.myfreeapps.myrecipes"
     },
     "android": {
+      "allowBackup": false,
       "package": "org.myfreeapps.myrecipes",
       "permissions": ["android.permission.SCHEDULE_EXACT_ALARM"]
     },

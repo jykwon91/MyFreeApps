@@ -9,6 +9,7 @@ export default function FormField({
   error,
   hint,
   required = false,
+  trailing,
   style,
   accessibilityLabel,
   accessibilityHint,
@@ -27,21 +28,25 @@ export default function FormField({
         {label}
         {required ? <Text style={{ color: colors.destructiveText }}> *</Text> : null}
       </Text>
-      <TextInput
-        placeholderTextColor={colors.mutedForeground}
-        {...inputProps}
-        accessibilityLabel={accessibilityLabel ?? (required ? `${label}, required` : label)}
-        accessibilityHint={error ?? accessibilityHint ?? hint}
-        style={{
-          minHeight: MIN_TOUCH_TARGET,
-          paddingHorizontal: spacing.md,
-          borderWidth: 1,
-          borderRadius: radius.md,
-          borderColor: error ? colors.destructiveText : colors.input,
-          color: colors.foreground,
-          fontSize: fontSize.md,
-        }}
-      />
+      <View style={{ justifyContent: "center" }}>
+        <TextInput
+          placeholderTextColor={colors.mutedForeground}
+          {...inputProps}
+          accessibilityLabel={accessibilityLabel ?? (required ? `${label}, required` : label)}
+          accessibilityHint={error ?? accessibilityHint ?? hint}
+          style={{
+            minHeight: MIN_TOUCH_TARGET,
+            paddingHorizontal: spacing.md,
+            paddingRight: trailing ? MIN_TOUCH_TARGET + spacing.md : spacing.md,
+            borderWidth: 1,
+            borderRadius: radius.md,
+            borderColor: error ? colors.destructiveText : colors.input,
+            color: colors.foreground,
+            fontSize: fontSize.md,
+          }}
+        />
+      {trailing ? <View style={{ position: "absolute", right: 0 }}>{trailing}</View> : null}
+      </View>
       {error ? (
         <Text
           accessibilityRole="alert"

@@ -1,1 +1,1 @@
-export { default } from "../../src/features/placeholders/SettingsScreen";
+export { default } from "../../src/features/settings/SettingsScreen";

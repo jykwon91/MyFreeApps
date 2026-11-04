@@ -11,6 +11,7 @@
       "bundleIdentifier": "org.myfreeapps.__APP_SCHEME__"
     },
     "android": {
+      "allowBackup": false,
       "package": "org.myfreeapps.__APP_SCHEME__"
     },
     "plugins": ["expo-router"]

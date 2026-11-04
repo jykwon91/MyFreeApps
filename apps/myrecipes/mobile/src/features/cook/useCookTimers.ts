@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { AppState } from "react-native";
 import { useSelector, useStore } from "react-redux";
+import { session } from "../../lib/session";
 import type { AppStore, RootState } from "../../lib/store";
 import {
   cancelCookTimerAlert,
@@ -37,9 +38,11 @@ export function useCookTimers(recipeId: string) {
   );
 
   useEffect(() => {
+    const accountAtStart = session.currentAccount();
     restorableCookTimers()
       .then((restorable) => {
-        store.dispatch(timersRestored(restorable));
+        // Read before a sign-out cancelled them, so they'd belong to the last person.
+        if (session.currentAccount() === accountAtStart) store.dispatch(timersRestored(restorable));
         return refreshAlerts(store);
       })
       .catch(() => {

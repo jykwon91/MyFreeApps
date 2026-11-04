@@ -356,6 +356,34 @@ describe("after the server demands a new sign-in", () => {
   });
 });
 
+describe("when another account signs in during a request", () => {
+  it("doesn't send the request again as that account", async () => {
+    let account = "a@example.com";
+    let token = "old";
+    const seen: unknown[] = [];
+    api.defaults.adapter = (config) => {
+      seen.push(config.headers.Authorization);
+      return respond(config, 401);
+    };
+    configurePlatform({
+      baseURL: "https://api.test",
+      tokenStore: { get: () => token, set: () => {}, clear: () => {} },
+      orgStore: { get: () => null },
+      isOnLogin: () => false,
+      currentAccount: () => account,
+      refreshSession: async () => {
+        account = "b@example.com";
+        token = "b-token";
+        return "refreshed";
+      },
+    });
+
+    await expect(api.get("/recipes")).rejects.toMatchObject({ response: { status: 401 } });
+
+    expect(seen).toEqual(["Bearer old"]);
+  });
+});
+
 describe("a platform with no refresh", () => {
   it("still signs out on a rejected token", async () => {
     const clear = vi.fn();

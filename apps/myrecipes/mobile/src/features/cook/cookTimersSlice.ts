@@ -22,6 +22,9 @@ const cookTimersSlice = createSlice({
     timerRemoved(state, { payload }: PayloadAction<string>) {
       state.items = state.items.filter((timer) => timer.id !== payload);
     },
+    timersCleared(state) {
+      state.items = [];
+    },
     timersRestored(state, { payload }: PayloadAction<CookTimer[]>) {
       const known = new Set(state.items.map((timer) => timer.id));
       const restored = payload.filter((timer) => !known.has(timer.id)).map((timer) => ({ ...timer, alert: "scheduled" as const }));
@@ -30,5 +33,5 @@ const cookTimersSlice = createSlice({
   },
 });
 
-export const { timerAlertSet, timerRemoved, timerStarted, timersRestored } = cookTimersSlice.actions;
+export const { timerAlertSet, timerRemoved, timerStarted, timersCleared, timersRestored } = cookTimersSlice.actions;
 export default cookTimersSlice.reducer;
