@@ -1,6 +1,6 @@
+import { act } from "@testing-library/react-native";
 import { router, Stack } from "expo-router";
 import { renderRouter, screen } from "expo-router/testing-library";
-import { act } from "@testing-library/react-native";
 import { Text } from "react-native";
 import { SINGLE_COPY_SCREENS } from "../src/constants/singleCopyScreens";
 
@@ -9,32 +9,49 @@ jest.mock("react-native-safe-area-context", () => jest.requireActual("react-nati
 function Layout() {
   return (
     <Stack>
-      {SINGLE_COPY_SCREENS.filter((name) => name.startsWith("leases")).map((name) => (
+      {SINGLE_COPY_SCREENS.map((name) => (
         <Stack.Screen dangerouslySingular key={name} name={name} />
       ))}
     </Stack>
   );
 }
 
+function Page() {
+  return <Text>page</Text>;
+}
+
 const routes = {
   _layout: Layout,
-  index: () => <Text>home</Text>,
-  "leases/index": () => <Text>leases</Text>,
-  "leases/[id]": () => <Text>one lease</Text>,
+  index: Page,
+  ...Object.fromEntries(SINGLE_COPY_SCREENS.map((name) => [name, Page])),
 };
 
+function linkTo(name: string): `/${string}` {
+  return `/${name.replace("[id]", "x1").replace(/\/?index$/, "")}`;
+}
+
 describe("single copy screens", () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it.each(SINGLE_COPY_SCREENS)("%s is a real screen", (name) => {
     expect(jest.requireActual(`../app/(app)/${name}`).default).toBeDefined();
   });
 
-  it("opens one copy when a row is tapped twice", async () => {
+  it("recognises every listed screen", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    await renderRouter(routes);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it.each(SINGLE_COPY_SCREENS)("%s opens one copy when tapped twice", async (name) => {
     await renderRouter(routes);
     await act(async () => {
-      router.push("/leases/l1");
-      router.push("/leases/l1");
+      router.push(linkTo(name));
+      router.push(linkTo(name));
     });
-    expect(screen).toHavePathname("/leases/l1");
+    expect(screen).toHavePathname(linkTo(name));
     await act(async () => router.back());
     expect(screen).toHavePathname("/");
   });
