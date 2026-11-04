@@ -11,6 +11,7 @@ from typing import Any
 
 from platform_shared.core.storage import StorageNotConfiguredError  # noqa: F401
 
+from app.core.datetime_utils import as_utc
 from app.models.applicants.applicant import Applicant
 from app.models.inquiries.inquiry import Inquiry
 from app.models.properties.property import Property
@@ -103,6 +104,11 @@ ALLOWED_ATTACHMENT_MIME_TYPES: frozenset[str] = frozenset({
     "image/png",
     "image/webp",
 })
+
+# How long after an extension was committed the host can still undo it.
+# Generous window — tenants sometimes change their mind weeks after
+# signing the addendum. Undo is strictly reversible (re-extend if needed).
+UNDO_WINDOW_DAYS: int = 30
 
 # Status transitions allowed by the host. Backwards transitions are disallowed
 # so an "active" lease can't be flipped back to "draft" without a tech reset.
@@ -215,7 +221,43 @@ async def _resolve_latest_extension(
     row = await lease_term_version_repo.get_latest_extension(db, lease_id=lease_id)
     if row is None:
         return None
-    return LeaseExtensionSummary.model_validate(row)
+    previous_ends_on = await _term_end_before(db, lease_id=lease_id, version_id=row.id)
+    created_at = as_utc(row.created_at)
+    return LeaseExtensionSummary(
+        id=row.id,
+        created_at=created_at,
+        starts_on=row.starts_on,
+        ends_on=row.ends_on,
+        source_attachment_id=row.source_attachment_id,
+        previous_ends_on=previous_ends_on,
+        undo_expires_at=created_at + _dt.timedelta(days=UNDO_WINDOW_DAYS),
+        can_undo=(
+            previous_ends_on is not None
+            and _undo_window_is_open(created_at, _dt.datetime.now(_dt.timezone.utc))
+        ),
+    )
+
+
+def _undo_window_is_open(created_at: _dt.datetime, now: _dt.datetime) -> bool:
+    return (now - as_utc(created_at)).days < UNDO_WINDOW_DAYS
+
+
+async def _term_end_before(
+    db,
+    *,
+    lease_id: uuid.UUID,
+    version_id: uuid.UUID,
+) -> _dt.date | None:
+    """The end date in force without this version: the next-newest extension, else the seed."""
+    others = [
+        version
+        for version in await lease_term_version_repo.list_by_lease(db, lease_id=lease_id)
+        if version.id != version_id
+    ]
+    extension = next((v for v in others if v.source_attachment_id is not None), None)
+    seed = next((v for v in others if v.source_attachment_id is None), None)
+    previous = extension or seed
+    return previous.ends_on if previous is not None else None
 
 
 async def _resolve_template_links(

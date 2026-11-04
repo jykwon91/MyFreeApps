@@ -454,6 +454,11 @@ async def undo_lease_extension(
             status_code=409,
             detail={"code": "NOT_LATEST_EXTENSION", "message": str(exc)},
         ) from exc
+    except lease_extension_service.NoEarlierTermError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "NO_EARLIER_TERM", "message": str(exc)},
+        ) from exc
     except lease_extension_service.UndoWindowExpiredError as exc:
         raise HTTPException(
             status_code=409,

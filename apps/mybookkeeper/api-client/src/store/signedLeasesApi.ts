@@ -141,6 +141,16 @@ const signedLeasesApi = baseApi.enhanceEndpoints({
         method: "POST",
         data,
       }),
+      // The response is the whole lease, so a screen shows the change straight
+      // away rather than the old value until the refetch lands.
+      async onQueryStarted({ leaseId }, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(signedLeasesApi.util.updateQueryData("getSignedLeaseById", leaseId, () => data));
+        } catch {
+          // The caller reports the failure, and the cache still holds the old value.
+        }
+      },
       invalidatesTags: (_r, _e, { leaseId }) => [
         { type: "SignedLease", id: leaseId },
         { type: "SignedLease", id: "LIST" },
@@ -155,6 +165,16 @@ const signedLeasesApi = baseApi.enhanceEndpoints({
         url: `/signed-leases/${leaseId}/extensions/${versionId}/undo`,
         method: "POST",
       }),
+      // The response is the whole lease, so a screen shows the change straight
+      // away rather than the old value until the refetch lands.
+      async onQueryStarted({ leaseId }, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(signedLeasesApi.util.updateQueryData("getSignedLeaseById", leaseId, () => data));
+        } catch {
+          // The caller reports the failure, and the cache still holds the old value.
+        }
+      },
       invalidatesTags: (_r, _e, { leaseId }) => [
         { type: "SignedLease", id: leaseId },
         { type: "SignedLease", id: "LIST" },

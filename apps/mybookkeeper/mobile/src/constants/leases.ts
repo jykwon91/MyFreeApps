@@ -61,6 +61,24 @@ export const LEASE_MESSAGES = {
   statusFailed: "I couldn't change the status. Want to try again?",
   statusMovedOn: "This lease's status changed somewhere else. Here's the latest.",
   goneWhileChanging: "That lease is gone.",
+  extend: "Extend lease",
+  extending: "Extending…",
+  newEndDate: "New end date",
+  extensionNote: "Note (optional)",
+  extensionNoteHint: "This note is printed on the addendum.",
+  extendFailedNothingChanged: "That didn't go through. Nothing was changed.",
+  extendNotSeen: "I don't see that change on the lease yet. Trying the same date again is safe.",
+  extendUnsure: "I can't reach the server, so I can't tell if that went through. Trying the same date again is safe.",
+  extendWrongStatus: "This lease is no longer signed or active, so it can't be extended.",
+  extendNoEndDate: "This lease has no end date yet. Add the original term on the website, then extend.",
+  extendCheckFields: "Check the date and note, then try again.",
+  undoExtension: "Undo extension",
+  undoingExtension: "Undoing…",
+  undoTitle: "Undo this extension?",
+  undoExpired: "This extension is more than 30 days old, so it can't be undone any more.",
+  undoNotLatest: "A newer extension was added. Open the lease again to undo the latest one.",
+  undoAlreadyDone: "That extension was already undone.",
+  undoFailed: "I couldn't undo the extension. Want to try again?",
 } as const;
 
 /** The rendered original and rent receipts come from the app itself. */
@@ -85,6 +103,8 @@ export const LEASE_FILE_TYPES = [
 
 export const LEASE_PHOTO_NAME = "lease-photo.jpg";
 
+export const EXTENSION_NOTE_MAX_LENGTH = 2000;
+
 export function addedFile(name: string): string {
   return `Added ${name}.`;
 }
@@ -95,6 +115,36 @@ export function markAs(label: string): string {
 
 export function markedAs(label: string): string {
   return `Marked as ${label.toLowerCase()}.`;
+}
+
+export function extendContext(endsOn: string): string {
+  return `Ends ${endsOn} now. I'll create an extension addendum PDF with signature lines and attach it to this lease.`;
+}
+
+export function pickDateAfter(endsOn: string): string {
+  return `Pick a date after ${endsOn}.`;
+}
+
+export function extendedTo(endsOn: string): string {
+  return `Lease extended to ${endsOn}.`;
+}
+
+export function alreadyEnds(endsOn: string): string {
+  return `The lease already ends ${endsOn}. It may have been changed elsewhere. Pick a later date.`;
+}
+
+export function undoUntil(date: string): string {
+  return `You can undo this until ${date}.`;
+}
+
+/** The email line goes once the extension can email the tenant the addendum. */
+export function undoBody(from: string, to: string | null): string {
+  const move = to ? `The end date goes back from ${from} to ${to}.` : `The end date goes back from ${from}.`;
+  return `${move} The addendum PDF stays attached to the lease. If you sent it to the tenant, let them know yourself.`;
+}
+
+export function undoDone(to: string | null): string {
+  return to ? `Extension undone. The lease ends ${to} again.` : "Extension undone.";
 }
 
 export function noLeaseFor(name: string): string {

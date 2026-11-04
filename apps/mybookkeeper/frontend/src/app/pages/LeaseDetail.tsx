@@ -74,22 +74,8 @@ export default function LeaseDetail() {
     canWrite
     && (lease?.status === "signed" || lease?.status === "active")
     && Boolean(lease?.ends_on);
-  // Match backend ``UNDO_WINDOW_DAYS``. Kept inline (single use) so the
-  // 30-day rule lives next to the button it gates.
-  const UNDO_WINDOW_DAYS = 30;
-  // Freeze "now" at first render — React 19's hooks/purity rule forbids
-  // calling Date.now() during render. The 30-day undo window doesn't need
-  // sub-second accuracy; freezing at mount is fine.
-  const [nowMs] = useState(() => Date.now());
   const latestExtension = lease?.latest_extension ?? null;
-  const ageMs = latestExtension
-    ? nowMs - new Date(latestExtension.created_at).getTime()
-    : null;
-  const canUndoExtension =
-    canExtend
-    && latestExtension !== null
-    && ageMs !== null
-    && ageMs < UNDO_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  const canUndoExtension = canExtend && latestExtension?.can_undo === true;
   // A successor lease can be created when the parent is far enough along
   // to be considered "real" (signed / active / ended) AND does not already
   // have one. ``draft`` / ``generated`` / ``sent`` should still be edited
