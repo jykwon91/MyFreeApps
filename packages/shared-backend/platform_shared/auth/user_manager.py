@@ -76,6 +76,9 @@ logger = logging.getLogger(__name__)
 UP = TypeVar("UP")
 
 
+_LOCKOUT_FIELDS = ["failed_login_count", "last_failed_login_at", "locked_until"]
+
+
 class PlatformBaseUserManager(
     UUIDIDMixin, BaseUserManager[UP, uuid.UUID], Generic[UP],
 ):
@@ -276,8 +279,12 @@ class PlatformBaseUserManager(
     async def _count_failed_login(
         self, user: models.UP, *, reason: str, now: datetime,
     ) -> None:
+        db = self.user_db.session
+        # Lock and reread until ``user_db.update`` commits. Parallel guesses would
+        # otherwise all count from the same stale value and undercount.
+        await db.refresh(user, _LOCKOUT_FIELDS, with_for_update=True)
         update = await record_failed_login(
-            user, db=self.user_db.session, user_id=user.id,
+            user, db=db, user_id=user.id,
             lockout_threshold=self.lockout_threshold,
             metadata={"reason": reason}, now=now,
         )

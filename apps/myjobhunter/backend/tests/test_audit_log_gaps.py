@@ -99,6 +99,7 @@ class TestNoEmailInLockedAccountLogs:
         manager.user_db = MagicMock()
         manager.user_db.update = AsyncMock()
         manager.user_db.session = MagicMock()
+        manager.user_db.session.refresh = AsyncMock()
         manager.password_helper = MagicMock()
 
         captured_messages: list[str] = []
@@ -156,6 +157,7 @@ class TestNoEmailInLockedAccountLogs:
         manager.user_db = MagicMock()
         manager.user_db.update = AsyncMock()
         manager.user_db.session = MagicMock()
+        manager.user_db.session.refresh = AsyncMock()
         manager.password_helper = MagicMock()
 
         captured_messages: list[str] = []
@@ -218,6 +220,7 @@ class TestLockedLoginEventCapturesRequestContext:
         manager.user_db = MagicMock()
         manager.user_db.update = AsyncMock()
         manager.user_db.session = MagicMock()
+        manager.user_db.session.refresh = AsyncMock()
         manager.password_helper = MagicMock()
 
         captured_requests: list = []
