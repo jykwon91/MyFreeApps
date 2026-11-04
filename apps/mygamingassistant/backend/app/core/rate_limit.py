@@ -18,6 +18,7 @@ from platform_shared.core.auth_messages import RATE_LIMIT_GENERIC_DETAIL
 from platform_shared.core.rate_limit import (
     RateLimiter,
     email_domain_from_request,
+    make_check_json_login_not_locked,
     make_require_turnstile,
 )
 from platform_shared.core.request_utils import get_client_ip
@@ -133,23 +134,18 @@ async def check_totp_rate_limit(
         raise
 
 
+# The lambda looks the function up at call time, so tests can patch it here.
+_check_json_login_not_locked = make_check_json_login_not_locked(
+    lambda db, email: get_user_by_email(db, email),
+)
+
+
 async def check_totp_account_not_locked(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    """Reject POST /auth/totp/login attempts for locked accounts."""
-    body = await request.json()
-    email: str = body.get("email", "")
-    if not email:
-        return
-    user = await get_user_by_email(db, email)
-    if user is None:
-        return
-    if user.locked_until and user.locked_until > datetime.now(tz=timezone.utc):
-        raise HTTPException(
-            status_code=429,
-            detail=RATE_LIMIT_GENERIC_DETAIL,
-        )
+    """Reject JSON logins for locked accounts."""
+    await _check_json_login_not_locked(request, db)
 
 
 async def check_account_not_locked(

@@ -20,7 +20,6 @@ Existing call sites inside MBK (``app.main``, ``app.api.totp``, route
 gates, tests) keep their imports — every public name from before M6
 still resolves here.
 """
-import json
 from datetime import datetime, timezone
 
 from fastapi import Depends, HTTPException, Request
@@ -32,6 +31,7 @@ from platform_shared.core.auth_messages import RATE_LIMIT_GENERIC_DETAIL
 from platform_shared.core.rate_limit import (
     RateLimiter,
     email_domain_from_request,
+    make_check_json_login_not_locked,
     make_require_turnstile,
 )
 from platform_shared.services.turnstile_service import verify_turnstile_token
@@ -219,63 +219,15 @@ async def check_account_not_locked(
         )
 
 
-async def _login_email_from_body(request: Request) -> str | None:
-    """Read ``email`` out of a JSON login body, or ``None`` if there isn't one.
-
-    A dependency runs *before* FastAPI validates the route's body model, so it
-    sees whatever the client actually sent: a well-formed body, no body at all,
-    a truncated upload, a JSON scalar, or ``{"email": 7}``. Only the first of
-    those names an account, and none of the others is lockout-relevant — there
-    is nothing to look up, and the route's own validation is what owes the
-    caller a 422. Letting the parse raise here turns that 422 into a 500 and
-    files an unhandled exception for what is really a malformed request.
-
-    Reading the body is safe: Starlette caches it on the request, so the route
-    handler still binds its ``TotpLoginRequest`` from the same bytes.
-    """
-    try:
-        body = await request.json()
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return None
-    if not isinstance(body, dict):
-        return None
-    email = body.get("email")
-    return email if isinstance(email, str) and email else None
+# The lambda looks the function up at call time, so tests can patch it here.
+_check_json_login_not_locked = make_check_json_login_not_locked(
+    lambda db, email: get_user_by_email(db, email),
+)
 
 
 async def check_totp_account_not_locked(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    """Reject ``POST /auth/totp/login`` attempts for locked accounts.
-
-    Parallel to ``check_account_not_locked`` for the form-encoded JWT login
-    path, but reads ``email`` from the JSON ``TotpLoginRequest`` body instead
-    of an ``OAuth2PasswordRequestForm``.
-
-    On block, writes a ``LOGIN_BLOCKED_LOCKED`` auth event so SOC/admin
-    tooling sees the same signal whether the attacker uses the JWT or TOTP
-    login endpoint.  The 429 body is intentionally identical to all other
-    rate-limit / lockout responses — callers cannot infer which gate fired.
-    """
-    email = await _login_email_from_body(request)
-    if not email:
-        return
-
-    user = await get_user_by_email(db, email)
-    if user is None:
-        return
-
-    if user.locked_until and user.locked_until > datetime.now(tz=timezone.utc):
-        await log_auth_event(
-            db,
-            event_type=AuthEventType.LOGIN_BLOCKED_LOCKED,
-            user_id=user.id,
-            request=request,
-            succeeded=False,
-        )
-        await db.commit()
-        raise HTTPException(
-            status_code=429,
-            detail=RATE_LIMIT_GENERIC_DETAIL,
-        )
+    """Reject JSON logins for locked accounts."""
+    await _check_json_login_not_locked(request, db)
