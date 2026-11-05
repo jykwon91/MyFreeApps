@@ -181,7 +181,7 @@ export default function Properties() {
       <ConfirmDialog
         open={!!confirmDeleteId}
         title="Delete property"
-        description={`Are you sure you want to delete ${deleteTarget?.name ?? "this property"}? Documents linked to this property will lose their property assignment.`}
+        description={`Are you sure you want to delete ${deleteTarget?.name ?? "this property"}? This also permanently deletes its listings and their photos, tenant and lease records, mortgages, insurance policies and utility plans. Documents, transactions and signed leases stay, but won't be linked to this property anymore.`}
         confirmLabel="Delete"
         variant="danger"
         isLoading={isDeletePending}

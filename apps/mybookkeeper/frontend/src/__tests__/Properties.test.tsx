@@ -190,6 +190,17 @@ describe("Properties", () => {
     expect(localStorage.getItem("props-info-dismissed")).toBe("1");
   });
 
+  it("warns what else goes when deleting a property", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Properties />);
+
+    await user.click(screen.getAllByTitle("Remove")[0]!);
+
+    const warning = await screen.findByText(/Are you sure you want to delete Beach House\?/);
+    expect(warning).toHaveTextContent(/permanently deletes its listings and their photos, tenant and lease records, mortgages, insurance policies and utility plans/);
+    expect(warning).toHaveTextContent(/Documents, transactions and signed leases stay/);
+  });
+
   it("shows improved empty state message when no properties", () => {
     vi.mocked(useGetPropertiesQuery).mockReturnValue({
       data: [],
