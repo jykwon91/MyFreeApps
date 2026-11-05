@@ -126,6 +126,35 @@ describe("PendingReceipts page", () => {
     expect(screen.getByTestId("pending-receipt-send-btn")).toBeInTheDocument();
   });
 
+  it("marks a send Gmail hasn't confirmed and hides Dismiss on it", () => {
+    vi.mocked(useGetPendingReceiptsQuery).mockReturnValue({
+      data: {
+        ...pendingResponse,
+        items: [{ ...pendingResponse.items[0], status: "sending" }],
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useGetPendingReceiptsQuery>);
+
+    renderPage();
+    expect(screen.getByTestId("pending-receipt-confirming")).toHaveTextContent("Confirming with Gmail");
+    expect(screen.queryByTestId("pending-receipt-dismiss-btn")).not.toBeInTheDocument();
+    expect(screen.getByTestId("pending-receipt-send-btn")).toBeInTheDocument();
+  });
+
+  it("shows no confirming pill on a pending row", () => {
+    vi.mocked(useGetPendingReceiptsQuery).mockReturnValue({
+      data: pendingResponse,
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useGetPendingReceiptsQuery>);
+
+    renderPage();
+    expect(screen.queryByTestId("pending-receipt-confirming")).not.toBeInTheDocument();
+  });
+
   it("shows send dialog when Review & send is clicked", async () => {
     vi.mocked(useGetPendingReceiptsQuery).mockReturnValue({
       data: pendingResponse,

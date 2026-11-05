@@ -15,7 +15,6 @@ Regression coverage for two related bugs:
 """
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -25,6 +24,7 @@ from googleapiclient.errors import HttpError
 from app.core.context import RequestContext
 from app.models.organization.organization_member import OrgRole
 from app.services.email.exceptions import GmailReauthRequiredError
+from tests.gmail_send_fakes import fake_gmail_post, gmail_response
 
 
 # ---------------------------------------------------------------------------
@@ -337,20 +337,24 @@ class TestSendPathNeedsReauth:
             mark_calls.append((integ, error, failed_at))
             integ.needs_reauth = True
 
-        mock_service = MagicMock()
-        mock_service.users.return_value.messages.return_value.send.return_value.execute.side_effect = send_side_effect
+        # The send POST answers a 401 as a response, not an exception.
+        outcome = (
+            gmail_response(send_side_effect.resp.status, {})
+            if isinstance(send_side_effect, HttpError)
+            else send_side_effect
+        )
 
         return (
-            patch("app.services.email.gmail_service.unit_of_work", fake_uow),
+            patch("app.services.email.gmail_request_executor.unit_of_work", fake_uow),
             patch(
-                "app.services.email.gmail_service.integration_repo.get_by_org_and_provider",
+                "app.services.email.gmail_request_executor.integration_repo.get_by_org_and_provider",
                 new=fake_get_by_org,
             ),
             patch(
-                "app.services.email.gmail_service.integration_repo.mark_needs_reauth",
+                "app.services.email.gmail_request_executor.integration_repo.mark_needs_reauth",
                 new=fake_mark_needs_reauth,
             ),
-            patch("app.services.email.gmail_service.get_gmail_service", return_value=(mock_service, MagicMock(token="t0"))),
+            fake_gmail_post(outcome),
             stale,
         )
 
@@ -436,7 +440,7 @@ class TestSendPathNeedsReauth:
             ctx_patches[2],
             ctx_patches[3],
         ):
-            from app.services.email.gmail_service import send_message_with_attachment
+            from app.services.email.gmail_attachment_send_service import send_message_with_attachment
 
             with pytest.raises(GmailReauthRequiredError):
                 await send_message_with_attachment(
@@ -448,6 +452,7 @@ class TestSendPathNeedsReauth:
                     attachment_bytes=b"%PDF",
                     attachment_filename="receipt.pdf",
                     attachment_content_type="application/pdf",
+                    message_id_header="<r-1@mybookkeeper.app>",
                 )
 
         assert len(mark_calls) == 1
@@ -471,7 +476,7 @@ class TestSendPathNeedsReauth:
             ctx_patches[2],
             ctx_patches[3],
         ):
-            from app.services.email.gmail_service import send_message_with_attachment
+            from app.services.email.gmail_attachment_send_service import send_message_with_attachment
 
             with pytest.raises(GmailReauthRequiredError):
                 await send_message_with_attachment(
@@ -483,6 +488,7 @@ class TestSendPathNeedsReauth:
                     attachment_bytes=b"%PDF",
                     attachment_filename="receipt.pdf",
                     attachment_content_type="application/pdf",
+                    message_id_header="<r-1@mybookkeeper.app>",
                 )
 
         assert len(mark_calls) == 1

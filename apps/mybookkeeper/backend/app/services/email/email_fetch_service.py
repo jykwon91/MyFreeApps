@@ -15,11 +15,11 @@ from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.email.email_types import EmailBodyData, FetchResult
 from app.repositories import email_queue_repo, integration_repo, sync_log_repo
 from app.services.email.exceptions import GmailReauthRequiredError
+from app.services.email.gmail_credentials import persist_refreshed_token
 from app.services.email.gmail_service import (
     fetch_attachment_bytes,
     fetch_email_body,
     get_gmail_service,
-    persist_refreshed_token,
 )
 
 logger = logging.getLogger(__name__)

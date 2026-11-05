@@ -10,11 +10,12 @@ from __future__ import annotations
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.services.email import gmail_service
+from app.services.email import gmail_credentials, gmail_service
+from tests.gmail_send_fakes import fake_gmail_post, gmail_response
 
 
 def _fake_integration(org_id: uuid.UUID) -> MagicMock:
@@ -25,30 +26,13 @@ def _fake_integration(org_id: uuid.UUID) -> MagicMock:
     return integration
 
 
-def _send_service_returning(send_response: dict, *, on_execute=None) -> MagicMock:
-    """Build a Gmail service stub whose send().execute() returns ``send_response``.
-
-    Optional ``on_execute`` hook fires before the response is returned — used
-    to simulate Google's auth library mutating the credentials object during
-    the call.
-    """
-    def execute():
-        if on_execute is not None:
-            on_execute()
-        return send_response
-
-    service = MagicMock()
-    service.users.return_value.messages.return_value.send.return_value.execute = execute
-    return service
-
-
 @asynccontextmanager
 async def _fake_uow_yielding(db):
     yield db
 
 
 class TestPersistRefreshedTokenHelper:
-    """Direct coverage for gmail_service.persist_refreshed_token."""
+    """Direct coverage for gmail_credentials.persist_refreshed_token."""
 
     @pytest.mark.asyncio
     async def test_no_persist_when_token_unchanged(self) -> None:
@@ -65,11 +49,11 @@ class TestPersistRefreshedTokenHelper:
             return integration
 
         with (
-            patch("app.services.email.gmail_service.unit_of_work", lambda: _fake_uow_yielding(MagicMock())),
-            patch("app.services.email.gmail_service.integration_repo.update_access_token", new=fake_update),
-            patch("app.services.email.gmail_service.integration_repo.get_by_org_and_provider", new=fake_get),
+            patch("app.services.email.gmail_credentials.unit_of_work", lambda: _fake_uow_yielding(MagicMock())),
+            patch("app.services.email.gmail_credentials.integration_repo.update_access_token", new=fake_update),
+            patch("app.services.email.gmail_credentials.integration_repo.get_by_org_and_provider", new=fake_get),
         ):
-            await gmail_service.persist_refreshed_token(integration, creds, prior_token="tok_old")
+            await gmail_credentials.persist_refreshed_token(integration, creds, prior_token="tok_old")
 
         assert update_calls == [], "no DB write when token is unchanged"
 
@@ -91,11 +75,11 @@ class TestPersistRefreshedTokenHelper:
             return refreshed
 
         with (
-            patch("app.services.email.gmail_service.unit_of_work", lambda: _fake_uow_yielding(MagicMock())),
-            patch("app.services.email.gmail_service.integration_repo.update_access_token", new=fake_update),
-            patch("app.services.email.gmail_service.integration_repo.get_by_org_and_provider", new=fake_get),
+            patch("app.services.email.gmail_credentials.unit_of_work", lambda: _fake_uow_yielding(MagicMock())),
+            patch("app.services.email.gmail_credentials.integration_repo.update_access_token", new=fake_update),
+            patch("app.services.email.gmail_credentials.integration_repo.get_by_org_and_provider", new=fake_get),
         ):
-            await gmail_service.persist_refreshed_token(integration, creds, prior_token="tok_old")
+            await gmail_credentials.persist_refreshed_token(integration, creds, prior_token="tok_old")
 
         assert len(update_calls) == 1
         called_integ, called_token, called_expiry = update_calls[0]
@@ -118,11 +102,11 @@ class TestPersistRefreshedTokenHelper:
             return None  # integration was deleted concurrently
 
         with (
-            patch("app.services.email.gmail_service.unit_of_work", lambda: _fake_uow_yielding(MagicMock())),
-            patch("app.services.email.gmail_service.integration_repo.update_access_token", new=fake_update),
-            patch("app.services.email.gmail_service.integration_repo.get_by_org_and_provider", new=fake_get),
+            patch("app.services.email.gmail_credentials.unit_of_work", lambda: _fake_uow_yielding(MagicMock())),
+            patch("app.services.email.gmail_credentials.integration_repo.update_access_token", new=fake_update),
+            patch("app.services.email.gmail_credentials.integration_repo.get_by_org_and_provider", new=fake_get),
         ):
-            await gmail_service.persist_refreshed_token(integration, creds, prior_token="tok_old")
+            await gmail_credentials.persist_refreshed_token(integration, creds, prior_token="tok_old")
 
         assert update_calls == [], "no write attempted when integration is gone"
 
@@ -132,17 +116,11 @@ class TestSendMessagePersistence:
 
     @pytest.mark.asyncio
     async def test_send_persists_token_when_refreshed_during_call(self) -> None:
-        org_id = uuid.uuid4()
-        integration = _fake_integration(org_id)
-        creds = MagicMock(token="tok_old", expiry=None)
+        integration = _fake_integration(uuid.uuid4())
 
-        def mutate_token_on_send():
+        def refresh_during_send(creds) -> None:  # type: ignore[no-untyped-def]
             creds.token = "tok_new"
-            creds.expiry = datetime(2026, 5, 13, 12, 0, 0, tzinfo=timezone.utc)
-
-        service = _send_service_returning(
-            {"id": "sent_123"}, on_execute=mutate_token_on_send,
-        )
+            creds.expiry = datetime(2026, 5, 13, 12, 0, 0)
 
         update_calls: list = []
 
@@ -153,10 +131,10 @@ class TestSendMessagePersistence:
             return MagicMock()
 
         with (
-            patch("app.services.email.gmail_service.get_gmail_service", return_value=(service, creds)),
-            patch("app.services.email.gmail_service.unit_of_work", lambda: _fake_uow_yielding(MagicMock())),
-            patch("app.services.email.gmail_service.integration_repo.update_access_token", new=fake_update),
-            patch("app.services.email.gmail_service.integration_repo.get_by_org_and_provider", new=fake_get),
+            fake_gmail_post(gmail_response(200, {"id": "sent_123"}), on_post=refresh_during_send),
+            patch("app.services.email.gmail_credentials.unit_of_work", lambda: _fake_uow_yielding(MagicMock())),
+            patch("app.services.email.gmail_credentials.integration_repo.update_access_token", new=fake_update),
+            patch("app.services.email.gmail_credentials.integration_repo.get_by_org_and_provider", new=fake_get),
         ):
             sent_id = await gmail_service.send_message(
                 integration,
@@ -173,20 +151,15 @@ class TestSendMessagePersistence:
 
     @pytest.mark.asyncio
     async def test_send_does_not_persist_when_token_unchanged(self) -> None:
-        org_id = uuid.uuid4()
-        integration = _fake_integration(org_id)
-        creds = MagicMock(token="tok_old", expiry=None)
-
-        service = _send_service_returning({"id": "sent_456"})
-
+        integration = _fake_integration(uuid.uuid4())
         update_calls: list = []
 
         async def fake_update(_db, integ, token, expiry):
             update_calls.append((integ, token, expiry))
 
         with (
-            patch("app.services.email.gmail_service.get_gmail_service", return_value=(service, creds)),
-            patch("app.services.email.gmail_service.integration_repo.update_access_token", new=fake_update),
+            fake_gmail_post(gmail_response(200, {"id": "sent_456"})),
+            patch("app.services.email.gmail_credentials.integration_repo.update_access_token", new=fake_update),
         ):
             sent_id = await gmail_service.send_message(
                 integration,

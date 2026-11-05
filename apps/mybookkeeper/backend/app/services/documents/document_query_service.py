@@ -9,7 +9,8 @@ from app.db.session import AsyncSessionLocal
 from app.models.documents.document import Document
 from app.models.responses.download_result import DownloadResult
 from app.repositories import document_repo, integration_repo
-from app.services.email.gmail_service import get_gmail_service, fetch_email_by_id, persist_refreshed_token
+from app.services.email.gmail_credentials import persist_refreshed_token
+from app.services.email.gmail_service import get_gmail_service, fetch_email_by_id
 
 _RENDERABLE_MIME_TYPES = {"application/pdf", "image/jpeg", "image/png", "image/webp"}
 

@@ -68,3 +68,12 @@ EMAIL_FILTER_LOG_SUBJECT_MAX_LEN = 500
 # re-extracted as a duplicate income transaction).
 APP_SENT_RECEIPT_FILTER_REASON = "app_sent_receipt"
 APP_SENT_INQUIRY_REPLY_FILTER_REASON = "app_sent_inquiry_reply"
+
+
+# Socket timeout for every Gmail API request. Without it a hung request can
+# block forever and still deliver long after the caller gave up.
+GMAIL_HTTP_TIMEOUT_SECONDS = 60
+GMAIL_MESSAGE_ID_DOMAIN = "mybookkeeper.app"
+GMAIL_SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+# 403 reasons that mean "slow down", not "missing permission".
+GMAIL_RATE_LIMIT_REASONS = frozenset({"rateLimitExceeded", "userRateLimitExceeded", "dailyLimitExceeded"})

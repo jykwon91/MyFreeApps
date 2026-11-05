@@ -11,7 +11,7 @@ from app.core.context import RequestContext
 from app.core.permissions import current_org_member
 from app.db.session import unit_of_work
 from app.repositories import integration_repo
-from app.services.email import gmail_service
+from app.services.email import gmail_attachment_send_service, gmail_service
 from app.test_helpers.auth import _require_test_mode
 
 router = APIRouter()
@@ -20,6 +20,9 @@ router = APIRouter()
 # Populated by the mock stub installed via POST /test/mock-gmail-send/enable.
 # Cleared on each enable call so tests start with a clean capture window.
 _last_gmail_attachment_send: dict[str, object] | None = None
+# How many attachment sends the stub has taken since the last enable — lets
+# E2E prove a double click emails the tenant once.
+_gmail_attachment_send_count = 0
 
 
 @router.post("/test/mock-gmail-send/enable", status_code=204)
@@ -38,8 +41,9 @@ async def enable_mock_gmail_send(
     ``disable`` restores the originals.
     """
     _require_test_mode()
-    global _last_gmail_attachment_send
+    global _last_gmail_attachment_send, _gmail_attachment_send_count
     _last_gmail_attachment_send = None  # clear capture window on each enable
+    _gmail_attachment_send_count = 0
 
     if getattr(gmail_service, "_real_send_message", None) is None:
         gmail_service._real_send_message = gmail_service.send_message  # type: ignore[attr-defined]
@@ -49,11 +53,14 @@ async def enable_mock_gmail_send(
 
     gmail_service.send_message = _stub  # type: ignore[assignment]
 
-    if getattr(gmail_service, "_real_send_message_with_attachment", None) is None:
-        gmail_service._real_send_message_with_attachment = gmail_service.send_message_with_attachment  # type: ignore[attr-defined]
+    if getattr(gmail_attachment_send_service, "_real_send_message_with_attachment", None) is None:
+        gmail_attachment_send_service._real_send_message_with_attachment = (  # type: ignore[attr-defined]
+            gmail_attachment_send_service.send_message_with_attachment
+        )
 
     async def _attachment_stub(*args: object, **kwargs: object) -> str:
-        global _last_gmail_attachment_send
+        global _last_gmail_attachment_send, _gmail_attachment_send_count
+        _gmail_attachment_send_count += 1
         _last_gmail_attachment_send = {
             "to_address": kwargs.get("to_address"),
             "subject": kwargs.get("subject"),
@@ -61,7 +68,7 @@ async def enable_mock_gmail_send(
         }
         return f"<e2e-mock-att-{uuid.uuid4().hex[:12]}@mybookkeeper.app>"
 
-    gmail_service.send_message_with_attachment = _attachment_stub  # type: ignore[assignment]
+    gmail_attachment_send_service.send_message_with_attachment = _attachment_stub  # type: ignore[assignment]
 
     # Also mock storage so receipt PDF upload succeeds without a real MinIO.
     if getattr(_storage_module, "_real_get_storage", None) is None:
@@ -99,10 +106,10 @@ async def disable_mock_gmail_send(
         gmail_service.send_message = real  # type: ignore[assignment]
         gmail_service._real_send_message = None  # type: ignore[attr-defined]
 
-    real_att = getattr(gmail_service, "_real_send_message_with_attachment", None)
+    real_att = getattr(gmail_attachment_send_service, "_real_send_message_with_attachment", None)
     if real_att is not None:
-        gmail_service.send_message_with_attachment = real_att  # type: ignore[assignment]
-        gmail_service._real_send_message_with_attachment = None  # type: ignore[attr-defined]
+        gmail_attachment_send_service.send_message_with_attachment = real_att  # type: ignore[assignment]
+        gmail_attachment_send_service._real_send_message_with_attachment = None  # type: ignore[attr-defined]
 
     real_storage = getattr(_storage_module, "_real_get_storage", None)
     if real_storage is not None:
@@ -116,6 +123,7 @@ class _LastGmailSendResponse(BaseModel):
     subject: str | None = None
     has_attachment: bool = False
     attachment_filename: str | None = None
+    send_count: int = 0
 
 
 @router.get("/test/last-gmail-send", response_model=_LastGmailSendResponse)
@@ -131,13 +139,14 @@ async def get_last_gmail_send(
     _require_test_mode()
     captured = _last_gmail_attachment_send
     if captured is None:
-        return _LastGmailSendResponse(captured=False)
+        return _LastGmailSendResponse(captured=False, send_count=_gmail_attachment_send_count)
     return _LastGmailSendResponse(
         captured=True,
         to_address=captured.get("to_address"),  # type: ignore[arg-type]
         subject=captured.get("subject"),  # type: ignore[arg-type]
         has_attachment="attachment_filename" in captured,
         attachment_filename=captured.get("attachment_filename"),  # type: ignore[arg-type]
+        send_count=_gmail_attachment_send_count,
     )
 
 

@@ -4,6 +4,11 @@ import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useSendReceiptMutation } from "@/shared/store/rentReceiptsApi";
 import api from "@/shared/lib/api";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
+import {
+  RECEIPT_SEND_FINISHED_CODES,
+  receiptSendErrorDetail,
+  receiptSendErrorMessage,
+} from "@/shared/lib/receipt-send-errors";
 import { inferPaymentMethod } from "./inferPaymentMethod";
 import ReceiptPreviewPane from "./ReceiptPreviewPane";
 
@@ -100,17 +105,9 @@ export default function SendReceiptDialog({ transaction, onClose }: SendReceiptD
       showSuccess(`Receipt ${result.receipt_number} sent.`);
       onClose(result.receipt_number);
     } catch (err: unknown) {
-      const detail =
-        (err as { data?: { detail?: string } })?.data?.detail ?? "";
-      if (detail === "gmail_reauth_required") {
-        showError(
-          "Gmail needs to be reconnected before sending receipts. Go to Integrations → Reconnect Gmail.",
-        );
-      } else if (detail) {
-        showError(detail);
-      } else {
-        showError("Couldn't send the receipt. Please try again.");
-      }
+      const detail = receiptSendErrorDetail(err);
+      showError(receiptSendErrorMessage(detail));
+      if (RECEIPT_SEND_FINISHED_CODES.has(detail)) onClose();
     }
   }
 
