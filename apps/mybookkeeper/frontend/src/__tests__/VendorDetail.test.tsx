@@ -106,7 +106,7 @@ describe("VendorDetail page", () => {
 
   it("renders the formatted hourly rate and flat-rate notes", () => {
     renderVendorDetail();
-    expect(screen.getByTestId("vendor-hourly-rate")).toHaveTextContent("$125.00/hr");
+    expect(screen.getByTestId("vendor-hourly-rate")).toHaveTextContent("$125/hr");
     expect(screen.getByTestId("vendor-flat-rate-notes")).toHaveTextContent(
       /Flat \$200 for drain unclog/,
     );

@@ -178,7 +178,7 @@ jobs:
     if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
     name: frontend-build / mybookkeeper
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -204,7 +204,13 @@ jobs:
       - name: Build frontend
         run: npm run build --workspace=mybookkeeper-frontend
 
+      - name: Test frontend
+        # The website's unit tests. Until this ran, failures here went unnoticed.
+        run: npm test --workspace=mybookkeeper-frontend
+
       - name: Check API client
+        # Runs even when the website tests fail, so one red run shows both problems.
+        if: ${{ !cancelled() }}
         run: |
           npm run typecheck --workspace=@mybookkeeper/api-client
           npm run lint --workspace=@mybookkeeper/api-client
