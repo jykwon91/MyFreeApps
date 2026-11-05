@@ -2,9 +2,10 @@ import { useState, useMemo } from "react";
 import * as Accordion from "@radix-ui/react-accordion";
 import { ChevronRight, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
-import { getFormLabel, FORM_TYPE_ORDER } from "@/shared/lib/tax-config";
+import { compareFormTypes } from "@mybookkeeper/api-client/utils/compareFormTypes";
+import { getFormLabel } from "@mybookkeeper/api-client/utils/taxFormLabel";
 import FormTypeGroup from "@/app/features/tax/FormTypeGroup";
-import type { TaxSourceDocument } from "@/shared/types/tax/source-document";
+import type { TaxSourceDocument } from "@mybookkeeper/api-client/types/tax/TaxSourceDocument";
 
 interface TaxDocumentsAccordionProps {
   documents: TaxSourceDocument[];
@@ -33,15 +34,7 @@ export default function TaxDocumentsAccordion({
 
     return sortedYears.map((year) => {
       const byType = byYear.get(year)!;
-      // Sort form types by FORM_TYPE_ORDER; unknowns go to end alphabetically
-      const sortedTypes = [...byType.keys()].sort((a, b) => {
-        const ai = FORM_TYPE_ORDER.indexOf(a);
-        const bi = FORM_TYPE_ORDER.indexOf(b);
-        if (ai === -1 && bi === -1) return a.localeCompare(b);
-        if (ai === -1) return 1;
-        if (bi === -1) return -1;
-        return ai - bi;
-      });
+      const sortedTypes = [...byType.keys()].sort(compareFormTypes);
       return {
         year,
         types: sortedTypes.map((type) => ({

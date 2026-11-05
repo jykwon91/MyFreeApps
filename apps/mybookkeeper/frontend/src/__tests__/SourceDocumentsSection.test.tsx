@@ -4,7 +4,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import SourceDocumentsSection from "@/app/features/tax/SourceDocumentsSection";
-import type { SourceDocumentsResponse } from "@/shared/types/tax/source-document";
+import type { SourceDocumentsResponse } from "@mybookkeeper/api-client/types/tax/SourceDocumentsResponse";
 
 const mockSourceDocumentsData: SourceDocumentsResponse = {
   documents: [

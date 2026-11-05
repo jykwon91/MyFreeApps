@@ -1,9 +1,10 @@
 import { useMemo } from "react";
 import { Eye, Download, FileText } from "lucide-react";
 import { downloadDocument } from "@/shared/utils/downloadDocument";
-import { getFormLabel, FORM_TYPE_ORDER } from "@/shared/lib/tax-config";
+import { compareFormTypes } from "@mybookkeeper/api-client/utils/compareFormTypes";
+import { getFormLabel } from "@mybookkeeper/api-client/utils/taxFormLabel";
 import Badge from "@/shared/components/ui/Badge";
-import type { TaxSourceDocument } from "@/shared/types/tax/source-document";
+import type { TaxSourceDocument } from "@mybookkeeper/api-client/types/tax/TaxSourceDocument";
 
 interface ReceivedDocumentsGroupedProps {
   documents: TaxSourceDocument[];
@@ -21,12 +22,7 @@ export default function ReceivedDocumentsGrouped({
       if (!groups.has(type)) groups.set(type, []);
       groups.get(type)!.push(doc);
     }
-    // Sort by FORM_TYPE_ORDER
-    return [...groups.entries()].sort((a, b) => {
-      const ai = FORM_TYPE_ORDER.indexOf(a[0]);
-      const bi = FORM_TYPE_ORDER.indexOf(b[0]);
-      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
-    });
+    return [...groups.entries()].sort((a, b) => compareFormTypes(a[0], b[0]));
   }, [documents]);
 
   if (documents.length === 0) {

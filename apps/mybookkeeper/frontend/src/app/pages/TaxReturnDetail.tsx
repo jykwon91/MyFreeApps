@@ -21,7 +21,7 @@ import FormFieldsTable from "@/app/features/tax/FormFieldsTable";
 import ValidationPanel from "@/app/features/tax/ValidationPanel";
 import SourceDocumentsSection from "@/app/features/tax/SourceDocumentsSection";
 import TaxAdvisorPanel from "@/app/features/tax/TaxAdvisorPanel";
-import { getFormLabel } from "@/shared/lib/tax-config";
+import { getFormLabel } from "@mybookkeeper/api-client/utils/taxFormLabel";
 import type { FieldValueType } from "@/shared/types/tax/tax-form";
 import { STATUS_BADGE } from "@/shared/lib/tax-return-config";
 

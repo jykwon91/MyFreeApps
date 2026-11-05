@@ -1,6 +1,6 @@
 import { Eye, Download } from "lucide-react";
 import { downloadDocument } from "@/shared/utils/downloadDocument";
-import type { TaxSourceDocument } from "@/shared/types/tax/source-document";
+import type { TaxSourceDocument } from "@mybookkeeper/api-client/types/tax/TaxSourceDocument";
 
 interface DocumentItemProps {
   doc: TaxSourceDocument;

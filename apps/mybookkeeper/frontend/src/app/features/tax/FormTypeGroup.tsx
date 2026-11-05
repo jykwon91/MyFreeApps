@@ -1,9 +1,9 @@
 import * as Accordion from "@radix-ui/react-accordion";
 import { ChevronRight } from "lucide-react";
-import { getFormLabel } from "@/shared/lib/tax-config";
+import { getFormLabel } from "@mybookkeeper/api-client/utils/taxFormLabel";
 import Badge from "@/shared/components/ui/Badge";
 import DocumentItem from "@/app/features/tax/DocumentItem";
-import type { TaxSourceDocument } from "@/shared/types/tax/source-document";
+import type { TaxSourceDocument } from "@mybookkeeper/api-client/types/tax/TaxSourceDocument";
 
 interface FormTypeGroupProps {
   formType: string;

@@ -1,5 +1,5 @@
 import { FileText, AlertTriangle, CheckCircle2, AlertCircle } from "lucide-react";
-import { getFormLabel } from "@/shared/lib/tax-config";
+import { getFormLabel } from "@mybookkeeper/api-client/utils/taxFormLabel";
 import Badge from "@/shared/components/ui/Badge";
 import type { BadgeColor } from "@/shared/components/ui/Badge";
 import type { ValidationResult } from "@/shared/types/tax/validation-result";
