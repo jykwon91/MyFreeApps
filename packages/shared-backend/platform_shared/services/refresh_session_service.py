@@ -1,6 +1,6 @@
 """Signed-in devices, for clients that keep a refresh token.
 
-Nothing here commits. The caller commits on every outcome, including a refused
+Each write is its own transaction, committed on every outcome, including a refused
 refresh, because refusing can end the session.
 
 Clients must send one refresh at a time. Parallel refreshes with one secret look
@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import logging
 import uuid
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -48,6 +49,7 @@ class RefreshSessionService:
     session_model: type[Any]
     user_model: type[Any]
     signing_key: str
+    unit_of_work_factory: Callable[[], AbstractAsyncContextManager[AsyncSession]]
     idle_seconds: int = REFRESH_SESSION_IDLE_SECONDS
     absolute_seconds: int = REFRESH_SESSION_ABSOLUTE_SECONDS
     previous_secret_seconds: int = REFRESH_SESSION_PREVIOUS_SECRET_SECONDS
@@ -71,10 +73,12 @@ class RefreshSessionService:
         cutoff = user.auth_valid_after
         return cutoff is None or session.created_at >= cutoff
 
-    async def issue(
-        self, db: AsyncSession, user: Any, *, device_name: str | None = None,
-    ) -> RefreshedSession:
+    async def issue(self, user: Any, *, device_name: str | None = None) -> RefreshedSession:
         """Start a session for a login that just succeeded."""
+        async with self.unit_of_work_factory() as db:
+            return await self._issue(db, user, device_name)
+
+    async def _issue(self, db: AsyncSession, user: Any, device_name: str | None) -> RefreshedSession:
         now = _now()
         await refresh_session_repo.delete_expired_for_user(
             db,
@@ -98,7 +102,7 @@ class RefreshSessionService:
             last_used_at=now,
             expires_at=now + timedelta(seconds=self.absolute_seconds),
         )
-        db.add(session)
+        refresh_session_repo.add(db, session)
         return RefreshedSession(
             user=user, session=session, refresh_token=format_refresh_token(session_id, secret, self.signing_key),
         )
@@ -108,15 +112,14 @@ class RefreshSessionService:
         parsed = parse_refresh_token(token, self.signing_key)
         return None if parsed is None else parsed[0]
 
-    async def end(self, db: AsyncSession, token: str) -> None:
+    async def end(self, token: str) -> None:
         """Sign out the device holding this token. Doing it twice is fine."""
         session_id = self.session_id_of(token)
         if session_id is not None:
-            await refresh_session_repo.delete_by_id(db, self.session_model, session_id)
+            async with self.unit_of_work_factory() as db:
+                await refresh_session_repo.delete_by_id(db, self.session_model, session_id)
 
-    async def rotate(
-        self, db: AsyncSession, token: str, *, request: Request | None = None,
-    ) -> RefreshedSession | None:
+    async def rotate(self, token: str, *, request: Request | None = None) -> RefreshedSession | None:
         """Swap a refresh token for a new one, or None if it can't be used.
 
         - A token this server didn't sign changes nothing, so knowing a session id
@@ -128,6 +131,10 @@ class RefreshSessionService:
           A client only goes back to its previous token, so two parties hold this
           session, and the session ends for both.
         """
+        async with self.unit_of_work_factory() as db:
+            return await self._rotate(db, token, request)
+
+    async def _rotate(self, db: AsyncSession, token: str, request: Request | None) -> RefreshedSession | None:
         parsed = parse_refresh_token(token, self.signing_key)
         if parsed is None:
             return None
@@ -181,9 +188,22 @@ class RefreshSessionService:
         sessions = await refresh_session_repo.list_for_user(db, self.session_model, user.id)
         return [session for session in sessions if self._is_usable(session, user, now)]
 
-    async def revoke(self, db: AsyncSession, user_id: uuid.UUID, session_id: uuid.UUID) -> bool:
+    async def revoke(
+        self, user_id: uuid.UUID, session_id: uuid.UUID, *, request: Request | None = None,
+    ) -> bool:
         """Sign out one of this user's devices. False if it isn't theirs or doesn't exist."""
-        return await refresh_session_repo.delete_owned(db, self.session_model, user_id, session_id)
+        async with self.unit_of_work_factory() as db:
+            revoked = await refresh_session_repo.delete_owned(db, self.session_model, user_id, session_id)
+            if revoked:
+                await log_auth_event(
+                    db,
+                    event_type=AuthEventType.DEVICE_SIGNED_OUT,
+                    user_id=user_id,
+                    request=request,
+                    succeeded=True,
+                    metadata={"session_id": str(session_id)},
+                )
+            return revoked
 
 
 __all__ = ["RefreshSessionService"]

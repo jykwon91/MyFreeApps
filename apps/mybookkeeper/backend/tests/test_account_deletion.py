@@ -11,23 +11,21 @@ Tests cover:
 import contextlib
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import pytest_asyncio
 from httpx import ASGITransport, AsyncClient, Response
 from platform_shared.core.auth_messages import RATE_LIMIT_GENERIC_DETAIL
+from platform_shared.services.guard_outcome import GuardOutcome
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth import current_active_user
+from app.core.auth import UserManager, current_active_user
 from app.core.config import settings
 from app.db.session import get_db
 from app.main import app
 from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrganizationMember
-from app.models.properties.property import Property
 from app.models.user.user import User
 
 
@@ -136,6 +134,7 @@ async def test_wrong_passwords_lock_the_account_like_wrong_logins(db: AsyncSessi
 
     assert (await _try_to_delete(db, user, password_ok=False)).status_code == 403
 
+    await db.refresh(user)
     assert user.failed_login_count == settings.lockout_threshold
     assert user.locked_until is not None
 
@@ -148,36 +147,23 @@ async def test_wrong_code_counts_toward_the_lockout(db: AsyncSession) -> None:
 
     assert (await _try_to_delete(db, user, password_ok=True, code_ok=False)).status_code == 403
 
+    await db.refresh(user)
     assert user.failed_login_count == 1
 
 
 @pytest.mark.anyio
 async def test_locked_account_is_refused_even_with_the_right_password(db: AsyncSession) -> None:
     user = _make_user()
-    user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=10)
     db.add(user)
     await db.flush()
+    guard = MagicMock(begin_attempt=AsyncMock(return_value=GuardOutcome.LOCKED))
 
-    response = await _try_to_delete(db, user, password_ok=True)
+    with patch.object(UserManager, "account_guard", new=guard):
+        response = await _try_to_delete(db, user, password_ok=True)
 
     assert response.status_code == 429
     assert response.json()["detail"] == RATE_LIMIT_GENERIC_DETAIL
     assert await db.get(User, user.id) is not None
-    assert user.failed_login_count == 0
-
-
-@pytest.mark.anyio
-async def test_old_failures_dont_count_toward_the_lockout(db: AsyncSession) -> None:
-    user = _make_user()
-    user.failed_login_count = settings.lockout_threshold - 1
-    user.last_failed_login_at = datetime.now(timezone.utc) - timedelta(days=30)
-    db.add(user)
-    await db.flush()
-
-    assert (await _try_to_delete(db, user, password_ok=False)).status_code == 403
-
-    assert user.failed_login_count == 1
-    assert user.locked_until is None
 
 
 # ---------------------------------------------------------------------------

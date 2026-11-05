@@ -275,7 +275,7 @@ async def test_a_right_code_cant_disable_a_locked_account_or_get_spent(stored: A
 
 
 @pytest.mark.asyncio
-async def test_step_up_spends_a_code_and_commits(stored: Any) -> None:
+async def test_step_up_spends_a_code(stored: Any) -> None:
     secret = generate_secret()
     user = _user(secret=secret)
     stored(user)
@@ -285,7 +285,6 @@ async def test_step_up_spends_a_code_and_commits(stored: Any) -> None:
 
     assert await service.verify_totp_code(db, user.id, code) is True
     assert user.totp_last_used_step is not None
-    db.commit.assert_awaited_once()
     assert await service.verify_totp_code(db, user.id, code) is False
 
 
@@ -302,14 +301,13 @@ async def test_step_up_spends_a_recovery_code(stored: Any) -> None:
 
 
 @pytest.mark.asyncio
-async def test_step_up_rejects_a_wrong_code_and_still_releases_the_lock(stored: Any) -> None:
+async def test_step_up_rejects_a_wrong_code(stored: Any) -> None:
     user = _user(secret=generate_secret())
     stored(user)
     db = AsyncMock()
 
     assert await _service().verify_totp_code(db, user.id, "000000") is False
     assert await _service().verify_totp_code(db, user.id, "") is False
-    db.commit.assert_awaited_once()
 
 
 @pytest.mark.asyncio

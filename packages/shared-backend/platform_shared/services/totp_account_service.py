@@ -128,20 +128,18 @@ class TotpAccountService:
     async def verify_totp_code(self, db: AsyncSession, user_id: uuid.UUID, code: str) -> bool:
         """Spend a code or recovery code for account deletion or the superuser gate.
 
-        Commits on the caller's session, so a spent code stays spent if the action
-        then fails, and the row lock is gone before the action starts.
+        The caller's transaction ends before the action starts, so a spent code stays
+        spent if the action then fails, and the row lock is gone by then.
         """
         if not code:
             return False
         user = await lock_by_id(db, user_id, user_model=self.user_model)
-        valid = (
+        return (
             user is not None
             and user.totp_enabled
             and bool(user.totp_secret)
             and (self._spend_time_code(user, code) or self._spend_recovery_code(user, code))
         )
-        await db.commit()
-        return valid
 
     def _spend_time_code(self, user: Any, code: str) -> bool:
         step = matching_time_step(

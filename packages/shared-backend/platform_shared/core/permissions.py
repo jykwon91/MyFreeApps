@@ -351,7 +351,10 @@ def make_strict_superuser_gate(
                 headers={"X-Require-Step-Up": "totp"},
             )
 
-        if not await verify_totp_step_up(db, user_id, x_totp_code):
+        code_ok = await verify_totp_step_up(db, user_id, x_totp_code)
+        # Keeps a spent code spent, and lets go of the row before the route runs.
+        await db.commit()
+        if not code_ok:
             await _record(AuthEventType.SUPERUSER_GATE_DENIED_BAD_TOTP, succeeded=False)
             raise HTTPException(
                 status_code=401,

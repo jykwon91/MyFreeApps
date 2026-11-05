@@ -1,7 +1,7 @@
-"""Read repository for the auth_events audit table.
+"""Repository for the auth_events audit table.
 
-Writes go through ``platform_shared.services.auth_event_service.log_auth_event``;
-reads go through here. Used by the admin auth-events listing route
+Callers write through ``platform_shared.services.auth_event_service.log_auth_event``,
+which builds the row; reads go through here. Used by the admin auth-events listing route
 (``platform_shared.api.admin_auth_events_router``).
 """
 from __future__ import annotations
@@ -14,6 +14,11 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.db.models.auth_event import AuthEvent
+
+
+def add(db: AsyncSession, event: AuthEvent) -> None:
+    """Add the row to the session. The caller's transaction commits it."""
+    db.add(event)
 
 
 async def list_filtered(

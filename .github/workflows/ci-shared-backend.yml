@@ -35,6 +35,23 @@ jobs:
     name: shared-backend-tests
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # tests/real_auth_stack.py: row locks and connection use need a real database.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      SHARED_BACKEND_TEST_POSTGRES_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
