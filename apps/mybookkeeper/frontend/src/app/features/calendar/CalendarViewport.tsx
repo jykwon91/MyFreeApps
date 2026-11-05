@@ -1,6 +1,6 @@
 import CalendarGrid from "@/app/features/calendar/CalendarGrid";
 import CalendarMonthGrid from "@/app/features/calendar/CalendarMonthGrid";
-import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
+import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 import type { CalendarView } from "@/shared/types/calendar/calendar-view";
 
 export interface CalendarViewportProps {

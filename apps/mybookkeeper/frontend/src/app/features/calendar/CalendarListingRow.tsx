@@ -1,18 +1,12 @@
-import {
-  CALENDAR_DAY_CELL_PX,
-  CALENDAR_LABEL_COLUMN_PX,
-  CALENDAR_ROW_HEIGHT_PX,
-  CALENDAR_UNASSIGNED_KEY,
-  CALENDAR_UNASSIGNED_LISTING_LABEL,
-  CALENDAR_UNASSIGNED_PROPERTY_LABEL,
-} from "@/shared/lib/calendar-constants";
+import { CALENDAR_UNASSIGNED_LISTING_LABEL } from "@mybookkeeper/api-client/constants/calendarSources";
+import { CALENDAR_DAY_CELL_PX, CALENDAR_LABEL_COLUMN_PX, CALENDAR_ROW_HEIGHT_PX, CALENDAR_UNASSIGNED_KEY, CALENDAR_UNASSIGNED_PROPERTY_LABEL } from "@/shared/lib/calendar-constants";
 import {
   eventStartIndex,
   eventSpan,
   type ListingRow,
 } from "@/app/features/calendar/calendar-utils";
 import CalendarEventBar from "@/app/features/calendar/CalendarEventBar";
-import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
+import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 
 export interface CalendarListingRowProps {
   row: ListingRow;

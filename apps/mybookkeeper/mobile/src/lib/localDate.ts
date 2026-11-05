@@ -10,6 +10,15 @@ export function isoFromDate(date: Date): string {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
+export function monthOf(date: Date): string {
+  return isoFromDate(new Date(date.getFullYear(), date.getMonth(), 1));
+}
+
+export function shiftMonth(month: string, by: number): string {
+  const start = dateFromIso(month);
+  return isoFromDate(new Date(start.getFullYear(), start.getMonth() + by, 1));
+}
+
 export function fullDateLabel(iso: string): string {
   return dateFromIso(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }

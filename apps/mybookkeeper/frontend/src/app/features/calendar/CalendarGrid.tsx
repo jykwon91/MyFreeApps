@@ -10,7 +10,7 @@ import {
   groupByListing,
   groupByProperty,
 } from "@/app/features/calendar/calendar-utils";
-import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
+import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 import CalendarGridHeader from "@/app/features/calendar/CalendarGridHeader";
 import CalendarListingRow from "@/app/features/calendar/CalendarListingRow";
 import CalendarEventDetail from "@/app/features/calendar/CalendarEventDetail";

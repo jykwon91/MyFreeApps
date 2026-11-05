@@ -10,7 +10,7 @@ import {
   formatMonthYear,
   parseIsoDate,
 } from "@/app/features/calendar/calendar-utils";
-import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
+import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 import type { MonthEventSegment } from "@/shared/types/calendar/month-event-segment";
 import type { MonthGrid } from "@/shared/types/calendar/month-grid";
 import type { MonthGridDay } from "@/shared/types/calendar/month-grid-day";

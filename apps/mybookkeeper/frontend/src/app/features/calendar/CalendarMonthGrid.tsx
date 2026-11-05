@@ -4,7 +4,7 @@ import { buildMonthGrid, eventsOnDay } from "@/app/features/calendar/month-grid-
 import CalendarEventDetail from "@/app/features/calendar/CalendarEventDetail";
 import CalendarMonthDayDialog from "@/app/features/calendar/CalendarMonthDayDialog";
 import CalendarMonthWeekRow from "@/app/features/calendar/CalendarMonthWeekRow";
-import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
+import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 
 export interface CalendarMonthGridProps {
   events: readonly CalendarEvent[];

@@ -4,6 +4,9 @@ const { transformIgnorePatterns } = require("jest-expo/jest-preset");
 // resolves here, so they need transforming like the packages the preset already allows.
 const ES_MODULE_PACKAGES = "(?:react-redux|@reduxjs/toolkit|immer|reselect|redux|redux-thunk|axios)";
 
+// Behind UTC, so a date read as UTC by mistake lands on the day before and fails a test.
+process.env.TZ = "America/Los_Angeles";
+
 module.exports = {
   preset: "jest-expo",
   setupFiles: ["<rootDir>/../../../packages/shared-mobile/jest/animationFrame.js"],

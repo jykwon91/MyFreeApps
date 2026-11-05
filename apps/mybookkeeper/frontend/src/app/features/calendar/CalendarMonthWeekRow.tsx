@@ -6,7 +6,7 @@ import {
 } from "@/shared/lib/calendar-constants";
 import CalendarMonthDayCell from "@/app/features/calendar/CalendarMonthDayCell";
 import CalendarMonthEventPill from "@/app/features/calendar/CalendarMonthEventPill";
-import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
+import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 import type { MonthGridWeek } from "@/shared/types/calendar/month-grid-week";
 
 export interface CalendarMonthWeekRowProps {

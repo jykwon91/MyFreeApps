@@ -1,10 +1,6 @@
-import {
-  CALENDAR_UNASSIGNED_LISTING_LABEL,
-  getSourceColor,
-  getSourceLabel,
-  isReadOnlySource,
-} from "@/shared/lib/calendar-constants";
-import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
+import { CALENDAR_UNASSIGNED_LISTING_LABEL, getSourceLabel, isReadOnlySource } from "@mybookkeeper/api-client/constants/calendarSources";
+import { getSourceColor } from "@/shared/lib/calendar-constants";
+import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 
 export interface CalendarAgendaEventProps {
   event: CalendarEvent;

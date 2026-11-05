@@ -8,7 +8,7 @@ import {
   startOfMonth,
   startOfWeek,
 } from "@/app/features/calendar/month-grid-utils";
-import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
+import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 
 function makeEvent(overrides: Partial<CalendarEvent> & Pick<CalendarEvent, "id">): CalendarEvent {
   return {

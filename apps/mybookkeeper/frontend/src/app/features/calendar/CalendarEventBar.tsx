@@ -1,6 +1,7 @@
-import { getSourceColor, getSourceLabel, isReadOnlySource } from "@/shared/lib/calendar-constants";
+import { getSourceLabel, isReadOnlySource } from "@mybookkeeper/api-client/constants/calendarSources";
+import { getSourceColor } from "@/shared/lib/calendar-constants";
 import { CALENDAR_DAY_CELL_PX } from "@/shared/lib/calendar-constants";
-import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
+import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 
 export interface CalendarEventBarProps {
   event: CalendarEvent;

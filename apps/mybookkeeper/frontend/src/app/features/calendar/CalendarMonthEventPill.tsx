@@ -1,13 +1,6 @@
-import {
-  CALENDAR_MONTH_DAY_HEADER_PX,
-  CALENDAR_MONTH_LANE_GAP_PX,
-  CALENDAR_MONTH_LANE_HEIGHT_PX,
-  CALENDAR_WEEK_LENGTH,
-  getSourceColor,
-  getSourceLabel,
-  isReadOnlySource,
-} from "@/shared/lib/calendar-constants";
-import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
+import { getSourceLabel, isReadOnlySource } from "@mybookkeeper/api-client/constants/calendarSources";
+import { CALENDAR_MONTH_DAY_HEADER_PX, CALENDAR_MONTH_LANE_GAP_PX, CALENDAR_MONTH_LANE_HEIGHT_PX, CALENDAR_WEEK_LENGTH, getSourceColor } from "@/shared/lib/calendar-constants";
+import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 import type { MonthEventSegment } from "@/shared/types/calendar/month-event-segment";
 
 export interface CalendarMonthEventPillProps {
