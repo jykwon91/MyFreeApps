@@ -1,3 +1,5 @@
+import { DEMO_EMAIL_REFUSED } from "@mybookkeeper/api-client/constants/demoRefusal";
+import { isDemoRefusal } from "@mybookkeeper/api-client/utils/isDemoRefusal";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
@@ -112,8 +114,8 @@ export default function LeaseDetail() {
     try {
       await emailLeaseToTenant(lease.id).unwrap();
       showSuccess("Email queued — should arrive in a few minutes.");
-    } catch {
-      showError("Couldn't queue the tenant email. Want to try again?");
+    } catch (err) {
+      showError(isDemoRefusal(err) ? DEMO_EMAIL_REFUSED : "Couldn't queue the tenant email. Want to try again?");
     }
   }
 

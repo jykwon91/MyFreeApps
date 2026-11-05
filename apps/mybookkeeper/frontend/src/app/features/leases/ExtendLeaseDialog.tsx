@@ -1,3 +1,5 @@
+import { DEMO_EXTEND_REFUSED } from "@mybookkeeper/api-client/constants/demoRefusal";
+import { isDemoRefusal } from "@mybookkeeper/api-client/utils/isDemoRefusal";
 import { useState } from "react";
 import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
@@ -107,7 +109,7 @@ export default function ExtendLeaseDialog({
         showError("This tenant has no email on file. Nothing was changed.");
         return;
       }
-      showError("Couldn't extend the lease. Please try again.");
+      showError(isDemoRefusal(err) ? DEMO_EXTEND_REFUSED : "Couldn't extend the lease. Please try again.");
     }
   }
 

@@ -1,11 +1,11 @@
 import { useGetRentReminderSendsQuery, useSendRentReminderNowMutation } from "@mybookkeeper/api-client/store/rentRemindersApi";
 import type { RentReminderChannel } from "@mybookkeeper/api-client/types/rent/rent-reminder-channel";
 import type { RentReminderPreview } from "@mybookkeeper/api-client/types/rent/rent-reminder-preview";
+import { isDemoRefusal } from "@mybookkeeper/api-client/utils/isDemoRefusal";
 import { useToast } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
 import { LOST_SEND_HOLD_MS, REMINDER_MESSAGES } from "../../constants/rentReminders";
 import { UPLOAD_MESSAGES } from "../../constants/uploads";
-import { isDemoRefusal } from "../../lib/isDemoRefusal";
 import { httpStatus } from "../transactions/transactionMessages";
 import { sendOutcome } from "./rentReminderDisplay";
 

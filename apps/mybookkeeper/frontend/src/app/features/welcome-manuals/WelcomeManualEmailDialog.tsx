@@ -3,6 +3,8 @@ import { AlertCircle, CheckCircle, Info, X } from "lucide-react";
 import Panel from "@/shared/components/ui/Panel";
 import FormField from "@/shared/components/ui/FormField";
 import { LoadingButton } from "@platform/ui";
+import { DEMO_EMAIL_REFUSED } from "@mybookkeeper/api-client/constants/demoRefusal";
+import { isDemoRefusal } from "@mybookkeeper/api-client/utils/isDemoRefusal";
 import { showError } from "@/shared/lib/toast-store";
 import { EMAIL_REGEX, SHARED_ROOM_OPTION } from "@/shared/lib/welcome-manual-constants";
 import { useEmailWelcomeManualMutation } from "@/shared/store/welcomeManualsApi";
@@ -47,10 +49,11 @@ export default function WelcomeManualEmailDialog({ manualId, rooms, onClose }: W
       }).unwrap();
       setErrorReason(send.error_reason);
       setStep(send.status);
-    } catch {
+    } catch (err) {
       // A non-200 (e.g. 404 manual not found) — the send-record path returns
-      // 200 even for failed/skipped, so this only fires on transport errors.
-      showError("I couldn't send that. Want to try again?");
+      // 200 even for failed/skipped, so this only fires on transport errors
+      // and a demo account's refusal.
+      showError(isDemoRefusal(err) ? DEMO_EMAIL_REFUSED : "I couldn't send that. Want to try again?");
     }
   }
 

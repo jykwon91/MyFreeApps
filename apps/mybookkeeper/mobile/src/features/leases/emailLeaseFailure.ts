@@ -1,6 +1,7 @@
+import { DEMO_EMAIL_REFUSED } from "@mybookkeeper/api-client/constants/demoRefusal";
+import { isDemoRefusal } from "@mybookkeeper/api-client/utils/isDemoRefusal";
 import { LEASE_MESSAGES, noEmailForLease } from "../../constants/leases";
 import { UPLOAD_MESSAGES } from "../../constants/uploads";
-import { isDemoRefusal } from "../../lib/isDemoRefusal";
 import { httpStatus } from "../transactions/transactionMessages";
 import { isMissingTenantEmail } from "./extendLeaseFailure";
 
@@ -10,7 +11,7 @@ export function emailLeaseFailure(error: unknown, tenantName: string | null): st
     case undefined:
       return LEASE_MESSAGES.emailUnsure;
     case 403:
-      return isDemoRefusal(error) ? LEASE_MESSAGES.emailDemo : UPLOAD_MESSAGES.notAllowed;
+      return isDemoRefusal(error) ? DEMO_EMAIL_REFUSED : UPLOAD_MESSAGES.notAllowed;
     case 404:
       return LEASE_MESSAGES.goneWhileChanging;
     default:
