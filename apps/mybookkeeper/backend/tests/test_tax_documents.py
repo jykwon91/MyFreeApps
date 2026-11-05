@@ -1,13 +1,14 @@
 """Tests for GET /tax-documents endpoint and list_all_source_documents service."""
 import uuid
 from contextlib import asynccontextmanager
-from datetime import date
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.context import RequestContext
@@ -15,10 +16,12 @@ from app.core.permissions import current_org_member
 from app.main import app
 from app.models.documents.document import Document
 from app.models.organization.organization import Organization
+from app.models.properties.property import Property
 from app.models.tax.tax_form_field import TaxFormField
 from app.models.tax.tax_form_instance import TaxFormInstance
 from app.models.tax.tax_return import TaxReturn
 from app.models.transactions.booking_statement import BookingStatement
+from app.models.transactions.transaction import Transaction
 from app.models.user.user import User
 from app.services.tax import tax_return_service
 
@@ -493,3 +496,239 @@ class TestGetSourceDocumentsForReturn:
 
         result = await tax_return_service.get_source_documents(ctx, tr.id)
         assert result.documents == []
+
+
+class TestChecklist:
+    """What "still waiting on" has to get right. A hidden missing form is the costly mistake."""
+
+    async def _booking(
+        self, db: AsyncSession, org: Organization, platform: str, property_id: uuid.UUID | None = None,
+    ) -> None:
+        db.add(BookingStatement(
+            id=uuid.uuid4(),
+            organization_id=org.id,
+            property_id=property_id,
+            res_code=f'RES-{uuid.uuid4().hex[:8]}',
+            platform=platform,
+            check_in=date(2025, 6, 1),
+            check_out=date(2025, 6, 5),
+            gross_booking=Decimal('500.00'),
+        ))
+        await db.commit()
+
+    async def _form(
+        self, db: AsyncSession, org: Organization, owner: User, form: str, issuer: str | None, *, deleted: bool = False,
+    ) -> Document:
+        result = await db.execute(
+            select(TaxReturn).where(TaxReturn.organization_id == org.id, TaxReturn.tax_year == 2025)
+        )
+        tax_return = result.scalar_one_or_none()
+        if tax_return is None:
+            tax_return = TaxReturn(id=uuid.uuid4(), organization_id=org.id, tax_year=2025)
+            db.add(tax_return)
+            await db.flush()
+        doc = Document(
+            id=uuid.uuid4(),
+            organization_id=org.id,
+            user_id=owner.id,
+            file_name=f'{form}.pdf',
+            source='upload',
+            status='completed',
+            deleted_at=datetime.now(timezone.utc) if deleted else None,
+        )
+        db.add(doc)
+        await db.flush()
+        db.add(TaxFormInstance(
+            id=uuid.uuid4(),
+            tax_return_id=tax_return.id,
+            form_name=form,
+            source_type='extracted',
+            document_id=doc.id,
+            issuer_name=issuer,
+        ))
+        await db.commit()
+        return doc
+
+    async def _property(self, db: AsyncSession, org: Organization, owner: User, name: str) -> Property:
+        prop = Property(id=uuid.uuid4(), organization_id=org.id, user_id=owner.id, name=name, address=f'{name} address')
+        db.add(prop)
+        await db.commit()
+        return prop
+
+    async def _transaction(
+        self,
+        db: AsyncSession,
+        org: Organization,
+        owner: User,
+        category: str,
+        property_id: uuid.UUID | None,
+        *,
+        status: str = 'approved',
+    ) -> None:
+        db.add(Transaction(
+            id=uuid.uuid4(),
+            organization_id=org.id,
+            user_id=owner.id,
+            property_id=property_id,
+            transaction_date=date(2025, 3, 1),
+            tax_year=2025,
+            vendor='Acme Management',
+            amount=Decimal('100.00'),
+            transaction_type='expense',
+            category=category,
+            status=status,
+        ))
+        await db.commit()
+
+    async def _checklist(self, org: Organization, owner: User) -> list[tuple[str, str | None, str]]:
+        result = await tax_return_service.list_all_source_documents(_make_ctx(org, owner), tax_year=2025)
+        return [(item.expected_type, item.expected_from, item.status) for item in result.checklist]
+
+    @pytest.mark.asyncio
+    async def test_another_issuers_form_does_not_count(self, db: AsyncSession, owner: User, org: Organization) -> None:
+        await self._booking(db, org, 'airbnb')
+        await self._booking(db, org, 'vrbo')
+        await self._form(db, org, owner, '1099_k', 'Airbnb Payments')
+        assert sorted(await self._checklist(org, owner)) == [
+            ('1099_k', 'Airbnb', 'received'),
+            ('1099_k', 'Vrbo', 'missing'),
+        ]
+
+    @pytest.mark.asyncio
+    async def test_vrbo_form_issued_by_its_parent_counts(self, db: AsyncSession, owner: User, org: Organization) -> None:
+        await self._booking(db, org, 'vrbo')
+        await self._form(db, org, owner, '1099_k', 'HomeAway.com, Inc.')
+        assert await self._checklist(org, owner) == [('1099_k', 'Vrbo', 'received')]
+
+    @pytest.mark.asyncio
+    async def test_form_with_unread_issuer_counts(self, db: AsyncSession, owner: User, org: Organization) -> None:
+        await self._booking(db, org, 'airbnb')
+        await self._form(db, org, owner, '1099_k', None)
+        assert await self._checklist(org, owner) == [('1099_k', 'Airbnb', 'received')]
+
+    @pytest.mark.asyncio
+    async def test_one_unread_form_answers_for_one_row(self, db: AsyncSession, owner: User, org: Organization) -> None:
+        await self._booking(db, org, 'airbnb')
+        await self._booking(db, org, 'vrbo')
+        await self._form(db, org, owner, '1099_k', None)
+        statuses = sorted(item[2] for item in await self._checklist(org, owner))
+        assert statuses == ['missing', 'received']
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize('issuer', ['Acme Management, LLC', 'Acme Management Group'])
+    async def test_a_managers_name_can_differ_a_little(
+        self, db: AsyncSession, owner: User, org: Organization, issuer: str,
+    ) -> None:
+        await self._transaction(db, org, owner, 'management_fee', None)
+        await self._form(db, org, owner, '1099_misc', issuer)
+        assert await self._checklist(org, owner) == [('1099_misc', 'Acme Management', 'received')]
+
+    @pytest.mark.asyncio
+    async def test_direct_bookings_expect_no_1099k(self, db: AsyncSession, owner: User, org: Organization) -> None:
+        await self._booking(db, org, 'direct')
+        assert await self._checklist(org, owner) == []
+
+    @pytest.mark.asyncio
+    async def test_booking_com_keeps_its_name(self, db: AsyncSession, owner: User, org: Organization) -> None:
+        await self._booking(db, org, 'booking.com')
+        assert await self._checklist(org, owner) == [('1099_k', 'Booking.com', 'missing')]
+
+    @pytest.mark.asyncio
+    async def test_year_with_no_return_still_says_whats_expected(
+        self, db: AsyncSession, owner: User, org: Organization,
+    ) -> None:
+        await self._booking(db, org, 'airbnb')
+        assert await self._checklist(org, owner) == [('1099_k', 'Airbnb', 'missing')]
+        result = await db.execute(select(TaxReturn).where(TaxReturn.organization_id == org.id))
+        assert result.scalars().all() == []
+
+    @pytest.mark.asyncio
+    async def test_no_year_and_no_return_stays_empty(self, db: AsyncSession, owner: User, org: Organization) -> None:
+        await self._booking(db, org, 'airbnb')
+        result = await tax_return_service.list_all_source_documents(_make_ctx(org, owner))
+        assert result.checklist == []
+
+    @pytest.mark.asyncio
+    async def test_deleted_document_is_not_listed_or_counted(
+        self, db: AsyncSession, owner: User, org: Organization,
+    ) -> None:
+        await self._booking(db, org, 'airbnb')
+        await self._form(db, org, owner, '1099_k', 'Airbnb', deleted=True)
+        result = await tax_return_service.list_all_source_documents(_make_ctx(org, owner), tax_year=2025)
+        assert result.documents == []
+        assert result.checklist[0].status == 'missing'
+
+    @pytest.mark.asyncio
+    async def test_one_1098_does_not_clear_two_properties(
+        self, db: AsyncSession, owner: User, org: Organization,
+    ) -> None:
+        elm = await self._property(db, org, owner, 'Elm St')
+        oak = await self._property(db, org, owner, 'Oak St')
+        await self._transaction(db, org, owner, 'mortgage_interest', elm.id)
+        await self._transaction(db, org, owner, 'mortgage_interest', oak.id)
+        await self._form(db, org, owner, '1098', 'Wells Fargo')
+        result = await tax_return_service.list_all_source_documents(_make_ctx(org, owner), tax_year=2025)
+        assert len(result.checklist) == 1
+        assert result.checklist[0].status == 'missing'
+        assert result.checklist[0].reason == 'Mortgage interest transactions exist for Elm St and Oak St. I have 1 of 2 1098s'
+
+    @pytest.mark.asyncio
+    async def test_enough_1098s_clear_the_row(self, db: AsyncSession, owner: User, org: Organization) -> None:
+        elm = await self._property(db, org, owner, 'Elm St')
+        oak = await self._property(db, org, owner, 'Oak St')
+        await self._transaction(db, org, owner, 'mortgage_interest', elm.id)
+        await self._transaction(db, org, owner, 'mortgage_interest', oak.id)
+        await self._form(db, org, owner, '1098', 'Wells Fargo')
+        await self._form(db, org, owner, '1098', 'Chase')
+        assert await self._checklist(org, owner) == [('1098', None, 'received')]
+
+    @pytest.mark.asyncio
+    async def test_managed_property_does_not_hide_a_self_run_ones_1099k(
+        self, db: AsyncSession, owner: User, org: Organization,
+    ) -> None:
+        managed = await self._property(db, org, owner, 'Elm St')
+        self_run = await self._property(db, org, owner, 'Oak St')
+        await self._transaction(db, org, owner, 'management_fee', managed.id)
+        await self._booking(db, org, 'vrbo', managed.id)
+        await self._booking(db, org, 'airbnb', self_run.id)
+        items = await self._checklist(org, owner)
+        assert ('1099_k', 'Airbnb', 'missing') in items
+        assert ('1099_k', 'Vrbo', 'missing') not in items
+
+    @pytest.mark.asyncio
+    async def test_fees_naming_no_property_cover_everything(
+        self, db: AsyncSession, owner: User, org: Organization,
+    ) -> None:
+        await self._transaction(db, org, owner, 'management_fee', None)
+        await self._booking(db, org, 'airbnb')
+        assert [item for item in await self._checklist(org, owner) if item[0] == '1099_k'] == []
+
+    @pytest.mark.asyncio
+    async def test_unapproved_fee_does_not_hide_a_1099k(
+        self, db: AsyncSession, owner: User, org: Organization,
+    ) -> None:
+        managed = await self._property(db, org, owner, 'Elm St')
+        self_run = await self._property(db, org, owner, 'Oak St')
+        await self._transaction(db, org, owner, 'management_fee', managed.id)
+        await self._transaction(db, org, owner, 'management_fee', self_run.id, status='duplicate')
+        await self._booking(db, org, 'airbnb', self_run.id)
+        assert ('1099_k', 'Airbnb', 'missing') in await self._checklist(org, owner)
+
+    @pytest.mark.asyncio
+    async def test_statement_with_no_property_counts_as_the_managers(
+        self, db: AsyncSession, owner: User, org: Organization,
+    ) -> None:
+        managed = await self._property(db, org, owner, 'Elm St')
+        await self._transaction(db, org, owner, 'management_fee', managed.id)
+        await self._booking(db, org, 'airbnb')
+        assert [item for item in await self._checklist(org, owner) if item[0] == '1099_k'] == []
+
+    @pytest.mark.asyncio
+    async def test_three_properties_read_as_a_list(self, db: AsyncSession, owner: User, org: Organization) -> None:
+        for name in ['Elm St', 'Oak St', 'Ash St']:
+            prop = await self._property(db, org, owner, name)
+            await self._transaction(db, org, owner, 'mortgage_interest', prop.id)
+        result = await tax_return_service.list_all_source_documents(_make_ctx(org, owner), tax_year=2025)
+        assert result.checklist[0].reason == (
+            'Mortgage interest transactions exist for Ash St, Elm St and Oak St. I have 0 of 3 1098s'
+        )

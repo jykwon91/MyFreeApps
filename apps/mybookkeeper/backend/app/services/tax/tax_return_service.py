@@ -3,7 +3,6 @@ import logging
 import uuid
 from decimal import Decimal
 
-from datetime import date
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,21 +10,18 @@ from app.core.context import RequestContext
 from app.core.pii import mask_pii
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.tax.tax_form_field import TaxFormField
-from app.models.tax.tax_form_instance import TaxFormInstance
 from app.models.tax.tax_return import TaxReturn
 from app.repositories import (
     document_repo,
-    property_repo,
-    booking_statement_repo,
     tax_form_repo,
     tax_return_repo,
-    transaction_repo,
 )
 from app.schemas.tax.source_document import (
     ChecklistItem,
     SourceDocumentsResponse,
     TaxSourceDocument,
 )
+from app.services.tax import tax_checklist
 
 logger = logging.getLogger(__name__)
 
@@ -218,7 +214,13 @@ async def list_all_source_documents(
             returns = [r for r in returns if r.tax_year == tax_year]
 
         if not returns:
-            return SourceDocumentsResponse(documents=[], checklist=[])
+            # A return only appears once a form has been read. That's when knowing
+            # what to expect matters most, so a chosen year still gets a checklist.
+            checklist = (
+                await tax_checklist.build_checklist(db, ctx.organization_id, tax_year, [])
+                if tax_year else []
+            )
+            return SourceDocumentsResponse(documents=[], checklist=checklist)
 
         # Aggregate source documents and checklists across all returns
         all_documents: list[TaxSourceDocument] = []
@@ -280,7 +282,6 @@ async def _get_source_documents_for_return(
 
     # Build source documents list from instances that have a document_id
     documents: list[TaxSourceDocument] = []
-    received_map: dict[tuple[str, str | None], TaxSourceDocument] = {}
 
     for inst in instances:
         if not inst.document_id or inst.form_name not in _EXTRACTED_FORM_TYPES:
@@ -313,95 +314,13 @@ async def _get_source_documents_for_return(
             form_instance_id=inst.id,
         )
         documents.append(source_doc)
-        received_map[(inst.form_name, inst.issuer_name)] = source_doc
 
-    # -- Build completeness checklist --
-    checklist: list[ChecklistItem] = []
-
-    # 1. Reservations -> expect 1099-K per unique platform, BUT only if
-    #    the platform pays the owner directly. If a PM handles the payouts
-    #    (indicated by management_fee transactions), the platform sends the
-    #    1099-K to the PM, not the owner.
-    mgmt_fee_count = await transaction_repo.count_by_category(
-        db, ctx.organization_id, tax_year, "management_fee"
-    )
-    has_pm = mgmt_fee_count > 0
-
-    if not has_pm:
-        # No PM — platforms pay owner directly, expect 1099-Ks
-        platforms = await booking_statement_repo.distinct_platforms_for_year(
-            db, ctx.organization_id, tax_year
-        )
-
-        for platform in platforms:
-            platform_label = platform.title() if platform else None
-            match = _find_received(received_map, "1099_k", platform_label)
-            checklist.append(ChecklistItem(
-                expected_type="1099_k",
-                expected_from=platform_label,
-                reason=f"Reservations found on {platform_label} platform",
-                status="received" if match else "missing",
-                document_id=match.document_id if match else None,
-            ))
-
-    # 2. Management fee transactions -> expect 1099-MISC per vendor
-    mgmt_vendors = await transaction_repo.distinct_vendors_by_category(
-        db, ctx.organization_id, tax_year, "management_fee"
-    )
-
-    for vendor in mgmt_vendors:
-        match = _find_received(received_map, "1099_misc", vendor)
-        checklist.append(ChecklistItem(
-            expected_type="1099_misc",
-            expected_from=vendor,
-            reason="Management fee transactions found",
-            status="received" if match else "missing",
-            document_id=match.document_id if match else None,
-        ))
-
-    # 3. Mortgage interest transactions -> expect 1098 per property
-    mortgage_property_ids = await transaction_repo.distinct_property_ids_by_category(
-        db, ctx.organization_id, tax_year, "mortgage_interest"
-    )
-
-    for prop_id in mortgage_property_ids:
-        prop = await property_repo.get_by_id(db, prop_id, ctx.organization_id)
-        prop_name = prop.name if prop else None
-        match = _find_received(received_map, "1098", None)
-        checklist.append(ChecklistItem(
-            expected_type="1098",
-            expected_from=None,
-            reason=f"Mortgage interest transactions exist for {prop_name}" if prop_name else "Mortgage interest transactions found",
-            status="received" if match else "missing",
-            document_id=match.document_id if match else None,
-        ))
+    checklist = await tax_checklist.build_checklist(db, ctx.organization_id, tax_year, documents)
 
     return SourceDocumentsResponse(
         documents=documents,
         checklist=checklist,
     )
-
-
-def _find_received(
-    received_map: dict[tuple[str, str | None], TaxSourceDocument],
-    form_type: str,
-    issuer_hint: str | None,
-) -> TaxSourceDocument | None:
-    """Try to find a received document matching form type and optionally issuer name."""
-    # Exact match first
-    if (form_type, issuer_hint) in received_map:
-        return received_map[(form_type, issuer_hint)]
-    # Try case-insensitive partial match on issuer_name
-    if issuer_hint:
-        hint_lower = issuer_hint.lower()
-        for (ft, issuer), doc in received_map.items():
-            if ft == form_type and issuer and hint_lower in issuer.lower():
-                return doc
-    # Any match on form_type with no specific issuer
-    for (ft, _), doc in received_map.items():
-        if ft == form_type:
-            return doc
-    return None
 
 
 async def delete_instance(
