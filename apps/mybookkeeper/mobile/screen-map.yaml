@@ -66,7 +66,7 @@ routes:
   /privacy:
     not_on_mobile: Opens on the website.
   /properties:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/properties/index
   /receipts:
     not_on_mobile: Not on the phone yet. More links to it on the website.
   /reconciliation:

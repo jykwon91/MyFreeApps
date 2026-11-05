@@ -16,6 +16,7 @@ export const SINGLE_COPY_SCREENS = [
   "leases/index",
   "listings/[id]",
   "listings/index",
+  "properties/index",
   "transactions/[id]/edit",
   "transactions/[id]/index",
 ] as const;
