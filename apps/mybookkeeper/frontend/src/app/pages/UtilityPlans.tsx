@@ -3,10 +3,8 @@ import { Button, ConfirmDialog } from "@platform/ui";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import {
-  useDeleteUtilityPlanMutation,
-  useGetUtilityPlansQuery,
-} from "@/shared/store/utilityPlansApi";
+import { useGetUtilityPlansQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
+import { useDeleteUtilityPlanMutation } from "@/shared/store/utilityPlansApi";
 import AddUtilityPlanDialog from "@/app/features/utility/AddUtilityPlanDialog";
 import BetterPlansSection from "@/app/features/utility/BetterPlansSection";
 import MarketRateBenchmarkDialog from "@/app/features/utility/MarketRateBenchmarkDialog";
@@ -14,7 +12,7 @@ import MarketRateBenchmarkSummary from "@/app/features/utility/MarketRateBenchma
 import EditUtilityPlanDialog from "@/app/features/utility/EditUtilityPlanDialog";
 import UtilityPlansListBody from "@/app/features/utility/UtilityPlansListBody";
 import { useUtilityPlansListMode } from "@/app/features/utility/useUtilityPlansListMode";
-import type { UtilityPlanSummary } from "@/shared/types/utility/utility-plan-summary";
+import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
 
 /**
  * All-plans view: every utility contract across every property.

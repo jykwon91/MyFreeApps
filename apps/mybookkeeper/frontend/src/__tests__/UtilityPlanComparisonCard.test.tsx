@@ -18,7 +18,7 @@ import UtilityPlanComparisonCard from "@/app/features/utility/UtilityPlanCompari
 import type { MarketRateBenchmark } from "@/shared/types/utility/market-rate-benchmark";
 import type { UtilityPlanRateComparison } from "@/shared/types/utility/utility-plan-rate-comparison";
 import type { UtilityPlanRateComparisonRow } from "@/shared/types/utility/utility-plan-rate-comparison-row";
-import type { UtilityPlanSummary } from "@/shared/types/utility/utility-plan-summary";
+import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -48,7 +48,7 @@ vi.mock("@/shared/store/marketRateBenchmarksApi", () => ({
   })),
 }));
 
-vi.mock("@/shared/store/utilityPlansApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/utilityPlansApi", () => ({
   useGetUtilityPlansQuery: vi.fn(() => ({
     data: { items: [], total: mockPlanTotal, has_more: false },
     isLoading: mockPlansLoading,

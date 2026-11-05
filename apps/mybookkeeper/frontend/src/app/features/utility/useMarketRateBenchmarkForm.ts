@@ -6,7 +6,7 @@ import {
   useUpsertMarketRateBenchmarkMutation,
 } from "@/shared/store/marketRateBenchmarksApi";
 import type { MarketRateBenchmark } from "@/shared/types/utility/market-rate-benchmark";
-import type { UtilityServiceType } from "@/shared/types/utility/utility-service-type";
+import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 
 interface UseMarketRateBenchmarkFormArgs {
   serviceType: UtilityServiceType;

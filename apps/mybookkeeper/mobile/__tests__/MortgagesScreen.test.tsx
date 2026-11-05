@@ -11,8 +11,9 @@ import { WEB_BASE_URL } from "../src/constants/api";
 import { MORTGAGE_MESSAGES } from "../src/constants/mortgages";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import MortgageDetailScreen from "../src/features/mortgages/MortgageDetailScreen";
-import { balanceLine, maskedLoanNumber, paymentLines, rateFixedLine, sortedMortgages } from "../src/features/mortgages/mortgageDisplay";
+import { balanceLine, paymentLines, rateFixedLine, sortedMortgages } from "../src/features/mortgages/mortgageDisplay";
 import MortgagesScreen from "../src/features/mortgages/MortgagesScreen";
+import { maskedNumber } from "../src/lib/maskedNumber";
 import { store } from "../src/lib/store";
 
 const mockPush = jest.fn();
@@ -91,15 +92,15 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe("maskedLoanNumber", () => {
+describe("maskedNumber", () => {
   it("keeps only the last four", () => {
-    expect(maskedLoanNumber("1234564944")).toBe("•••• 4944");
+    expect(maskedNumber("1234564944")).toBe("•••• 4944");
   });
 
   it("hides a number too short to have a safe last four", () => {
-    expect(maskedLoanNumber("1234567")).toBe("••••");
-    expect(maskedLoanNumber("12345678")).toBe("•••• 5678");
-    expect(maskedLoanNumber("944")).toBe("••••");
+    expect(maskedNumber("1234567")).toBe("••••");
+    expect(maskedNumber("12345678")).toBe("•••• 5678");
+    expect(maskedNumber("944")).toBe("••••");
   });
 });
 
@@ -249,9 +250,9 @@ describe("MortgageDetailScreen", () => {
     await show(<MortgageDetailScreen id="m1" />);
     await screen.findByText("•••• 4944");
     expect(screen.queryByText("1234564944")).toBeNull();
-    await fireEvent.press(screen.getByRole("button", { name: MORTGAGE_MESSAGES.showLoanNumberName }));
+    await fireEvent.press(screen.getByRole("button", { name: "Show the full loan number" }));
     expect(screen.getByText("1234564944")).toBeTruthy();
-    await fireEvent.press(screen.getByRole("button", { name: MORTGAGE_MESSAGES.hideLoanNumberName }));
+    await fireEvent.press(screen.getByRole("button", { name: "Hide the full loan number" }));
     expect(screen.queryByText("1234564944")).toBeNull();
   });
 

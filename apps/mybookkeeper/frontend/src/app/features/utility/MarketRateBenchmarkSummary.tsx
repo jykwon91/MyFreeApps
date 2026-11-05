@@ -2,9 +2,9 @@ import {
   formatCents,
   formatCentsPerKwh,
   formatPlanDate,
-} from "@/shared/lib/utility-plan-format";
+} from "@mybookkeeper/api-client/utils/utilityPlanFormat";
 import { useGetMarketRateBenchmarksQuery } from "@/shared/store/marketRateBenchmarksApi";
-import { UTILITY_SERVICE_TYPE_LABELS } from "@/shared/types/utility/utility-service-type";
+import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 import type { MarketRateBenchmark } from "@/shared/types/utility/market-rate-benchmark";
 
 export interface MarketRateBenchmarkSummaryProps {

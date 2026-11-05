@@ -1,4 +1,4 @@
-import { useGetUtilityPlansQuery } from "@/shared/store/utilityPlansApi";
+import { useGetUtilityPlansQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
 
 export interface HasAnyUtilityPlansResult {
   hasAnyPlans: boolean;

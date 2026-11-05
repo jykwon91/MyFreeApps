@@ -1,4 +1,4 @@
-import type { UtilityPlanDetail } from "@/shared/types/utility/utility-plan-detail";
+import type { UtilityPlanDetail } from "@mybookkeeper/api-client/types/utility/utility-plan-detail";
 import type { UtilityPlanFieldsPayload } from "@/shared/types/utility/utility-plan-fields-payload";
 import type { UtilityPlanFormValues } from "@/shared/types/utility/utility-plan-form-values";
 

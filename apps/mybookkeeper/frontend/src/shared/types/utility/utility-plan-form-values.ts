@@ -1,5 +1,5 @@
-import type { UtilityPlanRateType } from "@/shared/types/utility/utility-plan-rate-type";
-import type { UtilityServiceType } from "@/shared/types/utility/utility-service-type";
+import type { UtilityPlanRateType } from "@mybookkeeper/api-client/types/utility/utility-plan-rate-type";
+import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 
 /**
  * The utility-plan form's field state, in the shape the inputs hold it.

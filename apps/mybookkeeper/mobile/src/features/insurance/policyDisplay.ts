@@ -1,17 +1,11 @@
 import type { InsurancePolicySummary } from "@mybookkeeper/api-client/types/insurance/insurance-policy-summary";
 import { EXPIRES_SOON_DAYS } from "../../constants/insurance";
-import { dateFromIso, fullDateLabel } from "../../lib/localDate";
-
-const MS_PER_DAY = 86_400_000;
-
-function daysUntil(iso: string, todayIso: string): number {
-  return Math.round((dateFromIso(iso).getTime() - dateFromIso(todayIso).getTime()) / MS_PER_DAY);
-}
+import { daysBetween, fullDateLabel } from "../../lib/localDate";
 
 /** Null while a policy has a good while left, so a chip always means look at this. */
 export function expiryLabel(expirationDate: string | null, todayIso: string): string | null {
   if (!expirationDate) return null;
-  const days = daysUntil(expirationDate, todayIso);
+  const days = daysBetween(todayIso, expirationDate);
   if (days < -1) return `Expired ${-days} days ago`;
   if (days === -1) return "Expired yesterday";
   if (days === 0) return "Expires today";

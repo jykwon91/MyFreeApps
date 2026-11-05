@@ -1,4 +1,4 @@
-import type { UtilityPlanSummary } from "@/shared/types/utility/utility-plan-summary";
+import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
 import type { UtilityPlansListMode } from "@/shared/types/utility/utility-plans-list-mode";
 import UtilityPlanRow from "./UtilityPlanRow";
 

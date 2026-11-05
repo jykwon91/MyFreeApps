@@ -2,7 +2,7 @@ import { baseApi } from "./baseApi";
 import type { MarketRateBenchmark } from "@/shared/types/utility/market-rate-benchmark";
 import type { MarketRateBenchmarkUpsertRequest } from "@/shared/types/utility/market-rate-benchmark-upsert-request";
 import type { UtilityPlanRateComparison } from "@/shared/types/utility/utility-plan-rate-comparison";
-import type { UtilityServiceType } from "@/shared/types/utility/utility-service-type";
+import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 
 /**
  * RTK Query slice for market rate benchmarks and the comparison they drive.

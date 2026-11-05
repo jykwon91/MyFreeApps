@@ -1,8 +1,6 @@
-import {
-  UTILITY_PLAN_RENEWAL_STATUS_CLASSES,
-  UTILITY_PLAN_RENEWAL_STATUS_LABELS,
-} from "@/shared/types/utility/utility-plan-renewal-status";
-import type { UtilityPlanRenewalStatus } from "@/shared/types/utility/utility-plan-renewal-status";
+import { UTILITY_PLAN_RENEWAL_STATUS_CLASSES } from "@/shared/lib/utility-plan-renewal-classes";
+import { UTILITY_PLAN_RENEWAL_STATUS_LABELS } from "@mybookkeeper/api-client/types/utility/utility-plan-renewal-status";
+import type { UtilityPlanRenewalStatus } from "@mybookkeeper/api-client/types/utility/utility-plan-renewal-status";
 
 export interface UtilityPlanRenewalBadgeProps {
   status: UtilityPlanRenewalStatus;

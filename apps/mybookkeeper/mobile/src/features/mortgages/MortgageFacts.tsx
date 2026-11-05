@@ -4,9 +4,9 @@ import { useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { MORTGAGE_MESSAGES } from "../../constants/mortgages";
 import { fullDateLabel } from "../../lib/localDate";
+import HiddenNumber from "../shell/HiddenNumber";
 import TransactionFact from "../transactions/TransactionFact";
 import { balanceLine, paymentLines } from "./mortgageDisplay";
-import MortgageLoanNumber from "./MortgageLoanNumber";
 
 export default function MortgageFacts({ mortgage }: { mortgage: Mortgage }) {
   const { spacing } = useTheme();
@@ -19,7 +19,7 @@ export default function MortgageFacts({ mortgage }: { mortgage: Mortgage }) {
       {paymentLines(mortgage).map((line) => (
         <TransactionFact key={line.label} label={line.label} value={line.value} />
       ))}
-      {loanNumber ? <MortgageLoanNumber loanNumber={loanNumber} /> : null}
+      {loanNumber ? <HiddenNumber label={MORTGAGE_MESSAGES.loanNumber} value={loanNumber} /> : null}
       {mortgage.maturity_date ? <TransactionFact label={MORTGAGE_MESSAGES.loanEnds} value={fullDateLabel(mortgage.maturity_date)} /> : null}
       {mortgage.term_months !== null ? <TransactionFact label={MORTGAGE_MESSAGES.loanLength} value={formatMonths(mortgage.term_months)} /> : null}
       {mortgage.original_principal_cents !== null ? (

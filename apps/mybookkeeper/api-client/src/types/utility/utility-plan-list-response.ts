@@ -1,4 +1,4 @@
-import type { UtilityPlanSummary } from "@/shared/types/utility/utility-plan-summary";
+import type { UtilityPlanSummary } from "./utility-plan-summary";
 
 /**
  * Paginated list response for utility plans.

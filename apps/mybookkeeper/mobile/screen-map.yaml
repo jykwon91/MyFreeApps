@@ -106,7 +106,7 @@ routes:
   /user-activity:
     not_on_mobile: Operator dashboards, for the website.
   /utility-plans:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/utility-plans/index
   /vendors:
     screen: (app)/vendors/index
   /vendors/:vendorId:

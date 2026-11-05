@@ -19,6 +19,13 @@ export function shiftMonth(month: string, by: number): string {
   return isoFromDate(new Date(start.getFullYear(), start.getMonth() + by, 1));
 }
 
+const MS_PER_DAY = 86_400_000;
+
+/** Whole days from one date to another, unaffected by a clock change between them. */
+export function daysBetween(fromIso: string, toIso: string): number {
+  return Math.round((dateFromIso(toIso).getTime() - dateFromIso(fromIso).getTime()) / MS_PER_DAY);
+}
+
 export function fullDateLabel(iso: string): string {
   return dateFromIso(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }

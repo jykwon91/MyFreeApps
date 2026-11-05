@@ -1,5 +1,5 @@
-import { formatCurrency } from "@/shared/utils/currency";
-import type { UtilityServiceType } from "@/shared/types/utility/utility-service-type";
+import { formatCurrency } from "@platform/core/utils/currency";
+import type { UtilityServiceType } from "../types/utility/utility-service-type";
 
 /**
  * Display helpers for utility-plan figures.

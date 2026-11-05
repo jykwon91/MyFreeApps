@@ -12,7 +12,7 @@ import {
   formatComparisonFigure,
   formatPlanDate,
   formatRenewalCountdown,
-} from "@/shared/lib/utility-plan-format";
+} from "@mybookkeeper/api-client/utils/utilityPlanFormat";
 
 describe("formatCentsPerKwh", () => {
   it("keeps sub-cent precision", () => {

@@ -6,8 +6,8 @@ import { useGetMarketRateBenchmarksQuery } from "@/shared/store/marketRateBenchm
 import {
   UTILITY_SERVICE_TYPES,
   UTILITY_SERVICE_TYPE_LABELS,
-} from "@/shared/types/utility/utility-service-type";
-import type { UtilityServiceType } from "@/shared/types/utility/utility-service-type";
+} from "@mybookkeeper/api-client/types/utility/utility-service-type";
+import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 
 export interface MarketRateBenchmarkDialogProps {
   onClose: () => void;

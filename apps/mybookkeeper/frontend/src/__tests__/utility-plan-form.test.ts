@@ -13,7 +13,7 @@ import {
   toUtilityPlanFormValues,
   validateUtilityPlanForm,
 } from "@/shared/lib/utility-plan-form";
-import type { UtilityPlanDetail } from "@/shared/types/utility/utility-plan-detail";
+import type { UtilityPlanDetail } from "@mybookkeeper/api-client/types/utility/utility-plan-detail";
 
 function makeDetail(overrides: Partial<UtilityPlanDetail> = {}): UtilityPlanDetail {
   return {

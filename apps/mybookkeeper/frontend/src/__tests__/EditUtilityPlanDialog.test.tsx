@@ -12,7 +12,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import EditUtilityPlanDialog from "@/app/features/utility/EditUtilityPlanDialog";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import type { UtilityPlanDetail } from "@/shared/types/utility/utility-plan-detail";
+import type { UtilityPlanDetail } from "@mybookkeeper/api-client/types/utility/utility-plan-detail";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -24,7 +24,7 @@ let mockPlan: UtilityPlanDetail | undefined;
 let mockIsLoading = false;
 let mockIsError = false;
 
-vi.mock("@/shared/store/utilityPlansApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/utilityPlansApi", () => ({
   useGetUtilityPlanByIdQuery: vi.fn(() => ({
     data: mockPlan,
     isLoading: mockIsLoading,
@@ -32,6 +32,9 @@ vi.mock("@/shared/store/utilityPlansApi", () => ({
     isFetching: false,
     refetch: mockRefetch,
   })),
+}));
+
+vi.mock("@/shared/store/utilityPlansApi", () => ({
   useUpdateUtilityPlanMutation: vi.fn(() => [mockUpdate, { isLoading: false }]),
 }));
 
