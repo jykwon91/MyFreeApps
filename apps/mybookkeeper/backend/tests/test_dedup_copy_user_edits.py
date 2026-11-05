@@ -24,6 +24,18 @@ def _txn(**overrides) -> Transaction:
 
 
 class TestCopyUserEdits:
+    def test_line_does_not_cross_to_a_different_category(self) -> None:
+        old = _txn(category="mortgage_interest", schedule_e_line="line_12_mortgage_interest")
+        new = _txn(category="mortgage_principal")
+        _copy_user_edits(old, new)
+        assert new.schedule_e_line is None
+
+    def test_line_is_carried_when_the_category_matches(self) -> None:
+        old = _txn(category="insurance", schedule_e_line="line_9_insurance")
+        new = _txn(category="insurance")
+        _copy_user_edits(old, new)
+        assert new.schedule_e_line == "line_9_insurance"
+
     def test_carries_usage_when_replacement_lacks_it(self) -> None:
         # The common arrival order: the PDF statement (with kWh) lands first and
         # is later superseded by a notification that has only an amount.

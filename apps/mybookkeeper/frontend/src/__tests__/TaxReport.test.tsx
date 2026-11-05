@@ -91,6 +91,15 @@ describe('TaxReport', () => {
     localStorage.removeItem('tax-report-info-dismissed');
   });
 
+  it('marks mortgage principal as not deductible', () => {
+    vi.mocked(useGetTaxSummaryQuery).mockReturnValue({
+      data: { ...mockTaxSummary, by_category: { mortgage_interest: 300, mortgage_principal: 200 } },
+      isLoading: false,
+    } as never);
+    render(<Provider store={store}><BrowserRouter><TaxReport /></BrowserRouter></Provider>);
+    expect(screen.getAllByText('Not deductible')).toHaveLength(1);
+  });
+
   it('renders the Tax Report title', () => {
     renderWithProviders(<TaxReport />);
     expect(screen.getByText('Tax Report')).toBeInTheDocument();

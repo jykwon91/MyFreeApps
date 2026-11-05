@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.context import RequestContext
 from app.models.organization.organization import Organization
 from app.models.properties.property import Property, PropertyType
+from app.models.tax.tax_return import TaxReturn
 from app.models.transactions.transaction import Transaction
 from app.models.user.user import User
 from app.repositories import transaction_repo
@@ -177,6 +178,66 @@ class TestUpdateTransaction:
         updated_txn, retroactive_count = result
         assert updated_txn.vendor == "New Vendor"
         assert retroactive_count == 0
+
+    @pytest.mark.asyncio
+    async def test_changing_category_moves_the_schedule_e_line(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        ctx = _make_ctx(test_org, test_user)
+        txn = await _seed(db, test_org, test_user)
+        txn.category = "mortgage_interest"
+        txn.schedule_e_line = "line_12_mortgage_interest"
+        await db.commit()
+
+        @asynccontextmanager
+        async def _fake():
+            yield db
+
+        with patch("app.services.transactions.transaction_service.AsyncSessionLocal", _fake), patch("app.services.transactions.transaction_service.unit_of_work", _fake):
+            result = await transaction_service.update_transaction(ctx, txn.id, {"category": "mortgage_principal"})
+        assert result is not None
+        assert result[0].schedule_e_line is None
+
+    @pytest.mark.asyncio
+    async def test_a_line_chosen_with_the_category_is_kept(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        ctx = _make_ctx(test_org, test_user)
+        txn = await _seed(db, test_org, test_user)
+
+        @asynccontextmanager
+        async def _fake():
+            yield db
+
+        with patch("app.services.transactions.transaction_service.AsyncSessionLocal", _fake), patch("app.services.transactions.transaction_service.unit_of_work", _fake):
+            result = await transaction_service.update_transaction(
+                ctx, txn.id, {"category": "insurance", "schedule_e_line": "line_19_other"},
+            )
+        assert result is not None
+        assert result[0].schedule_e_line == "line_19_other"
+
+    @pytest.mark.asyncio
+    async def test_changing_category_flags_unfiled_returns_only(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        ctx = _make_ctx(test_org, test_user)
+        txn = await _seed(db, test_org, test_user)
+        draft = TaxReturn(organization_id=test_org.id, tax_year=2025, needs_recompute=False)
+        filed = TaxReturn(organization_id=test_org.id, tax_year=2024, status="filed", needs_recompute=False)
+        db.add_all([draft, filed])
+        await db.commit()
+
+        @asynccontextmanager
+        async def _fake():
+            yield db
+
+        with patch("app.services.transactions.transaction_service.AsyncSessionLocal", _fake), patch("app.services.transactions.transaction_service.unit_of_work", _fake):
+            await transaction_service.update_transaction(ctx, txn.id, {"category": "insurance"})
+
+        await db.refresh(draft)
+        await db.refresh(filed)
+        assert draft.needs_recompute is True
+        assert filed.needs_recompute is False
 
     @pytest.mark.asyncio
     async def test_rejects_disallowed_field(

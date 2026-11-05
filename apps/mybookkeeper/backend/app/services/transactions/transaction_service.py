@@ -6,10 +6,15 @@ from decimal import Decimal
 from sqlalchemy import Row
 
 from app.core.context import RequestContext
-from app.core.tags import CATEGORY_TO_SCHEDULE_E, transaction_type_for_category
+from app.core.tags import (
+    CATEGORY_TO_SCHEDULE_E,
+    schedule_e_line_after_category_change,
+    transaction_type_for_category,
+)
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.transactions.transaction import Transaction
 from app.repositories import transaction_repo
+from app.repositories.tax import tax_return_repo
 from app.schemas.transactions.duplicate import DuplicateMergeOverrides
 from app.services.classification import rule_learning_service
 from app.services.transactions.merge_strategy import MERGEABLE_FIELDS, auto_pick_defaults
@@ -130,6 +135,7 @@ async def update_transaction(
         if not txn or txn.deleted_at is not None:
             return None
         old_category = txn.category
+        old_schedule_e_line = txn.schedule_e_line
         old_property_id = txn.property_id
         for field, value in updates.items():
             if field not in UPDATABLE_FIELDS:
@@ -138,6 +144,10 @@ async def update_transaction(
 
         retroactive_count = 0
         if "category" in updates and txn.category != old_category:
+            if "schedule_e_line" not in updates:
+                txn.schedule_e_line = schedule_e_line_after_category_change(
+                    old_schedule_e_line, old_category, txn.category,
+                )
             retroactive_count = await rule_learning_service.learn_from_correction(
                 db,
                 organization_id=ctx.organization_id,
@@ -145,6 +155,9 @@ async def update_transaction(
                 transaction=txn,
                 old_category=old_category,
             )
+
+        if txn.category != old_category or txn.schedule_e_line != old_schedule_e_line:
+            await tax_return_repo.flag_unfiled_for_recompute(db, ctx.organization_id)
 
         # Clearing a property teaches nothing: a rule with no property would take
         # the property off every other row from this vendor at this address.

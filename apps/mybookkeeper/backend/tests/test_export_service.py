@@ -4,6 +4,7 @@ import io
 import uuid
 from datetime import date, datetime, timezone
 from decimal import Decimal
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -156,6 +157,15 @@ class TestExportPDF:
 
 
 class TestExportScheduleE:
+    def test_amounts_with_no_line_stay_out_of_the_totals(self) -> None:
+        property_id = uuid.uuid4()
+        rows = [
+            SimpleNamespace(property_id=property_id, schedule_e_line="line_12_mortgage_interest", total_amount=Decimal("300.00")),
+            SimpleNamespace(property_id=property_id, schedule_e_line=None, total_amount=Decimal("200.00")),
+        ]
+        by_property = export_service._amounts_by_property_and_line(rows)
+        assert sum(by_property[property_id].values()) == 300.00
+
     @pytest.mark.asyncio
     async def test_schedule_e_pdf_starts_with_magic_bytes(self, db: AsyncSession) -> None:
         user, org_id, prop = await _setup(db)

@@ -17,6 +17,7 @@ from app.models.tax.tax_return import TaxReturn
 from app.models.transactions.transaction import Transaction
 from app.models.user.user import User
 from app.repositories import tax_return_repo
+from app.services.tax import tax_recompute_service
 
 
 def _make_property(
@@ -109,8 +110,6 @@ class TestComputeScheduleE:
         db.add(insurance_txn)
         await db.commit()
 
-        from app.services.tax import tax_recompute_service
-
         @asynccontextmanager
         async def _fake():
             yield db
@@ -140,6 +139,104 @@ class TestComputeScheduleE:
         assert field_map.get("line_20") == Decimal("500.00")
         assert field_map.get("line_21") == Decimal("4500.00")
 
+    async def _recompute(self, db: AsyncSession, org_id: uuid.UUID, return_id: uuid.UUID) -> dict[str, Decimal | None]:
+        @asynccontextmanager
+        async def _fake():
+            yield db
+
+        with (
+            patch("app.services.tax.tax_recompute_service.unit_of_work", _fake),
+            patch("app.services.tax.tax_validation.unit_of_work", _fake),
+        ):
+            await tax_recompute_service.recompute(org_id, return_id)
+        await db.commit()
+        db.expire_all()
+        instances = await tax_return_repo.get_form_instances(db, return_id, "schedule_e")
+        return {
+            f.field_id: f.value_numeric
+            for i in instances if i.property_id is not None
+            for f in i.fields
+        }
+
+    @pytest.mark.asyncio
+    async def test_principal_with_an_old_line_is_left_off(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        prop = _make_property(test_org, test_user)
+        tax_return = _make_tax_return(test_org)
+        db.add_all([prop, tax_return])
+        await db.flush()
+        org_id, return_id = test_org.id, tax_return.id
+        db.add_all([
+            _make_transaction(
+                test_org, test_user, prop, category="mortgage_interest",
+                schedule_e_line="line_12_mortgage_interest", amount=Decimal("300.00"),
+            ),
+            _make_transaction(
+                test_org, test_user, prop, category="mortgage_principal",
+                schedule_e_line="line_12_mortgage_interest", amount=Decimal("900.00"),
+            ),
+        ])
+        await db.commit()
+
+        fields = await self._recompute(db, org_id, return_id)
+
+        assert fields["line_12"] == Decimal("300.00")
+        assert fields["line_20"] == Decimal("300.00")
+
+    @pytest.mark.asyncio
+    async def test_a_line_with_nothing_left_goes_back_to_zero(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        prop = _make_property(test_org, test_user)
+        tax_return = _make_tax_return(test_org)
+        db.add_all([prop, tax_return])
+        await db.flush()
+        org_id, return_id = test_org.id, tax_return.id
+        income = _make_transaction(
+            test_org, test_user, prop, category="rental_revenue", transaction_type="income",
+            schedule_e_line="line_3_rents_received", amount=Decimal("1000.00"),
+        )
+        interest = _make_transaction(
+            test_org, test_user, prop, category="mortgage_interest",
+            schedule_e_line="line_12_mortgage_interest", amount=Decimal("300.00"),
+        )
+        db.add_all([income, interest])
+        await db.commit()
+        assert (await self._recompute(db, org_id, return_id))["line_12"] == Decimal("300.00")
+
+        interest.category = "mortgage_principal"
+        await db.commit()
+        fields = await self._recompute(db, org_id, return_id)
+
+        assert fields["line_12"] == Decimal("0")
+        assert fields["line_20"] == Decimal("0")
+        assert fields["line_21"] == Decimal("1000.00")
+
+    @pytest.mark.asyncio
+    async def test_a_property_with_nothing_left_goes_back_to_zero(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        prop = _make_property(test_org, test_user)
+        tax_return = _make_tax_return(test_org)
+        db.add_all([prop, tax_return])
+        await db.flush()
+        org_id, return_id = test_org.id, tax_return.id
+        interest = _make_transaction(
+            test_org, test_user, prop, category="mortgage_interest",
+            schedule_e_line="line_12_mortgage_interest", amount=Decimal("300.00"),
+        )
+        db.add(interest)
+        await db.commit()
+        await self._recompute(db, org_id, return_id)
+
+        interest.category = "mortgage_principal"
+        await db.commit()
+        fields = await self._recompute(db, org_id, return_id)
+
+        assert fields["line_12"] == Decimal("0")
+        assert fields["line_20"] == Decimal("0")
+
     @pytest.mark.asyncio
     async def test_idempotent_recompute(
         self, db: AsyncSession, test_user: User, test_org: Organization,
@@ -162,8 +259,6 @@ class TestComputeScheduleE:
         )
         db.add(txn)
         await db.commit()
-
-        from app.services.tax import tax_recompute_service
 
         @asynccontextmanager
         async def _fake():
@@ -189,8 +284,6 @@ class TestComputeScheduleE:
         tax_return = _make_tax_return(test_org)
         db.add(tax_return)
         await db.commit()
-
-        from app.services.tax import tax_recompute_service
 
         @asynccontextmanager
         async def _fake():
@@ -224,8 +317,6 @@ class TestComputeForm4562:
         tax_return = _make_tax_return(test_org)
         db.add(tax_return)
         await db.commit()
-
-        from app.services.tax import tax_recompute_service
 
         @asynccontextmanager
         async def _fake():
@@ -264,8 +355,6 @@ class TestComputeForm4562:
         tax_return = _make_tax_return(test_org)
         db.add(tax_return)
         await db.commit()
-
-        from app.services.tax import tax_recompute_service
 
         @asynccontextmanager
         async def _fake():

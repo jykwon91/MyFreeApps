@@ -9,7 +9,7 @@ test.describe("Tax Report", () => {
     await expect(page.getByRole("heading", { name: "Tax Report" })).toBeVisible();
     // Wait past skeleton — page shows summary cards or empty state once loaded
     await expect(
-      page.getByText("Rental Revenue").first().or(page.getByText(/no tax data/i))
+      page.getByText("Rental Revenue").or(page.getByText(/no tax data/i)).first()
     ).toBeVisible({ timeout: 10000 });
   });
 
@@ -25,7 +25,7 @@ test.describe("Tax Report", () => {
     expect(String(targetYear)).not.toBe(initialYear);
 
     await expect(
-      page.getByText("Rental Revenue").first().or(page.getByText(new RegExp("no tax data for " + targetYear, "i")))
+      page.getByText("Rental Revenue").or(page.getByText(new RegExp("no tax data for " + targetYear, "i"))).first()
     ).toBeVisible({ timeout: 10000 });
   });
 
@@ -43,6 +43,37 @@ test.describe("Tax Report", () => {
       page.getByRole("button", { name: /export pdf/i }).click(),
     ]);
     expect(download.suggestedFilename()).toMatch(/\.pdf$/i);
+  });
+
+  test("mortgage principal is listed but not deducted", async ({ authedPage: page, api }) => {
+    const summaryUrl = `/summary/tax?year=${CURRENT_YEAR - 1}`;
+    const before = await (await api.get(summaryUrl)).json();
+    const created = await api.post("/transactions", {
+      data: {
+        transaction_date: `${CURRENT_YEAR - 1}-03-15`,
+        amount: "987654.00",
+        transaction_type: "expense",
+        category: "mortgage_principal",
+        vendor: `E2E Principal ${Date.now()}`,
+        tags: ["mortgage_principal"],
+        tax_relevant: true,
+      },
+    });
+    expect(created.ok()).toBe(true);
+    const { id } = await created.json();
+    try {
+      const approved = await api.patch(`/transactions/${id}`, { data: { status: "approved" } });
+      expect(approved.ok()).toBe(true);
+
+      const after = await (await api.get(summaryUrl)).json();
+      expect(after.by_category.mortgage_principal).toBeGreaterThanOrEqual(987654);
+      expect(after.total_deductions - before.total_deductions).toBeLessThan(987654);
+
+      await page.reload();
+      await expect(page.getByRole("cell", { name: /Mortgage Principal/i })).toContainText("Not deductible", { timeout: 10000 });
+    } finally {
+      await api.delete(`/transactions/${id}`);
+    }
   });
 
   test("page loads without crashing when w2_income is absent", async ({ authedPage: page }) => {
@@ -124,7 +155,7 @@ test.describe("Tax Returns — create and delete", () => {
 
     await page.goto("/tax-returns");
     await expect(page.getByRole("button", { name: /new return/i })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText(testYear)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(String(testYear), { exact: true })).toBeVisible({ timeout: 10000 });
   });
 
   test("cancel closes the creation form without creating", async ({ authedPage: page }) => {

@@ -8,6 +8,7 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import aliased, selectinload
 from sqlalchemy.sql.expression import FunctionElement
 
+from app.core.tags import NON_DEDUCTIBLE_TAGS
 from app.core.vendors import normalize_vendor
 from app.models.extraction.extraction import Extraction
 from app.models.transactions.transaction import Transaction
@@ -334,6 +335,7 @@ async def schedule_e_report(
             Transaction.status == "approved",
             Transaction.tax_relevant.is_(True),
             Transaction.tax_year == tax_year,
+            Transaction.category.notin_(NON_DEDUCTIBLE_TAGS),
         )
         .group_by(Transaction.property_id, Transaction.schedule_e_line)
     )
