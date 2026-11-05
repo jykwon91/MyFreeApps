@@ -10,7 +10,7 @@ import { useToday } from "../../lib/useToday";
 import type { Workspace } from "../../types/Workspace";
 import { isServerAnswer } from "../../utils/isServerAnswer";
 import { askOnce } from "../leases/askOnce";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { useListWorkspacesQuery } from "../workspace/workspaceApi";
 import InviteSheet from "./InviteSheet";
 import MemberRow from "./MemberRow";

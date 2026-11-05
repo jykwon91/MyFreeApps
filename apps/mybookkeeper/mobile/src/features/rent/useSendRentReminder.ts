@@ -6,7 +6,7 @@ import { useToast } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
 import { LOST_SEND_HOLD_MS, REMINDER_MESSAGES } from "../../constants/rentReminders";
 import { UPLOAD_MESSAGES } from "../../constants/uploads";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { sendOutcome } from "./rentReminderDisplay";
 
 function refusal(error: unknown): string | null {

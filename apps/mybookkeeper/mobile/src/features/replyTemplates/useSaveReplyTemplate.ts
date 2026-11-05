@@ -4,13 +4,13 @@ import {
   useUpdateReplyTemplateMutation,
 } from "@mybookkeeper/api-client/store/inquiriesApi";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
+import type { ReplyTemplateFailure } from "@mybookkeeper/api-client/types/inquiry/reply-template-failure";
+import { saveFailure } from "@mybookkeeper/api-client/utils/replyTemplateFailure";
 import { useToast } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
 import { REPLY_TEMPLATE_AMBIGUOUS_CREATE as AMBIGUOUS_CREATE, REPLY_TEMPLATE_MESSAGES } from "../../constants/replyTemplates";
-import type { ReplyTemplateFailure } from "../../types/ReplyTemplateFailure";
 import type { ReplyTemplateFormValues } from "../../types/ReplyTemplateFormValues";
 import { changedFields } from "./replyTemplateFormValues";
-import { saveFailure } from "./replyTemplateFailure";
 import { leaveToList } from "./replyTemplateNavigation";
 
 /** Creates a template, or saves what changed on `original`, and leaves when it's done. */

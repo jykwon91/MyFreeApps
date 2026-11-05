@@ -1,5 +1,5 @@
 import { PROMOTE_MESSAGES } from "../../constants/promote";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 
 /** The server's own wording can be a developer string, so it's never shown. */
 function commonFailure(status: number | undefined): string | null {

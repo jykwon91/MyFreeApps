@@ -3,7 +3,7 @@ import type { AssignableRole } from "@mybookkeeper/api-client/types/organization
 import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
 import { useToast } from "@platform/mobile";
 import { MEMBERS_MESSAGES as MESSAGES, ROLE_WITH_ARTICLE } from "../../constants/members";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { memberName } from "./membersDisplay";
 import { useAccessRefused } from "./useAccessRefused";
 import { useBusyRows } from "./useBusyRows";

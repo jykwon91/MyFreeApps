@@ -15,7 +15,7 @@ import { REPLY_TEMPLATE_MESSAGES } from "../../constants/replyTemplates";
 import { REPLY_BODY_MAX_LENGTH, REPLY_BODY_MIN_HEIGHT, REPLY_CHECK_DELAYS_MS, REPLY_SUBJECT_MAX_LENGTH, WRITE_MY_OWN_OPTION } from "../../constants/replies";
 import type { ReplyBlock } from "../../types/ReplyBlock";
 import type { ReplyFailure } from "../../types/ReplyFailure";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { deleteReplyDraft } from "./replyDrafts";
 import { matchesRendered, REPLY_BLOCK_WORDS, REPLY_FAILURE_WORDS, replyArrived, replyBlock, replyFailure } from "./replyStatus";

@@ -1,5 +1,5 @@
-import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
-import type { ReplyTemplateWriteCheck } from "../../types/ReplyTemplateWriteCheck";
+import type { ReplyTemplate } from "../types/inquiry/reply-template";
+import type { ReplyTemplateWriteCheck } from "../types/inquiry/reply-template-write-check";
 
 type Reload = () => Promise<{ isSuccess: boolean; data?: ReplyTemplate[] }>;
 

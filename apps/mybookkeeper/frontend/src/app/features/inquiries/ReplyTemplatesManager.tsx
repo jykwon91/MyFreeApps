@@ -8,11 +8,18 @@ import {
   useGetReplyTemplatesQuery,
 } from "@mybookkeeper/api-client/store/inquiriesApi";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
+import { archiveDescription } from "@/shared/lib/reply-template-messages";
+import ArchivedReplyTemplatesPanel from "./ArchivedReplyTemplatesPanel";
 import ReplyTemplateForm from "./ReplyTemplateForm";
 import ReplyTemplatesListBody from "./ReplyTemplatesListBody";
+import ReplyTemplatesViewTabs from "./ReplyTemplatesViewTabs";
 import { useReplyTemplatesListMode } from "./useReplyTemplatesListMode";
+import { useReplyTemplatesView } from "./useReplyTemplatesView";
+
+const PANEL_ID = "reply-templates-panel";
 
 export default function ReplyTemplatesManager() {
+  const [view, setView] = useReplyTemplatesView();
   const { data: templates = [], isLoading } = useGetReplyTemplatesQuery();
   const [archiveTemplate, { isLoading: isArchiving }] =
     useArchiveReplyTemplateMutation();
@@ -59,23 +66,34 @@ export default function ReplyTemplatesManager() {
             Pre-written replies you can pull up when an inquiry comes in.
           </p>
         </div>
-        <Button
-          variant="primary"
-          size="md"
-          onClick={handleNew}
-          data-testid="reply-template-new-button"
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          New template
-        </Button>
+        {/* A new template would never show up in the archived list beside it. */}
+        {view === "active" ? (
+          <Button
+            variant="primary"
+            size="md"
+            onClick={handleNew}
+            data-testid="reply-template-new-button"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            New template
+          </Button>
+        ) : null}
       </div>
 
-      <ReplyTemplatesListBody
-        mode={listMode}
-        templates={templates}
-        onEdit={handleEdit}
-        onArchive={setArchiveCandidate}
-      />
+      <ReplyTemplatesViewTabs view={view} onChange={setView} panelId={PANEL_ID} />
+
+      <div id={PANEL_ID} role="tabpanel" aria-labelledby={`reply-templates-tab-${view}`}>
+        {view === "archived" ? (
+          <ArchivedReplyTemplatesPanel onShowActive={() => setView("active")} />
+        ) : (
+          <ReplyTemplatesListBody
+            mode={listMode}
+            templates={templates}
+            onEdit={handleEdit}
+            onArchive={setArchiveCandidate}
+          />
+        )}
+      </div>
 
       {showForm ? (
         <ReplyTemplateForm
@@ -90,11 +108,7 @@ export default function ReplyTemplatesManager() {
       <ConfirmDialog
         open={!!archiveCandidate}
         title="Archive this template?"
-        description={
-          archiveCandidate
-            ? `"${archiveCandidate.name}" will be hidden from the picker. The audit history is preserved.`
-            : ""
-        }
+        description={archiveCandidate ? archiveDescription(archiveCandidate.name) : ""}
         confirmLabel="Archive"
         variant="danger"
         isLoading={isArchiving}

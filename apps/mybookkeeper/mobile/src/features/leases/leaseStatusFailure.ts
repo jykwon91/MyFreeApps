@@ -1,6 +1,6 @@
 import { LEASE_MESSAGES } from "../../constants/leases";
 import { UPLOAD_MESSAGES } from "../../constants/uploads";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 
 export function leaseStatusFailure(error: unknown): string {
   switch (httpStatus(error)) {

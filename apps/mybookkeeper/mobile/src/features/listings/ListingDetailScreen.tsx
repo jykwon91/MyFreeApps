@@ -12,7 +12,7 @@ import { plainFromMarkdown } from "../../lib/plainFromMarkdown";
 import InquiryChip from "../inquiries/InquiryChip";
 import { useOpenLink } from "../inquiries/useOpenLink";
 import TransactionFact from "../transactions/TransactionFact";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import ListingDetailSkeleton from "./ListingDetailSkeleton";
 import ListingFacts from "./ListingFacts";
 import ListingShareLink from "./ListingShareLink";

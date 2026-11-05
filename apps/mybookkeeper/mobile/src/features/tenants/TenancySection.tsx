@@ -9,7 +9,7 @@ import { endedToast, restartedToast, TENANT_MESSAGES } from "../../constants/ten
 import InquiryChip from "../inquiries/InquiryChip";
 import InquirySection from "../inquiries/InquirySection";
 import { useOpenLink } from "../inquiries/useOpenLink";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { useCanWrite } from "../workspace/useCanWrite";
 import EndTenancySheet from "./EndTenancySheet";
 import { tenancyLine, tenancyStateLabel } from "./tenantDisplay";

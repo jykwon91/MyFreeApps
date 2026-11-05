@@ -7,7 +7,7 @@ import { LEASE_TEMPLATE_LIST_LIMIT } from "../../constants/leaseTemplates";
 import { NEW_LEASE_MESSAGES as MESSAGES } from "../../constants/newLease";
 import type { NewLeaseFlow } from "../../types/NewLeaseFlow";
 import { applicantName } from "../applicants/applicantDisplay";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import NewLeaseDetailsSkeleton from "./NewLeaseDetailsSkeleton";
 import NewLeaseForm from "./NewLeaseForm";
 

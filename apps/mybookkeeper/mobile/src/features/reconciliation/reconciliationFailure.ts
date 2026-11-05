@@ -1,5 +1,5 @@
 import { RECONCILIATION_MESSAGES as MESSAGES } from "../../constants/reconciliation";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 
 const GATEWAY_FAILURES = [502, 503, 504];
 

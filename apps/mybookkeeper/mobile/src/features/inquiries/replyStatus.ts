@@ -2,7 +2,7 @@ import type { InquiryMessage } from "@mybookkeeper/api-client/types/inquiry/inqu
 import type { Integration } from "@mybookkeeper/api-client/types/integration/integration";
 import type { ReplyBlock } from "../../types/ReplyBlock";
 import type { ReplyFailure } from "../../types/ReplyFailure";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 
 export const REPLY_BLOCK_WORDS: Record<ReplyBlock, string> = {
   noGmail: "Connect Gmail to send replies. That part happens on the website.",

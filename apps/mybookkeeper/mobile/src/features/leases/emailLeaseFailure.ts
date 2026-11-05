@@ -2,7 +2,7 @@ import { DEMO_EMAIL_REFUSED } from "@mybookkeeper/api-client/constants/demoRefus
 import { isDemoRefusal } from "@mybookkeeper/api-client/utils/isDemoRefusal";
 import { LEASE_MESSAGES, noEmailForLease } from "../../constants/leases";
 import { UPLOAD_MESSAGES } from "../../constants/uploads";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { isMissingTenantEmail } from "./extendLeaseFailure";
 
 export function emailLeaseFailure(error: unknown, tenantName: string | null): string {

@@ -6,7 +6,7 @@ import { receiptSendErrorCode } from "@mybookkeeper/api-client/utils/receiptSend
 import { FIX_ON_WEBSITE, RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
 import type { ReceiptDismissFailure } from "../../types/ReceiptDismissFailure";
 import type { ReceiptSendFailure } from "../../types/ReceiptSendFailure";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 
 function serverDetail(error: unknown): unknown {
   return (error as { data?: { detail?: unknown } } | null)?.data?.detail;

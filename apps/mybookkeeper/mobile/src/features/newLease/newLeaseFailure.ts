@@ -1,7 +1,7 @@
 import { NEW_LEASE_MESSAGES as MESSAGES } from "../../constants/newLease";
 import { UPLOAD_MESSAGES } from "../../constants/uploads";
 import { leaseConflictCode } from "../leases/leaseConflictCode";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 
 /** The server's 422 for a required value is a plain sentence; a rule it checks has a code. */
 export function isOutOfDateForm(error: unknown): boolean {

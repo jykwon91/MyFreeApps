@@ -8,7 +8,7 @@ import { NEW_LEASE_MESSAGES } from "../../constants/newLease";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { useOpenLink } from "../inquiries/useOpenLink";
 import { nextPath } from "../newLease/newLeaseFlow";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { inDisplayOrder, placeholdersLine } from "./leaseTemplateDisplay";
 import LeaseTemplateDetailSkeleton from "./LeaseTemplateDetailSkeleton";

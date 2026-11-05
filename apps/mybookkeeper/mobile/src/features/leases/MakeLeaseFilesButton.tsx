@@ -3,7 +3,7 @@ import type { SignedLeaseDetail } from "@mybookkeeper/api-client/types/lease/sig
 import { LoadingButton, useToast } from "@platform/mobile";
 import { useRef } from "react";
 import { MAKE_AND_EMAIL_BODY, makeAndEmailTitle, NEW_LEASE_MESSAGES as MESSAGES } from "../../constants/newLease";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { askOnce } from "./askOnce";
 import { leaseEmailsOnGenerate } from "./leaseDisplay";
 

@@ -14,7 +14,7 @@ import InquiryChip from "../inquiries/InquiryChip";
 import InquirySection from "../inquiries/InquirySection";
 import { useOpenLink } from "../inquiries/useOpenLink";
 import { templatesPath } from "../newLease/newLeaseFlow";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { leaseCanHaveSuccessor, leaseCountdown, leaseHasEmailableFile, leaseIsInEffect, leaseNeedsFiles, leaseStatusLabel, leaseTerm, sortLeaseFiles } from "./leaseDisplay";
 import DeleteLeaseButton from "./DeleteLeaseButton";

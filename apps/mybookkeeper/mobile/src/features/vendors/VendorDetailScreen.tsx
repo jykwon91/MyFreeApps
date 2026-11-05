@@ -10,7 +10,7 @@ import InquiryChip from "../inquiries/InquiryChip";
 import InquiryContact from "../inquiries/InquiryContact";
 import { useOpenLink } from "../inquiries/useOpenLink";
 import TransactionFact from "../transactions/TransactionFact";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { directionsUrl, hourlyRateText } from "./vendorDisplay";
 import VendorDetailSkeleton from "./VendorDetailSkeleton";
 

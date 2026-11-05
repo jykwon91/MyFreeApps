@@ -3,7 +3,7 @@ import { Banner, LoadingButton, Skeleton, useTheme } from "@platform/mobile";
 import { Text } from "react-native";
 import { SCREENING_MESSAGES } from "../../constants/applicantScreening";
 import CollapsibleSection from "../inquiries/CollapsibleSection";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import ScreeningProviders from "./ScreeningProviders";
 
 export default function ScreeningActions({

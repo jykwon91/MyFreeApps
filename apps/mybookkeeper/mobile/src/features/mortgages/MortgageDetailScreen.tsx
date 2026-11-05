@@ -8,7 +8,7 @@ import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { useTodayIso } from "../../lib/useTodayIso";
 import InquiryChip from "../inquiries/InquiryChip";
 import { useOpenLink } from "../inquiries/useOpenLink";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import MortgageDetailSkeleton from "./MortgageDetailSkeleton";
 import { mortgageTitle, rateFixedLine } from "./mortgageDisplay";
 import MortgageFacts from "./MortgageFacts";

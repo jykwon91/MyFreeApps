@@ -2,11 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { store } from "@/shared/store";
 import ReplyTemplatesManager from "@/app/features/inquiries/ReplyTemplatesManager";
 import { showError } from "@/shared/lib/toast-store";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
+import { useGetArchivedReplyTemplatesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
+import { archiveDescription } from "@/shared/lib/reply-template-messages";
 
 const t1: ReplyTemplate = {
   id: "tpl-1",
@@ -35,7 +37,19 @@ vi.mock("@mybookkeeper/api-client/store/inquiriesApi", () => ({
   useCreateReplyTemplateMutation: vi.fn(() => [create, { isLoading: false }]),
   useUpdateReplyTemplateMutation: vi.fn(() => [update, { isLoading: false }]),
   useArchiveReplyTemplateMutation: vi.fn(() => [archive, { isLoading: false }]),
+  useGetArchivedReplyTemplatesQuery: vi.fn(() => ({
+    currentData: [{ ...t1, id: "tpl-2", name: "Old decline", is_archived: true }],
+    isError: false,
+    isFetching: false,
+    refetch: vi.fn(),
+  })),
 }));
+
+vi.mock("@/shared/hooks/useOrgRole", () => ({ useCanWrite: vi.fn(() => true) }));
+
+function SearchSpy() {
+  return <output data-testid="search-spy">{useLocation().search}</output>;
+}
 
 vi.mock("@/shared/lib/toast-store", () => ({
   showSuccess: vi.fn(),
@@ -43,11 +57,12 @@ vi.mock("@/shared/lib/toast-store", () => ({
   subscribe: vi.fn(() => () => {}),
 }));
 
-function renderManager() {
+function renderManager(path = "/reply-templates") {
   return render(
     <Provider store={store}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[path]}>
         <ReplyTemplatesManager />
+        <SearchSpy />
       </MemoryRouter>
     </Provider>,
   );
@@ -136,5 +151,60 @@ describe("ReplyTemplatesManager", () => {
     await waitFor(() => {
       expect(archive).toHaveBeenCalledWith(t1.id);
     });
+  });
+
+  it("says in the archive dialog that it can be restored and its name stays taken", async () => {
+    const user = userEvent.setup();
+    renderManager();
+    await user.click(screen.getByTestId(`reply-template-archive-${t1.id}`));
+    expect(screen.getByText(archiveDescription(t1.name))).toBeInTheDocument();
+  });
+});
+
+describe("the Active and Archived tabs", () => {
+  beforeEach(() => {
+    vi.mocked(useGetArchivedReplyTemplatesQuery).mockClear();
+    listState = { data: [t1], isLoading: false };
+  });
+
+  it("opens on Active, without asking for the archived ones", () => {
+    renderManager();
+    expect(screen.getByRole("tab", { name: "Active" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByTestId(`reply-template-row-${t1.id}`)).toBeInTheDocument();
+    expect(useGetArchivedReplyTemplatesQuery).not.toHaveBeenCalled();
+  });
+
+  it("opens on Archived from the link, with no New template button", () => {
+    renderManager("/reply-templates?view=archived");
+    expect(screen.getByRole("tab", { name: "Archived" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText("Old decline")).toBeInTheDocument();
+    expect(screen.queryByTestId(`reply-template-row-${t1.id}`)).not.toBeInTheDocument();
+    expect(screen.queryByTestId("reply-template-new-button")).not.toBeInTheDocument();
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", "reply-templates-tab-archived");
+  });
+
+  it("falls back to Active for a view it doesn't know", () => {
+    renderManager("/reply-templates?view=nonsense");
+    expect(screen.getByRole("tab", { name: "Active" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("puts the tab in the link, and takes it out again", async () => {
+    const user = userEvent.setup();
+    renderManager("/reply-templates?other=1");
+    await user.click(screen.getByRole("tab", { name: "Archived" }));
+    expect(screen.getByTestId("search-spy")).toHaveTextContent(/^\?other=1&view=archived$/);
+    await user.click(screen.getByRole("tab", { name: "Active" }));
+    expect(screen.getByTestId("search-spy")).toHaveTextContent(/^\?other=1$/);
+  });
+
+  it("moves between tabs with the arrow keys", async () => {
+    const user = userEvent.setup();
+    renderManager();
+    screen.getByRole("tab", { name: "Active" }).focus();
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("tab", { name: "Archived" })).toHaveFocus();
+    expect(screen.getByRole("tab", { name: "Archived" })).toHaveAttribute("aria-selected", "true");
+    await user.keyboard("{ArrowLeft}");
+    expect(screen.getByRole("tab", { name: "Active" })).toHaveFocus();
   });
 });
