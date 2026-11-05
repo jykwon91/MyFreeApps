@@ -14,7 +14,7 @@ import VersionTag from "@/app/components/VersionTag";
 import DemoWelcomeDialog from "@/app/components/DemoWelcomeDialog";
 import GmailReauthSidebarBanner from "@/app/components/GmailReauthSidebarBanner";
 import LegalFooter from "@/app/components/LegalFooter";
-import { useGetAttributionReviewQueueQuery } from "@/shared/store/attributionApi";
+import { useGetAttributionReviewQueueQuery } from "@mybookkeeper/api-client/store/attributionApi";
 import { useGmailSyncWatcher } from "@/shared/hooks/useGmailSyncWatcher";
 
 export default function Layout() {

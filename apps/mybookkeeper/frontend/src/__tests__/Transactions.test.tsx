@@ -148,14 +148,17 @@ vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
   })),
 }));
 
-vi.mock("@/shared/store/attributionApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/attributionApi", () => ({
   useGetAttributionReviewQueueQuery: vi.fn(() => ({
     data: { items: [], total: 0, pending_count: 0 },
     isLoading: false,
   })),
-  useAttributeTransactionManuallyMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useConfirmAttributionReviewMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useRejectAttributionReviewMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+}));
+
+vi.mock("@/shared/store/attributionApi", () => ({
+  useAttributeTransactionManuallyMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useGetPropertyPnlQuery: vi.fn(() => ({ data: undefined, isLoading: false })),
 }));
 

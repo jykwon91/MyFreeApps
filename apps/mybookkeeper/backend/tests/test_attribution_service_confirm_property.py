@@ -230,6 +230,43 @@ async def test_confirm_applicant_takes_precedence_over_property(db: AsyncSession
 
 
 @pytest.mark.asyncio
+async def test_a_picked_property_outranks_a_proposed_applicant(db: AsyncSession):
+    """Picking a property must book that property, not the tenant we only guessed."""
+    org_id, user_id = uuid.uuid4(), uuid.uuid4()
+    applicant = Applicant(
+        id=uuid.uuid4(),
+        organization_id=org_id,
+        user_id=user_id,
+        stage="lease_signed",
+        legal_name="Jane Doe",
+    )
+    prop = _property(org_id, user_id)
+    txn = _txn(org_id, user_id)
+    review = _review(org_id, user_id, txn.id, proposed_applicant_id=applicant.id)
+    db.add_all([applicant, prop, txn, review])
+    await db.flush()
+
+    receipt_mock = AsyncMock()
+    with patch(
+        "app.services.transactions.attribution_service.unit_of_work",
+        _make_fake_uow(db),
+    ), patch(
+        "app.services.transactions.attribution_service.receipt_service.create_pending_receipt_in_session",
+        receipt_mock,
+    ):
+        await confirm_review(
+            review_id=review.id, organization_id=org_id, user_id=user_id, property_id=prop.id,
+        )
+
+    refreshed_txn = (
+        await db.execute(select(Transaction).where(Transaction.id == txn.id))
+    ).scalar_one()
+    assert refreshed_txn.property_id == prop.id
+    assert refreshed_txn.applicant_id is None
+    receipt_mock.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_confirm_no_applicant_or_property_raises(db: AsyncSession):
     """A row with neither proposed target and no override args raises."""
     org_id, user_id = uuid.uuid4(), uuid.uuid4()

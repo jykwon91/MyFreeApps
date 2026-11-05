@@ -1,12 +1,8 @@
-import { tenancyState } from "@mybookkeeper/api-client/utils/tenancyState";
-import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
+import type { ApplicantSummary } from "../types/applicant/applicant-summary";
+import type { TenantOption } from "../types/applicant/tenant-option";
+import { tenancyState } from "./tenancyState";
 
 type TenantEndFields = Pick<ApplicantSummary, "tenant_ended_at" | "contract_end">;
-
-export interface TenantOption {
-  id: string;
-  label: string;
-}
 
 /**
  * Mirrors the backend ``applicant_repo.is_ended`` predicate: a tenancy has

@@ -1,20 +1,6 @@
+import type { AttributionApplicantSummary } from "./attribution-applicant-summary";
 import type { AttributionPropertySummary } from "./attribution-property-summary";
-
-export interface AttributionTransactionSummary {
-  id: string;
-  transaction_date: string;
-  amount: string;
-  vendor: string | null;
-  payer_name: string | null;
-  description: string | null;
-  property_id: string | null;
-  channel: string | null;
-}
-
-export interface AttributionApplicantSummary {
-  id: string;
-  legal_name: string | null;
-}
+import type { AttributionTransactionSummary } from "./attribution-transaction-summary";
 
 export interface AttributionReviewItem {
   id: string;
@@ -28,10 +14,4 @@ export interface AttributionReviewItem {
   transaction: AttributionTransactionSummary | null;
   proposed_applicant: AttributionApplicantSummary | null;
   proposed_property: AttributionPropertySummary | null;
-}
-
-export interface AttributionReviewQueueResponse {
-  items: AttributionReviewItem[];
-  total: number;
-  pending_count: number;
 }
