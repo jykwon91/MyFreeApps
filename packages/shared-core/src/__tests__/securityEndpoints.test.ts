@@ -83,9 +83,10 @@ describe("the injected endpoints", () => {
 
   it("setupTotp leaves the TOTP status cached", async () => {
     await store.dispatch(endpoints.getTotpStatus.initiate());
-    await store.dispatch(endpoints.setupTotp.initiate());
+    await store.dispatch(endpoints.setupTotp.initiate({ password: "pw" }));
     await settle();
     expect(requests()).toEqual(["GET /auth/totp/status", "POST /auth/totp/setup"]);
+    expect(seen[seen.length - 1].data).toBe(JSON.stringify({ password: "pw" }));
   });
 
   it("the user endpoints share no tag: updating doesn't refetch the current user", async () => {

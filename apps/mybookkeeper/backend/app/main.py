@@ -10,6 +10,7 @@ import jwt
 from jwt.exceptions import PyJWTError as JWTError
 from sqlalchemy import text
 
+from platform_shared.core.boot_guards import check_test_mode_off
 from platform_shared.core.git import resolve_git_commit
 from platform_shared.core.lifespan import create_app_lifespan
 from platform_shared.core.openapi import docs_kwargs
@@ -292,6 +293,11 @@ app.include_router(mobile_auth.router)
 app.include_router(taxpayer_profiles.router)
 app.include_router(demo.router)
 app.include_router(analytics.router)
+check_test_mode_off(
+    flag_name="ALLOW_TEST_ADMIN_PROMOTION",
+    flag_is_on=settings.allow_test_admin_promotion,
+    environment=settings.environment,
+)
 if settings.allow_test_admin_promotion:
     from app.test_helpers.router import router as test_helpers_router
     app.include_router(test_helpers_router)

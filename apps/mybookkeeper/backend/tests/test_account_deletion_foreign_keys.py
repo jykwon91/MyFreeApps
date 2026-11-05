@@ -108,7 +108,7 @@ async def _delete_account(db: AsyncSession, user: User) -> Response:
     fastapi_app.dependency_overrides[current_active_user] = lambda: user
     fastapi_app.dependency_overrides[get_db] = lambda: db
     try:
-        with patch("platform_shared.api.account_deletion_router.PasswordHelper") as helper:
+        with patch("platform_shared.testing.factories._FastPasswordHelper") as helper:
             helper.return_value.verify_and_update.return_value = (True, None)
             async with AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://test") as client:
                 return await client.request("DELETE", "/users/me", json={"password": "pw", "confirm_email": user.email})

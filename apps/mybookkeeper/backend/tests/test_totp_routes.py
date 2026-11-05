@@ -12,6 +12,7 @@ from unittest.mock import AsyncMock, patch
 import pyotp
 import pytest
 import pytest_asyncio
+from fastapi_users.password import PasswordHelper
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,6 +24,10 @@ from app.models.user.user import User
 from platform_shared.services.totp_service import generate_recovery_codes
 
 from app.services.user import totp_service
+
+
+_PASSWORD = "correct-password"
+_PASSWORD_HASH = PasswordHelper().hash(_PASSWORD)
 
 
 # ---------------------------------------------------------------------------
@@ -40,7 +45,7 @@ def _make_user(
     user = User(
         id=user_id,
         email=email,
-        hashed_password="fakehash",
+        hashed_password=_PASSWORD_HASH,
         is_active=True,
         is_superuser=False,
         is_verified=True,
@@ -92,7 +97,7 @@ async def user_with_totp(db: AsyncSession) -> tuple[User, str]:
     user = User(
         id=user_id,
         email="totp-user@example.com",
-        hashed_password="fakehash",
+        hashed_password=_PASSWORD_HASH,
         is_active=True,
         is_superuser=False,
         is_verified=True,
@@ -152,7 +157,7 @@ class TestTotpSetup:
     @pytest.mark.asyncio
     async def test_returns_secret_and_uri(self, db: AsyncSession, user_no_totp: User) -> None:
         async with _auth_client_for(user_no_totp)() as client:
-            resp = await client.post("/auth/totp/setup")
+            resp = await client.post("/auth/totp/setup", json={"password": _PASSWORD})
         assert resp.status_code == 200
         data = resp.json()
         assert "secret" in data
@@ -160,14 +165,41 @@ class TestTotpSetup:
         assert data["provisioning_uri"].startswith("otpauth://totp/")
 
     @pytest.mark.asyncio
+    async def test_wrong_password_starts_nothing_and_counts_toward_the_lockout(
+        self, db: AsyncSession, user_no_totp: User
+    ) -> None:
+        async with _auth_client_for(user_no_totp)() as client:
+            resp = await client.post("/auth/totp/setup", json={"password": "wrong"})
+        assert resp.status_code == 403
+        await db.refresh(user_no_totp)
+        assert user_no_totp.totp_secret is None
+        assert user_no_totp.failed_login_count == 1
+
+    @pytest.mark.asyncio
+    async def test_right_password_clears_earlier_failures(
+        self, db: AsyncSession, user_no_totp: User
+    ) -> None:
+        user_no_totp.failed_login_count = 2
+        await db.commit()
+        async with _auth_client_for(user_no_totp)() as client:
+            resp = await client.post("/auth/totp/setup", json={"password": _PASSWORD})
+        assert resp.status_code == 200
+        await db.refresh(user_no_totp)
+        assert user_no_totp.failed_login_count == 0
+
+    @pytest.mark.asyncio
     async def test_returns_400_when_already_enabled(
         self, db: AsyncSession, user_with_totp: tuple[User, str]
     ) -> None:
         user, _ = user_with_totp
+        user.failed_login_count = 3
+        await db.commit()
         async with _auth_client_for(user)() as client:
-            resp = await client.post("/auth/totp/setup")
+            resp = await client.post("/auth/totp/setup", json={"password": _PASSWORD})
         assert resp.status_code == 400
         assert "already enabled" in resp.json()["detail"]
+        await db.refresh(user)
+        assert user.failed_login_count == 3
 
 
 # ---------------------------------------------------------------------------

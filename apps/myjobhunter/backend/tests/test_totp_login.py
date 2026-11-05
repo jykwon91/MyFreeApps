@@ -29,7 +29,7 @@ from platform_shared.core.auth_events import AuthEventType
 async def _enroll_totp(client: AsyncClient, user, as_user) -> str:
     """Drive a user through enrollment and return the plaintext TOTP secret."""
     async with await as_user(user) as authed:
-        setup = await authed.post("/auth/totp/setup")
+        setup = await authed.post("/auth/totp/setup", json={"password": user["password"]})
         secret = setup.json()["secret"]
         await authed.post(
             "/auth/totp/verify",
@@ -147,7 +147,7 @@ async def test_recovery_code_accepted_and_consumed(
     consumed (cannot be reused), and confirm subsequent valid TOTP still works."""
     user = await user_factory()
     async with await as_user(user) as authed:
-        setup = await authed.post("/auth/totp/setup")
+        setup = await authed.post("/auth/totp/setup", json={"password": user["password"]})
         secret = setup.json()["secret"]
         verify = await authed.post(
             "/auth/totp/verify",
@@ -238,7 +238,7 @@ async def test_auth_events_written_on_totp_recovery_used(
 ) -> None:
     user = await user_factory()
     async with await as_user(user) as authed:
-        setup = await authed.post("/auth/totp/setup")
+        setup = await authed.post("/auth/totp/setup", json={"password": user["password"]})
         secret = setup.json()["secret"]
         verify = await authed.post(
             "/auth/totp/verify",

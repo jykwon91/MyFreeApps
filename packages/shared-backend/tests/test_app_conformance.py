@@ -1173,6 +1173,15 @@ class TestProfileUpdateCantChangeCredentials:
         assert "model_config" not in update_body, "UserUpdate must keep refusing unknown fields."
 
 
+class TestTestRoutesCantMountInProduction:
+    """The boot guard's unit tests can't notice an app that stops calling it."""
+
+    def test_mybookkeeper_runs_the_guard_before_mounting_test_routes(self) -> None:
+        main = _read("apps", "mybookkeeper", "backend", "app", "main.py")
+        assert "check_test_mode_off(" in main
+        assert main.index("check_test_mode_off(") < main.index("include_router(test_helpers_router)")
+
+
 class TestTotpRoutesAreShared:
     """A fix to two-factor login must reach every app, so no app keeps its own copy."""
 

@@ -22,7 +22,7 @@ const mockDisableTotp = vi.fn();
 
 vi.mock('@/shared/store/totpApi', () => ({
   useGetTotpStatusQuery: vi.fn(),
-  useSetupTotpMutation: vi.fn(() => [mockSetupTotp, { isLoading: false }]),
+  useSetupTotpMutation: vi.fn(() => [mockSetupTotp, { isLoading: false, reset: vi.fn() }]),
   useVerifyTotpMutation: vi.fn(() => [mockVerifyTotp, { isLoading: false }]),
   useDisableTotpMutation: vi.fn(() => [mockDisableTotp, { isLoading: false }]),
 }));
@@ -34,6 +34,13 @@ import {
   useDisableTotpMutation,
 } from '@/shared/store/totpApi';
 import { showSuccess } from '@/shared/lib/toast-store';
+
+beforeEach(() => {
+  vi.mocked(useSetupTotpMutation).mockReturnValue([
+    mockSetupTotp,
+    { isLoading: false, reset: vi.fn() },
+  ] as unknown as ReturnType<typeof useSetupTotpMutation>);
+});
 
 function renderComponent() {
   return render(
@@ -125,14 +132,16 @@ describe('TwoFactorSetup — setup flow', () => {
   it('clicking Enable 2FA calls the setup mutation', async () => {
     const user = userEvent.setup();
     mockSetupTotp.mockReturnValue({
-      unwrap: () => Promise.resolve({ secret: 'ABCDEF123456', provisioning_uri: 'otpauth://totp/test' }),
+      unwrap: () => Promise.resolve({ secret: 'ABCDEF123456', provisioning_uri: 'otpauth://totp/test', algorithm: 'sha256', digits: 6, period: 30 }),
     });
 
     renderComponent();
 
     await user.click(screen.getByText('Enable 2FA'));
+    await user.type(screen.getByLabelText('Enter your password to continue'), 'my-password');
+    await user.click(screen.getByText('Continue'));
 
-    expect(mockSetupTotp).toHaveBeenCalledWith();
+    expect(mockSetupTotp).toHaveBeenCalledWith({ password: 'my-password' });
   });
 
   it('shows QR code and secret after setup mutation succeeds', async () => {
@@ -141,31 +150,68 @@ describe('TwoFactorSetup — setup flow', () => {
       unwrap: () => Promise.resolve({
         secret: 'MYSECRET123',
         provisioning_uri: 'otpauth://totp/test?secret=MYSECRET123',
+        algorithm: 'sha256',
+        digits: 6,
+        period: 30,
       }),
     });
 
     renderComponent();
     await user.click(screen.getByText('Enable 2FA'));
+    await user.type(screen.getByLabelText('Enter your password to continue'), 'my-password');
+    await user.click(screen.getByText('Continue'));
 
     await screen.findByTestId('qr-code');
     expect(screen.getByTestId('qr-code')).toBeInTheDocument();
     expect(screen.getByText('MYSECRET123')).toBeInTheDocument();
+    expect(
+      screen.getByText('If you enter it by hand: time-based, SHA256, 6 digits, 30 seconds.'),
+    ).toBeInTheDocument();
+  });
+
+  it('asks for the password before calling setup, and Cancel forgets it', async () => {
+    const user = userEvent.setup();
+
+    renderComponent();
+    await user.click(screen.getByText('Enable 2FA'));
+    expect(mockSetupTotp).not.toHaveBeenCalled();
+    expect(screen.getByText('Continue').closest('button')).toBeDisabled();
+
+    await user.type(screen.getByLabelText('Enter your password to continue'), 'my-password');
+    await user.click(screen.getByText('Cancel'));
+    await user.click(screen.getByText('Enable 2FA'));
+
+    expect(screen.getByLabelText('Enter your password to continue')).toHaveValue('');
+    expect(mockSetupTotp).not.toHaveBeenCalled();
+  });
+
+  it('offers no way out while the password is being checked', async () => {
+    vi.mocked(useSetupTotpMutation).mockReturnValue([
+      mockSetupTotp, { isLoading: true, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useSetupTotpMutation>);
+    const user = userEvent.setup();
+    renderComponent();
+    await user.click(screen.getByText('Enable 2FA'));
+
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
   });
 
   it('shows the 6-digit code input label after setup', async () => {
     const user = userEvent.setup();
     mockSetupTotp.mockReturnValue({
-      unwrap: () => Promise.resolve({ secret: 'ABCDEF', provisioning_uri: 'otpauth://totp/test' }),
+      unwrap: () => Promise.resolve({ secret: 'ABCDEF', provisioning_uri: 'otpauth://totp/test', algorithm: 'sha256', digits: 6, period: 30 }),
     });
 
     renderComponent();
     await user.click(screen.getByText('Enable 2FA'));
+    await user.type(screen.getByLabelText('Enter your password to continue'), 'my-password');
+    await user.click(screen.getByText('Continue'));
 
     await screen.findByText('Enter the 6-digit code from your app');
     expect(screen.getByPlaceholderText('000000')).toBeInTheDocument();
   });
 
-  it('stays on the status step when setup mutation fails', async () => {
+  it('stays on the password step with the reason when setup is refused', async () => {
     const user = userEvent.setup();
     mockSetupTotp.mockReturnValue({
       unwrap: () => Promise.reject(new Error('Setup failed, please try again')),
@@ -173,22 +219,26 @@ describe('TwoFactorSetup — setup flow', () => {
 
     renderComponent();
     await user.click(screen.getByText('Enable 2FA'));
+    await user.type(screen.getByLabelText('Enter your password to continue'), 'my-password');
+    await user.click(screen.getByText('Continue'));
 
     await waitFor(() => {
       expect(screen.queryByTestId('qr-code')).not.toBeInTheDocument();
     });
-    expect(screen.getByText('Enable 2FA')).toBeInTheDocument();
+    expect(screen.getByLabelText('Enter your password to continue')).toBeInTheDocument();
     expect(screen.getByText('Setup failed, please try again')).toBeInTheDocument();
   });
 
   it('Cancel button from verify step returns to status view', async () => {
     const user = userEvent.setup();
     mockSetupTotp.mockReturnValue({
-      unwrap: () => Promise.resolve({ secret: 'ABCDEF', provisioning_uri: 'otpauth://totp/test' }),
+      unwrap: () => Promise.resolve({ secret: 'ABCDEF', provisioning_uri: 'otpauth://totp/test', algorithm: 'sha256', digits: 6, period: 30 }),
     });
 
     renderComponent();
     await user.click(screen.getByText('Enable 2FA'));
+    await user.type(screen.getByLabelText('Enter your password to continue'), 'my-password');
+    await user.click(screen.getByText('Continue'));
     await screen.findByText('Cancel');
 
     await user.click(screen.getByText('Cancel'));
@@ -210,7 +260,7 @@ describe('TwoFactorSetup — code input constraints', () => {
       isLoading: false,
     } as unknown as ReturnType<typeof useGetTotpStatusQuery>);
     mockSetupTotp.mockReturnValue({
-      unwrap: () => Promise.resolve({ secret: 'ABCDEF', provisioning_uri: 'otpauth://totp/test' }),
+      unwrap: () => Promise.resolve({ secret: 'ABCDEF', provisioning_uri: 'otpauth://totp/test', algorithm: 'sha256', digits: 6, period: 30 }),
     });
   });
 
@@ -219,6 +269,8 @@ describe('TwoFactorSetup — code input constraints', () => {
 
     renderComponent();
     await user.click(screen.getByText('Enable 2FA'));
+    await user.type(screen.getByLabelText('Enter your password to continue'), 'my-password');
+    await user.click(screen.getByText('Continue'));
     await screen.findByPlaceholderText('000000');
 
     const input = screen.getByPlaceholderText('000000');
@@ -232,6 +284,8 @@ describe('TwoFactorSetup — code input constraints', () => {
 
     renderComponent();
     await user.click(screen.getByText('Enable 2FA'));
+    await user.type(screen.getByLabelText('Enter your password to continue'), 'my-password');
+    await user.click(screen.getByText('Continue'));
     await screen.findByPlaceholderText('000000');
 
     const input = screen.getByPlaceholderText('000000');
@@ -245,6 +299,8 @@ describe('TwoFactorSetup — code input constraints', () => {
 
     renderComponent();
     await user.click(screen.getByText('Enable 2FA'));
+    await user.type(screen.getByLabelText('Enter your password to continue'), 'my-password');
+    await user.click(screen.getByText('Continue'));
     await screen.findByText('Verify & Enable');
 
     const verifyButton = screen.getByText('Verify & Enable').closest('button')!;
@@ -274,11 +330,13 @@ describe('TwoFactorSetup — verify flow', () => {
   async function advanceToVerifyStep() {
     const user = userEvent.setup();
     mockSetupTotp.mockReturnValue({
-      unwrap: () => Promise.resolve({ secret: 'ABCDEF', provisioning_uri: 'otpauth://totp/test' }),
+      unwrap: () => Promise.resolve({ secret: 'ABCDEF', provisioning_uri: 'otpauth://totp/test', algorithm: 'sha256', digits: 6, period: 30 }),
     });
 
     renderComponent();
     await user.click(screen.getByText('Enable 2FA'));
+    await user.type(screen.getByLabelText('Enter your password to continue'), 'my-password');
+    await user.click(screen.getByText('Continue'));
     await screen.findByPlaceholderText('000000');
     return user;
   }
@@ -382,7 +440,7 @@ describe('TwoFactorSetup — recovery codes', () => {
       isLoading: false,
     } as unknown as ReturnType<typeof useGetTotpStatusQuery>);
     mockSetupTotp.mockReturnValue({
-      unwrap: () => Promise.resolve({ secret: 'ABCDEF', provisioning_uri: 'otpauth://totp/test' }),
+      unwrap: () => Promise.resolve({ secret: 'ABCDEF', provisioning_uri: 'otpauth://totp/test', algorithm: 'sha256', digits: 6, period: 30 }),
     });
     mockVerifyTotp.mockReturnValue({
       unwrap: () => Promise.resolve({
@@ -393,6 +451,8 @@ describe('TwoFactorSetup — recovery codes', () => {
 
     renderComponent();
     await user.click(screen.getByText('Enable 2FA'));
+    await user.type(screen.getByLabelText('Enter your password to continue'), 'my-password');
+    await user.click(screen.getByText('Continue'));
     await screen.findByPlaceholderText('000000');
     await user.type(screen.getByPlaceholderText('000000'), '123456');
     await user.click(screen.getByText('Verify & Enable'));
@@ -636,7 +696,8 @@ describe('TwoFactorSetup — mutation loading states', () => {
     vi.clearAllMocks();
   });
 
-  it('shows Setting up... on the button while setup mutation is in flight', () => {
+  it('shows Checking... on the button while setup mutation is in flight', async () => {
+    const user = userEvent.setup();
     vi.mocked(useGetTotpStatusQuery).mockReturnValue({
       data: { enabled: false },
       isLoading: false,
@@ -644,8 +705,9 @@ describe('TwoFactorSetup — mutation loading states', () => {
     vi.mocked(useSetupTotpMutation).mockReturnValue([mockSetupTotp, { isLoading: true }] as unknown as ReturnType<typeof useSetupTotpMutation>);
 
     renderComponent();
+    await user.click(screen.getByText('Enable 2FA'));
 
-    expect(screen.getByText('Setting up...')).toBeInTheDocument();
+    expect(screen.getByText('Checking...')).toBeInTheDocument();
   });
 
   it('shows Verifying... on the button while verify mutation is in flight', async () => {
@@ -656,11 +718,11 @@ describe('TwoFactorSetup — mutation loading states', () => {
     } as unknown as ReturnType<typeof useGetTotpStatusQuery>);
     // Ensure setup mutation is NOT in-flight so "Enable 2FA" is clickable
     vi.mocked(useSetupTotpMutation).mockReturnValue(
-      [mockSetupTotp, { isLoading: false }] as unknown as ReturnType<typeof useSetupTotpMutation>,
+      [mockSetupTotp, { isLoading: false, reset: vi.fn() }] as unknown as ReturnType<typeof useSetupTotpMutation>,
     );
     // Setup resolves immediately to advance to verify step
     mockSetupTotp.mockReturnValue({
-      unwrap: () => Promise.resolve({ secret: 'ABCDEF', provisioning_uri: 'otpauth://totp/test' }),
+      unwrap: () => Promise.resolve({ secret: 'ABCDEF', provisioning_uri: 'otpauth://totp/test', algorithm: 'sha256', digits: 6, period: 30 }),
     });
     // Verify mutation is in-flight (never resolves)
     vi.mocked(useVerifyTotpMutation).mockReturnValue(
@@ -669,6 +731,8 @@ describe('TwoFactorSetup — mutation loading states', () => {
 
     renderComponent();
     await user.click(screen.getByText('Enable 2FA'));
+    await user.type(screen.getByLabelText('Enter your password to continue'), 'my-password');
+    await user.click(screen.getByText('Continue'));
     // Once on the verify step, the button shows the loading text from isVerifying=true
     await screen.findByText('Verifying...');
   });
@@ -685,5 +749,26 @@ describe('TwoFactorSetup — mutation loading states', () => {
     await user.click(screen.getByText('Disable 2FA'));
 
     expect(screen.getByText('Disabling...')).toBeInTheDocument();
+  });
+});
+
+describe("TwoFactorSetup — the password held by the setup call", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it.each([
+    { isLoading: true, resets: 0 },
+    { isLoading: false, resets: 1 },
+  ])("resets $resets time(s) when isLoading is $isLoading", ({ isLoading, resets }) => {
+    const reset = vi.fn();
+    vi.mocked(useSetupTotpMutation).mockReturnValue([
+      mockSetupTotp,
+      { isLoading, originalArgs: { password: "x" }, reset },
+    ] as unknown as ReturnType<typeof useSetupTotpMutation>);
+
+    renderComponent();
+
+    expect(reset).toHaveBeenCalledTimes(resets);
   });
 });

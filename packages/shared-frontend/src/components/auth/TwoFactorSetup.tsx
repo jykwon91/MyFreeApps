@@ -2,8 +2,12 @@ import { useState } from "react";
 import { Shield, ShieldCheck, ShieldOff, Copy, Check } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import type { TotpSetup } from "@platform/core/types/security/totp-setup";
+import { useForgetMutationArgs } from "../../hooks/useForgetMutationArgs";
+import Button from "../ui/Button";
 import LoadingButton from "../ui/LoadingButton";
+import TotpPasswordStep from "./TotpPasswordStep";
 import { showSuccess } from "../../lib/toast-store";
+import { TOTP_STEP } from "../../constants/totp-step";
 import type { TotpStep } from "../../types/totp-step";
 import { extractErrorMessage } from "../../utils/errorMessage";
 import {
@@ -27,27 +31,31 @@ import {
  * two-factor endpoints into baseApi.
  */
 export default function TwoFactorSetup() {
-  const [step, setStep] = useState<TotpStep>("status");
+  const [step, setStep] = useState<TotpStep>(TOTP_STEP.STATUS);
   const [setup, setSetup] = useState<TotpSetup | null>(null);
+  const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
 
   const { data: statusData, isLoading: isStatusLoading } = useGetTotpStatusQuery();
-  const [setupTotp, { isLoading: isSettingUp }] = useSetupTotpMutation();
+  const [setupTotp, { isLoading: isSettingUp, originalArgs: setupArgs, reset: forgetPassword }] = useSetupTotpMutation();
   const [verifyTotp, { isLoading: isVerifying }] = useVerifyTotpMutation();
   const [disableTotp, { isLoading: isDisabling }] = useDisableTotpMutation();
+
+  useForgetMutationArgs(setupArgs, isSettingUp, forgetPassword);
 
   const enabled = statusData?.enabled ?? null;
 
   function handleStartSetup(): void {
     setError("");
-    setupTotp()
+    setupTotp({ password })
       .unwrap()
       .then((data) => {
         setSetup(data);
-        setStep("verify");
+        setPassword("");
+        setStep(TOTP_STEP.VERIFY);
       })
       .catch((err: unknown) => setError(extractErrorMessage(err)));
   }
@@ -59,7 +67,7 @@ export default function TwoFactorSetup() {
       .then((data) => {
         if (data.verified) {
           setRecoveryCodes(data.recovery_codes);
-          setStep("recovery");
+          setStep(TOTP_STEP.RECOVERY);
           showSuccess("2FA enabled successfully");
         }
       })
@@ -71,7 +79,7 @@ export default function TwoFactorSetup() {
     disableTotp({ code })
       .unwrap()
       .then(() => {
-        setStep("status");
+        setStep(TOTP_STEP.STATUS);
         setCode("");
         showSuccess("2FA has been disabled");
       })
@@ -111,24 +119,24 @@ export default function TwoFactorSetup() {
         </div>
       </div>
 
-      {step === "status" && !enabled ? (
+      {step === TOTP_STEP.STATUS && !enabled ? (
         <div className="space-y-2">
-          <LoadingButton
-            onClick={handleStartSetup}
-            isLoading={isSettingUp}
-            loadingText="Setting up..."
+          <Button
+            onClick={() => {
+              setStep(TOTP_STEP.PASSWORD);
+              setError("");
+            }}
           >
             Enable 2FA
-          </LoadingButton>
-          {error ? <p className="text-destructive text-sm">{error}</p> : null}
+          </Button>
         </div>
       ) : null}
 
-      {step === "status" && enabled ? (
+      {step === TOTP_STEP.STATUS && enabled ? (
         <button
           type="button"
           onClick={() => {
-            setStep("disable");
+            setStep(TOTP_STEP.DISABLE);
             setCode("");
             setError("");
           }}
@@ -139,7 +147,22 @@ export default function TwoFactorSetup() {
         </button>
       ) : null}
 
-      {step === "verify" && setup ? (
+      {step === TOTP_STEP.PASSWORD ? (
+        <TotpPasswordStep
+          password={password}
+          error={error}
+          isChecking={isSettingUp}
+          onPasswordChange={setPassword}
+          onSubmit={handleStartSetup}
+          onCancel={() => {
+            setStep(TOTP_STEP.STATUS);
+            setPassword("");
+            setError("");
+          }}
+        />
+      ) : null}
+
+      {step === TOTP_STEP.VERIFY && setup ? (
         <div className="space-y-4">
           <div className="bg-muted/30 border rounded-lg p-4">
             <p className="text-sm mb-3">
@@ -154,6 +177,9 @@ export default function TwoFactorSetup() {
             </div>
             <p className="text-xs text-muted-foreground text-center font-mono break-all">
               {setup.secret}
+            </p>
+            <p className="text-xs text-muted-foreground text-center mt-1">
+              If you enter it by hand: time-based, {setup.algorithm.toUpperCase()}, {setup.digits} digits, {setup.period} seconds.
             </p>
           </div>
           <div>
@@ -186,7 +212,7 @@ export default function TwoFactorSetup() {
             <button
               type="button"
               onClick={() => {
-                setStep("status");
+                setStep(TOTP_STEP.STATUS);
                 setError("");
               }}
               className="px-4 py-2 text-sm border rounded-md hover:bg-muted transition-colors min-h-[44px]"
@@ -197,7 +223,7 @@ export default function TwoFactorSetup() {
         </div>
       ) : null}
 
-      {step === "recovery" ? (
+      {step === TOTP_STEP.RECOVERY ? (
         <div className="space-y-4">
           <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
             <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
@@ -228,7 +254,7 @@ export default function TwoFactorSetup() {
           </div>
           <button
             type="button"
-            onClick={() => setStep("status")}
+            onClick={() => setStep(TOTP_STEP.STATUS)}
             className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors min-h-[44px]"
           >
             I've saved my codes
@@ -236,7 +262,7 @@ export default function TwoFactorSetup() {
         </div>
       ) : null}
 
-      {step === "disable" ? (
+      {step === TOTP_STEP.DISABLE ? (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
             Enter a code from your authenticator app to disable 2FA.
@@ -266,7 +292,7 @@ export default function TwoFactorSetup() {
             <button
               type="button"
               onClick={() => {
-                setStep("status");
+                setStep(TOTP_STEP.STATUS);
                 setError("");
               }}
               className="px-4 py-2 text-sm border rounded-md hover:bg-muted transition-colors min-h-[44px]"

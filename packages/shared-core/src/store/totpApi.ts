@@ -13,8 +13,8 @@ const totpApi = apiWithTags.injectEndpoints({
       query: () => ({ url: "/auth/totp/status", method: "GET" }),
       providesTags: ["Totp"],
     }),
-    setupTotp: build.mutation<TotpSetup, void>({
-      query: () => ({ url: "/auth/totp/setup", method: "POST" }),
+    setupTotp: build.mutation<TotpSetup, { password: string }>({
+      query: (data) => ({ url: "/auth/totp/setup", method: "POST", data }),
     }),
     verifyTotp: build.mutation<TotpVerifyResponse, { code: string }>({
       query: (data) => ({ url: "/auth/totp/verify", method: "POST", data }),

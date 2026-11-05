@@ -4,11 +4,14 @@ from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.models.organization.organization_member import OrgRole
 from app.models.user.user import Role, User
 from app.repositories.user import user_repo
+from app.test_helpers.auth import force_verify_email
 
 
 @pytest_asyncio.fixture()
@@ -415,3 +418,29 @@ class TestSeedBlackout:
             assert exc_info.value.status_code == 404
         finally:
             settings.allow_test_admin_promotion = original
+
+
+class TestVerifyEmailHelper:
+    @pytest.mark.asyncio
+    async def test_gated_by_env_var(self) -> None:
+        with patch.object(settings, "allow_test_admin_promotion", False):
+            with pytest.raises(HTTPException) as exc_info:
+                await force_verify_email(email="nobody@example.com")
+        assert exc_info.value.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_marks_the_user_verified(self, db: AsyncSession, regular_user: User) -> None:
+        regular_user.is_verified = False
+        await db.commit()
+
+        with patch.object(settings, "allow_test_admin_promotion", True):
+            await force_verify_email(email=regular_user.email)
+
+        assert regular_user.is_verified is True
+
+    @pytest.mark.asyncio
+    async def test_unknown_email_is_a_404(self, db: AsyncSession) -> None:
+        with patch.object(settings, "allow_test_admin_promotion", True):
+            with pytest.raises(HTTPException) as exc_info:
+                await force_verify_email(email="nobody@example.com")
+        assert exc_info.value.status_code == 404

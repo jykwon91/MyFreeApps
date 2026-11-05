@@ -16,7 +16,6 @@ from httpx import AsyncClient
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from platform_shared.testing.factories import _FastPasswordHelper
 
 from app.core.config import settings
 from app.db.session import get_db
@@ -280,12 +279,8 @@ class TestAccountDataLifecycle:
 
     @pytest.mark.asyncio
     async def test_wrong_password_on_account_deletion_counts_toward_the_lockout(
-        self, user_factory, as_user, db: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+        self, user_factory, as_user, db: AsyncSession,
     ) -> None:
-        monkeypatch.setattr(
-            "platform_shared.api.account_deletion_router.PasswordHelper",
-            _FastPasswordHelper,
-        )
         # Signed in for real, so the route counts on the session that loaded the user.
         user = await user_factory()
         async with await as_user(user) as authed:
@@ -302,12 +297,8 @@ class TestAccountDataLifecycle:
 
     @pytest.mark.asyncio
     async def test_guesses_sent_together_get_no_more_than_the_lockout_allows(
-        self, user_factory, as_user, monkeypatch: pytest.MonkeyPatch,
+        self, user_factory, as_user,
     ) -> None:
-        monkeypatch.setattr(
-            "platform_shared.api.account_deletion_router.PasswordHelper",
-            _FastPasswordHelper,
-        )
         user = await user_factory()
         guesses = 12
         async with await as_user(user) as authed:
@@ -327,16 +318,8 @@ class TestAccountDataLifecycle:
 
     @pytest.mark.asyncio
     async def test_account_deletion_cascades_tutor_rows(
-        self, user_factory, as_user, db: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+        self, user_factory, as_user, db: AsyncSession,
     ) -> None:
-        # The shared deletion router bound the real PasswordHelper at import,
-        # before the test factories swapped in the fast hasher that
-        # user_factory registered with. Point it at the same hasher so the
-        # real password is still verified (MBK / MJH patch the same symbol).
-        monkeypatch.setattr(
-            "platform_shared.api.account_deletion_router.PasswordHelper",
-            _FastPasswordHelper,
-        )
         user = await user_factory()
         async with await as_user(user) as authed:
             session_id = (await authed.post("/sessions", json=_payload())).json()["id"]

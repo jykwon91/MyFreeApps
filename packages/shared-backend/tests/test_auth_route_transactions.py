@@ -20,6 +20,7 @@ from platform_shared.db.session import release_connection
 from platform_shared.services.account_deletion import AccountDeletionBlockedError
 from platform_shared.services.account_guard_service import AccountGuardService
 from platform_shared.services.guard_outcome import GuardOutcome
+from platform_shared.services.totp_already_enabled_error import TotpAlreadyEnabledError
 from tests.real_auth_stack import (
     EMAIL_DOMAIN,
     PASSWORD,
@@ -298,7 +299,7 @@ async def test_setup_then_verify_turns_2fa_on_and_saves_the_event(stack: RealAut
     user = await stack.add_user()
     stack.signed_in = user.id
 
-    setup = await stack.client.post("/auth/totp/setup")
+    setup = await stack.client.post("/auth/totp/setup", json={"password": PASSWORD})
     assert setup.status_code == 200
 
     wrong = await stack.client.post("/auth/totp/verify", json={"code": "000000"})
@@ -308,7 +309,144 @@ async def test_setup_then_verify_turns_2fa_on_and_saves_the_event(stack: RealAut
     right = await stack.client.post("/auth/totp/verify", json={"code": current_code(setup.json()["secret"])})
     assert right.status_code == 200 and right.json()["recovery_codes"]
     assert (await stack.stored_user(user.id)).totp_enabled
-    assert await stack.stored_event_types(user.id) == [AuthEventType.TOTP_ENABLED]
+    assert await stack.stored_event_types(user.id) == [
+        AuthEventType.LOGIN_FAILURE,
+        AuthEventType.TOTP_VERIFY_FAILURE,
+        AuthEventType.TOTP_ENABLED,
+    ]
+    stored = await stack.stored_user(user.id)
+    assert stored.failed_login_count == 0
+
+
+async def test_setup_with_the_wrong_password_counts_and_starts_nothing(stack: RealAuthStack) -> None:
+    user = await stack.add_user(failed_login_count=3)
+    stack.signed_in = user.id
+
+    resp = await stack.client.post("/auth/totp/setup", json={"password": "wrong"})
+
+    assert resp.status_code == 403
+    stored = await stack.stored_user(user.id)
+    assert stored.failed_login_count == 4
+    assert stored.totp_secret is None
+
+
+async def test_setup_with_the_right_password_clears_the_count(stack: RealAuthStack) -> None:
+    user = await stack.add_user(failed_login_count=3)
+    stack.signed_in = user.id
+
+    resp = await stack.client.post("/auth/totp/setup", json={"password": PASSWORD})
+
+    assert resp.status_code == 200
+    assert (await stack.stored_user(user.id)).failed_login_count == 0
+
+
+async def test_a_refused_setup_with_the_right_password_keeps_the_count(stack: RealAuthStack) -> None:
+    user = await stack.add_user(failed_login_count=3)
+    stack.signed_in = user.id
+
+    with patch.object(type(stack.totp), "setup_totp", AsyncMock(side_effect=TotpAlreadyEnabledError)):
+        resp = await stack.client.post("/auth/totp/setup", json={"password": PASSWORD})
+
+    assert resp.status_code == 400
+    assert (await stack.stored_user(user.id)).failed_login_count == 3
+
+
+async def test_setup_on_a_locked_account_is_refused_and_saves_the_row(stack: RealAuthStack) -> None:
+    user = await stack.add_user()
+    stack.signed_in = user.id
+    await stack.set_lockout(
+        user.id, failed_login_count=THRESHOLD, locked_until=datetime.now(timezone.utc) + timedelta(minutes=1),
+    )
+
+    resp = await stack.client.post("/auth/totp/setup", json={"password": PASSWORD})
+
+    assert resp.status_code == 429
+    assert (await stack.stored_user(user.id)).totp_secret is None
+    assert await stack.stored_event_types(user.id) == [AuthEventType.LOGIN_BLOCKED_LOCKED]
+
+
+async def test_wrong_setup_codes_lock_the_account_and_then_the_right_one_is_refused(stack: RealAuthStack) -> None:
+    user = await stack.add_user()
+    stack.signed_in = user.id
+    setup = await stack.client.post("/auth/totp/setup", json={"password": PASSWORD})
+
+    for _ in range(THRESHOLD):
+        assert (await stack.client.post("/auth/totp/verify", json={"code": "000000"})).status_code == 400
+
+    right = await stack.client.post("/auth/totp/verify", json={"code": current_code(setup.json()["secret"])})
+
+    assert right.status_code == 429
+    stored = await stack.stored_user(user.id)
+    assert not stored.totp_enabled
+    assert stored.failed_login_count == THRESHOLD and stored.locked_until is not None
+
+
+async def test_a_second_press_of_a_used_setup_code_is_not_a_guess(stack: RealAuthStack) -> None:
+    user = await stack.add_user()
+    stack.signed_in = user.id
+    setup = await stack.client.post("/auth/totp/setup", json={"password": PASSWORD})
+    code = current_code(setup.json()["secret"])
+
+    first, second = await asyncio.gather(
+        stack.client.post("/auth/totp/verify", json={"code": code}),
+        stack.client.post("/auth/totp/verify", json={"code": code}),
+    )
+
+    assert sorted((first.status_code, second.status_code)) == [200, 400]
+    stored = await stack.stored_user(user.id)
+    assert stored.totp_enabled and stored.failed_login_count == 0
+
+
+async def test_a_setup_code_with_no_setup_in_progress_is_not_a_guess(stack: RealAuthStack) -> None:
+    user = await stack.add_user()
+    stack.signed_in = user.id
+
+    resp = await stack.client.post("/auth/totp/verify", json={"code": "000000"})
+
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "No 2FA setup in progress. Cancel and start again."
+    stored = await stack.stored_user(user.id)
+    assert stored.failed_login_count == 0 and stored.locked_until is None
+    assert await stack.stored_event_types(user.id) == []
+
+
+async def test_a_lock_landing_during_setup_stops_it_and_stays_on(stack: RealAuthStack) -> None:
+    user = await stack.add_user()
+    stack.signed_in = user.id
+    locked_until = datetime.now(timezone.utc) + timedelta(minutes=1)
+    await stack.set_lockout(user.id, failed_login_count=THRESHOLD, locked_until=locked_until)
+    guard = type(_guard(stack))
+
+    with (
+        patch.object(guard, "begin_attempt", AsyncMock(return_value=GuardOutcome.ALLOWED)),
+        patch.object(guard, "record_password_attempt", AsyncMock(return_value=GuardOutcome.ALLOWED)),
+    ):
+        resp = await stack.client.post("/auth/totp/setup", json={"password": PASSWORD})
+
+    assert resp.status_code == 429
+    stored = await stack.stored_user(user.id)
+    assert stored.totp_secret is None
+    assert stored.failed_login_count == THRESHOLD and stored.locked_until == locked_until
+    assert await stack.stored_event_types(user.id) == [AuthEventType.LOGIN_BLOCKED_LOCKED]
+
+
+async def test_a_lock_landing_just_after_setup_saved_stays_on(stack: RealAuthStack) -> None:
+    user = await stack.add_user()
+    stack.signed_in = user.id
+    real_setup = stack.totp.setup_totp
+    locked_until: list[datetime] = []
+
+    async def setup_then_lock(user_id: uuid.UUID) -> tuple[str, str]:
+        result = await real_setup(user_id)
+        locked_until.append(await _lock_landing_mid_request(stack, user_id))
+        return result
+
+    with patch.object(type(stack.totp), "setup_totp", side_effect=setup_then_lock):
+        resp = await stack.client.post("/auth/totp/setup", json={"password": PASSWORD})
+
+    assert resp.status_code == 200
+    stored = await stack.stored_user(user.id)
+    assert stored.failed_login_count == THRESHOLD and stored.locked_until == locked_until[0]
 
 
 async def test_wrong_disable_code_saves_the_count_and_the_row(stack: RealAuthStack) -> None:
@@ -522,7 +660,7 @@ async def test_no_route_leaves_the_user_row_locked(stack: RealAuthStack) -> None
         lambda: client.post("/auth/totp/disable", json={"code": "000000"}),
         lambda: _delete(stack, _delete_body(user, "wrong")),
         lambda: _delete(stack, _delete_body(user, totp_code="000000")),
-        lambda: client.post("/auth/totp/setup"),
+        lambda: client.post("/auth/totp/setup", json={"password": PASSWORD}),
         lambda: client.post("/auth/totp/verify", json={"code": "000000"}),
     ]
     for send in requests:
@@ -692,6 +830,33 @@ async def test_wrong_disable_codes_sent_together_count_exactly_to_the_limit(wide
 
     responses = await asyncio.gather(*(
         wide_stack.client.post("/auth/totp/disable", json={"code": "000000"})
+        for _ in range(THRESHOLD + 5)
+    ))
+
+    assert {resp.status_code for resp in responses} <= {400, 429}
+    await _assert_counted_exactly_to_the_threshold(wide_stack, user.id)
+
+
+async def test_wrong_setup_passwords_sent_together_count_exactly_to_the_limit(wide_stack: RealAuthStack) -> None:
+    user = await wide_stack.add_user()
+    wide_stack.signed_in = user.id
+
+    responses = await asyncio.gather(*(
+        wide_stack.client.post("/auth/totp/setup", json={"password": "wrong"})
+        for _ in range(THRESHOLD + 5)
+    ))
+
+    assert {resp.status_code for resp in responses} <= {403, 429}
+    await _assert_counted_exactly_to_the_threshold(wide_stack, user.id)
+
+
+async def test_wrong_setup_codes_sent_together_count_exactly_to_the_limit(wide_stack: RealAuthStack) -> None:
+    user = await wide_stack.add_user()
+    wide_stack.signed_in = user.id
+    await wide_stack.client.post("/auth/totp/setup", json={"password": PASSWORD})
+
+    responses = await asyncio.gather(*(
+        wide_stack.client.post("/auth/totp/verify", json={"code": "000000"})
         for _ in range(THRESHOLD + 5)
     ))
 

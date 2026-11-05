@@ -11,3 +11,4 @@ class TotpRouteUser(LockoutAccount, Protocol):
     is_active: bool
     is_verified: bool
     totp_enabled: bool
+    hashed_password: str

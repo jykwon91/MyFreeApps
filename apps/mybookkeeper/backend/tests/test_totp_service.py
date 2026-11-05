@@ -11,11 +11,11 @@ from unittest.mock import patch
 
 import pyotp
 import pytest
-import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user.user import User
 from platform_shared.services import totp_service as shared_totp
+from platform_shared.services.totp_setup_not_started_error import TotpSetupNotStartedError
 
 from app.services.user import totp_service
 
@@ -323,18 +323,35 @@ class TestConfirmTotp:
         assert recovery_codes[0] not in user.totp_recovery_codes
 
     @pytest.mark.asyncio
-    async def test_no_totp_secret_returns_false(self, db: AsyncSession) -> None:
+    async def test_no_totp_secret_says_nothing_is_in_progress(self, db: AsyncSession) -> None:
         user = _make_user(totp_secret=None)
         db.add(user)
         await db.commit()
 
-        verified, _ = await totp_service.confirm_totp(user.id, "123456")
-        assert verified is False
+        with pytest.raises(TotpSetupNotStartedError):
+            await totp_service.confirm_totp(user.id, "123456")
 
     @pytest.mark.asyncio
     async def test_nonexistent_user_returns_false(self, db: AsyncSession) -> None:
         verified, _ = await totp_service.confirm_totp(uuid.uuid4(), "123456")
         assert verified is False
+
+    @pytest.mark.asyncio
+    async def test_right_code_on_a_locked_account_turns_nothing_on(self, db: AsyncSession) -> None:
+        user = _make_user()
+        db.add(user)
+        await db.commit()
+        secret = _setup_user_with_totp(user)
+        await db.commit()
+
+        # Patched because SQLite hands back the lock's time without its timezone.
+        with patch("platform_shared.services.totp_account_service.account_is_locked", return_value=True):
+            verified, recovery_codes = await totp_service.confirm_totp(user.id, pyotp.TOTP(secret).now())
+
+        assert verified is False
+        assert recovery_codes == []
+        await db.refresh(user)
+        assert user.totp_enabled is False
 
 
 class TestDisableTotp:

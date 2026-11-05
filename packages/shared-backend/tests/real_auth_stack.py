@@ -12,7 +12,6 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import patch
 
 import httpx
 import pyotp
@@ -240,10 +239,8 @@ async def make_stack(*, pool_size: int) -> AsyncIterator[RealAuthStack]:
         await connection.run_sync(AuthEvent.__table__.create)
 
     stack = RealAuthStack(engine)
-    # The deletion route may have imported the real helper before factories replaced it.
     try:
-        with patch("platform_shared.api.account_deletion_router.PasswordHelper", _FastPasswordHelper):
-            yield stack
+        yield stack
     finally:
         await stack.client.aclose()
         async with engine.begin() as connection:
