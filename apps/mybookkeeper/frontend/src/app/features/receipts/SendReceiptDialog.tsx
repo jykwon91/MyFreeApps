@@ -1,57 +1,36 @@
 import { useEffect, useState } from "react";
 import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import { useSendReceiptMutation } from "@/shared/store/rentReceiptsApi";
+import { formatCurrency } from "@/shared/utils/currency";
 import api from "@/shared/lib/api";
-import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
+import { useSendReceiptMutation } from "@mybookkeeper/api-client/store/rentReceiptsApi";
+import { RECEIPT_PAYMENT_METHOD_LABELS } from "@mybookkeeper/api-client/constants/receiptPaymentMethods";
+import { inferPaymentMethod } from "@mybookkeeper/api-client/utils/inferPaymentMethod";
+import { receiptPayerName } from "@mybookkeeper/api-client/utils/receiptPayerName";
+import type { PendingReceipt } from "@mybookkeeper/api-client/types/lease/pending-receipt";
 import {
   RECEIPT_SEND_FINISHED_CODES,
   receiptSendErrorDetail,
   receiptSendErrorMessage,
 } from "@/shared/lib/receipt-send-errors";
-import { inferPaymentMethod } from "./inferPaymentMethod";
 import ReceiptPreviewPane from "./ReceiptPreviewPane";
 
 export interface SendReceiptDialogProps {
-  transaction: Transaction;
+  receipt: PendingReceipt;
   onClose: (receiptNumber?: string) => void;
-}
-
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  check: "Check",
-  credit_card: "Credit card",
-  bank_transfer: "Bank transfer",
-  zelle: "Zelle",
-  venmo: "Venmo",
-  cash_app: "Cash App",
-  paypal: "PayPal",
-  cash: "Cash",
-  platform_payout: "Platform payout",
-  other: "Other",
-};
-
-function defaultPeriod(transactionDate: string): { start: string; end: string } {
-  const d = new Date(transactionDate + "T00:00:00");
-  const year = d.getFullYear();
-  const month = d.getMonth() + 1;
-  const lastDay = new Date(year, month, 0).getDate();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return {
-    start: `${year}-${pad(month)}-01`,
-    end: `${year}-${pad(month)}-${pad(lastDay)}`,
-  };
 }
 
 /**
  * Modal dialog to review and send a rent receipt PDF to the tenant.
- * Path A — triggered from a transaction row or the pending receipts page.
+ *
+ * The period starts as the one stored on the queued receipt, which the lease
+ * set when the payment was linked to the tenant.
  */
-export default function SendReceiptDialog({ transaction, onClose }: SendReceiptDialogProps) {
-  const period = defaultPeriod(transaction.transaction_date);
-  const [periodStart, setPeriodStart] = useState(period.start);
-  const [periodEnd, setPeriodEnd] = useState(period.end);
+export default function SendReceiptDialog({ receipt, onClose }: SendReceiptDialogProps) {
+  const [periodStart, setPeriodStart] = useState(receipt.period_start_date);
+  const [periodEnd, setPeriodEnd] = useState(receipt.period_end_date);
   const [paymentMethod, setPaymentMethod] = useState<string>(() =>
-    inferPaymentMethod(transaction),
+    inferPaymentMethod(receipt),
   );
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -80,7 +59,7 @@ export default function SendReceiptDialog({ transaction, onClose }: SendReceiptD
       });
       if (paymentMethod) params.append("payment_method", paymentMethod);
       const res = await api.get(
-        `/rent-receipts/preview/${transaction.id}?${params.toString()}`,
+        `/rent-receipts/preview/${receipt.transaction_id}?${params.toString()}`,
         { responseType: "blob" },
       );
       const blobUrl = URL.createObjectURL(res.data as Blob);
@@ -95,7 +74,7 @@ export default function SendReceiptDialog({ transaction, onClose }: SendReceiptD
   async function handleSend() {
     try {
       const result = await sendReceipt({
-        transaction_id: transaction.id,
+        transaction_id: receipt.transaction_id,
         data: {
           period_start: periodStart,
           period_end: periodEnd,
@@ -111,11 +90,6 @@ export default function SendReceiptDialog({ transaction, onClose }: SendReceiptD
     }
   }
 
-  const amountDisplay = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(parseFloat(transaction.amount));
-
   return (
     <div
       role="dialog"
@@ -129,7 +103,8 @@ export default function SendReceiptDialog({ transaction, onClose }: SendReceiptD
         <div className="px-6 py-4 border-b">
           <h2 className="text-base font-semibold">Send rent receipt</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {amountDisplay} received &mdash; confirm the details before sending.
+            {formatCurrency(receipt.amount)} from {receiptPayerName(receipt) ?? "this tenant"} &mdash;
+            confirm the details before sending.
           </p>
         </div>
 
@@ -185,7 +160,7 @@ export default function SendReceiptDialog({ transaction, onClose }: SendReceiptD
                 className="w-full px-3 py-2 text-sm border rounded-md"
               >
                 <option value="">— select —</option>
-                {Object.entries(PAYMENT_METHOD_LABELS).map(([val, label]) => (
+                {Object.entries(RECEIPT_PAYMENT_METHOD_LABELS).map(([val, label]) => (
                   <option key={val} value={val}>
                     {label}
                   </option>

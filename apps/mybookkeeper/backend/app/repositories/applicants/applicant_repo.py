@@ -222,6 +222,23 @@ async def get_legal_name(
     return result.scalar_one_or_none()
 
 
+async def get_live_owner_id(
+    db: AsyncSession,
+    *,
+    applicant_id: uuid.UUID,
+    organization_id: uuid.UUID,
+) -> uuid.UUID | None:
+    """Who added a live (not deleted) applicant in the org, whoever is asking."""
+    result = await db.execute(
+        select(Applicant.user_id).where(
+            Applicant.id == applicant_id,
+            Applicant.organization_id == organization_id,
+            Applicant.deleted_at.is_(None),
+        )
+    )
+    return result.scalar_one_or_none()
+
+
 async def get_by_inquiry(
     db: AsyncSession,
     *,

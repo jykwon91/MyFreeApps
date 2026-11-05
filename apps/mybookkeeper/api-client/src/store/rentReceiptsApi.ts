@@ -1,21 +1,22 @@
-import { baseApi } from "./baseApi";
-import type {
-  PendingReceiptListResponse,
-  SendReceiptRequest,
-  SendReceiptResponse,
-} from "@/shared/types/lease/pending-receipt";
+import { baseApi } from "@platform/core/store/baseApi";
+import type { PendingReceiptListArgs } from "../types/lease/pending-receipt-list-args";
+import type { PendingReceiptListResponse } from "../types/lease/pending-receipt-list-response";
+import type { SendReceiptRequest } from "../types/lease/send-receipt-request";
+import type { SendReceiptResponse } from "../types/lease/send-receipt-response";
 
-export const rentReceiptsApi = baseApi.injectEndpoints({
+const PENDING_TAG = { type: "SignedLease", id: "RECEIPTS_PENDING" } as const;
+
+/** RTK Query slice for rent receipts waiting to be sent. */
+export const rentReceiptsApi = baseApi.enhanceEndpoints({
+  addTagTypes: ["SignedLease", "Transaction"],
+}).injectEndpoints({
   endpoints: (builder) => ({
-    getPendingReceipts: builder.query<
-      PendingReceiptListResponse,
-      { limit?: number; offset?: number } | void
-    >({
+    getPendingReceipts: builder.query<PendingReceiptListResponse, PendingReceiptListArgs | void>({
       query: (params) => ({
         url: "/rent-receipts/pending",
         params: params ?? {},
       }),
-      providesTags: [{ type: "SignedLease", id: "RECEIPTS_PENDING" }],
+      providesTags: [PENDING_TAG],
     }),
 
     sendReceipt: builder.mutation<
@@ -28,7 +29,7 @@ export const rentReceiptsApi = baseApi.injectEndpoints({
         data,
       }),
       invalidatesTags: (_result, _err, { transaction_id }) => [
-        { type: "SignedLease", id: "RECEIPTS_PENDING" },
+        PENDING_TAG,
         { type: "Transaction", id: transaction_id },
         { type: "Transaction", id: "LIST" },
         "SignedLease",
@@ -41,7 +42,7 @@ export const rentReceiptsApi = baseApi.injectEndpoints({
         method: "POST",
         data: {},
       }),
-      invalidatesTags: [{ type: "SignedLease", id: "RECEIPTS_PENDING" }],
+      invalidatesTags: [PENDING_TAG],
     }),
   }),
 });

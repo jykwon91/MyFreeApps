@@ -1,16 +1,16 @@
-import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
+import type { PaymentFacts } from "../types/lease/payment-facts";
 
 /**
  * Best-effort inference of a receipt's payment method when the
- * extraction didn't fill ``transaction.payment_method``. Maps known
+ * extraction didn't fill the payment's ``payment_method``. Maps known
  * P2P / platform vendors to the value that the receipt PDF would
  * print anyway. Returns ``""`` when no confident default can be made
  * (caller falls back to the manual select).
  */
-export function inferPaymentMethod(transaction: Transaction): string {
-  if (transaction.payment_method) return transaction.payment_method;
+export function inferPaymentMethod(payment: PaymentFacts): string {
+  if (payment.payment_method) return payment.payment_method;
 
-  const vendor = (transaction.vendor ?? "").toLowerCase();
+  const vendor = (payment.vendor ?? "").toLowerCase();
   if (!vendor) return "";
 
   // Specific P2P rails first — these are the host-visible value on the receipt

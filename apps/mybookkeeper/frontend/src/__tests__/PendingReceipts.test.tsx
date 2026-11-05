@@ -4,15 +4,11 @@ import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import PendingReceipts from "@/app/pages/PendingReceipts";
-import type { PendingReceiptListResponse } from "@/shared/types/lease/pending-receipt";
+import type { PendingReceiptListResponse } from "@mybookkeeper/api-client/types/lease/pending-receipt-list-response";
 
-vi.mock("@/shared/store/rentReceiptsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/rentReceiptsApi", () => ({
   useGetPendingReceiptsQuery: vi.fn(),
   useDismissReceiptMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
-}));
-
-vi.mock("@mybookkeeper/api-client/store/transactionsApi", () => ({
-  useGetTransactionQuery: vi.fn(),
 }));
 
 vi.mock("@/app/features/receipts/SendReceiptDialog", () => ({
@@ -28,28 +24,12 @@ vi.mock("@/shared/lib/toast-store", () => ({
   showError: vi.fn(),
 }));
 
-import { useGetPendingReceiptsQuery } from "@/shared/store/rentReceiptsApi";
-import { useGetTransactionQuery } from "@mybookkeeper/api-client/store/transactionsApi";
-
-const mockTransaction = {
-  id: "txn-123",
-  transaction_date: "2026-05-15",
-  amount: "1500.00",
-  vendor: "Chase Bank",
-  payer_name: "Alice Johnson",
-  description: "Rent payment",
-  category: "income",
-  transaction_type: "income",
-  payment_method: "check",
-  status: "approved",
-};
+import { useGetPendingReceiptsQuery } from "@mybookkeeper/api-client/store/rentReceiptsApi";
 
 const pendingResponse: PendingReceiptListResponse = {
   items: [
     {
       id: "receipt-1",
-      user_id: "user-1",
-      organization_id: "org-1",
       transaction_id: "txn-123",
       applicant_id: "app-1",
       signed_lease_id: "lease-1",
@@ -59,13 +39,28 @@ const pendingResponse: PendingReceiptListResponse = {
       sent_at: null,
       sent_via_attachment_id: null,
       created_at: "2026-05-15T10:00:00Z",
-      updated_at: "2026-05-15T10:00:00Z",
-      deleted_at: null,
+      tenant_name: "Alice Johnson",
+      amount: "1500.00",
+      transaction_date: "2026-05-15",
+      payer_name: "A JOHNSON",
+      payment_method: "check",
+      vendor: "Chase Bank",
+      send_blocker: null,
     },
   ],
   total: 1,
   pending_count: 1,
+  gmail_state: "ready",
 };
+
+function mockList(data: PendingReceiptListResponse) {
+  vi.mocked(useGetPendingReceiptsQuery).mockReturnValue({
+    data,
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+  } as unknown as ReturnType<typeof useGetPendingReceiptsQuery>);
+}
 
 function renderPage() {
   return render(
@@ -80,12 +75,6 @@ function renderPage() {
 describe("PendingReceipts page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useGetTransactionQuery).mockReturnValue({
-      data: mockTransaction as unknown as ReturnType<typeof useGetTransactionQuery>["data"],
-      isLoading: false,
-      isError: false,
-      refetch: vi.fn(),
-    } as unknown as ReturnType<typeof useGetTransactionQuery>);
   });
 
   it("shows skeleton while loading", () => {
@@ -102,7 +91,7 @@ describe("PendingReceipts page", () => {
 
   it("shows empty state when no pending receipts", () => {
     vi.mocked(useGetPendingReceiptsQuery).mockReturnValue({
-      data: { items: [], total: 0, pending_count: 0 },
+      data: { items: [], total: 0, pending_count: 0, gmail_state: "ready" },
       isLoading: false,
       isError: false,
       refetch: vi.fn(),
@@ -121,9 +110,60 @@ describe("PendingReceipts page", () => {
     } as unknown as ReturnType<typeof useGetPendingReceiptsQuery>);
 
     renderPage();
-    expect(screen.getByTestId("pending-receipt-row")).toBeInTheDocument();
+    const row = screen.getByTestId("pending-receipt-row");
+    expect(row).toHaveTextContent("Alice Johnson");
+    expect(row).toHaveTextContent("$1,500.00");
+    expect(row).toHaveTextContent("2026-05-01 – 2026-05-31");
+    expect(row).toHaveTextContent("Received 2026-05-15");
     expect(screen.getByTestId("pending-receipt-dismiss-btn")).toBeInTheDocument();
-    expect(screen.getByTestId("pending-receipt-send-btn")).toBeInTheDocument();
+    expect(screen.getByTestId("pending-receipt-send-btn")).toBeEnabled();
+    expect(screen.queryByTestId("pending-receipt-blocker")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("pending-receipts-gmail-state")).not.toBeInTheDocument();
+  });
+
+  it("says why a receipt can't be sent and turns Send off for it", () => {
+    mockList({
+      ...pendingResponse,
+      items: [{ ...pendingResponse.items[0], send_blocker: "no_lease" }],
+    });
+
+    renderPage();
+    expect(screen.getByTestId("pending-receipt-blocker")).toHaveTextContent(/signed lease/i);
+    expect(screen.getByTestId("pending-receipt-send-btn")).toBeDisabled();
+    expect(screen.getByTestId("pending-receipt-dismiss-btn")).toBeEnabled();
+  });
+
+  it("says a teammate's tenant is theirs to send, naming the payer instead", () => {
+    mockList({
+      ...pendingResponse,
+      items: [
+        { ...pendingResponse.items[0], tenant_name: null, send_blocker: "tenant_of_other_member" },
+      ],
+    });
+
+    renderPage();
+    expect(screen.getByText("A JOHNSON")).toBeInTheDocument();
+    expect(screen.getByTestId("pending-receipt-blocker")).toHaveTextContent(/only they can send/i);
+    expect(screen.getByTestId("pending-receipt-send-btn")).toBeDisabled();
+  });
+
+  it("falls back to Tenant when there's no tenant or payer name", () => {
+    mockList({
+      ...pendingResponse,
+      items: [{ ...pendingResponse.items[0], tenant_name: null, payer_name: null }],
+    });
+
+    renderPage();
+    expect(screen.getByText("Tenant")).toBeInTheDocument();
+  });
+
+  it("turns every Send off while Gmail can't send, and links to Integrations", () => {
+    mockList({ ...pendingResponse, gmail_state: "needs_send_permission" });
+
+    renderPage();
+    expect(screen.getByTestId("pending-receipts-gmail-state")).toHaveTextContent(/not allowed to send/i);
+    expect(screen.getByRole("link", { name: "Open Integrations" })).toHaveAttribute("href", "/integrations");
+    expect(screen.getByTestId("pending-receipt-send-btn")).toBeDisabled();
   });
 
   it("marks a send Gmail hasn't confirmed and hides Dismiss on it", () => {
@@ -183,7 +223,7 @@ describe("PendingReceipts page", () => {
     expect(screen.getByText(/couldn't load pending receipts/i)).toBeInTheDocument();
   });
 
-  it("shows pending count in subtitle when receipts exist", () => {
+  it("counts every open receipt in the subtitle as waiting, not ready", () => {
     vi.mocked(useGetPendingReceiptsQuery).mockReturnValue({
       data: pendingResponse,
       isLoading: false,
@@ -192,6 +232,6 @@ describe("PendingReceipts page", () => {
     } as unknown as ReturnType<typeof useGetPendingReceiptsQuery>);
 
     renderPage();
-    expect(screen.getByText(/1 receipt ready to send/i)).toBeInTheDocument();
+    expect(screen.getByText("1 receipt waiting to send")).toBeInTheDocument();
   });
 });

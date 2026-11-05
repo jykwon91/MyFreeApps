@@ -8,10 +8,15 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
-from sqlalchemy import ColumnElement, func, select, update
+from sqlalchemy import ColumnElement, and_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.applicants.applicant import Applicant
+from app.models.inquiries.inquiry import Inquiry
 from app.models.leases.pending_rent_receipt import OPEN_RECEIPT_STATUSES, PendingRentReceipt
+from app.models.leases.signed_lease import SignedLease
+from app.models.transactions.transaction import Transaction
+from app.schemas.leases.pending_receipt_list_row import PendingReceiptListRow
 
 
 async def get_by_transaction_id(
@@ -48,27 +53,87 @@ async def get_by_id(
 async def list_open(
     db: AsyncSession,
     organization_id: uuid.UUID,
+    user_id: uuid.UUID,
     *,
     limit: int = 100,
     offset: int = 0,
-) -> list[PendingRentReceipt]:
+) -> list[PendingReceiptListRow]:
     """Receipts still waiting on the host: ``pending`` and ``sending``.
 
     ``sending`` rows stay listed so a send whose outcome was unknown can be
     retried — the retry is what checks Gmail and settles the row.
+
+    The tenant is read org-wide with its owner, so the service can tell a
+    teammate's tenant from a deleted one. The lease is read as the requesting
+    user, as ``send_receipt`` reads it.
     """
+    has_lease = (
+        select(SignedLease.id)
+        .where(
+            SignedLease.applicant_id == Transaction.applicant_id,
+            SignedLease.user_id == user_id,
+            SignedLease.organization_id == organization_id,
+            SignedLease.deleted_at.is_(None),
+        )
+        .exists()
+    )
     result = await db.execute(
-        select(PendingRentReceipt)
+        select(
+            PendingRentReceipt.id.label("id"),
+            PendingRentReceipt.transaction_id.label("transaction_id"),
+            PendingRentReceipt.applicant_id.label("applicant_id"),
+            PendingRentReceipt.signed_lease_id.label("signed_lease_id"),
+            PendingRentReceipt.period_start_date.label("period_start_date"),
+            PendingRentReceipt.period_end_date.label("period_end_date"),
+            PendingRentReceipt.status.label("status"),
+            PendingRentReceipt.sent_at.label("sent_at"),
+            PendingRentReceipt.sent_via_attachment_id.label("sent_via_attachment_id"),
+            PendingRentReceipt.created_at.label("created_at"),
+            Transaction.amount.label("amount"),
+            Transaction.transaction_date.label("transaction_date"),
+            Transaction.payer_name.label("payer_name"),
+            Transaction.payment_method.label("payment_method"),
+            Transaction.vendor.label("vendor"),
+            Transaction.applicant_id.is_not(None).label("attributed"),
+            Applicant.user_id.label("tenant_owner_id"),
+            Applicant.legal_name.label("tenant_name"),
+            Applicant.contact_email.label("contact_email"),
+            Inquiry.inquirer_email.label("inquirer_email"),
+            has_lease.label("has_lease"),
+        )
+        .join(
+            Transaction,
+            and_(
+                Transaction.id == PendingRentReceipt.transaction_id,
+                Transaction.organization_id == organization_id,
+            ),
+        )
+        .outerjoin(
+            Applicant,
+            and_(
+                Applicant.id == Transaction.applicant_id,
+                Applicant.organization_id == organization_id,
+                Applicant.deleted_at.is_(None),
+            ),
+        )
+        .outerjoin(
+            Inquiry,
+            and_(
+                Inquiry.id == Applicant.inquiry_id,
+                Inquiry.organization_id == organization_id,
+                Inquiry.deleted_at.is_(None),
+            ),
+        )
         .where(
             PendingRentReceipt.organization_id == organization_id,
             PendingRentReceipt.status.in_(OPEN_RECEIPT_STATUSES),
             PendingRentReceipt.deleted_at.is_(None),
         )
-        .order_by(PendingRentReceipt.created_at.desc())
+        .order_by(PendingRentReceipt.created_at.desc(), PendingRentReceipt.id.desc())
         .limit(limit)
         .offset(offset)
     )
-    return list(result.scalars().all())
+    return [PendingReceiptListRow.model_validate(dict(r._mapping)) for r in result.all()]
 
 
 async def count_open(
