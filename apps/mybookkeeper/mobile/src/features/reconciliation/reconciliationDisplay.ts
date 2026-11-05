@@ -1,6 +1,6 @@
-import type { AutoReconcileResult } from "@mybookkeeper/api-client/types/reconciliation/auto-reconcile-result";
 import type { ReconciliationSource } from "@mybookkeeper/api-client/types/reconciliation/reconciliation-source";
 import type { ReconciliationSourceStatus } from "@mybookkeeper/api-client/types/reconciliation/reconciliation-source-status";
+import { hasBeenCompared } from "@mybookkeeper/api-client/utils/reconciliationCompare";
 import { formatCurrency } from "@platform/core/utils/currency";
 import { MAX_REPORTED_AMOUNT, RECONCILIATION_MESSAGES as MESSAGES, SOURCE_TYPES, TAX_YEARS_OFFERED } from "../../constants/reconciliation";
 import type { ReconciliationFilter } from "../../types/ReconciliationFilter";
@@ -47,11 +47,6 @@ export function sourcesFor(sources: readonly ReconciliationSource[], filter: Rec
   return filter === "all" ? sources : sources.filter(needsLook);
 }
 
-/** Before a comparison the record total is just $0, so the whole form would read as a gap. */
-export function hasBeenCompared(source: ReconciliationSource): boolean {
-  return source.status !== "unmatched";
-}
-
 export function differenceLine(source: ReconciliationSource): string | null {
   const difference = Number(source.discrepancy);
   if (!hasBeenCompared(source) || difference === 0) return null;
@@ -76,14 +71,6 @@ export function noSourcesHeading(year: number): string {
 
 export function allMatchHeading(year: number): string {
   return `Everything matches for ${year}.`;
-}
-
-export function compareResultMessage(result: AutoReconcileResult): string {
-  const { auto_matched: matched, discrepancies: differ, sources_checked: checked } = result;
-  if (matched + differ === 0) return MESSAGES.nothingFound;
-  const summary = `${matched} matched, ${differ} ${differ === 1 ? "differs" : "differ"}.`;
-  const skipped = checked - matched - differ;
-  return skipped > 0 ? `${summary} ${skipped} had nothing to compare.` : summary;
 }
 
 export function reportedAmountError(amount: string): string | undefined {

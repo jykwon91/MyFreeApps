@@ -1,5 +1,6 @@
 import { test, expect } from "./fixtures/auth";
 import { getYear } from "date-fns";
+import { createTransaction, deleteTransaction } from "./fixtures/seed-data";
 
 const RUN_ID = Date.now();
 const CURRENT_YEAR = getYear(new Date());
@@ -95,5 +96,53 @@ test.describe("Reconciliation — add and delete 1099 source", () => {
     await expect(
       page.getByText(/discrepanc|everything matches|no discrepancies/i).first()
     ).toBeVisible({ timeout: 10000 });
+  });
+});
+
+test.describe("Reconciliation — compare with my records", () => {
+  test("a 1099 goes from not compared to matched against real income", async ({ authedPage: page, api }) => {
+    const issuer = `E2E Compare ${RUN_ID}`;
+    const transaction = await createTransaction(api, {
+      vendor: issuer,
+      amount: "1234.00",
+      transaction_type: "income",
+      category: "rental_revenue",
+      tax_relevant: true,
+      transaction_date: `${TEST_YEAR}-06-15`,
+    });
+
+    try {
+      // New transactions start pending, and a comparison only counts approved income.
+      const approved = await api.patch(`/transactions/${transaction.id}`, { data: { status: "approved" } });
+      expect(approved.ok()).toBe(true);
+
+      const added = await api.post("/reconciliation/upload-1099", {
+        data: { source_type: "1099_k", tax_year: TEST_YEAR, issuer, reported_amount: "1234.00" },
+      });
+      expect(added.ok()).toBe(true);
+
+      await page.goto("/reconciliation");
+      await page.getByRole("button", { name: /review sources/i }).click();
+
+      const row = page.getByRole("row", { name: new RegExp(issuer) });
+      await expect(row).toContainText("Unmatched", { timeout: 10000 });
+      const reservationTotal = row.getByRole("cell").nth(5);
+      const discrepancy = row.getByRole("cell").nth(6);
+      await expect(reservationTotal).toHaveText("—");
+      await expect(discrepancy).toHaveText("—");
+
+      await page.getByRole("button", { name: "Compare with my records" }).click();
+
+      await expect(page.getByText(new RegExp(`^${TEST_YEAR}: 1 matched, 0 differ\\.`)).first()).toBeVisible({ timeout: 10000 });
+      await expect(row).toContainText("Matched", { timeout: 10000 });
+      await expect(reservationTotal).toHaveText("$1,234.00");
+      await expect(discrepancy).toHaveText("$0.00");
+
+      const sources = await (await api.get(`/reconciliation/sources?tax_year=${TEST_YEAR}`)).json();
+      const saved = sources.find((source: { issuer: string }) => source.issuer === issuer);
+      expect(saved.status).toBe("matched");
+    } finally {
+      await deleteTransaction(api, transaction.id);
+    }
   });
 });

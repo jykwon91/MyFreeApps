@@ -1,3 +1,5 @@
+import { RECONCILIATION_COMPARE_MESSAGES } from "@mybookkeeper/api-client/constants/reconciliationCompare";
+
 export const RECONCILIATION_SKELETON_ROWS = ["a", "b", "c"];
 export const TAX_YEARS_OFFERED = 3;
 export const MAX_REPORTED_AMOUNT = 10_000_000_000;
@@ -12,6 +14,7 @@ export const SOURCE_TYPES = [
 ];
 
 export const RECONCILIATION_MESSAGES = {
+  ...RECONCILIATION_COMPARE_MESSAGES,
   loading: "Loading your 1099s",
   couldntLoad: "I couldn't load your 1099s.",
   checkConnection: "Check your connection and try again.",
@@ -24,8 +27,6 @@ export const RECONCILIATION_MESSAGES = {
   needsLook: "Needs a look",
   add: "Add a 1099",
   addHint: "Opens a form",
-  compare: "Compare with my records",
-  comparing: "Comparing…",
   compareHint: "Adds up your approved, tax-relevant income from each issuer and checks it against the form",
   noneBodyWriter: "Add one and I'll compare it with your records.",
   noneBodyViewer: "When someone adds one, it shows up here.",
@@ -37,10 +38,6 @@ export const RECONCILIATION_MESSAGES = {
   partlyMatched: "Partly matched",
   matched: "Matched",
   confirmed: "Confirmed",
-  nothingFound: "I couldn't find matching income. Each form needs an issuer name that matches your transactions.",
-  viewerRefused: "You have view-only access, so I can't do that.",
-  compareUnreachable: "I can't reach the server. Trying again is safe.",
-  compareFailed: "I couldn't compare them. Want to try again?",
   type: "Type",
   issuer: "Issuer (optional)",
   issuerHint: "Use the name on your transactions, like Airbnb, so I can compare them.",

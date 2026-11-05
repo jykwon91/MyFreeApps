@@ -7,12 +7,12 @@ import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-li
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import type { ReactNode } from "react";
 import { Alert } from "react-native";
+import { compareFailureMessage, compareResultMessage } from "@mybookkeeper/api-client/utils/reconciliationCompare";
 import { Provider } from "react-redux";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { RECONCILIATION_MESSAGES as MESSAGES } from "../src/constants/reconciliation";
 import ReconciliationAddScreen from "../src/features/reconciliation/ReconciliationAddScreen";
 import {
-  compareResultMessage,
   differenceLine,
   formYear,
   reportedAmountError,
@@ -20,7 +20,7 @@ import {
   sourceTitle,
   taxYearChoices,
 } from "../src/features/reconciliation/reconciliationDisplay";
-import { addFailureMessage, compareFailureMessage } from "../src/features/reconciliation/reconciliationFailure";
+import { addFailureMessage } from "../src/features/reconciliation/reconciliationFailure";
 import ReconciliationScreen from "../src/features/reconciliation/ReconciliationScreen";
 import { useCompareWithRecords } from "../src/features/reconciliation/useCompareWithRecords";
 import { useCanWrite } from "../src/features/workspace/useCanWrite";

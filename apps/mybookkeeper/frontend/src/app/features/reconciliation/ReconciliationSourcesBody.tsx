@@ -1,3 +1,4 @@
+import { RECONCILIATION_COMPARE_MESSAGES as COMPARE } from "@mybookkeeper/api-client/constants/reconciliationCompare";
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatTag } from "@/shared/utils/tag";
 import { RECONCILIATION_STATUS_STYLES } from "@/shared/lib/constants";
@@ -6,12 +7,16 @@ import type { ReconciliationSourcesMode } from "@/shared/types/reconciliation/re
 import { LoadingButton } from "@platform/ui";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import Skeleton from "@/shared/components/ui/Skeleton";
+import { comparedAmounts } from "./comparedAmounts";
 
 export interface ReconciliationSourcesBodyProps {
   mode: ReconciliationSourcesMode;
   sources: readonly ReconciliationSource[];
   onUploadStep: () => void;
   onNext: () => void;
+  canWrite: boolean;
+  isComparing: boolean;
+  onCompare: () => void;
 }
 
 export default function ReconciliationSourcesBody({
@@ -19,6 +24,9 @@ export default function ReconciliationSourcesBody({
   sources,
   onUploadStep,
   onNext,
+  canWrite,
+  isComparing,
+  onCompare,
 }: ReconciliationSourcesBodyProps) {
   switch (mode) {
     case "loading":
@@ -40,7 +48,8 @@ export default function ReconciliationSourcesBody({
       return (
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground mb-4">
-            Here are the 1099 sources I found. I have automatically matched them against your reservations.
+            Here are the 1099 sources I found.
+            {canWrite && " Choose Compare with my records and I'll check each form against your income from that issuer."}
           </p>
           <p className="text-xs text-muted-foreground mb-3">
             Each row is one 1099 form or year-end statement. A single form may cover multiple properties.
@@ -60,7 +69,9 @@ export default function ReconciliationSourcesBody({
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {sources.map((source) => (
+                {sources.map((source) => {
+                  const amounts = comparedAmounts(source);
+                  return (
                   <tr key={source.id} className="hover:bg-muted/40">
                     <td className="px-4 py-3">{formatTag(source.source_type)}</td>
                     <td className="px-4 py-3">
@@ -69,9 +80,9 @@ export default function ReconciliationSourcesBody({
                     <td className="px-4 py-3 text-muted-foreground">{source.document_file_name ?? "—"}</td>
                     <td className="px-4 py-3">{source.property_name ?? "—"}</td>
                     <td className="px-4 py-3 text-right font-medium">{formatCurrency(source.reported_amount)}</td>
-                    <td className="px-4 py-3 text-right">{formatCurrency(source.matched_amount)}</td>
-                    <td className={`px-4 py-3 text-right font-medium ${parseFloat(source.discrepancy) === 0 ? "text-green-600" : "text-amber-600"}`}>
-                      {formatCurrency(source.discrepancy)}
+                    <td className="px-4 py-3 text-right">{amounts.recordsTotal}</td>
+                    <td className={`px-4 py-3 text-right font-medium ${amounts.discrepancyClass}`}>
+                      {amounts.discrepancy}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${RECONCILIATION_STATUS_STYLES[source.status] ?? ""}`}>
@@ -79,11 +90,17 @@ export default function ReconciliationSourcesBody({
                       </span>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
-          <div className="flex justify-end pt-2">
+          <div className="flex flex-wrap justify-end gap-2 pt-2">
+            {canWrite && (
+              <LoadingButton size="sm" isLoading={isComparing} loadingText={COMPARE.comparing} onClick={onCompare}>
+                {COMPARE.compare}
+              </LoadingButton>
+            )}
             <LoadingButton size="sm" variant="secondary" onClick={onNext}>
               Review Discrepancies
             </LoadingButton>
