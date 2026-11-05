@@ -19,7 +19,7 @@ import TenancySection from "../tenants/TenancySection";
 import InquiryChip from "../inquiries/InquiryChip";
 import InquirySection from "../inquiries/InquirySection";
 import TransactionFact from "../transactions/TransactionFact";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { templatesPath } from "../newLease/newLeaseFlow";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { applicantName, applicantStageLabel, contractDates, promotedAgo, smokerLabel } from "./applicantDisplay";

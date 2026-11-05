@@ -2,7 +2,7 @@ import { DEMO_EXTEND_REFUSED } from "@mybookkeeper/api-client/constants/demoRefu
 import { isDemoRefusal } from "@mybookkeeper/api-client/utils/isDemoRefusal";
 import { LEASE_MESSAGES } from "../../constants/leases";
 import { UPLOAD_MESSAGES } from "../../constants/uploads";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { leaseConflictCode } from "./leaseConflictCode";
 
 export function isMissingTenantEmail(error: unknown): boolean {

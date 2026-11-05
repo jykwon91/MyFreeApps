@@ -11,7 +11,7 @@ import { useCanWrite } from "../workspace/useCanWrite";
 import { selectableProperties } from "./transactionEditValues";
 import { categoryLabel, displayAmount, isMoneyIn, isReviewable, spokenDate, propertyLabel, spokenAmount, spokenKind, statusLabel, transactionName } from "./transactionDisplay";
 import TransactionFact from "./TransactionFact";
-import { httpStatus } from "./transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { useApproveTransaction } from "./useApproveTransaction";
 
 export default function TransactionDetailScreen({ id, reviewQueue }: { id: string; reviewQueue: TransactionListParams | null }) {

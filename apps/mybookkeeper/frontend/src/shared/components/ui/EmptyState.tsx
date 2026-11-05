@@ -9,8 +9,9 @@ export default function EmptyState({ message, action }: EmptyStateProps) {
       <p>{message}</p>
       {action && (
         <button
+          type="button"
           onClick={action.onClick}
-          className="mt-2 text-sm font-medium text-primary hover:underline"
+          className="mt-2 inline-flex min-h-[44px] items-center px-2 text-sm font-medium text-primary hover:underline"
         >
           {action.label}
         </button>

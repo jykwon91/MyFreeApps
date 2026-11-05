@@ -19,7 +19,7 @@ import {
 } from "../../constants/leases";
 import DatePicker from "../shell/DatePicker";
 import { confirmDiscard } from "../uploads/confirmDiscard";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { extendLeaseFailure, isMissingTenantEmail } from "./extendLeaseFailure";
 
 interface ExtendLeaseSheetProps {

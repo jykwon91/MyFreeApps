@@ -1,6 +1,6 @@
 import { LEASE_MESSAGES } from "../../constants/leases";
 import { UPLOAD_MESSAGES } from "../../constants/uploads";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { leaseConflictCode } from "./leaseConflictCode";
 
 /** Null when the answer doesn't say whether the undo went through. */

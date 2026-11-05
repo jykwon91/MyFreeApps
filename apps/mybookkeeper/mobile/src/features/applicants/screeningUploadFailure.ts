@@ -1,6 +1,6 @@
 import { SCREENING_MESSAGES } from "../../constants/applicantScreening";
 import { UPLOAD_MESSAGES } from "../../constants/uploads";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 
 export function screeningUploadFailure(error: unknown): string {
   switch (httpStatus(error)) {

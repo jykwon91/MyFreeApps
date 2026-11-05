@@ -2,7 +2,7 @@ import { useGetInquiryByIdQuery } from "@mybookkeeper/api-client/store/inquiries
 import { EmptyState, Skeleton, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { ScrollView } from "react-native";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import PromoteForm from "./PromoteForm";
 
 export default function PromoteScreen({ id }: { id: string }) {

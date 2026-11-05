@@ -1,4 +1,5 @@
-import type { ReplyTemplateFailure } from "../types/ReplyTemplateFailure";
+import type { ReplyTemplateRestoreOutcome } from "@mybookkeeper/api-client/types/inquiry/reply-template-restore-outcome";
+import type { ReplyTemplateFailure } from "@mybookkeeper/api-client/types/inquiry/reply-template-failure";
 import type { ReplyTemplateField } from "../types/ReplyTemplateField";
 import type { ReplyTemplateVariable } from "../types/ReplyTemplateVariable";
 
@@ -125,3 +126,11 @@ export function unknownVariablesHint(tokens: readonly string[]): string {
   if (tokens.length === 1) return `I don't recognize ${tokens[0]}, so I'll leave it as you typed it.`;
   return `I don't recognize ${tokens.join(", ")}, so I'll leave them as you typed them.`;
 }
+
+export const RESTORE_FAILURE_MESSAGES: Record<Exclude<ReplyTemplateRestoreOutcome, "restored">, string> = {
+  gone: REPLY_TEMPLATE_MESSAGES.goneAnymore,
+  viewOnly: REPLY_TEMPLATE_MESSAGES.restoreViewOnly,
+  stillArchived: REPLY_TEMPLATE_MESSAGES.restoreStillArchived,
+  unsure: REPLY_TEMPLATE_MESSAGES.restoreUnsure,
+  failed: REPLY_TEMPLATE_MESSAGES.restoreFailed,
+};

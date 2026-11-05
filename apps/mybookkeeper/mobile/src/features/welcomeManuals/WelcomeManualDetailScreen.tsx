@@ -8,7 +8,7 @@ import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { WELCOME_MANUAL_MESSAGES } from "../../constants/welcomeManuals";
 import { plainFromMarkdown } from "../../lib/plainFromMarkdown";
 import { useOpenLink } from "../inquiries/useOpenLink";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { manualPropertyName } from "./welcomeManualDisplay";
 import WelcomeManualDetailSkeleton from "./WelcomeManualDetailSkeleton";
 import WelcomeManualPlace from "./WelcomeManualPlace";

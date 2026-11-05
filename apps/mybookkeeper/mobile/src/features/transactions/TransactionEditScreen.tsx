@@ -3,7 +3,7 @@ import { EmptyState, Skeleton, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { View } from "react-native";
 import TransactionEditForm from "./TransactionEditForm";
-import { httpStatus } from "./transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 
 export default function TransactionEditScreen({ id }: { id: string }) {
   const { spacing } = useTheme();

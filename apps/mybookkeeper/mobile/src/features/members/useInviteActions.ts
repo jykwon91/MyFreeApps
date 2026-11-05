@@ -7,7 +7,7 @@ import { ALREADY_MEMBER_DETAIL, MEMBERS_MESSAGES as MESSAGES } from "../../const
 import type { AppDispatch } from "../../lib/store";
 import type { InviteRequest } from "../../types/InviteRequest";
 import { isServerAnswer } from "../../utils/isServerAnswer";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { isInviteExpired, isSameEmail } from "./membersDisplay";
 import { useAccessRefused } from "./useAccessRefused";
 import { useBusyRows } from "./useBusyRows";

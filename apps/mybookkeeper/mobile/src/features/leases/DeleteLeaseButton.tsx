@@ -6,7 +6,7 @@ import { useDispatch } from "react-redux";
 import { deleteLeaseLabel, deleteLeaseTitle, LEASE_MESSAGES } from "../../constants/leases";
 import { UPLOAD_MESSAGES } from "../../constants/uploads";
 import type { AppDispatch } from "../../lib/store";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { askOnce } from "./askOnce";
 
 interface DeleteLeaseButtonProps {

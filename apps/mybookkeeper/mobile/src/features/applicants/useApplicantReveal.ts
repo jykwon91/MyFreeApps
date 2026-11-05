@@ -5,7 +5,7 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
 import { REVEAL_HIDES_AFTER_MS, REVEAL_MESSAGES } from "../../constants/applicantReveal";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { confirmOwner } from "../../lib/confirmOwner";
 
 export interface ApplicantReveal {

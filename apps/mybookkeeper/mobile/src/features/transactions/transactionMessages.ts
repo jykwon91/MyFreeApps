@@ -1,8 +1,5 @@
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import type { TransactionUpdateResult } from "@mybookkeeper/api-client/types/transaction/TransactionUpdateResult";
-
-export function httpStatus(error: unknown): number | undefined {
-  return typeof error === "object" && error !== null && "status" in error ? (error.status as number | undefined) : undefined;
-}
 
 /** The server's own wording can be a developer string, so it's never shown. */
 export function saveFailureMessage(error: unknown): string {

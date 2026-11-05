@@ -1,5 +1,5 @@
 import { PAYMENT_REVIEW_MESSAGES as MESSAGES, PAYMENT_REVIEW_SERVER_DETAILS as DETAILS } from "../../constants/paymentReview";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 
 function serverDetail(error: unknown): unknown {
   return (error as { data?: { detail?: unknown } } | null)?.data?.detail;

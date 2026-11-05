@@ -10,7 +10,7 @@ import { useTodayIso } from "../../lib/useTodayIso";
 import { useOpenFreshAttachment } from "../documents/useOpenFreshAttachment";
 import InquiryChip from "../inquiries/InquiryChip";
 import { useOpenLink } from "../inquiries/useOpenLink";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { expiryLabel, policyPlace } from "./policyDisplay";
 import PolicyDetailSkeleton from "./PolicyDetailSkeleton";
 import PolicyFacts from "./PolicyFacts";

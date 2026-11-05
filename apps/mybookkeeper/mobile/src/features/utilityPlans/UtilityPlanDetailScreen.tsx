@@ -10,7 +10,7 @@ import InquiryChip from "../inquiries/InquiryChip";
 import { useOpenLink } from "../inquiries/useOpenLink";
 import HiddenNumber from "../shell/HiddenNumber";
 import TransactionFact from "../transactions/TransactionFact";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { planChip, planFacts, planPriceLine, planProvider, planTermNote, planTitle } from "./utilityPlanDisplay";
 import UtilityPlanDetailSkeleton from "./UtilityPlanDetailSkeleton";
 

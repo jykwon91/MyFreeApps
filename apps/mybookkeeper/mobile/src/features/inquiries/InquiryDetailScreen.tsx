@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import type { InquiryMoreAction } from "../../types/InquiryMoreAction";
 import TransactionFact from "../transactions/TransactionFact";
-import { httpStatus } from "../transactions/transactionMessages";
+import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { deleteReplyDraft } from "./replyDrafts";
 import { moreOptions, stageOptions } from "./inquiryActionOptions";

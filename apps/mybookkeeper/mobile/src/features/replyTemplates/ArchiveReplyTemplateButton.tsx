@@ -1,10 +1,10 @@
 import { useArchiveReplyTemplateMutation, useGetReplyTemplatesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
+import { checkStillListed } from "@mybookkeeper/api-client/utils/checkStillListed";
+import { archiveFailure } from "@mybookkeeper/api-client/utils/replyTemplateFailure";
 import { LoadingButton, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { archiveTemplateTitle, REPLY_TEMPLATE_MESSAGES as MESSAGES } from "../../constants/replyTemplates";
 import { askOnce } from "../leases/askOnce";
-import { checkStillListed } from "./checkStillListed";
-import { archiveFailure } from "./replyTemplateFailure";
 import { leaveToList } from "./replyTemplateNavigation";
 
 interface ArchiveReplyTemplateButtonProps {
