@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures/auth";
-import type { Page } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-US", {
@@ -10,11 +10,42 @@ function formatCurrency(amount: number): string {
   }).format(Math.abs(amount));
 }
 
+// These tests approve bills in one shared org, which changes the totals others read.
+test.describe.configure({ mode: "serial" });
+
 const RUN_ID = Date.now();
 const E2E_VENDOR = `E2E Utility Vendor ${RUN_ID}`;
 
 async function waitForAnalyticsLoad(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible({ timeout: 10000 });
+}
+
+function firstOfThisMonth(): string {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+/** New transactions always start as pending, and analytics only counts approved ones. */
+async function createApprovedUtilityBill(
+  api: APIRequestContext,
+  bill: { amount: string; vendor: string; sub_category?: string },
+): Promise<string> {
+  const created = await api.post("/transactions", {
+    data: {
+      transaction_date: firstOfThisMonth(),
+      transaction_type: "expense",
+      category: "utilities",
+      tags: ["utilities"],
+      tax_relevant: true,
+      ...bill,
+    },
+  });
+  expect(created.ok()).toBe(true);
+  const { id } = await created.json();
+  const approved = await api.patch(`/transactions/${id}`, { data: { status: "approved" } });
+  if (!approved.ok()) await api.delete(`/transactions/${id}`);
+  expect(approved.ok()).toBe(true);
+  return id;
 }
 
 test.describe("Analytics — Layout", () => {
@@ -46,9 +77,17 @@ test.describe("Analytics — Layout", () => {
 });
 
 test.describe("Analytics — Utility Trends", () => {
-  test.beforeEach(async ({ authedPage: page }) => {
+  let billId: string | null = null;
+
+  test.beforeEach(async ({ authedPage: page, api }) => {
+    billId = await createApprovedUtilityBill(api, { amount: "45.00", vendor: E2E_VENDOR, sub_category: "water" });
     await page.goto("/analytics?tab=utility-trends");
     await waitForAnalyticsLoad(page);
+  });
+
+  test.afterEach(async ({ api }) => {
+    if (billId) await api.delete(`/transactions/${billId}`).catch(() => {});
+    billId = null;
   });
 
   test("shows skeleton then loads content or empty state", async ({ authedPage: page }) => {
@@ -176,24 +215,7 @@ test.describe("Analytics — Utility Transaction CRUD", () => {
     authedPage: page,
     api,
   }) => {
-    // Create a utility transaction via API with sub_category
-    const createRes = await api.post("/transactions", {
-      data: {
-        transaction_date: "2025-06-15",
-        amount: "99.50",
-        transaction_type: "expense",
-        category: "utilities",
-        sub_category: "electricity",
-        vendor: E2E_VENDOR,
-        description: "E2E test electricity bill",
-        tags: ["utilities"],
-        tax_relevant: true,
-        status: "approved",
-      },
-    });
-    expect(createRes.ok()).toBe(true);
-    const created = await createRes.json();
-    createdTxnId = created.id;
+    createdTxnId = await createApprovedUtilityBill(api, { amount: "99.50", vendor: E2E_VENDOR, sub_category: "electricity" });
 
     // Verify it appears in the analytics API response
     const analyticsRes = await api.get("/analytics/utility-trends");
@@ -215,5 +237,20 @@ test.describe("Analytics — Utility Transaction CRUD", () => {
 
     // Wait for data to load — should show Total Utility Spend
     await expect(page.getByText("Total Utilities")).toBeVisible({ timeout: 15000 });
+  });
+
+  test("an approved utility bill with no type still counts, under Other", async ({ authedPage: page, api }) => {
+    createdTxnId = await createApprovedUtilityBill(api, { amount: "777.77", vendor: `${E2E_VENDOR} combined` });
+
+    const analytics = await (await api.get("/analytics/utility-trends")).json();
+    expect(analytics.summary.other).toBeGreaterThanOrEqual(777.77);
+    expect(analytics.total_spend).toBeGreaterThanOrEqual(777.77);
+
+    await page.goto("/analytics?tab=utility-trends");
+    await waitForAnalyticsLoad(page);
+    const summary = page.getByRole("region", { name: "Utility spend summary" });
+    const otherLabel = summary.getByText("Other", { exact: true });
+    await expect(otherLabel).toBeVisible({ timeout: 15000 });
+    await expect(otherLabel.locator("..")).toContainText(formatCurrency(analytics.summary.other));
   });
 });
