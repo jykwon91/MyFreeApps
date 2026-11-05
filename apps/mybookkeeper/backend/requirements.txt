@@ -11,7 +11,7 @@ annotated-doc==0.0.5
     # via fastapi
 annotated-types==0.8.0
     # via pydantic
-anthropic==1.8.0
+anthropic==2.4.0
     # via mybookkeeper-backend
 anyio==4.15.1
     # via
