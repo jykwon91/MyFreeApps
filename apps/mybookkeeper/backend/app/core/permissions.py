@@ -135,7 +135,7 @@ async def reject_demo_user(
     user: User = Depends(current_active_user),
 ) -> User:
     async with AsyncSessionLocal() as db:
-        is_demo = await demo_repo.has_created_demo_org(db, user.id)
+        is_demo = await organization_repo.has_created_demo_org(db, user.id)
     if is_demo:
         raise HTTPException(
             status_code=403,

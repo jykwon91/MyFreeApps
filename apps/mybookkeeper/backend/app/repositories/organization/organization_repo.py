@@ -128,6 +128,15 @@ async def create_invite(
     return invite
 
 
+async def has_created_demo_org(db: AsyncSession, user_id: uuid.UUID) -> bool:
+    result = await db.execute(
+        select(Organization.id)
+        .where(Organization.created_by == user_id, Organization.is_demo.is_(True))
+        .limit(1)
+    )
+    return result.first() is not None
+
+
 async def delete_other_pending_invites(
     db: AsyncSession, org_id: uuid.UUID, email: str, keep_invite_id: uuid.UUID,
 ) -> None:
