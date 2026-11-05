@@ -3,8 +3,9 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 import ActiveReplyTemplatesPanel from "@/app/features/inquiries/ActiveReplyTemplatesPanel";
+import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { REPLY_TEMPLATE_SKELETON_ROWS } from "@/shared/lib/reply-template-constants";
-import { REPLY_TEMPLATE_MESSAGES as MESSAGES } from "@/shared/lib/reply-template-messages";
+import { REPLY_TEMPLATE_MESSAGES as MESSAGES, viewLabel } from "@/shared/lib/reply-template-messages";
 
 const t1: ReplyTemplate = {
   id: "tpl-1",
@@ -26,12 +27,17 @@ vi.mock("@mybookkeeper/api-client/store/inquiriesApi", () => ({
   useGetReplyTemplatesQuery: vi.fn(() => ({ ...listState, refetch })),
 }));
 
+vi.mock("@/shared/hooks/useOrgRole", () => ({ useCanWrite: vi.fn(() => true) }));
+
 const onEdit = vi.fn();
 const onArchive = vi.fn();
-const renderPanel = () => render(<ActiveReplyTemplatesPanel onEdit={onEdit} onArchive={onArchive} />);
+const onView = vi.fn();
+const panel = () => <ActiveReplyTemplatesPanel onEdit={onEdit} onArchive={onArchive} onView={onView} />;
+const renderPanel = () => render(panel());
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(useCanWrite).mockReturnValue(true);
   listState = { currentData: [t1], isError: false, isFetching: false };
 });
 
@@ -63,6 +69,35 @@ describe("the active templates panel", () => {
     expect(screen.getByText(t1.name)).toBeInTheDocument();
   });
 
+  it("gives a viewer View, never Edit or Archive, and a skeleton with one button a row", async () => {
+    vi.mocked(useCanWrite).mockReturnValue(false);
+    renderPanel();
+    expect(screen.queryByRole("button", { name: `Edit ${t1.name}` })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: `Archive ${t1.name}` })).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("button", { name: viewLabel(t1.name) }));
+    expect(onView).toHaveBeenCalledWith(t1);
+  });
+
+  it("draws one placeholder button a row for a viewer, two for a writer", () => {
+    listState = { currentData: undefined, isError: false, isFetching: true };
+    vi.mocked(useCanWrite).mockReturnValue(false);
+    const { unmount } = renderPanel();
+    const rows = REPLY_TEMPLATE_SKELETON_ROWS.length;
+    expect(screen.getByTestId("active-reply-templates-skeleton").querySelectorAll("[data-testid=reply-templates-skeleton-action]")).toHaveLength(rows);
+    unmount();
+    vi.mocked(useCanWrite).mockReturnValue(true);
+    renderPanel();
+    expect(screen.getByTestId("active-reply-templates-skeleton").querySelectorAll("[data-testid=reply-templates-skeleton-action]")).toHaveLength(rows * 2);
+  });
+
+  it("tells a viewer there are none without asking them to create one", () => {
+    vi.mocked(useCanWrite).mockReturnValue(false);
+    listState = { currentData: [], isError: false, isFetching: false };
+    renderPanel();
+    expect(screen.getByText(MESSAGES.noActiveViewer)).toBeInTheDocument();
+    expect(screen.queryByText(MESSAGES.noActive)).not.toBeInTheDocument();
+  });
+
   it("says there are none only when an empty list loaded", () => {
     listState = { currentData: [], isError: false, isFetching: false };
     renderPanel();
@@ -77,7 +112,7 @@ describe("the active templates panel", () => {
     await userEvent.setup().click(screen.getByRole("button", { name: MESSAGES.tryAgain }));
     expect(screen.getByRole("button", { name: new RegExp(MESSAGES.tryingAgain) })).toBeDisabled();
     listState = { currentData: [t1], isError: false, isFetching: false };
-    rerender(<ActiveReplyTemplatesPanel onEdit={onEdit} onArchive={onArchive} />);
+    rerender(panel());
     await act(async () => finish());
     expect(document.activeElement).toBe(screen.getByTestId("active-reply-templates-panel"));
   });
@@ -90,11 +125,11 @@ describe("the active templates panel", () => {
     await userEvent.setup().click(screen.getByRole("button", { name: MESSAGES.tryAgain }));
     // Under way, the query is no longer in error.
     listState = { currentData: [t1], isError: false, isFetching: true };
-    rerender(<ActiveReplyTemplatesPanel onEdit={onEdit} onArchive={onArchive} />);
+    rerender(panel());
     expect(screen.getByRole("status")).toHaveTextContent(MESSAGES.showingLastLoadedActive);
     expect(screen.getByRole("button", { name: new RegExp(MESSAGES.tryingAgain) })).toBeDisabled();
     listState = { currentData: [t1], isError: false, isFetching: false };
-    rerender(<ActiveReplyTemplatesPanel onEdit={onEdit} onArchive={onArchive} />);
+    rerender(panel());
     await act(async () => finish());
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.getByText(t1.name)).toBeInTheDocument();
@@ -104,7 +139,7 @@ describe("the active templates panel", () => {
     listState = { currentData: undefined, isError: true, isFetching: false };
     const { rerender } = renderPanel();
     listState = { currentData: [t1], isError: false, isFetching: false };
-    rerender(<ActiveReplyTemplatesPanel onEdit={onEdit} onArchive={onArchive} />);
+    rerender(panel());
     expect(document.activeElement).toBe(document.body);
   });
 });

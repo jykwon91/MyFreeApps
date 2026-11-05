@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@platform/ui";
 import { ConfirmDialog } from "@platform/ui";
+import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useArchiveReplyTemplate } from "@mybookkeeper/api-client/hooks/useArchiveReplyTemplate";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
@@ -9,6 +10,7 @@ import { ARCHIVE_FAILURES, archiveDescription, REPLY_TEMPLATE_MESSAGES as MESSAG
 import ActiveReplyTemplatesPanel from "./ActiveReplyTemplatesPanel";
 import ArchivedReplyTemplatesPanel from "./ArchivedReplyTemplatesPanel";
 import ReplyTemplateForm from "./ReplyTemplateForm";
+import ReplyTemplateView from "./ReplyTemplateView";
 import ReplyTemplatesViewTabs from "./ReplyTemplatesViewTabs";
 import { useReplyTemplatesView } from "./useReplyTemplatesView";
 
@@ -16,6 +18,8 @@ const PANEL_ID = "reply-templates-panel";
 
 export default function ReplyTemplatesManager() {
   const [view, setView] = useReplyTemplatesView();
+  const canWrite = useCanWrite();
+  const [viewing, setViewing] = useState<ReplyTemplate | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<ReplyTemplate | null>(
     null,
   );
@@ -62,9 +66,14 @@ export default function ReplyTemplatesManager() {
           <p className="text-xs text-muted-foreground">
             Pre-written replies you can pull up when an inquiry comes in.
           </p>
+          {canWrite ? null : (
+            <p className="text-xs text-muted-foreground" data-testid="reply-templates-view-only">
+              {MESSAGES.viewOnlyNote}
+            </p>
+          )}
         </div>
         {/* A new template would never show up in the archived list beside it. */}
-        {view === "active" ? (
+        {view === "active" && canWrite ? (
           <Button
             variant="primary"
             size="md"
@@ -83,9 +92,11 @@ export default function ReplyTemplatesManager() {
         {view === "archived" ? (
           <ArchivedReplyTemplatesPanel onShowActive={() => setView("active")} />
         ) : (
-          <ActiveReplyTemplatesPanel onEdit={handleEdit} onArchive={setArchiveCandidate} />
+          <ActiveReplyTemplatesPanel onEdit={handleEdit} onArchive={setArchiveCandidate} onView={setViewing} />
         )}
       </div>
+
+      {viewing ? <ReplyTemplateView template={viewing} onClose={() => setViewing(null)} /> : null}
 
       {showForm ? (
         <ReplyTemplateForm
