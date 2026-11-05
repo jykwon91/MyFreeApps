@@ -338,3 +338,101 @@ async def test_two_people_can_use_the_same_name(
     payload = ReplyTemplateCreateRequest(name="Same", subject_template="s", body_template="b")
     await reply_template_service.create_template(test_org.id, test_user.id, payload)
     await reply_template_service.create_template(test_org.id, other_user.id, payload)
+
+
+async def _archived_template(test_org: Organization, test_user: User):  # type: ignore[no-untyped-def]
+    created = await reply_template_service.create_template(
+        test_org.id, test_user.id,
+        ReplyTemplateCreateRequest(name="Old", subject_template="s", body_template="b"),
+    )
+    await reply_template_service.archive_template(test_user.id, created.id)
+    return created
+
+
+@pytest.mark.asyncio
+async def test_archived_templates_are_listed_only_when_asked(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    archived = await _archived_template(test_org, test_user)
+
+    active = await reply_template_service.list_templates(test_org.id, test_user.id)
+    everything = await reply_template_service.list_templates(
+        test_org.id, test_user.id, include_archived=True,
+    )
+
+    assert archived.id not in [t.id for t in active]
+    listed = {t.id: t for t in everything}
+    assert listed[archived.id].is_archived is True
+    assert len(everything) == len(active) + 1
+
+
+@pytest.mark.asyncio
+async def test_an_archived_template_cant_be_changed(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    archived = await _archived_template(test_org, test_user)
+    user_id = test_user.id  # each refused change rolls back, which expires test_user
+
+    with pytest.raises(LookupError):
+        await reply_template_service.update_template(
+            user_id, archived.id, ReplyTemplateUpdateRequest(name="New name"),
+        )
+    with pytest.raises(LookupError):
+        await reply_template_service.update_template(
+            user_id, archived.id, ReplyTemplateUpdateRequest(is_archived=True),
+        )
+
+    row = (await db.execute(
+        select(ReplyTemplate.name, ReplyTemplate.is_archived).where(ReplyTemplate.id == archived.id),
+    )).one()
+    assert tuple(row) == ("Old", True)
+
+
+@pytest.mark.asyncio
+async def test_an_archived_template_can_be_restored_and_changed_at_once(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    archived = await _archived_template(test_org, test_user)
+
+    restored = await reply_template_service.update_template(
+        test_user.id, archived.id,
+        ReplyTemplateUpdateRequest(is_archived=False, name="Back again"),
+    )
+
+    assert (restored.is_archived, restored.name) == (False, "Back again")
+    active = await reply_template_service.list_templates(test_org.id, test_user.id)
+    assert archived.id in [t.id for t in active]
+
+
+@pytest.mark.asyncio
+async def test_restoring_someone_else_s_template_raises(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    archived = await _archived_template(test_org, test_user)
+
+    with pytest.raises(LookupError):
+        await reply_template_service.update_template(
+            uuid.uuid4(), archived.id, ReplyTemplateUpdateRequest(is_archived=False),
+        )
+
+
+@pytest.mark.asyncio
+async def test_an_archived_template_cant_be_used_for_a_reply(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    listing = await _seed_listing(db, org=test_org, user=test_user)
+    inquiry = await inquiry_repo.create(
+        db,
+        organization_id=test_org.id,
+        user_id=test_user.id,
+        source="direct",
+        received_at=_dt.datetime.now(_dt.timezone.utc),
+        listing_id=listing.id,
+        inquirer_email="x@example.com",
+    )
+    archived = await _archived_template(test_org, test_user)
+
+    with pytest.raises(LookupError):
+        await reply_template_service.render_for_inquiry(
+            test_org.id, test_user.id, inquiry.id, archived.id,
+        )

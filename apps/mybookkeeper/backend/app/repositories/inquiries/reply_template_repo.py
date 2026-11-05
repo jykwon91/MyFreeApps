@@ -31,14 +31,17 @@ async def get_by_id_and_user(
     db: AsyncSession,
     template_id: uuid.UUID,
     user_id: uuid.UUID,
+    *,
+    for_update: bool = False,
 ) -> ReplyTemplate | None:
     """Return the template iff it exists and belongs to the given user."""
-    result = await db.execute(
-        select(ReplyTemplate).where(
-            ReplyTemplate.id == template_id,
-            ReplyTemplate.user_id == user_id,
-        )
+    stmt = select(ReplyTemplate).where(
+        ReplyTemplate.id == template_id,
+        ReplyTemplate.user_id == user_id,
     )
+    if for_update:
+        stmt = stmt.with_for_update()
+    result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
 
@@ -110,14 +113,10 @@ async def create(
 
 async def update_template(
     db: AsyncSession,
-    template_id: uuid.UUID,
-    user_id: uuid.UUID,
+    template: ReplyTemplate,
     fields: dict[str, Any],
-) -> ReplyTemplate | None:
-    """Apply allowlisted updates. Returns None if not found / wrong user."""
-    template = await get_by_id_and_user(db, template_id, user_id)
-    if template is None:
-        return None
+) -> ReplyTemplate:
+    """Apply allowlisted updates to a template the caller has already loaded."""
     safe_fields = {k: v for k, v in fields.items() if k in _UPDATABLE_COLUMNS}
     if not safe_fields:
         return template

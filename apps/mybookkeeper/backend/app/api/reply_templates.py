@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
@@ -26,10 +26,11 @@ router = APIRouter(prefix="/reply-templates", tags=["reply-templates"])
 
 @router.get("", response_model=list[ReplyTemplateResponse])
 async def list_templates(
+    include_archived: bool = Query(False),
     ctx: RequestContext = Depends(current_org_member),
 ) -> list[ReplyTemplateResponse]:
     return await reply_template_service.list_templates(
-        ctx.organization_id, ctx.user_id,
+        ctx.organization_id, ctx.user_id, include_archived=include_archived,
     )
 
 

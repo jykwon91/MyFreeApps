@@ -66,6 +66,22 @@ class TestListReplyTemplates:
         app.dependency_overrides.clear()
 
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(("query", "expected"), [("", False), ("?include_archived=true", True)])
+    async def test_passes_on_whether_to_include_archived(self, query: str, expected: bool) -> None:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        app.dependency_overrides[current_org_member] = lambda: _ctx(org_id, user_id)
+        with patch(
+            "app.api.reply_templates.reply_template_service.list_templates",
+            return_value=[],
+        ) as list_templates:
+            with TestClient(app) as client:
+                r = client.get(f"/reply-templates{query}")
+        app.dependency_overrides.clear()
+        assert r.status_code == 200
+        list_templates.assert_called_once_with(org_id, user_id, include_archived=expected)
+
+
 class TestCreateReplyTemplate:
     @pytest.mark.asyncio
     async def test_creates_via_service(self) -> None:
@@ -161,6 +177,32 @@ class TestUpdateReplyTemplate:
                 )
                 assert r.status_code == 404
         app.dependency_overrides.clear()
+
+
+    @pytest.mark.asyncio
+    async def test_a_blank_name_is_refused_before_the_service(self) -> None:
+        app.dependency_overrides[require_write_access] = lambda: _ctx(uuid.uuid4(), uuid.uuid4())
+        with patch(
+            "app.api.reply_templates.reply_template_service.update_template",
+        ) as update_template:
+            with TestClient(app) as client:
+                r = client.patch(f"/reply-templates/{uuid.uuid4()}", json={"name": "   "})
+        app.dependency_overrides.clear()
+        assert r.status_code == 422
+        update_template.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_an_archived_template_reads_as_not_found(self) -> None:
+        app.dependency_overrides[require_write_access] = lambda: _ctx(uuid.uuid4(), uuid.uuid4())
+        with patch(
+            "app.api.reply_templates.reply_template_service.update_template",
+            side_effect=LookupError("archived"),
+        ):
+            with TestClient(app) as client:
+                r = client.patch(f"/reply-templates/{uuid.uuid4()}", json={"name": "New"})
+        app.dependency_overrides.clear()
+        assert r.status_code == 404
+        assert r.json()["detail"] == "Reply template not found"
 
 
 class TestArchiveReplyTemplate:
