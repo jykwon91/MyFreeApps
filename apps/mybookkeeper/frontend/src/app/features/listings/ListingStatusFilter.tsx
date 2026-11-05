@@ -1,5 +1,5 @@
 import { cn } from "@/shared/utils/cn";
-import { LISTING_STATUSES, LISTING_STATUS_LABELS } from "@/shared/lib/listing-labels";
+import { LISTING_STATUSES, LISTING_STATUS_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
 import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listing-status";
 
 export interface ListingStatusFilterProps {

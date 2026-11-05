@@ -9,10 +9,8 @@ import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useDeleteListingMutation } from "@/shared/store/listingsApi";
 import { useGetListingByIdQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import {
-  LISTING_ROOM_TYPE_LABELS,
-  formatRate,
-} from "@/shared/lib/listing-labels";
+import { LISTING_ROOM_TYPE_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
+import { formatRate } from "@mybookkeeper/api-client/utils/formatRate";
 import ListingDetailSkeleton from "@/app/features/listings/ListingDetailSkeleton";
 import ListingDetailRow from "@/app/features/listings/ListingDetailRow";
 import ListingStatusBadge from "@/app/features/listings/ListingStatusBadge";

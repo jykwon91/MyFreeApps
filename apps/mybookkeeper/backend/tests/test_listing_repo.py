@@ -210,6 +210,29 @@ class TestListingRepoListByOrganization:
         assert {r.status for r in archived} == {"archived"}
 
     @pytest.mark.asyncio
+    async def test_pages_stay_whole_when_listings_share_a_timestamp(
+        self, db: AsyncSession, test_org: Organization, test_user: User,
+    ) -> None:
+        prop = await _seed_property(db, test_org, test_user)
+        made_together = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        listings = [
+            _make_listing(organization_id=test_org.id, user_id=test_user.id, property_id=prop.id, title=f"Room {n}")
+            for n in range(5)
+        ]
+        for listing in listings:
+            listing.created_at = made_together
+        db.add_all(listings)
+        await db.flush()
+
+        pages = [
+            await listing_repo.list_by_organization(db, test_org.id, limit=2, offset=offset)
+            for offset in (0, 2, 4)
+        ]
+
+        seen = [listing.id for page in pages for listing in page]
+        assert seen == sorted((listing.id for listing in listings), reverse=True)
+
+    @pytest.mark.asyncio
     async def test_paginates_with_limit_and_offset(
         self, db: AsyncSession, test_user: User, test_org: Organization
     ) -> None:
