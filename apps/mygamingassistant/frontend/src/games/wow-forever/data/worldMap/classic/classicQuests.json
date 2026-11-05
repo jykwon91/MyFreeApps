@@ -1,4 +1,4 @@
-{"source":{"repo":"cmangos/classic-db","commit":"ec4f596146be6467ea93c57397858e329e2db852","file":"Full_DB/ClassicDB_1_12_1_z2815.sql.gz","license":"GPL-3.0-or-later","clientTables":{"publisher":"Blizzard Entertainment (World of Warcraft: Forever client data)","via":"wago.tools DB2 export","branch":"wowf","build":"1.60.1.70707","tables":"FactionTemplate, UiMapAssignment, WorldMapOverlay, AreaTable"}},"questColumns":["id","title","minLevel","level","side","classes"],"quests":[[5,"Jitters' Growling Gut",17,20,"A",""],
+{"source":{"repo":"cmangos/classic-db","commit":"ec4f596146be6467ea93c57397858e329e2db852","file":"Full_DB/ClassicDB_1_12_1_z2815.sql.gz","license":"GPL-3.0-or-later","clientTables":{"publisher":"Blizzard Entertainment (World of Warcraft: Forever client data)","via":"wago.tools DB2 export","branch":"wowf","build":"1.60.1.70790","tables":"FactionTemplate, UiMapAssignment, WorldMapOverlay, AreaTable"}},"questColumns":["id","title","minLevel","level","side","classes"],"quests":[[5,"Jitters' Growling Gut",17,20,"A",""],
 [6,"Bounty on Garrick Padfoot",2,5,"A",""],
 [7,"Kobold Camp Cleanup",1,2,"A",""],
 [8,"A Rogue's Deal",1,5,"H",""],

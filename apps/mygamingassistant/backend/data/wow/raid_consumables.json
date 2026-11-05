@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-11-02T15:36:22Z",
-  "client_build": "1.60.1.70707",
-  "attribution": "Item names sourced from WoW Forever client (build 1.60.1.70707) via wago.tools DB2 export. Game data © Blizzard Entertainment.",
+  "generated_at": "2026-11-05T15:09:29Z",
+  "client_build": "1.60.1.70790",
+  "attribution": "Item names sourced from WoW Forever client (build 1.60.1.70790) via wago.tools DB2 export. Game data © Blizzard Entertainment.",
   "raids": {
     "barrow_deeps": {
       "name": "Barrow Deeps",

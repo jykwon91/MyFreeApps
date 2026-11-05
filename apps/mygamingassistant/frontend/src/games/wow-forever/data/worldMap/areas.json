@@ -1,4 +1,4 @@
-{"source":{"publisher":"Blizzard Entertainment (World of Warcraft: Forever client data)","via":"wago.tools DB2 export","branch":"wowf","build":"1.60.1.70707","tables":"AreaTable, WMOAreaTable (walk graph labels), UiMapAssignment"},"columns":["name","zone","x","y","z","indoor"],"rows":[["Burning Blade Coven",1411,43.8,53.8,65,1],
+{"source":{"publisher":"Blizzard Entertainment (World of Warcraft: Forever client data)","via":"wago.tools DB2 export","branch":"wowf","build":"1.60.1.70790","tables":"AreaTable, WMOAreaTable (walk graph labels), UiMapAssignment"},"columns":["name","zone","x","y","z","indoor"],"rows":[["Burning Blade Coven",1411,43.8,53.8,65,1],
 ["Darkspear Strand",1411,55.3,78.8,8,0],
 ["Deadeye Shore",1411,59.8,27.5,-2,0],
 ["Drygulch Ravine",1411,52.7,27.6,12,1],

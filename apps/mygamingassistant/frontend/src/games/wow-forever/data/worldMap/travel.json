@@ -1,4 +1,4 @@
-{"source":{"publisher":"Blizzard Entertainment (World of Warcraft: Forever client data)","via":"wago.tools DB2 export","branch":"wowf","build":"1.60.1.70707","tables":"TaxiNodes, TaxiPath, TaxiPathNode, WorldMapOverlay, AreaTable"},"nodeColumns":["id","name","continent","worldX","worldY","faction","zone","subzone","x","y"],"nodes":[[2,"Stormwind, Elwynn",0,-8832.8,478.6,"A",1453,"",71.6,72.3],
+{"source":{"publisher":"Blizzard Entertainment (World of Warcraft: Forever client data)","via":"wago.tools DB2 export","branch":"wowf","build":"1.60.1.70790","tables":"TaxiNodes, TaxiPath, TaxiPathNode, WorldMapOverlay, AreaTable"},"nodeColumns":["id","name","continent","worldX","worldY","faction","zone","subzone","x","y"],"nodes":[[2,"Stormwind, Elwynn",0,-8832.8,478.6,"A",1453,"",71.6,72.3],
 [4,"Sentinel Hill, Westfall",0,-10628.9,1036.7,"A",1436,"Sentinel Hill",56.6,52.7],
 [5,"Lakeshire, Redridge",0,-9429.1,-2231.4,"A",1433,"Three Corners",25.3,59.0],
 [6,"Ironforge, Dun Morogh",0,-4821.8,-1155.4,"A",1455,"",55.9,47.9],

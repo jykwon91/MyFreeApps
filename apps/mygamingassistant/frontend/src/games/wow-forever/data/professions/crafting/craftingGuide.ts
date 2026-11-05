@@ -105,7 +105,7 @@ export const CRAFTING_GUIDES: Readonly<Record<CraftingProfession, CraftingGuide>
         confidence: "unconfirmed",
       },
       {
-        text: "Forever adds 63 Enchanting recipes (necklace enchants, staves, the Arcane Salvager and more). Where their formulas come from isn't known yet.",
+        text: "Forever adds 64 Enchanting recipes (necklace enchants, staves, the Arcane Salvager and more). Where their formulas come from isn't known yet.",
         confidence: "confirmed",
       },
     ],
