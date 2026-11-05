@@ -187,6 +187,6 @@ describe("restoring from the website", () => {
     failWith({ status: 500 });
     refetch.mockResolvedValueOnce({ isSuccess: false });
     await clickRestore();
-    await waitFor(() => expect(showError).toHaveBeenCalledWith(MESSAGES.restoreUnsure));
+    await waitFor(() => expect(showError).toHaveBeenCalledWith(MESSAGES.writeUnsure));
   });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ReplyTemplate } from "../types/inquiry/reply-template";
 import { checkStillListed } from "../utils/checkStillListed";
-import { archiveFailure, restoreFailure, saveFailure } from "../utils/replyTemplateFailure";
+import { saveFailure } from "../utils/replyTemplateFailure";
 
 describe("reply template failures", () => {
   it.each([
@@ -18,23 +18,6 @@ describe("reply template failures", () => {
 
   it("treats an error with no status as no response", () => {
     expect(saveFailure(new Error("Network Error"))).toBe("noResponse");
-  });
-
-  it("never reads a 409 on archive as a taken name, and doesn't check the list after a 5xx", () => {
-    expect(archiveFailure({ status: 409 })).toBe("other");
-    expect(archiveFailure({ status: 404 })).toBe("gone");
-    expect(archiveFailure({ status: undefined })).toBe("noResponse");
-    expect(archiveFailure({ status: 403 })).toBe("viewOnly");
-    expect(archiveFailure({ status: 502 })).toBe("other");
-  });
-
-  it("never reads a 409 on restore as a taken name, but keeps a 5xx so the list gets checked", () => {
-    expect(restoreFailure({ status: 409 })).toBe("other");
-    expect(restoreFailure({ status: 422 })).toBe("other");
-    expect(restoreFailure({ status: 404 })).toBe("gone");
-    expect(restoreFailure({ status: 403 })).toBe("viewOnly");
-    expect(restoreFailure({ status: 500 })).toBe("serverError");
-    expect(restoreFailure(new Error("Network Error"))).toBe("noResponse");
   });
 });
 

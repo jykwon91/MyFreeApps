@@ -5,10 +5,10 @@ import { Provider } from "react-redux";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { store } from "@/shared/store";
 import ReplyTemplatesManager from "@/app/features/inquiries/ReplyTemplatesManager";
-import { showError } from "@/shared/lib/toast-store";
+import { showError, showSuccess } from "@/shared/lib/toast-store";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 import { useGetArchivedReplyTemplatesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
-import { archiveDescription } from "@/shared/lib/reply-template-messages";
+import { archiveDescription, REPLY_TEMPLATE_MESSAGES as MESSAGES } from "@/shared/lib/reply-template-messages";
 
 const t1: ReplyTemplate = {
   id: "tpl-1",
@@ -27,13 +27,16 @@ const create = vi.fn(() => ({ unwrap: () => Promise.resolve(t1) }));
 const update = vi.fn(() => ({ unwrap: () => Promise.resolve(t1) }));
 const archive = vi.fn(() => ({ unwrap: () => Promise.resolve() }));
 
+type Reloaded = { isSuccess: boolean; data?: ReplyTemplate[] };
+const refetch = vi.fn<() => Promise<Reloaded>>();
+
 let listState: { data: ReplyTemplate[]; isLoading: boolean } = {
   data: [t1],
   isLoading: false,
 };
 
 vi.mock("@mybookkeeper/api-client/store/inquiriesApi", () => ({
-  useGetReplyTemplatesQuery: vi.fn(() => listState),
+  useGetReplyTemplatesQuery: vi.fn(() => ({ ...listState, refetch })),
   useCreateReplyTemplateMutation: vi.fn(() => [create, { isLoading: false }]),
   useUpdateReplyTemplateMutation: vi.fn(() => [update, { isLoading: false }]),
   useArchiveReplyTemplateMutation: vi.fn(() => [archive, { isLoading: false }]),
@@ -74,6 +77,9 @@ describe("ReplyTemplatesManager", () => {
     vi.mocked(showError).mockClear();
     update.mockClear();
     archive.mockClear();
+    vi.mocked(showSuccess).mockClear();
+    refetch.mockReset();
+    refetch.mockResolvedValue({ isSuccess: true, data: [t1] });
     listState = { data: [t1], isLoading: false };
   });
 
@@ -151,6 +157,90 @@ describe("ReplyTemplatesManager", () => {
     await waitFor(() => {
       expect(archive).toHaveBeenCalledWith(t1.id);
     });
+  });
+
+  async function confirmArchive(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByTestId(`reply-template-archive-${t1.id}`));
+    await user.click(screen.getByRole("button", { name: "Archive" }));
+  }
+
+  const dialogTitle = () => screen.queryByRole("heading", { name: /Archive this template/i });
+
+  it("says it's archived and closes the dialog", async () => {
+    const user = userEvent.setup();
+    renderManager();
+    await confirmArchive(user);
+    await waitFor(() => expect(showSuccess).toHaveBeenCalledWith(MESSAGES.archived));
+    await waitFor(() => expect(dialogTitle()).not.toBeInTheDocument());
+    expect(refetch).not.toHaveBeenCalled();
+  });
+
+  it("says it was already gone on a 404, closes, and reloads the list", async () => {
+    const user = userEvent.setup();
+    archive.mockReturnValueOnce({ unwrap: () => Promise.reject({ status: 404, data: {} }) });
+    renderManager();
+    await confirmArchive(user);
+    await waitFor(() => expect(showSuccess).toHaveBeenCalledWith(MESSAGES.alreadyGone));
+    await waitFor(() => expect(dialogTitle()).not.toBeInTheDocument());
+    expect(refetch).toHaveBeenCalled();
+  });
+
+  it("counts a 502 as archived when the reloaded list no longer has it", async () => {
+    const user = userEvent.setup();
+    archive.mockReturnValueOnce({ unwrap: () => Promise.reject({ status: 502, data: "<html>Bad Gateway</html>" }) });
+    refetch.mockResolvedValueOnce({ isSuccess: true, data: [] });
+    renderManager();
+    await confirmArchive(user);
+    await waitFor(() => expect(showSuccess).toHaveBeenCalledWith(MESSAGES.archived));
+    expect(showError).not.toHaveBeenCalled();
+  });
+
+  it.each<[string, unknown, Reloaded, string, boolean]>([
+    ["a 502 that left it listed", { status: 502, data: {} }, { isSuccess: true, data: [t1] }, MESSAGES.archiveFailed, true],
+    ["a lost answer that left it listed", { status: undefined, data: "Network Error" }, { isSuccess: true, data: [t1] }, MESSAGES.archiveUnreachable, true],
+    ["a lost answer it can't check", { status: undefined, data: "Network Error" }, { isSuccess: false }, MESSAGES.writeUnsure, false],
+    ["a 403", { status: 403, data: {} }, { isSuccess: true, data: [t1] }, MESSAGES.archiveViewOnly, false],
+  ])("on %s it says so, and keeps the dialog open only to try again", async (_case, error, reloaded, words, staysOpen) => {
+    const user = userEvent.setup();
+    archive.mockReturnValueOnce({ unwrap: () => Promise.reject(error) });
+    refetch.mockResolvedValue(reloaded);
+    renderManager();
+    await confirmArchive(user);
+    await waitFor(() => expect(showError).toHaveBeenCalledWith(words));
+    if (staysOpen) expect(dialogTitle()).toBeInTheDocument();
+    else await waitFor(() => expect(dialogTitle()).not.toBeInTheDocument());
+    expect(showSuccess).not.toHaveBeenCalled();
+  });
+
+  it("shows it's archiving at once and sends once however often Archive is pressed", async () => {
+    const user = userEvent.setup();
+    let answer = () => {};
+    archive.mockReturnValueOnce({ unwrap: () => new Promise<void>((resolve) => (answer = resolve)) });
+    renderManager();
+    await confirmArchive(user);
+    const confirm = screen.getByRole("button", { name: /Processing/ });
+    expect(confirm).toBeDisabled();
+    await user.click(confirm);
+    answer();
+    await waitFor(() => expect(showSuccess).toHaveBeenCalledWith(MESSAGES.archived));
+    expect(archive).toHaveBeenCalledTimes(1);
+  });
+
+  it("doesn't close another template's dialog when an earlier archive answers", async () => {
+    const user = userEvent.setup();
+    const t2: ReplyTemplate = { ...t1, id: "tpl-3", name: "Welcome" };
+    listState = { data: [t1, t2], isLoading: false };
+    let answer = () => {};
+    archive.mockReturnValueOnce({ unwrap: () => new Promise<void>((resolve) => (answer = resolve)) });
+    renderManager();
+    await confirmArchive(user);
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(dialogTitle()).not.toBeInTheDocument());
+    await user.click(screen.getByTestId(`reply-template-archive-${t2.id}`));
+    answer();
+    await waitFor(() => expect(showSuccess).toHaveBeenCalledWith(MESSAGES.archived));
+    expect(dialogTitle()).toBeInTheDocument();
+    expect(screen.getByText(archiveDescription(t2.name))).toBeInTheDocument();
   });
 
   it("says in the archive dialog that it can be restored and its name stays taken", async () => {

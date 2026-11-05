@@ -12,7 +12,7 @@ interface RestoreReplyTemplateButtonProps {
 export default function RestoreReplyTemplateButton({ id, onRestored }: RestoreReplyTemplateButtonProps) {
   const { showToast } = useToast();
   const { restore, isBusy } = useRestoreReplyTemplate(id, (outcome) => {
-    if (outcome === "restored") {
+    if (outcome === "done") {
       onRestored();
       showToast(MESSAGES.restored);
       // Back to where it was restored from: opening it here would leave the archived list under it.

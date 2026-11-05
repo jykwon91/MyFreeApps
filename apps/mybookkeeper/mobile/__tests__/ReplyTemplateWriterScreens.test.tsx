@@ -167,11 +167,11 @@ describe("archiving", () => {
     expect(screen.getByTestId("reply-template-detail-skeleton")).toBeTruthy();
   });
 
-  it("counts it as done when the server no longer has it", async () => {
+  it("says it was already gone when the server no longer has it, and goes back", async () => {
     const server = await showDetail();
     server.templates = [];
     await archive();
-    expect(await screen.findByText(MESSAGES.archived)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.alreadyGone)).toBeTruthy();
     expect(mockBack).toHaveBeenCalled();
   });
 
@@ -180,6 +180,15 @@ describe("archiving", () => {
     server.templateWriteOutcome = "lostAfterSaving";
     await archive();
     expect(await screen.findByText(MESSAGES.archived)).toBeTruthy();
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+  });
+
+  it("counts it as done when the proxy fails after the server archived it", async () => {
+    const server = await showDetail();
+    server.templateWriteOutcome = "gatewayAfterSaving";
+    await archive();
+    expect(await screen.findByText(MESSAGES.archived)).toBeTruthy();
+    expect(screen.queryByText(/Bad Gateway/)).toBeNull();
     await waitFor(() => expect(mockBack).toHaveBeenCalled());
   });
 
