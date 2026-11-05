@@ -1,10 +1,7 @@
 import { useState } from "react";
 import { Button, LoadingButton } from "@platform/ui";
 import FormField from "@/shared/components/ui/FormField";
-import {
-  LISTING_SOURCES,
-  LISTING_SOURCE_LABELS,
-} from "@/shared/lib/listing-labels";
+import { LISTING_SOURCES, LISTING_SOURCE_LABELS } from "@/shared/lib/listing-labels";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   useCreateListingExternalIdMutation,

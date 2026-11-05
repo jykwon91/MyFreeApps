@@ -48,9 +48,9 @@ routes:
   /leases/new:
     not_on_mobile: Not on the phone yet. More links to it on the website.
   /listings:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/listings/index
   /listings/:listingId:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/listings/[id]
   /login:
     screen: sign-in
   /members:

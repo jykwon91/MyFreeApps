@@ -6,7 +6,7 @@ import AlertBox from "@/shared/components/ui/AlertBox";
 import { LoadingButton } from "@platform/ui";
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { LISTING_PAGE_SIZE, LISTING_STATUSES } from "@/shared/lib/listing-labels";
+import { LISTING_PAGE_SIZE, LISTING_STATUSES } from "@mybookkeeper/api-client/constants/listingLabels";
 import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listing-status";
 import type { ListingSummary } from "@mybookkeeper/api-client/types/listing/listing-summary";
 import ListingStatusFilter from "@/app/features/listings/ListingStatusFilter";

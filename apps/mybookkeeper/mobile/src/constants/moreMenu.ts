@@ -6,7 +6,7 @@ export const MORE_MENU: readonly MoreMenuGroup[] = [
     title: "Rentals",
     items: [
       { label: "Calendar", webPath: "/calendar", screen: "/calendar" },
-      { label: "Listings", webPath: "/listings" },
+      { label: "Listings", screen: "/listings" },
       { label: "Properties", webPath: "/properties" },
       { label: "Welcome Manuals", webPath: "/welcome-manuals" },
       { label: "Reply Templates", webPath: "/reply-templates" },

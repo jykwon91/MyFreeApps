@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import ListingStatusBadge from "./ListingStatusBadge";
-import { LISTING_ROOM_TYPE_LABELS, formatRate } from "@/shared/lib/listing-labels";
+import { LISTING_ROOM_TYPE_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
+import { formatRate } from "@mybookkeeper/api-client/utils/formatRate";
 import type { ListingSummary } from "@mybookkeeper/api-client/types/listing/listing-summary";
 
 export interface ListingCardProps {

@@ -5,12 +5,8 @@ import Panel from "@/shared/components/ui/Panel";
 import { LoadingButton } from "@platform/ui";
 import FormField from "@/shared/components/ui/FormField";
 import Markdown from "@/shared/components/ui/Markdown";
-import {
-  LISTING_ROOM_TYPES,
-  LISTING_ROOM_TYPE_LABELS,
-  LISTING_STATUSES,
-  LISTING_STATUS_LABELS,
-} from "@/shared/lib/listing-labels";
+import { LISTING_ROOM_TYPES } from "@/shared/lib/listing-labels";
+import { LISTING_ROOM_TYPE_LABELS, LISTING_STATUSES, LISTING_STATUS_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   useCreateListingMutation,

@@ -98,7 +98,8 @@ async def list_by_organization(
     )
     if status is not None:
         stmt = stmt.where(Listing.status == status)
-    stmt = stmt.order_by(Listing.created_at.desc()).limit(limit).offset(offset)
+    # The id breaks ties, so rows made together can't swap between pages.
+    stmt = stmt.order_by(Listing.created_at.desc(), Listing.id.desc()).limit(limit).offset(offset)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 

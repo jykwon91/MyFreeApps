@@ -2,10 +2,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import {
-  LISTING_SOURCES,
-  LISTING_SOURCE_LABELS,
-} from "@/shared/lib/listing-labels";
+import { LISTING_SOURCES, LISTING_SOURCE_LABELS } from "@/shared/lib/listing-labels";
 import { useDeleteListingExternalIdMutation } from "@/shared/store/listingsApi";
 import type { ListingExternalId } from "@mybookkeeper/api-client/types/listing/listing-external-id";
 import type { ListingSource } from "@mybookkeeper/api-client/types/listing/listing-source";
