@@ -167,4 +167,60 @@ export const CRAFTING_GUIDES: Readonly<Record<CraftingProfession, CraftingGuide>
       },
     ],
   },
+  blacksmithing: {
+    label: "Blacksmithing",
+    steps: [
+      {
+        id: "train",
+        title: "Train Blacksmithing at a blacksmithing trainer",
+        detail: "Any trainer below teaches Apprentice Blacksmithing and your first recipes. Blacksmithing is one of your two main professions.",
+      },
+      {
+        id: "hammer",
+        title: "Get a Blacksmith Hammer before your first belt",
+        detail: "In the Forever client every recipe on the route after the first stones needs a Blacksmith Hammer in your bags. In Classic it's sold by trade goods and blacksmithing vendors, and you craft next to an anvil — trainers stand by one.",
+        warning: "Don't sell or bank the hammer — recipes won't show as craftable without it.",
+      },
+      {
+        id: "bars",
+        title: "Mine and smelt your bars, or buy them",
+        detail: "Every recipe takes metal bars. With Mining you smelt ore at a forge yourself — open a material on the shopping list to see where it's mined, with directions.",
+      },
+      {
+        id: "craft",
+        title: "Craft the row for your skill until it turns green",
+        detail: "Open your Blacksmithing window (press K, or find it in your spellbook) next to an anvil and craft. Type your skill below and the route points at your row.",
+        command: "/cast Blacksmithing",
+      },
+    ],
+    routeIntro: "Craft each recipe from the first skill to the second, then move to the next row. Up to 245 every row is a trainer recipe.",
+    shoppingNote:
+      "Bars are smelted from ore with Mining, so the list counts the ore; the Mining skill each smelt needs is Classic's. Without Mining, buy the bars instead.",
+    forever: [
+      {
+        text: "Forever lowered the skill of most Blacksmithing recipes — e.g. Rough Bronze Leggings turns yellow at 120 instead of 145. The route uses Forever's numbers.",
+        confidence: "confirmed",
+      },
+      {
+        text: "Forever adds 197 Blacksmithing recipes (Skyforged chain, Acolyte's to Veteran's chain sets, an Anvil and a Sharpening Wheel and more). Where their plans come from isn't known yet.",
+        confidence: "confirmed",
+      },
+      {
+        text: "196 Forever recipes: source not known yet. They're marked \"Source unknown\" — no Classic trainer or vendor is named for them.",
+        confidence: "confirmed",
+      },
+      {
+        text: "Armorsmith, Weaponsmith and the three master specializations are in the Forever client, and its Plans for their recipes still ask for them.",
+        confidence: "confirmed",
+      },
+      {
+        text: "How you learn a specialization in Forever isn't known. The quests, skills and levels on this page are Classic's.",
+        confidence: "unconfirmed",
+      },
+      {
+        text: "The skill each trainer teaches a recipe at is Classic Era's. Forever may move some.",
+        confidence: "unconfirmed",
+      },
+    ],
+  },
 };

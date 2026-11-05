@@ -81,6 +81,32 @@ export const CRAFTING_TRAINERS: Readonly<Record<CraftingProfession, CraftingTrai
       ],
     },
   },
+  blacksmithing: {
+    cities: {
+      // Darnassus has no blacksmithing trainer.
+      A: [
+        { city: "Stormwind", npc: { name: "Therum Deepforge", npcId: 5511, where: "Stormwind City", x: 63.7, y: 37.0 } },
+        { city: "Ironforge", npc: { name: "Bengus Deepforge", npcId: 4258, where: "Ironforge", x: 52.5, y: 41.5 } },
+      ],
+      H: [
+        { city: "Orgrimmar", npc: { name: "Saru Steelfury", npcId: 3355, where: "Orgrimmar", x: 82.3, y: 23.0 } },
+        { city: "Thunder Bluff", npc: { name: "Karn Stonehoof", npcId: 2998, where: "Thunder Bluff", x: 39.4, y: 55.1 } },
+        { city: "Undercity", npc: { name: "James Van Brunt", npcId: 4596, where: "Undercity", x: 61.3, y: 30.6 } },
+      ],
+    },
+    towns: {
+      A: [
+        { name: "Smith Argus", npcId: 514, where: "Goldshire, Elwynn Forest", x: 41.7, y: 65.5 },
+        { name: "Tognus Flintfire", npcId: 1241, where: "Kharanos, Dun Morogh", x: 45.3, y: 51.9 },
+        { name: "Delfrum Flintbeard", npcId: 6299, where: "Auberdine, Darkshore", x: 38.2, y: 40.9 },
+      ],
+      H: [
+        { name: "Dwukk", npcId: 3174, where: "Razor Hill, Durotar", x: 52.0, y: 40.7 },
+        { name: "Guillaume Sorouy", npcId: 3557, where: "The Sepulcher, Silverpine Forest", x: 43.2, y: 41.1 },
+        { name: "Traugh", npcId: 3478, where: "The Crossroads, The Barrens", x: 51.3, y: 28.9 },
+      ],
+    },
+  },
 };
 
 /** Where a rank is trained: named trainers per faction, any trainer, or somewhere the map can't point to. */
@@ -101,6 +127,9 @@ export interface CraftingRank {
   headsUp?: string;
   confidence: Confidence;
 }
+
+// Artisan Blacksmithing: one neutral trainer for both factions (Classic).
+const BRIKK_KEENCRAFT: TrainerNpc = { name: "Brikk Keencraft", npcId: 2836, where: "Booty Bay, Stranglethorn Vale", x: 29.0, y: 75.6 };
 
 const JOURNEYMAN: CraftingRank = { skill: 50, name: "Journeyman", level: 10, cap: 150, trainers: { kind: "any" }, confidence: "confirmed" };
 
@@ -199,6 +228,32 @@ export const CRAFTING_RANKS: Readonly<Record<CraftingProfession, readonly Crafti
           H: { name: "Rogvar", npcId: 1386, where: "Stonard, Swamp of Sorrows", x: 48.5, y: 55.8 },
         },
       },
+      confidence: "unconfirmed",
+    },
+  ],
+  blacksmithing: [
+    JOURNEYMAN,
+    {
+      skill: 125,
+      name: "Expert",
+      level: 20,
+      cap: 225,
+      trainers: {
+        kind: "named",
+        trainers: {
+          A: { name: "Bengus Deepforge", npcId: 4258, where: "Ironforge", x: 52.5, y: 41.5 },
+          H: { name: "Saru Steelfury", npcId: 3355, where: "Orgrimmar", x: 82.3, y: 23.0 },
+        },
+      },
+      headsUp: "Artisan (at 200) is trained in one place for both factions — Booty Bay, at the south tip of Stranglethorn Vale.",
+      confidence: "unconfirmed",
+    },
+    {
+      skill: 200,
+      name: "Artisan",
+      level: 35,
+      cap: 300,
+      trainers: { kind: "named", trainers: { A: BRIKK_KEENCRAFT, H: BRIKK_KEENCRAFT } },
       confidence: "unconfirmed",
     },
   ],

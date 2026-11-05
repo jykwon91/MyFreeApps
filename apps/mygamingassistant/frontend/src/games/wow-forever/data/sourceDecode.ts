@@ -56,6 +56,8 @@ export interface SourceLookup {
   recipe(id: number): ItemSources;
   /** Where to get a reagent. */
   reagent(itemId: number): ItemSources;
+  /** A quest the file lists (a specialization quest), with its givers. */
+  quest(id: number): QuestSource | null;
 }
 
 const MOB_KINDS: readonly string[] = Object.values(MOB_KIND);
@@ -208,5 +210,6 @@ export function createSourceLookup(raw: RawSourcesFile): SourceLookup {
     source: raw.source,
     recipe: (id) => decode(raw.recipes[String(id)], null),
     reagent: (itemId) => decode(raw.reagents[String(itemId)], itemId),
+    quest,
   };
 }

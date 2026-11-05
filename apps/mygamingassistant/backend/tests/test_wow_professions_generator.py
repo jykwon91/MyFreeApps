@@ -16,12 +16,14 @@ import pytest
 from scripts.wow_food import recipe_sources
 from scripts.wow_food.recipe_sources import MIN_FARM_CHANCE, VENDOR_COLUMNS, _gather_locks, _stock, territory_of
 from scripts.wow_professions.build import DISENCHANT_COLUMNS, _best_giver, _disenchant_kind, _roll_chances
+from scripts.wow_professions import specs
 from scripts.wow_professions.crafts import (
     ClientRecipes,
     Items,
     _changes,
     build_recipes,
     forever_trainer_skill,
+    smelting_for,
 )
 
 CRAFTING_DATA = (
@@ -100,7 +102,7 @@ class TestBuildRecipes:
         assert [r["spell"] for r in build_recipes(forever, era, items)] == [MOTES, BOLT, GLOVES]
 
     def test_teaching_item_wins_over_trainer(self, forever: ClientRecipes, era: ClientRecipes, items: Items) -> None:
-        taught = Items(**{**items.__dict__, "taught_by": {GLOVES: (9999, "Pattern: Heavy Linen Gloves", 45)}})
+        taught = Items(**{**items.__dict__, "taught_by": {GLOVES: (9999, "Pattern: Heavy Linen Gloves", 45, 0)}})
         gloves = next(r for r in build_recipes(forever, era, taught) if r["spell"] == GLOVES)
         assert gloves["learn"] == {
             "source": "item", "skill": 45, "itemId": 9999, "item": "Pattern: Heavy Linen Gloves",
@@ -287,3 +289,120 @@ class TestClothFarmSpots:
     def test_territory_of_counts_capitals_as_their_faction(self) -> None:
         zones = [{"id": 1, "territory": "contested"}, {"id": 2, "faction": "A"}, {"id": 3}]
         assert territory_of([3, 2, 1], zones) == {"1": "contested", "2": "alliance"}
+
+
+def _smelt(spell: int, ore: int, bar: int, yellow: int, source: str = "trainer", extra: tuple[int, ...] = ()) -> dict:
+    return {
+        "spell": spell, "name": f"Smelt {bar}", "yellow": yellow, "grey": yellow + 40,
+        "reagents": [{"id": i, "name": "", "count": 1} for i in (ore, *extra)],
+        "creates": {"id": bar, "name": "", "count": 1, "quality": 1},
+        "learn": {"source": source, "skill": 1} if source == "start" else {"source": source},
+    }
+
+
+COPPER_ORE, TIN_ORE, COPPER_BAR, TIN_BAR, BRONZE_BAR, IRON_BAR = 2770, 2771, 2840, 3576, 2841, 3575
+
+
+class TestSmeltingFor:
+    MINING = [
+        _smelt(2657, COPPER_ORE, COPPER_BAR, 25, source="start"),
+        _smelt(3304, TIN_ORE, TIN_BAR, 65),
+        _smelt(2659, COPPER_BAR, BRONZE_BAR, 65, extra=(TIN_BAR,)),
+        _smelt(3307, 2772, IRON_BAR, 130),
+    ]
+
+    def test_only_the_bars_used_and_the_bars_they_need(self) -> None:
+        belt = {"reagents": [{"id": BRONZE_BAR, "count": 2}]}
+        smelts = smelting_for([belt], self.MINING, {3304: 50, 2659: 65})
+        assert [s["spell"] for s in smelts] == [2657, 3304, 2659]
+        assert [s["skill"] for s in smelts] == [1, 50, 65]
+
+    def test_no_classic_trainer_skill_falls_back_to_yellow(self) -> None:
+        smelts = smelting_for([{"reagents": [{"id": IRON_BAR, "count": 1}]}], self.MINING, {})
+        assert [(s["spell"], s["skill"]) for s in smelts] == [(3307, 130)]
+
+
+class TestSpecializations:
+    """Classic trainers and quests, faked: 9788 is Armorsmith, 9787 Weaponsmith.
+
+    NPC 1 gives the Armorsmith quest, 2 the Weaponsmith one, 3 gives none but
+    teaches only what 1 does (Orgrimmar's second trainer), 4 is a plain trainer
+    (it teaches recipes no specialist does). 2661 is a recipe everyone teaches.
+    """
+
+    @pytest.fixture(autouse=True)
+    def fake_sources(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        effects = [
+            {"SpellID": "100", "Effect": "36", "EffectTriggerSpell": "9788"},  # quest reward teaches Armorsmith
+            {"SpellID": "201", "Effect": "36", "EffectTriggerSpell": "9974"},  # trainer spell -> recipe
+        ]
+        dump = {
+            "quest_template": [
+                {"entry": 5283, "RewSpell": 100, "RewSpellCast": 0, "RequiredSkillValue": 200, "MinLevel": 40,
+                 "ReqItemId1": 7937, "ReqItemCount1": 4, "ReqItemId2": 0, "ReqItemCount2": 0,
+                 "ReqItemId3": 0, "ReqItemCount3": 0, "ReqItemId4": 0, "ReqItemCount4": 0},
+                {"entry": 5284, "RewSpell": 9787, "RewSpellCast": 0, "RequiredSkillValue": 200, "MinLevel": 40,
+                 "ReqItemId1": 0, "ReqItemCount1": 0, "ReqItemId2": 0, "ReqItemCount2": 0,
+                 "ReqItemId3": 0, "ReqItemCount3": 0, "ReqItemId4": 0, "ReqItemCount4": 0},
+                {"entry": 1, "RewSpell": 2575, "RewSpellCast": 0},
+            ],
+            "creature_questrelation": [{"id": 1, "quest": 5283}, {"id": 2, "quest": 5284}],
+            "npc_trainer": [
+                {"entry": 1, "spell": 201, "reqskill": 164},
+                {"entry": 3, "spell": 201, "reqskill": 164},
+                {"entry": 2, "spell": 10011, "reqskill": 164},
+                {"entry": 1, "spell": 2661, "reqskill": 164},
+                {"entry": 4, "spell": 2661, "reqskill": 164},
+                {"entry": 2, "spell": 2661, "reqskill": 164},
+                {"entry": 4, "spell": 2662, "reqskill": 164},
+                {"entry": 4, "spell": 2108, "reqskill": 165},
+            ],
+            "npc_trainer_template": [],
+            "creature_template": [],
+        }
+        monkeypatch.setattr(specs, "wago_table", lambda name, **_: effects if name == "SpellEffect" else [])
+        monkeypatch.setattr(specs, "cmangos_dump", lambda: Path("unused"))
+        monkeypatch.setattr(specs, "read_dump", lambda _path, wanted: {k: dump[k] for k in wanted})
+
+    def test_quests_reward_the_specialization_or_the_spell_that_teaches_it(self) -> None:
+        quests = specs.spec_quests(164)
+        assert [(q.quest, q.spec, q.skill, q.level, q.items, q.givers) for q in quests] == [
+            (5283, 9788, 200, 40, [(7937, 4)], [1]),
+            (5284, 9787, 200, 40, [], [2]),
+        ]
+
+    def test_recipes_only_specialists_teach(self) -> None:
+        # 9974 is taught by 1 and by 3 (no quest, teaches only Armorsmith things);
+        # 2661 is taught by both specialists and the plain trainer, so it needs no specialization.
+        assert specs.trainer_specs(164, specs.spec_quests(164)) == {9974: 9788, 10011: 9787}
+
+
+@pytest.fixture(scope="module")
+def blacksmithing_file() -> dict:
+    return json.loads((CRAFTING_DATA / "blacksmithing.json").read_text(encoding="utf-8"))
+
+
+TRUESILVER_BREASTPLATE, DAWNS_EDGE, COPPER_CHAIN_BELT = 9974, 16970, 2661
+ARMORSMITH, MASTER_AXESMITH = 9788, 17041
+
+
+class TestCommittedBlacksmithing:
+    def test_specialist_recipes(self, blacksmithing_file: dict) -> None:
+        recipes = {r["spell"]: r for r in blacksmithing_file["recipes"]}
+        assert recipes[TRUESILVER_BREASTPLATE]["spec"] == ARMORSMITH
+        assert recipes[DAWNS_EDGE]["spec"] == MASTER_AXESMITH
+        assert "spec" not in recipes[COPPER_CHAIN_BELT]
+
+    def test_specializations_with_their_classic_quests(self, blacksmithing_file: dict) -> None:
+        by_spell = {s["spell"]: s for s in blacksmithing_file["specs"]}
+        assert set(by_spell) == set(specs.SPECIALIZATIONS[164])
+        armorsmith = by_spell[ARMORSMITH]
+        assert armorsmith["name"] == "Armorsmith"
+        assert {q["id"] for q in armorsmith["quests"]} == {5283, 5301}
+        assert all(q["skill"] == 200 and q["level"] == 40 for q in armorsmith["quests"])
+
+    def test_smelting_covers_every_bar_starting_with_copper(self, blacksmithing_file: dict) -> None:
+        smelting = blacksmithing_file["smelting"]
+        assert smelting[0]["creates"]["id"] == COPPER_BAR and smelting[0]["skill"] == 1
+        made = {s["creates"]["id"] for s in smelting}
+        assert {COPPER_BAR, BRONZE_BAR, IRON_BAR} <= made

@@ -6,6 +6,7 @@ import sourcesJson from "@/games/wow-forever/data/professions/crafting/classic/s
 import tailoringJson from "@/games/wow-forever/data/professions/crafting/tailoring.json";
 import enchantingJson from "@/games/wow-forever/data/professions/crafting/enchanting.json";
 import alchemyJson from "@/games/wow-forever/data/professions/crafting/alchemy.json";
+import blacksmithingJson from "@/games/wow-forever/data/professions/crafting/blacksmithing.json";
 import trainerSkillsJson from "@/games/wow-forever/data/professions/crafting/classic/trainerSkills.json";
 import { resolveRoute } from "@/games/wow-forever/crafting/craftRoute";
 import { describeDisenchant, describeSkinning, matSummary, soldToYou } from "@/games/wow-forever/crafting/matSources";
@@ -36,6 +37,7 @@ const FILES: Record<CraftingProfession, CraftingFile> = {
   tailoring: tailoringJson as unknown as CraftingFile,
   enchanting: enchantingJson as unknown as CraftingFile,
   alchemy: alchemyJson as unknown as CraftingFile,
+  blacksmithing: blacksmithingJson as unknown as CraftingFile,
 };
 const TRAINER_SKILLS = trainerSkillsJson as unknown as Record<CraftingProfession, TrainerSkills>;
 

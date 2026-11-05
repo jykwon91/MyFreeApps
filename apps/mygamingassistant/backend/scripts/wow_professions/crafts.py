@@ -19,6 +19,8 @@ from dataclasses import dataclass, field
 TAILORING_SKILL_LINE = 197
 ENCHANTING_SKILL_LINE = 333
 ALCHEMY_SKILL_LINE = 171
+BLACKSMITHING_SKILL_LINE = 164
+MINING_SKILL_LINE = 186
 EFFECT_CREATE_ITEM = 24
 EFFECT_LEARN_SPELL = 36
 EFFECT_ENCHANT_ITEM = 53
@@ -54,8 +56,8 @@ class Items:
     names: dict[int, str]
     quality: dict[int, int]
     item_class: dict[int, int]
-    # recipe spell -> (teaching item id, its name, skill it asks)
-    taught_by: dict[int, tuple[int, str, int]] = field(default_factory=dict)
+    # recipe spell -> (teaching item id, its name, skill it asks, specialization it asks or 0)
+    taught_by: dict[int, tuple[int, str, int, int]] = field(default_factory=dict)
 
 
 def _reagent_rows(items: Items, pairs: list[tuple[int, int]]) -> list[dict]:
@@ -74,8 +76,13 @@ def _changes(spell: int, forever: ClientRecipes, era: ClientRecipes) -> list[str
     return changed
 
 
-def build_recipes(forever: ClientRecipes, era: ClientRecipes, items: Items) -> list[dict]:
-    """Every recipe of the profession in Forever, sorted by where it turns grey."""
+def build_recipes(
+    forever: ClientRecipes, era: ClientRecipes, items: Items, trainer_specs: dict[int, int] | None = None,
+) -> list[dict]:
+    """Every recipe of the profession in Forever, sorted by where it turns grey.
+
+    ``trainer_specs``: recipe -> the specialization whose trainers alone teach it (Classic).
+    """
     out = []
     for spell, (yellow, grey, on_learn) in forever.abilities.items():
         name = forever.names.get(spell)
@@ -99,12 +106,15 @@ def build_recipes(forever: ClientRecipes, era: ClientRecipes, items: Items) -> l
             record["enchant"] = True
         if tool := forever.tools.get(spell):
             record["tool"] = {"id": tool[0], "name": tool[1]}
+        teacher = None if on_learn else items.taught_by.get(spell)
         if on_learn:
             record["learn"] = {"source": "start", "skill": 1}
-        elif teacher := items.taught_by.get(spell):
+        elif teacher:
             record["learn"] = {"source": "item", "skill": teacher[2], "itemId": teacher[0], "item": teacher[1]}
         else:
             record["learn"] = {"source": "trainer"}
+        if spec := (teacher[3] if teacher else (trainer_specs or {}).get(spell, 0)):
+            record["spec"] = spec
         changes = _changes(spell, forever, era)
         if changes is None:
             record["newInForever"] = True
@@ -127,3 +137,31 @@ def forever_trainer_skill(classic_skill: int, recipe: dict) -> int:
     """
     shift = recipe["classic"]["yellow"] - recipe["yellow"] if "classic" in recipe else 0
     return max(1, min(classic_skill - shift, recipe["yellow"]))
+
+
+def smelting_for(recipes: list[dict], mining: list[dict], mining_trainer: dict[int, int]) -> list[dict]:
+    """The Mining smelts that make the bars ``recipes`` use (and the bars those need, Bronze from Copper).
+
+    Each is a Mining recipe record plus ``skill``: the Mining skill to learn
+    it — 1 when it comes with Mining, else the Classic trainer's moved as
+    Forever moved the recipe (``forever_trainer_skill``).
+    """
+    makers: dict[int, dict] = {}
+    for rec in sorted(mining, key=lambda r: r["yellow"]):
+        if "creates" in rec:
+            makers.setdefault(rec["creates"]["id"], rec)
+    needed = [r["id"] for rec in recipes for r in rec["reagents"]]
+    out: dict[int, dict] = {}
+    while needed:
+        item = needed.pop()
+        rec = makers.get(item)
+        if rec is None or rec["spell"] in out:
+            continue
+        if rec["learn"]["source"] == "start":
+            skill = 1
+        else:
+            classic = mining_trainer.get(rec["spell"])
+            skill = forever_trainer_skill(classic, rec) if classic else rec["yellow"]
+        out[rec["spell"]] = {**rec, "skill": skill}
+        needed.extend(r["id"] for r in rec["reagents"])
+    return sorted(out.values(), key=lambda r: (r["skill"], r["name"]))

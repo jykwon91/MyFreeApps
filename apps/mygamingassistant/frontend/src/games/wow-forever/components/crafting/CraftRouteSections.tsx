@@ -3,14 +3,19 @@ import CraftRouteHeader from "@/games/wow-forever/components/crafting/CraftRoute
 import CraftRouteList from "@/games/wow-forever/components/crafting/CraftRouteList";
 import CraftShoppingList from "@/games/wow-forever/components/crafting/CraftShoppingList";
 import CraftSkillInput from "@/games/wow-forever/components/crafting/CraftSkillInput";
+import CraftSpecPicker from "@/games/wow-forever/components/crafting/CraftSpecPicker";
+import CraftSpecRow from "@/games/wow-forever/components/crafting/CraftSpecRow";
 import CraftTransmuteList from "@/games/wow-forever/components/crafting/CraftTransmuteList";
 import GuideSection from "@/games/wow-forever/components/guide/GuideSection";
 import { currentEntryIndex, totalCrafts } from "@/games/wow-forever/crafting/craftRoute";
+import { routeForSpec } from "@/games/wow-forever/crafting/craftSpecs";
 import { CRAFTING_FEATURES } from "@/games/wow-forever/data/professions/crafting/craftingFeatures";
 import { CRAFTING_GUIDES } from "@/games/wow-forever/data/professions/crafting/craftingGuide";
+import { CRAFTING_SPECS } from "@/games/wow-forever/data/professions/crafting/craftingSpecs";
 import { CRAFTING_RANKS } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
 import type { CraftingData } from "@/games/wow-forever/hooks/useCraftingData";
 import { useCraftingSkill } from "@/games/wow-forever/hooks/useCraftingSkill";
+import { useCraftingSpec } from "@/games/wow-forever/hooks/useCraftingSpec";
 import { usePricedRoute } from "@/games/wow-forever/hooks/usePricedRoute";
 import type { CraftingProfession, ResolvedRouteEntry } from "@/games/wow-forever/types/crafting";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
@@ -39,7 +44,10 @@ export default function CraftRouteSections({ profession, faction, zoneId, level,
   const features = CRAFTING_FEATURES[profession];
   const [skill, setSkill] = useCraftingSkill(profession);
   const priced = usePricedRoute(profession, data, skill);
-  const entries = priced.entries;
+  const specs = CRAFTING_SPECS[profession];
+  const [spec, setSpec] = useCraftingSpec(profession);
+  const entries = routeForSpec(priced.entries, specs, spec);
+  const specNames = new Map((data.file.specs ?? []).map((s) => [s.spell, s.name]));
   const current = currentEntryIndex(entries, skill);
   const currentEntry = current === null ? undefined : entries[current];
   const place = { sources: data.sources, faction, zoneId, level, file: data.file };
@@ -82,6 +90,7 @@ export default function CraftRouteSections({ profession, faction, zoneId, level,
         <a href="#shopping" className="inline-flex items-center text-sm text-primary underline-offset-2 hover:underline min-h-[44px] sm:min-h-0">
           Jump to the shopping list
         </a>
+        {specs ? <CraftSpecPicker specs={specs} professionLabel={guide.label} value={spec} onChange={setSpec} /> : null}
         <CraftRouteList
           entries={entries}
           ranks={CRAFTING_RANKS[profession]}
@@ -90,6 +99,15 @@ export default function CraftRouteSections({ profession, faction, zoneId, level,
           faction={faction}
           professionLabel={guide.label}
           place={place}
+          fork={
+            specs
+              ? {
+                  skill: specs.forkAt,
+                  row: <CraftSpecRow specs={specs} records={data.file.specs ?? []} sources={data.sources} faction={faction} chosen={spec} />,
+                }
+              : null
+          }
+          specNames={specNames}
         />
         {features.transmutes ? (
           <CraftTransmuteList recipes={data.file.recipes} trainerSkills={data.trainerSkills} professionLabel={guide.label} place={place} />
