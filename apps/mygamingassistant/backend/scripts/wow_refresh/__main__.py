@@ -68,6 +68,7 @@ def generators(*, art: bool) -> list[list[str]]:
         ["scripts.wow_gold.build"],
         ["scripts.wow_consumables.build"],
         ["scripts.wow_items.build"],
+        ["scripts.wow_warlock.build"],
     ]
 
 
