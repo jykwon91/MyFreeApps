@@ -34,6 +34,7 @@ from app.core.rate_limit import (
     check_account_not_locked,
     check_login_rate_limit,
     check_totp_rate_limit,
+    login_limiter,
 )
 from app.db.session import get_db
 from app.main import app
@@ -104,7 +105,7 @@ class TestLockedFormLoginIsRecorded:
         await db.commit()
         email = locked_user.email.upper() if change_case else locked_user.email
 
-        with patch("app.core.rate_limit.login_limiter", RateLimiter(max_attempts=10, window_seconds=60)):
+        with patch.object(login_limiter, "check", RateLimiter(max_attempts=10, window_seconds=60).check):
             async with AsyncClient(
                 transport=ASGITransport(app=app, client=("203.0.113.9", 1234)),
                 base_url="http://test",
@@ -159,7 +160,7 @@ class TestResponseBodyIndistinguishability:
         scoped_limiter = RateLimiter(max_attempts=1, window_seconds=60)
 
         request = _make_request(ip="9.9.9.9")
-        with patch("app.core.rate_limit.login_limiter", scoped_limiter):
+        with patch.object(login_limiter, "check", scoped_limiter.check):
             # First call seeds the bucket; second call trips it.
             await check_login_rate_limit(request=request, db=db)
             with pytest.raises(HTTPException) as ip_exc_info:
@@ -200,7 +201,7 @@ class TestPerIpBlockAuditEvent:
         scoped_limiter = RateLimiter(max_attempts=1, window_seconds=60)
         request = _make_request(ip="203.0.113.42")
 
-        with patch("app.core.rate_limit.login_limiter", scoped_limiter):
+        with patch.object(login_limiter, "check", scoped_limiter.check):
             # Seed the bucket — this attempt is allowed and writes nothing.
             await check_login_rate_limit(request=request, db=db)
             assert (await _events(db)) == []

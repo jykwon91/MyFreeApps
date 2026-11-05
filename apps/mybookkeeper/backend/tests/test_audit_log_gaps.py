@@ -29,7 +29,7 @@ from platform_shared.schemas.totp.totp_login_response import TotpLoginResponse
 from platform_shared.services.account_guard_service import AccountGuardService
 
 from app.api.totp import router as totp_router
-from app.core.rate_limit import RateLimiter, check_totp_rate_limit
+from app.core.rate_limit import RateLimiter, check_totp_rate_limit, login_limiter, totp_limiter
 from app.models.system.auth_event import AuthEvent
 from app.models.user.user import User
 
@@ -93,7 +93,7 @@ class TestTotpRateLimitEmitsAuditEvent:
         scoped_limiter = RateLimiter(max_attempts=1, window_seconds=60)
         request = _make_request(ip="10.0.0.1")
 
-        with patch("app.core.rate_limit.totp_limiter", scoped_limiter):
+        with patch.object(totp_limiter, "check", scoped_limiter.check):
             # Seed the bucket — allowed, no row written.
             await check_totp_rate_limit(request=request, db=db)
             assert (await _auth_events(db)) == []
@@ -136,17 +136,17 @@ class TestTotpRateLimitEmitsAuditEvent:
         request = _make_request(ip="10.0.0.2")
 
         # Seed both buckets.
-        with patch("app.core.rate_limit.totp_limiter", scoped_totp_limiter):
+        with patch.object(totp_limiter, "check", scoped_totp_limiter.check):
             await check_totp_rate_limit(request=request, db=db)
-        with patch("app.core.rate_limit.login_limiter", scoped_login_limiter):
+        with patch.object(login_limiter, "check", scoped_login_limiter.check):
             await check_login_rate_limit(request=request, db=db)
 
         # Trip both and compare the 429 bodies.
-        with patch("app.core.rate_limit.totp_limiter", scoped_totp_limiter):
+        with patch.object(totp_limiter, "check", scoped_totp_limiter.check):
             with pytest.raises(HTTPException) as totp_exc:
                 await check_totp_rate_limit(request=request, db=db)
 
-        with patch("app.core.rate_limit.login_limiter", scoped_login_limiter):
+        with patch.object(login_limiter, "check", scoped_login_limiter.check):
             with pytest.raises(HTTPException) as login_exc:
                 await check_login_rate_limit(request=request, db=db)
 

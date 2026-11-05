@@ -8,27 +8,24 @@ WoW item reader (both modes).
 Mirrors apps/myjobhunter/backend/app/core/rate_limit.py (name + thresholds only).
 """
 
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from platform_shared.core.auth_events import AuthEventType
 from platform_shared.core.auth_messages import RATE_LIMIT_GENERIC_DETAIL
 from platform_shared.core.rate_limit import (
     RateLimiter,
-    email_domain_from_request,
     make_check_account_not_locked,
+    make_check_login_ip_limit,
     make_check_json_login_not_locked,
     make_require_turnstile,
 )
-from platform_shared.core.request_utils import get_client_ip
 from platform_shared.services.turnstile_service import verify_turnstile_token
 
 from app.core.config import settings
 from app.db.session import get_db
 # Case-insensitive like fastapi-users, or changing one letter's case gets past the lock check.
 from app.repositories.user.user_repo import get_by_email_ci as get_user_by_email
-from app.services.system.auth_event_service import log_auth_event
 
 
 __all__ = [
@@ -85,54 +82,24 @@ require_turnstile = make_require_turnstile(
 # ---------------------------------------------------------------------------
 
 
+_check_login_ip_limit = make_check_login_ip_limit(login_limiter)
+
+
 async def check_login_rate_limit(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    """Per-IP rate limit for login endpoints with audit logging."""
-    ip = get_client_ip(request)
-    try:
-        login_limiter.check(ip)
-    except HTTPException:
-        metadata: dict[str, str] = {"ip": ip}
-        domain = email_domain_from_request(request)
-        if domain is not None:
-            metadata["email_domain"] = domain
-        await log_auth_event(
-            db,
-            event_type=AuthEventType.LOGIN_BLOCKED_RATE_LIMIT,
-            user_id=None,
-            request=request,
-            succeeded=False,
-            metadata=metadata,
-        )
-        await db.commit()
-        raise
+    await _check_login_ip_limit(request, db)
+
+
+_check_totp_ip_limit = make_check_login_ip_limit(totp_limiter, extra_metadata={"gate": "totp"})
 
 
 async def check_totp_rate_limit(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    """Per-IP rate limit for the TOTP login endpoint."""
-    ip = get_client_ip(request)
-    try:
-        totp_limiter.check(ip)
-    except HTTPException:
-        metadata: dict[str, str] = {"ip": ip, "gate": "totp"}
-        domain = email_domain_from_request(request)
-        if domain is not None:
-            metadata["email_domain"] = domain
-        await log_auth_event(
-            db,
-            event_type=AuthEventType.LOGIN_BLOCKED_RATE_LIMIT,
-            user_id=None,
-            request=request,
-            succeeded=False,
-            metadata=metadata,
-        )
-        await db.commit()
-        raise
+    await _check_totp_ip_limit(request, db)
 
 
 # The lambda looks the function up at call time, so tests can patch it here.

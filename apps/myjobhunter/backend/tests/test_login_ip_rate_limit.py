@@ -33,6 +33,7 @@ from app.core.rate_limit import (
     RateLimiter,
     check_account_not_locked,
     check_login_rate_limit,
+    login_limiter,
 )
 from app.db.session import get_db
 from app.main import app
@@ -132,7 +133,7 @@ class TestResponseBodyIndistinguishability:
         """
         scoped_limiter = RateLimiter(max_attempts=1, window_seconds=60)
         request = _make_request(ip="9.9.9.9")
-        with patch("app.core.rate_limit.login_limiter", scoped_limiter):
+        with patch.object(login_limiter, "check", scoped_limiter.check):
             await check_login_rate_limit(request=request, db=db)
             with pytest.raises(HTTPException) as ip_exc_info:
                 await check_login_rate_limit(request=request, db=db)
@@ -171,7 +172,7 @@ class TestPerIpBlockAuditEvent:
         scoped_limiter = RateLimiter(max_attempts=1, window_seconds=60)
         request = _make_request(ip="203.0.113.42")
 
-        with patch("app.core.rate_limit.login_limiter", scoped_limiter):
+        with patch.object(login_limiter, "check", scoped_limiter.check):
             await check_login_rate_limit(request=request, db=db)
             assert (await _events(db)) == []
 
@@ -208,7 +209,7 @@ class TestPerIpBlockAuditEvent:
         request.state = MagicMock(spec=["login_email"])
         request.state.login_email = "Stuffer@Example.COM"
 
-        with patch("app.core.rate_limit.login_limiter", scoped_limiter):
+        with patch.object(login_limiter, "check", scoped_limiter.check):
             await check_login_rate_limit(request=request, db=db)
             with pytest.raises(HTTPException):
                 await check_login_rate_limit(request=request, db=db)
