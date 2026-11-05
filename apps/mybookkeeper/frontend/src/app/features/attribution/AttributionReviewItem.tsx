@@ -2,14 +2,14 @@ import { useState } from "react";
 import { CheckCircle, XCircle, HelpCircle, UserCheck, Home } from "lucide-react";
 import { LoadingButton } from "@platform/ui";
 import { formatCurrency } from "@/shared/utils/currency";
-import type { AttributionReviewItem as ReviewItemType } from "@/shared/types/attribution/attribution-review";
+import type { AttributionReviewItem as ReviewItemType } from "@mybookkeeper/api-client/types/attribution/attribution-review-item";
 import {
   useConfirmAttributionReviewMutation,
   useRejectAttributionReviewMutation,
-  useAttributeTransactionManuallyMutation,
-} from "@/shared/store/attributionApi";
+} from "@mybookkeeper/api-client/store/attributionApi";
+import { useAttributeTransactionManuallyMutation } from "@/shared/store/attributionApi";
 import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
-import { buildTenantOptions } from "@/shared/lib/tenant-status";
+import { buildTenantOptions } from "@mybookkeeper/api-client/utils/tenantStatus";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import AttributionChannelBadge from "./AttributionChannelBadge";

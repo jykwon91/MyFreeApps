@@ -46,10 +46,6 @@ const pnlWithData: PropertyPnLResponse = {
 
 vi.mock("@/shared/store/attributionApi", () => ({
   useGetPropertyPnlQuery: vi.fn(),
-  useGetAttributionReviewQueueQuery: vi.fn(() => ({ data: undefined, isLoading: true })),
-  useConfirmAttributionReviewMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
-  useRejectAttributionReviewMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
-  useAttributeTransactionManuallyMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
 import { useGetPropertyPnlQuery } from "@/shared/store/attributionApi";

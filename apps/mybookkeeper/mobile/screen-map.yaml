@@ -62,7 +62,7 @@ routes:
   /onboarding:
     not_on_mobile: First-time setup is done once, on the website.
   /payment-review:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/payment-review/index
   /privacy:
     not_on_mobile: Opens on the website.
   /properties:

@@ -1,6 +1,6 @@
 import { StatusBadge } from "@platform/ui";
 import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
-import { isTenantEnded } from "@/shared/lib/tenant-status";
+import { isTenantEnded } from "@mybookkeeper/api-client/utils/tenantStatus";
 
 export interface TenantStatusBadgeProps {
   tenant: ApplicantSummary;

@@ -1,51 +1,8 @@
 import { baseApi } from "./baseApi";
-import type { AttributionReviewQueueResponse } from "@/shared/types/attribution/attribution-review";
 import type { PropertyPnLResponse } from "@/shared/types/attribution/property-pnl";
 
 const attributionApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getAttributionReviewQueue: builder.query<
-      AttributionReviewQueueResponse,
-      { limit?: number; offset?: number } | void
-    >({
-      query: (params) => ({
-        url: "/transactions/attribution-review-queue",
-        params: params ?? {},
-      }),
-      providesTags: [{ type: "Transaction", id: "ATTRIBUTION_QUEUE" }],
-    }),
-
-    confirmAttributionReview: builder.mutation<
-      { ok: boolean; transaction_id: string },
-      { review_id: string; applicant_id?: string; property_id?: string }
-    >({
-      query: ({ review_id, applicant_id, property_id }) => ({
-        url: `/transactions/attribution-review-queue/${review_id}/confirm`,
-        method: "POST",
-        data: {
-          applicant_id: applicant_id ?? null,
-          property_id: property_id ?? null,
-        },
-      }),
-      invalidatesTags: [
-        { type: "Transaction", id: "ATTRIBUTION_QUEUE" },
-        { type: "Transaction", id: "LIST" },
-        "Summary",
-      ],
-    }),
-
-    rejectAttributionReview: builder.mutation<
-      { ok: boolean },
-      { review_id: string }
-    >({
-      query: ({ review_id }) => ({
-        url: `/transactions/attribution-review-queue/${review_id}/reject`,
-        method: "POST",
-        data: {},
-      }),
-      invalidatesTags: [{ type: "Transaction", id: "ATTRIBUTION_QUEUE" }],
-    }),
-
     attributeTransactionManually: builder.mutation<
       { ok: boolean; transaction_id: string },
       { transaction_id: string; applicant_id: string }
@@ -77,9 +34,6 @@ const attributionApi = baseApi.injectEndpoints({
 });
 
 export const {
-  useGetAttributionReviewQueueQuery,
-  useConfirmAttributionReviewMutation,
-  useRejectAttributionReviewMutation,
   useAttributeTransactionManuallyMutation,
   useGetPropertyPnlQuery,
 } = attributionApi;

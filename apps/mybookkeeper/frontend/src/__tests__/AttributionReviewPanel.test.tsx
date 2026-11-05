@@ -4,7 +4,7 @@ import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import AttributionReviewPanel from "@/app/features/attribution/AttributionReviewPanel";
-import type { AttributionReviewQueueResponse } from "@/shared/types/attribution/attribution-review";
+import type { AttributionReviewQueueResponse } from "@mybookkeeper/api-client/types/attribution/attribution-review-queue-response";
 
 const emptyQueue: AttributionReviewQueueResponse = {
   items: [],
@@ -66,10 +66,13 @@ const queueWithItems: AttributionReviewQueueResponse = {
   ],
 };
 
-vi.mock("@/shared/store/attributionApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/attributionApi", () => ({
   useGetAttributionReviewQueueQuery: vi.fn(),
   useConfirmAttributionReviewMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useRejectAttributionReviewMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+}));
+
+vi.mock("@/shared/store/attributionApi", () => ({
   useAttributeTransactionManuallyMutation: vi.fn(() => [
     vi.fn(() => ({ unwrap: () => Promise.resolve({ ok: true, transaction_id: "txn-2" }) })),
     { isLoading: false },
@@ -85,7 +88,7 @@ vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
 
 import {
   useGetAttributionReviewQueueQuery,
-} from "@/shared/store/attributionApi";
+} from "@mybookkeeper/api-client/store/attributionApi";
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(

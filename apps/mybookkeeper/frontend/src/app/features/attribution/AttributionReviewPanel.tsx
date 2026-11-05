@@ -1,7 +1,7 @@
 import { Inbox } from "lucide-react";
 import Card from "@/shared/components/ui/Card";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import { useGetAttributionReviewQueueQuery } from "@/shared/store/attributionApi";
+import { useGetAttributionReviewQueueQuery } from "@mybookkeeper/api-client/store/attributionApi";
 import AttributionReviewItem from "./AttributionReviewItem";
 import AttributionReviewSkeleton from "./AttributionReviewSkeleton";
 

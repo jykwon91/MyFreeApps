@@ -4,11 +4,13 @@ import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import AttributionReviewItem from "@/app/features/attribution/AttributionReviewItem";
-import type { AttributionReviewItem as ReviewItemType } from "@/shared/types/attribution/attribution-review";
+import type { AttributionReviewItem as ReviewItemType } from "@mybookkeeper/api-client/types/attribution/attribution-review-item";
 
-vi.mock("@/shared/store/attributionApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/attributionApi", () => ({
   useConfirmAttributionReviewMutation: vi.fn(),
   useRejectAttributionReviewMutation: vi.fn(),
+}));
+vi.mock("@/shared/store/attributionApi", () => ({
   useAttributeTransactionManuallyMutation: vi.fn(),
 }));
 vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
@@ -25,8 +27,8 @@ vi.mock("@/shared/lib/toast-store", () => ({
 import {
   useConfirmAttributionReviewMutation,
   useRejectAttributionReviewMutation,
-  useAttributeTransactionManuallyMutation,
-} from "@/shared/store/attributionApi";
+} from "@mybookkeeper/api-client/store/attributionApi";
+import { useAttributeTransactionManuallyMutation } from "@/shared/store/attributionApi";
 import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 

@@ -327,9 +327,9 @@ async def confirm_review(
         only; no receipt (an Airbnb payout has no tenant to receipt).
         ``property_id`` overrides ``proposed_property_id``.
 
-    The applicant target takes precedence: the property path is only taken
-    when there is no chosen applicant (a row never has both in practice; this
-    branch order makes the resolution deterministic if it ever does).
+    What the person picked outranks a guess: an explicit ``applicant_id``, then
+    an explicit ``property_id``, then ``proposed_applicant_id``, then
+    ``proposed_property_id``.
 
     Mutates the linked transaction and sets category=rental_revenue.
     """
@@ -344,7 +344,7 @@ async def confirm_review(
         if not txn:
             raise ValueError("Transaction not found")
 
-        chosen_applicant_id = applicant_id or row.proposed_applicant_id
+        chosen_applicant_id = applicant_id or (None if property_id else row.proposed_applicant_id)
         if chosen_applicant_id:
             # Fetch the applicant to verify it belongs to this org
             applicant = await applicant_repo.get(
