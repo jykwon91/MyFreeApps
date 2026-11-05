@@ -1,4 +1,4 @@
-import type { ReplyTemplateRestoreOutcome } from "@mybookkeeper/api-client/types/inquiry/reply-template-restore-outcome";
+import type { ReplyTemplateWriteOutcome } from "@mybookkeeper/api-client/types/inquiry/reply-template-write-outcome";
 import type { ReplyTemplateFailure } from "@mybookkeeper/api-client/types/inquiry/reply-template-failure";
 import type { ReplyTemplateField } from "../types/ReplyTemplateField";
 import type { ReplyTemplateVariable } from "../types/ReplyTemplateVariable";
@@ -89,6 +89,7 @@ export const REPLY_TEMPLATE_MESSAGES = {
   archiveUnreachable: "I can't reach the server, so I couldn't archive that.",
   archiveUnsure: "I'm not sure that went through. Pull down on the list to check.",
   archiveFailed: "I couldn't archive that. Want to try again?",
+  alreadyGone: "That template was already archived or removed.",
   templatesLoadFailed: "I couldn't load your templates.",
   subject: "Subject",
   message: "Message",
@@ -127,10 +128,19 @@ export function unknownVariablesHint(tokens: readonly string[]): string {
   return `I don't recognize ${tokens.join(", ")}, so I'll leave them as you typed them.`;
 }
 
-export const RESTORE_FAILURE_MESSAGES: Record<Exclude<ReplyTemplateRestoreOutcome, "restored">, string> = {
+export const RESTORE_FAILURE_MESSAGES: Record<Exclude<ReplyTemplateWriteOutcome, "done">, string> = {
   gone: REPLY_TEMPLATE_MESSAGES.goneAnymore,
   viewOnly: REPLY_TEMPLATE_MESSAGES.restoreViewOnly,
-  stillArchived: REPLY_TEMPLATE_MESSAGES.restoreStillArchived,
+  unreachable: REPLY_TEMPLATE_MESSAGES.restoreStillArchived,
+  stillListed: REPLY_TEMPLATE_MESSAGES.restoreStillArchived,
   unsure: REPLY_TEMPLATE_MESSAGES.restoreUnsure,
   failed: REPLY_TEMPLATE_MESSAGES.restoreFailed,
+};
+
+export const ARCHIVE_FAILURE_MESSAGES: Record<Exclude<ReplyTemplateWriteOutcome, "done" | "gone">, string> = {
+  viewOnly: REPLY_TEMPLATE_MESSAGES.archiveViewOnly,
+  unreachable: REPLY_TEMPLATE_MESSAGES.archiveUnreachable,
+  stillListed: REPLY_TEMPLATE_MESSAGES.archiveFailed,
+  unsure: REPLY_TEMPLATE_MESSAGES.archiveUnsure,
+  failed: REPLY_TEMPLATE_MESSAGES.archiveFailed,
 };

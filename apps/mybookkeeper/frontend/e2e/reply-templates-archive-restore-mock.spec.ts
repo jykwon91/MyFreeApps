@@ -1,5 +1,5 @@
 /**
- * No-backend E2E for restoring archived reply templates on /reply-templates.
+ * No-backend E2E for archiving and restoring reply templates on /reply-templates.
  *
  * Fully mocks the API via page.route() with a small stateful fake of the
  * reply-templates endpoints, so it runs under playwright.layout.config.ts in
@@ -9,6 +9,8 @@
  *   - The Archived tab is linkable, survives a reload, and hides New template.
  *   - Restore moves the template back to Active and sends is_archived=false.
  *   - A 502 after the server restored it is settled by reloading the list.
+ *   - Archive moves a template to Archived, and a 502 after the server archived it
+ *     is settled the same way.
  *   - The skeleton matches the loaded list's rows; Restore is at least 44px tall;
  *     no horizontal overflow at mobile / tablet / desktop widths.
  */
@@ -80,14 +82,15 @@ async function stubShell(page: Page): Promise<void> {
 interface FakeServer {
   rows: FakeTemplate[];
   patches: unknown[];
-  /** Restores, then answers like a proxy that lost the backend's reply. */
-  gatewayAfterRestore: boolean;
+  /** Restores or archives, then answers like a proxy that lost the backend's reply. */
+  gatewayAfterWrite: boolean;
+  deletes: string[];
   /** Holds every list read this long. */
   readDelayMs: number;
 }
 
 async function stubTemplates(page: Page, rows: FakeTemplate[]): Promise<FakeServer> {
-  const server: FakeServer = { rows, patches: [], gatewayAfterRestore: false, readDelayMs: 0 };
+  const server: FakeServer = { rows, patches: [], deletes: [], gatewayAfterWrite: false, readDelayMs: 0 };
   await page.route("**/api/reply-templates**", async (route, request: Request) => {
     const url = new URL(request.url());
     if (request.method() === "GET" && url.pathname.endsWith("/reply-templates")) {
@@ -107,11 +110,27 @@ async function stubTemplates(page: Page, rows: FakeTemplate[]): Promise<FakeServ
         return;
       }
       row.is_archived = sent.is_archived ?? row.is_archived;
-      if (server.gatewayAfterRestore) {
+      if (server.gatewayAfterWrite) {
         await route.fulfill({ status: 502, contentType: "text/html", body: "<html>502 Bad Gateway</html>" });
         return;
       }
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(asResponse(row)) });
+      return;
+    }
+    if (request.method() === "DELETE") {
+      const id = url.pathname.split("/").at(-1) ?? "";
+      server.deletes.push(id);
+      const row = server.rows.find((candidate) => candidate.id === id && !candidate.is_archived);
+      if (!row) {
+        await route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ detail: "Reply template not found" }) });
+        return;
+      }
+      row.is_archived = true;
+      if (server.gatewayAfterWrite) {
+        await route.fulfill({ status: 502, contentType: "text/html", body: "<html>502 Bad Gateway</html>" });
+        return;
+      }
+      await route.fulfill({ status: 204, body: "" });
       return;
     }
     await route.fulfill({ status: 404, body: "" });
@@ -165,7 +184,7 @@ test.describe("Restoring archived reply templates", () => {
 
   test("counts it as restored when the proxy fails after the server restored it", async ({ page }) => {
     const server = await openPage(page, freshRows());
-    server.gatewayAfterRestore = true;
+    server.gatewayAfterWrite = true;
     await page.getByRole("button", { name: "Restore Old decline" }).click();
     await expect(page.getByText("Restored. It's back in your templates.", { exact: true })).toBeVisible();
     await expect(page.getByText(/Bad Gateway/)).toHaveCount(0);
@@ -177,6 +196,33 @@ test.describe("Restoring archived reply templates", () => {
     await expect(page.getByText(/No archived templates/)).toBeVisible();
     await page.getByRole("button", { name: "Back to active templates" }).click();
     await expect(page.getByTestId(`reply-template-row-${ACTIVE.id}`)).toBeVisible();
+  });
+});
+
+test.describe("Archiving reply templates", () => {
+  async function archiveInitialReply(page: Page) {
+    await page.getByTestId(`reply-template-archive-${ACTIVE.id}`).click();
+    await page.getByRole("button", { name: "Archive", exact: true }).click();
+  }
+
+  test("archives it and shows it on the Archived tab", async ({ page }) => {
+    const server = await openPage(page, freshRows(), "/reply-templates");
+    await archiveInitialReply(page);
+    await expect(page.getByText("Template archived.", { exact: true })).toBeVisible();
+    await expect(page.getByTestId(`reply-template-row-${ACTIVE.id}`)).toHaveCount(0);
+    expect(server.deletes).toEqual([ACTIVE.id]);
+    await page.getByRole("tab", { name: "Archived" }).click();
+    await expect(page.getByTestId(`archived-reply-template-row-${ACTIVE.id}`)).toBeVisible();
+  });
+
+  test("counts it as archived when the proxy fails after the server archived it", async ({ page }) => {
+    const server = await openPage(page, freshRows(), "/reply-templates");
+    server.gatewayAfterWrite = true;
+    await archiveInitialReply(page);
+    await expect(page.getByText("Template archived.", { exact: true })).toBeVisible();
+    await expect(page.getByText(/Bad Gateway/)).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: /Archive this template/i })).toHaveCount(0);
+    await expect(page.getByTestId(`reply-template-row-${ACTIVE.id}`)).toHaveCount(0);
   });
 });
 

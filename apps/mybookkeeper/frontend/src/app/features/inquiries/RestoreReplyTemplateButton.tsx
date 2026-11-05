@@ -12,7 +12,7 @@ export interface RestoreReplyTemplateButtonProps {
 
 export default function RestoreReplyTemplateButton({ template, onRestored }: RestoreReplyTemplateButtonProps) {
   const { restore, isBusy } = useRestoreReplyTemplate(template.id, (outcome) => {
-    if (outcome !== "restored") {
+    if (outcome !== "done") {
       showError(RESTORE_FAILURE_MESSAGES[outcome]);
       return;
     }

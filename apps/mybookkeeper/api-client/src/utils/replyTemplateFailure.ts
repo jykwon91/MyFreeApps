@@ -18,14 +18,3 @@ export function saveFailure(error: unknown): ReplyTemplateFailure {
       return status >= 500 ? "serverError" : "other";
   }
 }
-
-export function archiveFailure(error: unknown): ReplyTemplateFailure {
-  const failure = saveFailure(error);
-  return failure === "nameTaken" || failure === "serverError" ? "other" : failure;
-}
-
-/** A restore can't clash on its name, and a 5xx may follow a restore that went through. */
-export function restoreFailure(error: unknown): ReplyTemplateFailure {
-  const failure = saveFailure(error);
-  return failure === "nameTaken" ? "other" : failure;
-}

@@ -1,4 +1,5 @@
-import type { ReplyTemplateRestoreOutcome } from "@mybookkeeper/api-client/types/inquiry/reply-template-restore-outcome";
+import type { ReplyTemplateWriteOutcome } from "@mybookkeeper/api-client/types/inquiry/reply-template-write-outcome";
+import type { ArchiveFailureFeedback } from "@/shared/types/inquiry/archive-failure-feedback";
 
 export const REPLY_TEMPLATE_MESSAGES = {
   activeTab: "Active",
@@ -13,6 +14,11 @@ export const REPLY_TEMPLATE_MESSAGES = {
   showingLastLoaded: "I couldn't reload your archived templates, so this is what I last loaded.",
   tryAgain: "Try again",
   tryingAgain: "Trying again…",
+  archived: "Template archived.",
+  alreadyGone: "That template was already archived or removed.",
+  archiveViewOnly: "You have view-only access, so I can't archive templates.",
+  archiveUnreachable: "I can't reach the server, so I couldn't archive that. Want to try again?",
+  archiveFailed: "I couldn't archive that template. Want to try again?",
   restore: "Restore",
   restoring: "Restoring…",
   restored: "Restored. It's back in your templates.",
@@ -20,15 +26,25 @@ export const REPLY_TEMPLATE_MESSAGES = {
   restoreGone: "I can't find that template anymore.",
   restoreFailed: "I couldn't restore that. Want to try again?",
   restoreStillArchived: "I couldn't restore that, and it's still archived. Want to try again?",
-  restoreUnsure: "I'm not sure that went through. Check the list before trying again.",
+  writeUnsure: "I'm not sure that went through. Check the list before trying again.",
 } as const;
 
-export const RESTORE_FAILURE_MESSAGES: Record<Exclude<ReplyTemplateRestoreOutcome, "restored">, string> = {
+export const RESTORE_FAILURE_MESSAGES: Record<Exclude<ReplyTemplateWriteOutcome, "done">, string> = {
   gone: REPLY_TEMPLATE_MESSAGES.restoreGone,
   viewOnly: REPLY_TEMPLATE_MESSAGES.restoreViewOnly,
-  stillArchived: REPLY_TEMPLATE_MESSAGES.restoreStillArchived,
-  unsure: REPLY_TEMPLATE_MESSAGES.restoreUnsure,
+  unreachable: REPLY_TEMPLATE_MESSAGES.restoreStillArchived,
+  stillListed: REPLY_TEMPLATE_MESSAGES.restoreStillArchived,
+  unsure: REPLY_TEMPLATE_MESSAGES.writeUnsure,
   failed: REPLY_TEMPLATE_MESSAGES.restoreFailed,
+};
+
+/** The dialog stays open only where trying again could help. */
+export const ARCHIVE_FAILURES: Record<Exclude<ReplyTemplateWriteOutcome, "done" | "gone">, ArchiveFailureFeedback> = {
+  viewOnly: { message: REPLY_TEMPLATE_MESSAGES.archiveViewOnly, keepDialogOpen: false },
+  unreachable: { message: REPLY_TEMPLATE_MESSAGES.archiveUnreachable, keepDialogOpen: true },
+  stillListed: { message: REPLY_TEMPLATE_MESSAGES.archiveFailed, keepDialogOpen: true },
+  unsure: { message: REPLY_TEMPLATE_MESSAGES.writeUnsure, keepDialogOpen: false },
+  failed: { message: REPLY_TEMPLATE_MESSAGES.archiveFailed, keepDialogOpen: true },
 };
 
 export function restoreLabel(name: string): string {

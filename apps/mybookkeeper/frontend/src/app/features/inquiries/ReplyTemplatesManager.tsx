@@ -3,12 +3,10 @@ import { Plus } from "lucide-react";
 import { Button } from "@platform/ui";
 import { ConfirmDialog } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import {
-  useArchiveReplyTemplateMutation,
-  useGetReplyTemplatesQuery,
-} from "@mybookkeeper/api-client/store/inquiriesApi";
+import { useGetReplyTemplatesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
+import { useArchiveReplyTemplate } from "@mybookkeeper/api-client/hooks/useArchiveReplyTemplate";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
-import { archiveDescription } from "@/shared/lib/reply-template-messages";
+import { ARCHIVE_FAILURES, archiveDescription, REPLY_TEMPLATE_MESSAGES as MESSAGES } from "@/shared/lib/reply-template-messages";
 import ArchivedReplyTemplatesPanel from "./ArchivedReplyTemplatesPanel";
 import ReplyTemplateForm from "./ReplyTemplateForm";
 import ReplyTemplatesListBody from "./ReplyTemplatesListBody";
@@ -21,8 +19,6 @@ const PANEL_ID = "reply-templates-panel";
 export default function ReplyTemplatesManager() {
   const [view, setView] = useReplyTemplatesView();
   const { data: templates = [], isLoading } = useGetReplyTemplatesQuery();
-  const [archiveTemplate, { isLoading: isArchiving }] =
-    useArchiveReplyTemplateMutation();
   const [editingTemplate, setEditingTemplate] = useState<ReplyTemplate | null>(
     null,
   );
@@ -32,6 +28,18 @@ export default function ReplyTemplatesManager() {
   );
 
   const listMode = useReplyTemplatesListMode({ isLoading, templates });
+  const { archive, isBusy: isArchiving } = useArchiveReplyTemplate((outcome, id) => {
+    // The dialog may have been dismissed, or opened for another template, while this one ran.
+    const closeIfStillOpen = () => setArchiveCandidate((open) => (open?.id === id ? null : open));
+    if (outcome === "done" || outcome === "gone") {
+      showSuccess(outcome === "done" ? MESSAGES.archived : MESSAGES.alreadyGone);
+      closeIfStillOpen();
+      return;
+    }
+    const failure = ARCHIVE_FAILURES[outcome];
+    showError(failure.message);
+    if (!failure.keepDialogOpen) closeIfStillOpen();
+  });
 
   function handleNew() {
     setEditingTemplate(null);
@@ -43,15 +51,8 @@ export default function ReplyTemplatesManager() {
     setShowForm(true);
   }
 
-  async function handleArchive() {
-    if (!archiveCandidate) return;
-    try {
-      await archiveTemplate(archiveCandidate.id).unwrap();
-      showSuccess("Template archived.");
-      setArchiveCandidate(null);
-    } catch {
-      showError("I couldn't archive that template. Want to try again?");
-    }
+  function handleArchive() {
+    if (archiveCandidate) void archive(archiveCandidate.id);
   }
 
   return (
@@ -112,7 +113,7 @@ export default function ReplyTemplatesManager() {
         confirmLabel="Archive"
         variant="danger"
         isLoading={isArchiving}
-        onConfirm={() => void handleArchive()}
+        onConfirm={handleArchive}
         onCancel={() => setArchiveCandidate(null)}
       />
     </section>
