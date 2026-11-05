@@ -1,6 +1,9 @@
 UTILITY_SUB_CATEGORIES = frozenset({
     "electricity", "water", "gas", "internet", "trash", "sewer",
 })
+# Where an approved utility bill with no single type is counted (a combined
+# municipal bill, or one entered without a type). Reporting only: never stored.
+UTILITY_UNTYPED_BUCKET = "other"
 
 REVENUE_TAGS = frozenset({"rental_revenue", "cleaning_fee_revenue", "business_income"})
 NEUTRAL_TAGS = frozenset({"security_deposit"})

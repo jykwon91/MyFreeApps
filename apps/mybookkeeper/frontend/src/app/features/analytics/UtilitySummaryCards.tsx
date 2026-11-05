@@ -1,6 +1,6 @@
 import Card from "@/shared/components/ui/Card";
 import { formatCurrency } from "@/shared/utils/currency";
-import { UTILITY_SUB_CATEGORIES, UTILITY_SUB_CATEGORY_COLORS } from "@/shared/lib/constants";
+import { UTILITY_SUB_CATEGORIES, UTILITY_SUB_CATEGORY_COLORS, UTILITY_UNTYPED_BUCKET } from "@/shared/lib/constants";
 
 export interface UtilitySummaryCardsProps {
   totalSpend: number;
@@ -12,6 +12,8 @@ function capitalize(s: string): string {
 }
 
 export default function UtilitySummaryCards({ totalSpend, summary }: UtilitySummaryCardsProps) {
+  const categories: string[] = [...UTILITY_SUB_CATEGORIES];
+  if (summary[UTILITY_UNTYPED_BUCKET]) categories.push(UTILITY_UNTYPED_BUCKET);
   return (
     <section
       className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3"
@@ -21,7 +23,7 @@ export default function UtilitySummaryCards({ totalSpend, summary }: UtilitySumm
         <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Utilities</p>
         <p className="text-2xl font-semibold mt-1 text-foreground">{formatCurrency(totalSpend)}</p>
       </Card>
-      {UTILITY_SUB_CATEGORIES.map((cat) => {
+      {categories.map((cat) => {
         const amount = summary[cat] ?? 0;
         const color = UTILITY_SUB_CATEGORY_COLORS[cat];
         return (

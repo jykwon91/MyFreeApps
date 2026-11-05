@@ -243,13 +243,6 @@ class Transaction(Base):
             ")",
             name="chk_txn_sub_category",
         ),
-        Index(
-            "ix_txn_utility_trends",
-            "organization_id", "sub_category", "property_id", "transaction_date",
-            postgresql_where=text(
-                "deleted_at IS NULL AND category = 'utilities' AND sub_category IS NOT NULL"
-            ),
-        ),
         # Partial index on the vendor FK — most transactions have no vendor
         # link, so indexing only the populated rows keeps the index lean.
         # Ships in migration ``h0j2k5m7n9p1`` (PR 4.2).

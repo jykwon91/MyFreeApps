@@ -186,9 +186,13 @@ export const UTILITY_SUB_CATEGORY_COLORS: Record<string, string> = {
   internet: "#8b5cf6",
   trash: "#84cc16",
   sewer: "#64748b",
+  other: "#a1a1aa",
 };
 
 export const UTILITY_SUB_CATEGORIES = ["electricity", "water", "gas", "internet", "trash", "sewer"] as const;
+
+/** Bills with no single utility type. Only shown when there are some, so the cards always add up to the total. */
+export const UTILITY_UNTYPED_BUCKET = "other";
 
 export const SUPPORTED_EXTENSIONS = new Set([".pdf", ".jpg", ".jpeg", ".png", ".webp", ".doc", ".docx", ".xls", ".xlsx", ".csv", ".zip"]);
 

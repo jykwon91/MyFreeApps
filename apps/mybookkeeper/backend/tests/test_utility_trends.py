@@ -204,15 +204,19 @@ class TestGetUtilityTrendsRepo:
         assert None not in sub_cats
 
     @pytest.mark.anyio
-    async def test_excludes_transactions_without_sub_category(self, db: AsyncSession) -> None:
+    async def test_counts_transactions_without_sub_category_as_other(self, db: AsyncSession) -> None:
         user, org_id = await _setup_org_and_user(db)
         # Utility with no sub_category (ambiguous municipal bill)
-        ambiguous = _make_transaction(org_id, user.id, sub_category=None)
-        db.add(ambiguous)
+        db.add(_make_transaction(org_id, user.id, sub_category=None, amount=Decimal("80.00")))
+        db.add(_make_transaction(org_id, user.id, sub_category=None, amount=Decimal("20.00")))
+        db.add(_make_transaction(org_id, user.id, sub_category="water", amount=Decimal("5.00")))
         await db.commit()
 
         rows = await utility_trends_repo.get_utility_trends(db, org_id)
-        assert len(rows) == 0
+        assert {row.sub_category: row.total for row in rows} == {"other": Decimal("100.00"), "water": Decimal("5.00")}
+
+        summary = await utility_trends_repo.get_utility_summary(db, org_id)
+        assert {row.sub_category: row.total for row in summary} == {"other": Decimal("100.00"), "water": Decimal("5.00")}
 
     @pytest.mark.anyio
     async def test_excludes_soft_deleted_transactions(self, db: AsyncSession) -> None:

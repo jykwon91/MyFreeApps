@@ -10,7 +10,7 @@ import {
 } from "recharts";
 import type { LegendPayload } from "recharts";
 import { parse, format } from "date-fns";
-import { UTILITY_SUB_CATEGORY_COLORS, UTILITY_SUB_CATEGORIES } from "@/shared/lib/constants";
+import { UTILITY_SUB_CATEGORY_COLORS, UTILITY_SUB_CATEGORIES, UTILITY_UNTYPED_BUCKET } from "@/shared/lib/constants";
 import UtilityTrendsChartTooltip from "@/app/features/analytics/UtilityTrendsChartTooltip";
 import type { UtilityTrendPoint } from "@mybookkeeper/api-client/types/analytics/utility-trend-point";
 
@@ -59,7 +59,7 @@ export interface UtilityTrendsChartProps {
 }
 
 export default function UtilityTrendsChart({ trends, granularity, height = 350 }: UtilityTrendsChartProps) {
-  const presentCategories = UTILITY_SUB_CATEGORIES.filter((cat) =>
+  const presentCategories = [...UTILITY_SUB_CATEGORIES, UTILITY_UNTYPED_BUCKET].filter((cat) =>
     trends.some((t) => t.sub_category === cat),
   );
   const [hiddenLines, setHiddenLines] = useState<Set<string>>(new Set());

@@ -7,6 +7,7 @@ import { store } from '@/shared/store';
 import Analytics from '@/app/pages/Analytics';
 import UtilityTrends from '@/app/features/analytics/UtilityTrends';
 import UtilitySummaryCards from '@/app/features/analytics/UtilitySummaryCards';
+import UtilityTrendsChart from '@/app/features/analytics/UtilityTrendsChart';
 import AnalyticsFilters from '@/app/features/analytics/AnalyticsFilters';
 import AnalyticsSkeleton from '@/app/features/analytics/AnalyticsSkeleton';
 import PropertyMultiSelect from '@/shared/components/PropertyMultiSelect';
@@ -214,6 +215,17 @@ describe('UtilityTrends', () => {
 // UtilitySummaryCards
 // ---------------------------------------------------------------------------
 describe('UtilitySummaryCards', () => {
+  it('shows bills with no single utility type so the cards add up to the total', () => {
+    render(<UtilitySummaryCards totalSpend={105} summary={{ water: 5, other: 100 }} />);
+    expect(screen.getByText('Other')).toBeInTheDocument();
+    expect(screen.getByText('$100.00')).toBeInTheDocument();
+  });
+
+  it('leaves the Other card out when every bill has a type', () => {
+    render(<UtilitySummaryCards totalSpend={5} summary={{ water: 5 }} />);
+    expect(screen.queryByText('Other')).toBeNull();
+  });
+
   it('renders the total spend card with correct amount', () => {
     render(<UtilitySummaryCards totalSpend={1234.5} summary={{ electricity: 800, water: 434.5 }} />);
     const section = screen.getByLabelText('Utility spend summary');
@@ -250,6 +262,20 @@ describe('UtilitySummaryCards', () => {
 // ---------------------------------------------------------------------------
 // AnalyticsFilters
 // ---------------------------------------------------------------------------
+describe('UtilityTrendsChart', () => {
+  const point = { period: '2026-01', property_id: null, property_name: null, total: 10 };
+
+  it('draws a line for bills with no single utility type', () => {
+    render(<UtilityTrendsChart granularity="monthly" trends={[{ ...point, sub_category: 'water' }, { ...point, sub_category: 'other' }]} />);
+    expect(screen.getAllByTestId('line')).toHaveLength(2);
+  });
+
+  it('leaves that line out when every bill has a type', () => {
+    render(<UtilityTrendsChart granularity="monthly" trends={[{ ...point, sub_category: 'water' }]} />);
+    expect(screen.getAllByTestId('line')).toHaveLength(1);
+  });
+});
+
 describe('AnalyticsFilters', () => {
   const defaultProps = {
     fromDate: '2025-01-01',

@@ -5,9 +5,15 @@ from datetime import date
 
 from sqlalchemy import select, func, and_, Row, case
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.elements import Label
 
+from app.core.tags import UTILITY_UNTYPED_BUCKET
 from app.models.properties.property import Property
 from app.models.transactions.transaction import Transaction
+
+
+def _utility_bucket() -> Label[str]:
+    return func.coalesce(Transaction.sub_category, UTILITY_UNTYPED_BUCKET).label("sub_category")
 
 
 def _build_utility_filters(
@@ -22,7 +28,6 @@ def _build_utility_filters(
         Transaction.deleted_at.is_(None),
         Transaction.status == "approved",
         Transaction.category == "utilities",
-        Transaction.sub_category.isnot(None),
     ]
     if start_date is not None:
         filters.append(Transaction.transaction_date >= start_date)
@@ -56,6 +61,7 @@ async def get_utility_trends(
     )
 
     year_col = func.extract("year", Transaction.transaction_date).label("year")
+    bucket_col = _utility_bucket()
 
     if granularity == "quarterly":
         # Map month → quarter number using a CASE expression (portable across DBs)
@@ -73,7 +79,7 @@ async def get_utility_trends(
         select(
             year_col,
             group_col,
-            Transaction.sub_category,
+            bucket_col,
             Transaction.property_id,
             Property.name.label("property_name"),
             func.sum(Transaction.amount).label("total"),
@@ -84,7 +90,7 @@ async def get_utility_trends(
         .group_by(
             year_col,
             group_col,
-            Transaction.sub_category,
+            bucket_col,
             Transaction.property_id,
             Property.name,
         )
@@ -108,13 +114,14 @@ async def get_utility_summary(
         end_date=end_date,
         property_ids=property_ids,
     )
+    bucket_col = _utility_bucket()
     result = await db.execute(
         select(
-            Transaction.sub_category,
+            bucket_col,
             func.sum(Transaction.amount).label("total"),
         )
         .select_from(Transaction)
         .where(and_(*filters))
-        .group_by(Transaction.sub_category)
+        .group_by(bucket_col)
     )
     return result.all()
