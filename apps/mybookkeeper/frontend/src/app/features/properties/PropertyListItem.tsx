@@ -1,7 +1,7 @@
 import { Pencil, Trash2 } from "lucide-react";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import { formatDate } from "@/shared/utils/date";
-import { CLASSIFICATION_LABELS, TYPE_LABELS } from "@/shared/lib/property-labels";
+import { CLASSIFICATION_LABELS, TYPE_LABELS } from "@mybookkeeper/api-client/constants/propertyLabels";
 import { Button } from "@platform/ui";
 import Badge from "@/shared/components/ui/Badge";
 
