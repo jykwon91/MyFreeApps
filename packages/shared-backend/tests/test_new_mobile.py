@@ -77,6 +77,14 @@ class TestGeneratedFiles:
             if path.is_file():
                 assert not re.search(r"__[A-Z_]+__", path.read_text("utf-8")), path
 
+    def test_can_be_built_and_submitted_for_the_app_stores(self, repo: Path) -> None:
+        _generate(repo)
+        eas = json.loads((_mobile_dir(repo) / "eas.json").read_text("utf-8"))
+
+        assert eas["build"]["production"]["autoIncrement"] is True
+        assert "buildType" not in eas["build"]["production"].get("android", {})
+        assert "production" in eas["submit"]
+
     def test_names_the_app(self, repo: Path) -> None:
         _generate(repo)
         generated = _mobile_dir(repo)

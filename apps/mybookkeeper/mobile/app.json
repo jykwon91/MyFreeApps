@@ -3,7 +3,7 @@
     "name": "MyBookkeeper",
     "slug": "mybookkeeper",
     "scheme": "mybookkeeper",
-    "version": "0.0.1",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",

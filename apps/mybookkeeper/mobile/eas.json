@@ -8,12 +8,17 @@
       "autoIncrement": true,
       "ios": { "resourceClass": "default" }
     },
+    "production": {
+      "autoIncrement": true,
+      "ios": { "resourceClass": "default" }
+    },
     "apk": {
       "android": { "buildType": "apk" },
       "distribution": "internal"
     }
   },
   "submit": {
-    "testflight": {}
+    "testflight": {},
+    "production": {}
   }
 }
