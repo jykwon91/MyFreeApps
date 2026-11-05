@@ -3,7 +3,7 @@ import { Button, LoadingButton } from "@platform/ui";
 import { policyToFormValues, toPolicyPayload } from "@/shared/lib/insurance-policy-form";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useUpdateInsurancePolicyMutation } from "@/shared/store/insurancePoliciesApi";
-import type { InsurancePolicyDetail } from "@/shared/types/insurance/insurance-policy-detail";
+import type { InsurancePolicyDetail } from "@mybookkeeper/api-client/types/insurance/insurance-policy-detail";
 import type { InsurancePolicyFormValues } from "@/shared/types/insurance/insurance-policy-form-values";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import InsurancePolicyFormFields from "./InsurancePolicyFormFields";

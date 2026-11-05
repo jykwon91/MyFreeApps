@@ -1,7 +1,7 @@
 import type { InsurancePolicyDraft } from "@/shared/types/insurance/insurance-policy-draft";
 import type { InsurancePolicyFormValues } from "@/shared/types/insurance/insurance-policy-form-values";
-import { INSURANCE_PREMIUM_FREQUENCIES } from "@/shared/types/insurance/insurance-premium-frequency";
-import type { InsurancePremiumFrequency } from "@/shared/types/insurance/insurance-premium-frequency";
+import { INSURANCE_PREMIUM_FREQUENCIES } from "@mybookkeeper/api-client/types/insurance/insurance-premium-frequency";
+import type { InsurancePremiumFrequency } from "@mybookkeeper/api-client/types/insurance/insurance-premium-frequency";
 
 /**
  * Turning a read declarations page into form state.

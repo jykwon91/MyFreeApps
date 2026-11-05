@@ -26,7 +26,7 @@ export const MORE_MENU: readonly MoreMenuGroup[] = [
       { label: "Reconciliation", webPath: "/reconciliation" },
       { label: "Vendors", screen: "/vendors" },
       { label: "Analytics", webPath: "/analytics" },
-      { label: "Insurance", webPath: "/insurance-policies" },
+      { label: "Insurance", screen: "/insurance" },
       { label: "Mortgages", webPath: "/mortgages" },
       { label: "Utility Plans", webPath: "/utility-plans" },
     ],

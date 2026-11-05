@@ -3,7 +3,7 @@ import {
   formatAnnualPremium,
   formatCoverageRate,
   formatPolicyMoney,
-} from "@/shared/lib/insurance-policy-format";
+} from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
 import { useGetInsuranceBenchmarkQuery } from "@/shared/store/insuranceBenchmarksApi";
 
 export interface InsuranceBenchmarkSummaryProps {

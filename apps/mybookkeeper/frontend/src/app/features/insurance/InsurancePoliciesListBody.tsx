@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
-import { formatAnnualPremium } from "@/shared/lib/insurance-policy-format";
+import { formatAnnualPremium } from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
 import type { InsurancePoliciesListMode } from "@/shared/types/insurance/insurance-policies-list-mode";
-import type { InsurancePolicySummary } from "@/shared/types/insurance/insurance-policy-summary";
+import type { InsurancePolicySummary } from "@mybookkeeper/api-client/types/insurance/insurance-policy-summary";
 import InsuranceExpirationBadge from "./InsuranceExpirationBadge";
 
 export interface InsurancePoliciesListBodyProps {

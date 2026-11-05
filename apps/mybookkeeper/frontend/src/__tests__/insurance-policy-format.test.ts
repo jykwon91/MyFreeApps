@@ -13,7 +13,7 @@ import {
   formatCoverageRate,
   formatPolicyMoney,
   formatWindHailDeductible,
-} from "@/shared/lib/insurance-policy-format";
+} from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
 
 describe("formatPolicyMoney", () => {
   it("renders cents as whole dollars", () => {

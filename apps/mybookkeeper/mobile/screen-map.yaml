@@ -30,9 +30,9 @@ routes:
   /inquiries/:inquiryId:
     screen: (app)/inquiries/[id]/index
   /insurance-policies:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/insurance/index
   /insurance-policies/:policyId:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/insurance/[id]
   /integrations:
     not_on_mobile: Connecting Gmail happens on the website; signing in to Google needs a browser. The reply screen links there.
   /invite/:token:

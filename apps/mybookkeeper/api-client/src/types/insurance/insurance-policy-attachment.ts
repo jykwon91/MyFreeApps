@@ -1,4 +1,4 @@
-import type { InsuranceAttachmentKind } from "@/shared/types/insurance/insurance-attachment-kind";
+import type { InsuranceAttachmentKind } from "./insurance-attachment-kind";
 
 /**
  * A file attached to an insurance policy.

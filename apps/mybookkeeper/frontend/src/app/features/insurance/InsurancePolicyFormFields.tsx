@@ -1,8 +1,8 @@
 import FormField from "@/shared/components/ui/FormField";
 import { INSURANCE_POLICY_INPUT_CLASS } from "./insurance-policy-input-class";
-import { FREQUENCY_LABEL } from "@/shared/lib/insurance-policy-format";
+import { FREQUENCY_LABEL } from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
 import type { InsurancePolicyFormValues } from "@/shared/types/insurance/insurance-policy-form-values";
-import { INSURANCE_PREMIUM_FREQUENCIES } from "@/shared/types/insurance/insurance-premium-frequency";
+import { INSURANCE_PREMIUM_FREQUENCIES } from "@mybookkeeper/api-client/types/insurance/insurance-premium-frequency";
 
 export interface InsurancePolicyFormFieldsProps {
   values: InsurancePolicyFormValues;

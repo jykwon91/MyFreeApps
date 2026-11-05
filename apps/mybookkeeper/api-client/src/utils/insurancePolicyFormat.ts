@@ -1,5 +1,5 @@
-import { formatCurrency } from "@/shared/utils/currency";
-import type { InsurancePremiumFrequency } from "@/shared/types/insurance/insurance-premium-frequency";
+import { formatCurrency } from "@platform/core/utils/currency";
+import type { InsurancePremiumFrequency } from "../types/insurance/insurance-premium-frequency";
 
 /**
  * Display helpers for insurance-policy figures.

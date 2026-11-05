@@ -1,5 +1,5 @@
 import type { InsuranceBenchmarkStatus } from "@/shared/types/insurance/insurance-benchmark-status";
-import type { InsurancePolicySummary } from "@/shared/types/insurance/insurance-policy-summary";
+import type { InsurancePolicySummary } from "@mybookkeeper/api-client/types/insurance/insurance-policy-summary";
 
 /**
  * One policy measured against the organization's insurance benchmark.

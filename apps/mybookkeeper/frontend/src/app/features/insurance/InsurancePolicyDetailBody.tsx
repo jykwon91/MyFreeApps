@@ -4,7 +4,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { useDeleteInsurancePolicyMutation } from "@/shared/store/insurancePoliciesApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import type { InsurancePolicyDetail } from "@/shared/types/insurance/insurance-policy-detail";
+import type { InsurancePolicyDetail } from "@mybookkeeper/api-client/types/insurance/insurance-policy-detail";
 import type { InsurancePolicyDetailMode } from "@/shared/types/insurance/insurance-policy-detail-mode";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { Button, ConfirmDialog } from "@platform/ui";
@@ -13,7 +13,7 @@ import {
   formatBilledPremium,
   formatPolicyMoney,
   formatWindHailDeductible,
-} from "@/shared/lib/insurance-policy-format";
+} from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
 import EditInsurancePolicyDialog from "./EditInsurancePolicyDialog";
 import InsuranceExpirationBadge from "./InsuranceExpirationBadge";
 import InsurancePolicyAttachmentsSection from "./InsurancePolicyAttachmentsSection";

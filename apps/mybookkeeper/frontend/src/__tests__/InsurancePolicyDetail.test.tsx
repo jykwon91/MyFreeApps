@@ -16,7 +16,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { store } from "@/shared/store";
 import InsurancePolicyDetail from "@/app/pages/InsurancePolicyDetail";
-import type { InsurancePolicyDetail as PolicyDetailType } from "@/shared/types/insurance/insurance-policy-detail";
+import type { InsurancePolicyDetail as PolicyDetailType } from "@mybookkeeper/api-client/types/insurance/insurance-policy-detail";
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -30,7 +30,7 @@ const deleteMock = vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) }));
 const updateMock = vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) }));
 let mockIsDeleting = false;
 
-vi.mock("@/shared/store/insurancePoliciesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/insurancePoliciesApi", () => ({
   useGetInsurancePolicyByIdQuery: vi.fn(() => ({
     data: mockPolicy,
     isLoading: mockIsLoading,
@@ -38,6 +38,9 @@ vi.mock("@/shared/store/insurancePoliciesApi", () => ({
     isFetching: mockIsFetching,
     refetch: mockRefetch,
   })),
+}));
+
+vi.mock("@/shared/store/insurancePoliciesApi", () => ({
   useDeleteInsurancePolicyMutation: vi.fn(() => [deleteMock, { isLoading: mockIsDeleting }]),
   useUpdateInsurancePolicyMutation: vi.fn(() => [updateMock, { isLoading: false }]),
   useUploadInsurancePolicyAttachmentMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),

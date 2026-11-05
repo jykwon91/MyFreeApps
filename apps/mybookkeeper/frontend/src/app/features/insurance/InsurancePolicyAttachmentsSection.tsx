@@ -5,12 +5,12 @@ import {
   INSURANCE_ATTACHMENT_KINDS,
   INSURANCE_ATTACHMENT_KIND_LABELS,
   type InsuranceAttachmentKind,
-} from "@/shared/types/insurance/insurance-attachment-kind";
+} from "@mybookkeeper/api-client/types/insurance/insurance-attachment-kind";
 import {
   useDeleteInsurancePolicyAttachmentMutation,
   useUploadInsurancePolicyAttachmentMutation,
 } from "@/shared/store/insurancePoliciesApi";
-import type { InsurancePolicyAttachment } from "@/shared/types/insurance/insurance-policy-attachment";
+import type { InsurancePolicyAttachment } from "@mybookkeeper/api-client/types/insurance/insurance-policy-attachment";
 import AttachmentViewer from "@/app/features/leases/AttachmentViewer";
 import InsurancePolicyAttachmentRow from "@/app/features/insurance/InsurancePolicyAttachmentRow";
 
