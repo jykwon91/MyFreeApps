@@ -1,15 +1,15 @@
 import { useListSignedLeasePagesInfiniteQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
-import { Banner, EmptyState, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
 import { LEASE_FILTERS, LEASE_MESSAGES } from "../../constants/leases";
+import { NEW_LEASE_MESSAGES } from "../../constants/newLease";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { uniqueById } from "../../lib/uniqueById";
 import type { LeaseFilter } from "../../types/LeaseFilter";
 import ApplicantsSkeleton, { ApplicantSkeletonRow } from "../applicants/ApplicantsSkeleton";
-import { useOpenLink } from "../inquiries/useOpenLink";
+import { templatesPath } from "../newLease/newLeaseFlow";
 import LoadMoreFailed from "../shell/LoadMoreFailed";
 import { useCanWrite } from "../workspace/useCanWrite";
 import LeaseRow from "./LeaseRow";
@@ -17,7 +17,6 @@ import LeaseRow from "./LeaseRow";
 export default function LeasesScreen() {
   const { spacing } = useTheme();
   const canWrite = useCanWrite();
-  const openLink = useOpenLink();
   const [filter, setFilter] = useState<LeaseFilter>("current");
   const [filterThatFailedToLoadMore, setFilterThatFailedToLoadMore] = useState<LeaseFilter | null>(null);
   const { currentData, error, fetchNextPage, hasNextPage, isFetching, isFetchingNextPage, refetch } =
@@ -48,8 +47,8 @@ export default function LeasesScreen() {
     if (filter === "all") {
       return (
         <EmptyState
-          action={canWrite ? { label: LEASE_MESSAGES.openWebsite, onPress: () => void openLink(`${WEB_BASE_URL}/leases`) } : undefined}
-          body={LEASE_MESSAGES.noneBody}
+          action={canWrite ? { label: NEW_LEASE_MESSAGES.newLease, onPress: () => router.push(templatesPath()) } : undefined}
+          body={canWrite ? LEASE_MESSAGES.noneBody : LEASE_MESSAGES.noneBodyViewer}
           heading={LEASE_MESSAGES.noneHeading}
         />
       );
@@ -70,6 +69,7 @@ export default function LeasesScreen() {
       ListHeaderComponent={
         <View style={{ gap: spacing.md, padding: spacing.lg }}>
           {error && rows.length > 0 && !loadMoreFailed ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+          {canWrite ? <LoadingButton onPress={() => router.push(templatesPath())} variant="secondary">{NEW_LEASE_MESSAGES.newLease}</LoadingButton> : null}
           <SegmentedControl accessibilityLabel={LEASE_MESSAGES.filterLabel} onChange={setFilter} segments={LEASE_FILTERS} value={filter} />
         </View>
       }

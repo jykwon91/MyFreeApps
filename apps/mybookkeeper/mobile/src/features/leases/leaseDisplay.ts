@@ -1,5 +1,6 @@
 import { LEASE_ATTACHMENT_KIND_LABELS, SIGNED_LEASE_STATUS_LABELS, SIGNED_LEASE_STATUS_NEXT } from "@mybookkeeper/api-client/constants/leaseLabels";
 import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
+import type { SignedLeaseDetail } from "@mybookkeeper/api-client/types/lease/signed-lease-detail";
 import type { SignedLeaseStatus } from "@mybookkeeper/api-client/types/lease/signed-lease-status";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import { localToday } from "@mybookkeeper/api-client/utils/tenancyState";
@@ -7,6 +8,7 @@ import { LEASE_MESSAGES } from "../../constants/leases";
 
 const DAY_MS = 86_400_000;
 const IN_EFFECT: readonly SignedLeaseStatus[] = ["signed", "active"];
+const CAN_HAVE_SUCCESSOR: readonly SignedLeaseStatus[] = ["signed", "active", "ended"];
 
 function daysBetween(from: string, to: string): number {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS);
@@ -14,6 +16,24 @@ function daysBetween(from: string, to: string): number {
 
 export function leaseIsInEffect(status: SignedLeaseStatus): boolean {
   return IN_EFFECT.includes(status);
+}
+
+/** A draft or sent lease is still edited in place, and a terminated one is closed for good. */
+export function leaseCanHaveSuccessor(lease: Pick<SignedLeaseDetail, "status" | "successor_lease_id">): boolean {
+  return CAN_HAVE_SUCCESSOR.includes(lease.status) && lease.successor_lease_id === null;
+}
+
+/**
+ * Making files moves a lease to generated, whatever it was, so it's only offered
+ * before the lease goes out. A sent or signed lease would quietly lose its status.
+ */
+export function leaseNeedsFiles(lease: Pick<SignedLeaseDetail, "kind" | "status" | "attachments">): boolean {
+  return lease.kind === "generated" && (lease.status === "draft" || (lease.status === "generated" && lease.attachments.length === 0));
+}
+
+/** Same rule as the server's `should_auto_email_after_generate`. */
+export function leaseEmailsOnGenerate(lease: Pick<SignedLeaseDetail, "auto_email_tenant" | "status" | "last_emailed_to_tenant_at">): boolean {
+  return lease.auto_email_tenant && lease.status !== "generated" && !lease.last_emailed_to_tenant_at;
 }
 
 export function leaseTerm(startsOn: string | null, endsOn: string | null): string {

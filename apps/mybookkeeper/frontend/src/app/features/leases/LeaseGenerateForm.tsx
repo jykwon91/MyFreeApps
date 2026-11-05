@@ -3,13 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useCreateSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
-import {
-  useGetGenerateDefaultsQuery,
-  useGetMultiGenerateDefaultsQuery,
-} from "@/shared/store/leaseTemplatesApi";
+import { useGetMultiGenerateDefaultsQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
+import { useGetGenerateDefaultsQuery } from "@/shared/store/leaseTemplatesApi";
 import type { LeaseTemplateDetail } from "@mybookkeeper/api-client/types/lease/lease-template-detail";
 import type { LeaseTemplatePlaceholder } from "@mybookkeeper/api-client/types/lease/lease-template-placeholder";
-import type { PlaceholderProvenance } from "@/shared/types/lease/placeholder-provenance";
+import type { PlaceholderProvenance } from "@mybookkeeper/api-client/types/lease/placeholder-provenance";
 import PlaceholderInput from "@/app/features/leases/PlaceholderInput";
 
 export interface LeaseGenerateFormProps {

@@ -6,18 +6,20 @@ import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
-import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
 import type { ReactElement } from "react";
 import { Linking } from "react-native";
 import { Provider } from "react-redux";
 import { WEB_BASE_URL } from "../src/constants/api";
+import { NEW_LEASE_MESSAGES } from "../src/constants/newLease";
 import { LEASE_TEMPLATE_MESSAGES } from "../src/constants/leaseTemplates";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { openAttachmentFile } from "../src/features/documents/openDocumentFile";
 import { inDisplayOrder, placeholdersLine, templateCountsLine, templateFileLine, templateRowLabel } from "../src/features/leaseTemplates/leaseTemplateDisplay";
 import LeaseTemplateDetailScreen from "../src/features/leaseTemplates/LeaseTemplateDetailScreen";
 import LeaseTemplatesScreen from "../src/features/leaseTemplates/LeaseTemplatesScreen";
+import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { store } from "../src/lib/store";
 
 const mockPush = jest.fn();
@@ -106,8 +108,10 @@ function aPage(items: LeaseTemplateSummary[], hasMore = false) {
 }
 
 function startServer(list: unknown, detail: unknown = aTemplate()) {
-  const server = { list, detail, listParams: undefined as unknown, detailCalls: 0 };
+  const server = { list, detail, listParams: undefined as unknown, detailCalls: 0, role: "owner", workspaceReads: 0 };
   const adapter: AxiosAdapter = async (config) => {
+    if (config.url === "/organizations") server.workspaceReads += 1;
+    if (config.url === "/organizations") return { data: [{ id: "w1", name: "Mine", org_role: server.role }], status: 200, statusText: "OK", headers: {}, config };
     const isList = config.url === "/lease-templates";
     if (isList) server.listParams = config.params;
     else server.detailCalls += 1;
@@ -131,6 +135,7 @@ async function show(element: ReactElement) {
 
 beforeEach(() => {
   store.dispatch(baseApi.util.resetApiState());
+  store.dispatch(workspaceChosen("w1"));
   mockPush.mockClear();
   mockBack.mockClear();
   mockOpenFile.mockReset();
@@ -344,6 +349,23 @@ describe("LeaseTemplateDetailScreen", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Open lease.docx" }));
     await screen.findByText(LEASE_TEMPLATE_MESSAGES.cantFind);
     expect(mockOpenFile).not.toHaveBeenCalled();
+  });
+
+  it("starts a lease from this template, asking who it's for next", async () => {
+    startServer(aPage([]));
+    await show(<LeaseTemplateDetailScreen id="t1" />);
+    await fireEvent.press(await screen.findByRole("button", { name: NEW_LEASE_MESSAGES.useTemplate }));
+    expect(mockPush).toHaveBeenCalledWith("/leases/new/applicant?template_ids=t1");
+  });
+
+  it("doesn't offer that to someone with view-only access", async () => {
+    const server = startServer(aPage([]));
+    server.role = "viewer";
+    await show(<LeaseTemplateDetailScreen id="t1" />);
+    await screen.findByRole("button", { name: LEASE_TEMPLATE_MESSAGES.openOneOnWebsite });
+    await waitFor(() => expect(server.workspaceReads).toBe(1));
+    await act(async () => undefined);
+    expect(screen.queryByRole("button", { name: NEW_LEASE_MESSAGES.useTemplate })).toBeNull();
   });
 
   it("links to this template on the website", async () => {

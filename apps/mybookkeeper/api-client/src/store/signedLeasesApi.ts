@@ -129,6 +129,15 @@ export const signedLeasesApi = baseApi.enhanceEndpoints({
 
     generateSignedLease: builder.mutation<SignedLeaseDetail, string>({
       query: (id) => ({ url: `/signed-leases/${id}/generate`, method: "POST" }),
+      // Until the refetch lands the lease would still look like a draft, and a second tap makes a second set of files.
+      async onQueryStarted(id, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(signedLeasesApi.util.updateQueryData("getSignedLeaseById", id, () => data));
+        } catch {
+          // The caller reports the failure, and the cache still holds the old value.
+        }
+      },
       invalidatesTags: (_r, _e, id) => [
         { type: "SignedLease", id },
         { type: "SignedLease", id: "LIST" },
