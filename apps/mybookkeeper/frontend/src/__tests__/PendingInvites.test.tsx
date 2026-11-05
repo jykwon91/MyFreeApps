@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import PendingInvites from "@/app/features/organizations/PendingInvites";
-import type { OrgInvite } from "@/shared/types/organization/invite";
+import type { OrgInvite } from "@mybookkeeper/api-client/types/organization/OrgInvite";
 
-vi.mock("@/shared/store/membersApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/membersApi", () => ({
   useListInvitesQuery: vi.fn(),
   useCancelInviteMutation: vi.fn(() => [
     vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })),
@@ -15,7 +15,7 @@ vi.mock("@/shared/hooks/useCurrentOrg", () => ({
   useActiveOrgId: vi.fn(() => "org-1"),
 }));
 
-import { useListInvitesQuery } from "@/shared/store/membersApi";
+import { useListInvitesQuery } from "@mybookkeeper/api-client/store/membersApi";
 
 function makeInvite(overrides: Partial<OrgInvite> = {}): OrgInvite {
   return {

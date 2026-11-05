@@ -1,5 +1,5 @@
 import { Navigate } from "react-router-dom";
-import type { OrgRole } from "@/shared/types/organization/org-role";
+import type { OrgRole } from "@mybookkeeper/api-client/types/organization/OrgRole";
 import { useOrgRole } from "@/shared/hooks/useOrgRole";
 
 export interface RequireOrgRoleProps {

@@ -1,4 +1,4 @@
-import type { OrgRole } from "./org-role";
+import type { OrgRole } from "@mybookkeeper/api-client/types/organization/OrgRole";
 
 export interface OrgWithRole {
   id: string;

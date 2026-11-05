@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { useListMembersQuery, useUpdateMemberRoleMutation, useRemoveMemberMutation } from "@/shared/store/membersApi";
+import { useListMembersQuery, useUpdateMemberRoleMutation, useRemoveMemberMutation } from "@mybookkeeper/api-client/store/membersApi";
 import { useActiveOrgId } from "@/shared/hooks/useCurrentOrg";
 import { useIsOrgAdmin } from "@/shared/hooks/useOrgRole";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
-import type { OrgRole } from "@/shared/types/organization/org-role";
-import type { OrgMember } from "@/shared/types/organization/member";
+import type { OrgRole } from "@mybookkeeper/api-client/types/organization/OrgRole";
+import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
 import Badge from "@/shared/components/ui/Badge";
 import Select from "@/shared/components/ui/Select";
 import { ConfirmDialog } from "@platform/ui";

@@ -22,7 +22,7 @@ vi.mock('@/app/features/organizations/MembersSkeleton', () => ({
   default: () => <div data-testid='members-skeleton' className='animate-pulse'>MembersSkeleton</div>,
 }));
 
-vi.mock('@/shared/store/membersApi', () => ({
+vi.mock('@mybookkeeper/api-client/store/membersApi', () => ({
   useListMembersQuery: vi.fn(() => ({ isLoading: false, isFetching: false })),
   useListInvitesQuery: vi.fn(() => ({ isLoading: false, isFetching: false })),
 }));
@@ -40,7 +40,7 @@ vi.mock('@/shared/hooks/useToast', () => ({
   useToast: vi.fn(() => ({ showError: vi.fn(), showSuccess: vi.fn() })),
 }));
 
-import { useListMembersQuery, useListInvitesQuery } from '@/shared/store/membersApi';
+import { useListMembersQuery, useListInvitesQuery } from '@mybookkeeper/api-client/store/membersApi';
 import { useActiveOrgId } from '@/shared/hooks/useCurrentOrg';
 import { useIsOrgAdmin } from '@/shared/hooks/useOrgRole';
 

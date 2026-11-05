@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAcceptInviteMutation, useGetInviteInfoQuery } from "@/shared/store/membersApi";
+import { useAcceptInviteMutation, useGetInviteInfoQuery } from "@mybookkeeper/api-client/store/membersApi";
 import { login, notifyAuthChange } from "@/shared/lib/auth";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";

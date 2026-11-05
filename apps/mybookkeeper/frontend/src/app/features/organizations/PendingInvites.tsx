@@ -1,4 +1,4 @@
-import { useListInvitesQuery, useCancelInviteMutation } from "@/shared/store/membersApi";
+import { useListInvitesQuery, useCancelInviteMutation } from "@mybookkeeper/api-client/store/membersApi";
 import { useActiveOrgId } from "@/shared/hooks/useCurrentOrg";
 import { formatDistanceToNow } from "date-fns";
 import { X } from "lucide-react";

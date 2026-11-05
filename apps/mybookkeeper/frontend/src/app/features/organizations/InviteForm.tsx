@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useCreateInviteMutation } from "@/shared/store/membersApi";
+import { useCreateInviteMutation } from "@mybookkeeper/api-client/store/membersApi";
 import { useActiveOrgId } from "@/shared/hooks/useCurrentOrg";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
-import type { OrgRole } from "@/shared/types/organization/org-role";
-import { INVITE_ROLE_OPTIONS } from "@/shared/lib/organization-config";
+import type { OrgRole } from "@mybookkeeper/api-client/types/organization/OrgRole";
+import { INVITE_ROLE_OPTIONS } from "@mybookkeeper/api-client/constants/orgRoles";
 import { LoadingButton } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 

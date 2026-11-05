@@ -7,7 +7,7 @@ const mockCreateInvite = vi.fn(() => ({
   unwrap: () => Promise.resolve({ email_sent: true }),
 }));
 
-vi.mock("@/shared/store/membersApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/membersApi", () => ({
   useCreateInviteMutation: vi.fn(() => [mockCreateInvite, { isLoading: false }]),
 }));
 

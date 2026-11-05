@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import MemberList from "@/app/features/organizations/MemberList";
-import type { OrgMember } from "@/shared/types/organization/member";
+import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
 
 const mockUpdateRole = vi.fn(() => ({ unwrap: () => Promise.resolve({}) }));
 const mockRemoveMember = vi.fn(() => ({ unwrap: () => Promise.resolve() }));
 
-vi.mock("@/shared/store/membersApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/membersApi", () => ({
   useListMembersQuery: vi.fn(),
   useUpdateMemberRoleMutation: vi.fn(() => [mockUpdateRole, { isLoading: false }]),
   useRemoveMemberMutation: vi.fn(() => [mockRemoveMember, { isLoading: false }]),
@@ -26,7 +26,7 @@ vi.mock("@/shared/hooks/useCurrentUser", () => ({
   useCurrentUser: vi.fn(() => ({ user: { id: "user-1", email: "me@test.com", name: "Me", role: "user", is_active: true }, isLoading: false })),
 }));
 
-import { useListMembersQuery } from "@/shared/store/membersApi";
+import { useListMembersQuery } from "@mybookkeeper/api-client/store/membersApi";
 
 function makeMember(overrides: Partial<OrgMember> = {}): OrgMember {
   return {

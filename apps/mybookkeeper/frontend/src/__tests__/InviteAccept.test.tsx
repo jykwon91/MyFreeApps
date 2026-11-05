@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import InviteAccept from "@/app/pages/InviteAccept";
-import type { InviteInfo } from "@/shared/types/organization/invite";
+import type { InviteInfo } from "@mybookkeeper/api-client/types/organization/InviteInfo";
 
-vi.mock("@/shared/store/membersApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/membersApi", () => ({
   useAcceptInviteMutation: vi.fn(() => [
     vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })),
     {} as never,
@@ -29,7 +29,7 @@ vi.mock("@/shared/components/ui/TurnstileWidget", () => ({
   default: () => null,
 }));
 
-import { useGetInviteInfoQuery } from "@/shared/store/membersApi";
+import { useGetInviteInfoQuery } from "@mybookkeeper/api-client/store/membersApi";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 
 function makeInviteInfo(overrides: Partial<InviteInfo> = {}): InviteInfo {

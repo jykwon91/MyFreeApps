@@ -1,4 +1,4 @@
-import type { OrgRole } from "@/shared/types/organization/org-role";
+import type { OrgRole } from "@mybookkeeper/api-client/types/organization/OrgRole";
 import { useCurrentOrg } from "./useCurrentOrg";
 
 export function useOrgRole(): OrgRole | null {

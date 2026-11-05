@@ -8,7 +8,7 @@ import { clearUploadQueue } from "../features/capture/uploadQueueFiles";
 import uploads, { uploadStatusDismissed } from "../features/capture/uploadsSlice";
 import { clearDocumentFiles } from "../features/documents/openDocumentFile";
 import { clearReplyDrafts } from "../features/inquiries/replyDrafts";
-import workspace, { workspaceChosen } from "../features/workspace/workspaceSlice";
+import workspace, { workspaceChosen, workspaceLost } from "../features/workspace/workspaceSlice";
 import { clearHeldFiles } from "../features/uploads/heldFile";
 import { refetchOnForeground } from "./refetchOnForeground";
 import { session } from "./session";
@@ -38,6 +38,7 @@ refetchOnForeground(store.dispatch);
 // In this order: a reset makes a mounted gate request again, and that request must not carry the old workspace.
 onAccountLeft(session, () => {
   store.dispatch(workspaceChosen(null));
+  store.dispatch(workspaceLost(null));
   store.dispatch(uploadStatusDismissed());
   // Each has to run whatever the others do: these are someone's records. Nothing may
   // escape either, or the session's next listener, which clears the cache, never runs.

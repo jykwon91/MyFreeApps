@@ -1,24 +1,40 @@
+import { baseApi } from "@platform/core/store/baseApi";
 import { Skeleton, useTheme } from "@platform/mobile";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { AppState, Linking, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { WEB_BASE_URL } from "../../constants/api";
-import type { RootState } from "../../lib/store";
+import type { AppDispatch, RootState } from "../../lib/store";
+import type { Workspace } from "../../types/Workspace";
 import { useListWorkspacesQuery } from "./workspaceApi";
 import WorkspaceMessage from "./WorkspaceMessage";
-import { workspaceChosen } from "./workspaceSlice";
+import { workspaceChosen, workspaceLost } from "./workspaceSlice";
 
 /** Almost every request needs a workspace, so nothing renders until there is one. */
 export default function WorkspaceGate({ children }: { children: ReactNode }) {
   const { data, error, refetch } = useListWorkspacesQuery();
   const activeId = useSelector((state: RootState) => state.workspace.activeId);
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const { colors, spacing } = useTheme();
-  const isActiveKnown = data?.some((workspace) => workspace.id === activeId) ?? false;
+  const active = data?.find((workspace) => workspace.id === activeId);
+  const isActiveKnown = active !== undefined;
+  const lastActive = useRef<Workspace | null>(null);
 
   useEffect(() => {
-    if (data && !isActiveKnown) dispatch(workspaceChosen(data[0]?.id ?? null));
-  }, [data, isActiveKnown, dispatch]);
+    if (active) lastActive.current = active;
+  }, [active]);
+
+  useEffect(() => {
+    if (!data || isActiveKnown) return;
+    const next = data[0] ?? null;
+    const lost = lastActive.current?.id === activeId ? lastActive.current : null;
+    lastActive.current = null;
+    dispatch(workspaceChosen(next?.id ?? null));
+    if (!lost) return;
+    dispatch(workspaceLost(next ? { from: lost.name, to: next.name } : null));
+    // The cache isn't keyed by workspace, so what's in it belongs to the one they just lost.
+    dispatch(baseApi.util.resetApiState());
+  }, [data, isActiveKnown, activeId, dispatch]);
 
   // Someone removed from their workspace would otherwise get refused on every request.
   useEffect(() => {
