@@ -146,6 +146,19 @@ describe("WelcomeManualEmailDialog", () => {
     expect(screen.getByTestId("welcome-manual-email-form")).toBeInTheDocument();
   });
 
+  it("tells a demo account it can't send email, rather than to try again", async () => {
+    emailMutationMock.mockReturnValue({
+      unwrap: () => Promise.reject({ status: 403, data: { detail: "This feature is not available for demo accounts" } }),
+    });
+    render(<WelcomeManualEmailDialog manualId="m-1" rooms={[]} onClose={onClose} />);
+    await userEvent.type(screen.getByTestId("welcome-manual-email-input"), "guest@example.com");
+    await userEvent.click(screen.getByTestId("welcome-manual-email-send"));
+
+    await waitFor(() => {
+      expect(showErrorMock).toHaveBeenCalledWith("Demo accounts can't send email.");
+    });
+  });
+
   describe("room picker", () => {
     it("is absent for a whole-place manual", () => {
       render(<WelcomeManualEmailDialog manualId="m-1" rooms={[]} onClose={onClose} />);

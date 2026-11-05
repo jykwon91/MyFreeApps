@@ -351,6 +351,10 @@ async def _require_tenant_email(lease_id: uuid.UUID, ctx: RequestContext) -> Non
             user_id=ctx.user_id,
             organization_id=ctx.organization_id,
         )
+    except lease_email_service.DemoWorkspaceEmailError as exc:
+        raise HTTPException(
+            status_code=403, detail="This feature is not available for demo accounts",
+        ) from exc
     except lease_email_service.LeaseNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Lease not found") from exc
     except lease_email_service.ApplicantEmailMissingError as exc:
@@ -374,6 +378,7 @@ async def extend_lease(
     Optionally emails that addendum to the tenant, best-effort, after commit.
 
     Errors:
+        403 — ``email_tenant`` from a demo account; nothing is extended.
         404 — lease not found / not in the calling tenant.
         409 — lease status is not signed/active, or ``new_ends_on`` is not
               strictly after the current ``ends_on``, or the lease has no

@@ -243,4 +243,18 @@ describe("LeaseDetail — Email to tenant button", () => {
       );
     });
   });
+
+  it("tells a demo account it can't send email, rather than to try again", async () => {
+    canWriteValue = true;
+    mockLease = buildLease();
+    mockApplicant = buildApplicant();
+    emailMock.mockReturnValueOnce({
+      unwrap: () => Promise.reject({ status: 403, data: { detail: "This feature is not available for demo accounts" } }),
+    });
+    renderDetail();
+    await userEvent.click(screen.getByTestId("lease-email-tenant-button"));
+    await waitFor(() => {
+      expect(showErrorMock).toHaveBeenCalledWith("Demo accounts can't send email.");
+    });
+  });
 });

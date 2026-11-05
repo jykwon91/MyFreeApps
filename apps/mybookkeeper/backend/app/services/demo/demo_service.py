@@ -2,13 +2,15 @@
 
 import logging
 import uuid
+from datetime import datetime, timezone
 
 from fastapi_users.password import PasswordHelper
 
 from platform_shared.auth.session_invalidation import session_cutoff_now
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal, unit_of_work
-from app.repositories.demo import demo_repo
+from app.repositories.demo import demo_people_repo, demo_repo
+from app.repositories.user import account_files_repo
 from app.schemas.demo.demo import (
     DemoCreateResponse,
     DemoCredentials,
@@ -29,8 +31,10 @@ from app.services.demo.demo_constants import (
     make_demo_org_name,
 )
 from app.services.demo.demo_email_service import send_demo_invite
+from app.services.demo.demo_people_constants import DEMO_INQUIRIES
 from app.services.demo.demo_pdf_generator import DemoDocumentPdfGenerator, DemoTaxPdfGenerator
 from app.services.tax import tax_recompute_service
+from app.services.user.account_deletion_service import remove_stored_files
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +64,7 @@ async def create_demo_user(
             db, org_name, user.id, is_demo=True, demo_tag=tag,
         )
         await demo_repo.create_tax_profile(db, org.id)
+        await demo_people_repo.create_people(db, user.id, org.id, DEMO_INQUIRIES, datetime.now(timezone.utc))
         property_ids = await demo_repo.create_properties(db, user.id, org.id, DEMO_PROPERTIES)
         transactions = await demo_repo.create_transactions(
             db, user.id, org.id, property_ids, DEMO_TRANSACTIONS,
@@ -127,7 +132,10 @@ async def delete_demo_user(user_id: uuid.UUID) -> DemoDeleteResponse:
         org_id = org.id
 
     async with unit_of_work() as db:
+        storage_keys = await account_files_repo.list_storage_keys(db, [org_id])
+        await demo_people_repo.delete_people(db, org_id)
         await demo_repo.delete_demo_user_completely(db, user_id, org_id)
+    remove_stored_files(storage_keys)
 
     logger.info("DEMO_ACTION deleted demo user user_id=%s org_id=%s", user_id, org_id)
     return DemoDeleteResponse(message=f"Demo user {user_id} deleted successfully")
@@ -149,7 +157,12 @@ async def reset_demo_user(user_id: uuid.UUID) -> DemoResetResponse:
         org_id = org.id
 
     async with unit_of_work() as db:
+        storage_keys = await account_files_repo.list_storage_keys(db, [org_id])
+        await demo_people_repo.delete_people(db, org_id)
         await demo_repo.delete_all_demo_data(db, user_id, org_id)
+        # A reset keeps some records, such as lease templates, and their files with them.
+        kept_keys = await account_files_repo.list_storage_keys(db, [org_id])
+    remove_stored_files(sorted(set(storage_keys) - set(kept_keys)))
 
     async with unit_of_work() as db:
         password = generate_demo_password()
@@ -158,6 +171,7 @@ async def reset_demo_user(user_id: uuid.UUID) -> DemoResetResponse:
         if existing_user:
             existing_user.hashed_password = hashed
             existing_user.auth_valid_after = session_cutoff_now()
+        await demo_people_repo.create_people(db, user_id, org_id, DEMO_INQUIRIES, datetime.now(timezone.utc))
         property_ids = await demo_repo.create_properties(db, user_id, org_id, DEMO_PROPERTIES)
         transactions = await demo_repo.create_transactions(
             db, user_id, org_id, property_ids, DEMO_TRANSACTIONS,

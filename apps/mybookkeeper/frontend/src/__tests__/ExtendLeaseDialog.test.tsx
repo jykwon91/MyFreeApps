@@ -192,6 +192,22 @@ describe("ExtendLeaseDialog", () => {
     expect(screen.getByTestId("extend-lease-no-email")).toBeInTheDocument();
   });
 
+  it("tells a demo account the email is why nothing changed", async () => {
+    mockExtendLease.mockReturnValueOnce({
+      unwrap: () => Promise.reject({ status: 403, data: { detail: "This feature is not available for demo accounts" } }),
+    });
+    renderDialog(vi.fn(), "2026-12-31", true, vi.fn());
+    fireEvent.change(screen.getByTestId("extend-lease-new-end"), {
+      target: { value: "2027-06-30" },
+    });
+    fireEvent.click(screen.getByTestId("extend-lease-email-tenant"));
+    fireEvent.click(screen.getByTestId("extend-lease-confirm"));
+
+    await waitFor(() => {
+      expect(showError).toHaveBeenCalledWith("Demo accounts can't send email. Nothing was changed.");
+    });
+  });
+
   it("says nothing changed when the address has gone since the page loaded", async () => {
     const onClose = vi.fn();
     const onTenantEmailMissing = vi.fn();
