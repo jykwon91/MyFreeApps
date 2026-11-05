@@ -89,7 +89,7 @@ class TestCheckAccountNotLocked:
         future = datetime.now(tz=timezone.utc) + timedelta(minutes=5)
         locked_user = _make_user(locked_until=future)
 
-        mock_db = MagicMock()
+        mock_db = MagicMock(commit=AsyncMock(), flush=AsyncMock())
         credentials = _make_credentials()
 
         with patch(
@@ -98,7 +98,7 @@ class TestCheckAccountNotLocked:
             return_value=locked_user,
         ):
             with pytest.raises(HTTPException) as exc:
-                await check_account_not_locked(credentials=credentials, db=mock_db)
+                await check_account_not_locked(request=MagicMock(), credentials=credentials, db=mock_db)
 
         assert exc.value.status_code == 429
         assert exc.value.detail == RATE_LIMIT_GENERIC_DETAIL
@@ -113,7 +113,7 @@ class TestCheckAccountNotLocked:
             new_callable=AsyncMock,
             return_value=unlocked_user,
         ):
-            await check_account_not_locked(credentials=_make_credentials(), db=mock_db)
+            await check_account_not_locked(request=MagicMock(), credentials=_make_credentials(), db=mock_db)
 
     @pytest.mark.asyncio
     async def test_unknown_email_does_not_raise(self) -> None:
@@ -125,6 +125,7 @@ class TestCheckAccountNotLocked:
             return_value=None,
         ):
             await check_account_not_locked(
+                request=MagicMock(),
                 credentials=_make_credentials(email="ghost@example.com"),
                 db=mock_db,
             )
@@ -140,7 +141,7 @@ class TestCheckAccountNotLocked:
             new_callable=AsyncMock,
             return_value=user,
         ):
-            await check_account_not_locked(credentials=_make_credentials(), db=mock_db)
+            await check_account_not_locked(request=MagicMock(), credentials=_make_credentials(), db=mock_db)
 
 
 # ---------------------------------------------------------------------------

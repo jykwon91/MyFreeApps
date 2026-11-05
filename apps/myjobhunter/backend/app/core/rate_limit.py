@@ -15,7 +15,6 @@ Existing tests can keep monkeypatching the module-level symbols
 the dependencies to the module-level names so those patches still take
 effect on the next request.
 """
-from datetime import datetime, timezone
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
@@ -26,6 +25,7 @@ from platform_shared.core.auth_messages import RATE_LIMIT_GENERIC_DETAIL
 from platform_shared.core.rate_limit import (
     RateLimiter,
     email_domain_from_request,
+    make_check_account_not_locked,
     make_check_json_login_not_locked,
     make_require_turnstile,
 )
@@ -34,7 +34,8 @@ from platform_shared.services.turnstile_service import verify_turnstile_token
 
 from app.core.config import settings
 from app.db.session import get_db
-from app.repositories.user.user_repo import get_by_email as get_user_by_email
+# Case-insensitive like fastapi-users, or changing one letter's case gets past the lock check.
+from app.repositories.user.user_repo import get_by_email_ci as get_user_by_email
 from app.services.system.auth_event_service import log_auth_event
 
 
@@ -156,19 +157,18 @@ async def check_totp_rate_limit(
         raise
 
 
+# The lambda looks the function up at call time, so tests can patch it here.
+_check_form_login_not_locked = make_check_account_not_locked(
+    lambda db, email: get_user_by_email(db, email),
+)
+
+
 async def check_account_not_locked(
+    request: Request,
     credentials: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    """Reject login attempts for accounts currently under lockout."""
-    user = await get_user_by_email(db, credentials.username)
-    if user is None:
-        return
-    if user.locked_until and user.locked_until > datetime.now(tz=timezone.utc):
-        raise HTTPException(
-            status_code=429,
-            detail=RATE_LIMIT_GENERIC_DETAIL,
-        )
+    await _check_form_login_not_locked(credentials, db, request)
 
 
 # The lambda looks the function up at call time, so tests can patch it here.

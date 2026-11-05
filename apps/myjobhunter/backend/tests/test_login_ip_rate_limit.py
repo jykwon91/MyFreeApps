@@ -144,6 +144,7 @@ class TestResponseBodyIndistinguishability:
 
         with pytest.raises(HTTPException) as lock_exc_info:
             await check_account_not_locked(
+                request=request,
                 credentials=_make_credentials(locked_user.email),
                 db=db,
             )

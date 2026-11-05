@@ -229,10 +229,30 @@ def make_check_login_ip_limit(
 # Account-lockout factory (early-reject before password check)
 # ---------------------------------------------------------------------------
 
+async def _refuse_if_locked(user: Any, db: AsyncSession, request: Request) -> None:
+    """Record ``LOGIN_BLOCKED_LOCKED`` and raise 429 if ``user`` is locked right now.
+
+    The 429 is byte-identical to the per-IP and registration gates, so callers
+    can't tell which one fired. The row has to be saved here, because the raise
+    ends the request before anything else would commit it.
+    """
+    locked_until = getattr(user, "locked_until", None)
+    if locked_until and locked_until > datetime.now(tz=timezone.utc):
+        await log_auth_event(
+            db,
+            event_type=AuthEventType.LOGIN_BLOCKED_LOCKED,
+            user_id=user.id,
+            request=request,
+            succeeded=False,
+        )
+        await db.commit()
+        raise HTTPException(status_code=429, detail=RATE_LIMIT_GENERIC_DETAIL)
+
+
 def make_check_account_not_locked(
     user_lookup: UserLookup,
-) -> Callable[[OAuth2PasswordRequestForm, AsyncSession], Awaitable[None]]:
-    """Build the account-lockout dependency.
+) -> Callable[[OAuth2PasswordRequestForm, AsyncSession, Request], Awaitable[None]]:
+    """Build the account-lockout check for logins that send the OAuth2 form.
 
     Runs BEFORE the password check so a locked account is rejected
     without revealing password correctness, and without further
@@ -240,27 +260,20 @@ def make_check_account_not_locked(
     inside ``UserManager.authenticate`` on a real password failure).
 
     ``user_lookup`` is the app's own repository function — typically
-    ``user_repo.get_by_email`` — passed in to avoid coupling this
+    ``user_repo.get_by_email_ci`` — passed in to avoid coupling this
     module to any app's User model.
-
-    On block, raises 429 with the shared ``RATE_LIMIT_GENERIC_DETAIL``
-    so the response is byte-identical to per-IP and registration gates.
     """
 
     async def _check_account_not_locked(
         credentials: OAuth2PasswordRequestForm,
         db: AsyncSession,
+        request: Request,
     ) -> None:
         user = await user_lookup(db, credentials.username)
         if user is None:
             # Unknown email — let the normal auth flow handle it (timing-safe).
             return
-        locked_until = getattr(user, "locked_until", None)
-        if locked_until and locked_until > datetime.now(tz=timezone.utc):
-            raise HTTPException(
-                status_code=429,
-                detail=RATE_LIMIT_GENERIC_DETAIL,
-            )
+        await _refuse_if_locked(user, db, request)
 
     return _check_account_not_locked
 
@@ -288,11 +301,7 @@ async def _login_email_from_body(request: Request) -> str | None:
 def make_check_json_login_not_locked(
     user_lookup: UserLookup,
 ) -> Callable[[Request, AsyncSession], Awaitable[None]]:
-    """Build the lockout check for logins that send JSON instead of the OAuth2 form.
-
-    On block, it records ``LOGIN_BLOCKED_LOCKED`` and raises the same 429 as every
-    other gate, so callers can't tell which one fired.
-    """
+    """Build the lockout check for logins that send JSON instead of the OAuth2 form."""
 
     async def _check(request: Request, db: AsyncSession) -> None:
         email = await _login_email_from_body(request)
@@ -301,16 +310,6 @@ def make_check_json_login_not_locked(
         user = await user_lookup(db, email)
         if user is None:
             return
-        locked_until = getattr(user, "locked_until", None)
-        if locked_until and locked_until > datetime.now(tz=timezone.utc):
-            await log_auth_event(
-                db,
-                event_type=AuthEventType.LOGIN_BLOCKED_LOCKED,
-                user_id=user.id,
-                request=request,
-                succeeded=False,
-            )
-            await db.commit()
-            raise HTTPException(status_code=429, detail=RATE_LIMIT_GENERIC_DETAIL)
+        await _refuse_if_locked(user, db, request)
 
     return _check

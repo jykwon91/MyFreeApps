@@ -20,7 +20,6 @@ Existing call sites inside MBK (``app.main``, ``app.api.totp``, route
 gates, tests) keep their imports — every public name from before M6
 still resolves here.
 """
-from datetime import datetime, timezone
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
@@ -31,6 +30,7 @@ from platform_shared.core.auth_messages import RATE_LIMIT_GENERIC_DETAIL
 from platform_shared.core.rate_limit import (
     RateLimiter,
     email_domain_from_request,
+    make_check_account_not_locked,
     make_check_json_login_not_locked,
     make_require_turnstile,
 )
@@ -39,7 +39,8 @@ from platform_shared.services.turnstile_service import verify_turnstile_token
 from app.core.config import settings
 from app.core.request_utils import get_client_ip
 from app.db.session import get_db
-from app.repositories.user.user_repo import get_by_email as get_user_by_email
+# Case-insensitive like fastapi-users, or changing one letter's case gets past the lock check.
+from app.repositories.user.user_repo import get_by_email_ci as get_user_by_email
 from platform_shared.services.auth_event_service import log_auth_event
 
 
@@ -199,26 +200,18 @@ async def check_register_rate_limit(request: Request) -> None:
     await require_turnstile(request)
 
 
+# The lambda looks the function up at call time, so tests can patch it here.
+_check_form_login_not_locked = make_check_account_not_locked(
+    lambda db, email: get_user_by_email(db, email),
+)
+
+
 async def check_account_not_locked(
+    request: Request,
     credentials: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    """Reject login attempts for accounts currently under lockout.
-
-    Runs BEFORE the password check so that a locked account is rejected
-    without revealing password correctness, and without incrementing the
-    failure counter further (the counter is only incremented inside
-    UserManager.authenticate on a real password failure).
-    """
-    user = await get_user_by_email(db, credentials.username)
-    if user is None:
-        # Unknown email — let the normal auth flow handle it (timing-safe).
-        return
-    if user.locked_until and user.locked_until > datetime.now(tz=timezone.utc):
-        raise HTTPException(
-            status_code=429,
-            detail=RATE_LIMIT_GENERIC_DETAIL,
-        )
+    await _check_form_login_not_locked(credentials, db, request)
 
 
 # The lambda looks the function up at call time, so tests can patch it here.

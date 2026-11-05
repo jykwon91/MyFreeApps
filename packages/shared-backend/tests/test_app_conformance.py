@@ -164,6 +164,29 @@ class TestNoLocalBootGuards:
         )
 
 
+@pytest.mark.parametrize(
+    "parts",
+    [("apps", app, "backend", "app", "core", "rate_limit.py") for app in _APPS]
+    + [("infra", "templates", "scaffold", "backend", "app", "core", "rate_limit.py")],
+    ids=[*_APPS, "scaffold"],
+)
+class TestLockCheckComesFromShared:
+    """A copied lock check is how every app stopped recording refused sign-ins."""
+
+    def test_uses_the_shared_factory(self, parts: tuple[str, ...]) -> None:
+        assert "make_check_account_not_locked(" in _read(*parts)
+
+    def test_has_no_lock_logic_of_its_own(self, parts: tuple[str, ...]) -> None:
+        assert "locked_until" not in _read(*parts)
+
+    def test_matches_email_like_the_login_does(self, parts: tuple[str, ...]) -> None:
+        assert "get_by_email_ci as get_user_by_email" in _read(*parts)
+
+    def test_ip_limit_runs_first(self, parts: tuple[str, ...]) -> None:
+        main = _read(*parts[:-2], "main.py")
+        assert main.index("Depends(check_login_rate_limit)") < main.index("Depends(check_account_not_locked)")
+
+
 @pytest.mark.parametrize("app", _APPS)
 class TestLifespanUsesSharedFactory:
     """Each app's lifespan must be built via the shared
