@@ -2,29 +2,22 @@ import { useSearchParams } from "react-router-dom";
 import CraftingGuideView from "@/games/wow-forever/components/crafting/CraftingGuideView";
 import SecondaryGuideView from "@/games/wow-forever/components/professions/SecondaryGuideView";
 import GuideSectionNav from "@/games/wow-forever/components/guide/GuideSectionNav";
+import ProfessionPicker from "@/games/wow-forever/components/professions/ProfessionPicker";
 import LevelCapNote from "@/games/wow-forever/components/shared/LevelCapNote";
 import NumberField from "@/games/wow-forever/components/shared/NumberField";
 import SegmentedToggle from "@/games/wow-forever/components/shared/SegmentedToggle";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
-import { PROFESSION, type Profession } from "@/games/wow-forever/data/professions/professionTypes";
 import { CRAFTING_GUIDES } from "@/games/wow-forever/data/professions/crafting/craftingGuide";
 import { LOOT_SECTION_ID } from "@/games/wow-forever/data/professions/crafting/disenchantOrSell";
 import { PROFESSIONS_DATA_STATUS } from "@/games/wow-forever/data/professions/professionsStatus";
 import { levelCap, playerLevel } from "@/games/wow-forever/data/levelCap";
 import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
-import { CRAFTING_PROFESSION, type CraftingProfession } from "@/games/wow-forever/types/crafting";
+import type { GuideProfession } from "@/games/wow-forever/data/professions/professionPicker";
+import { isCraftingProfession, parseGuideProfession } from "@/games/wow-forever/lib/guideProfession";
+import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
 import { FACTION, type PlayerFaction } from "@/games/wow-forever/types/worldMap";
 
 export const PROFESSION_PARAM = "p";
-
-type GuideProfession = Profession | CraftingProfession;
-
-const PROFESSION_OPTIONS: readonly { id: GuideProfession; label: string }[] = [
-  { id: PROFESSION.cooking, label: "Cooking" },
-  { id: PROFESSION.fishing, label: "Fishing" },
-  { id: CRAFTING_PROFESSION.tailoring, label: "Tailoring" },
-  { id: CRAFTING_PROFESSION.enchanting, label: "Enchanting" },
-];
 
 const FACTION_OPTIONS: readonly { id: PlayerFaction; label: string }[] = [
   { id: FACTION.alliance, label: "Alliance" },
@@ -51,20 +44,12 @@ function craftingSections(profession: CraftingProfession): readonly { id: string
   return [start, { id: LOOT_SECTION_ID, label: "Disenchant or sell?" }, ...rest];
 }
 
-function parseProfession(raw: string | null): GuideProfession {
-  return PROFESSION_OPTIONS.find((o) => o.id === raw)?.id ?? PROFESSION.cooking;
-}
-
-function isCrafting(profession: GuideProfession): profession is CraftingProfession {
-  return profession === CRAFTING_PROFESSION.tailoring || profession === CRAFTING_PROFESSION.enchanting;
-}
-
 /** /wow-forever/professions — how to train each profession and the fastest route to 300. */
 export default function WowProfessionsPage() {
   const [params, setParams] = useSearchParams();
-  const profession = parseProfession(params.get(PROFESSION_PARAM));
+  const profession = parseGuideProfession(params.get(PROFESSION_PARAM));
   const [player, updatePlayer] = usePlayerSettings();
-  const crafting = isCrafting(profession);
+  const crafting = isCraftingProfession(profession);
 
   function selectProfession(next: GuideProfession) {
     setParams({ [PROFESSION_PARAM]: next }, { replace: true });
@@ -79,14 +64,8 @@ export default function WowProfessionsPage() {
         backLabel="Back to WoW Forever"
       />
       <div className="space-y-3">
+        <ProfessionPicker value={profession} onChange={selectProfession} />
         <div className="flex flex-wrap gap-3">
-          <SegmentedToggle
-            label="Profession"
-            options={PROFESSION_OPTIONS}
-            value={profession}
-            onChange={selectProfession}
-            className="grid grid-cols-2 w-full sm:inline-flex sm:w-auto"
-          />
           <SegmentedToggle
             label="Faction"
             options={FACTION_OPTIONS}

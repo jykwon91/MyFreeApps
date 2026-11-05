@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { MAX_CRAFT_SKILL, parseSkill } from "@/games/wow-forever/crafting/craftRoute";
+import { isCraftingProfession } from "@/games/wow-forever/lib/guideProfession";
 import { readStored, writeStored } from "@/games/wow-forever/lib/safeLocalStorage";
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
 
@@ -14,7 +15,7 @@ function parseStored(raw: unknown): StoredSkills | null {
   const out: StoredSkills = {};
   for (const [key, value] of Object.entries(raw)) {
     const skill = parseSkill(value);
-    if (skill !== null && (key === "tailoring" || key === "enchanting")) out[key] = skill;
+    if (skill !== null && isCraftingProfession(key)) out[key] = skill;
   }
   return out;
 }

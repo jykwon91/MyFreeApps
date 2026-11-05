@@ -3,8 +3,9 @@ import UnconfirmedChip from "@/games/wow-forever/components/professions/Unconfir
 import CraftColorsLine from "@/games/wow-forever/components/crafting/CraftColorsLine";
 import CraftLearnLine, { type CraftPlace } from "@/games/wow-forever/components/crafting/CraftLearnLine";
 import CraftReagents from "@/games/wow-forever/components/crafting/CraftReagents";
+import SourceUnknownChip from "@/games/wow-forever/components/crafting/SourceUnknownChip";
 import { rowStateClass, type RowState } from "@/games/wow-forever/components/crafting/craftRowStyles";
-import { learnAt } from "@/games/wow-forever/crafting/craftRoute";
+import { learnAt, sourceUnknown } from "@/games/wow-forever/crafting/craftRoute";
 import type { CraftRecipe, CraftRouteOptions, TrainerSkills } from "@/games/wow-forever/types/crafting";
 
 interface CraftOptionsRowProps {
@@ -40,7 +41,10 @@ export default function CraftOptionsRow({ step, recipes, trainerSkills, state, p
       <ul className="grid gap-3 sm:grid-cols-2">
         {recipes.map((recipe, i) => (
           <li key={recipe.spell} className="rounded-lg border bg-card p-3 space-y-1.5">
-            <p className="font-medium">{recipe.name}</p>
+            <p className="flex flex-wrap items-center gap-2">
+              <span className="font-medium">{recipe.name}</span>
+              {sourceUnknown(recipe) ? <SourceUnknownChip /> : null}
+            </p>
             <p className="text-xs text-muted-foreground">{step.options[i].detail}</p>
             <CraftColorsLine recipe={recipe} />
             <CraftReagents reagents={recipe.reagents} place={place} professionLabel={professionLabel} />

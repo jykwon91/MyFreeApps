@@ -18,13 +18,16 @@ import { CRAFTING_ROUTES } from "@/games/wow-forever/data/professions/crafting/c
 import { CRAFTING_RANKS } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
 import type { CraftingFile, CraftingProfession, ResolvedRouteEntry, TrainerSkills } from "@/games/wow-forever/types/crafting";
 
-const FILES: Record<CraftingProfession, CraftingFile> = {
+/** The professions that take typed prices. */
+type PricedProfession = Extract<CraftingProfession, "tailoring" | "enchanting">;
+
+const FILES: Record<PricedProfession, CraftingFile> = {
   tailoring: tailoringJson as unknown as CraftingFile,
   enchanting: enchantingJson as unknown as CraftingFile,
 };
 const TRAINER_SKILLS = trainerSkillsJson as unknown as Record<CraftingProfession, TrainerSkills>;
 
-function context(profession: CraftingProfession): CraftContext {
+function context(profession: PricedProfession): CraftContext {
   const file = FILES[profession];
   return {
     file,
@@ -132,7 +135,7 @@ describe("enchantSlot", () => {
 });
 
 /** Price everything the route or any recipe uses, at 1s, then override. */
-function priceAll(profession: CraftingProfession, overrides: EnteredPrices, choices: RouteChoices = NO_CHOICES): EnteredPrices {
+function priceAll(profession: PricedProfession, overrides: EnteredPrices, choices: RouteChoices = NO_CHOICES): EnteredPrices {
   const items = priceItems(context(profession), 1, choices);
   const out: Record<string, number> = {};
   for (const item of [...items.main, ...items.more]) out[String(item.id)] = SILVER;
@@ -152,7 +155,7 @@ function usesItem(entries: readonly ResolvedRouteEntry[], from: number, to: numb
   return entries.some((e) => e.kind === "craft" && e.step.from < to && e.step.to > from && e.recipe.reagents.some((r) => r.id === itemId));
 }
 
-function expectValid(profession: CraftingProfession, entries: readonly ResolvedRouteEntry[], start: number, choices: RouteChoices) {
+function expectValid(profession: PricedProfession, entries: readonly ResolvedRouteEntry[], start: number, choices: RouteChoices) {
   const ctx = context(profession);
   expect(entries[0].step.from).toBe(1);
   expect(entries[entries.length - 1].step.to).toBe(MAX_CRAFT_SKILL);

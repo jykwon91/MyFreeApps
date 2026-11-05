@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import tailoringJson from "@/games/wow-forever/data/professions/crafting/tailoring.json";
 import enchantingJson from "@/games/wow-forever/data/professions/crafting/enchanting.json";
+import alchemyJson from "@/games/wow-forever/data/professions/crafting/alchemy.json";
 import trainerSkillsJson from "@/games/wow-forever/data/professions/crafting/classic/trainerSkills.json";
 import {
   currentEntryIndex,
@@ -10,6 +11,7 @@ import {
   parseSkill,
   resolveRoute,
   skillColors,
+  sourceUnknown,
 } from "@/games/wow-forever/crafting/craftRoute";
 import { shoppingList, shoppingListText } from "@/games/wow-forever/crafting/shoppingList";
 import { CRAFTING_GUIDES } from "@/games/wow-forever/data/professions/crafting/craftingGuide";
@@ -25,9 +27,10 @@ const SOURCES = createSourceLookup(sourcesJson as unknown as RawSourcesFile);
 const FILES: Record<CraftingProfession, CraftingFile> = {
   tailoring: tailoringJson as unknown as CraftingFile,
   enchanting: enchantingJson as unknown as CraftingFile,
+  alchemy: alchemyJson as unknown as CraftingFile,
 };
 const TRAINER_SKILLS = trainerSkillsJson as unknown as Record<CraftingProfession, TrainerSkills>;
-const PROFESSIONS = ["tailoring", "enchanting"] as const;
+const PROFESSIONS = ["tailoring", "enchanting", "alchemy"] as const;
 
 function recipeMap(file: CraftingFile): Map<number, CraftRecipe> {
   return new Map(file.recipes.map((r) => [r.spell, r]));
@@ -85,9 +88,17 @@ describe("learnAt", () => {
   const base: CraftRecipe = { spell: 1, name: "X", yellow: 60, grey: 95, reagents: [], learn: { source: "trainer" } };
 
   it("uses the Forever trainer skill and flags it when it moved from Classic", () => {
-    expect(learnAt(base, { "1": { classic: 60, forever: 60 } })).toEqual({ kind: "trainer", skill: 60, estimated: false });
-    expect(learnAt(base, { "1": { classic: 60, forever: 50 } })).toEqual({ kind: "trainer", skill: 50, estimated: true });
-    expect(learnAt(base, {})).toEqual({ kind: "trainer", skill: 60, estimated: true });
+    expect(learnAt(base, { "1": { classic: 60, forever: 60 } })).toEqual({ kind: "trainer", skill: 60, estimated: false, newInForever: false });
+    expect(learnAt(base, { "1": { classic: 60, forever: 50 } })).toEqual({ kind: "trainer", skill: 50, estimated: true, newInForever: false });
+    expect(learnAt(base, {})).toEqual({ kind: "trainer", skill: 60, estimated: true, newInForever: false });
+  });
+
+  it("never points a recipe Forever added at a Classic trainer", () => {
+    const added: CraftRecipe = { ...base, newInForever: true };
+    expect(learnAt(added, {})).toMatchObject({ kind: "trainer", newInForever: true });
+    expect(sourceUnknown(added)).toBe(true);
+    expect(sourceUnknown(base)).toBe(false);
+    expect(sourceUnknown({ ...added, learn: { source: "start", skill: 1 } })).toBe(false);
   });
 
   it("keeps patterns and starting recipes", () => {
@@ -183,5 +194,18 @@ describe.each(PROFESSIONS)("%s route data", (profession) => {
   it("states the right number of new Forever recipes", () => {
     const count = file.recipes.filter((r) => r.newInForever).length;
     expect(CRAFTING_GUIDES[profession].forever.some((c) => c.text.includes(`adds ${count} `))).toBe(true);
+  });
+
+  it("states how many Forever recipes have no known source yet", () => {
+    const count = file.recipes.filter(sourceUnknown).length;
+    if (count === 0) return;
+    expect(CRAFTING_GUIDES[profession].forever.some((c) => c.text.startsWith(`${count} Forever recipes: source not known yet`))).toBe(true);
+  });
+
+  it("never sends you to a Classic source for a recipe Forever added", () => {
+    for (const entry of entries) {
+      if (entry.kind !== "craft" || !entry.recipe.newInForever || entry.learn.kind !== "trainer") continue;
+      expect(entry.learn.newInForever, entry.recipe.name).toBe(true);
+    }
   });
 });

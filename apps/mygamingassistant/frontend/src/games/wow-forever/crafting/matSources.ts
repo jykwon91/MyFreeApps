@@ -4,8 +4,10 @@
  * Classic (cmangos classic-db) — the page labels them so.
  */
 import {
+  describeGather,
   describeRareDrop,
   farmSpots,
+  gatherOfSpots,
   isCommonDrop,
   isRareDrop,
   levelRange,
@@ -13,6 +15,7 @@ import {
   mobsForLevel,
   placeLabel,
   questsFor,
+  rankObjectSpots,
   splitVendors,
   stockSize,
   unknownSource,
@@ -120,10 +123,18 @@ export function soldToYou(sources: ItemSources, faction: PlayerFaction): boolean
   return splitVendors(sources.vendors, faction, null).yours.length > 0;
 }
 
-/** "Found in Giant Clam (Stranglethorn Vale)" — where the most of them are, when they lie on the ground. */
-function containerPart(sources: ItemSources): string {
-  const [spot] = sources.objectSpots;
+/** "Found in Giant Clam (Stranglethorn Vale)" — the nearest zone with them, when they lie on the ground. */
+function containerPart(sources: ItemSources, { faction, zoneId }: MatPlace): string {
+  const [spot] = rankObjectSpots(sources.objectSpots, faction, zoneId);
   return spot ? `Found in ${spot.name} (${spot.spot.zoneName})` : `Found in ${sources.containers[0]}`;
+}
+
+/** "Herbalism (skill 50): Mageroyal, The Barrens" — herbs and ore: gather them, nearest zone first. */
+function gatherPart(sources: ItemSources, { faction, zoneId }: MatPlace): string | null {
+  const gather = gatherOfSpots(sources.objectSpots);
+  const [spot] = rankObjectSpots(sources.objectSpots, faction, zoneId);
+  if (!gather || !spot) return null;
+  return `${describeGather(gather)}: ${spot.name}, ${spot.spot.zoneName}`;
 }
 
 /**
@@ -135,14 +146,17 @@ export function matSummary(info: MatInfo, place: MatPlace, maxParts = SUMMARY_PA
   const { faction, zoneId } = place;
   const vendor = vendorPart(sources, faction, zoneId);
   const parts: string[] = [];
+  // Herbs and ore: picking them is the way; the mobs that sometimes drop them are a footnote.
+  const gather = gatherPart(sources, place);
+  if (gather) parts.push(gather);
   if (vendor && !vendor.limited) parts.push(vendor.text);
   if (sources.disenchant) parts.push(disenchantPart(sources.disenchant));
   if (sources.skinning) parts.push(`Skin beasts ${levelRange(sources.skinning.levels)}`);
-  if (sources.drop) parts.push(dropPart(sources.drop, place));
+  if (sources.drop && !gather) parts.push(dropPart(sources.drop, place));
   if (madeBy) parts.push(`Made by ${madeBy}`);
   if (vendor?.limited) parts.push(vendor.text);
   // A chest that happens to hold cloth isn't worth naming next to the mobs that drop it.
-  if (sources.containers.length && !sources.drop) parts.push(containerPart(sources));
+  if (sources.containers.length && !sources.drop && !gather) parts.push(containerPart(sources, place));
   if (questsFor(sources.quests, faction).length) parts.push("Quest reward");
   if (sources.fishing.length) parts.push("Fishing");
   if (sources.vendors.length && !vendor) parts.push("Only the other faction's vendors sell it");

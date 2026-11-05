@@ -18,6 +18,7 @@ export type CraftingDataState =
 const RECIPE_FILES: Readonly<Record<CraftingProfession, () => Promise<{ default: unknown }>>> = {
   tailoring: () => import("@/games/wow-forever/data/professions/crafting/tailoring.json"),
   enchanting: () => import("@/games/wow-forever/data/professions/crafting/enchanting.json"),
+  alchemy: () => import("@/games/wow-forever/data/professions/crafting/alchemy.json"),
 };
 
 async function load(profession: CraftingProfession): Promise<CraftingData> {
@@ -38,22 +39,22 @@ async function load(profession: CraftingProfession): Promise<CraftingData> {
 
 /** The generated recipe, trainer and source data for one crafting profession. */
 export function useCraftingData(profession: CraftingProfession): CraftingDataState {
-  const [attempt, setAttempt] = useState(0);
-  const [result, setResult] = useState<{ profession: CraftingProfession; attempt: number; data: CraftingData | null } | null>(null);
-  const retry = useCallback(() => setAttempt((n) => n + 1), []);
+  const [result, setResult] = useState<{ profession: CraftingProfession; data: CraftingData | null } | null>(null);
+  // The browser remembers a module import that failed and won't fetch it again, so a retry reloads the page.
+  const retry = useCallback(() => window.location.reload(), []);
 
   useEffect(() => {
     let live = true;
     load(profession).then(
-      (data) => live && setResult({ profession, attempt, data }),
-      () => live && setResult({ profession, attempt, data: null }),
+      (data) => live && setResult({ profession, data }),
+      () => live && setResult({ profession, data: null }),
     );
     return () => {
       live = false;
     };
-  }, [profession, attempt]);
+  }, [profession]);
 
-  if (!result || result.profession !== profession || result.attempt !== attempt) return { status: "loading" };
+  if (!result || result.profession !== profession) return { status: "loading" };
   if (!result.data) return { status: "error", retry };
   return { status: "ready", data: result.data };
 }

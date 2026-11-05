@@ -1,5 +1,5 @@
 /**
- * WoW Forever Professions guide (Cooking, Fishing, Tailoring, Enchanting) — static, frontend-only page.
+ * WoW Forever Professions guide (Cooking, Fishing, Tailoring, Enchanting, Alchemy) — static, frontend-only page.
  *
  * Run: npm run test:e2e -- wow-forever-professions
  */
@@ -82,7 +82,7 @@ test("Enchanting says when to disenchant and when to sell", async ({ page }) => 
 
 test("the crafting guides never scroll sideways on a phone", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
-  for (const p of ["tailoring", "enchanting"]) {
+  for (const p of ["tailoring", "enchanting", "alchemy"]) {
     await page.goto(`/wow-forever/professions?p=${p}&skill=150`);
     await expect(page.locator("#route").getByText("You are here")).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -113,4 +113,93 @@ test("cloth points at a farm spot you can handle at your level", async ({ page }
   await silk.locator("summary").click();
   await silk.getByRole("button", { name: /^Show \d+ more farm spots$/ }).click();
   await expect(silk.getByText("Too high for level 30").first()).toBeVisible();
+});
+
+test("the picker groups crafting and secondary professions, one choice across both", async ({ page }) => {
+  await page.goto("/wow-forever/professions?p=enchanting");
+  const crafting = page.getByRole("radiogroup", { name: "Crafting professions" });
+  const secondary = page.getByRole("radiogroup", { name: "Secondary professions" });
+  await expect(crafting.getByRole("radio", { name: "Enchanting" })).toBeChecked();
+  await expect(secondary.getByRole("radio", { checked: true })).toHaveCount(0);
+  await expect(crafting.getByRole("radio")).toHaveText(["Alchemy", "Enchanting", "Tailoring"]);
+  await expect(page.getByText(/You can learn two crafting professions \(Classic rule\)/)).toBeVisible();
+
+  await secondary.getByRole("radio", { name: "Fishing" }).click();
+  await expect(page).toHaveURL(/\?p=fishing$/);
+  await expect(crafting.getByRole("radio", { checked: true })).toHaveCount(0);
+});
+
+test("an unknown profession link opens Cooking", async ({ page }) => {
+  await page.goto("/wow-forever/professions?p=jewelcrafting");
+  await expect(page.getByRole("radio", { name: "Cooking" })).toBeChecked();
+});
+
+test("the picker is three big targets to a row on a phone", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto("/wow-forever/professions?p=alchemy");
+  const radios = page.getByRole("radiogroup", { name: "Crafting professions" }).getByRole("radio");
+  await expect(radios).toHaveCount(3);
+  const boxes = await Promise.all((await radios.all()).map((r) => r.boundingBox()));
+  for (const box of boxes) expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+  expect(new Set(boxes.map((b) => Math.round(b?.y ?? 0))).size).toBe(1);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("Alchemy shows a hand-picked herb route with no prices, and where each herb grows", async ({ page }) => {
+  await page.goto("/wow-forever/professions");
+  await page.getByRole("radio", { name: "Alchemy" }).click();
+  await expect(page).toHaveURL(/\?p=alchemy$/);
+  const start = page.getByLabel("Get started: train it first");
+  await expect(start.getByText("Lilyssia Nightbreeze")).toBeVisible();
+  await expect(start.getByText("Works well with Herbalism")).toBeVisible();
+
+  const route = page.locator("#route");
+  await route.getByLabel("Your skill").fill("150");
+  await expect(page).toHaveURL(/skill=150/);
+  await expect(route.getByText("Craft Lesser Mana Potion until 165.")).toBeVisible();
+  await expect(route.locator('[aria-current="step"]').getByText("Lesser Mana Potion")).toBeVisible();
+  // No typed prices for Alchemy: no prices panel, no "cheapest" claim, no gold anywhere.
+  await expect(page.getByRole("region", { name: "Your prices" })).toHaveCount(0);
+  await expect(page.getByText(/cheapest/i)).toHaveCount(0);
+  await expect(page.locator("main").last()).not.toContainText(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
+  await expect(route.getByRole("heading", { name: "Transmutes" })).toBeVisible();
+  await expect(route.getByTestId("transmutes").getByText("Transmute: Legionite")).toBeVisible();
+
+  const shopping = page.locator("#shopping");
+  await shopping.locator("summary").first().click();
+  await expect(shopping.getByText(/Don't sell your crafts yet/)).toBeVisible();
+  const kelp = shopping.locator('details[data-mat="3820"]');
+  await expect(kelp.locator("summary")).toContainText(/Herbalism \(skill \d+\): Stranglekelp, /);
+  await kelp.locator("summary").click();
+  await expect(kelp.getByText(/Gather with Herbalism \(skill \d+\) from/)).toBeVisible();
+  await expect(kelp.getByRole("link", { name: /^Directions to Stranglekelp/ }).first()).toHaveAttribute("href", /\/wow-forever\/map\?to=/);
+});
+
+test("the loading skeleton keeps room for prices only where there are prices", async ({ page }) => {
+  let release: () => void = () => {};
+  const held = new Promise<void>((resolve) => (release = resolve));
+  await page.route(/crafting\/(alchemy|tailoring)\.json/, async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.goto("/wow-forever/professions?p=alchemy");
+  const skeleton = page.getByTestId("craft-route-skeleton");
+  await expect(skeleton).toBeVisible();
+  await expect(skeleton.getByTestId("craft-prices-skeleton")).toHaveCount(0);
+  await page.getByRole("radio", { name: "Tailoring" }).click();
+  await expect(skeleton.getByTestId("craft-prices-skeleton")).toHaveCount(1);
+  release();
+  await expect(page.locator("#route").getByLabel("Your skill")).toBeVisible();
+  await expect(skeleton).toHaveCount(0);
+});
+
+test("a route that fails to load names the profession and retries", async ({ page }) => {
+  let fail = true;
+  await page.route(/crafting\/alchemy\.json/, (route) => (fail ? route.abort() : route.continue()));
+  await page.goto("/wow-forever/professions?p=alchemy");
+  await expect(page.getByText("The Alchemy leveling route didn't load.")).toBeVisible();
+  fail = false;
+  await page.getByRole("button", { name: "Retry" }).click();
+  await expect(page.locator("#route").getByLabel("Your skill")).toBeVisible();
 });

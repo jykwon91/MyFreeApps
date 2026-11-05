@@ -22,6 +22,8 @@ interface CraftLearnLineProps {
 }
 
 function trainerText(learn: Extract<LearnAt, { kind: "trainer" }>, professionLabel: string): string {
+  // No Classic trainer teaches a recipe Forever added — don't name one.
+  if (learn.newInForever) return `New in Forever: source not known yet (probably a ${professionLabel} trainer, at about skill ${learn.skill})`;
   if (learn.estimated) return `${professionLabel} trainer, at about skill ${learn.skill}`;
   return `${professionLabel} trainer, at skill ${learn.skill}`;
 }

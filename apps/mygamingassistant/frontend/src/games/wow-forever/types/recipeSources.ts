@@ -36,6 +36,10 @@ export interface MobSpot {
 export const MOB_KIND = { farm: "", rare: "rare", elite: "elite", few: "few" } as const;
 export type MobKind = (typeof MOB_KIND)[keyof typeof MOB_KIND];
 
+/** The gathering profession a herb or ore node needs (from the Forever client's lock). */
+export const GATHER_SKILL = { herbalism: "herbalism", mining: "mining" } as const;
+export type GatherSkill = (typeof GATHER_SKILL)[keyof typeof GATHER_SKILL];
+
 export interface DropMob {
   name: string;
   minLevel: number;
@@ -108,6 +112,8 @@ export interface ObjectSpot {
   /** How many spawn in this zone. */
   count: number;
   spot: MobSpot;
+  /** A herb or ore node: the profession that gathers it, and the skill it takes. Null = anyone opens it. */
+  gather: { skill: GatherSkill; level: number } | null;
 }
 
 /** A clam that's an item (Small Barnacled Clam): open it — and these mobs drop it. */

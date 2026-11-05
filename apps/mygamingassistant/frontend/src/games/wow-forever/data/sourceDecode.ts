@@ -1,5 +1,5 @@
 import { TERRITORY, type Faction, type Territory } from "@/games/wow-forever/types/worldMap";
-import { MOB_KIND } from "@/games/wow-forever/types/recipeSources";
+import { GATHER_SKILL, MOB_KIND, type GatherSkill } from "@/games/wow-forever/types/recipeSources";
 import type {
   ContainerDrop,
   DisenchantFrom,
@@ -32,7 +32,7 @@ export interface RawSources {
   skinning?: { levels: number[]; zones: number[] };
   fishing?: string[];
   containers?: string[];
-  /** `[name, count, zone, subzone, x, y]`. */
+  /** `[name, count, zone, subzone, x, y, gather, skill]` — gather "herbalism" / "mining" / "". */
   objectSpots?: Row[];
   containerDrops?: [string, NonNullable<RawSources["drop"]>][];
 }
@@ -63,6 +63,15 @@ const MOB_KINDS: readonly string[] = Object.values(MOB_KIND);
 /** The data's "kind" column; anything unknown (or missing, in older rows) is a mob to farm. */
 function mobKind(value: unknown): MobKind {
   return MOB_KINDS.includes(String(value)) ? (String(value) as MobKind) : MOB_KIND.farm;
+}
+
+function isGatherSkill(value: unknown): value is GatherSkill {
+  return value === GATHER_SKILL.herbalism || value === GATHER_SKILL.mining;
+}
+
+/** The object spot's gather columns: a herb / ore node, or null for a clam or crate anyone opens. */
+function gatherOf(skill: unknown, level: unknown): ObjectSpot["gather"] {
+  return isGatherSkill(skill) ? { skill, level: Number(level) } : null;
 }
 
 export function createSourceLookup(raw: RawSourcesFile): SourceLookup {
@@ -144,9 +153,9 @@ export function createSourceLookup(raw: RawSourcesFile): SourceLookup {
   }
 
   function objectSpot(r: Row): ObjectSpot | null {
-    const [name, count, zoneId, subzone, x, y] = r;
+    const [name, count, zoneId, subzone, x, y, gather, skill] = r;
     const spot = spotAt(zoneId, subzone, x, y);
-    return spot ? { name: String(name), count: Number(count), spot } : null;
+    return spot ? { name: String(name), count: Number(count), spot, gather: gatherOf(gather, skill) } : null;
   }
 
   function drop(d: RawSources["drop"]): DropSource | null {

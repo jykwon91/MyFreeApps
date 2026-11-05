@@ -237,9 +237,10 @@ class TestRecipeSources:
 
     def test_giant_clams_say_where_they_lie(self, recipe_sources: dict) -> None:
         """"Found in Giant Clam" alone sends nobody anywhere: each container on the ground has a placed spot."""
-        name, count, zone, subzone, x, y = recipe_sources["reagents"]["4655"]["objectSpots"][0]
+        name, count, zone, subzone, x, y, gather, skill = recipe_sources["reagents"]["4655"]["objectSpots"][0]
         assert (name, recipe_sources["zones"][str(zone)], subzone) == ("Giant Clam", "Stranglethorn Vale", "The Vile Reef")
         assert count > 1 and 0 <= x <= 100 and 0 <= y <= 100
+        assert (gather, skill) == ("", 0)
         for record in recipe_sources["reagents"].values():
             for spot in record.get("objectSpots", []):
                 assert spot[0] in record["containers"] and str(spot[2]) in recipe_sources["zones"]

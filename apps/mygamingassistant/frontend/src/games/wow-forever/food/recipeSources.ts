@@ -5,7 +5,17 @@
 import { FACTION, TERRITORY, type Faction, type PlayerFaction, type Territory } from "@/games/wow-forever/types/worldMap";
 import { ENDPOINT_KIND, formatEndpoint } from "@/games/wow-forever/worldMap/trip";
 import type { FoodRecord } from "@/games/wow-forever/types/food";
-import { MOB_KIND, type DropMob, type DropSource, type ItemSources, type MobKind, type MobSpot, type VendorSpot } from "@/games/wow-forever/types/recipeSources";
+import {
+  MOB_KIND,
+  type DropMob,
+  type DropSource,
+  type GatherSkill,
+  type ItemSources,
+  type MobKind,
+  type MobSpot,
+  type ObjectSpot,
+  type VendorSpot,
+} from "@/games/wow-forever/types/recipeSources";
 
 /** Classic item ids stop well below this; Forever's new items start far above it. */
 export const FIRST_FOREVER_ITEM_ID = 100_000;
@@ -132,6 +142,24 @@ function groundRank(spot: MobSpot | null, faction: PlayerFaction, zoneId: number
   if (spot.zoneId === zoneId) return 0;
   if (spot.territory === TERRITORY.contested || spot.territory === null) return 2;
   return isHostileGround(spot, faction) ? 3 : 1;
+}
+
+const GATHER_LABEL: Readonly<Record<GatherSkill, string>> = { herbalism: "Herbalism", mining: "Mining" };
+
+/** "Herbalism (skill 50)" — what it takes to gather a node. */
+export function describeGather(gather: NonNullable<ObjectSpot["gather"]>): string {
+  return `${GATHER_LABEL[gather.skill]} (skill ${gather.level})`;
+}
+
+/** The node's gather skill when the item grows on herb / ore nodes, else null. */
+export function gatherOfSpots(spots: readonly ObjectSpot[]): ObjectSpot["gather"] {
+  return spots.find((o) => o.gather)?.gather ?? null;
+}
+
+/** Clams, herbs or veins on the ground: your zone, your side's zones, contested, then theirs — most spawns first. */
+export function rankObjectSpots(spots: readonly ObjectSpot[], faction: PlayerFaction, zoneId: number | null): ObjectSpot[] {
+  const rank = (o: ObjectSpot) => groundRank(o.spot, faction, zoneId);
+  return [...spots].sort((a, b) => rank(a) - rank(b) || b.count - a.count);
 }
 
 /**

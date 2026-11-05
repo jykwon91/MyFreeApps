@@ -41,9 +41,15 @@ export function learnAt(recipe: CraftRecipe, trainerSkills: TrainerSkills): Lear
   const learn = recipe.learn;
   if (learn.source === "start") return { kind: "start" };
   if (learn.source === "item") return { kind: "item", skill: learn.skill, itemId: learn.itemId, item: learn.item };
+  const newInForever = recipe.newInForever === true;
   const known = trainerSkills[String(recipe.spell)];
-  if (!known) return { kind: "trainer", skill: recipe.yellow, estimated: true };
-  return { kind: "trainer", skill: known.forever, estimated: known.forever !== known.classic };
+  if (!known) return { kind: "trainer", skill: recipe.yellow, estimated: true, newInForever };
+  return { kind: "trainer", skill: known.forever, estimated: known.forever !== known.classic, newInForever };
+}
+
+/** A recipe Forever added that no Classic source teaches: where to learn it isn't known yet. */
+export function sourceUnknown(recipe: CraftRecipe): boolean {
+  return recipe.newInForever === true && recipe.learn.source !== "start";
 }
 
 export function learnSkill(learn: LearnAt): number {
