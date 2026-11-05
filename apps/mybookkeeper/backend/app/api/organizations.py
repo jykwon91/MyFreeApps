@@ -4,7 +4,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.context import RequestContext
-from app.core.permissions import current_org_member, reject_demo_user, require_org_role
+from app.core.permissions import current_org_member, reject_demo_org, reject_demo_user, require_org_role
 from app.models.organization.organization_member import OrgRole
 from app.models.user.user import User
 from app.core.auth import current_active_user
@@ -141,6 +141,7 @@ async def create_invite(
     org_id: uuid.UUID,
     body: InviteCreate,
     ctx: RequestContext = Depends(require_org_role(OrgRole.OWNER, OrgRole.ADMIN)),
+    _not_demo: RequestContext = Depends(reject_demo_org),
 ) -> InviteRead:
     _verify_org_access(org_id, ctx)
     try:
@@ -196,6 +197,8 @@ async def accept_invite(
             organization_id=str(member.organization_id),
             org_role=member.org_role,
         )
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except LookupError as e:
