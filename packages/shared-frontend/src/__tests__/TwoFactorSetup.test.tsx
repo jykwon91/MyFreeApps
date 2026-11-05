@@ -31,7 +31,7 @@ vi.mock("../lib/toast-store", () => ({
 
 vi.mock("../store/totpApi", () => ({
   useGetTotpStatusQuery: vi.fn(),
-  useSetupTotpMutation: vi.fn(() => [mockSetupTotp, { isLoading: false }]),
+  useSetupTotpMutation: vi.fn(() => [mockSetupTotp, { isLoading: false, reset: vi.fn() }]),
   useVerifyTotpMutation: vi.fn(() => [mockVerifyTotp, { isLoading: false }]),
   useDisableTotpMutation: vi.fn(() => [mockDisableTotp, { isLoading: false }]),
 }));
@@ -42,6 +42,13 @@ import {
   useVerifyTotpMutation,
   useDisableTotpMutation,
 } from "../store/totpApi";
+
+beforeEach(() => {
+  vi.mocked(useSetupTotpMutation).mockReturnValue([
+    mockSetupTotp,
+    { isLoading: false, reset: vi.fn() },
+  ] as unknown as ReturnType<typeof useSetupTotpMutation>);
+});
 
 function renderComponent() {
   // A minimal store that wires the baseApi reducer; the component never
@@ -113,12 +120,24 @@ describe("TwoFactorSetup — enrollment flow", () => {
     } as unknown as ReturnType<typeof useGetTotpStatusQuery>);
     vi.mocked(useSetupTotpMutation).mockReturnValue([
       mockSetupTotp,
-      { isLoading: false },
+      { isLoading: false, reset: vi.fn() },
     ] as unknown as ReturnType<typeof useSetupTotpMutation>);
     vi.mocked(useVerifyTotpMutation).mockReturnValue([
       mockVerifyTotp,
       { isLoading: false },
     ] as unknown as ReturnType<typeof useVerifyTotpMutation>);
+  });
+
+  it("offers no way out while the password is being checked", async () => {
+    vi.mocked(useSetupTotpMutation).mockReturnValue([
+      mockSetupTotp,
+      { isLoading: true, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useSetupTotpMutation>);
+    const user = userEvent.setup();
+    renderComponent();
+    await user.click(screen.getByText("Enable 2FA"));
+
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
   });
 
   it("clicking Enable 2FA calls the setup mutation and renders QR + secret", async () => {
@@ -128,14 +147,23 @@ describe("TwoFactorSetup — enrollment flow", () => {
         Promise.resolve({
           secret: "MYSECRET123",
           provisioning_uri: "otpauth://totp/test?secret=MYSECRET123",
+          algorithm: "sha256",
+          digits: 6,
+          period: 30,
         }),
     });
 
     renderComponent();
     await user.click(screen.getByText("Enable 2FA"));
+    await user.type(screen.getByLabelText("Enter your password to continue"), "my-password");
+    await user.click(screen.getByText("Continue"));
 
     await screen.findByTestId("qr-code");
+    expect(mockSetupTotp).toHaveBeenCalledWith({ password: "my-password" });
     expect(screen.getByText("MYSECRET123")).toBeInTheDocument();
+    expect(
+      screen.getByText("If you enter it by hand: time-based, SHA256, 6 digits, 30 seconds."),
+    ).toBeInTheDocument();
     expect(
       screen.getByText("Enter the 6-digit code from your app"),
     ).toBeInTheDocument();
@@ -148,6 +176,9 @@ describe("TwoFactorSetup — enrollment flow", () => {
         Promise.resolve({
           secret: "ABCDEF",
           provisioning_uri: "otpauth://totp/test",
+          algorithm: "sha256",
+          digits: 6,
+          period: 30,
         }),
     });
     mockVerifyTotp.mockReturnValue({
@@ -160,6 +191,8 @@ describe("TwoFactorSetup — enrollment flow", () => {
 
     renderComponent();
     await user.click(screen.getByText("Enable 2FA"));
+    await user.type(screen.getByLabelText("Enter your password to continue"), "my-password");
+    await user.click(screen.getByText("Continue"));
     await screen.findByPlaceholderText("000000");
     await user.type(screen.getByPlaceholderText("000000"), "654321");
     await user.click(screen.getByText("Verify & Enable"));
@@ -181,11 +214,16 @@ describe("TwoFactorSetup — enrollment flow", () => {
         Promise.resolve({
           secret: "ABCDEF",
           provisioning_uri: "otpauth://totp/test",
+          algorithm: "sha256",
+          digits: 6,
+          period: 30,
         }),
     });
 
     renderComponent();
     await user.click(screen.getByText("Enable 2FA"));
+    await user.type(screen.getByLabelText("Enter your password to continue"), "my-password");
+    await user.click(screen.getByText("Continue"));
     await screen.findByPlaceholderText("000000");
 
     const verifyButton = screen.getByText("Verify & Enable").closest("button")!;
@@ -205,11 +243,16 @@ describe("TwoFactorSetup — enrollment flow", () => {
         Promise.resolve({
           secret: "ABC",
           provisioning_uri: "otpauth://totp/test",
+          algorithm: "sha256",
+          digits: 6,
+          period: 30,
         }),
     });
 
     renderComponent();
     await user.click(screen.getByText("Enable 2FA"));
+    await user.type(screen.getByLabelText("Enter your password to continue"), "my-password");
+    await user.click(screen.getByText("Continue"));
     await screen.findByPlaceholderText("000000");
     const input = screen.getByPlaceholderText("000000");
 
@@ -227,6 +270,9 @@ describe("TwoFactorSetup — enrollment flow", () => {
         Promise.resolve({
           secret: "X",
           provisioning_uri: "otpauth://totp/test",
+          algorithm: "sha256",
+          digits: 6,
+          period: 30,
         }),
     });
     mockVerifyTotp.mockReturnValue({
@@ -235,6 +281,8 @@ describe("TwoFactorSetup — enrollment flow", () => {
 
     renderComponent();
     await user.click(screen.getByText("Enable 2FA"));
+    await user.type(screen.getByLabelText("Enter your password to continue"), "my-password");
+    await user.click(screen.getByText("Continue"));
     await screen.findByPlaceholderText("000000");
     await user.type(screen.getByPlaceholderText("000000"), "000000");
     await user.click(screen.getByText("Verify & Enable"));
@@ -300,5 +348,26 @@ describe("TwoFactorSetup — disable flow", () => {
 
     expect(screen.queryByPlaceholderText("000000")).not.toBeInTheDocument();
     expect(mockDisableTotp).not.toHaveBeenCalled();
+  });
+});
+
+describe("TwoFactorSetup — the password held by the setup call", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it.each([
+    { isLoading: true, resets: 0 },
+    { isLoading: false, resets: 1 },
+  ])("resets $resets time(s) when isLoading is $isLoading", ({ isLoading, resets }) => {
+    const reset = vi.fn();
+    vi.mocked(useSetupTotpMutation).mockReturnValue([
+      mockSetupTotp,
+      { isLoading, originalArgs: { password: "x" }, reset },
+    ] as unknown as ReturnType<typeof useSetupTotpMutation>);
+
+    renderComponent();
+
+    expect(reset).toHaveBeenCalledTimes(resets);
   });
 });

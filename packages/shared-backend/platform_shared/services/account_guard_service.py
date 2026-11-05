@@ -138,9 +138,14 @@ class AccountGuardService:
         events: Sequence[AuthEventType],
         request: Request | None = None,
     ) -> None:
-        """Clear the count and log, for a change the two-factor service has already made."""
+        """Clear the count and log, for a change the two-factor service has already made.
+
+        A lock that landed since that change stays: it came from someone else's attempts.
+        """
         async with self.unit_of_work_factory() as db:
-            self._clear(await self._lock(db, user_id))
+            user = await self._lock(db, user_id)
+            if not is_locked(user, now=_now()):
+                self._clear(user)
             await self._log_all(db, user_id, events, request)
 
     async def spend_step_up_code(

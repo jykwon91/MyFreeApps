@@ -26,6 +26,9 @@ from platform_shared.services.totp_service import (
 LOGIN = {"email": "a@example.com", "password": "correct-password"}
 
 
+PASSWORD = "correct-password"
+
+
 def _user(**overrides: Any) -> SimpleNamespace:
     fields = {
         "id": uuid.uuid4(),
@@ -33,6 +36,7 @@ def _user(**overrides: Any) -> SimpleNamespace:
         "is_active": True,
         "is_verified": True,
         "totp_enabled": False,
+        "hashed_password": "stored-hash",
     }
     return SimpleNamespace(**(fields | overrides))
 
@@ -51,9 +55,13 @@ class _Harness:
         )
         self.manager = MagicMock()
         self.manager.authenticate_password = AsyncMock(return_value=user)
+        self.manager.password_helper.verify_and_update = MagicMock(
+            side_effect=lambda password, _hash: (password == PASSWORD, None),
+        )
         self.guard = MagicMock()
         self.guard.begin_attempt = AsyncMock(return_value=GuardOutcome.ALLOWED)
         self.guard.record_code_attempt = AsyncMock(return_value=GuardOutcome.ALLOWED)
+        self.guard.record_password_attempt = AsyncMock(return_value=GuardOutcome.ALLOWED)
         self.guard.record_success = AsyncMock()
         self.guard.record_event = AsyncMock()
         self.manager.account_guard = self.guard
@@ -201,12 +209,12 @@ def test_login_checks_dont_apply_to_other_routes() -> None:
 def test_setup_is_refused_when_already_enabled() -> None:
     harness = _Harness(_user(totp_enabled=True))
 
-    assert harness.client.post("/auth/totp/setup").status_code == 400
+    assert harness.client.post("/auth/totp/setup", json={"password": PASSWORD}).status_code == 400
     harness.service.setup_totp.assert_not_awaited()
 
 
 def test_setup_returns_the_secret() -> None:
-    resp = _Harness(_user()).client.post("/auth/totp/setup")
+    resp = _Harness(_user()).client.post("/auth/totp/setup", json={"password": PASSWORD})
 
     assert resp.json() == {
         "secret": "secret",
@@ -226,11 +234,69 @@ def test_the_settings_setup_reports_are_the_ones_codes_use() -> None:
     assert matching_time_step(secret, code, algorithm=DEFAULT_TOTP_ALGORITHM, after_step=None) is not None
 
 
+def test_setup_with_the_wrong_password_starts_nothing_and_counts_the_guess() -> None:
+    harness = _Harness(_user())
+    harness.guard.record_password_attempt.return_value = GuardOutcome.WRONG
+
+    resp = harness.client.post("/auth/totp/setup", json={"password": "wrong"})
+
+    assert resp.status_code == 403
+    harness.service.setup_totp.assert_not_awaited()
+    assert harness.guard.record_password_attempt.await_args.kwargs["correct"] is False
+
+
+def test_setup_needs_a_password() -> None:
+    harness = _Harness(_user())
+
+    assert harness.client.post("/auth/totp/setup").status_code == 422
+    assert harness.client.post("/auth/totp/setup", json={"password": ""}).status_code == 422
+    harness.service.setup_totp.assert_not_awaited()
+    harness.guard.record_password_attempt.assert_not_awaited()
+
+
+def test_setup_on_a_locked_account_checks_no_password() -> None:
+    harness = _Harness(_user())
+    harness.guard.begin_attempt.return_value = GuardOutcome.LOCKED
+
+    resp = harness.client.post("/auth/totp/setup", json={"password": PASSWORD})
+
+    assert resp.status_code == 429
+    harness.service.setup_totp.assert_not_awaited()
+    harness.manager.password_helper.verify_and_update.assert_not_called()
+
+
+def test_verify_on_a_locked_account_checks_no_code() -> None:
+    harness = _Harness(_user())
+    harness.guard.begin_attempt.return_value = GuardOutcome.LOCKED
+
+    assert harness.client.post("/auth/totp/verify", json={"code": "123456"}).status_code == 429
+    harness.service.confirm_totp.assert_not_awaited()
+
+
+def test_verify_guess_that_arrives_after_a_lock_gets_the_lock_answer() -> None:
+    harness = _Harness(_user())
+    harness.service.confirm_totp.return_value = (False, [])
+    harness.guard.record_code_attempt.return_value = GuardOutcome.LOCKED
+
+    assert harness.client.post("/auth/totp/verify", json={"code": "000000"}).status_code == 429
+
+
+def test_double_press_on_verify_says_it_is_already_on() -> None:
+    harness = _Harness(_user())
+    harness.service.confirm_totp.return_value = (False, [])
+    harness.guard.record_code_attempt.return_value = GuardOutcome.STATE_CHANGED
+
+    resp = harness.client.post("/auth/totp/verify", json={"code": "123456"})
+
+    assert (resp.status_code, resp.json()["detail"]) == (400, "2FA is already enabled")
+    assert harness.guard.record_code_attempt.await_args.kwargs["expect_totp_enabled"] is False
+
+
 def test_setup_racing_a_verify_is_refused() -> None:
     harness = _Harness(_user())
     harness.service.setup_totp.side_effect = TotpAlreadyEnabledError
 
-    assert harness.client.post("/auth/totp/setup").status_code == 400
+    assert harness.client.post("/auth/totp/setup", json={"password": PASSWORD}).status_code == 400
 
 
 def test_verify_returns_recovery_codes_and_logs_the_event() -> None:
@@ -239,7 +305,7 @@ def test_verify_returns_recovery_codes_and_logs_the_event() -> None:
     resp = harness.client.post("/auth/totp/verify", json={"code": "123456"})
 
     assert resp.json() == {"verified": True, "recovery_codes": ["code-1"]}
-    assert _logged_types(harness) == [AuthEventType.TOTP_ENABLED]
+    assert harness.guard.record_success.await_args.kwargs["events"] == (AuthEventType.TOTP_ENABLED,)
 
 
 def test_wrong_verify_code_enables_nothing() -> None:

@@ -31,7 +31,7 @@ async def test_setup_returns_secret_and_uri_only(
     """Setup returns secret + URI; recovery codes come from /verify (post-confirm)."""
     user = await user_factory()
     async with await as_user(user) as authed:
-        resp = await authed.post("/auth/totp/setup")
+        resp = await authed.post("/auth/totp/setup", json={"password": user["password"]})
 
     assert resp.status_code == 200, resp.text
     body = resp.json()
@@ -49,7 +49,7 @@ async def test_verify_returns_recovery_codes_on_success(
     """First successful /verify call returns the freshly-generated recovery codes."""
     user = await user_factory()
     async with await as_user(user) as authed:
-        setup = await authed.post("/auth/totp/setup")
+        setup = await authed.post("/auth/totp/setup", json={"password": user["password"]})
         secret = setup.json()["secret"]
         verify = await authed.post(
             "/auth/totp/verify",
@@ -73,7 +73,7 @@ async def test_verify_failed_returns_no_recovery_codes(
     """Failed /verify must not leak recovery codes."""
     user = await user_factory()
     async with await as_user(user) as authed:
-        await authed.post("/auth/totp/setup")
+        await authed.post("/auth/totp/setup", json={"password": user["password"]})
         verify = await authed.post("/auth/totp/verify", json={"code": "000000"})
 
     assert verify.status_code == 400
@@ -85,7 +85,7 @@ async def test_setup_does_not_enable_totp_yet(
 ) -> None:
     user = await user_factory()
     async with await as_user(user) as authed:
-        await authed.post("/auth/totp/setup")
+        await authed.post("/auth/totp/setup", json={"password": user["password"]})
         status = await authed.get("/auth/totp/status")
 
     assert status.status_code == 200
@@ -98,13 +98,13 @@ async def test_setup_rejects_when_already_enabled(
 ) -> None:
     user = await user_factory()
     async with await as_user(user) as authed:
-        setup = await authed.post("/auth/totp/setup")
+        setup = await authed.post("/auth/totp/setup", json={"password": user["password"]})
         secret = setup.json()["secret"]
         code = pyotp.TOTP(secret, digest=hashlib.sha256).now()
         await authed.post("/auth/totp/verify", json={"code": code})
 
         # Second setup attempt should be rejected
-        resp = await authed.post("/auth/totp/setup")
+        resp = await authed.post("/auth/totp/setup", json={"password": user["password"]})
     assert resp.status_code == 400
 
 
@@ -114,7 +114,7 @@ async def test_verify_with_correct_code_enables_totp(
 ) -> None:
     user = await user_factory()
     async with await as_user(user) as authed:
-        setup = await authed.post("/auth/totp/setup")
+        setup = await authed.post("/auth/totp/setup", json={"password": user["password"]})
         secret = setup.json()["secret"]
         code = pyotp.TOTP(secret, digest=hashlib.sha256).now()
         verify = await authed.post("/auth/totp/verify", json={"code": code})
@@ -133,7 +133,7 @@ async def test_verify_with_wrong_code_returns_400(
 ) -> None:
     user = await user_factory()
     async with await as_user(user) as authed:
-        await authed.post("/auth/totp/setup")
+        await authed.post("/auth/totp/setup", json={"password": user["password"]})
         resp = await authed.post("/auth/totp/verify", json={"code": "000000"})
         status = await authed.get("/auth/totp/status")
 
@@ -149,7 +149,7 @@ async def test_disable_requires_current_totp_code(
     user = await user_factory()
     async with await as_user(user) as authed:
         # Enroll
-        setup = await authed.post("/auth/totp/setup")
+        setup = await authed.post("/auth/totp/setup", json={"password": user["password"]})
         secret = setup.json()["secret"]
         await authed.post("/auth/totp/verify", json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).now()})
 
@@ -176,7 +176,7 @@ async def test_disable_clears_totp_secret_and_recovery_codes(
     ``totp_recovery_codes`` cleared so a new enrollment can start clean."""
     user = await user_factory()
     async with await as_user(user) as authed:
-        setup = await authed.post("/auth/totp/setup")
+        setup = await authed.post("/auth/totp/setup", json={"password": user["password"]})
         secret = setup.json()["secret"]
         await authed.post("/auth/totp/verify", json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).now()})
         await authed.post("/auth/totp/disable", json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).at(time.time() + 30)})
@@ -210,7 +210,7 @@ async def test_totp_secret_encrypted_at_rest(
     """
     user = await user_factory()
     async with await as_user(user) as authed:
-        setup = await authed.post("/auth/totp/setup")
+        setup = await authed.post("/auth/totp/setup", json={"password": user["password"]})
         plaintext_secret = setup.json()["secret"]
         verify = await authed.post(
             "/auth/totp/verify",
@@ -254,7 +254,7 @@ async def test_verify_requires_six_digit_code(
 ) -> None:
     user = await user_factory()
     async with await as_user(user) as authed:
-        await authed.post("/auth/totp/setup")
+        await authed.post("/auth/totp/setup", json={"password": user["password"]})
         # 5 digits — schema rejects
         resp = await authed.post("/auth/totp/verify", json={"code": "12345"})
     assert resp.status_code == 422

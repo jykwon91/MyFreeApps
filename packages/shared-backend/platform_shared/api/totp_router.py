@@ -1,8 +1,13 @@
 """Shared ``/auth/totp`` routes: enrollment, status and login.
 
 Three enrollment endpoints (require an authenticated user):
-    POST /auth/totp/setup    — start enrollment, return secret + URI
-    POST /auth/totp/verify   — confirm with first 6-digit code, flips totp_enabled=True
+    POST /auth/totp/setup    — start enrollment, return secret + URI. Requires the
+                               password, or a stolen token could turn 2FA on and
+                               lock the owner out.
+    POST /auth/totp/verify   — confirm with first 6-digit code, flips totp_enabled=True.
+                               Wrong codes count toward the lockout too: an enrollment
+                               left unfinished stays open, and a stolen token could
+                               otherwise guess its code without limit.
     POST /auth/totp/disable  — disable 2FA, requires a current TOTP code (not just a password).
                                Wrong codes count toward the same lockout as login,
                                or a stolen token could guess them here without limit.
@@ -32,6 +37,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.auth.refuse_as_locked import refuse_as_locked
 from platform_shared.auth.released_current_user import released_current_user
+from platform_shared.auth.require_current_password import require_current_password
 from platform_shared.auth.totp_route_service import TotpRouteService
 from platform_shared.auth.totp_route_user import TotpRouteUser
 from platform_shared.auth.user_manager import PlatformBaseUserManager
@@ -41,12 +47,15 @@ from platform_shared.schemas.totp.totp_disable_request import TotpDisableRequest
 from platform_shared.schemas.totp.totp_disable_response import TotpDisableResponse
 from platform_shared.schemas.totp.totp_login_request import TotpLoginRequest
 from platform_shared.schemas.totp.totp_login_response import TotpLoginResponse
+from platform_shared.schemas.totp.totp_setup_request import TotpSetupRequest
 from platform_shared.schemas.totp.totp_setup_response import TotpSetupResponse
 from platform_shared.schemas.totp.totp_status_response import TotpStatusResponse
 from platform_shared.schemas.totp.totp_verify_request import TotpVerifyRequest
 from platform_shared.schemas.totp.totp_verify_response import TotpVerifyResponse
 from platform_shared.services.guard_outcome import GuardOutcome
+from platform_shared.services.totp_account_locked_error import TotpAccountLockedError
 from platform_shared.services.totp_already_enabled_error import TotpAlreadyEnabledError
+from platform_shared.services.totp_setup_not_started_error import TotpSetupNotStartedError
 from platform_shared.services.totp_service import (
     DEFAULT_TOTP_ALGORITHM,
     TOTP_DIGITS,
@@ -79,7 +88,10 @@ def build_totp_router(
 
     @router.post("/setup", response_model=TotpSetupResponse)
     async def setup_totp(
+        body: TotpSetupRequest,
+        request: Request,
         user: TotpRouteUser = Depends(released_user),
+        user_manager: PlatformBaseUserManager = Depends(get_user_manager),
     ) -> TotpSetupResponse:
         """Begin enrollment.
 
@@ -89,10 +101,19 @@ def build_totp_router(
         """
         if user.totp_enabled:
             raise HTTPException(400, "2FA is already enabled")
+        await require_current_password(
+            password=body.password, user=user, user_manager=user_manager, request=request,
+        )
         try:
             secret, uri = await totp_service.setup_totp(user.id)
         except TotpAlreadyEnabledError as exc:
             raise HTTPException(400, "2FA is already enabled") from exc
+        except TotpAccountLockedError:
+            await user_manager.account_guard.record_event(
+                AuthEventType.LOGIN_BLOCKED_LOCKED, user_id=user.id, request=request, succeeded=False,
+            )
+            refuse_as_locked()
+        await user_manager.account_guard.record_success(user.id, events=(), request=request)
         return TotpSetupResponse(
             secret=secret,
             provisioning_uri=uri,
@@ -111,12 +132,25 @@ def build_totp_router(
         """Confirm enrollment. Recovery codes are returned here, exactly once."""
         if user.totp_enabled:
             raise HTTPException(400, "2FA is already enabled")
-        verified, recovery_codes = await totp_service.confirm_totp(user.id, body.code)
+        guard = user_manager.account_guard
+        if await guard.begin_attempt(user.id, request=request) is GuardOutcome.LOCKED:
+            refuse_as_locked()
+
+        try:
+            verified, recovery_codes = await totp_service.confirm_totp(user.id, body.code)
+        except TotpSetupNotStartedError as exc:
+            raise HTTPException(400, "No 2FA setup in progress. Cancel and start again.") from exc
         if not verified:
+            outcome = await guard.record_code_attempt(
+                user.id, valid=False, expect_totp_enabled=False, request=request,
+            )
+            if outcome is GuardOutcome.LOCKED:
+                refuse_as_locked()
+            # A double press: the first request turned it on, so this isn't a guess.
+            if outcome is GuardOutcome.STATE_CHANGED:
+                raise HTTPException(400, "2FA is already enabled")
             raise HTTPException(400, "Invalid verification code")
-        await user_manager.account_guard.record_event(
-            AuthEventType.TOTP_ENABLED, user_id=user.id, request=request, succeeded=True,
-        )
+        await guard.record_success(user.id, events=(AuthEventType.TOTP_ENABLED,), request=request)
         return TotpVerifyResponse(verified=True, recovery_codes=recovery_codes)
 
     @router.post("/disable", response_model=TotpDisableResponse)

@@ -13,6 +13,24 @@ no transitive dependency on per-app settings modules.
 _DEV_ENVIRONMENTS = ("development", "test")
 
 
+class ProductionTestModeError(RuntimeError):
+    """Raised at boot when test-only routes are switched on outside development and test."""
+
+
+def check_test_mode_off(*, flag_name: str, flag_is_on: bool, environment: str) -> None:
+    """Fail loud at boot if test-only routes are on outside development and test.
+
+    Those routes can make any account an admin or mark any email verified.
+    """
+    if environment in _DEV_ENVIRONMENTS:
+        return
+    if flag_is_on:
+        raise ProductionTestModeError(
+            f"{flag_name} must be off when ENVIRONMENT={environment}. "
+            "Remove it from the app's env file."
+        )
+
+
 class TurnstileNotConfiguredError(RuntimeError):
     """Raised at boot when Turnstile is not configured in a non-dev environment."""
 

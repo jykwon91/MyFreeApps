@@ -27,6 +27,7 @@ def fake_user(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
         totp_recovery_codes="STALE",
         totp_algorithm="sha1",
         totp_enabled=False,
+        locked_until=None,
     )
 
     @asynccontextmanager

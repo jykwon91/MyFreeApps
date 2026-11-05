@@ -18,7 +18,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.repositories.user_repo import lock_by_email, lock_by_id
 from platform_shared.services.account_lockout import is_locked as account_is_locked
+from platform_shared.services.totp_account_locked_error import TotpAccountLockedError
 from platform_shared.services.totp_already_enabled_error import TotpAlreadyEnabledError
+from platform_shared.services.totp_setup_not_started_error import TotpSetupNotStartedError
 from platform_shared.services.totp_service import (
     DEFAULT_TOTP_ALGORITHM,
     TotpAlgorithm,
@@ -71,6 +73,8 @@ class TotpAccountService:
             # this would then wipe the secret and recovery codes of a user with 2FA on.
             if user.totp_enabled:
                 raise TotpAlreadyEnabledError
+            if account_is_locked(user, now=datetime.now(tz=timezone.utc)):
+                raise TotpAccountLockedError
             secret = generate_secret()
             user.totp_secret = self.encrypt(secret, user_id)
             user.totp_recovery_codes = None
@@ -81,10 +85,20 @@ class TotpAccountService:
             )
 
     async def confirm_totp(self, user_id: uuid.UUID, code: str) -> tuple[bool, list[str]]:
-        """Turn 2FA on if ``code`` is right. Returns ``(verified, recovery_codes)``."""
+        """Turn 2FA on if ``code`` is right and the account isn't locked.
+        Returns ``(verified, recovery_codes)``. Raises ``TotpSetupNotStartedError`` if
+        nothing is waiting to be confirmed.
+
+        The lock is checked under the row lock, as in :meth:`disable_totp`.
+        """
         async with self.unit_of_work_factory() as db:
             user = await lock_by_id(db, user_id, user_model=self.user_model)
-            if user is None or not user.totp_secret or user.totp_enabled:
+            if user is None or user.totp_enabled:
+                return False, []
+            # Not a guess: there's nothing to guess at, so the caller mustn't count it.
+            if not user.totp_secret:
+                raise TotpSetupNotStartedError
+            if account_is_locked(user, now=datetime.now(tz=timezone.utc)):
                 return False, []
             if not self._spend_time_code(user, code):
                 return False, []

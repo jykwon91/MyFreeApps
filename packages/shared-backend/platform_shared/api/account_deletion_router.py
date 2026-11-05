@@ -19,10 +19,10 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
-from fastapi_users.password import PasswordHelper
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.auth.refuse_as_locked import refuse_as_locked
+from platform_shared.auth.require_current_password import require_current_password
 from platform_shared.auth.released_current_user import released_current_user
 from platform_shared.schemas.account import DeleteAccountRequest
 from platform_shared.services.account_deletion import (
@@ -90,22 +90,12 @@ def build_account_deletion_router(
         - Email address matching the account (typed confirmation)
         - TOTP code if 2FA is enabled
         """
-        guard = user_manager.account_guard
-        if await guard.begin_attempt(current_user.id, request=request) is GuardOutcome.LOCKED:
-            refuse_as_locked()
-
-        # Re-verify password to prevent CSRF and accidental deletion.
-        helper = PasswordHelper()
-        verified, _ = helper.verify_and_update(
-            body.password, current_user.hashed_password
+        await require_current_password(
+            password=body.password,
+            user=current_user,
+            user_manager=user_manager,
+            request=request,
         )
-        outcome = await guard.record_password_attempt(
-            current_user.id, correct=verified, finishes_login=False, request=request,
-        )
-        if outcome is GuardOutcome.LOCKED:
-            refuse_as_locked()
-        if outcome is GuardOutcome.WRONG:
-            raise HTTPException(status_code=403, detail="Incorrect password")
 
         # Email confirmation must exactly match the account email
         # (case-insensitive).
@@ -118,7 +108,7 @@ def build_account_deletion_router(
         if current_user.totp_enabled:
             if not body.totp_code:
                 raise HTTPException(status_code=400, detail="TOTP_CODE_REQUIRED")
-            outcome = await guard.spend_step_up_code(
+            outcome = await user_manager.account_guard.spend_step_up_code(
                 current_user.id, body.totp_code, verify_totp_step_up, request=request,
             )
             if outcome is GuardOutcome.LOCKED:

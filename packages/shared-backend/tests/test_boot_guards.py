@@ -5,10 +5,12 @@ import pytest
 from platform_shared.core.boot_guards import (
     EmailNotConfiguredError,
     SmsNotConfiguredError,
+    ProductionTestModeError,
     TransparencyNotConfiguredError,
     TurnstileNotConfiguredError,
     check_email_configured,
     check_sms_configured,
+    check_test_mode_off,
     check_transparency_configured,
     check_turnstile_configured,
 )
@@ -303,3 +305,18 @@ class TestCheckTransparencyConfigured:
 
     def test_inherits_from_runtime_error(self) -> None:
         assert issubclass(TransparencyNotConfiguredError, RuntimeError)
+
+
+class TestCheckTestModeOff:
+    @pytest.mark.parametrize("environment", ["development", "test"])
+    def test_allowed_where_tests_run(self, environment: str) -> None:
+        check_test_mode_off(flag_name="MY_FLAG", flag_is_on=True, environment=environment)
+
+    @pytest.mark.parametrize("environment", ["production", "staging"])
+    def test_off_passes_everywhere(self, environment: str) -> None:
+        check_test_mode_off(flag_name="MY_FLAG", flag_is_on=False, environment=environment)
+
+    @pytest.mark.parametrize("environment", ["production", "staging"])
+    def test_on_outside_development_and_test_raises(self, environment: str) -> None:
+        with pytest.raises(ProductionTestModeError, match="MY_FLAG"):
+            check_test_mode_off(flag_name="MY_FLAG", flag_is_on=True, environment=environment)

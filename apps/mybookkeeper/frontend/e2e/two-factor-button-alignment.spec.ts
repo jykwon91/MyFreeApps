@@ -138,6 +138,9 @@ test.describe("2FA — Security setup Verify & Enable button alignment", () => {
         body: JSON.stringify({
           provisioning_uri: "otpauth://totp/MBK:test@example.com?secret=JBSWY3DPEHPK3PXP&issuer=MBK",
           secret: "JBSWY3DPEHPK3PXP",
+          algorithm: "sha256",
+          digits: 6,
+          period: 30,
         }),
       });
     });
@@ -156,6 +159,8 @@ test.describe("2FA — Security setup Verify & Enable button alignment", () => {
     const enableBtn = page.getByRole("button", { name: /enable 2fa/i });
     await expect(enableBtn, "Could not reach Enable 2FA — investigate Security page render").toBeVisible({ timeout: 10000 });
     await enableBtn.click();
+    await page.getByLabel("Enter your password to continue").fill("any-password");
+    await page.getByRole("button", { name: "Continue" }).click();
 
     const verifyBtn = page.getByRole("button", { name: "Verify & Enable" });
     await expect(verifyBtn).toBeVisible({ timeout: 5000 });

@@ -2,7 +2,8 @@
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
+from pydantic import EmailStr
 
 from app.core.auth import current_active_user
 from app.core.config import settings
@@ -34,3 +35,15 @@ async def promote_to_admin(
             raise HTTPException(status_code=404, detail="User not found")
         await user_repo.update_role(db, target, Role.ADMIN)
         return target
+
+
+@router.post("/test/verify-email", status_code=204)
+async def force_verify_email(email: EmailStr = Body(..., embed=True)) -> None:
+    """Mark a user verified, for E2E tests that need their own account."""
+    _require_test_mode()
+
+    async with unit_of_work() as db:
+        target = await user_repo.get_by_email(db, email)
+        if not target:
+            raise HTTPException(status_code=404, detail="User not found")
+        target.is_verified = True
