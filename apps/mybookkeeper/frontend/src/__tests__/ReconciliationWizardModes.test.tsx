@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { useReconciliationSourcesMode } from "@/app/features/reconciliation/useReconciliationSourcesMode";
 import { useReconciliationDiscrepanciesMode } from "@/app/features/reconciliation/useReconciliationDiscrepanciesMode";
-import type { ReconciliationSource } from "@/shared/types/reconciliation/reconciliation-source";
+import type { ReconciliationSource } from "@mybookkeeper/api-client/types/reconciliation/reconciliation-source";
 
 const SOURCE: ReconciliationSource = {
   id: "1",

@@ -434,9 +434,10 @@ async def sum_by_normalized_vendor_year(
     organization_id: uuid.UUID,
     tax_year: int,
 ) -> list[tuple[str, Decimal]]:
-    """Return (normalized_vendor, sum_amount) for approved, tax-relevant transactions.
+    """Return (normalized_vendor, sum_amount) for approved, tax-relevant income.
 
-    Only includes rows where normalized_vendor is non-null.
+    Tax forms report income, and amounts are always positive, so a fee paid to
+    the same vendor would otherwise add to the total instead of being left out.
     """
     stmt = (
         select(
@@ -446,6 +447,7 @@ async def sum_by_normalized_vendor_year(
         .where(
             Transaction.organization_id == organization_id,
             Transaction.tax_year == tax_year,
+            Transaction.transaction_type == "income",
             Transaction.status == "approved",
             Transaction.tax_relevant.is_(True),
             Transaction.deleted_at.is_(None),
