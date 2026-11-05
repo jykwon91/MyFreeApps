@@ -83,10 +83,11 @@ export default function CraftShoppingList({ entries, skill, place, professionLab
               professionLabel={professionLabel}
               costOf={costOf}
             />
-            <CraftMakeLines lines={list.make} />
-            {keepCrafts ? <p className="text-sm">{KEEP_CRAFTS_NOTE}</p> : null}
+            <CraftMakeLines title="Make on the way" lines={list.make} />
+            <CraftMakeLines title="Smelt with Mining" lines={list.smelt} />
           </>
         )}
+        {keepCrafts ? <p className="text-sm">{KEEP_CRAFTS_NOTE}</p> : null}
         <p className="text-xs text-muted-foreground">
           Counts are averages for the route{fromSkill !== null ? ` from skill ${fromSkill}` : ""} — bring a few spare.
           {note ? ` ${note}` : ""}

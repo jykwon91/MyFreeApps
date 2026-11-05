@@ -1,6 +1,6 @@
 import type { Confidence } from "@/games/wow-forever/data/professions/professionTypes";
 
-export const CRAFTING_PROFESSION = { tailoring: "tailoring", enchanting: "enchanting", alchemy: "alchemy" } as const;
+export const CRAFTING_PROFESSION = { tailoring: "tailoring", enchanting: "enchanting", alchemy: "alchemy", blacksmithing: "blacksmithing" } as const;
 export type CraftingProfession = (typeof CRAFTING_PROFESSION)[keyof typeof CRAFTING_PROFESSION];
 
 /** What a crafting guide shows besides the route — differs per profession. */
@@ -47,6 +47,8 @@ export interface CraftRecipe {
   tool?: { id: number; name: string };
   learn: RecipeLearn;
   newInForever?: true;
+  /** The specialization spell it needs (Armorsmith…): its Plans ask for it (Forever), or only that specialization's trainers teach it (Classic). */
+  spec?: number;
   /** Classic Era's numbers, when Forever changed them. */
   classic?: { yellow: number; grey: number; reagents?: CraftReagent[] };
 }
@@ -57,6 +59,20 @@ export interface CraftingFile {
   /** Reagent item id -> the profession that makes it ("Tailoring" for bolts). */
   madeBy: Record<string, string>;
   recipes: CraftRecipe[];
+  /** Mining smelts for the bars the recipes use (Blacksmithing). */
+  smelting?: SmeltRecipe[];
+  /** The profession's specializations: Forever client names, Classic quests. */
+  specs?: CraftSpecRecord[];
+}
+
+/** A Mining smelt; `skill` = the Mining skill to learn it (1 = comes with Mining; trainer ones Classic, moved as Forever moved the recipe). */
+export type SmeltRecipe = CraftRecipe & { skill: number };
+
+/** A specialization, as generated: its spell, Forever name, and the Classic quests that teach it. */
+export interface CraftSpecRecord {
+  spell: number;
+  name: string;
+  quests: readonly { id: number; skill: number; level: number; items: CraftReagent[] }[];
 }
 
 /** Recipe spell -> skill a Classic trainer asks, and the Forever estimate from it. */
@@ -121,4 +137,6 @@ export interface ShoppingLine {
   madeBy?: string;
   /** For an item this profession makes on the way (bolts): what it takes, in total. */
   makesFrom?: CraftReagent[];
+  /** A bar smelted with Mining: the Mining skill it needs. */
+  smeltSkill?: number;
 }

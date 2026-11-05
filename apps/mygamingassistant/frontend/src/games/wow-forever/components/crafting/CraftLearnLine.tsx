@@ -12,7 +12,7 @@ export interface CraftPlace {
   /** The player's level, to rank the mobs they can farm first. Null = not set. */
   level: number | null;
   /** Which profession makes a material, and the recipes to make this profession's own (bolts). */
-  file: Pick<CraftingFile, "madeBy" | "recipes">;
+  file: Pick<CraftingFile, "madeBy" | "recipes" | "smelting">;
 }
 
 interface CraftLearnLineProps {

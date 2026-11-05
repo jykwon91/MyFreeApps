@@ -1,5 +1,5 @@
 /**
- * WoW Forever Professions guide (Cooking, Fishing, Tailoring, Enchanting, Alchemy) — static, frontend-only page.
+ * WoW Forever Professions guide (Cooking, Fishing, Tailoring, Enchanting, Alchemy, Blacksmithing) — static, frontend-only page.
  *
  * Run: npm run test:e2e -- wow-forever-professions
  */
@@ -82,7 +82,7 @@ test("Enchanting says when to disenchant and when to sell", async ({ page }) => 
 
 test("the crafting guides never scroll sideways on a phone", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
-  for (const p of ["tailoring", "enchanting", "alchemy"]) {
+  for (const p of ["tailoring", "enchanting", "alchemy", "blacksmithing"]) {
     await page.goto(`/wow-forever/professions?p=${p}&skill=150`);
     await expect(page.locator("#route").getByText("You are here")).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -121,7 +121,7 @@ test("the picker groups crafting and secondary professions, one choice across bo
   const secondary = page.getByRole("radiogroup", { name: "Secondary professions" });
   await expect(crafting.getByRole("radio", { name: "Enchanting" })).toBeChecked();
   await expect(secondary.getByRole("radio", { checked: true })).toHaveCount(0);
-  await expect(crafting.getByRole("radio")).toHaveText(["Alchemy", "Enchanting", "Tailoring"]);
+  await expect(crafting.getByRole("radio")).toHaveText(["Alchemy", "Blacksmithing", "Enchanting", "Tailoring"]);
   await expect(page.getByText(/You can learn two crafting professions \(Classic rule\)/)).toBeVisible();
 
   await secondary.getByRole("radio", { name: "Fishing" }).click();
@@ -134,11 +134,11 @@ test("an unknown profession link opens Cooking", async ({ page }) => {
   await expect(page.getByRole("radio", { name: "Cooking" })).toBeChecked();
 });
 
-test("the picker is three big targets to a row on a phone", async ({ page }) => {
+test("the crafting picker is one row of big targets on a phone", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   await page.goto("/wow-forever/professions?p=alchemy");
   const radios = page.getByRole("radiogroup", { name: "Crafting professions" }).getByRole("radio");
-  await expect(radios).toHaveCount(3);
+  await expect(radios).toHaveCount(4);
   const boxes = await Promise.all((await radios.all()).map((r) => r.boundingBox()));
   for (const box of boxes) expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
   expect(new Set(boxes.map((b) => Math.round(b?.y ?? 0))).size).toBe(1);
@@ -179,12 +179,15 @@ test("Alchemy shows a hand-picked herb route with no prices, and where each herb
 test("the loading skeleton keeps room for prices only where there are prices", async ({ page }) => {
   let release: () => void = () => {};
   const held = new Promise<void>((resolve) => (release = resolve));
-  await page.route(/crafting\/(alchemy|tailoring)\.json/, async (route) => {
+  await page.route(/crafting\/(alchemy|blacksmithing|tailoring)\.json/, async (route) => {
     await held;
     await route.continue();
   });
   await page.goto("/wow-forever/professions?p=alchemy");
   const skeleton = page.getByTestId("craft-route-skeleton");
+  await expect(skeleton).toBeVisible();
+  await expect(skeleton.getByTestId("craft-prices-skeleton")).toHaveCount(0);
+  await page.getByRole("radio", { name: "Blacksmithing" }).click();
   await expect(skeleton).toBeVisible();
   await expect(skeleton.getByTestId("craft-prices-skeleton")).toHaveCount(0);
   await page.getByRole("radio", { name: "Tailoring" }).click();
@@ -202,4 +205,54 @@ test("a route that fails to load names the profession and retries", async ({ pag
   fail = false;
   await page.getByRole("button", { name: "Retry" }).click();
   await expect(page.locator("#route").getByLabel("Your skill")).toBeVisible();
+});
+
+test("Blacksmithing forks at 200: pick a specialization and the route keeps only what you can learn", async ({ page }) => {
+  await page.goto("/wow-forever/professions");
+  await page.getByRole("radio", { name: "Blacksmithing" }).click();
+  await expect(page).toHaveURL(/\?p=blacksmithing$/);
+  const start = page.getByLabel("Get started: train it first");
+  await expect(start.getByText("Works well with Mining")).toBeVisible();
+  await expect(start.getByText("Get a Blacksmith Hammer before your first belt")).toBeVisible();
+
+  const route = page.locator("#route");
+  await route.getByLabel("Your skill").fill("150");
+  await expect(route.getByText("Craft Bronze Warhammer until 165.")).toBeVisible();
+  const decision = route.getByTestId("spec-decision");
+  await expect(decision).toContainText("At 200: choose a specialization");
+  await expect(decision).toContainText("Classic: needs level 40");
+  const armorsmith = decision.getByTestId("spec-armorsmith");
+  await expect(armorsmith).toContainText("Hand in:");
+  await expect(armorsmith.getByRole("link", { name: /^Directions to / })).toHaveAttribute("href", /\/wow-forever\/map\?to=/);
+
+  // Not chosen yet: every option, each specialist one with its chip.
+  await route.getByLabel("Your skill").fill("250");
+  const options = route.locator('[aria-current="step"]');
+  await expect(options.getByText("Truesilver Breastplate")).toBeVisible();
+  await expect(options.getByText("Blight", { exact: true })).toBeVisible();
+  await expect(options.getByTestId("spec-chip").first()).toBeVisible();
+
+  const picker = page.getByRole("radiogroup", { name: "Your Blacksmithing specialization" });
+  await expect(picker.getByRole("radio", { name: "Not chosen yet" })).toBeChecked();
+  await picker.getByRole("radio", { name: "Armorsmith" }).click();
+  await expect(page).toHaveURL(/spec=armorsmith/);
+  await expect(options.getByText("Truesilver Breastplate")).toBeVisible();
+  await expect(options.getByText("Blight", { exact: true })).toHaveCount(0);
+  await expect(armorsmith).toContainText("Your choice");
+
+  // Kept without the link.
+  await page.goto("/wow-forever/professions?p=blacksmithing");
+  await expect(page.getByRole("radiogroup", { name: "Your Blacksmithing specialization" }).getByRole("radio", { name: "Armorsmith" })).toBeChecked();
+
+  // No prices anywhere; bars are smelted from ore.
+  await expect(page.getByRole("region", { name: "Your prices" })).toHaveCount(0);
+  await expect(page.getByText(/cheapest/i)).toHaveCount(0);
+  await expect(page.locator("main").last()).not.toContainText(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
+  const shopping = page.locator("#shopping");
+  await shopping.locator("summary").first().click();
+  await expect(shopping.getByText(/Don't sell your crafts yet/)).toBeVisible();
+  await shopping.getByRole("radio", { name: "Whole route" }).click();
+  await expect(shopping.getByText("Smelt with Mining", { exact: true })).toBeVisible();
+  await expect(shopping.getByText(/\d+ Copper Bar \(Mining 1\)/)).toBeVisible();
+  await expect(shopping.locator('details[data-mat="2770"]').first()).toBeVisible();
 });

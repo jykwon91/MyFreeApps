@@ -14,4 +14,10 @@ export const CRAFTING_FEATURES: Readonly<Record<CraftingProfession, CraftingFeat
     transmutes: true,
     worksWith: { name: "Herbalism", why: "Every recipe on the route takes herbs — with Herbalism you pick them yourself as you level." },
   },
+  blacksmithing: {
+    priced: false,
+    enchantSlots: false,
+    transmutes: false,
+    worksWith: { name: "Mining", why: "Every recipe takes metal bars — with Mining you mine the ore and smelt the bars yourself." },
+  },
 };
