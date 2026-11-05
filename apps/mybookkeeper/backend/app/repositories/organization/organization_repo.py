@@ -4,7 +4,7 @@ import uuid
 from collections.abc import Sequence
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -126,6 +126,21 @@ async def create_invite(
     await db.flush()
     await db.refresh(invite)
     return invite
+
+
+async def delete_other_pending_invites(
+    db: AsyncSession, org_id: uuid.UUID, email: str, keep_invite_id: uuid.UUID,
+) -> None:
+    result = await db.execute(
+        select(OrganizationInvite).where(
+            OrganizationInvite.organization_id == org_id,
+            func.lower(OrganizationInvite.email) == email.lower(),
+            OrganizationInvite.status == "pending",
+            OrganizationInvite.id != keep_invite_id,
+        )
+    )
+    for invite in result.scalars().all():
+        await db.delete(invite)
 
 
 async def get_invite_by_token(db: AsyncSession, token: str) -> OrganizationInvite | None:

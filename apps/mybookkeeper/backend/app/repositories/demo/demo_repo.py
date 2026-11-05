@@ -41,6 +41,15 @@ async def get_org_by_user(db: AsyncSession, user_id: uuid.UUID) -> Organization 
     return result.scalar_one_or_none()
 
 
+async def has_created_demo_org(db: AsyncSession, user_id: uuid.UUID) -> bool:
+    result = await db.execute(
+        select(Organization.id)
+        .where(Organization.created_by == user_id, Organization.is_demo.is_(True))
+        .limit(1)
+    )
+    return result.first() is not None
+
+
 async def get_org_by_id(db: AsyncSession, org_id: uuid.UUID) -> Organization | None:
     result = await db.execute(
         select(Organization).where(Organization.id == org_id)

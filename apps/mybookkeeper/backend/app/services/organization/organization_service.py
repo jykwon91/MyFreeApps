@@ -145,8 +145,10 @@ async def create_invite(
     if org_role == "owner":
         raise ValueError("Cannot invite as owner")
 
+    email = email.strip().lower()
+
     async with unit_of_work() as db:
-        existing_user = await user_repo.get_by_email(db, email)
+        existing_user = await user_repo.get_by_email_ci(db, email)
         if existing_user:
             existing_member = await organization_repo.get_member(db, org_id, existing_user.id)
             if existing_member:
@@ -171,6 +173,11 @@ async def create_invite(
             invite_token=invite.token,
         )
         invite.email_sent = email_sent
+
+        # Inviting someone again replaces their pending invite, so only the newest link
+        # works. If the email failed, the older link is still the only one they have.
+        if email_sent:
+            await organization_repo.delete_other_pending_invites(db, org_id, email, invite.id)
 
         logger.info(
             "ORG_ACTION invite org=%s email=%s role=%s by=%s email_sent=%s",
@@ -207,7 +214,7 @@ async def get_invite_info(token: str) -> dict:
 
         org = await organization_repo.get_by_id(db, invite.organization_id)
         inviter = await user_repo.get_by_id(db, invite.invited_by)
-        invitee = await user_repo.get_by_email(db, invite.email)
+        invitee = await user_repo.get_by_email_ci(db, invite.email)
 
         expires = invite.expires_at
         if expires.tzinfo is None:
@@ -235,8 +242,15 @@ async def accept_invite(
         if expires.tzinfo is None:
             expires = expires.replace(tzinfo=timezone.utc)
         if expires < datetime.now(timezone.utc):
-            invite.status = "expired"
             raise ValueError("Invite has expired")
+
+        user = await user_repo.get_by_id(db, user_id)
+        if not user or user.email.lower() != invite.email.lower():
+            logger.warning(
+                "ORG_ACTION accept_invite_wrong_user org=%s user=%s",
+                invite.organization_id, user_id,
+            )
+            raise PermissionError("This invite was sent to a different email address")
 
         existing = await organization_repo.get_member(
             db, invite.organization_id, user_id,

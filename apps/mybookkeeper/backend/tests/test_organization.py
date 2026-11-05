@@ -10,8 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.organization.organization import Organization
 from app.models.organization.organization_invite import OrganizationInvite
-from app.models.organization.organization_member import OrganizationMember, OrgRole
-from app.models.user.user import Role, User
+from app.models.organization.organization_member import OrganizationMember
+from app.models.user.user import User
 from app.repositories import organization_repo
 from app.services.organization import organization_service
 
@@ -241,6 +241,101 @@ class TestInvites:
         member = await organization_service.accept_invite(invite.token, member_user.id)
         assert member.organization_id == org_with_owner.id
         assert member.org_role == "viewer"
+
+    @pytest.mark.asyncio
+    async def test_someone_else_with_the_link_cannot_join(
+        self, db: AsyncSession, owner: User, member_user: User, org_with_owner: Organization
+    ) -> None:
+        invite = await organization_service.create_invite(
+            org_with_owner.id, "someone-else@example.com", "admin", owner.id,
+        )
+        with pytest.raises(PermissionError):
+            await organization_service.accept_invite(invite.token, member_user.id)
+        assert await organization_repo.get_member(db, org_with_owner.id, member_user.id) is None
+        assert (await db.get(OrganizationInvite, invite.id)).status == "pending"
+
+    @pytest.mark.asyncio
+    async def test_accepting_ignores_email_case(
+        self, db: AsyncSession, owner: User, member_user: User, org_with_owner: Organization
+    ) -> None:
+        invite = await organization_service.create_invite(
+            org_with_owner.id, " Member@Example.COM ", "viewer", owner.id,
+        )
+        assert invite.email == "member@example.com"
+        member = await organization_service.accept_invite(invite.token, member_user.id)
+        assert member.org_role == "viewer"
+
+    @pytest.mark.asyncio
+    async def test_inviting_again_replaces_the_pending_invite(
+        self, db: AsyncSession, owner: User, org_with_owner: Organization
+    ) -> None:
+        first = await organization_service.create_invite(
+            org_with_owner.id, "new@example.com", "viewer", owner.id,
+        )
+        first_id, first_token = first.id, first.token
+        second = await organization_service.create_invite(
+            org_with_owner.id, "NEW@example.com", "user", owner.id,
+        )
+        assert second.token != first_token
+        assert await organization_repo.get_invite_by_token(db, first_token) is None
+        remaining = await organization_repo.list_invites(db, org_with_owner.id)
+        assert [invite.id for invite in remaining] == [second.id]
+        assert first_id != second.id
+
+    @pytest.mark.asyncio
+    async def test_inviting_again_keeps_other_people_and_accepted_invites(
+        self, db: AsyncSession, owner: User, member_user: User, org_with_owner: Organization
+    ) -> None:
+        accepted = await organization_service.create_invite(
+            org_with_owner.id, "member@example.com", "viewer", owner.id,
+        )
+        member = await organization_service.accept_invite(accepted.token, member_user.id)
+        await db.delete(member)
+        await db.flush()
+        other_org = Organization(name="Other", created_by=owner.id)
+        db.add(other_org)
+        await db.flush()
+        other_person = await organization_service.create_invite(
+            org_with_owner.id, "other@example.com", "viewer", owner.id,
+        )
+        other_workspace = await organization_service.create_invite(
+            other_org.id, "member@example.com", "viewer", owner.id,
+        )
+
+        await organization_service.create_invite(
+            org_with_owner.id, "member@example.com", "user", owner.id,
+        )
+
+        assert await db.get(OrganizationInvite, accepted.id) is not None
+        assert await db.get(OrganizationInvite, other_person.id) is not None
+        assert await db.get(OrganizationInvite, other_workspace.id) is not None
+
+    @pytest.mark.asyncio
+    async def test_old_link_survives_when_the_new_email_fails(
+        self, db: AsyncSession, owner: User, org_with_owner: Organization
+    ) -> None:
+        first = await organization_service.create_invite(
+            org_with_owner.id, "new@example.com", "viewer", owner.id,
+        )
+        first_token = first.token
+        with patch(
+            "app.services.organization.organization_service.send_invite_email",
+            return_value=False,
+        ):
+            second = await organization_service.create_invite(
+                org_with_owner.id, "new@example.com", "user", owner.id,
+            )
+        assert second.email_sent is False
+        assert await organization_repo.get_invite_by_token(db, first_token) is not None
+
+    @pytest.mark.asyncio
+    async def test_existing_member_found_whatever_the_case(
+        self, db: AsyncSession, owner: User, org_with_owner: Organization
+    ) -> None:
+        with pytest.raises(ValueError, match="already a member"):
+            await organization_service.create_invite(
+                org_with_owner.id, owner.email.upper(), "viewer", owner.id,
+            )
 
     @pytest.mark.asyncio
     async def test_accept_expired_invite(

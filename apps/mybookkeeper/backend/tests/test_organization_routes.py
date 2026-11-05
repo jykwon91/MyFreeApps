@@ -5,19 +5,19 @@ Tests the HTTP layer — status codes, response shapes, and error handling.
 """
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
+from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import current_active_user
 from app.core.context import RequestContext
-from app.core.permissions import current_active_user, current_org_member, reject_demo_user, require_org_role
+from app.core.permissions import current_org_member, reject_demo_user, require_org_role
 from app.main import app
 from app.models.organization.organization import Organization
-from app.models.organization.organization_invite import OrganizationInvite
 from app.models.organization.organization_member import OrganizationMember, OrgRole
 from app.models.user.user import User
 from app.repositories import organization_repo
@@ -77,6 +77,7 @@ def _patch_service_session(db: AsyncSession):
 
     with (
         patch("app.services.organization.organization_service.AsyncSessionLocal", _fake_session),
+        patch("app.core.permissions.AsyncSessionLocal", _fake_session),
         patch("app.services.organization.organization_service.unit_of_work", _fake_session),
         patch("app.services.organization.organization_service.send_invite_email", return_value=True),
     ):
@@ -363,6 +364,56 @@ class TestAcceptInvite:
         data = resp.json()
         assert data["organization_id"] == str(org.id)
         assert data["org_role"] == "viewer"
+
+    @pytest.mark.asyncio
+    async def test_accepting_someone_elses_invite_returns_403(
+        self,
+        db: AsyncSession,
+        client_as_owner: AsyncClient,
+        org: Organization,
+        owner: User,
+        second_user: User,
+    ) -> None:
+        invite = await organization_repo.create_invite(
+            db, org.id, "not-them@example.com", "admin", owner.id,
+        )
+        await db.commit()
+
+        app.dependency_overrides[current_active_user] = _override_auth(second_user)
+        app.dependency_overrides[reject_demo_user] = _override_auth(second_user)
+
+        resp = await client_as_owner.post(f"/organizations/invites/{invite.token}/accept")
+        assert resp.status_code == 403
+        assert await organization_repo.get_member(db, org.id, second_user.id) is None
+
+    @pytest.mark.asyncio
+    async def test_someone_with_two_workspaces_passes_the_demo_check(
+        self, db: AsyncSession, org: Organization, owner: User,
+    ) -> None:
+        db.add(Organization(name="Second", created_by=owner.id))
+        await db.flush()
+        assert await reject_demo_user(owner) is owner
+
+    @pytest.mark.asyncio
+    async def test_demo_account_with_two_workspaces_is_refused(
+        self, db: AsyncSession, org: Organization, owner: User,
+    ) -> None:
+        db.add(Organization(name="Demo", created_by=owner.id, is_demo=True))
+        await db.flush()
+        with pytest.raises(HTTPException) as refused:
+            await reject_demo_user(owner)
+        assert refused.value.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_demo_workspace_cannot_send_invites(
+        self, db: AsyncSession, client_as_owner: AsyncClient, org: Organization,
+    ) -> None:
+        with patch("app.core.permissions.demo_repo.is_demo_org", return_value=True):
+            resp = await client_as_owner.post(
+                f"/organizations/{org.id}/invites",
+                json={"email": "new@example.com", "org_role": "viewer"},
+            )
+        assert resp.status_code == 403
 
     @pytest.mark.asyncio
     async def test_accept_invalid_token_returns_404(
