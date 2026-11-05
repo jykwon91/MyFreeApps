@@ -2,6 +2,8 @@
 
 from decimal import Decimal
 
+SCHEDULE_E_AGGREGATE_LABEL = "Total (all properties)"
+
 SCHEDULE_E_LINE_LABELS: dict[str, str] = {
     "line_3": "Rents received",
     "line_5": "Advertising",

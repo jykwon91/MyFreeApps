@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.tax_constants import SCHEDULE_E_LINE_LABELS
+from app.core.tax_constants import SCHEDULE_E_AGGREGATE_LABEL, SCHEDULE_E_LINE_LABELS
 from app.models.tax.tax_form_field_source import TaxFormFieldSource
 from app.models.tax.tax_return import TaxReturn
 from app.repositories import property_repo, tax_return_repo, transaction_repo
@@ -149,7 +149,7 @@ async def compute_schedule_e(db: AsyncSession, tax_return: TaxReturn) -> int:
 
         aggregate = await tax_return_repo.upsert_form_instance(
             db, tax_return.id, "schedule_e", "computed",
-            instance_label="Total (all properties)",
+            instance_label=SCHEDULE_E_AGGREGATE_LABEL,
         )
         await tax_return_repo.upsert_field(
             db, aggregate.id, "line_26",

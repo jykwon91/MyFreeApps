@@ -1,3 +1,5 @@
+import uuid
+
 from pydantic import BaseModel
 
 
@@ -13,5 +15,7 @@ class FormCompleteness(BaseModel):
 
 class TaxCompletenessResponse(BaseModel):
     tax_year: int
+    tax_return_id: uuid.UUID
+    needs_recompute: bool
     forms: list[FormCompleteness]
     summary: str

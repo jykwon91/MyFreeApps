@@ -1,15 +1,17 @@
 """Tax completeness analysis — field coverage and highlights per form."""
 import uuid
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from app.core.tax_constants import (
     SCHEDULE_C_LINE_LABELS,
+    SCHEDULE_E_AGGREGATE_LABEL,
     SCHEDULE_E_LINE_LABELS,
     SCHEDULE_SE_LABELS,
 )
 from app.core.tax_form_fields import TAX_FORM_FIELD_DEFINITIONS
 from app.db.session import AsyncSessionLocal
 from app.models.tax.tax_form_field import TaxFormField
+from app.models.tax.tax_form_instance import TaxFormInstance
 from app.repositories import tax_return_repo
 from app.schemas.tax.tax_completeness import FormCompleteness, TaxCompletenessResponse
 
@@ -18,138 +20,118 @@ EXPECTED_FIELDS_BY_FORM: dict[str, dict[str, str]] = {}
 for _form_name, _field_list in TAX_FORM_FIELD_DEFINITIONS.items():
     EXPECTED_FIELDS_BY_FORM[_form_name] = {fid: flabel for fid, flabel in _field_list}
 
-EXPECTED_FIELDS_BY_FORM["schedule_e"] = SCHEDULE_E_LINE_LABELS
+# Line 26 is the total across properties, so it's never on a property's own form.
+EXPECTED_FIELDS_BY_FORM["schedule_e"] = {
+    line_id: label for line_id, label in SCHEDULE_E_LINE_LABELS.items() if line_id != "line_26"
+}
 EXPECTED_FIELDS_BY_FORM["schedule_c"] = SCHEDULE_C_LINE_LABELS
 EXPECTED_FIELDS_BY_FORM["schedule_se"] = SCHEDULE_SE_LABELS
 
 
 def _has_value(field: TaxFormField) -> bool:
-    if field.value_numeric is not None and field.value_numeric != Decimal("0"):
+    """A stored $0 is a value: recompute writes it on purpose, so it isn't missing."""
+    if field.value_numeric is not None:
         return True
     if field.value_text is not None and field.value_text.strip():
         return True
-    if field.value_boolean is not None:
-        return True
-    return False
+    return field.value_boolean is not None
+
+
+def _is_zero_text(text: str | None) -> bool:
+    """Form extraction stores a numeric 0 as the text "0" or "0.0"."""
+    if text is None:
+        return False
+    try:
+        return Decimal(text.strip()) == 0
+    except InvalidOperation:
+        return False
+
+
+def _has_amount(field: TaxFormField) -> bool:
+    """Whether a highlight can say something was found. A $0 isn't income, or a mortgage."""
+    if not _has_value(field) or field.value_numeric == Decimal("0"):
+        return False
+    return not _is_zero_text(field.value_text)
+
+
+def _real_label(form_name: str, instance_label: str | None) -> str | None:
+    """Form extraction labels a form with its own type when there's no issuer. That names nothing."""
+    if instance_label and instance_label.upper() != form_name.upper():
+        return instance_label
+    return None
+
+
+def _is_aggregate(instance: TaxFormInstance) -> bool:
+    """The Schedule E total recompute adds holds line 26 for all properties. It isn't a form to review."""
+    return (
+        instance.form_name == "schedule_e"
+        and instance.property_id is None
+        and instance.instance_label == SCHEDULE_E_AGGREGATE_LABEL
+    )
 
 
 def _generate_highlights(
     form_name: str,
     instance_label: str | None,
-    filled_ids: set[str],
-    missing_ids: set[str],
-    expected: dict[str, str],
+    with_amount: set[str],
+    without_amount: set[str],
 ) -> list[str]:
+    """Things worth a second look. Empty is fine: it says nothing about whether a form is complete."""
     highlights: list[str] = []
-    label = instance_label or form_name
 
     if form_name == "schedule_e":
-        if "line_3" in filled_ids:
+        label = instance_label or "this property"
+        if "line_3" in with_amount:
             highlights.append(f"Rental income found for {label}.")
-        if "line_12" in missing_ids:
-            highlights.append(
-                f"No mortgage interest for {label} — do you have a mortgage?"
-            )
-        if "line_9" in missing_ids:
-            highlights.append(
-                f"No insurance expense for {label} — is that covered elsewhere?"
-            )
-        if "line_18" in missing_ids:
-            highlights.append(
-                f"No depreciation for {label} — you may be able to claim this."
-            )
+        if "line_12" in without_amount:
+            highlights.append(f"No mortgage interest for {label} — do you have a mortgage?")
+        if "line_9" in without_amount:
+            highlights.append(f"No insurance expense for {label} — is that covered elsewhere?")
+        if "line_18" in without_amount:
+            highlights.append(f"No depreciation for {label} — ask your accountant whether you can claim it.")
 
     elif form_name == "schedule_c":
-        if "line_1" in filled_ids:
-            highlights.append("Business income captured.")
-        if "line_30" in missing_ids:
-            highlights.append(
-                "No home office deduction — do you work from home?"
-            )
+        if "line_1" in with_amount:
+            highlights.append("Business income found.")
+        if "line_30" in without_amount:
+            highlights.append("No home office deduction — do you work from home?")
 
     elif form_name == "w2":
-        if "box_1" in filled_ids:
-            highlights.append(f"Wages reported from {label}.")
-        if "box_12a" in missing_ids and "box_12b" in missing_ids:
+        if "box_1" in with_amount:
+            highlights.append(f"Wages reported from {instance_label or 'this W-2'}.")
+        if "box_12a" in without_amount and "box_12b" in without_amount:
             highlights.append("No Box 12 codes found — check for retirement contributions.")
 
-    elif form_name.startswith("1099"):
-        filled_count = len(filled_ids)
-        if filled_count > 0:
-            highlights.append(
-                f"Found {filled_count} field{'s' if filled_count != 1 else ''} "
-                f"reported on this {form_name.upper().replace('_', '-')}."
-            )
-
     elif form_name == "1098":
-        if "box_1" in filled_ids:
-            highlights.append(f"Mortgage interest reported for {label}.")
-
-    if not highlights:
-        filled_pct = (len(filled_ids) / max(len(expected), 1)) * 100
-        if filled_pct >= 80:
-            highlights.append(f"This {form_name} looks mostly complete.")
-        elif filled_pct >= 40:
-            highlights.append(
-                f"About half the fields are filled — review what's missing."
-            )
-        else:
-            highlights.append(
-                f"Only a few fields filled so far — this {form_name} needs attention."
-            )
+        if "box_1" in with_amount:
+            highlights.append(f"Mortgage interest reported for {instance_label or 'this mortgage'}.")
 
     return highlights
 
 
 def _generate_summary(forms: list[FormCompleteness]) -> str:
+    """What I have on file. Never how complete it is: most boxes on a form don't apply to most people."""
     if not forms:
         return "I don't have any tax forms for this year yet. Upload some documents and I'll start filling things in."
 
-    total_filled = sum(f.total_filled for f in forms)
-    total_expected = sum(f.total_expected for f in forms)
-
     parts: list[str] = []
 
-    schedule_e_forms = [f for f in forms if f.form_name == "schedule_e"]
-    if schedule_e_forms:
-        prop_count = len(schedule_e_forms)
-        parts.append(
-            f"I found income from {prop_count} rental "
-            f"propert{'ies' if prop_count != 1 else 'y'}. "
-            f"Schedule E is {'mostly complete' if all(f.total_filled / max(f.total_expected, 1) > 0.6 for f in schedule_e_forms) else 'still in progress'}."
-        )
-        for se in schedule_e_forms:
-            missing_important = [
-                m for m in se.missing_fields
-                if m in {"line_12", "line_9", "line_18"}
-            ]
-            if missing_important and se.instance_label:
-                labels = [SCHEDULE_E_LINE_LABELS.get(m, m) for m in missing_important]
-                parts.append(
-                    f"I'm missing {', '.join(labels).lower()} for {se.instance_label}."
-                )
+    property_count = sum(1 for f in forms if f.form_name == "schedule_e")
+    if property_count:
+        parts.append(f"I have {property_count} rental propert{'ies' if property_count != 1 else 'y'}.")
 
-    schedule_c_forms = [f for f in forms if f.form_name == "schedule_c"]
-    if schedule_c_forms:
-        parts.append("Schedule C data is being tracked for your business income.")
+    if any(f.form_name == "schedule_c" for f in forms):
+        parts.append("I have a Schedule C for your business income.")
 
-    w2_forms = [f for f in forms if f.form_name == "w2"]
-    if w2_forms:
-        count = len(w2_forms)
-        parts.append(f"I have {count} W-2{'s' if count != 1 else ''} on file.")
+    w2_count = sum(1 for f in forms if f.form_name == "w2")
+    if w2_count:
+        parts.append(f"I have {w2_count} W-2{'s' if w2_count != 1 else ''} on file.")
 
-    source_forms = [f for f in forms if f.form_name.startswith("1099") or f.form_name == "1098" or f.form_name == "k1"]
-    if source_forms:
-        parts.append(f"{len(source_forms)} information return{'s' if len(source_forms) != 1 else ''} uploaded.")
+    source_count = sum(1 for f in forms if f.form_name.startswith("1099") or f.form_name in {"1098", "k1"})
+    if source_count:
+        parts.append(f"I have {source_count} other tax form{'s' if source_count != 1 else ''} on file.")
 
-    if total_expected > 0:
-        pct = round(total_filled / total_expected * 100)
-        parts.append(f"Overall, {pct}% of expected fields are filled ({total_filled}/{total_expected}).")
-
-    if not parts:
-        return "I have some forms on file but need more data to give you a useful summary."
-
-    return " ".join(parts)
+    return " ".join(parts) or "I have some forms on file but need more data to give you a useful summary."
 
 
 async def get_tax_completeness(
@@ -174,28 +156,30 @@ async def get_tax_completeness(
     forms: list[FormCompleteness] = []
 
     for instance in instances:
+        if _is_aggregate(instance):
+            continue
+
         expected = EXPECTED_FIELDS_BY_FORM.get(instance.form_name, {})
         expected_ids = set(expected.keys())
 
-        filled_ids: set[str] = set()
-        for field in instance.fields:
-            if field.field_id in expected_ids and _has_value(field):
-                filled_ids.add(field.field_id)
+        fields = [field for field in instance.fields if field.field_id in expected_ids]
+        filled_ids = {field.field_id for field in fields if _has_value(field)}
+        with_amount = {field.field_id for field in fields if _has_amount(field)}
 
         missing_ids = expected_ids - filled_ids
 
+        label = _real_label(instance.form_name, instance.instance_label)
         highlights = _generate_highlights(
             instance.form_name,
-            instance.instance_label,
-            filled_ids,
-            missing_ids,
-            expected,
+            label,
+            with_amount,
+            expected_ids - with_amount,
         )
 
         forms.append(
             FormCompleteness(
                 form_name=instance.form_name,
-                instance_label=instance.instance_label,
+                instance_label=label,
                 filled_fields=sorted(filled_ids),
                 missing_fields=sorted(missing_ids),
                 total_expected=len(expected_ids),
@@ -208,6 +192,8 @@ async def get_tax_completeness(
 
     return TaxCompletenessResponse(
         tax_year=tax_year,
+        tax_return_id=tax_return.id,
+        needs_recompute=tax_return.needs_recompute,
         forms=forms,
         summary=summary,
     )
