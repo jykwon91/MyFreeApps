@@ -29,6 +29,32 @@ describe("renderTemplate (frontend mirror)", () => {
     expect(body).toBe("Hi Alice");
   });
 
+  it("turns a line break in a name or listing title into a space in the subject", () => {
+    const { subject, body } = renderTemplate({
+      ...BASE,
+      templateSubject: "Re: $listing for $name",
+      templateBody: "Hi $name,\n\nThanks",
+      inquirerName: "Alice\nSmith",
+      listingTitle: "Cozy\r\n  Room",
+    });
+    expect(subject).toBe("Re: Cozy Room for Alice Smith");
+    expect(body).toBe("Hi Alice\nSmith,\n\nThanks");
+  });
+
+  it.each([
+    ["Alice\u2028Smith", "Cozy\vRoom", "Re: Cozy Room for Alice Smith"],
+    ["Alice", "Cozy Room\x85", "Re: Cozy Room for Alice"],
+    ["Alice\fSmith", "Cozy\x1cRoom", "Re: Cozy Room for Alice Smith"],
+  ])("treats %j and %j the way the backend does", (inquirerName, listingTitle, expected) => {
+    const { subject } = renderTemplate({
+      ...BASE,
+      templateSubject: "Re: $listing for $name",
+      inquirerName,
+      listingTitle,
+    });
+    expect(subject).toBe(expected);
+  });
+
   it("substitutes $listing in subject", () => {
     const { subject } = renderTemplate({ ...BASE, templateSubject: "Re: $listing" });
     expect(subject).toBe("Re: Cozy Room");

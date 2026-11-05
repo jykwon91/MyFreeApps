@@ -12,7 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.context import RequestContext
-from app.core.permissions import current_org_member, require_write_access
+from app.core.permissions import require_write_access
 from app.main import app
 from app.models.organization.organization_member import OrgRole
 from app.schemas.inquiries.inquiry_message_response import InquiryMessageResponse
@@ -157,6 +157,20 @@ class TestSendReply:
                 )
                 assert r.status_code == 502
         app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "subject",
+        ["Re: Cozy\nBcc: evil@bad.com", "Line one\r\nLine two", "Re: Cozy\u2028Room", "Re: Cozy\x0bRoom", "   "],
+    )
+    async def test_a_subject_that_cant_be_an_email_header_is_refused_before_sending(self, subject: str) -> None:
+        app.dependency_overrides[require_write_access] = lambda: _ctx(uuid.uuid4(), uuid.uuid4())
+        with patch("app.api.inquiries.inquiry_reply_service.send_reply") as send_reply:
+            with TestClient(app) as client:
+                r = client.post(f"/inquiries/{uuid.uuid4()}/reply", json={"subject": subject, "body": "Hi"})
+        app.dependency_overrides.clear()
+        assert r.status_code == 422
+        send_reply.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_extra_fields_rejected(self) -> None:
