@@ -9,4 +9,3 @@ export type {
 } from "./tax-form";
 export type { TaxSuggestion, TaxAdvisorResponse } from "./tax-advisor";
 export type { TaxYearProfile } from "./tax-year-profile";
-export type { FormCompleteness, TaxCompletenessResponse } from "./tax-completeness";

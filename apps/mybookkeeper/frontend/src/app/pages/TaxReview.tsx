@@ -1,7 +1,7 @@
 import { useSearchParams, Link } from "react-router-dom";
 import { getYear } from "date-fns";
 import { FileText } from "lucide-react";
-import { useGetTaxCompletenessQuery } from "@/shared/store/taxCompletenessApi";
+import { useGetTaxCompletenessQuery } from "@mybookkeeper/api-client/store/taxCompletenessApi";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import ReviewSummary from "@/app/features/tax-review/ReviewSummary";
 import FormCompletenessCard from "@/app/features/tax-review/FormCompletenessCard";

@@ -28,6 +28,7 @@ export const FORM_LABELS: Record<string, string> = {
   schedule_a: "Schedule A",
   schedule_b: "Schedule B",
   schedule_c: "Schedule C",
+  schedule_se: "Schedule SE",
   schedule_d: "Schedule D",
   "4562": "Form 4562",
   "8825": "Form 8825",

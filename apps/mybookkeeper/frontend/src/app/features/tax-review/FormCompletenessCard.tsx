@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { ChevronDown, ChevronUp, AlertTriangle, CheckCircle } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
 import { getFormLabel } from "@mybookkeeper/api-client/utils/taxFormLabel";
-import type { FormCompleteness } from "@/shared/types/tax/tax-completeness";
+import type { FormCompleteness } from "@mybookkeeper/api-client/types/tax/FormCompleteness";
 
 export interface FormCompletenessCardProps {
   form: FormCompleteness;
