@@ -1,5 +1,5 @@
 import type { LeaseTemplatesListMode } from "@/shared/types/lease/lease-templates-list-mode";
-import type { LeaseTemplateSummary } from "@/shared/types/lease/lease-template-summary";
+import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import LeaseTemplatesListSkeleton from "./LeaseTemplatesListSkeleton";
 import LeaseTemplateCard from "./LeaseTemplateCard";

@@ -1,16 +1,16 @@
 import { baseApi } from "./baseApi";
 import type { GenerateDefaultsResponse } from "@/shared/types/lease/generate-defaults-response";
 import type { LeasePlaceholderUpdateRequest } from "@/shared/types/lease/lease-placeholder-update-request";
-import type { LeaseTemplateDetail } from "@/shared/types/lease/lease-template-detail";
-import type { LeaseTemplateListResponse } from "@/shared/types/lease/lease-template-list-response";
-import type { LeaseTemplatePlaceholder } from "@/shared/types/lease/lease-template-placeholder";
+import type { LeaseTemplateDetail } from "@mybookkeeper/api-client/types/lease/lease-template-detail";
+import type { LeaseTemplatePlaceholder } from "@mybookkeeper/api-client/types/lease/lease-template-placeholder";
 import type { LeaseTemplateUpdateRequest } from "@/shared/types/lease/lease-template-update-request";
 import type { MultiGenerateDefaultsRequest } from "@/shared/types/lease/multi-generate-defaults-request";
 import type { MultiGenerateDefaultsResponse } from "@/shared/types/lease/multi-generate-defaults-response";
 import type { SuggestPlaceholdersResponse } from "@/shared/types/lease/suggest-placeholders-response";
 
 /**
- * RTK Query slice for the Lease Templates domain.
+ * The website's lease template actions. Reading a template is shared with the
+ * phone: see ``@mybookkeeper/api-client/store/leaseTemplatesApi``.
  *
  * Tag strategy: each item carries its own ``LeaseTemplate:{id}`` tag plus a
  * shared ``LeaseTemplate:LIST`` tag for the paginated list. Mutations against
@@ -21,34 +21,6 @@ import type { SuggestPlaceholdersResponse } from "@/shared/types/lease/suggest-p
  */
 const leaseTemplatesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getLeaseTemplates: builder.query<
-      LeaseTemplateListResponse,
-      { limit?: number; offset?: number } | void
-    >({
-      query: (args) => ({
-        url: "/lease-templates",
-        params: {
-          ...(args?.limit !== undefined ? { limit: args.limit } : {}),
-          ...(args?.offset !== undefined ? { offset: args.offset } : {}),
-        },
-      }),
-      providesTags: (result) =>
-        result
-          ? [
-              ...result.items.map((t) => ({
-                type: "LeaseTemplate" as const,
-                id: t.id,
-              })),
-              { type: "LeaseTemplate" as const, id: "LIST" },
-            ]
-          : [{ type: "LeaseTemplate" as const, id: "LIST" }],
-    }),
-
-    getLeaseTemplateById: builder.query<LeaseTemplateDetail, string>({
-      query: (id) => ({ url: `/lease-templates/${id}` }),
-      providesTags: (_r, _e, id) => [{ type: "LeaseTemplate", id }],
-    }),
-
     createLeaseTemplate: builder.mutation<
       LeaseTemplateDetail,
       { name: string; description?: string; files: File[] }
@@ -161,8 +133,6 @@ const leaseTemplatesApi = baseApi.injectEndpoints({
 });
 
 export const {
-  useGetLeaseTemplatesQuery,
-  useGetLeaseTemplateByIdQuery,
   useGetGenerateDefaultsQuery,
   useGetMultiGenerateDefaultsQuery,
   useCreateLeaseTemplateMutation,

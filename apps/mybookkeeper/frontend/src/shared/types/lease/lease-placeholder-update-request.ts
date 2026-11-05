@@ -1,4 +1,4 @@
-import type { LeasePlaceholderInputType } from "@/shared/types/lease/lease-placeholder-input-type";
+import type { LeasePlaceholderInputType } from "@mybookkeeper/api-client/types/lease/lease-placeholder-input-type";
 
 export interface LeasePlaceholderUpdateRequest {
   display_label?: string;

@@ -18,7 +18,7 @@ import { store } from "@/shared/store";
 import LeaseNew from "@/app/pages/LeaseNew";
 import MultiTemplatePicker from "@/app/features/leases/MultiTemplatePicker";
 import ApplicantPicker from "@/app/features/leases/ApplicantPicker";
-import type { LeaseTemplateSummary } from "@/shared/types/lease/lease-template-summary";
+import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 
 // ---------------------------------------------------------------------------
@@ -34,10 +34,13 @@ const mockUseGetMultiGenerateDefaultsQuery = vi.fn();
 const mockUseCreateSignedLeaseMutation = vi.fn();
 const mockUseCanWrite = vi.fn();
 
-vi.mock("@/shared/store/leaseTemplatesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/leaseTemplatesApi", () => ({
   useGetLeaseTemplatesQuery: () => mockUseGetLeaseTemplatesQuery(),
   useGetLeaseTemplateByIdQuery: (id: unknown, opts: unknown) =>
     mockUseGetLeaseTemplateByIdQuery(id, opts),
+}));
+
+vi.mock("@/shared/store/leaseTemplatesApi", () => ({
   useGetGenerateDefaultsQuery: (args: unknown, opts: unknown) =>
     mockUseGetGenerateDefaultsQuery(args, opts),
   useGetMultiGenerateDefaultsQuery: (args: unknown, opts: unknown) =>

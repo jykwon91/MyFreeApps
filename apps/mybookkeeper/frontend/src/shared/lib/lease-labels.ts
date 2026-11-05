@@ -1,4 +1,4 @@
-import type { LeasePlaceholderInputType } from "@/shared/types/lease/lease-placeholder-input-type";
+import type { LeasePlaceholderInputType } from "@mybookkeeper/api-client/types/lease/lease-placeholder-input-type";
 import type { SignedLeaseStatus } from "@mybookkeeper/api-client/types/lease/signed-lease-status";
 import type { BadgeColor } from "@/shared/components/ui/Badge";
 
@@ -46,3 +46,13 @@ export const PREFILL_PROVENANCE_LABELS: Record<string, string> = {
   user: "from your profile",
   today: "today's date",
 };
+
+export const LEASE_PLACEHOLDER_INPUT_TYPES: readonly LeasePlaceholderInputType[] = [
+  "text",
+  "email",
+  "phone",
+  "date",
+  "number",
+  "computed",
+  "signature",
+] as const;

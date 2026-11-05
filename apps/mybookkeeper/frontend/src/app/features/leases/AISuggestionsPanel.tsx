@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Sparkles, X, ChevronDown, ChevronUp } from "lucide-react";
 import type { SuggestedPlaceholderItem } from "@/shared/types/lease/suggest-placeholders-response";
 import { LEASE_PLACEHOLDER_INPUT_TYPE_LABELS } from "@/shared/lib/lease-labels";
-import type { LeasePlaceholderInputType } from "@/shared/types/lease/lease-placeholder-input-type";
+import type { LeasePlaceholderInputType } from "@mybookkeeper/api-client/types/lease/lease-placeholder-input-type";
 
 export interface AISuggestionsPanelProps {
   suggestions: SuggestedPlaceholderItem[];

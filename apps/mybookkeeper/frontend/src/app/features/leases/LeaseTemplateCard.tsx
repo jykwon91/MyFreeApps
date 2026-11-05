@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import type { LeaseTemplateSummary } from "@/shared/types/lease/lease-template-summary";
+import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 
 export interface LeaseTemplateCardProps {
   template: LeaseTemplateSummary;

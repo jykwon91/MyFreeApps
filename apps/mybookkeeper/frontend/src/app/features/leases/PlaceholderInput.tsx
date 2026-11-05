@@ -1,4 +1,4 @@
-import type { LeaseTemplatePlaceholder } from "@/shared/types/lease/lease-template-placeholder";
+import type { LeaseTemplatePlaceholder } from "@mybookkeeper/api-client/types/lease/lease-template-placeholder";
 import type { PlaceholderProvenance } from "@/shared/types/lease/placeholder-provenance";
 import ProvenanceBadge from "@/app/features/leases/ProvenanceBadge";
 

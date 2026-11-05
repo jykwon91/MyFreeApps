@@ -22,7 +22,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { store } from "@/shared/store";
 import LeaseDetail from "@/app/pages/LeaseDetail";
 import type { SignedLeaseDetail } from "@mybookkeeper/api-client/types/lease/signed-lease-detail";
-import type { LeaseTemplateSummary } from "@/shared/types/lease/lease-template-summary";
+import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -92,7 +92,7 @@ const TEMPLATES: LeaseTemplateSummary[] = [
   },
 ];
 
-vi.mock("@/shared/store/leaseTemplatesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/leaseTemplatesApi", () => ({
   useGetLeaseTemplatesQuery: () => ({
     data: { items: TEMPLATES, total: 2 },
     isLoading: false,

@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import { useGetLeaseTemplatesQuery } from "@/shared/store/leaseTemplatesApi";
+import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import {
   useAddSignedLeaseTemplatesMutation,
   usePrefillAddendumPlaceholdersMutation,
 } from "@mybookkeeper/api-client/store/signedLeasesApi";
-import type { LeaseTemplateSummary } from "@/shared/types/lease/lease-template-summary";
+import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 import type { SignedLeaseTemplatePrefillItem } from "@mybookkeeper/api-client/types/lease/signed-lease-template-prefill";
 import LeaseAddTemplatePickStep from "./LeaseAddTemplatePickStep";
 import LeaseAddTemplateValuesStep from "./LeaseAddTemplateValuesStep";

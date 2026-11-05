@@ -5,10 +5,8 @@ import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import { LoadingButton } from "@platform/ui";
-import {
-  useDeleteLeaseTemplateMutation,
-  useGetLeaseTemplateByIdQuery,
-} from "@/shared/store/leaseTemplatesApi";
+import { useGetLeaseTemplateByIdQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
+import { useDeleteLeaseTemplateMutation } from "@/shared/store/leaseTemplatesApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import PlaceholderSpecEditor from "@/app/features/leases/PlaceholderSpecEditor";
