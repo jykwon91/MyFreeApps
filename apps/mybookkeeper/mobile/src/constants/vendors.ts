@@ -1,0 +1,30 @@
+export const ALL_CATEGORIES_OPTION = "all";
+export const VENDOR_SKELETON_ROWS = ["a", "b", "c", "d", "e", "f"];
+
+export const VENDOR_MESSAGES = {
+  loadingList: "Loading your vendors",
+  loadingMore: "Loading more vendors",
+  loadingOne: "Loading this vendor",
+  couldntLoadList: "I couldn't load your vendors.",
+  couldntLoadOne: "I couldn't load that vendor.",
+  cantFind: "I can't find that vendor.",
+  maybeDeleted: "It may have been deleted.",
+  tryAgainOffer: "Want me to try again?",
+  tryAgain: "Try again",
+  back: "Back",
+  noneHeading: "You don't have any vendors yet.",
+  noneBody: "Add the people you trust on the website, and I'll keep them here for when something breaks.",
+  openWebsite: "Open on the website",
+  clearFilter: "Clear filter",
+  tryAnotherCategory: "Try another category, or see them all.",
+  chooseCategory: "Show which category?",
+  allCategories: "All categories",
+  preferred: "Preferred",
+  call: "Call",
+  directions: "Directions",
+  address: "Address",
+  hourlyRate: "Hourly rate",
+  flatRates: "Flat rates",
+  notes: "Notes",
+  manageOnWebsite: "Adding and changing vendors is on the website.",
+} as const;

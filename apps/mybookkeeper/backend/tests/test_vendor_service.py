@@ -68,6 +68,29 @@ class TestListVendors:
         assert {item.id for item in envelope.items} == {v1.id, v2.id}
 
     @pytest.mark.asyncio
+    async def test_summaries_carry_the_phone_for_a_call_from_the_row(
+        self,
+        db: AsyncSession,
+        test_user: User,
+        test_org: Organization,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        await vendor_repo.create(
+            db,
+            organization_id=test_org.id,
+            user_id=test_user.id,
+            name="Plumber A",
+            category="plumber",
+            phone="555-0123",
+        )
+        await db.commit()
+        _patch_session(monkeypatch, db)
+
+        envelope = await vendor_service.list_vendors(test_org.id, test_user.id)
+
+        assert envelope.items[0].phone == "555-0123"
+
+    @pytest.mark.asyncio
     async def test_category_filter_narrows(
         self,
         db: AsyncSession,

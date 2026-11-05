@@ -4,9 +4,8 @@ import type { VendorCategory } from "./vendor-category";
  * Mirrors backend ``VendorSummary`` Pydantic schema — the rolodex-card shape
  * returned by GET /vendors.
  *
- * Excludes phone / email / address / flat_rate_notes / notes per
- * RENTALS_PLAN.md §5.4 information hierarchy — those live on the detail
- * page only.
+ * Carries the phone so a row can offer a call. Email, address, flat rate notes
+ * and notes live on the detail page only.
  */
 export interface VendorSummary {
   id: string;
@@ -15,6 +14,7 @@ export interface VendorSummary {
 
   name: string;
   category: VendorCategory;
+  phone: string | null;
   hourly_rate: string | null;
   preferred: boolean;
 

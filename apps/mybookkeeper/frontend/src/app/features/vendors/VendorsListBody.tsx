@@ -1,5 +1,5 @@
 import type { VendorsListMode } from "@/shared/types/vendor/vendors-list-mode";
-import type { VendorSummary } from "@/shared/types/vendor/vendor-summary";
+import type { VendorSummary } from "@mybookkeeper/api-client/types/vendor/vendor-summary";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import { LoadingButton } from "@platform/ui";
 import VendorsListSkeleton from "./VendorsListSkeleton";

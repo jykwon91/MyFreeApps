@@ -1,9 +1,11 @@
-import { baseApi } from "./baseApi";
-import type { VendorCreateRequest } from "@/shared/types/vendor/vendor-create-request";
-import type { VendorListArgs } from "@/shared/types/vendor/vendor-list-args";
-import type { VendorListResponse } from "@/shared/types/vendor/vendor-list-response";
-import type { VendorResponse } from "@/shared/types/vendor/vendor-response";
-import type { VendorUpdateRequest } from "@/shared/types/vendor/vendor-update-request";
+import { baseApi } from "@platform/core/store/baseApi";
+import { VENDOR_PAGE_SIZE } from "../constants/vendorLabels";
+import type { VendorCreateRequest } from "../types/vendor/vendor-create-request";
+import type { VendorListArgs } from "../types/vendor/vendor-list-args";
+import type { VendorListResponse } from "../types/vendor/vendor-list-response";
+import type { VendorPageArgs } from "../types/vendor/vendor-page-args";
+import type { VendorResponse } from "../types/vendor/vendor-response";
+import type { VendorUpdateRequest } from "../types/vendor/vendor-update-request";
 
 /**
  * RTK Query slice for the Vendors domain (rentals Phase 4).
@@ -14,7 +16,9 @@ import type { VendorUpdateRequest } from "@/shared/types/vendor/vendor-update-re
  * ``deleteVendor`` mutations and invalidates ``Transaction:LIST`` on
  * delete because vendor deletion clears ``Transaction.vendor_id`` rows.
  */
-const vendorsApi = baseApi.injectEndpoints({
+export const vendorsApi = baseApi.enhanceEndpoints({
+  addTagTypes: ["Vendor", "Transaction"],
+}).injectEndpoints({
   endpoints: (builder) => ({
     getVendors: builder.query<VendorListResponse, VendorListArgs | void>({
       query: (args) => ({
@@ -39,6 +43,21 @@ const vendorsApi = baseApi.injectEndpoints({
               { type: "Vendor" as const, id: "LIST" },
             ]
           : [{ type: "Vendor" as const, id: "LIST" }],
+    }),
+    listVendorPages: builder.infiniteQuery<VendorListResponse, VendorPageArgs, number>({
+      infiniteQueryOptions: {
+        initialPageParam: 0,
+        getNextPageParam: (lastPage, _allPages, lastOffset) =>
+          lastPage.has_more ? lastOffset + VENDOR_PAGE_SIZE : undefined,
+      },
+      query: ({ queryArg, pageParam }) => ({
+        url: "/vendors",
+        params: { ...queryArg, limit: VENDOR_PAGE_SIZE, offset: pageParam },
+      }),
+      providesTags: (result) => [
+        ...(result?.pages.flatMap((page) => page.items).map((vendor) => ({ type: "Vendor" as const, id: vendor.id })) ?? []),
+        { type: "Vendor" as const, id: "LIST" },
+      ],
     }),
     getVendorById: builder.query<VendorResponse, string>({
       query: (id) => ({ url: `/vendors/${id}` }),
@@ -83,4 +102,5 @@ export const {
   useCreateVendorMutation,
   useUpdateVendorMutation,
   useDeleteVendorMutation,
+  useListVendorPagesInfiniteQuery,
 } = vendorsApi;

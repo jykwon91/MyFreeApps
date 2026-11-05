@@ -4,12 +4,12 @@ import { Plus } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import { Button, LoadingButton } from "@platform/ui";
-import { useGetVendorsQuery } from "@/shared/store/vendorsApi";
+import { useGetVendorsQuery } from "@mybookkeeper/api-client/store/vendorsApi";
 import {
   VENDOR_CATEGORIES,
   VENDOR_PAGE_SIZE,
-} from "@/shared/lib/vendor-labels";
-import type { VendorCategory } from "@/shared/types/vendor/vendor-category";
+} from "@mybookkeeper/api-client/constants/vendorLabels";
+import type { VendorCategory } from "@mybookkeeper/api-client/types/vendor/vendor-category";
 import VendorCategoryFilter from "@/app/features/vendors/VendorCategoryFilter";
 import VendorPreferredToggle from "@/app/features/vendors/VendorPreferredToggle";
 import VendorForm from "@/app/features/vendors/VendorForm";

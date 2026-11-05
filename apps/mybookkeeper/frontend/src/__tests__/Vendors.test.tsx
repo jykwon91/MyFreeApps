@@ -4,8 +4,8 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import Vendors from "@/app/pages/Vendors";
-import type { VendorSummary } from "@/shared/types/vendor/vendor-summary";
-import type { VendorListResponse } from "@/shared/types/vendor/vendor-list-response";
+import type { VendorSummary } from "@mybookkeeper/api-client/types/vendor/vendor-summary";
+import type { VendorListResponse } from "@mybookkeeper/api-client/types/vendor/vendor-list-response";
 
 const mockVendors: VendorSummary[] = [
   {
@@ -14,6 +14,7 @@ const mockVendors: VendorSummary[] = [
     user_id: "user-1",
     name: "Bob's Plumbing",
     category: "plumber",
+    phone: null,
     hourly_rate: "125.00",
     preferred: true,
     last_used_at: "2026-04-01T10:00:00Z",
@@ -26,6 +27,7 @@ const mockVendors: VendorSummary[] = [
     user_id: "user-1",
     name: "Sparky Electric",
     category: "electrician",
+    phone: null,
     hourly_rate: null,
     preferred: false,
     last_used_at: null,
@@ -52,7 +54,7 @@ const createVendor = vi.fn(() => ({ unwrap: () => Promise.resolve({}) }));
 const updateVendor = vi.fn(() => ({ unwrap: () => Promise.resolve({}) }));
 const deleteVendor = vi.fn(() => ({ unwrap: () => Promise.resolve() }));
 
-vi.mock("@/shared/store/vendorsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/vendorsApi", () => ({
   useGetVendorsQuery: vi.fn(() => defaultVendorsState),
   useGetVendorByIdQuery: vi.fn(() => ({ data: undefined, isLoading: false })),
   useCreateVendorMutation: () => [createVendor, { isLoading: false }],
@@ -60,7 +62,7 @@ vi.mock("@/shared/store/vendorsApi", () => ({
   useDeleteVendorMutation: () => [deleteVendor, { isLoading: false }],
 }));
 
-import { useGetVendorsQuery } from "@/shared/store/vendorsApi";
+import { useGetVendorsQuery } from "@mybookkeeper/api-client/store/vendorsApi";
 
 type ListQueryReturn = ReturnType<typeof useGetVendorsQuery>;
 

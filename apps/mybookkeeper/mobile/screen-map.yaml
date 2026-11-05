@@ -108,9 +108,9 @@ routes:
   /utility-plans:
     not_on_mobile: Not on the phone yet. More links to it on the website.
   /vendors:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/vendors/index
   /vendors/:vendorId:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/vendors/[id]
   /verify-email:
     not_on_mobile: Done on the website, which the sign-in screen links to.
   /welcome-manuals:

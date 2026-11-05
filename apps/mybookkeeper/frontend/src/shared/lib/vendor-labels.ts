@@ -1,37 +1,5 @@
 import type { BadgeColor } from "@/shared/components/ui/Badge";
-import type { VendorCategory } from "@/shared/types/vendor/vendor-category";
-
-/**
- * Category label & color tables for the Vendors domain.
- *
- * Mirrors backend tuples in ``app/core/vendor_enums.py`` — keep both in
- * sync when categories are added (canonical source of truth is the backend
- * ``CheckConstraint`` per RENTALS_PLAN.md §4.1).
- */
-
-export const VENDOR_CATEGORIES: readonly VendorCategory[] = [
-  "handyman",
-  "plumber",
-  "electrician",
-  "hvac",
-  "locksmith",
-  "cleaner",
-  "pest",
-  "landscaper",
-  "general_contractor",
-] as const;
-
-export const VENDOR_CATEGORY_LABELS: Record<VendorCategory, string> = {
-  handyman: "Handyman",
-  plumber: "Plumber",
-  electrician: "Electrician",
-  hvac: "HVAC",
-  locksmith: "Locksmith",
-  cleaner: "Cleaner",
-  pest: "Pest Control",
-  landscaper: "Landscaper",
-  general_contractor: "General Contractor",
-};
+import type { VendorCategory } from "@mybookkeeper/api-client/types/vendor/vendor-category";
 
 /**
  * Category badge colors. Visually grouped by trade family so scanning a
@@ -50,5 +18,3 @@ export const VENDOR_CATEGORY_BADGE_COLORS: Record<VendorCategory, BadgeColor> = 
   landscaper: "green",
   general_contractor: "yellow",
 };
-
-export const VENDOR_PAGE_SIZE = 25;

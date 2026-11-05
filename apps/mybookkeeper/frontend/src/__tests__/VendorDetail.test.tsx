@@ -4,7 +4,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { store } from "@/shared/store";
 import VendorDetail from "@/app/pages/VendorDetail";
-import type { VendorResponse } from "@/shared/types/vendor/vendor-response";
+import type { VendorResponse } from "@mybookkeeper/api-client/types/vendor/vendor-response";
 
 const mockVendor: VendorResponse = {
   id: "vendor-1",
@@ -36,7 +36,7 @@ const deleteVendor = vi.fn(() => ({ unwrap: () => Promise.resolve() }));
 const updateVendor = vi.fn(() => ({ unwrap: () => Promise.resolve(mockVendor) }));
 const createVendor = vi.fn(() => ({ unwrap: () => Promise.resolve(mockVendor) }));
 
-vi.mock("@/shared/store/vendorsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/vendorsApi", () => ({
   useGetVendorsQuery: vi.fn(() => ({ data: undefined, isLoading: false })),
   useGetVendorByIdQuery: vi.fn(() => defaultDetailState),
   useDeleteVendorMutation: () => [deleteVendor, { isLoading: false }],
@@ -44,7 +44,7 @@ vi.mock("@/shared/store/vendorsApi", () => ({
   useCreateVendorMutation: () => [createVendor, { isLoading: false }],
 }));
 
-import { useGetVendorByIdQuery } from "@/shared/store/vendorsApi";
+import { useGetVendorByIdQuery } from "@mybookkeeper/api-client/store/vendorsApi";
 
 type DetailQueryReturn = ReturnType<typeof useGetVendorByIdQuery>;
 

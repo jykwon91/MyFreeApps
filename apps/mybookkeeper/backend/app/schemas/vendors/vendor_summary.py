@@ -1,8 +1,9 @@
 """Minimal Vendor payload for list / rolodex views.
 
 Only the fields the host needs to see in the rolodex grid: name, category,
-preferred flag, hourly rate, last_used_at. Full contact info / notes /
-flat_rate_notes are loaded on the detail page.
+phone (so the phone app can offer a call from the row), preferred flag, hourly
+rate, last_used_at. Email / address / notes / flat_rate_notes are loaded on the
+detail page.
 """
 from __future__ import annotations
 
@@ -20,6 +21,7 @@ class VendorSummary(BaseModel):
 
     name: str
     category: str
+    phone: str | None = None
     hourly_rate: Decimal | None = None
     preferred: bool
 
