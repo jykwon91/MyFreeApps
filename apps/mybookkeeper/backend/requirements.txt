@@ -244,7 +244,7 @@ pytest==9.1.1
 pytest-anyio==0.0.0
 pytest-asyncio==1.4.0
 pytest-xdist==3.8.0
-python-dateutil==2.9.0.post0
+python-dateutil==4.0.0
     # via icalendar
 python-docx==1.2.0
     # via mybookkeeper-backend
