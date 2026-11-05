@@ -154,6 +154,15 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   client …"). **No auction-house prices** — a test fails on any
   "N gold/silver". Class tips follow the saved World Map class; the page's Class picker saves to it. Its checklist has its own
   key (`mga.wowForever.gold.checklist.v1`), separate from the guide's.
+- Warlock macros (`/wow-forever/warlock-macros`) are hand-written paste-into-game
+  text in `data/warlock/warlockMacros.ts`. Their spell/item names are checked
+  by `wowWarlockMacros.test.ts` against `data/warlock/warlockNames.json`,
+  **GENERATED** by `python -m scripts.wow_warlock.build` (Warlock skill lines,
+  pet skill lines, Healthstone/Soulstone items; re-pinned by `wow_refresh`).
+  Max 255 chars per macro. Syntax Forever may not support (`@focus`,
+  `@mouseover`, `/castsequence`, `/stopcasting`, pet `/cast`) carries an
+  `unconfirmed` tag and the Unconfirmed chip — never claim in-game testing.
+  Forever renamed Curses to Banes (no Curse of Agony). No addon is involved.
 - Class/spec ids in `data/classes.ts` are the stable key for anything
   class-shaped (stat weights, compare settings, a future BiS page). Never rename.
 - **Scoring lives in the frontend** (`scoring/`), deterministic and unit-tested.

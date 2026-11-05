@@ -58,6 +58,11 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "How to make gold at your level and with your class — what to gather, what to sell, and what not to do.",
       },
       {
+        path: "/wow-forever/warlock-macros",
+        title: "Warlock macros",
+        description: "Pet, Fear, Healthstone and mouseover macros to paste into the game, with names checked against the client.",
+      },
+      {
         path: "/wow-forever/compare",
         title: "Item Compare",
         description: "Paste or screenshot two or more items and see which is better for your class and spec.",

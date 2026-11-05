@@ -34,6 +34,13 @@ def _column_rows(key: str, id_column: str, name_column: str) -> Callable[[Any], 
     return rows
 
 
+def _names_list(key: str) -> Callable[[Any], Rows]:
+    """A plain list of names, each its own row."""
+    def rows(document: Any) -> Rows:
+        return {name: (name, name) for name in document.get(key, [])}
+    return rows
+
+
 @dataclass(frozen=True)
 class Section:
     title: str
@@ -51,6 +58,8 @@ SECTIONS = (
     Section("Leatherworking recipes", f"{WOW_DATA}/professions/crafting/leatherworking.json", _named_rows("recipes", "spell", "name")),
     Section("Engineering recipes", f"{WOW_DATA}/professions/crafting/engineering.json", _named_rows("recipes", "spell", "name")),
     Section("Engineering smelts", f"{WOW_DATA}/professions/crafting/engineering.json", _named_rows("smelting", "spell", "name")),
+    Section("Warlock spells", f"{WOW_DATA}/warlock/warlockNames.json", _names_list("spells")),
+    Section("Warlock pet abilities", f"{WOW_DATA}/warlock/warlockNames.json", _names_list("petSpells")),
     Section("Item Compare items", f"{WOW_DATA}/items/items.json", _column_rows("items", "id", "name")),
     Section("Maps and zones", f"{WOW_DATA}/worldMap/zones.json", _named_rows("zones", "id", "name")),
     Section("Flight points", f"{WOW_DATA}/worldMap/travel.json", _column_rows("nodes", "id", "name")),
