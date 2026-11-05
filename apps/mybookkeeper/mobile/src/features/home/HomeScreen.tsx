@@ -1,4 +1,5 @@
 import { useGetDocumentsQuery } from "@mybookkeeper/api-client/store/documentsApi";
+import { useGetPendingReceiptsQuery } from "@mybookkeeper/api-client/store/rentReceiptsApi";
 import { useGetSummaryQuery, useGetSummaryYearsQuery } from "@mybookkeeper/api-client/store/summaryApi";
 import { useGetTransactionReviewCountQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 import { Banner, EmptyState, SegmentedControl, Skeleton, useRefresh, useTheme } from "@platform/mobile";
@@ -6,7 +7,7 @@ import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { ALL_DOCUMENTS } from "../../constants/documents";
-import { HOME_PERIODS, type HomePeriod } from "../../constants/home";
+import { HOME_PERIODS, HOME_RECEIPTS_ARGS, type HomePeriod } from "../../constants/home";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { useToday } from "../../lib/useToday";
 import { periodRange } from "../transactions/transactionFilters";
@@ -33,15 +34,17 @@ export default function HomeScreen() {
   const years = useGetSummaryYearsQuery();
   const reviewCount = useGetTransactionReviewCountQuery();
   const documents = useGetDocumentsQuery(ALL_DOCUMENTS);
+  const receipts = useGetPendingReceiptsQuery(HOME_RECEIPTS_ARGS, { skip: !canWrite });
 
   const { refreshControl } = useRefresh(
-    () => Promise.all([summary.refetch(), years.refetch(), reviewCount.refetch(), documents.refetch()]),
-    summary.error ?? years.error ?? reviewCount.error ?? documents.error,
+    () =>
+      Promise.all([summary.refetch(), years.refetch(), reviewCount.refetch(), documents.refetch(), canWrite ? receipts.refetch() : undefined]),
+    summary.error ?? years.error ?? reviewCount.error ?? documents.error ?? (canWrite ? receipts.error : undefined),
   );
 
   const hasNothingYet = years.data?.length === 0 && reviewCount.data?.count === 0 && documents.data?.length === 0;
   const isShowingOldData =
-    (summary.isError && summary.currentData) || (reviewCount.isError && reviewCount.data) || (documents.isError && documents.data);
+    (summary.isError && summary.currentData) || (reviewCount.isError && reviewCount.data) || (documents.isError && documents.data) || (receipts.isError && receipts.data);
 
   return (
     <ScrollView

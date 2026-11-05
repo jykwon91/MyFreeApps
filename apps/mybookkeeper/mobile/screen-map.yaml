@@ -68,7 +68,7 @@ routes:
   /properties:
     screen: (app)/properties/index
   /receipts:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/receipts/index
   /reconciliation:
     screen: (app)/reconciliation/index
   /register:
