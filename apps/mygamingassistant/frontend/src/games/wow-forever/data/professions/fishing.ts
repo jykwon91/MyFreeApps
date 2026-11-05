@@ -2,7 +2,9 @@ import type { FishRecipe, HowToStep, RouteStep } from "@/games/wow-forever/data/
 
 /**
  * Where to fish by skill — the Classic route. Zone fishing levels are
- * server-side, so none of this is confirmed for Forever yet.
+ * server-side, so none of it is confirmed for Forever yet. The launch client
+ * (1.60.1.70790, checked 2026-11-05) has the Expert book at level 20 and skill
+ * 125, as Classic; who sells it, and Nat Pagle's quest, are server-side.
  */
 export const FISHING_ROUTE: readonly RouteStep[] = [
   {

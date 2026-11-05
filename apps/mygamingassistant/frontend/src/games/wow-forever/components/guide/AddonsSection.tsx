@@ -6,7 +6,9 @@ export default function AddonsSection() {
   return (
     <GuideSection id="addons" title="Addons" intro="Popular Classic addons that make the game easier to learn.">
       <AlertBox variant="warning">
-        Forever's addon policy isn't confirmed yet — these may not all work, or be allowed, at launch.
+        Blizzard hasn't published a full addon policy for Forever. Forever runs modern WoW's addon system, not
+        Classic's, so you need each addon's Forever version — and in the beta, addons couldn't read combat data. Some of
+        these may not work, or be allowed.
       </AlertBox>
       <ul className="rounded-xl border bg-card divide-y">
         {ADDON_PICKS.map((a) => (

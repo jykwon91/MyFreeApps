@@ -101,9 +101,11 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
 - Cooking & Fishing (`/wow-forever/professions`, `?p=cooking|fishing`) is
-  pre-launch data in `data/professions/`: every row carries
-  `confidence: "confirmed" | "unconfirmed"`. After Forever launches, re-check
-  the unconfirmed rows and bump `PROFESSIONS_DATA_STATUS`.
+  hand-written data in `data/professions/`, researched in the beta and
+  re-checked against the launch client on 2026-11-05: every row carries
+  `confidence: "confirmed" | "unconfirmed"`. Rows still unconfirmed depend on
+  server-side facts (trainers, vendors, quests, fishing zones) — confirm them
+  in game or from a Blizzard post, then bump `PROFESSIONS_DATA_STATUS`.
 - Professions also has Tailoring and Enchanting (`?p=tailoring|enchanting`,
   `&skill=N`): trainers, rank-ups (Artisan Enchanting = Annora in Uldaman), a
   hand-picked route to 300 (`data/professions/crafting/*Route.ts`, joined to
@@ -122,7 +124,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - Making gold (`/wow-forever/gold`, `?band=1-20|20-40|40-60|all`, seeded from
   the World Map's saved level) is hand-written advice in `data/gold/goldTips.ts`:
   each tip is `classic` (no chip), `forever` (published for Forever) or
-  `unknown` (Unconfirmed). **No prices** before launch — a test fails on any
+  `unknown` (Unconfirmed; client-only facts stay here, worded "the Forever
+  client …"). **No auction-house prices** — a test fails on any
   "N gold/silver". Class tips follow the saved World Map class; the page's Class picker saves to it. Its checklist has its own
   key (`mga.wowForever.gold.checklist.v1`), separate from the guide's.
 - Class/spec ids in `data/classes.ts` are the stable key for anything

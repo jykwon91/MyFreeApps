@@ -97,12 +97,12 @@ export const CRAFTING_GUIDES: Readonly<Record<CraftingProfession, CraftingGuide>
         confidence: "confirmed",
       },
       {
-        text: "Beta players report Motes of Magic are sold by Enchanting Supplies vendors.",
+        text: "Beta players reported Motes of Magic sold by Enchanting Supplies vendors. Not checked in the live game yet.",
         confidence: "unconfirmed",
       },
       {
-        text: "In Classic Era any Enchanting skill can disenchant any item. Whether Forever adds a skill requirement isn't known yet.",
-        confidence: "unconfirmed",
+        text: "Any Enchanting skill can disenchant any item. The Forever client has no skill requirement on disenchanting, the same as Classic Era.",
+        confidence: "confirmed",
       },
       {
         text: "Forever adds 64 Enchanting recipes (necklace enchants, staves, the Arcane Salvager and more). Where their formulas come from isn't known yet.",

@@ -2,9 +2,11 @@ import type { CraftRouteEntry } from "@/games/wow-forever/types/crafting";
 
 /**
  * Tailoring 1–300. Recipes, skill colours and learn skills are the Forever
- * beta client's (`tailoring.json`); a test checks every row can be learned at
- * its start and is still not grey at its end. Rows from Artisan (200) on
- * can't be tested in the beta, so they are unconfirmed.
+ * client's (`tailoring.json`, launch build 1.60.1.70790); a test checks every
+ * row can be learned at its start and is still not grey at its end. Rows from
+ * 195 on were out of reach in the beta (level cap 30) and haven't been checked
+ * in the live game yet — trainers and pattern sources are server-side — so
+ * they are unconfirmed.
  */
 export const TAILORING_ROUTE: readonly CraftRouteEntry[] = [
   { kind: "craft", spell: 2963, from: 1, to: 25, note: "Linen Cloth drops from humanoids around level 5–15.", confidence: "confirmed" },
@@ -58,7 +60,7 @@ export const TAILORING_ROUTE: readonly CraftRouteEntry[] = [
     to: 300,
     title: "265–300: pick what you can get",
     intro:
-      "No one recipe is a safe pick here yet — Artisan couldn't be tested in the beta, and Forever's new patterns have no known source. Use whichever of these you have.",
+      "No one recipe is a safe pick here yet — Artisan wasn't reachable in the beta and hasn't been checked in the live game, and Forever's new patterns have no known source. Use whichever of these you have.",
     options: [
       { spell: 23664, detail: "Pattern from the Argent Dawn quartermaster (needs reputation)." },
       { spell: 18560, detail: "Pattern from Qia in Everlook. Mooncloth sells well, but each one costs 2 Felcloth." },

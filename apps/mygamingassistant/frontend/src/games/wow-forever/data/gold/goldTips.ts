@@ -10,15 +10,17 @@ import {
 
 /**
  * Making gold in Forever. Classic Era advice unless a tip says otherwise —
- * no auction-house prices: Forever's economy starts fresh at launch. Where
- * to farm (with vendor-price numbers) is generated: see `gold/goldFarms.ts`.
+ * no auction-house prices: Forever's economy is brand new. Where to farm
+ * (with vendor-price numbers) is generated: see `gold/goldFarms.ts`.
  *
- * AFTER LAUNCH (2026-11-04): re-check every `confidence: "unknown"` tip and
- * the Forever-only ones, then update `GOLD_DATA_STATUS`.
+ * Re-checked 2026-11-05 against Blizzard's posts and the launch client
+ * (1.60.1.70790). `forever` needs a Blizzard post; client-only facts are worded
+ * as "the Forever client …" and stay `unknown`. Re-check the `unknown` tips
+ * when Blizzard publishes more, then update `GOLD_DATA_STATUS`.
  */
 export const GOLD_DATA_STATUS = {
-  stage: "Pre-launch",
-  checkedOn: "2026-10-02",
+  stage: "Live game — Classic tips, some unconfirmed",
+  checkedOn: "2026-11-05",
 } as const;
 
 export const BAND_TIPS: readonly BandTips[] = [
@@ -70,7 +72,8 @@ export const BAND_TIPS: readonly BandTips[] = [
       {
         id: "well-fed",
         title: "Eat cooked food before you fight",
-        detail: "Forever's Well Fed buff also gives +5% experience from kills — faster leveling means more gold per hour.",
+        detail:
+          "The Forever client gives Well Fed +5% experience from kills (Blizzard hasn't announced it) — faster leveling means more gold per hour.",
         confidence: "unknown",
       },
     ],
@@ -83,7 +86,7 @@ export const BAND_TIPS: readonly BandTips[] = [
         id: "save-for-mount",
         title: "Save for your first mount",
         detail:
-          "In Classic, riding is the biggest cost of leveling. Forever hasn't published its mount level or price yet — don't spend on auction-house gear you'll replace in a few levels.",
+          "In Classic, riding is the biggest cost of leveling. The Forever client puts the first mounts at level 40, at a quarter of Classic's vendor price; Blizzard hasn't published what riding costs — don't spend on auction-house gear you'll replace in a few levels.",
         confidence: "unknown",
       },
       {
@@ -155,13 +158,13 @@ export const BAND_TIPS: readonly BandTips[] = [
       {
         id: "black-market",
         title: "The Black Market auction house is a gold sink",
-        detail: "Forever adds one in Powderfuse Port. Treat it as somewhere to spend gold, not to make it.",
+        detail: "Players report one in Powderfuse Port (Riverglades); Blizzard hasn't posted about it. Treat it as somewhere to spend gold, not to make it.",
         confidence: "unknown",
       },
       {
         id: "new-zones",
         title: "New Forever zones",
-        detail: "Forever's new zones aren't in the farm list — what drops there isn't known until people play them.",
+        detail: "Forever's new zones aren't in the farm list — their loot is server-side, so what drops there isn't published.",
         confidence: "unknown",
       },
     ],
@@ -183,7 +186,7 @@ export const CLASS_GOLD_TIPS: readonly ClassGoldTips[] = [
       {
         id: "mage-aoe",
         title: "AoE farm groups of mobs",
-        detail: "Mages can pull and kill whole packs at once for cloth and drops. Whether Forever changes the spells this relies on isn't known yet.",
+        detail: "Mages can pull and kill whole packs at once for cloth and drops. Blizzard's development notes change Frost spells this relies on (Cone of Cold, Winter's Chill), so how well it works in Forever isn't known yet.",
         confidence: "unknown",
       },
       {

@@ -3,6 +3,9 @@ import type { HowToStep, RouteStep } from "@/games/wow-forever/data/professions/
 /**
  * Fastest Cooking 1–300. "confirmed" rows were seen on a Forever beta trainer
  * (Stephen Ryback, Stormwind) or in the beta client; the rest are Classic.
+ * Checked 2026-11-05 against the launch client (1.60.1.70790): every recipe and
+ * book here has the same skill numbers as Classic. Who sells them, and the
+ * Artisan quest, are server-side, so those rows stay unconfirmed.
  */
 export const COOKING_ROUTE: readonly RouteStep[] = [
   {

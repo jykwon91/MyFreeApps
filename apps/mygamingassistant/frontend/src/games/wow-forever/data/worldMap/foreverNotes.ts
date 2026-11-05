@@ -1,5 +1,5 @@
 /**
- * Known Forever (beta) differences that change how you get around. The map
+ * Known Forever differences (most first seen in the beta) that change how you get around. The map
  * data is Classic-era unless captured, so these are called out separately.
  * Link a source where one is published.
  */
@@ -20,7 +20,7 @@ export const FOREVER_NOTES: readonly ForeverNote[] = [
   },
   {
     id: "summoning-stones",
-    text: "Meeting stones didn't summon in the beta, so plan to travel to the dungeon yourself.",
+    text: "Meeting stones didn't summon in the beta, and Blizzard hasn't said that changed at launch — plan to travel to the dungeon yourself.",
   },
   {
     id: "warlock-even-levels",

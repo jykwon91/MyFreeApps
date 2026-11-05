@@ -4,7 +4,7 @@ export const PROFESSION = { cooking: "cooking", fishing: "fishing" } as const;
 export type Profession = (typeof PROFESSION)[keyof typeof PROFESSION];
 
 /**
- * "confirmed" = seen in Forever (beta client, Blizzard, or in game).
+ * "confirmed" = seen in Forever (beta or launch client, Blizzard, or in game).
  * "unconfirmed" = Classic Era fact or community claim not yet checked in Forever.
  */
 export type Confidence = "confirmed" | "unconfirmed";

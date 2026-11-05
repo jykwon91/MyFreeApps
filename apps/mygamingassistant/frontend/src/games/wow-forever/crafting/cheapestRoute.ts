@@ -39,7 +39,7 @@ export const FORMULA_WINDOW = 50;
 /** Price list: recipes you can use within this many points of your skill put their materials on the main list. */
 export const SOON_WINDOW = 30;
 
-/** Rows from here on can't be tested in the beta — the hand route's own rule. */
+/** Rows from here on weren't reachable in the beta and aren't checked in the live game yet — the hand route's own rule. */
 export const UNCONFIRMED_FROM = 200;
 
 export function enchantSlot(name: string): EnchantSlot | null {
