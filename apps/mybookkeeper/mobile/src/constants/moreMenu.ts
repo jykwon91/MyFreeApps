@@ -23,7 +23,7 @@ export const MORE_MENU: readonly MoreMenuGroup[] = [
   {
     title: "Money tools",
     items: [
-      { label: "Reconciliation", webPath: "/reconciliation" },
+      { label: "Reconciliation", screen: "/reconciliation" },
       { label: "Vendors", screen: "/vendors" },
       { label: "Analytics", webPath: "/analytics" },
       { label: "Insurance", screen: "/insurance" },

@@ -1,7 +1,7 @@
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatTag } from "@/shared/utils/tag";
 import { RECONCILIATION_STATUS_STYLES } from "@/shared/lib/constants";
-import type { ReconciliationSource } from "@/shared/types/reconciliation/reconciliation-source";
+import type { ReconciliationSource } from "@mybookkeeper/api-client/types/reconciliation/reconciliation-source";
 import type { ReconciliationSourcesMode } from "@/shared/types/reconciliation/reconciliation-sources-mode";
 import { LoadingButton } from "@platform/ui";
 import EmptyState from "@/shared/components/ui/EmptyState";

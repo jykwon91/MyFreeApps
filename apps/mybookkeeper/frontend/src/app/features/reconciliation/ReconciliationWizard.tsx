@@ -6,7 +6,7 @@ import {
   useUpload1099Mutation,
   useListSourcesQuery,
   useGetDiscrepanciesQuery,
-} from "@/shared/store/reconciliationApi";
+} from "@mybookkeeper/api-client/store/reconciliationApi";
 import Select from "@/shared/components/ui/Select";
 import { LoadingButton } from "@platform/ui";
 import Card from "@/shared/components/ui/Card";

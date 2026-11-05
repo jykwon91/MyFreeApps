@@ -70,7 +70,7 @@ routes:
   /receipts:
     not_on_mobile: Not on the phone yet. More links to it on the website.
   /reconciliation:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/reconciliation/index
   /register:
     not_on_mobile: Done on the website, which the sign-in screen links to.
   /reply-templates:

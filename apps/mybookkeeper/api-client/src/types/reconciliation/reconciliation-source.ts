@@ -1,4 +1,4 @@
-export type ReconciliationSourceStatus = "unmatched" | "partial" | "matched" | "confirmed";
+import type { ReconciliationSourceStatus } from "./reconciliation-source-status";
 
 export interface ReconciliationSource {
   id: string;
@@ -15,12 +15,4 @@ export interface ReconciliationSource {
   created_at: string;
   document_file_name: string | null;
   property_name: string | null;
-}
-
-export interface ReconciliationMatch {
-  id: string;
-  reconciliation_source_id: string;
-  booking_statement_id: string;
-  matched_amount: string;
-  created_at: string;
 }

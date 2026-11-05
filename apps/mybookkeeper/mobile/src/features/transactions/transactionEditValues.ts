@@ -35,6 +35,10 @@ function isSameAmount(first: string, second: string): boolean {
 export function amountError(values: TransactionEditValues, original: Transaction): string | undefined {
   const amount = values.amount.trim();
   if (isSameAmount(amount, original.amount) && amount !== "") return undefined;
+  return moneyInputError(amount);
+}
+
+export function moneyInputError(amount: string): string | undefined {
   if (amount === "" || Number(amount) === 0) return "Enter an amount above $0.";
   if (!MONEY_PATTERN.test(amount)) return "Use dollars and cents, like 84.20.";
   return undefined;

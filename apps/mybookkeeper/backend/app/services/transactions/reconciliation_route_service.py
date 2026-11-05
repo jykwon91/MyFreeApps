@@ -83,10 +83,10 @@ async def auto_reconcile(
             normalized = normalize_vendor(source.issuer)
             txn_total = vendor_totals.get(normalized, Decimal("0"))
 
+            await reconciliation_repo.update_matched_amount(db, source, txn_total)
+
             if txn_total == Decimal("0"):
                 continue
-
-            await reconciliation_repo.update_matched_amount(db, source, txn_total)
 
             if source.reported_amount and abs(txn_total - source.reported_amount) < Decimal("1.00"):
                 source.status = "matched"

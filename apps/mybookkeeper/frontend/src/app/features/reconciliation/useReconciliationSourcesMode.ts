@@ -1,4 +1,4 @@
-import type { ReconciliationSource } from "@/shared/types/reconciliation/reconciliation-source";
+import type { ReconciliationSource } from "@mybookkeeper/api-client/types/reconciliation/reconciliation-source";
 import type { ReconciliationSourcesMode } from "@/shared/types/reconciliation/reconciliation-sources-mode";
 
 interface UseReconciliationSourcesModeArgs {

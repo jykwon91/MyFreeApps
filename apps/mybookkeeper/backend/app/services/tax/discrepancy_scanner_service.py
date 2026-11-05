@@ -146,7 +146,7 @@ async def _scan_1099_gaps(db: AsyncSession, organization_id: uuid.UUID, tax_year
                     title=f"1099 gap: {source.issuer}",
                     description=(
                         f"1099 reports ${source.reported_amount:.2f} from '{source.issuer}', "
-                        f"but only ${matched_sum:.2f} found in approved transactions — "
+                        f"but only ${matched_sum:.2f} found in approved income — "
                         f"a gap of ${gap:.2f}."
                     ),
                     affected_ids=[str(source.id)],
