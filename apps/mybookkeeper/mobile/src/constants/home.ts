@@ -9,3 +9,6 @@ export const HOME_PERIODS: readonly { value: HomePeriod; label: string }[] = [
 
 export const PROPERTIES_SHOWN_AT_FIRST = 5;
 export const DOCUMENTS_NEEDING_A_LOOK_LINK = "/money?segment=documents&filter=needsALook";
+export const RECEIPTS_LINK = "/receipts";
+/** Home only needs the count, which comes with any page. */
+export const HOME_RECEIPTS_ARGS = { limit: 1 };

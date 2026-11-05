@@ -40,6 +40,8 @@ export interface FakeTransactionServer {
   summary: Partial<SummaryResponse>;
   summaryYears: number[];
   documents: { id: string; status: string }[];
+  /** Rent receipts waiting to send. Only the count is served. */
+  pendingReceipts: number;
   /** Fails summary requests while set. */
   failSummary: boolean;
   requests: AxiosRequestConfig[];
@@ -60,6 +62,7 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     summary: { revenue: 0, expenses: 0, profit: 0, by_property: [] },
     summaryYears: [2026],
     documents: [],
+    pendingReceipts: 0,
     failSummary: false,
     requests: [],
   };
@@ -75,6 +78,9 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     if (config.url === "/properties") return respond(server.properties);
     if (config.url === "/documents") return respond(server.documents);
     if (config.url === "/summary/years") return respond(server.summaryYears);
+    if (config.url === "/rent-receipts/pending") {
+      return respond({ items: [], total: server.pendingReceipts, pending_count: server.pendingReceipts, gmail_state: "ready" });
+    }
     if (config.url?.startsWith("/summary")) return server.failSummary ? respond({ detail: "nope" }, 500) : respond(server.summary);
     if (config.url === "/transactions/review-count") {
       return respond({ count: server.transactions.filter((row) => REVIEWABLE.includes(row.status)).length });

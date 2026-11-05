@@ -48,6 +48,13 @@ function failRequests(...urls: string[]) {
     urls.includes(config.url ?? "") ? Promise.reject(Object.assign(new Error("Network Error"), { config })) : answer(config)) as typeof api.defaults.adapter;
 }
 
+/** Leaves a request unanswered, so the screen stays mid-load for it. */
+function holdRequests(...urls: string[]) {
+  const answer = api.defaults.adapter as (config: { url?: string }) => Promise<unknown>;
+  api.defaults.adapter = ((config: { url?: string }) =>
+    urls.includes(config.url ?? "") ? new Promise(() => undefined) : answer(config)) as typeof api.defaults.adapter;
+}
+
 async function pull() {
   await act(async () => {
     await screen.getByTestId("home-screen").props.refreshControl.props.onRefresh();
@@ -104,6 +111,48 @@ describe("HomeScreen", () => {
     expect(mockNavigate).toHaveBeenLastCalledWith("/money?segment=transactions&view=review&period=all&type=&property=&category=&vendor=&status=");
     await fireEvent.press(screen.getByRole("button", { name: "1 document needs a look" }));
     expect(mockNavigate).toHaveBeenLastCalledWith("/money?segment=documents&filter=needsALook");
+  });
+
+  it("links rent receipts waiting to send, asking only for the count", async () => {
+    const server = startTransactionServer([]);
+    server.pendingReceipts = 2;
+    await renderScreen();
+    await fireEvent.press(await screen.findByRole("button", { name: "2 rent receipts waiting to send" }));
+    expect(mockNavigate).toHaveBeenLastCalledWith("/receipts");
+    expect(server.requests.find((request) => request.url === "/rent-receipts/pending")?.params).toEqual({ limit: 1 });
+    expect(screen.queryByText("You're all caught up.")).toBeNull();
+  });
+
+  it("doesn't ask a viewer about receipts they can't send", async () => {
+    const server = startTransactionServer([]);
+    server.role = "viewer";
+    server.pendingReceipts = 2;
+    await renderScreen();
+    expect(await screen.findByText("You're all caught up.")).toBeTruthy();
+    expect(server.requests.some((request) => request.url === "/rent-receipts/pending")).toBe(false);
+  });
+
+  it("says when the receipts can't be checked, and isn't caught up", async () => {
+    startTransactionServer([]);
+    failRequests("/rent-receipts/pending");
+    await renderScreen();
+    expect(await screen.findByText("I couldn't check your rent receipts.")).toBeTruthy();
+    expect(screen.queryByText("You're all caught up.")).toBeNull();
+  });
+
+  it("keeps loading, never blank or caught up, while only the receipts are still coming", async () => {
+    startTransactionServer([]);
+    holdRequests("/rent-receipts/pending");
+    await renderScreen();
+    expect(await screen.findByLabelText("Loading what's waiting for you")).toBeTruthy();
+    expect(screen.queryByText("You're all caught up.")).toBeNull();
+  });
+
+  it("says what failed when more than one can't be checked", async () => {
+    startTransactionServer([]);
+    failRequests("/rent-receipts/pending", "/documents");
+    await renderScreen();
+    expect(await screen.findByText("I couldn't check what's waiting for you.")).toBeTruthy();
   });
 
   it("says when nothing is waiting", async () => {
@@ -214,8 +263,10 @@ describe("HomeScreen", () => {
     server.summary = { revenue: 2, expenses: 0, profit: 2, by_property: [] };
     server.documents = [{ id: "d1", status: "failed" }];
     server.transactions.push(aTransaction({ status: "pending" }));
+    server.pendingReceipts = 1;
     await pull();
     expect(await screen.findByText("+$2.00")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "1 rent receipt waiting to send" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "1 transaction to review" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "1 document needs a look" })).toBeTruthy();
   });

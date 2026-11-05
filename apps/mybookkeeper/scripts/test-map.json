@@ -1092,9 +1092,16 @@
         "api-client/src/types/lease/receipt-send-blocker.ts",
         "api-client/src/types/lease/send-receipt-request.ts",
         "api-client/src/types/lease/send-receipt-response.ts",
-        "api-client/src/utils/receiptPayerName.ts"
+        "api-client/src/utils/receiptPayerName.ts",
+        "api-client/src/types/lease/receipt-send-error-code.ts",
+        "api-client/src/constants/receiptSendErrorMessages.ts",
+        "api-client/src/constants/receiptSendFinishedCodes.ts",
+        "api-client/src/utils/receiptSendErrorCode.ts",
+        "backend/app/services/leases/receipt_send_error_details.py",
+        "frontend/src/shared/lib/receipt-send-errors.ts"
       ],
       "backend_tests": [
+        "test_receipt_send_details_match_api_client.py",
         "test_receipt_pdf_service.py",
         "test_receipt_sequence_repo.py",
         "test_receipt_routes.py",

@@ -21,9 +21,15 @@ export function numbersFailedMessage(period: HomePeriod): string {
   return `I couldn't load ${periodLabel(period).toLowerCase()}'s numbers.`;
 }
 
-export function waitingFailedMessage(transactionsFailed: boolean, documentsFailed: boolean): string | null {
-  if (transactionsFailed && documentsFailed) return "I couldn't check what's waiting for you.";
-  if (transactionsFailed) return "I couldn't check your transactions.";
-  if (documentsFailed) return "I couldn't check your documents.";
+export function receiptsWaiting(count: number): string {
+  return `${counted(count, "rent receipt", "rent receipts")} waiting to send`;
+}
+
+export function waitingFailedMessage(failed: { transactions: boolean; documents: boolean; receipts: boolean }): string | null {
+  const failures = [failed.transactions, failed.documents, failed.receipts].filter(Boolean).length;
+  if (failures > 1) return "I couldn't check what's waiting for you.";
+  if (failed.transactions) return "I couldn't check your transactions.";
+  if (failed.documents) return "I couldn't check your documents.";
+  if (failed.receipts) return "I couldn't check your rent receipts.";
   return null;
 }

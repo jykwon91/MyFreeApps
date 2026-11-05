@@ -18,6 +18,7 @@ export const MORE_MENU: readonly MoreMenuGroup[] = [
       { label: "Leases", webPath: "/leases", screen: "/leases" },
       { label: "Lease Templates", screen: "/lease-templates" },
       { label: "Payment Review", screen: "/payment-review" },
+      { label: "Rent Receipts", screen: "/receipts" },
     ],
   },
   {
