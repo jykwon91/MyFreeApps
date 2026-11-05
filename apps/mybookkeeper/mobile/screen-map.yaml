@@ -74,7 +74,7 @@ routes:
   /register:
     not_on_mobile: Done on the website, which the sign-in screen links to.
   /reply-templates:
-    not_on_mobile: Templates are chosen on the phone, and written on the website, where there's room for a long one. More links there.
+    screen: (app)/reply-templates/index
   /reset-password:
     not_on_mobile: Done on the website, which the sign-in screen links to.
   /security:
