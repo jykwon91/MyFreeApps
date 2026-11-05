@@ -1,5 +1,5 @@
-import type { LeaseTemplateFile } from "@/shared/types/lease/lease-template-file";
-import type { LeaseTemplatePlaceholder } from "@/shared/types/lease/lease-template-placeholder";
+import type { LeaseTemplateFile } from "./lease-template-file";
+import type { LeaseTemplatePlaceholder } from "./lease-template-placeholder";
 
 /**
  * Lease template detail (with files + placeholders).

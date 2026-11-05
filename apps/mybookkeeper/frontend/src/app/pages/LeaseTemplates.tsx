@@ -4,7 +4,7 @@ import { Plus } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import { LoadingButton } from "@platform/ui";
-import { useGetLeaseTemplatesQuery } from "@/shared/store/leaseTemplatesApi";
+import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import LeaseTemplateUploadDialog from "@/app/features/leases/LeaseTemplateUploadDialog";
 import { useLeaseTemplatesListMode } from "@/app/features/leases/useLeaseTemplatesListMode";

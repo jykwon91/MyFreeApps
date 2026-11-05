@@ -1,5 +1,5 @@
 import PlaceholderSpecRow from "@/app/features/leases/PlaceholderSpecRow";
-import type { LeaseTemplatePlaceholder } from "@/shared/types/lease/lease-template-placeholder";
+import type { LeaseTemplatePlaceholder } from "@mybookkeeper/api-client/types/lease/lease-template-placeholder";
 
 export interface PlaceholderSpecEditorProps {
   templateId: string;

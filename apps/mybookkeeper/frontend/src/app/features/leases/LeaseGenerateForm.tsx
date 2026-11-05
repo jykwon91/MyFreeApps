@@ -7,8 +7,8 @@ import {
   useGetGenerateDefaultsQuery,
   useGetMultiGenerateDefaultsQuery,
 } from "@/shared/store/leaseTemplatesApi";
-import type { LeaseTemplateDetail } from "@/shared/types/lease/lease-template-detail";
-import type { LeaseTemplatePlaceholder } from "@/shared/types/lease/lease-template-placeholder";
+import type { LeaseTemplateDetail } from "@mybookkeeper/api-client/types/lease/lease-template-detail";
+import type { LeaseTemplatePlaceholder } from "@mybookkeeper/api-client/types/lease/lease-template-placeholder";
 import type { PlaceholderProvenance } from "@/shared/types/lease/placeholder-provenance";
 import PlaceholderInput from "@/app/features/leases/PlaceholderInput";
 

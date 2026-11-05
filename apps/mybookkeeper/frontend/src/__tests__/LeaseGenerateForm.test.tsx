@@ -11,7 +11,7 @@ import { MemoryRouter } from "react-router-dom";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import LeaseGenerateForm from "@/app/features/leases/LeaseGenerateForm";
-import type { LeaseTemplateDetail } from "@/shared/types/lease/lease-template-detail";
+import type { LeaseTemplateDetail } from "@mybookkeeper/api-client/types/lease/lease-template-detail";
 
 // ---------------------------------------------------------------------------
 // Mock RTK Query hooks

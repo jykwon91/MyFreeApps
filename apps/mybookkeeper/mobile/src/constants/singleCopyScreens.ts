@@ -22,6 +22,8 @@ export const SINGLE_COPY_SCREENS = [
   "inquiries/[id]/index",
   "inquiries/[id]/promote",
   "inquiries/[id]/reply",
+  "lease-templates/[id]",
+  "lease-templates/index",
   "leases/[id]",
   "leases/index",
   "listings/[id]",

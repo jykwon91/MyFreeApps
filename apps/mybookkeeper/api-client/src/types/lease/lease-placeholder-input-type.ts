@@ -12,13 +12,3 @@ export type LeasePlaceholderInputType =
   | "number"
   | "computed"
   | "signature";
-
-export const LEASE_PLACEHOLDER_INPUT_TYPES: readonly LeasePlaceholderInputType[] = [
-  "text",
-  "email",
-  "phone",
-  "date",
-  "number",
-  "computed",
-  "signature",
-] as const;

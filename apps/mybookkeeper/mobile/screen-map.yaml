@@ -38,9 +38,9 @@ routes:
   /invite/:token:
     not_on_mobile: Opened from an email, on the website.
   /lease-templates:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/lease-templates/index
   /lease-templates/:templateId:
-    not_on_mobile: A template editor needs a bigger screen. The list stays.
+    screen: (app)/lease-templates/[id]
   /leases:
     screen: (app)/leases/index
   /leases/:leaseId:

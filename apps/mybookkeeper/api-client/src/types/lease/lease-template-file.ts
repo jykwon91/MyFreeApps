@@ -2,7 +2,8 @@
  * A single source file inside a lease template bundle.
  *
  * Mirrors `schemas/leases/lease_template_file_response.py`. ``presigned_url``
- * is null when storage is unavailable.
+ * is null when storage is unavailable or the stored file is gone;
+ * ``is_available`` is false only when it's gone.
  */
 export interface LeaseTemplateFile {
   id: string;
@@ -14,4 +15,5 @@ export interface LeaseTemplateFile {
   display_order: number;
   created_at: string;
   presigned_url: string | null;
+  is_available: boolean;
 }

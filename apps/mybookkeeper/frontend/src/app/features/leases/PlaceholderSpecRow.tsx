@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useUpdateLeasePlaceholderMutation } from "@/shared/store/leaseTemplatesApi";
-import { LEASE_PLACEHOLDER_INPUT_TYPE_LABELS } from "@/shared/lib/lease-labels";
 import {
+  LEASE_PLACEHOLDER_INPUT_TYPE_LABELS,
   LEASE_PLACEHOLDER_INPUT_TYPES,
-  type LeasePlaceholderInputType,
-} from "@/shared/types/lease/lease-placeholder-input-type";
-import type { LeaseTemplatePlaceholder } from "@/shared/types/lease/lease-template-placeholder";
+} from "@/shared/lib/lease-labels";
+import type { LeasePlaceholderInputType } from "@mybookkeeper/api-client/types/lease/lease-placeholder-input-type";
+import type { LeaseTemplatePlaceholder } from "@mybookkeeper/api-client/types/lease/lease-template-placeholder";
 
 export interface PlaceholderSpecRowProps {
   templateId: string;

@@ -1,4 +1,4 @@
-import type { LeaseTemplateSummary } from "@/shared/types/lease/lease-template-summary";
+import type { LeaseTemplateSummary } from "./lease-template-summary";
 
 export interface LeaseTemplateListResponse {
   items: LeaseTemplateSummary[];

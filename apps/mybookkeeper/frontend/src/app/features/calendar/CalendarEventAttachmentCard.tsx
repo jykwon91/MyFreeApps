@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { FileText, Paperclip, Trash2 } from "lucide-react";
 import type { ListingBlackoutAttachment } from "@/shared/types/listing/listing-blackout-attachment";
-import { formatFileSize } from "@/shared/utils/file-size";
+import { formatFileSize } from "@mybookkeeper/api-client/utils/file-size";
 import { reportMissingStorageObject } from "@/shared/lib/storage-observability";
 
 export interface CalendarEventAttachmentCardProps {

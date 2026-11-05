@@ -1,8 +1,8 @@
 import AlertBox from "@/shared/components/ui/AlertBox";
 import { LoadingButton } from "@platform/ui";
 import Skeleton from "@/shared/components/ui/Skeleton";
-import { useGetLeaseTemplatesQuery } from "@/shared/store/leaseTemplatesApi";
-import type { LeaseTemplateSummary } from "@/shared/types/lease/lease-template-summary";
+import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
+import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 
 export interface MultiTemplatePickerProps {
   selectedIds: string[];

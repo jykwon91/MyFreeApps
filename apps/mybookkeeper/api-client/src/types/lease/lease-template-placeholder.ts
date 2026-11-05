@@ -1,4 +1,4 @@
-import type { LeasePlaceholderInputType } from "@/shared/types/lease/lease-placeholder-input-type";
+import type { LeasePlaceholderInputType } from "./lease-placeholder-input-type";
 
 /**
  * Placeholder spec on a lease template.

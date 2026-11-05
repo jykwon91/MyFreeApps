@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import PlaceholderSpecEditor from "@/app/features/leases/PlaceholderSpecEditor";
-import type { LeaseTemplatePlaceholder } from "@/shared/types/lease/lease-template-placeholder";
+import type { LeaseTemplatePlaceholder } from "@mybookkeeper/api-client/types/lease/lease-template-placeholder";
 
 vi.mock("@/shared/store/leaseTemplatesApi", async () => {
   const actual = await vi.importActual<

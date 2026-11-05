@@ -1,7 +1,7 @@
 import AlertBox from "@/shared/components/ui/AlertBox";
 import { Button, LoadingButton } from "@platform/ui";
 import Skeleton from "@/shared/components/ui/Skeleton";
-import type { LeaseTemplateSummary } from "@/shared/types/lease/lease-template-summary";
+import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 
 export interface LeaseAddTemplatePickStepProps {
   available: LeaseTemplateSummary[];

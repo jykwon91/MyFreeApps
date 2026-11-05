@@ -7,7 +7,7 @@ import {
   useCreateLeaseTemplateMutation,
   useSuggestPlaceholdersMutation,
 } from "@/shared/store/leaseTemplatesApi";
-import type { LeaseTemplateDetail } from "@/shared/types/lease/lease-template-detail";
+import type { LeaseTemplateDetail } from "@mybookkeeper/api-client/types/lease/lease-template-detail";
 import type { SuggestPlaceholdersResponse } from "@/shared/types/lease/suggest-placeholders-response";
 
 export interface LeaseTemplateUploadDialogProps {
