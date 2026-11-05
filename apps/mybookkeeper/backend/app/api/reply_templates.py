@@ -38,9 +38,12 @@ async def create_template(
     payload: ReplyTemplateCreateRequest,
     ctx: RequestContext = Depends(require_write_access),
 ) -> ReplyTemplateResponse:
-    return await reply_template_service.create_template(
-        ctx.organization_id, ctx.user_id, payload,
-    )
+    try:
+        return await reply_template_service.create_template(
+            ctx.organization_id, ctx.user_id, payload,
+        )
+    except reply_template_service.ReplyTemplateNameTakenError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.patch("/{template_id}", response_model=ReplyTemplateResponse)
@@ -55,6 +58,8 @@ async def update_template(
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Reply template not found") from exc
+    except reply_template_service.ReplyTemplateNameTakenError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.delete("/{template_id}", status_code=204)

@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import uuid
 
+from sqlalchemy.exc import IntegrityError
+
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.repositories import (
     inquiry_repo,
@@ -130,21 +132,33 @@ async def list_templates(
     return [ReplyTemplateResponse.model_validate(t) for t in templates]
 
 
+# The per-person unique name is the only constraint a create or rename can trip:
+# the workspace and person come from the session. Archived templates keep theirs.
+NAME_TAKEN_MESSAGE = "You already have a template with that name. Archived ones count too, so try another."
+
+
+class ReplyTemplateNameTakenError(ValueError):
+    """The person already has a template with this name, possibly archived."""
+
+
 async def create_template(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
     payload: ReplyTemplateCreateRequest,
 ) -> ReplyTemplateResponse:
     async with unit_of_work() as db:
-        template = await reply_template_repo.create(
-            db,
-            organization_id=organization_id,
-            user_id=user_id,
-            name=payload.name,
-            subject_template=payload.subject_template,
-            body_template=payload.body_template,
-            display_order=payload.display_order,
-        )
+        try:
+            template = await reply_template_repo.create(
+                db,
+                organization_id=organization_id,
+                user_id=user_id,
+                name=payload.name,
+                subject_template=payload.subject_template,
+                body_template=payload.body_template,
+                display_order=payload.display_order,
+            )
+        except IntegrityError as exc:
+            raise ReplyTemplateNameTakenError(NAME_TAKEN_MESSAGE) from exc
     return ReplyTemplateResponse.model_validate(template)
 
 
@@ -155,9 +169,12 @@ async def update_template(
 ) -> ReplyTemplateResponse:
     fields = payload.to_update_dict()
     async with unit_of_work() as db:
-        template = await reply_template_repo.update_template(
-            db, template_id, user_id, fields,
-        )
+        try:
+            template = await reply_template_repo.update_template(
+                db, template_id, user_id, fields,
+            )
+        except IntegrityError as exc:
+            raise ReplyTemplateNameTakenError(NAME_TAKEN_MESSAGE) from exc
         if template is None:
             raise LookupError(f"Reply template {template_id} not found")
     return ReplyTemplateResponse.model_validate(template)

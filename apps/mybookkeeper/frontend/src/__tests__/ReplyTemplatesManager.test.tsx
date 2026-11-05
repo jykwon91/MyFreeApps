@@ -5,6 +5,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import ReplyTemplatesManager from "@/app/features/inquiries/ReplyTemplatesManager";
+import { showError } from "@/shared/lib/toast-store";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 
 const t1: ReplyTemplate = {
@@ -55,6 +56,7 @@ function renderManager() {
 describe("ReplyTemplatesManager", () => {
   beforeEach(() => {
     create.mockClear();
+    vi.mocked(showError).mockClear();
     update.mockClear();
     archive.mockClear();
     listState = { data: [t1], isLoading: false };
@@ -87,6 +89,33 @@ describe("ReplyTemplatesManager", () => {
     expect(screen.getByTestId("reply-template-form-name")).toHaveValue(
       "Initial inquiry reply",
     );
+  });
+
+  async function saveNewTemplate(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByTestId("reply-template-new-button"));
+    await user.type(screen.getByTestId("reply-template-form-name"), "Same");
+    await user.type(screen.getByTestId("reply-template-form-subject"), "Hi");
+    await user.type(screen.getByTestId("reply-template-form-body"), "Hello");
+    await user.click(screen.getByTestId("reply-template-form-submit"));
+  }
+
+  it("says why when the name is taken, and keeps the form open to change it", async () => {
+    const user = userEvent.setup();
+    const detail = "You already have a template with that name. Archived ones count too, so try another.";
+    create.mockReturnValueOnce({ unwrap: () => Promise.reject({ status: 409, data: { detail } }) });
+    renderManager();
+    await saveNewTemplate(user);
+    expect(showError).toHaveBeenCalledWith(detail);
+    expect(screen.getByTestId("reply-template-form-name")).toHaveValue("Same");
+  });
+
+  it("offers another try on any other failure", async () => {
+    const user = userEvent.setup();
+    create.mockReturnValueOnce({ unwrap: () => Promise.reject({ status: 500, data: {} }) });
+    renderManager();
+    await saveNewTemplate(user);
+    expect(showError).toHaveBeenCalledWith("I couldn't save that template. Want to try again?");
+    expect(screen.getByTestId("reply-template-form")).toBeInTheDocument();
   });
 
   it("opens archive confirm dialog", async () => {

@@ -14,6 +14,10 @@ from app.main import app
 from app.models.organization.organization_member import OrgRole
 from app.schemas.inquiries.rendered_template_response import RenderedTemplateResponse
 from app.schemas.inquiries.reply_template_response import ReplyTemplateResponse
+from app.services.inquiries.reply_template_service import (
+    NAME_TAKEN_MESSAGE,
+    ReplyTemplateNameTakenError,
+)
 
 
 def _ctx(org_id: uuid.UUID, user_id: uuid.UUID) -> RequestContext:
@@ -105,6 +109,39 @@ class TestCreateReplyTemplate:
             )
             assert r.status_code == 422
         app.dependency_overrides.clear()
+
+
+class TestReplyTemplateNameTaken:
+    @pytest.mark.asyncio
+    async def test_create_gets_a_409_with_the_reason(self) -> None:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
+        with patch(
+            "app.api.reply_templates.reply_template_service.create_template",
+            side_effect=ReplyTemplateNameTakenError(NAME_TAKEN_MESSAGE),
+        ):
+            with TestClient(app) as client:
+                r = client.post(
+                    "/reply-templates",
+                    json={"name": "Same", "subject_template": "s", "body_template": "b"},
+                )
+        app.dependency_overrides.clear()
+        assert r.status_code == 409
+        assert r.json()["detail"] == NAME_TAKEN_MESSAGE
+
+    @pytest.mark.asyncio
+    async def test_rename_gets_a_409_with_the_reason(self) -> None:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
+        with patch(
+            "app.api.reply_templates.reply_template_service.update_template",
+            side_effect=ReplyTemplateNameTakenError(NAME_TAKEN_MESSAGE),
+        ):
+            with TestClient(app) as client:
+                r = client.patch(f"/reply-templates/{uuid.uuid4()}", json={"name": "Same"})
+        app.dependency_overrides.clear()
+        assert r.status_code == 409
+        assert r.json()["detail"] == NAME_TAKEN_MESSAGE
 
 
 class TestUpdateReplyTemplate:

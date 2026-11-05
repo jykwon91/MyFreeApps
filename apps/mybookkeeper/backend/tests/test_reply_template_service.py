@@ -276,3 +276,65 @@ async def test_render_for_inquiry_cross_org_raises(
         await reply_template_service.render_for_inquiry(
             other_org_id, test_user.id, inquiry.id, template.id,
         )
+
+
+@pytest.mark.asyncio
+async def test_create_with_a_name_already_used_says_so(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    payload = ReplyTemplateCreateRequest(name="Same", subject_template="s", body_template="b")
+    await reply_template_service.create_template(test_org.id, test_user.id, payload)
+
+    with pytest.raises(reply_template_service.ReplyTemplateNameTakenError):
+        await reply_template_service.create_template(test_org.id, test_user.id, payload)
+
+
+@pytest.mark.asyncio
+async def test_rename_to_a_name_already_used_says_so_and_changes_nothing(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    await reply_template_service.create_template(
+        test_org.id, test_user.id,
+        ReplyTemplateCreateRequest(name="Taken", subject_template="s", body_template="b"),
+    )
+    other = await reply_template_service.create_template(
+        test_org.id, test_user.id,
+        ReplyTemplateCreateRequest(name="Other", subject_template="s", body_template="b"),
+    )
+
+    with pytest.raises(reply_template_service.ReplyTemplateNameTakenError):
+        await reply_template_service.update_template(
+            test_user.id, other.id, ReplyTemplateUpdateRequest(name="Taken"),
+        )
+
+    names = (await db.execute(
+        select(ReplyTemplate.name).where(ReplyTemplate.id == other.id),
+    )).scalars().all()
+    assert names == ["Other"]
+
+
+@pytest.mark.asyncio
+async def test_an_archived_template_still_holds_its_name(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    payload = ReplyTemplateCreateRequest(name="Old", subject_template="s", body_template="b")
+    archived = await reply_template_service.create_template(test_org.id, test_user.id, payload)
+    await reply_template_service.archive_template(test_user.id, archived.id)
+
+    with pytest.raises(reply_template_service.ReplyTemplateNameTakenError):
+        await reply_template_service.create_template(test_org.id, test_user.id, payload)
+
+
+@pytest.mark.asyncio
+async def test_two_people_can_use_the_same_name(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    other_user = User(
+        id=uuid.uuid4(), email="other@example.com", hashed_password="x",
+        is_active=True, is_superuser=False, is_verified=True,
+    )
+    db.add(other_user)
+    await db.flush()
+    payload = ReplyTemplateCreateRequest(name="Same", subject_template="s", body_template="b")
+    await reply_template_service.create_template(test_org.id, test_user.id, payload)
+    await reply_template_service.create_template(test_org.id, other_user.id, payload)
