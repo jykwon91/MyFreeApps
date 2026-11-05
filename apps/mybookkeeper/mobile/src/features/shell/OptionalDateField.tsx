@@ -10,6 +10,7 @@ export default function OptionalDateField({
   label,
   maximumDate,
   onChange,
+  required = false,
   startsAt,
   value,
 }: {
@@ -17,6 +18,7 @@ export default function OptionalDateField({
   label: string;
   maximumDate?: Date;
   onChange: (iso: string | null) => void;
+  required?: boolean;
   startsAt: Date;
   value: string | null;
 }) {
@@ -44,7 +46,10 @@ export default function OptionalDateField({
 
   return (
     <View style={{ gap: spacing.xs }}>
-      <Text style={{ fontSize: fontSize.sm, fontWeight: "500", color: colors.foreground }}>{label}</Text>
+      <Text style={{ fontSize: fontSize.sm, fontWeight: "500", color: colors.foreground }}>
+        {label}
+        {required ? <Text style={{ color: colors.destructiveText }}> *</Text> : null}
+      </Text>
       <Text style={{ fontSize: fontSize.md, color: value ? colors.foreground : colors.mutedForeground }}>{value ? fullDateLabel(value) : "Not set"}</Text>
       <View style={{ flexDirection: "row", gap: spacing.sm }}>
         <LoadingButton accessibilityLabel={`${isPicking ? "Done choosing" : value ? "Change" : "Choose"} ${label.toLowerCase()}`} onPress={pick} style={{ flex: 1 }} variant="secondary">

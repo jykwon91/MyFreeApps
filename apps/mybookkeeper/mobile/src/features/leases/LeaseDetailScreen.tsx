@@ -8,13 +8,15 @@ import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { WEB_BASE_URL } from "../../constants/api";
 import { extendedLine, lastEmailed, LEASE_MESSAGES } from "../../constants/leases";
+import { NEW_LEASE_MESSAGES } from "../../constants/newLease";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import InquiryChip from "../inquiries/InquiryChip";
 import InquirySection from "../inquiries/InquirySection";
 import { useOpenLink } from "../inquiries/useOpenLink";
+import { templatesPath } from "../newLease/newLeaseFlow";
 import { httpStatus } from "../transactions/transactionMessages";
 import { useCanWrite } from "../workspace/useCanWrite";
-import { leaseCountdown, leaseHasEmailableFile, leaseIsInEffect, leaseStatusLabel, leaseTerm, sortLeaseFiles } from "./leaseDisplay";
+import { leaseCanHaveSuccessor, leaseCountdown, leaseHasEmailableFile, leaseIsInEffect, leaseNeedsFiles, leaseStatusLabel, leaseTerm, sortLeaseFiles } from "./leaseDisplay";
 import DeleteLeaseButton from "./DeleteLeaseButton";
 import EmailLeaseButton from "./EmailLeaseButton";
 import LeaseDetailSkeleton from "./LeaseDetailSkeleton";
@@ -22,6 +24,7 @@ import ExtendLeaseSheet from "./ExtendLeaseSheet";
 import LeaseFileRow from "./LeaseFileRow";
 import LeaseStatusControl from "./LeaseStatusControl";
 import LeaseUploadSheet from "./LeaseUploadSheet";
+import MakeLeaseFilesButton from "./MakeLeaseFilesButton";
 import UndoExtensionButton from "./UndoExtensionButton";
 import { useOpenLeaseFile } from "./useOpenLeaseFile";
 
@@ -78,6 +81,8 @@ export default function LeaseDetailScreen({ id }: { id: string }) {
           {canWrite ? <LeaseStatusControl leaseId={lease.id} status={lease.status} /> : null}
         </View>
   
+        {canWrite && leaseNeedsFiles(lease) ? <MakeLeaseFilesButton lease={lease} /> : null}
+
         <InquirySection title={LEASE_MESSAGES.term}>
           <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>{leaseTerm(lease.starts_on, lease.ends_on)}</Text>
           {countdown ? <Text style={mutedText}>{countdown}</Text> : null}
@@ -120,6 +125,11 @@ export default function LeaseDetailScreen({ id }: { id: string }) {
           </InquirySection>
         ) : null}
   
+        {canWrite && leaseCanHaveSuccessor(lease) ? (
+          <LoadingButton onPress={() => router.push(templatesPath({ applicantId: lease.applicant_id, parentLeaseId: lease.id }))} variant="secondary">
+            {NEW_LEASE_MESSAGES.newLease}
+          </LoadingButton>
+        ) : null}
         {lease.parent_lease_id ? (
           <LoadingButton onPress={() => router.push(`/leases/${lease.parent_lease_id}`)} variant="ghost">
             {LEASE_MESSAGES.earlierLease}

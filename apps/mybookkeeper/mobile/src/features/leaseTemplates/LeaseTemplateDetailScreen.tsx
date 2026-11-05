@@ -4,9 +4,12 @@ import { router } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
 import { WEB_BASE_URL } from "../../constants/api";
 import { LEASE_TEMPLATE_MESSAGES as MESSAGES } from "../../constants/leaseTemplates";
+import { NEW_LEASE_MESSAGES } from "../../constants/newLease";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { useOpenLink } from "../inquiries/useOpenLink";
+import { nextPath } from "../newLease/newLeaseFlow";
 import { httpStatus } from "../transactions/transactionMessages";
+import { useCanWrite } from "../workspace/useCanWrite";
 import { inDisplayOrder, placeholdersLine } from "./leaseTemplateDisplay";
 import LeaseTemplateDetailSkeleton from "./LeaseTemplateDetailSkeleton";
 import LeaseTemplateFileRow from "./LeaseTemplateFileRow";
@@ -15,6 +18,7 @@ import { useOpenTemplateFile } from "./useOpenTemplateFile";
 export default function LeaseTemplateDetailScreen({ id }: { id: string }) {
   const { colors, spacing, fontSize } = useTheme();
   const openLink = useOpenLink();
+  const canWrite = useCanWrite();
   const { openingId, open } = useOpenTemplateFile(id);
   const { currentData: template, error, isFetching, refetch } = useGetLeaseTemplateByIdQuery(id);
   const { refresh, refreshControl } = useRefresh(async () => {
@@ -45,6 +49,7 @@ export default function LeaseTemplateDetailScreen({ id }: { id: string }) {
         </Text>
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{`Version ${template.version}`}</Text>
       </View>
+      {canWrite ? <LoadingButton onPress={() => router.push(nextPath({ templateIds: [template.id] }))}>{NEW_LEASE_MESSAGES.useTemplate}</LoadingButton> : null}
       {template.description ? (
         <Text selectable style={{ fontSize: fontSize.md, color: colors.foreground }}>
           {template.description}

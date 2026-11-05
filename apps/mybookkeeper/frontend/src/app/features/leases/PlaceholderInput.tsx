@@ -1,5 +1,5 @@
 import type { LeaseTemplatePlaceholder } from "@mybookkeeper/api-client/types/lease/lease-template-placeholder";
-import type { PlaceholderProvenance } from "@/shared/types/lease/placeholder-provenance";
+import type { PlaceholderProvenance } from "@mybookkeeper/api-client/types/lease/placeholder-provenance";
 import ProvenanceBadge from "@/app/features/leases/ProvenanceBadge";
 
 export interface PlaceholderInputProps {

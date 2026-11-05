@@ -9,7 +9,6 @@ import { router } from "expo-router";
 import { useRef, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { WEB_BASE_URL } from "../../constants/api";
 import { CONTRACT_LOCKED_STAGE, STAGES_READY_FOR_LEASE } from "../../constants/applicants";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import TenantLeases from "../leases/TenantLeases";
@@ -19,9 +18,9 @@ import TenantPayments from "./TenantPayments";
 import TenancySection from "../tenants/TenancySection";
 import InquiryChip from "../inquiries/InquiryChip";
 import InquirySection from "../inquiries/InquirySection";
-import { useOpenLink } from "../inquiries/useOpenLink";
 import TransactionFact from "../transactions/TransactionFact";
 import { httpStatus } from "../transactions/transactionMessages";
+import { templatesPath } from "../newLease/newLeaseFlow";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { applicantName, applicantStageLabel, contractDates, promotedAgo, smokerLabel } from "./applicantDisplay";
 import ApplicantHistory from "./ApplicantHistory";
@@ -35,7 +34,6 @@ import type { AppDispatch } from "../../lib/store";
 
 export default function ApplicantDetailScreen({ id }: { id: string }) {
   const { colors, spacing, fontSize } = useTheme();
-  const openLink = useOpenLink();
   const { currentData: applicant, error, isFetching, refetch } = useGetApplicantByIdQuery(id);
   const dispatch = useDispatch<AppDispatch>();
   // Its leases and payments are their own queries, and a pull should reload the whole page.
@@ -158,7 +156,7 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
           }}
         >
           {isReadyForLease ? (
-            <LoadingButton onPress={() => void openLink(`${WEB_BASE_URL}/leases/new?applicant_id=${id}`)} style={{ flex: 1 }}>
+            <LoadingButton onPress={() => router.push(templatesPath({ applicantId: id }))} style={{ flex: 1 }}>
               Generate lease
             </LoadingButton>
           ) : null}

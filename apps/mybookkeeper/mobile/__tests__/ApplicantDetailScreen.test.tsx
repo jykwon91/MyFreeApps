@@ -2,7 +2,6 @@ import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
-import { Linking } from "react-native";
 import { Provider } from "react-redux";
 import ApplicantDetailScreen from "../src/features/applicants/ApplicantDetailScreen";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
@@ -243,20 +242,11 @@ describe("ApplicantDetailScreen", () => {
   });
 
   describe("generating a lease", () => {
-    it.each(["approved", "lease_sent"] as const)("offers it at %s, on the website", async (stage) => {
+    it.each(["approved", "lease_sent"] as const)("offers it at %s, already knowing who it's for", async (stage) => {
       startApplicantServer([anApplicant({ stage })]);
-      const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
       await renderScreen();
       await fireEvent.press(await screen.findByRole("button", { name: "Generate lease" }));
-      expect(openURL.mock.calls[0][0]).toMatch(/\/leases\/new\?applicant_id=a1$/);
-    });
-
-    it("says when the website link can't open", async () => {
-      startApplicantServer([anApplicant({ stage: "approved" })]);
-      jest.spyOn(Linking, "openURL").mockRejectedValue(new Error("no"));
-      await renderScreen();
-      await fireEvent.press(await screen.findByRole("button", { name: "Generate lease" }));
-      expect(await screen.findByText("I couldn't open that on this phone.")).toBeTruthy();
+      expect(mockPush).toHaveBeenCalledWith("/leases/new?applicant_id=a1");
     });
 
     it("doesn't offer it before they're approved", async () => {

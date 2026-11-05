@@ -1,4 +1,4 @@
-import type { PlaceholderProvenance } from "@/shared/types/lease/placeholder-provenance";
+import type { PlaceholderProvenance } from "@mybookkeeper/api-client/types/lease/placeholder-provenance";
 
 /**
  * Resolved default for a single placeholder key.
