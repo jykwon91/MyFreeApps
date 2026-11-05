@@ -3,6 +3,7 @@ import csv
 import io
 import uuid
 from collections import defaultdict
+from collections.abc import Iterable
 from datetime import date
 
 from reportlab.lib import colors
@@ -12,9 +13,11 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet
 
 from app.core.context import RequestContext
+from app.core.tags import NON_DEDUCTIBLE_TAGS
 from app.core.tax_constants import SCHEDULE_E_EXPORT_LABELS
 from app.db.session import AsyncSessionLocal
 from app.repositories import property_repo, transaction_repo
+from app.services.transactions.schedule_e_row import ScheduleERow
 from app.services.transactions.summary_service import get_tax_summary
 
 CSV_HEADERS = [
@@ -130,6 +133,15 @@ async def export_transactions_pdf(
     return buf.getvalue()
 
 
+def _amounts_by_property_and_line(rows: Iterable[ScheduleERow]) -> dict[uuid.UUID | None, dict[str, float]]:
+    """Only amounts on a Schedule E line: the rest have no row, so they can't be in a total."""
+    by_property: dict[uuid.UUID | None, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    for row in rows:
+        if row.schedule_e_line:
+            by_property[row.property_id][row.schedule_e_line] += float(row.total_amount)
+    return by_property
+
+
 async def export_schedule_e(
     ctx: RequestContext,
     tax_year: int,
@@ -145,14 +157,9 @@ async def export_schedule_e(
     elements.append(Paragraph(f"Schedule E Report - {tax_year}", styles["Title"]))
     elements.append(Spacer(1, 12))
 
-    by_property: dict[uuid.UUID | None, dict[str | None, float]] = defaultdict(lambda: defaultdict(float))
-    for row in rows:
-        by_property[row.property_id][row.schedule_e_line] += float(row.total_amount)
+    by_property = _amounts_by_property_and_line(rows)
 
-    all_lines = sorted(
-        {row.schedule_e_line for row in rows if row.schedule_e_line},
-        key=lambda x: x or "",
-    )
+    all_lines = sorted({line for lines in by_property.values() for line in lines})
 
     property_ids = sorted(by_property.keys(), key=lambda x: str(x))
 
@@ -163,7 +170,7 @@ async def export_schedule_e(
     data = [headers]
 
     for line_key in all_lines:
-        label = SCHEDULE_E_EXPORT_LABELS.get(line_key, line_key or "Other")
+        label = SCHEDULE_E_EXPORT_LABELS.get(line_key, line_key)
         row_data = [label]
         line_total = 0.0
         for pid in property_ids:
@@ -245,6 +252,8 @@ async def export_tax_summary(
         cat_data = [["Category", "Amount"]]
         for cat, amount in sorted(by_category.items()):
             label = cat.replace("_", " ").title()
+            if cat in NON_DEDUCTIBLE_TAGS:
+                label = f"{label} (not deductible)"
             cat_data.append([label, f"${amount:,.2f}"])
 
         cat_table = Table(cat_data, colWidths=[3 * inch, 2 * inch])

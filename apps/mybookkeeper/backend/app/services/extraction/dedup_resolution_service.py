@@ -136,7 +136,7 @@ def _copy_user_edits(old: Transaction, new: Transaction) -> None:
         new.sub_category = old.sub_category
     if old.tags and not new.tags:
         new.tags = old.tags
-    if old.schedule_e_line and not new.schedule_e_line:
+    if old.schedule_e_line and not new.schedule_e_line and old.category == new.category:
         new.schedule_e_line = old.schedule_e_line
     # Quantity and unit move together or not at all — chk_txn_usage_paired
     # rejects half a pair, so copying one without the other would turn a silent

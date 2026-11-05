@@ -4,7 +4,7 @@ import uuid
 
 from app.core.context import worker_context
 from app.core.storage import get_storage
-from app.core.tags import transaction_type_for_category
+from app.core.tags import schedule_e_line_after_category_change, transaction_type_for_category
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.documents.document import Document
 from app.models.extraction.extraction import Extraction
@@ -317,6 +317,9 @@ async def process_document(document_id: uuid.UUID) -> UploadResult:
                     address=txn.address,
                 )
                 if override:
+                    txn.schedule_e_line = schedule_e_line_after_category_change(
+                        txn.schedule_e_line, txn.category, override[0],
+                    )
                     txn.category = override[0]
                     txn.transaction_type = transaction_type_for_category(txn.category)
                     if override[1] and not txn.property_id:

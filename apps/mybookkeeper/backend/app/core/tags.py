@@ -15,6 +15,12 @@ EXPENSE_TAGS = frozenset({
     "supplies", "home_office", "meals", "vehicle_expenses",
     "health_insurance", "education_training",
 })
+# A real cost, but repaying a loan isn't a rental expense the IRS lets you deduct.
+NON_DEDUCTIBLE_TAGS = frozenset({"mortgage_principal"})
+DEDUCTIBLE_TAGS = EXPENSE_TAGS - NON_DEDUCTIBLE_TAGS
+# One mortgage statement splits into both of these under the same vendor, so a
+# correction to one row says nothing about the vendor's other rows.
+VENDOR_SPLIT_CATEGORIES = frozenset({"mortgage_interest", "mortgage_principal"})
 
 CATEGORY_TO_SCHEDULE_E: dict[str, str | None] = {
     "rental_revenue":        "line_3_rents_received",
@@ -127,3 +133,12 @@ def sanitize_tags(tags: list[str]) -> list[str]:
     if expense:
         result.append(expense)
     return result
+
+
+def schedule_e_line_after_category_change(
+    current_line: str | None, old_category: str, new_category: str,
+) -> str | None:
+    """Move the line with the category, unless someone chose a different line."""
+    if current_line != CATEGORY_TO_SCHEDULE_E.get(old_category):
+        return current_line
+    return CATEGORY_TO_SCHEDULE_E.get(new_category)

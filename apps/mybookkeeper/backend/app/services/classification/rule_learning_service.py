@@ -4,7 +4,11 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.tags import transaction_type_for_category
+from app.core.tags import (
+    VENDOR_SPLIT_CATEGORIES,
+    schedule_e_line_after_category_change,
+    transaction_type_for_category,
+)
 from app.core.vendors import normalize_address, normalize_vendor
 from app.models.transactions.transaction import Transaction
 from app.repositories import transaction_repo
@@ -30,6 +34,8 @@ async def learn_from_correction(
 
     new_category = transaction.category
     if new_category == old_category:
+        return 0
+    if {new_category, old_category} & VENDOR_SPLIT_CATEGORIES:
         return 0
 
     await classification_rule_repo.upsert_rule(
@@ -162,6 +168,9 @@ async def _retroactive_category_fix(
     updated = 0
     for txn in candidates:
         if normalize_vendor(txn.vendor) == normalized:
+            txn.schedule_e_line = schedule_e_line_after_category_change(
+                txn.schedule_e_line, txn.category, new_category,
+            )
             txn.category = new_category
             txn.transaction_type = transaction_type_for_category(new_category)
             txn.activity_id = new_activity_id

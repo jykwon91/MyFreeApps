@@ -2,7 +2,7 @@ import uuid
 from collections.abc import Sequence
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -73,6 +73,16 @@ async def set_needs_recompute(
 ) -> None:
     tax_return.needs_recompute = value
     await db.flush()
+
+
+async def flag_unfiled_for_recompute(
+    db: AsyncSession, organization_id: uuid.UUID,
+) -> None:
+    await db.execute(
+        sa_update(TaxReturn)
+        .where(TaxReturn.organization_id == organization_id, TaxReturn.status != "filed")
+        .values(needs_recompute=True)
+    )
 
 
 async def create_return(

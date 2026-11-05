@@ -7,6 +7,8 @@ correct totals, filtering, and grouping.
 import uuid
 from datetime import date, datetime, timezone
 from decimal import Decimal
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +18,7 @@ from app.models.organization.organization import Organization
 from app.models.properties.property import Property
 from app.models.transactions.transaction import Transaction
 from app.models.user.user import User
+from app.services.transactions import summary_service
 
 
 async def _setup_org_and_user(db: AsyncSession) -> tuple[User, uuid.UUID]:
@@ -989,3 +992,39 @@ class TestDistinctTransactionYears:
         from app.repositories import summary_repo
         years_b = await summary_repo.distinct_transaction_years(db, org_id_b)
         assert years_b == []
+
+
+class TestTaxSummaryDeductions:
+    @pytest.mark.anyio
+    async def test_mortgage_principal_is_listed_but_not_deducted(self) -> None:
+        property_id = uuid.uuid4()
+        by_category = [
+            SimpleNamespace(tag="rental_revenue", total=Decimal("1000.00")),
+            SimpleNamespace(tag="mortgage_interest", total=Decimal("300.00")),
+            SimpleNamespace(tag="mortgage_principal", total=Decimal("200.00")),
+        ]
+        by_property = [
+            SimpleNamespace(property_id=property_id, property_name="Elm", tag=row.tag, total=row.total)
+            for row in by_category
+        ]
+        ctx = _ctx(uuid.uuid4(), uuid.uuid4())
+
+        with (
+            patch("app.services.transactions.summary_service.AsyncSessionLocal", return_value=AsyncMock()),
+            patch(
+                "app.services.transactions.summary_service.summary_repo.txn_sum_by_category",
+                new=AsyncMock(return_value=by_category),
+            ),
+            patch(
+                "app.services.transactions.summary_service.summary_repo.txn_sum_by_property_and_category",
+                new=AsyncMock(return_value=by_property),
+            ),
+            patch("app.services.transactions.summary_service._build_w2_income", new=AsyncMock(return_value=[])),
+        ):
+            summary = await summary_service.get_tax_summary(ctx, 2025)
+
+        assert summary["total_deductions"] == 300.00
+        assert summary["net_taxable_income"] == 700.00
+        assert summary["by_category"]["mortgage_principal"] == 200.00
+        assert summary["by_property"][0]["expenses"] == 300.00
+        assert summary["by_property"][0]["net_income"] == 700.00

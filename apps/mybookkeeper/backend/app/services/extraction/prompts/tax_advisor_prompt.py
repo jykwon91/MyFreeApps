@@ -35,7 +35,7 @@ For each property with purchase_price set but no Form 4562 depreciation line, ca
 If a 1099-K is uploaded, compare box_1a (gross) against Schedule E line 3 totals. If they differ by more than $500, explain that the IRS receives the 1099-K and the taxpayer must reconcile the difference (channel fees, cleaning fees, etc.).
 
 ## Rule 7: Mortgage principal in expenses
-If any transaction has category "mortgage_principal" and status "approved", flag it — mortgage principal is NOT deductible and should not appear on Schedule E.
+If any transaction has category "mortgage_principal" and status "approved", remember it is NOT deductible and is already left off Schedule E. Flag it only if it looks like mortgage interest that was given the wrong category.
 
 ## Rule 8: Estimated tax payments
 If total tax liability estimate (AGI * 0.24 rough rate) exceeds $1,000 and no estimated payments are evident, suggest quarterly estimated payments. Set confidence to "low" since we lack full tax computation.

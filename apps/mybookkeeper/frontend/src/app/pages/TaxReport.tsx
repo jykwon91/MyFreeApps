@@ -4,6 +4,7 @@ import { Download, X } from "lucide-react";
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatTag } from "@/shared/utils/tag";
 import { downloadFile } from "@/shared/utils/download";
+import { NON_DEDUCTIBLE_CATEGORIES } from "@mybookkeeper/api-client/constants/taxCategories";
 import { useGetTaxSummaryQuery } from "@mybookkeeper/api-client/store/summaryApi";
 import { useToast } from "@/shared/hooks/useToast";
 import Select from "@/shared/components/ui/Select";
@@ -161,6 +162,9 @@ export default function TaxReport() {
                               <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
                                 Needs review before filing
                               </span>
+                            )}
+                            {NON_DEDUCTIBLE_CATEGORIES.includes(cat) && (
+                              <span className="text-xs text-muted-foreground">Not deductible</span>
                             )}
                           </span>
                         </td>

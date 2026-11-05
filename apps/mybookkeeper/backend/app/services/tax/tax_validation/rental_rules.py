@@ -135,8 +135,8 @@ async def _validate_mortgage_principal(
             field_id=None,
             message=(
                 f"Found {count} mortgage principal payment(s). "
-                f"Mortgage principal is not tax-deductible and should not "
-                f"appear on Schedule E."
+                f"Mortgage principal is not tax-deductible, so these are left "
+                f"off Schedule E. If any are really interest, change their category."
             ),
             expected_value=None,
             actual_value=None,

@@ -6,6 +6,7 @@ from sqlalchemy import Row, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.tags import NON_DEDUCTIBLE_TAGS
 from app.core.transaction_statuses import REVIEWABLE_STATUSES
 from app.models.extraction.extraction import Extraction
 from app.models.transactions.transaction import Transaction
@@ -171,6 +172,7 @@ async def list_schedule_e_transaction_details(
             Transaction.deleted_at.is_(None),
             Transaction.property_id.isnot(None),
             Transaction.schedule_e_line.isnot(None),
+            Transaction.category.notin_(NON_DEDUCTIBLE_TAGS),
         )
     )
     result = await db.execute(stmt)
@@ -281,6 +283,7 @@ async def sum_schedule_e_by_property_line(
             Transaction.deleted_at.is_(None),
             Transaction.property_id.isnot(None),
             Transaction.schedule_e_line.isnot(None),
+            Transaction.category.notin_(NON_DEDUCTIBLE_TAGS),
         )
         .group_by(Transaction.property_id, Transaction.schedule_e_line)
     )

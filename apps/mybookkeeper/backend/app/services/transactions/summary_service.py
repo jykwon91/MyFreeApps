@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.context import RequestContext
 from app.core.pii import mask_pii
 from app.core.property_constants import UNASSIGNED_PROPERTY_ID, UNASSIGNED_PROPERTY_NAME
-from app.core.tags import REVENUE_TAGS, EXPENSE_TAGS
+from app.core.tags import DEDUCTIBLE_TAGS, REVENUE_TAGS, EXPENSE_TAGS
 from app.db.session import AsyncSessionLocal
 from app.repositories import summary_repo, tax_return_repo
 
@@ -174,7 +174,7 @@ async def get_tax_summary(
         by_tag: dict[str, float] = {row.tag: float(row.total) for row in rows}
 
         revenue = sum(v for k, v in by_tag.items() if k in REVENUE_TAGS)
-        deductions = sum(v for k, v in by_tag.items() if k in EXPENSE_TAGS)
+        deductions = sum(v for k, v in by_tag.items() if k in DEDUCTIBLE_TAGS)
 
         property_data: dict[str, dict[str, str | float | None]] = defaultdict(
             lambda: {"name": None, "revenue": 0.0, "expenses": 0.0}
@@ -185,7 +185,7 @@ async def get_tax_summary(
             amount = float(row.total)
             if row.tag in REVENUE_TAGS:
                 property_data[pid]["revenue"] = float(property_data[pid]["revenue"] or 0) + amount
-            elif row.tag in EXPENSE_TAGS:
+            elif row.tag in DEDUCTIBLE_TAGS:
                 property_data[pid]["expenses"] = float(property_data[pid]["expenses"] or 0) + amount
 
         by_property = sorted(
