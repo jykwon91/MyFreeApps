@@ -2,14 +2,17 @@ import { describe, expect, it } from "vitest";
 import { fireEvent, render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import FoodSourceList from "@/games/wow-forever/components/food/detail/FoodSourceList";
+import CraftMatSources from "@/games/wow-forever/components/crafting/CraftMatSources";
+import CraftSkinningList from "@/games/wow-forever/components/crafting/CraftSkinningList";
 import sourcesJson from "@/games/wow-forever/data/professions/crafting/classic/sources.json";
 import tailoringJson from "@/games/wow-forever/data/professions/crafting/tailoring.json";
 import enchantingJson from "@/games/wow-forever/data/professions/crafting/enchanting.json";
 import alchemyJson from "@/games/wow-forever/data/professions/crafting/alchemy.json";
 import blacksmithingJson from "@/games/wow-forever/data/professions/crafting/blacksmithing.json";
+import leatherworkingJson from "@/games/wow-forever/data/professions/crafting/leatherworking.json";
 import trainerSkillsJson from "@/games/wow-forever/data/professions/crafting/classic/trainerSkills.json";
 import { resolveRoute } from "@/games/wow-forever/crafting/craftRoute";
-import { describeDisenchant, describeSkinning, matSummary, soldToYou } from "@/games/wow-forever/crafting/matSources";
+import { describeDisenchant, describeSkinning, isGathered, matSummary, soldToYou } from "@/games/wow-forever/crafting/matSources";
 import { shoppingList, shoppingListText } from "@/games/wow-forever/crafting/shoppingList";
 import { CRAFTING_ROUTES } from "@/games/wow-forever/data/professions/crafting/craftingRoutes";
 import { createSourceLookup, type RawSourcesFile } from "@/games/wow-forever/data/sourceDecode";
@@ -38,6 +41,7 @@ const FILES: Record<CraftingProfession, CraftingFile> = {
   enchanting: enchantingJson as unknown as CraftingFile,
   alchemy: alchemyJson as unknown as CraftingFile,
   blacksmithing: blacksmithingJson as unknown as CraftingFile,
+  leatherworking: leatherworkingJson as unknown as CraftingFile,
 };
 const TRAINER_SKILLS = trainerSkillsJson as unknown as Record<CraftingProfession, TrainerSkills>;
 
@@ -55,6 +59,13 @@ const SILK_CLOTH = 4306;
 const STRANGLETHORN = 1434;
 // Linen, Wool, Silk, Mageweave, Runecloth.
 const CLOTH = [LINEN_CLOTH, WOOL_CLOTH, 4306, 4338, 14047];
+
+function routeEntries(profession: CraftingProfession) {
+  const file = FILES[profession];
+  return resolveRoute(CRAFTING_ROUTES[profession], new Map(file.recipes.map((r) => [r.spell, r])), TRAINER_SKILLS[profession]);
+}
+
+const gathered = (id: number) => isGathered(SOURCES.reagent(id));
 
 function summary(itemId: number, madeBy: string | null = null, level: number | null = null): string {
   return matSummary({ sources: SOURCES.reagent(itemId), madeBy }, { faction: FACTION.alliance, zoneId: null, level });
@@ -202,13 +213,9 @@ describe("crafting material sources", () => {
     expect(soldToYou(SOURCES.reagent(COPPER_ROD), FACTION.alliance)).toBe(true);
   });
 
-  it("knows where every material of both routes comes from, apart from items new in Forever", () => {
-    for (const profession of ["tailoring", "enchanting"] as const) {
-      const file = FILES[profession];
-      const recipes = new Map(file.recipes.map((r) => [r.spell, r]));
-      const entries = resolveRoute(CRAFTING_ROUTES[profession], recipes, TRAINER_SKILLS[profession]);
-      const label = profession === "tailoring" ? "Tailoring" : "Enchanting";
-      const unknown = shoppingList(entries, null, file, label)
+  it("knows where every material of the routes comes from, apart from items new in Forever", () => {
+    for (const [profession, label] of [["tailoring", "Tailoring"], ["enchanting", "Enchanting"], ["leatherworking", "Leatherworking"]] as const) {
+      const unknown = shoppingList(routeEntries(profession), null, FILES[profession], label, gathered)
         .buy.filter((l) => !l.madeBy && l.id < 100_000 && !hasSources(SOURCES.reagent(l.id)))
         .map((l) => l.name);
       expect(unknown, profession).toEqual([]);
@@ -309,5 +316,76 @@ describe("crafting material sources", () => {
     fireEvent.click(getByRole("button", { name: `Show ${drop.mobs.length - 5} more mobs` }));
     expect(list.querySelectorAll("li").length).toBe(drop.mobs.length);
     expect(container.textContent).toContain("Too high for level 20");
+  });
+});
+
+const LIGHT_LEATHER = 2318;
+const MEDIUM_HIDE = 4232;
+const CURED_MEDIUM_HIDE = 4233;
+const SALT = 4289;
+const RUINED_LEATHER_SCRAPS = 2934;
+// Light, Medium, Heavy, Thick, Rugged.
+const LEATHER = [LIGHT_LEATHER, 2319, 4234, 4304, RUGGED_LEATHER];
+
+describe("Leatherworking materials", () => {
+  it("names beasts to skin for every leather, each with a place and coordinates", () => {
+    for (const id of LEATHER) {
+      const mobs = SOURCES.reagent(id).skinning!.mobs;
+      expect(mobs.length, String(id)).toBeGreaterThan(0);
+      for (const m of mobs) expect(m.spot?.zoneName, `${id} ${m.name}`).toBeTruthy();
+    }
+    const light = farmSpots(SOURCES.reagent(LIGHT_LEATHER).skinning!, FACTION.alliance, null);
+    expect(light[0].spot?.territory).toBe(TERRITORY.alliance);
+    expect(farmSpots(SOURCES.reagent(LIGHT_LEATHER).skinning!, FACTION.horde, null)[0].spot?.territory).toBe(TERRITORY.horde);
+  });
+
+  it("lists where to skin it with directions, then the rest on request", () => {
+    const skinning = SOURCES.reagent(LIGHT_LEATHER).skinning!;
+    const { getByRole } = render(
+      <MemoryRouter>
+        <CraftSkinningList skinning={skinning} faction={FACTION.alliance} zoneId={null} level={null} />
+      </MemoryRouter>,
+    );
+    const list = getByRole("list", { name: "Where to skin it" });
+    expect(list.querySelectorAll("li").length).toBe(4);
+    const links = [...list.querySelectorAll("a")];
+    expect(links.length).toBe(4);
+    for (const a of links) expect(decodeURIComponent(a.getAttribute("href")!)).toMatch(/^\/wow-forever\/map\?to=pt:\d+,[\d.]+,[\d.]+&dir=1$/);
+    fireEvent.click(getByRole("button", { name: /^Show \d+ more places to skin$/ }));
+    expect(list.querySelectorAll("li").length).toBe(skinning.mobs.length);
+  });
+
+  it("sends you to skin leather you could also make, and to make the hides you cure", () => {
+    const place = { sources: SOURCES, faction: FACTION.alliance, zoneId: null, level: null, file: FILES.leatherworking };
+    const light = render(
+      <MemoryRouter>
+        <CraftMatSources itemId={LIGHT_LEATHER} place={place} professionLabel="Leatherworking" />
+      </MemoryRouter>,
+    );
+    expect(light.getByRole("list", { name: "Where to skin it" })).toBeTruthy();
+    expect(light.container.textContent).toContain("You can also make it yourself with Light Leather: 3 Ruined Leather Scraps each.");
+    expect(light.container.textContent).not.toContain("ask a player with Leatherworking");
+    light.unmount();
+    const cured = render(
+      <MemoryRouter>
+        <CraftMatSources itemId={CURED_MEDIUM_HIDE} place={place} professionLabel="Leatherworking" />
+      </MemoryRouter>,
+    );
+    expect(cured.container.textContent).toBe(
+      "You make this yourself with Cured Medium Hide: 1 Medium Hide + 1 Salt each. Its materials are on the shopping list.",
+    );
+  });
+
+  it("counts skinned leather to gather, and cured hides as the hide plus Salt", () => {
+    const list = shoppingList(routeEntries("leatherworking"), null, FILES.leatherworking, "Leatherworking", gathered);
+    const light = list.buy.find((l) => l.id === LIGHT_LEATHER);
+    expect(light?.count).toBeGreaterThan(0);
+    expect(light?.madeBy).toBeUndefined();
+    expect(list.buy.some((l) => l.id === RUINED_LEATHER_SCRAPS)).toBe(false);
+    expect(list.buy.some((l) => l.id === CURED_MEDIUM_HIDE)).toBe(false);
+    const cured = list.make.find((l) => l.id === CURED_MEDIUM_HIDE);
+    expect(cured?.makesFrom?.map((r) => r.id).sort()).toEqual([MEDIUM_HIDE, SALT].sort());
+    expect(list.buy.find((l) => l.id === MEDIUM_HIDE)?.count).toBeGreaterThan(0);
+    expect(shoppingListText(list)).not.toMatch(/\d+ ?(gold|silver|copper)\b/i);
   });
 });

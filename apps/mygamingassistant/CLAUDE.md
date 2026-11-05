@@ -106,7 +106,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `confidence: "confirmed" | "unconfirmed"`. Rows still unconfirmed depend on
   server-side facts (trainers, vendors, quests, fishing zones) — confirm them
   in game or from a Blizzard post, then bump `PROFESSIONS_DATA_STATUS`.
-- Professions also has crafting guides (`?p=alchemy|blacksmithing|enchanting|tailoring`,
+- Professions also has crafting guides (`?p=alchemy|blacksmithing|enchanting|leatherworking|tailoring`,
   `&skill=N`, `&spec=<choice>`). The picker (`data/professions/professionPicker.ts`) groups
   Crafting vs Secondary; `isCraftingProfession` / `parseGuideProfession`
   (`lib/guideProfession.ts`) are the only list of what's crafting — never
@@ -125,15 +125,18 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   formula, `crafting/craftRoute.ts`) and a shopping list (bolts / motes the
   profession makes itself are expanded into raw materials). The skill lives in
   `?skill=` (wins for that visit) and `mga.wowForever.professions.skill.v1`.
-  **Specializations** (Blacksmithing so far; `data/professions/crafting/craftingSpecs.ts`,
+  **Specializations** (Blacksmithing, Leatherworking; `data/professions/crafting/craftingSpecs.ts`,
   `crafting/craftSpecs.ts`): a decision row at the fork, and a spec picker that
   filters the route's options by `recipe.spec` ("Not chosen yet" shows all,
   each with a chip). Kept in `?spec=` (wins for that visit) and per profession
   in `mga.wowForever.professions.spec.v1`. Spec quests, skills and levels are
   Classic. **Smelting**: a miner's profession (`SMELTS_FOR` in `build.py`) gets
   `smelting` in its JSON, and the shopping list counts ore, not bars.
+  **Skinning**: leather and hides carry `skinning.mobs` (a beast per best zone,
+  its densest pack, else the beasts themselves) with Directions; leather you
+  skin is never expanded into the scraps Leatherworking could make it from.
   **Recipe data is GENERATED** — `python -m scripts.wow_professions.build`
-  (from `backend/`) writes `data/professions/crafting/{tailoring,enchanting,alchemy,blacksmithing}.json`
+  (from `backend/`) writes `data/professions/crafting/{tailoring,enchanting,alchemy,blacksmithing,leatherworking}.json`
   (with `smelting` / `specs` where they apply)
   from the Forever client, plus `classic/trainerSkills.json` and
   `classic/sources.json` (cmangos GPL — keep LICENSE + README).

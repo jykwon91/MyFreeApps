@@ -87,6 +87,8 @@ export interface SkinningSource {
   levels: [number, number];
   /** Where the most of them are, best first. */
   zones: string[];
+  /** A beast to skin in each of the best zones, at its densest pack; `chance` is per skin. */
+  mobs: DropMob[];
 }
 
 export const DISENCHANT_FROM = { weapon: "weapon", armor: "armor" } as const;

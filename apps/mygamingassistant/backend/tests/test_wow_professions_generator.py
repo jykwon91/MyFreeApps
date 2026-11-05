@@ -406,3 +406,51 @@ class TestCommittedBlacksmithing:
         assert smelting[0]["creates"]["id"] == COPPER_BAR and smelting[0]["skill"] == 1
         made = {s["creates"]["id"] for s in smelting}
         assert {COPPER_BAR, BRONZE_BAR, IRON_BAR} <= made
+
+
+@pytest.fixture(scope="module")
+def leatherworking_file() -> dict:
+    return json.loads((CRAFTING_DATA / "leatherworking.json").read_text(encoding="utf-8"))
+
+
+DRAGONSCALE_BREASTPLATE, HELM_OF_FIRE, CHIMERIC_GLOVES, LIGHT_ARMOR_KIT = 10650, 10632, 19053, 2152
+DRAGONSCALE, ELEMENTAL, TRIBAL = 10656, 10658, 10660
+LIGHT_LEATHER, DEVILSAUR_LEATHER = "2318", "15417"
+
+
+class TestCommittedLeatherworking:
+    def test_specialist_recipes(self, leatherworking_file: dict) -> None:
+        recipes = {r["spell"]: r for r in leatherworking_file["recipes"]}
+        assert recipes[DRAGONSCALE_BREASTPLATE]["spec"] == DRAGONSCALE
+        assert recipes[HELM_OF_FIRE]["spec"] == ELEMENTAL
+        assert recipes[CHIMERIC_GLOVES]["spec"] == TRIBAL
+        assert "spec" not in recipes[LIGHT_ARMOR_KIT]
+
+    def test_specializations_with_their_classic_quests(self, leatherworking_file: dict) -> None:
+        by_spell = {s["spell"]: s for s in leatherworking_file["specs"]}
+        assert set(by_spell) == {DRAGONSCALE, ELEMENTAL, TRIBAL}
+        assert {q["id"] for q in by_spell[TRIBAL]["quests"]} == {5143, 5148}
+        assert all(q["skill"] == 225 and q["level"] == 40 for s in by_spell.values() for q in s["quests"])
+
+    def test_no_smelting(self, leatherworking_file: dict) -> None:
+        assert "smelting" not in leatherworking_file
+
+
+class TestSkinningSpots:
+    @pytest.fixture(scope="class")
+    def sources(self) -> dict:
+        return json.loads((CRAFTING_DATA / "classic" / "sources.json").read_text(encoding="utf-8"))
+
+    def test_a_beast_to_skin_per_zone_on_both_sides(self, sources: dict) -> None:
+        mobs = sources["reagents"][LIGHT_LEATHER]["skinning"]["mobs"]
+        zones = [m[4] for m in mobs]
+        assert len(zones) >= 5 and len(set(zones)) == len(zones)
+        assert all(m[5] and 0 < m[6] < 100 and 0 < m[7] < 100 for m in mobs)  # a subzone and coordinates
+        assert {sources["territory"][str(z)] for z in zones} >= {"alliance", "horde"}
+
+    def test_falls_back_to_the_beasts_when_no_pack_is_dense_enough(self, sources: dict) -> None:
+        mobs = sources["reagents"][DEVILSAUR_LEATHER]["skinning"]["mobs"]
+        assert mobs and all("Devilsaur" in m[0] and m[8] == "elite" for m in mobs)
+
+    def test_no_count_left_in_the_output(self, sources: dict) -> None:
+        assert all("count" not in r["skinning"] for r in sources["reagents"].values() if r.get("skinning"))

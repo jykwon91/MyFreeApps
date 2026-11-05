@@ -29,7 +29,7 @@ export interface RawSources {
   vendors?: Row[];
   quests?: number[];
   drop?: { world: boolean; levels: number[]; mobs: Row[]; more: number; zones: number[] };
-  skinning?: { levels: number[]; zones: number[] };
+  skinning?: { levels: number[]; zones: number[]; mobs?: Row[] };
   fishing?: string[];
   containers?: string[];
   /** `[name, count, zone, subzone, x, y, gather, skill]` — gather "herbalism" / "mining" / "". */
@@ -173,7 +173,7 @@ export function createSourceLookup(raw: RawSourcesFile): SourceLookup {
 
   function skinning(s: RawSources["skinning"]): SkinningSource | null {
     if (!s) return null;
-    return { levels: [s.levels[0], s.levels[1]], zones: s.zones.map(zoneName).filter(Boolean) };
+    return { levels: [s.levels[0], s.levels[1]], zones: s.zones.map(zoneName).filter(Boolean), mobs: (s.mobs ?? []).map(mob) };
   }
 
   function disenchant(itemId: number): DisenchantSource | null {

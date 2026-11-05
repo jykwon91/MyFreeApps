@@ -107,6 +107,32 @@ export const CRAFTING_TRAINERS: Readonly<Record<CraftingProfession, CraftingTrai
       ],
     },
   },
+  leatherworking: {
+    cities: {
+      A: [
+        { city: "Stormwind", npc: { name: "Simon Tanner", npcId: 5564, where: "Stormwind City", x: 71.7, y: 63.0 } },
+        { city: "Ironforge", npc: { name: "Fimble Finespindle", npcId: 5127, where: "Ironforge", x: 40.2, y: 33.7 } },
+        { city: "Darnassus", npc: { name: "Telonis", npcId: 4212, where: "Darnassus", x: 64.4, y: 21.5 } },
+      ],
+      H: [
+        { city: "Orgrimmar", npc: { name: "Karolek", npcId: 3365, where: "Orgrimmar", x: 62.8, y: 44.1 } },
+        { city: "Thunder Bluff", npc: { name: "Una", npcId: 3007, where: "Thunder Bluff", x: 41.5, y: 42.6 } },
+        { city: "Undercity", npc: { name: "Arthur Moore", npcId: 4588, where: "Undercity", x: 70.2, y: 57.4 } },
+      ],
+    },
+    towns: {
+      A: [
+        { name: "Adele Fielder", npcId: 1632, where: "Crystal Lake, Elwynn Forest", x: 46.4, y: 62.0 },
+        { name: "Nadyia Maneweaver", npcId: 3605, where: "Ban'ethil Hollow, Teldrassil", x: 41.9, y: 49.4 },
+        { name: "Aayndia Floralwind", npcId: 3967, where: "Astranaar, Ashenvale", x: 36.0, y: 52.1 },
+      ],
+      H: [
+        { name: "Chaw Stronghide", npcId: 3069, where: "Bloodhoof Village, Mulgore", x: 44.9, y: 61.5 },
+        { name: "Shelene Rhobart", npcId: 3549, where: "Balnir Farmstead, Tirisfal Glades", x: 65.4, y: 60.1 },
+        { name: "Krulmoo Fullmoon", npcId: 3703, where: "Camp Taurajo, The Barrens", x: 44.8, y: 59.5 },
+      ],
+    },
+  },
 };
 
 /** Where a rank is trained: named trainers per faction, any trainer, or somewhere the map can't point to. */
@@ -254,6 +280,38 @@ export const CRAFTING_RANKS: Readonly<Record<CraftingProfession, readonly Crafti
       level: 35,
       cap: 300,
       trainers: { kind: "named", trainers: { A: BRIKK_KEENCRAFT, H: BRIKK_KEENCRAFT } },
+      confidence: "unconfirmed",
+    },
+  ],
+  leatherworking: [
+    JOURNEYMAN,
+    {
+      skill: 125,
+      name: "Expert",
+      level: 20,
+      cap: 225,
+      trainers: {
+        kind: "named",
+        trainers: {
+          A: { name: "Simon Tanner", npcId: 5564, where: "Stormwind City", x: 71.7, y: 63.0 },
+          H: { name: "Karolek", npcId: 3365, where: "Orgrimmar", x: 62.8, y: 44.1 },
+        },
+      },
+      headsUp: "Artisan (at 200) is trained by Telonis in Darnassus (Alliance) or Una in Thunder Bluff (Horde).",
+      confidence: "unconfirmed",
+    },
+    {
+      skill: 200,
+      name: "Artisan",
+      level: 35,
+      cap: 300,
+      trainers: {
+        kind: "named",
+        trainers: {
+          A: { name: "Telonis", npcId: 4212, where: "Darnassus", x: 64.4, y: 21.5 },
+          H: { name: "Una", npcId: 3007, where: "Thunder Bluff", x: 41.5, y: 42.6 },
+        },
+      },
       confidence: "unconfirmed",
     },
   ],

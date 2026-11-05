@@ -1,10 +1,11 @@
-"""Build the WoW Forever crafting leveling guide data (Tailoring, Enchanting, Alchemy, Blacksmithing).
+"""Build the WoW Forever crafting leveling guide data (Tailoring, Enchanting, Alchemy, Blacksmithing,
+Leatherworking).
 
     python -m scripts.wow_professions.build
 
 Writes, under ``frontend/src/games/wow-forever/data/professions/crafting/``:
 
-* ``tailoring.json`` / ``enchanting.json`` / ``alchemy.json`` — every recipe in the Forever beta
+* ``<profession>.json`` (one per key of ``PROFESSIONS``) — every recipe in the Forever
   client: yellow / grey skill, reagents, what it makes (and whether that can
   be disenchanted), how it is learned, and what Forever changed against the
   Classic Era client. Game data © Blizzard Entertainment.
@@ -39,6 +40,7 @@ from scripts.wow_professions.crafts import (
     EFFECT_ENCHANT_ITEM,
     EFFECT_LEARN_SPELL,
     ENCHANTING_SKILL_LINE,
+    LEATHERWORKING_SKILL_LINE,
     MINING_SKILL_LINE,
     TAILORING_SKILL_LINE,
     TEACHING_PREFIXES,
@@ -70,6 +72,7 @@ PROFESSIONS = {
     "enchanting": ENCHANTING_SKILL_LINE,
     "alchemy": ALCHEMY_SKILL_LINE,
     "blacksmithing": BLACKSMITHING_SKILL_LINE,
+    "leatherworking": LEATHERWORKING_SKILL_LINE,
 }
 # Professions a miner levels: their file lists the smelts that make the bars they use.
 SMELTS_FOR = {"blacksmithing"}

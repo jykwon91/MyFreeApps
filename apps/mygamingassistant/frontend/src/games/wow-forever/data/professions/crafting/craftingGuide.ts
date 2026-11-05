@@ -223,4 +223,59 @@ export const CRAFTING_GUIDES: Readonly<Record<CraftingProfession, CraftingGuide>
       },
     ],
   },
+  leatherworking: {
+    label: "Leatherworking",
+    steps: [
+      {
+        id: "train",
+        title: "Train Leatherworking at a leatherworking trainer",
+        detail: "Any trainer below teaches Apprentice Leatherworking and your first recipes. Leatherworking is one of your two main professions.",
+      },
+      {
+        id: "leather",
+        title: "Skin your leather, or buy it",
+        detail: "Every recipe takes leather or hides. With Skinning you skin the beasts you kill — open a material on the shopping list to see which beasts and where, with directions.",
+      },
+      {
+        id: "supplies",
+        title: "Buy thread, dye and salt from a supply vendor",
+        detail: "Thread, dyes and Salt come from leatherworking supply vendors, who stand near the trainers. Hides are cured with Salt before the recipes that use them.",
+      },
+      {
+        id: "craft",
+        title: "Craft the row for your skill until it turns green",
+        detail: "Open your Leatherworking window (press K, or find it in your spellbook) and craft. Type your skill below and the route points at your row.",
+        command: "/cast Leatherworking",
+      },
+    ],
+    routeIntro: "Craft each recipe from the first skill to the second, then move to the next row. Up to 245 every row is a trainer recipe.",
+    shoppingNote:
+      "Leather and hides are skinned, so the list counts them; cured hides are counted as the hide plus Salt. Without Skinning, buy the leather instead.",
+    forever: [
+      {
+        text: "Forever lowered the skill of most Leatherworking recipes — e.g. Embossed Leather Gloves turns yellow at 70 instead of 85. The route uses Forever's numbers.",
+        confidence: "confirmed",
+      },
+      {
+        text: "Forever adds 276 Leatherworking recipes (Azure, Cloudy, Grovekeeper, Mender's, Skycaller's and other sets). Where their patterns come from isn't known yet.",
+        confidence: "confirmed",
+      },
+      {
+        text: "276 Forever recipes: source not known yet. They're marked \"Source unknown\" — no Classic trainer or vendor is named for them.",
+        confidence: "confirmed",
+      },
+      {
+        text: "Dragonscale, Elemental and Tribal Leatherworking are in the Forever client, and its Patterns for their recipes still ask for them.",
+        confidence: "confirmed",
+      },
+      {
+        text: "How you learn a specialization in Forever isn't known. The quests, skills and levels on this page are Classic's.",
+        confidence: "unconfirmed",
+      },
+      {
+        text: "The skill each trainer teaches a recipe at is Classic Era's. Forever may move some.",
+        confidence: "unconfirmed",
+      },
+    ],
+  },
 };

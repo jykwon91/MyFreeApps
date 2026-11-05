@@ -1,6 +1,7 @@
 import { ALCHEMY_ROUTE } from "@/games/wow-forever/data/professions/crafting/alchemyRoute";
 import { BLACKSMITHING_ROUTE } from "@/games/wow-forever/data/professions/crafting/blacksmithingRoute";
 import { ENCHANTING_ROUTE } from "@/games/wow-forever/data/professions/crafting/enchantingRoute";
+import { LEATHERWORKING_ROUTE } from "@/games/wow-forever/data/professions/crafting/leatherworkingRoute";
 import { TAILORING_ROUTE } from "@/games/wow-forever/data/professions/crafting/tailoringRoute";
 import type { CraftingProfession, CraftRouteEntry } from "@/games/wow-forever/types/crafting";
 
@@ -9,4 +10,5 @@ export const CRAFTING_ROUTES: Readonly<Record<CraftingProfession, readonly Craft
   enchanting: ENCHANTING_ROUTE,
   alchemy: ALCHEMY_ROUTE,
   blacksmithing: BLACKSMITHING_ROUTE,
+  leatherworking: LEATHERWORKING_ROUTE,
 };

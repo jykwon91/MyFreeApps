@@ -1,5 +1,5 @@
 /**
- * WoW Forever Professions guide (Cooking, Fishing, Tailoring, Enchanting, Alchemy, Blacksmithing) — static, frontend-only page.
+ * WoW Forever Professions guide (Cooking, Fishing, Tailoring, Enchanting, Alchemy, Blacksmithing, Leatherworking) — static, frontend-only page.
  *
  * Run: npm run test:e2e -- wow-forever-professions
  */
@@ -82,7 +82,7 @@ test("Enchanting says when to disenchant and when to sell", async ({ page }) => 
 
 test("the crafting guides never scroll sideways on a phone", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
-  for (const p of ["tailoring", "enchanting", "alchemy", "blacksmithing"]) {
+  for (const p of ["tailoring", "enchanting", "alchemy", "blacksmithing", "leatherworking"]) {
     await page.goto(`/wow-forever/professions?p=${p}&skill=150`);
     await expect(page.locator("#route").getByText("You are here")).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -121,7 +121,7 @@ test("the picker groups crafting and secondary professions, one choice across bo
   const secondary = page.getByRole("radiogroup", { name: "Secondary professions" });
   await expect(crafting.getByRole("radio", { name: "Enchanting" })).toBeChecked();
   await expect(secondary.getByRole("radio", { checked: true })).toHaveCount(0);
-  await expect(crafting.getByRole("radio")).toHaveText(["Alchemy", "Blacksmithing", "Enchanting", "Tailoring"]);
+  await expect(crafting.getByRole("radio")).toHaveText(["Alchemy", "Blacksmithing", "Enchanting", "Leatherworking", "Tailoring"]);
   await expect(page.getByText(/You can learn two crafting professions \(Classic rule\)/)).toBeVisible();
 
   await secondary.getByRole("radio", { name: "Fishing" }).click();
@@ -138,7 +138,7 @@ test("the crafting picker is one row of big targets on a phone", async ({ page }
   await page.setViewportSize({ width: 375, height: 800 });
   await page.goto("/wow-forever/professions?p=alchemy");
   const radios = page.getByRole("radiogroup", { name: "Crafting professions" }).getByRole("radio");
-  await expect(radios).toHaveCount(4);
+  await expect(radios).toHaveCount(5);
   const boxes = await Promise.all((await radios.all()).map((r) => r.boundingBox()));
   for (const box of boxes) expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
   expect(new Set(boxes.map((b) => Math.round(b?.y ?? 0))).size).toBe(1);
@@ -179,7 +179,7 @@ test("Alchemy shows a hand-picked herb route with no prices, and where each herb
 test("the loading skeleton keeps room for prices only where there are prices", async ({ page }) => {
   let release: () => void = () => {};
   const held = new Promise<void>((resolve) => (release = resolve));
-  await page.route(/crafting\/(alchemy|blacksmithing|tailoring)\.json/, async (route) => {
+  await page.route(/crafting\/(alchemy|blacksmithing|leatherworking|tailoring)\.json/, async (route) => {
     await held;
     await route.continue();
   });
@@ -188,6 +188,9 @@ test("the loading skeleton keeps room for prices only where there are prices", a
   await expect(skeleton).toBeVisible();
   await expect(skeleton.getByTestId("craft-prices-skeleton")).toHaveCount(0);
   await page.getByRole("radio", { name: "Blacksmithing" }).click();
+  await expect(skeleton).toBeVisible();
+  await expect(skeleton.getByTestId("craft-prices-skeleton")).toHaveCount(0);
+  await page.getByRole("radio", { name: "Leatherworking" }).click();
   await expect(skeleton).toBeVisible();
   await expect(skeleton.getByTestId("craft-prices-skeleton")).toHaveCount(0);
   await page.getByRole("radio", { name: "Tailoring" }).click();
@@ -255,4 +258,57 @@ test("Blacksmithing forks at 200: pick a specialization and the route keeps only
   await expect(shopping.getByText("Smelt with Mining", { exact: true })).toBeVisible();
   await expect(shopping.getByText(/\d+ Copper Bar \(Mining 1\)/)).toBeVisible();
   await expect(shopping.locator('details[data-mat="2770"]').first()).toBeVisible();
+});
+
+test("Leatherworking forks at 225, and leather points at beasts to skin", async ({ page }) => {
+  await page.goto("/wow-forever/professions");
+  await page.getByRole("radio", { name: "Leatherworking" }).click();
+  await expect(page).toHaveURL(/\?p=leatherworking$/);
+  const start = page.getByLabel("Get started: train it first");
+  await expect(start.getByText("Works well with Skinning")).toBeVisible();
+  await expect(start.getByText("Skin your leather, or buy it")).toBeVisible();
+
+  const route = page.locator("#route");
+  await route.getByLabel("Your skill").fill("150");
+  await expect(page).toHaveURL(/skill=150/);
+  await expect(route.getByText("Craft Heavy Armor Kit until 155.")).toBeVisible();
+  const decision = route.getByTestId("spec-decision");
+  await expect(decision).toContainText("At 225: choose a specialization");
+  await expect(decision).toContainText("Classic: needs level 40");
+  await expect(decision.getByTestId("spec-tribal")).toBeVisible();
+
+  // Not chosen yet: every option, each specialist one with its chip.
+  await route.getByLabel("Your skill").fill("250");
+  const options = route.locator('[aria-current="step"]');
+  await expect(options.getByText("Wicked Leather Gauntlets", { exact: true })).toBeVisible();
+  await expect(options.getByText("Dragonscale Breastplate", { exact: true })).toBeVisible();
+  await expect(options.getByText("Chimeric Gloves", { exact: true })).toBeVisible();
+  await expect(options.getByTestId("spec-chip").first()).toBeVisible();
+
+  const picker = page.getByRole("radiogroup", { name: "Your Leatherworking specialization" });
+  await expect(picker.getByRole("radio", { name: "Not chosen yet" })).toBeChecked();
+  await picker.getByRole("radio", { name: "Tribal" }).click();
+  await expect(page).toHaveURL(/spec=tribal/);
+  await expect(options.getByText("Chimeric Gloves", { exact: true })).toBeVisible();
+  await expect(options.getByText("Wicked Leather Gauntlets", { exact: true })).toBeVisible();
+  await expect(options.getByText("Dragonscale Breastplate", { exact: true })).toHaveCount(0);
+
+  // Kept without the link.
+  await page.goto("/wow-forever/professions?p=leatherworking");
+  await expect(page.getByRole("radiogroup", { name: "Your Leatherworking specialization" }).getByRole("radio", { name: "Tribal" })).toBeChecked();
+
+  // No prices anywhere; leather is skinned, with directions to the beasts.
+  await expect(page.getByRole("region", { name: "Your prices" })).toHaveCount(0);
+  await expect(page.getByText(/cheapest/i)).toHaveCount(0);
+  await expect(page.locator("main").last()).not.toContainText(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
+  const shopping = page.locator("#shopping");
+  await shopping.locator("summary").first().click();
+  await expect(shopping.getByText(/Don't sell your crafts yet/)).toBeVisible();
+  await shopping.getByRole("radio", { name: "Whole route" }).click();
+  const leather = shopping.locator('details[data-mat="2318"]').first();
+  await expect(leather.locator("summary")).toContainText(/Skin beasts level \d+–\d+/);
+  await leather.locator("summary").click();
+  const beasts = leather.getByRole("list", { name: "Where to skin it" });
+  await expect(beasts.getByRole("link", { name: /^Directions to / }).first()).toHaveAttribute("href", /\/wow-forever\/map\?to=pt/);
+  await expect(leather.getByText(/You can also make it yourself with Light Leather/)).toBeVisible();
 });
