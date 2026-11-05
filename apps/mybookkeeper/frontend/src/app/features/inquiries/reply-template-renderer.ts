@@ -16,6 +16,11 @@
  * before ``$name`` would match part of it.
  */
 
+// What Python's str.splitlines splits on (backend/app/core/line_break_utils.py): an email
+// subject can hold none of them. Spelled out because JS \s leaves out \x1c-\x1e and \x85.
+// eslint-disable-next-line no-control-regex -- \x1c-\x1e are line breaks to splitlines, so they have to be matched.
+const LINE_BREAK_RUN = /[ \t]*[\r\n\v\f\x1c-\x1e\x85\u2028\u2029]+\s*/g;
+
 const MAX_NAME = 100;
 const MAX_LISTING = 200;
 const MAX_EMPLOYER = 200;
@@ -113,5 +118,6 @@ export function renderTemplate(ctx: RenderTemplateContext): RenderTemplateResult
     body = `${ctx.listingLargeDogDisclosure.trim()}\n\n${body}`;
   }
 
-  return { subject, body };
+  // A name or listing title can carry a line break, and an email subject can't.
+  return { subject: subject.replace(LINE_BREAK_RUN, " ").trim(), body };
 }

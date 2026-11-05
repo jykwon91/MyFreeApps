@@ -28,7 +28,7 @@ def test_a_blank_field_is_refused(schema: type, field: str, blank: str) -> None:
         schema(**{**VALID, field: blank})
 
 
-@pytest.mark.parametrize("subject", ["Re: $listing\nBcc: x@example.com", "Line one\r\nLine two", "Hi\rthere"])
+@pytest.mark.parametrize("subject", ["Re: $listing\nBcc: x@example.com", "Line one\r\nLine two", "Hi\rthere", "Hi\u2028there"])
 @pytest.mark.parametrize("schema", [ReplyTemplateCreateRequest, ReplyTemplateUpdateRequest])
 def test_a_subject_with_a_line_break_inside_is_refused(schema: type, subject: str) -> None:
     with pytest.raises(ValidationError):

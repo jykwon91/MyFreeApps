@@ -19,6 +19,7 @@ from __future__ import annotations
 import datetime as _dt
 
 from app.core.inquiry_enums import REPLY_TEMPLATE_VARIABLES
+from app.core.line_break_utils import collapse_line_breaks
 
 # Sanitization caps — values longer than these are truncated. The caps are
 # generous (a person's name is rarely 100 chars) but bounded so a malicious
@@ -147,7 +148,8 @@ def render_template(
         host_phone=host_phone,
     )
 
-    rendered_subject = _substitute(template_subject, substitutions)
+    # A name or listing title can carry a line break; the subject becomes an email header that can't.
+    rendered_subject = collapse_line_breaks(_substitute(template_subject, substitutions))
     rendered_body = _substitute(template_body, substitutions)
 
     disclosure = applicable_disclosure(listing_pets_on_premises, listing_large_dog_disclosure)

@@ -195,6 +195,31 @@ class TestSanitization:
         assert body == "Hi <script>alert('x')</script>"
 
 
+class TestOneLineSubject:
+    @pytest.mark.parametrize(
+        ("inquirer_name", "listing_title", "expected"),
+        [
+            ("Alice\nSmith", "Cozy Room", "Re: Cozy Room for Alice Smith"),
+            ("Alice", "Cozy\r\n  Room", "Re: Cozy Room for Alice"),
+            ("Alice\u2028Smith", "Cozy\x0bRoom", "Re: Cozy Room for Alice Smith"),
+            ("Alice", "Cozy Room\x85", "Re: Cozy Room for Alice"),
+        ],
+    )
+    def test_a_line_break_in_a_value_becomes_a_space_in_the_subject(
+        self, inquirer_name: str, listing_title: str, expected: str,
+    ) -> None:
+        subject, _ = _render(
+            template_subject="Re: $listing for $name",
+            inquirer_name=inquirer_name,
+            listing_title=listing_title,
+        )
+        assert subject == expected
+
+    def test_the_body_keeps_its_line_breaks(self) -> None:
+        _, body = _render(template_body="Hi $name,\n\nThanks", inquirer_name="Alice")
+        assert body == "Hi Alice,\n\nThanks"
+
+
 class TestIdempotency:
     def test_template_with_no_variables_returns_unchanged(self) -> None:
         subject, body = _render(
