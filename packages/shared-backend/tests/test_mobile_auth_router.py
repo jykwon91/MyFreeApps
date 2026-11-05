@@ -4,7 +4,7 @@ from collections.abc import AsyncIterator
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import jwt
 import pytest
@@ -13,11 +13,11 @@ from fastapi.testclient import TestClient
 
 from platform_shared.api.mobile_auth_router import build_mobile_auth_router
 from platform_shared.auth.refreshed_session import RefreshedSession
-from platform_shared.core.auth_events import AuthEventType
 from platform_shared.core.refresh_session_limits import (
     MOBILE_ACCESS_TOKEN_SECONDS,
     REFRESH_ATTEMPTS_PER_SESSION,
 )
+from platform_shared.services.guard_outcome import GuardOutcome
 
 _SECRET = "test-secret-key-that-is-long-enough-to-sign-with"
 _LOGIN = {"email": "a@example.com", "password": "correct-password", "device_name": "Phone"}
@@ -49,8 +49,7 @@ def _session_row() -> SimpleNamespace:
 class _Harness:
     def __init__(self, user: SimpleNamespace | None = None) -> None:
         self.user = user or _user()
-        self.db = AsyncMock()
-        self.db.add = MagicMock()
+        self.db = AsyncMock(new=(), dirty=(), deleted=())
         self.row = _session_row()
         refreshed = RefreshedSession(user=self.user, session=self.row, refresh_token="new-refresh")
         self.sessions = MagicMock()
@@ -62,9 +61,10 @@ class _Harness:
         self.sessions.session_id_of = MagicMock(return_value=self.row.id)
         self.manager = MagicMock()
         self.manager.authenticate_password = AsyncMock(return_value=self.user)
-        self.manager.is_locked_now = AsyncMock(return_value=False)
-        self.manager.count_failed_second_factor = AsyncMock()
-        self.manager.clear_failed_logins = AsyncMock()
+        self.guard = MagicMock()
+        self.guard.record_event = AsyncMock()
+        self.guard.record_code_attempt = AsyncMock(return_value=GuardOutcome.ALLOWED)
+        self.manager.account_guard = self.guard
         self.totp = SimpleNamespace(validate_totp_for_login=AsyncMock(return_value=(True, False)))
 
         async def current_active_user() -> SimpleNamespace:
@@ -94,17 +94,11 @@ class _Harness:
         return self.client.post("/auth/mobile/refresh", json={"refresh_token": "old-refresh"})
 
 
-@pytest.fixture(autouse=True)
-def _no_audit_rows() -> Any:
-    with patch("platform_shared.auth.verified_login.log_auth_event", AsyncMock()):
-        yield
-
-
 def _claims(token: str) -> dict[str, Any]:
     return jwt.decode(token, _SECRET, algorithms=["HS256"], audience="fastapi-users:auth")
 
 
-def test_login_returns_both_tokens_and_commits_the_session() -> None:
+def test_login_returns_both_tokens() -> None:
     harness = _Harness()
     response = harness.client.post("/auth/mobile/login", json=_LOGIN)
     assert response.status_code == 200
@@ -116,7 +110,6 @@ def test_login_returns_both_tokens_and_commits_the_session() -> None:
     assert response.headers["cache-control"] == "no-store"
     harness.sessions.issue.assert_awaited_once()
     assert harness.sessions.issue.await_args.kwargs["device_name"] == "Phone"
-    harness.db.commit.assert_awaited()
 
 
 def test_a_2fa_user_without_a_code_gets_no_session() -> None:
@@ -130,10 +123,11 @@ def test_a_2fa_user_without_a_code_gets_no_session() -> None:
 def test_a_wrong_2fa_code_gets_no_session_and_counts_toward_lockout() -> None:
     harness = _Harness(_user(totp_enabled=True))
     harness.totp.validate_totp_for_login.return_value = (False, False)
+    harness.guard.record_code_attempt.return_value = GuardOutcome.WRONG
     response = harness.client.post("/auth/mobile/login", json=_LOGIN | {"totp_code": "000000"})
     assert response.status_code == 401
     assert response.json()["detail"] == "invalid_totp"
-    harness.manager.count_failed_second_factor.assert_awaited_once()
+    assert harness.guard.record_code_attempt.await_args.kwargs["valid"] is False
     harness.sessions.issue.assert_not_awaited()
 
 
@@ -171,16 +165,14 @@ def test_a_refreshed_access_token_keeps_the_login_time() -> None:
     assert claims["exp"] - claims["iat"] == MOBILE_ACCESS_TOKEN_SECONDS
     assert claims["sub"] == str(harness.user.id)
     assert response.headers["cache-control"] == "no-store"
-    harness.db.commit.assert_awaited()
 
 
-def test_a_refused_refresh_still_commits_so_an_ended_session_stays_ended() -> None:
+def test_a_refused_refresh_is_told_to_sign_out() -> None:
     harness = _Harness()
     harness.sessions.rotate.return_value = None
     response = harness.refresh()
     assert response.status_code == 401
     assert response.json()["detail"] == "refresh_invalid"
-    harness.db.commit.assert_awaited_once()
 
 
 def test_a_token_we_did_not_issue_is_refused_without_touching_the_database() -> None:
@@ -208,7 +200,6 @@ def test_logout_ends_the_session_and_needs_no_access_token() -> None:
     response = harness.client.post("/auth/mobile/logout", json={"refresh_token": "old-refresh"})
     assert response.status_code == 204
     harness.sessions.end.assert_awaited_once()
-    harness.db.commit.assert_awaited_once()
 
 
 def test_the_device_list_leaves_out_secrets() -> None:
@@ -222,11 +213,7 @@ def test_revoking_is_scoped_to_the_signed_in_user() -> None:
     harness = _Harness()
     session_id = uuid.uuid4()
     assert harness.client.delete(f"/auth/mobile/sessions/{session_id}").status_code == 204
-    args = harness.sessions.revoke.await_args.args
-    assert args[1:] == (harness.user.id, session_id)
-    harness.db.add.assert_called_once()
-    assert harness.db.add.call_args.args[0].event_type == AuthEventType.DEVICE_SIGNED_OUT
-    harness.db.commit.assert_awaited_once()
+    assert harness.sessions.revoke.await_args.args == (harness.user.id, session_id)
 
 
 def test_revoking_a_session_that_isnt_theirs_is_404() -> None:

@@ -12,6 +12,7 @@ Covers:
 - send_verification_email helper
 """
 import uuid
+from platform_shared.services.guard_outcome import GuardOutcome
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -201,6 +202,14 @@ class TestOnAfterVerify:
 # Login gating — unverified users cannot log in
 # ---------------------------------------------------------------------------
 
+def _allowing_guard() -> MagicMock:
+    guard = MagicMock()
+    guard.begin_attempt = AsyncMock(return_value=GuardOutcome.ALLOWED)
+    guard.record_password_attempt = AsyncMock(return_value=GuardOutcome.ALLOWED)
+    guard.record_event = AsyncMock()
+    return guard
+
+
 class TestLoginGating:
     @pytest.mark.anyio
     async def test_unverified_user_returns_none_from_authenticate(self):
@@ -216,9 +225,7 @@ class TestLoginGating:
 
         manager = UserManager.__new__(UserManager)
         user_db = MagicMock()
-        user_db.update = AsyncMock()
-        user_db.session.refresh = AsyncMock()
-        user_db.session.commit = AsyncMock()
+        user_db.session = MagicMock(new=(), dirty=(), deleted=(), commit=AsyncMock())
         manager.user_db = user_db
         manager.password_helper = MagicMock()
         manager.password_helper.hash = MagicMock(return_value="hashed")
@@ -237,7 +244,7 @@ class TestLoginGating:
             _FastApiUsersBaseUserManager,
             "authenticate",
             new=AsyncMock(return_value=unverified_user),
-        ):
+        ), patch.object(UserManager, "account_guard", new=_allowing_guard()):
             result = await manager.authenticate(credentials)
 
         assert result is None
@@ -251,9 +258,7 @@ class TestLoginGating:
 
         manager = UserManager.__new__(UserManager)
         user_db = MagicMock()
-        user_db.update = AsyncMock()
-        user_db.session.refresh = AsyncMock()
-        user_db.session.commit = AsyncMock()
+        user_db.session = MagicMock(new=(), dirty=(), deleted=(), commit=AsyncMock())
         manager.user_db = user_db
         manager.password_helper = MagicMock()
         manager.password_helper.hash = MagicMock(return_value="hashed")
@@ -272,7 +277,7 @@ class TestLoginGating:
             _FastApiUsersBaseUserManager,
             "authenticate",
             new=AsyncMock(return_value=verified_user),
-        ):
+        ), patch.object(UserManager, "account_guard", new=_allowing_guard()):
             result = await manager.authenticate(credentials)
 
         assert result is verified_user
@@ -361,7 +366,7 @@ class TestTotpLoginUnverified:
         try:
             with (
                 patch("app.core.auth.UserManager.authenticate_password", new=AsyncMock(return_value=unverified_user)),
-                patch("platform_shared.auth.verified_login.log_auth_event", new=AsyncMock(return_value=None)),
+                patch("app.core.auth.UserManager.account_guard", new=_allowing_guard()),
             ):
                 async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
                     resp = await client.post(

@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.core.request_utils import get_client_ip
 from platform_shared.db.models.auth_event import AuthEvent
+from platform_shared.repositories import auth_event_repo
 
 
 async def log_auth_event(
@@ -48,4 +49,4 @@ async def log_auth_event(
         succeeded=succeeded,
         event_metadata=metadata or {},
     )
-    db.add(event)
+    auth_event_repo.add(db, event)

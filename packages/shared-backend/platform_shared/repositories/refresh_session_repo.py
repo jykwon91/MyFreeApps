@@ -10,6 +10,10 @@ from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
+def add(db: AsyncSession, session: Any) -> None:
+    db.add(session)
+
+
 def _locked_select(session_model: type[Any], session_id: uuid.UUID) -> Any:
     return (
         select(session_model)
@@ -87,6 +91,6 @@ async def delete_by_id(db: AsyncSession, session_model: type[Any], session_id: u
     await db.execute(delete(session_model).where(session_model.id == session_id))
 
 
-__all__ = ["delete_all_but_newest",
+__all__ = ["add", "delete_all_but_newest",
     "delete_by_id",
     "delete_expired_for_user", "delete_owned", "delete_session", "list_for_user", "lock_by_id"]

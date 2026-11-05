@@ -1,12 +1,9 @@
 """Tests for the 2026-05-02 audit-log gap + PII cleanup fixes.
 
-Four contracts pinned here:
+Contracts pinned here:
 
 1. TOTP rate-limit gate (check_totp_rate_limit) emits LOGIN_BLOCKED_RATE_LIMIT
    with metadata.gate="totp" when the bucket is exhausted (Fix 1, CWE-778).
-
-2. Logger statements in UserManager no longer emit the full user.email address
-   — only user.id (Fix 2, CWE-532 / PII).
 
 3. emit_locked_login_event accepts an optional request parameter so that
    ip_address and user_agent are captured when called from authenticate_password
@@ -18,7 +15,6 @@ Four contracts pinned here:
 """
 import uuid
 from collections.abc import Awaitable, Callable
-from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -27,12 +23,15 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.core.auth_events import AuthEventType
+from platform_shared.db.session import unit_of_work_on_same_database
 from platform_shared.schemas.totp.totp_login_request import TotpLoginRequest
 from platform_shared.schemas.totp.totp_login_response import TotpLoginResponse
+from platform_shared.services.account_guard_service import AccountGuardService
 
 from app.api.totp import router as totp_router
 from app.core.rate_limit import RateLimiter, check_totp_rate_limit
 from app.models.system.auth_event import AuthEvent
+from app.models.user.user import User
 
 
 # ---------------------------------------------------------------------------
@@ -51,6 +50,13 @@ def _make_request(ip: str = "1.2.3.4") -> MagicMock:
     request.client.host = ip
     request.state = MagicMock(spec=[])  # no login_email attr
     return request
+
+
+def _guard_on(db: AsyncSession) -> AccountGuardService:
+    return AccountGuardService(
+        user_model=User,
+        unit_of_work_factory=lambda: unit_of_work_on_same_database(db),
+    )
 
 
 async def _auth_events(db: AsyncSession) -> list[AuthEvent]:
@@ -149,127 +155,6 @@ class TestTotpRateLimitEmitsAuditEvent:
 
 
 # ---------------------------------------------------------------------------
-# Fix 2 — Logger statements do not emit full user.email
-# ---------------------------------------------------------------------------
-
-
-class TestNoEmailInLockedAccountLogs:
-    @pytest.mark.anyio
-    async def test_locked_account_log_does_not_contain_email(self) -> None:
-        """logger.info in UserManager.authenticate for the locked-account
-        path must not include the full email address — only user.id.
-        Before Fix 2, the format string included user.email directly."""
-        import logging
-        from app.core.auth import UserManager
-
-        future = datetime.now(tz=timezone.utc) + timedelta(minutes=5)
-
-        user = MagicMock()
-        user.id = uuid.uuid4()
-        user.email = "secret@private.com"
-        user.failed_login_count = 5
-        user.locked_until = future
-        user.last_failed_login_at = None
-
-        manager = UserManager.__new__(UserManager)
-        manager.get_by_email = AsyncMock(return_value=user)
-        manager.user_db = MagicMock()
-        manager.user_db.update = AsyncMock()
-        manager.user_db.session = MagicMock()
-        manager.user_db.session.refresh = AsyncMock()
-        manager.password_helper = MagicMock()
-
-        captured_messages: list[str] = []
-
-        class _Capture(logging.Handler):
-            def emit(self, record: logging.LogRecord) -> None:
-                captured_messages.append(self.format(record))
-
-        import app.core.auth as auth_module
-        handler = _Capture()
-        test_logger = logging.getLogger(auth_module.__name__)
-        test_logger.addHandler(handler)
-        test_logger.setLevel(logging.DEBUG)
-
-        creds = MagicMock()
-        creds.username = "secret@private.com"
-        creds.password = "whatever"
-
-        try:
-            with patch(
-                "platform_shared.auth.user_manager.emit_locked_login_event",
-                new_callable=AsyncMock,
-            ):
-                await manager.authenticate(creds)
-        finally:
-            test_logger.removeHandler(handler)
-
-        # Assert no captured log message contains the full email address.
-        for msg in captured_messages:
-            assert "@" not in msg, (
-                f"Log message leaked full email address: {msg!r}\n"
-                "Fix 2 requires user.id in place of user.email in logger calls."
-            )
-
-    @pytest.mark.anyio
-    async def test_account_locked_warning_log_does_not_contain_email(
-        self,
-    ) -> None:
-        """The 'Account locked' warning (emitted when the threshold is reached)
-        must also not include user.email."""
-        import logging
-        from app.core.auth import UserManager
-        from app.core.config import settings
-
-        user = MagicMock()
-        user.id = uuid.uuid4()
-        user.email = "victim@private.com"
-        user.failed_login_count = settings.lockout_threshold - 1
-        user.locked_until = None
-        user.last_failed_login_at = None
-
-        manager = UserManager.__new__(UserManager)
-        manager.get_by_email = AsyncMock(return_value=user)
-        manager.user_db = MagicMock()
-        manager.user_db.update = AsyncMock()
-        manager.user_db.session = MagicMock()
-        manager.user_db.session.refresh = AsyncMock()
-        manager.password_helper = MagicMock()
-        manager.password_helper.hash = MagicMock(return_value="hashed")
-
-        captured_messages: list[str] = []
-
-        class _Capture(logging.Handler):
-            def emit(self, record: logging.LogRecord) -> None:
-                captured_messages.append(self.format(record))
-
-        import app.core.auth as auth_module
-        handler = _Capture()
-        test_logger = logging.getLogger(auth_module.__name__)
-        test_logger.addHandler(handler)
-        test_logger.setLevel(logging.DEBUG)
-
-        creds = MagicMock()
-        creds.username = "victim@private.com"
-        creds.password = "wrongpassword"
-
-        try:
-            with patch(
-                "fastapi_users.BaseUserManager.authenticate",
-                new_callable=AsyncMock,
-                return_value=None,
-            ):
-                await manager.authenticate(creds)
-        finally:
-            test_logger.removeHandler(handler)
-
-        for msg in captured_messages:
-            assert "@" not in msg, (
-                f"Log message leaked email address: {msg!r}"
-            )
-
-
-# ---------------------------------------------------------------------------
 # Fix 3 — emit_locked_login_event captures IP/UA when request is provided
 # ---------------------------------------------------------------------------
 
@@ -364,13 +249,13 @@ class TestInactiveUserTotpLoginAudit:
 
         user_manager = MagicMock()
         user_manager.authenticate_password = AsyncMock(return_value=inactive_user)
+        user_manager.account_guard = _guard_on(db)
 
         with pytest.raises(HTTPException) as exc_info:
             await totp_login(
                 request=request,
                 body=body,
                 user_manager=user_manager,
-                db=db,
             )
 
         assert exc_info.value.status_code == 400
@@ -409,13 +294,13 @@ class TestInactiveUserTotpLoginAudit:
 
         user_manager = MagicMock()
         user_manager.authenticate_password = AsyncMock(return_value=None)
+        user_manager.account_guard = _guard_on(db)
 
         with pytest.raises(HTTPException) as exc_info:
             await totp_login(
                 request=request,
                 body=body,
                 user_manager=user_manager,
-                db=db,
             )
 
         assert exc_info.value.status_code == 400

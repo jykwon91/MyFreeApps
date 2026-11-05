@@ -43,7 +43,6 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
 from typing import Any, Generic, Optional, TypeVar, Union
 
 from fastapi import Request
@@ -59,14 +58,9 @@ from fastapi_users import (
 
 from platform_shared.auth.session_invalidation import session_cutoff_now
 from platform_shared.core.auth_events import AuthEventType
-from platform_shared.services.account_lockout import (
-    autoreset_update_if_stale,
-    emit_locked_login_event,
-    is_locked as account_is_locked,
-    record_failed_login,
-    record_successful_login_update,
-)
-from platform_shared.services.auth_event_service import log_auth_event
+from platform_shared.db.session import release_connection, unit_of_work_on_same_database
+from platform_shared.services.account_guard_service import AccountGuardService
+from platform_shared.services.guard_outcome import GuardOutcome
 from platform_shared.services.hibp_service import HIBPCheckError, is_password_pwned
 from platform_shared.services.seed_admin_service import is_reserved_seed_email
 
@@ -74,9 +68,6 @@ logger = logging.getLogger(__name__)
 
 
 UP = TypeVar("UP")
-
-
-_LOCKOUT_FIELDS = ["failed_login_count", "last_failed_login_at", "locked_until"]
 
 
 class PlatformBaseUserManager(
@@ -113,6 +104,17 @@ class PlatformBaseUserManager(
             raise exceptions.UserAlreadyExists()
         return await super().create(user_create, safe=safe, request=request)
 
+    @property
+    def account_guard(self) -> AccountGuardService:
+        """Lockout and audit writes, in transactions separate from the request's session."""
+        session = self.user_db.session
+        return AccountGuardService(
+            user_model=self.user_db.user_table,
+            unit_of_work_factory=lambda: unit_of_work_on_same_database(session),
+            lockout_threshold=self.lockout_threshold,
+            lockout_autoreset_hours=self.lockout_autoreset_hours,
+        )
+
     async def authenticate(
         self, credentials: OAuth2PasswordRequestForm,
     ) -> Optional[models.UP]:
@@ -121,80 +123,39 @@ class PlatformBaseUserManager(
         Layers on top of the standard fastapi-users authenticate():
         1. Look up the user by email; unknown email → log LOGIN_FAILURE
            with PII-safe metadata (domain only) and return None.
-        2. If the account is locked → emit LOGIN_BLOCKED_LOCKED and reject
-           without checking the password.
-        3. Auto-reset stale failure counter (no activity in >24 h).
-        4. Delegate to parent for password verification.
-        5. On failure: increment counter, apply exponential lock at threshold.
-        6. On success: clear counter and lock state, unless the user has 2FA,
-           whose count clears only once the code has passed too.
-        7. Block unverified users (LOGIN_BLOCKED_UNVERIFIED).
-        8. Block TOTP-enabled users — they must use /auth/totp/login.
-        9. Log LOGIN_SUCCESS for the standard JWT path only.
+        2. Apply the lockout flow in :meth:`_check_password`.
+        3. Block unverified users (LOGIN_BLOCKED_UNVERIFIED).
+        4. Block TOTP-enabled users — they must use /auth/totp/login.
+        5. Log LOGIN_SUCCESS for the standard JWT path only.
         """
-        db = self.user_db.session
-
+        guard = self.account_guard
         try:
             user = await self.get_by_email(credentials.username)
         except exceptions.UserNotExists:
             # Unknown email — mimic parent's timing mitigation.
             self.password_helper.hash(credentials.password)
+            await release_connection(self.user_db.session)
             email_domain = (
                 credentials.username.split("@", 1)[-1]
                 if "@" in credentials.username
                 else ""
             )
-            await log_auth_event(
-                db,
-                event_type=AuthEventType.LOGIN_FAILURE,
+            await guard.record_event(
+                AuthEventType.LOGIN_FAILURE,
                 user_id=None,
                 succeeded=False,
                 metadata={"email_domain": email_domain, "reason": "unknown_email"},
             )
-            await db.commit()
             return None
 
-        now = datetime.now(tz=timezone.utc)
-
-        if account_is_locked(user, now=now):
-            logger.info(
-                "Login rejected for locked account user_id=%s (locked until %s)",
-                user.id, user.locked_until,
-            )
-            await emit_locked_login_event(db=db, user_id=user.id)
-            return None
-
-        await self.reset_stale_failed_logins(user)
-
-        result = await super().authenticate(credentials)
-
-        # Asked whichever way the guess went, so once locked a right guess
-        # and a wrong one get the same answer.
-        if await self.is_locked_now(user):
-            await emit_locked_login_event(db=db, user_id=user.id)
-            await db.commit()
-            return None
-
+        result = await self._check_password(user, credentials, request=None)
         if result is None:
-            await self._count_failed_login(user, reason="bad_password")
             return None
-
-        # A password alone doesn't finish a 2FA login, or anyone who knows it could
-        # keep clearing the count between guesses at the code.
-        if not getattr(result, "totp_enabled", False):
-            await self.clear_failed_logins(result)
-        await db.commit()
 
         # Block unverified users from the standard JWT login.
         # Defense-in-depth alongside `current_active_user(verified=True)`.
         if not result.is_verified:
-            await log_auth_event(
-                db,
-                event_type=AuthEventType.LOGIN_BLOCKED_UNVERIFIED,
-                user_id=result.id,
-                succeeded=False,
-            )
-            await db.commit()
+            await guard.record_event(AuthEventType.LOGIN_BLOCKED_UNVERIFIED, user_id=result.id, succeeded=False)
             return None
 
         # Block TOTP-enabled users — they must use /auth/totp/login,
@@ -202,11 +163,7 @@ class PlatformBaseUserManager(
         if getattr(result, "totp_enabled", False):
             return None
 
-        await log_auth_event(
-            db, event_type=AuthEventType.LOGIN_SUCCESS,
-            user_id=result.id, succeeded=True,
-        )
-        await db.commit()
+        await guard.record_event(AuthEventType.LOGIN_SUCCESS, user_id=result.id, succeeded=True)
         return result
 
     async def authenticate_password(
@@ -218,116 +175,48 @@ class PlatformBaseUserManager(
 
         Used by the unified ``/auth/totp/login`` endpoint, which performs
         TOTP validation + verified-user check itself after this returns.
-        Re-runs the lockout flow (lookup → lock check → auto-reset →
-        password verify → counter update) so the 2FA login path enjoys the
-        same brute-force protection as the standard one. A user with 2FA keeps
-        their count here; the route clears it once the code has passed.
+        Runs the same lockout flow as the standard login, so the 2FA login path
+        enjoys the same brute-force protection. Returns with the request's
+        connection released, ready for the 2FA service to take its own.
 
-        Pass ``request`` so ``emit_locked_login_event`` captures
-        ``ip_address`` and ``user_agent`` in the audit row.
+        Pass ``request`` so the locked-account audit row captures
+        ``ip_address`` and ``user_agent``.
 
         Calling this from anywhere else bypasses 2FA — don't.
         """
-        db = self.user_db.session
-
         try:
             user = await self.get_by_email(credentials.username)
         except exceptions.UserNotExists:
             self.password_helper.hash(credentials.password)
+            await release_connection(self.user_db.session)
             return None
+        return await self._check_password(user, credentials, request=request)
 
-        now = datetime.now(tz=timezone.utc)
-
-        if account_is_locked(user, now=now):
-            logger.info(
-                "TOTP login rejected for locked account user_id=%s (locked until %s)",
-                user.id, user.locked_until,
-            )
-            await emit_locked_login_event(db=db, user_id=user.id, request=request)
+    async def _check_password(
+        self,
+        user: models.UP,
+        credentials: OAuth2PasswordRequestForm,
+        *,
+        request: Optional[Request],
+    ) -> Optional[models.UP]:
+        """Lock check → stale reset → password check → count or clear."""
+        session = self.user_db.session
+        guard = self.account_guard
+        await release_connection(session)
+        if await guard.begin_attempt(user.id, request=request) is GuardOutcome.LOCKED:
+            logger.info("Login rejected for locked account user_id=%s", user.id)
             return None
-
-        await self.reset_stale_failed_logins(user)
 
         result = await super().authenticate(credentials)
+        await release_connection(session)
 
-        if await self.is_locked_now(user):
-            await emit_locked_login_event(db=db, user_id=user.id, request=request)
-            await db.commit()
-            return None
-
-        if result is None:
-            await self._count_failed_login(user, reason="bad_password")
-            return None
-
-        # A password alone doesn't finish a 2FA login, or anyone who knows it could
-        # keep clearing the count between guesses at the code.
-        if not getattr(result, "totp_enabled", False):
-            await self.clear_failed_logins(result)
-        await db.commit()
-
-        return result
-
-    async def reset_stale_failed_logins(self, user: models.UP) -> None:
-        """Forget old failures, so a typo months ago doesn't count toward a lockout."""
-        autoreset = autoreset_update_if_stale(
-            user, now=datetime.now(tz=timezone.utc), autoreset_hours=self.lockout_autoreset_hours,
+        outcome = await guard.record_password_attempt(
+            user.id,
+            correct=result is not None,
+            finishes_login=True,
+            request=request,
         )
-        if autoreset is not None:
-            await self.user_db.update(user, autoreset)
-            user.failed_login_count = 0
-            user.last_failed_login_at = None
-            user.locked_until = None
-
-    async def is_locked_now(self, user: models.UP) -> bool:
-        """Reread the lockout under a row lock, which the caller's commit releases.
-
-        Guesses sent together all pass a check made when the request began, so
-        anything acting on a guess has to ask again once it has checked it.
-        """
-        await self.user_db.session.refresh(user, _LOCKOUT_FIELDS, with_for_update=True)
-        return account_is_locked(user, now=datetime.now(tz=timezone.utc))
-
-    async def totp_enabled_now(self, user: models.UP) -> bool:
-        """Reread whether 2FA is on. The copy loaded with the request may be out of date."""
-        await self.user_db.session.refresh(user, ["totp_enabled"])
-        return user.totp_enabled
-
-    async def count_failed_password(self, user: models.UP) -> None:
-        """Count a wrong password given while signed in toward the login lockout."""
-        await self._count_failed_login(
-            user, reason="bad_password",
-        )
-
-    async def count_failed_second_factor(self, user: models.UP) -> None:
-        """Count a wrong 2FA code toward the same lockout as a wrong password."""
-        await self._count_failed_login(
-            user, reason="bad_totp",
-        )
-
-    async def clear_failed_logins(self, user: models.UP) -> None:
-        """Clear the lockout count once the whole login has succeeded."""
-        clear_update = record_successful_login_update(user)
-        if clear_update is not None:
-            await self.user_db.update(user, clear_update)
-
-    async def _count_failed_login(
-        self, user: models.UP, *, reason: str,
-    ) -> None:
-        db = self.user_db.session
-        # Lock and reread until ``user_db.update`` commits. Parallel guesses would
-        # otherwise all count from the same stale value and undercount.
-        await db.refresh(user, _LOCKOUT_FIELDS, with_for_update=True)
-        update = await record_failed_login(
-            user, db=db, user_id=user.id,
-            lockout_threshold=self.lockout_threshold,
-            metadata={"reason": reason}, now=datetime.now(tz=timezone.utc),
-        )
-        if "locked_until" in update:
-            logger.warning(
-                "Account locked: user_id=%s until %s (consecutive failures: %d)",
-                user.id, update["locked_until"], update["failed_login_count"],
-            )
-        await self.user_db.update(user, update)
+        return result if outcome is GuardOutcome.ALLOWED else None
 
     async def _update(self, user: UP, update_dict: dict[str, Any]) -> UP:
         """End every existing session when the password changes.

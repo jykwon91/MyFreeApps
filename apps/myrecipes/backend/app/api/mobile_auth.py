@@ -10,7 +10,7 @@ from app.core.rate_limit import (
     check_totp_account_not_locked,
     check_totp_rate_limit,
 )
-from app.db.session import get_db
+from app.db.session import get_db, unit_of_work
 from app.models.user.refresh_session import RefreshSession
 from app.models.user.user import User
 from app.services.user import totp_service
@@ -19,6 +19,7 @@ router = build_mobile_auth_router(
     secret_key=settings.secret_key,
     session_service=RefreshSessionService(
         session_model=RefreshSession, user_model=User, signing_key=settings.secret_key,
+        unit_of_work_factory=unit_of_work,
     ),
     current_active_user=current_active_user,
     get_user_manager=get_user_manager,

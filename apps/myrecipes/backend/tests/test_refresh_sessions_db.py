@@ -1,110 +1,123 @@
 """Refresh sessions against the real table: what fakes can't show."""
 import uuid
-from collections.abc import AsyncGenerator, Awaitable, Callable
-from datetime import datetime, timezone
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
 
 import pytest
 import pytest_asyncio
 from sqlalchemy import delete, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.models.user.refresh_session import RefreshSession
 from app.models.user.user import User
 from platform_shared.services.refresh_session_service import RefreshSessionService
 
-_SERVICE = RefreshSessionService(
-    session_model=RefreshSession, user_model=User, signing_key="test-signing-key",
-)
+
+@pytest_asyncio.fixture
+async def sessions(db_engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
+    return async_sessionmaker(db_engine, expire_on_commit=False)
 
 
 @pytest_asyncio.fixture
-async def new_user(db: AsyncSession, user_factory) -> AsyncGenerator[Callable[[], Awaitable[User]], None]:
-    """Load registered users into the test's transaction.
+async def service(sessions: async_sessionmaker[AsyncSession]) -> RefreshSessionService:
+    """The service commits each step itself, as it does in production."""
 
-    The rollback runs before user_factory's cleanup. A session row holds a lock on
-    its user until the transaction ends, and the cleanup deletes that user.
-    """
+    @asynccontextmanager
+    async def unit_of_work() -> AsyncIterator[AsyncSession]:
+        async with sessions() as session:
+            async with session.begin():
+                yield session
+
+    return RefreshSessionService(
+        session_model=RefreshSession,
+        user_model=User,
+        signing_key="test-signing-key",
+        unit_of_work_factory=unit_of_work,
+    )
+
+
+@pytest_asyncio.fixture
+async def new_user(
+    sessions: async_sessionmaker[AsyncSession], user_factory,
+) -> Callable[[], Awaitable[User]]:
+    """Registered users. user_factory's cleanup deletes them and, with them, their sessions."""
 
     async def _create() -> User:
         registered = await user_factory()
-        user = await db.get(User, uuid.UUID(str(registered["id"])))
+        async with sessions() as session:
+            user = await session.get(User, uuid.UUID(str(registered["id"])))
         assert user is not None
         return user
 
-    yield _create
-    await db.rollback()
+    return _create
+
+
+async def _stored(
+    sessions: async_sessionmaker[AsyncSession], session_id: uuid.UUID,
+) -> RefreshSession | None:
+    async with sessions() as session:
+        return await session.get(RefreshSession, session_id)
 
 
 @pytest.mark.asyncio
-async def test_a_session_rotates_and_lists_through_the_database(db: AsyncSession, new_user) -> None:
+async def test_a_session_rotates_and_lists_through_the_database(service, sessions, new_user) -> None:
     user = await new_user()
-    issued = await _SERVICE.issue(db, user, device_name="Phone")
-    await db.flush()
+    issued = await service.issue(user, device_name="Phone")
 
-    rotated = await _SERVICE.rotate(db, issued.refresh_token)
+    rotated = await service.rotate(issued.refresh_token)
     assert rotated is not None and rotated.user.id == user.id
-    await db.flush()
 
-    assert [row.id for row in await _SERVICE.list_active(db, user)] == [issued.session.id]
+    async with sessions() as session:
+        assert [row.id for row in await service.list_active(session, user)] == [issued.session.id]
 
 
 @pytest.mark.asyncio
-async def test_presenting_a_replaced_secret_deletes_the_session(db: AsyncSession, new_user) -> None:
+async def test_presenting_a_replaced_secret_deletes_the_session(service, sessions, new_user) -> None:
     user = await new_user()
-    issued = await _SERVICE.issue(db, user)
-    await db.flush()
-    session_id = issued.session.id
+    issued = await service.issue(user)
 
-    owners = await _SERVICE.rotate(db, issued.refresh_token)
-    await db.flush()
+    owners = await service.rotate(issued.refresh_token)
     for _ in range(2):
-        assert await _SERVICE.rotate(db, issued.refresh_token) is not None
-        await db.flush()
-        db.expire_all()
+        assert await service.rotate(issued.refresh_token) is not None
 
-    assert await _SERVICE.rotate(db, owners.refresh_token) is None
-    await db.flush()
-    assert (await db.execute(select(RefreshSession).where(RefreshSession.id == session_id))).first() is None
+    assert await service.rotate(owners.refresh_token) is None
+    assert await _stored(sessions, issued.session.id) is None
 
 
 @pytest.mark.asyncio
-async def test_a_token_only_touches_its_own_session(db: AsyncSession, new_user) -> None:
+async def test_a_token_only_touches_its_own_session(service, sessions, new_user) -> None:
     user = await new_user()
-    now = datetime.now(timezone.utc)
-    phone = await _SERVICE.issue(db, user, device_name="Phone")
-    tablet = await _SERVICE.issue(db, user, device_name="Tablet")
-    await db.flush()
-    tablet_hash = tablet.session.current_secret_hash
+    phone = await service.issue(user, device_name="Phone")
+    tablet = await service.issue(user, device_name="Tablet")
 
-    rotated = await _SERVICE.rotate(db, phone.refresh_token)
-    await db.flush()
+    rotated = await service.rotate(phone.refresh_token)
 
     assert rotated.session.id == phone.session.id
-    assert tablet.session.current_secret_hash == tablet_hash
+    stored_tablet = await _stored(sessions, tablet.session.id)
+    assert stored_tablet.current_secret_hash == tablet.session.current_secret_hash
 
 
 @pytest.mark.asyncio
-async def test_only_the_owner_can_revoke_a_session(db: AsyncSession, new_user) -> None:
+async def test_only_the_owner_can_revoke_a_session(service, sessions, new_user) -> None:
     owner = await new_user()
     other = await new_user()
-    issued = await _SERVICE.issue(db, owner)
-    await db.flush()
-    session_id = issued.session.id
+    issued = await service.issue(owner)
 
-    assert await _SERVICE.revoke(db, other.id, session_id) is False
-    assert await _SERVICE.revoke(db, owner.id, session_id) is True
-    assert (await db.execute(select(RefreshSession).where(RefreshSession.id == session_id))).first() is None
+    assert await service.revoke(other.id, issued.session.id) is False
+    assert await _stored(sessions, issued.session.id) is not None
+    assert await service.revoke(owner.id, issued.session.id) is True
+    assert await _stored(sessions, issued.session.id) is None
 
 
 @pytest.mark.asyncio
-async def test_deleting_a_user_deletes_their_sessions(db: AsyncSession, new_user) -> None:
+async def test_deleting_a_user_deletes_their_sessions(service, sessions, new_user) -> None:
     user = await new_user()
-    await _SERVICE.issue(db, user)
-    await db.flush()
-    user_id = user.id
+    await service.issue(user)
 
-    await db.execute(delete(User).where(User.id == user_id))
-    await db.flush()
+    async with sessions() as session:
+        async with session.begin():
+            await session.execute(delete(User).where(User.id == user.id))
 
-    rows = await db.execute(select(RefreshSession).where(RefreshSession.user_id == user_id))
-    assert rows.first() is None
+    async with sessions() as session:
+        rows = await session.execute(select(RefreshSession).where(RefreshSession.user_id == user.id))
+        assert rows.first() is None

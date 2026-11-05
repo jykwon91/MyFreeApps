@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from typing import Any
@@ -37,7 +39,6 @@ class _Session(RefreshSessionMixin, _Base):
 
 
 _KEY = "test-signing-key"
-_SERVICE = RefreshSessionService(session_model=_Session, user_model=_User, signing_key=_KEY)
 
 
 def _user(**overrides: Any) -> SimpleNamespace:
@@ -53,9 +54,19 @@ class _Device:
         self.user = user or _user()
         self.db = MagicMock(execute=AsyncMock(), delete=AsyncMock())
         self.row: _Session | None = None
+        self.service = RefreshSessionService(
+            session_model=_Session,
+            user_model=_User,
+            signing_key=_KEY,
+            unit_of_work_factory=self._unit_of_work,
+        )
+
+    @asynccontextmanager
+    async def _unit_of_work(self) -> AsyncIterator[MagicMock]:
+        yield self.db
 
     async def sign_in(self) -> str:
-        issued = await _SERVICE.issue(self.db, self.user, device_name="Phone")
+        issued = await self.service.issue(self.user, device_name="Phone")
         self.row = issued.session
         return issued.refresh_token
 
@@ -70,7 +81,7 @@ class _Device:
                 AsyncMock(return_value=self.user),
             ),
         ):
-            result = await _SERVICE.rotate(self.db, token)
+            result = await self.service.rotate(token)
         return None if result is None else result.refresh_token
 
 
@@ -262,7 +273,9 @@ async def test_a_valid_token_on_an_unusable_session_changes_nothing() -> None:
 
 def test_a_service_needs_a_signing_key() -> None:
     with pytest.raises(ValueError):
-        RefreshSessionService(session_model=_Session, user_model=_User, signing_key="")
+        RefreshSessionService(
+            session_model=_Session, user_model=_User, signing_key="", unit_of_work_factory=MagicMock(),
+        )
 
 
 def test_token_parsing_refuses_anything_but_what_was_issued() -> None:
@@ -358,7 +371,7 @@ async def test_the_device_list_leaves_out_sessions_that_cant_refresh() -> None:
         "platform_shared.services.refresh_session_service.refresh_session_repo.list_for_user",
         AsyncMock(return_value=[active, expired]),
     ):
-        assert await _SERVICE.list_active(device.db, device.user) == [active]
+        assert await device.service.list_active(device.db, device.user) == [active]
 
 
 def test_the_refresh_lock_is_a_row_lock() -> None:

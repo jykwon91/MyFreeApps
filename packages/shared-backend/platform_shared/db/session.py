@@ -89,3 +89,23 @@ def create_session_factory(
         get_db=get_db,
         unit_of_work=unit_of_work,
     )
+
+
+async def release_connection(session: AsyncSession) -> None:
+    """End a read-only transaction, handing its connection back to the pool.
+
+    Not a way to save work: it refuses a session with changes waiting to be written.
+    Writes belong in a ``unit_of_work``. A commit is used because a rollback would
+    expire the objects the session has loaded, such as the signed-in user.
+    """
+    if session.new or session.dirty or session.deleted:
+        raise RuntimeError("release_connection called on a session with unsaved changes")
+    await session.commit()
+
+
+@asynccontextmanager
+async def unit_of_work_on_same_database(session: AsyncSession) -> AsyncIterator[AsyncSession]:
+    """A ``unit_of_work`` on the database ``session`` uses, for code handed only a session."""
+    async with AsyncSession(bind=session.bind, expire_on_commit=False) as other:
+        async with other.begin():
+            yield other

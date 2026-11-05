@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import time
 
-import pytest
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
@@ -154,7 +153,8 @@ class TestMakeStrictSuperuserGate:
             """Stand-in for AsyncSession — ``add`` and ``commit`` are exercised."""
 
             async def commit(self) -> None:
-                events[-1]["committed"] = True
+                if events:
+                    events[-1]["committed"] = True
 
             def add(self, obj: object) -> None:
                 events.append(
