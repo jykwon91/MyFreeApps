@@ -3,22 +3,19 @@ import { Plus } from "lucide-react";
 import { Button } from "@platform/ui";
 import { ConfirmDialog } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import { useGetReplyTemplatesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { useArchiveReplyTemplate } from "@mybookkeeper/api-client/hooks/useArchiveReplyTemplate";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 import { ARCHIVE_FAILURES, archiveDescription, REPLY_TEMPLATE_MESSAGES as MESSAGES } from "@/shared/lib/reply-template-messages";
+import ActiveReplyTemplatesPanel from "./ActiveReplyTemplatesPanel";
 import ArchivedReplyTemplatesPanel from "./ArchivedReplyTemplatesPanel";
 import ReplyTemplateForm from "./ReplyTemplateForm";
-import ReplyTemplatesListBody from "./ReplyTemplatesListBody";
 import ReplyTemplatesViewTabs from "./ReplyTemplatesViewTabs";
-import { useReplyTemplatesListMode } from "./useReplyTemplatesListMode";
 import { useReplyTemplatesView } from "./useReplyTemplatesView";
 
 const PANEL_ID = "reply-templates-panel";
 
 export default function ReplyTemplatesManager() {
   const [view, setView] = useReplyTemplatesView();
-  const { data: templates = [], isLoading } = useGetReplyTemplatesQuery();
   const [editingTemplate, setEditingTemplate] = useState<ReplyTemplate | null>(
     null,
   );
@@ -27,7 +24,6 @@ export default function ReplyTemplatesManager() {
     null,
   );
 
-  const listMode = useReplyTemplatesListMode({ isLoading, templates });
   const { archive, isBusy: isArchiving } = useArchiveReplyTemplate((outcome, id) => {
     // The dialog may have been dismissed, or opened for another template, while this one ran.
     const closeIfStillOpen = () => setArchiveCandidate((open) => (open?.id === id ? null : open));
@@ -87,12 +83,7 @@ export default function ReplyTemplatesManager() {
         {view === "archived" ? (
           <ArchivedReplyTemplatesPanel onShowActive={() => setView("active")} />
         ) : (
-          <ReplyTemplatesListBody
-            mode={listMode}
-            templates={templates}
-            onEdit={handleEdit}
-            onArchive={setArchiveCandidate}
-          />
+          <ActiveReplyTemplatesPanel onEdit={handleEdit} onArchive={setArchiveCandidate} />
         )}
       </div>
 

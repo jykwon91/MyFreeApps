@@ -1,5 +1,5 @@
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
-import type { ArchivedReplyTemplatesMode } from "@/shared/types/inquiry/archived-reply-templates-mode";
+import type { ReplyTemplatesLoadMode } from "@/shared/types/inquiry/reply-templates-load-mode";
 
 interface ModeInputs {
   templates: readonly ReplyTemplate[] | undefined;
@@ -8,7 +8,7 @@ interface ModeInputs {
 }
 
 /** A failed load never reads as "none": only a list that loaded can be empty. */
-export function archivedReplyTemplatesMode({ templates, isError, isFetching }: ModeInputs): ArchivedReplyTemplatesMode {
+export function replyTemplatesLoadMode({ templates, isError, isFetching }: ModeInputs): ReplyTemplatesLoadMode {
   if (!templates) return isError && !isFetching ? "error" : "loading";
   // An empty list that then failed to reload can't say there are none any more.
   if (isError) return templates.length > 0 ? "stale" : "error";

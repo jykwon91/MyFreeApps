@@ -30,10 +30,9 @@ const archive = vi.fn(() => ({ unwrap: () => Promise.resolve() }));
 type Reloaded = { isSuccess: boolean; data?: ReplyTemplate[] };
 const refetch = vi.fn<() => Promise<Reloaded>>();
 
-let listState: { data: ReplyTemplate[]; isLoading: boolean } = {
-  data: [t1],
-  isLoading: false,
-};
+type ListState = { currentData: ReplyTemplate[] | undefined; isError: boolean; isFetching: boolean };
+const loaded = (templates: ReplyTemplate[]): ListState => ({ currentData: templates, isError: false, isFetching: false });
+let listState = loaded([t1]);
 
 vi.mock("@mybookkeeper/api-client/store/inquiriesApi", () => ({
   useGetReplyTemplatesQuery: vi.fn(() => ({ ...listState, refetch })),
@@ -80,7 +79,7 @@ describe("ReplyTemplatesManager", () => {
     vi.mocked(showSuccess).mockClear();
     refetch.mockReset();
     refetch.mockResolvedValue({ isSuccess: true, data: [t1] });
-    listState = { data: [t1], isLoading: false };
+    listState = loaded([t1]);
   });
 
   it("renders existing templates as rows", () => {
@@ -90,9 +89,17 @@ describe("ReplyTemplatesManager", () => {
   });
 
   it("shows empty state when no templates", () => {
-    listState = { data: [], isLoading: false };
+    listState = loaded([]);
     renderManager();
     expect(screen.getByText(/No templates yet/i)).toBeInTheDocument();
+  });
+
+  it("never says there are none when the list didn't load", () => {
+    listState = { currentData: undefined, isError: true, isFetching: false };
+    renderManager();
+    expect(screen.getByRole("alert")).toHaveTextContent(MESSAGES.couldntLoadActive);
+    expect(screen.queryByText(/No templates yet/i)).not.toBeInTheDocument();
+    expect(screen.getByTestId("reply-template-new-button")).toBeInTheDocument();
   });
 
   it("opens the form when New template is clicked", async () => {
@@ -229,7 +236,7 @@ describe("ReplyTemplatesManager", () => {
   it("doesn't close another template's dialog when an earlier archive answers", async () => {
     const user = userEvent.setup();
     const t2: ReplyTemplate = { ...t1, id: "tpl-3", name: "Welcome" };
-    listState = { data: [t1, t2], isLoading: false };
+    listState = loaded([t1, t2]);
     let answer = () => {};
     archive.mockReturnValueOnce({ unwrap: () => new Promise<void>((resolve) => (answer = resolve)) });
     renderManager();
@@ -254,7 +261,7 @@ describe("ReplyTemplatesManager", () => {
 describe("the Active and Archived tabs", () => {
   beforeEach(() => {
     vi.mocked(useGetArchivedReplyTemplatesQuery).mockClear();
-    listState = { data: [t1], isLoading: false };
+    listState = loaded([t1]);
   });
 
   it("opens on Active, without asking for the archived ones", () => {

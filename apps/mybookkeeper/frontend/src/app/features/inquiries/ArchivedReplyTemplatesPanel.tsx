@@ -4,9 +4,9 @@ import EmptyState from "@/shared/components/ui/EmptyState";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { REPLY_TEMPLATE_MESSAGES as MESSAGES } from "@/shared/lib/reply-template-messages";
 import ArchivedReplyTemplatesList from "./ArchivedReplyTemplatesList";
-import ArchivedReplyTemplatesRetry from "./ArchivedReplyTemplatesRetry";
-import ArchivedReplyTemplatesSkeleton from "./ArchivedReplyTemplatesSkeleton";
-import { archivedReplyTemplatesMode } from "./archivedReplyTemplatesMode";
+import ReplyTemplatesRetry from "./ReplyTemplatesRetry";
+import ReplyTemplatesSkeleton from "./ReplyTemplatesSkeleton";
+import { useReplyTemplatesLoad } from "./useReplyTemplatesLoad";
 
 export interface ArchivedReplyTemplatesPanelProps {
   onShowActive: () => void;
@@ -14,10 +14,10 @@ export interface ArchivedReplyTemplatesPanelProps {
 
 export default function ArchivedReplyTemplatesPanel({ onShowActive }: ArchivedReplyTemplatesPanelProps) {
   const canWrite = useCanWrite();
-  const { currentData, isError, isFetching, refetch } = useGetArchivedReplyTemplatesQuery();
+  const query = useGetArchivedReplyTemplatesQuery();
   const panel = useRef<HTMLDivElement>(null);
-  const mode = archivedReplyTemplatesMode({ templates: currentData, isError, isFetching });
-  const retry = () => void refetch();
+  const { mode, retry, isRetrying } = useReplyTemplatesLoad(query, panel);
+  const onRetry = () => void retry();
 
   return (
     // A restored row leaves the list, and the last one takes the list with it,
@@ -30,9 +30,9 @@ export default function ArchivedReplyTemplatesPanel({ onShowActive }: ArchivedRe
   function renderMode() {
     switch (mode) {
       case "loading":
-        return <ArchivedReplyTemplatesSkeleton canWrite={canWrite} />;
+        return <ReplyTemplatesSkeleton variant="archived" label={MESSAGES.loadingArchived} showActions={canWrite} />;
       case "error":
-        return <ArchivedReplyTemplatesRetry message={MESSAGES.couldntLoadArchived} isRetrying={isFetching} onRetry={retry} />;
+        return <ReplyTemplatesRetry message={MESSAGES.couldntLoadArchived} announce="alert" isRetrying={isRetrying} onRetry={onRetry} />;
       case "empty":
         return (
           <EmptyState
@@ -45,13 +45,13 @@ export default function ArchivedReplyTemplatesPanel({ onShowActive }: ArchivedRe
         return (
           <div className="space-y-3">
             {mode === "stale" ? (
-              <ArchivedReplyTemplatesRetry message={MESSAGES.showingLastLoaded} isRetrying={isFetching} onRetry={retry} />
+              <ReplyTemplatesRetry message={MESSAGES.showingLastLoadedArchived} announce="status" isRetrying={isRetrying} onRetry={onRetry} />
             ) : null}
             <p className="text-xs text-muted-foreground">
               {canWrite ? MESSAGES.archivedIntro : MESSAGES.archivedIntroViewer}
             </p>
             <ArchivedReplyTemplatesList
-              templates={currentData ?? []}
+              templates={query.currentData ?? []}
               canWrite={canWrite}
               onRestored={() => panel.current?.focus()}
             />

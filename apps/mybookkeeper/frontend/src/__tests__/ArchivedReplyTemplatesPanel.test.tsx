@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 import ArchivedReplyTemplatesPanel from "@/app/features/inquiries/ArchivedReplyTemplatesPanel";
@@ -100,8 +100,21 @@ describe("the archived templates panel", () => {
   it("keeps the rows, with a banner, when a reload fails", () => {
     archivedState = { currentData: [old], isError: true, isFetching: false };
     render(<ArchivedReplyTemplatesPanel onShowActive={onShowActive} />);
-    expect(screen.getByRole("alert")).toHaveTextContent(MESSAGES.showingLastLoaded);
+    expect(screen.getByRole("status")).toHaveTextContent(MESSAGES.showingLastLoadedArchived);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(restoreButton()).toBeEnabled();
+  });
+
+  it("brings focus to the panel when a retry takes its button away", async () => {
+    let finish = (_reloaded: Reloaded) => {};
+    refetch.mockReturnValueOnce(new Promise<Reloaded>((resolve) => (finish = resolve)));
+    archivedState = { currentData: undefined, isError: true, isFetching: false };
+    const { rerender } = render(<ArchivedReplyTemplatesPanel onShowActive={onShowActive} />);
+    await userEvent.setup().click(screen.getByRole("button", { name: MESSAGES.tryAgain }));
+    archivedState = { currentData: [old], isError: false, isFetching: false };
+    rerender(<ArchivedReplyTemplatesPanel onShowActive={onShowActive} />);
+    await act(async () => finish({ isSuccess: true, data: [old] }));
+    expect(document.activeElement).toBe(screen.getByTestId("archived-reply-templates-panel"));
   });
 });
 

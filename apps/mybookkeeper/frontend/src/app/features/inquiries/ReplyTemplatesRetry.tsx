@@ -1,17 +1,19 @@
 import { LoadingButton } from "@platform/ui";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import { REPLY_TEMPLATE_MESSAGES } from "@/shared/lib/reply-template-messages";
+import type { ReplyTemplatesRetryAnnounce } from "@/shared/types/inquiry/reply-templates-retry-announce";
 
-export interface ArchivedReplyTemplatesRetryProps {
+export interface ReplyTemplatesRetryProps {
   message: string;
+  announce: ReplyTemplatesRetryAnnounce;
   isRetrying: boolean;
   onRetry: () => void;
 }
 
-export default function ArchivedReplyTemplatesRetry({ message, isRetrying, onRetry }: ArchivedReplyTemplatesRetryProps) {
+export default function ReplyTemplatesRetry({ message, announce, isRetrying, onRetry }: ReplyTemplatesRetryProps) {
   return (
     <AlertBox variant="error" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <span role="alert">{message}</span>
+      <span role={announce}>{message}</span>
       <LoadingButton
         variant="secondary"
         size="md"
