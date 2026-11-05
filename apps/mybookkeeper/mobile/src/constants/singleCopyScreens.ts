@@ -3,6 +3,7 @@
  * appears to do nothing, so each of these keeps one copy per id in the stack.
  */
 export const SINGLE_COPY_SCREENS = [
+  "ai-permission",
   "applicants/[id]",
   "camera",
   "delete-account",

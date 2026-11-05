@@ -15,6 +15,10 @@ import { Directory, fakeFiles, File, resetFakeFiles } from "../test-support/fake
 
 jest.mock("expo-file-system", () => jest.requireActual("../test-support/fakeFileSystem"));
 jest.mock("expo-sharing", () => ({ shareAsync: jest.fn() }));
+jest.mock("../src/features/aiPermission/aiPermission", () => ({
+  ...jest.requireActual("../src/features/aiPermission/aiPermission"),
+  hasAiPermission: () => true,
+}));
 
 const originalAdapter = api.defaults.adapter;
 const SOURCE = "doc:/source.jpg";

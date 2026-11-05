@@ -1,10 +1,13 @@
 import { Banner, useTheme } from "@platform/mobile";
+import { router } from "expo-router";
 import { useEffect } from "react";
 import { Text, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { SENT_MESSAGE_MS } from "../../constants/capture";
 import type { AppDispatch, RootState } from "../../lib/store";
+import { waitingFilesMessage } from "../aiPermission/waitingFilesMessage";
 import { drainUploadQueue } from "./drainUploadQueue";
+import { pendingUploads } from "./uploadQueueFiles";
 import { uploadPhaseChanged, uploadStatusDismissed } from "./uploadsSlice";
 
 /** Where the photos are. Nothing here needs an answer unless a send failed. */
@@ -12,6 +15,7 @@ export default function UploadStatus() {
   const { colors, spacing, fontSize } = useTheme();
   const dispatch = useDispatch<AppDispatch>();
   const { phase, rejections } = useSelector((state: RootState) => state.uploads);
+  const workspaceId = useSelector((state: RootState) => state.workspace.activeId);
 
   useEffect(() => {
     if (phase !== "sent") return;
@@ -28,6 +32,13 @@ export default function UploadStatus() {
         <Banner
           actions={[{ label: "Try again", onPress: () => void dispatch(drainUploadQueue()) }]}
           message="I couldn't send that. It's saved here, and I'll try again when you come back. Want me to try now?"
+        />
+      ) : null}
+      {phase === "waitingForPermission" && workspaceId ? (
+        <Banner
+          actions={[{ label: "Review", onPress: () => router.push("/ai-permission") }]}
+          message={waitingFilesMessage(pendingUploads(workspaceId).length)}
+          tone="success"
         />
       ) : null}
       {phase === "limitReached" ? (
