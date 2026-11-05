@@ -523,7 +523,7 @@ once on the router. This is the no-bandaid approach (see
 | `/users/me*` | — | All |
 | `/auth/*` login/forgot/reset/verify | Yes | — |
 | `/auth/jwt/logout`, TOTP setup/verify/disable/status | — | Yes |
-| `/_test/*` (when `MGA_ENABLE_TEST_HELPERS=1`) | `reset-rate-limit` only | `seed-lineup` etc. |
+| `/_test/*` (when `MGA_ENABLE_TEST_HELPERS=1`) | — | `reset-rate-limit`, `seed-lineup` etc. |
 | `/health`, `/version` | Yes | — |
 
 The public `GET /api/lineups/{id}` returns 404 on `pending_review` or `hidden`

@@ -20,6 +20,7 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from jwt.exceptions import PyJWTError as JWTError
 
+from platform_shared.core.boot_guards import check_test_mode_off
 from platform_shared.api.admin_router import build_admin_router
 from platform_shared.api.discord_activity_router import build_discord_activity_router
 from platform_shared.core.git import resolve_git_commit
@@ -56,7 +57,7 @@ from app.core.rate_limit import (
     check_login_rate_limit,
     require_turnstile,
 )
-from app.schemas.user.user_base import UserCreate, UserRead, UserUpdate
+from app.schemas.user.user_base import UserRead, UserUpdate
 from app.services.discord.startup import start_discord
 from app.services.storage.bucket_initializer import ensure_bucket
 from app.services.system.admin_user_service_factory import shared_admin_user_service
@@ -491,6 +492,11 @@ def create_app(settings: Settings = settings) -> FastAPI:
     # Provides rate-limit reset + seed-lineup endpoints for E2E tests.
     # Never set this flag in production. (Skipped in serve_only — the seed-lineup
     # helper writes content, which has no place in a read-only deployment.)
+    check_test_mode_off(
+        flag_name="MGA_ENABLE_TEST_HELPERS",
+        flag_is_on=settings.mga_enable_test_helpers and not settings.serve_only,
+        environment=settings.environment,
+    )
     if settings.mga_enable_test_helpers and not settings.serve_only:
         from app.test_helpers.router import router as _test_helpers_router
         app.include_router(_test_helpers_router)

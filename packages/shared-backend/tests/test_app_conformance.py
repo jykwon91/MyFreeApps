@@ -14,6 +14,7 @@ in the per-test allow-list with a comment explaining the divergence.
 """
 from __future__ import annotations
 
+import ast
 import json
 import re
 from pathlib import Path
@@ -71,6 +72,8 @@ _SENTRY_EXEMPT = {"mygamingassistant", "mylanguagetutor"}
 
 # Discovered rather than listed, so a new app can't dodge the mobile checks.
 _ALL_APPS = _render._list_apps(_REPO_ROOT)
+
+_TEST_ROUTE_MOUNT = re.compile(r"include_router\(\s*(_?test_helpers_router|test_helpers\.router)")
 
 
 def _read(*parts: str) -> str:
@@ -1173,13 +1176,37 @@ class TestProfileUpdateCantChangeCredentials:
         assert "model_config" not in update_body, "UserUpdate must keep refusing unknown fields."
 
 
-class TestTestRoutesCantMountInProduction:
-    """The boot guard's unit tests can't notice an app that stops calling it."""
+def _test_route_guard_and_mount(main_source: str) -> tuple[ast.stmt, ast.If]:
+    """The statement before the ``if`` that mounts the test routes, and that ``if``."""
+    tree = ast.parse(main_source)
+    for node in ast.walk(tree):
+        statements = getattr(node, "body", None)
+        if not isinstance(statements, list):
+            continue
+        for index, statement in enumerate(statements):
+            if isinstance(statement, ast.If) and _TEST_ROUTE_MOUNT.search(ast.unparse(statement)):
+                assert index > 0, "nothing runs before the test routes mount"
+                return statements[index - 1], statement
+    raise AssertionError("test routes not found; update this test if they moved")
 
-    def test_mybookkeeper_runs_the_guard_before_mounting_test_routes(self) -> None:
-        main = _read("apps", "mybookkeeper", "backend", "app", "main.py")
-        assert "check_test_mode_off(" in main
-        assert main.index("check_test_mode_off(") < main.index("include_router(test_helpers_router)")
+
+class TestTestRoutesCantMountInProduction:
+    """The boot guard's unit tests can't notice an app that stops calling it, or
+    one whose mount starts following a different condition from the guard."""
+
+    @pytest.mark.parametrize(
+        "main_path",
+        [("apps", app, "backend", "app", "main.py") for app in _ALL_APPS]
+        + [("infra", "templates", "scaffold", "backend", "app", "main.py")],
+        ids=lambda parts: parts[1],
+    )
+    def test_guard_checks_exactly_what_mounts_the_routes(self, main_path: tuple[str, ...]) -> None:
+        guard, mount = _test_route_guard_and_mount(_read(*main_path))
+
+        assert isinstance(guard, ast.Expr) and isinstance(guard.value, ast.Call)
+        assert ast.unparse(guard.value.func) == "check_test_mode_off"
+        flag_is_on = next(kw.value for kw in guard.value.keywords if kw.arg == "flag_is_on")
+        assert ast.dump(flag_is_on) == ast.dump(mount.test)
 
 
 class TestTotpRoutesAreShared:

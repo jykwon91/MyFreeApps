@@ -17,6 +17,7 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from jwt.exceptions import PyJWTError as JWTError
 
+from platform_shared.core.boot_guards import check_test_mode_off
 from platform_shared.core.git import resolve_git_commit
 from platform_shared.core.lifespan import create_app_lifespan
 from platform_shared.core.openapi import docs_kwargs
@@ -247,6 +248,11 @@ app.include_router(totp.router)
 # Test helpers -- only mounted when APP_ENABLE_TEST_HELPERS=1.
 # Provides rate-limit reset for E2E tests.
 # Never set this flag in production.
+check_test_mode_off(
+    flag_name="APP_ENABLE_TEST_HELPERS",
+    flag_is_on=settings.app_enable_test_helpers,
+    environment=settings.environment,
+)
 if settings.app_enable_test_helpers:
     from app.test_helpers.router import router as _test_helpers_router
     app.include_router(_test_helpers_router)
