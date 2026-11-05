@@ -3,6 +3,7 @@ import LoadErrorRetry from "@/components/game/LoadErrorRetry";
 import MacroHowTo from "@/games/wow-forever/components/warlock/MacroHowTo";
 import WarlockMacroCard from "@/games/wow-forever/components/warlock/WarlockMacroCard";
 import WarlockMacrosSkeleton from "@/games/wow-forever/components/warlock/WarlockMacrosSkeleton";
+import { WARLOCK_NAMES_STATUS } from "@/games/wow-forever/data/warlock/warlockNamesStatus";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import { WARLOCK_MACROS } from "@/games/wow-forever/data/warlock/warlockMacros";
 import { useWarlockNames } from "@/games/wow-forever/hooks/useWarlockNames";
@@ -21,7 +22,7 @@ export default function WowWarlockMacrosPage() {
       />
       <AlertBox variant="info">
         Spell and item names are checked against the Forever client files
-        {state.status === "ready" ? ` (build ${state.names.clientBuild})` : ""}. The game itself can't be run here, so
+        {state.status === WARLOCK_NAMES_STATUS.READY ? ` (build ${state.names.clientBuild})` : ""}. The game itself can't be run here, so
         no macro has been tested in game. Syntax Forever may not support is marked{" "}
         <span className="font-medium">Unconfirmed</span>.
       </AlertBox>
@@ -30,11 +31,11 @@ export default function WowWarlockMacrosPage() {
         <h2 id="macro-list" className="text-lg font-semibold">
           Macros
         </h2>
-        {state.status === "loading" && <WarlockMacrosSkeleton />}
-        {state.status === "error" && (
+        {state.status === WARLOCK_NAMES_STATUS.LOADING && <WarlockMacrosSkeleton />}
+        {state.status === WARLOCK_NAMES_STATUS.ERROR && (
           <LoadErrorRetry message="Couldn't load the Forever client names." onRetry={state.retry} retrying={false} />
         )}
-        {state.status === "ready" && (
+        {state.status === WARLOCK_NAMES_STATUS.READY && (
           <div className="grid grid-cols-1 gap-4">
             {WARLOCK_MACROS.map((macro) => (
               <WarlockMacroCard key={macro.id} macro={macro} missing={missingNames(macro, state.names)} />

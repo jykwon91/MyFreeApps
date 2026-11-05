@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
+import { WARLOCK_NAMES_STATUS } from "@/games/wow-forever/data/warlock/warlockNamesStatus";
 import type { WarlockNames } from "@/games/wow-forever/types/warlockNames";
 
 export type WarlockNamesState =
-  | { status: "loading" }
-  | { status: "error"; retry: () => void }
-  | { status: "ready"; names: WarlockNames };
+  | { status: typeof WARLOCK_NAMES_STATUS.LOADING }
+  | { status: typeof WARLOCK_NAMES_STATUS.ERROR; retry: () => void }
+  | { status: typeof WARLOCK_NAMES_STATUS.READY; names: WarlockNames };
 
 /** The Forever client's Warlock names, loaded only when the macros page opens. */
 export function useWarlockNames(): WarlockNamesState {
@@ -23,7 +24,7 @@ export function useWarlockNames(): WarlockNamesState {
     };
   }, []);
 
-  if (result === undefined) return { status: "loading" };
-  if (result === null) return { status: "error", retry };
-  return { status: "ready", names: result };
+  if (result === undefined) return { status: WARLOCK_NAMES_STATUS.LOADING };
+  if (result === null) return { status: WARLOCK_NAMES_STATUS.ERROR, retry };
+  return { status: WARLOCK_NAMES_STATUS.READY, names: result };
 }
