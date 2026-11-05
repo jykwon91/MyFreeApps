@@ -23,5 +23,6 @@ export function newCompareItem(name: string, source: ItemSource = "manual"): Com
     setName: null,
     source,
     warnings: [],
+    origin: null,
   };
 }

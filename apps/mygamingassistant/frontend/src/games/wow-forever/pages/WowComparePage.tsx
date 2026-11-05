@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@platform/ui";
+import ClientDataFooter from "@/games/wow-forever/components/compare/ClientDataFooter";
 import CompareDisclaimer from "@/games/wow-forever/components/compare/CompareDisclaimer";
 import CompareResultPanel from "@/games/wow-forever/components/compare/CompareResultPanel";
 import CompareSettingsBar from "@/games/wow-forever/components/compare/CompareSettingsBar";
@@ -8,6 +9,7 @@ import ItemCard from "@/games/wow-forever/components/compare/ItemCard";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import { useCompareItems, MAX_COMPARE_ITEMS } from "@/games/wow-forever/hooks/useCompareItems";
 import { useCompareSettings } from "@/games/wow-forever/hooks/useCompareSettings";
+import { sameItemPositions } from "@/games/wow-forever/lib/sameItemPositions";
 import { compareItems } from "@/games/wow-forever/scoring/compareItems";
 import { describeWeights } from "@/games/wow-forever/scoring/describeWeights";
 
@@ -16,12 +18,13 @@ export default function WowComparePage() {
   const [settings, updateSettings] = useCompareSettings();
   const { items, addItem, removeItem, replaceItem, canAdd, canRemove } = useCompareItems();
   const result = useMemo(() => compareItems(items, settings), [items, settings]);
+  const sameAs = useMemo(() => sameItemPositions(items), [items]);
 
   return (
     <main className="p-4 sm:p-8 space-y-6 max-w-6xl">
       <WowPageHeader
         title="Item Compare"
-        subtitle="Paste or screenshot two or more items to see which is better for your class and spec."
+        subtitle="Search, paste or screenshot two or more items to see which is better for your class and spec."
         backTo="/wow-forever"
         backLabel="Back to WoW Forever"
       />
@@ -34,6 +37,9 @@ export default function WowComparePage() {
             item={item}
             position={i + 1}
             canRemove={canRemove}
+            classId={settings.classId}
+            bracket={settings.bracket}
+            sameAsPosition={sameAs[i]}
             onChange={replaceItem}
             onRemove={removeItem}
           />
@@ -46,6 +52,7 @@ export default function WowComparePage() {
         </Button>
       ) : null}
       <CompareResultPanel result={result} weightsLabel={describeWeights(settings, result.weightSource)} />
+      <ClientDataFooter />
     </main>
   );
 }

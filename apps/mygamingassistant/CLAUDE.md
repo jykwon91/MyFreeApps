@@ -167,6 +167,24 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   image on screen before and after reading so it can be checked.
 - Stat keys / slots / qualities exist on both sides —
   `tests/test_wow_stat_keys_parity.py` fails CI on drift.
+- **"Search by name"** (the default input tab) searches
+  `data/items/items.json`, **GENERATED** by `python -m scripts.wow_items.build`
+  (from `backend/`; never hand-edit) from the Forever client's ItemSparse
+  (uncommon+ items with stats). Stats = `RandPropPoints[ilvl].<Quality>F_<slot>
+  × StatPercentEditor / 10000` (round half up); armor = ItemArmorTotal ×
+  ArmorLocation × ItemArmorQuality (+ QualityModifier; shields from
+  ItemArmorShield); weapon damage = the ItemDamage* table's DPS × speed,
+  spread by `DmgVariance`. Damage is left blank (`damageUnknown`, "enter it from your
+  tooltip") for caster weapons (`Flags_4 & 0x100`), legendaries and non-wand
+  weapons with spell stats — the formula is wrong for those. Random-suffix
+  items (`classic/randomSuffixItems.json`, cmangos GPL — keep LICENSE +
+  README) have no stats in the list and say so. Client stat ids map in
+  `scripts/wow_items/client_ids.py`; unmapped ones count as "other effects".
+  `tests/test_wow_items_generator.py` pins items checked against Forever
+  tooltips — a failing pin means the client changed. The file is fetched as a
+  same-origin asset (`?url`, `lib/clientItemsLoader.ts`, one load shared by
+  every card) so it works in the Discord Activity; a picked item keeps its
+  game-file numbers as `origin.baseline`, so edits are marked and can be reset.
 
 #### Food picker (`/wow-forever/food`, "What should I eat?")
 

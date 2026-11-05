@@ -46,6 +46,7 @@ SECTIONS = (
     Section("Tailoring recipes", f"{WOW_DATA}/professions/crafting/tailoring.json", _named_rows("recipes", "spell", "name")),
     Section("Enchanting recipes", f"{WOW_DATA}/professions/crafting/enchanting.json", _named_rows("recipes", "spell", "name")),
     Section("Alchemy recipes", f"{WOW_DATA}/professions/crafting/alchemy.json", _named_rows("recipes", "spell", "name")),
+    Section("Item Compare items", f"{WOW_DATA}/items/items.json", _column_rows("items", "id", "name")),
     Section("Maps and zones", f"{WOW_DATA}/worldMap/zones.json", _named_rows("zones", "id", "name")),
     Section("Flight points", f"{WOW_DATA}/worldMap/travel.json", _column_rows("nodes", "id", "name")),
     Section("Boats and zeppelins", f"{WOW_DATA}/worldMap/travel.json", _named_rows("transports", "id", "name")),

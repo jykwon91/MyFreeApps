@@ -30,7 +30,8 @@ export default function WeaponFields({ weapon, onChange }: WeaponFieldsProps) {
   const [lastWeapon, setLastWeapon] = useState(weapon);
   if (weapon !== lastWeapon) {
     setLastWeapon(weapon);
-    if (weapon !== null) setDraft(toDraft(weapon));
+    // A null from outside while the draft is complete is a reset, not a half-typed draft.
+    if (weapon !== null || toWeapon(draft) !== null) setDraft(toDraft(weapon));
   }
 
   function update(patch: Partial<Draft>) {

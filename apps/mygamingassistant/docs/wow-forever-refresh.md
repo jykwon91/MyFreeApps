@@ -87,7 +87,7 @@ client data itself.
 From `apps/mygamingassistant/backend`:
 
 ```bash
-pytest tests/test_wow_refresh.py tests/test_wow_food_generator.py tests/test_wow_professions_generator.py tests/test_wow_world_map_generator.py tests/test_wow_raid_consumables.py
+pytest tests/test_wow_refresh.py tests/test_wow_food_generator.py tests/test_wow_professions_generator.py tests/test_wow_world_map_generator.py tests/test_wow_raid_consumables.py tests/test_wow_items_generator.py
 ```
 
 From `apps/mygamingassistant/frontend`:
@@ -99,6 +99,10 @@ npx tsc --noEmit
 
 A failing route test usually means a recipe's skill values moved. Fix the
 hand-picked route in `data/professions/crafting/*Route.ts`; don't loosen the test.
+
+A failing pinned item in `test_wow_items_generator.py` means the client changed
+that item or a budget table. Check the item on a Forever tooltip. If the game
+shows the new numbers, update the pin and say so in the PR.
 
 ## 5. Ship
 
@@ -121,6 +125,7 @@ Leave the PR open and say why, instead of merging, when:
 ## 6. Check the live site
 
 After the deploy, confirm <https://mygamingassistant.myfreeapps.org/wow-forever>
-and its `/food`, `/professions`, `/gold` and `/map` pages load and show the new
-build. A scheduled agent has no browser, so it can only fetch them: say that in its
+and its `/food`, `/professions`, `/gold`, `/compare` and `/map` pages load and show
+the new build (on `/compare`, search an item by name and check the client build
+under the result). A scheduled agent has no browser, so it can only fetch them: say that in its
 report, so a person knows a hand check is still owed.
