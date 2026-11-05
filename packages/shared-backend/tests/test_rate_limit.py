@@ -309,6 +309,20 @@ class TestMakeCheckLoginIpLimit:
         assert exc_info.value.detail == RATE_LIMIT_GENERIC_DETAIL
 
     @pytest.mark.anyio
+    async def test_extra_metadata_goes_on_the_row(self, db: AsyncSession) -> None:
+        log_event = AsyncMock()
+        limiter = RateLimiter(max_attempts=1, window_seconds=60)
+        dep = make_check_login_ip_limit(limiter, log_event=log_event, extra_metadata={"gate": "totp"})
+
+        request = _make_request(ip="9.9.9.9")
+        await dep(request, db)  # seeds the bucket
+        with pytest.raises(HTTPException):
+            await dep(request, db)
+
+        assert log_event.await_args.kwargs["metadata"]["gate"] == "totp"
+        assert log_event.await_args.kwargs["metadata"]["ip"] == "9.9.9.9"
+
+    @pytest.mark.anyio
     async def test_block_writes_audit_event_with_ip_metadata(self, db: AsyncSession) -> None:
         """Using the real ``log_auth_event`` (default seam) — verifies the
         full row shape, including the ``LOGIN_BLOCKED_RATE_LIMIT`` event

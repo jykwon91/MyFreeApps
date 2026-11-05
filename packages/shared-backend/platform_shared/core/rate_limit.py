@@ -25,7 +25,7 @@ import time
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Awaitable, Callable, Optional
+from typing import Any, Awaitable, Callable, Mapping, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -186,6 +186,7 @@ def make_check_login_ip_limit(
     limiter: RateLimiter,
     *,
     log_event: Callable[..., Awaitable[None]] = log_auth_event,
+    extra_metadata: Mapping[str, str] | None = None,
 ) -> Callable[[Request, AsyncSession], Awaitable[None]]:
     """Build the per-IP login dependency that audits every block.
 
@@ -207,7 +208,7 @@ def make_check_login_ip_limit(
         try:
             limiter.check(ip)
         except HTTPException:
-            metadata: dict[str, str] = {"ip": ip}
+            metadata: dict[str, str] = {"ip": ip, **(extra_metadata or {})}
             domain = email_domain_from_request(request)
             if domain is not None:
                 metadata["email_domain"] = domain

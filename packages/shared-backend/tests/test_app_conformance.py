@@ -179,6 +179,12 @@ class TestLockCheckComesFromShared:
     def test_has_no_lock_logic_of_its_own(self, parts: tuple[str, ...]) -> None:
         assert "locked_until" not in _read(*parts)
 
+    def test_ip_limits_use_the_shared_factory(self, parts: tuple[str, ...]) -> None:
+        source = _read(*parts)
+        assert "make_check_login_ip_limit(login_limiter)" in source
+        assert 'make_check_login_ip_limit(totp_limiter, extra_metadata={"gate": "totp"})' in source
+        assert "LOGIN_BLOCKED_RATE_LIMIT" not in source
+
     def test_matches_email_like_the_login_does(self, parts: tuple[str, ...]) -> None:
         assert "get_by_email_ci as get_user_by_email" in _read(*parts)
 
