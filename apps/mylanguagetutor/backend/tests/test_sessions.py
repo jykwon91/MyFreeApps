@@ -19,7 +19,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from platform_shared.testing.factories import _FastPasswordHelper
 
 from app.core.config import settings
+from app.db.session import get_db
 from app.domain.turn_status import TurnStatus
+from app.main import app
 from app.models.tutor.tutor_session import TutorSession
 from app.models.tutor.tutor_turn import TutorTurn
 from app.models.user.user import User
@@ -309,6 +311,9 @@ class TestAccountDataLifecycle:
         user = await user_factory()
         guesses = 12
         async with await as_user(user) as authed:
+            # as_user shares one connection between requests, which can't serve
+            # these at once. Each needs its own, as it would in production.
+            app.dependency_overrides.pop(get_db)
             answers = await asyncio.gather(*(
                 authed.request(
                     "DELETE",
