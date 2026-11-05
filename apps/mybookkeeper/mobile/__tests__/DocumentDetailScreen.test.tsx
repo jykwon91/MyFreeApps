@@ -11,12 +11,14 @@ import { store } from "../src/lib/store";
 import { aDocument, startFakeServer } from "../test-support/documentsServer";
 
 const mockBack = jest.fn();
+const mockPush = jest.fn();
+const mockHasPermission = jest.fn(() => true);
 const mockDownload = jest.fn();
 const mockDelete = jest.fn();
 const mockShare = jest.fn();
 const mockDirectoryDelete = jest.fn();
 jest.mock("expo-router", () => ({
-  router: { back: () => mockBack() },
+  router: { back: () => mockBack(), push: (path: string) => mockPush(path) },
   useFocusEffect: (callback: () => void) => {
     const { useEffect } = jest.requireActual("react");
     useEffect(callback, [callback]);
@@ -44,6 +46,10 @@ jest.mock("expo-file-system", () => {
   return { Directory, File, Paths: { cache: "cache" } };
 });
 jest.mock("expo-sharing", () => ({ shareAsync: (...args: unknown[]) => mockShare(...args) }));
+jest.mock("../src/features/aiPermission/aiPermission", () => ({
+  ...jest.requireActual("../src/features/aiPermission/aiPermission"),
+  hasAiPermission: () => mockHasPermission(),
+}));
 
 const originalAdapter = api.defaults.adapter;
 
@@ -153,6 +159,15 @@ describe("DocumentDetailScreen", () => {
     expect(screen.getByText("Blurry")).toBeTruthy();
     await fireEvent.press(await screen.findByRole("button", { name: "Try reading it again" }));
     await waitFor(() => expect(server.requests.some((request) => request.method === "post")).toBe(true));
+  });
+
+  it("asks for permission instead of sending a document to read again", async () => {
+    mockHasPermission.mockReturnValueOnce(false);
+    const server = startFakeServer([aDocument({ status: "failed" })]);
+    await renderDetail();
+    await fireEvent.press(await screen.findByRole("button", { name: "Try reading it again" }));
+    expect(mockPush).toHaveBeenCalledWith("/ai-permission");
+    expect(server.requests.some((request) => request.method === "post")).toBe(false);
   });
 
   it("offers a viewer no changes", async () => {

@@ -1,4 +1,5 @@
 import type { MoreMenuGroup } from "../types/MoreMenuGroup";
+import { PRIVACY_POLICY_PATH } from "./aiPermission";
 
 export const MORE_MENU: readonly MoreMenuGroup[] = [
   {
@@ -37,6 +38,13 @@ export const MORE_MENU: readonly MoreMenuGroup[] = [
       { label: "Tax Documents", webPath: "/tax-documents" },
       { label: "Tax Returns", webPath: "/tax-returns" },
       { label: "Tax Review", webPath: "/tax-review" },
+    ],
+  },
+  {
+    title: "Privacy",
+    items: [
+      { label: "Claude and my documents", screen: "/ai-permission" },
+      { label: "Privacy policy", webPath: PRIVACY_POLICY_PATH },
     ],
   },
   {

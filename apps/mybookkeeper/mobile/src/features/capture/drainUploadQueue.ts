@@ -9,6 +9,7 @@ import {
 import type { AppDispatch, RootState } from "../../lib/store";
 import type { PendingUpload } from "../../types/PendingUpload";
 import type { UploadPhase } from "../../types/UploadPhase";
+import { hasAiPermission } from "../aiPermission/aiPermission";
 import { rejectionMessage } from "./rejectionMessage";
 import { uploadForm } from "./uploadForm";
 import { pendingUploads, removeFromQueue } from "./uploadQueueFiles";
@@ -33,6 +34,8 @@ async function sendAll(workspaceId: string, dispatch: AppDispatch, getState: () 
   while (getState().workspace.activeId === workspaceId) {
     const next = pendingUploads(workspaceId).find((upload) => !failed.has(upload.uri));
     if (!next) return failed.size > 0 ? "unreachable" : sentAny ? "sent" : "idle";
+    // Asked before every file, so stopping takes effect at the next one.
+    if (!hasAiPermission()) return "waitingForPermission";
 
     const result = await send(next, dispatch);
     if (!("error" in result)) {
@@ -62,7 +65,14 @@ export function drainUploadQueue() {
     const workspaceId = getState().workspace.activeId;
     if (!workspaceId || isDraining) return;
 
-    if (pendingUploads(workspaceId).length === 0) return;
+    if (pendingUploads(workspaceId).length === 0) {
+      if (getState().uploads.phase === "waitingForPermission") dispatch(uploadPhaseChanged("idle"));
+      return;
+    }
+    if (!hasAiPermission()) {
+      dispatch(uploadPhaseChanged("waitingForPermission"));
+      return;
+    }
 
     let phase: UploadPhase = "unreachable";
     isDraining = true;

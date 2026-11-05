@@ -8,6 +8,7 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { Alert, ScrollView, Text, View } from "react-native";
 import { STILL_READING_MESSAGE } from "../../constants/documents";
+import { hasAiPermission } from "../aiPermission/aiPermission";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { documentName, documentStatusLine, documentTypeLabel, isBeingRead } from "./documentDisplay";
 import DocumentFileView from "./DocumentFileView";
@@ -50,6 +51,10 @@ export default function DocumentDetailScreen({ id }: { id: string }) {
   const statusLine = documentStatusLine(document);
 
   async function tryReadingAgain(): Promise<void> {
+    if (!hasAiPermission()) {
+      router.push("/ai-permission");
+      return;
+    }
     try {
       await reExtract(id).unwrap();
     } catch {

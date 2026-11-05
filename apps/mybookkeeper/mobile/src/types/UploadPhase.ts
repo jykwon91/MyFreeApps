@@ -1,1 +1,1 @@
-export type UploadPhase = "idle" | "sending" | "sent" | "unreachable" | "limitReached";
+export type UploadPhase = "idle" | "sending" | "sent" | "unreachable" | "limitReached" | "waitingForPermission";

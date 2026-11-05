@@ -3,6 +3,7 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { assertSecureApiUrl, onAccountLeft, resetCacheOnAccountChange } from "@platform/mobile";
 import { configureStore } from "@reduxjs/toolkit";
 import { API_BASE_URL } from "../constants/api";
+import { stopAi } from "../features/aiPermission/aiPermission";
 import { clearUploadQueue } from "../features/capture/uploadQueueFiles";
 import uploads, { uploadStatusDismissed } from "../features/capture/uploadsSlice";
 import { clearDocumentFiles } from "../features/documents/openDocumentFile";
@@ -38,18 +39,13 @@ refetchOnForeground(store.dispatch);
 onAccountLeft(session, () => {
   store.dispatch(workspaceChosen(null));
   store.dispatch(uploadStatusDismissed());
-  // Whatever the first does, the second still has to run: these are someone's records.
-  try {
-    clearDocumentFiles();
-  } finally {
+  // Each has to run whatever the others do: these are someone's records. Nothing may
+  // escape either, or the session's next listener, which clears the cache, never runs.
+  for (const clear of [clearDocumentFiles, clearUploadQueue, clearReplyDrafts, clearHeldFiles, stopAi]) {
     try {
-      clearUploadQueue();
-    } finally {
-      try {
-        clearReplyDrafts();
-      } finally {
-        clearHeldFiles();
-      }
+      clear();
+    } catch (error) {
+      console.error("Couldn't clear what the last account left on this phone", error);
     }
   }
 });

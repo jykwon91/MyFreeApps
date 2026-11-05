@@ -36,7 +36,7 @@ export default function MoreScreen() {
             {group.items
               .filter((item) => !item.adminOnly || isAdmin)
               .map((item) => (
-                <MoreRow item={item} key={item.webPath} />
+                <MoreRow item={item} key={item.label} />
               ))}
           </View>
         ))}
