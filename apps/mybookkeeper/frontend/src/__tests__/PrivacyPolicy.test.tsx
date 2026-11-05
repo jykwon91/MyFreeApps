@@ -22,6 +22,26 @@ describe("PrivacyPolicy — rendering", () => {
     expect(screen.getByText(new RegExp(PRIVACY_LAST_UPDATED))).toBeInTheDocument();
   });
 
+  it("says the phone app asks before sending documents to Anthropic", () => {
+    renderPrivacyPolicy();
+    expect(screen.getByText(/The phone app asks your permission before sending any/)).toBeInTheDocument();
+  });
+
+  it("names every kind of content sent to Anthropic", () => {
+    renderPrivacyPolicy();
+    expect(screen.getByText(/Gmail emails and attachments/)).toBeInTheDocument();
+    expect(screen.getByText(/Mortgage statements, insurance policies and utility bills/)).toBeInTheDocument();
+    expect(screen.getByText(/Lease templates you upload/)).toBeInTheDocument();
+    expect(screen.getByText(/Your tax data/)).toBeInTheDocument();
+    expect(screen.getByText(/for a spam check/)).toBeInTheDocument();
+  });
+
+  it("covers tenant data and when deletion is refused", () => {
+    renderPrivacyPolicy();
+    expect(screen.getByRole("heading", { name: /people you rent to/i })).toBeInTheDocument();
+    expect(screen.getByText(/we\s+can't delete the account yet/)).toBeInTheDocument();
+  });
+
   it("renders the Who we are section", () => {
     renderPrivacyPolicy();
     expect(screen.getByRole("heading", { name: /who we are/i })).toBeInTheDocument();

@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-export const PRIVACY_LAST_UPDATED = "2026-04-25";
+export const PRIVACY_LAST_UPDATED = "2026-11-04";
 
 export default function PrivacyPolicy() {
   return (
@@ -22,8 +22,9 @@ export default function PrivacyPolicy() {
           <section id="who-we-are">
             <h2 className="text-xl font-semibold mb-3">Who we are</h2>
             <p>
-              MyBookkeeper is a personal bookkeeping app built for rental property owners. It helps
-              you track income and expenses, extract data from receipts and invoices, and connect your
+              MyBookkeeper is a personal bookkeeping app built for rental property owners, on the
+              website and on iPhone and Android. It helps you track income and expenses, extract data
+              from receipts and invoices, manage inquiries, applicants and leases, and connect your
               Gmail inbox to automatically pull in billing emails.
             </p>
             <p className="mt-2">
@@ -67,6 +68,23 @@ export default function PrivacyPolicy() {
                 Tax documents and return data you create or that get generated from your transactions
               </li>
             </ul>
+
+            <h3 className="font-semibold mt-4 mb-2">People you rent to</h3>
+            <p>
+              If you use the rental features, MyBookkeeper holds what you and prospective tenants
+              enter about them: inquiries sent through your public form (including name, email, phone
+              and the message), applicant details such as legal name, date of birth and employer,
+              screening results, leases and signed lease documents, tenant payments, and the messages
+              you send. Sensitive applicant details are encrypted at rest.
+            </p>
+
+            <h3 className="font-semibold mt-4 mb-2">The phone app</h3>
+            <p>
+              The app uses your camera, photos and files only when you add a receipt or document, and
+              only sends the ones you choose. Files waiting to send, and reply drafts, stay on your
+              phone until they're sent or you sign out. Your sign-in is kept in the phone's secure
+              storage.
+            </p>
 
             <h3 className="font-semibold mt-4 mb-2">Gmail integration (optional)</h3>
             <p>
@@ -121,10 +139,9 @@ export default function PrivacyPolicy() {
           <section id="where-stored">
             <h2 className="text-xl font-semibold mb-3">Where your data is stored</h2>
             <p>
-              All data lives in a PostgreSQL database and on the filesystem of a single virtual
-              private server hosted in a United States data center. Uploaded files are stored on that
-              same server's disk. There is no CDN, no distributed cloud storage, and no third-party
-              data warehouse involved.
+              Data lives in a PostgreSQL database, and uploaded files in object storage we run
+              ourselves, on a virtual private server hosted in a United States data center. There is
+              no third-party data warehouse involved.
             </p>
           </section>
 
@@ -136,10 +153,13 @@ export default function PrivacyPolicy() {
                 exists
               </li>
               <li>
-                <strong>Deleted accounts</strong> — all your data is permanently deleted immediately
-                when you delete your account (Settings → Danger Zone → Delete account). This includes
-                your properties, documents, transactions, integrations, and usage logs. There is no
-                soft-delete or grace period.
+                <strong>Deleted accounts</strong> — your data is permanently deleted immediately when
+                you delete your account (on the website, Settings → Security; on the phone, More →
+                Delete account). This includes your properties, documents, stored files, transactions,
+                integrations, and usage logs. There is no soft-delete or grace period. If other people
+                use a workspace you created, or you added records to someone else's workspace, we
+                can't delete the account yet, because that would remove or break their records. The
+                app tells you when this applies.
               </li>
               <li>
                 <strong>Database backups</strong> — automated backups are retained for 30 days. Your
@@ -165,8 +185,26 @@ export default function PrivacyPolicy() {
               <div>
                 <h3 className="font-semibold mb-1">Anthropic (Claude AI)</h3>
                 <p>
-                  When you upload a document or sync a Gmail email, its content is sent to
-                  Anthropic's Claude API for data extraction. Anthropic's{" "}
+                  Anthropic's Claude API is used to read documents and answer the requests below, so
+                  this content is sent to Anthropic:
+                </p>
+                <ul className="list-disc list-inside space-y-1 ml-2 my-2">
+                  <li>
+                    Documents you upload, including from the phone, which can include names, addresses
+                    and amounts. The phone app asks your permission before sending any, and you can
+                    stop it under More → Claude and my documents
+                  </li>
+                  <li>Gmail emails and attachments, if you connect Gmail</li>
+                  <li>Mortgage statements, insurance policies and utility bills you add</li>
+                  <li>Lease templates you upload, to suggest the fields to fill in</li>
+                  <li>Your tax data, when you ask for tax advice</li>
+                  <li>
+                    Messages from your public inquiry form, for a spam check, with names replaced and
+                    email addresses and phone numbers removed
+                  </li>
+                </ul>
+                <p>
+                  Anthropic's{" "}
                   <a
                     href="https://www.anthropic.com/privacy"
                     target="_blank"
@@ -177,6 +215,24 @@ export default function PrivacyPolicy() {
                   </a>{" "}
                   applies to that data. We use the standard API tier — we have not opted in to any
                   data-training program.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-1">Sentry (error reports)</h3>
+                <p>
+                  When the server hits an error, a report goes to Sentry so we can fix it. Reports are
+                  set not to include personal details by default, but one can contain whatever was in
+                  the failing request. Sentry's{" "}
+                  <a
+                    href="https://sentry.io/privacy/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    privacy policy
+                  </a>{" "}
+                  applies.
                 </p>
               </div>
 
@@ -250,7 +306,8 @@ export default function PrivacyPolicy() {
                 <h3 className="font-semibold mb-1">Deletion (right to erasure)</h3>
                 <p>
                   You can permanently delete your account from{" "}
-                  <strong>Settings → Security → Delete my account</strong>. Deletion requires
+                  <strong>Settings → Security → Delete my account</strong>, or in the phone app from{" "}
+                  <strong>More → Delete account</strong>. Deletion requires
                   password re-verification plus email confirmation (and a TOTP code if you have 2FA
                   enabled). Deletion is immediate and irreversible.
                 </p>
@@ -304,8 +361,8 @@ export default function PrivacyPolicy() {
           <section id="cookies">
             <h2 className="text-xl font-semibold mb-3">Cookies and tracking</h2>
             <p>
-              MyBookkeeper does not use cookies. Your authentication token is stored in your
-              browser's <code>localStorage</code>, not in a cookie. We do not use analytics
+              MyBookkeeper does not use cookies. On the website, your authentication token is stored
+              in your browser's <code>localStorage</code>, not in a cookie. We do not use analytics
               trackers, advertising pixels, or any third-party tracking scripts.
             </p>
           </section>
