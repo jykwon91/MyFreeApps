@@ -13,7 +13,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import Mortgages from "@/app/pages/Mortgages";
-import type { Mortgage } from "@/shared/types/mortgage/mortgage";
+import type { Mortgage } from "@mybookkeeper/api-client/types/mortgage/mortgage";
 
 const mockRefetch = vi.fn();
 let mockIsLoading = false;
@@ -21,7 +21,7 @@ let mockIsError = false;
 let mockIsFetching = false;
 let mockMortgages: Mortgage[] = [];
 
-vi.mock("@/shared/store/mortgagesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/mortgagesApi", () => ({
   useGetMortgagesQuery: vi.fn(() => ({
     data: { items: mockMortgages, total: mockMortgages.length, has_more: false },
     isLoading: mockIsLoading,
@@ -29,6 +29,9 @@ vi.mock("@/shared/store/mortgagesApi", () => ({
     isFetching: mockIsFetching,
     refetch: mockRefetch,
   })),
+}));
+
+vi.mock("@/shared/store/mortgagesApi", () => ({
   useCreateMortgageMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useUpdateMortgageMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDeleteMortgageMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),

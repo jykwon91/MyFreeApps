@@ -1,18 +1,12 @@
 import { baseApi } from "./baseApi";
-import type { Mortgage } from "@/shared/types/mortgage/mortgage";
+import type { Mortgage } from "@mybookkeeper/api-client/types/mortgage/mortgage";
 import type { MortgageCreateRequest } from "@/shared/types/mortgage/mortgage-create-request";
 import type { MortgageDraft } from "@/shared/types/mortgage/mortgage-draft";
-import type { MortgageListResponse } from "@/shared/types/mortgage/mortgage-list-response";
 import type { MortgageUpdateRequest } from "@/shared/types/mortgage/mortgage-update-request";
 
-export interface MortgageListArgs {
-  property_id?: string;
-  limit?: number;
-  offset?: number;
-}
-
 /**
- * RTK Query slice for the Mortgages domain.
+ * The website's writes for Mortgages. Reads are in the api-client, shared with
+ * the phone.
  *
  * Tag strategy mirrors insurancePoliciesApi: per-id ``Mortgage:{id}`` plus a
  * shared ``Mortgage:LIST``. Every write also invalidates ``Mortgage:RATE_WATCH``
@@ -22,27 +16,6 @@ export interface MortgageListArgs {
  */
 const mortgagesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getMortgages: builder.query<MortgageListResponse, MortgageListArgs | void>({
-      query: (args) => ({
-        url: "/mortgages",
-        params: {
-          ...(args?.property_id ? { property_id: args.property_id } : {}),
-          ...(args?.limit !== undefined ? { limit: args.limit } : {}),
-          ...(args?.offset !== undefined ? { offset: args.offset } : {}),
-        },
-      }),
-      providesTags: (result) =>
-        result
-          ? [
-              ...result.items.map((m) => ({
-                type: "Mortgage" as const,
-                id: m.id,
-              })),
-              { type: "Mortgage" as const, id: "LIST" },
-            ]
-          : [{ type: "Mortgage" as const, id: "LIST" }],
-    }),
-
     createMortgage: builder.mutation<Mortgage, MortgageCreateRequest>({
       query: (data) => ({ url: "/mortgages", method: "POST", data }),
       invalidatesTags: [
@@ -69,7 +42,8 @@ const mortgagesApi = baseApi.injectEndpoints({
 
     deleteMortgage: builder.mutation<void, string>({
       query: (id) => ({ url: `/mortgages/${id}`, method: "DELETE" }),
-      invalidatesTags: [
+      invalidatesTags: (_r, _e, id) => [
+        { type: "Mortgage", id },
         { type: "Mortgage", id: "LIST" },
         { type: "Mortgage", id: "RATE_WATCH" },
       ],
@@ -112,7 +86,6 @@ const mortgagesApi = baseApi.injectEndpoints({
 });
 
 export const {
-  useGetMortgagesQuery,
   useCreateMortgageMutation,
   useUpdateMortgageMutation,
   useDeleteMortgageMutation,

@@ -11,7 +11,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import EditMortgageDialog from "@/app/features/mortgages/EditMortgageDialog";
-import type { Mortgage } from "@/shared/types/mortgage/mortgage";
+import type { Mortgage } from "@mybookkeeper/api-client/types/mortgage/mortgage";
 
 const updateUnwrap = vi.fn(() => Promise.resolve({}));
 const deleteUnwrap = vi.fn(() => Promise.resolve({}));

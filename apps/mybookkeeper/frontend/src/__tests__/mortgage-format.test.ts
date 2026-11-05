@@ -15,7 +15,7 @@ import {
   formatMonths,
   formatRateBand,
   formatRatePct,
-} from "@/shared/lib/mortgage-format";
+} from "@mybookkeeper/api-client/utils/mortgageFormat";
 
 describe("formatMoneyCents", () => {
   it("renders cents as whole dollars with separators", () => {

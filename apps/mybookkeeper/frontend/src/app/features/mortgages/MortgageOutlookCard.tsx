@@ -1,4 +1,4 @@
-import { formatRatePct } from "@/shared/lib/mortgage-format";
+import { formatRatePct } from "@mybookkeeper/api-client/utils/mortgageFormat";
 import {
   MORTGAGE_VERDICT_BORDER,
   MORTGAGE_VERDICT_HEADLINE,
