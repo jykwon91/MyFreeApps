@@ -26,7 +26,7 @@ import type { ReplyTemplateUpdateRequest } from "../types/inquiry/reply-template
  * Reply templates use a parallel ``ReplyTemplate`` tag family — separate
  * from inquiries because templates and inquiries refresh independently.
  */
-const inquiriesApi = baseApi.enhanceEndpoints({
+export const inquiriesApi = baseApi.enhanceEndpoints({
   addTagTypes: ["Inquiry", "ReplyTemplate"],
 }).injectEndpoints({
   endpoints: (builder) => ({

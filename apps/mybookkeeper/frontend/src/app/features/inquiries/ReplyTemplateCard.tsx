@@ -1,4 +1,5 @@
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
+import { replyTemplatePreview } from "@mybookkeeper/api-client/utils/replyTemplatePreview";
 
 export interface ReplyTemplateCardProps {
   template: ReplyTemplate;
@@ -17,14 +18,7 @@ export default function ReplyTemplateCard({
   selected,
   onSelect,
 }: ReplyTemplateCardProps) {
-  const previewLines = template.body_template
-    .split("\n")
-    .filter((line) => line.trim().length > 0)
-    .slice(0, 2)
-    .join(" ");
-  const preview = previewLines.length > 120
-    ? `${previewLines.slice(0, 120).trim()}...`
-    : previewLines;
+  const preview = replyTemplatePreview(template.body_template);
 
   return (
     <button
