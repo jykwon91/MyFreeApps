@@ -135,9 +135,13 @@ describe("LeaseTemplateUploadDialog", () => {
     mockCreateMutation.mockImplementation(() => ({
       unwrap: () => Promise.resolve(template),
     }));
-    // Mock suggestPlaceholders to resolve with suggestions.
+    // Hold suggestPlaceholders open so the loader is observable before it resolves.
+    let resolveSuggest: (value: SuggestPlaceholdersResponse) => void = () => {};
     mockSuggestMutation.mockImplementation(() => ({
-      unwrap: () => Promise.resolve(suggestions),
+      unwrap: () =>
+        new Promise<SuggestPlaceholdersResponse>((resolve) => {
+          resolveSuggest = resolve;
+        }),
     }));
 
     const onCreated = vi.fn();
@@ -162,6 +166,9 @@ describe("LeaseTemplateUploadDialog", () => {
     await waitFor(() => {
       expect(screen.getByTestId("ai-suggesting-loader")).toBeInTheDocument();
     });
+    expect(onCreated).not.toHaveBeenCalled();
+
+    resolveSuggest(suggestions);
 
     // After AI resolves, onCreated is called with template + suggestions.
     await waitFor(() => {
