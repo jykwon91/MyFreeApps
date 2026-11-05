@@ -4,16 +4,15 @@ import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { MORE_MENU } from "../../constants/moreMenu";
-import { useActiveWorkspace } from "../workspace/useActiveWorkspace";
+import { useIsAdmin } from "../workspace/useIsAdmin";
 import MoreRow from "./MoreRow";
 
 export default function MoreScreen() {
   const { colors, fontSize, spacing } = useTheme();
   const devices = useDevices();
   const { reload } = devices;
-  const workspace = useActiveWorkspace();
   const [message, setMessage] = useState<AccountMessage | null>(null);
-  const isAdmin = workspace?.org_role === "owner" || workspace?.org_role === "admin";
+  const isAdmin = useIsAdmin();
   const version = Constants.expoConfig?.version;
 
   useFocusEffect(

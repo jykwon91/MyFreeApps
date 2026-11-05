@@ -28,7 +28,6 @@ export const TAX_REPORT_MESSAGES = {
   preparing: "Preparing...",
   tooManyExports: "I've made a lot of exports this hour. Try again in a bit.",
   couldntExport: "I couldn't make that PDF. Please try again in a bit.",
-  webLink: "Open tax returns on the website",
   tryAgain: "Try again",
   checkConnection: "Check your connection.",
   tryAgainLater: "Please try again in a bit.",

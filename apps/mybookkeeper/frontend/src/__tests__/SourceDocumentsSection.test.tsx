@@ -56,8 +56,8 @@ const emptySourceDocumentsData: SourceDocumentsResponse = {
   checklist: [],
 };
 
-vi.mock("@/shared/store/taxReturnsApi", async () => {
-  const actual = await vi.importActual("@/shared/store/taxReturnsApi");
+vi.mock("@mybookkeeper/api-client/store/taxReturnsApi", async () => {
+  const actual = await vi.importActual("@mybookkeeper/api-client/store/taxReturnsApi");
   return {
     ...actual,
     useGetSourceDocumentsQuery: vi.fn(() => ({
@@ -68,7 +68,7 @@ vi.mock("@/shared/store/taxReturnsApi", async () => {
   };
 });
 
-import { useGetSourceDocumentsQuery } from "@/shared/store/taxReturnsApi";
+import { useGetSourceDocumentsQuery } from "@mybookkeeper/api-client/store/taxReturnsApi";
 
 function renderComponent(taxReturnId: string = "tr-1") {
   return render(

@@ -1,6 +1,5 @@
-import { LoadingButton, WebLink, useTheme } from "@platform/mobile";
+import { LoadingButton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
 import { TAX_REPORT_MESSAGES as MESSAGES } from "../../constants/taxReport";
 import type { TaxExport } from "../../types/TaxExport";
 import { taxExports } from "./taxReportDisplay";
@@ -37,7 +36,6 @@ export default function TaxReportExports({ year, canShare, showShare, sharingId,
           <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.shareNote}</Text>
         </>
       ) : null}
-      <WebLink label={MESSAGES.webLink} url={`${WEB_BASE_URL}/tax-returns`} />
     </View>
   );
 }

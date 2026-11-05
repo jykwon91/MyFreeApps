@@ -1,4 +1,4 @@
-import type { ValidationResult } from "@/shared/types/tax/validation-result";
+import type { ValidationResult } from "@mybookkeeper/api-client/types/tax/ValidationResult";
 import type { FormSummary } from "@/shared/types/tax/form-summary";
 
 export function buildFormSummaries(

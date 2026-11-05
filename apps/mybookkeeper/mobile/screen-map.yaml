@@ -88,9 +88,9 @@ routes:
   /tax-documents:
     screen: (app)/tax/documents
   /tax-returns:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/tax-returns/index
   /tax-returns/:id:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/tax-returns/[id]
   /tax-review:
     not_on_mobile: Not on the phone yet. More links to it on the website.
   /tenants:

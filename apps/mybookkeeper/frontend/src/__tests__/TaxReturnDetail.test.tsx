@@ -4,8 +4,8 @@ import { Provider } from "react-redux";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { store } from "@/shared/store";
 import TaxReturnDetail from "@/app/pages/TaxReturnDetail";
-import type { TaxReturn } from "@/shared/types/tax/tax-return";
-import type { ValidationResult } from "@/shared/types/tax/validation-result";
+import type { TaxReturn } from "@mybookkeeper/api-client/types/tax/TaxReturn";
+import type { ValidationResult } from "@mybookkeeper/api-client/types/tax/ValidationResult";
 
 const mockTaxReturn: TaxReturn = {
   id: "tr-1",
@@ -47,17 +47,13 @@ const mockValidationResults: ValidationResult[] = [
   },
 ];
 
-vi.mock("@/shared/store/taxReturnsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/taxReturnsApi", () => ({
   useGetTaxReturnQuery: vi.fn(() => ({
     data: mockTaxReturn,
     isLoading: false,
   })),
   useGetFormsOverviewQuery: vi.fn(() => ({
     data: [],
-    isLoading: false,
-  })),
-  useGetFormFieldsQuery: vi.fn(() => ({
-    data: undefined,
     isLoading: false,
   })),
   useGetValidationQuery: vi.fn(() => ({
@@ -70,6 +66,13 @@ vi.mock("@/shared/store/taxReturnsApi", () => ({
     isError: false,
   })),
   useRecomputeMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+}));
+
+vi.mock("@/shared/store/taxReturnsApi", () => ({
+  useGetFormFieldsQuery: vi.fn(() => ({
+    data: undefined,
+    isLoading: false,
+  })),
   useOverrideFieldMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useGetAdvisorSuggestionsQuery: vi.fn(() => ({ data: undefined, isLoading: false, error: { status: 404 } })),
   useGenerateAdvisorSuggestionsMutation: vi.fn(() => [vi.fn(), { isLoading: false, error: undefined }]),
@@ -79,7 +82,7 @@ vi.mock("@/shared/store/taxReturnsApi", () => ({
 import {
   useGetTaxReturnQuery,
   useGetValidationQuery,
-} from "@/shared/store/taxReturnsApi";
+} from "@mybookkeeper/api-client/store/taxReturnsApi";
 
 function renderWithRoute(id: string = "tr-1") {
   return render(

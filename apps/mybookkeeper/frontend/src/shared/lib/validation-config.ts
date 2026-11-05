@@ -1,7 +1,5 @@
 import { AlertCircle, AlertTriangle, Info } from "lucide-react";
-import type { ValidationSeverity } from "@/shared/types/tax/validation-result";
-
-export const SEVERITY_ORDER: ValidationSeverity[] = ["error", "warning", "info"];
+import type { ValidationSeverity } from "@mybookkeeper/api-client/types/tax/ValidationSeverity";
 
 export const SEVERITY_CONFIG: Record<ValidationSeverity, {
   icon: typeof AlertCircle;
