@@ -40,6 +40,7 @@ class _Harness:
         )
         self.manager = MagicMock()
         self.manager.authenticate_password = AsyncMock(return_value=user)
+        self.manager.is_locked_now = AsyncMock(return_value=False)
         self.manager.count_failed_second_factor = AsyncMock()
         self.manager.clear_failed_logins = AsyncMock()
         self.strategy = MagicMock()
@@ -254,3 +255,18 @@ def test_verify_only_accepts_six_digits(events: AsyncMock, code: str) -> None:
 
     assert harness.client.post("/auth/totp/verify", json={"code": code}).status_code == 422
     harness.service.confirm_totp.assert_not_awaited()
+
+
+@pytest.mark.parametrize("code_is_right", [True, False], ids=["right", "wrong"])
+def test_a_lock_from_codes_sent_together_stops_this_one_too(events: AsyncMock, code_is_right: bool) -> None:
+    harness = _Harness(_user(totp_enabled=True))
+    harness.manager.is_locked_now.return_value = True
+    harness.service.validate_totp_for_login.return_value = (code_is_right, False)
+
+    resp = harness.client.post("/auth/totp/login", json=LOGIN | {"totp_code": "000000"})
+
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "LOGIN_BAD_CREDENTIALS"
+    harness.manager.count_failed_second_factor.assert_not_awaited()
+    harness.manager.clear_failed_logins.assert_not_awaited()
+    harness.strategy.write_token.assert_not_awaited()

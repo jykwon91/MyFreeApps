@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Awaitable, Callable
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
@@ -45,6 +46,7 @@ def _manager(user: SimpleNamespace, *, password_is_right: bool = True) -> _Manag
     user_db.update.side_effect = persist
     user_db.session = MagicMock()
     user_db.session.refresh = AsyncMock()
+    user_db.session.commit = AsyncMock()
     manager = _Manager(user_db)
     manager.get_by_email = AsyncMock(return_value=user)  # type: ignore[method-assign]
     manager.password_helper = MagicMock()
@@ -126,6 +128,47 @@ async def test_finishing_the_login_clears_the_count_and_the_lock_state() -> None
     assert user.failed_login_count == 0
     assert user.last_failed_login_at is None
     assert user.locked_until is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", [0, 1], ids=["jwt_login", "totp_login_password_step"])
+@pytest.mark.parametrize("password_is_right", [True, False], ids=["right", "wrong"])
+async def test_a_lock_from_guesses_sent_together_stops_this_one_too(path: int, password_is_right: bool) -> None:
+    user = _user(totp_enabled=False, failed_login_count=4)
+    manager = _manager(user, password_is_right=password_is_right)
+
+    async def lock_lands_meanwhile(*_: Any, **__: Any) -> None:
+        user.failed_login_count = 5
+        user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=1)
+
+    manager.user_db.session.refresh.side_effect = lock_lands_meanwhile
+
+    assert await _both_login_paths(manager)[path](CREDENTIALS) is None
+    assert user.failed_login_count == 5
+    assert user.locked_until is not None
+
+
+@pytest.mark.asyncio
+async def test_the_row_stays_locked_until_the_count_is_cleared() -> None:
+    user = _user(totp_enabled=False, failed_login_count=3)
+    manager = _manager(user)
+    calls = MagicMock()
+    calls.attach_mock(manager.user_db.update, "clear")
+    calls.attach_mock(manager.user_db.session.commit, "commit")
+
+    await manager.authenticate(CREDENTIALS)
+
+    names = [call[0] for call in calls.mock_calls]
+    assert names.index("clear") < names.index("commit")
+
+
+@pytest.mark.asyncio
+async def test_a_jwt_login_saves_its_audit_row() -> None:
+    manager = _manager(_user(totp_enabled=False))
+
+    await manager.authenticate(CREDENTIALS)
+
+    manager.user_db.session.commit.assert_awaited()
 
 
 @pytest.mark.asyncio

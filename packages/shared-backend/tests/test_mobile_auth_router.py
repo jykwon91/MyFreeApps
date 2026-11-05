@@ -62,6 +62,7 @@ class _Harness:
         self.sessions.session_id_of = MagicMock(return_value=self.row.id)
         self.manager = MagicMock()
         self.manager.authenticate_password = AsyncMock(return_value=self.user)
+        self.manager.is_locked_now = AsyncMock(return_value=False)
         self.manager.count_failed_second_factor = AsyncMock()
         self.manager.clear_failed_logins = AsyncMock()
         self.totp = SimpleNamespace(validate_totp_for_login=AsyncMock(return_value=(True, False)))

@@ -57,6 +57,7 @@ def _make_manager(user: MagicMock | None, *, parent_returns: MagicMock | None) -
 
     user_db = MagicMock()
     user_db.session.refresh = AsyncMock()
+    user_db.session.commit = AsyncMock()
     user_db.update = AsyncMock()
 
     if user is None:
