@@ -400,6 +400,7 @@ async def distinct_vendors_by_category(
             Transaction.organization_id == organization_id,
             Transaction.tax_year == tax_year,
             Transaction.category == category,
+            Transaction.status == "approved",
             Transaction.deleted_at.is_(None),
             Transaction.vendor.isnot(None),
         )
@@ -422,6 +423,7 @@ async def distinct_property_ids_by_category(
             Transaction.organization_id == organization_id,
             Transaction.tax_year == tax_year,
             Transaction.category == category,
+            Transaction.status == "approved",
             Transaction.deleted_at.is_(None),
             Transaction.property_id.isnot(None),
         )

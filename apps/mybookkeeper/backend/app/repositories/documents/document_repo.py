@@ -247,11 +247,11 @@ async def delete_batch_processing(
 async def get_by_ids(
     db: AsyncSession, document_ids: list[uuid.UUID],
 ) -> dict[uuid.UUID, Document]:
-    """Batch-fetch documents by ID. Returns {id: Document} map."""
+    """Batch-fetch documents by ID, leaving out deleted ones. Returns {id: Document} map."""
     if not document_ids:
         return {}
     result = await db.execute(
-        select(Document).where(Document.id.in_(document_ids))
+        select(Document).where(Document.id.in_(document_ids), Document.deleted_at.is_(None))
     )
     return {d.id: d for d in result.scalars().all()}
 

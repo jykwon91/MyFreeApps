@@ -254,3 +254,12 @@ STANDARD_DEDUCTION: dict[int, dict[str, Decimal]] = {
         "head_of_household": Decimal("22500"),
     },
 }
+
+# Booking platforms that send an owner a 1099-K: the name to show, and the names
+# that form can be issued under. Vrbo's parent companies issue its forms. "direct"
+# bookings have no platform to send one, so it isn't listed.
+PLATFORM_1099K_ISSUERS: dict[str, tuple[str, tuple[str, ...]]] = {
+    "airbnb": ("Airbnb", ("airbnb",)),
+    "vrbo": ("Vrbo", ("vrbo", "homeaway", "expedia")),
+    "booking.com": ("Booking.com", ("booking.com",)),
+}

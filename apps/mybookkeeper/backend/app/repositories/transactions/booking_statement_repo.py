@@ -107,8 +107,14 @@ async def distinct_platforms_for_year(
     db: AsyncSession,
     organization_id: uuid.UUID,
     tax_year: int,
+    *,
+    excluding_property_ids: Sequence[uuid.UUID] | None = None,
 ) -> list[str]:
-    """Return distinct lowercased platform names for booking statements in a tax year."""
+    """Return distinct lowercased platform names for booking statements in a tax year.
+
+    With `excluding_property_ids`, statements must name some other property: one with
+    no property can't be said to fall outside the excluded ones.
+    """
     stmt = (
         select(func.lower(BookingStatement.platform))
         .where(
@@ -119,6 +125,11 @@ async def distinct_platforms_for_year(
         )
         .group_by(func.lower(BookingStatement.platform))
     )
+    if excluding_property_ids is not None:
+        stmt = stmt.where(
+            BookingStatement.property_id.isnot(None),
+            BookingStatement.property_id.not_in(excluding_property_ids),
+        )
     result = await db.execute(stmt)
     return [row[0] for row in result.all()]
 
