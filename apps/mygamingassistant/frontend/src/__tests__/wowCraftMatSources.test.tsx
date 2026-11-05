@@ -5,6 +5,7 @@ import FoodSourceList from "@/games/wow-forever/components/food/detail/FoodSourc
 import sourcesJson from "@/games/wow-forever/data/professions/crafting/classic/sources.json";
 import tailoringJson from "@/games/wow-forever/data/professions/crafting/tailoring.json";
 import enchantingJson from "@/games/wow-forever/data/professions/crafting/enchanting.json";
+import alchemyJson from "@/games/wow-forever/data/professions/crafting/alchemy.json";
 import trainerSkillsJson from "@/games/wow-forever/data/professions/crafting/classic/trainerSkills.json";
 import { resolveRoute } from "@/games/wow-forever/crafting/craftRoute";
 import { describeDisenchant, describeSkinning, matSummary, soldToYou } from "@/games/wow-forever/crafting/matSources";
@@ -22,6 +23,7 @@ import {
   isHostileGround,
   isRareDrop,
   mobsForLevel,
+  rankObjectSpots,
   stockLabel,
 } from "@/games/wow-forever/food/recipeSources";
 import { FACTION, TERRITORY } from "@/games/wow-forever/types/worldMap";
@@ -33,6 +35,7 @@ const SOURCES = createSourceLookup(sourcesJson as unknown as RawSourcesFile);
 const FILES: Record<CraftingProfession, CraftingFile> = {
   tailoring: tailoringJson as unknown as CraftingFile,
   enchanting: enchantingJson as unknown as CraftingFile,
+  alchemy: alchemyJson as unknown as CraftingFile,
 };
 const TRAINER_SKILLS = trainerSkillsJson as unknown as Record<CraftingProfession, TrainerSkills>;
 
@@ -56,6 +59,21 @@ function summary(itemId: number, madeBy: string | null = null, level: number | n
 }
 
 describe("crafting material sources", () => {
+  it("sends you to the herbs on your own side, with the Herbalism skill they take", () => {
+    const PEACEBLOOM = 2447;
+    const spots = SOURCES.reagent(PEACEBLOOM).objectSpots;
+    expect(spots.every((o) => o.gather?.skill === "herbalism" && o.gather.level === 1)).toBe(true);
+    const alliance = rankObjectSpots(spots, FACTION.alliance, null)[0];
+    const horde = rankObjectSpots(spots, FACTION.horde, null)[0];
+    expect(alliance.spot.territory).toBe(TERRITORY.alliance);
+    expect(horde.spot.territory).toBe(TERRITORY.horde);
+    expect(summary(PEACEBLOOM).startsWith(`Herbalism (skill 1): Peacebloom, ${alliance.spot.zoneName}`)).toBe(true);
+  });
+
+  it("leaves clams and crates without a gathering skill", () => {
+    expect(FOOD_SOURCES.reagent(4655).objectSpots.every((o) => o.gather === null)).toBe(true);
+  });
+
   it("names a farm spot for cloth on your own side, not just a level band", () => {
     const drop = SOURCES.reagent(LINEN_CLOTH).drop!;
     expect(isCommonDrop(drop)).toBe(true);

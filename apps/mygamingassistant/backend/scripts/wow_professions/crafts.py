@@ -1,12 +1,13 @@
 """Turn a profession's client recipes into the records the leveling guide reads.
 
-Chain: ``SkillLineAbility`` (SkillLine 197 Tailoring / 333 Enchanting) →
+Chain: ``SkillLineAbility`` (SkillLine 197 Tailoring / 333 Enchanting / 171
+Alchemy) →
 recipe spell → its reagents (``SpellReagents``) and what it makes (a
 ``CREATE_ITEM`` effect → ``ItemSparse``; an enchant makes no item). The
 skill colours come from the same row: ``TrivialSkillLineRankLow`` is where
 the recipe turns yellow, ``TrivialSkillLineRankHigh`` where it turns grey
 (green is half-way, as in game). The skill needed to *learn* a recipe isn't
-in the client — a Pattern / Formula item carries it (``RequiredSkillRank``);
+in the client — a Pattern / Formula / Recipe item carries it (``RequiredSkillRank``);
 a trainer's is server-side (see ``build.load_trainer_skill``).
 
 The same chain run on the Classic Era client says what Forever changed.
@@ -17,6 +18,7 @@ from dataclasses import dataclass, field
 
 TAILORING_SKILL_LINE = 197
 ENCHANTING_SKILL_LINE = 333
+ALCHEMY_SKILL_LINE = 171
 EFFECT_CREATE_ITEM = 24
 EFFECT_LEARN_SPELL = 36
 EFFECT_ENCHANT_ITEM = 53

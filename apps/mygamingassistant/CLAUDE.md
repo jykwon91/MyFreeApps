@@ -106,8 +106,18 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `confidence: "confirmed" | "unconfirmed"`. Rows still unconfirmed depend on
   server-side facts (trainers, vendors, quests, fishing zones) — confirm them
   in game or from a Blizzard post, then bump `PROFESSIONS_DATA_STATUS`.
-- Professions also has Tailoring and Enchanting (`?p=tailoring|enchanting`,
-  `&skill=N`): trainers, rank-ups (Artisan Enchanting = Annora in Uldaman), a
+- Professions also has crafting guides (`?p=alchemy|enchanting|tailoring`,
+  `&skill=N`). The picker (`data/professions/professionPicker.ts`) groups
+  Crafting vs Secondary; `isCraftingProfession` / `parseGuideProfession`
+  (`lib/guideProfession.ts`) are the only list of what's crafting — never
+  hard-code profession keys. What each guide shows is
+  `crafting/craftingFeatures.ts`: only `priced` professions (Tailoring,
+  Enchanting) get the prices panel / cheapest route; the rest show the
+  hand-picked route with no costs, no "cheapest" and no prices anywhere.
+  Recipes Forever added and no Classic source teaches get a "Source unknown"
+  chip and never a Classic trainer (`sourceUnknown`, `learnAt.newInForever`).
+  Herb / ore nodes carry their gathering skill (Forever `Lock` table) in the
+  `objectSpots` rows. Each guide has trainers, rank-ups (Artisan Enchanting = Annora in Uldaman), a
   hand-picked route to 300 (`data/professions/crafting/*Route.ts`, joined to
   the recipe data by spell id — `wowCraftRoute.test.ts` checks it runs 1→300
   with no gaps, never past a rank cap, never crafting a recipe at grey or
@@ -116,7 +126,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   profession makes itself are expanded into raw materials). The skill lives in
   `?skill=` (wins for that visit) and `mga.wowForever.professions.skill.v1`.
   **Recipe data is GENERATED** — `python -m scripts.wow_professions.build`
-  (from `backend/`) writes `data/professions/crafting/{tailoring,enchanting}.json`
+  (from `backend/`) writes `data/professions/crafting/{tailoring,enchanting,alchemy}.json`
   from the Forever client, plus `classic/trainerSkills.json` and
   `classic/sources.json` (cmangos GPL — keep LICENSE + README).
   `tests/test_wow_professions_generator.py`. A route row that names a spell

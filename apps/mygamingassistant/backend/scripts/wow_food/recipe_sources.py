@@ -59,8 +59,13 @@ CAPITAL_TERRITORY = {"A": "alliance", "H": "horde"}
 MIN_SHOWN_CHANCE = 1.0
 # A clam bed or crate on the ground: where to go, in at most this many zones (most spawns first).
 SHOWN_OBJECT_ZONES = 3
+# Herbs and ore veins grow on both factions' ground: enough zones that each side has its own.
+SHOWN_GATHER_ZONES = 10
 # Spawns this close (yards) count as one pack when picking where to farm a mob.
 PACK_YARDS = 150.0
+# Lock.Type_0 of a lock opened by a skill; its Index_0 is then the LockType: herb or mineral node.
+LOCK_KEY_SKILL = 2
+GATHER_LOCK_TYPES = {2: "herbalism", 3: "mining"}
 
 _TABLES = {
     "creature",
@@ -176,6 +181,9 @@ class ClassicSources:
                 self._objects_by_loot[_i(o["data1"])].append(_i(o["entry"]))
                 object_name[_i(o["entry"])] = str(o["name"])
         self._object_name = object_name
+        self._gather = _gather_locks(
+            {_i(o["entry"]): _i(o["data0"]) for o in t["gameobject_template"] if _i(o["entry"]) in object_name}
+        )
         self._object_spawns: dict[int, list[Row]] = defaultdict(list)
         for g in sorted(t["gameobject"], key=lambda r: _i(r["guid"])):
             if _i(g["map"]) in CLASSIC_CONTINENTS and _i(g["id"]) in object_name:
@@ -374,11 +382,14 @@ class ClassicSources:
         return sorted(names)
 
     def object_spots(self, item: int) -> list[list[object]]:
-        """Where the clams / crates holding it lie: per zone with the most of them, the spawn with the most others nearby.
+        """Where the clams / crates / herbs / veins holding it lie: per zone with the most of them, the spawn with the most others nearby.
 
-        Row: [object name, spawns in that zone, zone, subzone, x, y].
+        Row: [object name, spawns in that zone, zone, subzone, x, y, gather, skill] — ``gather`` is
+        "herbalism" / "mining" for a node only that gathering skill opens (at ``skill``, from the
+        Forever client's Lock table), else "" and 0.
         """
         spots: dict[str, list[tuple[float, float, Placement]]] = defaultdict(list)
+        gather: dict[str, tuple[str, int]] = {}
         for loot_id, chance, _ in self._object_loot.by_table.get(item, []):
             if chance < MIN_CONTAINER_CHANCE:
                 continue
@@ -388,12 +399,14 @@ class ClassicSources:
                     spot = place(self._zones, self._art, _i(g["map"]), wx, wy, exclude=FOREVER_ONLY_ZONES)
                     if spot:
                         spots[self._object_name[entry]].append((wx, wy, spot))
+                        gather.setdefault(self._object_name[entry], self._gather.get(entry, ("", 0)))
         rows: list[list[object]] = []
         for name, placed in sorted(spots.items()):
             per_zone = Counter(spot.zone.ui_map_id for _, _, spot in placed)
-            for zone, count in sorted(per_zone.items(), key=lambda kv: (-kv[1], kv[0]))[:SHOWN_OBJECT_ZONES]:
+            shown = SHOWN_GATHER_ZONES if gather[name][0] else SHOWN_OBJECT_ZONES
+            for zone, count in sorted(per_zone.items(), key=lambda kv: (-kv[1], kv[0]))[:shown]:
                 here = [s for s in placed if s[2].zone.ui_map_id == zone]
-                rows.append([name, count, *self._farm_spot(here)])
+                rows.append([name, count, *self._farm_spot(here), *gather[name]])
         return rows
 
     def container_drops(self, item: int) -> list[list[object]]:
@@ -438,6 +451,17 @@ class ClassicSources:
             "containerDrops": self.container_drops(item),
             "quests": self.quests(item),
         })
+
+
+def _gather_locks(object_locks: dict[int, int]) -> dict[int, tuple[str, int]]:
+    """Object entry -> ("herbalism" / "mining", skill) for a herb or mineral node, from the Forever client's Lock table."""
+    locks = {_i(r["ID"]): r for r in sources.wago_table("Lock")}
+    out: dict[int, tuple[str, int]] = {}
+    for entry, lock_id in object_locks.items():
+        lock = locks.get(lock_id)
+        if lock and _i(lock["Type_0"]) == LOCK_KEY_SKILL and _i(lock["_Index_0"]) in GATHER_LOCK_TYPES:
+            out[entry] = (GATHER_LOCK_TYPES[_i(lock["_Index_0"])], _i(lock["Skill_0"]))
+    return out
 
 
 def territory_of(zone_ids: Iterable[int], zones: Iterable[dict[str, object]]) -> dict[str, str]:

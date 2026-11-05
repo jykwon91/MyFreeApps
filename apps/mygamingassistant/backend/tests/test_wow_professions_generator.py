@@ -13,7 +13,8 @@ from pathlib import Path
 
 import pytest
 
-from scripts.wow_food.recipe_sources import MIN_FARM_CHANCE, VENDOR_COLUMNS, _stock, territory_of
+from scripts.wow_food import recipe_sources
+from scripts.wow_food.recipe_sources import MIN_FARM_CHANCE, VENDOR_COLUMNS, _gather_locks, _stock, territory_of
 from scripts.wow_professions.build import DISENCHANT_COLUMNS, _best_giver, _disenchant_kind, _roll_chances
 from scripts.wow_professions.crafts import (
     ClientRecipes,
@@ -133,6 +134,14 @@ def enchanting() -> dict[int, dict]:
     return _recipes("enchanting")
 
 
+@pytest.fixture(scope="module")
+def alchemy() -> dict[int, dict]:
+    return _recipes("alchemy")
+
+
+ELIXIR_OF_MINOR_DEFENSE, TRANSMUTE_IRON_TO_GOLD, MINOR_ARCANE_ELIXIR = 7183, 11479, 1245246
+
+
 class TestCommittedData:
     def test_bolt_of_linen(self, tailoring: dict[int, dict]) -> None:
         bolt = tailoring[BOLT]
@@ -149,9 +158,19 @@ class TestCommittedData:
         assert motes["newInForever"] is True
         assert motes["tool"]["id"] == ROD
 
-    def test_every_trainer_recipe_has_an_estimate(self, tailoring: dict[int, dict], enchanting: dict[int, dict]) -> None:
+    def test_alchemy_from_the_forever_client(self, alchemy: dict[int, dict]) -> None:
+        defense = alchemy[ELIXIR_OF_MINOR_DEFENSE]
+        assert defense["learn"]["source"] == "start"
+        assert (defense["yellow"], defense["grey"]) == (55, 95)
+        assert alchemy[MINOR_ARCANE_ELIXIR]["newInForever"] is True
+        transmute = alchemy[TRANSMUTE_IRON_TO_GOLD]
+        assert transmute["learn"]["source"] == "item" and transmute["learn"]["item"].startswith("Recipe: ")
+
+    def test_every_trainer_recipe_has_an_estimate(
+        self, tailoring: dict[int, dict], enchanting: dict[int, dict], alchemy: dict[int, dict]
+    ) -> None:
         skills = json.loads((CRAFTING_DATA / "classic" / "trainerSkills.json").read_text(encoding="utf-8"))
-        for name, recipes in (("tailoring", tailoring), ("enchanting", enchanting)):
+        for name, recipes in (("tailoring", tailoring), ("enchanting", enchanting), ("alchemy", alchemy)):
             for spell, entry in skills[name].items():
                 recipe = recipes[int(spell)]
                 assert recipe["learn"]["source"] == "trainer"
@@ -200,6 +219,24 @@ class TestDisenchantSources:
         reagents = json.loads((CRAFTING_DATA / "classic" / "sources.json").read_text(encoding="utf-8"))["reagents"]
         assert reagents["8170"]["skinning"]["levels"][0] >= 40  # Rugged Leather
         assert "skinning" not in reagents["2592"]  # sheep don't make Wool Cloth a skinning mat
+
+
+class TestGatherNodes:
+    def test_skill_locks_become_herbalism_or_mining(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        locks = [
+            {"ID": "29", "Type_0": "2", "_Index_0": "2", "Skill_0": "1"},  # Silverleaf
+            {"ID": "39", "Type_0": "2", "_Index_0": "3", "Skill_0": "65"},  # Tin Vein
+            {"ID": "57", "Type_0": "2", "_Index_0": "1", "Skill_0": "1"},  # a lockbox: lockpicking
+        ]
+        monkeypatch.setattr(recipe_sources.sources, "wago_table", lambda name: locks)
+        assert _gather_locks({1617: 29, 1732: 39, 3714: 57, 9: 0}) == {1617: ("herbalism", 1), 1732: ("mining", 65)}
+
+    def test_committed_herb_spots_say_herbalism(self) -> None:
+        reagents = json.loads((CRAFTING_DATA / "classic" / "sources.json").read_text(encoding="utf-8"))["reagents"]
+        peacebloom = reagents["2447"]["objectSpots"]
+        assert peacebloom and all(spot[6:] == ["herbalism", 1] for spot in peacebloom)
+        goldthorn = reagents["3821"]["objectSpots"][0]
+        assert goldthorn[6] == "herbalism" and goldthorn[7] > 100
 
 
 class TestVendorStock:

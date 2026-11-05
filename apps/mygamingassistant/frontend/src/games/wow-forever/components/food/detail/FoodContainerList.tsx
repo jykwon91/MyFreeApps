@@ -1,6 +1,6 @@
 import FoodDropList from "@/games/wow-forever/components/food/detail/FoodDropList";
 import FoodObjectSpotRow from "@/games/wow-forever/components/food/detail/FoodObjectSpotRow";
-import { hostileGroundLabel } from "@/games/wow-forever/food/recipeSources";
+import { describeGather, gatherOfSpots, hostileGroundLabel, rankObjectSpots } from "@/games/wow-forever/food/recipeSources";
 import type { ItemSources } from "@/games/wow-forever/types/recipeSources";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 
@@ -14,20 +14,21 @@ interface FoodContainerListProps {
 
 /**
  * Clams, herbs and crates that hold it — and where: the zones with the most
- * of them on the ground, or the mobs that drop the clam. A chest with no
- * fixed spot is only named.
+ * of them on the ground (yours first), or the mobs that drop the clam. A
+ * chest with no fixed spot is only named.
  */
 export default function FoodContainerList({ sources, faction, zoneId, level }: FoodContainerListProps) {
   const { containers, objectSpots, containerDrops } = sources;
   const severalKinds = containers.length > 1;
+  const gather = gatherOfSpots(objectSpots);
   return (
     <div className="space-y-2">
       <p className="text-sm">
-        <span className="font-medium">Found in</span> {containers.join(", ")}.
+        <span className="font-medium">{gather ? `Gather with ${describeGather(gather)} from` : "Found in"}</span> {containers.join(", ")}.
       </p>
       {objectSpots.length ? (
         <ul className="space-y-2" aria-label="Where to find them">
-          {objectSpots.map((o) => (
+          {rankObjectSpots(objectSpots, faction, zoneId).map((o) => (
             <FoodObjectSpotRow key={`${o.name}-${o.spot.zoneId}`} object={o} named={severalKinds} warning={hostileGroundLabel(o.spot, faction)} />
           ))}
         </ul>

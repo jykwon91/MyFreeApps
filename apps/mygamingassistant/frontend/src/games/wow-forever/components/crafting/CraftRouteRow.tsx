@@ -4,7 +4,9 @@ import CraftColorsLine from "@/games/wow-forever/components/crafting/CraftColors
 import CraftLearnLine, { type CraftPlace } from "@/games/wow-forever/components/crafting/CraftLearnLine";
 import CraftReagents from "@/games/wow-forever/components/crafting/CraftReagents";
 import CraftRowCost from "@/games/wow-forever/components/crafting/CraftRowCost";
+import SourceUnknownChip from "@/games/wow-forever/components/crafting/SourceUnknownChip";
 import { CRAFT_ROW_GRID, rowStateClass, type RowState } from "@/games/wow-forever/components/crafting/craftRowStyles";
+import { sourceUnknown } from "@/games/wow-forever/crafting/craftRoute";
 import type { ResolvedCraftStep } from "@/games/wow-forever/types/crafting";
 
 interface CraftRouteRowProps {
@@ -37,6 +39,7 @@ export default function CraftRouteRow({ entry, state, showChip, makesTool, profe
               <span className="rounded bg-primary px-1.5 py-0.5 text-xs text-primary-foreground">You are here</span>
             ) : null}
             {showChip && step.confidence === "unconfirmed" ? <UnconfirmedChip /> : null}
+            {sourceUnknown(recipe) ? <SourceUnknownChip /> : null}
           </p>
           <CraftColorsLine recipe={recipe} />
         </div>

@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { ENCHANT_SLOTS, type EnchantSlot } from "@/games/wow-forever/crafting/cheapestRoute";
 import { MAX_PRICE_COPPER, type EnteredPrices } from "@/games/wow-forever/crafting/matPrices";
+import { isCraftingProfession } from "@/games/wow-forever/lib/guideProfession";
 import { readStored, writeStored } from "@/games/wow-forever/lib/safeLocalStorage";
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
 
@@ -29,9 +30,8 @@ type StoredRecipes = Partial<Record<CraftingProfession, number[]>>;
 function parseStoredRecipes(raw: unknown): StoredRecipes | null {
   if (!isObject(raw)) return null;
   const out: StoredRecipes = {};
-  for (const key of ["tailoring", "enchanting"] as const) {
-    const list = raw[key];
-    if (Array.isArray(list)) out[key] = list.filter((n): n is number => Number.isInteger(n) && n > 0);
+  for (const [key, list] of Object.entries(raw)) {
+    if (isCraftingProfession(key) && Array.isArray(list)) out[key] = list.filter((n): n is number => Number.isInteger(n) && n > 0);
   }
   return out;
 }

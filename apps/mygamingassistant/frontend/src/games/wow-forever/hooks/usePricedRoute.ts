@@ -12,12 +12,13 @@ import {
 } from "@/games/wow-forever/crafting/cheapestRoute";
 import { resolveRoute } from "@/games/wow-forever/crafting/craftRoute";
 import { createPriceBook, type PriceBook } from "@/games/wow-forever/crafting/matPrices";
+import { CRAFTING_FEATURES } from "@/games/wow-forever/data/professions/crafting/craftingFeatures";
 import { CRAFTING_GUIDES } from "@/games/wow-forever/data/professions/crafting/craftingGuide";
 import { CRAFTING_ROUTES } from "@/games/wow-forever/data/professions/crafting/craftingRoutes";
 import { CRAFTING_RANKS } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
 import type { CraftingData } from "@/games/wow-forever/hooks/useCraftingData";
 import { useExcludedSlots, useKnownRecipes, useMatPrices, type MatPrices } from "@/games/wow-forever/hooks/useCraftPrices";
-import { CRAFTING_PROFESSION, type CraftingProfession, type CraftRecipe, type ResolvedRouteEntry } from "@/games/wow-forever/types/crafting";
+import type { CraftingProfession, CraftRecipe, ResolvedRouteEntry } from "@/games/wow-forever/types/crafting";
 
 export interface PricedRouteState {
   /** The route to show — cheapest for your prices, or the default. */
@@ -55,10 +56,11 @@ export function usePricedRoute(profession: CraftingProfession, data: CraftingDat
   const [slotsExcluded, setSlot] = useExcludedSlots();
   const [useDefault, setUseDefault] = useState(false);
   const start = skill ?? 1;
-  // Slots only mean something for enchants; Tailoring never excludes any.
+  const features = CRAFTING_FEATURES[profession];
+  // Slots only mean something for enchants; other professions never exclude any.
   const excludedSlots = useMemo(
-    () => (profession === CRAFTING_PROFESSION.enchanting ? slotsExcluded : new Set<EnchantSlot>()),
-    [profession, slotsExcluded],
+    () => (features.enchantSlots ? slotsExcluded : new Set<EnchantSlot>()),
+    [features.enchantSlots, slotsExcluded],
   );
 
   const ctx = useMemo<CraftContext>(
@@ -76,7 +78,8 @@ export function usePricedRoute(profession: CraftingProfession, data: CraftingDat
   const items = useMemo(() => priceItems(ctx, start, choices), [ctx, start, choices]);
   const formulas = useMemo(() => formulaChoices(ctx, start, choices), [ctx, start, choices]);
   const pricesEntered = [...items.main, ...items.more].filter((i) => prices.prices[String(i.id)] !== undefined).length;
-  const canCompare = pricesEntered > 0;
+  // A profession without prices never compares — prices typed on another guide don't leak in.
+  const canCompare = features.priced && pricesEntered > 0;
 
   const book = useMemo(() => createPriceBook(prices.prices, ctx.file, ctx.professionLabel), [prices.prices, ctx]);
   const defaults = useMemo(() => resolveRoute(ctx.route, ctx.recipes, ctx.trainerSkills), [ctx]);

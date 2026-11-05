@@ -8,8 +8,8 @@ export interface CraftingGuide {
   routeIntro: string;
   /** Under the shopping list. */
   shoppingNote?: string;
-  /** In the prices panel: what isn't asked for because you make it yourself. */
-  pricedFromMaterials: string;
+  /** In the prices panel (professions with prices only): what isn't asked for because you make it yourself. */
+  pricedFromMaterials?: string;
   forever: readonly ForeverChange[];
   /** "Disenchant or sell?" — only for professions that break loot into materials. */
   lootRules?: readonly LootRule[];
@@ -51,6 +51,10 @@ export const CRAFTING_GUIDES: Readonly<Record<CraftingProfession, CraftingGuide>
       },
       {
         text: "Forever adds 180 Tailoring recipes (Stormsewn, Earthenweave, Ghostweave and more). Where their patterns come from isn't known yet.",
+        confidence: "confirmed",
+      },
+      {
+        text: "180 Forever recipes: source not known yet. They're marked \"Source unknown\" — no Classic trainer or vendor is named for them.",
         confidence: "confirmed",
       },
     ],
@@ -107,6 +111,59 @@ export const CRAFTING_GUIDES: Readonly<Record<CraftingProfession, CraftingGuide>
       {
         text: "Forever adds 64 Enchanting recipes (necklace enchants, staves, the Arcane Salvager and more). Where their formulas come from isn't known yet.",
         confidence: "confirmed",
+      },
+      {
+        text: "62 Forever recipes: source not known yet. They're marked \"Source unknown\" — no Classic trainer or vendor is named for them.",
+        confidence: "confirmed",
+      },
+    ],
+  },
+  alchemy: {
+    label: "Alchemy",
+    steps: [
+      {
+        id: "train",
+        title: "Train Alchemy at an alchemy trainer",
+        detail: "Any trainer below teaches Apprentice Alchemy and your first recipes. Alchemy is one of your two main professions.",
+      },
+      {
+        id: "herbs",
+        title: "Pick herbs as you level",
+        detail: "Every recipe on the route takes herbs. Open a material on the route or the shopping list to see where it grows — with directions.",
+      },
+      {
+        id: "vials",
+        title: "Buy vials from an alchemy or trade goods vendor",
+        detail: "Empty, Leaded and Crystal Vials are bought, never farmed. Open one on the shopping list for the nearest vendor.",
+      },
+      {
+        id: "craft",
+        title: "Craft the row for your skill until it turns green",
+        detail: "Open your Alchemy window (press K, or find it in your spellbook) and craft. Type your skill below and the route points at your row.",
+        command: "/cast Alchemy",
+      },
+    ],
+    routeIntro: "Craft each recipe from the first skill to the second, then move to the next row. Every row is a trainer recipe and takes only herbs and vials.",
+    forever: [
+      {
+        text: "Forever adds 71 Alchemy recipes — Discolored Healing Potions, dyes, Sulfuric Acid, Mana Well, an Alchemy Laboratory, Transmute: Legionite and more.",
+        confidence: "confirmed",
+      },
+      {
+        text: "69 Forever recipes: source not known yet. They're marked \"Source unknown\" — no Classic trainer or vendor is named for them.",
+        confidence: "confirmed",
+      },
+      {
+        text: "The Classic healing potions aren't in Forever. Its healing potions are Discolored Healing Potions, and the trainer ones take a Murloc Eye.",
+        confidence: "confirmed",
+      },
+      {
+        text: "Elixir of Minor Defense takes 1 Silverleaf and 1 Peacebloom (Classic: 2 Silverleaf).",
+        confidence: "confirmed",
+      },
+      {
+        text: "The skill each trainer teaches a recipe at is Classic Era's. Forever may move some.",
+        confidence: "unconfirmed",
       },
     ],
   },

@@ -1,7 +1,19 @@
 import type { Confidence } from "@/games/wow-forever/data/professions/professionTypes";
 
-export const CRAFTING_PROFESSION = { tailoring: "tailoring", enchanting: "enchanting" } as const;
+export const CRAFTING_PROFESSION = { tailoring: "tailoring", enchanting: "enchanting", alchemy: "alchemy" } as const;
 export type CraftingProfession = (typeof CRAFTING_PROFESSION)[keyof typeof CRAFTING_PROFESSION];
+
+/** What a crafting guide shows besides the route — differs per profession. */
+export interface CraftingFeatures {
+  /** Type material prices and get the cheapest route. Off = the hand-picked route, no costs anywhere. */
+  priced: boolean;
+  /** Enchanting's "skip enchants for these slots" list. */
+  enchantSlots: boolean;
+  /** List the Transmute recipes under the route. */
+  transmutes: boolean;
+  /** The gathering profession that feeds it, for the "Works well with" card. */
+  worksWith: { name: string; why: string } | null;
+}
 
 export interface CraftReagent {
   id: number;
@@ -76,7 +88,7 @@ export type CraftRouteEntry = CraftRouteStep | CraftRouteOptions;
 /** Where you learn a recipe on the route. */
 export type LearnAt =
   | { kind: "start" }
-  | { kind: "trainer"; skill: number; estimated: boolean }
+  | { kind: "trainer"; skill: number; estimated: boolean; newInForever: boolean }
   | { kind: "item"; skill: number; itemId: number; item: string };
 
 /** Where a shown row came from: picked for your prices, or the hand-written route. */

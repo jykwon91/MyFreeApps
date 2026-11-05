@@ -3,7 +3,7 @@ import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 
 /**
- * Tailoring and Enchanting trainers. Ids, areas and coordinates are the World
+ * Crafting trainers. Ids, areas and coordinates are the World
  * Map's Classic (cmangos) rows — a test checks every one against
  * `classicServices.json`. Who teaches which rank is Classic Era; Forever may differ.
  */
@@ -55,6 +55,30 @@ export const CRAFTING_TRAINERS: Readonly<Record<CraftingProfession, CraftingTrai
     towns: {
       A: [{ name: "Alanna Raveneye", npcId: 3606, where: "The Oracle Glade, Teldrassil", x: 36.7, y: 34.2 }],
       H: [{ name: "Vance Undergloom", npcId: 5695, where: "Brill, Tirisfal Glades", x: 61.8, y: 51.6 }],
+    },
+  },
+  alchemy: {
+    cities: {
+      A: [
+        { city: "Stormwind", npc: { name: "Lilyssia Nightbreeze", npcId: 5499, where: "Stormwind City", x: 55.7, y: 86.1 } },
+        { city: "Ironforge", npc: { name: "Tally Berryfizz", npcId: 5177, where: "Ironforge", x: 66.6, y: 55.7 } },
+        { city: "Darnassus", npc: { name: "Ainethil", npcId: 4160, where: "Darnassus", x: 54.9, y: 24.0 } },
+      ],
+      H: [
+        { city: "Orgrimmar", npc: { name: "Yelmak", npcId: 3347, where: "Orgrimmar", x: 56.8, y: 33.0 } },
+        { city: "Thunder Bluff", npc: { name: "Bena Winterhoof", npcId: 3009, where: "Thunder Bluff", x: 46.6, y: 33.2 } },
+        { city: "Undercity", npc: { name: "Doctor Herbert Halsey", npcId: 4611, where: "Undercity", x: 47.8, y: 73.3 } },
+      ],
+    },
+    towns: {
+      A: [
+        { name: "Cyndra Kindwhisper", npcId: 3603, where: "Dolanaar, Teldrassil", x: 57.6, y: 60.8 },
+        { name: "Ghak Healtouch", npcId: 1470, where: "Thelsamar, Loch Modan", x: 37.1, y: 49.4 },
+      ],
+      H: [
+        { name: "Carolai Anise", npcId: 2132, where: "Brill, Tirisfal Glades", x: 59.4, y: 52.2 },
+        { name: "Miao'zan", npcId: 3184, where: "Sen'jin Village, Durotar", x: 55.4, y: 73.9 },
+      ],
     },
   },
 };
@@ -142,6 +166,38 @@ export const CRAFTING_RANKS: Readonly<Record<CraftingProfession, readonly Crafti
         dungeon: "Uldaman",
         dungeonLink: "/wow-forever/map?npc=classic-i-286",
         detail: "She's past mobs in the low 40s — bring a group or come back at about level 45.",
+      },
+      confidence: "unconfirmed",
+    },
+  ],
+  alchemy: [
+    JOURNEYMAN,
+    {
+      skill: 125,
+      name: "Expert",
+      level: 20,
+      cap: 225,
+      trainers: {
+        kind: "named",
+        trainers: {
+          A: { name: "Ainethil", npcId: 4160, where: "Darnassus", x: 54.9, y: 24.0 },
+          H: { name: "Doctor Herbert Halsey", npcId: 4611, where: "Undercity", x: 47.8, y: 73.3 },
+        },
+      },
+      headsUp: "Artisan (at 200) is trained far away — Sardor Isle in Feralas for Alliance, Stonard in Swamp of Sorrows for Horde.",
+      confidence: "unconfirmed",
+    },
+    {
+      skill: 200,
+      name: "Artisan",
+      level: 35,
+      cap: 300,
+      trainers: {
+        kind: "named",
+        trainers: {
+          A: { name: "Kylanna Windwhisper", npcId: 7948, where: "Sardor Isle, Feralas", x: 32.6, y: 43.8 },
+          H: { name: "Rogvar", npcId: 1386, where: "Stonard, Swamp of Sorrows", x: 48.5, y: 55.8 },
+        },
       },
       confidence: "unconfirmed",
     },

@@ -1,10 +1,10 @@
-"""Build the WoW Forever Tailoring and Enchanting leveling guide data.
+"""Build the WoW Forever crafting leveling guide data (Tailoring, Enchanting, Alchemy).
 
     python -m scripts.wow_professions.build
 
 Writes, under ``frontend/src/games/wow-forever/data/professions/crafting/``:
 
-* ``tailoring.json`` / ``enchanting.json`` — every recipe in the Forever beta
+* ``tailoring.json`` / ``enchanting.json`` / ``alchemy.json`` — every recipe in the Forever beta
   client: yellow / grey skill, reagents, what it makes (and whether that can
   be disenchanted), how it is learned, and what Forever changed against the
   Classic Era client. Game data © Blizzard Entertainment.
@@ -33,6 +33,7 @@ from scripts.wow_food.build import (
 from scripts.wow_food.recipe_sources import MOB_COLUMNS, VENDOR_COLUMNS, ClassicSources, territory_of
 from scripts.wow_professions.crafts import (
     ACQUIRE_ON_SKILL_LEARN,
+    ALCHEMY_SKILL_LINE,
     EFFECT_CREATE_ITEM,
     EFFECT_ENCHANT_ITEM,
     EFFECT_LEARN_SPELL,
@@ -60,7 +61,11 @@ from scripts.wow_world_map.zones import load_zones
 
 DATA_DIR = WOW_DATA_DIR / "professions" / "crafting"
 CLASSIC_DIR = DATA_DIR / "classic"
-PROFESSIONS = {"tailoring": TAILORING_SKILL_LINE, "enchanting": ENCHANTING_SKILL_LINE}
+PROFESSIONS = {
+    "tailoring": TAILORING_SKILL_LINE,
+    "enchanting": ENCHANTING_SKILL_LINE,
+    "alchemy": ALCHEMY_SKILL_LINE,
+}
 # Professions whose recipes make reagents another profession uses ("made by Blacksmithing").
 CRAFTING_SKILL_LINES = {
     164: "Blacksmithing", 165: "Leatherworking", 171: "Alchemy", 185: "Cooking", 186: "Mining",
