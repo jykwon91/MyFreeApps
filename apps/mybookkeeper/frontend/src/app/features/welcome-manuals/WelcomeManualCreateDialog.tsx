@@ -8,7 +8,7 @@ import { useCreateWelcomeManualMutation } from "@/shared/store/welcomeManualsApi
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { WelcomeManualCreateFormValues } from "@/shared/types/welcome-manual/welcome-manual-create-form-values";
 import type { WelcomeManualCreateRequest } from "@/shared/types/welcome-manual/welcome-manual-create-request";
-import type { WelcomeManualResponse } from "@/shared/types/welcome-manual/welcome-manual-response";
+import type { WelcomeManualResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-response";
 
 export interface WelcomeManualCreateDialogProps {
   properties: readonly Property[];

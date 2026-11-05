@@ -4,7 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, X } from "lucide-react";
 import { reportMissingStorageObject } from "@/shared/lib/storage-observability";
 import { SECTION_IMAGE_STORAGE_DOMAIN } from "@/shared/lib/welcome-manual-constants";
-import type { WelcomeManualSectionImageResponse } from "@/shared/types/welcome-manual/welcome-manual-section-image-response";
+import type { WelcomeManualSectionImageResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-image-response";
 
 export interface WelcomeManualSectionImageCardProps {
   image: WelcomeManualSectionImageResponse;

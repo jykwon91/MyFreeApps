@@ -27,7 +27,7 @@ import {
   useDeleteSectionFieldMutation,
   useUpdateSectionFieldMutation,
 } from "@/shared/store/welcomeManualsApi";
-import type { WelcomeManualSectionFieldResponse } from "@/shared/types/welcome-manual/welcome-manual-section-field-response";
+import type { WelcomeManualSectionFieldResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-field-response";
 import WelcomeManualSectionFieldCard from "./WelcomeManualSectionFieldCard";
 
 export interface WelcomeManualSectionFieldManagerProps {

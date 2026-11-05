@@ -114,6 +114,6 @@ routes:
   /verify-email:
     not_on_mobile: Done on the website, which the sign-in screen links to.
   /welcome-manuals:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/welcome-manuals/index
   /welcome-manuals/:manualId:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/welcome-manuals/[id]

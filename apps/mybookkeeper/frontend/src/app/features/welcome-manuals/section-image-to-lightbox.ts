@@ -1,5 +1,5 @@
 import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
-import type { WelcomeManualSectionImageResponse } from "@/shared/types/welcome-manual/welcome-manual-section-image-response";
+import type { WelcomeManualSectionImageResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-image-response";
 
 /**
  * Adapt a section image to the shape `PhotoLightbox` consumes. The lightbox

@@ -12,7 +12,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import WelcomeManualCreateDialog from "@/app/features/welcome-manuals/WelcomeManualCreateDialog";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
-import type { WelcomeManualResponse } from "@/shared/types/welcome-manual/welcome-manual-response";
+import type { WelcomeManualResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-response";
 
 const createMutationMock = vi.fn();
 

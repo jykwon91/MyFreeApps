@@ -1,7 +1,7 @@
 import { LoadingButton } from "@platform/ui";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import type { WelcomeManualsListMode } from "@/shared/types/welcome-manual/welcome-manuals-list-mode";
-import type { WelcomeManualSummary } from "@/shared/types/welcome-manual/welcome-manual-summary";
+import type { WelcomeManualSummary } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-summary";
 import WelcomeManualsSkeleton from "./WelcomeManualsSkeleton";
 import WelcomeManualCard from "./WelcomeManualCard";
 import WelcomeManualTableRow from "./WelcomeManualTableRow";

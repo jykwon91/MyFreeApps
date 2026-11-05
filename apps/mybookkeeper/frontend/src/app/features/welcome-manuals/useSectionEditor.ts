@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useUpdateSectionMutation } from "@/shared/store/welcomeManualsApi";
 import type { SectionEditorValues } from "@/shared/types/welcome-manual/section-editor-values";
-import type { WelcomeManualSectionResponse } from "@/shared/types/welcome-manual/welcome-manual-section-response";
+import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
 import type { WelcomeManualSectionUpdateRequest } from "@/shared/types/welcome-manual/welcome-manual-section-update-request";
 
 function valuesToUpdateRequest(
