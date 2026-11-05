@@ -3,7 +3,6 @@ import { getYear } from "date-fns";
 import { FileText } from "lucide-react";
 import { useGetTaxCompletenessQuery } from "@/shared/store/taxCompletenessApi";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import { Button } from "@platform/ui";
 import ReviewSummary from "@/app/features/tax-review/ReviewSummary";
 import FormCompletenessCard from "@/app/features/tax-review/FormCompletenessCard";
 import TaxReviewSkeleton from "@/app/features/tax-review/TaxReviewSkeleton";
@@ -58,7 +57,7 @@ export default function TaxReview() {
             ))}
           </section>
 
-          <div className="flex items-center justify-between gap-4 pt-2 border-t">
+          <div className="pt-2 border-t">
             <Link
               to="/tax-returns"
               className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
@@ -66,9 +65,6 @@ export default function TaxReview() {
               <FileText className="h-4 w-4" />
               View Full Tax Return
             </Link>
-            <Button variant="primary" size="sm">
-              Looks good
-            </Button>
           </div>
         </div>
       )}
