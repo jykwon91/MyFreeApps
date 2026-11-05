@@ -52,7 +52,7 @@ export default function InquiriesScreen({
     setListThatFailedToLoadMore(result.isError ? listKey : null);
   }
 
-  const emptyList = isFetching ? (
+  const emptyList = !currentData && isFetching ? (
     <InquiriesSkeleton />
   ) : error ? (
     <EmptyState action={{ label: "Try again", onPress: refresh }} body="Want me to try again?" heading="I couldn't load your inquiries." />

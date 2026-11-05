@@ -23,7 +23,7 @@ export default function PoliciesScreen() {
   const rows = useMemo(() => sortedPolicies(currentData?.items ?? [], todayIso), [currentData, todayIso]);
   const openWebsite = () => void openLink(`${WEB_BASE_URL}/insurance-policies`);
 
-  const emptyList = isFetching ? (
+  const emptyList = !currentData && isFetching ? (
     <PoliciesSkeleton />
   ) : error ? (
     <EmptyState

@@ -90,7 +90,7 @@ export default function TransactionsScreen({
     );
   }
 
-  const emptyList = isFetching ? (
+  const emptyList = !currentData && isFetching ? (
     <TransactionsSkeleton />
   ) : error ? (
     <EmptyState

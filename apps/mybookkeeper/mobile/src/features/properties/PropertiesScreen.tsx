@@ -20,7 +20,7 @@ export default function PropertiesScreen() {
   const waiting = properties.filter(needsClassification).length;
   const openWebsite = () => void openLink(`${WEB_BASE_URL}/properties`);
 
-  const emptyList = isFetching ? (
+  const emptyList = !currentData && isFetching ? (
     <PropertiesSkeleton />
   ) : error ? (
     <EmptyState

@@ -21,7 +21,7 @@ export default function MortgagesScreen() {
   const rows = useMemo(() => sortedMortgages(currentData?.items ?? []), [currentData]);
   const openWebsite = () => void openLink(`${WEB_BASE_URL}/mortgages`);
 
-  const emptyList = isFetching ? (
+  const emptyList = !currentData && isFetching ? (
     <MortgagesSkeleton />
   ) : error ? (
     <EmptyState

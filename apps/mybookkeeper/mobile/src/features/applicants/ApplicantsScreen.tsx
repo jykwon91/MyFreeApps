@@ -47,7 +47,7 @@ export default function ApplicantsScreen({
     setListThatFailedToLoadMore(result.isError ? listKey : null);
   }
 
-  const emptyList = isFetching ? (
+  const emptyList = !currentData && isFetching ? (
     <ApplicantsSkeleton />
   ) : error ? (
     <EmptyState action={{ label: "Try again", onPress: refresh }} body="Want me to try again?" heading="I couldn't load your applicants." />

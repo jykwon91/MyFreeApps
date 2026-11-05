@@ -22,7 +22,7 @@ export default function WelcomeManualsScreen() {
   const rows = currentData?.items ?? [];
   const openWebsite = () => void openLink(`${WEB_BASE_URL}/welcome-manuals`);
 
-  const emptyList = isFetching ? (
+  const emptyList = !currentData && isFetching ? (
     <WelcomeManualsSkeleton />
   ) : error ? (
     <EmptyState
