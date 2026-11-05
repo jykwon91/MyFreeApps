@@ -16,14 +16,3 @@ export function addFailureMessage(error: unknown): string {
       return MESSAGES.addFailed;
   }
 }
-
-export function compareFailureMessage(error: unknown): string {
-  switch (httpStatus(error)) {
-    case undefined:
-      return MESSAGES.compareUnreachable;
-    case 403:
-      return MESSAGES.viewerRefused;
-    default:
-      return MESSAGES.compareFailed;
-  }
-}

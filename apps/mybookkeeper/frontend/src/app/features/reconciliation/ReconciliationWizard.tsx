@@ -12,6 +12,7 @@ import { LoadingButton } from "@platform/ui";
 import Card from "@/shared/components/ui/Card";
 import { useReconciliationSourcesMode } from "./useReconciliationSourcesMode";
 import { useReconciliationDiscrepanciesMode } from "./useReconciliationDiscrepanciesMode";
+import { useCompareWithRecords } from "./useCompareWithRecords";
 import ReconciliationSourcesBody from "./ReconciliationSourcesBody";
 import ReconciliationDiscrepanciesBody from "./ReconciliationDiscrepanciesBody";
 
@@ -27,18 +28,23 @@ export default function ReconciliationWizard({ onToast, canWrite = true }: Recon
   const [step, setStep] = useState(0);
 
   const [upload1099, { isLoading: isUploading }] = useUpload1099Mutation();
-  const { data: sources = [], isLoading: sourcesLoading } = useListSourcesQuery({ tax_year: taxYear });
-  const { data: discrepancies = [], isLoading: discrepanciesLoading } = useGetDiscrepanciesQuery(
+  const { currentData: currentSources, isFetching: sourcesFetching } = useListSourcesQuery({ tax_year: taxYear });
+  const { currentData: currentDiscrepancies, isFetching: discrepanciesFetching } = useGetDiscrepanciesQuery(
     { tax_year: taxYear },
     { skip: step < 2 },
   );
+  const sources = currentSources ?? [];
+  const discrepancies = currentDiscrepancies ?? [];
+  const sourcesLoading = sourcesFetching && !currentSources;
+  const discrepanciesLoading = discrepanciesFetching && !currentDiscrepancies;
+  const { compare, isComparing } = useCompareWithRecords(taxYear, onToast);
 
   const [sourceType, setSourceType] = useState("1099_k");
   const [issuer, setIssuer] = useState("");
   const [reportedAmount, setReportedAmount] = useState("");
 
   const sourcesMode = useReconciliationSourcesMode({ isLoading: sourcesLoading, sources });
-  const discrepanciesMode = useReconciliationDiscrepanciesMode({ isLoading: discrepanciesLoading, count: discrepancies.length });
+  const discrepanciesMode = useReconciliationDiscrepanciesMode({ isLoading: discrepanciesLoading || sourcesLoading, count: discrepancies.length });
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
@@ -62,7 +68,12 @@ export default function ReconciliationWizard({ onToast, canWrite = true }: Recon
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 mb-6">
-        <Select value={taxYear} onChange={(e) => setTaxYear(Number(e.target.value))} className="text-xs py-1.5">
+        <Select
+          value={taxYear}
+          onChange={(e) => setTaxYear(Number(e.target.value))}
+          disabled={isComparing}
+          className="text-xs py-1.5"
+        >
           {[currentYear - 1, currentYear - 2, currentYear - 3].map((y) => (
             <option key={y} value={y}>{y}</option>
           ))}
@@ -156,6 +167,9 @@ export default function ReconciliationWizard({ onToast, canWrite = true }: Recon
             sources={sources}
             onUploadStep={() => setStep(0)}
             onNext={() => setStep(2)}
+            canWrite={canWrite}
+            isComparing={isComparing}
+            onCompare={compare}
           />
         </Card>
       )}
@@ -165,6 +179,7 @@ export default function ReconciliationWizard({ onToast, canWrite = true }: Recon
           <ReconciliationDiscrepanciesBody
             mode={discrepanciesMode}
             discrepancies={discrepancies}
+            hasSources={sources.length > 0}
           />
         </Card>
       )}

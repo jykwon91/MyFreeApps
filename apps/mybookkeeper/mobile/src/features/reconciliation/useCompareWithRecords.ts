@@ -1,8 +1,7 @@
 import { useAutoReconcileMutation } from "@mybookkeeper/api-client/store/reconciliationApi";
+import { compareFailureMessage, compareResultMessage } from "@mybookkeeper/api-client/utils/reconciliationCompare";
 import { useToast } from "@platform/mobile";
 import { useRef } from "react";
-import { compareResultMessage } from "./reconciliationDisplay";
-import { compareFailureMessage } from "./reconciliationFailure";
 
 export function useCompareWithRecords(year: number) {
   const { showToast } = useToast();

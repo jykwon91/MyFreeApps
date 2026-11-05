@@ -1,10 +1,11 @@
 import type { ReconciliationSource } from "@mybookkeeper/api-client/types/reconciliation/reconciliation-source";
+import { hasBeenCompared } from "@mybookkeeper/api-client/utils/reconciliationCompare";
 import { formatCurrency } from "@platform/core/utils/currency";
 import { useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { RECONCILIATION_MESSAGES as MESSAGES } from "../../constants/reconciliation";
 import InquiryChip from "../inquiries/InquiryChip";
-import { differenceLine, hasBeenCompared, rowLabel, sourceTitle, statusWord } from "./reconciliationDisplay";
+import { differenceLine, rowLabel, sourceTitle, statusWord } from "./reconciliationDisplay";
 
 export default function ReconciliationRow({ source }: { source: ReconciliationSource }) {
   const { colors, spacing, fontSize } = useTheme();

@@ -5,15 +5,18 @@ import type { ReconciliationSource } from "@mybookkeeper/api-client/types/reconc
 import type { ReconciliationDiscrepanciesMode } from "@/shared/types/reconciliation/reconciliation-discrepancies-mode";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import Skeleton from "@/shared/components/ui/Skeleton";
+import { comparedAmounts } from "./comparedAmounts";
 
 export interface ReconciliationDiscrepanciesBodyProps {
   mode: ReconciliationDiscrepanciesMode;
   discrepancies: readonly ReconciliationSource[];
+  hasSources: boolean;
 }
 
 export default function ReconciliationDiscrepanciesBody({
   mode,
   discrepancies,
+  hasSources,
 }: ReconciliationDiscrepanciesBodyProps) {
   switch (mode) {
     case "loading":
@@ -25,14 +28,16 @@ export default function ReconciliationDiscrepanciesBody({
         </div>
       );
     case "empty":
-      return <EmptyState message="No discrepancies found. Everything matches!" />;
+      return <EmptyState message={hasSources ? "No discrepancies found. Everything matches!" : "No 1099 sources for this year yet."} />;
     case "list":
       return (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            These sources have discrepancies between reported and matched amounts. Review and resolve them below.
+            These sources don't match your records yet. A dash means I don't have a total from your records for that form.
           </p>
-          {discrepancies.map((d) => (
+          {discrepancies.map((d) => {
+            const amounts = comparedAmounts(d);
+            return (
             <div key={d.id} className="border rounded-lg p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <div>
@@ -50,17 +55,18 @@ export default function ReconciliationDiscrepanciesBody({
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">Reservation Total</p>
-                  <p className="font-medium">{formatCurrency(d.matched_amount)}</p>
+                  <p className="font-medium">{amounts.recordsTotal}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">Discrepancy</p>
-                  <p className={`font-medium ${parseFloat(d.discrepancy) === 0 ? "text-green-600" : "text-amber-600"}`}>
-                    {formatCurrency(d.discrepancy)}
+                  <p className={`font-medium ${amounts.discrepancyClass}`}>
+                    {amounts.discrepancy}
                   </p>
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       );
   }
