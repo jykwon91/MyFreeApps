@@ -23,7 +23,7 @@ export default function UtilityPlansScreen() {
   const rows = useMemo(() => sortedPlans(currentData?.items ?? [], todayIso), [currentData, todayIso]);
   const openWebsite = () => void openLink(`${WEB_BASE_URL}/utility-plans`);
 
-  const emptyList = isFetching ? (
+  const emptyList = !currentData && isFetching ? (
     <UtilityPlansSkeleton />
   ) : error ? (
     <EmptyState

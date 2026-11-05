@@ -186,6 +186,18 @@ describe("WelcomeManualsScreen", () => {
     expect(openURL).toHaveBeenCalledWith(`${WEB_BASE_URL}/welcome-manuals`);
   });
 
+  it("keeps saying there are none during a reload", async () => {
+    const server = startServer(aPage([]));
+    await show(<WelcomeManualsScreen />);
+    await screen.findByText(WELCOME_MANUAL_MESSAGES.noneHeading);
+    server.list = "hold";
+    await act(async () => {
+      void screen.getByTestId("welcome-manuals-list").props.refreshControl.props.onRefresh();
+    });
+    expect(screen.getByText(WELCOME_MANUAL_MESSAGES.noneHeading)).toBeTruthy();
+    expect(screen.queryByTestId("welcome-manuals-skeleton")).toBeNull();
+  });
+
   it("offers a retry when the first load fails, and recovers", async () => {
     const server = startServer("fail");
     await show(<WelcomeManualsScreen />);

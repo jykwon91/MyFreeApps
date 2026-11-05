@@ -11,6 +11,7 @@ import { Linking, Platform } from "react-native";
 import { Provider } from "react-redux";
 import { WEB_BASE_URL } from "../src/constants/api";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
+import { VENDOR_MESSAGES } from "../src/constants/vendors";
 import { directionsUrl } from "../src/features/vendors/vendorDisplay";
 import VendorDetailScreen from "../src/features/vendors/VendorDetailScreen";
 import VendorsScreen from "../src/features/vendors/VendorsScreen";
@@ -166,6 +167,18 @@ describe("VendorsScreen", () => {
     await screen.findByText("You don't have any vendors yet.");
     await fireEvent.press(screen.getByRole("button", { name: "Open on the website" }));
     expect(openURL).toHaveBeenCalledWith(`${WEB_BASE_URL}/vendors`);
+  });
+
+  it("keeps saying there are none during a reload", async () => {
+    const server = startServer(aPage([]));
+    await show(<VendorsScreen />);
+    await screen.findByText(VENDOR_MESSAGES.noneHeading);
+    server.list = "hold";
+    await act(async () => {
+      void screen.getByTestId("vendors-list").props.refreshControl.props.onRefresh();
+    });
+    expect(screen.getByText(VENDOR_MESSAGES.noneHeading)).toBeTruthy();
+    expect(screen.queryByTestId("vendors-skeleton")).toBeNull();
   });
 
   it("offers a retry when the first load fails, and recovers", async () => {

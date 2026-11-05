@@ -44,7 +44,7 @@ export default function VendorsScreen() {
     setListThatFailedToLoadMore(result.isError ? listKey : null);
   }
 
-  const emptyList = isFetching ? (
+  const emptyList = !currentData && isFetching ? (
     <VendorsSkeleton />
   ) : error ? (
     <EmptyState

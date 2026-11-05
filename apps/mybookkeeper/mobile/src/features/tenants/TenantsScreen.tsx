@@ -37,7 +37,7 @@ export default function TenantsScreen({
     setFilterThatFailedToLoadMore(result.isError ? filter : null);
   }
 
-  const emptyList = isFetching ? (
+  const emptyList = !currentData && isFetching ? (
     <ApplicantsSkeleton label={TENANT_MESSAGES.loading} />
   ) : error ? (
     <EmptyState action={{ label: TENANT_MESSAGES.tryAgain, onPress: refresh }} body={TENANT_MESSAGES.wantRetry} heading={TENANT_MESSAGES.couldntLoad} />

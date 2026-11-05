@@ -45,7 +45,7 @@ export default function ListingsScreen() {
     setListThatFailedToLoadMore(result.isError ? listKey : null);
   }
 
-  const emptyList = isFetching ? (
+  const emptyList = !currentData && isFetching ? (
     <ListingsSkeleton />
   ) : error ? (
     <EmptyState
