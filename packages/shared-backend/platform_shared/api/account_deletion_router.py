@@ -23,12 +23,9 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi_users.password import PasswordHelper
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from platform_shared.core.auth_messages import RATE_LIMIT_GENERIC_DETAIL
+from platform_shared.auth.refuse_as_locked import refuse_as_locked
 from platform_shared.schemas.account import DeleteAccountRequest
-from platform_shared.services.account_lockout import (
-    emit_locked_login_event,
-    is_locked as account_is_locked,
-)
+from platform_shared.services.account_lockout import is_locked as account_is_locked
 from platform_shared.services.account_deletion import (
     AccountDeletionBlockedError,
     delete_account,
@@ -93,13 +90,8 @@ def build_account_deletion_router(
         - Email address matching the account (typed confirmation)
         - TOTP code if 2FA is enabled
         """
-        async def refuse_as_locked() -> None:
-            await emit_locked_login_event(db=db, user_id=current_user.id, request=request)
-            await db.commit()
-            raise HTTPException(status_code=429, detail=RATE_LIMIT_GENERIC_DETAIL)
-
         if account_is_locked(current_user, now=datetime.now(tz=timezone.utc)):
-            await refuse_as_locked()
+            await refuse_as_locked(db, current_user.id, request)
         await user_manager.reset_stale_failed_logins(current_user)
 
         # Re-verify password to prevent CSRF and accidental deletion.
@@ -110,7 +102,7 @@ def build_account_deletion_router(
         # Asked whichever way the guess went, so once locked a right guess
         # and a wrong one get the same answer.
         if await user_manager.is_locked_now(current_user):
-            await refuse_as_locked()
+            await refuse_as_locked(db, current_user.id, request)
         if not verified:
             await user_manager.count_failed_password(current_user)
             raise HTTPException(status_code=403, detail="Incorrect password")
@@ -130,7 +122,7 @@ def build_account_deletion_router(
                 raise HTTPException(status_code=400, detail="TOTP_CODE_REQUIRED")
             code_ok = await verify_totp_step_up(db, current_user.id, body.totp_code)
             if await user_manager.is_locked_now(current_user):
-                await refuse_as_locked()
+                await refuse_as_locked(db, current_user.id, request)
             if not code_ok:
                 await user_manager.count_failed_second_factor(current_user)
                 raise HTTPException(status_code=403, detail="Invalid TOTP code")

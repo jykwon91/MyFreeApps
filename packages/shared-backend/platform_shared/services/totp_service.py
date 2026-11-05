@@ -63,6 +63,11 @@ from cryptography.fernet import Fernet
 # tests) can reference the production value without magic numbers.
 VERIFY_WINDOW: Final[int] = 1
 
+# pyotp's defaults, which every code here uses. Named for telling people who
+# type the key into an authenticator app by hand.
+TOTP_DIGITS: Final[int] = 6
+TOTP_PERIOD_SECONDS: Final[int] = 30
+
 # 8 alphanumeric (hex) recovery codes, 8 chars each. Format must NOT change
 # without a data migration — production users have these stored on their
 # user row; changing the format invalidates every existing code.

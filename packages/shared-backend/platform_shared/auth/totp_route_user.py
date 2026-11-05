@@ -2,8 +2,10 @@
 import uuid
 from typing import Protocol
 
+from platform_shared.services.account_lockout import LockoutAccount
 
-class TotpRouteUser(Protocol):
+
+class TotpRouteUser(LockoutAccount, Protocol):
     id: uuid.UUID
     email: str
     is_active: bool
