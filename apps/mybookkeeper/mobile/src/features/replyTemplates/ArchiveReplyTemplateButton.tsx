@@ -3,6 +3,7 @@ import { LoadingButton, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { archiveTemplateTitle, REPLY_TEMPLATE_MESSAGES as MESSAGES } from "../../constants/replyTemplates";
 import { askOnce } from "../leases/askOnce";
+import { checkStillListed } from "./checkStillListed";
 import { archiveFailure } from "./replyTemplateFailure";
 import { leaveToList } from "./replyTemplateNavigation";
 
@@ -32,11 +33,10 @@ export default function ArchiveReplyTemplateButton({ id, name, onArchived }: Arc
     void refetch();
   }
 
-  /** The server commits before it answers, so a lost answer doesn't mean nothing happened. */
   async function checkWhatHappened(): Promise<void> {
-    const latest = await refetch();
-    if (!latest.isSuccess) showToast(MESSAGES.archiveUnsure, "error");
-    else if (latest.data.some((template) => template.id === id)) showToast(MESSAGES.archiveUnreachable, "error");
+    const check = await checkStillListed(refetch, id);
+    if (check === "unsure") showToast(MESSAGES.archiveUnsure, "error");
+    else if (check === "stillListed") showToast(MESSAGES.archiveUnreachable, "error");
     else finish();
   }
 

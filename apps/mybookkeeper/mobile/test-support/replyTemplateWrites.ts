@@ -6,7 +6,7 @@ type Respond = (data: unknown, status?: number) => Promise<AxiosResponse>;
 type Committed = { data: unknown; status: number };
 
 function nameIsTaken(server: FakeInquiryServer, name: string, ownId?: string): boolean {
-  return server.archivedTemplateNames.includes(name) || server.templates.some((row) => row.name === name && row.id !== ownId);
+  return [...server.templates, ...server.archivedTemplates].some((row) => row.name === name && row.id !== ownId);
 }
 
 function commit(config: AxiosRequestConfig, server: FakeInquiryServer): Committed {
@@ -16,7 +16,7 @@ function commit(config: AxiosRequestConfig, server: FakeInquiryServer): Committe
     if (sent.name && nameIsTaken(server, sent.name)) return { data: { detail: "A template with this name already exists" }, status: 409 };
     const now = new Date().toISOString();
     const row: Partial<ReplyTemplate> = {
-      id: `made${server.templates.length + server.archivedTemplateNames.length + 1}`,
+      id: `made${server.templates.length + server.archivedTemplates.length + 1}`,
       organization_id: "o",
       user_id: "u",
       is_archived: false,
@@ -28,19 +28,28 @@ function commit(config: AxiosRequestConfig, server: FakeInquiryServer): Committe
     server.templates.push(row);
     return { data: row, status: 201 };
   }
+  const archived = server.archivedTemplates.find((candidate) => candidate.id === id);
+  // An archived template can only be restored; anything else treats it as gone.
+  if (archived && config.method === "patch" && sent.is_archived === false) {
+    Object.assign(archived, sent);
+    server.archivedTemplates = server.archivedTemplates.filter((candidate) => candidate !== archived);
+    server.templates.push(archived);
+    return { data: archived, status: 200 };
+  }
   const row = server.templates.find((candidate) => candidate.id === id);
   if (!row) return { data: { detail: "Reply template not found" }, status: 404 };
-  if (config.method === "delete") {
+  if (config.method === "delete" || sent.is_archived === true) {
     server.templates = server.templates.filter((candidate) => candidate !== row);
-    if (row.name) server.archivedTemplateNames.push(row.name);
-    return { data: undefined, status: 204 };
+    Object.assign(row, sent, { is_archived: true });
+    server.archivedTemplates.push(row);
+    return config.method === "delete" ? { data: undefined, status: 204 } : { data: row, status: 200 };
   }
   if (sent.name && nameIsTaken(server, sent.name, id)) return { data: { detail: "A template with this name already exists" }, status: 409 };
   Object.assign(row, sent);
   return { data: row, status: 200 };
 }
 
-/** Answers a create, change or archive of a reply template, like the server does. */
+/** Answers a create, change, archive or restore of a reply template, like the server does. */
 export function answerTemplateWrite(config: AxiosRequestConfig, server: FakeInquiryServer, respond: Respond): Promise<AxiosResponse> {
   const lost = () => Promise.reject(Object.assign(new Error("Network Error"), { config }));
   if (server.role === "viewer") return respond({ detail: "nope" }, 403);

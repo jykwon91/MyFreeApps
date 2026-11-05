@@ -135,7 +135,7 @@ describe("making a template", () => {
 
   it("says so beside the name when the server finds it taken, and never shows the server's words", async () => {
     const server = serverWith([]);
-    server.archivedTemplateNames = ["Old one"];
+    server.archivedTemplates = [aReplyTemplate({ id: "old", name: "Old one", is_archived: true })];
     await showCreate();
     await fill("Old one");
     await fireEvent.press(saveButton());
@@ -450,7 +450,7 @@ describe("changing a template", () => {
 
   it("says a rename to an archived template's name is taken", async () => {
     const server = serverWith();
-    server.archivedTemplateNames = ["Gone"];
+    server.archivedTemplates = [aReplyTemplate({ id: "gone", name: "Gone", is_archived: true })];
     await showEdit();
     await fireEvent.changeText(nameInput(), "Gone");
     await fireEvent.press(saveButton(MESSAGES.saveChanges));

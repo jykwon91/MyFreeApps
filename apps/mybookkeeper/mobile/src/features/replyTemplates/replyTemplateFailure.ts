@@ -25,6 +25,12 @@ export function archiveFailure(error: unknown): ReplyTemplateFailure {
   return failure === "nameTaken" || failure === "serverError" ? "other" : failure;
 }
 
+/** A restore can't clash on its name, and a 5xx may follow a restore that went through. */
+export function restoreFailure(error: unknown): ReplyTemplateFailure {
+  const failure = saveFailure(error);
+  return failure === "nameTaken" ? "other" : failure;
+}
+
 /** The banner for a failure, or null when it shows somewhere else. */
 export function saveBanner(failure: ReplyTemplateFailure): string | null {
   switch (failure) {

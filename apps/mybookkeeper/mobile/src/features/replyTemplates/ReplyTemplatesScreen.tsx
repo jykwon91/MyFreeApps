@@ -5,6 +5,7 @@ import { FlatList, View } from "react-native";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { REPLY_TEMPLATE_MESSAGES } from "../../constants/replyTemplates";
 import { useCanWrite } from "../workspace/useCanWrite";
+import ArchivedTemplatesLink from "./ArchivedTemplatesLink";
 import ReplyTemplateRow from "./ReplyTemplateRow";
 import ReplyTemplatesSkeleton from "./ReplyTemplatesSkeleton";
 
@@ -38,6 +39,8 @@ export default function ReplyTemplatesScreen() {
   return (
     <FlatList
       ListEmptyComponent={emptyList}
+      // Not while it first loads or can't load: the way back to a template shouldn't hang below a failure.
+      ListFooterComponent={currentData ? <ArchivedTemplatesLink /> : undefined}
       ListHeaderComponent={
         showsBanner || canWrite ? (
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
