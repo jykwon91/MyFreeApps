@@ -11,6 +11,8 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import AsyncSessionLocal, unit_of_work
+from app.mappers.pending_receipt_mapper import to_pending_receipt_response
+from app.repositories import integration_repo
 from app.repositories.applicants import applicant_repo
 from app.repositories.leases import (
     pending_rent_receipt_repo,
@@ -18,6 +20,7 @@ from app.repositories.leases import (
 from app.repositories.transactions import transaction_repo
 from app.repositories.user import user_repo
 from app.repositories.inquiries import inquiry_repo
+from app.schemas.leases.receipt_response import PendingReceiptListResponse
 from app.services.leases.exceptions import (
     ReceiptSendInProgressError,
     ReceiptTransactionNotAttributedError,
@@ -28,6 +31,12 @@ from app.services.leases.receipt_formatting import (
 )
 from app.services.leases.receipt_pdf_service import ReceiptData, generate_receipt_pdf
 from app.services.leases.receipt_period_resolver import resolve_lease_and_period
+from app.services.leases.receipt_send_readiness import (
+    blocker_error,
+    receipt_gmail_state,
+    receipt_send_blocker,
+    resolve_tenant_email,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -108,21 +117,41 @@ async def create_pending_receipt_from_attribution(
         )
 
 
-async def count_pending_receipts(organization_id: uuid.UUID) -> int:
-    async with AsyncSessionLocal() as db:
-        return await pending_rent_receipt_repo.count_open(db, organization_id)
-
-
-async def list_pending_receipts(
+async def get_pending_receipt_list(
     *,
     organization_id: uuid.UUID,
+    user_id: uuid.UUID,
     limit: int = 100,
     offset: int = 0,
-) -> list:
+) -> PendingReceiptListResponse:
+    """Open receipts, each with what a send would refuse, plus the Gmail state."""
     async with AsyncSessionLocal() as db:
-        return list(await pending_rent_receipt_repo.list_open(
-            db, organization_id, limit=limit, offset=offset,
-        ))
+        rows = await pending_rent_receipt_repo.list_open(
+            db, organization_id, user_id, limit=limit, offset=offset,
+        )
+        pending_count = await pending_rent_receipt_repo.count_open(db, organization_id)
+        integration = await integration_repo.get_by_org_and_provider(
+            db, organization_id, "gmail",
+        )
+    items = [
+        to_pending_receipt_response(
+            row,
+            receipt_send_blocker(
+                attributed=row.attributed,
+                tenant_owner_id=row.tenant_owner_id,
+                requester_id=user_id,
+                tenant_email=resolve_tenant_email(row.contact_email, row.inquirer_email),
+                has_lease=row.has_lease,
+            ),
+        )
+        for row in rows
+    ]
+    return PendingReceiptListResponse(
+        items=items,
+        total=pending_count,
+        pending_count=pending_count,
+        gmail_state=receipt_gmail_state(integration),
+    )
 
 
 async def dismiss_pending_receipt(
@@ -179,13 +208,18 @@ async def preview_receipt_pdf(
             user_id=user_id,
         )
         if applicant is None:
+            owner_id = await applicant_repo.get_live_owner_id(
+                db, applicant_id=txn.applicant_id, organization_id=organization_id,
+            )
+            if owner_id is not None:
+                raise blocker_error("tenant_of_other_member")
             raise LookupError(f"Applicant {txn.applicant_id} not found")
 
-        tenant_email: str | None = None
+        inquirer_email: str | None = None
         if applicant.inquiry_id is not None:
             inq = await inquiry_repo.get_by_id(db, applicant.inquiry_id, organization_id)
             if inq is not None:
-                tenant_email = inq.inquirer_email
+                inquirer_email = inq.inquirer_email
 
         property_address, _ = await resolve_property_address(
             db,
@@ -201,7 +235,7 @@ async def preview_receipt_pdf(
         receipt_number="R-PREVIEW",
         receipt_date=_dt.date.today(),
         payer_name=applicant.legal_name or "Tenant",
-        payer_email=tenant_email,
+        payer_email=resolve_tenant_email(applicant.contact_email, inquirer_email),
         landlord_name=landlord_name,
         property_address=property_address,
         period_start=period_start,

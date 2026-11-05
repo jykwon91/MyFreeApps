@@ -1,13 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { inferPaymentMethod } from "@/app/features/receipts/inferPaymentMethod";
-import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
+import { inferPaymentMethod } from "../utils/inferPaymentMethod";
+import type { PaymentFacts } from "../types/lease/payment-facts";
 
-function txn(overrides: Partial<Transaction>): Transaction {
-  return {
-    vendor: null,
-    payment_method: null,
-    ...overrides,
-  } as Transaction;
+function txn(overrides: Partial<PaymentFacts>): PaymentFacts {
+  return { vendor: null, payment_method: null, ...overrides };
 }
 
 describe("inferPaymentMethod", () => {

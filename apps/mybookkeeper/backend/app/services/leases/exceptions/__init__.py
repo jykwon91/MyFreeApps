@@ -10,3 +10,4 @@ from app.services.leases.exceptions.receipt_send_in_progress_error import Receip
 from app.services.leases.exceptions.receipt_dismissed_error import ReceiptDismissedError  # noqa: F401
 from app.services.leases.exceptions.receipt_send_unconfirmed_error import ReceiptSendUnconfirmedError  # noqa: F401
 from app.services.leases.exceptions.receipt_sent_not_recorded_error import ReceiptSentNotRecordedError  # noqa: F401
+from app.services.leases.exceptions.receipt_tenant_of_other_member_error import ReceiptTenantOfOtherMemberError  # noqa: F401

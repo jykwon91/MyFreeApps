@@ -4,11 +4,11 @@ import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import SendReceiptDialog from "@/app/features/receipts/SendReceiptDialog";
-import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
+import type { PendingReceipt } from "@mybookkeeper/api-client/types/lease/pending-receipt";
 
 const mockSendReceipt = vi.fn();
 
-vi.mock("@/shared/store/rentReceiptsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/rentReceiptsApi", () => ({
   useSendReceiptMutation: vi.fn(() => [mockSendReceipt, { isLoading: false }]),
 }));
 
@@ -24,34 +24,32 @@ vi.mock("@/shared/lib/api", () => ({
 
 import { showSuccess, showError } from "@/shared/lib/toast-store";
 
-const mockTransaction = {
-  id: "txn-123",
-  transaction_date: "2026-05-15",
-  amount: "1500.00",
-  vendor: "Chase Bank",
-  payer_name: "Alice Johnson",
-  description: "Rent payment",
-  category: "income",
-  transaction_type: "income",
-  tax_relevant: false,
-  payment_method: "check",
-  property_id: null,
+// A lease-set period that isn't a calendar month: the dialog must keep it.
+const mockReceipt: PendingReceipt = {
+  id: "receipt-1",
+  transaction_id: "txn-123",
   applicant_id: "app-456",
-  attribution_source: "auto_exact",
-  channel: null,
-  tax_year: 2026,
-  status: "approved",
-  is_manual: false,
+  signed_lease_id: "lease-1",
+  period_start_date: "2026-05-10",
+  period_end_date: "2026-06-09",
+  status: "pending",
+  sent_at: null,
+  sent_via_attachment_id: null,
   created_at: "2026-05-15T10:00:00Z",
-  updated_at: "2026-05-15T10:00:00Z",
-  vendor_id: null,
-} as unknown as Transaction;
+  tenant_name: "Alice Johnson",
+  amount: "1500.00",
+  transaction_date: "2026-05-15",
+  payer_name: "A JOHNSON",
+  payment_method: "check",
+  vendor: "Chase Bank",
+  send_blocker: null,
+};
 
-function renderDialog(onClose = vi.fn()) {
+function renderDialog(onClose = vi.fn(), receipt: PendingReceipt = mockReceipt) {
   return render(
     <Provider store={store}>
       <BrowserRouter>
-        <SendReceiptDialog transaction={mockTransaction} onClose={onClose} />
+        <SendReceiptDialog receipt={receipt} onClose={onClose} />
       </BrowserRouter>
     </Provider>,
   );
@@ -67,21 +65,25 @@ describe("SendReceiptDialog", () => {
     expect(screen.getByRole("dialog", { name: "Send rent receipt" })).toBeInTheDocument();
   });
 
-  it("shows the transaction amount in the header", () => {
+  it("shows the amount and the tenant in the header", () => {
     renderDialog();
-    expect(screen.getByText(/\$1,500\.00/)).toBeInTheDocument();
+    expect(screen.getByText(/\$1,500\.00 from Alice Johnson/)).toBeInTheDocument();
   });
 
-  it("pre-fills period start and end from the transaction month", () => {
+  it("names the payer from the payment when the tenant's name isn't known", () => {
+    renderDialog(vi.fn(), { ...mockReceipt, tenant_name: null });
+    expect(screen.getByText(/\$1,500\.00 from A JOHNSON/)).toBeInTheDocument();
+  });
+
+  it("pre-fills the period stored on the receipt, not the payment's calendar month", () => {
     renderDialog();
     const startInput = screen.getByTestId("receipt-period-start") as HTMLInputElement;
     const endInput = screen.getByTestId("receipt-period-end") as HTMLInputElement;
-    // Transaction date is 2026-05-15 → month is May → start=2026-05-01, end=2026-05-31
-    expect(startInput.value).toBe("2026-05-01");
-    expect(endInput.value).toBe("2026-05-31");
+    expect(startInput.value).toBe("2026-05-10");
+    expect(endInput.value).toBe("2026-06-09");
   });
 
-  it("pre-fills payment method from transaction", () => {
+  it("pre-fills the payment method from the payment", () => {
     renderDialog();
     const select = screen.getByTestId("receipt-payment-method") as HTMLSelectElement;
     expect(select.value).toBe("check");
@@ -206,8 +208,8 @@ describe("SendReceiptDialog", () => {
       expect.objectContaining({ responseType: "blob" }),
     );
     const calledUrl = mockApiGet.mock.calls[0][0] as string;
-    expect(calledUrl).toContain("period_start=2026-05-01");
-    expect(calledUrl).toContain("period_end=2026-05-31");
+    expect(calledUrl).toContain("period_start=2026-05-10");
+    expect(calledUrl).toContain("period_end=2026-06-09");
 
     const iframe = screen.getByTestId("receipt-preview-iframe") as HTMLIFrameElement;
     expect(iframe.src).toBe("blob:fake-pdf-url");

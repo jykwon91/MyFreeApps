@@ -9,10 +9,13 @@ from fastapi.responses import Response
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
+from app.schemas.leases.receipt_period_rules import (
+    RECEIPT_PERIOD_ORDER_MESSAGE,
+    receipt_period_in_order,
+)
 from app.schemas.leases.receipt_request import SendReceiptRequest
 from app.schemas.leases.receipt_response import (
     PendingReceiptListResponse,
-    PendingReceiptResponse,
     SendReceiptResponse,
 )
 from app.services.leases import receipt_send_service, receipt_service
@@ -28,6 +31,7 @@ from app.services.leases.exceptions import (
     ReceiptSendInProgressError,
     ReceiptSendUnconfirmedError,
     ReceiptSentNotRecordedError,
+    ReceiptTenantOfOtherMemberError,
     ReceiptTransactionNotAttributedError,
 )
 from app.services.leases.receipt_send_error_details import (
@@ -51,16 +55,11 @@ async def list_pending_receipts(
     offset: int = Query(default=0, ge=0),
     ctx: RequestContext = Depends(current_org_member),
 ) -> PendingReceiptListResponse:
-    items = await receipt_service.list_pending_receipts(
+    return await receipt_service.get_pending_receipt_list(
         organization_id=ctx.organization_id,
+        user_id=ctx.user_id,
         limit=limit,
         offset=offset,
-    )
-    pending_count = await receipt_service.count_pending_receipts(ctx.organization_id)
-    return PendingReceiptListResponse(
-        items=[PendingReceiptResponse.model_validate(r) for r in items],
-        total=len(items),
-        pending_count=pending_count,
     )
 
 
@@ -98,6 +97,7 @@ async def send_receipt(
         raise HTTPException(status_code=409, detail=RECEIPT_DISMISSED) from exc
     except (
         ReceiptTransactionNotAttributedError,
+        ReceiptTenantOfOtherMemberError,
         ReceiptMissingApplicantEmailError,
         ReceiptMissingLeaseError,
         ReceiptMissingIntegrationError,
@@ -153,6 +153,8 @@ async def preview_receipt(
     ctx: RequestContext = Depends(current_org_member),
 ) -> Response:
     """Return a preview PDF without saving or sending."""
+    if not receipt_period_in_order(period_start, period_end):
+        raise HTTPException(status_code=422, detail=RECEIPT_PERIOD_ORDER_MESSAGE)
     try:
         pdf_bytes, filename = await receipt_service.preview_receipt_pdf(
             transaction_id=transaction_id,
@@ -172,5 +174,5 @@ async def preview_receipt(
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ReceiptTransactionNotAttributedError as exc:
+    except (ReceiptTransactionNotAttributedError, ReceiptTenantOfOtherMemberError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

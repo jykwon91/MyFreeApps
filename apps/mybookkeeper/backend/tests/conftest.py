@@ -39,6 +39,8 @@ from app.models.organization.organization_member import OrganizationMember
 from app.models.user.user import User
 from platform_shared.testing.factories import make_user_fixture
 
+pytest_plugins = ["tests.receipt_seed"]
+
 
 @pytest.fixture(scope="session")
 def anyio_backend() -> str:

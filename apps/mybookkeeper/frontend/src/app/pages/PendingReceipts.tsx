@@ -1,108 +1,17 @@
-import { useState } from "react";
+import { Link } from "react-router-dom";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import AlertBox from "@/shared/components/ui/AlertBox";
-import { Button } from "@platform/ui";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
-import {
-  useGetPendingReceiptsQuery,
-  useDismissReceiptMutation,
-} from "@/shared/store/rentReceiptsApi";
-import { useGetTransactionQuery } from "@mybookkeeper/api-client/store/transactionsApi";
-import SendReceiptDialog from "@/app/features/receipts/SendReceiptDialog";
+import { useGetPendingReceiptsQuery } from "@mybookkeeper/api-client/store/rentReceiptsApi";
+import { RECEIPT_GMAIL_STATE_MESSAGES } from "@mybookkeeper/api-client/constants/receiptReadinessMessages";
+import PendingReceiptRow from "@/app/features/receipts/PendingReceiptRow";
 import PendingReceiptsSkeleton from "@/app/features/receipts/PendingReceiptsSkeleton";
-import type { PendingReceipt } from "@/shared/types/lease/pending-receipt";
-
-function PendingReceiptRow({ receipt }: { receipt: PendingReceipt }) {
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const { data: transaction } = useGetTransactionQuery(receipt.transaction_id);
-  const [dismissReceipt, { isLoading: isDismissing }] = useDismissReceiptMutation();
-
-  async function handleDismiss() {
-    try {
-      await dismissReceipt({ transaction_id: receipt.transaction_id }).unwrap();
-      showSuccess("Receipt dismissed.");
-    } catch {
-      showError("Couldn't dismiss the receipt. Please try again.");
-    }
-  }
-
-  const amountDisplay = transaction
-    ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
-        parseFloat(transaction.amount),
-      )
-    : "—";
-
-  const periodDisplay = `${receipt.period_start_date} – ${receipt.period_end_date}`;
-  // A send whose outcome Gmail never confirmed. It can't be dismissed; the
-  // next send checks Gmail before emailing again.
-  const isConfirming = receipt.status === "sending";
-
-  return (
-    <>
-      <div
-        data-testid="pending-receipt-row"
-        className="flex items-center justify-between gap-4 py-3 border-b last:border-b-0"
-      >
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">
-            {transaction?.payer_name ?? transaction?.vendor ?? "Tenant"}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {amountDisplay} &middot; {periodDisplay}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Received {transaction?.transaction_date ?? "—"}
-          </p>
-          {isConfirming && (
-            <span
-              data-testid="pending-receipt-confirming"
-              className="inline-flex mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800"
-            >
-              Confirming with Gmail
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {!isConfirming && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              data-testid="pending-receipt-dismiss-btn"
-              onClick={() => void handleDismiss()}
-              disabled={isDismissing}
-            >
-              Dismiss
-            </Button>
-          )}
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            data-testid="pending-receipt-send-btn"
-            onClick={() => setDialogOpen(true)}
-            disabled={!transaction}
-          >
-            Review &amp; send
-          </Button>
-        </div>
-      </div>
-
-      {dialogOpen && transaction && (
-        <SendReceiptDialog
-          transaction={transaction}
-          onClose={() => setDialogOpen(false)}
-        />
-      )}
-    </>
-  );
-}
 
 export default function PendingReceipts() {
   const { data, isLoading, isError, refetch } = useGetPendingReceiptsQuery();
   const receipts = data?.items ?? [];
   const pendingCount = data?.pending_count ?? 0;
+  const gmailState = data?.gmail_state ?? "ready";
 
   if (isLoading) {
     return <PendingReceiptsSkeleton />;
@@ -114,7 +23,7 @@ export default function PendingReceipts() {
         title="Pending Receipts"
         subtitle={
           pendingCount > 0
-            ? `${pendingCount} receipt${pendingCount === 1 ? "" : "s"} ready to send`
+            ? `${pendingCount} receipt${pendingCount === 1 ? "" : "s"} waiting to send`
             : "Rent receipts that have been auto-queued from attributed payments."
         }
       />
@@ -132,6 +41,17 @@ export default function PendingReceipts() {
         </AlertBox>
       )}
 
+      {gmailState !== "ready" && (
+        <AlertBox variant="warning">
+          <span data-testid="pending-receipts-gmail-state">
+            {RECEIPT_GMAIL_STATE_MESSAGES[gmailState]}{" "}
+          </span>
+          <Link to="/integrations" className="underline hover:no-underline">
+            Open Integrations
+          </Link>
+        </AlertBox>
+      )}
+
       {!isError && receipts.length === 0 && (
         <EmptyState
           message="When you attribute a rent payment to a tenant, I'll queue a receipt here for you to review and send."
@@ -141,7 +61,7 @@ export default function PendingReceipts() {
       {receipts.length > 0 && (
         <div className="bg-card border rounded-lg p-4 divide-y">
           {receipts.map((receipt) => (
-            <PendingReceiptRow key={receipt.id} receipt={receipt} />
+            <PendingReceiptRow key={receipt.id} receipt={receipt} canSend={gmailState === "ready"} />
           ))}
         </div>
       )}

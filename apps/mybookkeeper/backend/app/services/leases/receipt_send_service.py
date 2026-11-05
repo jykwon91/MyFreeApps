@@ -43,7 +43,6 @@ from app.repositories.leases import (
     pending_rent_receipt_repo,
     rent_receipt_sequence_repo,
     signed_lease_attachment_repo,
-    signed_lease_repo,
 )
 from app.repositories.transactions import transaction_repo
 from app.repositories.user import user_repo
@@ -56,20 +55,15 @@ from app.services.email.exceptions import (
     GmailSendOutcomeUnknownError,
     GmailSendScopeError,
 )
-from app.services.integrations import integration_service
 from app.services.leases.exceptions import (
     ReceiptAlreadySentError,
     ReceiptDismissedError,
     ReceiptGmailReauthError,
     ReceiptGmailSendError,
-    ReceiptMissingApplicantEmailError,
-    ReceiptMissingIntegrationError,
-    ReceiptMissingLeaseError,
     ReceiptMissingSendScopeError,
     ReceiptSendInProgressError,
     ReceiptSendUnconfirmedError,
     ReceiptSentNotRecordedError,
-    ReceiptTransactionNotAttributedError,
 )
 from app.services.leases.receipt_address_resolver import resolve_property_address
 from app.services.leases.receipt_formatting import (
@@ -80,6 +74,13 @@ from app.services.leases.receipt_formatting import (
 from app.services.leases.receipt_pdf_service import ReceiptData, generate_receipt_pdf
 from app.services.leases.receipt_send_constants import RECEIPT_SEND_CLAIM_STALE_AFTER
 from app.services.leases.receipt_send_context import ReceiptSendContext
+from app.services.leases.receipt_send_readiness import (
+    blocker_error,
+    gmail_state_error,
+    receipt_gmail_state,
+    receipt_send_blocker,
+    resolve_tenant_email,
+)
 from app.services.leases.receipt_send_result import ReceiptSendResult
 
 logger = logging.getLogger(__name__)
@@ -115,65 +116,56 @@ async def _load_context(
         txn = await transaction_repo.get_by_id(db, transaction_id, organization_id)
         if txn is None:
             raise LookupError(f"Transaction {transaction_id} not found")
-        if txn.applicant_id is None:
-            raise ReceiptTransactionNotAttributedError(
-                "This transaction hasn't been attributed to a tenant yet."
-            )
 
-        applicant = await applicant_repo.get(
-            db,
-            applicant_id=txn.applicant_id,
-            organization_id=organization_id,
-            user_id=user_id,
-        )
-        if applicant is None:
-            raise LookupError(f"Applicant {txn.applicant_id} not found")
-
+        applicant = None
+        tenant_owner_id: uuid.UUID | None = None
         tenant_email: str | None = None
-        if applicant.inquiry_id is not None:
-            inq = await inquiry_repo.get_by_id(db, applicant.inquiry_id, organization_id)
-            if inq is not None:
-                tenant_email = inq.inquirer_email
-        if not tenant_email:
-            raise ReceiptMissingApplicantEmailError(
-                "Tenant has no email address on file. Cannot send the receipt."
-            )
-
-        property_address, lease_id = await resolve_property_address(
-            db,
-            applicant_id=txn.applicant_id,
-            organization_id=organization_id,
-            user_id=user_id,
-        )
-        if lease_id is None:
-            leases = await signed_lease_repo.list_for_tenant(
+        property_address = ""
+        lease_id: uuid.UUID | None = None
+        if txn.applicant_id is not None:
+            applicant = await applicant_repo.get(
                 db,
-                user_id=user_id,
-                organization_id=organization_id,
                 applicant_id=txn.applicant_id,
-                include_deleted=False,
-                limit=1,
+                organization_id=organization_id,
+                user_id=user_id,
             )
-            lease_id = leases[0].id if leases else None
-        if lease_id is None:
-            raise ReceiptMissingLeaseError(
-                "This tenant has no signed lease to file the receipt under. "
-                "Add the lease, then send."
+            tenant_owner_id = (
+                user_id if applicant is not None
+                else await applicant_repo.get_live_owner_id(
+                    db, applicant_id=txn.applicant_id, organization_id=organization_id,
+                )
             )
+        if applicant is not None:
+            inquirer_email: str | None = None
+            if applicant.inquiry_id is not None:
+                inq = await inquiry_repo.get_by_id(db, applicant.inquiry_id, organization_id)
+                if inq is not None:
+                    inquirer_email = inq.inquirer_email
+            tenant_email = resolve_tenant_email(applicant.contact_email, inquirer_email)
+            property_address, lease_id = await resolve_property_address(
+                db,
+                applicant_id=applicant.id,
+                organization_id=organization_id,
+                user_id=user_id,
+            )
+        blocker = receipt_send_blocker(
+            attributed=txn.applicant_id is not None,
+            tenant_owner_id=tenant_owner_id,
+            requester_id=user_id,
+            tenant_email=tenant_email,
+            has_lease=lease_id is not None,
+        )
+        if blocker is not None:
+            raise blocker_error(blocker)
+        assert applicant is not None and tenant_email and lease_id is not None
 
         integration = await integration_repo.get_by_org_and_provider(
             db, organization_id, "gmail",
         )
-        if integration is None:
-            raise ReceiptMissingIntegrationError("Connect Gmail before sending receipts.")
-        if not integration_service.integration_has_send_scope(integration):
-            raise ReceiptMissingSendScopeError(
-                "Gmail send permission missing. Reconnect Gmail to enable receipts.",
-            )
-        if integration.needs_reauth:
-            raise ReceiptGmailReauthError(
-                "Gmail token expired. Reconnect Gmail to send receipts.",
-            )
+        gmail_state = receipt_gmail_state(integration)
+        if gmail_state != "ready":
+            raise gmail_state_error(gmail_state)
+        assert integration is not None
 
         host_user = await user_repo.get_by_id(db, user_id)
         if not host_user or not host_user.email:

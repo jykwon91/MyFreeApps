@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { configureStore } from "@reduxjs/toolkit";
 import { baseApi, tagTypes } from "@/shared/store/baseApi";
 import { EMAIL_DERIVED_TAGS } from "@/shared/store/emailDerivedTags";
-import { rentReceiptsApi } from "@/shared/store/rentReceiptsApi";
+import { rentReceiptsApi } from "@mybookkeeper/api-client/store/rentReceiptsApi";
 import { integrationsApi } from "@/shared/store/integrationsApi";
 
 vi.mock("@platform/core/lib/api", () => ({ default: vi.fn() }));

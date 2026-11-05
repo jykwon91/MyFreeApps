@@ -4,16 +4,17 @@ Uses dependency_overrides on ``current_org_member`` / ``require_write_access``
 and patches service calls — no real DB or Gmail connection required.
 
 Covers:
-- GET /rent-receipts/pending — happy path and empty list.
+- GET /rent-receipts/pending — enriched items, total, Gmail state, empty list.
 - POST /rent-receipts/{transaction_id}/send — happy path, 404, 422 (not attributed),
-  422 (no email), 422 (no integration), 503 (gmail_reauth_required), 502 (send error).
+  422 (teammate's tenant), 422 (no email), 422 (no integration), 503 (gmail_reauth_required), 502 (send error).
 - POST /rent-receipts/{transaction_id}/dismiss — happy path, 404, 422 (already sent), 409 (mid-send).
-- GET /rent-receipts/preview/{transaction_id} — happy path and 422.
+- GET /rent-receipts/preview/{transaction_id} — happy path, 422s, 404.
 """
 from __future__ import annotations
 
 import uuid
 from datetime import date, datetime, timezone
+from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -24,6 +25,7 @@ from app.core.permissions import current_org_member, require_write_access
 from app.main import app
 from app.models.organization.organization_member import OrgRole
 from app.schemas.leases.receipt_response import (
+    PendingReceiptListResponse,
     PendingReceiptResponse,
 )
 from app.services.leases import exceptions as exc
@@ -36,12 +38,10 @@ def _ctx(org_id: uuid.UUID, user_id: uuid.UUID) -> RequestContext:
     )
 
 
-def _pending_receipt(org_id: uuid.UUID, transaction_id: uuid.UUID | None = None) -> PendingReceiptResponse:
+def _pending_receipt(transaction_id: uuid.UUID | None = None) -> PendingReceiptResponse:
     now = datetime.now(timezone.utc)
     return PendingReceiptResponse(
         id=uuid.uuid4(),
-        user_id=uuid.uuid4(),
-        organization_id=org_id,
         transaction_id=transaction_id or uuid.uuid4(),
         applicant_id=uuid.uuid4(),
         signed_lease_id=uuid.uuid4(),
@@ -51,8 +51,13 @@ def _pending_receipt(org_id: uuid.UUID, transaction_id: uuid.UUID | None = None)
         sent_at=None,
         sent_via_attachment_id=None,
         created_at=now,
-        updated_at=now,
-        deleted_at=None,
+        tenant_name="Maria Lopez",
+        amount=Decimal("1450.00"),
+        transaction_date=date(2026, 5, 3),
+        payer_name="M LOPEZ",
+        payment_method=None,
+        vendor="Zelle",
+        send_blocker=None,
     )
 
 
@@ -85,39 +90,43 @@ def override_ctx(org_id, user_id):
 # ---------------------------------------------------------------------------
 
 class TestListPendingReceipts:
-    def test_returns_pending_list(self, client, override_ctx, org_id) -> None:
-        receipt = _pending_receipt(org_id)
-        with (
-            patch(
-                "app.services.leases.receipt_service.list_pending_receipts",
-                new_callable=AsyncMock,
-                return_value=[receipt],
-            ),
-            patch(
-                "app.services.leases.receipt_service.count_pending_receipts",
-                new_callable=AsyncMock,
-                return_value=1,
-            ),
-        ):
-            resp = client.get("/rent-receipts/pending")
+    def test_returns_enriched_items_total_and_gmail_state(
+        self, client, override_ctx, org_id, user_id,
+    ) -> None:
+        listing = PendingReceiptListResponse(
+            items=[_pending_receipt()],
+            total=3,
+            pending_count=3,
+            gmail_state="needs_send_permission",
+        )
+        with patch(
+            "app.services.leases.receipt_service.get_pending_receipt_list",
+            new_callable=AsyncMock,
+            return_value=listing,
+        ) as list_mock:
+            resp = client.get("/rent-receipts/pending?limit=1&offset=2")
 
         assert resp.status_code == 200
         body = resp.json()
-        assert body["pending_count"] == 1
-        assert len(body["items"]) == 1
-        assert body["items"][0]["status"] == "pending"
+        assert body["total"] == 3
+        assert body["pending_count"] == 3
+        assert body["gmail_state"] == "needs_send_permission"
+        item = body["items"][0]
+        assert item["tenant_name"] == "Maria Lopez"
+        assert item["amount"] == "1450.00"
+        assert item["transaction_date"] == "2026-05-03"
+        assert item["send_blocker"] is None
+        assert "tenant_email" not in item
+        list_mock.assert_awaited_once_with(
+            organization_id=org_id, user_id=user_id, limit=1, offset=2,
+        )
 
     def test_returns_empty_list(self, client, override_ctx) -> None:
-        with (
-            patch(
-                "app.services.leases.receipt_service.list_pending_receipts",
-                new_callable=AsyncMock,
-                return_value=[],
-            ),
-            patch(
-                "app.services.leases.receipt_service.count_pending_receipts",
-                new_callable=AsyncMock,
-                return_value=0,
+        with patch(
+            "app.services.leases.receipt_service.get_pending_receipt_list",
+            new_callable=AsyncMock,
+            return_value=PendingReceiptListResponse(
+                items=[], total=0, pending_count=0, gmail_state="ready",
             ),
         ):
             resp = client.get("/rent-receipts/pending")
@@ -125,6 +134,7 @@ class TestListPendingReceipts:
         assert resp.status_code == 200
         body = resp.json()
         assert body["pending_count"] == 0
+        assert body["total"] == 0
         assert body["items"] == []
 
     def test_requires_auth(self, client) -> None:
@@ -182,6 +192,17 @@ class TestSendReceipt:
         ):
             resp = client.post(f"/rent-receipts/{txn_id}/send", json=_SEND_BODY)
         assert resp.status_code == 422
+
+    def test_teammates_tenant_returns_422(self, client, override_ctx) -> None:
+        txn_id = uuid.uuid4()
+        with patch(
+            "app.services.leases.receipt_send_service.send_receipt",
+            new_callable=AsyncMock,
+            side_effect=exc.ReceiptTenantOfOtherMemberError("teammate's tenant"),
+        ):
+            resp = client.post(f"/rent-receipts/{txn_id}/send", json=_SEND_BODY)
+        assert resp.status_code == 422
+        assert resp.json()["detail"] == "teammate's tenant"
 
     def test_no_email_returns_422(self, client, override_ctx) -> None:
         txn_id = uuid.uuid4()
@@ -356,6 +377,20 @@ class TestPreviewReceipt:
             )
         assert resp.status_code == 422
 
+    def test_teammates_tenant_returns_422(self, client, override_ctx) -> None:
+        txn_id = uuid.uuid4()
+        with patch(
+            "app.services.leases.receipt_service.preview_receipt_pdf",
+            new_callable=AsyncMock,
+            side_effect=exc.ReceiptTenantOfOtherMemberError("teammate's tenant"),
+        ):
+            resp = client.get(
+                f"/rent-receipts/preview/{txn_id}",
+                params={"period_start": "2026-05-01", "period_end": "2026-05-31"},
+            )
+        assert resp.status_code == 422
+        assert resp.json()["detail"] == "teammate's tenant"
+
     def test_not_found_returns_404(self, client, override_ctx) -> None:
         txn_id = uuid.uuid4()
         with patch(
@@ -371,3 +406,15 @@ class TestPreviewReceipt:
                 },
             )
         assert resp.status_code == 404
+
+    def test_period_end_before_start_returns_422(self, client, override_ctx) -> None:
+        with patch(
+            "app.services.leases.receipt_service.preview_receipt_pdf",
+            new_callable=AsyncMock,
+        ) as preview:
+            resp = client.get(
+                f"/rent-receipts/preview/{uuid.uuid4()}",
+                params={"period_start": "2026-05-31", "period_end": "2026-05-01"},
+            )
+        assert resp.status_code == 422
+        preview.assert_not_awaited()
