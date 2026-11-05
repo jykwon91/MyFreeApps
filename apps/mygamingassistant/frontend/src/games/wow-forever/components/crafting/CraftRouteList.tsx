@@ -22,6 +22,8 @@ interface CraftRouteListProps {
   fork: { skill: number; row: ReactNode } | null;
   /** Specialization spell -> its name, for the chips on recipes that need one. */
   specNames: ReadonlyMap<number, string>;
+  /** A line under each recipe saying what its item does. */
+  showEffects: boolean;
 }
 
 function stateOf(index: number, current: number | null): RowState {
@@ -40,6 +42,7 @@ export default function CraftRouteList({
   place,
   fork,
   specNames,
+  showEffects,
 }: CraftRouteListProps) {
   const tools = new Set(entries.flatMap((e) => (e.kind === "craft" && e.recipe.tool ? [e.recipe.tool.id] : [])));
   const pending = [...ranks];
@@ -66,6 +69,7 @@ export default function CraftRouteList({
           professionLabel={professionLabel}
           place={place}
           specNames={specNames}
+          showEffect={showEffects}
         />,
       );
       return;
@@ -77,6 +81,7 @@ export default function CraftRouteList({
         state={state}
         showChip
         makesTool={entry.recipe.creates !== undefined && tools.has(entry.recipe.creates.id)}
+        showEffect={showEffects}
         professionLabel={professionLabel}
         place={place}
       />,

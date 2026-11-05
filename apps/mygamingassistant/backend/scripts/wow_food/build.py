@@ -106,6 +106,7 @@ def load_book() -> SpellBook:
                 period_ms=_int(r["EffectAuraPeriod"]),
                 trigger=_int(r["EffectTriggerSpell"]),
                 item_type=_int(r["EffectItemType"]),
+                variance=float(r.get("Variance") or 0),
             )
         )
     book.effects = dict(effects)

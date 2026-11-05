@@ -64,4 +64,21 @@ export const CRAFTING_SPECS: Readonly<Partial<Record<CraftingProfession, Craftin
     unlearnWarning: CHOOSE_ONCE,
     confidence: "unconfirmed",
   },
+  engineering: {
+    forkAt: 200,
+    level: 30,
+    intro: "At 200 you can specialize. Each unlocks its own recipes; the route itself never needs one.",
+    choices: [
+      {
+        id: "gnomish",
+        spell: 20219,
+        label: "Gnomish",
+        summary: "Odd gadgets — Shrink Ray, Net-o-Matic, Rocket Boots, World Enlarger, Mind Control Cap, Death Ray.",
+        howTo: { kind: "quests" },
+      },
+      { id: "goblin", spell: 20222, label: "Goblin", summary: "Goblin Jumper Cables XL — its Schematic asks for Goblin Engineering.", howTo: { kind: "quests" } },
+    ],
+    unlearnWarning: CHOOSE_ONCE,
+    confidence: "unconfirmed",
+  },
 };

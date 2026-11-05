@@ -10,7 +10,8 @@ Supported tokens (all we meet in food and drink tooltips):
 
 * ``$@spelldesc<id>`` / ``$@spellname<id>`` / ``$@spellicon<id>``
 * ``$s<n>`` ``$w<n>`` ``$m<n>`` ``$M<n>`` — effect ``n`` base points, of this
-  spell or of ``$<id>s<n>``
+  spell or of ``$<id>s<n>``; an effect that rolls (``Variance``, the Forever
+  client's form of Classic's dice) reads "26 to 34", as the game shows it
 * ``$o<n>`` — the effect's total over the duration (a tick every 5 s)
 * ``$t<n>`` — the effect's tick period, in seconds
 * ``$d`` / ``$<id>d`` (also written ``$<id>d1``) — duration
@@ -20,6 +21,7 @@ Supported tokens (all we meet in food and drink tooltips):
 """
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import dataclass, field
 
@@ -43,6 +45,8 @@ class Effect:
     period_ms: int
     trigger: int
     item_type: int = 0
+    # Spread of the roll around the base: base × (1 ± variance / 2).
+    variance: float = 0.0
 
 
 @dataclass
@@ -81,6 +85,18 @@ def _number(value: float) -> str:
     return str(int(round(value))) if abs(value - round(value)) < 1e-6 else f"{value:.1f}"
 
 
+def _half_up(value: float) -> int:
+    return int(math.floor(value + 0.5))
+
+
+def roll_range(e: Effect) -> str:
+    """An effect's amount as the game prints it: "30", or "26 to 34" when it rolls."""
+    base = abs(e.base_points)
+    if not e.variance:
+        return _number(base)
+    return f"{_half_up(base * (1 - e.variance / 2))} to {_half_up(base * (1 + e.variance / 2))}"
+
+
 def _value(book: SpellBook, spell_id: int, kind: str, number: int) -> float | None:
     e = book.effect(spell_id, number)
     if e is None:
@@ -114,6 +130,9 @@ def evaluate(book: SpellBook, spell_id: int, template: str | None = None, depth:
     def value(m: re.Match[str]) -> str:
         ref = int(m.group(1)) if m.group(1) else spell_id
         kind = "o" if m.group(2) == "o" else "s"
+        e = book.effect(ref, int(m.group(3)))
+        if kind == "s" and e is not None and e.variance:
+            return roll_range(e)
         v = _value(book, ref, kind, int(m.group(3)))
         return m.group(0) if v is None else _number(v)
 

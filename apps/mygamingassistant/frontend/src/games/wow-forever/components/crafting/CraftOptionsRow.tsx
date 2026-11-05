@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import UnconfirmedChip from "@/games/wow-forever/components/professions/UnconfirmedChip";
 import CraftColorsLine from "@/games/wow-forever/components/crafting/CraftColorsLine";
+import CraftEffectLine from "@/games/wow-forever/components/crafting/CraftEffectLine";
 import CraftLearnLine, { type CraftPlace } from "@/games/wow-forever/components/crafting/CraftLearnLine";
 import CraftReagents from "@/games/wow-forever/components/crafting/CraftReagents";
 import CraftSpecChip from "@/games/wow-forever/components/crafting/CraftSpecChip";
@@ -18,10 +19,12 @@ interface CraftOptionsRowProps {
   place: CraftPlace;
   /** Specialization spell -> its name, for the chip on an option only one can learn. */
   specNames: ReadonlyMap<number, string>;
+  /** Say what each item does (Engineering). */
+  showEffect: boolean;
 }
 
 /** The end of the route where several recipes could work — each with its skill, materials and source. */
-export default function CraftOptionsRow({ step, recipes, trainerSkills, state, professionLabel, place, specNames }: CraftOptionsRowProps) {
+export default function CraftOptionsRow({ step, recipes, trainerSkills, state, professionLabel, place, specNames, showEffect }: CraftOptionsRowProps) {
   return (
     <li
       id={`craft-${step.from}`}
@@ -49,6 +52,7 @@ export default function CraftOptionsRow({ step, recipes, trainerSkills, state, p
               {sourceUnknown(recipe) ? <SourceUnknownChip /> : null}
               {recipe.spec !== undefined ? <CraftSpecChip name={specNames.get(recipe.spec) ?? "Specialization"} /> : null}
             </p>
+            {showEffect ? <CraftEffectLine recipe={recipe} file={place.file} professionLabel={professionLabel} /> : null}
             <p className="text-xs text-muted-foreground">{step.options[i].detail}</p>
             <CraftColorsLine recipe={recipe} />
             <CraftReagents reagents={recipe.reagents} place={place} professionLabel={professionLabel} />

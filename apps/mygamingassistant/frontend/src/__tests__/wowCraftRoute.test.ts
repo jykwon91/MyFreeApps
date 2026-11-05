@@ -4,6 +4,7 @@ import enchantingJson from "@/games/wow-forever/data/professions/crafting/enchan
 import alchemyJson from "@/games/wow-forever/data/professions/crafting/alchemy.json";
 import blacksmithingJson from "@/games/wow-forever/data/professions/crafting/blacksmithing.json";
 import leatherworkingJson from "@/games/wow-forever/data/professions/crafting/leatherworking.json";
+import engineeringJson from "@/games/wow-forever/data/professions/crafting/engineering.json";
 import trainerSkillsJson from "@/games/wow-forever/data/professions/crafting/classic/trainerSkills.json";
 import {
   currentEntryIndex,
@@ -16,6 +17,8 @@ import {
   sourceUnknown,
 } from "@/games/wow-forever/crafting/craftRoute";
 import { shoppingList, shoppingListText } from "@/games/wow-forever/crafting/shoppingList";
+import { effectText } from "@/games/wow-forever/crafting/craftEffect";
+import { CRAFTING_FEATURES } from "@/games/wow-forever/data/professions/crafting/craftingFeatures";
 import { CRAFTING_GUIDES } from "@/games/wow-forever/data/professions/crafting/craftingGuide";
 import { CRAFTING_ROUTES } from "@/games/wow-forever/data/professions/crafting/craftingRoutes";
 import { CRAFTING_RANKS } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
@@ -32,9 +35,10 @@ const FILES: Record<CraftingProfession, CraftingFile> = {
   alchemy: alchemyJson as unknown as CraftingFile,
   blacksmithing: blacksmithingJson as unknown as CraftingFile,
   leatherworking: leatherworkingJson as unknown as CraftingFile,
+  engineering: engineeringJson as unknown as CraftingFile,
 };
 const TRAINER_SKILLS = trainerSkillsJson as unknown as Record<CraftingProfession, TrainerSkills>;
-const PROFESSIONS = ["tailoring", "enchanting", "alchemy", "blacksmithing", "leatherworking"] as const;
+const PROFESSIONS = ["tailoring", "enchanting", "alchemy", "blacksmithing", "leatherworking", "engineering"] as const;
 
 function recipeMap(file: CraftingFile): Map<number, CraftRecipe> {
   return new Map(file.recipes.map((r) => [r.spell, r]));
@@ -128,6 +132,33 @@ describe("shoppingList", () => {
     const late = shoppingList(tailoring, 250, FILES.tailoring, "Tailoring");
     expect(late.buy.some((l) => l.id === LINEN_CLOTH)).toBe(false);
     expect(late.buy.length).toBeLessThan(whole.buy.length);
+  });
+});
+
+describe("Engineering item lines", () => {
+  const rows = resolved("engineering").flatMap((e) => (e.kind === "craft" ? [e] : []));
+  const text = (spell: number) => {
+    const row = rows.find((e) => e.recipe.spell === spell);
+    if (!row) throw new Error(`no route row for ${spell}`);
+    return effectText(row.recipe, FILES.engineering, "Engineering");
+  };
+
+  it("shows the client's tooltip, with the rolled damage as a range", () => {
+    expect(text(3962)).toMatch(/^Inflicts 132 to 218 Fire damage/);
+    expect(text(12619)).toMatch(/^Inflicts 255 to 345 Fire damage/);
+  });
+
+  it("calls a part with no tooltip a part, and says nothing it can't back with data", () => {
+    expect(text(3918)).toBe("A part for other Engineering recipes.");
+    expect(text(3924)).toBe("A part for other Engineering recipes.");
+    // The spanner is a tool, not a reagent, and its tooltip has no use line.
+    expect(text(7430)).toBeNull();
+  });
+
+  it("is only switched on for Engineering", () => {
+    const on = Object.entries(CRAFTING_FEATURES).filter(([, f]) => f.effects).map(([p]) => p);
+    expect(on).toEqual(["engineering"]);
+    for (const p of PROFESSIONS) if (p !== "engineering") expect(FILES[p].recipes.some((r) => r.effect)).toBe(false);
   });
 });
 

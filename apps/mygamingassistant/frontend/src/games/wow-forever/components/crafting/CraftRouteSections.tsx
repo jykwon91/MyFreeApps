@@ -108,6 +108,7 @@ export default function CraftRouteSections({ profession, faction, zoneId, level,
               : null
           }
           specNames={specNames}
+          showEffects={features.effects}
         />
         {features.transmutes ? (
           <CraftTransmuteList recipes={data.file.recipes} trainerSkills={data.trainerSkills} professionLabel={guide.label} place={place} />

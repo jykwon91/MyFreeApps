@@ -278,4 +278,63 @@ export const CRAFTING_GUIDES: Readonly<Record<CraftingProfession, CraftingGuide>
       },
     ],
   },
+  engineering: {
+    label: "Engineering",
+    steps: [
+      {
+        id: "train",
+        title: "Train Engineering at an engineering trainer",
+        detail:
+          "Any trainer below teaches Apprentice Engineering and your first recipes. Journeyman (at 50) is trained in a city — the town trainers teach Apprentice only (Classic). Engineering is one of your two main professions.",
+      },
+      {
+        id: "hammer",
+        title: "Get a Blacksmith Hammer before your first bolts",
+        detail:
+          "In the Forever client most Engineering recipes need a Blacksmith Hammer in your bags. In Classic it's sold by trade goods and blacksmithing vendors. At 50 you also make an Arclight Spanner — keep both.",
+        warning: "Don't sell or bank the hammer or the spanner — recipes won't show as craftable without them.",
+      },
+      {
+        id: "bars",
+        title: "Mine your ore and stone, or buy them",
+        detail: "Almost every recipe takes metal bars or stone for blasting powder. With Mining you get both — open a material on the shopping list to see where it's mined, with directions.",
+      },
+      {
+        id: "craft",
+        title: "Craft the row for your skill until it turns green",
+        detail: "Open your Engineering window (press K, or find it in your spellbook) and craft. Type your skill below and the route points at your row.",
+        command: "/cast Engineering",
+      },
+    ],
+    routeIntro:
+      "Craft each recipe from the first skill to the second, then move to the next row. Up to 265 every row is a trainer recipe. Under each name is what the item does, in the game's own words.",
+    shoppingNote:
+      "Bars are smelted from ore with Mining, so the list counts the ore; the Mining skill each smelt needs is Classic's. Parts you make on the way (bolts, casings, triggers) are counted as what they take. Without Mining, buy the bars instead.",
+    forever: [
+      {
+        text: "Forever adds 78 Engineering recipes (SAF-T and EZ-Thro devices, Satchels of bombs, a Repair Bot and a Reagent Bot, goggles and more). Where their schematics come from isn't known yet.",
+        confidence: "confirmed",
+      },
+      {
+        text: "77 Forever recipes: source not known yet. They're marked \"Source unknown\" — no Classic trainer or vendor is named for them.",
+        confidence: "confirmed",
+      },
+      {
+        text: "Rough Dynamite takes 1 Rough Blasting Powder and 1 Linen Cloth (Classic: 2 Rough Blasting Powder).",
+        confidence: "confirmed",
+      },
+      {
+        text: "Gnomish and Goblin Engineering are in the Forever client, and its Schematics for their recipes (World Enlarger, Alarm-O-Bot, Goblin Jumper Cables XL) still ask for them.",
+        confidence: "confirmed",
+      },
+      {
+        text: "How you learn a specialization in Forever isn't known. The quests, skills and levels on this page are Classic's.",
+        confidence: "unconfirmed",
+      },
+      {
+        text: "The skill each trainer teaches a recipe at is Classic Era's. Forever may move some.",
+        confidence: "unconfirmed",
+      },
+    ],
+  },
 };

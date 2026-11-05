@@ -1,5 +1,5 @@
 """Build the WoW Forever crafting leveling guide data (Tailoring, Enchanting, Alchemy, Blacksmithing,
-Leatherworking).
+Leatherworking, Engineering).
 
     python -m scripts.wow_professions.build
 
@@ -7,7 +7,7 @@ Writes, under ``frontend/src/games/wow-forever/data/professions/crafting/``:
 
 * ``<profession>.json`` (one per key of ``PROFESSIONS``) — every recipe in the Forever
   client: yellow / grey skill, reagents, what it makes (and whether that can
-  be disenchanted), how it is learned, and what Forever changed against the
+  be disenchanted; for Engineering, the item's tooltip line), how it is learned, and what Forever changed against the
   Classic Era client. Game data © Blizzard Entertainment.
 * ``classic/trainerSkills.json`` — the skill a trainer asks before teaching a
   recipe, and ``classic/sources.json`` — where pattern / formula items and
@@ -27,6 +27,7 @@ from collections import defaultdict
 from scripts.wow_food.build import (
     CLASSIC_LICENSE,
     WOW_DATA_DIR,
+    load_book,
     load_item_spells,
     load_trainer_skill,
     quest_details,
@@ -40,6 +41,7 @@ from scripts.wow_professions.crafts import (
     EFFECT_ENCHANT_ITEM,
     EFFECT_LEARN_SPELL,
     ENCHANTING_SKILL_LINE,
+    ENGINEERING_SKILL_LINE,
     LEATHERWORKING_SKILL_LINE,
     MINING_SKILL_LINE,
     TAILORING_SKILL_LINE,
@@ -50,6 +52,7 @@ from scripts.wow_professions.crafts import (
     forever_trainer_skill,
     smelting_for,
 )
+from scripts.wow_professions.effects import add_effects
 from scripts.wow_professions.specs import spec_quests, spec_records, trainer_specs
 from scripts.wow_world_map.build import write_json
 from scripts.wow_world_map.map_art import WorldMapArt
@@ -73,9 +76,12 @@ PROFESSIONS = {
     "alchemy": ALCHEMY_SKILL_LINE,
     "blacksmithing": BLACKSMITHING_SKILL_LINE,
     "leatherworking": LEATHERWORKING_SKILL_LINE,
+    "engineering": ENGINEERING_SKILL_LINE,
 }
 # Professions a miner levels: their file lists the smelts that make the bars they use.
-SMELTS_FOR = {"blacksmithing"}
+SMELTS_FOR = {"blacksmithing", "engineering"}
+# Professions whose items are named for what they do, not what they are: each recipe carries its tooltip line.
+DESCRIBES_FOR = {"engineering"}
 # Professions whose recipes make reagents another profession uses ("made by Blacksmithing").
 CRAFTING_SKILL_LINES = {
     164: "Blacksmithing", 165: "Leatherworking", 171: "Alchemy", 185: "Cooking", 186: "Mining",
@@ -293,6 +299,9 @@ def main() -> None:
         load_client(MINING_SKILL_LINE, WAGO_BRANCH, WAGO_BUILD), load_client(MINING_SKILL_LINE, WAGO_ERA_BRANCH, WAGO_ERA_BUILD), items,
     )
     mining_trainer = load_trainer_skill(MINING_SKILL_LINE)
+    book, item_spells = load_book(), load_item_spells()
+    for key in DESCRIBES_FOR:
+        add_effects(recipes[key], book, item_spells)
     smelting = {key: smelting_for(recipes[key], mining, mining_trainer) if key in SMELTS_FOR else [] for key in PROFESSIONS}
 
     reagent_ids = {r["id"] for rows in [*recipes.values(), *smelting.values()] for rec in rows for r in rec["reagents"]}
