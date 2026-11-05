@@ -6,6 +6,12 @@ export const REPLY_TEMPLATE_MESSAGES = {
   archivedTab: "Archived",
   archivedIntro: "These are archived, so I don't offer them when you reply. Their names stay taken. Restore one to use it again.",
   archivedIntroViewer: "These are archived, so I don't offer them when you reply.",
+  noActive: "No templates yet. Create your first to speed up replies.",
+  noActiveViewer: "No templates yet. When someone makes one, it'll show up here.",
+  viewOnlyNote: "View only. Ask a workspace admin to edit templates.",
+  subjectLabel: "Subject",
+  bodyLabel: "Body",
+  close: "Close",
   loadingActive: "Loading your templates",
   couldntLoadActive: "I couldn't load your templates. Want me to try again?",
   showingLastLoadedActive: "I couldn't reload your templates, so this is what I last loaded.",
@@ -49,6 +55,10 @@ export const ARCHIVE_FAILURES: Record<Exclude<ReplyTemplateWriteOutcome, "done" 
   unsure: { message: REPLY_TEMPLATE_MESSAGES.writeUnsure, keepDialogOpen: false },
   failed: { message: REPLY_TEMPLATE_MESSAGES.archiveFailed, keepDialogOpen: true },
 };
+
+export function viewLabel(name: string): string {
+  return `View ${name}`;
+}
 
 export function restoreLabel(name: string): string {
   return `Restore ${name}`;

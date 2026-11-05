@@ -8,6 +8,7 @@
  * Verifies:
  *   - A failed load of either tab says so (never "none"), and Try again loads the list.
  *   - The Active tab's skeleton matches the loaded rows and their Edit / Archive buttons.
+ *   - A viewer gets no New / Edit / Archive, and reads a template through View.
  *   - The Archived tab is linkable, survives a reload, and hides New template.
  *   - Restore moves the template back to Active and sends is_archived=false.
  *   - A 502 after the server restored it is settled by reloading the list.
@@ -56,7 +57,7 @@ function plantAuth(page: Page): Promise<void> {
   );
 }
 
-async function stubShell(page: Page): Promise<void> {
+async function stubShell(page: Page, orgRole = "owner"): Promise<void> {
   const json = (body: unknown) => ({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
   await page.route("**/api/users/me", (route) =>
     route.fulfill(
@@ -72,7 +73,7 @@ async function stubShell(page: Page): Promise<void> {
     ),
   );
   await page.route("**/api/organizations", (route) =>
-    route.fulfill(json([{ id: ORG_ID, name: "Test Workspace", role: "owner", org_role: "owner" }])),
+    route.fulfill(json([{ id: ORG_ID, name: "Test Workspace", role: orgRole, org_role: orgRole }])),
   );
   await page.route("**/api/version", (route) => route.fulfill(json({ version: "test" })));
   await page.route("**/api/tax-profile", (route) =>
@@ -196,11 +197,35 @@ test.describe("Loading reply templates", () => {
     const skeleton = page.getByTestId("active-reply-templates-skeleton");
     await expect(skeleton).toBeVisible();
     const skeletonRows = await skeleton.locator("li").count();
-    const skeletonButtons = await skeleton.locator("li .h-11").count();
+    const skeletonButtons = await skeleton.getByTestId("reply-templates-skeleton-action").count();
     await expect(page.getByText("Active 1", { exact: true })).toBeVisible({ timeout: 5000 });
     expect(skeletonRows).toBe(await page.locator('[data-testid^="reply-template-row-"]').count());
     const loadedButtons = await page.locator('[data-testid^="reply-template-edit-"], [data-testid^="reply-template-archive-"]').count();
     expect(skeletonButtons).toBe(loadedButtons);
+  });
+});
+
+test.describe("Reply templates for a viewer", () => {
+  test("offers View instead of New, Edit and Archive, and shows the whole template", async ({ page }) => {
+    await plantAuth(page);
+    await stubShell(page, "viewer");
+    const server = await stubTemplates(page, freshRows());
+    await page.goto("/reply-templates");
+    await expect(page.getByTestId(`reply-template-row-${ACTIVE.id}`)).toBeVisible();
+    await expect(page.getByText("View only. Ask a workspace admin to edit templates.", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("reply-template-new-button")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: `Edit ${ACTIVE.name}` })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: `Archive ${ACTIVE.name}` })).toHaveCount(0);
+
+    await page.getByRole("button", { name: `View ${ACTIVE.name}` }).click();
+    const view = page.getByTestId("reply-template-view");
+    await expect(view).toContainText(ACTIVE.subject_template);
+    await expect(view).toContainText("Hi $name");
+    await expect(view.getByRole("textbox")).toHaveCount(0);
+    await view.getByRole("button", { name: "Close", exact: true }).click();
+    await expect(view).toHaveCount(0);
+    expect(server.patches).toEqual([]);
+    expect(server.deletes).toEqual([]);
   });
 });
 
@@ -298,7 +323,7 @@ test.describe("Archived reply templates layout", () => {
     const skeleton = page.getByTestId("archived-reply-templates-skeleton");
     await expect(skeleton).toBeVisible();
     const skeletonRows = await skeleton.locator("li").count();
-    const skeletonButtons = await skeleton.locator("li .h-11").count();
+    const skeletonButtons = await skeleton.getByTestId("reply-templates-skeleton-action").count();
     await expect(page.getByText("Archived one", { exact: true })).toBeVisible({ timeout: 5000 });
     const loadedRows = await page.locator('[data-testid^="archived-reply-template-row-"]').count();
     expect(skeletonRows).toBe(loadedRows);

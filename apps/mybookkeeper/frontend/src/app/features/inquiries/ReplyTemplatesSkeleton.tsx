@@ -5,10 +5,11 @@ import type { ReplyTemplatesSkeletonVariant } from "@/shared/types/inquiry/reply
 export interface ReplyTemplatesSkeletonProps {
   variant: ReplyTemplatesSkeletonVariant;
   label: string;
-  showActions: boolean;
+  /** Buttons per row, as the loaded rows will have them. */
+  actions: number;
 }
 
-export default function ReplyTemplatesSkeleton({ variant, label, showActions }: ReplyTemplatesSkeletonProps) {
+export default function ReplyTemplatesSkeleton({ variant, label, actions }: ReplyTemplatesSkeletonProps) {
   const archived = variant === "archived";
   return (
     <div className="space-y-3" role="status" aria-busy="true" data-testid={`${variant}-reply-templates-skeleton`}>
@@ -29,11 +30,11 @@ export default function ReplyTemplatesSkeleton({ variant, label, showActions }: 
                 <Skeleton className="h-4 w-1/2" />
                 <Skeleton className="h-3 w-3/4" />
               </div>
-              {showActions && archived ? <Skeleton className="h-11 w-full sm:w-24" /> : null}
-              {showActions && !archived ? (
-                <div className="flex gap-1">
-                  <Skeleton className="h-11 w-10 sm:h-8" />
-                  <Skeleton className="h-11 w-10 sm:h-8" />
+              {actions > 0 ? (
+                <div className={archived ? "w-full sm:w-24" : "flex gap-1"}>
+                  {Array.from({ length: actions }, (_, i) => (
+                    <div key={i} data-testid="reply-templates-skeleton-action"><Skeleton className={archived ? "h-11 w-full" : "h-11 w-10 sm:h-8"} /></div>
+                  ))}
                 </div>
               ) : null}
             </li>

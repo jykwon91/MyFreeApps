@@ -30,7 +30,7 @@ export default function ArchivedReplyTemplatesPanel({ onShowActive }: ArchivedRe
   function renderMode() {
     switch (mode) {
       case "loading":
-        return <ReplyTemplatesSkeleton variant="archived" label={MESSAGES.loadingArchived} showActions={canWrite} />;
+        return <ReplyTemplatesSkeleton variant="archived" label={MESSAGES.loadingArchived} actions={canWrite ? 1 : 0} />;
       case "error":
         return <ReplyTemplatesRetry message={MESSAGES.couldntLoadArchived} announce="alert" isRetrying={isRetrying} onRetry={onRetry} />;
       case "empty":

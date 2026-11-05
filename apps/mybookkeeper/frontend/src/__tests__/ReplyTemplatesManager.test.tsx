@@ -8,7 +8,8 @@ import ReplyTemplatesManager from "@/app/features/inquiries/ReplyTemplatesManage
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 import { useGetArchivedReplyTemplatesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
-import { archiveDescription, REPLY_TEMPLATE_MESSAGES as MESSAGES } from "@/shared/lib/reply-template-messages";
+import { archiveDescription, REPLY_TEMPLATE_MESSAGES as MESSAGES, viewLabel } from "@/shared/lib/reply-template-messages";
+import { useCanWrite } from "@/shared/hooks/useOrgRole";
 
 const t1: ReplyTemplate = {
   id: "tpl-1",
@@ -80,6 +81,29 @@ describe("ReplyTemplatesManager", () => {
     refetch.mockReset();
     refetch.mockResolvedValue({ isSuccess: true, data: [t1] });
     listState = loaded([t1]);
+    vi.mocked(useCanWrite).mockReturnValue(true);
+  });
+
+  it("gives a viewer no New template, a view-only note, and the template read-only", async () => {
+    vi.mocked(useCanWrite).mockReturnValue(false);
+    const user = userEvent.setup();
+    renderManager();
+    expect(screen.queryByTestId("reply-template-new-button")).not.toBeInTheDocument();
+    expect(screen.getByTestId("reply-templates-view-only")).toHaveTextContent(MESSAGES.viewOnlyNote);
+    await user.click(screen.getByRole("button", { name: viewLabel(t1.name) }));
+    const view = screen.getByTestId("reply-template-view");
+    expect(view).toHaveTextContent(t1.subject_template);
+    expect(view).toHaveTextContent(t1.body_template);
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("reply-template-form")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: MESSAGES.close }));
+    expect(screen.queryByTestId("reply-template-view")).not.toBeInTheDocument();
+  });
+
+  it("gives a writer no view-only note", () => {
+    renderManager();
+    expect(screen.queryByTestId("reply-templates-view-only")).not.toBeInTheDocument();
+    expect(screen.getByTestId("reply-template-new-button")).toBeInTheDocument();
   });
 
   it("renders existing templates as rows", () => {
