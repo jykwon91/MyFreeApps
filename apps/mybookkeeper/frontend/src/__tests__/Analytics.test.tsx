@@ -10,7 +10,7 @@ import UtilitySummaryCards from '@/app/features/analytics/UtilitySummaryCards';
 import AnalyticsFilters from '@/app/features/analytics/AnalyticsFilters';
 import AnalyticsSkeleton from '@/app/features/analytics/AnalyticsSkeleton';
 import PropertyMultiSelect from '@/shared/components/PropertyMultiSelect';
-import type { UtilityTrendsResponse } from '@/shared/types/analytics';
+import type { UtilityTrendsResponse } from '@mybookkeeper/api-client/types/analytics/utility-trends-response';
 import type { Property } from '@mybookkeeper/api-client/types/property/property';
 
 vi.mock('recharts', () => ({
@@ -28,7 +28,7 @@ vi.mock('recharts', () => ({
   CartesianGrid: () => <div data-testid='cartesian-grid' />,
 }));
 
-vi.mock('@/shared/store/analyticsApi', () => ({
+vi.mock('@mybookkeeper/api-client/store/analyticsApi', () => ({
   useGetUtilityTrendsQuery: vi.fn(() => ({
     data: undefined, isLoading: true, isError: false, refetch: vi.fn(),
   })),
@@ -41,7 +41,7 @@ vi.mock('@mybookkeeper/api-client/store/propertiesApi', () => ({
   useDeletePropertyMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
-import { useGetUtilityTrendsQuery } from '@/shared/store/analyticsApi';
+import { useGetUtilityTrendsQuery } from '@mybookkeeper/api-client/store/analyticsApi';
 import { useGetPropertiesQuery } from '@mybookkeeper/api-client/store/propertiesApi';
 
 const mockProperties: Property[] = [
