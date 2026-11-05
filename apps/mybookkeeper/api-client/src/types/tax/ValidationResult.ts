@@ -1,4 +1,4 @@
-export type ValidationSeverity = "error" | "warning" | "info";
+import type { ValidationSeverity } from "./ValidationSeverity";
 
 export interface ValidationResult {
   severity: ValidationSeverity;

@@ -2,7 +2,7 @@ import { FileText, AlertTriangle, CheckCircle2, AlertCircle } from "lucide-react
 import { getFormLabel } from "@mybookkeeper/api-client/utils/taxFormLabel";
 import Badge from "@/shared/components/ui/Badge";
 import type { BadgeColor } from "@/shared/components/ui/Badge";
-import type { ValidationResult } from "@/shared/types/tax/validation-result";
+import type { ValidationResult } from "@mybookkeeper/api-client/types/tax/ValidationResult";
 import type { FormSummary } from "@/shared/types/tax/form-summary";
 
 export interface FormOverviewGridProps {

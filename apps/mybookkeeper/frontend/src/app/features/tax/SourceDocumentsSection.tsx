@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useGetSourceDocumentsQuery } from "@/shared/store/taxReturnsApi";
+import { useGetSourceDocumentsQuery } from "@mybookkeeper/api-client/store/taxReturnsApi";
 import DocumentViewer from "@/app/features/documents/DocumentViewer";
 import SourceDocumentsSkeleton from "@/app/features/tax/SourceDocumentsSkeleton";
 import ReceivedDocumentsGrouped from "@/app/features/tax/ReceivedDocumentsGrouped";

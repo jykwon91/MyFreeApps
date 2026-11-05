@@ -12,6 +12,8 @@ export const SINGLE_COPY_SCREENS = [
   "documents/[id]",
   "tax/index",
   "tax/documents",
+  "tax-returns/index",
+  "tax-returns/[id]",
   "reply-templates/[id]",
   "reply-templates/index",
   "welcome-manuals/[id]",

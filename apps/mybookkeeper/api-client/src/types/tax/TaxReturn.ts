@@ -1,4 +1,4 @@
-export type TaxReturnStatus = "draft" | "ready" | "filed";
+import type { TaxReturnStatus } from "./TaxReturnStatus";
 
 export interface TaxReturn {
   id: string;

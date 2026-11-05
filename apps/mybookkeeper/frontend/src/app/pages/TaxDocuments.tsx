@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { ChevronDown, X } from "lucide-react";
 import { useListTaxDocumentsQuery } from "@mybookkeeper/api-client/store/taxDocumentsApi";
-import { useListTaxReturnsQuery } from "@/shared/store/taxReturnsApi";
+import { useListTaxReturnsQuery } from "@mybookkeeper/api-client/store/taxReturnsApi";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import DocumentViewer from "@/app/features/documents/DocumentViewer";

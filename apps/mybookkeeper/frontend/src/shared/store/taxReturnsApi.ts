@@ -1,9 +1,7 @@
 import { baseApi } from "./baseApi";
-import type { TaxReturn } from "@/shared/types/tax/tax-return";
+import type { TaxReturn } from "@mybookkeeper/api-client/types/tax/TaxReturn";
 import type { FormWithFields } from "@/shared/types/tax/tax-form";
-import type { ValidationResult } from "@/shared/types/tax/validation-result";
 import type { TaxAdvisorCachedResponse } from "@/shared/types/tax/tax-advisor";
-import type { SourceDocumentsResponse } from "@mybookkeeper/api-client/types/tax/SourceDocumentsResponse";
 
 export interface CreateTaxReturnParams {
   tax_year: number;
@@ -21,32 +19,13 @@ export interface OverrideFieldParams {
 
 const taxReturnsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    listTaxReturns: builder.query<TaxReturn[], void>({
-      query: () => ({ url: "/tax-returns" }),
-      providesTags: (result) =>
-        result
-          ? [...result.map((r) => ({ type: "TaxReturn" as const, id: r.id })), { type: "TaxReturn", id: "LIST" }]
-          : [{ type: "TaxReturn", id: "LIST" }],
-    }),
     createTaxReturn: builder.mutation<TaxReturn, CreateTaxReturnParams>({
       query: (data) => ({ url: "/tax-returns", method: "POST", data }),
       invalidatesTags: [{ type: "TaxReturn", id: "LIST" }],
     }),
-    getTaxReturn: builder.query<TaxReturn, string>({
-      query: (id) => ({ url: `/tax-returns/${id}` }),
-      providesTags: (_result, _err, id) => [{ type: "TaxReturn", id }],
-    }),
-    getFormsOverview: builder.query<{ form_name: string; instance_count: number; field_count: number }[], string>({
-      query: (returnId) => ({ url: `/tax-returns/${returnId}/forms-overview` }),
-      providesTags: (_result, _err, id) => [{ type: "TaxReturn", id }],
-    }),
     getFormFields: builder.query<FormWithFields, { return_id: string; form_name: string }>({
       query: ({ return_id, form_name }) => ({ url: `/tax-returns/${return_id}/forms/${form_name}` }),
       providesTags: (_result, _err, { return_id }) => [{ type: "TaxReturn", id: return_id }],
-    }),
-    recompute: builder.mutation<TaxReturn, string>({
-      query: (id) => ({ url: `/tax-returns/${id}/recompute`, method: "POST" }),
-      invalidatesTags: (_result, _err, id) => [{ type: "TaxReturn", id }],
     }),
     overrideField: builder.mutation<void, OverrideFieldParams>({
       query: ({ return_id, field_id, value, override_reason, field_type }) => {
@@ -61,14 +40,6 @@ const taxReturnsApi = baseApi.injectEndpoints({
         };
       },
       invalidatesTags: (_result, _err, { return_id }) => [{ type: "TaxReturn", id: return_id }],
-    }),
-    getValidation: builder.query<ValidationResult[], string>({
-      query: (id) => ({ url: `/tax-returns/${id}/validation` }),
-      providesTags: (_result, _err, id) => [{ type: "TaxReturn", id }],
-    }),
-    getSourceDocuments: builder.query<SourceDocumentsResponse, string>({
-      query: (returnId) => ({ url: `/tax-returns/${returnId}/source-documents` }),
-      providesTags: (_result, _err, id) => [{ type: "TaxReturn", id }],
     }),
     getAdvisorSuggestions: builder.query<TaxAdvisorCachedResponse, string>({
       query: (taxReturnId) => ({ url: `/tax-returns/${taxReturnId}/advisor` }),
@@ -94,15 +65,9 @@ const taxReturnsApi = baseApi.injectEndpoints({
 });
 
 export const {
-  useListTaxReturnsQuery,
   useCreateTaxReturnMutation,
-  useGetTaxReturnQuery,
-  useGetFormsOverviewQuery,
   useGetFormFieldsQuery,
-  useGetSourceDocumentsQuery,
-  useRecomputeMutation,
   useOverrideFieldMutation,
-  useGetValidationQuery,
   useGetAdvisorSuggestionsQuery,
   useGenerateAdvisorSuggestionsMutation,
   useUpdateSuggestionStatusMutation,

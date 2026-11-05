@@ -5,7 +5,7 @@ import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
 import { store } from '@/shared/store';
 import TaxReturns from '@/app/pages/TaxReturns';
-import type { TaxReturn } from '@/shared/types/tax/tax-return';
+import type { TaxReturn } from '@mybookkeeper/api-client/types/tax/TaxReturn';
 
 const currentYear = new Date().getFullYear();
 
@@ -41,8 +41,11 @@ const mockCreateReturn = vi.fn(() => ({
 }));
 const mockNavigate = vi.fn();
 
-vi.mock('@/shared/store/taxReturnsApi', () => ({
+vi.mock('@mybookkeeper/api-client/store/taxReturnsApi', () => ({
   useListTaxReturnsQuery: vi.fn(() => ({ data: mockReturns, isLoading: false })),
+}));
+
+vi.mock('@/shared/store/taxReturnsApi', () => ({
   useCreateTaxReturnMutation: vi.fn(() => [mockCreateReturn, { isLoading: false }]),
 }));
 
@@ -55,7 +58,7 @@ vi.mock('@/shared/hooks/useToast', () => ({
   useToast: vi.fn(() => ({ showError: vi.fn(), showSuccess: vi.fn() })),
 }));
 
-import { useListTaxReturnsQuery } from '@/shared/store/taxReturnsApi';
+import { useListTaxReturnsQuery } from '@mybookkeeper/api-client/store/taxReturnsApi';
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(

@@ -1,7 +1,8 @@
 import { getFormLabel } from "@mybookkeeper/api-client/utils/taxFormLabel";
 import { formatCurrency } from "@/shared/utils/currency";
-import type { ValidationResult } from "@/shared/types/tax/validation-result";
-import { SEVERITY_ORDER, SEVERITY_CONFIG } from "@/shared/lib/validation-config";
+import type { ValidationResult } from "@mybookkeeper/api-client/types/tax/ValidationResult";
+import { VALIDATION_SEVERITY_ORDER } from "@mybookkeeper/api-client/constants/validationSeverityOrder";
+import { SEVERITY_CONFIG } from "@/shared/lib/validation-config";
 
 export interface ValidationPanelProps {
   results: ValidationResult[];
@@ -18,7 +19,7 @@ export default function ValidationPanel({ results, onNavigateToField }: Validati
     );
   }
 
-  const grouped = SEVERITY_ORDER
+  const grouped = VALIDATION_SEVERITY_ORDER
     .map((severity) => ({
       severity,
       items: results.filter((r) => r.severity === severity),

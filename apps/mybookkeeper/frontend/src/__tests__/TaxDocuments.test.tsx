@@ -6,7 +6,7 @@ import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import TaxDocuments from "@/app/pages/TaxDocuments";
 import type { SourceDocumentsResponse } from "@mybookkeeper/api-client/types/tax/SourceDocumentsResponse";
-import type { TaxReturn } from "@/shared/types/tax/tax-return";
+import type { TaxReturn } from "@mybookkeeper/api-client/types/tax/TaxReturn";
 
 const mockDocumentsData: SourceDocumentsResponse = {
   documents: [
@@ -82,8 +82,8 @@ const mockTaxReturns: TaxReturn[] = [
   },
 ];
 
-vi.mock("@/shared/store/taxReturnsApi", async () => {
-  const actual = await vi.importActual("@/shared/store/taxReturnsApi");
+vi.mock("@mybookkeeper/api-client/store/taxReturnsApi", async () => {
+  const actual = await vi.importActual("@mybookkeeper/api-client/store/taxReturnsApi");
   return {
     ...actual,
     useListTaxReturnsQuery: vi.fn(() => ({
@@ -113,7 +113,7 @@ vi.mock("@/app/features/documents/DocumentViewer", () => ({
 }));
 
 import { useListTaxDocumentsQuery } from "@mybookkeeper/api-client/store/taxDocumentsApi";
-import { useListTaxReturnsQuery } from "@/shared/store/taxReturnsApi";
+import { useListTaxReturnsQuery } from "@mybookkeeper/api-client/store/taxReturnsApi";
 
 function renderPage() {
   return render(

@@ -1,0 +1,50 @@
+import type { ValidationSeverity } from "@mybookkeeper/api-client/types/tax/ValidationSeverity";
+
+export const TAX_RETURNS_SKELETON_ROWS = [0, 1, 2] as const;
+
+export const SEVERITY_LABELS: Record<ValidationSeverity, string> = {
+  error: "Needs fixing",
+  warning: "Worth a look",
+  info: "Good to know",
+};
+
+export const TAX_RETURNS_MESSAGES = {
+  loading: "Loading tax returns",
+  loadingOne: "Loading tax return",
+  loadingSection: "Loading this part",
+  note: "This is a summary I keep for you and your accountant. It isn't filed with the IRS.",
+  outOfDate: "Numbers are out of date",
+  outOfDateDetail: "Something changed since I last added this up, so these numbers are out of date.",
+  tryAgain: "Try again",
+  checkConnection: "Check your connection and try again.",
+  tryAgainLater: "Please try again in a bit.",
+  couldntLoad: "I couldn't load your tax returns.",
+  couldntLoadOne: "I couldn't load this tax return.",
+  couldntFind: "I couldn't find that tax return.",
+  couldntFindBody: "It may have been deleted.",
+  couldntLoadSection: "I couldn't load this part. Pull down to try again.",
+  noneHeading: "No tax returns yet",
+  noneBodyWriter: "I start one when I read your first tax form. Add one and I'll take it from there.",
+  noneBodyViewer: "I start one when I read your first tax form.",
+  addDocument: "Add a document",
+  attention: "Needs your attention",
+  documents: "Documents",
+  forms: "Forms",
+  noDocuments: "I don't have any documents on this return yet.",
+  noForms: "I don't have any forms on this return yet.",
+  noAttention: "I didn't find anything to check.",
+  recalculate: "Recalculate",
+  recalculating: "Recalculating...",
+  recalculated: "All added up.",
+  couldntRecalculate: "I couldn't recalculate. Please try again in a bit.",
+  adminsOnly: "Only owners and admins can recalculate.",
+  filedTitle: "This return is marked filed",
+  filedBody: "Recalculating can change its numbers, and I can't undo it.",
+  recalculateAnyway: "Recalculate anyway",
+  cancel: "Cancel",
+  webLink: "Open this return on the website",
+  title: (year: number) => `${year} tax return`,
+  filedOn: (date: string) => `Filed on ${date}`,
+  updated: (when: string) => `Updated ${when}`,
+  fieldCount: (count: number) => `${count} ${count === 1 ? "field" : "fields"}`,
+} as const;
