@@ -133,19 +133,7 @@ class PlatformBaseUserManager(
             user = await self.get_by_email(credentials.username)
         except exceptions.UserNotExists:
             # Unknown email — mimic parent's timing mitigation.
-            self.password_helper.hash(credentials.password)
-            await release_connection(self.user_db.session)
-            email_domain = (
-                credentials.username.split("@", 1)[-1]
-                if "@" in credentials.username
-                else ""
-            )
-            await guard.record_event(
-                AuthEventType.LOGIN_FAILURE,
-                user_id=None,
-                succeeded=False,
-                metadata={"email_domain": email_domain, "reason": "unknown_email"},
-            )
+            await self._refuse_unknown_email(credentials, request=None)
             return None
 
         result = await self._check_password(user, credentials, request=None)
@@ -179,18 +167,39 @@ class PlatformBaseUserManager(
         enjoys the same brute-force protection. Returns with the request's
         connection released, ready for the 2FA service to take its own.
 
-        Pass ``request`` so the locked-account audit row captures
-        ``ip_address`` and ``user_agent``.
+        Every refusal has already been recorded when this returns ``None``. Pass
+        ``request`` so that row captures ``ip_address`` and ``user_agent``.
 
         Calling this from anywhere else bypasses 2FA — don't.
         """
         try:
             user = await self.get_by_email(credentials.username)
         except exceptions.UserNotExists:
-            self.password_helper.hash(credentials.password)
-            await release_connection(self.user_db.session)
+            await self._refuse_unknown_email(credentials, request=request)
             return None
         return await self._check_password(user, credentials, request=request)
+
+    async def _refuse_unknown_email(
+        self,
+        credentials: OAuth2PasswordRequestForm,
+        *,
+        request: Optional[Request],
+    ) -> None:
+        """Hash anyway so timing can't reveal the email is unknown, and record it by domain only."""
+        self.password_helper.hash(credentials.password)
+        await release_connection(self.user_db.session)
+        email_domain = (
+            credentials.username.split("@", 1)[-1]
+            if "@" in credentials.username
+            else ""
+        )
+        await self.account_guard.record_event(
+            AuthEventType.LOGIN_FAILURE,
+            user_id=None,
+            request=request,
+            succeeded=False,
+            metadata={"email_domain": email_domain, "reason": "unknown_email"},
+        )
 
     async def _check_password(
         self,

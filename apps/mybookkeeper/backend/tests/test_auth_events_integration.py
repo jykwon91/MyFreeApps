@@ -6,10 +6,9 @@ asserts that the correct AuthEvent row is written.
 import contextlib
 import uuid
 from contextlib import asynccontextmanager
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
-import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -258,23 +257,18 @@ async def test_totp_login_success_creates_event(db: AsyncSession) -> None:
 
 @pytest.mark.anyio
 async def test_totp_login_failure_creates_event(db: AsyncSession) -> None:
-    """Failed authentication (bad credentials) logs LOGIN_FAILURE."""
+    """Failed authentication (unknown email) logs one LOGIN_FAILURE."""
     from app.core.rate_limit import check_login_rate_limit, check_totp_rate_limit
 
     app.dependency_overrides[check_login_rate_limit] = lambda: None
     app.dependency_overrides[check_totp_rate_limit] = lambda: None
     try:
-        with patch(
-            "app.core.auth.UserManager.authenticate_password",
-            new_callable=AsyncMock,
-            return_value=None,
-        ):
-            transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
-                resp = await client.post(
-                    "/auth/totp/login",
-                    json={"email": "nobody@example.com", "password": "wrong"},
-                )
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post(
+                "/auth/totp/login",
+                json={"email": "nobody@example.com", "password": "wrong"},
+            )
     finally:
         app.dependency_overrides.pop(check_login_rate_limit, None)
         app.dependency_overrides.pop(check_totp_rate_limit, None)
@@ -282,7 +276,7 @@ async def test_totp_login_failure_creates_event(db: AsyncSession) -> None:
     assert resp.status_code == 400
 
     events = await _events(db)
-    assert any(e.event_type == "login.failure" and not e.succeeded for e in events)
+    assert [(e.event_type, e.succeeded) for e in events] == [("login.failure", False)]
 
 
 # ---------------------------------------------------------------------------

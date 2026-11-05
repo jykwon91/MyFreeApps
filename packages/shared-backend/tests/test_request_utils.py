@@ -1,6 +1,8 @@
 """Unit tests for ``platform_shared.core.request_utils.get_client_ip``."""
 from unittest.mock import MagicMock
 
+import pytest
+
 from platform_shared.core.request_utils import get_client_ip
 
 
@@ -51,3 +53,12 @@ class TestGetClientIp:
     def test_returns_unknown_when_no_client(self) -> None:
         req = _make_request(client_host=None)
         assert get_client_ip(req) == "unknown"
+
+
+@pytest.mark.parametrize(
+    "forwarded",
+    ["x" * 46, "not-an-ip", "1.2.3.4:443", "fe80::1%" + "a" * 50, ", 1.2.3.4"],
+    ids=["oversized", "text", "with-port", "scoped", "empty-first-hop"],
+)
+def test_a_forwarded_value_that_isnt_an_ip_falls_back_to_the_peer(forwarded: str) -> None:
+    assert get_client_ip(_make_request(client_host="172.16.0.1", forwarded_for=forwarded)) == "172.16.0.1"

@@ -185,16 +185,14 @@ class TestInactiveUserTotpLoginAudit:
         )
 
     @pytest.mark.asyncio
-    async def test_none_user_audit_event_has_null_user_id_and_bad_credentials(
+    async def test_a_refused_password_adds_no_row_of_its_own(
         self, db: AsyncSession,
     ) -> None:
-        """When authenticate_password returns None, the LOGIN_FAILURE row
-        must have user_id=None and reason='bad_credentials'."""
+        """authenticate_password has already recorded the refusal."""
         totp_login = _totp_login_endpoint()
+        rows_before = len(await _auth_events(db))
 
-        # Use a unique IP to identify rows written by this exact test invocation.
-        unique_ip = f"192.168.201.{id(db) % 256}"
-        request = _make_request(ip=unique_ip)
+        request = _make_request()
 
         body = MagicMock(spec=TotpLoginRequest)
         body.email = "ghost@example.com"
@@ -213,17 +211,4 @@ class TestInactiveUserTotpLoginAudit:
             )
 
         assert exc_info.value.status_code == 400
-
-        rows = await _auth_events(db)
-        this_run_rows = [r for r in rows if r.ip_address == unique_ip]
-        bad_creds_rows = [
-            r for r in this_run_rows
-            if r.event_type == AuthEventType.LOGIN_FAILURE
-            and r.event_metadata.get("reason") == "bad_credentials"
-        ]
-        assert bad_creds_rows, (
-            "Expected LOGIN_FAILURE with reason='bad_credentials' for "
-            f"ip={unique_ip}"
-        )
-        ev = bad_creds_rows[0]
-        assert ev.user_id is None, "user_id must be None for an unknown user"
+        assert len(await _auth_events(db)) == rows_before

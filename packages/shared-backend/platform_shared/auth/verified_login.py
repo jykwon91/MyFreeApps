@@ -30,13 +30,7 @@ async def verify_login(
     user = await user_manager.authenticate_password(credentials, request)
 
     if user is None:
-        await guard.record_event(
-            AuthEventType.LOGIN_FAILURE,
-            user_id=None,
-            request=request,
-            succeeded=False,
-            metadata={"reason": "bad_credentials"},
-        )
+        # authenticate_password has already recorded why.
         raise HTTPException(status_code=400, detail="LOGIN_BAD_CREDENTIALS")
 
     if not user.is_active:

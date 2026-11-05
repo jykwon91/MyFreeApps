@@ -90,7 +90,7 @@ class AccountGuardService:
                 await emit_locked_login_event(db=db, user_id=user_id, request=request)
                 return GuardOutcome.LOCKED
             if not correct:
-                await self._count_failure(db, user, reason="bad_password")
+                await self._count_failure(db, user, reason="bad_password", request=request)
                 return GuardOutcome.WRONG
             if finishes_login and _login_ends_with_the_password(user):
                 self._clear(user)
@@ -121,7 +121,7 @@ class AccountGuardService:
                 return GuardOutcome.ALLOWED
             if expect_totp_enabled is not None and user.totp_enabled != expect_totp_enabled:
                 return GuardOutcome.STATE_CHANGED
-            await self._count_failure(db, user, reason="bad_totp")
+            await self._count_failure(db, user, reason="bad_totp", request=request)
             await log_auth_event(
                 db,
                 event_type=AuthEventType.TOTP_VERIFY_FAILURE,
@@ -165,7 +165,7 @@ class AccountGuardService:
                 await emit_locked_login_event(db=db, user_id=user_id, request=request)
                 return GuardOutcome.LOCKED
             if not valid:
-                await self._count_failure(db, user, reason="bad_totp")
+                await self._count_failure(db, user, reason="bad_totp", request=request)
                 return GuardOutcome.WRONG
             return GuardOutcome.ALLOWED
 
@@ -200,7 +200,9 @@ class AccountGuardService:
         if cleared is not None:
             _apply_lockout_update(user, cleared)
 
-    async def _count_failure(self, db: AsyncSession, user: Any, *, reason: str) -> None:
+    async def _count_failure(
+        self, db: AsyncSession, user: Any, *, reason: str, request: Request | None,
+    ) -> None:
         update = await record_failed_login(
             user,
             db=db,
@@ -208,6 +210,7 @@ class AccountGuardService:
             lockout_threshold=self.lockout_threshold,
             metadata={"reason": reason},
             now=_now(),
+            request=request,
         )
         if "locked_until" in update:
             logger.warning(

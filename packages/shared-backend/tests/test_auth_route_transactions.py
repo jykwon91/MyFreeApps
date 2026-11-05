@@ -89,6 +89,19 @@ async def test_wrong_password_saves_the_count_and_the_row(stack: RealAuthStack) 
     assert [(e.event_type, e.event_metadata.get("reason")) for e in events] == [
         (AuthEventType.LOGIN_FAILURE, "bad_password"),
     ]
+    assert events[0].ip_address is not None
+    assert await stack.stored_events(None) == []
+
+
+async def test_a_junk_forwarded_address_cant_stop_wrong_passwords_being_counted(stack: RealAuthStack) -> None:
+    user = await stack.add_user()
+
+    resp = await stack.client.post(
+        "/auth/totp/login", json=_login_body(user, "wrong"), headers={"X-Forwarded-For": "x" * 46},
+    )
+
+    assert resp.status_code == 400
+    assert (await stack.stored_user(user.id)).failed_login_count == 1
 
 
 async def test_unknown_email_saves_a_row_without_the_address(stack: RealAuthStack) -> None:
@@ -97,7 +110,11 @@ async def test_unknown_email_saves_a_row_without_the_address(stack: RealAuthStac
     )
 
     assert resp.status_code == 400
-    assert await stack.stored_event_types(None) == [AuthEventType.LOGIN_FAILURE]
+    events = await stack.stored_events(None)
+    assert [(e.event_type, e.event_metadata) for e in events] == [
+        (AuthEventType.LOGIN_FAILURE, {"email_domain": EMAIL_DOMAIN, "reason": "unknown_email"}),
+    ]
+    assert events[0].ip_address is not None
 
 
 async def test_unverified_login_saves_its_row(stack: RealAuthStack) -> None:
@@ -135,6 +152,7 @@ async def test_a_refused_locked_login_records_where_it_came_from(stack: RealAuth
     assert blocked.event_type == AuthEventType.LOGIN_BLOCKED_LOCKED
     assert blocked.ip_address is not None
     assert blocked.user_agent == "LockedClient/1.0"
+    assert await stack.stored_events(None) == []
 
 
 async def test_old_failures_stop_counting(stack: RealAuthStack) -> None:
