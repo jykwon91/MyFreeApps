@@ -4,10 +4,6 @@ import { formatCurrency } from "@platform/core/utils/currency";
 import { MORTGAGE_MESSAGES } from "../../constants/mortgages";
 import { fullDateLabel } from "../../lib/localDate";
 
-const VISIBLE_LOAN_DIGITS = 4;
-const SHORTEST_LOAN_NUMBER_TO_PARTLY_SHOW = 8;
-const HIDDEN_DIGITS = "••••";
-
 export function mortgageTitle(mortgage: Pick<Mortgage, "property_name">): string {
   return mortgage.property_name ?? MORTGAGE_MESSAGES.unassigned;
 }
@@ -22,11 +18,6 @@ export function balanceLine(mortgage: Pick<Mortgage, "current_balance_cents" | "
   if (mortgage.current_balance_cents === null) return null;
   const amount = formatMoneyCents(mortgage.current_balance_cents);
   return mortgage.statement_date ? `${amount} as of ${fullDateLabel(mortgage.statement_date)}` : amount;
-}
-
-/** On a short number the last four would be most of it, so then nothing shows. */
-export function maskedLoanNumber(loanNumber: string): string {
-  return loanNumber.length >= SHORTEST_LOAN_NUMBER_TO_PARTLY_SHOW ? `${HIDDEN_DIGITS} ${loanNumber.slice(-VISIBLE_LOAN_DIGITS)}` : HIDDEN_DIGITS;
 }
 
 export function rateFixedLine(mortgage: Pick<Mortgage, "rate_type" | "fixed_until">, todayIso: string): string | null {

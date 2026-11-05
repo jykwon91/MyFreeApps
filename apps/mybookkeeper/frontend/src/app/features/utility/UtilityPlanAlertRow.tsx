@@ -1,6 +1,6 @@
-import { formatPlanDate, formatRenewalCountdown } from "@/shared/lib/utility-plan-format";
-import { UTILITY_SERVICE_TYPE_LABELS } from "@/shared/types/utility/utility-service-type";
-import type { UtilityPlanSummary } from "@/shared/types/utility/utility-plan-summary";
+import { formatPlanDate, formatRenewalCountdown } from "@mybookkeeper/api-client/utils/utilityPlanFormat";
+import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/types/utility/utility-service-type";
+import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
 import UtilityPlanRenewalBadge from "./UtilityPlanRenewalBadge";
 
 export interface UtilityPlanAlertRowProps {

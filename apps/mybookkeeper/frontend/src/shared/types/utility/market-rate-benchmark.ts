@@ -1,4 +1,4 @@
-import type { UtilityServiceType } from "@/shared/types/utility/utility-service-type";
+import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 
 /**
  * One recorded market observation.

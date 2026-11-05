@@ -5,7 +5,7 @@ import {
 } from "@/shared/lib/utility-plan-form";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useUpdateUtilityPlanMutation } from "@/shared/store/utilityPlansApi";
-import type { UtilityPlanDetail } from "@/shared/types/utility/utility-plan-detail";
+import type { UtilityPlanDetail } from "@mybookkeeper/api-client/types/utility/utility-plan-detail";
 import UtilityPlanFormActions from "./UtilityPlanFormActions";
 import UtilityPlanFormFields from "./UtilityPlanFormFields";
 import { useUtilityPlanForm } from "./useUtilityPlanForm";

@@ -1,9 +1,9 @@
 import type { UtilityPlanDraft } from "@/shared/types/utility/utility-plan-draft";
 import type { UtilityPlanFormValues } from "@/shared/types/utility/utility-plan-form-values";
-import { UTILITY_PLAN_RATE_TYPES } from "@/shared/types/utility/utility-plan-rate-type";
-import type { UtilityPlanRateType } from "@/shared/types/utility/utility-plan-rate-type";
-import { UTILITY_SERVICE_TYPES } from "@/shared/types/utility/utility-service-type";
-import type { UtilityServiceType } from "@/shared/types/utility/utility-service-type";
+import { UTILITY_PLAN_RATE_TYPES } from "@mybookkeeper/api-client/types/utility/utility-plan-rate-type";
+import type { UtilityPlanRateType } from "@mybookkeeper/api-client/types/utility/utility-plan-rate-type";
+import { UTILITY_SERVICE_TYPES } from "@mybookkeeper/api-client/types/utility/utility-service-type";
+import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 
 /**
  * Turning a read document into form state.

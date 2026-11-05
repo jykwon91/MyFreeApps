@@ -1,0 +1,41 @@
+export const UTILITY_PLAN_LIST_LIMIT = 100;
+/** Same window as EXPIRING_SOON_DAYS in backend/app/core/utility_plan_constants.py. */
+export const EXPIRING_SOON_DAYS = 45;
+export const UTILITY_PLAN_SKELETON_ROWS = ["a", "b", "c", "d"];
+
+export const UTILITY_PLAN_MESSAGES = {
+  loadingList: "Loading your utility plans",
+  loadingOne: "Loading this plan",
+  couldntLoadList: "I couldn't load your utility plans.",
+  couldntLoadOne: "I couldn't load that plan.",
+  cantFind: "I can't find that plan.",
+  maybeDeleted: "It may have been deleted.",
+  tryAgainOffer: "Want me to try again?",
+  tryAgain: "Try again",
+  back: "Back",
+  noneHeading: "You don't have any utility plans yet.",
+  noneBody: "Add one on the website and it'll show up here.",
+  openWebsite: "Open on the website",
+  manageOnWebsite: "Adding and changing plans, better plan offers and rate comparisons are on the website.",
+  moreOnWebsite: `I'm showing the first ${UTILITY_PLAN_LIST_LIMIT} plans. The rest are on the website.`,
+  unknownProperty: "Unknown property",
+  pastPlan: "Past plan",
+  noFixedTerm: "No fixed term",
+  accountNumber: "Account number",
+  notes: "Notes",
+  termEnds: "Term ends",
+  termLength: "Term length",
+  started: "Service started",
+  earlyTerminationFee: "Early termination fee",
+  averageAt1000: "Average price at 1,000 kWh",
+  energyCharge: "Energy charge",
+  deliveryCharge: "Delivery charge",
+  baseCharge: "Monthly base charge",
+  billCredit: "Bill credit",
+  minimumUsageFee: "Minimum usage fee",
+  afterPromo: "Monthly price after promotion",
+  equipmentFee: "Monthly equipment fee",
+  download: "Download speed",
+  upload: "Upload speed",
+  dataCap: "Data cap",
+} as const;

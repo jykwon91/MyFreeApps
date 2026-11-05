@@ -1,6 +1,6 @@
-import type { UtilityPlanRateType } from "@/shared/types/utility/utility-plan-rate-type";
-import type { UtilityPlanRenewalStatus } from "@/shared/types/utility/utility-plan-renewal-status";
-import type { UtilityServiceType } from "@/shared/types/utility/utility-service-type";
+import type { UtilityPlanRateType } from "./utility-plan-rate-type";
+import type { UtilityPlanRenewalStatus } from "./utility-plan-renewal-status";
+import type { UtilityServiceType } from "./utility-service-type";
 
 /**
  * Summary row for the utility-plan list.

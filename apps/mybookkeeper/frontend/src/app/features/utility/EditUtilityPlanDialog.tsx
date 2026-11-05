@@ -1,5 +1,5 @@
 import AlertBox from "@/shared/components/ui/AlertBox";
-import { useGetUtilityPlanByIdQuery } from "@/shared/store/utilityPlansApi";
+import { useGetUtilityPlanByIdQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
 import EditUtilityPlanForm from "./EditUtilityPlanForm";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import UtilityPlanFormSkeleton from "./UtilityPlanFormSkeleton";

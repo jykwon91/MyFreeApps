@@ -3,13 +3,13 @@ import {
   UTILITY_PLAN_RATE_TYPES,
   UTILITY_PLAN_RATE_TYPE_HINTS,
   UTILITY_PLAN_RATE_TYPE_LABELS,
-} from "@/shared/types/utility/utility-plan-rate-type";
+} from "@mybookkeeper/api-client/types/utility/utility-plan-rate-type";
 import {
   UTILITY_SERVICE_TYPES,
   UTILITY_SERVICE_TYPE_LABELS,
-} from "@/shared/types/utility/utility-service-type";
-import type { UtilityPlanRateType } from "@/shared/types/utility/utility-plan-rate-type";
-import type { UtilityServiceType } from "@/shared/types/utility/utility-service-type";
+} from "@mybookkeeper/api-client/types/utility/utility-service-type";
+import type { UtilityPlanRateType } from "@mybookkeeper/api-client/types/utility/utility-plan-rate-type";
+import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 import type { UtilityPlanFormState } from "./useUtilityPlanForm";
 import UtilityPlanInternetFields from "./UtilityPlanInternetFields";
 import { UTILITY_PLAN_INPUT_CLASS } from "./utility-plan-input-class";
