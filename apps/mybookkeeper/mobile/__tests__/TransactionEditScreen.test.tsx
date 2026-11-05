@@ -9,14 +9,14 @@ import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { aProperty, aTransaction, lastPatch, startTransactionServer } from "../test-support/transactionsServer";
+import { holdWrites } from "../test-support/holdWrites";
 
 const mockBack = jest.fn();
 const mockDispatch = jest.fn();
-const mockPreventRemove = { active: false, callback: null as null | ((event: { data: { action: unknown } }) => void) };
+const mockPreventRemove = { active: false, callback: null as null | ((event: { repeat: () => void }) => void) };
 jest.mock("expo-router", () => ({
   router: { back: () => mockBack() },
-  useNavigation: () => ({ dispatch: (action: unknown) => mockDispatch(action) }),
-  usePreventRemove: (active: boolean, callback: (event: { data: { action: unknown } }) => void) => {
+  usePreventRemove: (active: boolean, callback: (event: { repeat: () => void }) => void) => {
     mockPreventRemove.active = active;
     mockPreventRemove.callback = callback;
   },
@@ -156,10 +156,23 @@ describe("TransactionEditScreen", () => {
     expect(mockPreventRemove.active).toBe(false);
     await fireEvent.changeText(vendor, "Lowes");
     expect(mockPreventRemove.active).toBe(true);
-    await act(async () => mockPreventRemove.callback?.({ data: { action: "go-back" } }));
+    await act(async () => mockPreventRemove.callback?.({ repeat: () => mockDispatch("go-back") }));
     const buttons = alert.mock.calls[0]?.[2];
     buttons?.find((button) => button.style === "destructive")?.onPress?.();
     expect(mockDispatch).toHaveBeenCalledWith("go-back");
+  });
+
+  it("ignores going back while a save is on its way, so Discard can't beat it", async () => {
+    startTransactionServer([aTransaction()]);
+    const alert = jest.spyOn(Alert, "alert");
+    alert.mockClear();
+    await renderScreen();
+    await fireEvent.changeText(await screen.findByLabelText("Vendor"), "Lowes");
+    holdWrites();
+    await fireEvent.press(screen.getByRole("button", { name: "Save" }));
+    await act(async () => mockPreventRemove.callback?.({ repeat: () => mockDispatch("go-back") }));
+    expect(alert).not.toHaveBeenCalled();
+    expect(mockDispatch).not.toHaveBeenCalled();
   });
 
   it("offers the row's own retired property", async () => {

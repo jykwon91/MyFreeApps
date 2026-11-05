@@ -25,16 +25,16 @@ import ReconciliationScreen from "../src/features/reconciliation/ReconciliationS
 import { useCompareWithRecords } from "../src/features/reconciliation/useCompareWithRecords";
 import { useCanWrite } from "../src/features/workspace/useCanWrite";
 import { store } from "../src/lib/store";
+import { holdWrites } from "../test-support/holdWrites";
 
 const mockBack = jest.fn();
 const mockPush = jest.fn();
 const mockDispatch = jest.fn();
-const mockPreventRemove = { active: false, callback: null as null | ((event: { data: { action: unknown } }) => void) };
+const mockPreventRemove = { active: false, callback: null as null | ((event: { repeat: () => void }) => void) };
 jest.mock("expo-router", () => ({
   useFocusEffect: () => undefined,
   router: { back: () => mockBack(), push: (path: string) => mockPush(path) },
-  useNavigation: () => ({ dispatch: (action: unknown) => mockDispatch(action) }),
-  usePreventRemove: (active: boolean, callback: (event: { data: { action: unknown } }) => void) => {
+  usePreventRemove: (active: boolean, callback: (event: { repeat: () => void }) => void) => {
     mockPreventRemove.active = active;
     mockPreventRemove.callback = callback;
   },
@@ -483,9 +483,21 @@ describe("adding", () => {
     await typeInto(MESSAGES.amount, "10");
     expect(mockPreventRemove.active).toBe(true);
 
-    act(() => mockPreventRemove.callback?.({ data: { action: "go-back" } }));
-    act(() => jest.mocked(Alert.alert).mock.lastCall?.[2]?.find((option) => option.text === MESSAGES.discard)?.onPress?.());
+    await act(async () => mockPreventRemove.callback?.({ repeat: () => mockDispatch("go-back") }));
+    await act(async () => jest.mocked(Alert.alert).mock.lastCall?.[2]?.find((option) => option.text === MESSAGES.discard)?.onPress?.());
     expect(mockDispatch).toHaveBeenCalledWith("go-back");
+  });
+
+  it("ignores going back while the form is sending, so Discard can't beat it", async () => {
+    serve({});
+    await showForm();
+    await typeInto(MESSAGES.amount, "10");
+    holdWrites();
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.add }));
+    jest.mocked(Alert.alert).mockClear();
+    await act(async () => mockPreventRemove.callback?.({ repeat: () => mockDispatch("go-back") }));
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(mockDispatch).not.toHaveBeenCalled();
   });
 
   it("refreshes the list once a form is added", async () => {

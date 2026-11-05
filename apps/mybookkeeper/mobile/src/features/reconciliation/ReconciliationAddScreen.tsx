@@ -1,17 +1,17 @@
 import { useUpload1099Mutation } from "@mybookkeeper/api-client/store/reconciliationApi";
 import { Banner, FormField, LoadingButton, OptionSheet, useTheme, useToast } from "@platform/mobile";
-import { router, useNavigation, usePreventRemove } from "expo-router";
+import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { DEFAULT_SOURCE_TYPE, ISSUER_MAX_LENGTH, RECONCILIATION_MESSAGES as MESSAGES, SOURCE_TYPES } from "../../constants/reconciliation";
 import PickerField from "../transactions/PickerField";
 import { reportedAmountError, sourceTypeLabel } from "./reconciliationDisplay";
 import { addFailureMessage } from "./reconciliationFailure";
+import { useConfirmLeave } from "../../lib/useConfirmLeave";
 
 export default function ReconciliationAddScreen({ year }: { year: number }) {
   const { spacing } = useTheme();
   const { showToast } = useToast();
-  const navigation = useNavigation();
   const [upload1099, { isLoading }] = useUpload1099Mutation();
   const isSending = useRef(false);
   const [sourceType, setSourceType] = useState(DEFAULT_SOURCE_TYPE);
@@ -25,10 +25,11 @@ export default function ReconciliationAddScreen({ year }: { year: number }) {
   const isDirty = sourceType !== DEFAULT_SOURCE_TYPE || issuer !== "" || amount !== "";
   const amountProblem = reportedAmountError(amount);
 
-  usePreventRemove(isDirty && !isLeaving, ({ data }) => {
+  useConfirmLeave(isDirty && !isLeaving, (leave) => {
+    if (isSending.current) return;
     Alert.alert(MESSAGES.discardTitle, MESSAGES.discardBody, [
       { text: MESSAGES.keepEditing, style: "cancel" },
-      { text: MESSAGES.discard, style: "destructive", onPress: () => navigation.dispatch(data.action) },
+      { text: MESSAGES.discard, style: "destructive", onPress: leave },
     ]);
   });
 

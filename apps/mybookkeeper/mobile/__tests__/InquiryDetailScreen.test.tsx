@@ -11,16 +11,16 @@ import { store } from "../src/lib/store";
 import { saveReplyDraft } from "../src/features/inquiries/replyDrafts";
 import { resetFakeFiles } from "../test-support/fakeFileSystem";
 import { aMessage, anInquiry, lastInquiryWrite, startInquiryServer } from "../test-support/inquiriesServer";
+import { holdWrites } from "../test-support/holdWrites";
 
 const mockBack = jest.fn();
 const mockPush = jest.fn();
 const mockDispatch = jest.fn();
-const mockPreventRemove: { active: boolean; callback: ((event: { data: { action: unknown } }) => void) | null } = { active: false, callback: null };
+const mockPreventRemove: { active: boolean; callback: ((event: { repeat: () => void }) => void) | null } = { active: false, callback: null };
 jest.mock("expo-router", () => ({
   router: { back: () => mockBack(), push: (path: string) => mockPush(path) },
-  useNavigation: () => ({ dispatch: (action: unknown) => mockDispatch(action) }),
   useFocusEffect: (effect: () => void) => jest.requireActual<typeof import("react")>("react").useEffect(effect, [effect]),
-  usePreventRemove: (active: boolean, callback: (event: { data: { action: unknown } }) => void) => {
+  usePreventRemove: (active: boolean, callback: (event: { repeat: () => void }) => void) => {
     mockPreventRemove.active = active;
     mockPreventRemove.callback = callback;
     // Leaving the screen ends the guard, as the real hook does.
@@ -376,7 +376,7 @@ describe("InquiryDetailScreen", () => {
       await openNotes();
       await fireEvent.changeText(screen.getByLabelText("Your notes"), "Sounds good");
       await act(async () => {
-        mockPreventRemove.callback?.({ data: { action: "leave" } });
+        mockPreventRemove.callback?.({ repeat: () => mockDispatch("leave") });
       });
       await pressAlertButton("Save");
       expect(lastInquiryWrite(server)?.body).toEqual({ notes: "Sounds good" });
@@ -390,9 +390,25 @@ describe("InquiryDetailScreen", () => {
       server.failWritesWith = 500;
       await fireEvent.changeText(screen.getByLabelText("Your notes"), "Sounds good");
       await act(async () => {
-        mockPreventRemove.callback?.({ data: { action: "leave" } });
+        mockPreventRemove.callback?.({ repeat: () => mockDispatch("leave") });
       });
       await pressAlertButton("Save");
+      expect(mockDispatch).not.toHaveBeenCalled();
+    });
+
+    it("ignores going back while the notes are saving, so Discard can't beat it", async () => {
+      startInquiryServer([anInquiry()]);
+      const alert = jest.spyOn(Alert, "alert");
+      alert.mockClear();
+      await renderScreen();
+      await openNotes();
+      await fireEvent.changeText(screen.getByLabelText("Your notes"), "Sounds good");
+      holdWrites();
+      await fireEvent.press(screen.getByRole("button", { name: /save/i }));
+      await act(async () => {
+        mockPreventRemove.callback?.({ repeat: () => mockDispatch("leave") });
+      });
+      expect(alert).not.toHaveBeenCalled();
       expect(mockDispatch).not.toHaveBeenCalled();
     });
 
@@ -402,7 +418,7 @@ describe("InquiryDetailScreen", () => {
       await openNotes();
       await fireEvent.changeText(screen.getByLabelText("Your notes"), "Sounds good");
       await act(async () => {
-        mockPreventRemove.callback?.({ data: { action: "leave" } });
+        mockPreventRemove.callback?.({ repeat: () => mockDispatch("leave") });
       });
       await pressAlertButton("Discard");
       expect(lastInquiryWrite(server)).toBeNull();

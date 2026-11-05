@@ -9,7 +9,7 @@ import { usePromoteFromInquiryMutation } from "@mybookkeeper/api-client/store/ap
 import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
 import { promoteConflictDetail } from "@mybookkeeper/api-client/utils/applicantPromoteConflict";
 import { Banner, FormField, LoadingButton, SegmentedControl, useTheme, useToast } from "@platform/mobile";
-import { router, useNavigation, usePreventRemove } from "expo-router";
+import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, type ScrollViewInstance, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -18,12 +18,12 @@ import type { PromoteValues } from "../../types/PromoteValues";
 import OptionalDateField from "../shell/OptionalDateField";
 import { promoteFailure } from "./applicantFailures";
 import { isOldEnough, promoteRequest, promoteValuesFrom } from "./promoteValues";
+import { useConfirmLeave } from "../../lib/useConfirmLeave";
 
 export default function PromoteForm({ inquiry }: { inquiry: InquiryResponse }) {
   const { colors, spacing, fontSize } = useTheme();
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
   const [promote, { isLoading }] = usePromoteFromInquiryMutation();
   const [initial] = useState(() => promoteValuesFrom(inquiry));
   const [values, setValues] = useState<PromoteValues>(initial);
@@ -37,11 +37,11 @@ export default function PromoteForm({ inquiry }: { inquiry: InquiryResponse }) {
   const isTooYoung = values.dob !== null && !isOldEnough(values.dob, today);
   const isDirty = JSON.stringify(values) !== JSON.stringify(initial);
 
-  usePreventRemove((isDirty || isLoading) && !leaveTo, ({ data }) => {
+  useConfirmLeave((isDirty || isLoading) && !leaveTo, (leave) => {
     if (isSubmitting.current) return;
     Alert.alert("Discard this?", "They haven't been promoted yet.", [
       { text: "Keep editing", style: "cancel" },
-      { text: "Discard", style: "destructive", onPress: () => navigation.dispatch(data.action) },
+      { text: "Discard", style: "destructive", onPress: leave },
     ]);
   });
 
