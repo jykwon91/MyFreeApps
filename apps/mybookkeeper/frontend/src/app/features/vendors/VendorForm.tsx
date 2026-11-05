@@ -7,16 +7,16 @@ import FormField from "@/shared/components/ui/FormField";
 import {
   VENDOR_CATEGORIES,
   VENDOR_CATEGORY_LABELS,
-} from "@/shared/lib/vendor-labels";
+} from "@mybookkeeper/api-client/constants/vendorLabels";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   useCreateVendorMutation,
   useUpdateVendorMutation,
-} from "@/shared/store/vendorsApi";
-import type { VendorCategory } from "@/shared/types/vendor/vendor-category";
-import type { VendorCreateRequest } from "@/shared/types/vendor/vendor-create-request";
-import type { VendorResponse } from "@/shared/types/vendor/vendor-response";
-import type { VendorUpdateRequest } from "@/shared/types/vendor/vendor-update-request";
+} from "@mybookkeeper/api-client/store/vendorsApi";
+import type { VendorCategory } from "@mybookkeeper/api-client/types/vendor/vendor-category";
+import type { VendorCreateRequest } from "@mybookkeeper/api-client/types/vendor/vendor-create-request";
+import type { VendorResponse } from "@mybookkeeper/api-client/types/vendor/vendor-response";
+import type { VendorUpdateRequest } from "@mybookkeeper/api-client/types/vendor/vendor-update-request";
 
 export interface VendorFormProps {
   /** When provided the form is in edit mode; absent = create. */

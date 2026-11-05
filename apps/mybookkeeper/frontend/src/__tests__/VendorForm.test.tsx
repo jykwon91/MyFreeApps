@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import VendorForm from "@/app/features/vendors/VendorForm";
-import type { VendorResponse } from "@/shared/types/vendor/vendor-response";
+import type { VendorResponse } from "@mybookkeeper/api-client/types/vendor/vendor-response";
 
 const createVendor = vi.fn<(arg: Record<string, unknown>) => { unwrap: () => Promise<unknown> }>(() => ({
   unwrap: () => Promise.resolve({}),
@@ -12,7 +12,7 @@ const updateVendor = vi.fn<(arg: { id: string; data: Record<string, unknown> }) 
   unwrap: () => Promise.resolve({}),
 }));
 
-vi.mock("@/shared/store/vendorsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/vendorsApi", () => ({
   useCreateVendorMutation: () => [createVendor, { isLoading: false }],
   useUpdateVendorMutation: () => [updateVendor, { isLoading: false }],
 }));

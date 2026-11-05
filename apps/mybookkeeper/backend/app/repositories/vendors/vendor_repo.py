@@ -111,7 +111,7 @@ async def list_by_organization(
     limit: int = 50,
     offset: int = 0,
 ) -> list[Vendor]:
-    """List vendors for (organization_id, user_id). Newest first."""
+    """List vendors for (organization_id, user_id). Preferred first, then newest."""
     stmt = select(Vendor).where(
         Vendor.organization_id == organization_id,
         Vendor.user_id == user_id,
@@ -122,7 +122,11 @@ async def list_by_organization(
         stmt = stmt.where(Vendor.category == category)
     if preferred is not None:
         stmt = stmt.where(Vendor.preferred.is_(preferred))
-    stmt = stmt.order_by(desc(Vendor.created_at)).limit(limit).offset(offset)
+    stmt = (
+        stmt.order_by(desc(Vendor.preferred), desc(Vendor.created_at), desc(Vendor.id))
+        .limit(limit)
+        .offset(offset)
+    )
     result = await db.execute(stmt)
     return list(result.scalars().all())
 

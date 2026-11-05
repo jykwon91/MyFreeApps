@@ -8,7 +8,7 @@ import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   useDeleteVendorMutation,
   useGetVendorByIdQuery,
-} from "@/shared/store/vendorsApi";
+} from "@mybookkeeper/api-client/store/vendorsApi";
 import {
   formatAbsoluteTime,
   formatRelativeTime,

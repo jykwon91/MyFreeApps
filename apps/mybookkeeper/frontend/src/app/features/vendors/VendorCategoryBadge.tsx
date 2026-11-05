@@ -1,8 +1,6 @@
-import {
-  VENDOR_CATEGORY_BADGE_COLORS,
-  VENDOR_CATEGORY_LABELS,
-} from "@/shared/lib/vendor-labels";
-import type { VendorCategory } from "@/shared/types/vendor/vendor-category";
+import { VENDOR_CATEGORY_LABELS } from "@mybookkeeper/api-client/constants/vendorLabels";
+import { VENDOR_CATEGORY_BADGE_COLORS } from "@/shared/lib/vendor-labels";
+import type { VendorCategory } from "@mybookkeeper/api-client/types/vendor/vendor-category";
 import type { BadgeColor } from "@/shared/components/ui/Badge";
 
 const COLOR_CLASSES: Record<BadgeColor, string> = {

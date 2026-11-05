@@ -2,8 +2,8 @@ import { cn } from "@/shared/utils/cn";
 import {
   VENDOR_CATEGORIES,
   VENDOR_CATEGORY_LABELS,
-} from "@/shared/lib/vendor-labels";
-import type { VendorCategory } from "@/shared/types/vendor/vendor-category";
+} from "@mybookkeeper/api-client/constants/vendorLabels";
+import type { VendorCategory } from "@mybookkeeper/api-client/types/vendor/vendor-category";
 
 export interface VendorCategoryFilterProps {
   value: VendorCategory | null;

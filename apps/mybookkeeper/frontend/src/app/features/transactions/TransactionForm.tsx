@@ -12,7 +12,7 @@ import type { SourcePreview } from "@/shared/types/transaction/source-preview";
 import FormField from "@/shared/components/ui/FormField";
 import Select from "@/shared/components/ui/Select";
 import TransactionDuplicateActions from "@/app/features/transactions/TransactionDuplicateActions";
-import { useGetVendorsQuery } from "@/shared/store/vendorsApi";
+import { useGetVendorsQuery } from "@mybookkeeper/api-client/store/vendorsApi";
 import SourcePreviewBody from "./SourcePreviewBody";
 
 export interface TransactionFormProps {

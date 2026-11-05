@@ -222,6 +222,31 @@ class TestVendorRepoGetById:
 
 class TestVendorRepoList:
     @pytest.mark.asyncio
+    async def test_list_puts_preferred_first_then_newest(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        earlier = _dt.datetime(2026, 1, 1, tzinfo=_dt.timezone.utc)
+        later = _dt.datetime(2026, 2, 1, tzinfo=_dt.timezone.utc)
+        for name, preferred, created_at in (
+            ("old plain", False, earlier),
+            ("new plain", False, later),
+            ("old preferred", True, earlier),
+            ("new preferred", True, later),
+        ):
+            vendor = _make_vendor(
+                organization_id=test_org.id, user_id=test_user.id, name=name, preferred=preferred,
+            )
+            vendor.created_at = created_at
+            db.add(vendor)
+        await db.commit()
+
+        results = await vendor_repo.list_by_organization(
+            db, organization_id=test_org.id, user_id=test_user.id,
+        )
+
+        assert [v.name for v in results] == ["new preferred", "old preferred", "new plain", "old plain"]
+
+    @pytest.mark.asyncio
     async def test_list_isolates_by_org_and_user(
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:

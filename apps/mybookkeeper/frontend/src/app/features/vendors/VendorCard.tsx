@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Star } from "lucide-react";
 import { formatRelativeTime } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import { formatHourlyRate } from "@/shared/utils/hourly-rate";
-import type { VendorSummary } from "@/shared/types/vendor/vendor-summary";
+import type { VendorSummary } from "@mybookkeeper/api-client/types/vendor/vendor-summary";
 import VendorCategoryBadge from "./VendorCategoryBadge";
 
 export interface VendorCardProps {
