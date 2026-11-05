@@ -11,11 +11,14 @@ import uuid
 from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.repositories.user_repo import lock_by_email, lock_by_id
+from platform_shared.services.account_lockout import is_locked as account_is_locked
+from platform_shared.services.totp_already_enabled_error import TotpAlreadyEnabledError
 from platform_shared.services.totp_service import (
     DEFAULT_TOTP_ALGORITHM,
     TotpAlgorithm,
@@ -64,6 +67,10 @@ class TotpAccountService:
             user = await lock_by_id(db, user_id, user_model=self.user_model)
             if user is None:
                 raise ValueError("User not found")
+            # Checked under the lock: the route's check can race a /verify, and
+            # this would then wipe the secret and recovery codes of a user with 2FA on.
+            if user.totp_enabled:
+                raise TotpAlreadyEnabledError
             secret = generate_secret()
             user.totp_secret = self.encrypt(secret, user_id)
             user.totp_recovery_codes = None
@@ -77,7 +84,7 @@ class TotpAccountService:
         """Turn 2FA on if ``code`` is right. Returns ``(verified, recovery_codes)``."""
         async with self.unit_of_work_factory() as db:
             user = await lock_by_id(db, user_id, user_model=self.user_model)
-            if user is None or not user.totp_secret:
+            if user is None or not user.totp_secret or user.totp_enabled:
                 return False, []
             if not self._spend_time_code(user, code):
                 return False, []
@@ -87,10 +94,16 @@ class TotpAccountService:
             return True, recovery
 
     async def disable_totp(self, user_id: uuid.UUID, code: str) -> bool:
-        """Turn 2FA off if ``code`` is right."""
+        """Turn 2FA off if ``code`` is right and the account isn't locked.
+
+        The lock is checked under the row lock: guesses sent together all get past
+        the route's earlier check, and a right one mustn't win after the lockout.
+        """
         async with self.unit_of_work_factory() as db:
             user = await lock_by_id(db, user_id, user_model=self.user_model)
             if user is None or not user.totp_enabled or not user.totp_secret:
+                return False
+            if account_is_locked(user, now=datetime.now(tz=timezone.utc)):
                 return False
             if not self._spend_time_code(user, code):
                 return False

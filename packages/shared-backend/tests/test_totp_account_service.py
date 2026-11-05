@@ -5,6 +5,7 @@ import hashlib
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
@@ -14,6 +15,7 @@ import pytest
 
 from platform_shared.services import totp_account_service
 from platform_shared.services.totp_account_service import TotpAccountService
+from platform_shared.services.totp_already_enabled_error import TotpAlreadyEnabledError
 from platform_shared.services.totp_service import (
     decrypt_for_user,
     encrypt_for_user,
@@ -49,6 +51,7 @@ def _user(
     enabled: bool = True,
     recovery: str | None = None,
     algorithm: str = "sha256",
+    locked_until: datetime | None = None,
 ) -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.uuid4(),
@@ -58,6 +61,7 @@ def _user(
         totp_recovery_codes=recovery,
         totp_algorithm=algorithm,
         totp_last_used_step=None,
+        locked_until=locked_until,
     )
 
 
@@ -234,6 +238,40 @@ async def test_a_code_spent_confirming_cant_disable_2fa(stored: Any) -> None:
 
     assert await service.disable_totp(user.id, code) is False
     assert user.totp_enabled is True
+
+
+@pytest.mark.asyncio
+async def test_setup_when_already_on_keeps_the_secret_and_recovery_codes(stored: Any) -> None:
+    secret = generate_secret()
+    user = _user(secret=secret, enabled=True, recovery="AAAA1111")
+    stored(user)
+
+    with pytest.raises(TotpAlreadyEnabledError):
+        await _service().setup_totp(user.id)
+
+    assert (user.totp_secret, user.totp_recovery_codes) == (secret, "AAAA1111")
+
+
+@pytest.mark.asyncio
+async def test_confirm_when_already_on_keeps_the_recovery_codes(stored: Any) -> None:
+    secret = generate_secret()
+    user = _user(secret=secret, enabled=True, recovery="AAAA1111")
+    stored(user)
+
+    assert await _service().confirm_totp(user.id, _code(secret)) == (False, [])
+    assert user.totp_recovery_codes == "AAAA1111"
+
+
+@pytest.mark.asyncio
+async def test_a_right_code_cant_disable_a_locked_account_or_get_spent(stored: Any) -> None:
+    secret = generate_secret()
+    locked = datetime.now(tz=timezone.utc) + timedelta(minutes=5)
+    user = _user(secret=secret, locked_until=locked)
+    stored(user)
+
+    assert await _service().disable_totp(user.id, _code(secret)) is False
+    assert user.totp_enabled is True
+    assert user.totp_last_used_step is None
 
 
 @pytest.mark.asyncio

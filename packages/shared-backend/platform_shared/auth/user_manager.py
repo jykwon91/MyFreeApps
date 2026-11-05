@@ -287,6 +287,11 @@ class PlatformBaseUserManager(
         await self.user_db.session.refresh(user, _LOCKOUT_FIELDS, with_for_update=True)
         return account_is_locked(user, now=datetime.now(tz=timezone.utc))
 
+    async def totp_enabled_now(self, user: models.UP) -> bool:
+        """Reread whether 2FA is on. The copy loaded with the request may be out of date."""
+        await self.user_db.session.refresh(user, ["totp_enabled"])
+        return user.totp_enabled
+
     async def count_failed_password(self, user: models.UP) -> None:
         """Count a wrong password given while signed in toward the login lockout."""
         await self._count_failed_login(

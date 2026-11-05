@@ -16,6 +16,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
+from app.core.config import settings
 from app.db.session import get_db
 from app.main import app
 from app.models.user.user import User
@@ -237,6 +238,24 @@ class TestTotpDisable:
         async with _auth_client_for(user)() as client:
             resp = await client.post("/auth/totp/disable", json={"code": "000000"})
         assert resp.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_wrong_codes_count_toward_the_login_lockout(
+        self, db: AsyncSession, user_with_totp: tuple[User, str]
+    ) -> None:
+        # One short, because SQLite hands back naive datetimes the next attempt can't compare.
+        user, _ = user_with_totp
+        user.failed_login_count = settings.lockout_threshold - 1
+        await db.commit()
+
+        async with _auth_client_for(user)() as client:
+            resp = await client.post("/auth/totp/disable", json={"code": "000000"})
+
+        assert resp.status_code == 400
+        await db.refresh(user)
+        assert user.failed_login_count == settings.lockout_threshold
+        assert user.locked_until is not None
+        assert user.totp_enabled is True
 
     @pytest.mark.asyncio
     async def test_not_enabled_returns_400(
@@ -516,7 +535,6 @@ class TestTotpLoginAccountLockout:
         from app.core.rate_limit import (
             check_login_rate_limit,
             check_totp_rate_limit,
-            check_totp_account_not_locked,
         )
 
         # Lock the user.

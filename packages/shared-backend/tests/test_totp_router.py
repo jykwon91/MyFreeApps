@@ -1,16 +1,27 @@
 """The shared ``/auth/totp`` routes, with an app's dependencies replaced by fakes."""
+import hashlib
 import uuid
 from collections.abc import AsyncIterator
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pyotp
 import pytest
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 from platform_shared.api.totp_router import build_totp_router
 from platform_shared.core.auth_events import AuthEventType
+from platform_shared.services.totp_already_enabled_error import TotpAlreadyEnabledError
+from platform_shared.services.totp_service import (
+    DEFAULT_TOTP_ALGORITHM,
+    TOTP_DIGITS,
+    TOTP_PERIOD_SECONDS,
+    generate_secret,
+    matching_time_step,
+)
 
 LOGIN = {"email": "a@example.com", "password": "correct-password"}
 
@@ -22,6 +33,9 @@ def _user(**overrides: Any) -> SimpleNamespace:
         "is_active": True,
         "is_verified": True,
         "totp_enabled": False,
+        "locked_until": None,
+        "failed_login_count": 0,
+        "last_failed_login_at": None,
     }
     return SimpleNamespace(**(fields | overrides))
 
@@ -43,6 +57,8 @@ class _Harness:
         self.manager.is_locked_now = AsyncMock(return_value=False)
         self.manager.count_failed_second_factor = AsyncMock()
         self.manager.clear_failed_logins = AsyncMock()
+        self.manager.reset_stale_failed_logins = AsyncMock()
+        self.manager.totp_enabled_now = AsyncMock(return_value=True)
         self.strategy = MagicMock()
         self.strategy.write_token = AsyncMock(return_value="a-token")
 
@@ -74,6 +90,7 @@ def events() -> Any:
     logged = AsyncMock()
     with (
         patch("platform_shared.api.totp_router.log_auth_event", new=logged),
+        patch("platform_shared.auth.refuse_as_locked.emit_locked_login_event", new=AsyncMock()),
         patch("platform_shared.auth.verified_login.log_auth_event", new=logged),
     ):
         yield logged
@@ -210,7 +227,29 @@ def test_setup_is_refused_when_already_enabled(events: AsyncMock) -> None:
 def test_setup_returns_the_secret(events: AsyncMock) -> None:
     resp = _Harness(_user()).client.post("/auth/totp/setup")
 
-    assert resp.json() == {"secret": "secret", "provisioning_uri": "otpauth://uri"}
+    assert resp.json() == {
+        "secret": "secret",
+        "provisioning_uri": "otpauth://uri",
+        "algorithm": "sha256",
+        "digits": 6,
+        "period": 30,
+    }
+
+
+def test_the_settings_setup_reports_are_the_ones_codes_use() -> None:
+    secret = generate_secret()
+    code = pyotp.TOTP(
+        secret, digits=TOTP_DIGITS, interval=TOTP_PERIOD_SECONDS, digest=hashlib.sha256,
+    ).now()
+
+    assert matching_time_step(secret, code, algorithm=DEFAULT_TOTP_ALGORITHM, after_step=None) is not None
+
+
+def test_setup_racing_a_verify_is_refused(events: AsyncMock) -> None:
+    harness = _Harness(_user())
+    harness.service.setup_totp.side_effect = TotpAlreadyEnabledError
+
+    assert harness.client.post("/auth/totp/setup").status_code == 400
 
 
 def test_verify_returns_recovery_codes_and_commits_the_event(events: AsyncMock) -> None:
@@ -231,6 +270,13 @@ def test_wrong_verify_code_enables_nothing(events: AsyncMock) -> None:
     assert _logged_types(events) == []
 
 
+def test_verify_is_refused_when_already_enabled_and_keeps_the_recovery_codes(events: AsyncMock) -> None:
+    harness = _Harness(_user(totp_enabled=True))
+
+    assert harness.client.post("/auth/totp/verify", json={"code": "123456"}).status_code == 400
+    harness.service.confirm_totp.assert_not_awaited()
+
+
 def test_disable_commits_the_event(events: AsyncMock) -> None:
     harness = _Harness(_user(totp_enabled=True))
 
@@ -241,12 +287,59 @@ def test_disable_commits_the_event(events: AsyncMock) -> None:
     harness.db.commit.assert_awaited()
 
 
+def test_right_disable_code_clears_the_failure_count(events: AsyncMock) -> None:
+    harness = _Harness(_user(totp_enabled=True))
+
+    assert harness.client.post("/auth/totp/disable", json={"code": "123456"}).status_code == 200
+    harness.manager.clear_failed_logins.assert_awaited_once()
+
+
+def test_double_press_on_disable_counts_nothing(events: AsyncMock) -> None:
+    harness = _Harness(_user(totp_enabled=True))
+    harness.service.disable_totp.return_value = False
+    harness.manager.totp_enabled_now.return_value = False
+
+    resp = harness.client.post("/auth/totp/disable", json={"code": "123456"})
+
+    assert (resp.status_code, resp.json()["detail"]) == (400, "2FA is not enabled")
+    harness.manager.count_failed_second_factor.assert_not_awaited()
+
+
 def test_wrong_disable_code_disables_nothing(events: AsyncMock) -> None:
     harness = _Harness(_user(totp_enabled=True))
     harness.service.disable_totp.return_value = False
 
     assert harness.client.post("/auth/totp/disable", json={"code": "000000"}).status_code == 400
-    assert _logged_types(events) == []
+    assert _logged_types(events) == [AuthEventType.TOTP_VERIFY_FAILURE]
+    harness.manager.count_failed_second_factor.assert_awaited_once()
+    harness.db.commit.assert_awaited()
+
+
+def test_disable_when_off_is_told_so_and_counts_nothing(events: AsyncMock) -> None:
+    harness = _Harness(_user(totp_enabled=False))
+
+    resp = harness.client.post("/auth/totp/disable", json={"code": "123456"})
+
+    assert (resp.status_code, resp.json()["detail"]) == (400, "2FA is not enabled")
+    harness.service.disable_totp.assert_not_awaited()
+    harness.manager.count_failed_second_factor.assert_not_awaited()
+
+
+def test_disable_on_a_locked_account_checks_no_code(events: AsyncMock) -> None:
+    locked = datetime.now(tz=timezone.utc) + timedelta(minutes=5)
+    harness = _Harness(_user(totp_enabled=True, locked_until=locked))
+
+    assert harness.client.post("/auth/totp/disable", json={"code": "123456"}).status_code == 429
+    harness.service.disable_totp.assert_not_awaited()
+
+
+def test_disable_guess_that_arrives_after_a_lock_gets_the_lock_answer(events: AsyncMock) -> None:
+    harness = _Harness(_user(totp_enabled=True))
+    harness.service.disable_totp.return_value = False
+    harness.manager.is_locked_now.return_value = True
+
+    assert harness.client.post("/auth/totp/disable", json={"code": "000000"}).status_code == 429
+    harness.manager.count_failed_second_factor.assert_not_awaited()
 
 
 @pytest.mark.parametrize("code", ["12345", "1234567", "abcdef"])
