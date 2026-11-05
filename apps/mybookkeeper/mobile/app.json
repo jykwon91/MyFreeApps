@@ -43,7 +43,7 @@
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "I use Face ID to confirm it's you before showing an applicant's private details."
+          "faceIDPermission": "I use Face ID to confirm it's you before showing an applicant's private details or changing your sign-in security."
         }
       ],
       "@react-native-community/datetimepicker",

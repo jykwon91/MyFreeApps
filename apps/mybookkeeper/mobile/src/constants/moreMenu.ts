@@ -52,7 +52,7 @@ export const MORE_MENU: readonly MoreMenuGroup[] = [
     items: [
       { label: "Integrations", webPath: "/integrations" },
       { label: "Members", screen: "/members", adminOnly: true },
-      { label: "Security", webPath: "/security" },
+      { label: "Security", screen: "/security" },
     ],
   },
 ];

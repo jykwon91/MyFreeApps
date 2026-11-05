@@ -8,3 +8,4 @@ export const AUTH_REQUEST_TIMEOUT_MS = 15000;
 
 /** Clearing years of records takes a while, and giving up early leaves the answer unknown. */
 export const DELETE_ACCOUNT_TIMEOUT_MS = 60000;
+export const TWO_STEP_TIMEOUT_MS = 15_000;

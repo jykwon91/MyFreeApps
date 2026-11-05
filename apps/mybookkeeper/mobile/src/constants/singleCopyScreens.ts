@@ -39,6 +39,8 @@ export const SINGLE_COPY_SCREENS = [
   "properties/index",
   "reconciliation/add",
   "reconciliation/index",
+  "security/index",
+  "security/turn-on",
   "vendors/[id]",
   "vendors/index",
   "transactions/[id]/edit",

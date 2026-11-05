@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
 import { REVEAL_HIDES_AFTER_MS, REVEAL_MESSAGES } from "../../constants/applicantReveal";
 import { httpStatus } from "../transactions/transactionMessages";
-import { confirmOwner } from "./confirmOwner";
+import { confirmOwner } from "../../lib/confirmOwner";
 
 export interface ApplicantReveal {
   details: ApplicantSensitive | undefined;

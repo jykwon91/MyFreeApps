@@ -78,7 +78,7 @@ routes:
   /reset-password:
     not_on_mobile: Done on the website, which the sign-in screen links to.
   /security:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/security/index
   /support-myfreeapps:
     not_on_mobile: Opens on the website.
   /system-health:

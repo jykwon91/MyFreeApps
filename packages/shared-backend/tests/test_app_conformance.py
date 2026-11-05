@@ -1968,3 +1968,24 @@ class TestWebConfiguresSharedCoreFirst:
                 f"{path.relative_to(_REPO_ROOT)} re-exports @platform/core, so its first "
                 f'line must be `import "../lib/webPlatform";`.'
             )
+
+
+class TestPhoneTwoStepMatchesServerErrors:
+    """The phone tells these errors apart by their exact text, so a reworded server
+    message would quietly turn "no setup in progress" into "wrong code"."""
+
+    _CONSTANTS = _REPO_ROOT / "packages" / "shared-mobile" / "src" / "constants" / "twoStep.ts"
+    _SERVER_FILES = [
+        _REPO_ROOT / "packages" / "shared-backend" / "platform_shared" / "api" / "totp_router.py",
+        _REPO_ROOT / "packages" / "shared-backend" / "platform_shared" / "auth" / "require_current_password.py",
+    ]
+
+    def test_every_detail_the_phone_reads_is_one_the_server_sends(self) -> None:
+        constants = self._CONSTANTS.read_text(encoding="utf-8")
+        block = re.search(r"TWO_STEP_DETAILS = \{(.*?)\} as const", constants, re.S)
+        assert block, f"TWO_STEP_DETAILS not found in {self._CONSTANTS}"
+        details = re.findall(r':\s*"([^"]+)"', block.group(1))
+        assert details, "TWO_STEP_DETAILS is empty"
+        server = "\n".join(path.read_text(encoding="utf-8") for path in self._SERVER_FILES)
+        missing = [detail for detail in details if f'"{detail}"' not in server]
+        assert not missing, f"the server no longer sends: {missing}"

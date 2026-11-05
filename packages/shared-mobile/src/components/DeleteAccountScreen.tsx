@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, Text, type TextInput, View 
 import { fetchDevices, requestDeleteAccount } from "../auth/mobileAuthApi";
 import { useSecondFactorCode } from "../hooks/useSecondFactorCode";
 import { useSession } from "../hooks/useSession";
-import { useTwoFactorEnabled } from "../hooks/useTwoFactorEnabled";
+import { useTwoStepStatus } from "../hooks/useTwoStepStatus";
 import { useTheme } from "../theme/useTheme";
 import Banner from "./Banner";
 import FormField from "./FormField";
@@ -20,7 +20,7 @@ type FieldErrors = { email?: string; password?: string; code?: string };
 export default function DeleteAccountScreen({ warning }: { warning: string }) {
   const { colors, spacing, fontSize } = useTheme();
   const { session, state } = useSession();
-  const twoFactor = useTwoFactorEnabled();
+  const twoFactor = useTwoStepStatus();
   const secondFactor = useSecondFactorCode();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,9 +35,9 @@ export default function DeleteAccountScreen({ warning }: { warning: string }) {
   if (state.status !== "signedIn") return null;
   const accountEmail = state.email;
 
-  const showsCode = twoFactor.isEnabled === true || needsCode;
+  const showsCode = twoFactor.enabled === true || needsCode;
   const canSubmit =
-    twoFactor.isEnabled !== null &&
+    twoFactor.enabled !== null &&
     !isUnconfirmed &&
     email.trim().toLowerCase() === accountEmail.toLowerCase() &&
     password.length > 0 &&
@@ -150,8 +150,8 @@ export default function DeleteAccountScreen({ warning }: { warning: string }) {
           value={password}
         />
         {showsCode ? <SecondFactorCodeField error={fieldErrors.code} ref={codeInput} secondFactor={secondFactor} /> : null}
-        {twoFactor.isEnabled === null && !twoFactor.hasError ? <Skeleton height={48} testID="two-factor-skeleton" /> : null}
-        {twoFactor.hasError ? (
+        {twoFactor.enabled === null && twoFactor.failure === null ? <Skeleton height={48} testID="two-factor-skeleton" /> : null}
+        {twoFactor.failure !== null ? (
           <View style={{ gap: spacing.sm }}>
             <Banner message="We couldn't check your account's security settings. Check your connection and try again." />
             <LoadingButton loadingText="Trying again..." onPress={twoFactor.reload} variant="secondary">

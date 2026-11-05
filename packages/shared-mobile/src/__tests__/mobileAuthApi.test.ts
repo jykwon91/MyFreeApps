@@ -3,6 +3,7 @@ import { _resetPlatformForTests, configurePlatform } from "@platform/core/platfo
 import type { AxiosAdapter } from "axios";
 import {
   fetchDevices,
+  fetchTwoFactorEnabled,
   requestDeleteAccount,
   requestLogin,
   requestLogout,
@@ -142,4 +143,19 @@ describe("requestDeleteAccount", () => {
     await expect(requestDeleteAccount({ ...details, code: "123456" })).resolves.toEqual({ outcome: "deleted" });
     expect(sent).toEqual(["delete", "/users/me", { password: "pw", confirm_email: "me@example.com", totp_code: "123456" }]);
   });
+});
+
+describe("fetchTwoFactorEnabled", () => {
+  it.each([true, false])("reads %s", async (enabled) => {
+    api.defaults.adapter = answering(200, { enabled });
+    await expect(fetchTwoFactorEnabled()).resolves.toBe(enabled);
+  });
+
+  it.each([["a web page", "<html></html>"], ["no field", {}], ["a string", { enabled: "false" }]])(
+    "refuses %s rather than reading it as off",
+    async (_name, data) => {
+      api.defaults.adapter = answering(200, data);
+      await expect(fetchTwoFactorEnabled()).rejects.toThrow();
+    },
+  );
 });
