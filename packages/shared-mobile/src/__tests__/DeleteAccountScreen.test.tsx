@@ -195,6 +195,7 @@ it("won't guess whether two-factor is on", async () => {
     </SessionContext.Provider>,
   );
   await waitFor(() => expect(screen.getByText(/couldn't check your account's security/)).toBeTruthy());
+  expect(screen.queryByTestId("two-factor-skeleton")).toBeNull();
 
   await fillIn();
   expect(isDisabled()).toBe(true);

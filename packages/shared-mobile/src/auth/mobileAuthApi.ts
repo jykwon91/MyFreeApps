@@ -1,6 +1,6 @@
 import api from "@platform/core/lib/api";
 import { isAxiosError } from "axios";
-import { AUTH_REQUEST_TIMEOUT_MS, DELETE_ACCOUNT_TIMEOUT_MS, LOGOUT_TIMEOUT_MS } from "../constants/session";
+import { AUTH_REQUEST_TIMEOUT_MS, DELETE_ACCOUNT_TIMEOUT_MS, LOGOUT_TIMEOUT_MS, TWO_STEP_TIMEOUT_MS } from "../constants/session";
 import type { DeleteAccountDetails } from "../types/DeleteAccountDetails";
 import type { DeleteAccountResult } from "../types/DeleteAccountResult";
 import type { MobileTokens } from "../types/MobileTokens";
@@ -82,7 +82,9 @@ export async function revokeDevice(id: string): Promise<void> {
 }
 
 export async function fetchTwoFactorEnabled(): Promise<boolean> {
-  const { data } = await api.get<{ enabled: boolean }>("/auth/totp/status");
+  const { data } = await api.get<{ enabled: boolean }>("/auth/totp/status", { timeout: TWO_STEP_TIMEOUT_MS });
+  // A proxy or web fallback can answer 200 with something else, and that must not read as "off".
+  if (typeof data?.enabled !== "boolean") throw new Error("Unexpected two-step status answer");
   return data.enabled;
 }
 
