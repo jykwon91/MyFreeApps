@@ -1,5 +1,5 @@
 import AlertBox from "@/shared/components/ui/AlertBox";
-import { formatLoanDate, formatRatePct } from "@/shared/lib/mortgage-format";
+import { formatLoanDate, formatRatePct } from "@mybookkeeper/api-client/utils/mortgageFormat";
 import { buildMortgageRateWatchVerdict } from "@/shared/lib/mortgage-rate-watch-verdict";
 import type { MortgageRateWatch } from "@/shared/types/mortgage/mortgage-rate-watch";
 import MortgageOutlookCard from "./MortgageOutlookCard";

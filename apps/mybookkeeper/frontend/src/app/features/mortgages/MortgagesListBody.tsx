@@ -2,8 +2,8 @@ import {
   formatLoanDate,
   formatMoneyCents,
   formatRatePct,
-} from "@/shared/lib/mortgage-format";
-import type { Mortgage } from "@/shared/types/mortgage/mortgage";
+} from "@mybookkeeper/api-client/utils/mortgageFormat";
+import type { Mortgage } from "@mybookkeeper/api-client/types/mortgage/mortgage";
 import type { MortgagesListMode } from "@/shared/types/mortgage/mortgages-list-mode";
 
 export interface MortgagesListBodyProps {

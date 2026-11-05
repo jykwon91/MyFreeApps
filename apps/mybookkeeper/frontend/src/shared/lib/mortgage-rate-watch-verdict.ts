@@ -3,7 +3,7 @@ import {
   formatMoneyBand,
   formatRateBand,
   formatRatePct,
-} from "@/shared/lib/mortgage-format";
+} from "@mybookkeeper/api-client/utils/mortgageFormat";
 import type { MortgageRateWatch } from "@/shared/types/mortgage/mortgage-rate-watch";
 import type { MortgageRateWatchVerdict } from "@/shared/types/mortgage/mortgage-rate-watch-verdict";
 import type { MortgageRefiOutlook } from "@/shared/types/mortgage/mortgage-refi-outlook";

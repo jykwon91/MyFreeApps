@@ -56,7 +56,7 @@ routes:
   /members:
     not_on_mobile: Not on the phone yet. More links to it on the website.
   /mortgages:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/mortgages/index
   /oauth-callback:
     not_on_mobile: Part of connecting Gmail on the website.
   /onboarding:

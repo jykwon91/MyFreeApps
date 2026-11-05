@@ -5,7 +5,7 @@ import {
   formatMonths,
   formatRateBand,
   formatRatePct,
-} from "@/shared/lib/mortgage-format";
+} from "@mybookkeeper/api-client/utils/mortgageFormat";
 import type { MortgageRefiOutlook } from "@/shared/types/mortgage/mortgage-refi-outlook";
 
 export interface MortgageOutlookNumbersProps {

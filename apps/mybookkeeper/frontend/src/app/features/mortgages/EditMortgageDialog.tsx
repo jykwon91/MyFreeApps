@@ -10,7 +10,7 @@ import {
   useDeleteMortgageMutation,
   useUpdateMortgageMutation,
 } from "@/shared/store/mortgagesApi";
-import type { Mortgage } from "@/shared/types/mortgage/mortgage";
+import type { Mortgage } from "@mybookkeeper/api-client/types/mortgage/mortgage";
 import type { MortgageFormValues } from "@/shared/types/mortgage/mortgage-form-values";
 import MortgageFormFields from "./MortgageFormFields";
 

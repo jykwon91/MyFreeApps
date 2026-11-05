@@ -7,8 +7,8 @@ import EditMortgageDialog from "@/app/features/mortgages/EditMortgageDialog";
 import MortgageRateWatchSection from "@/app/features/mortgages/MortgageRateWatchSection";
 import MortgagesListBody from "@/app/features/mortgages/MortgagesListBody";
 import { useMortgagesListMode } from "@/app/features/mortgages/useMortgagesListMode";
-import { useGetMortgagesQuery } from "@/shared/store/mortgagesApi";
-import type { Mortgage } from "@/shared/types/mortgage/mortgage";
+import { useGetMortgagesQuery } from "@mybookkeeper/api-client/store/mortgagesApi";
+import type { Mortgage } from "@mybookkeeper/api-client/types/mortgage/mortgage";
 
 /**
  * Every loan on record, then what the market is doing to them.
