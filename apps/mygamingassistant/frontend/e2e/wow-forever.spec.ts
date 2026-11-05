@@ -24,7 +24,7 @@ function itemCard(page: Page, position: number) {
   return page.getByRole("article", { name: new RegExp(`^Item ${position}:`) });
 }
 
-test("items open on the screenshot reader and a read fills the item", async ({ page }) => {
+test("the screenshot reader fills the item", async ({ page }) => {
   await useArmsWarrior(page);
   await page.route("**/wow/items/extract", (route) =>
     route.fulfill({
@@ -50,7 +50,8 @@ test("items open on the screenshot reader and a read fills the item", async ({ p
   await page.goto("/wow-forever/compare");
 
   const card = itemCard(page, 1);
-  await expect(card.getByRole("radio", { name: "Screenshot" })).toHaveAttribute("aria-checked", "true");
+  await expect(card.getByRole("radio", { name: "Search by name" })).toHaveAttribute("aria-checked", "true");
+  await card.getByRole("radio", { name: "From a screenshot" }).click();
   // Ctrl+V into the box (a real paste event carrying the image).
   const box = card.getByRole("group", { name: "Add a screenshot" });
   await box.click();
@@ -81,7 +82,7 @@ test("pasted tooltips from a website are compared and a winner explained", async
     [2, "Sturdy Helm\n+5 Strength\n+10 Stamina"],
   ] as const) {
     const card = itemCard(page, position);
-    await card.getByRole("radio", { name: "Paste from a website" }).click();
+    await card.getByRole("radio", { name: "Paste text" }).click();
     await card.getByRole("textbox", { name: /tooltip text/i }).fill(text);
     await card.getByRole("button", { name: "Read text" }).click();
   }

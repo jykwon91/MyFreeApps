@@ -176,7 +176,8 @@ test("inside Discord: connects, shows the game picker, and opens the real site t
   expect(await loadedSdk(scripts)).toBe(true);
 
   // WoW Forever, scrolled to the bottom → Item Compare opens at its top, with
-  // pasting first (screenshots need the browser).
+  // searching by name first (the item list is a same-origin file, so it works
+  // inside Discord with no API).
   await activity.getByRole("link", { name: /WoW: Forever/ }).click();
   await expect(activity.getByRole("link", { name: /Item Compare/ })).toBeVisible();
   const content = activity.getByTestId("activity-content");
@@ -187,10 +188,12 @@ test("inside Discord: connects, shows the game picker, and opens the real site t
   await activity.getByRole("link", { name: /Item Compare/ }).click();
   await expect(activity.getByRole("heading", { name: "Item Compare" })).toBeVisible();
   expect(await content.evaluate((el) => el.scrollTop)).toBe(0);
-  await expect(activity.getByRole("radio", { name: "Paste from a website" }).first()).toHaveAttribute(
+  await expect(activity.getByRole("radio", { name: "Search by name" }).first()).toHaveAttribute(
     "aria-checked",
     "true",
   );
+  await activity.getByRole("combobox", { name: "Item name" }).first().fill("lionheart helm");
+  await expect(activity.getByRole("option", { name: /Lionheart Helm/ }).first()).toBeVisible();
 
   // "Open in browser" asks Discord to open this page on the real site; no tab
   // opens from inside the frame.

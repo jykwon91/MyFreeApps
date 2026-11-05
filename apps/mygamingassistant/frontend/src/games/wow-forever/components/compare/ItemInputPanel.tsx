@@ -1,41 +1,59 @@
 import { useState } from "react";
+import ItemSearchPanel from "@/games/wow-forever/components/compare/ItemSearchPanel";
 import ScreenshotReader from "@/games/wow-forever/components/compare/ScreenshotReader";
 import TextReader from "@/games/wow-forever/components/compare/TextReader";
 import SegmentedToggle from "@/games/wow-forever/components/shared/SegmentedToggle";
-import { INPUT_MODE, type InputMode } from "@/games/wow-forever/data/itemInputModes";
-import {
-  isScreenshotReaderBrowserOnly,
-  isScreenshotReaderOffered,
-} from "@/games/wow-forever/lib/itemReaderAvailability";
+import type { WowClassId } from "@/games/wow-forever/data/classes";
+import { INPUT_MODE, INPUT_MODES, type InputMode } from "@/games/wow-forever/data/itemInputModes";
+import type { WeightBracket } from "@/games/wow-forever/data/weights/statWeights";
 import type { ParsedTooltip } from "@/games/wow-forever/parsing/parseTooltipText";
+import type { ClientItem } from "@/games/wow-forever/types/clientItem";
+import type { CompareItem } from "@/games/wow-forever/types/compareItem";
 import type { ItemExtractionResponse } from "@/games/wow-forever/types/extractionResponse";
 
-// Screenshot comes first: in-game tooltips can't be copied as text, so a
-// screenshot is how most items get in. Pasting text is for tooltips copied
-// from a website.
-const INPUT_MODES: readonly { id: InputMode; label: string }[] = [
-  { id: INPUT_MODE.SCREENSHOT, label: "Screenshot" },
-  { id: INPUT_MODE.TEXT, label: "Paste from a website" },
-];
-
-// Start on whichever mode works here: inside the Discord Activity the reader
-// only explains itself, so pasting comes first.
-function defaultMode(): InputMode {
-  if (isScreenshotReaderOffered() && !isScreenshotReaderBrowserOnly()) return INPUT_MODE.SCREENSHOT;
-  return INPUT_MODE.TEXT;
-}
-
 interface ItemInputPanelProps {
+  item: CompareItem;
   itemLabel: string;
+  classId: WowClassId;
+  bracket: WeightBracket;
+  onPick: (record: ClientItem, clientBuild: string) => void;
+  onEnterByHand: (query: string) => void;
   onTextRead: (parsed: ParsedTooltip) => void;
   onScreenshotRead: (response: ItemExtractionResponse) => void;
 }
 
-export default function ItemInputPanel({ itemLabel, onTextRead, onScreenshotRead }: ItemInputPanelProps) {
-  const [mode, setMode] = useState<InputMode>(defaultMode);
+export default function ItemInputPanel({
+  item,
+  itemLabel,
+  classId,
+  bracket,
+  onPick,
+  onEnterByHand,
+  onTextRead,
+  onScreenshotRead,
+}: ItemInputPanelProps) {
+  const [mode, setMode] = useState<InputMode>(INPUT_MODE.SEARCH);
   return (
     <div className="space-y-3">
-      <SegmentedToggle label={`How to add ${itemLabel}`} options={INPUT_MODES} value={mode} onChange={setMode} />
+      <SegmentedToggle
+        label={`How to add ${itemLabel}`}
+        options={INPUT_MODES}
+        value={mode}
+        onChange={setMode}
+        className="flex-wrap"
+      />
+      {/* Kept mounted (hidden) so the query survives a look at another tab. */}
+      <div hidden={mode !== INPUT_MODE.SEARCH}>
+        <ItemSearchPanel
+          item={item}
+          itemLabel={itemLabel}
+          classId={classId}
+          bracket={bracket}
+          onPick={onPick}
+          onEnterByHand={onEnterByHand}
+          onSwitchMode={setMode}
+        />
+      </div>
       {mode === INPUT_MODE.SCREENSHOT ? <ScreenshotReader onRead={onScreenshotRead} /> : null}
       {mode === INPUT_MODE.TEXT ? <TextReader itemLabel={itemLabel} onRead={onTextRead} /> : null}
     </div>

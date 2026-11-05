@@ -1,5 +1,6 @@
 import type { ItemQuality, ItemSlot } from "@/games/wow-forever/data/itemSlots";
 import type { StatValues } from "@/games/wow-forever/data/statKeys";
+import type { ClientItemOrigin } from "@/games/wow-forever/types/clientItemOrigin";
 
 export interface WeaponStats {
   minDamage: number;
@@ -9,7 +10,7 @@ export interface WeaponStats {
 }
 
 /** Where the item's numbers came from — shown on the card. */
-export type ItemSource = "manual" | "text" | "screenshot";
+export type ItemSource = "manual" | "text" | "screenshot" | "database";
 
 /** One item being compared. Lives only in the page's state; never sent anywhere. */
 export interface CompareItem {
@@ -28,4 +29,6 @@ export interface CompareItem {
   source: ItemSource;
   /** Reader warnings for the user (dropped/unknown values). */
   warnings: string[];
+  /** Set when the item was picked from the game files; null otherwise. */
+  origin: ClientItemOrigin | null;
 }

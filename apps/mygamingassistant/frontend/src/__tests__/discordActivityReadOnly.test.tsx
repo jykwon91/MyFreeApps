@@ -12,10 +12,15 @@ import { MemoryRouter } from "react-router-dom";
 import { __resetDiscordLaunchForTests } from "@platform/ui/discord-activity/launchParams";
 import GlanceBoardOperatorMenu from "@/components/lineup/GlanceBoardOperatorMenu";
 import ItemInputPanel from "@/games/wow-forever/components/compare/ItemInputPanel";
+import { newCompareItem } from "@/games/wow-forever/lib/newCompareItem";
 import { isReadOnly } from "@/lib/readOnly";
 
 vi.mock("@/games/wow-forever/api/wowItemsApi", () => ({
   useExtractItemMutation: () => [vi.fn(), { isLoading: false }],
+}));
+vi.mock("@/games/wow-forever/lib/clientItemsLoader", () => ({
+  loadClientItems: () => new Promise(() => undefined),
+  prefetchClientItems: () => undefined,
 }));
 
 const LAUNCH_QUERY = "?frame_id=frame-1&instance_id=instance-1&platform=desktop";
@@ -31,7 +36,16 @@ function renderItemInput(url: string): void {
   loadPage(url);
   render(
     <MemoryRouter initialEntries={[url]}>
-      <ItemInputPanel itemLabel="Item A" onTextRead={vi.fn()} onScreenshotRead={vi.fn()} />
+      <ItemInputPanel
+        item={newCompareItem("Item A")}
+        itemLabel="Item A"
+        classId="warrior"
+        bracket="level60"
+        onPick={vi.fn()}
+        onEnterByHand={vi.fn()}
+        onTextRead={vi.fn()}
+        onScreenshotRead={vi.fn()}
+      />
     </MemoryRouter>,
   );
 }
@@ -88,15 +102,15 @@ describe("read-only sessions", () => {
 });
 
 describe("WoW item compare", () => {
-  it("starts on pasting text inside Discord", () => {
+  it("starts on searching by name inside Discord (no API needed)", () => {
     renderItemInput(`${COMPARE_PATH}${LAUNCH_QUERY}`);
-    expect(screen.getByRole("radio", { name: "Paste from a website" })).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByRole("textbox")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Search by name" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("combobox", { name: "Item name" })).toBeInTheDocument();
   });
 
   it("explains inside Discord that reading screenshots works in the browser", async () => {
     renderItemInput(`${COMPARE_PATH}${LAUNCH_QUERY}`);
-    await userEvent.click(screen.getByRole("radio", { name: "Screenshot" }));
+    await userEvent.click(screen.getByRole("radio", { name: "From a screenshot" }));
     expect(screen.getByText(/reading screenshots works in the browser/i)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Read screenshot" })).not.toBeInTheDocument();
   });
@@ -107,7 +121,7 @@ describe("WoW item compare", () => {
     // discordOpenExternal tests against the real SDK.
     const open = vi.spyOn(window, "open").mockReturnValue(null);
     renderItemInput(`${COMPARE_PATH}${LAUNCH_QUERY}`);
-    await userEvent.click(screen.getByRole("radio", { name: "Screenshot" }));
+    await userEvent.click(screen.getByRole("radio", { name: "From a screenshot" }));
     await userEvent.click(screen.getByRole("button", { name: "Open in browser" }));
     await vi.waitFor(() =>
       expect(open).toHaveBeenCalledWith(
@@ -118,9 +132,10 @@ describe("WoW item compare", () => {
     );
   });
 
-  it("starts on the screenshot reader on the website", () => {
+  it("offers the screenshot reader on the website", async () => {
     renderItemInput(COMPARE_PATH);
-    expect(screen.getByRole("radio", { name: "Screenshot" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "Search by name" })).toHaveAttribute("aria-checked", "true");
+    await userEvent.click(screen.getByRole("radio", { name: "From a screenshot" }));
     expect(screen.getByRole("button", { name: "Read screenshot" })).toBeInTheDocument();
   });
 });
