@@ -1,23 +1,23 @@
 import { useGetReplyTemplatesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { Banner, EmptyState, LoadingButton, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
-import { FlatList, Text, View } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
+import { FlatList, View } from "react-native";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { REPLY_TEMPLATE_MESSAGES } from "../../constants/replyTemplates";
-import { useOpenLink } from "../inquiries/useOpenLink";
+import { useCanWrite } from "../workspace/useCanWrite";
 import ReplyTemplateRow from "./ReplyTemplateRow";
 import ReplyTemplatesSkeleton from "./ReplyTemplatesSkeleton";
 
 export default function ReplyTemplatesScreen() {
-  const { colors, spacing, fontSize } = useTheme();
-  const openLink = useOpenLink();
+  const { spacing } = useTheme();
+  const canWrite = useCanWrite();
   const { currentData, error, isFetching, refetch } = useGetReplyTemplatesQuery();
   const { refresh, refreshControl } = useRefresh(async () => {
     await refetch();
   }, error);
   const rows = currentData ?? [];
-  const openWebsite = () => void openLink(`${WEB_BASE_URL}/reply-templates`);
+  const showsBanner = Boolean(error) && rows.length > 0;
+  const makeOne = () => router.push("/reply-templates/new");
 
   const emptyList = !currentData && isFetching ? (
     <ReplyTemplatesSkeleton />
@@ -29,8 +29,8 @@ export default function ReplyTemplatesScreen() {
     />
   ) : (
     <EmptyState
-      action={{ label: REPLY_TEMPLATE_MESSAGES.openWebsite, onPress: openWebsite }}
-      body={REPLY_TEMPLATE_MESSAGES.noneBody}
+      action={canWrite ? { label: REPLY_TEMPLATE_MESSAGES.makeOne, onPress: makeOne } : undefined}
+      body={canWrite ? REPLY_TEMPLATE_MESSAGES.noneBody : REPLY_TEMPLATE_MESSAGES.noneBodyViewer}
       heading={REPLY_TEMPLATE_MESSAGES.noneHeading}
     />
   );
@@ -38,20 +38,15 @@ export default function ReplyTemplatesScreen() {
   return (
     <FlatList
       ListEmptyComponent={emptyList}
-      ListFooterComponent={
-        rows.length > 0 ? (
-          <View style={{ gap: spacing.sm, padding: spacing.lg }}>
-            <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{REPLY_TEMPLATE_MESSAGES.manageOnWebsite}</Text>
-            <LoadingButton onPress={openWebsite} variant="ghost">
-              {REPLY_TEMPLATE_MESSAGES.openWebsite}
-            </LoadingButton>
-          </View>
-        ) : undefined
-      }
       ListHeaderComponent={
-        error && rows.length > 0 ? (
-          <View style={{ padding: spacing.lg }}>
-            <Banner message={SHOWING_LAST_LOADED_MESSAGE} />
+        showsBanner || canWrite ? (
+          <View style={{ gap: spacing.md, padding: spacing.lg }}>
+            {showsBanner ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            {canWrite ? (
+              <LoadingButton onPress={makeOne} variant="secondary">
+                {REPLY_TEMPLATE_MESSAGES.newTemplate}
+              </LoadingButton>
+            ) : null}
           </View>
         ) : undefined
       }

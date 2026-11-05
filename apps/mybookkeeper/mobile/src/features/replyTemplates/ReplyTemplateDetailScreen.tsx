@@ -1,18 +1,20 @@
 import { useGetReplyTemplatesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { Banner, EmptyState, LoadingButton, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
+import { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { REPLY_TEMPLATE_MESSAGES } from "../../constants/replyTemplates";
-import { useOpenLink } from "../inquiries/useOpenLink";
 import TransactionFact from "../transactions/TransactionFact";
+import { useCanWrite } from "../workspace/useCanWrite";
+import ArchiveReplyTemplateButton from "./ArchiveReplyTemplateButton";
 import { variablesUsed } from "./replyTemplateDisplay";
 import ReplyTemplateDetailSkeleton from "./ReplyTemplateDetailSkeleton";
 
 export default function ReplyTemplateDetailScreen({ id }: { id: string }) {
   const { colors, spacing, fontSize } = useTheme();
-  const openLink = useOpenLink();
+  const canWrite = useCanWrite();
+  const [hasArchived, setHasArchived] = useState(false);
   // The API has no single-template read, so this finds it in the list.
   const { currentData, error, isFetching, refetch } = useGetReplyTemplatesQuery();
   const { refresh, refreshControl } = useRefresh(async () => {
@@ -20,7 +22,8 @@ export default function ReplyTemplateDetailScreen({ id }: { id: string }) {
   }, error);
   const template = currentData?.find((candidate) => candidate.id === id);
 
-  if (!template && (isFetching || (!currentData && !error))) return <ReplyTemplateDetailSkeleton />;
+  // Archiving drops it from the list, which would read as "can't find" until the screen has gone.
+  if (hasArchived || (!template && (isFetching || (!currentData && !error)))) return <ReplyTemplateDetailSkeleton />;
   if (!currentData) {
     return (
       <EmptyState
@@ -76,12 +79,14 @@ export default function ReplyTemplateDetailScreen({ id }: { id: string }) {
           ))}
         </View>
       ) : null}
-      <View style={{ gap: spacing.sm }}>
-        <Text style={labelStyle}>{REPLY_TEMPLATE_MESSAGES.manageOnWebsite}</Text>
-        <LoadingButton onPress={() => void openLink(`${WEB_BASE_URL}/reply-templates`)} variant="ghost">
-          {REPLY_TEMPLATE_MESSAGES.openWebsite}
-        </LoadingButton>
-      </View>
+      {canWrite ? (
+        <View style={{ gap: spacing.sm }}>
+          <LoadingButton onPress={() => router.push(`/reply-templates/${template.id}/edit`)} variant="secondary">
+            {REPLY_TEMPLATE_MESSAGES.edit}
+          </LoadingButton>
+          <ArchiveReplyTemplateButton id={template.id} name={template.name} onArchived={() => setHasArchived(true)} />
+        </View>
+      ) : null}
     </ScrollView>
   );
 }

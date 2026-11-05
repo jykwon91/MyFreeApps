@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WEB_BASE_URL } from "../../constants/api";
+import { REPLY_TEMPLATE_MESSAGES } from "../../constants/replyTemplates";
 import { REPLY_BODY_MAX_LENGTH, REPLY_BODY_MIN_HEIGHT, REPLY_CHECK_DELAYS_MS, REPLY_SUBJECT_MAX_LENGTH, WRITE_MY_OWN_OPTION } from "../../constants/replies";
 import type { ReplyBlock } from "../../types/ReplyBlock";
 import type { ReplyFailure } from "../../types/ReplyFailure";
@@ -29,7 +30,7 @@ export default function InquiryReplyScreen({ id }: { id: string }) {
   const openLink = useOpenLink();
   const { currentData: inquiry, error: loadError, isFetching, refetch: refetchInquiry } = useGetInquiryByIdQuery(id);
   const { data: integrations, refetch: refetchIntegrations } = useGetIntegrationsQuery();
-  const { data: templates } = useGetReplyTemplatesQuery();
+  const { data: templates, error: templatesError, refetch: refetchTemplates } = useGetReplyTemplatesQuery();
   const [renderTemplate, { isFetching: isRendering }] = useLazyRenderReplyTemplateQuery();
   const [sendReply] = useSendInquiryReplyMutation();
   const { draft, change, wasRestored, startOver, settleRestored } = useReplyDraft(id);
@@ -206,6 +207,15 @@ export default function InquiryReplyScreen({ id }: { id: string }) {
           >
             {chosenName ? `Template: ${chosenName}` : "Choose a template"}
           </LoadingButton>
+        ) : templates ? (
+          <LoadingButton disabled={isBusy} onPress={() => router.push("/reply-templates/new")} variant="ghost">
+            {REPLY_TEMPLATE_MESSAGES.makeOne}
+          </LoadingButton>
+        ) : templatesError ? (
+          <Banner
+            actions={[{ label: REPLY_TEMPLATE_MESSAGES.tryAgain, onPress: () => void refetchTemplates() }]}
+            message={REPLY_TEMPLATE_MESSAGES.templatesLoadFailed}
+          />
         ) : null}
         <FormField
           editable={!isBusy && !isRendering}
