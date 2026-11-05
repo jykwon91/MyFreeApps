@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from platform_shared.auth.totp_route_service import TotpRouteService
 from platform_shared.auth.user_manager import PlatformBaseUserManager
 from platform_shared.core.auth_events import AuthEventType
+from platform_shared.services.account_lockout import emit_locked_login_event
 from platform_shared.services.auth_event_service import log_auth_event
 
 
@@ -71,6 +72,11 @@ async def verify_login(
         if not totp_code:
             return None
         valid, used_recovery = await totp_service.validate_totp_for_login(user.email, totp_code)
+        # Codes sent together all got past the lock check in the password step.
+        if await user_manager.is_locked_now(user):
+            await emit_locked_login_event(db=db, user_id=user.id, request=request)
+            await db.commit()
+            raise HTTPException(status_code=400, detail="LOGIN_BAD_CREDENTIALS")
         if not valid:
             await user_manager.count_failed_second_factor(user)
             await log_auth_event(
@@ -84,6 +90,7 @@ async def verify_login(
             raise HTTPException(status_code=401, detail="invalid_totp")
 
         await user_manager.clear_failed_logins(user)
+        await db.commit()
         await log_auth_event(
             db,
             event_type=(

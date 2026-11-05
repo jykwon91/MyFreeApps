@@ -151,6 +151,7 @@ class PlatformBaseUserManager(
                 succeeded=False,
                 metadata={"email_domain": email_domain, "reason": "unknown_email"},
             )
+            await db.commit()
             return None
 
         now = datetime.now(tz=timezone.utc)
@@ -167,14 +168,22 @@ class PlatformBaseUserManager(
 
         result = await super().authenticate(credentials)
 
+        # Asked whichever way the guess went, so once locked a right guess
+        # and a wrong one get the same answer.
+        if await self.is_locked_now(user):
+            await emit_locked_login_event(db=db, user_id=user.id)
+            await db.commit()
+            return None
+
         if result is None:
-            await self._count_failed_login(user, reason="bad_password", now=now)
+            await self._count_failed_login(user, reason="bad_password")
             return None
 
         # A password alone doesn't finish a 2FA login, or anyone who knows it could
         # keep clearing the count between guesses at the code.
         if not getattr(result, "totp_enabled", False):
             await self.clear_failed_logins(result)
+        await db.commit()
 
         # Block unverified users from the standard JWT login.
         # Defense-in-depth alongside `current_active_user(verified=True)`.
@@ -185,6 +194,7 @@ class PlatformBaseUserManager(
                 user_id=result.id,
                 succeeded=False,
             )
+            await db.commit()
             return None
 
         # Block TOTP-enabled users — they must use /auth/totp/login,
@@ -196,6 +206,7 @@ class PlatformBaseUserManager(
             db, event_type=AuthEventType.LOGIN_SUCCESS,
             user_id=result.id, succeeded=True,
         )
+        await db.commit()
         return result
 
     async def authenticate_password(
@@ -239,14 +250,20 @@ class PlatformBaseUserManager(
 
         result = await super().authenticate(credentials)
 
+        if await self.is_locked_now(user):
+            await emit_locked_login_event(db=db, user_id=user.id, request=request)
+            await db.commit()
+            return None
+
         if result is None:
-            await self._count_failed_login(user, reason="bad_password", now=now)
+            await self._count_failed_login(user, reason="bad_password")
             return None
 
         # A password alone doesn't finish a 2FA login, or anyone who knows it could
         # keep clearing the count between guesses at the code.
         if not getattr(result, "totp_enabled", False):
             await self.clear_failed_logins(result)
+        await db.commit()
 
         return result
 
@@ -273,13 +290,13 @@ class PlatformBaseUserManager(
     async def count_failed_password(self, user: models.UP) -> None:
         """Count a wrong password given while signed in toward the login lockout."""
         await self._count_failed_login(
-            user, reason="bad_password", now=datetime.now(tz=timezone.utc),
+            user, reason="bad_password",
         )
 
     async def count_failed_second_factor(self, user: models.UP) -> None:
         """Count a wrong 2FA code toward the same lockout as a wrong password."""
         await self._count_failed_login(
-            user, reason="bad_totp", now=datetime.now(tz=timezone.utc),
+            user, reason="bad_totp",
         )
 
     async def clear_failed_logins(self, user: models.UP) -> None:
@@ -289,7 +306,7 @@ class PlatformBaseUserManager(
             await self.user_db.update(user, clear_update)
 
     async def _count_failed_login(
-        self, user: models.UP, *, reason: str, now: datetime,
+        self, user: models.UP, *, reason: str,
     ) -> None:
         db = self.user_db.session
         # Lock and reread until ``user_db.update`` commits. Parallel guesses would
@@ -298,7 +315,7 @@ class PlatformBaseUserManager(
         update = await record_failed_login(
             user, db=db, user_id=user.id,
             lockout_threshold=self.lockout_threshold,
-            metadata={"reason": reason}, now=now,
+            metadata={"reason": reason}, now=datetime.now(tz=timezone.utc),
         )
         if "locked_until" in update:
             logger.warning(

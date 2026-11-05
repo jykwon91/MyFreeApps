@@ -217,6 +217,8 @@ class TestLoginGating:
         manager = UserManager.__new__(UserManager)
         user_db = MagicMock()
         user_db.update = AsyncMock()
+        user_db.session.refresh = AsyncMock()
+        user_db.session.commit = AsyncMock()
         manager.user_db = user_db
         manager.password_helper = MagicMock()
         manager.password_helper.hash = MagicMock(return_value="hashed")
@@ -250,6 +252,8 @@ class TestLoginGating:
         manager = UserManager.__new__(UserManager)
         user_db = MagicMock()
         user_db.update = AsyncMock()
+        user_db.session.refresh = AsyncMock()
+        user_db.session.commit = AsyncMock()
         manager.user_db = user_db
         manager.password_helper = MagicMock()
         manager.password_helper.hash = MagicMock(return_value="hashed")
