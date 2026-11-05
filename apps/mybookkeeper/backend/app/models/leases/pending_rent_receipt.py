@@ -5,8 +5,14 @@ a row is created here so the host can review and send a PDF receipt without
 having to hunt for the transaction manually.
 
 Status transitions:
-  pending  → sent       (host sent the PDF via SendReceiptDialog)
+  pending  → sending    (a send claimed the row; only one request can win)
+  sending  → sent       (Gmail accepted the email)
+  sending  → pending    (Gmail definitely did not send; the claim is released)
   pending  → dismissed  (host explicitly skipped this receipt)
+
+A row stays ``sending`` when Gmail's answer was unknown. The next send attempt
+after ``RECEIPT_SEND_CLAIM_STALE_AFTER`` looks the email up in Gmail by
+``send_message_id`` and either marks it sent or releases the claim.
 
 The row is NEVER deleted — it is the audit record for whether a receipt
 was sent or skipped. Soft-delete is intentionally omitted (receipts are
@@ -32,7 +38,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 
-PENDING_RENT_RECEIPT_STATUSES: tuple[str, ...] = ("pending", "sent", "dismissed")
+PENDING_RENT_RECEIPT_STATUSES: tuple[str, ...] = ("pending", "sending", "sent", "dismissed")
+# Still needs the host: not sent yet, or sent with the outcome unconfirmed.
+OPEN_RECEIPT_STATUSES: tuple[str, ...] = ("pending", "sending")
 
 
 class PendingRentReceipt(Base):
@@ -85,9 +93,16 @@ class PendingRentReceipt(Base):
     sent_at: Mapped[_dt.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
     )
-    # FK to the signed_lease_attachment row created when the receipt PDF was
-    # uploaded after sending. SET NULL — if the attachment is later deleted
-    # we keep the receipt queue row as a historical record.
+    # The RFC 822 Message-ID of the current (or last) send attempt. Kept after
+    # ``sent`` as the link to the email in the host's Sent folder.
+    send_message_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    send_claimed_at: Mapped[_dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
+    # FK to the signed_lease_attachment row for the current send attempt. It is
+    # created before the email goes out, so it only means "sent" once
+    # ``status == 'sent'``. SET NULL — if the attachment is later deleted we
+    # keep the receipt queue row as a historical record.
     sent_via_attachment_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("signed_lease_attachments.id", ondelete="SET NULL"),
@@ -113,8 +128,12 @@ class PendingRentReceipt(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "status IN ('pending', 'sent', 'dismissed')",
+            "status IN ('pending', 'sending', 'sent', 'dismissed')",
             name="chk_pending_rent_receipt_status",
+        ),
+        CheckConstraint(
+            "status <> 'sending' OR (send_message_id IS NOT NULL AND send_claimed_at IS NOT NULL)",
+            name="chk_pending_rent_receipt_sending_claim",
         ),
         # Fast lookup for the sidebar badge count and pending-receipts page.
         Index(

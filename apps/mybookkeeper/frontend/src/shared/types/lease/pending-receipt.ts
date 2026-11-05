@@ -1,4 +1,4 @@
-export type PendingReceiptStatus = "pending" | "sent" | "dismissed";
+export type PendingReceiptStatus = "pending" | "sending" | "sent" | "dismissed";
 
 export interface PendingReceipt {
   id: string;

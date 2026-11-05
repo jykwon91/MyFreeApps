@@ -1,103 +1,35 @@
-"""Rent receipt orchestration service.
+"""Rent receipt queue: create, list, dismiss and preview pending receipts.
 
-Flow for ``send_receipt``:
-  1. Fetch the transaction, applicant, linked lease, integration, user.
-  2. Atomically increment the receipt sequence to claim the next number.
-  3. Generate the PDF bytes.
-  4. Upload PDF to MinIO under ``signed-leases/<lease_id>/``.
-  5. Insert a ``signed_lease_attachment`` row (kind=``rent_receipt``).
-  6. Send the PDF via Gmail.
-  7. Mark any ``pending_rent_receipts`` row as ``sent``.
-
-Steps 4-5-7 happen inside a single ``unit_of_work`` transaction that wraps the
-DB writes only. The Gmail call (step 6) is outside the DB transaction per the
-established "send-first, persist-second" pattern from ``inquiry_reply_service``.
-
-If Gmail send fails, the storage upload and DB rows are rolled back so no
-orphaned attachment exists. The sequence number has already been consumed —
-we accept a gap in the numbering sequence rather than risk two receipts having
-the same number.
+Sending lives in ``receipt_send_service``.
 """
 from __future__ import annotations
 
 import datetime as _dt
 import logging
 import uuid
-from dataclasses import dataclass
-from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import AsyncSessionLocal, unit_of_work
-from app.repositories import integration_repo
 from app.repositories.applicants import applicant_repo
 from app.repositories.leases import (
     pending_rent_receipt_repo,
-    rent_receipt_sequence_repo,
-    signed_lease_attachment_repo,
-    signed_lease_repo,
 )
 from app.repositories.transactions import transaction_repo
 from app.repositories.user import user_repo
 from app.repositories.inquiries import inquiry_repo
-from app.services.email import gmail_service
-from app.services.email.app_sent_email_service import record_app_sent_email
-from app.services.email.constants import APP_SENT_RECEIPT_FILTER_REASON
-from app.services.email.exceptions import (
-    GmailReauthRequiredError,
-    GmailSendError,
-    GmailSendScopeError,
+from app.services.leases.exceptions import (
+    ReceiptSendInProgressError,
+    ReceiptTransactionNotAttributedError,
 )
-from app.services.integrations import integration_service
 from app.services.leases.receipt_address_resolver import resolve_property_address
 from app.services.leases.receipt_formatting import (
-    format_period_long as _format_period_long,
-    format_period_short as _format_period_short,
     resolve_landlord_name as _resolve_landlord_name,
 )
 from app.services.leases.receipt_pdf_service import ReceiptData, generate_receipt_pdf
 from app.services.leases.receipt_period_resolver import resolve_lease_and_period
-from app.core import storage as _storage_module
 
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Domain errors — mapped to HTTP status codes at the route level
-# ---------------------------------------------------------------------------
-
-class ReceiptMissingIntegrationError(Exception):
-    """Host has no Gmail integration connected."""
-
-
-class ReceiptMissingSendScopeError(Exception):
-    """Gmail integration lacks gmail.send scope — host must reconnect."""
-
-
-class ReceiptGmailReauthError(Exception):
-    """Gmail token expired — host must reconnect Gmail."""
-
-
-class ReceiptGmailSendError(Exception):
-    """Gmail rejected the message for a non-auth reason."""
-
-
-class ReceiptMissingApplicantEmailError(Exception):
-    """Tenant has no email on file — can't send the receipt."""
-
-
-class ReceiptTransactionNotAttributedError(Exception):
-    """Transaction has no applicant_id — not a rent payment."""
-
-
-# ---------------------------------------------------------------------------
-# Result type
-# ---------------------------------------------------------------------------
-
-@dataclass(frozen=True)
-class ReceiptSendResult:
-    receipt_number: str
-    attachment_id: uuid.UUID
 
 
 # ---------------------------------------------------------------------------
@@ -178,7 +110,7 @@ async def create_pending_receipt_from_attribution(
 
 async def count_pending_receipts(organization_id: uuid.UUID) -> int:
     async with AsyncSessionLocal() as db:
-        return await pending_rent_receipt_repo.count_pending(db, organization_id)
+        return await pending_rent_receipt_repo.count_open(db, organization_id)
 
 
 async def list_pending_receipts(
@@ -188,244 +120,9 @@ async def list_pending_receipts(
     offset: int = 0,
 ) -> list:
     async with AsyncSessionLocal() as db:
-        return list(await pending_rent_receipt_repo.list_pending(
+        return list(await pending_rent_receipt_repo.list_open(
             db, organization_id, limit=limit, offset=offset,
         ))
-
-
-async def send_receipt(
-    *,
-    transaction_id: uuid.UUID,
-    organization_id: uuid.UUID,
-    user_id: uuid.UUID,
-    period_start: _dt.date,
-    period_end: _dt.date,
-    payment_method: str | None,
-) -> ReceiptSendResult:
-    """Path A — generate, upload, email, and record a rent receipt.
-
-    Raises one of the ``Receipt*Error`` domain exceptions on failure.
-    The caller (route handler) maps these to HTTP status codes.
-    """
-    # ── Phase 1: load all data (read-only) ───────────────────────────────────
-    async with AsyncSessionLocal() as db:
-        txn = await transaction_repo.get_by_id(db, transaction_id, organization_id)
-        if txn is None:
-            raise LookupError(f"Transaction {transaction_id} not found")
-        if txn.applicant_id is None:
-            raise ReceiptTransactionNotAttributedError(
-                "This transaction hasn't been attributed to a tenant yet."
-            )
-
-        applicant = await applicant_repo.get(
-            db,
-            applicant_id=txn.applicant_id,
-            organization_id=organization_id,
-            user_id=user_id,
-        )
-        if applicant is None:
-            raise LookupError(f"Applicant {txn.applicant_id} not found")
-
-        # Resolve tenant email via the linked inquiry
-        tenant_email: str | None = None
-        if applicant.inquiry_id is not None:
-            inq = await inquiry_repo.get_by_id(db, applicant.inquiry_id, organization_id)
-            if inq is not None:
-                tenant_email = inq.inquirer_email
-
-        if not tenant_email:
-            raise ReceiptMissingApplicantEmailError(
-                "Tenant has no email address on file. Cannot send the receipt."
-            )
-
-        # Capture scalar before the session closes — avoids an implicit
-        # dependency on expire_on_commit=False after the context exits.
-        txn_applicant_id: uuid.UUID = txn.applicant_id
-
-        property_address, signed_lease_id = await resolve_property_address(
-            db,
-            applicant_id=txn_applicant_id,
-            organization_id=organization_id,
-            user_id=user_id,
-        )
-
-        integration = await integration_repo.get_by_org_and_provider(
-            db, organization_id, "gmail",
-        )
-        if integration is None:
-            raise ReceiptMissingIntegrationError(
-                "Connect Gmail before sending receipts."
-            )
-        if not integration_service.integration_has_send_scope(integration):
-            raise ReceiptMissingSendScopeError(
-                "Gmail send permission missing. Reconnect Gmail to enable receipts.",
-            )
-        if integration.needs_reauth:
-            raise ReceiptGmailReauthError(
-                "Gmail token expired. Reconnect Gmail to send receipts.",
-            )
-
-        host_user = await user_repo.get_by_id(db, user_id)
-        if not host_user or not host_user.email:
-            raise LookupError(f"User {user_id} not found or has no email")
-
-        landlord_name = _resolve_landlord_name(host_user)
-        from_address = host_user.email
-
-    # ── Phase 2: claim the receipt number (atomic DB op) ────────────────────
-    txn_date: _dt.date  # captured from the read phase above
-    async with unit_of_work() as db:
-        # Re-fetch transaction inside a fresh session to avoid expired state
-        txn2 = await transaction_repo.get_by_id(db, transaction_id, organization_id)
-        if txn2 is None:
-            raise LookupError(f"Transaction {transaction_id} disappeared")
-        txn_date = txn2.transaction_date
-        txn_amount: Decimal = txn2.amount
-        txn_payment_method = payment_method or txn2.payment_method
-
-        receipt_year = txn_date.year
-        receipt_num = await rent_receipt_sequence_repo.next_number(
-            db, user_id=user_id, year=receipt_year,
-        )
-        receipt_number = rent_receipt_sequence_repo.format_receipt_number(
-            receipt_year, receipt_num,
-        )
-
-    # ── Phase 3: generate PDF (pure, no I/O) ─────────────────────────────────
-    receipt_data = ReceiptData(
-        receipt_number=receipt_number,
-        receipt_date=_dt.date.today(),
-        payer_name=applicant.legal_name or "Tenant",
-        payer_email=tenant_email,
-        landlord_name=landlord_name,
-        property_address=property_address,
-        period_start=period_start,
-        period_end=period_end,
-        amount=txn_amount,
-        payment_method=txn_payment_method,
-    )
-    pdf_bytes = generate_receipt_pdf(receipt_data)
-    pdf_filename = f"receipt-{receipt_number}.pdf"
-
-    # ── Phase 4: upload to MinIO ──────────────────────────────────────────────
-    storage = _storage_module.get_storage()
-    storage_key = f"signed-leases/{signed_lease_id or 'unlinked'}/{uuid.uuid4()}/{pdf_filename}"
-    storage.upload_file(storage_key, pdf_bytes, "application/pdf")
-
-    # ── Phase 5: persist DB rows + send email ─────────────────────────────────
-    now = _dt.datetime.now(_dt.timezone.utc)
-    attachment_id: uuid.UUID
-
-    try:
-        # Gmail send is outside the DB transaction (send-first, persist-second
-        # pattern from inquiry_reply_service).
-        subject = (
-            f"Rent receipt {receipt_number} — "
-            f"{_format_period_short(period_start, period_end)} — "
-            f"{property_address}"
-        )
-        body = (
-            f"Hi {applicant.legal_name or 'there'},\n\n"
-            f"Please find your rent receipt attached.\n\n"
-            f"Receipt #{receipt_number}\n"
-            f"Period: {_format_period_long(period_start, period_end)}\n"
-            f"Amount: ${txn_amount:,.2f}\n\n"
-            f"Thank you,\n{landlord_name}"
-        )
-        sent_gmail_message_id = await gmail_service.send_message_with_attachment(
-            integration,
-            from_address=from_address,
-            to_address=tenant_email,
-            subject=subject,
-            body=body,
-            attachment_bytes=pdf_bytes,
-            attachment_filename=pdf_filename,
-            attachment_content_type="application/pdf",
-        )
-    except GmailReauthRequiredError as exc:
-        # needs_reauth is already set by send_message_with_attachment before raising.
-        # Roll back storage upload and surface the caller-facing error.
-        try:
-            storage.delete_file(storage_key)
-        except Exception:
-            logger.warning("Could not clean up orphaned receipt PDF at %s", storage_key)
-        raise ReceiptGmailReauthError(str(exc)) from exc
-    except (GmailSendScopeError, GmailSendError) as exc:
-        try:
-            storage.delete_file(storage_key)
-        except Exception:
-            logger.warning("Could not clean up orphaned receipt PDF at %s", storage_key)
-        if isinstance(exc, GmailSendScopeError):
-            raise ReceiptMissingSendScopeError(str(exc)) from exc
-        raise ReceiptGmailSendError(str(exc)) from exc
-
-    # Gmail succeeded — record the sent message ID FIRST, in its own
-    # transaction, so the Gmail sync never re-ingests this receipt email as a
-    # duplicate income transaction even if the attachment persistence below
-    # fails and rolls back.
-    await record_app_sent_email(
-        organization_id=organization_id,
-        user_id=user_id,
-        message_id=sent_gmail_message_id,
-        from_address=from_address,
-        subject=subject,
-        reason=APP_SENT_RECEIPT_FILTER_REASON,
-    )
-
-    # Persist the attachment row and update pending receipt
-    async with unit_of_work() as db:
-        # We need a lease_id for the attachment — use the resolved one or
-        # fall back to the first active lease. If none exists, we can't
-        # attach to a lease but still save the receipt somewhere.
-        effective_lease_id = signed_lease_id
-
-        if effective_lease_id is None:
-            # Try to resolve lease_id again inside this session
-            leases = await signed_lease_repo.list_for_tenant(
-                db,
-                user_id=user_id,
-                organization_id=organization_id,
-                applicant_id=txn_applicant_id,
-                include_deleted=False,
-                limit=1,
-            )
-            effective_lease_id = leases[0].id if leases else None
-
-        if effective_lease_id is None:
-            raise LookupError(
-                "Cannot save receipt — tenant has no signed lease to attach it to."
-            )
-
-        attachment = await signed_lease_attachment_repo.create(
-            db,
-            lease_id=effective_lease_id,
-            storage_key=storage_key,
-            filename=pdf_filename,
-            content_type="application/pdf",
-            size_bytes=len(pdf_bytes),
-            kind="rent_receipt",
-            uploaded_by_user_id=user_id,
-            uploaded_at=now,
-        )
-        attachment_id = attachment.id
-
-        # Mark pending receipt as sent (if one exists)
-        pending = await pending_rent_receipt_repo.get_by_transaction_id(
-            db, transaction_id, organization_id,
-        )
-        if pending is not None:
-            await pending_rent_receipt_repo.mark_sent(
-                db, pending, attachment_id=attachment_id, sent_at=now,
-            )
-
-    logger.info(
-        "Sent rent receipt %s for transaction %s (attachment %s)",
-        receipt_number, transaction_id, attachment_id,
-    )
-    return ReceiptSendResult(
-        receipt_number=receipt_number,
-        attachment_id=attachment_id,
-    )
 
 
 async def dismiss_pending_receipt(
@@ -435,16 +132,22 @@ async def dismiss_pending_receipt(
 ) -> None:
     """Path B — dismiss a pending receipt without sending."""
     async with unit_of_work() as db:
+        dismissed = await pending_rent_receipt_repo.mark_dismissed_if_pending(
+            db,
+            transaction_id=transaction_id,
+            organization_id=organization_id,
+            dismissed_at=_dt.datetime.now(_dt.timezone.utc),
+        )
+        if dismissed:
+            return
         pending = await pending_rent_receipt_repo.get_by_transaction_id(
             db, transaction_id, organization_id,
         )
-        if pending is None:
-            raise LookupError("No pending receipt found for this transaction")
-        if pending.status != "pending":
-            raise ValueError(f"Receipt is already {pending.status}")
-        await pending_rent_receipt_repo.mark_dismissed(
-            db, pending, dismissed_at=_dt.datetime.now(_dt.timezone.utc),
-        )
+    if pending is None:
+        raise LookupError("No pending receipt found for this transaction")
+    if pending.status == "sending":
+        raise ReceiptSendInProgressError("This receipt is being sent; it can't be dismissed.")
+    raise ValueError(f"Receipt is already {pending.status}")
 
 
 async def preview_receipt_pdf(

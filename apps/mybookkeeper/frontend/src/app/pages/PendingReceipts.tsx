@@ -34,6 +34,9 @@ function PendingReceiptRow({ receipt }: { receipt: PendingReceipt }) {
     : "—";
 
   const periodDisplay = `${receipt.period_start_date} – ${receipt.period_end_date}`;
+  // A send whose outcome Gmail never confirmed. It can't be dismissed; the
+  // next send checks Gmail before emailing again.
+  const isConfirming = receipt.status === "sending";
 
   return (
     <>
@@ -51,18 +54,28 @@ function PendingReceiptRow({ receipt }: { receipt: PendingReceipt }) {
           <p className="text-xs text-muted-foreground">
             Received {transaction?.transaction_date ?? "—"}
           </p>
+          {isConfirming && (
+            <span
+              data-testid="pending-receipt-confirming"
+              className="inline-flex mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800"
+            >
+              Confirming with Gmail
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            data-testid="pending-receipt-dismiss-btn"
-            onClick={() => void handleDismiss()}
-            disabled={isDismissing}
-          >
-            Dismiss
-          </Button>
+          {!isConfirming && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              data-testid="pending-receipt-dismiss-btn"
+              onClick={() => void handleDismiss()}
+              disabled={isDismissing}
+            >
+              Dismiss
+            </Button>
+          )}
           <Button
             type="button"
             variant="primary"

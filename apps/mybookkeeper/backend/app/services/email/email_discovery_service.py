@@ -21,11 +21,11 @@ from app.services.email.constants import (
     GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR,
 )
 from app.services.email.exceptions import GmailAuthExpiredError
+from app.services.email.gmail_credentials import persist_refreshed_token
 from app.services.email.gmail_service import (
     get_gmail_service,
     list_email_document_sources,
     list_new_email_ids,
-    persist_refreshed_token,
 )
 from app.services.email.header_truncation import truncate_header
 

@@ -270,6 +270,7 @@ reportlab==5.0.1
 requests==2.34.2
     # via
     #   google-api-core
+    #   mybookkeeper-backend
     #   requests-oauthlib
 requests-oauthlib==2.0.0
     # via google-auth-oauthlib

@@ -149,6 +149,44 @@ describe("SendReceiptDialog", () => {
     });
   });
 
+  it.each([
+    ["receipt_already_sent", /already went out/, true],
+    ["receipt_dismissed", /was dismissed/, true],
+    ["receipt_send_in_progress", /won't email it twice/, false],
+    ["receipt_send_unconfirmed", /check Gmail first/, false],
+    ["receipt_sent_not_recorded", /couldn't save that it was sent/, false],
+  ])("explains %s instead of showing the raw code", async (detail, message, closes) => {
+    mockSendReceipt.mockReturnValue({
+      unwrap: () => Promise.reject({ data: { detail } }),
+    });
+    const onClose = vi.fn();
+    renderDialog(onClose);
+    fireEvent.click(screen.getByTestId("receipt-send-btn"));
+
+    await waitFor(() => {
+      expect(showError).toHaveBeenCalledWith(expect.stringMatching(message));
+    });
+    expect(showError).not.toHaveBeenCalledWith(detail);
+    if (closes) {
+      expect(onClose).toHaveBeenCalledWith();
+    } else {
+      expect(onClose).not.toHaveBeenCalled();
+    }
+  });
+
+  it("shows the server's sentence for a request it can't act on", async () => {
+    const detail = "This tenant has no signed lease to file the receipt under. Add the lease, then send.";
+    mockSendReceipt.mockReturnValue({
+      unwrap: () => Promise.reject({ data: { detail } }),
+    });
+    renderDialog();
+    fireEvent.click(screen.getByTestId("receipt-send-btn"));
+
+    await waitFor(() => {
+      expect(showError).toHaveBeenCalledWith(detail);
+    });
+  });
+
   it("fetches the preview PDF via the authenticated API and renders it as a blob URL", async () => {
     const fakeBlob = new Blob(["%PDF-1.4 fake"], { type: "application/pdf" });
     mockApiGet.mockResolvedValueOnce({ data: fakeBlob });

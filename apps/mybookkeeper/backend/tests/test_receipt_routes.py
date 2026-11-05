@@ -7,7 +7,7 @@ Covers:
 - GET /rent-receipts/pending — happy path and empty list.
 - POST /rent-receipts/{transaction_id}/send — happy path, 404, 422 (not attributed),
   422 (no email), 422 (no integration), 503 (gmail_reauth_required), 502 (send error).
-- POST /rent-receipts/{transaction_id}/dismiss — happy path, 404, 422 (already sent).
+- POST /rent-receipts/{transaction_id}/dismiss — happy path, 404, 422 (already sent), 409 (mid-send).
 - GET /rent-receipts/preview/{transaction_id} — happy path and 422.
 """
 from __future__ import annotations
@@ -24,11 +24,10 @@ from app.core.permissions import current_org_member, require_write_access
 from app.main import app
 from app.models.organization.organization_member import OrgRole
 from app.schemas.leases.receipt_response import (
-    PendingReceiptListResponse,
     PendingReceiptResponse,
-    SendReceiptResponse,
 )
-from app.services.leases import receipt_service
+from app.services.leases import exceptions as exc
+from app.services.leases.receipt_send_result import ReceiptSendResult
 
 
 def _ctx(org_id: uuid.UUID, user_id: uuid.UUID) -> RequestContext:
@@ -148,12 +147,12 @@ class TestSendReceipt:
     def test_happy_path(self, client, override_ctx) -> None:
         txn_id = uuid.uuid4()
         attachment_id = uuid.uuid4()
-        result = receipt_service.ReceiptSendResult(
+        result = ReceiptSendResult(
             receipt_number="R-2026-0001",
             attachment_id=attachment_id,
         )
         with patch(
-            "app.services.leases.receipt_service.send_receipt",
+            "app.services.leases.receipt_send_service.send_receipt",
             new_callable=AsyncMock,
             return_value=result,
         ):
@@ -167,7 +166,7 @@ class TestSendReceipt:
     def test_transaction_not_found_returns_404(self, client, override_ctx) -> None:
         txn_id = uuid.uuid4()
         with patch(
-            "app.services.leases.receipt_service.send_receipt",
+            "app.services.leases.receipt_send_service.send_receipt",
             new_callable=AsyncMock,
             side_effect=LookupError("Transaction not found"),
         ):
@@ -177,9 +176,9 @@ class TestSendReceipt:
     def test_not_attributed_returns_422(self, client, override_ctx) -> None:
         txn_id = uuid.uuid4()
         with patch(
-            "app.services.leases.receipt_service.send_receipt",
+            "app.services.leases.receipt_send_service.send_receipt",
             new_callable=AsyncMock,
-            side_effect=receipt_service.ReceiptTransactionNotAttributedError("not attributed"),
+            side_effect=exc.ReceiptTransactionNotAttributedError("not attributed"),
         ):
             resp = client.post(f"/rent-receipts/{txn_id}/send", json=_SEND_BODY)
         assert resp.status_code == 422
@@ -187,9 +186,9 @@ class TestSendReceipt:
     def test_no_email_returns_422(self, client, override_ctx) -> None:
         txn_id = uuid.uuid4()
         with patch(
-            "app.services.leases.receipt_service.send_receipt",
+            "app.services.leases.receipt_send_service.send_receipt",
             new_callable=AsyncMock,
-            side_effect=receipt_service.ReceiptMissingApplicantEmailError("no email"),
+            side_effect=exc.ReceiptMissingApplicantEmailError("no email"),
         ):
             resp = client.post(f"/rent-receipts/{txn_id}/send", json=_SEND_BODY)
         assert resp.status_code == 422
@@ -197,9 +196,9 @@ class TestSendReceipt:
     def test_no_integration_returns_422(self, client, override_ctx) -> None:
         txn_id = uuid.uuid4()
         with patch(
-            "app.services.leases.receipt_service.send_receipt",
+            "app.services.leases.receipt_send_service.send_receipt",
             new_callable=AsyncMock,
-            side_effect=receipt_service.ReceiptMissingIntegrationError("no gmail"),
+            side_effect=exc.ReceiptMissingIntegrationError("no gmail"),
         ):
             resp = client.post(f"/rent-receipts/{txn_id}/send", json=_SEND_BODY)
         assert resp.status_code == 422
@@ -207,9 +206,9 @@ class TestSendReceipt:
     def test_gmail_reauth_returns_503(self, client, override_ctx) -> None:
         txn_id = uuid.uuid4()
         with patch(
-            "app.services.leases.receipt_service.send_receipt",
+            "app.services.leases.receipt_send_service.send_receipt",
             new_callable=AsyncMock,
-            side_effect=receipt_service.ReceiptGmailReauthError("token expired"),
+            side_effect=exc.ReceiptGmailReauthError("token expired"),
         ):
             resp = client.post(f"/rent-receipts/{txn_id}/send", json=_SEND_BODY)
         assert resp.status_code == 503
@@ -218,12 +217,44 @@ class TestSendReceipt:
     def test_gmail_send_error_returns_502(self, client, override_ctx) -> None:
         txn_id = uuid.uuid4()
         with patch(
-            "app.services.leases.receipt_service.send_receipt",
+            "app.services.leases.receipt_send_service.send_receipt",
             new_callable=AsyncMock,
-            side_effect=receipt_service.ReceiptGmailSendError("send failed"),
+            side_effect=exc.ReceiptGmailSendError("send failed"),
         ):
             resp = client.post(f"/rent-receipts/{txn_id}/send", json=_SEND_BODY)
         assert resp.status_code == 502
+
+    @pytest.mark.parametrize(
+        ("error", "status", "detail"),
+        [
+            (exc.ReceiptAlreadySentError("x"), 409, "receipt_already_sent"),
+            (exc.ReceiptSendInProgressError("x"), 409, "receipt_send_in_progress"),
+            (exc.ReceiptDismissedError("x"), 409, "receipt_dismissed"),
+            (exc.ReceiptSendUnconfirmedError("x"), 502, "receipt_send_unconfirmed"),
+            (exc.ReceiptSentNotRecordedError("x"), 500, "receipt_sent_not_recorded"),
+        ],
+    )
+    def test_exactly_once_refusals_return_stable_codes(
+        self, client, override_ctx, error, status, detail,
+    ) -> None:
+        with patch(
+            "app.services.leases.receipt_send_service.send_receipt",
+            new_callable=AsyncMock,
+            side_effect=error,
+        ):
+            resp = client.post(f"/rent-receipts/{uuid.uuid4()}/send", json=_SEND_BODY)
+        assert resp.status_code == status
+        assert resp.json()["detail"] == detail
+
+    def test_no_lease_returns_422_with_message(self, client, override_ctx) -> None:
+        with patch(
+            "app.services.leases.receipt_send_service.send_receipt",
+            new_callable=AsyncMock,
+            side_effect=exc.ReceiptMissingLeaseError("This tenant has no signed lease"),
+        ):
+            resp = client.post(f"/rent-receipts/{uuid.uuid4()}/send", json=_SEND_BODY)
+        assert resp.status_code == 422
+        assert resp.json()["detail"] == "This tenant has no signed lease"
 
     def test_period_end_before_start_returns_422(self, client, override_ctx) -> None:
         txn_id = uuid.uuid4()
@@ -273,6 +304,17 @@ class TestDismissReceipt:
             resp = client.post(f"/rent-receipts/{txn_id}/dismiss")
         assert resp.status_code == 422
 
+    def test_mid_send_returns_409_with_code(self, client, override_ctx) -> None:
+        txn_id = uuid.uuid4()
+        with patch(
+            "app.services.leases.receipt_service.dismiss_pending_receipt",
+            new_callable=AsyncMock,
+            side_effect=exc.ReceiptSendInProgressError("x"),
+        ):
+            resp = client.post(f"/rent-receipts/{txn_id}/dismiss")
+        assert resp.status_code == 409
+        assert resp.json()["detail"] == "receipt_send_in_progress"
+
 
 # ---------------------------------------------------------------------------
 # GET /rent-receipts/preview/{transaction_id}
@@ -303,7 +345,7 @@ class TestPreviewReceipt:
         with patch(
             "app.services.leases.receipt_service.preview_receipt_pdf",
             new_callable=AsyncMock,
-            side_effect=receipt_service.ReceiptTransactionNotAttributedError("not attributed"),
+            side_effect=exc.ReceiptTransactionNotAttributedError("not attributed"),
         ):
             resp = client.get(
                 f"/rent-receipts/preview/{txn_id}",

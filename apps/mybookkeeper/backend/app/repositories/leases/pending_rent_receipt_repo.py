@@ -8,10 +8,10 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
-from sqlalchemy import select, update
+from sqlalchemy import ColumnElement, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.leases.pending_rent_receipt import PendingRentReceipt
+from app.models.leases.pending_rent_receipt import OPEN_RECEIPT_STATUSES, PendingRentReceipt
 
 
 async def get_by_transaction_id(
@@ -45,18 +45,23 @@ async def get_by_id(
     return result.scalar_one_or_none()
 
 
-async def list_pending(
+async def list_open(
     db: AsyncSession,
     organization_id: uuid.UUID,
     *,
     limit: int = 100,
     offset: int = 0,
 ) -> list[PendingRentReceipt]:
+    """Receipts still waiting on the host: ``pending`` and ``sending``.
+
+    ``sending`` rows stay listed so a send whose outcome was unknown can be
+    retried — the retry is what checks Gmail and settles the row.
+    """
     result = await db.execute(
         select(PendingRentReceipt)
         .where(
             PendingRentReceipt.organization_id == organization_id,
-            PendingRentReceipt.status == "pending",
+            PendingRentReceipt.status.in_(OPEN_RECEIPT_STATUSES),
             PendingRentReceipt.deleted_at.is_(None),
         )
         .order_by(PendingRentReceipt.created_at.desc())
@@ -66,15 +71,15 @@ async def list_pending(
     return list(result.scalars().all())
 
 
-async def count_pending(
+async def count_open(
     db: AsyncSession,
     organization_id: uuid.UUID,
 ) -> int:
-    from sqlalchemy import func, select as sa_select
+    """Rows ``list_open`` returns: still to send, or a send still to confirm."""
     result = await db.execute(
-        sa_select(func.count()).select_from(PendingRentReceipt).where(
+        select(func.count()).select_from(PendingRentReceipt).where(
             PendingRentReceipt.organization_id == organization_id,
-            PendingRentReceipt.status == "pending",
+            PendingRentReceipt.status.in_(OPEN_RECEIPT_STATUSES),
             PendingRentReceipt.deleted_at.is_(None),
         )
     )
@@ -116,41 +121,130 @@ async def create_idempotent(
     return row
 
 
-async def mark_sent(
+async def claim_for_send(
     db: AsyncSession,
-    receipt: PendingRentReceipt,
     *,
-    attachment_id: uuid.UUID,
-    sent_at: _dt.datetime,
-) -> None:
-    await db.execute(
+    transaction_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    send_message_id: str,
+    claimed_at: _dt.datetime,
+) -> PendingRentReceipt | None:
+    """Move a ``pending`` row to ``sending``; return it, or None if not pending.
+
+    One conditional UPDATE, so of two concurrent claims exactly one matches.
+    """
+    result = await db.execute(
         update(PendingRentReceipt)
         .where(
-            PendingRentReceipt.id == receipt.id,
-            PendingRentReceipt.organization_id == receipt.organization_id,
+            PendingRentReceipt.transaction_id == transaction_id,
+            PendingRentReceipt.organization_id == organization_id,
+            PendingRentReceipt.status == "pending",
+            PendingRentReceipt.deleted_at.is_(None),
         )
         .values(
-            status="sent",
-            sent_at=sent_at,
-            sent_via_attachment_id=attachment_id,
-            updated_at=sent_at,
+            status="sending",
+            send_message_id=send_message_id,
+            send_claimed_at=claimed_at,
+            sent_via_attachment_id=None,
+            updated_at=claimed_at,
         )
+        .returning(PendingRentReceipt)
+        .execution_options(synchronize_session=False)
+    )
+    return result.scalar_one_or_none()
+
+
+def _held_by(
+    receipt_id: uuid.UUID, organization_id: uuid.UUID, send_message_id: str,
+) -> tuple[ColumnElement[bool], ...]:
+    return (
+        PendingRentReceipt.id == receipt_id,
+        PendingRentReceipt.organization_id == organization_id,
+        PendingRentReceipt.status == "sending",
+        PendingRentReceipt.send_message_id == send_message_id,
     )
 
 
-async def mark_dismissed(
+async def set_attempt_attachment(
     db: AsyncSession,
-    receipt: PendingRentReceipt,
+    *,
+    receipt_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    send_message_id: str,
+    attachment_id: uuid.UUID,
+) -> bool:
+    result = await db.execute(
+        update(PendingRentReceipt)
+        .where(*_held_by(receipt_id, organization_id, send_message_id))
+        .values(sent_via_attachment_id=attachment_id)
+        .execution_options(synchronize_session=False)
+    )
+    return result.rowcount == 1
+
+
+async def mark_sent_if_claimed(
+    db: AsyncSession,
+    *,
+    receipt_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    send_message_id: str,
+    sent_at: _dt.datetime,
+) -> bool:
+    """``sending`` → ``sent``, only while this attempt still holds the claim."""
+    result = await db.execute(
+        update(PendingRentReceipt)
+        .where(*_held_by(receipt_id, organization_id, send_message_id))
+        .values(status="sent", sent_at=sent_at, updated_at=sent_at)
+        .execution_options(synchronize_session=False)
+    )
+    return result.rowcount == 1
+
+
+async def release_claim(
+    db: AsyncSession,
+    *,
+    receipt_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    send_message_id: str,
+    released_at: _dt.datetime,
+) -> bool:
+    """``sending`` → ``pending``, only while this attempt still holds the claim.
+
+    Keyed on the attempt's Message-ID so a late release can never undo a
+    newer attempt.
+    """
+    result = await db.execute(
+        update(PendingRentReceipt)
+        .where(*_held_by(receipt_id, organization_id, send_message_id))
+        .values(
+            status="pending",
+            send_message_id=None,
+            send_claimed_at=None,
+            sent_via_attachment_id=None,
+            updated_at=released_at,
+        )
+        .execution_options(synchronize_session=False)
+    )
+    return result.rowcount == 1
+
+
+async def mark_dismissed_if_pending(
+    db: AsyncSession,
+    *,
+    transaction_id: uuid.UUID,
+    organization_id: uuid.UUID,
     dismissed_at: _dt.datetime,
-) -> None:
-    await db.execute(
+) -> bool:
+    """``pending`` → ``dismissed``; False if the row isn't pending (e.g. mid-send)."""
+    result = await db.execute(
         update(PendingRentReceipt)
         .where(
-            PendingRentReceipt.id == receipt.id,
-            PendingRentReceipt.organization_id == receipt.organization_id,
+            PendingRentReceipt.transaction_id == transaction_id,
+            PendingRentReceipt.organization_id == organization_id,
+            PendingRentReceipt.status == "pending",
+            PendingRentReceipt.deleted_at.is_(None),
         )
-        .values(
-            status="dismissed",
-            updated_at=dismissed_at,
-        )
+        .values(status="dismissed", updated_at=dismissed_at)
+        .execution_options(synchronize_session=False)
     )
+    return result.rowcount == 1
