@@ -24,6 +24,7 @@ from app.core.account_deletion_constants import (
 )
 from app.core.auth import current_active_user
 from app.db.base import Base
+from app.db.session import get_db
 from app.main import app as fastapi_app
 from app.models.documents.document import Document
 from app.models.organization.organization import Organization
@@ -103,8 +104,9 @@ async def _file_in(db: AsyncSession, org: Organization, writer: User, key: str) 
     await db.flush()
 
 
-async def _delete_account(user: User) -> Response:
+async def _delete_account(db: AsyncSession, user: User) -> Response:
     fastapi_app.dependency_overrides[current_active_user] = lambda: user
+    fastapi_app.dependency_overrides[get_db] = lambda: db
     try:
         with patch("platform_shared.api.account_deletion_router.PasswordHelper") as helper:
             helper.return_value.verify_and_update.return_value = (True, None)
@@ -124,7 +126,7 @@ async def test_sole_owner_can_delete_and_their_workspace_goes_too(db: AsyncSessi
     [owner] = await _users(db, "owner@example.com")
     org = await _workspace(db, owner)
 
-    response = await _delete_account(owner)
+    response = await _delete_account(db, owner)
 
     assert response.status_code == 204
     assert not await _exists(db, User, owner.id)
@@ -137,7 +139,7 @@ async def test_creator_of_a_shared_workspace_is_refused_and_nothing_changes(db: 
     solo = await _workspace(db, owner)
     shared = await _workspace(db, owner, member)
 
-    response = await _delete_account(owner)
+    response = await _delete_account(db, owner)
 
     assert response.status_code == 409
     assert response.json()["detail"] == OWNS_SHARED_WORKSPACE_MESSAGE
@@ -152,7 +154,7 @@ async def test_member_who_wrote_nothing_can_leave_and_the_workspace_survives(db:
     org = await _workspace(db, owner, member)
     await _record_in(db, org, owner)
 
-    response = await _delete_account(member)
+    response = await _delete_account(db, member)
 
     assert response.status_code == 204
     assert not await _exists(db, User, member.id)
@@ -173,7 +175,7 @@ async def test_opening_the_reply_picker_in_a_shared_workspace_does_not_block_lea
     ))
     await db.flush()
 
-    response = await _delete_account(member)
+    response = await _delete_account(db, member)
 
     assert response.status_code == 204
 
@@ -185,7 +187,7 @@ async def test_member_who_wrote_records_is_refused_and_keeps_their_own_workspace
     own = await _workspace(db, member)
     await _record_in(db, shared, member)
 
-    response = await _delete_account(member)
+    response = await _delete_account(db, member)
 
     assert response.status_code == 409
     assert response.json()["detail"] == HOLDS_SHARED_RECORDS_MESSAGE
@@ -199,7 +201,7 @@ async def test_being_removed_from_a_workspace_does_not_take_their_records_out_of
     org = await _workspace(db, owner)
     await _record_in(db, org, former)
 
-    response = await _delete_account(former)
+    response = await _delete_account(db, former)
 
     assert response.status_code == 409
     assert response.json()["detail"] == HOLDS_SHARED_RECORDS_MESSAGE
@@ -219,7 +221,7 @@ async def test_deleting_an_account_removes_its_stored_files_and_nobody_elses(db:
         patch("app.services.user.account_deletion_service.get_storage") as get_storage,
         patch("app.services.user.account_deletion_service.user_repo.holds_shared_records", return_value=False),
     ):
-        response = await _delete_account(owner)
+        response = await _delete_account(db, owner)
 
     assert response.status_code == 204
     get_storage.return_value.delete_file.assert_called_once_with("mine.pdf")
@@ -234,7 +236,7 @@ async def test_a_refused_delete_leaves_stored_files_alone(db: AsyncSession) -> N
     await _file_in(db, own, member, "mine.pdf")
 
     with patch("app.services.user.account_deletion_service.get_storage") as get_storage:
-        response = await _delete_account(member)
+        response = await _delete_account(db, member)
 
     assert response.status_code == 409
     get_storage.return_value.delete_file.assert_not_called()

@@ -88,6 +88,9 @@ export default function DeleteAccountScreen({ warning }: { warning: string }) {
         setFieldErrors({ code: "That code didn't work. Enter a new one." });
         codeInput.current?.focus();
         return;
+      case "rate_limited":
+        setBanner(`${NOT_DELETED} Too many attempts. Please try again later.`);
+        return;
       case "failed":
         setBanner(`${NOT_DELETED} Please try again.`);
         return;

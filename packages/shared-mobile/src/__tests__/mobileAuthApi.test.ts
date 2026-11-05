@@ -119,6 +119,7 @@ describe("requestDeleteAccount", () => {
     [400, "TOTP_CODE_REQUIRED", { outcome: "code_required" }],
     [403, "Invalid TOTP code", { outcome: "invalid_code" }],
     [409, "Remove them first.", { outcome: "refused", message: "Remove them first." }],
+    [429, "Too many attempts", { outcome: "rate_limited" }],
     [422, "Nope", { outcome: "failed" }],
     [500, "Oops", { outcome: "unknown" }],
     [401, "Unauthorized", { outcome: "unknown" }],

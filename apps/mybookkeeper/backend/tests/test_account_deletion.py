@@ -11,15 +11,19 @@ Tests cover:
 import contextlib
 import uuid
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
-from httpx import ASGITransport, AsyncClient
+from httpx import ASGITransport, AsyncClient, Response
+from platform_shared.core.auth_messages import RATE_LIMIT_GENERIC_DETAIL
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
+from app.core.config import settings
+from app.db.session import get_db
 from app.main import app
 from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrganizationMember
@@ -47,11 +51,12 @@ def _make_user(
     )
 
 
-def _auth_client(user: User):
-    """Context manager yielding an AsyncClient with current_active_user overridden."""
+def _auth_client(user: User, db: AsyncSession):
+    """Context manager yielding an AsyncClient signed in as ``user``, on the test's session."""
     @contextlib.asynccontextmanager
     async def _cm():
         app.dependency_overrides[current_active_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as c:
             yield c
@@ -94,7 +99,7 @@ async def test_delete_requires_correct_password(db: AsyncSession) -> None:
         mock_helper = mock_helper_cls.return_value
         mock_helper.verify_and_update.return_value = (False, None)
 
-        async with _auth_client(user)() as client:
+        async with _auth_client(user, db)() as client:
             response = await client.request(
                 "DELETE",
                 "/users/me",
@@ -106,6 +111,73 @@ async def test_delete_requires_correct_password(db: AsyncSession) -> None:
 
     assert response.status_code == 403
     assert response.json()["detail"] == "Incorrect password"
+
+
+async def _try_to_delete(db: AsyncSession, user: User, *, password_ok: bool, code_ok: bool = True) -> Response:
+    with (
+        patch("platform_shared.api.account_deletion_router.PasswordHelper") as helper,
+        patch("app.services.user.totp_service.verify_totp_code", new_callable=AsyncMock, return_value=code_ok),
+    ):
+        helper.return_value.verify_and_update.return_value = (password_ok, None)
+        async with _auth_client(user, db)() as client:
+            return await client.request(
+                "DELETE",
+                "/users/me",
+                json={"password": "pw", "confirm_email": user.email, "totp_code": "000000"},
+            )
+
+
+@pytest.mark.anyio
+async def test_wrong_passwords_lock_the_account_like_wrong_logins(db: AsyncSession) -> None:
+    user = _make_user()
+    user.failed_login_count = settings.lockout_threshold - 1
+    db.add(user)
+    await db.flush()
+
+    assert (await _try_to_delete(db, user, password_ok=False)).status_code == 403
+
+    assert user.failed_login_count == settings.lockout_threshold
+    assert user.locked_until is not None
+
+
+@pytest.mark.anyio
+async def test_wrong_code_counts_toward_the_lockout(db: AsyncSession) -> None:
+    user = _make_user(totp_enabled=True)
+    db.add(user)
+    await db.flush()
+
+    assert (await _try_to_delete(db, user, password_ok=True, code_ok=False)).status_code == 403
+
+    assert user.failed_login_count == 1
+
+
+@pytest.mark.anyio
+async def test_locked_account_is_refused_even_with_the_right_password(db: AsyncSession) -> None:
+    user = _make_user()
+    user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=10)
+    db.add(user)
+    await db.flush()
+
+    response = await _try_to_delete(db, user, password_ok=True)
+
+    assert response.status_code == 429
+    assert response.json()["detail"] == RATE_LIMIT_GENERIC_DETAIL
+    assert await db.get(User, user.id) is not None
+    assert user.failed_login_count == 0
+
+
+@pytest.mark.anyio
+async def test_old_failures_dont_count_toward_the_lockout(db: AsyncSession) -> None:
+    user = _make_user()
+    user.failed_login_count = settings.lockout_threshold - 1
+    user.last_failed_login_at = datetime.now(timezone.utc) - timedelta(days=30)
+    db.add(user)
+    await db.flush()
+
+    assert (await _try_to_delete(db, user, password_ok=False)).status_code == 403
+
+    assert user.failed_login_count == 1
+    assert user.locked_until is None
 
 
 # ---------------------------------------------------------------------------
@@ -122,7 +194,7 @@ async def test_delete_requires_email_confirmation(db: AsyncSession) -> None:
         mock_helper = mock_helper_cls.return_value
         mock_helper.verify_and_update.return_value = (True, None)
 
-        async with _auth_client(user)() as client:
+        async with _auth_client(user, db)() as client:
             response = await client.request(
                 "DELETE",
                 "/users/me",
@@ -150,7 +222,7 @@ async def test_delete_requires_totp_when_enabled_missing_code(db: AsyncSession) 
         mock_helper = mock_helper_cls.return_value
         mock_helper.verify_and_update.return_value = (True, None)
 
-        async with _auth_client(user)() as client:
+        async with _auth_client(user, db)() as client:
             response = await client.request(
                 "DELETE",
                 "/users/me",
@@ -182,7 +254,7 @@ async def test_delete_requires_totp_when_enabled_wrong_code(db: AsyncSession) ->
         mock_helper = mock_helper_cls.return_value
         mock_helper.verify_and_update.return_value = (True, None)
 
-        async with _auth_client(user)() as client:
+        async with _auth_client(user, db)() as client:
             response = await client.request(
                 "DELETE",
                 "/users/me",
@@ -223,7 +295,7 @@ async def test_delete_succeeds_with_correct_creds(db: AsyncSession) -> None:
         mock_helper = mock_helper_cls.return_value
         mock_helper.verify_and_update.return_value = (True, None)
 
-        async with _auth_client(user)() as client:
+        async with _auth_client(user, db)() as client:
             response = await client.request(
                 "DELETE",
                 "/users/me",

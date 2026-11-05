@@ -163,14 +163,7 @@ class PlatformBaseUserManager(
             await emit_locked_login_event(db=db, user_id=user.id)
             return None
 
-        autoreset = autoreset_update_if_stale(
-            user, now=now, autoreset_hours=self.lockout_autoreset_hours,
-        )
-        if autoreset is not None:
-            await self.user_db.update(user, autoreset)
-            user.failed_login_count = 0
-            user.last_failed_login_at = None
-            user.locked_until = None
+        await self.reset_stale_failed_logins(user)
 
         result = await super().authenticate(credentials)
 
@@ -242,14 +235,7 @@ class PlatformBaseUserManager(
             await emit_locked_login_event(db=db, user_id=user.id, request=request)
             return None
 
-        autoreset = autoreset_update_if_stale(
-            user, now=now, autoreset_hours=self.lockout_autoreset_hours,
-        )
-        if autoreset is not None:
-            await self.user_db.update(user, autoreset)
-            user.failed_login_count = 0
-            user.last_failed_login_at = None
-            user.locked_until = None
+        await self.reset_stale_failed_logins(user)
 
         result = await super().authenticate(credentials)
 
@@ -263,6 +249,32 @@ class PlatformBaseUserManager(
             await self.clear_failed_logins(result)
 
         return result
+
+    async def reset_stale_failed_logins(self, user: models.UP) -> None:
+        """Forget old failures, so a typo months ago doesn't count toward a lockout."""
+        autoreset = autoreset_update_if_stale(
+            user, now=datetime.now(tz=timezone.utc), autoreset_hours=self.lockout_autoreset_hours,
+        )
+        if autoreset is not None:
+            await self.user_db.update(user, autoreset)
+            user.failed_login_count = 0
+            user.last_failed_login_at = None
+            user.locked_until = None
+
+    async def is_locked_now(self, user: models.UP) -> bool:
+        """Reread the lockout under a row lock, which the caller's commit releases.
+
+        Guesses sent together all pass a check made when the request began, so
+        anything acting on a guess has to ask again once it has checked it.
+        """
+        await self.user_db.session.refresh(user, _LOCKOUT_FIELDS, with_for_update=True)
+        return account_is_locked(user, now=datetime.now(tz=timezone.utc))
+
+    async def count_failed_password(self, user: models.UP) -> None:
+        """Count a wrong password given while signed in toward the login lockout."""
+        await self._count_failed_login(
+            user, reason="bad_password", now=datetime.now(tz=timezone.utc),
+        )
 
     async def count_failed_second_factor(self, user: models.UP) -> None:
         """Count a wrong 2FA code toward the same lockout as a wrong password."""
