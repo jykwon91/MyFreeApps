@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Panel, { PanelCloseButton } from "@/shared/components/ui/Panel";
 import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { extractErrorMessage } from "@/shared/utils/errorMessage";
 import {
   useCreateReplyTemplateMutation,
   useUpdateReplyTemplateMutation,
@@ -77,8 +78,12 @@ export default function ReplyTemplateForm({ template, onClose }: ReplyTemplateFo
         showSuccess("Template created.");
       }
       onClose();
-    } catch {
-      showError("I couldn't save that template. Want to try again?");
+    } catch (err) {
+      showError(
+        (err as { status?: number }).status === 409
+          ? extractErrorMessage(err)
+          : "I couldn't save that template. Want to try again?",
+      );
     }
   }
 
