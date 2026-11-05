@@ -8,6 +8,7 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from jwt.exceptions import PyJWTError as JWTError
 
+from platform_shared.core.boot_guards import check_test_mode_off
 from platform_shared.core.git import resolve_git_commit
 from platform_shared.core.lifespan import create_app_lifespan
 from platform_shared.core.openapi import docs_kwargs
@@ -272,6 +273,11 @@ app.include_router(totp.router)
 # Test-only helpers — mounted only when MYJOBHUNTER_ENABLE_TEST_HELPERS=1.
 # Used by the E2E suite to put the DB into deterministic states (e.g.
 # flipping `is_verified=True`). NEVER enable in production.
+check_test_mode_off(
+    flag_name="MYJOBHUNTER_ENABLE_TEST_HELPERS",
+    flag_is_on=os.environ.get("MYJOBHUNTER_ENABLE_TEST_HELPERS") == "1",
+    environment=settings.environment,
+)
 if os.environ.get("MYJOBHUNTER_ENABLE_TEST_HELPERS") == "1":
     from app.api import test_helpers
 

@@ -10,16 +10,15 @@ TOTP routes, admin router, version endpoint). MGA-specific divergences
 are called out inline.
 """
 import logging
-import socket
 import time
 from datetime import datetime, timezone
-from urllib.parse import urlsplit
 
 import jwt
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from jwt.exceptions import PyJWTError as JWTError
 
+from platform_shared.core.boot_guards import check_test_mode_off
 from platform_shared.api.admin_router import build_admin_router
 from platform_shared.api.discord_activity_router import build_discord_activity_router
 from platform_shared.core.git import resolve_git_commit
@@ -50,13 +49,14 @@ from app.api import (
 from app.core.audit import current_user_id
 from app.core.auth import auth_backend, fastapi_users
 from app.core.config import Settings, settings
+from app.core.media_public_base_url_guard import check_media_public_base_url_resolvable
 from app.core.permissions import current_admin, current_strict_superuser
 from app.core.rate_limit import (
     check_account_not_locked,
     check_login_rate_limit,
     require_turnstile,
 )
-from app.schemas.user.user_base import UserCreate, UserRead, UserUpdate
+from app.schemas.user.user_base import UserRead, UserUpdate
 from app.services.discord.startup import start_discord
 from app.services.storage.bucket_initializer import ensure_bucket
 from app.services.system.admin_user_service_factory import shared_admin_user_service
@@ -90,60 +90,6 @@ class SchedulerStartupError(RuntimeError):
     """Raised at startup when SCHEDULER_ENABLED=true but the scheduler fails to start."""
 
 
-class MediaPublicBaseUrlUnresolvableError(RuntimeError):
-    """Raised at startup when MINIO_PUBLIC_BASE_URL is set but its host does not resolve.
-
-    Guards against the 2026-07-10 incident: MINIO_PUBLIC_BASE_URL was set to a
-    custom domain (mga-clips.myfreeapps.org) that was never bound as an R2 custom
-    domain — the myfreeapps.org zone is on Porkbun, not Cloudflare, so binding is
-    impossible without a zone migration. The host was NXDOMAIN, so EVERY lineup
-    clip/screenshot URL 404'd in the browser while the API and /health stayed
-    green. Fail loud at boot instead of silently serving a library of dead media.
-    """
-
-
-def _check_media_public_base_url_resolvable() -> None:
-    """Fail loud in prod if the configured public media host does not resolve.
-
-    ``minio_public_base_url`` drives clip/screenshot read URLs (see
-    ``lineup_url_signing._sign_screenshot_url``):
-
-    - **Empty (default prod mode):** URLs are presigned against the R2 S3
-      endpoint, which is always reachable — there is no separate public host to
-      check, so this guard is a no-op.
-    - **Set:** URLs become plain ``{base}/{key}`` against that host. If the host
-      does not resolve, every clip is a dead link while /health stays green.
-      That is the exact silent failure this guard converts into a loud boot
-      crash (prod) or a warning (dev/CI).
-    """
-    base = settings.minio_public_base_url
-    if not base:
-        return  # presigned mode — no separate public host to verify
-    host = urlsplit(base).hostname
-    if not host:
-        raise MediaPublicBaseUrlUnresolvableError(
-            f"MINIO_PUBLIC_BASE_URL={base!r} is not a valid absolute URL (no host). "
-            "Set it to the full https URL of a BOUND R2 custom domain, or leave it "
-            "empty to serve presigned R2 URLs (the default prod mode). See "
-            "apps/mygamingassistant/backend/.env.docker.example."
-        )
-    try:
-        socket.getaddrinfo(host, 443)
-    except socket.gaierror as exc:
-        msg = (
-            f"MINIO_PUBLIC_BASE_URL host {host!r} does not resolve ({exc}). Every "
-            "lineup clip/screenshot URL would point at a dead host while /health "
-            "stays green (the 2026-07-10 incident). Either bind that domain as an "
-            "R2 custom domain (requires the DNS zone on Cloudflare — see "
-            "apps/mygamingassistant/TECH_DEBT.md), or leave MINIO_PUBLIC_BASE_URL "
-            "empty to serve presigned R2 URLs (the default prod mode). See "
-            "apps/mygamingassistant/backend/.env.docker.example."
-        )
-        if settings.environment == "production":
-            raise MediaPublicBaseUrlUnresolvableError(msg) from exc
-        logger.warning("_on_startup: %s (non-production — continuing)", msg)
-
-
 async def _on_startup() -> None:
     """MGA-specific startup: seed the single operator user + classifier boot guard.
 
@@ -175,8 +121,8 @@ async def _on_startup() -> None:
     # Media serving boot guard — runs in BOTH modes. If a public media base URL
     # is configured, its host MUST resolve, or the whole public clip library
     # dead-links while /health stays green. No-op in the default presigned mode
-    # (empty base). See _check_media_public_base_url_resolvable.
-    _check_media_public_base_url_resolvable()
+    # (empty base). See check_media_public_base_url_resolvable.
+    check_media_public_base_url_resolvable()
 
     # Discord boot guard: fail loud in production if Discord is enabled but
     # the required vars are missing; then warm the raid bot's icons (non-blocking).
@@ -491,6 +437,11 @@ def create_app(settings: Settings = settings) -> FastAPI:
     # Provides rate-limit reset + seed-lineup endpoints for E2E tests.
     # Never set this flag in production. (Skipped in serve_only — the seed-lineup
     # helper writes content, which has no place in a read-only deployment.)
+    check_test_mode_off(
+        flag_name="MGA_ENABLE_TEST_HELPERS",
+        flag_is_on=settings.mga_enable_test_helpers and not settings.serve_only,
+        environment=settings.environment,
+    )
     if settings.mga_enable_test_helpers and not settings.serve_only:
         from app.test_helpers.router import router as _test_helpers_router
         app.include_router(_test_helpers_router)

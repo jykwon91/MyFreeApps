@@ -11,7 +11,6 @@ The full Tier-1 auth shell (TOTP, lockout, audit) is preserved so security
 primitives never need to be re-added if this app ever becomes multi-user.
 """
 
-from pydantic import Field
 
 from platform_shared.core.settings import BaseAppSettings
 
@@ -67,7 +66,7 @@ class Settings(BaseAppSettings):
     # (Porkbun) — so this stays empty until the zone migration tracked in
     # apps/mygamingassistant/TECH_DEBT.md. An unbound value dead-links every clip;
     # the lifespan now fails loud at boot if the host does not resolve (see
-    # app/main.py _check_media_public_base_url_resolvable). Also empty in local
+    # app/core/media_public_base_url_guard.py). Also empty in local
     # dev / CI, where storage is MinIO. See lineup_url_signing._sign_screenshot_url.
     # ------------------------------------------------------------------
     minio_public_base_url: str = ""
