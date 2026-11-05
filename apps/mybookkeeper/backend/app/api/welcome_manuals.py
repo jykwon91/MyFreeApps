@@ -3,7 +3,7 @@ import uuid
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 
 from app.core.context import RequestContext
-from app.core.permissions import current_org_member, require_write_access
+from app.core.permissions import current_org_member, reject_demo_org_write, require_write_access
 from app.schemas.welcome_manuals.welcome_manual_section_image_response import (
     WelcomeManualSectionImageResponse,
 )
@@ -139,7 +139,7 @@ async def delete_welcome_manual(
 async def email_welcome_manual(
     manual_id: uuid.UUID,
     payload: WelcomeManualEmailRequest,
-    ctx: RequestContext = Depends(require_write_access),
+    ctx: RequestContext = Depends(reject_demo_org_write),
 ) -> WelcomeManualSendResponse:
     """Render the manual to a PDF and email it to a free-typed guest.
 

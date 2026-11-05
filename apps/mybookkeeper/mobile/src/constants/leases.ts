@@ -87,6 +87,8 @@ export const LEASE_MESSAGES = {
   sendEmail: "Send email",
   emailing: "Sending…",
   emailFailed: "I couldn't send that. Want to try again?",
+  emailDemo: "Demo accounts can't send email.",
+  extendDemo: "Demo accounts can't send email. Nothing was changed.",
   emailUnsure: "I can't reach the server, so I'm not sure that went out. Check \"Last emailed\" before trying again.",
   deleteLease: "Delete lease",
   deleteLeaseHint: "Asks you to confirm first",

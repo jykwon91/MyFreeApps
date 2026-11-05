@@ -5,15 +5,14 @@ import { useToast } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
 import { LOST_SEND_HOLD_MS, REMINDER_MESSAGES } from "../../constants/rentReminders";
 import { UPLOAD_MESSAGES } from "../../constants/uploads";
+import { isDemoRefusal } from "../../lib/isDemoRefusal";
 import { httpStatus } from "../transactions/transactionMessages";
 import { sendOutcome } from "./rentReminderDisplay";
-
-const DEMO_DETAIL = "This feature is not available for demo accounts";
 
 function refusal(error: unknown): string | null {
   switch (httpStatus(error)) {
     case 403:
-      return (error as { data?: { detail?: unknown } }).data?.detail === DEMO_DETAIL ? REMINDER_MESSAGES.demo : UPLOAD_MESSAGES.notAllowed;
+      return isDemoRefusal(error) ? REMINDER_MESSAGES.demo : UPLOAD_MESSAGES.notAllowed;
     case 404:
       return REMINDER_MESSAGES.gone;
     case 409:

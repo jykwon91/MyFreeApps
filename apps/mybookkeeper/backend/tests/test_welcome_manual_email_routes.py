@@ -10,13 +10,14 @@ from __future__ import annotations
 
 import uuid
 from contextlib import asynccontextmanager
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.context import RequestContext
-from app.core.permissions import current_org_member, require_write_access
+from app.core.permissions import current_org_member, reject_demo_org_write, require_write_access
 from app.main import app
 from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrgRole
@@ -33,6 +34,7 @@ def _ctx(org_id: uuid.UUID, user_id: uuid.UUID) -> RequestContext:
 def _override_auth(org_id: uuid.UUID, user_id: uuid.UUID) -> None:
     app.dependency_overrides[current_org_member] = lambda: _ctx(org_id, user_id)
     app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
+    app.dependency_overrides[reject_demo_org_write] = lambda: _ctx(org_id, user_id)
 
 
 def _wire_db(monkeypatch: pytest.MonkeyPatch, db: AsyncSession) -> None:
@@ -97,6 +99,37 @@ class TestAuth:
             json={"recipient_email": "g@example.com"},
         )
         assert resp.status_code == 401
+
+
+class TestDemoAccounts:
+    @pytest.mark.asyncio
+    async def test_a_demo_account_is_refused_before_anything_is_sent(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        manual = await _seed_manual(db, org=test_org, user=test_user)
+        test_org.is_demo = True
+        await db.commit()
+
+        @asynccontextmanager
+        async def _same_session():
+            yield db
+
+        monkeypatch.setattr("app.core.permissions.AsyncSessionLocal", _same_session)
+        send_email = MagicMock(return_value=True)
+        monkeypatch.setattr(
+            "app.services.welcome_manuals.welcome_manual_email_service.email_service.send_email", send_email,
+        )
+        app.dependency_overrides[require_write_access] = lambda: _ctx(test_org.id, test_user.id)
+        try:
+            resp = TestClient(app).post(
+                f"/welcome-manuals/{manual.id}/email",
+                json={"recipient_email": "g@example.com"},
+            )
+        finally:
+            app.dependency_overrides.clear()
+        assert resp.status_code == 403
+        send_email.assert_not_called()
 
 
 class TestValidationAndNotFound:

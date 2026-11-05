@@ -38,6 +38,7 @@ from app.core.storage import get_storage
 from app.db.session import unit_of_work
 from app.models.leases.signed_lease_attachment import SignedLeaseAttachment
 from app.repositories.applicants import applicant_repo
+from app.repositories.demo import demo_repo
 from app.repositories.leases import (
     signed_lease_attachment_repo,
     signed_lease_repo,
@@ -144,6 +145,10 @@ class ApplicantEmailMissingError(LookupError):
     """
 
 
+class DemoWorkspaceEmailError(Exception):
+    """A demo workspace asked to email a tenant; it never sends real email."""
+
+
 class LeaseNotFoundError(LookupError):
     """Lease doesn't exist or isn't visible to the caller."""
 
@@ -160,10 +165,13 @@ async def assert_can_email_tenant(
     skip.
 
     Raises:
+        DemoWorkspaceEmailError: a demo workspace never sends real email.
         LeaseNotFoundError: lease doesn't exist or isn't visible.
         ApplicantEmailMissingError: applicant has no contact_email.
     """
     async with unit_of_work() as db:
+        if await demo_repo.is_demo_org(db, organization_id):
+            raise DemoWorkspaceEmailError(f"Demo workspace {organization_id} can't email a tenant")
         lease = await signed_lease_repo.get(
             db,
             lease_id=lease_id,
@@ -245,6 +253,12 @@ async def _send_to_tenant(
 ) -> bool:
     # Load the lease + applicant + attachments in one short transaction.
     async with unit_of_work() as db:
+        # Generating a lease queues this with no check first, and whoever is trying
+        # a demo account can type a real person's address.
+        if await demo_repo.is_demo_org(db, organization_id):
+            logger.info("lease_email.skipped reason=demo_workspace lease_id=%s", lease_id)
+            return False
+
         lease = await signed_lease_repo.get(
             db,
             lease_id=lease_id,

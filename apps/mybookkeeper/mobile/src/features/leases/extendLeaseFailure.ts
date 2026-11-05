@@ -1,5 +1,6 @@
 import { LEASE_MESSAGES } from "../../constants/leases";
 import { UPLOAD_MESSAGES } from "../../constants/uploads";
+import { isDemoRefusal } from "../../lib/isDemoRefusal";
 import { httpStatus } from "../transactions/transactionMessages";
 import { leaseConflictCode } from "./leaseConflictCode";
 
@@ -11,7 +12,7 @@ export function isMissingTenantEmail(error: unknown): boolean {
 export function extendLeaseFailure(error: unknown): string | null {
   switch (httpStatus(error)) {
     case 403:
-      return UPLOAD_MESSAGES.notAllowed;
+      return isDemoRefusal(error) ? LEASE_MESSAGES.extendDemo : UPLOAD_MESSAGES.notAllowed;
     case 404:
       return LEASE_MESSAGES.goneWhileChanging;
     case 409:

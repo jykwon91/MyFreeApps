@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import uuid
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -188,6 +188,49 @@ class TestAssertCanEmailTenant:
                     user_id=uuid.uuid4(),
                     organization_id=uuid.uuid4(),
                 )
+
+
+class TestDemoWorkspaces:
+    @pytest.mark.asyncio
+    async def test_the_check_refuses_a_demo_workspace(self, db, test_user, test_org) -> None:
+        from contextlib import asynccontextmanager
+
+        @asynccontextmanager
+        async def _fake_uow():  # type: ignore[no-untyped-def]
+            yield db
+
+        test_org.is_demo = True
+        await db.flush()
+        with patch.object(lease_email_service, "unit_of_work", _fake_uow):
+            with pytest.raises(lease_email_service.DemoWorkspaceEmailError):
+                await lease_email_service.assert_can_email_tenant(
+                    lease_id=uuid.uuid4(), user_id=test_user.id, organization_id=test_org.id,
+                )
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(("is_demo", "looked_up_the_lease"), [(True, False), (False, True)])
+    async def test_a_queued_send_stops_for_a_demo_workspace_only(
+        self, db, test_user, test_org, is_demo: bool, looked_up_the_lease: bool,
+    ) -> None:
+        from contextlib import asynccontextmanager
+
+        @asynccontextmanager
+        async def _fake_uow():  # type: ignore[no-untyped-def]
+            yield db
+
+        test_org.is_demo = is_demo
+        await db.flush()
+        with (
+            patch.object(lease_email_service, "unit_of_work", _fake_uow),
+            patch.object(lease_email_service.signed_lease_repo, "get", AsyncMock(return_value=None)) as get_lease,
+            patch.object(lease_email_service.email_service, "send_email") as send_email,
+        ):
+            sent = await lease_email_service.send_lease_to_tenant(
+                lease_id=uuid.uuid4(), user_id=test_user.id, organization_id=test_org.id,
+            )
+        assert sent is False
+        assert get_lease.called is looked_up_the_lease
+        send_email.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

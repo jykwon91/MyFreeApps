@@ -25,6 +25,7 @@ from app.core.context import RequestContext
 from app.core.permissions import require_write_access
 from app.main import app
 from app.models.organization.organization_member import OrgRole
+from app.services.leases.lease_email_service import DemoWorkspaceEmailError
 from app.schemas.leases.signed_lease_response import SignedLeaseResponse
 
 
@@ -131,6 +132,45 @@ class TestEmailLeaseToTenantManual:
         assert resp.status_code == 422
         body = resp.json()
         assert body.get("detail") == "applicant_email_missing"
+
+    def test_returns_403_from_a_demo_account_and_queues_nothing(self) -> None:
+        org_id, user_id, lease_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+        app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
+        try:
+            with patch(
+                "app.api.signed_leases.lease_email_service.assert_can_email_tenant",
+                new_callable=AsyncMock,
+                side_effect=DemoWorkspaceEmailError("demo"),
+            ), patch(
+                "app.api.signed_leases.send_lease_to_tenant", new_callable=AsyncMock,
+            ) as send:
+                resp = TestClient(app).post(f"/signed-leases/{lease_id}/email-tenant")
+        finally:
+            app.dependency_overrides.pop(require_write_access, None)
+
+        assert resp.status_code == 403
+        send.assert_not_called()
+
+    def test_extending_with_email_from_a_demo_account_changes_nothing(self) -> None:
+        org_id, user_id, lease_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+        app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
+        try:
+            with patch(
+                "app.api.signed_leases.lease_email_service.assert_can_email_tenant",
+                new_callable=AsyncMock,
+                side_effect=DemoWorkspaceEmailError("demo"),
+            ), patch(
+                "app.api.signed_leases.lease_extension_service.extend_lease", new_callable=AsyncMock,
+            ) as extend:
+                resp = TestClient(app).post(
+                    f"/signed-leases/{lease_id}/extend",
+                    json={"new_ends_on": "2030-01-01", "email_tenant": True},
+                )
+        finally:
+            app.dependency_overrides.pop(require_write_access, None)
+
+        assert resp.status_code == 403
+        extend.assert_not_called()
 
 
 class TestGenerateLeaseSchedulesAutoEmail:
