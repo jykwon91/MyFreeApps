@@ -162,14 +162,13 @@ def test_wrong_code_gets_no_token() -> None:
 @pytest.mark.parametrize(
     "user, detail, event, reason",
     [
-        (None, "LOGIN_BAD_CREDENTIALS", AuthEventType.LOGIN_FAILURE, "bad_credentials"),
         (_user(is_active=False), "LOGIN_BAD_CREDENTIALS", AuthEventType.LOGIN_FAILURE, "account_inactive"),
         (_user(is_verified=False), "LOGIN_USER_NOT_VERIFIED", AuthEventType.LOGIN_BLOCKED_UNVERIFIED, None),
     ],
-    ids=["bad password", "inactive", "unverified"],
+    ids=["inactive", "unverified"],
 )
 def test_refused_logins_get_no_token_and_are_recorded(
-    user: SimpleNamespace | None,
+    user: SimpleNamespace,
     detail: str,
     event: AuthEventType,
     reason: str | None,
@@ -183,6 +182,26 @@ def test_refused_logins_get_no_token_and_are_recorded(
     assert _logged_types(harness) == [event]
     assert (harness.guard.record_event.await_args.kwargs.get("metadata") or {}).get("reason") == reason
     harness.strategy.write_token.assert_not_awaited()
+
+
+def test_a_refused_password_gets_no_token_and_no_second_row() -> None:
+    harness = _Harness(None)
+
+    resp = harness.client.post("/auth/totp/login", json=LOGIN)
+
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "LOGIN_BAD_CREDENTIALS"
+    assert _logged_types(harness) == []
+    harness.strategy.write_token.assert_not_awaited()
+
+
+def test_an_oversized_email_is_refused_before_anything_is_recorded() -> None:
+    harness = _Harness(None)
+
+    resp = harness.client.post("/auth/totp/login", json={**LOGIN, "email": "a@" + "b" * 320})
+
+    assert resp.status_code == 422
+    harness.manager.authenticate_password.assert_not_awaited()
 
 
 def test_login_runs_the_checks_it_was_given() -> None:

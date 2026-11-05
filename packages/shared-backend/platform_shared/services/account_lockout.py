@@ -220,6 +220,7 @@ async def record_failed_login(
     metadata: Optional[dict[str, Any]] = None,
     now: Optional[datetime] = None,
     log_event: LogEvent = log_auth_event,
+    request: Optional[Request] = None,
 ) -> dict[str, Any]:
     """Compute the next lockout state after a wrong password or 2FA code.
 
@@ -250,6 +251,7 @@ async def record_failed_login(
         want.
       * ``user_id`` — written into the audit row. Pass ``None`` for
         unknown-email failures (so the row stays PII-safe).
+      * ``request`` — fills in the row's ``ip_address`` and ``user_agent``.
     """
     reference = now if now is not None else datetime.now(tz=timezone.utc)
     new_count = account.failed_login_count + 1
@@ -270,6 +272,7 @@ async def record_failed_login(
         db,
         event_type=AuthEventType.LOGIN_FAILURE,
         user_id=user_id,
+        request=request,
         succeeded=False,
         metadata=metadata or {},
     )

@@ -277,12 +277,10 @@ class TestInactiveUserTotpLoginAudit:
         )
 
     @pytest.mark.anyio
-    async def test_none_user_audit_event_has_null_user_id_and_bad_credentials(
+    async def test_a_refused_password_adds_no_row_of_its_own(
         self, db: AsyncSession,
     ) -> None:
-        """When authenticate_password returns None, the LOGIN_FAILURE row
-        must have user_id=None and reason='bad_credentials'.
-        This verifies the None branch wasn't broken by the split."""
+        """authenticate_password has already recorded the refusal."""
         totp_login = _totp_login_endpoint()
 
         request = _make_request()
@@ -304,13 +302,4 @@ class TestInactiveUserTotpLoginAudit:
             )
 
         assert exc_info.value.status_code == 400
-
-        rows = await _auth_events(db)
-        bad_creds_rows = [
-            r for r in rows
-            if r.event_type == AuthEventType.LOGIN_FAILURE
-            and r.event_metadata.get("reason") == "bad_credentials"
-        ]
-        assert bad_creds_rows, "Expected LOGIN_FAILURE with reason='bad_credentials'"
-        ev = bad_creds_rows[0]
-        assert ev.user_id is None, "user_id must be None for an unknown user"
+        assert await _auth_events(db) == []
