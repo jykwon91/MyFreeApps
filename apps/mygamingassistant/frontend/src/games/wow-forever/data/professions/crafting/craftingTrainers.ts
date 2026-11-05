@@ -14,6 +14,10 @@ export interface CraftingTrainers {
   towns: Readonly<Record<PlayerFaction, readonly TrainerNpc[]>>;
 }
 
+// Engineering: the city trainers who also teach Expert (Classic).
+const SPRINGSPINDLE_FIZZLEGEAR: TrainerNpc = { name: "Springspindle Fizzlegear", npcId: 5174, where: "Ironforge", x: 68.5, y: 43.5 };
+const ROXXIK: TrainerNpc = { name: "Roxxik", npcId: 11017, where: "Orgrimmar", x: 76.2, y: 25.2 };
+
 export const CRAFTING_TRAINERS: Readonly<Record<CraftingProfession, CraftingTrainers>> = {
   tailoring: {
     cities: {
@@ -133,6 +137,32 @@ export const CRAFTING_TRAINERS: Readonly<Record<CraftingProfession, CraftingTrai
       ],
     },
   },
+  engineering: {
+    cities: {
+      // Darnassus and Thunder Bluff have no engineering trainer.
+      A: [
+        { city: "Stormwind", npc: { name: "Lilliam Sparkspindle", npcId: 5518, where: "Stormwind City", x: 62.1, y: 30.3 } },
+        { city: "Ironforge", npc: SPRINGSPINDLE_FIZZLEGEAR },
+      ],
+      H: [
+        { city: "Orgrimmar", npc: ROXXIK },
+        { city: "Undercity", npc: { name: "Franklin Lloyd", npcId: 11031, where: "Undercity", x: 76.1, y: 74.0 } },
+      ],
+    },
+    towns: {
+      // Town trainers teach Apprentice only (Classic): train Journeyman in a city.
+      A: [
+        { name: "Bronk Guzzlegear", npcId: 1702, where: "Kharanos, Dun Morogh", x: 50.2, y: 50.4 },
+        { name: "Deek Fizzlebizz", npcId: 3290, where: "Stonewrought Dam, Loch Modan", x: 45.9, y: 13.4 },
+        { name: "Jenna Lemkenilli", npcId: 11037, where: "Auberdine, Darkshore", x: 38.3, y: 41.1 },
+      ],
+      H: [
+        { name: "Mukdrak", npcId: 11025, where: "Razor Hill, Durotar", x: 52.2, y: 40.8 },
+        { name: "Twizwick Sprocketgrind", npcId: 10993, where: "Red Rocks, Mulgore", x: 58.6, y: 39.4 },
+        { name: "Tinkerwiz", npcId: 3494, where: "Ratchet, The Barrens", x: 62.7, y: 36.3 },
+      ],
+    },
+  },
 };
 
 /** Where a rank is trained: named trainers per faction, any trainer, or somewhere the map can't point to. */
@@ -156,6 +186,8 @@ export interface CraftingRank {
 
 // Artisan Blacksmithing: one neutral trainer for both factions (Classic).
 const BRIKK_KEENCRAFT: TrainerNpc = { name: "Brikk Keencraft", npcId: 2836, where: "Booty Bay, Stranglethorn Vale", x: 29.0, y: 75.6 };
+// Artisan Engineering: likewise.
+const BUZZEK_BRACKETSWING: TrainerNpc = { name: "Buzzek Bracketswing", npcId: 8736, where: "Gadgetzan, Tanaris", x: 52.3, y: 27.7 };
 
 const JOURNEYMAN: CraftingRank = { skill: 50, name: "Journeyman", level: 10, cap: 150, trainers: { kind: "any" }, confidence: "confirmed" };
 
@@ -312,6 +344,33 @@ export const CRAFTING_RANKS: Readonly<Record<CraftingProfession, readonly Crafti
           H: { name: "Una", npcId: 3007, where: "Thunder Bluff", x: 41.5, y: 42.6 },
         },
       },
+      confidence: "unconfirmed",
+    },
+  ],
+  engineering: [
+    {
+      skill: 50,
+      name: "Journeyman",
+      level: 10,
+      cap: 150,
+      trainers: { kind: "named", trainers: { A: SPRINGSPINDLE_FIZZLEGEAR, H: ROXXIK } },
+      confidence: "unconfirmed",
+    },
+    {
+      skill: 125,
+      name: "Expert",
+      level: 20,
+      cap: 225,
+      trainers: { kind: "named", trainers: { A: SPRINGSPINDLE_FIZZLEGEAR, H: ROXXIK } },
+      headsUp: "Artisan (at 200) is trained in one place for both factions — Gadgetzan, in Tanaris.",
+      confidence: "unconfirmed",
+    },
+    {
+      skill: 200,
+      name: "Artisan",
+      level: 35,
+      cap: 300,
+      trainers: { kind: "named", trainers: { A: BUZZEK_BRACKETSWING, H: BUZZEK_BRACKETSWING } },
       confidence: "unconfirmed",
     },
   ],

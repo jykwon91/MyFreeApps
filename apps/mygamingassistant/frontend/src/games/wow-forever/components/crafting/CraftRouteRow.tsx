@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import UnconfirmedChip from "@/games/wow-forever/components/professions/UnconfirmedChip";
 import CraftColorsLine from "@/games/wow-forever/components/crafting/CraftColorsLine";
+import CraftEffectLine from "@/games/wow-forever/components/crafting/CraftEffectLine";
 import CraftLearnLine, { type CraftPlace } from "@/games/wow-forever/components/crafting/CraftLearnLine";
 import CraftReagents from "@/games/wow-forever/components/crafting/CraftReagents";
 import CraftRowCost from "@/games/wow-forever/components/crafting/CraftRowCost";
@@ -15,12 +16,14 @@ interface CraftRouteRowProps {
   showChip: boolean;
   /** It makes a tool later rows need (a runed rod). */
   makesTool: boolean;
+  /** Say what the item does under its name (Engineering). */
+  showEffect: boolean;
   professionLabel: string;
   place: CraftPlace;
 }
 
 /** One recipe on the route: a card on phones, a 4-column row from `sm` up, with tool and note underneath. */
-export default function CraftRouteRow({ entry, state, showChip, makesTool, professionLabel, place }: CraftRouteRowProps) {
+export default function CraftRouteRow({ entry, state, showChip, makesTool, showEffect, professionLabel, place }: CraftRouteRowProps) {
   const { step, recipe, crafts, learn } = entry;
   return (
     <li
@@ -41,6 +44,7 @@ export default function CraftRouteRow({ entry, state, showChip, makesTool, profe
             {showChip && step.confidence === "unconfirmed" ? <UnconfirmedChip /> : null}
             {sourceUnknown(recipe) ? <SourceUnknownChip /> : null}
           </p>
+          {showEffect ? <CraftEffectLine recipe={recipe} file={place.file} professionLabel={professionLabel} /> : null}
           <CraftColorsLine recipe={recipe} />
         </div>
         <p className="text-sm">

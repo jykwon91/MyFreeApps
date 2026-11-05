@@ -16,6 +16,7 @@ export const CRAFTING_GROUP: ProfessionGroup<CraftingProfession> = {
     { id: CRAFTING_PROFESSION.alchemy, label: "Alchemy" },
     { id: CRAFTING_PROFESSION.blacksmithing, label: "Blacksmithing" },
     { id: CRAFTING_PROFESSION.enchanting, label: "Enchanting" },
+    { id: CRAFTING_PROFESSION.engineering, label: "Engineering" },
     { id: CRAFTING_PROFESSION.leatherworking, label: "Leatherworking" },
     { id: CRAFTING_PROFESSION.tailoring, label: "Tailoring" },
   ],

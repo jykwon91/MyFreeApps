@@ -1,6 +1,6 @@
 import type { Confidence } from "@/games/wow-forever/data/professions/professionTypes";
 
-export const CRAFTING_PROFESSION = { tailoring: "tailoring", enchanting: "enchanting", alchemy: "alchemy", blacksmithing: "blacksmithing", leatherworking: "leatherworking" } as const;
+export const CRAFTING_PROFESSION = { tailoring: "tailoring", enchanting: "enchanting", alchemy: "alchemy", blacksmithing: "blacksmithing", leatherworking: "leatherworking", engineering: "engineering" } as const;
 export type CraftingProfession = (typeof CRAFTING_PROFESSION)[keyof typeof CRAFTING_PROFESSION];
 
 /** What a crafting guide shows besides the route — differs per profession. */
@@ -11,6 +11,8 @@ export interface CraftingFeatures {
   enchantSlots: boolean;
   /** List the Transmute recipes under the route. */
   transmutes: boolean;
+  /** A line under each route recipe saying what its item does (Engineering's names don't say). */
+  effects: boolean;
   /** The gathering profession that feeds it, for the "Works well with" card. */
   worksWith: { name: string; why: string } | null;
 }
@@ -45,6 +47,8 @@ export interface CraftRecipe {
   enchant?: true;
   /** Must be in your bags (Enchanting's runed rods). */
   tool?: { id: number; name: string };
+  /** What the item does, in its Forever tooltip's words (Engineering). */
+  effect?: string;
   learn: RecipeLearn;
   newInForever?: true;
   /** The specialization spell it needs (Armorsmith…): its Plans ask for it (Forever), or only that specialization's trainers teach it (Classic). */

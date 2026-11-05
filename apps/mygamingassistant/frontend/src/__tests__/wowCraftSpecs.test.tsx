@@ -4,6 +4,7 @@ import { act, renderHook } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import blacksmithingJson from "@/games/wow-forever/data/professions/crafting/blacksmithing.json";
 import leatherworkingJson from "@/games/wow-forever/data/professions/crafting/leatherworking.json";
+import engineeringJson from "@/games/wow-forever/data/professions/crafting/engineering.json";
 import trainerSkillsJson from "@/games/wow-forever/data/professions/crafting/classic/trainerSkills.json";
 import { resolveRoute } from "@/games/wow-forever/crafting/craftRoute";
 import { parseSpec, routeForSpec, specChain } from "@/games/wow-forever/crafting/craftSpecs";
@@ -18,6 +19,7 @@ const TRAINER_SKILLS = trainerSkillsJson as unknown as Record<CraftingProfession
 const SPEC_FILES = {
   blacksmithing: blacksmithingJson as unknown as CraftingFile,
   leatherworking: leatherworkingJson as unknown as CraftingFile,
+  engineering: engineeringJson as unknown as CraftingFile,
 } as const;
 type SpecProfession = keyof typeof SPEC_FILES;
 

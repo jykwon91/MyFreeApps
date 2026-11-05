@@ -106,7 +106,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `confidence: "confirmed" | "unconfirmed"`. Rows still unconfirmed depend on
   server-side facts (trainers, vendors, quests, fishing zones) — confirm them
   in game or from a Blizzard post, then bump `PROFESSIONS_DATA_STATUS`.
-- Professions also has crafting guides (`?p=alchemy|blacksmithing|enchanting|leatherworking|tailoring`,
+- Professions also has crafting guides (`?p=alchemy|blacksmithing|enchanting|engineering|leatherworking|tailoring`,
   `&skill=N`, `&spec=<choice>`). The picker (`data/professions/professionPicker.ts`) groups
   Crafting vs Secondary; `isCraftingProfession` / `parseGuideProfession`
   (`lib/guideProfession.ts`) are the only list of what's crafting — never
@@ -125,7 +125,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   formula, `crafting/craftRoute.ts`) and a shopping list (bolts / motes the
   profession makes itself are expanded into raw materials). The skill lives in
   `?skill=` (wins for that visit) and `mga.wowForever.professions.skill.v1`.
-  **Specializations** (Blacksmithing, Leatherworking; `data/professions/crafting/craftingSpecs.ts`,
+  **Specializations** (Blacksmithing, Leatherworking, Engineering; `data/professions/crafting/craftingSpecs.ts`,
   `crafting/craftSpecs.ts`): a decision row at the fork, and a spec picker that
   filters the route's options by `recipe.spec` ("Not chosen yet" shows all,
   each with a chip). Kept in `?spec=` (wins for that visit) and per profession
@@ -135,12 +135,17 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   **Skinning**: leather and hides carry `skinning.mobs` (a beast per best zone,
   its densest pack, else the beasts themselves) with Directions; leather you
   skin is never expanded into the scraps Leatherworking could make it from.
+  **Item lines** (Engineering; `effects` in `craftingFeatures.ts`): each recipe
+  carries `effect`, its item's Forever tooltip (`wow_professions/effects.py`;
+  rolled amounts read "26 to 34" from SpellEffect `Variance`, as the game
+  prints them); a part with no tooltip reads "A part for other ... recipes"
+  (`crafting/craftEffect.ts`), anything else shows nothing.
   **Recipe data is GENERATED** — `python -m scripts.wow_professions.build`
-  (from `backend/`) writes `data/professions/crafting/{tailoring,enchanting,alchemy,blacksmithing,leatherworking}.json`
+  (from `backend/`) writes `data/professions/crafting/{tailoring,enchanting,alchemy,blacksmithing,leatherworking,engineering}.json`
   (with `smelting` / `specs` where they apply)
   from the Forever client, plus `classic/trainerSkills.json` and
   `classic/sources.json` (cmangos GPL — keep LICENSE + README).
-  `tests/test_wow_professions_generator.py`. A route row that names a spell
+  `tests/test_wow_professions_generator.py`, `tests/test_wow_engineering_generator.py`. A route row that names a spell
   missing from the data throws, so re-run the route test after regenerating.
 - Making gold (`/wow-forever/gold`, `?band=1-20|20-40|40-60|all`, seeded from
   the World Map's saved level) is hand-written advice in `data/gold/goldTips.ts`:
