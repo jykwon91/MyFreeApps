@@ -121,12 +121,11 @@ async def test_update_template_only_allowlisted_fields(
     await db.commit()
     bogus_user_id = uuid.uuid4()
     updated = await reply_template_repo.update_template(
-        db, template.id, test_user.id,
+        db, template,
         # ``user_id`` is NOT in the allowlist — must be silently dropped.
         {"name": "updated", "user_id": bogus_user_id, "subject_template": "new"},
     )
     await db.commit()
-    assert updated is not None
     assert updated.name == "updated"
     assert updated.subject_template == "new"
     # Tenant column did NOT change.

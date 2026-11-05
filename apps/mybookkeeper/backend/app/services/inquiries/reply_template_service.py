@@ -122,12 +122,14 @@ async def ensure_default_templates_for_user(
 async def list_templates(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
+    *,
+    include_archived: bool = False,
 ) -> list[ReplyTemplateResponse]:
-    """List active templates for a user. Seeds defaults on first call."""
+    """List a user's templates, archived ones too when asked. Seeds defaults on first call."""
     await ensure_default_templates_for_user(organization_id, user_id)
     async with AsyncSessionLocal() as db:
         templates = await reply_template_repo.list_by_user(
-            db, organization_id, user_id, include_archived=False,
+            db, organization_id, user_id, include_archived=include_archived,
         )
     return [ReplyTemplateResponse.model_validate(t) for t in templates]
 
@@ -169,14 +171,17 @@ async def update_template(
 ) -> ReplyTemplateResponse:
     fields = payload.to_update_dict()
     async with unit_of_work() as db:
+        # Locked so an archive landing at the same moment can't slip in between check and write.
+        template = await reply_template_repo.get_by_id_and_user(
+            db, template_id, user_id, for_update=True,
+        )
+        # An archived template can only be restored; it can't be changed while archived.
+        if template is None or (template.is_archived and fields.get("is_archived") is not False):
+            raise LookupError(f"Reply template {template_id} not found")
         try:
-            template = await reply_template_repo.update_template(
-                db, template_id, user_id, fields,
-            )
+            template = await reply_template_repo.update_template(db, template, fields)
         except IntegrityError as exc:
             raise ReplyTemplateNameTakenError(NAME_TAKEN_MESSAGE) from exc
-        if template is None:
-            raise LookupError(f"Reply template {template_id} not found")
     return ReplyTemplateResponse.model_validate(template)
 
 
@@ -218,7 +223,7 @@ async def render_for_inquiry(
         template = await reply_template_repo.get_by_id_and_user(
             db, template_id, user_id,
         )
-        if template is None:
+        if template is None or template.is_archived:
             raise LookupError(f"Reply template {template_id} not found")
 
         inquiry = await inquiry_repo.get_by_id(db, inquiry_id, organization_id)

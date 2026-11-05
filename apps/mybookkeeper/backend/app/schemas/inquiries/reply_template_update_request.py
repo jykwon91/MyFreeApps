@@ -5,27 +5,35 @@ applies an explicit allowlist before ``setattr`` per the project security rule.
 """
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Any
 
-_NAME_MAX = 100
-_SUBJECT_MAX = 500
-_BODY_MAX = 10000
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from app.schemas.inquiries.reply_template_body import ReplyTemplateBody
+from app.schemas.inquiries.reply_template_name import ReplyTemplateName
+from app.schemas.inquiries.reply_template_subject import ReplyTemplateSubject
 
 
 class ReplyTemplateUpdateRequest(BaseModel):
     """Body for PATCH /reply-templates/{id} — every field optional."""
 
-    name: str | None = Field(default=None, min_length=1, max_length=_NAME_MAX)
-    subject_template: str | None = Field(
-        default=None, min_length=1, max_length=_SUBJECT_MAX,
-    )
-    body_template: str | None = Field(
-        default=None, min_length=1, max_length=_BODY_MAX,
-    )
+    name: ReplyTemplateName | None = None
+    subject_template: ReplyTemplateSubject | None = None
+    body_template: ReplyTemplateBody | None = None
     display_order: int | None = Field(default=None, ge=0, le=32767)
     is_archived: bool | None = None
 
     model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _no_explicit_nulls(cls, data: Any) -> Any:
+        # Leaving a field out means "don't change it"; null would try to clear a required column.
+        if isinstance(data, dict):
+            nulls = sorted(key for key, value in data.items() if value is None)
+            if nulls:
+                raise ValueError(f"Leave out a field you don't want to change rather than sending null: {', '.join(nulls)}")
+        return data
 
     def to_update_dict(self) -> dict[str, object]:
         """Return only the explicitly-provided fields."""
