@@ -1,11 +1,13 @@
 /**
- * No-backend E2E for archiving and restoring reply templates on /reply-templates.
+ * No-backend E2E for loading, archiving and restoring reply templates on /reply-templates.
  *
  * Fully mocks the API via page.route() with a small stateful fake of the
  * reply-templates endpoints, so it runs under playwright.layout.config.ts in
  * the `frontend-layout-e2e` CI job.
  *
  * Verifies:
+ *   - A failed load of either tab says so (never "none"), and Try again loads the list.
+ *   - The Active tab's skeleton matches the loaded rows and their Edit / Archive buttons.
  *   - The Archived tab is linkable, survives a reload, and hides New template.
  *   - Restore moves the template back to Active and sends is_archived=false.
  *   - A 502 after the server restored it is settled by reloading the list.
@@ -87,14 +89,20 @@ interface FakeServer {
   deletes: string[];
   /** Holds every list read this long. */
   readDelayMs: number;
+  /** Answers every list read with a 500. */
+  failListReads: boolean;
 }
 
 async function stubTemplates(page: Page, rows: FakeTemplate[]): Promise<FakeServer> {
-  const server: FakeServer = { rows, patches: [], deletes: [], gatewayAfterWrite: false, readDelayMs: 0 };
+  const server: FakeServer = { rows, patches: [], deletes: [], gatewayAfterWrite: false, readDelayMs: 0, failListReads: false };
   await page.route("**/api/reply-templates**", async (route, request: Request) => {
     const url = new URL(request.url());
     if (request.method() === "GET" && url.pathname.endsWith("/reply-templates")) {
       if (server.readDelayMs > 0) await new Promise((r) => setTimeout(r, server.readDelayMs));
+      if (server.failListReads) {
+        await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ detail: "boom" }) });
+        return;
+      }
       const withArchived = url.searchParams.get("include_archived") === "true";
       const listed = server.rows.filter((row) => withArchived || !row.is_archived);
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(listed.map(asResponse)) });
@@ -152,6 +160,49 @@ const ARCHIVED = template("00000000-0000-0000-0000-0000000000a2", "Old decline",
 function freshRows(): FakeTemplate[] {
   return [{ ...ACTIVE }, { ...ARCHIVED }];
 }
+
+test.describe("Loading reply templates", () => {
+  for (const [tab, path, rowPrefix] of [
+    ["Active", "/reply-templates", "reply-template-row-"],
+    ["Archived", "/reply-templates?view=archived", "archived-reply-template-row-"],
+  ] as const) {
+    test(`the ${tab} tab says it couldn't load, never "none", and Try again loads it`, async ({ page }) => {
+      await plantAuth(page);
+      await stubShell(page);
+      const server = await stubTemplates(page, freshRows());
+      server.failListReads = true;
+      await page.goto(path);
+      await expect(page.getByRole("alert").filter({ hasText: /couldn't load your/ })).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText(/No templates yet|No archived templates/)).toHaveCount(0);
+      await expect(page.locator(`[data-testid^="${rowPrefix}"]`)).toHaveCount(0);
+
+      server.failListReads = false;
+      await page.getByRole("button", { name: "Try again" }).click();
+      await expect(page.locator(`[data-testid^="${rowPrefix}"]`)).toHaveCount(1);
+      await expect(page.getByRole("alert").filter({ hasText: /couldn't load your/ })).toHaveCount(0);
+    });
+  }
+
+  // REPLY_TEMPLATE_SKELETON_ROWS (4) placeholder rows against 4 loaded ones.
+  test("the Active skeleton has the loaded list's rows and buttons", async ({ page }) => {
+    const rows = ["c1", "c2", "c3", "c4"].map((n, i) =>
+      template(`00000000-0000-0000-0000-0000000000${n}`, `Active ${i + 1}`, false),
+    );
+    await plantAuth(page);
+    await stubShell(page);
+    const server = await stubTemplates(page, rows);
+    server.readDelayMs = 1500;
+    await page.goto("/reply-templates");
+    const skeleton = page.getByTestId("active-reply-templates-skeleton");
+    await expect(skeleton).toBeVisible();
+    const skeletonRows = await skeleton.locator("li").count();
+    const skeletonButtons = await skeleton.locator("li .h-11").count();
+    await expect(page.getByText("Active 1", { exact: true })).toBeVisible({ timeout: 5000 });
+    expect(skeletonRows).toBe(await page.locator('[data-testid^="reply-template-row-"]').count());
+    const loadedButtons = await page.locator('[data-testid^="reply-template-edit-"], [data-testid^="reply-template-archive-"]').count();
+    expect(skeletonButtons).toBe(loadedButtons);
+  });
+});
 
 test.describe("Restoring archived reply templates", () => {
   test("restores from the Archived tab and shows it on Active", async ({ page }) => {
