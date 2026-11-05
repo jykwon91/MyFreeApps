@@ -26,7 +26,9 @@
         "backend/app/services/analytics/",
         "backend/app/repositories/analytics/",
         "frontend/src/pages/Analytics.tsx",
-        "frontend/src/features/analytics/"
+        "frontend/src/features/analytics/",
+        "api-client/src/store/analyticsApi.ts",
+        "api-client/src/types/analytics/"
       ],
       "backend_tests": [
         "test_utility_trends.py"

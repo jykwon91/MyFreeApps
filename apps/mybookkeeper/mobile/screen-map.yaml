@@ -4,7 +4,7 @@ routes:
   /admin:
     not_on_mobile: Operator dashboards, for the website.
   /analytics:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/analytics/index
   /applicants:
     screen: (app)/(tabs)/people
   /applicants/:applicantId:

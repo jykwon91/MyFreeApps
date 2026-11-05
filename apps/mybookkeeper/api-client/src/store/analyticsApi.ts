@@ -1,14 +1,10 @@
-import { baseApi } from "./baseApi";
-import type { UtilityTrendsResponse } from "@/shared/types/analytics";
+import { baseApi } from "@platform/core/store/baseApi";
+import type { UtilityTrendsParams } from "../types/analytics/utility-trends-params";
+import type { UtilityTrendsResponse } from "../types/analytics/utility-trends-response";
 
-export interface UtilityTrendsParams {
-  startDate?: string;
-  endDate?: string;
-  propertyIds?: string[];
-  granularity?: "monthly" | "quarterly";
-}
-
-const analyticsApi = baseApi.injectEndpoints({
+const analyticsApi = baseApi.enhanceEndpoints({
+  addTagTypes: ["Transaction"],
+}).injectEndpoints({
   endpoints: (builder) => ({
     getUtilityTrends: builder.query<UtilityTrendsResponse, UtilityTrendsParams | void>({
       query: (params) => ({

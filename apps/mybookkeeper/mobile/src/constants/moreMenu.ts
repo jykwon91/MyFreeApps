@@ -25,7 +25,7 @@ export const MORE_MENU: readonly MoreMenuGroup[] = [
     items: [
       { label: "Reconciliation", screen: "/reconciliation" },
       { label: "Vendors", screen: "/vendors" },
-      { label: "Analytics", webPath: "/analytics" },
+      { label: "Utility costs", screen: "/analytics" },
       { label: "Insurance", screen: "/insurance" },
       { label: "Mortgages", screen: "/mortgages" },
       { label: "Utility Plans", screen: "/utility-plans" },

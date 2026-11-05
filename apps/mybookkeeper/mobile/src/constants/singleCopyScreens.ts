@@ -4,6 +4,7 @@
  */
 export const SINGLE_COPY_SCREENS = [
   "ai-permission",
+  "analytics/index",
   "applicants/[id]",
   "calendar/index",
   "camera",

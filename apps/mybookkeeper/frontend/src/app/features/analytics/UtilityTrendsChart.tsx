@@ -12,7 +12,7 @@ import type { LegendPayload } from "recharts";
 import { parse, format } from "date-fns";
 import { UTILITY_SUB_CATEGORY_COLORS, UTILITY_SUB_CATEGORIES } from "@/shared/lib/constants";
 import UtilityTrendsChartTooltip from "@/app/features/analytics/UtilityTrendsChartTooltip";
-import type { UtilityTrendPoint } from "@/shared/types/analytics";
+import type { UtilityTrendPoint } from "@mybookkeeper/api-client/types/analytics/utility-trend-point";
 
 type Granularity = "monthly" | "quarterly";
 
