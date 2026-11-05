@@ -2,8 +2,10 @@ import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import type { AxiosAdapter } from "axios";
 import { Alert, Linking } from "react-native";
 import { Provider } from "react-redux";
+import { REPLY_TEMPLATE_MESSAGES } from "../src/constants/replyTemplates";
 import InquiryReplyScreen from "../src/features/inquiries/InquiryReplyScreen";
 import { replyFailure } from "../src/features/inquiries/replyStatus";
 import { clearReplyDrafts, deleteReplyDraft, hasReplyDraft, loadReplyDraft, saveReplyDraft } from "../src/features/inquiries/replyDrafts";
@@ -16,9 +18,10 @@ import { aMessage, anInquiry, lastInquiryWrite, startInquiryServer } from "../te
 jest.mock("../src/constants/replies", () => ({ ...jest.requireActual("../src/constants/replies"), REPLY_CHECK_DELAYS_MS: [0, 1] }));
 
 const mockBack = jest.fn();
+const mockPush = jest.fn();
 const mockPreventRemove = { active: false };
 jest.mock("expo-router", () => ({
-  router: { back: () => mockBack() },
+  router: { back: () => mockBack(), push: (path: string) => mockPush(path) },
   usePreventRemove: (active: boolean) => {
     mockPreventRemove.active = active;
   },
@@ -212,6 +215,29 @@ describe("InquiryReplyScreen", () => {
       await renderScreen();
       await screen.findByLabelText("Subject");
       expect(screen.queryByRole("button", { name: "Choose a template" })).toBeNull();
+    });
+
+    it("offers to make one when there are none", async () => {
+      startInquiryServer([anInquiry()]);
+      await renderScreen();
+      await fireEvent.press(await screen.findByRole("button", { name: REPLY_TEMPLATE_MESSAGES.makeOne }));
+      expect(mockPush).toHaveBeenCalledWith("/reply-templates/new");
+    });
+
+    it("says so, instead of hiding the choice, when the templates won't load, and recovers on a retry", async () => {
+      const server = startInquiryServer([anInquiry()]);
+      server.templates = TEMPLATES;
+      const answer = api.defaults.adapter as AxiosAdapter;
+      let failing = true;
+      api.defaults.adapter = (config) =>
+        failing && config.url === "/reply-templates" ? Promise.reject({ response: { status: 500, data: {} }, config, isAxiosError: true }) : answer(config);
+      await renderScreen();
+      expect(await screen.findByText(REPLY_TEMPLATE_MESSAGES.templatesLoadFailed)).toBeTruthy();
+      expect(screen.queryByRole("button", { name: REPLY_TEMPLATE_MESSAGES.makeOne })).toBeNull();
+      failing = false;
+      await fireEvent.press(screen.getByRole("button", { name: REPLY_TEMPLATE_MESSAGES.tryAgain }));
+      expect(await screen.findByRole("button", { name: "Choose a template" })).toBeTruthy();
+      expect(screen.queryByText(REPLY_TEMPLATE_MESSAGES.templatesLoadFailed)).toBeNull();
     });
   });
 

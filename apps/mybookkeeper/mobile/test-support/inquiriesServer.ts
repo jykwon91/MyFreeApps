@@ -6,6 +6,7 @@ import type { Integration } from "@mybookkeeper/api-client/types/integration/int
 import type { InquirySpamAssessment } from "@mybookkeeper/api-client/types/inquiry/inquiry-spam-assessment";
 import type { InquirySummary } from "@mybookkeeper/api-client/types/inquiry/inquiry-summary";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
+import { answerTemplateWrite } from "./replyTemplateWrites";
 
 export function aMessage(overrides: Partial<InquiryMessage> = {}): InquiryMessage {
   return {
@@ -66,6 +67,11 @@ export interface FakeInquiryServer {
   integrations: Partial<Integration>[];
   templates: Partial<ReplyTemplate>[];
   failTemplateRender: boolean;
+  /** Names of templates that were archived: they stay taken. */
+  archivedTemplateNames: string[];
+  /** How the next template write ends. "lost" ones commit (or not) but never answer. */
+  /** Saved, then: the answer lost; the answer lost and the network gone; or the proxy's own 502. */
+  templateWriteOutcome: "lostAfterSaving" | "lostBeforeSaving" | "lostAndOffline" | "gatewayAfterSaving" | null;
   /** How the next send ends. A number is a failure with that status. */
   sendOutcome: { status: number; detail?: string } | "lostAfterSending" | "lostBeforeSending" | null;
   requests: AxiosRequestConfig[];
@@ -84,6 +90,8 @@ export function startInquiryServer(inquiries: InquiryResponse[]): FakeInquirySer
     integrations: [{ provider: "gmail", has_send_scope: true, needs_reauth: false }],
     templates: [],
     failTemplateRender: false,
+    archivedTemplateNames: [],
+    templateWriteOutcome: null,
     sendOutcome: null,
     requests: [],
   };
@@ -98,7 +106,8 @@ export function startInquiryServer(inquiries: InquiryResponse[]): FakeInquirySer
     server.requests.push(config);
     if (server.offline) return Promise.reject(Object.assign(new Error("Network Error"), { config }));
     if (config.url === "/integrations") return respond(server.integrations);
-    if (config.url === "/reply-templates") return respond(server.templates);
+    if (config.url === "/reply-templates" && config.method === "get") return respond(server.templates);
+    if (config.url?.startsWith("/reply-templates")) return answerTemplateWrite(config, server, respond);
     if (config.url === "/inquiries") {
       const params = (config.params ?? {}) as Record<string, string | number | boolean | undefined>;
       const offset = Number(params.offset ?? 0);

@@ -1,4 +1,27 @@
+import type { ReplyTemplateFailure } from "../types/ReplyTemplateFailure";
+import type { ReplyTemplateField } from "../types/ReplyTemplateField";
 import type { ReplyTemplateVariable } from "../types/ReplyTemplateVariable";
+
+export const REPLY_TEMPLATE_NAME_MAX_LENGTH = 100;
+export const REPLY_TEMPLATE_SUBJECT_MAX_LENGTH = 500;
+export const REPLY_TEMPLATE_BODY_MAX_LENGTH = 10000;
+/** The message box shows how much room is left from here. */
+export const REPLY_TEMPLATE_BODY_COUNTER_FROM = 9000;
+export const REPLY_TEMPLATE_BODY_MIN_HEIGHT = 220;
+
+export const REPLY_TEMPLATE_FIELD_MAX_LENGTH: Record<ReplyTemplateField, number> = {
+  subject: REPLY_TEMPLATE_SUBJECT_MAX_LENGTH,
+  body: REPLY_TEMPLATE_BODY_MAX_LENGTH,
+};
+
+/** Anything that looks like a variable. Digits can't start one, so "$500" isn't. */
+export const REPLY_TEMPLATE_VARIABLE_PATTERN = /\$[A-Za-z_]+/g;
+/** A variable typed against these would run into them, so a space goes between. */
+export const REPLY_TEMPLATE_SPACE_BEFORE = /[A-Za-z0-9$]/;
+export const REPLY_TEMPLATE_SPACE_AFTER = /[A-Za-z0-9_]/;
+
+/** Failures after which a new template may still have been saved. */
+export const REPLY_TEMPLATE_AMBIGUOUS_CREATE: ReadonlySet<ReplyTemplateFailure> = new Set(["noResponse", "nameTaken", "serverError"]);
 
 export const REPLY_TEMPLATE_SKELETON_ROWS = ["a", "b", "c", "d"];
 
@@ -25,10 +48,61 @@ export const REPLY_TEMPLATE_MESSAGES = {
   maybeArchived: "It may have been archived.",
   back: "Back",
   noneHeading: "You don't have any reply templates.",
-  noneBody: "Ones you make on the website show up here.",
-  openWebsite: "Open on the website",
-  manageOnWebsite: "I can't create or edit templates here yet. Open the website to change them.",
+  noneBody: "Want to make one? I'll fill in names, dates and listings when you reply.",
+  noneBodyViewer: "You have view-only access, so I can't make one for you here.",
+  newTemplate: "New template",
+  makeOne: "Make a template",
+  edit: "Edit",
+  nameLabel: "Name",
+  nameHint: "What you'll see when you pick it, like Polite decline.",
+  nameRequired: "Give it a name.",
+  nameClash: "You already have a template with that name.",
+  nameTaken: "That name is taken. It might be a template you archived, so try another.",
+  subjectRequired: "Add a subject.",
+  messageRequired: "Write the message.",
+  variablesHelp: "What the variables fill in",
+  addToMessage: "Add to message",
+  addToSubject: "Add to subject",
+  tooLong: "That would make it too long.",
+  saveTemplate: "Save template",
+  saveChanges: "Save changes",
+  saving: "Saving…",
+  templateSaved: "Template saved.",
+  changesSaved: "Changes saved.",
+  couldntReach: "I can't reach the server, so I couldn't save that. Your template is still here.",
+  saveViewOnly: "You have view-only access, so I can't save this.",
+  saveFailed: "I couldn't save that. Want to try again?",
+  saveUnsure: "I'm not sure that saved. Check your templates before trying again, so you don't end up with two.",
+  goneAnymore: "I can't find that template anymore.",
+  discardTitle: "Discard your changes?",
+  discardBody: "I haven't saved them yet.",
+  keepEditing: "Keep editing",
+  discard: "Discard",
+  viewOnlyHeading: "You have view-only access.",
+  viewOnlyBody: "Ask the workspace owner to change your access.",
+  archive: "Archive",
+  archiving: "Archiving…",
+  archiveBody: "It will stop showing up when you reply. I can't bring it back from here, and you won't be able to reuse its name.",
+  archived: "Archived.",
+  archiveViewOnly: "You have view-only access.",
+  archiveUnreachable: "I can't reach the server, so I couldn't archive that.",
+  archiveUnsure: "I'm not sure that went through. Pull down on the list to check.",
+  archiveFailed: "I couldn't archive that. Want to try again?",
+  templatesLoadFailed: "I couldn't load your templates.",
   subject: "Subject",
   message: "Message",
   variablesHeading: "Variables in this template",
 } as const;
+
+export function archiveTemplateTitle(name: string): string {
+  return `Archive "${name}"?`;
+}
+
+export function messageCounter(length: number): string {
+  return `${length.toLocaleString("en-US")} of ${REPLY_TEMPLATE_BODY_MAX_LENGTH.toLocaleString("en-US")}`;
+}
+
+export function unknownVariablesHint(tokens: readonly string[]): string {
+  if (tokens.length === 1) return `I don't recognize ${tokens[0]}, so I'll leave it as you typed it.`;
+  return `I don't recognize ${tokens.join(", ")}, so I'll leave them as you typed them.`;
+}

@@ -7,9 +7,7 @@ import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
 import type { ReactElement } from "react";
-import { Linking } from "react-native";
 import { Provider } from "react-redux";
-import { WEB_BASE_URL } from "../src/constants/api";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { REPLY_TEMPLATE_MESSAGES } from "../src/constants/replyTemplates";
 import { variablesUsed } from "../src/features/replyTemplates/replyTemplateDisplay";
@@ -113,13 +111,13 @@ describe("ReplyTemplatesScreen", () => {
     expect(mockPush).toHaveBeenCalledWith("/reply-templates/t1");
   });
 
-  it("points to the website when there are none", async () => {
-    const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+  it("says there are none, and offers nothing to make one without write access", async () => {
     startServer([]);
     await show(<ReplyTemplatesScreen />);
     await screen.findByText(REPLY_TEMPLATE_MESSAGES.noneHeading);
-    await fireEvent.press(screen.getByRole("button", { name: REPLY_TEMPLATE_MESSAGES.openWebsite }));
-    expect(openURL).toHaveBeenCalledWith(`${WEB_BASE_URL}/reply-templates`);
+    expect(screen.getByText(REPLY_TEMPLATE_MESSAGES.noneBodyViewer)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: REPLY_TEMPLATE_MESSAGES.makeOne })).toBeNull();
+    expect(screen.queryByRole("button", { name: REPLY_TEMPLATE_MESSAGES.newTemplate })).toBeNull();
   });
 
   it("keeps saying there are none during a reload", async () => {
@@ -223,11 +221,11 @@ describe("ReplyTemplateDetailScreen", () => {
     expect(screen.getByText("Polite decline")).toBeTruthy();
   });
 
-  it("opens the website", async () => {
-    const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+  it("has no way to edit or archive without write access", async () => {
     startServer([aTemplate()]);
     await show(<ReplyTemplateDetailScreen id="t1" />);
-    await fireEvent.press(await screen.findByRole("button", { name: REPLY_TEMPLATE_MESSAGES.openWebsite }));
-    expect(openURL).toHaveBeenCalledWith(`${WEB_BASE_URL}/reply-templates`);
+    await screen.findByText("Polite decline");
+    expect(screen.queryByRole("button", { name: REPLY_TEMPLATE_MESSAGES.edit })).toBeNull();
+    expect(screen.queryByRole("button", { name: REPLY_TEMPLATE_MESSAGES.archive })).toBeNull();
   });
 });

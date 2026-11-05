@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams } from "expo-router";
-import ReplyTemplateDetailScreen from "../../../src/features/replyTemplates/ReplyTemplateDetailScreen";
+import ReplyTemplateDetailScreen from "../../../../src/features/replyTemplates/ReplyTemplateDetailScreen";
 
 export default function ReplyTemplateRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();

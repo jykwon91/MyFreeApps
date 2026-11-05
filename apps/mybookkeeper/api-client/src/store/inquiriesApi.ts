@@ -124,6 +124,22 @@ export const inquiriesApi = baseApi.enhanceEndpoints({
         method: "PATCH",
         data,
       }),
+      // The list is the only read there is, so it shows the change straight away
+      // rather than the old words until the refetch lands.
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(
+            inquiriesApi.util.updateQueryData("getReplyTemplates", undefined, (templates) =>
+              data.is_archived
+                ? templates.filter((template) => template.id !== data.id)
+                : templates.map((template) => (template.id === data.id ? data : template)),
+            ),
+          );
+        } catch {
+          // The caller reports the failure, and the cache still holds the old words.
+        }
+      },
       invalidatesTags: (_result, _err, arg) => [
         { type: "ReplyTemplate", id: arg.id },
         { type: "ReplyTemplate", id: "LIST" },
@@ -131,6 +147,18 @@ export const inquiriesApi = baseApi.enhanceEndpoints({
     }),
     archiveReplyTemplate: builder.mutation<void, string>({
       query: (id) => ({ url: `/reply-templates/${id}`, method: "DELETE" }),
+      async onQueryStarted(id, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          dispatch(
+            inquiriesApi.util.updateQueryData("getReplyTemplates", undefined, (templates) =>
+              templates.filter((template) => template.id !== id),
+            ),
+          );
+        } catch {
+          // The caller reports the failure, and the cache still holds the row.
+        }
+      },
       invalidatesTags: (_result, _err, id) => [
         { type: "ReplyTemplate", id },
         { type: "ReplyTemplate", id: "LIST" },

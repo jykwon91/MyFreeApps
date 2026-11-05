@@ -510,6 +510,7 @@
         "test_reply_template_repo.py",
         "test_reply_template_routes.py",
         "test_reply_template_service.py",
+        "test_reply_template_variables_match_phone.py",
         "test_gmail_service_send.py",
         "test_test_utils_routes.py"
       ],
