@@ -37,7 +37,7 @@ export const MORE_MENU: readonly MoreMenuGroup[] = [
       { label: "Tax Report", screen: "/tax" },
       { label: "Tax Documents", screen: "/tax/documents" },
       { label: "Tax Returns", screen: "/tax-returns" },
-      { label: "Tax Review", webPath: "/tax-review" },
+      { label: "Tax Review", screen: "/tax/review" },
     ],
   },
   {

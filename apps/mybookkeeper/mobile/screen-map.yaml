@@ -92,7 +92,7 @@ routes:
   /tax-returns/:id:
     screen: (app)/tax-returns/[id]
   /tax-review:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/tax/review
   /tenants:
     screen: (app)/(tabs)/people
   /tenants/:applicantId:
