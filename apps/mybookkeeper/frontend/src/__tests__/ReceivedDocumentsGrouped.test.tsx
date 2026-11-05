@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ReceivedDocumentsGrouped from "@/app/features/tax/ReceivedDocumentsGrouped";
-import type { TaxSourceDocument } from "@/shared/types/tax/source-document";
+import type { TaxSourceDocument } from "@mybookkeeper/api-client/types/tax/TaxSourceDocument";
 
 vi.mock("@/shared/utils/downloadDocument", () => ({
   downloadDocument: vi.fn(),

@@ -1,4 +1,4 @@
-import { getFormLabel } from "@/shared/lib/tax-config";
+import { getFormLabel } from "@mybookkeeper/api-client/utils/taxFormLabel";
 import { formatCurrency } from "@/shared/utils/currency";
 import type { ValidationResult } from "@/shared/types/tax/validation-result";
 import { SEVERITY_ORDER, SEVERITY_CONFIG } from "@/shared/lib/validation-config";

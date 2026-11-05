@@ -1,7 +1,7 @@
 import { CheckCircle2, AlertCircle, Upload } from "lucide-react";
-import { getFormLabel } from "@/shared/lib/tax-config";
+import { getFormLabel } from "@mybookkeeper/api-client/utils/taxFormLabel";
 import Badge from "@/shared/components/ui/Badge";
-import type { ChecklistItem } from "@/shared/types/tax/source-document";
+import type { ChecklistItem } from "@mybookkeeper/api-client/types/tax/ChecklistItem";
 
 interface CompletenessChecklistProps {
   items: ChecklistItem[];

@@ -11,6 +11,7 @@ export const SINGLE_COPY_SCREENS = [
   "delete-account",
   "documents/[id]",
   "tax/index",
+  "tax/documents",
   "reply-templates/[id]",
   "reply-templates/index",
   "welcome-manuals/[id]",

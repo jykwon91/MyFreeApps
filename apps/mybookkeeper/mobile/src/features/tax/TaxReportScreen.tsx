@@ -7,6 +7,7 @@ import { TAX_REPORT_MESSAGES as MESSAGES } from "../../constants/taxReport";
 import type { TaxReportView } from "../../types/TaxReportView";
 import type { TaxRow } from "../../types/TaxRow";
 import { useToday } from "../../lib/useToday";
+import { isServerAnswer } from "../../utils/isServerAnswer";
 import { useCanWrite } from "../workspace/useCanWrite";
 import TaxCategoryRowView from "./TaxCategoryRowView";
 import TaxPropertyRowView from "./TaxPropertyRowView";
@@ -48,11 +49,10 @@ export default function TaxReportScreen() {
       );
     }
     if (isFetching) return <TaxReportSkeleton />;
-    const isServerAnswer = error !== undefined && "status" in error && typeof error.status === "number";
     return (
       <EmptyState
         action={{ label: MESSAGES.tryAgain, onPress: refresh }}
-        body={isServerAnswer ? MESSAGES.tryAgainLater : MESSAGES.checkConnection}
+        body={isServerAnswer(error) ? MESSAGES.tryAgainLater : MESSAGES.checkConnection}
         heading={MESSAGES.couldntLoad(year)}
       />
     );

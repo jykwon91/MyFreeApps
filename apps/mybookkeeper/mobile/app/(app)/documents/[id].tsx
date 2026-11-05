@@ -5,7 +5,7 @@ export default function DocumentRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, title: "Document", headerBackTitle: "Money" }} />
+      <Stack.Screen options={{ headerShown: true, title: "Document", headerBackButtonDisplayMode: "minimal" }} />
       <DocumentDetailScreen id={id} />
     </>
   );

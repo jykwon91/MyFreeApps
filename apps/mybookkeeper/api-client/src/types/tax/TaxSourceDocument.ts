@@ -10,16 +10,3 @@ export interface TaxSourceDocument {
   uploaded_at: string;
   form_instance_id: string;
 }
-
-export interface ChecklistItem {
-  expected_type: string;
-  expected_from: string | null;
-  reason: string;
-  status: "received" | "missing";
-  document_id: string | null;
-}
-
-export interface SourceDocumentsResponse {
-  documents: TaxSourceDocument[];
-  checklist: ChecklistItem[];
-}

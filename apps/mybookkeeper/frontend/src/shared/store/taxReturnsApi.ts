@@ -3,7 +3,7 @@ import type { TaxReturn } from "@/shared/types/tax/tax-return";
 import type { FormWithFields } from "@/shared/types/tax/tax-form";
 import type { ValidationResult } from "@/shared/types/tax/validation-result";
 import type { TaxAdvisorCachedResponse } from "@/shared/types/tax/tax-advisor";
-import type { SourceDocumentsResponse } from "@/shared/types/tax/source-document";
+import type { SourceDocumentsResponse } from "@mybookkeeper/api-client/types/tax/SourceDocumentsResponse";
 
 export interface CreateTaxReturnParams {
   tax_year: number;
@@ -90,13 +90,6 @@ const taxReturnsApi = baseApi.injectEndpoints({
       query: (id) => ({ url: `/tax-returns/${id}`, method: "DELETE" }),
       invalidatesTags: [{ type: "TaxReturn", id: "LIST" }],
     }),
-    listTaxDocuments: builder.query<SourceDocumentsResponse, { tax_year?: number } | void>({
-      query: (params) => ({
-        url: "/tax-documents",
-        params: params && "tax_year" in params ? { tax_year: params.tax_year } : undefined,
-      }),
-      providesTags: [{ type: "TaxReturn", id: "TAX_DOCS" }],
-    }),
   }),
 });
 
@@ -114,5 +107,4 @@ export const {
   useGenerateAdvisorSuggestionsMutation,
   useUpdateSuggestionStatusMutation,
   useDeleteTaxReturnMutation,
-  useListTaxDocumentsQuery,
 } = taxReturnsApi;

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import CompletenessChecklist from "@/app/features/tax/CompletenessChecklist";
-import type { ChecklistItem } from "@/shared/types/tax/source-document";
+import type { ChecklistItem } from "@mybookkeeper/api-client/types/tax/ChecklistItem";
 
 const mockChecklist: ChecklistItem[] = [
   {

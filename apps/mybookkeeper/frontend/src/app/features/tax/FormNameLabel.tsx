@@ -1,4 +1,4 @@
-import { getFormLabel } from "@/shared/lib/tax-config";
+import { getFormLabel } from "@mybookkeeper/api-client/utils/taxFormLabel";
 
 export interface FormNameLabelProps {
   formName: string;

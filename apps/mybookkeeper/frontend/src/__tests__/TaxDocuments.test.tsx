@@ -5,7 +5,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import TaxDocuments from "@/app/pages/TaxDocuments";
-import type { SourceDocumentsResponse } from "@/shared/types/tax/source-document";
+import type { SourceDocumentsResponse } from "@mybookkeeper/api-client/types/tax/SourceDocumentsResponse";
 import type { TaxReturn } from "@/shared/types/tax/tax-return";
 
 const mockDocumentsData: SourceDocumentsResponse = {
@@ -86,13 +86,20 @@ vi.mock("@/shared/store/taxReturnsApi", async () => {
   const actual = await vi.importActual("@/shared/store/taxReturnsApi");
   return {
     ...actual,
+    useListTaxReturnsQuery: vi.fn(() => ({
+      data: mockTaxReturns,
+    })),
+  };
+});
+
+vi.mock("@mybookkeeper/api-client/store/taxDocumentsApi", async () => {
+  const actual = await vi.importActual("@mybookkeeper/api-client/store/taxDocumentsApi");
+  return {
+    ...actual,
     useListTaxDocumentsQuery: vi.fn(() => ({
       data: mockDocumentsData,
       isLoading: false,
       isError: false,
-    })),
-    useListTaxReturnsQuery: vi.fn(() => ({
-      data: mockTaxReturns,
     })),
   };
 });
@@ -105,10 +112,8 @@ vi.mock("@/app/features/documents/DocumentViewer", () => ({
   ),
 }));
 
-import {
-  useListTaxDocumentsQuery,
-  useListTaxReturnsQuery,
-} from "@/shared/store/taxReturnsApi";
+import { useListTaxDocumentsQuery } from "@mybookkeeper/api-client/store/taxDocumentsApi";
+import { useListTaxReturnsQuery } from "@/shared/store/taxReturnsApi";
 
 function renderPage() {
   return render(
