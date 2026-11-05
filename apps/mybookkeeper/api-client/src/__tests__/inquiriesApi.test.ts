@@ -101,3 +101,62 @@ describe("updateInquiry", () => {
     api.defaults.adapter = originalAdapter;
   });
 });
+
+describe("archived reply templates", () => {
+  const active = { id: "t1", name: "Active", display_order: 0, is_archived: false };
+  const old = { id: "t2", name: "Old", display_order: 0, is_archived: true };
+
+  // Answers each request in turn; anything after that is a refetch that never lands.
+  function answering(...answers: unknown[]) {
+    const originalAdapter = api.defaults.adapter;
+    const adapter: AxiosAdapter = (config) => {
+      sent.push(config);
+      if (answers.length === 0) return new Promise(() => {});
+      return Promise.resolve({ data: answers.shift(), status: 200, statusText: "", headers: {}, config });
+    };
+    api.defaults.adapter = adapter;
+    return () => {
+      api.defaults.adapter = originalAdapter;
+    };
+  }
+
+  function cached(store: ReturnType<typeof makeStore>, key: string) {
+    return store.getState()[baseApi.reducerPath].queries[key]?.data;
+  }
+
+  it("asks for archived ones too and keeps only those", async () => {
+    const restore = answering([active, old]);
+    const store = makeStore();
+    await store.dispatch(endpoints.getArchivedReplyTemplates.initiate());
+    expect(sent[0].url).toBe("/reply-templates");
+    expect(sent[0].params).toMatchObject({ include_archived: true });
+    expect(cached(store, "getArchivedReplyTemplates(undefined)")).toEqual([old]);
+    restore();
+  });
+
+  it("moves an archived template into the archived list at once", async () => {
+    const restore = answering([active], [old], undefined);
+    const store = makeStore();
+    await store.dispatch(endpoints.getReplyTemplates.initiate());
+    await store.dispatch(endpoints.getArchivedReplyTemplates.initiate());
+    await store.dispatch(endpoints.archiveReplyTemplate.initiate("t1"));
+    expect(cached(store, "getReplyTemplates(undefined)")).toEqual([]);
+    expect(cached(store, "getArchivedReplyTemplates(undefined)")).toEqual([
+      { ...active, is_archived: true },
+      old,
+    ]);
+    restore();
+  });
+
+  it("moves a restored template back into the templates at once", async () => {
+    const restored = { ...old, is_archived: false };
+    const restore = answering([active], [active, old], restored);
+    const store = makeStore();
+    await store.dispatch(endpoints.getReplyTemplates.initiate());
+    await store.dispatch(endpoints.getArchivedReplyTemplates.initiate());
+    await store.dispatch(endpoints.updateReplyTemplate.initiate({ id: "t2", data: { is_archived: false } }));
+    expect(cached(store, "getReplyTemplates(undefined)")).toEqual([active, restored]);
+    expect(cached(store, "getArchivedReplyTemplates(undefined)")).toEqual([]);
+    restore();
+  });
+});

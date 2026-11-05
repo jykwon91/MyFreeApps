@@ -67,8 +67,8 @@ export interface FakeInquiryServer {
   integrations: Partial<Integration>[];
   templates: Partial<ReplyTemplate>[];
   failTemplateRender: boolean;
-  /** Names of templates that were archived: they stay taken. */
-  archivedTemplateNames: string[];
+  /** Templates that were archived: listed only when asked for, and their names stay taken. */
+  archivedTemplates: Partial<ReplyTemplate>[];
   /** How the next template write ends. "lost" ones commit (or not) but never answer. */
   /** Saved, then: the answer lost; the answer lost and the network gone; or the proxy's own 502. */
   templateWriteOutcome: "lostAfterSaving" | "lostBeforeSaving" | "lostAndOffline" | "gatewayAfterSaving" | null;
@@ -90,7 +90,7 @@ export function startInquiryServer(inquiries: InquiryResponse[]): FakeInquirySer
     integrations: [{ provider: "gmail", has_send_scope: true, needs_reauth: false }],
     templates: [],
     failTemplateRender: false,
-    archivedTemplateNames: [],
+    archivedTemplates: [],
     templateWriteOutcome: null,
     sendOutcome: null,
     requests: [],
@@ -106,7 +106,13 @@ export function startInquiryServer(inquiries: InquiryResponse[]): FakeInquirySer
     server.requests.push(config);
     if (server.offline) return Promise.reject(Object.assign(new Error("Network Error"), { config }));
     if (config.url === "/integrations") return respond(server.integrations);
-    if (config.url === "/reply-templates" && config.method === "get") return respond(server.templates);
+    if (config.url === "/reply-templates" && config.method === "get") {
+      const includeArchived = Boolean((config.params as { include_archived?: boolean } | undefined)?.include_archived);
+      const rows = includeArchived ? [...server.templates, ...server.archivedTemplates] : [...server.templates];
+      // In the server's order: display order, then name.
+      rows.sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0) || (a.name ?? "").localeCompare(b.name ?? ""));
+      return respond(rows);
+    }
     if (config.url?.startsWith("/reply-templates")) return answerTemplateWrite(config, server, respond);
     if (config.url === "/inquiries") {
       const params = (config.params ?? {}) as Record<string, string | number | boolean | undefined>;

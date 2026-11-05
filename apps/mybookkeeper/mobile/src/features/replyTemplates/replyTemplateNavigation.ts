@@ -5,3 +5,8 @@ export function leaveToList(): void {
   if (router.canGoBack()) router.back();
   else router.replace("/reply-templates");
 }
+
+export function leaveToArchived(): void {
+  if (router.canGoBack()) router.back();
+  else router.replace("/reply-templates/archived");
+}

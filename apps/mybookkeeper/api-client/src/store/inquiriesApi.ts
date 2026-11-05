@@ -14,6 +14,8 @@ import type { RenderedTemplate } from "../types/inquiry/rendered-template";
 import type { ReplyTemplate } from "../types/inquiry/reply-template";
 import type { ReplyTemplateCreateRequest } from "../types/inquiry/reply-template-create-request";
 import type { ReplyTemplateUpdateRequest } from "../types/inquiry/reply-template-update-request";
+import { placeReplyTemplate } from "../utils/placeReplyTemplate";
+import { replyTemplateTags } from "../utils/replyTemplateTags";
 
 /**
  * RTK Query slice for the Inquiries domain.
@@ -103,13 +105,13 @@ export const inquiriesApi = baseApi.enhanceEndpoints({
     // ----- Reply templates -----
     getReplyTemplates: builder.query<ReplyTemplate[], void>({
       query: () => ({ url: "/reply-templates" }),
-      providesTags: (result) =>
-        result
-          ? [
-              ...result.map((t) => ({ type: "ReplyTemplate" as const, id: t.id })),
-              { type: "ReplyTemplate" as const, id: "LIST" },
-            ]
-          : [{ type: "ReplyTemplate" as const, id: "LIST" }],
+      providesTags: replyTemplateTags,
+    }),
+    // The server hands back active and archived together; this list keeps the archived ones.
+    getArchivedReplyTemplates: builder.query<ReplyTemplate[], void>({
+      query: () => ({ url: "/reply-templates", params: { include_archived: true } }),
+      transformResponse: (templates: ReplyTemplate[]) => templates.filter((t) => t.is_archived),
+      providesTags: replyTemplateTags,
     }),
     createReplyTemplate: builder.mutation<ReplyTemplate, ReplyTemplateCreateRequest>({
       query: (body) => ({ url: "/reply-templates", method: "POST", data: body }),
@@ -124,16 +126,20 @@ export const inquiriesApi = baseApi.enhanceEndpoints({
         method: "PATCH",
         data,
       }),
-      // The list is the only read there is, so it shows the change straight away
-      // rather than the old words until the refetch lands.
+      // The lists are the only reads there are, so they show the change straight away,
+      // with a restored or archived template already in the right one, rather than the
+      // old state until the refetch lands.
       async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
           dispatch(
             inquiriesApi.util.updateQueryData("getReplyTemplates", undefined, (templates) =>
-              data.is_archived
-                ? templates.filter((template) => template.id !== data.id)
-                : templates.map((template) => (template.id === data.id ? data : template)),
+              placeReplyTemplate(templates, data, !data.is_archived),
+            ),
+          );
+          dispatch(
+            inquiriesApi.util.updateQueryData("getArchivedReplyTemplates", undefined, (templates) =>
+              placeReplyTemplate(templates, data, data.is_archived),
             ),
           );
         } catch {
@@ -147,7 +153,11 @@ export const inquiriesApi = baseApi.enhanceEndpoints({
     }),
     archiveReplyTemplate: builder.mutation<void, string>({
       query: (id) => ({ url: `/reply-templates/${id}`, method: "DELETE" }),
-      async onQueryStarted(id, { dispatch, queryFulfilled }) {
+      async onQueryStarted(id, { dispatch, getState, queryFulfilled }) {
+        // The server answers with nothing, so the row comes from the list it was archived from.
+        const archived = inquiriesApi.endpoints.getReplyTemplates
+          .select()(getState())
+          .data?.find((template) => template.id === id);
         try {
           await queryFulfilled;
           dispatch(
@@ -155,6 +165,13 @@ export const inquiriesApi = baseApi.enhanceEndpoints({
               templates.filter((template) => template.id !== id),
             ),
           );
+          if (archived) {
+            dispatch(
+              inquiriesApi.util.updateQueryData("getArchivedReplyTemplates", undefined, (templates) =>
+                placeReplyTemplate(templates, { ...archived, is_archived: true }, true),
+              ),
+            );
+          }
         } catch {
           // The caller reports the failure, and the cache still holds the row.
         }
@@ -230,6 +247,7 @@ export const {
   useUpdateInquiryMutation,
   useDeleteInquiryMutation,
   useGetReplyTemplatesQuery,
+  useGetArchivedReplyTemplatesQuery,
   useCreateReplyTemplateMutation,
   useUpdateReplyTemplateMutation,
   useArchiveReplyTemplateMutation,

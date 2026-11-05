@@ -16,6 +16,8 @@ export const SINGLE_COPY_SCREENS = [
   "tax-returns/index",
   "tax-returns/[id]",
   "reply-templates/[id]/edit",
+  "reply-templates/archived/[id]",
+  "reply-templates/archived/index",
   "reply-templates/[id]/index",
   "reply-templates/index",
   "reply-templates/new",
