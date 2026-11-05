@@ -15,7 +15,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { baseApi } from "@/shared/store/baseApi";
 import * as calendarApi from "@/shared/store/calendarApi";
 import CalendarMonthGrid from "@/app/features/calendar/CalendarMonthGrid";
-import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
+import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 
 const TODAY = "2026-09-15";
 const ANCHOR = "2026-09-01";

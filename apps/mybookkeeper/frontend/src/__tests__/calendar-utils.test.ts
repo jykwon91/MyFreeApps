@@ -14,7 +14,7 @@ import {
   parseIsoDate,
   relativeTime,
 } from "@/app/features/calendar/calendar-utils";
-import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
+import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 
 function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
   return {

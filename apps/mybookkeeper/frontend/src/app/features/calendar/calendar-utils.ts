@@ -1,5 +1,5 @@
 import { CALENDAR_UNASSIGNED_KEY } from "@/shared/lib/calendar-constants";
-import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
+import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 
 /**
  * Pure helpers for the unified calendar viewer.

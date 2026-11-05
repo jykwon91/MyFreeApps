@@ -15,13 +15,9 @@ import { baseApi } from "@/shared/store/baseApi";
 import * as calendarApi from "@/shared/store/calendarApi";
 import CalendarEventDetail from "@/app/features/calendar/CalendarEventDetail";
 import CalendarEventBar from "@/app/features/calendar/CalendarEventBar";
-import {
-  CALENDAR_FILTER_SOURCES,
-  getSourceColor,
-  getSourceLabel,
-  isReadOnlySource,
-} from "@/shared/lib/calendar-constants";
-import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
+import { getSourceLabel, isReadOnlySource } from "@mybookkeeper/api-client/constants/calendarSources";
+import { CALENDAR_FILTER_SOURCES, getSourceColor } from "@/shared/lib/calendar-constants";
+import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 
 function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
   return {

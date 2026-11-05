@@ -19,7 +19,7 @@ import { baseApi } from "@/shared/store/baseApi";
 import * as calendarApi from "@/shared/store/calendarApi";
 import * as toastStore from "@/shared/lib/toast-store";
 import CalendarEventDetail from "@/app/features/calendar/CalendarEventDetail";
-import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
+import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 import type { ListingBlackoutAttachment } from "@/shared/types/listing/listing-blackout-attachment";
 
 // ---------------------------------------------------------------------------

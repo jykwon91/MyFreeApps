@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
+import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 import CalendarEventDetail from "@/app/features/calendar/CalendarEventDetail";
 import CalendarAgendaEvent from "@/app/features/calendar/CalendarAgendaEvent";
 

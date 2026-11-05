@@ -4,7 +4,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import Calendar from "@/app/pages/Calendar";
-import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
+import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { ListingListResponse } from "@mybookkeeper/api-client/types/listing/listing-list-response";
 
@@ -99,9 +99,12 @@ const defaultEventsState: QueryState<CalendarEvent[]> = {
   refetch: vi.fn(),
 };
 
-vi.mock("@/shared/store/calendarApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/calendarApi", () => ({
   useGetCalendarEventsQuery: vi.fn(() => defaultEventsState),
   useGetReviewQueueCountQuery: vi.fn(() => ({ data: 0 })),
+}));
+
+vi.mock("@/shared/store/calendarApi", () => ({
   useGetReviewQueueQuery: vi.fn(() => ({ data: [], isLoading: false, isError: false })),
   useResolveQueueItemMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useIgnoreQueueItemMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
@@ -116,7 +119,7 @@ vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   useGetListingsQuery: vi.fn(() => ({ data: mockListings, isLoading: false })),
 }));
 
-import { useGetCalendarEventsQuery } from "@/shared/store/calendarApi";
+import { useGetCalendarEventsQuery } from "@mybookkeeper/api-client/store/calendarApi";
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 
 /**

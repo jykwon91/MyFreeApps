@@ -12,7 +12,7 @@ routes:
   /apply/:slug:
     not_on_mobile: A public page for applicants, on the website.
   /calendar:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/calendar/index
   /costs:
     not_on_mobile: Operator dashboards, for the website.
   /demo:

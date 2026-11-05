@@ -1,6 +1,4 @@
 import { baseApi } from "./baseApi";
-import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
-import type { CalendarEventsArgs } from "@/shared/types/calendar/calendar-events-args";
 import type { ListingBlackoutAttachment } from "@/shared/types/listing/listing-blackout-attachment";
 import type { BlackoutUpdateRequest } from "@/shared/types/listing/blackout-update-request";
 import type { ReviewQueueItem } from "@/shared/types/calendar/review-queue-item";
@@ -13,7 +11,8 @@ import type { ResolveQueueItemResponse } from "@/shared/types/calendar/resolve-q
 /**
  * Unified calendar viewer API.
  *
- * Read paths: calendar events (with host_notes + attachment_count), attachments list.
+ * Reading events and the review count is in `@mybookkeeper/api-client/store/calendarApi`,
+ * because the phone uses those too. Read paths here: attachments list.
  * Write paths: update blackout notes, upload attachment, delete attachment.
  *
  * Cache invalidation strategy:
@@ -22,26 +21,6 @@ import type { ResolveQueueItemResponse } from "@/shared/types/calendar/resolve-q
  */
 const calendarApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getCalendarEvents: builder.query<CalendarEvent[], CalendarEventsArgs | void>({
-      query: (args) => ({
-        url: "/calendar/events",
-        params: {
-          ...(args?.from ? { from: args.from } : {}),
-          ...(args?.to ? { to: args.to } : {}),
-          ...(args?.listing_ids && args.listing_ids.length > 0
-            ? { listing_ids: args.listing_ids.join(",") }
-            : {}),
-          ...(args?.property_ids && args.property_ids.length > 0
-            ? { property_ids: args.property_ids.join(",") }
-            : {}),
-          ...(args?.sources && args.sources.length > 0
-            ? { sources: args.sources.join(",") }
-            : {}),
-        },
-      }),
-      providesTags: [{ type: "Calendar", id: "LIST" }],
-    }),
-
     updateBlackout: builder.mutation<
       { id: string; host_notes: string | null },
       { blackoutId: string; body: BlackoutUpdateRequest }
@@ -106,11 +85,6 @@ const calendarApi = baseApi.injectEndpoints({
       providesTags: [{ type: "ReviewQueue", id: "LIST" }],
     }),
 
-    getReviewQueueCount: builder.query<number, void>({
-      query: () => ({ url: "/calendar/review-queue/count" }),
-      providesTags: [{ type: "ReviewQueue", id: "COUNT" }],
-    }),
-
     resolveQueueItem: builder.mutation<
       ResolveQueueItemResponse,
       { itemId: string; body: ResolveQueueItemRequest }
@@ -156,13 +130,11 @@ const calendarApi = baseApi.injectEndpoints({
 });
 
 export const {
-  useGetCalendarEventsQuery,
   useUpdateBlackoutMutation,
   useGetBlackoutAttachmentsQuery,
   useUploadBlackoutAttachmentMutation,
   useDeleteBlackoutAttachmentMutation,
   useGetReviewQueueQuery,
-  useGetReviewQueueCountQuery,
   useResolveQueueItemMutation,
   useIgnoreQueueItemMutation,
   useDismissQueueItemMutation,

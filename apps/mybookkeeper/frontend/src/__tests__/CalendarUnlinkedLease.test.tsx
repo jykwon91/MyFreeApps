@@ -16,11 +16,9 @@ import { baseApi } from "@/shared/store/baseApi";
 import CalendarGrid from "@/app/features/calendar/CalendarGrid";
 import CalendarAgendaList from "@/app/features/calendar/CalendarAgendaList";
 import CalendarEventDetail from "@/app/features/calendar/CalendarEventDetail";
-import {
-  CALENDAR_UNASSIGNED_LISTING_LABEL,
-  CALENDAR_UNASSIGNED_PROPERTY_LABEL,
-} from "@/shared/lib/calendar-constants";
-import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
+import { CALENDAR_UNASSIGNED_LISTING_LABEL } from "@mybookkeeper/api-client/constants/calendarSources";
+import { CALENDAR_UNASSIGNED_PROPERTY_LABEL } from "@/shared/lib/calendar-constants";
+import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 
 function makeLinkedLease(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
   return {
