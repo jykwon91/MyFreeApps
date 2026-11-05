@@ -2,9 +2,11 @@ import type { CraftRouteEntry } from "@/games/wow-forever/types/crafting";
 
 /**
  * Enchanting 1–300. Recipes, skill colours, learn skills and rods are the
- * Forever beta client's (`enchanting.json`); a test checks every row can be
- * learned at its start, is not grey at its end, and that each rod it needs
- * is made on an earlier row. Rows from 200 on can't be tested in the beta.
+ * Forever client's (`enchanting.json`, launch build 1.60.1.70790); a test
+ * checks every row can be learned at its start, is not grey at its end, and
+ * that each rod it needs is made on an earlier row. Rows from 205 on were out
+ * of reach in the beta (level cap 30) and haven't been checked in the live
+ * game yet: which trainer teaches them, and when, is server-side.
  */
 export const ENCHANTING_ROUTE: readonly CraftRouteEntry[] = [
   {
@@ -13,7 +15,7 @@ export const ENCHANTING_ROUTE: readonly CraftRouteEntry[] = [
     from: 1,
     to: 2,
     note:
-      "Copper Rods are sold by the Enchanting Supplies vendor next to the trainer. Beta players report Motes of Magic are sold there too — we haven't confirmed it.",
+      "Copper Rods are sold by the Enchanting Supplies vendor next to the trainer. Beta players reported Motes of Magic sold there too — not checked in the live game yet.",
     confidence: "unconfirmed",
   },
   {

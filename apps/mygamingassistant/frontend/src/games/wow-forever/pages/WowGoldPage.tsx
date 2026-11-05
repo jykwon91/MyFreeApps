@@ -37,7 +37,7 @@ export default function WowGoldPage() {
       />
       <AlertBox variant="info">
         Gold figures are vendor prices from Classic's loot tables — the floor, which holds on a new realm before anyone
-        knows what sells. Auction-house prices aren't known until Forever launches. Tips are from Classic unless marked{" "}
+        knows what sells. Auction-house prices aren't listed — Forever's economy is brand new. Tips are from Classic unless marked{" "}
         <span className="font-medium">Forever</span> (published for Forever) or{" "}
         <span className="font-medium">Unconfirmed</span> (not known yet).
       </AlertBox>
