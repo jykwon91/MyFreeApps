@@ -1,4 +1,4 @@
-import { useListMembersQuery, useListInvitesQuery } from "@/shared/store/membersApi";
+import { useListMembersQuery, useListInvitesQuery } from "@mybookkeeper/api-client/store/membersApi";
 import { useActiveOrgId } from "@/shared/hooks/useCurrentOrg";
 import { useIsOrgAdmin } from "@/shared/hooks/useOrgRole";
 import { useToast } from "@/shared/hooks/useToast";

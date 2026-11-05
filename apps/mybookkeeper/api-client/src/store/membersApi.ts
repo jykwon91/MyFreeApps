@@ -1,9 +1,12 @@
-import { baseApi } from "./baseApi";
-import type { OrgMember } from "@/shared/types/organization/member";
-import type { OrgInvite, InviteInfo } from "@/shared/types/organization/invite";
-import type { OrgRole } from "@/shared/types/organization/org-role";
+import { baseApi } from "@platform/core/store/baseApi";
+import type { InviteInfo } from "../types/organization/InviteInfo";
+import type { OrgInvite } from "../types/organization/OrgInvite";
+import type { OrgMember } from "../types/organization/OrgMember";
+import type { OrgRole } from "../types/organization/OrgRole";
 
-const membersApi = baseApi.injectEndpoints({
+export const membersApi = baseApi.enhanceEndpoints({
+  addTagTypes: ["Members", "Invites", "Organization"],
+}).injectEndpoints({
   endpoints: (build) => ({
     listMembers: build.query<OrgMember[], string>({
       query: (orgId) => ({ url: `/organizations/${orgId}/members`, method: "GET" }),

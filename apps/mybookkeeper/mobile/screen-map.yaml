@@ -54,7 +54,7 @@ routes:
   /login:
     screen: sign-in
   /members:
-    not_on_mobile: Not on the phone yet. More links to it on the website.
+    screen: (app)/members/index
   /mortgages:
     screen: (app)/mortgages/index
   /oauth-callback:

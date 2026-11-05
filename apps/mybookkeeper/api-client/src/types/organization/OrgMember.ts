@@ -1,4 +1,4 @@
-import type { OrgRole } from "./org-role";
+import type { OrgRole } from "./OrgRole";
 
 export interface OrgMember {
   id: string;

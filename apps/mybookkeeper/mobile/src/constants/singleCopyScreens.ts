@@ -34,6 +34,7 @@ export const SINGLE_COPY_SCREENS = [
   "leases/index",
   "listings/[id]",
   "listings/index",
+  "members/index",
   "payment-review/index",
   "properties/index",
   "reconciliation/add",

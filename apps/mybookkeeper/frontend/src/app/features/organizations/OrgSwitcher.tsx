@@ -7,7 +7,7 @@ import { useCurrentOrg } from "@/shared/hooks/useCurrentOrg";
 import { useState } from "react";
 import { useCreateOrganizationMutation } from "@/shared/store/organizationsApi";
 
-import { ROLE_LABELS } from "@/shared/lib/organization-config";
+import { ROLE_LABELS } from "@mybookkeeper/api-client/constants/orgRoles";
 
 export default function OrgSwitcher() {
   const dispatch = useDispatch<AppDispatch>();
