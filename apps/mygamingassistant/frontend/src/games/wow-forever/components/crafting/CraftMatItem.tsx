@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import CraftMatSources from "@/games/wow-forever/components/crafting/CraftMatSources";
 import type { CraftPlace } from "@/games/wow-forever/components/crafting/CraftLearnLine";
-import { SUMMARY_PARTS, matSummary } from "@/games/wow-forever/crafting/matSources";
+import { SUMMARY_PARTS, isGathered, matSummary } from "@/games/wow-forever/crafting/matSources";
 
 interface CraftMatItemProps {
   itemId: number;
@@ -14,9 +14,11 @@ interface CraftMatItemProps {
 }
 
 function summaryOf(itemId: number, place: CraftPlace, professionLabel: string, parts: number): string {
+  const sources = place.sources.reagent(itemId);
   const madeBy = place.file.madeBy[String(itemId)] ?? null;
-  if (madeBy === professionLabel) return `You make this (${professionLabel})`;
-  return matSummary({ sources: place.sources.reagent(itemId), madeBy }, place, parts);
+  if (madeBy !== professionLabel) return matSummary({ sources, madeBy }, place, parts);
+  if (!isGathered(sources)) return `You make this (${professionLabel})`;
+  return matSummary({ sources, madeBy: null }, place, parts);
 }
 
 /** A material with the easiest way to get it underneath its name; opens to every source. */

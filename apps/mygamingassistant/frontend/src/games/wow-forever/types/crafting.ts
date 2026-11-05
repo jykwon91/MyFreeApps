@@ -1,6 +1,6 @@
 import type { Confidence } from "@/games/wow-forever/data/professions/professionTypes";
 
-export const CRAFTING_PROFESSION = { tailoring: "tailoring", enchanting: "enchanting", alchemy: "alchemy", blacksmithing: "blacksmithing" } as const;
+export const CRAFTING_PROFESSION = { tailoring: "tailoring", enchanting: "enchanting", alchemy: "alchemy", blacksmithing: "blacksmithing", leatherworking: "leatherworking" } as const;
 export type CraftingProfession = (typeof CRAFTING_PROFESSION)[keyof typeof CRAFTING_PROFESSION];
 
 /** What a crafting guide shows besides the route — differs per profession. */

@@ -20,6 +20,7 @@ const RECIPE_FILES: Readonly<Record<CraftingProfession, () => Promise<{ default:
   enchanting: () => import("@/games/wow-forever/data/professions/crafting/enchanting.json"),
   alchemy: () => import("@/games/wow-forever/data/professions/crafting/alchemy.json"),
   blacksmithing: () => import("@/games/wow-forever/data/professions/crafting/blacksmithing.json"),
+  leatherworking: () => import("@/games/wow-forever/data/professions/crafting/leatherworking.json"),
 };
 
 async function load(profession: CraftingProfession): Promise<CraftingData> {

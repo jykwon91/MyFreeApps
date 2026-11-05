@@ -33,13 +33,16 @@ export function makerOf(itemId: number, recipes: readonly CraftRecipe[]): CraftR
  * Items this profession makes itself (bolts of cloth, Mote of Magic) are not
  * bought: the route's own crafts of them count first, and any still short
  * are made from their raw materials, which go on the buy list. Bars the data
- * lists a Mining smelt for are smelted the same way, from ore.
+ * lists a Mining smelt for are smelted the same way, from ore. What `gathered`
+ * says is gathered (leather, skinned — though Leatherworking can make it from
+ * scraps) is bought or farmed like anything else.
  */
 export function shoppingList(
   entries: readonly ResolvedRouteEntry[],
   fromSkill: number | null,
   data: Pick<CraftingFile, "madeBy" | "recipes" | "smelting">,
   professionName: string,
+  gathered: (itemId: number) => boolean = () => false,
 ): ShoppingList {
   const start = fromSkill ?? 1;
   const need: Tally = { names: new Map(), counts: new Map() };
@@ -54,7 +57,7 @@ export function shoppingList(
   }
 
   const smelts = new Map((data.smelting ?? []).flatMap((r) => (r.creates ? [[r.creates.id, r] as const] : [])));
-  const ownMade = (id: number) => data.madeBy[String(id)] === professionName;
+  const ownMade = (id: number) => data.madeBy[String(id)] === professionName && !gathered(id);
   const make: ShoppingLine[] = [];
   const smelt: ShoppingLine[] = [];
   // Expanding one self-made item can need another (Mooncloth needs Felcloth), so repeat until nothing is short.
@@ -86,7 +89,9 @@ export function shoppingList(
   const buy: ShoppingLine[] = [];
   for (const [id, count] of need.counts) {
     if (ownMade(id) || smelts.has(id)) continue;
-    const madeBy = data.madeBy[String(id)];
+    // Your own profession's gathered mats (leather) aren't "made by" anyone else.
+    const maker = data.madeBy[String(id)];
+    const madeBy = maker === professionName ? undefined : maker;
     buy.push({ id, name: need.names.get(id) ?? `Item ${id}`, count, ...(madeBy ? { madeBy } : {}) });
   }
   return { buy, make, smelt };

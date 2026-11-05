@@ -38,6 +38,14 @@ export interface MatInfo {
   madeBy: string | null;
 }
 
+/**
+ * Skinned, so gathered rather than crafted — even leather Leatherworking can
+ * also make from scraps: the guide sends you to skin it, never "you make this".
+ */
+export function isGathered(sources: ItemSources): boolean {
+  return sources.skinning !== null;
+}
+
 /** " — most in The Barrens, Westfall", or nothing when no zone is known. */
 function mostIn(zones: readonly string[]): string {
   if (!zones.length) return "";

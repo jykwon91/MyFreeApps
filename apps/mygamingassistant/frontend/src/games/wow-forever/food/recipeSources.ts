@@ -167,7 +167,7 @@ export function rankObjectSpots(spots: readonly ObjectSpot[], faction: PlayerFac
  * With a level, the spots you can farm come first (closest to home, then the
  * best drop chance), then the ones too high for you, lowest level first.
  */
-export function farmSpots(drop: DropSource, faction: PlayerFaction, zoneId: number | null, level: number | null = null): DropMob[] {
+export function farmSpots(drop: Pick<DropSource, "mobs">, faction: PlayerFaction, zoneId: number | null, level: number | null = null): DropMob[] {
   const rank = (m: DropMob) => groundRank(m.spot, faction, zoneId);
   const byName = (a: DropMob, b: DropMob) => a.name.localeCompare(b.name);
   if (level === null) return [...drop.mobs].sort((a, b) => rank(a) - rank(b) || a.minLevel - b.minLevel || byName(a, b));

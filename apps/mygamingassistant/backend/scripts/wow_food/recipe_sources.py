@@ -10,7 +10,7 @@ the player's faction first), but a mob drop is summarised as the three best
 mobs to farm (drop chance x how many are spawned), the zones they live in and
 their level range — not every mob. Cloth and the like, which hundreds of mobs
 drop, instead get one farm spot per zone (the best mob there), so a player of
-either faction at any level has somewhere named to go. An item that only drops through many mobs'
+either faction at any level has somewhere named to go (leather: a beast to skin per zone). An item that only drops through many mobs'
 shared (reference) loot tables is a "world drop". A container (clam, herb
 node) is listed only when it reliably holds the item — not a random chest.
 """
@@ -340,7 +340,9 @@ class ClassicSources:
         return best.as_row()
 
     def skinning(self, item: int) -> dict[str, object] | None:
-        """Leather and hides: the level band of the mobs that skin into it and the zones with the most of them."""
+        """Leather and hides: the level band of the beasts that skin into it, the zones with the most of them,
+        and a beast to skin in each of the best zones (``mobs``, MOB_COLUMNS rows, chance = per skin) —
+        as many zones as herbs get, so each faction has its own."""
         chances: dict[int, float] = {}
         for loot_id, chance, _ in self._skinning.by_table.get(item, []):
             for npc in self._skin_owners.get(loot_id, []):
@@ -349,20 +351,29 @@ class ClassicSources:
         if not chances:
             return None
         zone_worth: Counter[int] = Counter()
+        placed: dict[int, list[tuple[float, float, Placement]]] = defaultdict(list)
         for npc, chance in chances.items():
             for s in self._spawns[npc]:
                 wx, wy = float(str(s["position_x"])), float(str(s["position_y"]))
                 spot = place(self._zones, self._art, _i(s["map"]), wx, wy, exclude=FOREVER_ONLY_ZONES)
                 if spot:
                     zone_worth[spot.zone.ui_map_id] += chance
+                    placed[npc].append((wx, wy, spot))
                     self.zone_names.setdefault(spot.zone.ui_map_id, spot.zone.name)
         if not zone_worth:
             return None
+        ranked = [z for z, _ in sorted(zone_worth.items(), key=lambda kv: (-kv[1], kv[0]))]
         levels = [(_i(self._npcs[n]["MinLevel"]), _i(self._npcs[n]["MaxLevel"])) for n in chances]
+        # Nothing with a pack to farm (Devilsaur): the few beasts there are, likeliest first, rare or not.
+        mobs = self._farm_spots(chances, placed, ranked[:SHOWN_GATHER_ZONES]) or [
+            self._mob_row(n, chances[n], placed[n])
+            for n in sorted((n for n in chances if placed[n]), key=lambda n: (-chances[n] * len(placed[n]), str(self._npcs[n]["Name"])))[:SHOWN_ZONES]
+        ]
         return {
             "levels": [min(lo for lo, _ in levels), max(hi for _, hi in levels)],
-            "zones": [z for z, _ in sorted(zone_worth.items(), key=lambda kv: (-kv[1], kv[0]))[:SHOWN_ZONES]],
-            "mobs": len(chances),
+            "zones": ranked[:SHOWN_ZONES],
+            "mobs": mobs,
+            "count": len(chances),
         }
 
     def fishing(self, item: int) -> list[str]:
@@ -437,10 +448,10 @@ class ClassicSources:
         drop = self.drop(item)
         skin = self.skinning(item)
         # A few beasts that skin into what hundreds of mobs drop (sheep -> Wool Cloth) aren't the way to get it.
-        if skin and drop and int(str(skin["mobs"])) < len(drop["mobs"]) + int(str(drop["more"])):  # type: ignore[arg-type]
+        if skin and drop and int(str(skin["count"])) < len(drop["mobs"]) + int(str(drop["more"])):  # type: ignore[arg-type]
             skin = None
         if skin:
-            del skin["mobs"]
+            del skin["count"]
         return _compact({
             "vendors": self.vendors(item),
             "drop": drop,

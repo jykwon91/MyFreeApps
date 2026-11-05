@@ -20,4 +20,10 @@ export const CRAFTING_FEATURES: Readonly<Record<CraftingProfession, CraftingFeat
     transmutes: false,
     worksWith: { name: "Mining", why: "Every recipe takes metal bars — with Mining you mine the ore and smelt the bars yourself." },
   },
+  leatherworking: {
+    priced: false,
+    enchantSlots: false,
+    transmutes: false,
+    worksWith: { name: "Skinning", why: "Every recipe takes leather or hides — with Skinning you skin them yourself from the beasts you kill." },
+  },
 };

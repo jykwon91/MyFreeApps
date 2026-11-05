@@ -5,7 +5,7 @@ import CraftMakeLines from "@/games/wow-forever/components/crafting/CraftMakeLin
 import CraftShoppingLines from "@/games/wow-forever/components/crafting/CraftShoppingLines";
 import type { CraftPlace } from "@/games/wow-forever/components/crafting/CraftLearnLine";
 import type { PriceBook } from "@/games/wow-forever/crafting/matPrices";
-import { matSummary, soldToYou } from "@/games/wow-forever/crafting/matSources";
+import { isGathered, matSummary, soldToYou } from "@/games/wow-forever/crafting/matSources";
 import { shoppingList, shoppingListText } from "@/games/wow-forever/crafting/shoppingList";
 import type { ResolvedRouteEntry, ShoppingLine } from "@/games/wow-forever/types/crafting";
 
@@ -33,7 +33,7 @@ interface CraftShoppingListProps {
 export default function CraftShoppingList({ entries, skill, place, professionLabel, note, priceBook, keepCrafts = false }: CraftShoppingListProps) {
   const [scope, setScope] = useState<Scope>(SCOPE.mine);
   const fromSkill = scope === SCOPE.mine ? skill : null;
-  const list = shoppingList(entries, fromSkill, place.file, professionLabel);
+  const list = shoppingList(entries, fromSkill, place.file, professionLabel, (id) => isGathered(place.sources.reagent(id)));
   // A vendor near you beats the auction house, even for what a profession can make (Copper Rod).
   const bought = (l: ShoppingLine) => !l.madeBy || soldToYou(place.sources.reagent(l.id), place.faction);
   const summary = (l: ShoppingLine) =>

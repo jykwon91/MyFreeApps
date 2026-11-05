@@ -6,7 +6,7 @@ import { CRAFTING_PROFESSION } from "@/games/wow-forever/types/crafting";
 
 describe("profession picker", () => {
   it("keeps every old ?p= link working and sends anything else to Cooking", () => {
-    for (const p of ["cooking", "fishing", "tailoring", "enchanting", "alchemy", "blacksmithing"]) expect(parseGuideProfession(p)).toBe(p);
+    for (const p of ["cooking", "fishing", "tailoring", "enchanting", "alchemy", "blacksmithing", "leatherworking"]) expect(parseGuideProfession(p)).toBe(p);
     for (const bad of [null, "", "jewelcrafting", "Tailoring"]) expect(parseGuideProfession(bad)).toBe("cooking");
   });
 
