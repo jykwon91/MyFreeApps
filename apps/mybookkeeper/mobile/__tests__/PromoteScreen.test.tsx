@@ -14,11 +14,10 @@ import { anInquiry } from "../test-support/inquiriesServer";
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
 const mockDispatch = jest.fn();
-const mockPreventRemove: { active: boolean; callback: ((event: { data: { action: unknown } }) => void) | null } = { active: false, callback: null };
+const mockPreventRemove: { active: boolean; callback: ((event: { repeat: () => void }) => void) | null } = { active: false, callback: null };
 jest.mock("expo-router", () => ({
   router: { replace: (path: string) => mockReplace(path), back: () => mockBack() },
-  useNavigation: () => ({ dispatch: (action: unknown) => mockDispatch(action) }),
-  usePreventRemove: (active: boolean, callback: (event: { data: { action: unknown } }) => void) => {
+  usePreventRemove: (active: boolean, callback: (event: { repeat: () => void }) => void) => {
     mockPreventRemove.active = active;
     mockPreventRemove.callback = callback;
   },
@@ -203,7 +202,7 @@ describe("PromoteScreen", () => {
     expect(mockPreventRemove.active).toBe(false);
     await fireEvent.changeText(screen.getByLabelText("Vehicle"), "Blue Subaru");
     expect(mockPreventRemove.active).toBe(true);
-    mockPreventRemove.callback?.({ data: { action: "leave" } });
+    mockPreventRemove.callback?.({ repeat: () => mockDispatch("leave") });
     expect(alert.mock.calls[0][0]).toBe("Discard this?");
     alert.mock.calls[0][2]?.find((button) => button.text === "Discard")?.onPress?.();
     expect(mockDispatch).toHaveBeenCalledWith("leave");

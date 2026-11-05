@@ -1,28 +1,22 @@
 import { TWO_STEP_MESSAGES as MESSAGES, type TwoStepLeaveRisk, TwoStepTurnOnScreen } from "@platform/mobile";
-import { router, usePreventRemove } from "expo-router";
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert } from "react-native";
 import { APP_NAME, SECURITY_ROUTE } from "../../constants/security";
+import { useConfirmLeave } from "../../lib/useConfirmLeave";
 
 export default function SecurityTurnOnScreen() {
   const [leaveRisk, setLeaveRisk] = useState<TwoStepLeaveRisk>("none");
   const [isFinished, setIsFinished] = useState(false);
 
-  usePreventRemove(leaveRisk !== "none", ({ repeat }) => {
+  useConfirmLeave(leaveRisk !== "none", (leave) => {
     if (leaveRisk === "turning_on") {
       Alert.alert(MESSAGES.stillTurningOnTitle, MESSAGES.stillTurningOnBody, [{ text: MESSAGES.stay, style: "cancel" }]);
       return;
     }
     Alert.alert(MESSAGES.leaveTitle, MESSAGES.leaveBody, [
       { text: MESSAGES.stay, style: "cancel" },
-      {
-        text: MESSAGES.leaveAnyway,
-        style: "destructive",
-        onPress: () => {
-          setLeaveRisk("none");
-          repeat();
-        },
-      },
+      { text: MESSAGES.leaveAnyway, style: "destructive", onPress: leave },
     ]);
   });
 

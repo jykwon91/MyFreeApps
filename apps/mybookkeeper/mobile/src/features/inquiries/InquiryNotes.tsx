@@ -1,16 +1,15 @@
 import { useUpdateInquiryMutation } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { FormField, LoadingButton, useTheme, useToast } from "@platform/mobile";
-import { useNavigation, usePreventRemove } from "expo-router";
 import { useState } from "react";
 import { Alert, Text, View } from "react-native";
 import { INQUIRY_NOTES_MAX_LENGTH } from "../../constants/inquiries";
 import { inquiryWriteFailure } from "./inquiryFailures";
 import CollapsibleSection from "./CollapsibleSection";
+import { useConfirmLeave } from "../../lib/useConfirmLeave";
 
 export default function InquiryNotes({ id, notes, canWrite }: { id: string; notes: string | null; canWrite: boolean }) {
   const { colors, spacing, fontSize } = useTheme();
   const { showToast } = useToast();
-  const navigation = useNavigation();
   const [updateInquiry, { isLoading: isSaving }] = useUpdateInquiryMutation();
   const saved = notes ?? "";
   // null until something is typed, so a refresh can't overwrite what's being typed.
@@ -30,14 +29,15 @@ export default function InquiryNotes({ id, notes, canWrite }: { id: string; note
     }
   }
 
-  usePreventRemove(isDirty, ({ data }) => {
+  useConfirmLeave(isDirty, (leave) => {
+    if (isSaving) return;
     Alert.alert("Save your notes?", "I haven't saved them yet.", [
       { text: "Keep editing", style: "cancel" },
-      { text: "Discard", style: "destructive", onPress: () => navigation.dispatch(data.action) },
+      { text: "Discard", style: "destructive", onPress: leave },
       {
         text: "Save",
         onPress: async () => {
-          if (await save()) navigation.dispatch(data.action);
+          if (await save()) leave();
         },
       },
     ]);
