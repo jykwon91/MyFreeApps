@@ -19,8 +19,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException, Request
@@ -376,10 +375,21 @@ class TestMakeCheckAccountNotLocked:
         lookup = AsyncMock(return_value=locked_user)
         dep = make_check_account_not_locked(lookup)
 
-        with pytest.raises(HTTPException) as exc_info:
-            await dep(_make_credentials("user@example.com"), MagicMock())
+        db = MagicMock(commit=AsyncMock())
+        request = MagicMock()
+        with patch("platform_shared.core.rate_limit.log_auth_event", AsyncMock()) as logged:
+            with pytest.raises(HTTPException) as exc_info:
+                await dep(_make_credentials("user@example.com"), db, request)
         assert exc_info.value.status_code == 429
         assert exc_info.value.detail == RATE_LIMIT_GENERIC_DETAIL
+        logged.assert_awaited_once_with(
+            db,
+            event_type=AuthEventType.LOGIN_BLOCKED_LOCKED,
+            user_id=locked_user.id,
+            request=request,
+            succeeded=False,
+        )
+        db.commit.assert_awaited_once()
 
     @pytest.mark.anyio
     async def test_unlocked_account_does_not_raise(self) -> None:
@@ -387,7 +397,7 @@ class TestMakeCheckAccountNotLocked:
         lookup = AsyncMock(return_value=unlocked)
         dep = make_check_account_not_locked(lookup)
 
-        await dep(_make_credentials("user@example.com"), MagicMock())  # must not raise
+        await dep(_make_credentials("user@example.com"), MagicMock(), MagicMock())  # must not raise
 
     @pytest.mark.anyio
     async def test_unknown_email_does_not_raise(self) -> None:
@@ -396,7 +406,7 @@ class TestMakeCheckAccountNotLocked:
         lookup = AsyncMock(return_value=None)
         dep = make_check_account_not_locked(lookup)
 
-        await dep(_make_credentials("ghost@example.com"), MagicMock())  # must not raise
+        await dep(_make_credentials("ghost@example.com"), MagicMock(), MagicMock())  # must not raise
 
     @pytest.mark.anyio
     async def test_expired_lock_does_not_raise(self) -> None:
@@ -405,7 +415,7 @@ class TestMakeCheckAccountNotLocked:
         lookup = AsyncMock(return_value=user)
         dep = make_check_account_not_locked(lookup)
 
-        await dep(_make_credentials("user@example.com"), MagicMock())  # must not raise
+        await dep(_make_credentials("user@example.com"), MagicMock(), MagicMock())  # must not raise
 
     @pytest.mark.anyio
     async def test_user_lookup_called_with_session_and_username(self) -> None:
@@ -414,7 +424,7 @@ class TestMakeCheckAccountNotLocked:
         dep = make_check_account_not_locked(lookup)
 
         fake_db = MagicMock()
-        await dep(_make_credentials("user@example.com"), fake_db)
+        await dep(_make_credentials("user@example.com"), fake_db, MagicMock())
 
         lookup.assert_awaited_once_with(fake_db, "user@example.com")
 

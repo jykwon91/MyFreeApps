@@ -82,7 +82,7 @@ class TestCheckAccountNotLocked:
         future = datetime.now(tz=timezone.utc) + timedelta(minutes=5)
         locked_user = _make_user(locked_until=future)
 
-        mock_db = MagicMock()
+        mock_db = MagicMock(commit=AsyncMock(), flush=AsyncMock())
         credentials = _make_credentials()
 
         with patch(
@@ -91,7 +91,7 @@ class TestCheckAccountNotLocked:
             return_value=locked_user,
         ):
             with pytest.raises(HTTPException) as exc_info:
-                await check_account_not_locked(credentials=credentials, db=mock_db)
+                await check_account_not_locked(request=MagicMock(), credentials=credentials, db=mock_db)
 
         assert exc_info.value.status_code == 429
         assert "Too many" in exc_info.value.detail
@@ -110,7 +110,7 @@ class TestCheckAccountNotLocked:
             return_value=unlocked_user,
         ):
             # Should not raise
-            await check_account_not_locked(credentials=credentials, db=mock_db)
+            await check_account_not_locked(request=MagicMock(), credentials=credentials, db=mock_db)
 
     @pytest.mark.anyio
     async def test_unknown_email_does_not_raise(self) -> None:
@@ -125,7 +125,7 @@ class TestCheckAccountNotLocked:
             return_value=None,
         ):
             # Unknown email — must not raise
-            await check_account_not_locked(credentials=credentials, db=mock_db)
+            await check_account_not_locked(request=MagicMock(), credentials=credentials, db=mock_db)
 
     @pytest.mark.anyio
     async def test_expired_lock_does_not_raise(self) -> None:
@@ -142,7 +142,7 @@ class TestCheckAccountNotLocked:
             return_value=user,
         ):
             # Expired lock — must not raise
-            await check_account_not_locked(credentials=credentials, db=mock_db)
+            await check_account_not_locked(request=MagicMock(), credentials=credentials, db=mock_db)
 
 
 # ---------------------------------------------------------------------------

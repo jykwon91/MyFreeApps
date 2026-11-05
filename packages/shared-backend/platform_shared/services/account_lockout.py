@@ -311,9 +311,8 @@ async def emit_locked_login_event(
 
     Pass ``request`` to capture ``ip_address`` and ``user_agent`` in the
     audit row — critical for per-IP brute-force analysis on locked accounts.
-    When called from code paths that don't have a ``Request`` available
-    (e.g. the standard fastapi-users JWT login path), omit the argument and
-    the fields will be NULL.
+    When called from code paths that don't have a ``Request`` available,
+    omit the argument and the fields will be NULL.
     """
     await log_event(
         db,

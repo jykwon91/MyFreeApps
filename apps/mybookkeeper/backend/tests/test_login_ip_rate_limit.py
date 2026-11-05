@@ -92,6 +92,53 @@ async def _events(db: AsyncSession) -> list[AuthEvent]:
 
 
 # ---------------------------------------------------------------------------
+# 0) A locked account signing in through the website's login is on the record
+# ---------------------------------------------------------------------------
+
+class TestLockedFormLoginIsRecorded:
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("change_case", [False, True], ids=["as-typed", "changed-case"])
+    async def test_one_row_with_the_callers_ip(self, db: AsyncSession, change_case: bool) -> None:
+        locked_user = _make_locked_user()
+        db.add(locked_user)
+        await db.commit()
+        email = locked_user.email.upper() if change_case else locked_user.email
+
+        with patch("app.core.rate_limit.login_limiter", RateLimiter(max_attempts=10, window_seconds=60)):
+            async with AsyncClient(
+                transport=ASGITransport(app=app, client=("203.0.113.9", 1234)),
+                base_url="http://test",
+            ) as client:
+                response = await client.post(
+                    "/auth/jwt/login",
+                    data={"username": email, "password": "anything"},
+                )
+
+        assert response.status_code == 429
+        assert response.json() == {"detail": RATE_LIMIT_GENERIC_DETAIL}
+        rows = await _events(db)
+        assert [row.event_type for row in rows] == [AuthEventType.LOGIN_BLOCKED_LOCKED]
+        assert rows[0].user_id == locked_user.id
+        assert rows[0].ip_address == "203.0.113.9"
+        assert rows[0].succeeded is False
+
+    @pytest.mark.asyncio
+    async def test_signing_out_is_not_a_login_attempt(self, db: AsyncSession) -> None:
+        locked_user = _make_locked_user()
+        db.add(locked_user)
+        await db.commit()
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(
+                "/auth/jwt/logout",
+                data={"username": locked_user.email, "password": "anything"},
+            )
+
+        assert response.status_code == 401
+        assert await _events(db) == []
+
+
+# ---------------------------------------------------------------------------
 # 1) Per-IP 429 body == account-lockout 429 body
 # ---------------------------------------------------------------------------
 
@@ -126,6 +173,7 @@ class TestResponseBodyIndistinguishability:
 
         with pytest.raises(HTTPException) as lock_exc_info:
             await check_account_not_locked(
+                request=request,
                 credentials=_make_credentials(locked_user.email),
                 db=db,
             )

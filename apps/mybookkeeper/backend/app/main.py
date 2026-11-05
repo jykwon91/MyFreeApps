@@ -154,13 +154,14 @@ async def set_audit_user(request: Request, call_next):
     return response
 
 
-# Auth routes (rate-limited)
-app.include_router(
-    fastapi_users.get_auth_router(auth_backend),
-    prefix="/auth/jwt",
-    tags=["auth"],
-    dependencies=[Depends(check_login_rate_limit), Depends(check_account_not_locked)],
-)
+# Auth routes (rate-limited). Only /login is gated: logout sends no credentials.
+_auth_router = fastapi_users.get_auth_router(auth_backend)
+for _route in _auth_router.routes:
+    if getattr(_route, "path", None) == "/login":
+        _route.dependencies.append(Depends(check_login_rate_limit))
+        _route.dependencies.append(Depends(check_account_not_locked))
+
+app.include_router(_auth_router, prefix="/auth/jwt", tags=["auth"])
 app.include_router(
     fastapi_users.get_register_router(UserRead, UserCreate),
     prefix="/auth",
