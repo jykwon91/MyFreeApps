@@ -16,7 +16,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { store } from "@/shared/store";
 import InsurancePolicies from "@/app/pages/InsurancePolicies";
-import type { InsurancePolicySummary } from "@/shared/types/insurance/insurance-policy-summary";
+import type { InsurancePolicySummary } from "@mybookkeeper/api-client/types/insurance/insurance-policy-summary";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -26,7 +26,7 @@ let mockIsError = false;
 let mockIsFetching = false;
 let mockPolicies: InsurancePolicySummary[] = [];
 
-vi.mock("@/shared/store/insurancePoliciesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/insurancePoliciesApi", () => ({
   useGetInsurancePoliciesQuery: vi.fn(() => ({
     data: { items: mockPolicies, total: mockPolicies.length, has_more: false },
     isLoading: mockIsLoading,

@@ -1,6 +1,6 @@
-import type { InsurancePolicyDetail } from "@/shared/types/insurance/insurance-policy-detail";
+import type { InsurancePolicyDetail } from "@mybookkeeper/api-client/types/insurance/insurance-policy-detail";
 import type { InsurancePolicyFormValues } from "@/shared/types/insurance/insurance-policy-form-values";
-import type { InsurancePremiumFrequency } from "@/shared/types/insurance/insurance-premium-frequency";
+import type { InsurancePremiumFrequency } from "@mybookkeeper/api-client/types/insurance/insurance-premium-frequency";
 
 /**
  * Conversion between the insurance-policy form's text state and the API shape.

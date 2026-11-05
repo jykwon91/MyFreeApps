@@ -1,21 +1,14 @@
 import { baseApi } from "./baseApi";
-import type { InsuranceAttachmentKind } from "@/shared/types/insurance/insurance-attachment-kind";
-import type { InsurancePolicyAttachment } from "@/shared/types/insurance/insurance-policy-attachment";
+import type { InsuranceAttachmentKind } from "@mybookkeeper/api-client/types/insurance/insurance-attachment-kind";
+import type { InsurancePolicyAttachment } from "@mybookkeeper/api-client/types/insurance/insurance-policy-attachment";
 import type { InsurancePolicyCreateRequest } from "@/shared/types/insurance/insurance-policy-create-request";
-import type { InsurancePolicyDetail } from "@/shared/types/insurance/insurance-policy-detail";
+import type { InsurancePolicyDetail } from "@mybookkeeper/api-client/types/insurance/insurance-policy-detail";
 import type { InsurancePolicyDraft } from "@/shared/types/insurance/insurance-policy-draft";
-import type { InsurancePolicyListResponse } from "@/shared/types/insurance/insurance-policy-list-response";
 import type { InsurancePolicyUpdateRequest } from "@/shared/types/insurance/insurance-policy-update-request";
 
-export interface InsurancePolicyListArgs {
-  property_id?: string;
-  expiring_before?: string;
-  limit?: number;
-  offset?: number;
-}
-
 /**
- * RTK Query slice for the Insurance Policies domain.
+ * The website's writes for Insurance Policies. Reads are in the api-client,
+ * shared with the phone.
  *
  * Tag strategy mirrors signedLeasesApi: per-id ``InsurancePolicy:{id}`` plus
  * a shared ``InsurancePolicy:LIST``. Attachment upload/delete invalidate the
@@ -23,36 +16,6 @@ export interface InsurancePolicyListArgs {
  */
 const insurancePoliciesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getInsurancePolicies: builder.query<
-      InsurancePolicyListResponse,
-      InsurancePolicyListArgs | void
-    >({
-      query: (args) => ({
-        url: "/insurance-policies",
-        params: {
-          ...(args?.property_id ? { property_id: args.property_id } : {}),
-          ...(args?.expiring_before ? { expiring_before: args.expiring_before } : {}),
-          ...(args?.limit !== undefined ? { limit: args.limit } : {}),
-          ...(args?.offset !== undefined ? { offset: args.offset } : {}),
-        },
-      }),
-      providesTags: (result) =>
-        result
-          ? [
-              ...result.items.map((p) => ({
-                type: "InsurancePolicy" as const,
-                id: p.id,
-              })),
-              { type: "InsurancePolicy" as const, id: "LIST" },
-            ]
-          : [{ type: "InsurancePolicy" as const, id: "LIST" }],
-    }),
-
-    getInsurancePolicyById: builder.query<InsurancePolicyDetail, string>({
-      query: (id) => ({ url: `/insurance-policies/${id}` }),
-      providesTags: (_r, _e, id) => [{ type: "InsurancePolicy", id }],
-    }),
-
     createInsurancePolicy: builder.mutation<
       InsurancePolicyDetail,
       InsurancePolicyCreateRequest
@@ -153,8 +116,6 @@ const insurancePoliciesApi = baseApi.injectEndpoints({
 });
 
 export const {
-  useGetInsurancePoliciesQuery,
-  useGetInsurancePolicyByIdQuery,
   useCreateInsurancePolicyMutation,
   useUpdateInsurancePolicyMutation,
   useDeleteInsurancePolicyMutation,

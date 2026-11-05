@@ -10,7 +10,7 @@ import { useInquiriesListMode } from "@/app/features/inquiries/useInquiriesListM
 import { useInquiryDetailMode } from "@/app/features/inquiries/useInquiryDetailMode";
 import { useMortgagesListMode } from "@/app/features/mortgages/useMortgagesListMode";
 import { useMortgageRateWatchMode } from "@/app/features/mortgages/useMortgageRateWatchMode";
-import type { InsurancePolicyDetail } from "@/shared/types/insurance/insurance-policy-detail";
+import type { InsurancePolicyDetail } from "@mybookkeeper/api-client/types/insurance/insurance-policy-detail";
 import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
 
 // ─────────────────────────────────────────────────────────────────────────────

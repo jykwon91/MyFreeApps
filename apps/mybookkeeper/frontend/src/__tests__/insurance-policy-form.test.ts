@@ -12,7 +12,7 @@ import {
   policyToFormValues,
   toPolicyPayload,
 } from "@/shared/lib/insurance-policy-form";
-import type { InsurancePolicyDetail } from "@/shared/types/insurance/insurance-policy-detail";
+import type { InsurancePolicyDetail } from "@mybookkeeper/api-client/types/insurance/insurance-policy-detail";
 
 const POLICY: InsurancePolicyDetail = {
   id: "policy-abc",

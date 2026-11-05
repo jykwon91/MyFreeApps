@@ -1,22 +1,20 @@
-import type { InsurancePolicyAttachment } from "@/shared/types/insurance/insurance-policy-attachment";
-import type { InsurancePremiumFrequency } from "@/shared/types/insurance/insurance-premium-frequency";
+import type { InsurancePremiumFrequency } from "./insurance-premium-frequency";
 
 /**
- * Full insurance policy with attachments.
+ * Summary row for the insurance policy list.
  *
- * Mirrors ``schemas/insurance/insurance_policy_response.py``.
+ * Mirrors ``schemas/insurance/insurance_policy_summary.py``.
+ *
+ * ``wind_hail_deductible_pct`` arrives as a JSON *string* because the backend
+ * column is ``Numeric`` — see ``shared/lib/insurance-policy-format.ts``, which
+ * is the only place it is parsed.
  */
-export interface InsurancePolicyDetail {
+export interface InsurancePolicySummary {
   id: string;
-  user_id: string;
-  organization_id: string;
   property_id: string;
   property_name: string | null;
-  /** The document this policy's numbers were read from, when it was read. */
-  source_document_id: string | null;
   policy_name: string;
   carrier: string | null;
-  policy_number: string | null;
   effective_date: string | null;
   expiration_date: string | null;
   coverage_amount_cents: number | null;
@@ -33,8 +31,6 @@ export interface InsurancePolicyDetail {
   annual_premium_cents: number | null;
   /** A year of premium plus the term's fees and taxes — what is paid. */
   annual_total_cents: number | null;
-  notes: string | null;
   created_at: string;
   updated_at: string;
-  attachments: InsurancePolicyAttachment[];
 }

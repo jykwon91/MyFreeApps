@@ -3,8 +3,8 @@ import { Download, Trash2 } from "lucide-react";
 import {
   INSURANCE_ATTACHMENT_KIND_LABELS,
   type InsuranceAttachmentKind,
-} from "@/shared/types/insurance/insurance-attachment-kind";
-import type { InsurancePolicyAttachment } from "@/shared/types/insurance/insurance-policy-attachment";
+} from "@mybookkeeper/api-client/types/insurance/insurance-attachment-kind";
+import type { InsurancePolicyAttachment } from "@mybookkeeper/api-client/types/insurance/insurance-policy-attachment";
 import { reportMissingStorageObject } from "@/shared/lib/storage-observability";
 
 export interface InsurancePolicyAttachmentRowProps {

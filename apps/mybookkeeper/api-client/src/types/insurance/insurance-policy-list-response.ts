@@ -1,4 +1,4 @@
-import type { InsurancePolicySummary } from "@/shared/types/insurance/insurance-policy-summary";
+import type { InsurancePolicySummary } from "./insurance-policy-summary";
 
 /**
  * Paginated list response for insurance policies.

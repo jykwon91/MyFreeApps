@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { addDays, format } from "date-fns";
 import { Button } from "@platform/ui";
-import { useGetInsurancePoliciesQuery } from "@/shared/store/insurancePoliciesApi";
+import { useGetInsurancePoliciesQuery } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import { useInsurancePoliciesListMode } from "@/app/features/insurance/useInsurancePoliciesListMode";

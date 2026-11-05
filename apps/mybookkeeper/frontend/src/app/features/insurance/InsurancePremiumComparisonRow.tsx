@@ -1,5 +1,5 @@
 import { formatBenchmarkGap } from "@/shared/lib/benchmark-format";
-import { formatCoverageRate } from "@/shared/lib/insurance-policy-format";
+import { formatCoverageRate } from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
 import type { InsurancePremiumComparisonRow as ComparisonRow } from "@/shared/types/insurance/insurance-premium-comparison-row";
 
 export interface InsurancePremiumComparisonRowProps {

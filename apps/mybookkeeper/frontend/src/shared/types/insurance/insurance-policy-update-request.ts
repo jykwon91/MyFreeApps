@@ -1,4 +1,4 @@
-import type { InsurancePremiumFrequency } from "@/shared/types/insurance/insurance-premium-frequency";
+import type { InsurancePremiumFrequency } from "@mybookkeeper/api-client/types/insurance/insurance-premium-frequency";
 
 /**
  * Request body for PATCH /insurance-policies/{id}.

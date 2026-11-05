@@ -1,5 +1,5 @@
 import type { InsurancePolicyDetailMode } from "@/shared/types/insurance/insurance-policy-detail-mode";
-import type { InsurancePolicyDetail } from "@/shared/types/insurance/insurance-policy-detail";
+import type { InsurancePolicyDetail } from "@mybookkeeper/api-client/types/insurance/insurance-policy-detail";
 
 interface UseInsurancePolicyDetailModeArgs {
   isLoading: boolean;

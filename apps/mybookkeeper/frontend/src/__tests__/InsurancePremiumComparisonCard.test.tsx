@@ -20,7 +20,7 @@ import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import InsurancePremiumComparisonCard from "@/app/features/insurance/InsurancePremiumComparisonCard";
 import type { InsuranceBenchmark } from "@/shared/types/insurance/insurance-benchmark";
-import type { InsurancePolicySummary } from "@/shared/types/insurance/insurance-policy-summary";
+import type { InsurancePolicySummary } from "@mybookkeeper/api-client/types/insurance/insurance-policy-summary";
 import type { InsurancePremiumComparison } from "@/shared/types/insurance/insurance-premium-comparison";
 import type { InsurancePremiumComparisonRow } from "@/shared/types/insurance/insurance-premium-comparison-row";
 
