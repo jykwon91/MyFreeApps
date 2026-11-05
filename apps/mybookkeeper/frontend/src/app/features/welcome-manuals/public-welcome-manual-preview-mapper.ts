@@ -1,7 +1,7 @@
 import type { PublicWelcomeManualPlace } from "@/shared/types/welcome-manual/public-welcome-manual-place";
 import type { PublicWelcomeManualSection } from "@/shared/types/welcome-manual/public-welcome-manual-section";
-import type { WelcomeManualPlaceResponse } from "@/shared/types/welcome-manual/welcome-manual-place-response";
-import type { WelcomeManualSectionResponse } from "@/shared/types/welcome-manual/welcome-manual-section-response";
+import type { WelcomeManualPlaceResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-place-response";
+import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
 
 /**
  * The public guide endpoint returns a trimmed shape (no ids, manual/section

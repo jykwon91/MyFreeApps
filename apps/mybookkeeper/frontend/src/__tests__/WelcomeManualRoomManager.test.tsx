@@ -19,7 +19,7 @@ import {
   NEW_ROOM_DEFAULT_NAME,
   WELCOME_MANUAL_MAX_ROOMS,
 } from "@/shared/lib/welcome-manual-constants";
-import type { WelcomeManualRoomResponse } from "@/shared/types/welcome-manual/welcome-manual-room-response";
+import type { WelcomeManualRoomResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-room-response";
 
 const createRoomMock = vi.fn();
 const updateRoomMock = vi.fn();

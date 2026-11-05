@@ -14,7 +14,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import WelcomeManuals from "@/app/pages/WelcomeManuals";
-import type { WelcomeManualSummary } from "@/shared/types/welcome-manual/welcome-manual-summary";
+import type { WelcomeManualSummary } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-summary";
 
 const mockRefetch = vi.fn();
 let mockIsLoading = false;
@@ -26,7 +26,7 @@ vi.mock("@/shared/lib/toast-store", () => ({
   showSuccess: vi.fn(),
 }));
 
-vi.mock("@/shared/store/welcomeManualsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/welcomeManualsApi", () => ({
   useGetWelcomeManualsQuery: vi.fn(() => ({
     data: { items: mockManuals, total: mockManuals.length, has_more: false },
     isLoading: mockIsLoading,
@@ -34,6 +34,9 @@ vi.mock("@/shared/store/welcomeManualsApi", () => ({
     isFetching: false,
     refetch: mockRefetch,
   })),
+}));
+
+vi.mock("@/shared/store/welcomeManualsApi", () => ({
   useCreateWelcomeManualMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 

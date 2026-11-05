@@ -9,6 +9,8 @@ export const SINGLE_COPY_SCREENS = [
   "camera",
   "delete-account",
   "documents/[id]",
+  "welcome-manuals/[id]",
+  "welcome-manuals/index",
   "utility-plans/[id]",
   "utility-plans/index",
   "mortgages/[id]",

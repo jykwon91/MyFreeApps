@@ -11,7 +11,7 @@ import {
   useDeleteRoomMutation,
   useUpdateRoomMutation,
 } from "@/shared/store/welcomeManualsApi";
-import type { WelcomeManualRoomResponse } from "@/shared/types/welcome-manual/welcome-manual-room-response";
+import type { WelcomeManualRoomResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-room-response";
 
 export interface WelcomeManualRoomManagerProps {
   manualId: string;

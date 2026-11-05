@@ -1,17 +1,15 @@
 import { baseApi } from "./baseApi";
 import type { WelcomeManualCreateRequest } from "@/shared/types/welcome-manual/welcome-manual-create-request";
 import type { WelcomeManualEmailRequest } from "@/shared/types/welcome-manual/welcome-manual-email-request";
-import type { WelcomeManualListArgs } from "@/shared/types/welcome-manual/welcome-manual-list-args";
-import type { WelcomeManualListResponse } from "@/shared/types/welcome-manual/welcome-manual-list-response";
-import type { WelcomeManualPlaceResponse } from "@/shared/types/welcome-manual/welcome-manual-place-response";
+import type { WelcomeManualPlaceResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-place-response";
 import type { WelcomeManualRoomCreateRequest } from "@/shared/types/welcome-manual/welcome-manual-room-create-request";
-import type { WelcomeManualRoomResponse } from "@/shared/types/welcome-manual/welcome-manual-room-response";
+import type { WelcomeManualRoomResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-room-response";
 import type { WelcomeManualRoomUpdateRequest } from "@/shared/types/welcome-manual/welcome-manual-room-update-request";
-import type { WelcomeManualResponse } from "@/shared/types/welcome-manual/welcome-manual-response";
+import type { WelcomeManualResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-response";
 import type { WelcomeManualSectionCreateRequest } from "@/shared/types/welcome-manual/welcome-manual-section-create-request";
-import type { WelcomeManualSectionFieldResponse } from "@/shared/types/welcome-manual/welcome-manual-section-field-response";
-import type { WelcomeManualSectionImageResponse } from "@/shared/types/welcome-manual/welcome-manual-section-image-response";
-import type { WelcomeManualSectionResponse } from "@/shared/types/welcome-manual/welcome-manual-section-response";
+import type { WelcomeManualSectionFieldResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-field-response";
+import type { WelcomeManualSectionImageResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-image-response";
+import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
 import type { WelcomeManualSectionUpdateRequest } from "@/shared/types/welcome-manual/welcome-manual-section-update-request";
 import type { WelcomeManualSendResponse } from "@/shared/types/welcome-manual/welcome-manual-send-response";
 import type { WelcomeManualShareResponse } from "@/shared/types/welcome-manual/welcome-manual-share-response";
@@ -20,26 +18,6 @@ import type { WelcomeManualUpdateRequest } from "@/shared/types/welcome-manual/w
 
 const welcomeManualsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getWelcomeManuals: builder.query<WelcomeManualListResponse, WelcomeManualListArgs | void>({
-      query: (args) => ({
-        url: "/welcome-manuals",
-        params: {
-          ...(args?.limit !== undefined ? { limit: args.limit } : {}),
-          ...(args?.offset !== undefined ? { offset: args.offset } : {}),
-        },
-      }),
-      providesTags: (result) =>
-        result
-          ? [
-              ...result.items.map((m) => ({ type: "WelcomeManual" as const, id: m.id })),
-              { type: "WelcomeManual" as const, id: "LIST" },
-            ]
-          : [{ type: "WelcomeManual" as const, id: "LIST" }],
-    }),
-    getWelcomeManualById: builder.query<WelcomeManualResponse, string>({
-      query: (id) => ({ url: `/welcome-manuals/${id}` }),
-      providesTags: (_result, _error, id) => [{ type: "WelcomeManual", id }],
-    }),
     createWelcomeManual: builder.mutation<WelcomeManualResponse, WelcomeManualCreateRequest>({
       query: (body) => ({ url: "/welcome-manuals", method: "POST", data: body }),
       invalidatesTags: [{ type: "WelcomeManual", id: "LIST" }],
@@ -355,8 +333,6 @@ const welcomeManualsApi = baseApi.injectEndpoints({
 });
 
 export const {
-  useGetWelcomeManualsQuery,
-  useGetWelcomeManualByIdQuery,
   useCreateWelcomeManualMutation,
   useUpdateWelcomeManualMutation,
   useDeleteWelcomeManualMutation,

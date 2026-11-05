@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MapPin } from "lucide-react";
 import { WELCOME_MANUAL_PRICE_TIERS } from "@/shared/lib/welcome-manual-constants";
-import type { WelcomeManualPlaceResponse } from "@/shared/types/welcome-manual/welcome-manual-place-response";
+import type { WelcomeManualPlaceResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-place-response";
 
 export interface WelcomeManualPlaceDirectoryProps {
   places: WelcomeManualPlaceResponse[];

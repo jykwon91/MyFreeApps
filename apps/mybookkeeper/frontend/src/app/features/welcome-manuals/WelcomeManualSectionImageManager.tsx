@@ -25,7 +25,7 @@ import {
   useUploadSectionImagesMutation,
 } from "@/shared/store/welcomeManualsApi";
 import type { SectionImageLightboxTarget } from "@/shared/types/welcome-manual/section-image-lightbox-target";
-import type { WelcomeManualSectionImageResponse } from "@/shared/types/welcome-manual/welcome-manual-section-image-response";
+import type { WelcomeManualSectionImageResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-image-response";
 import PhotoLightbox from "@/app/features/listings/PhotoLightbox";
 import WelcomeManualSectionImageCard from "./WelcomeManualSectionImageCard";
 import { sectionImageToLightboxPhoto } from "./section-image-to-lightbox";

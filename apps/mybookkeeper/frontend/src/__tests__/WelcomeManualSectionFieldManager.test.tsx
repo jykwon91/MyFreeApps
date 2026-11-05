@@ -16,7 +16,7 @@ import {
   MAX_FIELDS_PER_SECTION,
   NEW_FIELD_DEFAULT_LABEL,
 } from "@/shared/lib/welcome-manual-constants";
-import type { WelcomeManualSectionFieldResponse } from "@/shared/types/welcome-manual/welcome-manual-section-field-response";
+import type { WelcomeManualSectionFieldResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-field-response";
 
 const createFieldMock = vi.fn();
 const updateFieldMock = vi.fn();

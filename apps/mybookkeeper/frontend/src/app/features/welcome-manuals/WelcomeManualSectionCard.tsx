@@ -14,8 +14,8 @@ import {
   useDeleteSectionMutation,
   useUpdateSectionMutation,
 } from "@/shared/store/welcomeManualsApi";
-import type { WelcomeManualRoomResponse } from "@/shared/types/welcome-manual/welcome-manual-room-response";
-import type { WelcomeManualSectionResponse } from "@/shared/types/welcome-manual/welcome-manual-section-response";
+import type { WelcomeManualRoomResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-room-response";
+import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
 import WelcomeManualSectionFieldManager from "./WelcomeManualSectionFieldManager";
 import WelcomeManualSectionImageManager from "./WelcomeManualSectionImageManager";
 import { useSectionEditor } from "./useSectionEditor";

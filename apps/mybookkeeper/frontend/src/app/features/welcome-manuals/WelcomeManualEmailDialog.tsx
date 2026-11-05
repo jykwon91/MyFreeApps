@@ -9,7 +9,7 @@ import { showError } from "@/shared/lib/toast-store";
 import { EMAIL_REGEX, SHARED_ROOM_OPTION } from "@/shared/lib/welcome-manual-constants";
 import { useEmailWelcomeManualMutation } from "@/shared/store/welcomeManualsApi";
 import type { WelcomeManualEmailDialogStep } from "@/shared/types/welcome-manual/welcome-manual-email-dialog-step";
-import type { WelcomeManualRoomResponse } from "@/shared/types/welcome-manual/welcome-manual-room-response";
+import type { WelcomeManualRoomResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-room-response";
 
 export interface WelcomeManualEmailDialogProps {
   manualId: string;

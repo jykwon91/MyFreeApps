@@ -11,7 +11,7 @@ import {
   useDeletePlaceMutation,
   useUpdatePlaceMutation,
 } from "@/shared/store/welcomeManualsApi";
-import type { WelcomeManualPlaceResponse } from "@/shared/types/welcome-manual/welcome-manual-place-response";
+import type { WelcomeManualPlaceResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-place-response";
 import WelcomeManualPlaceCard from "./WelcomeManualPlaceCard";
 
 export interface WelcomeManualPlaceManagerProps {

@@ -25,10 +25,10 @@ import {
 import {
   useCreateSectionMutation,
   useDeleteWelcomeManualMutation,
-  useGetWelcomeManualByIdQuery,
 } from "@/shared/store/welcomeManualsApi";
+import { useGetWelcomeManualByIdQuery } from "@mybookkeeper/api-client/store/welcomeManualsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import type { WelcomeManualSectionResponse } from "@/shared/types/welcome-manual/welcome-manual-section-response";
+import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
 import WelcomeManualDetailSkeleton from "@/app/features/welcome-manuals/WelcomeManualDetailSkeleton";
 import WelcomeManualSectionCard from "@/app/features/welcome-manuals/WelcomeManualSectionCard";
 import WelcomeManualPreview from "@/app/features/welcome-manuals/WelcomeManualPreview";

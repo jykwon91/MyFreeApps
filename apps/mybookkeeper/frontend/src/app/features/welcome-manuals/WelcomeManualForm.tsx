@@ -9,7 +9,7 @@ import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useUpdateWelcomeManualMutation } from "@/shared/store/welcomeManualsApi";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { WelcomeManualFormValues } from "@/shared/types/welcome-manual/welcome-manual-form-values";
-import type { WelcomeManualResponse } from "@/shared/types/welcome-manual/welcome-manual-response";
+import type { WelcomeManualResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-response";
 import type { WelcomeManualUpdateRequest } from "@/shared/types/welcome-manual/welcome-manual-update-request";
 
 export interface WelcomeManualFormProps {

@@ -16,9 +16,9 @@ import { Provider } from "react-redux";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { store } from "@/shared/store";
 import WelcomeManualDetail from "@/app/pages/WelcomeManualDetail";
-import type { WelcomeManualResponse } from "@/shared/types/welcome-manual/welcome-manual-response";
-import type { WelcomeManualSectionResponse } from "@/shared/types/welcome-manual/welcome-manual-section-response";
-import type { WelcomeManualRoomResponse } from "@/shared/types/welcome-manual/welcome-manual-room-response";
+import type { WelcomeManualResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-response";
+import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
+import type { WelcomeManualRoomResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-room-response";
 
 let mockManual: WelcomeManualResponse | undefined;
 let mockIsLoading = false;
@@ -29,7 +29,7 @@ vi.mock("@/shared/lib/toast-store", () => ({
   showSuccess: vi.fn(),
 }));
 
-vi.mock("@/shared/store/welcomeManualsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/welcomeManualsApi", () => ({
   useGetWelcomeManualByIdQuery: vi.fn(() => ({
     data: mockManual,
     isLoading: mockIsLoading,
@@ -37,6 +37,9 @@ vi.mock("@/shared/store/welcomeManualsApi", () => ({
     isError: mockIsError,
     refetch: vi.fn(),
   })),
+}));
+
+vi.mock("@/shared/store/welcomeManualsApi", () => ({
   useCreateSectionMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDeleteWelcomeManualMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useEnableWelcomeManualShareMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),

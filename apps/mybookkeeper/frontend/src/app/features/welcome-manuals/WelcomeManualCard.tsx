@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import Badge from "@/shared/components/ui/Badge";
-import { formatSectionCount, formatUpdatedAt } from "@/shared/lib/welcome-manual-format";
-import type { WelcomeManualSummary } from "@/shared/types/welcome-manual/welcome-manual-summary";
+import { formatSectionCount, formatUpdatedAt } from "@mybookkeeper/api-client/utils/welcomeManualFormat";
+import type { WelcomeManualSummary } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-summary";
 
 export interface WelcomeManualCardProps {
   manual: WelcomeManualSummary;

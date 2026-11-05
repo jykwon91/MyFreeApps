@@ -20,8 +20,8 @@ import userEvent from "@testing-library/user-event";
 import { DndContext } from "@dnd-kit/core";
 import WelcomeManualSectionCard from "@/app/features/welcome-manuals/WelcomeManualSectionCard";
 import { SHARED_ROOM_OPTION } from "@/shared/lib/welcome-manual-constants";
-import type { WelcomeManualRoomResponse } from "@/shared/types/welcome-manual/welcome-manual-room-response";
-import type { WelcomeManualSectionResponse } from "@/shared/types/welcome-manual/welcome-manual-section-response";
+import type { WelcomeManualRoomResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-room-response";
+import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
 
 const updateSectionMock = vi.fn();
 const deleteSectionMock = vi.fn();

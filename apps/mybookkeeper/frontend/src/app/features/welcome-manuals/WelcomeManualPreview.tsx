@@ -1,6 +1,6 @@
 import Markdown from "@/shared/components/ui/Markdown";
-import type { WelcomeManualPlaceResponse } from "@/shared/types/welcome-manual/welcome-manual-place-response";
-import type { WelcomeManualSectionResponse } from "@/shared/types/welcome-manual/welcome-manual-section-response";
+import type { WelcomeManualPlaceResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-place-response";
+import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
 import WelcomeManualPlaceDirectory from "./WelcomeManualPlaceDirectory";
 
 export interface WelcomeManualPreviewProps {
