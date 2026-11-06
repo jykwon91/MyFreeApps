@@ -120,6 +120,8 @@ describe("submit failures", () => {
   it("maps 503, captcha, bad input and other errors", () => {
     expect(submitFailureFrom(axiosError(503, { detail: "feature_requests_unavailable" })).kind).toBe("unavailable");
     expect(submitFailureFrom(axiosError(400, { detail: "captcha_verification_failed" })).kind).toBe("human_check");
+    expect(submitFailureFrom(axiosError(400, { detail: "Captcha token required" })).kind).toBe("human_check");
+    expect(submitFailureFrom(axiosError(400, { detail: "no captcha here" })).kind).toBe("too_short");
     expect(submitFailureFrom(axiosError(422, { detail: "Write 10-1000 characters." })).kind).toBe("too_short");
     expect(submitFailureFrom(axiosError(500)).kind).toBe("server");
   });

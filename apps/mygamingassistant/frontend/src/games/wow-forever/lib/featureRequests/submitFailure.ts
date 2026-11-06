@@ -11,8 +11,8 @@ import type { SubmitFailure } from "@/games/wow-forever/types/featureRequests/su
 const UNAVAILABLE_STATUS = 503;
 const RATE_LIMITED_STATUS = 429;
 const BAD_INPUT_STATUSES: ReadonlySet<number> = new Set([400, 422]);
-/** platform_shared's Turnstile dependency answers with these details (plus "Captcha token required"). */
-const HUMAN_CHECK_DETAIL = /^captcha|captcha token required/i;
+/** platform_shared's Turnstile dependency details all start with "captcha" (incl. "Captcha token required"). */
+const HUMAN_CHECK_DETAIL = /^captcha/i;
 
 interface HttpErrorShape {
   status: number | undefined;
