@@ -8,7 +8,7 @@ import type { AuctionPrices } from "@/games/wow-forever/types/auctionPrices";
 const CLOCK_MS = 60_000;
 
 /** "Prices from TradeSkillMaster · updated 3 hours ago", with the region the prices are for. */
-export default function PriceCredit({ prices }: { prices: AuctionPrices }) {
+export default function PriceCredit({ prices, showRegion = true }: { prices: AuctionPrices; showRegion?: boolean }) {
   useNow(CLOCK_MS);
   const source = (
     <OutboundLink href={prices.credit.url} className="text-primary underline-offset-2 hover:underline">
@@ -24,7 +24,7 @@ export default function PriceCredit({ prices }: { prices: AuctionPrices }) {
       ) : (
         <p>No auction prices for this region yet. Prices come from {source}.</p>
       )}
-      <RegionSelect />
+      {showRegion && <RegionSelect />}
     </div>
   );
 }

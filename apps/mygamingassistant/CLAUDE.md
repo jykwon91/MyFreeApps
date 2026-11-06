@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/map`, `/wow-forever/guide`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/compare`, `/wow-forever/gear`)
+### WoW Forever (`/wow-forever`, `/wow-forever/map`, `/wow-forever/guide`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -282,6 +282,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   "Couldn't load prices — …" with a retry. The region is one saved choice
   (`hooks/useWowRegion.ts`, key `mga.wowForever.serverStatus.region.v1`,
   shared with server status; default US).
+- Auction house page (`/wow-forever/auction-house`, `?q=` search, replace-history): look up any item;
+  filter/sort is the pure `prices/auctionSearch.ts` (50 browse / 200 search cap).
 - Typed prices are optional overrides (`mga.wowForever.professions.priceOverrides.v2`,
   priced professions only); the pre-auction key `...prices.v1` is removed on read.
 - Tests stub the hook with `src/test/auctionPricesStub.ts`; E2E stubs

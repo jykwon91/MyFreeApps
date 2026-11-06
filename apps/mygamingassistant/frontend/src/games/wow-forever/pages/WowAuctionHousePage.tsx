@@ -1,0 +1,39 @@
+import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import AuctionHouseBody from "@/games/wow-forever/components/auctionHouse/AuctionHouseBody";
+import AuctionSearchControls from "@/games/wow-forever/components/auctionHouse/AuctionSearchControls";
+import PriceStatus from "@/games/wow-forever/components/prices/PriceStatus";
+import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
+import { DEFAULT_AUCTION_SORT } from "@/games/wow-forever/data/auctionSortOptions";
+import { useDocumentTitle } from "@/games/wow-forever/hooks/useDocumentTitle";
+import { useWowRegion } from "@/games/wow-forever/hooks/useWowRegion";
+import type { AuctionSort } from "@/games/wow-forever/types/auctionSort";
+
+export const QUERY_PARAM = "q";
+
+/** /wow-forever/auction-house — look up any item's auction price. The search lives in `?q=` so a lookup can be shared. */
+export default function WowAuctionHousePage() {
+  useDocumentTitle("Auction house prices");
+  const [params, setParams] = useSearchParams();
+  const [region, setRegion] = useWowRegion();
+  const [sort, setSort] = useState<AuctionSort>(DEFAULT_AUCTION_SORT);
+  const query = params.get(QUERY_PARAM) ?? "";
+
+  function changeQuery(next: string) {
+    setParams(next ? { [QUERY_PARAM]: next } : {}, { replace: true });
+  }
+
+  return (
+    <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
+      <WowPageHeader
+        title="Auction house prices"
+        subtitle="Look up what any item sells for."
+        backTo="/wow-forever"
+        backLabel="Back to WoW Forever"
+      />
+      <PriceStatus withoutPrices="no prices to show" showRegion={false} hideError />
+      <AuctionSearchControls region={region} onRegion={setRegion} query={query} onQuery={changeQuery} sort={sort} onSort={setSort} />
+      <AuctionHouseBody query={query} sort={sort} />
+    </main>
+  );
+}

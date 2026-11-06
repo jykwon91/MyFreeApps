@@ -58,6 +58,11 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "How to make gold at your level and with your class — what to gather, what to sell, and what not to do.",
       },
       {
+        path: "/wow-forever/auction-house",
+        title: "Auction house prices",
+        description: "Look up what any item sells for: market value, average sale price and how many sell a day, in the US or Europe.",
+      },
+      {
         path: "/wow-forever/warlock-macros",
         title: "Warlock macros",
         description: "Pet, Fear, Healthstone and mouseover macros to paste into the game, with names checked against the client.",
