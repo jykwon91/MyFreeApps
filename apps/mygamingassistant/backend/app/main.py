@@ -41,6 +41,7 @@ from app.api import (
     totp,
     wow_items,
     wow_map_captures,
+    wow_server_status,
 )
 # Note on lineups + lineup_packages routers:
 # MGA uses public-read / auth-write — each of those modules exports two
@@ -241,6 +242,7 @@ def _mount_public_routes(app: FastAPI) -> None:
     app.include_router(lineup_packages.public_router)
     app.include_router(wow_items.router)  # Turnstile + per-IP + daily-capped
     app.include_router(wow_map_captures.public_router)
+    app.include_router(wow_server_status.router)  # Server-cached Blizzard status
 
     # Disabled = absent (404), not present-but-broken.
     if settings.discord_enabled:
