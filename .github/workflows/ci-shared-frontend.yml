@@ -1,0 +1,53 @@
+name: Shared Frontend CI
+
+# Runs @platform/ui's own unit tests (packages/shared-frontend) on every pull
+# request to main and every push to main. Each app's CI builds and tests that
+# app, but nothing ran this package's tests until this workflow, so failures
+# here went unnoticed.
+#
+# DO NOT add a `paths:` filter, for the same reason as ci-shared-backend.yml:
+# a path-filtered pull_request workflow never reports its check, so it can
+# never be made a required status check, and a required one would hang PRs
+# that skip it on "Expected — Waiting for status to be reported."
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-shared-frontend-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  tests:
+    name: shared-frontend-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install workspace dependencies
+        # `npm install`, not `npm ci`: see ci-mybookkeeper.yml frontend-build
+        # (npm/cli#4828, workspace + optional platform-specific deps).
+        run: npm install
+
+      - name: Test @platform/ui
+        run: npm test --workspace=@platform/ui
+
+      - name: Typecheck @platform/ui
+        # Runs even when the tests fail, so one red run shows both problems.
+        if: ${{ !cancelled() }}
+        run: npm run typecheck --workspace=@platform/ui

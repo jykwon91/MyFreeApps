@@ -75,10 +75,11 @@ describe("InlineBoldText", () => {
   });
 
   it("renders interleaved plain and bold segments", () => {
-    render(<InlineBoldText text="hello **world** today" />);
+    const { container } = render(<InlineBoldText text="hello **world** today" />);
     expect(screen.getByText("world").tagName).toBe("STRONG");
-    expect(screen.getByText("hello ")).toBeInTheDocument();
-    expect(screen.getByText(" today")).toBeInTheDocument();
+    // The plain segments are bare text nodes beside the <strong>, not elements.
+    expect(container.textContent).toBe("hello world today");
+    expect(container.querySelectorAll("strong")).toHaveLength(1);
   });
 
   it("applies the default boldClassName to bold segments", () => {
@@ -94,7 +95,7 @@ describe("InlineBoldText", () => {
 
   it("renders an empty string without errors", () => {
     const { container } = render(<InlineBoldText text="" />);
-    expect(container.firstChild).toBeEmptyDOMElement();
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("renders multiple bold segments correctly", () => {
