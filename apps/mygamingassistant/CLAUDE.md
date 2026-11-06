@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/map`, `/wow-forever/guide`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/compare`)
+### WoW Forever (`/wow-forever`, `/wow-forever/map`, `/wow-forever/guide`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/compare`, `/wow-forever/gear`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -210,6 +210,41 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   same-origin asset (`?url`, `lib/clientItemsLoader.ts`, one load shared by
   every card) so it works in the Discord Activity; a picked item keeps its
   game-file numbers as `origin.baseline`, so edits are marked and can be reset.
+
+#### Best gear (`/wow-forever/gear`)
+
+- Top `TOP_ITEMS_PER_SLOT` (3) items per slot card for class + spec + level:
+  "While leveling" (what you can wear now + the next upgrade and its level)
+  and "Level 60 (pre-raid)". Settings live in the URL (`?class&spec&lvl&faction&view&pvp`;
+  `view` pushes history, the rest replace) and `mga.wowForever.gear.settings.v1`;
+  first visit seeds class/level/faction from the World Map player. Never
+  assert one "correct" spec — the player picks it.
+- Scoring reuses `scoring/` (`resolveWeights` + `scoreItem`); proficiencies
+  are `data/gear/classProficiencies.ts` (Classic: armor, heavy armor at 40,
+  shields, dual wield level). Ranking is `gear/rankGear.ts` (pure, tested in
+  `wowGearRanking.test.ts`). **Close rule** (`CLOSE_SCORE_PCT` = 3): a
+  known-source item ranks above a no-source one unless the unknown one
+  scores more than 3% higher. Level-60 epics with no known source go in a
+  separate "may be raid loot" disclosure, not the top 3.
+- **Data is GENERATED** — `python -m scripts.wow_gear.build` (from `backend/`,
+  last in `wow_refresh`) writes `data/gear/gearFacts.json` (Forever client:
+  crafted-by + skill, required skill/reputation, BoP, "Premier" PvP, era
+  leftovers, deprecated items) and `data/gear/classic/gearSources.json`
+  (cmangos GPL — keep LICENSE + README: quest rewards with level/side/class,
+  dungeon boss drops, dungeon level ranges, `raidOnly`, `pvp`). The Forever
+  client has **no JournalEncounterItem**, so boss drops are Classic data only.
+- Chips: "Crafted (game files)", "Quest (Classic data, may differ)", "Boss drop
+  (Classic data, may differ)", "Source unknown". Filters: deprecated/test
+  items, random-suffix items, `raidOnly` (raid/world-boss loot, quests gated
+  by raid items or the raid reputations `RAID_REPUTATIONS` in
+  `wow_gear/raid_gate.py` — Zandalar Tribe, Brood of Nozdormu), PvP unless
+  the PvP box is ticked (honor rank, battleground reputation, BG-vendor
+  conditions), other-faction / other-class quests.
+- Banner: pre-raid phase, raids open `RAIDS_OPEN_LABEL`, Classic Pawn weights,
+  Forever stats / hit cap unpublished, ranking approximate; drop rates and
+  set bonuses are never shown. `PUBLISHED_LIST` (LFCarry) is linked with its
+  checked date — never copied into our data. Item names link to Wowhead
+  Forever (`wowheadForeverItemUrl`, `OutboundLink`).
 
 #### Food picker (`/wow-forever/food`, "What should I eat?")
 

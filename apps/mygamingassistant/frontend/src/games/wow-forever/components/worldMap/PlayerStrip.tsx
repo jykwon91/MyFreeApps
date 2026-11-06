@@ -8,11 +8,7 @@ import { levelCap, playerLevel } from "@/games/wow-forever/data/levelCap";
 import type { PlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { FACTION, type PlayerFaction, type WorldMapData } from "@/games/wow-forever/types/worldMap";
 import type { Place } from "@/games/wow-forever/worldMap/places";
-
-const FACTION_OPTIONS: readonly { id: PlayerFaction; label: string }[] = [
-  { id: FACTION.alliance, label: "Alliance" },
-  { id: FACTION.horde, label: "Horde" },
-];
+import { PLAYER_FACTION_OPTIONS } from "@/games/wow-forever/data/playerFactionOptions";
 
 interface PlayerStripProps {
   data: WorldMapData;
@@ -50,7 +46,7 @@ export default function PlayerStrip({ data, settings, places, onChange }: Player
         <div className="space-y-1">
           <span className="text-sm font-medium">Faction</span>
           <div>
-            <SegmentedToggle label="Faction" options={FACTION_OPTIONS} value={settings.faction} onChange={changeFaction} />
+            <SegmentedToggle label="Faction" options={PLAYER_FACTION_OPTIONS} value={settings.faction} onChange={changeFaction} />
           </div>
         </div>
         <div className="space-y-1">
