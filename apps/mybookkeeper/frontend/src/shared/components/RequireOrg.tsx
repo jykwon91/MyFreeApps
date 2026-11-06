@@ -1,13 +1,13 @@
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { useDispatch } from "react-redux";
 import { Navigate } from "react-router-dom";
 import { useListOrganizationsQuery } from "@/shared/store/organizationsApi";
 import { useGetTaxProfileQuery } from "@/shared/store/taxProfileApi";
 import { setActiveOrg, setOrganizations } from "@/shared/store/organizationSlice";
-import { useActiveOrgId } from "@/shared/hooks/useCurrentOrg";
+import { useActiveOrgId, useCurrentOrg } from "@/shared/hooks/useCurrentOrg";
 import type { AppDispatch } from "@/shared/store";
 import type { ApiError } from "@/shared/types/api-error";
-import Skeleton from "@/shared/components/ui/Skeleton";
+import RequireOrgSkeleton from "@/shared/components/RequireOrgSkeleton";
 import CreateOrgPrompt from "@/app/features/organizations/CreateOrgPrompt";
 
 export interface RequireOrgProps {
@@ -27,8 +27,10 @@ export default function RequireOrg({ children }: RequireOrgProps) {
     skip: !orgs || orgs.length === 0,
   });
   const activeOrgId = useActiveOrgId();
+  const currentOrg = useCurrentOrg();
 
-  useEffect(() => {
+  // Layout effect: sync before paint, so a refetched role never shows stale.
+  useLayoutEffect(() => {
     if (!orgs) return;
     dispatch(setOrganizations(orgs));
     if (!activeOrgId && orgs.length > 0) {
@@ -39,47 +41,7 @@ export default function RequireOrg({ children }: RequireOrgProps) {
   // Only show the full-page loading skeleton on initial load (no orgs data yet).
   // On org switches, let child pages handle their own loading states.
   if (orgsLoading && !orgs) {
-    return (
-      <div className="min-h-screen flex">
-        {/* Sidebar skeleton */}
-        <aside className="hidden md:flex w-56 bg-card border-r flex-col shrink-0">
-          <div className="px-4 py-5 border-b">
-            <Skeleton className="h-5 w-32" />
-          </div>
-          <div className="px-3 py-4 space-y-1">
-            {Array.from({ length: 8 }, (_, i) => (
-              <Skeleton key={i} className="h-9 w-full rounded-md" />
-            ))}
-          </div>
-        </aside>
-        {/* Content skeleton — dashboard layout */}
-        <main className="flex-1 p-4 sm:p-8 space-y-6">
-          <Skeleton className="h-8 w-36" />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="border rounded-lg p-6 space-y-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-7 w-32" />
-              </div>
-            ))}
-          </div>
-          <div className="border rounded-lg px-4 py-3 flex items-center gap-3">
-            <Skeleton className="h-4 w-4" />
-            <Skeleton className="h-4 w-12" />
-            <Skeleton className="h-9 w-36 rounded-md" />
-            <div className="flex gap-2 ml-2">
-              <Skeleton className="h-8 w-12 rounded-md" />
-              <Skeleton className="h-8 w-16 rounded-md" />
-              <Skeleton className="h-8 w-20 rounded-md" />
-            </div>
-          </div>
-          <div className="border rounded-lg p-6">
-            <Skeleton className="h-5 w-40 mb-4" />
-            <Skeleton className="h-[300px] w-full rounded" />
-          </div>
-        </main>
-      </div>
-    );
+    return <RequireOrgSkeleton />;
   }
 
   // API error — distinguish auth failures from other errors.
@@ -112,8 +74,10 @@ export default function RequireOrg({ children }: RequireOrgProps) {
     return <CreateOrgPrompt />;
   }
 
-  if (!activeOrgId) {
-    return null;
+  // Wait until the active workspace is in the store, so pages always know
+  // the member's role and never show write controls to a viewer.
+  if (!currentOrg) {
+    return <RequireOrgSkeleton />;
   }
 
   if (taxProfile && !taxProfile.onboarding_completed) {

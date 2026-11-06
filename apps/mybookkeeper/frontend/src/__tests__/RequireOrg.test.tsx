@@ -7,6 +7,8 @@ import { configureStore } from "@reduxjs/toolkit";
 import { baseApi } from "@/shared/store/baseApi";
 import organizationReducer from "@/shared/store/organizationSlice";
 import RequireOrg from "@/shared/components/RequireOrg";
+import { useOrgRole } from "@/shared/hooks/useOrgRole";
+import type { OrgRole } from "@mybookkeeper/api-client/types/organization/OrgRole";
 
 vi.mock("@/shared/store/organizationsApi", () => ({
   useListOrganizationsQuery: vi.fn(),
@@ -28,31 +30,43 @@ vi.mock("@/shared/components/ui/Skeleton", () => ({
 
 import { useListOrganizationsQuery } from "@/shared/store/organizationsApi";
 
-function createStore() {
+const seenRoles: (OrgRole | null)[] = [];
+
+function RoleProbe() {
+  const role = useOrgRole();
+  seenRoles.push(role);
+  return <div data-testid="role-probe">{role}</div>;
+}
+
+function createStore(activeOrgId: string | null = null) {
   return configureStore({
     reducer: {
       [baseApi.reducerPath]: baseApi.reducer,
       organization: organizationReducer,
     },
+    preloadedState: { organization: { activeOrgId, organizations: [] } },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware().concat(baseApi.middleware),
   });
 }
 
-function renderWithProviders(queryState: Record<string, unknown>) {
+function renderWithProviders(
+  queryState: Record<string, unknown>,
+  options: { activeOrgId?: string | null; children?: React.ReactNode } = {},
+) {
   vi.mocked(useListOrganizationsQuery).mockReturnValue(
     queryState as unknown as ReturnType<typeof useListOrganizationsQuery>,
   );
 
   return render(
-    <Provider store={createStore()}>
+    <Provider store={createStore(options.activeOrgId ?? null)}>
       <MemoryRouter initialEntries={["/"]}>
         <Routes>
           <Route
             path="/"
             element={
               <RequireOrg>
-                <div data-testid="protected-content">Protected</div>
+                {options.children ?? <div data-testid="protected-content">Protected</div>}
               </RequireOrg>
             }
           />
@@ -105,6 +119,25 @@ describe("RequireOrg", () => {
     });
 
     expect(screen.getByTestId("protected-content")).toBeInTheDocument();
+  });
+
+  it("only renders pages once the member's role is known, even with a remembered workspace", () => {
+    seenRoles.length = 0;
+
+    renderWithProviders(
+      {
+        data: [{ id: "org-1", name: "Test Org", org_role: "viewer" as const, is_demo: false, created_at: "2026-01-01T00:00:00Z" }],
+        isLoading: false,
+        isError: false,
+        error: undefined,
+        refetch: vi.fn(),
+      },
+      { activeOrgId: "org-1", children: <RoleProbe /> },
+    );
+
+    expect(screen.getByTestId("role-probe")).toHaveTextContent("viewer");
+    expect(seenRoles.length).toBeGreaterThan(0);
+    expect(seenRoles).not.toContain(null);
   });
 
   // ── Regression: 401 error must redirect to login, not show CreateOrgPrompt ──
