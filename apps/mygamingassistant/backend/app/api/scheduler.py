@@ -20,6 +20,7 @@ from pydantic import BaseModel
 from app.core.auth import current_active_user
 from app.services.scheduling.scheduler_service import (
     JOB_CLEANUP_DOWNLOADS,
+    JOB_REFRESH_WOW_PRICES,
     JOB_SYNC_ALL_SOURCES,
     SchedulerNotStartedError,
     get_job_status,
@@ -33,7 +34,7 @@ router = APIRouter(
     dependencies=[Depends(current_active_user)],
 )
 
-KNOWN_JOB_IDS = frozenset({JOB_SYNC_ALL_SOURCES, JOB_CLEANUP_DOWNLOADS})
+KNOWN_JOB_IDS = frozenset({JOB_SYNC_ALL_SOURCES, JOB_CLEANUP_DOWNLOADS, JOB_REFRESH_WOW_PRICES})
 
 
 class JobStatus(BaseModel):

@@ -41,6 +41,7 @@ from app.api import (
     totp,
     wow_items,
     wow_map_captures,
+    wow_prices,
     wow_server_status,
 )
 # Note on lineups + lineup_packages routers:
@@ -147,10 +148,13 @@ async def _on_startup() -> None:
     if settings.scheduler_enabled:
         from app.services.scheduling.scheduler_service import start_scheduler
         try:
-            start_scheduler(sync_interval_hours=settings.source_sync_interval_hours)
+            start_scheduler(
+                sync_interval_hours=settings.source_sync_interval_hours,
+                price_refresh_interval_hours=settings.wow_price_refresh_interval_hours,
+            )
             logger.info(
-                "_on_startup: scheduler started — sync_interval_hours=%d",
-                settings.source_sync_interval_hours,
+                "_on_startup: scheduler started — sync_interval_hours=%d price_refresh_interval_hours=%d",
+                settings.source_sync_interval_hours, settings.wow_price_refresh_interval_hours,
             )
         except Exception as exc:
             if settings.environment == "production":
@@ -229,7 +233,8 @@ def _mount_public_routes(app: FastAPI) -> None:
 
     games + health are entirely public; lineups + lineup_packages contribute
     their ``public_router`` (read-only); wow_items is the anonymous item reader
-    (Turnstile + per-IP limit + durable daily cap). Nothing here requires auth,
+    (Turnstile + per-IP limit + durable daily cap); wow_prices serves the
+    auction-house prices the scheduler refreshes. Nothing here requires auth,
     so it is identical in both modes. version is a public deploy probe.
 
     Discord routes (``discord_public``: interactions, the raid art, the raid web
@@ -242,6 +247,7 @@ def _mount_public_routes(app: FastAPI) -> None:
     app.include_router(lineup_packages.public_router)
     app.include_router(wow_items.router)  # Turnstile + per-IP + daily-capped
     app.include_router(wow_map_captures.public_router)
+    app.include_router(wow_prices.router)  # auction-house prices, filled by the scheduler
     app.include_router(wow_server_status.router)  # Server-cached Blizzard status
 
     # Disabled = absent (404), not present-but-broken.

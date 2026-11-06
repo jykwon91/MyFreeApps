@@ -1,7 +1,7 @@
 """Unit tests for scheduler_service.
 
 Tests cover:
-  - start_scheduler() registers both jobs (async context required for AsyncIOScheduler)
+  - start_scheduler() registers its jobs, incl. the boot-time WoW price refresh (async context required for AsyncIOScheduler)
   - shutdown_scheduler() stops the scheduler
   - trigger_job() returns True for known jobs, False for unknown
   - cleanup_ingestion_downloads deletes oldest files when over cap
@@ -13,17 +13,20 @@ when AsyncIOScheduler.start() is called.
 from __future__ import annotations
 
 import time
+from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from app.services.scheduling.scheduler_service import (
     JOB_CLEANUP_DOWNLOADS,
     JOB_RAID_NOTIFICATIONS,
+    JOB_REFRESH_WOW_PRICES,
     JOB_SYNC_ALL_SOURCES,
     SchedulerNotStartedError,
     _run_cleanup_downloads,
+    _run_refresh_wow_prices,
     get_job_status,
     get_scheduler,
     shutdown_scheduler,
@@ -44,6 +47,15 @@ def cleanup_scheduler():
     shutdown_scheduler()
 
 
+@pytest.fixture(autouse=True)
+def no_price_downloads():
+    """The price job runs at boot; never let it reach TradeSkillMaster from a test."""
+    with patch(
+        "app.services.wow.prices.price_refresh_service.refresh_all", new=AsyncMock(return_value=[]),
+    ) as refresh:
+        yield refresh
+
+
 # ---------------------------------------------------------------------------
 # start_scheduler — must be async so the event loop is available
 # ---------------------------------------------------------------------------
@@ -57,6 +69,25 @@ async def test_start_scheduler_registers_both_jobs():
     job_ids = {j.id for j in scheduler.get_jobs()}
     assert JOB_SYNC_ALL_SOURCES in job_ids
     assert JOB_CLEANUP_DOWNLOADS in job_ids
+    assert JOB_REFRESH_WOW_PRICES in job_ids
+
+
+@pytest.mark.asyncio
+async def test_price_refresh_job_runs_at_boot_then_on_its_interval():
+    scheduler = start_scheduler(price_refresh_interval_hours=5)
+    job = scheduler.get_job(JOB_REFRESH_WOW_PRICES)
+    assert job is not None
+    assert job.trigger.interval.total_seconds() == 5 * 3600
+    assert job.max_instances == 1
+    assert job.next_run_time is not None
+    assert (job.next_run_time - datetime.now(timezone.utc)).total_seconds() < 60
+
+
+@pytest.mark.asyncio
+async def test_price_refresh_job_never_raises(no_price_downloads: AsyncMock):
+    no_price_downloads.side_effect = RuntimeError("boom")
+    await _run_refresh_wow_prices()  # logged, not raised — the job keeps its schedule
+    no_price_downloads.assert_awaited()
 
 
 @pytest.mark.asyncio
@@ -127,10 +158,8 @@ async def test_get_job_status_returns_jobs_when_started(monkeypatch: pytest.Monk
     monkeypatch.setattr(settings, "discord_enabled", False)
     start_scheduler()
     jobs = get_job_status()
-    assert len(jobs) == 2
     job_ids = {j["id"] for j in jobs}
-    assert JOB_SYNC_ALL_SOURCES in job_ids
-    assert JOB_CLEANUP_DOWNLOADS in job_ids
+    assert job_ids == {JOB_SYNC_ALL_SOURCES, JOB_CLEANUP_DOWNLOADS, JOB_REFRESH_WOW_PRICES}
     for job in jobs:
         assert "name" in job
         assert "trigger" in job

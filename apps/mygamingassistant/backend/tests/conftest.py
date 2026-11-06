@@ -160,6 +160,7 @@ _UOW_CONSUMERS = (
     "app.services.user.totp_service",
     "app.services.wow.item_extractor",
     "app.services.wow.map_capture_service",
+    "app.services.wow.prices.price_refresh_service",
 )
 
 
