@@ -367,3 +367,58 @@ class TestReplyTo:
 
         assert ok is True
         assert "Reply-To: host@example.com" in captured[0]
+
+
+class TestConsoleBackend:
+    """backend="console" logs each send instead of talking to SMTP (dev/CI)."""
+
+    def _console_service(self) -> EmailService:
+        return EmailService(from_name="TestApp", backend="console")
+
+    def test_send_or_raise_logs_and_never_opens_smtp(self, caplog: pytest.LogCaptureFixture) -> None:
+        with patch("smtplib.SMTP") as mock_smtp_cls, caplog.at_level("INFO"):
+            self._console_service().send_or_raise(["a@example.com"], "Verify", "<p>Hi</p>")
+        mock_smtp_cls.assert_not_called()
+        assert "[email:console]" in caplog.text
+        assert "a@example.com" in caplog.text
+        assert "'Verify'" in caplog.text
+
+    def test_send_returns_true(self) -> None:
+        with patch("smtplib.SMTP") as mock_smtp_cls:
+            assert self._console_service().send(["a@example.com"], "S", "<p>B</p>") is True
+        mock_smtp_cls.assert_not_called()
+
+    def test_empty_recipients_still_rejected(self) -> None:
+        with pytest.raises(ValueError):
+            self._console_service().send_or_raise([], "S", "<p>B</p>")
+        assert self._console_service().send([], "S", "<p>B</p>") is False
+
+    def test_is_configured_without_smtp_creds(self) -> None:
+        assert self._console_service().is_configured() is True
+
+    def test_smtp_backend_without_creds_is_not_configured(self) -> None:
+        assert EmailService(backend="smtp").is_configured() is False
+
+    def test_unknown_backend_is_refused(self) -> None:
+        with pytest.raises(ValueError, match="Unknown email backend"):
+            EmailService(backend="smpt")  # type: ignore[arg-type]
+
+
+class TestFromSettings:
+    def test_copies_smtp_fields_and_backend(self) -> None:
+        settings = MagicMock(
+            smtp_host="smtp.example.com",
+            smtp_port=2525,
+            smtp_user="user@example.com",
+            smtp_password="s3cr3t",
+            email_from_name="TestApp",
+            email_backend="console",
+        )
+        assert EmailService.from_settings(settings) == EmailService(
+            smtp_host="smtp.example.com",
+            smtp_port=2525,
+            smtp_user="user@example.com",
+            smtp_password="s3cr3t",
+            from_name="TestApp",
+            backend="console",
+        )

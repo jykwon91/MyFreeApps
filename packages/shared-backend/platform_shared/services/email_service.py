@@ -5,6 +5,7 @@ Usage:
         smtp_host="smtp.gmail.com", smtp_port=587,
         smtp_user="user@gmail.com", smtp_password="...",
         from_name="MyApp",
+        backend="smtp",   # or "console": log each send instead (dev/CI)
     )
 
     # Critical-path emails (verification, password reset, account
@@ -37,8 +38,11 @@ from email.mime.base import MIMEBase
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from typing import get_args
 
+from platform_shared.core.settings import BaseAppSettings
 from platform_shared.services.email_attachment import EmailAttachment
+from platform_shared.services.email_backend import EmailBackend
 
 logger = logging.getLogger(__name__)
 
@@ -98,9 +102,26 @@ class EmailService:
     smtp_user: str = ""
     smtp_password: str = ""
     from_name: str = ""
+    backend: EmailBackend = "smtp"
+
+    @classmethod
+    def from_settings(cls, settings: BaseAppSettings) -> "EmailService":
+        return cls(
+            smtp_host=settings.smtp_host,
+            smtp_port=settings.smtp_port,
+            smtp_user=settings.smtp_user,
+            smtp_password=settings.smtp_password,
+            from_name=settings.email_from_name,
+            backend=settings.email_backend,
+        )
+
+    def __post_init__(self) -> None:
+        if self.backend not in get_args(EmailBackend):
+            raise ValueError(f"Unknown email backend {self.backend!r}; use one of {get_args(EmailBackend)}")
 
     def is_configured(self) -> bool:
-        return bool(self.smtp_user and self.smtp_password)
+        """Whether a send can go through: always in console mode, else when SMTP creds are set."""
+        return self.backend == "console" or bool(self.smtp_user and self.smtp_password)
 
     def send_or_raise(
         self,
@@ -131,6 +152,12 @@ class EmailService:
         """
         if not to:
             raise ValueError("Recipients list cannot be empty")
+        if self.backend == "console":
+            logger.info(
+                "[email:console] to=%s subject=%r body_chars=%d attachments=%d",
+                to, subject, len(body_html), len(attachments or ()),
+            )
+            return
         if not self.is_configured():
             raise EmailNotConfiguredError(
                 "SMTP credentials are not configured (smtp_user / smtp_password "

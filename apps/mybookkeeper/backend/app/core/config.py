@@ -8,6 +8,7 @@ inquiry filters, etc.) live here.
 """
 
 from platform_shared.core.settings import BaseAppSettings
+from platform_shared.services.email_backend import EmailBackend
 
 
 class Settings(BaseAppSettings):
@@ -22,10 +23,9 @@ class Settings(BaseAppSettings):
     minio_bucket: str = "mybookkeeper-files"
     email_from_address: str = "mybookkeeper6@gmail.com"
     email_from_name: str = "MyBookkeeper"
-    # MBK historically hardcoded SMTP — opt in by default. Operators
-    # who want to silence outbound mail in a local sandbox can override
-    # to "console" via .env.docker.
-    email_backend: str = "smtp"
+    # MBK historically hardcoded SMTP — opt in by default. Set
+    # EMAIL_BACKEND=console to only log sends (local dev, E2E, CI).
+    email_backend: EmailBackend = "smtp"
     smtp_host: str = "smtp.gmail.com"
 
     # ------------------------------------------------------------------

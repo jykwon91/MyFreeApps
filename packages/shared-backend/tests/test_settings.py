@@ -106,6 +106,16 @@ class TestDefaults:
         assert s.backend_root_path == "/api"
 
 
+class TestEmailBackend:
+    def test_misspelled_backend_fails_at_boot(self) -> None:
+        # Neither "console" nor "smtp", so the boot guard would let it through.
+        with pytest.raises(ValidationError, match="email_backend"):
+            BaseAppSettings(_env_file=None, **_valid_kwargs(), email_backend="smpt")
+
+    def test_smtp_accepted(self) -> None:
+        assert BaseAppSettings(_env_file=None, **_valid_kwargs(), email_backend="smtp").email_backend == "smtp"
+
+
 class TestBackendRootPath:
     def test_default_matches_production_proxy_prefix(self) -> None:
         s = BaseAppSettings(_env_file=None, **_valid_kwargs())

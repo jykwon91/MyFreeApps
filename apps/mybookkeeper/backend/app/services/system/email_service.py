@@ -37,13 +37,7 @@ def _get_email_service() -> EmailService:
     the cache via ``_get_email_service.cache_clear()`` if they need
     to swap settings mid-run.
     """
-    return EmailService(
-        smtp_host=settings.smtp_host,
-        smtp_port=settings.smtp_port,
-        smtp_user=settings.smtp_user,
-        smtp_password=settings.smtp_password,
-        from_name=settings.email_from_name,
-    )
+    return EmailService.from_settings(settings)
 
 
 def is_configured() -> bool:

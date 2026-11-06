@@ -251,7 +251,7 @@ and copy its pattern**:
   here when those land.
 - Tracing fewer routes than MBK (no `documents/`, `transactions/` etc.)
   — MJH is earlier in its lifecycle.
-- `email_backend: str = "console"` default — appropriate while SMTP isn't
+- `email_backend: EmailBackend = "console"` default — appropriate while SMTP isn't
   wired on the VPS. Operator flips to `smtp` in `.env.docker` when ready.
 - `restart: unless-stopped` (MJH) vs `restart: always` (MBK) — MJH's
   choice is arguably better; both are valid.

@@ -31,6 +31,8 @@ to layer additional config — but the default already does the right thing.
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
+from platform_shared.services.email_backend import EmailBackend
+
 _MIN_KEY_LENGTH = 32
 
 
@@ -122,11 +124,11 @@ class BaseAppSettings(BaseSettings):
 
     # ------------------------------------------------------------------
     # Email delivery
-    # email_backend = "console" prints to stdout (dev/CI default);
+    # email_backend = "console" only logs each send (dev/CI default);
     # "smtp" sends via the configured SMTP server.
     # email_from_name: apps override with their brand string.
     # ------------------------------------------------------------------
-    email_backend: str = "console"
+    email_backend: EmailBackend = "console"
     email_from_address: str = ""
     email_from_name: str = "MyFreeApps"
     smtp_host: str = ""
