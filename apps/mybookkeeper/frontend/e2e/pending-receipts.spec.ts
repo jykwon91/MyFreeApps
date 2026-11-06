@@ -9,13 +9,15 @@ import { test, expect } from "./fixtures/auth";
  * Replaces the layout-only suite from PR #215 which only checked element
  * visibility with mocked API responses.
  *
- * Three scenarios:
+ * Four scenarios:
  *   A. Seed payment → open /receipts → click "Review & send" → Send → assert
  *      Gmail stub captured the send + lease attachment created.
  *   B. Same flow as A but verifies the pending-receipts list entry disappears
  *      after the receipt is marked sent.
- *   C. Gmail reauth gating — expired token → send button shows toast error
- *      about reconnecting Gmail, not a generic failure.
+ *   C. Gmail reauth gating: Send is off until Gmail is reconnected, and a
+ *      send already open when Gmail drops says to reconnect.
+ *   D. A send stuck on a Gmail account that isn't connected any more: the
+ *      row names the account and Dismiss works after confirming.
  */
 
 // ---------------------------------------------------------------------------
@@ -296,58 +298,52 @@ test.describe.serial("Pending Receipts — behavioral: send receipt chain", () =
   });
 
   // -------------------------------------------------------------------------
-  // Test C — Gmail reauth gating: expired token surfaces reconnect toast
+  // Test C — Gmail reauth gating: the list turns Send off and says to
+  //           reconnect; a send already open when Gmail drops says so too
   // -------------------------------------------------------------------------
 
-  test("C: expired Gmail token → send shows reconnect-Gmail error, not generic failure", async ({
+  test("C: Gmail needing reconnection turns Send off, and a send already open says to reconnect", async ({
     authedPage: page,
     api,
   }) => {
     const runId = Date.now();
+    const tenant = `E2E Tenant C ${runId}`;
     const seed = await seedRentPayment(api, {
-      tenant_legal_name: `E2E Tenant C ${runId}`,
+      tenant_legal_name: tenant,
       tenant_email: `e2e-receipt-c-${runId}@example.com`,
       amount_cents: 90000,
     });
+    const row = page.locator('[data-testid="pending-receipt-row"]').filter({ hasText: tenant });
 
     try {
-      // Seed integration with send scope but force needs_reauth=true.
       await seedGmailIntegration(api, { hasSendScope: true });
       await setGmailReauthState(api, true);
 
-      // Navigate and open the dialog.
       await page.goto("/receipts");
-      await expect(
-        page.locator('[data-testid="pending-receipt-row"]').filter({
-          hasText: `E2E Tenant C ${runId}`,
-        }),
-      ).toBeVisible({ timeout: 15000 });
+      await expect(row).toBeVisible({ timeout: 15000 });
+      await expect(page.getByTestId("pending-receipts-gmail-state")).toHaveText("Gmail needs to be reconnected before I can send.");
+      await expect(page.getByRole("link", { name: "Open Integrations" })).toHaveAttribute("href", "/integrations");
+      await expect(row.getByTestId("pending-receipt-send-btn")).toBeDisabled();
 
-      await page
-        .locator('[data-testid="pending-receipt-row"]')
-        .filter({ hasText: `E2E Tenant C ${runId}` })
-        .getByTestId("pending-receipt-send-btn")
-        .click();
-
+      // Reconnected: Send comes back.
+      await setGmailReauthState(api, false);
+      await page.reload();
+      await expect(row.getByTestId("pending-receipt-send-btn")).toBeEnabled({ timeout: 15000 });
+      await row.getByTestId("pending-receipt-send-btn").click();
       await expect(page.getByTestId("send-receipt-dialog")).toBeVisible({ timeout: 5000 });
 
-      // Click send — the backend returns 503 with gmail_reauth_required.
+      // Gmail drops while the dialog is open: the server refuses with 503.
+      await setGmailReauthState(api, true);
       const sendResponse = page.waitForResponse(
         (r) =>
           r.url().includes(`/api/rent-receipts/${seed.transaction_id}/send`) &&
           r.request().method() === "POST",
       );
       await page.getByTestId("receipt-send-btn").click();
-      const resp = await sendResponse;
-      // Backend returns 503 for gmail_reauth_required.
-      expect(resp.status()).toBe(503);
+      expect((await sendResponse).status()).toBe(503);
 
-      // The frontend should show a reconnect-specific toast, not a generic error.
-      await expect(
-        page.getByText(/reconnect gmail/i),
-      ).toBeVisible({ timeout: 5000 });
-
-      // Dialog stays open so the user can cancel or retry.
+      await expect(page.getByText(/Go to Integrations → Reconnect Gmail/)).toBeVisible({ timeout: 5000 });
+      // Nothing went, so the dialog stays open to cancel or retry.
       await expect(page.getByTestId("send-receipt-dialog")).toBeVisible();
     } finally {
       // Reset reauth state before cleanup so the integration deletion succeeds.
