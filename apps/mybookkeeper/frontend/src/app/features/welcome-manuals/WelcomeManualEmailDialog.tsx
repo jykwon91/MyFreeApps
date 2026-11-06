@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AlertCircle, CheckCircle, Info, X } from "lucide-react";
-import Panel from "@/shared/components/ui/Panel";
+import { Panel, PanelTitle } from "@platform/ui";
 import FormField from "@/shared/components/ui/FormField";
 import { LoadingButton } from "@platform/ui";
 import { DEMO_EMAIL_REFUSED } from "@mybookkeeper/api-client/constants/demoRefusal";
@@ -67,7 +67,9 @@ export default function WelcomeManualEmailDialog({ manualId, rooms, onClose }: W
     <Panel position="center" width="28rem" onClose={onClose}>
       <div className="flex flex-col flex-1 overflow-hidden" data-testid="welcome-manual-email-dialog">
         <div className="px-5 py-4 border-b flex items-start justify-between">
-          <h3 className="font-medium text-base">Email this guide to a guest</h3>
+          <PanelTitle asChild>
+            <h3 className="font-medium text-base">Email this guide to a guest</h3>
+          </PanelTitle>
           <button
             onClick={onClose}
             className="text-muted-foreground hover:text-foreground p-1"

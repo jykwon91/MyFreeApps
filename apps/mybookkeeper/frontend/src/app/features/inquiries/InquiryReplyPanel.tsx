@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Panel, { PanelCloseButton } from "@/shared/components/ui/Panel";
+import { Panel, PanelCloseButton, PanelTitle } from "@platform/ui";
 import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
@@ -138,7 +138,9 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
         {/* Header */}
         <div className="px-5 py-4 border-b flex items-start justify-between">
           <div>
-            <h3 className="font-medium text-base">Reply with template</h3>
+            <PanelTitle asChild>
+              <h3 className="font-medium text-base">Reply with template</h3>
+            </PanelTitle>
             <p className="text-xs text-muted-foreground">
               Sends via your connected Gmail address.
             </p>

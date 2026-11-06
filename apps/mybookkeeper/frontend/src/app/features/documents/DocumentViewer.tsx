@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchDocumentBlob, type DocumentBlob } from "@/shared/services/documentService";
-import Panel from "@/shared/components/ui/Panel";
+import { Panel } from "@platform/ui";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import { isPaymentTransaction } from "./PaymentDocumentCard";
 import DocumentViewerHeader from "./DocumentViewerHeader";

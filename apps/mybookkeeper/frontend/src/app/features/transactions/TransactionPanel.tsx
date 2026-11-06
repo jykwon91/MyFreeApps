@@ -6,7 +6,7 @@ import type { Transaction } from "@mybookkeeper/api-client/types/transaction/tra
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { TransactionFormValues } from "@/shared/types/transaction/transaction-form-values";
 import type { DuplicatePair } from "@mybookkeeper/api-client/types/transaction/DuplicatePair";
-import Panel from "@/shared/components/ui/Panel";
+import { Panel, PanelTitle } from "@platform/ui";
 import { LoadingButton } from "@platform/ui";
 import { ConfirmDialog } from "@platform/ui";
 import TransactionStatusBadge from "@/app/features/transactions/TransactionStatusBadge";
@@ -145,7 +145,9 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
         <div className="px-5 py-4 border-b space-y-2">
           <div className="flex items-start justify-between">
             <div className="space-y-1 min-w-0">
-              <h3 className="font-medium text-base truncate">{transaction.vendor ?? "Transaction"}</h3>
+              <PanelTitle asChild>
+                <h3 className="font-medium text-base truncate">{transaction.vendor ?? "Transaction"}</h3>
+              </PanelTitle>
               <p className="text-xs text-muted-foreground">Created {formatDate(transaction.created_at)}</p>
             </div>
             <button onClick={handleClose} className="text-muted-foreground hover:text-foreground p-1 rounded shrink-0 ml-2" aria-label="Close panel">

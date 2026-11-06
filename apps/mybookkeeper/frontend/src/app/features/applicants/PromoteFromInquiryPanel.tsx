@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle } from "lucide-react";
-import Panel, { PanelCloseButton } from "@/shared/components/ui/Panel";
+import { Panel, PanelCloseButton, PanelTitle } from "@platform/ui";
 import { Button, LoadingButton } from "@platform/ui";
 import FormField from "@/shared/components/ui/FormField";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
@@ -155,7 +155,9 @@ export default function PromoteFromInquiryPanel({ inquiry, onClose }: PromoteFro
         {/* Header */}
         <div className="px-5 py-4 border-b flex items-start justify-between">
           <div>
-            <h3 className="font-medium text-base">Promote to applicant</h3>
+            <PanelTitle asChild>
+              <h3 className="font-medium text-base">Promote to applicant</h3>
+            </PanelTitle>
             <p className="text-xs text-muted-foreground">
               I'll pre-fill what I can from the inquiry. You can edit anything.
             </p>

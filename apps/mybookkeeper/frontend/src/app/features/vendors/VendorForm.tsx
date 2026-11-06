@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { X } from "lucide-react";
-import Panel from "@/shared/components/ui/Panel";
+import { Panel, PanelTitle } from "@platform/ui";
 import { LoadingButton } from "@platform/ui";
 import FormField from "@/shared/components/ui/FormField";
 import {
@@ -174,9 +174,11 @@ export default function VendorForm({
       <div className="flex flex-col flex-1 overflow-hidden">
         <div className="px-5 py-4 border-b flex items-start justify-between">
           <div>
-            <h3 className="font-medium text-base">
-              {isEdit ? "Edit vendor" : "Add vendor"}
-            </h3>
+            <PanelTitle asChild>
+              <h3 className="font-medium text-base">
+                {isEdit ? "Edit vendor" : "Add vendor"}
+              </h3>
+            </PanelTitle>
             <p className="text-xs text-muted-foreground">
               {isEdit
                 ? "Update fields and save."

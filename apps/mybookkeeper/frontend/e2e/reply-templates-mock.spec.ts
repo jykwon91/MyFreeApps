@@ -229,6 +229,40 @@ test.describe("Reply templates for a viewer", () => {
   });
 });
 
+test.describe("Reply template panel", () => {
+  test("is a named dialog that keeps focus inside and returns it on Escape", async ({ page }) => {
+    const server = await openPage(page, freshRows(), "/reply-templates");
+    const edit = page.getByRole("button", { name: `Edit ${ACTIVE.name}` });
+    await edit.click();
+
+    const dialog = page.getByRole("dialog", { name: "Edit template" });
+    await expect(dialog).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Edit template" })).toHaveCount(1);
+    for (let i = 0; i < 8; i += 1) {
+      await page.keyboard.press("Tab");
+      expect(await dialog.evaluate((el) => el.contains(document.activeElement))).toBe(true);
+    }
+
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect(edit).toBeFocused();
+    expect(server.patches).toEqual([]);
+  });
+
+  test("on a phone, closing the drawer returns focus to Edit", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openPage(page, freshRows(), "/reply-templates");
+    const edit = page.getByRole("button", { name: `Edit ${ACTIVE.name}` });
+    await edit.click();
+
+    const dialog = page.getByRole("dialog", { name: "Edit template" });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Close panel" }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(edit).toBeFocused();
+  });
+});
+
 test.describe("Restoring archived reply templates", () => {
   test("restores from the Archived tab and shows it on Active", async ({ page }) => {
     const server = await openPage(page, freshRows());

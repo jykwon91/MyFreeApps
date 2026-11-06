@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { X } from "lucide-react";
-import Panel from "@/shared/components/ui/Panel";
+import { Panel, PanelTitle } from "@platform/ui";
 import { LoadingButton } from "@platform/ui";
 import FormField from "@/shared/components/ui/FormField";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
@@ -101,7 +101,9 @@ export default function InquiryForm({ listings, onClose, onCreated }: InquiryFor
       <div className="flex flex-col flex-1 overflow-hidden">
         <div className="px-5 py-4 border-b flex items-start justify-between">
           <div>
-            <h3 className="font-medium text-base">New inquiry</h3>
+            <PanelTitle asChild>
+              <h3 className="font-medium text-base">New inquiry</h3>
+            </PanelTitle>
             <p className="text-xs text-muted-foreground">
               Log an inquiry that came in outside Furnished Finder or Travel Nurse
               Housing — or a backdated one you want to track.

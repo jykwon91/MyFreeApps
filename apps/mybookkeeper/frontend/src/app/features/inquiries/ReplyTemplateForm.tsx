@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import Panel, { PanelCloseButton } from "@/shared/components/ui/Panel";
+import { Panel, PanelCloseButton, PanelTitle } from "@platform/ui";
 import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
@@ -95,9 +95,11 @@ export default function ReplyTemplateForm({ template, onClose }: ReplyTemplateFo
       >
         <div className="px-5 py-4 border-b flex items-start justify-between">
           <div>
-            <h3 className="font-medium text-base">
-              {isEdit ? "Edit template" : "New template"}
-            </h3>
+            <PanelTitle asChild>
+              <h3 className="font-medium text-base">
+                {isEdit ? "Edit template" : "New template"}
+              </h3>
+            </PanelTitle>
             <p className="text-xs text-muted-foreground">
               Use variables like $name, $listing, $dates — they'll be filled in
               when you reply.

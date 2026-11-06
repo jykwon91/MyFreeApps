@@ -1,5 +1,5 @@
 import { ExternalLink } from "lucide-react";
-import Panel, { PanelCloseButton } from "@/shared/components/ui/Panel";
+import { Panel, PanelCloseButton, PanelTitle } from "@platform/ui";
 import { useAttachmentViewMode } from "./useAttachmentViewMode";
 import AttachmentViewerBody from "./AttachmentViewerBody";
 
@@ -37,12 +37,14 @@ export default function AttachmentViewer({
     <Panel position="center" onClose={onClose}>
       <header className="flex items-center justify-between px-4 py-2 border-b shrink-0 bg-card">
         <div className="flex items-center gap-3 min-w-0">
-          <span
-            className="text-sm font-medium text-muted-foreground truncate max-w-xs"
-            title={filename}
-          >
-            {filename}
-          </span>
+          <PanelTitle asChild>
+            <span
+              className="text-sm font-medium text-muted-foreground truncate max-w-xs"
+              title={filename}
+            >
+              {filename}
+            </span>
+          </PanelTitle>
           {url ? (
             <a
               href={url}
