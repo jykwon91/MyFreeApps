@@ -234,12 +234,20 @@ async def list_active_gmail_sync_targets(db: AsyncSession) -> list[GmailSyncTarg
 async def delete_connected_by(
     db: AsyncSession, organization_id: uuid.UUID, user_id: uuid.UUID,
 ) -> list[str]:
-    """Delete the org's connections that ``user_id`` made. Returns their providers."""
+    """Delete the org's connections that ``user_id`` made. Returns their providers.
+
+    Locked as read: if another member's connect is taking a row over right now,
+    the lock waits for it and re-checks ``user_id``, so their new connection is
+    left alone.
+    """
     result = await db.execute(
-        select(Integration).where(
+        select(Integration)
+        .where(
             Integration.organization_id == organization_id,
             Integration.user_id == user_id,
         )
+        .with_for_update()
+        .execution_options(populate_existing=True)
     )
     rows = result.scalars().all()
     for integration in rows:

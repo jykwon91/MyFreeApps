@@ -118,7 +118,9 @@ async def list_members(db: AsyncSession, org_id: uuid.UUID) -> Sequence[Organiza
 async def update_member_role(
     db: AsyncSession, member: OrganizationMember, new_role: str
 ) -> OrganizationMember:
+    """Change the role now, waiting for any transaction that has the membership locked."""
     member.org_role = new_role
+    await db.flush()
     return member
 
 

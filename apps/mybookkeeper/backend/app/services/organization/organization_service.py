@@ -3,6 +3,8 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from platform_shared.core.auth_events import AuthEventType
 from platform_shared.services.auth_event_service import log_auth_event
 
@@ -109,12 +111,42 @@ async def update_member_role(
         if member.org_role == "owner":
             raise ValueError("Cannot change the owner's role")
 
+        old_role = member.org_role
         result = await organization_repo.update_member_role(db, member, new_role)
+        if parsed_role == OrgRole.VIEWER:
+            await _disconnect_their_integrations(
+                db, org_id, target_user_id, reason="made_viewer", acting_user_id=acting_user_id,
+            )
         logger.info(
             "ORG_ACTION role_change org=%s target=%s old=%s new=%s by=%s",
-            org_id, target_user_id, member.org_role, new_role, acting_user_id,
+            org_id, target_user_id, old_role, new_role, acting_user_id,
         )
         return result
+
+
+async def _disconnect_their_integrations(
+    db: AsyncSession,
+    org_id: uuid.UUID,
+    user_id: uuid.UUID,
+    *,
+    reason: str,
+    acting_user_id: uuid.UUID,
+) -> None:
+    """Delete the connections ``user_id`` made, once they can no longer make one.
+
+    A Gmail connection is the connecting member's mailbox, not the org's. Call
+    after the membership change is flushed: a connect finishing at the same time
+    holds a share lock on the membership, so that change waits for it, and under
+    READ COMMITTED this query then sees the connection it saved.
+    """
+    for provider in await integration_repo.delete_connected_by(db, org_id, user_id):
+        await log_auth_event(
+            db,
+            event_type=AuthEventType.OAUTH_DISCONNECT,
+            user_id=user_id,
+            succeeded=True,
+            metadata={"provider": provider, "reason": reason, "by": str(acting_user_id)},
+        )
 
 
 async def remove_member(
@@ -133,17 +165,9 @@ async def remove_member(
             raise ValueError("Cannot remove the owner")
 
         await organization_repo.remove_member(db, member)
-        # A Gmail connection they made is their mailbox, not the org's: it goes with them.
-        # A connect finishing now holds a share lock on the membership, so the delete
-        # above waits for it; under READ COMMITTED this query then sees its row.
-        for provider in await integration_repo.delete_connected_by(db, org_id, target_user_id):
-            await log_auth_event(
-                db,
-                event_type=AuthEventType.OAUTH_DISCONNECT,
-                user_id=target_user_id,
-                succeeded=True,
-                metadata={"provider": provider, "reason": "member_removed", "removed_by": str(acting_user_id)},
-            )
+        await _disconnect_their_integrations(
+            db, org_id, target_user_id, reason="member_removed", acting_user_id=acting_user_id,
+        )
         logger.info(
             "ORG_ACTION remove_member org=%s target=%s by=%s",
             org_id, target_user_id, acting_user_id,

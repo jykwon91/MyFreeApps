@@ -1,11 +1,12 @@
-"""A member's Gmail connection leaves the org with them, and can't be made after they've gone.
+"""A member's Gmail connection goes once they can't connect one: removed, or made a viewer.
 
-On real rows: removing the member who connected the org's Gmail deletes that
-connection, and a connect that finishes after a removal, or after they became a
-viewer, saves nothing.
+On real rows: removing or demoting to viewer the member who connected the org's
+Gmail deletes that connection, and a connect that finishes after either saves
+nothing.
 """
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 from collections.abc import AsyncIterator, Iterator
@@ -92,7 +93,7 @@ async def test_removing_the_member_who_connected_gmail_disconnects_it(
     [event] = await _disconnect_events(db)
     assert event.user_id == member.id
     assert event.event_metadata == {
-        "provider": "gmail", "reason": "member_removed", "removed_by": str(test_user.id),
+        "provider": "gmail", "reason": "member_removed", "by": str(test_user.id),
     }
 
 
@@ -108,6 +109,56 @@ async def test_removing_a_member_leaves_a_connection_someone_else_made(
     [kept] = await integration_repo.list_by_org(db, test_org.id)
     assert kept.user_id == test_user.id
     assert await _disconnect_events(db) == []
+
+
+@pytest.mark.asyncio
+async def test_making_the_connecting_member_a_viewer_disconnects_it(
+    db: AsyncSession, test_user: User, test_org: Organization, member: User, same_session,
+) -> None:
+    await _join(db, test_org, member, "admin", test_user)
+    await _connect(db, test_org, member)
+
+    await organization_service.update_member_role(test_org.id, member.id, "viewer", test_user.id)
+
+    assert await integration_repo.list_by_org(db, test_org.id) == []
+    [event] = await _disconnect_events(db)
+    assert (event.user_id, event.event_metadata) == (
+        member.id, {"provider": "gmail", "reason": "made_viewer", "by": str(test_user.id)},
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("connected_by", "new_role"),
+    [("member", "user"), ("member", "admin"), ("owner", "viewer")],
+    ids=["member-to-user", "member-to-admin", "someone-else-connected"],
+)
+async def test_other_role_changes_keep_the_connection(
+    db: AsyncSession, test_user: User, test_org: Organization, member: User, same_session,
+    connected_by, new_role,
+) -> None:
+    await _join(db, test_org, member, "user" if new_role == "admin" else "admin", test_user)
+    connector = member if connected_by == "member" else test_user
+    await _connect(db, test_org, connector)
+
+    await organization_service.update_member_role(test_org.id, member.id, new_role, test_user.id)
+
+    [kept] = await integration_repo.list_by_org(db, test_org.id)
+    assert kept.user_id == connector.id
+    assert await _disconnect_events(db) == []
+
+
+@pytest.mark.asyncio
+async def test_a_role_change_logs_the_role_it_replaced(
+    db: AsyncSession, test_user: User, test_org: Organization, member: User, same_session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    await _join(db, test_org, member, "admin", test_user)
+
+    with caplog.at_level(logging.INFO, logger=organization_service.__name__):
+        await organization_service.update_member_role(test_org.id, member.id, "user", test_user.id)
+
+    assert any("old=admin new=user" in r.getMessage() for r in caplog.records)
 
 
 @pytest.mark.asyncio

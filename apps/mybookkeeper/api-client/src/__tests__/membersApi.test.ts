@@ -54,4 +54,17 @@ describe("membersApi", () => {
       "get /integrations",
     ]);
   });
+
+  it("reloads the integrations after a role change, since a new viewer's Gmail connection is removed", async () => {
+    const store = makeStore();
+    store.dispatch(endpoints.getIntegrations.initiate());
+    await tick();
+    await store.dispatch(endpoints.updateMemberRole.initiate({ orgId: "w1", userId: "u2", orgRole: "viewer" }));
+    await tick();
+    expect(sent.map((config) => `${config.method} ${config.url}`)).toEqual([
+      "get /integrations",
+      "patch /organizations/w1/members/u2/role",
+      "get /integrations",
+    ]);
+  });
 });
