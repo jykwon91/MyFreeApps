@@ -6,6 +6,13 @@ import fs from "fs";
 import { BACKEND_URL, E2E_EMAIL, E2E_PASSWORD } from "./fixtures/config";
 import { test as authedTest } from "./fixtures/auth";
 
+declare global {
+  interface Window {
+    /** Set by the side-panel runtime below; delivers a message as if the tab's content script sent it. */
+    __mbkFromContentScript: (message: { action: string; form: string | null; year: number | null }) => void;
+  }
+}
+
 // Most tests load local files and need no signed-in user; the side-panel tests
 // that seed data use authedTest for its API client.
 const test = base;
@@ -152,6 +159,11 @@ function getExtensionRuntime(apiUrl: string): string {
       session: storageArea({}),
     };
     const backgroundListeners = [];
+    const pageListeners = [];
+    // What the content script would send from the tab, e.g. pageDetected.
+    window.__mbkFromContentScript = (message) => {
+      for (const listener of pageListeners) listener(structuredClone(message), {}, () => {});
+    };
 
     // A service worker has no window, document, localStorage or XHR; hide them
     // so background.js can't come to rely on them here.
@@ -184,7 +196,7 @@ function getExtensionRuntime(apiUrl: string): string {
           }
           resolve(undefined);
         }),
-        onMessage: { addListener: () => {} },
+        onMessage: { addListener: (fn) => pageListeners.push(fn) },
       },
       tabs: {
         query: async () => [{ id: 1 }],
@@ -372,7 +384,14 @@ test.describe("Chrome Extension — cross-site consistency", () => {
 // ═════════════════════════════════════════════════════════════════════════════
 
 test.describe("Chrome Extension — Sidepanel UI", () => {
-  async function loadSidepanel(page: Page): Promise<void> {
+  // `slow` holds back replies to matching URLs; `delivered` counts them as they arrive.
+  interface SlowReplies {
+    slow: (url: string) => boolean;
+    delayMs: number;
+    delivered: number;
+  }
+
+  async function loadSidepanel(page: Page, slowReplies?: SlowReplies): Promise<void> {
     await page.exposeFunction(
       "__mbkBackgroundFetch",
       async (
@@ -380,7 +399,12 @@ test.describe("Chrome Extension — Sidepanel UI", () => {
         init: { method?: string; headers?: Record<string, string>; body?: string },
       ): Promise<{ status: number; headers: Record<string, string>; body: string }> => {
         const res = await fetch(url, init);
-        return { status: res.status, headers: Object.fromEntries(res.headers), body: await res.text() };
+        const reply = { status: res.status, headers: Object.fromEntries(res.headers), body: await res.text() };
+        if (slowReplies?.slow(url)) {
+          await new Promise((resolve) => setTimeout(resolve, slowReplies.delayMs));
+          slowReplies.delivered++;
+        }
+        return reply;
       },
     );
     await page.addInitScript(getExtensionRuntime(BACKEND_URL));
@@ -466,6 +490,36 @@ test.describe("Chrome Extension — Sidepanel UI", () => {
 
       await yearSelect.selectOption(seededYear);
       await expect(formSelect).toBeEnabled({ timeout: 10000 });
+    });
+
+    authedTest("a slow forms reply for a year I've left doesn't turn the form picker back on", async ({ page }) => {
+      const slowReplies: SlowReplies = { slow: (url) => url.endsWith("/forms-overview"), delayMs: 1500, delivered: 0 };
+      await loadSidepanel(page, slowReplies);
+      await logIn(page);
+      const yearSelect = page.locator("#tax-year-select");
+      const formSelect = page.locator("#form-select");
+      await expect(yearSelect).toHaveValue(seededYear, { timeout: 10000 });
+
+      await yearSelect.selectOption("");
+      await expect.poll(() => slowReplies.delivered, { timeout: 10000 }).toBe(1);
+      // Let the side panel's continuation run before looking.
+      await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 0)));
+      await expect(formSelect).toBeDisabled();
+      await expect(formSelect.locator("option")).toHaveCount(1);
+    });
+    authedTest("a slow fields reply for a form page I've left doesn't show its fields", async ({ page }) => {
+      const slowReplies: SlowReplies = { slow: (url) => url.includes("/forms/w2?"), delayMs: 1500, delivered: 0 };
+      await loadSidepanel(page, slowReplies);
+      await logIn(page);
+      await expect(page.locator("#tax-year-select")).toHaveValue(seededYear, { timeout: 10000 });
+
+      const year = Number(seededYear);
+      await page.evaluate((y) => window.__mbkFromContentScript({ action: "pageDetected", form: "w2", year: y }), year);
+      await page.evaluate(() => window.__mbkFromContentScript({ action: "pageDetected", form: null, year: null }));
+      await expect.poll(() => slowReplies.delivered, { timeout: 10000 }).toBe(1);
+      // Let the side panel's continuation run before looking.
+      await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 0)));
+      await expect(page.locator("#fields-container")).toBeHidden();
     });
   });
 
