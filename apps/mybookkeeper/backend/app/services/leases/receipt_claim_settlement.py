@@ -132,7 +132,7 @@ async def settle_earlier_attempt(
             organization_id=organization_id,
             user_id=user_id,
             message_id=gmail_id,
-            from_address=ctx.from_address,
+            from_address=connected_address,
             subject=None,
             reason=APP_SENT_RECEIPT_FILTER_REASON,
         )

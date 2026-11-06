@@ -47,6 +47,18 @@ async def test_new_connection_profile_without_an_address_raises(monkeypatch: pyt
 
 
 @pytest.mark.asyncio
+async def test_new_connection_profile_address_that_could_break_a_header_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _profile_service(
+        monkeypatch, MagicMock(return_value={"emailAddress": "host@gmail.com\r\nBcc: x@evil.com"}),
+    )
+
+    with pytest.raises(GmailAccountUnknownError):
+        await gmail_mailbox.address_of_new_connection(MagicMock())
+
+
+@pytest.mark.asyncio
 async def test_new_connection_profile_error_is_logged_with_its_reason(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
 ) -> None:

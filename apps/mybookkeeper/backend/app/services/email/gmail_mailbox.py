@@ -11,6 +11,7 @@ import logging
 from google.oauth2.credentials import Credentials
 from googleapiclient.errors import HttpError
 
+from app.core.email_address_utils import is_plain_email_address
 from app.db.session import unit_of_work
 from app.models.integrations.integration import Integration
 from app.repositories import integration_repo
@@ -25,6 +26,9 @@ def _address_from(profile: dict[str, object]) -> str:
     address = profile.get("emailAddress")
     if not isinstance(address, str) or not address.strip():
         raise GmailAccountUnknownError("Gmail's profile had no email address")
+    # It becomes the From header of every send, so nothing but a bare address.
+    if not is_plain_email_address(address.strip()):
+        raise GmailAccountUnknownError("Gmail's profile address isn't a plain email address")
     return address.strip()
 
 

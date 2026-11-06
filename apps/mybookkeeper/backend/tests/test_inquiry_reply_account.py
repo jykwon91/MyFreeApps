@@ -130,28 +130,35 @@ async def test_connection_without_an_address_asks_gmail_once_and_keeps_it(
     ],
     ids=["reauth", "unreachable"],
 )
-async def test_unknown_account_refuses_before_anything_is_claimed(
-    db: AsyncSession, test_org, test_user, reply_gmail_send, profile, failure, raised,
+@pytest.mark.parametrize("with_key", [True, False], ids=["with-key", "older-app"])
+async def test_unknown_account_refuses_before_anything_is_claimed_or_sent(
+    db: AsyncSession, test_org, test_user, reply_gmail_send, profile, failure, raised, with_key,
 ) -> None:
     inquiry = await seed_inquiry(db, test_org, test_user)
     await _connect_as(db, None)
     profile.side_effect = failure
 
     with pytest.raises(raised):
-        await send_reply(test_org, test_user, inquiry, reply_request(uuid.uuid4()))
+        await send_reply(
+            test_org, test_user, inquiry, reply_request(uuid.uuid4() if with_key else None),
+        )
 
     reply_gmail_send.assert_not_awaited()
     assert await reply_claims(db) == []
 
 
 @pytest.mark.asyncio
-async def test_reply_without_a_key_does_not_ask_for_the_account(
+async def test_reply_without_a_key_still_goes_out_from_the_connected_account(
     db: AsyncSession, test_org, test_user, reply_gmail_send, profile,
 ) -> None:
+    """An older app sends no request id, so nothing is claimed, but From still needs the account."""
     inquiry = await seed_inquiry(db, test_org, test_user)
     await _connect_as(db, None)
 
-    await send_reply(test_org, test_user, inquiry, reply_request(None))
+    sent = await send_reply(test_org, test_user, inquiry, reply_request(None))
 
-    profile.assert_not_awaited()
+    profile.assert_awaited_once()
     assert reply_gmail_send.await_count == 1
+    assert reply_gmail_send.await_args.kwargs["from_address"] == "host@gmail.com"
+    assert sent.from_address == "host@gmail.com"
+    assert await reply_claims(db) == []

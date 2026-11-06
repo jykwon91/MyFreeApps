@@ -9,7 +9,6 @@ class ReplySendContext:
     """Everything a reply send needs, loaded and checked before anything is written."""
 
     integration: Integration
-    from_address: str
     to_address: str
     # What is emailed: the submitted body, with the pet disclosure in front when owed.
     body: str
