@@ -5,7 +5,7 @@ export type CraftingProfession = (typeof CRAFTING_PROFESSION)[keyof typeof CRAFT
 
 /** What a crafting guide shows besides the route — differs per profession. */
 export interface CraftingFeatures {
-  /** Type material prices and get the cheapest route. Off = the hand-picked route, no costs anywhere. */
+  /** The cheapest route at auction prices, and a panel to override them. Off = the hand-picked route (still with costs). */
   priced: boolean;
   /** Enchanting's "skip enchants for these slots" list. */
   enchantSlots: boolean;
@@ -111,7 +111,7 @@ export type LearnAt =
   | { kind: "trainer"; skill: number; estimated: boolean; newInForever: boolean }
   | { kind: "item"; skill: number; itemId: number; item: string };
 
-/** Where a shown row came from: picked for your prices, or the hand-written route. */
+/** Where a shown row came from: picked for the prices, or the hand-written route. */
 export type RouteRowSource = "priced" | "default";
 
 /** A route step joined to its recipe, with how many times to craft it. */

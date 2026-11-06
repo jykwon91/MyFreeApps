@@ -1,6 +1,7 @@
 import { Link, useLocation, useParams } from "react-router-dom";
 import EmptyStateNote from "@/games/wow-forever/components/shared/EmptyStateNote";
 import FoodCookingSpot from "@/games/wow-forever/components/food/detail/FoodCookingSpot";
+import FoodPriceSection from "@/games/wow-forever/components/food/detail/FoodPriceSection";
 import FoodEffectSection from "@/games/wow-forever/components/food/detail/FoodEffectSection";
 import FoodReagentsSection from "@/games/wow-forever/components/food/detail/FoodReagentsSection";
 import FoodRecipeSection from "@/games/wow-forever/components/food/detail/FoodRecipeSection";
@@ -15,7 +16,7 @@ import type { FoodKind } from "@/games/wow-forever/types/food";
 
 const KIND_LABEL: Record<FoodKind, string> = { food: "Food", drink: "Drink", feast: "Feast", other: "Novelty" };
 
-/** /wow-forever/food/:foodId — one food: what it does, how to learn it, what goes in it, where to cook it. */
+/** /wow-forever/food/:foodId: one food. What it does, how to learn it, buy or cook, what goes in it, where to cook it. */
 export default function WowFoodDetailPage() {
   const { foodId } = useParams();
   const { search } = useLocation();
@@ -61,6 +62,7 @@ export default function WowFoodDetailPage() {
         zoneId={zoneId}
         level={level}
       />
+      <FoodPriceSection food={food} />
       <FoodReagentsSection reagents={food.reagents} faction={faction} zoneId={zoneId} level={level} />
       <FoodCookingSpot focus={food.focus} />
       <aside className="rounded-xl border bg-card p-4 space-y-2 text-xs text-muted-foreground">

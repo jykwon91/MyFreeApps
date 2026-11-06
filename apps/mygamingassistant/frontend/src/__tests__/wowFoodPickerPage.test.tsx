@@ -6,6 +6,12 @@ import WowFoodPickerPage from "@/games/wow-forever/pages/WowFoodPickerPage";
 import { FOOD_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/useFoodPickerSettings";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
 
+// Auction prices come from the API; these tests don't look at them, so they stay loading.
+vi.mock("@/games/wow-forever/api/wowPricesApi", async () => {
+  const stub = await import("@/test/auctionPricesStub");
+  return { useGetWowPricesQuery: () => stub.pricesLoading() };
+});
+
 function LocationProbe() {
   const location = useLocation();
   return <output data-testid="search">{location.search}</output>;

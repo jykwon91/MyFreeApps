@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import GoldAuctionValue from "@/games/wow-forever/components/gold/GoldAuctionValue";
 import { directionsHref } from "@/games/wow-forever/food/recipeSources";
 import {
   clothPerHour,
@@ -8,15 +9,19 @@ import {
   oneEvery,
   type GoldFarm,
 } from "@/games/wow-forever/gold/goldFarms";
+import { clothAuctionPerHour, skinAuctionPerHour } from "@/games/wow-forever/gold/farmAuctionValue";
+import type { AuctionPrices } from "@/games/wow-forever/types/auctionPrices";
 
 interface GoldFarmCardProps {
   farm: GoldFarm;
   rank: number;
   skinning: boolean;
+  /** Null while loading, or when the prices didn't load: no auction values then. */
+  prices: AuctionPrices | null;
 }
 
 /** One farm spot: who to kill, where, and what an hour of it is worth. */
-export default function GoldFarmCard({ farm, rank, skinning }: GoldFarmCardProps) {
+export default function GoldFarmCard({ farm, rank, skinning, prices }: GoldFarmCardProps) {
   const cloth = Math.round(clothPerHour(farm));
   const greens = oneEvery(farm.greensPerKill + farm.bluesPerKill);
   const recipes = oneEvery(farm.recipesPerKill);
@@ -45,13 +50,23 @@ export default function GoldFarmCard({ farm, rank, skinning }: GoldFarmCardProps
           {skinning && farm.skinVendor > 0 ? ` + ${formatMoney(farm.skinVendor)} of ${farm.skin}` : ""}
           {farm.coin > 0 ? "" : " (it drops no coin)"}
         </li>
+        {skinning && farm.skin ? (
+          <li>
+            {farm.skin} you skin: about {Math.round(farm.killsPerHour)} an hour
+            {prices ? <GoldAuctionValue copper={skinAuctionPerHour(farm, prices)} /> : null}
+          </li>
+        ) : null}
         {cloth > 0 ? (
           <li>
-            About <span className="font-medium">{cloth} {farm.cloth}</span> an hour — keep it, players pay more than a vendor
+            About <span className="font-medium">{cloth} {farm.cloth}</span> an hour
+            {prices ? <GoldAuctionValue copper={clothAuctionPerHour(farm, prices)} /> : " — keep it, players pay more than a vendor"}
           </li>
         ) : null}
         {!skinning && farm.skin ? (
-          <li>Skinnable: {farm.skin}, another {formatMoney(farm.skinVendor * farm.killsPerHour)} an hour at a vendor</li>
+          <li>
+            Skinnable: {farm.skin}, another {formatMoney(farm.skinVendor * farm.killsPerHour)} an hour at a vendor
+            {prices ? <GoldAuctionValue copper={skinAuctionPerHour(farm, prices)} /> : null}
+          </li>
         ) : null}
         {greens ? <li>Green or better item: {greens}</li> : null}
         {recipes ? <li>Recipe: {recipes}</li> : null}

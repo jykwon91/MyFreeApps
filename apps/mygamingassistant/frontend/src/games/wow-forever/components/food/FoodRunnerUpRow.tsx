@@ -1,4 +1,5 @@
 import FoodDetailLink from "@/games/wow-forever/components/food/FoodDetailLink";
+import FoodPriceLine from "@/games/wow-forever/components/food/FoodPriceLine";
 import FoodChips from "@/games/wow-forever/components/food/FoodChips";
 import FoodSameAs from "@/games/wow-forever/components/food/FoodSameAs";
 import type { FoodActivity } from "@/games/wow-forever/food/foodActivities";
@@ -21,6 +22,7 @@ export default function FoodRunnerUpRow({ pick, activity }: { pick: FoodPick; ac
         <span className="text-sm text-muted-foreground">{effect(pick, activity)}</span>
       </p>
       <FoodChips pick={pick} />
+      <FoodPriceLine food={pick.food} />
       <FoodSameAs foods={pick.sameAs} />
     </li>
   );

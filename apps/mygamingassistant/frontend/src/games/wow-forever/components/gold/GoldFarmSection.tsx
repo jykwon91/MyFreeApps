@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import GoldFarmCard from "@/games/wow-forever/components/gold/GoldFarmCard";
+import PriceStatus from "@/games/wow-forever/components/prices/PriceStatus";
 import GuideSection from "@/games/wow-forever/components/guide/GuideSection";
 import SegmentedToggle from "@/games/wow-forever/components/shared/SegmentedToggle";
 import {
@@ -10,6 +11,7 @@ import {
   LEVELS_BELOW,
   type FarmSort,
 } from "@/games/wow-forever/gold/goldFarms";
+import { useAuctionPrices } from "@/games/wow-forever/hooks/useAuctionPrices";
 
 const SORT_OPTIONS: readonly { id: FarmSort; label: string }[] = [
   { id: FARM_SORT.gold, label: "Most gold" },
@@ -24,6 +26,7 @@ interface GoldFarmSectionProps {
 export default function GoldFarmSection({ level }: GoldFarmSectionProps) {
   const [skinning, setSkinning] = useState(false);
   const [sort, setSort] = useState<FarmSort>(FARM_SORT.gold);
+  const { prices } = useAuctionPrices();
   const farms = useMemo(
     () => (level === null ? [] : farmsFor(goldFarms(), level, { skinning, sort })),
     [level, skinning, sort],
@@ -51,11 +54,12 @@ export default function GoldFarmSection({ level }: GoldFarmSectionProps) {
             Mobs from level {Math.max(1, level - LEVELS_BELOW)} to {level + LEVELS_ABOVE}. Gold an hour counts coin and what the loot sells to a vendor
             for, at up to 60 kills an hour (fewer when the camp respawns slower than you kill). Casters and hunters often
             manage more, warriors and rogues less. Classic loot tables — Forever may change drops, and its new zones aren't
-            listed.
+            listed. Cloth and leather are also priced at the auction house when it has a price for them.
           </p>
+          <PriceStatus withoutPrices="showing the farms at vendor prices only" />
           <ol className="space-y-3 list-none">
             {farms.map((farm, i) => (
-              <GoldFarmCard key={farm.npcId} farm={farm} rank={i + 1} skinning={skinning} />
+              <GoldFarmCard key={farm.npcId} farm={farm} rank={i + 1} skinning={skinning} prices={prices} />
             ))}
           </ol>
         </>

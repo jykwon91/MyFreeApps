@@ -7,8 +7,10 @@ export const PRICE_DEBOUNCE_MS = 300;
 interface CraftPriceFieldProps {
   itemId: number;
   name: string;
-  /** Copper; undefined = no price entered. */
+  /** Your own price in copper; undefined = use the auction price. */
   value: number | undefined;
+  /** The auction price (undefined copper = none). Null while loading, or when the prices didn't load. */
+  auction: { copper: number | undefined } | null;
   onCommit: (itemId: number, copper: number | null) => void;
   /** e.g. "3 make 1 Greater Astral Essence" — under the field. */
   hint?: string;
@@ -19,16 +21,23 @@ function toText(value: number | undefined): string {
   return formatPrice(value);
 }
 
-/** What the field read, so a bare "35" (= 35 silver) is never a guess. */
-function helperText(text: string): { message: string; invalid: boolean } {
-  if (text.trim() === "") return { message: "", invalid: false };
-  const copper = parsePrice(text);
-  if (copper === null) return { message: "Try 1g 20s", invalid: true };
-  return { message: `= ${formatPrice(copper)}`, invalid: false };
+function auctionText(auction: CraftPriceFieldProps["auction"]): string {
+  if (!auction) return "";
+  if (auction.copper === undefined) return "No auction price";
+  return `Auction price ${formatPrice(auction.copper)}`;
 }
 
-/** One material's auction house price. Commits on blur, Enter, or a pause in typing. */
-export default function CraftPriceField({ itemId, name, value, onCommit, hint }: CraftPriceFieldProps) {
+/** What the field read, so a bare "35" (= 35 silver) is never a guess, and the auction price it stands in for. */
+function helperText(text: string, auction: CraftPriceFieldProps["auction"]): { message: string; invalid: boolean } {
+  if (text.trim() === "") return { message: auctionText(auction), invalid: false };
+  const copper = parsePrice(text);
+  if (copper === null) return { message: "Try 1g 20s", invalid: true };
+  const over = auction ? ` · yours; clear it for the auction price` : "";
+  return { message: `= ${formatPrice(copper)}${over}`, invalid: false };
+}
+
+/** One material's price: its auction price unless you type your own. Commits on blur, Enter, or a pause in typing. */
+export default function CraftPriceField({ itemId, name, value, auction, onCommit, hint }: CraftPriceFieldProps) {
   const id = useId();
   const [text, setText] = useState(toText(value));
   const [lastValue, setLastValue] = useState(value);
@@ -66,7 +75,8 @@ export default function CraftPriceField({ itemId, name, value, onCommit, hint }:
     timer.current = setTimeout(() => commit(next), PRICE_DEBOUNCE_MS);
   }
 
-  const helper = helperText(text);
+  const helper = helperText(text, auction);
+  const placeholder = auction?.copper === undefined ? "e.g. 1g 20s" : formatPrice(auction.copper);
   return (
     <div className="flex flex-col gap-1 min-w-0">
       <label htmlFor={id} className="text-sm font-medium break-words">
@@ -78,7 +88,7 @@ export default function CraftPriceField({ itemId, name, value, onCommit, hint }:
         inputMode="text"
         autoComplete="off"
         spellCheck={false}
-        placeholder="e.g. 1g 20s"
+        placeholder={placeholder}
         value={text}
         aria-invalid={helper.invalid || undefined}
         aria-describedby={`${id}-help`}

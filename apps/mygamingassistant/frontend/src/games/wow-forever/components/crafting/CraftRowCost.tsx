@@ -11,7 +11,7 @@ function missingText(missing: readonly { name: string }[]): string {
   return names.join(" and ");
 }
 
-/** "~2g 40s" for the row, or what it still needs a price for. Nothing before prices are in. */
+/** "~2g 40s" for the row, or which material has no auction price. Nothing before prices are in. */
 export default function CraftRowCost({ entry }: { entry: Pick<ResolvedCraftStep, "source" | "cost" | "missing"> }) {
   if (!entry.source) return null;
   if (entry.cost !== undefined) {
@@ -23,5 +23,5 @@ export default function CraftRowCost({ entry }: { entry: Pick<ResolvedCraftStep,
     );
   }
   if (!entry.missing?.length) return null;
-  return <p className="text-xs text-right text-muted-foreground">Cost unknown — needs a price for {missingText(entry.missing)}</p>;
+  return <p className="text-xs text-right text-muted-foreground">Cost unknown — no auction price for {missingText(entry.missing)}</p>;
 }

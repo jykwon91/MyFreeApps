@@ -6,14 +6,19 @@ import CraftSlotChecklist from "@/games/wow-forever/components/crafting/CraftSlo
 import type { CraftPlace } from "@/games/wow-forever/components/crafting/CraftLearnLine";
 import type { EnchantSlot, PriceItem } from "@/games/wow-forever/crafting/cheapestRoute";
 import { essencePartner, LESSER_PER_GREATER, type EnteredPrices } from "@/games/wow-forever/crafting/matPrices";
+import { auctionCopper } from "@/games/wow-forever/prices/auctionPrices";
+import type { AuctionPrices } from "@/games/wow-forever/types/auctionPrices";
 import type { CraftRecipe } from "@/games/wow-forever/types/crafting";
 
-/** How long "Undo" stays after Clear prices. */
+/** How long "Undo" stays after a reset to auction prices. */
 export const UNDO_MS = 6000;
 
 interface CraftPricesPanelProps {
   items: { main: readonly PriceItem[]; more: readonly PriceItem[] };
-  prices: EnteredPrices;
+  /** Only the prices you typed. */
+  overrides: EnteredPrices;
+  /** Null while loading, or when the prices didn't load. */
+  auction: AuctionPrices | null;
   onPrice: (itemId: number, copper: number | null) => void;
   onReplaceAll: (prices: EnteredPrices) => void;
   /** "Bolts … are priced from the cloth they're made of." */
@@ -26,15 +31,17 @@ interface CraftPricesPanelProps {
   place: CraftPlace;
 }
 
-function isSet(prices: EnteredPrices, item: PriceItem): boolean {
-  return prices[String(item.id)] !== undefined;
+function isOverridden(overrides: EnteredPrices, item: PriceItem): boolean {
+  return overrides[String(item.id)] !== undefined;
 }
 
-/** "Prices: 6 of 9 set" — counted over what the default route needs. */
-function summaryText(prices: EnteredPrices, main: readonly PriceItem[], more: readonly PriceItem[]): string {
-  const setMain = main.filter((i) => isSet(prices, i)).length;
-  if (!setMain && !more.some((i) => isSet(prices, i))) return "Prices: not set";
-  return `Prices: ${setMain} of ${main.length} set`;
+/** "Auction prices for 8 of 9 · 1 set by you", counted over what the default route needs. */
+function summaryText(auction: AuctionPrices | null, overrides: EnteredPrices, main: readonly PriceItem[]): string {
+  const own = main.filter((i) => isOverridden(overrides, i)).length;
+  const ownText = own ? ` · ${own} set by you` : "";
+  if (!auction) return `Auction prices not loaded${ownText}`;
+  const priced = main.filter((i) => auction.byId.has(i.id)).length;
+  return `Auction prices for ${priced} of ${main.length}${ownText}`;
 }
 
 /** "3 make 1 Greater Astral Essence" under an essence, since a price for either half counts for both. */
@@ -47,13 +54,15 @@ function essenceHint(item: PriceItem, names: ReadonlyMap<number, string>): strin
 }
 
 /**
- * "Your prices": what materials cost on your auction house, the formulas you
- * own and (Enchanting) the gear you can enchant — everything the cheapest
+ * "Prices": every material at its auction price, with an optional price of
+ * your own (say, for what you farm yourself). It also holds the formulas you
+ * own and, for Enchanting, the gear you can enchant: everything the cheapest
  * route needs to know. Collapsed to one summary line until opened.
  */
 export default function CraftPricesPanel({
   items,
-  prices,
+  overrides,
+  auction,
   onPrice,
   onReplaceAll,
   selfMadeNote,
@@ -68,8 +77,7 @@ export default function CraftPricesPanel({
   const [undo, setUndo] = useState<EnteredPrices | null>(null);
   const all = [...items.main, ...items.more];
   const names = new Map(all.map((i) => [i.id, i.name]));
-  const summary = summaryText(prices, items.main, items.more);
-  const anySet = all.some((i) => isSet(prices, i));
+  const anyOwn = all.some((i) => isOverridden(overrides, i));
 
   useEffect(() => {
     if (!undo) return;
@@ -77,11 +85,11 @@ export default function CraftPricesPanel({
     return () => clearTimeout(timer);
   }, [undo]);
 
-  function clearPrices(): void {
-    // Only this guide's materials — the other profession's prices stay.
-    const next: Record<string, number> = { ...prices };
+  function resetPrices(): void {
+    // Only this guide's materials. The other profession's prices stay.
+    const next: Record<string, number> = { ...overrides };
     for (const item of all) delete next[String(item.id)];
-    setUndo(prices);
+    setUndo(overrides);
     onReplaceAll(next);
   }
 
@@ -91,7 +99,8 @@ export default function CraftPricesPanel({
         <CraftPriceField
           itemId={item.id}
           name={item.name}
-          value={prices[String(item.id)]}
+          value={overrides[String(item.id)]}
+          auction={auction ? { copper: auctionCopper(auction, item.id) } : null}
           onCommit={onPrice}
           hint={essenceHint(item, names)}
         />
@@ -100,7 +109,7 @@ export default function CraftPricesPanel({
   }
 
   return (
-    <section className="rounded-xl border bg-card p-3 sm:p-4 space-y-2" aria-label="Your prices">
+    <section className="rounded-xl border bg-card p-3 sm:p-4 space-y-2" aria-label="Prices">
       <button
         type="button"
         aria-expanded={open}
@@ -109,15 +118,15 @@ export default function CraftPricesPanel({
         className="w-full min-h-[44px] flex flex-col items-start text-left"
       >
         <span className="font-semibold">
-          Your prices <span aria-hidden>{open ? "▲" : "▼"}</span>
+          Prices <span aria-hidden>{open ? "▲" : "▼"}</span>
         </span>
-        <span className="text-sm text-muted-foreground">{summary}</span>
+        <span className="text-sm text-muted-foreground">{summaryText(auction, overrides, items.main)}</span>
       </button>
-      {anySet ? null : <p className="text-sm">Add your auction house prices to find the cheapest route.</p>}
 
       <div id={panelId} hidden={!open} className="space-y-4 pt-1">
         <p className="text-sm text-muted-foreground">
-          What things cost on your auction house, per item. Leave blank if you don't know.
+          Each material is priced at the auction house. Type a price of your own only to change one, for example 0 for
+          something you farm yourself.
         </p>
         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">{items.main.map(field)}</ul>
         <p className="text-xs text-muted-foreground">{selfMadeNote}</p>
@@ -131,12 +140,12 @@ export default function CraftPricesPanel({
         ) : null}
 
         <div className="flex flex-wrap items-center gap-3">
-          <Button variant="link" className="min-h-[44px]" onClick={clearPrices} disabled={!anySet}>
-            Clear prices
+          <Button variant="link" className="min-h-[44px]" onClick={resetPrices} disabled={!anyOwn}>
+            Use auction prices for all
           </Button>
           {undo ? (
             <p className="text-sm flex items-center gap-2" role="status">
-              Prices cleared.
+              Back to auction prices.
               <Button
                 variant="link"
                 className="min-h-[44px]"

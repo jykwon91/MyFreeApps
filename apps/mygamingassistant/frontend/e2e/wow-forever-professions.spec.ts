@@ -5,6 +5,25 @@
  */
 import { test, expect } from "@playwright/test";
 
+// Auction prices are covered with stubbed prices in wow-forever-auction-prices.spec.ts.
+// Here the region has none, so the guides show their routes without costs.
+test.beforeEach(async ({ page }) => {
+  await page.route("**/wow/prices?region=*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        region: "us",
+        credit: { source: "tsm", name: "TradeSkillMaster", url: "https://www.tradeskillmaster.com" },
+        source_updated_at: null,
+        fetched_at: null,
+        columns: ["item_id", "market_value", "avg_sale_price", "historical", "sold_per_day", "name"],
+        items: [],
+      }),
+    }),
+  );
+});
+
 test("reaches the page from the landing card and leads with training", async ({ page }) => {
   await page.goto("/wow-forever");
   await page.getByRole("link", { name: /^Professions/ }).click();
@@ -173,8 +192,8 @@ test("Alchemy shows a hand-picked herb route with no prices, and where each herb
   await expect(page).toHaveURL(/skill=150/);
   await expect(route.getByText("Craft Lesser Mana Potion until 165.")).toBeVisible();
   await expect(route.locator('[aria-current="step"]').getByText("Lesser Mana Potion")).toBeVisible();
-  // No typed prices for Alchemy: no prices panel, no "cheapest" claim, no gold anywhere.
-  await expect(page.getByRole("region", { name: "Your prices" })).toHaveCount(0);
+  // No auction prices in this region: no prices panel, no "cheapest" claim, no gold anywhere.
+  await expect(page.getByRole("region", { name: "Prices", exact: true })).toHaveCount(0);
   await expect(page.getByText(/cheapest/i)).toHaveCount(0);
   await expect(page.locator("main").last()).not.toContainText(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
   await expect(route.getByRole("heading", { name: "Transmutes" })).toBeVisible();
@@ -264,8 +283,8 @@ test("Blacksmithing forks at 200: pick a specialization and the route keeps only
   await page.goto("/wow-forever/professions?p=blacksmithing");
   await expect(page.getByRole("radiogroup", { name: "Your Blacksmithing specialization" }).getByRole("radio", { name: "Armorsmith" })).toBeChecked();
 
-  // No prices anywhere; bars are smelted from ore.
-  await expect(page.getByRole("region", { name: "Your prices" })).toHaveCount(0);
+  // No auction prices in this region, so no prices anywhere; bars are smelted from ore.
+  await expect(page.getByRole("region", { name: "Prices", exact: true })).toHaveCount(0);
   await expect(page.getByText(/cheapest/i)).toHaveCount(0);
   await expect(page.locator("main").last()).not.toContainText(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
   const shopping = page.locator("#shopping");
@@ -314,8 +333,8 @@ test("Leatherworking forks at 225, and leather points at beasts to skin", async 
   await page.goto("/wow-forever/professions?p=leatherworking");
   await expect(page.getByRole("radiogroup", { name: "Your Leatherworking specialization" }).getByRole("radio", { name: "Tribal" })).toBeChecked();
 
-  // No prices anywhere; leather is skinned, with directions to the beasts.
-  await expect(page.getByRole("region", { name: "Your prices" })).toHaveCount(0);
+  // No auction prices in this region, so no prices anywhere; leather is skinned, with directions to the beasts.
+  await expect(page.getByRole("region", { name: "Prices", exact: true })).toHaveCount(0);
   await expect(page.getByText(/cheapest/i)).toHaveCount(0);
   await expect(page.locator("main").last()).not.toContainText(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
   const shopping = page.locator("#shopping");
@@ -385,8 +404,8 @@ test("Engineering says what each item does, forks at 200, and smelts its bars", 
   await page.goto("/wow-forever/professions?p=engineering");
   await expect(page.getByRole("radiogroup", { name: "Your Engineering specialization" }).getByRole("radio", { name: "Gnomish" })).toBeChecked();
 
-  // No prices anywhere; bars are smelted from ore.
-  await expect(page.getByRole("region", { name: "Your prices" })).toHaveCount(0);
+  // No auction prices in this region, so no prices anywhere; bars are smelted from ore.
+  await expect(page.getByRole("region", { name: "Prices", exact: true })).toHaveCount(0);
   await expect(page.getByText(/cheapest/i)).toHaveCount(0);
   await expect(page.locator("main").last()).not.toContainText(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
   const shopping = page.locator("#shopping");

@@ -2,6 +2,7 @@ import { useState } from "react";
 import CopyButton from "@/games/wow-forever/components/worldMap/CopyButton";
 import SegmentedToggle from "@/games/wow-forever/components/shared/SegmentedToggle";
 import CraftMakeLines from "@/games/wow-forever/components/crafting/CraftMakeLines";
+import CraftShoppingTotal from "@/games/wow-forever/components/crafting/CraftShoppingTotal";
 import CraftShoppingLines from "@/games/wow-forever/components/crafting/CraftShoppingLines";
 import type { CraftPlace } from "@/games/wow-forever/components/crafting/CraftLearnLine";
 import type { PriceBook } from "@/games/wow-forever/crafting/matPrices";
@@ -23,7 +24,7 @@ interface CraftShoppingListProps {
   place: CraftPlace;
   professionLabel: string;
   note?: string;
-  /** Your prices, once any are entered — each line then shows what it costs. */
+  /** Today's prices, once any are known. Each line then shows what it costs. */
   priceBook?: PriceBook | null;
   /** Add the "don't sell your crafts yet" line (professions without prices). */
   keepCrafts?: boolean;
@@ -41,11 +42,12 @@ export default function CraftShoppingList({ entries, skill, place, professionLab
   const end = entries.reduce((max, e) => Math.max(max, e.kind === "craft" ? e.step.to : 0), 0);
   const top = list.buy.slice(0, SUMMARY_ITEMS).map((l) => `${l.count} ${l.name}`).join(", ");
   const past = fromSkill !== null && fromSkill >= end;
-  const costOf = (l: ShoppingLine): number | undefined => {
-    const unit = priceBook?.item(l.id, l.name).price;
-    if (unit === undefined) return undefined;
-    return unit * l.count;
-  };
+  const costOf = priceBook
+    ? (l: ShoppingLine): number | undefined => {
+        const unit = priceBook.item(l.id, l.name).price;
+        return unit === undefined ? undefined : unit * l.count;
+      }
+    : undefined;
 
   return (
     <details className="rounded-xl border bg-card p-3 sm:p-4 group" id="shopping-list">
@@ -83,6 +85,7 @@ export default function CraftShoppingList({ entries, skill, place, professionLab
               professionLabel={professionLabel}
               costOf={costOf}
             />
+            {costOf ? <CraftShoppingTotal lines={list.buy} costOf={costOf} /> : null}
             <CraftMakeLines title="Make on the way" lines={list.make} />
             <CraftMakeLines title="Smelt with Mining" lines={list.smelt} />
           </>

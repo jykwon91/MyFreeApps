@@ -2,11 +2,20 @@ import { useCallback, useMemo, useState } from "react";
 import { ENCHANT_SLOTS, type EnchantSlot } from "@/games/wow-forever/crafting/cheapestRoute";
 import { MAX_PRICE_COPPER, type EnteredPrices } from "@/games/wow-forever/crafting/matPrices";
 import { isCraftingProfession } from "@/games/wow-forever/lib/guideProfession";
-import { readStored, writeStored } from "@/games/wow-forever/lib/safeLocalStorage";
+import { readStored, removeStored, writeStored } from "@/games/wow-forever/lib/safeLocalStorage";
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
 
-/** Prices are per item and items rarely overlap between professions, so one map serves both. */
-export const PRICES_STORAGE_KEY = "mga.wowForever.professions.prices.v1";
+/**
+ * Prices you typed over the auction price, per item. Items rarely overlap
+ * between professions, so one map serves every guide.
+ */
+export const PRICE_OVERRIDES_STORAGE_KEY = "mga.wowForever.professions.priceOverrides.v2";
+/**
+ * Before auction prices, every price was typed by hand. Those are dropped, not
+ * carried over as overrides, because a price typed weeks ago would quietly hide
+ * today's auction price.
+ */
+export const LEGACY_PRICES_STORAGE_KEY = "mga.wowForever.professions.prices.v1";
 export const KNOWN_RECIPES_STORAGE_KEY = "mga.wowForever.professions.knownRecipes.v1";
 export const ENCHANT_SLOTS_STORAGE_KEY = "mga.wowForever.professions.enchantSlots.v1";
 
@@ -42,20 +51,26 @@ function parseStoredSlots(raw: unknown): EnchantSlot[] | null {
   return ENCHANT_SLOTS.filter((slot) => (raw.excluded as unknown[]).includes(slot));
 }
 
-export interface MatPrices {
+export interface PriceOverrides {
+  /** Only what you typed. `usePricedRoute` merges these over the auction prices. */
   prices: EnteredPrices;
-  /** Null clears that item's price. */
+  /** Null drops that item's override, so it goes back to the auction price. */
   setPrice: (itemId: number, copper: number | null) => void;
-  /** Replace every price at once (clear, and undo the clear). */
+  /** Replace every override at once (reset to auction prices, and undo the reset). */
   replaceAll: (prices: EnteredPrices) => void;
 }
 
-/** Your auction house prices, saved on this device. Never throws without storage — they just won't persist. */
-export function useMatPrices(): MatPrices {
-  const [prices, setPrices] = useState<EnteredPrices>(() => readStored(PRICES_STORAGE_KEY, parseStoredPrices, {}));
+function readOverrides(): EnteredPrices {
+  removeStored(LEGACY_PRICES_STORAGE_KEY);
+  return readStored(PRICE_OVERRIDES_STORAGE_KEY, parseStoredPrices, {});
+}
+
+/** Prices you typed over the auction price, saved on this device. Without storage it never throws; they just won't persist. */
+export function usePriceOverrides(): PriceOverrides {
+  const [prices, setPrices] = useState<EnteredPrices>(readOverrides);
 
   const replaceAll = useCallback((next: EnteredPrices) => {
-    writeStored(PRICES_STORAGE_KEY, next);
+    writeStored(PRICE_OVERRIDES_STORAGE_KEY, next);
     setPrices(next);
   }, []);
 
@@ -64,7 +79,7 @@ export function useMatPrices(): MatPrices {
       const next = { ...prev };
       if (copper === null) delete next[String(itemId)];
       else next[String(itemId)] = copper;
-      writeStored(PRICES_STORAGE_KEY, next);
+      writeStored(PRICE_OVERRIDES_STORAGE_KEY, next);
       return next;
     });
   }, []);

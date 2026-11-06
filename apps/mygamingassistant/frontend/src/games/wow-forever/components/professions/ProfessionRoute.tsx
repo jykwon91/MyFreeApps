@@ -1,3 +1,4 @@
+import PriceStatus from "@/games/wow-forever/components/prices/PriceStatus";
 import RouteRow from "@/games/wow-forever/components/professions/RouteRow";
 import type { MatPlace } from "@/games/wow-forever/components/professions/RouteMatList";
 import SkillColorLegend from "@/games/wow-forever/components/professions/SkillColorLegend";
@@ -27,6 +28,7 @@ export default function ProfessionRoute({ steps, faction, columns, showLegend, m
     <div className="space-y-2">
       {showLegend ? <SkillColorLegend /> : null}
       <p className="text-xs text-muted-foreground">{caption}</p>
+      {matPlace ? <PriceStatus withoutPrices="showing the route without prices" /> : null}
       <div className="rounded-xl border bg-card overflow-hidden">
         <div className="hidden sm:grid sm:grid-cols-[6rem_1fr_1fr_1fr] sm:gap-4 p-3 border-b text-sm font-medium" aria-hidden>
           <span>Skill</span>

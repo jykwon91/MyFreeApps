@@ -4,6 +4,7 @@ import EmptyStateNote from "@/games/wow-forever/components/shared/EmptyStateNote
 import FoodNextUpgrade from "@/games/wow-forever/components/food/FoodNextUpgrade";
 import FoodPickerInputs from "@/games/wow-forever/components/food/FoodPickerInputs";
 import SettledStatus from "@/games/wow-forever/components/shared/SettledStatus";
+import PriceStatus from "@/games/wow-forever/components/prices/PriceStatus";
 import FoodRunnersUp from "@/games/wow-forever/components/food/FoodRunnersUp";
 import FoodTopPick from "@/games/wow-forever/components/food/FoodTopPick";
 import FoodTrainTarget from "@/games/wow-forever/components/food/FoodTrainTarget";
@@ -55,6 +56,7 @@ export default function WowFoodPickerPage() {
             Best food for {who} {ACTIVITY_PHRASE[activity]}
             {cookingSkill === null ? "" : ` with Cooking ${cookingSkill}`}.
           </p>
+          <PriceStatus withoutPrices="showing the food without prices" />
           {result.top ? (
             <FoodTopPick pick={result.top} activity={activity} who={who} />
           ) : (
