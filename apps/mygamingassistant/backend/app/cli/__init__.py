@@ -14,10 +14,13 @@ Usage:
     python -m app.cli widen-source
     python -m app.cli discord-register-commands [--guild GUILD_ID]
     python -m app.cli discord-sync-emojis [--dry-run]
+    python -m app.cli purge-wow-feature-submissions
 """
 import asyncio
 import sys
 from pathlib import Path
+
+from app.services.wow.feature_requests.feature_retention_service import purge_feature_request_data
 
 
 async def _run_backfill_clips() -> int:
@@ -417,6 +420,9 @@ def main() -> None:
         sys.exit(_run_discord_register_commands())
     elif command == "discord-sync-emojis":
         sys.exit(_run_discord_sync_emojis())
+    elif command == "purge-wow-feature-submissions":
+        # Same retention pass the scheduler runs daily (see feature_retention_service).
+        print(asyncio.run(purge_feature_request_data()))
     else:
         print(f"Unknown command: {command!r}")
         print("Available commands:")
@@ -435,6 +441,7 @@ def main() -> None:
         print("                         — register slash commands with Discord (no-op when DISCORD_ENABLED=false)")
         print("  discord-sync-emojis [--dry-run]")
         print("                         — upload the raid bot's icons (no-op when DISCORD_ENABLED=false)")
+        print("  purge-wow-feature-submissions — apply WoW feature-request retention now (also runs daily)")
         sys.exit(1)
 
 

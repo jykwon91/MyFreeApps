@@ -12,7 +12,11 @@ primitives never need to be re-added if this app ever becomes multi-user.
 """
 
 
+from pydantic import field_validator
+
 from platform_shared.core.settings import BaseAppSettings
+
+from app.core.triage_tokens import TriageToken, parse_triage_tokens
 
 
 class Settings(BaseAppSettings):
@@ -116,6 +120,27 @@ class Settings(BaseAppSettings):
     # Global Claude calls per UTC day, across restarts + workers (DB-backed,
     # daily_usage_counters). 0 turns the reader off (503).
     wow_extract_daily_cap: int = 300
+
+    # ------------------------------------------------------------------
+    # WoW Forever feature requests (POST /wow/feature-requests — PUBLIC, both
+    # modes). Claude refines an anonymous request into a user story; same
+    # gating shape as the item reader (availability 503
+    # ``feature_requests_unavailable`` → per-IP limits → Turnstile → inbox
+    # guard → durable daily cap on its own bucket). No boot guard.
+    # ------------------------------------------------------------------
+    claude_feature_refiner_model: str = "claude-haiku-5-5"
+    # Global Claude refinements per UTC day (daily_usage_counters). 0 = off (503).
+    wow_feature_request_daily_cap: int = 100
+    wow_feature_submit_rate_limit_per_hour: int = 5
+    wow_feature_submit_rate_limit_per_day: int = 20
+    wow_feature_vote_rate_limit_per_hour: int = 60
+    # Shared secrets for the triage API (header X-MGA-Triage-Token), as
+    # "label:token,label:token" (e.g. "browser:...,cli:..."; a bare token is
+    # labelled "default"). Empty = the triage router is not mounted (404).
+    # Labels [a-z0-9_-]{1,20}; each token >= 32 chars with >= 16 distinct
+    # characters, or the app refuses to boot. Generate a token with
+    #   python -c "import secrets;print(secrets.token_urlsafe(32))"
+    wow_feature_triage_token: str = ""
 
     # ------------------------------------------------------------------
     # Test-only helpers — never set in production.
@@ -224,5 +249,17 @@ class Settings(BaseAppSettings):
     # GET keeps prices at most ~3h behind and costs a 304 when nothing changed.
     wow_price_refresh_interval_hours: int = 3
 
+
+    @field_validator("wow_feature_triage_token")
+    @classmethod
+    def _triage_tokens_valid(cls, value: str) -> str:
+        """Fail loud at boot on a malformed or weak triage token list."""
+        parse_triage_tokens(value)
+        return value
+
+    @property
+    def wow_feature_triage_tokens(self) -> tuple[TriageToken, ...]:
+        """The configured (label, token) pairs; empty when unset."""
+        return parse_triage_tokens(self.wow_feature_triage_token)
 
 settings = Settings()

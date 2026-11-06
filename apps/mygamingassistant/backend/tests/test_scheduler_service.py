@@ -21,6 +21,7 @@ import pytest
 
 from app.services.scheduling.scheduler_service import (
     JOB_CLEANUP_DOWNLOADS,
+    JOB_PURGE_FEATURE_SUBMISSIONS,
     JOB_RAID_NOTIFICATIONS,
     JOB_REFRESH_WOW_PRICES,
     JOB_SYNC_ALL_SOURCES,
@@ -70,6 +71,7 @@ async def test_start_scheduler_registers_both_jobs():
     assert JOB_SYNC_ALL_SOURCES in job_ids
     assert JOB_CLEANUP_DOWNLOADS in job_ids
     assert JOB_REFRESH_WOW_PRICES in job_ids
+    assert JOB_PURGE_FEATURE_SUBMISSIONS in job_ids
 
 
 @pytest.mark.asyncio
@@ -88,6 +90,14 @@ async def test_price_refresh_job_never_raises(no_price_downloads: AsyncMock):
     no_price_downloads.side_effect = RuntimeError("boom")
     await _run_refresh_wow_prices()  # logged, not raised — the job keeps its schedule
     no_price_downloads.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_feature_request_retention_runs_daily():
+    job = start_scheduler().get_job(JOB_PURGE_FEATURE_SUBMISSIONS)
+    assert job is not None
+    assert job.trigger.interval.total_seconds() == 24 * 3600
+    assert job.max_instances == 1
 
 
 @pytest.mark.asyncio
@@ -159,7 +169,9 @@ async def test_get_job_status_returns_jobs_when_started(monkeypatch: pytest.Monk
     start_scheduler()
     jobs = get_job_status()
     job_ids = {j["id"] for j in jobs}
-    assert job_ids == {JOB_SYNC_ALL_SOURCES, JOB_CLEANUP_DOWNLOADS, JOB_REFRESH_WOW_PRICES}
+    assert job_ids == {
+        JOB_SYNC_ALL_SOURCES, JOB_CLEANUP_DOWNLOADS, JOB_REFRESH_WOW_PRICES, JOB_PURGE_FEATURE_SUBMISSIONS,
+    }
     for job in jobs:
         assert "name" in job
         assert "trigger" in job

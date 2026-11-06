@@ -284,6 +284,45 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - Tests stub the hook with `src/test/auctionPricesStub.ts`; E2E stubs
   `**/wow/prices**` (`e2e/wow-forever-auction-prices.spec.ts`).
 
+#### Feature requests (anonymous; Claude-refined; token-gated triage)
+
+- Visitors submit a request in their own words; Claude (Haiku,
+  `CLAUDE_FEATURE_REFINER_MODEL`, one forced `record_feature_request` tool call)
+  returns `new` (a PRIVATE `submitted` story), `duplicate` (linked to an existing
+  public story + the submitter's vote), `needs_clarification` (one question; the
+  follow-up — answered OR an empty "Skip, submit as is" — is always refined,
+  never asked again) or `rejected` (private reason). Backend:
+  `app/api/wow_features.py` (public), `app/api/wow_feature_triage.py` (triage),
+  `app/services/wow/feature_requests/`, models `wow_feature_story` /
+  `wow_feature_submission` / `wow_feature_vote` (migration 0049).
+- `POST /api/wow/feature-requests` gating order: availability (503
+  `feature_requests_unavailable` — same rule as the item reader, cap
+  `WOW_FEATURE_REQUEST_DAILY_CAP`) → per-IP 5/h + 20/day → Turnstile →
+  validation → inbox guard (503 `feature_inbox_full` at 500 untriaged) → same-text
+  reuse (no Claude call) → durable daily cap on its own bucket → Claude (no DB
+  transaction held) → write transaction (target re-read `FOR UPDATE`, follows
+  `merged_into` once). Claude's output is untrusted: enums enforced,
+  `duplicate_of` must be a short id that was in THIS prompt (≤200 public
+  candidates), length caps, links / markup / `@names` dropped
+  (`feature_response_mapper`).
+- Public responses never carry `raw_text`, `priority`, `ip_hash`, `voter_key`
+  or submissions (`tests/test_wow_feature_requests_api.py` checks every key).
+  Votes: no Turnstile (they work in the Discord Activity), 60/h per IP, one per
+  browser (`voter_key` = HMAC of the localStorage client id) and ≤3 per network
+  (IPv4 / IPv6 /64) per story.
+- Triage: `/api/wow/feature-requests/triage/*`, mounted ONLY when
+  `WOW_FEATURE_TRIAGE_TOKEN` is set (both modes). Auth is the
+  `core/triage_gate.py` middleware (runs before FastAPI parses the body, so a
+  wrong key can't learn the route exists from a 422): wrong/missing
+  `X-MGA-Triage-Token` → 404 identical to an unknown route; 10 failures per IP
+  per 15 min → 429; 240/min when authenticated; `Cache-Control: no-store` on
+  every triage response; audit actor `triage:<label>`. PATCH and merge require
+  `If-Match` = the story's `updated_at` (428 / 400 / 412 `story_changed`).
+  Operator CLI: `python -m scripts.wow_feature_triage` (reads
+  `backend/.env.triage`). Runbook: `docs/wow-forever-feature-triage.md`.
+- Retention: scheduler job `purge_wow_feature_submissions` (daily) and
+  `python -m app.cli purge-wow-feature-submissions`.
+
 #### Food picker (`/wow-forever/food`, "What should I eat?")
 
 - Level + class + spec + activity (Leveling / Dungeon / Raid / PvP / Fishing /
@@ -646,6 +685,8 @@ once on the router. This is the no-bandaid approach (see
 | `/api/lineup-packages` | GET + `/pin` (no server state) | POST / PATCH / DELETE |
 | `/api/sources/*` | — | All |
 | `/api/wow/items/extract` | POST, both modes (Claude reads an item screenshot/text; Turnstile + per-IP limit + durable daily cap; 503 `item_reader_unavailable` when unconfigured) | — |
+| `/api/wow/feature-requests` | GET board + `/{id}` (public stories only), POST submit (Turnstile + per-IP + inbox guard + daily cap; 503 `feature_requests_unavailable` when unconfigured), POST/DELETE `/{id}/vote` — both modes | — |
+| `/api/wow/feature-requests/triage/*` | — | Token (`X-MGA-Triage-Token`), not a login — mounted only when `WOW_FEATURE_TRIAGE_TOKEN` is set, in BOTH modes. The one operator write surface in serve-only prod |
 | `/api/wow/map-captures` | GET, both modes (World Map locations captured in Forever) | POST import (full-auth only; prod gets captures via the committed pack) |
 | `/api/wow/prices` | GET, both modes (auction-house prices by region, refreshed by the scheduler; ETag + 10-min cache) | — |
 | `/api/scheduler/*` | — | All |
@@ -655,6 +696,11 @@ once on the router. This is the no-bandaid approach (see
 | `/auth/jwt/logout`, TOTP setup/verify/disable/status | — | Yes |
 | `/_test/*` (when `MGA_ENABLE_TEST_HELPERS=1`) | — | `reset-rate-limit`, `seed-lineup` etc. |
 | `/health`, `/version` | Yes | — |
+
+**Serve-only exception:** serve-only prod has no operator login, so it has no
+auth writes — except the triage API, which uses its own shared-secret token
+instead of a session and is absent (404) unless the token is configured. Don't
+add other token-gated routers; extend this one or use full-auth mode.
 
 The public `GET /api/lineups/{id}` returns 404 on `pending_review` or `hidden`
 lineups so their presigned screenshot URLs don't leak before the operator
@@ -699,12 +745,16 @@ public, or empty pages where they expected to see content.
 | `SECRET_KEY` | Yes | JWT signing key — generate with `openssl rand -hex 32` |
 | `ENCRYPTION_KEY` | Yes | Fernet key for PII — generate with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
 | `DATABASE_URL` | Yes | Full async postgres URL |
-| `TURNSTILE_SECRET_KEY` | Optional | Forgot-password (full-auth) + the public WoW item reader. In serve-only/production the item reader answers 503 without it (no boot guard) |
+| `TURNSTILE_SECRET_KEY` | Optional | Forgot-password (full-auth) + the public WoW item reader + feature-request submit. In serve-only/production both answer 503 without it (no boot guard) |
 | `TURNSTILE_SITE_KEY` | Optional | Public site key. The prod bundle gets it from the GitHub Actions variable `MYGAMINGASSISTANT_VITE_TURNSTILE_SITE_KEY` (registry build), not from `.env.docker` |
-| `ANTHROPIC_API_KEY` | Optional | Classifier + WoW item reader. Missing → the item reader returns 503 (no boot guard) |
+| `ANTHROPIC_API_KEY` | Optional | Classifier + WoW item reader + feature requests. Missing → both answer 503 (no boot guard) |
 | `CLAUDE_ITEM_EXTRACTOR_MODEL` | Optional | Defaults to `claude-haiku-4-5-20251001` |
 | `WOW_EXTRACT_DAILY_CAP` | Optional | Global item-reader Claude calls per UTC day (DB-backed). Default 300; `0` switches the reader off |
 | `ITEM_EXTRACT_RATE_LIMIT_THRESHOLD` / `_WINDOW_SECONDS` | Optional | Per-IP item-reader limit. Default 20 per 3600 s |
+| `WOW_FEATURE_REQUEST_DAILY_CAP` | Optional | Global feature-request Claude calls per UTC day. Default 100; `0` switches submitting off (board + votes still work) |
+| `CLAUDE_FEATURE_REFINER_MODEL` | Optional | Defaults to `claude-haiku-5-5` |
+| `WOW_FEATURE_SUBMIT_RATE_LIMIT_PER_HOUR` / `_PER_DAY`, `WOW_FEATURE_VOTE_RATE_LIMIT_PER_HOUR` | Optional | Per-IP limits. Defaults 5 / 20 / 60 |
+| `WOW_FEATURE_TRIAGE_TOKEN` | Optional | `label:token,…` for the triage API. Empty = not mounted. Malformed or weak → the app refuses to boot. Same token in your local `backend/.env.triage` |
 
 **After first deploy:**
 ```bash

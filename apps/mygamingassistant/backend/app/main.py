@@ -39,6 +39,8 @@ from app.api import (
     scheduler,
     sources,
     totp,
+    wow_feature_triage,
+    wow_features,
     wow_items,
     wow_map_captures,
     wow_prices,
@@ -58,6 +60,7 @@ from app.core.rate_limit import (
     check_login_rate_limit,
     require_turnstile,
 )
+from app.core.triage_gate import make_triage_gate
 from app.schemas.user.user_base import UserRead, UserUpdate
 from app.services.discord.startup import start_discord
 from app.services.storage.bucket_initializer import ensure_bucket
@@ -249,6 +252,7 @@ def _mount_public_routes(app: FastAPI) -> None:
     app.include_router(wow_map_captures.public_router)
     app.include_router(wow_prices.router)  # auction-house prices, filled by the scheduler
     app.include_router(wow_server_status.router)  # Server-cached Blizzard status
+    app.include_router(wow_features.public_router)  # submit: Turnstile + per-IP + daily-capped
 
     # Disabled = absent (404), not present-but-broken.
     if settings.discord_enabled:
@@ -385,6 +389,10 @@ def create_app(settings: Settings = settings) -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Registered BEFORE set_audit_user so it runs inside it: the access log
+    # still records triage requests, and the triage actor set here wins.
+    app.middleware("http")(make_triage_gate(settings.wow_feature_triage_tokens))
+
     @app.middleware("http")
     async def set_audit_user(request: Request, call_next):
         """Populate ``current_user_id`` ContextVar from the request's JWT and
@@ -432,6 +440,12 @@ def create_app(settings: Settings = settings) -> FastAPI:
     if not settings.serve_only:
         _mount_auth_routes(app)
     _mount_public_routes(app)
+
+    # Triage API: the one token-gated write surface, in BOTH modes, and only
+    # when WOW_FEATURE_TRIAGE_TOKEN is set — otherwise absent (404). Auth is
+    # the triage gate middleware above. See docs/wow-forever-feature-triage.md.
+    if settings.wow_feature_triage_tokens:
+        app.include_router(wow_feature_triage.build_triage_router())
 
     # Public transparency / support endpoints (shared): GET /transparency +
     # POST /donations/kofi-webhook. Unauthenticated by design and mounted in

@@ -21,6 +21,7 @@ multi-host coordination (Redis backend) is intentionally out of scope.
 """
 import json
 import logging
+import math
 import time
 import threading
 from dataclasses import dataclass, field
@@ -76,6 +77,23 @@ class RateLimiter:
     def _cleanup_bucket(self, bucket: _Bucket, now: float) -> None:
         cutoff = now - self._config.window_seconds
         bucket.timestamps = [t for t in bucket.timestamps if t > cutoff]
+
+    def retry_after_seconds(self, key: str) -> Optional[int]:
+        """Seconds until ``key`` may try again, or None when it isn't limited.
+
+        Read-only: records nothing. Lets a caller send ``Retry-After`` on its
+        429, or refuse a request up front while a key is limited.
+        """
+        now = time.monotonic()
+        with self._lock:
+            bucket = self._buckets.get(key)
+            if bucket is None:
+                return None
+            self._cleanup_bucket(bucket, now)
+            if len(bucket.timestamps) < self._config.max_attempts:
+                return None
+            oldest = bucket.timestamps[-self._config.max_attempts]
+            return max(1, math.ceil(oldest + self._config.window_seconds - now))
 
     def check(self, key: str) -> None:
         """Record an attempt and raise 429 if over limit."""
