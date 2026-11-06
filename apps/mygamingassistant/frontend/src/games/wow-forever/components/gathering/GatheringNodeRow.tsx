@@ -16,7 +16,7 @@ export default function GatheringNodeRow({ resolved, skill }: GatheringNodeRowPr
       <div className="min-w-0">
         <p className="font-medium">
           {resolved.node.node}
-          {resolved.node.rare ? <span className="ml-2 text-xs font-normal text-muted-foreground">rare</span> : null}
+          {resolved.node.rare && <span className="ml-2 text-xs font-normal text-muted-foreground">rare</span>}
         </p>
         <p className="text-xs text-muted-foreground">
           Orange {t.orange} · Yellow {t.yellow} · Green {t.green} · Gray {t.grey}

@@ -175,6 +175,18 @@ describe("rankZones", () => {
     const zones = rankZones({ nodes: RESOLVED, skill: 260, faction: FACTION.horde, level: 60, zoneById: ZONES });
     expect(zones.map((z) => [z.zoneName, z.nodes])).toEqual([["Badlands", ["Iron"]]]);
   });
+
+  it("names a node once per zone and ranks a zone with no level range after the ones that have one", () => {
+    const loch = spot(38, "Loch Modan", "alliance");
+    const copper = [{ name: "Copper", itemId: 2770, node: "Copper Vein" }];
+    const spawns = [vein("Copper Vein", 200, loch, 1), vein("Copper Vein", 150, loch, 1), vein("Copper Vein", 20, ELWYNN, 1)];
+    const nodes = resolveNodes(copper, () => sourcesOf(spawns));
+    const zones = rankZones({ nodes, skill: 1, faction: FACTION.alliance, level: 5, zoneById: ZONES });
+    expect(zones.map((z) => [z.zoneName, z.nodes, z.count])).toEqual([
+      ["Elwynn Forest", ["Copper"], 20],
+      ["Loch Modan", ["Copper"], 200],
+    ]);
+  });
 });
 
 describe("zoneLevelNote", () => {

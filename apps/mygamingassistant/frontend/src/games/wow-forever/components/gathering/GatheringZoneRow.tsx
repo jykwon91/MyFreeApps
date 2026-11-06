@@ -13,7 +13,7 @@ export default function GatheringZoneRow({ zone }: { zone: GatheringZone }) {
         <p className="text-sm text-muted-foreground">
           {zone.nodes.join(", ")} · {zone.count} spawn points, most near {placeLabel(zone.spot)}
         </p>
-        {note ? <p className="text-xs text-muted-foreground">{note}</p> : null}
+        {note && <p className="text-xs text-muted-foreground">{note}</p>}
       </div>
       <FoodDirectionsLink spot={zone.spot} name={zone.zoneName} />
     </li>

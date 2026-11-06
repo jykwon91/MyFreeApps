@@ -1,4 +1,4 @@
-import { MIN_ZONE_SPAWNS, ZONE_LEVEL_SLACK, ZONES_SHOWN } from "@/games/wow-forever/data/professions/gathering/gatheringConfig";
+import { MIN_ZONE_SPAWNS, UNKNOWN_LEVEL_GAP, ZONE_LEVEL_SLACK, ZONES_SHOWN } from "@/games/wow-forever/data/professions/gathering/gatheringConfig";
 import { isHostileGround } from "@/games/wow-forever/food/recipeSources";
 import { gatherNow } from "@/games/wow-forever/gathering/gatherNow";
 import { nodeColor } from "@/games/wow-forever/gathering/nodeColors";
@@ -29,15 +29,16 @@ function targetNodes(nodes: readonly ResolvedNode[], skill: number | null): Reso
   return gatherable.slice(-1);
 }
 
-/** How far your level is outside the zone's range (0 inside it). */
-function levelGap(levels: readonly [number, number], level: number): number {
+/** How far your level is outside the zone's range (0 inside it; a zone with no range counts as far off). */
+function levelGap(levels: GatheringZone["levels"], level: number): number {
+  if (!levels) return UNKNOWN_LEVEL_GAP;
   return Math.max(0, levels[0] - level, level - levels[1]);
 }
 
 function compareZones(level: number | null) {
   return (a: GatheringZone, b: GatheringZone): number => {
     if (a.aboveYou !== b.aboveYou) return Number(a.aboveYou) - Number(b.aboveYou);
-    if (level !== null && a.levels && b.levels) {
+    if (level !== null) {
       const byGap = levelGap(a.levels, level) - levelGap(b.levels, level);
       if (byGap) return byGap;
     }
@@ -58,7 +59,7 @@ export function rankZones({ nodes, skill, faction, level, zoneById }: ZoneRankIn
       if (o.count < MIN_ZONE_SPAWNS || isHostileGround(o.spot, faction)) continue;
       const known = zones.get(o.spot.zoneId);
       if (known) {
-        known.nodes = [...known.nodes, resolved.node.name];
+        if (!known.nodes.includes(resolved.node.name)) known.nodes = [...known.nodes, resolved.node.name];
         if (o.count > known.count) Object.assign(known, { count: o.count, spot: o.spot });
         continue;
       }

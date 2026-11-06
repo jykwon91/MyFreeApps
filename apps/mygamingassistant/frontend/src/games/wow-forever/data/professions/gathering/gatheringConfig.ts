@@ -6,6 +6,9 @@ export const DEFAULT_NODE_OFFSETS: NodeColorOffsets = { yellow: 25, green: 50, g
 /** A zone whose lowest mobs are more than this many levels above you is listed last, with a note. */
 export const ZONE_LEVEL_SLACK = 2;
 
+/** A zone with no Forever level range ranks as this many levels off yours (behind any zone that fits). */
+export const UNKNOWN_LEVEL_GAP = 99;
+
 /** Fewer Classic spawn points than this and a zone isn't worth the trip. */
 export const MIN_ZONE_SPAWNS = 5;
 

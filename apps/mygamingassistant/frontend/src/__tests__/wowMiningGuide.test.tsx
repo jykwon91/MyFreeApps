@@ -98,5 +98,10 @@ describe("Mining guide", () => {
     const crafts = within(await screen.findByTestId("gathering-crafts"));
     expect(crafts.getByText("Smelting")).toBeInTheDocument();
     expect(crafts.getAllByText(/at a .*Forge/).length).toBeGreaterThan(0);
+    const azerothium = within(crafts.getByText("Smelt Azerothium").closest("li") as HTMLElement);
+    expect(azerothium.getByText(/Source unknown/)).toBeInTheDocument();
+    expect(azerothium.queryByText(/learn at/)).toBeNull();
+    const tin = within(crafts.getByText("Smelt Tin").closest("li") as HTMLElement);
+    expect(tin.getByText(/learn at 50/)).toBeInTheDocument();
   });
 });
