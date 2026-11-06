@@ -107,8 +107,8 @@ def _load() -> dict:
 
 
 def wowhead_url(item_id: int) -> str:
-    """Return the Wowhead URL for a Classic / Forever item."""
-    return f"https://www.wowhead.com/classic/item={item_id}"
+    """Return the Wowhead Forever URL for an item."""
+    return f"https://www.wowhead.com/forever/item={item_id}"
 
 
 def _role_matches(effective_role: str | None, item_roles: list[str]) -> bool:
