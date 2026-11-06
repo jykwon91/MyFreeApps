@@ -94,6 +94,39 @@ describe("MemberList", () => {
     expect(screen.getByText("Remove")).toBeInTheDocument();
   });
 
+  it("offers no role change or removal on the owner's row", () => {
+    const members = [
+      makeMember({ user_id: "user-2", user_email: "owner@test.com", user_name: "Owner", org_role: "owner" }),
+      makeMember({ user_id: "user-1", user_email: "me@test.com", user_name: "Me", org_role: "admin" }),
+    ];
+    vi.mocked(useListMembersQuery).mockReturnValue({
+      data: members,
+      isLoading: false,
+    } as unknown as ReturnType<typeof useListMembersQuery>);
+
+    render(<MemberList onError={onError} onSuccess={onSuccess} />);
+
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.queryByText("Remove")).not.toBeInTheDocument();
+    expect(screen.getByText("Owner", { selector: "span" })).toBeInTheDocument();
+  });
+
+  it("never offers Owner as a role to assign", () => {
+    const members = [
+      makeMember({ user_id: "user-1", user_email: "me@test.com", user_name: "Me", org_role: "owner" }),
+      makeMember({ user_id: "user-2", user_email: "other@test.com", org_role: "user" }),
+    ];
+    vi.mocked(useListMembersQuery).mockReturnValue({
+      data: members,
+      isLoading: false,
+    } as unknown as ReturnType<typeof useListMembersQuery>);
+
+    render(<MemberList onError={onError} onSuccess={onSuccess} />);
+
+    const options = screen.getAllByRole("option").map((o) => (o as HTMLOptionElement).value);
+    expect(options).toEqual(["admin", "user", "viewer"]);
+  });
+
   it("shows empty message when no members", () => {
     vi.mocked(useListMembersQuery).mockReturnValue({
       data: [],
@@ -115,7 +148,8 @@ describe("MemberList", () => {
 
     render(<MemberList onError={onError} onSuccess={onSuccess} />);
 
-    await user.click(screen.getByText("Remove"));
+    expect(screen.getByRole("combobox", { name: "Role for Other User" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Remove Other User" }));
 
     expect(screen.getByText("Remove member")).toBeInTheDocument();
     expect(screen.getByText(/Are you sure you want to remove other@test.com/)).toBeInTheDocument();

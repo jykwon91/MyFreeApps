@@ -9,8 +9,10 @@ import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgM
 import Badge from "@/shared/components/ui/Badge";
 import Select from "@/shared/components/ui/Select";
 import { ConfirmDialog } from "@platform/ui";
-import { ROLE_BADGE_COLORS, ROLE_OPTIONS } from "@/shared/lib/organization-config";
-import { removeMemberDescription } from "@/shared/lib/organization-messages";
+import { ASSIGNABLE_ROLE_OPTIONS } from "@mybookkeeper/api-client/constants/orgRoles";
+import { ROLE_BADGE_COLORS } from "@/shared/lib/organization-config";
+import { memberRoleLabel, removeMemberDescription } from "@/shared/lib/organization-messages";
+import MemberRowAction from "@/app/features/organizations/MemberRowAction";
 
 export interface MemberListProps {
   onError: (message: string) => void;
@@ -66,21 +68,25 @@ export default function MemberList({ onError, onSuccess }: MemberListProps) {
           <tbody>
             {members.map((member) => {
               const isSelf = member.user_id === user?.id;
+              // The owner's role and membership change only by ownership transfer.
+              const canManage = isAdmin && !isSelf && member.org_role !== "owner";
+              const name = member.user_name || member.user_email || "Unnamed";
               return (
                 <tr key={member.id} className="border-b last:border-b-0">
                   <td className="px-4 py-3">
-                    <div className="font-medium">{member.user_name || member.user_email || "Unnamed"}</div>
+                    <div className="font-medium">{name}</div>
                     <div className="text-xs text-muted-foreground">{member.user_email}</div>
                   </td>
                   <td className="px-4 py-3">
-                    {isAdmin && !isSelf ? (
+                    {canManage ? (
                       <Select
                         value={member.org_role}
                         onChange={(e) => handleRoleChange(member, e.target.value as OrgRole)}
                         disabled={isUpdatingRole}
+                        aria-label={memberRoleLabel(name)}
                         className="text-xs py-1"
                       >
-                        {ROLE_OPTIONS.map((opt) => (
+                        {ASSIGNABLE_ROLE_OPTIONS.map((opt) => (
                           <option key={opt.value} value={opt.value}>{opt.label} — {opt.description}</option>
                         ))}
                       </Select>
@@ -93,16 +99,12 @@ export default function MemberList({ onError, onSuccess }: MemberListProps) {
                   </td>
                   {isAdmin ? (
                     <td className="px-4 py-3 text-right">
-                      {!isSelf ? (
-                        <button
-                          onClick={() => setConfirmRemove(member)}
-                          className="text-xs text-destructive hover:underline"
-                        >
-                          Remove
-                        </button>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">You</span>
-                      )}
+                      <MemberRowAction
+                        isSelf={isSelf}
+                        canManage={canManage}
+                        name={name}
+                        onRemove={() => setConfirmRemove(member)}
+                      />
                     </td>
                   ) : null}
                 </tr>
