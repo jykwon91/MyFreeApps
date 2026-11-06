@@ -323,6 +323,17 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `If-Match` = the story's `updated_at` (428 / 400 / 412 `story_changed`).
   Operator CLI: `python -m scripts.wow_feature_triage` (reads
   `backend/.env.triage`). Runbook: `docs/wow-forever-feature-triage.md`.
+- Triage screen `/wow-forever/triage` (frontend, own lazy chunk, noindex,
+  unlinked): `pages/WowTriagePage.tsx` + `components|lib|hooks|data|types/
+  featureRequests/triage/`. Its own RTK store (`lib/.../triage/triageStore.ts`,
+  `api/triageApi.ts`); every call goes through `triageRequest.ts` (header only,
+  no-store, no cookies). Key in memory only (`triageKeyStore.ts`; 15-min idle
+  lock); a 401 or the gate's 404 locks, `feature_request_not_found` doesn't.
+  Refuses to run framed / in the Discord Activity. Player text is rendered as
+  text nodes in `TriageSubmissionQuote` with hidden characters revealed
+  (`revealHiddenChars.ts`). Approve / Not planned / Hide are delayed with Undo
+  (`useDelayedAction`, flushed on pagehide); Merge confirms and is immediate.
+  Tests: `src/__tests__/wowTriage*.test.ts(x)`, `e2e/wow-forever-triage.spec.ts`.
 - Retention: scheduler job `purge_wow_feature_submissions` (daily) and
   `python -m app.cli purge-wow-feature-submissions`.
 

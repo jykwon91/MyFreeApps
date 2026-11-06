@@ -59,6 +59,26 @@ never public.
 
 ## The triage loop
 
+### In the app (phone or desktop)
+
+Open `https://mygamingassistant.myfreeapps.org/wow-forever/triage` in a normal
+browser tab (it refuses to run inside the Discord Activity or any iframe) and
+paste the token — the part after `label:` — into **Triage key**. Let your
+password manager save it (username `mga-triage`). The key lives in memory only:
+reloading, **Lock**, 15 minutes idle, or a refused key all lock the screen.
+
+- **Inbox** — one card per new idea: what the player wrote (untrusted, shown as
+  plain text), how Claude read it, priority and area. **Approve** puts it on the
+  public board; **Edit**, **Merge…** (irreversible), **More → Not planned… /
+  Hide**. Approve, Not planned and Hide wait ~6 s with **Undo** before saving.
+  Duplicates: **Got it** or **Add note to story**. Claude's rejections sit in
+  the collapsed "Rejected by Claude" section (**Dismiss**).
+- **All requests** — every story by status; **Change status** offers only the
+  valid next states. **Shipped…** asks for the `/wow-forever/...` page where
+  players can try it; **Not planned…** needs a note players will see.
+
+### From the command line
+
 Run from `apps/mygamingassistant/backend`:
 
 ```
