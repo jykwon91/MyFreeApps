@@ -27,6 +27,8 @@ import InquiryNotesEditor from "./InquiryNotesEditor";
 import InquirySpamTriagePanel from "./InquirySpamTriagePanel";
 import InquiryReplyPanel from "./InquiryReplyPanel";
 import PromoteFromInquiryPanel from "@/app/features/applicants/PromoteFromInquiryPanel";
+import { useCanWrite } from "@/shared/hooks/useOrgRole";
+import { INQUIRY_MESSAGES } from "@/shared/lib/inquiry-messages";
 
 /** Inquiry stages that can't be promoted. Mirrors the backend
  * ``_NON_PROMOTABLE_STAGES`` set in ``services/applicants/promote_service.py``. */
@@ -42,6 +44,7 @@ export default function InquiryDetailBody({
   inquiry,
 }: InquiryDetailBodyProps) {
   const navigate = useNavigate();
+  const canWrite = useCanWrite();
   const [showDeclineConfirm, setShowDeclineConfirm] = useState(false);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [showReplyPanel, setShowReplyPanel] = useState(false);
@@ -106,77 +109,93 @@ export default function InquiryDetailBody({
             }
           />
 
+          {canWrite ? null : (
+            <p className="text-xs text-muted-foreground" data-testid="inquiry-view-only">
+              {INQUIRY_MESSAGES.viewOnlyNote}
+            </p>
+          )}
+
           {/* Action row */}
-          <div
-            className="flex flex-wrap items-center gap-3"
-            data-testid="inquiry-action-row"
-          >
-            <InquiryStageDropdown
-              inquiryId={inquiry.id}
-              currentStage={inquiry.stage}
-            />
-            <Button
-              variant="primary"
-              size="md"
-              onClick={() => setShowReplyPanel(true)}
-              data-testid="inquiry-reply-button"
-              className="w-full sm:w-auto"
+          {canWrite || inquiry.linked_applicant_id ? (
+            <div
+              className="flex flex-wrap items-center gap-3"
+              data-testid="inquiry-action-row"
             >
-              <Mail className="h-4 w-4 mr-1" />
-              Reply with template
-            </Button>
-            {inquiry.linked_applicant_id ? (
-              <Link
-                to={`/applicants/${inquiry.linked_applicant_id}`}
-                data-testid="inquiry-view-applicant-link"
-                className="inline-flex items-center font-medium border rounded-md px-4 py-2 text-sm min-h-[44px] hover:bg-muted"
-              >
-                <UserPlus className="h-4 w-4 mr-1" aria-hidden="true" />
-                View applicant
-              </Link>
-            ) : (
-              <Button
-                variant="secondary"
-                size="md"
-                onClick={() => setShowPromotePanel(true)}
-                data-testid="inquiry-promote-button"
-                disabled={
-                  (NON_PROMOTABLE_INQUIRY_STAGES as readonly string[]).includes(
-                    inquiry.stage,
-                  )
-                }
-                title={
-                  (NON_PROMOTABLE_INQUIRY_STAGES as readonly string[]).includes(
-                    inquiry.stage,
-                  )
-                    ? "Can't promote a declined or archived inquiry."
-                    : undefined
-                }
-              >
-                <UserPlus className="h-4 w-4 mr-1" aria-hidden="true" />
-                Promote to applicant
-              </Button>
-            )}
-            <Button
-              variant="secondary"
-              size="md"
-              onClick={() => setShowDeclineConfirm(true)}
-              data-testid="inquiry-decline-button"
-              className="text-red-600 border-red-200 hover:bg-red-50"
-            >
-              <Ban className="h-4 w-4 mr-1" />
-              Decline
-            </Button>
-            <Button
-              variant="secondary"
-              size="md"
-              onClick={() => setShowArchiveConfirm(true)}
-              data-testid="inquiry-archive-button"
-            >
-              <Archive className="h-4 w-4 mr-1" />
-              Archive
-            </Button>
-          </div>
+              {canWrite ? (
+                <>
+                  <InquiryStageDropdown
+                    inquiryId={inquiry.id}
+                    currentStage={inquiry.stage}
+                  />
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={() => setShowReplyPanel(true)}
+                    data-testid="inquiry-reply-button"
+                    className="w-full sm:w-auto"
+                  >
+                    <Mail className="h-4 w-4 mr-1" />
+                    Reply with template
+                  </Button>
+                </>
+              ) : null}
+              {inquiry.linked_applicant_id ? (
+                <Link
+                  to={`/applicants/${inquiry.linked_applicant_id}`}
+                  data-testid="inquiry-view-applicant-link"
+                  className="inline-flex items-center font-medium border rounded-md px-4 py-2 text-sm min-h-[44px] hover:bg-muted"
+                >
+                  <UserPlus className="h-4 w-4 mr-1" aria-hidden="true" />
+                  View applicant
+                </Link>
+              ) : canWrite ? (
+                <Button
+                  variant="secondary"
+                  size="md"
+                  onClick={() => setShowPromotePanel(true)}
+                  data-testid="inquiry-promote-button"
+                  disabled={
+                    (NON_PROMOTABLE_INQUIRY_STAGES as readonly string[]).includes(
+                      inquiry.stage,
+                    )
+                  }
+                  title={
+                    (NON_PROMOTABLE_INQUIRY_STAGES as readonly string[]).includes(
+                      inquiry.stage,
+                    )
+                      ? "Can't promote a declined or archived inquiry."
+                      : undefined
+                  }
+                >
+                  <UserPlus className="h-4 w-4 mr-1" aria-hidden="true" />
+                  Promote to applicant
+                </Button>
+              ) : null}
+              {canWrite ? (
+                <>
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={() => setShowDeclineConfirm(true)}
+                    data-testid="inquiry-decline-button"
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                  >
+                    <Ban className="h-4 w-4 mr-1" />
+                    Decline
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={() => setShowArchiveConfirm(true)}
+                    data-testid="inquiry-archive-button"
+                  >
+                    <Archive className="h-4 w-4 mr-1" />
+                    Archive
+                  </Button>
+                </>
+              ) : null}
+            </div>
+          ) : null}
 
           {/* Inquirer details */}
           <section className="border rounded-lg p-4 space-y-3" data-testid="inquirer-section">
@@ -259,15 +278,26 @@ export default function InquiryDetailBody({
             inquiryId={inquiry.id}
             spamStatus={inquiry.spam_status}
             spamScore={inquiry.spam_score}
+            canWrite={canWrite}
           />
 
           {/* Notes */}
           <section className="border rounded-lg p-4 space-y-3" data-testid="notes-section">
             <h2 className="text-sm font-medium">Notes</h2>
-            <InquiryNotesEditor
-              inquiryId={inquiry.id}
-              initialNotes={inquiry.notes}
-            />
+            {canWrite ? (
+              <InquiryNotesEditor
+                inquiryId={inquiry.id}
+                initialNotes={inquiry.notes}
+              />
+            ) : inquiry.notes ? (
+              <p className="text-sm whitespace-pre-wrap break-words" data-testid="inquiry-notes-text">
+                {inquiry.notes}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground" data-testid="inquiry-notes-text">
+                {INQUIRY_MESSAGES.noNotes}
+              </p>
+            )}
           </section>
 
           <InquiryQualityBreakdown
@@ -287,40 +317,44 @@ export default function InquiryDetailBody({
 
           <InquiryEventTimeline events={inquiry.events} />
 
-          <ConfirmDialog
-            open={showDeclineConfirm}
-            title="Decline this inquiry?"
-            description="The inquiry will be moved to Declined and a timeline event will be recorded. You can move it back later if needed."
-            confirmLabel="Decline"
-            variant="danger"
-            isLoading={isPatching}
-            onConfirm={() => void handleDecline()}
-            onCancel={() => setShowDeclineConfirm(false)}
-          />
+          {canWrite ? (
+            <>
+              <ConfirmDialog
+                open={showDeclineConfirm}
+                title="Decline this inquiry?"
+                description="The inquiry will be moved to Declined and a timeline event will be recorded. You can move it back later if needed."
+                confirmLabel="Decline"
+                variant="danger"
+                isLoading={isPatching}
+                onConfirm={() => void handleDecline()}
+                onCancel={() => setShowDeclineConfirm(false)}
+              />
 
-          <ConfirmDialog
-            open={showArchiveConfirm}
-            title="Archive this inquiry?"
-            description="The inquiry will be soft-deleted and removed from the inbox. The audit trail and timeline are preserved."
-            confirmLabel="Archive"
-            variant="danger"
-            isLoading={isDeleting}
-            onConfirm={() => void handleArchive()}
-            onCancel={() => setShowArchiveConfirm(false)}
-          />
+              <ConfirmDialog
+                open={showArchiveConfirm}
+                title="Archive this inquiry?"
+                description="The inquiry will be soft-deleted and removed from the inbox. The audit trail and timeline are preserved."
+                confirmLabel="Archive"
+                variant="danger"
+                isLoading={isDeleting}
+                onConfirm={() => void handleArchive()}
+                onCancel={() => setShowArchiveConfirm(false)}
+              />
 
-          {showReplyPanel ? (
-            <InquiryReplyPanel
-              inquiryId={inquiry.id}
-              onClose={() => setShowReplyPanel(false)}
-            />
-          ) : null}
+              {showReplyPanel ? (
+                <InquiryReplyPanel
+                  inquiryId={inquiry.id}
+                  onClose={() => setShowReplyPanel(false)}
+                />
+              ) : null}
 
-          {showPromotePanel ? (
-            <PromoteFromInquiryPanel
-              inquiry={inquiry}
-              onClose={() => setShowPromotePanel(false)}
-            />
+              {showPromotePanel ? (
+                <PromoteFromInquiryPanel
+                  inquiry={inquiry}
+                  onClose={() => setShowPromotePanel(false)}
+                />
+              ) : null}
+            </>
           ) : null}
         </>
       );

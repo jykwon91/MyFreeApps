@@ -1,6 +1,7 @@
 import type { InquiriesListMode } from "@/shared/types/inquiry/inquiries-list-mode";
 import type { InquirySummary } from "@mybookkeeper/api-client/types/inquiry/inquiry-summary";
 import EmptyState from "@/shared/components/ui/EmptyState";
+import { INQUIRY_MESSAGES } from "@/shared/lib/inquiry-messages";
 import { LoadingButton } from "@platform/ui";
 import InquiriesSkeleton from "./InquiriesSkeleton";
 import InquiryCard from "./InquiryCard";
@@ -15,6 +16,7 @@ export interface InquiriesListBodyProps {
   hasMore: boolean;
   isFetching: boolean;
   onLoadMore: () => void;
+  canWrite: boolean;
 }
 
 export default function InquiriesListBody({
@@ -26,6 +28,7 @@ export default function InquiriesListBody({
   hasMore,
   isFetching,
   onLoadMore,
+  canWrite,
 }: InquiriesListBodyProps) {
   switch (mode) {
     case "loading":
@@ -35,8 +38,10 @@ export default function InquiriesListBody({
         <EmptyState
           message={
             isFiltered
-              ? "No inquiries in this stage. Try a different filter."
-              : 'No inquiries yet. They\'ll land here when guests reach out via Furnished Finder, TNH, or directly. Use "New inquiry" to log one manually.'
+              ? INQUIRY_MESSAGES.noInquiriesInStage
+              : canWrite
+                ? INQUIRY_MESSAGES.noInquiries
+                : INQUIRY_MESSAGES.noInquiriesViewer
           }
         />
       );

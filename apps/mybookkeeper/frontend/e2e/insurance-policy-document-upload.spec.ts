@@ -22,8 +22,8 @@
  *   - No horizontal overflow, and the controls stay tappable at 390px
  */
 import { test, expect, type Page } from "@playwright/test";
+import { ORG_ID, plantAuth } from "./fixtures/mockSession";
 
-const ORG_ID = "00000000-0000-0000-0000-000000000010";
 const USER_ID = "00000000-0000-0000-0000-000000000001";
 const PROPERTY_ID = "00000000-0000-0000-0000-0000000000c1";
 const DOCUMENT_ID = "00000000-0000-0000-0000-0000000000d1";
@@ -58,19 +58,6 @@ const DRAFT = {
 
 function json(body: unknown) {
   return { status: 200, contentType: "application/json", body: JSON.stringify(body) };
-}
-
-function plantAuth(page: Page): Promise<void> {
-  return page.addInitScript(
-    ([orgId]) => {
-      const futureExp = Math.floor(Date.now() / 1000) + 3600;
-      const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-      const payload = btoa(JSON.stringify({ sub: "test-user", exp: futureExp }));
-      window.localStorage.setItem("token", `${header}.${payload}.fake-signature`);
-      window.localStorage.setItem("v1_activeOrgId", orgId);
-    },
-    [ORG_ID],
-  );
 }
 
 async function stubShell(page: Page): Promise<void> {

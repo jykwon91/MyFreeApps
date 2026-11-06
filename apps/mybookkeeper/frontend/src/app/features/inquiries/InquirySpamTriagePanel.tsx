@@ -16,9 +16,10 @@ export interface InquirySpamTriagePanelProps {
   inquiryId: string;
   spamStatus: InquirySpamStatus;
   spamScore: number | null;
+  canWrite: boolean;
 }
 
-export default function InquirySpamTriagePanel({ inquiryId, spamStatus, spamScore }: InquirySpamTriagePanelProps) {
+export default function InquirySpamTriagePanel({ inquiryId, spamStatus, spamScore, canWrite }: InquirySpamTriagePanelProps) {
   const [expanded, setExpanded] = useState(false);
   const { data: assessments = [], isLoading } = useGetInquirySpamAssessmentsQuery(
     inquiryId,
@@ -60,34 +61,36 @@ export default function InquirySpamTriagePanel({ inquiryId, spamStatus, spamScor
           <h2 className="text-sm font-medium">Spam triage</h2>
           <InquirySpamBadge status={spamStatus} score={spamScore} />
         </div>
-        <div className="flex flex-wrap gap-2">
-          {spamStatus !== "manually_cleared" && spamStatus !== "clean" ? (
-            <LoadingButton
-              variant="secondary"
-              size="sm"
-              isLoading={isMarkingNotSpam}
-              loadingText="Saving..."
-              onClick={handleMarkNotSpam}
-              data-testid="mark-not-spam-button"
-            >
-              <ShieldCheck className="h-4 w-4 mr-1" aria-hidden="true" />
-              Mark as not spam
-            </LoadingButton>
-          ) : null}
-          {spamStatus !== "spam" ? (
-            <LoadingButton
-              variant="secondary"
-              size="sm"
-              isLoading={isMarkingSpam}
-              loadingText="Saving..."
-              onClick={handleMarkSpam}
-              data-testid="mark-spam-button"
-            >
-              <ShieldAlert className="h-4 w-4 mr-1" aria-hidden="true" />
-              Mark as spam
-            </LoadingButton>
-          ) : null}
-        </div>
+        {canWrite ? (
+          <div className="flex flex-wrap gap-2">
+            {spamStatus !== "manually_cleared" && spamStatus !== "clean" ? (
+              <LoadingButton
+                variant="secondary"
+                size="sm"
+                isLoading={isMarkingNotSpam}
+                loadingText="Saving..."
+                onClick={handleMarkNotSpam}
+                data-testid="mark-not-spam-button"
+              >
+                <ShieldCheck className="h-4 w-4 mr-1" aria-hidden="true" />
+                Mark as not spam
+              </LoadingButton>
+            ) : null}
+            {spamStatus !== "spam" ? (
+              <LoadingButton
+                variant="secondary"
+                size="sm"
+                isLoading={isMarkingSpam}
+                loadingText="Saving..."
+                onClick={handleMarkSpam}
+                data-testid="mark-spam-button"
+              >
+                <ShieldAlert className="h-4 w-4 mr-1" aria-hidden="true" />
+                Mark as spam
+              </LoadingButton>
+            ) : null}
+          </div>
+        ) : null}
       </header>
 
       <button

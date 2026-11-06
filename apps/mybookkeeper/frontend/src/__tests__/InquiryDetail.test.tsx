@@ -115,7 +115,10 @@ vi.mock("@mybookkeeper/api-client/store/integrationsApi", () => ({
   useGetIntegrationsQuery: vi.fn(() => ({ data: [], isLoading: false })),
 }));
 
+vi.mock("@/shared/hooks/useOrgRole", () => ({ useCanWrite: vi.fn(() => true) }));
+
 import { useGetInquiryByIdQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
+import { useCanWrite } from "@/shared/hooks/useOrgRole";
 
 type DetailQueryReturn = ReturnType<typeof useGetInquiryByIdQuery>;
 
@@ -139,6 +142,7 @@ describe("InquiryDetail page", () => {
     );
     updateMutation.mockClear();
     deleteMutation.mockClear();
+    vi.mocked(useCanWrite).mockReturnValue(true);
   });
 
   it("renders all sections with the inquiry payload", () => {
@@ -261,5 +265,68 @@ describe("InquiryDetail page", () => {
     const timeline = screen.getByTestId("inquiry-event-timeline");
     expect(timeline).toHaveTextContent(/Received/i);
     expect(timeline).toHaveTextContent(/System/i);
+  });
+});
+
+describe("InquiryDetail page for a viewer", () => {
+  beforeEach(() => {
+    vi.mocked(useGetInquiryByIdQuery).mockReturnValue(
+      defaultDetailState as unknown as DetailQueryReturn,
+    );
+    vi.mocked(useCanWrite).mockReturnValue(false);
+  });
+
+  it("says it's view only and offers none of the changes the server would refuse", () => {
+    renderDetail();
+    expect(screen.getByRole("heading", { name: "Alice Nguyen" })).toBeInTheDocument();
+    expect(screen.getByTestId("inquiry-view-only")).toHaveTextContent(
+      "View only. Ask a workspace admin to reply to, promote, or change inquiries.",
+    );
+    for (const id of [
+      "inquiry-stage-dropdown",
+      "inquiry-reply-button",
+      "inquiry-promote-button",
+      "inquiry-decline-button",
+      "inquiry-archive-button",
+      "mark-spam-button",
+      "mark-not-spam-button",
+      "inquiry-notes-editor",
+    ]) {
+      expect(screen.queryByTestId(id)).not.toBeInTheDocument();
+    }
+    expect(screen.queryByTestId("inquiry-action-row")).not.toBeInTheDocument();
+    expect(screen.getByTestId("spam-triage-toggle")).toBeInTheDocument();
+  });
+
+  it("shows the notes as text, keeping line breaks", () => {
+    vi.mocked(useGetInquiryByIdQuery).mockReturnValue({
+      ...defaultDetailState,
+      data: { ...mockInquiry, notes: "Line one\nLine two" },
+    } as unknown as DetailQueryReturn);
+    renderDetail();
+    const notes = screen.getByTestId("inquiry-notes-text");
+    expect(notes.textContent).toBe("Line one\nLine two");
+    expect(notes).toHaveClass("whitespace-pre-wrap");
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  });
+
+  it("says there are no notes yet when there are none", () => {
+    vi.mocked(useGetInquiryByIdQuery).mockReturnValue({
+      ...defaultDetailState,
+      data: { ...mockInquiry, notes: null },
+    } as unknown as DetailQueryReturn);
+    renderDetail();
+    expect(screen.getByTestId("inquiry-notes-text")).toHaveTextContent("No notes yet.");
+  });
+
+  it("keeps the link to an applicant the inquiry was promoted to", () => {
+    vi.mocked(useGetInquiryByIdQuery).mockReturnValue({
+      ...defaultDetailState,
+      data: { ...mockInquiry, linked_applicant_id: "app-1" },
+    } as unknown as DetailQueryReturn);
+    renderDetail();
+    const row = screen.getByTestId("inquiry-action-row");
+    expect(row.children).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "View applicant" })).toHaveAttribute("href", "/applicants/app-1");
   });
 });

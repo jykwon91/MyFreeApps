@@ -26,8 +26,8 @@
  *   - A feed outage renders the reason and offers no verdict at all.
  */
 import { test, expect, type Page } from "@playwright/test";
+import { ORG_ID, plantAuth } from "./fixtures/mockSession";
 
-const ORG_ID = "00000000-0000-0000-0000-000000000010";
 const PROPERTY_ID = "00000000-0000-0000-0000-0000000000e1";
 const BLOCKED_PROPERTY_ID = "00000000-0000-0000-0000-0000000000e2";
 const MORTGAGE_ID = "00000000-0000-0000-0000-0000000000f1";
@@ -42,19 +42,6 @@ const FEED_DOWN_REASON =
 
 const UNCLASSIFIED_REASON =
   "This property isn't marked as a rental or a home you live in, and the two are priced differently.";
-
-function plantAuth(page: Page): Promise<void> {
-  return page.addInitScript(
-    ([orgId]) => {
-      const futureExp = Math.floor(Date.now() / 1000) + 3600;
-      const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-      const payload = btoa(JSON.stringify({ sub: "test-user", exp: futureExp }));
-      window.localStorage.setItem("token", `${header}.${payload}.fake-signature`);
-      window.localStorage.setItem("v1_activeOrgId", orgId);
-    },
-    [ORG_ID],
-  );
-}
 
 function json(body: unknown) {
   return { status: 200, contentType: "application/json", body: JSON.stringify(body) };

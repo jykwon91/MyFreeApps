@@ -29,8 +29,8 @@
  *   - A feed outage renders the reason and offers no verdict at all.
  */
 import { test, expect, type Page } from "@playwright/test";
+import { ORG_ID, plantAuth } from "./fixtures/mockSession";
 
-const ORG_ID = "00000000-0000-0000-0000-000000000010";
 const POLICY_ID = "00000000-0000-0000-0000-0000000000d1";
 const UNMATCHED_POLICY_ID = "00000000-0000-0000-0000-0000000000d2";
 const OUT_OF_SCOPE_POLICY_ID = "00000000-0000-0000-0000-0000000000d3";
@@ -46,19 +46,6 @@ const SKELETON_CARD_COUNT = 3;
 
 const FEED_DOWN_REASON =
   "The Texas Department of Insurance filing data could not be reached, so nothing was checked.";
-
-function plantAuth(page: Page): Promise<void> {
-  return page.addInitScript(
-    ([orgId]) => {
-      const futureExp = Math.floor(Date.now() / 1000) + 3600;
-      const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-      const payload = btoa(JSON.stringify({ sub: "test-user", exp: futureExp }));
-      window.localStorage.setItem("token", `${header}.${payload}.fake-signature`);
-      window.localStorage.setItem("v1_activeOrgId", orgId);
-    },
-    [ORG_ID],
-  );
-}
 
 function json(body: unknown) {
   return { status: 200, contentType: "application/json", body: JSON.stringify(body) };
