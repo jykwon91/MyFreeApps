@@ -11,7 +11,9 @@ export function useIsOrgAdmin(): boolean {
   return role === "owner" || role === "admin";
 }
 
+// Unknown role means no write access. RequireOrg only renders pages once the
+// role is known, so this never hides controls from a member who can write.
 export function useCanWrite(): boolean {
   const role = useOrgRole();
-  return role !== "viewer";
+  return role !== null && role !== "viewer";
 }
