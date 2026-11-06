@@ -73,7 +73,7 @@ export interface FakeInquiryServer {
   /** Saved, then: the answer lost; the answer lost and the network gone; or the proxy's own 502. */
   templateWriteOutcome: "lostAfterSaving" | "lostBeforeSaving" | "lostAndOffline" | "gatewayAfterSaving" | null;
   /** How the next send ends. A number is a failure with that status. */
-  sendOutcome: { status: number; detail?: string } | "lostAfterSending" | "lostBeforeSending" | null;
+  sendOutcome: { status: number; detail?: string | Record<string, string> } | "lostAfterSending" | "lostBeforeSending" | null;
   /** Replies sent, by request id: the same id again gets the same reply back, as the real server does. */
   sentByRequestId: Map<string, InquiryMessage>;
   requests: AxiosRequestConfig[];

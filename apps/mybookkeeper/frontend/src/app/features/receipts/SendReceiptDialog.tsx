@@ -8,9 +8,7 @@ import { RECEIPT_PAYMENT_METHOD_LABELS } from "@mybookkeeper/api-client/constant
 import { inferPaymentMethod } from "@mybookkeeper/api-client/utils/inferPaymentMethod";
 import { receiptPayerName } from "@mybookkeeper/api-client/utils/receiptPayerName";
 import type { PendingReceipt } from "@mybookkeeper/api-client/types/lease/pending-receipt";
-import { RECEIPT_SEND_FINISHED_CODES } from "@mybookkeeper/api-client/constants/receiptSendFinishedCodes";
-import { receiptSendErrorCode } from "@mybookkeeper/api-client/utils/receiptSendErrorCode";
-import { receiptSendErrorDetail, receiptSendErrorMessage } from "@/shared/lib/receipt-send-errors";
+import { receiptSendClosesDialog, receiptSendErrorMessage } from "@/shared/lib/receipt-send-errors";
 import ReceiptPreviewPane from "./ReceiptPreviewPane";
 
 export interface SendReceiptDialogProps {
@@ -82,10 +80,8 @@ export default function SendReceiptDialog({ receipt, onClose }: SendReceiptDialo
       showSuccess(`Receipt ${result.receipt_number} sent.`);
       onClose(result.receipt_number);
     } catch (err: unknown) {
-      const detail = receiptSendErrorDetail(err);
-      showError(receiptSendErrorMessage(detail));
-      const code = receiptSendErrorCode(detail);
-      if (code && RECEIPT_SEND_FINISHED_CODES.has(code)) onClose();
+      showError(receiptSendErrorMessage(err));
+      if (receiptSendClosesDialog(err)) onClose();
     }
   }
 

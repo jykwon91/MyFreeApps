@@ -43,6 +43,7 @@ const mockReceipt: PendingReceipt = {
   payment_method: "check",
   vendor: "Chase Bank",
   send_blocker: null,
+  sent_from_other_gmail: null,
 };
 
 function renderDialog(onClose = vi.fn(), receipt: PendingReceipt = mockReceipt) {
@@ -174,6 +175,26 @@ describe("SendReceiptDialog", () => {
     } else {
       expect(onClose).not.toHaveBeenCalled();
     }
+  });
+
+  it("names the account a stuck send went through, says where to reconnect it, and closes", async () => {
+    mockSendReceipt.mockReturnValue({
+      unwrap: () =>
+        Promise.reject({
+          status: 409,
+          data: { detail: { code: "receipt_sent_from_other_gmail", sender_gmail_address: "old@gmail.com" } },
+        }),
+    });
+    const onClose = vi.fn();
+    renderDialog(onClose);
+    fireEvent.click(screen.getByTestId("receipt-send-btn"));
+
+    await waitFor(() => {
+      expect(showError).toHaveBeenCalledWith(
+        expect.stringMatching(/gone out from old@gmail\.com,.*Go to Integrations → Reconnect Gmail\.$/),
+      );
+    });
+    expect(onClose).toHaveBeenCalledWith();
   });
 
   it("shows the server's sentence for a request it can't act on", async () => {

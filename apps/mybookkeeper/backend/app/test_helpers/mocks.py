@@ -2,6 +2,7 @@
 
 import datetime as _dt
 import uuid
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -12,6 +13,7 @@ from app.core.permissions import current_org_member
 from app.db.session import unit_of_work
 from app.repositories import integration_repo
 from app.services.email import gmail_attachment_send_service, gmail_service
+from app.services.email.exceptions import GmailSendOutcomeUnknownError
 from app.test_helpers.auth import _require_test_mode
 
 router = APIRouter()
@@ -25,8 +27,18 @@ _last_gmail_attachment_send: dict[str, object] | None = None
 _gmail_attachment_send_count = 0
 
 
+class _MockGmailSendRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    # "unknown": a reply send fails as if the connection dropped mid-send, so
+    # Gmail's answer never arrived and the reply may or may not have gone out.
+    # Only replies use ``send_message``; receipts go through the attachment stub.
+    reply_outcome: Literal["sent", "unknown"] = "sent"
+
+
 @router.post("/test/mock-gmail-send/enable", status_code=204)
 async def enable_mock_gmail_send(
+    payload: _MockGmailSendRequest | None = None,
     ctx: RequestContext = Depends(current_org_member),  # noqa: ARG001 — gated by ctx
 ) -> None:
     """Replace ``gmail_service.send_message`` and ``send_message_with_attachment``
@@ -48,7 +60,11 @@ async def enable_mock_gmail_send(
     if getattr(gmail_service, "_real_send_message", None) is None:
         gmail_service._real_send_message = gmail_service.send_message  # type: ignore[attr-defined]
 
+    reply_outcome = payload.reply_outcome if payload is not None else "sent"
+
     async def _stub(*args: object, **kwargs: object) -> str:
+        if reply_outcome == "unknown":
+            raise GmailSendOutcomeUnknownError("E2E: connection reset mid-send")
         return f"<e2e-mock-{uuid.uuid4().hex[:12]}@mybookkeeper.app>"
 
     gmail_service.send_message = _stub  # type: ignore[assignment]

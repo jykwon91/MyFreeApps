@@ -100,6 +100,9 @@ async def list_open(
             Applicant.contact_email.label("contact_email"),
             Inquiry.inquirer_email.label("inquirer_email"),
             has_lease.label("has_lease"),
+            PendingRentReceipt.send_message_id.label("send_message_id"),
+            PendingRentReceipt.send_claimed_at.label("send_claimed_at"),
+            PendingRentReceipt.sender_gmail_address.label("sender_gmail_address"),
         )
         .join(
             Transaction,

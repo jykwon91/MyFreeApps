@@ -2,7 +2,8 @@ import type { PendingReceipt } from "@mybookkeeper/api-client/types/lease/pendin
 import { LoadingButton, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Text, View } from "react-native";
-import { RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
+import { receiptSentFromOtherGmailMessage } from "@mybookkeeper/api-client/utils/receiptSentFromOtherGmailMessage";
+import { FIX_ON_WEBSITE, RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
 import ReceiptBlockerNote from "./ReceiptBlockerNote";
 import { dismissActionLabel, periodLabel, receiptAmount, receivedLine, reviewActionLabel, rowLabel, rowName } from "./receiptDisplay";
 import { usePendingReceiptActions } from "./usePendingReceiptActions";
@@ -18,8 +19,9 @@ export default function ReceiptRow({ receipt, canWrite, canSend }: ReceiptRowPro
   const { colors, spacing, fontSize } = useTheme();
   const { isDismissing, askToDismiss } = usePendingReceiptActions(receipt);
   const blocker = receipt.send_blocker;
-  // The server won't dismiss a receipt while an earlier send is being confirmed.
-  const isSending = receipt.status === "sending";
+  const otherGmail = receipt.sent_from_other_gmail;
+  // The server won't dismiss a receipt while an earlier send is being confirmed, unless it can't be confirmed.
+  const isConfirming = receipt.status === "sending" && otherGmail === null;
 
   return (
     <View style={{ gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border }}>
@@ -33,18 +35,24 @@ export default function ReceiptRow({ receipt, canWrite, canSend }: ReceiptRowPro
         <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>{periodLabel(receipt.period_start_date, receipt.period_end_date)}</Text>
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{receivedLine(receipt)}</Text>
       </View>
-      {isSending ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.checkingWithGmail}</Text> : null}
+      {isConfirming ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.checkingWithGmail}</Text> : null}
+      {otherGmail ? (
+        <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>{`${receiptSentFromOtherGmailMessage(otherGmail)} ${FIX_ON_WEBSITE}`}</Text>
+      ) : null}
       {blocker ? <ReceiptBlockerNote blocker={blocker} /> : null}
       {canWrite ? (
         <View style={{ gap: spacing.sm }}>
-          <LoadingButton
-            accessibilityLabel={reviewActionLabel(receipt)}
-            disabled={!canSend || blocker !== null || isDismissing}
-            onPress={() => router.push(`/receipts/${receipt.transaction_id}`)}
-          >
-            {MESSAGES.reviewAndSend}
-          </LoadingButton>
-          {isSending ? null : (
+          {/* Sending again would email it from the connected account, which may make a second copy. */}
+          {otherGmail ? null : (
+            <LoadingButton
+              accessibilityLabel={reviewActionLabel(receipt)}
+              disabled={!canSend || blocker !== null || isDismissing}
+              onPress={() => router.push(`/receipts/${receipt.transaction_id}`)}
+            >
+              {MESSAGES.reviewAndSend}
+            </LoadingButton>
+          )}
+          {isConfirming ? null : (
             <LoadingButton
               accessibilityHint={MESSAGES.dismissHint}
               accessibilityLabel={dismissActionLabel(receipt)}

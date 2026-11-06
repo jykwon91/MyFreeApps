@@ -108,3 +108,13 @@ async def mark_sent(
         .execution_options(synchronize_session=False),
     )
     return result.rowcount == 1
+
+
+async def backdate_open_claims(db: AsyncSession, *, inquiry_id: uuid.UUID, claimed_at: _dt.datetime) -> None:
+    """Move every unconfirmed claim on an inquiry back to ``claimed_at``. For the E2E test helpers."""
+    await db.execute(
+        update(InquiryReplySend)
+        .where(InquiryReplySend.inquiry_id == inquiry_id, InquiryReplySend.status == "sending")
+        .values(claimed_at=claimed_at)
+        .execution_options(synchronize_session=False),
+    )

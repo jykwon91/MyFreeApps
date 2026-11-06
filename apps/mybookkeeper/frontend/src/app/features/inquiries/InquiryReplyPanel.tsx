@@ -8,7 +8,9 @@ import {
   useLazyRenderReplyTemplateQuery,
 } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { useReplySend } from "@mybookkeeper/api-client/hooks/useReplySend";
-import { replySendLabel } from "./reply-send-label";
+import { REPLY_SEND_ACTION } from "@mybookkeeper/api-client/constants/replySendAction";
+import { replySendAction } from "@mybookkeeper/api-client/utils/replySendAction";
+import { REPLY_SEND_LABELS } from "@/shared/lib/inquiry-messages";
 import type { ReplySendFailure } from "@mybookkeeper/api-client/types/inquiry/reply-send-failure";
 import type { ReplySendResult } from "@mybookkeeper/api-client/types/inquiry/reply-send-result";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
@@ -67,7 +69,10 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
   const { data: integrations = [], isLoading: integrationsLoading } =
     useGetIntegrationsQuery();
   const [triggerRender, renderState] = useLazyRenderReplyTemplateQuery();
-  const { send, isRetry, isSending, isWaiting, mightHaveSent } = useReplySend(inquiryId, REPLY_SEND_OPTIONS);
+  const { send, isRetry, otherGmailAddress, isSending, isWaiting, mightHaveSent } = useReplySend(
+    inquiryId,
+    REPLY_SEND_OPTIONS,
+  );
   const [sendFailure, setSendFailure] = useState<ReplySendFailure | null>(null);
 
   const gmail = integrations.find((i) => i.provider === "gmail");
@@ -85,6 +90,10 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
   const renderFailed = selectedTemplateId !== null && renderFailedFor === selectedTemplateId;
   const draft = { template_id: tab === REPLY_TAB.TEMPLATE ? selectedTemplateId : null, subject: subject.trim(), body };
   const draftIsRetry = isRetry(draft);
+  // Still true of this draft after an edit and undo, since its earlier attempt still can't be checked.
+  const draftOtherGmail = otherGmailAddress(draft);
+  const shownFailure = sendFailure ?? (draftOtherGmail ? "otherAccount" : null);
+  const sendAction = replySendAction(shownFailure, mightHaveSent, draftIsRetry);
 
   useEffect(() => {
     if (!focusSubjectWhenFilled.current || renderFailed || isRenderFetching) return;
@@ -262,15 +271,17 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
         <div className="px-5 py-4 border-t space-y-3">
           <InquiryReplySendStatus
             waiting={isWaiting}
-            failure={sendFailure}
+            failure={shownFailure}
             changedAfterMightHaveSent={mightHaveSent && !draftIsRetry}
+            otherGmailAddress={draftOtherGmail}
           />
           <div className="flex items-center justify-end gap-2">
             <Button variant="secondary" size="md" onClick={requestClose} disabled={isSending}>
               Cancel
             </Button>
             <LoadingButton
-              variant="primary"
+              // Sending anyway may email them twice, so it isn't the obvious next step.
+              variant={sendAction === REPLY_SEND_ACTION.SEND_ANYWAY ? "secondary" : "primary"}
               size="md"
               isLoading={isSending}
               loadingText={isWaiting ? INQUIRY_MESSAGES.replyStillSendingButton : INQUIRY_MESSAGES.replySendingButton}
@@ -278,7 +289,7 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
               onClick={() => void handleSend()}
               data-testid="reply-send-button"
             >
-              {replySendLabel(sendFailure, mightHaveSent, draftIsRetry)}
+              {REPLY_SEND_LABELS[sendAction]}
             </LoadingButton>
           </div>
         </div>

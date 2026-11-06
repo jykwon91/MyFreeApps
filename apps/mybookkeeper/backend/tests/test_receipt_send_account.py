@@ -72,6 +72,12 @@ async def _row(db: AsyncSession, txn_id: uuid.UUID) -> PendingRentReceipt:
     )).scalar_one()
 
 
+async def _listed_account(org: Organization, user: User) -> str | None:
+    listed = await receipt_service.get_pending_receipt_list(organization_id=org.id, user_id=user.id)
+    (item,) = listed.items
+    return item.sent_from_other_gmail
+
+
 async def _integration(db: AsyncSession) -> Integration:
     return (await db.execute(
         select(Integration).execution_options(populate_existing=True),
@@ -230,6 +236,8 @@ async def test_stuck_send_on_an_account_no_longer_connected_can_be_dismissed(
     else:
         await _connect_as(db, connected)
 
+    assert await _listed_account(test_org, test_user) == "host@gmail.com"
+
     await _dismiss(test_org, txn_id)
 
     assert (await _row(db, txn_id)).status == "dismissed"
@@ -253,7 +261,18 @@ async def test_stuck_send_that_sending_can_settle_is_not_dismissed(
     await _set_receipt(db, txn_id, sender_gmail_address=claim_address)
     await _connect_as(db, connected)
 
+    assert await _listed_account(test_org, test_user) is None
     with pytest.raises(ReceiptSendInProgressError):
         await _dismiss(test_org, txn_id)
 
     assert (await _row(db, txn_id)).status == "sending"
+
+
+@pytest.mark.asyncio
+async def test_receipt_waiting_to_send_names_no_account(
+    db: AsyncSession, test_org, test_user, receipt_gmail_send,
+) -> None:
+    await _seed(db, org=test_org, user=test_user)
+    await _connect_as(db, "other@gmail.com")
+
+    assert await _listed_account(test_org, test_user) is None

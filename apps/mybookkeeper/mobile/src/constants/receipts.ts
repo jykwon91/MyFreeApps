@@ -36,6 +36,8 @@ export const RECEIPTS_MESSAGES = {
   dismissHint: "Asks you to confirm first",
   dismissTitle: "Dismiss this receipt?",
   dismissBody: "I'll take it off your list. The payment stays in your transactions.",
+  dismissOtherGmailBody:
+    "I'll take it off your list. Only do this if your tenant got it: if they didn't, reconnect that Gmail account on the website and send it instead.",
   dismissed: "Dismissed. The payment is still in your transactions.",
   checkingWithGmail: "I'm still checking with Gmail whether an earlier send went out. Sending again is safe: I won't email it twice.",
   openPaymentReview: "Open Payment Review",

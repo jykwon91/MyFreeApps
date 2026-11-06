@@ -356,4 +356,56 @@ test.describe.serial("Pending Receipts — behavioral: send receipt chain", () =
       await cleanupRentPayment(api, seed);
     }
   });
+
+  // -------------------------------------------------------------------------
+  // Test D — A send stuck on a Gmail account that isn't connected any more
+  //           can't be checked, so the row names it and lets me dismiss it
+  // -------------------------------------------------------------------------
+
+  test("D: send stuck on another Gmail account → row names it, Dismiss after confirming", async ({
+    authedPage: page,
+    api,
+  }) => {
+    const runId = Date.now();
+    const seed = await seedRentPayment(api, {
+      tenant_legal_name: `E2E Tenant D ${runId}`,
+      tenant_email: `e2e-receipt-d-${runId}@example.com`,
+      amount_cents: 110000,
+    });
+
+    try {
+      await seedGmailIntegration(api, { hasSendScope: true });
+      const stuck = await api.post("/test/seed-receipt-stuck-send", {
+        data: { transaction_id: seed.transaction_id, sender_gmail_address: "old-host@example.com" },
+      });
+      expect(stuck.ok()).toBeTruthy();
+
+      await page.goto("/receipts");
+      const row = page
+        .locator('[data-testid="pending-receipt-row"]')
+        .filter({ hasText: `E2E Tenant D ${runId}` });
+      await expect(row).toBeVisible({ timeout: 15000 });
+      await expect(row.getByTestId("pending-receipt-other-gmail-note")).toContainText("old-host@example.com");
+      await expect(row.getByTestId("pending-receipt-send-btn")).toHaveCount(0);
+
+      await row.getByTestId("pending-receipt-dismiss-btn").click();
+      const confirm = page.getByRole("dialog", { name: "Dismiss this receipt?" });
+      await expect(confirm).toBeVisible();
+      const dismissResponse = page.waitForResponse(
+        (r) =>
+          r.url().includes(`/api/rent-receipts/${seed.transaction_id}/dismiss`) &&
+          r.request().method() === "POST",
+      );
+      await confirm.getByRole("button", { name: "Dismiss" }).click();
+      expect((await dismissResponse).ok()).toBeTruthy();
+
+      await expect(row).not.toBeVisible({ timeout: 10000 });
+      const afterRes = await api.get("/rent-receipts/pending");
+      const afterData = await afterRes.json() as { items: { transaction_id: string }[] };
+      expect(afterData.items.find((item) => item.transaction_id === seed.transaction_id)).toBeUndefined();
+    } finally {
+      await removeGmailIntegration(api);
+      await cleanupRentPayment(api, seed);
+    }
+  });
 });

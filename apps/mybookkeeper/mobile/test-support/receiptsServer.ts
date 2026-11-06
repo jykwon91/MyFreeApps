@@ -24,12 +24,13 @@ export function aReceipt(overrides: Partial<PendingReceipt> = {}): PendingReceip
     payment_method: null,
     vendor: "Zelle",
     send_blocker: null,
+    sent_from_other_gmail: null,
     ...overrides,
   };
 }
 
 /** A reply to a write. `noAnswer` is a request whose answer never arrives. */
-export type FakeReply = { status: number; detail?: string } | "noAnswer";
+export type FakeReply = { status: number; detail?: string | Record<string, string> } | "noAnswer";
 
 export interface FakeReceiptServer {
   receipts: PendingReceipt[];

@@ -1,4 +1,5 @@
 import { RECEIPT_SEND_ERROR_MESSAGES } from "@mybookkeeper/api-client/constants/receiptSendErrorMessages";
+import { receiptSentFromOtherGmailMessage } from "@mybookkeeper/api-client/utils/receiptSentFromOtherGmailMessage";
 import { FIX_ON_WEBSITE, RECEIPTS_MESSAGES as MESSAGES } from "../src/constants/receipts";
 import { dismissFailure, sendFailure } from "../src/features/receipts/receiptFailure";
 
@@ -11,6 +12,10 @@ describe("telling send refusals apart", () => {
     [{ status: 422, data: { detail: "No email" } }, { kind: "recheck", fallback: MESSAGES.couldntSend }],
     [{ status: 503, data: { detail: "gmail_reauth_required" } }, { kind: "recheck", fallback: `${RECEIPT_SEND_ERROR_MESSAGES.gmail_reauth_required} ${FIX_ON_WEBSITE}` }],
     [{ status: 502, data: { detail: "Gmail said no" } }, { kind: "message", message: MESSAGES.gmailRefused }],
+    [
+      { status: 409, data: { detail: { code: "receipt_sent_from_other_gmail", sender_gmail_address: "old@gmail.com" } } },
+      { kind: "message", message: `${receiptSentFromOtherGmailMessage("old@gmail.com")} ${FIX_ON_WEBSITE}` },
+    ],
     // The proxy's own 5xx, with no detail from the app: the send may have gone out.
     [{ status: 502, data: "<html>Bad Gateway</html>" }, { kind: "unsure" }],
     [{ status: 504 }, { kind: "unsure" }],

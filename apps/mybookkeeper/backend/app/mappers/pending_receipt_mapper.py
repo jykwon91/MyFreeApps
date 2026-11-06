@@ -7,7 +7,10 @@ from app.schemas.leases.receipt_send_blocker import ReceiptSendBlocker
 
 
 def to_pending_receipt_response(
-    row: PendingReceiptListRow, send_blocker: ReceiptSendBlocker | None,
+    row: PendingReceiptListRow,
+    *,
+    send_blocker: ReceiptSendBlocker | None,
+    sent_from_other_gmail: str | None,
 ) -> PendingReceiptResponse:
     return PendingReceiptResponse(
         id=row.id,
@@ -28,4 +31,5 @@ def to_pending_receipt_response(
         payment_method=row.payment_method,
         vendor=row.vendor,
         send_blocker=send_blocker,
+        sent_from_other_gmail=sent_from_other_gmail,
     )

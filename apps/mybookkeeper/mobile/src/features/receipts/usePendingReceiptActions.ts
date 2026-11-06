@@ -31,7 +31,9 @@ export function usePendingReceiptActions(receipt: PendingReceipt) {
   }
 
   function askToDismiss(): void {
-    askOnce(asking, MESSAGES.dismissTitle, MESSAGES.dismissBody, {
+    // Gmail can't settle a send that went through another account, so dismissing may hide one that never arrived.
+    const body = receipt.sent_from_other_gmail === null ? MESSAGES.dismissBody : MESSAGES.dismissOtherGmailBody;
+    askOnce(asking, MESSAGES.dismissTitle, body, {
       text: MESSAGES.dismiss,
       style: "destructive",
       onPress: () => void dismiss(),

@@ -42,10 +42,10 @@ async function deleteInquiry(api: APIRequestContext, id: string): Promise<void> 
 
 async function seedGmailIntegration(
   api: APIRequestContext,
-  opts: { hasSendScope: boolean } = { hasSendScope: true },
+  opts: { hasSendScope: boolean; gmailAddress?: string } = { hasSendScope: true },
 ): Promise<void> {
   const res = await api.post("/test/seed-gmail-integration", {
-    data: { has_send_scope: opts.hasSendScope },
+    data: { has_send_scope: opts.hasSendScope, gmail_address: opts.gmailAddress ?? "e2e-host@example.com" },
   });
   if (!res.ok()) {
     throw new Error(`seedGmailIntegration failed: ${res.status()}`);
@@ -56,8 +56,11 @@ async function removeGmailIntegration(api: APIRequestContext): Promise<void> {
   await api.delete("/test/seed-gmail-integration").catch(() => {});
 }
 
-async function enableMockGmailSend(api: APIRequestContext): Promise<void> {
-  const res = await api.post("/test/mock-gmail-send/enable");
+async function enableMockGmailSend(
+  api: APIRequestContext,
+  replyOutcome: "sent" | "unknown" = "sent",
+): Promise<void> {
+  const res = await api.post("/test/mock-gmail-send/enable", { data: { reply_outcome: replyOutcome } });
   if (!res.ok()) {
     throw new Error(`enableMockGmailSend failed: ${res.status()}`);
   }
@@ -72,7 +75,9 @@ async function gotoInquiryDetail(page: Page, inquiryId: string): Promise<void> {
   await expect(page.getByTestId("inquiry-action-row")).toBeVisible({ timeout: 10000 });
 }
 
-test.describe("Templated reply flow (PR 2.3)", () => {
+// Serial: every test here seeds, changes or removes the org's one Gmail integration
+// and the process-wide Gmail stub, so two at once would see each other's state.
+test.describe.serial("Templated reply flow (PR 2.3)", () => {
   test.afterEach(async ({ api }) => {
     await disableMockGmailSend(api);
     await removeGmailIntegration(api);
@@ -241,6 +246,63 @@ test.describe("Templated reply flow (PR 2.3)", () => {
           (m) => m.direction === "outbound" && m.subject === subject,
         ),
       ).toBeTruthy();
+    } finally {
+      for (const id of seededIds) await deleteInquiry(api, id);
+    }
+  });
+
+  test("a reply first tried through another Gmail account is named, and only sent again as a new reply", async ({
+    authedPage: page, api,
+  }) => {
+    const runId = Date.now();
+    const seededIds: string[] = [];
+
+    try {
+      await seedGmailIntegration(api, { hasSendScope: true });
+      // Gmail never says whether this first attempt went out.
+      await enableMockGmailSend(api, "unknown");
+
+      const inquiryId = await seedInquiry(api, {
+        source: "direct",
+        inquirer_name: `E2E Other Account Inquirer ${runId}`,
+        inquirer_email: `other-account-${runId}@example.com`,
+      });
+      seededIds.push(inquiryId);
+
+      await gotoInquiryDetail(page, inquiryId);
+      await page.getByTestId("inquiry-reply-button").click();
+      await page.getByTestId("reply-tab-custom").click();
+      const subject = `E2E other account subject ${runId}`;
+      await page.getByTestId("reply-subject-input").fill(subject);
+      await page.getByTestId("reply-body-input").fill(`Other account body for ${runId}.`);
+
+      await page.getByTestId("reply-send-button").click();
+      await expect(page.getByTestId("reply-send-button")).toHaveText("Try again", { timeout: 10000 });
+
+      // The host reconnects Gmail as someone else, after the first attempt's claim has gone stale.
+      await seedGmailIntegration(api, { hasSendScope: true, gmailAddress: "e2e-new-host@example.com" });
+      expect((await api.post(`/test/inquiries/${inquiryId}/age-reply-sends`)).ok()).toBeTruthy();
+      await enableMockGmailSend(api, "sent");
+
+      const refused = page.waitForResponse(
+        (r) => r.url().includes(`/api/inquiries/${inquiryId}/reply`) && r.request().method() === "POST",
+      );
+      await page.getByTestId("reply-send-button").click();
+      expect((await refused).status()).toBe(409);
+      await expect(page.getByTestId("reply-send-failure")).toContainText("gone out from e2e-host@example.com,");
+      await expect(page.getByTestId("reply-send-button")).toHaveText("Send anyway as a new reply");
+
+      const sent = page.waitForResponse(
+        (r) => r.url().includes(`/api/inquiries/${inquiryId}/reply`) && r.request().method() === "POST",
+      );
+      await page.getByTestId("reply-send-button").click();
+      expect((await sent).ok()).toBeTruthy();
+      await expect(page.getByTestId("inquiry-reply-panel")).toHaveCount(0, { timeout: 5000 });
+
+      const detail = await (await api.get(`/inquiries/${inquiryId}`)).json() as {
+        messages: { direction: string; subject: string }[];
+      };
+      expect(detail.messages.filter((m) => m.direction === "outbound" && m.subject === subject)).toHaveLength(1);
     } finally {
       for (const id of seededIds) await deleteInquiry(api, id);
     }

@@ -224,6 +224,59 @@ describe("InquiryReplyPanel sending", () => {
     expect(sentIds()).toEqual(["req-1", "req-2"]);
   });
 
+  it("names the other Gmail account an earlier attempt went through, and sends anyway only under a new id", async () => {
+    const otherAccount = { status: 409, data: { detail: { code: "reply_sent_from_other_gmail", sender_gmail_address: "old@gmail.com" } } };
+    const user = userEvent.setup();
+    renderPanel();
+    await writeReply(user);
+    await user.click(screen.getByTestId("reply-send-button"));
+    await answer(0, otherAccount);
+
+    expect(screen.getByTestId("reply-send-failure")).toHaveTextContent(/gone out from old@gmail\.com,/);
+    expect(screen.getByTestId("reply-send-button")).toHaveTextContent(INQUIRY_MESSAGES.replySendAnywayButton);
+
+    await user.click(screen.getByTestId("reply-send-button"));
+    await answer(1, "ok");
+    expect(sentIds()).toEqual(["req-1", "req-2"]);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("checks the earlier attempt again after reopening, for when that account is reconnected", async () => {
+    const otherAccount = { status: 409, data: { detail: { code: "reply_sent_from_other_gmail", sender_gmail_address: "old@gmail.com" } } };
+    const user = userEvent.setup();
+    const first = renderPanel();
+    await writeReply(user);
+    await user.click(screen.getByTestId("reply-send-button"));
+    await answer(0, otherAccount);
+    first.unmount();
+
+    renderPanel();
+    await writeReply(user);
+    expect(screen.getByTestId("reply-send-button")).toHaveTextContent(INQUIRY_MESSAGES.replyTryAgainButton);
+    await user.click(screen.getByTestId("reply-send-button"));
+    await answer(1, "ok");
+    expect(sentIds()).toEqual(["req-1", "req-1"]);
+  });
+
+  it("forgets an account it couldn't check once another reply has gone", async () => {
+    const otherAccount = { status: 409, data: { detail: { code: "reply_sent_from_other_gmail", sender_gmail_address: "old@gmail.com" } } };
+    const user = userEvent.setup();
+    renderPanel();
+    await writeReply(user);
+    await user.click(screen.getByTestId("reply-send-button"));
+    await answer(0, otherAccount);
+    await user.type(screen.getByTestId("reply-body-input"), " Different.");
+    await user.click(screen.getByTestId("reply-send-button"));
+    await answer(1, "ok");
+
+    await user.clear(screen.getByTestId("reply-subject-input"));
+    await user.clear(screen.getByTestId("reply-body-input"));
+    await user.type(screen.getByTestId("reply-subject-input"), "Re: Room");
+    await user.type(screen.getByTestId("reply-body-input"), "Yes, it's open.");
+    expect(screen.getByTestId("reply-send-button")).toHaveTextContent("Send reply");
+    expect(screen.queryByText(/gone out from old@gmail\.com/)).toBeNull();
+  });
+
   it("says Gmail refused it, so nothing was sent", async () => {
     const user = userEvent.setup();
     renderPanel();

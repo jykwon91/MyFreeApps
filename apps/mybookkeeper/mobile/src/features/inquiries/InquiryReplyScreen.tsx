@@ -16,6 +16,7 @@ import { REPLY_BODY_MAX_LENGTH, REPLY_BODY_MIN_HEIGHT, REPLY_SUBJECT_MAX_LENGTH,
 import type { ReplyBlock } from "../../types/ReplyBlock";
 import type { ReplyDraft } from "../../types/ReplyDraft";
 import type { ReplySendFailure } from "@mybookkeeper/api-client/types/inquiry/reply-send-failure";
+import { REPLY_SEND_ACTION } from "@mybookkeeper/api-client/constants/replySendAction";
 import { replySendAction } from "@mybookkeeper/api-client/utils/replySendAction";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { useCanWrite } from "../workspace/useCanWrite";
@@ -37,7 +38,7 @@ export default function InquiryReplyScreen({ id }: { id: string }) {
   const { data: integrations, refetch: refetchIntegrations } = useGetIntegrationsQuery();
   const { data: templates, error: templatesError, refetch: refetchTemplates } = useGetReplyTemplatesQuery();
   const [renderTemplate, { isFetching: isRendering }] = useLazyRenderReplyTemplateQuery();
-  const { send: sendReply, isRetry, isWaiting, mightHaveSent } = useReplySend(id, REPLY_SEND_OPTIONS);
+  const { send: sendReply, isRetry, otherGmailAddress, isWaiting, mightHaveSent } = useReplySend(id, REPLY_SEND_OPTIONS);
   const { draft, change: saveDraft, wasRestored, startOver: clearDraft, settleRestored } = useReplyDraft(id);
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -82,6 +83,10 @@ export default function InquiryReplyScreen({ id }: { id: string }) {
   const email = inquiry.inquirer_email;
   const toSend = replyToSend(draft);
   const draftIsRetry = isRetry(toSend);
+  // Kept by the hook while this screen is open, so it outlives a failure cleared by editing.
+  const draftOtherGmail = otherGmailAddress(toSend);
+  const shownFailure = failure ?? (draftOtherGmail ? "otherAccount" : null);
+  const sendAction = replySendAction(shownFailure, mightHaveSent, draftIsRetry);
   const block: ReplyBlock | null = replyBlock(integrations, email);
   const canSend = !block && !isRendering && Boolean(draft.subject.trim()) && Boolean(draft.body.trim());
   const hasOwnWords = Boolean(draft.subject.trim() || draft.body.trim()) && !matchesRendered(draft, rendered);
@@ -187,7 +192,12 @@ export default function InquiryReplyScreen({ id }: { id: string }) {
             message={REPLY_BLOCK_WORDS[block]}
           />
         ) : null}
-        <ReplySendNotice changedAfterMightHaveSent={mightHaveSent && !draftIsRetry} failure={failure} isBlocked={block !== null} />
+        <ReplySendNotice
+          changedAfterMightHaveSent={mightHaveSent && !draftIsRetry}
+          failure={shownFailure}
+          isBlocked={block !== null}
+          otherGmailAddress={draftOtherGmail}
+        />
         {email ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{`To: ${email}`}</Text> : null}
         {wasRestored ? (
           <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
@@ -250,8 +260,9 @@ export default function InquiryReplyScreen({ id }: { id: string }) {
           isLoading={isBusy}
           loadingText={isWaiting ? REPLY_SEND_WORDS.stillSending : REPLY_SEND_WORDS.sending}
           onPress={() => void send()}
+          variant={sendAction === REPLY_SEND_ACTION.SEND_ANYWAY ? "secondary" : "primary"}
         >
-          {REPLY_SEND_LABELS[replySendAction(failure, mightHaveSent, draftIsRetry)]}
+          {REPLY_SEND_LABELS[sendAction]}
         </LoadingButton>
       </View>
       <OptionSheet

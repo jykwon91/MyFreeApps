@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
 import { store } from "@/shared/store";
@@ -24,7 +24,7 @@ vi.mock("@/shared/lib/toast-store", () => ({
   showError: vi.fn(),
 }));
 
-import { useGetPendingReceiptsQuery } from "@mybookkeeper/api-client/store/rentReceiptsApi";
+import { useDismissReceiptMutation, useGetPendingReceiptsQuery } from "@mybookkeeper/api-client/store/rentReceiptsApi";
 
 const pendingResponse: PendingReceiptListResponse = {
   items: [
@@ -46,6 +46,7 @@ const pendingResponse: PendingReceiptListResponse = {
       payment_method: "check",
       vendor: "Chase Bank",
       send_blocker: null,
+      sent_from_other_gmail: null,
     },
   ],
   total: 1,
@@ -181,6 +182,30 @@ describe("PendingReceipts page", () => {
     expect(screen.getByTestId("pending-receipt-confirming")).toHaveTextContent("Confirming with Gmail");
     expect(screen.queryByTestId("pending-receipt-dismiss-btn")).not.toBeInTheDocument();
     expect(screen.getByTestId("pending-receipt-send-btn")).toBeInTheDocument();
+  });
+
+  it("lets me dismiss, after confirming, a send through a Gmail account that isn't connected", async () => {
+    const dismiss = vi.fn(() => ({ unwrap: () => Promise.resolve() }));
+    vi.mocked(useDismissReceiptMutation).mockReturnValue([
+      dismiss,
+      { isLoading: false },
+    ] as unknown as ReturnType<typeof useDismissReceiptMutation>);
+    mockList({
+      ...pendingResponse,
+      items: [{ ...pendingResponse.items[0], status: "sending", sent_from_other_gmail: "old@gmail.com" }],
+    });
+
+    renderPage();
+    expect(screen.getByTestId("pending-receipt-other-gmail")).toHaveTextContent("Can't check with Gmail");
+    expect(screen.getByTestId("pending-receipt-other-gmail-note")).toHaveTextContent(/gone out from old@gmail\.com,/);
+    expect(screen.queryByTestId("pending-receipt-confirming")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("pending-receipt-send-btn")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("pending-receipt-dismiss-btn"));
+    expect(dismiss).not.toHaveBeenCalled();
+    const confirm = await screen.findByRole("dialog", { name: "Dismiss this receipt?" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "Dismiss" }));
+    await waitFor(() => expect(dismiss).toHaveBeenCalledWith({ transaction_id: "txn-123" }));
   });
 
   it("shows no confirming pill on a pending row", () => {

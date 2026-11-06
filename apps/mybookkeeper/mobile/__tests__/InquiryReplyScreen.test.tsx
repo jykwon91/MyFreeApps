@@ -7,7 +7,7 @@ import { Alert, Linking } from "react-native";
 import { Provider } from "react-redux";
 import { REPLY_TEMPLATE_MESSAGES } from "../src/constants/replyTemplates";
 import InquiryReplyScreen from "../src/features/inquiries/InquiryReplyScreen";
-import { REPLY_FAILURE_WORDS, REPLY_SEND_WORDS } from "../src/features/inquiries/replyStatus";
+import { REPLY_FAILURE_WORDS, REPLY_SEND_WORDS, replySentFromOtherGmailWords } from "../src/features/inquiries/replyStatus";
 import { clearReplyRequestIds } from "../src/features/inquiries/replyRequestIds";
 import { clearReplyDrafts, deleteReplyDraft, hasReplyDraft, loadReplyDraft, saveReplyDraft } from "../src/features/inquiries/replyDrafts";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
@@ -84,7 +84,7 @@ async function chooseTemplate(label: string) {
   });
 }
 
-const sendButton = () => screen.getByRole("button", { name: /^(Send|Try again|Check again|Send as a new reply)$/ });
+const sendButton = () => screen.getByRole("button", { name: /^(Send|Try again|Check again|Send as a new reply|Send anyway as a new reply)$/ });
 
 const replyIds = (server: { requests: { url?: string; data?: unknown }[] }) =>
   server.requests
@@ -438,6 +438,50 @@ describe("InquiryReplyScreen", () => {
       expect(await screen.findByText("Reply sent.")).toBeTruthy();
       const [first, second] = replyIds(server);
       expect(second).toBe(first);
+    });
+
+    describe("when an earlier attempt went through another Gmail account", () => {
+      const otherAccount = { status: 409, detail: { code: "reply_sent_from_other_gmail", sender_gmail_address: "old@gmail.com" } };
+
+      it("names the account, and sends anyway only as a new reply", async () => {
+        const server = startInquiryServer([anInquiry()]);
+        server.sendOutcome = otherAccount;
+        await writeAndSend();
+        expect(await screen.findByText(replySentFromOtherGmailWords("old@gmail.com"))).toBeTruthy();
+        expect(hasReplyDraft("i1")).toBe(true);
+        server.sendOutcome = null;
+        await fireEvent.press(screen.getByRole("button", { name: "Send anyway as a new reply" }));
+        expect(await screen.findByText("Reply sent.")).toBeTruthy();
+        const [first, second] = replyIds(server);
+        expect(second).not.toBe(first);
+      });
+
+      it("keeps naming it after the words change", async () => {
+        const server = startInquiryServer([anInquiry()]);
+        server.sendOutcome = otherAccount;
+        await writeAndSend();
+        await screen.findByText(replySentFromOtherGmailWords("old@gmail.com"));
+        await fireEvent.changeText(screen.getByLabelText("Message"), "Yes, it's open. ");
+        await fireEvent.changeText(screen.getByLabelText("Message"), "Yes, it's open.");
+        expect(screen.getByText(replySentFromOtherGmailWords("old@gmail.com"))).toBeTruthy();
+        expect(screen.getByRole("button", { name: "Send anyway as a new reply" })).toBeTruthy();
+      });
+
+      it("checks the earlier attempt again under its own id once the screen is reopened", async () => {
+        const server = startInquiryServer([anInquiry()]);
+        server.sendOutcome = otherAccount;
+        const { unmount } = await renderScreen();
+        await write();
+        await fireEvent.press(sendButton());
+        await screen.findByText(replySentFromOtherGmailWords("old@gmail.com"));
+        await act(async () => unmount());
+        server.sendOutcome = null;
+        await renderScreen();
+        await fireEvent.press(await screen.findByRole("button", { name: "Try again" }));
+        expect(await screen.findByText("Reply sent.")).toBeTruthy();
+        const [first, second] = replyIds(server);
+        expect(second).toBe(first);
+      });
     });
 
     it("waits while an earlier copy is still sending, then offers Check again", async () => {
