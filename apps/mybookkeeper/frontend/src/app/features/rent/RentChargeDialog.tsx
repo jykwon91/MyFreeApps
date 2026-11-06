@@ -3,7 +3,7 @@ import { Button, LoadingButton } from "@platform/ui";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import Select from "@/shared/components/ui/Select";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import { extractErrorMessage } from "@/shared/utils/errorMessage";
+import { extractErrorMessage } from "@platform/ui";
 import { useCreateRentChargeMutation } from "@mybookkeeper/api-client/store/rentLedgerApi";
 import { RENT_INPUT_CLASS } from "./rent-input-class";
 import { RENT_CHARGE_TYPE_LABEL, RENT_MANUAL_CHARGE_TYPES } from "@mybookkeeper/api-client/constants/rentLabels";

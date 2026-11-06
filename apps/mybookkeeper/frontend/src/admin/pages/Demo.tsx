@@ -14,7 +14,7 @@ import DemoUserTable from "@/admin/features/demo/DemoUserTable";
 import CreateDemoDialog from "@/admin/features/demo/CreateDemoDialog";
 import CredentialsModal from "@/admin/features/demo/CredentialsModal";
 import DemoPageSkeleton from "@/admin/features/demo/DemoPageSkeleton";
-import { extractErrorMessage } from "@/shared/utils/errorMessage";
+import { extractErrorMessage } from "@platform/ui";
 
 interface Credentials {
   email: string;

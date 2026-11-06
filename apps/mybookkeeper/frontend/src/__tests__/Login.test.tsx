@@ -260,6 +260,19 @@ describe("Login — TOTP challenge", () => {
     await screen.findByText("Invalid TOTP code");
   });
 
+  it("says the authentication code is invalid when the server answers invalid_totp", async () => {
+    const user = await submitCredentials();
+    const axiosErr = Object.assign(new Error("Request failed with status code 400"), {
+      response: { status: 400, data: { detail: "invalid_totp" } },
+    });
+    vi.mocked(login).mockRejectedValueOnce(axiosErr);
+
+    await user.type(screen.getByPlaceholderText("000000"), "000000");
+    await user.click(screen.getByRole("button", { name: "Verify" }));
+
+    await screen.findByText("Invalid authentication code. Please try again.");
+  });
+
   it("does not navigate when TOTP code is invalid", async () => {
     const user = await submitCredentials();
     vi.mocked(login).mockRejectedValueOnce(new Error("Invalid TOTP code"));

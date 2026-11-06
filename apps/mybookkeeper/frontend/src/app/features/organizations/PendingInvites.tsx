@@ -5,7 +5,7 @@ import type { OrgInvite } from "@mybookkeeper/api-client/types/organization/OrgI
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { isInviteExpired } from "@mybookkeeper/api-client/utils/isInviteExpired";
 import { useActiveOrgId } from "@/shared/hooks/useCurrentOrg";
-import { extractErrorMessage } from "@/shared/utils/errorMessage";
+import { extractErrorMessage } from "@platform/ui";
 import { formatDistanceToNow } from "date-fns";
 import { Loader2, X } from "lucide-react";
 import Badge from "@/shared/components/ui/Badge";

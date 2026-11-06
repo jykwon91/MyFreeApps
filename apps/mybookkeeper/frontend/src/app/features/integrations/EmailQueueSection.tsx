@@ -7,7 +7,7 @@ import {
   useRetryAllFailedMutation,
 } from "@/shared/store/integrationsApi";
 import { POLLING_OPTIONS, EMPTY_QUEUE } from "@/shared/lib/constants";
-import { extractErrorMessage } from "@/shared/utils/errorMessage";
+import { extractErrorMessage } from "@platform/ui";
 import { computeStatusCounts, groupBySession } from "@/shared/utils/email-queue";
 import { timeAgo } from "@/shared/utils/date";
 import { useToast } from "@/shared/hooks/useToast";

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button, LoadingButton } from "@platform/ui";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import { extractErrorMessage } from "@/shared/utils/errorMessage";
+import { extractErrorMessage } from "@platform/ui";
 import { useWaiveRentChargeMutation } from "@mybookkeeper/api-client/store/rentLedgerApi";
 import { RENT_INPUT_CLASS } from "./rent-input-class";
 import { formatCurrency } from "@/shared/utils/currency";

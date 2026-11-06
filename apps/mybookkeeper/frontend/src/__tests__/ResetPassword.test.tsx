@@ -8,24 +8,6 @@ vi.mock("@/shared/lib/api", () => ({
   default: { post: vi.fn() },
 }));
 
-vi.mock("@/shared/utils/errorMessage", () => ({
-  extractErrorMessage: (err: unknown) => {
-    if (err instanceof Error) return err.message;
-    if (err && typeof err === "object") {
-      const obj = err as Record<string, unknown>;
-      if (obj.data && typeof obj.data === "object") {
-        const data = obj.data as Record<string, unknown>;
-        if (typeof data.detail === "string") return data.detail;
-        if (data.detail && typeof data.detail === "object") {
-          const detail = data.detail as Record<string, unknown>;
-          if (typeof detail.reason === "string") return detail.reason;
-        }
-      }
-    }
-    return "An unexpected error occurred";
-  },
-}));
-
 import api from "@/shared/lib/api";
 
 const mockNavigate = vi.fn();
@@ -247,6 +229,19 @@ describe("ResetPassword \u2014 error handling", () => {
 
   it("shows a token-expired message when the error message contains the word token", async () => {
     vi.mocked(api.post).mockRejectedValue(new Error("Invalid token provided"));
+    const user = userEvent.setup();
+    const { container } = renderWithToken();
+    await user.type(newPasswordInput(container), "newpassword1234");
+    await user.type(confirmPasswordInput(container), "newpassword1234");
+    await user.click(screen.getByRole("button", { name: "Reset password" }));
+    await screen.findByText(/expired or already been used/i);
+  });
+
+  it("shows the token-expired message for the server's axios RESET_PASSWORD_BAD_TOKEN", async () => {
+    const axiosErr = Object.assign(new Error("Request failed with status code 400"), {
+      response: { status: 400, data: { detail: "RESET_PASSWORD_BAD_TOKEN" } },
+    });
+    vi.mocked(api.post).mockRejectedValue(axiosErr);
     const user = userEvent.setup();
     const { container } = renderWithToken();
     await user.type(newPasswordInput(container), "newpassword1234");

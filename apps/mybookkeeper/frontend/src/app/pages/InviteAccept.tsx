@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAcceptInviteMutation, useGetInviteInfoQuery } from "@mybookkeeper/api-client/store/membersApi";
 import { login, notifyAuthChange } from "@/shared/lib/auth";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
-import { extractErrorMessage } from "@/shared/utils/errorMessage";
+import { extractErrorMessage } from "@platform/ui";
 import { LoadingButton } from "@platform/ui";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import TurnstileWidget from "@/shared/components/ui/TurnstileWidget";

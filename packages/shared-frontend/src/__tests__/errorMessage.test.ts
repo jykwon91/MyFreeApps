@@ -82,6 +82,32 @@ describe("extractErrorMessage", () => {
     expect(extractErrorMessage(axiosErr)).toBe("REGISTER_USER_ALREADY_EXISTS");
   });
 
+  it("reads the reason of a fastapi-users { code, reason } detail", () => {
+    const axiosErr = new Error("Request failed with status code 400") as Error & {
+      response: { data: { detail: { code: string; reason: string } } };
+    };
+    axiosErr.response = {
+      data: {
+        detail: {
+          code: "REGISTER_INVALID_PASSWORD",
+          reason: "Password should be at least 12 characters",
+        },
+      },
+    };
+    expect(extractErrorMessage(axiosErr)).toBe("Password should be at least 12 characters");
+    expect(
+      extractErrorMessage({ data: { detail: { code: "X", reason: "Too short" } } }),
+    ).toBe("Too short");
+  });
+
+  it("falls through a { code } detail with no usable reason", () => {
+    const err = new Error("Request failed with status code 400") as Error & {
+      response: { data: { detail: { code: string } } };
+    };
+    err.response = { data: { detail: { code: "REGISTER_INVALID_PASSWORD" } } };
+    expect(extractErrorMessage(err)).toBe("Request failed with status code 400");
+  });
+
   it("reads RTK Query err.data.detail", () => {
     expect(
       extractErrorMessage({ status: 409, data: { detail: "invite_already_pending" } }),

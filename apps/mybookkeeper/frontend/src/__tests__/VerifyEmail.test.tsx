@@ -7,20 +7,6 @@ vi.mock("@/shared/lib/api", () => ({
   default: { post: vi.fn() },
 }));
 
-vi.mock("@/shared/utils/errorMessage", () => ({
-  extractErrorMessage: (err: unknown) => {
-    if (err instanceof Error) return err.message;
-    if (err && typeof err === "object") {
-      const obj = err as Record<string, unknown>;
-      if (obj.data && typeof obj.data === "object") {
-        const data = obj.data as Record<string, unknown>;
-        if (typeof data.detail === "string") return data.detail;
-      }
-    }
-    return "An unexpected error occurred";
-  },
-}));
-
 import api from "@/shared/lib/api";
 
 function renderVerifyEmail(search = "") {
@@ -88,6 +74,17 @@ describe("VerifyEmail — error", () => {
     renderVerifyEmail("?token=bad-token");
 
     await screen.findByText("VERIFY_TOKEN_INVALID");
+  });
+
+  it("shows the server's detail for an axios error, not the request status line", async () => {
+    const axiosErr = Object.assign(new Error("Request failed with status code 400"), {
+      response: { status: 400, data: { detail: "VERIFY_USER_BAD_TOKEN" } },
+    });
+    vi.mocked(api.post).mockRejectedValue(axiosErr);
+    renderVerifyEmail("?token=bad-token");
+
+    await screen.findByText("VERIFY_USER_BAD_TOKEN");
+    expect(screen.queryByText(/request failed with status code/i)).not.toBeInTheDocument();
   });
 
   it("shows a generic error when API error has no message", async () => {

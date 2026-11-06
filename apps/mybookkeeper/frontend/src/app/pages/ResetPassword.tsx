@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import api from "@/shared/lib/api";
-import { extractErrorMessage } from "@/shared/utils/errorMessage";
+import { extractErrorMessage } from "@platform/ui";
 import { LoadingButton } from "@platform/ui";
 
 const MIN_PASSWORD_LENGTH = 12;
