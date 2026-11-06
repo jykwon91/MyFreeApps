@@ -1,4 +1,5 @@
-import { TERRITORY, type Faction, type Territory } from "@/games/wow-forever/types/worldMap";
+import { createSpotDecoder, type SourceCell } from "@/games/wow-forever/data/spotDecode";
+import type { Faction } from "@/games/wow-forever/types/worldMap";
 import { GATHER_SKILL, MOB_KIND, type GatherSkill } from "@/games/wow-forever/types/recipeSources";
 import type {
   ContainerDrop,
@@ -8,7 +9,6 @@ import type {
   DropSource,
   ItemSources,
   MobKind,
-  MobSpot,
   ObjectSpot,
   QuestGiver,
   QuestSource,
@@ -23,7 +23,7 @@ import type {
  * each ship their own file in this shape.
  */
 
-type Row = readonly (string | number | boolean | null)[];
+type Row = readonly SourceCell[];
 
 export interface RawSources {
   vendors?: Row[];
@@ -77,14 +77,7 @@ function gatherOf(skill: unknown, level: unknown): ObjectSpot["gather"] {
 }
 
 export function createSourceLookup(raw: RawSourcesFile): SourceLookup {
-  function zoneName(zoneId: number): string {
-    return raw.zones[String(zoneId)] ?? "";
-  }
-
-  function territory(zoneId: number): Territory | null {
-    const side = raw.territory?.[String(zoneId)];
-    return Object.values(TERRITORY).find((t) => t === side) ?? null;
-  }
+  const { zoneName, spotAt } = createSpotDecoder(raw.zones, raw.territory);
 
   function vendor(r: Row): VendorSpot {
     const [npcId, name, title, zoneId, subzone, x, y, faction, stock, restockMinutes] = r;
@@ -127,18 +120,6 @@ export function createSourceLookup(raw: RawSourcesFile): SourceLookup {
       level: Number(level),
       side: side as Faction,
       givers: (givers as unknown as Row[]).map(giver),
-    };
-  }
-
-  function spotAt(zoneId: Row[number], subzone: Row[number], x: Row[number], y: Row[number]): MobSpot | null {
-    if (zoneId === null || zoneId === undefined) return null;
-    return {
-      zoneId: Number(zoneId),
-      zoneName: zoneName(Number(zoneId)),
-      subzone: String(subzone ?? ""),
-      x: Number(x),
-      y: Number(y),
-      territory: territory(Number(zoneId)),
     };
   }
 

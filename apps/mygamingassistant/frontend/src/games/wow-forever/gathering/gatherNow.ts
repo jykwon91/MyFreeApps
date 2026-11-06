@@ -1,9 +1,7 @@
+import { UNTRAINED_SKILL } from "@/games/wow-forever/data/professions/gathering/gatheringConfig";
 import { isWorthSkill, nodeColor } from "@/games/wow-forever/gathering/nodeColors";
 import type { GatheringNow } from "@/games/wow-forever/types/gathering/gatheringNow";
 import type { ResolvedNode } from "@/games/wow-forever/types/gathering/resolvedNode";
-
-/** With no skill typed, you've just trained it: skill 1. */
-const UNTRAINED_SKILL = 1;
 
 /**
  * What's worth gathering at `skill` (orange or yellow, lowest first) and the
