@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import { Button } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
 import {
   useDeleteChannelListingMutation,
   useGetChannelsQuery,
@@ -14,6 +15,8 @@ import ChannelListingFormModal from "./ChannelListingFormModal";
 
 export interface ChannelsSectionProps {
   listingId: string;
+  /** Viewers see the channels only: no add, edit or remove. */
+  canWrite: boolean;
 }
 
 type FormMode =
@@ -29,7 +32,7 @@ type FormMode =
  * shows when there's at least one unlinked channel available. Empty
  * state pitches the operator on the first link.
  */
-export default function ChannelsSection({ listingId }: ChannelsSectionProps) {
+export default function ChannelsSection({ listingId, canWrite }: ChannelsSectionProps) {
   const {
     data: channelListings = [],
     isLoading,
@@ -99,15 +102,13 @@ export default function ChannelsSection({ listingId }: ChannelsSectionProps) {
   }
 
   const showAddButton =
-    formMode.kind !== "create" && !allChannelsLinked && channels.length > 0;
+    canWrite && formMode.kind !== "create" && !allChannelsLinked && channels.length > 0;
 
   return (
     <div className="space-y-3" data-testid="channels-section">
       <div className="flex items-center justify-between gap-3">
         <div className="text-xs text-muted-foreground">
-          Connect this listing to channels you publish on. MBK will sync
-          calendars in both directions every 15 minutes — block a date here
-          and it propagates everywhere.
+          {canWrite ? LISTING_MESSAGES.channelsIntro : LISTING_MESSAGES.channelsIntroViewer}
         </div>
         {showAddButton ? (
           <Button
@@ -129,10 +130,9 @@ export default function ChannelsSection({ listingId }: ChannelsSectionProps) {
           className="border-2 border-dashed rounded-lg p-6 text-center space-y-3"
         >
           <p className="text-sm text-muted-foreground">
-            No channels yet. Add Airbnb, VRBO, Furnished Finder, or Rotating
-            Room to start syncing calendars.
+            {canWrite ? LISTING_MESSAGES.noChannels : LISTING_MESSAGES.noChannelsViewer}
           </p>
-          {channels.length > 0 ? (
+          {canWrite && channels.length > 0 ? (
             <Button
               variant="primary"
               size="md"
@@ -153,12 +153,13 @@ export default function ChannelsSection({ listingId }: ChannelsSectionProps) {
               onEdit={() => handleEdit(cl)}
               onRemove={() => handleRemove(cl)}
               isRemoving={removingId === cl.id}
+              canWrite={canWrite}
             />
           ))}
         </ul>
       )}
 
-      {formMode.kind === "create" ? (
+      {canWrite && formMode.kind === "create" ? (
         <ChannelListingFormModal
           open
           listingId={listingId}
@@ -167,7 +168,7 @@ export default function ChannelsSection({ listingId }: ChannelsSectionProps) {
         />
       ) : null}
 
-      {formMode.kind === "edit" ? (
+      {canWrite && formMode.kind === "edit" ? (
         <ChannelListingFormModal
           open
           listingId={listingId}

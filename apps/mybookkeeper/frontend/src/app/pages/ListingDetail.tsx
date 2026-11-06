@@ -23,6 +23,7 @@ import ListingPhotoManager from "@/app/features/listings/ListingPhotoManager";
 import DeleteListingModal from "@/app/features/listings/DeleteListingModal";
 import ChannelsSection from "@/app/features/listings/ChannelsSection";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
+import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
 
 export default function ListingDetail() {
   const { listingId } = useParams<{ listingId: string }>();
@@ -98,28 +99,36 @@ export default function ListingDetail() {
               </span>
             }
             actions={
-              <>
-                <Button
-                  variant="secondary"
-                  size="md"
-                  onClick={() => setShowEditForm(true)}
-                  data-testid="edit-listing-button"
-                >
-                  Edit
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="md"
-                  onClick={() => setShowDeleteModal(true)}
-                  className="text-red-600 border-red-200 hover:bg-red-50"
-                  data-testid="delete-listing-button"
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Delete
-                </Button>
-              </>
+              canWrite ? (
+                <>
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={() => setShowEditForm(true)}
+                    data-testid="edit-listing-button"
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={() => setShowDeleteModal(true)}
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                    data-testid="delete-listing-button"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Delete
+                  </Button>
+                </>
+              ) : undefined
             }
           />
+
+          {canWrite ? null : (
+            <p role="note" className="text-xs text-muted-foreground" data-testid="listing-view-only">
+              {LISTING_MESSAGES.viewOnlyNote}
+            </p>
+          )}
 
           {listing.pets_on_premises ? (
             <PetDisclosureBanner largeDogDisclosure={listing.large_dog_disclosure} />
@@ -171,6 +180,7 @@ export default function ListingDetail() {
             <ExternalIdSection
               listingId={listing.id}
               externalIds={listing.external_ids}
+              canWrite={canWrite}
             />
           </section>
 
@@ -178,15 +188,15 @@ export default function ListingDetail() {
 
           <section className="border rounded-lg p-4 space-y-3">
             <h2 className="text-sm font-medium">Photos</h2>
-            <ListingPhotoManager listingId={listing.id} photos={listing.photos} />
+            <ListingPhotoManager listingId={listing.id} photos={listing.photos} canWrite={canWrite} />
           </section>
 
           <section className="border rounded-lg p-4 space-y-3">
             <h2 className="text-sm font-medium">Channels</h2>
-            <ChannelsSection listingId={listing.id} />
+            <ChannelsSection listingId={listing.id} canWrite={canWrite} />
           </section>
 
-          {showEditForm ? (
+          {canWrite && showEditForm ? (
             <ListingForm
               listing={listing}
               properties={properties}
@@ -194,13 +204,15 @@ export default function ListingDetail() {
             />
           ) : null}
 
-          <DeleteListingModal
-            open={showDeleteModal}
-            listingTitle={listing.title}
-            isLoading={isDeleting}
-            onConfirm={handleConfirmDelete}
-            onCancel={() => setShowDeleteModal(false)}
-          />
+          {canWrite ? (
+            <DeleteListingModal
+              open={showDeleteModal}
+              listingTitle={listing.title}
+              isLoading={isDeleting}
+              onConfirm={handleConfirmDelete}
+              onCancel={() => setShowDeleteModal(false)}
+            />
+          ) : null}
         </>
       ) : null}
     </main>

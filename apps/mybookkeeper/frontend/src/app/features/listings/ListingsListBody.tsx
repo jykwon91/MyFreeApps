@@ -1,6 +1,7 @@
 import type { ListingsListMode } from "@/shared/types/listing/listings-list-mode";
 import type { ListingSummary } from "@mybookkeeper/api-client/types/listing/listing-summary";
 import EmptyState from "@/shared/components/ui/EmptyState";
+import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
 import { LoadingButton } from "@platform/ui";
 import ListingsSkeleton from "./ListingsSkeleton";
 import ListingCard from "./ListingCard";
@@ -13,6 +14,7 @@ export interface ListingsListBodyProps {
   hasMore: boolean;
   isFetching: boolean;
   onLoadMore: () => void;
+  canWrite: boolean;
 }
 
 export default function ListingsListBody({
@@ -22,13 +24,14 @@ export default function ListingsListBody({
   hasMore,
   isFetching,
   onLoadMore,
+  canWrite,
 }: ListingsListBodyProps) {
   switch (mode) {
     case "loading":
       return <ListingsSkeleton />;
     case "empty":
       return (
-        <EmptyState message="No listings yet. Create your first one to start tracking inquiries from Furnished Finder, Travel Nurse Housing, and direct contacts." />
+        <EmptyState message={canWrite ? LISTING_MESSAGES.noListings : LISTING_MESSAGES.noListingsViewer} />
       );
     case "list":
       return (

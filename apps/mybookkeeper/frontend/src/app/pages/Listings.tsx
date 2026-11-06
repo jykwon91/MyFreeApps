@@ -13,6 +13,7 @@ import ListingStatusFilter from "@/app/features/listings/ListingStatusFilter";
 import ListingForm from "@/app/features/listings/ListingForm";
 import { useListingsListMode } from "@/app/features/listings/useListingsListMode";
 import ListingsListBody from "@/app/features/listings/ListingsListBody";
+import { useCanWrite } from "@/shared/hooks/useOrgRole";
 
 const STATUS_PARAM = "status";
 
@@ -26,6 +27,7 @@ export default function Listings() {
   const status = parseStatusParam(searchParams.get(STATUS_PARAM));
   const [pageCount, setPageCount] = useState(1);
   const [showForm, setShowForm] = useState(false);
+  const canWrite = useCanWrite();
 
   const queryArgs = useMemo(
     () => ({
@@ -75,14 +77,16 @@ export default function Listings() {
         title="Listings"
         subtitle="Rooms and units you have available for rent."
         actions={
-          <LoadingButton
-            onClick={() => setShowForm(true)}
-            isLoading={false}
-            data-testid="new-listing-button"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            New listing
-          </LoadingButton>
+          canWrite ? (
+            <LoadingButton
+              onClick={() => setShowForm(true)}
+              isLoading={false}
+              data-testid="new-listing-button"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              New listing
+            </LoadingButton>
+          ) : undefined
         }
       />
 
@@ -110,9 +114,10 @@ export default function Listings() {
         hasMore={hasMore}
         isFetching={isFetching}
         onLoadMore={handleLoadMore}
+        canWrite={canWrite}
       />
 
-      {showForm ? (
+      {canWrite && showForm ? (
         <ListingForm
           properties={properties}
           onClose={() => setShowForm(false)}

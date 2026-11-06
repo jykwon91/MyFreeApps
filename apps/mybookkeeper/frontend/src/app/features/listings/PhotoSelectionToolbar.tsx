@@ -6,7 +6,8 @@ export interface PhotoSelectionToolbarProps {
   totalCount: number;
   onSelectAll: () => void;
   onClear: () => void;
-  onBulkDelete: () => void;
+  /** Left out for viewers, who can download but not delete. */
+  onBulkDelete?: () => void;
   onBulkDownload: () => void;
   isBulkDeleting: boolean;
   isBulkDownloading: boolean;
@@ -68,18 +69,20 @@ export default function PhotoSelectionToolbar({
           {isBulkDownloading ? "Downloading..." : "Download"}
         </Button>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onBulkDelete}
-          disabled={isBulkDeleting || isBulkDownloading}
-          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-          type="button"
-          data-testid="photo-bulk-delete-button"
-        >
-          <Trash2 className="h-4 w-4 mr-1" />
-          {isBulkDeleting ? "Deleting..." : "Delete"}
-        </Button>
+        {onBulkDelete ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBulkDelete}
+            disabled={isBulkDeleting || isBulkDownloading}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            type="button"
+            data-testid="photo-bulk-delete-button"
+          >
+            <Trash2 className="h-4 w-4 mr-1" />
+            {isBulkDeleting ? "Deleting..." : "Delete"}
+          </Button>
+        ) : null}
       </div>
     </div>
   );

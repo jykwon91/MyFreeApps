@@ -10,6 +10,8 @@ export interface ChannelListingRowProps {
   onEdit: () => void;
   onRemove: () => void;
   isRemoving?: boolean;
+  /** Viewers keep the links and Copy iCal URL, but get no Edit or Remove. */
+  canWrite: boolean;
 }
 
 /**
@@ -24,6 +26,7 @@ export default function ChannelListingRow({
   onEdit,
   onRemove,
   isRemoving,
+  canWrite,
 }: ChannelListingRowProps) {
   const [copied, setCopied] = useState(false);
   const channelName = channelListing.channel?.name ?? channelListing.channel_id;
@@ -75,28 +78,32 @@ export default function ChannelListingRow({
             )}
             Copy iCal URL
           </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={onEdit}
-            data-testid={`channel-listing-edit-${channelListing.id}`}
-            aria-label={`Edit ${channelName} channel link`}
-          >
-            <Pencil className="h-3 w-3 mr-1" aria-hidden="true" />
-            Edit
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={onRemove}
-            disabled={isRemoving}
-            data-testid={`channel-listing-remove-${channelListing.id}`}
-            aria-label={`Remove ${channelName} channel link`}
-            className="text-red-600 border-red-200 hover:bg-red-50"
-          >
-            <Trash2 className="h-3 w-3 mr-1" aria-hidden="true" />
-            Remove
-          </Button>
+          {canWrite ? (
+            <>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onEdit}
+                data-testid={`channel-listing-edit-${channelListing.id}`}
+                aria-label={`Edit ${channelName} channel link`}
+              >
+                <Pencil className="h-3 w-3 mr-1" aria-hidden="true" />
+                Edit
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onRemove}
+                disabled={isRemoving}
+                data-testid={`channel-listing-remove-${channelListing.id}`}
+                aria-label={`Remove ${channelName} channel link`}
+                className="text-red-600 border-red-200 hover:bg-red-50"
+              >
+                <Trash2 className="h-3 w-3 mr-1" aria-hidden="true" />
+                Remove
+              </Button>
+            </>
+          ) : null}
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-3">
