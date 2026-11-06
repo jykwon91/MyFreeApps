@@ -327,13 +327,11 @@ test.describe("Discovery — search, read, save", () => {
     await page.getByRole("button", { name: "Save to my recipes" }).click();
 
     await expect(page.getByRole("heading", { name: "Save this recipe" })).toBeVisible();
-    // FormField renders a <label> that isn't associated with its control, so
-    // getByLabel can't reach these — see apps/myrecipes/TECH_DEBT.md.
-    const title = page.locator('input[maxlength="255"]');
+    const title = page.getByRole("textbox", { name: "Title", exact: true });
     await expect(title).toHaveValue("Flan Napolitano");
 
     // The page it came from is recorded, so provenance survives the save.
-    const source = page.locator('input[maxlength="1000"]');
+    const source = page.getByRole("textbox", { name: "Source", exact: true });
     expect(await source.inputValue()).toContain(DETAIL.url);
 
     const probeTitle = `E2E Discovery Probe ${Date.now()}`;

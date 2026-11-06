@@ -66,7 +66,7 @@ export default function GreenhouseConfigSection({
         </p>
       </div>
 
-      <FormField label="Exclude keywords (optional)">
+      <FormField label="Exclude keywords (optional)" group>
         <MultiChipInput
           value={excludedKeywords}
           onChange={onExcludedKeywordsChange}

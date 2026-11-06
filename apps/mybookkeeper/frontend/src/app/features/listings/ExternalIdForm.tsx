@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { Button, LoadingButton } from "@platform/ui";
-import FormField from "@/shared/components/ui/FormField";
+import { Button, FormField, LoadingButton } from "@platform/ui";
 import { LISTING_SOURCES, LISTING_SOURCE_LABELS } from "@/shared/lib/listing-labels";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
@@ -129,53 +128,65 @@ export default function ExternalIdForm({
       </h3>
 
       <FormField label="Platform" required>
-        <select
-          value={source}
-          onChange={(e) => setSource(e.target.value as ListingSource)}
-          disabled={isEdit}
-          aria-label="Platform source"
-          data-testid="external-id-form-source"
-          className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm disabled:bg-muted disabled:text-muted-foreground"
-        >
-          {availableSources.map((s) => (
-            <option key={s} value={s}>
-              {LISTING_SOURCE_LABELS[s]}
-            </option>
-          ))}
-        </select>
-        {!isEdit && availableSources.length === 0 ? (
-          <p className="text-xs text-muted-foreground mt-1">
-            All platforms are already linked. Edit or remove an existing link
-            to free up a slot.
-          </p>
-        ) : null}
+        {(field) => (
+          <>
+            <select
+              value={source}
+              onChange={(e) => setSource(e.target.value as ListingSource)}
+              disabled={isEdit}
+              data-testid="external-id-form-source"
+              className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm disabled:bg-muted disabled:text-muted-foreground"
+              {...field}
+            >
+              {availableSources.map((s) => (
+                <option key={s} value={s}>
+                  {LISTING_SOURCE_LABELS[s]}
+                </option>
+              ))}
+            </select>
+            {!isEdit && availableSources.length === 0 ? (
+              <p className="text-xs text-muted-foreground mt-1">
+                All platforms are already linked. Edit or remove an existing link
+                to free up a slot.
+              </p>
+            ) : null}
+          </>
+        )}
       </FormField>
 
       <FormField label={`${LISTING_SOURCE_LABELS[source]} ID`}>
-        <input
-          type="text"
-          value={externalId}
-          onChange={(e) => setExternalId(e.target.value)}
-          placeholder={EXTERNAL_ID_SOURCE_HINTS[source]}
-          maxLength={100}
-          data-testid="external-id-form-external-id"
-          className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm"
-        />
-        <p className="text-xs text-muted-foreground mt-1">
-          {EXTERNAL_ID_SOURCE_HINTS[source]}
-        </p>
+        {(field) => (
+          <>
+            <input
+              type="text"
+              value={externalId}
+              onChange={(e) => setExternalId(e.target.value)}
+              placeholder={EXTERNAL_ID_SOURCE_HINTS[source]}
+              maxLength={100}
+              data-testid="external-id-form-external-id"
+              className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm"
+              {...field}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              {EXTERNAL_ID_SOURCE_HINTS[source]}
+            </p>
+          </>
+        )}
       </FormField>
 
       <FormField label={`${LISTING_SOURCE_LABELS[source]} URL`}>
-        <input
-          type="url"
-          value={externalUrl}
-          onChange={(e) => setExternalUrl(e.target.value)}
-          placeholder="https://..."
-          maxLength={500}
-          data-testid="external-id-form-external-url"
-          className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm"
-        />
+        {(field) => (
+          <input
+            type="url"
+            value={externalUrl}
+            onChange={(e) => setExternalUrl(e.target.value)}
+            placeholder="https://..."
+            maxLength={500}
+            data-testid="external-id-form-external-url"
+            className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm"
+            {...field}
+          />
+        )}
       </FormField>
 
       {validationError ? (

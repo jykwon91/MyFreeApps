@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { LoadingButton } from "@platform/ui";
-import FormField from "@/shared/components/ui/FormField";
+import { FormField, LoadingButton } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 import TilePicker from "@/shared/components/ui/TilePicker";
 import { CLASSIFICATION_OPTIONS } from "@/shared/lib/property-labels";
@@ -79,14 +78,17 @@ export default function PropertyOccupancyFixer({
       />
       {choice === "investment" ? (
         <FormField label="Rental type">
-          <Select
-            value={rentalType}
-            onChange={(e) => setRentalType(e.target.value as PropertyType)}
-            data-testid="property-occupancy-rental-type"
-          >
-            <option value="short_term">Short-Term Rental</option>
-            <option value="long_term">Long-Term Rental</option>
-          </Select>
+          {(field) => (
+            <Select
+              value={rentalType}
+              onChange={(e) => setRentalType(e.target.value as PropertyType)}
+              data-testid="property-occupancy-rental-type"
+              {...field}
+            >
+              <option value="short_term">Short-Term Rental</option>
+              <option value="long_term">Long-Term Rental</option>
+            </Select>
+          )}
         </FormField>
       ) : null}
       <LoadingButton

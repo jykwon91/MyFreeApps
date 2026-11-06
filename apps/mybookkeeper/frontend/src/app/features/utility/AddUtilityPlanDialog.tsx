@@ -1,5 +1,5 @@
 import { useState } from "react";
-import FormField from "@/shared/components/ui/FormField";
+import { FormField } from "@platform/ui";
 import { applyDraftToForm } from "@/shared/lib/utility-plan-draft";
 import {
   toUtilityPlanFields,
@@ -73,20 +73,23 @@ export default function AddUtilityPlanDialog({ onClose }: AddUtilityPlanDialogPr
         {draft && <UtilityPlanDraftNotices draft={draft} />}
 
         <FormField label="Property" required>
-          <select
-            value={propertyId}
-            onChange={(e) => setPropertyId(e.target.value)}
-            className={UTILITY_PLAN_INPUT_CLASS}
-            required
-            data-testid="utility-plan-property-select"
-          >
-            <option value="">Select a property…</option>
-            {properties.map((property) => (
-              <option key={property.id} value={property.id}>
-                {property.name}
-              </option>
-            ))}
-          </select>
+          {(field) => (
+            <select
+              value={propertyId}
+              onChange={(e) => setPropertyId(e.target.value)}
+              className={UTILITY_PLAN_INPUT_CLASS}
+              required
+              data-testid="utility-plan-property-select"
+              {...field}
+            >
+              <option value="">Select a property…</option>
+              {properties.map((property) => (
+                <option key={property.id} value={property.id}>
+                  {property.name}
+                </option>
+              ))}
+            </select>
+          )}
         </FormField>
 
         <UtilityPlanFormFields values={values} setField={setField} />

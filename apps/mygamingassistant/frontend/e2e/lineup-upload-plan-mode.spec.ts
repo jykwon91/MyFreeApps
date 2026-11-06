@@ -29,8 +29,8 @@ test.describe("Lineup upload form (/lineups/new)", () => {
     await expect(page.getByRole("heading", { name: "Add Lineup" })).toBeVisible();
 
     // Required dropdowns
-    await expect(page.getByLabel("Select game")).toBeVisible();
-    await expect(page.getByLabel("Select map")).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Game", exact: true })).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Map", exact: true })).toBeVisible();
 
     // Screenshot slots
     await expect(page.getByText("Stand screenshot")).toBeVisible();

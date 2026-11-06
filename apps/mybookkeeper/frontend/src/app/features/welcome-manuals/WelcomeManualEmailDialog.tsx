@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { AlertCircle, CheckCircle, Info, X } from "lucide-react";
-import { Panel, PanelTitle } from "@platform/ui";
-import FormField from "@/shared/components/ui/FormField";
-import { LoadingButton } from "@platform/ui";
+import { FormField, LoadingButton, Panel, PanelTitle } from "@platform/ui";
 import { DEMO_EMAIL_REFUSED } from "@mybookkeeper/api-client/constants/demoRefusal";
 import { isDemoRefusal } from "@mybookkeeper/api-client/utils/isDemoRefusal";
 import { showError } from "@/shared/lib/toast-store";
@@ -84,47 +82,58 @@ export default function WelcomeManualEmailDialog({ manualId, rooms, onClose }: W
           {step === "form" ? (
             <div className="space-y-4" data-testid="welcome-manual-email-form">
               <FormField label="Guest email address" required>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="guest@example.com"
-                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-                  data-testid="welcome-manual-email-input"
-                />
+                {(field) => (
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="guest@example.com"
+                    className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                    data-testid="welcome-manual-email-input"
+                    {...field}
+                  />
+                )}
               </FormField>
               <FormField label="Guest name (optional)">
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Alex"
-                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-                  data-testid="welcome-manual-email-name"
-                />
+                {(field) => (
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Alex"
+                    className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                    data-testid="welcome-manual-email-name"
+                    {...field}
+                  />
+                )}
               </FormField>
               {rooms.length > 0 ? (
                 <FormField label="Which room is this guest in" required>
-                  <select
-                    value={roomChoice}
-                    onChange={(e) => setRoomChoice(e.target.value)}
-                    className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px] bg-transparent"
-                    data-testid="welcome-manual-email-room"
-                  >
-                    <option value="">Choose a room…</option>
-                    {rooms.map((room) => (
-                      <option key={room.id} value={room.id}>
-                        {room.name}
-                      </option>
-                    ))}
-                    <option value={SHARED_ROOM_OPTION}>
-                      No room — shared sections only
-                    </option>
-                  </select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    The PDF gets every shared section plus the ones written for
-                    this room.
-                  </p>
+                  {(field) => (
+                    <>
+                      <select
+                        value={roomChoice}
+                        onChange={(e) => setRoomChoice(e.target.value)}
+                        className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px] bg-transparent"
+                        data-testid="welcome-manual-email-room"
+                        {...field}
+                      >
+                        <option value="">Choose a room…</option>
+                        {rooms.map((room) => (
+                          <option key={room.id} value={room.id}>
+                            {room.name}
+                          </option>
+                        ))}
+                        <option value={SHARED_ROOM_OPTION}>
+                          No room — shared sections only
+                        </option>
+                      </select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        The PDF gets every shared section plus the ones written for
+                        this room.
+                      </p>
+                    </>
+                  )}
                 </FormField>
               ) : null}
             </div>

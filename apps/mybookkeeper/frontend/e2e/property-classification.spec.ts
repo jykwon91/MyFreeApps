@@ -4,7 +4,7 @@ const RUN_ID = Date.now();
 
 /** Locate a <select> inside the FormField that has the given label text */
 function selectByLabel(container: import("@playwright/test").Locator, label: string) {
-  return container.locator(`xpath=.//div[label/span[text()="${label}"]]/select`);
+  return container.getByRole("combobox", { name: label, exact: true });
 }
 
 /** Map classification values to their tile button labels */

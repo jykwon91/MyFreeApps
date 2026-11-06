@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { Button, LoadingButton } from "@platform/ui";
-import FormField from "@/shared/components/ui/FormField";
+import { Button, FormField, LoadingButton } from "@platform/ui";
 import { applyDraftToForm } from "@/shared/lib/insurance-policy-draft";
 import { EMPTY_POLICY_FORM, toPolicyPayload } from "@/shared/lib/insurance-policy-form";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
@@ -80,20 +79,23 @@ export default function AddInsurancePolicyDialog({
         {draft && <InsurancePolicyDraftNotices draft={draft} />}
 
         <FormField label="Property" required>
-          <select
-            value={propertyId}
-            onChange={(e) => setPropertyId(e.target.value)}
-            className={INSURANCE_POLICY_INPUT_CLASS}
-            required
-            data-testid="insurance-policy-property-select"
-          >
-            <option value="">Select a property…</option>
-            {properties.map((property) => (
-              <option key={property.id} value={property.id}>
-                {property.name}
-              </option>
-            ))}
-          </select>
+          {(field) => (
+            <select
+              value={propertyId}
+              onChange={(e) => setPropertyId(e.target.value)}
+              className={INSURANCE_POLICY_INPUT_CLASS}
+              required
+              data-testid="insurance-policy-property-select"
+              {...field}
+            >
+              <option value="">Select a property…</option>
+              {properties.map((property) => (
+                <option key={property.id} value={property.id}>
+                  {property.name}
+                </option>
+              ))}
+            </select>
+          )}
         </FormField>
 
         <InsurancePolicyFormFields values={values} onChange={handleChange} />

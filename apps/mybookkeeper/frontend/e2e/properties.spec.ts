@@ -4,7 +4,7 @@ import { test, expect } from "./fixtures/auth";
 const RUN_ID = Date.now();
 
 function selectByLabel(container: import("@playwright/test").Locator, label: string) {
-  return container.locator(`xpath=.//div[label/span[text()="${label}"]]/select`);
+  return container.getByRole("combobox", { name: label, exact: true });
 }
 
 const CLASSIFICATION_TILE_LABELS: Record<string, string> = {

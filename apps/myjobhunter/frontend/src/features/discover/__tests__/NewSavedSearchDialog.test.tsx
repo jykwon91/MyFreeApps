@@ -26,7 +26,7 @@ import NewSavedSearchDialog from "../NewSavedSearchDialog";
 const mockShowError = vi.fn();
 const mockShowSuccess = vi.fn();
 
-vi.mock("@platform/ui", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
   ConfirmDialog: ({
     open,
     children,
@@ -64,18 +64,7 @@ vi.mock("@platform/ui", () => ({
   InlineBoldText: ({ text }: { text: string }) => <span>{text}</span>,
   Skeleton: () => <div data-testid="skeleton" />,
   // Used by GreenhouseConfigSection + LeverConfigSection
-  FormField: ({
-    label,
-    children,
-  }: {
-    label: string;
-    children: React.ReactNode;
-  }) => (
-    <div>
-      <label>{label}</label>
-      {children}
-    </div>
-  ),
+  FormField: (await importOriginal<typeof import("@platform/ui")>()).FormField,
   MultiChipInput: ({
     value,
     ariaLabel,

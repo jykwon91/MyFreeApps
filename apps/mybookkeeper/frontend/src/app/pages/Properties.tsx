@@ -9,10 +9,9 @@ import {
 import type { PropertyForm } from "@/shared/types/property/property-form";
 import { useToast } from "@/shared/hooks/useToast";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
-import { LoadingButton } from "@platform/ui";
+import { FormField, LoadingButton } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 import TilePicker from "@/shared/components/ui/TilePicker";
-import FormField from "@/shared/components/ui/FormField";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { ConfirmDialog } from "@platform/ui";
 import AlertBox from "@/shared/components/ui/AlertBox";
@@ -108,15 +107,18 @@ export default function Properties() {
       {canWrite ? (
         <section className="border rounded-lg p-4 space-y-4">
           <FormField label="Property name">
-            <input
-              value={form.name}
-              onChange={(e) => setField("name", e.target.value)}
-              className="w-full border rounded-md px-3 py-2 text-sm"
-              placeholder="e.g. Beach House Unit A"
-            />
+            {(field) => (
+              <input
+                value={form.name}
+                onChange={(e) => setField("name", e.target.value)}
+                className="w-full border rounded-md px-3 py-2 text-sm"
+                placeholder="e.g. Beach House Unit A"
+                {...field}
+              />
+            )}
           </FormField>
           <AddressInputs form={form} onChange={setField} />
-          <FormField label="Classification">
+          <FormField label="Classification" group>
             <TilePicker
               options={CLASSIFICATION_OPTIONS}
               value={form.classification}
@@ -126,10 +128,16 @@ export default function Properties() {
           </FormField>
           {form.classification === "investment" && (
             <FormField label="Rental type">
-              <Select value={form.type ?? "short_term"} onChange={(e) => setField("type", e.target.value)}>
-                <option value="short_term">Short-Term Rental</option>
-                <option value="long_term">Long-Term Rental</option>
-              </Select>
+              {(field) => (
+                <Select
+                  value={form.type ?? "short_term"}
+                  onChange={(e) => setField("type", e.target.value)}
+                  {...field}
+                >
+                  <option value="short_term">Short-Term Rental</option>
+                  <option value="long_term">Long-Term Rental</option>
+                </Select>
+              )}
             </FormField>
           )}
           <div className="flex justify-end">

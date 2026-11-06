@@ -32,19 +32,24 @@ export default function ExclusionsSection({
   return (
     <>
       <FormField label="Minimum salary (USD, optional)">
-        <input
-          type="number"
-          value={minSalary}
-          onChange={(e) => onMinSalaryChange(e.target.value)}
-          placeholder="150000"
-          min={0}
-          step={1000}
-          className={INPUT_CLASS}
-        />
-        <p className="text-xs text-muted-foreground mt-1">
-          Drops postings below the floor when source posts a salary range.
-          Postings without disclosed salary are kept.
-        </p>
+        {(field) => (
+          <>
+            <input
+              type="number"
+              value={minSalary}
+              onChange={(e) => onMinSalaryChange(e.target.value)}
+              placeholder="150000"
+              min={0}
+              step={1000}
+              className={INPUT_CLASS}
+              {...field}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Drops postings below the floor when source posts a salary range.
+              Postings without disclosed salary are kept.
+            </p>
+          </>
+        )}
       </FormField>
 
       <div>
@@ -58,7 +63,7 @@ export default function ExclusionsSection({
         />
       </div>
 
-      <FormField label="Also exclude keywords (optional)">
+      <FormField label="Also exclude keywords (optional)" group>
         <MultiChipInput
           value={excludedKeywords}
           onChange={onExcludedKeywordsChange}

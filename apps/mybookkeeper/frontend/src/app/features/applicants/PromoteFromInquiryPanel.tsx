@@ -1,9 +1,7 @@
 import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-import { Panel, PanelCloseButton, PanelTitle } from "@platform/ui";
-import { Button, LoadingButton } from "@platform/ui";
-import FormField from "@/shared/components/ui/FormField";
+import { Button, FormField, LoadingButton, Panel, PanelCloseButton, PanelTitle } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   APPLICANT_EMPLOYER_MAX,
@@ -161,44 +159,53 @@ export default function PromoteFromInquiryPanel({ inquiry, onClose }: PromoteFro
             label="Legal name"
             highlight={!inquiry.inquirer_name}
           >
-            <div className="flex items-center gap-2">
-              <input
-                {...register("legal_name", {
-                  maxLength: APPLICANT_LEGAL_NAME_MAX,
-                })}
-                data-testid="promote-form-legal-name"
-                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              />
-              {!inquiry.inquirer_name ? <PromoteMissingHint /> : null}
-            </div>
+            {(field) => (
+              <div className="flex items-center gap-2">
+                <input
+                  {...register("legal_name", {
+                    maxLength: APPLICANT_LEGAL_NAME_MAX,
+                  })}
+                  data-testid="promote-form-legal-name"
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  {...field}
+                />
+                {!inquiry.inquirer_name ? <PromoteMissingHint /> : null}
+              </div>
+            )}
           </FormField>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField label="Date of birth" highlight>
-              <div className="flex items-center gap-2">
-                <input
-                  type="date"
-                  {...register("dob")}
-                  data-testid="promote-form-dob"
-                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-                />
-                <PromoteMissingHint />
-              </div>
+              {(field) => (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    {...register("dob")}
+                    data-testid="promote-form-dob"
+                    className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                    {...field}
+                  />
+                  <PromoteMissingHint />
+                </div>
+              )}
             </FormField>
             <FormField
               label="Employer / hospital"
               highlight={!inquiry.inquirer_employer}
             >
-              <div className="flex items-center gap-2">
-                <input
-                  {...register("employer_or_hospital", {
-                    maxLength: APPLICANT_EMPLOYER_MAX,
-                  })}
-                  data-testid="promote-form-employer"
-                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-                />
-                {!inquiry.inquirer_employer ? <PromoteMissingHint /> : null}
-              </div>
+              {(field) => (
+                <div className="flex items-center gap-2">
+                  <input
+                    {...register("employer_or_hospital", {
+                      maxLength: APPLICANT_EMPLOYER_MAX,
+                    })}
+                    data-testid="promote-form-employer"
+                    className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                    {...field}
+                  />
+                  {!inquiry.inquirer_employer ? <PromoteMissingHint /> : null}
+                </div>
+              )}
             </FormField>
           </div>
 
@@ -209,62 +216,77 @@ export default function PromoteFromInquiryPanel({ inquiry, onClose }: PromoteFro
             label="Contract start"
             highlight={!inquiry.desired_start_date}
           >
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                {...register("contract_start")}
-                data-testid="promote-form-contract-start"
-                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              />
-              {!inquiry.desired_start_date ? <PromoteMissingHint /> : null}
-            </div>
+            {(field) => (
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  {...register("contract_start")}
+                  data-testid="promote-form-contract-start"
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  {...field}
+                />
+                {!inquiry.desired_start_date ? <PromoteMissingHint /> : null}
+              </div>
+            )}
           </FormField>
 
           <FormField label="Vehicle (make / model)" highlight>
-            <div className="flex items-center gap-2">
-              <input
-                {...register("vehicle_make_model", {
-                  maxLength: APPLICANT_VEHICLE_MAX,
-                })}
-                placeholder="e.g. Toyota Camry 2020"
-                data-testid="promote-form-vehicle"
-                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              />
-              <PromoteMissingHint />
-            </div>
+            {(field) => (
+              <div className="flex items-center gap-2">
+                <input
+                  {...register("vehicle_make_model", {
+                    maxLength: APPLICANT_VEHICLE_MAX,
+                  })}
+                  placeholder="e.g. Toyota Camry 2020"
+                  data-testid="promote-form-vehicle"
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  {...field}
+                />
+                <PromoteMissingHint />
+              </div>
+            )}
           </FormField>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField label="Smoker?" highlight>
-              <select
-                {...register("smoker_choice")}
-                data-testid="promote-form-smoker"
-                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              >
-                <option value="">Unknown</option>
-                <option value="no">No</option>
-                <option value="yes">Yes</option>
-              </select>
+              {(field) => (
+                <select
+                  {...register("smoker_choice")}
+                  data-testid="promote-form-smoker"
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  {...field}
+                >
+                  <option value="">Unknown</option>
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+              )}
             </FormField>
             <FormField label="Referred by" highlight>
-              <input
-                {...register("referred_by", {
-                  maxLength: APPLICANT_REFERRED_BY_MAX,
-                })}
-                data-testid="promote-form-referred-by"
-                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              />
+              {(field) => (
+                <input
+                  {...register("referred_by", {
+                    maxLength: APPLICANT_REFERRED_BY_MAX,
+                  })}
+                  data-testid="promote-form-referred-by"
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  {...field}
+                />
+              )}
             </FormField>
           </div>
 
           <FormField label="Pets" highlight>
-            <textarea
-              {...register("pets", { maxLength: APPLICANT_PETS_MAX })}
-              placeholder="e.g. 1 small cat, neutered"
-              data-testid="promote-form-pets"
-              rows={2}
-              className="w-full border rounded-md px-3 py-2 text-sm"
-            />
+            {(field) => (
+              <textarea
+                {...register("pets", { maxLength: APPLICANT_PETS_MAX })}
+                placeholder="e.g. 1 small cat, neutered"
+                data-testid="promote-form-pets"
+                rows={2}
+                className="w-full border rounded-md px-3 py-2 text-sm"
+                {...field}
+              />
+            )}
           </FormField>
         </form>
 

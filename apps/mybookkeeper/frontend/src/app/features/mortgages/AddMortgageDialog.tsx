@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { Button, LoadingButton } from "@platform/ui";
+import { Button, FormField, LoadingButton } from "@platform/ui";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
-import FormField from "@/shared/components/ui/FormField";
 import { applyMortgageDraftToForm } from "@/shared/lib/mortgage-draft";
 import { EMPTY_MORTGAGE_FORM, toMortgagePayload } from "@/shared/lib/mortgage-form";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
@@ -76,20 +75,23 @@ export default function AddMortgageDialog({ onClose }: AddMortgageDialogProps) {
         {draft && <MortgageDraftNotices draft={draft} />}
 
         <FormField label="Property" required>
-          <select
-            value={propertyId}
-            onChange={(e) => setPropertyId(e.target.value)}
-            className={MORTGAGE_INPUT_CLASS}
-            required
-            data-testid="mortgage-property-select"
-          >
-            <option value="">Select a property…</option>
-            {properties.map((property) => (
-              <option key={property.id} value={property.id}>
-                {property.name}
-              </option>
-            ))}
-          </select>
+          {(field) => (
+            <select
+              value={propertyId}
+              onChange={(e) => setPropertyId(e.target.value)}
+              className={MORTGAGE_INPUT_CLASS}
+              required
+              data-testid="mortgage-property-select"
+              {...field}
+            >
+              <option value="">Select a property…</option>
+              {properties.map((property) => (
+                <option key={property.id} value={property.id}>
+                  {property.name}
+                </option>
+              ))}
+            </select>
+          )}
         </FormField>
 
         <MortgageFormFields values={values} onChange={handleChange} />

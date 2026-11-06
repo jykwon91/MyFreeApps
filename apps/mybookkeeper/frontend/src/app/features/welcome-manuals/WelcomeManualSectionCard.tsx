@@ -2,8 +2,7 @@ import { forwardRef, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { DoorOpen, GripVertical, Trash2 } from "lucide-react";
-import { LoadingButton, ConfirmDialog } from "@platform/ui";
-import FormField from "@/shared/components/ui/FormField";
+import { ConfirmDialog, FormField, LoadingButton } from "@platform/ui";
 import Markdown from "@/shared/components/ui/Markdown";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
@@ -156,38 +155,48 @@ const WelcomeManualSectionCard = forwardRef<HTMLElement, WelcomeManualSectionCar
 
         {rooms.length > 0 ? (
           <FormField label="Who gets this section">
-            <select
-              value={section.room_id ?? SHARED_ROOM_OPTION}
-              onChange={(e) => void handleScopeChange(e.target.value)}
-              disabled={isRescoping}
-              className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px] bg-transparent disabled:opacity-60"
-              data-testid="welcome-manual-section-scope"
-            >
-              <option value={SHARED_ROOM_OPTION}>Everyone — shared by every room</option>
-              {rooms.map((room) => (
-                <option key={room.id} value={room.id}>
-                  {room.name} only
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-muted-foreground mt-1">
-              A room-only section reaches that room&rsquo;s guest in their emailed
-              guide. It never appears on the shared link.
-            </p>
+            {(field) => (
+              <>
+                <select
+                  value={section.room_id ?? SHARED_ROOM_OPTION}
+                  onChange={(e) => void handleScopeChange(e.target.value)}
+                  disabled={isRescoping}
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px] bg-transparent disabled:opacity-60"
+                  data-testid="welcome-manual-section-scope"
+                  {...field}
+                >
+                  <option value={SHARED_ROOM_OPTION}>Everyone — shared by every room</option>
+                  {rooms.map((room) => (
+                    <option key={room.id} value={room.id}>
+                      {room.name} only
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  A room-only section reaches that room&rsquo;s guest in their emailed
+                  guide. It never appears on the shared link.
+                </p>
+              </>
+            )}
           </FormField>
         ) : null}
 
         <FormField label="Instructions">
-          <textarea
-            {...editor.register("body")}
-            rows={4}
-            placeholder={BODY_PLACEHOLDER}
-            className="w-full border rounded-md px-3 py-2 text-sm"
-            data-testid="welcome-manual-section-body"
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            Supports markdown — **bold**, *italic*, lists, headings, links.
-          </p>
+          {(field) => (
+            <>
+              <textarea
+                {...editor.register("body")}
+                rows={4}
+                placeholder={BODY_PLACEHOLDER}
+                className="w-full border rounded-md px-3 py-2 text-sm"
+                data-testid="welcome-manual-section-body"
+                {...field}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Supports markdown — **bold**, *italic*, lists, headings, links.
+              </p>
+            </>
+          )}
         </FormField>
         {editor.bodyValue ? (
           <div data-testid="welcome-manual-section-body-preview">

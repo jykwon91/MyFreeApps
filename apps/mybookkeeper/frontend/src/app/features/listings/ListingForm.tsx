@@ -1,9 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { X } from "lucide-react";
-import { Panel, PanelTitle } from "@platform/ui";
-import { LoadingButton } from "@platform/ui";
-import FormField from "@/shared/components/ui/FormField";
+import { FormField, LoadingButton, Panel, PanelTitle } from "@platform/ui";
 import Markdown from "@/shared/components/ui/Markdown";
 import { LISTING_ROOM_TYPES } from "@/shared/lib/listing-labels";
 import { LISTING_ROOM_TYPE_LABELS, LISTING_STATUSES, LISTING_STATUS_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
@@ -215,44 +213,59 @@ export default function ListingForm({
           data-testid="listing-form"
         >
           <FormField label="Title" required>
-            <input
-              {...register("title", { required: "Title is required" })}
-              className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              data-testid="listing-form-title"
-            />
-            {errors.title ? (
-              <p className="text-xs text-red-600 mt-1">{errors.title.message}</p>
-            ) : null}
+            {(field) => (
+              <>
+                <input
+                  {...register("title", { required: "Title is required" })}
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  data-testid="listing-form-title"
+                  {...field}
+                />
+                {errors.title ? (
+                  <p className="text-xs text-red-600 mt-1">{errors.title.message}</p>
+                ) : null}
+              </>
+            )}
           </FormField>
 
           <FormField label="Property" required>
-            <select
-              {...register("property_id", { required: "Pick a property" })}
-              className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              data-testid="listing-form-property"
-            >
-              <option value="">Select a property…</option>
-              {properties.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-            {errors.property_id ? (
-              <p className="text-xs text-red-600 mt-1">{errors.property_id.message}</p>
-            ) : null}
+            {(field) => (
+              <>
+                <select
+                  {...register("property_id", { required: "Pick a property" })}
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  data-testid="listing-form-property"
+                  {...field}
+                >
+                  <option value="">Select a property…</option>
+                  {properties.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+                {errors.property_id ? (
+                  <p className="text-xs text-red-600 mt-1">{errors.property_id.message}</p>
+                ) : null}
+              </>
+            )}
           </FormField>
 
           <FormField label="Description">
-            <textarea
-              {...register("description")}
-              rows={4}
-              className="w-full border rounded-md px-3 py-2 text-sm"
-              data-testid="listing-form-description"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Supports markdown — **bold**, *italic*, lists, headings, links.
-            </p>
+            {(field) => (
+              <>
+                <textarea
+                  {...register("description")}
+                  rows={4}
+                  className="w-full border rounded-md px-3 py-2 text-sm"
+                  data-testid="listing-form-description"
+                  {...field}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Supports markdown — **bold**, *italic*, lists, headings, links.
+                </p>
+              </>
+            )}
           </FormField>
           {watchDescription ? (
             <div data-testid="listing-form-description-preview">
@@ -265,89 +278,112 @@ export default function ListingForm({
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <FormField label="Monthly rate (USD)" required>
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                {...register("monthly_rate", {
-                  required: "Monthly rate is required",
-                  validate: (v) =>
-                    Number(v) > 0 || "Monthly rate must be greater than 0",
-                })}
-                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-                data-testid="listing-form-monthly-rate"
-              />
-              {errors.monthly_rate ? (
-                <p className="text-xs text-red-600 mt-1">
-                  {errors.monthly_rate.message}
-                </p>
-              ) : null}
+              {(field) => (
+                <>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    {...register("monthly_rate", {
+                      required: "Monthly rate is required",
+                      validate: (v) =>
+                        Number(v) > 0 || "Monthly rate must be greater than 0",
+                    })}
+                    className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                    data-testid="listing-form-monthly-rate"
+                    {...field}
+                  />
+                  {errors.monthly_rate ? (
+                    <p className="text-xs text-red-600 mt-1">
+                      {errors.monthly_rate.message}
+                    </p>
+                  ) : null}
+                </>
+              )}
             </FormField>
             <FormField label="Weekly rate (USD)">
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                {...register("weekly_rate")}
-                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              />
+              {(field) => (
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  {...register("weekly_rate")}
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  {...field}
+                />
+              )}
             </FormField>
             <FormField label="Nightly rate (USD)">
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                {...register("nightly_rate")}
-                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              />
+              {(field) => (
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  {...register("nightly_rate")}
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  {...field}
+                />
+              )}
             </FormField>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Min stay (days)">
-              <input
-                type="number"
-                min="0"
-                {...register("min_stay_days")}
-                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              />
+              {(field) => (
+                <input
+                  type="number"
+                  min="0"
+                  {...register("min_stay_days")}
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  {...field}
+                />
+              )}
             </FormField>
             <FormField label="Max stay (days)">
-              <input
-                type="number"
-                min="0"
-                {...register("max_stay_days")}
-                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              />
+              {(field) => (
+                <input
+                  type="number"
+                  min="0"
+                  {...register("max_stay_days")}
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  {...field}
+                />
+              )}
             </FormField>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField label="Room type" required>
-              <select
-                {...register("room_type", { required: true })}
-                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-                data-testid="listing-form-room-type"
-              >
-                {LISTING_ROOM_TYPES.map((rt) => (
-                  <option key={rt} value={rt}>
-                    {LISTING_ROOM_TYPE_LABELS[rt]}
-                  </option>
-                ))}
-              </select>
+              {(field) => (
+                <select
+                  {...register("room_type", { required: true })}
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  data-testid="listing-form-room-type"
+                  {...field}
+                >
+                  {LISTING_ROOM_TYPES.map((rt) => (
+                    <option key={rt} value={rt}>
+                      {LISTING_ROOM_TYPE_LABELS[rt]}
+                    </option>
+                  ))}
+                </select>
+              )}
             </FormField>
             <FormField label="Status">
-              <select
-                {...register("status")}
-                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-                data-testid="listing-form-status"
-              >
-                {LISTING_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {LISTING_STATUS_LABELS[s]}
-                  </option>
-                ))}
-              </select>
+              {(field) => (
+                <select
+                  {...register("status")}
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  data-testid="listing-form-status"
+                  {...field}
+                >
+                  {LISTING_STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {LISTING_STATUS_LABELS[s]}
+                    </option>
+                  ))}
+                </select>
+              )}
             </FormField>
           </div>
 
@@ -367,12 +403,15 @@ export default function ListingForm({
           </div>
 
           <FormField label="Amenities (comma-separated)">
-            <input
-              {...register("amenities")}
-              placeholder="wifi, washer/dryer, smart lock"
-              className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              data-testid="listing-form-amenities"
-            />
+            {(field) => (
+              <input
+                {...register("amenities")}
+                placeholder="wifi, washer/dryer, smart lock"
+                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                data-testid="listing-form-amenities"
+                {...field}
+              />
+            )}
           </FormField>
 
           <div className="border-t pt-4 space-y-3">
@@ -386,12 +425,15 @@ export default function ListingForm({
             </label>
             {watchPets ? (
               <FormField label="Pet/dog disclosure (auto-prepended to templated replies)">
-                <textarea
-                  {...register("large_dog_disclosure")}
-                  rows={2}
-                  className="w-full border rounded-md px-3 py-2 text-sm"
-                  placeholder="e.g. We have a friendly large dog on the property."
-                />
+                {(field) => (
+                  <textarea
+                    {...register("large_dog_disclosure")}
+                    rows={2}
+                    className="w-full border rounded-md px-3 py-2 text-sm"
+                    placeholder="e.g. We have a friendly large dog on the property."
+                    {...field}
+                  />
+                )}
               </FormField>
             ) : null}
           </div>

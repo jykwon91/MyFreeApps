@@ -25,30 +25,36 @@ export default function WhereWhenSection({
   return (
     <div className="grid grid-cols-2 gap-4">
       <FormField label="Country">
-        <select
-          value={country}
-          onChange={(e) => onCountryChange(e.target.value as Country)}
-          className={INPUT_CLASS}
-        >
-          <option value="us">United States</option>
-          <option value="ca">Canada</option>
-          <option value="uk">United Kingdom</option>
-          <option value="au">Australia</option>
-        </select>
+        {(field) => (
+          <select
+            value={country}
+            onChange={(e) => onCountryChange(e.target.value as Country)}
+            className={INPUT_CLASS}
+            {...field}
+          >
+            <option value="us">United States</option>
+            <option value="ca">Canada</option>
+            <option value="uk">United Kingdom</option>
+            <option value="au">Australia</option>
+          </select>
+        )}
       </FormField>
 
       <FormField label="Posted">
-        <select
-          value={datePosted}
-          onChange={(e) => onDatePostedChange(e.target.value as DatePosted)}
-          className={INPUT_CLASS}
-        >
-          <option value="today">Past 24 hours</option>
-          <option value="3days">Past 3 days</option>
-          <option value="week">Past week</option>
-          <option value="month">Past month</option>
-          <option value="all">Any time</option>
-        </select>
+        {(field) => (
+          <select
+            value={datePosted}
+            onChange={(e) => onDatePostedChange(e.target.value as DatePosted)}
+            className={INPUT_CLASS}
+            {...field}
+          >
+            <option value="today">Past 24 hours</option>
+            <option value="3days">Past 3 days</option>
+            <option value="week">Past week</option>
+            <option value="month">Past month</option>
+            <option value="all">Any time</option>
+          </select>
+        )}
       </FormField>
     </div>
   );

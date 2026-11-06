@@ -8,12 +8,6 @@
  */
 import { PAYMENT_METHOD_OPTIONS } from "@/types/public/public";
 
-export function formatMoney(value: string | number): string {
-  const n = typeof value === "number" ? value : Number(value);
-  if (Number.isNaN(n)) return String(value);
-  return n.toFixed(2);
-}
-
 export function formatTime(time: string): string {
   // Expecting "HH:MM:SS" or "HH:MM"
   const [hh = "00", mm = "00"] = time.split(":");

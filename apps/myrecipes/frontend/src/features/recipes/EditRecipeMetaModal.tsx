@@ -63,38 +63,47 @@ export default function EditRecipeMetaModal({ open, onClose, recipe }: Props) {
 
           <form onSubmit={handleSubmit} className="mt-4 space-y-4">
             <FormField label="Title" required>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                disabled={isLoading}
-                required
-                maxLength={255}
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 min-h-[44px]"
-              />
+              {(field) => (
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  disabled={isLoading}
+                  required
+                  maxLength={255}
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 min-h-[44px]"
+                  {...field}
+                />
+              )}
             </FormField>
 
             <FormField label="Description">
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                disabled={isLoading}
-                rows={3}
-                maxLength={5000}
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              />
+              {(field) => (
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  disabled={isLoading}
+                  rows={3}
+                  maxLength={5000}
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                  {...field}
+                />
+              )}
             </FormField>
 
             <FormField label="Source">
-              <input
-                type="text"
-                value={source}
-                onChange={(e) => setSource(e.target.value)}
-                disabled={isLoading}
-                maxLength={1000}
-                placeholder="e.g. grandma, a cookbook, a URL"
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 min-h-[44px]"
-              />
+              {(field) => (
+                <input
+                  type="text"
+                  value={source}
+                  onChange={(e) => setSource(e.target.value)}
+                  disabled={isLoading}
+                  maxLength={1000}
+                  placeholder="e.g. grandma, a cookbook, a URL"
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 min-h-[44px]"
+                  {...field}
+                />
+              )}
             </FormField>
 
             <div className="flex justify-end gap-2 pt-2">

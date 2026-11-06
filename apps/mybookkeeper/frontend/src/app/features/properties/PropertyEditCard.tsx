@@ -6,10 +6,9 @@ import type { PropertyClassification } from "@mybookkeeper/api-client/types/prop
 import { CLASSIFICATION_OPTIONS } from "@/shared/lib/property-labels";
 import { useToast } from "@/shared/hooks/useToast";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
-import { Button, LoadingButton } from "@platform/ui";
+import { Button, FormField, LoadingButton } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 import TilePicker from "@/shared/components/ui/TilePicker";
-import FormField from "@/shared/components/ui/FormField";
 import { fromProperty, toAddress, addressComplete } from "./propertyForm";
 import AddressInputs from "./AddressInputs";
 
@@ -58,14 +57,17 @@ export default function PropertyEditCard({ property, onDone }: PropertyEditCardP
   return (
     <div className="border rounded-lg p-4 space-y-4 bg-muted/10">
       <FormField label="Property name">
-        <input
-          value={form.name}
-          onChange={(e) => setField("name", e.target.value)}
-          className="w-full border rounded-md px-3 py-2 text-sm"
-        />
+        {(field) => (
+          <input
+            value={form.name}
+            onChange={(e) => setField("name", e.target.value)}
+            className="w-full border rounded-md px-3 py-2 text-sm"
+            {...field}
+          />
+        )}
       </FormField>
       <AddressInputs form={form} onChange={setField} />
-      <FormField label="Classification">
+      <FormField label="Classification" group>
         <TilePicker
           options={CLASSIFICATION_OPTIONS}
           value={form.classification}
@@ -75,10 +77,16 @@ export default function PropertyEditCard({ property, onDone }: PropertyEditCardP
       </FormField>
       {form.classification === "investment" && (
         <FormField label="Rental type">
-          <Select value={form.type ?? "short_term"} onChange={(e) => setField("type", e.target.value)}>
-            <option value="short_term">Short-Term Rental</option>
-            <option value="long_term">Long-Term Rental</option>
-          </Select>
+          {(field) => (
+            <Select
+              value={form.type ?? "short_term"}
+              onChange={(e) => setField("type", e.target.value)}
+              {...field}
+            >
+              <option value="short_term">Short-Term Rental</option>
+              <option value="long_term">Long-Term Rental</option>
+            </Select>
+          )}
         </FormField>
       )}
       <div className="flex justify-end gap-2">

@@ -1,9 +1,7 @@
 import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { X } from "lucide-react";
-import { Panel, PanelTitle } from "@platform/ui";
-import { LoadingButton } from "@platform/ui";
-import FormField from "@/shared/components/ui/FormField";
+import { FormField, LoadingButton, Panel, PanelTitle } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { INQUIRY_SOURCES, INQUIRY_SOURCE_LABELS } from "@mybookkeeper/api-client/constants/inquiryLabels";
 import { useCreateInquiryMutation } from "@mybookkeeper/api-client/store/inquiriesApi";
@@ -126,138 +124,179 @@ export default function InquiryForm({ listings, onClose, onCreated }: InquiryFor
           data-testid="inquiry-form"
         >
           <FormField label="Source" required>
-            <select
-              {...register("source", { required: true })}
-              data-testid="inquiry-form-source"
-              className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-            >
-              {INQUIRY_SOURCES.map((s: InquirySource) => (
-                <option key={s} value={s}>
-                  {INQUIRY_SOURCE_LABELS[s]}
-                </option>
-              ))}
-            </select>
+            {(field) => (
+              <select
+                {...register("source", { required: true })}
+                data-testid="inquiry-form-source"
+                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                {...field}
+              >
+                {INQUIRY_SOURCES.map((s: InquirySource) => (
+                  <option key={s} value={s}>
+                    {INQUIRY_SOURCE_LABELS[s]}
+                  </option>
+                ))}
+              </select>
+            )}
           </FormField>
 
           {externalIdRequired ? (
             <FormField label={`${INQUIRY_SOURCE_LABELS[source]} inquiry ID`} required>
-              <input
-                {...register("external_inquiry_id", {
-                  required: "Required for non-direct inquiries",
-                })}
-                data-testid="inquiry-form-external-id"
-                placeholder="e.g. I-12345"
-                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              />
-              {errors.external_inquiry_id ? (
-                <p className="text-xs text-red-600 mt-1">
-                  {errors.external_inquiry_id.message}
-                </p>
-              ) : null}
+              {(field) => (
+                <>
+                  <input
+                    {...register("external_inquiry_id", {
+                      required: "Required for non-direct inquiries",
+                    })}
+                    data-testid="inquiry-form-external-id"
+                    placeholder="e.g. I-12345"
+                    className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                    {...field}
+                  />
+                  {errors.external_inquiry_id ? (
+                    <p className="text-xs text-red-600 mt-1">
+                      {errors.external_inquiry_id.message}
+                    </p>
+                  ) : null}
+                </>
+              )}
             </FormField>
           ) : null}
 
           <FormField label="Inquirer name" required>
-            <input
-              {...register("inquirer_name", { required: "Name is required" })}
-              data-testid="inquiry-form-name"
-              className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-            />
-            {errors.inquirer_name ? (
-              <p className="text-xs text-red-600 mt-1">{errors.inquirer_name.message}</p>
-            ) : null}
+            {(field) => (
+              <>
+                <input
+                  {...register("inquirer_name", { required: "Name is required" })}
+                  data-testid="inquiry-form-name"
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  {...field}
+                />
+                {errors.inquirer_name ? (
+                  <p className="text-xs text-red-600 mt-1">{errors.inquirer_name.message}</p>
+                ) : null}
+              </>
+            )}
           </FormField>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField label="Email">
-              <input
-                type="email"
-                {...register("inquirer_email")}
-                data-testid="inquiry-form-email"
-                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              />
+              {(field) => (
+                <input
+                  type="email"
+                  {...register("inquirer_email")}
+                  data-testid="inquiry-form-email"
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  {...field}
+                />
+              )}
             </FormField>
             <FormField label="Phone">
-              <input
-                type="tel"
-                {...register("inquirer_phone")}
-                data-testid="inquiry-form-phone"
-                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              />
+              {(field) => (
+                <input
+                  type="tel"
+                  {...register("inquirer_phone")}
+                  data-testid="inquiry-form-phone"
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  {...field}
+                />
+              )}
             </FormField>
           </div>
 
           <FormField label="Employer / hospital">
-            <input
-              {...register("inquirer_employer")}
-              placeholder="e.g. Texas Children's Hospital"
-              data-testid="inquiry-form-employer"
-              className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-            />
+            {(field) => (
+              <input
+                {...register("inquirer_employer")}
+                placeholder="e.g. Texas Children's Hospital"
+                data-testid="inquiry-form-employer"
+                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                {...field}
+              />
+            )}
           </FormField>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField label="Desired start date">
-              <input
-                type="date"
-                {...register("desired_start_date")}
-                data-testid="inquiry-form-start-date"
-                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              />
+              {(field) => (
+                <input
+                  type="date"
+                  {...register("desired_start_date")}
+                  data-testid="inquiry-form-start-date"
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  {...field}
+                />
+              )}
             </FormField>
             <FormField label="Desired end date">
-              <input
-                type="date"
-                {...register("desired_end_date", {
-                  validate: (v) =>
-                    !v || !startDate || v >= startDate
-                      || "End date must be on or after start date",
-                })}
-                data-testid="inquiry-form-end-date"
-                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              />
-              {errors.desired_end_date ? (
-                <p className="text-xs text-red-600 mt-1">
-                  {errors.desired_end_date.message}
-                </p>
-              ) : null}
+              {(field) => (
+                <>
+                  <input
+                    type="date"
+                    {...register("desired_end_date", {
+                      validate: (v) =>
+                        !v || !startDate || v >= startDate
+                          || "End date must be on or after start date",
+                    })}
+                    data-testid="inquiry-form-end-date"
+                    className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                    {...field}
+                  />
+                  {errors.desired_end_date ? (
+                    <p className="text-xs text-red-600 mt-1">
+                      {errors.desired_end_date.message}
+                    </p>
+                  ) : null}
+                </>
+              )}
             </FormField>
           </div>
 
           <FormField label="Listing">
-            <select
-              {...register("listing_id")}
-              data-testid="inquiry-form-listing"
-              className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-            >
-              <option value="">Not yet linked</option>
-              {listings.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.title}
-                </option>
-              ))}
-            </select>
+            {(field) => (
+              <select
+                {...register("listing_id")}
+                data-testid="inquiry-form-listing"
+                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                {...field}
+              >
+                <option value="">Not yet linked</option>
+                {listings.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.title}
+                  </option>
+                ))}
+              </select>
+            )}
           </FormField>
 
           <FormField label="Received at" required>
-            <input
-              type="datetime-local"
-              {...register("received_at", { required: "Received-at is required" })}
-              data-testid="inquiry-form-received-at"
-              className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-            />
-            {errors.received_at ? (
-              <p className="text-xs text-red-600 mt-1">{errors.received_at.message}</p>
-            ) : null}
+            {(field) => (
+              <>
+                <input
+                  type="datetime-local"
+                  {...register("received_at", { required: "Received-at is required" })}
+                  data-testid="inquiry-form-received-at"
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  {...field}
+                />
+                {errors.received_at ? (
+                  <p className="text-xs text-red-600 mt-1">{errors.received_at.message}</p>
+                ) : null}
+              </>
+            )}
           </FormField>
 
           <FormField label="Notes">
-            <textarea
-              {...register("notes")}
-              rows={3}
-              data-testid="inquiry-form-notes"
-              className="w-full border rounded-md px-3 py-2 text-sm"
-            />
+            {(field) => (
+              <textarea
+                {...register("notes")}
+                rows={3}
+                data-testid="inquiry-form-notes"
+                className="w-full border rounded-md px-3 py-2 text-sm"
+                {...field}
+              />
+            )}
           </FormField>
         </form>
 

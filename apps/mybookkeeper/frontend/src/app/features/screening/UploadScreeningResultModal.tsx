@@ -1,8 +1,7 @@
 import { useState, type FormEvent } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import { Button, LoadingButton } from "@platform/ui";
-import FormField from "@/shared/components/ui/FormField";
+import { Button, FormField, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useUploadScreeningResultMutation } from "@mybookkeeper/api-client/store/screeningApi";
 import {
@@ -128,53 +127,68 @@ export default function UploadScreeningResultModal({
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <FormField label="Report PDF" required>
-              <input
-                data-testid="upload-screening-file"
-                type="file"
-                accept="application/pdf,image/jpeg,image/png"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                className="block w-full text-sm file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-              />
-              {submitAttempted && !file ? (
-                <p className="text-xs text-red-500 mt-1">A PDF is required.</p>
-              ) : null}
+              {(field) => (
+                <>
+                  <input
+                    data-testid="upload-screening-file"
+                    type="file"
+                    accept="application/pdf,image/jpeg,image/png"
+                    onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                    className="block w-full text-sm file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                    {...field}
+                  />
+                  {submitAttempted && !file ? (
+                    <p className="text-xs text-red-500 mt-1">A PDF is required.</p>
+                  ) : null}
+                </>
+              )}
             </FormField>
 
             <FormField label="Outcome" required>
-              <select
-                data-testid="upload-screening-status"
-                value={status}
-                onChange={(e) => setStatus(e.target.value as ScreeningStatus | "")}
-                className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[44px]"
-              >
-                <option value="">— Choose outcome —</option>
-                {SCREENING_UPLOAD_OUTCOMES.map((s) => (
-                  <option key={s} value={s}>
-                    {SCREENING_STATUS_LABELS[s]}
-                  </option>
-                ))}
-              </select>
-              {submitAttempted && !status ? (
-                <p className="text-xs text-red-500 mt-1">Please choose an outcome.</p>
-              ) : null}
+              {(field) => (
+                <>
+                  <select
+                    data-testid="upload-screening-status"
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as ScreeningStatus | "")}
+                    className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[44px]"
+                    {...field}
+                  >
+                    <option value="">— Choose outcome —</option>
+                    {SCREENING_UPLOAD_OUTCOMES.map((s) => (
+                      <option key={s} value={s}>
+                        {SCREENING_STATUS_LABELS[s]}
+                      </option>
+                    ))}
+                  </select>
+                  {submitAttempted && !status ? (
+                    <p className="text-xs text-red-500 mt-1">Please choose an outcome.</p>
+                  ) : null}
+                </>
+              )}
             </FormField>
 
             {showSnippetField ? (
               <FormField label="Adverse action reason" required>
-                <textarea
-                  data-testid="upload-screening-snippet"
-                  value={adverseSnippet}
-                  onChange={(e) => setAdverseSnippet(e.target.value)}
-                  rows={3}
-                  maxLength={2000}
-                  placeholder="Short summary used on the FCRA adverse-action notice (e.g. 'Credit score below threshold')."
-                  className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                />
-                {submitAttempted && !adverseSnippet.trim() ? (
-                  <p className="text-xs text-red-500 mt-1">
-                    Required for declined / inconclusive outcomes.
-                  </p>
-                ) : null}
+                {(field) => (
+                  <>
+                    <textarea
+                      data-testid="upload-screening-snippet"
+                      value={adverseSnippet}
+                      onChange={(e) => setAdverseSnippet(e.target.value)}
+                      rows={3}
+                      maxLength={2000}
+                      placeholder="Short summary used on the FCRA adverse-action notice (e.g. 'Credit score below threshold')."
+                      className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      {...field}
+                    />
+                    {submitAttempted && !adverseSnippet.trim() ? (
+                      <p className="text-xs text-red-500 mt-1">
+                        Required for declined / inconclusive outcomes.
+                      </p>
+                    ) : null}
+                  </>
+                )}
               </FormField>
             ) : null}
 

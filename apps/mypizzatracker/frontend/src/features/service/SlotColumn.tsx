@@ -1,5 +1,6 @@
 import type { DashboardSlot } from "@/types/service/service";
 import { OrderCard } from "./OrderCard";
+import { formatPickupTime } from "@/features/service/formatPickupTime";
 
 interface SlotColumnProps {
   dropId: string;
@@ -56,10 +57,6 @@ export function SlotColumn({
       </ol>
     </section>
   );
-}
-
-function formatPickupTime(time: string): string {
-  return time.length >= 5 ? time.slice(0, 5) : time;
 }
 
 /**
