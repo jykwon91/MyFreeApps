@@ -66,7 +66,7 @@ def get_gmail_service(
     Returns ``(service, creds)``. Google's auth library auto-refreshes the
     access token in-memory when it gets a 401 — but the refreshed value lives
     only on ``creds``. Callers must inspect ``creds.token`` after each Gmail
-    call and persist via ``integration_repo.update_access_token`` if it
+    call and persist via ``gmail_credentials.persist_refreshed_token`` if it
     diverges from the value originally passed in. Without that step, every
     sync re-uses the stale DB-stored access token and re-pays the refresh
     roundtrip on the next call.

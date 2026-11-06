@@ -53,13 +53,11 @@ async def mark_integration_needs_reauth(
     reason: str,
 ) -> None:
     async with unit_of_work() as db:
-        stale = await integration_repo.get_by_org_and_provider(
-            db, integration.organization_id, "gmail"
+        marked = await integration_repo.mark_needs_reauth_if_unchanged(
+            db, integration, reason[:200], datetime.now(timezone.utc)
         )
-        if stale is not None:
-            await integration_repo.mark_needs_reauth(
-                db, stale, reason[:200], datetime.now(timezone.utc)
-            )
+    if not marked:
+        logger.info("Gmail was reconnected during this call; leaving the new connection's reauth state alone")
 
 
 def post_message_send(creds: Credentials, raw: str) -> requests.Response:

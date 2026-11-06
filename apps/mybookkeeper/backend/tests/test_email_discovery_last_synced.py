@@ -367,6 +367,12 @@ async def test_last_synced_NOT_updated_when_gmail_auth_expired() -> None:
                 new=fake_mark_completed,
             )
         )
+        stack.enter_context(
+            patch(
+                "app.services.email.email_discovery_service.integration_repo.mark_needs_reauth_if_unchanged",
+                new=AsyncMock(return_value=True),
+            )
+        )
 
         from app.services.email.email_discovery_service import discover_gmail_emails
 
