@@ -1,0 +1,53 @@
+/**
+ * Fixed values for the operator's triage screen (`/wow-forever/triage`). The status lists mirror the
+ * backend's `feature_literals.py` (`TriageSettableStatus`); the rest are this screen's own.
+ */
+
+/** Every status triage may PATCH — `duplicate` is only made by a merge. */
+export const TRIAGE_SETTABLE_STATUSES = ["submitted", "open", "planned", "in_progress", "shipped", "not_planned"] as const;
+
+export const TRIAGE_TABS = ["inbox", "all"] as const;
+
+/** The All requests chips, in the order they show. */
+export const TRIAGE_STATUS_FILTERS = [
+  "open",
+  "planned",
+  "in_progress",
+  "shipped",
+  "not_planned",
+  "hidden",
+  "merged",
+] as const;
+
+export const TRIAGE_SORTS = ["top", "priority", "new"] as const;
+
+export const TRIAGE_SHEET_KIND = {
+  edit: "edit",
+  merge: "merge",
+  shipped: "shipped",
+  notPlanned: "not_planned",
+} as const;
+
+export const TRIAGE_SHEET_KINDS = [
+  TRIAGE_SHEET_KIND.edit,
+  TRIAGE_SHEET_KIND.merge,
+  TRIAGE_SHEET_KIND.shipped,
+  TRIAGE_SHEET_KIND.notPlanned,
+] as const;
+
+/**
+ * How an inbox submission shows: a new story to approve, one already handled elsewhere, a vote on an
+ * existing public story, or a rejected / unanswered-question submission (collapsed section).
+ */
+export const INBOX_CARD_KIND = {
+  new: "new",
+  alreadyHandled: "already_handled",
+  duplicate: "duplicate",
+  rejected: "rejected",
+} as const;
+
+/** Private priority, 1 = most important (backend PRIORITY_MIN..PRIORITY_MAX). */
+export const TRIAGE_PRIORITIES = [1, 2, 3] as const;
+
+/** Statuses a story can be merged into (never itself, a merged story or a hidden one). */
+export const MERGE_TARGET_STATUSES = ["open", "planned", "in_progress", "shipped", "not_planned"] as const;
