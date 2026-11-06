@@ -1,7 +1,5 @@
 """Test-only auth helpers: the test-mode gate guard and admin-promotion endpoint."""
 
-import uuid
-
 from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import EmailStr
 
