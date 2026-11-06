@@ -2,6 +2,7 @@ import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AlertBox } from "@platform/ui";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
+import WowServerStatusSection from "@/games/wow-forever/components/serverStatus/WowServerStatusSection";
 import { COMPANION_GAMES, WOW_FOREVER_SLUG } from "@/games/registry";
 
 /** /wow-forever — entry point for the WoW Forever companion pages. */
@@ -15,6 +16,7 @@ export default function WowForeverLanding() {
         backTo="/"
         backLabel="Back to games"
       />
+      <WowServerStatusSection />
       <AlertBox variant="info">
         Much of this is based on Classic Era and may differ in Forever.
       </AlertBox>
