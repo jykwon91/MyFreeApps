@@ -80,6 +80,7 @@ from platform_shared.core.boot_guards import (
     check_transparency_configured,
     check_turnstile_configured,
 )
+from platform_shared.services.email_backend import EmailBackend
 
 
 class _SettingsProtocol(Protocol):
@@ -94,7 +95,7 @@ class _SettingsProtocol(Protocol):
     sentry_dsn: str
     environment: str
     turnstile_secret_key: str
-    email_backend: str
+    email_backend: EmailBackend
     smtp_user: str
     smtp_password: str
     sms_backend: str

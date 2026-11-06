@@ -10,6 +10,8 @@ Each guard takes its inputs as explicit kwargs so platform_shared has
 no transitive dependency on per-app settings modules.
 """
 
+from platform_shared.services.email_backend import EmailBackend
+
 _DEV_ENVIRONMENTS = ("development", "test")
 
 
@@ -80,7 +82,7 @@ class EmailNotConfiguredError(RuntimeError):
 
 def check_email_configured(
     *,
-    email_backend: str,
+    email_backend: EmailBackend,
     smtp_user: str,
     smtp_password: str,
     environment: str,
@@ -108,7 +110,7 @@ def check_email_configured(
     healthcheck catches the misconfig before users hit it.
 
     Args:
-        email_backend: ``"console"`` (dev/CI default — log to stdout)
+        email_backend: ``"console"`` (dev/CI default — only log each send)
             or ``"smtp"`` (production — send via SMTP).
         smtp_user: SMTP authentication username. Required for
             ``email_backend == "smtp"``.
