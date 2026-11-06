@@ -1,5 +1,4 @@
 /** @typedef {{ id: string; tax_year: number; [key: string]: unknown }} TaxReturn */
-/** @typedef {{ field_name: string; line: string; value: string | number }} FormField */
 
 const $ = (/** @type {string} */ sel) => document.querySelector(sel);
 const show = (/** @type {Element} */ el) => el.classList.remove("hidden");
@@ -35,7 +34,6 @@ const mainSuccess = /** @type {HTMLElement} */ ($("#main-success"));
 
 /** @type {TaxReturn[]} */
 let taxReturns = [];
-/** @typedef {{ id: string; label: string; fields: FormField[] }} FieldGroup */
 /** @type {FormField[]} */
 let currentFields = [];
 /** @type {FieldGroup[]} */
@@ -46,6 +44,9 @@ let detectedForm = /** @type {string | null} */ (null);
 let selectedDocumentId = /** @type {string | null} */ (null);
 /** Whether the login form is in the TOTP step */
 let awaitingTotp = false;
+/** Bumped by each forms / fields load and by anything that makes one moot; a reply to an older number is dropped. */
+let formsRequest = 0;
+let fieldsRequest = 0;
 
 const FORM_OPTIONS = [
   { value: "w2", label: "W-2" },
@@ -177,6 +178,8 @@ async function handleLogin(e) {
 }
 
 async function handleLogout() {
+  formsRequest++;
+  fieldsRequest++;
   await chrome.runtime.sendMessage({ action: "logout" });
   taxReturns = [];
   currentFields = [];
@@ -238,13 +241,13 @@ async function loadTaxReturns() {
 
 function handleTaxYearChange() {
   const year = parseInt(taxYearSelect.value, 10);
+  fieldsRequest++;
   hide(fieldsContainer);
   clearMessages();
 
   if (!year) {
     recomputeBtn.disabled = true;
-    formSelect.innerHTML = '<option value="">Select form...</option>';
-    formSelect.disabled = true;
+    populateFormSelect();
     return;
   }
 
@@ -258,6 +261,7 @@ function handleTaxYearChange() {
 }
 
 async function populateFormSelect() {
+  const request = ++formsRequest;
   formSelect.innerHTML = '<option value="">Select form...</option>';
   formSelect.disabled = true;
 
@@ -272,6 +276,7 @@ async function populateFormSelect() {
     returnId: taxReturn.id,
   });
 
+  if (request !== formsRequest) return;
   if (!result.success || !Array.isArray(result.data)) return;
 
   for (const item of result.data) {
@@ -287,6 +292,7 @@ async function populateFormSelect() {
 
 function handleFormSelect() {
   const form = formSelect.value;
+  fieldsRequest++;
   clearMessages();
   hide(instanceGroup);
   hide(fieldsContainer);
@@ -346,6 +352,7 @@ async function onPageDetected(form, year) {
   detectedForm = form;
 
   if (!form) {
+    fieldsRequest++;
     show(infoBanner);
     detectedFormBar.classList.remove("detected");
     detectedFormText.textContent = "Navigate to a tax form page";
@@ -367,6 +374,7 @@ async function onPageDetected(form, year) {
 }
 
 async function loadFormFields() {
+  const request = ++fieldsRequest;
   const year = parseInt(taxYearSelect.value, 10);
   if (!year || !detectedForm) return;
 
@@ -381,37 +389,13 @@ async function loadFormFields() {
     formName: detectedForm,
   });
 
+  if (request !== fieldsRequest) return;
   if (!result.success) {
     showError(result.error, mainError);
     return;
   }
 
-  const instances = result.data?.instances ?? [];
-  allInstances = instances.map((inst) => {
-    const issuer = inst.instance_label || inst.issuer_name || null;
-    const rawFields = inst.fields ?? [];
-    const fields = rawFields
-      .filter((f) => f.value !== "[REDACTED]" && f.value !== "***")
-      .map((f) => ({
-        field_name: f.label ?? f.field_id,
-        line: f.field_id,
-        value: f.value,
-      }));
-    // Add issuer/payer name as a field so it can be copied and auto-filled
-    if (issuer) {
-      fields.unshift({ field_name: "Payer / Financial Institution", line: "payer_name", value: issuer });
-    }
-    // Build a distinguishing label — add address or account number if name isn't unique
-    const address = rawFields.find((f) => f.field_id === "box_8")?.value;
-    const account = rawFields.find((f) => f.field_id === "account_number")?.value;
-    let label = issuer || "Unknown";
-    if (address && typeof address === "string") {
-      label += ` — ${address}`;
-    } else if (account) {
-      label += ` — Acct ${String(account).slice(-6)}`;
-    }
-    return { id: inst.instance_id, documentId: inst.document_id, label, fields };
-  }).filter((g) => g.fields.length > 0);
+  allInstances = toFieldGroups(result.data?.instances ?? []);
 
   if (allInstances.length === 0) {
     hide(instanceGroup);
