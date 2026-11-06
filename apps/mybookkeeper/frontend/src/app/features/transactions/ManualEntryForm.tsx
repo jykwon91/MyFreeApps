@@ -5,7 +5,7 @@ import { EXPENSE_CATEGORY_LIST, INCOME_CATEGORIES, PAYMENT_METHODS, CHANNELS } f
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionFormValues } from "@/shared/types/transaction/transaction-form-values";
-import Panel from "@/shared/components/ui/Panel";
+import { Panel, PanelTitle } from "@platform/ui";
 import FormField from "@/shared/components/ui/FormField";
 import Select from "@/shared/components/ui/Select";
 import { LoadingButton } from "@platform/ui";
@@ -79,7 +79,9 @@ export default function ManualEntryForm({ properties, onClose, onSuccess, onErro
   return (
     <Panel position="right" onClose={onClose}>
       <div className="flex items-center justify-between px-5 py-4 border-b">
-        <h2 className="font-semibold">New Transaction</h2>
+        <PanelTitle asChild>
+          <h2 className="font-semibold">New Transaction</h2>
+        </PanelTitle>
         <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-sm">Cancel</button>
       </div>
 

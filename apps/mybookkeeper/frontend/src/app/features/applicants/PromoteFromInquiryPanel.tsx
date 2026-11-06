@@ -1,8 +1,7 @@
 import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle } from "lucide-react";
-import Panel, { PanelCloseButton } from "@/shared/components/ui/Panel";
+import { Panel, PanelCloseButton, PanelTitle } from "@platform/ui";
 import { Button, LoadingButton } from "@platform/ui";
 import FormField from "@/shared/components/ui/FormField";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
@@ -12,9 +11,9 @@ import {
   APPLICANT_PETS_MAX,
   APPLICANT_REFERRED_BY_MAX,
   APPLICANT_VEHICLE_MAX,
-  MISSING_FIELD_TOOLTIP,
   PROMOTE_TOAST_MESSAGES,
 } from "@mybookkeeper/api-client/constants/applicantPromote";
+import PromoteMissingHint from "./PromoteMissingHint";
 import { usePromoteFromInquiryMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 import type { ApplicantPromoteRequest } from "@mybookkeeper/api-client/types/applicant/applicant-promote-request";
 import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
@@ -38,19 +37,6 @@ interface PromoteFormValues {
 
 /** Marker shown next to fields the inquiry didn't supply, so the host knows
  * they can fill it in (or leave blank — none are required for promotion). */
-function MissingHint() {
-  return (
-    <span
-      className="inline-flex items-center text-orange-500"
-      title={MISSING_FIELD_TOOLTIP}
-      aria-label={MISSING_FIELD_TOOLTIP}
-      data-testid="promote-missing-hint"
-    >
-      <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
-    </span>
-  );
-}
-
 function buildDefaults(inquiry: InquiryResponse): PromoteFormValues {
   return {
     legal_name: inquiry.inquirer_name ?? "",
@@ -155,7 +141,9 @@ export default function PromoteFromInquiryPanel({ inquiry, onClose }: PromoteFro
         {/* Header */}
         <div className="px-5 py-4 border-b flex items-start justify-between">
           <div>
-            <h3 className="font-medium text-base">Promote to applicant</h3>
+            <PanelTitle asChild>
+              <h3 className="font-medium text-base">Promote to applicant</h3>
+            </PanelTitle>
             <p className="text-xs text-muted-foreground">
               I'll pre-fill what I can from the inquiry. You can edit anything.
             </p>
@@ -181,7 +169,7 @@ export default function PromoteFromInquiryPanel({ inquiry, onClose }: PromoteFro
                 data-testid="promote-form-legal-name"
                 className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
               />
-              {!inquiry.inquirer_name ? <MissingHint /> : null}
+              {!inquiry.inquirer_name ? <PromoteMissingHint /> : null}
             </div>
           </FormField>
 
@@ -194,7 +182,7 @@ export default function PromoteFromInquiryPanel({ inquiry, onClose }: PromoteFro
                   data-testid="promote-form-dob"
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                 />
-                <MissingHint />
+                <PromoteMissingHint />
               </div>
             </FormField>
             <FormField
@@ -209,7 +197,7 @@ export default function PromoteFromInquiryPanel({ inquiry, onClose }: PromoteFro
                   data-testid="promote-form-employer"
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                 />
-                {!inquiry.inquirer_employer ? <MissingHint /> : null}
+                {!inquiry.inquirer_employer ? <PromoteMissingHint /> : null}
               </div>
             </FormField>
           </div>
@@ -228,7 +216,7 @@ export default function PromoteFromInquiryPanel({ inquiry, onClose }: PromoteFro
                 data-testid="promote-form-contract-start"
                 className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
               />
-              {!inquiry.desired_start_date ? <MissingHint /> : null}
+              {!inquiry.desired_start_date ? <PromoteMissingHint /> : null}
             </div>
           </FormField>
 
@@ -242,7 +230,7 @@ export default function PromoteFromInquiryPanel({ inquiry, onClose }: PromoteFro
                 data-testid="promote-form-vehicle"
                 className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
               />
-              <MissingHint />
+              <PromoteMissingHint />
             </div>
           </FormField>
 

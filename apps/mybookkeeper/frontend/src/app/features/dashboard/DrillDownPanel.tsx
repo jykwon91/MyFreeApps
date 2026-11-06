@@ -5,7 +5,7 @@ import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/properties
 import { UNASSIGNED_PROPERTY_ID } from "@/shared/lib/constants";
 import { useToast } from "@/shared/hooks/useToast";
 import { formatCurrency } from "@/shared/utils/currency";
-import Panel, { PanelCloseButton } from "@/shared/components/ui/Panel";
+import { Panel, PanelCloseButton, PanelTitle } from "@platform/ui";
 import type { DrillDownFilter } from "@/shared/types/dashboard/drill-down-filter";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import { useDrillDownBodyMode } from "./useDrillDownBodyMode";
@@ -75,11 +75,15 @@ export default function DrillDownPanel({ filter, onClose }: DrillDownPanelProps)
             <nav className="flex items-center gap-1.5 text-sm">
               <span className="text-muted-foreground truncate">{filter.label}</span>
               <ChevronRight size={14} className="text-muted-foreground shrink-0" />
-              <span className="font-medium truncate">{selectedTxn.vendor ?? "Transaction"}</span>
+              <PanelTitle asChild>
+                <span className="font-medium truncate">{selectedTxn.vendor ?? "Transaction"}</span>
+              </PanelTitle>
             </nav>
           ) : (
             <>
-              <p className="font-medium">{filter.label}</p>
+              <PanelTitle asChild>
+                <p className="font-medium">{filter.label}</p>
+              </PanelTitle>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {transactions.length} transaction{transactions.length !== 1 ? "s" : ""} — {formatCurrency(total)}
               </p>

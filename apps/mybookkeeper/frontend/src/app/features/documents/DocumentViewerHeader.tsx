@@ -1,6 +1,6 @@
 import type { DocumentBlob } from "@/shared/services/documentService";
 import type { DocumentViewMode } from "@/shared/types/document/document-view-mode";
-import { PanelCloseButton } from "@/shared/components/ui/Panel";
+import { PanelCloseButton, PanelTitle } from "@platform/ui";
 import OpenInNewTabLink from "./OpenInNewTabLink";
 
 export interface DocumentViewerHeaderProps {
@@ -19,7 +19,9 @@ export default function DocumentViewerHeader({
   return (
     <header className="flex items-center justify-between px-4 py-2 border-b shrink-0 bg-card">
       <div className="flex items-center gap-3 min-w-0">
-        <span className="text-sm font-medium text-muted-foreground">Source document</span>
+        <PanelTitle asChild>
+          <span className="text-sm font-medium text-muted-foreground">Source document</span>
+        </PanelTitle>
         {showOpenInNewTab ? <OpenInNewTabLink url={blob.url} /> : null}
       </div>
       <PanelCloseButton onClose={onClose} label="Close viewer" />

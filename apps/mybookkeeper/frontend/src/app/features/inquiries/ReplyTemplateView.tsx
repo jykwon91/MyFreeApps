@@ -1,4 +1,4 @@
-import Panel, { PanelCloseButton } from "@/shared/components/ui/Panel";
+import { Panel, PanelCloseButton, PanelTitle } from "@platform/ui";
 import { Button } from "@platform/ui";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 import { REPLY_TEMPLATE_MESSAGES as MESSAGES } from "@/shared/lib/reply-template-messages";
@@ -15,7 +15,9 @@ export default function ReplyTemplateView({ template, onClose }: ReplyTemplateVi
       <div className="flex flex-col flex-1 overflow-hidden" data-testid="reply-template-view">
         <div className="px-5 py-4 border-b flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="font-medium text-base break-words">{template.name}</h3>
+            <PanelTitle asChild>
+              <h3 className="font-medium text-base break-words">{template.name}</h3>
+            </PanelTitle>
             <p className="text-xs text-muted-foreground">{MESSAGES.viewOnlyNote}</p>
           </div>
           <PanelCloseButton onClose={onClose} />

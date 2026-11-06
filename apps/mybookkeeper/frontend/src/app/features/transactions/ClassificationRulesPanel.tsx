@@ -5,7 +5,7 @@ import {
   useDeleteClassificationRuleMutation,
 } from "@/shared/store/classificationRulesApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import Panel from "@/shared/components/ui/Panel";
+import { Panel, PanelTitle } from "@platform/ui";
 import { ConfirmDialog } from "@platform/ui";
 import { useClassificationRulesPanelMode } from "./useClassificationRulesPanelMode";
 import ClassificationRulesPanelBody from "./ClassificationRulesPanelBody";
@@ -42,7 +42,9 @@ export default function ClassificationRulesPanel({ onClose }: ClassificationRule
     <Panel position="right" onClose={onClose} width="520px">
       <div className="px-5 py-4 border-b flex items-center justify-between">
         <div>
-          <h3 className="font-medium text-base">Classification Rules</h3>
+          <PanelTitle asChild>
+            <h3 className="font-medium text-base">Classification Rules</h3>
+          </PanelTitle>
           <p className="text-xs text-muted-foreground mt-0.5">
             I learn these from your corrections. When you change a category, I remember it for next time.
           </p>

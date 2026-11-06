@@ -9,7 +9,7 @@
  * outside-click delegates to the @platform/ui Panel primitive.
  */
 import { X } from "lucide-react";
-import Panel from "@platform/ui/components/ui/Panel";
+import { Panel, PanelTitle } from "@platform/ui";
 import { useGetLineupQuery } from "@/store/lineupsApi";
 import LineupCard from "@/components/lineup/LineupCard";
 import type { usePins } from "@/hooks/usePins";
@@ -26,9 +26,11 @@ export default function LineupDetailPanel({ lineupId, onClose, pins }: Props) {
   return (
     <Panel position="right" width="22rem" onClose={onClose}>
       <div className="flex items-center justify-between p-3 border-b sticky top-0 bg-card z-10">
-        <h2 className="text-sm font-semibold truncate">
-          {lineup?.title ?? (isLoading ? "Loading..." : "Lineup")}
-        </h2>
+        <PanelTitle asChild>
+          <h2 className="text-sm font-semibold truncate">
+            {lineup?.title ?? (isLoading ? "Loading..." : "Lineup")}
+          </h2>
+        </PanelTitle>
         <button
           type="button"
           onClick={onClose}

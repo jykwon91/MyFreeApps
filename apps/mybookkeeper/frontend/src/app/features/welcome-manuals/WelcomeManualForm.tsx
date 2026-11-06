@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { X } from "lucide-react";
-import Panel from "@/shared/components/ui/Panel";
+import { Panel, PanelTitle } from "@platform/ui";
 import FormField from "@/shared/components/ui/FormField";
 import Markdown from "@/shared/components/ui/Markdown";
 import { LoadingButton } from "@platform/ui";
@@ -83,7 +83,9 @@ export default function WelcomeManualForm({
       <div className="flex flex-col flex-1 overflow-hidden">
         <div className="px-5 py-4 border-b flex items-start justify-between">
           <div>
-            <h3 className="font-medium text-base">Edit manual</h3>
+            <PanelTitle asChild>
+              <h3 className="font-medium text-base">Edit manual</h3>
+            </PanelTitle>
             <p className="text-xs text-muted-foreground">Update the title, intro, or property.</p>
           </div>
           <button
