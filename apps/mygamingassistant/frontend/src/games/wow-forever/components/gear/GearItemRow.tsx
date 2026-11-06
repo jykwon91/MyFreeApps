@@ -1,9 +1,7 @@
 import clsx from "clsx";
-import { OutboundLink } from "@platform/ui/discord-activity";
 import GearSourceChip from "@/games/wow-forever/components/gear/GearSourceChip";
-import { QUALITY_LABELS, QUALITY_TEXT_CLASSES } from "@/games/wow-forever/data/itemQualityStyles";
+import { QUALITY_TEXT_CLASSES } from "@/games/wow-forever/data/itemQualityStyles";
 import { describeSource, pctLabel, sourceChipKind } from "@/games/wow-forever/gear/gearSourceText";
-import { wowheadForeverItemUrl } from "@/games/wow-forever/lib/wowheadUrl";
 import type { RankedGearItem } from "@/games/wow-forever/types/rankedGearItem";
 
 const BADGE = "inline-block rounded border px-1.5 py-0.5 text-xs text-muted-foreground";
@@ -25,20 +23,14 @@ function levelLabel(requiredLevel: number, availableFrom: number, estimated: boo
   return availableFrom > requiredLevel ? `${required} · get it from level ${availableFrom}` : required;
 }
 
-/** One ranked item: name (opens Wowhead), level, how it compares, where it comes from. */
+/** One ranked item: name, level, how it compares, where it comes from. */
 export default function GearItemRow({ ranked, isTop, closeRuleApplied = false }: GearItemRowProps) {
   const { item, facts, sources } = ranked;
   const level = levelLabel(item.requiredLevel, ranked.availableFrom, ranked.availableFromEstimated);
   return (
     <li data-testid="gear-item-row" className="space-y-1.5 py-3 first:pt-0 last:pb-0">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <OutboundLink
-          href={wowheadForeverItemUrl(item.id)}
-          className={clsx("font-medium underline-offset-2 hover:underline min-h-[44px] sm:min-h-0 inline-flex items-center", QUALITY_TEXT_CLASSES[item.quality])}
-          aria-label={`${item.name} (${QUALITY_LABELS[item.quality]}) on Wowhead, opens in a new tab`}
-        >
-          {item.name}
-        </OutboundLink>
+        <span className={clsx("font-medium", QUALITY_TEXT_CLASSES[item.quality])}>{item.name}</span>
         <span className="text-xs text-muted-foreground tabular-nums">
           {pctLabel(ranked.pctOfBest, isTop, closeRuleApplied)} · score {ranked.score.toFixed(1)}
         </span>

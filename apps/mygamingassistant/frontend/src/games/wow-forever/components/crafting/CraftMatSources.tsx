@@ -1,11 +1,9 @@
 import FoodSourceList from "@/games/wow-forever/components/food/detail/FoodSourceList";
-import WowheadLink from "@/games/wow-forever/components/WowheadLink";
 import type { CraftPlace } from "@/games/wow-forever/components/crafting/CraftLearnLine";
 import CraftSkinningList from "@/games/wow-forever/components/crafting/CraftSkinningList";
 import { describeDisenchant, isGathered, soldToYou, unknownMat } from "@/games/wow-forever/crafting/matSources";
 import { makerOf } from "@/games/wow-forever/crafting/shoppingList";
-import { hasSources, isNewInForever } from "@/games/wow-forever/food/recipeSources";
-import { wowheadForeverItemUrl } from "@/games/wow-forever/lib/wowheadUrl";
+import { hasSources } from "@/games/wow-forever/food/recipeSources";
 
 /** Disenchant isn't a recipe or in the spellbook — Forever keeps it in the Professions window (K). */
 const DISENCHANT_HOW =
@@ -56,12 +54,7 @@ export default function CraftMatSources({ itemId, place, professionLabel }: Craf
       ) : null}
       <FoodSourceList sources={sources} faction={place.faction} zoneId={place.zoneId} level={place.level} preferEasySources />
       {known ? null : (
-        <div className="space-y-1">
-          <p className="text-sm text-muted-foreground">{unknownMat(itemId)}</p>
-          {isNewInForever(itemId) ? (
-            <WowheadLink href={wowheadForeverItemUrl(itemId)} />
-          ) : null}
-        </div>
+        <p className="text-sm text-muted-foreground">{unknownMat(itemId)}</p>
       )}
     </div>
   );

@@ -11,8 +11,8 @@ Rules:
 * Display names come from the Forever ``ItemSparse`` at build time —
   the ``name`` fields here are annotations only, not shipped.
 * Item 21546 is BLOCKED until verified by a subject-matter expert.
-* Items with ``item_id: None`` (e.g. "Repair to 100%") have no Wowhead
-  page and are excluded from the JSON; they appear here as documentation.
+* Items with ``item_id: None`` (e.g. "Repair to 100%") have no item id
+  and are excluded from the JSON; they appear here as documentation.
 """
 from __future__ import annotations
 
@@ -314,7 +314,7 @@ FOOD: dict[str, list[dict]] = {
 # ---------------------------------------------------------------------------
 # Always — every raider regardless of class / role
 # ---------------------------------------------------------------------------
-# Note: the item with item_id=None ("Repair to 100%") has no Wowhead page
+# Note: the item with item_id=None ("Repair to 100%") has no item id
 # and is excluded from the JSON; include it mentally before every raid.
 ALWAYS: list[dict] = [
     {"item_id": 13446, "why": "every raider needs an emergency heal", "tier": "essential"},

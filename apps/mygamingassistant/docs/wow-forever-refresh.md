@@ -30,7 +30,7 @@ Then read these for posts dated after `notes_reviewed_through`:
   and any Forever forum category that replaces it. Read staff posts only.
 
 Forum threads have a JSON form: add `.json` to `/t/<id>`, then keep the posts where
-`staff` is true. Don't fetch wowhead.com, because its robots.txt blocks AI bots.
+`staff` is true. Don't fetch Wowhead, because its robots.txt blocks AI bots.
 
 Blizzard could ship the launch build under a new product id, and `check` would still
 report the old one as current. Until `wowf` has a build dated on or after launch,

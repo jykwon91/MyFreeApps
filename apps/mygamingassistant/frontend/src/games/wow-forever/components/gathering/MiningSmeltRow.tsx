@@ -22,7 +22,7 @@ export default function MiningSmeltRow({ recipe, where }: MiningSmeltRowProps) {
         {recipe.name}
         {unknown && (
           <span className="ml-2">
-            <SourceUnknownChip spellId={recipe.spell} />
+            <SourceUnknownChip />
           </span>
         )}
       </p>

@@ -54,12 +54,12 @@ describe("Auction house page", () => {
   it("lists items most traded first with prices, a dash for no average, and the credit", () => {
     usePricesQuery.mockReturnValue(pricesReady(response("us", US_ITEMS)));
     renderPage();
-    expect(rows().map((r) => within(r).getAllByRole("link")[0].textContent)).toEqual(["Linen Cloth", "Silk Cloth", "Wool Cloth"]);
+    expect(rows().map((r) => r.firstElementChild?.textContent)).toEqual(["Linen Cloth", "Silk Cloth", "Wool Cloth"]);
     const silk = rows()[1];
     expect(within(silk).getByTestId("auction-market")).toHaveTextContent("50s");
     expect(within(silk).getByTestId("auction-avg")).toHaveTextContent("—");
     expect(within(silk).getByTestId("auction-sold")).toHaveTextContent("12");
-    expect(within(silk).getAllByRole("link")[0]).toHaveAttribute("href", "https://www.wowhead.com/forever/item=4306");
+    expect(within(silk).queryByRole("link")).toBeNull();
     expect(screen.getByTestId("price-credit")).toHaveTextContent("Prices from TradeSkillMaster");
   });
 
@@ -88,7 +88,7 @@ describe("Auction house page", () => {
     usePricesQuery.mockReturnValue(pricesReady(response("us", US_ITEMS)));
     renderPage();
     await userEvent.selectOptions(screen.getByLabelText("Sort by"), "high");
-    expect(within(rows()[0]).getAllByRole("link")[0]).toHaveTextContent("Silk Cloth");
+    expect(rows()[0].firstElementChild).toHaveTextContent("Silk Cloth");
   });
 
   it("switches region and asks for that region's prices", async () => {

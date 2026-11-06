@@ -235,7 +235,7 @@ def _items(tier: str, count: int, why_len: int) -> list[ConsumableItem]:
     return [
         ConsumableItem(
             item_id=1000 + i, name=f"{tier.title()} Potion {i}", why="x" * why_len,
-            tier=tier, wowhead_url=f"https://www.wowhead.com/forever/item={1000 + i}",
+            tier=tier,
         )
         for i in range(count)
     ]
@@ -255,8 +255,9 @@ def test_consumables_embed_layout() -> None:
     assert embed["footer"]["text"] == "To stop these DMs, use /raid prefs dm_reminders:false"
     assert [f["name"] for f in embed["fields"]] == ["Essential", "Recommended"]
     assert embed["fields"][0]["value"].splitlines()[0] == (
-        "[Essential Potion 0](https://www.wowhead.com/forever/item=1000) — xxxxxxxxxx"
+        "Essential Potion 0 — xxxxxxxxxx"
     )
+    assert "wowhead" not in str(embed).lower()
     assert payload["allowed_mentions"] == {"parse": []}
 
 

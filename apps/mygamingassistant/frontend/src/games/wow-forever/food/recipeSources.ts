@@ -21,7 +21,7 @@ import {
 export const FIRST_FOREVER_ITEM_ID = 100_000;
 
 /** An item new in Forever — so no Classic source data exists for it. */
-export function isNewInForever(itemId: number): boolean {
+function isNewInForever(itemId: number): boolean {
   return itemId >= FIRST_FOREVER_ITEM_ID;
 }
 

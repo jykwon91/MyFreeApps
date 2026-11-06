@@ -26,7 +26,6 @@ from app.services.wow.raid_consumables import (
     ConsumableChecklist,
     UnknownRaidError,
     select_consumables,
-    wowhead_url,
 )
 
 # Resolve the JSON relative to this file: tests/ -> backend/ -> data/wow/
@@ -97,12 +96,9 @@ class TestDatasetIntegrity:
         for item in _all_items_in_data(data):
             assert item["tier"] in valid_tiers, f"Invalid tier: {item}"
 
-    def test_wowhead_urls_present(self, data: dict) -> None:
+    def test_no_wowhead_url_in_data(self, data: dict) -> None:
         for item in _all_items_in_data(data):
-            url = item.get("wowhead_url", "")
-            assert url.startswith("https://www.wowhead.com/forever/item="), (
-                f"Bad wowhead_url for item {item['item_id']}: {url!r}"
-            )
+            assert "wowhead_url" not in item, f"item {item['item_id']} carries a wowhead_url"
 
     def test_raids_keys_present(self, data: dict) -> None:
         expected = {"barrow_deeps", "hyjal_summit", "onyxia",
@@ -286,12 +282,3 @@ class TestErrors:
     def test_error_message_includes_valid_keys(self) -> None:
         with pytest.raises(UnknownRaidError, match="barrow_deeps"):
             select_consumables("not_a_raid", None, None)
-
-
-# ---------------------------------------------------------------------------
-# 6. wowhead_url helper
-# ---------------------------------------------------------------------------
-
-def test_wowhead_url_format() -> None:
-    assert wowhead_url(13446) == "https://www.wowhead.com/forever/item=13446"
-    assert wowhead_url(274273) == "https://www.wowhead.com/forever/item=274273"

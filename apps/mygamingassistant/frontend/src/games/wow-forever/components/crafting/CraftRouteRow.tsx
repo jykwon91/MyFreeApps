@@ -42,7 +42,7 @@ export default function CraftRouteRow({ entry, state, showChip, makesTool, showE
               <span className="rounded bg-primary px-1.5 py-0.5 text-xs text-primary-foreground">You are here</span>
             ) : null}
             {showChip && step.confidence === "unconfirmed" ? <UnconfirmedChip /> : null}
-            {sourceUnknown(recipe) ? <SourceUnknownChip spellId={recipe.spell} /> : null}
+            {sourceUnknown(recipe) ? <SourceUnknownChip /> : null}
           </p>
           {showEffect ? <CraftEffectLine recipe={recipe} file={place.file} professionLabel={professionLabel} /> : null}
           <CraftColorsLine recipe={recipe} />
@@ -58,7 +58,7 @@ export default function CraftRouteRow({ entry, state, showChip, makesTool, showE
         </div>
         <div>
           <p className="sm:hidden text-xs text-muted-foreground">Learn</p>
-          <CraftLearnLine learn={learn} professionLabel={professionLabel} place={place} spellId={recipe.spell} />
+          <CraftLearnLine learn={learn} professionLabel={professionLabel} place={place} />
         </div>
       </div>
       {/* Done rows are history — what they cost no longer matters. */}

@@ -261,7 +261,8 @@ async def test_consumables_dms_and_single_fallback_post(
     assert embed["title"] == "Onyxia's Lair tomorrow — Priest (Healer)"
     assert "*Classic advice, which may differ in Forever.*" in embed["description"]
     assert {f["name"] for f in embed["fields"]} <= {"Essential", "Recommended", "Tryhard"}
-    assert "https://www.wowhead.com/forever/item=" in embed["fields"][0]["value"]
+    assert "wowhead" not in str(embed).lower()
+    assert " — " in embed["fields"][0]["value"]
     assert embed["footer"]["text"] == "To stop these DMs, use /raid prefs dm_reminders:false"
 
     [balance] = fake_discord.posts("dm-38")

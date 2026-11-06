@@ -96,10 +96,7 @@ describe("food detail page", () => {
     renderAt("/wow-forever/food/250070");
     const learn = section("Learn the recipe");
     expect(within(learn).getByText("New in Forever — where to get the recipe isn't known yet.")).toBeInTheDocument();
-    expect(within(learn).getByRole("link", { name: "Look it up on Wowhead" })).toHaveAttribute(
-      "href",
-      "https://www.wowhead.com/forever/item=250178",
-    );
+    expect(within(learn).queryByRole("link")).toBeNull();
     expect(within(section("Where to cook it")).getByText(/Iron Oven/)).toBeInTheDocument();
   });
 

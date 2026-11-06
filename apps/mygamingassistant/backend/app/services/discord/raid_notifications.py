@@ -234,8 +234,7 @@ def day_word(starts_at: datetime, now: datetime, tz_name: str) -> str:
 
 
 def _item_line(item: ConsumableItem) -> str:
-    name = item.name.replace("[", "(").replace("]", ")")
-    return f"[{name}]({item.wowhead_url}) — {item.why}"
+    return f"{item.name} — {item.why}"
 
 
 def _tier_value(lines: list[str], dropped: int) -> str:

@@ -39,7 +39,7 @@ a subject-matter expert confirms whether it applies in Forever raids.  See
 ## Items excluded by design
 
 `always` in the spec includes a non-addressable entry ("Repair to 100%") with
-`item_id: None`.  This item has no Wowhead page and is excluded from the JSON.
+`item_id: None`.  This item has no item id and is excluded from the JSON.
 It is documented here for completeness: every raider should repair to 100%
 durability before a raid.
 

@@ -81,7 +81,6 @@ class ConsumableItem:
     name: str
     why: str
     tier: Tier
-    wowhead_url: str
 
 
 @dataclass
@@ -104,11 +103,6 @@ class ConsumableChecklist:
 def _load() -> dict:
     """Load and cache the raid consumables JSON."""
     return json.loads(_DATA_PATH.read_text(encoding="utf-8"))
-
-
-def wowhead_url(item_id: int) -> str:
-    """Return the Wowhead Forever URL for an item."""
-    return f"https://www.wowhead.com/forever/item={item_id}"
 
 
 def _role_matches(effective_role: str | None, item_roles: list[str]) -> bool:
@@ -149,7 +143,6 @@ def _to_consumable(item: dict) -> ConsumableItem:
         name=item["name"],
         why=item["why"],
         tier=item["tier"],
-        wowhead_url=item.get("wowhead_url", wowhead_url(item["item_id"])),
     )
 
 
