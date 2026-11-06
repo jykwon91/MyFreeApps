@@ -10,8 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.context import RequestContext
 from app.db.session import unit_of_work
 from app.models.email.bounce_detection_result import BounceDetectionResult
+from app.models.email.discovery_outcome import DiscoveryOutcome
 from app.models.email.email_types import DiscoverResult, EmailSourcesData
 from app.models.email.inbound_email_signals import InboundEmailSignals
+from app.models.email.refreshed_gmail_token import RefreshedGmailToken
+from app.models.integrations.gmail_connection_snapshot import GmailConnectionSnapshot
 from app.core.config import settings
 from app.repositories import document_repo, email_filter_log_repo, email_queue_repo, gmail_skipped_message_repo, integration_repo, sync_log_repo
 from app.services.email.bounce_detector import BounceDetector
@@ -20,7 +23,7 @@ from app.services.email.constants import (
     EMAIL_FILTER_LOG_SUBJECT_MAX_LEN,
     GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR,
 )
-from app.services.email.exceptions import GmailAuthExpiredError
+from app.services.email.exceptions import GmailAuthExpiredError, GmailDiscoveryAuthRejectedError
 from app.services.email.gmail_credentials import persist_refreshed_token
 from app.services.email.gmail_service import (
     get_gmail_service,
@@ -38,13 +41,34 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
     Raises:
         GmailAuthExpiredError: Google rejected the stored refresh token. The
             caller is responsible for surfacing this to the user; this service
-            records a failed sync_log row so the failure appears in the UI.
+            sets the integration's reauth flag and records a failed sync_log
+            row so the failure appears in the UI.
     """
+    try:
+        outcome = await _discover(ctx)
+    except GmailDiscoveryAuthRejectedError as rejected:
+        # Discovery's transaction rolled back; these must be saved on their own.
+        async with unit_of_work() as db:
+            marked = await integration_repo.mark_needs_reauth_if_unchanged(
+                db, rejected.connection, rejected.reason[:200], datetime.now(timezone.utc)
+            )
+            if marked:
+                await _record_auth_expired_sync_log(db, ctx)
+        if not marked:
+            logger.info("Gmail was reconnected during discovery; not recording the old connection's failure")
+        raise GmailAuthExpiredError(str(rejected)) from rejected.__cause__
+    # After the commit, so the token write's row lock never waits on discovery's transaction.
+    if outcome.token is not None:
+        await persist_refreshed_token(outcome.token.connection, outcome.token.creds, outcome.token.prior_token)
+    return outcome.result
+
+
+async def _discover(ctx: RequestContext) -> DiscoveryOutcome:
     org_id = ctx.organization_id
     async with unit_of_work() as db:
         integration = await integration_repo.get_by_org_and_provider(db, org_id, "gmail")
         if not integration:
-            return DiscoverResult("skipped", reason="no_integration")
+            return DiscoveryOutcome(DiscoverResult("skipped", reason="no_integration"))
 
         now = datetime.now(timezone.utc)
         stuck_cutoff = now - timedelta(minutes=30)
@@ -52,10 +76,11 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
 
         running = await sync_log_repo.count_running(db, org_id, "gmail")
         if running:
-            return DiscoverResult("skipped", reason="sync_already_running")
+            return DiscoveryOutcome(DiscoverResult("skipped", reason="sync_already_running"))
 
         await email_queue_repo.reset_stuck(db, org_id, ["extracting"], "fetched")
 
+        connection = GmailConnectionSnapshot.of(integration)
         service, creds = get_gmail_service(integration.access_token, integration.refresh_token)
         prior_token = creds.token
 
@@ -75,27 +100,23 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
                 list_new_email_ids, service, processed_ids, label=label
             )
         except RefreshError as exc:
-            await integration_repo.mark_needs_reauth_if_unchanged(
-                db, integration, repr(exc)[:200], datetime.now(timezone.utc)
-            )
-            await _record_auth_expired_sync_log(db, ctx)
             logger.warning(
                 "Gmail refresh token rejected for org=%s user=%s during discovery: %s",
                 org_id, ctx.user_id, exc,
             )
-            raise GmailAuthExpiredError(str(exc)) from exc
+            raise GmailDiscoveryAuthRejectedError(
+                connection, repr(exc), str(exc),
+            ) from exc
         except HttpError as exc:
             status = getattr(getattr(exc, "resp", None), "status", None)
             if status == 401:
-                await integration_repo.mark_needs_reauth_if_unchanged(
-                    db, integration, f"HttpError 401: {exc!r}"[:200], datetime.now(timezone.utc)
-                )
-                await _record_auth_expired_sync_log(db, ctx)
                 logger.warning(
                     "Gmail token rejected (401) for org=%s user=%s during discovery: status=%s",
                     org_id, ctx.user_id, status,
                 )
-                raise GmailAuthExpiredError(str(exc)) from exc
+                raise GmailDiscoveryAuthRejectedError(
+                    connection, f"HttpError 401: {exc!r}", str(exc),
+                ) from exc
             raise
         logger.info(
             "Gmail discovery: matched=%d new=%d (skipped %d already-processed)",
@@ -111,8 +132,7 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
                 gmail_matches_total=gmail_matches_total,
             )
             await integration_repo.update_last_synced(db, integration, now)
-            await persist_refreshed_token(integration, creds, prior_token)
-            return DiscoverResult("nothing_new")
+            return DiscoveryOutcome(DiscoverResult("nothing_new"), RefreshedGmailToken(connection, creds, prior_token))
 
         log = await sync_log_repo.create(
             db, org_id, ctx.user_id, "gmail", "running",
@@ -130,27 +150,23 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
                     await asyncio.to_thread(list_email_document_sources, service, message_id),
                 )
             except RefreshError as exc:
-                await integration_repo.mark_needs_reauth_if_unchanged(
-                    db, integration, repr(exc)[:200], datetime.now(timezone.utc)
-                )
-                await sync_log_repo.mark_completed(db, log, "failed", error=GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR)
                 logger.warning(
                     "Gmail refresh token rejected for org=%s user=%s while fetching sources for message %s: %s",
                     org_id, ctx.user_id, message_id, exc,
                 )
-                raise GmailAuthExpiredError(str(exc)) from exc
+                raise GmailDiscoveryAuthRejectedError(
+                    connection, repr(exc), str(exc),
+                ) from exc
             except HttpError as exc:
                 status = getattr(getattr(exc, "resp", None), "status", None)
                 if status == 401:
-                    await integration_repo.mark_needs_reauth_if_unchanged(
-                        db, integration, f"HttpError 401: {exc!r}"[:200], datetime.now(timezone.utc)
-                    )
-                    await sync_log_repo.mark_completed(db, log, "failed", error=GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR)
                     logger.warning(
                         "Gmail token rejected (401) for org=%s user=%s while fetching sources for message %s: status=%s",
                         org_id, ctx.user_id, message_id, status,
                     )
-                    raise GmailAuthExpiredError(str(exc)) from exc
+                    raise GmailDiscoveryAuthRejectedError(
+                        connection, f"HttpError 401: {exc!r}", str(exc),
+                    ) from exc
                 # Non-401 HttpError — skip this message, don't abort the entire sync.
                 logger.warning(
                     "gmail_discovery: skipped message_id=%s org=%s user=%s exc=%s msg=%s",
@@ -222,8 +238,7 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
                     "Gmail discovery: filtered %d bounce/auto-reply emails for org=%s",
                     filtered_count, org_id,
                 )
-            await persist_refreshed_token(integration, creds, prior_token)
-            return DiscoverResult("nothing_new")
+            return DiscoveryOutcome(DiscoverResult("nothing_new"), RefreshedGmailToken(connection, creds, prior_token))
 
         log.total_items = total_sources
 
@@ -231,8 +246,10 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
             "Gmail discovery: queued %d document sources from %d emails under sync_log_id=%d (filtered %d bounces)",
             total_sources, len(new_ids), log.id, filtered_count,
         )
-        await persist_refreshed_token(integration, creds, prior_token)
-        return DiscoverResult("queued", count=total_sources, sync_log_id=log.id)
+        return DiscoveryOutcome(
+            DiscoverResult("queued", count=total_sources, sync_log_id=log.id),
+            RefreshedGmailToken(connection, creds, prior_token),
+        )
 
 
 def _detect_bounce(

@@ -3,3 +3,4 @@ from app.services.email.exceptions.gmail_reauth_required_error import GmailReaut
 from app.services.email.exceptions.gmail_send_error import GmailSendError  # noqa: F401
 from app.services.email.exceptions.gmail_send_scope_error import GmailSendScopeError  # noqa: F401
 from app.services.email.exceptions.gmail_send_outcome_unknown_error import GmailSendOutcomeUnknownError  # noqa: F401
+from app.services.email.exceptions.gmail_discovery_auth_rejected_error import GmailDiscoveryAuthRejectedError  # noqa: F401
