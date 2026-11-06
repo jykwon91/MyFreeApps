@@ -7,4 +7,6 @@ export interface ReplyRequestIdStore {
   get: (key: string) => string | null;
   set: (key: string, id: string) => void;
   delete: (key: string) => void;
+  /** Drops every key starting with `prefix`. */
+  deleteStartingWith: (prefix: string) => void;
 }

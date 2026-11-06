@@ -1,3 +1,5 @@
+import { REPLY_SEND_ACTION } from "@mybookkeeper/api-client/constants/replySendAction";
+import type { ReplySendAction } from "@mybookkeeper/api-client/types/inquiry/reply-send-action";
 import type { ReplySendFailure } from "@mybookkeeper/api-client/types/inquiry/reply-send-failure";
 
 export const INQUIRY_MESSAGES = {
@@ -35,4 +37,11 @@ export const REPLY_SEND_FAILURE_WORDS: Readonly<Record<ReplySendFailure, string>
   inFlight:
     "An earlier copy of this reply is still going out, and I won't send a second one. If it hasn't finished, check again in a few minutes. It can take up to 15.",
   refused: "I couldn't send that. Want to try again?",
+};
+
+export const REPLY_SEND_LABELS: Readonly<Record<ReplySendAction, string>> = {
+  [REPLY_SEND_ACTION.SEND]: INQUIRY_MESSAGES.replySendButton,
+  [REPLY_SEND_ACTION.TRY_AGAIN]: INQUIRY_MESSAGES.replyTryAgainButton,
+  [REPLY_SEND_ACTION.CHECK_AGAIN]: INQUIRY_MESSAGES.replyCheckAgainButton,
+  [REPLY_SEND_ACTION.SEND_AS_NEW]: INQUIRY_MESSAGES.replySendAsNewButton,
 };

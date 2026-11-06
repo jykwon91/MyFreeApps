@@ -1,6 +1,6 @@
 import { Directory, File, Paths } from "expo-file-system";
 import { REPLY_DRAFT_DIRECTORY } from "../../constants/replies";
-import { session } from "../../lib/session";
+import { signedInEmail } from "../../lib/signedInEmail";
 import type { ReplyDraft } from "../../types/ReplyDraft";
 
 /** In the cache, not documents: a message to a tenant shouldn't go into the phone's backups. */
@@ -10,11 +10,6 @@ function draftsRoot(): Directory {
 
 function draftFile(inquiryId: string): File {
   return new File(draftsRoot(), `${encodeURIComponent(inquiryId)}.json`);
-}
-
-function signedInEmail(): string | null {
-  const state = session.getState();
-  return state.status === "signedIn" ? state.email : null;
 }
 
 export function hasReplyDraft(inquiryId: string): boolean {

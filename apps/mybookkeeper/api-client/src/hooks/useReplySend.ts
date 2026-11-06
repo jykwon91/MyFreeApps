@@ -5,6 +5,7 @@ import type { ReplyDraft } from "../types/inquiry/reply-draft";
 import type { ReplySendResult } from "../types/inquiry/reply-send-result";
 import type { UseReplySendOptions } from "../types/inquiry/use-reply-send-options";
 import { replyMightHaveSent } from "../utils/replyMightHaveSent";
+import { replyInquiryKeyPrefix } from "../utils/replyInquiryKeyPrefix";
 import { replyMightHaveSentKey } from "../utils/replyMightHaveSentKey";
 import { replyRequestKey } from "../utils/replyRequestKey";
 import { sendReplyOnce } from "../utils/sendReplyOnce";
@@ -52,13 +53,17 @@ export function useReplySend(inquiryId: string, { newRequestId, requestIds }: Us
             if (mounted.current) setIsWaiting(waiting);
           },
         });
-        if (idSpent) requestIds.delete(key);
         if (result.ok) {
-          requestIds.delete(replyMightHaveSentKey(inquiryId));
+          // A reply went, so none of this inquiry's waiting ids is a retry any more: kept,
+          // a later reply with the same words would get that one back and send nothing.
+          requestIds.deleteStartingWith(replyInquiryKeyPrefix(inquiryId));
           if (mounted.current) setMightHaveSent(false);
-        } else if (replyMightHaveSent(result.failure)) {
-          requestIds.set(replyMightHaveSentKey(inquiryId), "true");
-          if (mounted.current) setMightHaveSent(true);
+        } else {
+          if (idSpent) requestIds.delete(key);
+          if (replyMightHaveSent(result.failure)) {
+            requestIds.set(replyMightHaveSentKey(inquiryId), "true");
+            if (mounted.current) setMightHaveSent(true);
+          }
         }
         return result;
       } finally {

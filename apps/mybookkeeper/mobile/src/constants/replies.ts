@@ -9,5 +9,5 @@ export const REPLY_BODY_MAX_LENGTH = 50000;
 
 export const REPLY_BODY_MIN_HEIGHT = 160;
 
-/** The server records a reply just after Gmail takes it, so a first look can come too soon. */
-export const REPLY_CHECK_DELAYS_MS = [0, 2000, 3000];
+/** Request ids for replies not yet confirmed sent, so trying again never emails twice. In documents. */
+export const REPLY_REQUEST_ID_FILE = "reply-request-ids.json";

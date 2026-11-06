@@ -74,6 +74,8 @@ export interface FakeInquiryServer {
   templateWriteOutcome: "lostAfterSaving" | "lostBeforeSaving" | "lostAndOffline" | "gatewayAfterSaving" | null;
   /** How the next send ends. A number is a failure with that status. */
   sendOutcome: { status: number; detail?: string } | "lostAfterSending" | "lostBeforeSending" | null;
+  /** Replies sent, by request id: the same id again gets the same reply back, as the real server does. */
+  sentByRequestId: Map<string, InquiryMessage>;
   requests: AxiosRequestConfig[];
 }
 
@@ -93,6 +95,7 @@ export function startInquiryServer(inquiries: InquiryResponse[]): FakeInquirySer
     archivedTemplates: [],
     templateWriteOutcome: null,
     sendOutcome: null,
+    sentByRequestId: new Map(),
     requests: [],
   };
   const adapter: AxiosAdapter = (config) => {
@@ -144,13 +147,16 @@ export function startInquiryServer(inquiries: InquiryResponse[]): FakeInquirySer
       const outcome = server.sendOutcome;
       if (outcome && typeof outcome === "object") return respond({ detail: outcome.detail ?? "nope" }, outcome.status);
       if (outcome === "lostBeforeSending") return Promise.reject(Object.assign(new Error("Network Error"), { config }));
-      const sent = JSON.parse(String(config.data)) as { body: string };
+      const sent = JSON.parse(String(config.data)) as { body: string; client_request_id?: string };
+      const already = sent.client_request_id ? server.sentByRequestId.get(sent.client_request_id) : undefined;
+      if (already) return respond(already, 201);
       const message = aMessage({
         id: `sent${inquiry.messages.length}`,
         direction: "outbound",
         parsed_body: `Pet disclosure.\n\n${sent.body}`,
       });
       inquiry.messages = [...inquiry.messages, message];
+      if (sent.client_request_id) server.sentByRequestId.set(sent.client_request_id, message);
       if (outcome === "lostAfterSending") return Promise.reject(Object.assign(new Error("Network Error"), { config }));
       return respond(message, 201);
     }
