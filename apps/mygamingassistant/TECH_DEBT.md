@@ -1,7 +1,7 @@
 # MyGamingAssistant - Tech Debt Log
 
-> Last scanned: 2026-06-01 (serve-only PR — logged 1 pre-existing test failure + extended the ORM-in-routes entry to include totp.py; prior findings preserved)
-> Issues: 0 critical, 6 high, 11 medium, 16 low (open entries, recounted 2026-10-01 with the raid post look PR)
+> Last scanned: 2026-11-06 (lint cleanup PR — cleared 20 frontend lint errors; logged 2 pre-existing test/CI gaps; prior findings preserved)
+> Issues: 0 critical, 6 high, 13 medium, 16 low (open entries, +2 medium from lint PR scan)
 
 mode: log-only - fix only Critical items that block the current feature; log everything else here.
 
@@ -191,6 +191,26 @@ backend/app/services/ingestion/chapter_post_processors.py
 ---
 
 ## Medium
+
+### [Testing] Frontend unit test suite not run in CI
+
+- **Severity:** Medium
+- **Effort:** S (~1 hour)
+- **Category:** CI / testing
+- **Location:** `.github/workflows/ci-mygamingassistant.yml`
+- **Discovered:** 2026-11-06 during lint cleanup PR
+- **Problem:** The MGA CI workflow runs backend tests (`backend-tests` job) and frontend build/lint (`frontend-build`, `frontend-lint` jobs) but has NO `frontend-test` job. Frontend unit tests (989 tests in 31 files via Vitest) are never run in CI. A pre-existing test failure in `MicroClipShiftOverlay.test.tsx` went undetected because of this gap.
+- **Recommendation:** Add a `frontend-test` job mirroring the `frontend-build` job shape but running `npm test --workspace=mygamingassistant-frontend -- --run` instead of the build step. Also fix the pre-existing test failure (see entry below) before enabling CI so the new job starts green.
+
+### [Testing] Pre-existing test failure in MicroClipShiftOverlay — queueMicrotask not flushed
+
+- **Severity:** Medium
+- **Effort:** S (~1 hour)
+- **Category:** test reliability
+- **Location:** `apps/mygamingassistant/frontend/src/__tests__/MicroClipShiftOverlay.test.tsx` — "fires the shift mutation with the operator-chosen offset on Apply" test; `apps/mygamingassistant/frontend/src/hooks/usePaneWindowShift.ts` — `apply()` uses `queueMicrotask`
+- **Discovered:** 2026-11-06 during lint cleanup PR
+- **Problem:** The `apply()` function in `usePaneWindowShift` calls `doShift` via `queueMicrotask` to avoid calling a side-effect inside a React state updater. RTL's synchronous `act()` (used by `fireEvent`) does not reliably flush `queueMicrotask` callbacks before assertions run, so `shiftMutation` is recorded as 0 calls even though the button was clicked. The test expectation is correct; the timing is off.
+- **Recommendation:** Make the test async and wrap the button click in `await act(async () => { fireEvent.click(...); })`. This correctly drains the microtask queue before the assertion. Alternatively, refactor `apply()` to avoid `queueMicrotask` by using a `useEffect` triggered by an "applying" phase transition.
 
 ### [Infra] Unify media routing — migrate myfreeapps.org zone to Cloudflare + bind mga-clips as an R2 custom domain
 
