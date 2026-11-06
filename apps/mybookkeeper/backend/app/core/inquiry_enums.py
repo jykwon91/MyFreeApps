@@ -96,6 +96,11 @@ INQUIRY_MESSAGE_DIRECTIONS: tuple[str, ...] = ("inbound", "outbound")
 INQUIRY_MESSAGE_CHANNELS: tuple[str, ...] = ("email", "sms", "in_app")
 INQUIRY_EVENT_ACTORS: tuple[str, ...] = ("host", "system", "applicant")
 
+# A claimed reply send (``inquiry_reply_sends``): ``sending`` from the claim until
+# the reply is recorded, ``sent`` once it is. A send Gmail definitely refused
+# deletes its claim, so there is no failed state.
+INQUIRY_REPLY_SEND_STATUSES: tuple[str, ...] = ("sending", "sent")
+
 # Templated-reply variable allowlist (PR 2.3). Order matches longest-match-first
 # substitution: ``$start_date`` and ``$end_date`` MUST be substituted before
 # the shorter ``$start`` / ``$end`` variants would match — but since neither
@@ -125,6 +130,7 @@ INQUIRY_EVENT_TYPES_SQL = _sql_in_list(INQUIRY_EVENT_TYPES)
 INQUIRY_MESSAGE_DIRECTIONS_SQL = _sql_in_list(INQUIRY_MESSAGE_DIRECTIONS)
 INQUIRY_MESSAGE_CHANNELS_SQL = _sql_in_list(INQUIRY_MESSAGE_CHANNELS)
 INQUIRY_EVENT_ACTORS_SQL = _sql_in_list(INQUIRY_EVENT_ACTORS)
+INQUIRY_REPLY_SEND_STATUSES_SQL = _sql_in_list(INQUIRY_REPLY_SEND_STATUSES)
 INQUIRY_SUBMITTED_VIA_SQL = _sql_in_list(INQUIRY_SUBMITTED_VIA)
 INQUIRY_SPAM_STATUSES_SQL = _sql_in_list(INQUIRY_SPAM_STATUSES)
 INQUIRY_EMPLOYMENT_STATUSES_SQL = _sql_in_list(INQUIRY_EMPLOYMENT_STATUSES)

@@ -142,6 +142,7 @@ class TestSendMessagePersistence:
                 to_address="tenant@example.com",
                 subject="Test",
                 body="Hello",
+                message_id_header="<reply-1@mybookkeeper.app>",
             )
 
         assert sent_id == "sent_123"
@@ -167,6 +168,7 @@ class TestSendMessagePersistence:
                 to_address="tenant@example.com",
                 subject="Test",
                 body="Hello",
+                message_id_header="<reply-1@mybookkeeper.app>",
             )
 
         assert sent_id == "sent_456"

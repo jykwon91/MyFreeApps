@@ -53,6 +53,7 @@ from app.repositories.calendar import review_queue_repo
 from app.repositories.calendar import blocklist_repo
 from app.repositories.inquiries import inquiry_repo
 from app.repositories.inquiries import inquiry_message_repo
+from app.repositories.inquiries import inquiry_reply_send_repo
 from app.repositories.inquiries import inquiry_event_repo
 from app.repositories.inquiries import inquiry_spam_assessment_repo
 from app.repositories.inquiries import reply_template_repo

@@ -34,6 +34,7 @@ async def _send(**kwargs: object) -> str:
         to_address="a@b.com",
         subject="s",
         body="b",
+        message_id_header="<reply-1@mybookkeeper.app>",
         **kwargs,  # type: ignore[arg-type]
     )
 
@@ -48,6 +49,7 @@ class TestSendMessageHappyPath:
                 to_address="alice@example.com",
                 subject="Re: Cozy Room",
                 body="Hi Alice",
+                message_id_header="<reply-1@mybookkeeper.app>",
             )
         assert sent_id == "gmail-id-123"
         message = gmail.message()
@@ -55,7 +57,7 @@ class TestSendMessageHappyPath:
         assert message["To"] == "alice@example.com"
         assert message["Subject"] == "Re: Cozy Room"
         assert "Hi Alice" in message.get_payload()
-        assert message["Message-ID"].endswith("@mybookkeeper.app>")
+        assert message["Message-ID"] == "<reply-1@mybookkeeper.app>"
 
     @pytest.mark.asyncio
     async def test_sets_in_reply_to_and_references_for_threading(self) -> None:
@@ -113,4 +115,5 @@ class TestSendMessageErrors:
                 to_address="a@b.com",
                 subject="s",
                 body="b",
+                message_id_header="<reply-1@mybookkeeper.app>",
             )
