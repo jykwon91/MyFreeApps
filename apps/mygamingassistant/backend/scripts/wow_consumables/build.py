@@ -36,7 +36,7 @@ from scripts.wow_world_map.sources import WAGO_BRANCH, WAGO_BUILD, wago_table
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 OUT_PATH = BACKEND_DIR / "data" / "wow" / "raid_consumables.json"
 
-WOWHEAD_BASE = "https://www.wowhead.com/classic/item="
+WOWHEAD_BASE = "https://www.wowhead.com/forever/item="
 
 ATTRIBUTION = (
     "Item names sourced from WoW Forever client "

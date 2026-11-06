@@ -100,7 +100,7 @@ class TestDatasetIntegrity:
     def test_wowhead_urls_present(self, data: dict) -> None:
         for item in _all_items_in_data(data):
             url = item.get("wowhead_url", "")
-            assert url.startswith("https://www.wowhead.com/classic/item="), (
+            assert url.startswith("https://www.wowhead.com/forever/item="), (
                 f"Bad wowhead_url for item {item['item_id']}: {url!r}"
             )
 
@@ -293,5 +293,5 @@ class TestErrors:
 # ---------------------------------------------------------------------------
 
 def test_wowhead_url_format() -> None:
-    assert wowhead_url(13446) == "https://www.wowhead.com/classic/item=13446"
-    assert wowhead_url(274273) == "https://www.wowhead.com/classic/item=274273"
+    assert wowhead_url(13446) == "https://www.wowhead.com/forever/item=13446"
+    assert wowhead_url(274273) == "https://www.wowhead.com/forever/item=274273"
