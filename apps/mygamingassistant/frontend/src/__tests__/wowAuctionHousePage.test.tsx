@@ -58,7 +58,7 @@ describe("Auction house page", () => {
     const silk = rows()[1];
     expect(within(silk).getByTestId("auction-market")).toHaveTextContent("50s");
     expect(within(silk).getByTestId("auction-avg")).toHaveTextContent("—");
-    expect(within(silk).getByTestId("auction-sold")).toHaveTextContent("12.3");
+    expect(within(silk).getByTestId("auction-sold")).toHaveTextContent("12");
     expect(within(silk).getAllByRole("link")[0]).toHaveAttribute("href", "https://www.wowhead.com/forever/item=4306");
     expect(screen.getByTestId("price-credit")).toHaveTextContent("Prices from TradeSkillMaster");
   });

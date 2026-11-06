@@ -8,9 +8,14 @@ export function priceOrDash(copper: number | null): string {
   return copper === null ? NO_FIGURE : formatPrice(copper);
 }
 
-/** "12" or "0.4" sales a day; a missing figure is a dash. */
+/** Under this many sales a day, one decimal still says something ("0.4"). */
+const WHOLE_SALES_FROM = 10;
+
+/** "20,239", "12" or "0.4" sales a day; a missing figure is a dash. */
 export function soldPerDayText(sold: number | null): string {
-  return sold === null ? NO_FIGURE : String(Math.round(sold * 10) / 10);
+  if (sold === null) return NO_FIGURE;
+  const digits = sold < WHOLE_SALES_FROM ? 1 : 0;
+  return sold.toLocaleString("en-US", { maximumFractionDigits: digits });
 }
 
 export function itemLabel(name: string, itemId: number): string {
