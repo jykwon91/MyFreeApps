@@ -87,7 +87,7 @@ client data itself.
 From `apps/mygamingassistant/backend`:
 
 ```bash
-pytest tests/test_wow_refresh.py tests/test_wow_food_generator.py tests/test_wow_professions_generator.py tests/test_wow_world_map_generator.py tests/test_wow_raid_consumables.py tests/test_wow_items_generator.py tests/test_wow_gear_generator.py
+pytest tests/test_wow_refresh.py tests/test_wow_food_generator.py tests/test_wow_professions_generator.py tests/test_wow_world_map_generator.py tests/test_wow_raid_consumables.py tests/test_wow_items_generator.py tests/test_wow_item_names.py tests/test_wow_gear_generator.py
 ```
 
 From `apps/mygamingassistant/frontend`:

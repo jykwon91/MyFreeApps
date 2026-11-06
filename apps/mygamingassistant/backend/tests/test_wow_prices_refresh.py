@@ -217,6 +217,15 @@ async def test_endpoint_serves_compact_rows(client: AsyncClient, db: AsyncSessio
     assert again.status_code == 304
 
 
+async def test_endpoint_names_items_the_source_left_blank(client: AsyncClient, db: AsyncSession, wow_game: Game) -> None:
+    # TSM lists Forever's new items with no name; the client's name is served.
+    pyrite = _price(249391, "", 104)
+    await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(LINEN, pyrite)), wow_game.id, "us", now=NOW)
+
+    items = (await client.get(URL, params={"region": "us"})).json()["items"]
+    assert [(row[0], row[5]) for row in items] == [(2589, "Linen Cloth"), (249391, "Pyrite")]
+
+
 async def test_etag_changes_when_new_prices_land(client: AsyncClient, db: AsyncSession, wow_game: Game) -> None:
     await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(LINEN)), wow_game.id, "us", now=NOW)
     first = (await client.get(URL)).headers["etag"]  # region defaults to us
