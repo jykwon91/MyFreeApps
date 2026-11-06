@@ -236,10 +236,11 @@ class Settings(BaseAppSettings):
     # ------------------------------------------------------------------
     # Scheduler (PR 6+)
     # ------------------------------------------------------------------
-    # Set SCHEDULER_ENABLED=false to disable the background cron entirely
-    # (useful for tests and local dev where you don't want background jobs).
-    # In production, if SCHEDULER_ENABLED=true and sources exist but the
-    # scheduler fails to start, the lifespan fails loudly.
+    # SCHEDULER_ENABLED turns the source jobs on/off: YouTube source sync,
+    # download cleanup and the Discord raid reminders. Serve-only prod sets it
+    # false so it never re-syncs sources. The WoW price refresh has its own
+    # switch below, so prices keep refreshing with it off. In production, if
+    # the scheduler fails to start, the lifespan fails loudly.
     scheduler_enabled: bool = True
     # Interval in hours between full source sync passes.
     # Each pass iterates all active sources sequentially.
@@ -248,6 +249,9 @@ class Settings(BaseAppSettings):
     # at boot). TSM's files say max-age=4h; asking every 3h with a conditional
     # GET keeps prices at most ~3h behind and costs a 304 when nothing changed.
     wow_price_refresh_interval_hours: int = 3
+    # WOW_PRICE_REFRESH_ENABLED — independent of SCHEDULER_ENABLED: the public
+    # GET /wow/prices is empty without it. Tests and offline dev can turn it off.
+    wow_price_refresh_enabled: bool = True
 
 
     @field_validator("wow_feature_triage_token")

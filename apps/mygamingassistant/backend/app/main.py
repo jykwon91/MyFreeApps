@@ -92,7 +92,7 @@ class ClassifierNotConfiguredError(RuntimeError):
 
 
 class SchedulerStartupError(RuntimeError):
-    """Raised at startup when SCHEDULER_ENABLED=true but the scheduler fails to start."""
+    """Raised at startup when the scheduler fails to start."""
 
 
 async def _on_startup() -> None:
@@ -147,34 +147,31 @@ async def _on_startup() -> None:
             "— classifier will log warnings and skip calls in non-production environment."
         )
 
-    # Scheduler boot guard — start APScheduler if enabled.
-    if settings.scheduler_enabled:
-        from app.services.scheduling.scheduler_service import start_scheduler
-        try:
-            start_scheduler(
-                sync_interval_hours=settings.source_sync_interval_hours,
-                price_refresh_interval_hours=settings.wow_price_refresh_interval_hours,
-            )
-            logger.info(
-                "_on_startup: scheduler started — sync_interval_hours=%d price_refresh_interval_hours=%d",
-                settings.source_sync_interval_hours, settings.wow_price_refresh_interval_hours,
-            )
-        except Exception as exc:
-            if settings.environment == "production":
-                raise SchedulerStartupError(
-                    f"SCHEDULER_ENABLED=true but scheduler failed to start: {exc}. "
-                    "Set SCHEDULER_ENABLED=false to disable the scheduler, or fix "
-                    "the underlying error."
-                ) from exc
-            logger.warning(
-                "_on_startup: SCHEDULER_ENABLED=true but scheduler failed to start "
-                "(non-production — continuing): %s", str(exc),
-            )
-    else:
+    _start_scheduler()
+
+
+def _start_scheduler() -> None:
+    """Start APScheduler. It always runs the retention purge; the source jobs
+    and the WoW price refresh each follow their own switch."""
+    if not settings.scheduler_enabled:
         logger.warning(
             "_on_startup: SCHEDULER_ENABLED=false — automatic source syncs and Discord raid "
             "reminders are disabled. Use POST /api/scheduler/trigger/sync_all_sources for "
             "manual syncs, or set SCHEDULER_ENABLED=true to re-enable.",
+        )
+    from app.services.scheduling.scheduler_service import start_scheduler
+    try:
+        start_scheduler(
+            sync_interval_hours=settings.source_sync_interval_hours,
+            price_refresh_interval_hours=settings.wow_price_refresh_interval_hours,
+            source_jobs=settings.scheduler_enabled,
+            price_refresh=settings.wow_price_refresh_enabled,
+        )
+    except Exception as exc:
+        if settings.environment == "production":
+            raise SchedulerStartupError(f"The scheduler failed to start: {exc}.") from exc
+        logger.warning(
+            "_on_startup: the scheduler failed to start (non-production — continuing): %s", str(exc),
         )
 
 
@@ -226,9 +223,8 @@ async def _seed_operator_if_configured() -> None:
 
 async def _on_shutdown() -> None:
     """MGA-specific shutdown: stop the APScheduler."""
-    if settings.scheduler_enabled:
-        from app.services.scheduling.scheduler_service import shutdown_scheduler
-        shutdown_scheduler()
+    from app.services.scheduling.scheduler_service import shutdown_scheduler
+    shutdown_scheduler()
 
 
 def _mount_public_routes(app: FastAPI) -> None:

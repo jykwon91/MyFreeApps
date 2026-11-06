@@ -85,6 +85,7 @@ jobs:
       ANTHROPIC_API_KEY: sk-ant-placeholder-not-real
       ENABLE_CLASSIFIER: "false"
       SCHEDULER_ENABLED: "false"
+      WOW_PRICE_REFRESH_ENABLED: "false"
       # Environment kept at default ("development") so the production boot
       # guards (seed user, classifier, scheduler) stay off.
 
