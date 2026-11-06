@@ -16,7 +16,7 @@
  * back to ``closed`` after RTK Query invalidation; the pane re-renders with
  * the trimmed clip and the slider closes on its own.
  */
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useTrimPaneMutation } from "@/store/lineupsApi";
 
 export type TrimmablePane = "throw" | "landing";
@@ -126,32 +126,23 @@ export function usePaneTrim({ lineupId, pane }: UsePaneTrimArgs) {
     [lineupId, pane, trimPane],
   );
 
-  const apply = useCallback(() => {
-    setPhase((prev) => {
-      if (prev.phase !== "open") return prev;
-      // Fire the request after the state transition commits; React calls
-      // this updater pure-functionally, so we schedule the side effect on
-      // the microtask queue rather than calling it synchronously inside.
-      queueMicrotask(() => void doTrim(prev.startOffsetS, prev.endOffsetS));
-      return {
-        phase: "applying",
-        startOffsetS: prev.startOffsetS,
-        endOffsetS: prev.endOffsetS,
-      };
-    });
-  }, [doTrim]);
+  // Sent from the click, not from a state updater (React may call those
+  // twice). The ref blocks a second click landing before the re-render.
+  const inFlight = useRef(false);
+  const send = useCallback(
+    (from: "open" | "error") => {
+      if (phase.phase !== from || inFlight.current) return;
+      inFlight.current = true;
+      setPhase({ phase: "applying", startOffsetS: phase.startOffsetS, endOffsetS: phase.endOffsetS });
+      void doTrim(phase.startOffsetS, phase.endOffsetS).finally(() => {
+        inFlight.current = false;
+      });
+    },
+    [phase, doTrim],
+  );
 
-  const retry = useCallback(() => {
-    setPhase((prev) => {
-      if (prev.phase !== "error") return prev;
-      queueMicrotask(() => void doTrim(prev.startOffsetS, prev.endOffsetS));
-      return {
-        phase: "applying",
-        startOffsetS: prev.startOffsetS,
-        endOffsetS: prev.endOffsetS,
-      };
-    });
-  }, [doTrim]);
+  const apply = useCallback(() => send("open"), [send]);
+  const retry = useCallback(() => send("error"), [send]);
 
   return { phase, open, close, updateRange, apply, retry };
 }

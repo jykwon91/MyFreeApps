@@ -7,6 +7,7 @@
  * directly without an HTTP round-trip.
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { StrictMode } from "react";
 import { act, renderHook, waitFor } from "@testing-library/react";
 
 const unwrap = vi.fn();
@@ -205,5 +206,19 @@ describe("usePaneTrim", () => {
     act(() => result.current.retry());
     expect(result.current.phase.phase).toBe("closed");
     expect(trimPaneMutation).not.toHaveBeenCalled();
+  });
+
+  it("sends one trim request for a double click, also under StrictMode", async () => {
+    unwrap.mockResolvedValue({ id: "l1" });
+    const { result } = renderHook(() => usePaneTrim({ lineupId: "l1", pane: "throw" }), {
+      wrapper: StrictMode,
+    });
+    act(() => result.current.open(5));
+    act(() => {
+      result.current.apply();
+      result.current.apply();
+    });
+    await waitFor(() => expect(result.current.phase.phase).toBe("closed"));
+    expect(trimPaneMutation).toHaveBeenCalledTimes(1);
   });
 });
