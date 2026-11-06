@@ -219,6 +219,10 @@ class Settings(BaseAppSettings):
     # Interval in hours between full source sync passes.
     # Each pass iterates all active sources sequentially.
     source_sync_interval_hours: int = 6
+    # Hours between WoW Forever auction-house price refreshes (also runs once
+    # at boot). TSM's files say max-age=4h; asking every 3h with a conditional
+    # GET keeps prices at most ~3h behind and costs a 304 when nothing changed.
+    wow_price_refresh_interval_hours: int = 3
 
 
 settings = Settings()

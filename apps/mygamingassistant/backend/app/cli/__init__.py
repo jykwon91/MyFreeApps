@@ -5,6 +5,7 @@ Usage:
     python -m app.cli import-lineups [pack.json]
     python -m app.cli import-wow-captures [pack.json]
     python -m app.cli export-wow-captures [pack.json]
+    python -m app.cli refresh-wow-prices
     python -m app.cli backfill-clips
     python -m app.cli backfill-technique
     python -m app.cli backfill-landing-clips
@@ -356,6 +357,20 @@ def _run_discord_sync_emojis() -> int:
     return 0 if report.ok else 1
 
 
+async def _run_refresh_wow_prices() -> int:
+    """Pull WoW Forever auction-house prices now (the scheduler does it every few hours)."""
+    from app.services.wow.prices.feed_refresh import OUTCOME_FAILED
+    from app.services.wow.prices.price_refresh_service import refresh_all
+
+    outcomes = await refresh_all()
+    for o in outcomes:
+        print(f"  {o.source}/{o.region}: {o.outcome} — {o.item_count} items")
+    if not outcomes:
+        print("Nothing refreshed — run load-fixtures first.")
+        return 1
+    return 1 if any(o.outcome == OUTCOME_FAILED for o in outcomes) else 0
+
+
 def main() -> None:
     command = sys.argv[1] if len(sys.argv) > 1 else ""
 
@@ -384,6 +399,8 @@ def main() -> None:
         from app.services.wow.map_capture_service import export_pack
         pack_path = Path(sys.argv[2]) if len(sys.argv) > 2 else None
         print(f"Wrote {asyncio.run(export_pack(pack_path))} World Map capture(s) to the pack.")
+    elif command == "refresh-wow-prices":
+        sys.exit(asyncio.run(_run_refresh_wow_prices()))
     elif command == "backfill-clips":
         sys.exit(asyncio.run(_run_backfill_clips()))
     elif command == "backfill-technique":
@@ -407,6 +424,7 @@ def main() -> None:
         print("  import-lineups [pack]  — seed the public library from a published pack (after load-fixtures)")
         print("  import-wow-captures [pack] — mirror the World Map capture pack into the database")
         print("  export-wow-captures [pack] — write stored World Map captures to the pack (local)")
+        print("  refresh-wow-prices     — pull WoW Forever auction-house prices now")
         print("  backfill-clips         — generate clips for accepted lineups missing one")
         print("  backfill-technique     — name throw-technique for accepted lineups missing one")
         print("  backfill-landing-clips — generate landing clips for accepted lineups missing one")

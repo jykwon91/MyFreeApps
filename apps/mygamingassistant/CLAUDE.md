@@ -154,6 +154,25 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   client …"). **No auction-house prices** — a test fails on any
   "N gold/silver". Class tips follow the saved World Map class; the page's Class picker saves to it. Its checklist has its own
   key (`mga.wowForever.gold.checklist.v1`), separate from the guide's.
+- **Auction-house prices** (`GET /api/wow/prices?region=us|eu|kr|tw`, public,
+  both modes) come from TradeSkillMaster's public region files
+  (`public-data.tradeskillmaster.com/forever/{region}/region/items.csv`, no
+  key). The scheduler job `refresh_wow_prices` pulls every region every
+  `WOW_PRICE_REFRESH_INTERVAL_HOURS` (default 3) and once at boot, with a
+  conditional GET (ETag / If-Modified-Since); `python -m app.cli
+  refresh-wow-prices` does it by hand. Code: `app/services/wow/prices/`
+  (a `PriceProvider` protocol — a second source is a new provider + a
+  `PRICE_SOURCES` CHECK value, no table change), tables `wow_price_feed`
+  (one per game × region × ruleset × source: validators, `source_updated_at`,
+  `fetched_at`, last error) and `wow_item_price` (copper). A failed fetch or a
+  file that suddenly has no prices keeps the stored set and logs a WARNING
+  with the HTTP status; kr / tw are header-only today (= no prices). Two API
+  workers both run the job — a per-feed advisory lock makes one skip. The
+  response is columnar (`columns` + `items` rows, ~48 KB for US) with an ETag
+  and `max-age=600`. **marketValue is the price to show**: `avgSalePrice` is
+  0 (no sales seen → stored as null) for over half the US items and swings
+  wildly on thin markets. Any page showing a price must credit
+  "Prices from TradeSkillMaster" with a link (`credit` in the response).
 - Warlock macros (`/wow-forever/warlock-macros`) are hand-written paste-into-game
   text in `data/warlock/warlockMacros.ts`. Their spell/item names are checked
   by `wowWarlockMacros.test.ts` against `data/warlock/warlockNames.json`,
@@ -609,6 +628,7 @@ once on the router. This is the no-bandaid approach (see
 | `/api/sources/*` | — | All |
 | `/api/wow/items/extract` | POST, both modes (Claude reads an item screenshot/text; Turnstile + per-IP limit + durable daily cap; 503 `item_reader_unavailable` when unconfigured) | — |
 | `/api/wow/map-captures` | GET, both modes (World Map locations captured in Forever) | POST import (full-auth only; prod gets captures via the committed pack) |
+| `/api/wow/prices` | GET, both modes (auction-house prices by region, refreshed by the scheduler; ETag + 10-min cache) | — |
 | `/api/scheduler/*` | — | All |
 | `/admin/*` | — | All |
 | `/users/me*` | — | All |

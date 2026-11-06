@@ -18,6 +18,10 @@ from app.models.game.lineup_package import LineupPackage, LineupPackageLineup  #
 # WoW Forever World Map — locations captured in game by the companion addon
 from app.models.wow.map_capture import WowMapCapture  # noqa: F401
 
+# WoW Forever auction-house prices — refreshed on a schedule from a price source
+from app.models.wow.price_feed import WowPriceFeed  # noqa: F401
+from app.models.wow.item_price import WowItemPrice  # noqa: F401
+
 # WoW Raid signup bot — guild config, events, signups, member prefs, notification outbox
 # Order: guild first (no deps), then event (fk→guild), signup (fk→event),
 # member_pref (fk→guild), notification (fk→event), attendance (fk→event).
