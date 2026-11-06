@@ -43,6 +43,7 @@ from app.services.inquiries.reply_exceptions import (
 )
 from app.services.inquiries.reply_send_error_details import (
     REPLY_GMAIL_REAUTH_REQUIRED,
+    REPLY_NO_RECIPIENT,
     REPLY_REQUEST_ID_REUSED,
     REPLY_SEND_IN_PROGRESS,
     REPLY_SEND_UNCONFIRMED,
@@ -233,9 +234,10 @@ async def send_reply(
     except (
         InquiryReplyMissingIntegrationError,
         InquiryReplyMissingSendScopeError,
-        InquiryReplyMissingRecipientError,
     ) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except InquiryReplyMissingRecipientError as exc:
+        raise HTTPException(status_code=422, detail=REPLY_NO_RECIPIENT) from exc
     except InquiryReplyRequestIdReusedError as exc:
         raise HTTPException(status_code=422, detail=REPLY_REQUEST_ID_REUSED) from exc
     except InquiryReplyInProgressError as exc:

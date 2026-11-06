@@ -145,6 +145,7 @@ class TestSendReply:
                     json={"subject": "s", "body": "b"},
                 )
                 assert r.status_code == 422
+                assert r.json()["detail"] == "reply_no_recipient"
         app.dependency_overrides.clear()
 
     @pytest.mark.asyncio

@@ -1,8 +1,9 @@
+import type { ReplyReconnectReason } from "@/shared/types/inquiry/reply-reconnect-reason";
 import { Link } from "react-router-dom";
 import AlertBox from "@/shared/components/ui/AlertBox";
 
 export interface GmailReconnectBannerProps {
-  reason: "missing-integration" | "missing-send-scope" | "reauth-required";
+  reason: NonNullable<ReplyReconnectReason>;
 }
 
 /**

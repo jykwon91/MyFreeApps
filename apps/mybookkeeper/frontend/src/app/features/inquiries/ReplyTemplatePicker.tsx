@@ -5,6 +5,7 @@ export interface ReplyTemplatePickerProps {
   templates: readonly ReplyTemplate[];
   selectedTemplateId: string | null;
   onSelect: (template: ReplyTemplate) => void;
+  disabled?: boolean;
 }
 
 /**
@@ -16,6 +17,7 @@ export default function ReplyTemplatePicker({
   templates,
   selectedTemplateId,
   onSelect,
+  disabled = false,
 }: ReplyTemplatePickerProps) {
   return (
     <div className="space-y-2 p-3" data-testid="reply-template-picker">
@@ -25,6 +27,7 @@ export default function ReplyTemplatePicker({
           template={template}
           selected={template.id === selectedTemplateId}
           onSelect={() => onSelect(template)}
+          disabled={disabled}
         />
       ))}
     </div>

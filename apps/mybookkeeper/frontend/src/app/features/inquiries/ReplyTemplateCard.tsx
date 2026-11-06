@@ -5,6 +5,7 @@ export interface ReplyTemplateCardProps {
   template: ReplyTemplate;
   selected: boolean;
   onSelect: () => void;
+  disabled?: boolean;
 }
 
 /**
@@ -17,6 +18,7 @@ export default function ReplyTemplateCard({
   template,
   selected,
   onSelect,
+  disabled = false,
 }: ReplyTemplateCardProps) {
   const preview = replyTemplatePreview(template.body_template);
 
@@ -24,9 +26,10 @@ export default function ReplyTemplateCard({
     <button
       type="button"
       onClick={onSelect}
+      disabled={disabled}
       data-testid={`reply-template-card-${template.id}`}
       data-selected={selected ? "true" : "false"}
-      className={`w-full text-left px-4 py-3 border rounded-lg min-h-[64px] transition-colors ${
+      className={`w-full text-left px-4 py-3 border rounded-lg min-h-[64px] transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
         selected
           ? "border-primary bg-primary/5"
           : "border-input hover:bg-muted/50"
