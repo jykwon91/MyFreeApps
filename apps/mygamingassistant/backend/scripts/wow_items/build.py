@@ -60,7 +60,10 @@ ATTRIBUTION = "Item data from the WoW Forever client via wago.tools. Game data Â
 MIN_QUALITY = 2  # uncommon
 SKIPPED_SLOTS = frozenset({"shirt", "tabard"})
 # Developer, placeholder and NPC-only items the client still carries.
-JUNK_NAME = re.compile(r"^\d+ |^Monster - |\[PH\]|^Deprecated |\bTEST\b|^Test |\bDEPRECATED\b|^OLD |^NPC ")
+JUNK_NAME = re.compile(
+    r"^\d+ |^Monster - |\[PH\]|\bPH\b|^\[TMP\]|^Deprecated |\bDEPRECATED\b|\bUNUSED\b|^OLD |^NPC |^QA"
+    r"|(?i:\btest\b)"
+)
 ALL_CLASSES_MASK = sum(CLASS_ID_BY_BIT)
 
 COLUMNS = [

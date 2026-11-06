@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import FoodDataNote from "@/games/wow-forever/components/food/FoodDataNote";
-import FoodEmptyState from "@/games/wow-forever/components/food/FoodEmptyState";
+import EmptyStateNote from "@/games/wow-forever/components/shared/EmptyStateNote";
 import FoodNextUpgrade from "@/games/wow-forever/components/food/FoodNextUpgrade";
 import FoodPickerInputs from "@/games/wow-forever/components/food/FoodPickerInputs";
-import FoodResultStatus from "@/games/wow-forever/components/food/FoodResultStatus";
+import SettledStatus from "@/games/wow-forever/components/shared/SettledStatus";
 import FoodRunnersUp from "@/games/wow-forever/components/food/FoodRunnersUp";
 import FoodTopPick from "@/games/wow-forever/components/food/FoodTopPick";
 import FoodTrainTarget from "@/games/wow-forever/components/food/FoodTrainTarget";
@@ -45,10 +45,10 @@ export default function WowFoodPickerPage() {
         backLabel="Back to WoW Forever"
       />
       <FoodPickerInputs settings={settings} onChange={update} />
-      <FoodResultStatus message={status} />
+      <SettledStatus message={status} />
 
       {result === null || level === null ? (
-        <FoodEmptyState message="Enter a level to see what to cook." />
+        <EmptyStateNote message="Enter a level to see what to cook." />
       ) : (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
@@ -58,7 +58,7 @@ export default function WowFoodPickerPage() {
           {result.top ? (
             <FoodTopPick pick={result.top} activity={activity} who={who} />
           ) : (
-            <FoodEmptyState message="Nothing you can eat at this level helps with that yet." />
+            <EmptyStateNote message="Nothing you can eat at this level helps with that yet." />
           )}
           {result.trainFor && cookingSkill !== null ? (
             <FoodTrainTarget pick={result.trainFor} cookingSkill={cookingSkill} activity={activity} />

@@ -1,5 +1,5 @@
 import { Link, useLocation, useParams } from "react-router-dom";
-import FoodEmptyState from "@/games/wow-forever/components/food/FoodEmptyState";
+import EmptyStateNote from "@/games/wow-forever/components/shared/EmptyStateNote";
 import FoodCookingSpot from "@/games/wow-forever/components/food/detail/FoodCookingSpot";
 import FoodEffectSection from "@/games/wow-forever/components/food/detail/FoodEffectSection";
 import FoodReagentsSection from "@/games/wow-forever/components/food/detail/FoodReagentsSection";
@@ -29,7 +29,7 @@ export default function WowFoodDetailPage() {
     return (
       <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
         <WowPageHeader title="Food not found" subtitle="" backTo={backTo} backLabel="Back to What should I eat?" />
-        <FoodEmptyState message="There's no food with that link. Pick one from What should I eat?" />
+        <EmptyStateNote message="There's no food with that link. Pick one from What should I eat?" />
         <Link to={backTo} className={DETAIL_LINK}>
           Back to What should I eat?
         </Link>

@@ -15,14 +15,9 @@ import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import type { GuideProfession } from "@/games/wow-forever/data/professions/professionPicker";
 import { isCraftingProfession, parseGuideProfession } from "@/games/wow-forever/lib/guideProfession";
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
-import { FACTION, type PlayerFaction } from "@/games/wow-forever/types/worldMap";
+import { PLAYER_FACTION_OPTIONS } from "@/games/wow-forever/data/playerFactionOptions";
 
 export const PROFESSION_PARAM = "p";
-
-const FACTION_OPTIONS: readonly { id: PlayerFaction; label: string }[] = [
-  { id: FACTION.alliance, label: "Alliance" },
-  { id: FACTION.horde, label: "Horde" },
-];
 
 const SECTIONS = [
   { id: "start", label: "Get started" },
@@ -68,7 +63,7 @@ export default function WowProfessionsPage() {
         <div className="flex flex-wrap gap-3">
           <SegmentedToggle
             label="Faction"
-            options={FACTION_OPTIONS}
+            options={PLAYER_FACTION_OPTIONS}
             value={player.faction}
             onChange={(faction) => updatePlayer({ faction })}
           />

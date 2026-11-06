@@ -19,7 +19,7 @@ import pytest
 
 from app.schemas.wow.extracted_item import ITEM_QUALITIES, ITEM_SLOTS
 from app.services.wow.stat_keys import STAT_KEYS
-from scripts.wow_items.build import COLUMNS, build_record, class_list, map_stats
+from scripts.wow_items.build import COLUMNS, JUNK_NAME, build_record, class_list, map_stats
 from scripts.wow_items.client_ids import STAT_KEY_BY_CLIENT_ID
 from scripts.wow_items.formula import BudgetTables, armor_value, round_half_up, stat_values, weapon_damage
 
@@ -204,6 +204,32 @@ def test_committed_rows_are_well_formed(items: dict[int, dict[str, Any]]) -> Non
         assert set(item["stats"]) <= set(STAT_KEYS)
         assert item["classes"] is None or set(item["classes"]) <= CLASS_IDS
         assert not item["name"].startswith(("Monster - ", "Deprecated "))
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        # Rows the Forever client carries that no player can get (seen in build 1.60.1).
+        "Item Properties Test",
+        "Nax PH Crit Plate Shoulders",
+        "QATest +1000 Spell Dmg Ring",
+        "UNUSED Electrified Mithril Gauntlets",
+        "UNUSED - Cloak of Arcane Insulation",
+        "2hander Animation as 1hander test copy",
+        "[TMP] Furbolg Ritual Stave",
+        "Monster - Axe, Horde",
+    ],
+)
+def test_junk_names_are_left_out(name: str) -> None:
+    assert JUNK_NAME.search(name)
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["Testament of Hope", "Robe of the Archmage", "Phalanx Leggings", "Contest Winner's Tabbard", "Ophidian Belt"],
+)
+def test_real_names_are_kept(name: str) -> None:
+    assert not JUNK_NAME.search(name)
 
 
 def test_random_suffix_items(items: dict[int, dict[str, Any]]) -> None:

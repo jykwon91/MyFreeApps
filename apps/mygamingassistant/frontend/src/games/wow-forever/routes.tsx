@@ -12,7 +12,8 @@ const WowFoodPickerPage = lazy(() => import("@/games/wow-forever/pages/WowFoodPi
 const WowFoodDetailPage = lazy(() => import("@/games/wow-forever/pages/WowFoodDetailPage"));
 const WowGoldPage = lazy(() => import("@/games/wow-forever/pages/WowGoldPage"));
 const WowWarlockMacrosPage = lazy(() => import("@/games/wow-forever/pages/WowWarlockMacrosPage"));
-const WowRaidPage =lazy(() => import("@/games/wow-forever/pages/WowRaidPage"));
+const WowGearPage = lazy(() => import("@/games/wow-forever/pages/WowGearPage"));
+const WowRaidPage = lazy(() => import("@/games/wow-forever/pages/WowRaidPage"));
 const WowRaidPlannerPage = lazy(() => import("@/games/wow-forever/pages/WowRaidPlannerPage"));
 
 function withSuspense(page: ReactElement): ReactElement {
@@ -33,6 +34,7 @@ export const wowForeverRoutes: RouteObject[] = [
   { path: "/wow-forever/food/:foodId", element: withSuspense(<WowFoodDetailPage />) },
   { path: "/wow-forever/gold", element: withSuspense(<WowGoldPage />) },
   { path: "/wow-forever/warlock-macros", element: withSuspense(<WowWarlockMacrosPage />) },
-  { path: "/wow-forever/raids/:webId",element: withSuspense(<WowRaidPage />) },
+  { path: "/wow-forever/gear", element: withSuspense(<WowGearPage />) },
+  { path: "/wow-forever/raids/:webId", element: withSuspense(<WowRaidPage />) },
   { path: "/wow-forever/raids/:webId/plan", element: withSuspense(<WowRaidPlannerPage />) },
 ];

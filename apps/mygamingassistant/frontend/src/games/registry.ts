@@ -63,6 +63,11 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "Pet, Fear, Healthstone and mouseover macros to paste into the game, with names checked against the client.",
       },
       {
+        path: "/wow-forever/gear",
+        title: "Best gear",
+        description: "The top three items per slot for your class, spec and level — your next upgrades while leveling, then a pre-raid list for 60.",
+      },
+      {
         path: "/wow-forever/compare",
         title: "Item Compare",
         description: "Paste or screenshot two or more items and see which is better for your class and spec.",
