@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
@@ -38,16 +38,24 @@ const integrationWithoutSendScope: Integration = {
   has_send_scope: false,
 };
 
-const triggerRender = vi.fn();
+const triggerRender = vi.fn((_args: { inquiryId: string; templateId: string }) => Promise.resolve({ isError: false }));
 const sendReply = vi.fn(() => ({ unwrap: () => Promise.resolve({}) }));
 
-let templateState = { data: [mockTemplate] as ReplyTemplate[], isLoading: false };
+interface TemplateListState {
+  currentData: ReplyTemplate[] | undefined;
+  isError: boolean;
+  isFetching: boolean;
+  refetch: () => Promise<unknown>;
+}
+const refetchTemplates = vi.fn(() => Promise.resolve({}));
+const listLoaded = (): TemplateListState => ({ currentData: [mockTemplate], isError: false, isFetching: false, refetch: refetchTemplates });
+let templateState: TemplateListState = listLoaded();
 let integrationsState: { data: Integration[]; isLoading: boolean } = {
   data: [integrationWithSendScope],
   isLoading: false,
 };
-let renderState: { data: { subject: string; body: string } | undefined; isFetching: boolean } = {
-  data: { subject: "Re: Cozy Room", body: "Hi Alice,\n\nWelcome." },
+let renderState: { currentData: { subject: string; body: string } | undefined; isFetching: boolean } = {
+  currentData: { subject: "Re: Cozy Room", body: "Hi Alice,\n\nWelcome." },
   isFetching: false,
 };
 let sendState = { isLoading: false };
@@ -86,10 +94,12 @@ describe("InquiryReplyPanel", () => {
     sendReply.mockClear();
     showError.mockClear();
     showSuccess.mockClear();
-    templateState = { data: [mockTemplate], isLoading: false };
+    triggerRender.mockImplementation(() => Promise.resolve({ isError: false }));
+    refetchTemplates.mockClear();
+    templateState = listLoaded();
     integrationsState = { data: [integrationWithSendScope], isLoading: false };
     renderState = {
-      data: { subject: "Re: Cozy Room", body: "Hi Alice,\n\nWelcome." },
+      currentData: { subject: "Re: Cozy Room", body: "Hi Alice,\n\nWelcome." },
       isFetching: false,
     };
     sendState = { isLoading: false };
@@ -148,7 +158,7 @@ describe("InquiryReplyPanel", () => {
 
   it("Custom tab clears the selected template id when sending", async () => {
     // Don't pre-populate the editor — start fresh for the custom tab.
-    renderState = { data: undefined, isFetching: false };
+    renderState = { currentData: undefined, isFetching: false };
     const user = userEvent.setup();
     renderPanel();
     await user.click(screen.getByTestId("reply-tab-custom"));
@@ -193,7 +203,7 @@ describe("InquiryReplyPanel", () => {
   });
 
   it("Send button is disabled while subject or body is empty", async () => {
-    renderState = { data: undefined, isFetching: false };
+    renderState = { currentData: undefined, isFetching: false };
     renderPanel();
     expect(screen.getByTestId("reply-send-button")).toBeDisabled();
   });
@@ -210,5 +220,153 @@ describe("InquiryReplyPanel", () => {
     await waitFor(() => {
       expect(showError).toHaveBeenCalled();
     });
+  });
+
+  describe("template list states", () => {
+    it("shows a card-shaped skeleton while templates load", () => {
+      templateState = { ...listLoaded(), currentData: undefined, isFetching: true };
+      renderPanel();
+      expect(screen.getByTestId("reply-template-picker-skeleton")).toHaveAttribute("role", "status");
+      expect(screen.queryByText(/Loading templates/)).not.toBeInTheDocument();
+    });
+
+    it("never reads a failed load as no templates, and Try again reloads", async () => {
+      templateState = { ...listLoaded(), currentData: undefined, isError: true };
+      const user = userEvent.setup();
+      renderPanel();
+      expect(screen.getByRole("alert")).toHaveTextContent("I couldn't load your templates. Want me to try again?");
+      expect(screen.queryByTestId("reply-template-picker-empty")).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Try again" }));
+      expect(refetchTemplates).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the last loaded templates usable when a reload fails", () => {
+      templateState = { ...listLoaded(), isError: true };
+      renderPanel();
+      expect(screen.getByRole("status")).toHaveTextContent("I couldn't reload your templates");
+      expect(screen.getByTestId(`reply-template-card-${mockTemplate.id}`)).toBeInTheDocument();
+    });
+
+    it("an empty list links to the Reply Templates page and closes the panel", async () => {
+      templateState = { ...listLoaded(), currentData: [] };
+      const onClose = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <Provider store={store}>
+          <MemoryRouter>
+            <InquiryReplyPanel inquiryId="inq-1" onClose={onClose} />
+          </MemoryRouter>
+        </Provider>,
+      );
+      expect(screen.getByText("You don't have any templates yet.")).toBeInTheDocument();
+      const link = screen.getByRole("link", { name: "Create one on the Reply Templates page" });
+      expect(link).toHaveAttribute("href", "/reply-templates");
+      await user.click(link);
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    it("Write custom still works when templates failed to load", async () => {
+      templateState = { ...listLoaded(), currentData: undefined, isError: true };
+      renderState = { currentData: undefined, isFetching: false };
+      const user = userEvent.setup();
+      renderPanel();
+      await user.click(screen.getByTestId("reply-tab-custom"));
+      expect(screen.getByTestId("reply-subject-input")).toBeInTheDocument();
+    });
+  });
+
+  describe("filling in a template", () => {
+    it("shows an editor skeleton while the template fills in", async () => {
+      renderState = { currentData: undefined, isFetching: true };
+      const user = userEvent.setup();
+      renderPanel();
+      await user.click(screen.getByTestId(`reply-template-card-${mockTemplate.id}`));
+      expect(screen.getByTestId("reply-render-loading")).toHaveAttribute("role", "status");
+      expect(screen.queryByTestId("reply-subject-input")).not.toBeInTheDocument();
+    });
+
+    it("a failed fill-in says so, keeps Send off, and Try again fills it in", async () => {
+      triggerRender.mockImplementationOnce(() => Promise.resolve({ isError: true }));
+      renderState = { currentData: undefined, isFetching: false };
+      const user = userEvent.setup();
+      const view = renderPanel();
+      await user.click(screen.getByTestId(`reply-template-card-${mockTemplate.id}`));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent("I couldn't fill in that template. Want me to try again?");
+      expect(screen.queryByTestId("reply-subject-input")).not.toBeInTheDocument();
+      expect(screen.getByTestId("reply-send-button")).toBeDisabled();
+
+      renderState = { currentData: { subject: "Re: Cozy Room", body: "Hi Alice" }, isFetching: false };
+      await user.click(screen.getByRole("button", { name: "Try again" }));
+      expect(triggerRender).toHaveBeenCalledTimes(2);
+      view.rerender(
+        <Provider store={store}>
+          <MemoryRouter>
+            <InquiryReplyPanel inquiryId="inq-1" onClose={() => {}} />
+          </MemoryRouter>
+        </Provider>,
+      );
+      expect(await screen.findByTestId("reply-subject-input")).toHaveValue("Re: Cozy Room");
+      expect(screen.queryByTestId("reply-render-error")).not.toBeInTheDocument();
+      expect(screen.getByTestId("reply-send-button")).toBeEnabled();
+    });
+
+    it("picking another template clears a failed fill-in", async () => {
+      const other: ReplyTemplate = { ...mockTemplate, id: "tpl-2", name: "Polite decline" };
+      templateState = { ...listLoaded(), currentData: [mockTemplate, other] };
+      triggerRender.mockImplementationOnce(() => Promise.resolve({ isError: true }));
+      const user = userEvent.setup();
+      renderPanel();
+      await user.click(screen.getByTestId(`reply-template-card-${mockTemplate.id}`));
+      expect(await screen.findByTestId("reply-render-error")).toBeInTheDocument();
+
+      await user.click(screen.getByTestId("reply-template-card-tpl-2"));
+      await waitFor(() => expect(screen.queryByTestId("reply-render-error")).not.toBeInTheDocument());
+      expect(screen.getByTestId("reply-subject-input")).toBeInTheDocument();
+    });
+
+    it("a late result from an earlier pick doesn't clear the current pick's failure", async () => {
+      const other: ReplyTemplate = { ...mockTemplate, id: "tpl-2", name: "Polite decline" };
+      templateState = { ...listLoaded(), currentData: [mockTemplate, other] };
+      let finishFirst: (value: { isError: boolean }) => void = () => {};
+      triggerRender
+        .mockImplementationOnce(() => new Promise((resolve) => { finishFirst = resolve; }))
+        .mockImplementationOnce(() => Promise.resolve({ isError: true }));
+      const user = userEvent.setup();
+      renderPanel();
+      await user.click(screen.getByTestId(`reply-template-card-${mockTemplate.id}`));
+      await user.click(screen.getByTestId("reply-template-card-tpl-2"));
+      expect(await screen.findByTestId("reply-render-error")).toBeInTheDocument();
+
+      await act(async () => finishFirst({ isError: false }));
+      expect(screen.getByTestId("reply-render-error")).toBeInTheDocument();
+      expect(screen.getByTestId("reply-send-button")).toBeDisabled();
+    });
+  });
+
+  it("Write custom starts empty after a template was filled in, and can send", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+    await user.click(screen.getByTestId(`reply-template-card-${mockTemplate.id}`));
+    expect(screen.getByTestId("reply-subject-input")).toHaveValue("Re: Cozy Room");
+
+    await user.click(screen.getByTestId("reply-tab-custom"));
+    expect(screen.getByTestId("reply-subject-input")).toHaveValue("");
+    expect(screen.getByTestId("reply-body-input")).toHaveValue("");
+    await user.type(screen.getByTestId("reply-subject-input"), "Hello");
+    await user.type(screen.getByTestId("reply-body-input"), "Hi there");
+    expect(screen.getByTestId("reply-send-button")).toBeEnabled();
+  });
+
+  it("a fill-in still on its way doesn't block or fill Write custom", async () => {
+    renderState = { currentData: { subject: "Re: Cozy Room", body: "Hi Alice" }, isFetching: true };
+    const user = userEvent.setup();
+    renderPanel();
+    await user.click(screen.getByTestId(`reply-template-card-${mockTemplate.id}`));
+    await user.click(screen.getByTestId("reply-tab-custom"));
+    expect(screen.getByTestId("reply-subject-input")).toHaveValue("");
+    await user.type(screen.getByTestId("reply-subject-input"), "Hello");
+    await user.type(screen.getByTestId("reply-body-input"), "Hi there");
+    expect(screen.getByTestId("reply-send-button")).toBeEnabled();
   });
 });

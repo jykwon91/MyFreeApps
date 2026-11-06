@@ -1,9 +1,12 @@
+import type { Ref } from "react";
+
 export interface RenderedReplyEditorProps {
   subject: string;
   body: string;
   onSubjectChange: (value: string) => void;
   onBodyChange: (value: string) => void;
   disabled?: boolean;
+  subjectRef?: Ref<HTMLInputElement>;
 }
 
 const SUBJECT_MAX = 500;
@@ -22,6 +25,7 @@ export default function RenderedReplyEditor({
   onSubjectChange,
   onBodyChange,
   disabled = false,
+  subjectRef,
 }: RenderedReplyEditorProps) {
   return (
     <div className="space-y-3">
@@ -33,6 +37,7 @@ export default function RenderedReplyEditor({
           Subject
         </label>
         <input
+          ref={subjectRef}
           id="reply-subject"
           type="text"
           value={subject}

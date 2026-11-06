@@ -19,6 +19,7 @@
  */
 import { test, expect, type Page, type Request } from "@playwright/test";
 import { ORG_ID, plantAuth } from "./fixtures/mockSession";
+import { json } from "./fixtures/mockResponse";
 
 interface FakeTemplate {
   id: string;
@@ -44,7 +45,6 @@ function asResponse(row: FakeTemplate) {
 }
 
 async function stubShell(page: Page, orgRole = "owner"): Promise<void> {
-  const json = (body: unknown) => ({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
   await page.route("**/api/users/me", (route) =>
     route.fulfill(
       json({

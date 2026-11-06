@@ -1,5 +1,8 @@
+import type { Ref } from "react";
 import type { InquiryReplyMode } from "@/shared/types/inquiry/inquiry-reply-mode";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
+import type { ReplyTemplatesLoad } from "@/shared/types/inquiry/reply-templates-load";
+import type { ReplyTemplateRenderState } from "@/shared/types/inquiry/reply-template-render-state";
 import type { GmailReconnectBannerProps } from "./GmailReconnectBanner";
 import InquiryReplyCustomBody from "./InquiryReplyCustomBody";
 import InquiryReplyReconnectBody from "./InquiryReplyReconnectBody";
@@ -8,31 +11,35 @@ import InquiryReplyTemplateBody from "./InquiryReplyTemplateBody";
 export interface InquiryReplyPanelBodyProps {
   mode: InquiryReplyMode;
   reconnectReason: GmailReconnectBannerProps["reason"] | null;
-  templates: ReplyTemplate[];
-  templatesLoading: boolean;
+  templates: readonly ReplyTemplate[];
+  templatesLoad: ReplyTemplatesLoad;
   selectedTemplateId: string | null;
-  isRenderFetching: boolean;
+  render: ReplyTemplateRenderState;
   isSending: boolean;
   subject: string;
   body: string;
   onSelectTemplate: (template: ReplyTemplate) => void;
   onSubjectChange: (value: string) => void;
   onBodyChange: (value: string) => void;
+  onBrowseTemplates: () => void;
+  subjectRef: Ref<HTMLInputElement>;
 }
 
 export default function InquiryReplyPanelBody({
   mode,
   reconnectReason,
   templates,
-  templatesLoading,
+  templatesLoad,
   selectedTemplateId,
-  isRenderFetching,
+  render,
   isSending,
   subject,
   body,
   onSelectTemplate,
   onSubjectChange,
   onBodyChange,
+  onBrowseTemplates,
+  subjectRef,
 }: InquiryReplyPanelBodyProps) {
   switch (mode) {
     case "reconnect":
@@ -42,15 +49,17 @@ export default function InquiryReplyPanelBody({
       return (
         <InquiryReplyTemplateBody
           templates={templates}
-          templatesLoading={templatesLoading}
+          templatesLoad={templatesLoad}
           selectedTemplateId={selectedTemplateId}
-          isRenderFetching={isRenderFetching}
+          render={render}
           isSending={isSending}
           subject={subject}
           body={body}
           onSelectTemplate={onSelectTemplate}
           onSubjectChange={onSubjectChange}
           onBodyChange={onBodyChange}
+          onBrowseTemplates={onBrowseTemplates}
+          subjectRef={subjectRef}
         />
       );
     case "custom":

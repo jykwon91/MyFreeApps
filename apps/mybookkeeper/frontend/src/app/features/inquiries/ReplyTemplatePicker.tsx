@@ -2,7 +2,7 @@ import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply
 import ReplyTemplateCard from "./ReplyTemplateCard";
 
 export interface ReplyTemplatePickerProps {
-  templates: ReplyTemplate[];
+  templates: readonly ReplyTemplate[];
   selectedTemplateId: string | null;
   onSelect: (template: ReplyTemplate) => void;
 }
@@ -17,13 +17,6 @@ export default function ReplyTemplatePicker({
   selectedTemplateId,
   onSelect,
 }: ReplyTemplatePickerProps) {
-  if (templates.length === 0) {
-    return (
-      <div className="text-sm text-muted-foreground p-4">
-        No templates yet. Create one in Settings.
-      </div>
-    );
-  }
   return (
     <div className="space-y-2 p-3" data-testid="reply-template-picker">
       {templates.map((template) => (

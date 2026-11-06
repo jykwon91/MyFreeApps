@@ -36,6 +36,11 @@ export const REPLY_TEMPLATE_MESSAGES = {
   restoreFailed: "I couldn't restore that. Want to try again?",
   restoreStillArchived: "I couldn't restore that, and it's still archived. Want to try again?",
   writeUnsure: "I'm not sure that went through. Check the list before trying again.",
+  pickerEmpty: "You don't have any templates yet.",
+  pickerEmptyLink: "Create one on the Reply Templates page",
+  fillingIn: "Hmm, let me build that for you...",
+  couldntFillIn: "I couldn't fill in that template. Want me to try again?",
+  couldntFillInHint: "You can also pick a different template or write your own.",
 } as const;
 
 export const RESTORE_FAILURE_MESSAGES: Record<Exclude<ReplyTemplateWriteOutcome, "done">, string> = {

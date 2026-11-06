@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Panel, PanelCloseButton, PanelTitle } from "@platform/ui";
 import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
@@ -11,6 +11,7 @@ import {
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 import InquiryReplyPanelBody from "./InquiryReplyPanelBody";
 import { useInquiryReplyMode } from "./useInquiryReplyMode";
+import { useReplyTemplatesLoad } from "./useReplyTemplatesLoad";
 
 export interface InquiryReplyPanelProps {
   inquiryId: string;
@@ -60,8 +61,16 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
   const [subjectOverride, setSubjectOverride] = useState<string | null>(null);
   const [bodyOverride, setBodyOverride] = useState<string | null>(null);
 
-  const { data: templates = [], isLoading: templatesLoading } =
-    useGetReplyTemplatesQuery();
+  // Which template last failed to fill in; it keeps its Try again while retrying.
+  const [renderFailedFor, setRenderFailedFor] = useState<string | null>(null);
+  const latestRender = useRef<string | null>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const subjectRef = useRef<HTMLInputElement>(null);
+  // After a Try again fills the template in, focus goes to its Subject.
+  const focusSubjectWhenFilled = useRef(false);
+
+  const templatesQuery = useGetReplyTemplatesQuery();
+  const templatesLoad = useReplyTemplatesLoad(templatesQuery, bodyRef);
   const { data: integrations = [], isLoading: integrationsLoading } =
     useGetIntegrationsQuery();
   const [triggerRender, renderState] = useLazyRenderReplyTemplateQuery();
@@ -73,8 +82,20 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
 
   // Derive subject/body: prefer local override (user edits), fall back to
   // server-rendered template data, then empty string.
-  const subject = subjectOverride ?? renderState.data?.subject ?? "";
-  const body = bodyOverride ?? renderState.data?.body ?? "";
+  // currentData belongs to the latest render only, so a failed render never
+  // shows the previous template's text; Write custom never takes a template's.
+  const rendered = tab === "template" ? renderState.currentData : undefined;
+  const isRenderFetching = tab === "template" && renderState.isFetching;
+  const subject = subjectOverride ?? rendered?.subject ?? "";
+  const body = bodyOverride ?? rendered?.body ?? "";
+  const renderFailed = selectedTemplateId !== null && renderFailedFor === selectedTemplateId;
+
+  useEffect(() => {
+    if (!focusSubjectWhenFilled.current || renderFailed || isRenderFetching) return;
+    if (!subjectRef.current) return;
+    focusSubjectWhenFilled.current = false;
+    subjectRef.current.focus();
+  }, [renderFailed, isRenderFetching]);
 
   function handleSubjectChange(value: string) {
     setSubjectOverride(value);
@@ -89,11 +110,27 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
     // Clear local overrides so the newly-rendered template fills the editor.
     setSubjectOverride(null);
     setBodyOverride(null);
-    void triggerRender({ inquiryId, templateId: template.id });
+    setRenderFailedFor(null);
+    focusSubjectWhenFilled.current = false;
+    void runRender(template.id);
+  }
+
+  async function runRender(templateId: string) {
+    latestRender.current = templateId;
+    const result = await triggerRender({ inquiryId, templateId });
+    if (latestRender.current !== templateId) return;
+    setRenderFailedFor(result.isError ? templateId : null);
+  }
+
+  function retryRender() {
+    if (!selectedTemplateId) return;
+    focusSubjectWhenFilled.current = true;
+    void runRender(selectedTemplateId);
   }
 
   function handleSwitchTab(next: ReplyTab) {
     setTab(next);
+    focusSubjectWhenFilled.current = false;
     if (next === "custom") {
       setSelectedTemplateId(null);
       setSubjectOverride(null);
@@ -127,7 +164,8 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
     subject.trim().length > 0 &&
     body.trim().length > 0 &&
     !isSending &&
-    !renderState.isFetching;
+    !isRenderFetching &&
+    !renderFailed;
 
   return (
     <Panel position="right" onClose={onClose} width="640px">
@@ -181,20 +219,26 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+        <div ref={bodyRef} tabIndex={-1} className="flex-1 overflow-y-auto p-5 space-y-4 focus:outline-none">
           <InquiryReplyPanelBody
             mode={mode}
             reconnectReason={reconnectReason}
-            templates={templates}
-            templatesLoading={templatesLoading}
+            templates={templatesQuery.currentData ?? []}
+            templatesLoad={templatesLoad}
             selectedTemplateId={selectedTemplateId}
-            isRenderFetching={renderState.isFetching}
+            render={{
+              isFetching: isRenderFetching,
+              failed: renderFailed,
+              onRetry: retryRender,
+            }}
             isSending={isSending}
             subject={subject}
             body={body}
             onSelectTemplate={handleSelectTemplate}
             onSubjectChange={handleSubjectChange}
             onBodyChange={handleBodyChange}
+            onBrowseTemplates={onClose}
+            subjectRef={subjectRef}
           />
         </div>
 
