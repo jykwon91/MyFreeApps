@@ -35,3 +35,14 @@ paths-ignore:
   # is hashed locally for protocol compliance and never leaves the server (only the
   # 5-char hash prefix does). Actual password storage uses argon2.
   - "apps/mybookkeeper/backend/app/services/user/hibp_service.py"
+  #
+  # apps/mygamingassistant/backend/app/services/wow/server_status_client.py and
+  # apps/mygamingassistant/backend/app/api/wow_server_status.py — log-injection
+  # findings on the `region` parameter. `region` is validated against ALLOWED_REGIONS
+  # (a frozenset of {"us", "eu", "kr", "tw"} — four 2-char ASCII codes) before any
+  # log call in both files. CRLF injection is impossible through values from that set.
+  # The runtime allowlist check is a data-flow guard that CodeQL cannot see.
+  # Sanitizing log args at call sites is explicitly prohibited by this project's
+  # engineering rules (see rules/global-preferences.md).
+  - "apps/mygamingassistant/backend/app/services/wow/server_status_client.py"
+  - "apps/mygamingassistant/backend/app/api/wow_server_status.py"

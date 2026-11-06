@@ -33,8 +33,17 @@ logger = logging.getLogger(__name__)
 # --- constants ----------------------------------------------------------------
 
 BLIZZARD_GRAPHQL_URL: Final = "https://worldofwarcraft.blizzard.com/en-us/graphql"
-BLIZZARD_STATUS_PAGE_URL: Final = "https://worldofwarcraft.blizzard.com/en-us/game/status/{region}"
 BLIZZARD_BUNDLE_HOST: Final = "https://assets-bwa.worldofwarcraft.blizzard.com"
+
+# Status page URLs are hardcoded constants keyed by region slug.
+# Using a lookup dict (not string formatting) means no user-controlled value
+# ever flows into URL construction — CodeQL cannot flag this as SSRF.
+_STATUS_PAGE_URLS: Final[dict[str, str]] = {
+    "us": "https://worldofwarcraft.blizzard.com/en-us/game/status/us",
+    "eu": "https://worldofwarcraft.blizzard.com/en-us/game/status/eu",
+    "kr": "https://worldofwarcraft.blizzard.com/en-us/game/status/kr",
+    "tw": "https://worldofwarcraft.blizzard.com/en-us/game/status/tw",
+}
 
 # Default documentId from the GetRealmStatusData query in Blizzard's bundle.
 # This WILL change on redeploys. It is used as the first attempt; if Blizzard
@@ -206,7 +215,7 @@ async def _discover_document_id(client: httpx.AsyncClient, region: str) -> str:
     Raises:
         ServerStatusUpstreamError: If any step fails.
     """
-    page_url = BLIZZARD_STATUS_PAGE_URL.format(region=region)
+    page_url = _STATUS_PAGE_URLS[region]
     try:
         page_response = await client.get(page_url, follow_redirects=True)
         page_response.raise_for_status()
