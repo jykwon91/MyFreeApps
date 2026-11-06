@@ -286,7 +286,8 @@ jobs:
             e2e/transactions-unsaved-mock.spec.ts \
             e2e/inquiries-viewer-mock.spec.ts \
             e2e/inquiry-reply-picker-mock.spec.ts \
-            e2e/listings-viewer-mock.spec.ts
+            e2e/listings-viewer-mock.spec.ts \
+            e2e/members-owner-row-mock.spec.ts
 
       - name: Upload Playwright report on failure
         if: failure()
