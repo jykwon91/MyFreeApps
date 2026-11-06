@@ -252,6 +252,36 @@ describe("crafting material sources", () => {
     expect(text).toMatch(/^\d+x Coarse Thread — Sold in most towns$/m);
   });
 
+  it("shows a Wowhead link when a Forever-only material has no sources", () => {
+    // Frilled Lichen (249399) is a reagent in Alchemy's Cerulean Dye recipe —
+    // id >= 100000, so it is new in Forever and has no source data.
+    const FRILLED_LICHEN = 249399;
+    const place = { sources: SOURCES, faction: FACTION.alliance, zoneId: null, level: null, file: FILES.alchemy };
+    const { getByRole } = render(
+      <MemoryRouter>
+        <CraftMatSources itemId={FRILLED_LICHEN} place={place} professionLabel="Alchemy" />
+      </MemoryRouter>,
+    );
+    const link = getByRole("link", { name: "Look it up on Wowhead" });
+    expect(link).toHaveAttribute("href", `https://www.wowhead.com/forever/item=${FRILLED_LICHEN}`);
+  });
+
+  it("does not show a Wowhead link for a Classic material with no sources", () => {
+    // Classic items (id < 100000) that have no sources should not get a Wowhead link.
+    // Use a known Classic item that is NOT in sources.json.
+    // Spider's Silk (3182) has rich source data — test with a crafted item id instead.
+    // Any item with id < 100_000 that hasSources() = false and isn't known to sources goes here.
+    // The simplest is to use a genuinely unknown Classic item id like 9999.
+    const UNKNOWN_CLASSIC_ITEM = 9999;
+    const place = { sources: SOURCES, faction: FACTION.alliance, zoneId: null, level: null, file: FILES.alchemy };
+    const { queryByRole } = render(
+      <MemoryRouter>
+        <CraftMatSources itemId={UNKNOWN_CLASSIC_ITEM} place={place} professionLabel="Alchemy" />
+      </MemoryRouter>,
+    );
+    expect(queryByRole("link", { name: "Look it up on Wowhead" })).toBeNull();
+  });
+
   it("lists every mob that drops Spider's Silk, each with its own chance", () => {
     const drop = SOURCES.reagent(SPIDERS_SILK).drop!;
     expect(isRareDrop(drop) || isCommonDrop(drop)).toBe(false);

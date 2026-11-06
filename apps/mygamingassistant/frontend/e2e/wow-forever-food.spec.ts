@@ -134,6 +134,16 @@ test("in the beta, a level past 30 reads as 30 and nothing past the cap is promi
   await expect(page.getByText(/Next upgrade at level/)).toHaveCount(0);
 });
 
+test("a Forever-only recipe shows a Wowhead link when its source isn't known", async ({ page }) => {
+  // Food 250070 (Bear Bruscitti) has recipeItem 250178, which is new in Forever and has no source data.
+  await page.goto("/wow-forever/food/250070");
+  const recipe = page.locator("section", { has: page.getByRole("heading", { name: "Learn the recipe" }) });
+  await expect(recipe.getByText("New in Forever — where to get the recipe isn't known yet.")).toBeVisible();
+  const link = recipe.getByRole("link", { name: "Look it up on Wowhead" });
+  await expect(link).toBeVisible();
+  await expect(link).toHaveAttribute("href", "https://www.wowhead.com/forever/item=250178");
+});
+
 test("an ingredient lists every mob that drops it, the best you can farm at your level first", async ({ page }) => {
   await page.goto("/wow-forever/food/1082?lvl=20&class=warlock");
   const meat = page.locator("li", { has: page.getByRole("heading", { name: /Crisp Spider Meat/ }) });

@@ -330,6 +330,16 @@ test("Leatherworking forks at 225, and leather points at beasts to skin", async 
   await expect(leather.getByText(/You can also make it yourself with Light Leather/)).toBeVisible();
 });
 
+test("a Forever-only transmute shows a Wowhead spell link in its Source unknown chip", async ({ page }) => {
+  // Transmute: Legionite (spell 1317279) is new in Forever — its source isn't known yet.
+  await page.goto("/wow-forever/professions?p=alchemy");
+  const transmutes = page.getByTestId("transmutes");
+  const legionite = transmutes.locator("li", { has: page.getByText("Transmute: Legionite") });
+  await expect(legionite.getByText("Source unknown")).toBeVisible();
+  const link = legionite.getByRole("link", { name: "Look it up on Wowhead" }).first();
+  await expect(link).toHaveAttribute("href", "https://www.wowhead.com/forever/spell=1317279");
+});
+
 test("Engineering says what each item does, forks at 200, and smelts its bars", async ({ page }) => {
   await page.goto("/wow-forever/professions");
   await page.getByRole("radio", { name: "Engineering" }).click();
