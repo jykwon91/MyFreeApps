@@ -1,3 +1,4 @@
+import { OWNER_ONLY_ADMIN_MESSAGE } from "@mybookkeeper/api-client/constants/ownerOnlyRefusal";
 import { membersApi } from "@mybookkeeper/api-client/store/membersApi";
 import type { OrgInvite } from "@mybookkeeper/api-client/types/organization/OrgInvite";
 import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
@@ -224,6 +225,25 @@ describe("what each role sees", () => {
     expect(screen.getByText(MESSAGES.removeFrom("Acme"))).toBeTruthy();
   });
 
+  it("lets an admin manage a user but not another admin", async () => {
+    serve({ members: [aMember({ id: "m1", user_id: "u1", org_role: "admin", user_email: "me@example.com" }), aMember({ id: "m4", user_id: "u4", org_role: "admin", user_email: "ada@example.com", user_name: "Ada" }), aMember()] });
+    await show({ ...ACME, org_role: "admin" });
+    await screen.findByText(MESSAGES.people(3));
+    expect(screen.getByTestId("member-u4").props.accessibilityRole).toBeUndefined();
+    await fireEvent.press(screen.getByTestId("member-u4"));
+    expect(screen.queryByText(MESSAGES.removeFrom("Acme"))).toBeNull();
+    await fireEvent.press(screen.getByTestId("member-u2"));
+    expect(screen.getByText(MESSAGES.removeFrom("Acme"))).toBeTruthy();
+  });
+
+  it("lets the owner manage an admin", async () => {
+    serve({ members: [ME, aMember({ org_role: "admin" })] });
+    await show();
+    await screen.findByText(MESSAGES.people(2));
+    await fireEvent.press(screen.getByTestId("member-u2"));
+    expect(screen.getByText(MESSAGES.removeFrom("Acme"))).toBeTruthy();
+  });
+
   it("tells a demo workspace it can't invite", async () => {
     serve();
     await show({ ...ACME, is_demo: true });
@@ -374,6 +394,32 @@ describe("changing a role", () => {
     await press("Viewer");
     expect(await screen.findByText(MESSAGES.notAllowed)).toBeTruthy();
     await waitFor(() => expect(calledWith(server, "GET").filter((url) => url === "/organizations").length).toBeGreaterThan(before));
+  });
+});
+
+describe("when someone became an admin meanwhile", () => {
+  it("says only the owner can change them, without asking for my workspaces again", async () => {
+    const server = serve({ members: [aMember({ id: "m1", user_id: "u1", org_role: "admin", user_email: "me@example.com" }), aMember()] });
+    server.refuse[`PATCH /organizations/${ORG}/members/u2/role`] = { status: 403, detail: "Only the owner can change an admin's role" };
+    await show({ ...ACME, org_role: "admin" });
+    await screen.findByText(MESSAGES.people(2));
+    await fireEvent.press(screen.getByTestId("member-u2"));
+    const before = calledWith(server, "GET").filter((url) => url === "/organizations").length;
+    await press("Viewer");
+    expect(await screen.findByText(OWNER_ONLY_ADMIN_MESSAGE)).toBeTruthy();
+    expect(calledWith(server, "GET").filter((url) => url === "/organizations").length).toBe(before);
+  });
+
+  it("says only the owner can remove them, and keeps them listed", async () => {
+    const server = serve({ members: [aMember({ id: "m1", user_id: "u1", org_role: "admin", user_email: "me@example.com" }), aMember()] });
+    server.refuse[`DELETE /organizations/${ORG}/members/u2`] = { status: 403, detail: "Only the owner can remove an admin" };
+    await show({ ...ACME, org_role: "admin" });
+    await screen.findByText(MESSAGES.people(2));
+    await fireEvent.press(screen.getByTestId("member-u2"));
+    await press(MESSAGES.removeFrom("Acme"));
+    await pressAlertButton(MESSAGES.removeConfirm("Sam"));
+    expect(await screen.findByText(OWNER_ONLY_ADMIN_MESSAGE)).toBeTruthy();
+    expect(screen.getByTestId("member-u2")).toBeTruthy();
   });
 });
 

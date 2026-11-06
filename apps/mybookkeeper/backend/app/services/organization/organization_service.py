@@ -105,11 +105,14 @@ async def update_member_role(
         raise ValueError("Cannot assign owner role — use ownership transfer")
 
     async with unit_of_work() as db:
-        member = await organization_repo.get_member(db, org_id, target_user_id)
+        member = await organization_repo.get_member_for_update(db, org_id, target_user_id)
         if not member:
             raise LookupError("Member not found")
         if member.org_role == "owner":
             raise ValueError("Cannot change the owner's role")
+        await _require_owner_to_touch_admin(
+            db, org_id, member, acting_user_id, "Only the owner can change an admin's role",
+        )
 
         old_role = member.org_role
         result = await organization_repo.update_member_role(db, member, new_role)
@@ -122,6 +125,21 @@ async def update_member_role(
             org_id, target_user_id, old_role, new_role, acting_user_id,
         )
         return result
+
+
+async def _require_owner_to_touch_admin(
+    db: AsyncSession,
+    org_id: uuid.UUID,
+    target: OrganizationMember,
+    acting_user_id: uuid.UUID,
+    message: str,
+) -> None:
+    """Only the owner may demote or remove an admin; admins manage users and viewers."""
+    if target.org_role != OrgRole.ADMIN:
+        return
+    acting = await organization_repo.get_member(db, org_id, acting_user_id)
+    if acting is None or acting.org_role != OrgRole.OWNER:
+        raise PermissionError(message)
 
 
 async def _disconnect_their_integrations(
@@ -158,11 +176,14 @@ async def remove_member(
         raise ValueError("Cannot remove yourself")
 
     async with unit_of_work() as db:
-        member = await organization_repo.get_member(db, org_id, target_user_id)
+        member = await organization_repo.get_member_for_update(db, org_id, target_user_id)
         if not member:
             raise LookupError("Member not found")
         if member.org_role == "owner":
             raise ValueError("Cannot remove the owner")
+        await _require_owner_to_touch_admin(
+            db, org_id, member, acting_user_id, "Only the owner can remove an admin",
+        )
 
         await organization_repo.remove_member(db, member)
         await _disconnect_their_integrations(

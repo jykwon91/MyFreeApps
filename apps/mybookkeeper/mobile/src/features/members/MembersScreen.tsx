@@ -1,3 +1,4 @@
+import { canManageMember } from "@mybookkeeper/api-client/utils/canManageMember";
 import { useListInvitesQuery, useListMembersQuery } from "@mybookkeeper/api-client/store/membersApi";
 import type { AssignableRole } from "@mybookkeeper/api-client/types/organization/AssignableRole";
 import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
@@ -16,7 +17,7 @@ import InviteSheet from "./InviteSheet";
 import MemberRow from "./MemberRow";
 import MembersSkeleton from "./MembersSkeleton";
 import MemberSheet from "./MemberSheet";
-import { canEditMember, isSameEmail, memberFirstName, memberName } from "./membersDisplay";
+import { isSameEmail, memberFirstName, memberName } from "./membersDisplay";
 import PendingInviteRow from "./PendingInviteRow";
 import { useInviteActions } from "./useInviteActions";
 import { useMemberActions } from "./useMemberActions";
@@ -104,7 +105,7 @@ export default function MembersScreen({ workspace }: { workspace: Workspace }) {
           {people.map((member) => (
             <MemberRow
               busyLabel={memberBusy[member.user_id]}
-              canEdit={canEditMember(member, myEmail, isAdmin)}
+              canEdit={canManageMember(member, workspace.org_role, isSameEmail(member.user_email, myEmail))}
               isHeld={isAnythingBusy}
               isMe={isSameEmail(member.user_email, myEmail)}
               key={member.id}
