@@ -21,6 +21,7 @@ from collections import Counter, defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 
+from scripts.wow_food.skinning_sources import MIN_FARM_SPAWNS, SkinningSources, densest
 from scripts.wow_world_map import sources
 from scripts.wow_world_map.coords import ZoneBounds
 from scripts.wow_world_map.factions import ALLIANCE, HORDE, FactionTemplate, usable_by
@@ -42,9 +43,8 @@ SHOWN_ZONES = 3
 # This many kinds of mob dropping it = cloth-like: a farm spot per zone, in this many zones.
 COMMON_DROP_MOBS = 50
 COMMON_SHOWN_ZONES = 10
-# A farm spot's mob must drop it at least this often, and have this many spawns in the zone (not a lone rare).
+# A farm spot's mob must drop it at least this often (and have MIN_FARM_SPAWNS spawns in the zone).
 MIN_FARM_CHANCE = 5.0
-MIN_FARM_SPAWNS = 4
 # creature_template.Rank of an ordinary mob (1+ = elite, rare, boss): what a solo player farms.
 NORMAL_RANK = 0
 # creature_template.Rank: 2 = rare elite, 4 = rare (a lone spawn on a long timer); 1 = elite, 3 = boss.
@@ -61,8 +61,6 @@ MIN_SHOWN_CHANCE = 1.0
 SHOWN_OBJECT_ZONES = 3
 # Herbs and ore veins grow on both factions' ground: enough zones that each side has its own.
 SHOWN_GATHER_ZONES = 10
-# Spawns this close (yards) count as one pack when picking where to farm a mob.
-PACK_YARDS = 150.0
 # Lock.Type_0 of a lock opened by a skill; its Index_0 is then the LockType: herb or mineral node.
 LOCK_KEY_SKILL = 2
 GATHER_LOCK_TYPES = {2: "herbalism", 3: "mining"}
@@ -128,7 +126,7 @@ def _stock(row: Row) -> tuple[int, int]:
         return 0, 0
     return stock, round(_i(row["incrtime"]) / 60)
 
-class ClassicSources:
+class ClassicSources(SkinningSources):
     """Answers "where does item X come from" from the cmangos dump."""
 
     def __init__(self, zones: list[ZoneBounds], art: WorldMapArt) -> None:
@@ -168,6 +166,10 @@ class ClassicSources:
             if _i(npc["SkinningLootId"]):
                 self._skin_owners[_i(npc["SkinningLootId"])].append(_i(npc["Entry"]))
         self._skinning = LootIndex.build(t["skinning_loot_template"], refs)
+        self._skin_loot: dict[int, list[tuple[int, float]]] = defaultdict(list)  # skinning table -> (item, chance)
+        for item, entries in self._skinning.by_table.items():
+            for loot_id, chance, _ in entries:
+                self._skin_loot[loot_id].append((item, chance))
         self._fishing = LootIndex.build(t["fishing_loot_template"], refs)
         self._object_loot = LootIndex.build(t["gameobject_loot_template"], refs)
         self._item_loot = LootIndex.build(t["item_loot_template"], refs)
@@ -331,11 +333,7 @@ class ClassicSources:
             return [None, "", None, None]
         per_zone = Counter(spot.zone.ui_map_id for _, _, spot in spots)
         zone = max(per_zone, key=lambda z: (per_zone[z], -z))
-        here = [s for s in spots if s[2].zone.ui_map_id == zone]
-        wx, wy, best = max(
-            here,
-            key=lambda a: (sum(math.hypot(a[0] - b[0], a[1] - b[1]) <= PACK_YARDS for b in here), -a[0], -a[1]),
-        )
+        best = densest([s for s in spots if s[2].zone.ui_map_id == zone])
         self.zone_names[zone] = best.zone.name
         return best.as_row()
 

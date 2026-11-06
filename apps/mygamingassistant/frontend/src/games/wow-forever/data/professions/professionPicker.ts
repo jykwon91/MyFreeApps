@@ -30,6 +30,7 @@ export const GATHERING_GROUP: ProfessionGroup<GatheringProfession> = {
   options: [
     { id: PROFESSION.herbalism, label: "Herbalism" },
     { id: PROFESSION.mining, label: "Mining" },
+    { id: PROFESSION.skinning, label: "Skinning" },
   ],
 };
 

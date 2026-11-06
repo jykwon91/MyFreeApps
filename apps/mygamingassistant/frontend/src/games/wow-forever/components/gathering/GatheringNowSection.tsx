@@ -1,26 +1,38 @@
+import type { ReactNode } from "react";
 import LoadErrorRetry from "@/components/game/LoadErrorRetry";
 import CraftSkillInput from "@/games/wow-forever/components/crafting/CraftSkillInput";
-import GatheringNowResults from "@/games/wow-forever/components/gathering/GatheringNowResults";
 import GatheringNowSkeleton from "@/games/wow-forever/components/gathering/GatheringNowSkeleton";
+import GatheringRankBanner from "@/games/wow-forever/components/gathering/GatheringRankBanner";
 import GuideSection from "@/games/wow-forever/components/guide/GuideSection";
 import { GATHERING_SKILL_PROMPT } from "@/games/wow-forever/data/professions/gathering/gatheringConfig";
 import { rankAdvice } from "@/games/wow-forever/gathering/rankCaps";
-import type { GatheringDataState } from "@/games/wow-forever/types/gathering/gatheringDataState";
-import type { GatheringGuide } from "@/games/wow-forever/types/gathering/gatheringGuide";
+import { zoneNameOf } from "@/games/wow-forever/gathering/zoneNameOf";
+import type { GatheringGuideBase } from "@/games/wow-forever/types/gathering/gatheringGuideBase";
+import type { GatheringLoadState } from "@/games/wow-forever/types/gathering/gatheringLoadState";
+import type { ZonedData } from "@/games/wow-forever/types/gathering/zonedData";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 
-interface GatheringNowSectionProps {
-  guide: GatheringGuide;
-  state: GatheringDataState;
+interface GatheringNowSectionProps<T extends ZonedData> {
+  guide: GatheringGuideBase;
+  state: GatheringLoadState<T>;
   skill: number | null;
   onSkillChange: (skill: number | null) => void;
   faction: PlayerFaction;
   zoneId: number | null;
-  level: number | null;
+  /** What to gather and where, once the data is in — the guide kind's own "right now". */
+  renderResults: (data: T) => ReactNode;
 }
 
-/** The top of a gathering guide: your skill, then what to gather and where. */
-export default function GatheringNowSection({ guide, state, skill, onSkillChange, faction, zoneId, level }: GatheringNowSectionProps) {
+/** The top of a gathering guide: your skill, the capped banner, then what to gather and where. */
+export default function GatheringNowSection<T extends ZonedData>({
+  guide,
+  state,
+  skill,
+  onSkillChange,
+  faction,
+  zoneId,
+  renderResults,
+}: GatheringNowSectionProps<T>) {
   return (
     <GuideSection id="now" title={`What can I ${guide.verb} right now?`}>
       <CraftSkillInput
@@ -34,7 +46,15 @@ export default function GatheringNowSection({ guide, state, skill, onSkillChange
         <LoadErrorRetry message={`Couldn't load where to ${guide.verb}.`} onRetry={state.retry} retrying={false} />
       )}
       {state.status === "ready" && (
-        <GatheringNowResults guide={guide} data={state.data} skill={skill} faction={faction} zoneId={zoneId} level={level} />
+        <div className="space-y-3">
+          <GatheringRankBanner
+            guide={guide}
+            skill={skill}
+            faction={faction}
+            zoneName={zoneNameOf(state.data.zoneById, zoneId)}
+          />
+          {renderResults(state.data)}
+        </div>
       )}
     </GuideSection>
   );

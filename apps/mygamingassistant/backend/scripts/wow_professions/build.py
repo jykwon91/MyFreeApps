@@ -17,6 +17,10 @@ Writes, under ``frontend/src/games/wow-forever/data/professions/crafting/``:
   reagents come from (vendors, drops, quests, disenchanting). Both are
   server-side, so they come from cmangos classic-db (GPL-3.0, pinned commit)
   and are kept apart with its LICENSE.
+* ``classic/skinning.json`` — for the Skinning guide: every mob a solo player
+  can skin, once per zone it has a pack in (levels, spawns, densest pack, the
+  leather it gives most), and the leather each mob level gives (cmangos
+  ``skinning_loot_template`` + creature levels; same LICENSE).
 
 The leveling route itself is hand-picked in the frontend
 (``data/professions/crafting/*Route.ts``) and checked against these files.
@@ -36,6 +40,7 @@ from scripts.wow_food.build import (
     quest_details,
 )
 from scripts.wow_food.recipe_sources import MOB_COLUMNS, VENDOR_COLUMNS, ClassicSources, territory_of
+from scripts.wow_food.skinning_sources import SKIN_MOB_COLUMNS
 from scripts.wow_professions.crafts import (
     ACQUIRE_ON_SKILL_LEARN,
     ALCHEMY_SKILL_LINE,
@@ -393,6 +398,17 @@ def main() -> None:
         "reagents": {k: v for k, v in reagent_sources.items() if v},
         "disenchantColumns": DISENCHANT_COLUMNS,
         "disenchant": {str(i): lv for i, lv in sorted(disenchanted_items().items()) if i in reagent_ids},
+    })
+    skin_mobs = classic.skinnable_mobs()
+    skin_zones = {int(str(r[4])) for r in skin_mobs}
+    write_json(CLASSIC_DIR / "skinning.json", {
+        "source": f"cmangos/classic-db@{CMANGOS_COMMIT}",
+        "mobColumns": SKIN_MOB_COLUMNS,
+        "mobs": skin_mobs,
+        "leatherColumns": ["minLevel", "maxLevel", "leathers"],
+        "leather": classic.leather_by_level(),
+        "zones": {str(z): zone_names[z] for z in sorted(skin_zones)},
+        "territory": territory_of(skin_zones, zone_entries),
     })
     shutil.copyfile(CLASSIC_LICENSE, CLASSIC_DIR / "LICENSE")
     (CLASSIC_DIR / "README.md").write_text(CLASSIC_README.format(commit=CMANGOS_COMMIT), encoding="utf-8")
