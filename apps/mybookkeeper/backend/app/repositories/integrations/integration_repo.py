@@ -20,21 +20,49 @@ async def get_by_org_and_provider(
     return result.scalar_one_or_none()
 
 
-async def mark_needs_reauth(
+async def _lock_if_credentials_unchanged(
+    db: AsyncSession, integration: Integration
+) -> Integration | None:
+    """The row, locked, if it still holds the refresh token ``integration`` was read with.
+
+    A reconnect rewrites the row in place, possibly to a different Google
+    account. Work that started on the old connection must not write its
+    tokens or its reauth flag onto the new one. Postgres re-checks the filter
+    against a row a concurrent reconnect just committed, so the stale writer
+    gets None.
+    """
+    result = await db.execute(
+        select(Integration)
+        .where(
+            Integration.id == integration.id,
+            Integration.refresh_token_encrypted.is_not_distinct_from(
+                integration.refresh_token_encrypted
+            ),
+        )
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    return result.scalar_one_or_none()
+
+
+async def mark_needs_reauth_if_unchanged(
     db: AsyncSession,
     integration: Integration,
     error: str,
     failed_at: datetime,
-) -> None:
-    """Flip the reauth flag and record when/why it was set.
+) -> bool:
+    """Flip the reauth flag and record when/why, unless the row was reconnected since.
 
-    Called from the Gmail client seam immediately after catching a RefreshError
-    so the state is persisted before raising GmailReauthRequiredError to callers.
-    The session is NOT flushed here — the caller must flush or commit.
+    Returns False when the connection changed, so nothing was written. The
+    session is NOT flushed here — the caller must flush or commit.
     """
-    integration.needs_reauth = True
-    integration.last_reauth_error = error
-    integration.last_reauth_failed_at = failed_at
+    current = await _lock_if_credentials_unchanged(db, integration)
+    if current is None:
+        return False
+    current.needs_reauth = True
+    current.last_reauth_error = error
+    current.last_reauth_failed_at = failed_at
+    return True
 
 
 async def clear_reauth_state(db: AsyncSession, integration: Integration) -> None:
@@ -65,11 +93,16 @@ async def upsert_gmail(
     token_expiry: datetime,
     scopes: list[str] | None = None,
 ) -> Integration:
+    # Locked and re-read so a reauth flag committed by a Gmail call on the old
+    # connection is loaded here, and the callback's clear_reauth_state writes it back.
     result = await db.execute(
-        select(Integration).where(
+        select(Integration)
+        .where(
             Integration.organization_id == organization_id,
             Integration.provider == "gmail",
         )
+        .with_for_update()
+        .execution_options(populate_existing=True)
     )
     existing = result.scalar_one_or_none()
 
@@ -108,25 +141,30 @@ async def update_last_synced(
     integration.last_synced_at = synced_at
 
 
-async def update_access_token(
+async def update_access_token_if_unchanged(
     db: AsyncSession,
     integration: Integration,
     access_token: str,
     expiry: datetime | None,
-) -> None:
-    """Persist a refreshed access token (and its expiry) for this integration.
+) -> bool:
+    """Persist a refreshed access token (and its expiry), unless the row was reconnected since.
 
     Called after Google's auth library mints a new access token in-memory.
     Without this, every Gmail call would re-trigger a refresh because the
-    DB-stored access_token stays frozen at OAuth-callback time.
+    DB-stored access_token stays frozen at OAuth-callback time. Returns False
+    when the connection changed, so nothing was written.
 
     ``expiry`` is normalized to timezone-aware UTC because google-auth returns
     naive UTC datetimes.
     """
-    integration.access_token = access_token
+    current = await _lock_if_credentials_unchanged(db, integration)
+    if current is None:
+        return False
+    current.access_token = access_token
     if expiry is not None and expiry.tzinfo is None:
         expiry = expiry.replace(tzinfo=timezone.utc)
-    integration.token_expiry = expiry
+    current.token_expiry = expiry
+    return True
 
 
 async def get_gmail_user_ids(db: AsyncSession) -> list[str]:

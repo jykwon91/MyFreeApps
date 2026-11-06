@@ -1,11 +1,15 @@
 """Google OAuth credentials for a Gmail integration, and saving refreshed tokens."""
 from __future__ import annotations
 
+import logging
+
 from google.oauth2.credentials import Credentials
 
 from app.core.config import settings
 from app.db.session import unit_of_work
 from app.repositories import integration_repo
+
+logger = logging.getLogger(__name__)
 
 
 def build_gmail_credentials(access_token: str, refresh_token: str | None = None) -> Credentials:
@@ -32,15 +36,14 @@ async def persist_refreshed_token(
     refresh only happens once per real expiry.
 
     Opens its own ``unit_of_work`` so it isn't entangled with whatever
-    transaction shape the caller has.
+    transaction shape the caller has. Skipped when Gmail was reconnected while
+    the call ran: the token belongs to the old connection.
     """
     if not creds.token or creds.token == prior_token:
         return
     async with unit_of_work() as db:
-        refreshed = await integration_repo.get_by_org_and_provider(
-            db, integration.organization_id, "gmail"
+        saved = await integration_repo.update_access_token_if_unchanged(
+            db, integration, creds.token, creds.expiry
         )
-        if refreshed is not None:
-            await integration_repo.update_access_token(
-                db, refreshed, creds.token, creds.expiry
-            )
+    if not saved:
+        logger.info("Gmail was reconnected during this call; not saving its refreshed token")

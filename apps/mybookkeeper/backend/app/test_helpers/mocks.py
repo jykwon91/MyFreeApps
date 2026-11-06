@@ -175,7 +175,7 @@ async def seed_integration_reauth_state(
             raise HTTPException(status_code=404, detail="No Gmail integration found")
         now = _dt.datetime.now(_dt.timezone.utc)
         if payload.needs_reauth:
-            await integration_repo.mark_needs_reauth(
+            await integration_repo.mark_needs_reauth_if_unchanged(
                 db, integration, "e2e-test-forced-reauth", now,
             )
         else:

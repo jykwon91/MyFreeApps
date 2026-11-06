@@ -92,6 +92,7 @@ class TestFetchPathHttpError401:
         async def fake_mark_needs_reauth(_db, integ, error, failed_at):
             mark_calls.append((integ, error, failed_at))
             integ.needs_reauth = True
+            return True
 
         async def fake_get_by_id(_db, item_id):
             return item
@@ -116,7 +117,7 @@ class TestFetchPathHttpError401:
                 new=AsyncMock(return_value=integration),
             ),
             patch(
-                "app.services.email.email_fetch_service.integration_repo.mark_needs_reauth",
+                "app.services.email.email_fetch_service.integration_repo.mark_needs_reauth_if_unchanged",
                 new=fake_mark_needs_reauth,
             ),
             patch(
@@ -170,6 +171,7 @@ class TestFetchPathHttpError401:
         async def fake_mark_needs_reauth(_db, integ, error, failed_at):
             mark_calls.append((integ, error, failed_at))
             integ.needs_reauth = True
+            return True
 
         async def fake_get_by_id(_db, item_id):
             return item
@@ -193,7 +195,7 @@ class TestFetchPathHttpError401:
                 new=AsyncMock(return_value=integration),
             ),
             patch(
-                "app.services.email.email_fetch_service.integration_repo.mark_needs_reauth",
+                "app.services.email.email_fetch_service.integration_repo.mark_needs_reauth_if_unchanged",
                 new=fake_mark_needs_reauth,
             ),
             patch(
@@ -240,6 +242,7 @@ class TestFetchPathHttpError401:
 
         async def fake_mark_needs_reauth(_db, integ, error, failed_at):
             mark_calls.append((integ, error, failed_at))
+            return True
 
         async def fake_get_by_id(_db, item_id):
             return item
@@ -266,7 +269,7 @@ class TestFetchPathHttpError401:
                 new=AsyncMock(return_value=integration),
             ),
             patch(
-                "app.services.email.email_fetch_service.integration_repo.mark_needs_reauth",
+                "app.services.email.email_fetch_service.integration_repo.mark_needs_reauth_if_unchanged",
                 new=fake_mark_needs_reauth,
             ),
             patch(
@@ -321,21 +324,15 @@ class TestSendPathNeedsReauth:
         send_side_effect: Exception,
     ):
         """Common patch stack for gmail_service send tests."""
-        stale = MagicMock()
-        stale.needs_reauth = False
-
         fake_db = MagicMock()
 
         @asynccontextmanager
         async def fake_uow():
             yield fake_db
 
-        async def fake_get_by_org(db, oid, provider):
-            return stale
-
         async def fake_mark_needs_reauth(db, integ, error, failed_at):
             mark_calls.append((integ, error, failed_at))
-            integ.needs_reauth = True
+            return True
 
         # The send POST answers a 401 as a response, not an exception.
         outcome = (
@@ -347,15 +344,10 @@ class TestSendPathNeedsReauth:
         return (
             patch("app.services.email.gmail_request_executor.unit_of_work", fake_uow),
             patch(
-                "app.services.email.gmail_request_executor.integration_repo.get_by_org_and_provider",
-                new=fake_get_by_org,
-            ),
-            patch(
-                "app.services.email.gmail_request_executor.integration_repo.mark_needs_reauth",
+                "app.services.email.gmail_request_executor.integration_repo.mark_needs_reauth_if_unchanged",
                 new=fake_mark_needs_reauth,
             ),
             fake_gmail_post(outcome),
-            stale,
         )
 
     @pytest.mark.asyncio
@@ -365,16 +357,14 @@ class TestSendPathNeedsReauth:
         integration = self._make_send_integration(org_id)
         mark_calls: list = []
 
-        patches = self._gmail_service_patches(
+        ctx_patches = self._gmail_service_patches(
             org_id, integration, mark_calls, RefreshError("invalid_grant")
         )
-        *ctx_patches, stale = patches
 
         with (
             ctx_patches[0],
             ctx_patches[1],
             ctx_patches[2],
-            ctx_patches[3],
         ):
             from app.services.email.gmail_service import send_message
 
@@ -389,7 +379,7 @@ class TestSendPathNeedsReauth:
                 )
 
         assert len(mark_calls) == 1, "mark_needs_reauth must be called for RefreshError"
-        assert stale.needs_reauth is True
+        assert mark_calls[0][0] is integration
 
     @pytest.mark.asyncio
     async def test_send_message_401_sets_needs_reauth(self) -> None:
@@ -398,16 +388,14 @@ class TestSendPathNeedsReauth:
         integration = self._make_send_integration(org_id)
         mark_calls: list = []
 
-        patches = self._gmail_service_patches(
+        ctx_patches = self._gmail_service_patches(
             org_id, integration, mark_calls, _make_fake_http_error(401)
         )
-        *ctx_patches, stale = patches
 
         with (
             ctx_patches[0],
             ctx_patches[1],
             ctx_patches[2],
-            ctx_patches[3],
         ):
             from app.services.email.gmail_service import send_message
 
@@ -422,7 +410,7 @@ class TestSendPathNeedsReauth:
                 )
 
         assert len(mark_calls) == 1, "mark_needs_reauth must be called for 401 HttpError"
-        assert stale.needs_reauth is True
+        assert mark_calls[0][0] is integration
 
     @pytest.mark.asyncio
     async def test_send_message_with_attachment_refresh_error_sets_needs_reauth(self) -> None:
@@ -431,16 +419,14 @@ class TestSendPathNeedsReauth:
         integration = self._make_send_integration(org_id)
         mark_calls: list = []
 
-        patches = self._gmail_service_patches(
+        ctx_patches = self._gmail_service_patches(
             org_id, integration, mark_calls, RefreshError("invalid_grant")
         )
-        *ctx_patches, stale = patches
 
         with (
             ctx_patches[0],
             ctx_patches[1],
             ctx_patches[2],
-            ctx_patches[3],
         ):
             from app.services.email.gmail_attachment_send_service import send_message_with_attachment
 
@@ -458,7 +444,7 @@ class TestSendPathNeedsReauth:
                 )
 
         assert len(mark_calls) == 1
-        assert stale.needs_reauth is True
+        assert mark_calls[0][0] is integration
 
     @pytest.mark.asyncio
     async def test_send_message_with_attachment_401_sets_needs_reauth(self) -> None:
@@ -467,16 +453,14 @@ class TestSendPathNeedsReauth:
         integration = self._make_send_integration(org_id)
         mark_calls: list = []
 
-        patches = self._gmail_service_patches(
+        ctx_patches = self._gmail_service_patches(
             org_id, integration, mark_calls, _make_fake_http_error(401)
         )
-        *ctx_patches, stale = patches
 
         with (
             ctx_patches[0],
             ctx_patches[1],
             ctx_patches[2],
-            ctx_patches[3],
         ):
             from app.services.email.gmail_attachment_send_service import send_message_with_attachment
 
@@ -494,4 +478,4 @@ class TestSendPathNeedsReauth:
                 )
 
         assert len(mark_calls) == 1
-        assert stale.needs_reauth is True
+        assert mark_calls[0][0] is integration

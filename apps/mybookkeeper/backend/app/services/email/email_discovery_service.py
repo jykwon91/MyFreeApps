@@ -75,7 +75,7 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
                 list_new_email_ids, service, processed_ids, label=label
             )
         except RefreshError as exc:
-            await integration_repo.mark_needs_reauth(
+            await integration_repo.mark_needs_reauth_if_unchanged(
                 db, integration, repr(exc)[:200], datetime.now(timezone.utc)
             )
             await _record_auth_expired_sync_log(db, ctx)
@@ -87,7 +87,7 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
         except HttpError as exc:
             status = getattr(getattr(exc, "resp", None), "status", None)
             if status == 401:
-                await integration_repo.mark_needs_reauth(
+                await integration_repo.mark_needs_reauth_if_unchanged(
                     db, integration, f"HttpError 401: {exc!r}"[:200], datetime.now(timezone.utc)
                 )
                 await _record_auth_expired_sync_log(db, ctx)
@@ -130,7 +130,7 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
                     await asyncio.to_thread(list_email_document_sources, service, message_id),
                 )
             except RefreshError as exc:
-                await integration_repo.mark_needs_reauth(
+                await integration_repo.mark_needs_reauth_if_unchanged(
                     db, integration, repr(exc)[:200], datetime.now(timezone.utc)
                 )
                 await sync_log_repo.mark_completed(db, log, "failed", error=GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR)
@@ -142,7 +142,7 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
             except HttpError as exc:
                 status = getattr(getattr(exc, "resp", None), "status", None)
                 if status == 401:
-                    await integration_repo.mark_needs_reauth(
+                    await integration_repo.mark_needs_reauth_if_unchanged(
                         db, integration, f"HttpError 401: {exc!r}"[:200], datetime.now(timezone.utc)
                     )
                     await sync_log_repo.mark_completed(db, log, "failed", error=GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR)

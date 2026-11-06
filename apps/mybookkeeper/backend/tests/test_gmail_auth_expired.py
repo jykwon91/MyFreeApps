@@ -58,6 +58,10 @@ async def test_discover_raises_gmail_auth_expired_on_refresh_error() -> None:
     with (
         patch("app.services.email.email_discovery_service.unit_of_work", fake_uow),
         patch(
+            "app.services.email.email_discovery_service.integration_repo.mark_needs_reauth_if_unchanged",
+            new=AsyncMock(return_value=True),
+        ),
+        patch(
             "app.services.email.email_discovery_service.integration_repo.get_by_org_and_provider",
             new=AsyncMock(return_value=fake_integration),
         ),
@@ -207,6 +211,7 @@ async def test_discovery_sets_needs_reauth_on_refresh_error() -> None:
 
     async def fake_mark_needs_reauth(_db, integration, error, failed_at):
         mark_reauth_calls.append((integration, error, failed_at))
+        return True
 
     with (
         patch("app.services.email.email_discovery_service.unit_of_work", fake_uow),
@@ -255,7 +260,7 @@ async def test_discovery_sets_needs_reauth_on_refresh_error() -> None:
             new=AsyncMock(),
         ),
         patch(
-            "app.services.email.email_discovery_service.integration_repo.mark_needs_reauth",
+            "app.services.email.email_discovery_service.integration_repo.mark_needs_reauth_if_unchanged",
             new=fake_mark_needs_reauth,
         ),
     ):

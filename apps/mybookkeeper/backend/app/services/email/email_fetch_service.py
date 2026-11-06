@@ -119,11 +119,9 @@ async def _fetch_next_pending(ctx: RequestContext) -> FetchResult:
             ctx.organization_id, item_id, exc,
         )
         async with unit_of_work() as db:
-            integration = await integration_repo.get_by_org_and_provider(db, ctx.organization_id, "gmail")
-            if integration:
-                await integration_repo.mark_needs_reauth(
-                    db, integration, repr(exc)[:200], datetime.now(timezone.utc)
-                )
+            await integration_repo.mark_needs_reauth_if_unchanged(
+                db, integration, repr(exc)[:200], datetime.now(timezone.utc)
+            )
             item_ref = await email_queue_repo.get_by_id(db, item_id)
             if item_ref:
                 await email_queue_repo.mark_status(db, item_ref, "failed", error="Gmail auth expired")
@@ -137,11 +135,9 @@ async def _fetch_next_pending(ctx: RequestContext) -> FetchResult:
                 ctx.organization_id, item_id, status,
             )
             async with unit_of_work() as db:
-                integration = await integration_repo.get_by_org_and_provider(db, ctx.organization_id, "gmail")
-                if integration:
-                    await integration_repo.mark_needs_reauth(
-                        db, integration, f"HttpError 401: {exc!r}"[:200], datetime.now(timezone.utc)
-                    )
+                await integration_repo.mark_needs_reauth_if_unchanged(
+                    db, integration, f"HttpError 401: {exc!r}"[:200], datetime.now(timezone.utc)
+                )
                 item_ref = await email_queue_repo.get_by_id(db, item_id)
                 if item_ref:
                     await email_queue_repo.mark_status(db, item_ref, "failed", error="Gmail auth expired (401)")
