@@ -1,5 +1,7 @@
 import { PROFESSION, type Profession } from "@/games/wow-forever/data/professions/professionTypes";
 import { CRAFTING_PROFESSION, type CraftingProfession } from "@/games/wow-forever/types/crafting";
+import type { GatheringProfession } from "@/games/wow-forever/types/gathering/gatheringProfession";
+import type { SecondaryProfession } from "@/games/wow-forever/types/secondaryProfession";
 
 /** Every guide on the Professions page. */
 export type GuideProfession = Profession | CraftingProfession;
@@ -22,8 +24,14 @@ export const CRAFTING_GROUP: ProfessionGroup<CraftingProfession> = {
   ],
 };
 
+/** Gathering professions — main professions too, so they count toward your two. */
+export const GATHERING_GROUP: ProfessionGroup<GatheringProfession> = {
+  label: "Gathering",
+  options: [{ id: PROFESSION.mining, label: "Mining" }],
+};
+
 /** Secondary professions — anyone can learn all of them. First Aid is one, though its guide is a crafting guide. */
-export const SECONDARY_GROUP: ProfessionGroup<GuideProfession> = {
+export const SECONDARY_GROUP: ProfessionGroup<SecondaryProfession | typeof CRAFTING_PROFESSION.firstaid> = {
   label: "Secondary",
   options: [
     { id: PROFESSION.cooking, label: "Cooking" },
@@ -32,5 +40,8 @@ export const SECONDARY_GROUP: ProfessionGroup<GuideProfession> = {
   ],
 };
 
+/** The picker's groups, in order. */
+export const PROFESSION_GROUPS: readonly ProfessionGroup<GuideProfession>[] = [CRAFTING_GROUP, GATHERING_GROUP, SECONDARY_GROUP];
+
 /** Under the picker. Classic Era's rule — Forever hasn't said otherwise yet. */
-export const TWO_PROFESSIONS_NOTE = "You can learn two crafting professions (Classic rule), plus every secondary one.";
+export const TWO_PROFESSIONS_NOTE = "You can learn two main professions, crafting or gathering (Classic rule), plus every secondary one.";

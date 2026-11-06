@@ -1,6 +1,10 @@
+import type { ConfidenceBasis } from "@/games/wow-forever/types/confidenceBasis";
+import { GATHERING_PROFESSION } from "@/games/wow-forever/types/gathering/gatheringProfession";
+import { SECONDARY_PROFESSION, type SecondaryProfession } from "@/games/wow-forever/types/secondaryProfession";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 
-export const PROFESSION = { cooking: "cooking", fishing: "fishing" } as const;
+/** Professions with hand-written guides: the secondary ones and the gathering ones (crafting ones are `CRAFTING_PROFESSION`). */
+export const PROFESSION = { ...SECONDARY_PROFESSION, ...GATHERING_PROFESSION } as const;
 export type Profession = (typeof PROFESSION)[keyof typeof PROFESSION];
 
 /**
@@ -64,17 +68,11 @@ export interface TrainerNpc {
   y: number;
 }
 
-export interface CityTrainers {
-  city: string;
-  faction: PlayerFaction;
-  cooking: TrainerNpc;
-  fishing: TrainerNpc;
-}
+/** A capital city's trainer for each secondary profession. */
+export type CityTrainers = { city: string; faction: PlayerFaction } & Readonly<Record<SecondaryProfession, TrainerNpc>>;
 
-export interface TownTrainers {
-  cooking: readonly TrainerNpc[];
-  fishing: readonly TrainerNpc[];
-}
+/** One faction's town trainers, per secondary profession. */
+export type TownTrainers = Readonly<Record<SecondaryProfession, readonly TrainerNpc[]>>;
 
 export interface FishRecipe {
   skill: number;
@@ -84,4 +82,6 @@ export interface FishRecipe {
 export interface ForeverChange {
   text: string;
   confidence: Confidence;
+  /** Why an unconfirmed change is listed — picks its chip's wording. No basis = "Unconfirmed". */
+  basis?: ConfidenceBasis;
 }

@@ -1,5 +1,6 @@
 import { AlertBox } from "@platform/ui";
 import UnconfirmedChip from "@/games/wow-forever/components/professions/UnconfirmedChip";
+import { confidenceChipLabel } from "@/games/wow-forever/lib/confidenceChipLabel";
 import { FOREVER_CHANGES } from "@/games/wow-forever/data/professions/foreverChanges";
 import { PROFESSIONS_DATA_STATUS } from "@/games/wow-forever/data/professions/professionsStatus";
 import type { ForeverChange } from "@/games/wow-forever/data/professions/professionTypes";
@@ -10,7 +11,7 @@ export default function ForeverChangesBox({ changes = FOREVER_CHANGES }: { chang
       <ul className="list-disc pl-5 space-y-1">
         {changes.map((c) => (
           <li key={c.text}>
-            {c.text} {c.confidence === "unconfirmed" ? <UnconfirmedChip /> : null}
+            {c.text} {c.confidence === "unconfirmed" ? <UnconfirmedChip label={confidenceChipLabel(c.basis)} /> : null}
           </li>
         ))}
       </ul>

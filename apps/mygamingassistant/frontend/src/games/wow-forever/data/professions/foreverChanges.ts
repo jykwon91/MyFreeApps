@@ -1,4 +1,5 @@
 import type { ForeverChange } from "@/games/wow-forever/data/professions/professionTypes";
+import type { SecondaryProfession } from "@/games/wow-forever/types/secondaryProfession";
 
 export const FOREVER_CHANGES: readonly ForeverChange[] = [
   { text: "Cooked food's Well Fed buff also gives +5% experience from kills — eat before you fight.", confidence: "confirmed" },
@@ -8,6 +9,12 @@ export const FOREVER_CHANGES: readonly ForeverChange[] = [
   { text: "Cooking and Fishing teach camp objects: Basic, Journeyman and Expert Campfires, plus a Fishing Bowl, Fishing Rack and Fishing Hut.", confidence: "confirmed" },
   { text: "The first campsite items come at skill 20, from starter-zone quests or a trainer. Those needing 140 or more drop in dungeons and raids.", confidence: "confirmed" },
 ];
+
+/** Each secondary guide's "What's different in Forever" — Cooking and Fishing share one list. */
+export const SECONDARY_FOREVER_CHANGES: Readonly<Record<SecondaryProfession, readonly ForeverChange[]>> = {
+  cooking: FOREVER_CHANGES,
+  fishing: FOREVER_CHANGES,
+};
 
 /** Recipe difficulty colors, as shown in the Cooking window. */
 export const SKILL_COLORS = [

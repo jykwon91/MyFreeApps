@@ -23,6 +23,7 @@ from scripts.wow_professions.crafts import (
     _changes,
     build_recipes,
     forever_trainer_skill,
+    mining_records,
     smelting_for,
 )
 
@@ -353,6 +354,43 @@ class TestSmeltingFor:
     def test_no_classic_trainer_skill_falls_back_to_yellow(self) -> None:
         smelts = smelting_for([{"reagents": [{"id": IRON_BAR, "count": 1}]}], self.MINING, {})
         assert [(s["spell"], s["skill"]) for s in smelts] == [(3307, 130)]
+
+
+class TestMiningRecords:
+    CAMP = {**_smelt(1230161, 2835, 279960, 20), "name": "Lodestone"}
+    TRACKING = {"spell": 2580, "name": "Find Minerals", "yellow": 0, "grey": 0, "reagents": [], "learn": {"source": "start", "skill": 1}}
+
+    def test_splits_forge_smelts_from_camp_items_and_drops_what_makes_nothing(self) -> None:
+        mining = [*TestSmeltingFor.MINING, self.CAMP, self.TRACKING]
+        focus = {2657: "Forge", 3304: "Forge", 2659: "Forge", 3307: "Black Forge"}
+        out = mining_records(mining, {3304: 50, 2659: 65}, focus)
+        assert [(s["spell"], s["skill"], s["focus"]) for s in out["smelting"]] == [
+            (2657, 1, "Forge"), (3304, 50, "Forge"), (2659, 65, "Forge"), (3307, 130, "Black Forge"),
+        ]
+        assert [(c["name"], c["skill"]) for c in out["camp"]] == [("Lodestone", 20)]
+        assert "focus" not in out["camp"][0]
+
+
+@pytest.fixture(scope="module")
+def mining_file() -> dict:
+    return json.loads((CRAFTING_DATA / "mining.json").read_text(encoding="utf-8"))
+
+
+class TestCommittedMining:
+    """Forever client facts the Mining guide states (1.60.1.70790)."""
+
+    def test_every_smelt_has_its_forge(self, mining_file: dict) -> None:
+        by_name = {s["name"]: s for s in mining_file["smelting"]}
+        assert by_name["Smelt Copper"]["skill"] == 1 and by_name["Smelt Copper"]["focus"] == "Forge"
+        assert by_name["Smelt Dark Iron"]["focus"] == "Black Forge"
+        assert by_name["Smelt Heavy Thorium"]["focus"] == "Molten Foundry"
+        assert by_name["Smelt Heavy Thorium"]["yellow"] == 300
+        azerothium = by_name["Smelt Azerothium"]
+        assert azerothium["yellow"] == 275 and azerothium["focus"] == "Forge"
+        assert sorted((r["name"], r["count"]) for r in azerothium["reagents"]) == [("Coal", 1), ("Pitchblende", 2)]
+
+    def test_camp_items(self, mining_file: dict) -> None:
+        assert [(c["name"], c["yellow"]) for c in mining_file["camp"]] == [("Lodestone", 20), ("Rock Garden", 140), ("Molten Foundry", 300)]
 
 
 class TestSpecializations:

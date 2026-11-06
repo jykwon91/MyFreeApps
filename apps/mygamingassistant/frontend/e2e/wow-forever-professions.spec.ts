@@ -141,7 +141,7 @@ test("the picker groups crafting and secondary professions, one choice across bo
   await expect(crafting.getByRole("radio", { name: "Enchanting" })).toBeChecked();
   await expect(secondary.getByRole("radio", { checked: true })).toHaveCount(0);
   await expect(crafting.getByRole("radio")).toHaveText(["Alchemy", "Blacksmithing", "Enchanting", "Engineering", "Leatherworking", "Tailoring"]);
-  await expect(page.getByText(/You can learn two crafting professions \(Classic rule\)/)).toBeVisible();
+  await expect(page.getByText(/You can learn two main professions, crafting or gathering \(Classic rule\)/)).toBeVisible();
 
   await secondary.getByRole("radio", { name: "Fishing" }).click();
   await expect(page).toHaveURL(/\?p=fishing$/);
