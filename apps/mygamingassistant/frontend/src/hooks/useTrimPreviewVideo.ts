@@ -63,6 +63,14 @@ export function useTrimPreviewVideo({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isSeeking, setIsSeeking] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [prevClipUrl, setPrevClipUrl] = useState(clipUrl);
+
+  // Reset error state whenever the URL rotates (presigned-URL refresh).
+  // Uses setState-during-render (React-idiomatic getDerivedStateFromProps equivalent).
+  if (prevClipUrl !== clipUrl) {
+    setPrevClipUrl(clipUrl);
+    setHasError(false);
+  }
 
   // ---------------------------------------------------------------------
   // Track seek state + error state for the lifetime of the video element.
@@ -85,13 +93,6 @@ export function useTrimPreviewVideo({
       video.removeEventListener("error", onError);
     };
   }, []);
-
-  // ---------------------------------------------------------------------
-  // Reset error state whenever the URL rotates (presigned-URL refresh).
-  // ---------------------------------------------------------------------
-  useEffect(() => {
-    setHasError(false);
-  }, [clipUrl]);
 
   // ---------------------------------------------------------------------
   // Drag: snap to the active thumb's offset, pause. Re-runs on every drag

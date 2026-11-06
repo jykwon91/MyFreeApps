@@ -46,31 +46,33 @@ export function ClipView({ clipUrl, posterUrl, title, label = "THROW", videoStyl
   // sticky-armed previously). Disarming detaches the src so the browser can
   // release decoded frames + the underlying HTTP connection — critical for
   // grids that mount dozens of looping H.264 streams.
-  const [armed, setArmed] = useState(false);
+  // Degrade where IntersectionObserver is absent (old webviews / jsdom):
+  // start armed + in-view so muted autoplay carries it.
+  const noObserver = typeof IntersectionObserver === "undefined";
+  const [armed, setArmed] = useState(noObserver);
   // True while the tile is on screen — drives play/pause in a separate effect
   // so play() never runs before React has committed the src to the DOM.
-  const [inView, setInView] = useState(false);
+  const [inView, setInView] = useState(noObserver);
   const [loadFailed, setLoadFailed] = useState(false);
 
   // A new clipUrl (re-processed clip / rotated presigned URL) is a different
   // clip — restart the lazy-load + error cycle.
-  useEffect(() => {
+  // Uses setState-during-render (React-idiomatic getDerivedStateFromProps equivalent).
+  const [prevClipUrl, setPrevClipUrl] = useState(clipUrl);
+  if (prevClipUrl !== clipUrl) {
+    setPrevClipUrl(clipUrl);
     setArmed(false);
     setLoadFailed(false);
-  }, [clipUrl]);
+  }
 
   // Observer lifecycle ONLY. disconnect() (not unobserve) is the correct
   // teardown — it covers React Strict Mode's mount→unmount→remount.
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-    // Degrade where IntersectionObserver is absent (old webviews / jsdom):
-    // arm + treat as in view, let muted autoplay carry it.
-    if (typeof IntersectionObserver === "undefined") {
-      setArmed(true);
-      setInView(true);
-      return;
-    }
+    // Already armed/in-view when IntersectionObserver is absent (initialised
+    // above via lazy useState) — no setState needed here, just skip setup.
+    if (noObserver) return;
     const obs = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
@@ -91,6 +93,8 @@ export function ClipView({ clipUrl, posterUrl, title, label = "THROW", videoStyl
     );
     obs.observe(el);
     return () => obs.disconnect();
+    // noObserver is a compile-time constant (typeof check); eslint exhaustive-deps doesn't flag it
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Play/pause AFTER src is committed (depends on armed+inView). autoPlay

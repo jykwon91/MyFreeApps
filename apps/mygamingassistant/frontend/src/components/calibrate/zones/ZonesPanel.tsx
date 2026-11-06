@@ -67,14 +67,11 @@ export default function ZonesPanel({
   const [drawingPoints, setDrawingPoints] = useState<Array<[number, number]>>([]);
 
   // Auto-select first zone if nothing is selected.
-  useEffect(() => {
-    if (selectedSlug || zones.length === 0) return;
-    setSelectedSlug(zones[0].slug);
-  }, [zones, selectedSlug]);
+  const effectiveSlug = selectedSlug ?? zones[0]?.slug ?? null;
 
   const selectedZone = useMemo(
-    () => zones.find((z) => z.slug === selectedSlug) ?? null,
-    [zones, selectedSlug],
+    () => zones.find((z) => z.slug === effectiveSlug) ?? null,
+    [zones, effectiveSlug],
   );
 
   const updateZonePoints = useCallback(
@@ -199,7 +196,7 @@ export default function ZonesPanel({
         <ZoneList
           zones={zones}
           loadedZones={loadedZones}
-          selectedSlug={selectedSlug}
+          selectedSlug={effectiveSlug}
           onSelect={setSelectedSlug}
           onNewZone={startNewPolygon}
         />
@@ -238,7 +235,7 @@ export default function ZonesPanel({
               backgroundSrc={backgroundSrc}
               backgroundIsFallback={backgroundIsFallback}
               zones={zones}
-              selectedSlug={selectedSlug}
+              selectedSlug={effectiveSlug}
               mode={mode}
               drawingSlug={drawingSlug}
               drawingPoints={drawingPoints}

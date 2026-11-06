@@ -70,23 +70,20 @@ export default function LineupListRow({
   const [expanded, setExpanded] = useState(false);
   const rowRef = useRef<HTMLDivElement>(null);
 
-  // When this row becomes the edited lineup, scroll it into the middle of the
-  // viewport so the operator's eye lands on it right after the editor panel
-  // opens on the left. Only fires on the isEditing→true transition.
-  useEffect(() => {
-    if (isEditing) {
-      rowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  }, [isEditing]);
+  // When a pin click focuses this lineup (?lineup=<id>), open it immediately.
+  // Uses setState-during-render (React-idiomatic getDerivedStateFromProps equivalent).
+  const [prevIsFocused, setPrevIsFocused] = useState(isFocused);
+  if (prevIsFocused !== isFocused && isFocused) {
+    setPrevIsFocused(isFocused);
+    setExpanded(true);
+  }
 
-  // When a pin click focuses this lineup (?lineup=<id>), open it and bring it
-  // into view — the "navigate to the lineup and expanded" pin-click behaviour.
+  // Scroll into view on edit or focus transitions (no setState — pure DOM side effect).
   useEffect(() => {
-    if (isFocused) {
-      setExpanded(true);
+    if (isEditing || isFocused) {
       rowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-  }, [isFocused]);
+  }, [isEditing, isFocused]);
 
   const target = lineup.target_zone?.name ?? "Unknown";
   const stand = lineup.stand_zone?.name ?? null;

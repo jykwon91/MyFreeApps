@@ -17,7 +17,7 @@
  * cleanly. After a successful save the caller MUST call `markSaved()` to
  * reset the baseline and clear localStorage.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { MapZone } from "@/types/game";
 import type { PointObject } from "@/lib/zonePolygon";
 
@@ -138,13 +138,13 @@ export function useZoneEditorDraft({
   const [ready, setReady] = useState(false);
   const [restoredFromStorage, setRestoredFromStorage] = useState(false);
 
-  // Initialize once when both mapId and serverZones are available.
-  // useRef guards against double-init on re-renders.
-  const initRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!mapId || !serverZones) return;
-    if (initRef.current === mapId) return;
-    initRef.current = mapId;
+  // Initialize once when both mapId and serverZones are available, or when
+  // mapId changes (navigating to a different map). Uses setState-during-render
+  // (React-idiomatic getDerivedStateFromProps equivalent) so the init logic
+  // doesn't live inside an effect body. All batched in one render cycle.
+  const [initedMapId, setInitedMapId] = useState<string | null>(null);
+  if (mapId && serverZones && initedMapId !== mapId) {
+    setInitedMapId(mapId);
 
     const server = zonesToMap(serverZones);
     const stored = readStoredDraft(mapId);
@@ -164,7 +164,7 @@ export function useZoneEditorDraft({
     }
     setBaseline(server);
     setReady(true);
-  }, [mapId, serverZones]);
+  }
 
   // Persist to localStorage on every change (but not during initial hydration).
   useEffect(() => {
