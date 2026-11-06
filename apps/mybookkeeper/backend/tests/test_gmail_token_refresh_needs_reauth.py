@@ -385,6 +385,7 @@ class TestSendPathNeedsReauth:
                     to_address="tenant@example.com",
                     subject="Test",
                     body="Hello",
+                    message_id_header="<reply-1@mybookkeeper.app>",
                 )
 
         assert len(mark_calls) == 1, "mark_needs_reauth must be called for RefreshError"
@@ -417,6 +418,7 @@ class TestSendPathNeedsReauth:
                     to_address="tenant@example.com",
                     subject="Test",
                     body="Hello",
+                    message_id_header="<reply-1@mybookkeeper.app>",
                 )
 
         assert len(mark_calls) == 1, "mark_needs_reauth must be called for 401 HttpError"

@@ -31,6 +31,7 @@ from app.models.calendar.calendar_email_review_queue import CalendarEmailReviewQ
 from app.models.calendar.calendar_listing_blocklist import CalendarListingBlocklist
 from app.models.inquiries.inquiry import Inquiry
 from app.models.inquiries.inquiry_message import InquiryMessage
+from app.models.inquiries.inquiry_reply_send import InquiryReplySend
 from app.models.inquiries.inquiry_event import InquiryEvent
 from app.models.inquiries.inquiry_spam_assessment import InquirySpamAssessment
 from app.models.inquiries.reply_template import ReplyTemplate

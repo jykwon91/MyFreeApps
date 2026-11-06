@@ -11,7 +11,7 @@ Status transitions:
   pending  → dismissed  (host explicitly skipped this receipt)
 
 A row stays ``sending`` when Gmail's answer was unknown. The next send attempt
-after ``RECEIPT_SEND_CLAIM_STALE_AFTER`` looks the email up in Gmail by
+after ``GMAIL_SEND_CLAIM_STALE_AFTER`` looks the email up in Gmail by
 ``send_message_id`` and either marks it sent or releases the claim.
 
 The row is NEVER deleted — it is the audit record for whether a receipt

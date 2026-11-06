@@ -17,7 +17,7 @@ Flow for ``send_receipt``:
      If that fails, the email went out: the row stays ``sending``.
 
 Settling a ``sending`` row (step 2): while the claim is younger than
-``RECEIPT_SEND_CLAIM_STALE_AFTER`` the attempt that holds it may still be
+``GMAIL_SEND_CLAIM_STALE_AFTER`` the attempt that holds it may still be
 running, so the new request is refused. After that, Gmail is searched for the
 stored Message-ID. Found → the row is marked sent. Not found → the claim is
 released and this request sends. A failed search changes nothing.
@@ -55,6 +55,7 @@ from app.services.email.exceptions import (
     GmailSendOutcomeUnknownError,
     GmailSendScopeError,
 )
+from app.services.email.send_claim_staleness import is_send_claim_stale
 from app.services.leases.exceptions import (
     ReceiptAlreadySentError,
     ReceiptDismissedError,
@@ -72,7 +73,6 @@ from app.services.leases.receipt_formatting import (
     resolve_landlord_name,
 )
 from app.services.leases.receipt_pdf_service import ReceiptData, generate_receipt_pdf
-from app.services.leases.receipt_send_constants import RECEIPT_SEND_CLAIM_STALE_AFTER
 from app.services.leases.receipt_send_context import ReceiptSendContext
 from app.services.leases.receipt_send_readiness import (
     blocker_error,
@@ -227,9 +227,7 @@ async def _settle_earlier_attempt(
     send_message_id = receipt.send_message_id
     if claimed_at is None or send_message_id is None:
         raise RuntimeError(f"Receipt {receipt.id} is sending without a claim")
-    if claimed_at.tzinfo is None:
-        claimed_at = claimed_at.replace(tzinfo=_dt.timezone.utc)
-    if _now() - claimed_at < RECEIPT_SEND_CLAIM_STALE_AFTER:
+    if not is_send_claim_stale(claimed_at, _now()):
         raise ReceiptSendInProgressError("This receipt is being sent right now.")
 
     attachment_filename: str | None = None

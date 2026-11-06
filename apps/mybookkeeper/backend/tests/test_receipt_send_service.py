@@ -22,8 +22,8 @@ from app.models.leases.signed_lease_attachment import SignedLeaseAttachment
 from app.models.organization.organization import Organization
 from app.models.user.user import User
 from app.repositories.leases import pending_rent_receipt_repo
-from app.services.email import gmail_attachment_send_service
-from app.services.email.constants import APP_SENT_RECEIPT_FILTER_REASON
+from app.services.email import gmail_attachment_send_service, gmail_sent_lookup
+from app.services.email.constants import APP_SENT_RECEIPT_FILTER_REASON, GMAIL_SEND_CLAIM_STALE_AFTER
 from app.services.email.exceptions import (
     GmailReauthRequiredError,
     GmailSendError,
@@ -40,7 +40,6 @@ from app.services.leases.exceptions import (
     ReceiptSendUnconfirmedError,
     ReceiptSentNotRecordedError,
 )
-from app.services.leases.receipt_send_constants import RECEIPT_SEND_CLAIM_STALE_AFTER
 from tests.receipt_seed import PERIOD_END, PERIOD_START
 from tests.receipt_seed import seed_receipt as _seed
 
@@ -76,7 +75,7 @@ async def _count(db: AsyncSession, model: type) -> int:
 
 
 async def _age_claim(db: AsyncSession, txn_id: uuid.UUID) -> None:
-    old = _dt.datetime.now(_dt.timezone.utc) - RECEIPT_SEND_CLAIM_STALE_AFTER - _dt.timedelta(minutes=1)
+    old = _dt.datetime.now(_dt.timezone.utc) - GMAIL_SEND_CLAIM_STALE_AFTER - _dt.timedelta(minutes=1)
     await db.execute(
         update(PendingRentReceipt)
         .where(PendingRentReceipt.transaction_id == txn_id)
@@ -481,10 +480,10 @@ async def test_stale_send_found_by_its_attachment_is_marked_sent(
     service = MagicMock()
     service.users.return_value.messages.return_value.list = _list
     monkeypatch.setattr(
-        gmail_attachment_send_service, "get_gmail_service",
+        gmail_sent_lookup, "get_gmail_service",
         lambda *_: (service, MagicMock(token="tok")),
     )
-    monkeypatch.setattr(gmail_attachment_send_service, "persist_refreshed_token", AsyncMock())
+    monkeypatch.setattr(gmail_sent_lookup, "persist_refreshed_token", AsyncMock())
 
     with pytest.raises(ReceiptAlreadySentError):
         await _send(org, user, txn_id)

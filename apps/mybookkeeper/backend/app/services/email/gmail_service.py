@@ -2,7 +2,6 @@ import base64
 import logging
 import re
 from email.message import EmailMessage
-from email.utils import make_msgid
 from pathlib import Path
 from typing import TypedDict
 
@@ -11,7 +10,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_httplib2 import AuthorizedHttp
 from googleapiclient.discovery import build
 from app.core.config import settings
-from app.services.email.constants import GMAIL_HTTP_TIMEOUT_SECONDS, GMAIL_MESSAGE_ID_DOMAIN
+from app.services.email.constants import GMAIL_HTTP_TIMEOUT_SECONDS
 from app.services.email.gmail_credentials import build_gmail_credentials
 from app.services.email.exceptions import GmailSendScopeError
 from app.services.email.gmail_request_executor import send_raw_gmail_message
@@ -334,13 +333,16 @@ async def send_message(
     to_address: str,
     subject: str,
     body: str,
+    message_id_header: str,
     in_reply_to_message_id: str | None = None,
 ) -> str:
     """Send a plaintext email via Gmail API on behalf of the host.
 
     Builds an RFC 5322 message via ``email.message.EmailMessage`` (which
-    handles header folding, encoding, and Message-ID generation correctly),
-    base64url-encodes it, and POSTs to ``users.messages.send``.
+    handles header folding and encoding correctly), base64url-encodes it, and
+    POSTs to ``users.messages.send``. The caller supplies the RFC 822
+    ``Message-ID`` so it can find the message again (``gmail_sent_lookup``) if
+    the outcome is unknown.
 
     Threading: when ``in_reply_to_message_id`` is provided the outbound
     message gets ``In-Reply-To`` and ``References`` headers so Gmail (and
@@ -365,7 +367,7 @@ async def send_message(
     message["From"] = from_address
     message["To"] = to_address
     message["Subject"] = subject
-    message["Message-ID"] = make_msgid(domain=GMAIL_MESSAGE_ID_DOMAIN)
+    message["Message-ID"] = message_id_header
     if in_reply_to_message_id:
         # Both headers are needed per RFC 5322 §3.6.4 — In-Reply-To handles
         # the immediate parent, References preserves the chain for clients

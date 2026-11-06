@@ -503,6 +503,8 @@
         "test_inquiry_audit_masking.py",
         "test_inquiry_reply_routes.py",
         "test_inquiry_reply_service.py",
+        "test_inquiry_reply_claim.py",
+        "test_send_claim_staleness.py",
         "test_inquiry_spam_scorer.py",
         "test_disposable_email_domains.py",
         "test_public_inquiry_service.py",
@@ -1111,6 +1113,7 @@
         "test_receipt_list_service.py",
         "test_receipt_readiness_matches_api_client.py",
         "test_receipt_send_service.py",
+        "test_send_claim_staleness.py",
         "test_receipt_period_resolver.py"
       ],
       "frontend_tests": [

@@ -30,6 +30,24 @@ from app.services.inquiries import (
     public_inquiry_service,
     reply_template_service,
 )
+from app.services.inquiries.reply_exceptions import (
+    InquiryReplyAuthExpiredError,
+    InquiryReplyInProgressError,
+    InquiryReplyMissingIntegrationError,
+    InquiryReplyMissingRecipientError,
+    InquiryReplyMissingSendScopeError,
+    InquiryReplyRequestIdReusedError,
+    InquiryReplySendFailedError,
+    InquiryReplySentNotRecordedError,
+    InquiryReplyUnconfirmedError,
+)
+from app.services.inquiries.reply_send_error_details import (
+    REPLY_GMAIL_REAUTH_REQUIRED,
+    REPLY_REQUEST_ID_REUSED,
+    REPLY_SEND_IN_PROGRESS,
+    REPLY_SEND_UNCONFIRMED,
+    REPLY_SENT_NOT_RECORDED,
+)
 from app.db.session import AsyncSessionLocal
 
 router = APIRouter(prefix="/inquiries", tags=["inquiries"])
@@ -201,24 +219,37 @@ async def send_reply(
     payload: InquiryReplyRequest,
     ctx: RequestContext = Depends(require_write_access),
 ) -> InquiryMessageResponse:
-    """Send a reply to an inquiry via the host's connected Gmail."""
+    """Send a reply to an inquiry via the host's connected Gmail.
+
+    Idempotent per ``client_request_id``: a repeat returns the recorded message
+    once the reply is sent, and never emails the inquirer a second time.
+    """
     try:
         return await inquiry_reply_service.send_reply(
             ctx.organization_id, ctx.user_id, inquiry_id, payload,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Inquiry not found") from exc
-    except inquiry_reply_service.InquiryReplyMissingIntegrationError as exc:
+    except (
+        InquiryReplyMissingIntegrationError,
+        InquiryReplyMissingSendScopeError,
+        InquiryReplyMissingRecipientError,
+    ) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except inquiry_reply_service.InquiryReplyMissingSendScopeError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except inquiry_reply_service.InquiryReplyMissingRecipientError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except inquiry_reply_service.InquiryReplyAuthExpiredError as exc:
-        # 503 with detail "gmail_reauth_required" — frontend checks this to
-        # show the reconnect prompt. The flag has already been set on the
-        # Integration row at this point.
-        raise HTTPException(status_code=503, detail="gmail_reauth_required") from exc
-    except inquiry_reply_service.InquiryReplySendFailedError as exc:
-        # 502 — upstream Gmail rejected; the host can retry.
+    except InquiryReplyRequestIdReusedError as exc:
+        raise HTTPException(status_code=422, detail=REPLY_REQUEST_ID_REUSED) from exc
+    except InquiryReplyInProgressError as exc:
+        raise HTTPException(status_code=409, detail=REPLY_SEND_IN_PROGRESS) from exc
+    except InquiryReplyAuthExpiredError as exc:
+        # The frontend checks this detail to show the reconnect prompt. The
+        # flag has already been set on the Integration row at this point.
+        raise HTTPException(status_code=503, detail=REPLY_GMAIL_REAUTH_REQUIRED) from exc
+    except InquiryReplySendFailedError as exc:
+        # 502 — Gmail definitely refused; nothing was sent, the host can retry.
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except InquiryReplyUnconfirmedError as exc:
+        # 504, not 502: Gmail may have sent it. Older phone builds read 502 as
+        # "nothing was sent" and anything else 5xx as "might have sent".
+        raise HTTPException(status_code=504, detail=REPLY_SEND_UNCONFIRMED) from exc
+    except InquiryReplySentNotRecordedError as exc:
+        raise HTTPException(status_code=500, detail=REPLY_SENT_NOT_RECORDED) from exc

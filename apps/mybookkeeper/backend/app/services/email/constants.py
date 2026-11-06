@@ -1,5 +1,7 @@
 """Constants shared across the email service package."""
 
+import datetime as _dt
+
 GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR = "Gmail connection expired — please disconnect and reconnect"
 GMAIL_AUTH_EXPIRED_API_DETAIL = "Gmail connection expired, please reconnect"
 
@@ -74,6 +76,11 @@ APP_SENT_INQUIRY_REPLY_FILTER_REASON = "app_sent_inquiry_reply"
 # block forever and still deliver long after the caller gave up.
 GMAIL_HTTP_TIMEOUT_SECONDS = 60
 GMAIL_MESSAGE_ID_DOMAIN = "mybookkeeper.app"
+# How long a ``sending`` claim (rent receipt, inquiry reply) is left alone before
+# a new attempt looks the email up in Gmail and settles the claim. Far longer
+# than any single Gmail request can take (``GMAIL_HTTP_TIMEOUT_SECONDS``), so
+# the attempt that took the claim is finished before anyone looks.
+GMAIL_SEND_CLAIM_STALE_AFTER = _dt.timedelta(minutes=15)
 GMAIL_SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
 # 403 reasons that mean "slow down", not "missing permission".
 GMAIL_RATE_LIMIT_REASONS = frozenset({"rateLimitExceeded", "userRateLimitExceeded", "dailyLimitExceeded"})

@@ -18,15 +18,19 @@ from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
 from googleapiclient.errors import HttpError
 
-from app.services.email import gmail_attachment_send_service, gmail_request_executor, gmail_service
-from app.services.email.constants import GMAIL_HTTP_TIMEOUT_SECONDS, GMAIL_SEND_URL
+from app.services.email import (
+    gmail_attachment_send_service,
+    gmail_request_executor,
+    gmail_sent_lookup,
+    gmail_service,
+)
+from app.services.email.constants import GMAIL_HTTP_TIMEOUT_SECONDS, GMAIL_SEND_CLAIM_STALE_AFTER, GMAIL_SEND_URL
 from app.services.email.exceptions import (
     GmailReauthRequiredError,
     GmailSendError,
     GmailSendOutcomeUnknownError,
     GmailSendScopeError,
 )
-from app.services.leases.receipt_send_constants import RECEIPT_SEND_CLAIM_STALE_AFTER
 from tests.gmail_send_fakes import fake_gmail_post, gmail_response
 
 MESSAGE_ID = "<receipt-attempt-1@mybookkeeper.app>"
@@ -267,10 +271,10 @@ def _service_whose_list(execute: Any, captured: dict[str, Any]) -> MagicMock:
 async def _find(service: MagicMock, *, attachment_filename: str | None = None) -> str | None:
     with (
         patch.object(
-            gmail_attachment_send_service, "get_gmail_service",
+            gmail_sent_lookup, "get_gmail_service",
             return_value=(service, MagicMock(token="t0")),
         ),
-        patch.object(gmail_attachment_send_service, "persist_refreshed_token", AsyncMock()),
+        patch.object(gmail_sent_lookup, "persist_refreshed_token", AsyncMock()),
     ):
         return await gmail_attachment_send_service.find_sent_message_id(
             _FakeIntegration(),
@@ -350,7 +354,7 @@ class TestFindSentMessage:
     @pytest.mark.asyncio
     async def test_401_marks_needs_reauth(self) -> None:
         mark = AsyncMock()
-        with patch.object(gmail_attachment_send_service, "mark_integration_needs_reauth", mark):
+        with patch.object(gmail_sent_lookup, "mark_integration_needs_reauth", mark):
             with pytest.raises(GmailReauthRequiredError):
                 await _find(_service_whose_list(_http_error(401), {}))
         mark.assert_awaited_once()
@@ -371,5 +375,5 @@ class TestClientTimeout:
     def test_stale_claim_window_far_exceeds_a_gmail_request(self) -> None:
         # A claim is only settled once the request that took it can't still
         # be talking to Gmail.
-        assert RECEIPT_SEND_CLAIM_STALE_AFTER.total_seconds() >= 10 * GMAIL_HTTP_TIMEOUT_SECONDS
+        assert GMAIL_SEND_CLAIM_STALE_AFTER.total_seconds() >= 10 * GMAIL_HTTP_TIMEOUT_SECONDS
 

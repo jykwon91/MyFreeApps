@@ -97,3 +97,15 @@ async def find_by_email_message_id(
         )
     )
     return result.scalar_one_or_none()
+
+
+async def get_for_inquiry(
+    db: AsyncSession, message_id: uuid.UUID, inquiry_id: uuid.UUID,
+) -> InquiryMessage | None:
+    result = await db.execute(
+        select(InquiryMessage).where(
+            InquiryMessage.id == message_id,
+            InquiryMessage.inquiry_id == inquiry_id,
+        )
+    )
+    return result.scalar_one_or_none()
