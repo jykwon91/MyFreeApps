@@ -1,8 +1,7 @@
 import type { InquiryMessage } from "@mybookkeeper/api-client/types/inquiry/inquiry-message";
 import type { Integration } from "@mybookkeeper/api-client/types/integration/integration";
 import type { ReplyBlock } from "../../types/ReplyBlock";
-import type { ReplyFailure } from "../../types/ReplyFailure";
-import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
+import type { ReplySendFailure } from "@mybookkeeper/api-client/types/inquiry/reply-send-failure";
 
 export const REPLY_BLOCK_WORDS: Record<ReplyBlock, string> = {
   noGmail: "Connect Gmail to send replies. That part happens on the website.",
@@ -11,13 +10,16 @@ export const REPLY_BLOCK_WORDS: Record<ReplyBlock, string> = {
   noEmailAddress: "This inquiry has no email address, so I can't send a reply. You can call instead.",
 };
 
-export const REPLY_FAILURE_WORDS: Record<ReplyFailure, string> = {
+export const REPLY_FAILURE_WORDS: Record<ReplySendFailure, string> = {
   gmailDisconnected: "Gmail disconnected. Reconnect on the website to send replies.",
   gmailConnection: "I couldn't send that. Check your Gmail connection on the website.",
   gmailRejected: "Gmail didn't accept that. Nothing was sent. Want me to try again?",
   gone: "I can't find that inquiry anymore.",
   viewOnly: "You have view-only access.",
+  noRecipient: "This inquiry has no email address, so I can't send a reply. You can call instead.",
   unsure: "I'm not sure that went through. Check your Gmail sent folder before sending again.",
+  notRecorded: "That went out, but I couldn't add it to this conversation. Don't send it again.",
+  inFlight: "I'm still sending an earlier copy of this reply. I won't send it twice.",
   refused: "I couldn't send that. Want to try again?",
 };
 
@@ -29,19 +31,6 @@ export function replyBlock(integrations: Integration[] | undefined, email: strin
   if (!gmail) return "noGmail";
   if (gmail.needs_reauth) return "gmailDisconnected";
   return gmail.has_send_scope === false ? "noSendPermission" : null;
-}
-
-export function replyFailure(error: unknown): ReplyFailure {
-  const status = httpStatus(error);
-  if (status === 403) return "viewOnly";
-  if (status === 404) return "gone";
-  const detail = (error as { data?: { detail?: unknown } } | null)?.data?.detail;
-  // The route's own refusals are sentences. A list is the request failing validation.
-  if (status === 422) return typeof detail === "string" ? "gmailConnection" : "refused";
-  if (status === 502) return "gmailRejected";
-  if (status === 503 && detail === "gmail_reauth_required") return "gmailDisconnected";
-  // No answer, or a server fault: Gmail may have sent it before things went wrong.
-  return status === undefined || status >= 500 ? "unsure" : "refused";
 }
 
 /** The server may have put a pet disclosure in front of what was typed, so this looks inside. */

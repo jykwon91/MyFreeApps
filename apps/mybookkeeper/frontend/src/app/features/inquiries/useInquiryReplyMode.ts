@@ -1,15 +1,10 @@
+import { REPLY_TAB } from "@/shared/lib/reply-tab";
 import type { InquiryReplyMode } from "@/shared/types/inquiry/inquiry-reply-mode";
-
-type ReconnectReason =
-  | "missing-integration"
-  | "missing-send-scope"
-  | "reauth-required"
-  | null;
-
-type ReplyTab = "template" | "custom";
+import type { ReplyReconnectReason } from "@/shared/types/inquiry/reply-reconnect-reason";
+import type { ReplyTab } from "@/shared/types/inquiry/reply-tab";
 
 interface UseInquiryReplyModeArgs {
-  reconnectReason: ReconnectReason;
+  reconnectReason: ReplyReconnectReason;
   tab: ReplyTab;
 }
 
@@ -26,6 +21,6 @@ export function useInquiryReplyMode({
   tab,
 }: UseInquiryReplyModeArgs): InquiryReplyMode {
   if (reconnectReason) return "reconnect";
-  if (tab === "template") return "template";
+  if (tab === REPLY_TAB.TEMPLATE) return "template";
   return "custom";
 }

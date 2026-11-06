@@ -14,11 +14,13 @@ import { WEB_BASE_URL } from "../../constants/api";
 import { REPLY_TEMPLATE_MESSAGES } from "../../constants/replyTemplates";
 import { REPLY_BODY_MAX_LENGTH, REPLY_BODY_MIN_HEIGHT, REPLY_CHECK_DELAYS_MS, REPLY_SUBJECT_MAX_LENGTH, WRITE_MY_OWN_OPTION } from "../../constants/replies";
 import type { ReplyBlock } from "../../types/ReplyBlock";
-import type { ReplyFailure } from "../../types/ReplyFailure";
+import type { ReplySendFailure } from "@mybookkeeper/api-client/types/inquiry/reply-send-failure";
+import { replyMightHaveSent } from "@mybookkeeper/api-client/utils/replyMightHaveSent";
+import { replySendFailure } from "@mybookkeeper/api-client/utils/replySendFailure";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { deleteReplyDraft } from "./replyDrafts";
-import { matchesRendered, REPLY_BLOCK_WORDS, REPLY_FAILURE_WORDS, replyArrived, replyBlock, replyFailure } from "./replyStatus";
+import { matchesRendered, REPLY_BLOCK_WORDS, REPLY_FAILURE_WORDS, replyArrived, replyBlock } from "./replyStatus";
 import { useOpenLink } from "./useOpenLink";
 import { useReplyDraft } from "./useReplyDraft";
 
@@ -37,7 +39,7 @@ export default function InquiryReplyScreen({ id }: { id: string }) {
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [rendered, setRendered] = useState<{ subject: string; body: string } | null>(null);
-  const [failure, setFailure] = useState<ReplyFailure | null>(null);
+  const [failure, setFailure] = useState<ReplySendFailure | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [mightHaveSent, setMightHaveSent] = useState(false);
   const [hasSent, setHasSent] = useState(false);
@@ -141,14 +143,12 @@ export default function InquiryReplyScreen({ id }: { id: string }) {
     try {
       await sendReply({ inquiryId: id, data: { template_id: draft.templateId, ...text } }).unwrap();
     } catch (error) {
-      const reason = replyFailure(error);
-      if (reason === "unsure") {
-        if (await hasReplyArrived(knownIds, text.body)) {
-          finish();
-          return;
-        }
-        setMightHaveSent(true);
+      const reason = replySendFailure(error);
+      if (reason === "unsure" && (await hasReplyArrived(knownIds, text.body))) {
+        finish();
+        return;
       }
+      if (replyMightHaveSent(reason)) setMightHaveSent(true);
       if (reason === "gmailDisconnected" || reason === "gmailConnection") {
         const latest = await refetchIntegrations();
         // Otherwise the block's words say this, and go when Gmail's reconnected.

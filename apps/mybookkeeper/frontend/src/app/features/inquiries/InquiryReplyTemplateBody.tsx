@@ -72,7 +72,7 @@ export default function InquiryReplyTemplateBody({
             {mode === "stale" ? (
               <ReplyTemplatesRetry message={MESSAGES.showingLastLoadedActive} announce="status" isRetrying={isRetrying} onRetry={onRetryList} />
             ) : null}
-            <ReplyTemplatePicker templates={templates} selectedTemplateId={selectedTemplateId} onSelect={onSelectTemplate} />
+            <ReplyTemplatePicker templates={templates} selectedTemplateId={selectedTemplateId} onSelect={onSelectTemplate} disabled={isSending} />
           </div>
         );
     }

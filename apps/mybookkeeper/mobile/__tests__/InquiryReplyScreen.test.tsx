@@ -7,7 +7,7 @@ import { Alert, Linking } from "react-native";
 import { Provider } from "react-redux";
 import { REPLY_TEMPLATE_MESSAGES } from "../src/constants/replyTemplates";
 import InquiryReplyScreen from "../src/features/inquiries/InquiryReplyScreen";
-import { replyFailure } from "../src/features/inquiries/replyStatus";
+import { REPLY_FAILURE_WORDS } from "../src/features/inquiries/replyStatus";
 import { clearReplyDrafts, deleteReplyDraft, hasReplyDraft, loadReplyDraft, saveReplyDraft } from "../src/features/inquiries/replyDrafts";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
@@ -330,9 +330,12 @@ describe("InquiryReplyScreen", () => {
       expect(sendButton().props.accessibilityState.disabled).toBe(false);
     });
 
-    it("tells a rejected request apart from a Gmail problem", () => {
-      expect(replyFailure({ status: 422, data: { detail: "Connect Gmail before replying to inquiries." } })).toBe("gmailConnection");
-      expect(replyFailure({ status: 422, data: { detail: [{ loc: ["body", "subject"] }] } })).toBe("refused");
+    it("says a reply that went out but wasn't recorded may already be there", async () => {
+      const server = startInquiryServer([anInquiry()]);
+      server.sendOutcome = { status: 500, detail: "reply_sent_not_recorded" };
+      await writeAndSend();
+      expect(await screen.findByText(REPLY_FAILURE_WORDS.notRecorded)).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Send again" })).toBeTruthy();
     });
 
     it("keeps looking when the first check comes too soon", async () => {

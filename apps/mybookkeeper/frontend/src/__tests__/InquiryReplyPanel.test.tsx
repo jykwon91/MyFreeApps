@@ -6,6 +6,7 @@ import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import InquiryReplyPanel from "@/app/features/inquiries/InquiryReplyPanel";
 import type { Integration } from "@mybookkeeper/api-client/types/integration/integration";
+import { REPLY_SEND_FAILURE_WORDS } from "@/shared/lib/inquiry-messages";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 
 // ----- Default mock state -----
@@ -208,7 +209,7 @@ describe("InquiryReplyPanel", () => {
     expect(screen.getByTestId("reply-send-button")).toBeDisabled();
   });
 
-  it("error toast appears when sendReply throws", async () => {
+  it("says in the panel when a send gets no answer, and keeps the panel open", async () => {
     sendReply.mockReturnValueOnce({
       unwrap: () => Promise.reject(new Error("boom")),
     });
@@ -217,9 +218,9 @@ describe("InquiryReplyPanel", () => {
     await user.click(screen.getByTestId(`reply-template-card-${mockTemplate.id}`));
     await user.click(screen.getByTestId("reply-send-button"));
 
-    await waitFor(() => {
-      expect(showError).toHaveBeenCalled();
-    });
+    expect(await screen.findByText(REPLY_SEND_FAILURE_WORDS.unsure)).toBeInTheDocument();
+    expect(screen.getByTestId("inquiry-reply-panel")).toBeInTheDocument();
+    expect(showSuccess).not.toHaveBeenCalled();
   });
 
   describe("template list states", () => {

@@ -6,35 +6,25 @@ import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrat
 import {
   useGetReplyTemplatesQuery,
   useLazyRenderReplyTemplateQuery,
-  useSendInquiryReplyMutation,
 } from "@mybookkeeper/api-client/store/inquiriesApi";
+import { useReplySend } from "@mybookkeeper/api-client/hooks/useReplySend";
+import { replySendLabel } from "./reply-send-label";
+import type { ReplySendFailure } from "@mybookkeeper/api-client/types/inquiry/reply-send-failure";
+import type { ReplySendResult } from "@mybookkeeper/api-client/types/inquiry/reply-send-result";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
+import { INQUIRY_MESSAGES } from "@/shared/lib/inquiry-messages";
+import { REPLY_SEND_OPTIONS } from "@/shared/lib/reply-send-options";
+import { REPLY_TAB } from "@/shared/lib/reply-tab";
+import type { ReplyTab } from "@/shared/types/inquiry/reply-tab";
+import { deriveReplyReconnectReason } from "./derive-reply-reconnect-reason";
 import InquiryReplyPanelBody from "./InquiryReplyPanelBody";
+import InquiryReplySendStatus from "./InquiryReplySendStatus";
 import { useInquiryReplyMode } from "./useInquiryReplyMode";
 import { useReplyTemplatesLoad } from "./useReplyTemplatesLoad";
 
 export interface InquiryReplyPanelProps {
   inquiryId: string;
   onClose: () => void;
-}
-
-type ReplyTab = "template" | "custom";
-
-type ReconnectReason =
-  | "missing-integration"
-  | "missing-send-scope"
-  | "reauth-required"
-  | null;
-
-function deriveReconnectReason(
-  integrationsLoading: boolean,
-  gmail: { needs_reauth?: boolean; has_send_scope?: boolean } | undefined,
-): ReconnectReason {
-  if (integrationsLoading) return null;
-  if (!gmail) return "missing-integration";
-  if (gmail.needs_reauth) return "reauth-required";
-  if (gmail.has_send_scope === false) return "missing-send-scope";
-  return null;
 }
 
 /**
@@ -49,12 +39,15 @@ function deriveReconnectReason(
  *   3. Otherwise: host picks a template OR switches to "Write custom".
  *      Selecting a template fires GET /render-template/{templateId} so
  *      the composer pre-fills with substituted text.
- *   4. Host edits subject/body, hits Send, mutation fires POST /reply.
+ *   4. Host edits subject/body, hits Send, mutation fires POST /reply with
+ *      one request id per reply text, kept across retries and reopening, so trying
+ *      again after a lost answer never emails the inquirer twice.
  *   5. On success: panel closes, toast confirms, inquiry refetches via
- *      RTK tag invalidation.
+ *      RTK tag invalidation. Otherwise the panel says what happened and
+ *      stays open; it can't be closed or changed mid-send.
  */
 export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPanelProps) {
-  const [tab, setTab] = useState<ReplyTab>("template");
+  const [tab, setTab] = useState<ReplyTab>(REPLY_TAB.TEMPLATE);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   // Local overrides allow the user to edit the rendered template content.
   // When a new render arrives, the overrides reset (via key change below).
@@ -74,21 +67,24 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
   const { data: integrations = [], isLoading: integrationsLoading } =
     useGetIntegrationsQuery();
   const [triggerRender, renderState] = useLazyRenderReplyTemplateQuery();
-  const [sendReply, { isLoading: isSending }] = useSendInquiryReplyMutation();
+  const { send, isRetry, isSending, isWaiting, mightHaveSent } = useReplySend(inquiryId, REPLY_SEND_OPTIONS);
+  const [sendFailure, setSendFailure] = useState<ReplySendFailure | null>(null);
 
   const gmail = integrations.find((i) => i.provider === "gmail");
-  const reconnectReason = deriveReconnectReason(integrationsLoading, gmail);
+  const reconnectReason = deriveReplyReconnectReason(integrationsLoading, gmail);
   const mode = useInquiryReplyMode({ reconnectReason, tab });
 
   // Derive subject/body: prefer local override (user edits), fall back to
   // server-rendered template data, then empty string.
   // currentData belongs to the latest render only, so a failed render never
   // shows the previous template's text; Write custom never takes a template's.
-  const rendered = tab === "template" ? renderState.currentData : undefined;
-  const isRenderFetching = tab === "template" && renderState.isFetching;
+  const rendered = tab === REPLY_TAB.TEMPLATE ? renderState.currentData : undefined;
+  const isRenderFetching = tab === REPLY_TAB.TEMPLATE && renderState.isFetching;
   const subject = subjectOverride ?? rendered?.subject ?? "";
   const body = bodyOverride ?? rendered?.body ?? "";
   const renderFailed = selectedTemplateId !== null && renderFailedFor === selectedTemplateId;
+  const draft = { template_id: tab === REPLY_TAB.TEMPLATE ? selectedTemplateId : null, subject: subject.trim(), body };
+  const draftIsRetry = isRetry(draft);
 
   useEffect(() => {
     if (!focusSubjectWhenFilled.current || renderFailed || isRenderFetching) return;
@@ -97,15 +93,28 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
     subjectRef.current.focus();
   }, [renderFailed, isRenderFetching]);
 
+  // What became of the last send no longer describes the reply being written.
+  function changeDraft() {
+    setSendFailure(null);
+  }
+
+  function requestClose() {
+    if (!isSending) onClose();
+  }
+
   function handleSubjectChange(value: string) {
+    changeDraft();
     setSubjectOverride(value);
   }
 
   function handleBodyChange(value: string) {
+    changeDraft();
     setBodyOverride(value);
   }
 
   function handleSelectTemplate(template: ReplyTemplate) {
+    if (isSending) return;
+    changeDraft();
     setSelectedTemplateId(template.id);
     // Clear local overrides so the newly-rendered template fills the editor.
     setSubjectOverride(null);
@@ -129,9 +138,11 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
   }
 
   function handleSwitchTab(next: ReplyTab) {
+    if (isSending) return;
+    if (next !== tab) changeDraft();
     setTab(next);
     focusSubjectWhenFilled.current = false;
-    if (next === "custom") {
+    if (next === REPLY_TAB.CUSTOM) {
       setSelectedTemplateId(null);
       setSubjectOverride(null);
       setBodyOverride(null);
@@ -140,23 +151,26 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
 
   async function handleSend() {
     if (!subject.trim() || !body.trim()) {
-      showError("Add a subject and a message before sending.");
+      showError(INQUIRY_MESSAGES.replyMissingParts);
       return;
     }
+    setSendFailure(null);
+    let result: ReplySendResult | null;
     try {
-      await sendReply({
-        inquiryId,
-        data: {
-          template_id: tab === "template" ? selectedTemplateId : null,
-          subject: subject.trim(),
-          body,
-        },
-      }).unwrap();
-      showSuccess("Reply sent.");
-      onClose();
-    } catch {
-      showError("I couldn't send that reply. Want to try again?");
+      result = await send(draft);
+    } catch (error) {
+      // Nothing was posted: the id couldn't be made or kept.
+      console.error(error);
+      setSendFailure("refused");
+      return;
     }
+    if (!result) return;
+    if (result.ok) {
+      showSuccess(INQUIRY_MESSAGES.replySent);
+      onClose();
+      return;
+    }
+    setSendFailure(result.failure);
   }
 
   const canSend =
@@ -168,7 +182,7 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
     !renderFailed;
 
   return (
-    <Panel position="right" onClose={onClose} width="640px">
+    <Panel position="right" onClose={requestClose} width="640px">
       <div
         className="flex flex-col flex-1 overflow-hidden"
         data-testid="inquiry-reply-panel"
@@ -183,7 +197,7 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
               Sends via your connected Gmail address.
             </p>
           </div>
-          <PanelCloseButton onClose={onClose} />
+          <PanelCloseButton onClose={requestClose} />
         </div>
 
         {/* Tabs */}
@@ -191,11 +205,12 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
           <button
             type="button"
             role="tab"
-            aria-selected={tab === "template"}
-            onClick={() => handleSwitchTab("template")}
+            aria-selected={tab === REPLY_TAB.TEMPLATE}
+            onClick={() => handleSwitchTab(REPLY_TAB.TEMPLATE)}
+            disabled={isSending}
             data-testid="reply-tab-template"
             className={`px-3 py-2 text-sm border-b-2 -mb-[2px] min-h-[44px] ${
-              tab === "template"
+              tab === REPLY_TAB.TEMPLATE
                 ? "border-primary text-foreground"
                 : "border-transparent text-muted-foreground"
             }`}
@@ -205,11 +220,12 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
           <button
             type="button"
             role="tab"
-            aria-selected={tab === "custom"}
-            onClick={() => handleSwitchTab("custom")}
+            aria-selected={tab === REPLY_TAB.CUSTOM}
+            onClick={() => handleSwitchTab(REPLY_TAB.CUSTOM)}
+            disabled={isSending}
             data-testid="reply-tab-custom"
             className={`px-3 py-2 text-sm border-b-2 -mb-[2px] min-h-[44px] ${
-              tab === "custom"
+              tab === REPLY_TAB.CUSTOM
                 ? "border-primary text-foreground"
                 : "border-transparent text-muted-foreground"
             }`}
@@ -237,27 +253,34 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
             onSelectTemplate={handleSelectTemplate}
             onSubjectChange={handleSubjectChange}
             onBodyChange={handleBodyChange}
-            onBrowseTemplates={onClose}
+            onBrowseTemplates={requestClose}
             subjectRef={subjectRef}
           />
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t flex items-center justify-end gap-2">
-          <Button variant="secondary" size="md" onClick={onClose}>
-            Cancel
-          </Button>
-          <LoadingButton
-            variant="primary"
-            size="md"
-            isLoading={isSending}
-            loadingText="Sending..."
-            disabled={!canSend}
-            onClick={() => void handleSend()}
-            data-testid="reply-send-button"
-          >
-            Send reply
-          </LoadingButton>
+        <div className="px-5 py-4 border-t space-y-3">
+          <InquiryReplySendStatus
+            waiting={isWaiting}
+            failure={sendFailure}
+            changedAfterMightHaveSent={mightHaveSent && !draftIsRetry}
+          />
+          <div className="flex items-center justify-end gap-2">
+            <Button variant="secondary" size="md" onClick={requestClose} disabled={isSending}>
+              Cancel
+            </Button>
+            <LoadingButton
+              variant="primary"
+              size="md"
+              isLoading={isSending}
+              loadingText={isWaiting ? INQUIRY_MESSAGES.replyStillSendingButton : INQUIRY_MESSAGES.replySendingButton}
+              disabled={!canSend}
+              onClick={() => void handleSend()}
+              data-testid="reply-send-button"
+            >
+              {replySendLabel(sendFailure, mightHaveSent, draftIsRetry)}
+            </LoadingButton>
+          </div>
         </div>
       </div>
     </Panel>

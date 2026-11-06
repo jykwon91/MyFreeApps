@@ -504,6 +504,7 @@
         "test_inquiry_reply_routes.py",
         "test_inquiry_reply_service.py",
         "test_inquiry_reply_claim.py",
+        "test_reply_send_details_match_api_client.py",
         "test_send_claim_staleness.py",
         "test_inquiry_spam_scorer.py",
         "test_disposable_email_domains.py",
