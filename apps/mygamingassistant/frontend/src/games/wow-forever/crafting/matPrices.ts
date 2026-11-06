@@ -116,6 +116,14 @@ export interface PriceBook {
   item(itemId: number, name: string): ItemPrice;
   /** Reagents for one craft; undefined cost when any reagent is unknown. */
   recipe(recipe: Pick<CraftRecipe, "reagents">): ItemPrice;
+  /**
+   * The one costing rule for an item this profession can make (a bolt): buy it
+   * or make it. Null = make it from its materials. Otherwise why it is bought:
+   * its materials have no auction price, or the item itself is cheaper. The
+   * route prices every row with `item()`, which takes the cheaper of the two;
+   * the shopping list asks this so it lists exactly what the route priced.
+   */
+  buyInstead(itemId: number): string | null;
 }
 
 function minDefined(a: number | undefined, b: number | undefined): number | undefined {
@@ -139,7 +147,7 @@ function enteredWithEssence(entered: EnteredPrices, itemId: number): number | un
  */
 export function createPriceBook(
   entered: EnteredPrices,
-  file: Pick<CraftingFile, "madeBy" | "recipes">,
+  file: Pick<CraftingFile, "madeBy" | "recipes" | "smelting">,
   professionLabel: string,
 ): PriceBook {
   const cache = new Map<number, ItemPrice>();
@@ -161,8 +169,11 @@ export function createPriceBook(
   }
 
   function madePrice(itemId: number): ItemPrice | null {
-    if (file.madeBy[String(itemId)] !== professionLabel || inProgress.has(itemId)) return null;
-    const maker = makerOf(itemId, file.recipes);
+    if (inProgress.has(itemId)) return null;
+    // A bar you smelt from ore is made like a bolt: from its materials.
+    const smelt = file.smelting?.find((r) => r.creates?.id === itemId);
+    if (!smelt && file.madeBy[String(itemId)] !== professionLabel) return null;
+    const maker = smelt ?? makerOf(itemId, file.recipes);
     if (!maker?.creates) return null;
     inProgress.add(itemId);
     const cost = recipePrice(maker);
@@ -190,5 +201,17 @@ export function createPriceBook(
     return { price, missing: [{ id: itemId, name }] };
   }
 
-  return { item, recipe: recipePrice };
+  function buyInstead(itemId: number): string | null {
+    const own = enteredWithEssence(entered, itemId);
+    if (own === undefined) return null;
+    const made = madePrice(itemId);
+    if (!made) return null;
+    if (made.price === undefined) {
+      const names = made.missing.map((m) => m.name);
+      return `${names.join(" and ")} ${names.length === 1 ? "has" : "have"} no auction price yet`;
+    }
+    return own < made.price ? "cheaper than making it" : null;
+  }
+
+  return { item, recipe: recipePrice, buyInstead };
 }

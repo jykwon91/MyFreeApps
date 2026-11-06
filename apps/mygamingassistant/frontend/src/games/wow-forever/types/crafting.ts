@@ -141,6 +141,8 @@ export interface ShoppingLine {
   madeBy?: string;
   /** For an item this profession makes on the way (bolts): what it takes, in total. */
   makesFrom?: CraftReagent[];
+  /** An item this profession could make but the list says to buy, and why ("Silk Cloth has no auction price yet"). */
+  buyNote?: string;
   /** A bar smelted with Mining: the Mining skill it needs. */
   smeltSkill?: number;
 }
