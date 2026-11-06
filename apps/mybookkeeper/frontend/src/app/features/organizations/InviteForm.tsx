@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useCreateInviteMutation } from "@mybookkeeper/api-client/store/membersApi";
 import { useActiveOrgId } from "@/shared/hooks/useCurrentOrg";
-import { extractErrorMessage } from "@/shared/utils/errorMessage";
+import { extractErrorMessage } from "@platform/ui";
 import type { OrgRole } from "@mybookkeeper/api-client/types/organization/OrgRole";
 import { INVITE_ROLE_OPTIONS } from "@mybookkeeper/api-client/constants/orgRoles";
 import { LoadingButton } from "@platform/ui";

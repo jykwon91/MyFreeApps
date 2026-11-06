@@ -61,7 +61,6 @@
         "frontend/src/app/features/security/TwoFactorSetup.tsx",
         "frontend/src/app/features/security/DeleteAccountModal.tsx",
         "frontend/src/shared/types/security/",
-        "frontend/src/shared/utils/errorMessage.ts",
         "backend/app/core/auth.py",
         "backend/app/core/rate_limit.py",
         "backend/app/core/request_utils.py",

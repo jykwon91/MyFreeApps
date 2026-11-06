@@ -3,7 +3,7 @@ import { useListMembersQuery, useUpdateMemberRoleMutation, useRemoveMemberMutati
 import { useActiveOrgId } from "@/shared/hooks/useCurrentOrg";
 import { useIsOrgAdmin, useOrgRole } from "@/shared/hooks/useOrgRole";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
-import { extractErrorMessage } from "@/shared/utils/errorMessage";
+import { extractErrorMessage } from "@platform/ui";
 import type { OrgRole } from "@mybookkeeper/api-client/types/organization/OrgRole";
 import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
 import Badge from "@/shared/components/ui/Badge";

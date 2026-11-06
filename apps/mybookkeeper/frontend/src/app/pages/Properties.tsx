@@ -8,7 +8,7 @@ import {
 } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { PropertyForm } from "@/shared/types/property/property-form";
 import { useToast } from "@/shared/hooks/useToast";
-import { extractErrorMessage } from "@/shared/utils/errorMessage";
+import { extractErrorMessage } from "@platform/ui";
 import { FormField, LoadingButton } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 import TilePicker from "@/shared/components/ui/TilePicker";

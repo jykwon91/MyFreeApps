@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Shield, ShieldCheck, ShieldOff, Copy, Check } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { extractErrorMessage } from "@/shared/utils/errorMessage";
+import { extractErrorMessage } from "@platform/ui";
 import { Button, LoadingButton, useForgetMutationArgs } from "@platform/ui";
 import TotpPasswordStep from "@platform/ui/components/auth/TotpPasswordStep";
 import { showSuccess } from "@/shared/lib/toast-store";

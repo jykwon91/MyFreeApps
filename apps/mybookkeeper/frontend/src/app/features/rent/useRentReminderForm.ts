@@ -4,7 +4,7 @@ import {
   useCreateRentReminderPlanMutation,
   useUpdateRentReminderPlanMutation,
 } from "@mybookkeeper/api-client/store/rentRemindersApi";
-import { extractErrorMessage } from "@/shared/utils/errorMessage";
+import { extractErrorMessage } from "@platform/ui";
 import {
   DEFAULT_SEND_DAYS_BEFORE,
   DEFAULT_SEND_TIME,

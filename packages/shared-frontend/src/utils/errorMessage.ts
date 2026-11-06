@@ -20,7 +20,8 @@
  * array (or its objects) reaches JSX, React throws "Objects are not
  * valid as a React child" and the route crashes. The array is flattened
  * to its ``msg`` strings (prefixed with the offending ``loc`` field)
- * via ``formatValidationDetail``.
+ * via ``formatValidationDetail``. A fastapi-users ``{ code, reason }``
+ * detail object returns its ``reason``.
  */
 
 function readDetail(data: unknown): string | undefined {
@@ -31,6 +32,11 @@ function readDetail(data: unknown): string | undefined {
     if (Array.isArray(detail)) {
       const msg = formatValidationDetail(detail);
       if (msg) return msg;
+    }
+    // fastapi-users password rules: { detail: { code, reason } }
+    if (detail !== null && typeof detail === "object") {
+      const reason = (detail as Record<string, unknown>).reason;
+      if (typeof reason === "string" && reason.trim()) return reason.trim();
     }
   }
   return undefined;

@@ -5,7 +5,7 @@ import {
   useGetRentReminderPreviewQuery,
   useSendRentReminderNowMutation,
 } from "@mybookkeeper/api-client/store/rentRemindersApi";
-import { extractErrorMessage } from "@/shared/utils/errorMessage";
+import { extractErrorMessage } from "@platform/ui";
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatDueDate, formatSendMoment } from "@mybookkeeper/api-client/utils/rentReminderFormat";
 import { RENT_REMINDER_CHANNEL_LABEL } from "@mybookkeeper/api-client/constants/rentReminderLabels";

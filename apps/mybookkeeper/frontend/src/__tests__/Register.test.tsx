@@ -8,24 +8,6 @@ vi.mock("@/shared/lib/api", () => ({
   default: { post: vi.fn() },
 }));
 
-vi.mock("@/shared/utils/errorMessage", () => ({
-  extractErrorMessage: (err: unknown) => {
-    if (err instanceof Error) return err.message;
-    if (err && typeof err === "object") {
-      const obj = err as Record<string, unknown>;
-      if (obj.data && typeof obj.data === "object") {
-        const data = obj.data as Record<string, unknown>;
-        if (typeof data.detail === "string") return data.detail;
-        if (data.detail && typeof data.detail === "object") {
-          const detail = data.detail as Record<string, unknown>;
-          if (typeof detail.reason === "string") return detail.reason;
-        }
-      }
-    }
-    return "An unexpected error occurred";
-  },
-}));
-
 // TurnstileWidget renders null when VITE_TURNSTILE_SITE_KEY is not set,
 // which is the case in the test environment.
 vi.mock("@/shared/components/ui/TurnstileWidget", () => ({

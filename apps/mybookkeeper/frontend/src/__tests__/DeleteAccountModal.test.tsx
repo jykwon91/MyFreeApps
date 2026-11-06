@@ -24,10 +24,6 @@ vi.mock("@/shared/lib/toast-store", () => ({
   showSuccess: vi.fn(),
 }));
 
-vi.mock("@/shared/utils/errorMessage", () => ({
-  extractErrorMessage: (err: unknown) => String(err),
-}));
-
 function renderModal(open = true) {
   const onClose = vi.fn();
   render(<DeleteAccountModal open={open} onClose={onClose} />);

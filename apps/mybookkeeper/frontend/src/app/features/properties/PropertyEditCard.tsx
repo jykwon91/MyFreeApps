@@ -5,7 +5,7 @@ import type { PropertyForm } from "@/shared/types/property/property-form";
 import type { PropertyClassification } from "@mybookkeeper/api-client/types/property/PropertyClassification";
 import { CLASSIFICATION_OPTIONS } from "@/shared/lib/property-labels";
 import { useToast } from "@/shared/hooks/useToast";
-import { extractErrorMessage } from "@/shared/utils/errorMessage";
+import { extractErrorMessage } from "@platform/ui";
 import { Button, FormField, LoadingButton } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 import TilePicker from "@/shared/components/ui/TilePicker";

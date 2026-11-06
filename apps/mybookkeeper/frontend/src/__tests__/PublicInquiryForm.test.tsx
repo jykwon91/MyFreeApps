@@ -22,19 +22,6 @@ vi.mock("@/shared/lib/api", () => ({
   default: { get: vi.fn(), post: vi.fn() },
 }));
 
-vi.mock("@/shared/utils/errorMessage", () => ({
-  extractErrorMessage: (err: unknown) => {
-    if (err && typeof err === "object") {
-      const obj = err as Record<string, unknown>;
-      if (obj.data && typeof obj.data === "object") {
-        const data = obj.data as Record<string, unknown>;
-        if (typeof data.detail === "string") return data.detail;
-      }
-    }
-    return "Something went wrong";
-  },
-}));
-
 vi.mock("@/shared/components/ui/TurnstileWidget", () => ({
   default: () => null,
 }));

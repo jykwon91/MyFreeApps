@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "@/shared/lib/api";
-import { extractErrorMessage } from "@/shared/utils/errorMessage";
+import { extractErrorMessage } from "@platform/ui";
 import type { PublicListing } from "@/shared/types/inquiry/public-listing";
 import { usePublicInquiryFlow } from "@/app/features/public-inquiry/usePublicInquiryFlow";
 import PublicInquiryListingPanel from "@/app/features/public-inquiry/PublicInquiryListingPanel";
