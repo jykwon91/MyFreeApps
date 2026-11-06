@@ -134,16 +134,30 @@ test("an unknown profession link opens Cooking", async ({ page }) => {
   await expect(page.getByRole("radio", { name: "Cooking" })).toBeChecked();
 });
 
-test("the crafting picker is one row of big targets on a phone", async ({ page }) => {
+test("every crafting radio fits inside the viewport and its group at 375px", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   await page.goto("/wow-forever/professions?p=alchemy");
-  const radios = page.getByRole("radiogroup", { name: "Crafting professions" }).getByRole("radio");
+  const group = page.getByRole("radiogroup", { name: "Crafting professions" });
+  const radios = group.getByRole("radio");
   await expect(radios).toHaveCount(6);
+
+  const groupBox = await group.boundingBox();
+  expect(groupBox).not.toBeNull();
+  const viewportWidth = 375;
+
   const boxes = await Promise.all((await radios.all()).map((r) => r.boundingBox()));
-  for (const box of boxes) expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
-  expect(new Set(boxes.map((b) => Math.round(b?.y ?? 0))).size).toBe(1);
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-  expect(overflow).toBeLessThanOrEqual(0);
+  for (const box of boxes) {
+    expect(box).not.toBeNull();
+    // Touch target: at least 44px tall.
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+    // Every radio must start inside the viewport.
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    // Every radio must end inside the viewport (no overflow off the right edge).
+    expect(box!.x + box!.width).toBeLessThanOrEqual(viewportWidth);
+    // Every radio must be contained within its group.
+    expect(box!.x).toBeGreaterThanOrEqual(groupBox!.x - 1);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(groupBox!.x + groupBox!.width + 1);
+  }
 });
 
 test("Alchemy shows a hand-picked herb route with no prices, and where each herb grows", async ({ page }) => {

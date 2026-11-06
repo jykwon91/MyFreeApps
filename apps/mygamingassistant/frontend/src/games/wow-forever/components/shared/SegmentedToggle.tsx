@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import { cn } from "@platform/ui";
 
 interface SegmentedToggleProps<T extends string> {
   label: string;
@@ -6,7 +7,9 @@ interface SegmentedToggleProps<T extends string> {
   /** Null = none of these options is picked (another group holds the choice). */
   value: T | null;
   onChange: (value: T) => void;
-  /** Extra classes for the group, e.g. "flex-wrap" when there are many options. */
+  /** Extra classes for the group, e.g. "flex-wrap" when there are many options.
+   *  Layout classes (grid, flex, inline-flex) in className override the default
+   *  inline-flex because the merge uses tailwind-merge. */
   className?: string;
   /** Narrow padding and text on phones, so long names fit three to a row. */
   compact?: boolean;
@@ -15,7 +18,7 @@ interface SegmentedToggleProps<T extends string> {
 /** Single-choice pill toggle (radio group semantics). */
 export default function SegmentedToggle<T extends string>({ label, options, value, onChange, className, compact = false }: SegmentedToggleProps<T>) {
   return (
-    <div role="radiogroup" aria-label={label} className={clsx("inline-flex rounded-lg border bg-card p-1 gap-1", className)}>
+    <div role="radiogroup" aria-label={label} className={cn("inline-flex rounded-lg border bg-card p-1 gap-1", className)}>
       {options.map((o) => (
         <button
           key={o.id}
