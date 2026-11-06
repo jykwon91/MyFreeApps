@@ -28,6 +28,7 @@ from google.auth.transport.requests import AuthorizedSession
 from google.oauth2.credentials import Credentials
 
 from app.db.session import unit_of_work
+from app.models.integrations.gmail_connection import GmailConnection
 from app.repositories import integration_repo
 from app.services.email.constants import (
     GMAIL_HTTP_TIMEOUT_SECONDS,
@@ -49,12 +50,12 @@ logger = logging.getLogger(__name__)
 
 
 async def mark_integration_needs_reauth(
-    integration,  # type: ignore[no-untyped-def] — app.models.integrations.Integration, avoid circular import
+    connection: GmailConnection,
     reason: str,
 ) -> None:
     async with unit_of_work() as db:
         marked = await integration_repo.mark_needs_reauth_if_unchanged(
-            db, integration, reason[:200], datetime.now(timezone.utc)
+            db, connection, reason[:200], datetime.now(timezone.utc)
         )
     if not marked:
         logger.info("Gmail was reconnected during this call; leaving the new connection's reauth state alone")

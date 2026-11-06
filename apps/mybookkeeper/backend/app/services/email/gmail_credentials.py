@@ -7,6 +7,7 @@ from google.oauth2.credentials import Credentials
 
 from app.core.config import settings
 from app.db.session import unit_of_work
+from app.models.integrations.gmail_connection import GmailConnection
 from app.repositories import integration_repo
 
 logger = logging.getLogger(__name__)
@@ -23,7 +24,7 @@ def build_gmail_credentials(access_token: str, refresh_token: str | None = None)
 
 
 async def persist_refreshed_token(
-    integration,  # type: ignore[no-untyped-def] — app.models.integrations.Integration, avoid circular import
+    connection: GmailConnection,
     creds: Credentials,
     prior_token: str | None,
 ) -> None:
@@ -43,7 +44,7 @@ async def persist_refreshed_token(
         return
     async with unit_of_work() as db:
         saved = await integration_repo.update_access_token_if_unchanged(
-            db, integration, creds.token, creds.expiry
+            db, connection, creds.token, creds.expiry
         )
     if not saved:
         logger.info("Gmail was reconnected during this call; not saving its refreshed token")

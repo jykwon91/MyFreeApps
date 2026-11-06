@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.integrations.gmail_connection import GmailConnection
 from app.models.integrations.integration import Integration
 
 
@@ -21,9 +22,9 @@ async def get_by_org_and_provider(
 
 
 async def _lock_if_credentials_unchanged(
-    db: AsyncSession, integration: Integration
+    db: AsyncSession, connection: GmailConnection
 ) -> Integration | None:
-    """The row, locked, if it still holds the refresh token ``integration`` was read with.
+    """The row, locked, if it still holds the refresh token ``connection`` was read with.
 
     A reconnect rewrites the row in place, possibly to a different Google
     account. Work that started on the old connection must not write its
@@ -34,9 +35,9 @@ async def _lock_if_credentials_unchanged(
     result = await db.execute(
         select(Integration)
         .where(
-            Integration.id == integration.id,
+            Integration.id == connection.id,
             Integration.refresh_token_encrypted.is_not_distinct_from(
-                integration.refresh_token_encrypted
+                connection.refresh_token_encrypted
             ),
         )
         .with_for_update()
@@ -47,7 +48,7 @@ async def _lock_if_credentials_unchanged(
 
 async def mark_needs_reauth_if_unchanged(
     db: AsyncSession,
-    integration: Integration,
+    connection: GmailConnection,
     error: str,
     failed_at: datetime,
 ) -> bool:
@@ -56,7 +57,7 @@ async def mark_needs_reauth_if_unchanged(
     Returns False when the connection changed, so nothing was written. The
     session is NOT flushed here — the caller must flush or commit.
     """
-    current = await _lock_if_credentials_unchanged(db, integration)
+    current = await _lock_if_credentials_unchanged(db, connection)
     if current is None:
         return False
     current.needs_reauth = True
@@ -143,7 +144,7 @@ async def update_last_synced(
 
 async def update_access_token_if_unchanged(
     db: AsyncSession,
-    integration: Integration,
+    connection: GmailConnection,
     access_token: str,
     expiry: datetime | None,
 ) -> bool:
@@ -157,7 +158,7 @@ async def update_access_token_if_unchanged(
     ``expiry`` is normalized to timezone-aware UTC because google-auth returns
     naive UTC datetimes.
     """
-    current = await _lock_if_credentials_unchanged(db, integration)
+    current = await _lock_if_credentials_unchanged(db, connection)
     if current is None:
         return False
     current.access_token = access_token

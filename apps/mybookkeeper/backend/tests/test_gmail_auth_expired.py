@@ -269,10 +269,11 @@ async def test_discovery_sets_needs_reauth_on_refresh_error() -> None:
         with pytest.raises(GmailAuthExpiredError):
             await discover_gmail_emails(ctx)
 
-    # mark_needs_reauth must be called exactly once with the integration object.
+    # mark_needs_reauth must be called exactly once, for the connection discovery ran on.
     assert len(mark_reauth_calls) == 1
     integration_arg, error_arg, failed_at_arg = mark_reauth_calls[0]
-    assert integration_arg is fake_integration
+    assert integration_arg.id == fake_integration.id
+    assert integration_arg.refresh_token_encrypted == fake_integration.refresh_token_encrypted
     assert "invalid_grant" in error_arg or "RefreshError" in error_arg
     assert failed_at_arg is not None
 
