@@ -294,7 +294,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   never asked again) or `rejected` (private reason). Backend:
   `app/api/wow_features.py` (public), `app/api/wow_feature_triage.py` (triage),
   `app/services/wow/feature_requests/`, models `wow_feature_story` /
-  `wow_feature_submission` / `wow_feature_vote` (migration 0048).
+  `wow_feature_submission` / `wow_feature_vote` (migration 0049).
 - `POST /api/wow/feature-requests` gating order: availability (503
   `feature_requests_unavailable` — same rule as the item reader, cap
   `WOW_FEATURE_REQUEST_DAILY_CAP`) → per-IP 5/h + 20/day → Turnstile →

@@ -1,7 +1,7 @@
 """Allowed values for WoW Forever feature requests — one list per enum.
 
 Backend columns are ``String(N)`` + CHECK constraints built from these tuples
-(migration 0048 holds frozen copies). The frontend keeps the same lists as
+(migration 0049 holds frozen copies). The frontend keeps the same lists as
 TypeScript unions; ``tests/test_wow_feature_request_enums.py`` pins them, and
 the class ids are checked against ``frontend/src/games/wow-forever/data/classes.ts``.
 Change both sides together.

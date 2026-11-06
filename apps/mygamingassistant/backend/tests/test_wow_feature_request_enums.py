@@ -1,6 +1,6 @@
 """WoW feature-request enums: pinned snapshot, Literal parity, class-id parity.
 
-The tuples feed the DB CHECK constraints (migration 0048 holds frozen
+The tuples feed the DB CHECK constraints (migration 0049 holds frozen
 copies), the Literal types feed the API schemas, and the frontend keeps its
 own unions. A change on one side without the others either rejects valid
 values or lets invalid ones through — so they are pinned here and change

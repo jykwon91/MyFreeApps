@@ -1,7 +1,7 @@
 """Add wow_feature_story / wow_feature_submission / wow_feature_vote
 
-Revision ID: 0048
-Revises: 0047
+Revision ID: 0049
+Revises: 0048
 Create Date: 2026-11-06 00:00:00.000000
 
 WHY. WoW Forever visitors (no accounts) can request features. Claude refines
@@ -17,8 +17,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0048"
-down_revision: Union[str, None] = "0047"
+revision: str = "0049"
+down_revision: Union[str, None] = "0048"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
