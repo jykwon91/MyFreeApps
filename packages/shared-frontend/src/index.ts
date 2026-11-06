@@ -26,6 +26,8 @@ export { formatFileSize } from "./utils/file-size";
 export { formatSalaryRange, SALARY_PERIOD_LABELS } from "./utils/salary-range";
 export { formatTag } from "./utils/tag";
 export { extractErrorMessage } from "./utils/errorMessage";
+export { describeAuthError } from "./utils/describeAuthError";
+export { isAlreadyVerifiedError } from "./utils/isAlreadyVerifiedError";
 export { showError, showSuccess, subscribe } from "./lib/toast-store";
 export type { ToastEvent, ToastVariant } from "./lib/toast-store";
 export { notifyAuthChange, useIsAuthenticated } from "./lib/auth-store";

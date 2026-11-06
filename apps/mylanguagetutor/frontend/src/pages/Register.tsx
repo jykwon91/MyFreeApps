@@ -3,12 +3,12 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Languages } from "lucide-react";
 import {
   AuthPageFooter,
+  describeAuthError,
   LoadingButton,
   TurnstileWidget,
   useIsAuthenticated,
 } from "@platform/ui";
 import { register } from "@/lib/auth";
-import { describeRegisterError } from "@/features/auth/registerErrorMessages";
 
 const MIN_PASSWORD_LENGTH = 12;
 
@@ -19,7 +19,7 @@ const MIN_PASSWORD_LENGTH = 12;
  * apps/myjobhunter/frontend/src/pages/Register.tsx: optional display name,
  * Turnstile widget, a required acceptance checkbox (submit disabled until
  * checked), and HIBP / weak-password reasons surfaced inline via
- * describeRegisterError. We do not auto-sign-in — the backend sends a
+ * describeAuthError. We do not auto-sign-in — the backend sends a
  * verification email and the page shows a "check your inbox" notice.
  */
 export default function Register() {
@@ -69,7 +69,7 @@ export default function Register() {
       await register(email.trim(), password, displayName, turnstileToken);
       setRegistered(true);
     } catch (err) {
-      setError(describeRegisterError(err));
+      setError(describeAuthError(err));
     } finally {
       setIsLoading(false);
     }

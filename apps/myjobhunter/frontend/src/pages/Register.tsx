@@ -2,13 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams, Navigate } from "react-router-dom";
 import {
   AuthPageFooter,
+  describeAuthError,
   LoadingButton,
   PasswordPair,
   TurnstileWidget,
 } from "@platform/ui";
 import { Briefcase } from "lucide-react";
 import { register } from "@/lib/auth";
-import { describeRegisterError } from "@/features/auth/registerErrorMessages";
 import { useGetInviteInfoQuery } from "@/store/invitesApi";
 
 const INVITE_TOKEN_STORAGE_KEY = "myjobhunter.pendingInviteToken";
@@ -130,7 +130,7 @@ function RegisterWithInvite({ token }: RegisterWithInviteProps) {
       await register(invite!.email, password, turnstileToken);
       setRegistered(true);
     } catch (err) {
-      setSubmitError(describeRegisterError(err));
+      setSubmitError(describeAuthError(err));
     } finally {
       setIsSubmitting(false);
     }

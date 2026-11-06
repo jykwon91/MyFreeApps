@@ -64,10 +64,19 @@ describe("VerifyEmail page", () => {
     renderVerify("/verify-email?token=invalid");
 
     expect(
-      await screen.findByText(/VERIFY_USER_BAD_TOKEN/i),
+      await screen.findByText("This verification link is invalid or has expired."),
     ).toBeInTheDocument();
     // Link to login still rendered so the user can request a new email
     expect(screen.getByRole("link", { name: /go to sign in/i })).toBeInTheDocument();
+  });
+
+  it("treats an already-verified email (second click) as success", async () => {
+    mockApiPost.mockRejectedValueOnce({ data: { detail: "VERIFY_USER_ALREADY_VERIFIED" } });
+
+    renderVerify("/verify-email?token=abc123");
+
+    expect(await screen.findByText(/your email has been verified/i)).toBeInTheDocument();
+    expect(screen.queryByText(/couldn't verify/i)).not.toBeInTheDocument();
   });
 
   it("shows an error when no token is in the query string", async () => {
