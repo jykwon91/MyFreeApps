@@ -181,8 +181,8 @@ async def handle_gmail_callback(code: str, state: str) -> None:
             )
             if member is None or member.org_role == OrgRole.VIEWER:
                 logger.warning(
-                    "Gmail OAuth connect refused: user=%s can no longer connect for org=%s",
-                    user_id_str, org_id_str,
+                    "Gmail OAuth connect refused: the member was %s since starting it",
+                    "removed" if member is None else "made a viewer",
                 )
                 raise GmailConnectNotAllowedError(GMAIL_CONNECT_NOT_ALLOWED_DETAIL)
             integration = await integration_repo.upsert_gmail(
