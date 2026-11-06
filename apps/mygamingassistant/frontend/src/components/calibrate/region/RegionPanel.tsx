@@ -48,19 +48,30 @@ export default function RegionPanel({
 }: RegionPanelProps) {
   const [useNumeric, setUseNumeric] = useState(false);
   const [corners, setCorners] = useState<CornerPoint[]>([]);
+  const [prevRegionDims, setPrevRegionDims] = useState({
+    x: region.x, y: region.y, width: region.width, height: region.height,
+  });
 
   // When `region` matches a non-default rect, seed the corners as the four
   // bbox vertices. This lets the operator switch between picker + numeric
   // modes without losing position info.
-  useEffect(() => {
-    if (region.width <= 0 || region.height <= 0) return;
+  // Uses setState-during-render (React-idiomatic getDerivedStateFromProps equivalent).
+  if (
+    region.width > 0 &&
+    region.height > 0 &&
+    (prevRegionDims.x !== region.x ||
+      prevRegionDims.y !== region.y ||
+      prevRegionDims.width !== region.width ||
+      prevRegionDims.height !== region.height)
+  ) {
+    setPrevRegionDims({ x: region.x, y: region.y, width: region.width, height: region.height });
     setCorners([
       { x: region.x, y: region.y },
       { x: region.x + region.width, y: region.y },
       { x: region.x + region.width, y: region.y + region.height },
       { x: region.x, y: region.y + region.height },
     ]);
-  }, [region.x, region.y, region.width, region.height]);
+  }
 
   // Trigger recapture when the keyboard shortcut fires.
   useEffect(() => {

@@ -86,6 +86,13 @@ export default function PaneTrimOverlay({
   const adminLineup = adminResult.data ?? null;
   const sourceUrl = resolveSourceUrl(adminLineup, pane, clipUrl);
   const sourceDurationS = useClipDuration(sourceUrl);
+
+  // Clear awaitingOpen once phase transitions out of "closed" (i.e., once open() was called).
+  // Uses setState-during-render (React-idiomatic getDerivedStateFromProps equivalent) so
+  // the effect body only calls open() with no setState.
+  if (phase.phase !== "closed" && awaitingOpen) {
+    setAwaitingOpen(false);
+  }
   const storedOffsets = resolveStoredOffsets(adminLineup, pane);
   // YouTube anchor: the admin payload carries the source-video id + chapter
   // marker so the Trim slider can expose the "Widen source" affordance. Both
@@ -132,7 +139,6 @@ export default function PaneTrimOverlay({
     if (phase.phase !== "closed") return;
     if (!adminResult.isSuccess || sourceDurationS == null) return;
     if (!adminResult.originalArgs || adminResult.originalArgs !== lineupId) return;
-    setAwaitingOpen(false);
     open(sourceDurationS, storedOffsets);
   }, [
     awaitingOpen,

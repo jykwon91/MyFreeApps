@@ -132,11 +132,15 @@ export default function LiveCs2Calibrate() {
       hasAnyDirty && currentLocation.pathname !== nextLocation.pathname,
   );
 
-  useEffect(() => {
+  // Open confirm dialog when router blocks navigation.
+  // Uses setState-during-render (React-idiomatic getDerivedStateFromProps equivalent).
+  const [prevBlockerState, setPrevBlockerState] = useState(blocker.state);
+  if (prevBlockerState !== blocker.state) {
+    setPrevBlockerState(blocker.state);
     if (blocker.state === "blocked") {
       setConfirmLeave(true);
     }
-  }, [blocker.state]);
+  }
 
   useEffect(() => {
     function onBeforeUnload(e: BeforeUnloadEvent) {
@@ -539,16 +543,26 @@ function useCroppedSnapshot(
   region: { x: number; y: number; width: number; height: number },
 ): string | null {
   const [dataUrl, setDataUrl] = useState<string | null>(null);
+  const [prevSnapshot, setPrevSnapshot] = useState(snapshot);
+  const [prevRegion, setPrevRegion] = useState(region);
+
+  // Clear dataUrl immediately when snapshot/region becomes invalid.
+  // Uses setState-during-render (React-idiomatic getDerivedStateFromProps equivalent).
+  const regionChanged =
+    prevRegion.x !== region.x ||
+    prevRegion.y !== region.y ||
+    prevRegion.width !== region.width ||
+    prevRegion.height !== region.height;
+  if (prevSnapshot !== snapshot || regionChanged) {
+    setPrevSnapshot(snapshot);
+    setPrevRegion(region);
+    if (!snapshot || region.width <= 0 || region.height <= 0) {
+      setDataUrl(null);
+    }
+  }
 
   useEffect(() => {
-    if (!snapshot) {
-      setDataUrl(null);
-      return;
-    }
-    if (region.width <= 0 || region.height <= 0) {
-      setDataUrl(null);
-      return;
-    }
+    if (!snapshot || region.width <= 0 || region.height <= 0) return;
     let cancelled = false;
     const img = new Image();
     img.onload = () => {

@@ -4,7 +4,7 @@
  * Two-way bound: changes to the swatch update the hex + sliders, and vice
  * versa. Hex parse failures keep the previous value (no flicker).
  */
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { LoadingButton } from "@platform/ui";
 import { hexToRgb, rgbToHex } from "@/lib/calibration";
 
@@ -23,12 +23,15 @@ export default function DotColorSwatch({
   onPickFromScreen,
   isPicking,
 }: DotColorSwatchProps) {
+  const [prevRgb, setPrevRgb] = useState<[number, number, number]>(rgb);
   const [hexInput, setHexInput] = useState(rgbToHex(rgb));
 
   // Keep hex input in sync with external rgb changes (e.g. slider drag).
-  useEffect(() => {
+  // Uses setState-during-render (React-idiomatic getDerivedStateFromProps equivalent).
+  if (prevRgb[0] !== rgb[0] || prevRgb[1] !== rgb[1] || prevRgb[2] !== rgb[2]) {
+    setPrevRgb(rgb);
     setHexInput(rgbToHex(rgb));
-  }, [rgb]);
+  }
 
   function applyHex(value: string) {
     setHexInput(value);

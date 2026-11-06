@@ -8,7 +8,7 @@
  * Renders blob bounding boxes as white outlines + numeric labels (`#1`, `#2`)
  * per the accessibility spec — color alone shouldn't carry information.
  */
-import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { Card, AlertBox } from "@platform/ui";
 import type { CvDebugFrameEvent } from "@/types/desktop";
 
@@ -32,10 +32,7 @@ export default function DotLivePreview({
   onStartPipeline,
 }: DotLivePreviewProps) {
   // Stalled detection: pipeline says running, but no frames for >5s.
-  const [stalled, setStalled] = useState(false);
-  useEffect(() => {
-    setStalled(pipelineRunning && secondsSinceLast >= 0 && secondsSinceLast > 5);
-  }, [pipelineRunning, secondsSinceLast]);
+  const stalled = pipelineRunning && secondsSinceLast >= 0 && secondsSinceLast > 5;
 
   if (!ready) {
     return (
@@ -157,7 +154,7 @@ export default function DotLivePreview({
 }
 
 interface ChipProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 function Chip({ children }: ChipProps) {

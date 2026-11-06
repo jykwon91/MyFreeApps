@@ -16,13 +16,20 @@
 import { useEffect, useState } from "react";
 
 export function useClipDuration(clipUrl: string | null | undefined): number | null {
+  const [prevClipUrl, setPrevClipUrl] = useState<string | null | undefined>(clipUrl);
   const [duration, setDuration] = useState<number | null>(null);
 
-  useEffect(() => {
+  // Reset duration when clipUrl clears or changes.
+  // Uses setState-during-render (React-idiomatic getDerivedStateFromProps equivalent).
+  if (prevClipUrl !== clipUrl) {
+    setPrevClipUrl(clipUrl);
     if (!clipUrl) {
       setDuration(null);
-      return;
     }
+  }
+
+  useEffect(() => {
+    if (!clipUrl) return;
 
     // Detached <video> — never appended to the DOM. Browser still fetches
     // metadata when src is set + preload="metadata".

@@ -14,7 +14,7 @@
  * `{x, y}` objects. `lib/zonePolygon` adapts at the boundary — the
  * mismatch was the design review's #1 ship-blocker.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useBlocker } from "react-router-dom";
 import { ConfirmDialog, showError, showSuccess } from "@platform/ui";
 import { useGetMapDetailQuery, useBulkUpdateMapZonesMutation } from "@/store/gamesApi";
@@ -58,6 +58,10 @@ export default function ZoneEditPage() {
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [showCoachmark, setShowCoachmark] = useState(false);
 
+  // Auto-select first zone when mapDetail loads and nothing is selected.
+  // Computed inline rather than via effect so there's no setState in an effect body.
+  const effectiveSelectedSlug = selectedSlug ?? mapDetail?.zones[0]?.slug ?? null;
+
   // ---- Draft → CvZonePolygon adapter for the canvas (tuples + names) ----
   const canvasZones: CvZonePolygon[] = useMemo(() => {
     if (!mapDetail) return [];
@@ -74,35 +78,43 @@ export default function ZoneEditPage() {
       .filter((z): z is CvZonePolygon => z !== null);
   }, [mapDetail, draft.zones]);
 
-  // ---- Auto-select first zone once data loads ----
-  useEffect(() => {
-    if (!mapDetail || selectedSlug) return;
-    if (mapDetail.zones.length === 0) return;
-    setSelectedSlug(mapDetail.zones[0].slug);
-  }, [mapDetail, selectedSlug]);
-
   // ---- Restored-from-storage one-time toast ----
-  const [restoreToastShown, setRestoreToastShown] = useState(false);
+  // useRef so setRestoreToastShown doesn't call setState in an effect body.
+  const restoreToastShownRef = useRef(false);
   useEffect(() => {
-    if (draft.restoredFromStorage && !restoreToastShown) {
+    if (draft.restoredFromStorage && !restoreToastShownRef.current) {
       showSuccess("Restored your in-progress draft.");
-      setRestoreToastShown(true);
+      restoreToastShownRef.current = true;
     }
-  }, [draft.restoredFromStorage, restoreToastShown]);
+  }, [draft.restoredFromStorage]);
 
   // ---- Coachmark for first-time `new` mode ----
+  // Check localStorage during render (safe on CSR); write to localStorage in
+  // a separate effect that calls no setState so the effect body is clean.
+  const [prevMode, setPrevMode] = useState(mode);
+  if (prevMode !== mode) {
+    setPrevMode(mode);
+    if (mode === "new") {
+      try {
+        if (!localStorage.getItem(COACHMARK_STORAGE_KEY)) {
+          setShowCoachmark(true);
+        }
+      } catch {
+        // localStorage disabled — show coachmark anyway, accept that next
+        // session will show it again.
+        setShowCoachmark(true);
+      }
+    }
+  }
+  // Write localStorage when coachmark is first shown (no setState → pure side effect).
   useEffect(() => {
-    if (mode !== "new") return;
+    if (!showCoachmark) return;
     try {
-      if (localStorage.getItem(COACHMARK_STORAGE_KEY)) return;
-      setShowCoachmark(true);
       localStorage.setItem(COACHMARK_STORAGE_KEY, "1");
     } catch {
-      // localStorage disabled — show coachmark anyway, accept that next
-      // session will show it again.
-      setShowCoachmark(true);
+      // ignore
     }
-  }, [mode]);
+  }, [showCoachmark]);
 
   // ---- Dirty-leave guard (react-router blocker + beforeunload) ----
   const blocker = useBlocker(
@@ -110,11 +122,15 @@ export default function ZoneEditPage() {
       draft.isDirty && currentLocation.pathname !== nextLocation.pathname,
   );
 
-  useEffect(() => {
+  // Open confirm dialog when router blocks navigation.
+  // Uses setState-during-render (React-idiomatic getDerivedStateFromProps equivalent).
+  const [prevBlockerState, setPrevBlockerState] = useState(blocker.state);
+  if (prevBlockerState !== blocker.state) {
+    setPrevBlockerState(blocker.state);
     if (blocker.state === "blocked") {
       setConfirmLeave(true);
     }
-  }, [blocker.state]);
+  }
 
   useEffect(() => {
     function onBeforeUnload(e: BeforeUnloadEvent) {
@@ -125,6 +141,27 @@ export default function ZoneEditPage() {
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [draft.isDirty]);
+
+  // ---- Drawing helpers — declared before the keyboard shortcut effect ----
+  const startDrawing = useCallback((slug: string) => {
+    setSelectedSlug(slug);
+    setMode("new");
+    setDrawingPoints([]);
+    setPreviewMode(false);
+  }, []);
+
+  const cancelDrawing = useCallback(() => {
+    setDrawingPoints([]);
+    setMode("select");
+  }, []);
+
+  // finalizeDrawing declared BEFORE the keyboard-shortcut effect that calls it.
+  const finalizeDrawing = useCallback(() => {
+    if (!effectiveSelectedSlug || drawingPoints.length < 3) return;
+    draft.setPolygon(effectiveSelectedSlug, tuplesToObjects(drawingPoints));
+    setDrawingPoints([]);
+    setMode("select");
+  }, [effectiveSelectedSlug, drawingPoints, draft]);
 
   // ---- Keyboard shortcuts ----
   useEffect(() => {
@@ -153,30 +190,10 @@ export default function ZoneEditPage() {
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-    // finalizeDrawing closes over drawingPoints + selectedSlug; the deps
+    // finalizeDrawing closes over drawingPoints + effectiveSelectedSlug; the deps
     // here are intentionally narrow to avoid binding a stale finalize.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, drawingPoints.length, draft.undo, draft.redo]);
-
-  // ---- Drawing helpers ----
-  const startDrawing = useCallback((slug: string) => {
-    setSelectedSlug(slug);
-    setMode("new");
-    setDrawingPoints([]);
-    setPreviewMode(false);
-  }, []);
-
-  const cancelDrawing = useCallback(() => {
-    setDrawingPoints([]);
-    setMode("select");
-  }, []);
-
-  const finalizeDrawing = useCallback(() => {
-    if (!selectedSlug || drawingPoints.length < 3) return;
-    draft.setPolygon(selectedSlug, tuplesToObjects(drawingPoints));
-    setDrawingPoints([]);
-    setMode("select");
-  }, [selectedSlug, drawingPoints, draft]);
 
   // ---- Canvas event handlers ----
   const handleAppendVertex = useCallback((pt: [number, number]) => {
@@ -207,9 +224,9 @@ export default function ZoneEditPage() {
 
   // ---- Action bar handlers ----
   const handleClearSelected = useCallback(() => {
-    if (!selectedSlug) return;
-    draft.clearPolygon(selectedSlug);
-  }, [selectedSlug, draft]);
+    if (!effectiveSelectedSlug) return;
+    draft.clearPolygon(effectiveSelectedSlug);
+  }, [effectiveSelectedSlug, draft]);
 
   // ---- Save ----
   const handleSave = useCallback(async () => {
@@ -248,16 +265,16 @@ export default function ZoneEditPage() {
 
   // ---- Action bar mode derivation ----
   const actionBarMode: ActionBarMode = useMemo(() => {
-    if (!selectedSlug) return null;
+    if (!effectiveSelectedSlug) return null;
     if (mode === "new") return "cancel";
-    const points = draft.zones[selectedSlug] ?? [];
+    const points = draft.zones[effectiveSelectedSlug] ?? [];
     if (points.length >= 3) return "clear";
     return "draw";
-  }, [selectedSlug, mode, draft.zones]);
+  }, [effectiveSelectedSlug, mode, draft.zones]);
 
   const selectedZone = useMemo(
-    () => mapDetail?.zones.find((z) => z.slug === selectedSlug) ?? null,
-    [mapDetail, selectedSlug],
+    () => mapDetail?.zones.find((z) => z.slug === effectiveSelectedSlug) ?? null,
+    [mapDetail, effectiveSelectedSlug],
   );
 
   // ---- Loading / error states ----
@@ -296,7 +313,7 @@ export default function ZoneEditPage() {
             zones={mapDetail.zones}
             draftZones={draft.zones}
             dirtySlugs={draft.dirtySlugs}
-            selectedSlug={selectedSlug}
+            selectedSlug={effectiveSelectedSlug}
             onSelectFilledZone={handleSelectFilledZone}
             onClickEmptyZone={startDrawing}
           />
@@ -328,9 +345,9 @@ export default function ZoneEditPage() {
                   backgroundSrc={mapDetail.minimap_url}
                   backgroundIsFallback={false}
                   zones={canvasZones}
-                  selectedSlug={selectedSlug}
+                  selectedSlug={effectiveSelectedSlug}
                   mode={mode}
-                  drawingSlug={mode === "new" ? selectedSlug : null}
+                  drawingSlug={mode === "new" ? effectiveSelectedSlug : null}
                   drawingPoints={drawingPoints}
                   onSelectZone={handleSelectZoneFromCanvas}
                   onUpdateZonePoints={handleUpdateZonePoints}

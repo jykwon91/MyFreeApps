@@ -70,6 +70,13 @@ export default function MicroClipShiftOverlay({
   const widerSourceDurationS = useClipDuration(widerSourceUrl);
   const storedOffset = resolvePaneOffset(adminLineup, pane);
 
+  // Clear awaitingOpen once phase transitions out of "closed" (i.e., once open() was called).
+  // Uses setState-during-render (React-idiomatic getDerivedStateFromProps equivalent) so
+  // the effect body only calls open() with no setState.
+  if (phase.phase !== "closed" && awaitingOpen) {
+    setAwaitingOpen(false);
+  }
+
   // Per-pane on-demand widen-source. The throw endpoint widens the shared
   // clip_url_original — unlocking shifting for stand/aim/throw/landing all
   // at once (PR1 design: stand/aim REUSE the throw wider source rather than
@@ -109,12 +116,10 @@ export default function MicroClipShiftOverlay({
     //     the gate so a missing wider source surfaces the widen prompt
     //     immediately rather than spinning forever.
     if (!widerSourceUrl) {
-      setAwaitingOpen(false);
       open(0, null);
       return;
     }
     if (widerSourceDurationS == null) return;
-    setAwaitingOpen(false);
     open(widerSourceDurationS, storedOffset);
   }, [
     awaitingOpen,
