@@ -10,8 +10,8 @@ import {
 
 /**
  * Making gold in Forever. Classic Era advice unless a tip says otherwise —
- * no auction-house prices: Forever's economy is brand new. Where to farm
- * (with vendor-price numbers) is generated: see `gold/goldFarms.ts`.
+ * no prices in the tips. Where to farm (vendor-price numbers, plus auction
+ * prices for cloth and leather) is generated: see `gold/goldFarms.ts`.
  *
  * Re-checked 2026-11-05 against Blizzard's posts and the launch client
  * (1.60.1.70790). `forever` needs a Blizzard post; client-only facts are worded
