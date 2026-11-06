@@ -15,8 +15,8 @@
  *   - Fields are named by their visible labels, and clicking a label focuses its field.
  */
 import { test, expect, type Page, type Request } from "@playwright/test";
+import { ORG_ID, plantAuth } from "./fixtures/mockSession";
 
-const ORG_ID = "00000000-0000-0000-0000-000000000010";
 const TXN_ID = "00000000-0000-0000-0000-0000000000a1";
 
 const TXN = {
@@ -44,19 +44,6 @@ const TXN = {
   applicant_id: null,
   attribution_source: null,
 };
-
-function plantAuth(page: Page): Promise<void> {
-  return page.addInitScript(
-    ([orgId]) => {
-      const futureExp = Math.floor(Date.now() / 1000) + 3600;
-      const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-      const payload = btoa(JSON.stringify({ sub: "test-user", exp: futureExp }));
-      window.localStorage.setItem("token", `${header}.${payload}.fake-signature`);
-      window.localStorage.setItem("v1_activeOrgId", orgId);
-    },
-    [ORG_ID],
-  );
-}
 
 interface FakeServer {
   patches: unknown[];

@@ -101,7 +101,10 @@ vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   useGetListingsQuery: vi.fn(() => defaultListingsState),
 }));
 
+vi.mock("@/shared/hooks/useOrgRole", () => ({ useCanWrite: vi.fn(() => true) }));
+
 import { useGetInquiriesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
+import { useCanWrite } from "@/shared/hooks/useOrgRole";
 
 type InquiriesQueryReturn = ReturnType<typeof useGetInquiriesQuery>;
 
@@ -121,6 +124,7 @@ describe("Inquiries page", () => {
       defaultInquiriesState as unknown as InquiriesQueryReturn,
     );
     createInquiryMock.mockClear();
+    vi.mocked(useCanWrite).mockReturnValue(true);
   });
 
   it("asks for the inbox by default, so email inquiries with no spam score show", () => {
@@ -163,7 +167,7 @@ describe("Inquiries page", () => {
       data: { items: [], total: 0, has_more: false },
     } as unknown as InquiriesQueryReturn);
     renderInquiries();
-    expect(screen.getByText(/No inquiries yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/No inquiries yet/i)).toHaveTextContent('Use "New inquiry" to log one manually.');
   });
 
   it("renders the filtered empty state when no inquiries match the active stage", () => {
@@ -218,5 +222,30 @@ describe("Inquiries page", () => {
     await user.click(screen.getByTestId("inquiry-filter-triaged"));
     // After click, the chip should be aria-selected
     expect(screen.getByTestId("inquiry-filter-triaged")).toHaveAttribute("aria-selected", "true");
+  });
+});
+
+describe("Inquiries page for a viewer", () => {
+  beforeEach(() => {
+    vi.mocked(useCanWrite).mockReturnValue(false);
+  });
+
+  it("hides New inquiry and keeps the Templates link", () => {
+    vi.mocked(useGetInquiriesQuery).mockReturnValue(
+      defaultInquiriesState as unknown as InquiriesQueryReturn,
+    );
+    renderInquiries();
+    expect(screen.queryByTestId("new-inquiry-button")).not.toBeInTheDocument();
+    expect(screen.getByTestId("manage-reply-templates-link")).toBeInTheDocument();
+  });
+
+  it("doesn't point a viewer at New inquiry when the list is empty", () => {
+    vi.mocked(useGetInquiriesQuery).mockReturnValue({
+      ...defaultInquiriesState,
+      data: { items: [], total: 0, has_more: false },
+    } as unknown as InquiriesQueryReturn);
+    renderInquiries();
+    const empty = screen.getByText(/No inquiries yet/i);
+    expect(empty).not.toHaveTextContent("New inquiry");
   });
 });

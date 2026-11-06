@@ -18,8 +18,7 @@
  *     no horizontal overflow at mobile / tablet / desktop widths.
  */
 import { test, expect, type Page, type Request } from "@playwright/test";
-
-const ORG_ID = "00000000-0000-0000-0000-000000000010";
+import { ORG_ID, plantAuth } from "./fixtures/mockSession";
 
 interface FakeTemplate {
   id: string;
@@ -42,19 +41,6 @@ function asResponse(row: FakeTemplate) {
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
   };
-}
-
-function plantAuth(page: Page): Promise<void> {
-  return page.addInitScript(
-    ([orgId]) => {
-      const futureExp = Math.floor(Date.now() / 1000) + 3600;
-      const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-      const payload = btoa(JSON.stringify({ sub: "test-user", exp: futureExp }));
-      window.localStorage.setItem("token", `${header}.${payload}.fake-signature`);
-      window.localStorage.setItem("v1_activeOrgId", orgId);
-    },
-    [ORG_ID],
-  );
 }
 
 async function stubShell(page: Page, orgRole = "owner"): Promise<void> {

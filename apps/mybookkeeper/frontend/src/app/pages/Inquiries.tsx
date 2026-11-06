@@ -15,6 +15,7 @@ import InquirySpamTabFilter from "@/app/features/inquiries/InquirySpamTabFilter"
 import InquiryForm from "@/app/features/inquiries/InquiryForm";
 import { useInquiriesListMode } from "@/app/features/inquiries/useInquiriesListMode";
 import InquiriesListBody from "@/app/features/inquiries/InquiriesListBody";
+import { useCanWrite } from "@/shared/hooks/useOrgRole";
 
 const STAGE_PARAM = "stage";
 const SPAM_PARAM = "spam";
@@ -52,6 +53,7 @@ export default function Inquiries() {
   const spamFilter = parseSpamParam(searchParams.get(SPAM_PARAM));
   const [pageCount, setPageCount] = useState(1);
   const [showForm, setShowForm] = useState(false);
+  const canWrite = useCanWrite();
 
   const queryArgs = useMemo(
     () => ({
@@ -138,14 +140,16 @@ export default function Inquiries() {
               <FileText className="h-4 w-4" aria-hidden="true" />
               Templates
             </Link>
-            <LoadingButton
-              onClick={() => setShowForm(true)}
-              isLoading={false}
-              data-testid="new-inquiry-button"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              New inquiry
-            </LoadingButton>
+            {canWrite ? (
+              <LoadingButton
+                onClick={() => setShowForm(true)}
+                isLoading={false}
+                data-testid="new-inquiry-button"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                New inquiry
+              </LoadingButton>
+            ) : null}
           </div>
         }
       />
@@ -178,9 +182,10 @@ export default function Inquiries() {
         hasMore={hasMore}
         isFetching={isFetching}
         onLoadMore={handleLoadMore}
+        canWrite={canWrite}
       />
 
-      {showForm ? (
+      {showForm && canWrite ? (
         <InquiryForm
           listings={listings}
           onClose={() => setShowForm(false)}

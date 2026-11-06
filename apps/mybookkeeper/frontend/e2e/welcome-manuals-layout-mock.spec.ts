@@ -13,22 +13,9 @@
  *   - No horizontal scroll on either page across mobile / tablet / desktop.
  */
 import { test, expect, type Page } from "@playwright/test";
+import { ORG_ID, plantAuth } from "./fixtures/mockSession";
 
-const ORG_ID = "00000000-0000-0000-0000-000000000010";
 const MANUAL_ID = "00000000-0000-0000-0000-0000000000a1";
-
-function plantAuth(page: Page): Promise<void> {
-  return page.addInitScript(
-    ([orgId]) => {
-      const futureExp = Math.floor(Date.now() / 1000) + 3600;
-      const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-      const payload = btoa(JSON.stringify({ sub: "test-user", exp: futureExp }));
-      window.localStorage.setItem("token", `${header}.${payload}.fake-signature`);
-      window.localStorage.setItem("v1_activeOrgId", orgId);
-    },
-    [ORG_ID],
-  );
-}
 
 async function stubShell(page: Page): Promise<void> {
   await page.route("**/api/users/me", (route) =>
