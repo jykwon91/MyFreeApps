@@ -8,9 +8,9 @@
  * Renders blob bounding boxes as white outlines + numeric labels (`#1`, `#2`)
  * per the accessibility spec — color alone shouldn't carry information.
  */
-import type { ReactNode } from "react";
 import { Card, AlertBox } from "@platform/ui";
 import type { CvDebugFrameEvent } from "@/types/desktop";
+import Chip from "./Chip";
 
 interface DotLivePreviewProps {
   /** Latest debug frame, or null if none received yet. */
@@ -150,18 +150,6 @@ export default function DotLivePreview({
         )}
       </div>
     </Card>
-  );
-}
-
-interface ChipProps {
-  children: ReactNode;
-}
-
-function Chip({ children }: ChipProps) {
-  return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted/40 text-[11px] font-medium">
-      {children}
-    </span>
   );
 }
 
