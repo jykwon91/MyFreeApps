@@ -182,6 +182,7 @@
         "test_email_queue_split.py",
         "test_email_queue_dedup_filter.py",
         "test_email_sync_worker.py",
+        "test_integration_org_scope.py",
         "test_gmail_auth_expired.py",
         "test_gmail_search_query.py",
         "test_email_discovery_last_synced.py",
@@ -251,7 +252,9 @@
       ],
       "backend_tests": [
         "test_gmail_auth_expired.py",
-        "test_email_discovery_last_synced.py"
+        "test_email_discovery_last_synced.py",
+        "test_integration_org_scope.py",
+        "test_integration_org_key_migration.py"
       ],
       "frontend_tests": [
         "Integrations.test.tsx",

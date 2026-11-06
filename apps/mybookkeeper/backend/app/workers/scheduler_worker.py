@@ -21,20 +21,21 @@ import time
 from app.core.config import settings
 from app.core.rent_reminder_constants import REMINDER_TICK_MINUTES
 from app.db.session import AsyncSessionLocal, engine, unit_of_work
+from app.models.integrations.gmail_sync_target import GmailSyncTarget
 from app.repositories import integration_repo
 from app.repositories.leases import signed_lease_repo
 from app.services.listings.channel_sync_service import poll_all as poll_all_channels
 from app.services.properties import utility_plan_service
 from app.services.rent import rent_reminder_dispatch_service
-from app.workers.email_sync_worker import sync_gmail_for_user
+from app.workers.email_sync_worker import sync_gmail_connection
 
 logger = logging.getLogger(__name__)
 
 
-async def get_gmail_user_ids() -> list[str]:
-    """Return only user IDs whose Gmail token is still active (not in needs_reauth state)."""
+async def get_gmail_sync_targets() -> list[GmailSyncTarget]:
+    """Gmail connections whose token is still active (not in needs_reauth state)."""
     async with AsyncSessionLocal() as db:
-        return await integration_repo.get_active_gmail_user_ids(db)
+        return await integration_repo.list_active_gmail_sync_targets(db)
 
 
 async def sync_all_channel_calendars() -> None:
@@ -130,10 +131,9 @@ async def flag_expiring_utility_plans() -> int:
 
 async def run_sync_cycle() -> None:
     """Run one full sync cycle for all integration types."""
-    gmail_user_ids = await get_gmail_user_ids()
-    for user_id in gmail_user_ids:
-        logger.info("Running Gmail sync for user %s", user_id)
-        await sync_gmail_for_user(user_id)
+    for target in await get_gmail_sync_targets():
+        logger.info("Running Gmail sync for org %s", target.organization_id)
+        await sync_gmail_connection(target)
 
     await sync_all_channel_calendars()
     await auto_end_replaced_leases()

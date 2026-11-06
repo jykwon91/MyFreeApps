@@ -10,7 +10,8 @@ background worker is expected to swallow it with a warning so the scheduler
 loop stays healthy.
 
 The scheduler must skip integrations where needs_reauth=True so it does not
-burn Google API quota retrying dead tokens on every cycle.
+burn Google API quota retrying dead tokens on every cycle: that is checked on
+real rows in ``test_integration_org_scope.py``.
 """
 import uuid
 from contextlib import asynccontextmanager
@@ -20,12 +21,14 @@ import pytest
 from google.auth.exceptions import RefreshError
 
 from app.core.context import RequestContext
+from app.models.integrations.gmail_sync_target import GmailSyncTarget
 from app.models.organization.organization_member import OrgRole
 from app.services.email.constants import (
     GMAIL_AUTH_EXPIRED_API_DETAIL,
     GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR,
 )
-from app.services.email.exceptions import GmailAuthExpiredError, GmailReauthRequiredError
+from app.services.email.exceptions import GmailAuthExpiredError
+from app.workers.email_sync_worker import sync_gmail_connection
 
 
 def _make_ctx() -> RequestContext:
@@ -147,16 +150,8 @@ async def test_sync_route_returns_401_on_gmail_auth_expired() -> None:
 
 @pytest.mark.asyncio
 async def test_worker_logs_warning_and_returns_on_gmail_auth_expired() -> None:
-    """sync_gmail_for_user swallows GmailAuthExpiredError with a warning, does not crash."""
-    from dataclasses import dataclass
-
-    @dataclass
-    class FakeMembership:
-        organization_id: uuid.UUID
-        user_id: uuid.UUID
-
-    user_id = uuid.uuid4()
-    org_id = uuid.uuid4()
+    """sync_gmail_connection swallows GmailAuthExpiredError with a warning, does not crash."""
+    target = GmailSyncTarget(organization_id=uuid.uuid4(), user_id=uuid.uuid4())
 
     with (
         patch("app.workers.email_sync_worker.AsyncSessionLocal") as mock_session_cls,
@@ -172,14 +167,10 @@ async def test_worker_logs_warning_and_returns_on_gmail_auth_expired() -> None:
         mock_db = AsyncMock()
         mock_session_cls.return_value.__aenter__ = AsyncMock(return_value=mock_db)
         mock_session_cls.return_value.__aexit__ = AsyncMock(return_value=False)
-        mock_org_repo.list_for_user = AsyncMock(
-            return_value=[FakeMembership(organization_id=org_id, user_id=user_id)]
-        )
-
-        from app.workers.email_sync_worker import sync_gmail_for_user
+        mock_org_repo.get_member = AsyncMock(return_value=MagicMock())
 
         # Should NOT raise.
-        await sync_gmail_for_user(str(user_id))
+        await sync_gmail_connection(target)
 
     # Downstream stages are not called once auth has expired.
     mock_fetch.assert_not_awaited()
@@ -276,26 +267,3 @@ async def test_discovery_sets_needs_reauth_on_refresh_error() -> None:
     assert integration_arg.refresh_token_encrypted == fake_integration.refresh_token_encrypted
     assert "invalid_grant" in error_arg or "RefreshError" in error_arg
     assert failed_at_arg is not None
-
-
-@pytest.mark.asyncio
-async def test_scheduler_skips_needs_reauth_integrations() -> None:
-    """get_active_gmail_user_ids excludes integrations where needs_reauth=True.
-
-    This is the scheduler-skip contract: integrations with expired tokens must
-    not be polled on every 15-minute cycle.
-    """
-    from unittest.mock import AsyncMock, patch
-
-    active_ids = ["user-111", "user-222"]
-
-    with patch(
-        "app.workers.scheduler_worker.integration_repo.get_active_gmail_user_ids",
-        new=AsyncMock(return_value=active_ids),
-    ) as mock_get_active:
-        from app.workers.scheduler_worker import get_gmail_user_ids
-
-        result = await get_gmail_user_ids()
-
-    mock_get_active.assert_awaited_once()
-    assert result == active_ids
