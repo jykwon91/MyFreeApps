@@ -18,6 +18,8 @@ Scheduled jobs:
                       3) and once at boot. Pulls WoW Forever auction-house
                       prices (``app/services/wow/prices/``); a per-feed
                       advisory lock keeps two processes from both writing.
+  purge_wow_feature_submissions — every 24 hours. WoW feature-request
+                      retention (``feature_retention_service``).
 
 Architecture rationale
 ----------------------
@@ -55,6 +57,8 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.services.wow.prices import price_refresh_service
+from app.core.wow_feature_request_limits import PURGE_INTERVAL_HOURS
+from app.services.wow.feature_requests.feature_retention_service import purge_feature_request_data
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +72,7 @@ JOB_SYNC_ALL_SOURCES = "sync_all_sources"
 JOB_CLEANUP_DOWNLOADS = "cleanup_ingestion_downloads"
 JOB_RAID_NOTIFICATIONS = "raid_notifications"
 JOB_REFRESH_WOW_PRICES = "refresh_wow_prices"
+JOB_PURGE_FEATURE_SUBMISSIONS = "purge_wow_feature_submissions"
 RAID_NOTIFICATIONS_INTERVAL_SECONDS = 60
 
 
@@ -131,6 +136,17 @@ def start_scheduler(
         max_instances=1,
         # Also once at boot, so a fresh deploy has prices without waiting hours.
         next_run_time=datetime.now(timezone.utc),
+    )
+
+    _scheduler.add_job(
+        _run_purge_feature_submissions,
+        trigger=IntervalTrigger(hours=PURGE_INTERVAL_HOURS),
+        id=JOB_PURGE_FEATURE_SUBMISSIONS,
+        name=JOB_PURGE_FEATURE_SUBMISSIONS,
+        replace_existing=True,
+        coalesce=True,
+        misfire_grace_time=3600,
+        max_instances=1,
     )
 
     from app.core.config import settings
@@ -301,6 +317,14 @@ async def _run_refresh_wow_prices() -> None:
         "scheduler_service: refresh_wow_prices: %s",
         ", ".join(f"{o.source}/{o.region}={o.outcome}({o.item_count})" for o in outcomes) or "nothing refreshed",
     )
+
+async def _run_purge_feature_submissions() -> None:
+    """Scheduled job: WoW feature-request retention."""
+    try:
+        await purge_feature_request_data()
+    except Exception:
+        # Retried on the next tick; logged so a persistent failure is visible.
+        logger.exception("scheduler_service: purge_wow_feature_submissions: run failed")
 
 
 async def _run_cleanup_downloads() -> None:

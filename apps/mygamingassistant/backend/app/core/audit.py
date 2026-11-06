@@ -30,9 +30,14 @@ MGA_SENSITIVE_FIELDS: frozenset[str] = frozenset({
 })
 
 # MGA skip-tables — high-volume / secret-bearing tables we don't audit.
+# The WoW feature-request submission + vote tables hold anonymous visitors'
+# raw text and IP/browser hashes, which must never be copied into audit_logs.
+# (wow_feature_story IS audited — triage edits keep their before/after.)
 MGA_SKIP_TABLES: frozenset[str] = frozenset({
     "auth_events",
     "refresh_sessions",
+    "wow_feature_submission",
+    "wow_feature_vote",
 })
 
 MGA_SKIP_FIELDS: frozenset[str] = frozenset()

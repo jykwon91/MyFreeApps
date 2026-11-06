@@ -131,6 +131,32 @@ class TestRateLimiter:
             limiter.check("ip1")
         assert exc_info.value.detail == RATE_LIMIT_GENERIC_DETAIL
 
+    def test_retry_after_is_none_until_limited(self) -> None:
+        limiter = RateLimiter(max_attempts=2, window_seconds=60)
+        assert limiter.retry_after_seconds("ip1") is None
+        limiter.check("ip1")
+        assert limiter.retry_after_seconds("ip1") is None
+
+    def test_retry_after_counts_down_from_the_window(self) -> None:
+        limiter = RateLimiter(max_attempts=2, window_seconds=60)
+        limiter.check("ip1")
+        limiter.check("ip1")
+        retry_after = limiter.retry_after_seconds("ip1")
+        assert retry_after is not None
+        assert 1 <= retry_after <= 60
+
+    def test_retry_after_records_nothing(self) -> None:
+        limiter = RateLimiter(max_attempts=1, window_seconds=60)
+        for _ in range(5):
+            assert limiter.retry_after_seconds("ip1") is None
+        limiter.check("ip1")
+        assert limiter.retry_after_seconds("ip2") is None
+
+    def test_retry_after_clears_when_the_window_passes(self) -> None:
+        limiter = RateLimiter(max_attempts=1, window_seconds=0)
+        limiter.check("ip1")
+        assert limiter.retry_after_seconds("ip1") is None
+
 
 # ---------------------------------------------------------------------------
 # email_domain_from_request — PII-safe parsing

@@ -28,6 +28,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Uplo
 from platform_shared.core.request_utils import get_client_ip
 
 from app.core.config import settings
+from app.core.public_ai_availability import missing_public_ai_config
 from app.core.rate_limit import RateLimiter, require_turnstile
 from app.schemas.wow.extracted_item import ItemExtractionResponse
 from app.services.wow import item_extractor
@@ -56,19 +57,10 @@ item_extract_limiter = RateLimiter(
 )
 
 
-def _turnstile_required() -> bool:
-    """Anonymous deployments must not expose a paid endpoint without a CAPTCHA."""
-    return settings.serve_only or settings.environment == "production"
-
-
 async def require_item_reader_available() -> None:
-    missing: list[str] = []
-    if not settings.anthropic_api_key:
-        missing.append("ANTHROPIC_API_KEY")
-    if settings.wow_extract_daily_cap <= 0:
-        missing.append("WOW_EXTRACT_DAILY_CAP")
-    if _turnstile_required() and not settings.turnstile_secret_key:
-        missing.append("TURNSTILE_SECRET_KEY")
+    missing = missing_public_ai_config(
+        daily_cap=settings.wow_extract_daily_cap, cap_env_name="WOW_EXTRACT_DAILY_CAP"
+    )
     if missing:
         logger.warning("wow item extract unavailable: not configured: %s", ",".join(missing))
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail=ITEM_READER_UNAVAILABLE)

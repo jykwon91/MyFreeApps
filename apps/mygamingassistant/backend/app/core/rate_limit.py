@@ -8,7 +8,7 @@ WoW item reader (both modes).
 Mirrors apps/myjobhunter/backend/app/core/rate_limit.py (name + thresholds only).
 """
 
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,6 +30,7 @@ from app.repositories.user.user_repo import get_by_email_ci as get_user_by_email
 
 __all__ = [
     "RateLimiter",
+    "check_with_retry_after",
     "RATE_LIMIT_GENERIC_DETAIL",
     "get_user_by_email",
     "login_limiter",
@@ -75,6 +76,16 @@ require_turnstile = make_require_turnstile(
     lambda: settings.turnstile_secret_key,
     verify=_verify_turnstile,
 )
+
+
+def check_with_retry_after(limiter: RateLimiter, key: str) -> None:
+    """``limiter.check(key)``, but the 429 carries ``Retry-After`` (same body)."""
+    try:
+        limiter.check(key)
+    except HTTPException as exc:
+        retry_after = limiter.retry_after_seconds(key)
+        headers = {"Retry-After": str(retry_after)} if retry_after is not None else None
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail, headers=headers) from exc
 
 
 # ---------------------------------------------------------------------------
