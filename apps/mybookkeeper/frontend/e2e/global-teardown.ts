@@ -88,7 +88,7 @@ async function cleanupTestData(token: string, orgId: string): Promise<void> {
     }
   } catch { /* non-critical */ }
 
-  // Clean up E2E tax returns (created by tax.spec.ts)
+  // Clean up E2E tax returns (tax.spec.ts and chrome-extension.spec.ts mark theirs head_of_household)
   try {
     const res = await fetch(`${BACKEND_URL}/tax-returns`, { headers });
     if (res.ok) {
