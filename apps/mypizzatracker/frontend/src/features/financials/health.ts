@@ -12,9 +12,3 @@ export const HEALTH_TONES: Record<DropHealth, BadgeTone> = {
   amber: "warning",
   red: "danger",
 };
-
-export function formatMoney(value: string): string {
-  const n = Number(value);
-  if (Number.isNaN(n)) return value;
-  return n.toFixed(2);
-}

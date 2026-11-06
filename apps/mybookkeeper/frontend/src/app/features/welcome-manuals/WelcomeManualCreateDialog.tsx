@@ -1,8 +1,6 @@
 import { useForm } from "react-hook-form";
 import { X } from "lucide-react";
-import { Panel, PanelTitle } from "@platform/ui";
-import FormField from "@/shared/components/ui/FormField";
-import { LoadingButton } from "@platform/ui";
+import { FormField, LoadingButton, Panel, PanelTitle } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useCreateWelcomeManualMutation } from "@/shared/store/welcomeManualsApi";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
@@ -81,30 +79,38 @@ export default function WelcomeManualCreateDialog({
           data-testid="welcome-manual-create-form"
         >
           <FormField label="Title" required>
-            <input
-              {...register("title", { required: "Title is required" })}
-              className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              placeholder="e.g. Welcome to the Lakeview Suite"
-              data-testid="welcome-manual-create-title"
-            />
-            {errors.title ? (
-              <p className="text-xs text-red-600 mt-1">{errors.title.message}</p>
-            ) : null}
+            {(field) => (
+              <>
+                <input
+                  {...register("title", { required: "Title is required" })}
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  placeholder="e.g. Welcome to the Lakeview Suite"
+                  data-testid="welcome-manual-create-title"
+                  {...field}
+                />
+                {errors.title ? (
+                  <p className="text-xs text-red-600 mt-1">{errors.title.message}</p>
+                ) : null}
+              </>
+            )}
           </FormField>
 
           <FormField label="Property (optional)">
-            <select
-              {...register("property_id")}
-              className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              data-testid="welcome-manual-create-property"
-            >
-              <option value="">No property</option>
-              {properties.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            {(field) => (
+              <select
+                {...register("property_id")}
+                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                data-testid="welcome-manual-create-property"
+                {...field}
+              >
+                <option value="">No property</option>
+                {properties.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </FormField>
 
           <label className="flex items-start gap-2 text-sm min-h-[44px]">

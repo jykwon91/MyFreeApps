@@ -50,6 +50,8 @@ export { default as Card } from "./components/ui/Card";
 export { default as ProgressBar } from "./components/ui/ProgressBar";
 export type { ProgressTone } from "./components/ui/ProgressBar";
 export { default as FormField } from "./components/ui/FormField";
+export type { FormFieldProps } from "./components/ui/FormFieldProps";
+export type { FormFieldControlProps } from "./components/ui/FormFieldControlProps";
 export { default as Toaster } from "./components/ui/Toaster";
 export { default as TurnstileWidget } from "./components/ui/TurnstileWidget";
 export { default as ConfirmDialog } from "./components/ui/ConfirmDialog";

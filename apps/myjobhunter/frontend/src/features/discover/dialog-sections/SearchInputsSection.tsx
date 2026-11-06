@@ -41,7 +41,7 @@ export default function SearchInputsSection({
 }: SearchInputsSectionProps) {
   return (
     <>
-      <FormField label="Role(s)" required>
+      <FormField label="Role(s)" required group>
         <MultiChipInput
           value={roles}
           onChange={onRolesChange}
@@ -51,7 +51,7 @@ export default function SearchInputsSection({
         />
       </FormField>
 
-      <FormField label="Skills (optional)">
+      <FormField label="Skills (optional)" group>
         <MultiChipInput
           value={skills}
           onChange={onSkillsChange}
@@ -62,18 +62,23 @@ export default function SearchInputsSection({
       </FormField>
 
       <FormField label="Location (optional)">
-        <input
-          type="text"
-          value={location}
-          onChange={(e) => onLocationChange(e.target.value)}
-          placeholder="City or 'Remote'"
-          className={INPUT_CLASS}
-          disabled={locationDisabled}
-        />
-        {locationDisabled && (
-          <p className="text-xs text-muted-foreground mt-1">
-            Disabled — you have remote-only on.
-          </p>
+        {(field) => (
+          <>
+            <input
+              type="text"
+              value={location}
+              onChange={(e) => onLocationChange(e.target.value)}
+              placeholder="City or 'Remote'"
+              className={INPUT_CLASS}
+              disabled={locationDisabled}
+              {...field}
+            />
+            {locationDisabled && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Disabled — you have remote-only on.
+              </p>
+            )}
+          </>
         )}
       </FormField>
     </>

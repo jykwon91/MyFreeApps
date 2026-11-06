@@ -14,21 +14,10 @@ import userEvent from "@testing-library/user-event";
 import GreenhouseConfigSection from "../GreenhouseConfigSection";
 
 // ---------------------------------------------------------------------------
-// Mock @platform/ui — we only need FormField + MultiChipInput stubs
+// Mock @platform/ui — real FormField, stubbed MultiChipInput
 // ---------------------------------------------------------------------------
-vi.mock("@platform/ui", () => ({
-  FormField: ({
-    label,
-    children,
-  }: {
-    label: string;
-    children: React.ReactNode;
-  }) => (
-    <div>
-      <label>{label}</label>
-      {children}
-    </div>
-  ),
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   MultiChipInput: ({
     value,
     onChange,

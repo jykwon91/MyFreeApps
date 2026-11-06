@@ -12,6 +12,7 @@
  *   - Save & close sends only the edited field, then closes.
  *   - A 500 on Save & close keeps the prompt open with an inline error, and a retry works.
  *   - The prompt's buttons are at least 44px tall and fit a phone-width screen.
+ *   - Fields are named by their visible labels, and clicking a label focuses its field.
  */
 import { test, expect, type Page, type Request } from "@playwright/test";
 
@@ -114,11 +115,11 @@ async function stubApi(page: Page): Promise<FakeServer> {
 async function openTransaction(page: Page): Promise<void> {
   await page.goto("/transactions");
   await page.getByText("Test Plumber").locator("visible=true").first().click();
-  await expect(page.locator('input[name="vendor"]')).toHaveValue("Test Plumber");
+  await expect(page.getByRole("textbox", { name: "Vendor", exact: true })).toHaveValue("Test Plumber");
 }
 
 async function editVendor(page: Page): Promise<void> {
-  await page.locator('input[name="vendor"]').fill("New Plumber");
+  await page.getByRole("textbox", { name: "Vendor", exact: true }).fill("New Plumber");
 }
 
 const prompt = (page: Page) => page.getByRole("alertdialog", { name: "Save your changes?" });
@@ -134,7 +135,7 @@ test.describe("Transaction editor: unsaved changes", () => {
   test("an unedited transaction closes straight away", async ({ page }) => {
     await openTransaction(page);
     await page.keyboard.press("Escape");
-    await expect(page.locator('input[name="vendor"]')).toHaveCount(0);
+    await expect(page.getByRole("textbox", { name: "Vendor", exact: true })).toHaveCount(0);
     await expect(prompt(page)).toHaveCount(0);
   });
 
@@ -151,7 +152,7 @@ test.describe("Transaction editor: unsaved changes", () => {
 
     await page.keyboard.press("Escape");
     await expect(prompt(page)).toHaveCount(0);
-    await expect(page.locator('input[name="vendor"]')).toHaveValue("New Plumber");
+    await expect(page.getByRole("textbox", { name: "Vendor", exact: true })).toHaveValue("New Plumber");
     expect(server.patches).toEqual([]);
   });
 
@@ -162,7 +163,7 @@ test.describe("Transaction editor: unsaved changes", () => {
 
     await prompt(page).getByRole("button", { name: "Discard" }).click();
     await expect(prompt(page)).toHaveCount(0);
-    await expect(page.locator('input[name="vendor"]')).toHaveCount(0);
+    await expect(page.getByRole("textbox", { name: "Vendor", exact: true })).toHaveCount(0);
     expect(server.patches).toEqual([]);
   });
 
@@ -173,7 +174,7 @@ test.describe("Transaction editor: unsaved changes", () => {
 
     await prompt(page).getByRole("button", { name: "Save & close" }).click();
     await expect(prompt(page)).toHaveCount(0);
-    await expect(page.locator('input[name="vendor"]')).toHaveCount(0);
+    await expect(page.getByRole("textbox", { name: "Vendor", exact: true })).toHaveCount(0);
     expect(server.patches).toEqual([{ vendor: "New Plumber" }]);
   });
 
@@ -189,6 +190,16 @@ test.describe("Transaction editor: unsaved changes", () => {
     await prompt(page).getByRole("button", { name: "Save & close" }).click();
     await expect(prompt(page)).toHaveCount(0);
     expect(server.patches).toHaveLength(2);
+  });
+
+  test("each field is named by its label, and clicking the label focuses it", async ({ page }) => {
+    await openTransaction(page);
+    const panel = page.getByRole("dialog", { name: "Test Plumber" });
+    await expect(panel.getByRole("spinbutton", { name: "Amount", exact: true })).toHaveValue("500.00");
+
+    await panel.getByText("Amount", { exact: true }).click();
+    await expect(panel.getByLabel("Amount", { exact: true })).toBeFocused();
+    await expect(panel.getByRole("group", { name: "Tax Relevant" }).getByRole("checkbox", { name: "Include in tax reports" })).toBeChecked();
   });
 
   test("the prompt fits a phone and its buttons are easy to tap", async ({ page }) => {

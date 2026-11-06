@@ -9,7 +9,7 @@ import type { Property } from "@mybookkeeper/api-client/types/property/property"
 import type { TransactionFormValues } from "@/shared/types/transaction/transaction-form-values";
 import type { DuplicateTransaction } from "@mybookkeeper/api-client/types/transaction/DuplicateTransaction";
 import type { SourcePreview } from "@/shared/types/transaction/source-preview";
-import FormField from "@/shared/components/ui/FormField";
+import { FormField } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 import TransactionDuplicateActions from "@/app/features/transactions/TransactionDuplicateActions";
 import { useGetVendorsQuery } from "@mybookkeeper/api-client/store/vendorsApi";
@@ -148,126 +148,163 @@ export default function TransactionForm({
       )}
 
       <FormField label="Date" dirty={!!dirtyFields.transaction_date}>
-        <input
-          type="date"
-          {...register("transaction_date")}
-          className={fieldClass("transaction_date")}
-        />
+        {(field) => (
+          <input
+            type="date"
+            {...register("transaction_date")}
+            className={fieldClass("transaction_date")}
+            {...field}
+          />
+        )}
       </FormField>
 
       <FormField label="Tax Year" dirty={!!dirtyFields.tax_year}>
-        <input
-          type="number"
-          {...register("tax_year", { valueAsNumber: true })}
-          className={fieldClass("tax_year")}
-          min={2020}
-          max={2099}
-        />
+        {(field) => (
+          <input
+            type="number"
+            {...register("tax_year", { valueAsNumber: true })}
+            className={fieldClass("tax_year")}
+            min={2020}
+            max={2099}
+            {...field}
+          />
+        )}
       </FormField>
 
       <FormField label="Vendor" dirty={!!dirtyFields.vendor}>
-        <input
-          type="text"
-          {...register("vendor")}
-          className={fieldClass("vendor")}
-        />
+        {(field) => (
+          <input
+            type="text"
+            {...register("vendor")}
+            className={fieldClass("vendor")}
+            {...field}
+          />
+        )}
       </FormField>
 
       {/* PR 4.2: link this transaction to a row in the Vendors rolodex.
           The "(none)" option submits ``vendor_id: null`` to detach. */}
       <FormField label="Assign vendor" dirty={!!dirtyFields.vendor_id}>
-        {vendorsLoading ? (
-          <div
-            className="h-10 w-full bg-muted/40 rounded-md animate-pulse"
-            data-testid="vendor-id-select-skeleton"
+        {(field) =>
+          vendorsLoading ? (
+            <div
+              className="h-10 w-full bg-muted/40 rounded-md animate-pulse"
+              data-testid="vendor-id-select-skeleton"
+            />
+          ) : (
+            <Select
+              {...register("vendor_id")}
+              className={selectClass("vendor_id")}
+              data-testid="vendor-id-select"
+              {...field}
+            >
+              <option value="">(none)</option>
+              {vendors.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name}
+                </option>
+              ))}
+            </Select>
+          )
+        }
+      </FormField>
+
+      <FormField label="Description" dirty={!!dirtyFields.description}>
+        {(field) => (
+          <textarea
+            {...register("description")}
+            className={fieldClass("description")}
+            rows={2}
+            {...field}
           />
-        ) : (
+        )}
+      </FormField>
+
+      <FormField label="Amount" dirty={!!dirtyFields.amount}>
+        {(field) => (
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">$</span>
+            <input
+              type="number"
+              {...register("amount")}
+              className={`${fieldClass("amount")} pl-7`}
+              step="0.01"
+              min="0.01"
+              {...field}
+            />
+          </div>
+        )}
+      </FormField>
+
+      <FormField label="Type" dirty={!!dirtyFields.transaction_type}>
+        {(field) => (
           <Select
-            {...register("vendor_id")}
-            className={selectClass("vendor_id")}
-            data-testid="vendor-id-select"
+            {...register("transaction_type", {
+              onChange: (e: React.ChangeEvent<HTMLSelectElement>) => {
+                setValue("category", e.target.value === "income" ? "rental_revenue" : "maintenance", { shouldDirty: true });
+              },
+            })}
+            className={selectClass("transaction_type")}
+            {...field}
           >
-            <option value="">(none)</option>
-            {vendors.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.name}
-              </option>
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </Select>
+        )}
+      </FormField>
+
+      <FormField label="Category" dirty={!!dirtyFields.category}>
+        {(field) => (
+          <Select {...register("category")} className={selectClass("category")}
+            {...field}
+          >
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>{formatTag(cat)}</option>
             ))}
           </Select>
         )}
       </FormField>
 
-      <FormField label="Description" dirty={!!dirtyFields.description}>
-        <textarea
-          {...register("description")}
-          className={fieldClass("description")}
-          rows={2}
-        />
-      </FormField>
-
-      <FormField label="Amount" dirty={!!dirtyFields.amount}>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">$</span>
-          <input
-            type="number"
-            {...register("amount")}
-            className={`${fieldClass("amount")} pl-7`}
-            step="0.01"
-            min="0.01"
-          />
-        </div>
-      </FormField>
-
-      <FormField label="Type" dirty={!!dirtyFields.transaction_type}>
-        <Select
-          {...register("transaction_type", {
-            onChange: (e: React.ChangeEvent<HTMLSelectElement>) => {
-              setValue("category", e.target.value === "income" ? "rental_revenue" : "maintenance", { shouldDirty: true });
-            },
-          })}
-          className={selectClass("transaction_type")}
-        >
-          <option value="income">Income</option>
-          <option value="expense">Expense</option>
-        </Select>
-      </FormField>
-
-      <FormField label="Category" dirty={!!dirtyFields.category}>
-        <Select {...register("category")} className={selectClass("category")}>
-          {categories.map((cat) => (
-            <option key={cat} value={cat}>{formatTag(cat)}</option>
-          ))}
-        </Select>
-      </FormField>
-
       <FormField label="Property" dirty={!!dirtyFields.property_id}>
-        <Select {...register("property_id")} className={selectClass("property_id")}>
-          <option value="">No property</option>
-          {properties.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </Select>
+        {(field) => (
+          <Select {...register("property_id")} className={selectClass("property_id")}
+            {...field}
+          >
+            <option value="">No property</option>
+            {properties.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </Select>
+        )}
       </FormField>
 
       <FormField label="Channel" dirty={!!dirtyFields.channel}>
-        <Select {...register("channel")} className={selectClass("channel")}>
-          <option value="">None</option>
-          {CHANNELS.map((c) => (
-            <option key={c} value={c}>{formatTag(c)}</option>
-          ))}
-        </Select>
+        {(field) => (
+          <Select {...register("channel")} className={selectClass("channel")}
+            {...field}
+          >
+            <option value="">None</option>
+            {CHANNELS.map((c) => (
+              <option key={c} value={c}>{formatTag(c)}</option>
+            ))}
+          </Select>
+        )}
       </FormField>
 
       <FormField label="Payment Method" dirty={!!dirtyFields.payment_method}>
-        <Select {...register("payment_method")} className={selectClass("payment_method")}>
-          <option value="">None</option>
-          {PAYMENT_METHODS.map((m) => (
-            <option key={m} value={m}>{formatTag(m)}</option>
-          ))}
-        </Select>
+        {(field) => (
+          <Select {...register("payment_method")} className={selectClass("payment_method")}
+            {...field}
+          >
+            <option value="">None</option>
+            {PAYMENT_METHODS.map((m) => (
+              <option key={m} value={m}>{formatTag(m)}</option>
+            ))}
+          </Select>
+        )}
       </FormField>
 
-      <FormField label="Tax Relevant" dirty={!!dirtyFields.tax_relevant}>
+      <FormField label="Tax Relevant" group dirty={!!dirtyFields.tax_relevant}>
         <label className={`flex items-center gap-2 text-sm ${dirtyFields.tax_relevant ? "text-primary font-medium" : ""}`}>
           <input
             type="checkbox"

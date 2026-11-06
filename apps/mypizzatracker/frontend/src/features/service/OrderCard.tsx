@@ -4,12 +4,14 @@ import {
   LoadingButton,
   StatusBadge,
   ConfirmDialog,
-  Select,
   showError,
   showSuccess,
   extractErrorMessage,
 } from "@platform/ui";
 import { Clock } from "lucide-react";
+import { formatMoney } from "@/lib/formatMoney";
+import MoveSelect from "@/features/service/MoveSelect";
+import { formatPickupTime } from "@/features/service/formatPickupTime";
 import {
   useAdvanceOrderMutation,
   useMoveOrderMutation,
@@ -217,55 +219,8 @@ export function OrderCard({
 }
 
 // ---------------------------------------------------------------------------
-// Move dropdown
-// ---------------------------------------------------------------------------
-
-interface MoveSelectProps {
-  currentSlotId: string;
-  slots: DashboardSlot[];
-  disabled: boolean;
-  onMove: (slotId: string) => void;
-}
-
-function MoveSelect({
-  currentSlotId,
-  slots,
-  disabled,
-  onMove,
-}: MoveSelectProps) {
-  if (slots.length <= 1) return null;
-  return (
-    <Select
-      aria-label="Move order to slot"
-      value={currentSlotId}
-      onChange={(e) => onMove(e.target.value)}
-      disabled={disabled}
-      className="h-8 text-xs"
-    >
-      {slots.map((s) => (
-        <option key={s.id} value={s.id}>
-          Slot {formatPickupTime(s.pickup_time)}
-          {s.id === currentSlotId ? " (current)" : ""}
-        </option>
-      ))}
-    </Select>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatMoney(value: string): string {
-  const n = Number(value);
-  if (Number.isNaN(n)) return value;
-  return n.toFixed(2);
-}
-
-function formatPickupTime(time: string | undefined): string {
-  if (!time) return "?";
-  return time.length >= 5 ? time.slice(0, 5) : time;
-}
 
 /**
  * Returns a label like ``12 min`` for stale not_started/cooking orders.

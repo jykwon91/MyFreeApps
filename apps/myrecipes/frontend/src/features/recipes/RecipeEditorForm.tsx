@@ -174,51 +174,63 @@ export default function RecipeEditorForm(props: Props) {
       {isTweak ? (
         <section className="bg-card border rounded-lg p-6 space-y-4">
           <FormField label="What did you change?" required highlight>
-            <textarea
-              value={changeNote}
-              onChange={(e) => setChangeNote(e.target.value)}
-              disabled={isSubmitting}
-              rows={2}
-              maxLength={2000}
-              placeholder="e.g. Cut the sugar by half, added vanilla"
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-            />
+            {(field) => (
+              <textarea
+                value={changeNote}
+                onChange={(e) => setChangeNote(e.target.value)}
+                disabled={isSubmitting}
+                rows={2}
+                maxLength={2000}
+                placeholder="e.g. Cut the sugar by half, added vanilla"
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                {...field}
+              />
+            )}
           </FormField>
         </section>
       ) : (
         <section className="bg-card border rounded-lg p-6 space-y-4">
           <FormField label="Title" required>
-            <input
-              ref={titleRef}
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              disabled={isSubmitting}
-              required
-              maxLength={255}
-              className={META_INPUT}
-            />
+            {(field) => (
+              <input
+                ref={titleRef}
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                disabled={isSubmitting}
+                required
+                maxLength={255}
+                className={META_INPUT}
+                {...field}
+              />
+            )}
           </FormField>
           <FormField label="Description">
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              disabled={isSubmitting}
-              rows={2}
-              maxLength={5000}
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-            />
+            {(field) => (
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                disabled={isSubmitting}
+                rows={2}
+                maxLength={5000}
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                {...field}
+              />
+            )}
           </FormField>
           <FormField label="Source">
-            <input
-              type="text"
-              value={source}
-              onChange={(e) => setSource(e.target.value)}
-              disabled={isSubmitting}
-              maxLength={1000}
-              placeholder="e.g. grandma, a cookbook, a URL"
-              className={META_INPUT}
-            />
+            {(field) => (
+              <input
+                type="text"
+                value={source}
+                onChange={(e) => setSource(e.target.value)}
+                disabled={isSubmitting}
+                maxLength={1000}
+                placeholder="e.g. grandma, a cookbook, a URL"
+                className={META_INPUT}
+                {...field}
+              />
+            )}
           </FormField>
         </section>
       )}
@@ -226,35 +238,44 @@ export default function RecipeEditorForm(props: Props) {
       <section className="bg-card border rounded-lg p-6 space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <FormField label="Servings">
-            <input
-              type="text"
-              value={servings}
-              onChange={(e) => setServings(e.target.value)}
-              disabled={isSubmitting}
-              maxLength={50}
-              placeholder="e.g. 4"
-              className={META_INPUT}
-            />
+            {(field) => (
+              <input
+                type="text"
+                value={servings}
+                onChange={(e) => setServings(e.target.value)}
+                disabled={isSubmitting}
+                maxLength={50}
+                placeholder="e.g. 4"
+                className={META_INPUT}
+                {...field}
+              />
+            )}
           </FormField>
           <FormField label="Prep (min)">
-            <input
-              type="number"
-              min={0}
-              value={prep}
-              onChange={(e) => setPrep(e.target.value)}
-              disabled={isSubmitting}
-              className={META_INPUT}
-            />
+            {(field) => (
+              <input
+                type="number"
+                min={0}
+                value={prep}
+                onChange={(e) => setPrep(e.target.value)}
+                disabled={isSubmitting}
+                className={META_INPUT}
+                {...field}
+              />
+            )}
           </FormField>
           <FormField label="Cook (min)">
-            <input
-              type="number"
-              min={0}
-              value={cook}
-              onChange={(e) => setCook(e.target.value)}
-              disabled={isSubmitting}
-              className={META_INPUT}
-            />
+            {(field) => (
+              <input
+                type="number"
+                min={0}
+                value={cook}
+                onChange={(e) => setCook(e.target.value)}
+                disabled={isSubmitting}
+                className={META_INPUT}
+                {...field}
+              />
+            )}
           </FormField>
         </div>
       </section>

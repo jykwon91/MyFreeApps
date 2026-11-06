@@ -1,10 +1,8 @@
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { X } from "lucide-react";
-import { Panel, PanelTitle } from "@platform/ui";
-import FormField from "@/shared/components/ui/FormField";
+import { FormField, LoadingButton, Panel, PanelTitle } from "@platform/ui";
 import Markdown from "@/shared/components/ui/Markdown";
-import { LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useUpdateWelcomeManualMutation } from "@/shared/store/welcomeManualsApi";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
@@ -105,26 +103,36 @@ export default function WelcomeManualForm({
           data-testid="welcome-manual-edit-form"
         >
           <FormField label="Title" required>
-            <input
-              {...register("title", { required: "Title is required" })}
-              className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              data-testid="welcome-manual-edit-title"
-            />
-            {errors.title ? (
-              <p className="text-xs text-red-600 mt-1">{errors.title.message}</p>
-            ) : null}
+            {(field) => (
+              <>
+                <input
+                  {...register("title", { required: "Title is required" })}
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  data-testid="welcome-manual-edit-title"
+                  {...field}
+                />
+                {errors.title ? (
+                  <p className="text-xs text-red-600 mt-1">{errors.title.message}</p>
+                ) : null}
+              </>
+            )}
           </FormField>
 
           <FormField label="Intro">
-            <textarea
-              {...register("intro_text")}
-              rows={4}
-              className="w-full border rounded-md px-3 py-2 text-sm"
-              data-testid="welcome-manual-edit-intro"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Supports markdown — **bold**, *italic*, lists, headings, links.
-            </p>
+            {(field) => (
+              <>
+                <textarea
+                  {...register("intro_text")}
+                  rows={4}
+                  className="w-full border rounded-md px-3 py-2 text-sm"
+                  data-testid="welcome-manual-edit-intro"
+                  {...field}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Supports markdown — **bold**, *italic*, lists, headings, links.
+                </p>
+              </>
+            )}
           </FormField>
           {watchIntro ? (
             <div data-testid="welcome-manual-edit-intro-preview">
@@ -136,18 +144,21 @@ export default function WelcomeManualForm({
           ) : null}
 
           <FormField label="Property (optional)">
-            <select
-              {...register("property_id")}
-              className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              data-testid="welcome-manual-edit-property"
-            >
-              <option value="">No property</option>
-              {properties.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            {(field) => (
+              <select
+                {...register("property_id")}
+                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                data-testid="welcome-manual-edit-property"
+                {...field}
+              >
+                <option value="">No property</option>
+                {properties.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </FormField>
         </form>
 

@@ -1,4 +1,4 @@
-import FormField from "@/shared/components/ui/FormField";
+import { FormField } from "@platform/ui";
 import { UTILITY_PLAN_INPUT_CLASS } from "./utility-plan-input-class";
 import type { UtilityPlanFormState } from "./useUtilityPlanForm";
 
@@ -25,29 +25,35 @@ export default function UtilityPlanInternetFields({
     <div className="space-y-4" data-testid="utility-plan-internet-fields">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <FormField label="Price after the promo (USD/mo)">
-          <input
-            type="number"
-            value={values.postPromoMonthly}
-            onChange={(e) => setField("postPromoMonthly", e.target.value)}
-            placeholder="89.99"
-            min="0"
-            step="0.01"
-            className={UTILITY_PLAN_INPUT_CLASS}
-            data-testid="utility-plan-post-promo-input"
-          />
+          {(field) => (
+            <input
+              type="number"
+              value={values.postPromoMonthly}
+              onChange={(e) => setField("postPromoMonthly", e.target.value)}
+              placeholder="89.99"
+              min="0"
+              step="0.01"
+              className={UTILITY_PLAN_INPUT_CLASS}
+              data-testid="utility-plan-post-promo-input"
+              {...field}
+            />
+          )}
         </FormField>
 
         <FormField label="Equipment fee (USD/mo)">
-          <input
-            type="number"
-            value={values.equipmentFeeMonthly}
-            onChange={(e) => setField("equipmentFeeMonthly", e.target.value)}
-            placeholder="15"
-            min="0"
-            step="0.01"
-            className={UTILITY_PLAN_INPUT_CLASS}
-            data-testid="utility-plan-equipment-fee-input"
-          />
+          {(field) => (
+            <input
+              type="number"
+              value={values.equipmentFeeMonthly}
+              onChange={(e) => setField("equipmentFeeMonthly", e.target.value)}
+              placeholder="15"
+              min="0"
+              step="0.01"
+              className={UTILITY_PLAN_INPUT_CLASS}
+              data-testid="utility-plan-equipment-fee-input"
+              {...field}
+            />
+          )}
         </FormField>
       </div>
 
@@ -59,29 +65,35 @@ export default function UtilityPlanInternetFields({
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <FormField label="Download (Mbps)">
-          <input
-            type="number"
-            value={values.downloadMbps}
-            onChange={(e) => setField("downloadMbps", e.target.value)}
-            placeholder="1000"
-            min="1"
-            step="1"
-            className={UTILITY_PLAN_INPUT_CLASS}
-            data-testid="utility-plan-download-input"
-          />
+          {(field) => (
+            <input
+              type="number"
+              value={values.downloadMbps}
+              onChange={(e) => setField("downloadMbps", e.target.value)}
+              placeholder="1000"
+              min="1"
+              step="1"
+              className={UTILITY_PLAN_INPUT_CLASS}
+              data-testid="utility-plan-download-input"
+              {...field}
+            />
+          )}
         </FormField>
 
         <FormField label="Upload (Mbps)">
-          <input
-            type="number"
-            value={values.uploadMbps}
-            onChange={(e) => setField("uploadMbps", e.target.value)}
-            placeholder="1000"
-            min="1"
-            step="1"
-            className={UTILITY_PLAN_INPUT_CLASS}
-            data-testid="utility-plan-upload-input"
-          />
+          {(field) => (
+            <input
+              type="number"
+              value={values.uploadMbps}
+              onChange={(e) => setField("uploadMbps", e.target.value)}
+              placeholder="1000"
+              min="1"
+              step="1"
+              className={UTILITY_PLAN_INPUT_CLASS}
+              data-testid="utility-plan-upload-input"
+              {...field}
+            />
+          )}
         </FormField>
 
         {/* Blank means uncapped, which is the usual case on fibre — the
@@ -89,16 +101,19 @@ export default function UtilityPlanInternetFields({
             in the hint above rather than the placeholder, which this column is
             too narrow to show in full. */}
         <FormField label="Data cap (GB)">
-          <input
-            type="number"
-            value={values.dataCapGb}
-            onChange={(e) => setField("dataCapGb", e.target.value)}
-            placeholder="1200"
-            min="1"
-            step="1"
-            className={UTILITY_PLAN_INPUT_CLASS}
-            data-testid="utility-plan-data-cap-input"
-          />
+          {(field) => (
+            <input
+              type="number"
+              value={values.dataCapGb}
+              onChange={(e) => setField("dataCapGb", e.target.value)}
+              placeholder="1200"
+              min="1"
+              step="1"
+              className={UTILITY_PLAN_INPUT_CLASS}
+              data-testid="utility-plan-data-cap-input"
+              {...field}
+            />
+          )}
         </FormField>
       </div>
     </div>

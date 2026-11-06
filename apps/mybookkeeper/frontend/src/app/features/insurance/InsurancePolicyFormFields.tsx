@@ -1,4 +1,4 @@
-import FormField from "@/shared/components/ui/FormField";
+import { FormField } from "@platform/ui";
 import { INSURANCE_POLICY_INPUT_CLASS } from "./insurance-policy-input-class";
 import { FREQUENCY_LABEL } from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
 import type { InsurancePolicyFormValues } from "@/shared/types/insurance/insurance-policy-form-values";
@@ -26,75 +26,93 @@ export default function InsurancePolicyFormFields({
   return (
     <>
       <FormField label="Policy name" required>
-        <input
-          type="text"
-          value={values.policyName}
-          onChange={(e) => onChange("policyName", e.target.value)}
-          placeholder="e.g. Landlord Insurance — 123 Main St"
-          className={INSURANCE_POLICY_INPUT_CLASS}
-          maxLength={255}
-          required
-          data-testid="insurance-policy-name-input"
-        />
+        {(field) => (
+          <input
+            type="text"
+            value={values.policyName}
+            onChange={(e) => onChange("policyName", e.target.value)}
+            placeholder="e.g. Landlord Insurance — 123 Main St"
+            className={INSURANCE_POLICY_INPUT_CLASS}
+            maxLength={255}
+            required
+            data-testid="insurance-policy-name-input"
+            {...field}
+          />
+        )}
       </FormField>
 
       <FormField label="Carrier">
-        <input
-          type="text"
-          value={values.carrier}
-          onChange={(e) => onChange("carrier", e.target.value)}
-          placeholder="e.g. State Farm"
-          className={INSURANCE_POLICY_INPUT_CLASS}
-          maxLength={255}
-          data-testid="insurance-carrier-input"
-        />
+        {(field) => (
+          <input
+            type="text"
+            value={values.carrier}
+            onChange={(e) => onChange("carrier", e.target.value)}
+            placeholder="e.g. State Farm"
+            className={INSURANCE_POLICY_INPUT_CLASS}
+            maxLength={255}
+            data-testid="insurance-carrier-input"
+            {...field}
+          />
+        )}
       </FormField>
 
       <FormField label="Policy number">
-        <input
-          type="text"
-          value={values.policyNumber}
-          onChange={(e) => onChange("policyNumber", e.target.value)}
-          placeholder="e.g. POL-123456"
-          className={INSURANCE_POLICY_INPUT_CLASS}
-          maxLength={255}
-          data-testid="insurance-policy-number-input"
-        />
+        {(field) => (
+          <input
+            type="text"
+            value={values.policyNumber}
+            onChange={(e) => onChange("policyNumber", e.target.value)}
+            placeholder="e.g. POL-123456"
+            className={INSURANCE_POLICY_INPUT_CLASS}
+            maxLength={255}
+            data-testid="insurance-policy-number-input"
+            {...field}
+          />
+        )}
       </FormField>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <FormField label="Effective date">
-          <input
-            type="date"
-            value={values.effectiveDate}
-            onChange={(e) => onChange("effectiveDate", e.target.value)}
-            className={INSURANCE_POLICY_INPUT_CLASS}
-            data-testid="insurance-effective-date-input"
-          />
+          {(field) => (
+            <input
+              type="date"
+              value={values.effectiveDate}
+              onChange={(e) => onChange("effectiveDate", e.target.value)}
+              className={INSURANCE_POLICY_INPUT_CLASS}
+              data-testid="insurance-effective-date-input"
+              {...field}
+            />
+          )}
         </FormField>
 
         <FormField label="Expiration date">
-          <input
-            type="date"
-            value={values.expirationDate}
-            onChange={(e) => onChange("expirationDate", e.target.value)}
-            className={INSURANCE_POLICY_INPUT_CLASS}
-            data-testid="insurance-expiration-date-input"
-          />
+          {(field) => (
+            <input
+              type="date"
+              value={values.expirationDate}
+              onChange={(e) => onChange("expirationDate", e.target.value)}
+              className={INSURANCE_POLICY_INPUT_CLASS}
+              data-testid="insurance-expiration-date-input"
+              {...field}
+            />
+          )}
         </FormField>
       </div>
 
       <FormField label="Coverage amount (USD)">
-        <input
-          type="number"
-          value={values.coverageDollars}
-          onChange={(e) => onChange("coverageDollars", e.target.value)}
-          placeholder="e.g. 500000"
-          min="0"
-          step="1"
-          className={INSURANCE_POLICY_INPUT_CLASS}
-          data-testid="insurance-coverage-input"
-        />
+        {(field) => (
+          <input
+            type="number"
+            value={values.coverageDollars}
+            onChange={(e) => onChange("coverageDollars", e.target.value)}
+            placeholder="e.g. 500000"
+            min="0"
+            step="1"
+            className={INSURANCE_POLICY_INPUT_CLASS}
+            data-testid="insurance-coverage-input"
+            {...field}
+          />
+        )}
       </FormField>
 
       <div className="pt-2 border-t space-y-4">
@@ -105,34 +123,40 @@ export default function InsurancePolicyFormFields({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField label="Premium (USD)">
-            <input
-              type="number"
-              value={values.premiumDollars}
-              onChange={(e) => onChange("premiumDollars", e.target.value)}
-              placeholder="e.g. 1240"
-              min="0"
-              step="0.01"
-              className={INSURANCE_POLICY_INPUT_CLASS}
-              data-testid="insurance-premium-input"
-            />
+            {(field) => (
+              <input
+                type="number"
+                value={values.premiumDollars}
+                onChange={(e) => onChange("premiumDollars", e.target.value)}
+                placeholder="e.g. 1240"
+                min="0"
+                step="0.01"
+                className={INSURANCE_POLICY_INPUT_CLASS}
+                data-testid="insurance-premium-input"
+                {...field}
+              />
+            )}
           </FormField>
 
           <FormField label="Billed">
-            <select
-              value={values.premiumFrequency}
-              onChange={(e) => onChange("premiumFrequency", e.target.value)}
-              className={INSURANCE_POLICY_INPUT_CLASS}
-              data-testid="insurance-premium-frequency-select"
-            >
-              {/* Blank rather than a default period: guessing "annually" over a
-                  monthly premium understates the yearly cost by 12x. */}
-              <option value="">Select…</option>
-              {INSURANCE_PREMIUM_FREQUENCIES.map((frequency) => (
-                <option key={frequency} value={frequency}>
-                  {FREQUENCY_LABEL[frequency]}
-                </option>
-              ))}
-            </select>
+            {(field) => (
+              <select
+                value={values.premiumFrequency}
+                onChange={(e) => onChange("premiumFrequency", e.target.value)}
+                className={INSURANCE_POLICY_INPUT_CLASS}
+                data-testid="insurance-premium-frequency-select"
+                {...field}
+              >
+                {/* Blank rather than a default period: guessing "annually" over a
+                    monthly premium understates the yearly cost by 12x. */}
+                <option value="">Select…</option>
+                {INSURANCE_PREMIUM_FREQUENCIES.map((frequency) => (
+                  <option key={frequency} value={frequency}>
+                    {FREQUENCY_LABEL[frequency]}
+                  </option>
+                ))}
+              </select>
+            )}
           </FormField>
         </div>
 
@@ -140,63 +164,77 @@ export default function InsurancePolicyFormFields({
             benchmark or a competing quote, while only the total reconciles
             against the bank. A surplus-lines policy separates them by ~15%. */}
         <FormField label="Fees & taxes (USD)">
-          <input
-            type="number"
-            value={values.feesAndTaxesDollars}
-            onChange={(e) => onChange("feesAndTaxesDollars", e.target.value)}
-            placeholder="e.g. 394.17"
-            min="0"
-            step="0.01"
-            className={INSURANCE_POLICY_INPUT_CLASS}
-            data-testid="insurance-fees-and-taxes-input"
-          />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Policy, inspection and agent fees, surplus lines tax and stamping
-            fee — everything on the bill that isn&apos;t premium, for the whole
-            policy term. Leave blank if the carrier charges none.
-          </p>
+          {(field) => (
+            <>
+              <input
+                type="number"
+                value={values.feesAndTaxesDollars}
+                onChange={(e) => onChange("feesAndTaxesDollars", e.target.value)}
+                placeholder="e.g. 394.17"
+                min="0"
+                step="0.01"
+                className={INSURANCE_POLICY_INPUT_CLASS}
+                data-testid="insurance-fees-and-taxes-input"
+                {...field}
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Policy, inspection and agent fees, surplus lines tax and stamping
+                fee — everything on the bill that isn&apos;t premium, for the whole
+                policy term. Leave blank if the carrier charges none.
+              </p>
+            </>
+          )}
         </FormField>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField label="Deductible (USD)">
-            <input
-              type="number"
-              value={values.deductibleDollars}
-              onChange={(e) => onChange("deductibleDollars", e.target.value)}
-              placeholder="e.g. 2500"
-              min="0"
-              step="1"
-              className={INSURANCE_POLICY_INPUT_CLASS}
-              data-testid="insurance-deductible-input"
-            />
+            {(field) => (
+              <input
+                type="number"
+                value={values.deductibleDollars}
+                onChange={(e) => onChange("deductibleDollars", e.target.value)}
+                placeholder="e.g. 2500"
+                min="0"
+                step="1"
+                className={INSURANCE_POLICY_INPUT_CLASS}
+                data-testid="insurance-deductible-input"
+                {...field}
+              />
+            )}
           </FormField>
 
           <FormField label="Wind / hail deductible (% of coverage)">
-            <input
-              type="number"
-              value={values.windHailPct}
-              onChange={(e) => onChange("windHailPct", e.target.value)}
-              placeholder="e.g. 2"
-              min="0"
-              max="100"
-              step="0.01"
-              className={INSURANCE_POLICY_INPUT_CLASS}
-              data-testid="insurance-wind-hail-input"
-            />
+            {(field) => (
+              <input
+                type="number"
+                value={values.windHailPct}
+                onChange={(e) => onChange("windHailPct", e.target.value)}
+                placeholder="e.g. 2"
+                min="0"
+                max="100"
+                step="0.01"
+                className={INSURANCE_POLICY_INPUT_CLASS}
+                data-testid="insurance-wind-hail-input"
+                {...field}
+              />
+            )}
           </FormField>
         </div>
       </div>
 
       <FormField label="Notes">
-        <textarea
-          value={values.notes}
-          onChange={(e) => onChange("notes", e.target.value)}
-          placeholder="Any additional notes about this policy..."
-          className={`${INSURANCE_POLICY_INPUT_CLASS} resize-none`}
-          rows={3}
-          maxLength={5000}
-          data-testid="insurance-notes-input"
-        />
+        {(field) => (
+          <textarea
+            value={values.notes}
+            onChange={(e) => onChange("notes", e.target.value)}
+            placeholder="Any additional notes about this policy..."
+            className={`${INSURANCE_POLICY_INPUT_CLASS} resize-none`}
+            rows={3}
+            maxLength={5000}
+            data-testid="insurance-notes-input"
+            {...field}
+          />
+        )}
       </FormField>
     </>
   );

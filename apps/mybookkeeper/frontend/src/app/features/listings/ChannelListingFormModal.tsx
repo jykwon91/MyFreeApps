@@ -1,8 +1,7 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Button, LoadingButton } from "@platform/ui";
+import { Button, FormField, LoadingButton } from "@platform/ui";
 import CopyField from "@/shared/components/ui/CopyField";
-import FormField from "@/shared/components/ui/FormField";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   useCreateListingChannelMutation,
@@ -140,71 +139,87 @@ export default function ChannelListingFormModal({
 
           <form onSubmit={handleSubmit} className="mt-4 space-y-3">
             <FormField label="Channel" required>
-              <select
-                value={channelId}
-                onChange={(e) => setChannelId(e.target.value)}
-                disabled={isEdit || noChannelsAvailable}
-                data-testid="channel-listing-form-channel"
-                className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm disabled:bg-muted disabled:text-muted-foreground"
-              >
-                {isEdit && existing ? (
-                  <option value={existing.channel_id}>
-                    {existing.channel?.name ?? existing.channel_id}
-                  </option>
-                ) : (
-                  availableChannels.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))
-                )}
-              </select>
-              {noChannelsAvailable ? (
-                <p className="text-xs text-muted-foreground mt-1">
-                  All channels are already linked to this listing.
-                </p>
-              ) : null}
+              {(field) => (
+                <>
+                  <select
+                    value={channelId}
+                    onChange={(e) => setChannelId(e.target.value)}
+                    disabled={isEdit || noChannelsAvailable}
+                    data-testid="channel-listing-form-channel"
+                    className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm disabled:bg-muted disabled:text-muted-foreground"
+                    {...field}
+                  >
+                    {isEdit && existing ? (
+                      <option value={existing.channel_id}>
+                        {existing.channel?.name ?? existing.channel_id}
+                      </option>
+                    ) : (
+                      availableChannels.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                  {noChannelsAvailable ? (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      All channels are already linked to this listing.
+                    </p>
+                  ) : null}
+                </>
+              )}
             </FormField>
 
             <FormField label="Listing URL on the channel" required>
-              <input
-                type="url"
-                value={externalUrl}
-                onChange={(e) => setExternalUrl(e.target.value)}
-                placeholder="https://..."
-                maxLength={500}
-                data-testid="channel-listing-form-external-url"
-                className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm"
-              />
+              {(field) => (
+                <input
+                  type="url"
+                  value={externalUrl}
+                  onChange={(e) => setExternalUrl(e.target.value)}
+                  placeholder="https://..."
+                  maxLength={500}
+                  data-testid="channel-listing-form-external-url"
+                  className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm"
+                  {...field}
+                />
+              )}
             </FormField>
 
             <FormField label="External listing ID (optional)">
-              <input
-                type="text"
-                value={externalId}
-                onChange={(e) => setExternalId(e.target.value)}
-                placeholder="e.g. 12345 or AB-123"
-                maxLength={120}
-                data-testid="channel-listing-form-external-id"
-                className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm"
-              />
+              {(field) => (
+                <input
+                  type="text"
+                  value={externalId}
+                  onChange={(e) => setExternalId(e.target.value)}
+                  placeholder="e.g. 12345 or AB-123"
+                  maxLength={120}
+                  data-testid="channel-listing-form-external-id"
+                  className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm"
+                  {...field}
+                />
+              )}
             </FormField>
 
             {channelSupportsImport ? (
               <FormField label="Channel's calendar export URL (optional)">
-                <input
-                  type="url"
-                  value={icalImportUrl}
-                  onChange={(e) => setIcalImportUrl(e.target.value)}
-                  placeholder="https://.../calendar.ics"
-                  maxLength={1000}
-                  data-testid="channel-listing-form-ical-import-url"
-                  className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Paste the channel's iCal export URL here so bookings on that
-                  channel come back into MBK every 15 minutes.
-                </p>
+                {(field) => (
+                  <>
+                    <input
+                      type="url"
+                      value={icalImportUrl}
+                      onChange={(e) => setIcalImportUrl(e.target.value)}
+                      placeholder="https://.../calendar.ics"
+                      maxLength={1000}
+                      data-testid="channel-listing-form-ical-import-url"
+                      className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm"
+                      {...field}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Paste the channel's iCal export URL here so bookings on that
+                      channel come back into MBK every 15 minutes.
+                    </p>
+                  </>
+                )}
               </FormField>
             ) : (
               <p className="text-xs text-muted-foreground italic">

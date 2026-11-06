@@ -13,7 +13,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import {
-  FileUploadDropzone,
   FormField,
   LoadingButton,
   Select,
@@ -25,6 +24,8 @@ import { useLineupGames } from "@/hooks/useLineupGames";
 import { useCreateLineupMutation, useGetUploadUrlMutation } from "@/store/lineupsApi";
 import type { LineupCreate } from "@/types/game";
 import { uploadFileToPresignedUrl } from "@/lib/storage";
+import StandScreenshotPanel from "@/components/lineup/StandScreenshotPanel";
+import AimScreenshotPanel from "@/components/lineup/AimScreenshotPanel";
 
 interface FormValues {
   game_id: string;
@@ -279,247 +280,202 @@ export default function LineupUpload() {
       <form onSubmit={onSubmit} className="space-y-5" noValidate>
         {/* Game */}
         <FormField label="Game">
-          <Select
-            value={selectedGameSlug}
-            onChange={(e) => {
-              setSelectedGameSlug(e.target.value);
-              setSelectedMapSlug("");
-              setValue("map_id", "");
-              setValue("target_zone_id", "");
-              setValue("stand_zone_id", "");
-              setValue("utility_type_id", "");
-            }}
-            disabled={!games}
-            aria-label="Select game"
-          >
-            <option value="">Select game…</option>
-            {games?.map((g) => (
-              <option key={g.id} value={g.slug}>{g.name}</option>
-            ))}
-          </Select>
-          <input type="hidden" {...register("game_id", { required: "Game is required" })} />
-          {errors.game_id && <p className="text-xs text-destructive mt-1">{errors.game_id.message}</p>}
+          {(field) => (
+            <>
+              <Select
+                value={selectedGameSlug}
+                onChange={(e) => {
+                  setSelectedGameSlug(e.target.value);
+                  setSelectedMapSlug("");
+                  setValue("map_id", "");
+                  setValue("target_zone_id", "");
+                  setValue("stand_zone_id", "");
+                  setValue("utility_type_id", "");
+                }}
+                disabled={!games}
+                {...field}
+              >
+                <option value="">Select game…</option>
+                {games?.map((g) => (
+                  <option key={g.id} value={g.slug}>{g.name}</option>
+                ))}
+              </Select>
+              <input type="hidden" {...register("game_id", { required: "Game is required" })} />
+              {errors.game_id && <p className="text-xs text-destructive mt-1">{errors.game_id.message}</p>}
+            </>
+          )}
         </FormField>
 
         {/* Map */}
         <FormField label="Map">
-          <Select
-            value={selectedMapSlug}
-            onChange={(e) => {
-              setSelectedMapSlug(e.target.value);
-              setValue("target_zone_id", "");
-              setValue("stand_zone_id", "");
-            }}
-            disabled={!selectedGameSlug || !maps}
-            aria-label="Select map"
-          >
-            <option value="">Select map…</option>
-            {maps?.map((m) => (
-              <option key={m.id} value={m.slug}>{m.name}</option>
-            ))}
-          </Select>
-          <input type="hidden" {...register("map_id", { required: "Map is required" })} />
-          {errors.map_id && <p className="text-xs text-destructive mt-1">{errors.map_id.message}</p>}
+          {(field) => (
+            <>
+              <Select
+                value={selectedMapSlug}
+                onChange={(e) => {
+                  setSelectedMapSlug(e.target.value);
+                  setValue("target_zone_id", "");
+                  setValue("stand_zone_id", "");
+                }}
+                disabled={!selectedGameSlug || !maps}
+                {...field}
+              >
+                <option value="">Select map…</option>
+                {maps?.map((m) => (
+                  <option key={m.id} value={m.slug}>{m.name}</option>
+                ))}
+              </Select>
+              <input type="hidden" {...register("map_id", { required: "Map is required" })} />
+              {errors.map_id && <p className="text-xs text-destructive mt-1">{errors.map_id.message}</p>}
+            </>
+          )}
         </FormField>
 
         {/* Target zone */}
         <FormField label="Target zone (where it lands)">
-          <Select
-            {...register("target_zone_id", { required: "Target zone is required" })}
-            disabled={!mapDetail}
-            aria-label="Select target zone"
-          >
-            <option value="">Select zone…</option>
-            {mapDetail?.zones.map((z) => (
-              <option key={z.id} value={z.id}>{z.name}</option>
-            ))}
-          </Select>
-          {errors.target_zone_id && <p className="text-xs text-destructive mt-1">{errors.target_zone_id.message}</p>}
+          {(field) => (
+            <>
+              <Select
+                {...register("target_zone_id", { required: "Target zone is required" })}
+                disabled={!mapDetail}
+                {...field}
+              >
+                <option value="">Select zone…</option>
+                {mapDetail?.zones.map((z) => (
+                  <option key={z.id} value={z.id}>{z.name}</option>
+                ))}
+              </Select>
+              {errors.target_zone_id && <p className="text-xs text-destructive mt-1">{errors.target_zone_id.message}</p>}
+            </>
+          )}
         </FormField>
 
         {/* Stand zone */}
         <FormField label="Stand zone (where you throw from)">
-          <Select
-            {...register("stand_zone_id", { required: "Stand zone is required" })}
-            disabled={!mapDetail}
-            aria-label="Select stand zone"
-          >
-            <option value="">Select zone…</option>
-            {mapDetail?.zones.map((z) => (
-              <option key={z.id} value={z.id}>{z.name}</option>
-            ))}
-          </Select>
-          {errors.stand_zone_id && <p className="text-xs text-destructive mt-1">{errors.stand_zone_id.message}</p>}
+          {(field) => (
+            <>
+              <Select
+                {...register("stand_zone_id", { required: "Stand zone is required" })}
+                disabled={!mapDetail}
+                {...field}
+              >
+                <option value="">Select zone…</option>
+                {mapDetail?.zones.map((z) => (
+                  <option key={z.id} value={z.id}>{z.name}</option>
+                ))}
+              </Select>
+              {errors.stand_zone_id && <p className="text-xs text-destructive mt-1">{errors.stand_zone_id.message}</p>}
+            </>
+          )}
         </FormField>
 
         {/* Side */}
         <FormField label="Side">
-          <Select
-            {...register("side", { required: "Side is required" })}
-            aria-label="Select side"
-          >
-            {sideOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </Select>
-          {errors.side && <p className="text-xs text-destructive mt-1">{errors.side.message}</p>}
+          {(field) => (
+            <>
+              <Select
+                {...register("side", { required: "Side is required" })}
+                {...field}
+              >
+                {sideOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </Select>
+              {errors.side && <p className="text-xs text-destructive mt-1">{errors.side.message}</p>}
+            </>
+          )}
         </FormField>
 
         {/* Utility type */}
         <FormField label="Utility type">
-          <Select
-            {...register("utility_type_id", { required: "Utility type is required" })}
-            disabled={!mapDetail}
-            aria-label="Select utility type"
-          >
-            <option value="">Select utility…</option>
-            {mapDetail?.utility_types.map((u) => (
-              <option key={u.id} value={u.id} className="capitalize">{u.name}</option>
-            ))}
-          </Select>
-          {errors.utility_type_id && <p className="text-xs text-destructive mt-1">{errors.utility_type_id.message}</p>}
+          {(field) => (
+            <>
+              <Select
+                {...register("utility_type_id", { required: "Utility type is required" })}
+                disabled={!mapDetail}
+                {...field}
+              >
+                <option value="">Select utility…</option>
+                {mapDetail?.utility_types.map((u) => (
+                  <option key={u.id} value={u.id} className="capitalize">{u.name}</option>
+                ))}
+              </Select>
+              {errors.utility_type_id && <p className="text-xs text-destructive mt-1">{errors.utility_type_id.message}</p>}
+            </>
+          )}
         </FormField>
 
         {/* Title */}
         <FormField label="Title" required>
-          <input
-            {...register("title", { required: "Title is required" })}
-            type="text"
-            placeholder="e.g. A-site smoke from CT spawn"
-            className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-            aria-label="Lineup title"
-          />
-          {errors.title && <p className="text-xs text-destructive mt-1">{errors.title.message}</p>}
+          {(field) => (
+            <>
+              <input
+                {...register("title", { required: "Title is required" })}
+                type="text"
+                placeholder="e.g. A-site smoke from CT spawn"
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                {...field}
+              />
+              {errors.title && <p className="text-xs text-destructive mt-1">{errors.title.message}</p>}
+            </>
+          )}
         </FormField>
 
         {/* Notes */}
         <FormField label="Notes (optional)">
-          <textarea
-            {...register("notes")}
-            rows={3}
-            placeholder="Step-by-step notes, crouch/jump timing, etc."
-            className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-y"
-            aria-label="Notes"
-          />
+          {(field) => (
+            <>
+              <textarea
+                {...register("notes")}
+                rows={3}
+                placeholder="Step-by-step notes, crouch/jump timing, etc."
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-y"
+                {...field}
+              />
+            </>
+          )}
         </FormField>
 
         {/* Setup seconds */}
         <FormField label="Setup time (seconds, optional)">
-          <input
-            {...register("setup_seconds")}
-            type="number"
-            min={0}
-            max={120}
-            placeholder="e.g. 8"
-            className="w-32 rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-            aria-label="Setup seconds"
-          />
+          {(field) => (
+            <>
+              <input
+                {...register("setup_seconds")}
+                type="number"
+                min={0}
+                max={120}
+                placeholder="e.g. 8"
+                className="w-32 rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                {...field}
+              />
+            </>
+          )}
         </FormField>
 
         {/* Screenshots */}
         <div className="grid sm:grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm font-medium mb-1.5">Stand screenshot *</p>
-            {standPreview ? (
-              <div className="relative rounded-md overflow-hidden border aspect-video bg-muted/20">
-                <img src={standPreview} alt="Stand preview" className="w-full h-full object-cover" />
-                {standUploading && (
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                    <div className="text-xs text-white">
-                      {standProgress < 100 ? `${standProgress}%` : "Processing…"}
-                    </div>
-                  </div>
-                )}
-                {standKey && !standUploading && (
-                  <div className="absolute top-1.5 right-1.5 bg-green-500/90 text-white text-xs px-1.5 py-0.5 rounded">
-                    Uploaded
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => { setStandFile(null); setStandKey(null); }}
-                  className="absolute top-1.5 left-1.5 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded hover:bg-black/80"
-                >
-                  Change
-                </button>
-              </div>
-            ) : (
-              <FileUploadDropzone
-                accept="image/*"
-                maxSizeBytes={10 * 1024 * 1024}
-                label="Drop stand screenshot here"
-                helperText="Max 10 MB — PNG/JPG"
-                uploading={standUploading}
-                onFilesSelected={handleStandFiles}
-              />
-            )}
-          </div>
-
-          <div>
-            <p className="text-sm font-medium mb-1.5">Aim screenshot *</p>
-            {aimPreview ? (
-              <div
-                ref={aimPreviewRef}
-                onClick={handleAimClick}
-                className="relative rounded-md overflow-hidden border aspect-video bg-muted/20 cursor-crosshair"
-                title="Click to set aim anchor point"
-              >
-                <img src={aimPreview} alt="Aim preview" className="w-full h-full object-cover" />
-                {aimUploading && (
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                    <div className="text-xs text-white">
-                      {aimProgress < 100 ? `${aimProgress}%` : "Processing…"}
-                    </div>
-                  </div>
-                )}
-                {aimKey && !aimUploading && (
-                  <div className="absolute top-1.5 right-1.5 bg-green-500/90 text-white text-xs px-1.5 py-0.5 rounded">
-                    Uploaded
-                  </div>
-                )}
-                {aimAnchor && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: `calc(${aimAnchor.x * 100}% - 6px)`,
-                      top: `calc(${aimAnchor.y * 100}% - 6px)`,
-                      width: 12,
-                      height: 12,
-                      borderRadius: "50%",
-                      border: "2px solid rgba(239, 68, 68, 0.9)",
-                      background: "rgba(239, 68, 68, 0.3)",
-                      boxShadow: "0 0 0 1px rgba(0,0,0,0.5)",
-                      pointerEvents: "none",
-                    }}
-                  />
-                )}
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setAimFile(null); setAimKey(null); setAimAnchor(null); }}
-                  className="absolute top-1.5 left-1.5 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded hover:bg-black/80"
-                >
-                  Change
-                </button>
-              </div>
-            ) : (
-              <FileUploadDropzone
-                accept="image/*"
-                maxSizeBytes={10 * 1024 * 1024}
-                label="Drop aim screenshot here"
-                helperText="Then click to set aim anchor point"
-                uploading={aimUploading}
-                onFilesSelected={handleAimFiles}
-              />
-            )}
-            {aimPreview && !aimUploading && (
-              <p className="text-xs text-muted-foreground mt-1">
-                {aimAnchor
-                  ? `Anchor set at ${Math.round(aimAnchor.x * 100)}%, ${Math.round(aimAnchor.y * 100)}%`
-                  : "Click the image to set the aim anchor point"}
-              </p>
-            )}
-          </div>
+          <StandScreenshotPanel
+            preview={standPreview}
+            uploading={standUploading}
+            progress={standProgress}
+            uploaded={!!standKey}
+            onFilesSelected={handleStandFiles}
+            onChange={() => { setStandFile(null); setStandKey(null); }}
+          />
+          <AimScreenshotPanel
+            preview={aimPreview}
+            previewRef={aimPreviewRef}
+            uploading={aimUploading}
+            progress={aimProgress}
+            uploaded={!!aimKey}
+            anchor={aimAnchor}
+            onFilesSelected={handleAimFiles}
+            onPreviewClick={handleAimClick}
+            onChange={() => { setAimFile(null); setAimKey(null); setAimAnchor(null); }}
+          />
         </div>
+
 
         {/* Submit */}
         <div className="pt-2 flex gap-3">

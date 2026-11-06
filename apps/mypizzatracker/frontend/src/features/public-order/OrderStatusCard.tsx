@@ -22,12 +22,12 @@ import {
 } from "@/types/public/public";
 import {
   formatDateLong,
-  formatMoney,
   formatPhoneDisplay,
   formatTime,
   paymentMethodLabel,
   shortId,
 } from "./formatters";
+import { formatMoney } from "@/lib/formatMoney";
 
 export interface OrderStatusCardProps {
   order: PublicOrderConfirmation;

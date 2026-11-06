@@ -5,10 +5,8 @@ import { EXPENSE_CATEGORY_LIST, INCOME_CATEGORIES, PAYMENT_METHODS, CHANNELS } f
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionFormValues } from "@/shared/types/transaction/transaction-form-values";
-import { Panel, PanelTitle } from "@platform/ui";
-import FormField from "@/shared/components/ui/FormField";
+import { FormField, LoadingButton, Panel, PanelTitle } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
-import { LoadingButton } from "@platform/ui";
 import { useCreateTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 
 export interface ManualEntryFormProps {
@@ -87,103 +85,134 @@ export default function ManualEntryForm({ properties, onClose, onSuccess, onErro
 
       <form id="manual-entry-form" onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
         <FormField label="Date" required>
-          <input
-            type="date"
-            {...register("transaction_date", {
-              onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-                if (e.target.value) {
-                  setValue("tax_year", getYear(new Date(e.target.value + "T00:00:00")));
-                }
-              },
-            })}
-            className="w-full border rounded-md px-3 py-2 text-sm"
-            required
-          />
+          {(field) => (
+            <input
+              type="date"
+              {...register("transaction_date", {
+                onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                  if (e.target.value) {
+                    setValue("tax_year", getYear(new Date(e.target.value + "T00:00:00")));
+                  }
+                },
+              })}
+              className="w-full border rounded-md px-3 py-2 text-sm"
+              required
+              {...field}
+            />
+          )}
         </FormField>
 
         <FormField label="Type" required>
-          <Select
-            {...register("transaction_type", {
-              onChange: (e: React.ChangeEvent<HTMLSelectElement>) => {
-                setValue("category", e.target.value === "income" ? "rental_revenue" : "maintenance");
-              },
-            })}
-            className="w-full"
-          >
-            <option value="income">Income</option>
-            <option value="expense">Expense</option>
-          </Select>
+          {(field) => (
+            <Select
+              {...register("transaction_type", {
+                onChange: (e: React.ChangeEvent<HTMLSelectElement>) => {
+                  setValue("category", e.target.value === "income" ? "rental_revenue" : "maintenance");
+                },
+              })}
+              className="w-full"
+              {...field}
+            >
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+            </Select>
+          )}
         </FormField>
 
         <FormField label="Amount" required>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">$</span>
-            <input
-              type="number"
-              {...register("amount")}
-              className="w-full border rounded-md pl-7 pr-3 py-2 text-sm"
-              placeholder="0.00"
-              step="0.01"
-              min="0.01"
-              required
-            />
-          </div>
+          {(field) => (
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">$</span>
+              <input
+                type="number"
+                {...register("amount")}
+                className="w-full border rounded-md pl-7 pr-3 py-2 text-sm"
+                placeholder="0.00"
+                step="0.01"
+                min="0.01"
+                required
+                {...field}
+              />
+            </div>
+          )}
         </FormField>
 
         <FormField label="Vendor">
-          <input
-            type="text"
-            {...register("vendor")}
-            className="w-full border rounded-md px-3 py-2 text-sm"
-            placeholder="e.g. Home Depot"
-          />
+          {(field) => (
+            <input
+              type="text"
+              {...register("vendor")}
+              className="w-full border rounded-md px-3 py-2 text-sm"
+              placeholder="e.g. Home Depot"
+              {...field}
+            />
+          )}
         </FormField>
 
         <FormField label="Description">
-          <textarea
-            {...register("description")}
-            className="w-full border rounded-md px-3 py-2 text-sm"
-            rows={2}
-            placeholder="Optional details"
-          />
+          {(field) => (
+            <textarea
+              {...register("description")}
+              className="w-full border rounded-md px-3 py-2 text-sm"
+              rows={2}
+              placeholder="Optional details"
+              {...field}
+            />
+          )}
         </FormField>
 
         <FormField label="Category" required>
-          <Select {...register("category")} className="w-full">
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>{formatTag(cat)}</option>
-            ))}
-          </Select>
+          {(field) => (
+            <Select {...register("category")} className="w-full"
+              {...field}
+            >
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>{formatTag(cat)}</option>
+              ))}
+            </Select>
+          )}
         </FormField>
 
         <FormField label="Property">
-          <Select {...register("property_id")} className="w-full">
-            <option value="">No property</option>
-            {properties.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </Select>
+          {(field) => (
+            <Select {...register("property_id")} className="w-full"
+              {...field}
+            >
+              <option value="">No property</option>
+              {properties.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </Select>
+          )}
         </FormField>
 
         <FormField label="Channel">
-          <Select {...register("channel")} className="w-full">
-            <option value="">None</option>
-            {CHANNELS.map((c) => (
-              <option key={c} value={c}>{formatTag(c)}</option>
-            ))}
-          </Select>
+          {(field) => (
+            <Select {...register("channel")} className="w-full"
+              {...field}
+            >
+              <option value="">None</option>
+              {CHANNELS.map((c) => (
+                <option key={c} value={c}>{formatTag(c)}</option>
+              ))}
+            </Select>
+          )}
         </FormField>
 
         <FormField label="Payment Method">
-          <Select {...register("payment_method")} className="w-full">
-            <option value="">None</option>
-            {PAYMENT_METHODS.map((m) => (
-              <option key={m} value={m}>{formatTag(m)}</option>
-            ))}
-          </Select>
+          {(field) => (
+            <Select {...register("payment_method")} className="w-full"
+              {...field}
+            >
+              <option value="">None</option>
+              {PAYMENT_METHODS.map((m) => (
+                <option key={m} value={m}>{formatTag(m)}</option>
+              ))}
+            </Select>
+          )}
         </FormField>
 
-        <FormField label="Tax Relevant">
+        <FormField label="Tax Relevant" group>
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"

@@ -1,9 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { X } from "lucide-react";
-import { Panel, PanelTitle } from "@platform/ui";
-import { LoadingButton } from "@platform/ui";
-import FormField from "@/shared/components/ui/FormField";
+import { FormField, LoadingButton, Panel, PanelTitle } from "@platform/ui";
 import {
   VENDOR_CATEGORIES,
   VENDOR_CATEGORY_LABELS,
@@ -202,78 +200,101 @@ export default function VendorForm({
           data-testid="vendor-form"
         >
           <FormField label="Name" required>
-            <input
-              {...register("name", { required: "Name is required" })}
-              className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              data-testid="vendor-form-name"
-            />
-            {errors.name ? (
-              <p className="text-xs text-red-600 mt-1">
-                {errors.name.message}
-              </p>
-            ) : null}
+            {(field) => (
+              <>
+                <input
+                  {...register("name", { required: "Name is required" })}
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  data-testid="vendor-form-name"
+                  {...field}
+                />
+                {errors.name ? (
+                  <p className="text-xs text-red-600 mt-1">
+                    {errors.name.message}
+                  </p>
+                ) : null}
+              </>
+            )}
           </FormField>
 
           <FormField label="Category" required>
-            <select
-              {...register("category", { required: true })}
-              className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              data-testid="vendor-form-category"
-            >
-              {VENDOR_CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {VENDOR_CATEGORY_LABELS[c]}
-                </option>
-              ))}
-            </select>
+            {(field) => (
+              <select
+                {...register("category", { required: true })}
+                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                data-testid="vendor-form-category"
+                {...field}
+              >
+                {VENDOR_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {VENDOR_CATEGORY_LABELS[c]}
+                  </option>
+                ))}
+              </select>
+            )}
           </FormField>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField label="Phone">
-              <input
-                type="tel"
-                {...register("phone")}
-                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-                data-testid="vendor-form-phone"
-                placeholder="555-0101"
-              />
+              {(field) => (
+                <input
+                  type="tel"
+                  {...register("phone")}
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  data-testid="vendor-form-phone"
+                  placeholder="555-0101"
+                  {...field}
+                />
+              )}
             </FormField>
             <FormField label="Email">
-              <input
-                type="email"
-                {...register("email")}
-                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-                data-testid="vendor-form-email"
-              />
+              {(field) => (
+                <input
+                  type="email"
+                  {...register("email")}
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  data-testid="vendor-form-email"
+                  {...field}
+                />
+              )}
             </FormField>
           </div>
 
           <FormField label="Address">
-            <input
-              {...register("address")}
-              className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-              data-testid="vendor-form-address"
-            />
+            {(field) => (
+              <input
+                {...register("address")}
+                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                data-testid="vendor-form-address"
+                {...field}
+              />
+            )}
           </FormField>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField label="Hourly rate (USD)">
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                {...register("hourly_rate")}
-                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-                data-testid="vendor-form-hourly-rate"
-              />
+              {(field) => (
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  {...register("hourly_rate")}
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  data-testid="vendor-form-hourly-rate"
+                  {...field}
+                />
+              )}
             </FormField>
             <FormField label="Flat-rate notes">
-              <input
-                {...register("flat_rate_notes")}
-                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-                placeholder="e.g. Flat $200 for drain unclog"
-                data-testid="vendor-form-flat-rate-notes"
-              />
+              {(field) => (
+                <input
+                  {...register("flat_rate_notes")}
+                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+                  placeholder="e.g. Flat $200 for drain unclog"
+                  data-testid="vendor-form-flat-rate-notes"
+                  {...field}
+                />
+              )}
             </FormField>
           </div>
 
@@ -287,12 +308,15 @@ export default function VendorForm({
           </label>
 
           <FormField label="Notes">
-            <textarea
-              {...register("notes")}
-              rows={3}
-              className="w-full border rounded-md px-3 py-2 text-sm"
-              data-testid="vendor-form-notes"
-            />
+            {(field) => (
+              <textarea
+                {...register("notes")}
+                rows={3}
+                className="w-full border rounded-md px-3 py-2 text-sm"
+                data-testid="vendor-form-notes"
+                {...field}
+              />
+            )}
           </FormField>
         </form>
 
