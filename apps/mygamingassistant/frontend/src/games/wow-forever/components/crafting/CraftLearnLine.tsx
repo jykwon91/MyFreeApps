@@ -1,5 +1,7 @@
 import FoodSourceList from "@/games/wow-forever/components/food/detail/FoodSourceList";
-import { hasSources, unknownSource } from "@/games/wow-forever/food/recipeSources";
+import WowheadLink from "@/games/wow-forever/components/WowheadLink";
+import { hasSources, isNewInForever, unknownSource } from "@/games/wow-forever/food/recipeSources";
+import { wowheadForeverItemUrl, wowheadForeverSpellUrl } from "@/games/wow-forever/lib/wowheadUrl";
 import type { SourceLookup } from "@/games/wow-forever/data/sourceDecode";
 import type { CraftingFile, LearnAt } from "@/games/wow-forever/types/crafting";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
@@ -19,6 +21,8 @@ interface CraftLearnLineProps {
   learn: LearnAt;
   professionLabel: string;
   place: CraftPlace;
+  /** Recipe spell id — when provided, adds a Wowhead link for Forever trainer rows. */
+  spellId?: number;
 }
 
 function trainerText(learn: Extract<LearnAt, { kind: "trainer" }>, professionLabel: string): string {
@@ -29,9 +33,20 @@ function trainerText(learn: Extract<LearnAt, { kind: "trainer" }>, professionLab
 }
 
 /** How to learn a route recipe; a Pattern / Formula opens to where it's sold or dropped. */
-export default function CraftLearnLine({ learn, professionLabel, place }: CraftLearnLineProps) {
+export default function CraftLearnLine({ learn, professionLabel, place, spellId }: CraftLearnLineProps) {
   if (learn.kind === "start") return <p className="text-sm">Known when you train {professionLabel}</p>;
-  if (learn.kind === "trainer") return <p className="text-sm">{trainerText(learn, professionLabel)}</p>;
+
+  if (learn.kind === "trainer") {
+    if (learn.newInForever && spellId !== undefined) {
+      return (
+        <div className="space-y-1">
+          <p className="text-sm">{trainerText(learn, professionLabel)}</p>
+          <WowheadLink href={wowheadForeverSpellUrl(spellId)} className="text-sm text-primary underline" />
+        </div>
+      );
+    }
+    return <p className="text-sm">{trainerText(learn, professionLabel)}</p>;
+  }
 
   const sources = place.sources.recipe(learn.itemId);
   return (
@@ -39,11 +54,16 @@ export default function CraftLearnLine({ learn, professionLabel, place }: CraftL
       <summary className="cursor-pointer min-h-[44px] sm:min-h-0 py-1 marker:text-muted-foreground">
         <span className="font-medium">{learn.item}</span> <span className="text-muted-foreground">(skill {learn.skill})</span>
       </summary>
-      <div className="pt-2">
+      <div className="pt-2 space-y-1">
         {hasSources(sources) ? (
           <FoodSourceList sources={sources} faction={place.faction} zoneId={place.zoneId} level={place.level} />
         ) : (
-          <p className="text-sm text-muted-foreground">{unknownSource(learn.itemId, "it")}</p>
+          <>
+            <p className="text-sm text-muted-foreground">{unknownSource(learn.itemId, "it")}</p>
+            {isNewInForever(learn.itemId) ? (
+              <WowheadLink href={wowheadForeverItemUrl(learn.itemId)} className="text-sm text-primary underline" />
+            ) : null}
+          </>
         )}
       </div>
     </details>

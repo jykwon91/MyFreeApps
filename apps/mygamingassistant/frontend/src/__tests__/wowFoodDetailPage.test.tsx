@@ -88,7 +88,12 @@ describe("food detail page", () => {
 
   it("says when a Forever recipe's source isn't known, and names the Iron Oven", () => {
     renderAt("/wow-forever/food/250070");
-    expect(within(section("Learn the recipe")).getByText("New in Forever — where to get the recipe isn't known yet.")).toBeInTheDocument();
+    const learn = section("Learn the recipe");
+    expect(within(learn).getByText("New in Forever — where to get the recipe isn't known yet.")).toBeInTheDocument();
+    expect(within(learn).getByRole("link", { name: "Look it up on Wowhead" })).toHaveAttribute(
+      "href",
+      "https://www.wowhead.com/forever/item=250178",
+    );
     expect(within(section("Where to cook it")).getByText(/Iron Oven/)).toBeInTheDocument();
   });
 

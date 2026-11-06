@@ -28,11 +28,11 @@ export default function CraftTransmuteList({ recipes, trainerSkills, professionL
           <li key={recipe.spell} className="rounded-lg border bg-card p-3 space-y-1.5">
             <p className="flex flex-wrap items-center gap-2">
               <span className="font-medium">{recipe.name}</span>
-              {sourceUnknown(recipe) ? <SourceUnknownChip /> : null}
+              {sourceUnknown(recipe) ? <SourceUnknownChip spellId={recipe.spell} /> : null}
             </p>
             <CraftColorsLine recipe={recipe} />
             <CraftReagents reagents={recipe.reagents} place={place} professionLabel={professionLabel} />
-            <CraftLearnLine learn={learnAt(recipe, trainerSkills)} professionLabel={professionLabel} place={place} />
+            <CraftLearnLine learn={learnAt(recipe, trainerSkills)} professionLabel={professionLabel} place={place} spellId={recipe.spell} />
           </li>
         ))}
       </ul>

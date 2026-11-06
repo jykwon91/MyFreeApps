@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
 import FoodSourceList from "@/games/wow-forever/components/food/detail/FoodSourceList";
+import WowheadLink from "@/games/wow-forever/components/WowheadLink";
 import { DETAIL_LINK, DETAIL_SECTION } from "@/games/wow-forever/components/food/detail/detailStyles";
-import { hasSources, skillLine, unknownSource } from "@/games/wow-forever/food/recipeSources";
+import { hasSources, isNewInForever, skillLine, unknownSource } from "@/games/wow-forever/food/recipeSources";
+import { wowheadForeverItemUrl } from "@/games/wow-forever/lib/wowheadUrl";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 import type { FoodRecord } from "@/games/wow-forever/types/food";
 import type { ItemSources } from "@/games/wow-forever/types/recipeSources";
@@ -49,7 +51,12 @@ export default function FoodRecipeSection({ food, sources, learnAt, cookingSkill
           {hasSources(sources) ? (
             <FoodSourceList sources={sources} faction={faction} zoneId={zoneId} level={level} />
           ) : (
-            <p className="text-sm">{unknownSource(learn.recipeItem ?? food.id, "the recipe")}</p>
+            <div className="space-y-1">
+              <p className="text-sm">{unknownSource(learn.recipeItem ?? food.id, "the recipe")}</p>
+              {isNewInForever(learn.recipeItem ?? food.id) ? (
+                <WowheadLink href={wowheadForeverItemUrl(learn.recipeItem ?? food.id)} />
+              ) : null}
+            </div>
           )}
         </div>
       )}
