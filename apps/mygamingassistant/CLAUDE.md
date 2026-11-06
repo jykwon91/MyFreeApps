@@ -155,7 +155,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `classic/sources.json` (cmangos GPL — keep LICENSE + README).
   `tests/test_wow_professions_generator.py`, `tests/test_wow_engineering_generator.py`. A route row that names a spell
   missing from the data throws, so re-run the route test after regenerating.
-- **Gathering guides** (`?p=mining`, `&skill=N`; the picker's Gathering group,
+- **Gathering guides** (`?p=mining|herbalism`, `&skill=N`; the picker's Gathering group,
   `isGatheringProfession`): `components/gathering/GatheringGuideView.tsx`, in
   this order — "What can I mine right now?" (skill box, a capped banner at
   75/150/225 naming the nearest trainer, the orange/yellow nodes + next unlock,

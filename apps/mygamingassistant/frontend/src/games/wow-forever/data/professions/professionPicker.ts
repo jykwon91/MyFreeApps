@@ -27,7 +27,10 @@ export const CRAFTING_GROUP: ProfessionGroup<CraftingProfession> = {
 /** Gathering professions — main professions too, so they count toward your two. */
 export const GATHERING_GROUP: ProfessionGroup<GatheringProfession> = {
   label: "Gathering",
-  options: [{ id: PROFESSION.mining, label: "Mining" }],
+  options: [
+    { id: PROFESSION.herbalism, label: "Herbalism" },
+    { id: PROFESSION.mining, label: "Mining" },
+  ],
 };
 
 /** Secondary professions — anyone can learn all of them. First Aid is one, though its guide is a crafting guide. */
