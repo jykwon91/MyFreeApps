@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import { useListTransactionsQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
@@ -10,6 +10,7 @@ import type { DrillDownFilter } from "@/shared/types/dashboard/drill-down-filter
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import { useDrillDownBodyMode } from "./useDrillDownBodyMode";
 import DrillDownPanelBody from "./DrillDownPanelBody";
+import type { TransactionPanelHandle } from "@/shared/types/transaction/transaction-panel-handle";
 
 export interface DrillDownPanelProps {
   filter: DrillDownFilter;
@@ -19,6 +20,7 @@ export interface DrillDownPanelProps {
 export default function DrillDownPanel({ filter, onClose }: DrillDownPanelProps) {
   const { showSuccess } = useToast();
   const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
+  const transactionPanelRef = useRef<TransactionPanelHandle>(null);
 
   const isUnassigned = filter.propertyId === UNASSIGNED_PROPERTY_ID;
 
@@ -59,12 +61,21 @@ export default function DrillDownPanel({ filter, onClose }: DrillDownPanelProps)
     transactionCount: transactions.length,
   });
 
+  // Leaving the detail view goes through the transaction's unsaved-edits prompt.
+  function leaveDetail(afterLeave: () => void) {
+    const panel = transactionPanelRef.current;
+    if (selectedTxn && panel) panel.requestClose(afterLeave);
+    else afterLeave();
+  }
+
+  const close = () => leaveDetail(onClose);
+
   return (
-    <Panel position="right" width="520px" onClose={onClose}>
+    <Panel position="right" width="520px" onClose={close}>
       {/* Breadcrumb header */}
       <header className="flex items-center gap-3 px-5 py-4 border-b">
         <button
-          onClick={selectedTxn ? () => setSelectedTxn(null) : onClose}
+          onClick={selectedTxn ? () => leaveDetail(() => setSelectedTxn(null)) : onClose}
           className="p-1.5 -ml-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0"
           title={selectedTxn ? "Back to list" : "Back to dashboard"}
         >
@@ -90,7 +101,7 @@ export default function DrillDownPanel({ filter, onClose }: DrillDownPanelProps)
             </>
           )}
         </div>
-        <PanelCloseButton onClose={onClose} />
+        <PanelCloseButton onClose={close} />
       </header>
 
       {/* Content: dispatched to sub-components via mode */}
@@ -101,6 +112,7 @@ export default function DrillDownPanel({ filter, onClose }: DrillDownPanelProps)
         properties={properties}
         onSelectTxn={setSelectedTxn}
         onClearTxn={() => setSelectedTxn(null)}
+        transactionPanelRef={transactionPanelRef}
         onTxnDeleted={() => {
           setSelectedTxn(null);
           showSuccess("Transaction deleted");
