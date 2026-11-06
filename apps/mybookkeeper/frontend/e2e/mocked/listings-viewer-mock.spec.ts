@@ -19,7 +19,7 @@ import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/lis
 import type { ListingSummary } from "@mybookkeeper/api-client/types/listing/listing-summary";
 import { json } from "./fixtures/mockResponse";
 import { plantAuth, stubSignedInShell } from "./fixtures/mockSession";
-import { LISTING_MESSAGES } from "../src/shared/lib/listing-messages";
+import { LISTING_MESSAGES } from "../../src/shared/lib/listing-messages";
 
 const LISTING_ID = "listing-1";
 

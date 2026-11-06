@@ -778,8 +778,8 @@
         "insurance-policy-detail-layout.spec.ts",
         "insurance-premium-benchmark.spec.ts",
         "insurance-premium-comparison-layout.spec.ts",
-        "insurance-policy-document-upload.spec.ts",
-        "insurance-rate-watch.spec.ts"
+        "mocked/insurance-policy-document-upload.spec.ts",
+        "mocked/insurance-rate-watch.spec.ts"
       ]
     },
     "mortgage": {
@@ -836,7 +836,7 @@
       ],
       "e2e_specs": [
         "mortgages.spec.ts",
-        "mortgage-rate-watch.spec.ts"
+        "mocked/mortgage-rate-watch.spec.ts"
       ]
     },
     "utility_plans": {
@@ -950,7 +950,7 @@
         "dashboard.spec.ts",
         "utility-plan-rate-benchmark.spec.ts",
         "utility-plan-comparison-layout.spec.ts",
-        "utility-better-plans.spec.ts"
+        "mocked/utility-better-plans.spec.ts"
       ]
     },
     "welcome_manuals": {
@@ -1004,7 +1004,7 @@
         "WelcomeManualCreateDialog.test.tsx"
       ],
       "e2e_specs": [
-        "welcome-manuals-layout-mock.spec.ts",
+        "mocked/welcome-manuals-layout-mock.spec.ts",
         "welcome-manual-rooms.spec.ts"
       ]
     },

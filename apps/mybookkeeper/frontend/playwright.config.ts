@@ -5,6 +5,9 @@ const frontendURL = `http://localhost:${frontendPort}`;
 
 export default defineConfig({
   testDir: "./e2e",
+  // Mocked specs run under playwright.layout.config.ts, without a backend.
+  // A regex, because Playwright matches globs anywhere in the absolute path.
+  testIgnore: /[\\/]e2e[\\/]mocked[\\/]/,
   outputDir: "./e2e/test-results",
   globalSetup: "./e2e/global-setup.ts",
   globalTeardown: "./e2e/global-teardown.ts",
