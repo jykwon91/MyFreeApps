@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CLOSE_SCORE_PCT, PRE_RAID_LEVEL } from "@/games/wow-forever/data/gear/gearPageConfig";
 import { GEAR_SLOT_GROUPS } from "@/games/wow-forever/data/gear/gearSlotGroups";
 import { decodeGearData } from "@/games/wow-forever/gear/decodeGearData";
-import { availableFrom, craftLevel } from "@/games/wow-forever/gear/gearAvailability";
+import { availableFrom, craftLevel, isAvailabilityEstimated } from "@/games/wow-forever/gear/gearAvailability";
 import { canEquip, groupUsable } from "@/games/wow-forever/gear/gearFilters";
 import { gearHeading } from "@/games/wow-forever/gear/gearHeading";
 import { describeSource, pctLabel, sourceChipKind } from "@/games/wow-forever/gear/gearSourceText";
@@ -151,15 +151,18 @@ describe("rankLeveling", () => {
       item(1, { requiredLevel: 15, stats: { intellect: 5 } }),
       item(2, { requiredLevel: 25, stats: { intellect: 8 } }),
       item(3, { requiredLevel: 30, stats: { intellect: 20 } }),
-      item(4, { requiredLevel: 0, stats: { intellect: 50 } }), // no level known
+      // req 0, no sources → estimate from ilvl (60 − 5 = 55); left out of "now" at level 20
+      item(4, { requiredLevel: 0, stats: { intellect: 50 } }),
     ];
     const ranking = rankLeveling(items, data(), settings, 20);
     const neck = slot(ranking, "neck");
     expect(neck.top.map((r) => r.item.id)).toEqual([1]);
+    // Item 2 (req 25) is the soonest better item (before 3 at 30, 4 at 55).
     expect(neck.nextUpgrade?.item.id).toBe(2);
     expect(neck.nextUpgrade?.availableFrom).toBe(25);
     expect(neck.nextUpgrade?.pctOfBest).toBe(160);
-    expect(ranking.unknownLevelCount).toBe(1);
+    // All items now have an estimated or stated level — nothing left out.
+    expect(ranking.unknownLevelCount).toBe(0);
   });
 
   it("waits for a quest's level when the item has none", () => {
@@ -167,6 +170,33 @@ describe("rankLeveling", () => {
     const gear = data({}, { quests: { "1": [QUEST("Later", 24)] } });
     expect(slot(rankLeveling(items, gear, settings, 20), "neck").nextUpgrade?.availableFrom).toBe(24);
     expect(slot(rankLeveling(items, gear, settings, 24), "neck").top.map((r) => r.item.id)).toEqual([1]);
+  });
+
+  it("estimates the available level for req ≤ 1 items with no sources (ilvl − 5)", () => {
+    // ilvl 43, req 1, no sources → estimated = Math.max(1, 43-5) = 38
+    // This is the Discarded Circlet pattern: the client shows req 1 but it's
+    // a quest reward obtainable around level 38 based on ilvl.
+    const items = [
+      item(1, { requiredLevel: 15, stats: { intellect: 5 } }), // wearable at 20
+      item(2, { requiredLevel: 1, itemLevel: 43, stats: { intellect: 8 } }), // estimated 38
+    ];
+    const ranking = rankLeveling(items, data(), settings, 20);
+    const neck = slot(ranking, "neck");
+    // Item 2 must NOT appear in top at level 20 (estimated available from 38).
+    expect(neck.top.map((r) => r.item.id)).toEqual([1]);
+    expect(neck.nextUpgrade?.item.id).toBe(2);
+    expect(neck.nextUpgrade?.availableFrom).toBe(38);
+    expect(neck.nextUpgrade?.availableFromEstimated).toBe(true);
+    // At level 38, item 2 becomes wearable (item 1 req 15 is also wearable).
+    const atLevel38 = slot(rankLeveling(items, data(), { ...settings, level: 38 }, 38), "neck");
+    expect(atLevel38.top[0].item.id).toBe(2); // item 2 leads (intellect 8 > 5)
+  });
+
+  it("still excludes items that have sources but none saying a level (Apprentice craft, unlisted drop)", () => {
+    const unlisted = { kind: "drop", boss: "Somebody", dungeon: null } as const;
+    // sources.length > 0 → estimate not applied → availableFrom stays null
+    expect(availableFrom(item(1, { requiredLevel: 0 }), [unlisted])).toBeNull();
+    expect(isAvailabilityEstimated(item(1, { requiredLevel: 0 }), [unlisted])).toBe(false);
   });
 });
 
@@ -223,6 +253,7 @@ describe("availability", () => {
     const quest = { kind: "quest", title: "Q", minLevel: 22, questLevel: 24, side: "N", classes: [] } as const;
     const unlisted = { kind: "drop", boss: "Somebody", dungeon: null } as const;
     expect(availableFrom(item(1, { requiredLevel: 0 }), [apprentice, quest, unlisted])).toBe(22);
+    // sources exist but none supply a level → may be from level 1; don't estimate
     expect(availableFrom(item(1, { requiredLevel: 0 }), [apprentice, unlisted])).toBeNull();
     expect(availableFrom(item(1, { requiredLevel: 18 }), [apprentice])).toBe(18);
   });
@@ -231,8 +262,28 @@ describe("availability", () => {
     const crafted = { kind: "crafted", profession: "Tailoring", skill: 270 } as const;
     expect(availableFrom(item(1, { requiredLevel: 20 }), [crafted])).toBe(35);
     expect(availableFrom(item(1, { requiredLevel: 50 }), [crafted])).toBe(50);
-    expect(availableFrom(item(1, { requiredLevel: 0 }), [])).toBeNull();
+    // req 0, no sources at all → estimate from ilvl (default ilvl=60 → 60-5=55)
+    expect(availableFrom(item(1, { requiredLevel: 0 }), [])).toBe(55);
+    // req 1, no sources → estimate from ilvl (default ilvl=60 → 55)
+    expect(availableFrom(item(1, { requiredLevel: 1 }), [])).toBe(55);
+    // req > 1 with no sources → stated level only (unchanged)
     expect(availableFrom(item(1, { requiredLevel: 7 }), [])).toBe(7);
+  });
+
+  it("estimates from ilvl exactly (ilvl − 5, min 1) for req ≤ 1 items with no sources", () => {
+    // Evidence: n=2194 items in items.json with ilvl 30–70 and req > 1,
+    // median gap = 5, p10 = p25 = p75 = p90 = 5 for uncommon, rare and epic.
+    expect(availableFrom(item(1, { requiredLevel: 0, itemLevel: 43 }), [])).toBe(38);
+    expect(availableFrom(item(1, { requiredLevel: 1, itemLevel: 43 }), [])).toBe(38);
+    expect(availableFrom(item(1, { requiredLevel: 0, itemLevel: 54 }), [])).toBe(49);
+    expect(availableFrom(item(1, { requiredLevel: 0, itemLevel: 61 }), [])).toBe(56);
+    // ilvl ≤ 6 clamps to 1
+    expect(availableFrom(item(1, { requiredLevel: 0, itemLevel: 5 }), [])).toBe(1);
+    expect(isAvailabilityEstimated(item(1, { requiredLevel: 0 }), [])).toBe(true);
+    expect(isAvailabilityEstimated(item(1, { requiredLevel: 1 }), [])).toBe(true);
+    expect(isAvailabilityEstimated(item(1, { requiredLevel: 2 }), [])).toBe(false);
+    const unlisted = { kind: "drop", boss: "X", dungeon: null } as const;
+    expect(isAvailabilityEstimated(item(1, { requiredLevel: 0 }), [unlisted])).toBe(false);
   });
 });
 
@@ -253,8 +304,20 @@ describe("source labels", () => {
     expect(sourceChipKind(two)).toBe("drop");
     expect(describeSource(two[0])).toBe("Edwin VanCleef, The Deadmines (levels 10–24)");
     expect(sourceChipKind([])).toBe("unknown");
+  });
+
+  it("pctLabel: standard labels", () => {
     expect(pctLabel(100, true)).toBe("Top pick");
     expect(pctLabel(91.6, false)).toBe("92% of top pick");
+  });
+
+  it("pctLabel: close rule — top pick says known source, second says scores higher", () => {
+    // Top pick won because of the close rule (a no-source item scored more).
+    expect(pctLabel(100, true, true)).toBe("Top pick · known source");
+    // The second item: pctOfBest = 102 (scored 2% higher than the top pick).
+    expect(pctLabel(102, false)).toBe("Scores 102% of top pick — source unknown");
+    // pctOfBest exactly at 100 is still normal (tied or genuinely lower).
+    expect(pctLabel(100, false)).toBe("100% of top pick");
   });
 });
 

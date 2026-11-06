@@ -24,7 +24,20 @@ export function describeSource(source: GearSource): string {
   return `${source.boss}, ${name} (levels ${enterAt}–${level})`;
 }
 
-/** "Top pick" for the card's first item, else "92% of top pick" (over 100 after the close rule). */
-export function pctLabel(pctOfBest: number, isTop: boolean): string {
-  return isTop ? "Top pick" : `${Math.round(pctOfBest)}% of top pick`;
+/**
+ * "Top pick" for the card's first item, else "92% of top pick".
+ *
+ * When the close rule ranked a known-source item above a higher-scoring
+ * no-source one (closeRuleApplied = true on the top pick, pctOfBest > 100
+ * on the second):
+ *   - top pick → "Top pick · known source"
+ *   - second item → "Scores X% of top pick — source unknown"
+ *
+ * This tells users why the lower-scoring item appears first without hiding
+ * the fact that the other item scored more.
+ */
+export function pctLabel(pctOfBest: number, isTop: boolean, closeRuleApplied = false): string {
+  if (isTop) return closeRuleApplied ? "Top pick · known source" : "Top pick";
+  if (pctOfBest > 100) return `Scores ${Math.round(pctOfBest)}% of top pick — source unknown`;
+  return `${Math.round(pctOfBest)}% of top pick`;
 }

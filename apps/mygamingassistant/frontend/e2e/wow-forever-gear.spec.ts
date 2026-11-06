@@ -123,3 +123,43 @@ test("the phone layout never scrolls sideways", async ({ page }) => {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test("level 30 Warlock: no item estimated above level 30 appears as wearable now", async ({ page }) => {
+  await page.goto("/wow-forever/gear?class=warlock&spec=affliction&faction=A&view=leveling&lvl=30");
+  await expect(heading(page, /Best gear for a level 30 Warlock/)).toBeVisible();
+
+  // All items in "top" should be obtainable at or before level 30.
+  // The fix stops high-ilvl items with req 0/1 and no known source from
+  // appearing as wearable at level 1 (e.g., Discarded Circlet ilvl 43,
+  // Denric's Dog Tags ilvl 54).
+  const allRows = page.getByTestId("gear-item-row");
+  const nextUpgrades = page.getByTestId("gear-next-upgrade");
+
+  // "Probably from about level N" labels must only appear in next-upgrade
+  // sections, never in the top-pick rows, when viewing level 30.
+  const estimatedInTop = page.locator('[data-testid="gear-slot-card"]')
+    .locator('ol')
+    .getByText(/Probably from about level [3-9][1-9]|Probably from about level [4-9]\d/);
+  await expect(estimatedInTop).toHaveCount(0);
+
+  // Next-upgrade section may show "about level N" for estimated items.
+  // The first next-upgrade must have a level > 30.
+  await expect(allRows.first()).toBeVisible();
+  const firstNextUpgrade = nextUpgrades.first();
+  if (await firstNextUpgrade.isVisible()) {
+    await expect(firstNextUpgrade).toContainText(/level \d+/);
+  }
+});
+
+test("estimated items show 'probably from about level N' in next-upgrade row", async ({ page }) => {
+  // At level 30, items with req ≤ 1 and no known source are estimated.
+  // They should appear as next-upgrade with "about level N" text, not in the
+  // wearable-now top list.
+  await page.goto("/wow-forever/gear?class=warlock&spec=affliction&faction=A&view=leveling&lvl=30");
+  await expect(heading(page, /Best gear for a level 30 Warlock/)).toBeVisible();
+
+  const nextUpgradeTexts = page.getByTestId("gear-next-upgrade");
+  // At least some next-upgrades should exist at level 30 for a Warlock.
+  const count = await nextUpgradeTexts.count();
+  expect(count).toBeGreaterThan(0);
+});

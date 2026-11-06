@@ -7,7 +7,7 @@ import {
 import { GEAR_SLOT_GROUPS } from "@/games/wow-forever/data/gear/gearSlotGroups";
 import type { ItemQuality } from "@/games/wow-forever/data/itemSlots";
 import { NO_FACTS } from "@/games/wow-forever/gear/decodeGearData";
-import { availableFrom } from "@/games/wow-forever/gear/gearAvailability";
+import { availableFrom, isAvailabilityEstimated } from "@/games/wow-forever/gear/gearAvailability";
 import { canEquip, groupUsable, questOpenTo } from "@/games/wow-forever/gear/gearFilters";
 import { fromClientData } from "@/games/wow-forever/lib/toCompareItem";
 import { resolveWeights } from "@/games/wow-forever/scoring/resolveWeights";
@@ -78,7 +78,14 @@ function candidates(
     if (all.length > 0 && sources.length === 0) continue;
     const total = score(item, data.clientBuild);
     if (total <= 0) continue;
-    out.push({ item, score: total, sources, facts, availableFrom: availableFrom(item, sources) });
+    out.push({
+      item,
+      score: total,
+      sources,
+      facts,
+      availableFrom: availableFrom(item, sources),
+      availableFromEstimated: isAvailabilityEstimated(item, sources),
+    });
   }
   return out;
 }
