@@ -64,7 +64,6 @@ from app.repositories import (
 )
 from app.repositories.inquiries.reply_already_claimed_error import ReplyAlreadyClaimedError
 from app.repositories.listings import listing_repo
-from app.repositories.user import user_repo
 from app.schemas.inquiries.inquiry_message_response import InquiryMessageResponse
 from app.schemas.inquiries.inquiry_reply_request import InquiryReplyRequest
 from app.services.email import gmail_mailbox, gmail_service
@@ -103,7 +102,6 @@ def _now() -> _dt.datetime:
 
 async def _load(
     organization_id: uuid.UUID,
-    user_id: uuid.UUID,
     inquiry_id: uuid.UUID,
     request: InquiryReplyRequest,
     request_hash: str,
@@ -153,10 +151,6 @@ async def _load(
                 "Gmail send permission missing. Reconnect Gmail to enable replies.",
             )
 
-        user = await user_repo.get_by_id(db, user_id)
-        if user is None or not user.email:
-            raise LookupError(f"User {user_id} not found or has no email")
-
         body = request.body
         if inquiry.listing_id is not None:
             listing = await listing_repo.get_by_id(db, inquiry.listing_id, organization_id)
@@ -180,7 +174,6 @@ async def _load(
 
         return ReplySendContext(
             integration=integration,
-            from_address=user.email,
             to_address=to_address,
             body=body,
             original_email_message_id=inquiry.email_message_id,
@@ -200,27 +193,24 @@ async def send_reply(
     """
     key = request.client_request_id
     request_hash = reply_request_hash(request)
-    loaded = await _load(organization_id, user_id, inquiry_id, request, request_hash)
+    loaded = await _load(organization_id, inquiry_id, request, request_hash)
     if isinstance(loaded, InquiryMessageResponse):
         return loaded
     ctx = loaded
 
-    # A claim records the Gmail account it goes through, so it is only ever
-    # settled by searching that account's mailbox.
-    sender_address: str | None = None
-    if key is not None:
-        try:
-            sender_address = await gmail_mailbox.ensure_gmail_address(
-                ctx.integration, purpose=GMAIL_PURPOSE_SEND_REPLIES,
-            )
-        except GmailReauthRequiredError as exc:
-            raise InquiryReplyAuthExpiredError(str(exc)) from exc
-        except GmailAccountUnknownError as exc:
-            raise InquiryReplySendFailedError(str(exc)) from exc
+    # The reply goes out from the connected Gmail account, not the login email,
+    # which that account may not be able to send as. A claim records the same
+    # address, so it is only ever settled by searching that account's mailbox.
+    try:
+        sender_address = await gmail_mailbox.ensure_gmail_address(
+            ctx.integration, purpose=GMAIL_PURPOSE_SEND_REPLIES,
+        )
+    except GmailReauthRequiredError as exc:
+        raise InquiryReplyAuthExpiredError(str(exc)) from exc
+    except GmailAccountUnknownError as exc:
+        raise InquiryReplySendFailedError(str(exc)) from exc
 
     if ctx.stale_claim is not None:
-        if sender_address is None:
-            raise RuntimeError(f"Inquiry {inquiry_id} has a stale reply claim but no request id")
         settled = await settle_stale_claim(
             organization_id=organization_id,
             user_id=user_id,
@@ -235,7 +225,7 @@ async def send_reply(
 
     send_message_id = make_msgid(domain=GMAIL_MESSAGE_ID_DOMAIN)
     claim: tuple[uuid.UUID, str] | None = None
-    if key is not None and sender_address is not None:
+    if key is not None:
         try:
             async with unit_of_work() as db:
                 row = await inquiry_reply_send_repo.claim(
@@ -256,7 +246,7 @@ async def send_reply(
     try:
         gmail_id = await gmail_service.send_message(
             ctx.integration,
-            from_address=ctx.from_address,
+            from_address=sender_address,
             to_address=ctx.to_address,
             subject=request.subject,
             body=ctx.body,
@@ -286,6 +276,7 @@ async def send_reply(
         user_id=user_id,
         inquiry_id=inquiry_id,
         ctx=ctx,
+        from_address=sender_address,
         subject=request.subject,
         gmail_id=gmail_id,
         claim=claim,

@@ -192,7 +192,6 @@ async def _load_context(
             lease_id=lease_id,
             integration=integration,
             landlord_name=resolve_landlord_name(host_user),
-            from_address=host_user.email,
         )
 
 
@@ -216,7 +215,8 @@ async def send_receipt(
         user_id=user_id,
     )
     # The claim records the Gmail account it goes through, so it is only ever
-    # settled by searching that account's mailbox.
+    # settled by searching that account's mailbox. It's also the From address:
+    # the login email may not be an address that account can send as.
     try:
         sender_address = await gmail_mailbox.ensure_gmail_address(
             ctx.integration, purpose=GMAIL_PURPOSE_SEND_RECEIPTS,
@@ -329,7 +329,7 @@ async def send_receipt(
     try:
         gmail_id = await gmail_attachment_send_service.send_message_with_attachment(
             ctx.integration,
-            from_address=ctx.from_address,
+            from_address=sender_address,
             to_address=ctx.tenant_email,
             subject=subject,
             body=body,
@@ -365,7 +365,7 @@ async def send_receipt(
         organization_id=organization_id,
         user_id=user_id,
         message_id=gmail_id,
-        from_address=ctx.from_address,
+        from_address=sender_address,
         subject=subject,
         reason=APP_SENT_RECEIPT_FILTER_REASON,
     )

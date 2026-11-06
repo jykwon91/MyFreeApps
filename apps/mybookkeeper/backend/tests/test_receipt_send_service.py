@@ -97,12 +97,14 @@ async def test_happy_path_sends_once_and_files_the_receipt(
     db: AsyncSession, ids, receipt_storage, receipt_gmail_send,
 ) -> None:
     org, user = ids
-    host_email = user.email
     txn_id = await _seed(db, org=org, user=user)
 
     result = await _send(org, user, txn_id)
 
     assert receipt_gmail_send.await_count == 1
+    # From is the connected Gmail account, not the app login email.
+    assert user.email != "host@gmail.com"
+    assert receipt_gmail_send.await_args.kwargs["from_address"] == "host@gmail.com"
     row = await _row(db, txn_id)
     assert row.status == "sent"
     assert row.sent_at is not None
@@ -113,7 +115,7 @@ async def test_happy_path_sends_once_and_files_the_receipt(
     log = (await db.execute(select(EmailFilterLog))).scalar_one()
     assert log.message_id == "gmail-sent-1"
     assert log.reason == APP_SENT_RECEIPT_FILTER_REASON
-    assert log.from_address == host_email
+    assert log.from_address == "host@gmail.com"
 
 
 @pytest.mark.asyncio
@@ -495,3 +497,6 @@ async def test_stale_send_found_by_its_attachment_is_marked_sent(
     assert queries[1] == f'from:me to:"andrew@example.com" filename:"{filename}"'
     assert (await _row(db, txn_id)).status == "sent"
     assert receipt_gmail_send.await_count == 1
+    # Found in the connected account's Sent, so that's who it went out from.
+    log = (await db.execute(select(EmailFilterLog))).scalar_one()
+    assert log.message_id == "gmail-late" and log.from_address == "host@gmail.com"

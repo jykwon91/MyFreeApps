@@ -248,6 +248,7 @@ async def test_stale_claim_found_in_gmail_is_recorded_without_emailing_again(
     assert reply_gmail_find.await_args.args[1] == claim.send_message_id
     assert claim.status == "sent" and claim.inquiry_message_id == result.id
     assert result.email_message_id == "gmail-sent-1"
+    assert result.from_address == "host@gmail.com"
     assert reply_gmail_send.await_count == 1
     await db.refresh(inquiry)
     assert inquiry.stage == "replied"

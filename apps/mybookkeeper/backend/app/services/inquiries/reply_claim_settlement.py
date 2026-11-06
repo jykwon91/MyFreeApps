@@ -84,6 +84,7 @@ async def settle_stale_claim(
             user_id=user_id,
             inquiry_id=inquiry_id,
             ctx=ctx,
+            from_address=connected_address,
             subject=subject,
             gmail_id=gmail_id,
             claim=(claim.id, claim.send_message_id),

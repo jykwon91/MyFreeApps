@@ -135,7 +135,10 @@ async def test_send_reply_happy_path_inserts_message_event_and_advances_stage(
             InquiryReplyRequest(subject="Re: Cozy Room", body="Hi Alice"),
         )
 
-    assert mock_send.called
+    # From is the connected Gmail account, not the app login email.
+    assert mock_send.await_args.kwargs["from_address"] == "host@gmail.com"
+    assert test_user.email != "host@gmail.com"
+    assert result.from_address == "host@gmail.com"
     assert result.direction == "outbound"
     assert result.channel == "email"
     assert result.subject == "Re: Cozy Room"
@@ -164,7 +167,7 @@ async def test_send_reply_happy_path_inserts_message_event_and_advances_stage(
     assert len(filter_rows) == 1
     assert filter_rows[0].message_id == "<gmail-id-123>"
     assert filter_rows[0].reason == APP_SENT_INQUIRY_REPLY_FILTER_REASON
-    assert filter_rows[0].from_address == test_user.email
+    assert filter_rows[0].from_address == "host@gmail.com"
     assert filter_rows[0].subject == "Re: Cozy Room"
 
 

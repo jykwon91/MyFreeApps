@@ -14,4 +14,3 @@ class ReceiptSendContext:
     lease_id: uuid.UUID
     integration: Integration
     landlord_name: str
-    from_address: str
