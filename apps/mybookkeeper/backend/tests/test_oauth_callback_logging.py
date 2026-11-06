@@ -190,6 +190,10 @@ class TestHandleGmailCallbackServiceLogging:
                     integration_service.gmail_mailbox,
                     "address_of_new_connection",
                     new=AsyncMock(return_value="host@gmail.com"),
+                ), patch.object(
+                    integration_service.organization_repo,
+                    "lock_member",
+                    new=AsyncMock(return_value=MagicMock(org_role="admin")),
                 ):
                     with patch(
                         "app.services.integrations.integration_service.unit_of_work"

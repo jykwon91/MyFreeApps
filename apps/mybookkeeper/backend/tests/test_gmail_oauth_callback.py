@@ -36,6 +36,7 @@ def callback() -> Iterator[dict[str, MagicMock]]:
         "upsert": AsyncMock(return_value=integration),
         "clear": AsyncMock(),
         "address": AsyncMock(return_value="host@gmail.com"),
+        "member": AsyncMock(return_value=MagicMock(org_role="admin")),
     }
     with (
         patch.object(integration_service, "unit_of_work", _uow),
@@ -49,6 +50,7 @@ def callback() -> Iterator[dict[str, MagicMock]]:
         patch.object(integration_service.integration_repo, "upsert_gmail", new=mocks["upsert"]),
         patch.object(integration_service.integration_repo, "clear_reauth_state", new=mocks["clear"]),
         patch.object(integration_service.gmail_mailbox, "address_of_new_connection", new=mocks["address"]),
+        patch.object(integration_service.organization_repo, "lock_member", new=mocks["member"]),
     ):
         yield mocks
 

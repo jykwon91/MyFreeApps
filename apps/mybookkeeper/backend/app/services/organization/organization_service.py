@@ -3,11 +3,14 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
+from platform_shared.core.auth_events import AuthEventType
+from platform_shared.services.auth_event_service import log_auth_event
+
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.organization.organization import Organization
 from app.models.organization.organization_invite import OrganizationInvite
 from app.models.organization.organization_member import OrgRole, OrganizationMember
-from app.repositories import organization_repo, user_repo
+from app.repositories import integration_repo, organization_repo, user_repo
 from app.services.organization.invite_email import send_invite_email
 
 logger = logging.getLogger(__name__)
@@ -130,6 +133,17 @@ async def remove_member(
             raise ValueError("Cannot remove the owner")
 
         await organization_repo.remove_member(db, member)
+        # A Gmail connection they made is their mailbox, not the org's: it goes with them.
+        # A connect finishing now holds a share lock on the membership, so the delete
+        # above waits for it; under READ COMMITTED this query then sees its row.
+        for provider in await integration_repo.delete_connected_by(db, org_id, target_user_id):
+            await log_auth_event(
+                db,
+                event_type=AuthEventType.OAUTH_DISCONNECT,
+                user_id=target_user_id,
+                succeeded=True,
+                metadata={"provider": provider, "reason": "member_removed", "removed_by": str(acting_user_id)},
+            )
         logger.info(
             "ORG_ACTION remove_member org=%s target=%s by=%s",
             org_id, target_user_id, acting_user_id,

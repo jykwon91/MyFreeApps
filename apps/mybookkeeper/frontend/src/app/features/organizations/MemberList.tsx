@@ -10,6 +10,7 @@ import Badge from "@/shared/components/ui/Badge";
 import Select from "@/shared/components/ui/Select";
 import { ConfirmDialog } from "@platform/ui";
 import { ROLE_BADGE_COLORS, ROLE_OPTIONS } from "@/shared/lib/organization-config";
+import { removeMemberDescription } from "@/shared/lib/organization-messages";
 
 export interface MemberListProps {
   onError: (message: string) => void;
@@ -114,7 +115,7 @@ export default function MemberList({ onError, onSuccess }: MemberListProps) {
       <ConfirmDialog
         open={!!confirmRemove}
         title="Remove member"
-        description={`Are you sure you want to remove ${confirmRemove?.user_email ?? "this member"} from the organization?`}
+        description={removeMemberDescription(confirmRemove?.user_email)}
         confirmLabel="Remove"
         variant="danger"
         isLoading={isRemoving}

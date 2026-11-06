@@ -86,6 +86,25 @@ async def get_member(
     return result.scalar_one_or_none()
 
 
+async def lock_member(
+    db: AsyncSession, org_id: uuid.UUID, user_id: uuid.UUID
+) -> OrganizationMember | None:
+    """The membership, share-locked so it can't be removed until this transaction ends.
+
+    A removal waiting on the lock then sees anything this transaction wrote
+    for the member, such as a Gmail connection, and removes that too.
+    """
+    result = await db.execute(
+        select(OrganizationMember)
+        .where(
+            OrganizationMember.organization_id == org_id,
+            OrganizationMember.user_id == user_id,
+        )
+        .with_for_update(read=True)
+    )
+    return result.scalar_one_or_none()
+
+
 async def list_members(db: AsyncSession, org_id: uuid.UUID) -> Sequence[OrganizationMember]:
     result = await db.execute(
         select(OrganizationMember)
@@ -104,7 +123,9 @@ async def update_member_role(
 
 
 async def remove_member(db: AsyncSession, member: OrganizationMember) -> None:
+    """Delete the membership now, waiting for any transaction that has it locked."""
     await db.delete(member)
+    await db.flush()
 
 
 async def create_invite(

@@ -12,13 +12,16 @@ from platform_shared.core.auth_events import AuthEventType
 
 from app.core.config import settings
 from app.core.context import RequestContext
+from app.core.gmail_connect_constants import GMAIL_CONNECT_NOT_ALLOWED_DETAIL
 from app.db.session import AsyncSessionLocal, unit_of_work
+from app.models.organization.organization_member import OrgRole
 from app.models.responses.integration_info import IntegrationInfo
 from app.models.responses.queue_item_info import QueueItemInfo
 from app.models.responses.retry_result import RetryResult
 from app.models.responses.sync_log_info import SyncLogInfo
-from app.repositories import email_queue_repo, integration_repo, sync_log_repo, user_repo
+from app.repositories import email_queue_repo, integration_repo, organization_repo, sync_log_repo, user_repo
 from app.services.email import gmail_mailbox
+from app.services.integrations.gmail_connect_not_allowed_error import GmailConnectNotAllowedError
 from platform_shared.services.auth_event_service import log_auth_event
 
 logger = logging.getLogger(__name__)
@@ -171,6 +174,17 @@ async def handle_gmail_callback(code: str, state: str) -> None:
 
     try:
         async with unit_of_work() as db:
+            # Rechecked here, locked: they may have been removed, or made a
+            # viewer, since starting the connection.
+            member = await organization_repo.lock_member(
+                db, uuid.UUID(org_id_str), uuid.UUID(user_id_str),
+            )
+            if member is None or member.org_role == OrgRole.VIEWER:
+                logger.warning(
+                    "Gmail OAuth connect refused: the member was %s since starting it",
+                    "removed" if member is None else "made a viewer",
+                )
+                raise GmailConnectNotAllowedError(GMAIL_CONNECT_NOT_ALLOWED_DETAIL)
             integration = await integration_repo.upsert_gmail(
                 db,
                 organization_id=uuid.UUID(org_id_str),
@@ -191,6 +205,8 @@ async def handle_gmail_callback(code: str, state: str) -> None:
                 succeeded=True,
                 metadata={"provider": "gmail"},
             )
+    except GmailConnectNotAllowedError:
+        raise
     except Exception:
         logger.exception("Gmail OAuth upsert failed (upsert_gmail / clear_reauth_state)")
         raise

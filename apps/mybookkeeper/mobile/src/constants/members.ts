@@ -39,7 +39,7 @@ export const MEMBERS_MESSAGES = {
   promoteConfirm: "Make admin",
   removeTitle: (name: string) => `Remove ${name}?`,
   removeBody: (org: string) =>
-    `They'll lose access to ${org} right away: its transactions, documents, leases and everything else in it. Their account stays, and what they added stays in ${org}. You can invite them again later.`,
+    `They'll lose access to ${org} right away: its transactions, documents, leases and everything else in it. Their account stays, and what they added stays in ${org}. If they connected ${org}'s Gmail, it's disconnected too. You can invite them again later.`,
   removeConfirm: (firstName: string) => `Remove ${firstName}`,
   roleChanged: (name: string, role: string) => `${name} is now ${role}.`,
   removed: (name: string) => `I removed ${name}.`,

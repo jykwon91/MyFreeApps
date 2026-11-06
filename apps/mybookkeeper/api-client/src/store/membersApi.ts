@@ -5,7 +5,7 @@ import type { OrgMember } from "../types/organization/OrgMember";
 import type { OrgRole } from "../types/organization/OrgRole";
 
 export const membersApi = baseApi.enhanceEndpoints({
-  addTagTypes: ["Members", "Invites", "Organization"],
+  addTagTypes: ["Members", "Invites", "Organization", "Integration"],
 }).injectEndpoints({
   endpoints: (build) => ({
     listMembers: build.query<OrgMember[], string>({
@@ -25,7 +25,8 @@ export const membersApi = baseApi.enhanceEndpoints({
         url: `/organizations/${orgId}/members/${userId}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Members"],
+      // A Gmail connection the member made is removed with them.
+      invalidatesTags: ["Members", "Integration"],
     }),
     createInvite: build.mutation<OrgInvite, { orgId: string; email: string; orgRole: OrgRole }>({
       query: ({ orgId, email, orgRole }) => ({
