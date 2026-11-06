@@ -1,6 +1,7 @@
 import { ROLE_LABELS } from "@mybookkeeper/api-client/constants/orgRoles";
 import type { OrgInvite } from "@mybookkeeper/api-client/types/organization/OrgInvite";
 import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
+import { isInviteExpired } from "@mybookkeeper/api-client/utils/isInviteExpired";
 import { MEMBERS_MESSAGES as MESSAGES, NOT_A_MEMBER_DETAIL } from "../../constants/members";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -15,10 +16,6 @@ export function memberFirstName(member: OrgMember): string {
 
 export function isSameEmail(a: string | null | undefined, b: string | null | undefined): boolean {
   return a != null && b != null && a.toLowerCase() === b.toLowerCase();
-}
-
-export function isInviteExpired(invite: OrgInvite, now: Date): boolean {
-  return new Date(invite.expires_at).getTime() <= now.getTime();
 }
 
 export function inviteStatusLine(invite: OrgInvite, now: Date): string {

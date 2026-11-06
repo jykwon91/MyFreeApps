@@ -9,3 +9,23 @@ export function memberRoleLabel(name: string): string {
 export function removeMemberLabel(name: string): string {
   return `Remove ${name}`;
 }
+
+export const INVITE_MESSAGES = {
+  none: "No pending invites.",
+  pending: "Pending",
+  expired: "Expired",
+  inviteGone: "That invite is already gone.",
+  couldntCancel: "I couldn't cancel that invite. Try again.",
+} as const;
+
+export function inviteSentMessage(email: string): string {
+  return `Invite sent to ${email}`;
+}
+
+export function inviteCancelledMessage(email: string): string {
+  return `Invite for ${email} cancelled`;
+}
+
+export function cancelInviteLabel(email: string): string {
+  return `Cancel invite for ${email}`;
+}

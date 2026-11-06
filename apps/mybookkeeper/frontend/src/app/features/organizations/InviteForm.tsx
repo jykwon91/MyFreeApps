@@ -6,6 +6,8 @@ import type { OrgRole } from "@mybookkeeper/api-client/types/organization/OrgRol
 import { INVITE_ROLE_OPTIONS } from "@mybookkeeper/api-client/constants/orgRoles";
 import { LoadingButton } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
+import { INVITE_EMAIL_MESSAGES } from "@mybookkeeper/api-client/constants/inviteMessages";
+import { inviteSentMessage } from "@/shared/lib/organization-messages";
 
 export interface InviteFormProps {
   onError: (message: string) => void;
@@ -23,11 +25,12 @@ export default function InviteForm({ onError, onSuccess }: InviteFormProps) {
     if (!orgId || !email.trim()) return;
     try {
       const result = await createInvite({ orgId, email: email.trim(), orgRole: role }).unwrap();
-      if (result.email_sent) {
-        onSuccess(`Invite sent to ${email.trim()}`);
-      } else {
-        onSuccess(`Invite created for ${email.trim()}, but the email could not be sent. Share the invite link manually.`);
+      if (!result.email_sent) {
+        // Kept so a mistyped address can be fixed and sent again.
+        onError(INVITE_EMAIL_MESSAGES.failed(email.trim()));
+        return;
       }
+      onSuccess(inviteSentMessage(email.trim()));
       setEmail("");
       setRole("user");
     } catch (err) {
