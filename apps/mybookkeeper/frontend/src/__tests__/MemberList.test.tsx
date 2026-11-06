@@ -119,5 +119,6 @@ describe("MemberList", () => {
 
     expect(screen.getByText("Remove member")).toBeInTheDocument();
     expect(screen.getByText(/Are you sure you want to remove other@test.com/)).toBeInTheDocument();
+    expect(screen.getByText(/If they connected this workspace's Gmail, it's disconnected too/)).toBeInTheDocument();
   });
 });

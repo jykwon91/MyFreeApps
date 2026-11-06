@@ -183,6 +183,7 @@
         "test_email_queue_dedup_filter.py",
         "test_email_sync_worker.py",
         "test_integration_org_scope.py",
+        "test_member_removal_gmail.py",
         "test_gmail_auth_expired.py",
         "test_gmail_search_query.py",
         "test_email_discovery_last_synced.py",
@@ -254,6 +255,7 @@
         "test_gmail_auth_expired.py",
         "test_email_discovery_last_synced.py",
         "test_integration_org_scope.py",
+        "test_member_removal_gmail.py",
         "test_integration_org_key_migration.py"
       ],
       "frontend_tests": [
@@ -291,6 +293,7 @@
       ],
       "backend_tests": [
         "test_organization.py",
+        "test_member_removal_gmail.py",
         "test_organization_routes.py",
         "test_invite_email.py",
         "test_org_data_isolation.py",

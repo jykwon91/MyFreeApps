@@ -231,5 +231,21 @@ async def list_active_gmail_sync_targets(db: AsyncSession) -> list[GmailSyncTarg
     return [GmailSyncTarget(organization_id=org_id, user_id=uid) for org_id, uid in result.all()]
 
 
+async def delete_connected_by(
+    db: AsyncSession, organization_id: uuid.UUID, user_id: uuid.UUID,
+) -> list[str]:
+    """Delete the org's connections that ``user_id`` made. Returns their providers."""
+    result = await db.execute(
+        select(Integration).where(
+            Integration.organization_id == organization_id,
+            Integration.user_id == user_id,
+        )
+    )
+    rows = result.scalars().all()
+    for integration in rows:
+        await db.delete(integration)
+    return [integration.provider for integration in rows]
+
+
 async def delete(db: AsyncSession, integration: Integration) -> None:
     await db.delete(integration)
