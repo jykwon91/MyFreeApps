@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import type { Ref } from "react";
 import { useForm } from "react-hook-form";
 import { X, Trash2 } from "lucide-react";
 import { formatDate } from "@/shared/utils/date";
@@ -12,6 +13,10 @@ import { ConfirmDialog } from "@platform/ui";
 import TransactionStatusBadge from "@/app/features/transactions/TransactionStatusBadge";
 import TransactionTypeBadge from "@/app/features/transactions/TransactionTypeBadge";
 import TransactionForm from "@/app/features/transactions/TransactionForm";
+import UnsavedChangesDialog from "@/app/features/transactions/UnsavedChangesDialog";
+import { showError } from "@/shared/lib/toast-store";
+import { TRANSACTION_EDIT_MESSAGES as MSG } from "@/shared/lib/transaction-edit-messages";
+import type { TransactionPanelHandle } from "@/shared/types/transaction/transaction-panel-handle";
 import AttributeTenantPicker from "@/app/features/transactions/AttributeTenantPicker";
 import { useUpdateTransactionMutation, useDeleteTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 
@@ -25,6 +30,8 @@ export interface TransactionPanelProps {
   duplicatePair?: DuplicatePair;
   onKeepDuplicate?: (keepId: string, deleteIds: string[]) => Promise<void>;
   onDismissDuplicate?: (transactionIds: string[]) => Promise<void>;
+  /** Embedded use: the parent closes through this so unsaved edits are never dropped. */
+  ref?: Ref<TransactionPanelHandle>;
 }
 
 function buildDefaults(t: Transaction): TransactionFormValues {
@@ -52,11 +59,16 @@ function buildPayload(data: TransactionFormValues, dirty: Partial<Record<keyof T
   return payload;
 }
 
-export default function TransactionPanel({ transaction, properties, onClose, onVendorLearned, onDeleted, embedded, duplicatePair, onKeepDuplicate, onDismissDuplicate }: TransactionPanelProps) {
+export default function TransactionPanel({ transaction, properties, onClose, onVendorLearned, onDeleted, embedded, duplicatePair, onKeepDuplicate, onDismissDuplicate, ref }: TransactionPanelProps) {
   const [updateTransaction, { isLoading: isSaving }] = useUpdateTransactionMutation();
   const [deleteTransaction, { isLoading: isDeleting }] = useDeleteTransactionMutation();
-  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  // What to run once unsaved edits are discarded or saved; non-null = prompt is open.
+  const [pendingClose, setPendingClose] = useState<(() => void) | null>(null);
+  const [unsavedSaveError, setUnsavedSaveError] = useState<string | null>(null);
+  // Set synchronously on the prompt's Save & close: isSaving only turns true a render
+  // later, and a second click in that gap would save twice and close twice.
+  const closeInFlight = useRef(false);
   const [isSavingAndClosing, setIsSavingAndClosing] = useState(false);
 
   const dupOther = duplicatePair
@@ -78,52 +90,84 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
     }
   }
 
-  async function onSave(data: TransactionFormValues) {
-    const payload = buildPayload(data, dirtyFields);
-    if (Object.keys(payload).length === 0) {
-      onClose();
-      return;
-    }
+  async function save(data: TransactionFormValues, extra: Record<string, unknown> = {}): Promise<boolean> {
+    const payload = { ...buildPayload(data, dirtyFields), ...extra };
+    if (Object.keys(payload).length === 0) return true;
     try {
       const result = await updateTransaction({ id: transaction.id, data: payload as Partial<Transaction> }).unwrap();
       notifyVendorLearned(result as unknown as Record<string, unknown>, data);
-      onClose();
+      return true;
     } catch {
-      // save failed -- stay open so user can retry
+      showError(MSG.couldntSave);
+      return false;
     }
   }
 
-  async function onSaveAndClose(data: TransactionFormValues) {
-    setIsSavingAndClosing(true);
-    setShowDiscardDialog(false);
-    const payload = buildPayload(data, dirtyFields);
-    try {
-      const result = await updateTransaction({ id: transaction.id, data: payload as Partial<Transaction> }).unwrap();
-      notifyVendorLearned(result as unknown as Record<string, unknown>, data);
-      onClose();
-    } catch {
-      setIsSavingAndClosing(false);
-    }
+  async function onSave(data: TransactionFormValues) {
+    if (await save(data)) onClose();
   }
 
   async function onApproveAndSave(data: TransactionFormValues) {
-    const payload = buildPayload(data, dirtyFields);
-    payload.status = "approved";
-    try {
-      const result = await updateTransaction({ id: transaction.id, data: payload as Partial<Transaction> }).unwrap();
-      notifyVendorLearned(result as unknown as Record<string, unknown>, data);
-      onClose();
-    } catch {
-      // save failed -- stay open
+    if (await save(data, { status: "approved" })) onClose();
+  }
+
+  function requestClose(afterClose: () => void) {
+    if (!isDirty) {
+      afterClose();
+      return;
+    }
+    setUnsavedSaveError(null);
+    setPendingClose(() => afterClose);
+  }
+
+  useImperativeHandle(ref, () => ({ requestClose }));
+
+  // Closing or reloading the tab gets the browser's own "leave site?" prompt.
+  useEffect(() => {
+    if (!isDirty) return;
+    function warn(e: BeforeUnloadEvent) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [isDirty]);
+
+  function handleClose() {
+    requestClose(onClose);
+  }
+
+  function handleKeepEditing() {
+    if (closeInFlight.current) return;
+    setPendingClose(null);
+  }
+
+  function handleDiscard() {
+    if (closeInFlight.current) return;
+    const afterClose = pendingClose;
+    setPendingClose(null);
+    afterClose?.();
+  }
+
+  async function onSaveAndClose(data: TransactionFormValues) {
+    if (await save(data)) {
+      const afterClose = pendingClose;
+      setPendingClose(null);
+      afterClose?.();
+    } else {
+      setUnsavedSaveError(MSG.couldntSave);
     }
   }
 
-  function handleClose() {
-    if (isDirty) {
-      setShowDiscardDialog(true);
-    } else {
-      onClose();
-    }
+  function handleSaveAndClose() {
+    if (closeInFlight.current) return;
+    closeInFlight.current = true;
+    setIsSavingAndClosing(true);
+    setUnsavedSaveError(null);
+    void handleSubmit(onSaveAndClose)().finally(() => {
+      closeInFlight.current = false;
+      setIsSavingAndClosing(false);
+    });
   }
 
   async function handleConfirmDelete() {
@@ -133,7 +177,7 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
       onDeleted?.();
       onClose();
     } catch {
-      // delete failed -- stay open so user sees the error
+      showError(MSG.couldntDelete);
     }
   }
 
@@ -231,14 +275,13 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
         </div>
       </div>
 
-      <ConfirmDialog
-        open={showDiscardDialog && !isSavingAndClosing}
-        title="Unsaved changes"
-        description="You have unsaved changes. Would you like to save them before closing?"
-        confirmLabel="Save & Close"
-        cancelLabel="Discard"
-        onConfirm={() => { handleSubmit(onSaveAndClose)(); }}
-        onCancel={() => { if (!isSavingAndClosing) { setShowDiscardDialog(false); onClose(); } }}
+      <UnsavedChangesDialog
+        open={pendingClose !== null}
+        isSaving={isSaving || isSavingAndClosing}
+        error={unsavedSaveError}
+        onKeepEditing={handleKeepEditing}
+        onDiscard={handleDiscard}
+        onSave={handleSaveAndClose}
       />
 
       <ConfirmDialog

@@ -1,9 +1,10 @@
-import { FileText } from "lucide-react";
+import type { Ref } from "react";
 import { useToast } from "@/shared/hooks/useToast";
-import { formatCurrency } from "@/shared/utils/currency";
-import { formatDate } from "@/shared/utils/date";
-import { formatTag } from "@/shared/utils/tag";
 import TransactionPanel from "@/app/features/transactions/TransactionPanel";
+import DrillDownEmptyState from "./DrillDownEmptyState";
+import DrillDownList from "./DrillDownList";
+import DrillDownLoadingState from "./DrillDownLoadingState";
+import type { TransactionPanelHandle } from "@/shared/types/transaction/transaction-panel-handle";
 import type { DrillDownBodyMode } from "@/shared/types/dashboard/drill-down-body-mode";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
@@ -16,62 +17,8 @@ export interface DrillDownPanelBodyProps {
   onSelectTxn: (txn: Transaction) => void;
   onClearTxn: () => void;
   onTxnDeleted: () => void;
-}
-
-function DrillDownLoadingState() {
-  return (
-    <div className="p-5 space-y-3">
-      {Array.from({ length: 5 }, (_, i) => (
-        <div key={i} className="h-14 bg-muted/40 rounded animate-pulse" />
-      ))}
-    </div>
-  );
-}
-
-function DrillDownEmptyState() {
-  return (
-    <p className="p-5 text-sm text-muted-foreground">
-      No transactions found for this period.
-    </p>
-  );
-}
-
-interface DrillDownListProps {
-  transactions: Transaction[];
-  onSelectTxn: (txn: Transaction) => void;
-}
-
-function DrillDownList({ transactions, onSelectTxn }: DrillDownListProps) {
-  return (
-    <ul className="divide-y">
-      {transactions.map((txn) => (
-        <li
-          key={txn.id}
-          onClick={() => onSelectTxn(txn)}
-          className="px-5 py-3 cursor-pointer hover:bg-muted/50 transition-colors"
-        >
-          <div className="flex items-center justify-between">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-medium truncate">{txn.vendor ?? "Unknown vendor"}</p>
-                {txn.source_document_id ? (
-                  <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                ) : null}
-              </div>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-xs text-muted-foreground">{formatDate(txn.transaction_date)}</span>
-                <span className="text-xs bg-muted rounded px-1.5 py-0.5">{formatTag(txn.category)}</span>
-              </div>
-            </div>
-            <span className="text-sm font-semibold ml-4 shrink-0">{formatCurrency(txn.amount)}</span>
-          </div>
-          {txn.description ? (
-            <p className="text-xs text-muted-foreground mt-1 truncate">{txn.description}</p>
-          ) : null}
-        </li>
-      ))}
-    </ul>
-  );
+  /** Lets the drill-down close the detail view through its unsaved-edits prompt. */
+  transactionPanelRef: Ref<TransactionPanelHandle>;
 }
 
 export default function DrillDownPanelBody({
@@ -82,6 +29,7 @@ export default function DrillDownPanelBody({
   onSelectTxn,
   onClearTxn,
   onTxnDeleted,
+  transactionPanelRef,
 }: DrillDownPanelBodyProps) {
   const { showSuccess } = useToast();
 
@@ -90,6 +38,7 @@ export default function DrillDownPanelBody({
       return (
         <TransactionPanel
           key={selectedTxn!.id}
+          ref={transactionPanelRef}
           transaction={selectedTxn!}
           properties={properties}
           onClose={onClearTxn}
