@@ -25,7 +25,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CADDYFILE = path.resolve(__dirname, "..", "..", "docker", "Caddyfile.docker");
+const CADDYFILE = path.resolve(__dirname, "..", "..", "..", "docker", "Caddyfile.docker");
 
 interface CaddyBlock {
   // Raw text of the block contents (excluding outer braces).

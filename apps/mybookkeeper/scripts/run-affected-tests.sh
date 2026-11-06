@@ -273,6 +273,16 @@ run_frontend_tests() {
   echo ""
 }
 
+# The HTML report would otherwise open on failure and hold up the next run.
+run_playwright() {
+  if PW_TEST_HTML_REPORT_OPEN=never npx playwright test "$@"; then
+    echo -e "  ${GREEN}E2E tests passed${NC}"
+  else
+    echo -e "  ${RED}E2E tests FAILED${NC}"
+    OVERALL_EXIT=1
+  fi
+}
+
 run_e2e_tests() {
   local spec_files="$1"
   echo -e "${CYAN}=== E2E tests ===${NC}"
@@ -280,26 +290,27 @@ run_e2e_tests() {
   cd "$REPO_ROOT/frontend"
   if [[ "$spec_files" == "ALL" ]]; then
     echo -e "  Running: ${YELLOW}all E2E tests${NC}"
-    if npx playwright test; then
-      echo -e "  ${GREEN}E2E tests passed${NC}"
-    else
-      echo -e "  ${RED}E2E tests FAILED${NC}"
-      OVERALL_EXIT=1
-    fi
+    run_playwright
+    run_playwright --config=playwright.layout.config.ts
   else
-    local pw_args=""
+    # Specs under mocked/ need no backend and run under the layout config.
+    local real_args=() mocked_args=()
     IFS=',' read -ra FILES <<< "$spec_files"
     for f in "${FILES[@]}"; do
-      pw_args="$pw_args e2e/$f"
+      if [[ "$f" == mocked/* ]]; then
+        mocked_args+=("e2e/$f")
+      else
+        real_args+=("e2e/$f")
+      fi
     done
     echo -e "  Running: ${YELLOW}${#FILES[@]} spec file(s)${NC}"
     echo "$spec_files" | tr ',' '\n' | sed 's/^/    /'
 
-    if npx playwright test $pw_args; then
-      echo -e "  ${GREEN}E2E tests passed${NC}"
-    else
-      echo -e "  ${RED}E2E tests FAILED${NC}"
-      OVERALL_EXIT=1
+    if [[ ${#real_args[@]} -gt 0 ]]; then
+      run_playwright "${real_args[@]}"
+    fi
+    if [[ ${#mocked_args[@]} -gt 0 ]]; then
+      run_playwright --config=playwright.layout.config.ts "${mocked_args[@]}"
     fi
   fi
   cd "$REPO_ROOT"

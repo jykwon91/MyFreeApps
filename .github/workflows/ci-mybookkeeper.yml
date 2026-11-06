@@ -262,38 +262,15 @@ jobs:
         timeout-minutes: 4
         run: npx playwright install chromium
 
-      - name: Run layout E2E tests (no backend)
+      - name: Run mocked E2E tests (no backend)
         working-directory: apps/mybookkeeper/frontend
-        # Pass explicit spec paths because the layout config's testDir is
-        # the full e2e/ folder, and the rest of those specs require a real
-        # backend via globalSetup. The layout config skips globalSetup but
-        # cannot filter which specs match. Add new layout-style specs to
-        # this list as they are written.
-        run: |
-          npx playwright test --config=playwright.layout.config.ts \
-            e2e/two-factor-button-alignment.spec.ts \
-            e2e/login-totp-button-text-centered.spec.ts \
-            e2e/document-viewer-failure-modes.spec.ts \
-            e2e/document-re-extract.spec.ts \
-            e2e/caddy-headers-blob-iframe.spec.ts \
-            e2e/welcome-manuals-layout-mock.spec.ts \
-            e2e/utility-better-plans.spec.ts \
-            e2e/utility-plan-document-upload.spec.ts \
-            e2e/insurance-policy-document-upload.spec.ts \
-            e2e/insurance-rate-watch.spec.ts \
-            e2e/mortgage-rate-watch.spec.ts \
-            e2e/reply-templates-mock.spec.ts \
-            e2e/transactions-unsaved-mock.spec.ts \
-            e2e/inquiries-viewer-mock.spec.ts \
-            e2e/inquiry-reply-picker-mock.spec.ts \
-            e2e/listings-viewer-mock.spec.ts \
-            e2e/members-owner-row-mock.spec.ts \
-            e2e/members-invites-mock.spec.ts
+        # Runs everything in e2e/mocked/.
+        run: npx playwright test --config=playwright.layout.config.ts
 
       - name: Upload Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: playwright-report
-          path: apps/mybookkeeper/frontend/e2e/test-results/
+          path: apps/mybookkeeper/frontend/e2e/test-results-mocked/
           retention-days: 7

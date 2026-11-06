@@ -3,11 +3,11 @@ import { defineConfig, devices } from "@playwright/test";
 const frontendPort = process.env.PW_PORT ?? "5173";
 const frontendURL = `http://localhost:${frontendPort}`;
 
-// Layout-only Playwright config: no global setup (no backend dependency),
-// for tests that fully mock their API surface via page.route().
+// No global setup and no backend: runs e2e/mocked/, whose specs answer every
+// API call themselves via page.route().
 export default defineConfig({
-  testDir: "./e2e",
-  outputDir: "./e2e/test-results",
+  testDir: "./e2e/mocked",
+  outputDir: "./e2e/test-results-mocked",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
