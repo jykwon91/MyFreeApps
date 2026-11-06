@@ -11,7 +11,7 @@ export const ROLE_LABELS: Record<OrgRole, string> = {
 export const ASSIGNABLE_ROLE_OPTIONS: readonly { value: AssignableRole; label: string; description: string }[] = [
   { value: "admin", label: "Admin", description: "Manage members, edit all data" },
   { value: "user", label: "User", description: "Add and edit most data" },
-  { value: "viewer", label: "Viewer", description: "Read-only. Can't create or edit." },
+  { value: "viewer", label: "Viewer", description: "Read-only. Can't create, edit or connect Gmail." },
 ];
 
 export const INVITE_ROLE_OPTIONS: readonly { value: AssignableRole; label: string }[] = [

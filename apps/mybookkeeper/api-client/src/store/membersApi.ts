@@ -18,7 +18,8 @@ export const membersApi = baseApi.enhanceEndpoints({
         method: "PATCH",
         data: { org_role: orgRole },
       }),
-      invalidatesTags: ["Members"],
+      // A Gmail connection a new viewer made is removed.
+      invalidatesTags: ["Members", "Integration"],
     }),
     removeMember: build.mutation<void, { orgId: string; userId: string }>({
       query: ({ orgId, userId }) => ({
