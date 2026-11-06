@@ -21,7 +21,30 @@ export const TRIAGE_STATUS_FILTERS = [
 
 export const TRIAGE_SORTS = ["top", "priority", "new"] as const;
 
-export const TRIAGE_SHEET_KINDS = ["edit", "merge", "shipped", "not_planned"] as const;
+export const TRIAGE_SHEET_KIND = {
+  edit: "edit",
+  merge: "merge",
+  shipped: "shipped",
+  notPlanned: "not_planned",
+} as const;
+
+export const TRIAGE_SHEET_KINDS = [
+  TRIAGE_SHEET_KIND.edit,
+  TRIAGE_SHEET_KIND.merge,
+  TRIAGE_SHEET_KIND.shipped,
+  TRIAGE_SHEET_KIND.notPlanned,
+] as const;
+
+/**
+ * How an inbox submission shows: a new story to approve, one already handled elsewhere, a vote on an
+ * existing public story, or a rejected / unanswered-question submission (collapsed section).
+ */
+export const INBOX_CARD_KIND = {
+  new: "new",
+  alreadyHandled: "already_handled",
+  duplicate: "duplicate",
+  rejected: "rejected",
+} as const;
 
 /** Private priority, 1 = most important (backend PRIORITY_MIN..PRIORITY_MAX). */
 export const TRIAGE_PRIORITIES = [1, 2, 3] as const;

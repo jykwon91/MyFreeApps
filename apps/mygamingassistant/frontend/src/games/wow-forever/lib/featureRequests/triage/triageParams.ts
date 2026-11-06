@@ -1,7 +1,7 @@
 /** The triage screen's URL state: `?tab=`, the All requests filters, and which sheet is open. Pure. */
 import { FEATURE_AREAS } from "@/games/wow-forever/data/featureRequests/featureRequestEnums";
 import { TRIAGE_PARAM } from "@/games/wow-forever/data/featureRequests/triage/triageConfig";
-import { TRIAGE_SORTS, TRIAGE_STATUS_FILTERS, TRIAGE_TABS } from "@/games/wow-forever/data/featureRequests/triage/triageEnums";
+import { TRIAGE_SHEET_KINDS, TRIAGE_SORTS, TRIAGE_STATUS_FILTERS, TRIAGE_TABS } from "@/games/wow-forever/data/featureRequests/triage/triageEnums";
 import type { TriageListFilters } from "@/games/wow-forever/types/featureRequests/triage/triageListFilters";
 import type { TriageOpenSheet } from "@/games/wow-forever/types/featureRequests/triage/triageOpenSheet";
 import type { TriageSheetKind } from "@/games/wow-forever/types/featureRequests/triage/triageSheetKind";
@@ -15,8 +15,6 @@ const SHEET_PARAM: Readonly<Record<TriageSheetKind, string>> = {
   shipped: TRIAGE_PARAM.shipped,
   not_planned: TRIAGE_PARAM.notPlanned,
 };
-
-const SHEET_ORDER: readonly TriageSheetKind[] = ["edit", "merge", "shipped", "not_planned"];
 
 function oneOf<T extends string>(values: readonly T[], raw: string | null): T | null {
   return values.find((v) => v === raw) ?? null;
@@ -35,7 +33,7 @@ export function parseTriageFilters(params: URLSearchParams): TriageListFilters {
 }
 
 export function parseOpenSheet(params: URLSearchParams): TriageOpenSheet | null {
-  for (const kind of SHEET_ORDER) {
+  for (const kind of TRIAGE_SHEET_KINDS) {
     const storyId = params.get(SHEET_PARAM[kind]);
     if (storyId !== null && storyId !== "") return { kind, storyId, fromSubmissionId: params.get(TRIAGE_PARAM.from) };
   }
@@ -72,7 +70,7 @@ export function withSheet(params: URLSearchParams, sheet: TriageOpenSheet): URLS
 
 export function withoutSheet(params: URLSearchParams): URLSearchParams {
   const next = new URLSearchParams(params);
-  for (const kind of SHEET_ORDER) next.delete(SHEET_PARAM[kind]);
+  for (const kind of TRIAGE_SHEET_KINDS) next.delete(SHEET_PARAM[kind]);
   next.delete(TRIAGE_PARAM.from);
   return next;
 }

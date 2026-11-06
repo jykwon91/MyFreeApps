@@ -10,6 +10,7 @@ import {
   findInboxItemForStory,
   findTriageStory,
 } from "@/games/wow-forever/lib/featureRequests/triage/triageStoryLookup";
+import { TRIAGE_SHEET_KIND } from "@/games/wow-forever/data/featureRequests/triage/triageEnums";
 import type { TriageActions } from "@/games/wow-forever/types/featureRequests/triage/triageActions";
 import type { TriageOpenSheet } from "@/games/wow-forever/types/featureRequests/triage/triageOpenSheet";
 import type { TriageTab } from "@/games/wow-forever/types/featureRequests/triage/triageTab";
@@ -33,7 +34,7 @@ export default function TriageSheets({ sheet, tab, actions, onClose }: TriageShe
   }
   const inboxItem = tab === "inbox" ? findInboxItemForStory(inbox.data, story.id) : null;
 
-  if (sheet.kind === "edit") {
+  if (sheet.kind === TRIAGE_SHEET_KIND.edit) {
     const from = findInboxItem(inbox.data, sheet.fromSubmissionId);
     return (
       <TriageEditSheet
@@ -45,11 +46,11 @@ export default function TriageSheets({ sheet, tab, actions, onClose }: TriageShe
       />
     );
   }
-  if (sheet.kind === "merge") {
+  if (sheet.kind === TRIAGE_SHEET_KIND.merge) {
     if (inboxItem === null) return <TriageSheetGone onClose={onClose} />;
     return <TriageMergeSheet source={story} onClose={onClose} onMerge={(target) => actions.mergeFromInbox(inboxItem, story, target)} />;
   }
-  if (sheet.kind === "shipped") {
+  if (sheet.kind === TRIAGE_SHEET_KIND.shipped) {
     return (
       <TriageShippedSheet
         story={story}

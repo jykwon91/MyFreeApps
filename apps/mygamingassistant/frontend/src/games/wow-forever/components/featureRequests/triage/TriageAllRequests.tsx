@@ -7,6 +7,7 @@ import TriageStoryRow from "@/games/wow-forever/components/featureRequests/triag
 import { useGetTriageStoriesQuery } from "@/games/wow-forever/api/triageApi";
 import { TRIAGE_COPY } from "@/games/wow-forever/data/featureRequests/triage/triageCopy";
 import { TRIAGE_PAGE_SIZE } from "@/games/wow-forever/data/featureRequests/triage/triageConfig";
+import { TRIAGE_SHEET_KIND } from "@/games/wow-forever/data/featureRequests/triage/triageEnums";
 import { TRIAGE_SECONDARY_BUTTON } from "@/games/wow-forever/data/featureRequests/triage/triageStyles";
 import { useRefetchOnFocus } from "@/games/wow-forever/hooks/featureRequests/useRefetchOnFocus";
 import { stableOrder } from "@/games/wow-forever/lib/featureRequests/stableOrder";
@@ -63,8 +64,8 @@ export default function TriageAllRequests({ actions, filters, onFiltersChange, o
   const shown = ordered.slice(0, paging.pages * TRIAGE_PAGE_SIZE);
 
   function pickStatus(story: TriageStory, option: TriageStatusOption): void {
-    if (option.sheet === "shipped") onOpenSheet({ kind: "shipped", storyId: story.id, fromSubmissionId: null });
-    else if (option.sheet === "not_planned") onOpenSheet({ kind: "not_planned", storyId: story.id, fromSubmissionId: null });
+    if (option.sheet === TRIAGE_SHEET_KIND.shipped) onOpenSheet({ kind: TRIAGE_SHEET_KIND.shipped, storyId: story.id, fromSubmissionId: null });
+    else if (option.sheet === TRIAGE_SHEET_KIND.notPlanned) onOpenSheet({ kind: TRIAGE_SHEET_KIND.notPlanned, storyId: story.id, fromSubmissionId: null });
     else actions.changeStatus(story, option.status);
   }
 
@@ -88,7 +89,7 @@ export default function TriageAllRequests({ actions, filters, onFiltersChange, o
                 pending={actions.pendingById.get(actionId)}
                 onUndo={() => actions.undo(actionId)}
                 onPickStatus={(option) => pickStatus(story, option)}
-                onEdit={() => onOpenSheet({ kind: "edit", storyId: story.id, fromSubmissionId: null })}
+                onEdit={() => onOpenSheet({ kind: TRIAGE_SHEET_KIND.edit, storyId: story.id, fromSubmissionId: null })}
                 onSetHidden={(hidden) =>
                   actions.saveStory(story, { hidden }, hidden ? TRIAGE_COPY.toastHidden : TRIAGE_COPY.toastUnhidden)
                 }

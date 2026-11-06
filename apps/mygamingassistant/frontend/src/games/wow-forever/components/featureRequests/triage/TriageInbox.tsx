@@ -10,6 +10,7 @@ import TriageRejectedSection from "@/games/wow-forever/components/featureRequest
 import { useGetTriageInboxQuery } from "@/games/wow-forever/api/triageApi";
 import { TRIAGE_COPY } from "@/games/wow-forever/data/featureRequests/triage/triageCopy";
 import { TRIAGE_INBOX_WARN_AT, TRIAGE_PAGE_PATH } from "@/games/wow-forever/data/featureRequests/triage/triageConfig";
+import { INBOX_CARD_KIND, TRIAGE_SHEET_KIND } from "@/games/wow-forever/data/featureRequests/triage/triageEnums";
 import { TRIAGE_SECONDARY_BUTTON } from "@/games/wow-forever/data/featureRequests/triage/triageStyles";
 import { useRefetchOnFocus } from "@/games/wow-forever/hooks/featureRequests/useRefetchOnFocus";
 import { useNow } from "@/games/wow-forever/hooks/useNow";
@@ -65,8 +66,8 @@ export default function TriageInbox({ actions, onOpenSheet }: TriageInboxProps) 
   }
 
   const visible = order.shown.filter((i) => !actions.finished.has(i.submission_id));
-  const main = visible.filter((i) => inboxCardKind(i) !== "rejected");
-  const rejected = visible.filter((i) => inboxCardKind(i) === "rejected");
+  const main = visible.filter((i) => inboxCardKind(i) !== INBOX_CARD_KIND.rejected);
+  const rejected = visible.filter((i) => inboxCardKind(i) === INBOX_CARD_KIND.rejected);
   const waiting = main.filter((i) => !actions.pendingById.has(i.submission_id));
   const total = query.data.total_untriaged;
 
@@ -91,17 +92,17 @@ export default function TriageInbox({ actions, onOpenSheet }: TriageInboxProps) 
   function cardFor(item: TriageInboxItem, story: TriageStory) {
     const kind = inboxCardKind(item);
     const id = item.submission_id;
-    if (kind === "already_handled") {
+    if (kind === INBOX_CARD_KIND.alreadyHandled) {
       return <TriageHandledCard key={id} item={item} story={story} onGotIt={() => actions.clearSubmission(item)} />;
     }
-    if (kind === "duplicate") {
+    if (kind === INBOX_CARD_KIND.duplicate) {
       return (
         <TriageDuplicateCard
           key={id}
           item={item}
           story={story}
           onGotIt={() => actions.clearSubmission(item)}
-          onAddNote={() => onOpenSheet({ kind: "edit", storyId: story.id, fromSubmissionId: id })}
+          onAddNote={() => onOpenSheet({ kind: TRIAGE_SHEET_KIND.edit, storyId: story.id, fromSubmissionId: id })}
         />
       );
     }
@@ -122,9 +123,9 @@ export default function TriageInbox({ actions, onOpenSheet }: TriageInboxProps) 
           collapsed(item, "Approved");
         }}
         onUndo={() => actions.undo(id)}
-        onEdit={() => sheet("edit")}
-        onMerge={() => sheet("merge")}
-        onNotPlanned={() => sheet("not_planned")}
+        onEdit={() => sheet(TRIAGE_SHEET_KIND.edit)}
+        onMerge={() => sheet(TRIAGE_SHEET_KIND.merge)}
+        onNotPlanned={() => sheet(TRIAGE_SHEET_KIND.notPlanned)}
         onHide={() => {
           actions.hideFromInbox(item, story);
           collapsed(item, "Hidden");

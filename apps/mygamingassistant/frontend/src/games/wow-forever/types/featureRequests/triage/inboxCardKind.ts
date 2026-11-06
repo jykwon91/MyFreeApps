@@ -1,5 +1,4 @@
-/**
- * How an inbox submission shows: a new story to approve, one already handled elsewhere, a vote on an
- * existing public story, or a rejected / unanswered-question submission (collapsed section).
- */
-export type InboxCardKind = "new" | "already_handled" | "duplicate" | "rejected";
+import type { INBOX_CARD_KIND } from "@/games/wow-forever/data/featureRequests/triage/triageEnums";
+
+/** See `INBOX_CARD_KIND`. */
+export type InboxCardKind = (typeof INBOX_CARD_KIND)[keyof typeof INBOX_CARD_KIND];
