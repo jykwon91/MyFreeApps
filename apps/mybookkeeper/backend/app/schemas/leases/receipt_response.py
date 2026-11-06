@@ -34,6 +34,9 @@ class PendingReceiptResponse(BaseModel):
     payment_method: str | None = None
     vendor: str | None = None
     send_blocker: ReceiptSendBlocker | None = None
+    # The Gmail account a stuck send went through, when it isn't connected any
+    # more: sending can't check it, so the host can dismiss it instead.
+    sent_from_other_gmail: str | None = None
 
 
 class PendingReceiptListResponse(BaseModel):

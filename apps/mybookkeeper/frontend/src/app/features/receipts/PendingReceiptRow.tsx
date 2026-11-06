@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Button } from "@platform/ui";
+import { Button, ConfirmDialog } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { formatCurrency } from "@/shared/utils/currency";
 import { useDismissReceiptMutation } from "@mybookkeeper/api-client/store/rentReceiptsApi";
 import { RECEIPT_SEND_BLOCKER_MESSAGES } from "@mybookkeeper/api-client/constants/receiptReadinessMessages";
 import type { PendingReceipt } from "@mybookkeeper/api-client/types/lease/pending-receipt";
 import { receiptPayerName } from "@mybookkeeper/api-client/utils/receiptPayerName";
+import { receiptSentFromOtherGmailMessage } from "@mybookkeeper/api-client/utils/receiptSentFromOtherGmailMessage";
+import { PENDING_RECEIPT_MESSAGES } from "@/shared/lib/pending-receipt-messages";
 import SendReceiptDialog from "./SendReceiptDialog";
 
 export interface PendingReceiptRowProps {
@@ -16,6 +18,7 @@ export interface PendingReceiptRowProps {
 
 export default function PendingReceiptRow({ receipt, canSend }: PendingReceiptRowProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [confirmingDismiss, setConfirmingDismiss] = useState(false);
   const [dismissReceipt, { isLoading: isDismissing }] = useDismissReceiptMutation();
 
   async function handleDismiss() {
@@ -24,12 +27,17 @@ export default function PendingReceiptRow({ receipt, canSend }: PendingReceiptRo
       showSuccess("Receipt dismissed.");
     } catch {
       showError("Couldn't dismiss the receipt. Please try again.");
+    } finally {
+      setConfirmingDismiss(false);
     }
   }
 
-  // A send whose outcome Gmail never confirmed. It can't be dismissed; the
-  // next send checks Gmail before emailing again.
-  const isConfirming = receipt.status === "sending";
+  // A send through a Gmail account that isn't connected any more. Sending can't
+  // check it, so the host decides: dismiss it, or reconnect that account.
+  const otherGmail = receipt.sent_from_other_gmail;
+  // Any other send whose outcome Gmail never confirmed. It can't be dismissed;
+  // the next send checks Gmail before emailing again.
+  const isConfirming = receipt.status === "sending" && otherGmail === null;
   const blocker = receipt.send_blocker;
 
   return (
@@ -57,6 +65,19 @@ export default function PendingReceiptRow({ receipt, canSend }: PendingReceiptRo
               Confirming with Gmail
             </span>
           )}
+          {otherGmail !== null && (
+            <>
+              <span
+                data-testid="pending-receipt-other-gmail"
+                className="inline-flex mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800"
+              >
+                {PENDING_RECEIPT_MESSAGES.cantCheckBadge}
+              </span>
+              <p data-testid="pending-receipt-other-gmail-note" className="text-xs text-amber-700 mt-1 break-words">
+                {receiptSentFromOtherGmailMessage(otherGmail)} {PENDING_RECEIPT_MESSAGES.reconnectHere}
+              </p>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {!isConfirming && (
@@ -65,24 +86,39 @@ export default function PendingReceiptRow({ receipt, canSend }: PendingReceiptRo
               variant="ghost"
               size="sm"
               data-testid="pending-receipt-dismiss-btn"
-              onClick={() => void handleDismiss()}
+              onClick={() => (otherGmail === null ? void handleDismiss() : setConfirmingDismiss(true))}
               disabled={isDismissing}
             >
               Dismiss
             </Button>
           )}
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            data-testid="pending-receipt-send-btn"
-            onClick={() => setDialogOpen(true)}
-            disabled={!canSend || blocker !== null}
-          >
-            Review &amp; send
-          </Button>
+          {otherGmail === null && (
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              data-testid="pending-receipt-send-btn"
+              onClick={() => setDialogOpen(true)}
+              disabled={!canSend || blocker !== null}
+            >
+              Review &amp; send
+            </Button>
+          )}
         </div>
       </div>
+
+      {otherGmail !== null && (
+        <ConfirmDialog
+          open={confirmingDismiss}
+          title={PENDING_RECEIPT_MESSAGES.dismissOtherGmailTitle}
+          description={PENDING_RECEIPT_MESSAGES.dismissOtherGmailBody}
+          confirmLabel="Dismiss"
+          variant="danger"
+          isLoading={isDismissing}
+          onConfirm={() => void handleDismiss()}
+          onCancel={() => setConfirmingDismiss(false)}
+        />
+      )}
 
       {dialogOpen && (
         <SendReceiptDialog receipt={receipt} onClose={() => setDialogOpen(false)} />

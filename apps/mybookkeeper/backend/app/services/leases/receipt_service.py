@@ -22,13 +22,12 @@ from app.repositories.transactions import transaction_repo
 from app.repositories.user import user_repo
 from app.repositories.inquiries import inquiry_repo
 from app.schemas.leases.receipt_response import PendingReceiptListResponse
-from app.services.email.gmail_address_match import same_gmail_address
-from app.services.email.send_claim_staleness import is_send_claim_stale
 from app.services.leases.exceptions import (
     ReceiptSendInProgressError,
     ReceiptTransactionNotAttributedError,
 )
 from app.services.leases.receipt_address_resolver import resolve_property_address
+from app.services.leases.receipt_other_gmail import sent_from_other_gmail
 from app.services.leases.receipt_formatting import (
     resolve_landlord_name as _resolve_landlord_name,
 )
@@ -136,15 +135,24 @@ async def get_pending_receipt_list(
         integration = await integration_repo.get_by_org_and_provider(
             db, organization_id, "gmail",
         )
+    now = _dt.datetime.now(_dt.timezone.utc)
     items = [
         to_pending_receipt_response(
             row,
-            receipt_send_blocker(
+            send_blocker=receipt_send_blocker(
                 attributed=row.attributed,
                 tenant_owner_id=row.tenant_owner_id,
                 requester_id=user_id,
                 tenant_email=resolve_tenant_email(row.contact_email, row.inquirer_email),
                 has_lease=row.has_lease,
+            ),
+            sent_from_other_gmail=sent_from_other_gmail(
+                status=row.status,
+                sender_gmail_address=row.sender_gmail_address,
+                send_message_id=row.send_message_id,
+                send_claimed_at=row.send_claimed_at,
+                integration=integration,
+                now=now,
             ),
         )
         for row in rows
@@ -194,19 +202,16 @@ async def _dismiss_if_sent_from_other_gmail(
     still within the stale window may belong to a send that's still running.
     """
     now = _dt.datetime.now(_dt.timezone.utc)
-    if (
-        receipt.sender_gmail_address is None
-        or receipt.send_message_id is None
-        or receipt.send_claimed_at is None
-        or not is_send_claim_stale(receipt.send_claimed_at, now)
-    ):
-        return False
     async with unit_of_work() as db:
         integration = await integration_repo.get_by_org_and_provider(db, organization_id, "gmail")
-        if integration is not None and (
-            integration.gmail_address is None
-            or same_gmail_address(integration.gmail_address, receipt.sender_gmail_address)
-        ):
+        if receipt.send_message_id is None or sent_from_other_gmail(
+            status=receipt.status,
+            sender_gmail_address=receipt.sender_gmail_address,
+            send_message_id=receipt.send_message_id,
+            send_claimed_at=receipt.send_claimed_at,
+            integration=integration,
+            now=now,
+        ) is None:
             return False
         dismissed = await pending_rent_receipt_repo.mark_dismissed_if_claimed(
             db,

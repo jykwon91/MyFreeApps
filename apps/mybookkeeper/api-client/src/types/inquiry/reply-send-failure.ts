@@ -9,4 +9,6 @@ export type ReplySendFailure =
   | "unsure"
   | "notRecorded"
   | "inFlight"
+  /** An earlier attempt went through a Gmail account that isn't connected now, so it can't be checked. */
+  | "otherAccount"
   | "refused";

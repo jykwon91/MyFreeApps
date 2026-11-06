@@ -25,6 +25,7 @@ import ReceiptsScreen from "../src/features/receipts/ReceiptsScreen";
 import { usePendingReceiptActions } from "../src/features/receipts/usePendingReceiptActions";
 import { useCanWrite } from "../src/features/workspace/useCanWrite";
 import { store } from "../src/lib/store";
+import { receiptSentFromOtherGmailMessage } from "@mybookkeeper/api-client/utils/receiptSentFromOtherGmailMessage";
 import { aReceipt, startReceiptServer } from "../test-support/receiptsServer";
 
 jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn(), back: jest.fn() } }));
@@ -220,6 +221,22 @@ describe("what the list shows", () => {
     expect(screen.getByText(MESSAGES.checkingWithGmail)).toBeTruthy();
     expect(sendButton().props.accessibilityState.disabled).toBe(false);
     expect(screen.queryByText(MESSAGES.dismiss)).toBeNull();
+  });
+
+  it("names the account a stuck send went through, offers no Send, and lets it be dismissed after a stronger warning", async () => {
+    const server = startReceiptServer([aReceipt({ status: "sending", sent_from_other_gmail: "old@gmail.com" })]);
+    await showScreen();
+
+    expect(screen.getByText(`${receiptSentFromOtherGmailMessage("old@gmail.com")} ${FIX_ON_WEBSITE}`)).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.checkingWithGmail)).toBeNull();
+    expect(screen.queryByText(MESSAGES.reviewAndSend)).toBeNull();
+
+    await fireEvent.press(screen.getByText(MESSAGES.dismiss));
+    expect(jest.mocked(Alert.alert).mock.calls[0].slice(0, 2)).toEqual([MESSAGES.dismissTitle, MESSAGES.dismissOtherGmailBody]);
+    await pressAlert(MESSAGES.dismiss);
+
+    expect(server.writes).toEqual([{ url: "/rent-receipts/tx1/dismiss", body: {} }]);
+    expect(screen.getByText(MESSAGES.noneHeading)).toBeTruthy();
   });
 
   it("gives a viewer the list and no buttons", async () => {

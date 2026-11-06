@@ -3,11 +3,13 @@ import {
   REPLY_NO_RECIPIENT,
   REPLY_REQUEST_ID_REUSED,
   REPLY_SEND_IN_PROGRESS,
+  REPLY_SENT_FROM_OTHER_GMAIL,
   REPLY_SENT_NOT_RECORDED,
 } from "../constants/replySendDetails";
 import type { ReplySendFailure } from "../types/inquiry/reply-send-failure";
 import { errorDetail } from "./errorDetail";
 import { httpStatus } from "./httpStatus";
+import { sentFromOtherGmail } from "./sentFromOtherGmail";
 
 export function replySendFailure(error: unknown): ReplySendFailure {
   const status = httpStatus(error);
@@ -15,6 +17,7 @@ export function replySendFailure(error: unknown): ReplySendFailure {
   if (status === 403) return "viewOnly";
   if (status === 404) return "gone";
   if (status === 409 && detail === REPLY_SEND_IN_PROGRESS) return "inFlight";
+  if (status === 409 && sentFromOtherGmail(detail, REPLY_SENT_FROM_OTHER_GMAIL) !== null) return "otherAccount";
   if (status === 422) {
     if (detail === REPLY_NO_RECIPIENT) return "noRecipient";
     if (detail === REPLY_REQUEST_ID_REUSED) return "refused";

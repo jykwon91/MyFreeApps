@@ -1,8 +1,9 @@
-import { REPLY_REQUEST_ID_REUSED } from "../constants/replySendDetails";
+import { REPLY_REQUEST_ID_REUSED, REPLY_SENT_FROM_OTHER_GMAIL } from "../constants/replySendDetails";
 import type { SendReplyOnceOptions } from "../types/inquiry/send-reply-once-options";
 import type { SendReplyOnceResult } from "../types/inquiry/send-reply-once-result";
 import { errorDetail } from "./errorDetail";
 import { replySendFailure } from "./replySendFailure";
+import { sentFromOtherGmail } from "./sentFromOtherGmail";
 
 /** Sends, asking again with the same id while the server says an earlier attempt is in flight. */
 export async function sendReplyOnce({
@@ -16,7 +17,7 @@ export async function sendReplyOnce({
     try {
       const message = await post();
       onWaiting(false);
-      return { result: { ok: true, message }, idSpent: true };
+      return { result: { ok: true, message }, idSpent: true, otherGmailAddress: null };
     } catch (error) {
       const failure = replySendFailure(error);
       if (failure === "inFlight" && attempt < delays.length && keepGoing()) {
@@ -25,7 +26,12 @@ export async function sendReplyOnce({
         if (keepGoing()) continue;
       }
       onWaiting(false);
-      return { result: { ok: false, failure }, idSpent: errorDetail(error) === REPLY_REQUEST_ID_REUSED };
+      const detail = errorDetail(error);
+      return {
+        result: { ok: false, failure },
+        idSpent: detail === REPLY_REQUEST_ID_REUSED,
+        otherGmailAddress: sentFromOtherGmail(detail, REPLY_SENT_FROM_OTHER_GMAIL),
+      };
     }
   }
 }

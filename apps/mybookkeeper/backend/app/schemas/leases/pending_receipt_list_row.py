@@ -1,7 +1,8 @@
 """One open rent receipt with the payment and tenant facts the list shows.
 
 Returned by ``pending_rent_receipt_repo.list_open``. The tenant's owner,
-emails and ``has_lease`` feed the send blocker and never leave the service layer.
+emails and ``has_lease`` feed the send blocker, and the send claim feeds
+``sent_from_other_gmail``; none of them leave the service layer.
 ``tenant_owner_id`` is None when the tenant is missing or deleted.
 """
 from __future__ import annotations
@@ -36,3 +37,6 @@ class PendingReceiptListRow(BaseModel):
     contact_email: str | None = None
     inquirer_email: str | None = None
     has_lease: bool
+    send_message_id: str | None = None
+    send_claimed_at: _dt.datetime | None = None
+    sender_gmail_address: str | None = None

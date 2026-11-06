@@ -11,6 +11,11 @@ export const REPLY_BLOCK_WORDS: Record<ReplyBlock, string> = {
   noEmailAddress: "This inquiry has no email address, so I can't send a reply. You can call instead.",
 };
 
+/** An earlier attempt went through an account that isn't connected now, so Gmail can't say whether it arrived. */
+export function replySentFromOtherGmailWords(account: string): string {
+  return `This reply may already have gone out from ${account}, which isn't connected any more, so I didn't send it again. Reconnect that account on the website, then reopen this inquiry so I can check, or send it anyway as a new reply. They might get it twice.`;
+}
+
 export const REPLY_FAILURE_WORDS: Record<ReplySendFailure, string> = {
   gmailDisconnected: "Gmail disconnected. Reconnect on the website to send replies.",
   gmailConnection: "I couldn't send that. Check your Gmail connection on the website.",
@@ -22,6 +27,7 @@ export const REPLY_FAILURE_WORDS: Record<ReplySendFailure, string> = {
   notRecorded: "That went out, but I couldn't add it to this conversation. Don't send it again. Check again in about 15 minutes and I'll add it.",
   inFlight: "An earlier copy of this reply is still going out, and I won't send a second one. If it hasn't finished, check again in a few minutes. It can take up to 15.",
   refused: "I couldn't send that. Want to try again?",
+  otherAccount: replySentFromOtherGmailWords("a Gmail account"),
 };
 
 export const REPLY_SEND_LABELS: Record<ReplySendAction, string> = {
@@ -29,6 +35,7 @@ export const REPLY_SEND_LABELS: Record<ReplySendAction, string> = {
   [REPLY_SEND_ACTION.TRY_AGAIN]: "Try again",
   [REPLY_SEND_ACTION.CHECK_AGAIN]: "Check again",
   [REPLY_SEND_ACTION.SEND_AS_NEW]: "Send as a new reply",
+  [REPLY_SEND_ACTION.SEND_ANYWAY]: "Send anyway as a new reply",
 };
 
 export const REPLY_SEND_WORDS = {

@@ -20,4 +20,6 @@ export interface PendingReceipt {
   payment_method: string | null;
   vendor: string | null;
   send_blocker: ReceiptSendBlocker | null;
+  /** The Gmail account a stuck send went through, once it isn't connected: sending can't check it, so it can be dismissed. */
+  sent_from_other_gmail: string | null;
 }

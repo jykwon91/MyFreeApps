@@ -17,11 +17,21 @@ export const INQUIRY_MESSAGES = {
   replyTryAgainButton: "Try again",
   replyCheckAgainButton: "Check again",
   replySendAsNewButton: "Send as a new reply",
+  replySendAnywayButton: "Send anyway as a new reply",
   replyChangedAfterMightHaveSent:
     "Your earlier reply may already have reached them, so sending this changed version would be a second email. Undo your changes to safely try the first one again.",
   replySendingButton: "Sending...",
   replyStillSendingButton: "Still sending...",
 } as const;
+
+/** An earlier attempt went through `account`, which isn't connected now, so I can't check it. */
+export function replySentFromOtherGmailWords(account: string): string {
+  return (
+    `This reply may already have gone out from ${account}, which isn't connected any more, so I didn't send it again. ` +
+    "Reconnect that account on the Integrations page and reopen this inquiry so I can check, " +
+    "or send it anyway as a new reply. They might get it twice."
+  );
+}
 
 /** Why a reply didn't go out, or might not have. Each says whether trying again is safe. */
 export const REPLY_SEND_FAILURE_WORDS: Readonly<Record<ReplySendFailure, string>> = {
@@ -36,6 +46,7 @@ export const REPLY_SEND_FAILURE_WORDS: Readonly<Record<ReplySendFailure, string>
     "That went out, but I couldn't add it to this conversation. Don't send it again. Check again in about 15 minutes and I'll add it.",
   inFlight:
     "An earlier copy of this reply is still going out, and I won't send a second one. If it hasn't finished, check again in a few minutes. It can take up to 15.",
+  otherAccount: replySentFromOtherGmailWords("a Gmail account"),
   refused: "I couldn't send that. Want to try again?",
 };
 
@@ -44,4 +55,5 @@ export const REPLY_SEND_LABELS: Readonly<Record<ReplySendAction, string>> = {
   [REPLY_SEND_ACTION.TRY_AGAIN]: INQUIRY_MESSAGES.replyTryAgainButton,
   [REPLY_SEND_ACTION.CHECK_AGAIN]: INQUIRY_MESSAGES.replyCheckAgainButton,
   [REPLY_SEND_ACTION.SEND_AS_NEW]: INQUIRY_MESSAGES.replySendAsNewButton,
+  [REPLY_SEND_ACTION.SEND_ANYWAY]: INQUIRY_MESSAGES.replySendAnywayButton,
 };

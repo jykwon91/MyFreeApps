@@ -1,4 +1,5 @@
 import type { ReceiptSendErrorCode } from "../types/lease/receipt-send-error-code";
+import { receiptSentFromOtherGmailMessage } from "../utils/receiptSentFromOtherGmailMessage";
 
 /**
  * What to say when a receipt send is refused, by the server's code. The server sends a
@@ -14,7 +15,6 @@ export const RECEIPT_SEND_ERROR_MESSAGES: Readonly<Record<ReceiptSendErrorCode, 
     "Gmail didn't tell me whether the receipt went out. Give me about 15 minutes, then try again — I'll check Gmail first so your tenant doesn't get it twice.",
   receipt_sent_not_recorded:
     "The receipt was emailed, but I couldn't save that it was sent. Try again in about 15 minutes and I'll record it — I won't email it twice.",
-  receipt_sent_from_other_gmail:
-    "I started sending this receipt through a different Gmail account than the one connected now, so I can't check whether your tenant got it. Reconnect that account and I'll check, or dismiss the receipt if they have it.",
+  receipt_sent_from_other_gmail: receiptSentFromOtherGmailMessage("a Gmail account"),
   gmail_reauth_required: "Gmail needs to be reconnected before I can send receipts.",
 };
