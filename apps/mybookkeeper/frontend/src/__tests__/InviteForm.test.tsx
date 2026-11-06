@@ -58,7 +58,7 @@ describe("InviteForm", () => {
     expect(onSuccess).toHaveBeenCalledWith("Invite sent to new@test.com");
   });
 
-  it("calls onSuccess with manual share message when email fails", async () => {
+  it("reports a failed invite email as an error, with a step the admin can take", async () => {
     mockCreateInvite.mockReturnValueOnce({
       unwrap: () => Promise.resolve({ email_sent: false }),
     });
@@ -69,9 +69,11 @@ describe("InviteForm", () => {
     await user.type(screen.getByLabelText("Email address"), "new@test.com");
     await user.click(screen.getByText("Send invite"));
 
-    expect(onSuccess).toHaveBeenCalledWith(
-      "Invite created for new@test.com, but the email could not be sent. Share the invite link manually."
+    expect(onError).toHaveBeenCalledWith(
+      "I made the invite but couldn't send the email to new@test.com. Check the address, or cancel it and try again.",
     );
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Email address")).toHaveValue("new@test.com");
   });
 
   it("shows role help text below the role selector", () => {

@@ -1,3 +1,4 @@
+import { INVITE_EMAIL_MESSAGES } from "@mybookkeeper/api-client/constants/inviteMessages";
 import type { AssignableRole } from "@mybookkeeper/api-client/types/organization/AssignableRole";
 
 export const ROLE_WITH_ARTICLE: Record<AssignableRole, string> = {
@@ -25,7 +26,7 @@ export const MEMBERS_MESSAGES = {
   couldntLoadInvites: "I couldn't load the pending invites.",
   expiresIn: (days: number) => `Expires in ${days} ${days === 1 ? "day" : "days"}`,
   expired: "Expired",
-  emailDidntSend: "Email didn't send",
+  emailDidntSend: INVITE_EMAIL_MESSAGES.didntSend,
   cancelInvite: "Cancel invite",
   cancelling: "Cancelling…",
   inviteAgain: "Invite again",
@@ -60,7 +61,7 @@ export const MEMBERS_MESSAGES = {
   alreadyIn: (email: string, org: string) => `${email} is already in ${org}.`,
   alreadyPending: (email: string) => `I already have a pending invite for ${email}.`,
   inviteSent: (email: string) => `I sent ${email} an invite. They finish joining from the link in the email, on the website.`,
-  inviteEmailFailed: (email: string) => `I made the invite but couldn't send the email to ${email}. Check the address, or cancel it and try again.`,
+  inviteEmailFailed: INVITE_EMAIL_MESSAGES.failed,
   inviteWentThrough: "That invite did go through.",
   couldntSend: "I couldn't send that. Check your connection and try again.",
   couldntSendServer: "I couldn't send that. Try again in a moment.",
