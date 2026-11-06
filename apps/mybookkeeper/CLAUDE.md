@@ -327,7 +327,7 @@ Conflicts between top-level pins and transitive requirements (the `python-multip
   - Falls back to full suite when shared infrastructure changes (auth, config, models, db session, conftest)
   - Force full suite: `bash scripts/run-affected-tests.sh --full`
   - Custom diff base: `bash scripts/run-affected-tests.sh HEAD~1`
-- **When to update test-map.json**: When adding new test files or new source directories, add them to the relevant domain in `scripts/test-map.json`. If a new domain is needed, create a new entry.
+- **When to update test-map.json**: When adding new test files or new source directories, add them to the relevant domain in `scripts/test-map.json`. If a new domain is needed, create a new entry. Paths are relative to `apps/mybookkeeper/`; the shared packages are `../../packages/...`. `backend/tests/test_test_map.py` fails when an entry names a file that doesn't exist, so move the entry when you move or delete a file.
 
 ## Known Gotchas
 

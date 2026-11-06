@@ -3,14 +3,17 @@
     "admin": {
       "source_paths": [
         "backend/app/services/system/admin_service.py",
-        "backend/app/repositories/admin_repo.py",
-        "backend/app/api/admin_routes.py",
-        "backend/app/api/test_utils.py",
-        "frontend/src/admin/pages/UserActivity.tsx"
+        "backend/app/repositories/system/admin_repo.py",
+        "backend/app/api/admin.py",
+        "backend/app/api/db_admin.py",
+        "frontend/src/admin/pages/UserActivity.tsx",
+        "backend/app/repositories/db_admin_repo.py",
+        "backend/app/test_helpers/"
       ],
       "backend_tests": [
         "test_admin_routes.py",
-        "test_test_utils_routes.py"
+        "test_test_utils_routes.py",
+        "test_db_admin.py"
       ],
       "frontend_tests": [
         "UserActivity.test.tsx"
@@ -18,15 +21,16 @@
       "e2e_specs": [
         "admin-skeleton.spec.ts",
         "admin.spec.ts",
-        "user-activity.spec.ts"
+        "user-activity.spec.ts",
+        "admin-db.spec.ts"
       ]
     },
     "analytics": {
       "source_paths": [
         "backend/app/services/analytics/",
         "backend/app/repositories/analytics/",
-        "frontend/src/pages/Analytics.tsx",
-        "frontend/src/features/analytics/",
+        "frontend/src/app/pages/Analytics.tsx",
+        "frontend/src/app/features/analytics/",
         "api-client/src/store/analyticsApi.ts",
         "api-client/src/types/analytics/"
       ],
@@ -52,7 +56,6 @@
         "frontend/src/app/pages/InviteAccept.tsx",
         "frontend/src/app/pages/VerifyEmail.tsx",
         "frontend/src/app/pages/Security.tsx",
-        "frontend/src/features/auth/",
         "frontend/src/shared/store/totpApi.ts",
         "frontend/src/shared/store/accountApi.ts",
         "frontend/src/app/features/security/TwoFactorSetup.tsx",
@@ -60,15 +63,12 @@
         "frontend/src/shared/types/security/",
         "frontend/src/shared/utils/errorMessage.ts",
         "backend/app/core/auth.py",
-        "backend/app/core/auth_messages.py",
         "backend/app/core/rate_limit.py",
         "backend/app/core/request_utils.py",
         "backend/app/models/user/user.py",
         "backend/app/repositories/user/user_repo.py",
         "backend/app/repositories/documents/document_repo.py",
         "backend/app/repositories/transactions/transaction_repo.py",
-        "backend/app/services/user/hibp_service.py",
-        "backend/app/services/user/turnstile_service.py",
         "backend/app/services/user/account_service.py",
         "backend/app/services/system/verification_email.py",
         "backend/app/api/account.py",
@@ -150,8 +150,8 @@
         "backend/app/services/documents/",
         "backend/app/schemas/documents/",
         "backend/app/api/documents.py",
-        "frontend/src/pages/Documents.tsx",
-        "frontend/src/features/documents/"
+        "frontend/src/app/pages/Documents.tsx",
+        "frontend/src/app/features/documents/"
       ],
       "backend_tests": [
         "test_document_checklist_service.py",
@@ -175,7 +175,6 @@
         "backend/app/models/email/",
         "backend/app/repositories/email/",
         "backend/app/services/email/",
-        "backend/app/schemas/email/",
         "backend/app/workers/email_sync_worker.py"
       ],
       "backend_tests": [
@@ -271,10 +270,10 @@
     "mappers": {
       "source_paths": [
         "backend/app/mappers/transaction_mapper.py",
-        "backend/app/mappers/reservation_mapper.py"
+        "backend/app/mappers/booking_statement_mapper.py"
       ],
       "backend_tests": [
-        "test_reservation_mapper.py",
+        "test_booking_statement_mapper.py",
         "test_metered_usage_extraction.py"
       ],
       "frontend_tests": [],
@@ -287,8 +286,7 @@
         "backend/app/services/organization/",
         "backend/app/schemas/organization/",
         "backend/app/api/organizations.py",
-        "backend/app/api/members.py",
-        "frontend/src/features/organization/",
+        "frontend/src/app/features/organizations/",
         "frontend/src/shared/store/organizationSlice.ts"
       ],
       "backend_tests": [
@@ -299,8 +297,7 @@
         "test_org_data_isolation.py",
         "test_org_idor.py",
         "test_org_role_enforcement.py",
-        "test_member_role_schema.py",
-        "test_member_list.py"
+        "test_member_role_schema.py"
       ],
       "frontend_tests": [
         "OrgSwitcher.test.tsx",
@@ -484,7 +481,6 @@
         "backend/app/api/inquiries.py",
         "backend/app/api/public_inquiries.py",
         "backend/app/api/reply_templates.py",
-        "backend/app/core/disposable_email_domains.py",
         "backend/app/services/system/inquiry_notification_email.py",
         "frontend/src/app/pages/Inquiries.tsx",
         "frontend/src/app/pages/InquiryDetail.tsx",
@@ -513,7 +509,6 @@
         "test_reply_send_details_match_api_client.py",
         "test_send_claim_staleness.py",
         "test_inquiry_spam_scorer.py",
-        "test_disposable_email_domains.py",
         "test_public_inquiry_service.py",
         "test_public_inquiries_api.py",
         "test_listing_slug.py",
@@ -623,9 +618,7 @@
         "EndTenancyDialog.test.tsx",
         "usePageListModes.test.ts"
       ],
-      "e2e_specs": [
-        "tenants.spec.ts"
-      ]
+      "e2e_specs": []
     },
     "rent_ledger": {
       "source_paths": [
@@ -638,8 +631,8 @@
         "backend/app/test_helpers/rent_seed.py",
         "backend/alembic/versions/rentledg260830_add_rent_schedules_and_charges.py",
         "frontend/src/app/features/rent/",
-        "frontend/src/shared/types/rent/",
-        "frontend/src/shared/store/rentLedgerApi.ts",
+        "api-client/src/types/rent/",
+        "api-client/src/store/rentLedgerApi.ts",
         "frontend/src/app/features/applicants/TenantPayments.tsx",
         "frontend/src/app/features/applicants/PaymentRow.tsx",
         "frontend/src/app/features/applicants/ApplicantDetailBody.tsx"
@@ -674,8 +667,8 @@
         "backend/app/workers/scheduler_worker.py",
         "backend/alembic/versions/rentrem261015_add_rent_reminder_plans_and_sends.py",
         "frontend/src/app/features/rent/",
-        "frontend/src/shared/types/rent/",
-        "frontend/src/shared/store/rentRemindersApi.ts",
+        "api-client/src/types/rent/",
+        "api-client/src/store/rentRemindersApi.ts",
         "frontend/src/app/features/applicants/ApplicantDetailBody.tsx"
       ],
       "backend_tests": [
@@ -716,7 +709,7 @@
         "frontend/src/app/pages/InsurancePolicyDetail.tsx",
         "frontend/src/app/features/insurance/",
         "frontend/src/shared/types/insurance/",
-        "frontend/src/shared/lib/insurance-policy-format.ts",
+        "api-client/src/utils/insurancePolicyFormat.ts",
         "frontend/src/shared/lib/insurance-policy-form.ts",
         "frontend/src/shared/lib/insurance-policy-draft.ts",
         "frontend/src/shared/lib/benchmark-format.ts",
@@ -752,7 +745,6 @@
       ],
       "frontend_tests": [
         "InsuranceExpirationBadge.test.tsx",
-        "ListingInsuranceSection.test.tsx",
         "InsurancePolicies.test.tsx",
         "InsurancePolicyDetail.test.tsx",
         "insurance-policy-format.test.ts",
@@ -799,7 +791,7 @@
         "frontend/src/app/pages/Mortgages.tsx",
         "frontend/src/app/features/mortgages/",
         "frontend/src/shared/types/mortgage/",
-        "frontend/src/shared/lib/mortgage-format.ts",
+        "api-client/src/utils/mortgageFormat.ts",
         "frontend/src/shared/lib/mortgage-form.ts",
         "frontend/src/shared/lib/mortgage-draft.ts",
         "frontend/src/shared/lib/mortgage-rate-watch-verdict.ts",
@@ -870,7 +862,7 @@
         "frontend/src/app/features/utility/",
         "frontend/src/shared/types/utility/",
         "frontend/src/shared/store/utilityPlansApi.ts",
-        "frontend/src/shared/lib/utility-plan-format.ts",
+        "api-client/src/utils/utilityPlanFormat.ts",
         "frontend/src/shared/lib/utility-plan-form.ts",
         "frontend/src/shared/lib/utility-plan-draft.ts",
         "frontend/src/shared/lib/benchmark-format.ts",
@@ -1027,7 +1019,7 @@
         "frontend/src/app/features/leases/",
         "frontend/src/shared/types/lease/",
         "frontend/src/shared/store/leaseTemplatesApi.ts",
-        "frontend/src/shared/store/signedLeasesApi.ts",
+        "api-client/src/store/signedLeasesApi.ts",
         "frontend/src/shared/lib/lease-labels.ts",
         "frontend/src/shared/lib/infer-attachment-kind.ts",
         "frontend/src/shared/types/lease/attachment-view-mode.ts"
@@ -1061,7 +1053,9 @@
         "lease-import.spec.ts",
         "lease-generate-defaults.spec.ts",
         "lease-new.spec.ts",
-        "leases.spec.ts",
+        "lease-extend.spec.ts",
+        "lease-undo-extension.spec.ts",
+        "lease-email-tenant.spec.ts",
         "lease-templates-phase2.spec.ts"
       ]
     },
@@ -1142,8 +1136,12 @@
         "backend/app/models/applicants/screening_result.py",
         "backend/alembic/versions/i1k3l6n8p0q2_add_screening_results_uploaded_columns.py",
         "frontend/src/app/features/screening/",
-        "frontend/src/shared/store/screeningApi.ts",
-        "frontend/src/shared/types/screening/",
+        "api-client/src/store/screeningApi.ts",
+        "api-client/src/types/applicant/screening-eligibility-response.ts",
+        "api-client/src/types/applicant/screening-redirect-response.ts",
+        "api-client/src/types/applicant/screening-upload-request.ts",
+        "api-client/src/types/applicant/screening-provider-info.ts",
+        "api-client/src/types/applicant/screening-providers-response.ts",
         "api-client/src/types/applicant/screening-result.ts"
       ],
       "backend_tests": [
@@ -1152,10 +1150,12 @@
         "test_input_validation_hardening.py"
       ],
       "frontend_tests": [
-        "RunScreeningButton.test.tsx",
-        "UploadScreeningResultModal.test.tsx",
-        "ScreeningResultRow.test.tsx",
-        "ScreeningResultsList.test.tsx"
+        "ScreeningSection.test.tsx",
+        "ScreeningResultCard.test.tsx",
+        "ScreeningPendingPanel.test.tsx",
+        "ScreeningEligibilityGate.test.tsx",
+        "ScreeningProviderGrid.test.tsx",
+        "UploadScreeningResultModal.test.tsx"
       ],
       "e2e_specs": [
         "applicant-screening.spec.ts"
@@ -1175,7 +1175,7 @@
         "frontend/src/app/pages/VendorDetail.tsx",
         "frontend/src/app/features/vendors/",
         "frontend/src/shared/types/vendor/",
-        "frontend/src/shared/store/vendorsApi.ts",
+        "api-client/src/store/vendorsApi.ts",
         "frontend/src/shared/lib/vendor-labels.ts"
       ],
       "backend_tests": [
@@ -1201,7 +1201,8 @@
         "backend/app/models/system/",
         "backend/app/repositories/system/",
         "backend/app/schemas/system/",
-        "backend/app/api/system.py"
+        "backend/app/api/health_dashboard.py",
+        "backend/app/api/frontend_errors.py"
       ],
       "backend_tests": [
         "test_frontend_errors.py",
@@ -1221,10 +1222,19 @@
         "backend/app/repositories/tax/",
         "backend/app/services/tax/",
         "backend/app/schemas/tax/",
-        "backend/app/api/tax.py",
+        "backend/app/api/tax_documents.py",
+        "backend/app/api/tax_completeness.py",
+        "backend/app/api/tax_profile.py",
+        "backend/app/api/tax_year_profiles.py",
+        "backend/app/api/taxpayer_profiles.py",
         "backend/app/api/tax_returns.py",
-        "frontend/src/pages/Tax.tsx",
-        "frontend/src/features/tax/"
+        "frontend/src/app/pages/TaxReturns.tsx",
+        "frontend/src/app/pages/TaxReturnDetail.tsx",
+        "frontend/src/app/pages/TaxDocuments.tsx",
+        "frontend/src/app/pages/TaxReport.tsx",
+        "frontend/src/app/pages/TaxReview.tsx",
+        "frontend/src/app/features/tax/",
+        "frontend/src/app/features/tax-review/"
       ],
       "backend_tests": [
         "test_tax_advisor_service.py",
@@ -1264,10 +1274,10 @@
         "backend/app/api/transactions.py",
         "backend/app/api/reconciliation.py",
         "backend/app/api/summary.py",
-        "frontend/src/pages/Transactions.tsx",
+        "frontend/src/app/pages/Transactions.tsx",
         "frontend/src/app/pages/Dashboard.tsx",
-        "frontend/src/features/transactions/",
-        "frontend/src/features/dashboard/",
+        "frontend/src/app/features/transactions/",
+        "frontend/src/app/features/dashboard/",
         "frontend/src/shared/types/dashboard/",
         "frontend/src/shared/components/ui/YearFilter.tsx",
         "api-client/src/store/summaryApi.ts",
@@ -1283,9 +1293,9 @@
         "test_merge_transactions.py",
         "test_reconciliation_repo.py",
         "test_reconciliation_routes.py",
-        "test_reservation_query_service.py",
-        "test_reservation_repo.py",
-        "test_reservation_routes.py",
+        "test_booking_statement_query_service.py",
+        "test_booking_statement_repo.py",
+        "test_booking_statement_routes.py",
         "test_summary_from_transactions.py",
         "test_transaction_repo.py",
         "test_transaction_routes.py",
@@ -1360,8 +1370,7 @@
         "Dashboard.test.tsx"
       ],
       "e2e_specs": [
-        "attribution-review.spec.ts",
-        "property-pnl-dashboard.spec.ts"
+        "attribution-review.spec.ts"
       ]
     },
     "classification_rules": {
@@ -1391,8 +1400,7 @@
         "frontend/src/shared/types/version/"
       ],
       "backend_tests": [
-        "test_version_endpoint.py",
-        "test_turnstile_boot_check.py"
+        "test_version_endpoint.py"
       ],
       "frontend_tests": [
         "VersionTag.test.tsx"
@@ -1403,7 +1411,6 @@
     },
     "core_utils": {
       "source_paths": [
-        "backend/app/core/auth_messages.py",
         "backend/app/core/pii.py",
         "backend/app/core/rate_limit.py",
         "backend/app/core/request_utils.py",
@@ -1472,7 +1479,10 @@
     "frontend/playwright.config.ts",
     "frontend/e2e/global-setup.ts",
     "frontend/e2e/global-teardown.ts",
-    "frontend/e2e/fixtures/"
+    "frontend/e2e/fixtures/",
+    "../../packages/shared-backend/",
+    "../../packages/shared-frontend/",
+    "../../packages/shared-core/"
   ],
   "always_e2e": [
     "navigation.spec.ts",

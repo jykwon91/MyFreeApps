@@ -2,7 +2,7 @@
 # run-affected-tests.sh — Run only tests affected by the current changes.
 #
 # Usage:
-#   bash scripts/run-affected-tests.sh              # diff against main
+#   bash scripts/run-affected-tests.sh              # diff against where this branch left origin/main
 #   bash scripts/run-affected-tests.sh HEAD~1        # diff against last commit
 #   bash scripts/run-affected-tests.sh --full        # force full suite
 #
@@ -28,8 +28,11 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-# Parse args
-DIFF_BASE="${1:-main}"
+# Parse args. The default base is where this branch left origin/main: a local
+# main is often behind, and diffing against it would list everything merged
+# since, shared packages included, and so always run the full suite.
+DEFAULT_BASE="$(git merge-base origin/main HEAD 2>/dev/null || echo main)"
+DIFF_BASE="${1:-$DEFAULT_BASE}"
 FORCE_FULL=false
 
 if [[ "$DIFF_BASE" == "--full" ]]; then
@@ -42,21 +45,37 @@ if [[ ! -f "$TEST_MAP" ]]; then
   exit 2
 fi
 
+# Changed files, as paths from this app's directory, which is how test-map.json
+# names them. git prints paths from the monorepo root, so the app's own changes
+# are read with --relative, and changes to the shared packages are given the
+# ../../ prefix so shared_paths can name them too.
+changed_paths() {
+  local base="$1" up
+  (
+    cd "$REPO_ROOT"
+    up="$(git rev-parse --show-cdup)"
+    git diff --name-only --relative "$base" 2>/dev/null || git diff --name-only --relative HEAD 2>/dev/null || true
+    git diff --name-only --relative --cached 2>/dev/null || true
+    git diff --name-only --relative 2>/dev/null || true
+    git ls-files --others --exclude-standard 2>/dev/null || true
+    {
+      git diff --name-only "$base" -- ':/packages/' 2>/dev/null || git diff --name-only HEAD -- ':/packages/' 2>/dev/null || true
+      git diff --name-only --cached -- ':/packages/' 2>/dev/null || true
+      git diff --name-only -- ':/packages/' 2>/dev/null || true
+    } | sed "s|^|$up|"
+    git ls-files --others --exclude-standard -- ':/packages/' 2>/dev/null || true
+  )
+}
+
 # Get changed files
 if [[ "$FORCE_FULL" == true ]]; then
   echo -e "${CYAN}=== Running FULL test suite (--full flag) ===${NC}"
 else
-  CHANGED_FILES=$(git diff --name-only "$DIFF_BASE" 2>/dev/null || git diff --name-only HEAD 2>/dev/null || echo "")
+  ALL_CHANGED=$(changed_paths "$DIFF_BASE" | sort -u | grep -v '^$' || true)
 
-  # Also include unstaged and staged changes
-  STAGED=$(git diff --name-only --cached 2>/dev/null || echo "")
-  UNSTAGED=$(git diff --name-only 2>/dev/null || echo "")
-  UNTRACKED=$(git ls-files --others --exclude-standard 2>/dev/null || echo "")
-
-  ALL_CHANGED=$(echo -e "$CHANGED_FILES\n$STAGED\n$UNSTAGED\n$UNTRACKED" | sort -u | grep -v '^$' || true)
-
-  # Filter out non-code files that don't affect tests
-  ALL_CHANGED=$(echo "$ALL_CHANGED" | grep -v -E '^(CLAUDE\.md|README\.md|TECH_DEBT\.md|\.github/|scripts/|deploy/|docker/|\.claude/|\.gitignore)' || true)
+  # Filter out non-code files that don't affect tests. The phone app and its
+  # shared package have their own CI job.
+  ALL_CHANGED=$(echo "$ALL_CHANGED" | grep -v -E '^(CLAUDE\.md|README\.md|TECH_DEBT\.md|\.github/|scripts/|deploy/|docker/|\.claude/|\.gitignore|mobile/|\.\./\.\./packages/shared-mobile/)' || true)
 
   if [[ -z "$ALL_CHANGED" ]]; then
     echo -e "${GREEN}No testable code changes detected. Nothing to test.${NC}"
@@ -317,9 +336,24 @@ run_e2e_tests() {
   echo ""
 }
 
+# api-client is shared by web and mobile and has its own vitest suite.
+run_api_client_tests() {
+  echo -e "${CYAN}=== api-client unit tests ===${NC}"
+  cd "$REPO_ROOT/api-client"
+  if npx vitest run; then
+    echo -e "  ${GREEN}api-client unit tests passed${NC}"
+  else
+    echo -e "  ${RED}api-client unit tests FAILED${NC}"
+    OVERALL_EXIT=1
+  fi
+  cd "$REPO_ROOT"
+  echo ""
+}
+
 # Main logic
 if [[ "$FORCE_FULL" == true ]]; then
   run_backend_tests "ALL"
+  run_api_client_tests
   run_frontend_tests "ALL"
   run_e2e_tests "ALL"
 else
@@ -330,6 +364,7 @@ else
     echo "$SHARED_HIT" | sed 's/^/  /'
     echo ""
     run_backend_tests "ALL"
+    run_api_client_tests
     run_frontend_tests "ALL"
     run_e2e_tests "ALL"
   else
@@ -341,6 +376,7 @@ else
       echo -e "${YELLOW}Running full suite as fallback.${NC}"
       echo ""
       run_backend_tests "ALL"
+      run_api_client_tests
       run_frontend_tests "ALL"
       run_e2e_tests "ALL"
     else
@@ -355,7 +391,13 @@ else
 
       # Check if any changed files are backend files not in map — run all backend if so
       BACKEND_CHANGED=$(echo "$ALL_CHANGED" | grep '^backend/' || true)
-      FRONTEND_CHANGED=$(echo "$ALL_CHANGED" | grep '^frontend/' || true)
+      # api-client code runs in the web app, so its changes count as frontend ones.
+      FRONTEND_CHANGED=$(echo "$ALL_CHANGED" | grep -E '^(frontend|api-client)/' || true)
+      API_CLIENT_CHANGED=$(echo "$ALL_CHANGED" | grep '^api-client/' || true)
+
+      if [[ -n "$API_CLIENT_CHANGED" ]]; then
+        run_api_client_tests
+      fi
 
       if [[ -n "$BACKEND_CHANGED" && -n "$BACKEND" ]]; then
         run_backend_tests "$BACKEND"
