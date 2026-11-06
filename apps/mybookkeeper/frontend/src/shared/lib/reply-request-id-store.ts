@@ -21,6 +21,17 @@ export const replyRequestIdStore: ReplyRequestIdStore = {
       // Kept in memory above.
     }
   },
+  deleteStartingWith: (prefix) => {
+    [...inMemory.keys()].filter((key) => key.startsWith(prefix)).forEach((key) => inMemory.delete(key));
+    try {
+      const stored = Array.from({ length: sessionStorage.length }, (_, index) => sessionStorage.key(index));
+      stored
+        .filter((key): key is string => key !== null && key.startsWith(PREFIX + prefix))
+        .forEach((key) => sessionStorage.removeItem(key));
+    } catch {
+      // Nothing stored there.
+    }
+  },
   delete: (key) => {
     inMemory.delete(key);
     try {

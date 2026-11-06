@@ -7,7 +7,8 @@ import { Alert, Linking } from "react-native";
 import { Provider } from "react-redux";
 import { REPLY_TEMPLATE_MESSAGES } from "../src/constants/replyTemplates";
 import InquiryReplyScreen from "../src/features/inquiries/InquiryReplyScreen";
-import { REPLY_FAILURE_WORDS } from "../src/features/inquiries/replyStatus";
+import { REPLY_FAILURE_WORDS, REPLY_SEND_WORDS } from "../src/features/inquiries/replyStatus";
+import { clearReplyRequestIds } from "../src/features/inquiries/replyRequestIds";
 import { clearReplyDrafts, deleteReplyDraft, hasReplyDraft, loadReplyDraft, saveReplyDraft } from "../src/features/inquiries/replyDrafts";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
@@ -15,7 +16,12 @@ import { store } from "../src/lib/store";
 import { fakeFiles, File, resetFakeFiles } from "../test-support/fakeFileSystem";
 import { aMessage, anInquiry, lastInquiryWrite, startInquiryServer } from "../test-support/inquiriesServer";
 
-jest.mock("../src/constants/replies", () => ({ ...jest.requireActual("../src/constants/replies"), REPLY_CHECK_DELAYS_MS: [0, 1] }));
+// The waits while an earlier copy is still sending.
+const mockSleep = jest.fn(() => Promise.resolve());
+jest.mock("@mybookkeeper/api-client/utils/sleep", () => ({ sleep: () => mockSleep() }));
+let mockIdCount = 0;
+const mockNewId = jest.fn(() => `request-${(mockIdCount += 1)}`);
+jest.mock("expo-crypto", () => ({ randomUUID: () => mockNewId() }));
 
 const mockBack = jest.fn();
 const mockPush = jest.fn();
@@ -45,6 +51,7 @@ beforeEach(() => {
   store.dispatch(workspaceChosen("w1"));
   jest.clearAllMocks();
   resetFakeFiles();
+  clearReplyRequestIds();
   jest.spyOn(session, "getState").mockReturnValue({ status: "signedIn", email: "me@example.com" } as never);
   jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
 });
@@ -55,7 +62,7 @@ afterEach(() => {
 });
 
 async function renderScreen() {
-  await render(
+  return render(
     <Provider store={store}>
       <ToastProvider bottomOffset={0}>
         <InquiryReplyScreen id="i1" />
@@ -77,7 +84,12 @@ async function chooseTemplate(label: string) {
   });
 }
 
-const sendButton = () => screen.getByRole("button", { name: /^(Send|Send again)$/ });
+const sendButton = () => screen.getByRole("button", { name: /^(Send|Try again|Check again|Send as a new reply)$/ });
+
+const replyIds = (server: { requests: { url?: string; data?: unknown }[] }) =>
+  server.requests
+    .filter((request) => request.url?.endsWith("/reply"))
+    .map((request) => (JSON.parse(String(request.data)) as { client_request_id: string }).client_request_id);
 
 describe("InquiryReplyScreen", () => {
   it("sends what was written, clears the draft and goes back", async () => {
@@ -91,7 +103,7 @@ describe("InquiryReplyScreen", () => {
     expect(lastInquiryWrite(server)).toEqual({
       method: "post",
       url: "/inquiries/i1/reply",
-      body: { template_id: null, subject: "About the room", body: "Yes, it's open." },
+      body: { template_id: null, subject: "About the room", body: "Yes, it's open.", client_request_id: expect.any(String) },
     });
     expect(hasReplyDraft("i1")).toBe(false);
     await waitFor(() => expect(mockBack).toHaveBeenCalled());
@@ -330,38 +342,12 @@ describe("InquiryReplyScreen", () => {
       expect(sendButton().props.accessibilityState.disabled).toBe(false);
     });
 
-    it("says a reply that went out but wasn't recorded may already be there", async () => {
+    it("says a reply that went out but wasn't recorded mustn't go again, and offers Check again", async () => {
       const server = startInquiryServer([anInquiry()]);
       server.sendOutcome = { status: 500, detail: "reply_sent_not_recorded" };
       await writeAndSend();
       expect(await screen.findByText(REPLY_FAILURE_WORDS.notRecorded)).toBeTruthy();
-      expect(screen.getByRole("button", { name: "Send again" })).toBeTruthy();
-    });
-
-    it("keeps looking when the first check comes too soon", async () => {
-      const server = startInquiryServer([anInquiry()]);
-      server.sendOutcome = "lostBeforeSending";
-      const realAdapter = api.defaults.adapter as (config: never) => Promise<unknown>;
-      let reads = 0;
-      api.defaults.adapter = (config) => {
-        if (config.url === "/inquiries/i1" && server.sendOutcome === "lostBeforeSending" && server.requests.some((request) => request.url?.endsWith("/reply"))) {
-          reads += 1;
-          if (reads === 2) server.inquiries[0].messages.push(aMessage({ id: "late", direction: "outbound", parsed_body: "Yes, it's open." }));
-        }
-        return realAdapter(config as never) as never;
-      };
-      await writeAndSend();
-      expect(await screen.findByText("Reply sent.")).toBeTruthy();
-    });
-
-    it("isn't fooled by the same words sent from the website since this loaded", async () => {
-      const server = startInquiryServer([anInquiry()]);
-      await renderScreen();
-      await write();
-      server.inquiries[0].messages.push(aMessage({ id: "web", direction: "outbound", parsed_body: "Yes, it's open." }));
-      server.sendOutcome = "lostBeforeSending";
-      await fireEvent.press(sendButton());
-      expect(await screen.findByText("I'm not sure that went through. Check your Gmail sent folder before sending again.")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Check again" })).toBeTruthy();
     });
 
     it("rechecks Gmail when the server says the connection is the problem", async () => {
@@ -372,29 +358,149 @@ describe("InquiryReplyScreen", () => {
       expect(server.requests.filter((request) => request.url === "/integrations").length).toBeGreaterThan(1);
     });
 
-    it("treats a lost answer as sent when the reply turns up, even with a disclosure added", async () => {
+    it("tries a lost answer again under the same id, so the reply goes once", async () => {
       const server = startInquiryServer([anInquiry()]);
       server.sendOutcome = "lostAfterSending";
       await writeAndSend();
+      expect(await screen.findByText(REPLY_FAILURE_WORDS.unsure)).toBeTruthy();
+      expect(hasReplyDraft("i1")).toBe(true);
+      server.sendOutcome = null;
+      await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
       expect(await screen.findByText("Reply sent.")).toBeTruthy();
+      const [first, second] = replyIds(server);
+      expect(second).toBe(first);
+      expect(server.inquiries[0].messages.filter((message) => message.direction === "outbound")).toHaveLength(1);
       expect(hasReplyDraft("i1")).toBe(false);
-      await waitFor(() => expect(mockBack).toHaveBeenCalled());
     });
 
-    it("says it's unsure when the reply doesn't turn up, and keeps the draft", async () => {
+    it.each([
+      ["no answer", "lostBeforeSending" as const],
+      ["a server fault", { status: 500 }],
+      ["a gateway timeout", { status: 504 }],
+    ])("says it couldn't confirm the reply after %s, and keeps the draft", async (_, outcome) => {
       const server = startInquiryServer([anInquiry()]);
-      server.sendOutcome = "lostBeforeSending";
+      server.sendOutcome = outcome;
       await writeAndSend();
-      expect(await screen.findByText("I'm not sure that went through. Check your Gmail sent folder before sending again.")).toBeTruthy();
-      expect(screen.getByRole("button", { name: "Send again" })).toBeTruthy();
+      expect(await screen.findByText(REPLY_FAILURE_WORDS.unsure)).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
       expect(hasReplyDraft("i1")).toBe(true);
     });
 
-    it("says it's unsure on a server fault too", async () => {
+    it("warns that a changed reply would be a second email, until the change is undone", async () => {
       const server = startInquiryServer([anInquiry()]);
-      server.sendOutcome = { status: 500 };
+      server.sendOutcome = "lostBeforeSending";
       await writeAndSend();
-      expect(await screen.findByText("I'm not sure that went through. Check your Gmail sent folder before sending again.")).toBeTruthy();
+      await screen.findByText(REPLY_FAILURE_WORDS.unsure);
+      await fireEvent.changeText(screen.getByLabelText("Message"), "Yes, it's open. Rent is $900.");
+      expect(screen.getByText(REPLY_SEND_WORDS.changedAfterMightHaveSent)).toBeTruthy();
+      expect(screen.queryByText(REPLY_FAILURE_WORDS.unsure)).toBeNull();
+      expect(screen.getByRole("button", { name: "Send as a new reply" })).toBeTruthy();
+      await fireEvent.changeText(screen.getByLabelText("Message"), "Yes, it's open.");
+      expect(screen.queryByText(REPLY_SEND_WORDS.changedAfterMightHaveSent)).toBeNull();
+      expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
+    });
+
+    it("sends a changed reply under a new id when asked to", async () => {
+      const server = startInquiryServer([anInquiry()]);
+      server.sendOutcome = "lostBeforeSending";
+      await writeAndSend();
+      await screen.findByText(REPLY_FAILURE_WORDS.unsure);
+      server.sendOutcome = null;
+      await fireEvent.changeText(screen.getByLabelText("Message"), "Different words.");
+      await fireEvent.press(screen.getByRole("button", { name: "Send as a new reply" }));
+      expect(await screen.findByText("Reply sent.")).toBeTruthy();
+      const [first, second] = replyIds(server);
+      expect(second).not.toBe(first);
+    });
+
+    it("doesn't warn about a second email after a definite refusal", async () => {
+      const server = startInquiryServer([anInquiry()]);
+      server.sendOutcome = { status: 502 };
+      await writeAndSend();
+      await screen.findByText(REPLY_FAILURE_WORDS.gmailRejected);
+      await fireEvent.changeText(screen.getByLabelText("Message"), "Different words.");
+      expect(screen.queryByText(REPLY_SEND_WORDS.changedAfterMightHaveSent)).toBeNull();
+      expect(screen.getByRole("button", { name: "Send" })).toBeTruthy();
+    });
+
+    it("remembers the reply may have gone after the screen is closed and opened again", async () => {
+      const server = startInquiryServer([anInquiry()]);
+      server.sendOutcome = "lostBeforeSending";
+      const { unmount } = await renderScreen();
+      await write();
+      await fireEvent.press(sendButton());
+      await screen.findByText(REPLY_FAILURE_WORDS.unsure);
+      await act(async () => unmount());
+      server.sendOutcome = null;
+      await renderScreen();
+      expect(await screen.findByRole("button", { name: "Try again" })).toBeTruthy();
+      await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
+      expect(await screen.findByText("Reply sent.")).toBeTruthy();
+      const [first, second] = replyIds(server);
+      expect(second).toBe(first);
+    });
+
+    it("waits while an earlier copy is still sending, then offers Check again", async () => {
+      const server = startInquiryServer([anInquiry()]);
+      server.sendOutcome = { status: 409, detail: "reply_send_in_progress" };
+      await writeAndSend();
+      expect(await screen.findByText(REPLY_FAILURE_WORDS.inFlight)).toBeTruthy();
+      const ids = replyIds(server);
+      expect(ids.length).toBeGreaterThan(1);
+      expect(new Set(ids).size).toBe(1);
+      server.sendOutcome = null;
+      await fireEvent.press(screen.getByRole("button", { name: "Check again" }));
+      expect(await screen.findByText("Reply sent.")).toBeTruthy();
+    });
+
+    it("sends a later reply with the same words as an earlier unconfirmed one, once one has gone", async () => {
+      const server = startInquiryServer([anInquiry()]);
+      server.sendOutcome = "lostAfterSending";
+      const { unmount } = await renderScreen();
+      await write("Thanks", "Thanks!");
+      await fireEvent.press(sendButton());
+      await screen.findByText(REPLY_FAILURE_WORDS.unsure);
+      server.sendOutcome = null;
+      await fireEvent.changeText(screen.getByLabelText("Message"), "Thanks!!");
+      await fireEvent.press(screen.getByRole("button", { name: "Send as a new reply" }));
+      await screen.findByText("Reply sent.");
+      await act(async () => unmount());
+
+      await renderScreen();
+      await write("Thanks", "Thanks!");
+      expect(sendButton().props.accessibilityState.disabled).toBe(false);
+      expect(screen.getByRole("button", { name: "Send" })).toBeTruthy();
+      await fireEvent.press(sendButton());
+      await screen.findByText("Reply sent.");
+      const [first, , third] = replyIds(server);
+      expect(third).not.toBe(first);
+      expect(server.inquiries[0].messages.filter((message) => message.direction === "outbound")).toHaveLength(3);
+    });
+
+    it("says it's still sending while it waits", async () => {
+      const server = startInquiryServer([anInquiry()]);
+      server.sendOutcome = { status: 409, detail: "reply_send_in_progress" };
+      let release: () => void = () => undefined;
+      mockSleep.mockImplementationOnce(() => new Promise<void>((resolve) => (release = resolve)));
+      await writeAndSend();
+      expect(await screen.findByRole("button", { name: REPLY_SEND_WORDS.stillSending })).toBeTruthy();
+      expect(mockPreventRemove.active).toBe(true);
+      server.sendOutcome = null;
+      await act(async () => release());
+      expect(await screen.findByText("Reply sent.")).toBeTruthy();
+    });
+
+    it("says so when no request id can be made, and sends nothing", async () => {
+      const server = startInquiryServer([anInquiry()]);
+      const logged = jest.spyOn(console, "error").mockImplementation(() => undefined);
+      mockNewId.mockImplementationOnce(() => {
+        throw new Error("no native module");
+      });
+      await writeAndSend();
+      expect(await screen.findByText(REPLY_FAILURE_WORDS.refused)).toBeTruthy();
+      expect(replyIds(server)).toEqual([]);
+      expect(logged).toHaveBeenCalled();
+      expect(sendButton().props.accessibilityState.disabled).toBe(false);
     });
 
     it("explains a refusal for view-only access", async () => {
@@ -440,6 +546,26 @@ describe("InquiryReplyScreen", () => {
     expect(await screen.findByText("Reply sent.")).toBeTruthy();
     await waitFor(() => expect(mockPreventRemove.active).toBe(false));
     expect(server.inquiries[0].messages).toHaveLength(2);
+  });
+
+  it("won't start a restored draft over while it's sending", async () => {
+    startInquiryServer([anInquiry()]);
+    const realAdapter = api.defaults.adapter as (config: never) => Promise<unknown>;
+    let release: () => void = () => undefined;
+    api.defaults.adapter = (config) =>
+      config.url?.endsWith("/reply")
+        ? new Promise((resolve) => {
+            release = () => resolve(realAdapter(config as never) as never);
+          })
+        : (realAdapter(config as never) as never);
+    saveReplyDraft("i1", { subject: "Half", body: "Done", templateId: null });
+    await renderScreen();
+    await screen.findByText("Restored your draft");
+    await fireEvent.press(sendButton());
+    await screen.findByRole("button", { name: "Sending…" });
+    expect(screen.getByRole("button", { name: "Start over" }).props.accessibilityState.disabled).toBe(true);
+    await act(async () => release());
+    expect(await screen.findByText("Reply sent.")).toBeTruthy();
   });
 
   it("is closed to a viewer", async () => {

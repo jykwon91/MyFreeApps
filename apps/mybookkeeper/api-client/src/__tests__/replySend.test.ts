@@ -11,8 +11,10 @@ import type { InquiryMessage } from "../types/inquiry/inquiry-message";
 import { errorDetail } from "../utils/errorDetail";
 import { fnv1aHash } from "../utils/fnv1aHash";
 import { replyMightHaveSent } from "../utils/replyMightHaveSent";
+import { replyInquiryKeyPrefix } from "../utils/replyInquiryKeyPrefix";
 import { replyMightHaveSentKey } from "../utils/replyMightHaveSentKey";
 import { replyRequestKey } from "../utils/replyRequestKey";
+import { replySendAction } from "../utils/replySendAction";
 import { replySendFailure } from "../utils/replySendFailure";
 import { sendReplyOnce } from "../utils/sendReplyOnce";
 
@@ -187,8 +189,31 @@ describe("replyMightHaveSent", () => {
     expect(replyMightHaveSent(failure)).toBe(expected);
   });
 
+  it("puts every key for an inquiry under its prefix, and none of another's", () => {
+    const draft = { template_id: null, subject: "s", body: "b" };
+    expect(replyRequestKey("i1", draft).startsWith(replyInquiryKeyPrefix("i1"))).toBe(true);
+    expect(replyMightHaveSentKey("i1").startsWith(replyInquiryKeyPrefix("i1"))).toBe(true);
+    expect(replyRequestKey("i10", draft).startsWith(replyInquiryKeyPrefix("i1"))).toBe(false);
+  });
+
   it("is marked per inquiry, apart from any reply's key", () => {
     expect(replyMightHaveSentKey("i1")).not.toBe(replyMightHaveSentKey("i2"));
     expect(replyMightHaveSentKey("i1")).not.toBe(replyRequestKey("i1", { template_id: null, subject: "", body: "" }));
+  });
+});
+
+describe("replySendAction", () => {
+  it.each([
+    [null, false, false, "send"],
+    ["refused", false, false, "send"],
+    ["gmailRejected", false, false, "send"],
+    ["unsure", true, true, "tryAgain"],
+    [null, true, true, "tryAgain"],
+    ["inFlight", true, true, "checkAgain"],
+    ["notRecorded", true, true, "checkAgain"],
+    ["unsure", true, false, "sendAsNew"],
+    [null, true, false, "sendAsNew"],
+  ] as const)("%s, might have sent %s, retry %s: %s", (failure, mightHaveSent, isRetry, expected) => {
+    expect(replySendAction(failure, mightHaveSent, isRetry)).toBe(expected);
   });
 });

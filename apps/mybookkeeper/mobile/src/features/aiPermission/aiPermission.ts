@@ -1,16 +1,11 @@
 import { File, Paths } from "expo-file-system";
 import { AI_PERMISSION_FILE, AI_PERMISSION_VERSION } from "../../constants/aiPermission";
-import { session } from "../../lib/session";
+import { signedInEmail } from "../../lib/signedInEmail";
 
 const listeners = new Set<() => void>();
 
 function permissionFile(): File {
   return new File(Paths.document, AI_PERMISSION_FILE);
-}
-
-function signedInEmail(): string | null {
-  const state = session.getState();
-  return state.status === "signedIn" ? state.email : null;
 }
 
 function notifyListeners(): void {
