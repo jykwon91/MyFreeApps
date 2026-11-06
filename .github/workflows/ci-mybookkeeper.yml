@@ -284,7 +284,8 @@ jobs:
             e2e/mortgage-rate-watch.spec.ts \
             e2e/reply-templates-mock.spec.ts \
             e2e/transactions-unsaved-mock.spec.ts \
-            e2e/inquiries-viewer-mock.spec.ts
+            e2e/inquiries-viewer-mock.spec.ts \
+            e2e/inquiry-reply-picker-mock.spec.ts
 
       - name: Upload Playwright report on failure
         if: failure()

@@ -16,6 +16,7 @@
  */
 import { test, expect, type Page, type Request } from "@playwright/test";
 import { ORG_ID, plantAuth } from "./fixtures/mockSession";
+import { json } from "./fixtures/mockResponse";
 
 const TXN_ID = "00000000-0000-0000-0000-0000000000a1";
 
@@ -50,7 +51,6 @@ interface FakeServer {
   failNextPatch: boolean;
 }
 
-const json = (body: unknown, status = 200) => ({ status, contentType: "application/json", body: JSON.stringify(body) });
 
 async function stubApi(page: Page): Promise<FakeServer> {
   const server: FakeServer = { patches: [], failNextPatch: false };
