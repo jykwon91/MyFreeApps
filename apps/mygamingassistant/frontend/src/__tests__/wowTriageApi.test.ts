@@ -58,6 +58,14 @@ describe("triageRequest", () => {
     expect(getTriageKeySnapshot()).toEqual({ unlocked: false, lockReason: "rejected" });
   });
 
+  it("does not lock when an accepted key asks for a story that's gone", async () => {
+    unlockTriage(TRIAGE_KEY);
+    fetchMock.mockResolvedValue(jsonResponse(404, { detail: "feature_request_not_found" }));
+    const result = await triageRequest({ path: "/stories/x", method: "PATCH", body: { hidden: true }, ifMatch: "v" });
+    expect(result).toEqual({ ok: false, error: expect.objectContaining({ status: 404 }) });
+    expect(getTriageKey()).toBe(TRIAGE_KEY);
+  });
+
   it("does not lock on other failures", async () => {
     unlockTriage(TRIAGE_KEY);
     fetchMock.mockResolvedValue(jsonResponse(429, { detail: "Too Many Requests" }, { "Retry-After": "30" }));

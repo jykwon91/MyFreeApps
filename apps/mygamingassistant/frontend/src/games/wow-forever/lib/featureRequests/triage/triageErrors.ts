@@ -4,6 +4,8 @@ import type { TriageApiError } from "@/games/wow-forever/types/featureRequests/t
 export const DETAIL_LOCKED = "triage_locked";
 export const DETAIL_STORY_CHANGED = "story_changed";
 export const DETAIL_MERGE_CONFLICT = "merge_conflict";
+/** The 404 an ACCEPTED key gets for a story or submission that no longer exists (backend DETAIL_NOT_FOUND). */
+export const DETAIL_STORY_NOT_FOUND = "feature_request_not_found";
 
 export function isTriageApiError(value: unknown): value is TriageApiError {
   return (

@@ -1,16 +1,23 @@
 /**
  * Every triage call goes through here: the key in the `X-MGA-Triage-Token` header (never the URL),
- * `If-Match` for writes, `cache: "no-store"`, no cookies, no referrer. A 404 or 401 means the key was
- * refused (a wrong key and a switched-off triage API look the same) — the screen locks at once.
+ * `If-Match` for writes, `cache: "no-store"`, no cookies, no referrer. A 401, or a 404 the gate sent (a
+ * wrong key and a switched-off triage API look the same), means the key was refused — the screen locks at
+ * once. A 404 for a story that's gone (`feature_request_not_found`) only reaches an accepted key: no lock.
  */
 import { TRIAGE_API_BASE, TRIAGE_TOKEN_HEADER } from "@/games/wow-forever/data/featureRequests/triage/triageConfig";
 import { getTriageKey, lockTriage, touchTriage } from "@/games/wow-forever/lib/featureRequests/triage/triageKeyStore";
 import { parseRetryAfter } from "@/games/wow-forever/lib/featureRequests/triage/retryAfter";
-import { DETAIL_LOCKED, triageErrorFrom } from "@/games/wow-forever/lib/featureRequests/triage/triageErrors";
+import { DETAIL_LOCKED, DETAIL_STORY_NOT_FOUND, triageErrorFrom } from "@/games/wow-forever/lib/featureRequests/triage/triageErrors";
 import type { TriageRequestArgs } from "@/games/wow-forever/types/featureRequests/triage/triageRequestArgs";
 import type { TriageResult } from "@/games/wow-forever/types/featureRequests/triage/triageResult";
 
 const LOCKING_STATUSES: ReadonlySet<number> = new Set([401, 404]);
+
+function keyWasRefused(status: number, body: unknown): boolean {
+  if (!LOCKING_STATUSES.has(status)) return false;
+  const detail = typeof body === "object" && body !== null ? (body as { detail?: unknown }).detail : undefined;
+  return detail !== DETAIL_STORY_NOT_FOUND;
+}
 
 async function readJson(response: Response): Promise<unknown> {
   try {
@@ -49,7 +56,8 @@ export async function triageRequest<T>(args: TriageRequestArgs): Promise<TriageR
     if (usingStoredKey) touchTriage();
     return { ok: true, data: (await readJson(response)) as T };
   }
-  if (usingStoredKey && LOCKING_STATUSES.has(response.status)) lockTriage("rejected");
+  const body = await readJson(response);
+  if (usingStoredKey && keyWasRefused(response.status, body)) lockTriage("rejected");
   const retryAfter = parseRetryAfter(response.headers.get("Retry-After"));
-  return { ok: false, error: triageErrorFrom(response.status, await readJson(response), retryAfter) };
+  return { ok: false, error: triageErrorFrom(response.status, body, retryAfter) };
 }
