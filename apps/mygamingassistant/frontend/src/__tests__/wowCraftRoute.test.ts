@@ -5,6 +5,7 @@ import alchemyJson from "@/games/wow-forever/data/professions/crafting/alchemy.j
 import blacksmithingJson from "@/games/wow-forever/data/professions/crafting/blacksmithing.json";
 import leatherworkingJson from "@/games/wow-forever/data/professions/crafting/leatherworking.json";
 import engineeringJson from "@/games/wow-forever/data/professions/crafting/engineering.json";
+import firstaidJson from "@/games/wow-forever/data/professions/crafting/firstaid.json";
 import trainerSkillsJson from "@/games/wow-forever/data/professions/crafting/classic/trainerSkills.json";
 import {
   currentEntryIndex,
@@ -36,9 +37,10 @@ const FILES: Record<CraftingProfession, CraftingFile> = {
   blacksmithing: blacksmithingJson as unknown as CraftingFile,
   leatherworking: leatherworkingJson as unknown as CraftingFile,
   engineering: engineeringJson as unknown as CraftingFile,
+  firstaid: firstaidJson as unknown as CraftingFile,
 };
 const TRAINER_SKILLS = trainerSkillsJson as unknown as Record<CraftingProfession, TrainerSkills>;
-const PROFESSIONS = ["tailoring", "enchanting", "alchemy", "blacksmithing", "leatherworking", "engineering"] as const;
+const PROFESSIONS = ["tailoring", "enchanting", "alchemy", "blacksmithing", "leatherworking", "engineering", "firstaid"] as const;
 
 function recipeMap(file: CraftingFile): Map<number, CraftRecipe> {
   return new Map(file.recipes.map((r) => [r.spell, r]));

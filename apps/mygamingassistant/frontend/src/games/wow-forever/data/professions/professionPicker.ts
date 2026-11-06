@@ -22,11 +22,12 @@ export const CRAFTING_GROUP: ProfessionGroup<CraftingProfession> = {
   ],
 };
 
-/** Secondary professions — anyone can learn all of them. */
-export const SECONDARY_GROUP: ProfessionGroup<Profession> = {
+/** Secondary professions — anyone can learn all of them. First Aid is one, though its guide is a crafting guide. */
+export const SECONDARY_GROUP: ProfessionGroup<GuideProfession> = {
   label: "Secondary",
   options: [
     { id: PROFESSION.cooking, label: "Cooking" },
+    { id: CRAFTING_PROFESSION.firstaid, label: "First Aid" },
     { id: PROFESSION.fishing, label: "Fishing" },
   ],
 };

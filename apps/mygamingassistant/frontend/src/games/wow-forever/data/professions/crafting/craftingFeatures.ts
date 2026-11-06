@@ -36,4 +36,6 @@ export const CRAFTING_FEATURES: Readonly<Record<CraftingProfession, CraftingFeat
     effects: true,
     worksWith: { name: "Mining", why: "Almost every recipe takes metal bars or stone — with Mining you mine the ore and smelt the bars yourself." },
   },
+  // Bandages take cloth, which drops from humanoids — no gathering profession feeds them.
+  firstaid: { priced: false, enchantSlots: false, transmutes: false, effects: false, worksWith: null },
 };

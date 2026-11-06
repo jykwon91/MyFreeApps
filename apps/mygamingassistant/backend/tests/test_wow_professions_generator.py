@@ -15,7 +15,7 @@ import pytest
 
 from scripts.wow_food import recipe_sources
 from scripts.wow_food.recipe_sources import MIN_FARM_CHANCE, VENDOR_COLUMNS, _gather_locks, _stock, territory_of
-from scripts.wow_professions.build import DISENCHANT_COLUMNS, _best_giver, _disenchant_kind, _roll_chances
+from scripts.wow_professions.build import DISENCHANT_COLUMNS, _best_giver, _disenchant_kind, _roll_chances, with_child_skill_lines
 from scripts.wow_professions import specs
 from scripts.wow_professions.crafts import (
     ClientRecipes,
@@ -141,7 +141,14 @@ def alchemy() -> dict[int, dict]:
     return _recipes("alchemy")
 
 
+@pytest.fixture(scope="module")
+def first_aid() -> dict[int, dict]:
+    return _recipes("firstaid")
+
+
 ELIXIR_OF_MINOR_DEFENSE, TRANSMUTE_IRON_TO_GOLD, MINOR_ARCANE_ELIXIR = 7183, 11479, 1245246
+LINEN_BANDAGE, HEAVY_SILK_BANDAGE, HEAVY_RUNECLOTH_BANDAGE = 3275, 7929, 18630
+HEALING_POTION_SPELL, HEALING_POTION_ITEM = 1244433, 929
 
 
 class TestCommittedData:
@@ -178,9 +185,35 @@ class TestCommittedData:
                 assert recipe["learn"]["source"] == "trainer"
                 assert 1 <= entry["forever"] <= recipe["yellow"]
 
+    def test_every_first_aid_trainer_recipe_has_an_estimate(self, first_aid: dict[int, dict]) -> None:
+        skills = json.loads((CRAFTING_DATA / "classic" / "trainerSkills.json").read_text(encoding="utf-8"))
+        for spell, entry in skills["firstaid"].items():
+            assert first_aid[int(spell)]["learn"]["source"] == "trainer"
+            assert 1 <= entry["forever"] <= first_aid[int(spell)]["yellow"]
+
     def test_cmangos_license_kept(self) -> None:
         assert (CRAFTING_DATA / "classic" / "LICENSE").is_file()
         assert "cmangos" in (CRAFTING_DATA / "classic" / "README.md").read_text(encoding="utf-8")
+
+
+class TestCommittedFirstAid:
+    def test_bandages_keep_their_classic_colours(self, first_aid: dict[int, dict]) -> None:
+        assert (first_aid[LINEN_BANDAGE]["yellow"], first_aid[LINEN_BANDAGE]["grey"]) == (30, 60)
+        assert first_aid[LINEN_BANDAGE]["learn"]["source"] == "start"
+        assert (first_aid[HEAVY_RUNECLOTH_BANDAGE]["yellow"], first_aid[HEAVY_RUNECLOTH_BANDAGE]["grey"]) == (290, 350)
+
+    def test_manuals_teach_through_the_child_skill_line(self, first_aid: dict[int, dict]) -> None:
+        learn = first_aid[HEAVY_SILK_BANDAGE]["learn"]
+        assert learn == {"source": "item", "skill": 180, "itemId": 16112, "item": "Manual: Heavy Silk Bandage"}
+
+    def test_healing_potions_moved_from_alchemy(self, first_aid: dict[int, dict], alchemy: dict[int, dict]) -> None:
+        potion = first_aid[HEALING_POTION_SPELL]
+        assert potion["creates"]["id"] == HEALING_POTION_ITEM and potion["newInForever"] is True
+        assert all(r["creates"]["id"] != HEALING_POTION_ITEM for r in alchemy.values())
+
+    def test_child_skill_lines_are_added(self) -> None:
+        rows = [{"ID": "2942", "ParentSkillLineID": "129"}, {"ID": "2948", "ParentSkillLineID": "197"}, {"ID": "7", "ParentSkillLineID": "0"}]
+        assert with_child_skill_lines({129}, rows) == {129, 2942}
 
 
 def _loot(item: int, chance: float, group: int = 1) -> dict:

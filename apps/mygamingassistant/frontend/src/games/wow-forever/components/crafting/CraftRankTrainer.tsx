@@ -1,6 +1,7 @@
 import { AlertTriangle } from "lucide-react";
 import TrainerMapLink from "@/games/wow-forever/components/professions/TrainerMapLink";
 import CraftMapLink from "@/games/wow-forever/components/crafting/CraftMapLink";
+import CraftRankErrand from "@/games/wow-forever/components/crafting/CraftRankErrand";
 import type { CraftingRank } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 
@@ -10,10 +11,23 @@ interface CraftRankTrainerProps {
   professionLabel: string;
 }
 
-/** Who trains a rank: any trainer, a named one for your faction, or one inside a dungeon. */
+/** Who trains a rank: any trainer, a named one for your faction, one inside a dungeon, a book vendor or a quest giver. */
 export default function CraftRankTrainer({ rank, faction, professionLabel }: CraftRankTrainerProps) {
   const t = rank.trainers;
   if (t.kind === "any") return <p className="text-sm">Any {professionLabel} trainer.</p>;
+  if (t.kind === "book") {
+    return <CraftRankErrand action={`Buy ${t.book} (${t.price}) from`} npc={t.vendors[faction]} trip={t.trip[faction]} />;
+  }
+  if (t.kind === "quest") {
+    return (
+      <CraftRankErrand
+        action={`Do the quest ${t.quest}, from`}
+        npc={t.givers[faction]}
+        detail={t.detail[faction]}
+        trip={t.trip[faction]}
+      />
+    );
+  }
   if (t.kind === "named") {
     const npc = t.trainers[faction];
     return (

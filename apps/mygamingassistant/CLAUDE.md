@@ -106,11 +106,16 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `confidence: "confirmed" | "unconfirmed"`. Rows still unconfirmed depend on
   server-side facts (trainers, vendors, quests, fishing zones) — confirm them
   in game or from a Blizzard post, then bump `PROFESSIONS_DATA_STATUS`.
-- Professions also has crafting guides (`?p=alchemy|blacksmithing|enchanting|engineering|leatherworking|tailoring`,
+- Professions also has crafting guides (`?p=alchemy|blacksmithing|enchanting|engineering|leatherworking|tailoring|firstaid`,
   `&skill=N`, `&spec=<choice>`). The picker (`data/professions/professionPicker.ts`) groups
   Crafting vs Secondary; `isCraftingProfession` / `parseGuideProfession`
   (`lib/guideProfession.ts`) are the only list of what's crafting — never
-  hard-code profession keys. What each guide shows is
+  hard-code profession keys. **First Aid** is listed under Secondary but is a
+  `CraftingProfession` (it renders `CraftingGuideView`): bandage-only route;
+  its Expert rank is a book (`kind: "book"`, vendors per faction) and Artisan
+  the Triage quest (`kind: "quest"`), both with a per-faction boat-trip note
+  and Directions (`data/professions/crafting/firstAidTrainers.ts`). Forever
+  moved the healing potions from Alchemy to First Aid. What each guide shows is
   `crafting/craftingFeatures.ts`: only `priced` professions (Tailoring,
   Enchanting) get the prices panel (overrides) / cheapest route; the rest show
   the hand-picked route, costed at auction prices, never called "cheapest".
@@ -141,8 +146,10 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   prints them); a part with no tooltip reads "A part for other ... recipes"
   (`crafting/craftEffect.ts`), anything else shows nothing.
   **Recipe data is GENERATED** — `python -m scripts.wow_professions.build`
-  (from `backend/`) writes `data/professions/crafting/{tailoring,enchanting,alchemy,blacksmithing,leatherworking,engineering}.json`
-  (with `smelting` / `specs` where they apply)
+  (from `backend/`) writes `data/professions/crafting/{tailoring,enchanting,alchemy,blacksmithing,leatherworking,engineering,firstaid}.json`
+  (with `smelting` / `specs` where they apply; teaching items are found by
+  prefix — Pattern/Formula/Recipe/Plans/Schematic/Manual — and by the
+  profession's skill line or its Forever child lines, e.g. First Aid's 2942)
   from the Forever client, plus `classic/trainerSkills.json` and
   `classic/sources.json` (cmangos GPL — keep LICENSE + README).
   `tests/test_wow_professions_generator.py`, `tests/test_wow_engineering_generator.py`. A route row that names a spell

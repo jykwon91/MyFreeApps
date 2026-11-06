@@ -1,13 +1,13 @@
 """Turn a profession's client recipes into the records the leveling guide reads.
 
 Chain: ``SkillLineAbility`` (SkillLine 197 Tailoring / 333 Enchanting / 171
-Alchemy) →
+Alchemy / 129 First Aid ...) →
 recipe spell → its reagents (``SpellReagents``) and what it makes (a
 ``CREATE_ITEM`` effect → ``ItemSparse``; an enchant makes no item). The
 skill colours come from the same row: ``TrivialSkillLineRankLow`` is where
 the recipe turns yellow, ``TrivialSkillLineRankHigh`` where it turns grey
 (green is half-way, as in game). The skill needed to *learn* a recipe isn't
-in the client — a Pattern / Formula / Recipe item carries it (``RequiredSkillRank``);
+in the client — a Pattern / Formula / Recipe / Manual item carries it (``RequiredSkillRank``);
 a trainer's is server-side (see ``build.load_trainer_skill``).
 
 The same chain run on the Classic Era client says what Forever changed.
@@ -23,13 +23,14 @@ BLACKSMITHING_SKILL_LINE = 164
 LEATHERWORKING_SKILL_LINE = 165
 ENGINEERING_SKILL_LINE = 202
 MINING_SKILL_LINE = 186
+FIRST_AID_SKILL_LINE = 129
 EFFECT_CREATE_ITEM = 24
 EFFECT_LEARN_SPELL = 36
 EFFECT_ENCHANT_ITEM = 53
 # SkillLineAbility.AcquireMethod: learned with the profession itself.
 ACQUIRE_ON_SKILL_LEARN = 1
 # Items a teaching item's name starts with.
-TEACHING_PREFIXES = ("Pattern: ", "Formula: ", "Recipe: ", "Plans: ", "Schematic: ")
+TEACHING_PREFIXES = ("Pattern: ", "Formula: ", "Recipe: ", "Plans: ", "Schematic: ", "Manual: ")
 # Item classes a disenchanter can break: weapons and armour.
 DISENCHANTABLE_CLASSES = {2, 4}
 UNCOMMON = 2

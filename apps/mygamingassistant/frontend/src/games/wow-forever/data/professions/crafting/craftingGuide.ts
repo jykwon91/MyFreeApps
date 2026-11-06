@@ -337,4 +337,75 @@ export const CRAFTING_GUIDES: Readonly<Record<CraftingProfession, CraftingGuide>
       },
     ],
   },
+  firstaid: {
+    label: "First Aid",
+    steps: [
+      {
+        id: "train",
+        title: "Train First Aid at a first aid trainer",
+        detail:
+          "Any trainer below teaches Apprentice First Aid and Linen Bandage. First Aid is a secondary profession — it doesn't take one of your two main profession slots, so anyone can learn it. Forever also has Junior trainers in the starting areas; they aren't on our map yet.",
+      },
+      {
+        id: "cloth",
+        title: "Keep the cloth you loot",
+        detail: "Every bandage on the route is cloth — Linen, Wool, Silk, Mageweave, Runecloth — and cloth drops from humanoid mobs (people, not beasts).",
+        warning: "Tailoring uses the same cloth. If you level both, buy extra at the auction house rather than starving one of them.",
+      },
+      {
+        id: "silk",
+        title: "Learn Silk Bandage before you leave the trainer",
+        detail: "Trainers teach up to Silk Bandage (Classic). Heavy Silk and Mageweave are manuals from the vendor who sells the Expert book, and Heavy Mageweave and the Runecloth bandages are taught by the Triage doctor.",
+      },
+      {
+        id: "craft",
+        title: "Make the row for your skill until it turns green",
+        detail: "Open your First Aid window (find it in your spellbook) and make bandages. Type your skill below and the route points at your row.",
+        command: "/cast First Aid",
+      },
+      {
+        id: "use",
+        title: "Bandage yourself between fights",
+        detail: "A bandage heals over 8 seconds while you stand still. Any damage stops it, and you can't bandage again for 60 seconds (Classic).",
+        stuck: "\"You can't do that yet\"? That's the Recently Bandaged debuff — wait out its minute.",
+      },
+    ],
+    routeIntro:
+      "Classic route — may differ in Forever. Make each bandage from the first skill to the second, then move to the next row. The recipes and their skill colours are the Forever client's; who teaches them, and when, is Classic's.",
+    shoppingNote: "You don't buy cloth on this route — you loot it. The auction price is there if you'd rather buy it, or sell what you have spare.",
+    forever: [
+      {
+        text: "Forever adds 17 First Aid recipes: healing potions, Poultices, Tourniquets, Anti-Venoms, Toxin Study, a First Aid Kit and a Plague Doctor's Laboratory. Where most of them come from isn't known yet.",
+        confidence: "confirmed",
+      },
+      {
+        text: "17 Forever recipes: source not known yet. They're marked \"Source unknown\" — no Classic trainer or vendor is named for them, so the route sticks to bandages.",
+        confidence: "confirmed",
+      },
+      {
+        text: "Healing potions moved from Alchemy to First Aid. Alchemy keeps only \"Discolored\" healing potions.",
+        confidence: "confirmed",
+      },
+      {
+        text: "The bandages are unchanged from Classic — the same cloth and the same skill colours.",
+        confidence: "confirmed",
+      },
+      {
+        text: "Expert First Aid – Under Wraps costs 1 gold in the game files.",
+        confidence: "confirmed",
+      },
+      {
+        text: "First Aid Kit (yellow at 20) is a camp item. Reported in the beta: it buffs your group with Stamina, like Power Word: Fortitude.",
+        confidence: "unconfirmed",
+      },
+      {
+        text: "Reported in the beta: trainers teach the low and middle recipes and Minor Healing Potion from skill 1; the higher manuals drop from mobs.",
+        confidence: "unconfirmed",
+      },
+      {
+        text: "The Triage quest for Artisan, and who teaches each recipe at what skill, are Classic Era's. Forever may change them.",
+        confidence: "unconfirmed",
+      },
+    ],
+  },
 };
