@@ -21,6 +21,10 @@ Scheduled jobs:
   purge_wow_feature_submissions — every 24 hours. WoW feature-request
                       retention (``feature_retention_service``).
 
+Switches: the purge always runs. SCHEDULER_ENABLED gates sync_all_sources,
+cleanup_ingestion_downloads and raid_notifications (serve-only prod turns it
+off). WOW_PRICE_REFRESH_ENABLED gates refresh_wow_prices.
+
 Architecture rationale
 ----------------------
 Single-VPS, single-process FastAPI app with a small, fixed set of sources.
@@ -81,14 +85,27 @@ class SchedulerNotStartedError(RuntimeError):
 
 
 def start_scheduler(
-    sync_interval_hours: int = 6, price_refresh_interval_hours: int = 3,
+    sync_interval_hours: int = 6,
+    price_refresh_interval_hours: int = 3,
+    *,
+    source_jobs: bool = True,
+    price_refresh: bool = True,
 ) -> AsyncIOScheduler:
     """Initialize the module-level AsyncIOScheduler and register jobs.
+
+    The feature-request retention purge always runs. Two more groups of jobs
+    each have a switch:
+
+    * ``source_jobs`` (``SCHEDULER_ENABLED``) — YouTube source sync, download
+      cleanup and the Discord raid reminders. Serve-only prod turns these off.
+    * ``price_refresh`` (``WOW_PRICE_REFRESH_ENABLED``) — the WoW Forever
+      auction-house prices. A read-only fetch of a public file, so it stays on
+      in serve-only prod, where the public price API needs it.
 
     Uses an in-memory job store (no DB required) — jobs are re-registered
     on every start from settings, so state is always fresh. Unlike MJH's
     discovery scheduler (which needs per-source intervals from the DB), MGA's
-    two jobs are fixed-interval global passes.
+    jobs are fixed-interval global passes.
 
     Idempotent: if already started, returns the existing scheduler.
 
@@ -102,8 +119,23 @@ def start_scheduler(
         return _scheduler
 
     _scheduler = AsyncIOScheduler(timezone="UTC")
+    _add_retention_jobs(_scheduler)
+    if source_jobs:
+        _add_source_jobs(_scheduler, sync_interval_hours)
+    if price_refresh:
+        _add_price_refresh_job(_scheduler, price_refresh_interval_hours)
 
-    _scheduler.add_job(
+    _scheduler.start()
+    logger.info(
+        "scheduler_service: started — source_jobs=%s sync_interval_hours=%d "
+        "price_refresh=%s price_refresh_interval_hours=%d",
+        source_jobs, sync_interval_hours, price_refresh, price_refresh_interval_hours,
+    )
+    return _scheduler
+
+
+def _add_source_jobs(scheduler: AsyncIOScheduler, sync_interval_hours: int) -> None:
+    scheduler.add_job(
         _run_sync_all_sources,
         trigger=IntervalTrigger(hours=sync_interval_hours),
         id=JOB_SYNC_ALL_SOURCES,
@@ -114,7 +146,7 @@ def start_scheduler(
         max_instances=1,
     )
 
-    _scheduler.add_job(
+    scheduler.add_job(
         _run_cleanup_downloads,
         trigger=IntervalTrigger(hours=1),
         id=JOB_CLEANUP_DOWNLOADS,
@@ -125,34 +157,10 @@ def start_scheduler(
         max_instances=1,
     )
 
-    _scheduler.add_job(
-        _run_refresh_wow_prices,
-        trigger=IntervalTrigger(hours=price_refresh_interval_hours),
-        id=JOB_REFRESH_WOW_PRICES,
-        name="refresh_wow_prices",
-        replace_existing=True,
-        coalesce=True,
-        misfire_grace_time=3600,
-        max_instances=1,
-        # Also once at boot, so a fresh deploy has prices without waiting hours.
-        next_run_time=datetime.now(timezone.utc),
-    )
-
-    _scheduler.add_job(
-        _run_purge_feature_submissions,
-        trigger=IntervalTrigger(hours=PURGE_INTERVAL_HOURS),
-        id=JOB_PURGE_FEATURE_SUBMISSIONS,
-        name=JOB_PURGE_FEATURE_SUBMISSIONS,
-        replace_existing=True,
-        coalesce=True,
-        misfire_grace_time=3600,
-        max_instances=1,
-    )
-
     from app.core.config import settings
 
     if settings.discord_enabled:
-        _scheduler.add_job(
+        scheduler.add_job(
             _run_raid_notifications,
             trigger=IntervalTrigger(seconds=RAID_NOTIFICATIONS_INTERVAL_SECONDS),
             id=JOB_RAID_NOTIFICATIONS,
@@ -163,12 +171,35 @@ def start_scheduler(
             max_instances=1,
         )
 
-    _scheduler.start()
-    logger.info(
-        "scheduler_service: started — sync_interval_hours=%d price_refresh_interval_hours=%d",
-        sync_interval_hours, price_refresh_interval_hours,
+
+def _add_retention_jobs(scheduler: AsyncIOScheduler) -> None:
+    # A promise to the people who submit data, so it has no switch: it runs
+    # wherever the scheduler runs, serve-only prod included.
+    scheduler.add_job(
+        _run_purge_feature_submissions,
+        trigger=IntervalTrigger(hours=PURGE_INTERVAL_HOURS),
+        id=JOB_PURGE_FEATURE_SUBMISSIONS,
+        name=JOB_PURGE_FEATURE_SUBMISSIONS,
+        replace_existing=True,
+        coalesce=True,
+        misfire_grace_time=3600,
+        max_instances=1,
     )
-    return _scheduler
+
+
+def _add_price_refresh_job(scheduler: AsyncIOScheduler, interval_hours: int) -> None:
+    scheduler.add_job(
+        _run_refresh_wow_prices,
+        trigger=IntervalTrigger(hours=interval_hours),
+        id=JOB_REFRESH_WOW_PRICES,
+        name="refresh_wow_prices",
+        replace_existing=True,
+        coalesce=True,
+        misfire_grace_time=3600,
+        max_instances=1,
+        # Also once at boot, so a fresh deploy has prices without waiting hours.
+        next_run_time=datetime.now(timezone.utc),
+    )
 
 
 def shutdown_scheduler() -> None:

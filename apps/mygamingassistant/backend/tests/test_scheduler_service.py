@@ -19,6 +19,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from app.core.config import settings
 from app.services.scheduling.scheduler_service import (
     JOB_CLEANUP_DOWNLOADS,
     JOB_PURGE_FEATURE_SUBMISSIONS,
@@ -283,3 +284,29 @@ async def test_cleanup_downloads_deletes_oldest_first(tmp_path):
     assert not f1.exists()
     assert not f2.exists()
     assert not f3.exists()
+
+
+# ---------------------------------------------------------------------------
+# Job groups — serve-only prod runs SCHEDULER_ENABLED=false yet needs prices
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_price_refresh_runs_without_the_source_jobs(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(settings, "discord_enabled", True)
+    job_ids = {j.id for j in start_scheduler(source_jobs=False, price_refresh=True).get_jobs()}
+    assert job_ids == {JOB_PURGE_FEATURE_SUBMISSIONS, JOB_REFRESH_WOW_PRICES}
+
+
+@pytest.mark.asyncio
+async def test_source_jobs_run_without_the_price_refresh(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(settings, "discord_enabled", True)
+    job_ids = {j.id for j in start_scheduler(source_jobs=True, price_refresh=False).get_jobs()}
+    assert job_ids == {
+        JOB_PURGE_FEATURE_SUBMISSIONS, JOB_SYNC_ALL_SOURCES, JOB_CLEANUP_DOWNLOADS, JOB_RAID_NOTIFICATIONS,
+    }
+
+
+@pytest.mark.asyncio
+async def test_retention_purge_runs_with_every_switch_off():
+    job_ids = {j.id for j in start_scheduler(source_jobs=False, price_refresh=False).get_jobs()}
+    assert job_ids == {JOB_PURGE_FEATURE_SUBMISSIONS}

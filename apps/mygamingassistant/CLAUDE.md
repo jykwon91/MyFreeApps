@@ -160,6 +160,9 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`public-data.tradeskillmaster.com/forever/{region}/region/items.csv`, no
   key). The scheduler job `refresh_wow_prices` pulls every region every
   `WOW_PRICE_REFRESH_INTERVAL_HOURS` (default 3) and once at boot, with a
+  switch of its own (`WOW_PRICE_REFRESH_ENABLED`, default true) — serve-only
+  prod runs `SCHEDULER_ENABLED=false`, which turns off only the source jobs
+  (sync, download cleanup, raid reminders), never the prices. It uses a
   conditional GET (ETag / If-Modified-Since); `python -m app.cli
   refresh-wow-prices` does it by hand. Code: `app/services/wow/prices/`
   (a `PriceProvider` protocol — a second source is a new provider + a
