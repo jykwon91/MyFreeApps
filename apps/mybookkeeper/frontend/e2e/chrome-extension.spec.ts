@@ -4,19 +4,27 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import { BACKEND_URL, E2E_EMAIL, E2E_PASSWORD } from "./fixtures/config";
+import { test as authedTest } from "./fixtures/auth";
 
-// Use base test without auth fixture — extension tests load local files
+// Most tests load local files and need no signed-in user; the side-panel tests
+// that seed data use authedTest for its API client.
 const test = base;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEST_PAGES_DIR = path.resolve(__dirname, "../../chrome-extension/test-pages");
 const CONTENT_JS = path.resolve(__dirname, "../../chrome-extension/content.js");
 const SIDEPANEL_HTML = path.resolve(__dirname, "../../chrome-extension/sidepanel.html");
+const BACKGROUND_JS = path.resolve(__dirname, "../../chrome-extension/background.js");
 
-// Strip the chrome.runtime.onMessage listener since we're not in an extension context
+// Outside an extension `chrome.runtime` is missing (headed Chrome still defines
+// `window.chrome`, just without `runtime`). content.js announces the detected
+// page on load and registers a message listener, so stub both as no-ops and
+// inject the file unmodified.
+const CHROME_STUB =
+  "window.chrome = Object.assign(window.chrome || {}, { runtime: { sendMessage: () => Promise.resolve(), onMessage: { addListener: () => {} } } });\n";
+
 function getContentScript(): string {
-  const raw = fs.readFileSync(CONTENT_JS, "utf-8");
-  return raw.replace(/chrome\.runtime\.onMessage[\s\S]*$/, "");
+  return CHROME_STUB + fs.readFileSync(CONTENT_JS, "utf-8");
 }
 
 const CONTENT_SCRIPT = getContentScript();
@@ -66,7 +74,7 @@ async function loadTestPage(page: Page, filename: string): Promise<void> {
 }
 
 async function injectAndBuildMap(page: Page): Promise<Record<string, string>> {
-  // Inject the stripped content script (no chrome.runtime references) as a <script> tag
+  // Inject content.js (with the chrome stub) as a <script> tag
   await page.addScriptTag({ content: CONTENT_SCRIPT });
 
   return page.evaluate(() => {
@@ -99,127 +107,89 @@ async function autoFill(
   );
 }
 
-// Mock chrome APIs for sidepanel tests
-function getChromeApiMock(serverUrl: string): string {
+// Runs the real background.js inside the side-panel page. Messages the side
+// panel sends reach background.js's onMessage listener, as they do in Chrome,
+// and its fetch goes through Playwright (see loadSidepanel).
+function getExtensionRuntime(apiUrl: string): string {
+  const background = JSON.stringify(fs.readFileSync(BACKGROUND_JS, "utf-8"));
   return `
-    window._mockMessages = [];
-    window._mockStorage = { local: { serverUrl: "${serverUrl}" }, session: {} };
+    function storageArea(initial) {
+      const data = { ...initial };
+      return {
+        get: async (keys) => {
+          if (keys === null || keys === undefined) return { ...data };
+          if (typeof keys === "string" || Array.isArray(keys)) {
+            const out = {};
+            for (const k of [].concat(keys)) if (k in data) out[k] = data[k];
+            return out;
+          }
+          const out = { ...keys };
+          for (const k of Object.keys(keys)) if (k in data) out[k] = data[k];
+          return out;
+        },
+        set: async (obj) => { Object.assign(data, obj); },
+        remove: async (keys) => { for (const k of [].concat(keys)) delete data[k]; },
+      };
+    }
+
+    // The real worker fetches with host permissions, so CORS never applies; a
+    // page loaded from file:// would be refused.
+    async function backgroundFetch(url, init) {
+      const res = await window.__mbkBackgroundFetch(String(url), init || {});
+      return {
+        ok: res.status >= 200 && res.status < 300,
+        status: res.status,
+        headers: { get: (name) => res.headers[name.toLowerCase()] ?? null },
+        text: async () => res.body,
+        json: async () => JSON.parse(res.body),
+        blob: async () => { throw new Error("blob() is not supported by the test fetch bridge"); },
+      };
+    }
+
+    const storage = {
+      sync: storageArea({ apiUrl: ${JSON.stringify(apiUrl)} }),
+      local: storageArea({}),
+      session: storageArea({}),
+    };
+    const backgroundListeners = [];
+
+    // A service worker has no window, document, localStorage or XHR; hide them
+    // so background.js can't come to rely on them here.
+    new Function("chrome", "fetch", "window", "document", "localStorage", "XMLHttpRequest", ${background})(
+      {
+        storage,
+        action: { onClicked: { addListener: () => {} } },
+        sidePanel: { open: async () => {} },
+        runtime: { onMessage: { addListener: (fn) => backgroundListeners.push(fn) } },
+      },
+      backgroundFetch,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    );
 
     window.chrome = {
-      storage: {
-        local: {
-          get: async (keys) => {
-            const result = {};
-            for (const k of (Array.isArray(keys) ? keys : [keys])) {
-              if (window._mockStorage.local[k] !== undefined) result[k] = window._mockStorage.local[k];
-            }
-            return result;
-          },
-          set: async (obj) => { Object.assign(window._mockStorage.local, obj); },
-        },
-        session: {
-          get: async (keys) => {
-            const result = {};
-            for (const k of (Array.isArray(keys) ? keys : [keys])) {
-              if (window._mockStorage.session[k] !== undefined) result[k] = window._mockStorage.session[k];
-            }
-            return result;
-          },
-          set: async (obj) => { Object.assign(window._mockStorage.session, obj); },
-          remove: async (keys) => {
-            for (const k of (Array.isArray(keys) ? keys : [keys])) delete window._mockStorage.session[k];
-          },
-        },
-      },
+      storage,
       runtime: {
-        sendMessage: async (msg) => {
-          window._mockMessages.push(msg);
-          const serverUrl = window._mockStorage.local.serverUrl;
-          const token = window._mockStorage.session.token;
-          const orgId = window._mockStorage.session.orgId;
-
-          if (msg.action === "login") {
-            try {
-              const res = await fetch(msg.serverUrl + "/auth/totp/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: msg.email, password: msg.password, totp_code: null }),
-              });
-              if (!res.ok) return { success: false, error: "Invalid credentials" };
-              const data = await res.json();
-              if (data.detail === "totp_required") return { success: false, error: "TOTP required" };
-              window._mockStorage.session.token = data.access_token;
-              window._mockStorage.session.email = msg.email;
-              // Fetch org
-              const orgRes = await fetch(msg.serverUrl + "/organizations", {
-                headers: { Authorization: "Bearer " + data.access_token },
-              });
-              if (orgRes.ok) {
-                const orgs = await orgRes.json();
-                if (orgs.length > 0) window._mockStorage.session.orgId = orgs[0].id;
-              }
-              return { success: true };
-            } catch (e) { return { success: false, error: String(e) }; }
+        // Chrome copies messages both ways and rejects when nothing listens.
+        sendMessage: (message) => new Promise((resolve, reject) => {
+          if (backgroundListeners.length === 0) {
+            reject(new Error("Could not establish connection. Receiving end does not exist."));
+            return;
           }
-
-          if (msg.action === "logout") {
-            delete window._mockStorage.session.token;
-            delete window._mockStorage.session.email;
-            delete window._mockStorage.session.orgId;
-            return { success: true };
+          const respond = (response) => resolve(structuredClone(response));
+          for (const listener of backgroundListeners) {
+            if (listener(structuredClone(message), {}, respond) === true) return;
           }
-
-          if (msg.action === "listTaxReturns") {
-            if (!token) return { success: false, error: "Not logged in", code: "SESSION_EXPIRED" };
-            try {
-              const headers = { Authorization: "Bearer " + token };
-              if (orgId) headers["X-Organization-Id"] = orgId;
-              const res = await fetch(serverUrl + "/tax-returns", { headers });
-              if (!res.ok) return { success: false, error: "Failed to load tax returns" };
-              return { success: true, data: await res.json() };
-            } catch (e) { return { success: false, error: String(e) }; }
-          }
-
-          if (msg.action === "getFormFields") {
-            if (!token) return { success: false, error: "Not logged in" };
-            try {
-              const headers = { Authorization: "Bearer " + token };
-              if (orgId) headers["X-Organization-Id"] = orgId;
-              const res = await fetch(serverUrl + "/tax-returns/" + msg.returnId + "/forms/" + msg.formName, { headers });
-              if (!res.ok) return { success: false, error: "Failed to load form fields" };
-              const data = await res.json();
-              const fields = (data.fields || []).map(f => ({
-                field_name: f.field_label || f.field_id,
-                line: f.field_id,
-                value: f.value_numeric ?? f.value_text ?? "",
-              }));
-              return { success: true, data: fields };
-            } catch (e) { return { success: false, error: String(e) }; }
-          }
-
-          if (msg.action === "recompute") {
-            if (!token) return { success: false, error: "Not logged in" };
-            try {
-              const headers = { Authorization: "Bearer " + token, "Content-Type": "application/json" };
-              if (orgId) headers["X-Organization-Id"] = orgId;
-              const res = await fetch(serverUrl + "/tax-returns/" + msg.returnId + "/recompute", { method: "POST", headers });
-              if (!res.ok) return { success: false, error: "Recompute failed" };
-              return { success: true };
-            } catch (e) { return { success: false, error: String(e) }; }
-          }
-
-          return { success: false, error: "Unknown action" };
-        },
+          resolve(undefined);
+        }),
         onMessage: { addListener: () => {} },
       },
       tabs: {
         query: async () => [{ id: 1 }],
-        sendMessage: async (_tabId, msg) => {
-          // Simulate content script auto-fill in the same page
-          return { success: true, filledCount: (msg.fields || []).length };
-        },
+        sendMessage: async (_tabId, msg) => ({ success: true, filledCount: (msg.fields || []).length }),
       },
-      sidePanel: { setOptions: async () => {} },
     };
   `;
 }
@@ -403,21 +373,32 @@ test.describe("Chrome Extension — cross-site consistency", () => {
 
 test.describe("Chrome Extension — Sidepanel UI", () => {
   async function loadSidepanel(page: Page): Promise<void> {
-    // Inject chrome API mocks before the page scripts run
-    await page.addInitScript(getChromeApiMock(BACKEND_URL));
+    await page.exposeFunction(
+      "__mbkBackgroundFetch",
+      async (
+        url: string,
+        init: { method?: string; headers?: Record<string, string>; body?: string },
+      ): Promise<{ status: number; headers: Record<string, string>; body: string }> => {
+        const res = await fetch(url, init);
+        return { status: res.status, headers: Object.fromEntries(res.headers), body: await res.text() };
+      },
+    );
+    await page.addInitScript(getExtensionRuntime(BACKEND_URL));
     await page.goto(`file:///${SIDEPANEL_HTML.replace(/\\/g, "/")}`);
     await page.waitForLoadState("domcontentloaded");
+  }
+
+  async function logIn(page: Page): Promise<void> {
+    await page.locator("#email").fill(E2E_EMAIL);
+    await page.locator("#password").fill(E2E_PASSWORD);
+    await page.locator("#login-btn").click();
+    await expect(page.locator("#main-section")).toBeVisible({ timeout: 15000 });
   }
 
   test("shows login section on first load", async ({ page }) => {
     await loadSidepanel(page);
     await expect(page.locator("#login-section")).toBeVisible();
     await expect(page.locator("#main-section")).not.toBeVisible();
-  });
-
-  test("server URL input is pre-populated from storage", async ({ page }) => {
-    await loadSidepanel(page);
-    await expect(page.locator("#server-url")).toHaveValue(BACKEND_URL);
   });
 
   test("login with invalid credentials shows error", async ({ page }) => {
@@ -440,47 +421,57 @@ test.describe("Chrome Extension — Sidepanel UI", () => {
     await expect(page.locator("#status-text")).toHaveText("Connected");
   });
 
-  test("after login, tax year dropdown is populated", async ({ page }) => {
-    await loadSidepanel(page);
+  // A return in a year newer than any the E2E user has, so the side panel
+  // auto-selects it; deleted again afterwards. One at a time, since each test
+  // picks the next free year.
+  authedTest.describe("with a tax return", () => {
+    authedTest.describe.configure({ mode: "default" });
+    let seededId: string | null = null;
+    let seededYear = "";
 
-    await page.locator("#email").fill(E2E_EMAIL);
-    await page.locator("#password").fill(E2E_PASSWORD);
-    await page.locator("#login-btn").click();
-    await expect(page.locator("#main-section")).toBeVisible({ timeout: 15000 });
+    authedTest.beforeEach(async ({ api }) => {
+      seededId = null;
+      const list = await api.get("/tax-returns");
+      expect(list.ok()).toBe(true);
+      const existing: { tax_year: number }[] = await list.json();
+      const year = Math.max(new Date().getFullYear(), ...existing.map((r) => r.tax_year)) + 1;
+      // head_of_household marks E2E returns, so global teardown removes any left behind.
+      const res = await api.post("/tax-returns", { data: { tax_year: year, filing_status: "head_of_household" } });
+      expect(res.status()).toBe(201);
+      const created: { id: string; tax_year: number } = await res.json();
+      seededId = created.id;
+      seededYear = String(created.tax_year);
+    });
 
-    // Tax year select should have at least the default option
-    const options = page.locator("#tax-year-select option");
-    await expect(options).not.toHaveCount(0, { timeout: 10000 });
-  });
+    authedTest.afterEach(async ({ api }) => {
+      if (seededId) expect((await api.delete(`/tax-returns/${seededId}`)).status()).toBe(204);
+    });
 
-  test("selecting a tax year enables the form selector", async ({ page }) => {
-    await loadSidepanel(page);
+    authedTest("after login, my tax years are listed", async ({ page }) => {
+      await loadSidepanel(page);
+      await logIn(page);
+      await expect(page.locator("#tax-year-select")).toHaveValue(seededYear, { timeout: 10000 });
+    });
 
-    await page.locator("#email").fill(E2E_EMAIL);
-    await page.locator("#password").fill(E2E_PASSWORD);
-    await page.locator("#login-btn").click();
-    await expect(page.locator("#main-section")).toBeVisible({ timeout: 15000 });
+    authedTest("choosing a tax year enables the form selector", async ({ page }) => {
+      await loadSidepanel(page);
+      await logIn(page);
+      const yearSelect = page.locator("#tax-year-select");
+      const formSelect = page.locator("#form-select");
+      await expect(yearSelect).toHaveValue(seededYear, { timeout: 10000 });
+      await expect(formSelect).toBeEnabled({ timeout: 10000 });
 
-    // Wait for tax years to load
-    await page.waitForTimeout(1000);
+      await yearSelect.selectOption("");
+      await expect(formSelect).toBeDisabled();
 
-    const yearSelect = page.locator("#tax-year-select");
-    const yearOptions = await yearSelect.locator("option").allTextContents();
-
-    // If there are tax returns, select the first real year
-    if (yearOptions.length > 1) {
-      await yearSelect.selectOption({ index: 1 });
-      await expect(page.locator("#form-select")).toBeEnabled();
-    }
+      await yearSelect.selectOption(seededYear);
+      await expect(formSelect).toBeEnabled({ timeout: 10000 });
+    });
   });
 
   test("logout returns to login section", async ({ page }) => {
     await loadSidepanel(page);
-
-    await page.locator("#email").fill(E2E_EMAIL);
-    await page.locator("#password").fill(E2E_PASSWORD);
-    await page.locator("#login-btn").click();
-    await expect(page.locator("#main-section")).toBeVisible({ timeout: 15000 });
+    await logIn(page);
 
     await page.locator("#logout-btn").click();
     await expect(page.locator("#login-section")).toBeVisible();
