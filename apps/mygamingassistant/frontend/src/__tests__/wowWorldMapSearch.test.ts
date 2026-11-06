@@ -10,6 +10,7 @@ import interiorsJson from "@/games/wow-forever/data/worldMap/classic/classicInte
 import { CITY_TRAINERS, TOWN_TRAINERS } from "@/games/wow-forever/data/professions/trainers";
 import { CRAFTING_RANKS, CRAFTING_TRAINERS, type RankTrainers } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
 import type { TrainerNpc } from "@/games/wow-forever/data/professions/professionTypes";
+import { GATHERING_GUIDES } from "@/games/wow-forever/data/professions/gathering/gatheringGuides";
 import { FACTION } from "@/games/wow-forever/types/worldMap";
 import { decodeWorldMap } from "@/games/wow-forever/worldMap/decodeWorldMap";
 import { areaLabel } from "@/games/wow-forever/worldMap/describeRank";
@@ -346,7 +347,7 @@ describe("Profession trainers link to the map", () => {
   const trainers = [
     ...CITY_TRAINERS.flatMap((c) => [c.cooking, c.fishing]),
     ...Object.values(TOWN_TRAINERS).flatMap((t) => [...t.cooking, ...t.fishing]),
-    ...Object.values(CRAFTING_TRAINERS).flatMap((t) => [
+    ...[...Object.values(CRAFTING_TRAINERS), ...Object.values(GATHERING_GUIDES).map((g) => g.trainers)].flatMap((t) => [
       ...Object.values(t.cities).flatMap((cities) => cities.map((c) => c.npc)),
       ...Object.values(t.towns).flat(),
     ]),

@@ -82,7 +82,7 @@ function columnReader(columns: unknown, what: string) {
   };
 }
 
-function decodeZone(raw: unknown): WorldZone {
+export function decodeZone(raw: unknown): WorldZone {
   const z = record(raw, "zone");
   const kind: ZoneKind | undefined = Object.values(ZONE_KIND).find((k) => k === z.kind);
   if (!kind) fail(`zone ${String(z.id)} has an unknown kind`);

@@ -160,11 +160,35 @@ def smelting_for(recipes: list[dict], mining: list[dict], mining_trainer: dict[i
         rec = makers.get(item)
         if rec is None or rec["spell"] in out:
             continue
-        if rec["learn"]["source"] == "start":
-            skill = 1
-        else:
-            classic = mining_trainer.get(rec["spell"])
-            skill = forever_trainer_skill(classic, rec) if classic else rec["yellow"]
-        out[rec["spell"]] = {**rec, "skill": skill}
+        out[rec["spell"]] = {**rec, "skill": _mining_learn_skill(rec, mining_trainer)}
         needed.extend(r["id"] for r in rec["reagents"])
     return sorted(out.values(), key=lambda r: (r["skill"], r["name"]))
+
+
+def _mining_learn_skill(rec: dict, mining_trainer: dict[int, int]) -> int:
+    """1 when it comes with Mining, else the Classic trainer's skill moved as Forever moved the recipe."""
+    if rec["learn"]["source"] == "start":
+        return 1
+    classic = mining_trainer.get(rec["spell"])
+    return forever_trainer_skill(classic, rec) if classic else rec["yellow"]
+
+
+def mining_records(mining: list[dict], mining_trainer: dict[int, int], focus: dict[int, str]) -> dict[str, list[dict]]:
+    """Every Mining recipe that makes something, for the Mining guide.
+
+    ``smelting``: the ones cast next to a spell focus (``focus``: recipe ->
+    "Forge", "Black Forge", "Molten Foundry"), each carrying it. ``camp``: the
+    rest — Forever's campsite items. Both carry ``skill`` as ``smelting_for`` does.
+    """
+    out: dict[str, list[dict]] = {"smelting": [], "camp": []}
+    for rec in mining:
+        if "creates" not in rec:
+            continue
+        row = {**rec, "skill": _mining_learn_skill(rec, mining_trainer)}
+        if spot := focus.get(rec["spell"]):
+            out["smelting"].append({**row, "focus": spot})
+        else:
+            out["camp"].append(row)
+    for rows in out.values():
+        rows.sort(key=lambda r: (r["skill"], r["yellow"], r["name"]))
+    return out

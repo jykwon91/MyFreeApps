@@ -1,6 +1,5 @@
 import { useSearchParams } from "react-router-dom";
-import CraftingGuideView from "@/games/wow-forever/components/crafting/CraftingGuideView";
-import SecondaryGuideView from "@/games/wow-forever/components/professions/SecondaryGuideView";
+import ProfessionGuideView from "@/games/wow-forever/components/professions/ProfessionGuideView";
 import GuideSectionNav from "@/games/wow-forever/components/guide/GuideSectionNav";
 import ProfessionPicker from "@/games/wow-forever/components/professions/ProfessionPicker";
 import LevelCapNote from "@/games/wow-forever/components/shared/LevelCapNote";
@@ -13,7 +12,8 @@ import { PROFESSIONS_DATA_STATUS } from "@/games/wow-forever/data/professions/pr
 import { levelCap, playerLevel } from "@/games/wow-forever/data/levelCap";
 import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import type { GuideProfession } from "@/games/wow-forever/data/professions/professionPicker";
-import { isCraftingProfession, parseGuideProfession } from "@/games/wow-forever/lib/guideProfession";
+import { GATHERING_SECTIONS } from "@/games/wow-forever/data/professions/gathering/gatheringConfig";
+import { isCraftingProfession, isGatheringProfession, parseGuideProfession } from "@/games/wow-forever/lib/guideProfession";
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
 import { PLAYER_FACTION_OPTIONS } from "@/games/wow-forever/data/playerFactionOptions";
 
@@ -39,12 +39,18 @@ function craftingSections(profession: CraftingProfession): readonly { id: string
   return [start, { id: LOOT_SECTION_ID, label: "Disenchant or sell?" }, ...rest];
 }
 
+/** The page nav for the picked profession's guide. */
+function guideSections(profession: GuideProfession): readonly { id: string; label: string }[] {
+  if (isCraftingProfession(profession)) return craftingSections(profession);
+  if (isGatheringProfession(profession)) return GATHERING_SECTIONS;
+  return SECTIONS;
+}
+
 /** /wow-forever/professions — how to train each profession and the fastest route to 300. */
 export default function WowProfessionsPage() {
   const [params, setParams] = useSearchParams();
   const profession = parseGuideProfession(params.get(PROFESSION_PARAM));
   const [player, updatePlayer] = usePlayerSettings();
-  const crafting = isCraftingProfession(profession);
 
   function selectProfession(next: GuideProfession) {
     setParams({ [PROFESSION_PARAM]: next }, { replace: true });
@@ -77,14 +83,10 @@ export default function WowProfessionsPage() {
           />
         </div>
         <LevelCapNote />
-        <GuideSectionNav sections={crafting ? craftingSections(profession) : SECTIONS} />
+        <GuideSectionNav sections={guideSections(profession)} />
       </div>
 
-      {crafting ? (
-        <CraftingGuideView profession={profession} faction={player.faction} zoneId={player.zoneId} level={player.level} />
-      ) : (
-        <SecondaryGuideView profession={profession} faction={player.faction} zoneId={player.zoneId} level={player.level} />
-      )}
+      <ProfessionGuideView profession={profession} faction={player.faction} zoneId={player.zoneId} level={player.level} />
     </main>
   );
 }

@@ -7,7 +7,9 @@ import TrainerList from "@/games/wow-forever/components/professions/TrainerList"
 import GuideSection from "@/games/wow-forever/components/guide/GuideSection";
 import { COOKING_ROUTE, COOKING_STEPS } from "@/games/wow-forever/data/professions/cooking";
 import { FISHING_ROUTE, FISHING_STEPS } from "@/games/wow-forever/data/professions/fishing";
-import { PROFESSION, type Profession } from "@/games/wow-forever/data/professions/professionTypes";
+import { SECONDARY_FOREVER_CHANGES } from "@/games/wow-forever/data/professions/foreverChanges";
+import { PROFESSION } from "@/games/wow-forever/data/professions/professionTypes";
+import type { SecondaryProfession } from "@/games/wow-forever/types/secondaryProfession";
 import { FOOD_SOURCES } from "@/games/wow-forever/data/food/recipeSourceData";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 
@@ -15,7 +17,7 @@ import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 const NO_CRAFTS = { madeBy: {}, recipes: [] };
 
 interface SecondaryGuideViewProps {
-  profession: Profession;
+  profession: SecondaryProfession;
   faction: PlayerFaction;
   zoneId: number | null;
   /** The player's level, to rank the mobs they can farm first. Null = not set. */
@@ -65,7 +67,7 @@ export default function SecondaryGuideView({ profession, faction, zoneId, level 
       </GuideSection>
 
       <GuideSection id="forever" title="What's different in Forever">
-        <ForeverChangesBox />
+        <ForeverChangesBox changes={SECONDARY_FOREVER_CHANGES[profession]} />
       </GuideSection>
     </>
   );

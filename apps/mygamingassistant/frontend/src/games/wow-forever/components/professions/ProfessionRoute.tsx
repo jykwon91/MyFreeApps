@@ -13,21 +13,23 @@ interface ProfessionRouteProps {
   showLegend: boolean;
   /** Where materials come from — Cooking; Fishing has none. */
   matPlace?: MatPlace;
+  /** Replaces the default caption — e.g. a gathering route says where its rows come from. */
+  caption?: string;
 }
 
 /** The leveling route as a list that stacks into cards on phones — no sideways scrolling. */
-export default function ProfessionRoute({ steps, faction, columns, showLegend, matPlace }: ProfessionRouteProps) {
+export default function ProfessionRoute({ steps, faction, columns, showLegend, matPlace, caption }: ProfessionRouteProps) {
   // When most rows are unconfirmed, a chip on each is noise — one caption says it.
   const unconfirmed = steps.filter((s) => s.confidence === "unconfirmed").length;
   const mostlyUnconfirmed = unconfirmed > steps.length / 2;
-  const caption = mostlyUnconfirmed
+  const defaultCaption = mostlyUnconfirmed
     ? "This is mostly the Classic route — not yet confirmed for Forever."
     : "Unconfirmed = Classic or community info not yet checked in Forever.";
 
   return (
     <div className="space-y-2">
       {showLegend ? <SkillColorLegend /> : null}
-      <p className="text-xs text-muted-foreground">{caption}</p>
+      <p className="text-xs text-muted-foreground">{caption ?? defaultCaption}</p>
       {matPlace ? <PriceStatus withoutPrices="showing the route without prices" /> : null}
       <div className="rounded-xl border bg-card overflow-hidden">
         <div className="hidden sm:grid sm:grid-cols-[6rem_1fr_1fr_1fr] sm:gap-4 p-3 border-b text-sm font-medium" aria-hidden>

@@ -1,11 +1,11 @@
 import TrainerMapLink from "@/games/wow-forever/components/professions/TrainerMapLink";
 import { CITY_TRAINERS, TOWN_TRAINERS } from "@/games/wow-forever/data/professions/trainers";
-import type { Profession } from "@/games/wow-forever/data/professions/professionTypes";
+import type { SecondaryProfession } from "@/games/wow-forever/types/secondaryProfession";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 import { formatCoord } from "@/games/wow-forever/worldMap/geometry";
 
 interface TrainerListProps {
-  profession: Profession;
+  profession: SecondaryProfession;
   faction: PlayerFaction;
 }
 

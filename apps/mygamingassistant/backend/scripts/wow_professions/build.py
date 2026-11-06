@@ -5,6 +5,9 @@ Leatherworking, Engineering, First Aid).
 
 Writes, under ``frontend/src/games/wow-forever/data/professions/crafting/``:
 
+* ``mining.json`` — every Mining recipe that makes something (SkillLine 186):
+  the smelts with the forge each needs, and Forever's campsite items, for the
+  Mining guide on the Professions page.
 * ``<profession>.json`` (one per key of ``PROFESSIONS``) — every recipe in the Forever
   client: yellow / grey skill, reagents, what it makes (and whether that can
   be disenchanted; for Engineering, the item's tooltip line), how it is learned, and what Forever changed against the
@@ -51,6 +54,7 @@ from scripts.wow_professions.crafts import (
     Items,
     build_recipes,
     forever_trainer_skill,
+    mining_records,
     smelting_for,
 )
 from scripts.wow_professions.effects import add_effects
@@ -128,6 +132,18 @@ def load_client(skill_line: int, branch: str, build: str) -> ClientRecipes:
         abilities=abilities, names=names, reagents=reagents, creates=creates, enchants=enchants,
         tools=_tools(set(abilities), kw),
     )
+
+
+def load_spell_focus(spells: set[int]) -> dict[int, str]:
+    """Recipe spell -> the object it is cast next to ("Forge", "Molten Foundry"), from the Forever client."""
+    kw = {"branch": WAGO_BRANCH, "build": WAGO_BUILD}
+    names = {_int(r["ID"]): r["Name_lang"].strip() for r in wago_table("SpellFocusObject", **kw)}
+    out: dict[int, str] = {}
+    for r in wago_table("SpellCastingRequirements", **kw):
+        spell, focus = _int(r["SpellID"]), _int(r["RequiresSpellFocus"])
+        if spell in spells and names.get(focus):
+            out[spell] = names[focus]
+    return out
 
 
 def _tools(spells: set[int], kw: dict[str, str]) -> dict[int, tuple[int, str]]:
@@ -314,6 +330,12 @@ def main() -> None:
     for key in DESCRIBES_FOR:
         add_effects(recipes[key], book, item_spells)
     smelting = {key: smelting_for(recipes[key], mining, mining_trainer) if key in SMELTS_FOR else [] for key in PROFESSIONS}
+
+    write_json(DATA_DIR / "mining.json", {
+        "source": f"wago.tools DB2 {WAGO_BRANCH} {WAGO_BUILD} (compared with {WAGO_ERA_BRANCH} {WAGO_ERA_BUILD})",
+        "skillLine": MINING_SKILL_LINE,
+        **mining_records(mining, mining_trainer, load_spell_focus({rec["spell"] for rec in mining})),
+    })
 
     reagent_ids = {r["id"] for rows in [*recipes.values(), *smelting.values()] for rec in rows for r in rec["reagents"]}
     crafted = made_by(reagent_ids)
