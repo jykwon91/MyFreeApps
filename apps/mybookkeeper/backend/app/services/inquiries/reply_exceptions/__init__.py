@@ -7,3 +7,4 @@ from app.services.inquiries.reply_exceptions.inquiry_reply_in_progress_error imp
 from app.services.inquiries.reply_exceptions.inquiry_reply_request_id_reused_error import InquiryReplyRequestIdReusedError  # noqa: F401
 from app.services.inquiries.reply_exceptions.inquiry_reply_unconfirmed_error import InquiryReplyUnconfirmedError  # noqa: F401
 from app.services.inquiries.reply_exceptions.inquiry_reply_sent_not_recorded_error import InquiryReplySentNotRecordedError  # noqa: F401
+from app.services.inquiries.reply_exceptions.inquiry_reply_sent_from_other_gmail_error import InquiryReplySentFromOtherGmailError  # noqa: F401

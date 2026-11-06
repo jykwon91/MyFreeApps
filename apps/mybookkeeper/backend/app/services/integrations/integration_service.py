@@ -18,6 +18,7 @@ from app.models.responses.queue_item_info import QueueItemInfo
 from app.models.responses.retry_result import RetryResult
 from app.models.responses.sync_log_info import SyncLogInfo
 from app.repositories import email_queue_repo, integration_repo, sync_log_repo, user_repo
+from app.services.email import gmail_mailbox
 from platform_shared.services.auth_event_service import log_auth_event
 
 logger = logging.getLogger(__name__)
@@ -152,12 +153,21 @@ async def handle_gmail_callback(code: str, state: str) -> None:
         logger.exception("Gmail OAuth token exchange failed (fetch_token)")
         raise
     creds = flow.credentials
+    if not creds.refresh_token:
+        # The consent prompt always gets one. Without it the connection can't
+        # outlive this access token, and a reconnect would keep another account's.
+        logger.error("Gmail OAuth connect failed: Google returned no refresh token")
+        raise ValueError("Google didn't return a refresh token. Reconnect Gmail and try again.")
     expiry = creds.expiry or datetime.now(timezone.utc) + timedelta(seconds=3600)
 
     # Google returns the actually-granted scopes (incremental consent may
     # mean fewer than what we requested). Persist them so we can detect
     # missing send-scope without a Google round-trip.
     granted_scopes = list(creds.scopes) if creds.scopes else []
+
+    # Before anything is saved: a connection is only usable once we know which
+    # account it is, since every send claim records the address it went through.
+    gmail_address = await gmail_mailbox.address_of_new_connection(creds)
 
     try:
         async with unit_of_work() as db:
@@ -169,6 +179,7 @@ async def handle_gmail_callback(code: str, state: str) -> None:
                 refresh_token=creds.refresh_token,
                 token_expiry=expiry,
                 scopes=granted_scopes,
+                gmail_address=gmail_address,
             )
             # A successful re-auth clears any stale reauth state so the UI
             # reconnect banner goes away immediately after the OAuth popup closes.

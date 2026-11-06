@@ -192,6 +192,7 @@ async def claim_for_send(
     transaction_id: uuid.UUID,
     organization_id: uuid.UUID,
     send_message_id: str,
+    sender_gmail_address: str,
     claimed_at: _dt.datetime,
 ) -> PendingRentReceipt | None:
     """Move a ``pending`` row to ``sending``; return it, or None if not pending.
@@ -210,6 +211,7 @@ async def claim_for_send(
             status="sending",
             send_message_id=send_message_id,
             send_claimed_at=claimed_at,
+            sender_gmail_address=sender_gmail_address,
             sent_via_attachment_id=None,
             updated_at=claimed_at,
         )
@@ -285,6 +287,7 @@ async def release_claim(
             status="pending",
             send_message_id=None,
             send_claimed_at=None,
+            sender_gmail_address=None,
             sent_via_attachment_id=None,
             updated_at=released_at,
         )
@@ -309,6 +312,28 @@ async def mark_dismissed_if_pending(
             PendingRentReceipt.status == "pending",
             PendingRentReceipt.deleted_at.is_(None),
         )
+        .values(status="dismissed", updated_at=dismissed_at)
+        .execution_options(synchronize_session=False)
+    )
+    return result.rowcount == 1
+
+
+async def mark_dismissed_if_claimed(
+    db: AsyncSession,
+    *,
+    receipt_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    send_message_id: str,
+    dismissed_at: _dt.datetime,
+) -> bool:
+    """``sending`` → ``dismissed``, only while the claim is still the one checked.
+
+    For a claim that can't be settled because Gmail now holds another account.
+    The claim's Message-ID, address and PDF stay as the record of the attempt.
+    """
+    result = await db.execute(
+        update(PendingRentReceipt)
+        .where(*_held_by(receipt_id, organization_id, send_message_id))
         .values(status="dismissed", updated_at=dismissed_at)
         .execution_options(synchronize_session=False)
     )

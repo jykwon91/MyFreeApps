@@ -30,6 +30,7 @@ from app.services.leases.exceptions import (
     ReceiptMissingSendScopeError,
     ReceiptSendInProgressError,
     ReceiptSendUnconfirmedError,
+    ReceiptSentFromOtherGmailError,
     ReceiptSentNotRecordedError,
     ReceiptTenantOfOtherMemberError,
     ReceiptTransactionNotAttributedError,
@@ -40,6 +41,7 @@ from app.services.leases.receipt_send_error_details import (
     RECEIPT_GMAIL_REAUTH_REQUIRED,
     RECEIPT_SEND_IN_PROGRESS,
     RECEIPT_SEND_UNCONFIRMED,
+    RECEIPT_SENT_FROM_OTHER_GMAIL,
     RECEIPT_SENT_NOT_RECORDED,
 )
 
@@ -93,6 +95,13 @@ async def send_receipt(
         raise HTTPException(status_code=409, detail=RECEIPT_ALREADY_SENT) from exc
     except ReceiptSendInProgressError as exc:
         raise HTTPException(status_code=409, detail=RECEIPT_SEND_IN_PROGRESS) from exc
+    except ReceiptSentFromOtherGmailError as exc:
+        # Kept, not resent: the tenant may have it already. Clients name the
+        # account so the host can reconnect it or dismiss the receipt.
+        raise HTTPException(
+            status_code=409,
+            detail={"code": RECEIPT_SENT_FROM_OTHER_GMAIL, "sender_gmail_address": exc.sender_gmail_address},
+        ) from exc
     except ReceiptDismissedError as exc:
         raise HTTPException(status_code=409, detail=RECEIPT_DISMISSED) from exc
     except (

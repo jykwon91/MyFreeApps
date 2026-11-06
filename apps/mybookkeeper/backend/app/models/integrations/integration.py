@@ -6,6 +6,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 
+from app.core.encrypted_string_type import EncryptedString
 from app.db.base import Base
 from app.core.security import decrypt_token, encrypt_token
 
@@ -29,6 +30,12 @@ class Integration(Base):
     needs_reauth: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     last_reauth_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     last_reauth_failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # The connected Gmail account (getProfile), so a send claim taken on one
+    # account is never settled by searching another. Null on rows connected
+    # before it was recorded; filled in before the next send. ``pii_key_version``
+    # tracks its key: ``key_version`` covers the OAuth tokens, another key family.
+    gmail_address: Mapped[str | None] = mapped_column(EncryptedString(255), nullable=True)
+    pii_key_version: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1, server_default="1")
 
     __table_args__ = (UniqueConstraint("user_id", "provider", name="uq_integration_user_provider"),)
 

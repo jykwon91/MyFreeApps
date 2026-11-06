@@ -21,7 +21,13 @@ Never emailing twice (``client_request_id``):
       running;
     - after that, settles the claim by looking the Message-ID up in Gmail:
       found → the reply is recorded and returned; not found → the claim is
-      released and this attempt sends.
+      released and this attempt sends;
+    - unless the claim went through a Gmail account that's no longer the
+      connected one (``InquiryReplySentFromOtherGmailError``): that mailbox
+      can't be searched, so the claim is kept and nothing is sent.
+
+    Each claim records the Gmail address it sends through
+    (``reply_claim_settlement``).
 
     A send Gmail definitely refused releases its claim. One whose outcome is
     unknown (timeout, 5xx), or that was sent but couldn't be recorded, keeps
@@ -48,12 +54,9 @@ import logging
 import uuid
 from email.utils import make_msgid
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.inquiries.inquiry_reply_send import InquiryReplySend
 from app.repositories import (
-    inquiry_event_repo,
     inquiry_message_repo,
     inquiry_repo,
     inquiry_reply_send_repo,
@@ -64,10 +67,10 @@ from app.repositories.listings import listing_repo
 from app.repositories.user import user_repo
 from app.schemas.inquiries.inquiry_message_response import InquiryMessageResponse
 from app.schemas.inquiries.inquiry_reply_request import InquiryReplyRequest
-from app.services.email import gmail_sent_lookup, gmail_service
-from app.services.email.app_sent_email_service import record_app_sent_email
-from app.services.email.constants import APP_SENT_INQUIRY_REPLY_FILTER_REASON, GMAIL_MESSAGE_ID_DOMAIN
+from app.services.email import gmail_mailbox, gmail_service
+from app.services.email.constants import GMAIL_MESSAGE_ID_DOMAIN, GMAIL_PURPOSE_SEND_REPLIES
 from app.services.email.exceptions import (
+    GmailAccountUnknownError,
     GmailReauthRequiredError,
     GmailSendError,
     GmailSendOutcomeUnknownError,
@@ -83,46 +86,19 @@ from app.services.inquiries.reply_exceptions import (
     InquiryReplyMissingSendScopeError,
     InquiryReplyRequestIdReusedError,
     InquiryReplySendFailedError,
-    InquiryReplySentNotRecordedError,
     InquiryReplyUnconfirmedError,
 )
+from app.services.inquiries.reply_claim_settlement import release, settle_stale_claim
+from app.services.inquiries.reply_recording import record_reply, recorded_message
 from app.services.inquiries.reply_request_hash import reply_request_hash
 from app.services.inquiries.reply_send_context import ReplySendContext
 from app.services.integrations import integration_service
 
 logger = logging.getLogger(__name__)
 
-_PURPOSE = "send replies"
-
 
 def _now() -> _dt.datetime:
     return _dt.datetime.now(_dt.timezone.utc)
-
-
-def _next_stage_for_reply(current_stage: str) -> str | None:
-    """Decide the post-reply stage. Returns None if no transition needed.
-
-    Replies from 'new' or 'triaged' advance the inquiry to 'replied'.
-    Later stages are preserved — host has already moved the inquiry forward.
-    """
-    if current_stage in ("new", "triaged"):
-        return "replied"
-    return None
-
-
-async def _recorded_message(
-    db: AsyncSession, claim: InquiryReplySend, inquiry_id: uuid.UUID,
-) -> InquiryMessageResponse:
-    """The message a ``sent`` claim recorded."""
-    message = (
-        await inquiry_message_repo.get_for_inquiry(db, claim.inquiry_message_id, inquiry_id)
-        if claim.inquiry_message_id is not None
-        else None
-    )
-    if message is None:
-        # The check constraint and the cascading FK rule this out.
-        raise RuntimeError(f"Sent reply claim {claim.id} has no message")
-    return InquiryMessageResponse.model_validate(message)
 
 
 async def _load(
@@ -154,7 +130,7 @@ async def _load(
                         "This request id was already used for a different reply.",
                     )
                 if claim.status == "sent":
-                    return await _recorded_message(db, claim, inquiry_id)
+                    return await recorded_message(db, claim, inquiry_id)
                 if not is_send_claim_stale(claim.claimed_at, _now()):
                     raise InquiryReplyInProgressError("This reply is being sent right now.")
                 stale_claim = claim
@@ -212,162 +188,6 @@ async def _load(
         )
 
 
-async def _record_reply(
-    *,
-    organization_id: uuid.UUID,
-    user_id: uuid.UUID,
-    inquiry_id: uuid.UUID,
-    ctx: ReplySendContext,
-    subject: str,
-    gmail_id: str,
-    claim: tuple[uuid.UUID, str] | None,
-) -> InquiryMessageResponse:
-    """Record a reply Gmail sent: app-sent log, then message + claim + stage + event."""
-    # Its own transaction, first, so the Gmail sync never re-ingests the host's
-    # own reply even if the transaction below fails.
-    await record_app_sent_email(
-        organization_id=organization_id,
-        user_id=user_id,
-        message_id=gmail_id,
-        from_address=ctx.from_address,
-        subject=subject,
-        reason=APP_SENT_INQUIRY_REPLY_FILTER_REASON,
-    )
-    now = _now()
-    lost_claim_id: uuid.UUID | None = None
-    try:
-        async with unit_of_work() as db:
-            message = await inquiry_message_repo.create(
-                db,
-                inquiry_id=inquiry_id,
-                direction="outbound",
-                channel="email",
-                from_address=ctx.from_address,
-                to_address=ctx.to_address,
-                subject=subject,
-                parsed_body=ctx.body,
-                email_message_id=gmail_id,
-                sent_at=now,
-            )
-            if claim is not None and not await inquiry_reply_send_repo.mark_sent(
-                db,
-                claim_id=claim[0],
-                send_message_id=claim[1],
-                inquiry_message_id=message.id,
-            ):
-                # Another attempt settled this claim first; keep its record, not ours.
-                await db.rollback()
-                lost_claim_id = claim[0]
-            else:
-                await _advance_inquiry(
-                    db, organization_id=organization_id, inquiry_id=inquiry_id,
-                    gmail_id=gmail_id, now=now,
-                )
-    except LookupError:
-        raise
-    except Exception as exc:
-        logger.error(
-            "Reply on inquiry %s was emailed (Gmail id %s) but couldn't be recorded",
-            inquiry_id, gmail_id, exc_info=True,
-        )
-        raise InquiryReplySentNotRecordedError("The reply was emailed but not saved.") from exc
-
-    if lost_claim_id is not None:
-        return await _claimed_reply(lost_claim_id, inquiry_id)
-    return InquiryMessageResponse.model_validate(message)
-
-
-async def _advance_inquiry(
-    db: AsyncSession,
-    *,
-    organization_id: uuid.UUID,
-    inquiry_id: uuid.UUID,
-    gmail_id: str,
-    now: _dt.datetime,
-) -> None:
-    """Move the stage on and log the reply, reading the inquiry inside the transaction."""
-    inquiry_in_tx = await inquiry_repo.get_by_id(db, inquiry_id, organization_id)
-    if inquiry_in_tx is None:
-        # Deleted after the send. The email is in the recipient's inbox;
-        # the claim went with the inquiry.
-        logger.error(
-            "Inquiry %s vanished between Gmail send and message persist "
-            "(gmail_message_id=%s)", inquiry_id, gmail_id,
-        )
-        raise LookupError(f"Inquiry {inquiry_id} not found")
-
-    next_stage = _next_stage_for_reply(inquiry_in_tx.stage)
-    if next_stage is not None and next_stage != inquiry_in_tx.stage:
-        await inquiry_repo.update_inquiry(
-            db, inquiry_id, organization_id, {"stage": next_stage},
-        )
-
-    await inquiry_event_repo.create(
-        db,
-        inquiry_id=inquiry_id,
-        event_type="replied",
-        actor="host",
-        occurred_at=now,
-    )
-
-
-async def _claimed_reply(claim_id: uuid.UUID, inquiry_id: uuid.UUID) -> InquiryMessageResponse:
-    """What became of a claim another attempt settled: its reply, or still in flight."""
-    async with AsyncSessionLocal() as db:
-        current = await inquiry_reply_send_repo.get_by_id(db, claim_id)
-        if current is not None and current.status == "sent":
-            return await _recorded_message(db, current, inquiry_id)
-    raise InquiryReplyInProgressError("This reply is being sent right now.")
-
-
-async def _release(claim_id: uuid.UUID, send_message_id: str) -> bool:
-    async with unit_of_work() as db:
-        return await inquiry_reply_send_repo.release(
-            db, claim_id=claim_id, send_message_id=send_message_id,
-        )
-
-
-async def _settle_stale_claim(
-    *,
-    organization_id: uuid.UUID,
-    user_id: uuid.UUID,
-    inquiry_id: uuid.UUID,
-    ctx: ReplySendContext,
-    subject: str,
-    claim: InquiryReplySend,
-) -> InquiryMessageResponse | None:
-    """Finish an earlier attempt Gmail did send, or release its claim. None once released."""
-    try:
-        gmail_id = await gmail_sent_lookup.find_by_message_id_header(
-            ctx.integration, claim.send_message_id, purpose=_PURPOSE,
-        )
-    except GmailReauthRequiredError as exc:
-        raise InquiryReplyAuthExpiredError(str(exc)) from exc
-    except Exception as exc:
-        logger.error(
-            "Could not check Gmail for reply claim %s (Message-ID %s)",
-            claim.id, claim.send_message_id, exc_info=True,
-        )
-        raise InquiryReplyUnconfirmedError("Couldn't check Gmail for this reply.") from exc
-
-    if gmail_id is not None:
-        logger.info("Reply claim %s was already in Gmail's Sent; recording it", claim.id)
-        return await _record_reply(
-            organization_id=organization_id,
-            user_id=user_id,
-            inquiry_id=inquiry_id,
-            ctx=ctx,
-            subject=subject,
-            gmail_id=gmail_id,
-            claim=(claim.id, claim.send_message_id),
-        )
-
-    logger.warning("Reply claim %s is stale and Gmail has no such message; releasing it", claim.id)
-    if not await _release(claim.id, claim.send_message_id):
-        raise InquiryReplyInProgressError("This reply is being sent right now.")
-    return None
-
-
 async def send_reply(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
@@ -385,21 +205,37 @@ async def send_reply(
         return loaded
     ctx = loaded
 
+    # A claim records the Gmail account it goes through, so it is only ever
+    # settled by searching that account's mailbox.
+    sender_address: str | None = None
+    if key is not None:
+        try:
+            sender_address = await gmail_mailbox.ensure_gmail_address(
+                ctx.integration, purpose=GMAIL_PURPOSE_SEND_REPLIES,
+            )
+        except GmailReauthRequiredError as exc:
+            raise InquiryReplyAuthExpiredError(str(exc)) from exc
+        except GmailAccountUnknownError as exc:
+            raise InquiryReplySendFailedError(str(exc)) from exc
+
     if ctx.stale_claim is not None:
-        settled = await _settle_stale_claim(
+        if sender_address is None:
+            raise RuntimeError(f"Inquiry {inquiry_id} has a stale reply claim but no request id")
+        settled = await settle_stale_claim(
             organization_id=organization_id,
             user_id=user_id,
             inquiry_id=inquiry_id,
             ctx=ctx,
             subject=request.subject,
             claim=ctx.stale_claim,
+            connected_address=sender_address,
         )
         if settled is not None:
             return settled
 
     send_message_id = make_msgid(domain=GMAIL_MESSAGE_ID_DOMAIN)
     claim: tuple[uuid.UUID, str] | None = None
-    if key is not None:
+    if key is not None and sender_address is not None:
         try:
             async with unit_of_work() as db:
                 row = await inquiry_reply_send_repo.claim(
@@ -408,6 +244,7 @@ async def send_reply(
                     client_request_id=key,
                     request_hash=request_hash,
                     send_message_id=send_message_id,
+                    sender_gmail_address=sender_address,
                     claimed_at=_now(),
                 )
                 claim = (row.id, send_message_id)
@@ -435,7 +272,7 @@ async def send_reply(
     except (GmailReauthRequiredError, GmailSendScopeError, GmailSendError) as exc:
         logger.warning("Inquiry %s reply refused by Gmail: %s", inquiry_id, exc)
         if claim is not None:
-            await _release(*claim)
+            await release(*claim)
         if isinstance(exc, GmailReauthRequiredError):
             # needs_reauth is already set by send_message before raising.
             raise InquiryReplyAuthExpiredError(str(exc)) from exc
@@ -444,7 +281,7 @@ async def send_reply(
             raise InquiryReplyMissingSendScopeError(str(exc)) from exc
         raise InquiryReplySendFailedError(str(exc)) from exc
 
-    return await _record_reply(
+    return await record_reply(
         organization_id=organization_id,
         user_id=user_id,
         inquiry_id=inquiry_id,

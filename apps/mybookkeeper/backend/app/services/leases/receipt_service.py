@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.mappers.pending_receipt_mapper import to_pending_receipt_response
+from app.models.leases.pending_rent_receipt import PendingRentReceipt
 from app.repositories import integration_repo
 from app.repositories.applicants import applicant_repo
 from app.repositories.leases import (
@@ -21,6 +22,8 @@ from app.repositories.transactions import transaction_repo
 from app.repositories.user import user_repo
 from app.repositories.inquiries import inquiry_repo
 from app.schemas.leases.receipt_response import PendingReceiptListResponse
+from app.services.email.gmail_address_match import same_gmail_address
+from app.services.email.send_claim_staleness import is_send_claim_stale
 from app.services.leases.exceptions import (
     ReceiptSendInProgressError,
     ReceiptTransactionNotAttributedError,
@@ -175,8 +178,46 @@ async def dismiss_pending_receipt(
     if pending is None:
         raise LookupError("No pending receipt found for this transaction")
     if pending.status == "sending":
+        if await _dismiss_if_sent_from_other_gmail(pending, organization_id):
+            return
         raise ReceiptSendInProgressError("This receipt is being sent; it can't be dismissed.")
     raise ValueError(f"Receipt is already {pending.status}")
+
+
+async def _dismiss_if_sent_from_other_gmail(
+    receipt: PendingRentReceipt, organization_id: uuid.UUID,
+) -> bool:
+    """Dismiss a stale ``sending`` receipt whose account is no longer connected.
+
+    Sending can't settle it (the mailbox it went through can't be searched),
+    so the host is the one who can say whether the tenant got it. A claim
+    still within the stale window may belong to a send that's still running.
+    """
+    now = _dt.datetime.now(_dt.timezone.utc)
+    if (
+        receipt.sender_gmail_address is None
+        or receipt.send_message_id is None
+        or receipt.send_claimed_at is None
+        or not is_send_claim_stale(receipt.send_claimed_at, now)
+    ):
+        return False
+    async with unit_of_work() as db:
+        integration = await integration_repo.get_by_org_and_provider(db, organization_id, "gmail")
+        if integration is not None and (
+            integration.gmail_address is None
+            or same_gmail_address(integration.gmail_address, receipt.sender_gmail_address)
+        ):
+            return False
+        dismissed = await pending_rent_receipt_repo.mark_dismissed_if_claimed(
+            db,
+            receipt_id=receipt.id,
+            organization_id=organization_id,
+            send_message_id=receipt.send_message_id,
+            dismissed_at=now,
+        )
+    if dismissed:
+        logger.info("Dismissed receipt %s, left sending on a Gmail account no longer connected", receipt.id)
+    return dismissed
 
 
 async def preview_receipt_pdf(

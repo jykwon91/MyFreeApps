@@ -66,6 +66,22 @@ async def mark_needs_reauth_if_unchanged(
     return True
 
 
+async def set_gmail_address_if_unchanged(
+    db: AsyncSession, connection: GmailConnection, gmail_address: str,
+) -> bool:
+    """Record the address of a row connected before addresses were recorded.
+
+    Returns False, writing nothing, when the row was reconnected since
+    ``connection`` was read: the address belongs to the old account, and the
+    reconnect recorded the new one. Not flushed — the caller commits.
+    """
+    current = await _lock_if_credentials_unchanged(db, connection)
+    if current is None:
+        return False
+    current.gmail_address = gmail_address
+    return True
+
+
 async def clear_reauth_state(db: AsyncSession, integration: Integration) -> None:
     """Clear the reauth flag after a successful OAuth re-flow.
 
@@ -90,10 +106,17 @@ async def upsert_gmail(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
     access_token: str,
-    refresh_token: str | None,
+    refresh_token: str,
     token_expiry: datetime,
     scopes: list[str] | None = None,
+    *,
+    gmail_address: str,
 ) -> Integration:
+    """Write a fresh connection's tokens and Gmail address onto the org's row.
+
+    Everything is overwritten: a reconnect may be a different account, and
+    keeping any of the old account's credentials would pair them with it.
+    """
     # Locked and re-read so a reauth flag committed by a Gmail call on the old
     # connection is loaded here, and the callback's clear_reauth_state writes it back.
     result = await db.execute(
@@ -109,9 +132,9 @@ async def upsert_gmail(
 
     if existing:
         existing.access_token = access_token
-        if refresh_token is not None:
-            existing.refresh_token = refresh_token
+        existing.refresh_token = refresh_token
         existing.token_expiry = token_expiry
+        existing.gmail_address = gmail_address
         if scopes is not None:
             metadata = dict(existing.metadata_ or {})
             metadata["scopes"] = scopes
@@ -128,6 +151,7 @@ async def upsert_gmail(
         provider="gmail",
         token_expiry=token_expiry,
         metadata_=metadata or None,
+        gmail_address=gmail_address,
     )
     integration.access_token = access_token
     integration.refresh_token = refresh_token

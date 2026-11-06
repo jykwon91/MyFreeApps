@@ -21,7 +21,7 @@ def _server_codes() -> set[str]:
 
 def test_every_send_code_is_in_the_api_client_type() -> None:
     codes = _server_codes()
-    assert len(codes) == 6
+    assert len(codes) == 7
     assert set(re.findall(r'"(\w+)"', CODE_TYPE.read_text())) == codes
 
 

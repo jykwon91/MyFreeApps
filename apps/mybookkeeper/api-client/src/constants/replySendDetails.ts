@@ -5,3 +5,4 @@ export const REPLY_SEND_UNCONFIRMED = "reply_send_unconfirmed";
 export const REPLY_SENT_NOT_RECORDED = "reply_sent_not_recorded";
 export const REPLY_GMAIL_REAUTH_REQUIRED = "gmail_reauth_required";
 export const REPLY_NO_RECIPIENT = "reply_no_recipient";
+export const REPLY_SENT_FROM_OTHER_GMAIL = "reply_sent_from_other_gmail";

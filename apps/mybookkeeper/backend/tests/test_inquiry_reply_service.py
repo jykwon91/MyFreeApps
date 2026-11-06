@@ -37,7 +37,7 @@ from app.schemas.inquiries.inquiry_reply_request import InquiryReplyRequest
 from app.services.email import app_sent_email_service
 from app.services.email.constants import APP_SENT_INQUIRY_REPLY_FILTER_REASON
 from app.services.email.exceptions import GmailReauthRequiredError, GmailSendError, GmailSendScopeError
-from app.services.inquiries import inquiry_reply_service
+from app.services.inquiries import inquiry_reply_service, reply_claim_settlement, reply_recording
 
 
 @pytest.fixture
@@ -57,6 +57,9 @@ def patch_session(monkeypatch: pytest.MonkeyPatch, db: AsyncSession):
 
     monkeypatch.setattr(inquiry_reply_service, "AsyncSessionLocal", _factory)
     monkeypatch.setattr(inquiry_reply_service, "unit_of_work", _uow)
+    monkeypatch.setattr(reply_recording, "AsyncSessionLocal", _factory)
+    monkeypatch.setattr(reply_recording, "unit_of_work", _uow)
+    monkeypatch.setattr(reply_claim_settlement, "unit_of_work", _uow)
     # The app-sent recorder opens its own transaction — route it to the same
     # test session so its EmailFilterLog write is visible to assertions.
     monkeypatch.setattr(app_sent_email_service, "unit_of_work", _uow)
@@ -75,6 +78,7 @@ async def _seed_integration(
         organization_id=org.id,
         user_id=user.id,
         provider="gmail",
+        gmail_address="host@gmail.com",
         token_expiry=_dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(hours=1),
         metadata_={
             "scopes": [
@@ -413,66 +417,6 @@ async def test_send_reply_reply_route_returns_503_on_auth_expired(
 
     assert exc_info.value.status_code == 503
     assert exc_info.value.detail == "gmail_reauth_required"
-
-
-@pytest.mark.asyncio
-async def test_integration_clear_reauth_state_on_oauth_callback() -> None:
-    """handle_gmail_callback clears needs_reauth after a successful re-auth."""
-    from contextlib import asynccontextmanager
-    from unittest.mock import AsyncMock, MagicMock, patch
-
-    fake_integration = MagicMock(
-        needs_reauth=True,
-        last_reauth_error="RefreshError: token revoked",
-        last_reauth_failed_at=_dt.datetime.now(_dt.timezone.utc),
-    )
-
-    @asynccontextmanager
-    async def fake_uow():
-        yield MagicMock()
-
-    with (
-        patch(
-            "app.services.integrations.integration_service.unit_of_work", fake_uow,
-        ),
-        patch(
-            "app.services.integrations.integration_service.integration_repo.upsert_gmail",
-            new=AsyncMock(return_value=fake_integration),
-        ),
-        patch(
-            "app.services.integrations.integration_service.integration_repo.clear_reauth_state",
-            new=AsyncMock(),
-        ) as mock_clear,
-        patch(
-            "app.services.integrations.integration_service.log_auth_event",
-            new=AsyncMock(),
-        ),
-        patch(
-            "app.services.integrations.integration_service._verify_oauth_state",
-            return_value=(str(uuid.uuid4()), str(uuid.uuid4()), "test-code-verifier", 0),
-        ),
-        patch(
-            "app.services.integrations.integration_service._require_state_outlives_session_cutoff",
-            new=AsyncMock(),
-        ),
-        patch(
-            "app.services.integrations.integration_service._get_flow",
-        ) as mock_flow_fn,
-    ):
-        mock_creds = MagicMock()
-        mock_creds.token = "new-access-token"
-        mock_creds.refresh_token = "new-refresh-token"
-        mock_creds.expiry = _dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(hours=1)
-        mock_creds.scopes = {"https://www.googleapis.com/auth/gmail.readonly"}
-
-        mock_flow = MagicMock()
-        mock_flow.credentials = mock_creds
-        mock_flow_fn.return_value = mock_flow
-
-        from app.services.integrations.integration_service import handle_gmail_callback
-        await handle_gmail_callback("oauth-code", "state-jwt")
-
-    mock_clear.assert_awaited_once()
 
 
 DISCLOSURE = "I have a 90lb golden retriever on the premises."

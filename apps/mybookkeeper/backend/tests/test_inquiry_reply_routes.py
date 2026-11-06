@@ -22,6 +22,7 @@ from app.services.inquiries.reply_exceptions import (
     InquiryReplyAuthExpiredError,
     InquiryReplyInProgressError,
     InquiryReplyRequestIdReusedError,
+    InquiryReplySentFromOtherGmailError,
     InquiryReplySentNotRecordedError,
     InquiryReplyUnconfirmedError,
 )
@@ -237,3 +238,20 @@ class TestSendReply:
         app.dependency_overrides.clear()
         assert r.status_code == 201
         assert send_reply.call_args.args[3].client_request_id == key
+
+
+@pytest.mark.asyncio
+async def test_reply_from_another_gmail_names_the_account() -> None:
+    app.dependency_overrides[require_write_access] = lambda: _ctx(uuid.uuid4(), uuid.uuid4())
+    with patch(
+        "app.api.inquiries.inquiry_reply_service.send_reply",
+        side_effect=InquiryReplySentFromOtherGmailError("old@gmail.com"),
+    ):
+        with TestClient(app, raise_server_exceptions=False) as client:
+            r = client.post(f"/inquiries/{uuid.uuid4()}/reply", json={"subject": "s", "body": "b"})
+    app.dependency_overrides.clear()
+    assert r.status_code == 409
+    assert r.json()["detail"] == {
+        "code": details.REPLY_SENT_FROM_OTHER_GMAIL,
+        "sender_gmail_address": "old@gmail.com",
+    }

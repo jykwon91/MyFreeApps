@@ -267,6 +267,19 @@ class TestSendReceipt:
         assert resp.status_code == status
         assert resp.json()["detail"] == detail
 
+    def test_send_from_another_gmail_names_the_account(self, client, override_ctx) -> None:
+        with patch(
+            "app.services.leases.receipt_send_service.send_receipt",
+            new_callable=AsyncMock,
+            side_effect=exc.ReceiptSentFromOtherGmailError("old@gmail.com"),
+        ):
+            resp = client.post(f"/rent-receipts/{uuid.uuid4()}/send", json=_SEND_BODY)
+        assert resp.status_code == 409
+        assert resp.json()["detail"] == {
+            "code": "receipt_sent_from_other_gmail",
+            "sender_gmail_address": "old@gmail.com",
+        }
+
     def test_no_lease_returns_422_with_message(self, client, override_ctx) -> None:
         with patch(
             "app.services.leases.receipt_send_service.send_receipt",

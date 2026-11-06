@@ -5,4 +5,5 @@ export type ReceiptSendErrorCode =
   | "receipt_dismissed"
   | "receipt_send_unconfirmed"
   | "receipt_sent_not_recorded"
+  | "receipt_sent_from_other_gmail"
   | "gmail_reauth_required";

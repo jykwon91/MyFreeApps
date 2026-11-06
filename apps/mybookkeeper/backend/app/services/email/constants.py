@@ -84,3 +84,7 @@ GMAIL_SEND_CLAIM_STALE_AFTER = _dt.timedelta(minutes=15)
 GMAIL_SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
 # 403 reasons that mean "slow down", not "missing permission".
 GMAIL_RATE_LIMIT_REASONS = frozenset({"rateLimitExceeded", "userRateLimitExceeded", "dailyLimitExceeded"})
+
+# Finish Gmail's reconnect messages: "Reconnect Gmail to send receipts."
+GMAIL_PURPOSE_SEND_RECEIPTS = "send receipts"
+GMAIL_PURPOSE_SEND_REPLIES = "send replies"

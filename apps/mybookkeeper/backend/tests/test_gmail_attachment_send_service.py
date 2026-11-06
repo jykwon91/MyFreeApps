@@ -20,8 +20,8 @@ from googleapiclient.errors import HttpError
 
 from app.services.email import (
     gmail_attachment_send_service,
+    gmail_read_executor,
     gmail_request_executor,
-    gmail_sent_lookup,
     gmail_service,
 )
 from app.services.email.constants import GMAIL_HTTP_TIMEOUT_SECONDS, GMAIL_SEND_CLAIM_STALE_AFTER, GMAIL_SEND_URL
@@ -271,10 +271,10 @@ def _service_whose_list(execute: Any, captured: dict[str, Any]) -> MagicMock:
 async def _find(service: MagicMock, *, attachment_filename: str | None = None) -> str | None:
     with (
         patch.object(
-            gmail_sent_lookup, "get_gmail_service",
+            gmail_read_executor, "get_gmail_service",
             return_value=(service, MagicMock(token="t0")),
         ),
-        patch.object(gmail_sent_lookup, "persist_refreshed_token", AsyncMock()),
+        patch.object(gmail_read_executor, "persist_refreshed_token", AsyncMock()),
     ):
         return await gmail_attachment_send_service.find_sent_message_id(
             _FakeIntegration(),
@@ -354,7 +354,7 @@ class TestFindSentMessage:
     @pytest.mark.asyncio
     async def test_401_marks_needs_reauth(self) -> None:
         mark = AsyncMock()
-        with patch.object(gmail_sent_lookup, "mark_integration_needs_reauth", mark):
+        with patch.object(gmail_read_executor, "mark_integration_needs_reauth", mark):
             with pytest.raises(GmailReauthRequiredError):
                 await _find(_service_whose_list(_http_error(401), {}))
         mark.assert_awaited_once()
