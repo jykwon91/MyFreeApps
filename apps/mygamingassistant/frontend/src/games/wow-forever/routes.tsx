@@ -18,6 +18,7 @@ const WowGearPage = lazy(() => import("@/games/wow-forever/pages/WowGearPage"));
 const WowRaidPage = lazy(() => import("@/games/wow-forever/pages/WowRaidPage"));
 const WowRaidPlannerPage = lazy(() => import("@/games/wow-forever/pages/WowRaidPlannerPage"));
 const WowSuggestPage = lazy(() => import("@/games/wow-forever/pages/WowSuggestPage"));
+const WowTriagePage = lazy(() => import("@/games/wow-forever/pages/WowTriagePage"));
 
 function withSuspense(page: ReactElement): ReactElement {
   return <Suspense fallback={<WowPageSkeleton />}>{page}</Suspense>;
@@ -56,4 +57,6 @@ export const wowForeverRoutes: RouteObject[] = [
   { path: "/wow-forever/raids/:webId/plan", element: withSuggestFooter(<WowRaidPlannerPage />, "dungeons_raids") },
   // The suggest page itself: no footer.
   { path: "/wow-forever/suggest", element: withSuspense(<WowSuggestPage />) },
+  // The operator-only triage screen: no footer, linked from nowhere, its own chunk.
+  { path: "/wow-forever/triage", element: withSuspense(<WowTriagePage />) },
 ];
