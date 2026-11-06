@@ -26,6 +26,44 @@ function yourSkill(cookingSkill: number, learnAt: number | null): string {
   return `You have ${cookingSkill}.`;
 }
 
+interface RecipeSourceBodyProps {
+  food: FoodRecord;
+  sources: ItemSources;
+  faction: PlayerFaction;
+  zoneId: number | null;
+  level: number | null;
+}
+
+/** The body of the "Learn the recipe" section — either a trainer note or item-source info. */
+function RecipeSourceBody({ food, sources, faction, zoneId, level }: RecipeSourceBodyProps) {
+  const { learn } = food;
+  if (learn.source === "trainer") {
+    return (
+      <div className="space-y-1">
+        <p className="text-sm">Any Cooking trainer teaches it — no recipe to buy.</p>
+        <Link to="/wow-forever/professions" className={DETAIL_LINK}>
+          Find a Cooking trainer in the Cooking guide
+        </Link>
+      </div>
+    );
+  }
+
+  const recipeId = learn.recipeItem ?? food.id;
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">Needs the item {learn.recipe}.</p>
+      {hasSources(sources) ? (
+        <FoodSourceList sources={sources} faction={faction} zoneId={zoneId} level={level} />
+      ) : (
+        <div className="space-y-1">
+          <p className="text-sm">{unknownSource(recipeId, "the recipe")}</p>
+          {isNewInForever(recipeId) ? <WowheadLink href={wowheadForeverItemUrl(recipeId)} /> : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** How to learn the recipe: the skill it takes and where the recipe comes from. */
 export default function FoodRecipeSection({ food, sources, learnAt, cookingSkill, faction, zoneId, level }: FoodRecipeSectionProps) {
   const { learn } = food;
@@ -38,28 +76,7 @@ export default function FoodRecipeSection({ food, sources, learnAt, cookingSkill
         {skillLine(learnAt, learn.greenAt, learn.greyAt)}
         {cookingSkill === null ? null : <span className="text-muted-foreground"> · {yourSkill(cookingSkill, learnAt)}</span>}
       </p>
-      {learn.source === "trainer" ? (
-        <div className="space-y-1">
-          <p className="text-sm">Any Cooking trainer teaches it — no recipe to buy.</p>
-          <Link to="/wow-forever/professions" className={DETAIL_LINK}>
-            Find a Cooking trainer in the Cooking guide
-          </Link>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <p className="text-sm text-muted-foreground">Needs the item {learn.recipe}.</p>
-          {hasSources(sources) ? (
-            <FoodSourceList sources={sources} faction={faction} zoneId={zoneId} level={level} />
-          ) : (
-            <div className="space-y-1">
-              <p className="text-sm">{unknownSource(learn.recipeItem ?? food.id, "the recipe")}</p>
-              {isNewInForever(learn.recipeItem ?? food.id) ? (
-                <WowheadLink href={wowheadForeverItemUrl(learn.recipeItem ?? food.id)} />
-              ) : null}
-            </div>
-          )}
-        </div>
-      )}
+      <RecipeSourceBody food={food} sources={sources} faction={faction} zoneId={zoneId} level={level} />
     </section>
   );
 }
