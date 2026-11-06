@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@platform/ui";
 import { ConfirmDialog } from "@platform/ui";
@@ -19,6 +19,8 @@ const PANEL_ID = "reply-templates-panel";
 export default function ReplyTemplatesManager() {
   const [view, setView] = useReplyTemplatesView();
   const canWrite = useCanWrite();
+  // Focus lands here when archiving takes the last template off the list.
+  const newButtonRef = useRef<HTMLButtonElement>(null);
   const [viewing, setViewing] = useState<ReplyTemplate | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<ReplyTemplate | null>(
     null,
@@ -77,6 +79,7 @@ export default function ReplyTemplatesManager() {
           <Button
             variant="primary"
             size="md"
+            ref={newButtonRef}
             onClick={handleNew}
             data-testid="reply-template-new-button"
           >
@@ -117,6 +120,7 @@ export default function ReplyTemplatesManager() {
         isLoading={isArchiving}
         onConfirm={handleArchive}
         onCancel={() => setArchiveCandidate(null)}
+        fallbackFocusRef={newButtonRef}
       />
     </section>
   );

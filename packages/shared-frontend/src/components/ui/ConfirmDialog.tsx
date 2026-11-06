@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, type RefObject } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import Button from "./Button";
 import Spinner from "../icons/Spinner";
+import { useRestoreFocusOnClose } from "../../hooks/useRestoreFocusOnClose";
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -30,6 +31,12 @@ export interface ConfirmDialogProps {
   onConfirm: () => void | Promise<void>;
   onCancel: () => void;
   children?: React.ReactNode;
+  /**
+   * Where focus goes if confirming removes the button that opened the dialog and no
+   * neighbouring item is left to take it (e.g. the last row of a list). Without it,
+   * focus lands on the matching control in the next or previous item when there is one.
+   */
+  fallbackFocusRef?: RefObject<HTMLElement | null>;
 }
 
 export default function ConfirmDialog({
@@ -43,8 +50,10 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
   children,
+  fallbackFocusRef,
 }: ConfirmDialogProps) {
   const [isPending, setIsPending] = useState(false);
+  const restoreFocus = useRestoreFocusOnClose(open, fallbackFocusRef);
 
   const isDestructive = variant === "danger" || variant === "destructive";
   const showLoading = isLoading || isPending;
@@ -65,7 +74,9 @@ export default function ConfirmDialog({
     <Dialog.Root open={open} onOpenChange={(isOpen) => { if (!isOpen) onCancel(); }}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 z-[70]" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] w-full max-w-sm rounded-lg border bg-card p-6 shadow-lg">
+        <Dialog.Content
+          onCloseAutoFocus={restoreFocus}
+          className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] w-full max-w-sm rounded-lg border bg-card p-6 shadow-lg">
           <Dialog.Title className="text-base font-semibold">{title}</Dialog.Title>
           <Dialog.Description className="text-sm text-muted-foreground mt-2">
             {description}

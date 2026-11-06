@@ -311,6 +311,25 @@ test.describe("Archiving reply templates", () => {
     await expect(page.getByTestId(`archived-reply-template-row-${ACTIVE.id}`)).toBeVisible();
   });
 
+  test("keeps keyboard focus in the list: the next template's Archive, then New template", async ({ page }) => {
+    const SECOND = template("00000000-0000-0000-0000-0000000000a3", "Decline", false);
+    const server = await openPage(page, [{ ...ACTIVE }, { ...SECOND }], "/reply-templates");
+    await expect(page.getByTestId(`reply-template-row-${SECOND.id}`)).toBeVisible();
+    // Hold the list reload so the row is removed after the dialog has closed, as on a real network.
+    server.readDelayMs = 400;
+    const firstArchive = page.getByTestId(`reply-template-archive-${ACTIVE.id}`);
+    await firstArchive.focus();
+    await page.keyboard.press("Enter");
+    await page.getByRole("button", { name: "Archive", exact: true }).press("Enter");
+    await expect(page.getByTestId(`reply-template-row-${ACTIVE.id}`)).toHaveCount(0);
+    await expect(page.getByTestId(`reply-template-archive-${SECOND.id}`)).toBeFocused();
+
+    await page.keyboard.press("Enter");
+    await page.getByRole("button", { name: "Archive", exact: true }).press("Enter");
+    await expect(page.getByTestId(`reply-template-row-${SECOND.id}`)).toHaveCount(0);
+    await expect(page.getByTestId("reply-template-new-button")).toBeFocused();
+  });
+
   test("counts it as archived when the proxy fails after the server archived it", async ({ page }) => {
     const server = await openPage(page, freshRows(), "/reply-templates");
     server.gatewayAfterWrite = true;

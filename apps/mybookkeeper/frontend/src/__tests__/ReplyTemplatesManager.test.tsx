@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { MemoryRouter, useLocation } from "react-router-dom";
@@ -60,15 +60,19 @@ vi.mock("@/shared/lib/toast-store", () => ({
   subscribe: vi.fn(() => () => {}),
 }));
 
-function renderManager(path = "/reply-templates") {
-  return render(
+function managerTree(path = "/reply-templates") {
+  return (
     <Provider store={store}>
       <MemoryRouter initialEntries={[path]}>
         <ReplyTemplatesManager />
         <SearchSpy />
       </MemoryRouter>
-    </Provider>,
+    </Provider>
   );
+}
+
+function renderManager(path = "/reply-templates") {
+  return render(managerTree(path));
 }
 
 describe("ReplyTemplatesManager", () => {
@@ -178,6 +182,30 @@ describe("ReplyTemplatesManager", () => {
     expect(
       screen.getByRole("heading", { name: /Archive this template/i }),
     ).toBeInTheDocument();
+  });
+
+  it("after archiving, focus moves to the next template's Archive button once the list reloads", async () => {
+    const t2: ReplyTemplate = { ...t1, id: "tpl-2", name: "Decline" };
+    listState = loaded([t1, t2]);
+    const user = userEvent.setup();
+    const { rerender } = renderManager();
+    await user.click(screen.getByTestId(`reply-template-archive-${t1.id}`));
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Archive" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    listState = loaded([t2]);
+    rerender(managerTree());
+    await waitFor(() => expect(screen.getByTestId(`reply-template-archive-${t2.id}`)).toHaveFocus());
+  });
+
+  it("after archiving the last template, focus moves to New template", async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderManager();
+    await user.click(screen.getByTestId(`reply-template-archive-${t1.id}`));
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Archive" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    listState = loaded([]);
+    rerender(managerTree());
+    await waitFor(() => expect(screen.getByTestId("reply-template-new-button")).toHaveFocus());
   });
 
   it("archive confirm calls the mutation", async () => {
