@@ -5,7 +5,9 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from app.core.context import RequestContext
+from app.models.integrations.gmail_sync_target import GmailSyncTarget
 from app.models.organization.organization_member import OrgRole
+from app.workers.email_sync_worker import sync_gmail_connection
 
 
 @dataclass
@@ -19,13 +21,13 @@ class FakeDiscoverResult:
     sync_log_id: int | None
 
 
-@pytest.mark.asyncio
-async def test_sync_gmail_builds_context_from_org_membership() -> None:
-    """Worker derives org context from user's org membership."""
-    user_id = uuid.uuid4()
-    org_id = uuid.uuid4()
-    membership = FakeMembership(organization_id=org_id, user_id=user_id)
+def _target() -> GmailSyncTarget:
+    return GmailSyncTarget(organization_id=uuid.uuid4(), user_id=uuid.uuid4())
 
+
+@pytest.mark.asyncio
+async def test_every_stage_runs_as_the_connection_and_its_org() -> None:
+    target = _target()
     captured_ctxs: list[RequestContext] = []
 
     async def fake_discover(ctx: RequestContext) -> FakeDiscoverResult:
@@ -45,48 +47,23 @@ async def test_sync_gmail_builds_context_from_org_membership() -> None:
         mock_db = AsyncMock()
         mock_session_cls.return_value.__aenter__ = AsyncMock(return_value=mock_db)
         mock_session_cls.return_value.__aexit__ = AsyncMock(return_value=False)
-        mock_org_repo.list_for_user = AsyncMock(return_value=[membership])
+        mock_org_repo.get_member = AsyncMock(
+            return_value=FakeMembership(organization_id=target.organization_id, user_id=target.user_id),
+        )
 
-        from app.workers.email_sync_worker import sync_gmail_for_user
+        await sync_gmail_connection(target)
 
-        await sync_gmail_for_user(str(user_id))
-
-    mock_org_repo.list_for_user.assert_awaited_once_with(mock_db, user_id)
+    mock_org_repo.get_member.assert_awaited_once_with(mock_db, target.organization_id, target.user_id)
     assert len(captured_ctxs) == 3
     for ctx in captured_ctxs:
-        assert ctx.organization_id == org_id
-        assert ctx.user_id == user_id
+        assert ctx.organization_id == target.organization_id
+        assert ctx.user_id == target.user_id
         assert ctx.org_role == OrgRole.OWNER
 
 
 @pytest.mark.asyncio
-async def test_sync_gmail_skips_user_without_org() -> None:
-    """Worker skips sync when user has no org memberships."""
-    user_id = uuid.uuid4()
-
-    with (
-        patch("app.workers.email_sync_worker.AsyncSessionLocal") as mock_session_cls,
-        patch("app.workers.email_sync_worker.organization_repo") as mock_org_repo,
-        patch("app.workers.email_sync_worker.discover_gmail_emails") as mock_discover,
-    ):
-        mock_db = AsyncMock()
-        mock_session_cls.return_value.__aenter__ = AsyncMock(return_value=mock_db)
-        mock_session_cls.return_value.__aexit__ = AsyncMock(return_value=False)
-        mock_org_repo.list_for_user = AsyncMock(return_value=[])
-
-        from app.workers.email_sync_worker import sync_gmail_for_user
-
-        await sync_gmail_for_user(str(user_id))
-
-    mock_discover.assert_not_awaited()
-
-
-@pytest.mark.asyncio
-async def test_sync_gmail_finalizes_sync_log_when_present() -> None:
-    """Worker calls finalize_sync_log when discover returns a sync_log_id."""
-    user_id = uuid.uuid4()
-    org_id = uuid.uuid4()
-    membership = FakeMembership(organization_id=org_id, user_id=user_id)
+async def test_finalizes_the_sync_log_when_discovery_opened_one() -> None:
+    target = _target()
     sync_log_id = 42
 
     with (
@@ -100,13 +77,13 @@ async def test_sync_gmail_finalizes_sync_log_when_present() -> None:
         mock_db = AsyncMock()
         mock_session_cls.return_value.__aenter__ = AsyncMock(return_value=mock_db)
         mock_session_cls.return_value.__aexit__ = AsyncMock(return_value=False)
-        mock_org_repo.list_for_user = AsyncMock(return_value=[membership])
+        mock_org_repo.get_member = AsyncMock(
+            return_value=FakeMembership(organization_id=target.organization_id, user_id=target.user_id),
+        )
 
-        from app.workers.email_sync_worker import sync_gmail_for_user
-
-        await sync_gmail_for_user(str(user_id))
+        await sync_gmail_connection(target)
 
     mock_finalize.assert_awaited_once()
     call_args = mock_finalize.call_args
     assert call_args[0][0] == sync_log_id
-    assert call_args[0][1].organization_id == org_id
+    assert call_args[0][1].organization_id == target.organization_id

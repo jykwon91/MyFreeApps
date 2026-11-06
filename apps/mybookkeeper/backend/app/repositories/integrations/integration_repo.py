@@ -3,9 +3,11 @@ from collections.abc import Sequence
 from datetime import datetime, timezone
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.integrations.gmail_connection import GmailConnection
+from app.models.integrations.gmail_sync_target import GmailSyncTarget
 from app.models.integrations.integration import Integration
 
 
@@ -101,22 +103,7 @@ async def list_by_org(
     return result.scalars().all()
 
 
-async def upsert_gmail(
-    db: AsyncSession,
-    organization_id: uuid.UUID,
-    user_id: uuid.UUID,
-    access_token: str,
-    refresh_token: str,
-    token_expiry: datetime,
-    scopes: list[str] | None = None,
-    *,
-    gmail_address: str,
-) -> Integration:
-    """Write a fresh connection's tokens and Gmail address onto the org's row.
-
-    Everything is overwritten: a reconnect may be a different account, and
-    keeping any of the old account's credentials would pair them with it.
-    """
+async def _lock_org_gmail(db: AsyncSession, organization_id: uuid.UUID) -> Integration | None:
     # Locked and re-read so a reauth flag committed by a Gmail call on the old
     # connection is loaded here, and the callback's clear_reauth_state writes it back.
     result = await db.execute(
@@ -128,36 +115,74 @@ async def upsert_gmail(
         .with_for_update()
         .execution_options(populate_existing=True)
     )
-    existing = result.scalar_one_or_none()
+    return result.scalar_one_or_none()
 
-    if existing:
-        existing.access_token = access_token
-        existing.refresh_token = refresh_token
-        existing.token_expiry = token_expiry
-        existing.gmail_address = gmail_address
-        if scopes is not None:
-            metadata = dict(existing.metadata_ or {})
-            metadata["scopes"] = scopes
-            existing.metadata_ = metadata
-        return existing
 
-    metadata: dict[str, object] = {}
-    if scopes is not None:
-        metadata["scopes"] = scopes
-
-    integration = Integration(
-        organization_id=organization_id,
-        user_id=user_id,
-        provider="gmail",
-        token_expiry=token_expiry,
-        metadata_=metadata or None,
-        gmail_address=gmail_address,
-    )
+def _write_connection(
+    integration: Integration,
+    *,
+    user_id: uuid.UUID,
+    access_token: str,
+    refresh_token: str,
+    token_expiry: datetime,
+    scopes: list[str] | None,
+    gmail_address: str,
+) -> None:
+    integration.user_id = user_id
     integration.access_token = access_token
     integration.refresh_token = refresh_token
-    db.add(integration)
-    await db.flush()
-    return integration
+    integration.token_expiry = token_expiry
+    integration.gmail_address = gmail_address
+    if scopes is not None:
+        metadata = dict(integration.metadata_ or {})
+        metadata["scopes"] = scopes
+        integration.metadata_ = metadata
+
+
+async def upsert_gmail(
+    db: AsyncSession,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+    access_token: str,
+    refresh_token: str,
+    token_expiry: datetime,
+    scopes: list[str] | None = None,
+    *,
+    gmail_address: str,
+) -> Integration:
+    """Write a fresh connection onto the org's one Gmail row, made by ``user_id``.
+
+    Everything is overwritten: a reconnect may be a different account, and
+    keeping any of the old account's credentials would pair them with it. The
+    row's ``user_id`` becomes whoever connected it last, since the tokens are
+    now that member's Google account. ``last_synced_at`` is kept: it belongs to
+    the row, not the account, and is only shown.
+    """
+    fields = dict(
+        user_id=user_id,
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_expiry=token_expiry,
+        scopes=scopes,
+        gmail_address=gmail_address,
+    )
+    existing = await _lock_org_gmail(db, organization_id)
+    if existing is None:
+        integration = Integration(organization_id=organization_id, provider="gmail")
+        _write_connection(integration, **fields)
+        try:
+            async with db.begin_nested():
+                db.add(integration)
+        except IntegrityError:
+            # A concurrent first connect inserted the org's row first. Take that
+            # row over, as a reconnect would: the latest connect wins either way.
+            existing = await _lock_org_gmail(db, organization_id)
+            if existing is None:
+                raise
+        else:
+            return integration
+    _write_connection(existing, **fields)
+    return existing
 
 
 async def update_last_synced(
@@ -192,29 +217,18 @@ async def update_access_token_if_unchanged(
     return True
 
 
-async def get_gmail_user_ids(db: AsyncSession) -> list[str]:
-    """Return all Gmail integration user IDs, including those in needs_reauth state.
+async def list_active_gmail_sync_targets(db: AsyncSession) -> list[GmailSyncTarget]:
+    """Every Gmail connection the scheduler should sync: those not waiting on a reconnect.
 
-    Use ``get_active_gmail_user_ids`` in the scheduler to skip expired tokens.
+    Expired tokens are skipped so they aren't retried every cycle.
     """
     result = await db.execute(
-        select(Integration.user_id).where(Integration.provider == "gmail")
-    )
-    return [str(uid) for uid in result.scalars().all()]
-
-
-async def get_active_gmail_user_ids(db: AsyncSession) -> list[str]:
-    """Return Gmail integration user IDs where needs_reauth is False.
-
-    The scheduler uses this to avoid retrying dead tokens every 15 minutes.
-    """
-    result = await db.execute(
-        select(Integration.user_id).where(
+        select(Integration.organization_id, Integration.user_id).where(
             Integration.provider == "gmail",
             Integration.needs_reauth.is_(False),
         )
     )
-    return [str(uid) for uid in result.scalars().all()]
+    return [GmailSyncTarget(organization_id=org_id, user_id=uid) for org_id, uid in result.all()]
 
 
 async def delete(db: AsyncSession, integration: Integration) -> None:

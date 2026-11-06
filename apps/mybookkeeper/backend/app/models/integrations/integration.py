@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, SmallInteger, String, Text, ForeignKey, DateTime, UniqueConstraint
+from sqlalchemy import Boolean, SmallInteger, String, Text, ForeignKey, DateTime, Index, UniqueConstraint
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
@@ -37,7 +37,13 @@ class Integration(Base):
     gmail_address: Mapped[str | None] = mapped_column(EncryptedString(255), nullable=True)
     pii_key_version: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1, server_default="1")
 
-    __table_args__ = (UniqueConstraint("user_id", "provider", name="uq_integration_user_provider"),)
+    # One connection per org and provider: every lookup is by org. ``user_id`` is
+    # the member who connected it, so deleting that user removes the connection
+    # (its tokens are their Google account). Indexed for that cascade.
+    __table_args__ = (
+        UniqueConstraint("organization_id", "provider", name="uq_integration_org_provider"),
+        Index("ix_integrations_user_id", "user_id"),
+    )
 
     user = relationship("User", back_populates="integrations")
 
