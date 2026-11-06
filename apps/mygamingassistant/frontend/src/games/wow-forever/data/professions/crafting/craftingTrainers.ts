@@ -1,4 +1,5 @@
 import type { Confidence, TrainerNpc } from "@/games/wow-forever/data/professions/professionTypes";
+import { FIRST_AID_RANKS, FIRST_AID_TRAINERS } from "@/games/wow-forever/data/professions/crafting/firstAidTrainers";
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 
@@ -163,19 +164,39 @@ export const CRAFTING_TRAINERS: Readonly<Record<CraftingProfession, CraftingTrai
       ],
     },
   },
+  firstaid: FIRST_AID_TRAINERS,
 };
 
-/** Where a rank is trained: named trainers per faction, any trainer, or somewhere the map can't point to. */
+/**
+ * Where a rank is trained: named trainers per faction, any trainer, somewhere
+ * the map can't point to, a book bought from a vendor, or a quest. `trip` is
+ * per faction: the errand means changing continent.
+ */
 export type RankTrainers =
   | { kind: "any" }
   | { kind: "named"; trainers: Readonly<Record<PlayerFaction, TrainerNpc>> }
-  | { kind: "dungeon"; name: string; dungeon: string; dungeonLink: string; detail: string };
+  | { kind: "dungeon"; name: string; dungeon: string; dungeonLink: string; detail: string }
+  | {
+      kind: "book";
+      book: string;
+      price: string;
+      vendors: Readonly<Record<PlayerFaction, TrainerNpc>>;
+      trip: Readonly<Record<PlayerFaction, string>>;
+    }
+  | {
+      kind: "quest";
+      quest: string;
+      givers: Readonly<Record<PlayerFaction, TrainerNpc>>;
+      detail: Readonly<Record<PlayerFaction, string>>;
+      trip: Readonly<Record<PlayerFaction, string>>;
+    };
 
 export interface CraftingRank {
   /** Skill you must reach to train it. */
   skill: number;
   name: "Journeyman" | "Expert" | "Artisan";
-  level: number;
+  /** Character level it needs; absent when nothing gates it (First Aid's Expert book). */
+  level?: number;
   /** New skill cap. */
   cap: number;
   trainers: RankTrainers;
@@ -374,4 +395,5 @@ export const CRAFTING_RANKS: Readonly<Record<CraftingProfession, readonly Crafti
       confidence: "unconfirmed",
     },
   ],
+  firstaid: FIRST_AID_RANKS,
 };

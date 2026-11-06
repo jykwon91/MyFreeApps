@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import alchemyJson from "@/games/wow-forever/data/professions/crafting/alchemy.json";
 import blacksmithingJson from "@/games/wow-forever/data/professions/crafting/blacksmithing.json";
 import engineeringJson from "@/games/wow-forever/data/professions/crafting/engineering.json";
+import firstaidJson from "@/games/wow-forever/data/professions/crafting/firstaid.json";
 import enchantingJson from "@/games/wow-forever/data/professions/crafting/enchanting.json";
 import leatherworkingJson from "@/games/wow-forever/data/professions/crafting/leatherworking.json";
 import tailoringJson from "@/games/wow-forever/data/professions/crafting/tailoring.json";
@@ -26,6 +27,7 @@ const FILES: Record<CraftingProfession, CraftingFile> = {
   blacksmithing: blacksmithingJson as unknown as CraftingFile,
   leatherworking: leatherworkingJson as unknown as CraftingFile,
   engineering: engineeringJson as unknown as CraftingFile,
+  firstaid: firstaidJson as unknown as CraftingFile,
 };
 const TRAINER_SKILLS = trainerSkillsJson as unknown as Record<CraftingProfession, TrainerSkills>;
 const PROFESSIONS = Object.keys(FILES) as CraftingProfession[];

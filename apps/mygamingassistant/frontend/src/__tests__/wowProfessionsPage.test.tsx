@@ -93,6 +93,21 @@ describe("Professions page", () => {
     expect(screen.getByText(/Forever adds 180 Tailoring recipes/)).toBeInTheDocument();
   });
 
+  it("opens First Aid from ?p=firstaid under Secondary, with the Expert book and the Triage quest on its route", async () => {
+    renderAt("/wow-forever/professions?p=firstaid");
+    expect(screen.getByRole("radio", { name: "First Aid" })).toBeChecked();
+    expect(screen.getByText("Shaina Fuller")).toBeInTheDocument();
+    await screen.findByRole("heading", { name: "Leveling route" });
+    expect(route().getAllByText("Linen Bandage").length).toBeGreaterThan(0);
+    expect(route().getByText(/At 125: learn Expert First Aid/)).toBeInTheDocument();
+    // The book's vendor also sells the Heavy Silk and Mageweave manuals, so later rows link to her too.
+    expect(route().getAllByRole("link", { name: "Directions to Deneb Walker" })[0]).toHaveAttribute("href", "/wow-forever/map?to=npc:2805&dir=1");
+    expect(route().getByText(/At 225: earn Artisan First Aid/)).toBeInTheDocument();
+    expect(route().getByRole("link", { name: "Directions to Doctor Gustaf VanHowzen" })).toBeInTheDocument();
+    expect(route().getByText(/boat from Menethil Harbor/)).toBeInTheDocument();
+    expect(screen.getByText(/Healing potions moved from Alchemy to First Aid/)).toBeInTheDocument();
+  });
+
   it("says where to get each material, in the shopping list and on the route rows", async () => {
     const user = userEvent.setup();
     renderAt("/wow-forever/professions?p=enchanting");

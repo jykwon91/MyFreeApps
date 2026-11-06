@@ -1,5 +1,5 @@
 """Build the WoW Forever crafting leveling guide data (Tailoring, Enchanting, Alchemy, Blacksmithing,
-Leatherworking, Engineering).
+Leatherworking, Engineering, First Aid).
 
     python -m scripts.wow_professions.build
 
@@ -10,7 +10,7 @@ Writes, under ``frontend/src/games/wow-forever/data/professions/crafting/``:
   be disenchanted; for Engineering, the item's tooltip line), how it is learned, and what Forever changed against the
   Classic Era client. Game data © Blizzard Entertainment.
 * ``classic/trainerSkills.json`` — the skill a trainer asks before teaching a
-  recipe, and ``classic/sources.json`` — where pattern / formula items and
+  recipe, and ``classic/sources.json`` — where pattern / formula / manual items and
   reagents come from (vendors, drops, quests, disenchanting). Both are
   server-side, so they come from cmangos classic-db (GPL-3.0, pinned commit)
   and are kept apart with its LICENSE.
@@ -42,6 +42,7 @@ from scripts.wow_professions.crafts import (
     EFFECT_LEARN_SPELL,
     ENCHANTING_SKILL_LINE,
     ENGINEERING_SKILL_LINE,
+    FIRST_AID_SKILL_LINE,
     LEATHERWORKING_SKILL_LINE,
     MINING_SKILL_LINE,
     TAILORING_SKILL_LINE,
@@ -77,6 +78,7 @@ PROFESSIONS = {
     "blacksmithing": BLACKSMITHING_SKILL_LINE,
     "leatherworking": LEATHERWORKING_SKILL_LINE,
     "engineering": ENGINEERING_SKILL_LINE,
+    "firstaid": FIRST_AID_SKILL_LINE,
 }
 # Professions a miner levels: their file lists the smelts that make the bars they use.
 SMELTS_FOR = {"blacksmithing", "engineering"}
@@ -84,7 +86,7 @@ SMELTS_FOR = {"blacksmithing", "engineering"}
 DESCRIBES_FOR = {"engineering"}
 # Professions whose recipes make reagents another profession uses ("made by Blacksmithing").
 CRAFTING_SKILL_LINES = {
-    164: "Blacksmithing", 165: "Leatherworking", 171: "Alchemy", 185: "Cooking", 186: "Mining",
+    129: "First Aid", 164: "Blacksmithing", 165: "Leatherworking", 171: "Alchemy", 185: "Cooking", 186: "Mining",
     197: "Tailoring", 202: "Engineering", 333: "Enchanting",
 }
 
@@ -142,8 +144,17 @@ def _tools(spells: set[int], kw: dict[str, str]) -> dict[int, tuple[int, str]]:
     return tools
 
 
+def with_child_skill_lines(skill_lines: set[int], rows: list[dict]) -> set[int]:
+    """``skill_lines`` plus the Forever client's child lines of them (``SkillLine.ParentSkillLineID``).
+
+    Forever's First Aid manuals ask for First Aid's child line 2942, not 129.
+    """
+    return skill_lines | {_int(r["ID"]) for r in rows if _int(r["ParentSkillLineID"]) in skill_lines}
+
+
 def load_items(skill_lines: set[int]) -> Items:
     sparse = {_int(r["ID"]): r for r in wago_table("ItemSparse")}
+    skill_lines = with_child_skill_lines(skill_lines, wago_table("SkillLine"))
     learn_effects: dict[int, list[int]] = defaultdict(list)
     for r in wago_table("SpellEffect"):
         if _int(r["Effect"]) == EFFECT_LEARN_SPELL and _int(r["DifficultyID"]) == 0:

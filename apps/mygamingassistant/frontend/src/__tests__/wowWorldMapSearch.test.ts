@@ -8,7 +8,8 @@ import masksJson from "@/games/wow-forever/data/worldMap/mapMasks.json";
 import areasJson from "@/games/wow-forever/data/worldMap/areas.json";
 import interiorsJson from "@/games/wow-forever/data/worldMap/classic/classicInteriors.json";
 import { CITY_TRAINERS, TOWN_TRAINERS } from "@/games/wow-forever/data/professions/trainers";
-import { CRAFTING_RANKS, CRAFTING_TRAINERS } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
+import { CRAFTING_RANKS, CRAFTING_TRAINERS, type RankTrainers } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
+import type { TrainerNpc } from "@/games/wow-forever/data/professions/professionTypes";
 import { FACTION } from "@/games/wow-forever/types/worldMap";
 import { decodeWorldMap } from "@/games/wow-forever/worldMap/decodeWorldMap";
 import { areaLabel } from "@/games/wow-forever/worldMap/describeRank";
@@ -333,6 +334,14 @@ describe("directions text", () => {
   });
 });
 
+/** The NPCs a rank-up names: its trainers, the book's vendors or the quest's givers. */
+function rankNpcs(trainers: RankTrainers): readonly TrainerNpc[] {
+  if (trainers.kind === "named") return Object.values(trainers.trainers);
+  if (trainers.kind === "book") return Object.values(trainers.vendors);
+  if (trainers.kind === "quest") return Object.values(trainers.givers);
+  return [];
+}
+
 describe("Profession trainers link to the map", () => {
   const trainers = [
     ...CITY_TRAINERS.flatMap((c) => [c.cooking, c.fishing]),
@@ -343,8 +352,21 @@ describe("Profession trainers link to the map", () => {
     ]),
     ...Object.values(CRAFTING_RANKS)
       .flat()
-      .flatMap((r) => (r.trainers.kind === "named" ? Object.values(r.trainers.trainers) : [])),
+      .flatMap((r) => rankNpcs(r.trainers)),
   ];
+
+  it("gives every rank-up quest from an NPC who offers it on the World Map", () => {
+    const quests = Object.values(CRAFTING_RANKS)
+      .flat()
+      .flatMap((r) => (r.trainers.kind === "quest" ? [r.trainers] : []));
+    expect(quests.length).toBeGreaterThan(0);
+    for (const quest of quests) {
+      for (const giver of Object.values(quest.givers)) {
+        const offered = data.questGivers.filter((p) => p.npcId === giver.npcId).flatMap((p) => p.quests ?? []);
+        expect(offered.map((q) => q.title)).toContain(quest.quest);
+      }
+    }
+  });
 
   it.each(trainers.map((t) => [t.name, t] as const))("%s is on the World Map where the page says", (_name, trainer) => {
     const poi = findLinkedPoi(String(trainer.npcId), data);
