@@ -1,4 +1,5 @@
 import FoodDetailLink from "@/games/wow-forever/components/food/FoodDetailLink";
+import FoodPriceLine from "@/games/wow-forever/components/food/FoodPriceLine";
 import FoodChips from "@/games/wow-forever/components/food/FoodChips";
 import type { FoodActivity } from "@/games/wow-forever/food/foodActivities";
 import { describeBuff, describeRestore } from "@/games/wow-forever/food/foodText";
@@ -32,6 +33,7 @@ export default function FoodTrainTarget({ pick, cookingSkill, activity }: FoodTr
         ({effect(pick, activity)}) is better, but your Cooking is {cookingSkill}.
       </p>
       <FoodChips pick={pick} />
+      <FoodPriceLine food={pick.food} />
     </section>
   );
 }

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
@@ -8,6 +8,12 @@ import { FISHING_ROUTE } from "@/games/wow-forever/data/professions/fishing";
 import { CITY_TRAINERS } from "@/games/wow-forever/data/professions/trainers";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { CRAFT_SKILL_STORAGE_KEY } from "@/games/wow-forever/hooks/useCraftingSkill";
+
+// Auction prices come from the API; these tests don't look at them, so they stay loading.
+vi.mock("@/games/wow-forever/api/wowPricesApi", async () => {
+  const stub = await import("@/test/auctionPricesStub");
+  return { useGetWowPricesQuery: () => stub.pricesLoading() };
+});
 
 function renderAt(path: string) {
   return render(

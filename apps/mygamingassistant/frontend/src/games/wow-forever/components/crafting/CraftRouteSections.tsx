@@ -6,6 +6,7 @@ import CraftSkillInput from "@/games/wow-forever/components/crafting/CraftSkillI
 import CraftSpecPicker from "@/games/wow-forever/components/crafting/CraftSpecPicker";
 import CraftSpecRow from "@/games/wow-forever/components/crafting/CraftSpecRow";
 import CraftTransmuteList from "@/games/wow-forever/components/crafting/CraftTransmuteList";
+import PriceStatus from "@/games/wow-forever/components/prices/PriceStatus";
 import GuideSection from "@/games/wow-forever/components/guide/GuideSection";
 import { currentEntryIndex, totalCrafts } from "@/games/wow-forever/crafting/craftRoute";
 import { routeForSpec } from "@/games/wow-forever/crafting/craftSpecs";
@@ -61,32 +62,36 @@ export default function CraftRouteSections({ profession, faction, zoneId, level,
           currentRowId={currentEntry ? `craft-${currentEntry.step.from}` : null}
           status={statusLine(entries, current)}
         />
+        <PriceStatus withoutPrices="showing routes without prices" />
         {features.priced ? (
-          <>
-            <CraftPricesPanel
-              items={priced.items}
-              prices={priced.prices.prices}
-              onPrice={priced.prices.setPrice}
-              onReplaceAll={priced.prices.replaceAll}
-              selfMadeNote={guide.pricedFromMaterials ?? ""}
-              formulas={priced.formulas}
-              knownFormulas={priced.knownFormulas}
-              onFormula={priced.setFormula}
-              slots={slots}
-              place={place}
-            />
-            <CraftRouteHeader
-              cheapest={priced.cheapest}
-              canCompare={priced.canCompare}
-              useDefault={priced.useDefault}
-              onUseDefault={priced.setUseDefault}
-              pricesEntered={priced.pricesEntered}
-              total={priced.total}
-              reach={priced.reach}
-              unknown={priced.unknown}
-            />
-          </>
+          <CraftPricesPanel
+            items={priced.items}
+            overrides={priced.overrides.prices}
+            auction={priced.auction}
+            onPrice={priced.overrides.setPrice}
+            onReplaceAll={priced.overrides.replaceAll}
+            selfMadeNote={guide.pricedFromMaterials ?? ""}
+            formulas={priced.formulas}
+            knownFormulas={priced.knownFormulas}
+            onFormula={priced.setFormula}
+            slots={slots}
+            place={place}
+          />
         ) : null}
+        <CraftRouteHeader
+          priced={features.priced}
+          cheapest={priced.cheapest}
+          hasCosts={priced.hasCosts}
+          useDefault={priced.useDefault}
+          onUseDefault={priced.setUseDefault}
+          auctionPriced={priced.auctionPriced}
+          materials={priced.materials}
+          overridden={priced.overridden}
+          total={priced.total}
+          reach={priced.reach}
+          unknown={priced.unknown}
+          stopsAtChoice={priced.stopsAtChoice}
+        />
         <a href="#shopping" className="inline-flex items-center text-sm text-primary underline-offset-2 hover:underline min-h-[44px] sm:min-h-0">
           Jump to the shopping list
         </a>

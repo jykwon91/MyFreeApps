@@ -112,8 +112,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`lib/guideProfession.ts`) are the only list of what's crafting — never
   hard-code profession keys. What each guide shows is
   `crafting/craftingFeatures.ts`: only `priced` professions (Tailoring,
-  Enchanting) get the prices panel / cheapest route; the rest show the
-  hand-picked route with no costs, no "cheapest" and no prices anywhere.
+  Enchanting) get the prices panel (overrides) / cheapest route; the rest show
+  the hand-picked route, costed at auction prices, never called "cheapest".
   Recipes Forever added and no Classic source teaches get a "Source unknown"
   chip and never a Classic trainer (`sourceUnknown`, `learnAt.newInForever`).
   Herb / ore nodes carry their gathering skill (Forever `Lock` table) in the
@@ -151,8 +151,9 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   the World Map's saved level) is hand-written advice in `data/gold/goldTips.ts`:
   each tip is `classic` (no chip), `forever` (published for Forever) or
   `unknown` (Unconfirmed; client-only facts stay here, worded "the Forever
-  client …"). **No auction-house prices** — a test fails on any
-  "N gold/silver". Class tips follow the saved World Map class; the page's Class picker saves to it. Its checklist has its own
+  client …"). The tips never state gold amounts — a test fails on any
+  "N gold/silver" in them; the farm cards' cloth / leather values come from
+  auction prices only. Class tips follow the saved World Map class; the page's Class picker saves to it. Its checklist has its own
   key (`mga.wowForever.gold.checklist.v1`), separate from the guide's.
 - **Auction-house prices** (`GET /api/wow/prices?region=us|eu|kr|tw`, public,
   both modes) come from TradeSkillMaster's public region files
@@ -264,6 +265,24 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   set bonuses are never shown. `PUBLISHED_LIST` (LFCarry) is linked with its
   checked date — never copied into our data. Item names link to Wowhead
   Forever (`wowheadForeverItemUrl`, `OutboundLink`).
+
+#### Auction-house prices (frontend)
+
+- Nobody types prices: `hooks/useAuctionPrices.ts` (one RTK Query cache,
+  `api/wowPricesApi.ts`, `GET /api/wow/prices?region=`) feeds every price on
+  the crafting guides, the Cooking route, the food picker + detail ("Buy or
+  cook?") and the gold farm cards. Columnar response in copper, mapped once by
+  `prices/auctionPrices.ts`. An item the source lacks reads "no auction price",
+  never 0.
+- Every priced surface shows `PriceStatus`: a skeleton, then the credit
+  ("Prices from TradeSkillMaster · updated X ago" + the region select), or
+  "Couldn't load prices — …" with a retry. The region is one saved choice
+  (`hooks/useWowRegion.ts`, key `mga.wowForever.serverStatus.region.v1`,
+  shared with server status; default US).
+- Typed prices are optional overrides (`mga.wowForever.professions.priceOverrides.v2`,
+  priced professions only); the pre-auction key `...prices.v1` is removed on read.
+- Tests stub the hook with `src/test/auctionPricesStub.ts`; E2E stubs
+  `**/wow/prices**` (`e2e/wow-forever-auction-prices.spec.ts`).
 
 #### Food picker (`/wow-forever/food`, "What should I eat?")
 

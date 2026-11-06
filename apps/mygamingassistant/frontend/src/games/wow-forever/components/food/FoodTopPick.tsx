@@ -1,4 +1,5 @@
 import FoodDetailLink from "@/games/wow-forever/components/food/FoodDetailLink";
+import FoodPriceLine from "@/games/wow-forever/components/food/FoodPriceLine";
 import FoodChips from "@/games/wow-forever/components/food/FoodChips";
 import FoodSameAs from "@/games/wow-forever/components/food/FoodSameAs";
 import type { FoodActivity } from "@/games/wow-forever/food/foodActivities";
@@ -22,6 +23,7 @@ export default function FoodTopPick({ pick, activity, who }: FoodTopPickProps) {
       </h2>
       <p className="text-sm">{whyLine(pick, activity, who)}</p>
       <FoodChips pick={pick} />
+      <FoodPriceLine food={pick.food} />
       <FoodSameAs foods={pick.sameAs} />
     </section>
   );

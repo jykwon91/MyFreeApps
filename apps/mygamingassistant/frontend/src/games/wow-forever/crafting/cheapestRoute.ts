@@ -76,7 +76,7 @@ export interface PricedRoute {
   reach: number;
   /** Some row ahead has no cost (a material without a price, or the options row). */
   unknown: boolean;
-  /** At least one row was picked for your prices — else it's just the default route. */
+  /** At least one row was picked for the prices — else it's just the default route. */
   priced: boolean;
 }
 

@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { findClass, findSpec, LEVELING_SPEC_ID, type WowClassId } from "@/games/wow-forever/data/classes";
 import { findActivity, type FoodActivity } from "@/games/wow-forever/food/foodActivities";
@@ -97,12 +97,21 @@ function toParams(s: FoodPickerSettings): Record<string, string> {
 export function useFoodPickerSettings(): [FoodPickerSettings, (patch: Partial<FoodPickerSettings>) => void] {
   const [params, setParams] = useSearchParams();
   const settings = useMemo(() => parseFoodSettings(fromParams(params), storedSettings()), [params]);
+  // The router applies a URL change in a transition. A second change made before
+  // it lands (type a level, then pick a class) must build on the first, not on
+  // the settings this render still shows, or the level is lost.
+  const pending = useRef<FoodPickerSettings | null>(null);
+  useEffect(() => {
+    pending.current = null;
+  }, [params]);
 
   const update = useCallback(
     (patch: Partial<FoodPickerSettings>) => {
-      const next = { ...settings, ...patch };
+      const base = pending.current ?? settings;
+      const next = { ...base, ...patch };
       // Spec ids are only unique within a class.
-      if (patch.classId && patch.classId !== settings.classId && patch.specId === undefined) next.specId = LEVELING_SPEC_ID;
+      if (patch.classId && patch.classId !== base.classId && patch.specId === undefined) next.specId = LEVELING_SPEC_ID;
+      pending.current = next;
       writeStored(FOOD_SETTINGS_STORAGE_KEY, next);
       setParams(toParams(next), { replace: true });
     },

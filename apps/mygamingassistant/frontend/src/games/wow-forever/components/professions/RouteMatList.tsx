@@ -1,3 +1,4 @@
+import AuctionPriceTag from "@/games/wow-forever/components/prices/AuctionPriceTag";
 import CraftMatItem from "@/games/wow-forever/components/crafting/CraftMatItem";
 import type { CraftPlace } from "@/games/wow-forever/components/crafting/CraftLearnLine";
 import type { MatRef } from "@/games/wow-forever/data/professions/professionTypes";
@@ -13,7 +14,7 @@ interface RouteMatListProps {
   matPlace: MatPlace | undefined;
 }
 
-/** A route row's materials, each with the easiest way to get it and opening to every place. */
+/** A route row's materials, each with its auction price and the easiest way to get it, opening to every place. */
 export default function RouteMatList({ mats, matPlace }: RouteMatListProps) {
   if (!mats?.length || !matPlace) return null;
   return (
@@ -22,7 +23,12 @@ export default function RouteMatList({ mats, matPlace }: RouteMatListProps) {
         <CraftMatItem
           key={m.id}
           itemId={m.id}
-          label={m.name}
+          label={
+            <>
+              {m.name}
+              <AuctionPriceTag itemId={m.id} />
+            </>
+          }
           place={matPlace.place}
           professionLabel={matPlace.professionLabel}
           summaryParts={1}

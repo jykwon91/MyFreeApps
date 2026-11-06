@@ -1,8 +1,16 @@
+const MINUTES_PER_HOUR = 60;
+const HOURS_PER_DAY = 24;
+
+function plural(n: number, unit: string): string {
+  return n === 1 ? `1 ${unit} ago` : `${n} ${unit}s ago`;
+}
+
 /**
  * Formats an ISO 8601 UTC timestamp as a human-readable relative time string.
  *
- * Used by the server-status section to show when Blizzard's status was last
- * fetched — intentionally coarse so small clock drift doesn't confuse readers.
+ * Used for when Blizzard's server status was last fetched and when the
+ * auction-house prices were updated. It's coarse on purpose, so small clock
+ * drift doesn't confuse readers.
  */
 export function relativeTime(isoString: string): string {
   const diffMs = Date.now() - new Date(isoString).getTime();
@@ -10,6 +18,8 @@ export function relativeTime(isoString: string): string {
   if (diffSeconds < 10) return "just now";
   if (diffSeconds < 60) return `${diffSeconds} seconds ago`;
   const diffMinutes = Math.round(diffSeconds / 60);
-  if (diffMinutes === 1) return "1 minute ago";
-  return `${diffMinutes} minutes ago`;
+  if (diffMinutes < MINUTES_PER_HOUR) return plural(diffMinutes, "minute");
+  const diffHours = Math.round(diffMinutes / MINUTES_PER_HOUR);
+  if (diffHours < HOURS_PER_DAY) return plural(diffHours, "hour");
+  return plural(Math.round(diffHours / HOURS_PER_DAY), "day");
 }

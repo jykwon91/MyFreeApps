@@ -17,6 +17,12 @@ import {
 import { CHECKLIST_STORAGE_KEY } from "@/games/wow-forever/hooks/useChecklist";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
 
+// Auction prices come from the API; these tests don't look at them, so they stay loading.
+vi.mock("@/games/wow-forever/api/wowPricesApi", async () => {
+  const stub = await import("@/test/auctionPricesStub");
+  return { useGetWowPricesQuery: () => stub.pricesLoading() };
+});
+
 function renderAt(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
