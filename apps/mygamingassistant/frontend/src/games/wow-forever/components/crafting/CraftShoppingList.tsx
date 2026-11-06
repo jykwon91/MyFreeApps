@@ -34,7 +34,7 @@ interface CraftShoppingListProps {
 export default function CraftShoppingList({ entries, skill, place, professionLabel, note, priceBook, keepCrafts = false }: CraftShoppingListProps) {
   const [scope, setScope] = useState<Scope>(SCOPE.mine);
   const fromSkill = scope === SCOPE.mine ? skill : null;
-  const list = shoppingList(entries, fromSkill, place.file, professionLabel, (id) => isGathered(place.sources.reagent(id)));
+  const list = shoppingList(entries, fromSkill, place.file, professionLabel, (id) => isGathered(place.sources.reagent(id)), priceBook?.buyInstead);
   // A vendor near you beats the auction house, even for what a profession can make (Copper Rod).
   const bought = (l: ShoppingLine) => !l.madeBy || soldToYou(place.sources.reagent(l.id), place.faction);
   const summary = (l: ShoppingLine) =>

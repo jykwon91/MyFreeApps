@@ -27,6 +27,7 @@ export default function CraftShoppingLines({ title, lines, place, professionLabe
               <>
                 <span className="tabular-nums font-medium">{l.count}</span> {l.name}
                 {costOf ? <CraftLineCost cost={costOf(l)} /> : null}
+                {l.buyNote ? <span className="text-muted-foreground" data-testid="buy-note"> — buy these; {l.buyNote}</span> : null}
               </>
             }
             place={place}

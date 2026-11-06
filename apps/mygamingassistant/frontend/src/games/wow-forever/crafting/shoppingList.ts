@@ -35,7 +35,9 @@ export function makerOf(itemId: number, recipes: readonly CraftRecipe[]): CraftR
  * are made from their raw materials, which go on the buy list. Bars the data
  * lists a Mining smelt for are smelted the same way, from ore. What `gathered`
  * says is gathered (leather, skinned — though Leatherworking can make it from
- * scraps) is bought or farmed like anything else.
+ * scraps) is bought or farmed like anything else. `buyInstead` (the price
+ * book's rule) names the self-made items to buy rather than make, so the list
+ * matches how the route priced them.
  */
 export function shoppingList(
   entries: readonly ResolvedRouteEntry[],
@@ -43,6 +45,7 @@ export function shoppingList(
   data: Pick<CraftingFile, "madeBy" | "recipes" | "smelting">,
   professionName: string,
   gathered: (itemId: number) => boolean = () => false,
+  buyInstead: (itemId: number) => string | null = () => null,
 ): ShoppingList {
   const start = fromSkill ?? 1;
   const need: Tally = { names: new Map(), counts: new Map() };
@@ -58,6 +61,15 @@ export function shoppingList(
 
   const smelts = new Map((data.smelting ?? []).flatMap((r) => (r.creates ? [[r.creates.id, r] as const] : [])));
   const ownMade = (id: number) => data.madeBy[String(id)] === professionName && !gathered(id);
+  const buyNotes = new Map<number, string>();
+  const bought = (id: number): boolean => {
+    if (!ownMade(id) && !smelts.has(id)) return false;
+    if (!buyNotes.has(id)) {
+      const note = buyInstead(id);
+      if (note) buyNotes.set(id, note);
+    }
+    return buyNotes.has(id);
+  };
   const make: ShoppingLine[] = [];
   const smelt: ShoppingLine[] = [];
   // Expanding one self-made item can need another (Mooncloth needs Felcloth), so repeat until nothing is short.
@@ -66,7 +78,7 @@ export function shoppingList(
     changed = false;
     for (const [id, count] of need.counts) {
       const smeltWith = smelts.get(id);
-      if ((!ownMade(id) && !smeltWith) || expanded.has(id)) continue;
+      if ((!ownMade(id) && !smeltWith) || bought(id) || expanded.has(id)) continue;
       expanded.add(id);
       changed = true;
       const short = count - (produced.get(id) ?? 0);
@@ -88,11 +100,14 @@ export function shoppingList(
 
   const buy: ShoppingLine[] = [];
   for (const [id, count] of need.counts) {
-    if (ownMade(id) || smelts.has(id)) continue;
+    const note = bought(id) ? buyNotes.get(id) : undefined;
+    // What the route's own crafts make is not bought.
+    const toBuy = note ? count - (produced.get(id) ?? 0) : count;
+    if (toBuy <= 0 || (!note && (ownMade(id) || smelts.has(id)))) continue;
     // Your own profession's gathered mats (leather) aren't "made by" anyone else.
     const maker = data.madeBy[String(id)];
     const madeBy = maker === professionName ? undefined : maker;
-    buy.push({ id, name: need.names.get(id) ?? `Item ${id}`, count, ...(madeBy ? { madeBy } : {}) });
+    buy.push({ id, name: need.names.get(id) ?? `Item ${id}`, count: toBuy, ...(madeBy ? { madeBy } : {}), ...(note ? { buyNote: note } : {}) });
   }
   return { buy, make, smelt };
 }
@@ -104,7 +119,7 @@ function madeByNote(line: ShoppingLine): string {
 
 /** The list as plain text, for pasting into notes or chat — with where to get each item when `where` is given. */
 export function shoppingListText(list: ShoppingList, where?: (line: ShoppingLine) => string): string {
-  const lines = list.buy.map((l) => `${l.count}x ${l.name}${where ? ` — ${where(l)}` : madeByNote(l)}`);
+  const lines = list.buy.map((l) => `${l.count}x ${l.name}${where ? ` — ${where(l)}` : madeByNote(l)}${l.buyNote ? ` — buy these; ${l.buyNote}` : ""}`);
   for (const l of list.make) {
     const from = (l.makesFrom ?? []).map((r) => `${r.count}x ${r.name}`).join(", ");
     lines.push(`Make ${l.count}x ${l.name} (from ${from})`);
