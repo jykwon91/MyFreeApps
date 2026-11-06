@@ -108,7 +108,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   in game or from a Blizzard post, then bump `PROFESSIONS_DATA_STATUS`.
 - Professions also has crafting guides (`?p=alchemy|blacksmithing|enchanting|engineering|leatherworking|tailoring|firstaid`,
   `&skill=N`, `&spec=<choice>`). The picker (`data/professions/professionPicker.ts`) groups
-  Crafting vs Secondary; `isCraftingProfession` / `parseGuideProfession`
+  Crafting vs Gathering vs Secondary; `isCraftingProfession` / `parseGuideProfession`
   (`lib/guideProfession.ts`) are the only list of what's crafting — never
   hard-code profession keys. **First Aid** is listed under Secondary but is a
   `CraftingProfession` (it renders `CraftingGuideView`): bandage-only route;
@@ -146,7 +146,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   prints them); a part with no tooltip reads "A part for other ... recipes"
   (`crafting/craftEffect.ts`), anything else shows nothing.
   **Recipe data is GENERATED** — `python -m scripts.wow_professions.build`
-  (from `backend/`) writes `data/professions/crafting/{tailoring,enchanting,alchemy,blacksmithing,leatherworking,engineering,firstaid}.json`
+  (from `backend/`) writes `data/professions/crafting/{tailoring,enchanting,alchemy,blacksmithing,leatherworking,engineering,firstaid,mining}.json`
+  (`mining.json` = Mining's own smelts + camp items, with each smelt's `focus`)
   (with `smelting` / `specs` where they apply; teaching items are found by
   prefix — Pattern/Formula/Recipe/Plans/Schematic/Manual — and by the
   profession's skill line or its Forever child lines, e.g. First Aid's 2942)
@@ -154,6 +155,22 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `classic/sources.json` (cmangos GPL — keep LICENSE + README).
   `tests/test_wow_professions_generator.py`, `tests/test_wow_engineering_generator.py`. A route row that names a spell
   missing from the data throws, so re-run the route test after regenerating.
+- **Gathering guides** (`?p=mining`, `&skill=N`; the picker's Gathering group,
+  `isGatheringProfession`): `components/gathering/GatheringGuideView.tsx`, in
+  this order — "What can I mine right now?" (skill box, a capped banner at
+  75/150/225 naming the nearest trainer, the orange/yellow nodes + next unlock,
+  2–3 zones ranked by Forever's `zones.json` levels with Directions; zones above
+  you go last), Get started, route, Forever changes, then the collapsed node
+  table and smelting. Pure logic in `gathering/` (`nodeColors`, `gatherNow`,
+  `rankZones`, `rankCaps`, `nearestTrainer`; `wowGathering.test.ts`). A node's
+  required skill is the Forever `Lock` skill on its `objectSpots` (a node with
+  none throws); yellow/green/grey offsets, ranks, spawns and trainer spots are
+  Classic and labelled so. Each row's chip says what it rests on
+  (`ForeverChange.basis`: "Reported in the beta" / "Classic route — may differ
+  in Forever"). A new gathering profession = a key in `GATHERING_PROFESSION`,
+  an option in `GATHERING_GROUP` and a `GATHERING_GUIDES` entry
+  (`data/professions/gathering/`); its trainers join the World Map trainer test
+  automatically. The skill shares `mga.wowForever.professions.skill.v1`.
 - Making gold (`/wow-forever/gold`, `?band=1-20|20-40|40-60|all`, seeded from
   the World Map's saved level) is hand-written advice in `data/gold/goldTips.ts`:
   each tip is `classic` (no chip), `forever` (published for Forever) or
