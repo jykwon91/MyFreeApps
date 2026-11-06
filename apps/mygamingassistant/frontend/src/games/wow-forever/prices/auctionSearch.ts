@@ -1,0 +1,33 @@
+/** Filter and order the auction-house price list for the lookup page. Pure: no state, no clock. */
+import type { AuctionPrice } from "@/games/wow-forever/types/auctionPrice";
+import type { AuctionSearchResult } from "@/games/wow-forever/types/auctionSearchResult";
+import type { AuctionSort } from "@/games/wow-forever/types/auctionSort";
+
+/** With nothing typed, the page shows this many of the top items. */
+export const BROWSE_LIMIT = 50;
+/** With a search, this many matches at most. */
+export const SEARCH_LIMIT = 200;
+
+type Compare = (a: AuctionPrice, b: AuctionPrice) => number;
+
+const byName: Compare = (a, b) => a.name.localeCompare(b.name) || a.itemId - b.itemId;
+
+/** Items with no sales figure sort last when ordered by sales. */
+const COMPARERS: Record<AuctionSort, Compare> = {
+  traded: (a, b) => (b.soldPerDay ?? -1) - (a.soldPerDay ?? -1) || byName(a, b),
+  high: (a, b) => b.marketValue - a.marketValue || byName(a, b),
+  low: (a, b) => a.marketValue - b.marketValue || byName(a, b),
+  name: byName,
+};
+
+function matches(item: AuctionPrice, needle: string): boolean {
+  return item.name.toLowerCase().includes(needle) || String(item.itemId) === needle;
+}
+
+export function searchAuctionItems(items: Iterable<AuctionPrice>, query: string, sort: AuctionSort): AuctionSearchResult {
+  const needle = query.trim().toLowerCase();
+  const found = needle ? [...items].filter((item) => matches(item, needle)) : [...items];
+  found.sort(COMPARERS[sort]);
+  const limit = needle ? SEARCH_LIMIT : BROWSE_LIMIT;
+  return { items: found.slice(0, limit), total: found.length, capped: found.length > limit };
+}

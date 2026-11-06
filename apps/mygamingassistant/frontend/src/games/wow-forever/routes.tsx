@@ -13,6 +13,7 @@ const WowProfessionsPage = lazy(() => import("@/games/wow-forever/pages/WowProfe
 const WowFoodPickerPage = lazy(() => import("@/games/wow-forever/pages/WowFoodPickerPage"));
 const WowFoodDetailPage = lazy(() => import("@/games/wow-forever/pages/WowFoodDetailPage"));
 const WowGoldPage = lazy(() => import("@/games/wow-forever/pages/WowGoldPage"));
+const WowAuctionHousePage = lazy(() => import("@/games/wow-forever/pages/WowAuctionHousePage"));
 const WowWarlockMacrosPage = lazy(() => import("@/games/wow-forever/pages/WowWarlockMacrosPage"));
 const WowGearPage = lazy(() => import("@/games/wow-forever/pages/WowGearPage"));
 const WowRaidPage = lazy(() => import("@/games/wow-forever/pages/WowRaidPage"));
@@ -51,6 +52,7 @@ export const wowForeverRoutes: RouteObject[] = [
   { path: "/wow-forever/food", element: withSuggestFooter(<WowFoodPickerPage />, "food_consumables") },
   { path: "/wow-forever/food/:foodId", element: withSuggestFooter(<WowFoodDetailPage />, "food_consumables") },
   { path: "/wow-forever/gold", element: withSuggestFooter(<WowGoldPage />, "gold_economy") },
+  { path: "/wow-forever/auction-house", element: withSuggestFooter(<WowAuctionHousePage />, "gold_economy") },
   { path: "/wow-forever/warlock-macros", element: withSuggestFooter(<WowWarlockMacrosPage />, "class_guides") },
   { path: "/wow-forever/gear", element: withSuggestFooter(<WowGearPage />, "gear_upgrades") },
   { path: "/wow-forever/raids/:webId", element: withSuggestFooter(<WowRaidPage />, "dungeons_raids") },
