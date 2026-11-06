@@ -17,4 +17,10 @@ export interface RankedGearItem {
   facts: GearItemFacts;
   /** Level the player can first get and use it at. */
   availableFrom: number;
+  /**
+   * True when availableFrom was estimated from item level rather than stated
+   * in the data (requiredLevel ≤ 1 with no known source). The UI labels
+   * these as "probably from about level N".
+   */
+  availableFromEstimated: boolean;
 }

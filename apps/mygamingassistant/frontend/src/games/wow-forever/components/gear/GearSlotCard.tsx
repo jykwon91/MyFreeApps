@@ -18,7 +18,12 @@ export default function GearSlotCard({ result }: { result: GearSlotResult }) {
       {top.length > 0 ? (
         <ol className="divide-y">
           {top.map((r, index) => (
-            <GearItemRow key={r.item.id} ranked={r} isTop={index === 0} />
+            <GearItemRow
+              key={r.item.id}
+              ranked={r}
+              isTop={index === 0}
+              closeRuleApplied={index === 0 && top.length >= 2 && top[1].pctOfBest > 100}
+            />
           ))}
         </ol>
       ) : (

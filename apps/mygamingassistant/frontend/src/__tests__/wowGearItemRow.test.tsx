@@ -25,6 +25,7 @@ const RANKED: RankedGearItem = {
   sources: [{ kind: "crafted", profession: "Tailoring", skill: 300 }],
   facts: { requires: null, reputation: { faction: "Argent Dawn", rank: "Honored" }, pvp: false, bindOnPickup: true },
   availableFrom: 57,
+  availableFromEstimated: false,
 };
 
 describe("GearItemRow", () => {
@@ -50,5 +51,22 @@ describe("GearItemRow", () => {
     expect(screen.getByTestId("gear-source-chip")).toHaveTextContent("Source unknown");
     expect(screen.getByText("Req. level 57 · get it from level 60")).toBeInTheDocument();
     expect(screen.getByText(/Top pick/)).toBeInTheDocument();
+  });
+
+  it("shows estimated availability as 'probably from about level N'", () => {
+    const estimated: RankedGearItem = {
+      ...RANKED,
+      item: { ...RANKED.item, requiredLevel: 1, itemLevel: 43 },
+      sources: [],
+      availableFrom: 38,
+      availableFromEstimated: true,
+    };
+    render(<GearItemRow ranked={estimated} isTop />);
+    expect(screen.getByText("Probably from about level 38")).toBeInTheDocument();
+  });
+
+  it("shows 'Top pick · known source' when close rule applied", () => {
+    render(<GearItemRow ranked={RANKED} isTop closeRuleApplied />);
+    expect(screen.getByText(/Top pick · known source/)).toBeInTheDocument();
   });
 });

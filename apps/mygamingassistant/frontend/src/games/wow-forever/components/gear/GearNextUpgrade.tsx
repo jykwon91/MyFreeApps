@@ -10,7 +10,9 @@ import type { RankedGearItem } from "@/games/wow-forever/types/rankedGearItem";
 export default function GearNextUpgrade({ upgrade }: { upgrade: RankedGearItem }) {
   return (
     <p data-testid="gear-next-upgrade" className="flex flex-wrap items-center gap-1.5 border-t pt-3 text-sm">
-      <span className="text-muted-foreground">Next upgrade at level {upgrade.availableFrom}:</span>
+      <span className="text-muted-foreground">
+        Next upgrade at {upgrade.availableFromEstimated ? "about " : ""}level {upgrade.availableFrom}:
+      </span>
       <OutboundLink
         href={wowheadForeverItemUrl(upgrade.item.id)}
         className={clsx("font-medium underline-offset-2 hover:underline", QUALITY_TEXT_CLASSES[upgrade.item.quality])}

@@ -12,17 +12,23 @@ interface GearItemRowProps {
   ranked: RankedGearItem;
   /** The card's first item. */
   isTop: boolean;
+  /**
+   * True when this top pick ranks above a higher-scoring no-source item due
+   * to the close rule. Used to explain the preference in the label.
+   */
+  closeRuleApplied?: boolean;
 }
 
-function levelLabel(requiredLevel: number, availableFrom: number): string {
+function levelLabel(requiredLevel: number, availableFrom: number, estimated: boolean): string {
+  if (estimated) return `Probably from about level ${availableFrom}`;
   const required = requiredLevel > 0 ? `Req. level ${requiredLevel}` : "No level requirement";
   return availableFrom > requiredLevel ? `${required} · get it from level ${availableFrom}` : required;
 }
 
 /** One ranked item: name (opens Wowhead), level, how it compares, where it comes from. */
-export default function GearItemRow({ ranked, isTop }: GearItemRowProps) {
+export default function GearItemRow({ ranked, isTop, closeRuleApplied = false }: GearItemRowProps) {
   const { item, facts, sources } = ranked;
-  const level = levelLabel(item.requiredLevel, ranked.availableFrom);
+  const level = levelLabel(item.requiredLevel, ranked.availableFrom, ranked.availableFromEstimated);
   return (
     <li data-testid="gear-item-row" className="space-y-1.5 py-3 first:pt-0 last:pb-0">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -34,7 +40,7 @@ export default function GearItemRow({ ranked, isTop }: GearItemRowProps) {
           {item.name}
         </OutboundLink>
         <span className="text-xs text-muted-foreground tabular-nums">
-          {pctLabel(ranked.pctOfBest, isTop)} · score {ranked.score.toFixed(1)}
+          {pctLabel(ranked.pctOfBest, isTop, closeRuleApplied)} · score {ranked.score.toFixed(1)}
         </span>
       </div>
       <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
