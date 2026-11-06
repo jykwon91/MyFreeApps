@@ -72,6 +72,11 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         title: "Item Compare",
         description: "Paste or screenshot two or more items and see which is better for your class and spec.",
       },
+      {
+        path: "/wow-forever/suggest",
+        title: "Suggest a feature",
+        description: "Tell me what's missing, and see what other players asked for — add a \"Me too\" to the ones you want.",
+      },
     ],
   },
 };

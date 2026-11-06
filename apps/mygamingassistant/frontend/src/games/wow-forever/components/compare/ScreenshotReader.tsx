@@ -1,14 +1,12 @@
-import { useCallback, useState } from "react";
-import { AlertBox, LoadingButton, TurnstileWidget } from "@platform/ui";
+import { useState } from "react";
+import { AlertBox, LoadingButton } from "@platform/ui";
 import ScreenshotDropTarget from "@/games/wow-forever/components/compare/ScreenshotDropTarget";
 import ScreenshotPreview from "@/games/wow-forever/components/compare/ScreenshotPreview";
 import ScreenshotReaderOpenInBrowser from "@/games/wow-forever/components/compare/ScreenshotReaderOpenInBrowser";
+import TurnstileField from "@/games/wow-forever/components/shared/TurnstileField";
 import { useExtractItemMutation } from "@/games/wow-forever/api/wowItemsApi";
-import {
-  isScreenshotReaderBrowserOnly,
-  isScreenshotReaderOffered,
-  turnstileSiteKey,
-} from "@/games/wow-forever/lib/itemReaderAvailability";
+import { useTurnstileToken } from "@/games/wow-forever/hooks/useTurnstileToken";
+import { isScreenshotReaderBrowserOnly, isScreenshotReaderOffered } from "@/games/wow-forever/lib/itemReaderAvailability";
 import { itemReaderErrorMessage } from "@/games/wow-forever/lib/itemReaderErrorMessage";
 import type { ItemExtractionResponse } from "@/games/wow-forever/types/extractionResponse";
 
@@ -30,13 +28,10 @@ export default function ScreenshotReader({ onRead }: ScreenshotReaderProps) {
   // The shown screenshot has been read into the item — kept on screen so it can be checked.
   const [wasRead, setWasRead] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [token, setToken] = useState("");
-  // Turnstile tokens are single-use: remounting the widget fetches a new one.
-  const [widgetKey, setWidgetKey] = useState(0);
+  // Turnstile tokens are single-use: every read gets a fresh one.
+  const turnstile = useTurnstileToken();
+  const { needsToken, token } = turnstile;
   const [extractItem, { isLoading }] = useExtractItemMutation();
-  const needsToken = turnstileSiteKey() !== "";
-  const handleVerify = useCallback((next: string) => setToken(next), []);
-  const handleExpire = useCallback(() => setToken(""), []);
 
   if (!isScreenshotReaderOffered()) {
     return (
@@ -73,8 +68,7 @@ export default function ScreenshotReader({ onRead }: ScreenshotReaderProps) {
     } catch (err) {
       setError(itemReaderErrorMessage(err));
     } finally {
-      setToken("");
-      setWidgetKey((k) => k + 1);
+      turnstile.reset();
     }
   }
 
@@ -86,7 +80,15 @@ export default function ScreenshotReader({ onRead }: ScreenshotReaderProps) {
       {!file && (
         <ScreenshotDropTarget accept={ACCEPTED_TYPES} disabled={isLoading} onImage={choose} onProblem={setError} />
       )}
-      {needsToken && <TurnstileWidget key={widgetKey} onVerify={handleVerify} onExpire={handleExpire} />}
+      {needsToken && (
+        <TurnstileField
+          resetKey={turnstile.resetKey}
+          expired={turnstile.expired}
+          onVerify={turnstile.onVerify}
+          onExpire={turnstile.onExpire}
+          onRetry={turnstile.reset}
+        />
+      )}
       {!wasRead && (
         <LoadingButton
           isLoading={isLoading}

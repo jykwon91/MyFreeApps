@@ -12,6 +12,10 @@ const extractItem = vi.hoisted(() => vi.fn());
 vi.mock("@/games/wow-forever/lib/itemReaderAvailability", () => ({
   isScreenshotReaderOffered: () => availability.offered,
   isScreenshotReaderBrowserOnly: () => availability.browserOnly,
+}));
+
+// The Turnstile token hook reads the site key from here.
+vi.mock("@/games/wow-forever/lib/humanCheckAvailability", () => ({
   turnstileSiteKey: () => availability.siteKey,
 }));
 
