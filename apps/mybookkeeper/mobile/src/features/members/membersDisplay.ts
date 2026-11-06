@@ -25,11 +25,6 @@ export function inviteStatusLine(invite: OrgInvite, now: Date): string {
   return `${role} · ${MESSAGES.expiresIn(days)}`;
 }
 
-/** The owner can't be changed by anyone, and nobody can change their own role or remove themselves. */
-export function canEditMember(member: OrgMember, myEmail: string | null, isAdmin: boolean): boolean {
-  return isAdmin && member.org_role !== "owner" && !isSameEmail(member.user_email, myEmail);
-}
-
 export function isNotMemberRefusal(error: unknown): boolean {
   return (error as { data?: { detail?: unknown } } | null)?.data?.detail === NOT_A_MEMBER_DETAIL;
 }

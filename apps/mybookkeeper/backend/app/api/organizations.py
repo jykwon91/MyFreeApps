@@ -115,6 +115,8 @@ async def update_member_role(
             org_role=member.org_role,
             joined_at=member.joined_at,
         )
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except LookupError as e:
@@ -130,6 +132,8 @@ async def remove_member(
     _verify_org_access(org_id, ctx)
     try:
         await organization_service.remove_member(org_id, user_id, ctx.user_id)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except LookupError as e:

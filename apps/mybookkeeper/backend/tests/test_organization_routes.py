@@ -553,3 +553,41 @@ class TestRemoveMember:
             f"/organizations/{org.id}/members/{uuid.uuid4()}",
         )
         assert resp.status_code == 404
+
+
+class TestAdminCannotTouchAnotherAdmin:
+    @pytest_asyncio.fixture()
+    async def other_admin(self, db: AsyncSession, org: Organization) -> User:
+        user = User(
+            id=uuid.uuid4(),
+            email="routes-other-admin@example.com",
+            hashed_password="fakehash",
+            is_active=True,
+            is_superuser=False,
+            is_verified=True,
+        )
+        db.add(user)
+        db.add(OrganizationMember(organization_id=org.id, user_id=user.id, org_role="admin"))
+        await db.commit()
+        return user
+
+    @pytest.mark.asyncio
+    async def test_demote_returns_403(
+        self, client_as_admin: AsyncClient, org: Organization, other_admin: User,
+    ) -> None:
+        resp = await client_as_admin.patch(
+            f"/organizations/{org.id}/members/{other_admin.id}/role",
+            json={"org_role": "user"},
+        )
+        assert resp.status_code == 403
+        assert resp.json()["detail"] == "Only the owner can change an admin's role"
+
+    @pytest.mark.asyncio
+    async def test_remove_returns_403(
+        self, client_as_admin: AsyncClient, org: Organization, other_admin: User,
+    ) -> None:
+        resp = await client_as_admin.delete(
+            f"/organizations/{org.id}/members/{other_admin.id}",
+        )
+        assert resp.status_code == 403
+        assert resp.json()["detail"] == "Only the owner can remove an admin"

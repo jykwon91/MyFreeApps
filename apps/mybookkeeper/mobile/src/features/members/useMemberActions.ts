@@ -3,7 +3,9 @@ import type { AssignableRole } from "@mybookkeeper/api-client/types/organization
 import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
 import { useToast } from "@platform/mobile";
 import { MEMBERS_MESSAGES as MESSAGES, ROLE_WITH_ARTICLE } from "../../constants/members";
+import { OWNER_ONLY_ADMIN_MESSAGE } from "@mybookkeeper/api-client/constants/ownerOnlyRefusal";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
+import { isOwnerOnlyRefusal } from "@mybookkeeper/api-client/utils/isOwnerOnlyRefusal";
 import { memberName } from "./membersDisplay";
 import { useAccessRefused } from "./useAccessRefused";
 import { useBusyRows } from "./useBusyRows";
@@ -24,6 +26,10 @@ export function useMemberActions(orgId: string) {
     success: string,
   ): Promise<void> {
     const status = httpStatus(error);
+    if (isOwnerOnlyRefusal(error)) {
+      showToast(OWNER_ONLY_ADMIN_MESSAGE, "error");
+      return;
+    }
     if (status === 403) {
       accessRefused(error);
       return;

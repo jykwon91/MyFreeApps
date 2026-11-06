@@ -13,6 +13,7 @@ from unittest.mock import patch
 import pytest
 import pytest_asyncio
 from fastapi import HTTPException
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.context import RequestContext
@@ -106,6 +107,23 @@ async def org_with_all_roles(
         db.add(member)
     await db.commit()
     return org
+
+
+@pytest_asyncio.fixture()
+async def second_admin(db: AsyncSession, org_with_all_roles: Organization) -> User:
+    user = User(
+        id=uuid.uuid4(),
+        email="role-admin-2@example.com",
+        hashed_password="fakehash",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db.add(user)
+    db.add(OrganizationMember(organization_id=org_with_all_roles.id, user_id=user.id, org_role="admin"))
+    await db.commit()
+    await db.refresh(user)
+    return user
 
 
 @pytest.fixture(autouse=True)
@@ -357,6 +375,55 @@ class TestAdminPermissions:
                 org_with_all_roles.id, regular_user.id, "owner", admin_user.id,
             )
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("new_role", ["user", "viewer"])
+    async def test_admin_cannot_demote_another_admin(
+        self,
+        db: AsyncSession,
+        org_with_all_roles: Organization,
+        admin_user: User,
+        second_admin: User,
+        new_role: str,
+    ) -> None:
+        with pytest.raises(PermissionError, match="Only the owner can change an admin's role"):
+            await organization_service.update_member_role(
+                org_with_all_roles.id, second_admin.id, new_role, admin_user.id,
+            )
+        member = await organization_repo.get_member(db, org_with_all_roles.id, second_admin.id)
+        assert member is not None
+        await db.refresh(member)
+        assert member.org_role == "admin"
+
+    @pytest.mark.asyncio
+    async def test_admin_cannot_remove_another_admin(
+        self,
+        db: AsyncSession,
+        org_with_all_roles: Organization,
+        admin_user: User,
+        second_admin: User,
+    ) -> None:
+        with pytest.raises(PermissionError, match="Only the owner can remove an admin"):
+            await organization_service.remove_member(
+                org_with_all_roles.id, second_admin.id, admin_user.id,
+            )
+        assert await organization_repo.get_member(db, org_with_all_roles.id, second_admin.id) is not None
+
+    @pytest.mark.asyncio
+    async def test_owner_can_demote_and_remove_any_admin(
+        self,
+        db: AsyncSession,
+        org_with_all_roles: Organization,
+        owner_user: User,
+        admin_user: User,
+        second_admin: User,
+    ) -> None:
+        updated = await organization_service.update_member_role(
+            org_with_all_roles.id, second_admin.id, "viewer", owner_user.id,
+        )
+        assert updated.org_role == "viewer"
+        await organization_service.remove_member(org_with_all_roles.id, admin_user.id, owner_user.id)
+        assert await organization_repo.get_member(db, org_with_all_roles.id, admin_user.id) is None
+
 
 # ---------------------------------------------------------------------------
 # Owner Permissions
@@ -529,3 +596,41 @@ class TestRoleEdgeCases:
     ) -> None:
         with pytest.raises(LookupError, match="Organization not found"):
             await organization_service.delete_organization(uuid.uuid4(), owner_user.id)
+
+
+class TestTargetRowLock:
+    """The admin check reads the target's role under a row lock, so a promotion can't slip in between."""
+
+    @pytest.mark.asyncio
+    async def test_get_member_for_update_locks_the_row_exclusively(
+        self, db: AsyncSession, org_with_all_roles: Organization, regular_user: User,
+    ) -> None:
+        statements = []
+        real_execute = db.execute
+
+        async def _capture(statement, *args, **kwargs):
+            statements.append(statement)
+            return await real_execute(statement, *args, **kwargs)
+
+        with patch.object(db, "execute", _capture):
+            member = await organization_repo.get_member_for_update(db, org_with_all_roles.id, regular_user.id)
+
+        assert member is not None and member.user_id == regular_user.id
+        sql = str(statements[0].compile(dialect=postgresql.dialect()))
+        assert sql.rstrip().endswith("FOR UPDATE")
+
+    @pytest.mark.asyncio
+    async def test_role_change_and_removal_read_the_target_locked(
+        self, db: AsyncSession, org_with_all_roles: Organization, owner_user: User, regular_user: User,
+    ) -> None:
+        with patch.object(
+            organization_repo, "get_member_for_update", wraps=organization_repo.get_member_for_update,
+        ) as locked:
+            await organization_service.update_member_role(
+                org_with_all_roles.id, regular_user.id, "viewer", owner_user.id,
+            )
+            await organization_service.remove_member(org_with_all_roles.id, regular_user.id, owner_user.id)
+        assert [c.args[1:] for c in locked.call_args_list] == [
+            (org_with_all_roles.id, regular_user.id),
+            (org_with_all_roles.id, regular_user.id),
+        ]

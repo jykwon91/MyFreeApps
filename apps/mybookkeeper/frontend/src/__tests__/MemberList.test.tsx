@@ -19,6 +19,7 @@ vi.mock("@/shared/hooks/useCurrentOrg", () => ({
 
 vi.mock("@/shared/hooks/useOrgRole", () => ({
   useIsOrgAdmin: vi.fn(() => true),
+  useOrgRole: vi.fn(() => "owner"),
   useCanWrite: vi.fn(() => true),
 }));
 
@@ -27,6 +28,7 @@ vi.mock("@/shared/hooks/useCurrentUser", () => ({
 }));
 
 import { useListMembersQuery } from "@mybookkeeper/api-client/store/membersApi";
+import { useOrgRole } from "@/shared/hooks/useOrgRole";
 
 function makeMember(overrides: Partial<OrgMember> = {}): OrgMember {
   return {
@@ -47,6 +49,7 @@ describe("MemberList", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useOrgRole).mockReturnValue("owner");
   });
 
   it("falls back to the email when a member's name is blank", () => {
@@ -95,6 +98,7 @@ describe("MemberList", () => {
   });
 
   it("offers no role change or removal on the owner's row", () => {
+    vi.mocked(useOrgRole).mockReturnValue("admin");
     const members = [
       makeMember({ user_id: "user-2", user_email: "owner@test.com", user_name: "Owner", org_role: "owner" }),
       makeMember({ user_id: "user-1", user_email: "me@test.com", user_name: "Me", org_role: "admin" }),
@@ -109,6 +113,40 @@ describe("MemberList", () => {
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.queryByText("Remove")).not.toBeInTheDocument();
     expect(screen.getByText("Owner", { selector: "span" })).toBeInTheDocument();
+  });
+
+  it("lets an admin manage users but not another admin", () => {
+    vi.mocked(useOrgRole).mockReturnValue("admin");
+    vi.mocked(useListMembersQuery).mockReturnValue({
+      data: [
+        makeMember({ user_id: "user-1", user_email: "me@test.com", user_name: "Me", org_role: "admin" }),
+        makeMember({ user_id: "user-2", user_email: "admin2@test.com", user_name: "Ada", org_role: "admin" }),
+        makeMember({ user_id: "user-3", user_email: "user@test.com", user_name: "Uma", org_role: "user" }),
+      ],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useListMembersQuery>);
+
+    render(<MemberList onError={onError} onSuccess={onSuccess} />);
+
+    expect(screen.queryByRole("combobox", { name: /Ada/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Remove Ada/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /Uma/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Remove Uma/ })).toBeInTheDocument();
+  });
+
+  it("lets the owner change or remove an admin", () => {
+    vi.mocked(useListMembersQuery).mockReturnValue({
+      data: [
+        makeMember({ user_id: "user-1", user_email: "me@test.com", user_name: "Me", org_role: "owner" }),
+        makeMember({ user_id: "user-2", user_email: "admin2@test.com", user_name: "Ada", org_role: "admin" }),
+      ],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useListMembersQuery>);
+
+    render(<MemberList onError={onError} onSuccess={onSuccess} />);
+
+    expect(screen.getByRole("combobox", { name: /Ada/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Remove Ada/ })).toBeInTheDocument();
   });
 
   it("never offers Owner as a role to assign", () => {

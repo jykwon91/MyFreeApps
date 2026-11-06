@@ -86,6 +86,21 @@ async def get_member(
     return result.scalar_one_or_none()
 
 
+async def get_member_for_update(
+    db: AsyncSession, org_id: uuid.UUID, user_id: uuid.UUID
+) -> OrganizationMember | None:
+    """The membership, locked for this transaction so its role can't change under a decision about it."""
+    result = await db.execute(
+        select(OrganizationMember)
+        .where(
+            OrganizationMember.organization_id == org_id,
+            OrganizationMember.user_id == user_id,
+        )
+        .with_for_update()
+    )
+    return result.scalar_one_or_none()
+
+
 async def lock_member(
     db: AsyncSession, org_id: uuid.UUID, user_id: uuid.UUID
 ) -> OrganizationMember | None:

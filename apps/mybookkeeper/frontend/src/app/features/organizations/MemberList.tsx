@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useListMembersQuery, useUpdateMemberRoleMutation, useRemoveMemberMutation } from "@mybookkeeper/api-client/store/membersApi";
 import { useActiveOrgId } from "@/shared/hooks/useCurrentOrg";
-import { useIsOrgAdmin } from "@/shared/hooks/useOrgRole";
+import { useIsOrgAdmin, useOrgRole } from "@/shared/hooks/useOrgRole";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
 import type { OrgRole } from "@mybookkeeper/api-client/types/organization/OrgRole";
@@ -10,6 +10,7 @@ import Badge from "@/shared/components/ui/Badge";
 import Select from "@/shared/components/ui/Select";
 import { ConfirmDialog } from "@platform/ui";
 import { ASSIGNABLE_ROLE_OPTIONS } from "@mybookkeeper/api-client/constants/orgRoles";
+import { canManageMember } from "@mybookkeeper/api-client/utils/canManageMember";
 import { ROLE_BADGE_COLORS } from "@/shared/lib/organization-config";
 import { memberRoleLabel, removeMemberDescription } from "@/shared/lib/organization-messages";
 import MemberRowAction from "@/app/features/organizations/MemberRowAction";
@@ -22,6 +23,7 @@ export interface MemberListProps {
 export default function MemberList({ onError, onSuccess }: MemberListProps) {
   const orgId = useActiveOrgId();
   const { user } = useCurrentUser();
+  const myRole = useOrgRole();
   const isAdmin = useIsOrgAdmin();
   const { data: members = [] } = useListMembersQuery(orgId!, { skip: !orgId });
   const [updateRole, { isLoading: isUpdatingRole }] = useUpdateMemberRoleMutation();
@@ -68,8 +70,7 @@ export default function MemberList({ onError, onSuccess }: MemberListProps) {
           <tbody>
             {members.map((member) => {
               const isSelf = member.user_id === user?.id;
-              // The owner's role and membership change only by ownership transfer.
-              const canManage = isAdmin && !isSelf && member.org_role !== "owner";
+              const canManage = canManageMember(member, myRole, isSelf);
               const name = member.user_name || member.user_email || "Unnamed";
               return (
                 <tr key={member.id} className="border-b last:border-b-0">
