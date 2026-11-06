@@ -1,13 +1,11 @@
-import { useId, useState } from "react";
+import { useId } from "react";
 import { Link } from "react-router-dom";
 import clsx from "clsx";
-import { LoadingButton } from "@platform/ui";
 import StoryCriteria from "@/games/wow-forever/components/featureRequests/StoryCriteria";
-import TriageStatusMenu from "@/games/wow-forever/components/featureRequests/triage/TriageStatusMenu";
-import TriageUndoBar from "@/games/wow-forever/components/featureRequests/triage/TriageUndoBar";
+import TriageStoryRowActions from "@/games/wow-forever/components/featureRequests/triage/TriageStoryRowActions";
 import { TRIAGE_COPY } from "@/games/wow-forever/data/featureRequests/triage/triageCopy";
 import { TRIAGE_STATUS_LABEL, TRIAGE_STATUS_STYLE } from "@/games/wow-forever/data/featureRequests/triage/triageLabels";
-import { TRIAGE_CHIP, TRIAGE_SECONDARY_BUTTON } from "@/games/wow-forever/data/featureRequests/triage/triageStyles";
+import { TRIAGE_CHIP } from "@/games/wow-forever/data/featureRequests/triage/triageStyles";
 import { areaChipLabel, playersAskedLabel, storySentence } from "@/games/wow-forever/lib/featureRequests/featureRequestFormat";
 import { isValidShippedPath } from "@/games/wow-forever/lib/featureRequests/triage/shippedPathValidator";
 import { mergedCountLabel, priorityLabel } from "@/games/wow-forever/lib/featureRequests/triage/triageFormat";
@@ -38,14 +36,7 @@ interface TriageStoryRowProps {
 export default function TriageStoryRow(props: TriageStoryRowProps) {
   const { story, status, expanded } = props;
   const detailsId = useId();
-  const [hiding, setHiding] = useState(false);
-  const merged = story.status === "duplicate";
   const nuances = story.submissions.map((s) => s.nuance_note).filter((n): n is string => n !== null);
-
-  const setHidden = (hidden: boolean) => {
-    setHiding(true);
-    void props.onSetHidden(hidden).finally(() => setHiding(false));
-  };
 
   return (
     <li data-section="story-row" data-story-id={story.id} className="rounded-xl border bg-card">
@@ -96,23 +87,15 @@ export default function TriageStoryRow(props: TriageStoryRowProps) {
               </ul>
             </div>
           ) : null}
-          {props.pending !== undefined ? (
-            <TriageUndoBar pending={props.pending} onUndo={props.onUndo} />
-          ) : merged ? null : story.hidden ? (
-            <LoadingButton variant="secondary" isLoading={hiding} loadingText={TRIAGE_COPY.saving} onClick={() => setHidden(false)}>
-              {TRIAGE_COPY.unhide}
-            </LoadingButton>
-          ) : (
-            <div className="flex flex-wrap items-start gap-2">
-              <TriageStatusMenu status={status} onPick={props.onPickStatus} />
-              <button type="button" onClick={props.onEdit} className={TRIAGE_SECONDARY_BUTTON}>
-                {TRIAGE_COPY.edit}
-              </button>
-              <LoadingButton variant="secondary" isLoading={hiding} loadingText={TRIAGE_COPY.saving} onClick={() => setHidden(true)}>
-                {TRIAGE_COPY.hide}
-              </LoadingButton>
-            </div>
-          )}
+          <TriageStoryRowActions
+            story={story}
+            status={status}
+            pending={props.pending}
+            onUndo={props.onUndo}
+            onPickStatus={props.onPickStatus}
+            onEdit={props.onEdit}
+            onSetHidden={props.onSetHidden}
+          />
         </div>
       ) : null}
     </li>
