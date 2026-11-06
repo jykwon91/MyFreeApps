@@ -9,7 +9,7 @@
  * Coordinates the editor mode, the selected zone, the drawing-in-progress
  * buffer, and the preview/edit toggle.
  */
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, Button, AlertBox } from "@platform/ui";
 import { Eye, EyeOff } from "lucide-react";
 import ZoneList from "./ZoneList";
