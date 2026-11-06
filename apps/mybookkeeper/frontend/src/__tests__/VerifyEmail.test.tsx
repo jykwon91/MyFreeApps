@@ -76,15 +76,26 @@ describe("VerifyEmail — error", () => {
     await screen.findByText("VERIFY_TOKEN_INVALID");
   });
 
-  it("shows the server's detail for an axios error, not the request status line", async () => {
+  it("says the link is invalid or expired for the server's VERIFY_USER_BAD_TOKEN", async () => {
     const axiosErr = Object.assign(new Error("Request failed with status code 400"), {
       response: { status: 400, data: { detail: "VERIFY_USER_BAD_TOKEN" } },
     });
     vi.mocked(api.post).mockRejectedValue(axiosErr);
     renderVerifyEmail("?token=bad-token");
 
-    await screen.findByText("VERIFY_USER_BAD_TOKEN");
-    expect(screen.queryByText(/request failed with status code/i)).not.toBeInTheDocument();
+    await screen.findByText("This verification link is invalid or has expired.");
+    expect(screen.queryByText(/VERIFY_USER_BAD_TOKEN|request failed with status code/i)).not.toBeInTheDocument();
+  });
+
+  it("treats an already-verified email (second click) as success", async () => {
+    const axiosErr = Object.assign(new Error("Request failed with status code 400"), {
+      response: { status: 400, data: { detail: "VERIFY_USER_ALREADY_VERIFIED" } },
+    });
+    vi.mocked(api.post).mockRejectedValue(axiosErr);
+    renderVerifyEmail("?token=used-token");
+
+    await screen.findByText(/your email has been verified/i);
+    expect(screen.queryByText(/VERIFY_USER_ALREADY_VERIFIED/)).not.toBeInTheDocument();
   });
 
   it("shows a generic error when API error has no message", async () => {

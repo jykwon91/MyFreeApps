@@ -258,6 +258,20 @@ describe("Register \u2014 error handling", () => {
     await screen.findByText("Email already registered");
   });
 
+  it("says the account already exists for the server's REGISTER_USER_ALREADY_EXISTS", async () => {
+    const axiosErr = Object.assign(new Error("Request failed with status code 400"), {
+      response: { status: 400, data: { detail: "REGISTER_USER_ALREADY_EXISTS" } },
+    });
+    vi.mocked(api.post).mockRejectedValue(axiosErr);
+    const user = userEvent.setup();
+    const { container } = renderRegister();
+    await user.type(emailInput(container), "taken@example.com");
+    await user.type(passwordInput(container), "mypassword1234");
+    await user.click(termsCheckbox());
+    await user.click(screen.getByRole("button", { name: "Sign up" }));
+    await screen.findByText("An account with this email already exists. Sign in instead.");
+  });
+
   it("does not navigate when registration fails", async () => {
     vi.mocked(api.post).mockRejectedValue(new Error("Email already registered"));
     const user = userEvent.setup();

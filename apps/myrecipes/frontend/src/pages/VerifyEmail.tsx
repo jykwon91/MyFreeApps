@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { ChefHat } from "lucide-react";
-import { extractErrorMessage } from "@platform/ui";
+import { describeAuthError, isAlreadyVerifiedError } from "@platform/ui";
 import { VerifyState } from "@/constants/verifyState";
 import api from "@/lib/api";
 
@@ -24,8 +24,12 @@ export default function VerifyEmail() {
       .post("/auth/verify", { token })
       .then(() => setState(VerifyState.SUCCESS))
       .catch((err: unknown) => {
+        if (isAlreadyVerifiedError(err)) {
+          setState(VerifyState.SUCCESS);
+          return;
+        }
         setState(VerifyState.ERROR);
-        setErrorMessage(extractErrorMessage(err));
+        setErrorMessage(describeAuthError(err));
       });
   }, [token]);
 

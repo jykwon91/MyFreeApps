@@ -55,6 +55,7 @@ test.describe("Register — check-inbox screen", () => {
     await page.goto("/register");
     await page.locator("input[type='email']").fill(testEmail);
     await page.locator("input[type='password']").fill("TestP@ssword1234!");
+    await page.getByRole("checkbox", { name: /i agree to the terms/i }).check();
     await page.getByRole("button", { name: /sign up/i }).click();
 
     // Should show check-inbox screen (not navigate to dashboard)

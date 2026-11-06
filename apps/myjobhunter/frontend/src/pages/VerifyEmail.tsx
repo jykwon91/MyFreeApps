@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { extractErrorMessage } from "@platform/ui";
+import { describeAuthError, isAlreadyVerifiedError } from "@platform/ui";
 import api from "@/lib/api";
 
 type VerifyState = "verifying" | "success" | "error";
@@ -23,8 +23,12 @@ export default function VerifyEmail() {
       .post("/auth/verify", { token })
       .then(() => setState("success"))
       .catch((err: unknown) => {
+        if (isAlreadyVerifiedError(err)) {
+          setState("success");
+          return;
+        }
         setState("error");
-        setErrorMessage(extractErrorMessage(err));
+        setErrorMessage(describeAuthError(err));
       });
   }, [token]);
 

@@ -1,8 +1,7 @@
 import { useState, useCallback } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import api from "@/shared/lib/api";
-import { extractErrorMessage } from "@platform/ui";
-import { AuthPageFooter, LoadingButton } from "@platform/ui";
+import { AuthPageFooter, describeAuthError, LoadingButton } from "@platform/ui";
 import TurnstileWidget from "@/shared/components/ui/TurnstileWidget";
 import LegalFooter from "@/app/components/LegalFooter";
 import { USER_NAME_INPUT_MAX_LENGTH } from "@/shared/lib/constants";
@@ -49,7 +48,7 @@ export default function Register() {
       });
       setRegistered(true);
     } catch (err) {
-      setError(extractErrorMessage(err));
+      setError(describeAuthError(err));
     } finally {
       setIsLoading(false);
     }
