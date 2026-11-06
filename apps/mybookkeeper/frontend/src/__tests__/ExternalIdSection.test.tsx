@@ -44,14 +44,27 @@ describe("ExternalIdSection", () => {
   });
 
   it("shows the empty state with a CTA when no external_ids exist", () => {
-    render(<ExternalIdSection listingId="listing-1" externalIds={[]} />);
+    render(<ExternalIdSection canWrite listingId="listing-1" externalIds={[]} />);
     expect(screen.getByTestId("external-id-empty-state")).toBeInTheDocument();
     expect(screen.getByTestId("external-id-add-cta")).toBeInTheDocument();
   });
 
+  it("gives a viewer the links with no add, edit or remove", () => {
+    render(<ExternalIdSection canWrite={false} listingId="listing-1" externalIds={[oneFFExternalId]} />);
+    expect(screen.getByTestId("external-id-row-ext-1")).toBeInTheDocument();
+    expect(screen.queryByTestId("external-id-add-button")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /edit|remove/i })).not.toBeInTheDocument();
+  });
+
+  it("gives a viewer a short empty state with no add button", () => {
+    render(<ExternalIdSection canWrite={false} listingId="listing-1" externalIds={[]} />);
+    expect(screen.getByTestId("external-id-empty-state")).toHaveTextContent("No links to other sites yet.");
+    expect(screen.queryByTestId("external-id-add-cta")).not.toBeInTheDocument();
+  });
+
   it("renders one row per external_id", () => {
     render(
-      <ExternalIdSection
+      <ExternalIdSection canWrite
         listingId="listing-1"
         externalIds={[oneFFExternalId]}
       />,
@@ -65,7 +78,7 @@ describe("ExternalIdSection", () => {
 
   it('opens the add form when "Add link" is clicked', async () => {
     render(
-      <ExternalIdSection
+      <ExternalIdSection canWrite
         listingId="listing-1"
         externalIds={[oneFFExternalId]}
       />,
@@ -84,7 +97,7 @@ describe("ExternalIdSection", () => {
       { ...oneFFExternalId, id: "ext-Airbnb", source: "Airbnb" },
       { ...oneFFExternalId, id: "ext-direct", source: "direct" },
     ];
-    render(<ExternalIdSection listingId="listing-1" externalIds={allFour} />);
+    render(<ExternalIdSection canWrite listingId="listing-1" externalIds={allFour} />);
     expect(
       screen.queryByTestId("external-id-add-button"),
     ).not.toBeInTheDocument();
@@ -95,7 +108,7 @@ describe("ExternalIdSection", () => {
       unwrap: () => Promise.resolve(undefined),
     });
     render(
-      <ExternalIdSection
+      <ExternalIdSection canWrite
         listingId="listing-1"
         externalIds={[oneFFExternalId]}
       />,
@@ -117,7 +130,7 @@ describe("ExternalIdSection", () => {
       unwrap: () => Promise.reject(new Error("network")),
     });
     render(
-      <ExternalIdSection
+      <ExternalIdSection canWrite
         listingId="listing-1"
         externalIds={[oneFFExternalId]}
       />,
@@ -132,7 +145,7 @@ describe("ExternalIdSection", () => {
 
   it("opens edit form when Edit is clicked on a row", async () => {
     render(
-      <ExternalIdSection
+      <ExternalIdSection canWrite
         listingId="listing-1"
         externalIds={[oneFFExternalId]}
       />,

@@ -54,6 +54,12 @@ describe("PhotoSelectionToolbar", () => {
     expect(onBulkDelete).toHaveBeenCalledTimes(1);
   });
 
+  it("leaves out Delete when there's no onBulkDelete, keeping Download", () => {
+    renderToolbar({ onBulkDelete: undefined });
+    expect(screen.queryByTestId("photo-bulk-delete-button")).not.toBeInTheDocument();
+    expect(screen.getByTestId("photo-bulk-download-button")).toBeInTheDocument();
+  });
+
   it("calls onBulkDownload when Download is clicked", async () => {
     const onBulkDownload = vi.fn();
     renderToolbar({ onBulkDownload });

@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import { Button } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { LISTING_SOURCES, LISTING_SOURCE_LABELS } from "@/shared/lib/listing-labels";
+import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
 import { useDeleteListingExternalIdMutation } from "@/shared/store/listingsApi";
 import type { ListingExternalId } from "@mybookkeeper/api-client/types/listing/listing-external-id";
 import type { ListingSource } from "@mybookkeeper/api-client/types/listing/listing-source";
@@ -12,6 +13,8 @@ import ExternalIdRow from "./ExternalIdRow";
 export interface ExternalIdSectionProps {
   listingId: string;
   externalIds: readonly ListingExternalId[];
+  /** Viewers see the links only: no add, edit or remove. */
+  canWrite: boolean;
 }
 
 type FormMode =
@@ -29,7 +32,7 @@ type FormMode =
  *   - Empty state with prominent CTA
  *   - Toasts for success / failure (no alert(), no modal popups for ops)
  */
-export default function ExternalIdSection({ listingId, externalIds }: ExternalIdSectionProps) {
+export default function ExternalIdSection({ listingId, externalIds, canWrite }: ExternalIdSectionProps) {
   const [formMode, setFormMode] = useState<FormMode>({ kind: "closed" });
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [deleteExternalId] = useDeleteListingExternalIdMutation();
@@ -71,7 +74,7 @@ export default function ExternalIdSection({ listingId, externalIds }: ExternalId
   }
 
   const showAddButton =
-    formMode.kind !== "create" && !allSourcesLinked;
+    canWrite && formMode.kind !== "create" && !allSourcesLinked;
 
   return (
     <div className="space-y-3" data-testid="external-id-section">
@@ -99,17 +102,19 @@ export default function ExternalIdSection({ listingId, externalIds }: ExternalId
           className="border-2 border-dashed rounded-lg p-6 text-center space-y-3"
         >
           <p className="text-sm text-muted-foreground">
-            Not linked to any listing platform yet.
+            {canWrite ? LISTING_MESSAGES.noExternalIds : LISTING_MESSAGES.noExternalIdsViewer}
           </p>
-          <Button
-            variant="primary"
-            size="md"
-            onClick={handleAdd}
-            data-testid="external-id-add-cta"
-          >
-            <Plus className="h-4 w-4 mr-1" aria-hidden="true" />
-            Add your first link
-          </Button>
+          {canWrite ? (
+            <Button
+              variant="primary"
+              size="md"
+              onClick={handleAdd}
+              data-testid="external-id-add-cta"
+            >
+              <Plus className="h-4 w-4 mr-1" aria-hidden="true" />
+              Add your first link
+            </Button>
+          ) : null}
         </div>
       ) : null}
 
@@ -122,12 +127,13 @@ export default function ExternalIdSection({ listingId, externalIds }: ExternalId
               onEdit={() => handleEdit(ext)}
               onRemove={() => handleRemove(ext)}
               isRemoving={removingId === ext.id}
+              canWrite={canWrite}
             />
           ))}
         </ul>
       ) : null}
 
-      {formMode.kind === "create" ? (
+      {canWrite && formMode.kind === "create" ? (
         <ExternalIdForm
           listingId={listingId}
           linkedSources={linkedSources}
@@ -136,7 +142,7 @@ export default function ExternalIdSection({ listingId, externalIds }: ExternalId
         />
       ) : null}
 
-      {formMode.kind === "edit" ? (
+      {canWrite && formMode.kind === "edit" ? (
         <ExternalIdForm
           listingId={listingId}
           existing={formMode.externalId}

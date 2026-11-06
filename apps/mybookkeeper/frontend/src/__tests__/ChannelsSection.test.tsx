@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import ChannelsSection from "@/app/features/listings/ChannelsSection";
 import type { ChannelListing } from "@/shared/types/listing/channel-listing";
 import type { Channel } from "@/shared/types/listing/channel";
+import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
 
 const showSuccessMock = vi.fn();
 const showErrorMock = vi.fn();
@@ -80,12 +81,12 @@ describe("ChannelsSection", () => {
 
   it("shows loading skeletons while fetching", () => {
     mockIsLoading = true;
-    render(<ChannelsSection listingId="listing-1" />);
+    render(<ChannelsSection canWrite listingId="listing-1" />);
     expect(screen.getByTestId("channels-section-loading")).toBeInTheDocument();
   });
 
   it("shows the empty state with CTA when no channel_listings exist", () => {
-    render(<ChannelsSection listingId="listing-1" />);
+    render(<ChannelsSection canWrite listingId="listing-1" />);
     expect(
       screen.getByTestId("channels-section-empty-state"),
     ).toBeInTheDocument();
@@ -94,7 +95,7 @@ describe("ChannelsSection", () => {
 
   it("renders one row per channel_listing", () => {
     mockChannelListings = [cl];
-    render(<ChannelsSection listingId="listing-1" />);
+    render(<ChannelsSection canWrite listingId="listing-1" />);
     expect(screen.getByTestId("channel-listings-list")).toBeInTheDocument();
     expect(screen.getByTestId("channel-listing-row-cl-1")).toBeInTheDocument();
     expect(screen.getByText("Airbnb")).toBeInTheDocument();
@@ -102,7 +103,7 @@ describe("ChannelsSection", () => {
 
   it('opens the modal when "Add channel" is clicked', async () => {
     mockChannelListings = [cl];
-    render(<ChannelsSection listingId="listing-1" />);
+    render(<ChannelsSection canWrite listingId="listing-1" />);
     expect(
       screen.queryByTestId("channel-listing-form-modal"),
     ).not.toBeInTheDocument();
@@ -111,13 +112,31 @@ describe("ChannelsSection", () => {
     expect(screen.getByTestId("channel-listing-form-modal")).toBeInTheDocument();
   });
 
+  it("gives a viewer the channels with copy but no add, edit or remove", () => {
+    mockChannelListings = [cl];
+    render(<ChannelsSection canWrite={false} listingId="listing-1" />);
+    expect(screen.getByTestId("channel-listing-row-cl-1")).toBeInTheDocument();
+    expect(screen.getByTestId("channel-listing-copy-cl-1")).toBeInTheDocument();
+    expect(screen.queryByTestId("channel-listing-edit-cl-1")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("channel-listing-remove-cl-1")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("channels-section-add-button")).not.toBeInTheDocument();
+    expect(screen.getByTestId("channels-section")).toHaveTextContent(LISTING_MESSAGES.channelsIntroViewer);
+    expect(screen.queryByText(LISTING_MESSAGES.channelsIntro)).not.toBeInTheDocument();
+  });
+
+  it("gives a viewer a short empty state with no add button", () => {
+    render(<ChannelsSection canWrite={false} listingId="listing-1" />);
+    expect(screen.getByTestId("channels-section-empty-state")).toHaveTextContent("No channels yet.");
+    expect(screen.queryByTestId("channels-section-add-cta")).not.toBeInTheDocument();
+  });
+
   it("hides the Add button when all channels are linked", () => {
     const both: ChannelListing[] = [
       cl,
       { ...cl, id: "cl-2", channel_id: "vrbo", channel: vrbo },
     ];
     mockChannelListings = both;
-    render(<ChannelsSection listingId="listing-1" />);
+    render(<ChannelsSection canWrite listingId="listing-1" />);
     expect(
       screen.queryByTestId("channels-section-add-button"),
     ).not.toBeInTheDocument();
@@ -129,7 +148,7 @@ describe("ChannelsSection", () => {
       unwrap: () => Promise.resolve(undefined),
     });
 
-    render(<ChannelsSection listingId="listing-1" />);
+    render(<ChannelsSection canWrite listingId="listing-1" />);
     await userEvent.setup().click(screen.getByTestId("channel-listing-remove-cl-1"));
 
     await waitFor(() => {
@@ -147,7 +166,7 @@ describe("ChannelsSection", () => {
       unwrap: () => Promise.reject(new Error("network")),
     });
 
-    render(<ChannelsSection listingId="listing-1" />);
+    render(<ChannelsSection canWrite listingId="listing-1" />);
     await userEvent.setup().click(screen.getByTestId("channel-listing-remove-cl-1"));
 
     await waitFor(() => {

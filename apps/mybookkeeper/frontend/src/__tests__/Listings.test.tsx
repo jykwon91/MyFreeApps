@@ -92,7 +92,11 @@ vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(() => defaultPropertiesState),
 }));
 
+vi.mock("@/shared/hooks/useOrgRole", () => ({ useCanWrite: vi.fn(() => true) }));
+
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
+import { useCanWrite } from "@/shared/hooks/useOrgRole";
+import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
 
 function renderListings(initialEntries: string[] = ["/listings"]) {
   return render(
@@ -106,6 +110,7 @@ function renderListings(initialEntries: string[] = ["/listings"]) {
 
 describe("Listings page", () => {
   beforeEach(() => {
+    vi.mocked(useCanWrite).mockReturnValue(true);
     vi.mocked(useGetListingsQuery).mockReturnValue(
       defaultListingsState as unknown as ReturnType<typeof useGetListingsQuery>,
     );
@@ -221,6 +226,23 @@ describe("Listings page", () => {
     await user.click(newBtn);
     expect(screen.getByTestId("listing-form")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /new listing/i })).toBeInTheDocument();
+  });
+
+  it("gives a viewer the list with no New listing button", () => {
+    vi.mocked(useCanWrite).mockReturnValue(false);
+    renderListings();
+    expect(screen.getAllByText(mockListings[0].title).length).toBeGreaterThan(0);
+    expect(screen.queryByTestId("new-listing-button")).not.toBeInTheDocument();
+  });
+
+  it("tells a viewer listings will show up once someone adds one", () => {
+    vi.mocked(useCanWrite).mockReturnValue(false);
+    vi.mocked(useGetListingsQuery).mockReturnValueOnce({
+      ...defaultListingsState,
+      data: { items: [], total: 0, has_more: false },
+    } as unknown as ReturnType<typeof useGetListingsQuery>);
+    renderListings();
+    expect(screen.getByText(LISTING_MESSAGES.noListingsViewer)).toBeInTheDocument();
   });
 
   it("hides the Load more button when has_more is false", () => {

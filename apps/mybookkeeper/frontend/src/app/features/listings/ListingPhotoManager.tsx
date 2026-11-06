@@ -30,12 +30,15 @@ import ListingPhotoCard from "@/app/features/listings/ListingPhotoCard";
 import PhotoSelectionToolbar from "@/app/features/listings/PhotoSelectionToolbar";
 import { usePhotoSelection } from "@/app/features/listings/usePhotoSelection";
 import { downloadPhotosAsZip } from "@/app/features/listings/photo-bulk-download";
+import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
 import PhotoLightbox from "@/app/features/listings/PhotoLightbox";
 
 export interface ListingPhotoManagerProps {
   listingId: string;
   listingSlug?: string;
   photos: readonly ListingPhoto[];
+  /** Viewers can look at, select and download photos only. */
+  canWrite: boolean;
 }
 
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -64,6 +67,7 @@ export default function ListingPhotoManager({
   listingId,
   listingSlug,
   photos,
+  canWrite,
 }: ListingPhotoManagerProps) {
   const [uploadPhotos, { isLoading: isUploading }] = useUploadListingPhotosMutation();
   const [deletePhoto] = useDeleteListingPhotoMutation();
@@ -194,36 +198,38 @@ export default function ListingPhotoManager({
 
   return (
     <div className="space-y-3" data-testid="listing-photo-manager">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-muted-foreground">
-          JPEG, PNG, or HEIC. 10MB max each. EXIF metadata (including GPS) is
-          stripped on upload.
-        </p>
-        <LoadingButton
-          variant="secondary"
-          size="sm"
-          isLoading={isUploading}
-          loadingText="Uploading..."
-          onClick={() => fileInputRef.current?.click()}
-          type="button"
-          data-testid="listing-photo-upload-button"
-        >
-          <Upload className="h-4 w-4 mr-1" />
-          Upload photos
-        </LoadingButton>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/heic,.heic,.heif"
-          multiple
-          className="hidden"
-          data-testid="listing-photo-file-input"
-          onChange={(e) => {
-            void handleFiles(e.target.files);
-            e.target.value = "";
-          }}
-        />
-      </div>
+      {canWrite ? (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">
+            JPEG, PNG, or HEIC. 10MB max each. EXIF metadata (including GPS) is
+            stripped on upload.
+          </p>
+          <LoadingButton
+            variant="secondary"
+            size="sm"
+            isLoading={isUploading}
+            loadingText="Uploading..."
+            onClick={() => fileInputRef.current?.click()}
+            type="button"
+            data-testid="listing-photo-upload-button"
+          >
+            <Upload className="h-4 w-4 mr-1" />
+            Upload photos
+          </LoadingButton>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/heic,.heic,.heif"
+            multiple
+            className="hidden"
+            data-testid="listing-photo-file-input"
+            onChange={(e) => {
+              void handleFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+        </div>
+      ) : null}
 
       {hasSelection ? (
         <PhotoSelectionToolbar
@@ -231,7 +237,7 @@ export default function ListingPhotoManager({
           totalCount={displayIds.length}
           onSelectAll={() => selectAll(displayIds)}
           onClear={clearSelection}
-          onBulkDelete={() => setConfirmBulkDelete(true)}
+          onBulkDelete={canWrite ? () => setConfirmBulkDelete(true) : undefined}
           onBulkDownload={() => void handleBulkDownload()}
           isBulkDeleting={isBulkDeleting}
           isBulkDownloading={isBulkDownloading}
@@ -243,8 +249,7 @@ export default function ListingPhotoManager({
           className="text-sm text-muted-foreground border rounded-lg p-6 text-center"
           data-testid="listing-photo-empty-state"
         >
-          No photos yet. Upload a few to make this listing pop on Furnished
-          Finder.
+          {canWrite ? LISTING_MESSAGES.noPhotos : LISTING_MESSAGES.noPhotosViewer}
         </p>
       ) : (
         <DndContext
@@ -270,6 +275,7 @@ export default function ListingPhotoManager({
                       toggleSelection(id, shiftKey, displayIds)
                     }
                     onOpen={() => setLightboxTarget({ listingId, index })}
+                    canWrite={canWrite}
                   />
                 );
               })}
@@ -278,28 +284,32 @@ export default function ListingPhotoManager({
         </DndContext>
       )}
 
-      <ConfirmDialog
-        open={!!confirmDeleteId}
-        title="Remove this photo?"
-        description="The photo will be deleted from this listing. This can't be undone."
-        confirmLabel="Remove"
-        cancelLabel="Cancel"
-        variant="danger"
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setConfirmDeleteId(null)}
-      />
+      {canWrite ? (
+        <>
+          <ConfirmDialog
+            open={!!confirmDeleteId}
+            title="Remove this photo?"
+            description="The photo will be deleted from this listing. This can't be undone."
+            confirmLabel="Remove"
+            cancelLabel="Cancel"
+            variant="danger"
+            onConfirm={handleConfirmDelete}
+            onCancel={() => setConfirmDeleteId(null)}
+          />
 
-      <ConfirmDialog
-        open={confirmBulkDelete}
-        title={`Delete ${selectedCount} photo${selectedCount === 1 ? "" : "s"}?`}
-        description="These photos will be permanently deleted from this listing. This can't be undone."
-        confirmLabel={`Delete ${selectedCount} photo${selectedCount === 1 ? "" : "s"}`}
-        cancelLabel="Cancel"
-        variant="danger"
-        isLoading={isBulkDeleting}
-        onConfirm={() => void handleBulkDelete()}
-        onCancel={() => setConfirmBulkDelete(false)}
-      />
+          <ConfirmDialog
+            open={confirmBulkDelete}
+            title={`Delete ${selectedCount} photo${selectedCount === 1 ? "" : "s"}?`}
+            description="These photos will be permanently deleted from this listing. This can't be undone."
+            confirmLabel={`Delete ${selectedCount} photo${selectedCount === 1 ? "" : "s"}`}
+            cancelLabel="Cancel"
+            variant="danger"
+            isLoading={isBulkDeleting}
+            onConfirm={() => void handleBulkDelete()}
+            onCancel={() => setConfirmBulkDelete(false)}
+          />
+        </>
+      ) : null}
 
       {lightboxTarget ? (
         <PhotoLightbox

@@ -85,7 +85,11 @@ vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(() => ({ data: mockProperties, isLoading: false })),
 }));
 
+vi.mock("@/shared/hooks/useOrgRole", () => ({ useCanWrite: vi.fn(() => true) }));
+
 import { useGetListingByIdQuery } from "@mybookkeeper/api-client/store/listingsApi";
+import { useCanWrite } from "@/shared/hooks/useOrgRole";
+import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
 
 function renderDetail(listing: ListingResponse | undefined = mockListing, overrides: Partial<{ isLoading: boolean; isError: boolean; refetch: () => void }> = {}) {
   vi.mocked(useGetListingByIdQuery).mockReturnValue({
@@ -111,6 +115,43 @@ function renderDetail(listing: ListingResponse | undefined = mockListing, overri
 describe("ListingDetail page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useCanWrite).mockReturnValue(true);
+  });
+
+  it("shows no view-only note to members who can write", () => {
+    renderDetail();
+    expect(screen.queryByTestId("listing-view-only")).not.toBeInTheDocument();
+  });
+
+  it("gives a viewer the listing with no way to change it", () => {
+    vi.mocked(useCanWrite).mockReturnValue(false);
+    renderDetail({
+      ...mockListing,
+      photos: [
+        { id: "p1", listing_id: "listing-1", storage_key: "key-1", caption: null, display_order: 0, created_at: "2026-01-01T00:00:00Z" },
+      ],
+    });
+    expect(screen.getByRole("note")).toHaveTextContent(LISTING_MESSAGES.viewOnlyNote);
+    expect(screen.getByRole("heading", { name: "Garage Suite A" })).toBeInTheDocument();
+    expect(screen.queryByTestId("edit-listing-button")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("delete-listing-button")).not.toBeInTheDocument();
+    expect(screen.getByText("FF-12345")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /add link/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /edit/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /remove/i })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("listing-photo-upload-button")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("listing-photo-file-input")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("listing-photo-drag-handle")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "View photo 1 full size" })).toBeInTheDocument();
+    expect(screen.getByText(LISTING_MESSAGES.noChannelsViewer)).toBeInTheDocument();
+  });
+
+  it("gives a viewer short empty states with no add buttons", () => {
+    vi.mocked(useCanWrite).mockReturnValue(false);
+    renderDetail({ ...mockListing, external_ids: [], photos: [] });
+    expect(screen.getByText(LISTING_MESSAGES.noExternalIdsViewer)).toBeInTheDocument();
+    expect(screen.getByText(LISTING_MESSAGES.noPhotosViewer)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /add your first/i })).not.toBeInTheDocument();
   });
 
   it("renders the listing title and status badge", () => {

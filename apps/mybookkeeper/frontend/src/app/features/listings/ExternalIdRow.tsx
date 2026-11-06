@@ -9,6 +9,8 @@ export interface ExternalIdRowProps {
   onEdit: () => void;
   onRemove: () => void;
   isRemoving?: boolean;
+  /** Viewers get the link and ID only, no Edit or Remove. */
+  canWrite: boolean;
 }
 
 /**
@@ -24,6 +26,7 @@ export default function ExternalIdRow({
   onEdit,
   onRemove,
   isRemoving,
+  canWrite,
 }: ExternalIdRowProps) {
   const sourceLabel = LISTING_SOURCE_LABELS[externalId.source];
   return (
@@ -51,30 +54,32 @@ export default function ExternalIdRow({
           <ExternalLink className="h-3 w-3" aria-hidden="true" />
         </a>
       ) : null}
-      <div className="ml-auto flex items-center gap-1">
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={onEdit}
-          data-testid={`external-id-edit-${externalId.id}`}
-          aria-label={`Edit ${sourceLabel} link`}
-        >
-          <Pencil className="h-3 w-3 mr-1" aria-hidden="true" />
-          Edit
-        </Button>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={onRemove}
-          disabled={isRemoving}
-          data-testid={`external-id-remove-${externalId.id}`}
-          aria-label={`Remove ${sourceLabel} link`}
-          className="text-red-600 border-red-200 hover:bg-red-50"
-        >
-          <Trash2 className="h-3 w-3 mr-1" aria-hidden="true" />
-          Remove
-        </Button>
-      </div>
+      {canWrite ? (
+        <div className="ml-auto flex items-center gap-1">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onEdit}
+            data-testid={`external-id-edit-${externalId.id}`}
+            aria-label={`Edit ${sourceLabel} link`}
+          >
+            <Pencil className="h-3 w-3 mr-1" aria-hidden="true" />
+            Edit
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onRemove}
+            disabled={isRemoving}
+            data-testid={`external-id-remove-${externalId.id}`}
+            aria-label={`Remove ${sourceLabel} link`}
+            className="text-red-600 border-red-200 hover:bg-red-50"
+          >
+            <Trash2 className="h-3 w-3 mr-1" aria-hidden="true" />
+            Remove
+          </Button>
+        </div>
+      ) : null}
     </li>
   );
 }

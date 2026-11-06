@@ -14,9 +14,15 @@ const baseExternalId: ListingExternalId = {
 };
 
 describe("ExternalIdRow", () => {
+  it("shows the link but no Edit or Remove when canWrite is false", () => {
+    render(<ExternalIdRow canWrite={false} externalId={baseExternalId} onEdit={() => {}} onRemove={() => {}} />);
+    expect(screen.getByRole("link", { name: /open furnished finder/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
   it("renders the source badge, external ID, and Open link", () => {
     render(
-      <ExternalIdRow
+      <ExternalIdRow canWrite
         externalId={baseExternalId}
         onEdit={() => {}}
         onRemove={() => {}}
@@ -32,7 +38,7 @@ describe("ExternalIdRow", () => {
 
   it('shows "No ID set" when external_id is null', () => {
     render(
-      <ExternalIdRow
+      <ExternalIdRow canWrite
         externalId={{ ...baseExternalId, external_id: null }}
         onEdit={() => {}}
         onRemove={() => {}}
@@ -43,7 +49,7 @@ describe("ExternalIdRow", () => {
 
   it("does not render the Open link when external_url is null", () => {
     render(
-      <ExternalIdRow
+      <ExternalIdRow canWrite
         externalId={{ ...baseExternalId, external_url: null }}
         onEdit={() => {}}
         onRemove={() => {}}
@@ -55,7 +61,7 @@ describe("ExternalIdRow", () => {
   it("calls onEdit when Edit is clicked", async () => {
     const onEdit = vi.fn();
     render(
-      <ExternalIdRow
+      <ExternalIdRow canWrite
         externalId={baseExternalId}
         onEdit={onEdit}
         onRemove={() => {}}
@@ -68,7 +74,7 @@ describe("ExternalIdRow", () => {
   it("calls onRemove when Remove is clicked", async () => {
     const onRemove = vi.fn();
     render(
-      <ExternalIdRow
+      <ExternalIdRow canWrite
         externalId={baseExternalId}
         onEdit={() => {}}
         onRemove={onRemove}
@@ -80,7 +86,7 @@ describe("ExternalIdRow", () => {
 
   it("disables the Remove button while removing", () => {
     render(
-      <ExternalIdRow
+      <ExternalIdRow canWrite
         externalId={baseExternalId}
         onEdit={() => {}}
         onRemove={() => {}}

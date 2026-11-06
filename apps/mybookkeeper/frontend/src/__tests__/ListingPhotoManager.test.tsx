@@ -17,11 +17,11 @@ vi.mock("@/shared/store/listingsApi", () => ({
   useUpdateListingPhotoMutation: vi.fn(() => [updateMock, { isLoading: false }]),
 }));
 
-function renderManager(photos: ListingPhoto[] = []) {
+function renderManager(photos: ListingPhoto[] = [], canWrite = true) {
   return render(
     <Provider store={store}>
       <MemoryRouter>
-        <ListingPhotoManager listingId="listing-1" photos={photos} />
+        <ListingPhotoManager canWrite={canWrite} listingId="listing-1" photos={photos} />
       </MemoryRouter>
     </Provider>,
   );
@@ -37,6 +37,28 @@ describe("ListingPhotoManager", () => {
   it("renders the empty state when no photos exist", () => {
     renderManager();
     expect(screen.getByTestId("listing-photo-empty-state")).toBeInTheDocument();
+  });
+
+  it("lets a viewer open, select and download photos but not change them", async () => {
+    renderManager(
+      [{
+        id: "p1", listing_id: "listing-1", storage_key: "k1",
+        caption: null, display_order: 0, created_at: "2026-01-01T00:00:00Z", presigned_url: null,
+      }],
+      false,
+    );
+    expect(screen.queryByTestId("listing-photo-upload-button")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("listing-photo-file-input")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("listing-photo-drag-handle")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("listing-photo-delete-button")).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByTestId("listing-photo-checkbox"));
+    expect(screen.getByTestId("photo-bulk-download-button")).toBeInTheDocument();
+    expect(screen.queryByTestId("photo-bulk-delete-button")).not.toBeInTheDocument();
+  });
+
+  it("tells a viewer there are no photos, with no upload pitch", () => {
+    renderManager([], false);
+    expect(screen.getByTestId("listing-photo-empty-state")).toHaveTextContent(/^No photos yet\.$/);
   });
 
   it("renders one card per photo", () => {
