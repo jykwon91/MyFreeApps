@@ -38,6 +38,7 @@ from app.services.inquiries.reply_exceptions import (
     InquiryReplyMissingSendScopeError,
     InquiryReplyRequestIdReusedError,
     InquiryReplySendFailedError,
+    InquiryReplySentFromOtherGmailError,
     InquiryReplySentNotRecordedError,
     InquiryReplyUnconfirmedError,
 )
@@ -47,6 +48,7 @@ from app.services.inquiries.reply_send_error_details import (
     REPLY_REQUEST_ID_REUSED,
     REPLY_SEND_IN_PROGRESS,
     REPLY_SEND_UNCONFIRMED,
+    REPLY_SENT_FROM_OTHER_GMAIL,
     REPLY_SENT_NOT_RECORDED,
 )
 from app.db.session import AsyncSessionLocal
@@ -242,6 +244,13 @@ async def send_reply(
         raise HTTPException(status_code=422, detail=REPLY_REQUEST_ID_REUSED) from exc
     except InquiryReplyInProgressError as exc:
         raise HTTPException(status_code=409, detail=REPLY_SEND_IN_PROGRESS) from exc
+    except InquiryReplySentFromOtherGmailError as exc:
+        # Kept, not resent: it may be in the inquirer's inbox already. Clients
+        # name the account so the host can reconnect it or send a new reply.
+        raise HTTPException(
+            status_code=409,
+            detail={"code": REPLY_SENT_FROM_OTHER_GMAIL, "sender_gmail_address": exc.sender_gmail_address},
+        ) from exc
     except InquiryReplyAuthExpiredError as exc:
         # The frontend checks this detail to show the reconnect prompt. The
         # flag has already been set on the Integration row at this point.

@@ -45,6 +45,7 @@ async def claim(
     client_request_id: uuid.UUID,
     request_hash: str,
     send_message_id: str,
+    sender_gmail_address: str,
     claimed_at: _dt.datetime,
 ) -> InquiryReplySend:
     """Insert a ``sending`` claim, or raise ``ReplyAlreadyClaimedError``.
@@ -59,6 +60,7 @@ async def claim(
         request_hash=request_hash,
         status="sending",
         send_message_id=send_message_id,
+        sender_gmail_address=sender_gmail_address,
         claimed_at=claimed_at,
     )
     db.add(row)

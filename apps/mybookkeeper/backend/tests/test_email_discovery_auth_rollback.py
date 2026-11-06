@@ -178,6 +178,7 @@ async def test_rejected_after_a_reconnect_leaves_the_new_connection_alone(
             await integration_repo.upsert_gmail(
                 other, test_org.id, test_user.id, "tok-b", "rt-b",
                 _dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(hours=1),
+                gmail_address="b@gmail.com",
             )
             await other.commit()
         return await real_get_ids(session, org_id)

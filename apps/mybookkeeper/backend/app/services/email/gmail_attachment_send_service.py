@@ -13,11 +13,9 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 from app.services.email import gmail_sent_lookup
+from app.services.email.constants import GMAIL_PURPOSE_SEND_RECEIPTS
 from app.services.email.exceptions import GmailSendScopeError
 from app.services.email.gmail_request_executor import send_raw_gmail_message
-
-
-_PURPOSE = "send receipts"
 
 
 async def send_message_with_attachment(
@@ -56,7 +54,7 @@ async def send_message_with_attachment(
 
     raw = base64.urlsafe_b64encode(msg.as_bytes()).decode("ascii")
 
-    return await send_raw_gmail_message(integration, raw, purpose=_PURPOSE)
+    return await send_raw_gmail_message(integration, raw, purpose=GMAIL_PURPOSE_SEND_RECEIPTS)
 
 
 def _search_term(value: str) -> str:
@@ -82,10 +80,10 @@ async def find_sent_message_id(
     receipt number. See ``gmail_sent_lookup`` for what "not found" means.
     """
     found = await gmail_sent_lookup.find_by_message_id_header(
-        integration, message_id_header, purpose=_PURPOSE,
+        integration, message_id_header, purpose=GMAIL_PURPOSE_SEND_RECEIPTS,
     )
     if found is None and attachment_filename:
         found = await gmail_sent_lookup.first_match(
-            integration, sent_attachment_query(attachment_filename, to_address), purpose=_PURPOSE,
+            integration, sent_attachment_query(attachment_filename, to_address), purpose=GMAIL_PURPOSE_SEND_RECEIPTS,
         )
     return found

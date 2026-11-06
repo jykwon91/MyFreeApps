@@ -26,7 +26,6 @@ from app.repositories import (
     applicant_event_repo,
     applicant_repo,
     inquiry_repo,
-    integration_repo,
     listing_blackout_repo,
     listing_repo,
     reference_repo,
@@ -46,7 +45,6 @@ from app.repositories.transactions import attribution_repo
 from app.repositories.vendors import vendor_repo
 from app.schemas.inquiries.inquiry_create_request import InquiryCreateRequest
 from app.schemas.inquiries.inquiry_response import InquiryResponse
-from app.services.integrations import integration_service
 from app.services.inquiries import inquiry_service
 from app.services.leases import receipt_service
 from app.services.leases.default_source_map import get_default, guess_display_label
@@ -212,54 +210,6 @@ async def delete_inquiry(
     _require_test_mode()
     async with unit_of_work() as db:
         await inquiry_repo.hard_delete_by_id(db, inquiry_id, ctx.organization_id)
-
-
-# ---------------------------------------------------------------------------
-# Gmail integration
-# ---------------------------------------------------------------------------
-
-class _SeedGmailRequest(BaseModel):
-    has_send_scope: bool = True
-
-
-@router.post("/test/seed-gmail-integration", status_code=204)
-async def seed_gmail_integration(
-    payload: _SeedGmailRequest,
-    ctx: RequestContext = Depends(current_org_member),
-) -> None:
-    """Test-only endpoint that creates (or updates) a Gmail integration with
-    a known scope state, so the E2E reply flow can run without going through
-    Google's OAuth servers.
-    """
-    _require_test_mode()
-    scopes = [integration_service.GMAIL_READONLY_SCOPE]
-    if payload.has_send_scope:
-        scopes.append(integration_service.GMAIL_SEND_SCOPE)
-    expiry = _dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(hours=1)
-    async with unit_of_work() as db:
-        await integration_repo.upsert_gmail(
-            db,
-            organization_id=ctx.organization_id,
-            user_id=ctx.user_id,
-            access_token="test-access-token",
-            refresh_token="test-refresh-token",
-            token_expiry=expiry,
-            scopes=scopes,
-        )
-
-
-@router.delete("/test/seed-gmail-integration", status_code=204)
-async def remove_gmail_integration(
-    ctx: RequestContext = Depends(current_org_member),
-) -> None:
-    """Cleanup counterpart to seed-gmail-integration."""
-    _require_test_mode()
-    async with unit_of_work() as db:
-        existing = await integration_repo.get_by_org_and_provider(
-            db, ctx.organization_id, "gmail",
-        )
-        if existing is not None:
-            await integration_repo.delete(db, existing)
 
 
 # ---------------------------------------------------------------------------

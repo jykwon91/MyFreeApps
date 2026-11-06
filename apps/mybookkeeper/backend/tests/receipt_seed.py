@@ -22,8 +22,8 @@ from app.models.transactions.transaction import Transaction
 from app.models.user.user import User
 from app.repositories.inquiries import inquiry_repo
 from app.repositories.leases import pending_rent_receipt_repo
-from app.services.email import app_sent_email_service, gmail_attachment_send_service
-from app.services.leases import receipt_send_service, receipt_service
+from app.services.email import app_sent_email_service, gmail_attachment_send_service, gmail_mailbox
+from app.services.leases import receipt_claim_settlement, receipt_send_service, receipt_service
 
 PERIOD_START = _dt.date(2026, 7, 1)
 PERIOD_END = _dt.date(2026, 7, 31)
@@ -50,9 +50,12 @@ def receipt_sessions(monkeypatch: pytest.MonkeyPatch, _db_engine: AsyncEngine) -
 
     monkeypatch.setattr(receipt_send_service, "AsyncSessionLocal", _factory)
     monkeypatch.setattr(receipt_send_service, "unit_of_work", _uow)
+    monkeypatch.setattr(receipt_claim_settlement, "AsyncSessionLocal", _factory)
+    monkeypatch.setattr(receipt_claim_settlement, "unit_of_work", _uow)
     monkeypatch.setattr(receipt_service, "AsyncSessionLocal", _factory)
     monkeypatch.setattr(receipt_service, "unit_of_work", _uow)
     monkeypatch.setattr(app_sent_email_service, "unit_of_work", _uow)
+    monkeypatch.setattr(gmail_mailbox, "unit_of_work", _uow)
 
 
 class RecordingStorage:
@@ -93,6 +96,7 @@ def _add_gmail(db: AsyncSession, *, org: Organization, user: User) -> None:
         organization_id=org.id,
         user_id=user.id,
         provider="gmail",
+        gmail_address="host@gmail.com",
         token_expiry=_dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(hours=1),
         metadata_={
             "scopes": [

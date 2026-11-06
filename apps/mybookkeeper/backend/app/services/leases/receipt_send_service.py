@@ -20,7 +20,11 @@ Settling a ``sending`` row (step 2): while the claim is younger than
 ``GMAIL_SEND_CLAIM_STALE_AFTER`` the attempt that holds it may still be
 running, so the new request is refused. After that, Gmail is searched for the
 stored Message-ID. Found → the row is marked sent. Not found → the claim is
-released and this request sends. A failed search changes nothing.
+released and this request sends. A failed search changes nothing. If the
+attempt went through a Gmail account that's no longer connected, its mailbox
+can't be searched: the row stays ``sending`` and nothing is emailed
+(``ReceiptSentFromOtherGmailError``). The host can reconnect that account or
+dismiss the receipt (``receipt_claim_settlement``).
 
 A skipped receipt number (claim released after numbering) is accepted rather
 than risk two receipts sharing a number.
@@ -46,16 +50,20 @@ from app.repositories.leases import (
 )
 from app.repositories.transactions import transaction_repo
 from app.repositories.user import user_repo
-from app.services.email import gmail_attachment_send_service
+from app.services.email import gmail_attachment_send_service, gmail_mailbox
 from app.services.email.app_sent_email_service import record_app_sent_email
-from app.services.email.constants import APP_SENT_RECEIPT_FILTER_REASON, GMAIL_MESSAGE_ID_DOMAIN
+from app.services.email.constants import (
+    APP_SENT_RECEIPT_FILTER_REASON,
+    GMAIL_MESSAGE_ID_DOMAIN,
+    GMAIL_PURPOSE_SEND_RECEIPTS,
+)
 from app.services.email.exceptions import (
+    GmailAccountUnknownError,
     GmailReauthRequiredError,
     GmailSendError,
     GmailSendOutcomeUnknownError,
     GmailSendScopeError,
 )
-from app.services.email.send_claim_staleness import is_send_claim_stale
 from app.services.leases.exceptions import (
     ReceiptAlreadySentError,
     ReceiptDismissedError,
@@ -65,6 +73,11 @@ from app.services.leases.exceptions import (
     ReceiptSendInProgressError,
     ReceiptSendUnconfirmedError,
     ReceiptSentNotRecordedError,
+)
+from app.services.leases.receipt_claim_settlement import (
+    delete_stored_pdf,
+    discard_attempt,
+    settle_earlier_attempt,
 )
 from app.services.leases.receipt_address_resolver import resolve_property_address
 from app.services.leases.receipt_formatting import (
@@ -183,112 +196,6 @@ async def _load_context(
         )
 
 
-async def _discard_attempt(
-    *,
-    receipt_id: uuid.UUID,
-    organization_id: uuid.UUID,
-    send_message_id: str,
-    attachment_id: uuid.UUID | None,
-) -> None:
-    """Release a claim whose email definitely did not go out, and remove its PDF."""
-    storage_key: str | None = None
-    async with unit_of_work() as db:
-        released = await pending_rent_receipt_repo.release_claim(
-            db,
-            receipt_id=receipt_id,
-            organization_id=organization_id,
-            send_message_id=send_message_id,
-            released_at=_now(),
-        )
-        if released and attachment_id is not None:
-            attachment = await signed_lease_attachment_repo.get_by_id(db, attachment_id)
-            if attachment is not None:
-                storage_key = attachment.storage_key
-                await signed_lease_attachment_repo.delete_by_id_scoped_to_lease(
-                    db, attachment.id, attachment.lease_id,
-                )
-    if storage_key is not None:
-        _delete_stored_pdf(storage_key)
-
-
-def _delete_stored_pdf(storage_key: str) -> None:
-    try:
-        _storage_module.get_storage().delete_file(storage_key)
-    except Exception:
-        logger.warning("Could not clean up orphaned receipt PDF at %s", storage_key)
-
-
-async def _settle_earlier_attempt(
-    ctx: ReceiptSendContext, organization_id: uuid.UUID, user_id: uuid.UUID,
-) -> None:
-    """Resolve a row left ``sending``. Returns only once the claim is released."""
-    receipt = ctx.receipt
-    claimed_at = receipt.send_claimed_at
-    send_message_id = receipt.send_message_id
-    if claimed_at is None or send_message_id is None:
-        raise RuntimeError(f"Receipt {receipt.id} is sending without a claim")
-    if not is_send_claim_stale(claimed_at, _now()):
-        raise ReceiptSendInProgressError("This receipt is being sent right now.")
-
-    attachment_filename: str | None = None
-    if receipt.sent_via_attachment_id is not None:
-        async with AsyncSessionLocal() as db:
-            attachment = await signed_lease_attachment_repo.get_by_id(
-                db, receipt.sent_via_attachment_id,
-            )
-            attachment_filename = attachment.filename if attachment is not None else None
-
-    try:
-        gmail_id = await gmail_attachment_send_service.find_sent_message_id(
-            ctx.integration,
-            send_message_id,
-            attachment_filename=attachment_filename,
-            to_address=ctx.tenant_email,
-        )
-    except GmailReauthRequiredError as exc:
-        raise ReceiptGmailReauthError(str(exc)) from exc
-    except Exception as exc:
-        logger.error(
-            "Could not check Gmail for receipt %s (Message-ID %s)",
-            receipt.id, send_message_id, exc_info=True,
-        )
-        raise ReceiptSendUnconfirmedError("Couldn't check Gmail for this receipt.") from exc
-
-    if gmail_id is not None:
-        await record_app_sent_email(
-            organization_id=organization_id,
-            user_id=user_id,
-            message_id=gmail_id,
-            from_address=ctx.from_address,
-            subject=None,
-            reason=APP_SENT_RECEIPT_FILTER_REASON,
-        )
-        try:
-            async with unit_of_work() as db:
-                await pending_rent_receipt_repo.mark_sent_if_claimed(
-                    db,
-                    receipt_id=receipt.id,
-                    organization_id=organization_id,
-                    send_message_id=send_message_id,
-                    sent_at=_now(),
-                )
-        except Exception as exc:
-            logger.error("Receipt %s is in Gmail but couldn't be marked sent", receipt.id, exc_info=True)
-            raise ReceiptSentNotRecordedError("The receipt was emailed but not saved as sent.") from exc
-        logger.info("Receipt %s was already in Gmail's Sent; marked sent", receipt.id)
-        raise ReceiptAlreadySentError("This receipt was already sent.")
-
-    logger.warning(
-        "Receipt %s claim is stale and Gmail has no such message; releasing it", receipt.id,
-    )
-    await _discard_attempt(
-        receipt_id=receipt.id,
-        organization_id=organization_id,
-        send_message_id=send_message_id,
-        attachment_id=receipt.sent_via_attachment_id,
-    )
-
-
 async def send_receipt(
     *,
     transaction_id: uuid.UUID,
@@ -308,8 +215,20 @@ async def send_receipt(
         organization_id=organization_id,
         user_id=user_id,
     )
+    # The claim records the Gmail account it goes through, so it is only ever
+    # settled by searching that account's mailbox.
+    try:
+        sender_address = await gmail_mailbox.ensure_gmail_address(
+            ctx.integration, purpose=GMAIL_PURPOSE_SEND_RECEIPTS,
+        )
+    except GmailReauthRequiredError as exc:
+        raise ReceiptGmailReauthError(str(exc)) from exc
+    except GmailAccountUnknownError as exc:
+        raise ReceiptGmailSendError(str(exc)) from exc
     if ctx.receipt.status == "sending":
-        await _settle_earlier_attempt(ctx, organization_id, user_id)
+        await settle_earlier_attempt(
+            ctx, organization_id, user_id, connected_address=sender_address,
+        )
 
     # ── Claim ────────────────────────────────────────────────────────────────
     send_message_id = make_msgid(domain=GMAIL_MESSAGE_ID_DOMAIN)
@@ -319,6 +238,7 @@ async def send_receipt(
             transaction_id=transaction_id,
             organization_id=organization_id,
             send_message_id=send_message_id,
+            sender_gmail_address=sender_address,
             claimed_at=_now(),
         )
         if claimed is None:
@@ -381,7 +301,7 @@ async def send_receipt(
                 raise RuntimeError(f"Lost the send claim on receipt {receipt_id}")
     except BaseException:  # cancellation too: never leave a claimed row and PDF behind
         try:
-            await _discard_attempt(
+            await discard_attempt(
                 receipt_id=receipt_id,
                 organization_id=organization_id,
                 send_message_id=send_message_id,
@@ -389,7 +309,7 @@ async def send_receipt(
             )
         finally:
             if uploaded:
-                _delete_stored_pdf(storage_key)
+                delete_stored_pdf(storage_key)
         raise
 
     # ── Send ─────────────────────────────────────────────────────────────────
@@ -425,7 +345,7 @@ async def send_receipt(
         )
         raise ReceiptSendUnconfirmedError(str(exc)) from exc
     except (GmailReauthRequiredError, GmailSendScopeError, GmailSendError) as exc:
-        await _discard_attempt(
+        await discard_attempt(
             receipt_id=receipt_id,
             organization_id=organization_id,
             send_message_id=send_message_id,

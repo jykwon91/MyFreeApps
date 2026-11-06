@@ -257,10 +257,11 @@ class TestUpdateAccessToken:
         assert integration.token_expiry is None
 
 
-async def _gmail_row(db: AsyncSession, user: User, org: Organization, refresh_token: str | None) -> Integration:
+async def _gmail_row(db: AsyncSession, user: User, org: Organization, refresh_token: str) -> Integration:
     integration = await integration_repo.upsert_gmail(
         db, org.id, user.id, "ya29.account-a", refresh_token,
         datetime(2026, 5, 13, 12, 0, 0, tzinfo=timezone.utc),
+        gmail_address="a@gmail.com",
     )
     await db.flush()
     return integration
@@ -288,6 +289,7 @@ class TestCredentialWritesAfterReconnect:
         reconnected = await integration_repo.upsert_gmail(
             db, test_org.id, test_user.id, "ya29.account-b", "rt-account-b",
             datetime(2026, 5, 13, 13, 0, 0, tzinfo=timezone.utc),
+            gmail_address="b@gmail.com",
         )
         await db.flush()
 
@@ -309,6 +311,7 @@ class TestCredentialWritesAfterReconnect:
         reconnected = await integration_repo.upsert_gmail(
             db, test_org.id, test_user.id, "ya29.account-b", "rt-account-b",
             datetime(2026, 5, 13, 13, 0, 0, tzinfo=timezone.utc),
+            gmail_address="b@gmail.com",
         )
         await db.flush()
 
@@ -321,28 +324,6 @@ class TestCredentialWritesAfterReconnect:
         await db.refresh(reconnected)
         assert reconnected.needs_reauth is False
         assert reconnected.last_reauth_error is None
-
-    @pytest.mark.asyncio
-    async def test_reconnect_that_kept_the_refresh_token_still_takes_the_write(
-        self, db: AsyncSession, test_user: User, test_org: Organization
-    ) -> None:
-        """Google may not return a new refresh token; the row keeps the old one,
-        so it is still the same connection."""
-        stale = _detach(db, await _gmail_row(db, test_user, test_org, "rt-account-a"))
-        reconnected = await integration_repo.upsert_gmail(
-            db, test_org.id, test_user.id, "ya29.account-a-again", None,
-            datetime(2026, 5, 13, 13, 0, 0, tzinfo=timezone.utc),
-        )
-        await db.flush()
-
-        saved = await integration_repo.update_access_token_if_unchanged(
-            db, stale, "ya29.account-a-refreshed", None,
-        )
-        await db.flush()
-
-        assert saved is True
-        await db.refresh(reconnected)
-        assert reconnected.access_token == "ya29.account-a-refreshed"
 
     @pytest.mark.asyncio
     async def test_unchanged_connection_takes_the_reauth_flag(
@@ -365,7 +346,10 @@ class TestCredentialWritesAfterReconnect:
     async def test_connection_without_a_refresh_token_takes_the_write(
         self, db: AsyncSession, test_user: User, test_org: Organization
     ) -> None:
-        integration = await _gmail_row(db, test_user, test_org, None)
+        integration = Integration(organization_id=test_org.id, user_id=test_user.id, provider="gmail")
+        integration.access_token = "ya29.old"
+        db.add(integration)
+        await db.flush()
 
         assert await integration_repo.update_access_token_if_unchanged(
             db, integration, "ya29.refreshed", None,
@@ -405,6 +389,7 @@ class TestCredentialWritesAfterReconnect:
         reconnected = await integration_repo.upsert_gmail(
             db, test_org.id, test_user.id, "ya29.account-b", "rt-account-b",
             datetime(2026, 5, 13, 13, 0, 0, tzinfo=timezone.utc),
+            gmail_address="b@gmail.com",
         )
         await integration_repo.clear_reauth_state(db, reconnected)
         await db.flush()

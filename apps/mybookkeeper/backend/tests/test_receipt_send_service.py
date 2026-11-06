@@ -22,7 +22,7 @@ from app.models.leases.signed_lease_attachment import SignedLeaseAttachment
 from app.models.organization.organization import Organization
 from app.models.user.user import User
 from app.repositories.leases import pending_rent_receipt_repo
-from app.services.email import gmail_attachment_send_service, gmail_sent_lookup
+from app.services.email import gmail_attachment_send_service, gmail_read_executor
 from app.services.email.constants import APP_SENT_RECEIPT_FILTER_REASON, GMAIL_SEND_CLAIM_STALE_AFTER
 from app.services.email.exceptions import (
     GmailReauthRequiredError,
@@ -166,11 +166,13 @@ async def test_two_claims_only_one_wins(db: AsyncSession, ids) -> None:
 
     first = await pending_rent_receipt_repo.claim_for_send(
         db, transaction_id=txn_id, organization_id=org.id,
-        send_message_id="<a@x>", claimed_at=now,
+        send_message_id="<a@x>", sender_gmail_address="host@gmail.com",
+        claimed_at=now,
     )
     second = await pending_rent_receipt_repo.claim_for_send(
         db, transaction_id=txn_id, organization_id=org.id,
-        send_message_id="<b@x>", claimed_at=now,
+        send_message_id="<b@x>", sender_gmail_address="host@gmail.com",
+        claimed_at=now,
     )
     assert first is not None
     assert second is None
@@ -182,7 +184,8 @@ async def test_claim_is_scoped_to_the_organization(db: AsyncSession, ids) -> Non
     txn_id = await _seed(db, org=org, user=user)
     claimed = await pending_rent_receipt_repo.claim_for_send(
         db, transaction_id=txn_id, organization_id=uuid.uuid4(),
-        send_message_id="<a@x>", claimed_at=_dt.datetime.now(_dt.timezone.utc),
+        send_message_id="<a@x>", sender_gmail_address="host@gmail.com",
+        claimed_at=_dt.datetime.now(_dt.timezone.utc),
     )
     assert claimed is None
     assert (await _row(db, txn_id)).status == "pending"
@@ -320,7 +323,8 @@ async def test_release_with_an_old_message_id_changes_nothing(db: AsyncSession, 
     txn_id = await _seed(db, org=org, user=user)
     claimed = await pending_rent_receipt_repo.claim_for_send(
         db, transaction_id=txn_id, organization_id=org.id,
-        send_message_id="<new@x>", claimed_at=_dt.datetime.now(_dt.timezone.utc),
+        send_message_id="<new@x>", sender_gmail_address="host@gmail.com",
+        claimed_at=_dt.datetime.now(_dt.timezone.utc),
     )
     assert claimed is not None
     released = await pending_rent_receipt_repo.release_claim(
@@ -480,10 +484,10 @@ async def test_stale_send_found_by_its_attachment_is_marked_sent(
     service = MagicMock()
     service.users.return_value.messages.return_value.list = _list
     monkeypatch.setattr(
-        gmail_sent_lookup, "get_gmail_service",
+        gmail_read_executor, "get_gmail_service",
         lambda *_: (service, MagicMock(token="tok")),
     )
-    monkeypatch.setattr(gmail_sent_lookup, "persist_refreshed_token", AsyncMock())
+    monkeypatch.setattr(gmail_read_executor, "persist_refreshed_token", AsyncMock())
 
     with pytest.raises(ReceiptAlreadySentError):
         await _send(org, user, txn_id)

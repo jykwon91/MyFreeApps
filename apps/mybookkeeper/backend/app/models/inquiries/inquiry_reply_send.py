@@ -17,10 +17,11 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, SmallInteger, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.encrypted_string_type import EncryptedString
 from app.core.inquiry_enums import INQUIRY_REPLY_SEND_STATUSES_SQL
 from app.db.base import Base
 
@@ -49,6 +50,13 @@ class InquiryReplySend(Base):
         unique=True,
     )
 
+    # The Gmail address the claim sent through. Settling compares it with the
+    # connected account before searching, so a reconnect to another account
+    # can't make an earlier send look unsent. Null on claims from before it was
+    # recorded (settled against the connected account, as they always were).
+    sender_gmail_address: Mapped[str | None] = mapped_column(EncryptedString(255), nullable=True)
+    key_version: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1, server_default="1")
+
     created_at: Mapped[_dt.datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -76,4 +84,8 @@ class InquiryReplySend(Base):
             "(status = 'sent') = (inquiry_message_id IS NOT NULL)",
             name="chk_inquiry_reply_send_sent_has_message",
         ),
+        # ``chk_inquiry_reply_send_sending_account`` (status <> 'sending' OR sender_gmail_address
+        # IS NOT NULL) exists only in the database, added NOT VALID by migration
+        # sendclaimacct261106: claims from before the address was recorded have
+        # none, and the tests need to create such claims.
     )

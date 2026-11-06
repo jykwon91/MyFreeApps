@@ -186,6 +186,10 @@ class TestHandleGmailCallbackServiceLogging:
                     integration_service.integration_repo,
                     "upsert_gmail",
                     new=AsyncMock(side_effect=_DbError("db unavailable")),
+                ), patch.object(
+                    integration_service.gmail_mailbox,
+                    "address_of_new_connection",
+                    new=AsyncMock(return_value="host@gmail.com"),
                 ):
                     with patch(
                         "app.services.integrations.integration_service.unit_of_work"
@@ -207,3 +211,4 @@ class TestHandleGmailCallbackServiceLogging:
         assert any("upsert" in m.lower() for m in error_messages), (
             f"Expected upsert failure log; got: {error_messages}"
         )
+

@@ -8,7 +8,7 @@ from typing import TypedDict
 import httplib2
 from google.oauth2.credentials import Credentials
 from google_auth_httplib2 import AuthorizedHttp
-from googleapiclient.discovery import build
+from googleapiclient.discovery import Resource, build
 from app.core.config import settings
 from app.services.email.constants import GMAIL_HTTP_TIMEOUT_SECONDS
 from app.services.email.gmail_credentials import build_gmail_credentials
@@ -60,7 +60,7 @@ def _normalize_filename(raw: str) -> str:
 
 def get_gmail_service(
     access_token: str, refresh_token: str | None = None,
-) -> tuple[object, Credentials]:
+) -> tuple[Resource, Credentials]:
     """Build a Gmail API client.
 
     Returns ``(service, creds)``. Google's auth library auto-refreshes the

@@ -83,6 +83,10 @@ MBK_SENSITIVE_FIELDS: frozenset[str] = frozenset({
     # The audit log must never capture the decrypted PIN (or its ciphertext,
     # which would leak that a share link is enabled).
     "share_pin",
+    # Gmail account addresses — the connected account on integrations, and the
+    # account a reply/receipt send claim went through. Encrypted at rest.
+    "gmail_address",
+    "sender_gmail_address",
     # Hosts may put sensitive context into freeform notes (medical info,
     # personal references, candid character assessments) — mask the column
     # to be safe. Applies to inquiries.notes, applicants.pets context,
