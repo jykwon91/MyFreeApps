@@ -1,7 +1,7 @@
 import Button from "./Button";
 import Spinner from "../icons/Spinner";
 
-interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface Props extends React.ComponentProps<"button"> {
   isLoading?: boolean;
   loadingText?: string;
   variant?: "primary" | "secondary" | "ghost" | "destructive" | "link";

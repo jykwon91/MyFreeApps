@@ -3,7 +3,7 @@ import { cn } from "../../utils/cn";
 type Variant = "primary" | "secondary" | "ghost" | "destructive" | "link";
 type Size = "md" | "sm";
 
-interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface Props extends React.ComponentProps<"button"> {
   variant?: Variant;
   size?: Size;
 }
