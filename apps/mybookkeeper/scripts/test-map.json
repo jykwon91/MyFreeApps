@@ -215,6 +215,7 @@
       ],
       "backend_tests": [
         "test_email_queue_split.py",
+        "test_sync_log_cancel.py",
         "test_email_queue_dedup_filter.py",
         "test_booking_parser.py",
         "test_gmail_fetch_email_body.py",

@@ -236,13 +236,13 @@ async def cancel_gmail_sync(ctx: RequestContext, sync_log_id: int | None = None)
     """Cancel a specific sync session or the latest running session."""
     async with unit_of_work() as db:
         if sync_log_id is not None:
-            await sync_log_repo.cancel(db, sync_log_id)
+            await sync_log_repo.cancel(db, sync_log_id, ctx.organization_id)
         else:
             # Fallback: cancel the latest running sync for this org
             logs = await sync_log_repo.list_recent(db, ctx.organization_id, "gmail", limit=1)
             for log in logs:
                 if log.status == "running":
-                    await sync_log_repo.cancel(db, log.id)
+                    await sync_log_repo.cancel(db, log.id, ctx.organization_id)
 
 
 async def check_sync_running(ctx: RequestContext) -> bool:
