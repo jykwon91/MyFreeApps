@@ -107,8 +107,8 @@ def _parse_str_csv(raw: str | None) -> list[str] | None:
 
 @events_router.get("/events", response_model=list[CalendarEventResponse])
 async def list_calendar_events(
-    from_: date | None = Query(None, alias="from", description="ISO date, inclusive"),
-    to: date | None = Query(None, description="ISO date, exclusive"),
+    from_: date = Query(alias="from", description="ISO date, inclusive"),
+    to: date = Query(description="ISO date, exclusive"),
     listing_ids: str | None = Query(None, description="Comma-separated listing UUIDs"),
     property_ids: str | None = Query(None, description="Comma-separated property UUIDs"),
     sources: str | None = Query(None, description="Comma-separated source slugs"),

@@ -47,7 +47,7 @@ def _make_event(*, source: str = "airbnb") -> CalendarEventResponse:
 class TestCalendarEventsEndpoint:
     def test_unauthenticated_returns_401(self) -> None:
         client = TestClient(app)
-        response = client.get("/calendar/events")
+        response = client.get("/calendar/events?from=2026-06-01&to=2026-07-01")
         assert response.status_code == 401
 
     @pytest.mark.asyncio
@@ -102,24 +102,24 @@ class TestCalendarEventsEndpoint:
         assert kwargs["sources"] == ["airbnb", "vrbo"]
         app.dependency_overrides.clear()
 
-    @pytest.mark.asyncio
-    async def test_default_window_when_dates_omitted(self) -> None:
-        org_id, user_id = uuid.uuid4(), uuid.uuid4()
-        app.dependency_overrides[current_org_member] = lambda: _ctx(org_id, user_id)
+    @pytest.mark.parametrize(
+        "query", ["", "?from=2026-06-01", "?to=2026-07-01"],
+    )
+    def test_requires_both_ends_of_the_window(self, query: str) -> None:
+        # The client knows the host's date and which range it shows; the
+        # server never guesses one from its own clock.
+        app.dependency_overrides[current_org_member] = lambda: _ctx(uuid.uuid4(), uuid.uuid4())
+        try:
+            with patch(
+                "app.api.calendar.calendar_service.list_events",
+                return_value=[],
+            ) as mock_list:
+                response = TestClient(app).get(f"/calendar/events{query}")
 
-        with patch(
-            "app.api.calendar.calendar_service.list_events",
-            return_value=[],
-        ) as mock_list:
-            client = TestClient(app)
-            response = client.get("/calendar/events")
-
-        assert response.status_code == 200
-        kwargs = mock_list.call_args.kwargs
-        # Service is responsible for applying defaults — route just passes None through.
-        assert kwargs["from_"] is None
-        assert kwargs["to"] is None
-        app.dependency_overrides.clear()
+            assert response.status_code == 422
+            mock_list.assert_not_called()
+        finally:
+            app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
     async def test_invalid_uuid_in_listing_ids_returns_400(self) -> None:
@@ -138,7 +138,7 @@ class TestCalendarEventsEndpoint:
         org_id, user_id = uuid.uuid4(), uuid.uuid4()
         app.dependency_overrides[current_org_member] = lambda: _ctx(org_id, user_id)
         client = TestClient(app)
-        response = client.get("/calendar/events?from=not-a-date")
+        response = client.get("/calendar/events?from=not-a-date&to=2026-07-01")
         # FastAPI rejects bad date types as 422 (input validation).
         assert response.status_code == 422
         app.dependency_overrides.clear()
