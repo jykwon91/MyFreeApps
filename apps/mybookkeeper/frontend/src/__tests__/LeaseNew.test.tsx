@@ -20,6 +20,7 @@ import MultiTemplatePicker from "@/app/features/leases/MultiTemplatePicker";
 import ApplicantPicker from "@/app/features/leases/ApplicantPicker";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
+import { queryStatus } from "@/test/rtk-query-status";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -282,8 +283,7 @@ describe("LeaseNew page", () => {
     mockUseGetApplicantByIdQuery.mockReturnValue({
       data: undefined,
       isLoading: false,
-      isFetching: false,
-      isError: true,
+      ...queryStatus({ failed: true, fetching: false }),
       refetch: vi.fn(),
     });
     renderLeaseNew("/leases/new?template_ids=tpl-1&applicant_id=app-bad");
@@ -372,8 +372,21 @@ describe("MultiTemplatePicker", () => {
   });
 
   it("shows error state", () => {
-    renderPicker({ isError: true, data: undefined, isLoading: false });
+    renderPicker({ ...queryStatus({ failed: true, fetching: false }), data: undefined, isLoading: false });
     expect(screen.getByText(/couldn't load your templates/i)).toBeInTheDocument();
+  });
+
+  it("keeps the error, not 'No templates yet', while Retry refetches", () => {
+    renderPicker({ ...queryStatus({ failed: true, fetching: true }), data: undefined, isLoading: false });
+    expect(screen.getByText(/couldn't load your templates/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+    expect(screen.queryByTestId("multi-template-picker-empty")).not.toBeInTheDocument();
+  });
+
+  it("keeps templates from an earlier load usable under the error", () => {
+    renderPicker({ ...queryStatus({ failed: true, fetching: false }) });
+    expect(screen.getByText(/couldn't load your templates/i)).toBeInTheDocument();
+    expect(screen.getByTestId(`multi-template-checkbox-${TEMPLATE_SUMMARY.id}`)).toBeInTheDocument();
   });
 });
 
@@ -450,7 +463,14 @@ describe("ApplicantPicker", () => {
   });
 
   it("shows error state", () => {
-    renderPicker({ isError: true, data: undefined, isLoading: false });
+    renderPicker({ ...queryStatus({ failed: true, fetching: false }), data: undefined, isLoading: false });
     expect(screen.getByText(/couldn't load your applicants/i)).toBeInTheDocument();
+  });
+
+  it("keeps the error, not 'No applicants at the right stage', while Retry refetches", () => {
+    renderPicker({ ...queryStatus({ failed: true, fetching: true }), data: undefined, isLoading: false });
+    expect(screen.getByText(/couldn't load your applicants/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+    expect(screen.queryByTestId("applicant-picker-empty")).not.toBeInTheDocument();
   });
 });

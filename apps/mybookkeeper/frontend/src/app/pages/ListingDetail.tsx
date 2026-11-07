@@ -182,7 +182,7 @@ export default function ListingDetail() {
 
           <section className="border rounded-lg p-4 space-y-3">
             <h2 className="text-sm font-medium">Channels</h2>
-            <ChannelsSection listingId={listing.id} canWrite={canWrite} />
+            <ChannelsSection key={listing.id} listingId={listing.id} canWrite={canWrite} />
           </section>
 
           {canWrite && showEditForm ? (

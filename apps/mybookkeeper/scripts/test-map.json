@@ -57,7 +57,8 @@
       "e2e_specs": [
         "analytics.spec.ts",
         "component-extraction.spec.ts",
-        "transactions.spec.ts"
+        "transactions.spec.ts",
+        "mocked/sections-retry-mock.spec.ts"
       ]
     },
     "auth": {
@@ -449,7 +450,8 @@
         "listings-external-ids.spec.ts",
         "listings-channels.spec.ts",
         "listing-markdown.spec.ts",
-        "mocked/list-pages-retry-mock.spec.ts"
+        "mocked/list-pages-retry-mock.spec.ts",
+        "mocked/sections-retry-mock.spec.ts"
       ]
     },
     "calendar": {
@@ -477,7 +479,10 @@
         "frontend/src/shared/types/listing/listing-blackout-attachment.ts",
         "frontend/src/shared/types/listing/blackout-update-request.ts",
         "frontend/src/shared/store/calendarApi.ts",
-        "frontend/src/shared/lib/calendar-constants.ts"
+        "frontend/src/shared/lib/calendar-constants.ts",
+        "frontend/src/shared/lib/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode-args.ts"
       ],
       "backend_tests": [
         "test_calendar_repository.py",
@@ -502,7 +507,8 @@
         "CalendarMonthGrid.test.tsx",
         "CalendarUnlinkedLease.test.tsx",
         "ReviewQueueItem.test.tsx",
-        "ReviewQueueDrawer.test.tsx"
+        "ReviewQueueDrawer.test.tsx",
+        "list-load-mode.test.ts"
       ],
       "e2e_specs": [
         "calendar.spec.ts",
@@ -510,7 +516,8 @@
         "calendar-month-view.spec.ts",
         "calendar-unlinked-lease.spec.ts",
         "calendar-booking-notes.spec.ts",
-        "calendar-review-queue-resolve.spec.ts"
+        "calendar-review-queue-resolve.spec.ts",
+        "mocked/sections-retry-mock.spec.ts"
       ]
     },
     "inquiries": {
@@ -1155,7 +1162,8 @@
         "lease-undo-extension.spec.ts",
         "lease-email-tenant.spec.ts",
         "lease-templates-phase2.spec.ts",
-        "mocked/list-pages-retry-mock.spec.ts"
+        "mocked/list-pages-retry-mock.spec.ts",
+        "mocked/sections-retry-mock.spec.ts"
       ]
     },
     "receipts": {
@@ -1204,7 +1212,11 @@
         "api-client/src/constants/receiptSendFinishedCodes.ts",
         "api-client/src/utils/receiptSendErrorCode.ts",
         "backend/app/services/leases/receipt_send_error_details.py",
-        "frontend/src/shared/lib/receipt-send-errors.ts"
+        "frontend/src/shared/lib/receipt-send-errors.ts",
+        "frontend/src/shared/lib/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode-args.ts",
+        "api-client/src/utils/receiptsWaitingLine.ts"
       ],
       "backend_tests": [
         "test_receipt_send_details_match_api_client.py",
@@ -1220,10 +1232,12 @@
       ],
       "frontend_tests": [
         "SendReceiptDialog.test.tsx",
-        "PendingReceipts.test.tsx"
+        "PendingReceipts.test.tsx",
+        "list-load-mode.test.ts"
       ],
       "e2e_specs": [
-        "pending-receipts.spec.ts"
+        "pending-receipts.spec.ts",
+        "mocked/sections-retry-mock.spec.ts"
       ]
     },
     "screening": {
@@ -1243,7 +1257,10 @@
         "api-client/src/types/applicant/screening-upload-request.ts",
         "api-client/src/types/applicant/screening-provider-info.ts",
         "api-client/src/types/applicant/screening-providers-response.ts",
-        "api-client/src/types/applicant/screening-result.ts"
+        "api-client/src/types/applicant/screening-result.ts",
+        "frontend/src/shared/lib/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode-args.ts"
       ],
       "backend_tests": [
         "test_screening.py",
@@ -1256,7 +1273,8 @@
         "ScreeningPendingPanel.test.tsx",
         "ScreeningEligibilityGate.test.tsx",
         "ScreeningProviderGrid.test.tsx",
-        "UploadScreeningResultModal.test.tsx"
+        "UploadScreeningResultModal.test.tsx",
+        "list-load-mode.test.ts"
       ],
       "e2e_specs": [
         "applicant-screening.spec.ts"

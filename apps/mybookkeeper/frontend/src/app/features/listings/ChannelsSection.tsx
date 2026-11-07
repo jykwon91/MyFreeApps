@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import { Button } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
@@ -10,19 +11,15 @@ import {
   useGetListingChannelsQuery,
 } from "@/shared/store/listingsApi";
 import type { ChannelListing } from "@/shared/types/listing/channel-listing";
-import ChannelListingRow from "./ChannelListingRow";
+import ChannelListingsBody from "./ChannelListingsBody";
 import ChannelListingFormModal from "./ChannelListingFormModal";
+import type { ChannelListingFormTarget } from "@/shared/types/listing/channel-listing-form-target";
 
 export interface ChannelsSectionProps {
   listingId: string;
   /** Viewers see the channels only: no add, edit or remove. */
   canWrite: boolean;
 }
-
-type FormMode =
-  | { kind: "closed" }
-  | { kind: "create" }
-  | { kind: "edit"; channelListing: ChannelListing };
 
 /**
  * "Channels" section on the listing detail page (PR 1.4).
@@ -33,18 +30,25 @@ type FormMode =
  * state pitches the operator on the first link.
  */
 export default function ChannelsSection({ listingId, canWrite }: ChannelsSectionProps) {
+  const { data, error, isFetching, refetch } = useGetListingChannelsQuery(listingId);
   const {
-    data: channelListings = [],
-    isLoading,
-    isError,
-    isFetching,
-    refetch,
-  } = useGetListingChannelsQuery(listingId);
-  const { data: channels = [] } = useGetChannelsQuery();
+    data: channels = [],
+    error: channelsError,
+    isFetching: isChannelsFetching,
+    refetch: refetchChannels,
+  } = useGetChannelsQuery();
   const [deleteChannelListing] = useDeleteChannelListingMutation();
 
-  const [formMode, setFormMode] = useState<FormMode>({ kind: "closed" });
+  // null while no form is open; `existing` is unset when adding a new link.
+  const [formTarget, setFormTarget] = useState<ChannelListingFormTarget | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
+
+  const channelListings = data ?? [];
+  const mode = resolveListLoadMode({
+    hasData: data !== undefined,
+    hasError: error !== undefined,
+    itemCount: channelListings.length,
+  });
 
   const linkedChannelIds = new Set(channelListings.map((cl) => cl.channel_id));
   const availableChannels = channels.filter((c) => !linkedChannelIds.has(c.id));
@@ -52,15 +56,15 @@ export default function ChannelsSection({ listingId, canWrite }: ChannelsSection
     channels.length > 0 && availableChannels.length === 0;
 
   function handleAdd() {
-    setFormMode({ kind: "create" });
+    setFormTarget({});
   }
 
   function handleEdit(cl: ChannelListing) {
-    setFormMode({ kind: "edit", channelListing: cl });
+    setFormTarget({ existing: cl });
   }
 
   function handleClose() {
-    setFormMode({ kind: "closed" });
+    setFormTarget(null);
   }
 
   async function handleRemove(cl: ChannelListing) {
@@ -78,7 +82,7 @@ export default function ChannelsSection({ listingId, canWrite }: ChannelsSection
     }
   }
 
-  if (isLoading) {
+  if (mode === "loading") {
     return (
       <div
         data-testid="channels-section-loading"
@@ -91,18 +95,21 @@ export default function ChannelsSection({ listingId, canWrite }: ChannelsSection
     );
   }
 
-  if (isError) {
-    return (
-      <LoadErrorAlert
-        message="I couldn't load the channels for this listing."
-        isRetrying={isFetching}
-        onRetry={() => refetch()}
-      />
-    );
-  }
+  // Decided on `error`, not `isError`: RTK clears `isError` while Retry
+  // refetches, which would flash the "no channels yet" pitch mid-retry.
+  const loadError = error ? (
+    <LoadErrorAlert
+      message="I couldn't load the channels for this listing."
+      isRetrying={isFetching}
+      onRetry={() => refetch()}
+    />
+  ) : null;
 
+  if (mode === "error") return loadError;
+
+  const isAdding = formTarget !== null && formTarget.existing === undefined;
   const showAddButton =
-    canWrite && formMode.kind !== "create" && !allChannelsLinked && channels.length > 0;
+    canWrite && !isAdding && !allChannelsLinked && channels.length > 0;
 
   return (
     <div className="space-y-3" data-testid="channels-section">
@@ -124,56 +131,36 @@ export default function ChannelsSection({ listingId, canWrite }: ChannelsSection
         ) : null}
       </div>
 
-      {channelListings.length === 0 ? (
-        <div
-          data-testid="channels-section-empty-state"
-          className="border-2 border-dashed rounded-lg p-6 text-center space-y-3"
-        >
-          <p className="text-sm text-muted-foreground">
-            {canWrite ? LISTING_MESSAGES.noChannels : LISTING_MESSAGES.noChannelsViewer}
-          </p>
-          {canWrite && channels.length > 0 ? (
-            <Button
-              variant="primary"
-              size="md"
-              onClick={handleAdd}
-              data-testid="channels-section-add-cta"
-            >
-              <Plus className="h-4 w-4 mr-1" aria-hidden="true" />
-              Add your first channel
-            </Button>
-          ) : null}
-        </div>
-      ) : (
-        <ul className="space-y-2" data-testid="channel-listings-list">
-          {channelListings.map((cl) => (
-            <ChannelListingRow
-              key={cl.id}
-              channelListing={cl}
-              onEdit={() => handleEdit(cl)}
-              onRemove={() => handleRemove(cl)}
-              isRemoving={removingId === cl.id}
-              canWrite={canWrite}
-            />
-          ))}
-        </ul>
-      )}
+      {loadError}
 
-      {canWrite && formMode.kind === "create" ? (
-        <ChannelListingFormModal
-          open
-          listingId={listingId}
-          availableChannels={availableChannels}
-          onClose={handleClose}
+      {/* Without the channel list there's nothing to link, so the add
+          buttons hide; say why instead of letting them vanish. */}
+      {canWrite && channelsError ? (
+        <LoadErrorAlert
+          message="I couldn't load the channels you can link, so adding one isn't available right now."
+          isRetrying={isChannelsFetching}
+          onRetry={() => refetchChannels()}
         />
       ) : null}
 
-      {canWrite && formMode.kind === "edit" ? (
+      <ChannelListingsBody
+        mode={mode}
+        channelListings={channelListings}
+        canWrite={canWrite}
+        canAddFirst={channels.length > 0}
+        removingId={removingId}
+        onAdd={handleAdd}
+        onEdit={handleEdit}
+        onRemove={(cl) => void handleRemove(cl)}
+      />
+
+      {canWrite && formTarget ? (
         <ChannelListingFormModal
+          key={formTarget.existing?.id ?? "new"}
           open
           listingId={listingId}
           availableChannels={availableChannels}
-          existing={formMode.channelListing}
+          existing={formTarget.existing}
           onClose={handleClose}
         />
       ) : null}

@@ -19,7 +19,6 @@ import {
   periodLabel,
   reviewActionLabel,
   rowLabel,
-  waitingLine,
 } from "../src/features/receipts/receiptDisplay";
 import ReceiptsScreen from "../src/features/receipts/ReceiptsScreen";
 import { usePendingReceiptActions } from "../src/features/receipts/usePendingReceiptActions";
@@ -368,10 +367,5 @@ describe("display helpers", () => {
 
   it("reads the whole receipt to a screen reader", () => {
     expect(rowLabel(aReceipt())).toBe("Jane Smith, 1,450 dollars, for June 2026, received June 3, 2026");
-  });
-
-  it("counts in the right number", () => {
-    expect(waitingLine(1)).toBe("1 receipt waiting to send");
-    expect(waitingLine(3)).toBe("3 receipts waiting to send");
   });
 });

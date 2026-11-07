@@ -5,7 +5,8 @@ import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { RECEIPTS_LIMIT, RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
 import { useCanWrite } from "../workspace/useCanWrite";
 import ReceiptGmailBanner from "./ReceiptGmailBanner";
-import { moreWaitingLine, waitingLine } from "./receiptDisplay";
+import { receiptsWaitingLine } from "@mybookkeeper/api-client/utils/receiptsWaitingLine";
+import { moreWaitingLine } from "./receiptDisplay";
 import ReceiptRow from "./ReceiptRow";
 import ReceiptsSkeleton from "./ReceiptsSkeleton";
 
@@ -47,7 +48,7 @@ export default function ReceiptsScreen() {
               <>
                 {canWrite ? <ReceiptGmailBanner state={gmailState} /> : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.viewOnly}</Text>}
                 <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
-                  {waitingLine(currentData?.pending_count ?? rows.length)}
+                  {receiptsWaitingLine(currentData?.pending_count ?? rows.length)}
                 </Text>
               </>
             ) : null}

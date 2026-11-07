@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
+import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import {
   useAddSignedLeaseTemplatesMutation,
   usePrefillAddendumPlaceholdersMutation,
@@ -20,8 +21,6 @@ export interface LeaseAddTemplateModalProps {
   existingTemplateIds: string[];
   onClose: () => void;
 }
-
-type Step = "pick" | "values";
 
 interface ValuesFormState {
   items: SignedLeaseTemplatePrefillItem[];
@@ -48,7 +47,6 @@ export default function LeaseAddTemplateModal({
   existingTemplateIds,
   onClose,
 }: LeaseAddTemplateModalProps) {
-  const [step, setStep] = useState<Step>("pick");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [valuesState, setValuesState] = useState<ValuesFormState | null>(null);
 
@@ -56,19 +54,18 @@ export default function LeaseAddTemplateModal({
     useAddSignedLeaseTemplatesMutation();
   const [prefill, { isLoading: isPrefilling }] =
     usePrefillAddendumPlaceholdersMutation();
-  const {
-    data,
-    isLoading,
-    isFetching,
-    isError,
-    refetch,
-  } = useGetLeaseTemplatesQuery();
+  const { data, error, isFetching, refetch } = useGetLeaseTemplatesQuery();
 
   const linkedSet = useMemo(
     () => new Set(existingTemplateIds),
     [existingTemplateIds],
   );
   const available = data?.items ?? [];
+  const templatesMode = resolveListLoadMode({
+    hasData: data !== undefined,
+    hasError: error !== undefined,
+    itemCount: available.length,
+  });
 
   function handleToggle(t: LeaseTemplateSummary) {
     setSelectedIds((prev) =>
@@ -88,7 +85,6 @@ export default function LeaseAddTemplateModal({
         initialValues[item.key] = item.value;
       }
       setValuesState({ items: result.items, values: initialValues });
-      setStep("values");
     } catch {
       showError("Couldn't load the template fields. Want to try again?");
     }
@@ -143,37 +139,37 @@ export default function LeaseAddTemplateModal({
           data-testid="lease-add-template-modal"
         >
           <Dialog.Title className="text-base font-semibold">
-            {step === "pick" ? "Add document" : "Fill in details"}
+            {valuesState ? "Fill in details" : "Add document"}
           </Dialog.Title>
           <Dialog.Description className="text-sm text-muted-foreground -mt-2">
-            {step === "pick"
-              ? "Pick a template to generate a document — extension, addendum, disclosure, etc."
-              : "I've pre-filled what I could. Edit anything that's wrong, and fill in the rest."}
+            {valuesState
+              ? "I've pre-filled what I could. Edit anything that's wrong, and fill in the rest."
+              : "Pick a template to generate a document — extension, addendum, disclosure, etc."}
           </Dialog.Description>
 
-          {step === "pick" ? (
+          {valuesState ? (
+            <LeaseAddTemplateValuesStep
+              items={valuesState.items}
+              values={valuesState.values}
+              onValueChange={handleValueChange}
+              isAdding={isAdding}
+              onBack={() => setValuesState(null)}
+              onClose={onClose}
+              onGenerate={() => void handleGenerate()}
+            />
+          ) : (
             <LeaseAddTemplatePickStep
               available={available}
               linkedSet={linkedSet}
               selectedIds={selectedIds}
               onToggle={handleToggle}
-              isError={isError}
-              isLoading={isLoading}
-              isFetching={isFetching}
+              mode={templatesMode}
+              hasError={error !== undefined}
+              isRetrying={isFetching}
               isPrefilling={isPrefilling}
               onRetry={() => void refetch()}
               onContinue={() => void handleContinue()}
               onClose={onClose}
-            />
-          ) : (
-            <LeaseAddTemplateValuesStep
-              items={valuesState?.items ?? []}
-              values={valuesState?.values ?? {}}
-              onValueChange={handleValueChange}
-              isAdding={isAdding}
-              onBack={() => setStep("pick")}
-              onClose={onClose}
-              onGenerate={() => void handleGenerate()}
             />
           )}
         </Dialog.Content>

@@ -2,6 +2,7 @@ import Skeleton from "@/shared/components/ui/Skeleton";
 import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 
 export interface MultiTemplatePickerProps {
   selectedIds: string[];
@@ -21,92 +22,101 @@ export default function MultiTemplatePicker({
   selectedIds,
   onToggle,
 }: MultiTemplatePickerProps) {
-  const { data, isLoading, isFetching, isError, refetch } =
-    useGetLeaseTemplatesQuery();
+  const { data, error, isFetching, refetch } = useGetLeaseTemplatesQuery();
   const templates = data?.items ?? [];
+  const mode = resolveListLoadMode({
+    hasData: data !== undefined,
+    hasError: error !== undefined,
+    itemCount: templates.length,
+  });
 
-  if (isError) {
-    return (
-      <LoadErrorAlert message="I couldn't load your templates. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
-    );
-  }
+  // Decided on `error`, not `isError`: RTK clears `isError` while Retry
+  // refetches, which would flash "No templates yet" mid-retry.
+  const loadError = error ? (
+    <LoadErrorAlert message="I couldn't load your templates. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
+  ) : null;
 
-  if (isLoading) {
-    return (
-      <div className="space-y-2" data-testid="multi-template-picker-skeleton">
-        <Skeleton className="h-14 w-full" />
-        <Skeleton className="h-14 w-full" />
-        <Skeleton className="h-14 w-full" />
-      </div>
-    );
-  }
-
-  if (templates.length === 0) {
-    return (
-      <p
-        className="text-sm text-muted-foreground py-4 text-center"
-        data-testid="multi-template-picker-empty"
-      >
-        No templates yet — upload one from the{" "}
-        <a href="/lease-templates" className="text-primary hover:underline">
-          Lease Templates
-        </a>{" "}
-        page first.
-      </p>
-    );
-  }
-
-  return (
-    <ul className="space-y-2" data-testid="multi-template-picker-list">
-      {templates.map((t) => {
-        const checked = selectedIds.includes(t.id);
-        const orderIndex = checked ? selectedIds.indexOf(t.id) + 1 : null;
-        return (
-          <li key={t.id}>
-            <label
-              className={[
-                "w-full flex items-start gap-3 border rounded-lg px-4 py-3 transition-colors min-h-[44px] cursor-pointer",
-                checked ? "border-primary bg-primary/5" : "hover:bg-muted/50",
-              ].join(" ")}
-              data-testid={`multi-template-option-${t.id}`}
-            >
-              <input
-                type="checkbox"
-                checked={checked}
-                onChange={() => onToggle(t)}
-                className="mt-1 h-4 w-4 cursor-pointer"
-                aria-label={`Select template ${t.name}`}
-                data-testid={`multi-template-checkbox-${t.id}`}
-              />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <span className="font-medium text-sm">{t.name}</span>
-                  <span className="text-xs text-muted-foreground shrink-0">
-                    v{t.version}
-                  </span>
-                </div>
-                {t.description ? (
-                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                    {t.description}
-                  </p>
-                ) : null}
-                <p className="text-xs text-muted-foreground mt-1">
-                  {t.placeholder_count}{" "}
-                  {t.placeholder_count === 1 ? "placeholder" : "placeholders"}
-                </p>
-                {orderIndex !== null ? (
-                  <p
-                    className="text-xs text-primary mt-1"
-                    data-testid={`multi-template-order-${t.id}`}
+  switch (mode) {
+    case "error":
+      return loadError;
+    case "loading":
+      return (
+        <div className="space-y-2" data-testid="multi-template-picker-skeleton">
+          <Skeleton className="h-14 w-full" />
+          <Skeleton className="h-14 w-full" />
+          <Skeleton className="h-14 w-full" />
+        </div>
+      );
+    case "empty":
+      return (
+        <p
+          className="text-sm text-muted-foreground py-4 text-center"
+          data-testid="multi-template-picker-empty"
+        >
+          No templates yet — upload one from the{" "}
+          <a href="/lease-templates" className="text-primary hover:underline">
+            Lease Templates
+          </a>{" "}
+          page first.
+        </p>
+      );
+    case "list":
+      return (
+        <div className="space-y-3">
+          {/* Items from an earlier load stay usable; this says the latest one failed. */}
+          {loadError}
+          <ul className="space-y-2" data-testid="multi-template-picker-list">
+            {templates.map((t) => {
+              const checked = selectedIds.includes(t.id);
+              const orderIndex = checked ? selectedIds.indexOf(t.id) + 1 : null;
+              return (
+                <li key={t.id}>
+                  <label
+                    className={[
+                      "w-full flex items-start gap-3 border rounded-lg px-4 py-3 transition-colors min-h-[44px] cursor-pointer",
+                      checked ? "border-primary bg-primary/5" : "hover:bg-muted/50",
+                    ].join(" ")}
+                    data-testid={`multi-template-option-${t.id}`}
                   >
-                    Selected #{orderIndex}
-                  </p>
-                ) : null}
-              </div>
-            </label>
-          </li>
-        );
-      })}
-    </ul>
-  );
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => onToggle(t)}
+                      className="mt-1 h-4 w-4 cursor-pointer"
+                      aria-label={`Select template ${t.name}`}
+                      data-testid={`multi-template-checkbox-${t.id}`}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="font-medium text-sm">{t.name}</span>
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          v{t.version}
+                        </span>
+                      </div>
+                      {t.description ? (
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                          {t.description}
+                        </p>
+                      ) : null}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {t.placeholder_count}{" "}
+                        {t.placeholder_count === 1 ? "placeholder" : "placeholders"}
+                      </p>
+                      {orderIndex !== null ? (
+                        <p
+                          className="text-xs text-primary mt-1"
+                          data-testid={`multi-template-order-${t.id}`}
+                        >
+                          Selected #{orderIndex}
+                        </p>
+                      ) : null}
+                    </div>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      );
+  }
 }

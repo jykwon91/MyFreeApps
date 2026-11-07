@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { Inbox } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import EmptyState from "@/shared/components/ui/EmptyState";
 import PropertyMultiSelect from "@/shared/components/PropertyMultiSelect";
 import { useGetCalendarEventsQuery, useGetReviewQueueCountQuery } from "@mybookkeeper/api-client/store/calendarApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
@@ -19,9 +18,7 @@ import {
   monthGridWindow,
   startOfMonth,
 } from "@/app/features/calendar/month-grid-utils";
-import CalendarLoadingState from "@/app/features/calendar/CalendarLoadingState";
-import CalendarViewport from "@/app/features/calendar/CalendarViewport";
-import CalendarAgendaList from "@/app/features/calendar/CalendarAgendaList";
+import CalendarBody from "@/app/features/calendar/CalendarBody";
 import CalendarLegend from "@/app/features/calendar/CalendarLegend";
 import CalendarSourceFilter from "@/app/features/calendar/CalendarSourceFilter";
 import CalendarMonthNav from "@/app/features/calendar/CalendarMonthNav";
@@ -31,6 +28,7 @@ import CalendarLastSynced from "@/app/features/calendar/CalendarLastSynced";
 import ReviewQueueDrawer from "@/app/features/calendar/ReviewQueueDrawer";
 import type { CalendarView } from "@/shared/types/calendar/calendar-view";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -95,9 +93,8 @@ export default function Calendar() {
 
   const {
     data: events,
-    isLoading,
+    error,
     isFetching,
-    isError,
     refetch,
   } = useGetCalendarEventsQuery(queryArgs);
   const { data: properties = [] } = useGetPropertiesQuery();
@@ -165,7 +162,11 @@ export default function Calendar() {
   }
 
   const eventsList = events ?? [];
-  const isEmpty = !isLoading && !isError && eventsList.length === 0;
+  const mode = resolveListLoadMode({
+    hasData: events !== undefined,
+    hasError: error !== undefined,
+    itemCount: eventsList.length,
+  });
 
   return (
     <main className="p-4 sm:p-8 space-y-6">
@@ -234,47 +235,20 @@ export default function Calendar() {
         </div>
       </div>
 
-      {isError ? (
+      {error ? (
         <LoadErrorAlert message="I couldn't load the calendar. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
-      {isLoading ? (
-        <CalendarLoadingState view={view} />
-      ) : hasNoListings && isEmpty ? (
-        // A tenancy can exist with no listing behind it, so "no listings" is
-        // only the right story when there's also nothing to show. Otherwise
-        // this prompt would hide the very events it claims don't exist.
-        <div
-          className="text-center text-muted-foreground text-sm py-8"
-          data-testid="calendar-no-listings"
-        >
-          <p>You don't have any listings yet.</p>
-          <Link
-            to="/listings"
-            className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
-          >
-            Add a listing to start tracking bookings here
-          </Link>
-        </div>
-      ) : isEmpty ? (
-        <EmptyState message="No bookings in this window. Try a different date range, or check that channel sync is wired up under Listings → Channels." />
-      ) : (
-        <>
-          <div className="hidden md:block" data-testid="calendar-desktop">
-            <CalendarViewport
-              view={view}
-              events={eventsList}
-              fromIso={fromIso}
-              toIso={toIso}
-              anchorIso={anchorIso}
-              todayIso={todayIso()}
-            />
-          </div>
-          <div className="md:hidden" data-testid="calendar-mobile">
-            <CalendarAgendaList events={eventsList} />
-          </div>
-        </>
-      )}
+      <CalendarBody
+        mode={mode}
+        hasNoListings={hasNoListings}
+        view={view}
+        events={eventsList}
+        fromIso={fromIso}
+        toIso={toIso}
+        anchorIso={anchorIso}
+        todayIso={todayIso()}
+      />
     </main>
   );
 }
