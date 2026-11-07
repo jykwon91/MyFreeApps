@@ -1,449 +1,123 @@
-import { test, expect } from "./fixtures/auth";
-import { createProperty, deleteProperty } from "./fixtures/seed-data";
+/**
+ * Dashboard year filter — the dropdown's years, how a year scopes the totals,
+ * and where the choice is kept. Runs against a fresh organization seeded with
+ * DASHBOARD_SEED (this year) and PRIOR_YEARS_SEED (the two years before).
+ */
+import { test, expect, type Page } from "@playwright/test";
+import { holdRequests } from "./fixtures/hold-requests";
+import { SoloOrg } from "./fixtures/solo-org";
+import { DASHBOARD_SEED as SEED, seedDashboard } from "./fixtures/dashboard-seed";
+import { PRIOR_YEARS_SEED as PRIOR, seedPriorYears } from "./fixtures/dashboard-prior-years-seed";
+import { chartIn, dragAcrossMonths, expectSummaryCards, openDashboard } from "./fixtures/dashboard-page";
 
 const STORAGE_KEY = "mbk:selectedYear";
-const CURRENT_YEAR = new Date().getFullYear();
 
-test.describe("Dashboard Year Filter", () => {
-  test.beforeEach(async ({ authedPage: page }) => {
-    // Clear the year filter from localStorage before each test
-    await page.evaluate((key) => localStorage.removeItem(key), STORAGE_KEY);
+let solo: SoloOrg | undefined;
+
+test.beforeAll(async ({ playwright }) => {
+  solo = await SoloOrg.create(playwright, "dashboard-year");
+  await seedPriorYears(solo.api, await seedDashboard(solo.api));
+});
+
+test.afterAll(async ({ playwright }) => {
+  await solo?.delete(playwright);
+});
+
+function yearFilter(page: Page) {
+  return page.getByTestId("year-filter");
+}
+
+test.describe("Dashboard year filter", () => {
+  test.beforeEach(async ({ page }) => {
+    if (!solo) throw new Error("the dashboard organization was not created");
+    await solo.signIn(page);
+  });
+
+  test("defaults to this year and lists every year with data, newest first", async ({ page }) => {
+    await openDashboard(page);
+
+    await expect(yearFilter(page)).toHaveValue(String(SEED.year));
+    await expect(yearFilter(page).locator("option")).toHaveText([
+      "All time",
+      String(SEED.year),
+      String(PRIOR.lastYear),
+      String(PRIOR.twoYearsAgo),
+    ]);
+    await expectSummaryCards(page, SEED.totals);
+  });
+
+  test("choosing a past year shows that year's totals and keeps the other years listed", async ({ page }) => {
+    await openDashboard(page);
+    const options = yearFilter(page).locator("option");
+    const everyYear = ["All time", String(SEED.year), String(PRIOR.lastYear), String(PRIOR.twoYearsAgo)];
+
+    await yearFilter(page).selectOption(String(PRIOR.lastYear));
+
+    await expectSummaryCards(page, PRIOR.lastYearTotals);
+    await expect(page).toHaveURL(new RegExp(`[?&]year=${PRIOR.lastYear}(&|$)`));
+    // Regression: the list once came from the year-scoped summary, so picking
+    // a year hid the others. Keep this after the totals check: only once the
+    // year's summary has rendered can the list have been rebuilt from it.
+    await expect(options).toHaveText(everyYear);
+  });
+
+  test("All time adds every year together", async ({ page }) => {
+    await openDashboard(page);
+
+    await yearFilter(page).selectOption("all");
+
+    await expectSummaryCards(page, PRIOR.allTimeTotals);
+  });
+
+  test("the chosen year is restored from storage on the next visit", async ({ page }) => {
+    await openDashboard(page);
+    await yearFilter(page).selectOption(String(PRIOR.lastYear));
+    await expectSummaryCards(page, PRIOR.lastYearTotals);
+    expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBe(String(PRIOR.lastYear));
+
+    // A plain "/" (not reload(), which keeps ?year=) so the year must come from storage.
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({
-      timeout: 15000,
-    });
-    await expect(page.getByText("Total Revenue").first()).toBeVisible({
-      timeout: 15000,
-    });
+    await expect(yearFilter(page)).toHaveValue(String(PRIOR.lastYear));
+    await expectSummaryCards(page, PRIOR.lastYearTotals);
   });
 
-  test.describe("Rendering", () => {
-    test("year filter dropdown appears in the filter bar when data exists", async ({
-      authedPage: page,
-      api,
-    }) => {
-      const res = await api.get("/summary");
-      const summary = await res.json();
-      const hasData =
-        summary.revenue > 0 ||
-        summary.expenses > 0 ||
-        summary.by_month?.length > 0 ||
-        summary.by_property?.length > 0;
-      if (!hasData) {
-        test.skip();
-        return;
-      }
+  test("?year= in the URL wins over the stored year", async ({ page }) => {
+    await page.evaluate(([key, value]) => localStorage.setItem(key, value), [STORAGE_KEY, String(PRIOR.lastYear)]);
 
-      const yearFilter = page.getByTestId("year-filter");
-      await expect(yearFilter).toBeVisible({ timeout: 10000 });
-    });
+    await page.goto("/?year=all");
 
-    test('year filter defaults to current year (not "all")', async ({
-      authedPage: page,
-      api,
-    }) => {
-      const res = await api.get("/summary");
-      const summary = await res.json();
-      const hasData =
-        summary.revenue > 0 ||
-        summary.expenses > 0 ||
-        summary.by_month?.length > 0;
-      if (!hasData) {
-        test.skip();
-        return;
-      }
-
-      const yearFilter = page.getByTestId("year-filter");
-      await expect(yearFilter).toBeVisible({ timeout: 10000 });
-      await expect(yearFilter).toHaveValue(String(CURRENT_YEAR));
-    });
-
-    test("year filter includes All time option and at least current year", async ({
-      authedPage: page,
-      api,
-    }) => {
-      const res = await api.get("/summary");
-      const summary = await res.json();
-      const hasData =
-        summary.revenue > 0 ||
-        summary.expenses > 0 ||
-        summary.by_month?.length > 0;
-      if (!hasData) {
-        test.skip();
-        return;
-      }
-
-      const yearFilter = page.getByTestId("year-filter");
-      await expect(yearFilter).toBeVisible({ timeout: 10000 });
-
-      // "All time" option should be present
-      const allOption = yearFilter.locator('option[value="all"]');
-      await expect(allOption).toHaveCount(1);
-
-      // Current year option should be present
-      const currentYearOption = yearFilter.locator(
-        `option[value="${CURRENT_YEAR}"]`,
-      );
-      await expect(currentYearOption).toHaveCount(1);
-    });
+    await expect(yearFilter(page)).toHaveValue("all");
+    await expectSummaryCards(page, PRIOR.allTimeTotals);
   });
 
-  test.describe("Year selection scopes summary data", () => {
-    test("selecting a past year triggers API call with matching date range", async ({
-      authedPage: page,
-      api,
-    }) => {
-      const res = await api.get("/summary");
-      const summary = await res.json();
+  test("choosing a year clears a range dragged on the chart", async ({ page }) => {
+    await openDashboard(page);
+    await dragAcrossMonths(page, chartIn(page, "Monthly Overview"), "Jan", "Feb");
+    await expectSummaryCards(page, SEED.janFeb);
+    const reset = page.getByRole("button", { name: /reset to all time/i });
+    await expect(reset).toBeVisible();
 
-      // We need historical data to have a meaningful past year to select
-      const years = (summary.by_month ?? [])
-        .map((m: { month: string }) => Number(m.month.slice(0, 4)))
-        .filter((y: number) => y < CURRENT_YEAR);
+    await yearFilter(page).selectOption(String(PRIOR.lastYear));
 
-      if (years.length === 0) {
-        test.skip();
-        return;
-      }
-
-      const pastYear = Math.max(...years);
-      const filterBarRes = await api.get(
-        `/summary?start_date=${pastYear}-01-01&end_date=${pastYear}-12-31`,
-      );
-      if (!filterBarRes.ok()) {
-        test.skip();
-        return;
-      }
-      const yearSummary = await filterBarRes.json();
-
-      const yearFilter = page.getByTestId("year-filter");
-      await expect(yearFilter).toBeVisible({ timeout: 10000 });
-
-      await yearFilter.selectOption(String(pastYear));
-
-      // Summary cards should update to reflect year-scoped data
-      // Wait for the API response to settle
-      await page.waitForTimeout(1000);
-
-      // Revenue card should show the year-scoped value
-      if (Math.abs(yearSummary.revenue) > 0) {
-        const expectedRevenue = new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-          minimumFractionDigits: 2,
-        }).format(yearSummary.revenue);
-        const revenueCard = page
-          .getByText("Total Revenue")
-          .locator("..")
-          .locator("p:last-child");
-        await expect(revenueCard).toHaveText(expectedRevenue, {
-          timeout: 10000,
-        });
-      }
-    });
-
-    test('selecting "All time" clears date scoping', async ({
-      authedPage: page,
-      api,
-    }) => {
-      const res = await api.get("/summary");
-      const summary = await res.json();
-
-      // Need data in a past year + current year to see a difference
-      const years = (summary.by_month ?? [])
-        .map((m: { month: string }) => Number(m.month.slice(0, 4)))
-        .filter((y: number) => y < CURRENT_YEAR);
-      if (years.length === 0) {
-        test.skip();
-        return;
-      }
-
-      const pastYear = Math.max(...years);
-      const allTimeRevenue = summary.revenue;
-      const allTimeExpenses = summary.expenses;
-
-      const yearFilter = page.getByTestId("year-filter");
-      await expect(yearFilter).toBeVisible({ timeout: 10000 });
-
-      // First select a past year to scope data
-      await yearFilter.selectOption(String(pastYear));
-      await page.waitForTimeout(1000);
-
-      // Then switch to "All time"
-      await yearFilter.selectOption("all");
-      await page.waitForTimeout(1000);
-
-      // Summary should show all-time values (≥ past-year values)
-      if (Math.abs(allTimeRevenue) > 0) {
-        const expectedRevenue = new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-          minimumFractionDigits: 2,
-        }).format(allTimeRevenue);
-        const revenueCard = page
-          .getByText("Total Revenue")
-          .locator("..")
-          .locator("p:last-child");
-        await expect(revenueCard).toHaveText(expectedRevenue, {
-          timeout: 10000,
-        });
-      }
-
-      if (Math.abs(allTimeExpenses) > 0) {
-        const expectedExpenses = new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-          minimumFractionDigits: 2,
-        }).format(allTimeExpenses);
-        const expensesCard = page
-          .getByText("Total Expenses")
-          .locator("..")
-          .locator("p:last-child");
-        await expect(expensesCard).toHaveText(expectedExpenses, {
-          timeout: 10000,
-        });
-      }
-    });
+    await expect(reset).toHaveCount(0);
+    await expectSummaryCards(page, PRIOR.lastYearTotals);
   });
 
-  test.describe("Persistence", () => {
-    test("selected year persists across page reload via localStorage", async ({
-      authedPage: page,
-      api,
-    }) => {
-      const res = await api.get("/summary");
-      const summary = await res.json();
-      const hasData =
-        summary.revenue > 0 ||
-        summary.expenses > 0 ||
-        summary.by_month?.length > 0;
-      if (!hasData) {
-        test.skip();
-        return;
-      }
+  test("the skeleton's filter bar has the loaded bar's year filter and presets", async ({ page }) => {
+    const releaseSummary = await holdRequests(page, (url) => url.pathname === "/api/summary");
 
-      const yearFilter = page.getByTestId("year-filter");
-      await expect(yearFilter).toBeVisible({ timeout: 10000 });
+    await page.goto("/");
 
-      // Select "All time"
-      await yearFilter.selectOption("all");
+    const skeletonBar = page.getByTestId("dashboard-skeleton-filter-bar");
+    await expect(skeletonBar).toBeVisible({ timeout: 10000 });
+    await expect(skeletonBar.getByTestId("dashboard-skeleton-year-filter")).toBeVisible();
+    const presetSlots = await page.getByTestId("dashboard-skeleton-presets").locator(":scope > *").count();
 
-      // Verify localStorage was updated
-      const stored = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
-      expect(stored).toBe("all");
+    releaseSummary();
 
-      // Reload page
-      await page.reload();
-      await expect(page.getByText("Total Revenue").first()).toBeVisible({
-        timeout: 15000,
-      });
-
-      // Year filter should still show "All time"
-      const yearFilterAfterReload = page.getByTestId("year-filter");
-      await expect(yearFilterAfterReload).toBeVisible({ timeout: 10000 });
-      await expect(yearFilterAfterReload).toHaveValue("all");
-    });
-
-    test("URL param ?year= overrides localStorage", async ({
-      authedPage: page,
-      api,
-    }) => {
-      const res = await api.get("/summary");
-      const summary = await res.json();
-      const hasData =
-        summary.revenue > 0 ||
-        summary.expenses > 0 ||
-        summary.by_month?.length > 0;
-      if (!hasData) {
-        test.skip();
-        return;
-      }
-
-      // Set localStorage to current year
-      await page.evaluate(
-        ({ key, value }) => localStorage.setItem(key, value),
-        { key: STORAGE_KEY, value: String(CURRENT_YEAR) },
-      );
-
-      // Navigate with ?year=all in URL — should override localStorage
-      await page.goto("/?year=all");
-      await expect(page.getByText("Total Revenue").first()).toBeVisible({
-        timeout: 15000,
-      });
-
-      const yearFilter = page.getByTestId("year-filter");
-      await expect(yearFilter).toBeVisible({ timeout: 10000 });
-      await expect(yearFilter).toHaveValue("all");
-    });
-  });
-
-  test.describe("Coexistence with manual date range", () => {
-    test("selecting a year clears any active manual date range reset button", async ({
-      authedPage: page,
-      api,
-    }) => {
-      const res = await api.get("/summary");
-      const summary = await res.json();
-      if (!summary.by_month?.length || summary.by_month.length < 2) {
-        test.skip();
-        return;
-      }
-
-      // First drag on chart to create a manual range
-      const chart = page.locator(".recharts-wrapper").first();
-      await expect(chart).toBeVisible({ timeout: 10000 });
-      const svg = chart.locator("svg").first();
-      const box = await svg.boundingBox();
-      if (!box) {
-        test.skip();
-        return;
-      }
-
-      const startX = box.x + box.width * 0.2;
-      const endX = box.x + box.width * 0.8;
-      const midY = box.y + box.height * 0.5;
-      await page.mouse.move(startX, midY);
-      await page.mouse.down();
-      await page.mouse.move(endX, midY, { steps: 10 });
-      await page.mouse.up();
-
-      // If drag registered a date range, "Reset to all time" appears
-      const resetBtn = page.getByText(/reset to all time/i);
-      const rangeApplied = await resetBtn
-        .isVisible({ timeout: 5000 })
-        .catch(() => false);
-      if (!rangeApplied) {
-        test.skip();
-        return;
-      }
-
-      // Now select a year from the dropdown — should clear the manual range
-      const yearFilter = page.getByTestId("year-filter");
-      await expect(yearFilter).toBeVisible({ timeout: 5000 });
-      await yearFilter.selectOption("all");
-
-      // "Reset to all time" button should be gone (manual range cleared)
-      await expect(resetBtn).not.toBeVisible({ timeout: 5000 });
-    });
-  });
-
-  test.describe("Year list is independent of the selected year (regression)", () => {
-    test("all data-bearing years stay listed after selecting a past year", async ({
-      authedPage: page,
-      api,
-    }) => {
-      // Seed one approved transaction in each of three distinct years. The bug
-      // derived the dropdown's year list from the year-scoped summary, so
-      // selecting one year hid the others. With the fix the list comes from the
-      // unfiltered /summary/years endpoint and must stay complete.
-      const years = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2];
-      const createdIds: string[] = [];
-      // Bulk approve only approves transactions assigned to a property.
-      const property = await createProperty(api, { name: `E2E Year Filter ${Date.now()}` });
-
-      const cleanup = async () => {
-        for (const id of createdIds) {
-          await api.delete(`/transactions/${id}`).catch(() => {});
-        }
-        await deleteProperty(api, property.id);
-      };
-
-      for (const y of years) {
-        const res = await api.post("/transactions", {
-          data: {
-            transaction_date: `${y}-06-15`,
-            property_id: property.id,
-            vendor: `E2E Year ${y}`,
-            amount: "123.45",
-            transaction_type: "income",
-            category: "rental_revenue",
-          },
-        });
-        if (!res.ok()) {
-          await cleanup();
-          test.skip(true, `Could not create test transaction for ${y}: ${res.status()}`);
-          return;
-        }
-        createdIds.push((await res.json()).id);
-      }
-
-      try {
-        // Manual transactions are created "pending" — approve them so they
-        // surface in the summary/years aggregations.
-        const approveRes = await api.post("/transactions/bulk-approve", {
-          data: { ids: createdIds },
-        });
-        expect(approveRes.ok()).toBe(true);
-        expect(await approveRes.json()).toEqual({ approved: years.length, skipped: 0 });
-
-        // Reload the dashboard so the year dropdown reflects the seeded data.
-        await page.goto("/");
-        await expect(page.getByText("Total Revenue").first()).toBeVisible({
-          timeout: 15000,
-        });
-
-        const yearFilter = page.getByTestId("year-filter");
-        await expect(yearFilter).toBeVisible({ timeout: 10000 });
-
-        // Every seeded year must be offered in the dropdown.
-        for (const y of years) {
-          await expect(yearFilter.locator(`option[value="${y}"]`)).toHaveCount(1);
-        }
-
-        // Select the oldest year — the bug collapsed the dropdown to
-        // ["All time", selectedYear], hiding the other years.
-        await yearFilter.selectOption(String(CURRENT_YEAR - 2));
-        await expect(yearFilter).toHaveValue(String(CURRENT_YEAR - 2));
-
-        // All seeded years must still be listed.
-        for (const y of years) {
-          await expect(yearFilter.locator(`option[value="${y}"]`)).toHaveCount(1);
-        }
-      } finally {
-        await cleanup();
-      }
-    });
-  });
-
-  test.describe("Skeleton layout", () => {
-    test("skeleton includes a year filter placeholder slot", async ({
-      authedPage: page,
-    }) => {
-      // Intercept the summary API to delay it, exposing the skeleton
-      await page.route("**/api/summary*", async (route) => {
-        await page.waitForTimeout(500);
-        await route.continue();
-      });
-
-      await page.goto("/");
-
-      // During loading, skeleton should be present — contains multiple animate-pulse elements
-      const skeleton = page
-        .locator(".animate-pulse")
-        .first();
-      const skeletonVisible = await skeleton
-        .isVisible({ timeout: 3000 })
-        .catch(() => false);
-
-      // If skeleton appeared, verify the page still loads correctly afterwards
-      if (skeletonVisible) {
-        // Eventually the real content should load
-        await expect(page.getByText("Total Revenue").first()).toBeVisible({
-          timeout: 15000,
-        });
-      } else {
-        // Fast enough that skeleton wasn't caught — still verify page loads
-        await expect(page.getByText("Total Revenue").first()).toBeVisible({
-          timeout: 15000,
-        });
-      }
-
-      // Verify year filter is present in loaded state
-      const yearFilter = page.getByTestId("year-filter");
-      const hasData = (await page.getByTestId("dashboard-filter-bar").count()) > 0;
-      if (hasData) {
-        await expect(yearFilter).toBeVisible({ timeout: 5000 });
-      }
-    });
+    await expect(page.getByTestId("dashboard-skeleton")).toHaveCount(0, { timeout: 15000 });
+    const bar = page.getByTestId("dashboard-filter-bar");
+    await expect(bar.getByTestId("year-filter")).toBeVisible();
+    await expect(bar.locator('[data-testid^="filter-preset-"]')).toHaveCount(presetSlots);
   });
 });

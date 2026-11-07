@@ -6,7 +6,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { holdRequests } from "./fixtures/hold-requests";
 import { SoloOrg } from "./fixtures/solo-org";
 import { DASHBOARD_SEED as SEED, seedDashboard } from "./fixtures/dashboard-seed";
-import { bars, card, chartIn, expectSummaryCards, monthLabel, openDashboard } from "./fixtures/dashboard-page";
+import { bars, card, chartIn, dragAcrossMonths, expectSummaryCards, openDashboard } from "./fixtures/dashboard-page";
 
 let solo: SoloOrg | undefined;
 
@@ -49,17 +49,7 @@ test.describe("Dashboard", () => {
     });
 
     test("dragging January to February narrows the totals, and Reset restores them", async ({ page }) => {
-      const chart = chartIn(page, "Monthly Overview");
-      await chart.scrollIntoViewIfNeeded();
-      const jan = (await monthLabel(chart, "Jan").boundingBox())!;
-      const feb = (await monthLabel(chart, "Feb").boundingBox())!;
-      const plot = (await chart.locator(":scope > svg").boundingBox())!;
-      const y = plot.y + plot.height / 2;
-
-      await page.mouse.move(jan.x + jan.width / 2, y);
-      await page.mouse.down();
-      await page.mouse.move(feb.x + feb.width / 2, y, { steps: 5 });
-      await page.mouse.up();
+      await dragAcrossMonths(page, chartIn(page, "Monthly Overview"), "Jan", "Feb");
 
       const lastOfFeb = new Date(SEED.year, 2, 0).getDate();
       await expect(page.getByText(`${SEED.year}-01-01 — ${SEED.year}-02-${lastOfFeb}`)).toBeVisible();
