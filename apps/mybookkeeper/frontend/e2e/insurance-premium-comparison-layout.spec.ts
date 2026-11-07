@@ -1,7 +1,7 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 import { createProperty } from "./fixtures/seed-data";
 import { seededOrg } from "./fixtures/seeded-org";
-import { localDateOffset } from "./fixtures/local-today";
+import { localDateOffset, localToday } from "./fixtures/local-today";
 
 /**
  * Layout E2E for the dashboard premium-comparison card and the market-premium
@@ -53,6 +53,7 @@ async function seedPolicy(
 async function seedBenchmark(api: APIRequestContext, source: string): Promise<void> {
   const res = await api.put(BENCHMARK_URL, {
     data: {
+      today: localToday(),
       annual_premium_cents: 120_000,
       coverage_amount_cents: 40_000_000,
       region_label: "Harris County, TX",
@@ -91,7 +92,7 @@ test.describe("Insurance premium comparison layout", () => {
     // Hold the comparison response long enough to observe the skeleton. The
     // glob is exact so the sibling `/insurance-policies` list call is
     // untouched.
-    await page.route("**/api/insurance-policies/premium-comparison", async (route) => {
+    await page.route("**/api/insurance-policies/premium-comparison?*", async (route) => {
       await new Promise((r) => setTimeout(r, 1500));
       await route.continue();
     });

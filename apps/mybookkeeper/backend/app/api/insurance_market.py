@@ -9,10 +9,13 @@ means the policy list never inherits a third party's latency.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Query
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member
+from app.schemas.dates.client_local_date import ClientLocalDate
 from app.schemas.insurance.insurance_market_watch_response import (
     InsuranceMarketWatchResponse,
 )
@@ -23,6 +26,7 @@ router = APIRouter(prefix="/insurance-market", tags=["insurance-market"])
 
 @router.get("/rate-watch", response_model=InsuranceMarketWatchResponse)
 async def get_rate_watch(
+    today: Annotated[ClientLocalDate, Query()],
     ctx: RequestContext = Depends(current_org_member),
 ) -> InsuranceMarketWatchResponse:
     """What Texas carriers have filed that bears on the operator's renewals.
@@ -34,4 +38,5 @@ async def get_rate_watch(
     return await insurance_market_watch_service.get_market_watch(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
+        today=today,
     )

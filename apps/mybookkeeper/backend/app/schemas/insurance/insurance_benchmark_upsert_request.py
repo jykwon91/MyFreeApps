@@ -15,11 +15,7 @@ import datetime as _dt
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-# The browser fills this field with *its* local date, which can be a calendar
-# day ahead of the server's. Rejecting on the server's date alone would 422 a
-# user east of the server for picking their own today. One day of slack absorbs
-# every real offset (max +14h) while still rejecting an actual forecast.
-_FUTURE_DATE_SLACK = _dt.timedelta(days=1)
+from app.schemas.dates.client_local_date import ClientLocalDate
 
 # $10,000,000/yr of premium and $1,000,000,000 of coverage are both far beyond
 # any residential policy. The caps exist to catch a cents/dollars mix-up at the
@@ -37,12 +33,16 @@ class InsuranceBenchmarkUpsertRequest(BaseModel):
     observed_on: _dt.date
     notes: str | None = Field(None, max_length=5000)
 
+    # Not stored: the caller's date, which ``observed_on`` may not be after and
+    # the returned staleness is measured from.
+    today: ClientLocalDate
+
     model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
     def _check_observed_on(self) -> InsuranceBenchmarkUpsertRequest:
         # A future-dated observation is a typo, not a forecast, and it would
         # make the staleness check permanently pass.
-        if self.observed_on > _dt.date.today() + _FUTURE_DATE_SLACK:
+        if self.observed_on > self.today:
             raise ValueError("observed_on cannot be in the future.")
         return self

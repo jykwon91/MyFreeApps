@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import uuid
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
 
@@ -14,6 +14,7 @@ from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
 from app.core.rate_limit import insurance_policy_extract_limiter
 from app.core.upload_errors import upload_error_status
+from app.schemas.dates.client_local_date import ClientLocalDate
 from app.schemas.insurance.insurance_policy_attachment_response import (
     InsurancePolicyAttachmentResponse,
 )
@@ -152,6 +153,7 @@ async def list_policies(
     "/premium-comparison", response_model=InsurancePolicyPremiumComparisonResponse,
 )
 async def get_premium_comparison(
+    today: Annotated[ClientLocalDate, Query()],
     ctx: RequestContext = Depends(current_org_member),
 ) -> InsurancePolicyPremiumComparisonResponse:
     """Unexpired policies priced materially above the recorded benchmark.
@@ -163,6 +165,7 @@ async def get_premium_comparison(
     return await insurance_benchmark_service.get_premium_comparison(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
+        today=today,
     )
 
 

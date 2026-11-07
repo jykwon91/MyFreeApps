@@ -110,7 +110,7 @@ async function stubInsurancePage(page: Page): Promise<void> {
   await page.route("**/api/insurance-policies?*", (route) =>
     route.fulfill(json({ items: [], total: 0, has_more: false })),
   );
-  await page.route("**/api/insurance-benchmarks", (route) =>
+  await page.route("**/api/insurance-benchmarks?*", (route) =>
     route.fulfill({ status: 404, contentType: "application/json", body: "{}" }),
   );
 }

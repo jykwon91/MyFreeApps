@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
 import { showError, showSuccess } from "@platform/ui";
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import {
   useDeleteInsuranceBenchmarkMutation,
   useUpsertInsuranceBenchmarkMutation,
@@ -10,14 +11,6 @@ import type { InsuranceBenchmark } from "@/shared/types/insurance/insurance-benc
 interface UseInsuranceBenchmarkFormArgs {
   existing: InsuranceBenchmark | null | undefined;
   onSaved: () => void;
-}
-
-/** Today as ``YYYY-MM-DD`` in local time — ``toISOString`` would shift the date. */
-function todayLocalIso(): string {
-  const now = new Date();
-  const month = `${now.getMonth() + 1}`.padStart(2, "0");
-  const day = `${now.getDate()}`.padStart(2, "0");
-  return `${now.getFullYear()}-${month}-${day}`;
 }
 
 /** Dollars typed into an input → integer cents, or null when unusable. */
@@ -50,7 +43,7 @@ export function useInsuranceBenchmarkForm({
   );
   const [regionLabel, setRegionLabel] = useState(existing?.region_label ?? "");
   const [source, setSource] = useState(existing?.source ?? "");
-  const [observedOn, setObservedOn] = useState(existing?.observed_on ?? todayLocalIso());
+  const [observedOn, setObservedOn] = useState(existing?.observed_on ?? localToday());
   const [notes, setNotes] = useState(existing?.notes ?? "");
 
   const [upsert, { isLoading: isSaving }] = useUpsertInsuranceBenchmarkMutation();
@@ -117,7 +110,7 @@ export function useInsuranceBenchmarkForm({
     isRemoving,
     canSubmit,
     canRemove,
-    maxObservedOn: todayLocalIso(),
+    maxObservedOn: localToday(),
     handleSubmit,
     handleRemove,
   };

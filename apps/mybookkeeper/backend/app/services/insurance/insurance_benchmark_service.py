@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import uuid
+from typing import Protocol
 
 from app.core.insurance_benchmark_constants import (
     BENCHMARK_STATUS_ABOVE,
@@ -39,7 +40,11 @@ from app.schemas.insurance.insurance_policy_premium_comparison_row import (
     InsurancePolicyPremiumComparisonRow,
 )
 from app.schemas.insurance.insurance_policy_summary import InsurancePolicySummary
-from app.services.insurance._insurance_benchmark_compare import compare
+from app.services.insurance._insurance_benchmark_compare import (
+    ComparableBenchmark,
+    compare,
+    is_stale,
+)
 from app.services.insurance.premium_math import annual_premium_cents
 
 # The comparison never pages. One benchmark measures every policy the operator
@@ -48,18 +53,46 @@ from app.services.insurance.premium_math import annual_premium_cents
 _COMPARISON_PAGE_SIZE = 500
 
 
+class _StoredBenchmark(ComparableBenchmark, Protocol):
+    """A persisted benchmark: the comparable figures plus its own metadata."""
+
+    id: uuid.UUID
+    region_label: str | None
+    source: str | None
+    notes: str | None
+    created_at: _dt.datetime
+    updated_at: _dt.datetime
+
+
 class InsuranceBenchmarkNotFoundError(LookupError):
     pass
 
 
+def _to_response(
+    benchmark: _StoredBenchmark, *, today: _dt.date,
+) -> InsuranceBenchmarkResponse:
+    return InsuranceBenchmarkResponse(
+        id=benchmark.id,
+        annual_premium_cents=benchmark.annual_premium_cents,
+        coverage_amount_cents=benchmark.coverage_amount_cents,
+        region_label=benchmark.region_label,
+        source=benchmark.source,
+        observed_on=benchmark.observed_on,
+        notes=benchmark.notes,
+        is_stale=is_stale(benchmark.observed_on, today=today),
+        created_at=benchmark.created_at,
+        updated_at=benchmark.updated_at,
+    )
+
+
 async def get_benchmark(
-    *, organization_id: uuid.UUID,
+    *, organization_id: uuid.UUID, today: _dt.date,
 ) -> InsuranceBenchmarkResponse | None:
     async with unit_of_work() as db:
         row = await insurance_benchmark_repo.get_for_org(
             db, organization_id=organization_id,
         )
-        return None if row is None else InsuranceBenchmarkResponse.model_validate(row)
+        return None if row is None else _to_response(row, today=today)
 
 
 async def upsert_benchmark(
@@ -72,6 +105,7 @@ async def upsert_benchmark(
     source: str | None,
     observed_on: _dt.date,
     notes: str | None,
+    today: _dt.date,
 ) -> InsuranceBenchmarkResponse:
     async with unit_of_work() as db:
         row = await insurance_benchmark_repo.upsert(
@@ -85,7 +119,7 @@ async def upsert_benchmark(
             observed_on=observed_on,
             notes=notes,
         )
-        return InsuranceBenchmarkResponse.model_validate(row)
+        return _to_response(row, today=today)
 
 
 async def delete_benchmark(*, organization_id: uuid.UUID) -> None:
@@ -111,10 +145,9 @@ async def get_premium_comparison(
     *,
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
-    today: _dt.date | None = None,
+    today: _dt.date,
 ) -> InsurancePolicyPremiumComparisonResponse:
     """Every unexpired policy measured against the organization's benchmark."""
-    reference = today or _dt.date.today()
 
     async with unit_of_work() as db:
         benchmark = await insurance_benchmark_repo.get_for_org(
@@ -134,7 +167,7 @@ async def get_premium_comparison(
     considered = 0
 
     for row in rows:
-        if _is_expired(row.expiration_date, reference):
+        if _is_expired(row.expiration_date, today):
             continue
         considered += 1
         summary = InsurancePolicySummary.model_validate(row).model_copy(
@@ -144,7 +177,7 @@ async def get_premium_comparison(
             annual_premium_cents(row.premium_cents, row.premium_frequency),
             row.coverage_amount_cents,
             benchmark,
-            today=reference,
+            today=today,
         )
         comparison_row = InsurancePolicyPremiumComparisonRow(
             policy=summary,
@@ -170,8 +203,7 @@ async def get_premium_comparison(
     return InsurancePolicyPremiumComparisonResponse(
         material_gap_pct=MATERIAL_GAP_PCT,
         benchmark=(
-            None if benchmark is None
-            else InsuranceBenchmarkResponse.model_validate(benchmark)
+            None if benchmark is None else _to_response(benchmark, today=today)
         ),
         above_market=above,
         not_compared=not_compared,

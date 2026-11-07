@@ -9,10 +9,13 @@ separate means the loan list never inherits a third party's latency.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Query
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member
+from app.schemas.dates.client_local_date import ClientLocalDate
 from app.schemas.mortgage.mortgage_rate_watch_response import (
     MortgageRateWatchResponse,
 )
@@ -23,6 +26,7 @@ router = APIRouter(prefix="/mortgage-market", tags=["mortgage-market"])
 
 @router.get("/rate-watch", response_model=MortgageRateWatchResponse)
 async def get_rate_watch(
+    today: Annotated[ClientLocalDate, Query()],
     ctx: RequestContext = Depends(current_org_member),
 ) -> MortgageRateWatchResponse:
     """Where each recorded loan sits against this week's published averages.
@@ -34,4 +38,5 @@ async def get_rate_watch(
     return await mortgage_rate_watch_service.get_rate_watch(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
+        today=today,
     )

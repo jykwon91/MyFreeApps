@@ -157,3 +157,13 @@ class TestGetRateWatch:
             result = await _run([_pair()])
         assert result.survey_30_year_pct is None
         assert result.survey_observed_on is None
+
+    @pytest.mark.asyncio
+    async def test_the_survey_staleness_check_uses_the_callers_date(self) -> None:
+        """No server clock: the survey is judged against the ``today`` passed in."""
+        with patch(
+            "app.services.mortgage.mortgage_rate_watch_service.fetch_rate_survey",
+            new=AsyncMock(return_value=SURVEY),
+        ) as fetch:
+            await _run([_pair()])
+        assert fetch.await_args.kwargs["today"] == TODAY

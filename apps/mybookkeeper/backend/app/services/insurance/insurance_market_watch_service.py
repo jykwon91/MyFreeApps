@@ -262,7 +262,7 @@ async def get_market_watch(
     *,
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
-    today: _dt.date | None = None,
+    today: _dt.date,
 ) -> InsuranceMarketWatchResponse:
     """Rate outlook per unexpired policy, plus the recent dwelling market.
 
@@ -271,8 +271,6 @@ async def get_market_watch(
     one outcome that must never happen is rendering "no increases filed" when
     the truth is "nothing was checked".
     """
-    reference = today or _dt.date.today()
-
     async with unit_of_work() as db:
         rows = await insurance_policy_repo.list_for_org(
             db,
@@ -295,10 +293,10 @@ async def get_market_watch(
             row,
             property_name=names.get(row.property_id),
             filings=filings,
-            today=reference,
+            today=today,
         )
         for row in rows
-        if not _is_expired(row.expiration_date, reference)
+        if not _is_expired(row.expiration_date, today)
     ]
 
     if feed_unavailable_reason is not None:
@@ -314,7 +312,7 @@ async def get_market_watch(
     # recorded expiration sort last rather than being treated as overdue.
     outlooks.sort(key=lambda o: o.expiration_date or _dt.date.max)
 
-    rising, flat = _market_view(filings, today=reference)
+    rising, flat = _market_view(filings, today=today)
 
     return InsuranceMarketWatchResponse(
         outlooks=outlooks,

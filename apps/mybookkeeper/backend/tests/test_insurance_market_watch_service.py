@@ -238,7 +238,7 @@ class TestPolicyOutlook:
             org_id=test_org.id,
             user_id=test_user.id,
             property_id=prop.id,
-            expiration_date=_dt.date(2025, 1, 1),
+            expiration_date=TODAY - _dt.timedelta(days=1),
         )
 
         result = await _watch(db, test_org, test_user, [_filing()])

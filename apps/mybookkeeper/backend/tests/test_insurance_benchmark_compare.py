@@ -91,7 +91,7 @@ class TestIsStale:
 
 class TestCompare:
     def test_no_benchmark_short_circuits(self) -> None:
-        result = compare(134_400, 50_000_000, None)
+        result = compare(134_400, 50_000_000, None, today=TODAY)
         assert result.status == BENCHMARK_STATUS_NO_BENCHMARK
         assert result.gap_pct is None
 

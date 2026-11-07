@@ -39,6 +39,10 @@ MORTGAGE_ID = uuid.uuid4()
 PROPERTY_ID = uuid.uuid4()
 
 _SERVICE = "app.api.mortgage_market.mortgage_rate_watch_service"
+# The client's local date, which the route requires and bounds to within a day
+# of the server's UTC date — so it is derived from the real clock, not fixed.
+TODAY = _dt.datetime.now(_dt.timezone.utc).date()
+TODAY_PARAMS = {"today": TODAY.isoformat()}
 _PATH = "/mortgage-market/rate-watch"
 
 
@@ -99,7 +103,7 @@ def _response(**overrides) -> MortgageRateWatchResponse:
 
 def test_returns_the_rate_watch(client):
     with patch(f"{_SERVICE}.get_rate_watch", AsyncMock(return_value=_response())):
-        response = client.get(_PATH)
+        response = client.get(_PATH, params=TODAY_PARAMS)
 
     assert response.status_code == 200
     body = response.json()
@@ -120,7 +124,7 @@ def test_returns_the_rate_watch(client):
 def test_scopes_the_read_to_the_caller_organization(client):
     mock = AsyncMock(return_value=_response())
     with patch(f"{_SERVICE}.get_rate_watch", mock):
-        client.get(_PATH)
+        client.get(_PATH, params=TODAY_PARAMS)
 
     assert mock.await_args.kwargs["organization_id"] == ORG_ID
     assert mock.await_args.kwargs["user_id"] == USER_ID
@@ -148,7 +152,7 @@ def test_a_feed_outage_still_returns_the_loans_with_a_reason(client):
         feed_unavailable_reason=REASON_FEED_UNAVAILABLE,
     )
     with patch(f"{_SERVICE}.get_rate_watch", AsyncMock(return_value=degraded)):
-        response = client.get(_PATH)
+        response = client.get(_PATH, params=TODAY_PARAMS)
 
     assert response.status_code == 200
     body = response.json()
@@ -164,6 +168,30 @@ def test_a_non_member_is_refused():
 
     app.dependency_overrides[current_org_member] = _deny
     try:
-        assert TestClient(app).get(_PATH).status_code == 403
+        assert TestClient(app).get(_PATH, params=TODAY_PARAMS).status_code == 403
     finally:
         app.dependency_overrides.clear()
+
+
+def test_missing_today_returns_422(client):
+    mock = AsyncMock(return_value=_response())
+    with patch(f"{_SERVICE}.get_rate_watch", mock):
+        assert client.get(_PATH).status_code == 422
+    assert mock.await_count == 0
+
+
+@pytest.mark.parametrize("offset_days", [-3, 3])
+def test_a_today_three_days_off_returns_422(client, offset_days):
+    off = TODAY + _dt.timedelta(days=offset_days)
+    assert client.get(_PATH, params={"today": off.isoformat()}).status_code == 422
+
+
+def test_the_callers_today_reaches_the_service_as_a_date(client):
+    """A user east of UTC is a day ahead; their date, not the server's, is used."""
+    ahead = TODAY + _dt.timedelta(days=1)
+    mock = AsyncMock(return_value=_response())
+    with patch(f"{_SERVICE}.get_rate_watch", mock):
+        response = client.get(_PATH, params={"today": ahead.isoformat()})
+
+    assert response.status_code == 200
+    assert mock.await_args.kwargs["today"] == ahead

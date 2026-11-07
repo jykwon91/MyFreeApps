@@ -1,3 +1,4 @@
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import { baseApi } from "./baseApi";
 import type { InsuranceMarketWatch } from "@/shared/types/insurance/insurance-market-watch";
 
@@ -15,7 +16,7 @@ import type { InsuranceMarketWatch } from "@/shared/types/insurance/insurance-ma
 const insuranceMarketApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getInsuranceRateWatch: builder.query<InsuranceMarketWatch, void>({
-      query: () => ({ url: "/insurance-market/rate-watch" }),
+      query: () => ({ url: "/insurance-market/rate-watch", params: { today: localToday() } }),
       providesTags: [{ type: "InsurancePolicy", id: "RATE_WATCH" }],
     }),
   }),

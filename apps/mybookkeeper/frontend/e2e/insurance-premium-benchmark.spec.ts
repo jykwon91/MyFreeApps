@@ -1,7 +1,7 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 import { createProperty } from "./fixtures/seed-data";
 import { seededOrg } from "./fixtures/seeded-org";
-import { localDateOffset } from "./fixtures/local-today";
+import { localDateOffset, localToday } from "./fixtures/local-today";
 
 /**
  * Insurance market-premium benchmark — full-flow behavioural E2E.
@@ -66,7 +66,9 @@ async function seedPolicy(
 }
 
 async function fetchComparison(api: APIRequestContext): Promise<Comparison> {
-  const res = await api.get("/insurance-policies/premium-comparison");
+  const res = await api.get("/insurance-policies/premium-comparison", {
+    params: { today: localToday() },
+  });
   if (!res.ok()) {
     throw new Error(`fetchComparison failed: ${res.status()} ${await res.text()}`);
   }
@@ -218,6 +220,7 @@ test.describe("Insurance premium benchmark", () => {
 
     const benchRes = await api.put("/insurance-benchmarks", {
       data: {
+        today: localToday(),
         annual_premium_cents: 120_000,
         coverage_amount_cents: 40_000_000,
         observed_on: localDateOffset(0),
@@ -237,12 +240,20 @@ test.describe("Insurance premium benchmark", () => {
     // It could never be normalised, so it would match nothing — and the
     // operator would believe their policies were being checked.
     const premiumOnly = await api.put("/insurance-benchmarks", {
-      data: { annual_premium_cents: 120_000, observed_on: localDateOffset(0) },
+      data: {
+        today: localToday(),
+        annual_premium_cents: 120_000,
+        observed_on: localDateOffset(0),
+      },
     });
     expect(premiumOnly.status()).toBe(422);
 
     const coverageOnly = await api.put("/insurance-benchmarks", {
-      data: { coverage_amount_cents: 40_000_000, observed_on: localDateOffset(0) },
+      data: {
+        today: localToday(),
+        coverage_amount_cents: 40_000_000,
+        observed_on: localDateOffset(0),
+      },
     });
     expect(coverageOnly.status()).toBe(422);
 
@@ -250,6 +261,7 @@ test.describe("Insurance premium benchmark", () => {
     // staleness — the one signal that tells the operator to look again.
     const future = await api.put("/insurance-benchmarks", {
       data: {
+        today: localToday(),
         annual_premium_cents: 120_000,
         coverage_amount_cents: 40_000_000,
         observed_on: localDateOffset(7),
