@@ -38,6 +38,20 @@ export async function createTransaction(
   return res.json();
 }
 
+/** New transactions start pending, and totals only count approved ones. */
+export async function createApprovedTransaction(
+  api: APIRequestContext,
+  overrides: Partial<TransactionInput> = {},
+): Promise<CreatedRecord> {
+  const created = await createTransaction(api, overrides);
+  const res = await api.patch(`/transactions/${created.id}`, { data: { status: "approved" } });
+  if (!res.ok()) {
+    await deleteTransaction(api, created.id);
+    throw new Error(`approving transaction failed: ${res.status()} ${await res.text()}`);
+  }
+  return created;
+}
+
 export async function createProperty(
   api: APIRequestContext,
   overrides: Partial<PropertyInput> = {},

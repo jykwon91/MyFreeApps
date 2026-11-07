@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { BACKEND_URL, E2E_EMAIL, E2E_PASSWORD } from "./fixtures/config";
+import { E2E_ONBOARDING } from "./fixtures/onboarding";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TOKEN_PATH = path.join(__dirname, ".auth-token");
@@ -99,11 +100,7 @@ async function completeOnboarding(token: string, orgId: string): Promise<void> {
       Authorization: `Bearer ${token}`,
       "X-Organization-Id": orgId,
     },
-    body: JSON.stringify({
-      tax_situations: ["rental_property"],
-      filing_status: "single",
-      dependents_count: 0,
-    }),
+    body: JSON.stringify(E2E_ONBOARDING),
   });
   // 400/409 likely means already onboarded — that's fine
   if (!res.ok && res.status !== 400 && res.status !== 409) {
