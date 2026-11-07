@@ -12,22 +12,31 @@ export const DASHBOARD_SEED = {
   year: YEAR,
   properties: { north: "E2E Dash North", south: "E2E Dash South" },
   transactions: [
-    { property: "north", month: 1, type: "income", category: "rental_revenue", vendor: "E2E Tenant Jan", amount: "1200.00" },
-    { property: "north", month: 1, type: "expense", category: "maintenance", vendor: "E2E Plumber Jan", amount: "300.00" },
-    { property: "south", month: 2, type: "income", category: "rental_revenue", vendor: "E2E Tenant Feb", amount: "1800.00" },
-    { property: "south", month: 2, type: "expense", category: "utilities", vendor: "E2E Power Feb", amount: "600.00" },
-    { property: "north", month: 3, type: "income", category: "rental_revenue", vendor: "E2E Tenant Mar", amount: "900.00" },
-    { property: "north", month: 3, type: "expense", category: "maintenance", vendor: "E2E Plumber Mar", amount: "150.00" },
+    { property: "north", month: 1, day: 15, type: "income", category: "rental_revenue", vendor: "E2E Tenant Jan", amount: "1200.00" },
+    { property: "north", month: 1, day: 15, type: "expense", category: "maintenance", vendor: "E2E Plumber Jan", amount: "300.00" },
+    // The same category in the same month at the other property, so a drill-down
+    // that loses the property filter shows the wrong rows.
+    { property: "south", month: 1, day: 10, type: "expense", category: "maintenance", vendor: "E2E Handyman Jan", amount: "100.00" },
+    { property: "south", month: 2, day: 15, type: "income", category: "rental_revenue", vendor: "E2E Tenant Feb", amount: "1800.00" },
+    { property: "south", month: 2, day: 15, type: "expense", category: "utilities", vendor: "E2E Power Feb", amount: "600.00" },
+    { property: "north", month: 3, day: 15, type: "income", category: "rental_revenue", vendor: "E2E Tenant Mar", amount: "900.00" },
+    { property: "north", month: 3, day: 15, type: "expense", category: "maintenance", vendor: "E2E Plumber Mar", amount: "150.00" },
   ],
-  totals: { revenue: "$3,900.00", expenses: "$1,050.00", profit: "$2,850.00" },
+  totals: { revenue: "$3,900.00", expenses: "$1,150.00", profit: "$2,750.00" },
   /** Three active months. */
-  monthlyAverage: { revenue: "$1,300.00", expenses: "$350.00", profit: "$950.00" },
+  monthlyAverage: { revenue: "$1,300.00", expenses: "$383.33", profit: "$916.67" },
   /** January and February only. */
-  janFeb: { revenue: "$3,000.00", expenses: "$900.00", profit: "$2,100.00" },
+  janFeb: { revenue: "$3,000.00", expenses: "$1,000.00", profit: "$2,000.00" },
   byProperty: {
     north: { revenue: "$2,100.00", expenses: "$450.00", profit: "$1,650.00" },
-    south: { revenue: "$1,800.00", expenses: "$600.00", profit: "$1,200.00" },
+    south: { revenue: "$1,800.00", expenses: "$700.00", profit: "$1,100.00" },
   },
+  /** Every expense category, both properties. */
+  byCategory: { maintenance: "$550.00", utilities: "$600.00" },
+  /** Only the Rental Revenue and Maintenance categories. */
+  rentalAndMaintenance: { revenue: "$3,900.00", expenses: "$550.00", profit: "$3,350.00" },
+  /** Only the Maintenance category. */
+  onlyMaintenance: { revenue: "$0.00", expenses: "$550.00", profit: "-$550.00" },
 } as const;
 
 export async function seedDashboard(api: APIRequestContext): Promise<void> {
@@ -38,7 +47,7 @@ export async function seedDashboard(api: APIRequestContext): Promise<void> {
   for (const t of DASHBOARD_SEED.transactions) {
     await createApprovedTransaction(api, {
       property_id: ids[t.property],
-      transaction_date: `${YEAR}-${String(t.month).padStart(2, "0")}-15`,
+      transaction_date: `${YEAR}-${String(t.month).padStart(2, "0")}-${String(t.day).padStart(2, "0")}`,
       transaction_type: t.type,
       category: t.category,
       vendor: t.vendor,

@@ -2,10 +2,11 @@
  * Dashboard — E2E tests against known data: a fresh organization seeded with
  * DASHBOARD_SEED, so every total on the page is exact.
  */
-import { test, expect, type Locator, type Page } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { holdRequests } from "./fixtures/hold-requests";
 import { SoloOrg } from "./fixtures/solo-org";
 import { DASHBOARD_SEED as SEED, seedDashboard } from "./fixtures/dashboard-seed";
+import { bars, card, chartIn, expectSummaryCards, monthLabel, openDashboard } from "./fixtures/dashboard-page";
 
 let solo: SoloOrg | undefined;
 
@@ -23,41 +24,10 @@ function org(): SoloOrg {
   return solo;
 }
 
-/** The card a heading titles. */
-function card(page: Page, title: string): Locator {
-  return page
-    .getByRole("heading", { name: title, exact: true })
-    .locator("xpath=ancestor::div[contains(@class,'rounded-lg')][1]");
-}
-
-async function expectSummaryCards(page: Page, totals: { revenue: string; expenses: string; profit: string }) {
-  const cards = page.getByTestId("dashboard-summary-cards").locator(":scope > *");
-  await expect(cards.filter({ hasText: "Total Revenue" })).toContainText(totals.revenue);
-  await expect(cards.filter({ hasText: "Total Expenses" })).toContainText(totals.expenses);
-  await expect(cards.filter({ hasText: "Net Profit" })).toContainText(totals.profit);
-}
-
-/** The chart inside a titled card. */
-function chartIn(page: Page, title: string): Locator {
-  return card(page, title).locator(".recharts-wrapper");
-}
-
-/** A chart's bars for one series (Recharts names each bar after it), in data order. */
-function bars(chart: Locator, series: string): Locator {
-  return chart.locator(`path.recharts-rectangle[name="${series}"]`);
-}
-
-/** The x-axis label for a month, e.g. "Jan 26". */
-function monthLabel(chart: Locator, month: string): Locator {
-  return chart.locator(".recharts-xAxis-tick-labels .recharts-cartesian-axis-tick-label").filter({ hasText: month });
-}
-
 test.describe("Dashboard", () => {
   test.beforeEach(async ({ page }) => {
     await org().signIn(page);
-    await page.goto("/");
-    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({ timeout: 15000 });
-    await expect(page.getByTestId("dashboard-summary-cards")).toBeVisible({ timeout: 15000 });
+    await openDashboard(page);
   });
 
   // ─── Summary cards ───────────────────────────────────────────────────────────
@@ -171,8 +141,8 @@ test.describe("Dashboard", () => {
       await bars(chartIn(page, "By Category"), "Maintenance").click();
 
       const panel = page.getByRole("dialog");
-      await expect(panel.getByText("2 transactions — $450.00")).toBeVisible();
-      await expect(panel.locator("ul li")).toContainText(["E2E Plumber Mar", "E2E Plumber Jan"]);
+      await expect(panel.getByText(`3 transactions — ${SEED.byCategory.maintenance}`)).toBeVisible();
+      await expect(panel.locator("ul li")).toContainText(["E2E Plumber Mar", "E2E Plumber Jan", "E2E Handyman Jan"]);
 
       await panel.getByLabel("Close panel").click();
       await expect(page.getByRole("dialog")).toHaveCount(0);
