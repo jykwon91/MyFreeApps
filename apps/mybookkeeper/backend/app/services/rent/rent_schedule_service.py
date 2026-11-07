@@ -102,6 +102,7 @@ async def create_schedule(
     amount: Decimal,
     cadence: str,
     start_date: _dt.date,
+    today: _dt.date,
     property_id: uuid.UUID | None = None,
     end_date: _dt.date | None = None,
     grace_days: int | None = None,
@@ -136,6 +137,7 @@ async def create_schedule(
         # host saves, rather than on some later read.
         await rent_ledger_service.ensure_charges_generated(
             db, organization_id=organization_id, applicant_id=applicant_id,
+            through=today,
         )
         return RentScheduleResponse.model_validate(schedule)
 
@@ -145,6 +147,7 @@ async def update_schedule(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
     schedule_id: uuid.UUID,
+    today: _dt.date,
     end_date: _dt.date | None = None,
     grace_days: int | None = None,
     notes: str | None = None,
@@ -181,6 +184,7 @@ async def update_schedule(
         applicant_id = schedule.applicant_id
         await rent_ledger_service.ensure_charges_generated(
             db, organization_id=organization_id, applicant_id=applicant_id,
+            through=today,
         )
         return RentScheduleResponse.model_validate(schedule)
 

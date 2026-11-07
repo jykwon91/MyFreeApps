@@ -34,8 +34,9 @@ async def get_ledger(
         RentLedgerAsOf,
         Query(
             description=(
-                "The host's local date, or an earlier one. Charges are generated "
-                "up to it, so a past date shows the ledger as it stood."
+                "The host's local date, or an earlier one. Missing charges are "
+                "generated up to it; a past date shows only rent for periods begun "
+                "by then and leaves later charges untouched."
             ),
         ),
     ],
@@ -69,6 +70,7 @@ async def create_schedule(
             end_date=payload.end_date,
             grace_days=payload.grace_days,
             notes=payload.notes,
+            today=payload.today,
         )
     except rent_schedule_service.TenantNotFoundError as exc:
         raise HTTPException(status_code=404, detail=_TENANT_NOT_FOUND) from exc
@@ -90,6 +92,7 @@ async def update_schedule(
             end_date=payload.end_date,
             grace_days=payload.grace_days,
             notes=payload.notes,
+            today=payload.today,
             # ``model_fields_set`` is what separates "omitted" from "explicitly
             # null" — without it, clearing an end date and not touching it look
             # identical on the wire.

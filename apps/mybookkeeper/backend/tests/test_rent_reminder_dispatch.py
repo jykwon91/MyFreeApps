@@ -139,13 +139,13 @@ class TestProjectionMatchesGenerator:
         """What a reminder quotes ahead of time is exactly what the ledger later charges."""
         applicant_id = await _tenant(db)
         fake = _fake_uow(db)
-        with patch.object(rent_ledger_service, "_today", lambda: _dt.date(2026, 10, 15)), \
-                patch("app.services.rent.rent_ledger_service.unit_of_work", fake), \
+        with patch("app.services.rent.rent_ledger_service.unit_of_work", fake), \
                 patch("app.services.rent.rent_schedule_service.unit_of_work", fake):
             await rent_schedule_service.create_schedule(
                 organization_id=ORG, user_id=USER, applicant_id=applicant_id,
                 amount=Decimal("1500.00"), cadence="monthly",
                 start_date=_dt.date(2026, 10, 15), end_date=_dt.date(2026, 11, 15),
+                today=_dt.date(2026, 10, 15),
             )
             schedule = (await db.execute(select(RentSchedule))).scalar_one()
             # Only Oct exists so far; project Nov before generating it.

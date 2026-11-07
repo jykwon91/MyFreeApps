@@ -5,4 +5,6 @@ export interface RentScheduleUpdateRequest {
   end_date?: string | null;
   grace_days?: number | null;
   notes?: string | null;
+  /** The host's local date (yyyy-MM-dd): charges are reconciled up to it on save. */
+  today: string;
 }

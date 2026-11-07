@@ -5,7 +5,7 @@ from datetime import date
 
 from pydantic import BaseModel, model_validator
 
-from app.schemas.leases.client_local_date import ClientLocalDate
+from app.schemas.dates.client_local_date import ClientLocalDate
 from app.schemas.leases.receipt_period_rules import (
     RECEIPT_PERIOD_ORDER_MESSAGE,
     receipt_period_in_order,

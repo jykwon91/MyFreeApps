@@ -5,6 +5,7 @@ import type { RentChargeCreateRequest } from "../types/rent/rent-charge-create-r
 import type { RentLedgerResponse } from "../types/rent/rent-ledger-response";
 import type { RentSchedule } from "../types/rent/rent-schedule";
 import type { RentScheduleCreateRequest } from "../types/rent/rent-schedule-create-request";
+import type { RentScheduleUpdateRequest } from "../types/rent/rent-schedule-update-request";
 import { localToday } from "../utils/localToday";
 
 /**
@@ -34,8 +35,11 @@ const rentLedgerApi = baseApi.enhanceEndpoints({
       ],
     }),
 
-    createRentSchedule: builder.mutation<RentSchedule, RentScheduleCreateRequest>({
-      query: (data) => ({ url: "/rent-ledger/schedules", method: "POST", data }),
+    createRentSchedule: builder.mutation<RentSchedule, Omit<RentScheduleCreateRequest, "today">>({
+      query: (args) => {
+        const data: RentScheduleCreateRequest = { ...args, today: localToday() };
+        return { url: "/rent-ledger/schedules", method: "POST", data };
+      },
       invalidatesTags: (_r, _e, { applicant_id }) => [
         { type: "RentLedger" as const, id: applicant_id },
       ],
@@ -45,11 +49,10 @@ const rentLedgerApi = baseApi.enhanceEndpoints({
       RentSchedule,
       RentScheduleUpdateArgs & { applicantId: string }
     >({
-      query: ({ scheduleId, applicantId: _applicantId, ...data }) => ({
-        url: `/rent-ledger/schedules/${scheduleId}`,
-        method: "PATCH",
-        data,
-      }),
+      query: ({ scheduleId, applicantId: _applicantId, ...fields }) => {
+        const data: RentScheduleUpdateRequest = { ...fields, today: localToday() };
+        return { url: `/rent-ledger/schedules/${scheduleId}`, method: "PATCH", data };
+      },
       invalidatesTags: (_r, _e, { applicantId }) => [
         { type: "RentLedger" as const, id: applicantId },
       ],

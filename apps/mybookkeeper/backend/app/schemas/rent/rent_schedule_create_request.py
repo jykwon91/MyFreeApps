@@ -8,6 +8,7 @@ from decimal import Decimal
 from pydantic import BaseModel, Field, field_validator
 
 from app.core.rent_ledger_enums import RENT_CADENCES
+from app.schemas.dates.client_local_date import ClientLocalDate
 from app.schemas.rent.rent_money import validate_money
 
 
@@ -20,6 +21,8 @@ class RentScheduleCreateRequest(BaseModel):
     end_date: _dt.date | None = None
     grace_days: int | None = Field(default=None, ge=0, le=365)
     notes: str | None = None
+    # The host's date: periods begun by then are charged when the schedule saves.
+    today: ClientLocalDate
 
     @field_validator("amount")
     @classmethod
