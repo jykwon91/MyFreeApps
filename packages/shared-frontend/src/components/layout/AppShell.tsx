@@ -2,11 +2,13 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { NavLink, useNavigate, useLocation, type NavLinkRenderProps } from "react-router-dom";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { ChevronDown, ChevronLeft, ChevronRight, LogOut, Search } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, LogOut } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { useScrollTopOnNavigate } from "../../hooks/useScrollTopOnNavigate";
 import { readLocalStorage, writeLocalStorage } from "../../lib/safeStorage";
+import UserAvatar, { type UserAvatarUser } from "./UserAvatar";
+import SearchBar from "./SearchBar";
 
 export type NavItem = {
   path: string;
@@ -47,7 +49,7 @@ export interface AppShellProps {
    * to an icon-only rail.  Collapsed state is persisted in localStorage.
    */
   collapsible?: boolean;
-  user: { name: string; email?: string; avatarUrl?: string };
+  user: UserAvatarUser;
   onSignOut: () => void;
   headerTitle?: string;
   headerActions?: ReactNode;
@@ -62,62 +64,6 @@ function isFab(
   item: BottomNavItem
 ): item is { kind: "fab"; label: string; icon: ReactNode; onClick: () => void } {
   return "kind" in item && item.kind === "fab";
-}
-
-function UserAvatar({ user }: { user: AppShellProps["user"] }) {
-  if (user.avatarUrl) {
-    return (
-      <img
-        src={user.avatarUrl}
-        alt={user.name}
-        className="w-8 h-8 rounded-full object-cover"
-      />
-    );
-  }
-  const initials = user.name
-    .split(" ")
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase();
-  return (
-    <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold">
-      {initials}
-    </div>
-  );
-}
-
-function SearchBar({
-  placeholder,
-  onSearchSubmit,
-}: {
-  placeholder: string;
-  onSearchSubmit?: (q: string) => void;
-}) {
-  const [value, setValue] = useState("");
-  const isMac =
-    typeof navigator !== "undefined" && /mac/i.test(navigator.platform);
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    onSearchSubmit?.(value);
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="relative hidden sm:flex items-center">
-      <Search className="absolute left-3 w-4 h-4 text-muted-foreground pointer-events-none" />
-      <input
-        type="search"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder={placeholder}
-        className="pl-9 pr-14 py-1.5 text-sm rounded-md border bg-background w-64 focus:outline-none focus:ring-2 focus:ring-primary/30"
-      />
-      <kbd className="absolute right-3 text-xs text-muted-foreground font-mono pointer-events-none">
-        {isMac ? "⌘K" : "Ctrl+K"}
-      </kbd>
-    </form>
-  );
 }
 
 export default function AppShell({
