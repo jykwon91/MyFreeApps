@@ -3,15 +3,12 @@ import clsx from "clsx";
 import MapPinned from "@/games/wow-forever/components/worldMap/MapPinned";
 import MapPointLabel from "@/games/wow-forever/components/worldMap/MapPointLabel";
 import TripEndMarker from "@/games/wow-forever/components/worldMap/TripEndMarker";
+import { MAP_H, MAP_W } from "@/games/wow-forever/data/worldMap/mapViewer";
 import type { MapView, WorldPoint } from "@/games/wow-forever/types/worldMap";
 import { mapShows, worldToMap } from "@/games/wow-forever/worldMap/mapGeometry";
 import type { StepKind } from "@/games/wow-forever/worldMap/directions";
 import type { MapMarker, MapRoute } from "@/games/wow-forever/worldMap/mapLayers";
 import { clusterLabel, clusterMarkers, type MarkerPx } from "@/games/wow-forever/worldMap/markerClusters";
-
-/** The client's world-map canvas size — the art in /public/wow-maps is drawn at this size. */
-export const MAP_W = 1002;
-export const MAP_H = 668;
 
 interface MapMarkerLayerProps {
   map: MapView;

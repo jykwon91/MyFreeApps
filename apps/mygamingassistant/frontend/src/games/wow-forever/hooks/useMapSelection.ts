@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { UNZOOMED, type ZoomView } from "@/hooks/useMinimapZoomPan";
 import type { MapViewState } from "@/games/wow-forever/hooks/useMapView";
 import type { WorldMapData } from "@/games/wow-forever/types/worldMap";
 import { scrollBehavior } from "@/games/wow-forever/lib/revealInViewport";
 import type { MapFocus } from "@/games/wow-forever/worldMap/mapLayers";
+import type { MapViewport } from "@/games/wow-forever/types/mapViewport";
+import { FULL_VIEW } from "@/games/wow-forever/worldMap/mapViewport";
 
 /** A zoom + pan for the map canvas to put back once `mapId` is on screen. */
 export interface MapZoomRestore {
   mapId: number;
-  zoom: ZoomView;
+  zoom: MapViewport;
 }
 
 export interface MapSelection {
@@ -35,7 +36,7 @@ export interface MapSelection {
   clearFocus: () => void;
   clearRestore: () => void;
   /** The map canvas's zoom changed (any cause) — remembered for the next snapshot. */
-  trackZoom: (zoom: ZoomView) => void;
+  trackZoom: (zoom: MapViewport) => void;
   /** The player zoomed / panned the map by hand: they've taken over the view. */
   takeControl: () => void;
 }
@@ -48,7 +49,7 @@ export interface SelectOptions {
 /** The view right before a list selection moved it. */
 interface ViewSnapshot {
   mapId: number;
-  zoom: ZoomView;
+  zoom: MapViewport;
   /** Map entries our selections pushed on the history since (undone with Back). */
   pushes: number;
   /** The map the selection put on screen — any other map means the player navigated. */
@@ -79,7 +80,7 @@ export function useMapSelection(data: WorldMapData | null, view: MapViewState): 
   const [focus, setFocus] = useState<MapFocus | null>(null);
   const [restore, setRestore] = useState<MapZoomRestore | null>(null);
   const snapshot = useRef<ViewSnapshot | null>(null);
-  const zoom = useRef<ZoomView>(UNZOOMED);
+  const zoom = useRef<MapViewport>(FULL_VIEW);
   const lastMapId = useRef(mapId);
 
   // A map change the selection didn't make is the player navigating.
@@ -133,7 +134,7 @@ export function useMapSelection(data: WorldMapData | null, view: MapViewState): 
 
   const clearFocus = useCallback(() => setFocus(null), []);
   const clearRestore = useCallback(() => setRestore(null), []);
-  const trackZoom = useCallback((next: ZoomView) => {
+  const trackZoom = useCallback((next: MapViewport) => {
     zoom.current = next;
   }, []);
   const takeControl = useCallback(() => {

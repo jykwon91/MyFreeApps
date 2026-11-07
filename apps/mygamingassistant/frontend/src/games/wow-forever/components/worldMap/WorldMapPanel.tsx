@@ -4,8 +4,8 @@ import ChildMapSelect from "@/games/wow-forever/components/worldMap/ChildMapSele
 import MapBreadcrumb from "@/games/wow-forever/components/worldMap/MapBreadcrumb";
 import MapCanvas from "@/games/wow-forever/components/worldMap/MapCanvas";
 import PositionConfirm from "@/games/wow-forever/components/worldMap/PositionConfirm";
-import type { ZoomView } from "@/hooks/useMinimapZoomPan";
 import type { MapZoomRestore } from "@/games/wow-forever/hooks/useMapSelection";
+import type { MapViewport } from "@/games/wow-forever/types/mapViewport";
 import type { PlayerFaction, WorldMapData, WorldZone } from "@/games/wow-forever/types/worldMap";
 import { childrenOf, isZoneView, mapPath } from "@/games/wow-forever/worldMap/mapHitTest";
 import {
@@ -48,7 +48,7 @@ interface WorldMapPanelProps {
   directionsOpen: boolean;
   restore: MapZoomRestore | null;
   onRestoreApplied: () => void;
-  onZoomChange: (zoom: ZoomView) => void;
+  onZoomChange: (view: MapViewport) => void;
   onManualZoom: () => void;
   onOpen: (mapId: number) => void;
   onSetPosition: (zoneId: number, x: number, y: number) => void;
@@ -221,8 +221,7 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
         <span className="font-medium text-cyan-400">●</span> quest givers ·{" "}
         <span className="font-medium text-red-700">●</span> dungeons · other coloured dots are results. With a result selected, a click on the map or Esc clears it and the map goes back to where it
         was — unless you've moved it yourself since.
-        Otherwise click a zone to open it; right-click or Esc zooms out. On your zone's map, click to set where you are. Scroll to zoom, drag to
-        move.
+        Otherwise click a zone to open it; right-click or Esc zooms out. On your zone's map, click to set where you are. Scroll, pinch or use + / − to zoom; drag or use the arrow keys to move.
       </p>
     </section>
   );

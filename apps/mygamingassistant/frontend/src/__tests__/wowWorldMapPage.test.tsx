@@ -384,7 +384,8 @@ describe("WoW Forever World Map page", () => {
       renderInElwynn();
       await screen.findByRole("region", { name: "Find" });
       fireEvent.wheel(screen.getByTestId("zone-map"), { deltaY: -400, clientX: 10, clientY: 10 });
-      expect(resetZoom()).toBeInTheDocument();
+      // A burst of wheel events becomes one zoom once the wheel stops ticking (a few tens of ms).
+      expect(await screen.findByRole("button", { name: "Reset zoom" })).toBeInTheDocument();
       const calder = await selectCalder();
       await userEvent.click(within(calder).getByRole("button", { name: /Clear selection/ }));
       expect(screen.getByRole("img", { name: "Elwynn Forest map" })).toBeInTheDocument();
