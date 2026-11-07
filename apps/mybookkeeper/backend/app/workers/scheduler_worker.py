@@ -62,8 +62,9 @@ async def auto_end_replaced_leases() -> int:
     â€” runs across every user. Errors on individual rows are logged but
     do not stop the cycle (one bad row should never block the rest).
     """
-    today = _dt.date.today()
     now = _dt.datetime.now(_dt.timezone.utc)
+    # The server stores no host time zone, so a lease hands over on the UTC date.
+    today = now.date()
     transitioned = 0
     try:
         async with unit_of_work() as db:

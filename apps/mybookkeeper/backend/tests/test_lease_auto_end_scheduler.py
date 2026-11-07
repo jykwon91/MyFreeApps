@@ -7,6 +7,7 @@ and do not stop the cycle.
 from __future__ import annotations
 
 import datetime as _dt
+import time
 import uuid
 from contextlib import asynccontextmanager
 from unittest.mock import patch
@@ -17,6 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.applicants.applicant import Applicant
 from app.models.leases.signed_lease import SignedLease
 from app.workers.scheduler_worker import auto_end_replaced_leases
+
+_UTC_TODAY = _dt.datetime.now(_dt.timezone.utc).date()
 
 
 def _fake_uow_for(session: AsyncSession):
@@ -73,7 +76,7 @@ async def test_auto_ends_parent_when_successor_started(
         user_id=user_id,
         org_id=org_id,
         status="active",
-        starts_on=_dt.date.today() - _dt.timedelta(days=1),
+        starts_on=_UTC_TODAY - _dt.timedelta(days=1),
         parent_lease_id=parent.id,
     )
 
@@ -98,7 +101,7 @@ async def test_skips_parent_when_successor_in_future(
         db,
         user_id=user_id,
         org_id=org_id,
-        starts_on=_dt.date.today() + _dt.timedelta(days=30),
+        starts_on=_UTC_TODAY + _dt.timedelta(days=30),
         parent_lease_id=parent.id,
     )
 
@@ -123,7 +126,7 @@ async def test_skips_parent_in_non_eligible_status(
         db,
         user_id=user_id,
         org_id=org_id,
-        starts_on=_dt.date.today() - _dt.timedelta(days=1),
+        starts_on=_UTC_TODAY - _dt.timedelta(days=1),
         parent_lease_id=parent.id,
     )
 
@@ -148,7 +151,7 @@ async def test_skips_when_successor_soft_deleted(
         db,
         user_id=user_id,
         org_id=org_id,
-        starts_on=_dt.date.today() - _dt.timedelta(days=1),
+        starts_on=_UTC_TODAY - _dt.timedelta(days=1),
         parent_lease_id=parent.id,
         deleted_at=_dt.datetime.now(_dt.timezone.utc),
     )
@@ -171,13 +174,13 @@ async def test_handles_multiple_parents_in_one_cycle(
     p1 = await _seed_lease(db, user_id=user_id, org_id=org_id, status="active")
     p2 = await _seed_lease(db, user_id=user_id, org_id=org_id, status="signed")
     p3 = await _seed_lease(db, user_id=user_id, org_id=org_id, status="active")
-    yesterday = _dt.date.today() - _dt.timedelta(days=1)
+    yesterday = _UTC_TODAY - _dt.timedelta(days=1)
     await _seed_lease(db, user_id=user_id, org_id=org_id, starts_on=yesterday, parent_lease_id=p1.id)
     await _seed_lease(db, user_id=user_id, org_id=org_id, starts_on=yesterday, parent_lease_id=p2.id)
     # p3 has a future-dated successor — should be skipped.
     await _seed_lease(
         db, user_id=user_id, org_id=org_id,
-        starts_on=_dt.date.today() + _dt.timedelta(days=10),
+        starts_on=_UTC_TODAY + _dt.timedelta(days=10),
         parent_lease_id=p3.id,
     )
 
@@ -191,3 +194,37 @@ async def test_handles_multiple_parents_in_one_cycle(
     assert p1.status == "ended"
     assert p2.status == "ended"
     assert p3.status == "active"
+
+
+@pytest.mark.asyncio
+async def test_hands_over_on_the_utc_date_whatever_the_server_zone(
+    db: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A zone whose local date differs from UTC's right now: behind UTC in
+    # the UTC morning, ahead of it in the afternoon.
+    zone = "Etc/GMT+12" if _dt.datetime.now(_dt.timezone.utc).hour < 12 else "Etc/GMT-14"
+    monkeypatch.setenv("TZ", zone)
+    time.tzset()
+    try:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        starting = await _seed_lease(db, user_id=user_id, org_id=org_id)
+        await _seed_lease(
+            db, user_id=user_id, org_id=org_id,
+            starts_on=_UTC_TODAY, parent_lease_id=starting.id,
+        )
+        not_yet = await _seed_lease(db, user_id=user_id, org_id=org_id)
+        await _seed_lease(
+            db, user_id=user_id, org_id=org_id,
+            starts_on=_UTC_TODAY + _dt.timedelta(days=1), parent_lease_id=not_yet.id,
+        )
+        assert _dt.date.today() != _UTC_TODAY
+
+        with patch("app.workers.scheduler_worker.unit_of_work", _fake_uow_for(db)):
+            assert await auto_end_replaced_leases() == 1
+    finally:
+        monkeypatch.delenv("TZ")
+        time.tzset()
+
+    await db.refresh(starting)
+    await db.refresh(not_yet)
+    assert (starting.status, not_yet.status) == ("ended", "active")
