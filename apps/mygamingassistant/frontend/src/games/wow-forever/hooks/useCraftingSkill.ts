@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
 import { MAX_CRAFT_SKILL, parseSkill } from "@/games/wow-forever/crafting/craftRoute";
 import { isCraftingProfession, isGatheringProfession } from "@/games/wow-forever/lib/guideProfession";
 import { readStored, writeStored } from "@/games/wow-forever/lib/safeLocalStorage";
@@ -40,7 +40,7 @@ export function clampSkill(value: number | null): number | null {
  * that visit without overwriting what you saved; typing a skill saves it per profession.
  */
 export function useCraftingSkill(profession: SkilledProfession):[number | null, (skill: number | null) => void] {
-  const [params, setParams] = useSearchParams();
+  const [params, setParams] = useLiveSearchParams();
   const fromUrl = parseSkill(params.get(SKILL_PARAM));
   const skill = fromUrl ?? readStored(CRAFT_SKILL_STORAGE_KEY, parseStored, {})[profession] ?? null;
 

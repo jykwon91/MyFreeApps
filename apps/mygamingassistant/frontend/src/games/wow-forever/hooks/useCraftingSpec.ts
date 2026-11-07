@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
 import { parseSpec } from "@/games/wow-forever/crafting/craftSpecs";
 import { CRAFTING_SPECS } from "@/games/wow-forever/data/professions/crafting/craftingSpecs";
 import { isCraftingProfession } from "@/games/wow-forever/lib/guideProfession";
@@ -28,7 +28,7 @@ function parseStored(raw: unknown): StoredSpecs | null {
  * `?spec=` link wins for that visit; choosing saves it per profession.
  */
 export function useCraftingSpec(profession: CraftingProfession): [string | null, (spec: string | null) => void] {
-  const [params, setParams] = useSearchParams();
+  const [params, setParams] = useLiveSearchParams();
   const specs = CRAFTING_SPECS[profession];
   const fromUrl = parseSpec(specs, params.get(SPEC_PARAM));
   const spec = fromUrl ?? readStored(CRAFT_SPEC_STORAGE_KEY, parseStored, {})[profession] ?? null;
