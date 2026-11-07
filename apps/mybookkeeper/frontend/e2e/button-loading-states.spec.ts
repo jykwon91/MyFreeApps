@@ -56,7 +56,7 @@ test.describe("Button loading states", () => {
       if (created) await api.delete(`/properties/${created.id}`);
     });
 
-    test("Delete property ConfirmDialog shows loading during deletion", async ({ authedPage: page, api }) => {
+    test("Delete property ConfirmDialog shows loading during deletion", async ({ authedPage: page }) => {
       // Create a property via the UI form (more reliable than API)
       const name = `E2E DelLoad ${RUN_ID}`;
       const section = page.locator("section").first();

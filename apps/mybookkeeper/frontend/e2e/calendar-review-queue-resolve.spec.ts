@@ -189,7 +189,6 @@ test.describe("Calendar review queue — Phase 2b resolve creates blackout", () 
   });
 
   test("resolve against a listing that doesn't exist is rejected and leaves the item queued", async ({
-    authedPage: page,
     api,
   }) => {
     // A resolve the backend rejects (422 — the listing doesn't exist) must

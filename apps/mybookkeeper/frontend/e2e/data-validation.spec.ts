@@ -36,7 +36,6 @@ test.describe("Data validation — API response integrity", () => {
       const data = await res.json();
 
       for (const txn of data) {
-        const amount = parseFloat(txn.amount);
         const decimals = txn.amount.includes(".") ? txn.amount.split(".")[1].length : 0;
         expect(decimals).toBeLessThanOrEqual(2);
       }

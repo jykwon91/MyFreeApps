@@ -56,4 +56,4 @@ export const test = base.extend<{ authedPage: Page; api: APIRequestContext; invi
 });
 
 export { expect };
-export type { APIRequestContext };
+export type { APIRequestContext, Page };

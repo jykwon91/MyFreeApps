@@ -11,6 +11,8 @@ declare global {
   interface Window {
     /** Set by the side-panel runtime below; delivers a message as if the tab's content script sent it. */
     __mbkFromContentScript: (message: { action: string; form: string | null; year: number | null }) => void;
+    /** The stubbed extension API the side-panel runtime below installs. */
+    chrome: { storage: { session: { get: (keys: string[]) => Promise<Record<string, unknown>> } } };
   }
 }
 
@@ -300,7 +302,7 @@ test.describe("Chrome Extension — Sidepanel UI", () => {
     await page.locator("#logout-btn").click();
     await expect(page.locator("#login-section")).toBeVisible();
     await expect(page.locator("#main-section")).not.toBeVisible();
-    const saved = await page.evaluate(() => chrome.storage.session.get(["token", "orgId"]));
+    const saved = await page.evaluate(() => window.chrome.storage.session.get(["token", "orgId"]));
     expect(saved).toEqual({});
   });
 });

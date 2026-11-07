@@ -1,5 +1,7 @@
 import { test, expect } from "./fixtures/auth";
 import { toasts } from "./fixtures/toasts";
+import { deleteProperty } from "./fixtures/seed-data";
+import type { APIRequestContext } from "@playwright/test";
 
 const RUN_ID = Date.now();
 
@@ -44,11 +46,12 @@ async function createClassifiedProperty(
   await expect(toasts(page).getByText("Property created", { exact: true })).toBeVisible({ timeout: 10000 });
 }
 
-async function cleanupProperty(api: { get: (url: string) => Promise<Response>; delete: (url: string) => Promise<Response> }, name: string) {
+async function cleanupProperty(api: APIRequestContext, name: string) {
   const res = await api.get("/properties");
-  const props = await res.json();
-  const found = props.find((p: { name: string; id: string }) => p.name === name);
-  if (found) await api.delete(`/properties/${found.id}`);
+  const props: Array<{ name: string; id: string }> = await res.json();
+  const found = props.find((p) => p.name === name);
+  if (!found) throw new Error(`cleanupProperty: no property named ${name}`);
+  await deleteProperty(api, found.id);
 }
 
 test.describe("Property Classification", () => {

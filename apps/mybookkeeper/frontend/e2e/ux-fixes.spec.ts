@@ -12,8 +12,6 @@ test.describe("Failed document alert", () => {
   });
 
   test("documents page shows failed alert when failed documents exist", async ({ authedPage: page }) => {
-    // Filter to failed status to check if any exist
-    const statusFilter = page.locator("select, [data-filter='status']").first();
     const hasFailed = await page.getByText(/I had trouble/i).isVisible({ timeout: 3000 }).catch(() => false);
 
     if (hasFailed) {

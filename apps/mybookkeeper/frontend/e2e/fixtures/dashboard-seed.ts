@@ -1,6 +1,5 @@
 import type { APIRequestContext } from "@playwright/test";
 import type { SeedPropertyIds } from "./seed-property-ids";
-import type { SeedRow } from "./seed-row";
 import { createProperty } from "./seed-data";
 import { seedTransactions } from "./seed-transactions";
 
