@@ -1287,7 +1287,10 @@
         "api-client/src/types/applicant/screening-result.ts",
         "frontend/src/shared/lib/list-load-mode.ts",
         "frontend/src/shared/types/list-load-mode.ts",
-        "frontend/src/shared/types/list-load-mode-args.ts"
+        "frontend/src/shared/types/list-load-mode-args.ts",
+        "frontend/src/shared/lib/detail-load-mode.ts",
+        "frontend/src/shared/types/detail-load-mode.ts",
+        "frontend/src/shared/types/detail-load-mode-args.ts"
       ],
       "backend_tests": [
         "test_screening.py",
@@ -1301,10 +1304,12 @@
         "ScreeningEligibilityGate.test.tsx",
         "ScreeningProviderGrid.test.tsx",
         "UploadScreeningResultModal.test.tsx",
-        "list-load-mode.test.ts"
+        "list-load-mode.test.ts",
+        "detail-load-mode.test.ts"
       ],
       "e2e_specs": [
-        "applicant-screening.spec.ts"
+        "applicant-screening.spec.ts",
+        "mocked/screening-providers-retry-mock.spec.ts"
       ]
     },
     "vendors": {
