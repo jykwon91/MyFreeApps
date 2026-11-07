@@ -175,7 +175,8 @@
         "upload-outcome.test.ts",
         "DocumentStatusBadge.test.tsx",
         "UploadStatusCard.test.tsx",
-        "progress-percent.test.ts"
+        "progress-percent.test.ts",
+        "DocumentsSkeleton.test.tsx"
       ],
       "e2e_specs": [
         "documents.spec.ts",
@@ -1510,6 +1511,7 @@
   "always_e2e": [
     "navigation.spec.ts",
     "mobile.spec.ts",
+    "mobile-skeleton-overflow.spec.ts",
     "chrome-extension.spec.ts",
     "chrome-extension-sidepanel.spec.ts",
     "ux-fixes.spec.ts",
