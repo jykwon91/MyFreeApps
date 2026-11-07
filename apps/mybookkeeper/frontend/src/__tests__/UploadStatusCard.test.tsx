@@ -11,6 +11,7 @@ const batchUpload: UploadState = {
   documentId: "doc-1",
   batchId: "batch-1",
   batchTotal: 4,
+  batchFailed: 0,
   multiUploadTotal: 0,
   multiUploadCompleted: 0,
   multiUploadFailed: 0,
@@ -54,6 +55,20 @@ describe("UploadStatusCard", () => {
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTitle("Dismiss"));
     expect(onDismiss).toHaveBeenCalled();
+  });
+
+  it("warns, rather than showing a plain success, when some of a finished batch failed", () => {
+    render(
+      <UploadStatusCard upload={{ ...batchUpload, status: FILE_STATUSES.DONE, batchFailed: 1 }} statusText="3 files — 3 of 4 documents processed (1 failed)" batchStatus={undefined} onCancelBatch={vi.fn()} isCancellingBatch={false} onDismiss={vi.fn()} />,
+    );
+    expect(screen.getByLabelText("Some files failed")).toBeInTheDocument();
+  });
+
+  it("shows no warning when a finished batch had no failures", () => {
+    render(
+      <UploadStatusCard upload={{ ...batchUpload, status: FILE_STATUSES.DONE }} statusText="3 files — 4 documents processed" batchStatus={undefined} onCancelBatch={vi.fn()} isCancellingBatch={false} onDismiss={vi.fn()} />,
+    );
+    expect(screen.queryByLabelText("Some files failed")).not.toBeInTheDocument();
   });
 
   it("shows the cancel as in progress and blocks a second click while it runs", () => {

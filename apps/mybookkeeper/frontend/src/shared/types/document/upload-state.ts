@@ -6,6 +6,7 @@ export interface UploadState {
   documentId: string | null;
   batchId: string | null;
   batchTotal: number;
+  batchFailed: number;
   multiUploadTotal: number;
   multiUploadCompleted: number;
   multiUploadFailed: number;

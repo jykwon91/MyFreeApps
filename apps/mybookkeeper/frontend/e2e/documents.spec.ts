@@ -1,6 +1,6 @@
 import type { Locator, Page, TestInfo } from "@playwright/test";
 import { test, expect } from "./fixtures/auth";
-import { deleteDocumentsNamed, docIdsNamed, seedDocument, seedTypedDocument, uniquePdf } from "./fixtures/documents";
+import { deleteDocumentsNamed, docIdsNamed, seedDocument, seedTypedDocument, uniquePdf, uniqueZip } from "./fixtures/documents";
 
 // Only this file uploads documents, and the upload zone takes one upload at a
 // time across the workspace, so its tests run in order rather than in parallel.
@@ -45,6 +45,42 @@ test.describe("Documents — upload, verify, delete", () => {
       await expect(page.getByText(`${name} —`, { exact: false })).toContainText(card);
     } finally {
       await deleteDocumentsNamed(api, name);
+    }
+  });
+
+  test("uploading a zip says how many of its documents were read, not success regardless", async ({ authedPage: page, api }, testInfo) => {
+    const prefix = prefixFor(testInfo, "zip");
+    const zipName = `${prefix}.zip`;
+    try {
+      await openDocuments(page, prefix);
+
+      await page.locator("input[type='file']").first().setInputFiles(await uniqueZip(zipName, [`${prefix}-a.pdf`, `${prefix}-b.pdf`]));
+
+      await expect(rowNamed(page, prefix)).toHaveCount(2, { timeout: 60000 });
+      const statuses = await Promise.all(
+        (await docIdsNamed(api, prefix)).map(async (id) => {
+          const res = await api.get(`/documents/upload-status/${id}`);
+          expect(res.ok(), await res.text()).toBe(true);
+          return ((await res.json()) as { status: string }).status;
+        }),
+      );
+      expect(statuses).toHaveLength(2);
+      const failed = statuses.filter((s) => s === "failed").length;
+
+      // CI's keyless stack fails both, so it runs the all-failed branch; a stack with a key reads them.
+      const card = page.getByText(`${zipName} —`, { exact: false });
+      if (failed === 2) {
+        await expect(card).toContainText("I had trouble reading all 2 of these", { timeout: 15000 });
+        await expect(card).not.toContainText("processed");
+      } else if (failed === 1) {
+        await expect(card).toContainText("I read 1 of 2, but had trouble with 1", { timeout: 15000 });
+        await expect(page.getByLabel("Some files failed")).toBeVisible();
+      } else {
+        expect(failed).toBe(0);
+        await expect(card).toContainText("2 documents processed", { timeout: 15000 });
+      }
+    } finally {
+      await deleteDocumentsNamed(api, prefix);
     }
   });
 

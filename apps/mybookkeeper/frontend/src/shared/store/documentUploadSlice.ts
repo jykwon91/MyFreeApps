@@ -27,6 +27,7 @@ const documentUploadSlice = createSlice({
         documentId: null,
         batchId: null,
         batchTotal: 1,
+        batchFailed: 0,
         multiUploadTotal: 0,
         multiUploadCompleted: 0,
         multiUploadFailed: 0,
@@ -39,6 +40,7 @@ const documentUploadSlice = createSlice({
         documentId: null,
         batchId: null,
         batchTotal: action.payload.total,
+        batchFailed: 0,
         multiUploadTotal: action.payload.total,
         multiUploadCompleted: 0,
         multiUploadFailed: 0,
@@ -54,7 +56,7 @@ const documentUploadSlice = createSlice({
     },
     multiUploadDone(state) {
       if (!state.current) return;
-      state.current.status = FILE_STATUSES.DONE;
+      state.current.status = state.current.multiUploadCompleted === 0 ? FILE_STATUSES.FAILED : FILE_STATUSES.DONE;
     },
     uploadSucceeded(state, action: PayloadAction<{ documentId: string; batchId: string | null; batchTotal: number }>) {
       if (!state.current) return;
@@ -70,6 +72,13 @@ const documentUploadSlice = createSlice({
     processingComplete(state, action: PayloadAction<UploadOutcome>) {
       if (!state.current) return;
       state.current.status = action.payload;
+    },
+    batchProcessed(state, action: PayloadAction<{ total: number; failed: number }>) {
+      if (!state.current) return;
+      const { total, failed } = action.payload;
+      state.current.status = total > 0 && failed >= total ? FILE_STATUSES.FAILED : FILE_STATUSES.DONE;
+      state.current.batchTotal = total;
+      state.current.batchFailed = failed;
     },
     restoreProcessing(state, action: PayloadAction<UploadState>) {
       state.current = action.payload;
@@ -90,6 +99,7 @@ export const {
   uploadSucceeded,
   uploadFailed,
   processingComplete,
+  batchProcessed,
   restoreProcessing,
   dismiss,
 } = documentUploadSlice.actions;
