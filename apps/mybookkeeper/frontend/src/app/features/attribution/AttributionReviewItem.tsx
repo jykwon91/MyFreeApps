@@ -185,8 +185,8 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
     showTenantPicker && !tenantsLoading && !applicantsError && tenantOptions.length > 0;
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start gap-4 p-4 border rounded-lg bg-card">
-      <div className="flex-1 space-y-1 min-w-0">
+    <div data-testid="attribution-review-item" className="flex flex-col sm:flex-row sm:items-start gap-4 p-4 border rounded-lg bg-card">
+      <div data-testid="attribution-review-item-main" className="flex-1 space-y-1 min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           {badgeChannel && <AttributionChannelBadge channel={badgeChannel} />}
           <span className="font-medium truncate">{displayName}</span>
@@ -370,7 +370,7 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
           </div>
         )}
       </div>
-      <div className="flex items-center gap-2 shrink-0">
+      <div data-testid="attribution-review-item-actions" className="flex items-center gap-2 shrink-0">
         {isFuzzyApplicant && (
           <LoadingButton
             variant="primary"

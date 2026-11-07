@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
 import { store } from "@/shared/store";
@@ -157,6 +157,15 @@ function renderItem(item: ReviewItemType) {
 }
 
 describe("AttributionReviewItem", () => {
+  it("renders a main column and an actions column inside the item row", () => {
+    renderItem(rentFuzzy());
+    const row = screen.getByTestId("attribution-review-item");
+    expect(within(row).getByTestId("attribution-review-item-main")).toHaveTextContent("Alice Johnson");
+    expect(
+      within(within(row).getByTestId("attribution-review-item-actions")).getByRole("button", { name: /Yes, that's them/ }),
+    ).toBeInTheDocument();
+  });
+
   it("rent-fuzzy: shows 'Yes, that's them' + tenant name, no property/badge UI", () => {
     renderItem(rentFuzzy());
     expect(screen.getByRole("button", { name: /Yes, that's them/ })).toBeInTheDocument();

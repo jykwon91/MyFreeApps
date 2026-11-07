@@ -8,8 +8,12 @@ export default function AttributionReviewSkeleton() {
         <Skeleton className="h-4 w-80" />
       </div>
       {[1, 2, 3].map((i) => (
-        <div key={i} className="flex items-start gap-4 p-4 border rounded-lg">
-          <div className="flex-1 space-y-2">
+        <div
+          key={i}
+          data-testid="attribution-review-skeleton-row"
+          className="flex flex-col sm:flex-row sm:items-start gap-4 p-4 border rounded-lg bg-card"
+        >
+          <div data-testid="attribution-review-skeleton-main" className="flex-1 space-y-1 min-w-0">
             <div className="flex gap-2">
               <Skeleton className="h-5 w-32" />
               <Skeleton className="h-5 w-16" />
@@ -18,7 +22,7 @@ export default function AttributionReviewSkeleton() {
             <Skeleton className="h-4 w-48" />
             <Skeleton className="h-4 w-56" />
           </div>
-          <div className="flex gap-2">
+          <div data-testid="attribution-review-skeleton-actions" className="flex items-center gap-2 shrink-0">
             <Skeleton className="h-9 w-28" />
             <Skeleton className="h-9 w-20" />
           </div>
