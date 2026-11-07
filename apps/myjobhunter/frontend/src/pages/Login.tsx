@@ -6,11 +6,11 @@ import {
   LoginForm,
   LoadingButton,
   TurnstileWidget,
-  extractErrorMessage,
+  describeAuthError,
+  isUnverifiedLoginError,
   useIsAuthenticated,
 } from "@platform/ui";
-import { isUnverifiedError, useSignIn } from "@/features/auth/useSignIn";
-import { requestVerifyToken } from "@/lib/auth";
+import { register, requestVerifyToken, signIn } from "@/lib/auth";
 import { ResendStatusMode } from "@/constants/resendStatusModes";
 import { ResendStatusAlert } from "@/components/ResendStatusAlert";
 
@@ -33,7 +33,6 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const isAuthenticated = useIsAuthenticated();
-  const { handleSignIn, handleRegister } = useSignIn();
 
   // Email-verification state (C4)
   const [needsVerification, setNeedsVerification] = useState(false);
@@ -81,7 +80,7 @@ export default function Login() {
     setNeedsVerification(false);
     setRegisteredEmail("");
     try {
-      const result = await handleSignIn(email, password);
+      const result = await signIn(email, password);
       if (result.status === "totp_required") {
         setPendingCredentials({ email, password });
         setTotpCode("");
@@ -90,17 +89,16 @@ export default function Login() {
       }
       navigateAfterLogin();
     } catch (err) {
-      if (isUnverifiedError(err)) {
-        setPendingEmail(email);
-        setNeedsVerification(true);
-        setResendStatus(ResendStatusMode.IDLE);
-      }
-      throw err;
+      if (!isUnverifiedLoginError(err)) throw err;
+      // The resend banner says it; rethrowing would make LoginForm say it again.
+      setPendingEmail(email);
+      setNeedsVerification(true);
+      setResendStatus(ResendStatusMode.IDLE);
     }
   }
 
   async function onRegister(email: string, password: string): Promise<void> {
-    await handleRegister(email, password, turnstileToken);
+    await register(email, password, turnstileToken);
     setRegisteredEmail(email);
     setNeedsVerification(false);
   }
@@ -123,7 +121,7 @@ export default function Login() {
     setTotpError("");
     setIsVerifyingTotp(true);
     try {
-      const result = await handleSignIn(
+      const result = await signIn(
         pendingCredentials.email,
         pendingCredentials.password,
         totpCode,
@@ -134,12 +132,7 @@ export default function Login() {
         setTotpError("Authentication code didn't go through. Please try again.");
       }
     } catch (err) {
-      const detail = extractErrorMessage(err);
-      setTotpError(
-        detail === "invalid_totp"
-          ? "Invalid authentication code. Please try again."
-          : detail,
-      );
+      setTotpError(describeAuthError(err));
     } finally {
       setIsVerifyingTotp(false);
     }

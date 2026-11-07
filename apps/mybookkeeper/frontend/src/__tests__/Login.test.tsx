@@ -17,6 +17,13 @@ import api from "@/shared/lib/api";
 
 const mockNavigate = vi.fn();
 
+/** What axios rejects with: the body is under response, .message is the status line. */
+function axiosError(status: number, detail: string): Error {
+  return Object.assign(new Error(`Request failed with status code ${status}`), {
+    response: { status, data: { detail } },
+  });
+}
+
 vi.mock("react-router-dom", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-router-dom")>();
   return {
@@ -117,8 +124,8 @@ describe("Login — error handling", () => {
     vi.clearAllMocks();
   });
 
-  it("shows generic error message when login fails", async () => {
-    vi.mocked(login).mockRejectedValue(new Error("Unauthorized"));
+  it("says the email or password is wrong when the server answers LOGIN_BAD_CREDENTIALS", async () => {
+    vi.mocked(login).mockRejectedValue(axiosError(400, "LOGIN_BAD_CREDENTIALS"));
     const user = userEvent.setup();
     const { container } = renderLogin();
 
@@ -126,13 +133,13 @@ describe("Login — error handling", () => {
     await user.type(passwordInput(container), "wrongpass");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
-    await screen.findByText("Invalid email or password");
+    await screen.findByText("Incorrect email or password. Please try again.");
   });
 
   it("does not show error before form submission", () => {
     renderLogin();
 
-    expect(screen.queryByText("Invalid email or password")).not.toBeInTheDocument();
+    expect(screen.queryByText("Incorrect email or password. Please try again.")).not.toBeInTheDocument();
   });
 
   it("shows validation message when email is empty", async () => {
@@ -365,8 +372,8 @@ describe("Login — lockout 429 handling", () => {
     vi.clearAllMocks();
   });
 
-  it("shows lockout message when login returns 429 with 'Too many' detail", async () => {
-    const lockoutError = { status: 429, data: { detail: "Too many sign-in attempts. Try again later." } };
+  it("shows lockout message when login returns 429", async () => {
+    const lockoutError = axiosError(429, "Too many attempts");
     vi.mocked(login).mockRejectedValue(lockoutError);
     const user = userEvent.setup();
     const { container } = renderLogin();
@@ -379,7 +386,7 @@ describe("Login — lockout 429 handling", () => {
   });
 
   it("disables submit button and shows countdown after lockout 429", async () => {
-    const lockoutError = { status: 429, data: { detail: "Too many sign-in attempts. Try again later." } };
+    const lockoutError = axiosError(429, "Too many attempts");
     vi.mocked(login).mockRejectedValue(lockoutError);
     const user = userEvent.setup();
     const { container } = renderLogin();
@@ -397,7 +404,7 @@ describe("Login — lockout 429 handling", () => {
   });
 
   it("shows generic error (not lockout message) for non-429 failures", async () => {
-    vi.mocked(login).mockRejectedValue(new Error("Unauthorized"));
+    vi.mocked(login).mockRejectedValue(axiosError(400, "LOGIN_BAD_CREDENTIALS"));
     const user = userEvent.setup();
     const { container } = renderLogin();
 
@@ -405,7 +412,7 @@ describe("Login — lockout 429 handling", () => {
     await user.type(passwordInput(container), "wrongpass");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
-    await screen.findByText("Invalid email or password");
+    await screen.findByText("Incorrect email or password. Please try again.");
     expect(screen.queryByText(/Too many sign-in attempts/i)).not.toBeInTheDocument();
   });
 });
@@ -457,7 +464,7 @@ describe("Login — sign up link", () => {
 // ---------------------------------------------------------------------------
 
 describe("Login — unverified user", () => {
-  const unverifiedError = { data: { detail: "LOGIN_USER_NOT_VERIFIED" } };
+  const unverifiedError = axiosError(400, "LOGIN_USER_NOT_VERIFIED");
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -497,7 +504,7 @@ describe("Login — unverified user", () => {
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
     await screen.findByText(/please verify your email/i);
-    expect(screen.queryByText("Invalid email or password")).not.toBeInTheDocument();
+    expect(screen.queryByText("Incorrect email or password. Please try again.")).not.toBeInTheDocument();
   });
 
   it("calls /auth/request-verify-token when resend button is clicked", async () => {

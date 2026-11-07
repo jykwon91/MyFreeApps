@@ -62,7 +62,6 @@ src/
     companies/      # CompaniesSkeleton, CompanyDetailSkeleton
     dashboard/      # DashboardSkeleton
     profile/        # ProfileSkeleton
-    auth/           # useSignIn hook
 
   lib/
     api.ts          # Re-exports @platform/ui axios instance

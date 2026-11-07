@@ -4,11 +4,11 @@ import { Gamepad2 } from "lucide-react";
 import {
   AuthPageFooter,
   LoadingButton,
-  extractErrorMessage,
+  describeAuthError,
+  isUnverifiedLoginError,
   useIsAuthenticated,
 } from "@platform/ui";
-import { isUnverifiedError, useSignIn } from "@/features/auth/useSignIn";
-import { requestVerifyToken } from "@/lib/auth";
+import { requestVerifyToken, signIn } from "@/lib/auth";
 
 interface LocationState {
   from?: string;
@@ -29,7 +29,6 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const isAuthenticated = useIsAuthenticated();
-  const { handleSignIn } = useSignIn();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -68,7 +67,7 @@ export default function Login() {
     setNeedsVerification(false);
     setIsLoading(true);
     try {
-      const result = await handleSignIn(email, password);
+      const result = await signIn(email, password);
       if (result.status === "totp_required") {
         setPendingCredentials({ email, password });
         setTotpCode("");
@@ -77,12 +76,12 @@ export default function Login() {
       }
       navigateAfterLogin();
     } catch (err) {
-      if (isUnverifiedError(err)) {
+      if (isUnverifiedLoginError(err)) {
         setPendingEmail(email);
         setNeedsVerification(true);
         setResendStatus("idle");
       } else {
-        setError("Incorrect email or password. Please try again.");
+        setError(describeAuthError(err));
       }
     } finally {
       setIsLoading(false);
@@ -107,7 +106,7 @@ export default function Login() {
     setTotpError("");
     setIsVerifyingTotp(true);
     try {
-      const result = await handleSignIn(
+      const result = await signIn(
         pendingCredentials.email,
         pendingCredentials.password,
         totpCode,
@@ -118,12 +117,7 @@ export default function Login() {
         setTotpError("Authentication code didn't go through. Please try again.");
       }
     } catch (err) {
-      const detail = extractErrorMessage(err);
-      setTotpError(
-        detail === "invalid_totp"
-          ? "Invalid authentication code. Please try again."
-          : detail,
-      );
+      setTotpError(describeAuthError(err));
     } finally {
       setIsVerifyingTotp(false);
     }
