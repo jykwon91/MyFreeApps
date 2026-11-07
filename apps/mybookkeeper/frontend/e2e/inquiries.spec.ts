@@ -1,4 +1,5 @@
-import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
+import { test, expect, type Page } from "./fixtures/auth";
+import { deleteInquiry, seedInquiry } from "./fixtures/inquiries";
 
 /**
  * PR 2.1b — Inquiries frontend behavioural E2E.
@@ -7,42 +8,6 @@ import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth
  * (which would populate inquiries automatically) ships in PR 2.2; this spec
  * exclusively exercises host-driven flows.
  */
-
-interface SeedInquiryPayload {
-  source: "FF" | "TNH" | "direct" | "other";
-  external_inquiry_id?: string | null;
-  inquirer_name?: string | null;
-  inquirer_email?: string | null;
-  inquirer_employer?: string | null;
-  desired_start_date?: string | null;
-  desired_end_date?: string | null;
-  listing_id?: string | null;
-  notes?: string | null;
-  received_at?: string;
-  email_message_id?: string | null;
-  inquirer_phone?: string | null;
-}
-
-async function seedInquiry(
-  api: APIRequestContext,
-  payload: SeedInquiryPayload,
-): Promise<string> {
-  const res = await api.post("/test/seed-inquiry", {
-    data: {
-      received_at: payload.received_at ?? new Date().toISOString(),
-      ...payload,
-    },
-  });
-  if (!res.ok()) {
-    throw new Error(`seedInquiry failed: ${res.status()} ${await res.text()}`);
-  }
-  const body = (await res.json()) as { id: string };
-  return body.id;
-}
-
-async function deleteInquiry(api: APIRequestContext, inquiryId: string): Promise<void> {
-  await api.delete(`/test/inquiries/${inquiryId}`).catch(() => {});
-}
 
 async function waitForInquiriesPage(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "Inquiries" })).toBeVisible({ timeout: 10000 });

@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
+import { deleteInquiry, seedInquiry } from "./fixtures/inquiries";
 
 /**
  * PR 3.1b — Applicants frontend behavioural E2E (read-only).
@@ -40,28 +41,6 @@ async function deleteApplicant(api: APIRequestContext, id: string): Promise<void
   await api.delete(`/test/applicants/${id}`).catch(() => {});
 }
 
-async function seedInquiry(
-  api: APIRequestContext,
-  inquirerName: string,
-): Promise<string> {
-  const res = await api.post("/test/seed-inquiry", {
-    data: {
-      source: "direct",
-      inquirer_name: inquirerName,
-      received_at: new Date().toISOString(),
-    },
-  });
-  if (!res.ok()) {
-    throw new Error(`seedInquiry failed: ${res.status()} ${await res.text()}`);
-  }
-  const body = (await res.json()) as { id: string };
-  return body.id;
-}
-
-async function deleteInquiry(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/test/inquiries/${id}`).catch(() => {});
-}
-
 async function waitForApplicantsPage(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "Applicants" })).toBeVisible({
     timeout: 10000,
@@ -82,7 +61,7 @@ test.describe("Applicants frontend (PR 3.1b)", () => {
 
     try {
       // Seed an inquiry first so we can prove the source-inquiry link works.
-      const inquiryId = await seedInquiry(api, inquirerName);
+      const inquiryId = await seedInquiry(api, { inquirer_name: inquirerName });
       seededInquiries.push(inquiryId);
 
       const applicantId = await seedApplicant(api, {
