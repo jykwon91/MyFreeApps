@@ -70,9 +70,8 @@ test.describe("Inquiry → Applicant promotion (PR 3.2)", () => {
       await expect(page.getByTestId("promote-form-contract-start")).toHaveValue(
         "2026-06-01",
       );
-      await expect(page.getByTestId("promote-form-contract-end")).toHaveValue(
-        "2026-12-01",
-      );
+      // Contract end comes from the signed lease, not the promotion.
+      await expect(page.getByTestId("promote-form-contract-end")).toHaveCount(0);
 
       // Submit.
       await page.getByTestId("promote-form-submit").click();
