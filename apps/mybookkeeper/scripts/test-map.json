@@ -18,6 +18,7 @@
         "test_extraction_seed_routes.py",
         "test_member_seed_routes.py",
         "test_listing_seed_routes.py",
+        "test_vendor_seed_routes.py",
         "test_db_admin.py",
         "test_seed_applicant_request.py",
         "test_seed_lease_template.py"
@@ -1338,6 +1339,7 @@
       ],
       "backend_tests": [
         "test_vendor_repo.py",
+        "test_vendor_seed_routes.py",
         "test_vendor_service.py",
         "test_vendor_routes.py",
         "test_vendor_writes.py"

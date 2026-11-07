@@ -1,4 +1,5 @@
 import type { APIRequestContext } from "@playwright/test";
+import type { SeedVendorPayload } from "./seed-vendor-payload";
 
 interface TransactionInput {
   vendor?: string;
@@ -90,4 +91,15 @@ export async function deleteListing(api: APIRequestContext, id: string): Promise
 export async function deleteReconciliationSource(api: APIRequestContext, id: string): Promise<void> {
   const res = await api.delete(`/test/reconciliation-sources/${id}`);
   if (!res.ok()) throw new Error(`deleteReconciliationSource failed: ${res.status()} ${await res.text()}`);
+}
+
+export async function seedVendor(api: APIRequestContext, payload: SeedVendorPayload): Promise<string> {
+  const res = await api.post("/test/seed-vendor", { data: payload });
+  if (!res.ok()) throw new Error(`seedVendor failed: ${res.status()} ${await res.text()}`);
+  return ((await res.json()) as { id: string }).id;
+}
+
+export async function deleteVendor(api: APIRequestContext, id: string): Promise<void> {
+  const res = await api.delete(`/test/vendors/${id}`);
+  if (!res.ok()) throw new Error(`deleteVendor failed: ${res.status()} ${await res.text()}`);
 }

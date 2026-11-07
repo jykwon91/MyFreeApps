@@ -1,4 +1,5 @@
-import { test, expect, type APIRequestContext } from "./fixtures/auth";
+import { test, expect } from "./fixtures/auth";
+import { deleteVendor, seedVendor } from "./fixtures/seed-data";
 
 /**
  * Layout E2E for the Vendors rolodex list + detail (PR 4.1b).
@@ -12,34 +13,6 @@ import { test, expect, type APIRequestContext } from "./fixtures/auth";
  *   4. The detail-page skeleton has the same section headers as the loaded
  *      page so there's no visual jump when data arrives.
  */
-
-interface SeedVendorPayload {
-  name?: string;
-  category?: string;
-  phone?: string | null;
-  email?: string | null;
-  address?: string | null;
-  hourly_rate?: string | null;
-  flat_rate_notes?: string | null;
-  preferred?: boolean;
-  notes?: string | null;
-}
-
-async function seedVendor(
-  api: APIRequestContext,
-  payload: SeedVendorPayload,
-): Promise<string> {
-  const res = await api.post("/test/seed-vendor", { data: payload });
-  if (!res.ok()) {
-    throw new Error(`seedVendor failed: ${res.status()} ${await res.text()}`);
-  }
-  const body = (await res.json()) as { id: string };
-  return body.id;
-}
-
-async function deleteVendor(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/test/vendors/${id}`).catch(() => {});
-}
 
 const VENDOR_COUNT = 3;
 
