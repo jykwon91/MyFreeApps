@@ -2,10 +2,13 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { NavLink, useNavigate, useLocation, type NavLinkRenderProps } from "react-router-dom";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { Search, LogOut, ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, LogOut } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { useScrollTopOnNavigate } from "../../hooks/useScrollTopOnNavigate";
+import { readLocalStorage, writeLocalStorage } from "../../lib/safeStorage";
+import UserAvatar, { type UserAvatarUser } from "./UserAvatar";
+import SearchBar from "./SearchBar";
 
 export type NavItem = {
   path: string;
@@ -14,15 +17,39 @@ export type NavItem = {
   exact?: boolean;
 };
 
+/**
+ * A secondary nav group that appears in the sidebar below the main nav.
+ * Visible only when the current path starts with `routePrefix` (if set).
+ */
+export type NavSection = {
+  id: string;
+  title: string;
+  items: NavItem[];
+  /** When set, the section is only shown while the pathname starts with this prefix. */
+  routePrefix?: string;
+};
+
 export type BottomNavItem =
   | NavItem
   | { kind: "fab"; label: string; icon: ReactNode; onClick: () => void };
 
 export interface AppShellProps {
   logo: ReactNode;
+  /**
+   * Icon-only version of the logo shown in the collapsed icon-rail.
+   * Falls back to `logo` when omitted.
+   */
+  logoIcon?: ReactNode;
   nav: NavItem[];
+  /** Secondary nav groups shown in the desktop sidebar below the main nav. */
+  navSections?: NavSection[];
   bottomNav?: BottomNavItem[];
-  user: { name: string; email?: string; avatarUrl?: string };
+  /**
+   * When true, the desktop sidebar gains a collapse toggle that shrinks it
+   * to an icon-only rail.  Collapsed state is persisted in localStorage.
+   */
+  collapsible?: boolean;
+  user: UserAvatarUser;
   onSignOut: () => void;
   headerTitle?: string;
   headerActions?: ReactNode;
@@ -31,72 +58,21 @@ export interface AppShellProps {
   children: ReactNode;
 }
 
+const SIDEBAR_COLLAPSED_KEY = "platform.sidebar.collapsed.v1";
+
 function isFab(
   item: BottomNavItem
 ): item is { kind: "fab"; label: string; icon: ReactNode; onClick: () => void } {
   return "kind" in item && item.kind === "fab";
 }
 
-function UserAvatar({ user }: { user: AppShellProps["user"] }) {
-  if (user.avatarUrl) {
-    return (
-      <img
-        src={user.avatarUrl}
-        alt={user.name}
-        className="w-8 h-8 rounded-full object-cover"
-      />
-    );
-  }
-  const initials = user.name
-    .split(" ")
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase();
-  return (
-    <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold">
-      {initials}
-    </div>
-  );
-}
-
-function SearchBar({
-  placeholder,
-  onSearchSubmit,
-}: {
-  placeholder: string;
-  onSearchSubmit?: (q: string) => void;
-}) {
-  const [value, setValue] = useState("");
-  const isMac =
-    typeof navigator !== "undefined" && /mac/i.test(navigator.platform);
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    onSearchSubmit?.(value);
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="relative hidden sm:flex items-center">
-      <Search className="absolute left-3 w-4 h-4 text-muted-foreground pointer-events-none" />
-      <input
-        type="search"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder={placeholder}
-        className="pl-9 pr-14 py-1.5 text-sm rounded-md border bg-background w-64 focus:outline-none focus:ring-2 focus:ring-primary/30"
-      />
-      <kbd className="absolute right-3 text-xs text-muted-foreground font-mono pointer-events-none">
-        {isMac ? "⌘K" : "Ctrl+K"}
-      </kbd>
-    </form>
-  );
-}
-
 export default function AppShell({
   logo,
+  logoIcon,
   nav,
+  navSections,
   bottomNav,
+  collapsible = false,
   user,
   onSignOut,
   headerTitle,
@@ -111,63 +87,163 @@ export default function AppShell({
   const mainRef = useScrollTopOnNavigate<HTMLElement>();
   const mobileItems = bottomNav ?? nav;
 
+  const [collapsed, setCollapsed] = useState(() =>
+    collapsible ? readLocalStorage(SIDEBAR_COLLAPSED_KEY) === "true" : false
+  );
+
+  function toggleCollapsed() {
+    const next = !collapsed;
+    setCollapsed(next);
+    writeLocalStorage(SIDEBAR_COLLAPSED_KEY, next ? "true" : "false");
+  }
+
+  const activeSections =
+    navSections?.filter(
+      (s) => !s.routePrefix || location.pathname.startsWith(s.routePrefix)
+    ) ?? [];
+
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar — desktop only */}
       {!isMobile && (
-        <aside className="w-60 flex flex-col border-r bg-background shrink-0">
+        <aside
+          id="main-sidebar"
+          className={cn(
+            "flex flex-col border-r bg-background shrink-0 transition-[width] duration-200",
+            collapsed ? "w-16" : "w-60"
+          )}
+        >
           {/* Logo */}
           <button
             onClick={() => navigate("/")}
-            className="flex items-center gap-2 px-4 py-4 hover:opacity-80 transition-opacity text-left"
+            className={cn(
+              "flex items-center gap-2 px-4 py-4 hover:opacity-80 transition-opacity text-left",
+              collapsed && "justify-center px-0"
+            )}
             aria-label="Go to home"
           >
-            {logo}
+            {collapsed ? (logoIcon ?? logo) : logo}
           </button>
 
-          {/* Nav */}
-          <nav aria-label="Main navigation" className="flex-1 px-2 py-2 space-y-0.5">
-            {nav.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                end={item.exact}
-                className={({ isActive }: NavLinkRenderProps) =>
-                  cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors min-h-[44px]",
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )
-                }
-                aria-current={
-                  location.pathname === item.path ||
-                  (!item.exact && location.pathname.startsWith(item.path))
-                    ? "page"
-                    : undefined
-                }
-              >
-                <span className="w-5 h-5 shrink-0">{item.icon}</span>
-                {item.label}
-              </NavLink>
+          {/* Nav + Sections — scrollable */}
+          <div className="flex-1 overflow-y-auto">
+            <nav aria-label="Main navigation" className="px-2 py-2 space-y-0.5">
+              {nav.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  end={item.exact}
+                  title={collapsed ? item.label : undefined}
+                  className={({ isActive }: NavLinkRenderProps) =>
+                    cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors min-h-[44px]",
+                      collapsed && "justify-center px-0",
+                      isActive
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )
+                  }
+                  aria-label={collapsed ? item.label : undefined}
+                  aria-current={
+                    location.pathname === item.path ||
+                    (!item.exact && location.pathname.startsWith(item.path))
+                      ? "page"
+                      : undefined
+                  }
+                >
+                  <span className="w-5 h-5 shrink-0">{item.icon}</span>
+                  {!collapsed && item.label}
+                </NavLink>
+              ))}
+            </nav>
+
+            {activeSections.map((section) => (
+              <div key={section.id} className="px-2 py-1">
+                {!collapsed && (
+                  <div
+                    className="text-xs font-medium text-muted-foreground px-3 py-1.5 uppercase tracking-wide"
+                    aria-label={section.title}
+                  >
+                    {section.title}
+                  </div>
+                )}
+                <div className="space-y-0.5">
+                  {section.items.map((item) => (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      end={item.exact}
+                      title={collapsed ? item.label : undefined}
+                      className={({ isActive }: NavLinkRenderProps) =>
+                        cn(
+                          "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors min-h-[44px]",
+                          collapsed && "justify-center px-0",
+                          isActive
+                            ? "bg-primary/10 text-primary"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )
+                      }
+                      aria-label={collapsed ? item.label : undefined}
+                      aria-current={
+                        location.pathname === item.path ||
+                        (!item.exact && location.pathname.startsWith(item.path))
+                          ? "page"
+                          : undefined
+                      }
+                    >
+                      <span className="w-5 h-5 shrink-0">{item.icon}</span>
+                      {!collapsed && item.label}
+                    </NavLink>
+                  ))}
+                </div>
+              </div>
             ))}
-          </nav>
+          </div>
+
+          {/* Collapse toggle */}
+          {collapsible && (
+            <div className={cn("border-t p-2 flex", collapsed ? "justify-center" : "justify-end")}>
+              <button
+                onClick={toggleCollapsed}
+                className="p-2 rounded-md hover:bg-muted transition-colors text-muted-foreground"
+                aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                aria-expanded={!collapsed}
+                aria-controls="main-sidebar"
+              >
+                {collapsed ? (
+                  <ChevronRight className="w-4 h-4" />
+                ) : (
+                  <ChevronLeft className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+          )}
 
           {/* User menu */}
           <div className="border-t p-2">
             <DropdownMenu.Root>
               <DropdownMenu.Trigger asChild>
-                <button className="flex items-center gap-2 w-full px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors min-h-[44px]">
+                <button
+                  className={cn(
+                    "flex items-center gap-2 w-full px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors min-h-[44px]",
+                    collapsed && "justify-center px-0"
+                  )}
+                  aria-label={collapsed ? user.name : undefined}
+                >
                   <UserAvatar user={user} />
-                  <div className="flex-1 text-left min-w-0">
-                    <div className="font-medium truncate">{user.name}</div>
-                    {user.email && (
-                      <div className="text-xs text-muted-foreground truncate">
-                        {user.email}
+                  {!collapsed && (
+                    <>
+                      <div className="flex-1 text-left min-w-0">
+                        <div className="font-medium truncate">{user.name}</div>
+                        {user.email && (
+                          <div className="text-xs text-muted-foreground truncate">
+                            {user.email}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                    </>
+                  )}
                 </button>
               </DropdownMenu.Trigger>
               <DropdownMenu.Portal>

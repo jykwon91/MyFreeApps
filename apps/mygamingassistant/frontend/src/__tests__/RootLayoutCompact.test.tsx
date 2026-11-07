@@ -24,6 +24,8 @@ vi.mock("react-router-dom", async (importOriginal) => {
     Outlet: () => <div data-testid="outlet" />,
     // useSearchParams driven by a mock so we can simulate ?compact=1
     useSearchParams: vi.fn(),
+    // useLocation driven by a mock — RootLayout reads pathname for the WoW section
+    useLocation: vi.fn(() => ({ pathname: "/" })),
   };
 });
 
