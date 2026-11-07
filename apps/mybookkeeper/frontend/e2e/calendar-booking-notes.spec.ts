@@ -2,6 +2,7 @@ import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { createProperty, deleteProperty } from "./fixtures/seed-data";
 import path from "path";
 import { fileURLToPath } from "url";
+import { toasts } from "./fixtures/toasts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -93,7 +94,7 @@ test.describe("Calendar booking notes + attachments", () => {
       await textarea.blur();
 
       // Wait for the save success toast.
-      await expect(page.getByText("Notes saved")).toBeVisible({ timeout: 5000 });
+      await expect(toasts(page).getByText("Notes saved")).toBeVisible({ timeout: 5000 });
 
       // Close dialog and reload.
       await page.keyboard.press("Escape");
@@ -171,7 +172,7 @@ test.describe("Calendar booking notes + attachments", () => {
       });
 
       // Wait for success toast.
-      await expect(page.getByText(/uploaded/i)).toBeVisible({ timeout: 10000 });
+      await expect(toasts(page).getByText(/uploaded/i)).toBeVisible({ timeout: 10000 });
 
       // Image preview should appear.
       const preview = dialog.getByTestId("attachment-image-preview");
@@ -191,7 +192,7 @@ test.describe("Calendar booking notes + attachments", () => {
       // Delete the attachment.
       const deleteBtn = dialogAfterReload.getByTestId("attachment-delete-btn").first();
       await deleteBtn.click();
-      await expect(page.getByText("Attachment removed")).toBeVisible({ timeout: 5000 });
+      await expect(toasts(page).getByText("Attachment removed")).toBeVisible({ timeout: 5000 });
 
       // Attachment list shows empty state.
       await expect(dialogAfterReload.getByTestId("attachments-empty")).toBeVisible();

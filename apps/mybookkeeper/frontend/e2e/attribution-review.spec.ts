@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { toasts } from "./fixtures/toasts";
 
 /**
  * E2E for the attribution review queue — PR D (Airbnb-payout review UX).
@@ -108,7 +109,7 @@ test.describe("Attribution review — Airbnb payout UX (PR D)", () => {
       await assignBtn.click();
 
       // Conversational success toast from handleConfirmProperty.
-      await expect(page.getByText(/book this payout/i)).toBeVisible({
+      await expect(toasts(page).getByText(/book this payout/i)).toBeVisible({
         timeout: 8000,
       });
 

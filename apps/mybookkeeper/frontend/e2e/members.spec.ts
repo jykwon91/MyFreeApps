@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures/auth";
+import { toasts } from "./fixtures/toasts";
 
 const RUN_ID = Date.now();
 
@@ -72,7 +73,7 @@ test.describe("Members page", () => {
 
       // Success toast should appear (message varies based on whether email was sent)
       await expect(
-        page.getByText(new RegExp(`invite (sent to|created for) ${testEmail}`, "i")).first()
+        toasts(page).getByText(new RegExp(`invite (sent to|created for) ${testEmail}`, "i"))
       ).toBeVisible({ timeout: 10000 });
 
       // The invite should now appear in the pending invites table
@@ -109,7 +110,7 @@ test.describe("Members page", () => {
       await page.getByRole("button", { name: /send invite/i }).click();
 
       // The form should not submit — no success toast should appear
-      await expect(page.getByText(/invite (sent to|created for)/i)).not.toBeVisible({ timeout: 3000 });
+      await expect(toasts(page).getByText(/invite (sent to|created for)/i)).not.toBeVisible({ timeout: 3000 });
 
       // The email input should still have the invalid value (form didn't reset)
       expect(await emailInput.inputValue()).toBe("not-an-email");
@@ -128,7 +129,7 @@ test.describe("Members page", () => {
 
       // Wait for success (message varies based on whether email was sent)
       await expect(
-        page.getByText(new RegExp(`invite (sent to|created for) ${testEmail}`, "i")).first()
+        toasts(page).getByText(new RegExp(`invite (sent to|created for) ${testEmail}`, "i"))
       ).toBeVisible({ timeout: 10000 });
 
       // Email input should be cleared after successful submission
@@ -292,7 +293,7 @@ test.describe("Members page", () => {
         await cancelBtn.click();
 
         // A success toast should appear confirming the cancellation
-        const toast = page.getByText(new RegExp(`invite for ${testEmail} cancelled`, "i")).first();
+        const toast = toasts(page).getByText(new RegExp(`invite for ${testEmail} cancelled`, "i"));
         await expect(toast).toBeVisible({ timeout: 10000 });
 
         // The invite row should also be gone from the table (scoped to avoid matching the toast)
@@ -348,11 +349,11 @@ test.describe("Members page", () => {
       await roleSelect.selectOption(newRole);
 
       // Success toast should appear
-      await expect(page.getByText(/updated.*to/i).first()).toBeVisible({ timeout: 5000 });
+      await expect(toasts(page).getByText(new RegExp(`^Updated .* to ${newRole}$`))).toBeVisible({ timeout: 5000 });
 
-      // Restore original role
+      // Restore original role — the first toast may still be showing.
       await roleSelect.selectOption(currentRole);
-      await expect(page.getByText(/updated.*to/i).first()).toBeVisible({ timeout: 5000 });
+      await expect(toasts(page).getByText(new RegExp(`^Updated .* to ${currentRole}$`))).toBeVisible({ timeout: 5000 });
     });
   });
 });

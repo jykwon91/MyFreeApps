@@ -177,7 +177,7 @@ test.describe("Inquiries frontend (PR 2.1b)", () => {
 
       // The timeline carries a declined event.
       await page.getByRole("button", { name: /Activity timeline/i }).click();
-      await expect(page.getByText(/Moved to Declined/i)).toBeVisible();
+      await expect(page.getByTestId("inquiry-event-timeline").getByText(/Moved to Declined/i)).toBeVisible();
     } finally {
       await deleteInquiry(api, inquiryId);
     }

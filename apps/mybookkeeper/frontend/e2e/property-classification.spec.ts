@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures/auth";
+import { toasts } from "./fixtures/toasts";
 
 const RUN_ID = Date.now();
 
@@ -40,7 +41,7 @@ async function createClassifiedProperty(
   }
 
   await page.getByRole("button", { name: /add property/i }).click();
-  await expect(page.getByText("Property created", { exact: true }).first()).toBeVisible({ timeout: 10000 });
+  await expect(toasts(page).getByText("Property created", { exact: true })).toBeVisible({ timeout: 10000 });
 }
 
 async function cleanupProperty(api: { get: (url: string) => Promise<Response>; delete: (url: string) => Promise<Response> }, name: string) {
