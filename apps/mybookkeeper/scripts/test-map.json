@@ -155,7 +155,10 @@
         "frontend/src/app/pages/Documents.tsx",
         "frontend/src/app/features/documents/",
         "frontend/src/shared/store/documentUploadSlice.ts",
-        "frontend/src/shared/utils/upload-outcome.ts"
+        "frontend/src/shared/utils/upload-outcome.ts",
+        "frontend/src/shared/utils/progress-percent.ts",
+        "frontend/src/shared/types/document/",
+        "api-client/src/types/document/"
       ],
       "backend_tests": [
         "test_document_checklist_service.py",
@@ -169,7 +172,9 @@
         "DocumentUploadZone.test.tsx",
         "SourceDocumentsSection.test.tsx",
         "upload-outcome.test.ts",
-        "DocumentStatusBadge.test.tsx"
+        "DocumentStatusBadge.test.tsx",
+        "UploadStatusCard.test.tsx",
+        "progress-percent.test.ts"
       ],
       "e2e_specs": [
         "documents.spec.ts",

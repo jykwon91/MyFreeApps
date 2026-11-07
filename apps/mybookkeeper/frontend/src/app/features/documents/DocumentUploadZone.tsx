@@ -1,11 +1,13 @@
 import { documentUploadForm } from "@/shared/lib/document-upload-form";
 import { useEffect, useRef } from "react";
-import { Loader2, CheckCircle2, XCircle, Upload, RotateCcw, Camera } from "lucide-react";
+import { Upload, Camera } from "lucide-react";
 import { useMediaQuery } from "@/shared/hooks/useMediaQuery";
 import { useUploadDocumentMutation, useGetBatchStatusQuery, useGetSingleUploadStatusQuery, useGetDocumentsQuery, useCancelBatchMutation } from "@mybookkeeper/api-client/store/documentsApi";
 import { baseApi } from "@/shared/store/baseApi";
 import { isSupportedFile } from "@/shared/utils/file-upload";
 import { uploadOutcome } from "@/shared/utils/upload-outcome";
+import { cn } from "@platform/ui";
+import UploadStatusCard from "./UploadStatusCard";
 import { DOCUMENT_STATUSES, type DocumentStatus } from "@mybookkeeper/api-client/types/document/DocumentStatus";
 import { BATCH_STATUSES } from "@mybookkeeper/api-client/types/document/BatchStatus";
 import { FILE_STATUSES } from "@/shared/types/document/file-status";
@@ -238,7 +240,13 @@ export default function DocumentUploadZone() {
   }
 
   const isActive = upload?.status === FILE_STATUSES.UPLOADING || upload?.status === FILE_STATUSES.PROCESSING;
-  const isMultiUpload = upload?.multiUploadTotal !== undefined && upload.multiUploadTotal > 0;
+
+  function handleCancelBatch(batchId: string) {
+    cancelBatch(batchId).unwrap().then(() => {
+      dispatch(dismiss());
+      dispatch(baseApi.util.invalidateTags(["Document", "Summary"]));
+    });
+  }
 
   const substatus = upload
     ? resolveUploadSubstatus({
@@ -270,9 +278,11 @@ export default function DocumentUploadZone() {
         onDragOver={(e) => { e.preventDefault(); dispatch(setDragging(true)); }}
         onDragLeave={() => dispatch(setDragging(false))}
         onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-lg px-6 py-12 text-center transition-colors ${
-          dragging ? "border-primary bg-primary/5" : "border-border"
-        } ${isActive ? "opacity-50 pointer-events-none" : ""}`}
+        className={cn(
+          "border-2 border-dashed rounded-lg px-6 py-12 text-center transition-colors",
+          dragging ? "border-primary bg-primary/5" : "border-border",
+          isActive && "opacity-50 pointer-events-none",
+        )}
       >
         <div className="flex flex-col items-center gap-3">
           {isMobile ? (
@@ -325,74 +335,13 @@ export default function DocumentUploadZone() {
         </div>
       </div>
 
-      {upload ? (
-        <div className="border rounded-lg px-3 py-2 text-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 min-w-0">
-              {(upload.status === FILE_STATUSES.UPLOADING || upload.status === FILE_STATUSES.PROCESSING) && (
-                <Loader2 size={14} className="animate-spin text-primary shrink-0" />
-              )}
-              {upload.status === FILE_STATUSES.DONE && (
-                <CheckCircle2 size={14} className="text-green-600 shrink-0" />
-              )}
-              {upload.status === FILE_STATUSES.SKIPPED && (
-                <CheckCircle2 size={14} className="text-muted-foreground shrink-0" />
-              )}
-              {(upload.status === FILE_STATUSES.ERROR || upload.status === FILE_STATUSES.FAILED) && (
-                <XCircle size={14} className="text-destructive shrink-0" />
-              )}
-              <span className={`truncate ${upload.status === FILE_STATUSES.ERROR || upload.status === FILE_STATUSES.FAILED ? "text-destructive" : "text-muted-foreground"}`}>
-                {statusText}
-              </span>
-            </div>
-            <div className="flex items-center gap-1 shrink-0 ml-2">
-              {upload.status === FILE_STATUSES.PROCESSING && upload.batchId && (
-                <button
-                  onClick={() => {
-                    cancelBatch(upload.batchId!).unwrap().then(() => {
-                      dispatch(dismiss());
-                      dispatch(baseApi.util.invalidateTags(["Document", "Summary"]));
-                    });
-                  }}
-                  className="text-xs text-muted-foreground hover:text-destructive font-medium"
-                >
-                  Cancel
-                </button>
-              )}
-              {upload.status === FILE_STATUSES.ERROR && (
-                <button onClick={() => dispatch(dismiss())} className="p-1 text-muted-foreground hover:text-foreground" title="Try again">
-                  <RotateCcw size={13} />
-                </button>
-              )}
-              {!isActive && (
-                <button onClick={() => dispatch(dismiss())} className="p-1 text-muted-foreground hover:text-destructive" title="Dismiss">
-                  <XCircle size={13} />
-                </button>
-              )}
-            </div>
-          </div>
-          {upload.status === FILE_STATUSES.UPLOADING && isMultiUpload ? (
-            <div className="mt-2">
-              <div className="w-full bg-muted rounded-full h-1.5">
-                <div
-                  className="bg-primary h-1.5 rounded-full transition-all duration-500"
-                  style={{ width: `${upload.multiUploadTotal > 0 ? (upload.multiUploadCompleted / upload.multiUploadTotal) * 100 : 0}%` }}
-                />
-              </div>
-            </div>
-          ) : null}
-          {upload.status === FILE_STATUSES.PROCESSING && upload.batchId && batchStatus ? (
-            <div className="mt-2">
-              <div className="w-full bg-muted rounded-full h-1.5">
-                <div
-                  className="bg-primary h-1.5 rounded-full transition-all duration-500"
-                  style={{ width: `${batchStatus.total > 0 ? (batchStatus.completed / batchStatus.total) * 100 : 0}%` }}
-                />
-              </div>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+      <UploadStatusCard
+        upload={upload}
+        statusText={statusText}
+        batchStatus={batchStatus}
+        onCancelBatch={handleCancelBatch}
+        onDismiss={() => dispatch(dismiss())}
+      />
     </div>
   );
 }

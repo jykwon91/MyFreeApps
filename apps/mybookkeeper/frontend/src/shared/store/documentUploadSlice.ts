@@ -1,17 +1,7 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import { FILE_STATUSES, type FileStatus } from "@/shared/types/document/file-status";
+import { FILE_STATUSES } from "@/shared/types/document/file-status";
+import type { UploadState } from "@/shared/types/document/upload-state";
 import type { UploadOutcome } from "@/shared/types/document/upload-outcome";
-
-interface UploadState {
-  fileName: string;
-  status: FileStatus;
-  documentId: string | null;
-  batchId: string | null;
-  batchTotal: number;
-  multiUploadTotal: number;
-  multiUploadCompleted: number;
-  multiUploadFailed: number;
-}
 
 interface DocumentUploadSliceState {
   current: UploadState | null;
