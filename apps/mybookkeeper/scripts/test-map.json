@@ -38,17 +38,26 @@
         "frontend/src/app/pages/Analytics.tsx",
         "frontend/src/app/features/analytics/",
         "api-client/src/store/analyticsApi.ts",
-        "api-client/src/types/analytics/"
+        "api-client/src/types/analytics/",
+        "frontend/src/shared/components/ui/CollapsibleFilters.tsx",
+        "frontend/src/shared/lib/filter-panel-breakpoint-classes.ts",
+        "frontend/src/shared/types/ui/filter-panel-breakpoint.ts",
+        "frontend/src/shared/utils/filters-toggle-label.ts",
+        "frontend/src/shared/types/ui/filter-panel-breakpoint-classes.ts"
       ],
       "backend_tests": [
         "test_utility_trends.py"
       ],
       "frontend_tests": [
-        "Analytics.test.tsx"
+        "Analytics.test.tsx",
+        "CollapsibleFilters.test.tsx",
+        "filtersToggleLabel.test.ts",
+        "TransactionFilterBar.test.tsx"
       ],
       "e2e_specs": [
         "analytics.spec.ts",
-        "component-extraction.spec.ts"
+        "component-extraction.spec.ts",
+        "transactions.spec.ts"
       ]
     },
     "auth": {
@@ -1314,7 +1323,12 @@
         "frontend/src/shared/hooks/useSelectedYear.ts",
         "frontend/src/shared/hooks/useDashboardYears.ts",
         "frontend/src/shared/types/transaction/",
-        "backend/app/core/utility_usage_constants.py"
+        "backend/app/core/utility_usage_constants.py",
+        "frontend/src/shared/components/ui/CollapsibleFilters.tsx",
+        "frontend/src/shared/lib/filter-panel-breakpoint-classes.ts",
+        "frontend/src/shared/types/ui/filter-panel-breakpoint.ts",
+        "frontend/src/shared/utils/filters-toggle-label.ts",
+        "frontend/src/shared/types/ui/filter-panel-breakpoint-classes.ts"
       ],
       "backend_tests": [
         "test_bank_csv_parser.py",
@@ -1354,7 +1368,10 @@
         "chart-utils.test.ts",
         "SortIndicator.test.tsx",
         "TransactionFilterBar.test.tsx",
-        "TransactionFormSource.test.tsx"
+        "TransactionFormSource.test.tsx",
+        "CollapsibleFilters.test.tsx",
+        "filtersToggleLabel.test.ts",
+        "Analytics.test.tsx"
       ],
       "e2e_specs": [
         "transactions.spec.ts",
@@ -1362,7 +1379,8 @@
         "dashboard.spec.ts",
         "dashboard-year-filter.spec.ts",
         "reconciliation.spec.ts",
-        "mocked/transactions-unsaved-mock.spec.ts"
+        "mocked/transactions-unsaved-mock.spec.ts",
+        "analytics.spec.ts"
       ]
     },
     "attribution": {

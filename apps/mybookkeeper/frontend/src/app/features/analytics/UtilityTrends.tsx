@@ -78,8 +78,10 @@ export default function UtilityTrends() {
   const isDefaultFrom = fromDate === getDefaultFrom();
   const isDefaultTo = toDate === getDefaultTo();
   const isDefaultGranularity = granularity === "monthly";
-  const hasActiveFilters =
-    !isDefaultFrom || !isDefaultTo || !isDefaultGranularity || propertyIds.length > 0;
+  const activeFilterCount = [!isDefaultFrom, !isDefaultTo, !isDefaultGranularity, propertyIds.length > 0].filter(
+    Boolean,
+  ).length;
+  const hasActiveFilters = activeFilterCount > 0;
 
   function handleClearFilters() {
     setSearchParams(
@@ -174,7 +176,7 @@ export default function UtilityTrends() {
         onToDate={handleToDate}
         onGranularity={handleGranularity}
         onPropertyIds={handlePropertyIds}
-        hasActiveFilters={hasActiveFilters}
+        activeFilterCount={activeFilterCount}
         onClear={handleClearFilters}
       />
       {trends.length === 0 && (
