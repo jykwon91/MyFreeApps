@@ -19,6 +19,9 @@ vi.mock("@/shared/lib/toast-store", () => ({
 }));
 
 import ScreeningProviderGrid from "@/app/features/screening/ScreeningProviderGrid";
+import { queryData } from "@/test/rtk-query-data";
+import { queryStatus } from "@/test/rtk-query-status";
+import type { QueryStatusOptions } from "@/test/types/query-status-options";
 
 const MOCK_PROVIDERS = {
   providers: [
@@ -41,6 +44,20 @@ const MOCK_PROVIDERS = {
   ],
 };
 
+const refetchMock = vi.fn();
+
+function providersState(
+  providers: typeof MOCK_PROVIDERS | undefined,
+  status: QueryStatusOptions = { failed: false, fetching: false },
+) {
+  return {
+    ...queryData(providers),
+    isLoading: providers === undefined && status.fetching && !status.failed,
+    ...queryStatus(status),
+    refetch: refetchMock,
+  };
+}
+
 function renderGrid(openWindow: ((url: string) => void) | undefined = vi.fn()) {
   return render(
     <Provider store={store}>
@@ -54,23 +71,24 @@ describe("ScreeningProviderGrid", () => {
     getProvidersMock.mockReset();
     triggerRedirectMock.mockReset();
     showErrorMock.mockReset();
+    refetchMock.mockReset();
   });
 
   it("shows a skeleton while providers are loading", () => {
-    getProvidersMock.mockReturnValue({ isLoading: true, isError: false, data: undefined });
+    getProvidersMock.mockReturnValue(providersState(undefined, { failed: false, fetching: true }));
     renderGrid();
     expect(screen.getByTestId("screening-provider-grid-skeleton")).toBeInTheDocument();
   });
 
   it("renders both provider cards when loaded", () => {
-    getProvidersMock.mockReturnValue({ isLoading: false, isError: false, data: MOCK_PROVIDERS });
+    getProvidersMock.mockReturnValue(providersState(MOCK_PROVIDERS));
     renderGrid();
     expect(screen.getByTestId("screening-provider-card-keycheck")).toBeInTheDocument();
     expect(screen.getByTestId("screening-provider-card-rentspree")).toBeInTheDocument();
   });
 
   it("shows provider label, cost, and turnaround on each card", () => {
-    getProvidersMock.mockReturnValue({ isLoading: false, isError: false, data: MOCK_PROVIDERS });
+    getProvidersMock.mockReturnValue(providersState(MOCK_PROVIDERS));
     renderGrid();
     expect(screen.getByText("KeyCheck")).toBeInTheDocument();
     expect(screen.getByText("Free")).toBeInTheDocument();
@@ -80,13 +98,36 @@ describe("ScreeningProviderGrid", () => {
   });
 
   it("shows an error message when providers fail to load", () => {
-    getProvidersMock.mockReturnValue({ isLoading: false, isError: true, data: undefined });
+    getProvidersMock.mockReturnValue(providersState(undefined, { failed: true, fetching: false }));
     renderGrid();
     expect(screen.getByTestId("screening-providers-error")).toBeInTheDocument();
   });
 
+  it("retries the provider load when Retry is clicked", async () => {
+    getProvidersMock.mockReturnValue(providersState(undefined, { failed: true, fetching: false }));
+    renderGrid();
+    await userEvent.setup().click(screen.getByTestId("screening-providers-retry"));
+    expect(refetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the error, not a skeleton, while Retry refetches", () => {
+    getProvidersMock.mockReturnValue(providersState(undefined, { failed: true, fetching: true }));
+    renderGrid();
+    expect(screen.getByTestId("screening-providers-error")).toBeInTheDocument();
+    expect(screen.getByTestId("screening-providers-retry")).toBeDisabled();
+    expect(screen.getByTestId("screening-providers-retry")).toHaveTextContent("Retrying...");
+    expect(screen.queryByTestId("screening-provider-grid-skeleton")).not.toBeInTheDocument();
+  });
+
+  it("keeps the provider cards usable under the error when a refresh fails", () => {
+    getProvidersMock.mockReturnValue(providersState(MOCK_PROVIDERS, { failed: true, fetching: false }));
+    renderGrid();
+    expect(screen.getByTestId("screening-providers-error")).toBeInTheDocument();
+    expect(screen.getByText("KeyCheck")).toBeInTheDocument();
+  });
+
   it("fetches the redirect URL and opens it on provider selection", async () => {
-    getProvidersMock.mockReturnValue({ isLoading: false, isError: false, data: MOCK_PROVIDERS });
+    getProvidersMock.mockReturnValue(providersState(MOCK_PROVIDERS));
     triggerRedirectMock.mockReturnValue({
       unwrap: () => Promise.resolve({ redirect_url: "https://kc.example/host", provider: "keycheck" }),
     });
@@ -103,7 +144,7 @@ describe("ScreeningProviderGrid", () => {
   });
 
   it("shows an error toast when the redirect fetch fails", async () => {
-    getProvidersMock.mockReturnValue({ isLoading: false, isError: false, data: MOCK_PROVIDERS });
+    getProvidersMock.mockReturnValue(providersState(MOCK_PROVIDERS));
     triggerRedirectMock.mockReturnValue({
       unwrap: () => Promise.reject(new Error("network error")),
     });

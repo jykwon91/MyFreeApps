@@ -1,38 +1,15 @@
 import { useState } from "react";
-import Skeleton from "@/shared/components/ui/Skeleton";
 import { showError } from "@/shared/lib/toast-store";
 import { useGetScreeningProvidersQuery, useLazyGetScreeningRedirectQuery } from "@mybookkeeper/api-client/store/screeningApi";
+import { resolveDetailLoadMode } from "@/shared/lib/detail-load-mode";
 import ScreeningProviderCard from "./ScreeningProviderCard";
+import ScreeningProviderGridSkeleton from "./ScreeningProviderGridSkeleton";
+import ScreeningInlineRetry from "./ScreeningInlineRetry";
 
 export interface ScreeningProviderGridProps {
   applicantId: string;
   /** Override window.open — only used by tests. */
   openWindow?: (url: string) => void;
-}
-
-function ProviderGridSkeleton() {
-  return (
-    <div
-      data-testid="screening-provider-grid-skeleton"
-      className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-      aria-hidden="true"
-    >
-      {[0, 1].map((i) => (
-        <div key={i} className="rounded-lg border p-4 space-y-3">
-          <Skeleton className="h-4 w-24 rounded" />
-          <Skeleton className="h-12 w-full rounded" />
-          <div className="flex gap-3">
-            <Skeleton className="h-3 w-16 rounded" />
-            <Skeleton className="h-3 w-20 rounded" />
-          </div>
-          <div className="flex justify-between">
-            <Skeleton className="h-8 w-16 rounded" />
-            <Skeleton className="h-8 w-28 rounded" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
 }
 
 /**
@@ -49,7 +26,8 @@ function ProviderGridSkeleton() {
  */
 export default function ScreeningProviderGrid({ applicantId, openWindow }: ScreeningProviderGridProps) {
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
-  const { data, isLoading, isError } = useGetScreeningProvidersQuery(applicantId);
+  const { currentData: data, error, isFetching, refetch } = useGetScreeningProvidersQuery(applicantId);
+  const mode = resolveDetailLoadMode({ hasData: data !== undefined, hasError: error !== undefined });
   const [triggerRedirect] = useLazyGetScreeningRedirectQuery();
 
   async function handleSelectProvider(providerName: string) {
@@ -76,31 +54,38 @@ export default function ScreeningProviderGrid({ applicantId, openWindow }: Scree
     }
   }
 
-  if (isLoading) {
-    return <ProviderGridSkeleton />;
+  if (mode === "loading") {
+    return <ScreeningProviderGridSkeleton />;
   }
 
-  if (isError || !data) {
-    return (
-      <p className="text-xs text-muted-foreground italic" data-testid="screening-providers-error">
-        I couldn't load the provider options. Please refresh the page and try again.
-      </p>
-    );
-  }
-
+  // Decided on `error`, not `isError`: RTK clears `isError` while Retry
+  // refetches, which would drop the message before the providers arrive.
   return (
-    <div
-      data-testid="screening-provider-grid"
-      className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-    >
-      {data.providers.map((provider) => (
-        <ScreeningProviderCard
-          key={provider.name}
-          provider={provider}
-          isLoading={loadingProvider === provider.name}
-          onSelect={handleSelectProvider}
+    <div className="space-y-3">
+      {error ? (
+        <ScreeningInlineRetry
+          message="I couldn't load the provider options."
+          isRetrying={isFetching}
+          onRetry={() => void refetch()}
+          testId="screening-providers-error"
+          retryTestId="screening-providers-retry"
         />
-      ))}
+      ) : null}
+      {data ? (
+        <div
+          data-testid="screening-provider-grid"
+          className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+        >
+          {data.providers.map((provider) => (
+            <ScreeningProviderCard
+              key={provider.name}
+              provider={provider}
+              isLoading={loadingProvider === provider.name}
+              onSelect={handleSelectProvider}
+            />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
