@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
+import { deleteInquiry, seedInquiry } from "./fixtures/inquiries";
 
 /**
  * E2E tests for the lease-template-source-pull enhancements:
@@ -31,36 +32,6 @@ async function seedTemplate(
 
 async function deleteTemplate(api: APIRequestContext, id: string): Promise<void> {
   await api.delete(`/test/lease-templates/${id}`).catch(() => {});
-}
-
-async function seedInquiry(
-  api: APIRequestContext,
-  payload: {
-    source?: string;
-    inquirer_name?: string | null;
-    inquirer_email?: string | null;
-    inquirer_phone?: string | null;
-    inquirer_employer?: string | null;
-    desired_start_date?: string | null;
-    desired_end_date?: string | null;
-  } = {},
-): Promise<string> {
-  const res = await api.post("/test/seed-inquiry", {
-    data: {
-      source: "direct",
-      received_at: new Date().toISOString(),
-      ...payload,
-    },
-  });
-  if (!res.ok()) {
-    throw new Error(`seedInquiry failed: ${res.status()} ${await res.text()}`);
-  }
-  const body = (await res.json()) as { id: string };
-  return body.id;
-}
-
-async function deleteInquiry(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/test/inquiries/${id}`).catch(() => {});
 }
 
 async function seedApplicant(

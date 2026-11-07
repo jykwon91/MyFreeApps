@@ -1,4 +1,5 @@
-import { test, expect, type APIRequestContext } from "./fixtures/auth";
+import { test, expect } from "./fixtures/auth";
+import { deleteInquiry, seedInquiry } from "./fixtures/inquiries";
 
 /**
  * Layout E2E for the Inquiries inbox.
@@ -10,32 +11,6 @@ import { test, expect, type APIRequestContext } from "./fixtures/auth";
  *      horizontal overflow.
  *   3. Mobile viewport surfaces card layout; desktop surfaces the table.
  */
-
-interface SeedInquiryPayload {
-  source: "FF" | "TNH" | "direct" | "other";
-  inquirer_name?: string;
-  inquirer_employer?: string;
-  desired_start_date?: string;
-  desired_end_date?: string;
-  external_inquiry_id?: string | null;
-  received_at?: string;
-}
-
-async function seedInquiry(api: APIRequestContext, payload: SeedInquiryPayload): Promise<string> {
-  const res = await api.post("/test/seed-inquiry", {
-    data: {
-      received_at: payload.received_at ?? new Date().toISOString(),
-      ...payload,
-    },
-  });
-  if (!res.ok()) throw new Error(`seedInquiry failed: ${res.status()} ${await res.text()}`);
-  const body = (await res.json()) as { id: string };
-  return body.id;
-}
-
-async function deleteInquiry(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/test/inquiries/${id}`).catch(() => {});
-}
 
 const INQUIRY_COUNT = 3;
 

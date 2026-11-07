@@ -1,33 +1,43 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
+import { deleteInquiry, seedInquiry } from "./fixtures/inquiries";
+import type { SeededApplicant } from "./fixtures/seeded-applicant";
 
 /**
  * PR 3.3 — Applicant screening (KeyCheck redirect-only) E2E.
  *
  * Covers the host-driven flow:
- *  1. Seed an applicant via /test/seed-applicant.
+ *  1. Seed a screenable applicant (linked inquiry with an email) via /test/seed-applicant.
  *  2. Open ApplicantDetail.
  *  3. Verify the Screening section renders with Run + Upload buttons.
  *  4. Upload a fake PDF report via the multipart endpoint.
  *  5. Verify the new screening_result row appears in the list.
  *  6. Verify a 'fail' upload requires the adverse-action snippet.
  *
- * Cleanup deletes seeded applicants + screening_results per
+ * Cleanup deletes seeded applicants, inquiries + screening_results per
  * ``feedback_clean_test_data``.
  */
 
-async function seedApplicant(api: APIRequestContext, runId: number): Promise<string> {
+/** Seeds an applicant that can be screened: a legal name, plus a linked inquiry with an email. */
+async function seedApplicant(api: APIRequestContext, runId: number): Promise<SeededApplicant> {
+  const inquiryId = await seedInquiry(api, {
+    inquirer_name: `E2E Screening ${runId}`,
+    inquirer_email: `e2e-screening-${runId}@example.com`,
+  });
   const res = await api.post("/test/seed-applicant", {
     data: {
       legal_name: `E2E Screening ${runId}`,
       stage: "lead",
       seed_event: true,
+      inquiry_id: inquiryId,
     },
   });
   if (!res.ok()) {
-    throw new Error(`seedApplicant failed: ${res.status()} ${await res.text()}`);
+    const detail = `${res.status()} ${await res.text()}`;
+    await deleteInquiry(api, inquiryId);
+    throw new Error(`seedApplicant failed: ${detail}`);
   }
   const body = (await res.json()) as { id: string };
-  return body.id;
+  return { applicantId: body.id, inquiryId };
 }
 
 async function deleteApplicant(api: APIRequestContext, id: string): Promise<void> {
@@ -58,12 +68,13 @@ test.describe("Applicant screening (PR 3.3 — KeyCheck redirect-only)", () => {
     api,
   }) => {
     const runId = Date.now();
-    const seededApplicantIds: string[] = [];
+    const seeded: SeededApplicant[] = [];
     const seededScreeningIds: string[] = [];
 
     try {
-      const applicantId = await seedApplicant(api, runId);
-      seededApplicantIds.push(applicantId);
+      const applicant = await seedApplicant(api, runId);
+      seeded.push(applicant);
+      const { applicantId } = applicant;
 
       await page.goto(`/applicants/${applicantId}`);
       await page.waitForLoadState("networkidle");
@@ -120,7 +131,10 @@ test.describe("Applicant screening (PR 3.3 — KeyCheck redirect-only)", () => {
       ).toBeVisible();
     } finally {
       for (const id of seededScreeningIds) await deleteScreeningResult(api, id);
-      for (const id of seededApplicantIds) await deleteApplicant(api, id);
+      for (const { applicantId, inquiryId } of seeded) {
+        await deleteApplicant(api, applicantId);
+        await deleteInquiry(api, inquiryId);
+      }
     }
   });
 
@@ -128,11 +142,12 @@ test.describe("Applicant screening (PR 3.3 — KeyCheck redirect-only)", () => {
     api,
   }) => {
     const runId = Date.now();
-    const seededApplicantIds: string[] = [];
+    const seeded: SeededApplicant[] = [];
 
     try {
-      const applicantId = await seedApplicant(api, runId);
-      seededApplicantIds.push(applicantId);
+      const applicant = await seedApplicant(api, runId);
+      seeded.push(applicant);
+      const { applicantId } = applicant;
 
       const pdf = buildMinimalPdf();
       // Missing snippet → backend 422.
@@ -147,17 +162,21 @@ test.describe("Applicant screening (PR 3.3 — KeyCheck redirect-only)", () => {
       );
       expect(badRes.status()).toBe(422);
     } finally {
-      for (const id of seededApplicantIds) await deleteApplicant(api, id);
+      for (const { applicantId, inquiryId } of seeded) {
+        await deleteApplicant(api, applicantId);
+        await deleteInquiry(api, inquiryId);
+      }
     }
   });
 
   test("redirect endpoint returns the configured KeyCheck URL", async ({ api }) => {
     const runId = Date.now();
-    const seededApplicantIds: string[] = [];
+    const seeded: SeededApplicant[] = [];
 
     try {
-      const applicantId = await seedApplicant(api, runId);
-      seededApplicantIds.push(applicantId);
+      const applicant = await seedApplicant(api, runId);
+      seeded.push(applicant);
+      const { applicantId } = applicant;
 
       const res = await api.get(`/applicants/${applicantId}/screening/redirect`);
       expect(res.status()).toBe(200);
@@ -165,7 +184,10 @@ test.describe("Applicant screening (PR 3.3 — KeyCheck redirect-only)", () => {
       expect(body.provider).toBe("keycheck");
       expect(body.redirect_url).toMatch(/^https?:\/\//);
     } finally {
-      for (const id of seededApplicantIds) await deleteApplicant(api, id);
+      for (const { applicantId, inquiryId } of seeded) {
+        await deleteApplicant(api, applicantId);
+        await deleteInquiry(api, inquiryId);
+      }
     }
   });
 });

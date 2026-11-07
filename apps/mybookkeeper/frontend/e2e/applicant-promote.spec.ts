@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
+import { deleteInquiry, seedInquiry } from "./fixtures/inquiries";
 
 /**
  * PR 3.2 — Inquiry → Applicant promotion E2E.
@@ -14,34 +15,6 @@ import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth
  * Cleanup deletes seeded inquiries + applicants per
  * ``feedback_clean_test_data``.
  */
-
-interface SeedInquiryPayload {
-  source: "FF" | "TNH" | "direct" | "other";
-  external_inquiry_id?: string | null;
-  inquirer_name?: string | null;
-  inquirer_email?: string | null;
-  inquirer_employer?: string | null;
-  desired_start_date?: string | null;
-  desired_end_date?: string | null;
-}
-
-async function seedInquiry(
-  api: APIRequestContext,
-  payload: SeedInquiryPayload,
-): Promise<string> {
-  const res = await api.post("/test/seed-inquiry", {
-    data: { received_at: new Date().toISOString(), ...payload },
-  });
-  if (!res.ok()) {
-    throw new Error(`seedInquiry failed: ${res.status()} ${await res.text()}`);
-  }
-  const body = (await res.json()) as { id: string };
-  return body.id;
-}
-
-async function deleteInquiry(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/test/inquiries/${id}`).catch(() => {});
-}
 
 async function deleteApplicant(api: APIRequestContext, id: string): Promise<void> {
   await api.delete(`/test/applicants/${id}`).catch(() => {});
