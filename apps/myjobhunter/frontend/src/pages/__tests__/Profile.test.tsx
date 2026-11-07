@@ -31,10 +31,6 @@ vi.mock("@/features/profile/SkillAddForm", () => ({
   default: () => null,
 }));
 
-vi.mock("@/features/profile/ScreeningAnswerRow", () => ({
-  default: () => null,
-}));
-
 // ---------------------------------------------------------------------------
 // Mock all RTK Query hooks — state controlled per-test via mockReturnValue.
 // ---------------------------------------------------------------------------
@@ -71,9 +67,9 @@ vi.mock("@/lib/screeningAnswersApi", () => ({
   useDeleteScreeningAnswerMutation: vi.fn(),
 }));
 
-// Mock @platform/ui completely — avoids importing React 19 code from
-// packages/shared-frontend into a React 18 test environment (two-copies crash).
-vi.mock("@platform/ui", () => ({
+// Partial mock over the real @platform/ui: stub only the toast calls.
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showSuccess: vi.fn(),
   showError: vi.fn(),
   extractErrorMessage: (err: unknown) => String(err),

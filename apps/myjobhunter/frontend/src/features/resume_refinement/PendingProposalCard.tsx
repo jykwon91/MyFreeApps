@@ -66,11 +66,11 @@ export default function PendingProposalCard({
   const [requestAlternative, alternative] = useRequestAlternativeMutation();
   const [skipTarget, skip] = useSkipTargetMutation();
 
-  useEffect(() => {
-    if (pendingEcho && session.turn_count > pendingEcho.baselineTurnCount) {
-      setPendingEcho(null);
-    }
-  }, [session.turn_count, pendingEcho]);
+  // Cleared during render, in the same render the real turn arrives,
+  // not in an effect afterwards.
+  if (pendingEcho && session.turn_count > pendingEcho.baselineTurnCount) {
+    setPendingEcho(null);
+  }
 
   const echoCallbackRef = useRef(onPendingEchoChange);
   echoCallbackRef.current = onPendingEchoChange;

@@ -30,12 +30,6 @@ vi.mock("@platform/ui", async (importOriginal) => {
   };
 });
 
-vi.mock("lucide-react", () => ({
-  ChevronDown: () => null,
-  ChevronRight: () => null,
-  Search: () => null,
-}));
-
 // dnd-kit's CJS bundle interacts badly with Vitest's React module
 // resolution under monorepo workspaces (the same React 18/19 conflict
 // that has previously prevented MBK from migrating to @platform/ui).

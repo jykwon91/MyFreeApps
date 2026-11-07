@@ -1,12 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import DimensionsTable from "../DimensionsTable";
 import type { JobAnalysisDimension } from "@/types/job-analysis/job-analysis-dimension";
-
-vi.mock("lucide-react", () => ({
-  AlertTriangle: () => null,
-  CheckCircle2: () => null,
-}));
 
 const ALL_FIVE: JobAnalysisDimension[] = [
   { key: "skill_match", status: "strong", rationale: "Python + Postgres covered." },

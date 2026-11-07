@@ -146,6 +146,12 @@ jobs:
       - name: Build frontend
         run: npm run build --workspace=mylanguagetutor-frontend
 
+      - name: Lint frontend
+        run: npm run lint --workspace=mylanguagetutor-frontend
+
+      - name: Test frontend
+        run: npm test --workspace=mylanguagetutor-frontend
+
   caddy-image:
     name: caddy-image / mylanguagetutor
     runs-on: ubuntu-latest

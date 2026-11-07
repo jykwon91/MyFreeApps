@@ -146,6 +146,12 @@ jobs:
       - name: Build frontend
         run: npm run build --workspace=mypizzatracker-frontend
 
+      - name: Lint frontend
+        run: npm run lint --workspace=mypizzatracker-frontend
+
+      - name: Test frontend
+        run: npm test --workspace=mypizzatracker-frontend
+
   caddy-image:
     name: caddy-image / mypizzatracker
     runs-on: ubuntu-latest

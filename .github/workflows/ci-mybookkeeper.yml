@@ -204,6 +204,9 @@ jobs:
       - name: Build frontend
         run: npm run build --workspace=mybookkeeper-frontend
 
+      - name: Lint frontend
+        run: npm run lint --workspace=mybookkeeper-frontend
+
       - name: Test frontend
         # The website's unit tests. Until this ran, failures here went unnoticed.
         run: npm test --workspace=mybookkeeper-frontend

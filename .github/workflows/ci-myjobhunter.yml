@@ -294,6 +294,12 @@ jobs:
       - name: Build frontend
         run: npm run build --workspace=myjobhunter-frontend
 
+      - name: Lint frontend
+        run: npm run lint --workspace=myjobhunter-frontend
+
+      - name: Test frontend
+        run: npm test --workspace=myjobhunter-frontend
+
   caddy-image:
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
