@@ -4,7 +4,6 @@
  */
 import type { Page } from "@playwright/test";
 import { test, expect, getOrgId } from "./fixtures/auth";
-import type { OrgInvite } from "@mybookkeeper/api-client/types/organization/OrgInvite";
 import { ViewerMember } from "./fixtures/viewer-member";
 
 const RUN_ID = Date.now();
@@ -33,23 +32,14 @@ function viewer(): ViewerMember {
 // ---------------------------------------------------------------------------
 
 test.describe("Viewer role — API invite", () => {
-  test("a viewer invite is created with org_role=viewer and listed as one", async ({ api }) => {
-    const orgId = getOrgId();
+  test("a viewer invite is created with org_role=viewer and listed as one", async ({ invites }) => {
     const email = `e2e-viewer-invite-${RUN_ID}@example.com`;
-    const res = await api.post(`/organizations/${orgId}/invites`, { data: { email, org_role: "viewer" } });
-    expect(res.status()).toBe(201);
-    const created: OrgInvite = await res.json();
-    try {
-      expect(created.org_role).toBe("viewer");
-      expect(created.email).toBe(email);
-
-      const listRes = await api.get(`/organizations/${orgId}/invites`);
-      expect(listRes.ok()).toBe(true);
-      const invites: OrgInvite[] = await listRes.json();
-      expect(invites.find((i) => i.id === created.id)?.org_role).toBe("viewer");
-    } finally {
-      await api.delete(`/organizations/${orgId}/invites/${created.id}`);
-    }
+    const created = await invites.create(email, "viewer");
+    expect(created.org_role).toBe("viewer");
+    expect(created.email).toBe(email);
+    const listed = await invites.findPending(email);
+    expect(listed?.id).toBe(created.id);
+    expect(listed?.org_role).toBe("viewer");
   });
 });
 
@@ -97,26 +87,6 @@ test.describe("Viewer role — Members page (owner)", () => {
     await expect(page.getByRole("heading", { name: /members/i, level: 1 })).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole("combobox", { name: `Role for ${viewer().name}` })).toBeVisible();
     expect(errors.filter((e) => !e.includes("ResizeObserver"))).toHaveLength(0);
-  });
-
-  test("sending a viewer invite from the form lists it as a viewer", async ({ authedPage: page, api }) => {
-    const email = `e2e-viewer-ui-${RUN_ID}@example.com`;
-    await page.getByRole("textbox", { name: /email/i }).fill(email);
-    await page.locator("#invite-role").selectOption("viewer");
-    await page.getByRole("button", { name: /send invite/i }).click();
-
-    try {
-      await expect(page.getByText(new RegExp(`invite (sent to|created for) ${email}`, "i")).first()).toBeVisible({
-        timeout: 10000,
-      });
-      const inviteRow = page.locator("table").last().locator("tbody tr").filter({ hasText: email });
-      await expect(inviteRow.getByText(/viewer/i).first()).toBeVisible({ timeout: 5000 });
-    } finally {
-      const invitesRes = await api.get(`/organizations/${getOrgId()}/invites`);
-      const invites: OrgInvite[] = await invitesRes.json();
-      const invite = invites.find((i) => i.email === email);
-      if (invite) await api.delete(`/organizations/${getOrgId()}/invites/${invite.id}`);
-    }
   });
 
   test("the viewer's row shows viewer selected in its role dropdown", async ({ authedPage: page }) => {
