@@ -1368,11 +1368,15 @@
         "backend/app/repositories/system/",
         "backend/app/schemas/system/",
         "backend/app/api/health_dashboard.py",
-        "backend/app/api/frontend_errors.py"
+        "backend/app/api/frontend_errors.py",
+        "backend/app/core/system_event_enums.py",
+        "backend/app/core/sql_in_list.py",
+        "backend/app/services/system/event_service.py"
       ],
       "backend_tests": [
         "test_frontend_errors.py",
-        "test_health_dashboard.py"
+        "test_health_dashboard.py",
+        "test_system_event_types.py"
       ],
       "frontend_tests": [
         "frontendErrorReporting.test.ts"
