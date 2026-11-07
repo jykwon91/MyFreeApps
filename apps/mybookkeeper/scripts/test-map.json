@@ -13,6 +13,7 @@
       "backend_tests": [
         "test_admin_routes.py",
         "test_test_utils_routes.py",
+        "test_tax_seed_routes.py",
         "test_db_admin.py"
       ],
       "frontend_tests": [
@@ -1487,6 +1488,7 @@
     "navigation.spec.ts",
     "mobile.spec.ts",
     "chrome-extension.spec.ts",
+    "chrome-extension-sidepanel.spec.ts",
     "ux-fixes.spec.ts",
     "info-banners.spec.ts"
   ]
