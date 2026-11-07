@@ -1,4 +1,5 @@
 import base64
+import datetime as _dt
 import logging
 import re
 from email.message import EmailMessage
@@ -238,6 +239,10 @@ def fetch_email_body(service, message_id: str) -> dict:
     can use it for channel detection even after the raw Gmail response is gone.
     The field is optional in ``EmailBodyData`` for backward compatibility with
     queue rows fetched before this field was added.
+
+    ``sent_on`` is the UTC date Gmail received the message (``internalDate``),
+    so a date with no year in the subject is read against when it was sent,
+    not when it happens to be parsed.
     """
     detail = service.users().messages().get(userId="me", id=message_id, format="full").execute()
     headers = {h["name"]: h["value"] for h in detail["payload"].get("headers", [])}
@@ -246,6 +251,9 @@ def fetch_email_body(service, message_id: str) -> dict:
         "subject": headers.get("Subject", ""),
         "from_address": headers.get("From"),
         "body": _extract_body(detail["payload"]),
+        "sent_on": _dt.datetime.fromtimestamp(
+            int(detail["internalDate"]) / 1000, tz=_dt.timezone.utc,
+        ).date().isoformat(),
     }
 
 

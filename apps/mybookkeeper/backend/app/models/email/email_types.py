@@ -10,6 +10,7 @@ class _EmailBodyDataRequired(TypedDict):
 
 class EmailBodyData(_EmailBodyDataRequired, total=False):
     from_address: str | None  # Present for emails fetched after booking parser wiring
+    sent_on: str  # ISO UTC date Gmail received it; absent on rows fetched before it was added
 
 
 class EmailSource(TypedDict, total=False):

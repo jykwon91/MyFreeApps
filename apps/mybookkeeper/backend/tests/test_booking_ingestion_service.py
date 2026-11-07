@@ -81,6 +81,7 @@ def _make_queue_item() -> MagicMock:
 # ---------------------------------------------------------------------------
 
 _AIRBNB_FROM = "automated@airbnb.com"
+_SENT_ON = date(2026, 5, 1)
 _AIRBNB_SUBJECT = "Reservation confirmed — Jun 5 - Jun 10"
 _AIRBNB_BODY = """
 Guest: Jane Smith
@@ -121,6 +122,7 @@ class TestNotABooking:
             return_value=mock_db,
         ):
             result = await ingest_booking_email(
+                sent_on=_SENT_ON,
                 ctx=_ctx(),
                 email_message_id="msg-non-booking",
                 from_address=_NON_BOOKING_FROM,
@@ -154,6 +156,7 @@ class TestUnparseable:
             caplog.at_level(logging.WARNING, logger="app.services.calendar.booking_ingestion_service"),
         ):
             result = await ingest_booking_email(
+                sent_on=_SENT_ON,
                 ctx=_ctx(),
                 email_message_id="msg-no-listing",
                 from_address=_AIRBNB_FROM,
@@ -193,6 +196,7 @@ class TestBlocked:
             ) as bo_mock,
         ):
             result = await ingest_booking_email(
+                sent_on=_SENT_ON,
                 ctx=_ctx(),
                 email_message_id="msg-blocked",
                 from_address=_AIRBNB_FROM,
@@ -238,6 +242,7 @@ class TestAutoMatched:
             ),
         ):
             result = await ingest_booking_email(
+                sent_on=_SENT_ON,
                 ctx=_ctx(),
                 email_message_id="msg-matched-1",
                 from_address=_AIRBNB_FROM,
@@ -292,6 +297,7 @@ class TestAutoMatched:
             ),
         ):
             await ingest_booking_email(
+                sent_on=_SENT_ON,
                 ctx=_ctx(),
                 email_message_id="msg-matched-existing-notes",
                 from_address=_AIRBNB_FROM,
@@ -316,6 +322,7 @@ class TestAutoMatchedIdempotent:
         upsert_mock = AsyncMock(return_value=blackout)
 
         kwargs = dict(
+            sent_on=_SENT_ON,
             ctx=_ctx(),
             email_message_id="msg-idempotent",
             from_address=_AIRBNB_FROM,
@@ -380,6 +387,7 @@ class TestQueuedForReview:
             ),
         ):
             result = await ingest_booking_email(
+                sent_on=_SENT_ON,
                 ctx=_ctx(),
                 email_message_id="msg-no-match",
                 from_address=_AIRBNB_FROM,
@@ -432,6 +440,7 @@ class TestQueuedForReviewIdempotent:
             ),
         ):
             result1 = await ingest_booking_email(
+                sent_on=_SENT_ON,
                 ctx=_ctx(),
                 email_message_id="msg-idempotent-queue",
                 from_address=_AIRBNB_FROM,
@@ -439,6 +448,7 @@ class TestQueuedForReviewIdempotent:
                 body=_AIRBNB_BODY,
             )
             result2 = await ingest_booking_email(
+                sent_on=_SENT_ON,
                 ctx=_ctx(),
                 email_message_id="msg-idempotent-queue",
                 from_address=_AIRBNB_FROM,
@@ -476,6 +486,7 @@ class TestExceptionPropagation:
         ):
             with pytest.raises(RuntimeError, match="DB connection lost"):
                 await ingest_booking_email(
+                    sent_on=_SENT_ON,
                     ctx=_ctx(),
                     email_message_id="msg-db-error",
                     from_address=_AIRBNB_FROM,

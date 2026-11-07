@@ -37,7 +37,8 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
+from functools import partial
 
 # ---------------------------------------------------------------------------
 # Channel detection — from-address and subject matchers
@@ -99,11 +100,9 @@ _DATE_WRITTEN_1 = re.compile(
 _DATE_WRITTEN_2 = re.compile(
     r"(\d{1,2})\s+(\w+)\s+(\d{4})",  # "5 August 2026"
 )
-# Abbreviated month-day e.g. "Jun 5" (no year — fall back to next occurrence)
-_DATE_ABBREV_NO_YEAR = re.compile(
-    r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})",
-    re.IGNORECASE,
-)
+# A year-less check-in up to this many days before the email was sent is
+# still this stay (a late confirmation), not next year's.
+_SUBJECT_CHECK_IN_PAST_SLACK_DAYS = 7
 
 # Airbnb subject shorthand: "Jun 5 - Jun 10"
 _DATE_RANGE_SHORT = re.compile(
@@ -200,6 +199,7 @@ def parse_booking_email(
     from_address: str | None,
     subject: str,
     body: str,
+    sent_on: date,
 ) -> BookingParseResult:
     """Parse a candidate booking email and return a ``BookingParseResult``.
 
@@ -208,7 +208,9 @@ def parse_booking_email(
     reservation confirmation; if ``False``, the email should be left to the
     existing invoice-extraction pipeline.
 
-    No external calls are made — this is pure text analysis.
+    ``sent_on`` is the date the email was sent; dates written without a
+    year are read relative to it. No external calls are made — this is pure
+    text analysis.
     """
     from_str = from_address or ""
     combined = f"{subject}\n{body}"
@@ -217,7 +219,7 @@ def parse_booking_email(
     if channel is None:
         return BookingParseResult(is_booking=False, raw_subject=subject)
 
-    result = _parse_for_channel(channel, subject=subject, body=combined)
+    result = _parse_for_channel(channel, subject=subject, body=combined, sent_on=sent_on)
     result.raw_subject = subject
     return result
 
@@ -255,10 +257,10 @@ def _detect_channel(from_address: str, subject: str) -> str | None:
 
 
 def _parse_for_channel(
-    channel: str, *, subject: str, body: str,
+    channel: str, *, subject: str, body: str, sent_on: date,
 ) -> BookingParseResult:
     parsers = {
-        "airbnb": _parse_airbnb,
+        "airbnb": partial(_parse_airbnb, sent_on=sent_on),
         "furnished_finder": _parse_furnished_finder,
         "booking_com": _parse_booking_com,
         "vrbo": _parse_vrbo,
@@ -269,7 +271,7 @@ def _parse_for_channel(
     return parser(subject=subject, body=body)
 
 
-def _parse_airbnb(*, subject: str, body: str) -> BookingParseResult:
+def _parse_airbnb(*, subject: str, body: str, sent_on: date) -> BookingParseResult:
     """Parse an Airbnb host-facing reservation confirmation."""
     # Listing ID: "#12345678"
     listing_match = re.search(r"#(\d{6,12})", body)
@@ -285,7 +287,7 @@ def _parse_airbnb(*, subject: str, body: str) -> BookingParseResult:
 
     # Fallback: date range from subject "Jun 5 - Jun 10"
     if check_in is None and check_out is None:
-        check_in, check_out = _extract_date_range_from_subject(subject)
+        check_in, check_out = _extract_date_range_from_subject(subject, sent_on)
 
     total_price = _extract_price_after_label(
         body, ("total payout:", "payout:", "total:"),
@@ -440,27 +442,39 @@ def _extract_price_after_label(text: str, labels: tuple[str, ...]) -> str | None
 
 
 def _extract_date_range_from_subject(
-    subject: str,
+    subject: str, sent_on: date,
 ) -> tuple[date | None, date | None]:
-    """Extract a date range from a subject line like 'Jun 5 - Jun 10'."""
+    """Extract a date range from a subject line like 'Jun 5 - Jun 10'.
+
+    The subject has no year. Check-in is the next such date from a week
+    before the email was sent; check-out is the next one on or after
+    check-in, so a stay over New Year ends in the following year.
+    """
     m = _DATE_RANGE_SHORT.search(subject)
     if not m:
         return None, None
 
-    # Assume current or next year — heuristic for now.
-    year = date.today().year
+    check_in = _next_occurrence(
+        m.group(1), m.group(2),
+        on_or_after=sent_on - timedelta(days=_SUBJECT_CHECK_IN_PAST_SLACK_DAYS),
+    )
+    check_out = _next_occurrence(m.group(3), m.group(4), on_or_after=check_in or sent_on)
+    return check_in, check_out
 
-    def _make(month_abbr: str, day_str: str) -> date | None:
-        month = _MONTHS.get(month_abbr.lower())
-        if not month:
-            return None
+
+def _next_occurrence(month_abbr: str, day_str: str, *, on_or_after: date) -> date | None:
+    """The first ``month day`` falling on or after ``on_or_after``.
+
+    Looks up to four years ahead so 29 February finds its next leap year.
+    """
+    month = _MONTHS.get(month_abbr.lower())
+    if not month:
+        return None
+    for year in range(on_or_after.year, on_or_after.year + 5):
         try:
-            d = date(year, int(month), int(day_str))
-            # If the date is in the past by more than a week, try next year.
-            if (date.today() - d).days > 7:
-                d = date(year + 1, int(month), int(day_str))
-            return d
+            candidate = date(year, int(month), int(day_str))
         except ValueError:
-            return None
-
-    return _make(m.group(1), m.group(2)), _make(m.group(3), m.group(4))
+            continue
+        if candidate >= on_or_after:
+            return candidate
+    return None

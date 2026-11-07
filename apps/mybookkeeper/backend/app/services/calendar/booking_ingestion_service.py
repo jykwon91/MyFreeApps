@@ -29,6 +29,7 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass
+from datetime import date
 from typing import Literal
 
 from app.core.context import RequestContext
@@ -74,6 +75,7 @@ async def ingest_booking_email(
     from_address: str | None,
     subject: str,
     body: str,
+    sent_on: date,
 ) -> IngestionResult:
     """Attempt to classify and route one email as a booking confirmation.
 
@@ -89,6 +91,7 @@ async def ingest_booking_email(
         from_address=from_address,
         subject=subject,
         body=body,
+        sent_on=sent_on,
     )
 
     if not parse_result.is_booking:

@@ -1,6 +1,7 @@
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+import json
+from datetime import date, datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -14,6 +15,7 @@ from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrgRole
 from app.models.integrations.sync_log import SyncLog
 from app.models.user.user import User
+from app.services.calendar.booking_ingestion_service import IngestionResult
 
 
 def _make_integration(org_id: uuid.UUID, user_id: uuid.UUID) -> Integration:
@@ -189,6 +191,56 @@ class TestDrainClaudeExtraction:
         )
         reloaded = row.scalar_one()
         assert reloaded.raw_content is None
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("stored_sent_on", "created_at", "expected"),
+        [
+            ("2026-12-30", datetime(2027, 1, 2, 9, tzinfo=timezone.utc), date(2026, 12, 30)),
+            # Fetched before sent_on was stored: read against when it was fetched.
+            (None, datetime(2027, 1, 2, 9, tzinfo=timezone.utc), date(2027, 1, 2)),
+        ],
+    )
+    async def test_booking_check_reads_dates_against_the_sent_date(
+        self,
+        db: AsyncSession,
+        test_user: User,
+        test_org: Organization,
+        setup_data: tuple[Integration, SyncLog, RequestContext],
+        stored_sent_on: str | None,
+        created_at: datetime,
+        expected: date,
+    ) -> None:
+        _, log, ctx = setup_data
+        body: dict[str, str] = {
+            "message_id": "m", "subject": "Reservation confirmed",
+            "from_address": "automated@airbnb.com", "body": "",
+        }
+        if stored_sent_on is not None:
+            body["sent_on"] = stored_sent_on
+        item = _make_queue_item(
+            test_org.id, test_user.id, log.id, status="fetched",
+            raw_content=json.dumps(body).encode(), attachment_id="body",
+        )
+        item.created_at = created_at
+        db.add(item)
+        await db.commit()
+
+        ingest = AsyncMock(return_value=IngestionResult(action="queued_for_review"))
+
+        @asynccontextmanager
+        async def _fake():
+            yield db
+
+        with (
+            patch("app.services.email.email_extraction_service.unit_of_work", _fake),
+            patch("app.services.email.email_extraction_service.ingest_booking_email", ingest),
+        ):
+            from app.services.email.email_extraction_service import _extract_next_fetched
+
+            await _extract_next_fetched(ctx)
+
+        assert ingest.await_args.kwargs["sent_on"] == expected
 
     @pytest.mark.asyncio
     async def test_nothing_to_extract_when_no_fetched(
