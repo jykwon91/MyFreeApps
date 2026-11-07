@@ -27,9 +27,8 @@ os.environ.setdefault("MINIO_SECRET_KEY", "test-secret-key")
 os.environ.setdefault("MINIO_BUCKET", "test-bucket")
 os.environ.setdefault("MINIO_PUBLIC_ENDPOINT", "test-minio:9000")
 import pytest_asyncio
-from sqlalchemy import event, JSON, String
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
-from sqlalchemy.dialects.postgresql import ARRAY, INET, JSONB
 from sqlalchemy.pool import StaticPool
 
 from app.db.base import Base
@@ -38,6 +37,7 @@ from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrganizationMember
 from app.models.user.user import User
 from platform_shared.testing.factories import make_user_fixture
+from platform_shared.testing.sqlite_metadata import patch_metadata_for_sqlite
 
 pytest_plugins = ["tests.receipt_seed", "tests.reply_seed"]
 
@@ -77,31 +77,6 @@ def _patch_storage_for_tests(monkeypatch):
     monkeypatch.setattr(storage, "_client", fake)
 
 
-def _patch_metadata_for_sqlite() -> None:
-    """Make PostgreSQL-specific DDL compatible with SQLite for tests.
-
-    Must run before any test module is imported — see the call site below.
-    """
-    for table in Base.metadata.tables.values():
-        cols_to_drop: list[str] = []
-        for column in table.columns:
-            if isinstance(column.type, JSONB):
-                column.type = JSON()
-            if isinstance(column.type, INET):
-                # SQLite has no INET; round-trip as text. Production schema
-                # is the source of truth (PostgreSQL INET).
-                column.type = String(45)
-            if isinstance(column.type, ARRAY):
-                # SQLite has no ARRAY; serialize as JSON for tests. The
-                # repository layer reads / writes Python lists either way.
-                column.type = JSON()
-            if column.computed is not None:
-                cols_to_drop.append(column.name)
-        for name in cols_to_drop:
-            table.columns[name].computed = None
-            table.columns[name].nullable = True
-
-
 # Swap the PostgreSQL-only column types at conftest import time, which pytest
 # does before it imports a single test module.
 #
@@ -115,7 +90,7 @@ def _patch_metadata_for_sqlite() -> None:
 # ``unrecognized token: "@"``. Which test got there first depended on
 # collection order and on how pytest-xdist happened to shard the run, so the
 # breakage moved around whenever tests were added.
-_patch_metadata_for_sqlite()
+patch_metadata_for_sqlite(Base.metadata)
 
 
 @pytest_asyncio.fixture(scope="session")

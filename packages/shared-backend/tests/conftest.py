@@ -4,12 +4,12 @@ from collections.abc import AsyncGenerator
 import pytest
 import pytest_asyncio
 from minio.error import S3Error
-from sqlalchemy import JSON, event
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from platform_shared.db.base import Base
+from platform_shared.testing.sqlite_metadata import patch_metadata_for_sqlite
 
 
 def make_s3_error(code: str, key: str = "obj") -> S3Error:
@@ -51,21 +51,9 @@ def anyio_backend() -> str:
     return "asyncio"
 
 
-def _patch_metadata_for_sqlite() -> None:
-    """Make PostgreSQL-specific DDL compatible with SQLite for tests.
-
-    Replaces JSONB columns with JSON so ``Base.metadata.create_all`` succeeds
-    against SQLite. Mirrors the same patch in MyBookkeeper's test conftest.
-    """
-    for table in Base.metadata.tables.values():
-        for column in table.columns:
-            if isinstance(column.type, JSONB):
-                column.type = JSON()
-
-
 @pytest.fixture(autouse=True, scope="session")
-def _patch_jsonb_for_sqlite_session() -> None:
-    """Apply the JSONB→JSON patch once per test session.
+def _patch_metadata_for_sqlite_session() -> None:
+    """Apply the SQLite type patch once per test session.
 
     Any test that calls ``Base.metadata.create_all`` against SQLite (including
     tests that define their own ``db`` fixture, like ``test_audit.py``) needs
@@ -78,7 +66,7 @@ def _patch_jsonb_for_sqlite_session() -> None:
     from platform_shared.db.models.audit_log import AuditLog  # noqa: F401
     from platform_shared.db.models.auth_event import AuthEvent  # noqa: F401
 
-    _patch_metadata_for_sqlite()
+    patch_metadata_for_sqlite(Base.metadata)
 
 
 @pytest_asyncio.fixture()
@@ -99,7 +87,7 @@ async def db() -> AsyncGenerator[AsyncSession, None]:
     def _disable_fk(dbapi_conn, _rec):  # type: ignore[no-untyped-def]
         dbapi_conn.execute("PRAGMA foreign_keys=OFF")
 
-    _patch_metadata_for_sqlite()
+    patch_metadata_for_sqlite(Base.metadata)
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
