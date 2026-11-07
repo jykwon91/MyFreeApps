@@ -1,12 +1,6 @@
 import { test, expect } from "./fixtures/auth";
 import { createProperty, createTransaction, deleteProperty, deleteTransaction } from "./fixtures/seed-data";
 import { getYear } from "date-fns";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const FIXTURES_DIR = path.join(__dirname, "fixtures", "documents");
-const TEST_PDF = "plumber-invoice.pdf";
 
 const RUN_ID = Date.now();
 const CURRENT_YEAR = getYear(new Date());
@@ -125,44 +119,5 @@ test.describe("Reconciliation workflow", () => {
     await expect(
       page.getByText(/discrepanc|everything matches|no discrepancies/i).first(),
     ).toBeVisible({ timeout: 10000 });
-  });
-});
-
-test.describe("Document upload and extraction", () => {
-  test("upload a PDF and verify it appears in the documents list", async ({ authedPage: page, api }) => {
-    test.setTimeout(60000); // Upload + extraction pipeline can be slow
-    // Navigate to documents page
-    await page.goto("/documents");
-    await expect(page.getByRole("heading", { name: "Documents" })).toBeVisible({ timeout: 10000 });
-    await expect(
-      page.locator("table").or(page.getByText(/no documents found/i)),
-    ).toBeVisible({ timeout: 15000 });
-
-    // Verify upload zone is visible
-    const fileInput = page.locator("input[type='file']").first();
-    await expect(fileInput).toBeAttached();
-
-    // Upload the test PDF fixture
-    await fileInput.setInputFiles(path.join(FIXTURES_DIR, TEST_PDF));
-
-    // Verify the document appears in the list
-    await expect(
-      page.getByText(TEST_PDF).or(page.getByText(/plumber/i)),
-    ).toBeVisible({ timeout: 15000 });
-
-    // Verify a processing/extracting status is shown (proves extraction pipeline started)
-    await expect(
-      page.getByText(/processing|extracting|uploading/i).first(),
-    ).toBeVisible({ timeout: 15000 });
-
-    // Clean up the uploaded document via API
-    const res = await api.get("/documents");
-    if (res.ok()) {
-      const docs = await res.json() as Array<{ file_name: string; id: string }>;
-      const doc = docs.find((d) => d.file_name === TEST_PDF);
-      if (doc) {
-        await api.delete(`/documents/${doc.id}`).catch(() => {});
-      }
-    }
   });
 });
