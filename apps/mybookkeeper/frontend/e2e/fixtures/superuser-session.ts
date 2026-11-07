@@ -5,6 +5,7 @@ import {
   totpCodeAtStep,
 } from "../../../../../packages/shared-frontend/src/testing/totpCode";
 import { BACKEND_URL } from "./config";
+import { E2E_ONBOARDING } from "./onboarding";
 
 const PASSWORD = "E2eSuperAdm1n!Secure";
 
@@ -63,7 +64,7 @@ export class SuperuserSession {
       const { id: orgId } = (await org.json()) as { id: string };
       const onboarded = await anon.post("/tax-profile/complete-onboarding", {
         headers: { ...auth, "X-Organization-Id": orgId },
-        data: { tax_situations: ["rental_property"], filing_status: "single", dependents_count: 0 },
+        data: E2E_ONBOARDING,
       });
       expect(onboarded.ok(), await onboarded.text()).toBe(true);
 

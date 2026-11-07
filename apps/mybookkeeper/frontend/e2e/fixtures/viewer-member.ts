@@ -1,9 +1,11 @@
-import { expect, type APIRequestContext, type APIResponse, type Page, type PlaywrightWorkerArgs } from "@playwright/test";
+import { expect, type APIRequestContext, type Page, type PlaywrightWorkerArgs } from "@playwright/test";
 import { getOrgId, getToken } from "./auth";
 import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
 import { BACKEND_URL } from "./config";
+import { cleanUp, cleanUpAfter } from "./cleanup";
+import { TestAccount } from "./test-account";
 
-const PASSWORD = "E2eViewerMemb3r!Secure";
+type Playwright = PlaywrightWorkerArgs["playwright"];
 
 /**
  * A second account that joined the shared E2E user's organization as a viewer,
@@ -14,54 +16,51 @@ const PASSWORD = "E2eViewerMemb3r!Secure";
  */
 export class ViewerMember {
   private constructor(
-    readonly userId: string,
-    readonly email: string,
-    readonly name: string,
+    private readonly account: TestAccount,
     readonly orgId: string,
-    private readonly token: string,
     private readonly inviteId: string,
     /** Signed in as the viewer, scoped to the organization it joined. */
     readonly api: APIRequestContext,
   ) {}
 
-  static async join(playwright: PlaywrightWorkerArgs["playwright"], label: string): Promise<ViewerMember> {
-    const email = `e2e-viewer-${label}-${Date.now()}@example.com`;
-    const name = `E2E Viewer ${label}`;
+  get userId(): string {
+    return this.account.userId;
+  }
+
+  get name(): string {
+    return this.account.name;
+  }
+
+  static async join(playwright: Playwright, label: string): Promise<ViewerMember> {
     const orgId = getOrgId();
     expect(orgId, "the shared E2E user should have an organization").not.toBe("");
+    const account = await TestAccount.create(playwright, `viewer-${label}`);
     const owner = await ownerContext(playwright, orgId);
     const anon = await playwright.request.newContext({ baseURL: BACKEND_URL });
-    let token = "";
     let inviteId = "";
     try {
-      // Not /auth/register: sign-ups and sign-ins are limited per IP, and a
-      // full run already comes close. Joining below still goes through the
-      // real invite and accept endpoints.
-      const created = await anon.post("/test/users", { data: { email, password: PASSWORD, name } });
-      expect(created.status(), await created.text()).toBe(201);
-      const { id: userId, access_token } = (await created.json()) as { id: string; access_token: string };
-      token = access_token;
-      const auth = { Authorization: `Bearer ${token}` };
-
-      const invited = await owner.post(`/organizations/${orgId}/invites`, { data: { email, org_role: "viewer" } });
+      const invited = await owner.post(`/organizations/${orgId}/invites`, {
+        data: { email: account.email, org_role: "viewer" },
+      });
       expect(invited.status(), await invited.text()).toBe(201);
       ({ id: inviteId } = (await invited.json()) as { id: string });
       const tokenRes = await owner.get(`/test/invites/${inviteId}/token`);
       expect(tokenRes.ok(), await tokenRes.text()).toBe(true);
       const { token: inviteToken } = (await tokenRes.json()) as { token: string };
-      const accepted = await anon.post(`/organizations/invites/${inviteToken}/accept`, { headers: auth });
+      const accepted = await anon.post(`/organizations/invites/${inviteToken}/accept`, { headers: account.authHeader });
       expect(accepted.ok(), await accepted.text()).toBe(true);
 
-      const api = await playwright.request.newContext({
-        baseURL: BACKEND_URL,
-        extraHTTPHeaders: { ...auth, "X-Organization-Id": orgId },
-      });
-      return new ViewerMember(userId, email, name, orgId, token, inviteId, api);
+      return new ViewerMember(account, orgId, inviteId, await account.apiContext(playwright, orgId));
     } catch (err) {
       // Half set up: nothing will hold the member to delete it later.
-      if (token) await deleteAccount(anon, email, { Authorization: `Bearer ${token}` });
-      if (inviteId) await owner.delete(`/test/invites/${inviteId}`);
-      throw err;
+      const invite = inviteId;
+      return await cleanUpAfter(
+        err,
+        () => account.delete(playwright),
+        async () => {
+          if (invite) await owner.delete(`/test/invites/${invite}`);
+        },
+      );
     } finally {
       await anon.dispose();
       await owner.dispose();
@@ -69,15 +68,8 @@ export class ViewerMember {
   }
 
   /** Signs ``page`` in as this account, in the organization it joined. */
-  async signIn(page: Page): Promise<void> {
-    await page.goto("/login");
-    await page.evaluate(
-      ([t, o]) => {
-        localStorage.setItem("token", t);
-        localStorage.setItem("v1_activeOrgId", o);
-      },
-      [this.token, this.orgId],
-    );
+  signIn(page: Page): Promise<void> {
+    return this.account.signIn(page, this.orgId);
   }
 
   /** This member's role, as the organization's member list has it. */
@@ -89,13 +81,16 @@ export class ViewerMember {
   }
 
   /** Deletes this account (and so its membership) and its invite, then ends the session. */
-  async delete(playwright: PlaywrightWorkerArgs["playwright"]): Promise<void> {
+  async delete(playwright: Playwright): Promise<void> {
     const owner = await ownerContext(playwright, this.orgId);
     try {
-      const deleted = await deleteAccount(this.api, this.email);
-      expect(deleted.ok(), `the viewer account should be cleaned up: ${await deleted.text()}`).toBe(true);
-      const invite = await owner.delete(`/test/invites/${this.inviteId}`);
-      expect(invite.status(), `the viewer's invite should be cleaned up: ${await invite.text()}`).toBe(204);
+      await cleanUp(
+        () => this.account.delete(playwright),
+        async () => {
+          const invite = await owner.delete(`/test/invites/${this.inviteId}`);
+          expect(invite.status(), `the viewer's invite should be cleaned up: ${await invite.text()}`).toBe(204);
+        },
+      );
     } finally {
       await owner.dispose();
       await this.api.dispose();
@@ -103,13 +98,9 @@ export class ViewerMember {
   }
 }
 
-function ownerContext(playwright: PlaywrightWorkerArgs["playwright"], orgId: string): Promise<APIRequestContext> {
+function ownerContext(playwright: Playwright, orgId: string): Promise<APIRequestContext> {
   return playwright.request.newContext({
     baseURL: BACKEND_URL,
     extraHTTPHeaders: { Authorization: `Bearer ${getToken()}`, "X-Organization-Id": orgId },
   });
-}
-
-function deleteAccount(ctx: APIRequestContext, email: string, headers: Record<string, string> = {}): Promise<APIResponse> {
-  return ctx.delete("/users/me", { headers, data: { password: PASSWORD, confirm_email: email } });
 }

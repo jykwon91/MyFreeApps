@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { BACKEND_URL } from "./config";
+import { storeSession } from "./session";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TOKEN_PATH = path.join(__dirname, "..", ".auth-token");
@@ -20,16 +21,7 @@ export function getOrgId(): string {
 }
 
 async function setupAuth(page: Page): Promise<void> {
-  const token = getToken();
-  await page.goto("/login");
-  await page.evaluate((t) => localStorage.setItem("token", t), token);
-
-  // Also set org ID if we have it
-  const orgId = getOrgId();
-  if (orgId) {
-    await page.evaluate((id) => localStorage.setItem("v1_activeOrgId", id), orgId);
-  }
-
+  await storeSession(page, getToken(), getOrgId() || undefined);
   await page.goto("/");
   await page.waitForLoadState("domcontentloaded");
 }
