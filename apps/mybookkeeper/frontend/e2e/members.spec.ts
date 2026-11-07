@@ -160,33 +160,29 @@ test.describe("Members page", () => {
     });
 
     test("pending invite rows show email, role, status badge, and expiry", async ({ authedPage: page, api }) => {
-      const orgRes = await api.get("/organizations");
-      const orgs = await orgRes.json();
-      if (!orgs.length) {
-        test.skip();
-        return;
+      // Seed our own invite: other specs create and cancel invites in parallel,
+      // so an ambient one can vanish between the API read and the UI check.
+      const orgs = await (await api.get("/organizations")).json();
+      const orgId: string = orgs[0].id;
+      const testEmail = `e2e-pending-row-${RUN_ID}@example.com`;
+      const createRes = await api.post(`/organizations/${orgId}/invites`, {
+        data: { email: testEmail, org_role: "viewer" },
+      });
+      expect(createRes.status()).toBe(201);
+      const invite: { id: string } = await createRes.json();
+
+      try {
+        await page.reload();
+        const row = page.getByRole("row").filter({ hasText: testEmail });
+        await expect(row).toHaveCount(1);
+        const cells = row.getByRole("cell");
+        await expect(cells.nth(1)).toHaveText("viewer");
+        await expect(cells.nth(2)).toHaveText("Pending");
+        await expect(cells.nth(3)).toHaveText(/^in /);
+      } finally {
+        const del = await api.delete(`/organizations/${orgId}/invites/${invite.id}`);
+        expect(del.ok(), `cleanup: cancel invite ${invite.id}`).toBe(true);
       }
-
-      const invitesRes = await api.get(`/organizations/${orgs[0].id}/invites`);
-      if (!invitesRes.ok()) {
-        test.skip(true, "Invites API call failed");
-        return;
-      }
-      const invites = await invitesRes.json();
-      const pending = invites.filter((i: { status: string }) => i.status === "pending");
-
-      if (pending.length === 0) {
-        // Empty state should show
-        await expect(page.getByText(/no pending invites/i)).toBeVisible({ timeout: 5000 });
-        return;
-      }
-
-      // First pending invite's email should be visible in the table
-      const firstEmail = pending[0].email;
-      await expect(page.getByText(firstEmail).first()).toBeVisible({ timeout: 10000 });
-
-      // Status badge should be capitalized ("Pending" not "pending")
-      await expect(page.getByText("Pending").first()).toBeVisible();
     });
   });
 
