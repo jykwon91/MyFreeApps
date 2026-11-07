@@ -226,8 +226,7 @@ test.describe("Members page", () => {
         // The invite email must be visible in the pending invites table
         await expect(page.getByText(testEmail).first()).toBeVisible({ timeout: 10000 });
 
-        // Find the row for this invite and click the cancel (X) button.
-        // The X button lives in the last cell with title="Cancel invite".
+        // Find the row for this invite and click its cancel (X) button.
         const inviteRow = page
           .locator("table")
           .last()
@@ -235,7 +234,7 @@ test.describe("Members page", () => {
           .filter({ hasText: testEmail });
         await expect(inviteRow).toBeVisible({ timeout: 5000 });
 
-        const cancelBtn = inviteRow.locator('button[title="Cancel invite"]');
+        const cancelBtn = inviteRow.getByRole("button", { name: `Cancel invite for ${testEmail}` });
         await expect(cancelBtn).toBeVisible({ timeout: 5000 });
         await cancelBtn.click();
 
@@ -289,7 +288,7 @@ test.describe("Members page", () => {
           .last()
           .locator("tbody tr")
           .filter({ hasText: testEmail });
-        const cancelBtn = inviteRow.locator('button[title="Cancel invite"]');
+        const cancelBtn = inviteRow.getByRole("button", { name: `Cancel invite for ${testEmail}` });
         await cancelBtn.click();
 
         // A success toast should appear confirming the cancellation
