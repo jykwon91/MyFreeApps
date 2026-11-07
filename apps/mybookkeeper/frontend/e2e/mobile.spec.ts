@@ -305,39 +305,4 @@ test.describe("Mobile responsiveness", () => {
       await expect(page.getByRole("heading", { name: "System Health" })).toBeVisible();
     });
   });
-
-  test.describe("Mobile card views", () => {
-    test("transactions page shows card view instead of table on mobile", async ({ authedPage: page }) => {
-      await page.goto("/transactions");
-      await expect(page.getByRole("heading", { name: "Transactions" })).toBeVisible({ timeout: 15000 });
-
-      // On mobile viewport, card view should be visible and table hidden
-      const cards = page.locator("[data-testid='mobile-card-view'], .md\\:hidden").first();
-      const cardsExist = await cards.isVisible({ timeout: 5000 }).catch(() => false);
-      if (!cardsExist) {
-        test.skip(true, "No card view or mobile layout detected");
-        return;
-      }
-      expect(cardsExist).toBe(true);
-    });
-
-    test("mobile filter toggle shows and hides filters", async ({ authedPage: page }) => {
-      await page.goto("/transactions");
-      await expect(page.getByRole("heading", { name: "Transactions" })).toBeVisible({ timeout: 15000 });
-
-      // Look for the mobile filter toggle button
-      const filterToggle = page.getByRole("button", { name: /filter/i }).first();
-      const isVisible = await filterToggle.isVisible({ timeout: 3000 }).catch(() => false);
-      if (!isVisible) {
-        test.skip(true, "No filter toggle on this viewport");
-        return;
-      }
-
-      await filterToggle.click();
-
-      // Some filter controls should now be visible
-      const filterControl = page.locator("select").first();
-      await expect(filterControl).toBeVisible({ timeout: 3000 });
-    });
-  });
 });

@@ -36,7 +36,7 @@ export default function TransactionTable({ table, colCount, onRowClick, editingI
   return (
     <div className="border rounded-lg overflow-hidden md:flex md:flex-col md:min-h-0 md:flex-1">
       {/* Mobile card view */}
-      <div className="md:hidden divide-y">
+      <div className="md:hidden divide-y" data-testid="transaction-cards">
         {table.getRowModel().rows.length === 0 ? (
           <EmptyState
             message={

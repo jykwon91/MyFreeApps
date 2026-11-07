@@ -1349,14 +1349,16 @@
         "YearFilter.test.tsx",
         "useDocumentColumns.test.tsx",
         "chart-utils.test.ts",
-        "SortIndicator.test.tsx"
+        "SortIndicator.test.tsx",
+        "TransactionFilterBar.test.tsx"
       ],
       "e2e_specs": [
         "transactions.spec.ts",
         "dashboard-filter.spec.ts",
         "dashboard.spec.ts",
         "dashboard-year-filter.spec.ts",
-        "reconciliation.spec.ts"
+        "reconciliation.spec.ts",
+        "mocked/transactions-unsaved-mock.spec.ts"
       ]
     },
     "attribution": {
@@ -1517,6 +1519,7 @@
     "navigation.spec.ts",
     "mobile.spec.ts",
     "dashboard-mobile.spec.ts",
+    "transactions-mobile.spec.ts",
     "mobile-skeleton-overflow.spec.ts",
     "chrome-extension.spec.ts",
     "chrome-extension-sidepanel.spec.ts",
