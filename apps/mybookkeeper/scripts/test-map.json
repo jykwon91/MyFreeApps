@@ -1002,6 +1002,7 @@
         "WelcomeManualDetail.test.tsx",
         "WelcomeManualShareCard.test.tsx",
         "PublicWelcomeManual.test.tsx",
+        "WelcomeManuals.test.tsx",
         "WelcomeManualRoomManager.test.tsx",
         "WelcomeManualSectionCard.test.tsx",
         "WelcomeManualSectionFieldManager.test.tsx",

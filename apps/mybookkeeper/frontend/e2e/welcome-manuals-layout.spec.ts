@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures/auth";
 import { createWelcomeManual, deleteWelcomeManual } from "./fixtures/welcome-manual";
+import { holdRequests } from "./fixtures/hold-requests";
 
 /**
  * Layout E2E for the Welcome Manuals list + detail pages (PR 4b).
@@ -24,13 +25,13 @@ test.describe("Welcome Manuals layout (PR 4b)", () => {
   }) => {
     await page.setViewportSize({ width: 375, height: 800 });
 
-    const runId = Date.now();
+    // Short enough to stay on one line at 375px, like a real manual title.
+    const titlePrefix = `E2E Shift ${Date.now() % 100000}-`;
     const manualIds: string[] = [];
     try {
       for (let i = 0; i < MANUAL_COUNT; i++) {
         const manual = await createWelcomeManual(api, {
-          // Short enough to stay on one line at 375px, like a real manual title.
-          title: `E2E Shift ${runId % 100000}-${i}`,
+          title: `${titlePrefix}${i}`,
           seed_default_sections: false,
         });
         manualIds.push(manual.id);
@@ -42,16 +43,19 @@ test.describe("Welcome Manuals layout (PR 4b)", () => {
 
       const skeletonCards = page.locator('[data-testid="welcome-manuals-skeleton"] ul.md\\:hidden li');
       expect(await skeletonCards.count()).toBeGreaterThan(0);
-      const skeletonHeight = (await skeletonCards.first().boundingBox())?.height ?? 0;
+      const skeletonBox = await skeletonCards.first().boundingBox();
+      expect(skeletonBox, "skeleton card has a box").not.toBeNull();
 
       release();
       // The list is shared with other specs, so compare card size rather than card count.
       const ourCards = page
         .locator('[data-testid="welcome-manuals-mobile"] li')
-        .filter({ hasText: `E2E Shift ${runId % 100000}-` });
+        .filter({ hasText: titlePrefix });
       await expect(ourCards).toHaveCount(MANUAL_COUNT);
-      const loadedHeight = (await ourCards.first().boundingBox())?.height ?? 0;
-      expect(Math.abs(skeletonHeight - loadedHeight)).toBeLessThanOrEqual(LAYOUT_SHIFT_TOLERANCE_PX);
+      const loadedBox = await ourCards.first().boundingBox();
+      expect(loadedBox, "loaded card has a box").not.toBeNull();
+      expect(skeletonBox!.height).toBeGreaterThan(0);
+      expect(Math.abs(skeletonBox!.height - loadedBox!.height)).toBeLessThanOrEqual(LAYOUT_SHIFT_TOLERANCE_PX);
     } finally {
       for (const id of manualIds) await deleteWelcomeManual(api, id);
     }
@@ -147,22 +151,6 @@ test.describe("Welcome Manuals layout (PR 4b)", () => {
     }
   });
 });
-
-/**
- * Holds requests whose URL matches ``matches`` until the returned release is called, so
- * a skeleton stays up for exactly as long as the test needs it.
- */
-async function holdRequests(page: Page, matches: (url: URL) => boolean): Promise<() => void> {
-  let release!: () => void;
-  const gate = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  await page.route(matches, async (route) => {
-    await gate;
-    await route.continue();
-  });
-  return release;
-}
 
 async function assertOnlyMobileVisible(page: Page, name: string, w: number, h: number): Promise<void> {
   await page.setViewportSize({ width: w, height: h });

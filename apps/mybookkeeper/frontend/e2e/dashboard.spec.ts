@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures/auth";
+import { holdRequests } from "./fixtures/hold-requests";
 
 // Format a number the same way formatCurrency() does: "$46,754.04"
 function formatCurrency(amount: number): string {
@@ -172,7 +173,7 @@ test.describe("Dashboard", () => {
         api.get("/properties"),
       ]);
       const summary = await summaryRes.json();
-      const properties = await propsRes.json();
+      const properties = (await propsRes.json()) as Array<{ id: string; name: string }>;
 
       if (!summary.by_property?.length) {
         test.skip();
@@ -180,7 +181,7 @@ test.describe("Dashboard", () => {
       }
 
       // Build a lookup from property id to name
-      const propMap = new Map(properties.map((p: { id: string; name: string }) => [p.id, p.name]));
+      const propMap = new Map(properties.map((p) => [p.id, p.name]));
 
       // Verify each property row in the summary is visible with its name and values
       for (const bp of summary.by_property.slice(0, 3)) {
@@ -489,12 +490,7 @@ test.describe("Dashboard", () => {
   test.describe("Skeleton layout", () => {
     test("skeleton shows sidebar and dashboard structure before data loads", async ({ authedPage: page }) => {
       // Hold the summary request so the skeleton stays up long enough to inspect.
-      let releaseSummary: () => void = () => {};
-      const summaryHeld = new Promise<void>((resolve) => { releaseSummary = resolve; });
-      await page.route((url) => url.pathname === "/api/summary", async (route) => {
-        await summaryHeld;
-        await route.continue();
-      });
+      const releaseSummary = await holdRequests(page, (url) => url.pathname === "/api/summary");
 
       await page.goto("/");
 
