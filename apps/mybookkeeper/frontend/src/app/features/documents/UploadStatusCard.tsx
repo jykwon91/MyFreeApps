@@ -1,5 +1,5 @@
 import { Loader2, CheckCircle2, XCircle, RotateCcw } from "lucide-react";
-import { ProgressBar, cn } from "@platform/ui";
+import { LoadingButton, ProgressBar, cn } from "@platform/ui";
 import type { BatchStatusResponse } from "@mybookkeeper/api-client/types/document/BatchStatusResponse";
 import { FILE_STATUSES } from "@/shared/types/document/file-status";
 import type { UploadState } from "@/shared/types/document/upload-state";
@@ -10,11 +10,12 @@ export interface UploadStatusCardProps {
   statusText: string | null;
   batchStatus: BatchStatusResponse | undefined;
   onCancelBatch: (batchId: string) => void;
+  isCancellingBatch: boolean;
   onDismiss: () => void;
 }
 
 /** The card under the drop zone that reports how the current upload is going. */
-export default function UploadStatusCard({ upload, statusText, batchStatus, onCancelBatch, onDismiss }: UploadStatusCardProps) {
+export default function UploadStatusCard({ upload, statusText, batchStatus, onCancelBatch, isCancellingBatch, onDismiss }: UploadStatusCardProps) {
   if (!upload) return null;
 
   const isActive = upload.status === FILE_STATUSES.UPLOADING || upload.status === FILE_STATUSES.PROCESSING;
@@ -35,12 +36,15 @@ export default function UploadStatusCard({ upload, statusText, batchStatus, onCa
         </div>
         <div className="flex items-center gap-1 shrink-0 ml-2">
           {upload.status === FILE_STATUSES.PROCESSING && batchId && (
-            <button
+            <LoadingButton
+              variant="ghost"
+              size="sm"
+              isLoading={isCancellingBatch}
+              loadingText="Cancelling…"
               onClick={() => onCancelBatch(batchId)}
-              className="text-xs text-muted-foreground hover:text-destructive font-medium"
             >
               Cancel
-            </button>
+            </LoadingButton>
           )}
           {upload.status === FILE_STATUSES.ERROR && (
             <button onClick={onDismiss} className="p-1 text-muted-foreground hover:text-foreground" title="Try again">

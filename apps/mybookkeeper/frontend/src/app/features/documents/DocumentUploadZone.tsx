@@ -8,6 +8,8 @@ import { isSupportedFile } from "@/shared/utils/file-upload";
 import { uploadOutcome } from "@/shared/utils/upload-outcome";
 import { cn } from "@platform/ui";
 import UploadStatusCard from "./UploadStatusCard";
+import { showError } from "@/shared/lib/toast-store";
+import { DOCUMENT_UPLOAD_MESSAGES } from "@/shared/lib/document-upload-messages";
 import { DOCUMENT_STATUSES, type DocumentStatus } from "@mybookkeeper/api-client/types/document/DocumentStatus";
 import { BATCH_STATUSES } from "@mybookkeeper/api-client/types/document/BatchStatus";
 import { FILE_STATUSES } from "@/shared/types/document/file-status";
@@ -115,7 +117,7 @@ export default function DocumentUploadZone() {
   const dispatch = useAppDispatch();
   const { current: upload, dragging } = useAppSelector((s) => s.documentUpload);
   const [uploadDocument] = useUploadDocumentMutation();
-  const [cancelBatch] = useCancelBatchMutation();
+  const [cancelBatch, { isLoading: isCancellingBatch }] = useCancelBatchMutation();
   const inputRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
 
@@ -241,11 +243,15 @@ export default function DocumentUploadZone() {
 
   const isActive = upload?.status === FILE_STATUSES.UPLOADING || upload?.status === FILE_STATUSES.PROCESSING;
 
-  function handleCancelBatch(batchId: string) {
-    cancelBatch(batchId).unwrap().then(() => {
-      dispatch(dismiss());
-      dispatch(baseApi.util.invalidateTags(["Document", "Summary"]));
-    });
+  async function handleCancelBatch(batchId: string) {
+    try {
+      await cancelBatch(batchId).unwrap();
+    } catch {
+      showError(DOCUMENT_UPLOAD_MESSAGES.CANCEL_FAILED);
+      return;
+    }
+    dispatch(dismiss());
+    dispatch(baseApi.util.invalidateTags(["Document", "Summary"]));
   }
 
   const substatus = upload
@@ -340,6 +346,7 @@ export default function DocumentUploadZone() {
         statusText={statusText}
         batchStatus={batchStatus}
         onCancelBatch={handleCancelBatch}
+        isCancellingBatch={isCancellingBatch}
         onDismiss={() => dispatch(dismiss())}
       />
     </div>

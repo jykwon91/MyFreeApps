@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
@@ -8,7 +8,9 @@ import type { RootState } from "@/shared/store/index";
 import documentUploadReducer from "@/shared/store/documentUploadSlice";
 import organizationReducer from "@/shared/store/organizationSlice";
 import DocumentUploadZone from "@/app/features/documents/DocumentUploadZone";
-import { useGetSingleUploadStatusQuery } from "@mybookkeeper/api-client/store/documentsApi";
+import { useGetBatchStatusQuery, useGetSingleUploadStatusQuery } from "@mybookkeeper/api-client/store/documentsApi";
+import { showError } from "@/shared/lib/toast-store";
+import { DOCUMENT_UPLOAD_MESSAGES } from "@/shared/lib/document-upload-messages";
 import type { DocumentStatus } from "@mybookkeeper/api-client/types/document/DocumentStatus";
 
 const mockUploadDocument = vi.fn(() => ({
@@ -24,8 +26,10 @@ vi.mock("@mybookkeeper/api-client/store/documentsApi", () => ({
   useGetBatchStatusQuery: vi.fn(() => ({ currentData: undefined })),
   useGetSingleUploadStatusQuery: vi.fn(() => ({ currentData: undefined })),
   useGetDocumentsQuery: vi.fn(() => ({ data: [] })),
-  useCancelBatchMutation: vi.fn(() => [mockCancelBatch]),
+  useCancelBatchMutation: vi.fn(() => [mockCancelBatch, { isLoading: false }]),
 }));
+
+vi.mock("@/shared/lib/toast-store", () => ({ showError: vi.fn() }));
 
 function buildTestStore(preloadedState?: Partial<RootState>) {
   return configureStore({
@@ -51,6 +55,7 @@ describe("DocumentUploadZone", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useGetSingleUploadStatusQuery).mockReturnValue({ currentData: undefined } as unknown as ReturnType<typeof useGetSingleUploadStatusQuery>);
+    vi.mocked(useGetBatchStatusQuery).mockReturnValue({ currentData: undefined } as unknown as ReturnType<typeof useGetBatchStatusQuery>);
   });
 
   it("renders drag-and-drop area with browse link", () => {
@@ -253,6 +258,35 @@ describe("DocumentUploadZone", () => {
     it("keeps reading while the document is still being extracted", () => {
       renderEndingIn("extracting");
       expect(screen.getByText(/let me read this/)).toBeInTheDocument();
+    });
+  });
+
+  describe("cancelling a batch", () => {
+    it("keeps the batch on screen and says so when the cancel fails", async () => {
+      vi.mocked(useGetBatchStatusQuery).mockReturnValue({
+        currentData: { batch_id: "batch-1", total: 3, completed: 1, failed: 0, status: "processing" },
+      } as unknown as ReturnType<typeof useGetBatchStatusQuery>);
+      mockCancelBatch.mockReturnValueOnce({ unwrap: () => Promise.reject(new Error("network")) });
+      renderWithStore(<DocumentUploadZone />, buildTestStore({
+        documentUpload: {
+          current: {
+            fileName: "3 files",
+            status: "processing" as const,
+            documentId: "doc-1",
+            batchId: "batch-1",
+            batchTotal: 3,
+            multiUploadTotal: 0,
+            multiUploadCompleted: 0,
+            multiUploadFailed: 0,
+          },
+          dragging: false,
+        },
+      }));
+
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+      await waitFor(() => expect(showError).toHaveBeenCalledWith(DOCUMENT_UPLOAD_MESSAGES.CANCEL_FAILED));
+      expect(screen.getByText(/1 of 3 extracted/)).toBeInTheDocument();
     });
   });
 });
