@@ -70,6 +70,7 @@ def generators(*, art: bool) -> list[list[str]]:
         ["scripts.wow_items.build"],
         ["scripts.wow_item_names.build"],
         ["scripts.wow_warlock.build"],
+        ["scripts.wow_class_spells.build"],
         # Reads the World Map, Professions and Item output above, so it runs last.
         ["scripts.wow_gear.build"],
     ]

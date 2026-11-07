@@ -41,6 +41,15 @@ def _names_list(key: str) -> Callable[[Any], Rows]:
     return rows
 
 
+def _class_spells(document: Any) -> Rows:
+    """Per-class name lists, each name its own row labelled with its class."""
+    return {
+        f"{cls}:{name}": (f"{name} ({cls})", name)
+        for cls, names in document.get("classes", {}).items()
+        for name in names
+    }
+
+
 @dataclass(frozen=True)
 class Section:
     title: str
@@ -60,6 +69,7 @@ SECTIONS = (
     Section("Engineering smelts", f"{WOW_DATA}/professions/crafting/engineering.json", _named_rows("smelting", "spell", "name")),
     Section("Warlock spells", f"{WOW_DATA}/warlock/warlockNames.json", _names_list("spells")),
     Section("Warlock pet abilities", f"{WOW_DATA}/warlock/warlockNames.json", _names_list("petSpells")),
+    Section("Class spells (Guide macros)", f"{WOW_DATA}/guide/classSpellNames.json", _class_spells),
     Section("Item Compare items", f"{WOW_DATA}/items/items.json", _column_rows("items", "id", "name")),
     Section("Maps and zones", f"{WOW_DATA}/worldMap/zones.json", _named_rows("zones", "id", "name")),
     Section("Flight points", f"{WOW_DATA}/worldMap/travel.json", _column_rows("nodes", "id", "name")),
