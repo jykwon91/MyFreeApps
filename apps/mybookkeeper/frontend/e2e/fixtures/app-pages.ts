@@ -1,0 +1,42 @@
+/**
+ * Every top-level page in App.tsx, for checks that sweep the whole app (the
+ * phone overflow guards). Add a page here when you add its route.
+ */
+export const APP_PAGES = [
+  "/",
+  "/analytics",
+  "/applicants",
+  "/calendar",
+  "/documents",
+  "/inquiries",
+  "/insurance-policies",
+  "/integrations",
+  "/lease-templates",
+  "/leases",
+  "/leases/new",
+  "/listings",
+  "/members",
+  "/mortgages",
+  "/payment-review",
+  "/properties",
+  "/receipts",
+  "/reconciliation",
+  "/reply-templates",
+  "/security",
+  "/tax",
+  "/tax-documents",
+  "/tax-returns",
+  "/tax-review",
+  "/tenants",
+  "/transactions",
+  "/utility-plans",
+  "/vendors",
+  "/welcome-manuals",
+  "/admin",
+  "/admin/system-health",
+  "/admin/costs",
+  "/admin/user-activity",
+  "/admin/demo",
+] as const;
+
+export type AppPage = (typeof APP_PAGES)[number];

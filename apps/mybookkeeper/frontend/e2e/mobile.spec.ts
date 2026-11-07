@@ -1,5 +1,6 @@
 import { test, expect } from "./fixtures/auth";
 import { toasts } from "./fixtures/toasts";
+import { APP_PAGES } from "./fixtures/app-pages";
 
 const MOBILE_VIEWPORT = { width: 375, height: 667 };
 
@@ -9,21 +10,6 @@ const PHONE_VIEWPORTS = [
   { name: "iPhone SE", width: 375, height: 667 },
   { name: "iPhone 12", width: 390, height: 844 },
   { name: "Pixel 5", width: 393, height: 851 },
-];
-
-const AUTH_PAGES = [
-  "/",
-  "/documents",
-  "/transactions",
-  "/tax",
-  "/tax/documents",
-  "/properties",
-  "/analytics",
-  "/admin",
-  "/admin/system-health",
-  "/admin/costs",
-  "/admin/user-activity",
-  "/admin/demo",
 ];
 
 // ─── Multi-viewport horizontal-overflow guard ────────────────────────────────
@@ -40,11 +26,13 @@ for (const device of PHONE_VIEWPORTS) {
       hasTouch: true,
     });
 
-    for (const url of AUTH_PAGES) {
+    for (const url of APP_PAGES) {
       test(`${url} — no horizontal overflow`, async ({ authedPage: page }) => {
         await page.goto(url);
         await page.waitForLoadState("domcontentloaded");
         await page.waitForTimeout(1200);
+        // A redirect (unknown route, missing role) would measure another page.
+        expect(new URL(page.url()).pathname).toBe(url);
 
         const { scrollWidth, wide } = await page.evaluate((target) => {
           const offenders: Array<{ tag: string; cls: string; width: number }> = [];

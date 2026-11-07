@@ -85,19 +85,19 @@ export default function ReconciliationWizard({ onToast, canWrite = true }: Recon
           <button
             key={label}
             onClick={() => setStep(i)}
-            className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
+            className={`flex-1 min-w-0 sm:flex-none px-2 sm:px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
               step === i
                 ? "border-primary text-primary bg-muted/50"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            <span className="inline-flex items-center gap-2">
+            <span className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
               <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs ${
                 step === i ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
               }`}>
                 {i + 1}
               </span>
-              {label}
+              <span className="text-center [overflow-wrap:anywhere]">{label}</span>
             </span>
           </button>
         ))}
