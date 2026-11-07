@@ -32,20 +32,19 @@ from app.schemas.properties.utility_plan_summary import UtilityPlanSummary
 def days_until_term_end(
     term_end_date: _dt.date | None,
     *,
-    today: _dt.date | None = None,
+    today: _dt.date,
 ) -> int | None:
     """Whole days from ``today`` to ``term_end_date``; negative once lapsed."""
     if term_end_date is None:
         return None
-    reference = today or _dt.date.today()
-    return (term_end_date - reference).days
+    return (term_end_date - today).days
 
 
 def renewal_status(
     rate_type: str,
     term_end_date: _dt.date | None,
     *,
-    today: _dt.date | None = None,
+    today: _dt.date,
     window_days: int = EXPIRING_SOON_DAYS,
 ) -> str:
     """Classify a plan's renewal urgency.
@@ -101,7 +100,7 @@ def to_summary(
     *,
     property_names: dict[uuid.UUID, str],
     current_ids: set[uuid.UUID],
-    today: _dt.date | None = None,
+    today: _dt.date,
 ) -> UtilityPlanSummary:
     return UtilityPlanSummary(
         id=plan.id,
@@ -126,7 +125,7 @@ def to_detail(
     *,
     property_name: str | None,
     is_current: bool,
-    today: _dt.date | None = None,
+    today: _dt.date,
 ) -> UtilityPlanResponse:
     return UtilityPlanResponse(
         id=plan.id,

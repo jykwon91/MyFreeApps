@@ -109,17 +109,16 @@ def benchmark_figure(benchmark: ComparableBenchmark | None) -> Decimal | None:
     return None if rate is None else Decimal(rate)
 
 
-def is_stale(observed_on: _dt.date, *, today: _dt.date | None = None) -> bool:
+def is_stale(observed_on: _dt.date, *, today: _dt.date) -> bool:
     """True once an observation is too old to describe the current market."""
-    reference = today or _dt.date.today()
-    return (reference - observed_on).days > BENCHMARK_STALE_AFTER_DAYS
+    return (today - observed_on).days > BENCHMARK_STALE_AFTER_DAYS
 
 
 def compare(
     plan: ComparablePlan,
     benchmark: ComparableBenchmark | None,
     *,
-    today: _dt.date | None = None,
+    today: _dt.date,
     material_gap_pct: float = MATERIAL_GAP_PCT,
 ) -> PlanComparison:
     """Classify one plan against the benchmark for its service type.

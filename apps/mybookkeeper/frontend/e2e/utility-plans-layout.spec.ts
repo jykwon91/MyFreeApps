@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { localToday } from "./fixtures/local-today";
 
 /**
  * Layout E2E for the Utility Plans list.
@@ -28,6 +29,7 @@ async function seedPlan(
 ): Promise<string> {
   const res = await api.post("/utility-plans", {
     data: {
+      today: localToday(),
       property_id: propertyId,
       service_type: "electricity",
       provider_name: providerName,
@@ -188,7 +190,7 @@ test.describe("Utility Plans layout", () => {
 
       // Hold the single-plan fetch so the dialog's skeleton is observable. The
       // list glob above it has already resolved.
-      await page.route(`**/api/utility-plans/${planId}`, async (route) => {
+      await page.route(`**/api/utility-plans/${planId}?*`, async (route) => {
         await new Promise((r) => setTimeout(r, 1500));
         await route.continue();
       });

@@ -1,6 +1,6 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { createProperty, deleteProperty } from "./fixtures/seed-data";
-import { localDateOffset } from "./fixtures/local-today";
+import { localDateOffset, localToday } from "./fixtures/local-today";
 
 /**
  * Layout E2E for the dashboard rate-comparison card and the market-rate dialog.
@@ -33,6 +33,7 @@ async function seedPlan(
 ): Promise<string> {
   const res = await api.post("/utility-plans", {
     data: {
+      today: localToday(),
       property_id: propertyId,
       service_type: SERVICE_TYPE,
       provider_name: providerName,
@@ -80,6 +81,7 @@ test.describe("Utility plan comparison layout", () => {
 
       const benchRes = await api.put(BENCHMARK_URL, {
         data: {
+          today: localToday(),
           monthly_cents: 6000,
           source: `E2E comparison layout ${runId}`,
           observed_on: localDateOffset(0),
@@ -90,7 +92,7 @@ test.describe("Utility plan comparison layout", () => {
 
       // Hold the comparison response long enough to observe the skeleton. The
       // glob is exact so the sibling `/utility-plans` list call is untouched.
-      await page.route("**/api/utility-plans/rate-comparison", async (route) => {
+      await page.route("**/api/utility-plans/rate-comparison?*", async (route) => {
         await new Promise((r) => setTimeout(r, 1500));
         await route.continue();
       });
@@ -154,6 +156,7 @@ test.describe("Utility plan comparison layout", () => {
 
       const benchRes = await api.put(BENCHMARK_URL, {
         data: {
+          today: localToday(),
           monthly_cents: 6000,
           source: `E2E a deliberately long provenance string for overflow ${runId}`,
           observed_on: localDateOffset(0),

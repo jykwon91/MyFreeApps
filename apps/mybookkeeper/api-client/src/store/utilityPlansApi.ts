@@ -1,4 +1,5 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { localToday } from "../utils/localToday";
 import type { UtilityPlanDetail } from "../types/utility/utility-plan-detail";
 import type { UtilityPlanListArgs } from "../types/utility/utility-plan-list-args";
 import type { UtilityPlanListResponse } from "../types/utility/utility-plan-list-response";
@@ -11,6 +12,7 @@ export const utilityPlansApi = baseApi.enhanceEndpoints({
       query: (args) => ({
         url: "/utility-plans",
         params: {
+          today: localToday(),
           ...(args?.property_id ? { property_id: args.property_id } : {}),
           ...(args?.service_type ? { service_type: args.service_type } : {}),
           ...(args?.expiring_before ? { expiring_before: args.expiring_before } : {}),
@@ -27,7 +29,7 @@ export const utilityPlansApi = baseApi.enhanceEndpoints({
           : [{ type: "UtilityPlan" as const, id: "LIST" }],
     }),
     getUtilityPlanById: builder.query<UtilityPlanDetail, string>({
-      query: (id) => ({ url: `/utility-plans/${id}` }),
+      query: (id) => ({ url: `/utility-plans/${id}`, params: { today: localToday() } }),
       providesTags: (_result, _error, id) => [{ type: "UtilityPlan", id }],
     }),
   }),

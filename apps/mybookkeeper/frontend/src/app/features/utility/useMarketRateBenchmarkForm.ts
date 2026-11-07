@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
 import { showError, showSuccess } from "@platform/ui";
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import {
   useDeleteMarketRateBenchmarkMutation,
   useUpsertMarketRateBenchmarkMutation,
@@ -12,14 +13,6 @@ interface UseMarketRateBenchmarkFormArgs {
   serviceType: UtilityServiceType;
   existing: MarketRateBenchmark | undefined;
   onSaved: () => void;
-}
-
-/** Today as ``YYYY-MM-DD`` in local time — ``toISOString`` would shift the date. */
-function todayLocalIso(): string {
-  const now = new Date();
-  const month = `${now.getMonth() + 1}`.padStart(2, "0");
-  const day = `${now.getDate()}`.padStart(2, "0");
-  return `${now.getFullYear()}-${month}-${day}`;
 }
 
 /**
@@ -47,7 +40,7 @@ export function useMarketRateBenchmarkForm({
     return existing.rate_cents_per_kwh ?? "";
   });
   const [source, setSource] = useState(existing?.source ?? "");
-  const [observedOn, setObservedOn] = useState(existing?.observed_on ?? todayLocalIso());
+  const [observedOn, setObservedOn] = useState(existing?.observed_on ?? localToday());
   const [notes, setNotes] = useState(existing?.notes ?? "");
 
   const [upsert, { isLoading: isSaving }] = useUpsertMarketRateBenchmarkMutation();
@@ -116,7 +109,7 @@ export function useMarketRateBenchmarkForm({
     isRemoving,
     canSubmit,
     canRemove,
-    maxObservedOn: todayLocalIso(),
+    maxObservedOn: localToday(),
     handleSubmit,
     handleRemove,
   };

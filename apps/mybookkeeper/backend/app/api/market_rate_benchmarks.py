@@ -12,10 +12,13 @@ The comparison these benchmarks feed lives at ``/utility-plans/rate-comparison``
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Response
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
+from app.schemas.dates.client_local_date import ClientLocalDate
 from app.schemas.properties.market_rate_benchmark_response import (
     MarketRateBenchmarkResponse,
 )
@@ -31,6 +34,7 @@ _NOT_FOUND_DETAIL = "No benchmark recorded for that service type"
 
 @router.get("", response_model=list[MarketRateBenchmarkResponse])
 async def list_benchmarks(
+    today: Annotated[ClientLocalDate, Query()],
     ctx: RequestContext = Depends(current_org_member),
 ) -> list[MarketRateBenchmarkResponse]:
     """Every benchmark the organization has recorded.
@@ -39,6 +43,7 @@ async def list_benchmarks(
     """
     return await market_rate_benchmark_service.list_benchmarks(
         organization_id=ctx.organization_id,
+        today=today,
     )
 
 
@@ -58,6 +63,7 @@ async def upsert_benchmark(
             source=payload.source,
             observed_on=payload.observed_on,
             notes=payload.notes,
+            today=payload.today,
         )
     except market_rate_benchmark_service.InvalidMarketRateBenchmarkError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

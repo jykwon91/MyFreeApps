@@ -68,7 +68,7 @@ class InvalidMarketRateBenchmarkError(ValueError):
 
 
 def _to_response(
-    benchmark: _StoredBenchmark, *, today: _dt.date | None = None,
+    benchmark: _StoredBenchmark, *, today: _dt.date,
 ) -> MarketRateBenchmarkResponse:
     return MarketRateBenchmarkResponse(
         id=benchmark.id,
@@ -128,7 +128,7 @@ def _assert_shape_matches_service(
 async def list_benchmarks(
     *,
     organization_id: uuid.UUID,
-    today: _dt.date | None = None,
+    today: _dt.date,
 ) -> list[MarketRateBenchmarkResponse]:
     async with unit_of_work() as db:
         rows = await market_rate_benchmark_repo.list_for_org(
@@ -147,7 +147,7 @@ async def upsert_benchmark(
     source: str | None,
     observed_on: _dt.date,
     notes: str | None,
-    today: _dt.date | None = None,
+    today: _dt.date,
 ) -> MarketRateBenchmarkResponse:
     """Record the organization's market rate for ``service_type``.
 
@@ -200,7 +200,7 @@ async def get_rate_comparison(
     *,
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
-    today: _dt.date | None = None,
+    today: _dt.date,
     material_gap_pct: float = MATERIAL_GAP_PCT,
 ) -> UtilityPlanRateComparisonResponse:
     """Current plans measured against the market benchmark for their service.

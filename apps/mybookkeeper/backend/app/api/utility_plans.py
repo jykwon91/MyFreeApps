@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import uuid
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import (
     APIRouter,
@@ -27,6 +27,7 @@ from app.core.rate_limit import (
 )
 from app.core.upload_errors import upload_error_status
 from app.core.utility_plan_constants import EXPIRING_SOON_DAYS
+from app.schemas.dates.client_local_date import ClientLocalDate
 from app.schemas.properties.utility_plan_create_request import UtilityPlanCreateRequest
 from app.schemas.properties.utility_offer_search_response import (
     UtilityOfferSearchResponse,
@@ -64,7 +65,8 @@ async def create_plan(
         return await utility_plan_service.create_plan(
             user_id=ctx.user_id,
             organization_id=ctx.organization_id,
-            fields=payload.model_dump(),
+            fields=payload.model_dump(exclude={"today"}),
+            today=payload.today,
         )
     except utility_plan_service.InvalidUtilityPlanError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -132,6 +134,7 @@ async def extract_plan_from_upload(
 
 @router.get("", response_model=UtilityPlanListResponse)
 async def list_plans(
+    today: Annotated[ClientLocalDate, Query()],
     property_id: uuid.UUID | None = Query(None),
     service_type: str | None = Query(None),
     expiring_before: _dt.date | None = Query(None),
@@ -147,11 +150,13 @@ async def list_plans(
         expiring_before=expiring_before,
         limit=limit,
         offset=offset,
+        today=today,
     )
 
 
 @router.get("/renewal-alerts", response_model=UtilityPlanRenewalAlertResponse)
 async def get_renewal_alerts(
+    today: Annotated[ClientLocalDate, Query()],
     window_days: int = Query(EXPIRING_SOON_DAYS, ge=1, le=365),
     ctx: RequestContext = Depends(current_org_member),
 ) -> UtilityPlanRenewalAlertResponse:
@@ -164,11 +169,13 @@ async def get_renewal_alerts(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         window_days=window_days,
+        today=today,
     )
 
 
 @router.get("/rate-comparison", response_model=UtilityPlanRateComparisonResponse)
 async def get_rate_comparison(
+    today: Annotated[ClientLocalDate, Query()],
     ctx: RequestContext = Depends(current_org_member),
 ) -> UtilityPlanRateComparisonResponse:
     """Current plans priced materially above the recorded market benchmark.
@@ -180,11 +187,13 @@ async def get_rate_comparison(
     return await market_rate_benchmark_service.get_rate_comparison(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
+        today=today,
     )
 
 
 @router.get("/offers", response_model=UtilityOfferSearchResponse)
 async def find_better_plans(
+    today: Annotated[ClientLocalDate, Query()],
     min_term_months: int = Query(DEFAULT_MIN_TERM_MONTHS, ge=1, le=60),
     ctx: RequestContext = Depends(current_org_member),
 ) -> UtilityOfferSearchResponse:
@@ -198,12 +207,14 @@ async def find_better_plans(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         min_term_months=min_term_months,
+        today=today,
     )
 
 
 @router.get("/{plan_id}", response_model=UtilityPlanResponse)
 async def get_plan(
     plan_id: uuid.UUID,
+    today: Annotated[ClientLocalDate, Query()],
     ctx: RequestContext = Depends(current_org_member),
 ) -> UtilityPlanResponse:
     try:
@@ -211,6 +222,7 @@ async def get_plan(
             user_id=ctx.user_id,
             organization_id=ctx.organization_id,
             plan_id=plan_id,
+            today=today,
         )
     except utility_plan_service.UtilityPlanNotFoundError as exc:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL) from exc
@@ -224,13 +236,14 @@ async def update_plan(
 ) -> UtilityPlanResponse:
     # exclude_unset preserves the distinction between "field omitted" and
     # "field explicitly set to null".
-    raw: dict[str, Any] = payload.model_dump(exclude_unset=True)
+    raw: dict[str, Any] = payload.model_dump(exclude_unset=True, exclude={"today"})
     if not raw:
         try:
             return await utility_plan_service.get_plan(
                 user_id=ctx.user_id,
                 organization_id=ctx.organization_id,
                 plan_id=plan_id,
+                today=payload.today,
             )
         except utility_plan_service.UtilityPlanNotFoundError as exc:
             raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL) from exc
@@ -241,6 +254,7 @@ async def update_plan(
             organization_id=ctx.organization_id,
             plan_id=plan_id,
             fields=raw,
+            today=payload.today,
         )
     except utility_plan_service.UtilityPlanNotFoundError as exc:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL) from exc

@@ -137,7 +137,9 @@ class TestIsStale:
 
 class TestCompare:
     def test_no_benchmark_short_circuits(self) -> None:
-        result = compare(_Plan(avg_price_cents_per_kwh_at_1000=Decimal("15")), None)
+        result = compare(
+            _Plan(avg_price_cents_per_kwh_at_1000=Decimal("15")), None, today=TODAY,
+        )
         assert result.status == BENCHMARK_STATUS_NO_BENCHMARK
         assert result.gap_pct is None
 

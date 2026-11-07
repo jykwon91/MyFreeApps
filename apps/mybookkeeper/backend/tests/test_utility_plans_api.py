@@ -56,6 +56,11 @@ _SERVICE = "app.api.utility_plans.utility_plan_service"
 _EXTRACTION = "app.api.utility_plans.utility_plan_extraction_service"
 _OFFERS = "app.api.utility_plans.utility_offer_service"
 
+# The client's local date, which the routes require and bound to within a day
+# of the server's UTC date — so it is derived from the real clock, not fixed.
+TODAY = _dt.datetime.now(_dt.timezone.utc).date()
+TODAY_PARAMS = {"today": TODAY.isoformat()}
+
 
 def _ctx(role: OrgRole = OrgRole.OWNER) -> RequestContext:
     return RequestContext(organization_id=ORG_ID, user_id=USER_ID, org_role=role)
@@ -119,6 +124,7 @@ class TestCreate:
             response = client.post(
                 "/utility-plans",
                 json={
+                    "today": TODAY.isoformat(),
                     "property_id": str(PROPERTY_ID),
                     "service_type": "electricity",
                     "provider_name": "Constellation",
@@ -140,6 +146,7 @@ class TestCreate:
         response = client.post(
             "/utility-plans",
             json={
+                "today": TODAY.isoformat(),
                 "property_id": str(PROPERTY_ID),
                 "service_type": "teleportation",
                 "provider_name": "Constellation",
@@ -152,6 +159,7 @@ class TestCreate:
         response = client.post(
             "/utility-plans",
             json={
+                "today": TODAY.isoformat(),
                 "property_id": str(PROPERTY_ID),
                 "service_type": "electricity",
                 "provider_name": "Constellation",
@@ -168,6 +176,7 @@ class TestCreate:
         response = client.post(
             "/utility-plans",
             json={
+                "today": TODAY.isoformat(),
                 "property_id": str(PROPERTY_ID),
                 "service_type": "electricity",
                 "provider_name": "Constellation",
@@ -188,6 +197,7 @@ class TestCreate:
             response = client.post(
                 "/utility-plans",
                 json={
+                    "today": TODAY.isoformat(),
                     "property_id": str(PROPERTY_ID),
                     "service_type": "internet",
                     "provider_name": "AT&T Fiber",
@@ -217,6 +227,7 @@ class TestCreate:
         response = client.post(
             "/utility-plans",
             json={
+                "today": TODAY.isoformat(),
                 "property_id": str(PROPERTY_ID),
                 "service_type": "internet",
                 "provider_name": "AT&T Fiber",
@@ -235,6 +246,7 @@ class TestCreate:
         response = client.post(
             "/utility-plans",
             json={
+                "today": TODAY.isoformat(),
                 "property_id": str(PROPERTY_ID),
                 "service_type": "internet",
                 "provider_name": "AT&T Fiber",
@@ -252,6 +264,7 @@ class TestCreate:
             response = client.post(
                 "/utility-plans",
                 json={
+                    "today": TODAY.isoformat(),
                     "property_id": str(PROPERTY_ID),
                     "service_type": "electricity",
                     "provider_name": "Constellation",
@@ -284,6 +297,7 @@ class TestCreate:
             response = client.post(
                 "/utility-plans",
                 json={
+                    "today": TODAY.isoformat(),
                     "property_id": str(PROPERTY_ID),
                     "service_type": "electricity",
                     "provider_name": "Constellation",
@@ -299,6 +313,7 @@ class TestCreate:
         response = client.post(
             "/utility-plans",
             json={
+                "today": TODAY.isoformat(),
                 "property_id": str(PROPERTY_ID),
                 "service_type": "electricity",
                 "provider_name": "Constellation",
@@ -563,6 +578,7 @@ class TestList:
             response = client.get(
                 "/utility-plans",
                 params={
+                    **TODAY_PARAMS,
                     "property_id": str(PROPERTY_ID),
                     "service_type": "natural_gas",
                     "expiring_before": "2026-12-31",
@@ -580,7 +596,9 @@ class TestList:
         assert kwargs["offset"] == 20
 
     def test_limit_above_the_cap_returns_422(self, client: TestClient) -> None:
-        response = client.get("/utility-plans", params={"limit": 500})
+        response = client.get(
+            "/utility-plans", params={**TODAY_PARAMS, "limit": 500},
+        )
         assert response.status_code == 422
 
 
@@ -602,7 +620,9 @@ class TestRenewalAlerts:
         ) as mock_alerts, patch(
             f"{_SERVICE}.get_plan", new_callable=AsyncMock,
         ) as mock_get:
-            response = client.get("/utility-plans/renewal-alerts")
+            response = client.get(
+                "/utility-plans/renewal-alerts", params=TODAY_PARAMS,
+            )
 
         assert response.status_code == 200
         assert mock_alerts.await_count == 1
@@ -619,7 +639,8 @@ class TestRenewalAlerts:
             return_value=payload,
         ) as mock_alerts:
             response = client.get(
-                "/utility-plans/renewal-alerts", params={"window_days": 90},
+                "/utility-plans/renewal-alerts",
+                params={**TODAY_PARAMS, "window_days": 90},
             )
 
         assert response.status_code == 200
@@ -627,7 +648,8 @@ class TestRenewalAlerts:
 
     def test_window_days_out_of_range_returns_422(self, client: TestClient) -> None:
         response = client.get(
-            "/utility-plans/renewal-alerts", params={"window_days": 0},
+            "/utility-plans/renewal-alerts",
+            params={**TODAY_PARAMS, "window_days": 0},
         )
         assert response.status_code == 422
 
@@ -639,11 +661,13 @@ class TestGet:
             new_callable=AsyncMock,
             side_effect=UtilityPlanNotFoundError(str(PLAN_ID)),
         ):
-            response = client.get(f"/utility-plans/{PLAN_ID}")
+            response = client.get(
+                f"/utility-plans/{PLAN_ID}", params=TODAY_PARAMS,
+            )
         assert response.status_code == 404
 
     def test_non_uuid_id_returns_422(self, client: TestClient) -> None:
-        response = client.get("/utility-plans/not-a-uuid")
+        response = client.get("/utility-plans/not-a-uuid", params=TODAY_PARAMS)
         assert response.status_code == 422
 
 
@@ -654,7 +678,7 @@ class TestUpdate:
             f"{_SERVICE}.update_plan", new_callable=AsyncMock, return_value=_detail(),
         ) as mock_update:
             response = client.patch(
-                f"/utility-plans/{PLAN_ID}", json={"plan_name": "Renewed 12"},
+                f"/utility-plans/{PLAN_ID}", json={"today": TODAY.isoformat(), "plan_name": "Renewed 12"},
             )
 
         assert response.status_code == 200
@@ -664,7 +688,7 @@ class TestUpdate:
         with patch(
             f"{_SERVICE}.update_plan", new_callable=AsyncMock, return_value=_detail(),
         ) as mock_update:
-            client.patch(f"/utility-plans/{PLAN_ID}", json={"term_end_date": None})
+            client.patch(f"/utility-plans/{PLAN_ID}", json={"today": TODAY.isoformat(), "term_end_date": None})
 
         assert mock_update.await_args.kwargs["fields"] == {"term_end_date": None}
 
@@ -674,7 +698,7 @@ class TestUpdate:
         ) as mock_get, patch(
             f"{_SERVICE}.update_plan", new_callable=AsyncMock,
         ) as mock_update:
-            response = client.patch(f"/utility-plans/{PLAN_ID}", json={})
+            response = client.patch(f"/utility-plans/{PLAN_ID}", json={"today": TODAY.isoformat()})
 
         assert response.status_code == 200
         assert mock_get.await_count == 1
@@ -692,7 +716,7 @@ class TestUpdate:
             f"{_SERVICE}.update_plan", new_callable=AsyncMock, return_value=_detail(),
         ) as mock_update:
             response = client.patch(
-                f"/utility-plans/{PLAN_ID}", json={"post_promo_monthly_cents": 9500},
+                f"/utility-plans/{PLAN_ID}", json={"today": TODAY.isoformat(), "post_promo_monthly_cents": 9500},
             )
 
         assert response.status_code == 200
@@ -711,7 +735,7 @@ class TestUpdate:
             ),
         ):
             response = client.patch(
-                f"/utility-plans/{PLAN_ID}", json={"term_end_date": "2020-01-01"},
+                f"/utility-plans/{PLAN_ID}", json={"today": TODAY.isoformat(), "term_end_date": "2020-01-01"},
             )
 
         assert response.status_code == 422
@@ -724,7 +748,7 @@ class TestUpdate:
             side_effect=UtilityPlanNotFoundError(str(PLAN_ID)),
         ):
             response = client.patch(
-                f"/utility-plans/{PLAN_ID}", json={"plan_name": "X"},
+                f"/utility-plans/{PLAN_ID}", json={"today": TODAY.isoformat(), "plan_name": "X"},
             )
         assert response.status_code == 404
 
@@ -759,6 +783,7 @@ class TestPermissions:
             assert client.post(
                 "/utility-plans",
                 json={
+                    "today": TODAY.isoformat(),
                     "property_id": str(PROPERTY_ID),
                     "service_type": "electricity",
                     "provider_name": "Constellation",
@@ -766,7 +791,7 @@ class TestPermissions:
                 },
             ).status_code == 403
             assert client.patch(
-                f"/utility-plans/{PLAN_ID}", json={"plan_name": "X"},
+                f"/utility-plans/{PLAN_ID}", json={"today": TODAY.isoformat(), "plan_name": "X"},
             ).status_code == 403
             assert client.delete(f"/utility-plans/{PLAN_ID}").status_code == 403
         finally:
@@ -779,7 +804,9 @@ class TestPermissions:
             with patch(
                 f"{_SERVICE}.list_plans", new_callable=AsyncMock, return_value=empty,
             ):
-                assert TestClient(app).get("/utility-plans").status_code == 200
+                assert TestClient(app).get(
+                    "/utility-plans", params=TODAY_PARAMS,
+                ).status_code == 200
         finally:
             app.dependency_overrides.clear()
 
@@ -809,7 +836,7 @@ class TestFindBetterPlans:
                     groups=[], reference_annual_kwh=12_000,
                 ),
             ):
-                response = client.get("/utility-plans/offers")
+                response = client.get("/utility-plans/offers", params=TODAY_PARAMS)
 
         assert response.status_code == 200
         mock_get.assert_not_called()
@@ -822,14 +849,21 @@ class TestFindBetterPlans:
                 groups=[], reference_annual_kwh=12_000,
             ),
         ) as mock_find:
-            response = client.get("/utility-plans/offers?min_term_months=24")
+            response = client.get(
+                "/utility-plans/offers",
+                params={**TODAY_PARAMS, "min_term_months": 24},
+            )
 
         assert response.status_code == 200
         assert mock_find.await_args.kwargs["min_term_months"] == 24
 
     def test_an_absurd_term_is_rejected(self, client: TestClient) -> None:
-        assert client.get("/utility-plans/offers?min_term_months=0").status_code == 422
-        assert client.get("/utility-plans/offers?min_term_months=99").status_code == 422
+        assert client.get(
+            "/utility-plans/offers", params={**TODAY_PARAMS, "min_term_months": 0},
+        ).status_code == 422
+        assert client.get(
+            "/utility-plans/offers", params={**TODAY_PARAMS, "min_term_months": 99},
+        ).status_code == 422
 
     def test_a_read_only_member_may_search(self) -> None:
         """Searching the market changes nothing, so a viewer may do it."""
@@ -842,6 +876,158 @@ class TestFindBetterPlans:
                     groups=[], reference_annual_kwh=12_000,
                 ),
             ):
-                assert TestClient(app).get("/utility-plans/offers").status_code == 200
+                assert TestClient(app).get(
+                    "/utility-plans/offers", params=TODAY_PARAMS,
+                ).status_code == 200
         finally:
             app.dependency_overrides.clear()
+
+
+_TODAY_GET_ROUTES = [
+    "/utility-plans",
+    "/utility-plans/renewal-alerts",
+    "/utility-plans/rate-comparison",
+    "/utility-plans/offers",
+    "/utility-plans/{plan_id}",
+]
+
+
+class TestTodayQueryParam:
+    @pytest.mark.parametrize("path", _TODAY_GET_ROUTES)
+    def test_missing_today_returns_422(self, client: TestClient, path: str) -> None:
+        assert client.get(path.format(plan_id=PLAN_ID)).status_code == 422
+
+    @pytest.mark.parametrize("path", _TODAY_GET_ROUTES)
+    @pytest.mark.parametrize("offset_days", [-3, 3])
+    def test_a_today_three_days_off_returns_422(
+        self, client: TestClient, path: str, offset_days: int,
+    ) -> None:
+        off = TODAY + _dt.timedelta(days=offset_days)
+        response = client.get(path.format(plan_id=PLAN_ID), params={"today": off.isoformat()})
+        assert response.status_code == 422
+
+    def test_renewal_alerts_receives_today_as_a_date(self, client: TestClient) -> None:
+        ahead = TODAY + _dt.timedelta(days=1)
+        payload = UtilityPlanRenewalAlertResponse(
+            window_days=EXPIRING_SOON_DAYS,
+            expired=[],
+            expiring_soon=[],
+            total_needing_attention=0,
+        )
+        with patch(
+            f"{_SERVICE}.get_renewal_alerts",
+            new_callable=AsyncMock,
+            return_value=payload,
+        ) as mock_alerts:
+            response = client.get(
+                "/utility-plans/renewal-alerts", params={"today": ahead.isoformat()},
+            )
+
+        assert response.status_code == 200
+        assert mock_alerts.await_args.kwargs["today"] == ahead
+
+    def test_offers_receives_today_as_a_date(self, client: TestClient) -> None:
+        with patch(
+            f"{_OFFERS}.find_better_plans",
+            new_callable=AsyncMock,
+            return_value=UtilityOfferSearchResponse(
+                groups=[], reference_annual_kwh=12_000,
+            ),
+        ) as mock_find:
+            client.get("/utility-plans/offers", params=TODAY_PARAMS)
+
+        assert mock_find.await_args.kwargs["today"] == TODAY
+
+    def test_list_and_get_receive_today_as_a_date(self, client: TestClient) -> None:
+        empty = UtilityPlanListResponse(items=[], total=0, has_more=False)
+        with patch(
+            f"{_SERVICE}.list_plans", new_callable=AsyncMock, return_value=empty,
+        ) as mock_list, patch(
+            f"{_SERVICE}.get_plan", new_callable=AsyncMock, return_value=_detail(),
+        ) as mock_get:
+            client.get("/utility-plans", params=TODAY_PARAMS)
+            client.get(f"/utility-plans/{PLAN_ID}", params=TODAY_PARAMS)
+
+        assert mock_list.await_args.kwargs["today"] == TODAY
+        assert mock_get.await_args.kwargs["today"] == TODAY
+
+
+class TestTodayBodyField:
+    _CREATE_BODY = {
+        "property_id": str(PROPERTY_ID),
+        "service_type": "electricity",
+        "provider_name": "Constellation",
+        "rate_type": "fixed",
+    }
+
+    def test_create_requires_today(self, client: TestClient) -> None:
+        response = client.post("/utility-plans", json=self._CREATE_BODY)
+        assert response.status_code == 422
+
+    def test_create_rejects_a_today_three_days_off(self, client: TestClient) -> None:
+        off = (TODAY + _dt.timedelta(days=3)).isoformat()
+        response = client.post(
+            "/utility-plans", json={**self._CREATE_BODY, "today": off},
+        )
+        assert response.status_code == 422
+
+    def test_create_passes_today_separately_from_the_stored_fields(
+        self, client: TestClient,
+    ) -> None:
+        with patch(
+            f"{_SERVICE}.create_plan", new_callable=AsyncMock, return_value=_detail(),
+        ) as mock_create:
+            response = client.post(
+                "/utility-plans",
+                json={**self._CREATE_BODY, "today": TODAY.isoformat()},
+            )
+
+        assert response.status_code == 201
+        kwargs = mock_create.await_args.kwargs
+        assert kwargs["today"] == TODAY
+        assert "today" not in kwargs["fields"]
+
+    def test_update_requires_today(self, client: TestClient) -> None:
+        response = client.patch(
+            f"/utility-plans/{PLAN_ID}", json={"plan_name": "Renewed 12"},
+        )
+        assert response.status_code == 422
+
+    def test_update_rejects_a_today_three_days_off(self, client: TestClient) -> None:
+        off = (TODAY - _dt.timedelta(days=3)).isoformat()
+        response = client.patch(
+            f"/utility-plans/{PLAN_ID}", json={"today": off, "plan_name": "X"},
+        )
+        assert response.status_code == 422
+
+    def test_update_passes_today_separately_from_the_stored_fields(
+        self, client: TestClient,
+    ) -> None:
+        with patch(
+            f"{_SERVICE}.update_plan", new_callable=AsyncMock, return_value=_detail(),
+        ) as mock_update:
+            response = client.patch(
+                f"/utility-plans/{PLAN_ID}",
+                json={"today": TODAY.isoformat(), "plan_name": "Renewed 12"},
+            )
+
+        assert response.status_code == 200
+        kwargs = mock_update.await_args.kwargs
+        assert kwargs["today"] == TODAY
+        assert kwargs["fields"] == {"plan_name": "Renewed 12"}
+
+    def test_a_today_only_update_reads_with_that_today(
+        self, client: TestClient,
+    ) -> None:
+        with patch(
+            f"{_SERVICE}.get_plan", new_callable=AsyncMock, return_value=_detail(),
+        ) as mock_get, patch(
+            f"{_SERVICE}.update_plan", new_callable=AsyncMock,
+        ) as mock_update:
+            response = client.patch(
+                f"/utility-plans/{PLAN_ID}", json={"today": TODAY.isoformat()},
+            )
+
+        assert response.status_code == 200
+        assert mock_get.await_args.kwargs["today"] == TODAY
+        assert mock_update.await_count == 0

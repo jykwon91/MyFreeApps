@@ -110,7 +110,9 @@ async def flag_expiring_utility_plans() -> int:
     stop the Gmail or lease steps in the same cycle.
     """
     try:
-        flagged = await utility_plan_service.sweep_plans_needing_renewal()
+        flagged = await utility_plan_service.sweep_plans_needing_renewal(
+            today=_dt.datetime.now(_dt.timezone.utc).date(),
+        )
     except Exception:
         logger.exception("flag_expiring_utility_plans cycle failed")
         return 0

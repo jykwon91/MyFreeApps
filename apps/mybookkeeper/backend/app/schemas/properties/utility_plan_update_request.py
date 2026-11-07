@@ -12,6 +12,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.schemas.dates.client_local_date import ClientLocalDate
 from app.schemas.properties.utility_plan_validation import (
     MAX_MBPS,
     MAX_RATE_CENTS,
@@ -57,6 +58,9 @@ class UtilityPlanUpdateRequest(BaseModel):
     source_document_id: uuid.UUID | None = None
 
     notes: str | None = Field(None, max_length=5000)
+
+    # Not stored: the date the returned renewal status is measured from.
+    today: ClientLocalDate
 
     model_config = ConfigDict(extra="forbid")
 

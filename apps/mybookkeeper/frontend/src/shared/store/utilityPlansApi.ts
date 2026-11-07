@@ -1,3 +1,4 @@
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import { baseApi } from "./baseApi";
 import type { UtilityPlanCreateRequest } from "@/shared/types/utility/utility-plan-create-request";
 import type { UtilityPlanDetail } from "@mybookkeeper/api-client/types/utility/utility-plan-detail";
@@ -26,6 +27,7 @@ const utilityPlansApi = baseApi.injectEndpoints({
       query: (args) => ({
         url: "/utility-plans/renewal-alerts",
         params: {
+          today: localToday(),
           ...(args?.window_days !== undefined
             ? { window_days: args.window_days }
             : {}),
@@ -36,9 +38,12 @@ const utilityPlansApi = baseApi.injectEndpoints({
 
     createUtilityPlan: builder.mutation<
       UtilityPlanDetail,
-      UtilityPlanCreateRequest
+      Omit<UtilityPlanCreateRequest, "today">
     >({
-      query: (data) => ({ url: "/utility-plans", method: "POST", data }),
+      query: (fields) => {
+        const data: UtilityPlanCreateRequest = { ...fields, today: localToday() };
+        return { url: "/utility-plans", method: "POST", data };
+      },
       invalidatesTags: [
         { type: "UtilityPlan", id: "LIST" },
         { type: "UtilityPlan", id: "ALERTS" },
@@ -51,13 +56,12 @@ const utilityPlansApi = baseApi.injectEndpoints({
 
     updateUtilityPlan: builder.mutation<
       UtilityPlanDetail,
-      { planId: string; data: UtilityPlanUpdateRequest }
+      { planId: string; data: Omit<UtilityPlanUpdateRequest, "today"> }
     >({
-      query: ({ planId, data }) => ({
-        url: `/utility-plans/${planId}`,
-        method: "PATCH",
-        data,
-      }),
+      query: ({ planId, data }) => {
+        const body: UtilityPlanUpdateRequest = { ...data, today: localToday() };
+        return { url: `/utility-plans/${planId}`, method: "PATCH", data: body };
+      },
       invalidatesTags: (_r, _e, { planId }) => [
         { type: "UtilityPlan", id: planId },
         { type: "UtilityPlan", id: "LIST" },
