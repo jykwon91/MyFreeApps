@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { Check, Link as LinkIcon } from "lucide-react";
 import { showError, showSuccess } from "@platform/ui";
-import { bisListShareOrigin } from "@/games/wow-forever/lib/bisLists/bisListShareOrigin";
+import { shareOrigin } from "@/games/wow-forever/lib/shareOrigin";
 import { bisListShareUrl, toSharedBisList } from "@/games/wow-forever/lib/bisLists/bisListShareUrl";
 import type { SharedBisList } from "@/games/wow-forever/types/bisLists/sharedBisList";
 
@@ -22,7 +22,7 @@ export default function BisListCopyLinkButton({ list }: { list: SharedBisList })
 
   async function copy() {
     window.clearTimeout(timer.current);
-    const url = bisListShareUrl(bisListShareOrigin(),toSharedBisList(list));
+    const url = bisListShareUrl(shareOrigin(), toSharedBisList(list));
     try {
       await navigator.clipboard.writeText(url);
     } catch {

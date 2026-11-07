@@ -6,6 +6,6 @@ import { MGA_SITE_URL } from "@/constants/discordActivity";
  * from a discordsays.com origin that only works inside Discord, so links go to
  * the real site instead.
  */
-export function bisListShareOrigin(): string {
+export function shareOrigin(): string {
   return isDiscordActivity() ? MGA_SITE_URL : window.location.origin;
 }

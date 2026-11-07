@@ -385,7 +385,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   one layer of an app's escaping is undone: separators sent as `%7E`, or a
   `%` before the name field — a link we made never has one there). Links
   point at `window.location.origin`, or `MGA_SITE_URL` inside the Discord
-  Activity (`bisListShareOrigin.ts`). Decoding is strict: >1200
+  Activity (`lib/shareOrigin.ts`, shared with the World Map's share link). Decoding is strict: >1200
   chars, wrong version, unknown class or field count → "This list link
   doesn't work"; unknown slots / malformed ids ignored; then
   `checkSharedList.ts` drops ids not in `items.json` or not wearable in that
@@ -625,7 +625,9 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`?m=<uiMapId>`, pushed on navigation so browser Back = zoom out); with no `m`
   the page follows the player's zone. Browsing never changes the saved
   position — only a click on your own zone's map (or a confirmed "Set position
-  here") does. Zoom out = button, breadcrumb, right-click or Esc.
+  here") does. Zoom out = Esc, the breadcrumb's Zoom out button, browser
+  Back, the −/Reset buttons, or "Zoom out to …" in the map menu. **Right-click
+  no longer zooms out** (since P3) — it opens the map menu (see My marks).
 - **Hit-testing** (`worldMap/mapHitTest.ts`, mirrors `C_Map.GetMapInfoAtPosition`):
   on a continent/world view the candidates are the children; on a zone view,
   its siblings. A candidate must cover the point with its mask
@@ -745,6 +747,46 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `wowWorldMapLayers.test.ts`, `e2e/wow-world-map-layers.spec.ts`; specs
   that click a zone's ground switch layers off first
   (`e2e/fixtures/mapLayers.ts`).
+- **My marks, my route, Share this view** (P3; browser-only, no server):
+  - **Map menu** (`useMapPressMenu`, `MapContextMenu`): right-click, a ~500 ms
+    press with a finger (`LONG_PRESS_MS`; a ring fills from 150 ms; any drag
+    > 6 px, a second finger or a page scroll cancels it; the browser's own
+    long-press `contextmenu` is swallowed) or Shift+F10 / the menu key on the
+    focused map (opens at the view's middle). Items: "Add a mark here",
+    "Copy coordinates" (`x, y`, 0–100, one decimal) and "Zoom out to
+    <parent>" (hidden at the root). Bottom sheet below `sm`. Also "Place a
+    mark" (crosshair; Esc cancels) and "Add a mark at the map's centre" in
+    the My marks panel for players who can't right-click or long-press.
+  - **Marks** (`hooks/useMapMarks.ts`, pure CRUD in `worldMap/mapMarks.ts`):
+    per map, localStorage `mga.wowForever.worldMap.marks.v1`, re-validated on
+    read (`parseStoredMapMarks`). Label (≤ 40 chars, control characters
+    dropped by `lib/cleanUserText.ts`, rendered as text only) + a style from
+    `data/worldMap/mapMarkStyles.ts` (style codes are in share links — never
+    reuse one). Caps in `data/worldMap/mapMarks.ts`: 30 marks per map, 200 in
+    all, 25 route stops. Delete has Undo, never a confirm.
+  - **Route** (`MapRouteList`, `worldMap/routeDistance.ts`): ordered stops of
+    your own marks on one map, drawn as a numbered fuchsia line; reorder,
+    remove, clear. Distances are **straight-line yards** (the directions'
+    map ↔ world conversion, `mapToWorld` + `yardsBetween`) — no pathfinding,
+    and the panel says so.
+  - **Share link** (`worldMap/mapViewShare.ts`, `ShareViewButton`):
+    `/wow-forever/map?m=<id>#view=1~<mapId>~<scale×100>.<cx×1000>.<cy×1000>~<layer codes ".">~<marks "_": x×10,y×10,styleCode,label>~<route indexes ".">`.
+    Layer codes are `data/worldMap/mapLayerShareCodes.ts` (never reuse one).
+    Labels percent-encoded incl. `~!'()*_`; one layer of an app's escaping is
+    undone (`%7E` separators, or a whole-link encode — a marks field we wrote
+    always has a ","). Decoding is strict (> 8000 chars, wrong version,
+    unknown map, bad numbers → null → "That shared map link doesn't work"
+    notice); out-of-range values clamp, bad marks / route indexes drop.
+    `hooks/useSharedMapView.ts` reads the fragment while rendering, puts the
+    map in `?m=`, applies the zoom, PREVIEWS the layers (`useMapLayers`
+    `preview` — never saved unless "Keep these layers") and strips the hash.
+    The marks are a separate read-only set (dashed, `SharedViewBanner`) —
+    "Save to my marks" ADDS them (duplicates skipped, a full map says how many
+    didn't fit), never overwrites yours. The shared set lives in React state,
+    so a reload drops it. Bump the version (and keep decoding v1) for any
+    format change.
+  - Tests: `wowWorldMapMarks.test.ts` (incl. hostile labels and links),
+    `e2e/wow-world-map-marks.spec.ts`.
 - Level rules (`worldMap/levels.ts`): trainers are never filtered by level;
   quests show when min level ≤ your level + 2; dungeons are coloured by the
   Classic con bands (grey/green/yellow/orange/red) and flagged "too low to

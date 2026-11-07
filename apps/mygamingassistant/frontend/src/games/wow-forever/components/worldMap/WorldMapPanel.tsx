@@ -1,15 +1,24 @@
 import { useMemo, useState } from "react";
 import clsx from "clsx";
+import { AlertBox } from "@platform/ui";
 import ChildMapSelect from "@/games/wow-forever/components/worldMap/ChildMapSelect";
 import MapBreadcrumb from "@/games/wow-forever/components/worldMap/MapBreadcrumb";
 import LevelFitLegend from "@/games/wow-forever/components/worldMap/LevelFitLegend";
 import MapCanvas from "@/games/wow-forever/components/worldMap/MapCanvas";
+import MapContextMenu from "@/games/wow-forever/components/worldMap/MapContextMenu";
 import MapLayersControl from "@/games/wow-forever/components/worldMap/MapLayersControl";
+import MapLegendNote from "@/games/wow-forever/components/worldMap/MapLegendNote";
+import MyMarksPanel from "@/games/wow-forever/components/worldMap/MyMarksPanel";
+import SharedViewBanner from "@/games/wow-forever/components/worldMap/SharedViewBanner";
+import ShareViewButton from "@/games/wow-forever/components/worldMap/ShareViewButton";
 import PositionConfirm from "@/games/wow-forever/components/worldMap/PositionConfirm";
 import type { WowClassId } from "@/games/wow-forever/data/classes";
 import { MAP_LAYER } from "@/games/wow-forever/data/worldMap/mapLayerIds";
 import { GATHERING_SPOTS_STATUS, useGatheringMapSpots } from "@/games/wow-forever/hooks/useGatheringMapSpots";
 import type { MapLayersState } from "@/games/wow-forever/hooks/useMapLayers";
+import { useMapMarkTools } from "@/games/wow-forever/hooks/useMapMarkTools";
+import type { MapMarksState } from "@/games/wow-forever/hooks/useMapMarks";
+import type { SharedMapViewState } from "@/games/wow-forever/hooks/useSharedMapView";
 import type { MapZoomRestore } from "@/games/wow-forever/hooks/useMapSelection";
 import type { MapViewport } from "@/games/wow-forever/types/mapViewport";
 import { MAP_KIND, type PlayerFaction, type WorldMapData, type WorldZone } from "@/games/wow-forever/types/worldMap";
@@ -71,6 +80,10 @@ interface WorldMapPanelProps {
   onZoomTo: (fit: MapFit) => void;
   /** "Show all on the map" results: drawn on every map level, in place of the usual results. */
   searchMarkers: readonly MapMarker[] | null;
+  /** Your marks + route on the viewed map. */
+  marks: MapMarksState;
+  /** A "Share this view" link that was opened: its read-only marks, its layer preview, or "this link doesn't work". */
+  sharedView: SharedMapViewState;
 }
 
 const PICK_PROMPT: Readonly<Record<PickTarget, string>> = {
@@ -86,7 +99,7 @@ interface PendingSpot {
 
 /** The map beside the list: navigable from Azeroth down to a city, with you, the results and the route. */
 export default function WorldMapPanel(props: WorldMapPanelProps) {
-  const { data, model, faction, mapId, playerZoneId, onOpen, onSetPosition, mapLayers, classId, level } = props;
+  const { data, model, faction, mapId, playerZoneId, onOpen, onSetPosition, mapLayers, classId, level, marks, sharedView } = props;
   const { settings } = mapLayers;
   const [pending, setPending] = useState<PendingSpot | null>(null);
   const [layersOpen, setLayersOpen] = useState(false);
@@ -98,6 +111,7 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
     [data, map, faction, classId, level, gathering.spots],
   );
   const counts = useMemo(() => byLayer && layerCounts(byLayer, gathering.spots !== null), [byLayer, gathering.spots]);
+  const tools = useMapMarkTools(map?.id ?? mapId, marks, mapLayers, sharedView);
   if (!map || !byLayer || !counts) return null;
   const zoneView = isZoneView(map);
   const continentView = map.kind === MAP_KIND.continent;
@@ -129,6 +143,9 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
   }
 
   const confirm = pending?.mapId === mapId ? pending : null;
+  const parent = map.parent === null ? undefined : data.maps.get(map.parent);
+  const shared = sharedView.shared;
+  const sharedMap = shared ? data.maps.get(shared.mapId) : undefined;
 
   return (
     <section aria-labelledby="wm-map" className="space-y-3">
@@ -136,6 +153,7 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
         <h2 id="wm-map" className="text-lg font-semibold">
           Map: {map.name}
         </h2>
+        <ShareViewButton makeUrl={tools.shareUrl} />
         {quickJumps.length > 0 && (
           <div role="group" aria-label="Which map" className="flex gap-2">
             {quickJumps.map(({ zone, label }) => (
@@ -159,6 +177,27 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
         <MapBreadcrumb path={mapPath(data, map.id)} onOpen={onOpen} />
         <ChildMapSelect maps={childrenOf(data, map.id)} onOpen={onOpen} />
       </div>
+      {sharedView.invalid && (
+        <AlertBox variant="warning">
+          That shared map link doesn't work — it may have been cut short when it was pasted. Showing your own map instead.{" "}
+          <button type="button" onClick={sharedView.dismissInvalid} className="underline min-h-[44px]">
+            Dismiss
+          </button>
+        </AlertBox>
+      )}
+      {(shared || mapLayers.previewing) && (
+        <SharedViewBanner
+          shared={shared}
+          mapName={sharedMap?.name ?? map.name}
+          onSharedMap={!shared || shared.mapId === map.id}
+          previewing={mapLayers.previewing}
+          onSave={tools.saveShared}
+          onDismiss={sharedView.dismissShared}
+          onOpenMap={() => shared && onOpen(shared.mapId)}
+          onKeepLayers={mapLayers.keepPreview}
+          onUseMyLayers={mapLayers.endPreview}
+        />
+      )}
       {props.picking && (
         <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-blue-500 bg-blue-500/10 px-3 py-2 text-sm">
           <span>{PICK_PROMPT[props.picking]}</span>
@@ -195,7 +234,10 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
         onFitApplied={props.onFitApplied}
         restore={props.restore}
         onRestoreApplied={props.onRestoreApplied}
-        onZoomChange={props.onZoomChange}
+        onZoomChange={(view) => {
+          props.onZoomChange(view);
+          tools.trackView(view);
+        }}
         onManualZoom={props.onManualZoom}
         onOpen={onOpen}
         onZoomOut={() => map.parent !== null && onOpen(map.parent)}
@@ -205,7 +247,14 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
         onOpenCluster={(members) => props.onZoomTo(clusterFit(data, map, members))}
         onClearSelection={props.onClearSelection}
         zoneFitLevel={continentView ? fitLevel : null}
+        marks={marks.marks}
+        sharedMarks={shared?.mapId === map.id ? shared.marks : null}
+        onMenu={tools.openMenu}
+        placing={tools.placing}
+        onPlace={tools.place}
+        onCancelPlace={() => tools.setPlacing(false)}
         overlay={
+          <>
           <MapLayersControl
             open={layersOpen}
             onOpenChange={setLayersOpen}
@@ -224,19 +273,36 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
             onOpen={onOpen}
             searchActive={props.searchMarkers !== null}
           />
+          {tools.menu && (
+            <MapContextMenu
+              target={tools.menu}
+              canAdd={marks.room > 0}
+              parentName={parent?.name ?? null}
+              onAdd={tools.addFromMenu}
+              onCopy={tools.copyFromMenu}
+              onZoomOut={() => {
+                tools.closeMenu();
+                if (parent) onOpen(parent.id);
+              }}
+              onClose={tools.closeMenu}
+            />
+          )}
+          </>
         }
       />
       {continentView && fitLevel !== null && <LevelFitLegend level={fitLevel} compact />}
-      <p className="text-xs text-muted-foreground">
-        <span className="font-medium text-blue-600">●</span> You ·{" "}
-        <span className="font-medium text-emerald-600">A</span> start ·{" "}
-        <span className="font-medium text-red-600">B</span> destination ·{" "}
-        <span className="font-medium text-amber-500">●</span> direction steps (walk solid, fly dashed, boat dotted) ·{" "}
-        other coloured dots are your results and the layers you've switched on (the Layers button on the map lists each
-        colour). With a result selected, a click on the map or Esc clears it and the map goes back to where it
-        was — unless you've moved it yourself since.
-        Otherwise click a zone to open it; right-click or Esc zooms out. On your zone's map, click to set where you are. Scroll, pinch or use + / − to zoom; drag or use the arrow keys to move.
-      </p>
+      <MyMarksPanel
+        map={map}
+        state={marks}
+        open={tools.panelOpen}
+        onOpenChange={tools.setPanelOpen}
+        placing={tools.placing}
+        onPlacingChange={tools.setPlacing}
+        onAddAtCentre={tools.addAtCentre}
+        focusId={tools.focusId}
+        onFocused={tools.clearFocusId}
+      />
+      <MapLegendNote />
     </section>
   );
 }

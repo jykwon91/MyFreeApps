@@ -17,7 +17,7 @@ export default function MapBreadcrumb({ path, onOpen }: MapBreadcrumbProps) {
         type="button"
         disabled={!parent}
         onClick={() => parent && onOpen(parent.id)}
-        title={parent ? `Zoom out to ${parent.name} (right-click the map or press Esc)` : "This is the whole world"}
+        title={parent ? `Zoom out to ${parent.name} (or press Esc on the map)` : "This is the whole world"}
         className="inline-flex items-center gap-1.5 rounded-md border px-3 text-sm min-h-[44px] sm:min-h-[32px] hover:bg-muted/40 disabled:opacity-50 disabled:hover:bg-transparent"
       >
         <ZoomOut className="h-4 w-4" aria-hidden />
