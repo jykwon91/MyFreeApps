@@ -299,8 +299,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - Banner: pre-raid phase, raids open `RAIDS_OPEN_LABEL`, Classic Pawn weights,
   Forever stats / hit cap unpublished, ranking approximate; drop rates and
   set bonuses are never shown. `PUBLISHED_LIST` (LFCarry) is linked with its
-  checked date — never copied into our data. Item names link to Wowhead
-  Forever (`wowheadForeverItemUrl`, `OutboundLink`).
+  checked date — never copied into our data. Item names are plain text; the
+  app never links to Wowhead (operator rule).
 
 #### Auction-house prices (frontend)
 

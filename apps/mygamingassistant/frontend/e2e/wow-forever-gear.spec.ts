@@ -31,7 +31,7 @@ test("reaches the page from the WoW Forever hub", async ({ page }) => {
   await expect(page.getByTestId("gear-phase-banner")).toContainText("December 9");
 });
 
-test("the Warlock pre-raid table: three items per slot, cloth only, with source chips and Wowhead links", async ({ page }) => {
+test("the Warlock pre-raid table: three items per slot, cloth only, with source chips and no links out", async ({ page }) => {
   await openPreRaid(page);
   await expect(page.getByTestId("gear-slot-card")).toHaveCount(WARLOCK_CARDS);
 
@@ -44,9 +44,8 @@ test("the Warlock pre-raid table: three items per slot, cloth only, with source 
     /^(Crafted \(game files\)|Quest \(Classic data, may differ\)|Boss drop \(Classic data, may differ\)|Source unknown)$/,
   );
 
-  const link = rows.first().getByRole("link");
-  await expect(link).toHaveAttribute("href", /^https:\/\/www\.wowhead\.com\/forever\/item=\d+$/);
-  await expect(link).toHaveAttribute("target", "_blank");
+  await expect(rows.first().getByRole("link")).toHaveCount(0);
+  await expect(page.locator('a[href*="wowhead"]')).toHaveCount(0);
 
   // Felcloth is Tailoring from the Forever client: the chip says game files.
   const felcloth = page.getByTestId("gear-item-row").filter({ hasText: "Felcloth Gloves" });

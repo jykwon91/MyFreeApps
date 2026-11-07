@@ -29,11 +29,10 @@ const RANKED: RankedGearItem = {
 };
 
 describe("GearItemRow", () => {
-  it("links the item to Wowhead Forever in a new tab", () => {
+  it("shows the item name as plain text, never a link to Wowhead", () => {
     render(<GearItemRow ranked={RANKED} isTop={false} />);
-    const link = screen.getByRole("link", { name: /Robe of the Archmage \(Epic\) on Wowhead/ });
-    expect(link).toHaveAttribute("href", "https://www.wowhead.com/forever/item=14152");
-    expect(link).toHaveAttribute("target", "_blank");
+    expect(screen.getByText("Robe of the Archmage")).toBeInTheDocument();
+    expect(screen.queryByRole("link")).toBeNull();
   });
 
   it("shows level, percent, score, source chip and badges", () => {

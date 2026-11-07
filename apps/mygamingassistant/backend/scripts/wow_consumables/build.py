@@ -36,17 +36,11 @@ from scripts.wow_world_map.sources import WAGO_BRANCH, WAGO_BUILD, wago_table
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 OUT_PATH = BACKEND_DIR / "data" / "wow" / "raid_consumables.json"
 
-WOWHEAD_BASE = "https://www.wowhead.com/forever/item="
-
 ATTRIBUTION = (
     "Item names sourced from WoW Forever client "
     f"(build {WAGO_BUILD}) via wago.tools DB2 export. "
     "Game data © Blizzard Entertainment."
 )
-
-
-def _wowhead(item_id: int) -> str:
-    return f"{WOWHEAD_BASE}{item_id}"
 
 
 def _load_names() -> dict[int, str]:
@@ -67,7 +61,7 @@ def _load_names() -> dict[int, str]:
 
 
 def _resolve(section_name: str, items: list[dict], names: dict[int, str]) -> list[dict]:
-    """Resolve names and Wowhead URLs for a list of spec items.
+    """Resolve names for a list of spec items.
 
     Raises ``SystemExit`` if any item id is missing from the Forever client or
     is present in the blocked list.
@@ -90,7 +84,6 @@ def _resolve(section_name: str, items: list[dict], names: dict[int, str]) -> lis
             "name": names[item_id],
             "why": item["why"],
             "tier": item["tier"],
-            "wowhead_url": _wowhead(item_id),
         }
         if "roles" in item:
             entry["roles"] = item["roles"]
