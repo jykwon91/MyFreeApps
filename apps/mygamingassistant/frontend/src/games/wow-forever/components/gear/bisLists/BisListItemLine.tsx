@@ -35,6 +35,7 @@ export default function BisListItemLine({ itemId, item, source }: BisListItemLin
         <ItemNameLink
           itemId={item.id}
           name={item.name}
+          item={item}
           className={clsx("font-medium break-words", QUALITY_TEXT_CLASSES[item.quality])}
         />
         <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
