@@ -4,7 +4,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import { BACKEND_URL, E2E_EMAIL, E2E_PASSWORD } from "./fixtures/config";
-import { test as authedTest } from "./fixtures/auth";
+import { getOrgId, getToken, test as authedTest } from "./fixtures/auth";
+import type { ExtensionSession } from "./fixtures/extension-session";
 
 declare global {
   interface Window {
@@ -13,9 +14,9 @@ declare global {
   }
 }
 
-// The side panel loaded as a page, with background.js running inside it. Most
-// tests need no signed-in user; the ones that seed data use authedTest for its
-// API client.
+// The side panel loaded as a page, with background.js running inside it. Tests
+// that start signed in reuse the test user's saved sign-in (openSignedIn) instead
+// of the login form; the ones that seed data use authedTest for its API client.
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SIDEPANEL_HTML = path.resolve(__dirname, "../../chrome-extension/sidepanel.html");
@@ -24,7 +25,7 @@ const BACKGROUND_JS = path.resolve(__dirname, "../../chrome-extension/background
 // Runs the real background.js inside the side-panel page. Messages the side
 // panel sends reach background.js's onMessage listener, as they do in Chrome,
 // and its fetch goes through Playwright (see loadSidepanel).
-function getExtensionRuntime(apiUrl: string): string {
+function getExtensionRuntime(apiUrl: string, session: ExtensionSession = {}): string {
   const background = JSON.stringify(fs.readFileSync(BACKGROUND_JS, "utf-8"));
   return `
     function storageArea(initial) {
@@ -63,7 +64,7 @@ function getExtensionRuntime(apiUrl: string): string {
     const storage = {
       sync: storageArea({ apiUrl: ${JSON.stringify(apiUrl)} }),
       local: storageArea({}),
-      session: storageArea({}),
+      session: storageArea(${JSON.stringify(session)}),
     };
     const backgroundListeners = [];
     const pageListeners = [];
@@ -121,7 +122,7 @@ test.describe("Chrome Extension — Sidepanel UI", () => {
     delivered: number;
   }
 
-  async function loadSidepanel(page: Page, slowReplies?: SlowReplies): Promise<void> {
+  async function loadSidepanel(page: Page, slowReplies?: SlowReplies, session?: ExtensionSession): Promise<void> {
     await page.exposeFunction(
       "__mbkBackgroundFetch",
       async (
@@ -137,7 +138,7 @@ test.describe("Chrome Extension — Sidepanel UI", () => {
         return reply;
       },
     );
-    await page.addInitScript(getExtensionRuntime(BACKEND_URL));
+    await page.addInitScript(getExtensionRuntime(BACKEND_URL, session));
     await page.goto(`file:///${SIDEPANEL_HTML.replace(/\\/g, "/")}`);
     await page.waitForLoadState("domcontentloaded");
   }
@@ -148,10 +149,10 @@ test.describe("Chrome Extension — Sidepanel UI", () => {
     expect(res.status()).toBe(201);
   }
 
-  async function logIn(page: Page): Promise<void> {
-    await page.locator("#email").fill(E2E_EMAIL);
-    await page.locator("#password").fill(E2E_PASSWORD);
-    await page.locator("#login-btn").click();
+  // Opens the panel with the test user's cached sign-in, as if they had signed in earlier.
+  // Only the login tests use the form: each form login counts toward the per-IP login limit.
+  async function openSignedIn(page: Page, slowReplies?: SlowReplies): Promise<void> {
+    await loadSidepanel(page, slowReplies, { token: getToken(), email: E2E_EMAIL, orgId: getOrgId() });
     await expect(page.locator("#main-section")).toBeVisible({ timeout: 15000 });
   }
 
@@ -207,15 +208,13 @@ test.describe("Chrome Extension — Sidepanel UI", () => {
       if (seededId) expect((await api.delete(`/tax-returns/${seededId}`)).status()).toBe(204);
     });
 
-    authedTest("after login, my tax years are listed", async ({ page }) => {
-      await loadSidepanel(page);
-      await logIn(page);
+    authedTest("signed in, my tax years are listed", async ({ page }) => {
+      await openSignedIn(page);
       await expect(page.locator("#tax-year-select")).toHaveValue(seededYear, { timeout: 10000 });
     });
 
     authedTest("choosing a tax year enables the form selector", async ({ page }) => {
-      await loadSidepanel(page);
-      await logIn(page);
+      await openSignedIn(page);
       const yearSelect = page.locator("#tax-year-select");
       const formSelect = page.locator("#form-select");
       await expect(yearSelect).toHaveValue(seededYear, { timeout: 10000 });
@@ -230,8 +229,7 @@ test.describe("Chrome Extension — Sidepanel UI", () => {
 
     authedTest("a slow forms reply for a year I've left doesn't turn the form picker back on", async ({ page }) => {
       const slowReplies: SlowReplies = { slow: (url) => url.endsWith("/forms-overview"), delayMs: 1500, delivered: 0 };
-      await loadSidepanel(page, slowReplies);
-      await logIn(page);
+      await openSignedIn(page, slowReplies);
       const yearSelect = page.locator("#tax-year-select");
       const formSelect = page.locator("#form-select");
       await expect(yearSelect).toHaveValue(seededYear, { timeout: 10000 });
@@ -245,8 +243,7 @@ test.describe("Chrome Extension — Sidepanel UI", () => {
     });
     authedTest("a slow fields reply for a form page I've left doesn't show its fields", async ({ page }) => {
       const slowReplies: SlowReplies = { slow: (url) => url.includes("/forms/w2?"), delayMs: 1500, delivered: 0 };
-      await loadSidepanel(page, slowReplies);
-      await logIn(page);
+      await openSignedIn(page, slowReplies);
       await expect(page.locator("#tax-year-select")).toHaveValue(seededYear, { timeout: 10000 });
 
       const year = Number(seededYear);
@@ -260,8 +257,7 @@ test.describe("Chrome Extension — Sidepanel UI", () => {
 
     authedTest("changing the tax year away and back keeps the detected form selected", async ({ page, api }) => {
       await seedW2(api, seededId);
-      await loadSidepanel(page);
-      await logIn(page);
+      await openSignedIn(page);
       const yearSelect = page.locator("#tax-year-select");
       const formSelect = page.locator("#form-select");
       await expect(yearSelect).toHaveValue(seededYear, { timeout: 10000 });
@@ -283,8 +279,7 @@ test.describe("Chrome Extension — Sidepanel UI", () => {
       expect(res.status()).toBe(201);
       const newer: { id: string } = await res.json();
       try {
-        await loadSidepanel(page);
-        await logIn(page);
+        await openSignedIn(page);
         const formSelect = page.locator("#form-select");
         await expect(page.locator("#tax-year-select")).toHaveValue(String(Number(seededYear) + 1), { timeout: 10000 });
         await expect(formSelect).toBeEnabled({ timeout: 10000 });
@@ -300,11 +295,12 @@ test.describe("Chrome Extension — Sidepanel UI", () => {
   });
 
   test("logout returns to login section", async ({ page }) => {
-    await loadSidepanel(page);
-    await logIn(page);
+    await openSignedIn(page);
 
     await page.locator("#logout-btn").click();
     await expect(page.locator("#login-section")).toBeVisible();
     await expect(page.locator("#main-section")).not.toBeVisible();
+    const saved = await page.evaluate(() => chrome.storage.session.get(["token", "orgId"]));
+    expect(saved).toEqual({});
   });
 });

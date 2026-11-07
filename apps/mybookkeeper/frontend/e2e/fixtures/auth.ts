@@ -8,11 +8,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TOKEN_PATH = path.join(__dirname, "..", ".auth-token");
 const ORG_PATH = path.join(__dirname, "..", ".auth-org");
 
-function getToken(): string {
+export function getToken(): string {
   return fs.readFileSync(TOKEN_PATH, "utf-8").trim();
 }
 
-function getOrgId(): string {
+export function getOrgId(): string {
   if (fs.existsSync(ORG_PATH)) {
     return fs.readFileSync(ORG_PATH, "utf-8").trim();
   }
