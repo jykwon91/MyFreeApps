@@ -14,6 +14,7 @@
         "test_admin_routes.py",
         "test_test_utils_routes.py",
         "test_tax_seed_routes.py",
+        "test_document_seed_routes.py",
         "test_db_admin.py",
         "test_seed_applicant_request.py",
         "test_seed_lease_template.py"

@@ -2,6 +2,7 @@ import { expect, type APIRequestContext } from "@playwright/test";
 import { readFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import type { DocumentType } from "./document-type";
 
 const SOURCE_PDF = path.join(path.dirname(fileURLToPath(import.meta.url)), "documents", "plumber-invoice.pdf");
 
@@ -52,4 +53,14 @@ export async function deleteDocumentsNamed(api: APIRequestContext, prefix: strin
     const del = await api.delete(`/documents/${id}`);
     expect(del.ok(), `cleanup: delete document ${id}`).toBe(true);
   }
+}
+
+/**
+ * Adds a read document of ``documentType`` under ``name`` through the test-only
+ * seed route. Extraction is what sets a type, and a keyless stack can't extract.
+ */
+export async function seedTypedDocument(api: APIRequestContext, name: string, documentType: DocumentType): Promise<string> {
+  const res = await api.post("/test/seed-document", { data: { file_name: name, document_type: documentType } });
+  expect(res.ok(), await res.text()).toBe(true);
+  return ((await res.json()) as { id: string }).id;
 }
