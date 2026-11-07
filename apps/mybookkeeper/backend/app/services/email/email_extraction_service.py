@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import cast
 
 from app.core.config import settings
@@ -110,6 +110,7 @@ async def _extract_next_fetched(ctx: RequestContext) -> ExtractResult:
         attachment_content_type: str | None = item.attachment_content_type
         email_subject: str | None = item.email_subject
         raw_content: bytes | None = item.raw_content
+        fetched_on: date = item.created_at.astimezone(timezone.utc).date()
 
     if raw_content is None:
         async with unit_of_work() as db:
@@ -137,6 +138,11 @@ async def _extract_next_fetched(ctx: RequestContext) -> ExtractResult:
                 from_address=email_data.get("from_address"),
                 subject=email_data["subject"],
                 body=email_data["body"],
+                # Rows fetched before sent_on was stored fall back to when they were fetched.
+                sent_on=(
+                    date.fromisoformat(email_data["sent_on"])
+                    if "sent_on" in email_data else fetched_on
+                ),
             )
             if ingestion_result.action in ("auto_matched", "queued_for_review", "blocked"):
                 logger.info(

@@ -214,6 +214,8 @@
       "backend_tests": [
         "test_email_queue_split.py",
         "test_email_queue_dedup_filter.py",
+        "test_booking_parser.py",
+        "test_gmail_fetch_email_body.py",
         "test_email_sync_worker.py",
         "test_integration_org_scope.py",
         "test_member_removal_gmail.py",
@@ -500,6 +502,7 @@
         "frontend/src/shared/types/list-load-mode-args.ts"
       ],
       "backend_tests": [
+        "test_booking_ingestion_service.py",
         "test_calendar_repository.py",
         "test_blackout_seed_routes.py",
         "test_calendar_service.py",
