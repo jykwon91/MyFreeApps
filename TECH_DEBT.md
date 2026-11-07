@@ -67,48 +67,6 @@ not a drive-by during a verification task).
 
 ---
 
-## MEDIUM — MGA frontend: 14 pre-existing lint errors in calibrate/* + ZoneEditPage
-
-**Logged:** 2026-05-16
-**Scope:** `apps/mygamingassistant/frontend/src/`
-**Effort:** Medium (~2-4h, each pattern fix is mechanical but spread across 8 files)
-
-### Problem
-
-`npm run lint` produces 14 errors (0 warnings) all pre-existing; none introduced
-by PR #685. Root causes:
-
-- **`react-hooks/set-state-in-effect`** (13 errors): synchronous `setState` calls
-  inside `useEffect` in calibrate components and pages. These can cause cascading
-  re-renders (the rule exists for a reason — React 18 strict mode may double-fire
-  them). Affected files:
-  - `src/components/calibrate/dots/DotColorSwatch.tsx` (line 30)
-  - `src/components/calibrate/dots/DotLivePreview.tsx` (line 37)
-  - `src/components/calibrate/region/RegionPanel.tsx` (line 57)
-  - `src/components/calibrate/zones/ZonesPanel.tsx` (line 72)
-  - `src/hooks/useZoneEditorDraft.ts` (line 156)
-  - `src/pages/LiveCs2Calibrate.tsx` (lines 137, 545)
-  - `src/pages/MapPage.tsx` (line 184)
-  - `src/pages/ZoneEditPage.tsx` (lines 81, 89, 98, 115)
-
-- **`react-hooks/cannot-access-before-init`** (1 error): variable accessed before
-  declaration in `ZoneEditPage.tsx` (line 151).
-
-- **`react-memo/require-memo`** (1 warning treated as error): memoization could not
-  be preserved in `ZoneEditPage.tsx` (line 174).
-
-### Recommendation
-
-Fix file by file in a dedicated cleanup PR. Each `setState-in-useEffect` pattern
-should be moved to a derived-state pattern (compute the value during render instead
-of syncing it via an effect) or wrapped in a condition that prevents double-firing.
-`ZoneEditPage.tsx` needs the declaration-order fix as well.
-
-Do not fix drive-by — these files have complex Tauri-specific interactions and need
-focused testing after refactor.
-
----
-
 ## MEDIUM — Inline theme script blocked by CSP in 4 of 6 apps, canonical MBK included
 
 **Logged:** 2026-10-01
@@ -176,24 +134,31 @@ that scrolls `<main>`, navigates, and asserts it is back at 0.
 
 ---
 
-## MEDIUM — CI runs no frontend unit tests, and the suites have started failing
+## MEDIUM — Per-app CI workflows are hand-written; `new_app` creates none
 
-**Logged:** 2026-11-02
-**Scope:** `.github/workflows/ci-*.yml`, `packages/shared-frontend`, `packages/shared-core`, `apps/*/frontend`
+**Logged:** 2026-11-06
+**Scope:** `.github/workflows/ci-<app>.yml`, `packages/shared-backend/platform_shared/infra/render.py`, `infra/templates/`
 
 ### Problem
 
-No workflow runs vitest for an app or shared package; CI only runs each app's
-production build and, for MBK, its mocked layout E2E specs. So shared-package
-tests can't block a merge, and failures have built up unnoticed. At 86d6f7eb:
-MBK 6 tests, MGA 1, MJH 18 tests plus 2 files that fail to load, shared-frontend
-2 (`InlineBoldText`). `shared-core`'s platform-neutrality tests have a counterpart
-in `test_app_conformance.py` for this reason.
+`render.py` renders each app's deploy workflow from `deploy.yml.j2`, but the
+`ci-<app>.yml` workflows (backend tests, frontend build, lint and unit tests,
+caddy image) are hand-written copies. So `new_app` gives a new app no per-app CI workflow (no backend tests,
+frontend build, lint or unit tests; only the repo-wide workflows run),
+and the copies drift: until #1692, three apps ran no frontend lint or tests and
+MyJobHunter's frontend job was on Node 20. MyLanguageTutor, MyPizzaTracker and
+MyRecipes already match apart from two comments and MyRecipes' API-client step.
+MyBookkeeper (change detection, mocked layout E2E, no caddy-image job, no
+Postgres service), MyJobHunter (change detection, pgvector) and
+MyGamingAssistant (separate frontend-lint and frontend-test jobs) differ more.
 
 ### Recommended fix
 
-Fix or remove the failing tests, then add a required job that runs the shared
-packages' and apps' vitest suites.
+Add `infra/templates/.github/workflows/ci.yml.j2` to `TEMPLATE_MAP`, starting
+from the three matching workflows (API-client step on `has_api_client`, the
+pgvector image from `postgres_image`), then move the other three onto it with
+those differences (change detection, layout E2E, optional DB service, split
+lint/test jobs) as template options rather than per-app copies.
 
 ---
 
