@@ -59,3 +59,9 @@ export async function deleteTransaction(api: APIRequestContext, id: string): Pro
 export async function deleteProperty(api: APIRequestContext, id: string): Promise<void> {
   await api.delete(`/properties/${id}`).catch(() => {});
 }
+
+/** Test-only route: the app itself has no way to delete a 1099 source. */
+export async function deleteReconciliationSource(api: APIRequestContext, id: string): Promise<void> {
+  const res = await api.delete(`/test/reconciliation-sources/${id}`);
+  if (!res.ok()) throw new Error(`deleteReconciliationSource failed: ${res.status()} ${await res.text()}`);
+}

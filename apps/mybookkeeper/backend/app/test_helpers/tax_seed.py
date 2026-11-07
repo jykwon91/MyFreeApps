@@ -1,4 +1,5 @@
-"""Test-only tax seed, so E2E tests can give a return a form without extracting a document.
+"""Test-only tax helpers: give a return a form without extracting a document, and
+remove the 1099 sources E2E tests add (the app has no way to delete one).
 
 Lives beside ``seed.py`` rather than inside it: that module is past the
 500-LOC guard.
@@ -12,6 +13,7 @@ from pydantic import BaseModel, Field
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member
 from app.db.session import unit_of_work
+from app.repositories import reconciliation_repo
 from app.repositories.tax import tax_return_repo
 from app.test_helpers.auth import _require_test_mode
 
@@ -45,3 +47,15 @@ async def seed_form_instance(
             db, return_id, payload.form_name, "manual", instance_label=payload.instance_label,
         )
         return _SeededFormInstance(id=instance.id)
+
+
+@router.delete("/test/reconciliation-sources/{source_id}", status_code=204)
+async def delete_reconciliation_source(
+    source_id: uuid.UUID,
+    ctx: RequestContext = Depends(current_org_member),
+) -> None:
+    """Delete a 1099 source in my organization, for E2E cleanup."""
+    _require_test_mode()
+    async with unit_of_work() as db:
+        if not await reconciliation_repo.delete_source(db, source_id, ctx.organization_id):
+            raise HTTPException(status_code=404, detail="Reconciliation source not found")

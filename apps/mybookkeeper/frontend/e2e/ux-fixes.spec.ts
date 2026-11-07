@@ -1,4 +1,9 @@
 import { test, expect } from "./fixtures/auth";
+import { getYear } from "date-fns";
+import { deleteReconciliationSource } from "./fixtures/seed-data";
+
+const TEST_YEAR = getYear(new Date()) - 1;
+const RUN_ID = Date.now();
 
 test.describe("Failed document alert", () => {
   test.beforeEach(async ({ authedPage: page }) => {
@@ -29,39 +34,39 @@ test.describe("Failed document alert", () => {
 });
 
 test.describe("Reconciliation table UX", () => {
-  test.beforeEach(async ({ authedPage: page }) => {
+  let sourceId: string | null = null;
+  // One per test so parallel tests never see each other's row.
+  let issuer = "";
+
+  test.beforeEach(async ({ authedPage: page, api }, testInfo) => {
+    issuer = `E2E UX Source ${RUN_ID} ${testInfo.testId}`;
+    const res = await api.post("/reconciliation/upload-1099", {
+      data: { source_type: "1099_k", tax_year: TEST_YEAR, issuer, reported_amount: "1234.00" },
+    });
+    expect(res.status()).toBe(201);
+    sourceId = (await res.json()).id;
+
     await page.goto("/reconciliation");
-    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByRole("heading", { name: "Reconciliation", level: 1 })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("combobox").first()).toHaveValue(String(TEST_YEAR));
+    await page.getByRole("button", { name: /review sources/i }).click();
+    await expect(page.getByRole("row").filter({ hasText: issuer })).toBeVisible({ timeout: 10000 });
+  });
+
+  test.afterEach(async ({ api }) => {
+    if (sourceId) await deleteReconciliationSource(api, sourceId);
+    sourceId = null;
   });
 
   test("reconciliation page shows renamed column headers", async ({ authedPage: page }) => {
-    // Wait for the review sources step to be visible
-    const reviewBtn = page.getByText(/Review Sources/i).first();
-    if (await reviewBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await reviewBtn.click();
-    }
-
-    // Check for renamed columns (may not be visible if no data)
-    const table = page.locator("table").first();
-    if (await table.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await expect(table.getByText("1099 Amount")).toBeVisible();
-      await expect(table.getByText("Reservation Total")).toBeVisible();
-      // Old column names should not exist
-      await expect(table.getByText("Reported")).not.toBeVisible();
-      await expect(table.getByText("Matched")).not.toBeVisible();
-    }
+    const table = page.getByRole("table");
+    await expect(table.getByRole("columnheader", { name: "1099 Amount", exact: true })).toBeVisible();
+    await expect(table.getByRole("columnheader", { name: "Reservation Total", exact: true })).toBeVisible();
+    await expect(table.getByRole("columnheader", { name: "Reported", exact: true })).toHaveCount(0);
+    await expect(table.getByRole("columnheader", { name: "Matched", exact: true })).toHaveCount(0);
   });
 
   test("reconciliation page shows explanatory text", async ({ authedPage: page }) => {
-    const reviewBtn = page.getByText(/Review Sources/i).first();
-    if (await reviewBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await reviewBtn.click();
-    }
-
-    await expect(
-      page.getByText(/Each row is one 1099 form or year-end statement/i).or(
-        page.getByText(/no.*sources/i)
-      )
-    ).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Each row is one 1099 form or year-end statement.")).toBeVisible();
   });
 });

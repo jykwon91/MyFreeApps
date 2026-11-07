@@ -2,7 +2,7 @@ import uuid
 from collections.abc import Sequence
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -67,6 +67,22 @@ async def get_source_by_id(
         )
     )
     return result.scalar_one_or_none()
+
+
+async def delete_source(
+    db: AsyncSession, source_id: uuid.UUID, organization_id: uuid.UUID
+) -> bool:
+    """Delete one source in the organization. False if there is none.
+
+    Its matches go with it through the foreign key's ON DELETE CASCADE.
+    """
+    result = await db.execute(
+        delete(ReconciliationSource).where(
+            ReconciliationSource.id == source_id,
+            ReconciliationSource.organization_id == organization_id,
+        )
+    )
+    return (result.rowcount or 0) > 0
 
 
 async def get_discrepancies(
