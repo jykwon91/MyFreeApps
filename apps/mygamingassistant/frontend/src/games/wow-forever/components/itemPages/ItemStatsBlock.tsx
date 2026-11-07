@@ -1,10 +1,10 @@
 import clsx from "clsx";
-import { Skeleton } from "@platform/ui";
+import ItemBindLine from "@/games/wow-forever/components/itemPages/ItemBindLine";
 import { QUALITY_TEXT_CLASSES } from "@/games/wow-forever/data/itemQualityStyles";
 import { SLOT_LABELS } from "@/games/wow-forever/data/itemSlots";
 import { formatPrice } from "@/games/wow-forever/crafting/matPrices";
 import { formatWeapon } from "@/games/wow-forever/lib/describeClientItem";
-import { bindText, classesText, weaponDps } from "@/games/wow-forever/lib/itemPages/describeItem";
+import { classesText, weaponDps } from "@/games/wow-forever/lib/itemPages/describeItem";
 import { itemStatLines } from "@/games/wow-forever/lib/itemPages/itemStatLines";
 import type { ClientItem } from "@/games/wow-forever/types/clientItem";
 import type { ItemPageFacts } from "@/games/wow-forever/types/itemPages/itemPageFacts";
@@ -29,13 +29,7 @@ export default function ItemStatsBlock({ item, facts, showVendorPrice = true, cl
       data-testid="item-stats"
     >
       <p className={`font-semibold ${QUALITY_TEXT_CLASSES[item.quality]}`}>{item.name}</p>
-      {facts === null ? (
-        <div aria-hidden className="flex h-5 items-center" data-testid="item-stats-bind-loading">
-          <Skeleton className="h-3 w-32" />
-        </div>
-      ) : facts.bind !== null ? (
-        <p>{bindText(facts.bind)}</p>
-      ) : null}
+      <ItemBindLine facts={facts} />
       <p className="flex justify-between gap-3">
         <span>{SLOT_LABELS[item.slot]}</span>
         {item.itemType ? <span>{item.itemType}</span> : null}
