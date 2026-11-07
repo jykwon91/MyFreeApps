@@ -401,7 +401,7 @@ test("every other WoW Forever page links here with its area", async ({ page }) =
     ["/wow-forever", "/wow-forever/suggest"],
     ["/wow-forever/gold", "/wow-forever/suggest?area=gold_economy"],
     ["/wow-forever/professions", "/wow-forever/suggest?area=professions"],
-    ["/wow-forever/warlock-macros", "/wow-forever/suggest?area=class_guides"],
+    ["/wow-forever/macros", "/wow-forever/suggest?area=class_guides"],
   ];
   for (const [path, href] of pages) {
     await page.goto(path);

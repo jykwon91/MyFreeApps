@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/map`, `/wow-forever/guide`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`)
+### WoW Forever (`/wow-forever`, `/wow-forever/map`, `/wow-forever/guide`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -210,26 +210,28 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   0 (no sales seen → stored as null) for over half the US items and swings
   wildly on thin markets. Any page showing a price must credit
   "Prices from TradeSkillMaster" with a link (`credit` in the response).
-- Warlock macros (`/wow-forever/warlock-macros`) are hand-written paste-into-game
-  text in `data/warlock/warlockMacros.ts`. Their spell/item names are checked
-  by `wowWarlockMacros.test.ts` against `data/warlock/warlockNames.json`,
-  **GENERATED** by `python -m scripts.wow_warlock.build` (Warlock skill lines,
-  pet skill lines, the wand's `Shoot`, Healthstone/Soulstone items and healing
-  potions; re-pinned by `wow_refresh`).
-  Max 255 chars per macro. Syntax Forever may not support (`@focus`,
-  `@mouseover`, `/castsequence`, `/stopcasting`, pet `/cast`, `!` keep-on,
-  `[mod:]`, `[nopet]`, `%t` in chat) carries an
-  `unconfirmed` tag and the Unconfirmed chip — never claim in-game testing.
-  Forever renamed Curses to Banes (no Curse of Agony). No addon is involved.
-- Guide **Macros** section (`/wow-forever/guide#macros`, `components/guide/MacrosSection.tsx`):
-  three generic mouseover templates (`data/guide/macroTemplates.ts`, filled
-  live from a "Your spell name" box by `lib/macroTemplates.ts`; empty =
-  `Spell Name`) and ready-made per-class macros (`data/guide/classMacros.ts`,
-  template + spell; Rogue/Warrior left out). `wowGuideMacros.test.ts` checks
-  each class macro's spell against `data/guide/classSpellNames.json`,
-  **GENERATED** by `python -m scripts.wow_class_spells.build` (each class's
-  talent-tree skill lines, owner checked by `SkillRaceClassInfo.ClassMask`;
-  re-pinned by `wow_refresh`). Trainer spells only — no talents.
+- **Macros** (`/wow-forever/macros`, `pages/WowMacrosPage.tsx`, the only place
+  macros live — the Guide has none): how-to, then "Hover-cast macros
+  (mouseover)" (three templates in `data/macros/macroTemplates.ts`, filled live
+  from a "Your spell name" box by `lib/macros/macroTemplates.ts`; empty =
+  `Spell Name`), then ready-made macros for every class. Data in
+  `data/macros/`: `hoverCastMacros.ts` (template + spell, every class) and
+  `warlockMacros.ts` (hand-written). `lib/macros/macroCatalog.ts` groups them
+  by class then kind (`macroKinds.ts`, hover cast always first). Class picker:
+  `?class=` wins, else `mga.wowForever.macros.class.v1`, else all classes
+  (`hooks/useMacroClassFilter.ts`). The old `/wow-forever/warlock-macros`
+  redirects to `/wow-forever/macros?class=warlock`.
+  `wowMacros.test.ts` checks every macro's spell/item names against
+  `data/macros/macroNames.json`, **GENERATED** by
+  `python -m scripts.wow_macros.build` (each class's talent-tree skill lines,
+  owner checked by `SkillRaceClassInfo.ClassMask`, Warlock pet lines, the
+  wand's `Shoot`, Healthstone/Soulstone items and healing potions; re-pinned
+  by `wow_refresh`). Trainer spells only — no talents. Max 255 chars per
+  macro. Syntax Forever may not support (`@focus`, `/castsequence`,
+  `/stopcasting`, pet `/cast`, `!` keep-on, `[mod:]`, `[nopet]`, `%t` in chat)
+  carries an `unconfirmed` tag and the Unconfirmed chip — never claim in-game
+  testing. Forever renamed Curses to Banes (no Curse of Agony). No addon, no
+  Wowhead links.
 - Class/spec ids in `data/classes.ts` are the stable key for anything
   class-shaped (stat weights, compare settings, a future BiS page). Never rename.
 - **Scoring lives in the frontend** (`scoring/`), deterministic and unit-tested.

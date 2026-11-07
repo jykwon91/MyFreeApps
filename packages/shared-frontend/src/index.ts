@@ -123,5 +123,6 @@ export { default as YouTubeEmbed } from "./components/embed/YouTubeEmbed";
 export { useDebouncedValue } from "./hooks/useDebouncedValue";
 export { useForgetMutationArgs } from "./hooks/useForgetMutationArgs";
 export { useMediaQuery } from "./hooks/useMediaQuery";
+export { useScrollTopOnNavigate } from "./hooks/useScrollTopOnNavigate";
 export { useTheme } from "./hooks/useTheme";
 export { useToast } from "./hooks/useToast";

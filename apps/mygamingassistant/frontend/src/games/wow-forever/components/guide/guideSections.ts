@@ -5,6 +5,5 @@ export const GUIDE_SECTIONS = [
   { id: "leveling", label: "Where to level" },
   { id: "professions", label: "Professions" },
   { id: "addons", label: "Addons" },
-  { id: "macros", label: "Macros" },
   { id: "dungeons", label: "Dungeon basics" },
 ] as const;
