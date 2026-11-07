@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -137,3 +137,21 @@ async def soft_delete(
 ) -> None:
     """Soft-delete a queue item (user dismissed without acting)."""
     await _soft_delete(db, item)
+
+
+async def hard_delete_by_id(
+    db: AsyncSession,
+    *,
+    item_id: uuid.UUID,
+    organization_id: uuid.UUID,
+) -> bool:
+    """Hard-delete a queue item, resolved or not. Returns whether a row was
+    deleted. Test cleanup only — users dismiss items with ``soft_delete``.
+    """
+    result = await db.execute(
+        delete(CalendarEmailReviewQueue).where(
+            CalendarEmailReviewQueue.id == item_id,
+            CalendarEmailReviewQueue.organization_id == organization_id,
+        )
+    )
+    return (result.rowcount or 0) > 0

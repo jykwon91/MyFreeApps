@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timezone
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -128,3 +128,23 @@ async def resolve(
     row.resolved_at = datetime.now(timezone.utc)
     await db.flush()
     return row
+
+
+async def hard_delete_by_id(
+    db: AsyncSession,
+    *,
+    review_id: uuid.UUID,
+    organization_id: uuid.UUID,
+) -> uuid.UUID | None:
+    """Hard-delete a review row, resolved or not. Returns the deleted row's
+    transaction id, or ``None`` when nothing was deleted. Test cleanup only.
+    """
+    result = await db.execute(
+        delete(RentAttributionReviewQueue)
+        .where(
+            RentAttributionReviewQueue.id == review_id,
+            RentAttributionReviewQueue.organization_id == organization_id,
+        )
+        .returning(RentAttributionReviewQueue.transaction_id)
+    )
+    return result.scalar_one_or_none()

@@ -15,14 +15,9 @@ from app.core.permissions import current_org_member
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
 from app.models.applicants.applicant import Applicant
-from app.models.applicants.screening_result import ScreeningResult
 from app.models.calendar.calendar_email_review_queue import CalendarEmailReviewQueue
 from app.models.leases.signed_lease import SignedLease
 from app.models.leases.signed_lease_attachment import SignedLeaseAttachment
-from app.models.transactions.rent_attribution_review_queue import (
-    RentAttributionReviewQueue,
-)
-from app.models.transactions.transaction import Transaction
 from app.repositories import (
     applicant_event_repo,
     applicant_repo,
@@ -339,23 +334,14 @@ async def delete_screening_result(
     """
     _require_test_mode()
     async with unit_of_work() as db:
-        # Tenant-scoped JOIN — the screening row inherits scope from its
-        # parent applicant. Delete only if the calling org owns the parent.
-        result = await db.execute(
-            _sa_select(ScreeningResult)
-            .join(Applicant, Applicant.id == ScreeningResult.applicant_id)
-            .where(
-                ScreeningResult.id == screening_id,
-                Applicant.organization_id == ctx.organization_id,
-                Applicant.user_id == ctx.user_id,
-            )
+        deleted = await screening_result_repo.hard_delete_by_id(
+            db,
+            screening_id=screening_id,
+            organization_id=ctx.organization_id,
+            user_id=ctx.user_id,
         )
-        row = result.scalar_one_or_none()
-        if row is None:
-            return
-        await db.execute(
-            _sa_delete(ScreeningResult).where(ScreeningResult.id == screening_id),
-        )
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Screening result not found")
 
 
 @router.delete("/test/applicants/{applicant_id}", status_code=204)
@@ -740,15 +726,16 @@ async def hard_delete_review_queue_item(
     item_id: uuid.UUID,
     ctx: RequestContext = Depends(current_org_member),
 ) -> None:
-    """Hard-delete a review-queue item for E2E cleanup. Test-only."""
+    """Hard-delete a review-queue item for E2E cleanup. Test-only. 404 when
+    nothing was deleted, so a cleanup that misses fails loudly.
+    """
     _require_test_mode()
     async with unit_of_work() as db:
-        await db.execute(
-            _sa_delete(CalendarEmailReviewQueue).where(
-                CalendarEmailReviewQueue.id == item_id,
-                CalendarEmailReviewQueue.organization_id == ctx.organization_id,
-            )
+        deleted = await review_queue_repo.hard_delete_by_id(
+            db, item_id=item_id, organization_id=ctx.organization_id,
         )
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Review queue item not found")
 
 
 # ---------------------------------------------------------------------------
@@ -975,23 +962,12 @@ async def hard_delete_attribution_review(
     """
     _require_test_mode()
     async with unit_of_work() as db:
-        result = await db.execute(
-            _sa_select(RentAttributionReviewQueue.transaction_id).where(
-                RentAttributionReviewQueue.id == review_id,
-                RentAttributionReviewQueue.organization_id == ctx.organization_id,
-            )
-        )
-        transaction_id = result.scalar_one_or_none()
-        await db.execute(
-            _sa_delete(RentAttributionReviewQueue).where(
-                RentAttributionReviewQueue.id == review_id,
-                RentAttributionReviewQueue.organization_id == ctx.organization_id,
-            )
+        transaction_id = await attribution_repo.hard_delete_by_id(
+            db, review_id=review_id, organization_id=ctx.organization_id,
         )
         if transaction_id is not None:
-            await db.execute(
-                _sa_delete(Transaction).where(
-                    Transaction.id == transaction_id,
-                    Transaction.organization_id == ctx.organization_id,
-                )
+            await transaction_repo.hard_delete_by_id(
+                db, transaction_id=transaction_id, organization_id=ctx.organization_id,
             )
+    if transaction_id is None:
+        raise HTTPException(status_code=404, detail="Attribution review not found")

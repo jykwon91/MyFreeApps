@@ -15,12 +15,10 @@ from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import delete as _sa_delete
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member
 from app.db.session import unit_of_work
-from app.models.transactions.transaction import Transaction
 from app.repositories import applicant_repo, transaction_repo
 from app.test_helpers.auth import _require_test_mode
 
@@ -106,9 +104,8 @@ async def delete_tenant_payment(
     """
     _require_test_mode()
     async with unit_of_work() as db:
-        await db.execute(
-            _sa_delete(Transaction).where(
-                Transaction.id == transaction_id,
-                Transaction.organization_id == ctx.organization_id,
-            ),
+        deleted = await transaction_repo.hard_delete_by_id(
+            db, transaction_id=transaction_id, organization_id=ctx.organization_id,
         )
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Payment not found")

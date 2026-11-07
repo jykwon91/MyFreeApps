@@ -60,7 +60,8 @@ async function deleteReviewQueueItem(
   api: APIRequestContext,
   itemId: string,
 ): Promise<void> {
-  await api.delete(`/test/review-queue/${itemId}`).catch(() => {});
+  const res = await api.delete(`/test/review-queue/${itemId}`);
+  if (!res.ok()) throw new Error(`deleteReviewQueueItem failed: ${res.status()} ${await res.text()}`);
 }
 
 /** Calendar events on one listing — other specs seed the same June window. */

@@ -10,7 +10,7 @@ All three modules are re-exported here so existing callers
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -181,3 +181,21 @@ async def mark_deleted(db: AsyncSession, transaction: Transaction) -> None:
 async def flush(db: AsyncSession) -> None:
     """Flush pending changes without committing (for mid-transaction reads)."""
     await db.flush()
+
+
+async def hard_delete_by_id(
+    db: AsyncSession,
+    *,
+    transaction_id: uuid.UUID,
+    organization_id: uuid.UUID,
+) -> bool:
+    """Hard-delete a transaction. Returns whether a row was deleted. Test
+    cleanup only — production deletes go through ``mark_deleted``.
+    """
+    result = await db.execute(
+        delete(Transaction).where(
+            Transaction.id == transaction_id,
+            Transaction.organization_id == organization_id,
+        )
+    )
+    return (result.rowcount or 0) > 0
