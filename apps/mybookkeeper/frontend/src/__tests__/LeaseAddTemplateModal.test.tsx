@@ -24,6 +24,7 @@ import { queryStatus } from "@/test/rtk-query-status";
 import LeaseDetail from "@/app/pages/LeaseDetail";
 import type { SignedLeaseDetail } from "@mybookkeeper/api-client/types/lease/signed-lease-detail";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
+import { queryData } from "@/test/rtk-query-data";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -54,7 +55,7 @@ vi.mock("@mybookkeeper/api-client/store/signedLeasesApi", () => ({
 }));
 
 vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
-  useGetApplicantByIdQuery: () => ({ data: undefined }),
+  useGetApplicantByIdQuery: () => ({ ...queryData(undefined) }),
 }));
 
 vi.mock("@/shared/lib/toast-store", () => ({
@@ -98,7 +99,7 @@ let templatesFetching = false;
 
 vi.mock("@mybookkeeper/api-client/store/leaseTemplatesApi", () => ({
   useGetLeaseTemplatesQuery: () => ({
-    data: templatesFailed ? undefined : { items: TEMPLATES, total: 2 },
+    ...queryData(templatesFailed ? undefined : { items: TEMPLATES, total: 2 }),
     isLoading: false,
     ...queryStatus({ failed: templatesFailed, fetching: templatesFetching }),
     refetch: vi.fn(),
@@ -144,7 +145,7 @@ function buildLease(overrides: Partial<SignedLeaseDetail> = {}): SignedLeaseDeta
 
 function renderDetail() {
   useGetSignedLeaseByIdQueryMock.mockReturnValue({
-    data: mockLease,
+    ...queryData(mockLease),
     isLoading: false,
     isFetching: false,
     isError: false,

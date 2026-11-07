@@ -407,7 +407,10 @@
         "frontend/src/app/features/public-inquiry/PublicInquiryListingPanel.tsx",
         "frontend/src/shared/lib/list-load-mode.ts",
         "frontend/src/shared/types/list-load-mode.ts",
-        "frontend/src/shared/types/list-load-mode-args.ts"
+        "frontend/src/shared/types/list-load-mode-args.ts",
+        "frontend/src/shared/lib/detail-load-mode.ts",
+        "frontend/src/shared/types/detail-load-mode.ts",
+        "frontend/src/shared/types/detail-load-mode-args.ts"
       ],
       "backend_tests": [
         "test_listing_repo.py",
@@ -440,7 +443,8 @@
         "ChannelListingFormModal.test.tsx",
         "channel-labels.test.ts",
         "Markdown.test.tsx",
-        "list-load-mode.test.ts"
+        "list-load-mode.test.ts",
+        "detail-load-mode.test.ts"
       ],
       "e2e_specs": [
         "listings-api.spec.ts",
@@ -451,7 +455,8 @@
         "listings-channels.spec.ts",
         "listing-markdown.spec.ts",
         "mocked/list-pages-retry-mock.spec.ts",
-        "mocked/sections-retry-mock.spec.ts"
+        "mocked/sections-retry-mock.spec.ts",
+        "mocked/detail-pages-retry-mock.spec.ts"
       ]
     },
     "calendar": {
@@ -548,7 +553,10 @@
         "api-client/src/utils/inquiryDateFormat.ts",
         "frontend/src/shared/lib/list-load-mode.ts",
         "frontend/src/shared/types/list-load-mode.ts",
-        "frontend/src/shared/types/list-load-mode-args.ts"
+        "frontend/src/shared/types/list-load-mode-args.ts",
+        "frontend/src/shared/lib/detail-load-mode.ts",
+        "frontend/src/shared/types/detail-load-mode.ts",
+        "frontend/src/shared/types/detail-load-mode-args.ts"
       ],
       "backend_tests": [
         "test_encrypted_string_type.py",
@@ -585,14 +593,15 @@
         "PublicInquiryForm.test.tsx",
         "ReplyTemplatesManager.test.tsx",
         "reply-template-renderer.test.ts",
-        "usePageListModes.test.ts",
-        "list-load-mode.test.ts"
+        "list-load-mode.test.ts",
+        "detail-load-mode.test.ts"
       ],
       "e2e_specs": [
         "inquiries.spec.ts",
         "inquiries-layout.spec.ts",
         "inquiry-reply.spec.ts",
-        "mocked/list-pages-retry-mock.spec.ts"
+        "mocked/list-pages-retry-mock.spec.ts",
+        "mocked/detail-pages-retry-mock.spec.ts"
       ]
     },
     "applicants": {
@@ -616,7 +625,10 @@
         "frontend/src/shared/lib/applicant-badge-colors.ts",
         "frontend/src/shared/lib/list-load-mode.ts",
         "frontend/src/shared/types/list-load-mode.ts",
-        "frontend/src/shared/types/list-load-mode-args.ts"
+        "frontend/src/shared/types/list-load-mode-args.ts",
+        "frontend/src/shared/lib/detail-load-mode.ts",
+        "frontend/src/shared/types/detail-load-mode.ts",
+        "frontend/src/shared/types/detail-load-mode-args.ts"
       ],
       "backend_tests": [
         "test_applicant_repo.py",
@@ -643,9 +655,9 @@
         "Applicants.test.tsx",
         "PromoteFromInquiryPanel.test.tsx",
         "ContractDatesEditor.test.tsx",
-        "useApplicantDetailMode.test.ts",
         "useLinkedLeaseDocumentsMode.test.ts",
-        "list-load-mode.test.ts"
+        "list-load-mode.test.ts",
+        "detail-load-mode.test.ts"
       ],
       "e2e_specs": [
         "applicants.spec.ts",
@@ -793,7 +805,10 @@
         "frontend/src/shared/types/document/document-source.ts",
         "frontend/src/shared/lib/list-load-mode.ts",
         "frontend/src/shared/types/list-load-mode.ts",
-        "frontend/src/shared/types/list-load-mode-args.ts"
+        "frontend/src/shared/types/list-load-mode-args.ts",
+        "frontend/src/shared/lib/detail-load-mode.ts",
+        "frontend/src/shared/types/detail-load-mode.ts",
+        "frontend/src/shared/types/detail-load-mode-args.ts"
       ],
       "backend_tests": [
         "test_insurance_policies_api.py",
@@ -826,7 +841,6 @@
         "AddInsurancePolicyDialog.test.tsx",
         "DocumentDraftNotices.test.tsx",
         "InsurancePolicyDocumentReader.test.tsx",
-        "usePageListModes.test.ts",
         "InsurancePremiumComparisonCard.test.tsx",
         "retryFailedQueries.test.ts",
         "InsuranceBenchmarkDialog.test.tsx",
@@ -838,7 +852,8 @@
         "rate-watch-action.test.ts",
         "benchmark-format.test.ts",
         "Dashboard.test.tsx",
-        "list-load-mode.test.ts"
+        "list-load-mode.test.ts",
+        "detail-load-mode.test.ts"
       ],
       "e2e_specs": [
         "insurance-premium.spec.ts",
@@ -904,7 +919,7 @@
         "mortgage-draft.test.ts",
         "mortgage-rate-watch-verdict.test.ts",
         "DocumentDraftNotices.test.tsx",
-        "usePageListModes.test.ts",
+        "useMortgageRateWatchMode.test.ts",
         "list-load-mode.test.ts"
       ],
       "e2e_specs": [
@@ -983,7 +998,10 @@
         "frontend/src/shared/types/document/document-source.ts",
         "frontend/src/shared/lib/list-load-mode.ts",
         "frontend/src/shared/types/list-load-mode.ts",
-        "frontend/src/shared/types/list-load-mode-args.ts"
+        "frontend/src/shared/types/list-load-mode-args.ts",
+        "frontend/src/shared/lib/detail-load-mode.ts",
+        "frontend/src/shared/types/detail-load-mode.ts",
+        "frontend/src/shared/types/detail-load-mode-args.ts"
       ],
       "backend_tests": [
         "test_utility_plan_service.py",
@@ -1023,7 +1041,8 @@
         "offer-stats.test.ts",
         "offer-tiers.test.ts",
         "TimeOfUseOffers.test.tsx",
-        "list-load-mode.test.ts"
+        "list-load-mode.test.ts",
+        "detail-load-mode.test.ts"
       ],
       "e2e_specs": [
         "utility-plans.spec.ts",
@@ -1059,7 +1078,10 @@
         "frontend/src/shared/lib/welcome-manual-constants.ts",
         "frontend/src/shared/lib/list-load-mode.ts",
         "frontend/src/shared/types/list-load-mode.ts",
-        "frontend/src/shared/types/list-load-mode-args.ts"
+        "frontend/src/shared/types/list-load-mode-args.ts",
+        "frontend/src/shared/lib/detail-load-mode.ts",
+        "frontend/src/shared/types/detail-load-mode.ts",
+        "frontend/src/shared/types/detail-load-mode-args.ts"
       ],
       "backend_tests": [
         "test_welcome_manual_image_routes.py",
@@ -1089,7 +1111,8 @@
         "WelcomeManualEmailDialog.test.tsx",
         "WelcomeManualPreview.test.tsx",
         "WelcomeManualCreateDialog.test.tsx",
-        "list-load-mode.test.ts"
+        "list-load-mode.test.ts",
+        "detail-load-mode.test.ts"
       ],
       "e2e_specs": [
         "mocked/welcome-manuals-layout-mock.spec.ts",
@@ -1125,7 +1148,10 @@
         "frontend/src/shared/types/lease/attachment-view-mode.ts",
         "frontend/src/shared/lib/list-load-mode.ts",
         "frontend/src/shared/types/list-load-mode.ts",
-        "frontend/src/shared/types/list-load-mode-args.ts"
+        "frontend/src/shared/types/list-load-mode-args.ts",
+        "frontend/src/shared/lib/detail-load-mode.ts",
+        "frontend/src/shared/types/detail-load-mode.ts",
+        "frontend/src/shared/types/detail-load-mode-args.ts"
       ],
       "backend_tests": [
         "test_lease_renderer.py",
@@ -1151,7 +1177,8 @@
         "LeaseTemplateUploadDialog.test.tsx",
         "AttachmentViewer.test.tsx",
         "useAttachmentViewMode.test.ts",
-        "list-load-mode.test.ts"
+        "list-load-mode.test.ts",
+        "detail-load-mode.test.ts"
       ],
       "e2e_specs": [
         "lease-templates.spec.ts",
@@ -1297,7 +1324,10 @@
         "frontend/src/shared/lib/vendor-labels.ts",
         "frontend/src/shared/lib/list-load-mode.ts",
         "frontend/src/shared/types/list-load-mode.ts",
-        "frontend/src/shared/types/list-load-mode-args.ts"
+        "frontend/src/shared/types/list-load-mode-args.ts",
+        "frontend/src/shared/lib/detail-load-mode.ts",
+        "frontend/src/shared/types/detail-load-mode.ts",
+        "frontend/src/shared/types/detail-load-mode-args.ts"
       ],
       "backend_tests": [
         "test_vendor_repo.py",
@@ -1309,7 +1339,8 @@
         "Vendors.test.tsx",
         "VendorDetail.test.tsx",
         "VendorForm.test.tsx",
-        "list-load-mode.test.ts"
+        "list-load-mode.test.ts",
+        "detail-load-mode.test.ts"
       ],
       "e2e_specs": [
         "vendors-api.spec.ts",

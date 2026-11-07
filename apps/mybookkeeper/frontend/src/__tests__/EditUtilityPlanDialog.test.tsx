@@ -13,6 +13,8 @@ import userEvent from "@testing-library/user-event";
 import EditUtilityPlanDialog from "@/app/features/utility/EditUtilityPlanDialog";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import type { UtilityPlanDetail } from "@mybookkeeper/api-client/types/utility/utility-plan-detail";
+import { queryStatus } from "@/test/rtk-query-status";
+import { queryData } from "@/test/rtk-query-data";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -23,13 +25,13 @@ const mockRefetch = vi.fn();
 let mockPlan: UtilityPlanDetail | undefined;
 let mockIsLoading = false;
 let mockIsError = false;
+let mockIsFetching = false;
 
 vi.mock("@mybookkeeper/api-client/store/utilityPlansApi", () => ({
   useGetUtilityPlanByIdQuery: vi.fn(() => ({
-    data: mockPlan,
+    ...queryData(mockPlan),
     isLoading: mockIsLoading,
-    isError: mockIsError,
-    isFetching: false,
+    ...queryStatus({ failed: mockIsError, fetching: mockIsFetching }),
     refetch: mockRefetch,
   })),
 }));
@@ -94,6 +96,7 @@ beforeEach(() => {
   mockPlan = PLAN;
   mockIsLoading = false;
   mockIsError = false;
+  mockIsFetching = false;
   mockUpdateUnwrap.mockResolvedValue(PLAN);
   mockUpdate.mockReturnValue({ unwrap: mockUpdateUnwrap });
 });
@@ -123,6 +126,19 @@ describe("EditUtilityPlanDialog — load states", () => {
     await user.click(screen.getByRole("button", { name: "Retry" }));
 
     expect(mockRefetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the error, not a blank dialog, while Retry refetches", () => {
+    mockPlan = undefined;
+    mockIsError = true;
+    mockIsFetching = true;
+
+    renderDialog();
+
+    expect(screen.getByText("Couldn't load this plan.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+    expect(screen.queryByTestId("utility-plan-form-loading")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("utility-plan-provider-input")).not.toBeInTheDocument();
   });
 });
 

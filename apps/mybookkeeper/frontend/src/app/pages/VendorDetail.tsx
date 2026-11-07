@@ -18,6 +18,7 @@ import VendorForm from "@/app/features/vendors/VendorForm";
 import DeleteVendorModal from "@/app/features/vendors/DeleteVendorModal";
 import { formatHourlyRate } from "@/shared/utils/hourly-rate";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { resolveDetailLoadMode } from "@/shared/lib/detail-load-mode";
 
 export default function VendorDetail() {
   const { vendorId } = useParams<{ vendorId: string }>();
@@ -26,12 +27,12 @@ export default function VendorDetail() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteVendor, { isLoading: isDeleting }] = useDeleteVendorMutation();
   const {
-    data: vendor,
-    isLoading,
+    currentData: vendor,
+    error,
     isFetching,
-    isError,
     refetch,
   } = useGetVendorByIdQuery(vendorId ?? "", { skip: !vendorId });
+  const mode = resolveDetailLoadMode({ hasData: vendor !== undefined, hasError: error !== undefined });
 
   async function handleConfirmDelete() {
     if (!vendor) return;
@@ -55,13 +56,13 @@ export default function VendorDetail() {
         Back to vendors
       </Link>
 
-      {isError ? (
+      {error ? (
         <LoadErrorAlert message="I couldn't find that vendor. Maybe it was removed?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
-      {isLoading || !vendor ? (
-        !isError ? <VendorDetailSkeleton /> : null
-      ) : (
+      {mode === "loading" ? <VendorDetailSkeleton /> : null}
+
+      {vendor ? (
         <>
           <SectionHeader
             title={vendor.name}
@@ -218,7 +219,7 @@ export default function VendorDetail() {
             onCancel={() => setShowDeleteModal(false)}
           />
         </>
-      )}
+      ) : null}
     </main>
   );
 }

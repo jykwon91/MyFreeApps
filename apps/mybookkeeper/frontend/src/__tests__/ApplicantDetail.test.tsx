@@ -35,7 +35,7 @@ const baseApplicant: ApplicantDetailResponse = {
 };
 
 const defaultQueryState = {
-  data: baseApplicant,
+  ...queryData(baseApplicant),
   isLoading: false,
   isFetching: false,
   isError: false,
@@ -73,6 +73,8 @@ import {
   useRevealApplicantSensitiveMutation,
 } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
+import { queryStatus } from "@/test/rtk-query-status";
+import { queryData } from "@/test/rtk-query-data";
 
 type QueryReturn = ReturnType<typeof useGetApplicantByIdQuery>;
 
@@ -125,7 +127,7 @@ describe("ApplicantDetail sensitive data", () => {
   });
 
   it("shows what the server returned", () => {
-    mockReveal({ data: REVEALED });
+    mockReveal({ ...queryData(REVEALED) });
     renderDetail();
     expect(screen.getByTestId("sensitive-dob")).toHaveTextContent("1990-05-15");
     expect(screen.getByTestId("sensitive-vehicle")).toHaveTextContent("Toyota Camry");
@@ -134,7 +136,7 @@ describe("ApplicantDetail sensitive data", () => {
   });
 
   it("forgets the details when hidden", async () => {
-    const { reset } = mockReveal({ data: REVEALED });
+    const { reset } = mockReveal({ ...queryData(REVEALED) });
     renderDetail();
     await userEvent.click(screen.getByTestId("sensitive-data-toggle"));
     expect(reset).toHaveBeenCalledTimes(1);
@@ -158,7 +160,7 @@ describe("ApplicantDetail sensitive data", () => {
     await userEvent.click(screen.getByTestId("sensitive-data-toggle"));
     expect(screen.getByTestId("sensitive-dob")).toHaveTextContent("1990-05-15");
 
-    const other = { ...defaultQueryState, data: { ...defaultQueryState.data, id: "app-2" } };
+    const other = { ...defaultQueryState, ...queryData({ ...defaultQueryState.data, id: "app-2" }) };
     vi.mocked(useGetApplicantByIdQuery).mockReturnValue(other as unknown as QueryReturn);
     rerender(page());
     expect(screen.getByTestId("sensitive-data-hidden")).toBeInTheDocument();
@@ -209,11 +211,11 @@ describe("ApplicantDetail page", () => {
   it("shows 'Restart tenancy' button when tenancy is ended", () => {
     vi.mocked(useGetApplicantByIdQuery).mockReturnValueOnce({
       ...defaultQueryState,
-      data: {
+      ...queryData({
         ...baseApplicant,
         tenant_ended_at: "2026-05-01T12:00:00Z",
         tenant_ended_reason: "Lease not renewed",
-      },
+      }),
     } as unknown as QueryReturn);
     renderDetail();
     expect(screen.getByTestId("restart-tenancy-button")).toBeInTheDocument();
@@ -223,11 +225,11 @@ describe("ApplicantDetail page", () => {
   it("shows ended date and reason when tenancy is ended", () => {
     vi.mocked(useGetApplicantByIdQuery).mockReturnValueOnce({
       ...defaultQueryState,
-      data: {
+      ...queryData({
         ...baseApplicant,
         tenant_ended_at: "2026-05-01T12:00:00Z",
         tenant_ended_reason: "Lease not renewed",
-      },
+      }),
     } as unknown as QueryReturn);
     renderDetail();
     expect(screen.getByText(/Lease not renewed/i)).toBeInTheDocument();
@@ -236,7 +238,7 @@ describe("ApplicantDetail page", () => {
   it("does NOT show tenancy section for non-lease_signed stages", () => {
     vi.mocked(useGetApplicantByIdQuery).mockReturnValueOnce({
       ...defaultQueryState,
-      data: { ...baseApplicant, stage: "approved" },
+      ...queryData({ ...baseApplicant, stage: "approved" }),
     } as unknown as QueryReturn);
     renderDetail();
     expect(screen.queryByTestId("tenancy-section")).toBeNull();
@@ -251,7 +253,7 @@ describe("ApplicantDetail page", () => {
   it("shows the source inquiry link when inquiry_id is set", () => {
     vi.mocked(useGetApplicantByIdQuery).mockReturnValueOnce({
       ...defaultQueryState,
-      data: { ...baseApplicant, inquiry_id: "inq-1" },
+      ...queryData({ ...baseApplicant, inquiry_id: "inq-1" }),
     } as unknown as QueryReturn);
     renderDetail();
     expect(screen.getByTestId("applicant-source-inquiry-link")).toBeInTheDocument();
@@ -265,7 +267,7 @@ describe("ApplicantDetail page", () => {
   it("shows the loading skeleton while fetching", () => {
     vi.mocked(useGetApplicantByIdQuery).mockReturnValueOnce({
       ...defaultQueryState,
-      data: undefined,
+      ...queryData(undefined),
       isLoading: true,
     } as unknown as QueryReturn);
     renderDetail();
@@ -275,12 +277,36 @@ describe("ApplicantDetail page", () => {
   it("shows an error alert when the query errors", () => {
     vi.mocked(useGetApplicantByIdQuery).mockReturnValueOnce({
       ...defaultQueryState,
-      data: undefined,
-      isError: true,
+      ...queryData(undefined),
+      ...queryStatus({ failed: true, fetching: false }),
     } as unknown as QueryReturn);
     renderDetail();
     expect(
       screen.getByText(/I couldn't find that applicant/i),
     ).toBeInTheDocument();
+  });
+
+  it("keeps the error, not a skeleton, while Retry refetches", () => {
+    vi.mocked(useGetApplicantByIdQuery).mockReturnValue({
+      ...defaultQueryState,
+      ...queryData(undefined),
+      isLoading: false,
+      ...queryStatus({ failed: true, fetching: true }),
+    } as unknown as QueryReturn);
+    renderDetail();
+    expect(screen.getByText(/I couldn't find that applicant/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+    expect(screen.queryByTestId("applicant-detail-skeleton")).not.toBeInTheDocument();
+  });
+
+  it("keeps the applicant showing under the error when a refresh fails", () => {
+    vi.mocked(useGetApplicantByIdQuery).mockReturnValue({
+      ...defaultQueryState,
+      isLoading: false,
+      ...queryStatus({ failed: true, fetching: false }),
+    } as unknown as QueryReturn);
+    renderDetail();
+    expect(screen.getByText(/I couldn't find that applicant/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Jane Doe" })).toBeInTheDocument();
   });
 });

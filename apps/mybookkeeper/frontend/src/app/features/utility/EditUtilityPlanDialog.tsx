@@ -3,6 +3,7 @@ import EditUtilityPlanForm from "./EditUtilityPlanForm";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import UtilityPlanFormSkeleton from "./UtilityPlanFormSkeleton";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { resolveDetailLoadMode } from "@/shared/lib/detail-load-mode";
 
 export interface EditUtilityPlanDialogProps {
   planId: string;
@@ -20,8 +21,9 @@ export default function EditUtilityPlanDialog({
   planId,
   onClose,
 }: EditUtilityPlanDialogProps) {
-  const { data: plan, isLoading, isError, refetch, isFetching } =
+  const { currentData: plan, error, refetch, isFetching } =
     useGetUtilityPlanByIdQuery(planId);
+  const mode = resolveDetailLoadMode({ hasData: plan !== undefined, hasError: error !== undefined });
 
   return (
     <FormDialogShell
@@ -30,9 +32,9 @@ export default function EditUtilityPlanDialog({
       onClose={onClose}
       width="wide"
     >
-      {isLoading ? <UtilityPlanFormSkeleton /> : null}
+      {mode === "loading" ? <UtilityPlanFormSkeleton /> : null}
 
-      {isError ? (
+      {error ? (
         <div className="p-5">
           <LoadErrorAlert message="Couldn't load this plan." isRetrying={isFetching} onRetry={() => void refetch()} />
         </div>

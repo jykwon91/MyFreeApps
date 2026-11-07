@@ -39,6 +39,7 @@ import WelcomeManualEmailDialog from "@/app/features/welcome-manuals/WelcomeManu
 import DeleteWelcomeManualModal from "@/app/features/welcome-manuals/DeleteWelcomeManualModal";
 import { useWelcomeManualSectionOrder } from "@/app/features/welcome-manuals/useWelcomeManualSectionOrder";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { resolveDetailLoadMode } from "@/shared/lib/detail-load-mode";
 
 export default function WelcomeManualDetail() {
   const { manualId } = useParams<{ manualId: string }>();
@@ -62,12 +63,12 @@ export default function WelcomeManualDetail() {
   const [deleteManual, { isLoading: isDeleting }] = useDeleteWelcomeManualMutation();
 
   const {
-    data: manual,
-    isLoading,
+    currentData: manual,
+    error,
     isFetching,
-    isError,
     refetch,
   } = useGetWelcomeManualByIdQuery(manualId ?? "", { skip: !manualId });
+  const mode = resolveDetailLoadMode({ hasData: manual !== undefined, hasError: error !== undefined });
   const { data: properties = [] } = useGetPropertiesQuery();
 
   const sections = manual?.sections ?? [];
@@ -163,11 +164,11 @@ export default function WelcomeManualDetail() {
         Back to welcome manuals
       </Link>
 
-      {isError ? (
+      {error ? (
         <LoadErrorAlert message="I couldn't load this welcome manual. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
-      {isLoading && !isError ? <WelcomeManualDetailSkeleton /> : null}
+      {mode === "loading" ? <WelcomeManualDetailSkeleton /> : null}
 
       {manual ? (
         <>

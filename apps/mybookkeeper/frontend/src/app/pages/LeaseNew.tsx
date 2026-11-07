@@ -11,6 +11,7 @@ import LeaseGenerateForm from "@/app/features/leases/LeaseGenerateForm";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { resolveDetailLoadMode } from "@/shared/lib/detail-load-mode";
 
 /**
  * /leases/new — wires the full generate-lease flow:
@@ -76,10 +77,9 @@ export default function LeaseNew() {
   }, [selectedTemplateIds, templateById]);
 
   const {
-    data: applicant,
-    isLoading: isLoadingApplicant,
+    currentData: applicant,
+    error: applicantError,
     isFetching: isFetchingApplicant,
-    isError: isApplicantError,
     refetch: refetchApplicant,
   } = useGetApplicantByIdQuery(resolvedApplicantId ?? "", {
     skip: !resolvedApplicantId,
@@ -124,8 +124,12 @@ export default function LeaseNew() {
   const hasTemplate = selectedTemplateIds.length > 0;
   const showApplicantPicker = hasTemplate && !resolvedApplicantId;
   const showForm = hasTemplate && !!resolvedApplicantId && !!applicant;
+  const applicantMode = resolveDetailLoadMode({
+    hasData: applicant !== undefined,
+    hasError: applicantError !== undefined,
+  });
   const isLoadingForm =
-    hasTemplate && !!resolvedApplicantId && isLoadingApplicant;
+    hasTemplate && !!resolvedApplicantId && applicantMode === "loading";
 
   return (
     <main className="p-4 sm:p-8 space-y-6 max-w-3xl" data-testid="lease-new-page">
@@ -201,7 +205,7 @@ export default function LeaseNew() {
       {/* ------------------------------------------------------------------ */}
       {/* Applicant error                                                     */}
       {/* ------------------------------------------------------------------ */}
-      {isApplicantError && resolvedApplicantId ? (
+      {applicantError && resolvedApplicantId ? (
         <div data-testid="lease-new-applicant-error">
           <LoadErrorAlert message="I couldn't load that applicant. Maybe they were removed?" isRetrying={isFetchingApplicant} onRetry={() => refetchApplicant()} />
         </div>

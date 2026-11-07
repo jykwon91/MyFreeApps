@@ -1,21 +1,20 @@
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useGetInquiryByIdQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
-import { useInquiryDetailMode } from "@/app/features/inquiries/useInquiryDetailMode";
+import { resolveDetailLoadMode } from "@/shared/lib/detail-load-mode";
 import InquiryDetailBody from "@/app/features/inquiries/InquiryDetailBody";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 export default function InquiryDetail() {
   const { inquiryId } = useParams<{ inquiryId: string }>();
   const {
-    data: inquiry,
-    isLoading,
+    currentData: inquiry,
+    error,
     isFetching,
-    isError,
     refetch,
   } = useGetInquiryByIdQuery(inquiryId ?? "", { skip: !inquiryId });
 
-  const mode = useInquiryDetailMode({ isLoading, isError, inquiry });
+  const mode = resolveDetailLoadMode({ hasData: inquiry !== undefined, hasError: error !== undefined });
 
   return (
     <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
@@ -27,7 +26,7 @@ export default function InquiryDetail() {
         Back to inquiries
       </Link>
 
-      {isError ? (
+      {error ? (
         <LoadErrorAlert message="I couldn't load this inquiry. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 

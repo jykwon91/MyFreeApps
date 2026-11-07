@@ -22,6 +22,7 @@ import LeaseDetail from "@/app/pages/LeaseDetail";
 import type { SignedLeaseDetail } from "@mybookkeeper/api-client/types/lease/signed-lease-detail";
 import type { ApplicantDetailResponse } from "@mybookkeeper/api-client/types/applicant/applicant-detail-response";
 import type { SignedLeaseStatus } from "@mybookkeeper/api-client/types/lease/signed-lease-status";
+import { queryData } from "@/test/rtk-query-data";
 
 const navigateMock = vi.fn();
 let mockLease: SignedLeaseDetail | undefined;
@@ -143,13 +144,13 @@ function buildApplicant(): ApplicantDetailResponse {
 
 function renderDetail() {
   useGetSignedLeaseByIdQueryMock.mockReturnValue({
-    data: mockLease,
+    ...queryData(mockLease),
     isLoading: false,
     isFetching: false,
     isError: false,
     refetch: vi.fn(),
   });
-  useGetApplicantByIdQueryMock.mockReturnValue({ data: mockApplicant });
+  useGetApplicantByIdQueryMock.mockReturnValue({ ...queryData(mockApplicant) });
   return render(
     <Provider store={store}>
       <MemoryRouter initialEntries={["/leases/lease-1"]}>
