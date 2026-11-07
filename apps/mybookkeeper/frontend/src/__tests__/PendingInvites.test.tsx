@@ -63,6 +63,47 @@ describe("PendingInvites", () => {
     expect(screen.queryByText("Email didn't send")).not.toBeInTheDocument();
   });
 
+  it("says the invites didn't load, instead of none pending, and retries", async () => {
+    const refetch = vi.fn();
+    vi.mocked(useListInvitesQuery).mockReturnValue({
+      currentData: undefined,
+      error: { status: "FETCH_ERROR", error: "Network Error" },
+      isFetching: false,
+      refetch,
+    } as unknown as ReturnType<typeof useListInvitesQuery>);
+    render(<PendingInvites />);
+
+    expect(screen.getByText("I couldn't load the pending invites.")).toBeInTheDocument();
+    expect(screen.queryByText("No pending invites.")).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps showing the invites it has when a later reload fails", () => {
+    vi.mocked(useListInvitesQuery).mockReturnValue({
+      currentData: [makeInvite({ email: "kept@test.com" })],
+      error: { status: 500 },
+      isFetching: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useListInvitesQuery>);
+    render(<PendingInvites />);
+
+    expect(screen.getByText("kept@test.com")).toBeInTheDocument();
+    expect(screen.queryByText("I couldn't load the pending invites.")).not.toBeInTheDocument();
+  });
+
+  it("shows the retry is in flight", () => {
+    vi.mocked(useListInvitesQuery).mockReturnValue({
+      currentData: undefined,
+      error: { status: 500 },
+      isFetching: true,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useListInvitesQuery>);
+    render(<PendingInvites />);
+
+    expect(screen.getByRole("button", { name: /Retrying/ })).toBeDisabled();
+  });
+
   it("never shows another organization's invites while this one loads", () => {
     vi.mocked(useListInvitesQuery).mockReturnValue({
       data: [makeInvite({ email: "old-org@example.com" })],

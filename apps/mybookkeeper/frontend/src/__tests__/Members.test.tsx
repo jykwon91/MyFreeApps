@@ -58,6 +58,9 @@ const LOADED = { data: [], currentData: [], isLoading: false, isFetching: false 
 const FIRST_LOAD = { data: undefined, currentData: undefined, isLoading: true, isFetching: true };
 const REFETCHING = { data: [], currentData: [], isLoading: false, isFetching: true };
 const SWITCHED_ORG = { data: [{ id: 'old-org-row' }], currentData: undefined, isLoading: false, isFetching: true };
+// RTK Query keeps `error` from a failed load until a later load succeeds, retries included.
+const FAILED = { data: undefined, currentData: undefined, isLoading: false, isFetching: false, isError: true, error: { status: 500 } };
+const RETRYING = { data: undefined, currentData: undefined, isLoading: false, isFetching: true, isError: false, error: { status: 500 } };
 
 function membersState(state: object) {
   vi.mocked(useListMembersQuery).mockReturnValue(state as unknown as ReturnType<typeof useListMembersQuery>);
@@ -171,6 +174,28 @@ describe('Members', () => {
     renderWithProviders(<Members />);
     expect(screen.getByTestId('members-skeleton')).toBeInTheDocument();
     expect(screen.queryByTestId('pending-invites')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['failed', FAILED],
+    ['is retrying', RETRYING],
+  ])('shows the page, not the skeleton, when the members load %s, so the list can say so', (_, state) => {
+    membersState(state);
+    renderWithProviders(<Members />);
+    expect(screen.queryByTestId('members-skeleton')).not.toBeInTheDocument();
+    expect(screen.getByTestId('member-list')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['failed', FAILED],
+    ['is retrying', RETRYING],
+  ])('shows the page, not the skeleton, when the invites load %s, keeping the invite form', (_, state) => {
+    vi.mocked(useIsOrgAdmin).mockReturnValue(true);
+    invitesState(state);
+    renderWithProviders(<Members />);
+    expect(screen.queryByTestId('members-skeleton')).not.toBeInTheDocument();
+    expect(screen.getByTestId('pending-invites')).toBeInTheDocument();
+    expect(screen.getByTestId('invite-form')).toBeInTheDocument();
   });
 
   it('keeps the same invite form while members and invites refetch in the background', () => {

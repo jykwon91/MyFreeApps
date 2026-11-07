@@ -313,7 +313,10 @@
         "backend/app/schemas/organization/",
         "backend/app/api/organizations.py",
         "frontend/src/app/features/organizations/",
-        "frontend/src/shared/store/organizationSlice.ts"
+        "frontend/src/shared/store/organizationSlice.ts",
+        "frontend/src/app/pages/Members.tsx",
+        "frontend/src/shared/lib/organization-messages.ts",
+        "frontend/src/shared/components/ui/LoadErrorAlert.tsx"
       ],
       "backend_tests": [
         "test_organization.py",
@@ -332,7 +335,8 @@
         "InviteForm.test.tsx",
         "PendingInvites.test.tsx",
         "RequireOrgRole.test.tsx",
-        "organizationSlice.test.ts"
+        "organizationSlice.test.ts",
+        "Members.test.tsx"
       ],
       "e2e_specs": [
         "members.spec.ts",
@@ -340,6 +344,7 @@
         "layout.spec.ts",
         "mocked/members-invites-mock.spec.ts",
         "mocked/members-owner-row-mock.spec.ts",
+        "mocked/members-load-error-mock.spec.ts",
         "mocked/members-org-switch-mock.spec.ts"
       ]
     },
