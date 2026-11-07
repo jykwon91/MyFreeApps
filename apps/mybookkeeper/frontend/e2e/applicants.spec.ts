@@ -104,10 +104,10 @@ test.describe("Applicants frontend (PR 3.1b)", () => {
       // List page renders.
       await page.goto("/applicants");
       await waitForApplicantsPage(page);
-      await expect(page.getByText(legalName).first()).toBeVisible({ timeout: 5000 });
+      await expect(page.getByTestId("applicants-desktop").getByText(legalName)).toBeVisible({ timeout: 5000 });
 
       // Drill into detail.
-      await page.getByText(legalName).first().click();
+      await page.getByTestId("applicants-desktop").getByText(legalName).click();
       await expect(page).toHaveURL(new RegExp(`/applicants/${applicantId}$`));
 
       // Header with stage badge.
@@ -179,14 +179,14 @@ test.describe("Applicants frontend (PR 3.1b)", () => {
       await waitForApplicantsPage(page);
 
       // All visible by default.
-      await expect(page.getByText(`E2E Lead ${runId}`).first()).toBeVisible();
-      await expect(page.getByText(`E2E Screening ${runId}`).first()).toBeVisible();
+      await expect(page.getByTestId("applicants-desktop").getByText(`E2E Lead ${runId}`)).toBeVisible();
+      await expect(page.getByTestId("applicants-desktop").getByText(`E2E Screening ${runId}`)).toBeVisible();
 
       // Filter to screening_pending.
       await page.getByTestId("applicant-filter-screening_pending").click();
       await page.waitForLoadState("networkidle");
 
-      await expect(page.getByText(`E2E Screening ${runId}`).first()).toBeVisible();
+      await expect(page.getByTestId("applicants-desktop").getByText(`E2E Screening ${runId}`)).toBeVisible();
       await expect(page.getByText(`E2E Lead ${runId}`)).toHaveCount(0);
 
       // URL state reflects the filter.
@@ -195,8 +195,8 @@ test.describe("Applicants frontend (PR 3.1b)", () => {
       // Back to All — both return.
       await page.getByTestId("applicant-filter-all").click();
       await page.waitForLoadState("networkidle");
-      await expect(page.getByText(`E2E Lead ${runId}`).first()).toBeVisible();
-      await expect(page.getByText(`E2E Screening ${runId}`).first()).toBeVisible();
+      await expect(page.getByTestId("applicants-desktop").getByText(`E2E Lead ${runId}`)).toBeVisible();
+      await expect(page.getByTestId("applicants-desktop").getByText(`E2E Screening ${runId}`)).toBeVisible();
     } finally {
       for (const id of seededIds) await deleteApplicant(api, id);
     }

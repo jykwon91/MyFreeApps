@@ -76,15 +76,15 @@ test.describe("Listings frontend (PR 1.1b)", () => {
 
       // All three seeded listings should be visible in the rendered list.
       // Their titles are unique to this run so we can assert presence directly.
-      await expect(page.getByText(`E2E Active Listing ${runId}`).first()).toBeVisible();
-      await expect(page.getByText(`E2E Paused Listing ${runId}`).first()).toBeVisible();
-      await expect(page.getByText(`E2E Archived Listing ${runId}`).first()).toBeVisible();
+      await expect(page.getByTestId("listings-desktop").getByText(`E2E Active Listing ${runId}`)).toBeVisible();
+      await expect(page.getByTestId("listings-desktop").getByText(`E2E Paused Listing ${runId}`)).toBeVisible();
+      await expect(page.getByTestId("listings-desktop").getByText(`E2E Archived Listing ${runId}`)).toBeVisible();
 
       // Filter to Active. The active row stays, the others must drop out.
       await page.getByTestId("listing-filter-active").click();
       await page.waitForLoadState("networkidle");
 
-      await expect(page.getByText(`E2E Active Listing ${runId}`).first()).toBeVisible();
+      await expect(page.getByTestId("listings-desktop").getByText(`E2E Active Listing ${runId}`)).toBeVisible();
       await expect(page.getByText(`E2E Paused Listing ${runId}`)).toHaveCount(0);
       await expect(page.getByText(`E2E Archived Listing ${runId}`)).toHaveCount(0);
 
@@ -92,7 +92,7 @@ test.describe("Listings frontend (PR 1.1b)", () => {
       expect(page.url()).toContain("status=active");
 
       // Click the active row → detail page renders the listing data.
-      await page.getByText(`E2E Active Listing ${runId}`).first().click();
+      await page.getByTestId("listings-desktop").getByText(`E2E Active Listing ${runId}`).click();
       await expect(page).toHaveURL(new RegExp(`/listings/${activeId}$`));
       await expect(page.getByRole("heading", { name: `E2E Active Listing ${runId}` })).toBeVisible();
       await expect(page.getByRole("link", { name: /back to listings/i })).toBeVisible();

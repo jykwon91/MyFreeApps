@@ -52,13 +52,13 @@ test.describe("Listings CRUD (PR 1.2)", () => {
       await page.getByTestId("listing-form-submit").click();
 
       // The form closes on success and the new card appears in the list.
-      await expect(page.getByText(`E2E Listing ${runId}`).first()).toBeVisible({
+      await expect(page.getByTestId("listings-desktop").getByText(`E2E Listing ${runId}`)).toBeVisible({
         timeout: 10000,
       });
       await page.waitForLoadState("networkidle");
 
       // 2) Drill in and verify fields.
-      await page.getByText(`E2E Listing ${runId}`).first().click();
+      await page.getByTestId("listings-desktop").getByText(`E2E Listing ${runId}`).click();
       await expect(
         page.getByRole("heading", { name: `E2E Listing ${runId}` }),
       ).toBeVisible();
