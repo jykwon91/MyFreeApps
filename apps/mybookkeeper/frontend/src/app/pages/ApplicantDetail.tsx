@@ -3,7 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import ApplicantDetailSkeleton from "@/app/features/applicants/ApplicantDetailSkeleton";
 import ApplicantDetailBody from "@/app/features/applicants/ApplicantDetailBody";
-import { useApplicantDetailMode } from "@/app/features/applicants/useApplicantDetailMode";
+import { resolveDetailLoadMode } from "@/shared/lib/detail-load-mode";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 export default function ApplicantDetail() {
@@ -12,14 +12,13 @@ export default function ApplicantDetail() {
   const isTenantContext = location.pathname.startsWith("/tenants/");
 
   const {
-    data: applicant,
-    isLoading,
+    currentData: applicant,
+    error,
     isFetching,
-    isError,
     refetch,
   } = useGetApplicantByIdQuery(applicantId ?? "", { skip: !applicantId });
 
-  const mode = useApplicantDetailMode({ isLoading, isError, applicant });
+  const mode = resolveDetailLoadMode({ hasData: applicant !== undefined, hasError: error !== undefined });
 
   return (
     <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
@@ -31,12 +30,12 @@ export default function ApplicantDetail() {
         Back to {isTenantContext ? "tenants" : "applicants"}
       </Link>
 
-      {isError ? (
+      {error ? (
         <LoadErrorAlert message="I couldn't find that applicant. Maybe it was removed?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
       {mode === "loading" ? <ApplicantDetailSkeleton /> : null}
-      {mode === "content" ? <ApplicantDetailBody key={applicant!.id} applicant={applicant!} /> : null}
+      {applicant ? <ApplicantDetailBody key={applicant.id} applicant={applicant} /> : null}
     </main>
   );
 }

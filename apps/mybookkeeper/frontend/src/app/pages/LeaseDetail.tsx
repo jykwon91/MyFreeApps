@@ -33,6 +33,7 @@ import LeaseAddTemplateModal from "@/app/features/leases/LeaseAddTemplateModal";
 import UndoExtensionDialog from "@/app/features/leases/UndoExtensionDialog";
 import type { SignedLeaseStatus } from "@mybookkeeper/api-client/types/lease/signed-lease-status";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { resolveDetailLoadMode } from "@/shared/lib/detail-load-mode";
 
 type Tab = "files" | "details" | "notes";
 
@@ -45,12 +46,12 @@ export default function LeaseDetail() {
   const [showExtendDialog, setShowExtendDialog] = useState(false);
   const [showUndoDialog, setShowUndoDialog] = useState(false);
   const {
-    data: lease,
-    isLoading,
+    currentData: lease,
+    error,
     isFetching,
-    isError,
     refetch,
   } = useGetSignedLeaseByIdQuery(leaseId ?? "", { skip: !leaseId });
+  const mode = resolveDetailLoadMode({ hasData: lease !== undefined, hasError: error !== undefined });
   const [generateLease, { isLoading: isGenerating }] =
     useGenerateSignedLeaseMutation();
   const [updateLease] = useUpdateSignedLeaseMutation();
@@ -152,19 +153,19 @@ export default function LeaseDetail() {
         Back to leases
       </Link>
 
-      {isError ? (
+      {error ? (
         <LoadErrorAlert message="I couldn't find that lease." isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
-      {isLoading || !lease ? (
-        !isError ? (
-          <div className="space-y-3">
-            <Skeleton className="h-7 w-1/2" />
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-32" />
-          </div>
-        ) : null
-      ) : (
+      {mode === "loading" ? (
+        <div className="space-y-3">
+          <Skeleton className="h-7 w-1/2" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-32" />
+        </div>
+      ) : null}
+
+      {lease ? (
         <>
           <SectionHeader
             title={`Lease ${lease.id.slice(0, 8)}`}
@@ -413,7 +414,7 @@ export default function LeaseDetail() {
             </section>
           ) : null}
         </>
-      )}
+      ) : null}
     </main>
   );
 }

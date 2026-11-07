@@ -76,6 +76,7 @@ const deleteMutation = vi.fn(() => ({ unwrap: () => Promise.resolve() }));
 
 interface DetailQueryState {
   data: InquiryResponse | undefined;
+  currentData: InquiryResponse | undefined;
   isLoading: boolean;
   isFetching: boolean;
   isError: boolean;
@@ -83,7 +84,7 @@ interface DetailQueryState {
 }
 
 const defaultDetailState: DetailQueryState = {
-  data: mockInquiry,
+  ...queryData(mockInquiry),
   isLoading: false,
   isFetching: false,
   isError: false,
@@ -92,19 +93,19 @@ const defaultDetailState: DetailQueryState = {
 
 vi.mock("@mybookkeeper/api-client/store/inquiriesApi", () => ({
   useGetInquiryByIdQuery: vi.fn(() => defaultDetailState),
-  useGetInquiriesQuery: vi.fn(() => ({ data: undefined, isLoading: false, isFetching: false, isError: false, refetch: vi.fn() })),
+  useGetInquiriesQuery: vi.fn(() => ({ ...queryData(undefined), isLoading: false, isFetching: false, isError: false, refetch: vi.fn() })),
   useUpdateInquiryMutation: vi.fn(() => [updateMutation, { isLoading: false }]),
   useDeleteInquiryMutation: vi.fn(() => [deleteMutation, { isLoading: false }]),
   useCreateInquiryMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
-  useGetReplyTemplatesQuery: vi.fn(() => ({ data: [], isLoading: false })),
+  useGetReplyTemplatesQuery: vi.fn(() => ({ ...queryData([]), isLoading: false })),
   useLazyRenderReplyTemplateQuery: vi.fn(() => [
     vi.fn(),
-    { data: undefined, isFetching: false },
+    { ...queryData(undefined), isFetching: false },
   ]),
   useSendInquiryReplyMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   // T0 — public inquiry form spam triage hooks
   useGetInquirySpamAssessmentsQuery: vi.fn(() => ({
-    data: [],
+    ...queryData([]),
     isLoading: false,
   })),
   useMarkInquiryNotSpamMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
@@ -112,13 +113,15 @@ vi.mock("@mybookkeeper/api-client/store/inquiriesApi", () => ({
 }));
 
 vi.mock("@mybookkeeper/api-client/store/integrationsApi", () => ({
-  useGetIntegrationsQuery: vi.fn(() => ({ data: [], isLoading: false })),
+  useGetIntegrationsQuery: vi.fn(() => ({ ...queryData([]), isLoading: false })),
 }));
 
 vi.mock("@/shared/hooks/useOrgRole", () => ({ useCanWrite: vi.fn(() => true) }));
 
 import { useGetInquiryByIdQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
+import { queryStatus } from "@/test/rtk-query-status";
+import { queryData } from "@/test/rtk-query-data";
 
 type DetailQueryReturn = ReturnType<typeof useGetInquiryByIdQuery>;
 
@@ -163,7 +166,7 @@ describe("InquiryDetail page", () => {
   it("renders the loading skeleton while fetching", () => {
     vi.mocked(useGetInquiryByIdQuery).mockReturnValueOnce({
       ...defaultDetailState,
-      data: undefined,
+      ...queryData(undefined),
       isLoading: true,
     } as unknown as DetailQueryReturn);
     renderDetail();
@@ -173,11 +176,36 @@ describe("InquiryDetail page", () => {
   it("renders an error AlertBox when the query errors", () => {
     vi.mocked(useGetInquiryByIdQuery).mockReturnValueOnce({
       ...defaultDetailState,
-      data: undefined,
-      isError: true,
+      ...queryData(undefined),
+      ...queryStatus({ failed: true, fetching: false }),
     } as unknown as DetailQueryReturn);
     renderDetail();
     expect(screen.getByText(/I couldn't load this inquiry/i)).toBeInTheDocument();
+  });
+
+  it("keeps the error, not a skeleton, while Retry refetches", () => {
+    vi.mocked(useGetInquiryByIdQuery).mockReturnValue({
+      ...defaultDetailState,
+      ...queryData(undefined),
+      isLoading: false,
+      ...queryStatus({ failed: true, fetching: true }),
+    } as unknown as DetailQueryReturn);
+    renderDetail();
+    expect(screen.getByText(/I couldn't load this inquiry/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+    expect(screen.queryByTestId("inquiry-detail-skeleton")).not.toBeInTheDocument();
+  });
+
+  it("keeps the inquiry showing under the error when a refresh fails", () => {
+    vi.mocked(useGetInquiryByIdQuery).mockReturnValue({
+      ...defaultDetailState,
+      ...queryData(mockInquiry),
+      isLoading: false,
+      ...queryStatus({ failed: true, fetching: false }),
+    } as unknown as DetailQueryReturn);
+    renderDetail();
+    expect(screen.getByText(/I couldn't load this inquiry/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Alice Nguyen" })).toBeInTheDocument();
   });
 
   it("calls update mutation when the stage dropdown changes", async () => {
@@ -220,7 +248,7 @@ describe("InquiryDetail page", () => {
     };
     vi.mocked(useGetInquiryByIdQuery).mockReturnValueOnce({
       ...defaultDetailState,
-      data: inquiryWithHtml,
+      ...queryData(inquiryWithHtml),
     } as unknown as DetailQueryReturn);
     renderDetail();
     // The literal "<script>" string appears in the DOM as text — never as a
@@ -301,7 +329,7 @@ describe("InquiryDetail page for a viewer", () => {
   it("shows the notes as text, keeping line breaks", () => {
     vi.mocked(useGetInquiryByIdQuery).mockReturnValue({
       ...defaultDetailState,
-      data: { ...mockInquiry, notes: "Line one\nLine two" },
+      ...queryData({ ...mockInquiry, notes: "Line one\nLine two" }),
     } as unknown as DetailQueryReturn);
     renderDetail();
     const notes = screen.getByTestId("inquiry-notes-text");
@@ -313,7 +341,7 @@ describe("InquiryDetail page for a viewer", () => {
   it("says there are no notes yet when there are none", () => {
     vi.mocked(useGetInquiryByIdQuery).mockReturnValue({
       ...defaultDetailState,
-      data: { ...mockInquiry, notes: null },
+      ...queryData({ ...mockInquiry, notes: null }),
     } as unknown as DetailQueryReturn);
     renderDetail();
     expect(screen.getByTestId("inquiry-notes-text")).toHaveTextContent("No notes yet.");
@@ -322,7 +350,7 @@ describe("InquiryDetail page for a viewer", () => {
   it("keeps the link to an applicant the inquiry was promoted to", () => {
     vi.mocked(useGetInquiryByIdQuery).mockReturnValue({
       ...defaultDetailState,
-      data: { ...mockInquiry, linked_applicant_id: "app-1" },
+      ...queryData({ ...mockInquiry, linked_applicant_id: "app-1" }),
     } as unknown as DetailQueryReturn);
     renderDetail();
     const row = screen.getByTestId("inquiry-action-row");

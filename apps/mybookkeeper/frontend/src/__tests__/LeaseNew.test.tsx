@@ -21,6 +21,7 @@ import ApplicantPicker from "@/app/features/leases/ApplicantPicker";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 import { queryStatus } from "@/test/rtk-query-status";
+import { queryData } from "@/test/rtk-query-data";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -191,40 +192,40 @@ function renderLeaseNew(initialPath = "/leases/new") {
 describe("LeaseNew page", () => {
   beforeEach(() => {
     mockUseGetLeaseTemplatesQuery.mockReturnValue({
-      data: { items: [TEMPLATE_SUMMARY] },
+      ...queryData({ items: [TEMPLATE_SUMMARY] }),
       isLoading: false,
       isFetching: false,
       isError: false,
       refetch: vi.fn(),
     });
     mockUseGetApplicantsQuery.mockReturnValue({
-      data: { items: APPLICANTS },
+      ...queryData({ items: APPLICANTS }),
       isLoading: false,
       isFetching: false,
       isError: false,
       refetch: vi.fn(),
     });
     mockUseGetLeaseTemplateByIdQuery.mockReturnValue({
-      data: undefined,
+      ...queryData(undefined),
       isLoading: false,
       isFetching: false,
       isError: false,
       refetch: vi.fn(),
     });
     mockUseGetApplicantByIdQuery.mockReturnValue({
-      data: undefined,
+      ...queryData(undefined),
       isLoading: false,
       isFetching: false,
       isError: false,
       refetch: vi.fn(),
     });
     mockUseGetGenerateDefaultsQuery.mockReturnValue({
-      data: undefined,
+      ...queryData(undefined),
       isLoading: false,
       isFetching: false,
     });
     mockUseGetMultiGenerateDefaultsQuery.mockReturnValue({
-      data: undefined,
+      ...queryData(undefined),
       isLoading: false,
       isFetching: false,
     });
@@ -264,14 +265,14 @@ describe("LeaseNew page", () => {
 
   it("shows form section when template_ids and applicant_id are in URL", () => {
     mockUseGetApplicantByIdQuery.mockReturnValue({
-      data: APPROVED_APPLICANT_DETAIL,
+      ...queryData(APPROVED_APPLICANT_DETAIL),
       isLoading: false,
       isFetching: false,
       isError: false,
       refetch: vi.fn(),
     });
     mockUseGetMultiGenerateDefaultsQuery.mockReturnValue({
-      data: { placeholders: [] },
+      ...queryData({ placeholders: [] }),
       isLoading: false,
       isFetching: false,
     });
@@ -279,15 +280,40 @@ describe("LeaseNew page", () => {
     expect(screen.getByTestId("lease-generate-form-section")).toBeInTheDocument();
   });
 
+  it("shows the form skeleton while the applicant loads", () => {
+    mockUseGetApplicantByIdQuery.mockReturnValue({
+      ...queryData(undefined),
+      isLoading: true,
+      ...queryStatus({ failed: false, fetching: true }),
+      refetch: vi.fn(),
+    });
+    renderLeaseNew("/leases/new?template_ids=tpl-1&applicant_id=app-1");
+    expect(screen.getByTestId("lease-new-form-skeleton")).toBeInTheDocument();
+    expect(screen.queryByTestId("lease-new-applicant-error")).not.toBeInTheDocument();
+  });
+
   it("shows applicant error banner when applicant fetch fails", () => {
     mockUseGetApplicantByIdQuery.mockReturnValue({
-      data: undefined,
+      ...queryData(undefined),
       isLoading: false,
       ...queryStatus({ failed: true, fetching: false }),
       refetch: vi.fn(),
     });
     renderLeaseNew("/leases/new?template_ids=tpl-1&applicant_id=app-bad");
     expect(screen.getByTestId("lease-new-applicant-error")).toBeInTheDocument();
+  });
+
+  it("keeps the applicant error, not a blank page, while Retry refetches", () => {
+    mockUseGetApplicantByIdQuery.mockReturnValue({
+      ...queryData(undefined),
+      isLoading: false,
+      ...queryStatus({ failed: true, fetching: true }),
+      refetch: vi.fn(),
+    });
+    renderLeaseNew("/leases/new?template_ids=tpl-1&applicant_id=app-bad");
+    expect(screen.getByTestId("lease-new-applicant-error")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+    expect(screen.queryByTestId("lease-new-form-skeleton")).not.toBeInTheDocument();
   });
 });
 
@@ -309,7 +335,7 @@ describe("MultiTemplatePicker", () => {
     selectedIds: string[] = [],
   ) {
     mockUseGetLeaseTemplatesQuery.mockReturnValue({
-      data: { items: [TEMPLATE_SUMMARY, TEMPLATE_SUMMARY_2] },
+      ...queryData({ items: [TEMPLATE_SUMMARY, TEMPLATE_SUMMARY_2] }),
       isLoading: false,
       isFetching: false,
       isError: false,
@@ -344,12 +370,12 @@ describe("MultiTemplatePicker", () => {
   });
 
   it("shows skeleton while loading", () => {
-    renderPicker({ data: undefined, isLoading: true });
+    renderPicker({ ...queryData(undefined), isLoading: true });
     expect(screen.getByTestId("multi-template-picker-skeleton")).toBeInTheDocument();
   });
 
   it("shows empty message when no templates exist", () => {
-    renderPicker({ data: { items: [] }, isLoading: false });
+    renderPicker({ ...queryData({ items: [] }), isLoading: false });
     expect(screen.getByTestId("multi-template-picker-empty")).toBeInTheDocument();
   });
 
@@ -372,12 +398,12 @@ describe("MultiTemplatePicker", () => {
   });
 
   it("shows error state", () => {
-    renderPicker({ ...queryStatus({ failed: true, fetching: false }), data: undefined, isLoading: false });
+    renderPicker({ ...queryStatus({ failed: true, fetching: false }), ...queryData(undefined), isLoading: false });
     expect(screen.getByText(/couldn't load your templates/i)).toBeInTheDocument();
   });
 
   it("keeps the error, not 'No templates yet', while Retry refetches", () => {
-    renderPicker({ ...queryStatus({ failed: true, fetching: true }), data: undefined, isLoading: false });
+    renderPicker({ ...queryStatus({ failed: true, fetching: true }), ...queryData(undefined), isLoading: false });
     expect(screen.getByText(/couldn't load your templates/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
     expect(screen.queryByTestId("multi-template-picker-empty")).not.toBeInTheDocument();
@@ -399,7 +425,7 @@ describe("ApplicantPicker", () => {
 
   function renderPicker(overrides: Partial<ReturnType<typeof mockUseGetApplicantsQuery>> = {}) {
     mockUseGetApplicantsQuery.mockReturnValue({
-      data: { items: APPLICANTS },
+      ...queryData({ items: APPLICANTS }),
       isLoading: false,
       isFetching: false,
       isError: false,
@@ -441,12 +467,12 @@ describe("ApplicantPicker", () => {
 
   it("shows empty message when no eligible applicants exist", () => {
     renderPicker({
-      data: {
+      ...queryData({
         items: [
           { ...APPLICANTS[2] }, // only lease_signed — ineligible
           { ...APPLICANTS[3] }, // only lead — ineligible
         ],
-      },
+      }),
     });
     expect(screen.getByTestId("applicant-picker-empty")).toBeInTheDocument();
   });
@@ -458,17 +484,17 @@ describe("ApplicantPicker", () => {
   });
 
   it("shows skeleton while loading", () => {
-    renderPicker({ data: undefined, isLoading: true });
+    renderPicker({ ...queryData(undefined), isLoading: true });
     expect(screen.getByTestId("applicant-picker-skeleton")).toBeInTheDocument();
   });
 
   it("shows error state", () => {
-    renderPicker({ ...queryStatus({ failed: true, fetching: false }), data: undefined, isLoading: false });
+    renderPicker({ ...queryStatus({ failed: true, fetching: false }), ...queryData(undefined), isLoading: false });
     expect(screen.getByText(/couldn't load your applicants/i)).toBeInTheDocument();
   });
 
   it("keeps the error, not 'No applicants at the right stage', while Retry refetches", () => {
-    renderPicker({ ...queryStatus({ failed: true, fetching: true }), data: undefined, isLoading: false });
+    renderPicker({ ...queryStatus({ failed: true, fetching: true }), ...queryData(undefined), isLoading: false });
     expect(screen.getByText(/couldn't load your applicants/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
     expect(screen.queryByTestId("applicant-picker-empty")).not.toBeInTheDocument();

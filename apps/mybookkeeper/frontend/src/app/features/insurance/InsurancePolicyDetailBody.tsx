@@ -5,7 +5,7 @@ import { useDeleteInsurancePolicyMutation } from "@/shared/store/insurancePolici
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import type { InsurancePolicyDetail } from "@mybookkeeper/api-client/types/insurance/insurance-policy-detail";
-import type { InsurancePolicyDetailMode } from "@/shared/types/insurance/insurance-policy-detail-mode";
+import type { DetailLoadMode } from "@/shared/types/detail-load-mode";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { Button, ConfirmDialog } from "@platform/ui";
 import {
@@ -20,7 +20,7 @@ import InsurancePolicyAttachmentsSection from "./InsurancePolicyAttachmentsSecti
 import InsurancePolicyDetailSkeleton from "./InsurancePolicyDetailSkeleton";
 
 export interface InsurancePolicyDetailBodyProps {
-  mode: InsurancePolicyDetailMode | null;
+  mode: DetailLoadMode;
   policy: InsurancePolicyDetail | undefined;
 }
 
@@ -52,7 +52,7 @@ export default function InsurancePolicyDetailBody({
   }
 
   switch (mode) {
-    case null:
+    case "error":
       return null;
     case "loading":
       return <InsurancePolicyDetailSkeleton />;

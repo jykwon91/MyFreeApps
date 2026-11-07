@@ -59,6 +59,7 @@ const mockProperties: Property[] = [
 
 const deleteListingMock = vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) }));
 
+import { queryStatus } from "@/test/rtk-query-status";
 vi.mock("@/shared/store/listingsApi", () => ({
   useCreateListingMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useUpdateListingMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
@@ -69,8 +70,8 @@ vi.mock("@/shared/store/listingsApi", () => ({
   useCreateListingExternalIdMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
   useUpdateListingExternalIdMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
   useDeleteListingExternalIdMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
-  useGetChannelsQuery: vi.fn(() => ({ data: [], isLoading: false })),
-  useGetListingChannelsQuery: vi.fn(() => ({ data: [], isLoading: false })),
+  useGetChannelsQuery: vi.fn(() => ({ ...queryData([]), isLoading: false })),
+  useGetListingChannelsQuery: vi.fn(() => ({ ...queryData([]), isLoading: false })),
   useCreateListingChannelMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
   useUpdateChannelListingMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
   useDeleteChannelListingMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
@@ -78,11 +79,11 @@ vi.mock("@/shared/store/listingsApi", () => ({
 
 vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   useGetListingByIdQuery: vi.fn(),
-  useGetListingsQuery: vi.fn(() => ({ data: { items: [], total: 0, has_more: false }, isLoading: false })),
+  useGetListingsQuery: vi.fn(() => ({ ...queryData({ items: [], total: 0, has_more: false }), isLoading: false })),
 }));
 
 vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
-  useGetPropertiesQuery: vi.fn(() => ({ data: mockProperties, isLoading: false })),
+  useGetPropertiesQuery: vi.fn(() => ({ ...queryData(mockProperties), isLoading: false })),
 }));
 
 vi.mock("@/shared/hooks/useOrgRole", () => ({ useCanWrite: vi.fn(() => true) }));
@@ -90,13 +91,15 @@ vi.mock("@/shared/hooks/useOrgRole", () => ({ useCanWrite: vi.fn(() => true) }))
 import { useGetListingByIdQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
+import { queryData } from "@/test/rtk-query-data";
 
-function renderDetail(listing: ListingResponse | undefined = mockListing, overrides: Partial<{ isLoading: boolean; isError: boolean; refetch: () => void }> = {}) {
+/** `null` renders before any listing has loaded. */
+function renderDetail(listing: ListingResponse | null = mockListing, overrides: Partial<{ failed: boolean; fetching: boolean; refetch: () => void }> = {}) {
+  const fetching = overrides.fetching ?? false;
   vi.mocked(useGetListingByIdQuery).mockReturnValue({
-    data: listing,
-    isLoading: overrides.isLoading ?? false,
-    isFetching: false,
-    isError: overrides.isError ?? false,
+    ...queryData(listing ?? undefined),
+    isLoading: listing === null && fetching && !overrides.failed,
+    ...queryStatus({ failed: overrides.failed ?? false, fetching }),
     refetch: overrides.refetch ?? vi.fn(),
   } as unknown as ReturnType<typeof useGetListingByIdQuery>);
 
@@ -326,16 +329,51 @@ describe("ListingDetail page", () => {
   });
 
   it("renders the skeleton while loading", () => {
-    renderDetail(undefined, { isLoading: true });
+    renderDetail(null, { fetching: true });
     expect(screen.getByTestId("listing-detail-skeleton")).toBeInTheDocument();
   });
 
   it("renders an inline error banner with retry on error", async () => {
     const refetchMock = vi.fn();
-    renderDetail(undefined, { isError: true, refetch: refetchMock });
+    renderDetail(null, { failed: true, refetch: refetchMock });
     expect(screen.getByText(/I couldn't load this listing/i)).toBeInTheDocument();
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /retry/i }));
     expect(refetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the error, not a blank page, while Retry refetches", () => {
+    renderDetail(null, { failed: true, fetching: true });
+    expect(screen.getByText(/I couldn't load this listing/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+    expect(screen.queryByTestId("listing-detail-skeleton")).not.toBeInTheDocument();
+  });
+
+  it("keeps the listing showing under the error when a refresh fails", () => {
+    renderDetail(mockListing, { failed: true });
+    expect(screen.getByText(/I couldn't load this listing/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: mockListing.title })).toBeInTheDocument();
+  });
+
+  it("shows a skeleton, not the previous listing, while a different listing loads", () => {
+    // RTK keeps the last answer in ``data`` when the id changes; only ``currentData`` is for this id.
+    vi.mocked(useGetListingByIdQuery).mockReturnValue({
+      data: mockListing,
+      currentData: undefined,
+      isLoading: false,
+      ...queryStatus({ failed: false, fetching: true }),
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useGetListingByIdQuery>);
+    render(
+      <Provider store={store}>
+        <MemoryRouter initialEntries={["/listings/listing-other"]}>
+          <Routes>
+            <Route path="/listings/:listingId" element={<ListingDetail />} />
+          </Routes>
+        </MemoryRouter>
+      </Provider>,
+    );
+    expect(screen.getByTestId("listing-detail-skeleton")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: mockListing.title })).not.toBeInTheDocument();
   });
 });

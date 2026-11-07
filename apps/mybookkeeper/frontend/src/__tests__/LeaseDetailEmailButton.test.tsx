@@ -20,6 +20,7 @@ import LeaseDetail from "@/app/pages/LeaseDetail";
 import type { SignedLeaseDetail } from "@mybookkeeper/api-client/types/lease/signed-lease-detail";
 import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
 import type { ApplicantDetailResponse } from "@mybookkeeper/api-client/types/applicant/applicant-detail-response";
+import { queryData } from "@/test/rtk-query-data";
 
 const emailMock = vi.fn(() => ({ unwrap: () => Promise.resolve() }));
 const showSuccessMock = vi.fn();
@@ -140,13 +141,13 @@ function buildApplicant(
 
 function renderDetail() {
   useGetSignedLeaseByIdQueryMock.mockReturnValue({
-    data: mockLease,
+    ...queryData(mockLease),
     isLoading: false,
     isFetching: false,
     isError: false,
     refetch: vi.fn(),
   });
-  useGetApplicantByIdQueryMock.mockReturnValue({ data: mockApplicant });
+  useGetApplicantByIdQueryMock.mockReturnValue({ ...queryData(mockApplicant) });
   return render(
     <Provider store={store}>
       <MemoryRouter initialEntries={["/leases/lease-1"]}>
@@ -249,7 +250,7 @@ describe("LeaseDetail — Email to tenant button", () => {
     mockLease = buildLease();
     mockApplicant = buildApplicant();
     emailMock.mockReturnValueOnce({
-      unwrap: () => Promise.reject({ status: 403, data: { detail: "This feature is not available for demo accounts" } }),
+      unwrap: () => Promise.reject({ status: 403, ...queryData({ detail: "This feature is not available for demo accounts" }) }),
     });
     renderDetail();
     await userEvent.click(screen.getByTestId("lease-email-tenant-button"));

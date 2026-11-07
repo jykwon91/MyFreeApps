@@ -25,7 +25,7 @@ const mockVendor: VendorResponse = {
 };
 
 const defaultDetailState = {
-  data: mockVendor,
+  ...queryData(mockVendor),
   isLoading: false,
   isFetching: false,
   isError: false,
@@ -37,7 +37,7 @@ const updateVendor = vi.fn(() => ({ unwrap: () => Promise.resolve(mockVendor) })
 const createVendor = vi.fn(() => ({ unwrap: () => Promise.resolve(mockVendor) }));
 
 vi.mock("@mybookkeeper/api-client/store/vendorsApi", () => ({
-  useGetVendorsQuery: vi.fn(() => ({ data: undefined, isLoading: false })),
+  useGetVendorsQuery: vi.fn(() => ({ ...queryData(undefined), isLoading: false })),
   useGetVendorByIdQuery: vi.fn(() => defaultDetailState),
   useDeleteVendorMutation: () => [deleteVendor, { isLoading: false }],
   useUpdateVendorMutation: () => [updateVendor, { isLoading: false }],
@@ -45,6 +45,8 @@ vi.mock("@mybookkeeper/api-client/store/vendorsApi", () => ({
 }));
 
 import { useGetVendorByIdQuery } from "@mybookkeeper/api-client/store/vendorsApi";
+import { queryStatus } from "@/test/rtk-query-status";
+import { queryData } from "@/test/rtk-query-data";
 
 type DetailQueryReturn = ReturnType<typeof useGetVendorByIdQuery>;
 
@@ -83,7 +85,7 @@ describe("VendorDetail page", () => {
   it("hides the preferred indicator when preferred=false", () => {
     vi.mocked(useGetVendorByIdQuery).mockReturnValueOnce({
       ...defaultDetailState,
-      data: { ...mockVendor, preferred: false },
+      ...queryData({ ...mockVendor, preferred: false }),
     } as unknown as DetailQueryReturn);
     renderVendorDetail();
     expect(screen.queryByTestId("vendor-preferred-indicator")).toBeNull();
@@ -120,7 +122,7 @@ describe("VendorDetail page", () => {
   it("renders the loading skeleton while fetching", () => {
     vi.mocked(useGetVendorByIdQuery).mockReturnValueOnce({
       ...defaultDetailState,
-      data: undefined,
+      ...queryData(undefined),
       isLoading: true,
     } as unknown as DetailQueryReturn);
     renderVendorDetail();
@@ -130,8 +132,8 @@ describe("VendorDetail page", () => {
   it("renders the friendly not-found message on error", () => {
     vi.mocked(useGetVendorByIdQuery).mockReturnValueOnce({
       ...defaultDetailState,
-      data: undefined,
-      isError: true,
+      ...queryData(undefined),
+      ...queryStatus({ failed: true, fetching: false }),
     } as unknown as DetailQueryReturn);
     renderVendorDetail();
     expect(
@@ -139,16 +141,41 @@ describe("VendorDetail page", () => {
     ).toBeInTheDocument();
   });
 
+  it("keeps the error, not a skeleton, while Retry refetches", () => {
+    vi.mocked(useGetVendorByIdQuery).mockReturnValue({
+      ...defaultDetailState,
+      ...queryData(undefined),
+      isLoading: false,
+      ...queryStatus({ failed: true, fetching: true }),
+    } as unknown as DetailQueryReturn);
+    renderVendorDetail();
+    expect(screen.getByText(/I couldn't find that vendor/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+    expect(screen.queryByTestId("vendor-detail-skeleton")).not.toBeInTheDocument();
+  });
+
+  it("keeps the vendor showing under the error when a refresh fails", () => {
+    vi.mocked(useGetVendorByIdQuery).mockReturnValue({
+      ...defaultDetailState,
+      ...queryData(mockVendor),
+      isLoading: false,
+      ...queryStatus({ failed: true, fetching: false }),
+    } as unknown as DetailQueryReturn);
+    renderVendorDetail();
+    expect(screen.getByText(/I couldn't find that vendor/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Bob's Plumbing" })).toBeInTheDocument();
+  });
+
   it("falls back to '—' for missing optional contact fields", () => {
     vi.mocked(useGetVendorByIdQuery).mockReturnValueOnce({
       ...defaultDetailState,
-      data: {
+      ...queryData({
         ...mockVendor,
         phone: null,
         email: null,
         address: null,
         flat_rate_notes: null,
-      },
+      }),
     } as unknown as DetailQueryReturn);
     renderVendorDetail();
     expect(screen.getByTestId("vendor-phone")).toHaveTextContent("—");
@@ -160,7 +187,7 @@ describe("VendorDetail page", () => {
   it("falls back to em dash for missing hourly rate", () => {
     vi.mocked(useGetVendorByIdQuery).mockReturnValueOnce({
       ...defaultDetailState,
-      data: { ...mockVendor, hourly_rate: null },
+      ...queryData({ ...mockVendor, hourly_rate: null }),
     } as unknown as DetailQueryReturn);
     renderVendorDetail();
     expect(screen.getByTestId("vendor-hourly-rate")).toHaveTextContent("—");
@@ -169,7 +196,7 @@ describe("VendorDetail page", () => {
   it("renders 'Never used' when last_used_at is null", () => {
     vi.mocked(useGetVendorByIdQuery).mockReturnValueOnce({
       ...defaultDetailState,
-      data: { ...mockVendor, last_used_at: null },
+      ...queryData({ ...mockVendor, last_used_at: null }),
     } as unknown as DetailQueryReturn);
     renderVendorDetail();
     expect(screen.getByText(/Never used/i)).toBeInTheDocument();

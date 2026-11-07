@@ -17,6 +17,8 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { store } from "@/shared/store";
 import InsurancePolicyDetail from "@/app/pages/InsurancePolicyDetail";
 import type { InsurancePolicyDetail as PolicyDetailType } from "@mybookkeeper/api-client/types/insurance/insurance-policy-detail";
+import { queryStatus } from "@/test/rtk-query-status";
+import { queryData } from "@/test/rtk-query-data";
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -32,10 +34,9 @@ let mockIsDeleting = false;
 
 vi.mock("@mybookkeeper/api-client/store/insurancePoliciesApi", () => ({
   useGetInsurancePolicyByIdQuery: vi.fn(() => ({
-    data: mockPolicy,
+    ...queryData(mockPolicy),
     isLoading: mockIsLoading,
-    isError: mockIsError,
-    isFetching: mockIsFetching,
+    ...queryStatus({ failed: mockIsError, fetching: mockIsFetching }),
     refetch: mockRefetch,
   })),
 }));
@@ -154,6 +155,21 @@ describe("InsurancePolicyDetail — error state", () => {
     renderPage();
     await user.click(screen.getByRole("button", { name: /retry/i }));
     expect(mockRefetch).toHaveBeenCalled();
+  });
+
+  it("keeps the error, not a skeleton, while Retry refetches", () => {
+    mockIsFetching = true;
+    renderPage();
+    expect(screen.getByText(/couldn't load this policy/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+    expect(screen.queryByTestId("insurance-policy-detail-skeleton")).not.toBeInTheDocument();
+  });
+
+  it("keeps the policy showing under the error when a refresh fails", () => {
+    mockPolicy = POLICY;
+    renderPage();
+    expect(screen.getByText(/couldn't load this policy/i)).toBeInTheDocument();
+    expect(screen.getByText("Landlord Insurance")).toBeInTheDocument();
   });
 });
 

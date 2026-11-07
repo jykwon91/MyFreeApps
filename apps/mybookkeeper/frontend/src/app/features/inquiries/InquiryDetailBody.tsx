@@ -15,7 +15,7 @@ import {
   formatLongDate,
   formatRelativeTime,
 } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import type { InquiryDetailMode } from "@/shared/types/inquiry/inquiry-detail-mode";
+import type { DetailLoadMode } from "@/shared/types/detail-load-mode";
 import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
 import InquiryStageBadge from "./InquiryStageBadge";
 import InquiryStageDropdown from "./InquiryStageDropdown";
@@ -35,7 +35,7 @@ import { INQUIRY_MESSAGES } from "@/shared/lib/inquiry-messages";
 const NON_PROMOTABLE_INQUIRY_STAGES = ["declined", "archived"] as const;
 
 export interface InquiryDetailBodyProps {
-  mode: InquiryDetailMode | null;
+  mode: DetailLoadMode;
   inquiry: InquiryResponse | undefined;
 }
 
@@ -85,7 +85,7 @@ export default function InquiryDetailBody({
   }
 
   switch (mode) {
-    case null:
+    case "error":
       return null;
     case "loading":
       return <InquiryDetailSkeleton />;

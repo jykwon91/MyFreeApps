@@ -19,10 +19,13 @@ import WelcomeManualDetail from "@/app/pages/WelcomeManualDetail";
 import type { WelcomeManualResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-response";
 import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
 import type { WelcomeManualRoomResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-room-response";
+import { queryStatus } from "@/test/rtk-query-status";
+import { queryData } from "@/test/rtk-query-data";
 
 let mockManual: WelcomeManualResponse | undefined;
 let mockIsLoading = false;
 let mockIsError = false;
+let mockIsFetching = false;
 
 vi.mock("@/shared/lib/toast-store", () => ({
   showError: vi.fn(),
@@ -31,10 +34,9 @@ vi.mock("@/shared/lib/toast-store", () => ({
 
 vi.mock("@mybookkeeper/api-client/store/welcomeManualsApi", () => ({
   useGetWelcomeManualByIdQuery: vi.fn(() => ({
-    data: mockManual,
+    ...queryData(mockManual),
     isLoading: mockIsLoading,
-    isFetching: false,
-    isError: mockIsError,
+    ...queryStatus({ failed: mockIsError, fetching: mockIsFetching }),
     refetch: vi.fn(),
   })),
 }));
@@ -63,7 +65,7 @@ vi.mock("@/shared/store/welcomeManualsApi", () => ({
 }));
 
 vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
-  useGetPropertiesQuery: vi.fn(() => ({ data: [] })),
+  useGetPropertiesQuery: vi.fn(() => ({ ...queryData([]) })),
 }));
 
 function makeSection(
@@ -135,6 +137,7 @@ describe("WelcomeManualDetail", () => {
     mockManual = undefined;
     mockIsLoading = false;
     mockIsError = false;
+    mockIsFetching = false;
   });
 
   it("renders the skeleton while loading", () => {
@@ -148,6 +151,15 @@ describe("WelcomeManualDetail", () => {
     renderDetail();
     expect(screen.getByText(/I couldn't load this welcome manual/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
+  });
+
+  it("keeps the error, not a blank page, while Retry refetches", () => {
+    mockIsError = true;
+    mockIsFetching = true;
+    renderDetail();
+    expect(screen.getByText(/I couldn't load this welcome manual/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+    expect(screen.queryByTestId("welcome-manual-detail-skeleton")).not.toBeInTheDocument();
   });
 
   it("disables the Email button when the manual has 0 sections", () => {

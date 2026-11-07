@@ -12,6 +12,7 @@ import PlaceholderSpecEditor from "@/app/features/leases/PlaceholderSpecEditor";
 import AISuggestionsPanel from "@/app/features/leases/AISuggestionsPanel";
 import type { SuggestPlaceholdersResponse } from "@/shared/types/lease/suggest-placeholders-response";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { resolveDetailLoadMode } from "@/shared/lib/detail-load-mode";
 
 interface LocationState {
   aiSuggestions?: SuggestPlaceholdersResponse | null;
@@ -29,12 +30,12 @@ export default function LeaseTemplateDetail() {
   );
 
   const {
-    data: template,
-    isLoading,
+    currentData: template,
+    error,
     isFetching,
-    isError,
     refetch,
   } = useGetLeaseTemplateByIdQuery(templateId ?? "", { skip: !templateId });
+  const mode = resolveDetailLoadMode({ hasData: template !== undefined, hasError: error !== undefined });
   const [deleteTemplate, { isLoading: isDeleting }] =
     useDeleteLeaseTemplateMutation();
 
@@ -80,22 +81,22 @@ export default function LeaseTemplateDetail() {
         Back to templates
       </Link>
 
-      {isError ? (
+      {error ? (
         <LoadErrorAlert message="I couldn't find that template. Maybe it was deleted?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
-      {isLoading || !template ? (
-        !isError ? (
-          <div
-            className="space-y-4"
-            data-testid="lease-template-detail-skeleton"
-          >
-            <Skeleton className="h-7 w-1/2" />
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-32" />
-          </div>
-        ) : null
-      ) : (
+      {mode === "loading" ? (
+        <div
+          className="space-y-4"
+          data-testid="lease-template-detail-skeleton"
+        >
+          <Skeleton className="h-7 w-1/2" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-32" />
+        </div>
+      ) : null}
+
+      {template ? (
         <>
           <SectionHeader
             title={template.name}
@@ -191,7 +192,7 @@ export default function LeaseTemplateDetail() {
             />
           </section>
         </>
-      )}
+      ) : null}
     </main>
   );
 }

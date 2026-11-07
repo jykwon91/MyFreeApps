@@ -24,6 +24,7 @@ import ChannelsSection from "@/app/features/listings/ChannelsSection";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { resolveDetailLoadMode } from "@/shared/lib/detail-load-mode";
 
 export default function ListingDetail() {
   const { listingId } = useParams<{ listingId: string }>();
@@ -33,12 +34,12 @@ export default function ListingDetail() {
   const [deleteListing, { isLoading: isDeleting }] = useDeleteListingMutation();
   const canWrite = useCanWrite();
   const {
-    data: listing,
-    isLoading,
+    currentData: listing,
+    error,
     isFetching,
-    isError,
     refetch,
   } = useGetListingByIdQuery(listingId ?? "", { skip: !listingId });
+  const mode = resolveDetailLoadMode({ hasData: listing !== undefined, hasError: error !== undefined });
   const { data: properties = [] } = useGetPropertiesQuery();
 
   const property = listing ? properties.find((p) => p.id === listing.property_id) : undefined;
@@ -65,11 +66,11 @@ export default function ListingDetail() {
         Back to listings
       </Link>
 
-      {isError ? (
+      {error ? (
         <LoadErrorAlert message="I couldn't load this listing. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
-      {isLoading && !isError ? <ListingDetailSkeleton /> : null}
+      {mode === "loading" ? <ListingDetailSkeleton /> : null}
       {listing ? (
         <>
           <SectionHeader

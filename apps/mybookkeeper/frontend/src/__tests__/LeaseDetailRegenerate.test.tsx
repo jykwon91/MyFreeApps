@@ -17,6 +17,7 @@ import { store } from "@/shared/store";
 import LeaseDetail from "@/app/pages/LeaseDetail";
 import type { SignedLeaseDetail } from "@mybookkeeper/api-client/types/lease/signed-lease-detail";
 import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
+import { queryData } from "@/test/rtk-query-data";
 
 const generateMock = vi.fn(() => ({ unwrap: () => Promise.resolve() }));
 const updateMock = vi.fn(() => ({ unwrap: () => Promise.resolve() }));
@@ -36,7 +37,7 @@ vi.mock("@mybookkeeper/api-client/store/signedLeasesApi", () => ({
 }));
 
 vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
-  useGetApplicantByIdQuery: () => ({ data: undefined }),
+  useGetApplicantByIdQuery: () => ({ ...queryData(undefined) }),
 }));
 
 vi.mock("@/shared/lib/toast-store", () => ({
@@ -101,7 +102,7 @@ function attachment(): SignedLeaseAttachment {
 
 function renderDetail() {
   useGetSignedLeaseByIdQueryMock.mockReturnValue({
-    data: mockLease,
+    ...queryData(mockLease),
     isLoading: false,
     isFetching: false,
     isError: false,
