@@ -29,7 +29,7 @@ from app.services.leases.exceptions import (
     ReceiptSendUnconfirmedError,
     ReceiptSentFromOtherGmailError,
 )
-from tests.receipt_seed import PERIOD_END, PERIOD_START
+from tests.receipt_seed import CLIENT_TODAY, PERIOD_END, PERIOD_START
 from tests.receipt_seed import seed_receipt as _seed
 
 pytestmark = pytest.mark.usefixtures("receipt_sessions", "receipt_storage")
@@ -57,6 +57,7 @@ async def _send(org: Organization, user: User, txn_id: uuid.UUID):  # type: igno
         period_start=PERIOD_START,
         period_end=PERIOD_END,
         payment_method="zelle",
+        today=CLIENT_TODAY,
     )
 
 

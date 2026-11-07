@@ -27,6 +27,8 @@ from app.services.leases import receipt_claim_settlement, receipt_send_service, 
 
 PERIOD_START = _dt.date(2026, 7, 1)
 PERIOD_END = _dt.date(2026, 7, 31)
+# Far from any server clock, so a receipt dated this proves the client's date was used.
+CLIENT_TODAY = _dt.date(2031, 3, 4)
 
 
 @pytest.fixture

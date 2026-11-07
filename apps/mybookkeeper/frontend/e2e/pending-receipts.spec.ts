@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures/auth";
+import { localToday } from "./fixtures/local-today";
 
 /**
  * Behavioral E2E tests for the rent-receipt send chain.
@@ -189,6 +190,17 @@ test.describe.serial("Pending Receipts — behavioral: send receipt chain", () =
       const periodStart = await page.getByTestId("receipt-period-start").inputValue();
       expect(periodStart).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 
+      // Preview is dated with the host's day too, and the PDF shows.
+      const previewResponse = page.waitForResponse((r) =>
+        r.url().includes(`/api/rent-receipts/preview/${seed.transaction_id}`),
+      );
+      await page.getByTestId("receipt-preview-btn").click();
+      const preview = await previewResponse;
+      expect(preview.ok()).toBeTruthy();
+      expect(preview.headers()["content-type"]).toContain("application/pdf");
+      expect(new URL(preview.url()).searchParams.get("today")).toBe(localToday());
+      await expect(page.getByTestId("receipt-preview-iframe")).toBeVisible();
+
       // Click Send and wait for the response.
       const sendResponse = page.waitForResponse(
         (r) =>
@@ -198,6 +210,7 @@ test.describe.serial("Pending Receipts — behavioral: send receipt chain", () =
       await page.getByTestId("receipt-send-btn").click();
       const resp = await sendResponse;
       expect(resp.ok()).toBeTruthy();
+      expect(resp.request().postDataJSON().today).toBe(localToday());
 
       // Dialog should close on success.
       await expect(page.getByTestId("send-receipt-dialog")).not.toBeVisible({ timeout: 5000 });

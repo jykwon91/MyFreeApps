@@ -6,6 +6,7 @@ import api from "@/shared/lib/api";
 import { useSendReceiptMutation } from "@mybookkeeper/api-client/store/rentReceiptsApi";
 import { RECEIPT_PAYMENT_METHOD_LABELS } from "@mybookkeeper/api-client/constants/receiptPaymentMethods";
 import { inferPaymentMethod } from "@mybookkeeper/api-client/utils/inferPaymentMethod";
+import { receiptPreviewPath } from "@mybookkeeper/api-client/utils/receiptPreviewPath";
 import { receiptPayerName } from "@mybookkeeper/api-client/utils/receiptPayerName";
 import type { PendingReceipt } from "@mybookkeeper/api-client/types/lease/pending-receipt";
 import { receiptSendClosesDialog, receiptSendErrorMessage } from "@/shared/lib/receipt-send-errors";
@@ -49,13 +50,8 @@ export default function SendReceiptDialog({ receipt, onClose }: SendReceiptDialo
       // Iframes don't carry the JWT Authorization header — fetch the PDF as
       // a blob via the authenticated axios client, then point the iframe at
       // a blob: URL we control.
-      const params = new URLSearchParams({
-        period_start: periodStart,
-        period_end: periodEnd,
-      });
-      if (paymentMethod) params.append("payment_method", paymentMethod);
       const res = await api.get(
-        `/rent-receipts/preview/${receipt.transaction_id}?${params.toString()}`,
+        receiptPreviewPath(receipt.transaction_id, { periodStart, periodEnd, paymentMethod }),
         { responseType: "blob" },
       );
       const blobUrl = URL.createObjectURL(res.data as Blob);

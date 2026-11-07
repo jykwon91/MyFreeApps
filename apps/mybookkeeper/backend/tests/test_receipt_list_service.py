@@ -36,7 +36,7 @@ from app.services.leases.exceptions import (
     ReceiptTenantOfOtherMemberError,
     ReceiptTransactionNotAttributedError,
 )
-from tests.receipt_seed import PERIOD_END, PERIOD_START, seed_receipt
+from tests.receipt_seed import CLIENT_TODAY, PERIOD_END, PERIOD_START, seed_receipt
 
 pytestmark = pytest.mark.usefixtures("receipt_sessions")
 
@@ -59,6 +59,7 @@ async def _send(org: Organization, user: User, txn_id: uuid.UUID):  # type: igno
         period_start=PERIOD_START,
         period_end=PERIOD_END,
         payment_method=None,
+        today=CLIENT_TODAY,
     )
 
 
@@ -185,6 +186,7 @@ async def test_teammates_tenant_says_only_they_can_send(
         await receipt_service.preview_receipt_pdf(
             transaction_id=txn_id, organization_id=test_org.id, user_id=other.id,
             period_start=PERIOD_START, period_end=PERIOD_END, payment_method=None,
+            today=CLIENT_TODAY,
         )
 
     [own_row] = await _list(test_org, test_user)

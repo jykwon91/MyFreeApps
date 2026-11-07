@@ -3,12 +3,14 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
+from app.schemas.leases.client_local_date import ClientLocalDate
 from app.schemas.leases.receipt_period_rules import (
     RECEIPT_PERIOD_ORDER_MESSAGE,
     receipt_period_in_order,
@@ -88,6 +90,7 @@ async def send_receipt(
             period_start=body.period_start,
             period_end=body.period_end,
             payment_method=body.payment_method,
+            today=body.today,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -156,6 +159,7 @@ async def dismiss_receipt(
 )
 async def preview_receipt(
     transaction_id: uuid.UUID,
+    today: Annotated[ClientLocalDate, Query()],
     period_start: date = Query(...),
     period_end: date = Query(...),
     payment_method: str | None = Query(default=None),
@@ -172,6 +176,7 @@ async def preview_receipt(
             period_start=period_start,
             period_end=period_end,
             payment_method=payment_method,
+            today=today,
         )
         return Response(
             content=pdf_bytes,

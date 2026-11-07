@@ -2,6 +2,7 @@ import { DEMO_EMAIL_REFUSED } from "@mybookkeeper/api-client/constants/demoRefus
 import { RECEIPT_GMAIL_STATE_MESSAGES, RECEIPT_SEND_BLOCKER_MESSAGES } from "@mybookkeeper/api-client/constants/receiptReadinessMessages";
 import { RECEIPT_SEND_ERROR_MESSAGES } from "@mybookkeeper/api-client/constants/receiptSendErrorMessages";
 import { rentReceiptsApi } from "@mybookkeeper/api-client/store/rentReceiptsApi";
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import type { PendingReceiptListResponse } from "@mybookkeeper/api-client/types/lease/pending-receipt-list-response";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
@@ -225,7 +226,7 @@ describe("the rent period", () => {
     await act(async () => screen.getByTestId("date-picker").props.onChange({ type: "set" }, new Date(2026, 5, 15)));
     await sendAndConfirm();
 
-    expect(server.writes[0].body).toEqual({ period_start: "2026-06-01", period_end: "2026-06-15", payment_method: "zelle" });
+    expect(server.writes[0].body).toEqual({ period_start: "2026-06-01", period_end: "2026-06-15", payment_method: "zelle", today: localToday() });
   });
 });
 
@@ -252,7 +253,7 @@ describe("how they paid", () => {
     await fireEvent.press(screen.getByText(MESSAGES.leaveItOff));
     await sendAndConfirm();
 
-    expect(server.writes[0].body).toEqual({ period_start: "2026-06-01", period_end: "2026-06-30", payment_method: null });
+    expect(server.writes[0].body).toEqual({ period_start: "2026-06-01", period_end: "2026-06-30", payment_method: null, today: localToday() });
   });
 
   it("guesses nothing when the payment says nothing", async () => {
@@ -274,7 +275,7 @@ describe("previewing", () => {
     await waitFor(() => expect(Sharing.shareAsync).toHaveBeenCalledTimes(1));
 
     expect(fakeDownloads()).toEqual([
-      "https://mybookkeeper.myfreeapps.org/api/rent-receipts/preview/tx1?period_start=2026-06-01&period_end=2026-06-30&payment_method=zelle",
+      `https://mybookkeeper.myfreeapps.org/api/rent-receipts/preview/tx1?period_start=2026-06-01&period_end=2026-06-30&payment_method=zelle&today=${localToday()}`,
     ]);
     expect(jest.mocked(Sharing.shareAsync).mock.calls[0][0]).toBe("cache:/documents/receipt-tx1.pdf");
     await waitFor(() => expect(fakeFiles()).toEqual([]));
@@ -353,7 +354,7 @@ describe("sending", () => {
 
     await sendAndConfirm();
 
-    expect(server.writes).toEqual([{ url: "/rent-receipts/tx1/send", body: { period_start: "2026-06-01", period_end: "2026-06-30", payment_method: "zelle" } }]);
+    expect(server.writes).toEqual([{ url: "/rent-receipts/tx1/send", body: { period_start: "2026-06-01", period_end: "2026-06-30", payment_method: "zelle", today: localToday() } }]);
     expect(screen.getByText(SENT)).toBeTruthy();
     expect(router.back).toHaveBeenCalledTimes(1);
     expect(cachedList()?.items.map((item) => item.transaction_id)).toEqual(["tx2"]);
