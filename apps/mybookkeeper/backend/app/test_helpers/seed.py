@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import delete as _sa_delete, select as _sa_select
 
 from app.core.context import RequestContext
@@ -217,9 +217,14 @@ async def delete_inquiry(
 # ---------------------------------------------------------------------------
 
 class _SeedApplicantRequest(BaseModel):
+    # Reject unknown fields so a spec can't seed a field that is silently dropped.
+    model_config = ConfigDict(extra="forbid")
+
     inquiry_id: uuid.UUID | None = None
     legal_name: str | None = None
     dob: str | None = None
+    contact_email: str | None = None
+    contract_start: _dt.date | None = None
     employer_or_hospital: str | None = None
     vehicle_make_model: str | None = None
     smoker: bool | None = None
@@ -263,6 +268,8 @@ async def seed_applicant(
             dob=payload.dob,
             employer_or_hospital=payload.employer_or_hospital,
             vehicle_make_model=payload.vehicle_make_model,
+            contact_email=payload.contact_email,
+            contract_start=payload.contract_start,
             smoker=payload.smoker,
             pets=payload.pets,
             referred_by=payload.referred_by,
