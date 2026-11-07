@@ -1,371 +1,241 @@
 /**
- * E2E tests for tax advisor persistence endpoints.
+ * Tax advisor persistence: reading the saved suggestions of a return, changing
+ * their status, and the advisor panel on the return page.
  *
- * Covers the three new endpoints introduced in the advisor-persistence feature:
- *   GET  /tax-returns/{id}/advisor            — returns cached suggestions or 404
- *   POST /tax-returns/{id}/advisor/generate   — calls Claude, persists, returns TaxAdvisorCachedResponse
- *   PATCH /tax-returns/{id}/advisor/{sid}     — updates suggestion status, returns updated cached response
+ * Runs in a fresh organization. Generating advice calls Claude, which the E2E
+ * stack can't, so each test gives its own return a known set of suggestions
+ * through /test/tax-returns/{id}/seed-advisor — the same save path generation
+ * uses. One return per test (a distinct tax year each), because a status change
+ * on one return carries over into its later advice.
  */
-import { test, expect } from "./fixtures/auth";
+import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { seededOrg } from "./fixtures/seeded-org";
 
-test.describe("Tax Advisor Persistence API", () => {
-  let returnId: string | null = null;
+const FAKE_ID = "00000000-0000-0000-0000-000000000000";
 
-  test.beforeAll(async ({ api }) => {
-    const res = await api.get("/tax-returns");
-    if (!res.ok()) return;
-    const returns = await res.json();
-    if (Array.isArray(returns) && returns.length > 0) {
-      returnId = returns[0].id;
-    }
+const HIGH = {
+  id: "e2e-high",
+  category: "deduction_gap",
+  severity: "high",
+  title: "E2E Missing depreciation",
+  description: "Your rental property has no depreciation recorded.",
+  estimated_savings: 1200,
+  action: "Add the property's cost basis.",
+  irs_reference: "Pub 527",
+  confidence: "high",
+};
+const LOW = {
+  id: "e2e-low",
+  category: "data_quality",
+  severity: "low",
+  title: "E2E Uncategorized expense",
+  description: "One expense has no category.",
+  estimated_savings: null,
+  action: "Pick a category for it.",
+  confidence: "medium",
+};
+
+interface Suggestion {
+  db_id: string;
+  id: string;
+  title: string;
+  severity: string;
+  status: string;
+  generation_id: string;
+}
+
+interface Advice {
+  suggestions: Suggestion[];
+  disclaimer: string;
+  generated_at: string | null;
+  model_version: string | null;
+}
+
+interface AdvisedReturn {
+  returnId: string;
+  generationId: string;
+}
+
+const org = seededOrg("tax-advisor");
+
+async function createReturn(api: APIRequestContext, year: number, withForm: boolean): Promise<string> {
+  const res = await api.post("/tax-returns", { data: { tax_year: year } });
+  expect(res.status(), await res.text()).toBe(201);
+  const { id } = (await res.json()) as { id: string };
+  if (withForm) {
+    const form = await api.post(`/test/tax-returns/${id}/seed-form-instance`, { data: { form_name: "w2" } });
+    expect(form.status(), await form.text()).toBe(201);
+  }
+  return id;
+}
+
+async function returnWithAdvice(api: APIRequestContext, year: number): Promise<AdvisedReturn> {
+  const returnId = await createReturn(api, year, true);
+  const res = await api.post(`/test/tax-returns/${returnId}/seed-advisor`, { data: { suggestions: [HIGH, LOW] } });
+  expect(res.status(), await res.text()).toBe(201);
+  const { generation_id } = (await res.json()) as { generation_id: string };
+  return { returnId, generationId: generation_id };
+}
+
+async function getAdvice(api: APIRequestContext, returnId: string): Promise<Advice> {
+  const res = await api.get(`/tax-returns/${returnId}/advisor`);
+  expect(res.status(), await res.text()).toBe(200);
+  return (await res.json()) as Advice;
+}
+
+function suggestionNamed(advice: Advice, title: string): Suggestion {
+  const found = advice.suggestions.find((s) => s.title === title);
+  if (!found) throw new Error(`no suggestion titled ${title} in ${JSON.stringify(advice.suggestions)}`);
+  return found;
+}
+
+async function openReturn(page: Page, returnId: string): Promise<void> {
+  await org().signIn(page);
+  await page.goto(`/tax-returns/${returnId}`);
+  await expect(page.getByRole("heading", { name: "AI Tax Advisor" })).toBeVisible({ timeout: 10000 });
+}
+
+function card(page: Page, title: string) {
+  return page.locator("div.border.rounded-lg").filter({ hasText: title });
+}
+
+test.describe("Tax advisor API", () => {
+  test("a return with no advice yet is a 404, as is a return that doesn't exist", async () => {
+    const returnId = await createReturn(org().api, 2020, true);
+
+    expect((await org().api.get(`/tax-returns/${returnId}/advisor`)).status()).toBe(404);
+    expect((await org().api.get(`/tax-returns/${FAKE_ID}/advisor`)).status()).toBe(404);
   });
 
-  // -------------------------------------------------------------------------
-  // GET /tax-returns/{id}/advisor
-  // -------------------------------------------------------------------------
-  test.describe("GET /advisor — cached suggestions", () => {
-    test("returns a client error for a non-existent return", async ({ api }) => {
-      const fakeId = "00000000-0000-0000-0000-000000000000";
-      const res = await api.get(`/tax-returns/${fakeId}/advisor`);
-      // 404 when the return doesn't exist; 405 if the running server has not yet
-      // been reloaded with this version of the code. Either is a 4xx, never 5xx.
-      expect(res.status()).toBeGreaterThanOrEqual(400);
-      expect(res.status()).toBeLessThan(500);
-    });
+  test("returns the saved suggestions with the generation they came from", async () => {
+    const { returnId, generationId } = await returnWithAdvice(org().api, 2021);
 
-    test("returns 404 when no generation exists for a real return", async ({ api }) => {
-      if (!returnId) {
-        test.skip(true, "No tax return available");
-        return;
-      }
-      // This may return 200 with cached data or 404 if no generation has been run yet.
-      // Either outcome is correct — we just verify it is not a 5xx error.
-      const res = await api.get(`/tax-returns/${returnId}/advisor`);
-      expect(res.status()).toBeLessThan(500);
-      if (res.ok()) {
-        // If cached data exists, verify the shape
-        const data = await res.json();
-        expect(Array.isArray(data.suggestions)).toBe(true);
-        expect(typeof data.disclaimer).toBe("string");
-        expect(data).toHaveProperty("generated_at");
-        expect(data).toHaveProperty("model_version");
-      } else {
-        expect(res.status()).toBe(404);
-      }
-    });
+    const advice = await getAdvice(org().api, returnId);
 
-    test("cached response has correct shape when suggestions exist", async ({ api }) => {
-      if (!returnId) {
-        test.skip(true, "No tax return available");
-        return;
-      }
-      const res = await api.get(`/tax-returns/${returnId}/advisor`);
-      if (!res.ok()) {
-        test.skip(true, "No cached advisor data yet");
-        return;
-      }
-      const data = await res.json();
-      expect(Array.isArray(data.suggestions)).toBe(true);
-      expect(typeof data.disclaimer).toBe("string");
-      expect(data.disclaimer.length).toBeGreaterThan(0);
-
-      if (data.suggestions.length > 0) {
-        const s = data.suggestions[0];
-        // TaxAdvisorSuggestionRead fields
-        expect(typeof s.db_id).toBe("string");
-        expect(typeof s.generation_id).toBe("string");
-        expect(typeof s.status).toBe("string");
-        expect(["active", "dismissed", "resolved"]).toContain(s.status);
-        // TaxSuggestion base fields
-        expect(typeof s.id).toBe("string");
-        expect(typeof s.category).toBe("string");
-        expect(typeof s.severity).toBe("string");
-        expect(["high", "medium", "low"]).toContain(s.severity);
-        expect(typeof s.title).toBe("string");
-        expect(typeof s.description).toBe("string");
-        expect(typeof s.action).toBe("string");
-        expect(typeof s.confidence).toBe("string");
-        expect(["high", "medium", "low"]).toContain(s.confidence);
-      }
-    });
+    expect(advice.model_version).toBe("e2e-seed");
+    expect(advice.generated_at).not.toBeNull();
+    expect(advice.disclaimer).toMatch(/does not constitute tax advice/);
+    expect(advice.suggestions.map((s) => [s.id, s.title, s.severity, s.status, s.generation_id])).toEqual([
+      [HIGH.id, HIGH.title, "high", "active", generationId],
+      [LOW.id, LOW.title, "low", "active", generationId],
+    ]);
   });
 
-  // -------------------------------------------------------------------------
-  // PATCH /tax-returns/{id}/advisor/{suggestion_id} — status update
-  // -------------------------------------------------------------------------
-  test.describe("PATCH /advisor/{suggestion_id} — status update", () => {
-    test("returns 404 for a non-existent suggestion", async ({ api }) => {
-      if (!returnId) {
-        test.skip(true, "No tax return available");
-        return;
-      }
-      const fakeSuggestionId = "00000000-0000-0000-0000-000000000001";
-      const res = await api.patch(`/tax-returns/${returnId}/advisor/${fakeSuggestionId}`, {
-        data: { status: "dismissed" },
-      });
-      expect(res.status()).toBe(404);
+  test("dismissing a suggestion drops it from the advice; reactivating brings it back", async () => {
+    const { returnId } = await returnWithAdvice(org().api, 2022);
+    const high = suggestionNamed(await getAdvice(org().api, returnId), HIGH.title);
+
+    const dismissed = await org().api.patch(`/tax-returns/${returnId}/advisor/${high.db_id}`, {
+      data: { status: "dismissed" },
     });
+    expect(dismissed.status(), await dismissed.text()).toBe(200);
+    expect(((await dismissed.json()) as Advice).suggestions.map((s) => s.title)).toEqual([LOW.title]);
+    expect((await getAdvice(org().api, returnId)).suggestions.map((s) => s.title)).toEqual([LOW.title]);
 
-    test("rejects invalid status values with a client error", async ({ api }) => {
-      if (!returnId) {
-        test.skip(true, "No tax return available");
-        return;
-      }
-      const fakeSuggestionId = "00000000-0000-0000-0000-000000000002";
-      const res = await api.patch(`/tax-returns/${returnId}/advisor/${fakeSuggestionId}`, {
-        data: { status: "invalid_status" },
-      });
-      // 422 (validation failure) when the new code is deployed;
-      // 404 if the running server does not yet have the PATCH route.
-      // Either is a client error, never a 5xx.
-      expect(res.status()).toBeGreaterThanOrEqual(400);
-      expect(res.status()).toBeLessThan(500);
+    const restored = await org().api.patch(`/tax-returns/${returnId}/advisor/${high.db_id}`, {
+      data: { status: "active" },
     });
-
-    test("updates a suggestion status and returns cached response shape", async ({ api }) => {
-      if (!returnId) {
-        test.skip(true, "No tax return available");
-        return;
-      }
-
-      // First check if there are any cached suggestions to update
-      const cachedRes = await api.get(`/tax-returns/${returnId}/advisor`);
-      if (!cachedRes.ok()) {
-        test.skip(true, "No suggestions persisted yet");
-        return;
-      }
-      const cached = await cachedRes.json();
-      if (!cached.suggestions || cached.suggestions.length === 0) {
-        test.skip(true, "No suggestions available to update");
-        return;
-      }
-
-      const firstSuggestion = cached.suggestions.find(
-        (s: { status: string }) => s.status === "active"
-      );
-      if (!firstSuggestion) {
-        test.skip(true, "No active suggestions to dismiss");
-        return;
-      }
-
-      const res = await api.patch(
-        `/tax-returns/${returnId}/advisor/${firstSuggestion.db_id}`,
-        { data: { status: "dismissed" } },
-      );
-      expect(res.ok()).toBe(true);
-      const data = await res.json();
-
-      // Response is TaxAdvisorCachedResponse
-      expect(Array.isArray(data.suggestions)).toBe(true);
-      expect(typeof data.disclaimer).toBe("string");
-      expect(data).toHaveProperty("generated_at");
-      expect(data).toHaveProperty("model_version");
-
-      // Restore status to avoid polluting other tests
-      await api.patch(`/tax-returns/${returnId}/advisor/${firstSuggestion.db_id}`, {
-        data: { status: "active" },
-      });
-    });
+    expect(restored.status(), await restored.text()).toBe(200);
+    expect(suggestionNamed((await restored.json()) as Advice, HIGH.title).status).toBe("active");
   });
 
-  // -------------------------------------------------------------------------
-  // UI — tax advisor panel loads without crashing
-  // -------------------------------------------------------------------------
-  test.describe("Tax Advisor Panel UI", () => {
-    test("tax return detail page renders advisor panel", async ({ authedPage: page }) => {
-      if (!returnId) {
-        test.skip(true, "No tax return available");
-        return;
-      }
-      await page.goto(`/tax-returns/${returnId}`);
+  test("resolving a suggestion keeps it in the advice as resolved", async () => {
+    const { returnId } = await returnWithAdvice(org().api, 2023);
+    const low = suggestionNamed(await getAdvice(org().api, returnId), LOW.title);
 
-      // Page loads with year info
-      await expect(page.getByText(/20\d{2}/).first()).toBeVisible({ timeout: 10000 });
-
-      // Advisor section is present somewhere on the page — either a button or loaded content
-      const advisorSection = page
-        .getByText(/tax advisor/i)
-        .or(page.getByRole("button", { name: /get tax advice/i }))
-        .or(page.getByText(/i can review your tax return/i))
-        .first();
-
-      const isVisible = await advisorSection.isVisible({ timeout: 8000 }).catch(() => false);
-      // Advisor panel presence is expected but not mandatory if forms haven't been set up
-      if (isVisible) {
-        await expect(advisorSection).toBeVisible();
-      }
+    const res = await org().api.patch(`/tax-returns/${returnId}/advisor/${low.db_id}`, {
+      data: { status: "resolved" },
     });
 
-    test("dismissing a suggestion via the UI X button hides the card and updates status", async ({
-      authedPage: page,
-      api,
-    }) => {
-      if (!returnId) {
-        test.skip(true, "No tax return available");
-        return;
-      }
+    expect(res.status(), await res.text()).toBe(200);
+    expect(suggestionNamed((await res.json()) as Advice, LOW.title).status).toBe("resolved");
+    expect(suggestionNamed(await getAdvice(org().api, returnId), HIGH.title).status).toBe("active");
+  });
 
-      // Require cached suggestions to actually test the dismiss UI
-      const cachedRes = await api.get(`/tax-returns/${returnId}/advisor`);
-      if (!cachedRes.ok()) {
-        test.skip(true, "No cached advisor suggestions — generate first to test dismiss UI");
-        return;
-      }
-      const cached = await cachedRes.json();
-      const activeSuggestion = cached.suggestions?.find(
-        (s: { status: string }) => s.status === "active",
-      );
-      if (!activeSuggestion) {
-        test.skip(true, "No active suggestions available to dismiss");
-        return;
-      }
+  test("an unknown suggestion is a 404 and an unknown status is rejected", async () => {
+    const { returnId } = await returnWithAdvice(org().api, 2024);
+    const high = suggestionNamed(await getAdvice(org().api, returnId), HIGH.title);
 
-      await page.goto(`/tax-returns/${returnId}`);
-      await page.waitForLoadState("domcontentloaded");
-
-      // The suggestion card renders the title in a span with class font-semibold.
-      // Find the card by the suggestion title.
-      const title = activeSuggestion.title as string;
-      const card = page.locator("div.border.rounded-lg").filter({ hasText: title }).first();
-      const cardVisible = await card.isVisible({ timeout: 10000 }).catch(() => false);
-      if (!cardVisible) {
-        test.skip(true, "Suggestion card not rendered in the UI");
-        return;
-      }
-
-      // The dismiss button has title="Dismiss" per SuggestionCard.tsx
-      const dismissBtn = card.locator('button[title="Dismiss"]');
-      await expect(dismissBtn).toBeVisible({ timeout: 5000 });
-      await dismissBtn.click();
-
-      // After dismiss, the card should disappear from the DOM (localStatus="dismissed" returns null)
-      await expect(card).not.toBeVisible({ timeout: 10000 });
-
-      try {
-        // Verify the backend status was updated via the cached endpoint
-        const afterRes = await api.get(`/tax-returns/${returnId}/advisor`);
-        expect(afterRes.ok()).toBe(true);
-        const after = await afterRes.json();
-        const updated = after.suggestions.find(
-          (s: { db_id: string }) => s.db_id === activeSuggestion.db_id,
-        );
-        expect(updated?.status).toBe("dismissed");
-      } finally {
-        // Restore the status so we don't pollute other tests
-        await api
-          .patch(`/tax-returns/${returnId}/advisor/${activeSuggestion.db_id}`, {
-            data: { status: "active" },
-          })
-          .catch(() => {});
-      }
+    const unknown = await org().api.patch(`/tax-returns/${returnId}/advisor/${FAKE_ID}`, {
+      data: { status: "dismissed" },
     });
-
-    test("resolving a suggestion via the UI check button shows resolved state", async ({
-      authedPage: page,
-      api,
-    }) => {
-      if (!returnId) {
-        test.skip(true, "No tax return available");
-        return;
-      }
-
-      const cachedRes = await api.get(`/tax-returns/${returnId}/advisor`);
-      if (!cachedRes.ok()) {
-        test.skip(true, "No cached advisor suggestions to resolve");
-        return;
-      }
-      const cached = await cachedRes.json();
-      const activeSuggestion = cached.suggestions?.find(
-        (s: { status: string }) => s.status === "active",
-      );
-      if (!activeSuggestion) {
-        test.skip(true, "No active suggestions available to resolve");
-        return;
-      }
-
-      await page.goto(`/tax-returns/${returnId}`);
-      await page.waitForLoadState("domcontentloaded");
-
-      const title = activeSuggestion.title as string;
-      const card = page.locator("div.border.rounded-lg").filter({ hasText: title }).first();
-      const cardVisible = await card.isVisible({ timeout: 10000 }).catch(() => false);
-      if (!cardVisible) {
-        test.skip(true, "Suggestion card not rendered in the UI");
-        return;
-      }
-
-      // The resolve button has title="Mark as resolved"
-      const resolveBtn = card.locator('button[title="Mark as resolved"]');
-      await expect(resolveBtn).toBeVisible({ timeout: 5000 });
-      await resolveBtn.click();
-
-      try {
-        // After resolving, the card renders the "marked as resolved" text
-        await expect(
-          page.getByText(/marked as resolved/i).first(),
-        ).toBeVisible({ timeout: 10000 });
-
-        // Verify backend status
-        const afterRes = await api.get(`/tax-returns/${returnId}/advisor`);
-        expect(afterRes.ok()).toBe(true);
-        const after = await afterRes.json();
-        const updated = after.suggestions.find(
-          (s: { db_id: string }) => s.db_id === activeSuggestion.db_id,
-        );
-        expect(updated?.status).toBe("resolved");
-      } finally {
-        await api
-          .patch(`/tax-returns/${returnId}/advisor/${activeSuggestion.db_id}`, {
-            data: { status: "active" },
-          })
-          .catch(() => {});
-      }
+    expect(unknown.status()).toBe(404);
+    const invalid = await org().api.patch(`/tax-returns/${returnId}/advisor/${high.db_id}`, {
+      data: { status: "invalid_status" },
     });
+    expect(invalid.status()).toBe(422);
+    expect(suggestionNamed(await getAdvice(org().api, returnId), HIGH.title).status).toBe("active");
+  });
+});
 
-    test("Regenerate button is visible when cached suggestions exist", async ({
-      authedPage: page,
-      api,
-    }) => {
-      if (!returnId) {
-        test.skip(true, "No tax return available");
-        return;
-      }
+test.describe("Tax advisor panel", () => {
+  test("a return with no forms says there's nothing to review", async ({ page }) => {
+    const returnId = await createReturn(org().api, 2025, false);
 
-      const cachedRes = await api.get(`/tax-returns/${returnId}/advisor`);
-      if (!cachedRes.ok()) {
-        test.skip(true, "No cached suggestions — Regenerate button only renders with cached data");
-        return;
-      }
+    await openReturn(page, returnId);
 
-      await page.goto(`/tax-returns/${returnId}`);
-      await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByText(/don't have any tax forms to review yet/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Get Tax Advice" })).toHaveCount(0);
+  });
 
-      const regenerateBtn = page.getByRole("button", { name: /regenerate/i }).first();
-      await expect(regenerateBtn).toBeVisible({ timeout: 10000 });
-    });
+  test("a return with forms but no advice offers to review it", async ({ page }) => {
+    const returnId = await createReturn(org().api, 2026, true);
 
-    test("advisor section shows correct empty state when no forms exist", async ({ authedPage: page }) => {
-      if (!returnId) {
-        test.skip(true, "No tax return available");
-        return;
-      }
-      await page.goto(`/tax-returns/${returnId}`);
-      await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
+    await openReturn(page, returnId);
 
-      // Either the "no forms" message or the CTA button — both are valid states
-      const noFormsMsg = page.getByText(/don't have any tax forms to review/i);
-      const ctaButton = page.getByRole("button", { name: /get tax advice/i });
+    await expect(page.getByText(/I can review your tax return/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Get Tax Advice" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Regenerate/ })).toHaveCount(0);
+  });
 
-      const hasNoForms = await noFormsMsg.isVisible({ timeout: 5000 }).catch(() => false);
-      const hasCta = !hasNoForms && await ctaButton.isVisible({ timeout: 5000 }).catch(() => false);
+  test("shows the saved suggestions grouped by priority, with Regenerate", async ({ page }) => {
+    const { returnId } = await returnWithAdvice(org().api, 2027);
 
-      // One of these states must be true, or cached suggestions are showing
-      const cachedResult = await page
-        .getByText(/high priority|medium priority|low priority/i)
-        .isVisible({ timeout: 3000 })
-        .catch(() => false);
+    await openReturn(page, returnId);
 
-      expect(hasNoForms || hasCta || cachedResult).toBe(true);
-    });
+    await expect(page.getByRole("heading", { name: "High Priority (1)" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Low Priority (1)" })).toBeVisible();
+    await expect(card(page, HIGH.title)).toContainText(HIGH.description);
+    await expect(card(page, HIGH.title)).toContainText("Could save ~$1,200");
+    await expect(card(page, LOW.title)).toContainText(LOW.action);
+    await expect(page.getByRole("button", { name: /Regenerate/ })).toBeVisible();
+    await expect(page.getByText(/does not constitute tax advice/)).toBeVisible();
+  });
+
+  test("dismissing a card hides it and saves the dismissal", async ({ page }) => {
+    const { returnId } = await returnWithAdvice(org().api, 2028);
+    await openReturn(page, returnId);
+    const high = card(page, HIGH.title);
+    await expect(high).toBeVisible();
+
+    const saved = page.waitForResponse(
+      (r) => r.request().method() === "PATCH" && r.url().includes(`/tax-returns/${returnId}/advisor/`),
+    );
+    await high.locator('button[title="Dismiss"]').click();
+
+    await expect(high).toHaveCount(0);
+    expect((await saved).status()).toBe(200);
+    expect((await getAdvice(org().api, returnId)).suggestions.map((s) => s.title)).toEqual([LOW.title]);
+    await page.reload();
+    await expect(card(page, LOW.title)).toBeVisible({ timeout: 10000 });
+    await expect(card(page, HIGH.title)).toHaveCount(0);
+  });
+
+  test("resolving a card marks it resolved and saves the status", async ({ page }) => {
+    const { returnId } = await returnWithAdvice(org().api, 2029);
+    await openReturn(page, returnId);
+    await expect(card(page, LOW.title)).toBeVisible();
+
+    const saved = page.waitForResponse(
+      (r) => r.request().method() === "PATCH" && r.url().includes(`/tax-returns/${returnId}/advisor/`),
+    );
+    await card(page, LOW.title).locator('button[title="Mark as resolved"]').click();
+
+    await expect(card(page, LOW.title)).toContainText("marked as resolved");
+    expect((await saved).status()).toBe(200);
+    expect(suggestionNamed(await getAdvice(org().api, returnId), LOW.title).status).toBe("resolved");
+    await page.reload();
+    await expect(card(page, LOW.title)).toContainText("marked as resolved", { timeout: 10000 });
+    await expect(card(page, HIGH.title).locator('button[title="Dismiss"]')).toBeVisible();
   });
 });
