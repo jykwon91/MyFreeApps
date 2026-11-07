@@ -4,10 +4,10 @@ import {
   formatRatePct,
 } from "@mybookkeeper/api-client/utils/mortgageFormat";
 import type { Mortgage } from "@mybookkeeper/api-client/types/mortgage/mortgage";
-import type { MortgagesListMode } from "@/shared/types/mortgage/mortgages-list-mode";
+import type { ListLoadMode } from "@/shared/types/list-load-mode";
 
 export interface MortgagesListBodyProps {
-  mode: MortgagesListMode;
+  mode: ListLoadMode;
   mortgages: Mortgage[];
   onEdit: (mortgage: Mortgage) => void;
 }
@@ -26,6 +26,9 @@ export default function MortgagesListBody({
   onEdit,
 }: MortgagesListBodyProps) {
   switch (mode) {
+    case "error":
+      // The page's LoadErrorAlert says the list couldn't load.
+      return null;
     case "loading":
       return (
         <div

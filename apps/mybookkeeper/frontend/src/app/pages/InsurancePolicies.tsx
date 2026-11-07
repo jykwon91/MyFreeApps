@@ -3,7 +3,7 @@ import { addDays, format } from "date-fns";
 import { Button } from "@platform/ui";
 import { useGetInsurancePoliciesQuery } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import { useInsurancePoliciesListMode } from "@/app/features/insurance/useInsurancePoliciesListMode";
+import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import AddInsurancePolicyDialog from "@/app/features/insurance/AddInsurancePolicyDialog";
 import InsuranceBenchmarkDialog from "@/app/features/insurance/InsuranceBenchmarkDialog";
 import InsuranceBenchmarkSummary from "@/app/features/insurance/InsuranceBenchmarkSummary";
@@ -24,12 +24,16 @@ export default function InsurancePolicies() {
     ? format(addDays(new Date(), 30), "yyyy-MM-dd")
     : undefined;
 
-  const { data, isLoading, isError, refetch, isFetching } = useGetInsurancePoliciesQuery(
+  const { data, error, refetch, isFetching } = useGetInsurancePoliciesQuery(
     expiringBefore ? { expiring_before: expiringBefore } : {},
   );
 
   const policies = data?.items ?? [];
-  const mode = useInsurancePoliciesListMode({ isLoading, policyCount: policies.length });
+  const mode = resolveListLoadMode({
+    hasData: data !== undefined,
+    hasError: error !== undefined,
+    itemCount: policies.length,
+  });
 
   return (
     <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
@@ -49,7 +53,7 @@ export default function InsurancePolicies() {
         }
       />
 
-      {isError ? (
+      {error ? (
         <LoadErrorAlert message="Couldn't load insurance policies." isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 

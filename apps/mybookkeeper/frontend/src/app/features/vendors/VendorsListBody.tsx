@@ -1,4 +1,4 @@
-import type { VendorsListMode } from "@/shared/types/vendor/vendors-list-mode";
+import type { ListLoadMode } from "@/shared/types/list-load-mode";
 import type { VendorSummary } from "@mybookkeeper/api-client/types/vendor/vendor-summary";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import { LoadingButton } from "@platform/ui";
@@ -7,7 +7,7 @@ import VendorCard from "./VendorCard";
 import VendorRow from "./VendorRow";
 
 export interface VendorsListBodyProps {
-  mode: VendorsListMode;
+  mode: ListLoadMode;
   vendors: VendorSummary[];
   isFiltered: boolean;
   showCategoryBadge: boolean;
@@ -26,6 +26,9 @@ export default function VendorsListBody({
   onLoadMore,
 }: VendorsListBodyProps) {
   switch (mode) {
+    case "error":
+      // The page's LoadErrorAlert says the list couldn't load.
+      return null;
     case "loading":
       return <VendorsListSkeleton />;
     case "empty":

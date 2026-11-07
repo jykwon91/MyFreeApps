@@ -12,7 +12,7 @@ import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquir
 import InquiryStageFilter from "@/app/features/inquiries/InquiryStageFilter";
 import InquirySpamTabFilter from "@/app/features/inquiries/InquirySpamTabFilter";
 import InquiryForm from "@/app/features/inquiries/InquiryForm";
-import { useInquiriesListMode } from "@/app/features/inquiries/useInquiriesListMode";
+import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import InquiriesListBody from "@/app/features/inquiries/InquiriesListBody";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
@@ -69,7 +69,7 @@ export default function Inquiries() {
     [stage, spamFilter, pageCount],
   );
 
-  const { data, isLoading, isFetching, isError, refetch } = useGetInquiriesQuery(queryArgs);
+  const { data, isFetching, error, refetch } = useGetInquiriesQuery(queryArgs);
   const { data: listingsData } = useGetListingsQuery();
 
   const inquiries = data?.items ?? [];
@@ -123,7 +123,11 @@ export default function Inquiries() {
   const showStageBadge = !stage;
   const isFiltered = !!stage;
 
-  const mode = useInquiriesListMode({ isLoading, isError, inquiryCount: inquiries.length });
+  const mode = resolveListLoadMode({
+    hasData: data !== undefined,
+    hasError: error !== undefined,
+    itemCount: inquiries.length,
+  });
 
   return (
     <main className="p-4 sm:p-8 space-y-6">
@@ -158,7 +162,7 @@ export default function Inquiries() {
 
       <InquiryStageFilter value={stage} onChange={handleFilterChange} />
 
-      {isError ? (
+      {error ? (
         <LoadErrorAlert message="I couldn't load your inquiries. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 

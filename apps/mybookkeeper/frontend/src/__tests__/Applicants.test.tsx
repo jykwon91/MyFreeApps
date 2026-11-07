@@ -60,6 +60,7 @@ vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
 }));
 
 import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
+import { queryStatus } from "@/test/rtk-query-status";
 
 type ListQueryReturn = ReturnType<typeof useGetApplicantsQuery>;
 
@@ -119,7 +120,7 @@ describe("Applicants page", () => {
     vi.mocked(useGetApplicantsQuery).mockReturnValueOnce({
       ...defaultApplicantsState,
       data: undefined,
-      isError: true,
+      ...queryStatus({ failed: true, fetching: false }),
     } as unknown as ListQueryReturn);
     renderApplicants();
     expect(screen.getByText(/I couldn't load your applicants/i)).toBeInTheDocument();

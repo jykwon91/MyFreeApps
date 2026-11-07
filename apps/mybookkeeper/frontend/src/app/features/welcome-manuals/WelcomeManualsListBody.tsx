@@ -1,13 +1,13 @@
 import { LoadingButton } from "@platform/ui";
 import EmptyState from "@/shared/components/ui/EmptyState";
-import type { WelcomeManualsListMode } from "@/shared/types/welcome-manual/welcome-manuals-list-mode";
+import type { ListLoadMode } from "@/shared/types/list-load-mode";
 import type { WelcomeManualSummary } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-summary";
 import WelcomeManualsSkeleton from "./WelcomeManualsSkeleton";
 import WelcomeManualCard from "./WelcomeManualCard";
 import WelcomeManualTableRow from "./WelcomeManualTableRow";
 
 export interface WelcomeManualsListBodyProps {
-  mode: WelcomeManualsListMode;
+  mode: ListLoadMode;
   manuals: WelcomeManualSummary[];
   propertyName: (m: WelcomeManualSummary) => string | null;
   hasMore: boolean;
@@ -26,6 +26,9 @@ export default function WelcomeManualsListBody({
   onCreateFirst,
 }: WelcomeManualsListBodyProps) {
   switch (mode) {
+    case "error":
+      // The page's LoadErrorAlert says the list couldn't load.
+      return null;
     case "loading":
       return <WelcomeManualsSkeleton />;
     case "empty":

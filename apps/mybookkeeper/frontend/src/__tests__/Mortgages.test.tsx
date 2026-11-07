@@ -14,6 +14,7 @@ import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import Mortgages from "@/app/pages/Mortgages";
 import type { Mortgage } from "@mybookkeeper/api-client/types/mortgage/mortgage";
+import { queryStatus } from "@/test/rtk-query-status";
 
 const mockRefetch = vi.fn();
 let mockIsLoading = false;
@@ -23,10 +24,10 @@ let mockMortgages: Mortgage[] = [];
 
 vi.mock("@mybookkeeper/api-client/store/mortgagesApi", () => ({
   useGetMortgagesQuery: vi.fn(() => ({
-    data: { items: mockMortgages, total: mockMortgages.length, has_more: false },
+    // RTK has no data while a first load runs or after it failed.
+    data: mockIsLoading || mockIsError ? undefined : { items: mockMortgages, total: mockMortgages.length, has_more: false },
     isLoading: mockIsLoading,
-    isError: mockIsError,
-    isFetching: mockIsFetching,
+    ...queryStatus({ failed: mockIsError, fetching: mockIsFetching }),
     refetch: mockRefetch,
   })),
 }));

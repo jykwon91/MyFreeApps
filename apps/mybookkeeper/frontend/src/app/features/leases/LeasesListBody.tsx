@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Trash2, Upload } from "lucide-react";
-import type { LeasesListMode } from "@/shared/types/lease/leases-list-mode";
+import type { ListLoadMode } from "@/shared/types/list-load-mode";
 import type { SignedLeaseSummary } from "@mybookkeeper/api-client/types/lease/signed-lease-summary";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import { ConfirmDialog } from "@platform/ui";
@@ -10,7 +10,7 @@ import LeaseQuickUploadModal from "./LeaseQuickUploadModal";
 import SignedLeaseStatusBadge from "./SignedLeaseStatusBadge";
 
 export interface LeasesListBodyProps {
-  mode: LeasesListMode;
+  mode: ListLoadMode;
   leases: SignedLeaseSummary[];
   canWrite?: boolean;
   onDelete?: (lease: SignedLeaseSummary) => Promise<void>;
@@ -43,6 +43,9 @@ export default function LeasesListBody({
   }
 
   switch (mode) {
+    case "error":
+      // The page's LoadErrorAlert says the list couldn't load.
+      return null;
     case "loading":
       return <LeasesListSkeleton />;
     case "empty":

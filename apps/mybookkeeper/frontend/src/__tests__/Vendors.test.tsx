@@ -63,6 +63,7 @@ vi.mock("@mybookkeeper/api-client/store/vendorsApi", () => ({
 }));
 
 import { useGetVendorsQuery } from "@mybookkeeper/api-client/store/vendorsApi";
+import { queryStatus } from "@/test/rtk-query-status";
 
 type ListQueryReturn = ReturnType<typeof useGetVendorsQuery>;
 
@@ -122,7 +123,7 @@ describe("Vendors page", () => {
     vi.mocked(useGetVendorsQuery).mockReturnValueOnce({
       ...defaultVendorsState,
       data: undefined,
-      isError: true,
+      ...queryStatus({ failed: true, fetching: false }),
     } as unknown as ListQueryReturn);
     renderVendors();
     expect(screen.getByText(/I couldn't load your vendors/i)).toBeInTheDocument();

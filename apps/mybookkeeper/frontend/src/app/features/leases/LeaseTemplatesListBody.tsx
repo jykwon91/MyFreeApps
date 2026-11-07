@@ -1,16 +1,19 @@
-import type { LeaseTemplatesListMode } from "@/shared/types/lease/lease-templates-list-mode";
+import type { ListLoadMode } from "@/shared/types/list-load-mode";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import LeaseTemplatesListSkeleton from "./LeaseTemplatesListSkeleton";
 import LeaseTemplateCard from "./LeaseTemplateCard";
 
 export interface LeaseTemplatesListBodyProps {
-  mode: LeaseTemplatesListMode;
+  mode: ListLoadMode;
   templates: LeaseTemplateSummary[];
 }
 
 export default function LeaseTemplatesListBody({ mode, templates }: LeaseTemplatesListBodyProps) {
   switch (mode) {
+    case "error":
+      // The page's LoadErrorAlert says the list couldn't load.
+      return null;
     case "loading":
       return <LeaseTemplatesListSkeleton />;
     case "empty":

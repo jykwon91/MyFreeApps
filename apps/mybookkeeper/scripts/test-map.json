@@ -403,7 +403,10 @@
         "frontend/src/shared/lib/external-id-form.ts",
         "frontend/src/shared/components/ui/SourceBadge.tsx",
         "frontend/src/shared/components/ui/Markdown.tsx",
-        "frontend/src/app/features/public-inquiry/PublicInquiryListingPanel.tsx"
+        "frontend/src/app/features/public-inquiry/PublicInquiryListingPanel.tsx",
+        "frontend/src/shared/lib/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode-args.ts"
       ],
       "backend_tests": [
         "test_listing_repo.py",
@@ -435,8 +438,8 @@
         "ChannelsSection.test.tsx",
         "ChannelListingFormModal.test.tsx",
         "channel-labels.test.ts",
-        "usePageListModes.test.ts",
-        "Markdown.test.tsx"
+        "Markdown.test.tsx",
+        "list-load-mode.test.ts"
       ],
       "e2e_specs": [
         "listings-api.spec.ts",
@@ -445,7 +448,8 @@
         "listings-crud.spec.ts",
         "listings-external-ids.spec.ts",
         "listings-channels.spec.ts",
-        "listing-markdown.spec.ts"
+        "listing-markdown.spec.ts",
+        "mocked/list-pages-retry-mock.spec.ts"
       ]
     },
     "calendar": {
@@ -534,7 +538,10 @@
         "api-client/src/constants/inquiryLabels.ts",
         "frontend/src/shared/lib/inquiry-badge-colors.ts",
         "api-client/src/utils/inquiryQuality.ts",
-        "api-client/src/utils/inquiryDateFormat.ts"
+        "api-client/src/utils/inquiryDateFormat.ts",
+        "frontend/src/shared/lib/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode-args.ts"
       ],
       "backend_tests": [
         "test_encrypted_string_type.py",
@@ -571,12 +578,14 @@
         "PublicInquiryForm.test.tsx",
         "ReplyTemplatesManager.test.tsx",
         "reply-template-renderer.test.ts",
-        "usePageListModes.test.ts"
+        "usePageListModes.test.ts",
+        "list-load-mode.test.ts"
       ],
       "e2e_specs": [
         "inquiries.spec.ts",
         "inquiries-layout.spec.ts",
-        "inquiry-reply.spec.ts"
+        "inquiry-reply.spec.ts",
+        "mocked/list-pages-retry-mock.spec.ts"
       ]
     },
     "applicants": {
@@ -597,7 +606,10 @@
         "api-client/src/constants/applicantLabels.ts",
         "api-client/src/constants/applicantPromote.ts",
         "api-client/src/utils/applicantStageTransitions.ts",
-        "frontend/src/shared/lib/applicant-badge-colors.ts"
+        "frontend/src/shared/lib/applicant-badge-colors.ts",
+        "frontend/src/shared/lib/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode-args.ts"
       ],
       "backend_tests": [
         "test_applicant_repo.py",
@@ -624,15 +636,16 @@
         "Applicants.test.tsx",
         "PromoteFromInquiryPanel.test.tsx",
         "ContractDatesEditor.test.tsx",
-        "useApplicantsListMode.test.ts",
         "useApplicantDetailMode.test.ts",
-        "useLinkedLeaseDocumentsMode.test.ts"
+        "useLinkedLeaseDocumentsMode.test.ts",
+        "list-load-mode.test.ts"
       ],
       "e2e_specs": [
         "applicants.spec.ts",
         "applicants-layout.spec.ts",
         "applicant-promote.spec.ts",
-        "applicant-contract-dates.spec.ts"
+        "applicant-contract-dates.spec.ts",
+        "mocked/list-pages-retry-mock.spec.ts"
       ]
     },
     "tenants": {
@@ -646,7 +659,10 @@
         "frontend/src/app/features/tenants/",
         "api-client/src/types/applicant/tenant-list-args.ts",
         "api-client/src/types/applicant/tenant-list-response.ts",
-        "api-client/src/types/applicant/tenancy-end-request.ts"
+        "api-client/src/types/applicant/tenancy-end-request.ts",
+        "frontend/src/shared/lib/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode-args.ts"
       ],
       "backend_tests": [
         "test_tenancy_api.py",
@@ -657,9 +673,11 @@
         "Tenants.test.tsx",
         "TenantStatusBadge.test.tsx",
         "EndTenancyDialog.test.tsx",
-        "usePageListModes.test.ts"
+        "list-load-mode.test.ts"
       ],
-      "e2e_specs": []
+      "e2e_specs": [
+        "mocked/list-pages-retry-mock.spec.ts"
+      ]
     },
     "rent_ledger": {
       "source_paths": [
@@ -765,7 +783,10 @@
         "backend/app/services/documents/document_ownership.py",
         "frontend/src/app/features/documents/",
         "frontend/src/shared/lib/document-read-errors.ts",
-        "frontend/src/shared/types/document/document-source.ts"
+        "frontend/src/shared/types/document/document-source.ts",
+        "frontend/src/shared/lib/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode-args.ts"
       ],
       "backend_tests": [
         "test_insurance_policies_api.py",
@@ -809,7 +830,8 @@
         "rate-watch-scope.test.ts",
         "rate-watch-action.test.ts",
         "benchmark-format.test.ts",
-        "Dashboard.test.tsx"
+        "Dashboard.test.tsx",
+        "list-load-mode.test.ts"
       ],
       "e2e_specs": [
         "insurance-premium.spec.ts",
@@ -818,7 +840,8 @@
         "insurance-premium-comparison-layout.spec.ts",
         "mocked/insurance-policy-document-upload.spec.ts",
         "mocked/insurance-rate-watch.spec.ts",
-        "mocked/dashboard-cards-retry-mock.spec.ts"
+        "mocked/dashboard-cards-retry-mock.spec.ts",
+        "mocked/list-pages-retry-mock.spec.ts"
       ]
     },
     "mortgage": {
@@ -846,7 +869,10 @@
         "frontend/src/shared/store/mortgagesApi.ts",
         "frontend/src/shared/store/mortgageMarketApi.ts",
         "frontend/src/app/features/documents/",
-        "frontend/src/shared/lib/document-read-errors.ts"
+        "frontend/src/shared/lib/document-read-errors.ts",
+        "frontend/src/shared/lib/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode-args.ts"
       ],
       "backend_tests": [
         "test_mortgages_api.py",
@@ -871,11 +897,13 @@
         "mortgage-draft.test.ts",
         "mortgage-rate-watch-verdict.test.ts",
         "DocumentDraftNotices.test.tsx",
-        "usePageListModes.test.ts"
+        "usePageListModes.test.ts",
+        "list-load-mode.test.ts"
       ],
       "e2e_specs": [
         "mortgages.spec.ts",
-        "mocked/mortgage-rate-watch.spec.ts"
+        "mocked/mortgage-rate-watch.spec.ts",
+        "mocked/list-pages-retry-mock.spec.ts"
       ]
     },
     "utility_plans": {
@@ -945,7 +973,10 @@
         "backend/app/services/documents/document_ownership.py",
         "frontend/src/app/features/documents/",
         "frontend/src/shared/lib/document-read-errors.ts",
-        "frontend/src/shared/types/document/document-source.ts"
+        "frontend/src/shared/types/document/document-source.ts",
+        "frontend/src/shared/lib/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode-args.ts"
       ],
       "backend_tests": [
         "test_utility_plan_service.py",
@@ -984,7 +1015,8 @@
         "BetterPlansSection.test.tsx",
         "offer-stats.test.ts",
         "offer-tiers.test.ts",
-        "TimeOfUseOffers.test.tsx"
+        "TimeOfUseOffers.test.tsx",
+        "list-load-mode.test.ts"
       ],
       "e2e_specs": [
         "utility-plans.spec.ts",
@@ -993,7 +1025,8 @@
         "utility-plan-rate-benchmark.spec.ts",
         "utility-plan-comparison-layout.spec.ts",
         "mocked/utility-better-plans.spec.ts",
-        "mocked/dashboard-cards-retry-mock.spec.ts"
+        "mocked/dashboard-cards-retry-mock.spec.ts",
+        "mocked/list-pages-retry-mock.spec.ts"
       ]
     },
     "welcome_manuals": {
@@ -1016,7 +1049,10 @@
         "frontend/src/app/features/welcome-manuals/",
         "frontend/src/shared/store/welcomeManualsApi.ts",
         "frontend/src/shared/types/welcome-manual/",
-        "frontend/src/shared/lib/welcome-manual-constants.ts"
+        "frontend/src/shared/lib/welcome-manual-constants.ts",
+        "frontend/src/shared/lib/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode-args.ts"
       ],
       "backend_tests": [
         "test_welcome_manual_image_routes.py",
@@ -1045,12 +1081,14 @@
         "WelcomeManualSectionFieldManager.test.tsx",
         "WelcomeManualEmailDialog.test.tsx",
         "WelcomeManualPreview.test.tsx",
-        "WelcomeManualCreateDialog.test.tsx"
+        "WelcomeManualCreateDialog.test.tsx",
+        "list-load-mode.test.ts"
       ],
       "e2e_specs": [
         "mocked/welcome-manuals-layout-mock.spec.ts",
         "welcome-manual-rooms.spec.ts",
-        "welcome-manuals-layout.spec.ts"
+        "welcome-manuals-layout.spec.ts",
+        "mocked/list-pages-retry-mock.spec.ts"
       ]
     },
     "leases": {
@@ -1077,7 +1115,10 @@
         "api-client/src/store/signedLeasesApi.ts",
         "frontend/src/shared/lib/lease-labels.ts",
         "frontend/src/shared/lib/infer-attachment-kind.ts",
-        "frontend/src/shared/types/lease/attachment-view-mode.ts"
+        "frontend/src/shared/types/lease/attachment-view-mode.ts",
+        "frontend/src/shared/lib/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode-args.ts"
       ],
       "backend_tests": [
         "test_lease_renderer.py",
@@ -1103,7 +1144,7 @@
         "LeaseTemplateUploadDialog.test.tsx",
         "AttachmentViewer.test.tsx",
         "useAttachmentViewMode.test.ts",
-        "usePageListModes.test.ts"
+        "list-load-mode.test.ts"
       ],
       "e2e_specs": [
         "lease-templates.spec.ts",
@@ -1113,7 +1154,8 @@
         "lease-extend.spec.ts",
         "lease-undo-extension.spec.ts",
         "lease-email-tenant.spec.ts",
-        "lease-templates-phase2.spec.ts"
+        "lease-templates-phase2.spec.ts",
+        "mocked/list-pages-retry-mock.spec.ts"
       ]
     },
     "receipts": {
@@ -1233,9 +1275,11 @@
         "frontend/src/app/pages/Vendors.tsx",
         "frontend/src/app/pages/VendorDetail.tsx",
         "frontend/src/app/features/vendors/",
-        "frontend/src/shared/types/vendor/",
         "api-client/src/store/vendorsApi.ts",
-        "frontend/src/shared/lib/vendor-labels.ts"
+        "frontend/src/shared/lib/vendor-labels.ts",
+        "frontend/src/shared/lib/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode.ts",
+        "frontend/src/shared/types/list-load-mode-args.ts"
       ],
       "backend_tests": [
         "test_vendor_repo.py",
@@ -1247,12 +1291,13 @@
         "Vendors.test.tsx",
         "VendorDetail.test.tsx",
         "VendorForm.test.tsx",
-        "usePageListModes.test.ts"
+        "list-load-mode.test.ts"
       ],
       "e2e_specs": [
         "vendors-api.spec.ts",
         "vendors.spec.ts",
-        "vendors-layout.spec.ts"
+        "vendors-layout.spec.ts",
+        "mocked/list-pages-retry-mock.spec.ts"
       ]
     },
     "system": {

@@ -1,12 +1,12 @@
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { formatAnnualPremium } from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
-import type { InsurancePoliciesListMode } from "@/shared/types/insurance/insurance-policies-list-mode";
+import type { ListLoadMode } from "@/shared/types/list-load-mode";
 import type { InsurancePolicySummary } from "@mybookkeeper/api-client/types/insurance/insurance-policy-summary";
 import InsuranceExpirationBadge from "./InsuranceExpirationBadge";
 
 export interface InsurancePoliciesListBodyProps {
-  mode: InsurancePoliciesListMode;
+  mode: ListLoadMode;
   policies: InsurancePolicySummary[];
   showExpiringSoon: boolean;
 }
@@ -17,6 +17,9 @@ export default function InsurancePoliciesListBody({
   showExpiringSoon,
 }: InsurancePoliciesListBodyProps) {
   switch (mode) {
+    case "error":
+      // The page's LoadErrorAlert says the list couldn't load.
+      return null;
     case "loading":
       return (
         <div
