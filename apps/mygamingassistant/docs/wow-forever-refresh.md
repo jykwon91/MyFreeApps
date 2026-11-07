@@ -73,7 +73,10 @@ names the build and the pages load icons from it. It needs `scripts/.env.r2`; a
 run without it stops there — publish before the PR merges, or every icon shows its
 placeholder until you do.
 
-Add `--art` when a post or the report mentions new or changed maps. Walk graphs
+Add `--art` when a post or the report mentions new or changed maps. It re-stitches
+`frontend/public/wow-maps/` (one WebP per map, plus `highlight/`), which ships with
+the frontend build: the World Map's pan and zoom viewer magnifies that same picture
+up to 4×, so there are no map tiles to cut and nothing to publish to R2. Walk graphs
 (`public/wow-walk`) aren't part of `apply` because they need a few GB of client
 files. If terrain or buildings changed, say so in the PR and leave the rebuild
 (`python -m scripts.wow_world_map.walk`) for a machine with room for it.

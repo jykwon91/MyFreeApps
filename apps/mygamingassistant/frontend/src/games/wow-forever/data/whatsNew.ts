@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-07",
+    title: "Zoom and drag the World Map",
+    summary:
+      "Zoom into any map with the scroll wheel, a pinch or the + and − buttons, and drag it around to look closer at towns, roads and markers.",
+    to: "/wow-forever/map",
+  },
+  {
+    date: "2026-11-07",
     title: "Source tags on every page",
     summary:
       "One set of tags shows where each fact comes from: seen in game, official, game files, Classic data or unconfirmed. Hover or tap a tag to see what it means.",

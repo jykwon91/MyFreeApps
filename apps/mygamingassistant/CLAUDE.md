@@ -592,6 +592,33 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   fully explored) stitched from the Forever client's map tiles — © Blizzard
   Entertainment, shown for reference in a free fan tool. One image loads per
   viewed zone. See `public/wow-maps/README.md`.
+- **Pan / zoom viewer** (`MapCanvas` → `hooks/useMapViewer.ts`): Leaflet 1.9
+  (`CRS.Simple`), wrapped by our own hook — never react-leaflet (Hippocratic
+  licence) and never Leaflet's controls. Leaflet is lazy-loaded
+  (`lib/leaflet/loadLeaflet.ts`), so only the map page's chunk pulls it in.
+  One art pixel = one unit at zoom 0, top-left (0, 0), y down = negative lat
+  (`worldMap/mapViewport.ts`, pure + unit-tested against Leaflet's own
+  projection); `MapViewport` (`types/mapViewport.ts`) is the page's view
+  (`scale` 1 = the whole picture, `centerX/Y` 0..1). Zoom runs from the
+  whole picture to `MAX_MAP_SCALE` (4×, `data/worldMap/mapViewer.ts`) — past
+  that the art only blurs, so there are **no tiles**: the stitched WebP is
+  already the client's full resolution. The picture (img + hover highlight +
+  SVG markers, scaled by `scale` so markers keep their screen size) is a
+  React portal into a div the hook owns: it fills the box straight away and
+  moves into Leaflet's overlay pane once Leaflet loads
+  (`attachMapPicture.ts`, ImageOverlay done with public API). Wheel
+  (`attachWheelZoom.ts`, our own — Leaflet's fires after `remove()`), keys
+  (`data/worldMap/mapViewKeys.ts`, handled in `MapCanvas`, Leaflet's keyboard
+  is off) and the +/− buttons (`MapZoomControls`, bottom-right, 44 px) all go
+  through `attachZoomQueue.ts`: Leaflet ignores a zoom or view asked for
+  mid-animation, so the queue runs the newest one when the zoom under way
+  ends — never call `map.setView` / `setZoom` around it. Unmounting mid-zoom
+  removes the map only once that zoom lands (`removeMapWhenStill.ts`: Leaflet's
+  `remove()` leaves the zoom's end timer running, which throws). Double-click and box
+  zoom are off (a click opens a zone). Unzoomed, `touch-action: pan-y` lets a
+  finger scroll the page; zoomed it's `none` and the finger drags the map.
+  Tests: `wowWorldMapViewport.test.ts`, `wowWorldMapZoomQueue.test.ts`,
+  `e2e/wow-world-map-viewer.spec.ts`.
 - **Navigation like the in-game map.** `zones.json` carries every map's UiMap
   `parent` (Azeroth `947` → continents → zones → capitals), `levels` and
   `territory`; `decodeMapTree` builds the tree. The viewed map lives in the URL
@@ -627,7 +654,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   screen. **Manual-navigation rule:** any map change the selection didn't
   make (zoom out, breadcrumb, neighbour label, map click, "Open a map",
   "Your zone"/"Destination" buttons, browser Back, changing your zone) or any
-  hand zoom/pan (wheel, a drag on a zoomed map, "Reset zoom") while selected
+  hand zoom/pan (wheel, pinch, a drag on a zoomed map, the +/− buttons, arrow
+  / +/− keys, "Reset zoom") while selected
   drops the snapshot — the player took control, so letting go only clears the
   highlight in place. A marker click on the map never moves the view, so it
   takes no snapshot of its own. "Reset filters" (`hooks/useFindFilters.ts`)
