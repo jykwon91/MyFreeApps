@@ -1,5 +1,6 @@
 import { useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
 import type { WorldMapData } from "@/games/wow-forever/types/worldMap";
 
 /** `/wow-forever/map?m=1429` — the map being looked at, so back = zoom out and a view can be linked. */
@@ -22,7 +23,7 @@ export interface MapViewState {
  * the world map.
  */
 export function useMapView(data: WorldMapData | null, playerZoneId: number | null): MapViewState {
-  const [params, setParams] = useSearchParams();
+  const [params, setParams] = useLiveSearchParams();
   const navigate = useNavigate();
   const requested = Number(params.get(MAP_PARAM));
   let mapId: number | null = null;

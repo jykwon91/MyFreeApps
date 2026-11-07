@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
 import { TRIAGE_SHEET_HISTORY_STATE } from "@/games/wow-forever/data/featureRequests/triage/triageConfig";
 import {
   parseOpenSheet,
@@ -23,7 +24,7 @@ function pushedBySheet(state: unknown): boolean {
  * closes it) and closing a sheet goes Back to that entry rather than stacking another.
  */
 export function useTriageParams() {
-  const [params, setParams] = useSearchParams();
+  const [params, setParams] = useLiveSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
   const tab = useMemo(() => parseTriageTab(params), [params]);
