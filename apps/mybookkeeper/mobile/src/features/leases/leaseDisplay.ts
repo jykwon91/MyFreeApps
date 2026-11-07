@@ -3,7 +3,7 @@ import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease
 import type { SignedLeaseDetail } from "@mybookkeeper/api-client/types/lease/signed-lease-detail";
 import type { SignedLeaseStatus } from "@mybookkeeper/api-client/types/lease/signed-lease-status";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { localToday } from "@mybookkeeper/api-client/utils/tenancyState";
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import { LEASE_MESSAGES } from "../../constants/leases";
 
 const DAY_MS = 86_400_000;

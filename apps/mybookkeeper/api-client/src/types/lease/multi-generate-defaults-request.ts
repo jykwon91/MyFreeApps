@@ -6,4 +6,6 @@
 export interface MultiGenerateDefaultsRequest {
   template_ids: string[];
   applicant_id: string;
+  /** The host's local date (yyyy-MM-dd), used for `today` defaults. */
+  today: string;
 }

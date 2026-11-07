@@ -4,7 +4,7 @@ import AlertBox from "@/shared/components/ui/AlertBox";
 import { LoadingButton } from "@platform/ui";
 import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { APPLICANT_PAGE_SIZE } from "@mybookkeeper/api-client/constants/applicantLabels";
-import { localToday } from "@mybookkeeper/api-client/utils/tenancyState";
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import { useTenantsListMode } from "@/app/features/tenants/useTenantsListMode";
 import TenantsListBody from "@/app/features/tenants/TenantsListBody";
 

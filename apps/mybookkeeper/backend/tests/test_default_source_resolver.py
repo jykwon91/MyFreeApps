@@ -19,6 +19,9 @@ from app.services.leases.default_source_resolver import (
 )
 
 
+_TODAY = datetime.date(2026, 1, 15)
+
+
 # ---------------------------------------------------------------------------
 # Helpers — minimal mock objects matching ORM column names
 # ---------------------------------------------------------------------------
@@ -71,13 +74,13 @@ def _make_inquiry(
 class TestResolveDefaultSource:
     def test_single_applicant_source_returns_value_and_provenance(self) -> None:
         applicant = _make_applicant(legal_name="Jane Doe")
-        value, prov = resolve_default_source("applicant.legal_name", applicant, None)
+        value, prov = resolve_default_source("applicant.legal_name", applicant, None, today=_TODAY)
         assert value == "Jane Doe"
         assert prov == "applicant"
 
     def test_single_applicant_source_none_returns_none(self) -> None:
         applicant = _make_applicant(legal_name=None)
-        value, prov = resolve_default_source("applicant.legal_name", applicant, None)
+        value, prov = resolve_default_source("applicant.legal_name", applicant, None, today=_TODAY)
         assert value is None
         assert prov is None
 
@@ -85,7 +88,7 @@ class TestResolveDefaultSource:
         applicant = _make_applicant(legal_name=None)
         inquiry = _make_inquiry(inquirer_name="John Smith")
         value, prov = resolve_default_source(
-            "applicant.legal_name || inquiry.inquirer_name", applicant, inquiry
+            "applicant.legal_name || inquiry.inquirer_name", applicant, inquiry, today=_TODAY
         )
         assert value == "John Smith"
         assert prov == "inquiry"
@@ -94,7 +97,7 @@ class TestResolveDefaultSource:
         applicant = _make_applicant(legal_name="Jane Doe")
         inquiry = _make_inquiry(inquirer_name="John Smith")
         value, prov = resolve_default_source(
-            "applicant.legal_name || inquiry.inquirer_name", applicant, inquiry
+            "applicant.legal_name || inquiry.inquirer_name", applicant, inquiry, today=_TODAY
         )
         assert value == "Jane Doe"
         assert prov == "applicant"
@@ -103,7 +106,7 @@ class TestResolveDefaultSource:
         applicant = _make_applicant(legal_name=None)
         inquiry = _make_inquiry(inquirer_name=None)
         value, prov = resolve_default_source(
-            "applicant.legal_name || inquiry.inquirer_name", applicant, inquiry
+            "applicant.legal_name || inquiry.inquirer_name", applicant, inquiry, today=_TODAY
         )
         assert value is None
         assert prov is None
@@ -111,21 +114,26 @@ class TestResolveDefaultSource:
     def test_inquiry_none_with_fallback_chain_returns_none(self) -> None:
         applicant = _make_applicant(legal_name=None)
         value, prov = resolve_default_source(
-            "applicant.legal_name || inquiry.inquirer_name", applicant, None
+            "applicant.legal_name || inquiry.inquirer_name", applicant, None, today=_TODAY
         )
         assert value is None
         assert prov is None
 
-    def test_today_returns_todays_date_as_iso_string(self) -> None:
+    def test_today_returns_the_passed_date_not_the_server_date(self) -> None:
         applicant = _make_applicant()
-        value, prov = resolve_default_source("today", applicant, None)
-        assert value == datetime.date.today().isoformat()
+        client_date = datetime.date(2030, 12, 31)
+        value, prov = resolve_default_source("today", applicant, None, today=client_date)
+        assert value == "2030-12-31"
         assert prov == "today"
+
+    def test_today_is_required(self) -> None:
+        with pytest.raises(TypeError):
+            resolve_default_source("today", _make_applicant(), None)  # type: ignore[call-arg]
 
     def test_date_field_returned_as_iso_string(self) -> None:
         target_date = datetime.date(2026, 3, 1)
         applicant = _make_applicant(contract_start=target_date)
-        value, prov = resolve_default_source("applicant.contract_start", applicant, None)
+        value, prov = resolve_default_source("applicant.contract_start", applicant, None, today=_TODAY)
         assert value == "2026-03-01"
         assert prov == "applicant"
 
@@ -133,7 +141,7 @@ class TestResolveDefaultSource:
         applicant = _make_applicant(contact_email="tenant@applicant.com")
         inquiry = _make_inquiry(inquirer_email="tenant@inquiry.com")
         value, prov = resolve_default_source(
-            "applicant.contact_email || inquiry.inquirer_email", applicant, inquiry,
+            "applicant.contact_email || inquiry.inquirer_email", applicant, inquiry, today=_TODAY,
         )
         assert value == "tenant@applicant.com"
         assert prov == "applicant"
@@ -142,7 +150,7 @@ class TestResolveDefaultSource:
         applicant = _make_applicant(contact_email=None)
         inquiry = _make_inquiry(inquirer_email="tenant@inquiry.com")
         value, prov = resolve_default_source(
-            "applicant.contact_email || inquiry.inquirer_email", applicant, inquiry,
+            "applicant.contact_email || inquiry.inquirer_email", applicant, inquiry, today=_TODAY,
         )
         assert value == "tenant@inquiry.com"
         assert prov == "inquiry"
@@ -151,7 +159,7 @@ class TestResolveDefaultSource:
         applicant = _make_applicant(contact_phone="555-0100")
         inquiry = _make_inquiry(inquirer_phone="555-0200")
         value, prov = resolve_default_source(
-            "applicant.contact_phone || inquiry.inquirer_phone", applicant, inquiry,
+            "applicant.contact_phone || inquiry.inquirer_phone", applicant, inquiry, today=_TODAY,
         )
         assert value == "555-0100"
         assert prov == "applicant"
@@ -160,7 +168,7 @@ class TestResolveDefaultSource:
         applicant = _make_applicant(legal_name="")
         inquiry = _make_inquiry(inquirer_name="John Smith")
         value, prov = resolve_default_source(
-            "applicant.legal_name || inquiry.inquirer_name", applicant, inquiry
+            "applicant.legal_name || inquiry.inquirer_name", applicant, inquiry, today=_TODAY
         )
         assert value == "John Smith"
         assert prov == "inquiry"
@@ -170,7 +178,7 @@ class TestResolveDefaultSource:
         applicant = _make_applicant(contract_start=None)
         inquiry = _make_inquiry(desired_start_date=target)
         value, prov = resolve_default_source(
-            "applicant.contract_start || inquiry.desired_start_date", applicant, inquiry
+            "applicant.contract_start || inquiry.desired_start_date", applicant, inquiry, today=_TODAY
         )
         assert value == "2026-06-01"
         assert prov == "inquiry"
@@ -282,7 +290,7 @@ class TestResolveLeasePropertyUser:
         lease.starts_on = datetime.date(2026, 5, 3)
         lease.ends_on = None
         value, prov = resolve_default_source(
-            "lease.starts_on", applicant, None, lease=lease,
+            "lease.starts_on", applicant, None, lease=lease, today=_TODAY,
         )
         assert value == "2026-05-03"
         assert prov == "lease"
@@ -293,7 +301,7 @@ class TestResolveLeasePropertyUser:
         lease.starts_on = None
         lease.ends_on = datetime.date(2026, 5, 17)
         value, prov = resolve_default_source(
-            "lease.ends_on", applicant, None, lease=lease,
+            "lease.ends_on", applicant, None, lease=lease, today=_TODAY,
         )
         assert value == "2026-05-17"
         assert prov == "lease"
@@ -303,7 +311,7 @@ class TestResolveLeasePropertyUser:
         lease = MagicMock()
         lease.starts_on = None
         value, prov = resolve_default_source(
-            "lease.starts_on", applicant, None, lease=lease,
+            "lease.starts_on", applicant, None, lease=lease, today=_TODAY,
         )
         assert value is None
         assert prov is None
@@ -312,7 +320,7 @@ class TestResolveLeasePropertyUser:
         """If the spec references lease.* but no lease was passed, resolve to None."""
         applicant = _make_applicant()
         value, prov = resolve_default_source(
-            "lease.starts_on", applicant, None,
+            "lease.starts_on", applicant, None, today=_TODAY,
         )
         assert value is None
         assert prov is None
@@ -322,7 +330,7 @@ class TestResolveLeasePropertyUser:
         prop = MagicMock()
         prop.address = "123 Main St, Austin TX"
         value, prov = resolve_default_source(
-            "property.address", applicant, None, property_record=prop,
+            "property.address", applicant, None, property_record=prop, today=_TODAY,
         )
         assert value == "123 Main St, Austin TX"
         assert prov == "property"
@@ -332,7 +340,7 @@ class TestResolveLeasePropertyUser:
         user = MagicMock()
         user.name = "Jason Kwon"
         value, prov = resolve_default_source(
-            "user.name", applicant, None, user_record=user,
+            "user.name", applicant, None, user_record=user, today=_TODAY,
         )
         assert value == "Jason Kwon"
         assert prov == "user"
@@ -341,7 +349,7 @@ class TestResolveLeasePropertyUser:
         """Pre-2026-05-07 callers (no lease/property/user kwargs) keep working."""
         applicant = _make_applicant(legal_name="Jane Doe")
         value, prov = resolve_default_source(
-            "applicant.legal_name", applicant, None,
+            "applicant.legal_name", applicant, None, today=_TODAY,
         )
         assert value == "Jane Doe"
         assert prov == "applicant"

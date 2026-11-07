@@ -15,6 +15,7 @@ Pipeline for ``replace_files`` (re-upload to bump version):
 """
 from __future__ import annotations
 
+import datetime
 import logging
 import uuid
 
@@ -364,6 +365,7 @@ async def generate_defaults_multi(
     organization_id: uuid.UUID,
     template_ids: list[uuid.UUID],
     applicant_id: uuid.UUID,
+    today: datetime.date,
 ) -> list[dict]:
     """Return merged placeholders + resolved defaults across N templates.
 
@@ -398,7 +400,6 @@ async def generate_defaults_multi(
                 )
             )
 
-        # Validate applicant belongs to caller.
         applicant = await applicant_repo.get(
             db,
             applicant_id=applicant_id,
@@ -408,7 +409,6 @@ async def generate_defaults_multi(
         if applicant is None:
             raise ApplicantNotFoundError(f"Applicant {applicant_id} not found")
 
-        # Load linked inquiry if present.
         inquiry = None
         if applicant.inquiry_id is not None:
             inquiry = await get_by_applicant_inquiry_id(
@@ -431,7 +431,7 @@ async def generate_defaults_multi(
                 continue
             if p.default_source:
                 value, provenance = resolve_default_source(
-                    p.default_source, applicant, inquiry,
+                    p.default_source, applicant, inquiry, today=today,
                 )
             else:
                 value, provenance = None, None
@@ -451,6 +451,7 @@ async def generate_defaults(
     organization_id: uuid.UUID,
     template_id: uuid.UUID,
     applicant_id: uuid.UUID,
+    today: datetime.date,
 ) -> list[dict]:
     """Return resolved default values for each placeholder in a template.
 
@@ -463,7 +464,6 @@ async def generate_defaults(
     and ``provenance=None`` so the frontend can render all fields in one pass.
     """
     async with unit_of_work() as db:
-        # Validate template belongs to caller.
         template = await lease_template_repo.get(
             db,
             template_id=template_id,
@@ -473,7 +473,6 @@ async def generate_defaults(
         if template is None:
             raise TemplateNotFoundError(f"Template {template_id} not found")
 
-        # Validate applicant belongs to caller.
         applicant = await applicant_repo.get(
             db,
             applicant_id=applicant_id,
@@ -483,7 +482,6 @@ async def generate_defaults(
         if applicant is None:
             raise ApplicantNotFoundError(f"Applicant {applicant_id} not found")
 
-        # Load linked inquiry if present.
         inquiry = None
         if applicant.inquiry_id is not None:
             inquiry = await get_by_applicant_inquiry_id(
@@ -503,7 +501,7 @@ async def generate_defaults(
             continue
         if p.default_source:
             value, provenance = resolve_default_source(
-                p.default_source, applicant, inquiry,
+                p.default_source, applicant, inquiry, today=today,
             )
         else:
             value, provenance = None, None

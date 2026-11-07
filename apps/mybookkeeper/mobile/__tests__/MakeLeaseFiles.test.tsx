@@ -1,4 +1,5 @@
 import type { SignedLeaseDetail } from "@mybookkeeper/api-client/types/lease/signed-lease-detail";
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
@@ -80,6 +81,7 @@ describe("making a draft's files", () => {
     expect(screen.queryByRole("button", { name: MESSAGES.makeFiles })).toBeNull();
     expect(screen.queryByRole("button", { name: MESSAGES.remakeFiles })).toBeNull();
     expect(generates).toHaveLength(1);
+    expect(JSON.parse(String(generates[0].data))).toEqual({ today: localToday() });
     expect(alert).not.toHaveBeenCalled();
   });
 

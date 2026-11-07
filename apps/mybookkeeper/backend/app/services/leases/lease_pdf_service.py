@@ -113,6 +113,7 @@ async def generate_lease(
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
     lease_id: uuid.UUID,
+    today: _dt.date,
 ) -> tuple[SignedLeaseResponse, bool]:
     """Render the lease and transition status to ``generated``.
 
@@ -160,13 +161,13 @@ async def generate_lease(
                     seen_placeholder_keys.add(p.key)
                     placeholders.append(p)
 
-    substitutions: dict[str, str] = {}
-    for key, value in (lease.values or {}).items():
-        substitutions[key] = "" if value is None else str(value)
+    substitutions: dict[str, str] = {
+        k: "" if v is None else str(v) for k, v in (lease.values or {}).items()
+    }
     for p in placeholders:
         if p.input_type == "computed" and p.computed_expr:
             try:
-                substitutions[p.key] = evaluate(p.computed_expr, lease.values or {})
+                substitutions[p.key] = evaluate(p.computed_expr, lease.values or {}, today=today)
             except ComputedExprError as exc:
                 logger.warning(
                     "Computed placeholder %s failed to evaluate: %s", p.key, exc,
@@ -249,6 +250,7 @@ async def add_templates_and_generate(
     organization_id: uuid.UUID,
     lease_id: uuid.UUID,
     template_ids: list[uuid.UUID],
+    today: _dt.date,
     values_override: dict[str, str] | None = None,
 ) -> SignedLeaseResponse:
     """Link additional templates to an existing lease and render only their files.
@@ -358,11 +360,9 @@ async def add_templates_and_generate(
                 continue
             try:
                 resolved, _ = resolve_default_source(
-                    p.default_source,
-                    applicant,
-                    inquiry,
-                    lease=lease,
-                    property_record=property_record,
+                    p.default_source, applicant, inquiry,
+                    today=today,
+                    lease=lease, property_record=property_record,
                     user_record=user_record,
                 )
             except (ValueError, AttributeError):
@@ -434,7 +434,7 @@ async def add_templates_and_generate(
     for p in placeholders:
         if p.input_type == "computed" and p.computed_expr:
             try:
-                substitutions[p.key] = evaluate(p.computed_expr, values_snapshot)
+                substitutions[p.key] = evaluate(p.computed_expr, values_snapshot, today=today)
             except ComputedExprError as exc:
                 logger.warning(
                     "Computed placeholder %s failed to evaluate: %s", p.key, exc,

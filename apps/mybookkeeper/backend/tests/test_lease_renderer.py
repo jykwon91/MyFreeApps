@@ -157,15 +157,23 @@ class TestPlaceholderExtractor:
 # Computed expression DSL
 # ---------------------------------------------------------------------------
 
+_TODAY = _dt.date(2026, 5, 2)
+
+
 class TestComputedDsl:
-    def test_today_evaluates(self) -> None:
-        out = evaluate("today", {}, today=_dt.date(2026, 5, 2))
-        assert out == "2026-05-02"
+    def test_today_evaluates_to_the_passed_date(self) -> None:
+        out = evaluate("today", {}, today=_dt.date(2031, 3, 4))
+        assert out == "2031-03-04"
+
+    def test_today_is_required(self) -> None:
+        with pytest.raises(TypeError):
+            evaluate("today", {})  # type: ignore[call-arg]
 
     def test_date_diff_days(self) -> None:
         out = evaluate(
             "(MOVE-OUT DATE - MOVE-IN DATE).days",
             {"MOVE-IN DATE": "2026-06-01", "MOVE-OUT DATE": "2026-12-01"},
+            today=_TODAY,
         )
         assert out == "183"
 
@@ -174,6 +182,7 @@ class TestComputedDsl:
         out = evaluate(
             "(MOVE_OUT_DATE - MOVE_IN_DATE).days",
             {"MOVE_IN_DATE": "2026-01-01", "MOVE_OUT_DATE": "2026-01-08"},
+            today=_TODAY,
         )
         assert out == "7"
 
@@ -181,6 +190,7 @@ class TestComputedDsl:
         out = evaluate(
             "(FIRST + LAST)",
             {"FIRST": "Alice ", "LAST": "Smith"},
+            today=_TODAY,
         )
         assert out == "Alice Smith"
 
@@ -199,12 +209,12 @@ class TestComputedDsl:
 
     def test_evaluate_rejects_eval_payload(self) -> None:
         with pytest.raises(ComputedExprError):
-            evaluate("__import__('os').system('whoami')", {})
+            evaluate("__import__('os').system('whoami')", {}, today=_TODAY)
 
     def test_evaluate_missing_value_raises(self) -> None:
         with pytest.raises(ComputedExprError):
-            evaluate("(A - B).days", {"A": "2026-01-01"})
+            evaluate("(A - B).days", {"A": "2026-01-01"}, today=_TODAY)
 
     def test_evaluate_invalid_iso_raises(self) -> None:
         with pytest.raises(ComputedExprError):
-            evaluate("(A - B).days", {"A": "2026-01-01", "B": "not-a-date"})
+            evaluate("(A - B).days", {"A": "2026-01-01", "B": "not-a-date"}, today=_TODAY)

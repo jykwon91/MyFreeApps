@@ -20,6 +20,10 @@ from app.main import app
 from app.models.organization.organization_member import OrgRole
 
 
+def _utc_today() -> str:
+    return _dt.datetime.now(_dt.timezone.utc).date().isoformat()
+
+
 def _ctx(org_id: uuid.UUID, user_id: uuid.UUID) -> RequestContext:
     return RequestContext(
         organization_id=org_id, user_id=user_id, org_role=OrgRole.OWNER,
@@ -300,7 +304,7 @@ class TestGetGenerateDefaults:
                 client = TestClient(app)
                 resp = client.get(
                     f"/lease-templates/{template_id}/generate-defaults",
-                    params={"applicant_id": str(applicant_id)},
+                    params={"applicant_id": str(applicant_id), "today": _utc_today()},
                 )
             assert resp.status_code == 200
             body = resp.json()
@@ -327,7 +331,7 @@ class TestGetGenerateDefaults:
                 client = TestClient(app)
                 resp = client.get(
                     f"/lease-templates/{template_id}/generate-defaults",
-                    params={"applicant_id": str(applicant_id)},
+                    params={"applicant_id": str(applicant_id), "today": _utc_today()},
                 )
             assert resp.status_code == 404
         finally:
@@ -348,7 +352,7 @@ class TestGetGenerateDefaults:
                 client = TestClient(app)
                 resp = client.get(
                     f"/lease-templates/{template_id}/generate-defaults",
-                    params={"applicant_id": str(applicant_id)},
+                    params={"applicant_id": str(applicant_id), "today": _utc_today()},
                 )
             assert resp.status_code == 404
         finally:
@@ -375,7 +379,9 @@ class TestGenerateLease:
                 side_effect=StorageNotConfiguredError("not configured"),
             ):
                 client = TestClient(app)
-                resp = client.post(f"/signed-leases/{lease_id}/generate")
+                resp = client.post(
+                    f"/signed-leases/{lease_id}/generate", json={"today": _utc_today()},
+                )
             assert resp.status_code == 503
         finally:
             app.dependency_overrides.clear()

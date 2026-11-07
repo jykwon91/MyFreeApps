@@ -41,6 +41,9 @@ from app.schemas.leases.signed_lease_response import SignedLeaseResponse
 from app.schemas.leases.signed_lease_add_templates_request import (
     SignedLeaseAddTemplatesRequest,
 )
+from app.schemas.leases.signed_lease_generate_request import (
+    SignedLeaseGenerateRequest,
+)
 from app.schemas.leases.signed_lease_template_prefill_request import (
     SignedLeaseTemplatePrefillRequest,
 )
@@ -250,6 +253,7 @@ async def prefill_addendum_placeholders(
             organization_id=ctx.organization_id,
             lease_id=lease_id,
             template_ids=payload.template_ids,
+            today=payload.today,
         )
     except signed_lease_service.SignedLeaseNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Lease not found") from exc
@@ -277,6 +281,7 @@ async def add_templates_to_lease(
             organization_id=ctx.organization_id,
             lease_id=lease_id,
             template_ids=payload.template_ids,
+            today=payload.today,
             values_override=payload.values,
         )
     except signed_lease_service.SignedLeaseNotFoundError as exc:
@@ -290,6 +295,7 @@ async def add_templates_to_lease(
 @router.post("/{lease_id}/generate", response_model=SignedLeaseResponse)
 async def generate_lease(
     lease_id: uuid.UUID,
+    payload: SignedLeaseGenerateRequest,
     background_tasks: BackgroundTasks,
     ctx: RequestContext = Depends(require_write_access),
 ) -> SignedLeaseResponse:
@@ -298,6 +304,7 @@ async def generate_lease(
             user_id=ctx.user_id,
             organization_id=ctx.organization_id,
             lease_id=lease_id,
+            today=payload.today,
         )
     except signed_lease_service.SignedLeaseNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Lease not found") from exc

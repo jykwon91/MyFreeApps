@@ -7,6 +7,7 @@ distinct responsibility: read-only resolution vs. mutation + PDF rendering.
 """
 from __future__ import annotations
 
+import datetime
 import logging
 import uuid
 
@@ -36,6 +37,7 @@ async def prefill_addendum_placeholders(
     organization_id: uuid.UUID,
     lease_id: uuid.UUID,
     template_ids: list[uuid.UUID],
+    today: datetime.date,
 ) -> SignedLeaseTemplatePrefillResponse:
     """Compute resolved + unresolved placeholder values for a template + lease pair.
 
@@ -117,6 +119,7 @@ async def prefill_addendum_placeholders(
                         p.default_source,
                         applicant,
                         inquiry,
+                        today=today,
                         lease=lease,
                         property_record=property_record,
                         user_record=user_record,
