@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
 import { MAP_PARAM } from "@/games/wow-forever/hooks/useMapView";
 import {
   ENDPOINT_KIND,
@@ -37,7 +37,7 @@ export interface TripState {
 
 /** The trip lives in the URL, so every step of it can be linked and Back walks through them. */
 export function useTrip(): TripState {
-  const [params, setParams] = useSearchParams();
+  const [params, setParams] = useLiveSearchParams();
   const toText = params.get(TO_PARAM);
   const npcText = params.get(NPC_PARAM);
   const fromText = params.get(FROM_PARAM);
