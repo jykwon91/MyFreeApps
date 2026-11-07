@@ -86,7 +86,8 @@ test.describe("Contract dates editing", () => {
       await startInput.fill("2026-07-01");
       await startInput.blur();
 
-      await page.waitForLoadState("networkidle");
+      // The save is debounced after blur, so wait for its toast.
+      await expect(page.getByText("Contract date updated", { exact: true })).toBeVisible();
 
       const updated = await getApplicant(api, applicantId);
       expect(updated.contract_start).toBe("2026-07-01");

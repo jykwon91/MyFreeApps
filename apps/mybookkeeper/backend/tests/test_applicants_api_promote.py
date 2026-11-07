@@ -224,7 +224,8 @@ class TestPromoteEndpoint:
             app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
-    async def test_contract_dates_inverted_returns_422(self) -> None:
+    async def test_contract_end_is_rejected_returns_422(self) -> None:
+        """Contract end comes from the signed lease, never the promotion."""
         org_id, user_id = uuid.uuid4(), uuid.uuid4()
         inquiry_id = uuid.uuid4()
         app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
@@ -233,10 +234,14 @@ class TestPromoteEndpoint:
             response = client.post(
                 f"/applicants/promote/{inquiry_id}",
                 json={
-                    "contract_start": "2026-12-01",
-                    "contract_end": "2026-06-01",
+                    "contract_start": "2026-06-01",
+                    "contract_end": "2026-12-01",
                 },
             )
             assert response.status_code == 422
+            errors = response.json()["detail"]
+            assert [(e["type"], e["loc"]) for e in errors] == [
+                ("extra_forbidden", ["body", "contract_end"]),
+            ]
         finally:
             app.dependency_overrides.clear()
