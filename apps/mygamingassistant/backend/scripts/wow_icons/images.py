@@ -9,9 +9,6 @@ from PIL import Image  # generator-only dependency (Pillow, via qrcode[pil])
 
 ICON_SIZE: Final = 64
 WEBP_QUALITY: Final = 80
-CONTENT_TYPE: Final = "image/webp"
-# A key holds one build's bytes for ever, so browsers and caches may keep it for a year.
-CACHE_CONTROL: Final = "public, max-age=31536000, immutable"
 
 # BLP2 header: magic, type, then encoding / alpha depth / alpha encoding / mips bytes,
 # width + height, 16 mip offsets.

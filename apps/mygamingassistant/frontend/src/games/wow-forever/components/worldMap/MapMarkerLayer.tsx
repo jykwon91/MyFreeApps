@@ -4,6 +4,7 @@ import MapPinned from "@/games/wow-forever/components/worldMap/MapPinned";
 import MapPointLabel from "@/games/wow-forever/components/worldMap/MapPointLabel";
 import TripEndMarker from "@/games/wow-forever/components/worldMap/TripEndMarker";
 import { MAP_H, MAP_W } from "@/games/wow-forever/data/worldMap/mapViewer";
+import { SATELLITE_LINE_HALO, SATELLITE_MARKER_RIM } from "@/games/wow-forever/data/worldMap/mapStyle";
 import type { MapView, WorldPoint } from "@/games/wow-forever/types/worldMap";
 import { mapShows, worldToMap } from "@/games/wow-forever/worldMap/mapGeometry";
 import type { StepKind } from "@/games/wow-forever/worldMap/directions";
@@ -128,7 +129,7 @@ function MapMarkerLayer({ map, player, markers, selectedId, route, onSelectMarke
               strokeWidth={(leg.number === highlight ? 12 : 8) / scale}
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="stroke-black/60"
+              className={`stroke-black/60 ${SATELLITE_LINE_HALO}`}
             />
           ))}
           {legs.map((leg) => (
@@ -150,7 +151,7 @@ function MapMarkerLayer({ map, player, markers, selectedId, route, onSelectMarke
         const at = toPx(map, s.world);
         if (!at) return null;
         return (
-          <g key={`stop-${s.number}`} aria-label={`Step ${s.number}: ${s.label}`}>
+          <g key={`stop-${s.number}`} className={SATELLITE_MARKER_RIM} aria-label={`Step ${s.number}: ${s.label}`}>
             <MapPinned at={at} scale={scale}>
               <circle cx={at.px} cy={at.py} r={14} strokeWidth={3} className="fill-amber-400 stroke-black/70" />
               <text x={at.px} y={at.py + 6} textAnchor="middle" className="fill-black text-[18px] font-bold">
@@ -170,7 +171,7 @@ function MapMarkerLayer({ map, player, markers, selectedId, route, onSelectMarke
             tabIndex={0}
             aria-label={label}
             data-testid="marker-cluster"
-            className="cursor-pointer focus:outline-none"
+            className={`cursor-pointer focus:outline-none ${SATELLITE_MARKER_RIM}`}
             onPointerDown={(e) => e.stopPropagation()}
             onPointerUp={(e) => e.stopPropagation()}
             onClick={() => onOpenCluster(c.members)}
@@ -197,7 +198,7 @@ function MapMarkerLayer({ map, player, markers, selectedId, route, onSelectMarke
             tabIndex={0}
             aria-label={m.label}
             aria-pressed={selected}
-            className="cursor-pointer focus:outline-none"
+            className={`cursor-pointer focus:outline-none ${SATELLITE_MARKER_RIM}`}
             onPointerDown={(e) => e.stopPropagation()}
             onPointerUp={(e) => e.stopPropagation()}
             onClick={() => onSelectMarker(m.id)}
