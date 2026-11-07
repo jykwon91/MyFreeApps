@@ -1,14 +1,13 @@
-import type { InquiriesListMode } from "@/shared/types/inquiry/inquiries-list-mode";
+import type { ListLoadMode } from "@/shared/types/list-load-mode";
 import type { InquirySummary } from "@mybookkeeper/api-client/types/inquiry/inquiry-summary";
-import EmptyState from "@/shared/components/ui/EmptyState";
-import { INQUIRY_MESSAGES } from "@/shared/lib/inquiry-messages";
 import { LoadingButton } from "@platform/ui";
+import InquiriesEmpty from "./InquiriesEmpty";
 import InquiriesSkeleton from "./InquiriesSkeleton";
 import InquiryCard from "./InquiryCard";
 import InquiryRow from "./InquiryRow";
 
 export interface InquiriesListBodyProps {
-  mode: InquiriesListMode;
+  mode: ListLoadMode;
   inquiries: InquirySummary[];
   isFiltered: boolean;
   showStageBadge: boolean;
@@ -31,20 +30,13 @@ export default function InquiriesListBody({
   canWrite,
 }: InquiriesListBodyProps) {
   switch (mode) {
+    case "error":
+      // The page's LoadErrorAlert says the list couldn't load.
+      return null;
     case "loading":
       return <InquiriesSkeleton />;
     case "empty":
-      return (
-        <EmptyState
-          message={
-            isFiltered
-              ? INQUIRY_MESSAGES.noInquiriesInStage
-              : canWrite
-                ? INQUIRY_MESSAGES.noInquiries
-                : INQUIRY_MESSAGES.noInquiriesViewer
-          }
-        />
-      );
+      return <InquiriesEmpty isFiltered={isFiltered} canWrite={canWrite} />;
     case "list":
       return (
         <>

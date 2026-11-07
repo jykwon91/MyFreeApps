@@ -1,9 +1,9 @@
 import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
-import type { UtilityPlansListMode } from "@/shared/types/utility/utility-plans-list-mode";
+import type { ListLoadMode } from "@/shared/types/list-load-mode";
 import UtilityPlanRow from "./UtilityPlanRow";
 
 export interface UtilityPlansListBodyProps {
-  mode: UtilityPlansListMode;
+  mode: ListLoadMode;
   plans: UtilityPlanSummary[];
   showExpiringOnly: boolean;
   deletingPlanId: string | null;
@@ -20,6 +20,9 @@ export default function UtilityPlansListBody({
   onDelete,
 }: UtilityPlansListBodyProps) {
   switch (mode) {
+    case "error":
+      // The page's LoadErrorAlert says the list couldn't load.
+      return null;
     case "loading":
       return (
         // Mirrors the loaded row: two-line left block, then a badge and the

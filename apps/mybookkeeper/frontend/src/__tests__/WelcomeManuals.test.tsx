@@ -15,6 +15,7 @@ import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import WelcomeManuals from "@/app/pages/WelcomeManuals";
 import type { WelcomeManualSummary } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-summary";
+import { queryStatus } from "@/test/rtk-query-status";
 
 const mockRefetch = vi.fn();
 let mockIsLoading = false;
@@ -28,10 +29,10 @@ vi.mock("@/shared/lib/toast-store", () => ({
 
 vi.mock("@mybookkeeper/api-client/store/welcomeManualsApi", () => ({
   useGetWelcomeManualsQuery: vi.fn(() => ({
-    data: { items: mockManuals, total: mockManuals.length, has_more: false },
+    // RTK has no data while a first load runs or after it failed.
+    data: mockIsLoading || mockIsError ? undefined : { items: mockManuals, total: mockManuals.length, has_more: false },
     isLoading: mockIsLoading,
-    isError: mockIsError,
-    isFetching: false,
+    ...queryStatus({ failed: mockIsError, fetching: false }),
     refetch: mockRefetch,
   })),
 }));

@@ -6,7 +6,7 @@ import { APPLICANT_PAGE_SIZE, APPLICANT_STAGES } from "@mybookkeeper/api-client/
 import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 import ApplicantStageFilter from "@/app/features/applicants/ApplicantStageFilter";
 import ApplicantsListBody from "@/app/features/applicants/ApplicantsListBody";
-import { useApplicantsListMode } from "@/app/features/applicants/useApplicantsListMode";
+import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 const STAGE_PARAM = "stage";
@@ -32,7 +32,7 @@ export default function Applicants() {
     [stage, pageCount],
   );
 
-  const { data, isLoading, isFetching, isError, refetch } =
+  const { data, isFetching, error, refetch } =
     useGetApplicantsQuery(queryArgs);
 
   const applicants = data?.items ?? [];
@@ -40,9 +40,10 @@ export default function Applicants() {
   const isFiltered = !!stage;
   const showStageBadge = !stage;
 
-  const mode = useApplicantsListMode({
-    isLoading,
-    isEmpty: applicants.length === 0 && !isError,
+  const mode = resolveListLoadMode({
+    hasData: data !== undefined,
+    hasError: error !== undefined,
+    itemCount: applicants.length,
   });
 
   function handleFilterChange(next: ApplicantStage | null) {
@@ -69,7 +70,7 @@ export default function Applicants() {
 
       <ApplicantStageFilter value={stage} onChange={handleFilterChange} />
 
-      {isError ? (
+      {error ? (
         <LoadErrorAlert message="I couldn't load your applicants. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 

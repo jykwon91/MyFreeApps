@@ -105,6 +105,7 @@ vi.mock("@/shared/hooks/useOrgRole", () => ({ useCanWrite: vi.fn(() => true) }))
 
 import { useGetInquiriesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
+import { queryStatus } from "@/test/rtk-query-status";
 
 type InquiriesQueryReturn = ReturnType<typeof useGetInquiriesQuery>;
 
@@ -195,7 +196,8 @@ describe("Inquiries page", () => {
   it("renders an error AlertBox + retry button when the query errors", () => {
     vi.mocked(useGetInquiriesQuery).mockReturnValueOnce({
       ...defaultInquiriesState,
-      isError: true,
+      data: undefined,
+      ...queryStatus({ failed: true, fetching: false }),
     } as unknown as InquiriesQueryReturn);
     renderInquiries();
     expect(screen.getByText(/I couldn't load your inquiries/i)).toBeInTheDocument();

@@ -12,7 +12,7 @@ import type { VendorCategory } from "@mybookkeeper/api-client/types/vendor/vendo
 import VendorCategoryFilter from "@/app/features/vendors/VendorCategoryFilter";
 import VendorPreferredToggle from "@/app/features/vendors/VendorPreferredToggle";
 import VendorForm from "@/app/features/vendors/VendorForm";
-import { useVendorsListMode } from "@/app/features/vendors/useVendorsListMode";
+import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import VendorsListBody from "@/app/features/vendors/VendorsListBody";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
@@ -47,7 +47,7 @@ export default function Vendors() {
     [category, preferredOnly, pageCount],
   );
 
-  const { data, isLoading, isFetching, isError, refetch } =
+  const { data, isFetching, error, refetch } =
     useGetVendorsQuery(queryArgs);
 
   const vendors = data?.items ?? [];
@@ -55,7 +55,11 @@ export default function Vendors() {
   const isFiltered = !!category || preferredOnly;
   const showCategoryBadge = !category;
 
-  const mode = useVendorsListMode({ isLoading, isError, vendorCount: vendors.length });
+  const mode = resolveListLoadMode({
+    hasData: data !== undefined,
+    hasError: error !== undefined,
+    itemCount: vendors.length,
+  });
 
   function handleCategoryChange(next: VendorCategory | null) {
     const params = new URLSearchParams(searchParams);
@@ -109,7 +113,7 @@ export default function Vendors() {
         />
       </div>
 
-      {isError ? (
+      {error ? (
         <LoadErrorAlert message="I couldn't load your vendors. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 

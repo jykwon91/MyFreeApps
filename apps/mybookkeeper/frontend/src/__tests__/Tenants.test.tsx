@@ -59,6 +59,7 @@ vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
 }));
 
 import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
+import { queryStatus } from "@/test/rtk-query-status";
 
 type QueryReturn = ReturnType<typeof useGetTenantsQuery>;
 
@@ -126,7 +127,7 @@ describe("Tenants page", () => {
     vi.mocked(useGetTenantsQuery).mockReturnValueOnce({
       ...defaultQueryState,
       data: undefined,
-      isError: true,
+      ...queryStatus({ failed: true, fetching: false }),
     } as unknown as QueryReturn);
     renderTenants();
     expect(

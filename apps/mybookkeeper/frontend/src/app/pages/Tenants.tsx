@@ -3,7 +3,7 @@ import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { APPLICANT_PAGE_SIZE } from "@mybookkeeper/api-client/constants/applicantLabels";
 import { localToday } from "@mybookkeeper/api-client/utils/localToday";
-import { useTenantsListMode } from "@/app/features/tenants/useTenantsListMode";
+import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import TenantsListBody from "@/app/features/tenants/TenantsListBody";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
@@ -21,13 +21,17 @@ export default function Tenants() {
     [includeEnded, pageCount],
   );
 
-  const { data, isLoading, isFetching, isError, refetch } =
+  const { data, isFetching, error, refetch } =
     useGetTenantsQuery(queryArgs);
 
   const tenants = data?.items ?? [];
   const hasMore = data?.has_more ?? false;
 
-  const mode = useTenantsListMode({ isLoading, isError, tenantCount: tenants.length });
+  const mode = resolveListLoadMode({
+    hasData: data !== undefined,
+    hasError: error !== undefined,
+    itemCount: tenants.length,
+  });
 
   function handleToggleEnded() {
     setIncludeEnded((prev) => !prev);
@@ -58,7 +62,7 @@ export default function Tenants() {
         </label>
       </div>
 
-      {isError ? (
+      {error ? (
         <LoadErrorAlert message="I couldn't load your tenants. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 

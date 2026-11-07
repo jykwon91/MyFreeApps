@@ -5,19 +5,23 @@ import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import LeaseTemplateUploadDialog from "@/app/features/leases/LeaseTemplateUploadDialog";
-import { useLeaseTemplatesListMode } from "@/app/features/leases/useLeaseTemplatesListMode";
+import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import LeaseTemplatesListBody from "@/app/features/leases/LeaseTemplatesListBody";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 export default function LeaseTemplates() {
   const canWrite = useCanWrite();
   const navigate = useNavigate();
-  const { data, isLoading, isFetching, isError, refetch } =
+  const { data, isFetching, error, refetch } =
     useGetLeaseTemplatesQuery();
   const [uploadOpen, setUploadOpen] = useState(false);
 
   const templates = data?.items ?? [];
-  const mode = useLeaseTemplatesListMode({ isLoading, isError, templateCount: templates.length });
+  const mode = resolveListLoadMode({
+    hasData: data !== undefined,
+    hasError: error !== undefined,
+    itemCount: templates.length,
+  });
 
   return (
     <main className="p-4 sm:p-8 space-y-6">
@@ -39,7 +43,7 @@ export default function LeaseTemplates() {
         }
       />
 
-      {isError ? (
+      {error ? (
         <LoadErrorAlert message="I couldn't load your templates. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 

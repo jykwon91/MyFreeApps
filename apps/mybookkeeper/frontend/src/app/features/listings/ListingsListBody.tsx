@@ -1,4 +1,4 @@
-import type { ListingsListMode } from "@/shared/types/listing/listings-list-mode";
+import type { ListLoadMode } from "@/shared/types/list-load-mode";
 import type { ListingSummary } from "@mybookkeeper/api-client/types/listing/listing-summary";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
@@ -8,7 +8,7 @@ import ListingCard from "./ListingCard";
 import ListingTableRow from "./ListingTableRow";
 
 export interface ListingsListBodyProps {
-  mode: ListingsListMode;
+  mode: ListLoadMode;
   listings: ListingSummary[];
   propertyName: (l: ListingSummary) => string;
   hasMore: boolean;
@@ -27,6 +27,9 @@ export default function ListingsListBody({
   canWrite,
 }: ListingsListBodyProps) {
   switch (mode) {
+    case "error":
+      // The page's LoadErrorAlert says the list couldn't load.
+      return null;
     case "loading":
       return <ListingsSkeleton />;
     case "empty":

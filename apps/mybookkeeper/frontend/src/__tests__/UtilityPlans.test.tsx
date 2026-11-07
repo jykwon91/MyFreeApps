@@ -19,6 +19,7 @@ import { store } from "@/shared/store";
 import UtilityPlans from "@/app/pages/UtilityPlans";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
+import { queryStatus } from "@/test/rtk-query-status";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -31,10 +32,10 @@ let mockPlans: UtilityPlanSummary[] = [];
 
 vi.mock("@mybookkeeper/api-client/store/utilityPlansApi", () => ({
   useGetUtilityPlansQuery: vi.fn(() => ({
-    data: { items: mockPlans, total: mockPlans.length, has_more: false },
+    // RTK has no data while a first load runs or after it failed.
+    data: mockIsLoading || mockIsError ? undefined : { items: mockPlans, total: mockPlans.length, has_more: false },
     isLoading: mockIsLoading,
-    isError: mockIsError,
-    isFetching: mockIsFetching,
+    ...queryStatus({ failed: mockIsError, fetching: mockIsFetching }),
     refetch: mockRefetch,
   })),
   useGetUtilityPlanByIdQuery: vi.fn(() => ({

@@ -1,4 +1,4 @@
-import type { TenantsListMode } from "@mybookkeeper/api-client/types/applicant/tenants-list-mode";
+import type { ListLoadMode } from "@/shared/types/list-load-mode";
 import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import { LoadingButton } from "@platform/ui";
@@ -7,7 +7,7 @@ import TenantCard from "./TenantCard";
 import TenantRow from "./TenantRow";
 
 export interface TenantsListBodyProps {
-  mode: TenantsListMode;
+  mode: ListLoadMode;
   tenants: ApplicantSummary[];
   includeEnded: boolean;
   hasMore: boolean;
@@ -24,6 +24,9 @@ export default function TenantsListBody({
   onLoadMore,
 }: TenantsListBodyProps) {
   switch (mode) {
+    case "error":
+      // The page's LoadErrorAlert says the list couldn't load.
+      return null;
     case "loading":
       return <TenantsListSkeleton />;
     case "empty":

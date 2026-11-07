@@ -10,7 +10,7 @@ import MarketRateBenchmarkDialog from "@/app/features/utility/MarketRateBenchmar
 import MarketRateBenchmarkSummary from "@/app/features/utility/MarketRateBenchmarkSummary";
 import EditUtilityPlanDialog from "@/app/features/utility/EditUtilityPlanDialog";
 import UtilityPlansListBody from "@/app/features/utility/UtilityPlansListBody";
-import { useUtilityPlansListMode } from "@/app/features/utility/useUtilityPlansListMode";
+import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
@@ -28,7 +28,7 @@ export default function UtilityPlans() {
   const [deletingPlanId, setDeletingPlanId] = useState<string | null>(null);
   const [planPendingDelete, setPlanPendingDelete] = useState<UtilityPlanSummary | null>(null);
 
-  const { data, isLoading, isError, isFetching, refetch } = useGetUtilityPlansQuery({});
+  const { data, error, isFetching, refetch } = useGetUtilityPlansQuery({});
   const [deletePlan] = useDeleteUtilityPlanMutation();
 
   const allPlans = data?.items ?? [];
@@ -44,7 +44,11 @@ export default function UtilityPlans() {
       )
     : allPlans;
 
-  const mode = useUtilityPlansListMode({ isLoading, planCount: plans.length });
+  const mode = resolveListLoadMode({
+    hasData: data !== undefined,
+    hasError: error !== undefined,
+    itemCount: plans.length,
+  });
 
   async function handleConfirmDelete() {
     const plan = planPendingDelete;
@@ -93,7 +97,7 @@ export default function UtilityPlans() {
         }
       />
 
-      {isError ? (
+      {error ? (
         <LoadErrorAlert message="Couldn't load utility plans." isRetrying={isFetching} onRetry={() => void refetch()} />
       ) : null}
 

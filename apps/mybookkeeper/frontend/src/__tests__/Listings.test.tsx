@@ -97,6 +97,7 @@ vi.mock("@/shared/hooks/useOrgRole", () => ({ useCanWrite: vi.fn(() => true) }))
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
+import { queryStatus } from "@/test/rtk-query-status";
 
 function renderListings(initialEntries: string[] = ["/listings"]) {
   return render(
@@ -191,8 +192,8 @@ describe("Listings page", () => {
     const refetchMock = vi.fn();
     vi.mocked(useGetListingsQuery).mockReturnValueOnce({
       ...defaultListingsState,
-      data: { items: [], total: 0, has_more: false },
-      isError: true,
+      data: undefined,
+      ...queryStatus({ failed: true, fetching: false }),
       refetch: refetchMock,
     } as unknown as ReturnType<typeof useGetListingsQuery>);
     renderListings();

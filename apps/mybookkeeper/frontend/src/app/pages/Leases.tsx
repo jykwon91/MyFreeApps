@@ -9,7 +9,7 @@ import {
 } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import LeaseImportDialog from "@/app/features/leases/LeaseImportDialog";
-import { useLeasesListMode } from "@/app/features/leases/useLeasesListMode";
+import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import LeasesListBody from "@/app/features/leases/LeasesListBody";
 import type { SignedLeaseSummary } from "@mybookkeeper/api-client/types/lease/signed-lease-summary";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
@@ -18,11 +18,15 @@ export default function Leases() {
   const canWrite = useCanWrite();
   const navigate = useNavigate();
   const [showImportDialog, setShowImportDialog] = useState(false);
-  const { data, isLoading, isFetching, isError, refetch } =
+  const { data, isFetching, error, refetch } =
     useGetSignedLeasesQuery();
   const [deleteLease, { isLoading: isDeleting }] = useDeleteSignedLeaseMutation();
   const leases = data?.items ?? [];
-  const mode = useLeasesListMode({ isLoading, isError, leaseCount: leases.length });
+  const mode = resolveListLoadMode({
+    hasData: data !== undefined,
+    hasError: error !== undefined,
+    itemCount: leases.length,
+  });
 
   async function handleDelete(lease: SignedLeaseSummary) {
     try {
@@ -64,7 +68,7 @@ export default function Leases() {
         }
       />
 
-      {isError ? (
+      {error ? (
         <LoadErrorAlert message="I couldn't load your leases. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 

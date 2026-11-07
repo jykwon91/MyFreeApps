@@ -10,7 +10,7 @@ import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listi
 import type { ListingSummary } from "@mybookkeeper/api-client/types/listing/listing-summary";
 import ListingStatusFilter from "@/app/features/listings/ListingStatusFilter";
 import ListingForm from "@/app/features/listings/ListingForm";
-import { useListingsListMode } from "@/app/features/listings/useListingsListMode";
+import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import ListingsListBody from "@/app/features/listings/ListingsListBody";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
@@ -38,7 +38,7 @@ export default function Listings() {
     [status, pageCount],
   );
 
-  const { data, isLoading, isFetching, isError, refetch } = useGetListingsQuery(queryArgs);
+  const { data, isFetching, error, refetch } = useGetListingsQuery(queryArgs);
   const { data: properties = [] } = useGetPropertiesQuery();
 
   const listings = data?.items ?? [];
@@ -69,7 +69,11 @@ export default function Listings() {
 
   const propertyName = (l: ListingSummary) => propertyById.get(l.property_id) ?? "Unknown property";
 
-  const mode = useListingsListMode({ isLoading, isError, listingCount: listings.length });
+  const mode = resolveListLoadMode({
+    hasData: data !== undefined,
+    hasError: error !== undefined,
+    itemCount: listings.length,
+  });
 
   return (
     <main className="p-4 sm:p-8 space-y-6">
@@ -92,7 +96,7 @@ export default function Listings() {
 
       <ListingStatusFilter value={status} onChange={handleFilterChange} />
 
-      {isError ? (
+      {error ? (
         <LoadErrorAlert message="I couldn't load your listings. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 

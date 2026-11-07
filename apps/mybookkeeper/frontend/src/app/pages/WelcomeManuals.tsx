@@ -9,7 +9,7 @@ import { WELCOME_MANUAL_PAGE_SIZE } from "@/shared/lib/welcome-manual-constants"
 import type { WelcomeManualSummary } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-summary";
 import WelcomeManualsListBody from "@/app/features/welcome-manuals/WelcomeManualsListBody";
 import WelcomeManualCreateDialog from "@/app/features/welcome-manuals/WelcomeManualCreateDialog";
-import { useWelcomeManualsListMode } from "@/app/features/welcome-manuals/useWelcomeManualsListMode";
+import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 export default function WelcomeManuals() {
@@ -22,7 +22,7 @@ export default function WelcomeManuals() {
     [pageCount],
   );
 
-  const { data, isLoading, isFetching, isError, refetch } = useGetWelcomeManualsQuery(queryArgs);
+  const { data, isFetching, error, refetch } = useGetWelcomeManualsQuery(queryArgs);
   const { data: properties = [] } = useGetPropertiesQuery();
 
   const manuals = data?.items ?? [];
@@ -43,10 +43,10 @@ export default function WelcomeManuals() {
     setPageCount((prev) => prev + 1);
   }
 
-  const mode = useWelcomeManualsListMode({
-    isLoading,
-    isError,
-    manualCount: manuals.length,
+  const mode = resolveListLoadMode({
+    hasData: data !== undefined,
+    hasError: error !== undefined,
+    itemCount: manuals.length,
   });
 
   return (
@@ -66,7 +66,7 @@ export default function WelcomeManuals() {
         }
       />
 
-      {isError ? (
+      {error ? (
         <LoadErrorAlert message="I couldn't load your welcome manuals. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 

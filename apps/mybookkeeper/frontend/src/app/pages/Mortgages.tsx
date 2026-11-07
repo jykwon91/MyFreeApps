@@ -5,7 +5,7 @@ import AddMortgageDialog from "@/app/features/mortgages/AddMortgageDialog";
 import EditMortgageDialog from "@/app/features/mortgages/EditMortgageDialog";
 import MortgageRateWatchSection from "@/app/features/mortgages/MortgageRateWatchSection";
 import MortgagesListBody from "@/app/features/mortgages/MortgagesListBody";
-import { useMortgagesListMode } from "@/app/features/mortgages/useMortgagesListMode";
+import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import { useGetMortgagesQuery } from "@mybookkeeper/api-client/store/mortgagesApi";
 import type { Mortgage } from "@mybookkeeper/api-client/types/mortgage/mortgage";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
@@ -22,12 +22,13 @@ export default function Mortgages() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editing, setEditing] = useState<Mortgage | null>(null);
 
-  const { data, isLoading, isError, refetch, isFetching } = useGetMortgagesQuery();
+  const { data, error, refetch, isFetching } = useGetMortgagesQuery();
 
   const mortgages = data?.items ?? [];
-  const mode = useMortgagesListMode({
-    isLoading,
-    mortgageCount: mortgages.length,
+  const mode = resolveListLoadMode({
+    hasData: data !== undefined,
+    hasError: error !== undefined,
+    itemCount: mortgages.length,
   });
 
   return (
@@ -48,7 +49,7 @@ export default function Mortgages() {
         }
       />
 
-      {isError ? (
+      {error ? (
         <LoadErrorAlert message="Couldn't load mortgages." isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
