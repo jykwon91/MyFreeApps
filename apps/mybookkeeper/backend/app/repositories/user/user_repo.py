@@ -50,6 +50,11 @@ async def set_active(db: AsyncSession, user: User, *, is_active: bool) -> User:
     return user
 
 
+async def set_superuser(db: AsyncSession, user: User, *, is_superuser: bool) -> User:
+    user.is_superuser = is_superuser
+    return user
+
+
 async def holds_shared_records(db: AsyncSession, user_id: uuid.UUID) -> bool:
     """Whether any row a user's deletion would remove or be blocked by remains.
 
