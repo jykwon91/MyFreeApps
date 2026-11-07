@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ReactElement } from "react";
-import type { RouteObject } from "react-router-dom";
+import { Navigate, type RouteObject } from "react-router-dom";
 import WowSuggestFooterLink from "@/games/wow-forever/components/featureRequests/WowSuggestFooterLink";
 import WowPageSkeleton from "@/games/wow-forever/components/shared/WowPageSkeleton";
 import type { FeatureArea } from "@/games/wow-forever/types/featureRequests/featureArea";
@@ -14,7 +14,7 @@ const WowFoodPickerPage = lazy(() => import("@/games/wow-forever/pages/WowFoodPi
 const WowFoodDetailPage = lazy(() => import("@/games/wow-forever/pages/WowFoodDetailPage"));
 const WowGoldPage = lazy(() => import("@/games/wow-forever/pages/WowGoldPage"));
 const WowAuctionHousePage = lazy(() => import("@/games/wow-forever/pages/WowAuctionHousePage"));
-const WowWarlockMacrosPage = lazy(() => import("@/games/wow-forever/pages/WowWarlockMacrosPage"));
+const WowMacrosPage = lazy(() => import("@/games/wow-forever/pages/WowMacrosPage"));
 const WowGearPage = lazy(() => import("@/games/wow-forever/pages/WowGearPage"));
 const WowRaidPage = lazy(() => import("@/games/wow-forever/pages/WowRaidPage"));
 const WowRaidPlannerPage = lazy(() => import("@/games/wow-forever/pages/WowRaidPlannerPage"));
@@ -53,7 +53,9 @@ export const wowForeverRoutes: RouteObject[] = [
   { path: "/wow-forever/food/:foodId", element: withSuggestFooter(<WowFoodDetailPage />, "food_consumables") },
   { path: "/wow-forever/gold", element: withSuggestFooter(<WowGoldPage />, "gold_economy") },
   { path: "/wow-forever/auction-house", element: withSuggestFooter(<WowAuctionHousePage />, "gold_economy") },
-  { path: "/wow-forever/warlock-macros", element: withSuggestFooter(<WowWarlockMacrosPage />, "class_guides") },
+  { path: "/wow-forever/macros", element: withSuggestFooter(<WowMacrosPage />, "class_guides") },
+  // The old Warlock-only page: same macros, now the Warlock filter of the Macros page.
+  { path: "/wow-forever/warlock-macros", element: <Navigate to="/wow-forever/macros?class=warlock" replace /> },
   { path: "/wow-forever/gear", element: withSuggestFooter(<WowGearPage />, "gear_upgrades") },
   { path: "/wow-forever/raids/:webId", element: withSuggestFooter(<WowRaidPage />, "dungeons_raids") },
   { path: "/wow-forever/raids/:webId/plan", element: withSuggestFooter(<WowRaidPlannerPage />, "dungeons_raids") },

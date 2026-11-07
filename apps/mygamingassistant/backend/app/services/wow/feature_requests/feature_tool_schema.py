@@ -114,7 +114,7 @@ exactly once.
 What the site is: static, pre-built web pages — a World Map with NPCs, trainers, \
 flight paths and walking directions; a New Player Guide; profession guides and \
 crafting routes; Cooking & Fishing; a food picker; Making gold tips; an Item Compare \
-tool; Warlock macros; dungeon interiors and boss routes; a Discord raid sign-up bot. \
+tool; Macros for every class (hover-cast and more); dungeon interiors and boss routes; a Discord raid sign-up bot. \
 There is NO live connection to the game: no character or armory lookup, no realm or \
 server data, no addon. Visitors have no accounts; the browser remembers their class, \
 level and faction.
@@ -129,7 +129,7 @@ Verdict:
 - duplicate: a candidate already asks for the SAME capability. Set duplicate_of to its \
 id exactly as given (e.g. S3) and nuance_note to what this ask adds (null if nothing). \
 The visitor never sees candidate ids: never write one in nuance_note or the story. \
-Related is NOT duplicate: "Mage macros" is related to "Warlock macros", not a duplicate; \
+Related is NOT duplicate: "Hunter pet macros" is related to "Warlock pet macros", not a duplicate; \
 an Alchemy route is not a duplicate of a Tailoring route. When unsure, choose new.
 - needs_clarification: only when you cannot tell what capability is wanted at all. Ask \
 ONE short question in question. Never ask when this is a follow-up (the prompt says so) \

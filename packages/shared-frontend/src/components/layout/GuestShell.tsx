@@ -4,6 +4,7 @@ import { LogIn } from "lucide-react";
 import Button from "../ui/Button";
 import { cn } from "../../utils/cn";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
+import { useScrollTopOnNavigate } from "../../hooks/useScrollTopOnNavigate";
 import type { NavItem } from "./AppShell";
 
 export interface GuestShellProps {
@@ -52,6 +53,7 @@ export default function GuestShell({
   const isMobile = useMediaQuery("(max-width: 767px)");
   const navigate = useNavigate();
   const location = useLocation();
+  const mainRef = useScrollTopOnNavigate<HTMLElement>();
 
   function onSignIn() {
     navigate("/login", {
@@ -134,7 +136,7 @@ export default function GuestShell({
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main ref={mainRef} className="flex-1 overflow-y-auto">{children}</main>
 
         {/* Mobile bottom nav */}
         {isMobile && (

@@ -63,9 +63,9 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "Look up what any item sells for: market value, average sale price and how many sell a day, in the US or Europe.",
       },
       {
-        path: "/wow-forever/warlock-macros",
-        title: "Warlock macros",
-        description: "Pet, Fear, Healthstone and mouseover macros to paste into the game, with names checked against the client.",
+        path: "/wow-forever/macros",
+        title: "Macros",
+        description: "Hover-cast (mouseover) and other macros to paste into the game, for every class, with names checked against the client.",
       },
       {
         path: "/wow-forever/gear",

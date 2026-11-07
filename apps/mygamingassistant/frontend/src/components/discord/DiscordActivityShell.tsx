@@ -1,6 +1,6 @@
-import { useLayoutEffect, useRef, type CSSProperties, type ReactNode } from "react";
-import { NavLink, useLocation } from "react-router-dom";
-import { ThemeToggle } from "@platform/ui";
+import type { CSSProperties, ReactNode } from "react";
+import { NavLink } from "react-router-dom";
+import { ThemeToggle, useScrollTopOnNavigate } from "@platform/ui";
 import OpenInBrowserButton from "@/components/discord/OpenInBrowserButton";
 
 interface DiscordActivityShellProps {
@@ -26,15 +26,8 @@ const SAFE_AREA_PADDING: CSSProperties = {
  * spare it (picture-in-picture), leaving the page the whole tile.
  */
 export default function DiscordActivityShell({ children }: DiscordActivityShellProps) {
-  const { pathname } = useLocation();
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  // Pages scroll inside this frame rather than the window, which the router's
-  // ScrollRestoration doesn't reach: open each new page at its top instead of
-  // wherever the previous page was scrolled to.
-  useLayoutEffect(() => {
-    if (contentRef.current !== null) contentRef.current.scrollTop = 0;
-  }, [pathname]);
+  // Pages scroll inside this frame rather than the window: open each new page at its top.
+  const contentRef = useScrollTopOnNavigate<HTMLDivElement>();
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground" style={SAFE_AREA_PADDING}>
