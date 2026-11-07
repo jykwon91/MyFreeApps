@@ -18,10 +18,15 @@ export const TAX_RETURN = {
   updated_at: "2026-01-05T00:00:00Z",
 };
 
-/** The return and its source documents; the page's other reads fall to the spec's catch-all. */
-export async function stubTaxReturnDetail(page: Page): Promise<void> {
-  await page.route(new RegExp(`/api/tax-returns/${TAX_RETURN_ID}$`), (route) => route.fulfill(json(TAX_RETURN)));
+/** An empty source-documents answer; the catch-all's [] would crash the page's documents section. */
+export async function stubTaxReturnSourceDocuments(page: Page): Promise<void> {
   await page.route(new RegExp(`/api/tax-returns/${TAX_RETURN_ID}/source-documents$`), (route) =>
     route.fulfill(json({ documents: [], checklist: [] })),
   );
+}
+
+/** The return and its source documents; the page's other reads fall to the spec's catch-all. */
+export async function stubTaxReturnDetail(page: Page): Promise<void> {
+  await page.route(new RegExp(`/api/tax-returns/${TAX_RETURN_ID}$`), (route) => route.fulfill(json(TAX_RETURN)));
+  await stubTaxReturnSourceDocuments(page);
 }

@@ -17,7 +17,7 @@ import { plantAuth, stubSignedInShell } from "./fixtures/mockSession";
 import { failUntilRecovered } from "./fixtures/flakyEndpoint";
 import { LISTING, LISTING_ID } from "./fixtures/mockListing";
 import { INQUIRY_DETAIL, INQUIRY_ID } from "./fixtures/mockInquiry";
-import { TAX_RETURN, TAX_RETURN_ID } from "./fixtures/mockTaxReturn";
+import { TAX_RETURN, TAX_RETURN_ID, stubTaxReturnSourceDocuments } from "./fixtures/mockTaxReturn";
 
 interface DetailPage {
   name: string;
@@ -27,6 +27,8 @@ interface DetailPage {
   record: unknown;
   loaded: (page: Page) => Locator;
   skeleton: string;
+  /** Reads the loaded page makes that the catch-all can't answer. */
+  stubPage?: (page: Page) => Promise<void>;
 }
 
 const PAGES: DetailPage[] = [
@@ -57,6 +59,7 @@ const PAGES: DetailPage[] = [
     record: TAX_RETURN,
     loaded: (p) => p.getByRole("heading", { name: "2025 Tax Return" }),
     skeleton: "tax-return-skeleton",
+    stubPage: stubTaxReturnSourceDocuments,
   },
 ];
 
@@ -75,6 +78,7 @@ async function signIn(page: Page): Promise<void> {
 for (const detail of PAGES) {
   test(`${detail.name}: a failed load keeps its error through Retry until the record loads`, async ({ page }) => {
     await signIn(page);
+    await detail.stubPage?.(page);
     const load = await failUntilRecovered(page, detail.endpoint, detail.record);
 
     await page.goto(detail.path);
