@@ -2,7 +2,7 @@
 
 Usage (from ``apps/mygamingassistant/backend``)::
 
-    python -m scripts.wow_items.build
+    python -m scripts.wow_items.build [--hotfix-cache <DBCache.bin>]
 
 Writes ``frontend/src/games/wow-forever/data/items/items.json`` — every
 uncommon-or-better piece of gear in the Forever client (the build pinned in
@@ -15,11 +15,18 @@ so it is left out (``damageUnknown``) for the player to type in.
 from a random "of the …" suffix. The Forever client ships no suffix tables, so
 that list is cmangos classic-db (GPL-3.0, LICENSE + README next to it).
 
+Most Forever items exist only as server hotfixes, so the rows come from
+``forever_items.py``: the client file plus hotfixes from wago.tools and from
+the operator's own Forever client cache (``--hotfix-cache``, else
+``WOW_FOREVER_HOTFIX_CACHE``, else the default install path). The run stops
+if that cache is missing.
+
 Item data from the WoW Forever client via wago.tools. Game data © Blizzard
 Entertainment. Never hand-edit the output.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import shutil
@@ -39,6 +46,7 @@ from scripts.wow_items.client_ids import (
     STAT_KEY_BY_CLIENT_ID,
     UNNAMED_SUBCLASSES,
 )
+from scripts.wow_items.forever_items import hotfix_cache_path, load_forever_item_tables
 from scripts.wow_items.formula import (
     BudgetTables,
     Row,
@@ -219,13 +227,16 @@ def write_rows(path: Path, header: dict[str, Any], key: str, rows: list[Any]) ->
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Build the WoW Forever item list.")
+    parser.add_argument("--hotfix-cache", help="the Forever client's Cache/ADB/enUS/DBCache.bin")
+    cache_path = hotfix_cache_path(parser.parse_args().hotfix_cache)
     print(f"Loading item tables from wago.tools ({WAGO_BRANCH} {WAGO_BUILD})...")
     tables = load_tables()
-    item_rows = _by(wago_table("Item"), "ID")
+    forever = load_forever_item_tables(cache_path)
     suffix_ids = random_suffix_ids()
-    records = build_items(wago_table("ItemSparse"), item_rows, tables, load_subclass_names(), suffix_ids)
+    records = build_items(forever.sparse, forever.item, tables, load_subclass_names(), suffix_ids)
     write_rows(OUT_PATH, {
-        "source": f"wago.tools DB2 {WAGO_BRANCH} {WAGO_BUILD}",
+        "source": forever.source,
         "clientBuild": WAGO_BUILD,
         "attribution": ATTRIBUTION,
         "columns": COLUMNS,

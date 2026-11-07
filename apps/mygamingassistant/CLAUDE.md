@@ -263,7 +263,15 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - **"Search by name"** (the default input tab) searches
   `data/items/items.json`, **GENERATED** by `python -m scripts.wow_items.build`
   (from `backend/`; never hand-edit) from the Forever client's ItemSparse
-  (uncommon+ items with stats). Stats = `RandPropPoints[ilvl].<Quality>F_<slot>
+  (uncommon+ items with stats). **Most Forever items exist only as server
+  hotfixes** (the client file has ~19k of ~32k item rows; Hand of Justice and
+  most Classic gear aren't in it), so `wow_items/forever_items.py` layers the
+  client file, wago.tools' hotfix export (`useHotfixes=1`) and the operator's
+  own client cache `DBCache.bin` (`hotfix_cache.py` + `dbd.py`, decoded with
+  WoWDBDefs; the cache wins, being the server's newest answer). Items and gear
+  builds take `--hotfix-cache` / `WOW_FOREVER_HOTFIX_CACHE` and stop when it's
+  missing. Items no client has seen yet stay out; never fill them from the
+  Classic Era client (Forever re-itemized). Stats = `RandPropPoints[ilvl].<Quality>F_<slot>
   × StatPercentEditor / 10000` (round half up); armor = ItemArmorTotal ×
   ArmorLocation × ItemArmorQuality (+ QualityModifier; shields from
   ItemArmorShield); weapon damage = the ItemDamage* table's DPS × speed,

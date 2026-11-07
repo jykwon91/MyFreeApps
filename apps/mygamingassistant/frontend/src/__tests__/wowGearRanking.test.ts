@@ -119,6 +119,17 @@ describe("rankPreRaid", () => {
     expect(neck.unknownEpics[0].pctOfBest).toBe(125);
   });
 
+  it("ranks level 60 PvP epics with the rest when PvP is on: their source is PvP, not a raid", () => {
+    const items = [
+      item(1, { quality: "epic", requiredLevel: 60, stats: { spell_damage: 50 } }), // PvP rank reward
+      item(2, { stats: { spell_damage: 40 } }),
+    ];
+    const gear = data({ pvp: { "1": 1 } });
+    const neck = slot(rankPreRaid(items, gear, { ...PRE_RAID, includePvp: true }), "neck");
+    expect(neck.top.map((r) => r.item.id)).toEqual([1, 2]);
+    expect(neck.unknownEpics).toEqual([]);
+  });
+
   it("hides quests the other faction or another class takes, keeps items with another source", () => {
     const items = [
       item(1, { stats: { spell_damage: 50 } }),

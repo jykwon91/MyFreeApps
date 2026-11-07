@@ -45,7 +45,16 @@ python -m scripts.wow_refresh apply
 ```
 
 It pins the newest builds in `sources.py`, runs every generator and prints a report
-of what changed, by name. A generator failing stops the run: fix the cause or leave
+of what changed, by name.
+
+Most Forever items aren't in the client file. The server sends them as hotfixes, so
+the item and Best gear generators also read the game's own hotfix cache,
+`D:\World of Warcraft\_forever_\Cache\ADB\enUS\DBCache.bin`. Point elsewhere with
+`--hotfix-cache <path>` or `WOW_FOREVER_HOTFIX_CACHE`. `apply` stops before
+repinning if the file is missing. It also stops if the client is on a build whose
+item layout differs from the pinned one: log into the game once on the new build
+and run it again. The game only caches items it has seen, so playing (opening
+vendors, loot, the auction house) is what fills the item list in. A generator failing stops the run: fix the cause or leave
 it for a person, and never hand-edit generated JSON.
 
 Add `--art` when a post or the report mentions new or changed maps. Walk graphs
@@ -87,7 +96,7 @@ client data itself.
 From `apps/mygamingassistant/backend`:
 
 ```bash
-pytest tests/test_wow_refresh.py tests/test_wow_food_generator.py tests/test_wow_professions_generator.py tests/test_wow_world_map_generator.py tests/test_wow_raid_consumables.py tests/test_wow_items_generator.py tests/test_wow_item_names.py tests/test_wow_gear_generator.py
+pytest tests/test_wow_refresh.py tests/test_wow_food_generator.py tests/test_wow_professions_generator.py tests/test_wow_world_map_generator.py tests/test_wow_raid_consumables.py tests/test_wow_items_generator.py tests/test_wow_items_hotfix_cache.py tests/test_wow_item_names.py tests/test_wow_gear_generator.py
 ```
 
 From `apps/mygamingassistant/frontend`:
