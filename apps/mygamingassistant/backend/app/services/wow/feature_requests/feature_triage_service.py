@@ -1,9 +1,10 @@
 """Triage: read the inbox and stories, edit, merge, mark submissions triaged.
 
-Called only behind the triage token (``app/api/wow_feature_triage.py``). Every
-write logs ONE structured INFO line — actor label, action, ids, status
-before -> after; never story text, never the token. ``audit_logs`` records the
-row changes with ``changed_by = "triage:<label>"`` (set by the auth dependency).
+Called only by the signed-in operator (superuser; ``app/api/wow_feature_triage.py``).
+Every write logs ONE structured INFO line — actor (the operator's user id),
+action, ids, status before -> after; never story text, never an email.
+``audit_logs`` records the row changes with ``changed_by`` = the operator's user
+id (set from the JWT by the audit middleware).
 
 Optimistic concurrency: PATCH and merge take the story's ``updated_at`` (sent
 as ``If-Match``); a stale value raises ``StoryChangedError``.

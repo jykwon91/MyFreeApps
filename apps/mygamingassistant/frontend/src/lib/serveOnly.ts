@@ -1,14 +1,17 @@
 /**
  * Serve-only mode detection.
  *
- * In the production serve-only deployment, MGA is a PURE PUBLIC READ-ONLY
- * lineup library with ZERO authentication. The backend mounts no auth routes
- * (they 404), so the frontend must hide every auth affordance:
+ * In the production serve-only deployment, MGA is a PUBLIC READ-ONLY lineup
+ * library. Players never sign in. The backend mounts only the operator's
+ * sign-in (JWT / TOTP login, logout, GET /users/me, 2FA settings) and the
+ * superuser-only triage API — no registration, password reset, verification,
+ * account or write routers. So the frontend:
  *   - RootLayout renders the GuestShell only (never AppShell), with NO
- *     "Sign in" CTA and public-only nav.
- *   - <AuthRequired> redirects to home instead of showing a Sign-in card.
- *   - The /login, /forgot-password, /reset-password, /verify-email routes
- *     redirect to home (they'd hit absent backend endpoints otherwise).
+ *     "Sign in" CTA and public-only nav; a signed-in operator gets only
+ *     Triage / Two-factor / Sign out (ServeOnlyOperatorActions).
+ *   - Write <AuthRequired> routes redirect to home instead of a Sign-in card.
+ *   - /login and /security stay (lib/canSignIn.ts); /forgot-password,
+ *     /reset-password and /verify-email redirect to home.
  *
  * The flag is the Vite build-time public env VITE_SERVE_ONLY (inlined into the
  * bundle at `npm run build`). It is wired through the docker build-args chain

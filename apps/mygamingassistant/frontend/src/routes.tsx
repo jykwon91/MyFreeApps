@@ -21,19 +21,26 @@ import ResetPassword from "@/pages/ResetPassword";
 import VerifyEmail from "@/pages/VerifyEmail";
 import NotFound from "@/pages/NotFound";
 import RootLayout from "@/RootLayout";
+import { canSignIn } from "@/lib/canSignIn";
 import { isReadOnly } from "@/lib/readOnly";
 import { wowForeverRoutes } from "@/games/wow-forever/routes";
 
-// Read-only sessions (lib/readOnly.ts) can never sign in: in serve-only mode
-// (production public library) the backend mounts NO auth routes, and the
-// Discord Activity has no sign-in in v1. The standalone auth pages would
-// dead-end, so they redirect to the public home, and every <AuthRequired>
-// route below is `unavailable` (redirects home too). In full-auth mode these
-// resolve to the real pages unchanged.
+// Read-only sessions (lib/readOnly.ts): serve-only prod mounts no write
+// routers, account routes, registration or password reset, and the Discord
+// Activity has no sign-in in v1. Forgot / reset / verify would dead-end, so they
+// redirect to the public home, and the write <AuthRequired> routes below are
+// `unavailable` (redirect home too). /login and /security follow canSignIn()
+// instead: serve-only keeps the operator's sign-in (unlinked) for triage + 2FA.
+// In full-auth mode every page resolves unchanged.
 const readOnly = isReadOnly();
+const signInUnavailable = !canSignIn();
 
 function authPageElement(page: ReactElement): ReactElement {
   return readOnly ? <Navigate to="/" replace /> : page;
+}
+
+function signInPageElement(page: ReactElement): ReactElement {
+  return signInUnavailable ? <Navigate to="/" replace /> : page;
 }
 
 // MGA is single-user — no /register route.
@@ -131,7 +138,7 @@ export const routes: RouteObject[] = [
       {
         path: "/security",
         element: (
-          <AuthRequired action="manage account security" unavailable={readOnly}>
+          <AuthRequired action="manage account security" unavailable={signInUnavailable}>
             <Security />
           </AuthRequired>
         ),
@@ -145,7 +152,7 @@ export const routes: RouteObject[] = [
   // video still render; the cost widget is omitted. See platform_shared/services/
   // transparency + memory/project_mga_prod_storage_r2.md.
   { path: "/support-myfreeapps", element: <Support appName="MyGamingAssistant" showTransparency={false} /> },
-  { path: "/login", element: authPageElement(<Login />) },
+  { path: "/login", element: signInPageElement(<Login />) },
   { path: "/forgot-password", element: authPageElement(<ForgotPassword />) },
   { path: "/reset-password", element: authPageElement(<ResetPassword />) },
   { path: "/verify-email", element: authPageElement(<VerifyEmail />) },

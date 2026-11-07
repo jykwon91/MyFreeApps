@@ -6,7 +6,8 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import { showError, showSuccess } from "@platform/ui";
-import { triageApi } from "@/games/wow-forever/api/triageApi";
+import { store } from "@/lib/store";
+import { selectCachedTriage, triageApi } from "@/games/wow-forever/api/triageApi";
 import { TRIAGE_COPY } from "@/games/wow-forever/data/featureRequests/triage/triageCopy";
 import { TRIAGE_UNDO_MS } from "@/games/wow-forever/data/featureRequests/triage/triageConfig";
 import { TRIAGE_STATUS_LABEL } from "@/games/wow-forever/data/featureRequests/triage/triageLabels";
@@ -14,7 +15,6 @@ import { useDelayedAction } from "@/games/wow-forever/hooks/featureRequests/tria
 import { triageErrorView } from "@/games/wow-forever/lib/featureRequests/triage/triageErrorView";
 import { doneLabel, mergedIntoLabel } from "@/games/wow-forever/lib/featureRequests/triage/triageFormat";
 import { findTriageStory } from "@/games/wow-forever/lib/featureRequests/triage/triageStoryLookup";
-import { triageStore } from "@/games/wow-forever/lib/featureRequests/triage/triageStore";
 import type { DelayedAction } from "@/games/wow-forever/types/featureRequests/triage/delayedAction";
 import type { DelayedActionFailure } from "@/games/wow-forever/types/featureRequests/triage/delayedActionFailure";
 import type { InboxCardEdits } from "@/games/wow-forever/types/featureRequests/triage/inboxCardEdits";
@@ -26,15 +26,13 @@ import type { TriageStoryPatch } from "@/games/wow-forever/types/featureRequests
 
 /** The freshest cached copy, so `If-Match` matches what the server has after an edit. */
 function latest(story: TriageStory): TriageStory {
-  const state = triageStore.getState();
-  const inbox = triageApi.endpoints.getTriageInbox.select()(state).data;
-  const stories = triageApi.endpoints.getTriageStories.select()(state).data;
+  const { inbox, stories } = selectCachedTriage(store.getState());
   return findTriageStory(story.id, inbox, stories) ?? story;
 }
 
 async function patchStory(story: TriageStory, patch: TriageStoryPatch): Promise<TriageStory> {
   const current = latest(story);
-  const request = triageStore.dispatch(
+  const request = store.dispatch(
     triageApi.endpoints.patchTriageStory.initiate({ story: { id: current.id, updated_at: current.updated_at }, patch }),
   );
   try {
@@ -45,7 +43,7 @@ async function patchStory(story: TriageStory, patch: TriageStoryPatch): Promise<
 }
 
 async function markTriaged(submissionIds: string[]): Promise<void> {
-  const request = triageStore.dispatch(triageApi.endpoints.markSubmissionsTriaged.initiate(submissionIds));
+  const request = store.dispatch(triageApi.endpoints.markSubmissionsTriaged.initiate(submissionIds));
   try {
     await request.unwrap();
   } finally {
@@ -55,7 +53,7 @@ async function markTriaged(submissionIds: string[]): Promise<void> {
 
 async function mergeStory(story: TriageStory, intoStoryId: string): Promise<void> {
   const current = latest(story);
-  const request = triageStore.dispatch(
+  const request = store.dispatch(
     triageApi.endpoints.mergeTriageStory.initiate({ story: { id: current.id, updated_at: current.updated_at }, intoStoryId }),
   );
   try {
@@ -129,6 +127,9 @@ export function useTriageActions() {
     [dropOptimistic, setError],
   );
   const queue = useDelayedAction({ delayMs: TRIAGE_UNDO_MS, onSuccess, onFailure });
+  const { flush } = queue;
+  /** Stable, so a screen can register it with `registerPendingWrites`. */
+  const flushAll = useCallback(() => flush(), [flush]);
 
   const schedule = useCallback(
     (action: DelayedAction) => {
@@ -246,7 +247,7 @@ export function useTriageActions() {
   return {
     pendingById,
     rateLimitedUntil: queue.rateLimitedUntil,
-    flushAll: () => queue.flush(),
+    flushAll,
     finished,
     errors,
     optimisticStatus,

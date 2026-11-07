@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { AlertBox } from "@platform/ui";
 import TriageAllRequests from "@/games/wow-forever/components/featureRequests/triage/TriageAllRequests";
 import TriageHeader from "@/games/wow-forever/components/featureRequests/triage/TriageHeader";
@@ -9,26 +9,28 @@ import { TRIAGE_COPY } from "@/games/wow-forever/data/featureRequests/triage/tri
 import { TRIAGE_SECONDARY_BUTTON } from "@/games/wow-forever/data/featureRequests/triage/triageStyles";
 import { useCountdown } from "@/games/wow-forever/hooks/featureRequests/triage/useCountdown";
 import { useTriageActions } from "@/games/wow-forever/hooks/featureRequests/triage/useTriageActions";
-import { useTriageActivity } from "@/games/wow-forever/hooks/featureRequests/triage/useTriageActivity";
 import { useTriageParams } from "@/games/wow-forever/hooks/featureRequests/triage/useTriageParams";
-import { lockTriage } from "@/games/wow-forever/lib/featureRequests/triage/triageKeyStore";
+import { isNotOperator } from "@/games/wow-forever/lib/featureRequests/triage/triageErrors";
 import { unsavedLabel } from "@/games/wow-forever/lib/featureRequests/triage/triageFormat";
+import { signOutAfterSaving } from "@/lib/auth";
+import { registerPendingWrites } from "@/lib/pendingWrites";
 
-/** The unlocked screen: header, the active tab, the 429 / unsaved banners and the open sheet. */
+/** The signed-in screen: header, the active tab, the 429 / unsaved banners and the open sheet. */
 export default function TriageWorkspace() {
-  useTriageActivity();
   const panelId = useId();
   const params = useTriageParams();
   const actions = useTriageActions();
   const inbox = useGetTriageInboxQuery();
-  const [locking, setLocking] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const slowDownSeconds = useCountdown(actions.rateLimitedUntil);
+  const notOperator = isNotOperator(inbox.error);
 
-  async function lock() {
-    setLocking(true);
-    // Anything still in its undo window is sent before the key is forgotten.
-    await actions.flushAll();
-    lockTriage("manual");
+  // Any Sign out (this header's or the shell's) sends what's still in its undo window first.
+  useEffect(() => registerPendingWrites(actions.flushAll), [actions.flushAll]);
+
+  function signOut() {
+    setSigningOut(true);
+    void signOutAfterSaving();
   }
 
   return (
@@ -37,8 +39,8 @@ export default function TriageWorkspace() {
         tab={params.tab}
         onTab={params.setTab}
         inboxCount={inbox.data?.total_untriaged ?? null}
-        onLock={() => void lock()}
-        locking={locking}
+        onSignOut={signOut}
+        signingOut={signingOut}
         panelId={panelId}
       />
       <div className="mx-auto max-w-5xl space-y-4 p-4 sm:p-6">
@@ -59,7 +61,14 @@ export default function TriageWorkspace() {
             </div>
           </AlertBox>
         ) : null}
-        <section role="tabpanel" id={panelId} aria-labelledby={`${panelId}-tab-${params.tab}`}>
+        {notOperator ? (
+          <AlertBox variant="error">
+            <span role="alert" data-testid="triage-not-operator">
+              {TRIAGE_COPY.notOperator}
+            </span>
+          </AlertBox>
+        ) : null}
+        <section hidden={notOperator} role="tabpanel" id={panelId} aria-labelledby={`${panelId}-tab-${params.tab}`}>
           {params.tab === "inbox" ? (
             <TriageInbox actions={actions} onOpenSheet={params.openSheet} />
           ) : (

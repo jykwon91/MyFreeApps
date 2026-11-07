@@ -1,0 +1,57 @@
+import { useState } from "react";
+import { Trash2 } from "lucide-react";
+import DataExportButton from "@/features/security/DataExportButton";
+import DeleteAccountModal from "@/features/security/DeleteAccountModal";
+
+/** The Security page's "Data & Privacy" card: export your data, delete your account (+ its confirm modal). */
+export default function DataPrivacySection() {
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  return (
+    <>
+      <div className="bg-card border rounded-lg p-6 space-y-6">
+        <h2 className="text-base font-semibold">Data &amp; Privacy</h2>
+
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium">Export your data</p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Download a JSON copy of your profile, lineups, and saved data.
+            </p>
+          </div>
+          <div className="shrink-0">
+            <DataExportButton />
+          </div>
+        </div>
+
+        <hr className="border-border" />
+
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-red-600 dark:text-red-400">
+              Delete account
+            </p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Permanently delete your account and all associated data. This
+              cannot be undone.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowDeleteModal(true)}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 transition-colors shrink-0 min-h-[44px] sm:min-h-[36px]"
+            aria-label="Delete my account"
+          >
+            <Trash2 size={14} />
+            Delete my account
+          </button>
+        </div>
+      </div>
+
+      <DeleteAccountModal
+        open={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+      />
+    </>
+  );
+}

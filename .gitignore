@@ -31,7 +31,6 @@ dist/
 !*.env.example
 !.env.docker.example
 !.env.r2.example
-!.env.triage.example
 
 # OS
 .DS_Store

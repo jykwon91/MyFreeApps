@@ -1,15 +1,24 @@
 /**
- * WoW Forever feature-request triage (/wow-forever/triage) — unlock, the inbox with Approve / Undo, Merge,
- * an All requests status change to Shipped (path checked), Lock dropping everything, the phone layout and
- * the list skeleton. The triage API is mocked (`**\/wow/feature-requests/triage/**`); every other /api call
- * answers 404. No backend needed.
+ * WoW Forever feature-request triage (/wow-forever/triage) — the operator signs in with their account
+ * (signed out → /login → back here), the inbox with Approve / Undo, Merge, an All requests status change to
+ * Shipped (path checked), Sign out sending a pending write and dropping every private row, a 401 mid-session
+ * returning to sign in and back to the same place, the phone layout and the list skeleton. Login,
+ * `/users/me` and the triage API are mocked; the triage mock answers 401 without the operator's Bearer
+ * token. Every other /api call answers 404. No backend needed.
  *
  * Run: npm run test:e2e -- wow-forever-triage
  */
 import { expect, test, type Page, type Request } from "@playwright/test";
 
 const PAGE = "/wow-forever/triage";
-const KEY = "fixture-triage-key-not-a-secret";
+const OPERATOR_EMAIL = "operator@fixture.example";
+const OPERATOR_PASSWORD = "fixture-password-not-a-secret";
+/** A JWT-shaped fixture (never signed; the app only reads `exp`). Standard base64, as the app's atob reads it. */
+const FIXTURE_TOKEN = [
+  Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64"),
+  Buffer.from(JSON.stringify({ sub: "fixture-operator", exp: 4102444800 })).toString("base64"),
+  "fixture-signature",
+].join(".");
 const UNDO_MS = 6000;
 
 interface Story {
@@ -104,22 +113,39 @@ interface Api {
   requests: Request[];
   /** Hold GET /stories until released. */
   holdStories: Promise<void> | null;
+  /** The server has expired the session: every triage call answers 401. */
+  expired: boolean;
 }
 
 function writes(api: Api, method: string, pathPart: string): Request[] {
   return api.requests.filter((r) => r.method() === method && new URL(r.url()).pathname.includes(pathPart));
 }
 
-/** Mock the triage API with the key `KEY`; anything else under /api is 404. */
+/** Mock login (the fixture operator), `/users/me` and the triage API (Bearer only); anything else under /api is 404. */
 async function mockTriage(page: Page, api: Api): Promise<void> {
   await page.route(
     (url) => url.pathname.startsWith("/api/"),
     (route) => route.fulfill({ status: 404, json: { detail: "Not Found" } }),
   );
+  await page.route("**/api/auth/totp/login", (route) => {
+    const { email, password } = route.request().postDataJSON() as { email: string; password: string };
+    if (email !== OPERATOR_EMAIL || password !== OPERATOR_PASSWORD) {
+      return route.fulfill({ status: 400, json: { detail: "LOGIN_BAD_CREDENTIALS" } });
+    }
+    api.expired = false;
+    return route.fulfill({ json: { access_token: FIXTURE_TOKEN, token_type: "bearer" } });
+  });
+  await page.route("**/api/users/me", (route) =>
+    route.fulfill({
+      json: { id: "fixture-operator", email: OPERATOR_EMAIL, is_active: true, is_superuser: true, is_verified: true },
+    }),
+  );
   await page.route("**/wow/feature-requests/triage/**", async (route) => {
     const request = route.request();
     api.requests.push(request);
-    if (request.headers()["x-mga-triage-token"] !== KEY) return route.fulfill({ status: 404, json: { detail: "Not Found" } });
+    if (api.expired || request.headers()["authorization"] !== `Bearer ${FIXTURE_TOKEN}`) {
+      return route.fulfill({ status: 401, json: { detail: "Unauthorized" } });
+    }
     const path = new URL(request.url()).pathname.replace("/api/wow/feature-requests/triage", "");
     const method = request.method();
     if (method === "GET" && path === "/inbox") {
@@ -154,30 +180,41 @@ async function mockTriage(page: Page, api: Api): Promise<void> {
 }
 
 function newApi(inbox: Item[], stories: Story[]): Api {
-  return { inbox, stories, requests: [], holdStories: null };
+  return { inbox, stories, requests: [], holdStories: null, expired: false };
 }
 
-async function unlock(page: Page): Promise<void> {
-  await page.goto(PAGE);
-  await page.getByLabel("Triage key").fill(KEY);
-  await page.getByRole("button", { name: "Unlock" }).click();
+/** On /login (sent there from triage): sign in as the fixture operator. */
+async function fillSignIn(page: Page, password = OPERATOR_PASSWORD): Promise<void> {
+  await expect(page).toHaveURL(/\/login$/);
+  await page.getByLabel("Email").fill(OPERATOR_EMAIL);
+  await page.getByLabel("Password").fill(password);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+}
+
+async function signIn(page: Page, target = PAGE): Promise<void> {
+  await page.goto(target);
+  await fillSignIn(page);
   await expect(page.getByTestId("triage-workspace")).toBeVisible();
 }
 
+const workspace = (page: Page) => page.getByTestId("triage-workspace");
+
 const card = (page: Page, text: string) => page.locator('[data-section="inbox-card"]').filter({ hasText: text });
 
-test("unlock, approve, undo, approve again, and a pending approve is flushed by Lock", async ({ page }) => {
+test("sign in, approve, undo, approve again, and a pending approve is sent by Sign out", async ({ page }) => {
   const first = story(1, { status: "submitted", title: "Herb spawn map" });
   const second = story(2, { status: "submitted", title: "Raid signups in Discord", area: "dungeons_raids" });
   const api = newApi([item(1, first), item(2, second)], [first, second]);
   await mockTriage(page, api);
 
+  // Signed out: the triage page sends you to sign in and calls nothing; a wrong password stays there.
   await page.goto(PAGE);
-  await page.getByLabel("Triage key").fill("wrong");
-  await page.getByRole("button", { name: "Unlock" }).click();
-  await expect(page.getByRole("alert")).toHaveText("That key didn't work. Check you copied all of it.");
-  await page.getByLabel("Triage key").fill(KEY);
-  await page.getByRole("button", { name: "Unlock" }).click();
+  await fillSignIn(page, "fixture-wrong-password");
+  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(page).toHaveURL(/\/login$/);
+  expect(api.requests).toHaveLength(0);
+  await fillSignIn(page);
+  await expect(page).toHaveURL(new RegExp(`${PAGE}$`));
   await expect(page.getByRole("heading", { name: "2 ideas waiting for you" })).toBeVisible();
   await expect(card(page, "Herb spawn map").getByText("Player wrote — untrusted")).toBeVisible();
 
@@ -199,10 +236,10 @@ test("unlock, approve, undo, approve again, and a pending approve is flushed by 
   await expect(page.getByText("Approved. It's on the board.", { exact: true })).toBeVisible();
   await expect(card(page, "Herb spawn map")).toHaveCount(0);
 
-  // A second approve still in its window is sent straight away when the operator locks.
+  // A second approve still in its window is sent straight away when the operator signs out.
   await card(page, "Raid signups in Discord").getByRole("button", { name: "Approve" }).click();
-  await page.getByRole("button", { name: "Lock" }).click();
-  await expect(page.getByLabel("Triage key")).toBeVisible();
+  await workspace(page).getByRole("button", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/login$/);
   expect(writes(api, "PATCH", `/stories/${second.id}`)).toHaveLength(1);
   expect(writes(api, "POST", "/mark-triaged")).toHaveLength(2);
 });
@@ -213,7 +250,7 @@ test("merges a new idea into an existing story after confirming", async ({ page 
   const other = story(3, { title: "Raid signups", i_want: "discord raid signups", area: "dungeons_raids" });
   const api = newApi([item(1, source)], [source, target, other]);
   await mockTriage(page, api);
-  await unlock(page);
+  await signIn(page);
 
   await card(page, "Map of herb spawns").getByRole("button", { name: "Merge…" }).click();
   const sheet = page.getByRole("dialog");
@@ -245,7 +282,7 @@ test("All requests: marks an in-progress story shipped, refusing a link off the 
   const building = story(4, { title: "Cheapest Alchemy route", status: "in_progress", vote_count: 9 });
   const api = newApi([], [story(1), building, story(5, { status: "shipped", shipped_path: "/wow-forever/map" })]);
   await mockTriage(page, api);
-  await unlock(page);
+  await signIn(page);
 
   await page.getByRole("tab", { name: "All requests" }).click();
   await expect(page).toHaveURL(/tab=all/);
@@ -274,27 +311,37 @@ test("All requests: marks an in-progress story shipped, refusing a link off the 
   expect(patch.headers()["if-match"]).toBe(building.updated_at);
 });
 
-test("Lock forgets the key and every private row", async ({ page }) => {
+test("Sign out drops the session and every private row", async ({ page }) => {
   const s = story(1, { status: "submitted", title: "Secret-ish idea title" });
   const api = newApi([item(1, s)], [s]);
   await mockTriage(page, api);
-  await unlock(page);
+  await signIn(page);
   await expect(page.getByText("Secret-ish idea title")).toBeVisible();
+  for (const r of api.requests) expect(r.headers()["authorization"]).toBe(`Bearer ${FIXTURE_TOKEN}`);
 
-  await page.getByRole("button", { name: "Lock" }).click();
-  await expect(page.getByRole("heading", { name: "Operator sign-in" })).toBeVisible();
+  await workspace(page).getByRole("button", { name: "Sign out" }).click();
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
   await expect(page.getByText("Secret-ish idea title")).toHaveCount(0);
-  await expect(page.getByLabel("Triage key")).toHaveValue("");
-  const stored = await page.evaluate(() => JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage }) + document.cookie);
-  expect(stored).not.toContain(KEY);
-  expect(page.url()).not.toContain(KEY);
-  for (const r of api.requests) expect(r.url()).not.toContain(KEY);
+  expect(await page.evaluate(() => localStorage.getItem("token"))).toBeNull();
 
-  // Locked: a tab switch makes no triage call.
+  // Signed out: opening triage again goes to sign in and makes no triage call.
   const before = api.requests.length;
   await page.goto(`${PAGE}?tab=all`);
-  await expect(page.getByLabel("Triage key")).toBeVisible();
+  await expect(page).toHaveURL(/\/login$/);
   expect(api.requests.length).toBe(before);
+});
+
+test("a session that expires mid-way goes to sign in and comes back to the same place", async ({ page }) => {
+  const s = story(4, { title: "Cheapest Alchemy route", status: "open" });
+  const api = newApi([], [s]);
+  await mockTriage(page, api);
+  await signIn(page);
+
+  api.expired = true;
+  await page.getByRole("tab", { name: "All requests" }).click();
+  await fillSignIn(page);
+  await expect(page).toHaveURL(/\/wow-forever\/triage\?tab=all/);
+  await expect(page.locator('[data-section="story-row"]').filter({ hasText: "Cheapest Alchemy route" })).toBeVisible();
 });
 
 test.describe("phone", () => {
@@ -305,7 +352,7 @@ test.describe("phone", () => {
     const s = story(1, { status: "submitted", title: "A very long title that should wrap nicely on a small phone screen" });
     const api = newApi([item(1, s, { untrusted_submission_text: long })], [s]);
     await mockTriage(page, api);
-    await unlock(page);
+    await signIn(page);
 
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(scrollWidth).toBeLessThanOrEqual(375);
@@ -315,8 +362,8 @@ test.describe("phone", () => {
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
     // Full width inside the card's padding.
     expect(box?.width ?? 0).toBeGreaterThan((cardBox?.width ?? 0) - 40);
-    for (const name of ["Edit", "Merge…", "More", "Lock"]) {
-      const b = await page.getByRole("button", { name, exact: true }).first().boundingBox();
+    for (const name of ["Edit", "Merge…", "More", "Sign out"]) {
+      const b = await workspace(page).getByRole("button", { name, exact: true }).first().boundingBox();
       expect(b?.height ?? 0).toBeGreaterThanOrEqual(44);
     }
   });
@@ -330,7 +377,7 @@ test("the All requests skeleton has the loaded list's structure", async ({ page 
     release = resolve;
   });
   await mockTriage(page, api);
-  await unlock(page);
+  await signIn(page);
   await page.getByRole("tab", { name: "All requests" }).click();
 
   const skeleton = page.getByTestId("triage-list-skeleton");
