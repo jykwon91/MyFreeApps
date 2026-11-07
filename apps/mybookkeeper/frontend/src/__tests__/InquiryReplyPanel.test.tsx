@@ -27,7 +27,6 @@ const integrationWithSendScope: Integration = {
   provider: "gmail",
   connected: true,
   last_synced_at: null,
-  metadata: null,
   has_send_scope: true,
 };
 
@@ -35,7 +34,6 @@ const integrationWithoutSendScope: Integration = {
   provider: "gmail",
   connected: true,
   last_synced_at: null,
-  metadata: null,
   has_send_scope: false,
 };
 

@@ -14,6 +14,7 @@ from app.core.config import settings
 from app.core.context import RequestContext
 from app.core.gmail_connect_constants import GMAIL_CONNECT_NOT_ALLOWED_DETAIL
 from app.db.session import AsyncSessionLocal, unit_of_work
+from app.mappers.integration_mapper import to_integration_info
 from app.models.organization.organization_member import OrgRole
 from app.models.responses.integration_info import IntegrationInfo
 from app.models.responses.queue_item_info import QueueItemInfo
@@ -217,19 +218,16 @@ async def list_integrations(
 ) -> list[IntegrationInfo]:
     async with AsyncSessionLocal() as db:
         integrations = await integration_repo.list_by_org(db, ctx.organization_id)
-        result: list[IntegrationInfo] = []
-        for i in integrations:
-            info: IntegrationInfo = {
-                "provider": i.provider,
-                "last_synced_at": i.last_synced_at,
-                "connected": True,
-            }
-            if i.provider == "gmail":
-                info["has_send_scope"] = integration_has_send_scope(i)
-                info["needs_reauth"] = i.needs_reauth
-                info["last_reauth_error"] = i.last_reauth_error
-            result.append(info)
-        return result
+        return [to_integration_info(i, has_send_scope=integration_has_send_scope(i)) for i in integrations]
+
+
+async def update_gmail_label(ctx: RequestContext, label: str) -> IntegrationInfo | None:
+    """Limit syncing to one Gmail label (blank clears it). None if Gmail isn't connected."""
+    async with unit_of_work() as db:
+        integration = await integration_repo.set_gmail_label(db, ctx.organization_id, label.strip() or None)
+        if integration is None:
+            return None
+        return to_integration_info(integration, has_send_scope=integration_has_send_scope(integration))
 
 
 async def cancel_gmail_sync(ctx: RequestContext, sync_log_id: int | None = None) -> None:

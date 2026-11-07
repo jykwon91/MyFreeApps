@@ -109,7 +109,6 @@ class Settings(BaseAppSettings):
         "from:emaildl.att-mail.com OR from:tmr3.com OR "
         "from:constellation.com"
     )
-    gmail_label: str = ""
 
     # ------------------------------------------------------------------
     # Document upload / extraction

@@ -16,6 +16,7 @@ from app.models.responses.queue_item_response import QueueItemResponse
 from app.models.responses.retry_all_response import RetryAllResponse
 from app.models.responses.retry_response import RetryResponse
 from app.models.responses.sync_log_response import SyncLogResponse
+from app.schemas.integrations.gmail_label_update import GmailLabelUpdate
 from app.schemas.integrations.gmail_sync_response import GmailSyncResponse
 from app.services.email.constants import GMAIL_AUTH_EXPIRED_API_DETAIL
 from app.services.email.exceptions import GmailAuthExpiredError
@@ -173,6 +174,17 @@ async def gmail_sync_logs(
 ) -> list[SyncLogResponse]:
     items = await integration_service.get_sync_logs(ctx)
     return [SyncLogResponse(**i) for i in items]
+
+
+@router.patch("/gmail/label")
+async def update_gmail_label(
+    body: GmailLabelUpdate,
+    ctx: RequestContext = Depends(require_write_access),
+) -> IntegrationResponse:
+    info = await integration_service.update_gmail_label(ctx, body.label)
+    if info is None:
+        raise HTTPException(status_code=404, detail="Gmail not connected")
+    return IntegrationResponse(**info)
 
 
 @router.delete("/gmail", status_code=204)

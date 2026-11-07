@@ -13,3 +13,5 @@ class IntegrationResponse(TypedDict):
     has_send_scope: NotRequired[bool]
     needs_reauth: NotRequired[bool]
     last_reauth_error: NotRequired[str | None]
+    # gmail_label: the label syncing is limited to; None syncs every email.
+    gmail_label: NotRequired[str | None]

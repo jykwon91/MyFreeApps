@@ -12,14 +12,14 @@ const mockGmailIntegration: Integration = {
   provider: "gmail",
   connected: true,
   last_synced_at: "2024-03-15T10:00:00Z",
-  metadata: { gmail_label: "Receipts" },
+  gmail_label: "Receipts",
 };
 
 const mockNeedsReauthIntegration: Integration = {
   provider: "gmail",
   connected: true,
   last_synced_at: "2024-03-10T10:00:00Z",
-  metadata: null,
+  gmail_label: null,
   needs_reauth: true,
   last_reauth_error: "RefreshError: Token has been expired or revoked.",
 };
@@ -180,7 +180,7 @@ describe("Integrations", () => {
     expect(screen.getByPlaceholderText("e.g. Receipts")).toBeInTheDocument();
   });
 
-  it("initializes label input from saved metadata when Gmail is connected", () => {
+  it("initializes label input from the saved label when Gmail is connected", () => {
     vi.mocked(useGetIntegrationsQuery).mockReturnValue({
       data: [mockGmailIntegration],
       isLoading: false,
@@ -203,7 +203,7 @@ describe("Integrations", () => {
 
   it("shows sync all emails hint when label is not set", () => {
     vi.mocked(useGetIntegrationsQuery).mockReturnValue({
-      data: [{ ...mockGmailIntegration, metadata: null }],
+      data: [{ ...mockGmailIntegration, gmail_label: null }],
       isLoading: false,
       refetch: vi.fn(),
     } as unknown as ReturnType<typeof useGetIntegrationsQuery>);

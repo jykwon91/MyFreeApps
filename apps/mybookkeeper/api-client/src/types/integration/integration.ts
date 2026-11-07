@@ -2,7 +2,6 @@ export interface Integration {
   provider: string;
   connected: boolean;
   last_synced_at: string | null;
-  metadata: Record<string, unknown> | null;
   /**
    * Gmail-specific. Only present when ``provider === "gmail"``. Indicates
    * whether the host's OAuth tokens include the ``gmail.send`` scope (added
@@ -21,4 +20,8 @@ export interface Integration {
    * For diagnostic display only — not shown to end users.
    */
   last_reauth_error?: string | null;
+  /**
+   * Gmail-specific. The label syncing is limited to; null syncs every email.
+   */
+  gmail_label?: string | null;
 }
