@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
+import { deleteSignedLease } from "./fixtures/signed-leases";
 import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 import { deleteApplicant } from "./fixtures/applicants";
 import { deleteBlackout } from "./fixtures/blackouts";
@@ -194,7 +195,7 @@ test.describe("Calendar month view", () => {
       await expect(page.getByTestId("calendar-month-grid")).toBeVisible();
       await expect(page.getByTestId("calendar-grid")).toHaveCount(0);
     } finally {
-      await api.delete(`/test/signed-leases/${leaseId}`).catch(() => {});
+      await deleteSignedLease(api, leaseId);
       await deleteApplicant(api, applicantId);
       await deleteListing(api, listingId);
       await deleteProperty(api, property.id);
@@ -257,7 +258,7 @@ test.describe("Calendar month view", () => {
       await expect(dialog).toBeHidden();
     } finally {
       for (const id of blackoutIds) await deleteBlackout(api, id);
-      await api.delete(`/test/signed-leases/${leaseId}`).catch(() => {});
+      await deleteSignedLease(api, leaseId);
       await deleteApplicant(api, applicantId);
       await deleteListing(api, listingId);
       await deleteProperty(api, property.id);

@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
+import { deleteSignedLease } from "./fixtures/signed-leases";
 import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 import { deleteApplicant } from "./fixtures/applicants";
 
@@ -179,8 +180,8 @@ test.describe("Tenancies with no listing linked", () => {
         page.locator('[data-testid="calendar-listing-row"][data-unassigned="true"]'),
       ).toHaveCount(0);
     } finally {
-      await api.delete(`/test/signed-leases/${unlinkedLeaseId}`).catch(() => {});
-      await api.delete(`/test/signed-leases/${linkedLeaseId}`).catch(() => {});
+      await deleteSignedLease(api, unlinkedLeaseId);
+      await deleteSignedLease(api, linkedLeaseId);
       await deleteApplicant(api, unlinkedApplicantId);
       await deleteApplicant(api, linkedApplicantId);
       await deleteListing(api, listingId);

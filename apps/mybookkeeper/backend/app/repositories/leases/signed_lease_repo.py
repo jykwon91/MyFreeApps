@@ -281,6 +281,27 @@ async def soft_delete(
     return (result.rowcount or 0) > 0
 
 
+async def hard_delete_by_id(
+    db: AsyncSession,
+    *,
+    lease_id: uuid.UUID,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+) -> bool:
+    """Hard-delete a lease owned by (organization_id, user_id), soft-deleted or
+    not. Returns whether a row was deleted. Test cleanup only — production
+    deletes are soft. Attachments, term versions and template links cascade.
+    """
+    result = await db.execute(
+        delete(SignedLease).where(
+            SignedLease.id == lease_id,
+            SignedLease.user_id == user_id,
+            SignedLease.organization_id == organization_id,
+        )
+    )
+    return (result.rowcount or 0) > 0
+
+
 async def hard_delete_for_organization(db: AsyncSession, organization_id: uuid.UUID) -> None:
     """For deleting an account. Everywhere else a lease is soft-deleted."""
     await db.execute(delete(SignedLease).where(SignedLease.organization_id == organization_id))

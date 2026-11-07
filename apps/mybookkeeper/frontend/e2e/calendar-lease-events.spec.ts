@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
+import { deleteSignedLease } from "./fixtures/signed-leases";
 import { listingRowBars } from "./fixtures/calendar-rows";
 import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 import { deleteApplicant } from "./fixtures/applicants";
@@ -164,7 +165,7 @@ test.describe("Tenant leases on the calendar", () => {
       await expect(bars).toHaveAttribute("data-source", "airbnb");
     } finally {
       await deleteBlackout(api, blackoutId);
-      await api.delete(`/test/signed-leases/${leaseId}`).catch(() => {});
+      await deleteSignedLease(api, leaseId);
       await deleteApplicant(api, applicantId);
       await deleteListing(api, listingId);
       await deleteProperty(api, property.id);

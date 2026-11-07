@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
+import { deleteSignedLease } from "./fixtures/signed-leases";
 import { deleteInquiry, seedInquiry } from "./fixtures/inquiries";
 import { deleteApplicant } from "./fixtures/applicants";
 
@@ -53,10 +54,6 @@ async function seedApplicant(
   }
   const body = (await res.json()) as { id: string };
   return body.id;
-}
-
-async function deleteSignedLease(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/test/signed-leases/${id}`).catch(() => {});
 }
 
 async function transitionApplicantStage(
