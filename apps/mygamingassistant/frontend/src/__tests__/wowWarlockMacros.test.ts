@@ -40,6 +40,10 @@ describe("Warlock macros against the Forever client", () => {
       if (usesIn(m, "@mouseover")) expect(m.unconfirmed).toContain("mouseover");
       if (usesIn(m, "/castsequence")) expect(m.unconfirmed).toContain("castsequence");
       if (usesIn(m, "/stopcasting")) expect(m.unconfirmed).toContain("stopcasting");
+      if (usesIn(m, "/cast !")) expect(m.unconfirmed).toContain("bang");
+      if (usesIn(m, "[mod:")) expect(m.unconfirmed).toContain("modifier");
+      if (usesIn(m, "[nopet]")) expect(m.unconfirmed).toContain("nopet");
+      if (usesIn(m, "%t")) expect(m.unconfirmed).toContain("chatTarget");
       for (const syntax of m.unconfirmed) expect(SYNTAX_NOTES[syntax]).toBeTruthy();
     }
   });
@@ -49,7 +53,9 @@ describe("Warlock macros against the Forever client", () => {
     for (const needle of [
       "/petattack", "Seduction", "Spell Lock", "Suffering", "Sacrifice", "/stopcasting\n/cast Fear",
       "/stopcasting\n/cast Death Coil", "@mouseover,harm,nodead][] Corruption", "Bane of Agony", "@focus,harm,nodead][] Fear",
-      "Banish", "Major Healthstone", "Create Healthstone", "Soulstone", "Life Tap", "Drain Soul", "Amplify Curse",
+      "Banish", "Major Healthstone", "/cast !Shoot", "[mod:shift] Curse of Weakness", "[nopet] Summon Voidwalker",
+      "/p Summoning %t", "/p Soulstone on %t", "Major Healing Potion", "Fel Domination", "@focus,harm,nodead][] Spell Lock",
+      "/petattack [@mouseover,harm,nodead]", "@focus,harm,nodead][] Seduction", "@mouseover,exists,nodead][] Devour Magic", "Create Healthstone", "Soulstone", "Life Tap", "Drain Soul", "Amplify Curse",
     ]) {
       expect(text).toContain(needle);
     }
@@ -57,13 +63,15 @@ describe("Warlock macros against the Forever client", () => {
 });
 
 describe("missingNames", () => {
-  const client: WarlockNames = { source: "", clientBuild: "1", spells: ["Fear"], petSpells: ["Seduction"], items: ["Healthstone"] };
+  const client: WarlockNames = {
+    source: "", clientBuild: "1", spells: ["Fear"], petSpells: ["Seduction"], generalSpells: ["Shoot"], items: ["Healthstone"], potions: ["Healing Potion"],
+  };
   const macro = (spells: string[], items: string[]): WarlockMacro => ({
     id: "x", title: "x", summary: "x", text: "x", spells, items, unconfirmed: [],
   });
 
-  it("accepts spells, pet abilities and items the client has", () => {
-    expect(missingNames(macro(["Fear", "Seduction"], ["Healthstone"]), client)).toEqual([]);
+  it("accepts spells, pet abilities, general spells, items and potions the client has", () => {
+    expect(missingNames(macro(["Fear", "Seduction", "Shoot"], ["Healthstone", "Healing Potion"]), client)).toEqual([]);
   });
 
   it("reports names the client lacks, and does not mix up spells with items", () => {
@@ -78,6 +86,14 @@ describe("missingNames", () => {
 describe("namesInText", () => {
   it("reads /cast and /use names without conditions", () => {
     expect(namesInText("/stopcasting\n/cast [@focus,harm][] Fear\n/use Major Healthstone")).toEqual(["Fear", "Major Healthstone"]);
+  });
+
+  it("reads each ; clause of a /cast and drops the ! keep-on prefix", () => {
+    expect(namesInText("/cast [mod:shift] Curse of Weakness; Bane of Agony\n/cast !Shoot")).toEqual([
+      "Curse of Weakness",
+      "Bane of Agony",
+      "Shoot",
+    ]);
   });
 
   it("splits a /castsequence and drops its reset option", () => {

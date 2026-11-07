@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.wow_warlock.build import OUT_PATH, check_skill_lines, spell_names, stone_names
+from scripts.wow_warlock.build import OUT_PATH, check_skill_lines, potion_names, spell_names, stone_names
 
 ABILITIES = [
     {"SkillLine": "355", "Spell": "1"},
@@ -39,6 +39,17 @@ def test_stones_keep_every_rank_and_nothing_else() -> None:
     assert stone_names(items) == ["Healthstone", "Major Healthstone", "Soulstone"]
 
 
+def test_potions_keep_every_rank_and_nothing_else() -> None:
+    items = [
+        {"Display_lang": n}
+        for n in (
+            "Minor Healing Potion", "Healing Potion", "Superior Healing Potion", "Major Healing Potion",
+            "Major Discolored Healing Potion", "Manual: Greater Healing Potion", "Healing Potion Recipe",
+        )
+    ]
+    assert potion_names(items) == ["Healing Potion", "Major Healing Potion", "Minor Healing Potion", "Superior Healing Potion"]
+
+
 def test_a_renumbered_skill_line_fails_loudly() -> None:
     lines = [{"ID": "355", "DisplayName_lang": "Affliction"}]
     check_skill_lines(lines, {355: "Affliction"})
@@ -60,3 +71,17 @@ class TestCommittedNames:
 
     def test_has_every_healthstone_rank_name(self, names: dict) -> None:
         assert {"Minor Healthstone", "Major Healthstone", "Soulstone"} <= set(names["items"])
+
+    def test_has_the_wand_ability_and_the_spells_the_new_macros_use(self, names: dict) -> None:
+        assert names["generalSpells"] == ["Shoot"]
+        assert {
+            "Curse of Weakness", "Curse of Tongues", "Health Funnel", "Fel Domination",
+            "Ritual of Summoning", "Summon Voidwalker",
+        } <= set(names["spells"])
+        assert "Devour Magic" in names["petSpells"]
+
+    def test_has_every_healing_potion_rank_the_macros_use(self, names: dict) -> None:
+        assert {
+            "Major Healing Potion", "Superior Healing Potion", "Greater Healing Potion",
+            "Healing Potion", "Lesser Healing Potion", "Minor Healing Potion",
+        } <= set(names["potions"])

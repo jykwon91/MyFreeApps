@@ -9,6 +9,14 @@ const HEALTHSTONE_USE = [
 ] as const;
 const SOULSTONE_USE = ["Major Soulstone", "Greater Soulstone", "Soulstone", "Lesser Soulstone", "Minor Soulstone"] as const;
 
+const POTION_USE = [
+  "Major Healing Potion",
+  "Superior Healing Potion",
+  "Greater Healing Potion",
+  "Healing Potion",
+  "Lesser Healing Potion",
+] as const;
+
 const joinUseLines = (items: readonly string[]): string => items.map((i) => `/use ${i}`).join("\n");
 
 /**
@@ -20,6 +28,42 @@ const joinUseLines = (items: readonly string[]): string => items.map((i) => `/us
  */
 export const WARLOCK_MACROS: readonly WarlockMacro[] = [
   {
+    id: "pet-attack-wand",
+    title: "Pet attack, then wand",
+    summary: "Sends your pet in and starts your wand. Press it again and it keeps shooting instead of switching the wand off, which saves mana between fights.",
+    text: "/petattack\n/cast !Shoot",
+    spells: ["Shoot"],
+    items: [],
+    unconfirmed: ["bang"],
+  },
+  {
+    id: "curse-swap",
+    title: "One-key curse picker",
+    summary: "One key for three curses: a plain press casts Bane of Agony, Shift casts Curse of Weakness and Ctrl casts Curse of Tongues.",
+    text: "/cast [mod:shift] Curse of Weakness; [mod:ctrl] Curse of Tongues; Bane of Agony",
+    spells: ["Curse of Weakness", "Curse of Tongues", "Bane of Agony"],
+    items: [],
+    unconfirmed: ["modifier"],
+  },
+  {
+    id: "pet-care",
+    title: "Summon or Health Funnel",
+    summary: "With no pet out it summons your Voidwalker; with a pet out it Health Funnels to heal it.",
+    text: "/cast [nopet] Summon Voidwalker; Health Funnel",
+    spells: ["Summon Voidwalker", "Health Funnel"],
+    items: [],
+    unconfirmed: ["nopet"],
+  },
+  {
+    id: "fel-dom-summon",
+    title: "Fel Domination, then summon",
+    summary: "Fel Domination first, then Summon Voidwalker, to make the summon fast. If Fel Domination shares the global cooldown in Forever, press it a second time.",
+    text: "/cast Fel Domination\n/cast Summon Voidwalker",
+    spells: ["Fel Domination", "Summon Voidwalker"],
+    items: [],
+    unconfirmed: [],
+  },
+  {
     id: "pet-attack",
     title: "Pet attack, then Shadow Bolt",
     summary: "Sends your pet at your target and opens with Shadow Bolt, so one key starts every pull.",
@@ -27,6 +71,15 @@ export const WARLOCK_MACROS: readonly WarlockMacro[] = [
     spells: ["Shadow Bolt"],
     items: [],
     unconfirmed: [],
+  },
+  {
+    id: "mouseover-pet-attack",
+    title: "Pet attack on mouseover",
+    summary: "Sends your pet at the enemy under your mouse, else your target.",
+    text: "/petattack [@mouseover,harm,nodead]",
+    spells: [],
+    items: [],
+    unconfirmed: ["mouseover"],
   },
   {
     id: "seduction",
@@ -38,6 +91,15 @@ export const WARLOCK_MACROS: readonly WarlockMacro[] = [
     unconfirmed: ["petCast"],
   },
   {
+    id: "focus-seduction",
+    title: "Seduction on focus",
+    summary: "Your Succubus charms the humanoid you set as focus (/focus on it first), else your target.",
+    text: "/cast [@focus,harm,nodead][] Seduction",
+    spells: ["Seduction"],
+    items: [],
+    unconfirmed: ["focus", "petCast"],
+  },
+  {
     id: "spell-lock",
     title: "Felhunter Spell Lock",
     summary: "Your Felhunter interrupts the spell your target is casting.",
@@ -45,6 +107,15 @@ export const WARLOCK_MACROS: readonly WarlockMacro[] = [
     spells: ["Spell Lock"],
     items: [],
     unconfirmed: ["petCast"],
+  },
+  {
+    id: "focus-spell-lock",
+    title: "Spell Lock your focus",
+    summary: "Your Felhunter interrupts the enemy you set as focus (/focus on it first), else your target.",
+    text: "/cast [@focus,harm,nodead][] Spell Lock",
+    spells: ["Spell Lock"],
+    items: [],
+    unconfirmed: ["focus", "petCast"],
   },
   {
     id: "suffering",
@@ -101,6 +172,15 @@ export const WARLOCK_MACROS: readonly WarlockMacro[] = [
     unconfirmed: ["mouseover"],
   },
   {
+    id: "mouseover-devour-magic",
+    title: "Devour Magic on mouseover",
+    summary: "Your Felhunter removes a magic effect from the friend under your mouse, else your target.",
+    text: "/cast [@mouseover,exists,nodead][] Devour Magic",
+    spells: ["Devour Magic"],
+    items: [],
+    unconfirmed: ["mouseover", "petCast"],
+  },
+  {
     id: "focus-fear",
     title: "Fear your focus",
     summary: "Fears the enemy you set as focus (/focus on it first), else your target, so you can keep damaging another mob.",
@@ -128,6 +208,15 @@ export const WARLOCK_MACROS: readonly WarlockMacro[] = [
     unconfirmed: [],
   },
   {
+    id: "panic-heal",
+    title: "Healthstone and potion together",
+    summary: "Uses your best Healthstone and your best healing potion in one press; they have separate cooldowns, so both fire. Potions go Major down to Lesser; Minor Healing Potion is left out to fit the 255-character limit.",
+    text: `${joinUseLines(HEALTHSTONE_USE)}\n${joinUseLines(POTION_USE)}`,
+    spells: [],
+    items: [...HEALTHSTONE_USE, ...POTION_USE],
+    unconfirmed: [],
+  },
+  {
     id: "create-healthstone",
     title: "Create a Healthstone",
     summary: "Makes a Healthstone of the highest rank you know. Do it before a dungeon or raid, and after you use one.",
@@ -144,6 +233,24 @@ export const WARLOCK_MACROS: readonly WarlockMacro[] = [
     spells: [],
     items: SOULSTONE_USE,
     unconfirmed: [],
+  },
+  {
+    id: "soulstone-announce",
+    title: "Soulstone and announce",
+    summary: "Tells your party who you are Soulstoning, then uses your Soulstone on your friendly target.",
+    text: `/p Soulstone on %t\n${joinUseLines(SOULSTONE_USE)}`,
+    spells: [],
+    items: SOULSTONE_USE,
+    unconfirmed: ["chatTarget"],
+  },
+  {
+    id: "summon-announce",
+    title: "Summon, then tell the party",
+    summary: "Tells your party who you are summoning, then starts Ritual of Summoning on your target.",
+    text: "/p Summoning %t - click the portal!\n/cast Ritual of Summoning",
+    spells: ["Ritual of Summoning"],
+    items: [],
+    unconfirmed: ["chatTarget"],
   },
   {
     id: "life-tap",

@@ -5,7 +5,8 @@
 Writes ``frontend/src/games/wow-forever/data/warlock/warlockNames.json``: every
 Warlock spell name (SkillLineAbility for the Affliction, Demonology and
 Destruction skill lines), every Warlock pet ability (Imp, Voidwalker, Succubus
-and Felhunter skill lines) and the Healthstone / Soulstone item names, all from
+and Felhunter skill lines) and the Healthstone / Soulstone item names, the wand ability (Shoot, from the Wands
+skill line) and the healing potion item names, all from
 the Forever client (the build pinned in ``sources.py``). The macros are
 hand-written; a frontend test fails when one names something missing here.
 Never hand-edit the JSON; re-run this.
@@ -29,8 +30,14 @@ OUT_PATH = (
 SPELL_LINES = {355: "Affliction", 354: "Demonology", 593: "Destruction"}
 PET_LINES = {188: "Pet - Imp", 204: "Pet - Voidwalker", 205: "Pet - Succubus", 189: "Pet - Felhunter"}
 
+# Skills any class has, not a Warlock line; only the wand's "Shoot" is kept from it.
+GENERAL_LINES = {228: "Wands"}
+GENERAL_SPELLS = {"Shoot"}
+
 # Every rank of the stones: "Minor Healthstone" ... "Major Healthstone", plus the unprefixed one.
 STONE_NAME = re.compile(r"^(?:(?:Minor|Lesser|Greater|Major) )?(?:Healthstone|Soulstone)$")
+# Every rank of the healing potion: "Minor Healing Potion" ... "Major Healing Potion", plus the unprefixed one.
+POTION_NAME = re.compile(r"^(?:(?:Minor|Lesser|Greater|Superior|Major) )?Healing Potion$")
 # Dev-only spells the client keeps in these skill lines.
 PLACEHOLDER = re.compile(r"\(DND\)|^\?$")
 
@@ -54,19 +61,29 @@ def stone_names(items: list[dict[str, str]]) -> list[str]:
     return sorted({r["Display_lang"].strip() for r in items if STONE_NAME.match(r["Display_lang"].strip())})
 
 
+def potion_names(items: list[dict[str, str]]) -> list[str]:
+    return sorted({r["Display_lang"].strip() for r in items if POTION_NAME.match(r["Display_lang"].strip())})
+
+
 def main() -> None:
-    check_skill_lines(wago_table("SkillLine"), {**SPELL_LINES, **PET_LINES})
+    check_skill_lines(wago_table("SkillLine"), {**SPELL_LINES, **PET_LINES, **GENERAL_LINES})
     abilities = wago_table("SkillLineAbility")
     by_id = {r["ID"]: r["Name_lang"] for r in wago_table("SpellName")}
+    items = wago_table("ItemSparse")
     payload = {
         "source": f"WoW Forever client build {WAGO_BUILD} ({WAGO_BRANCH}) via wago.tools. Game data (c) Blizzard Entertainment.",
         "clientBuild": WAGO_BUILD,
         "spells": spell_names(abilities, by_id, set(SPELL_LINES)),
         "petSpells": spell_names(abilities, by_id, set(PET_LINES)),
-        "items": stone_names(wago_table("ItemSparse")),
+        "generalSpells": [n for n in spell_names(abilities, by_id, set(GENERAL_LINES)) if n in GENERAL_SPELLS],
+        "items": stone_names(items),
+        "potions": potion_names(items),
     }
     write_json(OUT_PATH, payload)
-    print(f"wrote {OUT_PATH} ({len(payload['spells'])} spells, {len(payload['petSpells'])} pet, {len(payload['items'])} items)")
+    print(
+        f"wrote {OUT_PATH} ({len(payload['spells'])} spells, {len(payload['petSpells'])} pet, "
+        f"{len(payload['generalSpells'])} general, {len(payload['items'])} items, {len(payload['potions'])} potions)"
+    )
 
 
 if __name__ == "__main__":

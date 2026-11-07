@@ -214,9 +214,11 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   text in `data/warlock/warlockMacros.ts`. Their spell/item names are checked
   by `wowWarlockMacros.test.ts` against `data/warlock/warlockNames.json`,
   **GENERATED** by `python -m scripts.wow_warlock.build` (Warlock skill lines,
-  pet skill lines, Healthstone/Soulstone items; re-pinned by `wow_refresh`).
+  pet skill lines, the wand's `Shoot`, Healthstone/Soulstone items and healing
+  potions; re-pinned by `wow_refresh`).
   Max 255 chars per macro. Syntax Forever may not support (`@focus`,
-  `@mouseover`, `/castsequence`, `/stopcasting`, pet `/cast`) carries an
+  `@mouseover`, `/castsequence`, `/stopcasting`, pet `/cast`, `!` keep-on,
+  `[mod:]`, `[nopet]`, `%t` in chat) carries an
   `unconfirmed` tag and the Unconfirmed chip — never claim in-game testing.
   Forever renamed Curses to Banes (no Curse of Agony). No addon is involved.
 - Class/spec ids in `data/classes.ts` are the stable key for anything
