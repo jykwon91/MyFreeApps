@@ -13,7 +13,7 @@ export default function ItemFinderResults({ items }: { items: readonly ClientIte
         <li key={item.id} className="flex min-h-[44px] items-center gap-2 px-1 py-1">
           <GameIcon icon={itemIcon(item.id)} size={24} alt="" className="shrink-0" />
           <div className="min-w-0">
-            <ItemNameLink itemId={item.id} name={item.name} className={`text-sm font-medium ${QUALITY_TEXT_CLASSES[item.quality]}`} />
+            <ItemNameLink itemId={item.id} name={item.name} item={item} className={`text-sm font-medium ${QUALITY_TEXT_CLASSES[item.quality]}`} />
             <p className="text-xs text-muted-foreground truncate">{describeClientItem(item)}</p>
           </div>
         </li>
