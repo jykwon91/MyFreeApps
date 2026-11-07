@@ -8,4 +8,6 @@ export const TRANSACTION_EDIT_MESSAGES = {
   saving: "Saving...",
   couldntSave: "I couldn't save your changes. Mind trying again?",
   couldntDelete: "I couldn't delete that transaction. Mind trying again?",
+  openingSource: "Opening the source document...",
+  couldntOpenSource: "I couldn't open the source document. Mind trying again?",
 } as const;

@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { UseFormRegister, UseFormWatch, UseFormSetValue, FieldErrors } from "react-hook-form";
-import { X, FileText } from "lucide-react";
-import api from "@/shared/lib/api";
+import { X, FileText, Loader2 } from "lucide-react";
+import { fetchDocumentBlob } from "@/shared/services/documentService";
+import { showError } from "@/shared/lib/toast-store";
+import { TRANSACTION_EDIT_MESSAGES as MSG } from "@/shared/lib/transaction-edit-messages";
 import { formatTag } from "@/shared/utils/tag";
 import { EXPENSE_CATEGORY_LIST, INCOME_CATEGORIES, PAYMENT_METHODS, CHANNELS } from "@/shared/lib/constants";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
@@ -42,6 +44,13 @@ export default function TransactionForm({
   onDismissDuplicate,
 }: TransactionFormProps) {
   const [sourcePreview, setSourcePreview] = useState<SourcePreview | null>(null);
+  const [isOpeningSource, setIsOpeningSource] = useState(false);
+  // The panel remounts per transaction, so a download can finish after it closes.
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const transactionType = watch("transaction_type");
   const categories = transactionType === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORY_LIST;
@@ -73,18 +82,22 @@ export default function TransactionForm({
   }, [sourcePreview, revokePreview]);
 
   const handleViewSource = useCallback(async (docId: string) => {
+    if (isOpeningSource) return;
+    setIsOpeningSource(true);
     try {
-      const res = await api.get(`/documents/${docId}/download`, { responseType: "blob" });
-      const blob = res.data as Blob;
-      const contentType = String(res.headers["content-type"] ?? "");
-      const url = URL.createObjectURL(blob);
+      const { url, contentType } = await fetchDocumentBlob(docId);
+      if (!mountedRef.current) {
+        URL.revokeObjectURL(url);
+        return;
+      }
       const type = contentType.includes("pdf") ? "pdf" : contentType.startsWith("image/") ? "image" : "other";
-      revokePreview();
       setSourcePreview({ url, type });
     } catch {
-      revokePreview();
+      if (mountedRef.current) showError(MSG.couldntOpenSource);
+    } finally {
+      if (mountedRef.current) setIsOpeningSource(false);
     }
-  }, [revokePreview]);
+  }, [isOpeningSource]);
 
   function fieldClass(name: keyof TransactionFormValues): string {
     return dirtyFields[name]
@@ -120,11 +133,14 @@ export default function TransactionForm({
           <button
             type="button"
             onClick={() => handleViewSource(transaction.source_document_id!)}
-            className="text-primary hover:underline truncate text-left"
+            aria-disabled={isOpeningSource}
+            className="text-primary hover:underline truncate text-left aria-disabled:opacity-60 aria-disabled:cursor-wait"
             aria-label={`Open source document ${transaction.source_file_name}`}
           >
             {transaction.source_file_name}
           </button>
+          {isOpeningSource && <Loader2 size={14} className="animate-spin text-muted-foreground shrink-0" aria-hidden="true" />}
+          <span className="sr-only" role="status">{isOpeningSource ? MSG.openingSource : ""}</span>
         </div>
       )}
 
