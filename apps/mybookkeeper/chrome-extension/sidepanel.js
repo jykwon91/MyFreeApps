@@ -180,8 +180,8 @@ async function handleLogin(e) {
 async function handleLogout() {
   formsRequest++;
   fieldsRequest++;
-  await chrome.runtime.sendMessage({ action: "logout" });
   taxReturns = [];
+  await chrome.runtime.sendMessage({ action: "logout" });
   currentFields = [];
   allInstances = [];
   detectedForm = null;
@@ -255,7 +255,6 @@ function handleTaxYearChange() {
   populateFormSelect();
 
   if (detectedForm) {
-    formSelect.value = detectedForm;
     loadFormFields();
   }
 }
@@ -288,6 +287,13 @@ async function populateFormSelect() {
     formSelect.appendChild(opt);
   }
   formSelect.disabled = false;
+  selectDetectedForm();
+}
+
+function selectDetectedForm() {
+  if (detectedForm && [...formSelect.options].some((o) => o.value === detectedForm)) {
+    formSelect.value = detectedForm;
+  }
 }
 
 function handleFormSelect() {
@@ -339,17 +345,14 @@ async function requestPageDetection() {
  * @param {number | null} year
  */
 async function onPageDetected(form, year) {
-  // Auto-select year if detected and available
-  if (year) {
-    const yearStr = String(year);
-    const available = [...taxYearSelect.options].some((o) => o.value === yearStr);
-    if (available) {
-      taxYearSelect.value = yearStr;
-      recomputeBtn.disabled = false;
-    }
-  }
-
+  const yearStr = year ? String(year) : "";
   detectedForm = form;
+  if (yearStr && yearStr !== taxYearSelect.value && [...taxYearSelect.options].some((o) => o.value === yearStr)) {
+    taxYearSelect.value = yearStr;
+    recomputeBtn.disabled = false;
+    hide(fieldsContainer);
+    populateFormSelect();
+  }
 
   if (!form) {
     fieldsRequest++;
@@ -365,10 +368,7 @@ async function onPageDetected(form, year) {
   detectedFormBar.classList.add("detected");
   detectedFormText.textContent = label;
 
-  // Sync dropdown to detected form
-  if (formSelect.querySelector(`option[value="${form}"]`)) {
-    formSelect.value = form;
-  }
+  selectDetectedForm();
 
   await loadFormFields();
 }
