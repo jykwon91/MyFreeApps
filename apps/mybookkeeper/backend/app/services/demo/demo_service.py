@@ -10,7 +10,7 @@ from platform_shared.auth.session_invalidation import session_cutoff_now
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.repositories.demo import demo_people_repo, demo_repo
-from app.repositories.user import account_files_repo
+from app.repositories.user import account_files_repo, user_repo
 from app.schemas.demo.demo import (
     DemoCreateResponse,
     DemoCredentials,
@@ -59,7 +59,7 @@ async def create_demo_user(
 
         password = generate_demo_password()
         hashed = _password_helper.hash(password)
-        user = await demo_repo.create_user(db, email, hashed, display_name)
+        user = await user_repo.create_verified(db, email, hashed, display_name)
         org = await demo_repo.create_org_with_member(
             db, org_name, user.id, is_demo=True, demo_tag=tag,
         )

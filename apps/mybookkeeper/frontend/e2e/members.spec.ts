@@ -1,5 +1,6 @@
 import { test, expect } from "./fixtures/auth";
 import { toasts } from "./fixtures/toasts";
+import { ViewerMember } from "./fixtures/viewer-member";
 
 const RUN_ID = Date.now();
 
@@ -303,53 +304,32 @@ test.describe("Members page", () => {
   // ─── Role Change ─────────────────────────────────────────────────────────────
 
   test.describe("Role management", () => {
-    test("changing a member role via dropdown shows success toast", async ({ authedPage: page, api }) => {
-      const userRes = await api.get("/users/me");
-      const currentUser = await userRes.json();
+    let member: ViewerMember | undefined;
 
-      const orgRes = await api.get("/organizations");
-      const orgs = await orgRes.json();
-      if (!orgs.length) {
-        test.skip();
-        return;
-      }
+    test.beforeAll(async ({ playwright }) => {
+      member = await ViewerMember.join(playwright, `members-${RUN_ID}`);
+    });
 
-      const membersRes = await api.get(`/organizations/${orgs[0].id}/members`);
-      if (!membersRes.ok()) {
-        test.skip();
-        return;
-      }
-      const members = await membersRes.json();
+    test.afterAll(async ({ playwright }) => {
+      await member?.delete(playwright);
+    });
 
-      // Find a non-self member to change role
-      const target = members.find((m: { user_id: string }) => m.user_id !== currentUser.id);
-      if (!target?.user_email) {
-        test.skip();
-        return;
-      }
+    test("changing a member role via dropdown shows success toast and saves it", async ({ authedPage: page, api }) => {
+      if (!member) throw new Error("the second member was not created");
+      const joined = member;
+      const roleOf = (): Promise<string | undefined> => joined.roleIn(api);
 
-      // Find their row and the role select dropdown
-      const memberRow = page.locator("table").first().locator("tbody tr").filter({ hasText: target.user_email });
-      await expect(memberRow).toBeVisible({ timeout: 10000 });
+      const roleSelect = page.getByRole("combobox", { name: `Role for ${joined.name}` });
+      await expect(roleSelect).toHaveValue("viewer", { timeout: 10000 });
 
-      const roleSelect = memberRow.locator("select");
-      if ((await roleSelect.count()) === 0) {
-        test.skip();
-        return;
-      }
+      await roleSelect.selectOption("admin");
+      await expect(toasts(page).getByText(new RegExp(`^Updated .* to admin$`))).toBeVisible({ timeout: 5000 });
+      await expect.poll(roleOf).toBe("admin");
 
-      const currentRole = await roleSelect.inputValue();
-      const newRole = currentRole === "admin" ? "user" : "admin";
-
-      // Change role
-      await roleSelect.selectOption(newRole);
-
-      // Success toast should appear
-      await expect(toasts(page).getByText(new RegExp(`^Updated .* to ${newRole}$`))).toBeVisible({ timeout: 5000 });
-
-      // Restore original role — the first toast may still be showing.
-      await roleSelect.selectOption(currentRole);
-      await expect(toasts(page).getByText(new RegExp(`^Updated .* to ${currentRole}$`))).toBeVisible({ timeout: 5000 });
+      // Restore — the first toast may still be showing.
+      await roleSelect.selectOption("viewer");
+      await expect(toasts(page).getByText(new RegExp(`^Updated .* to viewer$`))).toBeVisible({ timeout: 5000 });
+      await expect.poll(roleOf).toBe("viewer");
     });
   });
 });
