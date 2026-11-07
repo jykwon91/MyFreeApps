@@ -188,6 +188,26 @@ test.describe("Transactions", () => {
       await expect.poll(() => image.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(1);
     });
 
+    test("says so when its source document can't be opened", async ({ page }) => {
+      let fail!: () => void;
+      const held = new Promise<void>((resolve) => { fail = resolve; });
+      await page.route("**/api/documents/*/download", async (route) => {
+        await held;
+        await route.fulfill({ status: 500, body: "storage down" });
+      });
+      await row(page, SEED.flagged.vendor).click();
+      const panel = page.getByRole("dialog", { name: SEED.flagged.vendor });
+      const source = panel.getByRole("button", { name: `Open source document ${SEED.flagged.file_name}`, exact: true });
+
+      await source.click();
+      await expect(source).toHaveAttribute("aria-disabled", "true");
+      fail();
+
+      await expect(page.getByText("I couldn't open the source document. Mind trying again?", { exact: true })).toBeVisible();
+      await expect(page.getByRole("img", { name: "Source document" })).toHaveCount(0);
+      await expect(source).toHaveAttribute("aria-disabled", "false");
+    });
+
     test("a manual transaction has no source document link", async ({ page }) => {
       await row(page, POWER_BILL.vendor).click();
       const panel = page.getByRole("dialog", { name: POWER_BILL.vendor, exact: true });
