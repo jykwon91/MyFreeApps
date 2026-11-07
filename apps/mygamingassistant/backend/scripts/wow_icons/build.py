@@ -3,7 +3,8 @@
     python -m scripts.wow_icons.build
 
 Reads the generated Professions data (run ``scripts.wow_professions.build``
-first) and the gathering guides' node items, looks each id up in the Forever
+first), the gathering guides' node items and the hand-written Cooking guide's
+ingredients, looks each id up in the Forever
 client tables (pinned build, ``scripts/wow_world_map/sources.py``) and writes
 ``frontend/src/games/wow-forever/data/icons/wowIcons.json``::
 
@@ -35,9 +36,12 @@ from scripts.wow_world_map.sources import WAGO_BRANCH, WAGO_BUILD, wago_table
 
 CRAFTING_DIR = WOW_DATA_DIR / "professions" / "crafting"
 GATHERING_DIR = WOW_DATA_DIR / "professions" / "gathering"
+COOKING_FILE = WOW_DATA_DIR / "professions" / "cooking.ts"
 OUT_FILE = WOW_DATA_DIR / "icons" / "wowIcons.json"
 # Hand-written gathering nodes name their item as `itemId: 2447`.
 _NODE_ITEM = re.compile(r"\bitemId:\s*(\d+)")
+# The hand-written Cooking guide names each ingredient as `{ id: 2672, name: "Stringy Wolf Meat" }`.
+_MAT_ITEM = re.compile(r"\{\s*id:\s*(\d+),\s*name:")
 # The comma between two map entries: after `]` (an item) or a digit (a spell), before a quoted id.
 _ENTRY_BREAK = re.compile(r'([\]\d]),"(?=\d)')
 
@@ -50,6 +54,11 @@ def gathering_item_ids(directory: Path = GATHERING_DIR) -> set[int]:
     return ids
 
 
+def cooking_item_ids(path: Path = COOKING_FILE) -> set[int]:
+    """The ingredients the hand-written Cooking guide lists."""
+    return {int(m) for m in _MAT_ITEM.findall(path.read_text(encoding="utf-8"))}
+
+
 def write_icon_map(path: Path, payload: dict[str, Any]) -> None:
     """The map as JSON with one id per line, so a client update's diff shows which icons moved."""
     text = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
@@ -59,7 +68,7 @@ def write_icon_map(path: Path, payload: dict[str, Any]) -> None:
 
 
 def wanted_ids() -> IconIds:
-    ids = IconIds(items=gathering_item_ids())
+    ids = IconIds(items=gathering_item_ids() | cooking_item_ids())
     for path in sorted(CRAFTING_DIR.glob("*.json")):
         ids.update(crafting_file_ids(json.loads(path.read_text(encoding="utf-8"))))
     return ids
