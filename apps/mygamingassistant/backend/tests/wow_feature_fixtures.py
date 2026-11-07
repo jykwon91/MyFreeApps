@@ -167,7 +167,7 @@ HYJAL_QUESTS = FeatureFixture(
             so_that="I can plan my last levels",
             area="leveling_quests",
             feasibility="needs_data",
-            feasibility_note="Mount Hyjal is new in Forever and its quests aren't published yet; the New Player Guide covers the classic zones.",
+            feasibility_note="Mount Hyjal is new in Forever and its quests aren't published yet; the World Map covers the classic zones.",
         ),
     },
     verdict="new",

@@ -112,9 +112,9 @@ MyGamingAssistant, and record each one with the {TOOL_NAME} tool. Always call th
 exactly once.
 
 What the site is: static, pre-built web pages — a World Map with NPCs, trainers, \
-flight paths and walking directions; a New Player Guide; profession guides and \
-crafting routes; Cooking & Fishing; a food picker; Making gold tips; an Item Compare \
-tool; Macros for every class (hover-cast and more); dungeon interiors and boss routes; a Discord raid sign-up bot. \
+flight paths and walking directions; profession leveling guides and crafting routes; \
+Cooking & Fishing; a food picker; Making gold tips; an Item Compare tool; Macros for \
+every class (hover-cast and more); dungeon interiors and boss routes; a Discord raid sign-up bot. \
 There is NO live connection to the game: no character or armory lookup, no realm or \
 server data, no addon. Visitors have no accounts; the browser remembers their class, \
 level and faction.
@@ -159,7 +159,7 @@ an empty-state criterion (what shows when nothing matches). Hostile-faction NPCs
 towns are hidden by default. When the data may differ in Forever, add a criterion that \
 the row carries the label "Classic location — may differ in Forever".
 - area — exactly one: map_travel (World Map, directions, flight paths), \
-leveling_quests (New Player Guide, quests, leveling), professions (crafting and \
+leveling_quests (quests, leveling, XP grinding), professions (crafting and \
 gathering guides), food_consumables (food picker, potions, consumables), gold_economy \
 (Making gold), gear_upgrades (Item Compare, best in slot), class_guides (class pages, \
 macros), dungeons_raids (dungeon interiors, bosses, raid bot), pvp, site_app (anything \

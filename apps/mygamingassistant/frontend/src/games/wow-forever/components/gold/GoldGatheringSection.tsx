@@ -1,4 +1,4 @@
-import GuideSection from "@/games/wow-forever/components/guide/GuideSection";
+import GuideSection from "@/games/wow-forever/components/shared/GuideSection";
 import { GATHERING_TIPS } from "@/games/wow-forever/data/gold/goldTips";
 
 /** The three gathering professions — the steadiest gold while leveling. */

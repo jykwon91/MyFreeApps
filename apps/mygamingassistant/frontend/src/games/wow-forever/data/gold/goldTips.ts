@@ -1,7 +1,7 @@
-import type { ChecklistItem } from "@/games/wow-forever/data/guide/guideTypes";
 import {
   LEVEL_BAND,
   type BandTips,
+  type ChecklistItem,
   type ClassGoldTips,
   type GatheringTip,
   type GoldTip,

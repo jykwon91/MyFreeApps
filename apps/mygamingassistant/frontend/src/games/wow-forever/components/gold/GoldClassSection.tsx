@@ -1,6 +1,6 @@
 import { Select } from "@platform/ui";
 import GoldTipList from "@/games/wow-forever/components/gold/GoldTipList";
-import GuideSection from "@/games/wow-forever/components/guide/GuideSection";
+import GuideSection from "@/games/wow-forever/components/shared/GuideSection";
 import { findClass, WOW_CLASSES, type WowClassId } from "@/games/wow-forever/data/classes";
 import { CLASS_GOLD_TIPS } from "@/games/wow-forever/data/gold/goldTips";
 

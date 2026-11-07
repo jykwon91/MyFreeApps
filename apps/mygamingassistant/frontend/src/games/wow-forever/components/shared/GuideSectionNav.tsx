@@ -1,10 +1,9 @@
-import { GUIDE_SECTIONS } from "@/games/wow-forever/components/guide/guideSections";
-
 interface GuideSectionNavProps {
-  sections?: readonly { id: string; label: string }[];
+  sections: readonly { id: string; label: string }[];
 }
 
-export default function GuideSectionNav({ sections = GUIDE_SECTIONS }: GuideSectionNavProps) {
+/** Jump-link strip rendered at the top of Gold, Professions and similar WoW Forever pages. */
+export default function GuideSectionNav({ sections }: GuideSectionNavProps) {
   return (
     <nav aria-label="Page sections" className="flex flex-wrap gap-2">
       {sections.map((s) => (

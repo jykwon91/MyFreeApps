@@ -7,7 +7,7 @@ interface GuideSectionProps {
   children: ReactNode;
 }
 
-/** One anchored section of the New Player Guide. */
+/** One anchored, titled section used across Gold, Professions and other WoW Forever pages. */
 export default function GuideSection({ id, title, intro, children }: GuideSectionProps) {
   return (
     <section id={id} aria-labelledby={`${id}-heading`} className="space-y-3 scroll-mt-4">

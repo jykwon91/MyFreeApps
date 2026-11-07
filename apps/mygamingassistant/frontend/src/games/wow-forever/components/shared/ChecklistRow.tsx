@@ -1,4 +1,4 @@
-import type { ChecklistItem } from "@/games/wow-forever/data/guide/guideTypes";
+import type { ChecklistItem } from "@/games/wow-forever/data/gold/goldTypes";
 
 interface ChecklistRowProps {
   item: ChecklistItem;

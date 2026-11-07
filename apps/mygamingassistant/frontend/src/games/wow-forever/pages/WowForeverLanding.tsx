@@ -12,7 +12,7 @@ export default function WowForeverLanding() {
     <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
       <WowPageHeader
         title="World of Warcraft: Forever"
-        subtitle="Help for new players and a quick way to check gear upgrades."
+        subtitle="World map with directions, profession leveling guides, gear compare and more."
         backTo="/"
         backLabel="Back to games"
       />

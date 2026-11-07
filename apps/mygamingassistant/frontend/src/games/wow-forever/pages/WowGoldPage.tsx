@@ -6,7 +6,7 @@ import GoldFarmSection from "@/games/wow-forever/components/gold/GoldFarmSection
 import GoldGatheringSection from "@/games/wow-forever/components/gold/GoldGatheringSection";
 import GoldPlanSection from "@/games/wow-forever/components/gold/GoldPlanSection";
 import GoldSellSection from "@/games/wow-forever/components/gold/GoldSellSection";
-import GuideSectionNav from "@/games/wow-forever/components/guide/GuideSectionNav";
+import GuideSectionNav from "@/games/wow-forever/components/shared/GuideSectionNav";
 import NumberField from "@/games/wow-forever/components/shared/NumberField";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import { GOLD_DATA_STATUS } from "@/games/wow-forever/data/gold/goldTips";

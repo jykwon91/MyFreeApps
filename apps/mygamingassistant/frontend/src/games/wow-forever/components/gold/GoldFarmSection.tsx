@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import GoldFarmCard from "@/games/wow-forever/components/gold/GoldFarmCard";
 import PriceStatus from "@/games/wow-forever/components/prices/PriceStatus";
-import GuideSection from "@/games/wow-forever/components/guide/GuideSection";
+import GuideSection from "@/games/wow-forever/components/shared/GuideSection";
 import SegmentedToggle from "@/games/wow-forever/components/shared/SegmentedToggle";
 import {
   FARM_SORT,

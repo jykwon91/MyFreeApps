@@ -27,7 +27,7 @@ describe("game registry", () => {
 
   it("gives each card a tagline", () => {
     expect(getGameTagline({ slug: "cs2", kind: "lineups" })).toMatch(/lineups/i);
-    expect(getGameTagline({ slug: "wow-forever", kind: "companion" })).toMatch(/guide/i);
+    expect(getGameTagline({ slug: "wow-forever", kind: "companion" })).toMatch(/world map|item compare|profession/i);
   });
 });
 
@@ -45,6 +45,7 @@ describe("routing", () => {
 
   it("resolves WoW paths to the WoW pages and lineup games to the map grid", () => {
     expect(matchedPath("/wow-forever")).toBe("/wow-forever");
+    // /guide redirects to /wow-forever — the route still exists (as a Navigate), path resolves.
     expect(matchedPath("/wow-forever/guide")).toBe("/wow-forever/guide");
     expect(matchedPath("/wow-forever/compare")).toBe("/wow-forever/compare");
     expect(matchedPath("/wow-forever/map")).toBe("/wow-forever/map");
