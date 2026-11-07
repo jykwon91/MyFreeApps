@@ -317,6 +317,14 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   shared with server status; default US).
 - Auction house page (`/wow-forever/auction-house`, `?q=` search, replace-history): look up any item;
   filter/sort is the pure `prices/auctionSearch.ts` (50 browse / 200 search cap).
+- Material prices fill in automatically (`CraftPriceField` shows the price as
+  its value, labelled "Auction house"). An item with no auction price is
+  worked out in `crafting/derivedPrices.ts` — an essence from the other half of
+  its pair, or an item another profession makes from its reagents (`makers` in
+  the generated crafting JSON, `maker_records` in `build.py`), only when every
+  reagent has a price. Precedence: yours > auction > worked out. Still nothing
+  = "Not on the auction house yet", never a request to type one. Route lines
+  show each material's unit price from the same price book as the totals.
 - Typed prices are optional overrides (`mga.wowForever.professions.priceOverrides.v2`,
   priced professions only); the pre-auction key `...prices.v1` is removed on read.
 - Tests stub the hook with `src/test/auctionPricesStub.ts`; E2E stubs

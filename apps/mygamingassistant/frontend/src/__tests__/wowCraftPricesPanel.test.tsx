@@ -12,6 +12,7 @@ import type { CraftingData } from "@/games/wow-forever/hooks/useCraftingData";
 import { LEGACY_PRICES_STORAGE_KEY, PRICE_OVERRIDES_STORAGE_KEY } from "@/games/wow-forever/hooks/useCraftPrices";
 import { FACTION } from "@/games/wow-forever/types/worldMap";
 import type { CraftingFile, CraftingProfession, TrainerSkills } from "@/games/wow-forever/types/crafting";
+import { NOT_SOLD_YET } from "@/games/wow-forever/crafting/autoPriceText";
 import { priceList, pricesFailed, pricesReady } from "@/test/auctionPricesStub";
 
 const usePricesQuery = vi.hoisted(() => vi.fn());
@@ -33,6 +34,7 @@ function dataFor(json: unknown, profession: CraftingProfession): CraftingData {
 const ENCHANTING = dataFor(enchantingJson, "enchanting");
 const ALCHEMY = dataFor(alchemyJson, "alchemy");
 const STRANGE_DUST = 10940;
+const LESSER_ASTRAL = 10998;
 // Copper Rod + Strange Dust price the first rows: Runed Copper Rod, then Dust to Motes. Nothing else has a price.
 const FIRST_ROWS = priceList([
   [STRANGE_DUST, 60, "Strange Dust"],
@@ -68,7 +70,7 @@ describe("auction prices on a crafting guide", () => {
     expect(routeSection().getByText("Cheapest at auction prices")).toBeInTheDocument();
     // The rows after the first ones need materials this stub has no price for.
     expect(routeSection().getByText(/^Estimated cost to reach skill \d+: ~/)).toBeInTheDocument();
-    expect(routeSection().getByText(/^Auction prices for 2 of \d+ materials\.$/)).toBeInTheDocument();
+    expect(routeSection().getByText(/^Priced \d+ of \d+ materials automatically\.$/)).toBeInTheDocument();
     const credit = screen.getByTestId("price-credit");
     expect(within(credit).getByRole("link", { name: "TradeSkillMaster" })).toHaveAttribute("href", "https://www.tradeskillmaster.com");
     expect(credit).toHaveTextContent(/Prices from TradeSkillMaster · updated/);
@@ -77,14 +79,39 @@ describe("auction prices on a crafting guide", () => {
     expect(routeSection().getByText("Default route")).toBeInTheDocument();
   });
 
-  it("shows each material's auction price, and says when there is none", async () => {
+  it("fills each material in with its auction price, and says when nobody sells one yet", async () => {
     renderSections();
     await openPanel();
     const dust = screen.getByLabelText("Strange Dust");
-    expect(dust).toHaveValue("");
-    expect(dust).toHaveAttribute("placeholder", "60c");
-    expect(screen.getByText("Auction price 60c")).toBeInTheDocument();
-    expect(screen.getAllByText("No auction price").length).toBeGreaterThan(0);
+    expect(dust).toHaveValue("60c");
+    expect(dust).not.toHaveAttribute("placeholder");
+    expect(within(dust.parentElement as HTMLElement).getByText("Auction house")).toBeInTheDocument();
+    expect(screen.getAllByText(NOT_SOLD_YET).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/e\.g\. 1g/)).toBeNull();
+  });
+
+  it("works out a price nobody sells yet: an essence from its pair, a rod from its materials", async () => {
+    usePricesQuery.mockReturnValue(
+      pricesReady(priceList([
+        [STRANGE_DUST, 60, "Strange Dust"],
+        [LESSER_ASTRAL, 200, "Lesser Astral Essence"],
+        [3577, 1000, "Gold Bar"],
+        [3478, 30, "Coarse Grinding Stone"],
+      ])),
+    );
+    renderSections();
+    await openPanel();
+    const greater = screen.getByLabelText("Greater Astral Essence");
+    expect(greater).toHaveValue("6s");
+    expect(within(greater.parentElement as HTMLElement).getByText("From Lesser Astral Essence")).toBeInTheDocument();
+    const rod = screen.getByLabelText("Golden Rod");
+    expect(rod).toHaveValue("10s 60c");
+    expect(within(rod.parentElement as HTMLElement).getByText("From its materials")).toBeInTheDocument();
+  });
+
+  it("shows what one of each material costs on the route's lines", () => {
+    renderSections();
+    expect(routeSection().getAllByText(/ · 60c each$/).length).toBeGreaterThan(0);
   });
 
   it("keeps a price you type as an override, saved apart from the auction prices", async () => {
@@ -92,10 +119,28 @@ describe("auction prices on a crafting guide", () => {
     await openPanel();
     const dust = screen.getByLabelText("Strange Dust");
     fireEvent.change(dust, { target: { value: "1g 20s" } });
-    expect(screen.getByText(/^= 1g 20s · yours/)).toBeInTheDocument();
+    expect(screen.getByText("= 1g 20s · your price")).toBeInTheDocument();
     fireEvent.blur(dust);
     expect(JSON.parse(window.localStorage.getItem(PRICE_OVERRIDES_STORAGE_KEY) ?? "{}")).toEqual({ "10940": 12000 });
     expect(routeSection().getByText(/1 you set yourself/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Use auction price (60c)" }));
+    expect(dust).toHaveValue("60c");
+    expect(JSON.parse(window.localStorage.getItem(PRICE_OVERRIDES_STORAGE_KEY) ?? "{}")).toEqual({});
+    expect(routeSection().queryByText(/you set yourself/)).toBeNull();
+  });
+
+  it("reads a bare number as silver, and emptying the field goes back to the auction price", async () => {
+    window.localStorage.setItem(PRICE_OVERRIDES_STORAGE_KEY, JSON.stringify({ "10940": 30 }));
+    renderSections();
+    await openPanel();
+    const dust = screen.getByLabelText("Strange Dust");
+    fireEvent.change(dust, { target: { value: "35" } });
+    expect(screen.getByText("= 35s · your price")).toBeInTheDocument();
+    fireEvent.change(dust, { target: { value: "" } });
+    fireEvent.blur(dust);
+    expect(dust).toHaveValue("60c");
+    expect(JSON.parse(window.localStorage.getItem(PRICE_OVERRIDES_STORAGE_KEY) ?? "{}")).toEqual({});
   });
 
   it("flags a price it can't read", async () => {
@@ -113,7 +158,7 @@ describe("auction prices on a crafting guide", () => {
     await openPanel();
     expect(screen.getByLabelText("Strange Dust")).toHaveValue("30c");
     await userEvent.click(screen.getByRole("button", { name: "Use auction prices for all" }));
-    expect(screen.getByLabelText("Strange Dust")).toHaveValue("");
+    expect(screen.getByLabelText("Strange Dust")).toHaveValue("60c");
     await userEvent.click(screen.getByRole("button", { name: "Undo" }));
     expect(screen.getByLabelText("Strange Dust")).toHaveValue("30c");
   });

@@ -5,6 +5,7 @@ import CraftRankRow from "@/games/wow-forever/components/crafting/CraftRankRow";
 import CraftRouteRow from "@/games/wow-forever/components/crafting/CraftRouteRow";
 import type { CraftPlace } from "@/games/wow-forever/components/crafting/CraftLearnLine";
 import { CRAFT_ROW_GRID, type RowState } from "@/games/wow-forever/components/crafting/craftRowStyles";
+import type { PriceBook } from "@/games/wow-forever/crafting/matPrices";
 import type { CraftingRank } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
 import type { ResolvedRouteEntry, TrainerSkills } from "@/games/wow-forever/types/crafting";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
@@ -24,6 +25,8 @@ interface CraftRouteListProps {
   specNames: ReadonlyMap<number, string>;
   /** A line under each recipe saying what its item does. */
   showEffects: boolean;
+  /** Prices each material line ("60c each"); null = no prices. */
+  priceBook: PriceBook | null;
 }
 
 function stateOf(index: number, current: number | null): RowState {
@@ -43,6 +46,7 @@ export default function CraftRouteList({
   fork,
   specNames,
   showEffects,
+  priceBook,
 }: CraftRouteListProps) {
   const tools = new Set(entries.flatMap((e) => (e.kind === "craft" && e.recipe.tool ? [e.recipe.tool.id] : [])));
   const pending = [...ranks];
@@ -70,6 +74,7 @@ export default function CraftRouteList({
           place={place}
           specNames={specNames}
           showEffect={showEffects}
+          priceBook={priceBook}
         />,
       );
       return;
@@ -84,6 +89,7 @@ export default function CraftRouteList({
         showEffect={showEffects}
         professionLabel={professionLabel}
         place={place}
+        priceBook={priceBook}
       />,
     );
   });

@@ -8,6 +8,7 @@ import CraftSpecChip from "@/games/wow-forever/components/crafting/CraftSpecChip
 import SourceUnknownChip from "@/games/wow-forever/components/crafting/SourceUnknownChip";
 import { rowStateClass, type RowState } from "@/games/wow-forever/components/crafting/craftRowStyles";
 import { learnAt, sourceUnknown } from "@/games/wow-forever/crafting/craftRoute";
+import type { PriceBook } from "@/games/wow-forever/crafting/matPrices";
 import type { CraftRecipe, CraftRouteOptions, TrainerSkills } from "@/games/wow-forever/types/crafting";
 
 interface CraftOptionsRowProps {
@@ -21,10 +22,21 @@ interface CraftOptionsRowProps {
   specNames: ReadonlyMap<number, string>;
   /** Say what each item does (Engineering). */
   showEffect: boolean;
+  priceBook: PriceBook | null;
 }
 
 /** The end of the route where several recipes could work — each with its skill, materials and source. */
-export default function CraftOptionsRow({ step, recipes, trainerSkills, state, professionLabel, place, specNames, showEffect }: CraftOptionsRowProps) {
+export default function CraftOptionsRow({
+  step,
+  recipes,
+  trainerSkills,
+  state,
+  professionLabel,
+  place,
+  specNames,
+  showEffect,
+  priceBook,
+}: CraftOptionsRowProps) {
   return (
     <li
       id={`craft-${step.from}`}
@@ -55,7 +67,7 @@ export default function CraftOptionsRow({ step, recipes, trainerSkills, state, p
             {showEffect ? <CraftEffectLine recipe={recipe} file={place.file} professionLabel={professionLabel} /> : null}
             <p className="text-xs text-muted-foreground">{step.options[i].detail}</p>
             <CraftColorsLine recipe={recipe} />
-            <CraftReagents reagents={recipe.reagents} place={place} professionLabel={professionLabel} />
+            <CraftReagents reagents={recipe.reagents} place={place} professionLabel={professionLabel} priceBook={priceBook} />
             <CraftLearnLine learn={learnAt(recipe, trainerSkills)} professionLabel={professionLabel} place={place} />
           </li>
         ))}

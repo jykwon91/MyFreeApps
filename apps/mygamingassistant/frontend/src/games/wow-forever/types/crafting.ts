@@ -1,4 +1,5 @@
 import type { Confidence } from "@/games/wow-forever/data/professions/professionTypes";
+import type { MakerRecipe } from "@/games/wow-forever/types/makerRecipe";
 
 export const CRAFTING_PROFESSION = { tailoring: "tailoring", enchanting: "enchanting", alchemy: "alchemy", blacksmithing: "blacksmithing", leatherworking: "leatherworking", engineering: "engineering", firstaid: "firstaid" } as const;
 export type CraftingProfession = (typeof CRAFTING_PROFESSION)[keyof typeof CRAFTING_PROFESSION];
@@ -67,6 +68,8 @@ export interface CraftingFile {
   smelting?: SmeltRecipe[];
   /** The profession's specializations: Forever client names, Classic quests. */
   specs?: CraftSpecRecord[];
+  /** Item id -> how another profession makes it (and its reagents in turn), to price it from its materials. */
+  makers?: Record<string, MakerRecipe>;
 }
 
 /** A Mining smelt; `skill` = the Mining skill to learn it (1 = comes with Mining; trainer ones Classic, moved as Forever moved the recipe). */

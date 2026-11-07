@@ -137,7 +137,7 @@ describe("Professions page", () => {
     expect(within(thread).getByText("Sold in most towns")).toBeInTheDocument();
     // A step made many times says how many of each material it takes in all.
     expect(within(thread).getByText(/^\d+×$/)).toBeInTheDocument();
-    expect(within(thread).getByText("· 1 each")).toBeInTheDocument();
+    expect(within(thread).getByText(/· 1 per craft/)).toBeInTheDocument();
     unmount();
 
     renderAt("/wow-forever/professions?p=cooking");
