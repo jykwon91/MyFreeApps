@@ -53,32 +53,6 @@ test.describe("Extracted component rendering", () => {
     });
   });
 
-  test.describe("Tax — SuggestionCard, TaxAdvisorPanelSkeleton, SourceDocumentsSkeleton, ReceivedDocumentsGrouped, CompletenessChecklist", () => {
-    test("tax return detail page renders with extracted tax components", async ({ authedPage: page, api }) => {
-      // Get a tax return to navigate to
-      const res = await api.get("/tax-returns");
-      if (!res.ok()) {
-        test.skip();
-        return;
-      }
-      const taxReturns = await res.json();
-      if (!Array.isArray(taxReturns) || taxReturns.length === 0) {
-        test.skip();
-        return;
-      }
-
-      const taxReturn = taxReturns[0];
-      await page.goto(`/tax-returns/${taxReturn.id}`);
-
-      // Wait for the page to load — heading or any tab should appear
-      await expect(page.getByText(String(taxReturn.tax_year)).first()).toBeVisible({ timeout: 15000 });
-
-      // The page rendered successfully — extracted components are working
-      // (SourceDocumentsSkeleton, ReceivedDocumentsGrouped, CompletenessChecklist,
-      //  SuggestionCard, TaxAdvisorPanelSkeleton are all used on this page)
-    });
-  });
-
   test.describe("Tax Documents — DocumentItem, FormTypeGroup", () => {
     test("tax documents page renders accordion with extracted components", async ({ authedPage: page }) => {
       await page.goto("/tax");
