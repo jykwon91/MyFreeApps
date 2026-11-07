@@ -203,6 +203,7 @@ async def send_receipt(
     period_start: _dt.date,
     period_end: _dt.date,
     payment_method: str | None,
+    today: _dt.date,
 ) -> ReceiptSendResult:
     """Generate, file and email a rent receipt. Never emails the tenant twice.
 
@@ -266,7 +267,7 @@ async def send_receipt(
     try:
         pdf_bytes = generate_receipt_pdf(ReceiptData(
             receipt_number=receipt_number,
-            receipt_date=_dt.date.today(),
+            receipt_date=today,
             payer_name=ctx.tenant_name or "Tenant",
             payer_email=ctx.tenant_email,
             landlord_name=ctx.landlord_name,

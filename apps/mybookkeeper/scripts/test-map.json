@@ -1113,6 +1113,7 @@
         "test_receipt_pdf_service.py",
         "test_receipt_sequence_repo.py",
         "test_receipt_routes.py",
+        "test_receipt_client_local_date.py",
         "test_receipt_list_service.py",
         "test_receipt_readiness_matches_api_client.py",
         "test_receipt_send_service.py",

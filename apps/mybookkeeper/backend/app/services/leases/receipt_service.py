@@ -233,6 +233,7 @@ async def preview_receipt_pdf(
     period_start: _dt.date,
     period_end: _dt.date,
     payment_method: str | None,
+    today: _dt.date,
 ) -> tuple[bytes, str]:
     """Generate a preview PDF without uploading or sending.
 
@@ -279,7 +280,7 @@ async def preview_receipt_pdf(
 
     receipt_data = ReceiptData(
         receipt_number="R-PREVIEW",
-        receipt_date=_dt.date.today(),
+        receipt_date=today,
         payer_name=applicant.legal_name or "Tenant",
         payer_email=resolve_tenant_email(applicant.contact_email, inquirer_email),
         landlord_name=landlord_name,

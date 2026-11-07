@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import SendReceiptDialog from "@/app/features/receipts/SendReceiptDialog";
 import type { PendingReceipt } from "@mybookkeeper/api-client/types/lease/pending-receipt";
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 
 const mockSendReceipt = vi.fn();
 
@@ -231,6 +232,7 @@ describe("SendReceiptDialog", () => {
     const calledUrl = mockApiGet.mock.calls[0][0] as string;
     expect(calledUrl).toContain("period_start=2026-05-10");
     expect(calledUrl).toContain("period_end=2026-06-09");
+    expect(calledUrl).toContain(`today=${localToday()}`);
 
     const iframe = screen.getByTestId("receipt-preview-iframe") as HTMLIFrameElement;
     expect(iframe.src).toBe("blob:fake-pdf-url");

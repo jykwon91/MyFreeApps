@@ -146,10 +146,13 @@ class TestListPendingReceipts:
 # POST /rent-receipts/{transaction_id}/send
 # ---------------------------------------------------------------------------
 
+_TODAY = datetime.now(timezone.utc).date().isoformat()
+
 _SEND_BODY = {
     "period_start": "2026-05-01",
     "period_end": "2026-05-31",
     "payment_method": "check",
+    "today": _TODAY,
 }
 
 
@@ -298,6 +301,7 @@ class TestSendReceipt:
                 "period_start": "2026-05-31",
                 "period_end": "2026-05-01",
                 "payment_method": None,
+                "today": _TODAY,
             },
         )
         assert resp.status_code == 422
@@ -368,6 +372,7 @@ class TestPreviewReceipt:
                 params={
                     "period_start": "2026-05-01",
                     "period_end": "2026-05-31",
+                    "today": _TODAY,
                 },
             )
         assert resp.status_code == 200
@@ -386,6 +391,7 @@ class TestPreviewReceipt:
                 params={
                     "period_start": "2026-05-01",
                     "period_end": "2026-05-31",
+                    "today": _TODAY,
                 },
             )
         assert resp.status_code == 422
@@ -399,7 +405,7 @@ class TestPreviewReceipt:
         ):
             resp = client.get(
                 f"/rent-receipts/preview/{txn_id}",
-                params={"period_start": "2026-05-01", "period_end": "2026-05-31"},
+                params={"period_start": "2026-05-01", "period_end": "2026-05-31", "today": _TODAY},
             )
         assert resp.status_code == 422
         assert resp.json()["detail"] == "teammate's tenant"
@@ -416,6 +422,7 @@ class TestPreviewReceipt:
                 params={
                     "period_start": "2026-05-01",
                     "period_end": "2026-05-31",
+                    "today": _TODAY,
                 },
             )
         assert resp.status_code == 404
@@ -427,7 +434,7 @@ class TestPreviewReceipt:
         ) as preview:
             resp = client.get(
                 f"/rent-receipts/preview/{uuid.uuid4()}",
-                params={"period_start": "2026-05-31", "period_end": "2026-05-01"},
+                params={"period_start": "2026-05-31", "period_end": "2026-05-01", "today": _TODAY},
             )
         assert resp.status_code == 422
         preview.assert_not_awaited()
