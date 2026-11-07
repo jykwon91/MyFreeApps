@@ -17,7 +17,7 @@ export default function PickedItemSummary({ record, onChange, changeButtonRef }:
     <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/20 px-3 py-2">
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold">
-          <ItemNameLink itemId={record.id} name={record.name} className={QUALITY_TEXT_CLASSES[record.quality]} />{" "}
+          <ItemNameLink itemId={record.id} name={record.name} item={record} className={QUALITY_TEXT_CLASSES[record.quality]} />{" "}
           <span className="text-xs font-normal text-muted-foreground">({QUALITY_LABELS[record.quality]})</span>
         </p>
         <p className="text-xs text-muted-foreground">{describeClientItem(record)}</p>

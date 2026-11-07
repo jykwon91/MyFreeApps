@@ -366,6 +366,15 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `/wow-forever/map?to=pt:...&dir=1` (vendors, mobs, quest givers, dungeon doors).
   Item names on Best gear and Item Compare link here (`ItemNameLink`, router
   state `{ from }` so Back returns to that page).
+- **Item tooltip** (`ItemNameLink` → `ItemTooltip`, `hooks/useHoverTooltip.ts`):
+  mouse hover (150 ms) or keyboard focus (`:focus-visible`) shows
+  `ItemStatsBlock` in a `<body>` portal placed by `@floating-ui/react-dom`
+  (above, flipped below at the edge); leave / blur / Escape hide it. Touch and
+  clicks never open it — a tap only navigates. Data: the page's in-memory
+  `ClientItem` when it has one (pass `item` — Best gear, BiS lists, Compare's
+  picked item, the item finder), else only the item's Forever shard
+  (`lib/itemPages/itemTooltipLoader.ts`, cached per shard). No vendor price in
+  the tooltip; the bind line's place is held while the shard loads.
 - A Classic item no Forever client has shown yet (`classic/unseen.json`) says
   so — never "doesn't exist" — and an unknown id says "not found"; both offer
   the compare page's name search (`ItemFinder`, `searchItems`).
