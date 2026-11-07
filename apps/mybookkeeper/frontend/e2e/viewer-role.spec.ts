@@ -10,6 +10,7 @@
  * Tests that depend on UI changes (viewer option in select) gracefully skip
  * when the feature is not yet deployed to the running frontend instance.
  */
+import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures/auth";
 
 const RUN_ID = Date.now();
@@ -395,6 +396,15 @@ async function mockViewerRole(
   });
 }
 
+// Pages render only after organizations load. Wait for the heading and the
+// "Viewer" label so absence checks run against the mocked role, not the skeleton.
+// Call mockViewerRole first.
+async function openAsViewer(page: Page, path: string, heading: string): Promise<void> {
+  await page.goto(path);
+  await expect(page.getByRole("heading", { name: heading })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText("Viewer", { exact: true })).toBeVisible();
+}
+
 test.describe("Viewer role — write operation enforcement (UI)", () => {
   test("Transactions page hides Add Transaction affordance when role is viewer", async ({
     authedPage: page,
@@ -422,46 +432,25 @@ test.describe("Viewer role — write operation enforcement (UI)", () => {
 
   test("Documents page hides upload zone when role is viewer", async ({ authedPage: page }) => {
     await mockViewerRole(page);
-    await page.goto("/documents");
-    await page.waitForLoadState("domcontentloaded");
-
-    // The upload zone is gated with `{canWrite ? <DocumentUploadZone /> : null}`.
-    // It should not render for viewers. Detect by the drag-and-drop affordance text.
-    const dropZone = page.getByText(/drag.*drop|upload documents/i).first();
-    await expect(dropZone).not.toBeVisible({ timeout: 5000 });
+    await openAsViewer(page, "/documents", "Documents");
+    await expect(page.getByPlaceholder("Search by file name...")).toBeVisible();
+    await expect(page.getByText(/drag and drop a file/i)).toHaveCount(0);
+    await expect(page.locator("input[type='file']")).toHaveCount(0);
   });
 
   test("Properties page hides create form when role is viewer", async ({ authedPage: page }) => {
     await mockViewerRole(page);
-    await page.goto("/properties");
-    await page.waitForLoadState("domcontentloaded");
-
-    // The create form section (labelled "Property name" input) is gated on canWrite.
-    // Expect no input for creating a new property.
-    const propertyNameInput = page
-      .getByRole("textbox", { name: /property name/i })
-      .first();
-    await expect(propertyNameInput).not.toBeVisible({ timeout: 5000 });
+    await openAsViewer(page, "/properties", "Properties");
+    await expect(page.getByRole("textbox", { name: /property name/i })).toHaveCount(0);
   });
 
   test("viewer can still navigate to read pages without being blocked", async ({
     authedPage: page,
   }) => {
     await mockViewerRole(page);
-
-    // Dashboard
-    await page.goto("/");
-    await page.waitForLoadState("domcontentloaded");
-
-    // Transactions
-    await page.goto("/transactions");
-    await expect(page.getByRole("heading", { name: "Transactions" })).toBeVisible({
-      timeout: 15000,
-    });
-
-    // Documents
-    await page.goto("/documents");
-    await page.waitForLoadState("domcontentloaded");
+    await openAsViewer(page, "/", "Dashboard");
+    await openAsViewer(page, "/transactions", "Transactions");
+    await openAsViewer(page, "/documents", "Documents");
 
     // No redirects to login, no error page
     expect(page.url()).not.toContain("/login");
