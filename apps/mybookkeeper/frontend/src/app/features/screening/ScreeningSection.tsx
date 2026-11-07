@@ -43,14 +43,15 @@ function ScreeningSectionSkeleton() {
  * grid, pending panel, and results list.
  *
  * Flow:
- *   1. Fetch eligibility — not eligible → show gate with missing-field list.
- *   2. Eligible + has_pending → show pending panel (with upload CTA for writers).
+ *   1. A pending screening → show pending panel (upload CTA for writers), whatever
+ *      eligibility says: eligibility only gates starting a new screening.
+ *   2. Not eligible → show gate with missing-field list.
  *   3. Eligible + no pending → show provider grid and upload button (writers only —
  *      readers see "no screening initiated yet" placeholder). Opening a provider
  *      doesn't create a pending result, so this is the usual way to reach the upload.
  *   4. After grid action: results list appears below (always visible when results exist).
  *
- * Results list is always shown when results exist, regardless of current state.
+ * Completed results list below whatever state is shown above (or a retry if they fail to load).
  * This lets the host see historical results while a new one is pending.
  */
 export default function ScreeningSection({ applicantId, canWrite, reports, openWindow }: ScreeningSectionProps) {
@@ -82,8 +83,15 @@ export default function ScreeningSection({ applicantId, canWrite, reports, openW
       data-testid="screening-section-content"
       className="space-y-4"
     >
-      {/* Eligibility error — degraded gracefully */}
-      {isEligibilityError ? (
+      {/* A screening already started stays reachable even if the applicant
+          has since lost the contact details needed to start a new one. */}
+      {pendingResult ? (
+        <ScreeningPendingPanel
+          pendingResult={pendingResult}
+          onUploadClick={() => setUploadModalOpen(true)}
+          canWrite={canWrite}
+        />
+      ) : isEligibilityError ? (
         <p
           className="text-xs text-muted-foreground italic"
           data-testid="screening-eligibility-error"
@@ -91,17 +99,9 @@ export default function ScreeningSection({ applicantId, canWrite, reports, openW
           I couldn't check screening eligibility. Please refresh the page.
         </p>
       ) : eligibility && !eligibility.eligible ? (
-        /* Not eligible — show gate */
         <ScreeningEligibilityGate eligibility={eligibility} />
       ) : eligibility?.eligible ? (
-        /* Eligible — show pending panel or provider grid */
-        pendingResult ? (
-          <ScreeningPendingPanel
-            pendingResult={pendingResult}
-            onUploadClick={() => setUploadModalOpen(true)}
-            canWrite={canWrite}
-          />
-        ) : canWrite ? (
+        canWrite ? (
           <div className="space-y-3">
             <ScreeningProviderGrid
               applicantId={applicantId}
@@ -130,7 +130,7 @@ export default function ScreeningSection({ applicantId, canWrite, reports, openW
         )
       ) : null}
 
-      {/* Results list — always shown when completed results exist */}
+      {/* Completed results, or a retry if they failed to load */}
       {isResultsError ? (
         <div className="text-xs text-muted-foreground italic flex items-center gap-3">
           <span>I couldn't load the screening history.</span>

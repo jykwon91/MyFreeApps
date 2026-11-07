@@ -12,6 +12,7 @@ export default function ApplicantScreening({ applicant }: { applicant: Applicant
   const canWrite = useCanWrite();
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const results = applicant.screening_results;
+  const completedResults = results.filter((result) => result.status !== "pending");
 
   return (
     <InquirySection title="Screening">
@@ -21,7 +22,7 @@ export default function ApplicantScreening({ applicant }: { applicant: Applicant
       ))}
       {canWrite ? (
         <>
-          <ScreeningActions applicantId={applicant.id} hasResults={results.length > 0} onUpload={() => setIsUploadOpen(true)} />
+          <ScreeningActions applicantId={applicant.id} hasPending={completedResults.length < results.length} hasResults={completedResults.length > 0} onUpload={() => setIsUploadOpen(true)} />
           <ScreeningUploadSheet applicantId={applicant.id} isOpen={isUploadOpen} onClose={() => setIsUploadOpen(false)} />
         </>
       ) : null}

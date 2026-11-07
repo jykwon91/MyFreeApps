@@ -8,16 +8,33 @@ import ScreeningProviders from "./ScreeningProviders";
 
 export default function ScreeningActions({
   applicantId,
+  hasPending,
   hasResults,
   onUpload,
 }: {
   applicantId: string;
+  hasPending: boolean;
   hasResults: boolean;
   onUpload: () => void;
 }) {
   const { colors, fontSize } = useTheme();
-  const { data: eligibility, error, isLoading, refetch } = useGetScreeningEligibilityQuery(applicantId);
+  const { data: eligibility, error, isLoading, refetch } = useGetScreeningEligibilityQuery(applicantId, { skip: hasPending });
+  const uploadButton = (
+    <LoadingButton onPress={onUpload} variant="ghost">
+      {hasResults ? SCREENING_MESSAGES.uploadAnother : SCREENING_MESSAGES.upload}
+    </LoadingButton>
+  );
 
+  // A screening already started stays uploadable even if the applicant has
+  // since lost the contact details needed to start a new one.
+  if (hasPending || eligibility?.has_pending) {
+    return (
+      <>
+        <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>{SCREENING_MESSAGES.waitingOnReport}</Text>
+        {uploadButton}
+      </>
+    );
+  }
   if (isLoading) return <Skeleton height={48} />;
   if (error || !eligibility) {
     return (
@@ -39,18 +56,14 @@ export default function ScreeningActions({
   }
   return (
     <>
-      {eligibility.has_pending ? (
-        <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>{SCREENING_MESSAGES.waitingOnReport}</Text>
-      ) : hasResults ? (
+      {hasResults ? (
         <CollapsibleSection title={SCREENING_MESSAGES.runAnother}>
           <ScreeningProviders applicantId={applicantId} />
         </CollapsibleSection>
       ) : (
         <ScreeningProviders applicantId={applicantId} />
       )}
-      <LoadingButton onPress={onUpload} variant="ghost">
-        {hasResults ? SCREENING_MESSAGES.uploadAnother : SCREENING_MESSAGES.upload}
-      </LoadingButton>
+      {uploadButton}
     </>
   );
 }

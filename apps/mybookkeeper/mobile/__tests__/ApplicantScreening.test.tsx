@@ -177,6 +177,31 @@ describe("screening on the applicant page", () => {
       expect(screen.queryByRole("button", { name: "Open KeyCheck" })).toBeNull();
     });
 
+    it("keeps a started screening's upload after they stop being eligible", async () => {
+      const server = startApplicantServer([anApplicant()]);
+      server.eligibility = { eligible: false, missing_fields: ["Contact method"], has_pending: true };
+      await renderScreen();
+      expect(await screen.findByText("Waiting on a report. Have it? Upload it.")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Upload a result" })).toBeTruthy();
+      expect(screen.queryByText("I need a few more details before screening.")).toBeNull();
+      expect(screen.queryByRole("button", { name: "Open KeyCheck" })).toBeNull();
+    });
+
+    it("offers the upload for a started screening even when the check fails", async () => {
+      const server = startApplicantServer([anApplicant({
+        screening_results: [{
+          id: "s1", applicant_id: "a1", provider: "keycheck", status: "pending", has_report: false,
+          notes: null, requested_at: "2026-11-01T12:00:00Z", completed_at: null, uploaded_at: "2026-11-01T12:00:00Z",
+          uploaded_by_user_id: "u1", created_at: "2026-11-01T12:00:00Z",
+        }],
+      })]);
+      server.eligibilityFailure = 500;
+      await renderScreen();
+      expect(await screen.findByText("Waiting on a report. Have it? Upload it.")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Upload a result" })).toBeTruthy();
+      expect(screen.queryByText("I couldn't check if screening is ready.")).toBeNull();
+    });
+
     it("explains offline, and tries again", async () => {
       const server = startApplicantServer([anApplicant()]);
       await renderScreen();

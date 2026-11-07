@@ -140,7 +140,7 @@ test.describe("Applicants frontend (PR 3.1b)", () => {
       await expect(page.getByTestId("sensitive-vehicle")).toHaveText("Toyota Camry 2020");
 
       // Screening / references / video-call note rows render at least one item each.
-      await expect(page.getByTestId("screening-list")).toBeVisible();
+      await expect(page.getByTestId("screening-pending-panel")).toBeVisible();
       await expect(page.getByTestId("references-list")).toBeVisible();
       await expect(page.getByTestId("notes-list")).toBeVisible();
 
