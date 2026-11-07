@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures/auth";
+import { createProperty, deleteProperty } from "./fixtures/seed-data";
 
 const STORAGE_KEY = "mbk:selectedYear";
 const CURRENT_YEAR = new Date().getFullYear();
@@ -337,17 +338,21 @@ test.describe("Dashboard Year Filter", () => {
       // unfiltered /summary/years endpoint and must stay complete.
       const years = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2];
       const createdIds: string[] = [];
+      // Bulk approve only approves transactions assigned to a property.
+      const property = await createProperty(api, { name: `E2E Year Filter ${Date.now()}` });
 
       const cleanup = async () => {
         for (const id of createdIds) {
           await api.delete(`/transactions/${id}`).catch(() => {});
         }
+        await deleteProperty(api, property.id);
       };
 
       for (const y of years) {
         const res = await api.post("/transactions", {
           data: {
             transaction_date: `${y}-06-15`,
+            property_id: property.id,
             vendor: `E2E Year ${y}`,
             amount: "123.45",
             transaction_type: "income",
@@ -369,6 +374,7 @@ test.describe("Dashboard Year Filter", () => {
           data: { ids: createdIds },
         });
         expect(approveRes.ok()).toBe(true);
+        expect(await approveRes.json()).toEqual({ approved: years.length, skipped: 0 });
 
         // Reload the dashboard so the year dropdown reflects the seeded data.
         await page.goto("/");
