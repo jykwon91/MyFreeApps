@@ -888,14 +888,14 @@ _TODAY_GET_ROUTES = [
     "/utility-plans/renewal-alerts",
     "/utility-plans/rate-comparison",
     "/utility-plans/offers",
-    f"/utility-plans/{PLAN_ID}",
+    "/utility-plans/{plan_id}",
 ]
 
 
 class TestTodayQueryParam:
     @pytest.mark.parametrize("path", _TODAY_GET_ROUTES)
     def test_missing_today_returns_422(self, client: TestClient, path: str) -> None:
-        assert client.get(path).status_code == 422
+        assert client.get(path.format(plan_id=PLAN_ID)).status_code == 422
 
     @pytest.mark.parametrize("path", _TODAY_GET_ROUTES)
     @pytest.mark.parametrize("offset_days", [-3, 3])
@@ -903,7 +903,8 @@ class TestTodayQueryParam:
         self, client: TestClient, path: str, offset_days: int,
     ) -> None:
         off = TODAY + _dt.timedelta(days=offset_days)
-        assert client.get(path, params={"today": off.isoformat()}).status_code == 422
+        response = client.get(path.format(plan_id=PLAN_ID), params={"today": off.isoformat()})
+        assert response.status_code == 422
 
     def test_renewal_alerts_receives_today_as_a_date(self, client: TestClient) -> None:
         ahead = TODAY + _dt.timedelta(days=1)
