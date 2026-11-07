@@ -84,8 +84,8 @@ async function cleanupTestData(token: string, orgId: string): Promise<void> {
   try {
     const res = await fetch(`${BACKEND_URL}/documents`, { headers });
     if (res.ok) {
-      const docs = (await res.json()) as Array<{ id: string; file_name: string }>;
-      const e2e = docs.filter((d) => d.file_name === "plumber-invoice.pdf");
+      const docs = (await res.json()) as Array<{ id: string; file_name: string | null }>;
+      const e2e = docs.filter((d) => d.file_name === "plumber-invoice.pdf" || d.file_name?.startsWith("e2e-viewer-"));
       for (const doc of e2e) {
         await fetch(`${BACKEND_URL}/documents/${doc.id}`, { method: "DELETE", headers }).catch(() => {});
       }
