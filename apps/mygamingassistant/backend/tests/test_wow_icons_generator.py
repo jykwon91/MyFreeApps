@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from scripts.wow_icons.build import OUT_FILE, gathering_item_ids, wanted_ids, write_icon_map
+from scripts.wow_icons.build import OUT_FILE, cooking_item_ids, gathering_item_ids, wanted_ids, write_icon_map
 from scripts.wow_icons.ids import (
     IconIds,
     appearance_icon_map,
@@ -114,6 +114,16 @@ def test_gathering_nodes_are_read_from_the_guides(tmp_path: Path) -> None:
     (tmp_path / "herbs.ts").write_text('{ name: "Peacebloom", itemId: 2447, node: "Peacebloom" },\n', encoding="utf-8")
     (tmp_path / "ore.ts").write_text("{ itemId:2770 }", encoding="utf-8")
     assert gathering_item_ids(tmp_path) == {2447, 2770}
+
+
+def test_cooking_ingredients_are_read_from_the_guide(tmp_path: Path) -> None:
+    path = tmp_path / "cooking.ts"
+    path.write_text(
+        'mats: [{ id: 2672, name: "Stringy Wolf Meat" }, { id: 769, name: "Chunk of Boar Meat" }],\n'
+        '{ id: "train", title: "Train Cooking" },\n',
+        encoding="utf-8",
+    )
+    assert cooking_item_ids(path) == {2672, 769}
 
 
 def test_map_file_puts_one_id_per_line_and_stays_json(tmp_path: Path) -> None:
