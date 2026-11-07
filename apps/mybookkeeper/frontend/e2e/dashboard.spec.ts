@@ -70,9 +70,12 @@ test.describe("Dashboard", () => {
     test("the monthly average divides by the months that have data", async ({ page }) => {
       const average = card(page, "Monthly Average");
       await expect(average).toContainText("across 3 months");
-      await expect(average.locator("div", { hasText: /^Revenue/ })).toContainText(SEED.monthlyAverage.revenue);
-      await expect(average.locator("div", { hasText: /^Expenses/ })).toContainText(SEED.monthlyAverage.expenses);
-      await expect(average.locator("div", { hasText: /^Profit/ })).toContainText(SEED.monthlyAverage.profit);
+      await expect(average.getByRole("term")).toHaveText(["Revenue", "Expenses", "Profit"]);
+      await expect(average.getByRole("definition")).toHaveText([
+        SEED.monthlyAverage.revenue,
+        SEED.monthlyAverage.expenses,
+        SEED.monthlyAverage.profit,
+      ]);
     });
 
     test("dragging January to February narrows the totals, and Reset restores them", async ({ page }) => {

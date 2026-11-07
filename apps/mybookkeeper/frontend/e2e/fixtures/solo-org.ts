@@ -1,4 +1,5 @@
 import { expect, type APIRequestContext, type Page, type PlaywrightWorkerArgs } from "@playwright/test";
+import { cleanUpAfter } from "./cleanup";
 import { E2E_ONBOARDING } from "./onboarding";
 import { TestAccount } from "./test-account";
 
@@ -7,8 +8,7 @@ type Playwright = PlaywrightWorkerArgs["playwright"];
 /**
  * A fresh account that owns an organization of its own. Nothing else writes to
  * it, so a spec can seed known data and assert exact totals. ``delete`` removes
- * the organization (and, by cascade, everything in it), then the account,
- * which can't be deleted while it still created an organization.
+ * the organization (and, by cascade, everything in it), then the account.
  */
 export class SoloOrg {
   private constructor(
@@ -31,9 +31,8 @@ export class SoloOrg {
       expect(onboarded.ok(), await onboarded.text()).toBe(true);
       return solo;
     } catch (err) {
-      if (solo) await solo.delete(playwright);
-      else await account.delete(playwright);
-      throw err;
+      const made = solo;
+      return await cleanUpAfter(err, () => (made ? made.delete(playwright) : account.delete(playwright)));
     } finally {
       await unscoped.dispose();
     }
@@ -49,7 +48,8 @@ export class SoloOrg {
       expect(res.status(), `the organization should be deleted: ${await res.text()}`).toBe(204);
     } finally {
       await this.api.dispose();
-      await this.account.delete(playwright);
     }
+    // Only now: the account can't be deleted while its organization exists.
+    await this.account.delete(playwright);
   }
 }

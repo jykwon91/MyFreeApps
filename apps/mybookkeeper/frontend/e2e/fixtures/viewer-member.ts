@@ -2,6 +2,7 @@ import { expect, type APIRequestContext, type Page, type PlaywrightWorkerArgs } 
 import { getOrgId, getToken } from "./auth";
 import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
 import { BACKEND_URL } from "./config";
+import { cleanUp, cleanUpAfter } from "./cleanup";
 import { TestAccount } from "./test-account";
 
 type Playwright = PlaywrightWorkerArgs["playwright"];
@@ -52,9 +53,14 @@ export class ViewerMember {
       return new ViewerMember(account, orgId, inviteId, await account.apiContext(playwright, orgId));
     } catch (err) {
       // Half set up: nothing will hold the member to delete it later.
-      await account.delete(playwright);
-      if (inviteId) await owner.delete(`/test/invites/${inviteId}`);
-      throw err;
+      const invite = inviteId;
+      return await cleanUpAfter(
+        err,
+        () => account.delete(playwright),
+        async () => {
+          if (invite) await owner.delete(`/test/invites/${invite}`);
+        },
+      );
     } finally {
       await anon.dispose();
       await owner.dispose();
@@ -78,9 +84,13 @@ export class ViewerMember {
   async delete(playwright: Playwright): Promise<void> {
     const owner = await ownerContext(playwright, this.orgId);
     try {
-      await this.account.delete(playwright);
-      const invite = await owner.delete(`/test/invites/${this.inviteId}`);
-      expect(invite.status(), `the viewer's invite should be cleaned up: ${await invite.text()}`).toBe(204);
+      await cleanUp(
+        () => this.account.delete(playwright),
+        async () => {
+          const invite = await owner.delete(`/test/invites/${this.inviteId}`);
+          expect(invite.status(), `the viewer's invite should be cleaned up: ${await invite.text()}`).toBe(204);
+        },
+      );
     } finally {
       await owner.dispose();
       await this.api.dispose();

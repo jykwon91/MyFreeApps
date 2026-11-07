@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { expect, type APIRequestContext, type Page, type PlaywrightWorkerArgs } from "@playwright/test";
 import { BACKEND_URL } from "./config";
+import { storeSession } from "./session";
 
 const PASSWORD = "E2eTestAcc0unt!Secure";
 
@@ -48,15 +49,8 @@ export class TestAccount {
   }
 
   /** Signs ``page`` in as this account, in ``orgId``. */
-  async signIn(page: Page, orgId: string): Promise<void> {
-    await page.goto("/login");
-    await page.evaluate(
-      ([t, o]) => {
-        localStorage.setItem("token", t);
-        localStorage.setItem("v1_activeOrgId", o);
-      },
-      [this.token, orgId],
-    );
+  signIn(page: Page, orgId: string): Promise<void> {
+    return storeSession(page, this.token, orgId);
   }
 
   /** Deletes the account through ``DELETE /users/me``, as its owner would. */
