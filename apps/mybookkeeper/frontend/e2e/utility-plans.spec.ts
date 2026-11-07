@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
 import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { localDateOffset } from "./fixtures/local-today";
 
 /**
  * Utility Plans full-flow behavioural E2E.
@@ -36,13 +37,6 @@ interface RenewalAlerts {
   expired: UtilityPlanRow[];
   expiring_soon: UtilityPlanRow[];
   total_needing_attention: number;
-}
-
-/** ``offsetDays`` from today as ``YYYY-MM-DD``. Negative is in the past. */
-function isoDateOffset(offsetDays: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetDays);
-  return d.toISOString().slice(0, 10);
 }
 
 async function fetchPlan(api: APIRequestContext, id: string): Promise<UtilityPlanRow> {
@@ -99,9 +93,9 @@ test.describe("Utility Plans", () => {
       await page.getByTestId("utility-plan-avg-price-input").fill("13.9");
       await page.getByTestId("utility-plan-base-charge-input").fill("4.39");
       await page.getByTestId("utility-plan-term-months-input").fill("12");
-      await page.getByTestId("utility-plan-start-date-input").fill(isoDateOffset(-400));
+      await page.getByTestId("utility-plan-start-date-input").fill(localDateOffset(-400));
       // Term lapsed 35 days ago.
-      await page.getByTestId("utility-plan-end-date-input").fill(isoDateOffset(-35));
+      await page.getByTestId("utility-plan-end-date-input").fill(localDateOffset(-35));
       await page.getByTestId("utility-plan-etf-input").fill("150");
       await page.getByTestId("utility-plan-save-button").click();
 
@@ -260,8 +254,8 @@ test.describe("Utility Plans", () => {
           energy_charge_cents_per_kwh: "11.6",
           tdu_charge_cents_per_kwh: "5.3509",
           term_months: 12,
-          service_start_date: isoDateOffset(-400),
-          term_end_date: isoDateOffset(-35),
+          service_start_date: localDateOffset(-400),
+          term_end_date: localDateOffset(-35),
           min_usage_fee_cents: 995,
           min_usage_threshold_kwh: 999,
           notes: NOTE,
@@ -292,7 +286,7 @@ test.describe("Utility Plans", () => {
       await expect(page.getByTestId("utility-plan-property-select")).toBeHidden();
 
       // 2) Fill in the account number the row was missing and renew the term.
-      const renewedEnd = isoDateOffset(300);
+      const renewedEnd = localDateOffset(300);
       await page.getByTestId("utility-plan-account-input").fill("6403771807-5");
       await page.getByTestId("utility-plan-end-date-input").fill(renewedEnd);
       await page.getByTestId("utility-plan-save-button").click();

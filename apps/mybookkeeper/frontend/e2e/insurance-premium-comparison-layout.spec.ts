@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { localDateOffset } from "./fixtures/local-today";
 
 /**
  * Layout E2E for the dashboard premium-comparison card and the market-premium
@@ -24,12 +25,6 @@ const SKELETON_ROW_COUNT = 2;
 
 const BENCHMARK_URL = "/insurance-benchmarks";
 
-function isoDateOffset(offsetDays: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetDays);
-  return d.toISOString().slice(0, 10);
-}
-
 /** An unambiguously above-market policy: 600¢ per $1,000 against a 300¢ market. */
 async function seedPolicy(
   api: APIRequestContext,
@@ -44,8 +39,8 @@ async function seedPolicy(
       premium_cents: 240_000,
       premium_frequency: "annual",
       coverage_amount_cents: 40_000_000,
-      effective_date: isoDateOffset(-30),
-      expiration_date: isoDateOffset(335),
+      effective_date: localDateOffset(-30),
+      expiration_date: localDateOffset(335),
     },
   });
   if (!res.ok()) {
@@ -61,7 +56,7 @@ async function seedBenchmark(api: APIRequestContext, source: string): Promise<vo
       coverage_amount_cents: 40_000_000,
       region_label: "Harris County, TX",
       source,
-      observed_on: isoDateOffset(0),
+      observed_on: localDateOffset(0),
     },
   });
   expect(res.ok()).toBe(true);

@@ -1,5 +1,6 @@
 import { test, expect } from "./fixtures/auth";
 import type { APIRequestContext, Page } from "@playwright/test";
+import { endOfMonth, format, startOfMonth, subMonths } from "date-fns";
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-US", {
@@ -175,10 +176,8 @@ test.describe("Analytics — API Integration", () => {
   test("summary cards match API data when utility data exists", async ({ authedPage: page, api }) => {
     // Use same default date range as the frontend (last 12 months)
     const now = new Date();
-    const from = new Date(now.getFullYear(), now.getMonth() - 11, 1);
-    const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    const startDate = from.toISOString().slice(0, 10);
-    const endDate = to.toISOString().slice(0, 10);
+    const startDate = format(startOfMonth(subMonths(now, 11)), "yyyy-MM-dd");
+    const endDate = format(endOfMonth(now), "yyyy-MM-dd");
 
     const res = await api.get(`/analytics/utility-trends?start_date=${startDate}&end_date=${endDate}`);
     const data = await res.json();

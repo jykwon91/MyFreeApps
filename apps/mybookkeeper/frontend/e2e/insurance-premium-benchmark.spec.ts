@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
 import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { localDateOffset } from "./fixtures/local-today";
 
 /**
  * Insurance market-premium benchmark — full-flow behavioural E2E.
@@ -41,13 +42,6 @@ interface Comparison {
   has_stale_benchmark: boolean;
 }
 
-/** ``offsetDays`` from today as ``YYYY-MM-DD``. Negative is in the past. */
-function isoDateOffset(offsetDays: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetDays);
-  return d.toISOString().slice(0, 10);
-}
-
 async function seedPolicy(
   api: APIRequestContext,
   propertyId: string,
@@ -60,8 +54,8 @@ async function seedPolicy(
       premium_frequency: "annual",
       // Years from expiry: the expiration badge has nothing to say here, which
       // is exactly the blind spot the premium check covers.
-      effective_date: isoDateOffset(-30),
-      expiration_date: isoDateOffset(335),
+      effective_date: localDateOffset(-30),
+      expiration_date: localDateOffset(335),
       ...data,
     },
   });
@@ -243,7 +237,7 @@ test.describe("Insurance premium benchmark", () => {
         data: {
           annual_premium_cents: 120_000,
           coverage_amount_cents: 40_000_000,
-          observed_on: isoDateOffset(0),
+          observed_on: localDateOffset(0),
         },
       });
       expect(benchRes.ok()).toBe(true);
@@ -269,12 +263,12 @@ test.describe("Insurance premium benchmark", () => {
     // It could never be normalised, so it would match nothing — and the
     // operator would believe their policies were being checked.
     const premiumOnly = await api.put("/insurance-benchmarks", {
-      data: { annual_premium_cents: 120_000, observed_on: isoDateOffset(0) },
+      data: { annual_premium_cents: 120_000, observed_on: localDateOffset(0) },
     });
     expect(premiumOnly.status()).toBe(422);
 
     const coverageOnly = await api.put("/insurance-benchmarks", {
-      data: { coverage_amount_cents: 40_000_000, observed_on: isoDateOffset(0) },
+      data: { coverage_amount_cents: 40_000_000, observed_on: localDateOffset(0) },
     });
     expect(coverageOnly.status()).toBe(422);
 
@@ -284,7 +278,7 @@ test.describe("Insurance premium benchmark", () => {
       data: {
         annual_premium_cents: 120_000,
         coverage_amount_cents: 40_000_000,
-        observed_on: isoDateOffset(7),
+        observed_on: localDateOffset(7),
       },
     });
     expect(future.status()).toBe(422);
