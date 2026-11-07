@@ -174,6 +174,22 @@ describe('UtilityTrends', () => {
     expect(screen.getByRole('button', { name: /Reset date range/i })).toBeInTheDocument();
   });
 
+  it('counts each changed filter on the phone toggle', () => {
+    vi.mocked(useGetUtilityTrendsQuery).mockReturnValue({
+      data: mockTrendsData, isLoading: false, isError: false, refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useGetUtilityTrendsQuery>);
+    renderWithProviders(<UtilityTrends />, ['/?from=2025-01-01&to=2025-03-31&granularity=quarterly']);
+    expect(screen.getByRole('button', { name: 'Filters, 3 on' })).toBeInTheDocument();
+  });
+
+  it('counts several selected properties as one filter', () => {
+    vi.mocked(useGetUtilityTrendsQuery).mockReturnValue({
+      data: mockTrendsData, isLoading: false, isError: false, refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useGetUtilityTrendsQuery>);
+    renderWithProviders(<UtilityTrends />, ['/?properties=p1,p2']);
+    expect(screen.getByRole('button', { name: 'Filters, 1 on' })).toBeInTheDocument();
+  });
+
   it('shows summary cards and chart when data with multiple periods exists', () => {
     vi.mocked(useGetUtilityTrendsQuery).mockReturnValue({
       data: mockTrendsData, isLoading: false, isError: false, refetch: vi.fn(),
@@ -287,7 +303,7 @@ describe('AnalyticsFilters', () => {
     onToDate: vi.fn(),
     onGranularity: vi.fn(),
     onPropertyIds: vi.fn(),
-    hasActiveFilters: false,
+    activeFilterCount: 0,
     onClear: vi.fn(),
   };
 
@@ -330,43 +346,33 @@ describe('AnalyticsFilters', () => {
   });
 
   it('does not show Clear filters button when no active filters', () => {
-    render(<AnalyticsFilters {...defaultProps} hasActiveFilters={false} />);
+    render(<AnalyticsFilters {...defaultProps} activeFilterCount={0} />);
     expect(screen.queryByRole('button', { name: /Clear all filters/i })).not.toBeInTheDocument();
   });
 
   it('shows Clear filters button when filters are active', () => {
-    render(<AnalyticsFilters {...defaultProps} hasActiveFilters={true} />);
+    render(<AnalyticsFilters {...defaultProps} activeFilterCount={1} />);
     expect(screen.getByRole('button', { name: /Clear all filters/i })).toBeInTheDocument();
   });
 
   it('calls onClear when Clear filters button is clicked', async () => {
     const onClear = vi.fn();
-    render(<AnalyticsFilters {...defaultProps} hasActiveFilters={true} onClear={onClear} />);
+    render(<AnalyticsFilters {...defaultProps} activeFilterCount={1} onClear={onClear} />);
     await userEvent.click(screen.getByRole('button', { name: /Clear all filters/i }));
     expect(onClear).toHaveBeenCalledOnce();
   });
 
-  it('starts with the phone filters panel collapsed', () => {
+  it('puts the filters in a panel that collapses below the sm breakpoint', () => {
     render(<AnalyticsFilters {...defaultProps} />);
-    const toggle = screen.getByRole('button', { name: /^Filters$/i });
-    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    const toggle = screen.getByRole('button', { name: 'Filters' });
     const panel = document.getElementById(toggle.getAttribute('aria-controls') ?? '');
     expect(panel).toContainElement(screen.getByLabelText('From date'));
     expect(panel).toHaveClass('hidden', 'sm:flex');
   });
 
-  it('expands mobile filters panel when toggle is clicked', async () => {
-    render(<AnalyticsFilters {...defaultProps} />);
-    const toggle = screen.getByRole('button', { name: /^Filters$/i });
-    await userEvent.click(toggle);
-    expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    const panel = document.getElementById(toggle.getAttribute('aria-controls') ?? '');
-    expect(panel).toHaveClass('flex');
-    expect(panel).not.toHaveClass('hidden');
-
-    await userEvent.click(toggle);
-    expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    expect(panel).toHaveClass('hidden');
+  it('names the phone toggle with the active filter count', () => {
+    render(<AnalyticsFilters {...defaultProps} activeFilterCount={2} />);
+    expect(screen.getByRole('button', { name: 'Filters, 2 on' })).toBeInTheDocument();
   });
 }); 
 

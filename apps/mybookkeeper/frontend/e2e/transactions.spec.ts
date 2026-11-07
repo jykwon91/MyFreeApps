@@ -242,6 +242,36 @@ test.describe("Transactions", () => {
       await expect(rows(page)).toHaveCount(SEED.count);
     });
 
+    test("on a phone the filters open from the Filters button, which counts the active ones", async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      const cards = page.getByTestId("transaction-cards").locator(":scope > *");
+      await expect(cards).toHaveCount(SEED.count);
+
+      await expect(vendorFilter(page)).toBeHidden();
+      const toggle = page.getByRole("button", { name: "Filters", exact: true });
+      await toggle.click();
+      await expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+      await vendorFilter(page).fill("E2E Plumber Jan");
+      await expect(cards).toHaveCount(1);
+      await expect(cards).toContainText("E2E Plumber Jan");
+      await expect(page.getByRole("button", { name: "Filters, 1 on" })).toHaveAttribute("aria-expanded", "true");
+
+      await page.getByRole("button", { name: "Clear filters" }).click();
+      await expect(cards).toHaveCount(SEED.count);
+      const cleared = page.getByRole("button", { name: "Filters", exact: true });
+      await expect(cleared).toBeVisible();
+
+      await cleared.click();
+      await expect(cleared).toHaveAttribute("aria-expanded", "false");
+      await expect(vendorFilter(page)).toBeHidden();
+    });
+
+    test("on a larger screen the filters always show, without a Filters button", async ({ page }) => {
+      await expect(vendorFilter(page)).toBeVisible();
+      await expect(page.getByRole("button", { name: /^Filters/ })).toBeHidden();
+    });
+
     test("matches part of the vendor, ignoring case", async ({ page }) => {
       await vendorFilter(page).fill("plumber");
       await expect(rows(page)).toHaveCount(PLUMBERS.length);

@@ -1,11 +1,9 @@
-import { useId, useState } from "react";
-import { Filter } from "lucide-react";
 import { formatTag } from "@/shared/utils/tag";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { Filters } from "@/shared/types/transaction/transaction-filters";
 import { STATUS_OPTIONS, TYPE_OPTIONS, ALL_CATEGORIES, EMPTY_FILTERS } from "@/shared/lib/transaction-config";
 import Select from "@/shared/components/ui/Select";
-import Badge from "@/shared/components/ui/Badge";
+import CollapsibleFilters from "@/shared/components/ui/CollapsibleFilters";
 
 export interface TransactionFilterBarProps {
   filters: Filters;
@@ -14,18 +12,14 @@ export interface TransactionFilterBarProps {
 }
 
 export default function TransactionFilterBar({ filters, onChange, properties }: TransactionFilterBarProps) {
-  const [mobileExpanded, setMobileExpanded] = useState(false);
-  const mobileFiltersId = useId();
-
   function update(field: keyof Filters, value: string) {
     onChange({ ...filters, [field]: value });
   }
 
-  const hasFilters = Object.values(filters).some(Boolean);
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
-  const filterControls = (
-    <>
+  return (
+    <CollapsibleFilters activeCount={activeFilterCount} breakpoint="md">
       <Select aria-label="Filter by property" value={filters.property_id} onChange={(e) => update("property_id", e.target.value)} className="text-xs py-1.5">
         <option value="">All Properties</option>
         {properties.map((p) => (
@@ -81,42 +75,15 @@ export default function TransactionFilterBar({ filters, onChange, properties }: 
         placeholder="To"
       />
 
-      {hasFilters && (
+      {activeFilterCount > 0 && (
         <button
+          type="button"
           onClick={() => onChange(EMPTY_FILTERS)}
           className="text-xs text-primary hover:underline font-medium"
         >
           Clear filters
         </button>
       )}
-    </>
-  );
-
-  return (
-    <div>
-      {/* Mobile: toggle button */}
-      <button
-        onClick={() => setMobileExpanded((p) => !p)}
-        aria-expanded={mobileExpanded}
-        aria-controls={mobileFiltersId}
-        className="md:hidden inline-flex items-center gap-1.5 border rounded-md px-3 py-1.5 text-xs font-medium hover:bg-muted min-h-[44px]"
-      >
-        <Filter size={14} />
-        Filters
-        {activeFilterCount > 0 && <Badge label={String(activeFilterCount)} color="blue" />}
-      </button>
-
-      {/* Mobile: expandable filter section */}
-      {mobileExpanded && (
-        <div id={mobileFiltersId} className="md:hidden flex flex-wrap items-center gap-2 mt-2">
-          {filterControls}
-        </div>
-      )}
-
-      {/* Desktop: always visible */}
-      <div className="hidden md:flex flex-wrap items-center gap-2">
-        {filterControls}
-      </div>
-    </div>
+    </CollapsibleFilters>
   );
 }

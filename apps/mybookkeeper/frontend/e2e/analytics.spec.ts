@@ -107,12 +107,13 @@ test.describe("Analytics — Utility Trends", () => {
     const fromDate = page.getByLabel("From date");
     await expect(fromDate).toBeHidden();
 
-    const toggle = page.getByRole("button", { name: "Filters", exact: true });
+    const toggle = page.getByRole("button", { name: /^Filters(, \d+ on)?$/ });
     await toggle.click();
     await expect(toggle).toHaveAttribute("aria-expanded", "true");
     await fromDate.fill(SEED.thisMonth.from);
     await expect(page).toHaveURL(new RegExp(`[?&]from=${SEED.thisMonth.from}(&|$)`));
     await expect(cardAmount(page, "Total Utilities")).toHaveText(SEED.thisMonth.total);
+    await expect(toggle).toHaveAccessibleName("Filters, 1 on");
 
     // A range with no bills keeps the panel open so the next date can be picked.
     await fromDate.fill("2000-01-01");
