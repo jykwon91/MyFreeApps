@@ -68,12 +68,16 @@ export async function createProperty(
   return res.json();
 }
 
+// A failed request resolves rather than throws, so the status is what tells a
+// cleanup that left its data behind from one that worked.
 export async function deleteTransaction(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/transactions/${id}`).catch(() => {});
+  const res = await api.delete(`/transactions/${id}`);
+  if (!res.ok()) throw new Error(`deleteTransaction failed: ${res.status()} ${await res.text()}`);
 }
 
 export async function deleteProperty(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/properties/${id}`).catch(() => {});
+  const res = await api.delete(`/properties/${id}`);
+  if (!res.ok()) throw new Error(`deleteProperty failed: ${res.status()} ${await res.text()}`);
 }
 
 /** Test-only route: the app itself has no way to delete a 1099 source. */
