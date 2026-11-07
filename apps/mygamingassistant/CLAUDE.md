@@ -221,6 +221,15 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `[mod:]`, `[nopet]`, `%t` in chat) carries an
   `unconfirmed` tag and the Unconfirmed chip — never claim in-game testing.
   Forever renamed Curses to Banes (no Curse of Agony). No addon is involved.
+- Guide **Macros** section (`/wow-forever/guide#macros`, `components/guide/MacrosSection.tsx`):
+  three generic mouseover templates (`data/guide/macroTemplates.ts`, filled
+  live from a "Your spell name" box by `lib/macroTemplates.ts`; empty =
+  `Spell Name`) and ready-made per-class macros (`data/guide/classMacros.ts`,
+  template + spell; Rogue/Warrior left out). `wowGuideMacros.test.ts` checks
+  each class macro's spell against `data/guide/classSpellNames.json`,
+  **GENERATED** by `python -m scripts.wow_class_spells.build` (each class's
+  talent-tree skill lines, owner checked by `SkillRaceClassInfo.ClassMask`;
+  re-pinned by `wow_refresh`). Trainer spells only — no talents.
 - Class/spec ids in `data/classes.ts` are the stable key for anything
   class-shaped (stat weights, compare settings, a future BiS page). Never rename.
 - **Scoring lives in the frontend** (`scoring/`), deterministic and unit-tested.

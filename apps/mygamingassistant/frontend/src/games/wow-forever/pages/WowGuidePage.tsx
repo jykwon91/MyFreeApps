@@ -4,6 +4,7 @@ import ClassPicksSection from "@/games/wow-forever/components/guide/ClassPicksSe
 import DungeonBasicsSection from "@/games/wow-forever/components/guide/DungeonBasicsSection";
 import GuideSectionNav from "@/games/wow-forever/components/guide/GuideSectionNav";
 import LevelingZonesSection from "@/games/wow-forever/components/guide/LevelingZonesSection";
+import MacrosSection from "@/games/wow-forever/components/guide/MacrosSection";
 import ProfessionsSection from "@/games/wow-forever/components/guide/ProfessionsSection";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 
@@ -23,6 +24,7 @@ export default function WowGuidePage() {
       <LevelingZonesSection />
       <ProfessionsSection />
       <AddonsSection />
+      <MacrosSection />
       <DungeonBasicsSection />
     </main>
   );

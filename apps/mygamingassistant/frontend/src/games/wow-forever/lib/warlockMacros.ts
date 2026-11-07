@@ -1,8 +1,8 @@
+import { MACRO_MAX_LENGTH } from "@/games/wow-forever/data/macroMaxLength";
 import type { WarlockMacro } from "@/games/wow-forever/types/warlockMacro";
 import type { WarlockNames } from "@/games/wow-forever/types/warlockNames";
 
-/** The game's limit on one macro's text. */
-export const MACRO_MAX_LENGTH = 255;
+export { MACRO_MAX_LENGTH };
 
 const COMMAND_LINE = /^\/(cast|use|castsequence)\s+(.*)$/;
 const KEEP_ON_PREFIX = /^!/;

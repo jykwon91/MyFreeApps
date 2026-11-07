@@ -1,7 +1,7 @@
 import UnconfirmedChip from "@/games/wow-forever/components/professions/UnconfirmedChip";
-import MacroCopyButton from "@/games/wow-forever/components/warlock/MacroCopyButton";
+import MacroCopyButton from "@/games/wow-forever/components/shared/MacroCopyButton";
 import { SYNTAX_NOTES } from "@/games/wow-forever/data/warlock/macroSyntaxNotes";
-import { MACRO_MAX_LENGTH } from "@/games/wow-forever/lib/warlockMacros";
+import { MACRO_MAX_LENGTH } from "@/games/wow-forever/data/macroMaxLength";
 import type { WarlockMacro } from "@/games/wow-forever/types/warlockMacro";
 
 interface WarlockMacroCardProps {
