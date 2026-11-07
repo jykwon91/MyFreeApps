@@ -87,6 +87,34 @@ async def insert_ignore_conflict(
     await db.execute(stmt)
 
 
+async def create_item(
+    db: AsyncSession,
+    *,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+    sync_log_id: int,
+    message_id: str,
+    attachment_filename: str | None,
+    email_subject: str | None,
+    status: str,
+    error: str | None = None,
+) -> EmailQueue:
+    item = EmailQueue(
+        organization_id=organization_id,
+        user_id=user_id,
+        sync_log_id=sync_log_id,
+        message_id=message_id,
+        attachment_id=message_id,
+        attachment_filename=attachment_filename,
+        email_subject=email_subject,
+        status=status,
+        error=error,
+    )
+    db.add(item)
+    await db.flush()
+    return item
+
+
 async def reset_stuck(
     db: AsyncSession,
     organization_id: uuid.UUID,
