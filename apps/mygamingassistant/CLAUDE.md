@@ -305,6 +305,27 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   every card) so it works in the Discord Activity; a picked item keeps its
   game-file numbers as `origin.baseline`, so edits are marked and can be reset.
 
+#### Hub (`/wow-forever`, "Overview")
+
+- Under the header: "Game data: patch 1.60.1 (build 70790) · updated <date>" from
+  `data/dataRefresh.json`, **written by `wow_refresh apply`** (never by hand; a
+  backend test checks its build matches `sources.WAGO_BUILD`).
+- **What's new on this site** (`data/whatsNew.ts`, hand-written, newest first,
+  date = the day it merged): the latest `WHATS_NEW_HUB_COUNT` (5) + "Show all".
+  Add an entry in the same PR as any player-visible change. An entry's `to` path
+  (query dropped) must be the hub or a hub tile — that page gets the dot.
+- **Update dots** on hub tiles and their left-nav items (`NavItem.dotLabel` in
+  `@platform/ui`): a page with an entry the browser hasn't seen. Seen entries
+  (by `entryKey` = date + title, never by time, so a same-day ship still dots)
+  live in `mga.wowForever.pageVisits.v1` (`lib/whatsNew/pageVisitStore.ts`,
+  one `useSyncExternalStore` source for nav + tiles, re-read before each write
+  and reloaded on the `storage` event so tabs never undo each other; pure logic
+  in `lib/whatsNew/updateDots.ts`). `RootLayout` records each visit
+  (`useRecordWowPageVisit`), which clears that page's dot; the first-ever visit
+  marks every current entry seen, so new players see no dots. Tiles use the left nav's icons
+  (`data/featureIcons.ts`, `WowFeatureIcon`). Tests: `wowWhatsNew.test.ts`,
+  `wowForeverLanding.test.tsx`, `e2e/wow-forever-whats-new.spec.ts`.
+
 #### Best gear (`/wow-forever/gear`)
 
 - Top `TOP_ITEMS_PER_SLOT` (3) items per slot card for class + spec + level:

@@ -1,13 +1,22 @@
 """The WoW Forever refresh: choosing the build, pinning it, and describing changes."""
 from __future__ import annotations
 
+import json
 import subprocess
+from datetime import date
 from pathlib import Path
 
 import pytest
 
-from scripts.wow_refresh.__main__ import newest_build, repin
-from scripts.wow_refresh.report import SECTIONS, WOW_DATA, _changed_generated_files, _strip_provenance, diff_section
+from scripts.wow_refresh.__main__ import APP_DIR, newest_build, repin, write_data_refresh
+from scripts.wow_refresh.report import (
+    DATA_REFRESH_FILE,
+    SECTIONS,
+    WOW_DATA,
+    _changed_generated_files,
+    _strip_provenance,
+    diff_section,
+)
 from scripts.wow_world_map import sources
 
 FOOD = next(s for s in SECTIONS if s.title == "Food and drink")
@@ -90,3 +99,30 @@ def test_changed_files_cover_deleted_and_added_data_but_nothing_else(tmp_path: P
     (tmp_path / "tsconfig.json").write_text("{ // not JSON\n}", encoding="utf-8")
 
     assert _changed_generated_files(tmp_path) == [f"{WOW_DATA}/gone.json", f"{WOW_DATA}/new.json"]
+
+
+def test_data_refresh_records_the_build_and_day(tmp_path: Path) -> None:
+    path = tmp_path / "dataRefresh.json"
+    write_data_refresh(path, build="1.60.1.70999", on=date(2026, 11, 9))
+    assert json.loads(path.read_text(encoding="utf-8")) == {"clientBuild": "1.60.1.70999", "refreshedOn": "2026-11-09"}
+
+
+def test_committed_data_refresh_names_the_pinned_build() -> None:
+    committed = json.loads((APP_DIR / DATA_REFRESH_FILE).read_text(encoding="utf-8"))
+    assert committed["clientBuild"] == sources.WAGO_BUILD
+    date.fromisoformat(committed["refreshedOn"])
+
+
+def test_the_refresh_date_alone_is_not_a_data_change(tmp_path: Path) -> None:
+    def git(*args: str) -> None:
+        subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *args], cwd=tmp_path, check=True, capture_output=True)
+
+    refresh = tmp_path / DATA_REFRESH_FILE
+    refresh.parent.mkdir(parents=True)
+    write_data_refresh(refresh, build="1", on=date(2026, 11, 1))
+    git("init", "-q")
+    git("add", ".")
+    git("commit", "-qm", "base")
+
+    write_data_refresh(refresh, build="2", on=date(2026, 11, 9))
+    assert _changed_generated_files(tmp_path) == []

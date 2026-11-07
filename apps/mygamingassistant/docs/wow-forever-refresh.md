@@ -44,8 +44,11 @@ If there's no new build and no new post, stop. No branch, no PR.
 python -m scripts.wow_refresh apply
 ```
 
-It pins the newest builds in `sources.py`, runs every generator and prints a report
-of what changed, by name.
+It pins the newest builds in `sources.py`, runs every generator, writes
+`frontend/src/games/wow-forever/data/dataRefresh.json` (the build and today's date,
+shown on the hub as "Game data: patch … · updated …"; only after every generator
+succeeded) and prints a report of what changed, by name. Commit `dataRefresh.json`
+with the refresh, and never edit it by hand.
 
 Most Forever items aren't in the client file. The server sends them as hotfixes, so
 the item, item page, icon and Best gear generators also read the game's own hotfix cache,

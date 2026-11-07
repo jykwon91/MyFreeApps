@@ -8,6 +8,8 @@ import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { useScrollTopOnNavigate } from "../../hooks/useScrollTopOnNavigate";
 import { readLocalStorage, writeLocalStorage } from "../../lib/safeStorage";
 import type { NavItem, NavSection } from "./AppShell";
+import NavItemContent from "./NavItemContent";
+import { navItemAccessibleLabel } from "../../utils/navItemAccessibleLabel";
 
 export interface GuestShellProps {
   logo: ReactNode;
@@ -134,7 +136,7 @@ export default function GuestShell({
                   key={item.path}
                   to={item.path}
                   end={item.exact}
-                  title={collapsed ? item.label : undefined}
+                  title={collapsed ? navItemAccessibleLabel(item, true) : undefined}
                   className={({ isActive }: NavLinkRenderProps) =>
                     cn(
                       "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors min-h-[44px]",
@@ -144,10 +146,9 @@ export default function GuestShell({
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )
                   }
-                  aria-label={collapsed ? item.label : undefined}
+                  aria-label={navItemAccessibleLabel(item, collapsed)}
                 >
-                  <span className="w-5 h-5 shrink-0">{item.icon}</span>
-                  {!collapsed && item.label}
+                  <NavItemContent item={item} collapsed={collapsed} />
                 </NavLink>
               ))}
             </nav>
@@ -168,7 +169,7 @@ export default function GuestShell({
                       key={item.path}
                       to={item.path}
                       end={item.exact}
-                      title={collapsed ? item.label : undefined}
+                      title={collapsed ? navItemAccessibleLabel(item, true) : undefined}
                       className={({ isActive }: NavLinkRenderProps) =>
                         cn(
                           "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors min-h-[44px]",
@@ -178,7 +179,7 @@ export default function GuestShell({
                             : "text-muted-foreground hover:bg-muted hover:text-foreground"
                         )
                       }
-                      aria-label={collapsed ? item.label : undefined}
+                      aria-label={navItemAccessibleLabel(item, collapsed)}
                       aria-current={
                         location.pathname === item.path ||
                         (!item.exact && location.pathname.startsWith(item.path))
@@ -186,8 +187,7 @@ export default function GuestShell({
                           : undefined
                       }
                     >
-                      <span className="w-5 h-5 shrink-0">{item.icon}</span>
-                      {!collapsed && item.label}
+                      <NavItemContent item={item} collapsed={collapsed} />
                     </NavLink>
                   ))}
                 </div>
@@ -276,9 +276,9 @@ export default function GuestShell({
                     isActive ? "text-primary" : "text-muted-foreground"
                   )
                 }
+                aria-label={navItemAccessibleLabel(item, false)}
               >
-                <span className="w-5 h-5">{item.icon}</span>
-                <span>{item.label}</span>
+                <NavItemContent item={item} collapsed={false} stacked />
               </NavLink>
             ))}
           </nav>

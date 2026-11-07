@@ -20,10 +20,11 @@ import re
 import subprocess
 import sys
 import urllib.request
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from scripts.wow_items.forever_items import HOTFIX_CACHE_ENV, hotfix_cache_path
-from scripts.wow_refresh.report import render_report
+from scripts.wow_refresh.report import DATA_REFRESH_FILE, render_report
 from scripts.wow_world_map import sources
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
@@ -50,6 +51,12 @@ def repin(text: str, *, build: str, era_build: str) -> str:
         if count != 1:
             raise SystemExit(f"could not find {name} in {SOURCES_FILE}")
     return text
+
+
+def write_data_refresh(path: Path, *, build: str, on: date) -> None:
+    """The hub's "Game data: patch … · updated …" line, so it is never hand-kept."""
+    document = {"clientBuild": build, "refreshedOn": on.isoformat()}
+    path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
 
 
 def fetch_builds() -> dict[str, list[dict[str, str]]]:
@@ -104,6 +111,8 @@ def apply(*, art: bool, hotfix_cache: str | None) -> int:
         print(f"running {' '.join(module)}", flush=True)
         # Each generator imports the pins at start-up, so each needs its own process.
         subprocess.run([sys.executable, "-m", *module], cwd=BACKEND_DIR, check=True)
+    # Only after every generator succeeded, so the hub never claims a refresh that stopped halfway.
+    write_data_refresh(APP_DIR / DATA_REFRESH_FILE, build=latest, on=datetime.now(UTC).date())
     print(render_report(APP_DIR))
     return 0
 

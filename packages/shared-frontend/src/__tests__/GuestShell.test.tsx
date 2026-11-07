@@ -106,4 +106,33 @@ describe("GuestShell", () => {
     );
     expect(screen.queryByTestId("topbar-sign-in")).toBeNull();
   });
+
+  it("shows no dot unless a nav item sets dotLabel", () => {
+    renderWithRouter(
+      <GuestShell logo={<div>logo</div>} nav={SAMPLE_NAV}>
+        <div>content</div>
+      </GuestShell>,
+    );
+    expect(screen.queryByTestId("nav-item-dot")).toBeNull();
+  });
+
+  it("marks a section item with a dot and reads its dotLabel", () => {
+    renderWithRouter(
+      <GuestShell
+        logo={<div>logo</div>}
+        nav={SAMPLE_NAV}
+        navSections={[
+          {
+            id: "extra",
+            title: "Extra",
+            items: [{ path: "/news", label: "News", icon: <span />, dotLabel: "new" }],
+          },
+        ]}
+      >
+        <div>content</div>
+      </GuestShell>,
+    );
+    expect(screen.getAllByTestId("nav-item-dot")).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "News (new)" })).toBeInTheDocument();
+  });
 });

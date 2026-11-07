@@ -134,4 +134,24 @@ describe("AppShell — collapsible", () => {
     // After collapse: "Games" text is gone (icon only)
     expect(screen.queryByText("Games")).toBeNull();
   });
+
+  it("dotLabel: no dot by default", () => {
+    renderShell("/wow-forever/map", [WOW_SECTION]);
+    expect(screen.queryByTestId("nav-item-dot")).toBeNull();
+  });
+
+  it("dotLabel: marks the item and stays in its name on the collapsed rail", () => {
+    const section: NavSection = {
+      ...WOW_SECTION,
+      items: WOW_SECTION.items.map((item) =>
+        item.path === "/wow-forever/macros" ? { ...item, dotLabel: "new" } : item,
+      ),
+    };
+    renderShell("/wow-forever/map", [section], true);
+    expect(screen.getAllByTestId("nav-item-dot")).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "Macros (new)" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+    expect(screen.getAllByTestId("nav-item-dot")).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "Macros (new)" })).toHaveAttribute("aria-label", "Macros (new)");
+  });
 });
