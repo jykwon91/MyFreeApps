@@ -629,6 +629,7 @@
         "backend/app/services/rent/",
         "backend/app/api/rent_ledger.py",
         "backend/app/core/rent_ledger_enums.py",
+        "backend/app/core/client_date_constants.py",
         "backend/app/test_helpers/rent_seed.py",
         "backend/alembic/versions/rentledg260830_add_rent_schedules_and_charges.py",
         "frontend/src/app/features/rent/",
@@ -641,7 +642,8 @@
       "backend_tests": [
         "test_rent_period_math.py",
         "test_rent_allocation.py",
-        "test_rent_ledger_service.py"
+        "test_rent_ledger_service.py",
+        "test_rent_ledger_as_of.py"
       ],
       "frontend_tests": [
         "RentLedgerPanel.test.tsx",
@@ -1010,6 +1012,7 @@
         "backend/app/api/lease_templates.py",
         "backend/app/api/signed_leases.py",
         "backend/app/core/lease_enums.py",
+        "backend/app/core/client_date_constants.py",
         "backend/alembic/versions/lease260502_add_lease_templates_phase_1.py",
         "backend/alembic/versions/leaseimport260502_add_signed_lease_kind_nullable_template.py",
         "frontend/src/app/pages/LeaseTemplates.tsx",

@@ -5,6 +5,7 @@ import type { RentChargeCreateRequest } from "../types/rent/rent-charge-create-r
 import type { RentLedgerResponse } from "../types/rent/rent-ledger-response";
 import type { RentSchedule } from "../types/rent/rent-schedule";
 import type { RentScheduleCreateRequest } from "../types/rent/rent-schedule-create-request";
+import { localToday } from "../utils/localToday";
 
 /**
  * RTK Query slice for the tenant rent ledger.
@@ -24,7 +25,7 @@ const rentLedgerApi = baseApi.enhanceEndpoints({
     getRentLedger: builder.query<RentLedgerResponse, RentLedgerArgs>({
       query: ({ applicantId, asOf }) => ({
         url: `/rent-ledger/tenants/${applicantId}`,
-        params: asOf ? { as_of: asOf } : undefined,
+        params: { as_of: asOf ?? localToday() },
       }),
       // Payments are transactions, so changing one changes what's owed.
       providesTags: (_r, _e, { applicantId }) => [

@@ -463,6 +463,7 @@ class TestLedger:
         with ledger_patch, pytest.raises(rent_ledger_service.TenantNotFoundError):
             await rent_ledger_service.get_ledger(
                 organization_id=ORG, user_id=USER, applicant_id=uuid.uuid4(),
+                as_of=_TODAY,
             )
 
     @pytest.mark.asyncio
@@ -475,6 +476,7 @@ class TestLedger:
         with ledger_patch:
             ledger = await rent_ledger_service.get_ledger(
                 organization_id=ORG, user_id=USER, applicant_id=applicant_id,
+                as_of=_TODAY,
             )
 
         assert ledger.schedules == []

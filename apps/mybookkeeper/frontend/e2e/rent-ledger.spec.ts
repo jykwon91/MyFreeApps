@@ -10,6 +10,11 @@ import { test, expect, type APIRequestContext } from "./fixtures/auth";
  */
 
 const MONTHLY_RENT = "1500";
+// The page evaluates the ledger on the browser's local date, so each test pins
+// the browser clock to the day its UI assertions describe — the same day the
+// API reads below pass as ``as_of``. Local noon keeps it the same calendar day
+// in any test-runner time zone.
+const MID_AUGUST = new Date(2026, 7, 20, 12);
 const WEEKLY_PAYMENT = "375.00";
 
 interface Ledger {
@@ -118,6 +123,7 @@ test.describe("Rent ledger", () => {
         "2026-08-17",
       ]);
 
+      await page.clock.setFixedTime(MID_AUGUST);
       await page.goto(`/applicants/${applicantId}`);
       await expect(page.getByTestId("rent-ledger-section")).toBeVisible({
         timeout: 15000,
@@ -162,6 +168,7 @@ test.describe("Rent ledger", () => {
         "2026-08-10",
       ]);
 
+      await page.clock.setFixedTime(MID_AUGUST);
       await page.goto(`/applicants/${applicantId}`);
       await expect(page.getByTestId("rent-ledger-section")).toBeVisible({
         timeout: 15000,
@@ -193,6 +200,7 @@ test.describe("Rent ledger", () => {
       applicantId = await seedTenant(api, `E2E Rent Prorated ${runId}`);
       transactionIds = await seedPayments(api, applicantId, ["2026-08-20"]);
 
+      await page.clock.setFixedTime(MID_AUGUST);
       await page.goto(`/applicants/${applicantId}`);
       await expect(page.getByTestId("rent-ledger-section")).toBeVisible({
         timeout: 15000,
@@ -242,6 +250,7 @@ test.describe("Rent ledger", () => {
       });
       transactionIds = [...rent, ...deposit];
 
+      await page.clock.setFixedTime(MID_AUGUST);
       await page.goto(`/applicants/${applicantId}`);
       await expect(page.getByTestId("rent-ledger-section")).toBeVisible({
         timeout: 15000,
@@ -271,6 +280,7 @@ test.describe("Rent ledger", () => {
       applicantId = await seedTenant(api, `E2E Rent Waive ${runId}`);
       transactionIds = await seedPayments(api, applicantId, ["2026-08-03"]);
 
+      await page.clock.setFixedTime(MID_AUGUST);
       await page.goto(`/applicants/${applicantId}`);
       await expect(page.getByTestId("rent-ledger-section")).toBeVisible({
         timeout: 15000,
@@ -311,6 +321,7 @@ test.describe("Rent ledger", () => {
       applicantId = await seedTenant(api, `E2E Rent Applied ${runId}`);
       transactionIds = await seedPayments(api, applicantId, ["2026-08-03"]);
 
+      await page.clock.setFixedTime(MID_AUGUST);
       await page.goto(`/applicants/${applicantId}`);
       await expect(page.getByTestId("rent-ledger-section")).toBeVisible({
         timeout: 15000,
@@ -344,6 +355,7 @@ test.describe("Rent ledger", () => {
         await route.continue();
       });
 
+      await page.clock.setFixedTime(MID_AUGUST);
       await page.goto(`/applicants/${applicantId}`);
       const skeleton = page.getByTestId("rent-ledger-skeleton");
       await expect(skeleton).toBeVisible({ timeout: 15000 });

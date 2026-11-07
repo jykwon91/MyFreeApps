@@ -171,11 +171,9 @@ async def get_ledger(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
     applicant_id: uuid.UUID,
-    as_of: _dt.date | None = None,
+    as_of: _dt.date,
 ) -> RentLedgerResponse:
-    """The full rent picture for one tenant, charges refreshed first."""
-    today = as_of or _today()
-
+    """The full rent picture for one tenant as of the host's date, charges refreshed first."""
     async with unit_of_work() as db:
         applicant = await applicant_repo.get(
             db,
@@ -188,7 +186,7 @@ async def get_ledger(
 
         await ensure_charges_generated(
             db, organization_id=organization_id,
-            applicant_id=applicant_id, through=today,
+            applicant_id=applicant_id, through=as_of,
         )
 
         schedules = list(
@@ -274,7 +272,7 @@ async def get_ledger(
                 waived_reason=charge.waived_reason,
                 allocated=settlement.allocated,
                 remaining=settlement.remaining,
-                status=settlement.status(today),
+                status=settlement.status(as_of),
                 applications=[
                     RentPaymentApplication(
                         transaction_id=app.payment_id,
@@ -315,12 +313,12 @@ async def get_ledger(
         settlement_by_id=settlement_by_id,
         cadence_by_charge=cadence_by_charge,
         full_amount_by_charge=full_amount_by_charge,
-        as_of=today,
+        as_of=as_of,
     )
 
     return RentLedgerResponse(
         applicant_id=applicant_id,
-        as_of=today,
+        as_of=as_of,
         schedules=[RentScheduleResponse.model_validate(s) for s in schedules],
         charges=charge_responses,
         payments=payment_responses,

@@ -9,7 +9,7 @@ from typing import Annotated
 
 from pydantic import AfterValidator
 
-from app.core.lease_constants import CLIENT_LOCAL_DATE_MAX_SKEW_DAYS
+from app.core.client_date_constants import CLIENT_LOCAL_DATE_MAX_SKEW_DAYS
 
 
 def _within_a_day_of_utc(value: datetime.date) -> datetime.date:
