@@ -20,6 +20,7 @@
 
 // Re-export key utilities for convenience
 export { cn } from "./utils/cn";
+export { formatCount } from "./utils/count";
 export { formatCurrency } from "./utils/currency";
 export { formatDate, timeAgo } from "./utils/date";
 export { formatFileSize } from "./utils/file-size";
