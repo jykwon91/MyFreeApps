@@ -23,6 +23,7 @@ from the operator entirely) or ranked on a blended rate that nobody pays.
 """
 from __future__ import annotations
 
+import datetime as _dt
 import math
 import uuid
 from decimal import Decimal
@@ -81,9 +82,9 @@ _NO_BETTER_REASON = (
 )
 
 
-def _months_remaining(term_end_date: object) -> int | None:
+def _months_remaining(term_end_date: _dt.date | None, *, today: _dt.date) -> int | None:
     """Whole months left on a term, rounded up. None when there is no end date."""
-    days = days_until_term_end(term_end_date)  # type: ignore[arg-type]
+    days = days_until_term_end(term_end_date, today=today)
     if days is None:
         return None
     return max(math.ceil(days / 30), 0)
@@ -179,6 +180,7 @@ async def find_better_plans(
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
     min_term_months: int = DEFAULT_MIN_TERM_MONTHS,
+    today: _dt.date,
 ) -> UtilityOfferSearchResponse:
     """Rank live market offers against every property's current electricity plan."""
     async with unit_of_work() as db:
@@ -210,7 +212,7 @@ async def find_better_plans(
                 # A stored fee is the total the EFL states, not a monthly rate —
                 # per-month fees are normalised when the plan is recorded.
                 is_per_remaining_month=False,
-                months_remaining=_months_remaining(plan.term_end_date),
+                months_remaining=_months_remaining(plan.term_end_date, today=today),
             ),
         )
 

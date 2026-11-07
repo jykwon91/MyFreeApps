@@ -319,6 +319,41 @@ class TestRenewalAlerts:
 
         assert result.total_needing_attention == 0
 
+    async def test_status_is_measured_from_the_passed_today(
+        self, db: AsyncSession,
+    ) -> None:
+        """The caller's date decides the bucket, never the server's clock."""
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        prop = await _make_property(db, org_id, user_id, "6740 Peerless St")
+        term_end = _dt.date(2030, 3, 15)
+        await utility_plan_repo.create(
+            db,
+            user_id=user_id,
+            organization_id=org_id,
+            property_id=prop.id,
+            service_type=SERVICE_TYPE_ELECTRICITY,
+            provider_name="Constellation",
+            rate_type=RATE_TYPE_FIXED,
+            term_end_date=term_end,
+        )
+
+        with patch(_UOW_TARGET, _make_fake_uow(db)):
+            before = await utility_plan_service.get_renewal_alerts(
+                user_id=user_id,
+                organization_id=org_id,
+                today=term_end - _dt.timedelta(days=5),
+            )
+            after = await utility_plan_service.get_renewal_alerts(
+                user_id=user_id,
+                organization_id=org_id,
+                today=term_end + _dt.timedelta(days=1),
+            )
+
+        assert [p.days_until_term_end for p in before.expiring_soon] == [5]
+        assert before.expired == []
+        assert [p.days_until_term_end for p in after.expired] == [-1]
+        assert after.expiring_soon == []
+
     async def test_superseded_expired_plan_is_not_alerted(
         self, db: AsyncSession,
     ) -> None:
@@ -592,6 +627,7 @@ class TestUpdatePlan:
                     organization_id=org_id,
                     plan_id=plan.id,
                     fields={"term_end_date": _dt.date(2024, 6, 1)},
+                    today=TODAY,
                 )
 
     async def test_patch_accepts_post_promo_against_a_stored_term_end(
@@ -618,6 +654,7 @@ class TestUpdatePlan:
                 organization_id=org_id,
                 plan_id=plan.id,
                 fields={"post_promo_monthly_cents": 9500},
+                today=TODAY,
             )
 
         assert detail.post_promo_monthly_cents == 9500
@@ -647,6 +684,7 @@ class TestUpdatePlan:
                     organization_id=org_id,
                     plan_id=plan.id,
                     fields={"term_end_date": None},
+                    today=TODAY,
                 )
 
     async def test_account_number_is_normalized_on_update(
@@ -670,6 +708,7 @@ class TestUpdatePlan:
                 organization_id=org_id,
                 plan_id=plan.id,
                 fields={"account_number": "6403771807-5"},
+                today=TODAY,
             )
 
         # Same normalization as utility_account_link, so the plan and the
@@ -685,6 +724,7 @@ class TestUpdatePlan:
                     organization_id=org_id,
                     plan_id=uuid.uuid4(),
                     fields={"provider_name": "Anything"},
+                    today=TODAY,
                 )
 
 
@@ -752,6 +792,7 @@ class TestDetailMappingIsExhaustive:
 
         detail = utility_plan_helpers.to_detail(
             plan, property_name="6734 Peerless St", is_current=True,
+            today=TODAY,
         )
 
         dropped = [
@@ -801,6 +842,7 @@ class TestSourceDocumentIsolation:
                     "rate_type": RATE_TYPE_FIXED,
                     "source_document_id": doc.id,
                 },
+                today=TODAY,
             )
 
         assert detail.source_document_id == doc.id
@@ -824,6 +866,7 @@ class TestSourceDocumentIsolation:
                         "rate_type": RATE_TYPE_FIXED,
                         "source_document_id": theirs.id,
                     },
+                    today=TODAY,
                 )
 
     async def test_patching_in_another_orgs_document_is_rejected(
@@ -849,6 +892,7 @@ class TestSourceDocumentIsolation:
                     organization_id=org_id,
                     plan_id=plan.id,
                     fields={"source_document_id": theirs.id},
+                    today=TODAY,
                 )
 
     async def test_a_document_id_naming_nothing_is_rejected(
@@ -870,6 +914,7 @@ class TestSourceDocumentIsolation:
                         "rate_type": RATE_TYPE_FIXED,
                         "source_document_id": uuid.uuid4(),
                     },
+                    today=TODAY,
                 )
 
     async def test_a_plan_with_no_source_document_skips_the_lookup(
@@ -892,6 +937,7 @@ class TestSourceDocumentIsolation:
                         "provider_name": "Constellation",
                         "rate_type": RATE_TYPE_FIXED,
                     },
+                    today=TODAY,
                 )
 
         assert detail.source_document_id is None

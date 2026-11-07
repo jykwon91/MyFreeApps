@@ -48,4 +48,6 @@ export interface UtilityPlanCreateRequest {
   source_document_id?: string | null;
 
   notes?: string | null;
+  /** The caller's local date; the returned renewal status is measured from it. */
+  today: string;
 }

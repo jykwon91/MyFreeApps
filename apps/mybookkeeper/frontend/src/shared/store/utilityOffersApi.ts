@@ -1,3 +1,4 @@
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import { baseApi } from "./baseApi";
 import type { UtilityOfferSearchResponse } from "@/shared/types/utility/utility-offer-search-response";
 
@@ -20,7 +21,10 @@ const utilityOffersApi = baseApi.injectEndpoints({
     >({
       query: (args) => ({
         url: "/utility-plans/offers",
-        params: args?.minTermMonths ? { min_term_months: args.minTermMonths } : undefined,
+        params: {
+          today: localToday(),
+          ...(args?.minTermMonths ? { min_term_months: args.minTermMonths } : {}),
+        },
       }),
       providesTags: [{ type: "UtilityPlan", id: "OFFERS" }],
     }),

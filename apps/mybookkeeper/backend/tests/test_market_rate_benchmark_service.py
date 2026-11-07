@@ -447,6 +447,7 @@ class TestBenchmarkCrud:
                     source=None,
                     observed_on=TODAY,
                     notes=None,
+                    today=TODAY,
                 )
 
     async def test_flat_service_rejects_a_metered_rate(
@@ -465,6 +466,7 @@ class TestBenchmarkCrud:
                     source=None,
                     observed_on=TODAY,
                     notes=None,
+                    today=TODAY,
                 )
 
     async def test_unknown_service_type_is_rejected_before_the_check_constraint(
@@ -484,6 +486,7 @@ class TestBenchmarkCrud:
                     source=None,
                     observed_on=TODAY,
                     notes=None,
+                    today=TODAY,
                 )
 
     async def test_delete_of_a_missing_benchmark_raises_not_found(

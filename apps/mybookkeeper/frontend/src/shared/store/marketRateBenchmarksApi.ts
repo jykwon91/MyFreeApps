@@ -1,3 +1,4 @@
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import { baseApi } from "./baseApi";
 import type { MarketRateBenchmark } from "@/shared/types/utility/market-rate-benchmark";
 import type { MarketRateBenchmarkUpsertRequest } from "@/shared/types/utility/market-rate-benchmark-upsert-request";
@@ -15,7 +16,7 @@ import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/
 const marketRateBenchmarksApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getMarketRateBenchmarks: builder.query<MarketRateBenchmark[], void>({
-      query: () => ({ url: "/market-rate-benchmarks" }),
+      query: () => ({ url: "/market-rate-benchmarks", params: { today: localToday() } }),
       providesTags: (result) =>
         result
           ? [
@@ -29,19 +30,18 @@ const marketRateBenchmarksApi = baseApi.injectEndpoints({
     }),
 
     getUtilityPlanRateComparison: builder.query<UtilityPlanRateComparison, void>({
-      query: () => ({ url: "/utility-plans/rate-comparison" }),
+      query: () => ({ url: "/utility-plans/rate-comparison", params: { today: localToday() } }),
       providesTags: [{ type: "UtilityPlan", id: "COMPARISON" }],
     }),
 
     upsertMarketRateBenchmark: builder.mutation<
       MarketRateBenchmark,
-      { serviceType: UtilityServiceType; data: MarketRateBenchmarkUpsertRequest }
+      { serviceType: UtilityServiceType; data: Omit<MarketRateBenchmarkUpsertRequest, "today"> }
     >({
-      query: ({ serviceType, data }) => ({
-        url: `/market-rate-benchmarks/${serviceType}`,
-        method: "PUT",
-        data,
-      }),
+      query: ({ serviceType, data }) => {
+        const body: MarketRateBenchmarkUpsertRequest = { ...data, today: localToday() };
+        return { url: `/market-rate-benchmarks/${serviceType}`, method: "PUT", data: body };
+      },
       invalidatesTags: (_r, _e, { serviceType }) => [
         { type: "MarketRateBenchmark", id: serviceType },
         { type: "MarketRateBenchmark", id: "LIST" },

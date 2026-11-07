@@ -10,8 +10,8 @@ export function localToday(): string {
 
 /**
  * ``offsetDays`` from the host's today as ``YYYY-MM-DD``. Negative is in the past.
- * Utility-plan and insurance endpoints use the server's own date, so these specs
- * assume the backend runs in the test host's timezone.
+ * Insurance endpoints still use the server's own date, so specs on them assume
+ * the backend runs in the test host's timezone.
  */
 export function localDateOffset(offsetDays: number): string {
   return format(addDays(new Date(), offsetDays), "yyyy-MM-dd");

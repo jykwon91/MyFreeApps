@@ -1,6 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
 import { createProperty, deleteProperty } from "./fixtures/seed-data";
-import { localDateOffset } from "./fixtures/local-today";
+import { localDateOffset, localToday } from "./fixtures/local-today";
 
 /**
  * Utility Plans full-flow behavioural E2E.
@@ -40,13 +40,13 @@ interface RenewalAlerts {
 }
 
 async function fetchPlan(api: APIRequestContext, id: string): Promise<UtilityPlanRow> {
-  const res = await api.get(`/utility-plans/${id}`);
+  const res = await api.get(`/utility-plans/${id}`, { params: { today: localToday() } });
   if (!res.ok()) throw new Error(`fetchPlan failed: ${res.status()} ${await res.text()}`);
   return res.json();
 }
 
 async function fetchAlerts(api: APIRequestContext): Promise<RenewalAlerts> {
-  const res = await api.get("/utility-plans/renewal-alerts");
+  const res = await api.get("/utility-plans/renewal-alerts", { params: { today: localToday() } });
   if (!res.ok()) throw new Error(`fetchAlerts failed: ${res.status()} ${await res.text()}`);
   return res.json();
 }
@@ -157,7 +157,7 @@ test.describe("Utility Plans", () => {
         timeout: 10000,
       });
 
-      const afterDelete = await api.get(`/utility-plans/${planId}`);
+      const afterDelete = await api.get(`/utility-plans/${planId}`, { params: { today: localToday() } });
       expect(afterDelete.status()).toBe(404);
       planId = null;
     } finally {
@@ -246,6 +246,7 @@ test.describe("Utility Plans", () => {
 
       const created = await api.post("/utility-plans", {
         data: {
+          today: localToday(),
           property_id: propertyId,
           service_type: "electricity",
           rate_type: "fixed",

@@ -10,5 +10,5 @@ import type { UtilityPlanCreateRequest } from "@/shared/types/utility/utility-pl
  * would silently rewrite that property's rate history. Delete and re-create.
  */
 export type UtilityPlanUpdateRequest = Partial<
-  Omit<UtilityPlanCreateRequest, "property_id">
->;
+  Omit<UtilityPlanCreateRequest, "property_id" | "today">
+> & Pick<UtilityPlanCreateRequest, "today">;

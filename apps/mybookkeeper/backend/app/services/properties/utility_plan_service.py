@@ -107,6 +107,7 @@ async def create_plan(
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
     fields: dict[str, Any],
+    today: _dt.date,
 ) -> UtilityPlanResponse:
     payload = dict(fields)
     account_number = payload.get("account_number")
@@ -134,6 +135,7 @@ async def create_plan(
             plan,
             property_name=names.get(plan.property_id),
             is_current=plan.id in current_ids,
+            today=today,
         )
     return detail
 
@@ -151,6 +153,7 @@ async def list_plans(
     expiring_before: _dt.date | None = None,
     limit: int = 50,
     offset: int = 0,
+    today: _dt.date,
 ) -> UtilityPlanListResponse:
     async with unit_of_work() as db:
         rows = await utility_plan_repo.list_for_org(
@@ -180,7 +183,7 @@ async def list_plans(
         current_ids = current_plan_ids(all_active)
 
     items = [
-        to_summary(r, property_names=names, current_ids=current_ids)
+        to_summary(r, property_names=names, current_ids=current_ids, today=today)
         for r in rows
     ]
     return UtilityPlanListResponse(
@@ -193,6 +196,7 @@ async def get_plan(
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
     plan_id: uuid.UUID,
+    today: _dt.date,
 ) -> UtilityPlanResponse:
     async with unit_of_work() as db:
         plan = await utility_plan_repo.get(
@@ -212,6 +216,7 @@ async def get_plan(
             plan,
             property_name=names.get(plan.property_id),
             is_current=plan.id in current_ids,
+            today=today,
         )
 
 
@@ -224,7 +229,7 @@ async def get_renewal_alerts(
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
     window_days: int = EXPIRING_SOON_DAYS,
-    today: _dt.date | None = None,
+    today: _dt.date,
 ) -> UtilityPlanRenewalAlertResponse:
     """Current, renewable plans whose term has lapsed or is about to."""
     async with unit_of_work() as db:
@@ -276,7 +281,7 @@ async def get_renewal_alerts(
 
 async def sweep_plans_needing_renewal(
     *,
-    today: _dt.date | None = None,
+    today: _dt.date,
     window_days: int = EXPIRING_SOON_DAYS,
 ) -> list[UtilityPlanSummary]:
     """Cross-tenant version of :func:`get_renewal_alerts`, for the scheduler.
@@ -287,8 +292,7 @@ async def sweep_plans_needing_renewal(
 
     Ordered most urgent (longest lapsed) first.
     """
-    reference = today or _dt.date.today()
-    cutoff = reference + _dt.timedelta(days=window_days)
+    cutoff = today + _dt.timedelta(days=window_days)
 
     async with unit_of_work() as db:
         candidates = await utility_plan_repo.list_active_for_expiring_properties(
@@ -302,7 +306,7 @@ async def sweep_plans_needing_renewal(
 
     flagged = [
         to_summary(
-            plan, property_names=names, current_ids=current_ids, today=reference,
+            plan, property_names=names, current_ids=current_ids, today=today,
         )
         for plan in candidates
         if plan.id in current_ids
@@ -310,7 +314,7 @@ async def sweep_plans_needing_renewal(
         and renewal_status(
             plan.rate_type,
             plan.term_end_date,
-            today=reference,
+            today=today,
             window_days=window_days,
         )
         in ACTIONABLE_RENEWAL_STATUSES
@@ -329,6 +333,7 @@ async def update_plan(
     organization_id: uuid.UUID,
     plan_id: uuid.UUID,
     fields: dict[str, Any],
+    today: _dt.date,
 ) -> UtilityPlanResponse:
     payload = dict(fields)
     account_number = payload.get("account_number")
@@ -373,6 +378,7 @@ async def update_plan(
             plan,
             property_name=names.get(plan.property_id),
             is_current=plan.id in current_ids,
+            today=today,
         )
 
 

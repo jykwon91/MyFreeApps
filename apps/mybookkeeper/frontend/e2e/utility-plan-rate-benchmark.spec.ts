@@ -1,6 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
 import { createProperty, deleteProperty } from "./fixtures/seed-data";
-import { localDateOffset } from "./fixtures/local-today";
+import { localDateOffset, localToday } from "./fixtures/local-today";
 
 /**
  * Rate-benchmark full-flow behavioural E2E.
@@ -52,6 +52,7 @@ async function seedPlan(
 ): Promise<string> {
   const res = await api.post("/utility-plans", {
     data: {
+      today: localToday(),
       property_id: propertyId,
       service_type: "electricity",
       provider_name: providerName,
@@ -72,7 +73,7 @@ async function seedPlan(
 }
 
 async function fetchComparison(api: APIRequestContext): Promise<Comparison> {
-  const res = await api.get("/utility-plans/rate-comparison");
+  const res = await api.get("/utility-plans/rate-comparison", { params: { today: localToday() } });
   if (!res.ok()) {
     throw new Error(`fetchComparison failed: ${res.status()} ${await res.text()}`);
   }
@@ -80,7 +81,7 @@ async function fetchComparison(api: APIRequestContext): Promise<Comparison> {
 }
 
 async function fetchBenchmarks(api: APIRequestContext): Promise<BenchmarkRow[]> {
-  const res = await api.get("/market-rate-benchmarks");
+  const res = await api.get("/market-rate-benchmarks", { params: { today: localToday() } });
   if (!res.ok()) {
     throw new Error(`fetchBenchmarks failed: ${res.status()} ${await res.text()}`);
   }
@@ -209,6 +210,7 @@ test.describe("Utility plan rate benchmark", () => {
 
       const planRes = await api.post("/utility-plans", {
         data: {
+          today: localToday(),
           property_id: propertyId,
           service_type: "natural_gas",
           provider_name: `E2E CenterPoint ${runId}`,
@@ -224,6 +226,7 @@ test.describe("Utility plan rate benchmark", () => {
 
       const benchRes = await api.put("/market-rate-benchmarks/natural_gas", {
         data: {
+          today: localToday(),
           rate_cents_per_kwh: "1.0000",
           source: `E2E regulated check ${runId}`,
           observed_on: localDateOffset(0),
@@ -251,6 +254,7 @@ test.describe("Utility plan rate benchmark", () => {
     // readable 422 rather than an IntegrityError 500.
     const res = await api.put("/market-rate-benchmarks/electricity", {
       data: {
+        today: localToday(),
         rate_cents_per_kwh: "11.1000",
         monthly_cents: 6000,
         observed_on: localDateOffset(0),
