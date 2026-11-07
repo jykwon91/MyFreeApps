@@ -1,9 +1,7 @@
 import { useRef, useState } from "react";
 import { Plus } from "lucide-react";
-import { Button } from "@platform/ui";
-import { ConfirmDialog } from "@platform/ui";
+import { Button, ConfirmDialog, showError, showSuccess } from "@platform/ui";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useArchiveReplyTemplate } from "@mybookkeeper/api-client/hooks/useArchiveReplyTemplate";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 import { ARCHIVE_FAILURES, archiveDescription, REPLY_TEMPLATE_MESSAGES as MESSAGES } from "@/shared/lib/reply-template-messages";

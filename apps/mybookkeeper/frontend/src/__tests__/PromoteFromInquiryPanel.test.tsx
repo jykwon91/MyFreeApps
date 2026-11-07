@@ -35,7 +35,8 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: (m: string) => showErrorMock(m),
   showSuccess: (m: string) => showSuccessMock(m),
   subscribe: () => () => {},

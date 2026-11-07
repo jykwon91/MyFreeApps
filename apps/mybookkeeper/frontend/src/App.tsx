@@ -8,7 +8,7 @@ import RequireRole from "@/shared/components/RequireRole";
 import RequireOrg from "@/shared/components/RequireOrg";
 import RequireOrgRole from "@/shared/components/RequireOrgRole";
 import ErrorBoundary from "@/shared/components/ErrorBoundary";
-import Toaster from "@/shared/components/ui/Toaster";
+import { Toaster } from "@platform/ui";
 import Login from "@/app/pages/Login";
 import Register from "@/app/pages/Register";
 import ForgotPassword from "@/app/pages/ForgotPassword";

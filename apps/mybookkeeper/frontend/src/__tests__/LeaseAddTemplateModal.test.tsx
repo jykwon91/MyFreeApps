@@ -58,7 +58,8 @@ vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
   useGetApplicantByIdQuery: () => ({ ...queryData(undefined) }),
 }));
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: (...args: unknown[]) => showErrorMock(...args),
   showSuccess: (...args: unknown[]) => showSuccessMock(...args),
 }));

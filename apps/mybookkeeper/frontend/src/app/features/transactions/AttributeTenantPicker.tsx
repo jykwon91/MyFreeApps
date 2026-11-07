@@ -15,10 +15,9 @@
  */
 import { useState } from "react";
 import { UserCheck } from "lucide-react";
-import { LoadingButton } from "@platform/ui";
+import { LoadingButton, showError, showSuccess } from "@platform/ui";
 import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useAttributeTransactionManuallyMutation } from "@/shared/store/attributionApi";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { buildTenantOptions } from "@mybookkeeper/api-client/utils/tenantStatus";
 
 export interface AttributeTenantPickerProps {

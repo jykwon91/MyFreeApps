@@ -11,7 +11,8 @@ import type { SuggestPlaceholdersResponse } from "@/shared/types/lease/suggest-p
 // Mocks
 // ---------------------------------------------------------------------------
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showSuccess: vi.fn(),
   showError: vi.fn(),
 }));
@@ -110,7 +111,7 @@ describe("LeaseTemplateUploadDialog", () => {
   });
 
   it("shows error when submitting without a name", async () => {
-    const { showError } = await import("@/shared/lib/toast-store");
+    const { showError } = await import("@platform/ui");
     renderDialog({});
     // Submit without entering a name.
     submitForm();
@@ -118,7 +119,7 @@ describe("LeaseTemplateUploadDialog", () => {
   });
 
   it("shows error when submitting without files", async () => {
-    const { showError } = await import("@/shared/lib/toast-store");
+    const { showError } = await import("@platform/ui");
     renderDialog({});
     fireEvent.change(screen.getByTestId("template-name-input"), {
       target: { value: "My Lease" },

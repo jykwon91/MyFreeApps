@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { Button, ConfirmDialog } from "@platform/ui";
+import { Button, ConfirmDialog, showError, showSuccess } from "@platform/ui";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useGetUtilityPlansQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
 import { useDeleteUtilityPlanMutation } from "@/shared/store/utilityPlansApi";
 import AddUtilityPlanDialog from "@/app/features/utility/AddUtilityPlanDialog";

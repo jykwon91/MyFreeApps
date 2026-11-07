@@ -1,8 +1,7 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Upload, X } from "lucide-react";
-import { LoadingButton } from "@platform/ui";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { LoadingButton, showError, showSuccess } from "@platform/ui";
 import {
   useCreateLeaseTemplateMutation,
   useSuggestPlaceholdersMutation,

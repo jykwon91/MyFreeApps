@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/shared/utils/cn";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { showError, showSuccess, Button, LoadingButton } from "@platform/ui";
 import { useCompleteOnboardingMutation } from "@/shared/store/taxProfileApi";
-import { Button, LoadingButton } from "@platform/ui";
 import TaxSituationStep from "@/app/features/onboarding/TaxSituationStep";
 import FilingStatusStep from "@/app/features/onboarding/FilingStatusStep";
 import DependentsStep from "@/app/features/onboarding/DependentsStep";

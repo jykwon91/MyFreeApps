@@ -1,8 +1,7 @@
 import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { X } from "lucide-react";
-import { FormField, LoadingButton, Panel, PanelTitle } from "@platform/ui";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { FormField, LoadingButton, Panel, PanelTitle, showError, showSuccess } from "@platform/ui";
 import { INQUIRY_SOURCES, INQUIRY_SOURCE_LABELS } from "@mybookkeeper/api-client/constants/inquiryLabels";
 import { useCreateInquiryMutation } from "@mybookkeeper/api-client/store/inquiriesApi";
 import type { InquiryCreateRequest } from "@mybookkeeper/api-client/types/inquiry/inquiry-create-request";

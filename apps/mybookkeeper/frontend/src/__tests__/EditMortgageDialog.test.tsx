@@ -23,7 +23,8 @@ vi.mock("@/shared/store/mortgagesApi", () => ({
   useDeleteMortgageMutation: vi.fn(() => [mockDelete, { isLoading: false }]),
 }));
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: vi.fn(),
   showSuccess: vi.fn(),
 }));

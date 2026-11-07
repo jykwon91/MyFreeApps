@@ -2,8 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Star, Trash2 } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import { Button } from "@platform/ui";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { Button, showError, showSuccess } from "@platform/ui";
 import {
   useDeleteVendorMutation,
   useGetVendorByIdQuery,

@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Loader2, Upload } from "lucide-react";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { showError, showSuccess } from "@platform/ui";
 import {
   useDeleteBlackoutAttachmentMutation,
   useGetBlackoutAttachmentsQuery,

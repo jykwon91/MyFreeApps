@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { CheckCircle, XCircle, HelpCircle, UserCheck, Home } from "lucide-react";
-import { LoadingButton } from "@platform/ui";
+import { LoadingButton, showError, showSuccess } from "@platform/ui";
 import { formatCurrency } from "@/shared/utils/currency";
 import type { AttributionReviewItem as ReviewItemType } from "@mybookkeeper/api-client/types/attribution/attribution-review-item";
 import {
@@ -11,7 +11,6 @@ import { useAttributeTransactionManuallyMutation } from "@/shared/store/attribut
 import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { buildTenantOptions } from "@mybookkeeper/api-client/utils/tenantStatus";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
 import AttributionChannelBadge from "./AttributionChannelBadge";
 
 export interface AttributionReviewItemProps {

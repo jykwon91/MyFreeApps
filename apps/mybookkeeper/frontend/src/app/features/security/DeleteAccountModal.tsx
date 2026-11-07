@@ -1,12 +1,10 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { AlertTriangle } from "lucide-react";
-import { Button } from "@platform/ui";
-import { extractErrorMessage } from "@platform/ui";
+import { Button, extractErrorMessage, showError } from "@platform/ui";
 import { useDeleteAccountMutation } from "@/shared/store/accountApi";
 import { useGetTotpStatusQuery } from "@/shared/store/totpApi";
 import { logout } from "@/shared/lib/auth";
-import { showError } from "@/shared/lib/toast-store";
 
 export interface DeleteAccountModalProps {
   open: boolean;

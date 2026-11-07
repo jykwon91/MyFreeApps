@@ -13,7 +13,8 @@ vi.mock("@mybookkeeper/api-client/store/rentReceiptsApi", () => ({
   useSendReceiptMutation: vi.fn(() => [mockSendReceipt, { isLoading: false }]),
 }));
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showSuccess: vi.fn(),
   showError: vi.fn(),
 }));
@@ -23,7 +24,7 @@ vi.mock("@/shared/lib/api", () => ({
   default: { get: (...args: unknown[]) => mockApiGet(...args) },
 }));
 
-import { showSuccess, showError } from "@/shared/lib/toast-store";
+import { showSuccess, showError } from "@platform/ui";
 
 // A lease-set period that isn't a calendar month: the dialog must keep it.
 const mockReceipt: PendingReceipt = {

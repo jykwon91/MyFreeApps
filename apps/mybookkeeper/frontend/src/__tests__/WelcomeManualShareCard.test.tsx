@@ -17,7 +17,8 @@ const updateShareMock = vi.fn(() => ({
 }));
 const revokeShareMock = vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) }));
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: vi.fn(),
   showSuccess: vi.fn(),
 }));

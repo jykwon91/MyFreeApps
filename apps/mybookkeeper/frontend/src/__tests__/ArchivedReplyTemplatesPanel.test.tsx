@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 import ArchivedReplyTemplatesPanel from "@/app/features/inquiries/ArchivedReplyTemplatesPanel";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { showError, showSuccess } from "@platform/ui";
 import { REPLY_TEMPLATE_MESSAGES as MESSAGES, restoreLabel } from "@/shared/lib/reply-template-messages";
 
 const old: ReplyTemplate = {
@@ -32,7 +32,8 @@ vi.mock("@mybookkeeper/api-client/store/inquiriesApi", () => ({
 
 vi.mock("@/shared/hooks/useOrgRole", () => ({ useCanWrite: vi.fn(() => true) }));
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showSuccess: vi.fn(),
   showError: vi.fn(),
   subscribe: vi.fn(() => () => {}),

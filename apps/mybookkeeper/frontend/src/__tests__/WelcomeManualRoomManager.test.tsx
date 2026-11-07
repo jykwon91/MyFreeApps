@@ -25,7 +25,8 @@ const createRoomMock = vi.fn();
 const updateRoomMock = vi.fn();
 const deleteRoomMock = vi.fn();
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: vi.fn(),
   showSuccess: vi.fn(),
 }));

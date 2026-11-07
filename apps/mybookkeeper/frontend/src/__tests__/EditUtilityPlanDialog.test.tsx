@@ -11,7 +11,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import EditUtilityPlanDialog from "@/app/features/utility/EditUtilityPlanDialog";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { showError, showSuccess } from "@platform/ui";
 import type { UtilityPlanDetail } from "@mybookkeeper/api-client/types/utility/utility-plan-detail";
 import { queryStatus } from "@/test/rtk-query-status";
 import { queryData } from "@/test/rtk-query-data";
@@ -40,7 +40,8 @@ vi.mock("@/shared/store/utilityPlansApi", () => ({
   useUpdateUtilityPlanMutation: vi.fn(() => [mockUpdate, { isLoading: false }]),
 }));
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: vi.fn(),
   showSuccess: vi.fn(),
 }));

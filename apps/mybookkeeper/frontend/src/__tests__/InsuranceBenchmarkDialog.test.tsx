@@ -11,7 +11,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
-import { showError } from "@/shared/lib/toast-store";
+import { showError } from "@platform/ui";
 import { store } from "@/shared/store";
 import InsuranceBenchmarkDialog from "@/app/features/insurance/InsuranceBenchmarkDialog";
 import type { InsuranceBenchmark } from "@/shared/types/insurance/insurance-benchmark";
@@ -32,7 +32,8 @@ vi.mock("@/shared/store/insuranceBenchmarksApi", () => ({
   useDeleteInsuranceBenchmarkMutation: vi.fn(() => [mockDelete, { isLoading: false }]),
 }));
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: vi.fn(),
   showSuccess: vi.fn(),
 }));

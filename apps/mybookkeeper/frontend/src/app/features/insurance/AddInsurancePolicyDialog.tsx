@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { Button, FormField, LoadingButton } from "@platform/ui";
+import { Button, FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
 import { applyDraftToForm } from "@/shared/lib/insurance-policy-draft";
 import { EMPTY_POLICY_FORM, toPolicyPayload } from "@/shared/lib/insurance-policy-form";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useCreateInsurancePolicyMutation } from "@/shared/store/insurancePoliciesApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { InsurancePolicyDraft } from "@/shared/types/insurance/insurance-policy-draft";

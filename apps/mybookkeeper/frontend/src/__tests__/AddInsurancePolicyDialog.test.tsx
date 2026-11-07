@@ -12,7 +12,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import AddInsurancePolicyDialog from "@/app/features/insurance/AddInsurancePolicyDialog";
 import { FORM_DIALOG_WIDTH_CLASS } from "@/shared/components/ui/form-dialog-width-class";
-import { showError } from "@/shared/lib/toast-store";
+import { showError } from "@platform/ui";
 import type { InsurancePolicyDraft } from "@/shared/types/insurance/insurance-policy-draft";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
@@ -45,7 +45,8 @@ vi.mock("@mybookkeeper/api-client/store/documentsApi", () => ({
   })),
 }));
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: vi.fn(),
   showSuccess: vi.fn(),
 }));

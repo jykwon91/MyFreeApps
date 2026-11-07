@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { FormField, LoadingButton } from "@platform/ui";
+import { FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 import TilePicker from "@/shared/components/ui/TilePicker";
 import { CLASSIFICATION_OPTIONS } from "@/shared/lib/property-labels";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   useGetPropertiesQuery,
   useUpdatePropertyMutation,

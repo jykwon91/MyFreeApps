@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { X, Download, Trash2 } from "lucide-react";
-import { AlertBox } from "@platform/ui";
+import { AlertBox, showError, showSuccess } from "@platform/ui";
 import TwoFactorSetup from "@/app/features/security/TwoFactorSetup";
 import DeleteAccountModal from "@/app/features/security/DeleteAccountModal";
 import DisplayNameSetting from "@/app/features/security/DisplayNameSetting";
 import { useDismissable } from "@/shared/hooks/useDismissable";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
 import api from "@/shared/lib/api";
 
 export default function Security() {

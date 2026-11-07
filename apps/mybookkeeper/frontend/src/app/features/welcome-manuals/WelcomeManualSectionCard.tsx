@@ -2,9 +2,8 @@ import { forwardRef, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { DoorOpen, GripVertical, Trash2 } from "lucide-react";
-import { ConfirmDialog, FormField, LoadingButton } from "@platform/ui";
+import { ConfirmDialog, FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
 import Markdown from "@/shared/components/ui/Markdown";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   NEW_SECTION_DEFAULT_TITLE,
   SHARED_ROOM_OPTION,

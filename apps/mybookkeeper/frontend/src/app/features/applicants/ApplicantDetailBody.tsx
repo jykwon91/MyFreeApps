@@ -4,7 +4,7 @@ import { ExternalLink } from "lucide-react";
 import { useGetSignedLeasesQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { useRestartTenancyMutation, useRevealApplicantSensitiveMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { showError, showSuccess, Button, LoadingButton } from "@platform/ui";
 import {
   formatAbsoluteTime,
   formatLongDate,
@@ -12,7 +12,6 @@ import {
 } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import type { ApplicantDetailResponse } from "@mybookkeeper/api-client/types/applicant/applicant-detail-response";
 import type { SignedLeaseSummary } from "@mybookkeeper/api-client/types/lease/signed-lease-summary";
-import { Button, LoadingButton } from "@platform/ui";
 import ApplicantStatusControl from "./ApplicantStatusControl";
 import ApplicantTimelineList from "./ApplicantTimelineList";
 import ContractDatesEditor from "./ContractDatesEditor";

@@ -27,7 +27,8 @@ vi.mock("@/shared/lib/api", () => ({
   },
 }));
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: vi.fn(),
   showSuccess: vi.fn(),
 }));
@@ -200,7 +201,7 @@ describe("Security — data export", () => {
   });
 
   it("clicking Download my data triggers export and shows success toast", async () => {
-    const { showSuccess } = await import("@/shared/lib/toast-store");
+    const { showSuccess } = await import("@platform/ui");
     const user = userEvent.setup();
     renderSecurity();
 

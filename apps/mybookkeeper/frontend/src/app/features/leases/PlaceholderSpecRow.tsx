@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { showError, showSuccess } from "@platform/ui";
 import { useUpdateLeasePlaceholderMutation } from "@/shared/store/leaseTemplatesApi";
 import {
   LEASE_PLACEHOLDER_INPUT_TYPE_LABELS,

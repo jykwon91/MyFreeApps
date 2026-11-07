@@ -18,7 +18,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import UtilityPlanDocumentReader from "@/app/features/utility/UtilityPlanDocumentReader";
-import { showError } from "@/shared/lib/toast-store";
+import { showError } from "@platform/ui";
 import type { UtilityPlanDraft } from "@/shared/types/utility/utility-plan-draft";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
@@ -39,7 +39,8 @@ vi.mock("@mybookkeeper/api-client/store/documentsApi", () => ({
   useGetDocumentsQuery: (...args: unknown[]) => mockUseGetDocuments(...args),
 }));
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: vi.fn(),
   showSuccess: vi.fn(),
 }));

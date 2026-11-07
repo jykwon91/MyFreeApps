@@ -10,14 +10,15 @@ vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
 vi.mock("@/shared/store/attributionApi", () => ({
   useAttributeTransactionManuallyMutation: vi.fn(),
 }));
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: vi.fn(),
   showSuccess: vi.fn(),
 }));
 
 import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useAttributeTransactionManuallyMutation } from "@/shared/store/attributionApi";
-import { showSuccess } from "@/shared/lib/toast-store";
+import { showSuccess } from "@platform/ui";
 
 const resolvedUnwrap = () => ({ unwrap: () => Promise.resolve({ ok: true }) });
 let attributeTrigger: ReturnType<typeof vi.fn>;

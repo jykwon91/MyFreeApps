@@ -16,8 +16,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { Plus } from "lucide-react";
-import { LoadingButton, ConfirmDialog } from "@platform/ui";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { LoadingButton, ConfirmDialog, showError, showSuccess } from "@platform/ui";
 import {
   MAX_FIELDS_PER_SECTION,
   NEW_FIELD_DEFAULT_LABEL,

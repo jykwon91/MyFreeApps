@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { Button, FormField, LoadingButton } from "@platform/ui";
+import { Button, FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import { applyMortgageDraftToForm } from "@/shared/lib/mortgage-draft";
 import { EMPTY_MORTGAGE_FORM, toMortgagePayload } from "@/shared/lib/mortgage-form";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useCreateMortgageMutation } from "@/shared/store/mortgagesApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { MortgageDraft } from "@/shared/types/mortgage/mortgage-draft";

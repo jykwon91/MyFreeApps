@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { AlertCircle, CheckCircle, Info, X } from "lucide-react";
-import { FormField, LoadingButton, Panel, PanelTitle } from "@platform/ui";
+import { FormField, LoadingButton, Panel, PanelTitle, showError } from "@platform/ui";
 import { DEMO_EMAIL_REFUSED } from "@mybookkeeper/api-client/constants/demoRefusal";
 import { isDemoRefusal } from "@mybookkeeper/api-client/utils/isDemoRefusal";
-import { showError } from "@/shared/lib/toast-store";
 import { EMAIL_REGEX, SHARED_ROOM_OPTION } from "@/shared/lib/welcome-manual-constants";
 import { useEmailWelcomeManualMutation } from "@/shared/store/welcomeManualsApi";
 import type { WelcomeManualEmailDialogStep } from "@/shared/types/welcome-manual/welcome-manual-email-dialog-step";

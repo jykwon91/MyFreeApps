@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import { Button } from "@platform/ui";
+import { Button, showError, showSuccess } from "@platform/ui";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import {
   useGetSignedLeasesQuery,
   useDeleteSignedLeaseMutation,
 } from "@mybookkeeper/api-client/store/signedLeasesApi";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
 import LeaseImportDialog from "@/app/features/leases/LeaseImportDialog";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import LeasesListBody from "@/app/features/leases/LeasesListBody";

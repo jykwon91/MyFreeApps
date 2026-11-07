@@ -1,8 +1,7 @@
 import { DEMO_EXTEND_REFUSED } from "@mybookkeeper/api-client/constants/demoRefusal";
 import { isDemoRefusal } from "@mybookkeeper/api-client/utils/isDemoRefusal";
 import { useState } from "react";
-import { Button, LoadingButton } from "@platform/ui";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
 import { useExtendSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 
 const NOTES_MAX_LENGTH = 2000;

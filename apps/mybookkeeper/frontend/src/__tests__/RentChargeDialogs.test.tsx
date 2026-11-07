@@ -14,12 +14,13 @@ vi.mock("@mybookkeeper/api-client/store/rentLedgerApi", () => ({
   useWaiveRentChargeMutation: () => [mockWaive, { isLoading: false }],
 }));
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showSuccess: vi.fn(),
   showError: vi.fn(),
 }));
 
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { showError, showSuccess } from "@platform/ui";
 
 const CHARGE: RentCharge = {
   id: "chg-1",

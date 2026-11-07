@@ -10,13 +10,14 @@ vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
   useEndTenancyMutation: vi.fn(() => [mockEndTenancy, { isLoading: false }]),
 }));
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showSuccess: vi.fn(),
   showError: vi.fn(),
 }));
 
 import { useEndTenancyMutation } from "@mybookkeeper/api-client/store/applicantsApi";
-import { showSuccess, showError } from "@/shared/lib/toast-store";
+import { showSuccess, showError } from "@platform/ui";
 
 function renderDialog(onClose = vi.fn()) {
   return render(

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Check, Copy, ExternalLink, Pencil, Trash2 } from "lucide-react";
-import { Button } from "@platform/ui";
-import { showSuccess } from "@/shared/lib/toast-store";
+import { Button, showSuccess } from "@platform/ui";
 import type { ChannelListing } from "@/shared/types/listing/channel-listing";
 import ChannelImportStatusBadge from "./ChannelImportStatusBadge";
 

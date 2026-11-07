@@ -7,7 +7,7 @@ import type { Transaction } from "@mybookkeeper/api-client/types/transaction/tra
 import type { TransactionFormValues } from "@/shared/types/transaction/transaction-form-values";
 import TransactionForm from "@/app/features/transactions/TransactionForm";
 import api from "@/shared/lib/api";
-import { showError } from "@/shared/lib/toast-store";
+import { showError } from "@platform/ui";
 import { TRANSACTION_EDIT_MESSAGES } from "@/shared/lib/transaction-edit-messages";
 
 vi.mock("@mybookkeeper/api-client/store/vendorsApi", () => ({
@@ -15,7 +15,10 @@ vi.mock("@mybookkeeper/api-client/store/vendorsApi", () => ({
 }));
 
 vi.mock("@/shared/lib/api", () => ({ default: { get: vi.fn() } }));
-vi.mock("@/shared/lib/toast-store", () => ({ showError: vi.fn() }));
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
+  showError: vi.fn(),
+}));
 
 const FLAGGED = {
   id: "00000000-0000-0000-0000-000000000002",

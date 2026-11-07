@@ -11,7 +11,8 @@ vi.mock('qrcode.react', () => ({
   ),
 }));
 
-vi.mock('@/shared/lib/toast-store', () => ({
+vi.mock('@platform/ui', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@platform/ui')>()),
   showSuccess: vi.fn(),
   showError: vi.fn(),
 }));
@@ -33,7 +34,7 @@ import {
   useVerifyTotpMutation,
   useDisableTotpMutation,
 } from '@/shared/store/totpApi';
-import { showSuccess } from '@/shared/lib/toast-store';
+import { showSuccess } from '@platform/ui';
 
 beforeEach(() => {
   vi.mocked(useSetupTotpMutation).mockReturnValue([

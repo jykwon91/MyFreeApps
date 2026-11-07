@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { LoadingButton, ConfirmDialog } from "@platform/ui";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { LoadingButton, ConfirmDialog, showError, showSuccess } from "@platform/ui";
 import {
   NEW_PLACE_DEFAULT_NAME,
   WELCOME_MANUAL_MAX_PLACES,

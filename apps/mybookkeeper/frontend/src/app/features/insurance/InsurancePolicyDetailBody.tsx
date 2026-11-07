@@ -3,11 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { Pencil, Trash2 } from "lucide-react";
 import { useDeleteInsurancePolicyMutation } from "@/shared/store/insurancePoliciesApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { showError, showSuccess, Button, ConfirmDialog } from "@platform/ui";
 import type { InsurancePolicyDetail } from "@mybookkeeper/api-client/types/insurance/insurance-policy-detail";
 import type { DetailLoadMode } from "@/shared/types/detail-load-mode";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import { Button, ConfirmDialog } from "@platform/ui";
 import {
   formatAnnualPremium,
   formatBilledPremium,

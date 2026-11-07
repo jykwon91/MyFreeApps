@@ -1,7 +1,6 @@
-import { LoadingButton } from "@platform/ui";
+import { LoadingButton, showError, showSuccess } from "@platform/ui";
 import { useRestoreReplyTemplate } from "@mybookkeeper/api-client/hooks/useRestoreReplyTemplate";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { REPLY_TEMPLATE_MESSAGES as MESSAGES, RESTORE_FAILURE_MESSAGES, restoreLabel } from "@/shared/lib/reply-template-messages";
 
 export interface RestoreReplyTemplateButtonProps {

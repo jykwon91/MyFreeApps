@@ -7,14 +7,11 @@ import type { Transaction } from "@mybookkeeper/api-client/types/transaction/tra
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { TransactionFormValues } from "@/shared/types/transaction/transaction-form-values";
 import type { DuplicatePair } from "@mybookkeeper/api-client/types/transaction/DuplicatePair";
-import { Panel, PanelTitle } from "@platform/ui";
-import { LoadingButton } from "@platform/ui";
-import { ConfirmDialog } from "@platform/ui";
+import { Panel, PanelTitle, LoadingButton, ConfirmDialog, showError } from "@platform/ui";
 import TransactionStatusBadge from "@/app/features/transactions/TransactionStatusBadge";
 import TransactionTypeBadge from "@/app/features/transactions/TransactionTypeBadge";
 import TransactionForm from "@/app/features/transactions/TransactionForm";
 import UnsavedChangesDialog from "@/app/features/transactions/UnsavedChangesDialog";
-import { showError } from "@/shared/lib/toast-store";
 import { TRANSACTION_EDIT_MESSAGES as MSG } from "@/shared/lib/transaction-edit-messages";
 import type { TransactionPanelHandle } from "@/shared/types/transaction/transaction-panel-handle";
 import AttributeTenantPicker from "@/app/features/transactions/AttributeTenantPicker";

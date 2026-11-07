@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, LoadingButton } from "@platform/ui";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
 import { formatCurrency } from "@/shared/utils/currency";
 import api from "@/shared/lib/api";
 import { useSendReceiptMutation } from "@mybookkeeper/api-client/store/rentReceiptsApi";

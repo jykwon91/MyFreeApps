@@ -1,8 +1,7 @@
 import { useState, type FormEvent } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import { Button, FormField, LoadingButton } from "@platform/ui";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { Button, FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
 import { useUploadScreeningResultMutation } from "@mybookkeeper/api-client/store/screeningApi";
 import {
   ADVERSE_OUTCOMES,

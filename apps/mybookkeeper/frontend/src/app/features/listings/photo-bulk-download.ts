@@ -1,5 +1,5 @@
 import JSZip from "jszip";
-import { showError } from "@/shared/lib/toast-store";
+import { showError } from "@platform/ui";
 import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
 
 /**

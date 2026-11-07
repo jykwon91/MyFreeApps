@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { arrayMove } from "@dnd-kit/sortable";
 import type { DragEndEvent } from "@dnd-kit/core";
-import { showError } from "@/shared/lib/toast-store";
+import { showError } from "@platform/ui";
 import { useReorderSectionsMutation } from "@/shared/store/welcomeManualsApi";
 import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
 

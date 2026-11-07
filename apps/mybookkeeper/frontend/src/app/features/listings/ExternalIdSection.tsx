@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { Button } from "@platform/ui";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { Button, showError, showSuccess } from "@platform/ui";
 import { LISTING_SOURCES, LISTING_SOURCE_LABELS } from "@/shared/lib/listing-labels";
 import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
 import { useDeleteListingExternalIdMutation } from "@/shared/store/listingsApi";

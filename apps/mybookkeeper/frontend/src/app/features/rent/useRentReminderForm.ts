@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { showError, showSuccess, extractErrorMessage } from "@platform/ui";
 import {
   useCreateRentReminderPlanMutation,
   useUpdateRentReminderPlanMutation,
 } from "@mybookkeeper/api-client/store/rentRemindersApi";
-import { extractErrorMessage } from "@platform/ui";
 import {
   DEFAULT_SEND_DAYS_BEFORE,
   DEFAULT_SEND_TIME,

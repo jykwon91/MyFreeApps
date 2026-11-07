@@ -3,7 +3,7 @@ import {
   toUtilityPlanFormValues,
   validateUtilityPlanForm,
 } from "@/shared/lib/utility-plan-form";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { showError, showSuccess } from "@platform/ui";
 import { useUpdateUtilityPlanMutation } from "@/shared/store/utilityPlansApi";
 import type { UtilityPlanDetail } from "@mybookkeeper/api-client/types/utility/utility-plan-detail";
 import UtilityPlanFormActions from "./UtilityPlanFormActions";

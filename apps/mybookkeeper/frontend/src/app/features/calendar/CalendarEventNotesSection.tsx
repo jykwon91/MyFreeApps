@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { showError, showSuccess } from "@platform/ui";
 import { useUpdateBlackoutMutation } from "@/shared/store/calendarApi";
 
 // Debounce delay for saving notes on blur (ms).

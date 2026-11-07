@@ -4,12 +4,11 @@ import {
   useGetSignedLeaseByIdQuery,
   useDeleteSignedLeaseMutation,
 } from "@mybookkeeper/api-client/store/signedLeasesApi";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { showError, showSuccess, ConfirmDialog } from "@platform/ui";
 import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
 import type { SignedLeaseSummary } from "@mybookkeeper/api-client/types/lease/signed-lease-summary";
 import SignedLeaseStatusBadge from "@/app/features/leases/SignedLeaseStatusBadge";
 import AttachmentViewer from "@/app/features/leases/AttachmentViewer";
-import { ConfirmDialog } from "@platform/ui";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import LinkedLeaseDocumentsBody from "./LinkedLeaseDocumentsBody";
 import { useLinkedLeaseDocumentsMode } from "./useLinkedLeaseDocumentsMode";

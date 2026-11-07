@@ -6,9 +6,8 @@ import { useUploadDocumentMutation, useGetBatchStatusQuery, useGetSingleUploadSt
 import { baseApi } from "@/shared/store/baseApi";
 import { isSupportedFile } from "@/shared/utils/file-upload";
 import { uploadOutcome } from "@/shared/utils/upload-outcome";
-import { cn } from "@platform/ui";
+import { cn, showError } from "@platform/ui";
 import UploadStatusCard from "./UploadStatusCard";
-import { showError } from "@/shared/lib/toast-store";
 import { DOCUMENT_UPLOAD_MESSAGES } from "@/shared/lib/document-upload-messages";
 import { DOCUMENT_STATUSES, type DocumentStatus } from "@mybookkeeper/api-client/types/document/DocumentStatus";
 import { BATCH_STATUSES } from "@mybookkeeper/api-client/types/document/BatchStatus";
