@@ -6,19 +6,19 @@ export const calendarApi = baseApi.enhanceEndpoints({
   addTagTypes: ["Calendar", "ReviewQueue"],
 }).injectEndpoints({
   endpoints: (builder) => ({
-    getCalendarEvents: builder.query<CalendarEvent[], CalendarEventsArgs | void>({
+    getCalendarEvents: builder.query<CalendarEvent[], CalendarEventsArgs>({
       query: (args) => ({
         url: "/calendar/events",
         params: {
-          ...(args?.from ? { from: args.from } : {}),
-          ...(args?.to ? { to: args.to } : {}),
-          ...(args?.listing_ids && args.listing_ids.length > 0
+          from: args.from,
+          to: args.to,
+          ...(args.listing_ids && args.listing_ids.length > 0
             ? { listing_ids: args.listing_ids.join(",") }
             : {}),
-          ...(args?.property_ids && args.property_ids.length > 0
+          ...(args.property_ids && args.property_ids.length > 0
             ? { property_ids: args.property_ids.join(",") }
             : {}),
-          ...(args?.sources && args.sources.length > 0
+          ...(args.sources && args.sources.length > 0
             ? { sources: args.sources.join(",") }
             : {}),
         },

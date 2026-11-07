@@ -492,6 +492,8 @@
         "frontend/src/shared/types/listing/listing-blackout-attachment.ts",
         "frontend/src/shared/types/listing/blackout-update-request.ts",
         "frontend/src/shared/store/calendarApi.ts",
+        "api-client/src/store/calendarApi.ts",
+        "api-client/src/types/calendar/",
         "frontend/src/shared/lib/calendar-constants.ts",
         "frontend/src/shared/lib/list-load-mode.ts",
         "frontend/src/shared/types/list-load-mode.ts",
