@@ -11,14 +11,17 @@ Usage:
 """
 import argparse
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func, desc
+from sqlalchemy import desc, func, text
+from sqlalchemy.orm import Query, Session
 
 from app.cli.db import SyncSession
 from app.models.user.user import User
 from app.models.documents.document import Document
 from app.models.system.system_event import SystemEvent
+from app.models.tax.tax_form_instance import TaxFormInstance
+from app.models.tax.tax_return import TaxReturn
 from app.models.extraction.extraction import Extraction
 from app.models.transactions.transaction import Transaction
 
@@ -29,6 +32,12 @@ def _parse_duration(s: str) -> timedelta:
     num = int(s[:-1])
     unit = units.get(s[-1], "hours")
     return timedelta(**{unit: num})
+
+
+def _since(window: timedelta) -> datetime:
+    # Timezone-aware, so Postgres compares it to timestamptz columns as UTC
+    # rather than reading a naive value in the session's time zone.
+    return datetime.now(timezone.utc) - window
 
 
 def cmd_users(args):
@@ -47,7 +56,7 @@ def cmd_events(args):
     with SyncSession() as session:
         query = session.query(SystemEvent).order_by(desc(SystemEvent.created_at))
         if args.since:
-            cutoff = datetime.utcnow() - _parse_duration(args.since)
+            cutoff = _since(_parse_duration(args.since))
             query = query.filter(SystemEvent.created_at >= cutoff)
         if args.severity:
             query = query.filter(SystemEvent.severity == args.severity)
@@ -101,36 +110,30 @@ def cmd_extractions(args):
             print(f"{str(e.id):<38} {(e.status or ''):<12} {(e.document_type or ''):<18} {(e.confidence or ''):<12} {(e.tokens_used or 0):<8} {ts}")
 
 
+def _tax_forms_query(session: Session, year: int | None) -> Query[TaxFormInstance]:
+    query = session.query(TaxFormInstance).order_by(desc(TaxFormInstance.created_at))
+    if year is not None:
+        query = query.join(TaxReturn).filter(TaxReturn.tax_year == year)
+    return query
+
+
 def cmd_tax_forms(args):
     with SyncSession() as session:
-        # Use raw SQL since TaxFormInstance model path may vary
-        result = session.execute(
-            session.bind.raw_connection().cursor().execute(  # type: ignore
-                "SELECT id, tax_return_id, form_type, status, created_at FROM tax_form_instances ORDER BY created_at DESC LIMIT %s",
-                (args.limit,),
-            )
-        )
-        # Simpler approach: query via text
-        from sqlalchemy import text
-        rows = session.execute(
-            text("SELECT id, form_type, status, created_at FROM tax_form_instances ORDER BY created_at DESC LIMIT :limit"),
-            {"limit": args.limit},
-        ).fetchall()
+        rows = _tax_forms_query(session, args.year).limit(args.limit).all()
         if not rows:
             print("No tax form instances found.")
             return
         print(f"{'ID':<38} {'Form Type':<20} {'Status':<15} {'Created'}")
         print("-" * 90)
-        for r in rows:
-            ts = r[3].strftime("%Y-%m-%d %H:%M") if r[3] else "?"
-            print(f"{str(r[0]):<38} {(r[1] or ''):<20} {(r[2] or ''):<15} {ts}")
+        for f in rows:
+            ts = f.created_at.strftime("%Y-%m-%d %H:%M") if f.created_at else "?"
+            print(f"{str(f.id):<38} {f.form_name:<20} {f.status:<15} {ts}")
 
 
 def cmd_costs(args):
     with SyncSession() as session:
-        from sqlalchemy import text
         period_days = {"day": 1, "week": 7, "month": 30, "year": 365}.get(args.period, 30)
-        cutoff = datetime.utcnow() - timedelta(days=period_days)
+        cutoff = _since(timedelta(days=period_days))
 
         # Token usage from extractions
         row = session.execute(
@@ -180,7 +183,7 @@ def main():
 
     # tax-forms
     p = subparsers.add_parser("tax-forms", help="List tax form instances")
-    p.add_argument("--year", help="Filter by tax year")
+    p.add_argument("--year", type=int, help="Filter by tax year")
     p.add_argument("--limit", type=int, default=50, help="Max rows")
 
     # costs
