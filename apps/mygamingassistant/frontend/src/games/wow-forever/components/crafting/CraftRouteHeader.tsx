@@ -10,7 +10,8 @@ interface CraftRouteHeaderProps {
   hasCosts: boolean;
   useDefault: boolean;
   onUseDefault: (useDefault: boolean) => void;
-  auctionPriced: number;
+  /** Materials priced without you typing: auction prices and ones worked out from them. */
+  autoPriced: number;
   materials: number;
   overridden: number;
   total: number;
@@ -30,10 +31,10 @@ function totalText(total: number, reach: number, unknown: boolean, stopsAtChoice
   return "Your next row needs something with no auction price, so there's no estimate yet.";
 }
 
-/** "Auction prices for 8 of 9 materials · 1 you set yourself." */
-function basisText(auctionPriced: number, materials: number, overridden: number): string {
+/** "Priced 8 of 9 materials automatically · 1 you set yourself." */
+function basisText(autoPriced: number, materials: number, overridden: number): string {
   const own = overridden ? ` · ${overridden} you set yourself` : "";
-  return `Auction prices for ${auctionPriced} of ${materials} materials${own}.`;
+  return `Priced ${autoPriced} of ${materials} materials automatically${own}.`;
 }
 
 /** Which route is showing, the switch back to the default, and what it should cost from here. */
@@ -43,7 +44,7 @@ export default function CraftRouteHeader({
   hasCosts,
   useDefault,
   onUseDefault,
-  auctionPriced,
+  autoPriced,
   materials,
   overridden,
   total,
@@ -64,7 +65,7 @@ export default function CraftRouteHeader({
           Use default route
         </label>
       ) : null}
-      {hasCosts ? <p className="text-xs text-muted-foreground">{basisText(auctionPriced, materials, overridden)}</p> : null}
+      {hasCosts ? <p className="text-xs text-muted-foreground">{basisText(autoPriced, materials, overridden)}</p> : null}
     </div>
   );
 }

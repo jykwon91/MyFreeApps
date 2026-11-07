@@ -68,6 +68,7 @@ export default function CraftRouteSections({ profession, faction, zoneId, level,
             items={priced.items}
             overrides={priced.overrides.prices}
             auction={priced.auction}
+            autoPrices={priced.autoPrices}
             onPrice={priced.overrides.setPrice}
             onReplaceAll={priced.overrides.replaceAll}
             selfMadeNote={guide.pricedFromMaterials ?? ""}
@@ -84,7 +85,7 @@ export default function CraftRouteSections({ profession, faction, zoneId, level,
           hasCosts={priced.hasCosts}
           useDefault={priced.useDefault}
           onUseDefault={priced.setUseDefault}
-          auctionPriced={priced.auctionPriced}
+          autoPriced={priced.autoPriced}
           materials={priced.materials}
           overridden={priced.overridden}
           total={priced.total}
@@ -114,6 +115,7 @@ export default function CraftRouteSections({ profession, faction, zoneId, level,
           }
           specNames={specNames}
           showEffects={features.effects}
+          priceBook={priced.priceBook}
         />
         {features.transmutes ? (
           <CraftTransmuteList recipes={data.file.recipes} trainerSkills={data.trainerSkills} professionLabel={guide.label} place={place} />

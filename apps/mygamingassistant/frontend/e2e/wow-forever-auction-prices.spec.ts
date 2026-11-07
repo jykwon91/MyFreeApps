@@ -3,7 +3,10 @@
  *
  * The prices are filled in automatically, so nothing here types a price. It checks:
  *   - Tailoring and Enchanting show a cheapest route with a total, and the TSM credit
- *   - a material the source has no price for is labelled "No auction price"
+ *   - every priced material shows its price filled in; one nobody sells yet is
+ *     worked out from its materials ("From its materials") or says it isn't sold yet
+ *   - route lines show what one of each material costs ("50c each")
+ *   - your own price overrides one, and "Use auction price" puts it back
  *   - a guide without a cheapest route (Alchemy) still shows costs, with no prices panel
  *   - the Cooking route prices its materials
  *   - a food page: buy or cook, ingredient prices, the recipe's price
@@ -20,8 +23,9 @@ const PRICES = "**/wow/prices?region=*";
 const COLUMNS = ["item_id", "market_value", "avg_sale_price", "historical", "sold_per_day", "name"];
 const UPDATED_AT = "2026-11-06T09:00:00Z";
 const NOW = new Date("2026-11-06T12:00:00Z");
-/** The one Enchanting material the stub leaves out, so its "no auction price" label can be checked. */
+/** Enchanting materials the stub leaves out: one nothing can price, one worked out from what Blacksmithing makes it with. */
 const LARGE_BRILLIANT_SHARD = 14344;
+const GOLDEN_ROD = 11128;
 
 interface Reagent {
   id: number;
@@ -36,11 +40,19 @@ function reagentsOf(file: string): Reagent[] {
 
 type Row = [number, number, string];
 
-/** Every material these guides use, at 50c, minus Large Brilliant Shard. */
+/** Golden Rod = 1 Gold Bar + 2 Coarse Grinding Stone, at 50c each = 1s 50c. */
+const ROD_MATERIALS: Row[] = [
+  [3577, 50, "Gold Bar"],
+  [3478, 50, "Coarse Grinding Stone"],
+];
+
+/** Every material these guides use, at 50c, minus Large Brilliant Shard and Golden Rod (plus what Golden Rod is made of). */
 function craftingRows(): Row[] {
   const seen = new Map<number, string>();
   for (const file of ["tailoring", "enchanting", "alchemy"]) for (const r of reagentsOf(file)) seen.set(r.id, r.name);
   seen.delete(LARGE_BRILLIANT_SHARD);
+  seen.delete(GOLDEN_ROD);
+  for (const [id, , name] of ROD_MATERIALS) seen.set(id, name);
   return [...seen].map(([id, name]) => [id, 50, name]);
 }
 
@@ -89,7 +101,7 @@ test("Tailoring finds the cheapest route at auction prices and totals it, with n
   await expect(route.getByText("Cheapest at auction prices")).toBeVisible();
   // 265-300 is a "pick what you can get" row, so the total stops there.
   await expect(route.getByText(/^Estimated cost to reach skill 265: ~\d+g.*Past that, you pick a recipe, so it isn't counted\.$/)).toBeVisible();
-  await expect(route.getByText(/^Auction prices for \d+ of \d+ materials\.$/)).toBeVisible();
+  await expect(route.getByText(/^Priced \d+ of \d+ materials automatically\.$/)).toBeVisible();
   await expect(page.getByRole("textbox").filter({ hasText: /./ })).toHaveCount(0);
 
   const shopping = page.locator("#shopping");
@@ -97,21 +109,36 @@ test("Tailoring finds the cheapest route at auction prices and totals it, with n
   await expect(shopping.getByTestId("shopping-total")).toContainText("All of it at auction prices: ~");
 });
 
-test("Enchanting totals its route and labels the material with no auction price", async ({ page }) => {
+test("Enchanting fills in every price it can, works out what nobody sells yet, and prices each route line", async ({ page }) => {
   await stubPrices(page, craftingRows());
   await page.goto("/wow-forever/professions?p=enchanting");
   const route = page.locator("#route");
   await expect(route.getByText("Cheapest at auction prices")).toBeVisible();
   await expect(route.getByText(/^Estimated cost to (reach skill )?\d+: ~/)).toBeVisible();
+  await expect(route.getByText(/ · 50c each$/).first()).toBeVisible();
 
   await route.getByRole("button", { name: /^Prices/ }).click();
+  await expect(route.getByText(/^Priced \d+ of \d+ automatically$/)).toBeVisible();
   await route.getByText(/^More materials other recipes use/).click();
+  const dust = route.getByLabel("Strange Dust");
+  await expect(dust).toHaveValue("50c");
+  await expect(dust.locator("xpath=..").getByText("Auction house")).toBeVisible();
+  const rod = route.getByLabel("Golden Rod");
+  await expect(rod).toHaveValue("1s 50c");
+  await expect(rod.locator("xpath=..").getByText("From its materials")).toBeVisible();
   const shard = route.getByLabel("Large Brilliant Shard");
   await expect(shard).toHaveValue("");
-  await expect(shard.locator("xpath=..").getByText("No auction price")).toBeVisible();
-  const dust = route.getByLabel("Strange Dust");
-  await expect(dust).toHaveAttribute("placeholder", "50c");
-  await expect(dust.locator("xpath=..").getByText("Auction price 50c")).toBeVisible();
+  await expect(shard.locator("xpath=..").getByText(/^Not on the auction house yet — fills in automatically once it sells$/)).toBeVisible();
+  await expect(route.getByText(/e\.g\. 1g/)).toHaveCount(0);
+
+  // Your own price overrides the auction one, and one click puts the auction price back.
+  await dust.fill("1g");
+  await dust.blur();
+  await expect(dust.locator("xpath=..").getByText("= 1g · your price")).toBeVisible();
+  await expect(route.getByText(/1 you set yourself/)).toBeVisible();
+  await dust.locator("xpath=..").getByRole("button", { name: "Use auction price (50c)" }).click();
+  await expect(dust).toHaveValue("50c");
+  await expect(route.getByText(/you set yourself/)).toHaveCount(0);
 });
 
 test("Alchemy shows costs on its hand-picked route, without a prices panel or a cheapest claim", async ({ page }) => {

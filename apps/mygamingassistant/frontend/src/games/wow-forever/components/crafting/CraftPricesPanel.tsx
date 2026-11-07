@@ -5,9 +5,10 @@ import CraftPriceField from "@/games/wow-forever/components/crafting/CraftPriceF
 import CraftSlotChecklist from "@/games/wow-forever/components/crafting/CraftSlotChecklist";
 import type { CraftPlace } from "@/games/wow-forever/components/crafting/CraftLearnLine";
 import type { EnchantSlot, PriceItem } from "@/games/wow-forever/crafting/cheapestRoute";
+import { autoPriceSource } from "@/games/wow-forever/crafting/autoPriceText";
 import { essencePartner, LESSER_PER_GREATER, type EnteredPrices } from "@/games/wow-forever/crafting/matPrices";
-import { auctionCopper } from "@/games/wow-forever/prices/auctionPrices";
 import type { AuctionPrices } from "@/games/wow-forever/types/auctionPrices";
+import type { AutoPrice } from "@/games/wow-forever/types/autoPrice";
 import type { CraftRecipe } from "@/games/wow-forever/types/crafting";
 
 /** How long "Undo" stays after a reset to auction prices. */
@@ -19,6 +20,8 @@ interface CraftPricesPanelProps {
   overrides: EnteredPrices;
   /** Null while loading, or when the prices didn't load. */
   auction: AuctionPrices | null;
+  /** Each material's price nobody typed: its auction price, else one worked out from other prices. */
+  autoPrices: ReadonlyMap<number, AutoPrice>;
   onPrice: (itemId: number, copper: number | null) => void;
   onReplaceAll: (prices: EnteredPrices) => void;
   /** "Bolts … are priced from the cloth they're made of." */
@@ -35,13 +38,18 @@ function isOverridden(overrides: EnteredPrices, item: PriceItem): boolean {
   return overrides[String(item.id)] !== undefined;
 }
 
-/** "Auction prices for 8 of 9 · 1 set by you", counted over what the default route needs. */
-function summaryText(auction: AuctionPrices | null, overrides: EnteredPrices, main: readonly PriceItem[]): string {
+/** "Priced 11 of 18 automatically · 1 set by you", counted over what the default route needs. */
+function summaryText(
+  auction: AuctionPrices | null,
+  autoPrices: ReadonlyMap<number, AutoPrice>,
+  overrides: EnteredPrices,
+  main: readonly PriceItem[],
+): string {
   const own = main.filter((i) => isOverridden(overrides, i)).length;
   const ownText = own ? ` · ${own} set by you` : "";
   if (!auction) return `Auction prices not loaded${ownText}`;
-  const priced = main.filter((i) => auction.byId.has(i.id)).length;
-  return `Auction prices for ${priced} of ${main.length}${ownText}`;
+  const priced = main.filter((i) => autoPrices.has(i.id)).length;
+  return `Priced ${priced} of ${main.length} automatically${ownText}`;
 }
 
 /** "3 make 1 Greater Astral Essence" under an essence, since a price for either half counts for both. */
@@ -63,6 +71,7 @@ export default function CraftPricesPanel({
   items,
   overrides,
   auction,
+  autoPrices,
   onPrice,
   onReplaceAll,
   selfMadeNote,
@@ -94,13 +103,16 @@ export default function CraftPricesPanel({
   }
 
   function field(item: PriceItem) {
+    const auto = autoPrices.get(item.id);
     return (
       <li key={item.id}>
         <CraftPriceField
           itemId={item.id}
           name={item.name}
           value={overrides[String(item.id)]}
-          auction={auction ? { copper: auctionCopper(auction, item.id) } : null}
+          auto={auto}
+          autoSource={auto ? autoPriceSource(auto, names) : ""}
+          loaded={auction !== null}
           onCommit={onPrice}
           hint={essenceHint(item, names)}
         />
@@ -120,12 +132,13 @@ export default function CraftPricesPanel({
         <span className="font-semibold">
           Prices <span aria-hidden>{open ? "▲" : "▼"}</span>
         </span>
-        <span className="text-sm text-muted-foreground">{summaryText(auction, overrides, items.main)}</span>
+        <span className="text-sm text-muted-foreground">{summaryText(auction, autoPrices, overrides, items.main)}</span>
       </button>
 
       <div id={panelId} hidden={!open} className="space-y-4 pt-1">
         <p className="text-sm text-muted-foreground">
-          Each material is priced at the auction house. Type a price of your own only to change one, for example 0 for
+          Each material is filled in from the auction house. One nobody sells yet is worked out from what it's made of,
+          or from the other half of its essence pair. Type a price of your own only to change one, for example 0 for
           something you farm yourself.
         </p>
         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">{items.main.map(field)}</ul>

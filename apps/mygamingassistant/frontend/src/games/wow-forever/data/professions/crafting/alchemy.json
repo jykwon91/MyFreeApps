@@ -569,4 +569,4 @@
 {"id":8925,"name":"Crystal Vial","count":1}],"creates":{"id":20004,"name":"Major Troll's Blood Elixir","count":1,"quality":1},"learn":{"source":"item","skill":290,"itemId":20014,"item":"Recipe: Major Troll's Blood Elixir"}},
 {"spell":17580,"name":"Major Mana Potion","yellow":310,"grey":350,"reagents":[{"id":13463,"name":"Dreamfoil","count":3},
 {"id":13467,"name":"Icecap","count":2},
-{"id":8925,"name":"Crystal Vial","count":1}],"creates":{"id":13444,"name":"Major Mana Potion","count":1,"quality":1},"learn":{"source":"item","skill":295,"itemId":13501,"item":"Recipe: Major Mana Potion"}}]}
+{"id":8925,"name":"Crystal Vial","count":1}],"creates":{"id":13444,"name":"Major Mana Potion","count":1,"quality":1},"learn":{"source":"item","skill":295,"itemId":13501,"item":"Recipe: Major Mana Potion"}}],"makers":{"3575":{"count":1,"reagents":[{"id":2772,"name":"Iron Ore","count":1}]},"3860":{"count":1,"reagents":[{"id":3858,"name":"Mithril Ore","count":1}]},"12359":{"count":1,"reagents":[{"id":10620,"name":"Thorium Ore","count":1}]},"251291":{"count":1,"reagents":[{"id":248815,"name":"Heavy Thorium Ore","count":1}]}}}

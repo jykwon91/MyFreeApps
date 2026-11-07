@@ -216,6 +216,28 @@ def made_by(items: set[int]) -> dict[str, str]:
     return dict(sorted(out.items(), key=lambda kv: int(kv[0])))
 
 
+def maker_records(item_ids: set[int], recipes: list[dict]) -> dict[str, dict]:
+    """Item -> what one craft of it takes, and the same for those reagents in turn.
+
+    Prices an item nobody sells yet (a rod Blacksmithing makes) from its
+    materials. Where several recipes make an item, the one learned first.
+    """
+    makers_of: dict[int, list[dict]] = defaultdict(list)
+    for rec in recipes:
+        if rec.get("creates"):
+            makers_of[rec["creates"]["id"]].append(rec)
+    out: dict[str, dict] = {}
+    todo = sorted(item_ids)
+    while todo:
+        item = todo.pop()
+        if str(item) in out or item not in makers_of:
+            continue
+        rec = min(makers_of[item], key=lambda r: (r["yellow"], r["spell"]))
+        out[str(item)] = {"count": rec["creates"]["count"], "reagents": rec["reagents"]}
+        todo.extend(r["id"] for r in rec["reagents"])
+    return dict(sorted(out.items(), key=lambda kv: int(kv[0])))
+
+
 UNCOMMON = 2
 RARE = 3
 ITEM_CLASS_WEAPON = 2
@@ -344,11 +366,18 @@ def main() -> None:
 
     reagent_ids = {r["id"] for rows in [*recipes.values(), *smelting.values()] for rec in rows for r in rec["reagents"]}
     crafted = made_by(reagent_ids)
+    every_recipe = [rec for rows in [*recipes.values(), mining] for rec in rows]
     for key, line in PROFESSIONS.items():
         used = {str(r["id"]) for rec in [*recipes[key], *smelting[key]] for r in rec["reagents"]}
         extra: dict[str, object] = {}
         if smelting[key]:
             extra["smelting"] = smelting[key]
+        # The profession prices its own crafts and smelts from `recipes` / `smelting`; these are everyone else's.
+        own = {rec["creates"]["id"] for rec in [*recipes[key], *smelting[key]] if rec.get("creates")}
+        others = {int(k) for k, v in crafted.items() if k in used and v != CRAFTING_SKILL_LINES[line]} - own
+        makers = maker_records(others, every_recipe)
+        if makers:
+            extra["makers"] = makers
         if quests_of[key]:
             extra["specs"] = spec_records(line, quests_of[key], items.names)
         write_json(DATA_DIR / f"{key}.json", {

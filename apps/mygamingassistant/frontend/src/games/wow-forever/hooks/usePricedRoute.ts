@@ -11,6 +11,7 @@ import {
   type RouteChoices,
 } from "@/games/wow-forever/crafting/cheapestRoute";
 import { resolveRoute } from "@/games/wow-forever/crafting/craftRoute";
+import { autoPrice, derivePrices, withDerived, type Makers } from "@/games/wow-forever/crafting/derivedPrices";
 import { createPriceBook, type EnteredPrices, type PriceBook } from "@/games/wow-forever/crafting/matPrices";
 import { CRAFTING_FEATURES } from "@/games/wow-forever/data/professions/crafting/craftingFeatures";
 import { CRAFTING_GUIDES } from "@/games/wow-forever/data/professions/crafting/craftingGuide";
@@ -19,8 +20,10 @@ import { CRAFTING_RANKS } from "@/games/wow-forever/data/professions/crafting/cr
 import { useAuctionPrices } from "@/games/wow-forever/hooks/useAuctionPrices";
 import type { CraftingData } from "@/games/wow-forever/hooks/useCraftingData";
 import { useExcludedSlots, useKnownRecipes, usePriceOverrides, type PriceOverrides } from "@/games/wow-forever/hooks/useCraftPrices";
-import { effectivePrices } from "@/games/wow-forever/prices/auctionPrices";
+import { auctionCopper, effectivePrices } from "@/games/wow-forever/prices/auctionPrices";
 import type { AuctionPrices } from "@/games/wow-forever/types/auctionPrices";
+import type { AutoPrice } from "@/games/wow-forever/types/autoPrice";
+import type { DerivedPrice } from "@/games/wow-forever/types/derivedPrice";
 import type { CraftingProfession, CraftRecipe, ResolvedRouteEntry } from "@/games/wow-forever/types/crafting";
 
 export interface PricedRouteState {
@@ -39,8 +42,8 @@ export interface PricedRouteState {
   unknown: boolean;
   /** The total stops at a "pick what you can get" row, not at a missing price. */
   stopsAtChoice: boolean;
-  /** This guide's materials with an auction price, and how many of them there are. */
-  auctionPriced: number;
+  /** This guide's materials priced without you typing (auction or worked out), and how many there are. */
+  autoPriced: number;
   materials: number;
   /** Overrides you typed for this guide's materials. */
   overridden: number;
@@ -55,9 +58,12 @@ export interface PricedRouteState {
   overrides: PriceOverrides;
   /** Null while the auction prices load, or when they failed. */
   auction: AuctionPrices | null;
+  /** Each of this guide's materials that has a price nobody typed: its auction price, else one worked out. */
+  autoPrices: ReadonlyMap<number, AutoPrice>;
 }
 
 const NO_OVERRIDES: EnteredPrices = {};
+const NO_MAKERS: Makers = {};
 
 function countPriced(items: readonly PriceItem[], prices: EnteredPrices): number {
   return items.filter((i) => prices[String(i.id)] !== undefined).length;
@@ -65,7 +71,7 @@ function countPriced(items: readonly PriceItem[], prices: EnteredPrices): number
 
 /**
  * Everything the route section needs for prices. That's the auction prices
- * with your overrides on top, the cheapest route at those prices (Tailoring,
+ * with your overrides on top, prices worked out for what isn't sold yet, the cheapest route at those prices (Tailoring,
  * Enchanting), and the default route with what each row costs. The DP is
  * memoized on its inputs, so typing elsewhere on the page doesn't rerun it.
  */
@@ -84,7 +90,8 @@ export function usePricedRoute(profession: CraftingProfession, data: CraftingDat
   );
   // Overrides only exist where the prices panel does, so one typed on Tailoring never prices another guide.
   const typed = features.priced ? overrides.prices : NO_OVERRIDES;
-  const prices = useMemo(() => effectivePrices(auction, typed), [auction, typed]);
+  // Auction prices and yours; then whatever can be worked out from those.
+  const known = useMemo(() => effectivePrices(auction, typed), [auction, typed]);
 
   const ctx = useMemo<CraftContext>(
     () => ({
@@ -100,7 +107,11 @@ export function usePricedRoute(profession: CraftingProfession, data: CraftingDat
   const choices = useMemo<RouteChoices>(() => ({ knownFormulas, excludedSlots }), [knownFormulas, excludedSlots]);
   const items = useMemo(() => priceItems(ctx, start, choices), [ctx, start, choices]);
   const formulas = useMemo(() => formulaChoices(ctx, start, choices), [ctx, start, choices]);
-  const all = [...items.main, ...items.more];
+  const all = useMemo(() => [...items.main, ...items.more], [items]);
+  const makers = data.file.makers ?? NO_MAKERS;
+  const derived = useMemo(() => derivePrices(known, makers, all.map((i) => i.id)), [known, makers, all]);
+  const prices = useMemo(() => withDerived(known, derived), [known, derived]);
+  const autoPrices = useMemo(() => autoPricesFor(all, auction, derived), [all, auction, derived]);
   const hasCosts = countPriced(all, prices) > 0;
   const canCompare = features.priced && hasCosts;
 
@@ -116,7 +127,7 @@ export function usePricedRoute(profession: CraftingProfession, data: CraftingDat
     canCompare,
     useDefault,
     setUseDefault,
-    auctionPriced: all.filter((i) => auction?.byId.has(i.id)).length,
+    autoPriced: autoPrices.size,
     materials: all.length,
     overridden: countPriced(all, typed),
     priceBook: hasCosts ? book : null,
@@ -128,7 +139,21 @@ export function usePricedRoute(profession: CraftingProfession, data: CraftingDat
     setSlot,
     overrides,
     auction,
+    autoPrices,
   };
+}
+
+function autoPricesFor(
+  items: readonly PriceItem[],
+  auction: AuctionPrices | null,
+  derived: ReadonlyMap<number, DerivedPrice>,
+): ReadonlyMap<number, AutoPrice> {
+  const out = new Map<number, AutoPrice>();
+  for (const item of items) {
+    const price = autoPrice(auctionCopper(auction, item.id), derived.get(item.id));
+    if (price) out.set(item.id, price);
+  }
+  return out;
 }
 
 function pickShown(

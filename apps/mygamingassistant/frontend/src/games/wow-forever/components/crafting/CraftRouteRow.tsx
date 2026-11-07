@@ -8,6 +8,7 @@ import CraftRowCost from "@/games/wow-forever/components/crafting/CraftRowCost";
 import SourceUnknownChip from "@/games/wow-forever/components/crafting/SourceUnknownChip";
 import { CRAFT_ROW_GRID, rowStateClass, type RowState } from "@/games/wow-forever/components/crafting/craftRowStyles";
 import { sourceUnknown } from "@/games/wow-forever/crafting/craftRoute";
+import type { PriceBook } from "@/games/wow-forever/crafting/matPrices";
 import type { ResolvedCraftStep } from "@/games/wow-forever/types/crafting";
 
 interface CraftRouteRowProps {
@@ -20,10 +21,11 @@ interface CraftRouteRowProps {
   showEffect: boolean;
   professionLabel: string;
   place: CraftPlace;
+  priceBook: PriceBook | null;
 }
 
 /** One recipe on the route: a card on phones, a 4-column row from `sm` up, with tool and note underneath. */
-export default function CraftRouteRow({ entry, state, showChip, makesTool, showEffect, professionLabel, place }: CraftRouteRowProps) {
+export default function CraftRouteRow({ entry, state, showChip, makesTool, showEffect, professionLabel, place, priceBook }: CraftRouteRowProps) {
   const { step, recipe, crafts, learn } = entry;
   return (
     <li
@@ -54,7 +56,7 @@ export default function CraftRouteRow({ entry, state, showChip, makesTool, showE
         </p>
         <div>
           <p className="sm:hidden text-xs text-muted-foreground">{crafts > 1 ? "Materials in all" : "Each craft takes"}</p>
-          <CraftReagents reagents={recipe.reagents} place={place} professionLabel={professionLabel} crafts={crafts} />
+          <CraftReagents reagents={recipe.reagents} place={place} professionLabel={professionLabel} crafts={crafts} priceBook={priceBook} />
         </div>
         <div>
           <p className="sm:hidden text-xs text-muted-foreground">Learn</p>
