@@ -18,6 +18,7 @@ const AUTH_PAGES = [
   "/tax",
   "/tax/documents",
   "/properties",
+  "/reconciliation",
   "/analytics",
   "/admin",
   "/admin/system-health",
