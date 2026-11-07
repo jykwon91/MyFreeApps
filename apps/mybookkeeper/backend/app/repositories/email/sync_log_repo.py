@@ -140,12 +140,13 @@ async def is_cancelled(db: AsyncSession, sync_log_id: int) -> bool:
     return row is not None
 
 
-async def cancel(db: AsyncSession, sync_log_id: int) -> bool:
-    """Set cancelled_at on a running sync log. Returns True if updated."""
+async def cancel(db: AsyncSession, sync_log_id: int, organization_id: uuid.UUID) -> bool:
+    """Set cancelled_at on one of the organization's running sync logs. Returns True if updated."""
     result = await db.execute(
         update(SyncLog)
         .where(
             SyncLog.id == sync_log_id,
+            SyncLog.organization_id == organization_id,
             SyncLog.status == "running",
             SyncLog.cancelled_at.is_(None),
         )
