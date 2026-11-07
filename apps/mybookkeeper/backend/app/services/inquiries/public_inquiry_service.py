@@ -36,6 +36,7 @@ from typing import Any
 from platform_shared.core.disposable_email_domains import is_disposable_email
 
 from app.core.config import settings
+from app.core.public_inquiry_constants import MAX_MOVE_IN_DAYS_AHEAD, PAST_MOVE_IN_GRACE_DAYS
 from app.db.session import unit_of_work
 from app.repositories.inquiries import (
     inquiry_event_repo,
@@ -52,14 +53,6 @@ from app.services.inquiries import inquiry_spam_scorer
 
 logger = logging.getLogger(__name__)
 
-# Hard upper bound on how far in the future a move-in date can be. Past
-# this, the inquiry is almost certainly nonsense (or someone testing the
-# form) and we reject it before Claude ever sees it.
-_MAX_MOVE_IN_DAYS_AHEAD = 365
-# How many days into the past a move-in date can be. Operators sometimes
-# get inquiries from people who already moved (referrals, last-minute
-# situations) so we allow today + a small grace window.
-_PAST_MOVE_IN_GRACE_DAYS = 30
 # Phone normalization — strip every non-digit, then check length is 10 or 11
 # (US 10-digit or +1 prefixed).
 _PHONE_DIGITS_RE = re.compile(r"\D+")
@@ -138,10 +131,10 @@ async def submit_public_inquiry(
         if normalized_phone is None:
             return PublicInquiryResult(outcome=PublicInquiryOutcome.INVALID)
 
-        # Move-in date window
-        today = _dt.date.today()
-        if (payload.move_in_date < today - _dt.timedelta(days=_PAST_MOVE_IN_GRACE_DAYS)
-                or payload.move_in_date > today + _dt.timedelta(days=_MAX_MOVE_IN_DAYS_AHEAD)):
+        # Move-in date window, from the applicant's own date so it matches the form.
+        today = payload.today
+        if (payload.move_in_date < today - _dt.timedelta(days=PAST_MOVE_IN_GRACE_DAYS)
+                or payload.move_in_date > today + _dt.timedelta(days=MAX_MOVE_IN_DAYS_AHEAD)):
             return PublicInquiryResult(outcome=PublicInquiryOutcome.INVALID)
 
         # Employment status allowlist (kept here, not in the schema, so

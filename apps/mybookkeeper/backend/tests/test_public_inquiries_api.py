@@ -31,15 +31,17 @@ from app.services.inquiries.public_inquiry_service import (
     PublicInquiryOutcome,
     PublicInquiryResult,
 )
+from tests.utc_today import utc_today
 
 
 def _valid_body(slug: str = "abc-123") -> dict:
-    today = _dt.date.today()
+    today = utc_today()
     return {
         "listing_slug": slug,
         "name": "Alice",
         "email": "alice@example.com",
         "phone": "555-123-4567",
+        "today": today.isoformat(),
         "move_in_date": (today + _dt.timedelta(days=30)).isoformat(),
         "move_out_date": (today + _dt.timedelta(days=30 + 180)).isoformat(),
         "occupant_count": 1,

@@ -26,6 +26,8 @@ vi.mock("@/shared/components/ui/TurnstileWidget", () => ({
   default: () => null,
 }));
 
+import { addDays, format } from "date-fns";
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import api from "@/shared/lib/api";
 
 const mockListing = {
@@ -51,9 +53,7 @@ function renderForm(slug = "master-bedroom-abc123") {
 }
 
 function futureDateIso(daysFromNow = 30): string {
-  const d = new Date();
-  d.setDate(d.getDate() + daysFromNow);
-  return d.toISOString().slice(0, 10);
+  return format(addDays(new Date(), daysFromNow), "yyyy-MM-dd");
 }
 
 async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
@@ -178,6 +178,25 @@ describe("PublicInquiryForm — validation UX", () => {
     expect(screen.queryByTestId("public-inquiry-name-error")).not.toBeInTheDocument();
   });
 
+  it("refuses a move-in more than a year out, which the server would reject", async () => {
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockListing });
+    const user = userEvent.setup();
+    renderForm();
+
+    await screen.findByTestId("public-inquiry-form");
+    await fillValidForm(user);
+    const moveIn = screen.getByTestId("public-inquiry-move-in");
+    expect(moveIn).toHaveAttribute("max", futureDateIso(365));
+    await user.clear(moveIn);
+    await user.type(moveIn, futureDateIso(366));
+    await user.click(screen.getByTestId("public-inquiry-submit"));
+
+    expect(await screen.findByTestId("public-inquiry-move-in-error")).toHaveTextContent(
+      /within the next year/,
+    );
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
   it("clears a field's error once the user fixes the value", async () => {
     (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockListing });
     const user = userEvent.setup();
@@ -286,6 +305,7 @@ describe("PublicInquiryForm — submit", () => {
       "/inquiries/public",
       expect.objectContaining({
         listing_slug: "master-bedroom-abc123",
+        today: localToday(),
         name: "Alice Smith",
         email: "alice@example.com",
         has_pets: false,

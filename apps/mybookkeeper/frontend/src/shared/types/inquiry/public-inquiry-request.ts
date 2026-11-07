@@ -10,6 +10,8 @@ export interface PublicInquiryRequest {
   name: string;
   email: string;
   phone: string;
+  /** The applicant's date; the server measures the move-in window from it. */
+  today: string;
   move_in_date: string;
   move_out_date: string;
   occupant_count: number;

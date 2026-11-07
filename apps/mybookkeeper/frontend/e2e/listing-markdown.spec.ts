@@ -1,4 +1,6 @@
-import { test, expect, type APIRequestContext } from "./fixtures/auth";
+import { test, expect } from "./fixtures/auth";
+import type { CreatedListing } from "./fixtures/created-listing";
+import { createListing } from "./fixtures/listing-seed";
 import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 
 /**
@@ -13,38 +15,6 @@ import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-d
  *
  * Each test seeds data via real API, then tears it down in `finally`.
  */
-
-interface CreatedListing {
-  id: string;
-  slug: string;
-}
-
-async function createListing(
-  api: APIRequestContext,
-  payload: {
-    property_id: string;
-    title: string;
-    monthly_rate: string;
-    description?: string;
-  },
-): Promise<CreatedListing> {
-  const res = await api.post("/listings", {
-    data: {
-      room_type: "private_room",
-      status: "active",
-      private_bath: false,
-      parking_assigned: false,
-      furnished: false,
-      pets_on_premises: false,
-      ...payload,
-    },
-  });
-  if (!res.ok()) {
-    throw new Error(`createListing failed: ${res.status()} ${await res.text()}`);
-  }
-  const body = (await res.json()) as { id: string; slug: string };
-  return { id: body.id, slug: body.slug };
-}
 
 test.describe("Markdown rendering for listing descriptions", () => {
   test("public apply page renders markdown — bold, list, and link produce HTML elements", async ({

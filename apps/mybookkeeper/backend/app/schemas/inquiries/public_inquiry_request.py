@@ -20,6 +20,7 @@ from app.core.inquiry_enums import (
     INQUIRY_EMPLOYMENT_STATUSES,
     INQUIRY_US_STATES,
 )
+from app.schemas.dates.client_local_date import ClientLocalDate
 
 _NAME_MAX = 200
 _PHONE_MAX = 50
@@ -41,6 +42,8 @@ class PublicInquiryRequest(BaseModel):
     phone: str = Field(min_length=7, max_length=_PHONE_MAX)
 
     move_in_date: _dt.date
+    # Not stored: the applicant's date, which the move-in window is measured from.
+    today: ClientLocalDate
     move_out_date: _dt.date
     occupant_count: int = Field(ge=1, le=10)
     has_pets: bool

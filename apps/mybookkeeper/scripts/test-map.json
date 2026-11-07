@@ -552,6 +552,8 @@
         "backend/app/core/encrypted_string_type.py",
         "backend/app/api/inquiries.py",
         "backend/app/api/public_inquiries.py",
+        "backend/app/core/public_inquiry_constants.py",
+        "frontend/src/app/features/public-inquiry/",
         "backend/app/api/reply_templates.py",
         "backend/app/services/system/inquiry_notification_email.py",
         "frontend/src/app/pages/Inquiries.tsx",
@@ -588,6 +590,8 @@
         "test_send_claim_staleness.py",
         "test_inquiry_spam_scorer.py",
         "test_public_inquiry_service.py",
+        "test_public_inquiry_request_schema.py",
+        "test_public_inquiry_move_in_window_matches_form.py",
         "test_public_inquiries_api.py",
         "test_listing_slug.py",
         "test_reply_template_renderer.py",
@@ -607,6 +611,7 @@
         "InquiryReplyPanel.test.tsx",
         "InquirySpamBadge.test.tsx",
         "PublicInquiryForm.test.tsx",
+        "publicInquiryMoveInDate.test.ts",
         "ReplyTemplatesManager.test.tsx",
         "reply-template-renderer.test.ts",
         "list-load-mode.test.ts",
@@ -615,6 +620,7 @@
       "e2e_specs": [
         "inquiries.spec.ts",
         "inquiries-layout.spec.ts",
+        "public-inquiry-submit.spec.ts",
         "inquiry-reply.spec.ts",
         "mocked/list-pages-retry-mock.spec.ts",
         "mocked/detail-pages-retry-mock.spec.ts"
