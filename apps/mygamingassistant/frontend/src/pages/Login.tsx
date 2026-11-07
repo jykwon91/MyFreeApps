@@ -8,13 +8,20 @@ import {
   isUnverifiedLoginError,
   useIsAuthenticated,
 } from "@platform/ui";
+import { RESEND_STATUS } from "@/constants/resendStatus";
+import ResendVerificationAction from "@/features/auth/ResendVerificationAction";
+import { TRIAGE_PAGE_PATH } from "@/games/wow-forever/data/featureRequests/triage/triageConfig";
 import { requestVerifyToken, signIn } from "@/lib/auth";
+import { isServeOnly } from "@/lib/serveOnly";
+import type { ResendStatus } from "@/types/auth/resendStatus";
 
 interface LocationState {
   from?: string;
 }
 
-type ResendStatus = "idle" | "sending" | "sent" | "error";
+/** Serve-only prod has one signed-in job (triage) and no password-reset flow. */
+const SERVE_ONLY = isServeOnly();
+const DEFAULT_AFTER_LOGIN = SERVE_ONLY ? TRIAGE_PAGE_PATH : "/";
 
 /**
  * Login page for the single-user MyGamingAssistant.
@@ -37,7 +44,7 @@ export default function Login() {
 
   const [needsVerification, setNeedsVerification] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
-  const [resendStatus, setResendStatus] = useState<ResendStatus>("idle");
+  const [resendStatus, setResendStatus] = useState<ResendStatus>(RESEND_STATUS.idle);
 
   const [pendingCredentials, setPendingCredentials] = useState<
     { email: string; password: string } | null
@@ -52,13 +59,13 @@ export default function Login() {
   useEffect(() => {
     if (isAuthenticated) {
       const state = location.state as LocationState | null;
-      navigate(state?.from ?? "/", { replace: true });
+      navigate(state?.from ?? DEFAULT_AFTER_LOGIN, { replace: true });
     }
   }, [isAuthenticated, navigate, location.state]);
 
   function navigateAfterLogin(): void {
     const state = location.state as LocationState | null;
-    navigate(state?.from ?? "/", { replace: true });
+    navigate(state?.from ?? DEFAULT_AFTER_LOGIN, { replace: true });
   }
 
   async function handleSubmit(e: React.FormEvent): Promise<void> {
@@ -79,7 +86,7 @@ export default function Login() {
       if (isUnverifiedLoginError(err)) {
         setPendingEmail(email);
         setNeedsVerification(true);
-        setResendStatus("idle");
+        setResendStatus(RESEND_STATUS.idle);
       } else {
         setError(describeAuthError(err));
       }
@@ -90,12 +97,12 @@ export default function Login() {
 
   async function onResendVerification() {
     if (!pendingEmail) return;
-    setResendStatus("sending");
+    setResendStatus(RESEND_STATUS.sending);
     try {
       await requestVerifyToken(pendingEmail);
-      setResendStatus("sent");
+      setResendStatus(RESEND_STATUS.sent);
     } catch {
-      setResendStatus("error");
+      setResendStatus(RESEND_STATUS.error);
     }
   }
 
@@ -234,11 +241,13 @@ export default function Login() {
               </LoadingButton>
             </form>
 
-            <p className="mt-4 text-sm text-center text-muted-foreground">
-              <a href="/forgot-password" className="text-primary hover:underline">
-                Forgot password?
-              </a>
-            </p>
+            {SERVE_ONLY ? null : (
+              <p className="mt-4 text-sm text-center text-muted-foreground">
+                <a href="/forgot-password" className="text-primary hover:underline">
+                  Forgot password?
+                </a>
+              </p>
+            )}
 
             {needsVerification ? (
               <div className="mt-6 space-y-2 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm">
@@ -246,25 +255,7 @@ export default function Login() {
                   Please verify your email before signing in. Check your inbox for the
                   verification link.
                 </p>
-                {resendStatus === "sent" ? (
-                  <p className="text-emerald-700">
-                    Verification email sent. Check your inbox.
-                  </p>
-                ) : resendStatus === "error" ? (
-                  <p className="text-destructive">
-                    Couldn't resend right now. Try again shortly.
-                  </p>
-                ) : (
-                  <LoadingButton
-                    type="button"
-                    isLoading={resendStatus === "sending"}
-                    loadingText="Sending..."
-                    className="w-full"
-                    onClick={onResendVerification}
-                  >
-                    Resend verification email
-                  </LoadingButton>
-                )}
+                <ResendVerificationAction status={resendStatus} onResend={onResendVerification} />
               </div>
             ) : null}
           </>
