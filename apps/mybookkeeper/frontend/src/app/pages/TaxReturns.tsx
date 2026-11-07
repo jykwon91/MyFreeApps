@@ -15,6 +15,7 @@ import Select from "@/shared/components/ui/Select";
 import { STATUS_BADGE, FILING_STATUSES } from "@/shared/lib/tax-return-config";
 import TaxReturnsListSkeleton from "@/app/features/tax/TaxReturnsListSkeleton";
 import { useDismissable } from "@/shared/hooks/useDismissable";
+import { hasHttpStatus } from "@/shared/utils/http-status";
 
 export default function TaxReturns() {
   const navigate = useNavigate();
@@ -35,8 +36,12 @@ export default function TaxReturns() {
       showSuccess(`Tax return for ${newYear} created`);
       setShowCreate(false);
       navigate(`/tax-returns/${result.id}`);
-    } catch {
-      showError("I couldn't create that tax return. Please try again.");
+    } catch (err) {
+      showError(
+        hasHttpStatus(err, 409)
+          ? `You already have a ${newYear} tax return.`
+          : "I couldn't create that tax return. Please try again.",
+      );
     }
   }, [createReturn, newYear, newFilingStatus, showSuccess, showError, navigate]);
 

@@ -1,4 +1,6 @@
+import { test as baseTest, type APIRequestContext } from "@playwright/test";
 import { test, expect } from "./fixtures/auth";
+import { seededOrg } from "./fixtures/seeded-org";
 import { getYear } from "date-fns";
 
 const CURRENT_YEAR = getYear(new Date());
@@ -107,95 +109,68 @@ test.describe("Tax Report", () => {
   });
 });
 
-test.describe("Tax Returns — create and delete", () => {
-  let createdReturnId: string | null = null;
+// A fresh organization starts with no tax returns, so every year is free to create.
+baseTest.describe("Tax Returns", () => {
+  const org = seededOrg("tax-returns");
+  const YEAR = CURRENT_YEAR - 1;
 
-  test.afterAll(async ({ api }) => {
-    if (createdReturnId) {
-      await api.delete("/tax-returns/" + createdReturnId).catch(() => { /* non-critical */ });
-    }
-  });
+  async function returnYears(api: APIRequestContext): Promise<number[]> {
+    const res = await api.get("/tax-returns");
+    expect(res.ok()).toBe(true);
+    return ((await res.json()) as { tax_year: number }[]).map((r) => r.tax_year);
+  }
 
-  test.beforeEach(async ({ authedPage: page }) => {
+  baseTest.beforeEach(async ({ page }) => {
+    await org().signIn(page);
     await page.goto("/tax-returns");
     await expect(page.getByRole("heading", { name: "Tax Returns" })).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: /new return/i })
-    ).toBeVisible({ timeout: 10000 });
   });
 
-  test("create a tax return — fills form, submits, verifies card appears", async ({ authedPage: page, api }) => {
-    const existingRes = await api.get("/tax-returns");
-    const existing = await existingRes.json();
-    const existingYears = new Set(
-      (Array.isArray(existing) ? existing : []).map((r: { tax_year: number }) => r.tax_year)
-    );
-    const availableYears = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2, CURRENT_YEAR - 3];
-    const testYear = availableYears.find((y) => !existingYears.has(y));
-    if (testYear === undefined) {
-      test.skip(true, "All available tax years already have returns");
-      return;
-    }
+  // Serial: the first test sees the empty organization, the later ones the return it creates.
+  baseTest.describe.configure({ mode: "serial" });
+
+  baseTest("with no returns, says so; Cancel closes the form without creating one", async ({ page }) => {
+    await expect(page.getByText("No tax returns yet")).toBeVisible();
 
     await page.getByRole("button", { name: /new return/i }).click();
-    await expect(page.getByText("Create Tax Return")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Create Tax Return")).toBeVisible();
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByText("Create Tax Return")).toHaveCount(0);
 
-    const yearSelect = page.locator("select").first();
-    await expect(yearSelect).toBeVisible({ timeout: 5000 });
-    await yearSelect.selectOption(String(testYear));
+    expect(await returnYears(org().api)).toEqual([]);
+  });
+
+  baseTest("the filing status choices cover the IRS statuses", async ({ page }) => {
+    await page.getByRole("button", { name: /new return/i }).click();
+    const statusSelect = page.locator("select").last();
+    await expect(statusSelect.locator("option")).toContainText([
+      /single/i, /married filing jointly/i, /married filing separately/i, /head of household/i,
+    ]);
+  });
+
+  baseTest("creating a return opens it, and the list then shows it as a draft", async ({ page }) => {
+    await page.getByRole("button", { name: /new return/i }).click();
+    await page.locator("select").first().selectOption(String(YEAR));
     await page.locator("select").last().selectOption("head_of_household");
-
     await page.getByRole("button", { name: /^create$/i }).click();
 
-    await expect(page).toHaveURL(/\/tax-returns\//, { timeout: 10000 });
-
-    const url = page.url();
-    const match = url.match(/\/tax-returns\/([0-9a-f-]{36})/);
-    if (match) createdReturnId = match[1];
+    await expect(page).toHaveURL(/\/tax-returns\/[0-9a-f-]{36}$/);
+    expect(await returnYears(org().api)).toEqual([YEAR]);
 
     await page.goto("/tax-returns");
-    await expect(page.getByRole("button", { name: /new return/i })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText(String(testYear), { exact: true })).toBeVisible({ timeout: 10000 });
+    const card = page.getByRole("button", { name: new RegExp(`^${YEAR}`) });
+    await expect(card).toContainText("Draft");
+    await expect(card).toContainText("head of household");
+    await expect(page.getByText("No tax returns yet")).toHaveCount(0);
   });
 
-  test("cancel closes the creation form without creating", async ({ authedPage: page }) => {
+  baseTest("a second return for the same year is refused, naming the year", async ({ page }) => {
     await page.getByRole("button", { name: /new return/i }).click();
-    await expect(page.getByText("Create Tax Return")).toBeVisible({ timeout: 5000 });
-    await page.getByRole("button", { name: /cancel/i }).click();
-    await expect(page.getByText("Create Tax Return")).not.toBeVisible({ timeout: 5000 });
-  });
+    await page.locator("select").first().selectOption(String(YEAR));
+    await page.getByRole("button", { name: /^create$/i }).click();
 
-  test("filing status dropdown has all required options", async ({ authedPage: page }) => {
-    await page.getByRole("button", { name: /new return/i }).click();
-    await expect(page.getByText("Create Tax Return")).toBeVisible({ timeout: 5000 });
-
-    const statusSelect = page.locator("select").last();
-    await statusSelect.waitFor({ state: "visible" });
-    const options = await statusSelect.locator("option").allTextContents();
-
-    expect(options.some((o) => /single/i.test(o))).toBe(true);
-    expect(options.some((o) => /married filing jointly/i.test(o))).toBe(true);
-    expect(options.some((o) => /head of household/i.test(o))).toBe(true);
-  });
-
-  test("existing returns show year and status badge", async ({ authedPage: page, api }) => {
-    const listRes = await api.get("/tax-returns");
-    const returns = await listRes.json();
-    if (!Array.isArray(returns) || returns.length === 0) {
-      const createRes = await api.post("/tax-returns", {
-        data: { tax_year: CURRENT_YEAR - 3, filing_status: "single" },
-      });
-      if (createRes.ok()) {
-        const r = await createRes.json();
-        createdReturnId = r.id;
-      }
-      await page.reload();
-      await expect(page.getByRole("button", { name: /new return/i })).toBeVisible({ timeout: 10000 });
-    }
-
-    const yearCard = page.getByText(/^20\d{2}$/).first();
-    await expect(yearCard).toBeVisible({ timeout: 10000 });
-
-    await expect(page.getByText(/draft|ready|filed/i).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(`You already have a ${YEAR} tax return.`, { exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/tax-returns$/);
+    expect(await returnYears(org().api)).toEqual([YEAR]);
   });
 });

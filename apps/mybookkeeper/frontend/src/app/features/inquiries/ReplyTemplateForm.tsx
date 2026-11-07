@@ -5,6 +5,7 @@ import {
   useUpdateReplyTemplateMutation,
 } from "@mybookkeeper/api-client/store/inquiriesApi";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
+import { hasHttpStatus } from "@/shared/utils/http-status";
 
 export interface ReplyTemplateFormProps {
   template: ReplyTemplate | null;
@@ -77,7 +78,7 @@ export default function ReplyTemplateForm({ template, onClose }: ReplyTemplateFo
       onClose();
     } catch (err) {
       showError(
-        (err as { status?: number }).status === 409
+        hasHttpStatus(err, 409)
           ? extractErrorMessage(err)
           : "I couldn't save that template. Want to try again?",
       );

@@ -54,8 +54,9 @@ vi.mock('react-router-dom', async () => {
   return { ...actual, useNavigate: vi.fn(() => mockNavigate) };
 });
 
+const mockShowError = vi.fn();
 vi.mock('@/shared/hooks/useToast', () => ({
-  useToast: vi.fn(() => ({ showError: vi.fn(), showSuccess: vi.fn() })),
+  useToast: vi.fn(() => ({ showError: mockShowError, showSuccess: vi.fn() })),
 }));
 
 import { useListTaxReturnsQuery } from '@mybookkeeper/api-client/store/taxReturnsApi';
@@ -193,6 +194,29 @@ describe('TaxReturns', () => {
     await user.click(screen.getByText('New Return'));
     await user.click(screen.getByText('Create'));
     expect(mockCreateReturn).toHaveBeenCalled();
+  });
+
+  it('names the year when a return for it already exists', async () => {
+    mockCreateReturn.mockReturnValueOnce({
+      unwrap: () => Promise.reject({ status: 409, data: { detail: 'exists' } }),
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<TaxReturns />);
+    await user.click(screen.getByText('New Return'));
+    await user.click(screen.getByText('Create'));
+    expect(mockShowError).toHaveBeenCalledWith(`You already have a ${currentYear} tax return.`);
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('asks to try again when creating fails for another reason', async () => {
+    mockCreateReturn.mockReturnValueOnce({
+      unwrap: () => Promise.reject({ status: 500, data: {} }),
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<TaxReturns />);
+    await user.click(screen.getByText('New Return'));
+    await user.click(screen.getByText('Create'));
+    expect(mockShowError).toHaveBeenCalledWith("I couldn't create that tax return. Please try again.");
   });
 
   it('shows needs recompute indicator on affected cards', () => {

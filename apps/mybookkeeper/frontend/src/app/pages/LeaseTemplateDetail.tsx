@@ -12,6 +12,7 @@ import AISuggestionsPanel from "@/app/features/leases/AISuggestionsPanel";
 import type { SuggestPlaceholdersResponse } from "@/shared/types/lease/suggest-placeholders-response";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { resolveDetailLoadMode } from "@/shared/lib/detail-load-mode";
+import { hasHttpStatus } from "@/shared/utils/http-status";
 
 interface LocationState {
   aiSuggestions?: SuggestPlaceholdersResponse | null;
@@ -52,11 +53,8 @@ export default function LeaseTemplateDetail() {
       showSuccess("Template deleted.");
       navigate("/lease-templates");
     } catch (e: unknown) {
-      const err = e as {
-        status?: number;
-        data?: { detail?: { code?: string } };
-      };
-      if (err.status === 409 && err.data?.detail?.code === "template_in_use") {
+      const detail = (e as { data?: { detail?: { code?: string } } }).data?.detail;
+      if (hasHttpStatus(e, 409) && detail?.code === "template_in_use") {
         showError(
           "Can't delete this template — there are active leases referencing it.",
         );
