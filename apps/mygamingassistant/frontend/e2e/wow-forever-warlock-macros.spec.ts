@@ -22,7 +22,7 @@ test("shows the how-to and every macro, with unconfirmed syntax labelled", async
   await expect(page.getByText("/macro", { exact: true })).toBeVisible();
   const cards = page.getByRole("article");
   await expect(cards.first()).toBeVisible();
-  expect(await cards.count()).toBeGreaterThanOrEqual(10);
+  expect(await cards.count()).toBeGreaterThanOrEqual(28);
 
   const focus = page.getByRole("article", { name: "Fear your focus" });
   await expect(focus.getByTestId("macro-text")).toHaveText("/cast [@focus,harm,nodead][] Fear");

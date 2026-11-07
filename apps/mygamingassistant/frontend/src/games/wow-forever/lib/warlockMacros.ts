@@ -5,6 +5,7 @@ import type { WarlockNames } from "@/games/wow-forever/types/warlockNames";
 export const MACRO_MAX_LENGTH = 255;
 
 const COMMAND_LINE = /^\/(cast|use|castsequence)\s+(.*)$/;
+const KEEP_ON_PREFIX = /^!/;
 const CONDITIONS = /^(\[[^\]]*\]\s*)+/;
 const SEQUENCE_RESET = /^reset=\S+\s*/;
 
@@ -15,17 +16,20 @@ export function namesInText(text: string): string[] {
     const match = COMMAND_LINE.exec(line.trim());
     if (!match) continue;
     const [, command, rest] = match;
-    const body = (command === "castsequence" ? rest.replace(SEQUENCE_RESET, "") : rest).replace(CONDITIONS, "");
-    const parts = command === "castsequence" ? body.split(",") : [body];
-    names.push(...parts.map((p) => p.trim()).filter((p) => p !== ""));
+    const body = command === "castsequence" ? rest.replace(SEQUENCE_RESET, "") : rest;
+    // A /castsequence lists spells with commas; /cast and /use pick one clause per ";".
+    const clauses = body.split(command === "castsequence" ? "," : ";");
+    names.push(
+      ...clauses.map((c) => c.trim().replace(CONDITIONS, "").replace(KEEP_ON_PREFIX, "").trim()).filter((p) => p !== ""),
+    );
   }
   return names;
 }
 
 /** Names a macro lists that the Forever client doesn't have. Empty means every one is confirmed. */
 export function missingNames(macro: WarlockMacro, names: WarlockNames): string[] {
-  const spells = new Set([...names.spells, ...names.petSpells]);
-  const items = new Set(names.items);
+  const spells = new Set([...names.spells, ...names.petSpells, ...names.generalSpells]);
+  const items = new Set([...names.items, ...names.potions]);
   return [
     ...macro.spells.filter((s) => !spells.has(s)),
     ...macro.items.filter((i) => !items.has(i)),
