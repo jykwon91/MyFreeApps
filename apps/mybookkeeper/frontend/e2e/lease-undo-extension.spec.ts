@@ -169,9 +169,16 @@ test.describe("Lease extension undo", () => {
         await expect(
           page.getByTestId("undo-extension-dialog"),
         ).toBeVisible();
-        await page.getByTestId("undo-extension-confirm").click();
-
-        await page.waitForLoadState("networkidle");
+        // networkidle resolves at once on an already-loaded page, so wait for
+        // the undo request itself before reading the lease back.
+        const [undoResponse] = await Promise.all([
+          page.waitForResponse(
+            (r) => r.request().method() === "POST"
+              && /\/signed-leases\/[^/]+\/extensions\/[^/]+\/undo$/.test(r.url()),
+          ),
+          page.getByTestId("undo-extension-confirm").click(),
+        ]);
+        expect(undoResponse.ok()).toBe(true);
 
         const fetched = await getLease(api, leaseId);
         expect(fetched.ends_on).toBe("2026-12-31");
