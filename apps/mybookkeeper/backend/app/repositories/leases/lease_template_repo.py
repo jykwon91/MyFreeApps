@@ -9,7 +9,7 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
-from sqlalchemy import desc, func, select, update
+from sqlalchemy import delete, desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.leases.lease_template import LeaseTemplate
@@ -171,5 +171,28 @@ async def soft_delete(
             LeaseTemplate.deleted_at.is_(None),
         )
         .values(deleted_at=_dt.datetime.now(_dt.timezone.utc))
+    )
+    return (result.rowcount or 0) > 0
+
+
+async def hard_delete_by_id(
+    db: AsyncSession,
+    *,
+    template_id: uuid.UUID,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+) -> bool:
+    """Hard-delete a template, soft-deleted or not. Returns whether a row was
+    deleted. Test cleanup only — production deletes are soft.
+
+    Files and placeholders cascade. A signed lease generated from the template
+    is ``RESTRICT``: delete the lease first or this raises ``IntegrityError``.
+    """
+    result = await db.execute(
+        delete(LeaseTemplate).where(
+            LeaseTemplate.id == template_id,
+            LeaseTemplate.user_id == user_id,
+            LeaseTemplate.organization_id == organization_id,
+        )
     )
     return (result.rowcount or 0) > 0

@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
+import { deleteTemplate } from "./fixtures/lease-templates";
 
 /**
  * Lease Templates Phase 1 — primary user flows.
@@ -27,10 +28,6 @@ async function seedTemplate(
   }
   const body = (await res.json()) as { id: string };
   return body.id;
-}
-
-async function deleteTemplate(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/test/lease-templates/${id}`).catch(() => {});
 }
 
 async function fetchTemplate(api: APIRequestContext, id: string) {

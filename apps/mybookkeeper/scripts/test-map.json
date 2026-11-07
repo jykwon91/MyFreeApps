@@ -1166,6 +1166,7 @@
       "backend_tests": [
         "test_lease_renderer.py",
         "test_lease_template_repo.py",
+        "test_seed_lease_template.py",
         "test_lease_templates_api.py",
         "test_lease_import_api.py",
         "test_lease_import_heuristic.py",

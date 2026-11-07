@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
+import { deleteTemplate } from "./fixtures/lease-templates";
 import { deleteInquiry, seedInquiry } from "./fixtures/inquiries";
 import { localToday } from "./fixtures/local-today";
 import { deleteApplicant } from "./fixtures/applicants";
@@ -31,10 +32,6 @@ async function seedTemplate(
   }
   const body = (await res.json()) as { id: string };
   return body.id;
-}
-
-async function deleteTemplate(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/test/lease-templates/${id}`).catch(() => {});
 }
 
 async function seedApplicant(
