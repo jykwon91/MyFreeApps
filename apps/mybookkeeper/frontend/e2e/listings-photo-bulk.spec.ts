@@ -59,7 +59,6 @@ async function waitForPhotos(page: Page, count: number): Promise<void> {
 }
 
 test.describe("Photo bulk actions (PR multi-select)", () => {
-  test.skip(!fs.existsSync(FIXTURE_PHOTO), "GPS-EXIF fixture missing — run scripts/build-listings-fixtures.py");
 
   test("user can select 2 of 3 photos with checkboxes, bulk delete, and grid shows 1 remaining", async ({
     authedPage: page,
