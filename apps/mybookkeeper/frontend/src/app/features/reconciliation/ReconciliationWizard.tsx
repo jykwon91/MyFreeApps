@@ -97,7 +97,7 @@ export default function ReconciliationWizard({ onToast, canWrite = true }: Recon
               }`}>
                 {i + 1}
               </span>
-              {label}
+              <span className="text-center [overflow-wrap:anywhere]">{label}</span>
             </span>
           </button>
         ))}

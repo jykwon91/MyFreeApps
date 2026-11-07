@@ -31,6 +31,8 @@ for (const device of PHONE_VIEWPORTS) {
         await page.goto(url);
         await page.waitForLoadState("domcontentloaded");
         await page.waitForTimeout(1200);
+        // A redirect (unknown route, missing role) would measure another page.
+        expect(new URL(page.url()).pathname).toBe(url);
 
         const { scrollWidth, wide } = await page.evaluate((target) => {
           const offenders: Array<{ tag: string; cls: string; width: number }> = [];

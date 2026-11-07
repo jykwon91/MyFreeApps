@@ -38,3 +38,5 @@ export const APP_PAGES = [
   "/admin/user-activity",
   "/admin/demo",
 ] as const;
+
+export type AppPage = (typeof APP_PAGES)[number];
