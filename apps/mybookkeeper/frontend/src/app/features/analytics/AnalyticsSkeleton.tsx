@@ -3,9 +3,12 @@ import Card from "@/shared/components/ui/Card";
 
 export default function AnalyticsSkeleton() {
   return (
-    <div className="space-y-6">
-      {/* Summary cards row — 3 columns: total + 2 sub-categories visible, rest overflow */}
-      <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+    <div className="space-y-6" data-testid="analytics-skeleton">
+      {/* Summary cards row: the total plus one card per utility type */}
+      <section
+        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3"
+        data-testid="analytics-skeleton-summary"
+      >
         {/* Total spend card (wider) */}
         <Card className="col-span-2 sm:col-span-1 lg:col-span-2">
           <Skeleton className="h-3 w-20" />
@@ -21,7 +24,7 @@ export default function AnalyticsSkeleton() {
       </section>
 
       {/* Filter bar */}
-      <div className="flex flex-wrap gap-3 items-center">
+      <div className="flex flex-wrap gap-3 items-center" data-testid="analytics-skeleton-filters">
         <Skeleton className="h-9 w-36" />
         <Skeleton className="h-9 w-36" />
         <Skeleton className="h-9 w-28" />

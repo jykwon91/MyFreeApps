@@ -362,11 +362,14 @@ describe('AnalyticsSkeleton', () => {
   });
 
   it('renders 7 cards in the summary grid matching the loaded layout', () => {
-    const { container } = render(<AnalyticsSkeleton />);
-    const section = container.querySelector('section.grid');
-    expect(section).not.toBeNull();
+    render(<AnalyticsSkeleton />);
     // 1 total card + 6 sub-category cards (one per UTILITY_SUB_CATEGORIES) = 7 direct children
-    expect(section!.querySelectorAll(':scope > div').length).toBe(7);
+    expect(screen.getByTestId('analytics-skeleton-summary').children).toHaveLength(7);
+  });
+
+  it('renders a filter bar slot for the two dates, the granularity toggle and the property filter', () => {
+    render(<AnalyticsSkeleton />);
+    expect(screen.getByTestId('analytics-skeleton-filters').children).toHaveLength(4);
   });
 
   it('renders chart area skeleton with height matching the loaded chart', () => {

@@ -1,255 +1,185 @@
-import { test, expect } from "./fixtures/auth";
-import type { APIRequestContext, Page } from "@playwright/test";
-import { endOfMonth, format, startOfMonth, subMonths } from "date-fns";
+/**
+ * Analytics — utility trends. Runs against a fresh organization seeded with
+ * ANALYTICS_SEED, so every total on the page is known in advance.
+ */
+import { test, expect } from "@playwright/test";
+import { holdRequests } from "./fixtures/hold-requests";
+import { seededOrg } from "./fixtures/seeded-org";
+import { ANALYTICS_SEED as SEED, seedAnalytics } from "./fixtures/analytics-seed";
+import {
+  TYPE_CARDS,
+  cardAmount,
+  expectCards,
+  expectChart,
+  openAnalytics,
+  summary,
+  trendsChart,
+  xAxisLabels,
+} from "./fixtures/analytics-page";
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(Math.abs(amount));
-}
+const TRENDS_PATH = "/analytics/utility-trends";
 
-// These tests approve bills in one shared org, which changes the totals others read.
-test.describe.configure({ mode: "serial" });
-
-const RUN_ID = Date.now();
-const E2E_VENDOR = `E2E Utility Vendor ${RUN_ID}`;
-
-async function waitForAnalyticsLoad(page: Page): Promise<void> {
-  await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible({ timeout: 10000 });
-}
-
-function firstOfThisMonth(): string {
-  const today = new Date();
-  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
-}
-
-/** New transactions always start as pending, and analytics only counts approved ones. */
-async function createApprovedUtilityBill(
-  api: APIRequestContext,
-  bill: { amount: string; vendor: string; sub_category?: string },
-): Promise<string> {
-  const created = await api.post("/transactions", {
-    data: {
-      transaction_date: firstOfThisMonth(),
-      transaction_type: "expense",
-      category: "utilities",
-      tags: ["utilities"],
-      tax_relevant: true,
-      ...bill,
-    },
-  });
-  expect(created.ok()).toBe(true);
-  const { id } = await created.json();
-  const approved = await api.patch(`/transactions/${id}`, { data: { status: "approved" } });
-  if (!approved.ok()) await api.delete(`/transactions/${id}`);
-  expect(approved.ok()).toBe(true);
-  return id;
-}
+const org = seededOrg("analytics", seedAnalytics);
 
 test.describe("Analytics — Layout", () => {
-  test.beforeEach(async ({ authedPage: page }) => {
-    await page.goto("/analytics");
-    await waitForAnalyticsLoad(page);
+  test.beforeEach(async ({ page }) => {
+    await org().signIn(page);
+    await openAnalytics(page);
   });
 
-  test("renders the Analytics heading", async ({ authedPage: page }) => {
-    await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible();
+  test("shows the Utility Trends tab as active by default", async ({ page }) => {
+    await expect(page.getByRole("tab", { name: "Utility Trends" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("link", { name: "Analytics" })).toBeVisible();
   });
 
-  test("shows Utility Trends tab as active by default", async ({ authedPage: page }) => {
-    const tab = page.getByRole("tab", { name: "Utility Trends" });
-    await expect(tab).toBeVisible();
-    await expect(tab).toHaveAttribute("aria-selected", "true");
-  });
-
-  test("sidebar has Analytics nav link", async ({ authedPage: page }) => {
-    const nav = page.getByRole("link", { name: "Analytics" });
-    await expect(nav).toBeVisible();
-  });
-
-  test("URL defaults to tab=utility-trends", async ({ authedPage: page }) => {
-    // Click the tab to ensure URL param is set
+  test("clicking the tab records it in the URL", async ({ page }) => {
     await page.getByRole("tab", { name: "Utility Trends" }).click();
     await expect(page).toHaveURL(/tab=utility-trends/);
   });
 });
 
 test.describe("Analytics — Utility Trends", () => {
-  let billId: string | null = null;
-
-  test.beforeEach(async ({ authedPage: page, api }) => {
-    billId = await createApprovedUtilityBill(api, { amount: "45.00", vendor: E2E_VENDOR, sub_category: "water" });
-    await page.goto("/analytics?tab=utility-trends");
-    await waitForAnalyticsLoad(page);
+  test.beforeEach(async ({ page }) => {
+    await org().signIn(page);
   });
 
-  test.afterEach(async ({ api }) => {
-    if (billId) await api.delete(`/transactions/${billId}`).catch(() => {});
-    billId = null;
+  test("totals the last 12 months of approved utility bills, by type", async ({ page }) => {
+    await openAnalytics(page);
+
+    // Exact totals: the bill the day before the range and the maintenance expense are left out.
+    await expectCards(page, SEED.totals);
+    await expectChart(page, SEED.monthLabels.length, SEED.typesInRange);
+    await expect(xAxisLabels(page)).toHaveText(SEED.monthLabels);
+    await expect(page.getByRole("radio", { name: "Monthly" })).toHaveAttribute("aria-checked", "true");
+    // The default view counts as unfiltered.
+    await expect(page.getByRole("button", { name: "Clear all filters" })).toHaveCount(0);
   });
 
-  test("shows skeleton then loads content or empty state", async ({ authedPage: page }) => {
-    // Reload to catch the skeleton
-    await page.reload();
-    // Either skeleton pulse elements or loaded content should be visible
-    const loaded = page
-      .getByText("Total Utility Spend")
-      .or(page.getByText("I haven't found any utility expenses"))
-      .or(page.getByText("No utility expenses found"))
-      .or(page.locator(".animate-pulse").first());
-    await expect(loaded).toBeVisible({ timeout: 15000 });
+  test("quarterly granularity groups the bills by quarter", async ({ page }) => {
+    await openAnalytics(page);
+    await expect(xAxisLabels(page)).toHaveText(SEED.monthLabels);
+
+    await page.getByRole("radio", { name: "Quarterly" }).click();
+
+    await expect(page).toHaveURL(/[?&]granularity=quarterly(&|$)/);
+    await expect(page.getByRole("radio", { name: "Quarterly" })).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByRole("radio", { name: "Monthly" })).toHaveAttribute("aria-checked", "false");
+    // Quarter labels only come back from a quarterly request.
+    await expect(xAxisLabels(page)).toHaveText(SEED.quarterLabels);
+    await expectCards(page, SEED.totals);
   });
 
-  test("filter bar renders date inputs and granularity toggle", async ({ authedPage: page }) => {
-    // Wait for content to load past skeleton
-    await page.waitForTimeout(2000);
+  test("the property filter narrows the totals, and Clear brings them back", async ({ page }) => {
+    await openAnalytics(page);
+    await expectCards(page, SEED.totals);
 
-    // Check for filter elements — they're in the desktop view
-    const fromInput = page.locator("input[type='date']").first();
-    const monthlyBtn = page.getByRole("radio", { name: "Monthly" });
-    const quarterlyBtn = page.getByRole("radio", { name: "Quarterly" });
+    await page.getByRole("button", { name: "Filter by property" }).click();
+    await page.getByRole("menuitemcheckbox", { name: SEED.properties.north }).click();
+    await page.keyboard.press("Escape");
 
-    // On mobile, filters may be behind a toggle — check both paths
-    const filtersToggle = page.getByRole("button", { name: /filters/i });
-    if (await filtersToggle.isVisible().catch(() => false)) {
-      await filtersToggle.click();
-    }
+    await expect(page).toHaveURL(/[?&]properties=[0-9a-f-]{36}(&|$)/);
+    await expectCards(page, SEED.north);
+    await expectChart(page, SEED.northPeriods, SEED.northTypesInRange);
 
-    await expect(fromInput).toBeVisible({ timeout: 5000 });
-    await expect(monthlyBtn).toBeVisible();
-    await expect(quarterlyBtn).toBeVisible();
+    await page.getByRole("button", { name: "Clear all filters" }).click();
+
+    await expect(page).not.toHaveURL(/[?&]properties=/);
+    await expectCards(page, SEED.totals);
   });
 
-  test("granularity toggle updates URL parameter", async ({ authedPage: page }) => {
-    await page.waitForTimeout(2000);
+  test("a range covering one month shows that month and asks for a wider range", async ({ page }) => {
+    await openAnalytics(page);
+    await expectCards(page, SEED.totals);
 
-    // Open mobile filter panel if needed
-    const filtersToggle = page.getByRole("button", { name: /filters/i });
-    if (await filtersToggle.isVisible().catch(() => false)) {
-      await filtersToggle.click();
-    }
+    await page.getByLabel("From date").first().fill(SEED.thisMonth.from);
 
-    const quarterlyBtn = page.getByRole("radio", { name: "Quarterly" });
-    const quarterlyVisible = await quarterlyBtn.isVisible().catch(() => false);
-    test.skip(!quarterlyVisible, "Quarterly granularity radio button not visible — filter panel may be hidden");
-    await quarterlyBtn.click();
-    await expect(page).toHaveURL(/granularity=quarterly/);
+    await expect(page).toHaveURL(new RegExp(`[?&]from=${SEED.thisMonth.from}(&|$)`));
+    await expect(cardAmount(page, "Total Utilities")).toHaveText(SEED.thisMonth.total);
+    await expect(page.getByText("I only have one month of data — try expanding the date range to see trends.")).toBeVisible();
+    await expect(trendsChart(page)).toHaveCount(0);
+  });
+
+  test("a range ending on a bill's date counts that bill", async ({ page }) => {
+    await openAnalytics(page, `?from=${SEED.beforeRange.from}&to=${SEED.beforeRange.to}`);
+
+    await expect(cardAmount(page, "Total Utilities")).toHaveText(SEED.beforeRange.total);
+    await expect(cardAmount(page, "Water")).toHaveText(SEED.beforeRange.total);
+  });
+
+  test("a range with no bills says so, and Reset date range restores the default", async ({ page }) => {
+    await openAnalytics(page, "?from=2000-01-01&to=2000-12-31");
+
+    await expect(page.getByText("No utility expenses found between Jan 1, 2000 and Dec 31, 2000.")).toBeVisible();
+    await expect(summary(page)).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Reset date range" }).click();
+
+    await expect(page).not.toHaveURL(/[?&](from|to)=/);
+    await expectCards(page, SEED.totals);
+  });
+
+  test("the skeleton holds the summary card slots while the trends load", async ({ page }) => {
+    const release = await holdRequests(page, (url) => url.pathname.endsWith(TRENDS_PATH));
+    await page.goto("/analytics");
+
+    // The total plus one slot per utility type. Other gets a card only when
+    // there are untyped bills, so it has no slot.
+    await expect(page.getByTestId("analytics-skeleton-summary").locator(":scope > *")).toHaveCount(1 + TYPE_CARDS.length);
+    await expect(page.getByTestId("analytics-skeleton-filters")).toBeVisible();
+
+    release();
+
+    await expect(page.getByTestId("analytics-skeleton")).toHaveCount(0);
+    await expect(summary(page).locator(":scope > *")).toHaveCount(1 + TYPE_CARDS.length + 1);
+    await expectCards(page, SEED.totals);
+  });
+
+  test("a failed load offers Retry, which loads the totals", async ({ page }) => {
+    let failNext = true;
+    await page.route((url) => url.pathname.endsWith(TRENDS_PATH), async (route) => {
+      if (!failNext) return route.continue();
+      failNext = false;
+      await route.fulfill({ status: 500, json: { detail: "boom" } });
+    });
+
+    await openAnalytics(page);
+    await expect(page.getByText("I ran into a problem loading your utility data. Want me to try again?")).toBeVisible();
+
+    await page.getByRole("button", { name: "Retry" }).click();
+
+    await expectCards(page, SEED.totals);
   });
 });
 
-test.describe("Analytics — API Integration", () => {
-  test("utility trends API endpoint returns valid response", async ({ api }) => {
-    const res = await api.get("/analytics/utility-trends");
+test.describe("Analytics — no utility bills", () => {
+  const empty = seededOrg("analytics-empty");
+
+  test("an organization with no utility bills sees the empty state", async ({ page }) => {
+    await empty().signIn(page);
+    await openAnalytics(page);
+
+    await expect(page.getByText(/I haven't found any utility expenses yet/)).toBeVisible();
+    await expect(summary(page)).toHaveCount(0);
+  });
+});
+
+test.describe("Analytics — API", () => {
+  test("returns the seeded totals for an explicit range", async () => {
+    const { from, to, totalSpend, summary: byType } = SEED.thisMonth;
+    const res = await org().api.get(`${TRENDS_PATH}?start_date=${from}&end_date=${to}`);
     expect(res.ok()).toBe(true);
     const data = await res.json();
-
-    // Validate response shape
-    expect(data).toHaveProperty("trends");
-    expect(data).toHaveProperty("summary");
-    expect(data).toHaveProperty("total_spend");
-    expect(Array.isArray(data.trends)).toBe(true);
-    expect(typeof data.total_spend).toBe("number");
-    expect(typeof data.summary).toBe("object");
+    expect(data.total_spend).toBe(totalSpend);
+    expect(data.summary).toEqual(byType);
   });
 
-  test("utility trends API accepts granularity parameter", async ({ api }) => {
-    const monthly = await api.get("/analytics/utility-trends?granularity=monthly");
-    expect(monthly.ok()).toBe(true);
-
-    const quarterly = await api.get("/analytics/utility-trends?granularity=quarterly");
-    expect(quarterly.ok()).toBe(true);
-  });
-
-  test("utility trends API rejects invalid granularity", async ({ api }) => {
-    const res = await api.get("/analytics/utility-trends?granularity=weekly");
+  test("rejects an unknown granularity", async () => {
+    const res = await org().api.get(`${TRENDS_PATH}?granularity=weekly`);
     expect(res.status()).toBe(422);
   });
 
-  test("utility trends API rejects invalid property_ids", async ({ api }) => {
-    const res = await api.get("/analytics/utility-trends?property_ids=not-a-uuid");
+  test("rejects a property id that isn't a UUID", async () => {
+    const res = await org().api.get(`${TRENDS_PATH}?property_ids=not-a-uuid`);
     expect(res.status()).toBe(422);
-  });
-
-  test("summary cards match API data when utility data exists", async ({ authedPage: page, api }) => {
-    // Use same default date range as the frontend (last 12 months)
-    const now = new Date();
-    const startDate = format(startOfMonth(subMonths(now, 11)), "yyyy-MM-dd");
-    const endDate = format(endOfMonth(now), "yyyy-MM-dd");
-
-    const res = await api.get(`/analytics/utility-trends?start_date=${startDate}&end_date=${endDate}`);
-    const data = await res.json();
-
-    if (data.total_spend === 0) {
-      test.skip();
-      return;
-    }
-
-    await page.goto("/analytics?tab=utility-trends");
-    await waitForAnalyticsLoad(page);
-
-    // Wait for data to load
-    await expect(page.getByText("Total Utilities")).toBeVisible({ timeout: 15000 });
-
-    // Verify total spend amount appears on page
-    const formatted = formatCurrency(data.total_spend);
-    await expect(page.getByText(formatted).first()).toBeVisible({ timeout: 10000 });
-  });
-});
-
-test.describe("Analytics — Utility Transaction CRUD", () => {
-  let createdTxnId: string | null = null;
-
-  test.afterEach(async ({ api }) => {
-    // Clean up test transaction
-    if (createdTxnId) {
-      await api.delete(`/transactions/${createdTxnId}`).catch(() => {});
-      createdTxnId = null;
-    }
-  });
-
-  test("creating a utility transaction with sub_category shows in analytics", async ({
-    authedPage: page,
-    api,
-  }) => {
-    createdTxnId = await createApprovedUtilityBill(api, { amount: "99.50", vendor: E2E_VENDOR, sub_category: "electricity" });
-
-    // Verify it appears in the analytics API response
-    const analyticsRes = await api.get("/analytics/utility-trends");
-    expect(analyticsRes.ok()).toBe(true);
-    const analytics = await analyticsRes.json();
-
-    // Should have at least one electricity trend point
-    const electricityTrends = analytics.trends.filter(
-      (t: { sub_category: string }) => t.sub_category === "electricity",
-    );
-    expect(electricityTrends.length).toBeGreaterThan(0);
-
-    // Summary should include electricity
-    expect(analytics.summary.electricity).toBeGreaterThan(0);
-
-    // Navigate to analytics page and verify data is visible
-    await page.goto("/analytics?tab=utility-trends");
-    await waitForAnalyticsLoad(page);
-
-    // Wait for data to load — should show Total Utility Spend
-    await expect(page.getByText("Total Utilities")).toBeVisible({ timeout: 15000 });
-  });
-
-  test("an approved utility bill with no type still counts, under Other", async ({ authedPage: page, api }) => {
-    createdTxnId = await createApprovedUtilityBill(api, { amount: "777.77", vendor: `${E2E_VENDOR} combined` });
-
-    const analytics = await (await api.get("/analytics/utility-trends")).json();
-    expect(analytics.summary.other).toBeGreaterThanOrEqual(777.77);
-    expect(analytics.total_spend).toBeGreaterThanOrEqual(777.77);
-
-    await page.goto("/analytics?tab=utility-trends");
-    await waitForAnalyticsLoad(page);
-    const summary = page.getByRole("region", { name: "Utility spend summary" });
-    const otherLabel = summary.getByText("Other", { exact: true });
-    await expect(otherLabel).toBeVisible({ timeout: 15000 });
-    await expect(otherLabel.locator("..")).toContainText(formatCurrency(analytics.summary.other));
   });
 });

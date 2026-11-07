@@ -5,6 +5,7 @@ interface TransactionInput {
   amount: string;
   transaction_type: "income" | "expense";
   category: string;
+  sub_category?: string;
   transaction_date: string;
   property_id?: string;
   tax_relevant?: boolean;

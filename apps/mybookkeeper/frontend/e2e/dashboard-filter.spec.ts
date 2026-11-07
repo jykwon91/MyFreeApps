@@ -4,7 +4,7 @@
  * a fresh organization seeded with DASHBOARD_SEED, so every total is exact.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { SoloOrg } from "./fixtures/solo-org";
+import { seededOrg } from "./fixtures/seeded-org";
 import { DASHBOARD_SEED as SEED, seedDashboard } from "./fixtures/dashboard-seed";
 import { bars, card, chartIn, expectSummaryCards, legend, openDashboard } from "./fixtures/dashboard-page";
 
@@ -34,20 +34,10 @@ async function selectProperty(page: Page, name: string): Promise<void> {
 }
 
 test.describe("Dashboard filters", () => {
-  let solo: SoloOrg | undefined;
-
-  test.beforeAll(async ({ playwright }) => {
-    solo = await SoloOrg.create(playwright, "dashboard-filter");
-    await seedDashboard(solo.api);
-  });
-
-  test.afterAll(async ({ playwright }) => {
-    await solo?.delete(playwright);
-  });
+  const org = seededOrg("dashboard-filter", seedDashboard);
 
   test.beforeEach(async ({ page }) => {
-    if (!solo) throw new Error("the dashboard organization was not created");
-    await solo.signIn(page);
+    await org().signIn(page);
     await openDashboard(page);
     await expect(page.getByTestId("dashboard-filter-bar")).toBeVisible();
   });
@@ -224,19 +214,10 @@ test.describe("Dashboard filters", () => {
 });
 
 test.describe("Dashboard filters with no data", () => {
-  let empty: SoloOrg | undefined;
-
-  test.beforeAll(async ({ playwright }) => {
-    empty = await SoloOrg.create(playwright, "dashboard-empty");
-  });
-
-  test.afterAll(async ({ playwright }) => {
-    await empty?.delete(playwright);
-  });
+  const empty = seededOrg("dashboard-empty");
 
   test("an empty dashboard has no filter bar", async ({ page }) => {
-    if (!empty) throw new Error("the empty organization was not created");
-    await empty.signIn(page);
+    await empty().signIn(page);
     await openDashboard(page);
 
     await expect(page.getByTestId("dashboard-filter-bar")).toHaveCount(0);
