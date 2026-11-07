@@ -2,7 +2,7 @@
  * Mirrors backend ``ApplicantPromoteRequest`` — the body for
  * POST /applicants/promote/{inquiry_id}.
  *
- * All fields are optional. The backend auto-fills missing values from the
+ * Every field but ``today`` is optional. The backend auto-fills missing values from the
  * source inquiry where possible (legal_name, employer_or_hospital,
  * contract_start). Fields with no inquiry source (dob, vehicle_make_model,
  * smoker, pets, referred_by) come from this payload only.
@@ -24,4 +24,7 @@ export interface ApplicantPromoteRequest {
   smoker?: boolean | null;
   pets?: string | null;
   referred_by?: string | null;
+
+  /** Not stored: the host's date, for the minimum-age check on ``dob``. */
+  today: string;
 }

@@ -17,6 +17,7 @@ import { useState } from "react";
 import { UserCheck } from "lucide-react";
 import { LoadingButton, showError, showSuccess } from "@platform/ui";
 import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import { useAttributeTransactionManuallyMutation } from "@/shared/store/attributionApi";
 import { buildTenantOptions } from "@mybookkeeper/api-client/utils/tenantStatus";
 
@@ -37,6 +38,7 @@ export default function AttributeTenantPicker({
   const { data: tenantsResponse, isLoading: loadingApplicants } = useGetTenantsQuery({
     limit: 100,
     include_ended: true,
+    today: localToday(),
   });
 
   const tenantOptions = buildTenantOptions(tenantsResponse?.items ?? []);

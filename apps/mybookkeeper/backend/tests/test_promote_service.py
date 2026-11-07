@@ -33,6 +33,8 @@ from app.repositories.inquiries import inquiry_repo
 from app.schemas.applicants.applicant_promote_request import ApplicantPromoteRequest
 from app.services.applicants import promote_service
 
+_TODAY = _dt.datetime.now(_dt.timezone.utc).date()
+
 
 @pytest.fixture
 def patch_session(monkeypatch: pytest.MonkeyPatch, db: AsyncSession):
@@ -109,7 +111,7 @@ async def test_promote_happy_path_autofills_pii_and_dates(
         organization_id=test_org.id,
         user_id=test_user.id,
         inquiry_id=inquiry.id,
-        overrides=ApplicantPromoteRequest(),
+        overrides=ApplicantPromoteRequest(today=_TODAY),
     )
 
     assert applicant.legal_name == "Alice Tester"
@@ -135,6 +137,7 @@ async def test_promote_overrides_take_precedence_over_inquiry_values(
         user_id=test_user.id,
         inquiry_id=inquiry.id,
         overrides=ApplicantPromoteRequest(
+            today=_TODAY,
             legal_name="Alice T. Override",
             employer_or_hospital="Texas Children's",
             dob=_dt.date(1990, 5, 12),
@@ -165,7 +168,7 @@ async def test_promote_emits_two_events_one_per_domain(
         organization_id=test_org.id,
         user_id=test_user.id,
         inquiry_id=inquiry.id,
-        overrides=ApplicantPromoteRequest(),
+        overrides=ApplicantPromoteRequest(today=_TODAY),
     )
 
     applicant_events = (
@@ -202,7 +205,7 @@ async def test_promote_advances_inquiry_stage_to_converted(
         organization_id=test_org.id,
         user_id=test_user.id,
         inquiry_id=inquiry.id,
-        overrides=ApplicantPromoteRequest(),
+        overrides=ApplicantPromoteRequest(today=_TODAY),
     )
 
     refreshed = await inquiry_repo.get_by_id(db, inquiry.id, test_org.id)
@@ -231,7 +234,7 @@ async def test_promote_allowed_from_every_promotable_stage(
         organization_id=test_org.id,
         user_id=test_user.id,
         inquiry_id=inquiry.id,
-        overrides=ApplicantPromoteRequest(),
+        overrides=ApplicantPromoteRequest(today=_TODAY),
     )
     assert applicant.stage == "lead"
 
@@ -255,7 +258,7 @@ async def test_promote_rejects_terminal_stages(
             organization_id=test_org.id,
             user_id=test_user.id,
             inquiry_id=inquiry.id,
-            overrides=ApplicantPromoteRequest(),
+            overrides=ApplicantPromoteRequest(today=_TODAY),
         )
     assert exc_info.value.stage == terminal_stage
 
@@ -271,7 +274,7 @@ async def test_promote_idempotent_second_call_returns_already_promoted_with_exis
         organization_id=test_org.id,
         user_id=test_user.id,
         inquiry_id=inquiry.id,
-        overrides=ApplicantPromoteRequest(),
+        overrides=ApplicantPromoteRequest(today=_TODAY),
     )
     # Capture the id BEFORE the second call so a transaction rollback in
     # the AlreadyPromotedError path can't expire the attribute.
@@ -282,7 +285,7 @@ async def test_promote_idempotent_second_call_returns_already_promoted_with_exis
             organization_id=test_org.id,
             user_id=test_user.id,
             inquiry_id=inquiry.id,
-            overrides=ApplicantPromoteRequest(),
+            overrides=ApplicantPromoteRequest(today=_TODAY),
         )
     assert exc_info.value.applicant_id == first_id
 
@@ -299,7 +302,7 @@ async def test_promote_cross_org_raises_lookup(
             organization_id=uuid.uuid4(),  # different org
             user_id=test_user.id,
             inquiry_id=inquiry.id,
-            overrides=ApplicantPromoteRequest(),
+            overrides=ApplicantPromoteRequest(today=_TODAY),
         )
 
 
@@ -320,7 +323,7 @@ async def test_promote_cross_user_raises_lookup(
             organization_id=test_org.id,
             user_id=uuid.uuid4(),  # different user
             inquiry_id=inquiry.id,
-            overrides=ApplicantPromoteRequest(),
+            overrides=ApplicantPromoteRequest(today=_TODAY),
         )
 
 
@@ -345,7 +348,7 @@ async def test_promote_pii_round_trips_decrypted_to_decrypted(
         organization_id=test_org.id,
         user_id=test_user.id,
         inquiry_id=inquiry.id,
-        overrides=ApplicantPromoteRequest(),
+        overrides=ApplicantPromoteRequest(today=_TODAY),
     )
     applicant_id = applicant.id
 
@@ -374,7 +377,7 @@ async def test_promote_inquiry_not_found_raises_lookup(
             organization_id=test_org.id,
             user_id=test_user.id,
             inquiry_id=uuid.uuid4(),  # nonexistent
-            overrides=ApplicantPromoteRequest(),
+            overrides=ApplicantPromoteRequest(today=_TODAY),
         )
 
 
@@ -431,7 +434,7 @@ async def test_promote_atomicity_rolls_back_when_post_create_step_fails(
             organization_id=test_org.id,
             user_id=test_user.id,
             inquiry_id=inquiry.id,
-            overrides=ApplicantPromoteRequest(),
+            overrides=ApplicantPromoteRequest(today=_TODAY),
         )
 
     # Drop in-memory ORM cache so the assertions actually re-query the DB
@@ -474,7 +477,7 @@ async def test_promote_copies_inquirer_email_and_phone_to_applicant(
         organization_id=test_org.id,
         user_id=test_user.id,
         inquiry_id=inquiry.id,
-        overrides=ApplicantPromoteRequest(),
+        overrides=ApplicantPromoteRequest(today=_TODAY),
     )
 
     assert applicant.contact_email == "alice@example.com"
@@ -500,6 +503,7 @@ async def test_promote_host_override_wins_over_inquiry_email(
         user_id=test_user.id,
         inquiry_id=inquiry.id,
         overrides=ApplicantPromoteRequest(
+            today=_TODAY,
             contact_email="overridden@example.com",
             contact_phone="555-0001",
         ),
@@ -527,7 +531,7 @@ async def test_promote_handles_null_inquirer_email_and_phone(
         organization_id=test_org.id,
         user_id=test_user.id,
         inquiry_id=inquiry.id,
-        overrides=ApplicantPromoteRequest(),
+        overrides=ApplicantPromoteRequest(today=_TODAY),
     )
 
     assert applicant.contact_email is None

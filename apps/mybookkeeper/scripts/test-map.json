@@ -648,6 +648,7 @@
         "test_applicant_service.py",
         "test_applicants_api.py",
         "test_applicants_api_promote.py",
+        "test_applicant_promote_request.py",
         "test_promote_service.py",
         "test_screening_result_repo.py",
         "test_reference_repo.py",
