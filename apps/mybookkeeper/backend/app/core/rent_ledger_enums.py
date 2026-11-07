@@ -7,6 +7,8 @@ source of truth — referenced from both the SQLAlchemy model
 
 Mirrors ``app/core/applicant_enums.py`` for consistency.
 """
+from app.core.sql_in_list import sql_in_list
+
 
 # How often a rent obligation recurs. This is the *obligation* cadence and is
 # deliberately independent of how often the tenant actually pays — a tenant on
@@ -58,9 +60,5 @@ RENT_CHARGE_STATUSES: tuple[str, ...] = (
 )
 
 
-def _sql_in_list(values: tuple[str, ...]) -> str:
-    return "(" + ", ".join(f"'{v}'" for v in values) + ")"
-
-
-RENT_CADENCES_SQL = _sql_in_list(RENT_CADENCES)
-RENT_CHARGE_TYPES_SQL = _sql_in_list(RENT_CHARGE_TYPES)
+RENT_CADENCES_SQL = sql_in_list(RENT_CADENCES)
+RENT_CHARGE_TYPES_SQL = sql_in_list(RENT_CHARGE_TYPES)

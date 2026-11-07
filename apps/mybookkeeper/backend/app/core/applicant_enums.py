@@ -7,6 +7,8 @@ source of truth — referenced from both the SQLAlchemy model
 
 Mirrors ``app/core/inquiry_enums.py`` (Phase 2) for consistency.
 """
+from app.core.sql_in_list import sql_in_list
+
 
 # Applicant pipeline stages. ``lead`` is the entry point (set when an
 # Inquiry is promoted to an Applicant via the PR 3.2 promotion service).
@@ -63,13 +65,9 @@ REFERENCE_RELATIONSHIPS: tuple[str, ...] = (
 )
 
 
-def _sql_in_list(values: tuple[str, ...]) -> str:
-    return "(" + ", ".join(f"'{v}'" for v in values) + ")"
-
-
-APPLICANT_STAGES_SQL = _sql_in_list(APPLICANT_STAGES)
-APPLICANT_EVENT_TYPES_SQL = _sql_in_list(APPLICANT_EVENT_TYPES)
-APPLICANT_EVENT_ACTORS_SQL = _sql_in_list(APPLICANT_EVENT_ACTORS)
-SCREENING_PROVIDERS_SQL = _sql_in_list(SCREENING_PROVIDERS)
-SCREENING_STATUSES_SQL = _sql_in_list(SCREENING_STATUSES)
-REFERENCE_RELATIONSHIPS_SQL = _sql_in_list(REFERENCE_RELATIONSHIPS)
+APPLICANT_STAGES_SQL = sql_in_list(APPLICANT_STAGES)
+APPLICANT_EVENT_TYPES_SQL = sql_in_list(APPLICANT_EVENT_TYPES)
+APPLICANT_EVENT_ACTORS_SQL = sql_in_list(APPLICANT_EVENT_ACTORS)
+SCREENING_PROVIDERS_SQL = sql_in_list(SCREENING_PROVIDERS)
+SCREENING_STATUSES_SQL = sql_in_list(SCREENING_STATUSES)
+REFERENCE_RELATIONSHIPS_SQL = sql_in_list(REFERENCE_RELATIONSHIPS)

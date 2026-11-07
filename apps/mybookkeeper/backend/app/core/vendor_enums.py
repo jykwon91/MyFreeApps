@@ -7,6 +7,8 @@ source of truth — referenced from both the SQLAlchemy model
 
 Mirrors ``app/core/applicant_enums.py`` (Phase 3) for consistency.
 """
+from app.core.sql_in_list import sql_in_list
+
 
 # Vendor trade categories. Keep this list aligned with RENTALS_PLAN.md §5.4 —
 # every value here corresponds to a UI affordance in the rolodex (PR 4.1b).
@@ -23,8 +25,4 @@ VENDOR_CATEGORIES: tuple[str, ...] = (
 )
 
 
-def _sql_in_list(values: tuple[str, ...]) -> str:
-    return "(" + ", ".join(f"'{v}'" for v in values) + ")"
-
-
-VENDOR_CATEGORIES_SQL = _sql_in_list(VENDOR_CATEGORIES)
+VENDOR_CATEGORIES_SQL = sql_in_list(VENDOR_CATEGORIES)
