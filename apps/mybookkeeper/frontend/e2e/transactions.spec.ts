@@ -1,453 +1,292 @@
-// TransactionPanel split into TransactionForm + TransactionDuplicateActions — pure refactor, no behavior change.
-import { test, expect } from "./fixtures/auth";
-import type { Page } from "@playwright/test";
+/**
+ * The Transactions page against a fresh organization seeded with
+ * TRANSACTIONS_SEED, so the table always holds the same eight transactions:
+ * seven approved ones and one that extraction flagged for review. Tests that
+ * add a transaction delete it again, so the next test sees the same table.
+ */
+import { readFile } from "node:fs/promises";
+import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { seededOrg } from "./fixtures/seeded-org";
+import { createTransaction, deleteTransaction } from "./fixtures/seed-data";
+import { TRANSACTIONS_SEED as SEED, seedTransactionsPage } from "./fixtures/transactions-seed";
 
-const RUN_ID = Date.now();
+const org = seededOrg("transactions", seedTransactionsPage);
 
-async function openManualEntryForm(page: Page): Promise<void> {
-  await page.getByRole("button", { name: /add transaction/i }).click();
-  await expect(page.getByRole("heading", { name: /new transaction/i })).toBeVisible({ timeout: 5000 });
+const POWER_BILL = SEED.approved.find((t) => t.vendor === "E2E Power Feb")!;
+const PLUMBERS = SEED.approved.filter((t) => /plumber/i.test(t.vendor)).map((t) => t.vendor);
+
+interface ListedTransaction {
+  id: string;
+  vendor: string | null;
+  amount: string;
+  status: string;
+  transaction_date: string;
 }
 
-// Fills and submits the New Transaction form, then waits for the vendor to appear in the table.
-async function createTransactionViaUI(page: Page, vendor: string, amount = "75.00"): Promise<void> {
-  await openManualEntryForm(page);
-  await page.locator("input[type='date']").first().fill("2025-06-15");
-  await page.locator("input[placeholder='0.00']").fill(amount);
-  await page.locator("input[placeholder='e.g. Home Depot']").fill(vendor);
-  await page.getByRole("button", { name: /create transaction/i }).click();
-  // Panel closes after successful creation
-  await expect(page.getByRole("heading", { name: /new transaction/i })).not.toBeVisible({ timeout: 10000 });
-  await expect(page.locator("tbody").getByText(vendor)).toBeVisible({ timeout: 10000 });
+function rows(page: Page) {
+  return page.locator("tbody tr");
+}
+
+function row(page: Page, vendor: string) {
+  return rows(page).filter({ hasText: vendor });
+}
+
+function vendorFilter(page: Page) {
+  return page.getByRole("textbox", { name: "Filter by vendor", exact: true });
+}
+
+async function findByVendor(api: APIRequestContext, vendor: string): Promise<ListedTransaction | undefined> {
+  const res = await api.get("/transactions");
+  expect(res.ok(), await res.text()).toBe(true);
+  return ((await res.json()) as ListedTransaction[]).find((t) => t.vendor === vendor);
+}
+
+/** For cleanup: never throws, so it can't hide the test's own failure. */
+async function deleteByVendor(api: APIRequestContext, vendor: string): Promise<void> {
+  const res = await api.get("/transactions").catch(() => null);
+  if (!res?.ok()) return;
+  const found = ((await res.json()) as ListedTransaction[]).find((t) => t.vendor === vendor);
+  if (found) await deleteTransaction(api, found.id);
+}
+
+async function openTransactions(page: Page): Promise<void> {
+  await page.goto("/transactions");
+  await expect(page.getByRole("heading", { name: "Transactions" })).toBeVisible();
+  await expect(rows(page)).toHaveCount(SEED.count);
+}
+
+/** Adds a pending transaction for one test, and reloads so the table shows it. */
+async function addPending(page: Page, vendor: string, amount: string): Promise<string> {
+  const { id } = await createTransaction(org().api, { vendor, amount });
+  await page.reload();
+  await expect(row(page, vendor)).toBeVisible();
+  return id;
 }
 
 test.describe("Transactions", () => {
-  test.beforeEach(async ({ authedPage: page }) => {
-    await page.goto("/transactions");
-    await expect(page.getByRole("heading", { name: "Transactions" })).toBeVisible();
-    await expect(
-      page.locator("tbody tr").first().or(page.getByText(/no transactions found/i))
-    ).toBeVisible({ timeout: 10000 });
+  test.beforeEach(async ({ page }) => {
+    await org().signIn(page);
+    await openTransactions(page);
   });
-
-  // ─── Create transaction ──────────────────────────────────────────────────────
 
   test.describe("Create transaction", () => {
-    test("creates a manual transaction and verifies it appears in the table", async ({ authedPage: page, api }) => {
-      const vendor = `E2E Vendor ${RUN_ID}`;
-
-      await createTransactionViaUI(page, vendor);
-
-      // Capture ID for cleanup
-      const res = await api.get("/transactions");
-      const txns = await res.json();
-      const created = (txns as Array<{ vendor: string; id: string }>).find((t) => t.vendor === vendor);
-      if (created) await api.delete(`/transactions/${created.id}`).catch(() => {/* non-critical */});
-    });
-  });
-
-  // ─── Edit transaction ────────────────────────────────────────────────────────
-
-  test.describe("Edit transaction", () => {
-    test("opens edit panel, changes a field, saves and verifies the change persists", async ({ authedPage: page, api }) => {
-      const vendor = `E2E Edit Txn ${RUN_ID}`;
-
-      // Create via the UI form so we don't depend on the broken POST API
-      await createTransactionViaUI(page, vendor, "99.00");
-
-      // Get the ID for later cleanup
-      const listRes = await api.get("/transactions");
-      const txns = await listRes.json();
-      const created = (txns as Array<{ vendor: string; id: string }>).find((t) => t.vendor === vendor);
-      const createdId = created?.id ?? null;
-
+    test("a manual transaction saves as pending and appears in the table", async ({ page }) => {
+      const vendor = "E2E New Vendor";
       try {
-        // Open the row
-        const row = page.locator("tbody tr").filter({ hasText: vendor });
-        await expect(row).toBeVisible({ timeout: 10000 });
-        await row.click();
+        await page.getByRole("button", { name: /add transaction/i }).click();
+        const form = page.getByRole("dialog", { name: /new transaction/i });
+        await form.getByLabel(/^Date/).fill("2025-06-15");
+        await form.getByLabel(/^Amount/).fill("75.00");
+        await form.getByLabel(/^Vendor/).fill(vendor);
+        await form.getByRole("button", { name: /create transaction/i }).click();
 
-        // Edit panel opens — the vendor input is registered via react-hook-form with name="vendor"
-        const vendorInput = page.locator('input[name="vendor"]');
-        await expect(vendorInput).toBeVisible({ timeout: 5000 });
+        await expect(page.getByRole("heading", { name: /new transaction/i })).toBeHidden();
+        await expect(row(page, vendor)).toContainText("Pending");
+        await expect(rows(page)).toHaveCount(SEED.count + 1);
 
-        // Change the vendor name
-        const updatedVendor = `E2E Edited ${RUN_ID}`;
-        await vendorInput.clear();
-        await vendorInput.fill(updatedVendor);
-
-        // Save
-        await page.getByRole("button", { name: /^save$/i }).click();
-
-        // Updated vendor should now appear in the table
-        await expect(page.locator("tbody tr").filter({ hasText: updatedVendor })).toBeVisible({ timeout: 10000 });
-        await expect(page.locator("tbody tr").filter({ hasText: vendor })).not.toBeVisible({ timeout: 5000 });
+        const saved = await findByVendor(org().api, vendor);
+        expect(saved).toMatchObject({ amount: "75.00", status: "pending", transaction_date: "2025-06-15" });
       } finally {
-        if (createdId) {
-          await api.delete(`/transactions/${createdId}`).catch(() => {/* non-critical */});
-        }
-      }
-    });
-  });
-
-  // ─── Approve transaction ─────────────────────────────────────────────────────
-
-  test.describe("Approve transaction", () => {
-    test("approves a pending transaction and verifies the status badge changes", async ({ authedPage: page, api }) => {
-      const vendor = `E2E Approve ${RUN_ID}`;
-
-      // Create via UI — new manual transactions start as "pending"
-      await createTransactionViaUI(page, vendor, "55.00");
-
-      // Get the ID for cleanup
-      const listRes = await api.get("/transactions");
-      const txns = await listRes.json();
-      const created = (txns as Array<{ vendor: string; id: string }>).find((t) => t.vendor === vendor);
-      const createdId = created?.id ?? null;
-
-      try {
-        // Open the row
-        const row = page.locator("tbody tr").filter({ hasText: vendor });
-        await expect(row).toBeVisible({ timeout: 10000 });
-        await row.click();
-
-        // The Approve button appears for pending/needs_review transactions.
-        // Scope to the panel (not the bulk approve button in the toolbar).
-        const approveBtn = page.getByRole("button", { name: /^approve$/i }).last();
-        await expect(approveBtn).toBeVisible({ timeout: 5000 });
-        await approveBtn.click();
-
-        // Verify status via API
-        if (createdId) {
-          await expect.poll(async () => {
-            const verifyRes = await api.get(`/transactions/${createdId}`);
-            const updated = await verifyRes.json();
-            return updated.status;
-          }, { timeout: 5000 }).toBe("approved");
-        }
-      } finally {
-        if (createdId) {
-          await api.delete(`/transactions/${createdId}`).catch(() => {/* non-critical */});
-        }
-      }
-    });
-  });
-
-  // ─── Export CSV ──────────────────────────────────────────────────────────────
-
-  test.describe("Export", () => {
-    test("export CSV menu item opens and can be clicked", async ({ authedPage: page }) => {
-      // Clicking Export CSV triggers a blob-URL download (api.get + URL.createObjectURL),
-      // which cannot be reliably detected by Playwright in any runtime (no download event,
-      // no observable network response when requested through axios with responseType=blob
-      // and intercepted by the service worker). Verify the menu opens and the item is
-      // clickable — download behavior is covered by the backend export unit tests.
-      await page.getByRole("button", { name: /export/i }).click();
-      const csvItem = page.getByRole("menuitem", { name: /export csv/i });
-      await expect(csvItem).toBeVisible({ timeout: 3000 });
-      // Radix DropdownMenu renders in a Portal that may be outside the viewport;
-      // dispatch a direct click event to bypass viewport/stability checks.
-      await csvItem.dispatchEvent("click");
-      // After click, the dropdown should close
-      await expect(csvItem).not.toBeVisible({ timeout: 5000 });
-    });
-
-    test("export button shows CSV and PDF options", async ({ authedPage: page }) => {
-      await page.getByRole("button", { name: /export/i }).click();
-      await expect(page.getByText("Export CSV")).toBeVisible({ timeout: 3000 });
-      await expect(page.getByText("Export PDF")).toBeVisible();
-    });
-  });
-
-  // ─── Table interaction ───────────────────────────────────────────────────────
-
-  test.describe("Table interaction", () => {
-    test("selecting a row checkbox shows bulk action bar with count", async ({ authedPage: page }) => {
-      const checkbox = page.locator("tbody input[type='checkbox']").first();
-      test.skip(!(await checkbox.isVisible()), "No transactions to select — table is empty");
-
-      await checkbox.click();
-      await expect(page.getByText(/\d+ selected/)).toBeVisible({ timeout: 5000 });
-
-      // Clear selection
-      const clear = page.getByRole("button", { name: /clear/i });
-      if (await clear.isVisible()) {
-        await clear.click();
-        await expect(page.getByText(/\d+ selected/)).not.toBeVisible({ timeout: 5000 });
+        await deleteByVendor(org().api, vendor);
       }
     });
 
-    test("clicking a row opens the edit panel with form fields", async ({ authedPage: page }) => {
-      const row = page.locator("tbody tr").first();
-      test.skip(!(await row.isVisible()), "No transactions in table — seed data to run this test");
-
-      await row.click();
-      // Panel shows a date input (use first() to avoid strict mode error with filter date inputs)
-      await expect(page.locator("input[type='date']").first()).toBeVisible({ timeout: 5000 });
-      // Close
-      await page.keyboard.press("Escape");
-    });
-
-    test("cancel closes the new transaction form without creating", async ({ authedPage: page }) => {
+    test("cancel closes the new transaction form without creating", async ({ page }) => {
       await page.getByRole("button", { name: /add transaction/i }).click();
-      await expect(page.getByRole("heading", { name: /new transaction/i })).toBeVisible({ timeout: 5000 });
+      await expect(page.getByRole("heading", { name: /new transaction/i })).toBeVisible();
       await page.getByRole("button", { name: /^cancel$/i }).first().click();
-      await expect(page.getByRole("heading", { name: /new transaction/i })).not.toBeVisible({ timeout: 5000 });
+      await expect(page.getByRole("heading", { name: /new transaction/i })).toBeHidden();
+      await expect(rows(page)).toHaveCount(SEED.count);
     });
   });
 
-  // ─── Vendor rules ────────────────────────────────────────────────────────────
+  test.describe("Edit panel", () => {
+    test("clicking a row opens it with that transaction's details", async ({ page }) => {
+      await row(page, POWER_BILL.vendor).click();
 
-  test.describe("Vendor rules panel", () => {
-    test("opens vendor rules panel from toolbar", async ({ authedPage: page }) => {
-      await page.getByRole("button", { name: /vendor rules/i }).click();
-      await expect(page.getByText("Classification Rules").first()).toBeVisible({ timeout: 5000 });
-      await page.getByRole("button", { name: /close panel/i }).click();
-      await expect(page.getByText("Classification Rules")).not.toBeVisible({ timeout: 5000 });
-    });
-  });
-
-  // ─── Import ──────────────────────────────────────────────────────────────────
-
-  test.describe("Bank statement import", () => {
-    test("import button opens the import modal", async ({ authedPage: page }) => {
-      await page.getByRole("button", { name: /import/i }).click();
-      await expect(page.getByRole("heading", { name: /import bank statement/i })).toBeVisible({ timeout: 5000 });
-      await page.getByRole("button", { name: /close import modal/i }).click();
-      await expect(page.getByRole("heading", { name: /import bank statement/i })).not.toBeVisible({ timeout: 5000 });
-    });
-  });
-
-  // ─── Duplicates tab ───────────────────────────────────────────────────────
-
-  test.describe("Duplicates tab", () => {
-    test("Transactions page has a Duplicates tab", async ({ authedPage: page }) => {
-      const dupTab = page.getByRole("button", { name: /Duplicates/ }).first();
-      await expect(dupTab).toBeVisible({ timeout: 5000 });
+      const panel = page.getByRole("dialog", { name: POWER_BILL.vendor, exact: true });
+      await expect(panel.getByRole("textbox", { name: "Vendor", exact: true })).toHaveValue(POWER_BILL.vendor);
+      await expect(panel.getByLabel("Date", { exact: true })).toHaveValue(POWER_BILL.date);
+      await expect(panel.getByLabel("Amount", { exact: true })).toHaveValue(POWER_BILL.amount);
     });
 
-    test("clicking Duplicates tab switches view and updates URL", async ({ authedPage: page }) => {
-      await page.getByRole("button", { name: /Duplicates/ }).first().click();
-      await expect(page).toHaveURL(/tab=duplicates/, { timeout: 5000 });
-      // Filter bar should not be visible on duplicates tab
-      await expect(page.getByText(/All Properties/).first()).not.toBeVisible({ timeout: 3000 });
-    });
+    test("a changed vendor is saved", async ({ page }) => {
+      const id = await addPending(page, "E2E Edit Me", "99.00");
+      try {
+        await row(page, "E2E Edit Me").click();
+        const panel = page.getByRole("dialog", { name: "E2E Edit Me" });
+        await panel.getByRole("textbox", { name: "Vendor", exact: true }).fill("E2E Edited");
+        await panel.getByRole("button", { name: /^save$/i }).click();
 
-    test("duplicates tab shows cards or empty state", async ({ authedPage: page }) => {
-      await page.goto("/transactions?tab=duplicates");
-      await expect(
-        page.locator("[class*='border rounded-lg']").first().or(page.getByText(/No suspected duplicates/i))
-      ).toBeVisible({ timeout: 15000 });
-    });
-
-    test("duplicates tab hides transaction-only actions", async ({ authedPage: page }) => {
-      await page.goto("/transactions?tab=duplicates");
-      await page.waitForLoadState("domcontentloaded");
-      await expect(page.getByRole("button", { name: "Add Transaction" })).not.toBeVisible({ timeout: 3000 });
-    });
-
-    test("switching back to Transactions tab restores the table", async ({ authedPage: page }) => {
-      await page.goto("/transactions?tab=duplicates");
-      // Wait for the duplicates tab content to load (tab buttons are disabled while loading)
-      await expect(
-        page.locator("[class*='border rounded-lg']").first().or(page.getByText(/No suspected duplicates/i))
-      ).toBeVisible({ timeout: 15000 });
-
-      // Scope to the tab bar (direct sibling of the page header), not the sidebar nav link
-      const txnTab = page.locator("div.flex.gap-1.border-b").getByRole("button", { name: "Transactions" });
-      await expect(txnTab).toBeEnabled({ timeout: 10000 });
-      await txnTab.dispatchEvent("click");
-      await expect(page).toHaveURL(/\/transactions(?!\?tab)/, { timeout: 10000 });
-      // Filter bar (with status, type, category selects) should reappear — check the select elements
-      await expect(page.locator("select").first()).toBeVisible({ timeout: 5000 });
-    });
-
-    test("direct URL navigation to duplicates tab works", async ({ authedPage: page }) => {
-      await page.goto("/transactions?tab=duplicates");
-      await expect(page.getByRole("heading", { name: "Transactions" })).toBeVisible({ timeout: 5000 });
-      await expect(
-        page.locator("[class*='border rounded-lg']").first().or(page.getByText(/No suspected duplicates/i))
-      ).toBeVisible({ timeout: 15000 });
-    });
-  });
-
-  // ─── Transaction panel — review reason ──────────────────────────────────
-
-  test.describe("Transaction panel review reason", () => {
-    test("needs_review transaction shows review reason banner when data exists", async ({ authedPage: page }) => {
-      // Look for any needs_review badge in the table
-      const reviewBadge = page.getByText("needs_review").first();
-      test.skip(!(await reviewBadge.isVisible({ timeout: 5000 }).catch(() => false)), "No needs_review transactions in table — seed data to run this test");
-
-      // Click the row containing the needs_review badge
-      await reviewBadge.locator("xpath=ancestor::tr").click();
-      await page.waitForTimeout(500);
-
-      // Panel should show the review reason in a yellow banner if review_reason exists
-      const banner = page.locator("[class*='bg-yellow']");
-      const hasBanner = await banner.isVisible({ timeout: 5000 }).catch(() => false);
-      if (hasBanner) {
-        await expect(banner).toContainText(/match|property|extract|amount/i);
+        await expect(row(page, "E2E Edited")).toBeVisible();
+        await expect(row(page, "E2E Edit Me")).toHaveCount(0);
+        await expect.poll(async () => (await findByVendor(org().api, "E2E Edited"))?.id).toBe(id);
+      } finally {
+        await deleteTransaction(org().api, id);
       }
-      await page.keyboard.press("Escape");
     });
-  });
 
-  // ─── Transaction panel — source document ────────────────────────────────
+    test("approving a pending transaction marks it approved", async ({ page }) => {
+      const id = await addPending(page, "E2E Approve Me", "55.00");
+      try {
+        await expect(row(page, "E2E Approve Me")).toContainText("Pending");
+        await row(page, "E2E Approve Me").click();
+        await page.getByRole("dialog", { name: "E2E Approve Me" }).getByRole("button", { name: /^approve$/i }).click();
 
-  test.describe("Transaction panel source document", () => {
-    test("transaction with source document shows file link", async ({ authedPage: page }) => {
-      const row = page.locator("tbody tr").first();
-      test.skip(!(await row.isVisible({ timeout: 5000 }).catch(() => false)), "No transactions in table — seed data to run this test");
-
-      await row.click();
-      await page.waitForTimeout(500);
-
-      // If the transaction has a source file, the link should be visible
-      const sourceLink = page.locator("text=/\\.pdf$|\\.csv$|\\.xlsx$/i");
-      const hasSource = await sourceLink.first().isVisible({ timeout: 3000 }).catch(() => false);
-      // This validates the source document link renders when data exists
-      if (hasSource) {
-        await expect(sourceLink.first()).toBeVisible();
+        await expect(row(page, "E2E Approve Me").getByTitle("Approved")).toBeVisible();
+        await expect(row(page, "E2E Approve Me")).not.toContainText("Pending");
+        await expect.poll(async () => (await findByVendor(org().api, "E2E Approve Me"))?.status).toBe("approved");
+      } finally {
+        await deleteTransaction(org().api, id);
       }
-      await page.keyboard.press("Escape");
+    });
+
+    test("delete asks first: cancel keeps the transaction, confirm deletes it", async ({ page }) => {
+      const id = await addPending(page, "E2E Delete Me", "12.34");
+      try {
+        await row(page, "E2E Delete Me").click();
+        const panel = page.getByRole("dialog", { name: "E2E Delete Me" });
+        const confirm = page.getByRole("dialog", { name: "Delete transaction" });
+
+        await panel.getByRole("button", { name: "Delete transaction" }).click();
+        await expect(confirm).toContainText('"E2E Delete Me" transaction for $12.34');
+        await confirm.getByRole("button", { name: "Cancel" }).click();
+        await expect(confirm).toBeHidden();
+        await expect(panel).toBeVisible();
+        await expect(row(page, "E2E Delete Me")).toBeVisible();
+        expect(await findByVendor(org().api, "E2E Delete Me")).toBeDefined();
+
+        await panel.getByRole("button", { name: "Delete transaction" }).click();
+        await confirm.getByRole("button", { name: "Delete", exact: true }).click();
+        await expect(panel).toBeHidden();
+        await expect(row(page, "E2E Delete Me")).toHaveCount(0);
+        await expect.poll(() => findByVendor(org().api, "E2E Delete Me")).toBeUndefined();
+      } finally {
+        await deleteTransaction(org().api, id);
+      }
     });
   });
 
-  // ─── Vendor filter (PR #197) ─────────────────────────────────────────────────
+  test.describe("A transaction extraction flagged", () => {
+    test("shows Needs Review, and its panel says why", async ({ page }) => {
+      const flagged = rows(page).filter({ hasText: "Needs Review" });
+      await expect(flagged).toHaveCount(1);
+      await expect(flagged).toContainText(SEED.flagged.vendor);
+
+      await flagged.click();
+      const panel = page.getByRole("dialog", { name: SEED.flagged.vendor });
+      await expect(panel.getByText(SEED.flagged.review_reason, { exact: true })).toBeVisible();
+    });
+
+    test("links to its source document, which opens", async ({ page }) => {
+      await row(page, SEED.flagged.vendor).click();
+      const panel = page.getByRole("dialog", { name: SEED.flagged.vendor });
+
+      await panel.getByRole("button", { name: `Open source document ${SEED.flagged.file_name}`, exact: true }).click();
+      const image = page.getByRole("img", { name: "Source document" });
+      await expect(image).toBeVisible();
+      await expect.poll(() => image.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(1);
+    });
+
+    test("a manual transaction has no source document link", async ({ page }) => {
+      await row(page, POWER_BILL.vendor).click();
+      const panel = page.getByRole("dialog", { name: POWER_BILL.vendor, exact: true });
+      await expect(panel.getByRole("textbox", { name: "Vendor", exact: true })).toBeVisible();
+      await expect(panel.getByRole("button", { name: /open source document/i })).toHaveCount(0);
+    });
+  });
+
+  test.describe("Selection", () => {
+    test("selecting rows shows the bulk bar with the count, and Clear selection hides it", async ({ page }) => {
+      const checkboxes = page.locator("tbody input[type='checkbox']");
+      await expect(checkboxes).toHaveCount(SEED.count);
+
+      await checkboxes.nth(0).check();
+      await expect(page.getByText("1 selected", { exact: true })).toBeVisible();
+      await checkboxes.nth(1).check();
+      await expect(page.getByText("2 selected", { exact: true })).toBeVisible();
+
+      await page.getByRole("button", { name: "Clear selection" }).click();
+      await expect(page.getByText(/\d+ selected/)).toBeHidden();
+      await expect(checkboxes.nth(0)).not.toBeChecked();
+    });
+  });
 
   test.describe("Vendor filter", () => {
-    test.describe.configure({ mode: "serial" });
+    test("narrows the table to the vendor, and clearing it shows every transaction", async ({ page }) => {
+      await vendorFilter(page).fill("E2E Plumber Jan");
+      await expect(rows(page)).toHaveCount(1);
+      await expect(rows(page)).toContainText("E2E Plumber Jan");
 
-    const seedVendorA = `E2E VendorFilterA ${RUN_ID}`;
-    const seedVendorB = `E2E VendorFilterB ${RUN_ID}`;
-    const createdIds: string[] = [];
-
-    test("seeds two transactions with distinct vendors for filter tests", async ({
-      authedPage: page,
-      api,
-    }) => {
-      await createTransactionViaUI(page, seedVendorA, "12.34");
-      await createTransactionViaUI(page, seedVendorB, "56.78");
-
-      // Record ids for cleanup in the final test
-      const listRes = await api.get("/transactions");
-      const txns = (await listRes.json()) as Array<{ vendor: string; id: string }>;
-      for (const vendor of [seedVendorA, seedVendorB]) {
-        const created = txns.find((t) => t.vendor === vendor);
-        if (created) createdIds.push(created.id);
-      }
-
-      // Ensure both rows are in the table before the filter test runs
-      await expect(page.locator("tbody tr").filter({ hasText: seedVendorA })).toBeVisible({
-        timeout: 10000,
-      });
-      await expect(page.locator("tbody tr").filter({ hasText: seedVendorB })).toBeVisible({
-        timeout: 10000,
-      });
+      await vendorFilter(page).fill("");
+      await expect(rows(page)).toHaveCount(SEED.count);
     });
 
-    test("typing in the vendor filter narrows results to matching rows", async ({
-      authedPage: page,
-    }) => {
-      // The vendor filter input is rendered inside TransactionFilterBar.
-      const vendorFilter = page.getByPlaceholder(/filter by vendor/i).first();
-      await expect(vendorFilter).toBeVisible({ timeout: 10000 });
-
-      // Filter by the unique A identifier — B must disappear
-      await vendorFilter.fill(seedVendorA);
-
-      await expect(page.locator("tbody tr").filter({ hasText: seedVendorA })).toBeVisible({
-        timeout: 10000,
-      });
-      await expect(page.locator("tbody tr").filter({ hasText: seedVendorB })).not.toBeVisible({
-        timeout: 5000,
-      });
-    });
-
-    test("clearing the vendor filter shows all transactions again", async ({
-      authedPage: page,
-    }) => {
-      const vendorFilter = page.getByPlaceholder(/filter by vendor/i).first();
-      await expect(vendorFilter).toBeVisible({ timeout: 10000 });
-
-      // Apply a narrow filter first, then clear it
-      await vendorFilter.fill(seedVendorA);
-      await expect(page.locator("tbody tr").filter({ hasText: seedVendorB })).not.toBeVisible({
-        timeout: 5000,
-      });
-
-      // Use fill("") to trigger the controlled input's onChange handler
-      await vendorFilter.fill("");
-
-      // Both seeded rows should be visible again after the filter refetches
-      await expect(page.locator("tbody tr").filter({ hasText: seedVendorA })).toBeVisible({
-        timeout: 15000,
-      });
-      await expect(page.locator("tbody tr").filter({ hasText: seedVendorB })).toBeVisible({
-        timeout: 15000,
-      });
-    });
-
-    test("partial vendor match filters correctly (case insensitive substring)", async ({
-      authedPage: page,
-    }) => {
-      // Navigate explicitly to a clean transactions page (no tab param, no filter state)
-      await page.goto("/transactions");
-      await expect(page.getByRole("heading", { name: "Transactions" })).toBeVisible({ timeout: 10000 });
-
-      const vendorFilter = page.getByPlaceholder(/filter by vendor/i).first();
-      await expect(vendorFilter).toBeVisible({ timeout: 10000 });
-
-      // Use a shared substring that exists in both seeded vendors
-      await vendorFilter.fill(`VendorFilter`);
-
-      // Both seeded rows should still be visible since they share the substring
-      await expect(page.locator("tbody tr").filter({ hasText: seedVendorA })).toBeVisible({
-        timeout: 10000,
-      });
-      await expect(page.locator("tbody tr").filter({ hasText: seedVendorB })).toBeVisible({
-        timeout: 10000,
-      });
-
-      // Clear for the next test
-      await vendorFilter.clear();
-    });
-
-    test("cleans up seeded vendor filter transactions", async ({ api }) => {
-      for (const id of createdIds) {
-        await api.delete(`/transactions/${id}`).catch(() => {
-          /* non-critical */
-        });
-      }
-      createdIds.length = 0;
+    test("matches part of the vendor, ignoring case", async ({ page }) => {
+      await vendorFilter(page).fill("plumber");
+      await expect(rows(page)).toHaveCount(PLUMBERS.length);
+      for (const vendor of PLUMBERS) await expect(row(page, vendor)).toBeVisible();
     });
   });
 
-  test.describe("Delete from edit panel", () => {
-    test("edit panel shows delete button with confirmation", async ({ authedPage: page }) => {
-      await page.goto("/transactions");
-      await expect(page.getByText("Transactions").first()).toBeVisible({ timeout: 15000 });
+  test.describe("Export", () => {
+    test("export button shows CSV and PDF options", async ({ page }) => {
+      await page.getByRole("button", { name: /export/i }).click();
+      await expect(page.getByText("Export CSV")).toBeVisible();
+      await expect(page.getByText("Export PDF")).toBeVisible();
+    });
 
-      // Click a transaction row to open the edit panel
-      const row = page.locator("tr").nth(1);
-      if ((await row.count()) === 0) {
-        test.skip();
-        return;
-      }
-      await row.click();
+    test("Export CSV downloads every transaction", async ({ page }) => {
+      await page.getByRole("button", { name: /export/i }).click();
+      const [download] = await Promise.all([
+        page.waitForEvent("download"),
+        page.getByRole("menuitem", { name: /export csv/i }).click(),
+      ]);
+      expect(download.suggestedFilename()).toBe("transactions.csv");
+      const csv = await readFile(await download.path(), "utf8");
+      for (const t of [...SEED.approved, SEED.flagged]) expect(csv).toContain(t.vendor);
+    });
+  });
 
-      // Edit panel should open — find the specific "Delete transaction" button
-      const deleteBtn = page.getByRole("button", { name: "Delete transaction" });
-      await expect(deleteBtn).toBeVisible({ timeout: 5000 });
+  test.describe("Toolbar panels", () => {
+    test("opens and closes the vendor rules panel", async ({ page }) => {
+      await page.getByRole("button", { name: /vendor rules/i }).click();
+      await expect(page.getByText("Classification Rules").first()).toBeVisible();
+      await page.getByRole("button", { name: /close panel/i }).click();
+      await expect(page.getByText("Classification Rules")).toBeHidden();
+    });
 
-      // Click delete — confirmation dialog should appear
-      await deleteBtn.click();
-      await expect(page.getByText(/are you sure you want to delete/i)).toBeVisible({ timeout: 5000 });
+    test("opens and closes the bank statement import", async ({ page }) => {
+      await page.getByRole("button", { name: /import/i }).click();
+      await expect(page.getByRole("heading", { name: /import bank statement/i })).toBeVisible();
+      await page.getByRole("button", { name: /close import modal/i }).click();
+      await expect(page.getByRole("heading", { name: /import bank statement/i })).toBeHidden();
+    });
+  });
 
-      // Cancel the deletion
-      await page.getByRole("button", { name: "Cancel" }).click();
-      await expect(page.getByText(/are you sure you want to delete/i)).not.toBeVisible({ timeout: 3000 });
+  test.describe("Duplicates tab", () => {
+    const noDuplicates = (page: Page) => page.getByText(/No suspected duplicates right now/);
+
+    test("switches view, updates the URL, and hides transaction-only actions", async ({ page }) => {
+      await page.getByRole("button", { name: /Duplicates/ }).first().click();
+      await expect(page).toHaveURL(/tab=duplicates/);
+      await expect(noDuplicates(page)).toBeVisible();
+      await expect(vendorFilter(page)).toBeHidden();
+      await expect(page.getByRole("button", { name: "Add Transaction" })).toBeHidden();
+    });
+
+    test("opens directly from the URL, and switching back restores the table", async ({ page }) => {
+      await page.goto("/transactions?tab=duplicates");
+      await expect(page.getByRole("heading", { name: "Transactions" })).toBeVisible();
+      await expect(noDuplicates(page)).toBeVisible();
+
+      // The page's tab, not the sidebar link.
+      const txnTab = page.getByRole("main").getByRole("button", { name: "Transactions", exact: true });
+      await expect(txnTab).toBeEnabled();
+      await txnTab.click();
+      await expect(page).toHaveURL(/\/transactions(?!\?tab)/);
+      await expect(rows(page)).toHaveCount(SEED.count);
+      await expect(vendorFilter(page)).toBeVisible();
     });
   });
 });
