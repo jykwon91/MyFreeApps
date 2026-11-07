@@ -18,6 +18,7 @@ import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
+import { queryStatus } from "@/test/rtk-query-status";
 import InsurancePremiumComparisonCard from "@/app/features/insurance/InsurancePremiumComparisonCard";
 import type { InsuranceBenchmark } from "@/shared/types/insurance/insurance-benchmark";
 import type { InsurancePolicySummary } from "@mybookkeeper/api-client/types/insurance/insurance-policy-summary";
@@ -36,8 +37,7 @@ vi.mock("@/shared/store/insuranceBenchmarksApi", () => ({
   useGetInsurancePremiumComparisonQuery: vi.fn(() => ({
     data: mockComparison,
     isLoading: mockLoading,
-    isError: mockError,
-    isFetching: mockFetching,
+    ...queryStatus({ failed: mockError, fetching: mockFetching }),
     refetch: mockRefetch,
   })),
 }));
@@ -213,13 +213,18 @@ describe("InsurancePremiumComparisonCard — when it renders at all", () => {
   });
 
   it("says the retry is in flight rather than looking unclicked", () => {
+    // Mid-retry RTK reports neither loading nor error and there is no data
+    // yet — read naively, that is "no policies tracked" and the card vanishes.
     mockError = true;
     mockFetching = true;
+    mockComparison = undefined;
 
     renderCard();
 
-    expect(screen.getByRole("button", { name: "Retrying..." })).toBeInTheDocument();
+    expect(screen.getByText("Couldn't compare your insurance premiums to the market.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
   });
+
 
   it("does not read a failed query as 'no policies tracked'", () => {
     // The two are indistinguishable in the payload but opposite in meaning:

@@ -752,6 +752,7 @@
         "frontend/src/shared/types/insurance/",
         "api-client/src/utils/insurancePolicyFormat.ts",
         "frontend/src/shared/lib/insurance-policy-form.ts",
+        "frontend/src/shared/lib/retry-failed-queries.ts",
         "frontend/src/shared/lib/insurance-policy-draft.ts",
         "frontend/src/shared/lib/benchmark-format.ts",
         "frontend/src/shared/store/insurancePoliciesApi.ts",
@@ -796,6 +797,7 @@
         "InsurancePolicyDocumentReader.test.tsx",
         "usePageListModes.test.ts",
         "InsurancePremiumComparisonCard.test.tsx",
+        "retryFailedQueries.test.ts",
         "InsuranceBenchmarkDialog.test.tsx",
         "InsuranceBenchmarkSummary.test.tsx",
         "RateWatchSection.test.tsx",
@@ -812,7 +814,8 @@
         "insurance-premium-benchmark.spec.ts",
         "insurance-premium-comparison-layout.spec.ts",
         "mocked/insurance-policy-document-upload.spec.ts",
-        "mocked/insurance-rate-watch.spec.ts"
+        "mocked/insurance-rate-watch.spec.ts",
+        "mocked/dashboard-cards-retry-mock.spec.ts"
       ]
     },
     "mortgage": {
@@ -907,6 +910,8 @@
         "frontend/src/shared/lib/utility-plan-form.ts",
         "frontend/src/shared/lib/utility-plan-draft.ts",
         "frontend/src/shared/lib/benchmark-format.ts",
+        "frontend/src/shared/lib/retry-failed-queries.ts",
+        "frontend/src/shared/types/retryable-query.ts",
         "backend/app/models/properties/market_rate_benchmark.py",
         "backend/app/repositories/properties/market_rate_benchmark_repo.py",
         "backend/app/schemas/properties/market_rate_benchmark_response.py",
@@ -971,6 +976,7 @@
         "benchmark-format.test.ts",
         "Dashboard.test.tsx",
         "UtilityPlanComparisonCard.test.tsx",
+        "retryFailedQueries.test.ts",
         "MarketRateBenchmarkDialog.test.tsx",
         "BetterPlansSection.test.tsx",
         "offer-stats.test.ts",
@@ -983,7 +989,8 @@
         "dashboard.spec.ts",
         "utility-plan-rate-benchmark.spec.ts",
         "utility-plan-comparison-layout.spec.ts",
-        "mocked/utility-better-plans.spec.ts"
+        "mocked/utility-better-plans.spec.ts",
+        "mocked/dashboard-cards-retry-mock.spec.ts"
       ]
     },
     "welcome_manuals": {

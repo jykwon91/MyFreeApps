@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
+import { queryStatus } from "@/test/rtk-query-status";
 import UtilityPlanRenewalAlertCard from "@/app/features/utility/UtilityPlanRenewalAlertCard";
 import type { UtilityPlanRenewalAlert } from "@/shared/types/utility/utility-plan-renewal-alert";
 import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
@@ -19,9 +20,13 @@ import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
 const mockRefetch = vi.fn();
+const mockRefetchPlans = vi.fn();
+let mockPlansError = false;
+let mockPlansFetching = false;
 let mockAlerts: UtilityPlanRenewalAlert | undefined;
 let mockAlertsLoading = false;
 let mockAlertsError = false;
+let mockAlertsFetching = false;
 let mockPlanTotal = 0;
 let mockPlansLoading = false;
 
@@ -29,8 +34,7 @@ vi.mock("@/shared/store/utilityPlansApi", () => ({
   useGetUtilityPlanRenewalAlertsQuery: vi.fn(() => ({
     data: mockAlerts,
     isLoading: mockAlertsLoading,
-    isError: mockAlertsError,
-    isFetching: false,
+    ...queryStatus({ failed: mockAlertsError, fetching: mockAlertsFetching }),
     refetch: mockRefetch,
   })),
 }));
@@ -39,6 +43,8 @@ vi.mock("@mybookkeeper/api-client/store/utilityPlansApi", () => ({
   useGetUtilityPlansQuery: vi.fn(() => ({
     data: { items: [], total: mockPlanTotal, has_more: false },
     isLoading: mockPlansLoading,
+    ...queryStatus({ failed: mockPlansError, fetching: mockPlansFetching }),
+    refetch: mockRefetchPlans,
   })),
 }));
 
@@ -79,8 +85,11 @@ beforeEach(() => {
   mockAlerts = undefined;
   mockAlertsLoading = false;
   mockAlertsError = false;
+  mockAlertsFetching = false;
   mockPlanTotal = 0;
   mockPlansLoading = false;
+  mockPlansError = false;
+  mockPlansFetching = false;
 });
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -126,6 +135,54 @@ describe("UtilityPlanRenewalAlertCard — when it renders at all", () => {
     await user.click(screen.getByRole("button", { name: "Retry" }));
 
     expect(mockRefetch).toHaveBeenCalledTimes(1);
+    expect(mockRefetchPlans).not.toHaveBeenCalled();
+  });
+
+  it("retries the plans query when that is the one that failed", async () => {
+    // Refetching only the alerts would leave the card on this error no
+    // matter how many times Retry is pressed.
+    mockPlansError = true;
+    const user = userEvent.setup();
+
+    renderCard();
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(mockRefetchPlans).toHaveBeenCalledTimes(1);
+    expect(mockRefetch).not.toHaveBeenCalled();
+  });
+
+  it("holds the error rather than hiding the card while a failed plans query is retried", () => {
+    // Mid-retry the plans query has no data, which reads as "tracks no
+    // plans" — the card would vanish instead of showing the retry.
+    mockPlansError = true;
+    mockPlansFetching = true;
+    mockPlanTotal = 0;
+
+    renderCard();
+
+    expect(screen.getByText("Couldn't check utility plan renewals.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+  });
+
+  it("holds the error rather than an all-clear while a failed alerts query is retried", () => {
+    mockAlertsError = true;
+    mockAlertsFetching = true;
+    mockPlanTotal = 3;
+
+    renderCard();
+
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+    expect(screen.queryByTestId("utility-plan-alert-card-clear")).not.toBeInTheDocument();
+  });
+
+  it("keeps Retry available while only a healthy query is refetching", () => {
+    mockAlertsError = true;
+    mockPlansFetching = true;
+    mockPlanTotal = 3;
+
+    renderCard();
+
+    expect(screen.getByRole("button", { name: "Retry" })).toBeEnabled();
   });
 });
 

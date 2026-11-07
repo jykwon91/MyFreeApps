@@ -1,10 +1,5 @@
 import { useGetUtilityPlansQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
-
-export interface HasAnyUtilityPlansResult {
-  hasAnyPlans: boolean;
-  isLoading: boolean;
-  isError: boolean;
-}
+import type { HasAnyUtilityPlansResult } from "@/shared/types/utility/has-any-utility-plans-result";
 
 /**
  * Whether the operator tracks any utility plans at all.
@@ -16,10 +11,12 @@ export interface HasAnyUtilityPlansResult {
  * Query dedupes the identical request so the second caller costs nothing.
  */
 export function useHasAnyUtilityPlans(): HasAnyUtilityPlansResult {
-  const { data, isLoading, isError } = useGetUtilityPlansQuery({ limit: 1 });
+  const { data, isLoading, error, isFetching, refetch } = useGetUtilityPlansQuery({ limit: 1 });
   return {
     hasAnyPlans: (data?.total ?? 0) > 0,
     isLoading,
-    isError,
+    error,
+    isFetching,
+    refetch,
   };
 }

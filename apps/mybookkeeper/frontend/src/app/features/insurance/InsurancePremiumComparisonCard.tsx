@@ -7,6 +7,7 @@ import InsurancePremiumNotComparedRow from "./InsurancePremiumNotComparedRow";
 import { useInsuranceComparisonCardMode } from "./useInsuranceComparisonCardMode";
 import { INSURANCE_COMPARISON_CARD_MODES } from "@/shared/types/insurance/insurance-comparison-card-mode";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { hasFailedQuery, isRetryingFailedQuery, retryFailedQueries } from "@/shared/lib/retry-failed-queries";
 
 /**
  * Dashboard card for policies priced materially above the recorded market
@@ -24,12 +25,15 @@ import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
  * many were actually measured and how old the yardstick is.
  */
 export default function InsurancePremiumComparisonCard() {
-  const { data, isLoading, isError, refetch, isFetching } =
-    useGetInsurancePremiumComparisonQuery();
+  const comparison = useGetInsurancePremiumComparisonQuery();
+  const { data, isLoading } = comparison;
+  const queries = [comparison];
 
   const mode = useInsuranceComparisonCardMode({
     isLoading,
-    isError,
+    // Held through a retry, which leaves the query with no data yet — read
+    // as settled, that would be "no policies tracked" or an all-clear.
+    isError: hasFailedQuery(queries),
     totalAboveMarket: data?.total_above_market,
     hasAnyPolicies: (data?.total_considered ?? 0) > 0,
     hasBenchmark: data?.benchmark != null,
@@ -42,7 +46,7 @@ export default function InsurancePremiumComparisonCard() {
 
   if (mode === INSURANCE_COMPARISON_CARD_MODES.ERROR) {
     return (
-      <LoadErrorAlert message="Couldn't compare your insurance premiums to the market." isRetrying={isFetching} onRetry={() => void refetch()} />
+      <LoadErrorAlert message="Couldn't compare your insurance premiums to the market." isRetrying={isRetryingFailedQuery(queries)} onRetry={() => retryFailedQueries(queries)} />
     );
   }
 

@@ -14,6 +14,7 @@ import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
+import { queryStatus } from "@/test/rtk-query-status";
 import UtilityPlanComparisonCard from "@/app/features/utility/UtilityPlanComparisonCard";
 import type { MarketRateBenchmark } from "@/shared/types/utility/market-rate-benchmark";
 import type { UtilityPlanRateComparison } from "@/shared/types/utility/utility-plan-rate-comparison";
@@ -23,28 +24,35 @@ import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
 const mockRefetch = vi.fn();
+const mockRefetchBenchmarks = vi.fn();
+const mockRefetchPlans = vi.fn();
 let mockComparison: UtilityPlanRateComparison | undefined;
 let mockComparisonLoading = false;
 let mockComparisonError = false;
+let mockComparisonFetching = false;
+let mockBenchmarksFetching = false;
 let mockBenchmarks: MarketRateBenchmark[] = [];
 let mockBenchmarksLoading = false;
 let mockBenchmarksError = false;
 let mockPlanTotal = 0;
 let mockPlansLoading = false;
 let mockPlansError = false;
+let mockPlansFetching = false;
 
+// ``*Error`` means the query has failed; ``*Fetching`` means a request is in
+// flight. Together they give the retry-in-progress shape RTK really produces.
 vi.mock("@/shared/store/marketRateBenchmarksApi", () => ({
   useGetUtilityPlanRateComparisonQuery: vi.fn(() => ({
     data: mockComparison,
     isLoading: mockComparisonLoading,
-    isError: mockComparisonError,
-    isFetching: false,
+    ...queryStatus({ failed: mockComparisonError, fetching: mockComparisonFetching }),
     refetch: mockRefetch,
   })),
   useGetMarketRateBenchmarksQuery: vi.fn(() => ({
     data: mockBenchmarks,
     isLoading: mockBenchmarksLoading,
-    isError: mockBenchmarksError,
+    ...queryStatus({ failed: mockBenchmarksError, fetching: mockBenchmarksFetching }),
+    refetch: mockRefetchBenchmarks,
   })),
 }));
 
@@ -52,7 +60,8 @@ vi.mock("@mybookkeeper/api-client/store/utilityPlansApi", () => ({
   useGetUtilityPlansQuery: vi.fn(() => ({
     data: { items: [], total: mockPlanTotal, has_more: false },
     isLoading: mockPlansLoading,
-    isError: mockPlansError,
+    ...queryStatus({ failed: mockPlansError, fetching: mockPlansFetching }),
+    refetch: mockRefetchPlans,
   })),
 }));
 
@@ -122,12 +131,15 @@ beforeEach(() => {
   mockComparison = undefined;
   mockComparisonLoading = false;
   mockComparisonError = false;
+  mockComparisonFetching = false;
   mockBenchmarks = [];
   mockBenchmarksLoading = false;
   mockBenchmarksError = false;
+  mockBenchmarksFetching = false;
   mockPlanTotal = 0;
   mockPlansLoading = false;
   mockPlansError = false;
+  mockPlansFetching = false;
 });
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -208,6 +220,88 @@ describe("UtilityPlanComparisonCard — when it renders at all", () => {
     await user.click(screen.getByRole("button", { name: "Retry" }));
 
     expect(mockRefetch).toHaveBeenCalledTimes(1);
+    expect(mockRefetchBenchmarks).not.toHaveBeenCalled();
+    expect(mockRefetchPlans).not.toHaveBeenCalled();
+  });
+
+  it("retries the benchmarks query when that is the one that failed", async () => {
+    // Refetching only the comparison would leave the card on this error no
+    // matter how many times Retry is pressed.
+    mockBenchmarksError = true;
+    mockPlanTotal = 3;
+    const user = userEvent.setup();
+
+    renderCard();
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(mockRefetchBenchmarks).toHaveBeenCalledTimes(1);
+    expect(mockRefetch).not.toHaveBeenCalled();
+  });
+
+  it("retries the plans query when that is the one that failed", async () => {
+    mockPlansError = true;
+    const user = userEvent.setup();
+
+    renderCard();
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(mockRefetchPlans).toHaveBeenCalledTimes(1);
+    expect(mockRefetch).not.toHaveBeenCalled();
+  });
+
+  it("holds the error with Retry in progress while a failed benchmarks query is retried", () => {
+    // Mid-retry the query has no data and RTK reports neither loading nor
+    // error. Read naively that is "no market rate recorded" — the false
+    // prompt this card must never show for a query that failed.
+    mockBenchmarksError = true;
+    mockBenchmarksFetching = true;
+    mockPlanTotal = 3;
+    mockComparison = { material_gap_pct: 10, above_market: [], not_compared: [], total_above_market: 0, has_stale_benchmark: false };
+
+    renderCard();
+
+    expect(screen.getByText("Couldn't compare your utility rates to the market.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+    expect(screen.queryByTestId("utility-plan-comparison-card-no-benchmark")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("utility-plan-comparison-card-clear")).not.toBeInTheDocument();
+  });
+
+  it("holds the error rather than hiding the card while a failed plans query is retried", () => {
+    mockPlansError = true;
+    mockPlansFetching = true;
+    mockPlanTotal = 0;
+
+    renderCard();
+
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+  });
+
+  it("still retries its own failed query while the other card retries the shared plans query", async () => {
+    // Both failed; the renewal card's Retry has already sent the shared plans
+    // query. This card's Retry must stay usable for benchmarks, and must not
+    // send plans a second time.
+    mockPlansError = true;
+    mockPlansFetching = true;
+    mockBenchmarksError = true;
+    const user = userEvent.setup();
+
+    renderCard();
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(mockRefetchBenchmarks).toHaveBeenCalledTimes(1);
+    expect(mockRefetchPlans).not.toHaveBeenCalled();
+  });
+
+  it("keeps Retry available while only a healthy query is refetching", () => {
+    // A background refresh of a query that didn't fail is not a retry, and
+    // must not lock the button the user needs.
+    mockComparisonError = true;
+    mockBenchmarksFetching = true;
+    mockPlanTotal = 3;
+
+    renderCard();
+
+    expect(screen.getByRole("button", { name: "Retry" })).toBeEnabled();
   });
 
   it("does not read a failed benchmarks query as 'none recorded'", () => {
