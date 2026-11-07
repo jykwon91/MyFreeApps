@@ -1,6 +1,6 @@
 """Build the WoW Forever icon map: the client icon of every item / spell the pages show.
 
-    python -m scripts.wow_icons.build
+    python -m scripts.wow_icons.build --hotfix-cache "<Forever>/_forever_/Cache/ADB/enUS/DBCache.bin"
 
 Reads the generated Professions data (run ``scripts.wow_professions.build``
 first), the gathering guides' node items and the hand-written Cooking guide's
@@ -18,6 +18,7 @@ icons © Blizzard Entertainment.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import re
 from pathlib import Path
@@ -32,10 +33,12 @@ from scripts.wow_icons.ids import (
     item_icons,
     spell_icons,
 )
+from scripts.wow_items.forever_items import hotfix_cache_path, load_forever_item_tables
 from scripts.wow_world_map.sources import WAGO_BRANCH, WAGO_BUILD, wago_table
 
 CRAFTING_DIR = WOW_DATA_DIR / "professions" / "crafting"
 GATHERING_DIR = WOW_DATA_DIR / "professions" / "gathering"
+ITEMS_FILE = WOW_DATA_DIR / "items" / "items.json"
 COOKING_FILE = WOW_DATA_DIR / "professions" / "cooking.ts"
 OUT_FILE = WOW_DATA_DIR / "icons" / "wowIcons.json"
 # Hand-written gathering nodes name their item as `itemId: 2447`.
@@ -67,21 +70,32 @@ def write_icon_map(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(text + "\n", encoding="utf-8")
 
 
+def gear_item_ids(path: Path = ITEMS_FILE) -> set[int]:
+    """Every item ``items.json`` lists: what Best gear, Item Compare and the item pages name."""
+    return {int(row[0]) for row in json.loads(path.read_text(encoding="utf-8"))["items"]}
+
+
 def wanted_ids() -> IconIds:
-    ids = IconIds(items=gathering_item_ids() | cooking_item_ids())
+    ids = IconIds(items=gathering_item_ids() | cooking_item_ids() | gear_item_ids())
     for path in sorted(CRAFTING_DIR.glob("*.json")):
         ids.update(crafting_file_ids(json.loads(path.read_text(encoding="utf-8"))))
     return ids
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Build the WoW Forever icon map.")
+    parser.add_argument("--hotfix-cache", help="the Forever client's Cache/ADB/enUS/DBCache.bin")
+    cache_path = hotfix_cache_path(parser.parse_args().hotfix_cache)
     ids = wanted_ids()
     print(f"Loading icon tables from wago.tools ({WAGO_BRANCH} {WAGO_BUILD})...")
-    appearance = appearance_icon_map(wago_table("ItemModifiedAppearance"), wago_table("ItemAppearance"))
-    items, missing_items = item_icons(ids.items, wago_table("Item"), wago_table("ItemSparse"), appearance)
+    forever = load_forever_item_tables(cache_path)
+    appearance = appearance_icon_map(
+        wago_table("ItemModifiedAppearance", hotfixes=True), wago_table("ItemAppearance", hotfixes=True)
+    )
+    items, missing_items = item_icons(ids.items, forever.item.values(), forever.sparse, appearance)
     spells, missing_spells = spell_icons(ids.spells, wago_table("SpellMisc"))
     payload = {
-        "source": f"wago.tools DB2 {WAGO_BRANCH} {WAGO_BUILD}. Icons © Blizzard Entertainment.",
+        "source": f"{forever.source}. Icons © Blizzard Entertainment.",
         "build": WAGO_BUILD,
         "items": {str(k): list(v) for k, v in items.items()},
         "spells": {str(k): v for k, v in spells.items()},

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { render as rtlRender, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import GearItemRow from "@/games/wow-forever/components/gear/GearItemRow";
 import type { RankedGearItem } from "@/games/wow-forever/types/rankedGearItem";
 
@@ -28,11 +30,17 @@ const RANKED: RankedGearItem = {
   availableFromEstimated: false,
 };
 
+function render(ui: ReactElement) {
+  return rtlRender(<MemoryRouter initialEntries={["/wow-forever/gear?class=mage"]}>{ui}</MemoryRouter>);
+}
+
 describe("GearItemRow", () => {
-  it("shows the item name as plain text, never a link to Wowhead", () => {
+  it("links the item name to its own item page, never to Wowhead", () => {
     render(<GearItemRow ranked={RANKED} isTop={false} />);
-    expect(screen.getByText("Robe of the Archmage")).toBeInTheDocument();
-    expect(screen.queryByRole("link")).toBeNull();
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveTextContent("Robe of the Archmage");
+    expect(links[0]).toHaveAttribute("href", "/wow-forever/items/14152");
   });
 
   it("shows level, percent, score, source chip and badges", () => {

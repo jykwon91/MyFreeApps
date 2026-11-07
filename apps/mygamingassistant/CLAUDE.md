@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`)
+### WoW Forever (`/wow-forever`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -319,8 +319,38 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - Banner: pre-raid phase, raids open `RAIDS_OPEN_LABEL`, Classic Pawn weights,
   Forever stats / hit cap unpublished, ranking approximate; drop rates and
   set bonuses are never shown. `PUBLISHED_LIST` (LFCarry) is linked with its
-  checked date — never copied into our data. Item names are plain text; the
-  app never links to Wowhead (operator rule).
+  checked date — never copied into our data. Item names link to our own item
+  page (`/wow-forever/items/:id`); the app never links to Wowhead (operator rule).
+
+#### Item pages (`/wow-forever/items/:id`)
+
+- What an item is and how to get it: header (icon, quality-coloured name,
+  slot/type, item level, required level), an in-game-style tooltip block, then
+  "How to get it", most practical first (`lib/itemPages/itemSourceSections.ts`):
+  vendors, quests your faction can do, dungeon drops, crafted, open-world drops,
+  containers, other-faction quests, raid drops (raids open `RAIDS_OPEN_LABEL`).
+  Every Classic section carries "Classic source — may differ in Forever";
+  recipes are "Forever game files". Directions go to
+  `/wow-forever/map?to=pt:...&dir=1` (vendors, mobs, quest givers, dungeon doors).
+  Item names on Best gear and Item Compare link here (`ItemNameLink`, router
+  state `{ from }` so Back returns to that page).
+- A Classic item no Forever client has shown yet (`classic/unseen.json`) says
+  so — never "doesn't exist" — and an unknown id says "not found"; both offer
+  the compare page's name search (`ItemFinder`, `searchItems`).
+- **Data is GENERATED** — `python -m scripts.wow_item_pages.build
+  --hotfix-cache <DBCache.bin>` (from `backend/`, after the World Map,
+  Professions and Items builds). Shard = `id % 64` (`SHARD_COUNT` in
+  `shards.py` = `ITEM_PAGE_SHARD_COUNT`; a test pins both). A page lazy-loads
+  ONE Forever shard (`data/items/pages/NN.json`: the `items.json` row, bind,
+  vendor price, crafted-by from the crafting JSON) and ONE Classic shard
+  (`data/items/pages/classic/NN.json`, cmangos GPL — keep LICENSE + README:
+  vendors, quests with level/class, open-world drops, dungeon/raid drops,
+  containers) through `import.meta.glob` (`data/itemPages/itemPageShards.ts`);
+  never import a shard statically. Drop chances follow cmangos loot rules
+  (`loot_chances.py`: equal-share groups, references rolled `maxcount` times, a
+  reference ≥10 creatures share is a "world drop" with a level range).
+  `tests/test_wow_item_pages_generator.py`, `src/__tests__/wowItemPage*.test.ts(x)`,
+  `e2e/wow-forever-item-page.spec.ts`.
 
 #### In-game icons (`GameIcon`)
 
@@ -331,8 +361,10 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `spellIcon`, `recipeIcon`, `iconUrl`) against
   `data/icons/wowIcons.json` — **GENERATED** by `python -m scripts.wow_icons.build`
   (item → `Item.IconFileDataID`, else its default appearance's icon; spell →
-  `SpellMisc`; quality from ItemSparse; the build is pinned in the file). Covers
-  the crafting / gathering guides' items and spells.
+  `SpellMisc`; quality from ItemSparse, hotfixes included — it takes
+  `--hotfix-cache` like the item build; the build is pinned in the file). Covers
+  the crafting / gathering guides' items and spells, the Cooking ingredients and
+  every item in `items.json` (Best gear, Item Compare, item pages).
 - Images are the client's BLP icons as 64px WebP, uploaded by
   `python -m scripts.wow_icons.publish --to r2` (needs `scripts/.env.r2`;
   skips what's already there) to `wow/{build}/icons/{fdid}.webp`, and served
