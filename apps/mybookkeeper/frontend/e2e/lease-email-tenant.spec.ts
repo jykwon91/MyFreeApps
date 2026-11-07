@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
+import { deleteApplicant } from "./fixtures/applicants";
 
 /**
  * E2E tests for the auto-email-tenant-on-generate feature + manual
@@ -50,18 +51,11 @@ async function seedSignedLease(
   return body.id;
 }
 
-async function deleteApplicant(
-  api: APIRequestContext, id: string,
-): Promise<void> {
-  await api.delete(`/test/applicants/${id}`).catch(() => {});
-}
-
 async function deleteSignedLease(
   api: APIRequestContext, id: string,
 ): Promise<void> {
   await api.delete(`/test/signed-leases/${id}`).catch(() => {});
 }
-
 
 test.describe("Lease — Email to tenant", () => {
   test(

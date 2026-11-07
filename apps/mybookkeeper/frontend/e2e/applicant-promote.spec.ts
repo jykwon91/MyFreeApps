@@ -1,5 +1,6 @@
-import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
+import { test, expect, type Page } from "./fixtures/auth";
 import { deleteInquiry, seedInquiry } from "./fixtures/inquiries";
+import { deleteApplicant } from "./fixtures/applicants";
 
 /**
  * PR 3.2 — Inquiry → Applicant promotion E2E.
@@ -15,10 +16,6 @@ import { deleteInquiry, seedInquiry } from "./fixtures/inquiries";
  * Cleanup deletes seeded inquiries + applicants per
  * ``feedback_clean_test_data``.
  */
-
-async function deleteApplicant(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/test/applicants/${id}`).catch(() => {});
-}
 
 async function waitForInquiryDetail(page: Page, inquiryId: string): Promise<void> {
   await expect(page).toHaveURL(new RegExp(`/inquiries/${inquiryId}$`));

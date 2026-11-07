@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
+import { deleteApplicant } from "./fixtures/applicants";
 
 /**
  * PR: manual-applicant-stage-transition
@@ -24,10 +25,6 @@ async function seedApplicant(
     throw new Error(`seedApplicant failed: ${res.status()} ${await res.text()}`);
   }
   return ((await res.json()) as { id: string }).id;
-}
-
-async function deleteApplicant(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/test/applicants/${id}`).catch(() => {});
 }
 
 async function getApplicantEvents(

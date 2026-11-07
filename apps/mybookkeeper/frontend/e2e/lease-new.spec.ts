@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
 import { deleteInquiry, seedInquiry } from "./fixtures/inquiries";
+import { deleteApplicant } from "./fixtures/applicants";
 
 /**
  * E2E tests for /leases/new — the generate-lease page.
@@ -52,10 +53,6 @@ async function seedApplicant(
   }
   const body = (await res.json()) as { id: string };
   return body.id;
-}
-
-async function deleteApplicant(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/test/applicants/${id}`).catch(() => {});
 }
 
 async function deleteSignedLease(api: APIRequestContext, id: string): Promise<void> {

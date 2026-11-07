@@ -510,3 +510,82 @@ class TestApplicantInquiryFkSetNull:
         # Verify the FK declaration via metadata as a structural regression.
         fk_target = next(iter(Applicant.__table__.c.inquiry_id.foreign_keys))
         assert fk_target.ondelete == "SET NULL"
+
+
+class TestApplicantRepoHardDelete:
+    @pytest.mark.asyncio
+    async def test_deletes_my_applicant(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        a = _make_applicant(organization_id=test_org.id, user_id=test_user.id)
+        db.add(a)
+        await db.flush()
+
+        deleted = await applicant_repo.hard_delete_by_id(
+            db, applicant_id=a.id, organization_id=test_org.id, user_id=test_user.id,
+        )
+
+        assert deleted is True
+        assert await applicant_repo.get(
+            db, applicant_id=a.id, organization_id=test_org.id,
+            user_id=test_user.id, include_deleted=True,
+        ) is None
+
+    @pytest.mark.asyncio
+    async def test_deletes_a_soft_deleted_applicant(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        a = _make_applicant(
+            organization_id=test_org.id, user_id=test_user.id,
+            deleted_at=_dt.datetime.now(_dt.timezone.utc),
+        )
+        db.add(a)
+        await db.flush()
+
+        assert await applicant_repo.hard_delete_by_id(
+            db, applicant_id=a.id, organization_id=test_org.id, user_id=test_user.id,
+        ) is True
+
+    @pytest.mark.asyncio
+    async def test_nothing_to_delete_returns_false(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        assert await applicant_repo.hard_delete_by_id(
+            db, applicant_id=uuid.uuid4(), organization_id=test_org.id, user_id=test_user.id,
+        ) is False
+
+    @pytest.mark.asyncio
+    async def test_another_organizations_applicant_is_kept(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        user_b, org_b = await _make_second_org(db)
+        a = _make_applicant(organization_id=org_b.id, user_id=user_b.id)
+        db.add(a)
+        await db.flush()
+
+        deleted = await applicant_repo.hard_delete_by_id(
+            db, applicant_id=a.id, organization_id=test_org.id, user_id=test_user.id,
+        )
+
+        assert deleted is False
+        assert await applicant_repo.get(
+            db, applicant_id=a.id, organization_id=org_b.id, user_id=user_b.id,
+        ) is not None
+
+    @pytest.mark.asyncio
+    async def test_another_users_applicant_in_my_organization_is_kept(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        user_b, _ = await _make_second_org(db)
+        a = _make_applicant(organization_id=test_org.id, user_id=user_b.id)
+        db.add(a)
+        await db.flush()
+
+        deleted = await applicant_repo.hard_delete_by_id(
+            db, applicant_id=a.id, organization_id=test_org.id, user_id=test_user.id,
+        )
+
+        assert deleted is False
+        assert await applicant_repo.get(
+            db, applicant_id=a.id, organization_id=test_org.id, user_id=user_b.id,
+        ) is not None

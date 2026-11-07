@@ -1,6 +1,7 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { deleteInquiry, seedInquiry } from "./fixtures/inquiries";
 import type { SeededApplicant } from "./fixtures/seeded-applicant";
+import { deleteApplicant } from "./fixtures/applicants";
 
 /**
  * PR 3.3 — Applicant screening (KeyCheck redirect-only) E2E.
@@ -38,10 +39,6 @@ async function seedApplicant(api: APIRequestContext, runId: number): Promise<See
   }
   const body = (await res.json()) as { id: string };
   return { applicantId: body.id, inquiryId };
-}
-
-async function deleteApplicant(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/test/applicants/${id}`).catch(() => {});
 }
 
 async function deleteScreeningResult(api: APIRequestContext, id: string): Promise<void> {

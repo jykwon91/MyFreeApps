@@ -1,6 +1,7 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { createProperty, deleteProperty } from "./fixtures/seed-data";
 import { toasts } from "./fixtures/toasts";
+import { deleteApplicant } from "./fixtures/applicants";
 
 /**
  * E2E for the attribution review queue — PR D (Airbnb-payout review UX).
@@ -57,10 +58,6 @@ async function seedApplicant(
   if (!res.ok()) return null;
   const body = (await res.json()) as { id: string };
   return body.id;
-}
-
-async function deleteApplicant(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/test/applicants/${id}`).catch(() => {});
 }
 
 async function getTransaction(

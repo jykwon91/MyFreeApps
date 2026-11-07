@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
+import { deleteApplicant } from "./fixtures/applicants";
 
 /**
  * E2E for the 30-day extension undo flow.
@@ -76,18 +77,11 @@ async function getLease(
   }>;
 }
 
-async function deleteApplicant(
-  api: APIRequestContext, id: string,
-): Promise<void> {
-  await api.delete(`/test/applicants/${id}`).catch(() => {});
-}
-
 async function deleteSignedLease(
   api: APIRequestContext, id: string,
 ): Promise<void> {
   await api.delete(`/test/signed-leases/${id}`).catch(() => {});
 }
-
 
 test.describe("Lease extension undo", () => {
   test(

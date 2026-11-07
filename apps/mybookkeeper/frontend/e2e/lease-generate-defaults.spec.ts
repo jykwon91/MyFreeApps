@@ -1,6 +1,7 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { deleteInquiry, seedInquiry } from "./fixtures/inquiries";
 import { localToday } from "./fixtures/local-today";
+import { deleteApplicant } from "./fixtures/applicants";
 
 /**
  * E2E tests for the lease-template-source-pull enhancements:
@@ -54,10 +55,6 @@ async function seedApplicant(
   }
   const body = (await res.json()) as { id: string };
   return body.id;
-}
-
-async function deleteApplicant(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/test/applicants/${id}`).catch(() => {});
 }
 
 async function getGenerateDefaults(

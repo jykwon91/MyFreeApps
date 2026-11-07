@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
+import { deleteApplicant } from "./fixtures/applicants";
 
 /**
  * Layout E2E for the Applicants list + detail (PR 3.1b).
@@ -33,10 +34,6 @@ async function seedApplicant(
   }
   const body = (await res.json()) as { id: string };
   return body.id;
-}
-
-async function deleteApplicant(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/test/applicants/${id}`).catch(() => {});
 }
 
 const APPLICANT_COUNT = 3;
