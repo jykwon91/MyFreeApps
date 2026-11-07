@@ -94,6 +94,38 @@ describe("ScreeningSection", () => {
     expect(screen.getByTestId("screening-pending-panel")).toBeInTheDocument();
   });
 
+  it("keeps a started screening reachable after the applicant stops being eligible", () => {
+    eligibilityMock.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: { eligible: false, missing_fields: ["Email or phone"], has_pending: true },
+    });
+    resultsMock.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: [PENDING_RESULT],
+      isFetching: false,
+      refetch: vi.fn(),
+    });
+    renderSection();
+    expect(screen.getByTestId("screening-pending-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("screening-pending-upload-button")).toBeInTheDocument();
+    expect(screen.queryByTestId("screening-eligibility-gate")).not.toBeInTheDocument();
+  });
+
+  it("shows a started screening when the eligibility check fails", () => {
+    eligibilityMock.mockReturnValue({ isLoading: false, isError: true, data: undefined });
+    resultsMock.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: [PENDING_RESULT],
+      isFetching: false,
+      refetch: vi.fn(),
+    });
+    renderSection();
+    expect(screen.getByTestId("screening-pending-panel")).toBeInTheDocument();
+  });
+
   it("shows completed result cards when results exist", () => {
     eligibilityMock.mockReturnValue({
       isLoading: false,
