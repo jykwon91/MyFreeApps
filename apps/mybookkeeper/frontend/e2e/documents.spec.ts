@@ -239,7 +239,7 @@ test.describe("Documents — viewer on row click", () => {
 
   test.beforeEach(async ({ authedPage: page, api }, testInfo) => {
     docId = "";
-    fileName = `e2e-viewer-${Date.now()}-${testInfo.workerIndex}.pdf`;
+    fileName = `e2e-doc-viewer-${Date.now()}-${testInfo.workerIndex}.pdf`;
     const uploadRes = await api.post("/documents/upload", {
       multipart: {
         file: {
