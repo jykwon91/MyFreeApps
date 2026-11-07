@@ -9,21 +9,21 @@ Usage:
 import argparse
 import uuid
 
+from fastapi_users.password import PasswordHelper
 from sqlalchemy import text
 
 from app.cli.db import SyncSession
 
+TEST_PASSWORD = "testpassword123"
+_password_helper = PasswordHelper()
 _CLEANUP_TABLES = frozenset({"documents", "extractions", "transactions", "system_events"})
 
 
 def cmd_create_test_user(args):
     """Create a test user with a given role."""
-    from passlib.context import CryptContext
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
     user_id = uuid.uuid4()
     email = f"test-{args.role}-{str(user_id)[:8]}@test.local"
-    hashed = pwd_context.hash("testpassword123")
+    hashed = _password_helper.hash(TEST_PASSWORD)
 
     with SyncSession() as session:
         # Create org first
@@ -55,7 +55,7 @@ def cmd_create_test_user(args):
         session.commit()
         print(f"Created test user:")
         print(f"  Email: {email}")
-        print(f"  Password: testpassword123")
+        print("  Password: (TEST_PASSWORD in app/cli/seed.py)")
         print(f"  Role: {args.role.upper()}")
         print(f"  User ID: {user_id}")
         print(f"  Org ID: {org_id}")

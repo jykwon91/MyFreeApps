@@ -28,7 +28,7 @@ from platform_shared.services.seed_admin_service import (
     seed_admin_user,
 )
 
-# A structurally valid bcrypt hash (passlib shape: $2b$ + cost + 53 chars).
+# A structurally valid bcrypt hash (bcrypt.hashpw shape: $2b$ + cost + 53 chars).
 VALID_HASH = "$2b$12$" + "a" * 53
 OTHER_HASH = "$2b$12$" + "b" * 53
 
@@ -304,3 +304,11 @@ class TestBuildSeedAdminHook:
         assert [e["event_type"] for e in logged_events] == [
             AuthEventType.SEED_ADMIN_CREATED,
         ]
+
+
+class TestBcryptHashpwOutput:
+    def test_real_bcrypt_hashpw_output_passes_validator(self):
+        import bcrypt
+
+        hashed = bcrypt.hashpw(b"fixture-not-a-secret", bcrypt.gensalt()).decode()
+        assert is_bcrypt_hash(hashed)

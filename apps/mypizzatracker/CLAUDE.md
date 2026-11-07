@@ -127,7 +127,7 @@ missing. If either env var is absent in production, the app refuses to start.
 | Var | Required | Notes |
 |---|---|---|
 | `SEED_USER_EMAIL` | Yes (prod) | Operator login email |
-| `SEED_USER_PASSWORD_HASH` | Yes (prod) | bcrypt hash -- generate with `python -c "from passlib.hash import bcrypt; print(bcrypt.hash('yourpassword'))"` |
+| `SEED_USER_PASSWORD_HASH` | Yes (prod) | bcrypt hash -- generate with `python -c "import bcrypt, getpass; print(bcrypt.hashpw(getpass.getpass().encode(), bcrypt.gensalt()).decode())"` |
 | `SECRET_KEY` | Yes | JWT signing key -- generate with `openssl rand -hex 32` |
 | `ENCRYPTION_KEY` | Yes | Fernet key for PII -- generate with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
 | `DATABASE_URL` | Yes | Full async postgres URL |

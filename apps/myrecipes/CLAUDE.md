@@ -151,7 +151,7 @@ the "Seed VPS env files" workflow: `gh workflow run seed-env.yml -f app=myrecipe
 | Var | Required | Notes |
 |---|---|---|
 | `SEED_ADMIN_EMAIL` | Yes (prod) | Boot-seeded platform admin; reserved from public registration |
-| `SEED_ADMIN_PASSWORD_HASH` | Yes (prod) | bcrypt hash -- generate locally with `python -c "from passlib.context import CryptContext; import getpass; print(CryptContext(schemes=['bcrypt']).hash(getpass.getpass()))"` |
+| `SEED_ADMIN_PASSWORD_HASH` | Yes (prod) | bcrypt hash -- generate locally with `python -c "import bcrypt, getpass; print(bcrypt.hashpw(getpass.getpass().encode(), bcrypt.gensalt()).decode())"` |
 | `SECRET_KEY` | Yes | JWT signing -- `openssl rand -hex 32` |
 | `ENCRYPTION_KEY` | Yes | Fernet PII key -- `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
 | `DATABASE_URL` | Yes | Full async postgres URL (set by docker-compose) |
