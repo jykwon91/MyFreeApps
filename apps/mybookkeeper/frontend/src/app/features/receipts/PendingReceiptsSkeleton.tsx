@@ -19,12 +19,12 @@ export default function PendingReceiptsSkeleton() {
             className="flex items-center justify-between gap-4 py-3"
             data-testid="pending-receipt-row-skeleton"
           >
-            <div className="flex-1 space-y-1.5">
-              <div className="h-4 w-36 bg-muted animate-pulse rounded" />
-              <div className="h-3 w-48 bg-muted animate-pulse rounded" />
-              <div className="h-3 w-28 bg-muted animate-pulse rounded" />
+            <div className="flex-1 min-w-0 space-y-1.5">
+              <div className="h-4 w-36 max-w-full bg-muted animate-pulse rounded" />
+              <div className="h-3 w-48 max-w-full bg-muted animate-pulse rounded" />
+              <div className="h-3 w-28 max-w-full bg-muted animate-pulse rounded" />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 shrink-0">
               <div className="h-8 w-16 bg-muted animate-pulse rounded" />
               <div className="h-8 w-28 bg-muted animate-pulse rounded" />
             </div>

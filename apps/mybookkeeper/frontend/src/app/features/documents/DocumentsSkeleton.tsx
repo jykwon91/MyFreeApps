@@ -1,6 +1,8 @@
 import Skeleton from "@/shared/components/ui/Skeleton";
+import DocumentCardSkeleton from "@/app/features/documents/DocumentCardSkeleton";
 
-// Mirrors the 7-column table in Documents.tsx:
+// Mirrors DocumentTable: phone cards below md, the 7-column table from md up,
+// and the pagination footer under both.
 // checkbox | status | file | type | source | uploaded | actions
 const COLUMNS = [
   { width: "w-4" },     // checkbox
@@ -12,31 +14,51 @@ const COLUMNS = [
   { width: "w-6" },     // delete action
 ];
 
-export default function DocumentsSkeleton() {
+const ROW_COUNT = 10;
+
+interface DocumentsSkeletonProps {
+  canWrite: boolean;
+}
+
+export default function DocumentsSkeleton({ canWrite }: DocumentsSkeletonProps) {
   return (
-    <div className="md:flex-1 md:overflow-auto">
-      <table className="w-full text-sm min-w-[600px]">
-        <thead className="text-left text-xs text-muted-foreground border-b bg-background">
-          <tr>
-            {COLUMNS.map((col, i) => (
-              <th key={i} className="px-3 py-2">
-                <Skeleton className={`h-3 ${col.width}`} />
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {Array.from({ length: 10 }, (_, row) => (
-            <tr key={row} className="border-b">
+    <div className="border rounded-lg overflow-hidden md:flex md:flex-col md:min-h-0 md:flex-1">
+      <div className="md:hidden divide-y">
+        {Array.from({ length: ROW_COUNT }, (_, i) => (
+          <DocumentCardSkeleton key={i} canWrite={canWrite} />
+        ))}
+      </div>
+      <div className="hidden md:block flex-1 overflow-auto">
+        <table className="w-full text-sm min-w-[600px]">
+          <thead className="text-left text-xs text-muted-foreground border-b bg-background">
+            <tr>
               {COLUMNS.map((col, i) => (
-                <td key={i} className="px-3 py-2">
+                <th key={i} className="px-3 py-2">
                   <Skeleton className={`h-3 ${col.width}`} />
-                </td>
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {Array.from({ length: ROW_COUNT }, (_, row) => (
+              <tr key={row} className="border-b">
+                {COLUMNS.map((col, i) => (
+                  <td key={i} className="px-3 py-2">
+                    <Skeleton className={`h-3 ${col.width}`} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div
+        className="flex items-center justify-between px-4 py-3 border-t bg-muted/30 shrink-0"
+        data-testid="documents-skeleton-footer"
+      >
+        <Skeleton className="h-5 w-32" />
+        <Skeleton className="h-5 w-40" />
+      </div>
     </div>
   );
 }
