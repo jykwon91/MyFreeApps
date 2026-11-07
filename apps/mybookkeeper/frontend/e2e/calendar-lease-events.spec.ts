@@ -2,6 +2,7 @@ import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { listingRowBars } from "./fixtures/calendar-rows";
 import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 import { deleteApplicant } from "./fixtures/applicants";
+import { deleteBlackout } from "./fixtures/blackouts";
 
 /**
  * E2E for tenant occupancy on the unified calendar.
@@ -162,7 +163,7 @@ test.describe("Tenant leases on the calendar", () => {
       await expect(bars).toHaveCount(1);
       await expect(bars).toHaveAttribute("data-source", "airbnb");
     } finally {
-      await api.delete(`/test/blackouts/${blackoutId}`).catch(() => {});
+      await deleteBlackout(api, blackoutId);
       await api.delete(`/test/signed-leases/${leaseId}`).catch(() => {});
       await deleteApplicant(api, applicantId);
       await deleteListing(api, listingId);

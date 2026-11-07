@@ -174,7 +174,6 @@ async def delete_by_id_scoped_to_organization(
     through the ``listings.organization_id`` link. Returns True if a
     row was deleted, False otherwise.
     """
-    from app.models.listings.listing import Listing
     result = await db.execute(
         select(ListingBlackout)
         .join(Listing, Listing.id == ListingBlackout.listing_id)

@@ -2,6 +2,7 @@ import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { listingRowBars } from "./fixtures/calendar-rows";
 import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 import { toasts } from "./fixtures/toasts";
+import { deleteBlackout } from "./fixtures/blackouts";
 
 /**
  * E2E tests for the calendar review queue Phase 2b: resolve → listing_blackout.
@@ -60,10 +61,6 @@ async function deleteReviewQueueItem(
   itemId: string,
 ): Promise<void> {
   await api.delete(`/test/review-queue/${itemId}`).catch(() => {});
-}
-
-async function deleteBlackout(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/test/blackouts/${id}`).catch(() => {});
 }
 
 /** Calendar events on one listing — other specs seed the same June window. */

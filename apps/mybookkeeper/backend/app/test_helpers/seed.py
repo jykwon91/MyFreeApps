@@ -166,15 +166,18 @@ async def delete_blackout(
     """Hard-delete a blackout for E2E cleanup. Test-only.
 
     Tenant-scoped via JOIN to ``listings.organization_id`` (enforced
-    inside the repository helper).
+    inside the repository helper). 404 when there was nothing to delete, so
+    a cleanup that misses its row fails instead of passing silently.
     """
     _require_test_mode()
     async with unit_of_work() as db:
-        await listing_blackout_repo.delete_by_id_scoped_to_organization(
+        deleted = await listing_blackout_repo.delete_by_id_scoped_to_organization(
             db,
             blackout_id=blackout_id,
             organization_id=ctx.organization_id,
         )
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Blackout not found")
 
 
 # ---------------------------------------------------------------------------

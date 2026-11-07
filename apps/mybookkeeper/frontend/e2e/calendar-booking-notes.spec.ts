@@ -4,6 +4,7 @@ import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-d
 import path from "path";
 import { fileURLToPath } from "url";
 import { toasts } from "./fixtures/toasts";
+import { deleteBlackout } from "./fixtures/blackouts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const IMAGE_FIXTURE = path.join(__dirname, "fixtures", "listings", "test-photo-with-gps.jpg");
@@ -47,10 +48,6 @@ async function seedBlackout(api: APIRequestContext, payload: SeedBlackoutPayload
   if (!res.ok()) throw new Error(`seedBlackout failed: ${res.status()} ${await res.text()}`);
   const body = (await res.json()) as { id: string };
   return body.id;
-}
-
-async function deleteBlackout(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/test/blackouts/${id}`).catch(() => {});
 }
 
 /** Seeds a property → listing → June booking, registering each cleanup as soon as it exists. */
