@@ -10,6 +10,7 @@ import BisListSkeleton from "@/games/wow-forever/components/gear/bisLists/BisLis
 import SharedBisListView from "@/games/wow-forever/components/gear/bisLists/SharedBisListView";
 import { MAX_BIS_LISTS } from "@/games/wow-forever/data/bisLists/bisListConfig";
 import { DEFAULT_BIS_LIST_PHASE } from "@/games/wow-forever/data/bisLists/bisListPhases";
+import { BIS_LIST_START } from "@/games/wow-forever/data/bisLists/bisListStartOptions";
 import { MAX_LEVEL } from "@/games/wow-forever/data/levelCap";
 import { useBisLists } from "@/games/wow-forever/hooks/useBisLists";
 import { listFromDraft } from "@/games/wow-forever/lib/bisLists/listFromDraft";
@@ -34,7 +35,7 @@ function firstDraft(settings: GearSettings): BisListDraft {
     classId: settings.classId,
     specId: settings.specId,
     phase: DEFAULT_BIS_LIST_PHASE,
-    start: "recommended",
+    start: BIS_LIST_START.recommended,
     level: settings.level ?? MAX_LEVEL,
   };
 }

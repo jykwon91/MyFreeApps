@@ -1,5 +1,6 @@
 import { useState, type Dispatch } from "react";
 import { showSuccess } from "@platform/ui";
+import { BIS_LIST_PHASE } from "@/games/wow-forever/data/bisLists/bisListPhases";
 import BisListActions from "@/games/wow-forever/components/gear/bisLists/BisListActions";
 import BisListEditableSlotRow from "@/games/wow-forever/components/gear/bisLists/BisListEditableSlotRow";
 import BisListRenameForm from "@/games/wow-forever/components/gear/bisLists/BisListRenameForm";
@@ -33,7 +34,7 @@ export default function BisListEditor({ list, listCount, itemList, gear, faction
   const [announcement, setAnnouncement] = useState("");
   const slots = bisSlotsFor(list.classId);
   const { filled, obtained } = bisListProgress(list);
-  const bracket = list.phase === "leveling" ? "leveling" : "level60";
+  const bracket = list.phase === BIS_LIST_PHASE.leveling ? "leveling" : "level60";
 
   function pick(slot: BisSlot, item: ClientItem) {
     const cleared = clashingSlots(slot.id).filter((s) => list.items[s] !== undefined);

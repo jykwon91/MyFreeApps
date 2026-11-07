@@ -30,3 +30,9 @@ export function bisSlotLabels(slots: readonly BisSlotId[]): string {
     .map((s) => s.label)
     .join(" and ");
 }
+
+/** "1 item in the link was left out" / "3 items in the link were left out". */
+export function droppedItemsText(count: number): string {
+  if (count === 1) return "1 item in the link was left out";
+  return `${count} items in the link were left out`;
+}

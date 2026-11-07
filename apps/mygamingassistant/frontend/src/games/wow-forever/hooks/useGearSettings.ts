@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { findClass, findSpec, firstSpec } from "@/games/wow-forever/data/classes";
-import { isGearView } from "@/games/wow-forever/data/gear/gearViews";
+import { GEAR_VIEW, isGearView } from "@/games/wow-forever/data/gear/gearViews";
 import { MAX_LEVEL, playerLevel } from "@/games/wow-forever/data/levelCap";
 import { PLAYER_SETTINGS_STORAGE_KEY, parsePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { readStored, writeStored } from "@/games/wow-forever/lib/safeLocalStorage";
@@ -18,7 +18,7 @@ export const DEFAULT_GEAR_SETTINGS: GearSettings = {
   specId: firstSpec("warlock"),
   level: null,
   faction: FACTION.alliance,
-  view: "leveling",
+  view: GEAR_VIEW.leveling,
   includePvp: false,
 };
 

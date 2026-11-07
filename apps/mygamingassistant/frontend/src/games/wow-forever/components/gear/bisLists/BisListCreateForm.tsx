@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { Button, Select } from "@platform/ui";
+import BisListStartNote from "@/games/wow-forever/components/gear/bisLists/BisListStartNote";
 import NumberField from "@/games/wow-forever/components/shared/NumberField";
 import SegmentedToggle from "@/games/wow-forever/components/shared/SegmentedToggle";
 import { MAX_BIS_LIST_NAME_LENGTH } from "@/games/wow-forever/data/bisLists/bisListConfig";
-import { BIS_LIST_PHASES } from "@/games/wow-forever/data/bisLists/bisListPhases";
-import { BIS_LIST_START_OPTIONS } from "@/games/wow-forever/data/bisLists/bisListStartOptions";
+import { BIS_LIST_PHASE, BIS_LIST_PHASES } from "@/games/wow-forever/data/bisLists/bisListPhases";
+import { BIS_LIST_START, BIS_LIST_START_OPTIONS } from "@/games/wow-forever/data/bisLists/bisListStartOptions";
 import { findClass, firstSpec, WOW_CLASSES, type WowClassId } from "@/games/wow-forever/data/classes";
 import { MAX_LEVEL } from "@/games/wow-forever/data/levelCap";
 import { suggestedBisListName } from "@/games/wow-forever/lib/bisLists/bisListText";
@@ -23,8 +24,8 @@ const FIELD_LABEL = "text-xs font-medium text-muted-foreground";
 export default function BisListCreateForm({ initial, onCreate, onCancel }: BisListCreateFormProps) {
   const [draft, setDraft] = useState(initial);
   const specs = findClass(draft.classId)?.specs ?? [];
-  const recommended = draft.start === "recommended";
-  const askLevel = recommended && draft.phase === "leveling";
+  const recommended = draft.start === BIS_LIST_START.recommended;
+  const askLevel = recommended && draft.phase === BIS_LIST_PHASE.leveling;
 
   function update(patch: Partial<BisListDraft>) {
     setDraft((d) => ({ ...d, ...patch }));
@@ -86,13 +87,7 @@ export default function BisListCreateForm({ initial, onCreate, onCancel }: BisLi
       <div className="flex flex-col gap-1">
         <span className={FIELD_LABEL}>Start from</span>
         <SegmentedToggle label="Start from" options={BIS_LIST_START_OPTIONS} value={draft.start} onChange={(start) => update({ start })} className="self-start flex-wrap" />
-        {recommended ? (
-          <p className="text-xs text-muted-foreground">
-            {draft.phase === "leveling"
-              ? "The top pick per slot from “While leveling” at the level below."
-              : "The top pick per slot from “Level 60 (pre-raid)”. Raids aren't ranked, so a Raid list starts from pre-raid too."}
-          </p>
-        ) : null}
+        {recommended ? <BisListStartNote phase={draft.phase} /> : null}
       </div>
       {askLevel ? (
         <div className="max-w-[12rem]">

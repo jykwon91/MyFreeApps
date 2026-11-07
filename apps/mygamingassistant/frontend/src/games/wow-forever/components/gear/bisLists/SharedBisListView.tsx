@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Button } from "@platform/ui";
 import BisListSlotRow from "@/games/wow-forever/components/gear/bisLists/BisListSlotRow";
 import { bisSlotsFor } from "@/games/wow-forever/lib/bisLists/bisSlotFit";
-import { bisListSubtitle } from "@/games/wow-forever/lib/bisLists/bisListText";
+import { bisListSubtitle, droppedItemsText } from "@/games/wow-forever/lib/bisLists/bisListText";
 import { checkSharedList } from "@/games/wow-forever/lib/bisLists/checkSharedList";
 import { mainBisSource } from "@/games/wow-forever/lib/bisLists/mainBisSource";
 import type { SharedBisList } from "@/games/wow-forever/types/bisLists/sharedBisList";
@@ -51,7 +51,7 @@ export default function SharedBisListView({ list, itemList, gear, faction, canSa
       </header>
       {checked.dropped > 0 ? (
         <p className="text-sm text-muted-foreground" data-testid="bis-shared-dropped">
-          {checked.dropped === 1 ? "1 item in the link was left out" : `${checked.dropped} items in the link were left out`}: not in
+          {droppedItemsText(checked.dropped)}: not in
           the current game files, or not one this class can wear in that slot.
         </p>
       ) : null}
