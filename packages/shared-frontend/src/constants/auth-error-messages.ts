@@ -12,4 +12,5 @@ export const AUTH_ERROR_MESSAGES: ReadonlyMap<string, string> = new Map([
   ["Too many attempts", "Too many attempts. Wait a few minutes and try again."],
   ["REGISTER_USER_ALREADY_EXISTS", "An account with this email already exists. Sign in instead."],
   ["VERIFY_USER_BAD_TOKEN", "This verification link is invalid or has expired."],
+  ["RESET_PASSWORD_BAD_TOKEN", "This reset link has expired or already been used. Request a new one."],
 ]);

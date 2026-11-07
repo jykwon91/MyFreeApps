@@ -78,6 +78,16 @@ test.describe("Reset Password — page layout", () => {
     await expect(page.getByText("At least 12 characters")).toBeVisible();
   });
 
+  test("a link the server doesn't accept says so in plain words", async ({ page }) => {
+    await page.goto("/reset-password?token=not-a-real-reset-token");
+    await page.getByLabel("New password").fill("a-long-new-password-1");
+    await page.getByLabel("Confirm password").fill("a-long-new-password-1");
+    await page.getByRole("button", { name: "Reset password" }).click();
+    await expect(
+      page.getByText("This reset link has expired or already been used. Request a new one."),
+    ).toBeVisible({ timeout: 10000 });
+  });
+
   test("clears token from URL after page load", async ({ page }) => {
     await page.goto("/reset-password?token=test-token");
     await expect(page.getByLabel("New password")).toBeVisible();

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router-dom";
+import { AxiosError } from "axios";
 import ResetPassword from "@/app/pages/ResetPassword";
 
 vi.mock("@/shared/lib/api", () => ({
@@ -227,14 +228,14 @@ describe("ResetPassword \u2014 submit success", () => {
 describe("ResetPassword \u2014 error handling", () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it("shows a token-expired message when the error message contains the word token", async () => {
-    vi.mocked(api.post).mockRejectedValue(new Error("Invalid token provided"));
+  it("shows a plain message, not axios's own text, when the request never reaches the server", async () => {
+    vi.mocked(api.post).mockRejectedValue(new AxiosError("Network Error", "ERR_NETWORK"));
     const user = userEvent.setup();
     const { container } = renderWithToken();
     await user.type(newPasswordInput(container), "newpassword1234");
     await user.type(confirmPasswordInput(container), "newpassword1234");
     await user.click(screen.getByRole("button", { name: "Reset password" }));
-    await screen.findByText(/expired or already been used/i);
+    await screen.findByText("Something went wrong. Please try again.");
   });
 
   it("shows the token-expired message for the server's axios RESET_PASSWORD_BAD_TOKEN", async () => {
@@ -247,10 +248,10 @@ describe("ResetPassword \u2014 error handling", () => {
     await user.type(newPasswordInput(container), "newpassword1234");
     await user.type(confirmPasswordInput(container), "newpassword1234");
     await user.click(screen.getByRole("button", { name: "Reset password" }));
-    await screen.findByText(/expired or already been used/i);
+    await screen.findByText("This reset link has expired or already been used. Request a new one.");
   });
 
-  it("shows the raw API error message for non-token errors", async () => {
+  it("passes a plain Error's message through", async () => {
     vi.mocked(api.post).mockRejectedValue(new Error("Server error"));
     const user = userEvent.setup();
     const { container } = renderWithToken();
@@ -285,9 +286,10 @@ describe("ResetPassword \u2014 error handling", () => {
   it("surfaces the breach message when the backend returns an HIBP rejection", async () => {
     const breachReason =
       "This password has appeared in a known data breach. Please pick a different one. (We checked anonymously — your password never left our server in plaintext.)";
-    vi.mocked(api.post).mockRejectedValue({
-      data: { detail: { code: "RESET_PASSWORD_INVALID_PASSWORD", reason: breachReason } },
+    const axiosErr = Object.assign(new AxiosError("Request failed with status code 400", "ERR_BAD_REQUEST"), {
+      response: { status: 400, data: { detail: { code: "RESET_PASSWORD_INVALID_PASSWORD", reason: breachReason } } },
     });
+    vi.mocked(api.post).mockRejectedValue(axiosErr);
     const user = userEvent.setup();
     const { container } = renderWithToken();
     await user.type(newPasswordInput(container), "mypassword1234");

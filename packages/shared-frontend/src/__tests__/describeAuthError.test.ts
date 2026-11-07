@@ -21,6 +21,12 @@ describe("describeAuthError", () => {
     );
   });
 
+  it("maps a used or expired reset link", () => {
+    expect(describeAuthError(axiosError("RESET_PASSWORD_BAD_TOKEN"))).toBe(
+      "This reset link has expired or already been used. Request a new one.",
+    );
+  });
+
   it("maps the sign-in failures", () => {
     expect(describeAuthError(axiosError("LOGIN_BAD_CREDENTIALS"))).toBe(
       "Incorrect email or password. Please try again.",
