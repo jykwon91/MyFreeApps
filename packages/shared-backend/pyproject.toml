@@ -46,9 +46,6 @@ dev = [
     # the real JWTStrategy write/read paths. Runtime apps that authenticate
     # pull fastapi-users in via their own pyproject.toml.
     "fastapi-users[sqlalchemy]>=15.0,<16.0",
-    # Required by tests that generate a real bcrypt.hashpw hash to exercise
-    # the seed-admin hash validator.
-    "bcrypt>=4.2",
 ]
 
 [tool.pytest.ini_options]
