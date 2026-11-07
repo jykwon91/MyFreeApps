@@ -95,9 +95,9 @@ test.describe("Attribution review — Airbnb payout UX (PR D)", () => {
       await page.goto("/payment-review");
       await page.waitForLoadState("networkidle");
 
-      const row = page.locator("div.bg-card").filter({ hasText: desc });
+      const row = page.getByTestId("attribution-review-item").filter({ hasText: desc });
       await expect(row).toBeVisible({ timeout: 5000 });
-      await expect(row.getByText("Airbnb payout")).toBeVisible();
+      await expect(row.getByText("Airbnb payout", { exact: true })).toBeVisible();
 
       const select = row.getByRole("combobox", { name: /pick a property/i });
       await expect(select).toBeVisible({ timeout: 3000 });
@@ -160,8 +160,8 @@ test.describe("Attribution review — Airbnb payout UX (PR D)", () => {
       await page.goto("/payment-review");
       await page.waitForLoadState("networkidle");
 
-      const rentRow = page.locator("div.bg-card").filter({ hasText: rentDesc });
-      const bnbRow = page.locator("div.bg-card").filter({ hasText: bnbDesc });
+      const rentRow = page.getByTestId("attribution-review-item").filter({ hasText: rentDesc });
+      const bnbRow = page.getByTestId("attribution-review-item").filter({ hasText: bnbDesc });
       await expect(rentRow).toBeVisible({ timeout: 5000 });
       await expect(bnbRow).toBeVisible({ timeout: 5000 });
 
@@ -172,13 +172,13 @@ test.describe("Attribution review — Airbnb payout UX (PR D)", () => {
       await expect(
         rentRow.getByRole("combobox", { name: /pick a tenant/i }),
       ).toBeVisible();
-      await expect(rentRow.getByText("Airbnb payout")).toHaveCount(0);
+      await expect(rentRow.getByText("Airbnb payout", { exact: true })).toHaveCount(0);
       await expect(
         rentRow.getByRole("combobox", { name: /pick a property/i }),
       ).toHaveCount(0);
 
       // Airbnb row: property-shaped — channel badge + property picker, no tenant picker.
-      await expect(bnbRow.getByText("Airbnb payout")).toBeVisible();
+      await expect(bnbRow.getByText("Airbnb payout", { exact: true })).toBeVisible();
       await expect(
         bnbRow.getByText("Couldn't figure out which property this payout belongs to."),
       ).toBeVisible();
@@ -223,20 +223,25 @@ test.describe("Attribution review — Airbnb payout UX (PR D)", () => {
     try {
       await page.goto("/payment-review");
 
-      // Skeleton: a 3-row placeholder list (border rows that are NOT the
-      // real bg-card item), each with the same two-column shape.
-      const skeletonRows = page.locator("div.border.rounded-lg:not(.bg-card)");
+      // Skeleton: a 3-row placeholder list, each with the same two columns
+      // (details + actions) as a loaded row.
+      const skeletonRows = page.getByTestId("attribution-review-skeleton-row");
       await expect(skeletonRows).toHaveCount(3);
-      await expect(skeletonRows.first().locator(".flex-1")).toBeVisible();
-      await expect(page.locator(".animate-pulse").first()).toBeVisible();
+      await expect(skeletonRows.first().getByTestId("attribution-review-skeleton-main")).toBeVisible();
+      await expect(skeletonRows.first().getByTestId("attribution-review-skeleton-actions")).toBeVisible();
+      await expect(skeletonRows.first().locator(".animate-pulse").first()).toBeVisible();
+      const skeletonDirection = await skeletonRows
+        .first()
+        .evaluate((el) => getComputedStyle(el).flexDirection);
 
-      // After the queue resolves the skeleton is replaced by real rows that
-      // share the same two-column structure (left flex-1 + right shrink-0).
+      // After the queue resolves the skeleton is replaced by real rows with
+      // the same two columns.
       await expect(skeletonRows).toHaveCount(0, { timeout: 8000 });
-      const row = page.locator("div.bg-card").filter({ hasText: desc });
+      const row = page.getByTestId("attribution-review-item").filter({ hasText: desc });
       await expect(row).toBeVisible({ timeout: 5000 });
-      await expect(row.locator(".flex-1")).toBeVisible();
-      await expect(row.locator(".shrink-0")).toBeVisible();
+      await expect(row.getByTestId("attribution-review-item-main")).toBeVisible();
+      await expect(row.getByTestId("attribution-review-item-actions")).toBeVisible();
+      expect(await row.evaluate((el) => getComputedStyle(el).flexDirection)).toBe(skeletonDirection);
     } finally {
       await page.unroute("**/attribution-review-queue*");
       await deleteAttributionReview(api, seeded!.id);
