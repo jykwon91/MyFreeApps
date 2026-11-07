@@ -9,6 +9,8 @@ model ``CheckConstraint``s and the Alembic migration DDL.
 ``frontend/src/shared/types/insurance/insurance-premium-frequency.ts`` — a value
 added here MUST be added there in the same PR.
 """
+from app.core.sql_in_list import sql_in_list
+
 
 # File kinds for insurance policy attachments.
 INSURANCE_ATTACHMENT_KINDS: tuple[str, ...] = (
@@ -44,9 +46,5 @@ PREMIUM_PAYMENTS_PER_YEAR: dict[str, int] = {
 }
 
 
-def _sql_in_list(values: tuple[str, ...]) -> str:
-    return "(" + ", ".join(f"'{v}'" for v in values) + ")"
-
-
-INSURANCE_ATTACHMENT_KINDS_SQL = _sql_in_list(INSURANCE_ATTACHMENT_KINDS)
-PREMIUM_FREQUENCIES_SQL = _sql_in_list(PREMIUM_FREQUENCIES)
+INSURANCE_ATTACHMENT_KINDS_SQL = sql_in_list(INSURANCE_ATTACHMENT_KINDS)
+PREMIUM_FREQUENCIES_SQL = sql_in_list(PREMIUM_FREQUENCIES)

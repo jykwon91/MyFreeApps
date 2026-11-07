@@ -4,6 +4,8 @@ String + ``CheckConstraint`` per RENTALS_PLAN.md §4.1, never SQLAlchemy
 ``Enum``. Referenced by the models, the migration DDL, the request schemas,
 and mirrored as TypeScript unions in ``frontend/src/shared/types/rent/``.
 """
+from app.core.sql_in_list import sql_in_list
+
 
 # How often the tenant is reminded. Independent of the schedule's *obligation*
 # cadence: a tenant charged monthly who pays every Sunday gets a ``weekly``
@@ -35,12 +37,8 @@ RENT_REMINDER_EMAIL_STATUSES: tuple[str, ...] = ("queued", "sent", "failed")
 RENT_REMINDER_PENDING_STATUSES: tuple[str, ...] = ("queued", "sent_to_phone")
 
 
-def _sql_in_list(values: tuple[str, ...]) -> str:
-    return "(" + ", ".join(f"'{v}'" for v in values) + ")"
-
-
-RENT_REMINDER_FREQUENCIES_SQL = _sql_in_list(RENT_REMINDER_FREQUENCIES)
-RENT_REMINDER_CHANNELS_SQL = _sql_in_list(RENT_REMINDER_CHANNELS)
-RENT_REMINDER_SEND_STATUSES_SQL = _sql_in_list(RENT_REMINDER_SEND_STATUSES)
-RENT_REMINDER_EMAIL_STATUSES_SQL = _sql_in_list(RENT_REMINDER_EMAIL_STATUSES)
-RENT_REMINDER_PENDING_STATUSES_SQL = _sql_in_list(RENT_REMINDER_PENDING_STATUSES)
+RENT_REMINDER_FREQUENCIES_SQL = sql_in_list(RENT_REMINDER_FREQUENCIES)
+RENT_REMINDER_CHANNELS_SQL = sql_in_list(RENT_REMINDER_CHANNELS)
+RENT_REMINDER_SEND_STATUSES_SQL = sql_in_list(RENT_REMINDER_SEND_STATUSES)
+RENT_REMINDER_EMAIL_STATUSES_SQL = sql_in_list(RENT_REMINDER_EMAIL_STATUSES)
+RENT_REMINDER_PENDING_STATUSES_SQL = sql_in_list(RENT_REMINDER_PENDING_STATUSES)
