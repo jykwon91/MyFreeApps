@@ -5,9 +5,7 @@ import { useListTaxDocumentsQuery } from "@mybookkeeper/api-client/store/taxDocu
 import { useListTaxReturnsQuery } from "@mybookkeeper/api-client/store/taxReturnsApi";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import DocumentViewer from "@/app/features/documents/DocumentViewer";
-import TaxDocumentsAccordion from "@/app/features/tax/TaxDocumentsAccordion";
-import TaxDocumentsAccordionSkeleton from "@/app/features/tax/TaxDocumentsAccordionSkeleton";
-import TaxDocumentChecklist from "@/app/features/tax/TaxDocumentChecklist";
+import TaxDocumentsContent from "@/app/features/tax/TaxDocumentsContent";
 import { useDismissable } from "@/shared/hooks/useDismissable";
 
 export default function TaxDocuments() {
@@ -16,7 +14,9 @@ export default function TaxDocuments() {
   const [selectedYear, setSelectedYear] = useState<number | undefined>(undefined);
 
   const { data: taxReturns = [] } = useListTaxReturnsQuery();
-  const { data, isLoading, isError } = useListTaxDocumentsQuery(
+  // currentData is only this filter's answer, so a newly picked year shows the
+  // skeleton instead of the previous filter's forms while it loads.
+  const { currentData: data, isError } = useListTaxDocumentsQuery(
     selectedYear ? { tax_year: selectedYear } : undefined,
   );
 
@@ -69,21 +69,12 @@ export default function TaxDocuments() {
         </AlertBox>
       )}
 
-      {isLoading ? (
-        <TaxDocumentsAccordionSkeleton />
-      ) : isError ? (
-        <div className="border rounded-lg p-6 text-center text-muted-foreground">
-          <p>I had trouble loading your tax documents. Please try refreshing.</p>
-        </div>
-      ) : (
-        <div className="space-y-4 md:flex-1 md:overflow-auto md:min-h-0">
-          <TaxDocumentsAccordion
-            documents={data?.documents ?? []}
-            onViewDocument={handleViewDocument}
-          />
-          <TaxDocumentChecklist items={data?.checklist ?? []} />
-        </div>
-      )}
+      <TaxDocumentsContent
+        data={data}
+        isError={isError}
+        selectedYear={selectedYear}
+        onViewDocument={handleViewDocument}
+      />
 
       {viewingDocId ? (
         <DocumentViewer

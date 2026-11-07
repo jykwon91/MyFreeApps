@@ -1,96 +1,97 @@
-import { test, expect } from "./fixtures/auth";
+/**
+ * Tax Documents — the year → form → issuer accordion, the year filter and the
+ * source-document viewer. Runs against fresh organizations so the documents
+ * on the page are exactly the ones seeded here.
+ */
+import { test, expect, type Page } from "@playwright/test";
+import { test as authedTest } from "./fixtures/auth";
+import { seededOrg } from "./fixtures/seeded-org";
+import { TAX_DOCS_SEED, seedTaxDocuments } from "./fixtures/tax-documents-seed";
 
-test.describe("Tax Documents — navigation", () => {
-  test("sidebar has a Tax Documents link", async ({ authedPage: page }) => {
-    await page.goto("/");
-    await expect(page.getByRole("link", { name: "Tax Documents" })).toBeVisible();
-  });
+const [ACME_W2, CREDIT_UNION_INT, HARBOR_INT] = TAX_DOCS_SEED.forms;
 
-  test("clicking the Tax Documents sidebar link navigates to /tax-documents", async ({ authedPage: page }) => {
+authedTest.describe("Tax Documents — navigation", () => {
+  authedTest("the sidebar's Tax Documents link opens the page", async ({ authedPage: page }) => {
     await page.goto("/");
     await page.getByRole("link", { name: "Tax Documents" }).click();
-    await expect(page).toHaveURL(/tax-documents/);
+    await expect(page).toHaveURL(/\/tax-documents$/);
+    await expect(page.getByRole("heading", { name: "Tax Documents" })).toBeVisible();
   });
 });
 
-test.describe("Tax Documents — accordion layout", () => {
-  test.beforeEach(async ({ authedPage: page }) => {
+function yearTrigger(page: Page, year: number) {
+  return page.getByRole("button", { name: new RegExp(`^${year}\\b`) });
+}
+
+function issuerRow(page: Page, issuer: string) {
+  return page.getByText(issuer, { exact: true }).locator("xpath=ancestor::div[contains(@class,'border-t')][1]");
+}
+
+test.describe("Tax Documents — with forms in two years", () => {
+  const org = seededOrg("tax-documents", seedTaxDocuments);
+
+  test.beforeEach(async ({ page }) => {
+    await org().signIn(page);
     await page.goto("/tax-documents");
     await expect(page.getByRole("heading", { name: "Tax Documents" })).toBeVisible();
-    // Wait for content to load
-    await page.waitForTimeout(3000);
   });
 
-  test("renders the Tax Documents page title", async ({ authedPage: page }) => {
-    await expect(page.getByRole("heading", { name: "Tax Documents" })).toBeVisible();
+  test("years are listed newest first with their counts, and the newest is open", async ({ page }) => {
+    await expect(yearTrigger(page, 2025)).toContainText("2");
+    await expect(yearTrigger(page, 2025)).toHaveAttribute("aria-expanded", "true");
+    await expect(yearTrigger(page, 2024)).toContainText("1");
+    await expect(yearTrigger(page, 2024)).toHaveAttribute("aria-expanded", "false");
+    // A closed year names the forms inside it.
+    await expect(yearTrigger(page, 2024)).toContainText("1099-INT");
+
+    const years = await page.getByRole("button", { name: /^20\d\d\b/ }).allTextContents();
+    expect(years.map((t) => t.slice(0, 4))).toEqual(["2025", "2024"]);
   });
 
-  test("shows grouped documents or empty state", async ({ authedPage: page }) => {
-    // Page should show either W-2/1099 form type badges or the empty state
-    const hasFormTypes = await page.getByText("W-2").first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasEmpty = await page.getByText(/no tax documents/i).isVisible({ timeout: 3000 }).catch(() => false);
-    expect(hasFormTypes || hasEmpty).toBe(true);
+  test("the open year groups its issuers under each form", async ({ page }) => {
+    await expect(issuerRow(page, ACME_W2.issuer)).toBeVisible();
+    await expect(issuerRow(page, CREDIT_UNION_INT.issuer)).toBeVisible();
+    await expect(page.getByRole("button", { name: /^W-2\s*1$/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^1099-INT\s*1$/ })).toBeVisible();
+    await expect(page.getByText(HARBOR_INT.issuer, { exact: true })).toHaveCount(0);
+
+    // An older year opens with its forms closed.
+    await yearTrigger(page, 2024).click();
+    await expect(page.getByText(HARBOR_INT.issuer, { exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: /^1099-INT\s*1$/ }).last().click();
+    await expect(issuerRow(page, HARBOR_INT.issuer)).toBeVisible();
   });
 
-  test("year groups show document count badge", async ({ authedPage: page }) => {
-    const hasData = await page.getByText("2025").isVisible({ timeout: 5000 }).catch(() => false);
-    if (!hasData) {
-      test.skip(true, "No 2025 tax documents available");
-      return;
-    }
-    await expect(page.getByText("2025").locator("..").getByText(/\d+/)).toBeVisible();
+  test("the year filter shows only that year's forms", async ({ page }) => {
+    const yearSelect = page.locator("select");
+    await expect(yearSelect.locator("option")).toHaveText(["All Years", "2025", "2024"]);
+
+    // The chosen year opens with its forms showing.
+    await yearSelect.selectOption("2024");
+    await expect(yearTrigger(page, 2024)).toHaveAttribute("aria-expanded", "true");
+    await expect(issuerRow(page, HARBOR_INT.issuer)).toBeVisible();
+    await expect(yearTrigger(page, 2025)).toHaveCount(0);
+    await expect(page.getByText(ACME_W2.issuer, { exact: true })).toHaveCount(0);
+
+    await yearSelect.selectOption("");
+    await expect(yearTrigger(page, 2025)).toBeVisible();
+    await expect(yearTrigger(page, 2024)).toBeVisible();
   });
 
-  test("form type groups are visible within expanded year", async ({ authedPage: page }) => {
-    const hasData = await page.getByText("2025").isVisible({ timeout: 5000 }).catch(() => false);
-    if (!hasData) {
-      test.skip(true, "No 2025 tax documents available");
-      return;
-    }
-    await expect(
-      page.getByText("W-2").first()
-        .or(page.getByText("1099-MISC").first())
-        .or(page.getByText("1098").first())
-    ).toBeVisible({ timeout: 5000 });
+  test("View opens the form's source document", async ({ page }) => {
+    await issuerRow(page, ACME_W2.issuer).getByRole("button", { name: "View" }).click();
+    await expect(page.getByText("Source document")).toBeVisible();
   });
+});
 
-  test("issuer names are visible within expanded form type group", async ({ authedPage: page }) => {
-    const hasData = await page.getByText("2025").isVisible({ timeout: 5000 }).catch(() => false);
-    if (!hasData) {
-      test.skip(true, "No 2025 tax documents available");
-      return;
-    }
-    await expect(
-      page.getByText(/LLC|Inc|Bank|Credit Union/i).first()
-    ).toBeVisible({ timeout: 5000 });
-  });
+test.describe("Tax Documents — with no forms", () => {
+  const org = seededOrg("tax-documents-empty");
 
-  test("View button opens document viewer", async ({ authedPage: page }) => {
-    const viewBtn = page.getByRole("button", { name: /view/i }).first();
-    const hasView = await viewBtn.isVisible({ timeout: 5000 }).catch(() => false);
-    if (!hasView) {
-      test.skip(true, "No View button available — no documents");
-      return;
-    }
-    await viewBtn.click();
-    await expect(page.getByText("Source document")).toBeVisible({ timeout: 5000 });
-  });
-
-  test("year selector is visible", async ({ authedPage: page }) => {
-    const yearSelect = page.locator("select").first();
-    const hasSelect = await yearSelect.isVisible({ timeout: 5000 }).catch(() => false);
-    if (!hasSelect) {
-      test.skip(true, "No year selector visible");
-      return;
-    }
-    const options = await yearSelect.locator("option").allTextContents();
-    expect(options.some(o => o.includes("All"))).toBe(true);
-  });
-
-  test("document checklist section or empty state is visible", async ({ authedPage: page }) => {
-    const hasChecklist = await page.getByText(/checklist/i).first().isVisible({ timeout: 5000 }).catch(() => false);
-    const hasMissing = await page.getByText(/missing/i).first().isVisible({ timeout: 3000 }).catch(() => false);
-    const hasEmptyState = await page.getByText(/no tax documents/i).isVisible({ timeout: 3000 }).catch(() => false);
-    expect(hasChecklist || hasMissing || hasEmptyState).toBe(true);
+  test("says there are none and points to Documents", async ({ page }) => {
+    await org().signIn(page);
+    await page.goto("/tax-documents");
+    await expect(page.getByText("No tax documents yet")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Documents", exact: true }).last()).toHaveAttribute("href", "/documents");
+    await expect(page.locator("select")).toHaveCount(0);
   });
 });
