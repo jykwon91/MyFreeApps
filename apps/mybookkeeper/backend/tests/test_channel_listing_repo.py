@@ -2,7 +2,7 @@
 
 In-memory SQLite via the shared ``db`` fixture. The PostgreSQL-only
 features (partial UNIQUE, JSONB constraint) are skipped on SQLite via
-``conftest._patch_metadata_for_sqlite``; the dedup behaviour we're
+``patch_metadata_for_sqlite`` (called from conftest); the dedup behaviour we're
 testing here lives at the application layer (the upsert helper) so it
 works on either DB.
 """

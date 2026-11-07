@@ -1,4 +1,4 @@
-"""Regression contract for ``conftest._patch_metadata_for_sqlite``.
+"""Regression contract for ``patch_metadata_for_sqlite`` (``platform_shared.testing.sqlite_metadata``), called from conftest.
 
 The patch swaps PostgreSQL-only column types for SQLite-compatible ones so the
 in-memory test database can hold the production schema. It has to run before
@@ -17,12 +17,12 @@ from __future__ import annotations
 
 import pytest
 from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import ARRAY, INET, JSONB
+from sqlalchemy.dialects.postgresql import ARRAY, INET, JSONB, UUID
 
 from app.db.base import Base
 from app.models.transactions.transaction import Transaction
 
-_POSTGRES_ONLY_TYPES = (JSONB, INET, ARRAY)
+_POSTGRES_ONLY_TYPES = (JSONB, INET, ARRAY, UUID)
 
 
 class TestMetadataIsSqliteCompatible:
