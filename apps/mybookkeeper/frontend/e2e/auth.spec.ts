@@ -65,7 +65,7 @@ test.describe("Authentication — login error handling", () => {
     await page.locator("input[type='email']").fill("nonexistent@example.com");
     await page.locator("input[type='password']").fill("wrongpassword123");
     await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page.getByText("Invalid email or password")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Incorrect email or password. Please try again.")).toBeVisible({ timeout: 5000 });
   });
 
   test("shows loading state on submit", async ({ page }) => {
@@ -75,7 +75,7 @@ test.describe("Authentication — login error handling", () => {
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(
       page.getByRole("button", { name: "Signing in..." })
-        .or(page.getByText("Invalid email or password"))
+        .or(page.getByText("Incorrect email or password. Please try again."))
     ).toBeVisible({ timeout: 5000 });
   });
 });

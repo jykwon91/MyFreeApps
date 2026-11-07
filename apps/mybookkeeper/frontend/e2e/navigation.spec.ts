@@ -5,14 +5,14 @@ test.describe("Authenticated navigation", () => {
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
     // Verify actual dashboard content loads (not just the heading)
     await expect(
-      page.getByText("Total Revenue").or(page.getByText(/no transactions yet/i))
+      page.getByText("Total Revenue").or(page.getByText(/no transactions yet/i)).first()
     ).toBeVisible({ timeout: 15000 });
   });
 
   test("sidebar shows all expected nav items", async ({ authedPage: page }) => {
     await expect(page.getByRole("link", { name: "Dashboard" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Transactions" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Documents" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Documents", exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Properties" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Tax Report" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Integrations" })).toBeVisible();
@@ -23,10 +23,9 @@ test.describe("Authenticated navigation", () => {
     await expect(page).toHaveURL(/\/transactions/);
     await expect(page.getByRole("heading", { name: "Transactions" })).toBeVisible();
 
-    // Page content should load — either table rows or an empty indicator
-    await expect(
-      page.locator("tbody tr").first().or(page.getByText(/no transactions/i))
-    ).toBeVisible({ timeout: 15000 });
+    // Page content should load: a transaction row, or the table's empty-state row.
+    // Skeleton rows have no text, so they don't count.
+    await expect(page.locator("tbody tr").filter({ hasText: /\S/ }).first()).toBeVisible({ timeout: 15000 });
 
     // Sidebar active state: the Transactions link should have the active class
     const txnLink = page.getByRole("link", { name: "Transactions" });
@@ -37,7 +36,7 @@ test.describe("Authenticated navigation", () => {
   });
 
   test("navigating to Documents loads the documents page with upload area", async ({ authedPage: page }) => {
-    await page.getByRole("link", { name: "Documents" }).click();
+    await page.getByRole("link", { name: "Documents", exact: true }).click();
     await expect(page).toHaveURL(/\/documents/);
     await expect(page.getByRole("heading", { name: "Documents" })).toBeVisible();
 

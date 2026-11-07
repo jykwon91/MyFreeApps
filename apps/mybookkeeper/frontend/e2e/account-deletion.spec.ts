@@ -96,8 +96,8 @@ test.describe("Account deletion — happy path", () => {
     await page.locator("input[type='password']").fill(DELETE_PASSWORD);
     await page.getByRole("button", { name: /sign in/i }).click();
 
-    await expect(
-      page.getByText(/invalid|credentials|not found|incorrect/i).first()
-    ).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText("Incorrect email or password. Please try again.")).toBeVisible({
+      timeout: 8000,
+    });
   });
 });

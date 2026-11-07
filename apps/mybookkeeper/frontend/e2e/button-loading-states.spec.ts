@@ -198,7 +198,7 @@ test.describe("Button loading states", () => {
       await expect(signInBtn).toBeDisabled({ timeout: 1000 });
 
       // Wait for the auth call to complete (will show error)
-      await expect(page.getByText(/invalid|error|wrong/i)).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText("Incorrect email or password. Please try again.")).toBeVisible({ timeout: 10000 });
     });
   });
 });
