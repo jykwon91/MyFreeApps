@@ -1,5 +1,4 @@
-/** The Leaflet module, loaded on demand so only the World Map pays for it. */
-export type Leaflet = typeof import("leaflet");
+import type { Leaflet } from "@/games/wow-forever/types/leaflet";
 
 let loaded: Leaflet | null = null;
 let pending: Promise<Leaflet> | null = null;

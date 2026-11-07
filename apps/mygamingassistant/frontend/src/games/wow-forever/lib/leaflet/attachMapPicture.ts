@@ -1,5 +1,11 @@
 import type { LatLngBounds, Map as LeafletMap, ZoomAnimEvent } from "leaflet";
-import type { Leaflet } from "@/games/wow-forever/lib/leaflet/loadLeaflet";
+import type { Leaflet } from "@/games/wow-forever/types/leaflet";
+
+function requirePane(map: LeafletMap, name: string): HTMLElement {
+  const pane = map.getPane(name);
+  if (!pane) throw new Error(`Leaflet map has no ${name}`);
+  return pane;
+}
 
 /**
  * Puts our own map picture (art, highlight and markers, rendered by React) on a
@@ -9,9 +15,8 @@ import type { Leaflet } from "@/games/wow-forever/lib/leaflet/loadLeaflet";
  * Returns a function that takes it back off.
  */
 export function attachMapPicture(L: Leaflet, map: LeafletMap, picture: HTMLElement, bounds: LatLngBounds): () => void {
-  const pane = map.getPane("overlayPane");
-  const mapPane = map.getPane("mapPane");
-  if (!pane || !mapPane) throw new Error("Leaflet map has no overlay pane");
+  const pane = requirePane(map, "overlayPane");
+  const mapPane = requirePane(map, "mapPane");
   pane.appendChild(picture);
   picture.classList.add("leaflet-zoom-animated");
 
@@ -28,7 +33,7 @@ export function attachMapPicture(L: Leaflet, map: LeafletMap, picture: HTMLEleme
     const origin = map
       .project(e.center, e.zoom)
       .subtract(map.getSize().divideBy(2))
-      .add(L.DomUtil.getPosition(mapPane!))
+      .add(L.DomUtil.getPosition(mapPane))
       .round();
     const offset = map.project(bounds.getNorthWest(), e.zoom).subtract(origin);
     L.DomUtil.setTransform(picture, offset, map.getZoomScale(e.zoom));

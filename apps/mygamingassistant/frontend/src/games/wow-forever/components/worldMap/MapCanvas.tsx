@@ -8,7 +8,8 @@ import MapMarkerLayer from "@/games/wow-forever/components/worldMap/MapMarkerLay
 import MapZoomControls from "@/games/wow-forever/components/worldMap/MapZoomControls";
 import { MAP_H, MAP_W } from "@/games/wow-forever/data/worldMap/mapViewer";
 import { MAP_VIEW_KEYS } from "@/games/wow-forever/data/worldMap/mapViewKeys";
-import { MAP_VIEWER_STATUS, useMapViewer } from "@/games/wow-forever/hooks/useMapViewer";
+import { MAP_VIEWER_STATUS } from "@/games/wow-forever/data/worldMap/mapViewer";
+import { useMapViewer } from "@/games/wow-forever/hooks/useMapViewer";
 import type { MapView, PlayerFaction, WorldMapData, WorldPoint } from "@/games/wow-forever/types/worldMap";
 import type { MapViewport } from "@/games/wow-forever/types/mapViewport";
 import { formatCoord } from "@/games/wow-forever/worldMap/geometry";

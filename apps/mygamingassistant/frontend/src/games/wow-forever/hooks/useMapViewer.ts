@@ -1,11 +1,23 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import type { Map as LeafletMap } from "leaflet";
-import { MAP_WHEEL_PX_PER_ZOOM, MAP_ZOOM_STEP, MAX_MAP_SCALE } from "@/games/wow-forever/data/worldMap/mapViewer";
+import {
+  MAP_PICTURE_CLASS,
+  MAP_TEARDOWN_WAIT_MS,
+  MAP_VIEWER_STATUS,
+  MAP_WHEEL_PX_PER_ZOOM,
+  MAP_ZOOM_STEP,
+  MAX_MAP_SCALE,
+} from "@/games/wow-forever/data/worldMap/mapViewer";
 import { attachMapPicture } from "@/games/wow-forever/lib/leaflet/attachMapPicture";
 import { attachWheelZoom } from "@/games/wow-forever/lib/leaflet/attachWheelZoom";
-import { attachZoomQueue, type ZoomQueue } from "@/games/wow-forever/lib/leaflet/attachZoomQueue";
-import { loadLeaflet, loadedLeaflet, type Leaflet } from "@/games/wow-forever/lib/leaflet/loadLeaflet";
+import { attachZoomQueue } from "@/games/wow-forever/lib/leaflet/attachZoomQueue";
+import { loadLeaflet, loadedLeaflet } from "@/games/wow-forever/lib/leaflet/loadLeaflet";
+import { removeMapWhenStill } from "@/games/wow-forever/lib/leaflet/removeMapWhenStill";
+import type { Leaflet } from "@/games/wow-forever/types/leaflet";
+import type { MapViewerOptions } from "@/games/wow-forever/types/mapViewerOptions";
+import type { MapViewerStatus } from "@/games/wow-forever/types/mapViewerStatus";
 import type { MapViewport } from "@/games/wow-forever/types/mapViewport";
+import type { ZoomQueue } from "@/games/wow-forever/types/zoomQueue";
 import {
   FULL_VIEW,
   PICTURE_BOUNDS,
@@ -18,24 +30,6 @@ import {
   viewportAt,
   zoomForScale,
 } from "@/games/wow-forever/worldMap/mapViewport";
-
-export const MAP_VIEWER_STATUS = { loading: "loading", ready: "ready", failed: "failed" } as const;
-export type MapViewerStatus = (typeof MAP_VIEWER_STATUS)[keyof typeof MAP_VIEWER_STATUS];
-
-/** Before Leaflet takes it over, the picture simply fills the viewer. */
-const PICTURE_CLASS = "absolute left-0 top-0 h-full w-full";
-
-export interface MapViewerOptions {
-  /**
-   * Every settled view (after a zoom, a pan, a resize), programmatic or not. A
-   * view asked for in code (setView / focusOn / reset) is reported when asked,
-   * and the stops on the way to it are not, so the page always knows where
-   * the map is going.
-   */
-  onChange?: (view: MapViewport) => void;
-  /** The wheel changed the zoom (a person, never focusOn / setView / reset). */
-  onWheelZoom?: () => void;
-}
 
 function readView(map: LeafletMap, fit: number): MapViewport {
   const centre = map.getCenter();
@@ -52,7 +46,7 @@ function readView(map: LeafletMap, fit: number): MapViewport {
 export function useMapViewer(containerRef: RefObject<HTMLDivElement | null>, options: MapViewerOptions = {}) {
   const [picture] = useState(() => {
     const el = document.createElement("div");
-    el.className = PICTURE_CLASS;
+    el.className = MAP_PICTURE_CLASS;
     return el;
   });
   const [leaflet, setLeaflet] = useState<Leaflet | null>(loadedLeaflet);
@@ -140,10 +134,12 @@ export function useMapViewer(containerRef: RefObject<HTMLDivElement | null>, opt
       setCurrentView(next);
       if (!queue.busy()) optionsRef.current.onChange?.(next);
     }
+    const dragStart = () => setDragging(true);
+    const dragEnd = () => setDragging(false);
     viewer.on("zoom move", moving);
     viewer.on("moveend", settled);
-    viewer.on("dragstart", () => setDragging(true));
-    viewer.on("dragend", () => setDragging(false));
+    viewer.on("dragstart", dragStart);
+    viewer.on("dragend", dragEnd);
 
     // A resize keeps the same part of the picture in view.
     const observer =
@@ -164,14 +160,19 @@ export function useMapViewer(containerRef: RefObject<HTMLDivElement | null>, opt
     });
 
     return () => {
+      const zooming = queue.busy();
       cancelAnimationFrame(frame);
       observer?.disconnect();
       detachWheel();
       queue.detach();
       zoomQueue.current = null;
+      viewer.off("zoom move", moving);
+      viewer.off("moveend", settled);
+      viewer.off("dragstart", dragStart);
+      viewer.off("dragend", dragEnd);
       detach();
-      viewer.remove();
       container.appendChild(picture);
+      removeMapWhenStill(viewer, zooming, MAP_TEARDOWN_WAIT_MS);
       setMap(null);
       setDragging(false);
     };

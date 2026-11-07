@@ -16,3 +16,18 @@ export const MAP_WHEEL_PX_PER_ZOOM = 120;
 
 /** How far one arrow-key press pans the map, in screen px. */
 export const MAP_KEYBOARD_PAN_PX = 80;
+
+/** Wheel events closer together than this are one zoom (a trackpad sends dozens a second). */
+export const MAP_WHEEL_DEBOUNCE_MS = 40;
+
+/**
+ * Longest a map waits for a zoom under way to land before it's taken down
+ * (Leaflet's own transition ends after 250 ms; this is the fallback).
+ */
+export const MAP_TEARDOWN_WAIT_MS = 500;
+
+/** Before Leaflet takes it over, the map picture simply fills the viewer. */
+export const MAP_PICTURE_CLASS = "absolute left-0 top-0 h-full w-full";
+
+/** Where the viewer is: Leaflet still loading, ready, or failed to load. */
+export const MAP_VIEWER_STATUS = { loading: "loading", ready: "ready", failed: "failed" } as const;

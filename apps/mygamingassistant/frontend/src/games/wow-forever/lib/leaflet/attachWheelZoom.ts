@@ -1,10 +1,8 @@
 import type { Map as LeafletMap, Point } from "leaflet";
-import type { Leaflet } from "@/games/wow-forever/lib/leaflet/loadLeaflet";
-import type { ZoomQueue } from "@/games/wow-forever/lib/leaflet/attachZoomQueue";
+import { MAP_WHEEL_DEBOUNCE_MS } from "@/games/wow-forever/data/worldMap/mapViewer";
+import type { Leaflet } from "@/games/wow-forever/types/leaflet";
+import type { ZoomQueue } from "@/games/wow-forever/types/zoomQueue";
 import { wheelZoomDelta } from "@/games/wow-forever/worldMap/mapViewport";
-
-/** Wheel events closer together than this are one zoom (a trackpad sends dozens a second). */
-const WHEEL_DEBOUNCE_MS = 40;
 
 /**
  * Wheel zoom towards the pointer, as Leaflet's own does (a short burst of wheel
@@ -47,7 +45,7 @@ export function attachWheelZoom(
     const now = Date.now();
     if (!startedAt) startedAt = now;
     clearTimeout(timer);
-    timer = setTimeout(zoom, Math.max(WHEEL_DEBOUNCE_MS - (now - startedAt), 0));
+    timer = setTimeout(zoom, Math.max(MAP_WHEEL_DEBOUNCE_MS - (now - startedAt), 0));
   }
 
   container.addEventListener("wheel", wheel, { passive: false });
