@@ -36,6 +36,23 @@ async def list_pending(
     return list(result.scalars().all())
 
 
+async def get_by_message_id(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    email_message_id: str,
+) -> CalendarEmailReviewQueue | None:
+    """Return the user's queue item for a Gmail message, deleted or not —
+    the same key the dedup unique index uses."""
+    result = await db.execute(
+        select(CalendarEmailReviewQueue).where(
+            CalendarEmailReviewQueue.user_id == user_id,
+            CalendarEmailReviewQueue.email_message_id == email_message_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
 async def get_by_id_scoped(
     db: AsyncSession,
     item_id: uuid.UUID,

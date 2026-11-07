@@ -8,14 +8,12 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import delete as _sa_delete, select as _sa_select
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
 from app.models.applicants.applicant import Applicant
-from app.models.calendar.calendar_email_review_queue import CalendarEmailReviewQueue
 from app.models.leases.signed_lease import SignedLease
 from app.models.leases.signed_lease_attachment import SignedLeaseAttachment
 from app.repositories import (
@@ -710,13 +708,10 @@ async def seed_review_queue_item(
         )
         if row is None:
             # Already exists — fetch the existing row to return its id.
-            result = await db.execute(
-                _sa_select(CalendarEmailReviewQueue).where(
-                    CalendarEmailReviewQueue.user_id == ctx.user_id,
-                    CalendarEmailReviewQueue.email_message_id == payload.email_message_id,
-                )
+            row = await review_queue_repo.get_by_message_id(
+                db, user_id=ctx.user_id, email_message_id=payload.email_message_id,
             )
-            row = result.scalar_one()
+            assert row is not None
 
     return _SeedReviewQueueResponse(id=row.id)
 

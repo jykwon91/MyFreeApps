@@ -165,6 +165,22 @@ async def _delete_review_item(row_id: uuid.UUID, ctx: RequestContext) -> None:
     await hard_delete_review_queue_item(item_id=row_id, ctx=ctx)
 
 
+class TestSeedReviewQueueItem:
+    @pytest.mark.asyncio
+    async def test_seeding_the_same_message_twice_returns_the_same_item(
+        self, ctx: RequestContext,
+    ) -> None:
+        payload = _SeedReviewQueueRequest(
+            email_message_id=f"twice-{uuid.uuid4()}", check_in="2026-06-01", check_out="2026-06-05",
+        )
+
+        first = await seed_review_queue_item(payload=payload, ctx=ctx)
+        second = await seed_review_queue_item(payload=payload, ctx=ctx)
+
+        assert second.id == first.id
+        await _delete_review_item(first.id, ctx)
+
+
 class TestDeleteReviewQueueItem:
     @pytest.mark.asyncio
     async def test_deletes_my_item(self, db: AsyncSession, ctx: RequestContext) -> None:
