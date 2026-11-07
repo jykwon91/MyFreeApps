@@ -28,6 +28,7 @@ Game data © Blizzard Entertainment. Never hand-edit the output.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import shutil
 from collections import defaultdict
@@ -46,6 +47,7 @@ from scripts.wow_gear.loot import (
     table_items,
 )
 from scripts.wow_gear.raid_gate import quest_reward_ids, raid_gated_quests, raid_given_quests
+from scripts.wow_items.forever_items import ForeverItemTables, hotfix_cache_path, load_forever_item_tables
 from scripts.wow_world_map.quests import quest_classes, quest_side
 from scripts.wow_world_map.sources import (
     CMANGOS_COMMIT,
@@ -313,16 +315,17 @@ def _load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _forever_facts(gear_ids: set[int]) -> dict[int, list[Any]]:
+def _forever_facts(gear_ids: set[int], forever: ForeverItemTables) -> dict[int, list[Any]]:
     """Write ``gearFacts.json``; return the crafted items (the Classic half needs them)."""
     crafting = {stem: _load_json(CRAFTING_DIR / f"{stem}.json") for stem in PROFESSIONS}
     crafted = {i: v for i, v in crafted_items(crafting).items() if i in gear_ids}
     skill_names = {as_int(r["ID"]): r["DisplayName_lang"] for r in wago_table("SkillLine") if r.get("DisplayName_lang")}
     faction_names = {as_int(r["ID"]): r["Name_lang"] for r in wago_table("Faction") if r.get("Name_lang")}
-    facts = item_facts(wago_table("ItemSparse"), gear_ids, skill_names, faction_names)
-    era_ids = {as_int(r["ID"]) for r in wago_table("ItemSparse", branch=WAGO_ERA_BRANCH, build=WAGO_ERA_BUILD)}
+    facts = item_facts(forever.sparse, gear_ids, skill_names, faction_names)
+    era_rows = wago_table("ItemSparse", branch=WAGO_ERA_BRANCH, build=WAGO_ERA_BUILD, hotfixes=True)
+    era_ids = {as_int(r["ID"]) for r in era_rows}
     write_json(FACTS_PATH, {
-        "source": f"wago.tools DB2 {WAGO_BRANCH} {WAGO_BUILD} (compared with {WAGO_ERA_BRANCH} {WAGO_ERA_BUILD})",
+        "source": f"{forever.source} (compared with {WAGO_ERA_BRANCH} {WAGO_ERA_BUILD} with hotfixes)",
         "clientBuild": WAGO_BUILD,
         "attribution": ATTRIBUTION,
         "encounterJournal": False,
@@ -401,9 +404,12 @@ def _classic_sources(gear_ids: set[int], crafted: Mapping[int, Any]) -> None:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Build the WoW Forever Best gear data.")
+    parser.add_argument("--hotfix-cache", help="the Forever client's Cache/ADB/enUS/DBCache.bin")
+    cache_path = hotfix_cache_path(parser.parse_args().hotfix_cache)
     gear_ids = {row[0] for row in _load_json(ITEMS_PATH)["items"]}
     print(f"{len(gear_ids):,} gear items; loading Forever tables ({WAGO_BRANCH} {WAGO_BUILD})...")
-    crafted = _forever_facts(gear_ids)
+    crafted = _forever_facts(gear_ids, load_forever_item_tables(cache_path))
     print("Reading cmangos classic-db...")
     _classic_sources(gear_ids, crafted)
     print(f"-> {DATA_DIR}")

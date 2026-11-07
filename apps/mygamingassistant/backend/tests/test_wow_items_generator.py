@@ -196,6 +196,15 @@ def test_unreproducible_damage_is_blank(items: dict[int, dict[str, Any]], item_i
     assert items[item_id]["damageUnknown"] == 1
 
 
+def test_items_the_client_gets_only_as_hotfixes_are_listed(items: dict[int, dict[str, Any]]) -> None:
+    # Not in the Forever client file at all; the server sends them as hotfixes.
+    assert items[11815]["name"] == "Hand of Justice"
+    assert items[2245]["stats"] == {"agility": 13, "spirit": 18, "stamina": 32}  # Helm of Narv
+    document = json.loads((ITEMS_DIR / "items.json").read_text(encoding="utf-8"))
+    assert "hotfix" in document["source"]
+    assert len(items) > 9000
+
+
 def test_committed_rows_are_well_formed(items: dict[int, dict[str, Any]]) -> None:
     assert len(items) > 4000
     for item in items.values():

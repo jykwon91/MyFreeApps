@@ -37,6 +37,9 @@ WAGO_BUILD = "1.60.1.70790"
 WAGO_ERA_BRANCH = "wow_classic_era"
 WAGO_ERA_BUILD = "1.15.9.70576"
 
+# Record layouts of the client tables, for decoding the game's own hotfix cache.
+WOWDBDEFS_REPO = "wowdev/WoWDBDefs"
+
 _USER_AGENT = "MyGamingAssistant world-map generator (github.com/jykwon91/MyFreeApps)"
 
 CACHE_DIR = Path(tempfile.gettempdir()) / "mga-wow-world-map-cache"
@@ -60,11 +63,34 @@ def cmangos_dump() -> Path:
 
 
 def wago_table(
-    name: str, *, branch: str = WAGO_BRANCH, build: str = WAGO_BUILD
+    name: str, *, branch: str = WAGO_BRANCH, build: str = WAGO_BUILD, hotfixes: bool = False
 ) -> list[dict[str, str]]:
+    """A client table as wago.tools exports it.
+
+    ``hotfixes`` asks for the table with the server hotfixes wago.tools has
+    collected applied on top of the client file. Forever ships most of its
+    items only that way (see ``scripts/wow_items/forever_items.py``). The
+    hotfix set grows over time, so that export isn't fixed for a build the way
+    the plain one is; it is cached per build all the same.
+    """
     url = f"https://wago.tools/db2/{name}/csv?branch={branch}&build={build}"
-    path = _fetch(url, CACHE_DIR / build / f"{name}.csv")
+    stem = name
+    if hotfixes:
+        url += "&useHotfixes=1"
+        stem += ".hotfixes"
+    path = _fetch(url, CACHE_DIR / build / f"{stem}.csv")
     return list(csv.DictReader(io.StringIO(path.read_text(encoding="utf-8"))))
+
+
+def wowdbdefs_definition(table: str, client_build: int) -> str:
+    """WoWDBDefs' column layout file for a client table (MIT, github.com/wowdev/WoWDBDefs).
+
+    Read from ``master``: a definition only ever gains layouts for new builds,
+    and it is cached per client build number, so a new client build fetches a
+    copy that knows it.
+    """
+    url = f"https://raw.githubusercontent.com/{WOWDBDEFS_REPO}/master/definitions/{table}.dbd"
+    return _fetch(url, CACHE_DIR / "wowdbdefs" / str(client_build) / f"{table}.dbd").read_text(encoding="utf-8")
 
 
 def area_triggers() -> list[dict[str, str]]:

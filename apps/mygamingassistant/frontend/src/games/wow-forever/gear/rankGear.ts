@@ -110,7 +110,10 @@ function equippable(classId: WowClassId, list: readonly Candidate[], groupIndex:
   return list.filter((c) => canEquip(c.item, group, classId, level(c)));
 }
 
-/** Level 60: top items per card; unknown-source epics are listed apart (may be raid loot). */
+/**
+ * Level 60: top items per card; unknown-source epics are listed apart (may be raid loot).
+ * PvP gear is never one of those: its source is PvP, and it only shows when PvP is on.
+ */
 export function rankPreRaid(items: readonly ClientItem[], data: GearData, settings: GearSettings): GearRanking {
   const pool = candidates(items, data, settings, scorer(settings, false));
   const slots: GearSlotResult[] = [];
@@ -118,7 +121,10 @@ export function rankPreRaid(items: readonly ClientItem[], data: GearData, settin
     if (!groupUsable(group, settings.classId)) return;
     const usable = equippable(settings.classId, pool, index, () => PRE_RAID_LEVEL);
     const isUnknownEpic = (c: Candidate) =>
-      c.sources.length === 0 && RAID_LIKE_QUALITIES.has(c.item.quality) && c.item.requiredLevel >= PRE_RAID_LEVEL;
+      c.sources.length === 0 &&
+      !c.facts.pvp &&
+      RAID_LIKE_QUALITIES.has(c.item.quality) &&
+      c.item.requiredLevel >= PRE_RAID_LEVEL;
     const ranked = usable.filter((c) => !isUnknownEpic(c)).sort(compareRanked).slice(0, TOP_ITEMS_PER_SLOT);
     const epics = usable.filter(isUnknownEpic).sort(compareRanked).slice(0, TOP_ITEMS_PER_SLOT);
     slots.push({
