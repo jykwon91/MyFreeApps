@@ -22,6 +22,7 @@ vi.mock("@/shared/lib/toast-store", () => ({
 }));
 
 import ScreeningSection from "@/app/features/screening/ScreeningSection";
+import { queryStatus } from "@/test/rtk-query-status";
 
 const PENDING_RESULT = {
   id: "r-pending",
@@ -44,12 +45,16 @@ const PASS_RESULT = {
   has_report: true,
 };
 
-function renderSection(canWrite = true) {
-  return render(
+function sectionElement(canWrite = true) {
+  return (
     <Provider store={store}>
       <ScreeningSection applicantId="app-1" canWrite={canWrite} />
-    </Provider>,
+    </Provider>
   );
+}
+
+function renderSection(canWrite = true) {
+  return render(sectionElement(canWrite));
 }
 
 describe("ScreeningSection", () => {
@@ -114,7 +119,7 @@ describe("ScreeningSection", () => {
   });
 
   it("shows a started screening when the eligibility check fails", () => {
-    eligibilityMock.mockReturnValue({ isLoading: false, isError: true, data: undefined });
+    eligibilityMock.mockReturnValue({ isLoading: false, ...queryStatus({ failed: true, fetching: false }), data: undefined });
     resultsMock.mockReturnValue({
       isLoading: false,
       isError: false,
@@ -204,9 +209,67 @@ describe("ScreeningSection", () => {
   });
 
   it("shows eligibility error message when eligibility fetch fails", () => {
-    eligibilityMock.mockReturnValue({ isLoading: false, isError: true, data: undefined });
+    eligibilityMock.mockReturnValue({ isLoading: false, ...queryStatus({ failed: true, fetching: false }), data: undefined });
     resultsMock.mockReturnValue({ isLoading: false, isError: false, data: [] });
     renderSection();
     expect(screen.getByTestId("screening-eligibility-error")).toBeInTheDocument();
+  });
+
+  it("retries a failed eligibility check, and keeps the error while it runs", async () => {
+    const refetch = vi.fn();
+    eligibilityMock.mockReturnValue({ isLoading: false, ...queryStatus({ failed: true, fetching: false }), data: undefined, refetch });
+    resultsMock.mockReturnValue({ isLoading: false, isError: false, data: [] });
+    const { rerender } = renderSection();
+    await userEvent.click(screen.getByTestId("screening-eligibility-retry"));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    eligibilityMock.mockReturnValue({ isLoading: false, ...queryStatus({ failed: true, fetching: true }), data: undefined, refetch });
+    rerender(sectionElement());
+    expect(screen.getByTestId("screening-eligibility-error")).toBeInTheDocument();
+    expect(screen.getByTestId("screening-eligibility-retry")).toHaveTextContent("Retrying...");
+    expect(screen.getByTestId("screening-eligibility-retry")).toBeDisabled();
+  });
+
+  it("offers Retry when the history fails, instead of saying there are no reports", () => {
+    eligibilityMock.mockReturnValue({ isLoading: false, isError: false, data: { eligible: true, missing_fields: [], has_pending: false } });
+    resultsMock.mockReturnValue({ isLoading: false, ...queryStatus({ failed: true, fetching: false }), data: undefined, refetch: vi.fn() });
+    renderSection();
+    expect(screen.getByText("I couldn't load the screening history.")).toBeInTheDocument();
+    expect(screen.getByTestId("screening-list-retry")).toHaveTextContent("Retry");
+    expect(screen.queryByTestId("screening-results-empty")).not.toBeInTheDocument();
+  });
+
+  it("keeps the history error, not 'No completed screening reports yet', while Retry refetches", () => {
+    eligibilityMock.mockReturnValue({ isLoading: false, isError: false, data: { eligible: true, missing_fields: [], has_pending: false } });
+    resultsMock.mockReturnValue({ isLoading: false, ...queryStatus({ failed: true, fetching: true }), data: undefined, refetch: vi.fn() });
+    renderSection();
+    expect(screen.getByText("I couldn't load the screening history.")).toBeInTheDocument();
+    expect(screen.getByTestId("screening-list-retry")).toBeDisabled();
+    expect(screen.queryByTestId("screening-results-empty")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("screening-section-skeleton")).not.toBeInTheDocument();
+  });
+  it("keeps loaded reports visible under the retry line when a refresh fails", () => {
+    eligibilityMock.mockReturnValue({ isLoading: false, isError: false, data: { eligible: true, missing_fields: [], has_pending: false } });
+    resultsMock.mockReturnValue({ isLoading: false, ...queryStatus({ failed: true, fetching: false }), data: [PASS_RESULT], refetch: vi.fn() });
+    renderSection();
+    expect(screen.getByText("I couldn't load the screening history.")).toBeInTheDocument();
+    expect(screen.getByTestId("screening-result-card-r-pass")).toBeInTheDocument();
+    expect(screen.queryByTestId("screening-results-empty")).not.toBeInTheDocument();
+  });
+
+  it("shows the error, not the empty note, when an empty history fails to refresh", () => {
+    eligibilityMock.mockReturnValue({ isLoading: false, isError: false, data: { eligible: true, missing_fields: [], has_pending: false } });
+    resultsMock.mockReturnValue({ isLoading: false, ...queryStatus({ failed: true, fetching: false }), data: [], refetch: vi.fn() });
+    renderSection();
+    expect(screen.getByText("I couldn't load the screening history.")).toBeInTheDocument();
+    expect(screen.queryByTestId("screening-results-empty")).not.toBeInTheDocument();
+  });
+
+  it("shows a pending screening alongside a history error", () => {
+    eligibilityMock.mockReturnValue({ isLoading: false, isError: false, data: { eligible: true, missing_fields: [], has_pending: true } });
+    resultsMock.mockReturnValue({ isLoading: false, ...queryStatus({ failed: true, fetching: false }), data: [PENDING_RESULT], refetch: vi.fn() });
+    renderSection();
+    expect(screen.getByText("I couldn't load the screening history.")).toBeInTheDocument();
+    expect(screen.getByTestId("screening-pending-panel")).toBeInTheDocument();
   });
 });

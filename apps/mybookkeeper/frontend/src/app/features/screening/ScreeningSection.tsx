@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { Button } from "@platform/ui";
-import Skeleton from "@/shared/components/ui/Skeleton";
 import { useGetScreeningEligibilityQuery, useGetScreeningResultsQuery } from "@mybookkeeper/api-client/store/screeningApi";
 import type { ScreeningReport } from "@mybookkeeper/api-client/types/applicant/screening-report";
-import ScreeningEligibilityGate from "./ScreeningEligibilityGate";
-import ScreeningPendingPanel from "./ScreeningPendingPanel";
-import ScreeningProviderGrid from "./ScreeningProviderGrid";
-import ScreeningResultCard from "./ScreeningResultCard";
+import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
+import ScreeningHistoryBody from "./ScreeningHistoryBody";
+import ScreeningInlineRetry from "./ScreeningInlineRetry";
+import ScreeningSectionSkeleton from "./ScreeningSectionSkeleton";
+import ScreeningStatusPanel from "./ScreeningStatusPanel";
 import UploadScreeningResultModal from "./UploadScreeningResultModal";
 
 export interface ScreeningSectionProps {
@@ -16,26 +15,6 @@ export interface ScreeningSectionProps {
   reports?: readonly ScreeningReport[];
   /** Override window.open — only used by tests. */
   openWindow?: (url: string) => void;
-}
-
-function ScreeningSectionSkeleton() {
-  return (
-    <div
-      data-testid="screening-section-skeleton"
-      className="space-y-3"
-      aria-hidden="true"
-    >
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {[0, 1].map((i) => (
-          <div key={i} className="rounded-lg border p-4 space-y-3">
-            <Skeleton className="h-4 w-24 rounded" />
-            <Skeleton className="h-10 w-full rounded" />
-            <Skeleton className="h-8 w-28 rounded self-end" />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 /**
@@ -59,114 +38,65 @@ export default function ScreeningSection({ applicantId, canWrite, reports, openW
 
   const {
     data: eligibility,
-    isLoading: isEligibilityLoading,
-    isError: isEligibilityError,
+    error: eligibilityError,
+    isFetching: isEligibilityFetching,
+    refetch: refetchEligibility,
   } = useGetScreeningEligibilityQuery(applicantId);
 
   const {
     data: results,
-    isLoading: isResultsLoading,
-    isError: isResultsError,
-    refetch: refetchResults,
+    error: resultsError,
     isFetching: isResultsFetching,
+    refetch: refetchResults,
   } = useGetScreeningResultsQuery(applicantId);
 
   const pendingResult = results?.find((r) => r.status === "pending") ?? null;
   const completedResults = results?.filter((r) => r.status !== "pending") ?? [];
+  // Decided on `error`, not `isError`: RTK clears `isError` while Retry
+  // refetches, which would flash "No completed screening reports yet".
+  const historyMode = resolveListLoadMode({
+    hasData: results !== undefined,
+    hasError: resultsError !== undefined,
+    itemCount: completedResults.length,
+  });
+  const isFirstLoad =
+    (results === undefined && resultsError === undefined) ||
+    (eligibility === undefined && eligibilityError === undefined);
 
-  if (isEligibilityLoading || isResultsLoading) {
+  if (isFirstLoad) {
     return <ScreeningSectionSkeleton />;
   }
 
   return (
-    <div
-      data-testid="screening-section-content"
-      className="space-y-4"
-    >
-      {/* A screening already started stays reachable even if the applicant
-          has since lost the contact details needed to start a new one. */}
-      {pendingResult ? (
-        <ScreeningPendingPanel
-          pendingResult={pendingResult}
-          onUploadClick={() => setUploadModalOpen(true)}
-          canWrite={canWrite}
+    <div data-testid="screening-section-content" className="space-y-4">
+      <ScreeningStatusPanel
+        applicantId={applicantId}
+        canWrite={canWrite}
+        pendingResult={pendingResult}
+        eligibility={eligibility}
+        hasEligibilityError={eligibilityError !== undefined}
+        isEligibilityRetrying={isEligibilityFetching}
+        onRetryEligibility={() => void refetchEligibility()}
+        onUploadClick={() => setUploadModalOpen(true)}
+        openWindow={openWindow}
+      />
+
+      {resultsError ? (
+        <ScreeningInlineRetry
+          message="I couldn't load the screening history."
+          isRetrying={isResultsFetching}
+          onRetry={() => void refetchResults()}
+          testId="screening-list-error"
+          retryTestId="screening-list-retry"
         />
-      ) : isEligibilityError ? (
-        <p
-          className="text-xs text-muted-foreground italic"
-          data-testid="screening-eligibility-error"
-        >
-          I couldn't check screening eligibility. Please refresh the page.
-        </p>
-      ) : eligibility && !eligibility.eligible ? (
-        <ScreeningEligibilityGate eligibility={eligibility} />
-      ) : eligibility?.eligible ? (
-        canWrite ? (
-          <div className="space-y-3">
-            <ScreeningProviderGrid
-              applicantId={applicantId}
-              openWindow={openWindow}
-            />
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs text-muted-foreground">Got the report? Upload it here to record the outcome.</p>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => setUploadModalOpen(true)}
-                data-testid="screening-upload-button"
-              >
-                Upload report
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <p
-            data-testid="screening-no-results-viewer"
-            className="text-xs text-muted-foreground italic"
-          >
-            No screening has been initiated yet.
-          </p>
-        )
       ) : null}
 
-      {/* Completed results, or a retry if they failed to load */}
-      {isResultsError ? (
-        <div className="text-xs text-muted-foreground italic flex items-center gap-3">
-          <span>I couldn't load the screening history.</span>
-          <button
-            type="button"
-            onClick={() => refetchResults()}
-            disabled={isResultsFetching}
-            className="text-primary hover:underline min-h-[44px]"
-            data-testid="screening-list-retry"
-          >
-            {isResultsFetching ? "Retrying..." : "Retry"}
-          </button>
-        </div>
-      ) : completedResults.length > 0 ? (
-        <div
-          data-testid="screening-results-list"
-          className="space-y-3"
-        >
-          {completedResults.map((result) => (
-            <ScreeningResultCard
-              key={result.id}
-              result={result}
-              report={reports?.find((report) => report.id === result.id)}
-            />
-          ))}
-        </div>
-      ) : !pendingResult && eligibility?.eligible && !canWrite ? null : (
-        completedResults.length === 0 && !pendingResult && eligibility?.eligible ? (
-          <p
-            data-testid="screening-results-empty"
-            className="text-xs text-muted-foreground italic"
-          >
-            No completed screening reports yet.
-          </p>
-        ) : null
-      )}
+      <ScreeningHistoryBody
+        mode={historyMode}
+        completedResults={completedResults}
+        reports={reports}
+        showEmptyNote={!pendingResult && eligibility?.eligible === true && canWrite}
+      />
 
       {/* Upload modal — writers only */}
       {canWrite ? (

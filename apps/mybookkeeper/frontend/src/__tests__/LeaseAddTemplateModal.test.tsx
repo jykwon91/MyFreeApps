@@ -20,6 +20,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Provider } from "react-redux";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { store } from "@/shared/store";
+import { queryStatus } from "@/test/rtk-query-status";
 import LeaseDetail from "@/app/pages/LeaseDetail";
 import type { SignedLeaseDetail } from "@mybookkeeper/api-client/types/lease/signed-lease-detail";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
@@ -92,12 +93,14 @@ const TEMPLATES: LeaseTemplateSummary[] = [
   },
 ];
 
+let templatesFailed = false;
+let templatesFetching = false;
+
 vi.mock("@mybookkeeper/api-client/store/leaseTemplatesApi", () => ({
   useGetLeaseTemplatesQuery: () => ({
-    data: { items: TEMPLATES, total: 2 },
+    data: templatesFailed ? undefined : { items: TEMPLATES, total: 2 },
     isLoading: false,
-    isFetching: false,
-    isError: false,
+    ...queryStatus({ failed: templatesFailed, fetching: templatesFetching }),
     refetch: vi.fn(),
   }),
 }));
@@ -161,6 +164,8 @@ function renderDetail() {
 beforeEach(() => {
   vi.clearAllMocks();
   canWriteValue = true;
+  templatesFailed = false;
+  templatesFetching = false;
   addTemplatesMock.mockReturnValue({ unwrap: () => Promise.resolve({}) });
   prefillMock.mockReturnValue({
     unwrap: () =>
@@ -252,6 +257,21 @@ describe("LeaseAddTemplateModal", () => {
     ).toBeInTheDocument();
   });
 
+  it("keeps the templates error, not 'no templates yet', while Retry refetches", async () => {
+    canWriteValue = true;
+    mockLease = buildLease();
+    templatesFailed = true;
+    templatesFetching = true;
+    renderDetail();
+    fireEvent.click(screen.getByTestId("lease-add-template-button"));
+    await waitFor(() =>
+      expect(screen.getByTestId("lease-add-template-modal")).toBeInTheDocument(),
+    );
+    expect(screen.getByText(/couldn't load your templates/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+    expect(screen.queryByTestId("lease-add-template-empty")).not.toBeInTheDocument();
+  });
+
   it("'Continue' button is disabled when nothing selected", async () => {
     canWriteValue = true;
     mockLease = buildLease();
@@ -289,6 +309,25 @@ describe("LeaseAddTemplateModal", () => {
     expect(
       (screen.getByTestId("addendum-input-NEW LEASE END DATE") as HTMLInputElement).value,
     ).toBe("");
+  });
+
+  it("Back returns to the template picker with the selection kept", async () => {
+    canWriteValue = true;
+    mockLease = buildLease();
+    renderDetail();
+    fireEvent.click(screen.getByTestId("lease-add-template-button"));
+    await waitFor(() =>
+      expect(screen.getByTestId("add-template-checkbox-tpl-new")).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByTestId("add-template-checkbox-tpl-new"));
+    fireEvent.click(screen.getByTestId("lease-add-template-continue"));
+    await waitFor(() => expect(screen.getByText("Fill in details")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId("lease-add-template-back"));
+    expect(screen.getByRole("heading", { name: "Add document" })).toBeInTheDocument();
+    expect(screen.queryByTestId("lease-add-template-values-list")).not.toBeInTheDocument();
+    expect(screen.getByTestId("add-template-checkbox-tpl-new")).toBeChecked();
+    expect(screen.getByTestId("lease-add-template-continue")).toBeEnabled();
   });
 
   it("Generate fires add-templates mutation with template_ids + values", async () => {

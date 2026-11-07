@@ -25,6 +25,7 @@ vi.mock("@/shared/lib/toast-store", () => ({
 }));
 
 import { useDismissReceiptMutation, useGetPendingReceiptsQuery } from "@mybookkeeper/api-client/store/rentReceiptsApi";
+import { queryStatus } from "@/test/rtk-query-status";
 
 const pendingResponse: PendingReceiptListResponse = {
   items: [
@@ -240,12 +241,26 @@ describe("PendingReceipts page", () => {
     vi.mocked(useGetPendingReceiptsQuery).mockReturnValue({
       data: undefined,
       isLoading: false,
-      isError: true,
+      ...queryStatus({ failed: true, fetching: false }),
       refetch: vi.fn(),
     } as unknown as ReturnType<typeof useGetPendingReceiptsQuery>);
 
     renderPage();
     expect(screen.getByText(/couldn't load pending receipts/i)).toBeInTheDocument();
+  });
+
+  it("keeps the error, not the empty state, while Retry refetches", () => {
+    vi.mocked(useGetPendingReceiptsQuery).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      ...queryStatus({ failed: true, fetching: true }),
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useGetPendingReceiptsQuery>);
+
+    renderPage();
+    expect(screen.getByText(/couldn't load pending receipts/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+    expect(screen.queryByText(/I'll queue a receipt here/)).not.toBeInTheDocument();
   });
 
   it("counts every open receipt in the subtitle as waiting, not ready", () => {

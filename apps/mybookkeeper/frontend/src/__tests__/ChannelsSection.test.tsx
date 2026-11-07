@@ -5,6 +5,7 @@ import ChannelsSection from "@/app/features/listings/ChannelsSection";
 import type { ChannelListing } from "@/shared/types/listing/channel-listing";
 import type { Channel } from "@/shared/types/listing/channel";
 import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
+import { queryStatus } from "@/test/rtk-query-status";
 
 const showSuccessMock = vi.fn();
 const showErrorMock = vi.fn();
@@ -22,14 +23,23 @@ let mockChannels: Channel[] = [];
 let mockChannelListings: ChannelListing[] = [];
 let mockIsLoading = false;
 let mockIsError = false;
+let mockIsFetching = false;
+let mockChannelsFailed = false;
+let mockChannelsFetching = false;
+const refetchChannelListings = vi.fn();
+const refetchChannels = vi.fn();
 
 vi.mock("@/shared/store/listingsApi", () => ({
-  useGetChannelsQuery: vi.fn(() => ({ data: mockChannels })),
+  useGetChannelsQuery: vi.fn(() => ({
+    data: mockChannelsFailed ? undefined : mockChannels,
+    ...queryStatus({ failed: mockChannelsFailed, fetching: mockChannelsFetching }),
+    refetch: refetchChannels,
+  })),
   useGetListingChannelsQuery: vi.fn(() => ({
-    data: mockChannelListings,
+    data: mockIsLoading || mockIsError ? undefined : mockChannelListings,
     isLoading: mockIsLoading,
-    isError: mockIsError,
-    refetch: vi.fn(),
+    ...queryStatus({ failed: mockIsError, fetching: mockIsLoading || mockIsFetching }),
+    refetch: refetchChannelListings,
   })),
   useDeleteChannelListingMutation: vi.fn(() => [
     deleteMutationMock,
@@ -77,12 +87,50 @@ describe("ChannelsSection", () => {
     mockChannelListings = [];
     mockIsLoading = false;
     mockIsError = false;
+    mockIsFetching = false;
+    mockChannelsFailed = false;
+    mockChannelsFetching = false;
   });
 
   it("shows loading skeletons while fetching", () => {
     mockIsLoading = true;
     render(<ChannelsSection canWrite listingId="listing-1" />);
     expect(screen.getByTestId("channels-section-loading")).toBeInTheDocument();
+  });
+
+  it("shows the load error with Retry, not the empty pitch, when the links fail to load", async () => {
+    mockIsError = true;
+    render(<ChannelsSection canWrite listingId="listing-1" />);
+    expect(screen.getByText("I couldn't load the channels for this listing.")).toBeInTheDocument();
+    expect(screen.queryByTestId("channels-section-empty-state")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetchChannelListings).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the load error, not the empty pitch, while Retry refetches", () => {
+    mockIsError = true;
+    mockIsFetching = true;
+    render(<ChannelsSection canWrite listingId="listing-1" />);
+    expect(screen.getByText("I couldn't load the channels for this listing.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+    expect(screen.queryByTestId("channels-section-empty-state")).not.toBeInTheDocument();
+  });
+
+  it("says why adding is unavailable when the channel list fails to load", async () => {
+    mockChannelsFailed = true;
+    render(<ChannelsSection canWrite listingId="listing-1" />);
+    expect(
+      screen.getByText("I couldn't load the channels you can link, so adding one isn't available right now."),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("channels-section-add-cta")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetchChannels).toHaveBeenCalledTimes(1);
+  });
+
+  it("doesn't warn a viewer that adding is unavailable", () => {
+    mockChannelsFailed = true;
+    render(<ChannelsSection canWrite={false} listingId="listing-1" />);
+    expect(screen.queryByText(/so adding one isn't available/)).not.toBeInTheDocument();
   });
 
   it("shows the empty state with CTA when no channel_listings exist", () => {
@@ -110,6 +158,23 @@ describe("ChannelsSection", () => {
 
     await userEvent.setup().click(screen.getByTestId("channels-section-add-button"));
     expect(screen.getByTestId("channel-listing-form-modal")).toBeInTheDocument();
+  });
+
+  it("opens the edit form for a row, then the add form fresh after closing it", async () => {
+    mockChannelListings = [cl];
+    const user = userEvent.setup();
+    render(<ChannelsSection canWrite listingId="listing-1" />);
+
+    await user.click(screen.getByTestId("channel-listing-edit-cl-1"));
+    expect(screen.getByText("Edit channel link")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("https://airbnb.com/rooms/12345")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByTestId("channel-listing-form-modal")).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId("channels-section-add-button"));
+    expect(screen.getByText("Add a channel")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("https://airbnb.com/rooms/12345")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("channels-section-add-button")).not.toBeInTheDocument();
   });
 
   it("gives a viewer the channels with copy but no add, edit or remove", () => {

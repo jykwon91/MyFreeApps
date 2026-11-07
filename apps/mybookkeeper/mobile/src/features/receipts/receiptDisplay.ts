@@ -46,10 +46,6 @@ export function receivedLine(receipt: PendingReceipt): string {
   return `Received ${shortDate(receipt.transaction_date)}`;
 }
 
-export function waitingLine(count: number): string {
-  return `${count} ${count === 1 ? "receipt" : "receipts"} waiting to send`;
-}
-
 export function moreWaitingLine(count: number): string {
   return `${count} more ${count === 1 ? "is" : "are"} waiting. They'll show up as you finish these.`;
 }

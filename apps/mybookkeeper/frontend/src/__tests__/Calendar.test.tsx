@@ -121,6 +121,7 @@ vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
 
 import { useGetCalendarEventsQuery } from "@mybookkeeper/api-client/store/calendarApi";
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
+import { queryStatus } from "@/test/rtk-query-status";
 
 /**
  * The month grid is the default view, so any assertion about the
@@ -209,13 +210,37 @@ describe("Calendar page", () => {
   it("shows error banner with retry on error", () => {
     const refetch = vi.fn();
     vi.mocked(useGetCalendarEventsQuery).mockReturnValue(
-      { ...defaultEventsState, data: undefined, isError: true, refetch } as unknown as ReturnType<
+      { ...defaultEventsState, data: undefined, ...queryStatus({ failed: true, fetching: false }), refetch } as unknown as ReturnType<
         typeof useGetCalendarEventsQuery
       >,
     );
     renderCalendar();
     expect(screen.getByText(/couldn't load the calendar/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
+  });
+
+  it("keeps the error, not 'No bookings', while Retry refetches", () => {
+    vi.mocked(useGetCalendarEventsQuery).mockReturnValue(
+      { ...defaultEventsState, data: undefined, ...queryStatus({ failed: true, fetching: true }) } as unknown as ReturnType<
+        typeof useGetCalendarEventsQuery
+      >,
+    );
+    renderCalendar();
+    expect(screen.getByText(/couldn't load the calendar/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+    expect(screen.queryByText(/No bookings in this window/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId("calendar-desktop")).not.toBeInTheDocument();
+  });
+
+  it("keeps the error, not 'No bookings', when an empty window's filter change fails", () => {
+    vi.mocked(useGetCalendarEventsQuery).mockReturnValue(
+      { ...defaultEventsState, data: [], ...queryStatus({ failed: true, fetching: false }) } as unknown as ReturnType<
+        typeof useGetCalendarEventsQuery
+      >,
+    );
+    renderCalendar();
+    expect(screen.getByText(/couldn't load the calendar/i)).toBeInTheDocument();
+    expect(screen.queryByText(/No bookings in this window/)).not.toBeInTheDocument();
   });
 
   it("shows empty-state copy when no events match the window", () => {

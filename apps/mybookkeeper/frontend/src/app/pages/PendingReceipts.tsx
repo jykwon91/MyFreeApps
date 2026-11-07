@@ -1,19 +1,26 @@
 import { Link } from "react-router-dom";
 import { AlertBox } from "@platform/ui";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import EmptyState from "@/shared/components/ui/EmptyState";
 import { useGetPendingReceiptsQuery } from "@mybookkeeper/api-client/store/rentReceiptsApi";
+import { receiptsWaitingLine } from "@mybookkeeper/api-client/utils/receiptsWaitingLine";
 import { RECEIPT_GMAIL_STATE_MESSAGES } from "@mybookkeeper/api-client/constants/receiptReadinessMessages";
-import PendingReceiptRow from "@/app/features/receipts/PendingReceiptRow";
+import PendingReceiptsListBody from "@/app/features/receipts/PendingReceiptsListBody";
 import PendingReceiptsSkeleton from "@/app/features/receipts/PendingReceiptsSkeleton";
 
 export default function PendingReceipts() {
-  const { data, isLoading, isError, refetch } = useGetPendingReceiptsQuery();
+  const { data, error, isFetching, refetch } = useGetPendingReceiptsQuery();
   const receipts = data?.items ?? [];
   const pendingCount = data?.pending_count ?? 0;
   const gmailState = data?.gmail_state ?? "ready";
+  const mode = resolveListLoadMode({
+    hasData: data !== undefined,
+    hasError: error !== undefined,
+    itemCount: receipts.length,
+  });
 
-  if (isLoading) {
+  if (mode === "loading") {
     return <PendingReceiptsSkeleton />;
   }
 
@@ -23,23 +30,14 @@ export default function PendingReceipts() {
         title="Pending Receipts"
         subtitle={
           pendingCount > 0
-            ? `${pendingCount} receipt${pendingCount === 1 ? "" : "s"} waiting to send`
+            ? receiptsWaitingLine(pendingCount)
             : "Rent receipts that have been auto-queued from attributed payments."
         }
       />
 
-      {isError && (
-        <AlertBox variant="error">
-          Couldn't load pending receipts.{" "}
-          <button
-            type="button"
-            onClick={() => void refetch()}
-            className="underline hover:no-underline"
-          >
-            Tap to retry.
-          </button>
-        </AlertBox>
-      )}
+      {error ? (
+        <LoadErrorAlert message="Couldn't load pending receipts." isRetrying={isFetching} onRetry={() => void refetch()} />
+      ) : null}
 
       {gmailState !== "ready" && (
         <AlertBox variant="warning">
@@ -52,19 +50,7 @@ export default function PendingReceipts() {
         </AlertBox>
       )}
 
-      {!isError && receipts.length === 0 && (
-        <EmptyState
-          message="When you attribute a rent payment to a tenant, I'll queue a receipt here for you to review and send."
-        />
-      )}
-
-      {receipts.length > 0 && (
-        <div className="bg-card border rounded-lg p-4 divide-y">
-          {receipts.map((receipt) => (
-            <PendingReceiptRow key={receipt.id} receipt={receipt} canSend={gmailState === "ready"} />
-          ))}
-        </div>
-      )}
+      <PendingReceiptsListBody mode={mode} receipts={receipts} canSend={gmailState === "ready"} />
     </main>
   );
 }

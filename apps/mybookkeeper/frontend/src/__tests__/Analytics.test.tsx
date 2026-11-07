@@ -44,6 +44,7 @@ vi.mock('@mybookkeeper/api-client/store/propertiesApi', () => ({
 
 import { useGetUtilityTrendsQuery } from '@mybookkeeper/api-client/store/analyticsApi';
 import { useGetPropertiesQuery } from '@mybookkeeper/api-client/store/propertiesApi';
+import { queryStatus } from "@/test/rtk-query-status";
 
 const mockProperties: Property[] = [
   { id: 'prop-1', name: 'Beach House', address: '123 Ocean Dr', classification: 'investment', type: 'short_term', is_active: true, activity_periods: [], created_at: '2024-01-01T00:00:00Z' },
@@ -209,17 +210,36 @@ describe('UtilityTrends', () => {
 
   it('shows error state with retry button on API error', () => {
     vi.mocked(useGetUtilityTrendsQuery).mockReturnValue({
-      data: undefined, isLoading: false, isError: true, refetch: vi.fn(),
+      data: undefined, isLoading: false, ...queryStatus({ failed: true, fetching: false }), refetch: vi.fn(),
     } as unknown as ReturnType<typeof useGetUtilityTrendsQuery>);
     renderWithProviders(<UtilityTrends />);
     expect(screen.getByText(/I ran into a problem loading your utility data/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Retry/i })).toBeInTheDocument();
   });
 
+  it('keeps the error, not the empty pitch, while Retry refetches', () => {
+    vi.mocked(useGetUtilityTrendsQuery).mockReturnValue({
+      data: undefined, isLoading: false, ...queryStatus({ failed: true, fetching: true }), refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useGetUtilityTrendsQuery>);
+    renderWithProviders(<UtilityTrends />);
+    expect(screen.getByText(/I ran into a problem loading your utility data/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retrying...' })).toBeDisabled();
+    expect(screen.queryByText(/I haven't found any utility expenses yet/)).not.toBeInTheDocument();
+  });
+
+  it("doesn't show the previous range's numbers while a failed range retries", () => {
+    vi.mocked(useGetUtilityTrendsQuery).mockReturnValue({
+      data: mockTrendsData, isLoading: false, ...queryStatus({ failed: true, fetching: true }), refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useGetUtilityTrendsQuery>);
+    renderWithProviders(<UtilityTrends />);
+    expect(screen.getByText(/I ran into a problem loading your utility data/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Utility spend summary')).not.toBeInTheDocument();
+  });
+
   it('calls refetch when the Retry button is clicked', async () => {
     const mockRefetch = vi.fn();
     vi.mocked(useGetUtilityTrendsQuery).mockReturnValue({
-      data: undefined, isLoading: false, isError: true, refetch: mockRefetch,
+      data: undefined, isLoading: false, ...queryStatus({ failed: true, fetching: false }), refetch: mockRefetch,
     } as unknown as ReturnType<typeof useGetUtilityTrendsQuery>);
     renderWithProviders(<UtilityTrends />);
     await userEvent.click(screen.getByRole('button', { name: /Retry/i }));

@@ -2,6 +2,7 @@ import { useSearchParams, Link } from "react-router-dom";
 import { subMonths, format, startOfMonth, endOfMonth } from "date-fns";
 import { useGetUtilityTrendsQuery } from "@mybookkeeper/api-client/store/analyticsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
+import { LoadingButton } from "@platform/ui";
 import AnalyticsSkeleton from "./AnalyticsSkeleton";
 import AnalyticsFilters from "./AnalyticsFilters";
 import UtilityTrendsChart from "./UtilityTrendsChart";
@@ -108,8 +109,9 @@ export default function UtilityTrends() {
 
   const {
     data,
+    error,
     isLoading,
-    isError,
+    isFetching,
     refetch,
   } = useGetUtilityTrendsQuery(queryParams, {
     refetchOnMountOrArgChange: 300,
@@ -121,18 +123,18 @@ export default function UtilityTrends() {
     return <AnalyticsSkeleton />;
   }
 
-  if (isError) {
+  // Decided on `error`, not `isError`: RTK clears `isError` while Retry
+  // refetches, and `data` then still holds the previous range's numbers (or
+  // nothing, which reads as "no utility expenses yet").
+  if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
         <p className="text-muted-foreground">
           I ran into a problem loading your utility data. Want me to try again?
         </p>
-        <button
-          onClick={() => refetch()}
-          className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-        >
+        <LoadingButton type="button" isLoading={isFetching} loadingText="Retrying..." onClick={() => void refetch()}>
           Retry
-        </button>
+        </LoadingButton>
       </div>
     );
   }
