@@ -15,6 +15,7 @@ interface PropertyInput {
   name: string;
   address?: string;
   type?: "short_term" | "long_term";
+  classification?: "investment" | "primary_residence" | "second_home" | "unclassified";
 }
 
 interface CreatedRecord {

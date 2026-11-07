@@ -93,6 +93,73 @@ class TestCreateManualTransaction:
         assert result.is_manual is True
         assert result.amount == Decimal("200.00")
 
+    @staticmethod
+    async def _create(db: AsyncSession, ctx: RequestContext, **fields: object) -> Transaction:
+        @asynccontextmanager
+        async def _fake():
+            yield db
+
+        with patch("app.services.transactions.transaction_service.AsyncSessionLocal", _fake), patch("app.services.transactions.transaction_service.unit_of_work", _fake):
+            return await transaction_service.create_manual_transaction(ctx, {
+                "transaction_date": date(2025, 6, 15),
+                "amount": Decimal("1800.00"),
+                **fields,
+            })
+
+    @pytest.mark.asyncio
+    async def test_derives_schedule_e_line_from_category(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        result = await self._create(
+            db, _make_ctx(test_org, test_user),
+            transaction_type="income", category="rental_revenue",
+        )
+        assert result.schedule_e_line == "line_3_rents_received"
+
+    @pytest.mark.asyncio
+    async def test_keeps_explicit_schedule_e_line(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        result = await self._create(
+            db, _make_ctx(test_org, test_user),
+            transaction_type="expense", category="maintenance", schedule_e_line="line_14_repairs",
+        )
+        assert result.schedule_e_line == "line_14_repairs"
+
+    @pytest.mark.asyncio
+    async def test_unmapped_category_has_no_line_and_flags_nothing(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        draft = TaxReturn(organization_id=test_org.id, tax_year=2025, needs_recompute=False)
+        db.add(draft)
+        await db.commit()
+
+        result = await self._create(
+            db, _make_ctx(test_org, test_user),
+            transaction_type="expense", category="uncategorized",
+        )
+        await db.refresh(draft)
+        assert result.schedule_e_line is None
+        assert draft.needs_recompute is False
+
+    @pytest.mark.asyncio
+    async def test_tax_line_flags_unfiled_returns_only(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        draft = TaxReturn(organization_id=test_org.id, tax_year=2025, needs_recompute=False)
+        filed = TaxReturn(organization_id=test_org.id, tax_year=2024, status="filed", needs_recompute=False)
+        db.add_all([draft, filed])
+        await db.commit()
+
+        await self._create(
+            db, _make_ctx(test_org, test_user),
+            transaction_type="income", category="rental_revenue",
+        )
+        await db.refresh(draft)
+        await db.refresh(filed)
+        assert draft.needs_recompute is True
+        assert filed.needs_recompute is False
+
 
 class TestGetTransaction:
     @pytest.mark.asyncio
