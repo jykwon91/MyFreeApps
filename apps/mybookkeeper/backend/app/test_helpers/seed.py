@@ -1,6 +1,7 @@
 """Test-only seed and cleanup endpoints for E2E test data management."""
 
 import datetime as _dt
+import logging
 import uuid
 from decimal import Decimal
 from typing import Literal
@@ -11,6 +12,7 @@ from sqlalchemy import delete as _sa_delete, select as _sa_select
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member
+from app.core.storage import get_storage
 from app.db.session import unit_of_work
 from app.models.applicants.applicant import Applicant
 from app.models.applicants.screening_result import ScreeningResult
@@ -50,6 +52,8 @@ from app.services.leases import receipt_service
 from app.services.leases.default_source_map import get_default, guess_display_label
 from app.services.leases.placeholder_extractor import extract_placeholder_keys
 from app.test_helpers.auth import _require_test_mode
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -480,43 +484,60 @@ async def seed_lease_template(
 ) -> _SeedLeaseTemplateResponse:
     """Test-only direct insert for E2E lease-template seeding.
 
-    Bypasses MinIO upload — writes a single in-memory template_file row
-    pointing at a fake storage_key. The E2E flow that exercises the upload
-    pipeline uses the real ``POST /lease-templates`` endpoint via the UI.
+    Stores ``source_text`` as the template's single markdown file, in object
+    storage like a real upload, so endpoints that read the file (suggest
+    placeholders, generate) work on a seeded template. It skips the upload
+    endpoint's validation; the E2E flow that exercises that uses the real
+    ``POST /lease-templates`` endpoint via the UI.
     """
     _require_test_mode()
-    async with unit_of_work() as db:
-        template = await lease_template_repo.create(
-            db,
-            user_id=ctx.user_id,
-            organization_id=ctx.organization_id,
-            name=payload.name,
-            description=payload.description,
-        )
-        await lease_template_file_repo.create(
-            db,
-            template_id=template.id,
-            filename="seed.md",
-            storage_key=f"lease-templates/{template.id}/seed",
-            content_type="text/markdown",
-            size_bytes=len(payload.source_text),
-            display_order=0,
-        )
-        keys = extract_placeholder_keys(payload.source_text)
-        for order, key in enumerate(keys):
-            seed = get_default(key)
-            await lease_template_placeholder_repo.create(
+    content = payload.source_text.encode("utf-8")
+    storage = get_storage()
+    storage_key: str | None = None
+    try:
+        async with unit_of_work() as db:
+            template = await lease_template_repo.create(
+                db,
+                user_id=ctx.user_id,
+                organization_id=ctx.organization_id,
+                name=payload.name,
+                description=payload.description,
+            )
+            storage_key = f"lease-templates/{template.id}/{uuid.uuid4()}"
+            storage.upload_file(storage_key, content, "text/markdown")
+            await lease_template_file_repo.create(
                 db,
                 template_id=template.id,
-                key=key,
-                display_label=guess_display_label(key),
-                input_type=seed.input_type,
-                required=True,
-                default_source=seed.default_source,
-                computed_expr=seed.computed_expr,
-                display_order=order,
+                filename="seed.md",
+                storage_key=storage_key,
+                content_type="text/markdown",
+                size_bytes=len(content),
+                display_order=0,
             )
-        return _SeedLeaseTemplateResponse(id=template.id)
+            keys = extract_placeholder_keys(payload.source_text)
+            for order, key in enumerate(keys):
+                seed = get_default(key)
+                await lease_template_placeholder_repo.create(
+                    db,
+                    template_id=template.id,
+                    key=key,
+                    display_label=guess_display_label(key),
+                    input_type=seed.input_type,
+                    required=True,
+                    default_source=seed.default_source,
+                    computed_expr=seed.computed_expr,
+                    display_order=order,
+                )
+            template_id = template.id
+    except Exception:
+        # Don't leave an orphan object if the database write fails.
+        if storage_key is not None:
+            try:
+                storage.delete_file(storage_key)
+            except Exception:  # noqa: BLE001
+                logger.warning("Failed to delete orphan seeded template file %s", storage_key)
+        raise
+    return _SeedLeaseTemplateResponse(id=template_id)
 
 
 @router.delete("/test/lease-templates/{template_id}", status_code=204)
@@ -536,7 +557,14 @@ async def hard_delete_lease_template(
         )
         if existing is None:
             return
+        files = await lease_template_file_repo.list_for_template(db, template_id=template_id)
         await db.execute(_sa_delete(LeaseTemplate).where(LeaseTemplate.id == template_id))
+    storage = get_storage()
+    for f in files:
+        try:
+            storage.delete_file(f.storage_key)
+        except Exception:  # noqa: BLE001
+            logger.warning("Failed to delete seeded template file %s", f.storage_key)
 
 
 class _SeedAttachmentSpec(BaseModel):
