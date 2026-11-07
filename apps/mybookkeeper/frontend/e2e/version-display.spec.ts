@@ -2,8 +2,8 @@ import { test, expect } from "./fixtures/auth";
 import { BACKEND_URL } from "./fixtures/config";
 
 test.describe("Version display", () => {
-  test("GET /api/version returns commit and timestamp", async ({ api }) => {
-    const resp = await api.get(`${BACKEND_URL}/api/version`);
+  test("GET /version returns commit and timestamp", async ({ api }) => {
+    const resp = await api.get(`${BACKEND_URL}/version`);
     expect(resp.ok()).toBe(true);
     const body = await resp.json();
     expect(body).toHaveProperty("commit");
@@ -31,7 +31,7 @@ test.describe("Version display", () => {
   });
 
   test("version tag displays the same commit as the API", async ({ authedPage: page, api }) => {
-    const resp = await api.get(`${BACKEND_URL}/api/version`);
+    const resp = await api.get(`${BACKEND_URL}/version`);
     const { commit } = await resp.json();
 
     await page.goto("/");
