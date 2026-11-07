@@ -3,7 +3,7 @@ import Card from "@/shared/components/ui/Card";
 
 export default function MembersSkeleton() {
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-4xl" data-testid="members-skeleton">
       {/* SectionHeader: "Members" + subtitle */}
       <div>
         <Skeleton className="h-8 w-28" />

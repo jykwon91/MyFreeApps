@@ -89,15 +89,20 @@ test.describe("Members: pending invites", () => {
 
   test("an invite whose email fails reports it with a next step", async ({ page }) => {
     await plantAuth(page);
-    await stubApi(page);
+    const { invitesLoads } = await stubApi(page);
     await page.goto("/members");
 
     await page.getByLabel("Email address").fill("typo@exmaple.com");
+    await expect.poll(invitesLoads).toBeGreaterThan(0);
+    const loadsBeforeSend = invitesLoads();
     await page.getByRole("button", { name: "Send invite" }).click();
 
     await expect(
       page.getByText("I made the invite but couldn't send the email to typo@exmaple.com. Check the address, or cancel it and try again.", { exact: true }),
     ).toBeVisible();
     await expect(page.getByText(/Share the invite link/)).toHaveCount(0);
+    // Kept so the admin can fix the typo, even after the invites list reloads.
+    await expect.poll(invitesLoads).toBeGreaterThan(loadsBeforeSend);
+    await expect(page.getByLabel("Email address")).toHaveValue("typo@exmaple.com");
   });
 });

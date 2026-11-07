@@ -25,7 +25,7 @@ export default function MemberList({ onError, onSuccess }: MemberListProps) {
   const { user } = useCurrentUser();
   const myRole = useOrgRole();
   const isAdmin = useIsOrgAdmin();
-  const { data: members = [] } = useListMembersQuery(orgId!, { skip: !orgId });
+  const { currentData: members = [] } = useListMembersQuery(orgId!, { skip: !orgId });
   const [updateRole, { isLoading: isUpdatingRole }] = useUpdateMemberRoleMutation();
   const [removeMember, { isLoading: isRemoving }] = useRemoveMemberMutation();
   const [confirmRemove, setConfirmRemove] = useState<OrgMember | null>(null);

@@ -337,7 +337,10 @@
       "e2e_specs": [
         "members.spec.ts",
         "viewer-role.spec.ts",
-        "layout.spec.ts"
+        "layout.spec.ts",
+        "mocked/members-invites-mock.spec.ts",
+        "mocked/members-owner-row-mock.spec.ts",
+        "mocked/members-org-switch-mock.spec.ts"
       ]
     },
     "properties": {

@@ -54,7 +54,7 @@ describe("MemberList", () => {
 
   it("falls back to the email when a member's name is blank", () => {
     vi.mocked(useListMembersQuery).mockReturnValue({
-      data: [makeMember({ user_email: "blank@test.com", user_name: "" })],
+      currentData: [makeMember({ user_email: "blank@test.com", user_name: "" })],
       isLoading: false,
     } as unknown as ReturnType<typeof useListMembersQuery>);
 
@@ -69,7 +69,7 @@ describe("MemberList", () => {
       makeMember({ user_id: "user-2", user_email: "other@test.com", user_name: "Other User" }),
     ];
     vi.mocked(useListMembersQuery).mockReturnValue({
-      data: members,
+      currentData: members,
       isLoading: false,
     } as unknown as ReturnType<typeof useListMembersQuery>);
 
@@ -87,7 +87,7 @@ describe("MemberList", () => {
       makeMember({ user_id: "user-2", user_email: "other@test.com" }),
     ];
     vi.mocked(useListMembersQuery).mockReturnValue({
-      data: members,
+      currentData: members,
       isLoading: false,
     } as unknown as ReturnType<typeof useListMembersQuery>);
 
@@ -104,7 +104,7 @@ describe("MemberList", () => {
       makeMember({ user_id: "user-1", user_email: "me@test.com", user_name: "Me", org_role: "admin" }),
     ];
     vi.mocked(useListMembersQuery).mockReturnValue({
-      data: members,
+      currentData: members,
       isLoading: false,
     } as unknown as ReturnType<typeof useListMembersQuery>);
 
@@ -118,7 +118,7 @@ describe("MemberList", () => {
   it("lets an admin manage users but not another admin", () => {
     vi.mocked(useOrgRole).mockReturnValue("admin");
     vi.mocked(useListMembersQuery).mockReturnValue({
-      data: [
+      currentData: [
         makeMember({ user_id: "user-1", user_email: "me@test.com", user_name: "Me", org_role: "admin" }),
         makeMember({ user_id: "user-2", user_email: "admin2@test.com", user_name: "Ada", org_role: "admin" }),
         makeMember({ user_id: "user-3", user_email: "user@test.com", user_name: "Uma", org_role: "user" }),
@@ -136,7 +136,7 @@ describe("MemberList", () => {
 
   it("lets the owner change or remove an admin", () => {
     vi.mocked(useListMembersQuery).mockReturnValue({
-      data: [
+      currentData: [
         makeMember({ user_id: "user-1", user_email: "me@test.com", user_name: "Me", org_role: "owner" }),
         makeMember({ user_id: "user-2", user_email: "admin2@test.com", user_name: "Ada", org_role: "admin" }),
       ],
@@ -155,7 +155,7 @@ describe("MemberList", () => {
       makeMember({ user_id: "user-2", user_email: "other@test.com", org_role: "user" }),
     ];
     vi.mocked(useListMembersQuery).mockReturnValue({
-      data: members,
+      currentData: members,
       isLoading: false,
     } as unknown as ReturnType<typeof useListMembersQuery>);
 
@@ -167,7 +167,7 @@ describe("MemberList", () => {
 
   it("shows empty message when no members", () => {
     vi.mocked(useListMembersQuery).mockReturnValue({
-      data: [],
+      currentData: [],
       isLoading: false,
     } as unknown as ReturnType<typeof useListMembersQuery>);
 
@@ -176,11 +176,23 @@ describe("MemberList", () => {
     expect(screen.getByText("No members yet.")).toBeInTheDocument();
   });
 
+  it("never shows another organization's members while this one loads", () => {
+    vi.mocked(useListMembersQuery).mockReturnValue({
+      data: [makeMember({ user_email: "old-org@test.com" })],
+      currentData: undefined,
+      isFetching: true,
+    } as unknown as ReturnType<typeof useListMembersQuery>);
+
+    render(<MemberList onError={onError} onSuccess={onSuccess} />);
+
+    expect(screen.queryByText("old-org@test.com")).not.toBeInTheDocument();
+  });
+
   it("opens confirm dialog when remove is clicked", async () => {
     const user = userEvent.setup();
     const members = [makeMember({ user_id: "user-2", user_email: "other@test.com" })];
     vi.mocked(useListMembersQuery).mockReturnValue({
-      data: members,
+      currentData: members,
       isLoading: false,
     } as unknown as ReturnType<typeof useListMembersQuery>);
 

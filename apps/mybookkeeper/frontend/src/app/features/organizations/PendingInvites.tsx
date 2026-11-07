@@ -23,7 +23,7 @@ export interface PendingInvitesProps {
 
 export default function PendingInvites({ onSuccess, onError }: PendingInvitesProps) {
   const orgId = useActiveOrgId();
-  const { data: invites = [] } = useListInvitesQuery(orgId!, { skip: !orgId });
+  const { currentData: invites = [] } = useListInvitesQuery(orgId!, { skip: !orgId });
   const [cancelInvite] = useCancelInviteMutation();
   const [cancelling, setCancelling] = useState<ReadonlySet<string>>(new Set());
   const now = new Date();
