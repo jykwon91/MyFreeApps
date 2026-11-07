@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures/auth";
-import { createTransaction, deleteTransaction } from "./fixtures/seed-data";
+import { createProperty, createTransaction, deleteProperty, deleteTransaction } from "./fixtures/seed-data";
 import { getYear } from "date-fns";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -62,49 +62,38 @@ test.describe("Document checklist", () => {
   });
 });
 
-test.describe("Discrepancy scanner", () => {
-  let createdTxnId: string | null = null;
+test.describe("Tax report", () => {
+  test("an approved tax-relevant expense shows under its property", async ({ authedPage: page, api }) => {
+    const propertyName = `E2E Tax Report ${RUN_ID}`;
+    const property = await createProperty(api, { name: propertyName });
+    let txnId: string | null = null;
+    try {
+      const txn = await createTransaction(api, {
+        vendor: `E2E Tax Report Vendor ${RUN_ID}`,
+        amount: "250.00",
+        transaction_type: "expense",
+        category: "maintenance",
+        transaction_date: `${TEST_YEAR}-06-15`,
+        property_id: property.id,
+        tax_relevant: true,
+      });
+      txnId = txn.id;
+      // The report counts approved transactions only; manual ones start pending.
+      const approveRes = await api.post("/transactions/bulk-approve", { data: { ids: [txn.id] } });
+      expect(approveRes.ok()).toBe(true);
+      expect(await approveRes.json()).toEqual({ approved: 1, skipped: 0 });
 
-  test.afterAll(async ({ api }) => {
-    if (createdTxnId) {
-      await deleteTransaction(api, createdTxnId);
+      await page.goto("/tax");
+      await expect(page.getByRole("heading", { name: "Tax Report", level: 1 })).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole("combobox").first()).toHaveValue(String(TEST_YEAR));
+
+      const row = page.getByRole("row").filter({ hasText: propertyName });
+      // Property, Revenue, Expenses, Net Income
+      await expect(row.getByRole("cell").nth(2)).toHaveText("$250.00", { timeout: 10000 });
+    } finally {
+      if (txnId) await deleteTransaction(api, txnId);
+      await deleteProperty(api, property.id);
     }
-  });
-
-  test("create transaction, verify tax and reconciliation pages load with content", async ({ authedPage: page, api }) => {
-    // Create a test transaction to ensure the user has data
-    const txn = await createTransaction(api, {
-      vendor: `E2E Discrepancy Test ${RUN_ID}`,
-      amount: "250.00",
-      transaction_type: "expense",
-      category: "maintenance",
-      transaction_date: `${TEST_YEAR}-06-15`,
-    });
-    createdTxnId = txn.id;
-
-    // Navigate to tax page and verify it loads with content
-    await page.goto("/tax");
-    await page.waitForLoadState("domcontentloaded");
-    await expect(
-      page.getByRole("heading", { name: "Tax Report", level: 1 }),
-    ).toBeVisible({ timeout: 10000 });
-
-    // Verify the page shows tax data (not just a loading state)
-    await expect(
-      page.getByText("Rental Revenue").first().or(page.getByText(/no tax data/i)),
-    ).toBeVisible({ timeout: 10000 });
-
-    // Navigate to reconciliation page and verify it loads
-    await page.goto("/reconciliation");
-    await page.waitForLoadState("domcontentloaded");
-    await expect(
-      page.getByRole("heading", { name: /reconciliation/i }),
-    ).toBeVisible({ timeout: 10000 });
-
-    // Verify reconciliation page shows actionable content
-    await expect(
-      page.getByText(/upload 1099|review sources|discrepancies/i).first(),
-    ).toBeVisible({ timeout: 10000 });
   });
 });
 

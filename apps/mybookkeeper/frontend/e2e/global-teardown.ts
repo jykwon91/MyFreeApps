@@ -60,17 +60,22 @@ async function cleanupTestData(token: string, orgId: string): Promise<void> {
     }
   } catch { /* non-critical */ }
 
-  // Clean up E2E reconciliation sources
+  // Clean up E2E reconciliation sources. Specs file them under last year.
   try {
-    for (const year of [2024, 2025, 2026]) {
+    const thisYear = new Date().getFullYear();
+    for (const year of [thisYear - 2, thisYear - 1, thisYear]) {
       const res = await fetch(`${BACKEND_URL}/reconciliation/sources?tax_year=${year}`, { headers });
       if (res.ok) {
         const sources = (await res.json()) as Array<{ id: string; issuer: string }>;
         const e2e = sources.filter((s) => s.issuer?.startsWith("E2E "));
+        let deleted = 0;
         for (const src of e2e) {
-          await fetch(`${BACKEND_URL}/reconciliation/sources/${src.id}`, { method: "DELETE", headers }).catch(() => {});
+          const del = await fetch(`${BACKEND_URL}/test/reconciliation-sources/${src.id}`, { method: "DELETE", headers })
+            .catch(() => null);
+          if (del?.ok) deleted += 1;
+          else console.warn(`E2E teardown: could not delete reconciliation source ${src.id}: ${del?.status ?? "network error"}`);
         }
-        if (e2e.length > 0) console.log(`E2E teardown: deleted ${e2e.length} reconciliation source(s) for ${year}`);
+        if (deleted > 0) console.log(`E2E teardown: deleted ${deleted} reconciliation source(s) for ${year}`);
       }
     }
   } catch { /* non-critical */ }

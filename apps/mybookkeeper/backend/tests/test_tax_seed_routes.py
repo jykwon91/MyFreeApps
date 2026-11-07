@@ -1,6 +1,7 @@
 """Tests for the test-only tax seed route."""
 import uuid
 from contextlib import asynccontextmanager
+from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
@@ -14,8 +15,13 @@ from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrgRole
 from app.models.tax.tax_form_instance import TaxFormInstance
 from app.models.tax.tax_return import TaxReturn
+from app.models.transactions.reconciliation_source import ReconciliationSource
 from app.models.user.user import User
-from app.test_helpers.tax_seed import _SeedFormInstanceRequest, seed_form_instance
+from app.test_helpers.tax_seed import (
+    _SeedFormInstanceRequest,
+    delete_reconciliation_source,
+    seed_form_instance,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -99,3 +105,56 @@ class TestSeedFormInstance:
             settings.allow_test_admin_promotion = original
         assert exc_info.value.status_code == 404
         assert (await db.execute(select(TaxFormInstance))).first() is None
+
+
+async def _make_source(db: AsyncSession, org_id: uuid.UUID, user: User) -> ReconciliationSource:
+    source = ReconciliationSource(
+        organization_id=org_id, user_id=user.id, source_type="1099_k",
+        tax_year=2031, issuer="E2E Issuer", reported_amount=Decimal("100.00"),
+    )
+    db.add(source)
+    await db.commit()
+    return source
+
+
+async def _source_ids(db: AsyncSession) -> list[uuid.UUID]:
+    return list((await db.execute(select(ReconciliationSource.id))).scalars().all())
+
+
+class TestDeleteReconciliationSource:
+    @pytest.mark.asyncio
+    async def test_deletes_my_source(
+        self, db: AsyncSession, test_user: User, test_org: Organization, test_mode: None,
+    ) -> None:
+        source = await _make_source(db, test_org.id, test_user)
+        other = await _make_source(db, test_org.id, test_user)
+
+        await delete_reconciliation_source(source.id, ctx=_ctx(test_org.id, test_user))
+
+        assert await _source_ids(db) == [other.id]
+
+    @pytest.mark.asyncio
+    async def test_another_organizations_source_is_not_found(
+        self, db: AsyncSession, test_user: User, test_org: Organization, test_mode: None,
+    ) -> None:
+        source = await _make_source(db, test_org.id, test_user)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await delete_reconciliation_source(source.id, ctx=_ctx(uuid.uuid4(), test_user))
+        assert exc_info.value.status_code == 404
+        assert await _source_ids(db) == [source.id]
+
+    @pytest.mark.asyncio
+    async def test_not_found_outside_test_mode(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        source = await _make_source(db, test_org.id, test_user)
+        original = settings.allow_test_admin_promotion
+        settings.allow_test_admin_promotion = False
+        try:
+            with pytest.raises(HTTPException) as exc_info:
+                await delete_reconciliation_source(source.id, ctx=_ctx(test_org.id, test_user))
+        finally:
+            settings.allow_test_admin_promotion = original
+        assert exc_info.value.status_code == 404
+        assert await _source_ids(db) == [source.id]

@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures/auth";
 import { getYear } from "date-fns";
-import { createTransaction, deleteTransaction } from "./fixtures/seed-data";
+import { createTransaction, deleteReconciliationSource, deleteTransaction } from "./fixtures/seed-data";
 import { toasts } from "./fixtures/toasts";
 
 const RUN_ID = Date.now();
@@ -12,7 +12,7 @@ test.describe("Reconciliation — add and delete 1099 source", () => {
 
   test.afterAll(async ({ api }) => {
     if (createdSourceId) {
-      await api.delete(`/reconciliation/sources/${createdSourceId}`).catch(() => {/* non-critical */});
+      await deleteReconciliationSource(api, createdSourceId);
     }
   });
 
@@ -111,6 +111,7 @@ test.describe("Reconciliation — compare with my records", () => {
       transaction_date: `${TEST_YEAR}-06-15`,
     });
 
+    let sourceId: string | null = null;
     try {
       // New transactions start pending, and a comparison only counts approved income.
       const approved = await api.patch(`/transactions/${transaction.id}`, { data: { status: "approved" } });
@@ -120,6 +121,7 @@ test.describe("Reconciliation — compare with my records", () => {
         data: { source_type: "1099_k", tax_year: TEST_YEAR, issuer, reported_amount: "1234.00" },
       });
       expect(added.ok()).toBe(true);
+      sourceId = (await added.json()).id;
 
       await page.goto("/reconciliation");
       await page.getByRole("button", { name: /review sources/i }).click();
@@ -142,6 +144,7 @@ test.describe("Reconciliation — compare with my records", () => {
       const saved = sources.find((source: { issuer: string }) => source.issuer === issuer);
       expect(saved.status).toBe("matched");
     } finally {
+      if (sourceId) await deleteReconciliationSource(api, sourceId);
       await deleteTransaction(api, transaction.id);
     }
   });
