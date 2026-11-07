@@ -160,7 +160,7 @@ describe("DocumentList", () => {
         data: {
           items: [
             makeDoc({ id: "doc-1", title: "Cover Letter Draft" }),
-            makeDoc({ id: "doc-2", title: "Tailored Resume" }),
+            makeDoc({ id: "doc-2", title: "Acme Resume v2" }),
           ],
           total: 2,
         },
@@ -171,7 +171,7 @@ describe("DocumentList", () => {
       renderList();
 
       expect(screen.getByText("Cover Letter Draft")).toBeInTheDocument();
-      expect(screen.getByText("Tailored Resume")).toBeInTheDocument();
+      expect(screen.getByText("Acme Resume v2")).toBeInTheDocument();
     });
 
     it("renders kind badges for each document", () => {

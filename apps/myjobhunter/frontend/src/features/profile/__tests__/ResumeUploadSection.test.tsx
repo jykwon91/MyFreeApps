@@ -169,9 +169,8 @@ describe("ResumeUploadSection", () => {
 
     render(<ResumeUploadSection profileId="profile-1" />);
 
-    expect(mockResumeJobRow).toHaveBeenCalledWith(
+    expect(mockResumeJobRow.mock.calls[0][0]).toEqual(
       expect.objectContaining({ job: STUB_JOB }),
-      expect.anything(),
     );
   });
 

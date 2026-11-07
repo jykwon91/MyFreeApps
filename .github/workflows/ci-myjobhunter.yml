@@ -283,7 +283,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
@@ -293,6 +293,12 @@ jobs:
 
       - name: Build frontend
         run: npm run build --workspace=myjobhunter-frontend
+
+      - name: Lint frontend
+        run: npm run lint --workspace=myjobhunter-frontend
+
+      - name: Test frontend
+        run: npm test --workspace=myjobhunter-frontend
 
   caddy-image:
     needs: changes

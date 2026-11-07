@@ -54,15 +54,14 @@ export default function ActiveSessionView({ session, onStartNew }: ActiveSession
   const [pendingLine, setPendingLine] = useState<string | null>(null);
   const controlsRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    if (
-      pendingLine &&
-      activeTarget &&
-      normalizeLine(activeTarget.current_text) === normalizeLine(pendingLine)
-    ) {
-      setPendingLine(null);
-    }
-  }, [activeTarget, pendingLine]);
+  // Adjusted during render, not in an effect (no extra render pass).
+  if (
+    pendingLine &&
+    activeTarget &&
+    normalizeLine(activeTarget.current_text) === normalizeLine(pendingLine)
+  ) {
+    setPendingLine(null);
+  }
 
   async function handleLineSelected({ text, section }: { text: string; section: string }) {
     if (createTarget.isLoading) return;

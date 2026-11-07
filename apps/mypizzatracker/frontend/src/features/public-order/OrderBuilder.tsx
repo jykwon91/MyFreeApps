@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Card,
   Button,
@@ -48,24 +48,23 @@ export default function OrderBuilder({ drop, menu, onPlaced }: OrderBuilderProps
     skip: debouncedDigits < 7 || usualApplied,
   });
 
-  // If the customer name field is empty when a match returns, pre-fill it.
-  // Never overwrite something the customer typed.
-  useEffect(() => {
-    if (
-      lookupQuery.data?.customer_name
-      && customerName.trim() === ""
-    ) {
+  // Pre-fill an empty name once per lookup result, during render. Never
+  // overwrite something the customer typed, and don't refill a name they
+  // cleared on purpose.
+  const [prefilledFrom, setPrefilledFrom] = useState(lookupQuery.data);
+  if (lookupQuery.data && lookupQuery.data !== prefilledFrom) {
+    setPrefilledFrom(lookupQuery.data);
+    if (lookupQuery.data.customer_name && customerName.trim() === "") {
       setCustomerName(lookupQuery.data.customer_name);
     }
-  }, [lookupQuery.data, customerName]);
+  }
 
   // Clearing the phone resets the "applied" lock so a different customer
   // on a shared device can get their own "welcome back".
-  useEffect(() => {
-    if (countPhoneDigits(customerPhone) < 7 && usualApplied) {
-      setUsualApplied(false);
-    }
-  }, [customerPhone, usualApplied]);
+  const handlePhoneChange = (phone: string) => {
+    setCustomerPhone(phone);
+    if (countPhoneDigits(phone) < 7) setUsualApplied(false);
+  };
 
   const orderableTheUsual = useMemo(() => {
     if (!lookupQuery.data) return [];
@@ -73,7 +72,9 @@ export default function OrderBuilder({ drop, menu, onPlaced }: OrderBuilderProps
   }, [lookupQuery.data, menu]);
 
   const applyTheUsual = () => {
-    if (orderableTheUsual.length === 0) return;
+    // The banner can outlive the phone for the debounce window; applying then
+    // would set a lock that no later phone change clears.
+    if (orderableTheUsual.length === 0 || countPhoneDigits(customerPhone) < 7) return;
     setLines(
       orderableTheUsual.map((line) => ({
         localId: cryptoRandomId(),
@@ -96,7 +97,7 @@ export default function OrderBuilder({ drop, menu, onPlaced }: OrderBuilderProps
   const slotCapacityOk =
     selectedSlot !== undefined && lines.length <= selectedSlot.remaining_pizzas;
 
-  const trimmedPhoneDigits = (customerPhone.match(/\d/g) || []).length;
+  const trimmedPhoneDigits = countPhoneDigits(customerPhone);
 
   const valid =
     Boolean(selectedSlotId) &&
@@ -223,7 +224,7 @@ export default function OrderBuilder({ drop, menu, onPlaced }: OrderBuilderProps
               <input
                 type="tel"
                 value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
+                onChange={(e) => handlePhoneChange(e.target.value)}
                 placeholder="(512) 555-1234"
                 className="w-full px-3 py-2 rounded border bg-background"
                 autoComplete="tel"

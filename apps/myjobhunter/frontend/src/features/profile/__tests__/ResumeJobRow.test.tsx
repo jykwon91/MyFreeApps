@@ -33,13 +33,6 @@ vi.mock("@platform/ui", () => ({
   formatFileSize: (bytes: number) => `${bytes} bytes`,
 }));
 
-vi.mock("lucide-react", () => ({
-  Download: () => <svg data-testid="download-icon" />,
-  FileText: () => <svg data-testid="file-icon" />,
-  ChevronDown: () => <svg data-testid="chevron-down" />,
-  ChevronUp: () => <svg data-testid="chevron-up" />,
-}));
-
 // ---------------------------------------------------------------------------
 // Import under test — AFTER all vi.mock calls.
 // ---------------------------------------------------------------------------
