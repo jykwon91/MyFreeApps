@@ -6,6 +6,23 @@ import ItemNameLink from "@/games/wow-forever/components/itemPages/ItemNameLink"
 import { ITEM_TOOLTIP_SHOW_DELAY_MS } from "@/games/wow-forever/data/itemPages/itemTooltipConfig";
 import type { ClientItem } from "@/games/wow-forever/types/clientItem";
 
+// Shard loads wait on this gate. It is open unless a test holds it to see the loading state — otherwise
+// a fast machine can finish the real shard import inside an async timer advance, and the skeleton is gone.
+const shardGate = vi.hoisted(() => ({ wait: Promise.resolve(), release: () => {} }));
+vi.mock("@/games/wow-forever/data/itemPages/itemPageShards", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/games/wow-forever/data/itemPages/itemPageShards")>();
+  const gated = Object.fromEntries(
+    Object.entries(actual.FOREVER_ITEM_SHARDS).map(([key, load]) => [key, async () => (await shardGate.wait, load())]),
+  );
+  return { ...actual, FOREVER_ITEM_SHARDS: gated };
+});
+
+function holdShards(): void {
+  shardGate.wait = new Promise<void>((resolve) => {
+    shardGate.release = resolve;
+  });
+}
+
 // As the gear page holds it in memory (the row from the Forever shard).
 const FELCLOTH_PANTS: ClientItem = {
   id: 14107,
@@ -47,6 +64,8 @@ function hover(link: HTMLElement, pointerType: string) {
 describe("item name tooltip", () => {
   beforeEach(() => stubFocusVisible(true));
   afterEach(() => {
+    shardGate.release();
+    shardGate.wait = Promise.resolve();
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -62,6 +81,7 @@ describe("item name tooltip", () => {
 
   it("a mouse hover shows the tooltip after the delay, described by the link; leaving hides it", async () => {
     vi.useFakeTimers();
+    holdShards();
     renderLink({ itemId: FELCLOTH_PANTS.id, name: FELCLOTH_PANTS.name, item: FELCLOTH_PANTS });
     const link = screen.getByRole("link", { name: "Felcloth Pants" });
 
