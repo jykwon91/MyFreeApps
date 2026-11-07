@@ -15,7 +15,12 @@ from app.models.documents.document import Document
 from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrgRole
 from app.models.user.user import User
-from app.test_helpers.document_seed import _SeedDocumentRequest, seed_document
+from app.test_helpers.document_seed import (
+    _SeedDocumentRequest,
+    _SeedFailedDocumentRequest,
+    seed_document,
+    seed_failed_document,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -69,6 +74,52 @@ class TestSeedDocument:
             with pytest.raises(HTTPException) as exc_info:
                 await seed_document(
                     _SeedDocumentRequest(file_name="e2e.pdf", document_type="invoice"),
+                    ctx=_ctx(test_org.id, test_user),
+                )
+        finally:
+            settings.allow_test_admin_promotion = original
+        assert exc_info.value.status_code == 404
+        assert (await db.execute(select(Document))).first() is None
+
+
+class TestSeedFailedDocument:
+    @pytest.mark.asyncio
+    async def test_adds_a_failed_untyped_document_to_my_organization(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        original = settings.allow_test_admin_promotion
+        settings.allow_test_admin_promotion = True
+        try:
+            seeded = await seed_failed_document(
+                _SeedFailedDocumentRequest(file_name="e2e-doc-bad.pdf", error_message="Could not read this file"),
+                ctx=_ctx(test_org.id, test_user),
+            )
+        finally:
+            settings.allow_test_admin_promotion = original
+
+        document = (await db.execute(select(Document).where(Document.id == seeded.id))).scalar_one()
+        assert document.organization_id == test_org.id
+        assert document.user_id == test_user.id
+        assert document.file_name == "e2e-doc-bad.pdf"
+        assert document.status == "failed"
+        assert document.error_message == "Could not read this file"
+        assert document.document_type is None
+        assert document.deleted_at is None
+
+    def test_requires_an_error_message(self) -> None:
+        with pytest.raises(ValidationError):
+            _SeedFailedDocumentRequest(file_name="e2e.pdf", error_message="")
+
+    @pytest.mark.asyncio
+    async def test_not_found_outside_test_mode(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        original = settings.allow_test_admin_promotion
+        settings.allow_test_admin_promotion = False
+        try:
+            with pytest.raises(HTTPException) as exc_info:
+                await seed_failed_document(
+                    _SeedFailedDocumentRequest(file_name="e2e.pdf", error_message="boom"),
                     ctx=_ctx(test_org.id, test_user),
                 )
         finally:

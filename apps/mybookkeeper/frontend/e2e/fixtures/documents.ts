@@ -72,3 +72,15 @@ export async function seedTypedDocument(api: APIRequestContext, name: string, do
   expect(res.ok(), await res.text()).toBe(true);
   return ((await res.json()) as { id: string }).id;
 }
+
+/**
+ * Adds a document whose reading failed under ``name`` through the test-only
+ * seed route, so a spec gets a failure on a keyed stack as well as a keyless one.
+ */
+export async function seedFailedDocument(api: APIRequestContext, name: string): Promise<string> {
+  const res = await api.post("/test/seed-failed-document", {
+    data: { file_name: name, error_message: "E2E: this document could not be read" },
+  });
+  expect(res.ok(), await res.text()).toBe(true);
+  return ((await res.json()) as { id: string }).id;
+}
