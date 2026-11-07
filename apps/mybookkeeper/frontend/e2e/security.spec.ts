@@ -27,16 +27,26 @@ test.describe("Security page — layout", () => {
 });
 
 test.describe("Security page — info banner", () => {
-  test("info banner recommending 2FA is visible", async ({ authedPage: page }) => {
-    // Clear any dismissed state
-    await page.evaluate(() => localStorage.removeItem("security-info-dismissed"));
+  const bannerText = /We recommend enabling it since your account contains sensitive financial data/;
+
+  test("shows the 2FA recommendation until dismissed, and stays dismissed after reload", async ({ authedPage: page }) => {
     await page.goto("/security");
+    await page.evaluate(() => localStorage.removeItem("security-info-dismissed"));
+    await page.reload();
     await expect(page.getByRole("heading", { name: /security/i })).toBeVisible({ timeout: 10000 });
 
-    const banner = page.getByText(/recommend|protect|two-factor/i).first();
-    const isBannerVisible = await banner.isVisible({ timeout: 5000 }).catch(() => false);
-    test.skip(!isBannerVisible, "Info banner not visible — may already be dismissed or not present");
+    const banner = page.getByText(bannerText);
     await expect(banner).toBeVisible();
+
+    await page.getByRole("button", { name: "Dismiss" }).click();
+    await expect(banner).toHaveCount(0);
+    expect(await page.evaluate(() => localStorage.getItem("security-info-dismissed"))).toBe("1");
+
+    await page.reload();
+    await expect(page.getByRole("heading", { name: /security/i })).toBeVisible({ timeout: 10000 });
+    await expect(banner).toHaveCount(0);
+
+    await page.evaluate(() => localStorage.removeItem("security-info-dismissed"));
   });
 });
 
