@@ -3,11 +3,12 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { configurePlatform } from "@platform/core/platform/configurePlatform";
 import { configureStore } from "@reduxjs/toolkit";
 import type { AxiosAdapter } from "axios";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import "../store/applicantsApi";
 import "../store/signedLeasesApi";
 
 const reads: string[] = [];
+const writes: { url: string; data: unknown }[] = [];
 
 function makeStore() {
   return configureStore({
@@ -28,6 +29,7 @@ beforeAll(() => {
   });
   const adapter: AxiosAdapter = (config) => {
     if (config.method === "get") reads.push(config.url ?? "");
+    else writes.push({ url: config.url ?? "", data: config.data ? JSON.parse(String(config.data)) : undefined });
     return Promise.resolve({ data: { id: "new", parent_lease_id: "old", applicant_id: "a1" }, status: 200, statusText: "", headers: {}, config });
   };
   api.defaults.adapter = adapter;
@@ -35,6 +37,11 @@ beforeAll(() => {
 
 beforeEach(() => {
   reads.length = 0;
+  writes.length = 0;
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe("signedLeasesApi", () => {
@@ -61,5 +68,17 @@ describe("signedLeasesApi", () => {
     await store.dispatch(endpoints[endpoint].initiate(arg));
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(reads).toEqual(["/applicants/a1"]);
+  });
+
+  it.each([
+    ["prefillAddendumPlaceholders", { leaseId: "l1", templateIds: ["t1"] }, { template_ids: ["t1"] }, "/signed-leases/l1/template-prefill"],
+    ["addSignedLeaseTemplates", { leaseId: "l1", templateIds: ["t1"] }, { template_ids: ["t1"] }, "/signed-leases/l1/templates"],
+    ["generateSignedLease", "l1", {}, "/signed-leases/l1/generate"],
+  ])("%s sends the host's local date for today defaults", async (endpoint, arg, body, url) => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    // 11:30pm local: a UTC date would already be tomorrow for a US host.
+    vi.setSystemTime(new Date(2026, 10, 6, 23, 30));
+    await makeStore().dispatch(endpoints[endpoint].initiate(arg));
+    expect(writes).toEqual([{ url, data: { ...body, today: "2026-11-06" } }]);
   });
 });

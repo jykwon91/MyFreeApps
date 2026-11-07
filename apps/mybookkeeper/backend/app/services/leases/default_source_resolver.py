@@ -19,6 +19,7 @@ Usage::
         spec="applicant.legal_name || inquiry.inquirer_name",
         applicant=applicant_orm_row,
         inquiry=inquiry_orm_row,  # or None
+        today=client_local_date,
     )
 """
 from __future__ import annotations
@@ -169,6 +170,7 @@ def resolve_default_source(
     applicant: Applicant,
     inquiry: Inquiry | None,
     *,
+    today: datetime.date,
     lease: SignedLease | None = None,
     property_record: Property | None = None,
     user_record: User | None = None,
@@ -187,6 +189,9 @@ def resolve_default_source(
     Dates are returned as ISO-8601 strings (``YYYY-MM-DD``) for consistency
     with the frontend ``<input type="date">`` format.
 
+    ``today`` is the caller's local date (the server runs in UTC, so it
+    can't know the host's date itself).
+
     The keyword-only ``lease`` / ``property_record`` / ``user_record`` params
     are optional. Existing call sites that only have applicant + inquiry
     context (e.g. fresh-lease creation) keep working — segments referencing
@@ -199,6 +204,7 @@ def resolve_default_source(
             segment,
             applicant,
             inquiry,
+            today=today,
             lease=lease,
             property_record=property_record,
             user_record=user_record,
@@ -217,12 +223,13 @@ def _evaluate_segment(
     applicant: Applicant,
     inquiry: Inquiry | None,
     *,
+    today: datetime.date,
     lease: SignedLease | None = None,
     property_record: Property | None = None,
     user_record: User | None = None,
 ) -> Any | None:
     if segment == "today":
-        return datetime.date.today()
+        return today
 
     namespace, attr = segment.split(".", 1)
     if namespace == "applicant":

@@ -5,9 +5,12 @@ import uuid
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.schemas.leases.client_local_date import ClientLocalDate
+
 
 class SignedLeaseAddTemplatesRequest(BaseModel):
     template_ids: list[uuid.UUID]
+    today: ClientLocalDate
     # Caller-supplied placeholder values, applied on top of the lease's
     # existing values and any auto-resolved defaults. Required when
     # attaching a template to an imported lease whose ``lease.values`` is

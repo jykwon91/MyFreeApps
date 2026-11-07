@@ -1,11 +1,13 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { deleteInquiry, seedInquiry } from "./fixtures/inquiries";
+import { localToday } from "./fixtures/local-today";
 
 /**
  * E2E tests for the lease-template-source-pull enhancements:
  *
- * - Backend: ``GET /lease-templates/{id}/generate-defaults?applicant_id=``
- *   correctly resolves defaults with inquiry fallback.
+ * - Backend: ``GET /lease-templates/{id}/generate-defaults?applicant_id=&today=``
+ *   correctly resolves defaults with inquiry fallback, and ``today``
+ *   placeholders resolve to the host's local date the client sends.
  *
  * NOTE: ``LeaseGenerateForm`` is a component built in PR #175 but not yet
  * integrated into any app route (the consuming page is a future PR). These
@@ -63,9 +65,12 @@ async function getGenerateDefaults(
   api: APIRequestContext,
   templateId: string,
   applicantId: string,
+  today: string | null = localToday(),
 ) {
+  const params = new URLSearchParams({ applicant_id: applicantId });
+  if (today !== null) params.set("today", today);
   const res = await api.get(
-    `/lease-templates/${templateId}/generate-defaults?applicant_id=${applicantId}`,
+    `/lease-templates/${templateId}/generate-defaults?${params.toString()}`,
   );
   return { status: res.status(), body: await res.json() };
 }
@@ -233,7 +238,7 @@ test.describe("generate-defaults API (lease-template-source-pull)", () => {
   );
 
   test(
-    "today placeholder resolves to today's date, provenance=today",
+    "today placeholder resolves to the host's local date, provenance=today",
     async ({ api }) => {
       const runId = Date.now();
       const seededTemplates: string[] = [];
@@ -248,8 +253,9 @@ test.describe("generate-defaults API (lease-template-source-pull)", () => {
         const applicantId = await seedApplicant(api, { legal_name: "Test Tenant" });
         seededApplicants.push(applicantId);
 
+        const hostToday = localToday();
         const { status, body } = await getGenerateDefaults(
-          api, templateId, applicantId,
+          api, templateId, applicantId, hostToday,
         );
         expect(status).toBe(200);
 
@@ -259,13 +265,25 @@ test.describe("generate-defaults API (lease-template-source-pull)", () => {
           provenance: string | null;
         }>).find((d) => d.key === "EFFECTIVE DATE");
 
-        const todayIso = new Date().toISOString().slice(0, 10);
-        expect(effectiveDateDefault?.value).toBe(todayIso);
+        expect(effectiveDateDefault?.value).toBe(hostToday);
         expect(effectiveDateDefault?.provenance).toBe("today");
       } finally {
         for (const id of seededTemplates) await deleteTemplate(api, id);
         for (const id of seededApplicants) await deleteApplicant(api, id);
       }
+    },
+  );
+
+  test(
+    "request without the host's date is rejected with 422",
+    async ({ api }) => {
+      const { status } = await getGenerateDefaults(
+        api,
+        "00000000-0000-4000-8000-000000000002",
+        "00000000-0000-4000-8000-000000000001",
+        null,
+      );
+      expect(status).toBe(422);
     },
   );
 

@@ -2,6 +2,7 @@ import { leaseTemplatesApi } from "@mybookkeeper/api-client/store/leaseTemplates
 import type { MergedPlaceholder } from "@mybookkeeper/api-client/types/lease/merged-placeholder";
 import type { LeasePlaceholderInputType } from "@mybookkeeper/api-client/types/lease/lease-placeholder-input-type";
 import type { PlaceholderProvenance } from "@mybookkeeper/api-client/types/lease/placeholder-provenance";
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import api from "@platform/core/lib/api";
 import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
@@ -202,7 +203,7 @@ describe("the whole way through", () => {
 
     await fireEvent.press(await screen.findByText("Sam Lee"));
     expect(await screen.findByDisplayValue("Dana Reed")).toBeTruthy();
-    expect(server.defaultsReads).toEqual([{ template_ids: ["t2", "t1"], applicant_id: "a2" }]);
+    expect(server.defaultsReads).toEqual([{ template_ids: ["t2", "t1"], applicant_id: "a2", today: localToday() }]);
 
     await pressCreate();
     expect(await screen.findByText("lease-new1")).toBeTruthy();

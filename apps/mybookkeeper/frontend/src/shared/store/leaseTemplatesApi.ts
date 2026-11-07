@@ -1,4 +1,5 @@
 import { baseApi } from "./baseApi";
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import type { GenerateDefaultsResponse } from "@/shared/types/lease/generate-defaults-response";
 import type { LeasePlaceholderUpdateRequest } from "@/shared/types/lease/lease-placeholder-update-request";
 import type { LeaseTemplateDetail } from "@mybookkeeper/api-client/types/lease/lease-template-detail";
@@ -76,7 +77,7 @@ const leaseTemplatesApi = baseApi.injectEndpoints({
     >({
       query: ({ templateId, applicantId }) => ({
         url: `/lease-templates/${templateId}/generate-defaults`,
-        params: { applicant_id: applicantId },
+        params: { applicant_id: applicantId, today: localToday() },
       }),
       // No cache tag — always fetch fresh when applicant changes.
     }),

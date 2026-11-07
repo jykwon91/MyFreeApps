@@ -11,6 +11,7 @@ import type { SignedLeaseListArgs } from "../types/lease/signed-lease-list-args"
 import type { SignedLeaseListResponse } from "../types/lease/signed-lease-list-response";
 import type { SignedLeaseTemplatePrefillResponse } from "../types/lease/signed-lease-template-prefill";
 import type { SignedLeaseUpdateRequest } from "../types/lease/signed-lease-update-request";
+import { localToday } from "../utils/localToday";
 
 /** A new lease also changes the one it follows, which now has a successor. */
 function tagsAfterNewLease(lease: SignedLeaseDetail | undefined) {
@@ -128,7 +129,7 @@ export const signedLeasesApi = baseApi.enhanceEndpoints({
     }),
 
     generateSignedLease: builder.mutation<SignedLeaseDetail, string>({
-      query: (id) => ({ url: `/signed-leases/${id}/generate`, method: "POST" }),
+      query: (id) => ({ url: `/signed-leases/${id}/generate`, method: "POST", data: { today: localToday() } }),
       // Until the refetch lands the lease would still look like a draft, and a second tap makes a second set of files.
       async onQueryStarted(id, { dispatch, queryFulfilled }) {
         try {
@@ -258,6 +259,7 @@ export const signedLeasesApi = baseApi.enhanceEndpoints({
         method: "POST",
         data: {
           template_ids: templateIds,
+          today: localToday(),
           ...(values ? { values } : {}),
         },
       }),
@@ -274,7 +276,7 @@ export const signedLeasesApi = baseApi.enhanceEndpoints({
       query: ({ leaseId, templateIds }) => ({
         url: `/signed-leases/${leaseId}/template-prefill`,
         method: "POST",
-        data: { template_ids: templateIds },
+        data: { template_ids: templateIds, today: localToday() },
       }),
     }),
   }),

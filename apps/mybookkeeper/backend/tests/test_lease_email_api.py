@@ -29,6 +29,10 @@ from app.services.leases.lease_email_service import DemoWorkspaceEmailError
 from app.schemas.leases.signed_lease_response import SignedLeaseResponse
 
 
+def _utc_today() -> str:
+    return _dt.datetime.now(_dt.timezone.utc).date().isoformat()
+
+
 def _ctx(org_id: uuid.UUID, user_id: uuid.UUID) -> RequestContext:
     return RequestContext(
         organization_id=org_id, user_id=user_id, org_role=OrgRole.OWNER,
@@ -201,7 +205,9 @@ class TestGenerateLeaseSchedulesAutoEmail:
                 side_effect=lambda func, *a, **kw: scheduled(func, *a, **kw),
             ):
                 client = TestClient(app)
-                resp = client.post(f"/signed-leases/{lease_id}/generate")
+                resp = client.post(
+                    f"/signed-leases/{lease_id}/generate", json={"today": _utc_today()},
+                )
         finally:
             app.dependency_overrides.pop(require_write_access, None)
 
@@ -235,7 +241,9 @@ class TestGenerateLeaseSchedulesAutoEmail:
                 side_effect=lambda func, *a, **kw: scheduled(func, *a, **kw),
             ):
                 client = TestClient(app)
-                resp = client.post(f"/signed-leases/{lease_id}/generate")
+                resp = client.post(
+                    f"/signed-leases/{lease_id}/generate", json={"today": _utc_today()},
+                )
         finally:
             app.dependency_overrides.pop(require_write_access, None)
 

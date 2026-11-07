@@ -3,7 +3,7 @@
 Supports exactly these forms:
 - ``(KEY_A - KEY_B).days`` — date diff in days (both keys must be type=date)
 - ``(KEY_A + KEY_B)`` — string concatenation
-- ``today`` — current date
+- ``today`` — the caller's local date, passed in as ``today``
 
 Anything else raises ``ComputedExprError`` at parse time. There is NO
 ``eval()`` involved — the parser is a hand-rolled regex matcher.
@@ -57,14 +57,13 @@ def evaluate(
     expr: str,
     values: dict[str, object],
     *,
-    today: _dt.date | None = None,
+    today: _dt.date,
 ) -> str:
     """Evaluate ``expr`` against ``values`` and return a string suitable for substitution.
 
     Raises ``ComputedExprError`` for malformed expressions or missing values.
     """
     validate_expr(expr)
-    today = today or _dt.date.today()
 
     if _TODAY_RE.match(expr):
         return today.isoformat()

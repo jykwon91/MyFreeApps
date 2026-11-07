@@ -11,9 +11,12 @@ import uuid
 
 from pydantic import BaseModel, field_validator
 
+from app.schemas.leases.client_local_date import ClientLocalDate
+
 
 class SignedLeaseTemplatePrefillRequest(BaseModel):
     template_ids: list[uuid.UUID]
+    today: ClientLocalDate
 
     @field_validator("template_ids")
     @classmethod

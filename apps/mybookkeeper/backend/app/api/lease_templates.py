@@ -10,12 +10,17 @@ call — cross-tenant access returns the same shape as a missing row.
 from __future__ import annotations
 
 import uuid
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
-from app.schemas.leases.generate_defaults_response import GenerateDefaultsResponse
+from app.schemas.leases.client_local_date import ClientLocalDate
+from app.schemas.leases.generate_defaults_response import (
+    GenerateDefaultsResponse,
+    PlaceholderDefault,
+)
 from app.schemas.leases.lease_template_list_response import (
     LeaseTemplateListResponse,
 )
@@ -105,6 +110,7 @@ async def post_multi_generate_defaults(
             organization_id=ctx.organization_id,
             template_ids=payload.template_ids,
             applicant_id=payload.applicant_id,
+            today=payload.today,
         )
     except lease_template_service.TemplateNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Template not found") from exc
@@ -192,6 +198,7 @@ async def update_placeholder(
 )
 async def get_generate_defaults(
     template_id: uuid.UUID,
+    today: Annotated[ClientLocalDate, Query()],
     applicant_id: uuid.UUID = Query(...),
     ctx: RequestContext = Depends(current_org_member),
 ) -> GenerateDefaultsResponse:
@@ -208,8 +215,8 @@ async def get_generate_defaults(
             organization_id=ctx.organization_id,
             template_id=template_id,
             applicant_id=applicant_id,
+            today=today,
         )
-        from app.schemas.leases.generate_defaults_response import PlaceholderDefault
         return GenerateDefaultsResponse(
             defaults=[PlaceholderDefault(**d) for d in defaults]
         )

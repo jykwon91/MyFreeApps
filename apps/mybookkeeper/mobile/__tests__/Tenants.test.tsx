@@ -1,5 +1,5 @@
 import { APPLICANT_PAGE_SIZE } from "@mybookkeeper/api-client/constants/applicantLabels";
-import { localToday } from "@mybookkeeper/api-client/utils/tenancyState";
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";

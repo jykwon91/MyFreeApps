@@ -1031,6 +1031,7 @@
         "test_lease_import_api.py",
         "test_lease_import_heuristic.py",
         "test_default_source_resolver.py",
+        "test_lease_client_local_date.py",
         "test_signed_lease_multi_template.py",
         "test_suggest_placeholders_api.py"
       ],
@@ -1039,6 +1040,7 @@
         "PlaceholderSpecEditor.test.tsx",
         "LeaseImportDialog.test.tsx",
         "LeaseGenerateForm.test.tsx",
+        "leaseTemplatesApiGenerateDefaults.test.ts",
         "LeaseNew.test.tsx",
         "LeasesListBody.test.tsx",
         "LeaseAttachmentDropzone.test.tsx",
