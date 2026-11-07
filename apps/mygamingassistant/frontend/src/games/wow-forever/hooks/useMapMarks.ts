@@ -36,7 +36,7 @@ export interface MapMarksState {
   removeStop: (index: number) => void;
   moveStop: (index: number, delta: number) => void;
   clearRoute: () => void;
-  /** The last delete / clear, until undone or replaced. */
+  /** The last delete / clear on the viewed map, until undone or any other change. */
   undo: MapMarksUndo | null;
   applyUndo: () => void;
   dismissUndo: () => void;
@@ -64,6 +64,7 @@ export function useMapMarks(mapId: number | null): MapMarksState {
       if (e.key !== MAP_MARKS_STORAGE_KEY) return;
       latest.current = readStore();
       setStore(latest.current);
+      setUndo(null);
     }
     window.addEventListener("storage", reload);
     return () => window.removeEventListener("storage", reload);
@@ -73,6 +74,8 @@ export function useMapMarks(mapId: number | null): MapMarksState {
     if (next === latest.current) return;
     latest.current = next;
     setStore(next);
+    // Undo restores a snapshot, so any later change ends it (a delete or clear sets a new one right after).
+    setUndo(null);
     writeStored(MAP_MARKS_STORAGE_KEY, next);
   }, []);
 
@@ -138,7 +141,7 @@ export function useMapMarks(mapId: number | null): MapMarksState {
     removeStop: (index) => edit((s, m) => removeRouteStop(s, m, index)),
     moveStop: (index, delta) => edit((s, m) => moveRouteStop(s, m, index, delta)),
     clearRoute: clear,
-    undo,
+    undo: undo?.mapId === mapId ? undo : null,
     applyUndo,
     dismissUndo: () => setUndo(null),
     saveShared,

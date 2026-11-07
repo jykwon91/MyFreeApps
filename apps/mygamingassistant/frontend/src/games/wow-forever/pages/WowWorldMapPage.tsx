@@ -46,12 +46,13 @@ export default function WowWorldMapPage() {
   const marks = useMapMarks(view.mapId);
   // A "Share this view" link: its map, zoom and layers on screen, its marks shown read-only.
   const sharedView = useSharedMapView(data, mapLayers);
-  const { clearRestore: clearSharedRestore } = sharedView;
+  const { restore: sharedRestore, clearRestore: clearSharedRestore } = sharedView;
   const { clearRestore: clearSelectionRestore } = selection;
-  const clearRestores = useCallback(() => {
-    clearSharedRestore();
-    clearSelectionRestore();
-  }, [clearSharedRestore, clearSelectionRestore]);
+  // The shared view's zoom goes first; once applied, only that one is cleared.
+  const clearAppliedRestore = useCallback(() => {
+    if (sharedRestore) clearSharedRestore();
+    else clearSelectionRestore();
+  }, [sharedRestore, clearSharedRestore, clearSelectionRestore]);
   const { selectedPoiId } = selection;
   const places = useMemo(() => (data ? buildPlaces(data) : []), [data]);
 
@@ -236,7 +237,7 @@ export default function WowWorldMapPage() {
                   onCancelPick={planner.cancelPick}
                   directionsOpen={planner.directionsOpen}
                   restore={sharedView.restore ?? selection.restore}
-                  onRestoreApplied={clearRestores}
+                  onRestoreApplied={clearAppliedRestore}
                   onZoomChange={selection.trackZoom}
                   onManualZoom={selection.takeControl}
                   onOpen={view.goTo}

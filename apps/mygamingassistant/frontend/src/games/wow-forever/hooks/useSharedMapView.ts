@@ -37,13 +37,16 @@ export function useSharedMapView(data: WorldMapData | null, layers: MapLayersSta
   const { preview } = layers;
 
   // Read while rendering (not in an effect), so the shared map, zoom and layers arrive with the first frame.
+  // `preview` sets useMapLayers' state during this render, which React allows only because both hooks
+  // live in the same component (WowWorldMapPage) — keep them together.
   if (data && isMapViewFragment(hash) && opened?.hash !== hash) {
     const view = decodeMapViewFragment(hash);
     const ok = view !== null && data.maps.has(view.mapId);
     setOpened({ hash, mapId: ok ? view.mapId : null });
     setInvalid(!ok);
+    // A newer link replaces what an earlier one shared, even when it doesn't work.
+    setShared(ok && view.marks.marks.length > 0 ? { mapId: view.mapId, marks: view.marks } : null);
     if (ok) {
-      setShared(view.marks.marks.length > 0 ? { mapId: view.mapId, marks: view.marks } : null);
       setRestore({ mapId: view.mapId, zoom: view.viewport });
       preview(view.layers);
     }

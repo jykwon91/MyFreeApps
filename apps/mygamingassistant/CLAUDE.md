@@ -759,11 +759,13 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
     the My marks panel for players who can't right-click or long-press.
   - **Marks** (`hooks/useMapMarks.ts`, pure CRUD in `worldMap/mapMarks.ts`):
     per map, localStorage `mga.wowForever.worldMap.marks.v1`, re-validated on
-    read (`parseStoredMapMarks`). Label (≤ 40 chars, control characters
-    dropped by `lib/cleanUserText.ts`, rendered as text only) + a style from
+    read (`parseMapMarksStore`). Label (≤ 40 chars; any whitespace becomes
+    one space and control / format characters are dropped by
+    `lib/cleanUserText.ts`; rendered as text only) + a style from
     `data/worldMap/mapMarkStyles.ts` (style codes are in share links — never
     reuse one). Caps in `data/worldMap/mapMarks.ts`: 30 marks per map, 200 in
-    all, 25 route stops. Delete has Undo, never a confirm.
+    all, 25 route stops. Delete / Clear route have Undo (until any other
+    change or another map), never a confirm.
   - **Route** (`MapRouteList`, `worldMap/routeDistance.ts`): ordered stops of
     your own marks on one map, drawn as a numbered fuchsia line; reorder,
     remove, clear. Distances are **straight-line yards** (the directions'
@@ -774,7 +776,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
     Layer codes are `data/worldMap/mapLayerShareCodes.ts` (never reuse one).
     Labels percent-encoded incl. `~!'()*_`; one layer of an app's escaping is
     undone (`%7E` separators, or a whole-link encode — a marks field we wrote
-    always has a ","). Decoding is strict (> 8000 chars, wrong version,
+    always has a ","). Decoding is strict (> 32000 chars — the biggest view we
+    can make, encoded again, fits; a test checks it — wrong version,
     unknown map, bad numbers → null → "That shared map link doesn't work"
     notice); out-of-range values clamp, bad marks / route indexes drop.
     `hooks/useSharedMapView.ts` reads the fragment while rendering, puts the

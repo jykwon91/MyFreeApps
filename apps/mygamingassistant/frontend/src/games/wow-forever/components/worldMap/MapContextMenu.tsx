@@ -17,7 +17,7 @@ interface MapContextMenuProps {
 }
 
 const ITEM_CLASS =
-  "flex w-full items-center gap-3 rounded-md px-3 text-left text-sm min-h-[48px] sm:min-h-[40px] hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none disabled:opacity-50 disabled:hover:bg-transparent";
+  "flex w-full items-center gap-3 rounded-md px-3 text-left text-sm min-h-[48px] sm:min-h-[40px] hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none aria-disabled:opacity-50 aria-disabled:hover:bg-transparent";
 
 /** Opens away from the nearest edges of the map box, so it never hangs off the map. */
 function placement(target: MapMenuTarget): CSSProperties {
@@ -40,7 +40,7 @@ export default function MapContextMenu({ target, canAdd, parentName, onAdd, onCo
   const coords = formatMapCoords(target.x, target.y);
 
   useEffect(() => {
-    menuRef.current?.querySelector<HTMLButtonElement>("[role=menuitem]:not(:disabled)")?.focus({ preventScroll: true });
+    menuRef.current?.querySelector<HTMLButtonElement>("[role=menuitem]:not([aria-disabled=true])")?.focus({ preventScroll: true });
     function outside(e: PointerEvent) {
       if (!menuRef.current?.contains(e.target as Node)) onClose();
     }
@@ -60,7 +60,7 @@ export default function MapContextMenu({ target, canAdd, parentName, onAdd, onCo
     }
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "Home" && e.key !== "End") return;
     e.preventDefault();
-    const items = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>("[role=menuitem]:not(:disabled)") ?? []);
+    const items = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>("[role=menuitem]") ?? []);
     if (items.length === 0) return;
     const at = items.indexOf(document.activeElement as HTMLButtonElement);
     let next = 0;
@@ -84,7 +84,8 @@ export default function MapContextMenu({ target, canAdd, parentName, onAdd, onCo
     >
       <div aria-hidden className="mx-auto mb-1 h-1.5 w-10 rounded-full bg-muted-foreground/40 sm:hidden" />
       <p className="px-3 py-1 text-xs text-muted-foreground tabular-nums">At {coords}</p>
-      <button type="button" role="menuitem" disabled={!canAdd} onClick={onAdd} className={ITEM_CLASS}>
+      {/* aria-disabled, not disabled: it stays reachable, so a keyboard / screen-reader user hears why. */}
+      <button type="button" role="menuitem" aria-disabled={!canAdd} onClick={canAdd ? onAdd : undefined} className={ITEM_CLASS}>
         <MapPin aria-hidden className="h-4 w-4" />
         {canAdd ? "Add a mark here" : "This map's marks are full"}
       </button>

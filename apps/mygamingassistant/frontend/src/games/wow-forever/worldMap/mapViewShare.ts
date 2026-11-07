@@ -10,6 +10,8 @@ import { DEFAULT_MAP_MARK_STYLE, MAP_MARK_STYLES } from "@/games/wow-forever/dat
 import { MAP_LAYER_IDS, type MapLayerId } from "@/games/wow-forever/data/worldMap/mapLayerIds";
 import { MAP_LAYER_SHARE_CODES } from "@/games/wow-forever/data/worldMap/mapLayerShareCodes";
 import { MAX_MAP_SCALE } from "@/games/wow-forever/data/worldMap/mapViewer";
+import { encodeLinkText } from "@/games/wow-forever/lib/encodeLinkText";
+import { safeDecodeURIComponent } from "@/games/wow-forever/lib/safeDecodeURIComponent";
 import type { MapLayerChoice } from "@/games/wow-forever/types/mapLayers/mapLayerChoice";
 import type { MapMark } from "@/games/wow-forever/types/mapMarks/mapMark";
 import type { SharedMapView } from "@/games/wow-forever/types/mapMarks/sharedMapView";
@@ -53,10 +55,6 @@ const CODE_TO_LAYER = new Map<string, MapLayerId>(MAP_LAYER_IDS.map((id) => [MAP
 const CODE_TO_STYLE = new Map(MAP_MARK_STYLES.map((s) => [s.code, s.id]));
 const STYLE_TO_CODE = new Map(MAP_MARK_STYLES.map((s) => [s.id, s.code]));
 
-function encodeLabel(label: string): string {
-  return encodeURIComponent(label).replace(EXTRA_ESCAPES, (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`);
-}
-
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -71,7 +69,7 @@ export function encodeMapViewFragment(view: SharedMapView): string {
   const marks = view.marks.marks.slice(0, MAX_MARKS_PER_MAP);
   const index = new Map(marks.map((m, i) => [m.id, i]));
   const markRows = marks.map((m) =>
-    [Math.round(roundMapCoord(m.x) * 10), Math.round(roundMapCoord(m.y) * 10), STYLE_TO_CODE.get(m.style) ?? "p", encodeLabel(m.label)].join(
+    [Math.round(roundMapCoord(m.x) * 10), Math.round(roundMapCoord(m.y) * 10), STYLE_TO_CODE.get(m.style) ?? "p", encodeLinkText(m.label, EXTRA_ESCAPES)].join(
       MARK_FIELD_SEPARATOR,
     ),
   );
@@ -118,24 +116,12 @@ function splitFields(value: string): string[] {
  */
 function unescapeMarks(raw: string): string | null {
   if (raw === "" || raw.includes(MARK_FIELD_SEPARATOR)) return raw;
-  try {
-    return decodeURIComponent(raw);
-  } catch {
-    return null;
-  }
+  return safeDecodeURIComponent(raw);
 }
 
 function parseLayers(raw: string): MapLayerChoice {
   const on = new Set(raw === "" ? [] : raw.split(LIST_SEPARATOR).flatMap((code) => CODE_TO_LAYER.get(code) ?? []));
   return Object.fromEntries(MAP_LAYER_IDS.map((id) => [id, on.has(id)])) as Record<MapLayerId, boolean>;
-}
-
-function decodeLabel(raw: string): string | null {
-  try {
-    return decodeURIComponent(raw);
-  } catch {
-    return null;
-  }
 }
 
 function parseMark(raw: string, index: number): MapMark | null {
@@ -146,7 +132,7 @@ function parseMark(raw: string, index: number): MapMark | null {
   const x = Number(xRaw) / 10;
   const y = Number(yRaw) / 10;
   if (x > 100 || y > 100) return null;
-  const label = decodeLabel(labelRaw);
+  const label = safeDecodeURIComponent(labelRaw);
   if (label === null) return null;
   const style = CODE_TO_STYLE.get(styleRaw) ?? DEFAULT_MAP_MARK_STYLE;
   return { id: `s${index}`, x: roundMapCoord(x), y: roundMapCoord(y), style, label: cleanMarkLabel(label, style) };

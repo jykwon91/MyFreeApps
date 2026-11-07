@@ -50,6 +50,13 @@ export function useMapMarkTools(mapId: number, marks: MapMarksState, layers: Map
   const [focusId, setFocusId] = useState<string | null>(null);
   const [view, setView] = useState<TrackedView | null>(null);
   const viewport = view?.mapId === mapId ? view.viewport : FULL_VIEW;
+  // Another map on screen (Back, a breadcrumb…): the menu's point and "Place a mark" belonged to the old one.
+  const [menuMapId, setMenuMapId] = useState(mapId);
+  if (menuMapId !== mapId) {
+    setMenuMapId(mapId);
+    setMenu(null);
+    setPlacing(false);
+  }
 
   const closeMenu = useCallback(() => {
     setMenu(null);

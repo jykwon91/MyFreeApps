@@ -25,8 +25,12 @@ export const TOUCH_CONTEXT_MENU_WINDOW_MS = 1000;
 export const MAP_VIEW_FRAGMENT_KEY = "view";
 /** First field of the fragment; a link with any other version is refused. */
 export const MAP_VIEW_FRAGMENT_VERSION = "1";
-/** Longer fragments are refused unread (30 marks with long labels fit well under this). */
-export const MAX_MAP_VIEW_FRAGMENT_LENGTH = 8000;
+/**
+ * Longer fragments are refused unread. The worst link we can write — 30 marks
+ * with 40 emoji each (12 characters apiece once encoded) — is ~15,000; an app
+ * that encodes the whole link again turns each "%" into "%25", ~24,700 (a test checks).
+ */
+export const MAX_MAP_VIEW_FRAGMENT_LENGTH = 32000;
 /** Where a share link opens. */
 export const WORLD_MAP_PAGE_PATH = "/wow-forever/map";
 

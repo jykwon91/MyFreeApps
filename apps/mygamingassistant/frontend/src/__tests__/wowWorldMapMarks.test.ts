@@ -315,7 +315,7 @@ describe("share link", () => {
       "Fine",
       "Unknown style",
       "<script>alert(1)</script>",
-      "evilline",
+      "evil line",
       "a".repeat(MAX_MARK_LABEL_LENGTH),
       "Mark",
     ]);
@@ -330,11 +330,38 @@ describe("share link", () => {
     expect(v?.marks.marks).toHaveLength(MAX_MARKS_PER_MAP);
     expect(v?.marks.route).toHaveLength(MAX_ROUTE_STOPS);
   });
+
+  it("fits the largest view we can make under the length limit, even encoded again by an app", () => {
+    const label = "🗡".repeat(MAX_MARK_LABEL_LENGTH);
+    const marks = Array.from({ length: MAX_MARKS_PER_MAP }, (_, i): MapMark => ({
+      id: `m${i}`,
+      x: 99.9,
+      y: 99.9,
+      label,
+      style: MAP_MARK_STYLE.meet,
+    }));
+    const biggest: SharedMapView = {
+      ...view,
+      layers: Object.fromEntries(MAP_LAYER_IDS.map((id) => [id, true])) as SharedMapView["layers"],
+      marks: { marks, route: marks.slice(0, MAX_ROUTE_STOPS).map((m) => m.id) },
+    };
+    const value = encodeMapViewFragment(biggest).slice("view=".length);
+    const encodedAgain = encodeURIComponent(value);
+    expect(`view=${encodedAgain}`.length).toBeLessThanOrEqual(MAX_MAP_VIEW_FRAGMENT_LENGTH);
+    for (const hash of [`#view=${value}`, `#view=${encodedAgain}`]) {
+      const back = decodeMapViewFragment(hash);
+      expect(back?.marks.marks).toHaveLength(MAX_MARKS_PER_MAP);
+      expect(back?.marks.marks[0].label).toBe(label);
+      expect(back?.marks.route).toHaveLength(MAX_ROUTE_STOPS);
+    }
+  });
 });
 
 describe("cleanUserText", () => {
-  it("drops hidden characters, collapses spaces and counts characters, not UTF-16 units", () => {
-    expect(cleanUserText("a​⁦b\tc\u0007  d", 40)).toBe("abc d");
+  it("drops hidden characters, turns any whitespace into one space and counts characters, not UTF-16 units", () => {
+    expect(cleanUserText("a​⁦b\tc\u0007  d", 40)).toBe("ab c d");
+    expect(cleanUserText("two\nlines\r\nhere", 40)).toBe("two lines here");
+    expect(cleanUserText("soft­hyphen﻿", 40)).toBe("softhyphen");
     expect(cleanUserText("😀😀😀", 2)).toBe("😀😀");
     expect(cleanUserText(" ‏ ", 10)).toBe("");
   });
