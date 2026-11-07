@@ -1,5 +1,7 @@
 import { test, expect } from "./fixtures/auth";
 import { toasts } from "./fixtures/toasts";
+import { formatCost } from "../src/admin/features/costs/format";
+import type { CostSummary } from "../src/shared/types/admin/cost";
 
 test.describe("Admin Dashboard", () => {
   test.beforeEach(async ({ authedPage: page }) => {
@@ -175,28 +177,19 @@ test.describe("System Health", () => {
     const severitySelect = page.locator("select[aria-label='Filter by severity']");
     test.skip(!(await severitySelect.isVisible({ timeout: 5000 })), "Severity filter select not visible — events table may not be rendered");
 
-    // Count events with default "all" filter
-    const initialRows = page.locator("table tbody tr");
-    const initialCount = await initialRows.count();
-
-    // Filter by "error" — should show different (potentially fewer) results
+    // Filter by "error": every row left must be an error event, or the empty state shows
     await severitySelect.selectOption("error");
     await page.waitForLoadState("networkidle");
-
-    // After filtering, either we have error rows or an empty state
-    const errorRows = page.locator("table tbody tr");
+    const severityCells = page.locator("table tbody tr td:nth-child(3)");
     const emptyState = page.getByText(/no events match/i);
-    await expect(errorRows.first().or(emptyState)).toBeVisible({ timeout: 5000 });
+    await expect(severityCells.first().or(emptyState)).toBeVisible({ timeout: 5000 });
+    for (const severity of await severityCells.allInnerTexts()) {
+      expect(severity.trim()).toBe("error");
+    }
 
     // Reset to "all"
     await severitySelect.selectOption("all");
-    await page.waitForLoadState("networkidle");
-
-    // Row count should match or exceed error-only count
-    const resetCount = await page.locator("table tbody tr").count();
-    // Can't guarantee specific counts, but "all" should not show fewer than filtered
-    // (unless new events appeared — just verify the filter actually changed content)
-    expect(typeof resetCount).toBe("number");
+    await expect(severitySelect).toHaveValue("all");
   });
 
   test("Retry Failed Documents button click triggers API call", async ({ authedPage: page }) => {
@@ -223,12 +216,17 @@ test.describe("Cost Monitoring", () => {
   test("cost summary cards show values from API", async ({ authedPage: page, api }) => {
     const res = await api.get("/admin/costs/summary");
     test.skip(!res.ok(), "Admin costs summary API unavailable");
-    const summary = await res.json();
+    const summary: CostSummary = await res.json();
 
-    // The "Today" cost card should display the today value
-    await expect(page.getByText("Today").first()).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("This Week").first()).toBeVisible();
-    await expect(page.getByText("This Month").first()).toBeVisible();
+    const cards: Array<[string, number]> = [
+      ["Today", summary.today],
+      ["This Week", summary.this_week],
+      ["This Month", summary.this_month],
+    ];
+    for (const [label, cost] of cards) {
+      const value = page.locator("p", { hasText: new RegExp(`^${label}$`) }).locator("xpath=following-sibling::p[1]");
+      await expect(value).toHaveText(formatCost(cost), { timeout: 10000 });
+    }
   });
 
   test("user period selector switches between today/week/month and updates table", async ({ authedPage: page }) => {

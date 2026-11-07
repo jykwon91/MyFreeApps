@@ -47,10 +47,7 @@ test.describe("Extracted component rendering", () => {
       await page.goto("/analytics");
       await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible({ timeout: 15000 });
 
-      // The chart container should render (even if empty)
-      // UtilityTrendsChart uses the extracted UtilityTrendsChartTooltip
-      const chartSection = page.locator("[aria-label*='Utility spend trends']");
-      // Chart may not be present if no utility data — that's fine, page rendered
+      // The chart may not be present without utility data — the page rendered
       const pageRendered = await page.getByRole("heading", { name: "Analytics" }).isVisible();
       expect(pageRendered).toBe(true);
     });

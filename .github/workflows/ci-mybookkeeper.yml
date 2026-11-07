@@ -207,6 +207,10 @@ jobs:
       - name: Lint frontend
         run: npm run lint --workspace=mybookkeeper-frontend
 
+      - name: Typecheck E2E tests
+        # The build only typechecks src/, so type errors in e2e/ went unseen.
+        run: npm run typecheck:e2e --workspace=mybookkeeper-frontend
+
       - name: Test frontend
         # The website's unit tests. Until this ran, failures here went unnoticed.
         run: npm test --workspace=mybookkeeper-frontend

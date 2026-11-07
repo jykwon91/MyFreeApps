@@ -136,12 +136,7 @@ test.describe("Markdown rendering for listing descriptions", () => {
       const links = page.locator("a[href^='javascript:']");
       await expect(links).toHaveCount(0);
 
-      // No <script> element injected by the markdown content
-      const scripts = page.locator("script");
-      const scriptCount = await scripts.count();
-      // There may be legitimate script tags from the app bundle,
-      // but none should have been injected by the description content.
-      // We verify the XSS sentinel was NOT set.
+      // No script from the description ran: the XSS sentinel was never set.
       const xssSet = await page.evaluate(() => (window as Window & { __xss?: boolean }).__xss);
       expect(xssSet).toBeUndefined();
     } finally {

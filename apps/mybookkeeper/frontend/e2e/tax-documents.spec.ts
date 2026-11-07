@@ -1,5 +1,4 @@
 import { test, expect } from "./fixtures/auth";
-import { BACKEND_URL } from "./fixtures/config";
 
 test.describe("Tax Documents — navigation", () => {
   test("sidebar has a Tax Documents link", async ({ authedPage: page }) => {

@@ -5,8 +5,8 @@
  */
 import { test, expect } from "@playwright/test";
 
-function plantValidJwtAndOrgInLocalStorage(page: import("@playwright/test").Page): Promise<void> {
-  return page.addInitScript(() => {
+async function plantValidJwtAndOrgInLocalStorage(page: import("@playwright/test").Page): Promise<void> {
+  await page.addInitScript(() => {
     const futureExp = Math.floor(Date.now() / 1000) + 3600;
     const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
     const payload = btoa(JSON.stringify({ sub: "test-user", exp: futureExp }));

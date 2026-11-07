@@ -65,22 +65,6 @@ async function loadTestPage(page: Page, filename: string): Promise<void> {
   await page.waitForLoadState("domcontentloaded");
 }
 
-async function injectAndBuildMap(page: Page): Promise<Record<string, string>> {
-  // Inject content.js (with the chrome stub) as a <script> tag
-  await page.addScriptTag({ content: CONTENT_SCRIPT });
-
-  return page.evaluate(() => {
-    // @ts-expect-error -- buildPageFieldMap defined by injected script
-    const fieldMap = buildPageFieldMap() as Map<string, HTMLInputElement>;
-    const result: Record<string, string> = {};
-    for (const [lineId, input] of fieldMap.entries()) {
-      if (input.id) result[lineId] = `#${input.id}`;
-      else if (input.name) result[lineId] = `[name="${input.name}"]`;
-    }
-    return result;
-  });
-}
-
 async function autoFill(
   page: Page,
   fields: Array<{ field_name: string; line: string; value: number | string }>,

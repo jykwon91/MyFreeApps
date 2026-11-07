@@ -22,8 +22,8 @@ const ORG_ID = "00000000-0000-0000-0000-000000000010";
 const DOC_ID = "00000000-0000-0000-0000-000000000bbb";
 const FAILED_FILE = "unreadable-invoice.pdf";
 
-function plantValidJwtAndOrgInLocalStorage(page: import("@playwright/test").Page): Promise<void> {
-  return page.addInitScript(
+async function plantValidJwtAndOrgInLocalStorage(page: import("@playwright/test").Page): Promise<void> {
+  await page.addInitScript(
     ([orgId]) => {
       const futureExp = Math.floor(Date.now() / 1000) + 3600;
       const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
