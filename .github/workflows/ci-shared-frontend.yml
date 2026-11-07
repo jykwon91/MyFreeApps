@@ -1,9 +1,9 @@
 name: Shared Frontend CI
 
-# Runs @platform/ui's own unit tests (packages/shared-frontend) on every pull
-# request to main and every push to main. Each app's CI builds and tests that
-# app, but nothing ran this package's tests until this workflow, so failures
-# here went unnoticed.
+# Runs the unit tests and typecheck of the shared web packages, @platform/ui
+# (packages/shared-frontend) and @platform/core (packages/shared-core), on every
+# pull request to main and every push to main. Each app's CI builds and tests
+# that app, but no app runs these packages' own tests.
 #
 # DO NOT add a `paths:` filter, for the same reason as ci-shared-backend.yml:
 # a path-filtered pull_request workflow never reports its check, so it can
@@ -51,3 +51,11 @@ jobs:
         # Runs even when the tests fail, so one red run shows both problems.
         if: ${{ !cancelled() }}
         run: npm run typecheck --workspace=@platform/ui
+
+      - name: Test @platform/core
+        if: ${{ !cancelled() }}
+        run: npm test --workspace=@platform/core
+
+      - name: Typecheck @platform/core
+        if: ${{ !cancelled() }}
+        run: npm run typecheck --workspace=@platform/core
