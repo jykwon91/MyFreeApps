@@ -24,7 +24,7 @@ test("an Alliance Warlock in Elwynn finds a trainer, gets directions and copies 
 
   const trainer = page.getByRole("article", { name: "Warlock trainer: Maximillian Crowe" });
   await expect(trainer).toBeVisible();
-  await expect(trainer.getByText("Classic location — may differ in Forever")).toBeVisible();
+  await expect(trainer.getByTestId("provenance-badge")).toHaveAttribute("data-provenance", "classic");
 
   // The map shows the zone art.
   await expect(page.getByRole("img", { name: "Elwynn Forest map" })).toBeVisible();
@@ -108,8 +108,9 @@ test("a location captured in Forever replaces the Classic spot and the waypoint 
   await page.getByRole("button", { name: "Set", exact: true }).click();
 
   const trainer = page.getByRole("article", { name: "Warlock trainer: Maximillian Crowe" });
-  await expect(trainer.getByText(/^Captured in Forever/)).toBeVisible();
-  await expect(trainer.getByText("Classic location — may differ in Forever")).toHaveCount(0);
+  await expect(trainer.getByTestId("provenance-badge")).toHaveAttribute("data-provenance", "seen");
+  await expect(trainer.getByText(/^Seen in game/)).toBeVisible();
+  await expect(trainer.locator('[data-provenance="classic"]')).toHaveCount(0);
   await trainer.getByRole("button", { name: /Show on map/ }).click();
   await trainer.getByRole("button", { name: "Copy in-game waypoint" }).first().click();
   const copied = await page.evaluate(() => navigator.clipboard.readText());

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { CLASSIC_SOURCE_LABEL, FOREVER_SOURCE_LABEL } from "@/games/wow-forever/data/itemPages/itemPageConfig";
+import { PROVENANCE_LABEL } from "@/games/wow-forever/data/provenance/provenanceLabels";
 import WowItemPage from "@/games/wow-forever/pages/WowItemPage";
 
 function renderAt(path: string, from?: string) {
@@ -32,7 +32,7 @@ describe("item page", () => {
     expect(within(sources).getByRole("heading", { level: 3, name: "Dungeon drop" })).toBeInTheDocument();
     expect(within(sources).getByText(/Emperor Dagran Thaurissan · boss/)).toBeInTheDocument();
     expect(within(sources).getByText(/In Blackrock Depths/)).toBeInTheDocument();
-    expect(within(sources).getByText(CLASSIC_SOURCE_LABEL)).toBeInTheDocument();
+    expect(within(sources).getByText(PROVENANCE_LABEL.classic)).toBeInTheDocument();
     expect(within(sources).getAllByRole("link", { name: /Directions/ })[0]).toHaveAttribute(
       "href",
       expect.stringMatching(/^\/wow-forever\/map\?to=pt%3A.+&dir=1$/),
@@ -43,7 +43,7 @@ describe("item page", () => {
     renderAt("/wow-forever/items/14152");
     await screen.findByRole("heading", { level: 1, name: "Robe of the Archmage" });
     const sources = howToGet();
-    expect(within(sources).getByText(FOREVER_SOURCE_LABEL)).toBeInTheDocument();
+    expect(within(sources).getByText(PROVENANCE_LABEL.client)).toBeInTheDocument();
     expect(within(sources).getByRole("link", { name: "Crafting guide" })).toHaveAttribute(
       "href",
       "/wow-forever/professions?p=tailoring&skill=295",

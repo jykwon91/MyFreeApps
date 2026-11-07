@@ -2,9 +2,10 @@ import type { WowClassId } from "@/games/wow-forever/data/classes";
 
 /**
  * How sure a gold tip is for Forever:
- * - `classic`: true in Classic Era, nothing published says Forever changed it (no chip).
- * - `forever`: published by Blizzard for Forever.
- * - `unknown`: depends on something Forever hasn't published yet.
+ * - `classic`: true in Classic Era, nothing published says Forever changed it ("Classic data").
+ * - `forever`: published by Blizzard for Forever ("Official").
+ * - `unknown`: depends on something Forever hasn't published yet ("Unconfirmed").
+ * The badge is `goldProvenance` (`lib/provenance/goldProvenance.ts`).
  */
 export const GOLD_CONFIDENCE = { classic: "classic", forever: "forever", unknown: "unknown" } as const;
 export type GoldConfidence = (typeof GOLD_CONFIDENCE)[keyof typeof GOLD_CONFIDENCE];

@@ -1,8 +1,9 @@
-import UnconfirmedChip from "@/games/wow-forever/components/professions/UnconfirmedChip";
+import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
 import MacroCopyButton from "@/games/wow-forever/components/macros/MacroCopyButton";
 import { MACRO_MAX_LENGTH } from "@/games/wow-forever/data/macros/macroMaxLength";
 import { SYNTAX_NOTES } from "@/games/wow-forever/data/macros/macroSyntaxNotes";
 import type { MacroSyntax } from "@/games/wow-forever/types/macros/macroSyntax";
+import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
 
 interface MacroCardProps {
   title: string;
@@ -56,7 +57,7 @@ export default function MacroCard({
       </p>
       {unconfirmed.length > 0 && (
         <div className="space-y-1 text-xs text-muted-foreground">
-          <UnconfirmedChip />
+          <ProvenanceBadge provenance={PROVENANCE.unconfirmed} />
           <ul className="list-disc pl-5">
             {unconfirmed.map((syntax) => (
               <li key={syntax}>{SYNTAX_NOTES[syntax]}</li>

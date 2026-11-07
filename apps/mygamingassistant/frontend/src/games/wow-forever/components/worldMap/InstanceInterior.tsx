@@ -16,6 +16,8 @@ import {
   type Interior,
   type RouteFrom,
 } from "@/games/wow-forever/worldMap/interiors";
+import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
+import { CLASSIC_ROUTE_TAG } from "@/games/wow-forever/data/provenance/provenanceTags";
 
 interface InstanceInteriorProps {
   interior: Interior;
@@ -160,7 +162,7 @@ export default function InstanceInterior({
           )}
           <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
             <li>
-              Boss order and positions are Classic's — Forever may differ.
+              Boss order and positions: <ProvenanceBadge {...CLASSIC_ROUTE_TAG} />
             </li>
             <li>
               Routes come from the game's own map data and don't count fights.

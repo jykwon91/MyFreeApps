@@ -18,7 +18,8 @@ export default function WowForeverLanding() {
       />
       <WowServerStatusSection />
       <AlertBox variant="info">
-        Much of this is based on Classic Era and may differ in Forever.
+        Much of this is based on Classic Era. Facts are tagged with where they come from — see &ldquo;How to read these
+        tags&rdquo; at the bottom of each page.
       </AlertBox>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {features.map((f) => (

@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ReactElement } from "react";
 import { Navigate, type RouteObject } from "react-router-dom";
 import WowSuggestFooterLink from "@/games/wow-forever/components/featureRequests/WowSuggestFooterLink";
+import ProvenanceGuide from "@/games/wow-forever/components/shared/ProvenanceGuide";
 import WowLegalNotice from "@/games/wow-forever/components/shared/WowLegalNotice";
 import WowPageSkeleton from "@/games/wow-forever/components/shared/WowPageSkeleton";
 import type { FeatureArea } from "@/games/wow-forever/types/featureRequests/featureArea";
@@ -26,12 +27,16 @@ function withSuspense(page: ReactElement): ReactElement {
   return <Suspense fallback={<WowPageSkeleton />}>{page}</Suspense>;
 }
 
-/** A public WoW Forever page with the Blizzard trademark / art notice under it — the one place it's mounted. */
+/**
+ * A public WoW Forever page with "How to read these tags" and the Blizzard trademark / art notice
+ * under it — the one place either is mounted.
+ */
 function withLegalNotice(page: ReactElement): ReactElement {
   // Inside the Suspense boundary, so the footer arrives with the page rather than under its skeleton.
   return withSuspense(
     <>
       {page}
+      <ProvenanceGuide />
       <WowLegalNotice />
     </>,
   );

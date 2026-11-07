@@ -1,7 +1,8 @@
-import UnconfirmedChip from "@/games/wow-forever/components/professions/UnconfirmedChip";
+import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
 import CraftRankTrainer from "@/games/wow-forever/components/crafting/CraftRankTrainer";
 import type { CraftingRank, RankTrainers } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
+import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
 
 interface CraftRankRowProps {
   rank: CraftingRank;
@@ -28,7 +29,7 @@ export default function CraftRankRow({ rank, faction, professionLabel }: CraftRa
         <span className="font-normal text-muted-foreground">
           ({needs}raises your cap to {rank.cap})
         </span>{" "}
-        {rank.confidence === "unconfirmed" ? <UnconfirmedChip /> : null}
+        {rank.confidence === "unconfirmed" ? <ProvenanceBadge provenance={PROVENANCE.unconfirmed} /> : null}
       </p>
       <CraftRankTrainer rank={rank} faction={faction} professionLabel={professionLabel} />
       {rank.headsUp ? (

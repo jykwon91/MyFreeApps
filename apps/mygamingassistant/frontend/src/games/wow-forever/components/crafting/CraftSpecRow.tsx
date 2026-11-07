@@ -1,11 +1,12 @@
 import { AlertTriangle } from "lucide-react";
-import UnconfirmedChip from "@/games/wow-forever/components/professions/UnconfirmedChip";
+import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
 import CraftSpecChoiceItem from "@/games/wow-forever/components/crafting/CraftSpecChoiceItem";
 import { specChain } from "@/games/wow-forever/crafting/craftSpecs";
 import type { SourceLookup } from "@/games/wow-forever/data/sourceDecode";
 import type { CraftSpecRecord } from "@/games/wow-forever/types/crafting";
 import type { CraftingSpecs } from "@/games/wow-forever/types/craftingSpecs";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
+import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
 
 interface CraftSpecRowProps {
   specs: CraftingSpecs;
@@ -24,7 +25,7 @@ export default function CraftSpecRow({ specs, records, sources, faction, chosen 
       <p className="font-semibold">
         At {specs.forkAt}: choose a specialization{" "}
         <span className="font-normal text-muted-foreground">(Classic: needs level {specs.level})</span>{" "}
-        {specs.confidence === "unconfirmed" ? <UnconfirmedChip /> : null}
+        {specs.confidence === "unconfirmed" ? <ProvenanceBadge provenance={PROVENANCE.unconfirmed} /> : null}
       </p>
       <p className="text-sm">{specs.intro}</p>
       <p className="flex items-start gap-1.5 text-sm">

@@ -53,7 +53,7 @@ describe("Skinning guide", () => {
     const card = await skinNowCard();
     expect(card.getByText("Skill 115, level 18 → skin beasts level 15–20")).toBeInTheDocument();
     expect(card.getByText(/up to level 23/)).toBeInTheDocument();
-    expect(card.getByText("Classic rule — may differ in Forever")).toBeInTheDocument();
+    expect(card.getByTestId("provenance-badge")).toHaveAttribute("data-provenance", "classic");
     expect(card.getByText(/Light Leather/)).toBeInTheDocument();
     const zones = within(screen.getByRole("list", { name: "Where to go" }));
     expect(zones.getAllByRole("link", { name: /Directions/ })[0]).toHaveAttribute("href", expect.stringMatching(/^\/wow-forever\/map\?to=pt%3A\d+/));

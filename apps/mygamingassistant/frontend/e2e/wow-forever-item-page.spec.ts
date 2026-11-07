@@ -5,7 +5,6 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 
-const CLASSIC_LABEL = "Classic source — may differ in Forever";
 const PHONE = { width: 375, height: 812 };
 
 function howToGet(page: Page) {
@@ -28,7 +27,7 @@ test("opens an item page from Best gear, shows how to get it, and goes back", as
   await expect(page.getByTestId("item-stats")).toContainText("Item Level");
   const sources = howToGet(page);
   await expect(sources.getByRole("heading", { level: 3, name: "Crafted" })).toBeVisible();
-  await expect(sources.getByText("Forever game files")).toBeVisible();
+  await expect(sources.getByTestId("provenance-badge").first()).toHaveAttribute("data-provenance", "client");
   await expect(sources.getByRole("link", { name: "Crafting guide" })).toHaveAttribute("href", /\/wow-forever\/professions\?p=tailoring&skill=\d+/);
   await expect(page.locator('a[href*="wowhead"]')).toHaveCount(0);
 
@@ -44,7 +43,7 @@ test("lists a dungeon boss drop with its chance, labelled Classic, with directio
   const dungeon = sources.getByRole("region", { name: "Dungeon drop" });
   await expect(dungeon).toContainText(/Emperor Dagran Thaurissan · boss, level \d+ · 19\.8%/);
   await expect(dungeon).toContainText("Blackrock Depths");
-  await expect(dungeon.getByText(CLASSIC_LABEL)).toBeVisible();
+  await expect(dungeon.getByTestId("provenance-badge")).toHaveAttribute("data-provenance", "classic");
   await dungeon.getByRole("link", { name: "Directions to Blackrock Depths entrance" }).click();
   await expect(page).toHaveURL(/\/wow-forever\/map\?to=pt%3A.+&dir=1/);
 });

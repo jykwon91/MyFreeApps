@@ -7,6 +7,6 @@
  * client nor a Blizzard post settles yet — check them in game, then update this.
  */
 export const PROFESSIONS_DATA_STATUS = {
-  stage: "Live game — some rows still unconfirmed",
+  summary: "How to train each profession and the fastest route to 300",
   checkedOn: "2026-11-05",
 } as const;

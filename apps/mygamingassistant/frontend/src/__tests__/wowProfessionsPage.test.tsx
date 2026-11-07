@@ -8,6 +8,7 @@ import { FISHING_ROUTE } from "@/games/wow-forever/data/professions/fishing";
 import { CITY_TRAINERS } from "@/games/wow-forever/data/professions/trainers";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { CRAFT_SKILL_STORAGE_KEY } from "@/games/wow-forever/hooks/useCraftingSkill";
+import { PROVENANCE_LABEL } from "@/games/wow-forever/data/provenance/provenanceLabels";
 
 // Auction prices come from the API; these tests don't look at them, so they stay loading.
 vi.mock("@/games/wow-forever/api/wowPricesApi", async () => {
@@ -68,7 +69,7 @@ describe("Professions page", () => {
 
   it("uses one caption instead of a chip per row when most of the route is unconfirmed", async () => {
     renderAt("/wow-forever/professions?p=fishing");
-    expect(route().getByText(/mostly the Classic route/)).toBeInTheDocument();
+    expect(route().getByTestId("route-provenance")).toHaveTextContent(`Most of this route: ${PROVENANCE_LABEL.classic}`);
     expect(route().queryByText("Unconfirmed")).not.toBeInTheDocument();
   });
 

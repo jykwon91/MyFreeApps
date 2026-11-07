@@ -82,6 +82,6 @@ export interface FishRecipe {
 export interface ForeverChange {
   text: string;
   confidence: Confidence;
-  /** Why an unconfirmed change is listed — picks its chip's wording. No basis = "Unconfirmed". */
+  /** Why an unconfirmed change is listed — picks its badge (`confidenceProvenance`). No basis = Unconfirmed. */
   basis?: ConfidenceBasis;
 }

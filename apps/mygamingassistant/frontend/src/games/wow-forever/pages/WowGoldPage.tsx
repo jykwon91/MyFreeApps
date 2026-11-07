@@ -31,16 +31,13 @@ export default function WowGoldPage() {
     <main className="p-4 sm:p-8 space-y-8 max-w-4xl">
       <WowPageHeader
         title="Making gold"
-        subtitle={`${GOLD_DATA_STATUS.stage} · checked ${GOLD_DATA_STATUS.checkedOn}`}
+        subtitle={`${GOLD_DATA_STATUS.summary} · checked ${GOLD_DATA_STATUS.checkedOn}`}
         backTo="/wow-forever"
         backLabel="Back to WoW Forever"
       />
       <AlertBox variant="info">
         Gold figures are vendor prices from Classic's loot tables — the floor. Cloth and leather on the farm cards
-        also show auction-house prices, where TradeSkillMaster has one. The "Sell" tips are advice, not prices. Tips are from
-        Classic unless marked{" "}
-        <span className="font-medium">Forever</span> (published for Forever) or{" "}
-        <span className="font-medium">Unconfirmed</span> (not known yet).
+        also show auction-house prices, where TradeSkillMaster has one. The "Sell" tips are advice, not prices.
       </AlertBox>
       <div className="space-y-1">
         <NumberField
