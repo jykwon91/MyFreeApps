@@ -1,6 +1,7 @@
 import { test, expect } from "./fixtures/auth";
 import { getYear } from "date-fns";
 import { deleteReconciliationSource } from "./fixtures/seed-data";
+import { deleteDocumentsNamed, seedFailedDocument, seedTypedDocument } from "./fixtures/documents";
 
 const TEST_YEAR = getYear(new Date()) - 1;
 const RUN_ID = Date.now();
@@ -11,14 +12,26 @@ test.describe("Failed document alert", () => {
     await expect(page.getByRole("heading", { name: "Documents" })).toBeVisible({ timeout: 10000 });
   });
 
-  test("documents page shows failed alert when failed documents exist", async ({ authedPage: page }) => {
-    const hasFailed = await page.getByText(/I had trouble/i).isVisible({ timeout: 3000 }).catch(() => false);
+  test("a failed document raises the alert, and Show failed lists only failed documents", async ({ authedPage: page, api }) => {
+    // The e2e-doc- prefix also lets global teardown catch anything left behind.
+    const prefix = `e2e-doc-alert-${RUN_ID}-`;
+    const failed = `${prefix}failed.pdf`;
+    const read = `${prefix}read.pdf`;
+    await seedFailedDocument(api, failed);
+    await seedTypedDocument(api, read, "invoice");
 
-    if (hasFailed) {
-      // Alert should have a "Show failed" button
-      await expect(page.getByRole("button", { name: /show failed/i })).toBeVisible();
+    try {
+      await page.reload();
+      // Parallel specs may add failures of their own, so the alert names this
+      // file or counts several.
+      await expect(page.getByText(/^I had trouble with /)).toBeVisible({ timeout: 10000 });
+
+      await page.getByRole("button", { name: "Show failed" }).click();
+      await expect(page.getByRole("row").filter({ hasText: failed })).toBeVisible();
+      await expect(page.getByRole("row").filter({ hasText: read })).toHaveCount(0);
+    } finally {
+      await deleteDocumentsNamed(api, prefix);
     }
-    // If no failed docs, alert should not be visible — both cases are valid
   });
 
   test("documents page does not show raw SQL errors", async ({ authedPage: page }) => {
