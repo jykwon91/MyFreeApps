@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { __resetDiscordLaunchForTests } from "@platform/ui/discord-activity/launchParams";
 import { MGA_SITE_URL } from "@/constants/discordActivity";
-import { bisListShareOrigin } from "@/games/wow-forever/lib/bisLists/bisListShareOrigin";
+import { shareOrigin } from "@/games/wow-forever/lib/shareOrigin";
 import { MAX_BIS_LIST_FRAGMENT_LENGTH, MAX_BIS_LISTS } from "@/games/wow-forever/data/bisLists/bisListConfig";
 import { BIS_SLOTS } from "@/games/wow-forever/data/bisLists/bisSlots";
 import { GEAR_SLOT_GROUPS } from "@/games/wow-forever/data/gear/gearSlotGroups";
@@ -116,9 +116,9 @@ describe("share-link fragment", () => {
 
   it("points share links at the real site from inside the Discord Activity", () => {
     loadPage("/wow-forever/gear");
-    expect(bisListShareOrigin()).toBe(window.location.origin);
+    expect(shareOrigin()).toBe(window.location.origin);
     loadPage("/wow-forever/gear?frame_id=frame-1&instance_id=instance-1&platform=desktop");
-    expect(bisListShareOrigin()).toBe(MGA_SITE_URL);
+    expect(shareOrigin()).toBe(MGA_SITE_URL);
     sessionStorage.clear();
     loadPage("/");
   });

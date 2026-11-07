@@ -5,7 +5,6 @@ import {
   useState,
   type CSSProperties,
   type KeyboardEvent,
-  type MouseEvent,
   type PointerEvent,
   type ReactNode,
 } from "react";
@@ -18,13 +17,18 @@ import ZoneLevelLabels from "@/games/wow-forever/components/worldMap/ZoneLevelLa
 import { useElementSize } from "@/games/wow-forever/hooks/useElementSize";
 import { zoneFitsOf } from "@/games/wow-forever/worldMap/zoneFit";
 import { placeZoneLabels, zoneLabels } from "@/games/wow-forever/worldMap/zoneLabels";
+import LongPressRing from "@/games/wow-forever/components/worldMap/LongPressRing";
 import MapHoverStatus from "@/games/wow-forever/components/worldMap/MapHoverStatus";
+import MapMarksLayer from "@/games/wow-forever/components/worldMap/MapMarksLayer";
 import MapMarkerLayer from "@/games/wow-forever/components/worldMap/MapMarkerLayer";
 import MapZoomControls from "@/games/wow-forever/components/worldMap/MapZoomControls";
 import { MAP_H, MAP_W } from "@/games/wow-forever/data/worldMap/mapViewer";
 import { MAP_VIEW_KEYS } from "@/games/wow-forever/data/worldMap/mapViewKeys";
 import { MAP_VIEWER_STATUS } from "@/games/wow-forever/data/worldMap/mapViewer";
+import { useMapPressMenu } from "@/games/wow-forever/hooks/useMapPressMenu";
 import { useMapViewer } from "@/games/wow-forever/hooks/useMapViewer";
+import type { MapMarks } from "@/games/wow-forever/types/mapMarks/mapMarks";
+import type { MapMenuTarget } from "@/games/wow-forever/types/mapMarks/mapMenuTarget";
 import type { MapView, PlayerFaction, WorldMapData, WorldPoint } from "@/games/wow-forever/types/worldMap";
 import type { MapViewport } from "@/games/wow-forever/types/mapViewport";
 import { formatCoord } from "@/games/wow-forever/worldMap/geometry";
@@ -79,6 +83,15 @@ interface MapCanvasProps {
   onClearSelection: () => void;
   /** Tint a continent's zones by how they fit this level ("Where to level"); null = no tint. */
   zoneFitLevel: number | null;
+  /** Your marks + route on this map, and a shared set shown read-only (null = none). */
+  marks: MapMarks;
+  sharedMarks: MapMarks | null;
+  /** Right-click, a long press or the menu key: the map menu at that point. */
+  onMenu: (target: MapMenuTarget) => void;
+  /** "Place a mark": the next click or tap on the map puts a mark there (Esc cancels). */
+  placing: boolean;
+  onPlace: (x: number, y: number) => void;
+  onCancelPlace: () => void;
   /** Controls drawn over the map's corner (the Layers button and panel), outside the viewer so its keys stay its own. */
   overlay?: ReactNode;
 }
@@ -94,17 +107,19 @@ function sameHit(a: MapHit | null, b: MapHit): boolean {
  * One map of the zoom-out tree with its art, the route and the results, in a
  * Leaflet viewer: wheel / pinch / +/- to zoom, drag or arrow keys to pan.
  * Like the in-game map: hover a zone to light it up, click to open it,
- * right-click or Esc to zoom out (Esc, or a click, first clears a selected result — and the view goes back to where it
+ * Esc to zoom out (Esc, or a click, first clears a selected result — and the view goes back to where it
  * was before the selection, unless the player moved it since); on a zone map the neighbours are named at
- * the edges and a click past a border opens that zone.
+ * the edges and a click past a border opens that zone. Right-click, a long press or the menu key opens
+ * the map menu (add a mark, copy coordinates, zoom out) — `useMapPressMenu`.
  */
 export default function MapCanvas(props: MapCanvasProps) {
   const { data, map, faction, focus, onFocusApplied, restore, onRestoreApplied, onManualZoom } = props;
-  const { onOpen, onZoomOut, onPick, selectedId, onClearSelection } = props;
+  const { onOpen, onZoomOut, onPick, selectedId, onClearSelection, placing, onPlace, onCancelPlace } = props;
   const canvasRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const viewer = useMapViewer(containerRef, { onChange: props.onZoomChange, onWheelZoom: onManualZoom });
+  const press = useMapPressMenu(containerRef, svgRef, props.onMenu);
   const { focusOn, reset, setView } = viewer;
   const ready = viewer.status === MAP_VIEWER_STATUS.ready;
   const settled = ready || viewer.status === MAP_VIEWER_STATUS.failed;
@@ -171,6 +186,7 @@ export default function MapCanvas(props: MapCanvasProps) {
   function pointerDown(e: PointerEvent<HTMLDivElement>) {
     if (e.button !== 0) return;
     pointers.current.add(e.pointerId);
+    press.down(e, pointers.current.size);
     if (pointers.current.size > 1) {
       pinched.current = true;
       return;
@@ -180,6 +196,7 @@ export default function MapCanvas(props: MapCanvasProps) {
   }
 
   function pointerMove(e: PointerEvent<HTMLDivElement>) {
+    press.move(e);
     if (viewer.dragging || pointers.current.size > 1) return;
     const at = percentAt(e);
     if (!at) return;
@@ -189,12 +206,18 @@ export default function MapCanvas(props: MapCanvasProps) {
 
   function pointerCancel(e: PointerEvent<HTMLDivElement>) {
     // The page took the gesture (a swipe scrolling past the map): no click.
+    press.end(e);
     pointers.current.delete(e.pointerId);
     down.current = null;
   }
 
   function pointerUp(e: PointerEvent<HTMLDivElement>) {
     pointers.current.delete(e.pointerId);
+    if (press.end(e)) {
+      // The finger held long enough to open the menu: that was no click.
+      down.current = null;
+      return;
+    }
     const start = down.current;
     if (pinched.current) {
       // A pinch is a hand zoom; once the last finger lifts it's over.
@@ -213,6 +236,10 @@ export default function MapCanvas(props: MapCanvasProps) {
       if (viewer.isZoomed) onManualZoom();
       return;
     }
+    if (placing) {
+      onPlace(at.x, at.y);
+      return;
+    }
     // With a result selected, a click off its marker only lets go of it (markers keep their own clicks).
     if (selectedId !== null) {
       onClearSelection();
@@ -221,11 +248,6 @@ export default function MapCanvas(props: MapCanvasProps) {
     const hit = hitTestMap(data, map.id, at.x, at.y);
     if (hit.kind === HIT_KIND.goTo && hit.target) onOpen(hit.target.id);
     if (hit.kind === HIT_KIND.here) onPick(Number(formatCoord(at.x)), Number(formatCoord(at.y)));
-  }
-
-  function contextMenu(e: MouseEvent<HTMLDivElement>) {
-    e.preventDefault();
-    onZoomOut();
   }
 
   function keyDown(e: KeyboardEvent<HTMLDivElement>) {
@@ -240,10 +262,16 @@ export default function MapCanvas(props: MapCanvasProps) {
       onManualZoom();
       return;
     }
+    if (e.target === e.currentTarget && (e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey))) {
+      e.preventDefault();
+      press.keyMenu();
+      return;
+    }
     if (e.key !== "Escape") return;
     e.preventDefault();
-    // Like the in-game map: Esc first lets go of the selection, then zooms out.
-    if (selectedId !== null) onClearSelection();
+    // Like the in-game map: Esc first stops placing a mark, then lets go of the selection, then zooms out.
+    if (placing) onCancelPlace();
+    else if (selectedId !== null) onClearSelection();
     else onZoomOut();
   }
 
@@ -256,12 +284,15 @@ export default function MapCanvas(props: MapCanvasProps) {
   let cursor: CSSProperties["cursor"];
   if (!viewer.dragging && goTo) cursor = "pointer";
   else if (!viewer.dragging && hover?.kind === HIT_KIND.here) cursor = "crosshair";
+  if (!viewer.dragging && placing) cursor = "crosshair";
   const viewerStyle: CSSProperties = {
     cursor,
     // Unzoomed, a one-finger swipe still scrolls the page past the map; zoomed in, it pans the map.
     touchAction: viewer.isZoomed ? "none" : "pan-y",
     background: "transparent",
     font: "inherit",
+    // iOS: a held finger opens our menu, not the system's image callout.
+    WebkitTouchCallout: "none",
   };
 
   const picture = (
@@ -297,6 +328,8 @@ export default function MapCanvas(props: MapCanvasProps) {
           onOpenCluster={props.onOpenCluster}
           scale={viewer.scale}
         />
+        {props.sharedMarks && <MapMarksLayer marks={props.sharedMarks} shared scale={viewer.scale} />}
+        <MapMarksLayer marks={props.marks} scale={viewer.scale} />
       </svg>
     </>
   );
@@ -308,8 +341,9 @@ export default function MapCanvas(props: MapCanvasProps) {
           <div
             ref={containerRef}
             data-testid="zone-map"
+            data-map-viewer
             tabIndex={0}
-            aria-label={`${map.name} — scroll, pinch or +/- to zoom, drag or arrow keys to move; right-click or press Escape to zoom out`}
+            aria-label={`${map.name} — scroll, pinch or +/- to zoom, drag or arrow keys to move; Escape to zoom out; right-click, long-press or Shift+F10 for the map menu`}
             className={VIEWER_CLASS}
             style={viewerStyle}
             onPointerDown={pointerDown}
@@ -317,7 +351,7 @@ export default function MapCanvas(props: MapCanvasProps) {
             onPointerUp={pointerUp}
             onPointerCancel={pointerCancel}
             onPointerLeave={() => setHover(null)}
-            onContextMenu={contextMenu}
+            onContextMenu={press.contextMenu}
             onKeyDown={keyDown}
           >
             {createPortal(picture, viewer.picture)}
@@ -333,6 +367,7 @@ export default function MapCanvas(props: MapCanvasProps) {
               onManualZoom();
             }}
           />
+          {press.ring && <LongPressRing ring={press.ring} />}
           {props.overlay}
         </div>
       </MapEdgeFrame>

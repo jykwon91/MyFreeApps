@@ -8,6 +8,8 @@ import { DEFAULT_BIS_LIST_PHASE, isBisListPhase } from "@/games/wow-forever/data
 import { BIS_SLOTS } from "@/games/wow-forever/data/bisLists/bisSlots";
 import { findClass, findSpec, firstSpec } from "@/games/wow-forever/data/classes";
 import { cleanBisListName } from "@/games/wow-forever/lib/bisLists/bisListName";
+import { encodeLinkText } from "@/games/wow-forever/lib/encodeLinkText";
+import { safeDecodeURIComponent } from "@/games/wow-forever/lib/safeDecodeURIComponent";
 import { parseBisListItems } from "@/games/wow-forever/lib/bisLists/parseBisListItems";
 import type { SharedBisList } from "@/games/wow-forever/types/bisLists/sharedBisList";
 
@@ -30,16 +32,9 @@ const ROW_SEPARATOR = ":";
 /** Characters encodeURIComponent leaves alone that would break the split or a chat app's link detection. */
 const EXTRA_ESCAPES = /[~!'()*]/g;
 
-function encodeName(name: string): string {
-  return encodeURIComponent(name).replace(EXTRA_ESCAPES, (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`);
-}
-
 function decodeName(raw: string): string {
-  try {
-    return cleanBisListName(decodeURIComponent(raw), UNNAMED_BIS_LIST);
-  } catch {
-    return UNNAMED_BIS_LIST;
-  }
+  const name = safeDecodeURIComponent(raw);
+  return name === null ? UNNAMED_BIS_LIST : cleanBisListName(name, UNNAMED_BIS_LIST);
 }
 
 /**
@@ -63,11 +58,8 @@ function splitFields(value: string): string[] {
  */
 function unescapeFields(fields: string[]): string[] | null {
   if (!fields.slice(0, -1).some((field) => field.includes("%"))) return fields;
-  try {
-    return fields.map((field) => decodeURIComponent(field));
-  } catch {
-    return null;
-  }
+  const decoded = fields.map(safeDecodeURIComponent);
+  return decoded.every((field): field is string => field !== null) ? decoded : null;
 }
 
 /** `list=1~…` (no "#"), ready for a URL's fragment. */
@@ -76,7 +68,7 @@ export function encodeBisListFragment(list: SharedBisList): string {
     const itemId = list.items[id];
     return itemId === undefined ? [] : [`${id}:${itemId}`];
   });
-  const fields = [BIS_LIST_FRAGMENT_VERSION, list.classId, list.specId, list.phase, rows.join(","), encodeName(list.name)];
+  const fields = [BIS_LIST_FRAGMENT_VERSION, list.classId, list.specId, list.phase, rows.join(","), encodeLinkText(list.name, EXTRA_ESCAPES)];
   return `${PREFIX}${fields.join(SEPARATOR)}`;
 }
 

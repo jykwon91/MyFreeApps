@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-07",
+    title: "Your own marks, routes and shareable maps",
+    summary:
+      "Right-click the World Map (or press and hold on a phone) to drop your own marks, join them into a route with the distance in yards, and share a link that opens the same map, marks and route for a friend.",
+    to: "/wow-forever/map",
+  },
+  {
+    date: "2026-11-07",
     title: "Map layers and where to level",
     summary:
       "Pick what the World Map shows — flight masters, inns, trainers, quest givers, herbs, ore and more, each with how many are on the map — and see every zone's levels, coloured by how well it suits your level.",

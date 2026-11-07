@@ -15,9 +15,11 @@ import WorldMapPanel from "@/games/wow-forever/components/worldMap/WorldMapPanel
 import WorldMapSkeleton from "@/games/wow-forever/components/worldMap/WorldMapSkeleton";
 import { useFindFilters } from "@/games/wow-forever/hooks/useFindFilters";
 import { useMapLayers } from "@/games/wow-forever/hooks/useMapLayers";
+import { useMapMarks } from "@/games/wow-forever/hooks/useMapMarks";
 import { useMapSearch } from "@/games/wow-forever/hooks/useMapSearch";
 import { useMapSelection } from "@/games/wow-forever/hooks/useMapSelection";
 import { useMapView } from "@/games/wow-forever/hooks/useMapView";
+import { useSharedMapView } from "@/games/wow-forever/hooks/useSharedMapView";
 import { usePlayerSettings, type PlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { useTravelSettings } from "@/games/wow-forever/hooks/useTravelSettings";
 import { useTripPlanner } from "@/games/wow-forever/hooks/useTripPlanner";
@@ -41,6 +43,16 @@ export default function WowWorldMapPage() {
   const { findFilterId, showAllClasses, includeOtherFaction } = find.filters;
   const view = useMapView(data, settings.zoneId);
   const selection = useMapSelection(data, view);
+  const marks = useMapMarks(view.mapId);
+  // A "Share this view" link: its map, zoom and layers on screen, its marks shown read-only.
+  const sharedView = useSharedMapView(data, mapLayers);
+  const { restore: sharedRestore, clearRestore: clearSharedRestore } = sharedView;
+  const { clearRestore: clearSelectionRestore } = selection;
+  // The shared view's zoom goes first; once applied, only that one is cleared.
+  const clearAppliedRestore = useCallback(() => {
+    if (sharedRestore) clearSharedRestore();
+    else clearSelectionRestore();
+  }, [sharedRestore, clearSharedRestore, clearSelectionRestore]);
   const { selectedPoiId } = selection;
   const places = useMemo(() => (data ? buildPlaces(data) : []), [data]);
 
@@ -224,8 +236,8 @@ export default function WowWorldMapPage() {
                   onPickPoint={planner.pickPoint}
                   onCancelPick={planner.cancelPick}
                   directionsOpen={planner.directionsOpen}
-                  restore={selection.restore}
-                  onRestoreApplied={selection.clearRestore}
+                  restore={sharedView.restore ?? selection.restore}
+                  onRestoreApplied={clearAppliedRestore}
                   onZoomChange={selection.trackZoom}
                   onManualZoom={selection.takeControl}
                   onOpen={view.goTo}
@@ -237,6 +249,8 @@ export default function WowWorldMapPage() {
                   level={settings.level}
                   onLevelChange={(level) => updateSettings({ level })}
                   searchMarkers={mapSearch.markers}
+                  marks={marks}
+                  sharedView={sharedView}
                 />
               </div>
             )}
