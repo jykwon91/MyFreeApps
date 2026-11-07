@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ReactElement } from "react";
 import { Navigate, type RouteObject } from "react-router-dom";
 import WowSuggestFooterLink from "@/games/wow-forever/components/featureRequests/WowSuggestFooterLink";
+import WowLegalNotice from "@/games/wow-forever/components/shared/WowLegalNotice";
 import WowPageSkeleton from "@/games/wow-forever/components/shared/WowPageSkeleton";
 import type { FeatureArea } from "@/games/wow-forever/types/featureRequests/featureArea";
 
@@ -24,13 +25,23 @@ function withSuspense(page: ReactElement): ReactElement {
   return <Suspense fallback={<WowPageSkeleton />}>{page}</Suspense>;
 }
 
+/** A public WoW Forever page with the Blizzard trademark / art notice under it — the one place it's mounted. */
+function withLegalNotice(page: ReactElement): ReactElement {
+  // Inside the Suspense boundary, so the footer arrives with the page rather than under its skeleton.
+  return withSuspense(
+    <>
+      {page}
+      <WowLegalNotice />
+    </>,
+  );
+}
+
 /**
  * A WoW Forever page with the shared "Missing something? Suggest a feature" footer — the one place it's
  * mounted. `area` opens the suggest board on what players asked for about this page (null: every area).
  */
 function withSuggestFooter(page: ReactElement, area: FeatureArea | null): ReactElement {
-  // Inside the Suspense boundary, so the footer arrives with the page rather than under its skeleton.
-  return withSuspense(
+  return withLegalNotice(
     <>
       {page}
       <WowSuggestFooterLink area={area} />
@@ -60,7 +71,7 @@ export const wowForeverRoutes: RouteObject[] = [
   { path: "/wow-forever/raids/:webId", element: withSuggestFooter(<WowRaidPage />, "dungeons_raids") },
   { path: "/wow-forever/raids/:webId/plan", element: withSuggestFooter(<WowRaidPlannerPage />, "dungeons_raids") },
   // The suggest page itself: no footer.
-  { path: "/wow-forever/suggest", element: withSuspense(<WowSuggestPage />) },
+  { path: "/wow-forever/suggest", element: withLegalNotice(<WowSuggestPage />) },
   // The operator-only triage screen: no footer, linked from nowhere, its own chunk.
   { path: "/wow-forever/triage", element: withSuspense(<WowTriagePage />) },
 ];

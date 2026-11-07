@@ -1,4 +1,6 @@
 import SkillColorTag from "@/games/wow-forever/components/gathering/SkillColorTag";
+import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
+import { itemIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import type { GatheringNow } from "@/games/wow-forever/types/gathering/gatheringNow";
 
 interface GatheringNowCardProps {
@@ -16,6 +18,7 @@ export default function GatheringNowCard({ now, verb }: GatheringNowCardProps) {
         <ul className="flex flex-wrap gap-x-4 gap-y-1">
           {now.now.map(({ resolved, color }) => (
             <li key={resolved.node.node} className="flex flex-wrap items-center gap-2">
+              <GameIcon icon={itemIcon(resolved.node.itemId)} size={24} alt="" />
               <span className="font-semibold">{resolved.node.node}</span>
               <SkillColorTag color={color} />
               {resolved.node.rare && <span className="text-xs text-muted-foreground">rare</span>}
@@ -26,7 +29,8 @@ export default function GatheringNowCard({ now, verb }: GatheringNowCardProps) {
       {!worth && <p className="text-sm">Nothing gives skill to {verb} at your skill — everything you can reach is green or gray.</p>}
       {now.next && (
         <p className="text-sm text-muted-foreground">
-          Next unlock: <span className="font-medium text-foreground">{now.next.node.name}</span> at {now.next.thresholds.orange}
+          Next unlock: <GameIcon icon={itemIcon(now.next.node.itemId)} size={16} alt="" className="mr-1" />
+          <span className="font-medium text-foreground">{now.next.node.name}</span> at {now.next.thresholds.orange}
         </p>
       )}
     </div>

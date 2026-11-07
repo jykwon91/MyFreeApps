@@ -2,6 +2,8 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@platform/ui";
 import { NOT_SOLD_YET, resetPriceLabel } from "@/games/wow-forever/crafting/autoPriceText";
 import { formatPrice, parsePrice } from "@/games/wow-forever/crafting/matPrices";
+import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
+import { itemIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import type { AutoPrice } from "@/games/wow-forever/types/autoPrice";
 
 /** Commit this long after the last keystroke, so the route updates without waiting for blur. */
@@ -108,7 +110,8 @@ export default function CraftPriceField({ itemId, name, value, auto, autoSource,
   const helper = helperText(text, auto, autoSource, loaded);
   return (
     <div className="flex flex-col gap-1 min-w-0">
-      <label htmlFor={id} className="text-sm font-medium break-words">
+      <label htmlFor={id} className="flex items-center gap-2 text-sm font-medium break-words">
+        <GameIcon icon={itemIcon(itemId)} size={16} alt="" />
         {name}
       </label>
       <input
