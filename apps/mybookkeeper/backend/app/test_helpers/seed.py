@@ -17,7 +17,6 @@ from app.db.session import unit_of_work
 from app.models.applicants.applicant import Applicant
 from app.models.applicants.screening_result import ScreeningResult
 from app.models.calendar.calendar_email_review_queue import CalendarEmailReviewQueue
-from app.models.leases.lease_template import LeaseTemplate
 from app.models.leases.signed_lease import SignedLease
 from app.models.leases.signed_lease_attachment import SignedLeaseAttachment
 from app.models.transactions.rent_attribution_review_queue import (
@@ -548,20 +547,21 @@ async def hard_delete_lease_template(
     template_id: uuid.UUID,
     ctx: RequestContext = Depends(current_org_member),
 ) -> None:
-    """Hard-delete a lease template (cascades files / placeholders). Test-only."""
+    """Hard-delete a lease template (cascades files / placeholders). Test-only.
+
+    404 when nothing was deleted, so a cleanup that misses fails loudly.
+    """
     _require_test_mode()
     async with unit_of_work() as db:
-        existing = await lease_template_repo.get(
+        files = await lease_template_file_repo.list_for_template(db, template_id=template_id)
+        deleted = await lease_template_repo.hard_delete_by_id(
             db,
             template_id=template_id,
             user_id=ctx.user_id,
             organization_id=ctx.organization_id,
-            include_deleted=True,
         )
-        if existing is None:
-            return
-        files = await lease_template_file_repo.list_for_template(db, template_id=template_id)
-        await db.execute(_sa_delete(LeaseTemplate).where(LeaseTemplate.id == template_id))
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Lease template not found")
     storage = get_storage()
     for f in files:
         try:

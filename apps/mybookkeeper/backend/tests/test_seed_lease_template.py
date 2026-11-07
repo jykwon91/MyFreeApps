@@ -4,10 +4,12 @@ Endpoints such as suggest-placeholders download the template's file from
 object storage, so a seeded template must have a real object behind its file
 row, and deleting the template must remove that object.
 """
+import uuid
 from contextlib import asynccontextmanager
 from unittest.mock import MagicMock, patch
 
 import pytest
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -119,3 +121,80 @@ async def test_a_failed_database_write_removes_the_uploaded_file(
         )
 
     assert objects == {}
+
+
+async def _seeded(ctx: RequestContext) -> uuid.UUID:
+    result = await seed_lease_template(
+        payload=_SeedLeaseTemplateRequest(name="Seeded", source_text=SOURCE_TEXT),
+        ctx=ctx,
+    )
+    return result.id
+
+
+@pytest.mark.asyncio
+async def test_deleting_a_template_that_does_not_exist_is_404(ctx: RequestContext) -> None:
+    with pytest.raises(HTTPException) as exc:
+        await hard_delete_lease_template(template_id=uuid.uuid4(), ctx=ctx)
+
+    assert exc.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_deleting_a_template_twice_is_404(ctx: RequestContext) -> None:
+    template_id = await _seeded(ctx)
+    await hard_delete_lease_template(template_id=template_id, ctx=ctx)
+
+    with pytest.raises(HTTPException) as exc:
+        await hard_delete_lease_template(template_id=template_id, ctx=ctx)
+
+    assert exc.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_another_organizations_template_is_404_and_kept_with_its_file(
+    db: AsyncSession, ctx: RequestContext, objects: dict[str, bytes],
+) -> None:
+    template_id = await _seeded(ctx)
+    outsider = RequestContext(
+        user_id=ctx.user_id, organization_id=uuid.uuid4(), org_role=OrgRole.OWNER,
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await hard_delete_lease_template(template_id=template_id, ctx=outsider)
+
+    assert exc.value.status_code == 404
+    assert len(objects) == 1
+    assert await lease_template_repo.get(
+        db, template_id=template_id, user_id=ctx.user_id,
+        organization_id=ctx.organization_id,
+    ) is not None
+
+
+@pytest.mark.asyncio
+async def test_outside_test_mode_delete_is_404_and_kept(
+    db: AsyncSession, ctx: RequestContext, objects: dict[str, bytes],
+) -> None:
+    template_id = await _seeded(ctx)
+    settings.allow_test_admin_promotion = False
+
+    with pytest.raises(HTTPException) as exc:
+        await hard_delete_lease_template(template_id=template_id, ctx=ctx)
+
+    assert exc.value.status_code == 404
+    assert len(objects) == 1
+
+
+@pytest.mark.asyncio
+async def test_another_members_template_in_my_organization_is_404_and_kept(
+    ctx: RequestContext, objects: dict[str, bytes],
+) -> None:
+    template_id = await _seeded(ctx)
+    other_member = RequestContext(
+        user_id=uuid.uuid4(), organization_id=ctx.organization_id, org_role=OrgRole.OWNER,
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        await hard_delete_lease_template(template_id=template_id, ctx=other_member)
+
+    assert exc.value.status_code == 404
+    assert len(objects) == 1

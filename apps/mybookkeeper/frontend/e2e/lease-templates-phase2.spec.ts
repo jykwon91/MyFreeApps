@@ -1,4 +1,5 @@
-import { test, expect, type APIRequestContext } from "./fixtures/auth";
+import { test, expect } from "./fixtures/auth";
+import { deleteTemplate } from "./fixtures/lease-templates";
 
 /**
  * Lease Templates Phase 2 — AI placeholder auto-detection.
@@ -15,13 +16,6 @@ import { test, expect, type APIRequestContext } from "./fixtures/auth";
  * configured in the E2E environment. The test asserts on the panel's presence,
  * not on exact suggestion content, so it passes regardless.
  */
-
-async function deleteTemplate(
-  api: APIRequestContext,
-  id: string,
-): Promise<void> {
-  await api.delete(`/test/lease-templates/${id}`).catch(() => {});
-}
 
 test.describe("Lease Templates Phase 2 — AI placeholder auto-detection", () => {
   test("upload dialog shows AI suggesting loader, then detail page lands with AI panel", async ({
