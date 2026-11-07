@@ -47,7 +47,8 @@ describe("GearItemRow", () => {
     render(<GearItemRow ranked={RANKED} isTop={false} />);
     expect(screen.getByText("Req. level 57")).toBeInTheDocument();
     expect(screen.getByText("96% of top pick · score 41.2")).toBeInTheDocument();
-    expect(screen.getByTestId("gear-source-chip")).toHaveTextContent("Crafted (game files)");
+    expect(screen.getByTestId("gear-source-chip")).toHaveTextContent("Crafted");
+    expect(screen.getByTestId("provenance-badge")).toHaveAttribute("data-provenance", "client");
     expect(screen.getByText("Tailoring 300")).toBeInTheDocument();
     expect(screen.getByText("Honored with Argent Dawn")).toBeInTheDocument();
     expect(screen.getByText("Binds when picked up")).toBeInTheDocument();
@@ -56,6 +57,7 @@ describe("GearItemRow", () => {
   it("says when an item has no known source", () => {
     render(<GearItemRow ranked={{ ...RANKED, sources: [], availableFrom: 60 }} isTop />);
     expect(screen.getByTestId("gear-source-chip")).toHaveTextContent("Source unknown");
+    expect(screen.queryByTestId("provenance-badge")).not.toBeInTheDocument();
     expect(screen.getByText("Req. level 57 · get it from level 60")).toBeInTheDocument();
     expect(screen.getByText(/Top pick/)).toBeInTheDocument();
   });

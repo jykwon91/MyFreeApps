@@ -6,10 +6,10 @@ import InstanceDropList from "@/games/wow-forever/components/itemPages/InstanceD
 import ItemDropSection from "@/games/wow-forever/components/itemPages/ItemDropSection";
 import ItemQuestList from "@/games/wow-forever/components/itemPages/ItemQuestList";
 import ItemSourceSection from "@/games/wow-forever/components/itemPages/ItemSourceSection";
-import { CLASSIC_SOURCE_LABEL, FOREVER_SOURCE_LABEL } from "@/games/wow-forever/data/itemPages/itemPageConfig";
 import { questsFor } from "@/games/wow-forever/food/recipeSources";
 import { RAID_NOTE } from "@/games/wow-forever/lib/itemPages/describeItem";
 import { noSourceText } from "@/games/wow-forever/lib/itemPages/noSourceText";
+import { itemSectionProvenance } from "@/games/wow-forever/lib/provenance/itemSectionProvenance";
 import {
   ITEM_SOURCE_SECTION,
   itemSourceSections,
@@ -75,11 +75,7 @@ export default function ItemHowToGet({ page, faction, zoneId, level }: ItemHowTo
       </h2>
       {sections.length ? (
         sections.map((section) => (
-          <ItemSourceSection
-            key={section}
-            title={TITLES[section]}
-            label={section === ITEM_SOURCE_SECTION.crafted ? FOREVER_SOURCE_LABEL : CLASSIC_SOURCE_LABEL}
-          >
+          <ItemSourceSection key={section} title={TITLES[section]} provenance={itemSectionProvenance(section)}>
             {body(section)}
           </ItemSourceSection>
         ))

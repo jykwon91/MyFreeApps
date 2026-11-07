@@ -1,8 +1,9 @@
 import RouteMatList, { type MatPlace } from "@/games/wow-forever/components/professions/RouteMatList";
-import UnconfirmedChip from "@/games/wow-forever/components/professions/UnconfirmedChip";
+import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
 import { forFaction } from "@/games/wow-forever/lib/forFaction";
 import type { RouteStep } from "@/games/wow-forever/data/professions/professionTypes";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
+import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
 
 interface RouteRowProps {
   step: RouteStep;
@@ -16,7 +17,7 @@ interface RouteRowProps {
 
 /** One route row: a card on phones, a table row from `sm` up. Milestones read as stage breaks. */
 export default function RouteRow({ step, faction, showChip, materialsLabel, sourceLabel, matPlace }: RouteRowProps) {
-  const chip = showChip && step.confidence === "unconfirmed" ? <UnconfirmedChip /> : null;
+  const chip = showChip && step.confidence === "unconfirmed" ? <ProvenanceBadge provenance={PROVENANCE.unconfirmed} /> : null;
 
   if (step.kind === "milestone") {
     return (

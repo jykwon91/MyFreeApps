@@ -12,6 +12,8 @@ import {
 import { instanceBand, LEVEL_BAND } from "@/games/wow-forever/worldMap/levels";
 import type { Interior } from "@/games/wow-forever/worldMap/interiors";
 import type { RankedPoi } from "@/games/wow-forever/worldMap/nearest";
+import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
+import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
 
 const PAGE_SIZE = 4;
 const ENTRANCE_ID = /^classic-i-(\d+)$/;
@@ -59,8 +61,8 @@ export default function InstanceList(props: InstanceListProps) {
         Dungeons &amp; raids
       </h2>
       <p className="text-sm text-muted-foreground">
-        Levels are Forever's own. Entrances are from Classic — Forever's new
-        dungeons aren't mapped yet.
+        Levels: <ProvenanceBadge provenance={PROVENANCE.client} /> Entrances:{" "}
+        <ProvenanceBadge provenance={PROVENANCE.classic} /> Forever&apos;s new dungeons aren&apos;t mapped yet.
       </p>
       <div className="space-y-3">
         {shown.map((ranked) => {

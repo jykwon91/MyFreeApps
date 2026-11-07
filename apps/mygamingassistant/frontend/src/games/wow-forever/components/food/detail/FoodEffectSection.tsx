@@ -1,7 +1,8 @@
-import UnconfirmedChip from "@/games/wow-forever/components/professions/UnconfirmedChip";
+import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
 import { DETAIL_SECTION } from "@/games/wow-forever/components/food/detail/detailStyles";
 import { describeBuff, describeRestores } from "@/games/wow-forever/food/foodText";
 import type { FoodRecord } from "@/games/wow-forever/types/food";
+import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
 
 /** What eating it does, then the client's own tooltip. */
 export default function FoodEffectSection({ food }: { food: FoodRecord }) {
@@ -20,7 +21,7 @@ export default function FoodEffectSection({ food }: { food: FoodRecord }) {
         ) : null}
         {food.xpBonusPct ? (
           <li>
-            +{food.xpBonusPct}% XP from kills while Well Fed <UnconfirmedChip />
+            +{food.xpBonusPct}% XP from kills while Well Fed <ProvenanceBadge provenance={PROVENANCE.unconfirmed} />
           </li>
         ) : null}
       </ul>

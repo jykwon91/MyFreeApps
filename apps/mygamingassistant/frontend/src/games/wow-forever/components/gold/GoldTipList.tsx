@@ -1,6 +1,7 @@
 import clsx from "clsx";
-import GoldConfidenceChip from "@/games/wow-forever/components/gold/GoldConfidenceChip";
+import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
 import type { GoldTip } from "@/games/wow-forever/data/gold/goldTypes";
+import { goldProvenance } from "@/games/wow-forever/lib/provenance/goldProvenance";
 
 interface GoldTipListProps {
   tips: readonly GoldTip[];
@@ -24,7 +25,7 @@ export default function GoldTipList({ tips, numbered = false }: GoldTipListProps
           ) : null}
           <div className="space-y-0.5 min-w-0">
             <p className="text-sm font-medium">
-              {tip.title} <GoldConfidenceChip confidence={tip.confidence} />
+              {tip.title} <ProvenanceBadge provenance={goldProvenance(tip.confidence)} />
             </p>
             <p className="text-sm text-muted-foreground">{tip.detail}</p>
           </div>

@@ -5,6 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 import WowWorldMapPage from "@/games/wow-forever/pages/WowWorldMapPage";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
 import type { MapCapture } from "@/games/wow-forever/types/mapCapture";
+import { PROVENANCE_LABEL } from "@/games/wow-forever/data/provenance/provenanceLabels";
 
 const capturesQuery = vi.hoisted(() => ({
   data: { captures: [] as MapCapture[] },
@@ -52,7 +53,7 @@ describe("WoW Forever World Map page", () => {
     // Measured from the middle of the zone, Northshire is closest.
     const trainer = await screen.findByRole("article", { name: "Warlock trainer: Drusilla La Salle" });
     expect(within(trainer).getByText(/Northshire Valley, Elwynn Forest/)).toBeInTheDocument();
-    expect(within(trainer).getByText("Classic location — may differ in Forever")).toBeInTheDocument();
+    expect(within(trainer).getByText(PROVENANCE_LABEL.classic)).toBeInTheDocument();
     // Coordinates and waypoints wait until the row is opened.
     expect(within(trainer).queryByRole("button", { name: "Copy in-game waypoint" })).not.toBeInTheDocument();
     await userEvent.click(within(trainer).getByRole("button", { name: /Show on map/ }));
@@ -129,7 +130,7 @@ describe("WoW Forever World Map page", () => {
     expect(within(trainer).getByText(/Goldshire, Elwynn Forest ·/)).toBeInTheDocument();
     await userEvent.click(within(trainer).getByRole("button", { name: /Show on map/ }));
     expect(within(trainer).getByText("Map 43.1, 65.5")).toBeInTheDocument();
-    expect(within(trainer).getByText(/^Captured in Forever/)).toBeInTheDocument();
+    expect(within(trainer).getByText(/^Seen in game/)).toBeInTheDocument();
     capturesQuery.data = { captures: [] };
   });
 

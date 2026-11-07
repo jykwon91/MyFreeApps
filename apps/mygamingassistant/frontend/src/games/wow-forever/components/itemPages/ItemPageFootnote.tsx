@@ -20,7 +20,7 @@ export default function ItemPageFootnote({ faction, clientBuild }: ItemPageFootn
       </p>
       <p>
         Stats, bind, vendor price and recipes are read from the WoW Forever client (build {clientBuild}). Vendors, quests,
-        drops and drop chances are Classic data (cmangos classic-db) and may differ in Forever. Sources in Forever's new
+        drops and drop chances are Classic data (cmangos classic-db). Sources in Forever's new
         zones aren't listed yet.
       </p>
     </aside>

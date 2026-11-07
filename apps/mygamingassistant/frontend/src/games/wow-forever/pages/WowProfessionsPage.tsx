@@ -60,7 +60,7 @@ export default function WowProfessionsPage() {
     <main className="p-4 sm:p-8 space-y-8 max-w-4xl">
       <WowPageHeader
         title="Professions"
-        subtitle={`${PROFESSIONS_DATA_STATUS.stage} · checked ${PROFESSIONS_DATA_STATUS.checkedOn}`}
+        subtitle={`${PROFESSIONS_DATA_STATUS.summary} · checked ${PROFESSIONS_DATA_STATUS.checkedOn}`}
         backTo="/wow-forever"
         backLabel="Back to WoW Forever"
       />

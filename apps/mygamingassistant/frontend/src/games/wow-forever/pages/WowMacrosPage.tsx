@@ -2,7 +2,9 @@ import { AlertBox } from "@platform/ui";
 import ClassMacroList from "@/games/wow-forever/components/macros/ClassMacroList";
 import HoverCastSection from "@/games/wow-forever/components/macros/HoverCastSection";
 import MacroHowToCard from "@/games/wow-forever/components/macros/MacroHowToCard";
+import ProvenanceChip from "@/games/wow-forever/components/shared/ProvenanceChip";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
+import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
 import { MACRO_NAMES } from "@/games/wow-forever/data/macros/macroNames";
 
 /** /wow-forever/macros — hover-cast and other macros to paste into the in-game macro window, for every class. */
@@ -18,8 +20,8 @@ export default function WowMacrosPage() {
       <AlertBox variant="info">
         Spell and item names are checked against the Forever client files (build {MACRO_NAMES.clientBuild}). Forever runs
         modern WoW&rsquo;s interface, so hover-cast macros and #showtooltip should work, but the game can&rsquo;t be run
-        here, so no macro has been tested in game. Syntax Forever may not support is marked{" "}
-        <span className="font-medium">Unconfirmed</span>.
+        here, so no macro has been tested in game. Syntax Forever may not support is tagged{" "}
+        <ProvenanceChip provenance={PROVENANCE.unconfirmed} />.
       </AlertBox>
       <MacroHowToCard />
       <HoverCastSection />

@@ -105,7 +105,25 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   re-checked against the launch client on 2026-11-05: every row carries
   `confidence: "confirmed" | "unconfirmed"`. Rows still unconfirmed depend on
   server-side facts (trainers, vendors, quests, fishing zones) — confirm them
-  in game or from a Blizzard post, then bump `PROFESSIONS_DATA_STATUS`.
+  in game or from a Blizzard post, then bump `PROFESSIONS_DATA_STATUS.checkedOn`.
+- **Provenance badges — the ONE "where is this from" system.** Every fact that
+  needs a source tag uses `components/shared/ProvenanceBadge.tsx` (a button:
+  hover, keyboard focus or a tap shows what the tag means; Escape / a tap
+  elsewhere closes it). Categories are `types/provenance/provenance.ts`; labels,
+  descriptions, order and details live only in `data/provenance/provenanceLabels.ts`:
+  "Seen in game" (+ date, addon captures), "Official" (Forever team posted it),
+  "Game files" (the Forever client — never for server-side facts like
+  trainers, vendors, drops), "Classic data" (Classic Era, may differ) and
+  "Unconfirmed" (dashed; beta reports land here). Data fields stay as they are;
+  small pure mappers in `lib/provenance/` turn them into a tag
+  (`confidenceProvenance`, `goldProvenance`, `poiProvenance`,
+  `gearSourceProvenance`, `itemSectionProvenance`). Badges are neutral
+  outlines — icon + word, never colour. In a tagged list a row with no badge
+  has been checked against Forever. `ProvenanceGuide` ("How to read these
+  tags") renders under every WoW page via `withLegalNotice`. Never add a
+  second chip, label string or "may differ in Forever" sentence — tag the fact
+  instead. Not provenance (keep separate): "Source unknown", route-type
+  badges, Compare's input-method note, TSM price credits.
 - Professions also has crafting guides (`?p=alchemy|blacksmithing|enchanting|engineering|leatherworking|tailoring|firstaid`,
   `&skill=N`, `&spec=<choice>`). The picker (`data/professions/professionPicker.ts`) groups
   Crafting vs Gathering vs Secondary; `isCraftingProfession` / `parseGuideProfession`
@@ -175,16 +193,16 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   required skill is the Forever `Lock` skill on its `objectSpots` (a node with
   none throws); yellow/green/grey offsets, ranks, spawns and trainer spots are
   Classic and labelled so. Each row's chip says what it rests on
-  (`ForeverChange.basis`: "Reported in the beta" / "Classic route — may differ
-  in Forever"). A new gathering profession = a key in `GATHERING_PROFESSION`,
+  (`ForeverChange.basis` → `confidenceProvenance`: a beta report is
+  Unconfirmed, a Classic route or rule is Classic data). A new gathering profession = a key in `GATHERING_PROFESSION`,
   an option in `GATHERING_GROUP` and a `GATHERING_GUIDES` entry
   (`data/professions/gathering/`); its trainers join the World Map trainer test
   automatically. The skill shares `mga.wowForever.professions.skill.v1`.
 - Making gold (`/wow-forever/gold`, `?band=1-20|20-40|40-60|all`, seeded from
   the World Map's saved level) is hand-written advice in `data/gold/goldTips.ts`:
-  each tip is `classic` (no chip), `forever` (published for Forever) or
-  `unknown` (Unconfirmed; client-only facts stay here, worded "the Forever
-  client …"). The tips never state gold amounts — a test fails on any
+  each tip is `classic` (Classic data badge), `forever` (published for
+  Forever — Official) or `unknown` (Unconfirmed; client-only facts stay here,
+  worded "the Forever client …"; `goldProvenance`). The tips never state gold amounts — a test fails on any
   "N gold/silver" in them; the farm cards' cloth / leather values come from
   auction prices only. Class tips follow the saved World Map class; the page's Class picker saves to it. Its checklist has its own
   key (`mga.wowForever.gold.checklist.v1`).
@@ -228,7 +246,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   by `wow_refresh`). Trainer spells only — no talents. Max 255 chars per
   macro. Syntax Forever may not support (`@focus`, `/castsequence`,
   `/stopcasting`, pet `/cast`, `!` keep-on, `[mod:]`, `[nopet]`, `%t` in chat)
-  carries an `unconfirmed` tag and the Unconfirmed chip — never claim in-game
+  carries an `unconfirmed` tag and the Unconfirmed badge — never claim in-game
   testing. Forever renamed Curses to Banes (no Curse of Agony). No addon, no
   Wowhead links.
 - Class/spec ids in `data/classes.ts` are the stable key for anything
@@ -309,8 +327,9 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (cmangos GPL — keep LICENSE + README: quest rewards with level/side/class,
   dungeon boss drops, dungeon level ranges, `raidOnly`, `pvp`). The Forever
   client has **no JournalEncounterItem**, so boss drops are Classic data only.
-- Chips: "Crafted (game files)", "Quest (Classic data, may differ)", "Boss drop
-  (Classic data, may differ)", "Source unknown". Filters: deprecated/test
+- Source chips: "Crafted", "Quest", "Boss drop", "Source unknown", each followed by
+  its provenance badge (`gearSourceProvenance`: crafted = Game files, quest / drop
+  = Classic data, unknown = none). Filters: deprecated/test
   items, random-suffix items, `raidOnly` (raid/world-boss loot, quests gated
   by raid items or the raid reputations `RAID_REPUTATIONS` in
   `wow_gear/raid_gate.py` — Zandalar Tribe, Brood of Nozdormu), PvP unless
@@ -361,8 +380,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   "How to get it", most practical first (`lib/itemPages/itemSourceSections.ts`):
   vendors, quests your faction can do, dungeon drops, crafted, open-world drops,
   containers, other-faction quests, raid drops (raids open `RAIDS_OPEN_LABEL`).
-  Every Classic section carries "Classic source — may differ in Forever";
-  recipes are "Forever game files". Directions go to
+  Every Classic section carries a Classic data badge; recipes are Game files
+  (`itemSectionProvenance`). Directions go to
   `/wow-forever/map?to=pt:...&dir=1` (vendors, mobs, quest givers, dungeon doors).
   Item names on Best gear and Item Compare link here (`ItemNameLink`, router
   state `{ from }` so Back returns to that page).
@@ -514,8 +533,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   of thumb; other activities use Pawn's Classic spec weights. Attack power
   counts once (max of melee/ranged), healing only for healers, a healer's
   `spell_power` never counts as spell damage, PvP lifts Stamina to your main
-  stat's worth. Feasts only for Dungeon/Raid. The +5% kill-XP is shown as
-  Unconfirmed (conditions unpublished).
+  stat's worth. Feasts only for Dungeon/Raid. The +5% kill-XP carries the
+  Unconfirmed badge (conditions unpublished).
 - **Food detail** (`/wow-forever/food/:foodId`, `pages/WowFoodDetailPage.tsx`):
   every food name in the picker links here, carrying the picker query so Back
   returns to the same answer. Shows what it does, how to learn it (skill
@@ -546,8 +565,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   coordinate conversion against wiki NPC positions and the committed output.
 - **Licensing:** `data/worldMap/classic/` is derived from cmangos classic-db,
   GPL-3.0 — keep its LICENSE + README (commit SHA) next to the data. No cmangos
-  code is copied; no Questie/ForeverGuide/Wowhead data. Every Classic row is
-  labelled "Classic location — may differ in Forever" in the UI.
+  code is copied; no Questie/ForeverGuide/Wowhead data. Every Classic row
+  carries a Classic data badge in the UI (`poiProvenance`).
 - **Map art:** `frontend/public/wow-maps/<uiMapId>.webp` (WebP q70, 1002×668,
   fully explored) stitched from the Forever client's map tiles — © Blizzard
   Entertainment, shown for reference in a free fan tool. One image loads per
@@ -733,7 +752,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   upserts by `capture_key` (newer `captured_at` wins). `GET` is public in both
   modes; the page merges captures over Classic rows (`applyCaptures.ts`): same
   npc id / instance id, else same name + zone; matched rows keep their Classic
-  id, subkind and levels and show "Captured in Forever <date>". If the GET
+  id, subkind and levels and show a "Seen in game <date>" badge. If the GET
   fails the page says so and shows Classic only — never localStorage.
 - **Publishing captures to prod (serve-only, no import route):** locally run
   `python -m app.cli export-wow-captures` → commit

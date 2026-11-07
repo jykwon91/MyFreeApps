@@ -2,7 +2,8 @@ import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
 import clsx from "clsx";
 import { Badge } from "@platform/ui";
 import { ChevronDown, MapPin, Route, X } from "lucide-react";
-import ProvenanceBadge from "@/games/wow-forever/components/worldMap/ProvenanceBadge";
+import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
+import { poiProvenance } from "@/games/wow-forever/lib/provenance/poiProvenance";
 import WaypointButtons from "@/games/wow-forever/components/worldMap/WaypointButtons";
 import { FACTION, POI_KIND, type PlayerFaction, type WorldMapData } from "@/games/wow-forever/types/worldMap";
 import { areaLabel, distanceLabel, poiWaypoint } from "@/games/wow-forever/worldMap/describeRank";
@@ -89,7 +90,7 @@ export default function PoiRow(props: PoiRowProps) {
       </p>
       {children}
       <div className="flex flex-wrap gap-2">
-        <ProvenanceBadge poi={poi} />
+        <ProvenanceBadge {...poiProvenance(poi)} />
         {poi.faction === FACTION.neutral && poi.kind === POI_KIND.service && (
           <Badge color="purple" label="Neutral town — both factions" />
         )}

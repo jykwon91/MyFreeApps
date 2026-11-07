@@ -44,7 +44,7 @@ test("the old Warlock page redirects to the Macros page with Warlock picked", as
   await expect(warlock.getByRole("heading", { level: 4 }).first()).toHaveText("Hover cast");
   const focus = page.getByRole("article", { name: "Fear your focus" });
   await expect(focus.getByTestId("macro-text")).toHaveText("/cast [@focus,harm,nodead][] Fear");
-  await expect(focus.getByText("Unconfirmed")).toBeVisible();
+  await expect(focus.getByTestId("provenance-badge")).toHaveAttribute("data-provenance", "unconfirmed");
   const healthstone = page.getByRole("article", { name: "Use your Healthstone" });
   await expect(healthstone.getByTestId("macro-text")).toContainText("/use Major Healthstone");
   await expect(healthstone.getByText(/Names checked against the Forever client/)).toBeVisible();

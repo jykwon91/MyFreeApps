@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import UnconfirmedChip from "@/games/wow-forever/components/professions/UnconfirmedChip";
+import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
 import CraftColorsLine from "@/games/wow-forever/components/crafting/CraftColorsLine";
 import CraftEffectLine from "@/games/wow-forever/components/crafting/CraftEffectLine";
 import CraftLearnLine, { type CraftPlace } from "@/games/wow-forever/components/crafting/CraftLearnLine";
@@ -12,6 +12,7 @@ import { CRAFT_ROW_GRID, rowStateClass, type RowState } from "@/games/wow-foreve
 import { sourceUnknown } from "@/games/wow-forever/crafting/craftRoute";
 import type { PriceBook } from "@/games/wow-forever/crafting/matPrices";
 import type { ResolvedCraftStep } from "@/games/wow-forever/types/crafting";
+import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
 
 interface CraftRouteRowProps {
   entry: ResolvedCraftStep;
@@ -48,7 +49,7 @@ export default function CraftRouteRow({ entry, state, showChip, makesTool, showE
             {state === "current" ? (
               <span className="rounded bg-primary px-1.5 py-0.5 text-xs text-primary-foreground">You are here</span>
             ) : null}
-            {showChip && step.confidence === "unconfirmed" ? <UnconfirmedChip /> : null}
+            {showChip && step.confidence === "unconfirmed" ? <ProvenanceBadge provenance={PROVENANCE.unconfirmed} /> : null}
             {sourceUnknown(recipe) ? <SourceUnknownChip /> : null}
           </p>
           {showEffect ? <CraftEffectLine recipe={recipe} file={place.file} professionLabel={professionLabel} /> : null}

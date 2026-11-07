@@ -1,6 +1,6 @@
 import GatheringZoneRow from "@/games/wow-forever/components/gathering/GatheringZoneRow";
-import UnconfirmedChip from "@/games/wow-forever/components/professions/UnconfirmedChip";
-import { CONFIDENCE_BASIS_LABEL } from "@/games/wow-forever/data/professions/confidenceBasisLabel";
+import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
+import { CLASSIC_ROUTE_TAG } from "@/games/wow-forever/data/provenance/provenanceTags";
 import type { GatheringZone } from "@/games/wow-forever/types/gathering/gatheringZone";
 
 /** The two or three zones to go to now — spawns are Classic data, so the list says so. */
@@ -10,7 +10,7 @@ export default function GatheringZoneList({ zones }: { zones: readonly Gathering
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="text-sm font-medium">Where to go</h3>
-        <UnconfirmedChip label={CONFIDENCE_BASIS_LABEL.classic} />
+        <ProvenanceBadge {...CLASSIC_ROUTE_TAG} />
       </div>
       <ol className="rounded-xl border bg-card divide-y" aria-label="Where to go">
         {zones.map((zone) => (

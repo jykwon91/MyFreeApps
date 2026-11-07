@@ -1,10 +1,10 @@
 import type { GearSource } from "@/games/wow-forever/types/gearSource";
 
-/** The source chips, in the order the legend lists them. */
+/** How an item is got. Where each comes from is its provenance badge (`gearSourceProvenance`). */
 export const SOURCE_CHIP = {
-  crafted: "Crafted (game files)",
-  quest: "Quest (Classic data, may differ)",
-  drop: "Boss drop (Classic data, may differ)",
+  crafted: "Crafted",
+  quest: "Quest",
+  drop: "Boss drop",
   unknown: "Source unknown",
 } as const;
 

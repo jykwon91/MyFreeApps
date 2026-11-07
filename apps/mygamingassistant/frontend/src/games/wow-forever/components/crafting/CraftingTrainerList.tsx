@@ -2,6 +2,8 @@ import TrainerMapLink from "@/games/wow-forever/components/professions/TrainerMa
 import type { CraftingTrainers } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 import { formatCoord } from "@/games/wow-forever/worldMap/geometry";
+import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
+import { CLASSIC_ROUTE_TAG } from "@/games/wow-forever/data/provenance/provenanceTags";
 
 /** Where to train a crafting profession, for the chosen faction — each trainer opens on the World Map. */
 export default function CraftingTrainerList({ trainers, faction }: { trainers: CraftingTrainers; faction: PlayerFaction }) {
@@ -32,7 +34,9 @@ export default function CraftingTrainerList({ trainers, faction }: { trainers: C
           ))}
         </ul>
       </div>
-      <p className="text-xs text-muted-foreground">Locations are from Classic and may differ slightly in Forever.</p>
+      <p className="text-xs text-muted-foreground">
+        Trainer locations: <ProvenanceBadge {...CLASSIC_ROUTE_TAG} />
+      </p>
     </div>
   );
 }

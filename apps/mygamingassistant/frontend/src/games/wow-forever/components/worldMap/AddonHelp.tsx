@@ -37,11 +37,11 @@ export default function AddonHelp() {
       <p>
         While it's on, the addon also notes — out of combat only — where trainers and other services you walk up to, quest givers
         you talk to and dungeon entrances you walk through really are in Forever. Type <code>/mga captures</code> to see how many.
-        Those places replace the Classic ones on this map and are marked <strong>Captured in Forever</strong>.
+        Those places replace the Classic ones on this map and are tagged <strong>Seen in game</strong> with the date.
       </p>
       <h3 className="font-semibold">Where the locations come from</h3>
       <p className="text-muted-foreground">
-        Other NPC locations are from the Classic 1.12 world (cmangos classic-db, GPL-3.0) and may differ in Forever — each row says so.
+        Other NPC locations are from the Classic 1.12 world (cmangos classic-db, GPL-3.0) and are tagged <strong>Classic data</strong>.
         Maps, flight paths, boats and zeppelins are from the WoW Forever client data (via wago.tools). World of Warcraft and its
         maps are © Blizzard Entertainment; this is a free fan tool.
       </p>

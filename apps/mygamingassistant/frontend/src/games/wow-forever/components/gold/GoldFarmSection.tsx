@@ -12,6 +12,8 @@ import {
   type FarmSort,
 } from "@/games/wow-forever/gold/goldFarms";
 import { useAuctionPrices } from "@/games/wow-forever/hooks/useAuctionPrices";
+import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
+import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
 
 const SORT_OPTIONS: readonly { id: FarmSort; label: string }[] = [
   { id: FARM_SORT.gold, label: "Most gold" },
@@ -53,8 +55,8 @@ export default function GoldFarmSection({ level }: GoldFarmSectionProps) {
           <p className="text-xs text-muted-foreground">
             Mobs from level {Math.max(1, level - LEVELS_BELOW)} to {level + LEVELS_ABOVE}. Gold an hour counts coin and what the loot sells to a vendor
             for, at up to 60 kills an hour (fewer when the camp respawns slower than you kill). Casters and hunters often
-            manage more, warriors and rogues less. Classic loot tables — Forever may change drops, and its new zones aren't
-            listed. Cloth and leather are also priced at the auction house when it has a price for them.
+            manage more, warriors and rogues less. Forever's new zones aren't listed. Cloth and leather are also priced at
+            the auction house when it has a price for them. Loot tables: <ProvenanceBadge provenance={PROVENANCE.classic} />
           </p>
           <PriceStatus withoutPrices="showing the farms at vendor prices only" />
           <ol className="space-y-3 list-none">

@@ -5,7 +5,7 @@ import GuideSection from "@/games/wow-forever/components/shared/GuideSection";
 import ForeverChangesBox from "@/games/wow-forever/components/professions/ForeverChangesBox";
 import HowToSteps from "@/games/wow-forever/components/professions/HowToSteps";
 import ProfessionRoute from "@/games/wow-forever/components/professions/ProfessionRoute";
-import { CONFIDENCE_BASIS_LABEL } from "@/games/wow-forever/data/professions/confidenceBasisLabel";
+import { CLASSIC_ROUTE_TAG } from "@/games/wow-forever/data/provenance/provenanceTags";
 import type { GatheringGuideBase } from "@/games/wow-forever/types/gathering/gatheringGuideBase";
 import type { GatheringLoadState } from "@/games/wow-forever/types/gathering/gatheringLoadState";
 import type { ZonedData } from "@/games/wow-forever/types/gathering/zonedData";
@@ -63,7 +63,7 @@ export default function GatheringGuideLayout<T extends ZonedData>({
           faction={faction}
           columns={guide.routeColumns}
           showLegend={false}
-          caption={CONFIDENCE_BASIS_LABEL.classic}
+          routeTag={CLASSIC_ROUTE_TAG}
         />
       </GuideSection>
 

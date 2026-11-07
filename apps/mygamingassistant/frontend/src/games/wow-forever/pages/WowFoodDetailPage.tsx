@@ -13,6 +13,8 @@ import { getItSummary } from "@/games/wow-forever/food/recipeSources";
 import { useFoodPickerSettings } from "@/games/wow-forever/hooks/useFoodPickerSettings";
 import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import type { FoodKind } from "@/games/wow-forever/types/food";
+import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
+import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
 
 const KIND_LABEL: Record<FoodKind, string> = { food: "Food", drink: "Drink", feast: "Feast", other: "Novelty" };
 
@@ -74,8 +76,9 @@ export default function WowFoodDetailPage() {
           .
         </p>
         <p>
-          Vendors, quests, drops and drop chances are Classic data ({RECIPE_SOURCE_DATA.split("@")[0]}) and may differ in
-          Forever. The recipe, ingredients and effect are read from the Forever client (build {FOOD_DATA_BUILD}).
+          Vendors, quests, drops and drop chances ({RECIPE_SOURCE_DATA.split("@")[0]}):{" "}
+          <ProvenanceBadge provenance={PROVENANCE.classic} /> The recipe, ingredients and effect (build {FOOD_DATA_BUILD}):{" "}
+          <ProvenanceBadge provenance={PROVENANCE.client} />
         </p>
       </aside>
     </main>

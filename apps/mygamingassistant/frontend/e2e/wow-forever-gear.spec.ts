@@ -41,7 +41,7 @@ test("the Warlock pre-raid table: three items per slot, cloth only, with source 
   await expect(rows.first()).toContainText("Top pick");
   await expect(rows.nth(1)).toContainText("% of top pick");
   await expect(chest.getByTestId("gear-source-chip").first()).toHaveText(
-    /^(Crafted \(game files\)|Quest \(Classic data, may differ\)|Boss drop \(Classic data, may differ\)|Source unknown)$/,
+    /^(Crafted|Quest|Boss drop|Source unknown)$/,
   );
 
   // The name is the row's one link: our own item page, never a site outside the app.
@@ -49,9 +49,10 @@ test("the Warlock pre-raid table: three items per slot, cloth only, with source 
   await expect(rows.first().getByRole("link")).toHaveAttribute("href", /^\/wow-forever\/items\/\d+$/);
   await expect(page.locator('a[href*="wowhead"]')).toHaveCount(0);
 
-  // Felcloth is Tailoring from the Forever client: the chip says game files.
+  // Felcloth is Tailoring from the Forever client: the source is crafted, tagged Game files.
   const felcloth = page.getByTestId("gear-item-row").filter({ hasText: "Felcloth Gloves" });
-  await expect(felcloth.getByTestId("gear-source-chip")).toHaveText("Crafted (game files)");
+  await expect(felcloth.getByTestId("gear-source-chip")).toHaveText("Crafted");
+  await expect(felcloth.getByTestId("provenance-badge")).toHaveAttribute("data-provenance", "client");
   await expect(felcloth).toContainText(/Tailoring \d+/);
 
   // No mail, leather or plate on a Warlock, and no PvP gear until it's switched on.

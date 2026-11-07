@@ -9,6 +9,8 @@ import type { PriceBook } from "@/games/wow-forever/crafting/matPrices";
 import type { CraftingRank } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
 import type { ResolvedRouteEntry, TrainerSkills } from "@/games/wow-forever/types/crafting";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
+import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
+import { CLASSIC_ROUTE_TAG } from "@/games/wow-forever/data/provenance/provenanceTags";
 
 interface CraftRouteListProps {
   entries: readonly ResolvedRouteEntry[];
@@ -98,8 +100,8 @@ export default function CraftRouteList({
     <div className="space-y-2">
       <SkillColorLegend />
       <p className="text-xs text-muted-foreground">
-        "Make about" counts the extra crafts while a recipe is yellow or green, when a point isn't certain. Unconfirmed =
-        not yet checked in Forever. Where to buy or farm materials is Classic data and may differ in Forever.
+        "Make about" counts the extra crafts while a recipe is yellow or green, when a point isn't certain. Where to buy or
+        farm materials: <ProvenanceBadge {...CLASSIC_ROUTE_TAG} />
       </p>
       <div className="rounded-xl border bg-card overflow-hidden">
         <div className={`hidden sm:grid ${CRAFT_ROW_GRID} p-3 border-b text-sm font-medium`} aria-hidden>

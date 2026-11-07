@@ -15,11 +15,12 @@ import {
  *
  * Re-checked 2026-11-05 against Blizzard's posts and the launch client
  * (1.60.1.70790). `forever` needs a Blizzard post; client-only facts are worded
- * as "the Forever client …" and stay `unknown`. Re-check the `unknown` tips
+ * as "the Forever client …" and stay `unknown`. Each tip's badge is
+ * `goldProvenance` (`lib/provenance/`). Re-check the `unknown` tips
  * when Blizzard publishes more, then update `GOLD_DATA_STATUS`.
  */
 export const GOLD_DATA_STATUS = {
-  stage: "Live game — Classic tips, some unconfirmed",
+  summary: "How to make gold while leveling: a plan, where to farm and what to keep",
   checkedOn: "2026-11-05",
 } as const;
 

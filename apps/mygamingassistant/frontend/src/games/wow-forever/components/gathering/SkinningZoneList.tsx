@@ -1,6 +1,6 @@
 import SkinningZoneRow from "@/games/wow-forever/components/gathering/SkinningZoneRow";
-import UnconfirmedChip from "@/games/wow-forever/components/professions/UnconfirmedChip";
-import { CONFIDENCE_BASIS_LABEL } from "@/games/wow-forever/data/professions/confidenceBasisLabel";
+import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
+import { CLASSIC_ROUTE_TAG } from "@/games/wow-forever/data/provenance/provenanceTags";
 import type { SkinningZone } from "@/games/wow-forever/types/gathering/skinningZone";
 
 /** The two or three zones to skin in now — mob levels and spawns are Classic data, so the list says so. */
@@ -12,7 +12,7 @@ export default function SkinningZoneList({ zones }: { zones: readonly SkinningZo
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="text-sm font-medium">Where to go</h3>
-        <UnconfirmedChip label={CONFIDENCE_BASIS_LABEL.classic} />
+        <ProvenanceBadge {...CLASSIC_ROUTE_TAG} />
       </div>
       <ol className="rounded-xl border bg-card divide-y" aria-label="Where to go">
         {zones.map((zone) => (

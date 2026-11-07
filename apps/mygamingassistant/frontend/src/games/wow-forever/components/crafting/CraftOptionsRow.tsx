@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import UnconfirmedChip from "@/games/wow-forever/components/professions/UnconfirmedChip";
+import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
 import CraftColorsLine from "@/games/wow-forever/components/crafting/CraftColorsLine";
 import CraftEffectLine from "@/games/wow-forever/components/crafting/CraftEffectLine";
 import CraftLearnLine, { type CraftPlace } from "@/games/wow-forever/components/crafting/CraftLearnLine";
@@ -12,6 +12,7 @@ import { rowStateClass, type RowState } from "@/games/wow-forever/components/cra
 import { learnAt, sourceUnknown } from "@/games/wow-forever/crafting/craftRoute";
 import type { PriceBook } from "@/games/wow-forever/crafting/matPrices";
 import type { CraftRecipe, CraftRouteOptions, TrainerSkills } from "@/games/wow-forever/types/crafting";
+import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
 
 interface CraftOptionsRowProps {
   step: CraftRouteOptions;
@@ -54,7 +55,7 @@ export default function CraftOptionsRow({
           {state === "current" ? (
             <span className="rounded bg-primary px-1.5 py-0.5 text-xs text-primary-foreground">You are here</span>
           ) : null}
-          {step.confidence === "unconfirmed" ? <UnconfirmedChip /> : null}
+          {step.confidence === "unconfirmed" ? <ProvenanceBadge provenance={PROVENANCE.unconfirmed} /> : null}
         </p>
         <p className="text-sm text-muted-foreground">{step.intro}</p>
       </div>
