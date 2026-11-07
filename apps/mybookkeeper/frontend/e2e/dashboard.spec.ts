@@ -488,20 +488,30 @@ test.describe("Dashboard", () => {
 
   test.describe("Skeleton layout", () => {
     test("skeleton shows sidebar and dashboard structure before data loads", async ({ authedPage: page }) => {
-      // Navigate away then back to trigger the loading state
-      await page.goto("/admin");
-      await expect(page.getByText("Admin").first()).toBeVisible({ timeout: 10000 });
+      // Hold the summary request so the skeleton stays up long enough to inspect.
+      let releaseSummary: () => void = () => {};
+      const summaryHeld = new Promise<void>((resolve) => { releaseSummary = resolve; });
+      await page.route((url) => url.pathname === "/api/summary", async (route) => {
+        await summaryHeld;
+        await route.continue();
+      });
 
-      // Navigate back — should show skeleton or loaded dashboard
       await page.goto("/");
 
-      // Either the skeleton sidebar or the real sidebar should be visible quickly
-      const sidebar = page.locator("aside").first();
-      const heading = page.getByRole("heading", { name: "Dashboard" });
-      await expect(sidebar.or(heading)).toBeVisible({ timeout: 15000 });
+      const skeleton = page.getByTestId("dashboard-skeleton");
+      await expect(skeleton).toBeVisible({ timeout: 10000 });
+      await expect(page.locator("aside").first()).toBeVisible();
+      const skeletonCards = page.getByTestId("dashboard-skeleton-summary-cards");
+      await expect(skeletonCards.locator(":scope > *")).toHaveCount(3);
+      const skeletonColumns = await skeletonCards.evaluate((el) => getComputedStyle(el).gridTemplateColumns);
 
-      // Dashboard should fully load
-      await expect(page.getByText("Total Revenue").first()).toBeVisible({ timeout: 15000 });
+      releaseSummary();
+
+      await expect(skeleton).toHaveCount(0, { timeout: 15000 });
+      const cards = page.getByTestId("dashboard-summary-cards");
+      await expect(cards.locator(":scope > *")).toHaveCount(3);
+      await expect(cards.getByText("Total Revenue")).toBeVisible();
+      expect(await cards.evaluate((el) => getComputedStyle(el).gridTemplateColumns)).toBe(skeletonColumns);
     });
   });
 });

@@ -5,7 +5,7 @@ import InsurancePremiumComparisonCardSkeleton from "@/app/features/insurance/Ins
 
 export default function DashboardSkeleton() {
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="space-y-6 sm:space-y-8" data-testid="dashboard-skeleton">
       {/* SectionHeader: "Dashboard" + subtitle */}
       <div>
         <Skeleton className="h-8 w-36" />
@@ -13,7 +13,7 @@ export default function DashboardSkeleton() {
       </div>
 
       {/* Summary cards — 3 columns matching SummaryCard */}
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4" data-testid="dashboard-skeleton-summary-cards">
         {[0, 1, 2].map((i) => (
           <Card key={i}>
             <Skeleton className="h-4 w-24" />

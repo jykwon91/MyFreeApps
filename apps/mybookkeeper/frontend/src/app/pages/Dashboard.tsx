@@ -167,7 +167,7 @@ export default function Dashboard() {
         actions={headerActions}
       />
 
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4" data-testid="dashboard-summary-cards">
         <SummaryCard
           label="Total Revenue"
           amount={filteredSummary?.revenue ?? 0}
