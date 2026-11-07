@@ -84,6 +84,7 @@ class PublicInquiryOutcome(str, Enum):
 class PublicInquiryResult:
     outcome: PublicInquiryOutcome
     inquiry_id: uuid.UUID | None = None
+    organization_id: uuid.UUID | None = None
     spam_status: str | None = None
     notify_operator: bool = False
     notify_subject_prefix: str = ""
@@ -207,6 +208,7 @@ async def submit_public_inquiry(
             return PublicInquiryResult(
                 outcome=PublicInquiryOutcome.SUCCESS,
                 inquiry_id=inquiry.id,
+                organization_id=inquiry.organization_id,
                 spam_status="spam",
             )
 
@@ -227,6 +229,7 @@ async def submit_public_inquiry(
             return PublicInquiryResult(
                 outcome=PublicInquiryOutcome.SUCCESS,
                 inquiry_id=inquiry.id,
+                organization_id=inquiry.organization_id,
                 spam_status="spam",
             )
 
@@ -264,6 +267,7 @@ async def submit_public_inquiry(
             return PublicInquiryResult(
                 outcome=PublicInquiryOutcome.SUCCESS,
                 inquiry_id=inquiry.id,
+                organization_id=inquiry.organization_id,
                 spam_status="spam",
             )
 
@@ -312,6 +316,7 @@ async def submit_public_inquiry(
             return PublicInquiryResult(
                 outcome=PublicInquiryOutcome.SUCCESS,
                 inquiry_id=inquiry.id,
+                organization_id=inquiry.organization_id,
                 spam_status=final_status,
                 notify_operator=True,
                 notify_subject_prefix="",
@@ -354,6 +359,7 @@ async def submit_public_inquiry(
         return PublicInquiryResult(
             outcome=PublicInquiryOutcome.SUCCESS,
             inquiry_id=inquiry.id,
+            organization_id=inquiry.organization_id,
             spam_status=final_status,
             notify_operator=notify,
             notify_subject_prefix=subject_prefix,

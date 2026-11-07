@@ -166,6 +166,8 @@ class TestPublicInquiryHappyPath:
         assert inquiry.desired_start_date == utc_today() + _dt.timedelta(days=14)
         assert (inquiry.desired_end_date - inquiry.desired_start_date).days == 180
         assert inquiry.listing_id == test_listing.id
+        assert result.inquiry_id == inquiry.id
+        assert result.organization_id == inquiry.organization_id == test_listing.organization_id
 
         # Assessments — turnstile, honeypot, submit_timing, disposable_email, claude_score
         assessments = (

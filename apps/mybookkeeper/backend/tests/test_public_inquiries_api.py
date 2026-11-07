@@ -171,23 +171,30 @@ class TestPublicListingLookup:
 
 
 class TestPublicInquirySubmission:
-    def test_happy_path_returns_received(self) -> None:
+    def test_happy_path_returns_received_and_notifies_for_the_inquirys_organization(self) -> None:
+        inquiry_id, organization_id = uuid.uuid4(), uuid.uuid4()
+
         async def fake_submit(**_kwargs):
             return PublicInquiryResult(
                 outcome=PublicInquiryOutcome.SUCCESS,
-                inquiry_id=uuid.uuid4(),
+                inquiry_id=inquiry_id,
+                organization_id=organization_id,
                 spam_status="clean",
                 notify_operator=True,
                 notify_subject_prefix="",
             )
 
         client = TestClient(app)
-        with patch.object(
-            public_inquiry_service, "submit_public_inquiry", side_effect=fake_submit,
+        with (
+            patch.object(public_inquiry_service, "submit_public_inquiry", side_effect=fake_submit),
+            patch.object(public_inquiries, "send_inquiry_notification", return_value=True) as notify,
         ):
             r = client.post("/inquiries/public", json=_valid_body())
         assert r.status_code == 200
         assert r.json() == {"status": "received"}
+        notify.assert_called_once_with(
+            inquiry_id=inquiry_id, organization_id=organization_id, subject_prefix="",
+        )
 
     def test_invalid_email_returns_422_or_400(self) -> None:
         body = _valid_body()

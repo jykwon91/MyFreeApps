@@ -21,6 +21,7 @@ from app.core.config import settings
 from app.core.rate_limit import RateLimiter
 from app.core.request_utils import get_client_ip
 from app.schemas.inquiries.public_inquiry_request import (
+    PUBLIC_INQUIRY_FRIENDLY_ERROR_TELL_MORE,
     PublicInquiryRequest,
 )
 from app.schemas.listings.public_listing_response import PublicListingResponse
@@ -136,9 +137,6 @@ async def submit_public_inquiry(
         raise HTTPException(status_code=404, detail="Listing not found")
     if result.outcome == PublicInquiryOutcome.NEEDS_MORE_DETAIL:
         # Soft gate — friendly hint so legitimate users can fix and resubmit.
-        from app.schemas.inquiries.public_inquiry_request import (
-            PUBLIC_INQUIRY_FRIENDLY_ERROR_TELL_MORE,
-        )
         raise HTTPException(
             status_code=400,
             detail=PUBLIC_INQUIRY_FRIENDLY_ERROR_TELL_MORE,
@@ -148,10 +146,11 @@ async def submit_public_inquiry(
 
     # SUCCESS path. Schedule operator notification for clean / flagged
     # results in a background task so the HTTP response is fast.
-    if result.notify_operator and result.inquiry_id is not None:
+    if result.notify_operator and result.inquiry_id is not None and result.organization_id is not None:
         background_tasks.add_task(
             send_inquiry_notification,
             inquiry_id=result.inquiry_id,
+            organization_id=result.organization_id,
             subject_prefix=result.notify_subject_prefix,
         )
 
