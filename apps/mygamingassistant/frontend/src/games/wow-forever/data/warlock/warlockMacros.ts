@@ -76,7 +76,7 @@ export const WARLOCK_MACROS: readonly WarlockMacro[] = [
     id: "mouseover-pet-attack",
     title: "Pet attack on mouseover",
     summary: "Sends your pet at the enemy under your mouse, else your target.",
-    text: "/petattack [@mouseover,harm,nodead]",
+    text: "/petattack [@mouseover,harm,nodead][]",
     spells: [],
     items: [],
     unconfirmed: ["mouseover"],
