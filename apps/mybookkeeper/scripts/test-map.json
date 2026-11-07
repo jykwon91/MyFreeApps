@@ -1011,7 +1011,8 @@
       ],
       "e2e_specs": [
         "mocked/welcome-manuals-layout-mock.spec.ts",
-        "welcome-manual-rooms.spec.ts"
+        "welcome-manual-rooms.spec.ts",
+        "welcome-manuals-layout.spec.ts"
       ]
     },
     "leases": {

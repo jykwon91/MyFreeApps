@@ -1,12 +1,13 @@
-import { test, expect, type Page } from "./fixtures/auth";
+import type { Page } from "@playwright/test";
+import { test, expect } from "./fixtures/auth";
 import { createWelcomeManual, deleteWelcomeManual } from "./fixtures/welcome-manual";
 
 /**
  * Layout E2E for the Welcome Manuals list + detail pages (PR 4b).
  *
  * Verifies:
- *   1. The list skeleton has card/row slots (no layout shift), and the
- *      skeleton slot count is in the same ballpark as the loaded list.
+ *   1. The list skeleton has card slots the same size as the loaded cards
+ *      (no layout shift when the list arrives).
  *   2. Mobile (375), tablet (768), desktop (1280) render both pages without
  *      horizontal overflow.
  *   3. Mobile viewport surfaces the card layout; desktop surfaces the table.
@@ -14,9 +15,10 @@ import { createWelcomeManual, deleteWelcomeManual } from "./fixtures/welcome-man
  */
 
 const MANUAL_COUNT = 3;
+const LAYOUT_SHIFT_TOLERANCE_PX = 2;
 
 test.describe("Welcome Manuals layout (PR 4b)", () => {
-  test("list skeleton card count is in the ballpark of the loaded card count on mobile", async ({
+  test("list skeleton cards are the size of the loaded cards on mobile", async ({
     authedPage: page,
     api,
   }) => {
@@ -25,38 +27,31 @@ test.describe("Welcome Manuals layout (PR 4b)", () => {
     const runId = Date.now();
     const manualIds: string[] = [];
     try {
-      // Block the list call so the skeleton stays visible long enough to count.
-      await page.route("**/api/welcome-manuals**", async (route) => {
-        await new Promise((r) => setTimeout(r, 1500));
-        await route.continue();
-      });
-
-      const navPromise = page.goto("/welcome-manuals");
-      await expect(page.getByTestId("welcome-manuals-skeleton")).toBeVisible({ timeout: 5000 });
-
-      const skeletonMobileList = page.locator(
-        '[data-testid="welcome-manuals-skeleton"] ul.md\\:hidden li',
-      );
-      const skeletonCount = await skeletonMobileList.count();
-      expect(skeletonCount).toBeGreaterThan(0);
-
       for (let i = 0; i < MANUAL_COUNT; i++) {
         const manual = await createWelcomeManual(api, {
-          title: `E2E Layout Manual ${runId}-${i}`,
+          // Short enough to stay on one line at 375px, like a real manual title.
+          title: `E2E Shift ${runId % 100000}-${i}`,
           seed_default_sections: false,
         });
         manualIds.push(manual.id);
       }
-      await page.unroute("**/api/welcome-manuals**");
-      await navPromise;
-      await page.reload();
-      await page.waitForLoadState("networkidle");
 
-      const loadedMobileCards = page.locator('[data-testid="welcome-manuals-mobile"] li');
-      const loadedCount = await loadedMobileCards.count();
-      expect(loadedCount).toBeGreaterThanOrEqual(MANUAL_COUNT);
+      const release = await holdRequests(page, (url) => url.pathname === "/api/welcome-manuals");
+      await page.goto("/welcome-manuals");
+      await expect(page.getByTestId("welcome-manuals-skeleton")).toBeVisible({ timeout: 5000 });
 
-      expect(Math.abs(skeletonCount - loadedCount)).toBeLessThanOrEqual(4);
+      const skeletonCards = page.locator('[data-testid="welcome-manuals-skeleton"] ul.md\\:hidden li');
+      expect(await skeletonCards.count()).toBeGreaterThan(0);
+      const skeletonHeight = (await skeletonCards.first().boundingBox())?.height ?? 0;
+
+      release();
+      // The list is shared with other specs, so compare card size rather than card count.
+      const ourCards = page
+        .locator('[data-testid="welcome-manuals-mobile"] li')
+        .filter({ hasText: `E2E Shift ${runId % 100000}-` });
+      await expect(ourCards).toHaveCount(MANUAL_COUNT);
+      const loadedHeight = (await ourCards.first().boundingBox())?.height ?? 0;
+      expect(Math.abs(skeletonHeight - loadedHeight)).toBeLessThanOrEqual(LAYOUT_SHIFT_TOLERANCE_PX);
     } finally {
       for (const id of manualIds) await deleteWelcomeManual(api, id);
     }
@@ -131,23 +126,17 @@ test.describe("Welcome Manuals layout (PR 4b)", () => {
       seed_default_sections: true,
     });
     try {
-      // Block the detail call so the skeleton stays visible long enough to assert.
-      await page.route(`**/api/welcome-manuals/${manual.id}`, async (route) => {
-        await new Promise((r) => setTimeout(r, 1200));
-        await route.continue();
-      });
-      const navPromise = page.goto(`/welcome-manuals/${manual.id}`);
+      const release = await holdRequests(page, (url) => url.pathname === `/api/welcome-manuals/${manual.id}`);
+      await page.goto(`/welcome-manuals/${manual.id}`);
       await expect(page.getByTestId("welcome-manual-detail-skeleton")).toBeVisible({
         timeout: 5000,
       });
-      await page.unroute(`**/api/welcome-manuals/${manual.id}`);
-      await navPromise;
-      await page.waitForLoadState("networkidle");
+      release();
 
-      await expect(
-        page.getByRole("heading", { name: `E2E Detail Layout ${runId}` }),
-      ).toBeVisible();
-      await expect(page.getByTestId("welcome-manual-header-card")).toBeVisible();
+      // The guest preview below repeats the title, so look in the header card.
+      const header = page.getByTestId("welcome-manual-header-card");
+      await expect(header.getByRole("heading", { name: `E2E Detail Layout ${runId}` })).toBeVisible();
+      await expect(page.getByTestId("welcome-manual-detail-skeleton")).toHaveCount(0);
 
       // No horizontal overflow on the detail page either.
       const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
@@ -158,6 +147,22 @@ test.describe("Welcome Manuals layout (PR 4b)", () => {
     }
   });
 });
+
+/**
+ * Holds requests whose URL matches ``matches`` until the returned release is called, so
+ * a skeleton stays up for exactly as long as the test needs it.
+ */
+async function holdRequests(page: Page, matches: (url: URL) => boolean): Promise<() => void> {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(matches, async (route) => {
+    await gate;
+    await route.continue();
+  });
+  return release;
+}
 
 async function assertOnlyMobileVisible(page: Page, name: string, w: number, h: number): Promise<void> {
   await page.setViewportSize({ width: w, height: h });
