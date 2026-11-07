@@ -1,13 +1,12 @@
 import { test, expect } from "./fixtures/auth";
 import { toasts } from "./fixtures/toasts";
 import { APP_PAGES } from "./fixtures/app-pages";
-
-const MOBILE_VIEWPORT = { width: 375, height: 667 };
+import { PHONE_VIEWPORT as MOBILE_VIEWPORT } from "./fixtures/phone-viewport";
 
 // Common phone sizes — viewport width is the only thing that matters for
 // layout regression. Kept to 3 to balance coverage with suite runtime.
 const PHONE_VIEWPORTS = [
-  { name: "iPhone SE", width: 375, height: 667 },
+  { name: "iPhone SE", ...MOBILE_VIEWPORT },
   { name: "iPhone 12", width: 390, height: 844 },
   { name: "Pixel 5", width: 393, height: 851 },
 ];
@@ -192,13 +191,6 @@ test.describe("Mobile responsiveness", () => {
       await expect(page.getByRole("heading", { name: "Transactions" })).toBeVisible({ timeout: 10000 });
     });
 
-    test("no horizontal scroll on dashboard", async ({ authedPage: page }) => {
-      await page.goto("/");
-      await expect(page.getByText("Total Revenue").first()).toBeVisible({ timeout: 15000 });
-      const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
-      expect(bodyWidth).toBeLessThanOrEqual(400);
-    });
-
     test("no horizontal scroll on transactions page", async ({ authedPage: page }) => {
       await page.goto("/transactions");
       await expect(
@@ -259,76 +251,6 @@ test.describe("Mobile responsiveness", () => {
       const props = await res.json();
       const created = props.find((p: { name: string; id: string }) => p.name === name);
       if (created) await api.delete(`/properties/${created.id}`);
-    });
-  });
-
-  // ─── Dashboard ───────────────────────────────────────────────────────────────
-
-  test.describe("Dashboard", () => {
-    test("summary cards are visible on 375px viewport", async ({ authedPage: page }) => {
-      await page.goto("/");
-      await expect(page.getByText("Total Revenue").first()).toBeVisible({ timeout: 15000 });
-      await expect(page.getByText("Total Expenses").first()).toBeVisible();
-      await expect(page.locator("p", { hasText: "Net Profit" }).first()).toBeVisible();
-    });
-
-    test("recharts fit within mobile viewport width", async ({ authedPage: page, api }) => {
-      const res = await api.get("/summary");
-      const summary = await res.json();
-      if (!summary.by_month?.length) {
-        test.skip(true, "No monthly chart data available");
-        return;
-      }
-
-      await page.goto("/");
-      await expect(page.getByText("Total Revenue").first()).toBeVisible({ timeout: 15000 });
-
-      const chart = page.locator(".recharts-wrapper").first();
-      if (await chart.isVisible()) {
-        const box = await chart.boundingBox();
-        expect(box!.width).toBeLessThanOrEqual(MOBILE_VIEWPORT.width);
-      }
-    });
-
-    test("drill-down panel opens as bottom sheet on mobile (not as oversized right panel)", async ({ authedPage: page, api }) => {
-      // Seed a tiny transaction so the dashboard has a chart bar to click
-      const res = await api.get("/summary");
-      const summary = await res.json();
-      if (!summary?.by_month?.length) {
-        test.skip(true, "No chart data to drill down into");
-        return;
-      }
-
-      await page.goto("/");
-      await expect(page.getByText("Total Revenue").first()).toBeVisible({ timeout: 15000 });
-
-      // Find a chart bar (Recharts renders <g class="recharts-bar-rectangle">)
-      const bar = page.locator(".recharts-bar-rectangle").first();
-      if (!(await bar.isVisible({ timeout: 5000 }).catch(() => false))) {
-        test.skip(true, "No bar chart rendered");
-        return;
-      }
-
-      await bar.click({ force: true });
-
-      // On mobile (<768px), DrillDownPanel renders via vaul as a bottom drawer
-      // anchored to bottom-0 left-0 right-0 — NOT as a 520px-wide right panel
-      // that would overflow the viewport.
-      const drawer = page.locator("[vaul-drawer]").first()
-        .or(page.locator("[role='dialog']").filter({ hasText: /transaction/i }).first());
-
-      const drawerVisible = await drawer.isVisible({ timeout: 3000 }).catch(() => false);
-      if (!drawerVisible) {
-        // Panel didn't open — the chart may not be drillable in this test data
-        test.skip(true, "Drill-down panel did not open");
-        return;
-      }
-
-      // Drawer must not exceed viewport width
-      const drawerBox = await drawer.boundingBox();
-      expect(drawerBox?.width ?? 0).toBeLessThanOrEqual(MOBILE_VIEWPORT.width);
-      // And it must be anchored near the bottom of the viewport (y > half)
-      expect(drawerBox?.y ?? 0).toBeGreaterThan(MOBILE_VIEWPORT.height / 3);
     });
   });
 
