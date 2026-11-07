@@ -6,7 +6,6 @@ import type { FeatureArea } from "@/games/wow-forever/types/featureRequests/feat
 
 // Lazy so the lineup library's bundle doesn't carry the WoW pages.
 const WowForeverLanding = lazy(() => import("@/games/wow-forever/pages/WowForeverLanding"));
-const WowGuidePage = lazy(() => import("@/games/wow-forever/pages/WowGuidePage"));
 const WowComparePage = lazy(() => import("@/games/wow-forever/pages/WowComparePage"));
 const WowWorldMapPage = lazy(() => import("@/games/wow-forever/pages/WowWorldMapPage"));
 const WowProfessionsPage = lazy(() => import("@/games/wow-forever/pages/WowProfessionsPage"));
@@ -45,7 +44,8 @@ function withSuggestFooter(page: ReactElement, area: FeatureArea | null): ReactE
  */
 export const wowForeverRoutes: RouteObject[] = [
   { path: "/wow-forever", element: withSuggestFooter(<WowForeverLanding />, null) },
-  { path: "/wow-forever/guide", element: withSuggestFooter(<WowGuidePage />, "leveling_quests") },
+  // The New Player Guide was removed — redirect so old links don't 404.
+  { path: "/wow-forever/guide", element: <Navigate to="/wow-forever" replace /> },
   { path: "/wow-forever/compare", element: withSuggestFooter(<WowComparePage />, "gear_upgrades") },
   { path: "/wow-forever/map", element: withSuggestFooter(<WowWorldMapPage />, "map_travel") },
   { path: "/wow-forever/professions", element: withSuggestFooter(<WowProfessionsPage />, "professions") },

@@ -1,6 +1,6 @@
 import { Button } from "@platform/ui";
-import ChecklistRow from "@/games/wow-forever/components/guide/ChecklistRow";
-import GuideSection from "@/games/wow-forever/components/guide/GuideSection";
+import ChecklistRow from "@/games/wow-forever/components/shared/ChecklistRow";
+import GuideSection from "@/games/wow-forever/components/shared/GuideSection";
 import { GOLD_DONT_DO } from "@/games/wow-forever/data/gold/goldTips";
 import { useChecklist } from "@/games/wow-forever/hooks/useChecklist";
 

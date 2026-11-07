@@ -1,5 +1,5 @@
 import GoldTipList from "@/games/wow-forever/components/gold/GoldTipList";
-import GuideSection from "@/games/wow-forever/components/guide/GuideSection";
+import GuideSection from "@/games/wow-forever/components/shared/GuideSection";
 import { tipsForLevel } from "@/games/wow-forever/data/gold/goldTips";
 
 interface GoldPlanSectionProps {

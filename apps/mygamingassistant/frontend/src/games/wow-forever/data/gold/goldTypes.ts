@@ -37,3 +37,10 @@ export interface GatheringTip {
   what: string;
   pairsWith: string;
 }
+
+/** A checkable item in a "tick these off" list. */
+export interface ChecklistItem {
+  id: string;
+  title: string;
+  detail: string;
+}

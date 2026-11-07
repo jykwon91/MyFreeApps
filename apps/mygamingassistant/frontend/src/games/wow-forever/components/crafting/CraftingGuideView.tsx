@@ -6,7 +6,7 @@ import CraftWorksWithCard from "@/games/wow-forever/components/crafting/CraftWor
 import DisenchantOrSell from "@/games/wow-forever/components/crafting/DisenchantOrSell";
 import ForeverChangesBox from "@/games/wow-forever/components/professions/ForeverChangesBox";
 import HowToSteps from "@/games/wow-forever/components/professions/HowToSteps";
-import GuideSection from "@/games/wow-forever/components/guide/GuideSection";
+import GuideSection from "@/games/wow-forever/components/shared/GuideSection";
 import { CRAFTING_FEATURES } from "@/games/wow-forever/data/professions/crafting/craftingFeatures";
 import { CRAFTING_GUIDES } from "@/games/wow-forever/data/professions/crafting/craftingGuide";
 import { LOOT_RULES_INTRO, LOOT_RULES_TIP, LOOT_SECTION_ID } from "@/games/wow-forever/data/professions/crafting/disenchantOrSell";

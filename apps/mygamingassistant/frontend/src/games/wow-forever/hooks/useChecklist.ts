@@ -1,17 +1,15 @@
 import { useCallback, useState } from "react";
 import { readStored, removeStored, writeStored } from "@/games/wow-forever/lib/safeLocalStorage";
 
-export const CHECKLIST_STORAGE_KEY = "mga.wowForever.guide.checklist.v1";
-
 function parseIds(raw: unknown): string[] | null {
   if (!Array.isArray(raw)) return null;
   return raw.filter((v): v is string => typeof v === "string");
 }
 
-/** Checked item ids for a checklist, persisted in localStorage (the guide's by default). */
+/** Checked item ids for a checklist, persisted in localStorage under `storageKey`. */
 export function useChecklist(
   validIds: readonly string[],
-  storageKey: string = CHECKLIST_STORAGE_KEY,
+  storageKey: string,
 ): {
   checked: ReadonlySet<string>;
   toggle: (id: string) => void;

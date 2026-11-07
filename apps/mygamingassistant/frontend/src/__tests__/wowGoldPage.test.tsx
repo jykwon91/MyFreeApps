@@ -14,7 +14,6 @@ import {
   goldFarms,
   goldPerHour,
 } from "@/games/wow-forever/gold/goldFarms";
-import { CHECKLIST_STORAGE_KEY } from "@/games/wow-forever/hooks/useChecklist";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
 
 // Auction prices come from the API; these tests don't look at them, so they stay loading.
@@ -167,12 +166,11 @@ describe("Making gold page", () => {
     expect(now.getByText("Unconfirmed")).toBeInTheDocument();
   });
 
-  it("saves the checklist separately from the New Player Guide's", async () => {
+  it("saves the checklist under its own key", async () => {
     renderAt("/wow-forever/gold");
     await userEvent.click(section("dont").getByLabelText(/Don't buy gold/));
     expect(section("dont").getByText(`1 of ${GOLD_DONT_DO.length} done`)).toBeInTheDocument();
     expect(JSON.parse(window.localStorage.getItem(GOLD_CHECKLIST_STORAGE_KEY) ?? "[]")).toEqual(["no-buying-gold"]);
-    expect(window.localStorage.getItem(CHECKLIST_STORAGE_KEY)).toBeNull();
   });
 
   it("has well-formed data", () => {

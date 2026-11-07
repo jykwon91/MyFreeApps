@@ -1,5 +1,5 @@
 import GoldTipList from "@/games/wow-forever/components/gold/GoldTipList";
-import GuideSection from "@/games/wow-forever/components/guide/GuideSection";
+import GuideSection from "@/games/wow-forever/components/shared/GuideSection";
 import { AH_BASICS, SELL_ITEMS, VENDOR_ITEMS } from "@/games/wow-forever/data/gold/goldTips";
 
 /** What to put on the auction house, what to vendor, and how to post. */

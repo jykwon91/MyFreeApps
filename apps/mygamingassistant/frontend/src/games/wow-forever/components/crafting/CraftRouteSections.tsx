@@ -7,7 +7,7 @@ import CraftSpecPicker from "@/games/wow-forever/components/crafting/CraftSpecPi
 import CraftSpecRow from "@/games/wow-forever/components/crafting/CraftSpecRow";
 import CraftTransmuteList from "@/games/wow-forever/components/crafting/CraftTransmuteList";
 import PriceStatus from "@/games/wow-forever/components/prices/PriceStatus";
-import GuideSection from "@/games/wow-forever/components/guide/GuideSection";
+import GuideSection from "@/games/wow-forever/components/shared/GuideSection";
 import { currentEntryIndex, totalCrafts } from "@/games/wow-forever/crafting/craftRoute";
 import { routeForSpec } from "@/games/wow-forever/crafting/craftSpecs";
 import { CRAFTING_FEATURES } from "@/games/wow-forever/data/professions/crafting/craftingFeatures";

@@ -1,6 +1,6 @@
 import { useSearchParams } from "react-router-dom";
 import ProfessionGuideView from "@/games/wow-forever/components/professions/ProfessionGuideView";
-import GuideSectionNav from "@/games/wow-forever/components/guide/GuideSectionNav";
+import GuideSectionNav from "@/games/wow-forever/components/shared/GuideSectionNav";
 import ProfessionPicker from "@/games/wow-forever/components/professions/ProfessionPicker";
 import LevelCapNote from "@/games/wow-forever/components/shared/LevelCapNote";
 import NumberField from "@/games/wow-forever/components/shared/NumberField";

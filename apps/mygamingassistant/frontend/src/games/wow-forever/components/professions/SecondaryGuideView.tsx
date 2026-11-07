@@ -4,7 +4,7 @@ import ForeverChangesBox from "@/games/wow-forever/components/professions/Foreve
 import HowToSteps from "@/games/wow-forever/components/professions/HowToSteps";
 import ProfessionRoute from "@/games/wow-forever/components/professions/ProfessionRoute";
 import TrainerList from "@/games/wow-forever/components/professions/TrainerList";
-import GuideSection from "@/games/wow-forever/components/guide/GuideSection";
+import GuideSection from "@/games/wow-forever/components/shared/GuideSection";
 import { COOKING_ROUTE, COOKING_STEPS } from "@/games/wow-forever/data/professions/cooking";
 import { FISHING_ROUTE, FISHING_STEPS } from "@/games/wow-forever/data/professions/fishing";
 import { SECONDARY_FOREVER_CHANGES } from "@/games/wow-forever/data/professions/foreverChanges";

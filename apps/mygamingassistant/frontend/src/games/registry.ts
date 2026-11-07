@@ -30,17 +30,12 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
   [WOW_FOREVER_SLUG]: {
     slug: WOW_FOREVER_SLUG,
     landingPath: "/wow-forever",
-    tagline: "New player guide, world map & item compare",
+    tagline: "World map, profession leveling & item compare",
     features: [
       {
         path: "/wow-forever/map",
         title: "World Map",
         description: "The nearest class trainer, flight master, inn or bank for your faction — with step-by-step directions.",
-      },
-      {
-        path: "/wow-forever/guide",
-        title: "New Player Guide",
-        description: "Class picks, mistakes to avoid, where to level, professions, addons and dungeon basics.",
       },
       {
         path: "/wow-forever/professions",

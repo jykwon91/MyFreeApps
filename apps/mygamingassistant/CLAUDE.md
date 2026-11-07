@@ -5,8 +5,8 @@
 **MyGamingAssistant** — a single-user, self-hosted lineup and utility management tool
 for tactical FPS games (Valorant, CS2). Core value: store and visualize lineup throws
 overlaid on game minimaps. Also hosts **companion** games — static per-game pages
-with no maps (currently World of Warcraft: Forever: a World Map, a New Player Guide
-and an Item Compare tool). Part of the MyFreeApps monorepo.
+with no maps (currently World of Warcraft: Forever: a World Map, profession leveling
+guides, item compare, gold tips and more). Part of the MyFreeApps monorepo.
 
 **Single-user app:** There is NO `/register` route. The operator account is seeded at
 boot time from `SEED_USER_EMAIL` + `SEED_USER_PASSWORD_HASH` env vars. Production boot
@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/map`, `/wow-forever/guide`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`)
+### WoW Forever (`/wow-forever`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -187,7 +187,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   client …"). The tips never state gold amounts — a test fails on any
   "N gold/silver" in them; the farm cards' cloth / leather values come from
   auction prices only. Class tips follow the saved World Map class; the page's Class picker saves to it. Its checklist has its own
-  key (`mga.wowForever.gold.checklist.v1`), separate from the guide's.
+  key (`mga.wowForever.gold.checklist.v1`).
 - **Auction-house prices** (`GET /api/wow/prices?region=us|eu|kr|tw`, public,
   both modes) come from TradeSkillMaster's public region files
   (`public-data.tradeskillmaster.com/forever/{region}/region/items.csv`, no
@@ -210,8 +210,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   0 (no sales seen → stored as null) for over half the US items and swings
   wildly on thin markets. Any page showing a price must credit
   "Prices from TradeSkillMaster" with a link (`credit` in the response).
-- **Macros** (`/wow-forever/macros`, `pages/WowMacrosPage.tsx`, the only place
-  macros live — the Guide has none): how-to, then "Hover-cast macros
+- **Macros** (`/wow-forever/macros`, `pages/WowMacrosPage.tsx`): how-to, then "Hover-cast macros
   (mouseover)" (three templates in `data/macros/macroTemplates.ts`, filled live
   from a "Your spell name" box by `lib/macros/macroTemplates.ts`; empty =
   `Spell Name`), then ready-made macros for every class. Data in

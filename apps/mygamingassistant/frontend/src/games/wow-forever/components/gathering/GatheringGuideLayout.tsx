@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import CraftingTrainerList from "@/games/wow-forever/components/crafting/CraftingTrainerList";
 import GatheringNowSection from "@/games/wow-forever/components/gathering/GatheringNowSection";
-import GuideSection from "@/games/wow-forever/components/guide/GuideSection";
+import GuideSection from "@/games/wow-forever/components/shared/GuideSection";
 import ForeverChangesBox from "@/games/wow-forever/components/professions/ForeverChangesBox";
 import HowToSteps from "@/games/wow-forever/components/professions/HowToSteps";
 import ProfessionRoute from "@/games/wow-forever/components/professions/ProfessionRoute";

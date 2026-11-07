@@ -3,7 +3,7 @@ import LoadErrorRetry from "@/components/game/LoadErrorRetry";
 import CraftSkillInput from "@/games/wow-forever/components/crafting/CraftSkillInput";
 import GatheringNowSkeleton from "@/games/wow-forever/components/gathering/GatheringNowSkeleton";
 import GatheringRankBanner from "@/games/wow-forever/components/gathering/GatheringRankBanner";
-import GuideSection from "@/games/wow-forever/components/guide/GuideSection";
+import GuideSection from "@/games/wow-forever/components/shared/GuideSection";
 import { GATHERING_SKILL_PROMPT } from "@/games/wow-forever/data/professions/gathering/gatheringConfig";
 import { rankAdvice } from "@/games/wow-forever/gathering/rankCaps";
 import { zoneNameOf } from "@/games/wow-forever/gathering/zoneNameOf";
