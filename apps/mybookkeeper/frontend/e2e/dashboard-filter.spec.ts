@@ -1,525 +1,244 @@
-import { test, expect } from "./fixtures/auth";
+/**
+ * Dashboard filters — category presets and chips, the property filter, and how
+ * they reshape the totals, the monthly chart and the drill-down. Runs against
+ * a fresh organization seeded with DASHBOARD_SEED, so every total is exact.
+ */
+import { test, expect, type Page } from "@playwright/test";
+import { SoloOrg } from "./fixtures/solo-org";
+import { DASHBOARD_SEED as SEED, seedDashboard } from "./fixtures/dashboard-seed";
+import { bars, card, chartIn, expectSummaryCards, legend, openDashboard } from "./fixtures/dashboard-page";
 
-test.describe("Dashboard Category Filter", () => {
-  test.beforeEach(async ({ authedPage: page }) => {
-    await page.goto("/");
-    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText("Total Revenue").first()).toBeVisible({ timeout: 15000 });
+const ONLY_EXPENSES = { revenue: "$0.00", expenses: SEED.totals.expenses, profit: `-${SEED.totals.expenses}` };
+const ONLY_INCOME = { revenue: SEED.totals.revenue, expenses: "$0.00", profit: SEED.totals.revenue };
+const NORTH = SEED.byProperty.north;
+
+/** The category chips (the Reset button in the same panel has no pressed state). */
+function chips(page: Page) {
+  return page.getByTestId("filter-categories-panel").locator("button[aria-pressed]");
+}
+
+function chip(page: Page, name: string) {
+  return page.getByTestId("filter-categories-panel").getByRole("button", { name, exact: true });
+}
+
+async function expandChips(page: Page): Promise<void> {
+  await page.getByTestId("filter-expand-toggle").click();
+  await expect(page.getByTestId("filter-categories-panel")).toBeVisible();
+}
+
+async function selectProperty(page: Page, name: string): Promise<void> {
+  await page.getByTestId("property-filter-trigger").click();
+  await page.getByRole("menuitemcheckbox", { name }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("property-filter-trigger")).toHaveText(name);
+}
+
+test.describe("Dashboard filters", () => {
+  let solo: SoloOrg | undefined;
+
+  test.beforeAll(async ({ playwright }) => {
+    solo = await SoloOrg.create(playwright, "dashboard-filter");
+    await seedDashboard(solo.api);
   });
 
-  test.describe("Filter bar rendering", () => {
-    test("filter bar appears with preset buttons when dashboard has data", async ({ authedPage: page, api }) => {
-      const res = await api.get("/summary");
-      const summary = await res.json();
-      const hasData = summary.revenue > 0 || summary.expenses > 0;
-      if (!hasData) {
-        test.skip();
-        return;
-      }
-
-      const filterBar = page.getByTestId("dashboard-filter-bar");
-      await expect(filterBar).toBeVisible({ timeout: 10000 });
-
-      await expect(page.getByTestId("filter-preset-all")).toBeVisible();
-      await expect(page.getByTestId("filter-preset-income")).toBeVisible();
-      await expect(page.getByTestId("filter-preset-expenses")).toBeVisible();
-    });
-
-    test("filter bar does not appear when dashboard is empty", async ({ authedPage: page, api }) => {
-      const res = await api.get("/summary");
-      const summary = await res.json();
-      const hasData = summary.revenue > 0 || summary.expenses > 0
-        || summary.by_month?.length > 0 || summary.by_property?.length > 0;
-      if (hasData) {
-        test.skip();
-        return;
-      }
-
-      await expect(page.getByTestId("dashboard-filter-bar")).not.toBeVisible({ timeout: 5000 });
-    });
+  test.afterAll(async ({ playwright }) => {
+    await solo?.delete(playwright);
   });
 
-  test.describe("Preset filters", () => {
-    test("clicking Expenses preset updates summary cards to show only expenses", async ({ authedPage: page, api }) => {
-      const res = await api.get("/summary");
-      const summary = await res.json();
-      if (summary.revenue === 0 && summary.expenses === 0) {
-        test.skip();
-        return;
-      }
+  test.beforeEach(async ({ page }) => {
+    if (!solo) throw new Error("the dashboard organization was not created");
+    await solo.signIn(page);
+    await openDashboard(page);
+    await expect(page.getByTestId("dashboard-filter-bar")).toBeVisible();
+  });
 
-      const filterBar = page.getByTestId("dashboard-filter-bar");
-      await expect(filterBar).toBeVisible({ timeout: 10000 });
-
+  test.describe("Category presets", () => {
+    test("Expenses leaves only expenses in the totals and the chart", async ({ page }) => {
       await page.getByTestId("filter-preset-expenses").click();
 
-      const revenueCard = page.getByText("Total Revenue").locator("..").locator("p:last-child");
-      await expect(revenueCard).toHaveText("$0.00", { timeout: 5000 });
-
+      await expectSummaryCards(page, ONLY_EXPENSES);
       await expect(page.getByTestId("filter-count")).toBeVisible();
+      const chart = chartIn(page, "Monthly Overview");
+      await expect(bars(chart, "Revenue")).toHaveCount(0);
+      await expect(bars(chart, "maintenance")).toHaveCount(2);
+      await expect(bars(chart, "utilities")).toHaveCount(1);
     });
 
-    test("clicking Income preset updates summary cards to show only income", async ({ authedPage: page, api }) => {
-      const res = await api.get("/summary");
-      const summary = await res.json();
-      if (summary.revenue === 0 && summary.expenses === 0) {
-        test.skip();
-        return;
-      }
-
-      const filterBar = page.getByTestId("dashboard-filter-bar");
-      await expect(filterBar).toBeVisible({ timeout: 10000 });
-
+    test("Income leaves only income in the totals and the chart", async ({ page }) => {
       await page.getByTestId("filter-preset-income").click();
 
-      const expensesCard = page.getByText("Total Expenses").locator("..").locator("p:last-child");
-      await expect(expensesCard).toHaveText("$0.00", { timeout: 5000 });
+      await expectSummaryCards(page, ONLY_INCOME);
+      const chart = chartIn(page, "Monthly Overview");
+      await expect(bars(chart, "Revenue")).toHaveCount(3);
+      await expect(bars(chart, "maintenance")).toHaveCount(0);
+      await expect(bars(chart, "utilities")).toHaveCount(0);
     });
 
-    test("clicking All preset resets to show all data", async ({ authedPage: page, api }) => {
-      const res = await api.get("/summary");
-      const summary = await res.json();
-      if (summary.revenue === 0 && summary.expenses === 0) {
-        test.skip();
-        return;
-      }
-
-      const filterBar = page.getByTestId("dashboard-filter-bar");
-      await expect(filterBar).toBeVisible({ timeout: 10000 });
-
+    test("All brings every category back", async ({ page }) => {
       await page.getByTestId("filter-preset-expenses").click();
-      const revenueCard = page.getByText("Total Revenue").locator("..").locator("p:last-child");
-      await expect(revenueCard).toHaveText("$0.00", { timeout: 5000 });
+      await expectSummaryCards(page, ONLY_EXPENSES);
 
       await page.getByTestId("filter-preset-all").click();
 
-      if (summary.revenue > 0) {
-        const expectedRevenue = new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-          minimumFractionDigits: 2,
-        }).format(summary.revenue);
-        await expect(revenueCard).toHaveText(expectedRevenue, { timeout: 5000 });
-      }
+      await expectSummaryCards(page, SEED.totals);
+      await expect(page.getByTestId("filter-count")).toHaveCount(0);
+    });
 
-      await expect(page.getByTestId("filter-count")).not.toBeVisible({ timeout: 3000 });
+    test("a category filter leaves the by-property totals whole", async ({ page }) => {
+      await page.getByTestId("filter-preset-expenses").click();
+      await expectSummaryCards(page, ONLY_EXPENSES);
+
+      const row = card(page, "By Property").locator("tbody tr").filter({ hasText: SEED.properties.north });
+      await expect(row.locator("td")).toHaveText([SEED.properties.north, NORTH.revenue, NORTH.expenses, NORTH.profit]);
     });
   });
 
   test.describe("Category chips", () => {
-    test("expand toggle reveals individual category chips", async ({ authedPage: page, api }) => {
-      const res = await api.get("/summary");
-      const summary = await res.json();
-      if (summary.revenue === 0 && summary.expenses === 0) {
-        test.skip();
-        return;
-      }
-
-      const filterBar = page.getByTestId("dashboard-filter-bar");
-      await expect(filterBar).toBeVisible({ timeout: 10000 });
-
-      await expect(page.getByTestId("filter-categories-panel")).not.toBeVisible({ timeout: 3000 });
-
-      await page.getByTestId("filter-expand-toggle").click();
+    test("the chips are grouped under Income and Expenses, all selected", async ({ page }) => {
+      await expect(page.getByTestId("filter-categories-panel")).toHaveCount(0);
+      await expandChips(page);
 
       const panel = page.getByTestId("filter-categories-panel");
-      await expect(panel).toBeVisible({ timeout: 5000 });
-
-      const incomeHeader = panel.getByText("Income", { exact: true });
-      const expensesHeader = panel.getByText("Expenses", { exact: true });
-      await expect(incomeHeader).toBeVisible();
-      await expect(expensesHeader).toBeVisible();
+      await expect(panel.getByText("Income", { exact: true })).toBeVisible();
+      await expect(panel.getByText("Expenses", { exact: true })).toBeVisible();
+      await expect(chip(page, "Rental Revenue")).toHaveAttribute("aria-pressed", "true");
+      await expect(chip(page, "Maintenance")).toHaveAttribute("aria-pressed", "true");
     });
 
-    test("clicking a category chip selects only that category when unfiltered", async ({ authedPage: page, api }) => {
-      const res = await api.get("/summary");
-      const summary = await res.json();
-      if (summary.revenue === 0 && summary.expenses === 0) {
-        test.skip();
-        return;
-      }
+    test("the first click selects only that category; later clicks add and remove", async ({ page }) => {
+      await expandChips(page);
 
-      const filterBar = page.getByTestId("dashboard-filter-bar");
-      await expect(filterBar).toBeVisible({ timeout: 10000 });
+      await chip(page, "Rental Revenue").click();
+      await expect(chip(page, "Rental Revenue")).toHaveAttribute("aria-pressed", "true");
+      await expect(chip(page, "Maintenance")).toHaveAttribute("aria-pressed", "false");
+      await expect(page.getByTestId("filter-count")).toHaveText(`1 of ${await chips(page).count()}`);
+      await expectSummaryCards(page, ONLY_INCOME);
 
-      await page.getByTestId("filter-expand-toggle").click();
-      await expect(page.getByTestId("filter-categories-panel")).toBeVisible({ timeout: 5000 });
+      await chip(page, "Maintenance").click();
+      await expect(chip(page, "Maintenance")).toHaveAttribute("aria-pressed", "true");
+      await expectSummaryCards(page, SEED.rentalAndMaintenance);
 
-      const rentalChip = page.getByRole("button", { name: /Rental Revenue/ });
-      if (await rentalChip.count() === 0) {
-        test.skip();
-        return;
-      }
+      await chip(page, "Rental Revenue").click();
+      await expect(chip(page, "Rental Revenue")).toHaveAttribute("aria-pressed", "false");
+      await expectSummaryCards(page, SEED.onlyMaintenance);
+    });
 
-      await expect(rentalChip).toHaveAttribute("aria-pressed", "true");
+    test("the last selected category can't be turned off", async ({ page }) => {
+      await expandChips(page);
+      await chip(page, "Maintenance").click();
+      await expect(page.getByTestId("filter-count")).toHaveText(`1 of ${await chips(page).count()}`);
 
-      // First click from unfiltered state = "select only" this category
-      await rentalChip.click();
+      await chip(page, "Maintenance").click();
 
-      // Chip stays selected (it's the only one now)
-      await expect(rentalChip).toHaveAttribute("aria-pressed", "true");
-
-      // Filter count should show we're filtered
-      await expect(page.getByTestId("filter-count")).toBeVisible({ timeout: 3000 });
-
-      // Second click when already filtered = toggle off this category
-      await rentalChip.click();
-
-      // Rental Revenue is now deselected (other categories remain)
-      await expect(rentalChip).toHaveAttribute("aria-pressed", "false");
-      await expect(page.getByTestId("filter-count")).toBeVisible({ timeout: 3000 });
+      await expect(chip(page, "Maintenance")).toHaveAttribute("aria-pressed", "true");
+      await expect(page.getByTestId("filter-count")).toHaveText(`1 of ${await chips(page).count()}`);
+      await expectSummaryCards(page, SEED.onlyMaintenance);
     });
   });
 
-  test.describe("Filter and chart interaction", () => {
-    test("property sections stay visible when category filter is active", async ({ authedPage: page, api }) => {
-      const res = await api.get("/summary");
-      const summary = await res.json();
-      if (!summary.by_property?.length) {
-        test.skip();
-        return;
-      }
-
-      await expect(page.getByText("By Property").first()).toBeVisible({ timeout: 10000 });
-
+  test.describe("Drill-down under a filter", () => {
+    test("with Expenses on, a category bar lists that month's expense", async ({ page }) => {
       await page.getByTestId("filter-preset-expenses").click();
+      await bars(chartIn(page, "Monthly Overview"), "utilities").click();
 
-      // Property section should remain visible even when filtering by category
-      await expect(page.getByText("By Property").first()).toBeVisible({ timeout: 5000 });
+      const panel = page.getByRole("dialog");
+      await expect(panel.getByText(`Utilities — February ${SEED.year}`)).toBeVisible();
+      await expect(panel.getByText(`1 transaction — ${SEED.byCategory.utilities}`)).toBeVisible();
+      await expect(panel.locator("ul li")).toHaveText([/E2E Power Feb/]);
     });
 
-    test("drill-down still works after applying a filter", async ({ authedPage: page, api }) => {
-      const res = await api.get("/summary");
-      const summary = await res.json();
-      const hasMonthlyData = (summary.by_month?.length ?? 0) > 0;
-      if (!hasMonthlyData) {
-        test.skip();
-        return;
-      }
+    test("with only Maintenance on, the chart and drill-down hold nothing else", async ({ page }) => {
+      await expandChips(page);
+      await chip(page, "Maintenance").click();
 
-      await page.getByTestId("filter-preset-expenses").click();
+      const chart = chartIn(page, "Monthly Overview");
+      await expect(bars(chart, "Revenue")).toHaveCount(0);
+      await expect(bars(chart, "utilities")).toHaveCount(0);
+      await expect(bars(chart, "maintenance")).toHaveCount(2);
 
-      await page.waitForTimeout(500);
-
-      const chartWrapper = page.locator(".recharts-wrapper").first();
-      const isChartVisible = await chartWrapper.isVisible({ timeout: 5000 }).catch(() => false);
-      test.skip(!isChartVisible, "Chart not visible after applying expense filter — no data to drill into");
-
-      const barRect = chartWrapper.locator(".recharts-bar-rectangle rect").first();
-      test.skip((await barRect.count()) === 0, "No bar rectangles rendered — no chart data to click");
-      const barBox = await barRect.boundingBox();
-      test.skip(!barBox || barBox.height < 3, "Bar rectangle too small or missing bounding box — bar has no data");
-
-      await page.mouse.click(barBox!.x + barBox!.width / 2, barBox!.y + barBox!.height / 2);
-
-      const panelHeader = page.getByText(/\d+ transactions?/).first();
-      const panelVisible = await panelHeader.isVisible({ timeout: 5000 }).catch(() => false);
-      if (panelVisible) {
-        const closeBtn = page.getByLabel("Close panel");
-        if ((await closeBtn.count()) > 0) {
-          await closeBtn.click();
-        }
-      }
+      await bars(chart, "maintenance").first().click();
+      const panel = page.getByRole("dialog");
+      await expect(panel.getByText(`Maintenance — January ${SEED.year}`)).toBeVisible();
+      await expect(panel.locator("ul li")).toHaveText([/E2E Plumber Jan/, /E2E Handyman Jan/]);
     });
   });
 
-  test.describe("Reset button", () => {
-    test("reset button clears all filters", async ({ authedPage: page, api }) => {
-      const res = await api.get("/summary");
-      const summary = await res.json();
-      if (summary.revenue === 0 && summary.expenses === 0) {
-        test.skip();
-        return;
-      }
+  test.describe("Property filter", () => {
+    test("choosing a property narrows the totals to it", async ({ page }) => {
+      await expect(page.getByTestId("property-filter-trigger")).toHaveText("All Properties");
 
-      const filterBar = page.getByTestId("dashboard-filter-bar");
-      await expect(filterBar).toBeVisible({ timeout: 10000 });
+      await selectProperty(page, SEED.properties.north);
 
+      await expectSummaryCards(page, NORTH);
+    });
+
+    test("with one property chosen, the chart splits its revenue and expenses", async ({ page }) => {
+      await selectProperty(page, SEED.properties.north);
+
+      const chart = chartIn(page, "Monthly Overview");
+      // Recharts' Legend sorts entries by series name, so Expenses comes before Revenue.
+      await expect(legend(chart)).toHaveText([
+        `${SEED.properties.north} — Expenses`,
+        `${SEED.properties.north} — Revenue`,
+        "Net Profit",
+      ]);
+      await expect(bars(chart, `${SEED.properties.north} — Revenue`)).toHaveCount(2);
+    });
+
+    test("a category filter on top of a property shows that property's categories (AND)", async ({ page }) => {
+      await selectProperty(page, SEED.properties.north);
       await page.getByTestId("filter-preset-expenses").click();
 
-      // Expand the panel to access the reset button
-      await page.getByTestId("filter-expand-toggle").click();
-      await expect(page.getByTestId("filter-clear")).toBeVisible({ timeout: 3000 });
+      await expectSummaryCards(page, { revenue: "$0.00", expenses: NORTH.expenses, profit: `-${NORTH.expenses}` });
+      const chart = chartIn(page, "Monthly Overview");
+      // Sorted by raw series name: "Net Profit" before "maintenance".
+      await expect(legend(chart)).toHaveText(["Net Profit", "Maintenance"]);
+    });
 
+    test("a drill-down under a property filter lists only that property's rows", async ({ page }) => {
+      await selectProperty(page, SEED.properties.south);
+      await page.getByTestId("filter-preset-expenses").click();
+
+      await bars(chartIn(page, "Monthly Overview"), "maintenance").click();
+
+      const panel = page.getByRole("dialog");
+      await expect(panel.getByText(`Maintenance — January ${SEED.year}`)).toBeVisible();
+      await expect(panel.getByText("1 transaction — $100.00")).toBeVisible();
+      await expect(panel.locator("ul li")).toHaveText([/E2E Handyman Jan/]);
+    });
+
+    test("Reset clears the property and the category filter together", async ({ page }) => {
+      await selectProperty(page, SEED.properties.north);
+      await page.getByTestId("filter-preset-expenses").click();
+      await expectSummaryCards(page, { revenue: "$0.00", expenses: NORTH.expenses, profit: `-${NORTH.expenses}` });
+
+      await expandChips(page);
       await page.getByTestId("filter-clear").click();
 
-      await expect(page.getByTestId("filter-count")).not.toBeVisible({ timeout: 3000 });
-      await expect(page.getByTestId("filter-clear")).not.toBeVisible({ timeout: 3000 });
-
-      if (summary.revenue > 0) {
-        const revenueCard = page.getByText("Total Revenue").locator("..").locator("p:last-child");
-        const expectedRevenue = new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-          minimumFractionDigits: 2,
-        }).format(summary.revenue);
-        await expect(revenueCard).toHaveText(expectedRevenue, { timeout: 5000 });
-      }
+      await expect(page.getByTestId("property-filter-trigger")).toHaveText("All Properties");
+      await expect(page.getByTestId("filter-count")).toHaveCount(0);
+      await expect(page.getByTestId("filter-clear")).toHaveCount(0);
+      await expectSummaryCards(page, SEED.totals);
     });
   });
 });
 
-test.describe("Dashboard Property Filter", () => {
-  test.beforeEach(async ({ authedPage: page }) => {
-    await page.goto("/");
-    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText("Total Revenue").first()).toBeVisible({ timeout: 15000 });
+test.describe("Dashboard filters with no data", () => {
+  let empty: SoloOrg | undefined;
+
+  test.beforeAll(async ({ playwright }) => {
+    empty = await SoloOrg.create(playwright, "dashboard-empty");
   });
 
-  test("property dropdown appears when user has properties", async ({ authedPage: page, api }) => {
-    const res = await api.get("/properties");
-    const properties = await res.json();
-    if (properties.length === 0) {
-      test.skip();
-      return;
-    }
-
-    const summaryRes = await api.get("/summary");
-    const summary = await summaryRes.json();
-    if (summary.revenue === 0 && summary.expenses === 0) {
-      test.skip();
-      return;
-    }
-
-    await expect(page.getByTestId("property-filter-trigger")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("All Properties")).toBeVisible();
+  test.afterAll(async ({ playwright }) => {
+    await empty?.delete(playwright);
   });
 
-  test("selecting a property scopes dashboard data to that property", async ({ authedPage: page, api }) => {
-    const propRes = await api.get("/properties");
-    const properties = await propRes.json();
-    if (properties.length < 2) {
-      test.skip();
-      return;
-    }
+  test("an empty dashboard has no filter bar", async ({ page }) => {
+    if (!empty) throw new Error("the empty organization was not created");
+    await empty.signIn(page);
+    await openDashboard(page);
 
-    const summaryRes = await api.get("/summary");
-    const summary = await summaryRes.json();
-    if (summary.revenue === 0 && summary.expenses === 0) {
-      test.skip();
-      return;
-    }
-
-    // Get summary for first property to compare
-    const firstProp = properties[0];
-    const propSummaryRes = await api.get(`/summary?property_ids=${firstProp.id}`);
-    const propSummary = await propSummaryRes.json();
-
-    // Click property dropdown and select first property
-    await page.getByTestId("property-filter-trigger").click();
-    await page.getByText(firstProp.name).click();
-
-    // Summary cards should update to show property-scoped data
-    if (propSummary.revenue !== summary.revenue) {
-      const revenueCard = page.getByText("Total Revenue").locator("..").locator("p:last-child");
-      const expectedRevenue = new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-        minimumFractionDigits: 2,
-      }).format(propSummary.revenue);
-      await expect(revenueCard).toHaveText(expectedRevenue, { timeout: 5000 });
-    }
-
-    // Trigger should show property name
-    await expect(page.getByTestId("property-filter-trigger")).toContainText(firstProp.name);
-
-    // Reset button should be visible inside expanded panel
-    await page.getByTestId("filter-expand-toggle").click();
-    await expect(page.getByTestId("filter-clear")).toBeVisible({ timeout: 3000 });
-  });
-
-  test("property filter and category filter work together (AND logic)", async ({ authedPage: page, api }) => {
-    const propRes = await api.get("/properties");
-    const properties = await propRes.json();
-    if (properties.length === 0) {
-      test.skip();
-      return;
-    }
-
-    const summaryRes = await api.get("/summary");
-    const summary = await summaryRes.json();
-    if (summary.revenue === 0 && summary.expenses === 0) {
-      test.skip();
-      return;
-    }
-
-    // Select a property
-    await page.getByTestId("property-filter-trigger").click();
-    await page.getByRole("menuitemcheckbox", { name: properties[0].name }).click();
-    await page.keyboard.press("Escape");
-
-    // Then apply category filter
-    await page.getByTestId("filter-preset-expenses").click();
-
-    // Revenue should be $0 (expenses-only filter)
-    const revenueCard = page.getByText("Total Revenue").locator("..").locator("p:last-child");
-    await expect(revenueCard).toHaveText("$0.00", { timeout: 5000 });
-
-    // Both filters should be indicated
-    await expect(page.getByTestId("filter-count")).toBeVisible();
-    await page.getByTestId("filter-expand-toggle").click();
-    await expect(page.getByTestId("filter-clear")).toBeVisible({ timeout: 3000 });
-  });
-
-  test("reset clears both property and category filters", async ({ authedPage: page, api }) => {
-    const propRes = await api.get("/properties");
-    const properties = await propRes.json();
-    if (properties.length === 0) {
-      test.skip();
-      return;
-    }
-
-    const summaryRes = await api.get("/summary");
-    const summary = await summaryRes.json();
-    if (summary.revenue === 0 && summary.expenses === 0) {
-      test.skip();
-      return;
-    }
-
-    // Apply both filters
-    await page.getByTestId("property-filter-trigger").click();
-    await page.getByRole("menuitemcheckbox", { name: properties[0].name }).click();
-    await page.keyboard.press("Escape");
-    await page.getByTestId("filter-preset-expenses").click();
-
-    // Expand panel and click reset
-    await page.getByTestId("filter-expand-toggle").click();
-    await page.getByTestId("filter-clear").click();
-
-    // Both filters should be cleared
-    await expect(page.getByText("All Properties")).toBeVisible({ timeout: 5000 });
-    await expect(page.getByTestId("filter-count")).not.toBeVisible({ timeout: 3000 });
-    await expect(page.getByTestId("filter-clear")).not.toBeVisible({ timeout: 3000 });
-  });
-});
-
-test.describe("Dashboard Property Expense Split", () => {
-  test.beforeEach(async ({ authedPage: page }) => {
-    await page.goto("/");
-    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText("Total Revenue").first()).toBeVisible({ timeout: 15000 });
-  });
-
-  test("selecting a property shows per-property revenue and expense bars in legend", async ({ authedPage: page, api }) => {
-    const propRes = await api.get("/properties");
-    const properties = await propRes.json();
-    if (properties.length < 2) {
-      test.skip();
-      return;
-    }
-
-    const summaryRes = await api.get("/summary");
-    const summary = await summaryRes.json();
-    if ((summary.by_month?.length ?? 0) === 0) {
-      test.skip();
-      return;
-    }
-
-    // Select first property to trigger property breakdown
-    await page.getByTestId("property-filter-trigger").click();
-    await page.getByRole("menuitemcheckbox", { name: properties[0].name }).click();
-    await page.keyboard.press("Escape");
-
-    // Wait for chart to re-render
-    await page.waitForTimeout(1000);
-
-    // Chart legend should show property-specific labels
-    const chartWrapper = page.locator(".recharts-wrapper").first();
-    const isChartVisible = await chartWrapper.isVisible({ timeout: 5000 }).catch(() => false);
-    test.skip(!isChartVisible, "Chart not visible after selecting property — no chart to verify legend");
-
-    // Look for property name in the legend text
-    const legendText = await chartWrapper.locator(".recharts-legend-wrapper").textContent();
-    expect(legendText).toContain(properties[0].name);
-  });
-
-  test("category filter overrides property expense bars with category bars", async ({ authedPage: page, api }) => {
-    const propRes = await api.get("/properties");
-    const properties = await propRes.json();
-    if (properties.length < 2) {
-      test.skip();
-      return;
-    }
-
-    const summaryRes = await api.get("/summary");
-    const summary = await summaryRes.json();
-    if ((summary.by_month?.length ?? 0) === 0 || summary.expenses === 0) {
-      test.skip();
-      return;
-    }
-
-    // Select a property first
-    await page.getByTestId("property-filter-trigger").click();
-    await page.getByRole("menuitemcheckbox", { name: properties[0].name }).click();
-    await page.keyboard.press("Escape");
-
-    await page.waitForTimeout(500);
-
-    // Now apply expense category filter — should switch from property expense bars to category bars
-    await page.getByTestId("filter-preset-expenses").click();
-
-    await page.waitForTimeout(500);
-
-    // Revenue card should be $0 — only expenses shown
-    const revenueCard = page.getByText("Total Revenue").locator("..").locator("p:last-child");
-    await expect(revenueCard).toHaveText("$0.00", { timeout: 5000 });
-
-    // Chart legend should no longer show property expense labels (no " — Expenses")
-    const chartWrapper = page.locator(".recharts-wrapper").first();
-    const isChartVisible = await chartWrapper.isVisible({ timeout: 5000 }).catch(() => false);
-    test.skip(!isChartVisible, "Chart not visible after applying category filter — no legend to verify");
-
-    const legendText = await chartWrapper.locator(".recharts-legend-wrapper").textContent() ?? "";
-    expect(legendText).not.toContain("— Expenses");
-  });
-
-  test("selecting a single expense category shows only that category in drill-down", async ({ authedPage: page, api }) => {
-    const summaryRes = await api.get("/summary");
-    const summary = await summaryRes.json();
-    if ((summary.by_month?.length ?? 0) === 0 || summary.expenses === 0) {
-      test.skip();
-      return;
-    }
-
-    // Expand filter panel and select only maintenance
-    await page.getByTestId("filter-expand-toggle").click();
-    await expect(page.getByTestId("filter-categories-panel")).toBeVisible({ timeout: 5000 });
-
-    const maintenanceChip = page.getByRole("button", { name: /Maintenance/ }).first();
-    if ((await maintenanceChip.count()) === 0) {
-      test.skip();
-      return;
-    }
-
-    // Right-click or context-click to "select only" maintenance
-    await maintenanceChip.click({ button: "right" });
-
-    await page.waitForTimeout(500);
-
-    // Click on a bar in the chart to open drill-down
-    const chartWrapper = page.locator(".recharts-wrapper").first();
-    const isChartVisible = await chartWrapper.isVisible({ timeout: 5000 }).catch(() => false);
-    test.skip(!isChartVisible, "Chart not visible after applying maintenance category filter — no data to drill into");
-
-    const barRect = chartWrapper.locator(".recharts-bar-rectangle rect").first();
-    test.skip((await barRect.count()) === 0, "No bar rectangles rendered — no chart data to click");
-    const barBox = await barRect.boundingBox();
-    test.skip(!barBox || barBox.height < 3, "Bar rectangle too small or missing bounding box — bar has no data");
-
-    await page.mouse.click(barBox!.x + barBox!.width / 2, barBox!.y + barBox!.height / 2);
-
-    // If drill-down panel opened, verify it shows the correct category
-    const panelHeader = page.getByText(/\d+ transactions?/).first();
-    const panelVisible = await panelHeader.isVisible({ timeout: 5000 }).catch(() => false);
-    if (panelVisible) {
-      // The drill-down title should reference the filtered category, not "Expenses"
-      const panelTitle = page.locator("[class*='font-semibold'], h2, h3").filter({ hasText: /Maintenance|Revenue/ }).first();
-      const titleVisible = await panelTitle.isVisible({ timeout: 3000 }).catch(() => false);
-      if (titleVisible) {
-        const titleText = await panelTitle.textContent();
-        // Should not say generic "Expenses" — should be specific category or revenue
-        expect(titleText).toBeTruthy();
-      }
-    }
+    await expect(page.getByTestId("dashboard-filter-bar")).toHaveCount(0);
   });
 });
