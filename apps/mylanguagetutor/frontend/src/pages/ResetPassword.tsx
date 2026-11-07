@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { LoadingButton, PasswordPair, extractErrorMessage } from "@platform/ui";
+import { LoadingButton, PasswordPair, describeAuthError } from "@platform/ui";
 import { Languages } from "lucide-react";
 import { resetPassword } from "@/lib/auth";
 
@@ -51,12 +51,7 @@ export default function ResetPassword() {
       await resetPassword(token!, password);
       setSuccess(true);
     } catch (err) {
-      const message = extractErrorMessage(err);
-      if (message.toLowerCase().includes("token")) {
-        setError("This reset link has expired or already been used. Request a new one.");
-      } else {
-        setError(message || "Failed to reset password. Please try again.");
-      }
+      setError(describeAuthError(err));
     }
     setIsLoading(false);
   }

@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import api from "@/shared/lib/api";
-import { extractErrorMessage } from "@platform/ui";
-import { LoadingButton } from "@platform/ui";
+import { describeAuthError, LoadingButton } from "@platform/ui";
 
 const MIN_PASSWORD_LENGTH = 12;
 
@@ -67,12 +66,7 @@ export default function ResetPassword() {
       await api.post("/auth/reset-password", { token, password });
       setSuccess(true);
     } catch (err) {
-      const message = extractErrorMessage(err);
-      if (message.toLowerCase().includes("token")) {
-        setError("This reset link has expired or already been used. Please request a new one.");
-      } else {
-        setError(message || "Failed to reset password. Please try again.");
-      }
+      setError(describeAuthError(err));
     }
 
     setIsLoading(false);
