@@ -9,32 +9,31 @@ test.describe("Classification Rules panel", () => {
     ).toBeVisible({ timeout: 10000 });
   });
 
-  test("opens panel from toolbar and verifies rules load from API", async ({ authedPage: page, api }) => {
-    await page.getByRole("button", { name: /vendor rules/i }).click();
+  // Other specs add and remove rules on this account in parallel, so these
+  // tests check their own rule rather than the account's whole list. The
+  // empty state and exact counts are pinned in mocked/classification-rules-panel-mock.spec.ts.
+  test("opens panel from toolbar and shows a rule created through the API", async ({ authedPage: page, api }) => {
+    const pattern = `E2E Panel Rule ${Date.now()}`;
+    const createRes = await api.post("/classification-rules", {
+      data: { match_type: "vendor", match_pattern: pattern, category: "utilities" },
+    });
+    expect(createRes.ok()).toBe(true);
+    const rule = await createRes.json();
 
-    // Panel header shows "Classification Rules"
-    await expect(page.getByText("Classification Rules").first()).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText(/I learn these from your corrections/i)).toBeVisible();
+    try {
+      await page.reload();
+      await page.getByRole("button", { name: /vendor rules/i }).click();
 
-    // Fetch rules from API and verify UI matches
-    const res = await api.get("/classification-rules");
-    const rules = await res.json();
+      const panel = page.getByRole("dialog", { name: "Classification Rules" });
+      await expect(panel.getByText(/I learn these from your corrections/i)).toBeVisible();
+      await expect(panel.getByRole("columnheader", { name: "Pattern" })).toBeVisible();
+      await expect(panel.getByRole("columnheader", { name: "Category" })).toBeVisible();
 
-    if (Array.isArray(rules) && rules.length > 0) {
-      // Table should show Pattern and Category columns
-      await expect(page.getByText("Pattern").first()).toBeVisible({ timeout: 5000 });
-      await expect(page.getByText("Category").first()).toBeVisible();
-
-      // First rule's match pattern should appear
-      await expect(page.getByText(rules[0].match_pattern).first()).toBeVisible({ timeout: 5000 });
-
-      // Rule count in footer should match API
-      const footerText = `${rules.length} rule${rules.length === 1 ? "" : "s"} total`;
-      await expect(page.getByText(footerText)).toBeVisible({ timeout: 5000 });
-    } else {
-      // Empty state
-      await expect(page.getByText(/no classification rules yet/i)).toBeVisible({ timeout: 5000 });
-      await expect(page.getByText("0 rules total")).toBeVisible();
+      const row = panel.locator("tbody tr").filter({ hasText: pattern });
+      await expect(row).toBeVisible();
+      await expect(row).toContainText("Utilities");
+    } finally {
+      await api.delete(`/classification-rules/${rule.id}`);
     }
   });
 
@@ -48,10 +47,7 @@ test.describe("Classification Rules panel", () => {
         category: "utilities",
       },
     });
-    if (!createRes.ok()) {
-      test.skip(true, "Could not create a classification rule via API — skipping");
-      return;
-    }
+    expect(createRes.ok()).toBe(true);
     const rule = await createRes.json();
 
     // Reload to pick up the new rule
@@ -94,10 +90,7 @@ test.describe("Classification Rules panel", () => {
         category: "maintenance",
       },
     });
-    if (!createRes.ok()) {
-      test.skip(true, "Could not create classification rule via API");
-      return;
-    }
+    expect(createRes.ok()).toBe(true);
     const rule = await createRes.json();
 
     await page.reload();
@@ -141,25 +134,26 @@ test.describe("Classification Rules panel", () => {
   });
 
   test("rule count in footer matches the number of table rows", async ({ authedPage: page, api }) => {
-    await page.getByRole("button", { name: /vendor rules/i }).click();
-    await expect(page.getByText("Classification Rules").first()).toBeVisible({ timeout: 5000 });
+    const pattern = `E2E Count Rule ${Date.now()}`;
+    const createRes = await api.post("/classification-rules", {
+      data: { match_type: "vendor", match_pattern: pattern, category: "insurance" },
+    });
+    expect(createRes.ok()).toBe(true);
+    const rule = await createRes.json();
 
-    const res = await api.get("/classification-rules");
-    const rules = await res.json();
-    const count = Array.isArray(rules) ? rules.length : 0;
+    try {
+      await page.reload();
+      await page.getByRole("button", { name: /vendor rules/i }).click();
 
-    // Footer text
-    const footerRegex = new RegExp(`${count} rules? total`, "i");
-    await expect(page.getByText(footerRegex)).toBeVisible({ timeout: 5000 });
+      const panel = page.getByRole("dialog", { name: "Classification Rules" });
+      const rows = panel.locator("tbody tr");
+      await expect(rows.filter({ hasText: pattern })).toBeVisible();
 
-    // Table rows should match count (if there are rules)
-    if (count > 0) {
-      // Count the data rows in the panel table (inside the panel, not the main transactions table)
-      const panelTable = page.locator("[class*='Panel'] table, [class*='panel'] table").first();
-      if (await panelTable.isVisible({ timeout: 3000 })) {
-        const rows = panelTable.locator("tbody tr");
-        await expect(rows).toHaveCount(count, { timeout: 5000 });
-      }
+      // Footer and rows come from the same fetch, so they agree whatever other specs are doing.
+      const count = await rows.count();
+      await expect(panel.getByText(`${count} rule${count === 1 ? "" : "s"} total`)).toBeVisible();
+    } finally {
+      await api.delete(`/classification-rules/${rule.id}`);
     }
   });
 });
