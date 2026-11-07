@@ -43,7 +43,6 @@ async function seedApplicant(
     legal_name?: string | null;
     employer_or_hospital?: string | null;
     contract_start?: string | null;
-    contract_end?: string | null;
     stage?: string;
   } = {},
 ): Promise<string> {
@@ -154,7 +153,6 @@ test.describe("generate-defaults API (lease-template-source-pull)", () => {
           legal_name: null,
           employer_or_hospital: null,
           contract_start: null,
-          contract_end: null,
         });
         seededApplicants.push(applicantId);
 

@@ -14,7 +14,8 @@
         "test_admin_routes.py",
         "test_test_utils_routes.py",
         "test_tax_seed_routes.py",
-        "test_db_admin.py"
+        "test_db_admin.py",
+        "test_seed_applicant_request.py"
       ],
       "frontend_tests": [
         "UserActivity.test.tsx"

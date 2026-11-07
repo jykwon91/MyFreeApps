@@ -10,7 +10,7 @@ import { test, expect, type APIRequestContext } from "./fixtures/auth";
  *    queue endpoint. Asserts:
  *    - 422 ``"applicant_email_missing"`` when contact_email isn't set
  *      on the applicant.
- *    - 202 ``{"queued": true}`` once the applicant has an email.
+ *    - 202 ``{"queued": true}`` when the applicant has an email.
  *    - 404 for a lease that doesn't exist.
  *
  * 2. Frontend UI: the "Email to tenant" button is rendered on the
@@ -50,21 +50,6 @@ async function seedSignedLease(
   return body.id;
 }
 
-async function setApplicantContactEmail(
-  api: APIRequestContext,
-  applicantId: string,
-  contactEmail: string,
-): Promise<void> {
-  const res = await api.patch(`/applicants/${applicantId}`, {
-    data: { contact_email: contactEmail },
-  });
-  if (!res.ok()) {
-    throw new Error(
-      `setApplicantContactEmail failed: ${res.status()} ${await res.text()}`,
-    );
-  }
-}
-
 async function deleteApplicant(
   api: APIRequestContext, id: string,
 ): Promise<void> {
@@ -80,36 +65,44 @@ async function deleteSignedLease(
 
 test.describe("Lease — Email to tenant", () => {
   test(
-    "manual re-send: 422 when applicant has no contact_email, 202 once it's set",
+    "manual re-send: 422 when applicant has no contact_email, 202 when it has one",
     async ({ api }) => {
       const runId = Date.now();
-      const applicantId = await seedApplicant(api, `E2E Email ${runId}`);
-      let leaseId = "";
+      let noEmailId = "";
+      let withEmailId = "";
+      let noEmailLeaseId = "";
+      let withEmailLeaseId = "";
       try {
-        leaseId = await seedSignedLease(api, applicantId);
+        noEmailId = await seedApplicant(api, `E2E No Email ${runId}`);
+        withEmailId = await seedApplicant(
+          api,
+          `E2E Email ${runId}`,
+          { contact_email: `tenant-${runId}@example.com` },
+        );
+        noEmailLeaseId = await seedSignedLease(api, noEmailId);
+        withEmailLeaseId = await seedSignedLease(api, withEmailId);
 
         // Without a contact_email, the manual endpoint should 422
         // with detail "applicant_email_missing".
         const noEmailResp = await api.post(
-          `/signed-leases/${leaseId}/email-tenant`,
+          `/signed-leases/${noEmailLeaseId}/email-tenant`,
         );
         expect(noEmailResp.status()).toBe(422);
         const noEmailBody = (await noEmailResp.json()) as { detail: string };
         expect(noEmailBody.detail).toBe("applicant_email_missing");
 
-        // After setting a contact_email, the same call should 202.
-        await setApplicantContactEmail(
-          api, applicantId, `tenant-${runId}@example.com`,
-        );
+        // With a contact_email on file, the same call should 202.
         const queuedResp = await api.post(
-          `/signed-leases/${leaseId}/email-tenant`,
+          `/signed-leases/${withEmailLeaseId}/email-tenant`,
         );
         expect(queuedResp.status()).toBe(202);
         const queuedBody = (await queuedResp.json()) as { queued: boolean };
         expect(queuedBody.queued).toBe(true);
       } finally {
-        if (leaseId) await deleteSignedLease(api, leaseId);
-        await deleteApplicant(api, applicantId);
+        if (noEmailLeaseId) await deleteSignedLease(api, noEmailLeaseId);
+        if (withEmailLeaseId) await deleteSignedLease(api, withEmailLeaseId);
+        if (noEmailId) await deleteApplicant(api, noEmailId);
+        if (withEmailId) await deleteApplicant(api, withEmailId);
       }
     },
   );
@@ -124,30 +117,37 @@ test.describe("Lease — Email to tenant", () => {
   );
 
   test(
-    "lease detail page: Email to tenant button is rendered for a generated lease",
+    "lease detail page: Email to tenant is enabled only when the tenant has an email",
     async ({ authedPage: page, api }) => {
       const runId = Date.now();
-      const applicantId = await seedApplicant(
-        api,
-        `E2E Email UI ${runId}`,
-        { contact_email: `tenant-ui-${runId}@example.com` },
-      );
-      let leaseId = "";
+      let withEmailId = "";
+      let noEmailId = "";
+      let withEmailLeaseId = "";
+      let noEmailLeaseId = "";
       try {
-        leaseId = await seedSignedLease(api, applicantId);
-        // Seeded as kind=imported with one attachment, so the button
-        // should NOT render. Confirm absence first as a regression
-        // pin (the contract is "generated leases only").
-        await page.goto(`/leases/${leaseId}`);
-        await expect(
-          page.getByTestId("lease-applicant-card"),
-        ).toBeVisible();
-        await expect(
-          page.getByTestId("lease-email-tenant-button"),
-        ).toHaveCount(0);
+        withEmailId = await seedApplicant(
+          api,
+          `E2E Email UI ${runId}`,
+          { contact_email: `tenant-ui-${runId}@example.com` },
+        );
+        noEmailId = await seedApplicant(api, `E2E No Email UI ${runId}`);
+        // Seeded as kind=imported with a signed_lease attachment. Since #434
+        // any lease with an emailable attachment shows the button.
+        withEmailLeaseId = await seedSignedLease(api, withEmailId);
+        noEmailLeaseId = await seedSignedLease(api, noEmailId);
+
+        await page.goto(`/leases/${withEmailLeaseId}`);
+        await expect(page.getByTestId("lease-applicant-card")).toBeVisible();
+        await expect(page.getByTestId("lease-email-tenant-button")).toBeEnabled();
+
+        await page.goto(`/leases/${noEmailLeaseId}`);
+        await expect(page.getByTestId("lease-applicant-card")).toBeVisible();
+        await expect(page.getByTestId("lease-email-tenant-button")).toBeDisabled();
       } finally {
-        if (leaseId) await deleteSignedLease(api, leaseId);
-        await deleteApplicant(api, applicantId);
+        if (withEmailLeaseId) await deleteSignedLease(api, withEmailLeaseId);
+        if (noEmailLeaseId) await deleteSignedLease(api, noEmailLeaseId);
+        if (withEmailId) await deleteApplicant(api, withEmailId);
+        if (noEmailId) await deleteApplicant(api, noEmailId);
       }
     },
   );
