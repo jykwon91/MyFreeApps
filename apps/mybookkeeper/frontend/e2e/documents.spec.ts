@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures/auth";
+import { readFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -230,157 +231,86 @@ test.describe("Documents — search", () => {
 });
 
 test.describe("Documents — viewer on row click", () => {
-  test.beforeEach(async ({ authedPage: page }) => {
-    await page.goto("/documents");
-    await expect(page.getByRole("heading", { name: "Documents" })).toBeVisible();
-    await expect(
-      page.locator("table").or(page.getByText(/no documents found/i))
-    ).toBeVisible({ timeout: 15000 });
-  });
+  // Each test seeds its own PDF under a unique name. Upload dedups on content
+  // hash, so a trailing PDF comment makes the bytes unique too; otherwise the
+  // upload hands back another test's plumber-invoice.pdf.
+  let fileName = "";
+  let docId = "";
 
-  test("clicking a document row opens the viewer panel", async ({ authedPage: page }) => {
-    const firstRow = page.locator("tbody tr").first();
-    if ((await firstRow.count()) === 0) {
-      test.skip(true, "No documents to click");
-      return;
-    }
-
-    // Click the row (not on the checkbox or delete button — click on the file name cell)
-    await firstRow.click();
-
-    // The document viewer panel should open with "Source document" header
-    await expect(
-      page.getByText("Source document").first()
-    ).toBeVisible({ timeout: 10000 });
-  });
-
-  test("viewer shows source document header", async ({ authedPage: page }) => {
-    const firstRow = page.locator("tbody tr").first();
-    if ((await firstRow.count()) === 0) {
-      test.skip(true, "No documents to view");
-      return;
-    }
-
-    await firstRow.click();
-
-    // Header text should say "Source document"
-    const header = page.getByText("Source document").first();
-    await expect(header).toBeVisible({ timeout: 10000 });
-  });
-
-  test("closing the viewer returns to the document list", async ({ authedPage: page }) => {
-    const firstRow = page.locator("tbody tr").first();
-    if ((await firstRow.count()) === 0) {
-      test.skip(true, "No documents to view");
-      return;
-    }
-
-    await firstRow.click();
-
-    // Wait for the viewer to open
-    await expect(
-      page.getByText("Source document").first()
-    ).toBeVisible({ timeout: 10000 });
-
-    // Close the viewer using the close button (aria-label="Close viewer")
-    const closeBtn = page.getByLabel("Close viewer");
-    await expect(closeBtn).toBeVisible({ timeout: 5000 });
-    await closeBtn.click();
-
-    // Viewer should be gone
-    await expect(
-      page.getByText("Source document")
-    ).not.toBeVisible({ timeout: 5000 });
-
-    // Document table should still be visible
-    await expect(page.locator("table")).toBeVisible();
-  });
-
-  test("viewer actually renders the source document — iframe src is a blob URL and download response is 200 with content", async ({ authedPage: page, api }) => {
-    test.setTimeout(60000);
-
-    // Seed: upload a PDF via API so we know we have something to view.
-    const pdfPath = path.join(FIXTURES_DIR, TEST_PDF);
-    const pdfBytes = (await import("fs")).readFileSync(pdfPath);
+  test.beforeEach(async ({ authedPage: page, api }, testInfo) => {
+    docId = "";
+    fileName = `e2e-doc-viewer-${Date.now()}-${testInfo.workerIndex}.pdf`;
     const uploadRes = await api.post("/documents/upload", {
       multipart: {
         file: {
-          name: TEST_PDF,
+          name: fileName,
           mimeType: "application/pdf",
-          buffer: pdfBytes,
+          buffer: Buffer.concat([
+            readFileSync(path.join(FIXTURES_DIR, TEST_PDF)),
+            Buffer.from(`\n% ${fileName}\n`),
+          ]),
         },
       },
     });
     expect(uploadRes.ok()).toBe(true);
+    docId = (await uploadRes.json()).document_id;
 
-    // Find the just-uploaded doc id.
-    const listRes = await api.get("/documents");
-    expect(listRes.ok()).toBe(true);
-    const docs = (await listRes.json()) as Array<{ id: string; file_name: string }>;
-    const doc = docs.find((d) => d.file_name === TEST_PDF);
-    expect(doc, "uploaded document must appear in the list").toBeTruthy();
-    const docId = doc!.id;
+    await page.goto("/documents");
+    await expect(page.getByRole("heading", { name: "Documents" })).toBeVisible();
+    await expect(page.locator("tbody tr", { hasText: fileName })).toBeVisible({ timeout: 15000 });
+  });
 
-    // Capture browser-side console errors and the network response for the download.
+  test.afterEach(async ({ api }) => {
+    if (!docId) return;
+    const del = await api.delete(`/documents/${docId}`);
+    expect(del.ok(), `cleanup: delete document ${docId}`).toBe(true);
+  });
+
+  test("clicking a document row opens the viewer panel", async ({ authedPage: page }) => {
+    await page.locator("tbody tr", { hasText: fileName }).click();
+
+    await expect(page.getByText("Source document").first()).toBeVisible({ timeout: 10000 });
+  });
+
+  test("closing the viewer returns to the document list", async ({ authedPage: page }) => {
+    await page.locator("tbody tr", { hasText: fileName }).click();
+    await expect(page.getByText("Source document").first()).toBeVisible({ timeout: 10000 });
+
+    await page.getByLabel("Close viewer").click();
+
+    await expect(page.getByText("Source document")).toHaveCount(0);
+    await expect(page.locator("tbody tr", { hasText: fileName })).toBeVisible();
+  });
+
+  test("viewer actually renders the source document — iframe src is a blob URL and download response is 200 with content", async ({ authedPage: page }) => {
     const consoleErrors: string[] = [];
     page.on("console", (msg) => {
       if (msg.type() === "error") consoleErrors.push(msg.text());
     });
 
-    let downloadStatus: number | null = null;
-    let downloadBodySize: number | null = null;
-    let downloadContentType: string | null = null;
-    page.on("response", async (resp) => {
-      if (resp.url().includes(`/documents/${docId}/download`)) {
-        downloadStatus = resp.status();
-        downloadContentType = resp.headers()["content-type"] ?? null;
-        try {
-          const body = await resp.body();
-          downloadBodySize = body.length;
-        } catch {
-          downloadBodySize = -1;
-        }
-      }
-    });
-
-    await page.goto("/documents");
-    await expect(page.getByRole("heading", { name: "Documents" })).toBeVisible();
-    await expect(page.locator("table")).toBeVisible({ timeout: 15000 });
-
-    // Click the row for the uploaded document.
-    const targetRow = page.locator("tbody tr", { hasText: TEST_PDF }).first();
-    await expect(targetRow).toBeVisible({ timeout: 15000 });
-    await targetRow.click();
-
-    // Header proves the panel opened (this is what the existing tests stop at).
+    const download = page.waitForResponse((resp) => resp.url().includes(`/documents/${docId}/download`));
+    await page.locator("tbody tr", { hasText: fileName }).click();
     await expect(page.getByText("Source document").first()).toBeVisible({ timeout: 10000 });
 
-    // BEHAVIORAL ASSERTIONS — what was missing before today:
-    // 1. The download endpoint actually returned 200 with bytes.
-    await expect.poll(() => downloadStatus, { timeout: 15000, message: "download endpoint never responded" }).toBe(200);
-    expect(downloadBodySize, "download body must be non-empty").not.toBeNull();
-    expect(downloadBodySize!).toBeGreaterThan(0);
-    expect(downloadContentType, "PDF download must advertise application/pdf").toContain("pdf");
+    // 1. The download endpoint returned a non-empty PDF.
+    const downloadResp = await download;
+    expect(downloadResp.status()).toBe(200);
+    expect(downloadResp.headers()["content-type"], "PDF download must advertise application/pdf").toContain("pdf");
+    expect((await downloadResp.body()).length, "download body must be non-empty").toBeGreaterThan(0);
 
     // 2. The viewer rendered an iframe whose src is a blob: URL pointing at the fetched bytes.
     const iframe = page.locator('iframe[title="Source document"]');
     await expect(iframe).toBeVisible({ timeout: 10000 });
-    const iframeSrc = await iframe.getAttribute("src");
-    expect(iframeSrc, "iframe must have a src").toBeTruthy();
-    expect(iframeSrc!.startsWith("blob:"), `iframe src should be a blob URL, got: ${iframeSrc}`).toBe(true);
+    await expect(iframe).toHaveAttribute("src", /^blob:/);
 
     // 3. The error message UI must NOT be rendered.
-    const errorEl = page.locator("p.text-destructive");
-    expect(await errorEl.count(), "viewer should not show an error state").toBe(0);
+    await expect(page.locator("p.text-destructive")).toHaveCount(0);
 
     // 4. No browser console errors fired during the load.
     expect(
       consoleErrors,
       `unexpected browser console errors during viewer load: ${consoleErrors.join(" | ")}`
     ).toEqual([]);
-
-    // Cleanup
-    await api.delete(`/documents/${docId}`).catch(() => {/* non-critical */});
   });
 });
 
