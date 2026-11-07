@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
+import { listingRowBars } from "./fixtures/calendar-rows";
 import { createProperty, deleteProperty } from "./fixtures/seed-data";
 
 /**
@@ -42,14 +43,9 @@ async function deleteListing(api: APIRequestContext, listingId: string): Promise
   await api.delete(`/test/listings/${listingId}`).catch(() => {});
 }
 
-async function seedBlackout(api: APIRequestContext, payload: SeedBlackoutPayload): Promise<string | null> {
+async function seedBlackout(api: APIRequestContext, payload: SeedBlackoutPayload): Promise<string> {
   const res = await api.post("/test/seed-blackout", { data: payload });
-  if (!res.ok()) {
-    // The endpoint may not be wired up yet (it's added in this PR).
-    // Returning null lets the test skip gracefully rather than fail
-    // ambiguously — see the test body below.
-    return null;
-  }
+  if (!res.ok()) throw new Error(`seedBlackout failed: ${res.status()} ${await res.text()}`);
   const body = (await res.json()) as { id: string };
   return body.id;
 }
@@ -92,14 +88,7 @@ test.describe("Unified calendar viewer", () => {
       source: "vrbo",
       source_event_id: `e2e-vr-${runId}`,
     });
-
-    test.skip(
-      ab === null || vr === null,
-      "Blackout seed endpoint not wired up — see test_utils.py for the helper",
-    );
-
-    if (ab !== null) blackoutIds.push(ab);
-    if (vr !== null) blackoutIds.push(vr);
+    blackoutIds.push(ab, vr);
 
     try {
       // `view=timeline` throughout this spec: the month grid is the default
@@ -112,8 +101,8 @@ test.describe("Unified calendar viewer", () => {
         page.getByRole("heading", { name: "Calendar" }),
       ).toBeVisible();
 
-      // Two event bars render — one per blackout.
-      const bars = page.getByTestId("calendar-event-bar");
+      // Two event bars render on this listing's row — one per blackout.
+      const bars = listingRowBars(page, listingId);
       await expect(bars).toHaveCount(2);
 
       // Filter to airbnb only.
@@ -123,7 +112,7 @@ test.describe("Unified calendar viewer", () => {
       await page.keyboard.press("Escape");
       await page.waitForLoadState("networkidle");
 
-      const filteredBars = page.getByTestId("calendar-event-bar");
+      const filteredBars = listingRowBars(page, listingId);
       await expect(filteredBars).toHaveCount(1);
       await expect(filteredBars.first()).toHaveAttribute("data-source", "airbnb");
     } finally {
@@ -144,9 +133,10 @@ test.describe("Unified calendar viewer", () => {
     // alone.
     const runId = Date.now();
     const property = await createProperty(api, { name: `E2E Calendar Layout ${runId}` });
+    const listingTitle = `E2E Layout Listing ${runId}`;
     const listingId = await seedListing(api, {
       property_id: property.id,
-      title: `E2E Layout Listing ${runId}`,
+      title: listingTitle,
       status: "active",
     });
     const blackoutIds: string[] = [];
@@ -157,11 +147,7 @@ test.describe("Unified calendar viewer", () => {
       source: "airbnb",
       source_event_id: `e2e-layout-${runId}`,
     });
-    test.skip(
-      ab === null,
-      "Blackout seed endpoint not wired up — see test_utils.py for the helper",
-    );
-    if (ab !== null) blackoutIds.push(ab);
+    blackoutIds.push(ab);
 
     try {
       // Desktop: grid view visible, mobile agenda hidden.
@@ -171,7 +157,7 @@ test.describe("Unified calendar viewer", () => {
       await expect(page.getByRole("heading", { name: "Calendar" })).toBeVisible();
       await expect(page.getByTestId("calendar-desktop")).toBeVisible();
       await expect(page.getByTestId("calendar-mobile")).toBeHidden();
-      await expect(page.getByTestId("calendar-event-bar")).toHaveCount(1);
+      await expect(listingRowBars(page, listingId)).toHaveCount(1);
       let bodyWidth = await page.evaluate(() => document.body.scrollWidth);
       expect(
         bodyWidth,
@@ -184,7 +170,9 @@ test.describe("Unified calendar viewer", () => {
       await page.waitForLoadState("networkidle");
       await expect(page.getByTestId("calendar-mobile")).toBeVisible();
       await expect(page.getByTestId("calendar-desktop")).toBeHidden();
-      await expect(page.getByTestId("calendar-agenda-event")).toHaveCount(1);
+      await expect(
+        page.getByTestId("calendar-agenda-event").filter({ hasText: listingTitle }),
+      ).toHaveCount(1);
       bodyWidth = await page.evaluate(() => document.body.scrollWidth);
       expect(
         bodyWidth,

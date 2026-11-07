@@ -78,8 +78,10 @@ class CalendarEmailReviewQueue(Base):
             "status IN ('pending', 'resolved', 'ignored')",
             name="chk_review_queue_status",
         ),
-        # Dedup guard — identical Gmail message cannot produce two pending
-        # entries for the same user.
+        # Dedup guard — the same Gmail message never produces a second entry
+        # for a user, whatever the first one's status. Not partial on purpose:
+        # review_queue_repo's upsert infers its conflict target from these
+        # columns, and a WHERE clause here would need a matching index_where.
         Index(
             "uq_review_queue_user_message_id",
             "user_id", "email_message_id",

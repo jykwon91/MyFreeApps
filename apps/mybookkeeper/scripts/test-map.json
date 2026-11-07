@@ -481,7 +481,10 @@
         "test_blackout_notes_attachments.py",
         "test_input_validation_hardening.py",
         "test_review_queue_routes.py",
-        "test_review_queue_service.py"
+        "test_review_queue_service.py",
+        "test_review_queue_repo.py",
+        "test_blocklist_repo.py",
+        "test_on_conflict_targets.py"
       ],
       "frontend_tests": [
         "Calendar.test.tsx",

@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
+import { listingRowBars } from "./fixtures/calendar-rows";
 import { createProperty, deleteProperty } from "./fixtures/seed-data";
 
 /**
@@ -70,7 +71,7 @@ async function seedLease(
   return body.id;
 }
 
-async function seedBlackout(api: APIRequestContext, listingId: string, runId: number): Promise<string | null> {
+async function seedBlackout(api: APIRequestContext, listingId: string, runId: number): Promise<string> {
   const res = await api.post("/test/seed-blackout", {
     data: {
       listing_id: listingId,
@@ -80,7 +81,7 @@ async function seedBlackout(api: APIRequestContext, listingId: string, runId: nu
       source_event_id: `e2e-lease-cal-${runId}`,
     },
   });
-  if (!res.ok()) return null;
+  if (!res.ok()) throw new Error(`seedBlackout failed: ${res.status()} ${await res.text()}`);
   const body = (await res.json()) as { id: string };
   return body.id;
 }
@@ -102,11 +103,6 @@ test.describe("Tenant leases on the calendar", () => {
     const leaseId = await seedLease(api, applicantId, listingId);
     const blackoutId = await seedBlackout(api, listingId, runId);
 
-    test.skip(
-      blackoutId === null,
-      "Blackout seed endpoint not wired up — see app/test_helpers/seed.py",
-    );
-
     try {
       // The listing-per-row timeline — the month grid is the default view.
       await page.goto(`/calendar?from=${FROM_ISO}&to=${TO_ISO}&view=timeline`);
@@ -114,12 +110,10 @@ test.describe("Tenant leases on the calendar", () => {
       await expect(page.getByRole("heading", { name: "Calendar" })).toBeVisible();
 
       // Both sources land on the same listing row.
-      const bars = page.getByTestId("calendar-event-bar");
+      const bars = listingRowBars(page, listingId);
       await expect(bars).toHaveCount(2);
 
-      const leaseBar = page.locator(
-        '[data-testid="calendar-event-bar"][data-source="lease"]',
-      );
+      const leaseBar = bars.and(page.locator('[data-source="lease"]'));
       await expect(leaseBar).toHaveCount(1);
       // The band names the tenant — "Tenant" alone would say nothing the
       // colour didn't already.
@@ -153,8 +147,8 @@ test.describe("Tenant leases on the calendar", () => {
       await page.getByRole("menuitemcheckbox", { name: /Tenant/ }).click();
       await page.keyboard.press("Escape");
       await page.waitForLoadState("networkidle");
-      await expect(page.getByTestId("calendar-event-bar")).toHaveCount(1);
-      await expect(page.getByTestId("calendar-event-bar")).toHaveAttribute("data-source", "lease");
+      await expect(bars).toHaveCount(1);
+      await expect(bars).toHaveAttribute("data-source", "lease");
 
       // Swap the filter to Airbnb only — the tenancy drops out. This is the
       // half that catches a service that ignores the source filter for one of
@@ -164,10 +158,10 @@ test.describe("Tenant leases on the calendar", () => {
       await page.getByRole("menuitemcheckbox", { name: /Airbnb/ }).click();
       await page.keyboard.press("Escape");
       await page.waitForLoadState("networkidle");
-      await expect(page.getByTestId("calendar-event-bar")).toHaveCount(1);
-      await expect(page.getByTestId("calendar-event-bar")).toHaveAttribute("data-source", "airbnb");
+      await expect(bars).toHaveCount(1);
+      await expect(bars).toHaveAttribute("data-source", "airbnb");
     } finally {
-      if (blackoutId !== null) await api.delete(`/test/blackouts/${blackoutId}`).catch(() => {});
+      await api.delete(`/test/blackouts/${blackoutId}`).catch(() => {});
       await api.delete(`/test/signed-leases/${leaseId}`).catch(() => {});
       await api.delete(`/test/applicants/${applicantId}`).catch(() => {});
       await api.delete(`/test/listings/${listingId}`).catch(() => {});
