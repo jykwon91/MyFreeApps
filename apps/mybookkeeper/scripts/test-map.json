@@ -15,6 +15,7 @@
         "test_test_utils_routes.py",
         "test_tax_seed_routes.py",
         "test_document_seed_routes.py",
+        "test_extraction_seed_routes.py",
         "test_member_seed_routes.py",
         "test_db_admin.py",
         "test_seed_applicant_request.py",
@@ -1350,7 +1351,8 @@
         "useDocumentColumns.test.tsx",
         "chart-utils.test.ts",
         "SortIndicator.test.tsx",
-        "TransactionFilterBar.test.tsx"
+        "TransactionFilterBar.test.tsx",
+        "TransactionFormSource.test.tsx"
       ],
       "e2e_specs": [
         "transactions.spec.ts",

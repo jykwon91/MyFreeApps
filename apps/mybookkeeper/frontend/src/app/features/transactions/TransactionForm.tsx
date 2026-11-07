@@ -121,6 +121,7 @@ export default function TransactionForm({
             type="button"
             onClick={() => handleViewSource(transaction.source_document_id!)}
             className="text-primary hover:underline truncate text-left"
+            aria-label={`Open source document ${transaction.source_file_name}`}
           >
             {transaction.source_file_name}
           </button>
