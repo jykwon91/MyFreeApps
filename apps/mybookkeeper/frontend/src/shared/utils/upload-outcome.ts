@@ -1,19 +1,19 @@
-import type { DocumentStatus } from "@mybookkeeper/api-client/types/document/DocumentStatus";
-import type { UploadOutcome } from "@/shared/types/document/upload-outcome";
+import { DOCUMENT_STATUSES, type DocumentStatus } from "@mybookkeeper/api-client/types/document/DocumentStatus";
+import { UPLOAD_OUTCOMES, type UploadOutcome } from "@/shared/types/document/upload-outcome";
 
 /** How a single upload's extraction ended, or null while it's still being read. */
 export function uploadOutcome(status: DocumentStatus): UploadOutcome | null {
   switch (status) {
-    case "processing":
-    case "extracting":
+    case DOCUMENT_STATUSES.PROCESSING:
+    case DOCUMENT_STATUSES.EXTRACTING:
       return null;
-    case "completed":
-      return "done";
-    case "failed":
-      return "failed";
-    case "duplicate":
-    case "skipped":
-    case "deleted":
-      return "skipped";
+    case DOCUMENT_STATUSES.COMPLETED:
+      return UPLOAD_OUTCOMES.DONE;
+    case DOCUMENT_STATUSES.FAILED:
+      return UPLOAD_OUTCOMES.FAILED;
+    case DOCUMENT_STATUSES.DUPLICATE:
+    case DOCUMENT_STATUSES.SKIPPED:
+    case DOCUMENT_STATUSES.DELETED:
+      return UPLOAD_OUTCOMES.SKIPPED;
   }
 }

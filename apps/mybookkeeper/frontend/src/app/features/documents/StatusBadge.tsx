@@ -1,7 +1,7 @@
 import { StatusBadge } from "@platform/ui";
 import type { ReactElement } from "react";
 import { AlertCircle } from "lucide-react";
-import type { DocumentStatus } from "@mybookkeeper/api-client/types/document/DocumentStatus";
+import { DOCUMENT_STATUSES, type DocumentStatus } from "@mybookkeeper/api-client/types/document/DocumentStatus";
 
 interface DocumentStatusBadgeProps {
   status: DocumentStatus;
@@ -10,12 +10,12 @@ interface DocumentStatusBadgeProps {
 
 export default function DocumentStatusBadge({ status, errorMessage }: DocumentStatusBadgeProps): ReactElement {
   switch (status) {
-    case "processing":
-    case "extracting":
+    case DOCUMENT_STATUSES.PROCESSING:
+    case DOCUMENT_STATUSES.EXTRACTING:
       return <StatusBadge tone="info" label="Extracting" />;
-    case "completed":
+    case DOCUMENT_STATUSES.COMPLETED:
       return <span className="text-green-500" title="Completed">&#10003;</span>;
-    case "failed":
+    case DOCUMENT_STATUSES.FAILED:
       return (
         <span className="inline-flex items-center gap-1.5" title={errorMessage ?? "Extraction failed"}>
           <StatusBadge tone="danger" label="Failed" />
@@ -26,11 +26,11 @@ export default function DocumentStatusBadge({ status, errorMessage }: DocumentSt
           )}
         </span>
       );
-    case "duplicate":
+    case DOCUMENT_STATUSES.DUPLICATE:
       return <StatusBadge tone="danger" label="Duplicate" />;
-    case "skipped":
+    case DOCUMENT_STATUSES.SKIPPED:
       return <StatusBadge tone="neutral" label="Read" />;
-    case "deleted":
+    case DOCUMENT_STATUSES.DELETED:
       return <StatusBadge tone="neutral" label="Deleted" />;
   }
 }

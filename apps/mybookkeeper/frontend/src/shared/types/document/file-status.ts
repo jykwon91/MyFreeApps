@@ -1,4 +1,10 @@
-import type { UploadOutcome } from "./upload-outcome";
+import { UPLOAD_OUTCOMES } from "./upload-outcome";
 
-// A single upload ends "done", "failed" or "skipped" (read, but nothing new to add).
-export type FileStatus = "uploading" | "processing" | "error" | UploadOutcome;
+export const FILE_STATUSES = {
+  UPLOADING: "uploading",
+  PROCESSING: "processing",
+  ERROR: "error",
+  ...UPLOAD_OUTCOMES,
+} as const;
+
+export type FileStatus = (typeof FILE_STATUSES)[keyof typeof FILE_STATUSES];
