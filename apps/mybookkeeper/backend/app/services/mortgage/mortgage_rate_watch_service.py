@@ -46,10 +46,8 @@ async def get_rate_watch(
     *,
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
-    today: _dt.date | None = None,
+    today: _dt.date,
 ) -> MortgageRateWatchResponse:
-    as_of = today or _dt.date.today()
-
     async with unit_of_work() as db:
         pairs = await mortgage_repo.list_with_properties(
             db, user_id=user_id, organization_id=organization_id,
@@ -59,7 +57,7 @@ async def get_rate_watch(
         return MortgageRateWatchResponse()
 
     try:
-        survey = await fetch_rate_survey(today=as_of)
+        survey = await fetch_rate_survey(today=today)
     except MortgageRateFeedUnavailableError as exc:
         logger.warning("mortgage rate watch could not reach the survey: %s", exc)
         return MortgageRateWatchResponse(
@@ -78,7 +76,7 @@ async def get_rate_watch(
             # member's value is what the occupancy table is keyed by.
             classification=prop.classification.value,
             survey=survey,
-            today=as_of,
+            today=today,
         )
         for mortgage, prop in pairs
     ]

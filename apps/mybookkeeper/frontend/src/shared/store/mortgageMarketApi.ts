@@ -1,3 +1,4 @@
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import { baseApi } from "./baseApi";
 import type { MortgageRateWatch } from "@/shared/types/mortgage/mortgage-rate-watch";
 
@@ -12,7 +13,7 @@ import type { MortgageRateWatch } from "@/shared/types/mortgage/mortgage-rate-wa
 const mortgageMarketApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getMortgageRateWatch: builder.query<MortgageRateWatch, void>({
-      query: () => ({ url: "/mortgage-market/rate-watch" }),
+      query: () => ({ url: "/mortgage-market/rate-watch", params: { today: localToday() } }),
       providesTags: [{ type: "Mortgage", id: "RATE_WATCH" }],
     }),
   }),

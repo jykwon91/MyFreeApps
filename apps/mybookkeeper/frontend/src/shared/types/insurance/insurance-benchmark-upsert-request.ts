@@ -12,4 +12,6 @@ export interface InsuranceBenchmarkUpsertRequest {
   source?: string | null;
   observed_on: string;
   notes?: string | null;
+  /** The caller's local date; ``observed_on`` may not be after it. */
+  today: string;
 }

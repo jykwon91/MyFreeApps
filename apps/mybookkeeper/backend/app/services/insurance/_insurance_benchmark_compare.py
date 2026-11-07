@@ -87,10 +87,9 @@ def rate_cents_per_1000_coverage(
     return Decimal(annual_premium_cents) / coverage_units
 
 
-def is_stale(observed_on: _dt.date, *, today: _dt.date | None = None) -> bool:
+def is_stale(observed_on: _dt.date, *, today: _dt.date) -> bool:
     """True once an observation is too old to describe the current market."""
-    reference = today or _dt.date.today()
-    return (reference - observed_on).days > BENCHMARK_STALE_AFTER_DAYS
+    return (today - observed_on).days > BENCHMARK_STALE_AFTER_DAYS
 
 
 def compare(
@@ -98,7 +97,7 @@ def compare(
     policy_coverage_amount_cents: int | None,
     benchmark: ComparableBenchmark | None,
     *,
-    today: _dt.date | None = None,
+    today: _dt.date,
     material_gap_pct: float = MATERIAL_GAP_PCT,
 ) -> PolicyComparison:
     """Classify one policy against the organization's benchmark.

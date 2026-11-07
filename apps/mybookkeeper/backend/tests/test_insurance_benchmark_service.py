@@ -118,7 +118,7 @@ class TestBenchmarkCrud:
         with patch(_UOW_TARGET, _make_fake_uow(db)):
             assert (
                 await insurance_benchmark_service.get_benchmark(
-                    organization_id=test_org.id,
+                    organization_id=test_org.id, today=TODAY,
                 )
                 is None
             )
@@ -136,6 +136,7 @@ class TestBenchmarkCrud:
                 source="TDI HelpInsure",
                 observed_on=TODAY,
                 notes=None,
+                today=TODAY,
             )
             second = await insurance_benchmark_service.upsert_benchmark(
                 user_id=test_user.id,
@@ -146,6 +147,7 @@ class TestBenchmarkCrud:
                 source="Renewal quote",
                 observed_on=TODAY,
                 notes=None,
+                today=TODAY,
             )
 
         # Same row updated, not a second one — the org has one benchmark.
@@ -166,8 +168,46 @@ class TestBenchmarkCrud:
                 source=None,
                 observed_on=TODAY,
                 notes=None,
+                today=TODAY,
             )
         assert saved.rate_cents_per_1000_coverage == Decimal("300.00")
+
+    @pytest.mark.parametrize(
+        ("days_after_window", "expected_stale"), [(0, False), (1, True)],
+    )
+    async def test_staleness_is_measured_from_the_callers_date(
+        self,
+        db: AsyncSession,
+        test_user: User,
+        test_org: Organization,
+        days_after_window: int,
+        expected_stale: bool,
+    ) -> None:
+        """The same row reads fresh or stale depending on the ``today`` sent."""
+        await _make_benchmark(db, org_id=test_org.id, user_id=test_user.id)
+        client_today = TODAY + _dt.timedelta(
+            days=BENCHMARK_STALE_AFTER_DAYS + days_after_window,
+        )
+
+        with patch(_UOW_TARGET, _make_fake_uow(db)):
+            read = await insurance_benchmark_service.get_benchmark(
+                organization_id=test_org.id, today=client_today,
+            )
+            saved = await insurance_benchmark_service.upsert_benchmark(
+                user_id=test_user.id,
+                organization_id=test_org.id,
+                annual_premium_cents=MARKET_PREMIUM_CENTS,
+                coverage_amount_cents=MARKET_COVERAGE_CENTS,
+                region_label=None,
+                source=None,
+                observed_on=TODAY,
+                notes=None,
+                today=client_today,
+            )
+
+        assert read is not None
+        assert read.is_stale is expected_stale
+        assert saved.is_stale is expected_stale
 
     async def test_delete_removes_it_and_then_reports_not_found(
         self, db: AsyncSession, test_user: User, test_org: Organization,
@@ -193,7 +233,7 @@ class TestBenchmarkCrud:
         with patch(_UOW_TARGET, _make_fake_uow(db)):
             assert (
                 await insurance_benchmark_service.get_benchmark(
-                    organization_id=uuid.uuid4(),
+                    organization_id=uuid.uuid4(), today=TODAY,
                 )
                 is None
             )
@@ -411,6 +451,35 @@ class TestGetPremiumComparison:
 
         assert result.has_stale_benchmark is True
         assert result.above_market[0].benchmark_is_stale is True
+        assert result.benchmark is not None
+        assert result.benchmark.is_stale is True
+
+    async def test_a_policy_expiring_on_the_callers_today_is_still_measured(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """Expiry is judged on the client's date: a day later it drops out."""
+        prop = await _make_property(db, test_org.id, test_user.id)
+        await _make_policy(
+            db,
+            org_id=test_org.id,
+            user_id=test_user.id,
+            property_id=prop.id,
+            expiration_date=TODAY,
+        )
+        await _make_benchmark(db, org_id=test_org.id, user_id=test_user.id)
+
+        with patch(_UOW_TARGET, _make_fake_uow(db)):
+            on_the_day = await insurance_benchmark_service.get_premium_comparison(
+                user_id=test_user.id, organization_id=test_org.id, today=TODAY,
+            )
+            day_after = await insurance_benchmark_service.get_premium_comparison(
+                user_id=test_user.id,
+                organization_id=test_org.id,
+                today=TODAY + _dt.timedelta(days=1),
+            )
+
+        assert on_the_day.total_considered == 1
+        assert day_after.total_considered == 0
 
     async def test_another_orgs_policies_are_not_measured(
         self, db: AsyncSession, test_user: User, test_org: Organization,

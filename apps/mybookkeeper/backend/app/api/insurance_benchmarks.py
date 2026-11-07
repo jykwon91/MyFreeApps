@@ -12,10 +12,13 @@ on the policy resource.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
+from app.schemas.dates.client_local_date import ClientLocalDate
 from app.schemas.insurance.insurance_benchmark_response import (
     InsuranceBenchmarkResponse,
 )
@@ -29,6 +32,7 @@ router = APIRouter(prefix="/insurance-benchmarks", tags=["insurance-benchmarks"]
 
 @router.get("", response_model=InsuranceBenchmarkResponse | None)
 async def get_benchmark(
+    today: Annotated[ClientLocalDate, Query()],
     ctx: RequestContext = Depends(current_org_member),
 ) -> InsuranceBenchmarkResponse | None:
     """The organization's recorded market observation, or null if none.
@@ -39,6 +43,7 @@ async def get_benchmark(
     """
     return await insurance_benchmark_service.get_benchmark(
         organization_id=ctx.organization_id,
+        today=today,
     )
 
 
@@ -56,6 +61,7 @@ async def upsert_benchmark(
         source=payload.source,
         observed_on=payload.observed_on,
         notes=payload.notes,
+        today=payload.today,
     )
 
 

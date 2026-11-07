@@ -1,3 +1,4 @@
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import { baseApi } from "./baseApi";
 import type { InsuranceBenchmark } from "@/shared/types/insurance/insurance-benchmark";
 import type { InsuranceBenchmarkUpsertRequest } from "@/shared/types/insurance/insurance-benchmark-upsert-request";
@@ -17,20 +18,26 @@ import type { InsurancePremiumComparison } from "@/shared/types/insurance/insura
 const insuranceBenchmarksApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getInsuranceBenchmark: builder.query<InsuranceBenchmark | null, void>({
-      query: () => ({ url: "/insurance-benchmarks" }),
+      query: () => ({ url: "/insurance-benchmarks", params: { today: localToday() } }),
       providesTags: [{ type: "InsuranceBenchmark", id: "CURRENT" }],
     }),
 
     getInsurancePremiumComparison: builder.query<InsurancePremiumComparison, void>({
-      query: () => ({ url: "/insurance-policies/premium-comparison" }),
+      query: () => ({
+        url: "/insurance-policies/premium-comparison",
+        params: { today: localToday() },
+      }),
       providesTags: [{ type: "InsurancePolicy", id: "COMPARISON" }],
     }),
 
     upsertInsuranceBenchmark: builder.mutation<
       InsuranceBenchmark,
-      InsuranceBenchmarkUpsertRequest
+      Omit<InsuranceBenchmarkUpsertRequest, "today">
     >({
-      query: (data) => ({ url: "/insurance-benchmarks", method: "PUT", data }),
+      query: (fields) => {
+        const data: InsuranceBenchmarkUpsertRequest = { ...fields, today: localToday() };
+        return { url: "/insurance-benchmarks", method: "PUT", data };
+      },
       invalidatesTags: [
         { type: "InsuranceBenchmark", id: "CURRENT" },
         { type: "InsurancePolicy", id: "COMPARISON" },
