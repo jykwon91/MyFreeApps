@@ -32,12 +32,9 @@ interface SeedAttributionReviewResponse {
 async function seedAttributionReview(
   api: APIRequestContext,
   payload: SeedAttributionReviewPayload,
-): Promise<SeedAttributionReviewResponse | null> {
+): Promise<SeedAttributionReviewResponse> {
   const res = await api.post("/test/seed-attribution-review", { data: payload });
-  if (!res.ok()) {
-    // Seed endpoint not wired (ALLOW_TEST_ADMIN_PROMOTION off) — caller skips.
-    return null;
-  }
+  expect(res.ok(), `seed-attribution-review: ${res.status()} ${await res.text()}`).toBe(true);
   return res.json() as Promise<SeedAttributionReviewResponse>;
 }
 
@@ -52,11 +49,11 @@ async function deleteAttributionReview(
 async function seedApplicant(
   api: APIRequestContext,
   legalName: string,
-): Promise<string | null> {
+): Promise<string> {
   const res = await api.post("/test/seed-applicant", {
     data: { legal_name: legalName, stage: "lease_signed" },
   });
-  if (!res.ok()) return null;
+  expect(res.ok(), `seed-applicant: ${res.status()} ${await res.text()}`).toBe(true);
   const body = (await res.json()) as { id: string };
   return body.id;
 }
@@ -64,9 +61,9 @@ async function seedApplicant(
 async function getTransaction(
   api: APIRequestContext,
   id: string,
-): Promise<{ property_id: string | null } | null> {
+): Promise<{ property_id: string | null }> {
   const res = await api.get(`/transactions/${id}`);
-  if (!res.ok()) return null;
+  expect(res.ok(), `GET /transactions/${id}: ${res.status()}`).toBe(true);
   return res.json() as Promise<{ property_id: string | null }>;
 }
 
@@ -78,19 +75,15 @@ test.describe("Attribution review — Airbnb payout UX (PR D)", () => {
     const runId = Date.now();
     const desc = `E2E Airbnb payout ${runId}`;
     const property = await createProperty(api, { name: `E2E Attr Prop ${runId}` });
-
-    const seeded = await seedAttributionReview(api, {
-      channel: "airbnb",
-      confidence: "unmatched",
-      amount: "920.00",
-      description: desc,
-    });
-    test.skip(
-      seeded === null,
-      "seed-attribution-review endpoint not wired (ALLOW_TEST_ADMIN_PROMOTION off)",
-    );
+    let seeded: SeedAttributionReviewResponse | undefined;
 
     try {
+      seeded = await seedAttributionReview(api, {
+        channel: "airbnb",
+        confidence: "unmatched",
+        amount: "920.00",
+        description: desc,
+      });
       await page.goto("/payment-review");
       await page.waitForLoadState("networkidle");
 
@@ -115,12 +108,12 @@ test.describe("Attribution review — Airbnb payout UX (PR D)", () => {
       await expect(row).toBeHidden({ timeout: 5000 });
 
       // The transaction now carries the chosen property in the DB.
-      const txn = await getTransaction(api, seeded!.transaction_id);
-      expect(txn?.property_id).toBe(property.id);
+      const txn = await getTransaction(api, seeded.transaction_id);
+      expect(txn.property_id).toBe(property.id);
     } finally {
       // Delete the review row + its transaction first (FK to property),
       // then the property.
-      await deleteAttributionReview(api, seeded!.id);
+      if (seeded) await deleteAttributionReview(api, seeded.id);
       await deleteProperty(api, property.id);
     }
   });
@@ -136,26 +129,24 @@ test.describe("Attribution review — Airbnb payout UX (PR D)", () => {
     // Airbnb-unmatched needs ≥1 property for the picker to render; rent-unmatched
     // needs a lease_signed applicant for the tenant picker to render.
     const property = await createProperty(api, { name: `E2E Mixed Prop ${runId}` });
-    const applicantId = await seedApplicant(api, `E2E Mixed Tenant ${runId}`);
-
-    const rentSeed = await seedAttributionReview(api, {
-      channel: null,
-      confidence: "unmatched",
-      amount: "1500.00",
-      description: rentDesc,
-    });
-    const bnbSeed = await seedAttributionReview(api, {
-      channel: "airbnb",
-      confidence: "unmatched",
-      amount: "920.00",
-      description: bnbDesc,
-    });
-    test.skip(
-      rentSeed === null || bnbSeed === null,
-      "seed-attribution-review endpoint not wired (ALLOW_TEST_ADMIN_PROMOTION off)",
-    );
+    let applicantId: string | undefined;
+    let rentSeed: SeedAttributionReviewResponse | undefined;
+    let bnbSeed: SeedAttributionReviewResponse | undefined;
 
     try {
+      applicantId = await seedApplicant(api, `E2E Mixed Tenant ${runId}`);
+      rentSeed = await seedAttributionReview(api, {
+        channel: null,
+        confidence: "unmatched",
+        amount: "1500.00",
+        description: rentDesc,
+      });
+      bnbSeed = await seedAttributionReview(api, {
+        channel: "airbnb",
+        confidence: "unmatched",
+        amount: "920.00",
+        description: bnbDesc,
+      });
       await page.goto("/payment-review");
       await page.waitForLoadState("networkidle");
 
@@ -188,8 +179,8 @@ test.describe("Attribution review — Airbnb payout UX (PR D)", () => {
         bnbRow.getByRole("combobox", { name: /pick a tenant/i }),
       ).toHaveCount(0);
     } finally {
-      await deleteAttributionReview(api, rentSeed!.id);
-      await deleteAttributionReview(api, bnbSeed!.id);
+      if (rentSeed) await deleteAttributionReview(api, rentSeed.id);
+      if (bnbSeed) await deleteAttributionReview(api, bnbSeed.id);
       if (applicantId) await deleteApplicant(api, applicantId);
       await deleteProperty(api, property.id);
     }
@@ -201,17 +192,7 @@ test.describe("Attribution review — Airbnb payout UX (PR D)", () => {
   }) => {
     const runId = Date.now();
     const desc = `E2E skeleton airbnb ${runId}`;
-    const property = await createProperty(api, { name: `E2E Skel Prop ${runId}` });
-    const seeded = await seedAttributionReview(api, {
-      channel: "airbnb",
-      confidence: "unmatched",
-      amount: "920.00",
-      description: desc,
-    });
-    test.skip(
-      seeded === null,
-      "seed-attribution-review endpoint not wired (ALLOW_TEST_ADMIN_PROMOTION off)",
-    );
+    const property = await createProperty(api, { name: `E2E Skel Prop ${runId}` });    let seeded: SeedAttributionReviewResponse | undefined;
 
     // Delay the queue response so the skeleton is observable.
     await page.route("**/attribution-review-queue*", async (route) => {
@@ -220,6 +201,12 @@ test.describe("Attribution review — Airbnb payout UX (PR D)", () => {
     });
 
     try {
+      seeded = await seedAttributionReview(api, {
+        channel: "airbnb",
+        confidence: "unmatched",
+        amount: "920.00",
+        description: desc,
+      });
       await page.goto("/payment-review");
 
       // Skeleton: a 3-row placeholder list, each with the same two columns
@@ -243,7 +230,7 @@ test.describe("Attribution review — Airbnb payout UX (PR D)", () => {
       expect(await row.evaluate((el) => getComputedStyle(el).flexDirection)).toBe(skeletonDirection);
     } finally {
       await page.unroute("**/attribution-review-queue*");
-      await deleteAttributionReview(api, seeded!.id);
+      if (seeded) await deleteAttributionReview(api, seeded.id);
       await deleteProperty(api, property.id);
     }
   });
