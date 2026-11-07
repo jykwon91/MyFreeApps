@@ -13,6 +13,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.schemas.inquiries.public_inquiry_request import PublicInquiryRequest
+from tests.utc_today import utc_today
 
 
 def _payload(**overrides) -> dict:
@@ -21,8 +22,9 @@ def _payload(**overrides) -> dict:
         "name": "Alice Smith",
         "email": "alice@example.com",
         "phone": "555-123-4567",
-        "move_in_date": _dt.date.today() + _dt.timedelta(days=14),
-        "move_out_date": _dt.date.today() + _dt.timedelta(days=14 + 180),
+        "today": utc_today(),
+        "move_in_date": utc_today() + _dt.timedelta(days=14),
+        "move_out_date": utc_today() + _dt.timedelta(days=14 + 180),
         "occupant_count": 1,
         "has_pets": False,
         "vehicle_count": 1,
@@ -78,7 +80,7 @@ class TestUsRegionValidation:
 
 class TestMoveDateValidation:
     def test_rejects_move_out_equal_to_move_in(self) -> None:
-        today = _dt.date.today()
+        today = utc_today()
         with pytest.raises(ValidationError):
             PublicInquiryRequest(**_payload(
                 move_in_date=today + _dt.timedelta(days=14),
@@ -86,7 +88,7 @@ class TestMoveDateValidation:
             ))
 
     def test_rejects_move_out_before_move_in(self) -> None:
-        today = _dt.date.today()
+        today = utc_today()
         with pytest.raises(ValidationError):
             PublicInquiryRequest(**_payload(
                 move_in_date=today + _dt.timedelta(days=20),
@@ -94,9 +96,14 @@ class TestMoveDateValidation:
             ))
 
     def test_accepts_short_stay_under_30_days(self) -> None:
-        today = _dt.date.today()
+        today = utc_today()
         req = PublicInquiryRequest(**_payload(
             move_in_date=today + _dt.timedelta(days=14),
             move_out_date=today + _dt.timedelta(days=21),
         ))
         assert (req.move_out_date - req.move_in_date).days == 7
+
+
+def test_rejects_a_today_that_is_not_the_applicant_s_current_date() -> None:
+    with pytest.raises(ValidationError):
+        PublicInquiryRequest(**_payload(today=utc_today() - _dt.timedelta(days=3)))

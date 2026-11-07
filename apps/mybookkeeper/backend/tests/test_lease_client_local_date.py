@@ -41,13 +41,10 @@ from app.services.leases.signed_lease_service import (
     generate_lease,
     prefill_addendum_placeholders,
 )
+from tests.utc_today import utc_today
 
 # Far from any server clock, so a pass proves the passed date was used.
 _CLIENT_DATE = datetime.date(2031, 3, 4)
-
-
-def _utc_today() -> datetime.date:
-    return datetime.datetime.now(datetime.timezone.utc).date()
 
 
 def _fake_uow(session: AsyncSession):
@@ -142,12 +139,12 @@ class TestClientLocalDate:
 
     @pytest.mark.parametrize("offset", [-1, 0, 1])
     def test_accepts_dates_within_one_day_of_utc(self, offset: int) -> None:
-        value = _utc_today() + datetime.timedelta(days=offset)
+        value = utc_today() + datetime.timedelta(days=offset)
         assert self._adapter.validate_python(value.isoformat()) == value
 
     @pytest.mark.parametrize("offset", [-2, 2, 400])
     def test_rejects_dates_more_than_one_day_off(self, offset: int) -> None:
-        value = _utc_today() + datetime.timedelta(days=offset)
+        value = utc_today() + datetime.timedelta(days=offset)
         with pytest.raises(ValidationError):
             self._adapter.validate_python(value.isoformat())
 
@@ -328,7 +325,7 @@ class TestRoutesRequireClientDate:
     @pytest.mark.parametrize(("call", "target", "result"), _ROUTES)
     @pytest.mark.parametrize("offset", [-1, 1])
     def test_passes_client_date_to_service(self, client, call, target, result, offset: int) -> None:
-        client_today = _utc_today() + datetime.timedelta(days=offset)
+        client_today = utc_today() + datetime.timedelta(days=offset)
         with patch(target, new_callable=AsyncMock, return_value=result) as service:
             resp = call(client, client_today.isoformat())
         assert resp.status_code == 200, resp.text
@@ -342,7 +339,7 @@ class TestRoutesRequireClientDate:
         ],
     )
     def test_lease_writes_pass_client_date_to_service(self, client, call, target) -> None:
-        client_today = _utc_today() - datetime.timedelta(days=1)
+        client_today = utc_today() - datetime.timedelta(days=1)
         with patch(
             target, new_callable=AsyncMock, side_effect=SignedLeaseNotFoundError("stop here"),
         ) as service:
@@ -356,6 +353,6 @@ class TestRoutesRequireClientDate:
     )
     @pytest.mark.parametrize("offset", [None, -2, 2])
     def test_missing_or_far_off_date_is_422(self, client, call, offset: int | None) -> None:
-        today = None if offset is None else (_utc_today() + datetime.timedelta(days=offset)).isoformat()
+        today = None if offset is None else (utc_today() + datetime.timedelta(days=offset)).isoformat()
         resp = call(client, today)
         assert resp.status_code == 422

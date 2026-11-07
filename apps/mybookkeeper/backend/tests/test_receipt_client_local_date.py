@@ -23,12 +23,9 @@ from app.services.leases import receipt_send_service, receipt_service
 from app.services.leases.receipt_pdf_service import ReceiptData
 from app.services.leases.receipt_send_result import ReceiptSendResult
 from tests.receipt_seed import CLIENT_TODAY, PERIOD_END, PERIOD_START, seed_receipt
+from tests.utc_today import utc_today
 
 _PERIOD = {"period_start": "2026-05-01", "period_end": "2026-05-31"}
-
-
-def _utc_today() -> datetime.date:
-    return datetime.datetime.now(datetime.timezone.utc).date()
 
 
 @pytest.fixture
@@ -112,7 +109,7 @@ class TestRoutesRequireClientDate:
     @pytest.mark.parametrize(("call", "target", "result"), [_SEND, _PREVIEW], ids=["send", "preview"])
     @pytest.mark.parametrize("offset", [-1, 0, 1])
     def test_passes_client_date_to_service(self, client, call, target, result, offset: int) -> None:
-        today = _utc_today() + datetime.timedelta(days=offset)
+        today = utc_today() + datetime.timedelta(days=offset)
         with patch(target, new_callable=AsyncMock, return_value=result) as service:
             resp = call(client, today.isoformat())
 
@@ -122,7 +119,7 @@ class TestRoutesRequireClientDate:
     @pytest.mark.parametrize(("call", "target", "result"), [_SEND, _PREVIEW], ids=["send", "preview"])
     @pytest.mark.parametrize("offset", [None, -2, 2, 400])
     def test_missing_or_far_off_date_is_422(self, client, call, target, result, offset: int | None) -> None:
-        today = None if offset is None else (_utc_today() + datetime.timedelta(days=offset)).isoformat()
+        today = None if offset is None else (utc_today() + datetime.timedelta(days=offset)).isoformat()
         with patch(target, new_callable=AsyncMock, return_value=result) as service:
             resp = call(client, today)
 

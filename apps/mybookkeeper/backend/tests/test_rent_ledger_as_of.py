@@ -29,25 +29,22 @@ from app.models.organization.organization_member import OrgRole
 from app.schemas.rent.rent_ledger_as_of import RentLedgerAsOf
 from app.schemas.rent.rent_ledger_response import RentLedgerResponse
 from app.services.rent import rent_ledger_service, rent_schedule_service
+from tests.utc_today import utc_today
 
 _SERVICE = "app.api.rent_ledger.rent_ledger_service.get_ledger"
-
-
-def _utc_today() -> datetime.date:
-    return datetime.datetime.now(datetime.timezone.utc).date()
 
 
 class TestRentLedgerAsOf:
     @pytest.mark.parametrize("offset", [-400, -2, -1, 0, 1])
     def test_accepts_past_dates_and_any_real_local_today(self, offset: int) -> None:
-        value = _utc_today() + datetime.timedelta(days=offset)
+        value = utc_today() + datetime.timedelta(days=offset)
         assert TypeAdapter(RentLedgerAsOf).validate_python(value) == value
 
     @pytest.mark.parametrize("offset", [2, 30])
     def test_rejects_dates_later_than_any_local_today(self, offset: int) -> None:
         with pytest.raises(ValidationError):
             TypeAdapter(RentLedgerAsOf).validate_python(
-                _utc_today() + datetime.timedelta(days=offset),
+                utc_today() + datetime.timedelta(days=offset),
             )
 
 
@@ -75,7 +72,7 @@ class TestLedgerRouteRequiresAsOf:
     @pytest.mark.parametrize("offset", [-60, -1, 0, 1])
     def test_passes_as_of_to_service(self, client: TestClient, offset: int) -> None:
         applicant_id = uuid.uuid4()
-        as_of = _utc_today() + datetime.timedelta(days=offset)
+        as_of = utc_today() + datetime.timedelta(days=offset)
         with patch(
             _SERVICE, new_callable=AsyncMock, return_value=_ledger(applicant_id, as_of),
         ) as service:
@@ -89,7 +86,7 @@ class TestLedgerRouteRequiresAsOf:
     def test_missing_or_future_as_of_is_422(self, client: TestClient, offset: int | None) -> None:
         params = (
             {} if offset is None
-            else {"as_of": (_utc_today() + datetime.timedelta(days=offset)).isoformat()}
+            else {"as_of": (utc_today() + datetime.timedelta(days=offset)).isoformat()}
         )
         with patch(_SERVICE, new_callable=AsyncMock) as service:
             resp = client.get(f"/rent-ledger/tenants/{uuid.uuid4()}", params=params)
@@ -146,7 +143,7 @@ class TestScheduleRoutesRequireClientDate:
     def test_passes_client_date_to_service(
         self, writer_client: TestClient, call, target: str, offset: int,
     ) -> None:
-        today = _utc_today() + datetime.timedelta(days=offset)
+        today = utc_today() + datetime.timedelta(days=offset)
         with patch(target, new_callable=AsyncMock, side_effect=_NOT_FOUND[target]) as service:
             resp = call(writer_client, today)
         assert resp.status_code == 404, resp.text
@@ -157,7 +154,7 @@ class TestScheduleRoutesRequireClientDate:
     def test_missing_or_far_off_date_is_422(
         self, writer_client: TestClient, call, target: str, offset: int | None,
     ) -> None:
-        today = None if offset is None else _utc_today() + datetime.timedelta(days=offset)
+        today = None if offset is None else utc_today() + datetime.timedelta(days=offset)
         with patch(target, new_callable=AsyncMock) as service:
             resp = call(writer_client, today)
         assert resp.status_code == 422

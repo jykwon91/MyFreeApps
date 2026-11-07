@@ -3,9 +3,10 @@ import {
   MAX_FREE_TEXT_CHARS,
   PRORATION_DAYS_PER_MONTH,
   inputClasses,
+  latestMoveInISO,
   rentEstimate,
-  todayISO,
 } from "./public-inquiry-helpers";
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import PublicInquiryField from "./PublicInquiryField";
 import type { PublicListing } from "@/shared/types/inquiry/public-listing";
 
@@ -88,7 +89,8 @@ export default function PublicInquiryContactSection({
             id="move-in"
             type="date"
             required
-            min={todayISO()}
+            min={localToday()}
+            max={latestMoveInISO()}
             value={form.moveInDate}
             onChange={(e) => update("moveInDate", e.target.value)}
             onBlur={() => markTouched("moveInDate")}

@@ -1,3 +1,5 @@
+import { addDays, format } from "date-fns";
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import type { FieldErrors, FormState, ValidatedField } from "./public-inquiry-types";
 import { US_STATE_CODES } from "@/shared/types/inquiry/us-state";
 import { DEFAULT_COUNTRY_CODE } from "@/shared/types/inquiry/country";
@@ -7,6 +9,8 @@ export const MIN_WHY_THIS_ROOM_CHARS = 30;
 export const MAX_FREE_TEXT_CHARS = 2000;
 export const MIN_PHONE_DIGITS = 7;
 export const PRORATION_DAYS_PER_MONTH = 30;
+/** The server rejects a move-in further out than this (backend public_inquiry_constants). */
+export const MAX_MOVE_IN_DAYS_AHEAD = 365;
 
 export const INITIAL_FORM: FormState = {
   name: "",
@@ -67,8 +71,9 @@ export function rentEstimate(
   return { days, total: total.toFixed(2) };
 }
 
-export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+/** The latest move-in date the form accepts, in the applicant's own date. */
+export function latestMoveInISO(): string {
+  return format(addDays(new Date(), MAX_MOVE_IN_DAYS_AHEAD), "yyyy-MM-dd");
 }
 
 export function validateForm(state: FormState): FieldErrors {
@@ -93,8 +98,10 @@ export function validateForm(state: FormState): FieldErrors {
 
   if (state.moveInDate.length !== 10) {
     errors.moveInDate = "Please choose a move-in date.";
-  } else if (state.moveInDate < todayISO()) {
+  } else if (state.moveInDate < localToday()) {
     errors.moveInDate = "Move-in date can't be in the past.";
+  } else if (state.moveInDate > latestMoveInISO()) {
+    errors.moveInDate = "Move-in date must be within the next year.";
   }
 
   if (state.moveOutDate.length !== 10) {

@@ -43,6 +43,7 @@ from app.services.inquiries.inquiry_spam_scorer import (
     ClaudeScoringResult,
 )
 from app.services.inquiries.public_inquiry_service import PublicInquiryOutcome
+from tests.utc_today import utc_today
 
 
 @pytest.fixture
@@ -97,8 +98,9 @@ def _payload(slug: str = "master-bedroom-abc123", **overrides) -> PublicInquiryR
         "name": "Alice Smith",
         "email": "alice@example.com",
         "phone": "555-123-4567",
-        "move_in_date": _dt.date.today() + _dt.timedelta(days=14),
-        "move_out_date": _dt.date.today() + _dt.timedelta(days=14 + 180),
+        "today": utc_today(),
+        "move_in_date": utc_today() + _dt.timedelta(days=14),
+        "move_out_date": utc_today() + _dt.timedelta(days=14 + 180),
         "occupant_count": 1,
         "has_pets": False,
         "pets_description": None,
@@ -275,7 +277,7 @@ class TestInputValidation:
     async def test_move_in_date_in_past_rejected(
         self, db: AsyncSession, test_listing: Listing, patch_session,
     ) -> None:
-        old = _dt.date.today() - _dt.timedelta(days=120)
+        old = utc_today() - _dt.timedelta(days=120)
         result = await public_inquiry_service.submit_public_inquiry(
             payload=_payload(move_in_date=old),
             client_ip="1.2.3.4",
@@ -284,6 +286,40 @@ class TestInputValidation:
             rate_limited=False,
         )
         assert result.outcome == PublicInquiryOutcome.INVALID
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("applicant_offset", "days_ahead", "outcome"),
+        [
+            (0, 365, PublicInquiryOutcome.SUCCESS),
+            (0, 366, PublicInquiryOutcome.INVALID),
+            # Applicant already on tomorrow (UTC+14): a year from THEIR today
+            # is 366 days from the server's, and still allowed.
+            (1, 365, PublicInquiryOutcome.SUCCESS),
+            (-1, 365, PublicInquiryOutcome.SUCCESS),
+            (-1, 366, PublicInquiryOutcome.INVALID),
+        ],
+    )
+    async def test_move_in_window_runs_from_the_applicant_s_date(
+        self, db: AsyncSession, test_listing: Listing, patch_session,
+        applicant_offset: int, days_ahead: int, outcome: PublicInquiryOutcome,
+    ) -> None:
+        today = utc_today() + _dt.timedelta(days=applicant_offset)
+        move_in = today + _dt.timedelta(days=days_ahead)
+        with patch.object(
+            inquiry_spam_scorer, "score_inquiry", return_value=_clean_claude_result(),
+        ):
+            result = await public_inquiry_service.submit_public_inquiry(
+                payload=_payload(
+                    today=today, move_in_date=move_in,
+                    move_out_date=move_in + _dt.timedelta(days=90),
+                ),
+                client_ip="1.2.3.4",
+                user_agent="Mozilla/5.0",
+                turnstile_passed=True,
+                rate_limited=False,
+            )
+        assert result.outcome == outcome
 
     @pytest.mark.asyncio
     async def test_short_why_returns_friendly_hint(
