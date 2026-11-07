@@ -3,9 +3,10 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.schemas.tax.filing_status import FilingStatus
+
 
 TaxSituation = Literal["rental_property", "self_employment", "w2_employment", "investment"]
-FilingStatus = Literal["single", "married_filing_jointly", "married_filing_separately", "head_of_household", "qualifying_surviving_spouse"]
 
 ALLOWED_TAX_SITUATIONS = {"rental_property", "self_employment", "w2_employment", "investment"}
 

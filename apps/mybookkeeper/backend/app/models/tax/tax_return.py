@@ -8,6 +8,9 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 
+from app.core.tax_return_enums import (
+    FILING_STATUSES_SQL, JURISDICTION_MAX_LENGTH, MAX_TAX_RETURN_YEAR, MIN_TAX_RETURN_YEAR,
+)
 from app.db.base import Base
 
 
@@ -18,7 +21,7 @@ class TaxReturn(Base):
     organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"))
     tax_year: Mapped[int] = mapped_column(SmallInteger)
     filing_status: Mapped[str] = mapped_column(String(30), default="single")
-    jurisdiction: Mapped[str] = mapped_column(String(50), default="federal")
+    jurisdiction: Mapped[str] = mapped_column(String(JURISDICTION_MAX_LENGTH), default="federal")
     status: Mapped[str] = mapped_column(String(20), default="draft")
     needs_recompute: Mapped[bool] = mapped_column(Boolean, default=True)
     filed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -28,7 +31,7 @@ class TaxReturn(Base):
     __table_args__ = (
         UniqueConstraint("organization_id", "tax_year", "jurisdiction", name="uq_return_org_year_jur"),
         CheckConstraint(
-            "tax_year >= 2020 AND tax_year <= 2099",
+            f"tax_year >= {MIN_TAX_RETURN_YEAR} AND tax_year <= {MAX_TAX_RETURN_YEAR}",
             name="chk_return_year",
         ),
         CheckConstraint(
@@ -36,10 +39,7 @@ class TaxReturn(Base):
             name="chk_return_status",
         ),
         CheckConstraint(
-            "filing_status IN ("
-            "'single', 'married_filing_jointly', 'married_filing_separately', "
-            "'head_of_household', 'qualifying_surviving_spouse'"
-            ")",
+            f"filing_status IN {FILING_STATUSES_SQL}",
             name="chk_return_filing",
         ),
     )
