@@ -66,7 +66,7 @@ jobs:
       # check can block a merge — the per-app `backend-deps-resolve` jobs are
       # path-filtered and so cannot be required (#1299 / #1308 broke main).
       - name: Set up uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
 
       - name: Install shared-backend with dev extras
         working-directory: packages/shared-backend
