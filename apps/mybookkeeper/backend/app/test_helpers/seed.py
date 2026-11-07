@@ -106,10 +106,12 @@ async def delete_listing(
     listing_id: uuid.UUID,
     ctx: RequestContext = Depends(current_org_member),
 ) -> None:
-    """Hard-delete a listing for E2E cleanup. Test-only."""
+    """Hard-delete a listing for E2E cleanup. Test-only. A 404 tells a cleanup
+    that named the wrong listing, or one already gone, from one that worked."""
     _require_test_mode()
     async with unit_of_work() as db:
-        await listing_repo.hard_delete_by_id(db, listing_id, ctx.organization_id)
+        if not await listing_repo.hard_delete_by_id(db, listing_id, ctx.organization_id):
+            raise HTTPException(status_code=404, detail="Listing not found")
 
 
 # ---------------------------------------------------------------------------

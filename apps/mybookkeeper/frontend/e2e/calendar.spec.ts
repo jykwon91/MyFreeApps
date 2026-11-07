@@ -1,6 +1,6 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { listingRowBars } from "./fixtures/calendar-rows";
-import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 
 /**
  * E2E for the unified calendar page (Option A — read-only viewer).
@@ -37,10 +37,6 @@ async function seedListing(api: APIRequestContext, payload: SeedListingPayload):
   if (!res.ok()) throw new Error(`seedListing failed: ${res.status()} ${await res.text()}`);
   const body = (await res.json()) as { id: string };
   return body.id;
-}
-
-async function deleteListing(api: APIRequestContext, listingId: string): Promise<void> {
-  await api.delete(`/test/listings/${listingId}`).catch(() => {});
 }
 
 async function seedBlackout(api: APIRequestContext, payload: SeedBlackoutPayload): Promise<string> {

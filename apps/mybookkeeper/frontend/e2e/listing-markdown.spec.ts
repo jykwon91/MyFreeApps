@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
-import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 
 /**
  * Markdown rendering for listing descriptions.
@@ -44,10 +44,6 @@ async function createListing(
   }
   const body = (await res.json()) as { id: string; slug: string };
   return { id: body.id, slug: body.slug };
-}
-
-async function deleteListing(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/listings/${id}`).catch(() => {});
 }
 
 test.describe("Markdown rendering for listing descriptions", () => {

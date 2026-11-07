@@ -233,15 +233,16 @@ async def hard_delete_by_id(
     db: AsyncSession,
     listing_id: uuid.UUID,
     organization_id: uuid.UUID,
-) -> None:
-    """Hard-delete a listing scoped to an organization. Test-utility only —
-    production code uses soft-delete (set deleted_at)."""
-    await db.execute(
+) -> bool:
+    """Hard-delete a listing scoped to an organization; False if no row matched.
+    Test-utility only — production code uses soft-delete (set deleted_at)."""
+    result = await db.execute(
         delete(Listing).where(
             Listing.id == listing_id,
             Listing.organization_id == organization_id,
         )
     )
+    return result.rowcount > 0
 
 
 async def list_by_channel(

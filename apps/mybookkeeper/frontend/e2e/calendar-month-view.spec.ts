@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
-import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 
 /**
  * E2E for the month view — the calendar's default shape.
@@ -194,7 +194,7 @@ test.describe("Calendar month view", () => {
     } finally {
       await api.delete(`/test/signed-leases/${leaseId}`).catch(() => {});
       await api.delete(`/test/applicants/${applicantId}`).catch(() => {});
-      await api.delete(`/test/listings/${listingId}`).catch(() => {});
+      await deleteListing(api, listingId);
       await deleteProperty(api, property.id);
     }
   });
@@ -257,7 +257,7 @@ test.describe("Calendar month view", () => {
       for (const id of blackoutIds) await api.delete(`/test/blackouts/${id}`).catch(() => {});
       await api.delete(`/test/signed-leases/${leaseId}`).catch(() => {});
       await api.delete(`/test/applicants/${applicantId}`).catch(() => {});
-      await api.delete(`/test/listings/${listingId}`).catch(() => {});
+      await deleteListing(api, listingId);
       await deleteProperty(api, property.id);
     }
   });

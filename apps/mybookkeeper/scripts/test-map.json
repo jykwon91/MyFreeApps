@@ -17,6 +17,7 @@
         "test_document_seed_routes.py",
         "test_extraction_seed_routes.py",
         "test_member_seed_routes.py",
+        "test_listing_seed_routes.py",
         "test_db_admin.py",
         "test_seed_applicant_request.py",
         "test_seed_lease_template.py"
@@ -414,6 +415,7 @@
       ],
       "backend_tests": [
         "test_listing_repo.py",
+        "test_listing_seed_routes.py",
         "test_listing_service.py",
         "test_listing_routes.py",
         "test_listing_photo_service.py",

@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
-import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 
 /**
  * E2E for tenancies the host never linked to a listing.
@@ -182,7 +182,7 @@ test.describe("Tenancies with no listing linked", () => {
       await api.delete(`/test/signed-leases/${linkedLeaseId}`).catch(() => {});
       await api.delete(`/test/applicants/${unlinkedApplicantId}`).catch(() => {});
       await api.delete(`/test/applicants/${linkedApplicantId}`).catch(() => {});
-      await api.delete(`/test/listings/${listingId}`).catch(() => {});
+      await deleteListing(api, listingId);
       await deleteProperty(api, property.id);
     }
   });

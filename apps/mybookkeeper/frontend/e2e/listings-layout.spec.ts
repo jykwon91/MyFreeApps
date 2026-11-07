@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
-import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 
 /**
  * Layout E2E for the Listings page.
@@ -24,10 +24,6 @@ async function seedListing(api: APIRequestContext, payload: SeedListingPayload):
   if (!res.ok()) throw new Error(`seedListing failed: ${res.status()} ${await res.text()}`);
   const body = (await res.json()) as { id: string };
   return body.id;
-}
-
-async function deleteListing(api: APIRequestContext, listingId: string): Promise<void> {
-  await api.delete(`/test/listings/${listingId}`).catch(() => {});
 }
 
 const LISTING_COUNT = 3;

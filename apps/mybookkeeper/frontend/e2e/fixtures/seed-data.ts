@@ -80,6 +80,12 @@ export async function deleteProperty(api: APIRequestContext, id: string): Promis
   if (!res.ok()) throw new Error(`deleteProperty failed: ${res.status()} ${await res.text()}`);
 }
 
+/** Test-only hard delete: the app's own delete only marks a listing deleted. */
+export async function deleteListing(api: APIRequestContext, id: string): Promise<void> {
+  const res = await api.delete(`/test/listings/${id}`);
+  if (!res.ok()) throw new Error(`deleteListing failed: ${res.status()} ${await res.text()}`);
+}
+
 /** Test-only route: the app itself has no way to delete a 1099 source. */
 export async function deleteReconciliationSource(api: APIRequestContext, id: string): Promise<void> {
   const res = await api.delete(`/test/reconciliation-sources/${id}`);

@@ -303,7 +303,7 @@ class TestListingRepoCreateAndDelete:
         db.add(listing)
         await db.commit()
 
-        await listing_repo.hard_delete_by_id(db, listing.id, test_org.id)
+        assert await listing_repo.hard_delete_by_id(db, listing.id, test_org.id) is True
         await db.commit()
 
         fetched = await listing_repo.get_by_id(db, listing.id, test_org.id)
@@ -321,7 +321,7 @@ class TestListingRepoCreateAndDelete:
         await db.commit()
 
         # Different org should not be able to delete this row.
-        await listing_repo.hard_delete_by_id(db, listing.id, uuid.uuid4())
+        assert await listing_repo.hard_delete_by_id(db, listing.id, uuid.uuid4()) is False
         await db.commit()
 
         fetched = await listing_repo.get_by_id(db, listing.id, test_org.id)

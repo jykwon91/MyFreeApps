@@ -1,8 +1,8 @@
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
-import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
-import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { test, expect, type Page } from "./fixtures/auth";
+import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 
 /**
  * PR 1.2 — Listings CRUD + photo upload behavioural E2E.
@@ -14,14 +14,6 @@ import { createProperty, deleteProperty } from "./fixtures/seed-data";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE_GPS_PHOTO = path.join(__dirname, "fixtures", "listings", "test-photo-with-gps.jpg");
-
-async function deleteListingViaTestApi(api: APIRequestContext, listingId: string): Promise<void> {
-  await api.delete(`/test/listings/${listingId}`).catch(() => {});
-}
-
-async function deleteListingViaPublicApi(api: APIRequestContext, listingId: string): Promise<void> {
-  await api.delete(`/listings/${listingId}`).catch(() => {});
-}
 
 async function waitForListingsPage(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "Listings" })).toBeVisible({ timeout: 10000 });
@@ -93,8 +85,7 @@ test.describe("Listings CRUD (PR 1.2)", () => {
       await expect(page.getByText(`E2E Listing ${runId}`)).toHaveCount(0);
     } finally {
       for (const id of listingIds) {
-        await deleteListingViaTestApi(api, id);
-        await deleteListingViaPublicApi(api, id);
+        await deleteListing(api, id);
       }
       await deleteProperty(api, property.id);
     }
@@ -176,7 +167,7 @@ test.describe("Listings CRUD (PR 1.2)", () => {
       expect(afterBody.photos.length).toBe(0);
     } finally {
       for (const id of listingIds) {
-        await deleteListingViaTestApi(api, id);
+        await deleteListing(api, id);
       }
       await deleteProperty(api, property.id);
     }
@@ -218,7 +209,7 @@ test.describe("Listings CRUD (PR 1.2)", () => {
       expect(res.status()).toBe(415);
     } finally {
       if (listingId) {
-        await deleteListingViaTestApi(api, listingId);
+        await deleteListing(api, listingId);
       }
       await deleteProperty(api, property.id);
     }

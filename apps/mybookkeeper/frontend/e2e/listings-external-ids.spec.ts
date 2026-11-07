@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
-import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 import { toasts } from "./fixtures/toasts";
 
 /**
@@ -10,10 +10,6 @@ import { toasts } from "./fixtures/toasts";
  * `feedback_clean_test_data.md`). Cascade delete on `listing_external_ids`
  * handles the child rows.
  */
-
-async function deleteListingViaTestApi(api: APIRequestContext, listingId: string): Promise<void> {
-  await api.delete(`/test/listings/${listingId}`).catch(() => {});
-}
 
 async function seedListing(
   api: APIRequestContext,
@@ -151,7 +147,7 @@ test.describe("Listings external-ID linkage (PR 1.3)", () => {
       );
     } finally {
       for (const id of listingIds) {
-        await deleteListingViaTestApi(api, id);
+        await deleteListing(api, id);
       }
       await deleteProperty(api, property.id);
     }
@@ -200,7 +196,7 @@ test.describe("Listings external-ID linkage (PR 1.3)", () => {
       expect(optionTexts.length).toBeGreaterThan(0);
     } finally {
       for (const id of listingIds) {
-        await deleteListingViaTestApi(api, id);
+        await deleteListing(api, id);
       }
       await deleteProperty(api, property.id);
     }
@@ -260,7 +256,7 @@ test.describe("Listings external-ID linkage (PR 1.3)", () => {
       expect(detail.external_ids).toHaveLength(0);
     } finally {
       for (const id of listingIds) {
-        await deleteListingViaTestApi(api, id);
+        await deleteListing(api, id);
       }
       await deleteProperty(api, property.id);
     }

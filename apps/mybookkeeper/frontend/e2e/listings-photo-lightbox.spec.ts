@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
-import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 
 /**
  * E2E tests for the photo lightbox on the Listing detail page.
@@ -31,10 +31,6 @@ async function seedListing(api: APIRequestContext, payload: SeedListingPayload):
   }
   const body = (await res.json()) as { id: string };
   return body.id;
-}
-
-async function deleteListing(api: APIRequestContext, listingId: string): Promise<void> {
-  await api.delete(`/test/listings/${listingId}`).catch(() => {});
 }
 
 test.describe("Photo lightbox (PR listings-photo-lightbox)", () => {
