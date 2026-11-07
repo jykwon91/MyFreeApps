@@ -9,7 +9,7 @@ import {
 } from "@/shared/store/taxReturnsApi";
 import { useToast } from "@/shared/hooks/useToast";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import { Button, LoadingButton } from "@platform/ui";
+import { Button, LoadingButton, isNotFound } from "@platform/ui";
 import Badge from "@/shared/components/ui/Badge";
 import TaxReturnSkeleton from "@/app/features/tax/TaxReturnSkeleton";
 import FormOverviewGrid from "@/app/features/tax/FormOverviewGrid";
@@ -21,6 +21,8 @@ import TaxAdvisorPanel from "@/app/features/tax/TaxAdvisorPanel";
 import { getFormLabel } from "@mybookkeeper/api-client/utils/taxFormLabel";
 import type { FieldValueType } from "@/shared/types/tax/tax-form";
 import { STATUS_BADGE } from "@/shared/lib/tax-return-config";
+import { resolveDetailLoadMode } from "@/shared/lib/detail-load-mode";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 export default function TaxReturnDetail() {
   const { id } = useParams<{ id: string }>();
@@ -30,13 +32,17 @@ export default function TaxReturnDetail() {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedForm = searchParams.get("form");
 
-  const { data: taxReturn, isLoading: isLoadingReturn } = useGetTaxReturnQuery(id!, { skip: !id });
-  const { data: formsOverview = [] } = useGetFormsOverviewQuery(id!, { skip: !id });
-  const { data: validationResults = [], isLoading: isLoadingValidation } = useGetValidationQuery(id!, { skip: !id });
-  const { data: formData, isLoading: isLoadingForm } = useGetFormFieldsQuery(
+  const returnQuery = useGetTaxReturnQuery(id!, { skip: !id });
+  const overviewQuery = useGetFormsOverviewQuery(id!, { skip: !id });
+  const validationQuery = useGetValidationQuery(id!, { skip: !id });
+  const formQuery = useGetFormFieldsQuery(
     { return_id: id!, form_name: selectedForm! },
     { skip: !id || !selectedForm },
   );
+  const taxReturn = returnQuery.currentData;
+  const formsOverview = overviewQuery.currentData;
+  const validation = validationQuery.currentData;
+  const formData = formQuery.currentData;
 
   const [recompute, { isLoading: isRecomputing }] = useRecomputeMutation();
   const [overrideField, { isLoading: isOverriding }] = useOverrideFieldMutation();
@@ -69,7 +75,22 @@ export default function TaxReturnDetail() {
     setSearchParams({ form: formName });
   }, [setSearchParams]);
 
-  if (isLoadingReturn || isLoadingValidation) {
+  const returnMode = resolveDetailLoadMode({ hasData: taxReturn !== undefined, hasError: returnQuery.error !== undefined });
+  // The forms grid is built from both lists, so it waits for both, like the return.
+  const sectionsPending = [overviewQuery, validationQuery].some(
+    (q) => q.currentData === undefined && q.error === undefined,
+  );
+  const backButton = (
+    <button
+      onClick={() => navigate("/tax-returns")}
+      className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 mb-3 min-h-[44px]"
+    >
+      <ArrowLeft className="h-4 w-4" />
+      Back to Tax Returns
+    </button>
+  );
+
+  if (returnMode === "loading" || (returnMode === "content" && sectionsPending)) {
     return (
       <main className="p-4 sm:p-8 space-y-6">
         <TaxReturnSkeleton />
@@ -77,7 +98,7 @@ export default function TaxReturnDetail() {
     );
   }
 
-  if (!taxReturn) {
+  if (!taxReturn && isNotFound(returnQuery.error)) {
     return (
       <main className="p-4 sm:p-8">
         <div className="text-center py-16 text-muted-foreground">
@@ -90,16 +111,30 @@ export default function TaxReturnDetail() {
     );
   }
 
+  if (!taxReturn) {
+    return (
+      <main className="p-4 sm:p-8">
+        {backButton}
+        <LoadErrorAlert
+          message="I couldn't load this tax return. Want me to try again?"
+          isRetrying={returnQuery.isFetching}
+          onRetry={() => returnQuery.refetch()}
+        />
+      </main>
+    );
+  }
+
   const badge = STATUS_BADGE[taxReturn.status];
+  const validationResults = validation ?? [];
 
   // Build form list from actual form instances + any forms with validation results
-  const overviewNames = formsOverview.map((f) => f.form_name);
+  const overviewNames = (formsOverview ?? []).map((f) => f.form_name);
   const validationNames = validationResults.map((v) => v.form_name);
   const formNames = [...new Set([...overviewNames, ...validationNames])];
 
   const instanceCounts: Record<string, number> = {};
   const fieldCounts: Record<string, number> = {};
-  for (const f of formsOverview) {
+  for (const f of formsOverview ?? []) {
     instanceCounts[f.form_name] = f.instance_count;
     fieldCounts[f.form_name] = f.field_count;
   }
@@ -109,13 +144,14 @@ export default function TaxReturnDetail() {
   return (
     <main className="p-4 sm:p-8 space-y-6">
       <div>
-        <button
-          onClick={() => navigate("/tax-returns")}
-          className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 mb-3"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Tax Returns
-        </button>
+        {backButton}
+        {returnQuery.error ? (
+          <LoadErrorAlert
+            message="I couldn't refresh this tax return. Want me to try again?"
+            isRetrying={returnQuery.isFetching}
+            onRetry={() => returnQuery.refetch()}
+          />
+        ) : null}
         <SectionHeader
           title={`${taxReturn.tax_year} Tax Return`}
           subtitle={taxReturn.filing_status.replace(/_/g, " ")}
@@ -159,9 +195,16 @@ export default function TaxReturnDetail() {
             <h2 className="text-lg font-semibold">{getFormLabel(selectedForm)}</h2>
           </div>
 
-          {isLoadingForm ? (
-            <TaxReturnSkeleton />
-          ) : formData ? (
+          {formQuery.error ? (
+            <LoadErrorAlert
+              message="I couldn't load this form. Want me to try again?"
+              isRetrying={formQuery.isFetching}
+              onRetry={() => formQuery.refetch()}
+            />
+          ) : null}
+          {!formData ? (
+            formQuery.error ? null : <TaxReturnSkeleton />
+          ) : formData.instances.length > 0 ? (
             <div className="space-y-6">
               {formData.instances.map((instance) => (
                 <FormFieldsTable
@@ -185,11 +228,20 @@ export default function TaxReturnDetail() {
         <>
           <section>
             <h2 className="text-lg font-semibold mb-4">Forms</h2>
-            <FormOverviewGrid
-              forms={formSummaries}
-              validationResults={validationResults}
-              onFormClick={handleFormClick}
-            />
+            {overviewQuery.error ? (
+              <LoadErrorAlert
+                message="I couldn't load the forms for this return. Want me to try again?"
+                isRetrying={overviewQuery.isFetching}
+                onRetry={() => overviewQuery.refetch()}
+              />
+            ) : null}
+            {formsOverview ? (
+              <FormOverviewGrid
+                forms={formSummaries}
+                validationResults={validationResults}
+                onFormClick={handleFormClick}
+              />
+            ) : null}
           </section>
 
           <section>
@@ -199,15 +251,27 @@ export default function TaxReturnDetail() {
 
           <section>
             <h2 className="text-lg font-semibold mb-4">Validation</h2>
-            <ValidationPanel
-              results={validationResults}
-              onNavigateToField={handleNavigateToField}
-            />
+            {validationQuery.error ? (
+              <LoadErrorAlert
+                message="I couldn't load the validation checks. Want me to try again?"
+                isRetrying={validationQuery.isFetching}
+                onRetry={() => validationQuery.refetch()}
+              />
+            ) : null}
+            {validation ? (
+              <ValidationPanel
+                results={validation}
+                onNavigateToField={handleNavigateToField}
+              />
+            ) : null}
           </section>
 
           <section>
             <h2 className="text-lg font-semibold mb-4">AI Tax Advisor</h2>
-            <TaxAdvisorPanel taxReturnId={id!} formCount={formNames.length} />
+            {/* Its "no forms yet" note would be wrong if the forms didn't load. */}
+            {formsOverview ? (
+              <TaxAdvisorPanel taxReturnId={id!} formCount={formNames.length} />
+            ) : null}
           </section>
         </>
       )}

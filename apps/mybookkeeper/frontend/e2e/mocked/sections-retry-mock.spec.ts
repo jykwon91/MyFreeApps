@@ -5,6 +5,9 @@
  * Fully mocks the API via page.route(), so it runs under playwright.layout.config.ts
  * in the `frontend-layout-e2e` CI job.
  *
+ * Also a tax return's forms and validation checks, which read a failed load as
+ * "No forms yet" and "All checks passed".
+ *
  * Each of these shows "couldn't load" with Retry when its load fails. RTK clears
  * ``isError`` the moment a retry starts while there's still no data, which these
  * read as "nothing here": "No bookings", "No templates yet", the empty receipts
@@ -17,6 +20,7 @@ import { json } from "./fixtures/mockResponse";
 import { plantAuth, stubSignedInShell } from "./fixtures/mockSession";
 import { failUntilRecovered } from "./fixtures/flakyEndpoint";
 import { LISTING, LISTING_ID } from "./fixtures/mockListing";
+import { TAX_RETURN_ID, stubTaxReturnDetail } from "./fixtures/mockTaxReturn";
 
 const CHANNELS = [
   { id: "airbnb", name: "Airbnb", supports_ical_export: true, supports_ical_import: true, created_at: "2026-01-01T00:00:00Z" },
@@ -82,6 +86,25 @@ const SECTIONS: Section[] = [
     emptyAnswer: [],
     empty: (p) => p.getByTestId("channels-section-empty-state"),
     stubPage: stubListingDetail,
+  },
+  {
+    name: "tax return forms",
+    path: `/tax-returns/${TAX_RETURN_ID}`,
+    endpoint: new RegExp(`/api/tax-returns/${TAX_RETURN_ID}/forms-overview$`),
+    error: "I couldn't load the forms for this return. Want me to try again?",
+    emptyAnswer: [],
+    empty: (p) => p.getByText("No forms yet"),
+    stubPage: stubTaxReturnDetail,
+  },
+  {
+    name: "tax return validation",
+    path: `/tax-returns/${TAX_RETURN_ID}`,
+    endpoint: new RegExp(`/api/tax-returns/${TAX_RETURN_ID}/validation$`),
+    error: "I couldn't load the validation checks. Want me to try again?",
+    emptyAnswer: [],
+    // "All checks passed" while the checks never loaded would be false reassurance.
+    empty: (p) => p.getByText("All checks passed"),
+    stubPage: stubTaxReturnDetail,
   },
 ];
 

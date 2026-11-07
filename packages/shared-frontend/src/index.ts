@@ -26,6 +26,7 @@ export { formatDate, timeAgo } from "./utils/date";
 export { formatFileSize } from "./utils/file-size";
 export { formatSalaryRange, SALARY_PERIOD_LABELS } from "./utils/salary-range";
 export { formatTag } from "./utils/tag";
+export { isNotFound } from "./utils/isNotFound";
 export { extractErrorMessage } from "./utils/errorMessage";
 export { describeAuthError } from "./utils/describeAuthError";
 export { isAlreadyVerifiedError } from "./utils/isAlreadyVerifiedError";

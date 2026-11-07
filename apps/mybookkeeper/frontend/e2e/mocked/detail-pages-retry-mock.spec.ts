@@ -17,6 +17,7 @@ import { plantAuth, stubSignedInShell } from "./fixtures/mockSession";
 import { failUntilRecovered } from "./fixtures/flakyEndpoint";
 import { LISTING, LISTING_ID } from "./fixtures/mockListing";
 import { INQUIRY_DETAIL, INQUIRY_ID } from "./fixtures/mockInquiry";
+import { TAX_RETURN, TAX_RETURN_ID } from "./fixtures/mockTaxReturn";
 
 interface DetailPage {
   name: string;
@@ -46,6 +47,16 @@ const PAGES: DetailPage[] = [
     record: INQUIRY_DETAIL,
     loaded: (p) => p.getByRole("heading", { name: INQUIRY_DETAIL.inquirer_name }),
     skeleton: "inquiry-detail-skeleton",
+  },
+  {
+    // Used to say "I couldn't find that tax return." with no way to retry.
+    name: "tax return",
+    path: `/tax-returns/${TAX_RETURN_ID}`,
+    endpoint: new RegExp(`/api/tax-returns/${TAX_RETURN_ID}$`),
+    error: "I couldn't load this tax return. Want me to try again?",
+    record: TAX_RETURN,
+    loaded: (p) => p.getByRole("heading", { name: "2025 Tax Return" }),
+    skeleton: "tax-return-skeleton",
   },
 ];
 

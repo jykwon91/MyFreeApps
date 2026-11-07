@@ -4,7 +4,7 @@ import {
   useGetAdvisorSuggestionsQuery,
   useGenerateAdvisorSuggestionsMutation,
 } from "@/shared/store/taxReturnsApi";
-import { LoadingButton } from "@platform/ui";
+import { LoadingButton, isNotFound } from "@platform/ui";
 import { SEVERITY_ORDER, SEVERITY_CONFIG } from "@/shared/lib/tax-advisor-config";
 import SuggestionCard from "@/app/features/tax/SuggestionCard";
 import TaxAdvisorPanelSkeleton from "@/app/features/tax/TaxAdvisorPanelSkeleton";
@@ -66,8 +66,7 @@ export default function TaxAdvisorPanel({ taxReturnId, formCount }: TaxAdvisorPa
 
   // No cached suggestions yet (404 or empty) — show CTA
   const hasCached = cached && cached.suggestions.length > 0;
-  const is404 = cacheError && "status" in cacheError && cacheError.status === 404;
-  const noCachedSuggestions = !cached || (is404 as boolean);
+  const noCachedSuggestions = !cached || isNotFound(cacheError);
 
   if (noCachedSuggestions) {
     const is429 = generateError && "status" in generateError && generateError.status === 429;
