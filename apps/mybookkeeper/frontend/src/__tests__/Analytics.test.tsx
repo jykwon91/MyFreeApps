@@ -295,25 +295,38 @@ describe('AnalyticsFilters', () => {
 
   it('renders from and to date inputs', () => {
     render(<AnalyticsFilters {...defaultProps} />);
-    expect(screen.getAllByLabelText('From date').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByLabelText('To date').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByLabelText('From date')).toHaveAttribute('type', 'date');
+    expect(screen.getByLabelText('To date')).toHaveAttribute('type', 'date');
+  });
+
+  it('renders each filter control once, with ids that stay unique across instances', () => {
+    render(
+      <>
+        <AnalyticsFilters {...defaultProps} />
+        <AnalyticsFilters {...defaultProps} />
+      </>,
+    );
+    const ids = Array.from(document.querySelectorAll('[id]')).map((el) => el.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(screen.getAllByLabelText('From date')).toHaveLength(2);
+    expect(screen.getAllByRole('radiogroup')).toHaveLength(2);
   });
 
   it('renders Monthly and Quarterly granularity radio buttons', () => {
     render(<AnalyticsFilters {...defaultProps} />);
-    const firstGroup = screen.getAllByRole('radiogroup')[0];
-    expect(within(firstGroup).getByRole('radio', { name: 'Monthly' })).toBeInTheDocument();
-    expect(within(firstGroup).getByRole('radio', { name: 'Quarterly' })).toBeInTheDocument();
+    const group = screen.getByRole('radiogroup');
+    expect(within(group).getByRole('radio', { name: 'Monthly' })).toBeInTheDocument();
+    expect(within(group).getByRole('radio', { name: 'Quarterly' })).toBeInTheDocument();
   });
 
   it('marks Monthly as aria-checked when granularity is monthly', () => {
     render(<AnalyticsFilters {...defaultProps} granularity='monthly' />);
-    expect(screen.getAllByRole('radio', { name: 'Monthly' })[0]).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'Monthly' })).toHaveAttribute('aria-checked', 'true');
   });
 
   it('marks Quarterly as aria-checked when granularity is quarterly', () => {
     render(<AnalyticsFilters {...defaultProps} granularity='quarterly' />);
-    expect(screen.getAllByRole('radio', { name: 'Quarterly' })[0]).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'Quarterly' })).toHaveAttribute('aria-checked', 'true');
   });
 
   it('does not show Clear filters button when no active filters', () => {
@@ -323,19 +336,23 @@ describe('AnalyticsFilters', () => {
 
   it('shows Clear filters button when filters are active', () => {
     render(<AnalyticsFilters {...defaultProps} hasActiveFilters={true} />);
-    expect(screen.getAllByRole('button', { name: /Clear all filters/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole('button', { name: /Clear all filters/i })).toBeInTheDocument();
   });
 
   it('calls onClear when Clear filters button is clicked', async () => {
     const onClear = vi.fn();
     render(<AnalyticsFilters {...defaultProps} hasActiveFilters={true} onClear={onClear} />);
-    await userEvent.click(screen.getAllByRole('button', { name: /Clear all filters/i })[0]);
+    await userEvent.click(screen.getByRole('button', { name: /Clear all filters/i }));
     expect(onClear).toHaveBeenCalledOnce();
   });
 
-  it('renders mobile Filters toggle button with aria-expanded false initially', () => {
+  it('starts with the phone filters panel collapsed', () => {
     render(<AnalyticsFilters {...defaultProps} />);
-    expect(screen.getByRole('button', { name: /^Filters$/i })).toHaveAttribute('aria-expanded', 'false');
+    const toggle = screen.getByRole('button', { name: /^Filters$/i });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    const panel = document.getElementById(toggle.getAttribute('aria-controls') ?? '');
+    expect(panel).toContainElement(screen.getByLabelText('From date'));
+    expect(panel).toHaveClass('hidden', 'sm:flex');
   });
 
   it('expands mobile filters panel when toggle is clicked', async () => {
@@ -343,7 +360,13 @@ describe('AnalyticsFilters', () => {
     const toggle = screen.getByRole('button', { name: /^Filters$/i });
     await userEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    expect(document.getElementById('mobile-filters')).toBeInTheDocument();
+    const panel = document.getElementById(toggle.getAttribute('aria-controls') ?? '');
+    expect(panel).toHaveClass('flex');
+    expect(panel).not.toHaveClass('hidden');
+
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(panel).toHaveClass('hidden');
   });
 }); 
 

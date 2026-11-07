@@ -157,70 +157,13 @@ export default function UtilityTrends() {
     );
   }
 
-  // Filters active but no data in range
-  if (trends.length === 0 && hasActiveFilters) {
-    return (
-      <div className="space-y-4">
-        <AnalyticsFilters
-          fromDate={fromDate}
-          toDate={toDate}
-          granularity={granularity}
-          propertyIds={propertyIds}
-          properties={properties}
-          onFromDate={handleFromDate}
-          onToDate={handleToDate}
-          onGranularity={handleGranularity}
-          onPropertyIds={handlePropertyIds}
-          hasActiveFilters={hasActiveFilters}
-          onClear={handleClearFilters}
-        />
-        <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-          <p className="text-muted-foreground">
-            No utility expenses found between {formatDisplayDate(fromDate)} and{" "}
-            {formatDisplayDate(toDate)}.
-          </p>
-          <button
-            onClick={handleClearFilters}
-            className="px-4 py-2 text-sm font-medium border rounded-md hover:bg-muted transition-colors"
-          >
-            Reset date range
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Only 1 data point — can't show a trend
+  // The filters stay in one place in every state below, so React keeps the same
+  // instance (and its open phone panel) when a filter change empties the range.
   const uniquePeriods = new Set(trends.map((t) => t.period));
-  if (uniquePeriods.size === 1) {
-    return (
-      <div className="space-y-6">
-        <UtilitySummaryCards totalSpend={totalSpend} summary={summary} />
-        <AnalyticsFilters
-          fromDate={fromDate}
-          toDate={toDate}
-          granularity={granularity}
-          propertyIds={propertyIds}
-          properties={properties}
-          onFromDate={handleFromDate}
-          onToDate={handleToDate}
-          onGranularity={handleGranularity}
-          onPropertyIds={handlePropertyIds}
-          hasActiveFilters={hasActiveFilters}
-          onClear={handleClearFilters}
-        />
-        <Card>
-          <p className="text-sm text-muted-foreground text-center py-8">
-            I only have one month of data — try expanding the date range to see trends.
-          </p>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
-      <UtilitySummaryCards totalSpend={totalSpend} summary={summary} />
+      {trends.length > 0 && <UtilitySummaryCards totalSpend={totalSpend} summary={summary} />}
       <AnalyticsFilters
         fromDate={fromDate}
         toDate={toDate}
@@ -234,9 +177,33 @@ export default function UtilityTrends() {
         hasActiveFilters={hasActiveFilters}
         onClear={handleClearFilters}
       />
-      <Card title="Utility Spend Over Time">
-        <UtilityTrendsChart trends={trends} granularity={granularity} />
-      </Card>
+      {trends.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+          <p className="text-muted-foreground">
+            No utility expenses found between {formatDisplayDate(fromDate)} and{" "}
+            {formatDisplayDate(toDate)}.
+          </p>
+          <button
+            type="button"
+            onClick={handleClearFilters}
+            className="px-4 py-2 text-sm font-medium border rounded-md hover:bg-muted transition-colors"
+          >
+            Reset date range
+          </button>
+        </div>
+      )}
+      {uniquePeriods.size === 1 && (
+        <Card>
+          <p className="text-sm text-muted-foreground text-center py-8">
+            I only have one month of data — try expanding the date range to see trends.
+          </p>
+        </Card>
+      )}
+      {uniquePeriods.size > 1 && (
+        <Card title="Utility Spend Over Time">
+          <UtilityTrendsChart trends={trends} granularity={granularity} />
+        </Card>
+      )}
     </div>
   );
 }
