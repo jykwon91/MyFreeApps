@@ -1,12 +1,14 @@
 import { StatusBadge } from "@platform/ui";
+import type { ReactElement } from "react";
 import { AlertCircle } from "lucide-react";
+import type { DocumentStatus } from "@mybookkeeper/api-client/types/document/DocumentStatus";
 
 interface DocumentStatusBadgeProps {
-  status: string;
+  status: DocumentStatus;
   errorMessage?: string | null;
 }
 
-export default function DocumentStatusBadge({ status, errorMessage }: DocumentStatusBadgeProps) {
+export default function DocumentStatusBadge({ status, errorMessage }: DocumentStatusBadgeProps): ReactElement {
   switch (status) {
     case "processing":
     case "extracting":
@@ -26,7 +28,9 @@ export default function DocumentStatusBadge({ status, errorMessage }: DocumentSt
       );
     case "duplicate":
       return <StatusBadge tone="danger" label="Duplicate" />;
-    default:
-      return <StatusBadge tone="neutral" label={status} />;
+    case "skipped":
+      return <StatusBadge tone="neutral" label="Read" />;
+    case "deleted":
+      return <StatusBadge tone="neutral" label="Deleted" />;
   }
 }

@@ -5,6 +5,8 @@ import { useMediaQuery } from "@/shared/hooks/useMediaQuery";
 import { useUploadDocumentMutation, useGetBatchStatusQuery, useGetSingleUploadStatusQuery, useGetDocumentsQuery, useCancelBatchMutation } from "@mybookkeeper/api-client/store/documentsApi";
 import { baseApi } from "@/shared/store/baseApi";
 import { isSupportedFile } from "@/shared/utils/file-upload";
+import { uploadOutcome } from "@/shared/utils/upload-outcome";
+import type { DocumentStatus } from "@mybookkeeper/api-client/types/document/DocumentStatus";
 import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
 import {
   setDragging,
@@ -27,7 +29,7 @@ interface UploadStateSnapshot {
   fileName: string;
   batchId: string | null;
   multiUploadTotal: number;
-  singleStatusCode: string | undefined;
+  singleStatusCode: DocumentStatus | undefined;
   batchStatusReady: boolean;
 }
 
@@ -46,6 +48,10 @@ function resolveUploadSubstatus(snap: UploadStateSnapshot): UploadSubstatus {
     case "done":
       if (isMulti) return "done-multi";
       return batchId ? "done-batch" : "done-single";
+    case "failed":
+      return "failed-single";
+    case "skipped":
+      return "skipped-single";
   }
 }
 
@@ -92,6 +98,10 @@ function resolveUploadStatusText(args: UploadStatusTextArgs): string {
       return `${fileName} — ${batchTotal} document${batchTotal !== 1 ? "s" : ""} processed`;
     case "done-single":
       return `${fileName} — Got it! Check your Transactions page for the extracted data.`;
+    case "failed-single":
+      return `${fileName} — I had trouble reading this one. You can have me try again from the list below.`;
+    case "skipped-single":
+      return `${fileName} — I read it, but there was nothing new to add to your transactions.`;
   }
 }
 
@@ -105,13 +115,13 @@ export default function DocumentUploadZone() {
   const cameraRef = useRef<HTMLInputElement>(null);
 
   // --- Poll batch status for zip uploads ---
-  const { data: batchStatus } = useGetBatchStatusQuery(upload?.batchId ?? "", {
+  const { currentData: batchStatus } = useGetBatchStatusQuery(upload?.batchId ?? "", {
     pollingInterval: upload?.status === "processing" && upload.batchId ? 3000 : 0,
     skip: !upload?.batchId || upload.status !== "processing",
   });
 
   // --- Poll single doc status for non-zip uploads ---
-  const { data: singleStatus } = useGetSingleUploadStatusQuery(upload?.documentId ?? "", {
+  const { currentData: singleStatus } = useGetSingleUploadStatusQuery(upload?.documentId ?? "", {
     pollingInterval: upload?.status === "processing" && !upload.batchId ? 3000 : 0,
     skip: !upload?.documentId || !!upload.batchId || upload.status !== "processing",
   });
@@ -120,12 +130,13 @@ export default function DocumentUploadZone() {
     if (!upload || upload.status !== "processing") return;
 
     if (upload.batchId && batchStatus?.status === "done") {
-      dispatch(processingComplete());
+      dispatch(processingComplete("done"));
       dispatch(baseApi.util.invalidateTags(["Document", "Summary", "Transaction"]));
     }
 
-    if (!upload.batchId && singleStatus?.status && !["processing", "extracting"].includes(singleStatus.status)) {
-      dispatch(processingComplete());
+    const outcome = !upload.batchId && singleStatus ? uploadOutcome(singleStatus.status) : null;
+    if (outcome) {
+      dispatch(processingComplete(outcome));
       dispatch(baseApi.util.invalidateTags(["Document", "Summary", "Transaction"]));
     }
   }, [batchStatus, singleStatus, upload, dispatch]);
@@ -321,10 +332,13 @@ export default function DocumentUploadZone() {
               {upload.status === "done" && (
                 <CheckCircle2 size={14} className="text-green-600 shrink-0" />
               )}
-              {upload.status === "error" && (
+              {upload.status === "skipped" && (
+                <CheckCircle2 size={14} className="text-muted-foreground shrink-0" />
+              )}
+              {(upload.status === "error" || upload.status === "failed") && (
                 <XCircle size={14} className="text-destructive shrink-0" />
               )}
-              <span className={`truncate ${upload.status === "error" ? "text-destructive" : "text-muted-foreground"}`}>
+              <span className={`truncate ${upload.status === "error" || upload.status === "failed" ? "text-destructive" : "text-muted-foreground"}`}>
                 {statusText}
               </span>
             </div>

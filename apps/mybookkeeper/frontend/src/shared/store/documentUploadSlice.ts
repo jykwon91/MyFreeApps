@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { FileStatus } from "@/shared/types/document/file-status";
+import type { UploadOutcome } from "@/shared/types/document/upload-outcome";
 
 interface UploadState {
   fileName: string;
@@ -76,9 +77,9 @@ const documentUploadSlice = createSlice({
       if (!state.current) return;
       state.current.status = "error";
     },
-    processingComplete(state) {
+    processingComplete(state, action: PayloadAction<UploadOutcome>) {
       if (!state.current) return;
-      state.current.status = "done";
+      state.current.status = action.payload;
     },
     restoreProcessing(state, action: PayloadAction<UploadState>) {
       state.current = action.payload;
