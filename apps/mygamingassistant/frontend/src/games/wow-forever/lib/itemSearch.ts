@@ -88,6 +88,7 @@ function run(list: ClientItemList, query: string, tokens: readonly string[], fil
   let hiddenByClass = 0;
   list.items.forEach((item, i) => {
     if (filters.slot !== null && item.slot !== filters.slot) return;
+    if (filters.fits && !filters.fits(item)) return;
     if (!matches(tokens, list.searchWords[i], fuzzy)) return;
     if (!usableBy(item, filters.usableBy)) {
       hiddenByClass += 1;

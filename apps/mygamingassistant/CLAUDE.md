@@ -321,6 +321,38 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   set bonuses are never shown. `PUBLISHED_LIST` (LFCarry) is linked with its
   checked date — never copied into our data. Item names link to our own item
   page (`/wow-forever/items/:id`); the app never links to Wowhead (operator rule).
+- **My lists** (`?view=mine`, the third view; no hub tile): player-made BiS
+  lists, browser-only — localStorage `mga.wowForever.gear.bisLists.v1`
+  (`hooks/useBisLists.ts`, pure reducer `lib/bisLists/bisListsReducer.ts`,
+  stored value re-validated list by list in `parseStoredBisLists.ts`, rows
+  tidied by `tidyBisListItems.ts`; nothing is written until something
+  changes; another tab's save is loaded via the `storage` event and never
+  written back). The Faction toggle ("Quest sources for") is Best gear's own
+  `faction` setting — it drives source lines and recommended picks, and
+  keeps a share link open. 18 rows (`data/bisLists/bisSlots.ts`:
+  two rings, two trinkets; a two-hander clears both hands and vice versa,
+  `placeBisItem.ts`); a class's rows follow `groupUsable` (no relics in
+  `items.json`, so Paladin/Druid/Shaman have no ranged row). Phases are
+  generic (Leveling / Pre-raid / Raid) — never raid names. "Start from
+  recommended" = the Best gear top picks (`startingBisItems.ts`; a Raid list
+  starts from pre-raid). Per-row "I have it" ticks; no score total, no
+  unique-equipped check (no flag in the data). Picking reuses the compare
+  search: `components/compare/ItemSearchBox.tsx` (shared with
+  `ItemSearchPanel`) with a `slotLimit` / `fits` filter (`fitsBisSlot`).
+- **Share links** carry the whole list in the URL fragment, never a server:
+  `#list=1~<class>~<spec>~<phase>~<slot>:<id>,…~<name>`
+  (`lib/bisLists/bisListFragment.ts`; name percent-encoded incl. `~!'()*`;
+  one layer of an app's escaping is undone: separators sent as `%7E`, or a
+  `%` before the name field — a link we made never has one there). Links
+  point at `window.location.origin`, or `MGA_SITE_URL` inside the Discord
+  Activity (`bisListShareOrigin.ts`). Decoding is strict: >1200
+  chars, wrong version, unknown class or field count → "This list link
+  doesn't work"; unknown slots / malformed ids ignored; then
+  `checkSharedList.ts` drops ids not in `items.json` or not wearable in that
+  row and says how many. A link opens read-only with "Save to my lists".
+  Bump the version (and keep decoding v1) for any format change. Tests:
+  `wowBisLists.test.ts`, `wowBisListsView.test.tsx`,
+  `e2e/wow-forever-gear-lists.spec.ts`.
 
 #### Item pages (`/wow-forever/items/:id`)
 
