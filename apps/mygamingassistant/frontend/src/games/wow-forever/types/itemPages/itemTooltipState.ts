@@ -1,8 +1,11 @@
+import type { ITEM_TOOLTIP_STATUS } from "@/games/wow-forever/data/itemPages/itemTooltipStatus";
 import type { ItemTooltipData } from "@/games/wow-forever/types/itemPages/itemTooltipData";
 
-/** An item tooltip's data while its shard loads; "missing" = the item isn't in the Forever files. */
+type Status = typeof ITEM_TOOLTIP_STATUS;
+
+/** An item tooltip's data while its shard loads; MISSING = the item isn't in the Forever files. */
 export type ItemTooltipState =
-  | { status: "loading" }
-  | { status: "error" }
-  | { status: "missing" }
-  | { status: "ready"; data: ItemTooltipData };
+  | { status: Status["LOADING"] }
+  | { status: Status["ERROR"] }
+  | { status: Status["MISSING"] }
+  | { status: Status["READY"]; data: ItemTooltipData };
