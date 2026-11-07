@@ -51,11 +51,26 @@ function renderWithProviders(ui: React.ReactElement) {
     </Provider>,
   );
 }
+
+// The RTK Query states this page reads. After an org switch `data` still holds the old
+// org's list while `currentData` is undefined until the new one arrives.
+const LOADED = { data: [], currentData: [], isLoading: false, isFetching: false };
+const FIRST_LOAD = { data: undefined, currentData: undefined, isLoading: true, isFetching: true };
+const REFETCHING = { data: [], currentData: [], isLoading: false, isFetching: true };
+const SWITCHED_ORG = { data: [{ id: 'old-org-row' }], currentData: undefined, isLoading: false, isFetching: true };
+
+function membersState(state: object) {
+  vi.mocked(useListMembersQuery).mockReturnValue(state as unknown as ReturnType<typeof useListMembersQuery>);
+}
+
+function invitesState(state: object) {
+  vi.mocked(useListInvitesQuery).mockReturnValue(state as unknown as ReturnType<typeof useListInvitesQuery>);
+}
 describe('Members', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useListMembersQuery).mockReturnValue({ isLoading: false, isFetching: false } as unknown as ReturnType<typeof useListMembersQuery>);
-    vi.mocked(useListInvitesQuery).mockReturnValue({ isLoading: false, isFetching: false } as unknown as ReturnType<typeof useListInvitesQuery>);
+    membersState(LOADED);
+    invitesState(LOADED);
     vi.mocked(useIsOrgAdmin).mockReturnValue(false);
     vi.mocked(useActiveOrgId).mockReturnValue('org-1');
   });
@@ -123,26 +138,75 @@ describe('Members', () => {
     expect(screen.getByText('Pending invites')).toBeInTheDocument();
   });
 
-  it('shows skeleton when members are loading', () => {
-    vi.mocked(useListMembersQuery).mockReturnValue({ isLoading: true, isFetching: false } as unknown as ReturnType<typeof useListMembersQuery>);
-    const { container } = renderWithProviders(<Members />);
-    const skeletons = container.querySelectorAll('.animate-pulse');
-    expect(skeletons.length).toBeGreaterThanOrEqual(1);
+  it('shows skeleton on the first load of members', () => {
+    membersState(FIRST_LOAD);
+    renderWithProviders(<Members />);
+    expect(screen.getByTestId('members-skeleton')).toBeInTheDocument();
+    expect(screen.queryByText('Team members')).not.toBeInTheDocument();
   });
 
-  it('shows skeleton when members are fetching', () => {
-    vi.mocked(useListMembersQuery).mockReturnValue({ isLoading: false, isFetching: true } as unknown as ReturnType<typeof useListMembersQuery>);
-    const { container } = renderWithProviders(<Members />);
-    const skeletons = container.querySelectorAll('.animate-pulse');
-    expect(skeletons.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it('shows skeleton for admin when invites are loading', () => {
+  it('shows skeleton for admin on the first load of invites', () => {
     vi.mocked(useIsOrgAdmin).mockReturnValue(true);
-    vi.mocked(useListInvitesQuery).mockReturnValue({ isLoading: true, isFetching: false } as unknown as ReturnType<typeof useListInvitesQuery>);
-    const { container } = renderWithProviders(<Members />);
-    const skeletons = container.querySelectorAll('.animate-pulse');
-    expect(skeletons.length).toBeGreaterThanOrEqual(1);
+    invitesState(FIRST_LOAD);
+    renderWithProviders(<Members />);
+    expect(screen.getByTestId('members-skeleton')).toBeInTheDocument();
+  });
+
+  it('ignores the invites load for a non-admin, who never fetches invites', () => {
+    invitesState(FIRST_LOAD);
+    renderWithProviders(<Members />);
+    expect(screen.queryByTestId('members-skeleton')).not.toBeInTheDocument();
+  });
+
+  it('shows skeleton after an org switch instead of the old org\'s members', () => {
+    membersState(SWITCHED_ORG);
+    renderWithProviders(<Members />);
+    expect(screen.getByTestId('members-skeleton')).toBeInTheDocument();
+    expect(screen.queryByTestId('member-list')).not.toBeInTheDocument();
+  });
+
+  it('shows skeleton for admin after an org switch instead of the old org\'s invites', () => {
+    vi.mocked(useIsOrgAdmin).mockReturnValue(true);
+    invitesState(SWITCHED_ORG);
+    renderWithProviders(<Members />);
+    expect(screen.getByTestId('members-skeleton')).toBeInTheDocument();
+    expect(screen.queryByTestId('pending-invites')).not.toBeInTheDocument();
+  });
+
+  it('keeps the same invite form while members and invites refetch in the background', () => {
+    vi.mocked(useIsOrgAdmin).mockReturnValue(true);
+    const { rerender } = renderWithProviders(<Members />);
+    const form = screen.getByTestId('invite-form');
+
+    membersState(REFETCHING);
+    invitesState(REFETCHING);
+    rerender(
+      <Provider store={store}>
+        <BrowserRouter>
+          <Members />
+        </BrowserRouter>
+      </Provider>,
+    );
+
+    expect(screen.queryByTestId('members-skeleton')).not.toBeInTheDocument();
+    expect(screen.getByTestId('invite-form')).toBe(form);
+  });
+
+  it('remounts the page content when the active org changes', () => {
+    vi.mocked(useIsOrgAdmin).mockReturnValue(true);
+    const { rerender } = renderWithProviders(<Members />);
+    const form = screen.getByTestId('invite-form');
+
+    vi.mocked(useActiveOrgId).mockReturnValue('org-2');
+    rerender(
+      <Provider store={store}>
+        <BrowserRouter>
+          <Members />
+        </BrowserRouter>
+      </Provider>,
+    );
+
+    expect(screen.getByTestId('invite-form')).not.toBe(form);
   });
 
   it('renders main layout without skeleton when loaded', () => {

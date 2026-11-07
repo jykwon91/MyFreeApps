@@ -33,7 +33,7 @@ function makeInvite(overrides: Partial<OrgInvite> = {}): OrgInvite {
 
 function showInvites(invites: OrgInvite[]) {
   vi.mocked(useListInvitesQuery).mockReturnValue({
-    data: invites,
+    currentData: invites,
     isLoading: false,
   } as unknown as ReturnType<typeof useListInvitesQuery>);
 }
@@ -61,6 +61,17 @@ describe("PendingInvites", () => {
     expect(screen.getByText("test@example.com")).toBeInTheDocument();
     expect(screen.getByText("Pending")).toBeInTheDocument();
     expect(screen.queryByText("Email didn't send")).not.toBeInTheDocument();
+  });
+
+  it("never shows another organization's invites while this one loads", () => {
+    vi.mocked(useListInvitesQuery).mockReturnValue({
+      data: [makeInvite({ email: "old-org@example.com" })],
+      currentData: undefined,
+      isFetching: true,
+    } as unknown as ReturnType<typeof useListInvitesQuery>);
+    render(<PendingInvites />);
+
+    expect(screen.queryByText("old-org@example.com")).not.toBeInTheDocument();
   });
 
   it("shows empty message when no pending invites", () => {
