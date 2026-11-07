@@ -21,9 +21,7 @@ Boot guards (enforced in main.py _on_startup):
 The password is stored as a bcrypt hash. Never store plaintext.
 
 To generate the hash:
-    python -c "from passlib.context import CryptContext; \
-      ctx = CryptContext(schemes=['bcrypt']); \
-      print(ctx.hash('your-password'))"
+    python -c "import bcrypt, getpass; print(bcrypt.hashpw(getpass.getpass().encode(), bcrypt.gensalt()).decode())"
 
 Then set SEED_USER_PASSWORD_HASH in backend/.env.docker.
 """

@@ -78,9 +78,7 @@ class Settings(BaseAppSettings):
     # ------------------------------------------------------------------
     seed_user_email: str = ""
     # bcrypt hash of the seed user's password. Generate via:
-    #   python -c "from passlib.context import CryptContext; \
-    #     ctx = CryptContext(schemes=['bcrypt']); \
-    #     print(ctx.hash('your-password'))"
+    #   python -c "import bcrypt, getpass; print(bcrypt.hashpw(getpass.getpass().encode(), bcrypt.gensalt()).decode())"
     seed_user_password_hash: str = ""
 
     # ------------------------------------------------------------------
