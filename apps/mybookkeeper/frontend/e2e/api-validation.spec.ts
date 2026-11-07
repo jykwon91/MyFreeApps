@@ -104,14 +104,18 @@ test.describe("API endpoint validation", () => {
 
   test.describe("Reconciliation API", () => {
     test("list sources returns response", async ({ api }) => {
-      const res = await api.get("/reconciliation/sources");
+      const res = await api.get("/reconciliation/sources", {
+        params: { tax_year: new Date().getFullYear() },
+      });
       expect(res.ok()).toBe(true);
       const data = await res.json();
       expect(Array.isArray(data)).toBe(true);
     });
 
     test("list discrepancies returns response", async ({ api }) => {
-      const res = await api.get("/reconciliation/discrepancies");
+      const res = await api.get("/reconciliation/discrepancies", {
+        params: { tax_year: new Date().getFullYear() },
+      });
       expect(res.ok()).toBe(true);
       const data = await res.json();
       expect(Array.isArray(data)).toBe(true);
@@ -142,9 +146,9 @@ test.describe("API endpoint validation", () => {
     });
   });
 
-  test.describe("Reservations API", () => {
-    test("list reservations returns response", async ({ api }) => {
-      const res = await api.get("/reservations");
+  test.describe("Booking statements API", () => {
+    test("list booking statements returns response", async ({ api }) => {
+      const res = await api.get("/booking-statements");
       expect(res.ok()).toBe(true);
       const data = await res.json();
       expect(Array.isArray(data)).toBe(true);
