@@ -1,7 +1,14 @@
-import { test, expect } from "./fixtures/auth";
+import { test, expect, type APIRequestContext } from "./fixtures/auth";
+import { TestAccount } from "./fixtures/test-account";
 import { toasts } from "./fixtures/toasts";
 import { formatCost } from "../src/admin/features/costs/format";
 import type { CostSummary } from "../src/shared/types/admin/cost";
+
+async function adminRoleOf(api: APIRequestContext, userId: string): Promise<string | undefined> {
+  const res = await api.get("/admin/users");
+  expect(res.status(), await res.text()).toBe(200);
+  return ((await res.json()) as { id: string; role: string }[]).find((u) => u.id === userId)?.role;
+}
 
 test.describe("Admin Dashboard", () => {
   test.beforeEach(async ({ authedPage: page }) => {
@@ -41,16 +48,10 @@ test.describe("Admin Dashboard", () => {
   });
 
   test("search filters users — typing real email shows matching row, clearing restores all", async ({ authedPage: page, api }) => {
-    // Get the actual user list from API to know what to search for
-    const res = await api.get("/admin/users");
-    expect(res.ok()).toBe(true);
-    const users = await res.json();
-    if (users.length === 0) {
-      test.skip();
-      return;
-    }
-
-    const targetEmail = users[0].email;
+    // The signed-in admin is always in the list.
+    const me = await api.get("/users/me");
+    expect(me.status(), await me.text()).toBe(200);
+    const targetEmail = ((await me.json()) as { email: string }).email;
     const search = page.getByPlaceholder(/search by email or name/i);
 
     // Filter by the target email
@@ -89,10 +90,7 @@ test.describe("Admin Dashboard", () => {
 
   test("Organizations tab shows data matching /admin/organizations API", async ({ authedPage: page, api }) => {
     const res = await api.get("/admin/orgs");
-    if (!res.ok()) {
-      test.skip();
-      return;
-    }
+    expect(res.status(), await res.text()).toBe(200);
     const orgs = await res.json();
 
     await page.getByRole("tab", { name: "Organizations" }).click();
@@ -106,45 +104,31 @@ test.describe("Admin Dashboard", () => {
     }
   });
 
-  test("role change via dropdown triggers API update", async ({ authedPage: page, api }) => {
-    // Get users to find a non-self user to change
-    const res = await api.get("/admin/users");
-    const users = await res.json();
+  test("role change via dropdown saves the new role, and changing it back restores it", async ({
+    authedPage: page,
+    api,
+    playwright,
+  }) => {
+    // A user of its own to change, so no real account's role is touched.
+    const target = await TestAccount.create(playwright, "admin-role");
+    try {
+      expect(await adminRoleOf(api, target.userId)).toBe("user");
+      await page.reload();
+      await page.getByPlaceholder(/search by email or name/i).fill(target.email);
+      const roleSelect = page.locator("tbody tr").filter({ hasText: target.email }).locator("select");
+      await expect(roleSelect).toHaveValue("user", { timeout: 10000 });
 
-    // Find a user who is not the current admin (they won't have a dropdown)
-    const currentUserRes = await api.get("/users/me");
-    const currentUser = await currentUserRes.json();
-    const targetUser = users.find((u: { id: string; email: string }) => u.id !== currentUser.id);
+      await roleSelect.selectOption("admin");
+      await expect(toasts(page).getByText(/role updated/i)).toBeVisible({ timeout: 5000 });
+      await expect.poll(() => adminRoleOf(api, target.userId)).toBe("admin");
 
-    if (!targetUser) {
-      test.skip();
-      return;
+      // Both changes say "Role updated", and the first toast may still be showing.
+      await roleSelect.selectOption("user");
+      await expect(toasts(page).getByText(/role updated/i)).toHaveCount(2, { timeout: 5000 });
+      await expect.poll(() => adminRoleOf(api, target.userId)).toBe("user");
+    } finally {
+      await target.delete(playwright);
     }
-
-    // Find the row for the target user and locate its role dropdown
-    const userRow = page.locator("tbody tr").filter({ hasText: targetUser.email });
-    await expect(userRow).toBeVisible({ timeout: 10000 });
-
-    const roleSelect = userRow.locator("select");
-    if ((await roleSelect.count()) === 0) {
-      // User may be self — skip
-      test.skip();
-      return;
-    }
-
-    const currentRole = await roleSelect.inputValue();
-    const newRole = currentRole === "admin" ? "user" : "admin";
-
-    // Change the role
-    await roleSelect.selectOption(newRole);
-
-    // Verify success toast appears
-    await expect(toasts(page).getByText(/role updated/i)).toBeVisible({ timeout: 5000 });
-
-    // Restore original role
-    // Both changes say "Role updated", and the first toast may still be showing.
-    await roleSelect.selectOption(currentRole);
-    await expect(toasts(page).getByText(/role updated/i)).toHaveCount(2, { timeout: 5000 });
   });
 });
 
@@ -175,7 +159,7 @@ test.describe("System Health", () => {
 
   test("severity filter changes the events table content", async ({ authedPage: page }) => {
     const severitySelect = page.locator("select[aria-label='Filter by severity']");
-    test.skip(!(await severitySelect.isVisible({ timeout: 5000 })), "Severity filter select not visible — events table may not be rendered");
+    await expect(severitySelect).toBeVisible({ timeout: 5000 });
 
     // Filter by "error": every row left must be an error event, or the empty state shows
     await severitySelect.selectOption("error");
@@ -215,7 +199,7 @@ test.describe("Cost Monitoring", () => {
 
   test("cost summary cards show values from API", async ({ authedPage: page, api }) => {
     const res = await api.get("/admin/costs/summary");
-    test.skip(!res.ok(), "Admin costs summary API unavailable");
+    expect(res.status(), await res.text()).toBe(200);
     const summary: CostSummary = await res.json();
 
     const cards: Array<[string, number]> = [
@@ -231,7 +215,7 @@ test.describe("Cost Monitoring", () => {
 
   test("user period selector switches between today/week/month and updates table", async ({ authedPage: page }) => {
     const select = page.locator("#cost-user-period");
-    test.skip(!(await select.isVisible({ timeout: 5000 })), "User period selector not visible — cost monitoring table may not be rendered");
+    await expect(select).toBeVisible({ timeout: 5000 });
 
     // Switch to week
     await select.selectOption("week");
@@ -260,14 +244,11 @@ test.describe("Cost Monitoring", () => {
 
     // Verify threshold values from API are populated in the inputs
     const thresholdsRes = await api.get("/admin/costs/thresholds");
-    if (thresholdsRes.ok()) {
-      const thresholds = await thresholdsRes.json();
-      const dailyInput = page.locator("#threshold-daily_budget");
-      if (await dailyInput.isVisible({ timeout: 3000 })) {
-        const val = await dailyInput.inputValue();
-        expect(parseFloat(val)).toBe(thresholds.daily_budget);
-      }
-    }
+    expect(thresholdsRes.status(), await thresholdsRes.text()).toBe(200);
+    const thresholds = (await thresholdsRes.json()) as { daily_budget: number };
+    const dailyInput = page.locator("#threshold-daily_budget");
+    await expect(dailyInput).toBeVisible({ timeout: 3000 });
+    expect(parseFloat(await dailyInput.inputValue())).toBe(thresholds.daily_budget);
 
     // Close the modal by clicking the X button
     await page.locator(".fixed button:has-text('×')").click();
@@ -283,7 +264,7 @@ test.describe("Cost Monitoring", () => {
 
     // Change a value
     const dailyInput = page.locator("#threshold-daily_budget");
-    test.skip(!(await dailyInput.isVisible({ timeout: 3000 })), "Daily budget input not visible in threshold modal");
+    await expect(dailyInput).toBeVisible({ timeout: 3000 });
     const original = await dailyInput.inputValue();
     const newVal = String(parseFloat(original) + 1);
     await dailyInput.fill(newVal);
