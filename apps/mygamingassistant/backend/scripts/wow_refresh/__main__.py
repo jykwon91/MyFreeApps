@@ -67,6 +67,8 @@ def generators(*, art: bool, hotfix_cache: Path) -> list[list[str]]:
         world_map,
         ["scripts.wow_food.build"],
         ["scripts.wow_professions.build"],
+        # Reads the Professions output above. Its images are published last, below.
+        ["scripts.wow_icons.build"],
         ["scripts.wow_gold.build"],
         ["scripts.wow_consumables.build"],
         ["scripts.wow_items.build", *cache],
@@ -74,6 +76,8 @@ def generators(*, art: bool, hotfix_cache: Path) -> list[list[str]]:
         ["scripts.wow_macros.build"],
         # Reads the World Map, Professions and Item output above, so it runs last.
         ["scripts.wow_gear.build", *cache],
+        # The new build's icons must be in R2 before the data naming them ships (needs scripts/.env.r2).
+        ["scripts.wow_icons.publish", "--to", "r2"],
     ]
 
 

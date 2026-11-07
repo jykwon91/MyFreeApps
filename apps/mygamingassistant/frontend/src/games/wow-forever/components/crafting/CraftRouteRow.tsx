@@ -6,6 +6,8 @@ import CraftLearnLine, { type CraftPlace } from "@/games/wow-forever/components/
 import CraftReagents from "@/games/wow-forever/components/crafting/CraftReagents";
 import CraftRowCost from "@/games/wow-forever/components/crafting/CraftRowCost";
 import SourceUnknownChip from "@/games/wow-forever/components/crafting/SourceUnknownChip";
+import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
+import { recipeIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import { CRAFT_ROW_GRID, rowStateClass, type RowState } from "@/games/wow-forever/components/crafting/craftRowStyles";
 import { sourceUnknown } from "@/games/wow-forever/crafting/craftRoute";
 import type { PriceBook } from "@/games/wow-forever/crafting/matPrices";
@@ -39,7 +41,10 @@ export default function CraftRouteRow({ entry, state, showChip, makesTool, showE
             <span className="rounded-full bg-muted px-2 py-0.5 text-sm font-semibold tabular-nums">
               {step.from}–{step.to}
             </span>
-            <span className="font-medium">{recipe.name}</span>
+            <span className="inline-flex items-center gap-2 font-medium">
+              <GameIcon icon={recipeIcon(recipe)} size={24} alt="" />
+              {recipe.name}
+            </span>
             {state === "current" ? (
               <span className="rounded bg-primary px-1.5 py-0.5 text-xs text-primary-foreground">You are here</span>
             ) : null}

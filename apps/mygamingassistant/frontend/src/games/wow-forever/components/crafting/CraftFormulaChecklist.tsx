@@ -2,6 +2,9 @@ import type { CraftPlace } from "@/games/wow-forever/components/crafting/CraftLe
 import { matSummary } from "@/games/wow-forever/crafting/matSources";
 import { hasSources } from "@/games/wow-forever/food/recipeSources";
 import type { CraftRecipe } from "@/games/wow-forever/types/crafting";
+import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
+import { itemIcon, recipeIcon } from "@/games/wow-forever/lib/icons/wowIcons";
+import type { WowIcon } from "@/games/wow-forever/types/icons/wowIcon";
 
 interface CraftFormulaChecklistProps {
   title: string;
@@ -25,6 +28,12 @@ function formulaName(recipe: CraftRecipe): string {
   return recipe.learn.item;
 }
 
+/** The Pattern / Formula item's own icon, as the name is the item's; else the recipe's. */
+function formulaIcon(recipe: CraftRecipe): WowIcon | null {
+  if (recipe.learn.source !== "item") return recipeIcon(recipe);
+  return itemIcon(recipe.learn.itemId);
+}
+
 /**
  * Patterns / Formulas you own. Only these join the cheapest route — a recipe
  * you'd have to go and buy isn't "cheapest" until you have it.
@@ -45,6 +54,7 @@ export default function CraftFormulaChecklist({ title, formulas, known, onToggle
                 checked={known.has(recipe.spell)}
                 onChange={(e) => onToggle(recipe.spell, e.target.checked)}
               />
+              <GameIcon icon={formulaIcon(recipe)} size={24} alt="" />
               <span className="min-w-0 break-words">
                 <span className="block text-sm">{formulaName(recipe)}</span>
                 <span className="block text-xs text-muted-foreground">{learnLine(recipe, place)}</span>

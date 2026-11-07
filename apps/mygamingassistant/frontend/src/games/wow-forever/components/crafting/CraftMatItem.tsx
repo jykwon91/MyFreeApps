@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import CraftMatSources from "@/games/wow-forever/components/crafting/CraftMatSources";
 import type { CraftPlace } from "@/games/wow-forever/components/crafting/CraftLearnLine";
+import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
+import { itemIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import { SUMMARY_PARTS, isGathered, matSummary } from "@/games/wow-forever/crafting/matSources";
 
 interface CraftMatItemProps {
@@ -27,6 +29,7 @@ export default function CraftMatItem({ itemId, label, place, professionLabel, su
     <li>
       <details className="group" data-mat={itemId}>
         <summary className="cursor-pointer min-h-[44px] sm:min-h-0 py-1 marker:text-muted-foreground">
+          <GameIcon icon={itemIcon(itemId)} size={16} alt="" className="mr-1.5 -mt-0.5" />
           {label}
           <span className="block text-xs text-muted-foreground">{summaryOf(itemId, place, professionLabel, summaryParts)}</span>
         </summary>

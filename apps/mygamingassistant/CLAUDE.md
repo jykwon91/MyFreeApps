@@ -322,6 +322,27 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   checked date — never copied into our data. Item names are plain text; the
   app never links to Wowhead (operator rule).
 
+#### In-game icons (`GameIcon`)
+
+- `components/shared/GameIcon.tsx` (`icon`, `size` 16/24/32/48, `alt` — "" when
+  the name is printed next to it) shows an item/spell icon in a frame ringed in
+  the item's quality colour, lazy-loaded; no icon or a failed load = a same-size
+  neutral placeholder. Look-ups: `lib/icons/wowIcons.ts` (`itemIcon`,
+  `spellIcon`, `recipeIcon`, `iconUrl`) against
+  `data/icons/wowIcons.json` — **GENERATED** by `python -m scripts.wow_icons.build`
+  (item → `Item.IconFileDataID`, else its default appearance's icon; spell →
+  `SpellMisc`; quality from ItemSparse; the build is pinned in the file). Covers
+  the crafting / gathering guides' items and spells.
+- Images are the client's BLP icons as 64px WebP, uploaded by
+  `python -m scripts.wow_icons.publish --to r2` (needs `scripts/.env.r2`;
+  skips what's already there) to `wow/{build}/icons/{fdid}.webp`, and served
+  same-origin by `GET /api/wow/icons/...` (`app/api/wow_icons.py`,
+  `services/wow/icon_service.py`) — works in the Discord Activity and needs no
+  CSP change. Both run in `wow_refresh`; publish before the refresh PR merges.
+  Never commit the images; never use another site's icon files.
+- `WowLegalNotice` (Blizzard trademark + "icons and map art © Blizzard" notice)
+  renders once under every WoW Forever page via `withLegalNotice` in `routes.tsx`.
+
 #### Auction-house prices (frontend)
 
 - Nobody types prices: `hooks/useAuctionPrices.ts` (one RTK Query cache,
@@ -766,6 +787,7 @@ once on the router. This is the no-bandaid approach (see
 | `/api/wow/feature-requests/triage/*` | — | Token (`X-MGA-Triage-Token`), not a login — mounted only when `WOW_FEATURE_TRIAGE_TOKEN` is set, in BOTH modes. The one operator write surface in serve-only prod |
 | `/api/wow/map-captures` | GET, both modes (World Map locations captured in Forever) | POST import (full-auth only; prod gets captures via the committed pack) |
 | `/api/wow/prices` | GET, both modes (auction-house prices by region, refreshed by the scheduler; ETag + 10-min cache) | — |
+| `/api/wow/icons/{build}/{fdid}.webp` | GET, both modes (in-game icons streamed from object storage; year-long immutable cache, 404 + no-store when unpublished) | — |
 | `/api/scheduler/*` | — | All |
 | `/admin/*` | — | All |
 | `/users/me*` | — | All |

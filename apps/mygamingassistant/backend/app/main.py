@@ -41,6 +41,7 @@ from app.api import (
     totp,
     wow_feature_triage,
     wow_features,
+    wow_icons,
     wow_items,
     wow_map_captures,
     wow_prices,
@@ -247,6 +248,7 @@ def _mount_public_routes(app: FastAPI) -> None:
     app.include_router(wow_items.router)  # Turnstile + per-IP + daily-capped
     app.include_router(wow_map_captures.public_router)
     app.include_router(wow_prices.router)  # auction-house prices, filled by the scheduler
+    app.include_router(wow_icons.router)  # in-game icons, from object storage
     app.include_router(wow_server_status.router)  # Server-cached Blizzard status
     app.include_router(wow_features.public_router)  # submit: Turnstile + per-IP + daily-capped
 

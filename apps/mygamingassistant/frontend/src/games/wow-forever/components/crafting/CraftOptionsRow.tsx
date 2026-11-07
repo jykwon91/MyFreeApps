@@ -6,6 +6,8 @@ import CraftLearnLine, { type CraftPlace } from "@/games/wow-forever/components/
 import CraftReagents from "@/games/wow-forever/components/crafting/CraftReagents";
 import CraftSpecChip from "@/games/wow-forever/components/crafting/CraftSpecChip";
 import SourceUnknownChip from "@/games/wow-forever/components/crafting/SourceUnknownChip";
+import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
+import { recipeIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import { rowStateClass, type RowState } from "@/games/wow-forever/components/crafting/craftRowStyles";
 import { learnAt, sourceUnknown } from "@/games/wow-forever/crafting/craftRoute";
 import type { PriceBook } from "@/games/wow-forever/crafting/matPrices";
@@ -60,7 +62,10 @@ export default function CraftOptionsRow({
         {recipes.map((recipe, i) => (
           <li key={recipe.spell} className="rounded-lg border bg-card p-3 space-y-1.5">
             <p className="flex flex-wrap items-center gap-2">
-              <span className="font-medium">{recipe.name}</span>
+              <span className="inline-flex items-center gap-2 font-medium">
+                <GameIcon icon={recipeIcon(recipe)} size={24} alt="" />
+                {recipe.name}
+              </span>
               {sourceUnknown(recipe) ? <SourceUnknownChip /> : null}
               {recipe.spec !== undefined ? <CraftSpecChip name={specNames.get(recipe.spec) ?? "Specialization"} /> : null}
             </p>

@@ -57,6 +57,12 @@ and run it again. The game only caches items it has seen, so playing (opening
 vendors, loot, the auction house) is what fills the item list in. A generator failing stops the run: fix the cause or leave
 it for a person, and never hand-edit generated JSON.
 
+Its last step publishes the new build's icons (`scripts.wow_icons.publish --to r2`,
+WebP under `wow/{build}/icons/` in the prod R2 bucket), because `wowIcons.json`
+names the build and the pages load icons from it. It needs `scripts/.env.r2`; a
+run without it stops there — publish before the PR merges, or every icon shows its
+placeholder until you do.
+
 Add `--art` when a post or the report mentions new or changed maps. Walk graphs
 (`public/wow-walk`) aren't part of `apply` because they need a few GB of client
 files. If terrain or buildings changed, say so in the PR and leave the rebuild
@@ -96,7 +102,7 @@ client data itself.
 From `apps/mygamingassistant/backend`:
 
 ```bash
-pytest tests/test_wow_refresh.py tests/test_wow_food_generator.py tests/test_wow_professions_generator.py tests/test_wow_world_map_generator.py tests/test_wow_raid_consumables.py tests/test_wow_items_generator.py tests/test_wow_items_hotfix_cache.py tests/test_wow_item_names.py tests/test_wow_gear_generator.py
+pytest tests/test_wow_refresh.py tests/test_wow_food_generator.py tests/test_wow_professions_generator.py tests/test_wow_world_map_generator.py tests/test_wow_raid_consumables.py tests/test_wow_items_generator.py tests/test_wow_items_hotfix_cache.py tests/test_wow_item_names.py tests/test_wow_gear_generator.py tests/test_wow_icons_generator.py
 ```
 
 From `apps/mygamingassistant/frontend`:
