@@ -168,10 +168,16 @@ test.describe("Lease extension", () => {
         await page
           .getByTestId("extend-lease-notes")
           .fill("Six-month renewal");
-        await page.getByTestId("extend-lease-confirm").click();
-
-        // Wait for the mutation + cache invalidation to settle.
-        await page.waitForLoadState("networkidle");
+        // networkidle resolves at once on an already-loaded page, so wait for
+        // the extend request itself before reading the lease back.
+        const [extendResponse] = await Promise.all([
+          page.waitForResponse(
+            (r) => r.request().method() === "POST"
+              && r.url().endsWith(`/signed-leases/${leaseId}/extend`),
+          ),
+          page.getByTestId("extend-lease-confirm").click(),
+        ]);
+        expect(extendResponse.ok()).toBe(true);
 
         const updated = await getLease(api, leaseId);
         expect(updated.ends_on).toBe("2027-06-30");
