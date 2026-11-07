@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { UseFormRegister, UseFormWatch, UseFormSetValue, FieldErrors } from "react-hook-form";
 import { X, FileText, Loader2 } from "lucide-react";
 import { fetchDocumentBlob } from "@/shared/services/documentService";
-import { showError } from "@/shared/lib/toast-store";
+import { showError, FormField } from "@platform/ui";
 import { TRANSACTION_EDIT_MESSAGES as MSG } from "@/shared/lib/transaction-edit-messages";
 import { formatTag } from "@/shared/utils/tag";
 import { EXPENSE_CATEGORY_LIST, INCOME_CATEGORIES, PAYMENT_METHODS, CHANNELS } from "@/shared/lib/constants";
@@ -11,7 +11,6 @@ import type { Property } from "@mybookkeeper/api-client/types/property/property"
 import type { TransactionFormValues } from "@/shared/types/transaction/transaction-form-values";
 import type { DuplicateTransaction } from "@mybookkeeper/api-client/types/transaction/DuplicateTransaction";
 import type { SourcePreview } from "@/shared/types/transaction/source-preview";
-import { FormField } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 import TransactionDuplicateActions from "@/app/features/transactions/TransactionDuplicateActions";
 import { useGetVendorsQuery } from "@mybookkeeper/api-client/store/vendorsApi";

@@ -20,7 +20,8 @@ vi.mock("@mybookkeeper/api-client/store/vendorsApi", () => ({
 const successToast = vi.fn();
 const errorToast = vi.fn();
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showSuccess: (...a: unknown[]) => successToast(...a),
   showError: (...a: unknown[]) => errorToast(...a),
 }));

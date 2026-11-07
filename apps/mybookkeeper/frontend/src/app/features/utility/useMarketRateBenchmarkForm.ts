@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { showError, showSuccess } from "@platform/ui";
 import {
   useDeleteMarketRateBenchmarkMutation,
   useUpsertMarketRateBenchmarkMutation,

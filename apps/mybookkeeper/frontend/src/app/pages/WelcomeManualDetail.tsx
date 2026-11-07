@@ -13,8 +13,7 @@ import {
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import Markdown from "@/shared/components/ui/Markdown";
-import { Button, LoadingButton } from "@platform/ui";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
 import {
   NEW_SECTION_DEFAULT_TITLE,
   SHARED_ROOM_OPTION,

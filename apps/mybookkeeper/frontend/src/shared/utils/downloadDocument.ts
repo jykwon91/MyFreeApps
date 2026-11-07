@@ -1,5 +1,5 @@
 import api from "@/shared/lib/api";
-import { showError } from "@/shared/lib/toast-store";
+import { showError } from "@platform/ui";
 
 export async function downloadDocument(documentId: string, fileName: string | null): Promise<void> {
   try {

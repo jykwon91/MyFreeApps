@@ -22,7 +22,8 @@ const createFieldMock = vi.fn();
 const updateFieldMock = vi.fn();
 const deleteFieldMock = vi.fn();
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: vi.fn(),
   showSuccess: vi.fn(),
 }));

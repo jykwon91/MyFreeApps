@@ -37,8 +37,8 @@ vi.mock("@/app/features/transactions/TransactionForm", () => ({
 }));
 
 const showError = vi.fn();
-vi.mock("@/shared/lib/toast-store", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/shared/lib/toast-store")>()),
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: (msg: string) => showError(msg),
 }));
 

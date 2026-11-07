@@ -5,7 +5,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { store } from "@/shared/store";
 import ReplyTemplatesManager from "@/app/features/inquiries/ReplyTemplatesManager";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { showError, showSuccess } from "@platform/ui";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 import { useGetArchivedReplyTemplatesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { archiveDescription, REPLY_TEMPLATE_MESSAGES as MESSAGES, viewLabel } from "@/shared/lib/reply-template-messages";
@@ -54,7 +54,8 @@ function SearchSpy() {
   return <output data-testid="search-spy">{useLocation().search}</output>;
 }
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showSuccess: vi.fn(),
   showError: vi.fn(),
   subscribe: vi.fn(() => () => {}),

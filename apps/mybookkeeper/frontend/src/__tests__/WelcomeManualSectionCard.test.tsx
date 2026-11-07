@@ -26,7 +26,8 @@ import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/type
 const updateSectionMock = vi.fn();
 const deleteSectionMock = vi.fn();
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: vi.fn(),
   showSuccess: vi.fn(),
 }));

@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Panel, PanelCloseButton, PanelTitle } from "@platform/ui";
-import { Button, LoadingButton } from "@platform/ui";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { Panel, PanelCloseButton, PanelTitle, Button, LoadingButton, showError, showSuccess } from "@platform/ui";
 import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
 import {
   useGetReplyTemplatesQuery,

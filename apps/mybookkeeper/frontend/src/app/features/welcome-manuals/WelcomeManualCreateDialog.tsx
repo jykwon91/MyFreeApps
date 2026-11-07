@@ -1,7 +1,6 @@
 import { useForm } from "react-hook-form";
 import { X } from "lucide-react";
-import { FormField, LoadingButton, Panel, PanelTitle } from "@platform/ui";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { FormField, LoadingButton, Panel, PanelTitle, showError, showSuccess } from "@platform/ui";
 import { useCreateWelcomeManualMutation } from "@/shared/store/welcomeManualsApi";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { WelcomeManualCreateFormValues } from "@/shared/types/welcome-manual/welcome-manual-create-form-values";

@@ -1,11 +1,9 @@
-import { AlertBox, LoadingButton } from "@platform/ui";
+import { AlertBox, LoadingButton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
 import Skeleton from "@/shared/components/ui/Skeleton";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   useGetRentReminderPreviewQuery,
   useSendRentReminderNowMutation,
 } from "@mybookkeeper/api-client/store/rentRemindersApi";
-import { extractErrorMessage } from "@platform/ui";
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatDueDate, formatSendMoment } from "@mybookkeeper/api-client/utils/rentReminderFormat";
 import { RENT_REMINDER_CHANNEL_LABEL } from "@mybookkeeper/api-client/constants/rentReminderLabels";

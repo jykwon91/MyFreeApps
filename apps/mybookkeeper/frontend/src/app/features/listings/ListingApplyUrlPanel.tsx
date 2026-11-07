@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Copy, Check, QrCode } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { LoadingButton } from "@platform/ui";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { LoadingButton, showError, showSuccess } from "@platform/ui";
 
 export interface ListingApplyUrlPanelProps {
   slug: string | null;

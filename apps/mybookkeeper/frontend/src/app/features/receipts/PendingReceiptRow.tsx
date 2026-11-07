@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { Button, ConfirmDialog } from "@platform/ui";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { Button, ConfirmDialog, showError, showSuccess } from "@platform/ui";
 import { formatCurrency } from "@/shared/utils/currency";
 import { useDismissReceiptMutation } from "@mybookkeeper/api-client/store/rentReceiptsApi";
 import { RECEIPT_SEND_BLOCKER_MESSAGES } from "@mybookkeeper/api-client/constants/receiptReadinessMessages";

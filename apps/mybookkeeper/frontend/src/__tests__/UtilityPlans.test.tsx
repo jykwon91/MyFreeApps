@@ -17,7 +17,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import UtilityPlans from "@/app/pages/UtilityPlans";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { showError, showSuccess } from "@platform/ui";
 import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
 import { queryStatus } from "@/test/rtk-query-status";
 
@@ -66,7 +66,8 @@ vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(() => ({ data: [{ id: "prop-1", name: "6738 Peerless St" }] })),
 }));
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: vi.fn(),
   showSuccess: vi.fn(),
 }));

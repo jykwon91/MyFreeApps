@@ -16,7 +16,8 @@ vi.mock("react-router-dom", async (importOriginal) => {
   return { ...actual, useNavigate: vi.fn(() => vi.fn()) };
 });
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showSuccess: vi.fn(),
   showError: vi.fn(),
 }));
@@ -175,7 +176,7 @@ describe("LeaseImportDialog", () => {
   });
 
   it("shows error toast when import fails", async () => {
-    const { showError } = await import("@/shared/lib/toast-store");
+    const { showError } = await import("@platform/ui");
 
     mockImportMutation.mockImplementation(() => ({
       unwrap: vi.fn().mockRejectedValue(new Error("500 Internal Server Error")),

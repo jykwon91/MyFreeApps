@@ -1,12 +1,11 @@
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { X } from "lucide-react";
-import { FormField, LoadingButton, Panel, PanelTitle } from "@platform/ui";
+import { FormField, LoadingButton, Panel, PanelTitle, showError, showSuccess } from "@platform/ui";
 import {
   VENDOR_CATEGORIES,
   VENDOR_CATEGORY_LABELS,
 } from "@mybookkeeper/api-client/constants/vendorLabels";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   useCreateVendorMutation,
   useUpdateVendorMutation,

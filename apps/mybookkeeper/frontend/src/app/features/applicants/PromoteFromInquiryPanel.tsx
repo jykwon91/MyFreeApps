@@ -1,8 +1,7 @@
 import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-import { Button, FormField, LoadingButton, Panel, PanelCloseButton, PanelTitle } from "@platform/ui";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { Button, FormField, LoadingButton, Panel, PanelCloseButton, PanelTitle, showError, showSuccess } from "@platform/ui";
 import {
   APPLICANT_EMPLOYER_MAX,
   APPLICANT_LEGAL_NAME_MAX,

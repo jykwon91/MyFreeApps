@@ -27,9 +27,10 @@ vi.mock("@mybookkeeper/api-client/store/signedLeasesApi", () => ({
   useUploadSignedLeaseAttachmentMutation: vi.fn(() => [mockUpload, { isLoading: false }]),
 }));
 
-import { showError as showErrorMock, showSuccess as showSuccessMock } from "@/shared/lib/toast-store";
+import { showError as showErrorMock, showSuccess as showSuccessMock } from "@platform/ui";
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: vi.fn(),
   showSuccess: vi.fn(),
 }));

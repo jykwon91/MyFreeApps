@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { showError, showSuccess, ConfirmDialog } from "@platform/ui";
 import {
   useDeleteSignedLeaseAttachmentMutation,
   useUpdateLeaseAttachmentMutation,
@@ -9,7 +9,6 @@ import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease
 import AttachmentViewer from "@/app/features/leases/AttachmentViewer";
 import LeaseAttachmentDropzone from "@/app/features/leases/LeaseAttachmentDropzone";
 import LeaseAttachmentRow from "@/app/features/leases/LeaseAttachmentRow";
-import { ConfirmDialog } from "@platform/ui";
 import { attachmentBacksExtension } from "./attachmentBacksExtension";
 
 export interface LeaseAttachmentsSectionProps {

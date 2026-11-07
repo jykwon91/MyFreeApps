@@ -9,7 +9,7 @@ import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import { inferKindFromFilename, inferKindsForFiles } from "@/shared/lib/infer-attachment-kind";
 import LeaseAttachmentsSection from "@/app/features/leases/LeaseAttachmentsSection";
-import { showError } from "@/shared/lib/toast-store";
+import { showError } from "@platform/ui";
 import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
 
 // ---------------------------------------------------------------------------
@@ -82,7 +82,8 @@ vi.mock("@mybookkeeper/api-client/store/signedLeasesApi", () => ({
 }));
 
 // Suppress toast errors in tests.
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: vi.fn(),
   showSuccess: vi.fn(),
 }));

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { showError } from "@/shared/lib/toast-store";
+import { showError } from "@platform/ui";
 import { useGetScreeningProvidersQuery, useLazyGetScreeningRedirectQuery } from "@mybookkeeper/api-client/store/screeningApi";
 import { resolveDetailLoadMode } from "@/shared/lib/detail-load-mode";
 import ScreeningProviderCard from "./ScreeningProviderCard";

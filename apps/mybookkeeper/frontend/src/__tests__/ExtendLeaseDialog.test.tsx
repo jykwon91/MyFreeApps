@@ -13,13 +13,14 @@ vi.mock("@mybookkeeper/api-client/store/signedLeasesApi", () => ({
   ]),
 }));
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showSuccess: vi.fn(),
   showError: vi.fn(),
 }));
 
 import { useExtendSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
-import { showSuccess, showError } from "@/shared/lib/toast-store";
+import { showSuccess, showError } from "@platform/ui";
 
 function renderDialog(
   onClose = vi.fn(),

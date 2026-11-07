@@ -9,7 +9,7 @@ import documentUploadReducer from "@/shared/store/documentUploadSlice";
 import organizationReducer from "@/shared/store/organizationSlice";
 import DocumentUploadZone from "@/app/features/documents/DocumentUploadZone";
 import { useGetBatchStatusQuery, useGetDocumentsQuery, useGetSingleUploadStatusQuery } from "@mybookkeeper/api-client/store/documentsApi";
-import { showError } from "@/shared/lib/toast-store";
+import { showError } from "@platform/ui";
 import { DOCUMENT_UPLOAD_MESSAGES } from "@/shared/lib/document-upload-messages";
 import type { DocumentStatus } from "@mybookkeeper/api-client/types/document/DocumentStatus";
 
@@ -29,7 +29,10 @@ vi.mock("@mybookkeeper/api-client/store/documentsApi", () => ({
   useCancelBatchMutation: vi.fn(() => [mockCancelBatch, { isLoading: false }]),
 }));
 
-vi.mock("@/shared/lib/toast-store", () => ({ showError: vi.fn() }));
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
+  showError: vi.fn(),
+}));
 
 function buildTestStore(preloadedState?: Partial<RootState>) {
   return configureStore({

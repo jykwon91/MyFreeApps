@@ -73,7 +73,8 @@ vi.mock("@mybookkeeper/api-client/store/integrationsApi", () => ({
 
 const showError = vi.fn();
 const showSuccess = vi.fn();
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: (msg: string) => showError(msg),
   showSuccess: (msg: string) => showSuccess(msg),
   subscribe: vi.fn(() => () => {}),

@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { showError, showSuccess } from "@platform/ui";
 import { useUpdateSectionMutation } from "@/shared/store/welcomeManualsApi";
 import type { SectionEditorValues } from "@/shared/types/welcome-manual/section-editor-values";
 import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";

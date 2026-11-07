@@ -19,7 +19,8 @@ vi.mock("@/shared/lib/auth", () => ({
   logout: vi.fn(),
 }));
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: vi.fn(),
   showSuccess: vi.fn(),
 }));
@@ -123,7 +124,7 @@ describe("DeleteAccountModal — form interaction", () => {
   });
 
   it("shows error toast when deletion fails", async () => {
-    const { showError } = await import("@/shared/lib/toast-store");
+    const { showError } = await import("@platform/ui");
     const user = userEvent.setup();
     mockDeleteAccount.mockReturnValue({
       unwrap: vi.fn().mockRejectedValue("Incorrect password"),

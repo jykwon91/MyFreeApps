@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { showError, showSuccess } from "@platform/ui";
 import api from "@/shared/lib/api";
 import { USER_NAME_INPUT_MAX_LENGTH } from "@/shared/lib/constants";
 

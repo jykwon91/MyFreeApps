@@ -21,7 +21,8 @@ import type { WelcomeManualSendResponse } from "@/shared/types/welcome-manual/we
 const emailMutationMock = vi.fn();
 const showErrorMock = vi.fn();
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: (msg: string) => showErrorMock(msg),
   showSuccess: vi.fn(),
 }));

@@ -17,7 +17,7 @@ import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
 import { baseApi } from "@/shared/store/baseApi";
 import * as calendarApi from "@/shared/store/calendarApi";
-import * as toastStore from "@/shared/lib/toast-store";
+import * as toastStore from "@platform/ui";
 import CalendarEventDetail from "@/app/features/calendar/CalendarEventDetail";
 import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 import type { ListingBlackoutAttachment } from "@/shared/types/listing/listing-blackout-attachment";

@@ -55,7 +55,8 @@ vi.mock("@/shared/hooks/useOrgRole", () => ({
   useCanWrite: vi.fn(() => true),
 }));
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showSuccess: vi.fn(),
   showError: vi.fn(),
 }));

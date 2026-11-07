@@ -12,7 +12,8 @@ vi.mock("@mybookkeeper/api-client/store/screeningApi", () => ({
 
 const showErrorMock = vi.fn();
 const showSuccessMock = vi.fn();
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: (m: string) => showErrorMock(m),
   showSuccess: (m: string) => showSuccessMock(m),
 }));

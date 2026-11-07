@@ -15,12 +15,13 @@ vi.mock("@mybookkeeper/api-client/store/rentLedgerApi", () => ({
   useDeleteRentScheduleMutation: () => [mockRemove, { isLoading: false }],
 }));
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showSuccess: vi.fn(),
   showError: vi.fn(),
 }));
 
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { showError, showSuccess } from "@platform/ui";
 
 const EXISTING: RentSchedule = {
   id: "sch-1",

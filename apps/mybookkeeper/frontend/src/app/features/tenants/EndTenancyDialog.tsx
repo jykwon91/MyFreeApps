@@ -1,6 +1,5 @@
 import { useRef, useState } from "react";
-import { Button, LoadingButton } from "@platform/ui";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
 import { TENANCY_END_REASON_MAX_LENGTH } from "@mybookkeeper/api-client/constants/tenancy";
 import { useEndTenancyMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 

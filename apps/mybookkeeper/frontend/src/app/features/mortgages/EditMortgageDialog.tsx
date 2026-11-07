@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { Button, ConfirmDialog, LoadingButton } from "@platform/ui";
+import { Button, ConfirmDialog, LoadingButton, showError, showSuccess } from "@platform/ui";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import {
   mortgageToFormValues,
   toMortgagePayload,
 } from "@/shared/lib/mortgage-form";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   useDeleteMortgageMutation,
   useUpdateMortgageMutation,

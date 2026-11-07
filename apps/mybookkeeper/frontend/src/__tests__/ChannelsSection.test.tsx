@@ -10,7 +10,8 @@ import { queryStatus } from "@/test/rtk-query-status";
 const showSuccessMock = vi.fn();
 const showErrorMock = vi.fn();
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: (msg: string) => showErrorMock(msg),
   showSuccess: (msg: string) => showSuccessMock(msg),
 }));

@@ -16,9 +16,7 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { Upload } from "lucide-react";
-import { LoadingButton } from "@platform/ui";
-import { ConfirmDialog } from "@platform/ui";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { LoadingButton, ConfirmDialog, showError, showSuccess } from "@platform/ui";
 import {
   useDeleteListingPhotoMutation,
   useUpdateListingPhotoMutation,

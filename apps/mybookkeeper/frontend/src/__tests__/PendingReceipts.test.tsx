@@ -19,7 +19,8 @@ vi.mock("@/app/features/receipts/SendReceiptDialog", () => ({
   ),
 }));
 
-vi.mock("@/shared/lib/toast-store", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showSuccess: vi.fn(),
   showError: vi.fn(),
 }));

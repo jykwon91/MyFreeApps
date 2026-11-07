@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { showError, showSuccess, extractErrorMessage } from "@platform/ui";
 import {
   useCreateRentScheduleMutation,
   useDeleteRentScheduleMutation,
   useUpdateRentScheduleMutation,
 } from "@mybookkeeper/api-client/store/rentLedgerApi";
-import { extractErrorMessage } from "@platform/ui";
 import type { RentCadence } from "@mybookkeeper/api-client/types/rent/rent-cadence";
 import type { RentSchedule } from "@mybookkeeper/api-client/types/rent/rent-schedule";
 
