@@ -2,13 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import AlertBox from "@/shared/components/ui/AlertBox";
-import { LoadingButton } from "@platform/ui";
 import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import LeaseTemplateUploadDialog from "@/app/features/leases/LeaseTemplateUploadDialog";
 import { useLeaseTemplatesListMode } from "@/app/features/leases/useLeaseTemplatesListMode";
 import LeaseTemplatesListBody from "@/app/features/leases/LeaseTemplatesListBody";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 export default function LeaseTemplates() {
   const canWrite = useCanWrite();
@@ -41,18 +40,7 @@ export default function LeaseTemplates() {
       />
 
       {isError ? (
-        <AlertBox variant="error" className="flex items-center justify-between gap-3">
-          <span>I couldn't load your templates. Want me to try again?</span>
-          <LoadingButton
-            variant="secondary"
-            size="sm"
-            isLoading={isFetching}
-            loadingText="Retrying..."
-            onClick={() => refetch()}
-          >
-            Retry
-          </LoadingButton>
-        </AlertBox>
+        <LoadErrorAlert message="I couldn't load your templates. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
       <LeaseTemplatesListBody mode={mode} templates={templates} />

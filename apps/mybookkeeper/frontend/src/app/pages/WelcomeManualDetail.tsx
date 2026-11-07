@@ -12,7 +12,6 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import AlertBox from "@/shared/components/ui/AlertBox";
 import Markdown from "@/shared/components/ui/Markdown";
 import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
@@ -39,6 +38,7 @@ import WelcomeManualForm from "@/app/features/welcome-manuals/WelcomeManualForm"
 import WelcomeManualEmailDialog from "@/app/features/welcome-manuals/WelcomeManualEmailDialog";
 import DeleteWelcomeManualModal from "@/app/features/welcome-manuals/DeleteWelcomeManualModal";
 import { useWelcomeManualSectionOrder } from "@/app/features/welcome-manuals/useWelcomeManualSectionOrder";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 export default function WelcomeManualDetail() {
   const { manualId } = useParams<{ manualId: string }>();
@@ -164,18 +164,7 @@ export default function WelcomeManualDetail() {
       </Link>
 
       {isError ? (
-        <AlertBox variant="error" className="flex items-center justify-between gap-3">
-          <span>I couldn't load this welcome manual. Want me to try again?</span>
-          <LoadingButton
-            variant="secondary"
-            size="sm"
-            isLoading={isFetching}
-            loadingText="Retrying..."
-            onClick={() => refetch()}
-          >
-            Retry
-          </LoadingButton>
-        </AlertBox>
+        <LoadErrorAlert message="I couldn't load this welcome manual. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
       {isLoading && !isError ? <WelcomeManualDetailSkeleton /> : null}

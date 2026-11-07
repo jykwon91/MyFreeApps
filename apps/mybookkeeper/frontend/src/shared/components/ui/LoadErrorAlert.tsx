@@ -1,5 +1,4 @@
-import { LoadingButton } from "@platform/ui";
-import AlertBox from "@/shared/components/ui/AlertBox";
+import { AlertBox, LoadingButton } from "@platform/ui";
 
 export interface LoadErrorAlertProps {
   message: string;
@@ -11,7 +10,7 @@ export default function LoadErrorAlert({ message, isRetrying, onRetry }: LoadErr
   return (
     <AlertBox variant="error" className="flex items-center justify-between gap-3">
       <span>{message}</span>
-      <LoadingButton variant="secondary" size="sm" isLoading={isRetrying} loadingText="Retrying..." onClick={onRetry}>
+      <LoadingButton type="button" variant="secondary" size="sm" isLoading={isRetrying} loadingText="Retrying..." onClick={onRetry}>
         Retry
       </LoadingButton>
     </AlertBox>

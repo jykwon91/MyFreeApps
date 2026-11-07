@@ -1,12 +1,11 @@
 import { useMemo, useState } from "react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import AlertBox from "@/shared/components/ui/AlertBox";
-import { LoadingButton } from "@platform/ui";
 import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { APPLICANT_PAGE_SIZE } from "@mybookkeeper/api-client/constants/applicantLabels";
 import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import { useTenantsListMode } from "@/app/features/tenants/useTenantsListMode";
 import TenantsListBody from "@/app/features/tenants/TenantsListBody";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 export default function Tenants() {
   const [includeEnded, setIncludeEnded] = useState(false);
@@ -60,18 +59,7 @@ export default function Tenants() {
       </div>
 
       {isError ? (
-        <AlertBox variant="error" className="flex items-center justify-between gap-3">
-          <span>I couldn't load your tenants. Want me to try again?</span>
-          <LoadingButton
-            variant="secondary"
-            size="sm"
-            isLoading={isFetching}
-            loadingText="Retrying..."
-            onClick={() => refetch()}
-          >
-            Retry
-          </LoadingButton>
-        </AlertBox>
+        <LoadErrorAlert message="I couldn't load your tenants. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
       <TenantsListBody

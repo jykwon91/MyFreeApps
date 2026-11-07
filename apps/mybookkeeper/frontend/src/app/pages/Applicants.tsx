@@ -1,14 +1,13 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import AlertBox from "@/shared/components/ui/AlertBox";
-import { LoadingButton } from "@platform/ui";
 import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { APPLICANT_PAGE_SIZE, APPLICANT_STAGES } from "@mybookkeeper/api-client/constants/applicantLabels";
 import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 import ApplicantStageFilter from "@/app/features/applicants/ApplicantStageFilter";
 import ApplicantsListBody from "@/app/features/applicants/ApplicantsListBody";
 import { useApplicantsListMode } from "@/app/features/applicants/useApplicantsListMode";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 const STAGE_PARAM = "stage";
 
@@ -71,18 +70,7 @@ export default function Applicants() {
       <ApplicantStageFilter value={stage} onChange={handleFilterChange} />
 
       {isError ? (
-        <AlertBox variant="error" className="flex items-center justify-between gap-3">
-          <span>I couldn't load your applicants. Want me to try again?</span>
-          <LoadingButton
-            variant="secondary"
-            size="sm"
-            isLoading={isFetching}
-            loadingText="Retrying..."
-            onClick={() => refetch()}
-          >
-            Retry
-          </LoadingButton>
-        </AlertBox>
+        <LoadErrorAlert message="I couldn't load your applicants. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
       <ApplicantsListBody

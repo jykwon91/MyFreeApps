@@ -1,8 +1,7 @@
-import AlertBox from "@/shared/components/ui/AlertBox";
-import { LoadingButton } from "@platform/ui";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 export interface MultiTemplatePickerProps {
   selectedIds: string[];
@@ -28,18 +27,7 @@ export default function MultiTemplatePicker({
 
   if (isError) {
     return (
-      <AlertBox variant="error" className="flex items-center justify-between gap-3">
-        <span>I couldn't load your templates. Want me to try again?</span>
-        <LoadingButton
-          variant="secondary"
-          size="sm"
-          isLoading={isFetching}
-          loadingText="Retrying..."
-          onClick={() => refetch()}
-        >
-          Retry
-        </LoadingButton>
-      </AlertBox>
+      <LoadErrorAlert message="I couldn't load your templates. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
     );
   }
 

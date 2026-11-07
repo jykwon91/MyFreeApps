@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Button, ConfirmDialog } from "@platform/ui";
-import AlertBox from "@/shared/components/ui/AlertBox";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useGetUtilityPlansQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
@@ -13,6 +12,7 @@ import EditUtilityPlanDialog from "@/app/features/utility/EditUtilityPlanDialog"
 import UtilityPlansListBody from "@/app/features/utility/UtilityPlansListBody";
 import { useUtilityPlansListMode } from "@/app/features/utility/useUtilityPlansListMode";
 import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 /**
  * All-plans view: every utility contract across every property.
@@ -94,16 +94,7 @@ export default function UtilityPlans() {
       />
 
       {isError ? (
-        <AlertBox variant="error" className="flex items-center justify-between gap-3">
-          <span>Couldn't load utility plans.</span>
-          <button
-            type="button"
-            onClick={() => void refetch()}
-            className="text-sm font-medium hover:underline"
-          >
-            {isFetching ? "Retrying..." : "Retry"}
-          </button>
-        </AlertBox>
+        <LoadErrorAlert message="Couldn't load utility plans." isRetrying={isFetching} onRetry={() => void refetch()} />
       ) : null}
 
       <MarketRateBenchmarkSummary onEdit={() => setShowBenchmarkDialog(true)} />

@@ -2,8 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Star, Trash2 } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import AlertBox from "@/shared/components/ui/AlertBox";
-import { Button, LoadingButton } from "@platform/ui";
+import { Button } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   useDeleteVendorMutation,
@@ -18,6 +17,7 @@ import VendorDetailSkeleton from "@/app/features/vendors/VendorDetailSkeleton";
 import VendorForm from "@/app/features/vendors/VendorForm";
 import DeleteVendorModal from "@/app/features/vendors/DeleteVendorModal";
 import { formatHourlyRate } from "@/shared/utils/hourly-rate";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 export default function VendorDetail() {
   const { vendorId } = useParams<{ vendorId: string }>();
@@ -56,18 +56,7 @@ export default function VendorDetail() {
       </Link>
 
       {isError ? (
-        <AlertBox variant="error" className="flex items-center justify-between gap-3">
-          <span>I couldn't find that vendor. Maybe it was removed?</span>
-          <LoadingButton
-            variant="secondary"
-            size="sm"
-            isLoading={isFetching}
-            loadingText="Retrying..."
-            onClick={() => refetch()}
-          >
-            Retry
-          </LoadingButton>
-        </AlertBox>
+        <LoadErrorAlert message="I couldn't find that vendor. Maybe it was removed?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
       {isLoading || !vendor ? (

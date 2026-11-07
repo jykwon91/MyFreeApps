@@ -1,10 +1,9 @@
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useGetInsurancePolicyByIdQuery } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
-import AlertBox from "@/shared/components/ui/AlertBox";
-import { LoadingButton } from "@platform/ui";
 import { useInsurancePolicyDetailMode } from "@/app/features/insurance/useInsurancePolicyDetailMode";
 import InsurancePolicyDetailBody from "@/app/features/insurance/InsurancePolicyDetailBody";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 export default function InsurancePolicyDetail() {
   const { policyId } = useParams<{ policyId: string }>();
@@ -30,18 +29,7 @@ export default function InsurancePolicyDetail() {
       </Link>
 
       {isError ? (
-        <AlertBox variant="error" className="flex items-center justify-between gap-3">
-          <span>I couldn't load this policy. Want me to try again?</span>
-          <LoadingButton
-            variant="secondary"
-            size="sm"
-            isLoading={isFetching}
-            loadingText="Retrying..."
-            onClick={() => refetch()}
-          >
-            Retry
-          </LoadingButton>
-        </AlertBox>
+        <LoadErrorAlert message="I couldn't load this policy. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
       <InsurancePolicyDetailBody mode={mode} policy={policy} />

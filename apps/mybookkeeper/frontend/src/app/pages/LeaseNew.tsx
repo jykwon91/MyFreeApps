@@ -2,8 +2,6 @@ import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import AlertBox from "@/shared/components/ui/AlertBox";
-import { LoadingButton } from "@platform/ui";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
@@ -12,6 +10,7 @@ import ApplicantPicker from "@/app/features/leases/ApplicantPicker";
 import LeaseGenerateForm from "@/app/features/leases/LeaseGenerateForm";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 /**
  * /leases/new — wires the full generate-lease flow:
@@ -204,21 +203,7 @@ export default function LeaseNew() {
       {/* ------------------------------------------------------------------ */}
       {isApplicantError && resolvedApplicantId ? (
         <div data-testid="lease-new-applicant-error">
-          <AlertBox
-            variant="error"
-            className="flex items-center justify-between gap-3"
-          >
-            <span>I couldn't load that applicant. Maybe they were removed?</span>
-            <LoadingButton
-              variant="secondary"
-              size="sm"
-              isLoading={isFetchingApplicant}
-              loadingText="Retrying..."
-              onClick={() => refetchApplicant()}
-            >
-              Retry
-            </LoadingButton>
-          </AlertBox>
+          <LoadErrorAlert message="I couldn't load that applicant. Maybe they were removed?" isRetrying={isFetchingApplicant} onRetry={() => refetchApplicant()} />
         </div>
       ) : null}
 

@@ -315,8 +315,7 @@
         "frontend/src/app/features/organizations/",
         "frontend/src/shared/store/organizationSlice.ts",
         "frontend/src/app/pages/Members.tsx",
-        "frontend/src/shared/lib/organization-messages.ts",
-        "frontend/src/shared/components/ui/LoadErrorAlert.tsx"
+        "frontend/src/shared/lib/organization-messages.ts"
       ],
       "backend_tests": [
         "test_organization.py",
@@ -1534,6 +1533,7 @@
     "frontend/src/main.tsx",
     "frontend/src/app/components/Layout.tsx",
     "frontend/src/shared/components/ui/Skeleton.tsx",
+    "frontend/src/shared/components/ui/LoadErrorAlert.tsx",
     "frontend/src/admin/components/AdminLayout.tsx",
     "frontend/vite.config.ts",
     "frontend/vitest.config.ts",
