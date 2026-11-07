@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures/auth";
+import { toasts } from "./fixtures/toasts";
 
 test.describe("Admin Dashboard", () => {
   test.beforeEach(async ({ authedPage: page }) => {
@@ -136,11 +137,12 @@ test.describe("Admin Dashboard", () => {
     await roleSelect.selectOption(newRole);
 
     // Verify success toast appears
-    await expect(page.getByText(/role updated/i).first()).toBeVisible({ timeout: 5000 });
+    await expect(toasts(page).getByText(/role updated/i)).toBeVisible({ timeout: 5000 });
 
     // Restore original role
+    // Both changes say "Role updated", and the first toast may still be showing.
     await roleSelect.selectOption(currentRole);
-    await expect(page.getByText(/role updated/i).first()).toBeVisible({ timeout: 5000 });
+    await expect(toasts(page).getByText(/role updated/i)).toHaveCount(2, { timeout: 5000 });
   });
 });
 
@@ -205,7 +207,7 @@ test.describe("System Health", () => {
       await retryBtn.click();
       // Should show success or error toast
       await expect(
-        page.getByText(/reset \d+ failed document/i).or(page.getByText(/couldn't retry/i))
+        toasts(page).getByText(/reset \d+ failed document/i).or(toasts(page).getByText(/couldn't retry/i))
       ).toBeVisible({ timeout: 10000 });
     }
     // If disabled, that means 0 failed documents — button correctly reflects state

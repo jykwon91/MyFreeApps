@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures/auth";
+import { toasts } from "./fixtures/toasts";
 
 test.describe("Demo Users Management (consolidated page)", () => {
   test.beforeEach(async ({ authedPage: page }) => {
@@ -82,7 +83,7 @@ test.describe("Demo Users Management (consolidated page)", () => {
     await expect(page.getByText(/delete demo user/i)).toBeVisible({ timeout: 5000 });
     await page.getByRole("button", { name: "Delete" }).click();
 
-    await expect(page.getByText(/deleted/i).first()).toBeVisible({ timeout: 10000 });
+    await expect(toasts(page).getByText(/deleted/i)).toBeVisible({ timeout: 10000 });
     await expect(page.getByText(tag)).not.toBeVisible({ timeout: 10000 });
   });
 

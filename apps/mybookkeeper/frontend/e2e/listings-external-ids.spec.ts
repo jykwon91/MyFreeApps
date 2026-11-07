@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
 import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { toasts } from "./fixtures/toasts";
 
 /**
  * PR 1.3 — External-ID linkage UI behavioural E2E.
@@ -248,11 +249,8 @@ test.describe("Listings external-ID linkage (PR 1.3)", () => {
       await page.getByTestId("external-id-form-submit").click();
 
       // Toast surfaces with the conflict message; the form does NOT close.
-      // The toast renders in both the visual toast element and the
-      // aria-live screen-reader announcer; either is enough to confirm
-      // the user got feedback, so we use `.first()`.
       await expect(
-        page.getByText(/already linked to another listing/i).first(),
+        toasts(page).getByText(/already linked to another listing/i),
       ).toBeVisible({ timeout: 10000 });
       await expect(page.getByTestId("external-id-form")).toBeVisible();
 

@@ -1,5 +1,6 @@
 import { test, expect } from "./fixtures/auth";
 import type { Page } from "@playwright/test";
+import { toasts } from "./fixtures/toasts";
 
 const RUN_ID = Date.now();
 
@@ -47,7 +48,7 @@ test.describe("Button loading states", () => {
       await expect(addBtn).toBeDisabled({ timeout: 1000 });
 
       // Wait for success and clean up
-      await expect(page.getByText("Property created").first()).toBeVisible({ timeout: 10000 });
+      await expect(toasts(page).getByText("Property created")).toBeVisible({ timeout: 10000 });
 
       const res = await api.get("/properties");
       const props = await res.json();
@@ -66,7 +67,7 @@ test.describe("Button loading states", () => {
       await page.getByPlaceholder("77023").fill("78701");
       await section.getByRole("button", { name: "Investment Property" }).click();
       await page.getByRole("button", { name: /add property/i }).click();
-      await expect(page.getByText("Property created").first()).toBeVisible({ timeout: 10000 });
+      await expect(toasts(page).getByText("Property created")).toBeVisible({ timeout: 10000 });
       await expect(page.locator("li").filter({ hasText: name })).toBeVisible({ timeout: 10000 });
 
       // Delay the DELETE

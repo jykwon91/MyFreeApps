@@ -1,6 +1,7 @@
 import { test, expect } from "./fixtures/auth";
 import { getYear } from "date-fns";
 import { createTransaction, deleteTransaction } from "./fixtures/seed-data";
+import { toasts } from "./fixtures/toasts";
 
 const RUN_ID = Date.now();
 const CURRENT_YEAR = getYear(new Date());
@@ -42,8 +43,7 @@ test.describe("Reconciliation — add and delete 1099 source", () => {
     // Submit
     await page.getByRole("button", { name: /add 1099 source/i }).click();
 
-    // Success toast (use .first() to avoid strict mode violation with sr-only aria-live span)
-    await expect(page.getByText(/1099 source added/i).first()).toBeVisible({ timeout: 10000 });
+    await expect(toasts(page).getByText(/1099 source added/i)).toBeVisible({ timeout: 10000 });
 
     // Should advance to step 2 (Review Sources) automatically — the table or empty state card appears
     await expect(
@@ -71,7 +71,7 @@ test.describe("Reconciliation — add and delete 1099 source", () => {
     await page.getByRole("button", { name: /add 1099 source/i }).click();
 
     // No success toast should appear
-    await expect(page.getByText(/1099 source added/i)).not.toBeVisible({ timeout: 2000 });
+    await expect(toasts(page).getByText(/1099 source added/i)).not.toBeVisible({ timeout: 2000 });
   });
 
   test("year selector changes the tax year context", async ({ authedPage: page }) => {

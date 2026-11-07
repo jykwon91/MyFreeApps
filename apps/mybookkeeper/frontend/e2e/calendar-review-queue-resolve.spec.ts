@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { toasts } from "./fixtures/toasts";
 
 /**
  * E2E tests for the calendar review queue Phase 2b: resolve → listing_blackout.
@@ -155,7 +156,7 @@ test.describe("Calendar review queue — Phase 2b resolve creates blackout", () 
       await queueItem.getByTestId("review-queue-confirm-btn").click();
 
       // Assert the success toast appears with a date range.
-      const toast = page.getByText(/Booking added/i);
+      const toast = toasts(page).getByText(/Booking added/i);
       await expect(toast).toBeVisible({ timeout: 8000 });
 
       // The toast should mention both dates.
