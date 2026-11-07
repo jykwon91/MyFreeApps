@@ -20,8 +20,10 @@ export default function Members() {
   // role change keeps the page, and the invite form's input with it. Goes by `currentData`,
   // not `isLoading`: when the active org changes without a cache reset (setOrganizations
   // falls back to another org once the active one is gone), `data` is still the old org's.
-  const waitingForMembers = members.currentData === undefined && members.isFetching;
-  const waitingForInvites = isAdmin && invites.currentData === undefined && invites.isFetching;
+  // A failed load keeps the page too, so its list can say so and offer a retry: RTK Query
+  // holds on to `error` until a load succeeds, retries included.
+  const waitingForMembers = members.currentData === undefined && members.isFetching && !members.error;
+  const waitingForInvites = isAdmin && invites.currentData === undefined && invites.isFetching && !invites.error;
   if (waitingForMembers || waitingForInvites) {
     return (
       <div className="p-6">

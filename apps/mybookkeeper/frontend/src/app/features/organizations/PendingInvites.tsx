@@ -9,6 +9,7 @@ import { extractErrorMessage } from "@platform/ui";
 import { formatDistanceToNow } from "date-fns";
 import { Loader2, X } from "lucide-react";
 import Badge from "@/shared/components/ui/Badge";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { INVITE_STATUS_COLORS } from "@/shared/lib/organization-config";
 import {
   INVITE_MESSAGES,
@@ -23,12 +24,12 @@ export interface PendingInvitesProps {
 
 export default function PendingInvites({ onSuccess, onError }: PendingInvitesProps) {
   const orgId = useActiveOrgId();
-  const { currentData: invites = [] } = useListInvitesQuery(orgId!, { skip: !orgId });
+  const { currentData: invites, error, isFetching, refetch } = useListInvitesQuery(orgId!, { skip: !orgId });
   const [cancelInvite] = useCancelInviteMutation();
   const [cancelling, setCancelling] = useState<ReadonlySet<string>>(new Set());
   const now = new Date();
 
-  const pendingInvites = invites.filter((inv) => inv.status === "pending");
+  const pendingInvites = (invites ?? []).filter((inv) => inv.status === "pending");
 
   async function handleCancel(invite: OrgInvite) {
     if (!orgId || cancelling.has(invite.id)) return;
@@ -53,6 +54,14 @@ export default function PendingInvites({ onSuccess, onError }: PendingInvitesPro
         return next;
       });
     }
+  }
+
+  // Never loaded. On a failure RTK Query has already tried twice: once for the page, and
+  // again when this list mounted and subscribed to the failed query.
+  if (invites === undefined) {
+    return error ? (
+      <LoadErrorAlert message={INVITE_MESSAGES.couldntLoad} isRetrying={isFetching} onRetry={() => void refetch()} />
+    ) : null;
   }
 
   if (pendingInvites.length === 0) {

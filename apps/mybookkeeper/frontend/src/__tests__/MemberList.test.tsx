@@ -176,6 +176,50 @@ describe("MemberList", () => {
     expect(screen.getByText("No members yet.")).toBeInTheDocument();
   });
 
+  it("says the members didn't load, instead of an empty org, and retries", async () => {
+    const refetch = vi.fn();
+    vi.mocked(useListMembersQuery).mockReturnValue({
+      currentData: undefined,
+      error: { status: 500 },
+      isFetching: false,
+      refetch,
+    } as unknown as ReturnType<typeof useListMembersQuery>);
+
+    render(<MemberList onError={onError} onSuccess={onSuccess} />);
+
+    expect(screen.getByText("I couldn't load the members.")).toBeInTheDocument();
+    expect(screen.queryByText("No members yet.")).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps showing the members it has when a later reload fails", () => {
+    vi.mocked(useListMembersQuery).mockReturnValue({
+      currentData: [makeMember({ user_email: "kept@test.com" })],
+      error: { status: 500 },
+      isFetching: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useListMembersQuery>);
+
+    render(<MemberList onError={onError} onSuccess={onSuccess} />);
+
+    expect(screen.getByText("kept@test.com")).toBeInTheDocument();
+    expect(screen.queryByText("I couldn't load the members.")).not.toBeInTheDocument();
+  });
+
+  it("shows the retry is in flight", () => {
+    vi.mocked(useListMembersQuery).mockReturnValue({
+      currentData: undefined,
+      error: { status: 500 },
+      isFetching: true,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useListMembersQuery>);
+
+    render(<MemberList onError={onError} onSuccess={onSuccess} />);
+
+    expect(screen.getByRole("button", { name: /Retrying/ })).toBeDisabled();
+  });
+
   it("never shows another organization's members while this one loads", () => {
     vi.mocked(useListMembersQuery).mockReturnValue({
       data: [makeMember({ user_email: "old-org@test.com" })],

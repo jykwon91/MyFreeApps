@@ -8,11 +8,12 @@ import type { OrgRole } from "@mybookkeeper/api-client/types/organization/OrgRol
 import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
 import Badge from "@/shared/components/ui/Badge";
 import Select from "@/shared/components/ui/Select";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { ConfirmDialog } from "@platform/ui";
 import { ASSIGNABLE_ROLE_OPTIONS } from "@mybookkeeper/api-client/constants/orgRoles";
 import { canManageMember } from "@mybookkeeper/api-client/utils/canManageMember";
 import { ROLE_BADGE_COLORS } from "@/shared/lib/organization-config";
-import { memberRoleLabel, removeMemberDescription } from "@/shared/lib/organization-messages";
+import { MEMBER_LIST_MESSAGES, memberRoleLabel, removeMemberDescription } from "@/shared/lib/organization-messages";
 import MemberRowAction from "@/app/features/organizations/MemberRowAction";
 
 export interface MemberListProps {
@@ -25,7 +26,7 @@ export default function MemberList({ onError, onSuccess }: MemberListProps) {
   const { user } = useCurrentUser();
   const myRole = useOrgRole();
   const isAdmin = useIsOrgAdmin();
-  const { currentData: members = [] } = useListMembersQuery(orgId!, { skip: !orgId });
+  const { currentData: members, error, isFetching, refetch } = useListMembersQuery(orgId!, { skip: !orgId });
   const [updateRole, { isLoading: isUpdatingRole }] = useUpdateMemberRoleMutation();
   const [removeMember, { isLoading: isRemoving }] = useRemoveMemberMutation();
   const [confirmRemove, setConfirmRemove] = useState<OrgMember | null>(null);
@@ -52,8 +53,16 @@ export default function MemberList({ onError, onSuccess }: MemberListProps) {
     }
   }
 
+  // Never loaded. On a failure RTK Query has already tried twice: once for the page, and
+  // again when this list mounted and subscribed to the failed query.
+  if (members === undefined) {
+    return error ? (
+      <LoadErrorAlert message={MEMBER_LIST_MESSAGES.couldntLoad} isRetrying={isFetching} onRetry={() => void refetch()} />
+    ) : null;
+  }
+
   if (members.length === 0) {
-    return <p className="text-sm text-muted-foreground">No members yet.</p>;
+    return <p className="text-sm text-muted-foreground">{MEMBER_LIST_MESSAGES.none}</p>;
   }
 
   return (

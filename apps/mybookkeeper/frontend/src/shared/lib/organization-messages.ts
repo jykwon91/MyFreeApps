@@ -10,8 +10,14 @@ export function removeMemberLabel(name: string): string {
   return `Remove ${name}`;
 }
 
+export const MEMBER_LIST_MESSAGES = {
+  none: "No members yet.",
+  couldntLoad: "I couldn't load the members.",
+} as const;
+
 export const INVITE_MESSAGES = {
   none: "No pending invites.",
+  couldntLoad: "I couldn't load the pending invites.",
   pending: "Pending",
   expired: "Expired",
   inviteGone: "That invite is already gone.",
