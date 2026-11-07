@@ -23,6 +23,19 @@ export function monthLabel(chart: Locator, month: string): Locator {
   return chart.locator(".recharts-xAxis-tick-labels .recharts-cartesian-axis-tick-label").filter({ hasText: month });
 }
 
+/** Drags across a chart from one month's label to another's, as a user picks a range. */
+export async function dragAcrossMonths(page: Page, chart: Locator, from: string, to: string): Promise<void> {
+  await chart.scrollIntoViewIfNeeded();
+  const start = (await monthLabel(chart, from).boundingBox())!;
+  const end = (await monthLabel(chart, to).boundingBox())!;
+  const plot = (await chart.locator(":scope > svg").boundingBox())!;
+  const y = plot.y + plot.height / 2;
+  await page.mouse.move(start.x + start.width / 2, y);
+  await page.mouse.down();
+  await page.mouse.move(end.x + end.width / 2, y, { steps: 5 });
+  await page.mouse.up();
+}
+
 /** The chart's legend entries, in order. */
 export function legend(chart: Locator): Locator {
   return chart.locator(".recharts-legend-item-text");
