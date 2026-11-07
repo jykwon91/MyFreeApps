@@ -15,6 +15,12 @@ export interface GameFeature {
   path: string;
   title: string;
   description: string;
+  /**
+   * Lucide icon name used in the sidebar nav and anywhere icon-driven UI renders
+   * this feature (e.g. a collapsed icon-rail). Injected as a ReactNode at the
+   * component layer — keep this file free of JSX / React imports.
+   */
+  iconName: string;
 }
 
 export interface CompanionGameEntry {
@@ -35,46 +41,55 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
       {
         path: "/wow-forever/map",
         title: "World Map",
+        iconName: "Map",
         description: "The nearest class trainer, flight master, inn or bank for your faction — with step-by-step directions.",
       },
       {
         path: "/wow-forever/professions",
         title: "Professions",
+        iconName: "Hammer",
         description: "Cooking, Fishing, Tailoring and Enchanting: where to train, the fastest route to 300 and a shopping list.",
       },
       {
         path: "/wow-forever/food",
         title: "What should I eat?",
+        iconName: "Utensils",
         description: "The best food to cook for your level, class and what you're doing — leveling, dungeons, raids, PvP or fishing.",
       },
       {
         path: "/wow-forever/gold",
         title: "Making gold",
+        iconName: "Coins",
         description: "How to make gold at your level and with your class — what to gather, what to sell, and what not to do.",
       },
       {
         path: "/wow-forever/auction-house",
         title: "Auction house prices",
+        iconName: "TrendingUp",
         description: "Look up what any item sells for: market value, average sale price and how many sell a day, in the US or Europe.",
       },
       {
         path: "/wow-forever/macros",
         title: "Macros",
+        iconName: "Terminal",
         description: "Hover-cast (mouseover) and other macros to paste into the game, for every class, with names checked against the client.",
       },
       {
         path: "/wow-forever/gear",
         title: "Best gear",
+        iconName: "Trophy",
         description: "The top three items per slot for your class, spec and level — your next upgrades while leveling, then a pre-raid list for 60.",
       },
       {
         path: "/wow-forever/compare",
         title: "Item Compare",
+        iconName: "Scale",
         description: "Paste or screenshot two or more items and see which is better for your class and spec.",
       },
       {
         path: "/wow-forever/suggest",
         title: "Suggest a feature",
+        iconName: "Lightbulb",
         description: "Tell me what's missing, and see what other players asked for — add a \"Me too\" to the ones you want.",
       },
     ],
