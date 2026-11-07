@@ -4,25 +4,11 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { holdRequests } from "./fixtures/hold-requests";
-import { SoloOrg } from "./fixtures/solo-org";
+import { seededOrg } from "./fixtures/seeded-org";
 import { DASHBOARD_SEED as SEED, seedDashboard } from "./fixtures/dashboard-seed";
 import { bars, card, chartIn, dragAcrossMonths, expectSummaryCards, openDashboard } from "./fixtures/dashboard-page";
 
-let solo: SoloOrg | undefined;
-
-test.beforeAll(async ({ playwright }) => {
-  solo = await SoloOrg.create(playwright, "dashboard");
-  await seedDashboard(solo.api);
-});
-
-test.afterAll(async ({ playwright }) => {
-  await solo?.delete(playwright);
-});
-
-function org(): SoloOrg {
-  if (!solo) throw new Error("the dashboard organization was not created");
-  return solo;
-}
+const org = seededOrg("dashboard", seedDashboard);
 
 test.describe("Dashboard", () => {
   test.beforeEach(async ({ page }) => {

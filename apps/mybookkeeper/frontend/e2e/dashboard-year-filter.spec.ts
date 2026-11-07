@@ -5,23 +5,14 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { holdRequests } from "./fixtures/hold-requests";
-import { SoloOrg } from "./fixtures/solo-org";
+import { seededOrg } from "./fixtures/seeded-org";
 import { DASHBOARD_SEED as SEED, seedDashboard } from "./fixtures/dashboard-seed";
 import { PRIOR_YEARS_SEED as PRIOR, seedPriorYears } from "./fixtures/dashboard-prior-years-seed";
 import { chartIn, dragAcrossMonths, expectSummaryCards, openDashboard } from "./fixtures/dashboard-page";
 
 const STORAGE_KEY = "mbk:selectedYear";
 
-let solo: SoloOrg | undefined;
-
-test.beforeAll(async ({ playwright }) => {
-  solo = await SoloOrg.create(playwright, "dashboard-year");
-  await seedPriorYears(solo.api, await seedDashboard(solo.api));
-});
-
-test.afterAll(async ({ playwright }) => {
-  await solo?.delete(playwright);
-});
+const org = seededOrg("dashboard-year", async (api) => seedPriorYears(api, await seedDashboard(api)));
 
 function yearFilter(page: Page) {
   return page.getByTestId("year-filter");
@@ -29,8 +20,7 @@ function yearFilter(page: Page) {
 
 test.describe("Dashboard year filter", () => {
   test.beforeEach(async ({ page }) => {
-    if (!solo) throw new Error("the dashboard organization was not created");
-    await solo.signIn(page);
+    await org().signIn(page);
   });
 
   test("defaults to this year and lists every year with data, newest first", async ({ page }) => {

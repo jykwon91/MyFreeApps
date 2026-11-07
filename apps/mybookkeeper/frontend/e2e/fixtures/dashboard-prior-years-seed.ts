@@ -1,6 +1,7 @@
 import type { APIRequestContext } from "@playwright/test";
-import { DASHBOARD_SEED, seedTransactions } from "./dashboard-seed";
-import type { DashboardPropertyIds } from "./dashboard-property-ids";
+import { DASHBOARD_SEED } from "./dashboard-seed";
+import type { SeedPropertyIds } from "./seed-property-ids";
+import { seedTransactions } from "./seed-transactions";
 
 const YEAR = DASHBOARD_SEED.year;
 
@@ -22,6 +23,6 @@ export const PRIOR_YEARS_SEED = {
   allTimeTotals: { revenue: "$4,500.00", expenses: "$1,350.00", profit: "$3,150.00" },
 } as const;
 
-export function seedPriorYears(api: APIRequestContext, properties: DashboardPropertyIds): Promise<void> {
+export function seedPriorYears(api: APIRequestContext, properties: SeedPropertyIds): Promise<void> {
   return seedTransactions(api, properties, PRIOR_YEARS_SEED.transactions);
 }

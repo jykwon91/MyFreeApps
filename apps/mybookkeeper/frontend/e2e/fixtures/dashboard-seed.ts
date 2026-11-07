@@ -1,7 +1,8 @@
 import type { APIRequestContext } from "@playwright/test";
-import type { DashboardPropertyIds } from "./dashboard-property-ids";
-import type { DashboardSeedRow } from "./dashboard-seed-row";
-import { createApprovedTransaction, createProperty } from "./seed-data";
+import type { SeedPropertyIds } from "./seed-property-ids";
+import type { SeedRow } from "./seed-row";
+import { createProperty } from "./seed-data";
+import { seedTransactions } from "./seed-transactions";
 
 const YEAR = new Date().getFullYear();
 
@@ -42,29 +43,11 @@ export const DASHBOARD_SEED = {
 } as const;
 
 /** Seeds DASHBOARD_SEED; returns the two properties' ids. */
-export async function seedDashboard(api: APIRequestContext): Promise<DashboardPropertyIds> {
-  const ids: DashboardPropertyIds = {
+export async function seedDashboard(api: APIRequestContext): Promise<SeedPropertyIds> {
+  const ids: SeedPropertyIds = {
     north: (await createProperty(api, { name: DASHBOARD_SEED.properties.north })).id,
     south: (await createProperty(api, { name: DASHBOARD_SEED.properties.south })).id,
   };
   await seedTransactions(api, ids, DASHBOARD_SEED.transactions);
   return ids;
-}
-
-/** Creates each row as an approved transaction on its property. */
-export async function seedTransactions(
-  api: APIRequestContext,
-  properties: DashboardPropertyIds,
-  rows: readonly DashboardSeedRow[],
-): Promise<void> {
-  for (const row of rows) {
-    await createApprovedTransaction(api, {
-      property_id: properties[row.property],
-      transaction_date: row.date,
-      transaction_type: row.type,
-      category: row.category,
-      vendor: row.vendor,
-      amount: row.amount,
-    });
-  }
 }
