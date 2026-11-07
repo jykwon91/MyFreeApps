@@ -16,6 +16,7 @@
  *       worker re-runs, then the document reappears in its reprocessed state.
  */
 import { test, expect } from "@playwright/test";
+import { VERSION_INFO } from "./fixtures/mockSession";
 
 const USER_ID = "00000000-0000-0000-0000-000000000001";
 const ORG_ID = "00000000-0000-0000-0000-000000000010";
@@ -67,7 +68,7 @@ async function stubAuthAndOrg(page: import("@playwright/test").Page): Promise<vo
     });
   });
   await page.route("**/api/version", (route) => {
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ version: "test" }) });
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(VERSION_INFO) });
   });
   await page.route("**/api/tax-profile", (route) => {
     route.fulfill({

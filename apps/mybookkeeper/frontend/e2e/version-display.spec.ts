@@ -40,20 +40,4 @@ test.describe("Version display", () => {
     const versionTag = page.locator('[data-testid="version-tag"]');
     await expect(versionTag).toHaveText(`v.${commit}`);
   });
-
-  test("version tag is not shown when commit is unknown", async ({ authedPage: page }) => {
-    // This test verifies the tag exists in normal conditions
-    // The "unknown" case is covered by the unit test
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-
-    const versionTag = page.locator('[data-testid="version-tag"]');
-    const isVisible = await versionTag.isVisible().catch(() => false);
-    if (!isVisible) {
-      test.skip(true, "Version tag not visible in this environment");
-      return;
-    }
-    const text = await versionTag.textContent();
-    expect(text).not.toContain("unknown");
-  });
 });

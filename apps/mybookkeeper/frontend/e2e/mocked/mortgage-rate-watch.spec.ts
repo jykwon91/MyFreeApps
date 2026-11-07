@@ -26,7 +26,7 @@
  *   - A feed outage renders the reason and offers no verdict at all.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { ORG_ID, plantAuth } from "./fixtures/mockSession";
+import { VERSION_INFO, ORG_ID, plantAuth } from "./fixtures/mockSession";
 
 const PROPERTY_ID = "00000000-0000-0000-0000-0000000000e1";
 const BLOCKED_PROPERTY_ID = "00000000-0000-0000-0000-0000000000e2";
@@ -87,7 +87,7 @@ async function stubShell(page: Page): Promise<void> {
   await page.route("**/api/organizations", (route) =>
     route.fulfill(json([{ id: ORG_ID, name: "Test Workspace", role: "owner" }])),
   );
-  await page.route("**/api/version", (route) => route.fulfill(json({ version: "test" })));
+  await page.route("**/api/version", (route) => route.fulfill(json(VERSION_INFO)));
   await page.route("**/api/tax-profile", (route) =>
     route.fulfill(
       json({

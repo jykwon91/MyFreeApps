@@ -13,7 +13,7 @@
  *   - No horizontal scroll on either page across mobile / tablet / desktop.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { ORG_ID, plantAuth } from "./fixtures/mockSession";
+import { VERSION_INFO, ORG_ID, plantAuth } from "./fixtures/mockSession";
 
 const MANUAL_ID = "00000000-0000-0000-0000-0000000000a1";
 
@@ -41,7 +41,7 @@ async function stubShell(page: Page): Promise<void> {
     }),
   );
   await page.route("**/api/version", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ version: "test" }) }),
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(VERSION_INFO) }),
   );
   await page.route("**/api/tax-profile", (route) =>
     route.fulfill({

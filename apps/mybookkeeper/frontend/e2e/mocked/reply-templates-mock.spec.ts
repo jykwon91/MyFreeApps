@@ -18,7 +18,7 @@
  *     no horizontal overflow at mobile / tablet / desktop widths.
  */
 import { test, expect, type Page, type Request } from "@playwright/test";
-import { ORG_ID, plantAuth } from "./fixtures/mockSession";
+import { VERSION_INFO, ORG_ID, plantAuth } from "./fixtures/mockSession";
 import { json } from "./fixtures/mockResponse";
 
 interface FakeTemplate {
@@ -61,7 +61,7 @@ async function stubShell(page: Page, orgRole = "owner"): Promise<void> {
   await page.route("**/api/organizations", (route) =>
     route.fulfill(json([{ id: ORG_ID, name: "Test Workspace", role: orgRole, org_role: orgRole }])),
   );
-  await page.route("**/api/version", (route) => route.fulfill(json({ version: "test" })));
+  await page.route("**/api/version", (route) => route.fulfill(json(VERSION_INFO)));
   await page.route("**/api/tax-profile", (route) =>
     route.fulfill(json({ onboarding_completed: true, tax_situations: [], filing_status: null, dependents_count: 0 })),
   );
