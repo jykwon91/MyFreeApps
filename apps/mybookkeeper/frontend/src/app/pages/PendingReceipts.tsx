@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
+import { AlertBox } from "@platform/ui";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import EmptyState from "@/shared/components/ui/EmptyState";
-import AlertBox from "@/shared/components/ui/AlertBox";
 import { useGetPendingReceiptsQuery } from "@mybookkeeper/api-client/store/rentReceiptsApi";
 import { RECEIPT_GMAIL_STATE_MESSAGES } from "@mybookkeeper/api-client/constants/receiptReadinessMessages";
 import PendingReceiptRow from "@/app/features/receipts/PendingReceiptRow";

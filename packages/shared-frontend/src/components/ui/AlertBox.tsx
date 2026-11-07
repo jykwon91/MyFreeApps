@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-type AlertVariant = "info" | "warning" | "error" | "success";
+export type AlertVariant = "info" | "warning" | "error" | "success";
 
 interface AlertBoxProps {
   variant: AlertVariant;

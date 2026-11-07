@@ -1,6 +1,6 @@
+import { AlertBox } from "@platform/ui";
 import type { ReplySendFailure } from "@mybookkeeper/api-client/types/inquiry/reply-send-failure";
 import { replyMightHaveSent } from "@mybookkeeper/api-client/utils/replyMightHaveSent";
-import AlertBox from "@/shared/components/ui/AlertBox";
 import { INQUIRY_MESSAGES, REPLY_SEND_FAILURE_WORDS, replySentFromOtherGmailWords } from "@/shared/lib/inquiry-messages";
 
 export interface InquiryReplySendNoticeProps {

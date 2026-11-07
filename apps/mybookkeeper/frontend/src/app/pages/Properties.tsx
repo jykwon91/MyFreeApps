@@ -8,13 +8,12 @@ import {
 } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { PropertyForm } from "@/shared/types/property/property-form";
 import { useToast } from "@/shared/hooks/useToast";
-import { extractErrorMessage } from "@platform/ui";
+import { extractErrorMessage, AlertBox } from "@platform/ui";
 import { FormField, LoadingButton } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 import TilePicker from "@/shared/components/ui/TilePicker";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { ConfirmDialog } from "@platform/ui";
-import AlertBox from "@/shared/components/ui/AlertBox";
 import type { PropertyClassification } from "@mybookkeeper/api-client/types/property/PropertyClassification";
 import { CLASSIFICATION_OPTIONS } from "@/shared/lib/property-labels";
 import { blankForm, addressComplete, toAddress } from "@/app/features/properties/propertyForm";

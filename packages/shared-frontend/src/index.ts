@@ -44,6 +44,7 @@ export type { CurrentUser } from "@platform/core/types/user/current-user";
 // UI components
 export { default as EmptyState } from "./components/ui/EmptyState";
 export { default as AlertBox } from "./components/ui/AlertBox";
+export type { AlertVariant } from "./components/ui/AlertBox";
 export { default as Button } from "./components/ui/Button";
 export { default as LoadingButton } from "./components/ui/LoadingButton";
 export { default as Skeleton } from "./components/ui/Skeleton";

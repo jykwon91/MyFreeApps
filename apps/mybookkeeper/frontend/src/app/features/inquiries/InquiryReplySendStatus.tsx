@@ -1,5 +1,5 @@
+import { AlertBox } from "@platform/ui";
 import type { ReplySendFailure } from "@mybookkeeper/api-client/types/inquiry/reply-send-failure";
-import AlertBox from "@/shared/components/ui/AlertBox";
 import { INQUIRY_MESSAGES } from "@/shared/lib/inquiry-messages";
 import InquiryReplySendNotice from "./InquiryReplySendNotice";
 

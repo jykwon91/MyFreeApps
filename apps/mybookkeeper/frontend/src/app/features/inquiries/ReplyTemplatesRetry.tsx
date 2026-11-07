@@ -1,5 +1,4 @@
-import { LoadingButton } from "@platform/ui";
-import AlertBox from "@/shared/components/ui/AlertBox";
+import { LoadingButton, AlertBox } from "@platform/ui";
 import { REPLY_TEMPLATE_MESSAGES } from "@/shared/lib/reply-template-messages";
 import type { ReplyTemplatesRetryAnnounce } from "@/shared/types/inquiry/reply-templates-retry-announce";
 
