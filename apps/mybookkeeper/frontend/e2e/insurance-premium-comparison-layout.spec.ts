@@ -1,5 +1,6 @@
-import { test, expect, type APIRequestContext } from "./fixtures/auth";
-import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { createProperty } from "./fixtures/seed-data";
+import { seededOrg } from "./fixtures/seeded-org";
 import { localDateOffset } from "./fixtures/local-today";
 
 /**
@@ -14,10 +15,10 @@ import { localDateOffset } from "./fixtures/local-today";
  *      horizontally at mobile / tablet / desktop widths.
  *   3. The dialog's close control meets the 44px touch-target minimum.
  *
- * The benchmark is a singleton per organization and this account is shared with
- * the sibling insurance specs, so this file runs serially and removes the
- * benchmark on the way out — two tests upserting the same row concurrently
- * would race on the unique index.
+ * The benchmark is a singleton per organization, so the file has an
+ * organization of its own and runs its tests in order: two tests upserting the
+ * same row concurrently would race on the unique index. Deleting the
+ * organization afterwards removes everything they seeded.
  */
 
 /** Matches the placeholder row count in ``InsurancePremiumComparisonCardSkeleton``. */
@@ -63,7 +64,7 @@ async function seedBenchmark(api: APIRequestContext, source: string): Promise<vo
 }
 
 async function hasHorizontalOverflow(
-  page: import("@playwright/test").Page,
+  page: Page,
 ): Promise<boolean> {
   return page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
@@ -73,148 +74,125 @@ async function hasHorizontalOverflow(
 test.describe.configure({ mode: "serial" });
 
 test.describe("Insurance premium comparison layout", () => {
-  test("skeleton row count and shape match the loaded card", async ({
-    authedPage: page,
-    api,
-  }) => {
+  const org = seededOrg("insurance-premium-layout");
+
+  test("skeleton row count and shape match the loaded card", async ({ page }) => {
+    const { api } = org();
+    await org().signIn(page);
     const runId = Date.now();
-    let propertyId: string | null = null;
-    let policyId: string | null = null;
-    let benchmarkRecorded = false;
 
-    try {
-      const property = await createProperty(api, {
-        name: `E2E Premium Layout ${runId}`,
-      });
-      propertyId = property.id;
-      policyId = await seedPolicy(api, propertyId, `E2E Premium Layout Policy ${runId}`);
-      await seedBenchmark(api, `E2E premium layout ${runId}`);
-      benchmarkRecorded = true;
+    const property = await createProperty(api, {
+      name: `E2E Premium Layout ${runId}`,
+    });
+    const propertyId = property.id;
+    const policyId = await seedPolicy(api, propertyId, `E2E Premium Layout Policy ${runId}`);
+    await seedBenchmark(api, `E2E premium layout ${runId}`);
 
-      // Hold the comparison response long enough to observe the skeleton. The
-      // glob is exact so the sibling `/insurance-policies` list call is
-      // untouched.
-      await page.route("**/api/insurance-policies/premium-comparison", async (route) => {
-        await new Promise((r) => setTimeout(r, 1500));
-        await route.continue();
-      });
+    // Hold the comparison response long enough to observe the skeleton. The
+    // glob is exact so the sibling `/insurance-policies` list call is
+    // untouched.
+    await page.route("**/api/insurance-policies/premium-comparison", async (route) => {
+      await new Promise((r) => setTimeout(r, 1500));
+      await route.continue();
+    });
 
-      const navPromise = page.goto("/");
+    const navPromise = page.goto("/");
 
-      const skeleton = page.getByTestId("insurance-premium-comparison-card-loading");
-      await expect(skeleton).toBeVisible({ timeout: 15000 });
-      await expect(skeleton.locator("ul > li")).toHaveCount(SKELETON_ROW_COUNT);
-      // Each placeholder row reserves exactly one gap-pill slot, like a real row.
-      await expect(skeleton.locator(".rounded-full")).toHaveCount(SKELETON_ROW_COUNT);
+    const skeleton = page.getByTestId("insurance-premium-comparison-card-loading");
+    await expect(skeleton).toBeVisible({ timeout: 15000 });
+    await expect(skeleton.locator("ul > li")).toHaveCount(SKELETON_ROW_COUNT);
+    // Each placeholder row reserves exactly one gap-pill slot, like a real row.
+    await expect(skeleton.locator(".rounded-full")).toHaveCount(SKELETON_ROW_COUNT);
 
-      await navPromise;
+    await navPromise;
 
-      await expect(page.getByTestId("insurance-premium-comparison-card")).toBeVisible({
-        timeout: 20000,
-      });
-      await expect(
-        page.getByTestId(`insurance-premium-comparison-${policyId}`),
-      ).toBeVisible();
-      // One gap pill per row, loaded and loading alike — that 1:1 ratio is the
-      // shape the skeleton promises, and it keeps the right-hand column from
-      // jumping when the data lands. Counted rather than compared to a fixed
-      // number because the account is shared with the sibling insurance specs.
-      // Scoped to the above-market list specifically: the card also renders a
-      // "not checked" list, whose rows carry no gap pill by design.
-      const loadedRows = page.locator(
-        '[data-testid="insurance-premium-comparison-above-list"] > li',
-      );
-      const loadedCount = await loadedRows.count();
-      expect(loadedCount).toBeGreaterThanOrEqual(1);
-      await expect(
-        page.locator('[data-testid^="insurance-premium-comparison-gap-"]'),
-      ).toHaveCount(loadedCount);
-    } finally {
-      if (benchmarkRecorded) await api.delete(BENCHMARK_URL).catch(() => {});
-      if (policyId) await api.delete(`/insurance-policies/${policyId}`).catch(() => {});
-      if (propertyId) await deleteProperty(api, propertyId);
-    }
+    await expect(page.getByTestId("insurance-premium-comparison-card")).toBeVisible({
+      timeout: 20000,
+    });
+    await expect(
+      page.getByTestId(`insurance-premium-comparison-${policyId}`),
+    ).toBeVisible();
+    // One gap pill per row, loaded and loading alike — that 1:1 ratio is the
+    // shape the skeleton promises, and it keeps the right-hand column from
+    // jumping when the data lands. Scoped to the above-market list
+    // specifically: the card also renders a "not checked" list, whose rows
+    // carry no gap pill by design.
+    await expect(
+      page.locator('[data-testid="insurance-premium-comparison-above-list"] > li'),
+    ).toHaveCount(1);
+    await expect(
+      page.locator('[data-testid^="insurance-premium-comparison-gap-"]'),
+    ).toHaveCount(1);
   });
 
-  test("the card and dialog fit every viewport and keep 44px touch targets", async ({
-    authedPage: page,
-    api,
-  }) => {
+  test("the card and dialog fit every viewport and keep 44px touch targets", async ({ page }) => {
+    const { api } = org();
+    await org().signIn(page);
     const runId = Date.now();
-    let propertyId: string | null = null;
-    let policyId: string | null = null;
-    let benchmarkRecorded = false;
 
-    try {
-      const property = await createProperty(api, {
-        name: `E2E Wide Premium Property Name That Could Overflow ${runId}`,
-      });
-      propertyId = property.id;
-      policyId = await seedPolicy(
-        api,
-        propertyId,
-        `E2E Premium Policy With A Deliberately Long Name ${runId}`,
-      );
-      await seedBenchmark(
-        api,
-        `E2E a deliberately long provenance string for overflow ${runId}`,
-      );
-      benchmarkRecorded = true;
+    const property = await createProperty(api, {
+      name: `E2E Wide Premium Property Name That Could Overflow ${runId}`,
+    });
+    const propertyId = property.id;
+    const policyId = await seedPolicy(
+      api,
+      propertyId,
+      `E2E Premium Policy With A Deliberately Long Name ${runId}`,
+    );
+    await seedBenchmark(
+      api,
+      `E2E a deliberately long provenance string for overflow ${runId}`,
+    );
 
-      for (const size of [
-        { width: 375, height: 800 },
-        { width: 768, height: 900 },
-        { width: 1440, height: 900 },
-      ]) {
-        await page.setViewportSize(size);
-        await page.goto("/");
-        await expect(
-          page.getByTestId(`insurance-premium-comparison-${policyId}`),
-        ).toBeVisible({ timeout: 20000 });
-        expect(
-          await hasHorizontalOverflow(page),
-          `dashboard overflow at ${size.width}px`,
-        ).toBe(false);
+    for (const size of [
+      { width: 375, height: 800 },
+      { width: 768, height: 900 },
+      { width: 1440, height: 900 },
+    ]) {
+      await page.setViewportSize(size);
+      await page.goto("/");
+      await expect(
+        page.getByTestId(`insurance-premium-comparison-${policyId}`),
+      ).toBeVisible({ timeout: 20000 });
+      expect(
+        await hasHorizontalOverflow(page),
+        `dashboard overflow at ${size.width}px`,
+      ).toBe(false);
 
-        await page.goto("/insurance-policies");
-        await expect(page.getByTestId("insurance-benchmark-summary")).toBeVisible({
-          timeout: 15000,
-        });
-        expect(
-          await hasHorizontalOverflow(page),
-          `policies page overflow at ${size.width}px`,
-        ).toBe(false);
-      }
-
-      // The dialog is the tightest layout — a modal on a 375px viewport, and
-      // the only place two currency fields sit side by side.
-      await page.setViewportSize({ width: 375, height: 800 });
       await page.goto("/insurance-policies");
-      await page.getByTestId("insurance-benchmark-summary-edit").click();
-      await expect(page.getByTestId("insurance-benchmark-dialog")).toBeVisible();
-      expect(await hasHorizontalOverflow(page), "dialog overflow at 375px").toBe(false);
-
-      // Both figures must stay tappable, not just visible.
-      for (const field of [
-        "insurance-benchmark-premium",
-        "insurance-benchmark-coverage",
-      ]) {
-        const box = await page.getByTestId(field).boundingBox();
-        expect(box, `${field} has no box`).not.toBeNull();
-        expect(box!.height, `${field} height`).toBeGreaterThanOrEqual(44);
-      }
-
-      const close = page
-        .getByTestId("insurance-benchmark-dialog")
-        .getByRole("button", { name: "Close" });
-      const box = await close.boundingBox();
-      expect(box, "close control has no box").not.toBeNull();
-      expect(box!.width, "close width").toBeGreaterThanOrEqual(44);
-      expect(box!.height, "close height").toBeGreaterThanOrEqual(44);
-    } finally {
-      if (benchmarkRecorded) await api.delete(BENCHMARK_URL).catch(() => {});
-      if (policyId) await api.delete(`/insurance-policies/${policyId}`).catch(() => {});
-      if (propertyId) await deleteProperty(api, propertyId);
+      await expect(page.getByTestId("insurance-benchmark-summary")).toBeVisible({
+        timeout: 15000,
+      });
+      expect(
+        await hasHorizontalOverflow(page),
+        `policies page overflow at ${size.width}px`,
+      ).toBe(false);
     }
+
+    // The dialog is the tightest layout — a modal on a 375px viewport, and
+    // the only place two currency fields sit side by side.
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.goto("/insurance-policies");
+    await page.getByTestId("insurance-benchmark-summary-edit").click();
+    await expect(page.getByTestId("insurance-benchmark-dialog")).toBeVisible();
+    expect(await hasHorizontalOverflow(page), "dialog overflow at 375px").toBe(false);
+
+    // Both figures must stay tappable, not just visible.
+    for (const field of [
+      "insurance-benchmark-premium",
+      "insurance-benchmark-coverage",
+    ]) {
+      const box = await page.getByTestId(field).boundingBox();
+      expect(box, `${field} has no box`).not.toBeNull();
+      expect(box!.height, `${field} height`).toBeGreaterThanOrEqual(44);
+    }
+
+    const close = page
+      .getByTestId("insurance-benchmark-dialog")
+      .getByRole("button", { name: "Close" });
+    const box = await close.boundingBox();
+    expect(box, "close control has no box").not.toBeNull();
+    expect(box!.width, "close width").toBeGreaterThanOrEqual(44);
+    expect(box!.height, "close height").toBeGreaterThanOrEqual(44);
   });
 });
