@@ -25,7 +25,8 @@
         "test_signed_lease_seed_routes.py",
         "test_db_admin.py",
         "test_seed_applicant_request.py",
-        "test_seed_lease_template.py"
+        "test_seed_lease_template.py",
+        "test_cleanup_seed_routes.py"
       ],
       "frontend_tests": [
         "UserActivity.test.tsx"
@@ -509,7 +510,8 @@
         "test_review_queue_service.py",
         "test_review_queue_repo.py",
         "test_blocklist_repo.py",
-        "test_on_conflict_targets.py"
+        "test_on_conflict_targets.py",
+        "test_cleanup_seed_routes.py"
       ],
       "frontend_tests": [
         "Calendar.test.tsx",
@@ -1307,7 +1309,8 @@
       "backend_tests": [
         "test_screening.py",
         "test_screening_result_repo.py",
-        "test_input_validation_hardening.py"
+        "test_input_validation_hardening.py",
+        "test_cleanup_seed_routes.py"
       ],
       "frontend_tests": [
         "ScreeningSection.test.tsx",
@@ -1484,7 +1487,8 @@
         "test_transaction_schema.py",
         "test_transaction_service.py",
         "test_vendor_normalization.py",
-        "test_metered_usage_extraction.py"
+        "test_metered_usage_extraction.py",
+        "test_cleanup_seed_routes.py"
       ],
       "frontend_tests": [
         "Transactions.test.tsx",
@@ -1552,7 +1556,8 @@
         "test_attribution_service_airbnb_payout.py",
         "test_attribution_service_payer_alias.py",
         "test_attribution_service_auto_verifies.py",
-        "test_attribution_service_income_guard.py"
+        "test_attribution_service_income_guard.py",
+        "test_cleanup_seed_routes.py"
       ],
       "frontend_tests": [
         "AttributionReviewPanel.test.tsx",

@@ -45,7 +45,8 @@ async function deleteAttributionReview(
   api: APIRequestContext,
   reviewId: string,
 ): Promise<void> {
-  await api.delete(`/test/attribution-review/${reviewId}`).catch(() => {});
+  const res = await api.delete(`/test/attribution-review/${reviewId}`);
+  if (!res.ok()) throw new Error(`deleteAttributionReview failed: ${res.status()} ${await res.text()}`);
 }
 
 async function seedApplicant(

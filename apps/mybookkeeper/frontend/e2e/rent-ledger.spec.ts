@@ -87,7 +87,8 @@ async function cleanUp(
   transactionIds: string[],
 ): Promise<void> {
   for (const id of transactionIds) {
-    await api.delete(`/test/tenant-payments/${id}`).catch(() => {});
+    const res = await api.delete(`/test/tenant-payments/${id}`);
+    if (!res.ok()) throw new Error(`delete tenant payment failed: ${res.status()} ${await res.text()}`);
   }
   if (applicantId) {
     await deleteApplicant(api, applicantId);

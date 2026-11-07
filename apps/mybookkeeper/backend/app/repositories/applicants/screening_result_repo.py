@@ -10,7 +10,7 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
-from sqlalchemy import desc, select, update
+from sqlalchemy import delete, desc, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.applicants.applicant import Applicant
@@ -131,3 +131,26 @@ async def update_status(
     await db.flush()
     await db.refresh(sr)
     return sr
+
+
+async def hard_delete_by_id(
+    db: AsyncSession,
+    *,
+    screening_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> bool:
+    """Hard-delete a screening result whose applicant the caller owns. Returns
+    whether a row was deleted. Test cleanup only.
+    """
+    owned_applicants = select(Applicant.id).where(
+        Applicant.organization_id == organization_id,
+        Applicant.user_id == user_id,
+    )
+    result = await db.execute(
+        delete(ScreeningResult).where(
+            ScreeningResult.id == screening_id,
+            ScreeningResult.applicant_id.in_(owned_applicants),
+        )
+    )
+    return (result.rowcount or 0) > 0
