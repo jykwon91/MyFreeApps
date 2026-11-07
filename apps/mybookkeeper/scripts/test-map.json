@@ -1499,7 +1499,8 @@
         "dashboard-year-filter.spec.ts",
         "reconciliation.spec.ts",
         "mocked/transactions-unsaved-mock.spec.ts",
-        "analytics.spec.ts"
+        "analytics.spec.ts",
+        "tax-return-detail.spec.ts"
       ]
     },
     "attribution": {

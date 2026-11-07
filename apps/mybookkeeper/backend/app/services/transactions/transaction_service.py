@@ -98,6 +98,8 @@ async def create_manual_transaction(
 ) -> Transaction:
     if "tax_year" not in data or data["tax_year"] is None:
         data["tax_year"] = data["transaction_date"].year
+    if data.get("schedule_e_line") is None:
+        data["schedule_e_line"] = CATEGORY_TO_SCHEDULE_E.get(data["category"])
     async with unit_of_work() as db:
         created = await transaction_repo.create_transaction(
             db,
@@ -106,6 +108,8 @@ async def create_manual_transaction(
             is_manual=True,
             **data,
         )
+        if created.schedule_e_line is not None:
+            await tax_return_repo.flag_unfiled_for_recompute(db, ctx.organization_id)
         # Re-fetch with selectinload so FastAPI can serialize source_file_name
         # (a hybrid_property that traverses extraction → document relationships)
         # without hitting a DetachedInstanceError after the session closes.

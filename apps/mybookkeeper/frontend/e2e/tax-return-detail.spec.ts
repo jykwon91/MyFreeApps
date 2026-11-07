@@ -1,177 +1,120 @@
-import { test, expect } from "./fixtures/auth";
+import { expect, test, type APIRequestContext } from "@playwright/test";
+import { seededOrg } from "./fixtures/seeded-org";
+import { createApprovedTransaction, createProperty } from "./fixtures/seed-data";
+import { toasts } from "./fixtures/toasts";
+
+const TAX_YEAR = 2025;
+const RENT = 1800;
+const REPAIRS = 250;
+
+interface ScheduleEInstance {
+  property_id: string | null;
+  fields: { field_id: string; value: number | string | boolean | null }[];
+}
+
+let returnId = "";
+let propertyId = "";
+
+async function seed(api: APIRequestContext): Promise<void> {
+  const property = await createProperty(api, {
+    name: "E2E Duplex",
+    type: "long_term",
+    classification: "investment",
+  });
+  propertyId = property.id;
+  // Entered by hand: the path that once left Schedule E empty.
+  await createApprovedTransaction(api, {
+    property_id: property.id,
+    transaction_type: "income",
+    category: "rental_revenue",
+    amount: RENT.toFixed(2),
+    transaction_date: `${TAX_YEAR}-03-15`,
+    tax_relevant: true,
+    vendor: "E2E Tenant",
+  });
+  await createApprovedTransaction(api, {
+    property_id: property.id,
+    transaction_type: "expense",
+    category: "maintenance",
+    amount: REPAIRS.toFixed(2),
+    transaction_date: `${TAX_YEAR}-04-10`,
+    tax_relevant: true,
+    vendor: "E2E Plumber",
+  });
+  const res = await api.post("/tax-returns", { data: { tax_year: TAX_YEAR } });
+  expect(res.status(), await res.text()).toBe(201);
+  returnId = ((await res.json()) as { id: string }).id;
+}
+
+/** Schedule E line values, keyed by property id; the all-properties total is under "total". */
+async function scheduleE(api: APIRequestContext): Promise<Record<string, Record<string, unknown>>> {
+  const res = await api.get(`/tax-returns/${returnId}/forms/schedule_e`);
+  expect(res.ok(), await res.text()).toBe(true);
+  const { instances } = (await res.json()) as { instances: ScheduleEInstance[] };
+  return Object.fromEntries(instances.map((i) => [
+    i.property_id ?? "total",
+    Object.fromEntries(i.fields.map((f) => [f.field_id, f.value])),
+  ]));
+}
+
+// One return, walked through in order: opened fresh, recomputed, then left.
+test.describe.configure({ mode: "serial" });
 
 test.describe("Tax Return Detail", () => {
-  test("navigating to tax returns page", async ({ authedPage: page }) => {
-    await page.goto("/tax-returns");
-    await expect(page.getByRole("heading", { name: "Tax Returns" })).toBeVisible();
+  const org = seededOrg("tax-return-detail", seed);
 
-    // Click on a tax return card if one exists
-    const card = page.getByText(/^20\d{2}$/).first();
-    if (await card.isVisible({ timeout: 10000 })) {
-      await card.click();
-      // Should navigate to detail page
-      await expect(page).toHaveURL(/\/tax-returns\//);
-    }
+  test("a new return opens from the list and waits for a recompute", async ({ page }) => {
+    await org().signIn(page);
+    await page.goto("/tax-returns");
+    const card = page.getByRole("button", { name: new RegExp(`^${TAX_YEAR}`) });
+    await expect(card).toContainText("Needs recompute");
+    await card.click();
+
+    await expect(page).toHaveURL(`/tax-returns/${returnId}`);
+    await expect(page.getByRole("heading", { name: `${TAX_YEAR} Tax Return` })).toBeVisible();
+    await expect(page.getByText("Needs recompute")).toBeVisible();
+    await expect(page.getByText("No forms yet")).toBeVisible();
+    await expect(page.getByText("I don't see any tax documents linked to this return yet.")).toBeVisible();
+    await expect(page.getByText("All checks passed")).toBeVisible();
+    await expect(page.getByText("I don't have any tax forms to review yet.", { exact: false })).toBeVisible();
   });
 
-  test.describe("With existing tax return", () => {
-    let returnId: string;
+  test("recompute puts hand-entered rent and repairs on Schedule E", async ({ page }) => {
+    await org().signIn(page);
+    // Held until the button has been seen busy, so the check can't race the response.
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    await page.route(`**/api/tax-returns/${returnId}/recompute`, async (route) => {
+      await held;
+      await route.continue();
+    });
+    await page.goto(`/tax-returns/${returnId}`);
 
-    test.beforeEach(async ({ authedPage: page, api }) => {
-      const res = await api.get("/tax-returns");
-      if (!res.ok()) {
-        test.skip(true, "Tax returns API unavailable");
-        return;
-      }
-      const returns = await res.json();
-      if (returns.length === 0) {
-        test.skip(true, "No tax returns exist");
-        return;
-      }
+    await page.getByRole("button", { name: "Recompute" }).click();
+    await expect(page.getByRole("button", { name: "Recomputing..." })).toBeDisabled();
+    release();
 
-      returnId = returns[0].id;
-      await page.goto(`/tax-returns/${returnId}`);
+    await expect(toasts(page).getByText("Recompute complete. I've recalculated everything.")).toBeVisible();
+    await expect(page.getByText("Needs recompute")).toHaveCount(0);
+
+    expect(await scheduleE(org().api)).toEqual({
+      [propertyId]: { line_3: RENT, line_7: REPAIRS, line_20: REPAIRS, line_21: RENT - REPAIRS },
+      total: { line_26: RENT - REPAIRS },
     });
 
-    test("detail page shows return info", async ({ authedPage: page }) => {
-      await expect(page.getByText(/20\d{2}/).first()).toBeVisible({ timeout: 10000 });
-    });
+    const card = page.getByRole("button", { name: /^Schedule E/ });
+    await expect(card).toContainText("2 instances");
+    await card.click();
+    await expect(page).toHaveURL(`/tax-returns/${returnId}?form=schedule_e`);
+    await expect(page.getByRole("row", { name: /Rents received/ })).toContainText("$1,800.00");
+    await expect(page.getByRole("row", { name: /Cleaning and maintenance/ })).toContainText("$250.00");
+  });
 
-    test("detail page shows forms overview", async ({ authedPage: page }) => {
-      const formsHeading = page.getByRole("heading", { name: "Forms" });
-      await expect(formsHeading).toBeVisible({ timeout: 10000 });
-      const formContent = page.getByText(/schedule.*e|form 1040|1099/i).first();
-      const emptyState = page.getByText(/no forms yet/i);
-      const hasForm = await formContent.isVisible({ timeout: 3000 });
-      const hasEmpty = await emptyState.isVisible({ timeout: 3000 });
-      expect(hasForm || hasEmpty).toBe(true);
-    });
-
-    test("recompute button triggers recalculation", async ({ authedPage: page }) => {
-      const recomputeBtn = page.getByRole("button", { name: /recompute/i });
-      const isVisible = await recomputeBtn.isVisible({ timeout: 10000 }).catch(() => false);
-      test.skip(!isVisible, "Recompute button not visible — no tax return data");
-
-      await recomputeBtn.click();
-
-      // Verify feedback: either a success toast, loading state, or updated content
-      await expect(
-        page.getByText(/recomputed|updated|success/i).first()
-          .or(page.getByRole("button", { name: /recomputing/i }))
-          .or(page.getByText(/forms updated/i).first())
-      ).toBeVisible({ timeout: 10000 });
-    });
-
-    test("back button navigates to tax returns list", async ({ authedPage: page }) => {
-      const backBtn = page.getByRole("button", { name: /back/i }).or(page.getByRole("link", { name: /back|tax returns/i }));
-      const isVisible = await backBtn.isVisible({ timeout: 10000 });
-      test.skip(!isVisible, "Back button not found on tax return detail page");
-      await backBtn.click();
-      await expect(page).toHaveURL(/\/tax-returns$/);
-    });
-
-    test("validation panel shows results", async ({ authedPage: page }) => {
-      const validation = page.getByText(/validation|issue|warning/i).first();
-      const isVisible = await validation.isVisible({ timeout: 10000 });
-      test.skip(!isVisible, "No validation panel visible on tax return detail page");
-      await expect(validation).toBeVisible();
-    });
-
-    test("tax advisor panel exists", async ({ authedPage: page }) => {
-      const advisor = page.getByText(/tax advisor|ask|advice/i).first();
-      const advisorBtn = page.getByRole("button", { name: /advisor|ask/i });
-      const advisorVisible = await advisor.isVisible({ timeout: 5000 });
-      const advisorBtnVisible = !advisorVisible && await advisorBtn.isVisible({ timeout: 5000 });
-      test.skip(!advisorVisible && !advisorBtnVisible, "No tax advisor panel or button visible on tax return detail page");
-      if (advisorVisible) {
-        await expect(advisor).toBeVisible();
-      } else {
-        await expect(advisorBtn).toBeVisible();
-      }
-    });
-
-    test("source documents heading is visible", async ({ authedPage: page }) => {
-      const heading = page.getByRole("heading", { name: "Source Documents" });
-      await expect(heading).toBeVisible({ timeout: 10000 });
-    });
-
-    test("source documents section shows received documents or empty state", async ({ authedPage: page, api }) => {
-      // Wait for the section to load past skeleton
-      await expect(
-        page.getByRole("heading", { name: "Source Documents" })
-      ).toBeVisible({ timeout: 10000 });
-
-      // Fetch source documents from the API to know what to expect
-      const res = await api.get(`/tax-returns/${returnId}/source-documents`);
-      if (!res.ok()) {
-        // API might not be available — just verify the section renders
-        return;
-      }
-      const data = await res.json();
-
-      if (data.documents && data.documents.length > 0) {
-        // Should show "Received Documents (N)" header
-        await expect(
-          page.getByText(/received documents/i).first()
-        ).toBeVisible({ timeout: 10000 });
-
-        // Verify the first document's issuer name appears
-        const firstDoc = data.documents[0];
-        if (firstDoc.issuer_name) {
-          await expect(
-            page.getByText(firstDoc.issuer_name).first()
-          ).toBeVisible({ timeout: 5000 });
-        }
-      } else {
-        // Empty state should explain no documents are linked
-        await expect(
-          page.getByText(/don't see any tax documents/i).first()
-        ).toBeVisible({ timeout: 10000 });
-      }
-    });
-
-    test("completeness checklist shows expected document types", async ({ authedPage: page, api }) => {
-      await expect(
-        page.getByRole("heading", { name: "Source Documents" })
-      ).toBeVisible({ timeout: 10000 });
-
-      const res = await api.get(`/tax-returns/${returnId}/source-documents`);
-      test.skip(!res.ok(), "Tax return source documents API unavailable");
-      const data = await res.json();
-
-      if (data.checklist && data.checklist.length > 0) {
-        // Document Checklist header should be visible
-        await expect(
-          page.getByText(/document checklist/i).first()
-        ).toBeVisible({ timeout: 10000 });
-
-        // Should show received/missing counts
-        const receivedCount = data.checklist.filter(
-          (i: { status: string }) => i.status === "received"
-        ).length;
-        const missingCount = data.checklist.filter(
-          (i: { status: string }) => i.status === "missing"
-        ).length;
-        await expect(
-          page.getByText(`${receivedCount} received, ${missingCount} missing`)
-        ).toBeVisible({ timeout: 5000 });
-
-        // Each checklist item should show its expected_from (issuer) if present
-        for (const item of data.checklist.slice(0, 3)) {
-          if (item.expected_from) {
-            await expect(
-              page.getByText(item.expected_from).first()
-            ).toBeVisible({ timeout: 5000 });
-          }
-          // Status badge should show "Received" or "Upload" link
-          if (item.status === "received") {
-            await expect(
-              page.getByText("Received").first()
-            ).toBeVisible({ timeout: 5000 });
-          }
-        }
-      }
-      // If no checklist items, the checklist section simply doesn't render — that's fine
-    });
+  test("back returns to the list", async ({ page }) => {
+    await org().signIn(page);
+    await page.goto(`/tax-returns/${returnId}`);
+    await page.getByRole("button", { name: "Back to Tax Returns" }).click();
+    await expect(page).toHaveURL("/tax-returns");
+    await expect(page.getByRole("button", { name: new RegExp(`^${TAX_YEAR}`) })).not.toContainText("Needs recompute");
   });
 });
