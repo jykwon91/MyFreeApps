@@ -1,4 +1,4 @@
-import AlertBox from "@/shared/components/ui/AlertBox";
+import { AlertBox } from "@platform/ui";
 import RateWatchActionItem from "@/app/features/insurance/RateWatchActionItem";
 import RateWatchMarketList from "@/app/features/insurance/RateWatchMarketList";
 import RateWatchOutlookCard from "@/app/features/insurance/RateWatchOutlookCard";

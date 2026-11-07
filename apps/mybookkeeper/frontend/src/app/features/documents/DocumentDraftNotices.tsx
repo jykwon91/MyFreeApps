@@ -1,5 +1,4 @@
-import AlertBox from "@/shared/components/ui/AlertBox";
-import type { AlertVariant } from "@/shared/components/ui/AlertBox";
+import { AlertBox, type AlertVariant } from "@platform/ui";
 
 /** The three things every draft reports beyond the fields it filled in. */
 export interface DraftNoticeSource {

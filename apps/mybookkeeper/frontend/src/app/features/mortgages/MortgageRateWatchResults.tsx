@@ -1,4 +1,4 @@
-import AlertBox from "@/shared/components/ui/AlertBox";
+import { AlertBox } from "@platform/ui";
 import { formatLoanDate, formatRatePct } from "@mybookkeeper/api-client/utils/mortgageFormat";
 import { buildMortgageRateWatchVerdict } from "@/shared/lib/mortgage-rate-watch-verdict";
 import type { MortgageRateWatch } from "@/shared/types/mortgage/mortgage-rate-watch";

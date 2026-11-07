@@ -1,7 +1,7 @@
 import { useSearchParams } from "react-router-dom";
 import { X } from "lucide-react";
+import { AlertBox } from "@platform/ui";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import AlertBox from "@/shared/components/ui/AlertBox";
 import UtilityTrends from "@/app/features/analytics/UtilityTrends";
 import { useDismissable } from "@/shared/hooks/useDismissable";
 

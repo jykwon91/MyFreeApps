@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { X, Download, Trash2 } from "lucide-react";
-import AlertBox from "@/shared/components/ui/AlertBox";
+import { AlertBox } from "@platform/ui";
 import TwoFactorSetup from "@/app/features/security/TwoFactorSetup";
 import DeleteAccountModal from "@/app/features/security/DeleteAccountModal";
 import DisplayNameSetting from "@/app/features/security/DisplayNameSetting";

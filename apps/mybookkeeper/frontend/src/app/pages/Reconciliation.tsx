@@ -1,10 +1,10 @@
 import { X } from "lucide-react";
+import { AlertBox } from "@platform/ui";
 import { useToast } from "@/shared/hooks/useToast";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { useDismissable } from "@/shared/hooks/useDismissable";
 import ReconciliationWizard from "@/app/features/reconciliation/ReconciliationWizard";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import AlertBox from "@/shared/components/ui/AlertBox";
 
 export default function Reconciliation() {
   const { showError, showSuccess } = useToast();

@@ -8,11 +8,10 @@ import { NON_DEDUCTIBLE_CATEGORIES } from "@mybookkeeper/api-client/constants/ta
 import { useGetTaxSummaryQuery } from "@mybookkeeper/api-client/store/summaryApi";
 import { useToast } from "@/shared/hooks/useToast";
 import Select from "@/shared/components/ui/Select";
-import { Button } from "@platform/ui";
+import { Button, AlertBox } from "@platform/ui";
 import TaxReportSkeleton from "@/app/features/tax/TaxReportSkeleton";
 import Card from "@/shared/components/ui/Card";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import AlertBox from "@/shared/components/ui/AlertBox";
 import { useDismissable } from "@/shared/hooks/useDismissable";
 
 export default function TaxReport() {
