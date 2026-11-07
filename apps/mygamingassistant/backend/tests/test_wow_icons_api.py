@@ -1,7 +1,8 @@
-"""GET /wow/icons/{build}/{fileDataId}.webp — served from object storage, cached for a year.
+"""GET /wow/icons/{build}/{fileDataId}.webp and /wow/satellite/{build}/{uiMapId}.webp —
+served from object storage, cached for a year.
 
-Nothing but a build and a numeric file id may reach a storage key; a missing
-icon is a 404 the browser doesn't keep.
+Nothing but a build and a numeric id may reach a storage key; a missing image
+is a 404 the browser doesn't keep.
 """
 from __future__ import annotations
 
@@ -38,11 +39,13 @@ class _FakeStorage:
 
 @pytest.fixture
 def storage(monkeypatch: pytest.MonkeyPatch) -> _FakeStorage:
-    fake = _FakeStorage({f"wow/{_BUILD}/icons/134829.webp": _WEBP})
+    fake = _FakeStorage({f"wow/{_BUILD}/icons/134829.webp": _WEBP, f"wow/{_BUILD}/satellite/1429.webp": _WEBP})
     monkeypatch.setattr(icon_service, "get_storage", lambda: fake)
     icon_service._cached_download.cache_clear()
+    icon_service._cached_satellite_download.cache_clear()
     yield fake
     icon_service._cached_download.cache_clear()
+    icon_service._cached_satellite_download.cache_clear()
 
 
 @pytest_asyncio.fixture
@@ -97,4 +100,63 @@ async def test_malformed_names_never_reach_storage(
 
 
 def test_icon_key_normalises_the_file_id() -> None:
-    assert icon_service.icon_key(_BUILD, "0134829.webp") == f"wow/{_BUILD}/icons/134829.webp"
+    assert icon_service.asset_key(icon_service.ICONS, _BUILD, "0134829.webp") == f"wow/{_BUILD}/icons/134829.webp"
+
+
+@pytest.mark.parametrize(
+    ("build", "file_name"),
+    [(_BUILD, "1429.webp\n"), (f"{_BUILD}\n", "1429.webp"), (_BUILD, " 1429.webp")],
+)
+def test_trailing_or_leading_junk_makes_no_key(build: str, file_name: str) -> None:
+    assert icon_service.asset_key(icon_service.SATELLITE, build, file_name) is None
+
+
+@pytest.mark.asyncio
+async def test_published_satellite_view_is_webp_cached_for_a_year(http: AsyncClient, storage: _FakeStorage) -> None:
+    response = await http.get(f"/wow/satellite/{_BUILD}/1429.webp")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/webp"
+    assert response.headers["cache-control"] == "public, max-age=31536000, immutable"
+    assert response.content == _WEBP
+    assert storage.reads == [f"wow/{_BUILD}/satellite/1429.webp"]
+
+
+@pytest.mark.asyncio
+async def test_unpublished_satellite_view_is_a_404_not_kept(http: AsyncClient, storage: _FakeStorage) -> None:
+    response = await http.get(f"/wow/satellite/{_BUILD}/1411.webp")
+    assert response.status_code == 404
+    assert response.headers["cache-control"] == "no-store"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("build", "file_name"),
+    [
+        (_BUILD, "1429.png"),
+        (_BUILD, "..%2F..%2Ficons%2F134829.webp"),
+        (_BUILD, "..%2Fsecret.webp"),
+        (_BUILD, "%2E%2E%2F1429.webp"),
+        (_BUILD, "1429.webp%00.png"),
+        (_BUILD, "1429%2F.webp"),
+        (_BUILD, "-1.webp"),
+        (_BUILD, "1234567.webp"),
+        ("..", "1429.webp"),
+        ("1.60.1.70790%2F..", "1429.webp"),
+        ("latest", "1429.webp"),
+    ],
+)
+async def test_malformed_satellite_names_never_reach_storage(
+    http: AsyncClient, storage: _FakeStorage, build: str, file_name: str
+) -> None:
+    response = await http.get(f"/wow/satellite/{build}/{file_name}")
+    assert response.status_code == 404
+    assert storage.reads == []
+
+
+def test_satellite_key_normalises_the_map_id() -> None:
+    assert icon_service.asset_key(icon_service.SATELLITE, _BUILD, "01429.webp") == f"wow/{_BUILD}/satellite/1429.webp"
+
+
+@pytest.mark.parametrize("kind", ["", "maps", "..", "icons/../satellite", "ICONS"])
+def test_only_known_kinds_make_a_key(kind: str) -> None:
+    assert icon_service.asset_key(kind, _BUILD, "1429.webp") is None

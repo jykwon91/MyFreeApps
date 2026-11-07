@@ -72,6 +72,8 @@ def generators(*, art: bool, hotfix_cache: Path) -> list[list[str]]:
         world_map.append("--no-art")
     return [
         world_map,
+        # Reads the World Map's zones.json. Its images are published last, below.
+        ["scripts.wow_satellite.build"],
         ["scripts.wow_food.build"],
         ["scripts.wow_professions.build"],
         ["scripts.wow_gold.build"],
@@ -87,6 +89,8 @@ def generators(*, art: bool, hotfix_cache: Path) -> list[list[str]]:
         ["scripts.wow_gear.build", *cache],
         # The new build's icons must be in R2 before the data naming them ships (needs scripts/.env.r2).
         ["scripts.wow_icons.publish", "--to", "r2"],
+        # Same for the World Map's satellite pictures (satellite.json names the build).
+        ["scripts.wow_satellite.publish", "--to", "r2"],
     ]
 
 

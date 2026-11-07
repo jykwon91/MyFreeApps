@@ -2,6 +2,7 @@ import { memo } from "react";
 import MapMarkGlyph from "@/games/wow-forever/components/worldMap/MapMarkGlyph";
 import MapPinned from "@/games/wow-forever/components/worldMap/MapPinned";
 import { MAP_H, MAP_W } from "@/games/wow-forever/data/worldMap/mapViewer";
+import { SATELLITE_LINE_HALO } from "@/games/wow-forever/data/worldMap/mapStyle";
 import type { MapMarks } from "@/games/wow-forever/types/mapMarks/mapMarks";
 import { routeMarks } from "@/games/wow-forever/worldMap/mapMarks";
 
@@ -42,7 +43,7 @@ function MapMarksLayer({ marks, shared = false, scale }: MapMarksLayerProps) {
             strokeWidth={8 / scale}
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="stroke-black/60"
+            className={`stroke-black/60 ${SATELLITE_LINE_HALO}`}
           />
           <polyline
             data-testid={shared ? "shared-route-line" : "my-route-line"}

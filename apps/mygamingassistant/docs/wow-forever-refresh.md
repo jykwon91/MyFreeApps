@@ -73,6 +73,21 @@ names the build and the pages load icons from it. It needs `scripts/.env.r2`; a
 run without it stops there — publish before the PR merges, or every icon shows its
 placeholder until you do.
 
+The World Map's satellite view works the same way. `scripts.wow_satellite.build`
+(right after the World Map) stitches each zone's and city's picture from the
+client's own minimap tiles (the continent WDTs' MAID chunk, 512 px BLP tiles) into
+a 2004×1336 WebP — the drawn art's frame at twice the size — under the download
+cache (`.../<build>/satellite/`), and writes `data/worldMap/satellite.json` (the
+build + the maps that have one). The images are never committed:
+`scripts.wow_satellite.publish --to r2` uploads them to `wow/{build}/satellite/`
+(skipping keys already there; `--dry-run` lists what it would send), and the API
+serves them at `/api/wow/satellite/{build}/{uiMapId}.webp`. A refresh always needs
+both, because the manifest names the new build: until they're published the
+toggle's Satellite falls back to the drawn map with "Try again". The first build on
+a new client downloads ~1,800 tiles (a few minutes; cached per build). Rebuild one
+map alone with `python -m scripts.wow_satellite.build <uiMapId> ...` (that run
+leaves the manifest alone).
+
 Add `--art` when a post or the report mentions new or changed maps. It re-stitches
 `frontend/public/wow-maps/` (one WebP per map, plus `highlight/`), which ships with
 the frontend build: the World Map's pan and zoom viewer magnifies that same picture
@@ -115,7 +130,7 @@ client data itself.
 From `apps/mygamingassistant/backend`:
 
 ```bash
-pytest tests/test_wow_refresh.py tests/test_wow_food_generator.py tests/test_wow_professions_generator.py tests/test_wow_world_map_generator.py tests/test_wow_raid_consumables.py tests/test_wow_items_generator.py tests/test_wow_items_hotfix_cache.py tests/test_wow_item_names.py tests/test_wow_gear_generator.py tests/test_wow_icons_generator.py tests/test_wow_item_pages_generator.py
+pytest tests/test_wow_refresh.py tests/test_wow_food_generator.py tests/test_wow_professions_generator.py tests/test_wow_world_map_generator.py tests/test_wow_raid_consumables.py tests/test_wow_items_generator.py tests/test_wow_items_hotfix_cache.py tests/test_wow_item_names.py tests/test_wow_gear_generator.py tests/test_wow_icons_generator.py tests/test_wow_satellite_generator.py tests/test_wow_item_pages_generator.py
 ```
 
 From `apps/mygamingassistant/frontend`:

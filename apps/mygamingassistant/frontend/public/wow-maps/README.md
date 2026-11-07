@@ -25,3 +25,7 @@ continent, its coastline) that the page tints friendly / hostile / contested
 when you hover it on the map above. Zones' highlights are also turned into
 the hit-test masks in `src/games/wow-forever/data/worldMap/mapMasks.json`.
 Cities and islands ship no highlight art.
+
+The satellite view is NOT here: it is stitched from the client's minimap tiles by
+`python -m scripts.wow_satellite.build`, published to object storage and served by
+`/api/wow/satellite/...` (see the World Map section of the app's CLAUDE.md).

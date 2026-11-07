@@ -11,6 +11,8 @@ import {
 import { createPortal } from "react-dom";
 import MapEdgeFrame from "@/games/wow-forever/components/worldMap/MapEdgeFrame";
 import MapGrid from "@/games/wow-forever/components/worldMap/MapGrid";
+import MapGround from "@/games/wow-forever/components/worldMap/MapGround";
+import MapStyleToggle from "@/games/wow-forever/components/worldMap/MapStyleToggle";
 import MapHoverHighlight from "@/games/wow-forever/components/worldMap/MapHoverHighlight";
 import ZoneFitTints from "@/games/wow-forever/components/worldMap/ZoneFitTints";
 import ZoneLevelLabels from "@/games/wow-forever/components/worldMap/ZoneLevelLabels";
@@ -25,8 +27,10 @@ import MapZoomControls from "@/games/wow-forever/components/worldMap/MapZoomCont
 import { MAP_H, MAP_W } from "@/games/wow-forever/data/worldMap/mapViewer";
 import { MAP_VIEW_KEYS } from "@/games/wow-forever/data/worldMap/mapViewKeys";
 import { MAP_VIEWER_STATUS } from "@/games/wow-forever/data/worldMap/mapViewer";
+import { MAP_STYLE } from "@/games/wow-forever/data/worldMap/mapStyle";
 import { useMapPressMenu } from "@/games/wow-forever/hooks/useMapPressMenu";
 import { useMapViewer } from "@/games/wow-forever/hooks/useMapViewer";
+import { useSatelliteView } from "@/games/wow-forever/hooks/useSatelliteView";
 import type { MapMarks } from "@/games/wow-forever/types/mapMarks/mapMarks";
 import type { MapMenuTarget } from "@/games/wow-forever/types/mapMarks/mapMenuTarget";
 import type { MapView, PlayerFaction, WorldMapData, WorldPoint } from "@/games/wow-forever/types/worldMap";
@@ -47,10 +51,12 @@ const FOCUS_SCALE = 2.5;
 const FIT_FILL = 0.7;
 /**
  * The viewer's own box. Static on purpose: Leaflet adds its classes to this
- * element, and a changing className would make React wipe them.
+ * element, and a changing className would make React wipe them. It is the
+ * `group/viewer` whose `data-map-style` darkens the halos of labels and
+ * lines on the satellite view.
  */
 const VIEWER_CLASS =
-  "absolute inset-0 rounded-xl border select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500";
+  "group/viewer absolute inset-0 rounded-xl border select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500";
 
 interface MapCanvasProps {
   data: WorldMapData;
@@ -124,6 +130,7 @@ export default function MapCanvas(props: MapCanvasProps) {
   const ready = viewer.status === MAP_VIEWER_STATUS.ready;
   const settled = ready || viewer.status === MAP_VIEWER_STATUS.failed;
   const [imageFailed, setImageFailed] = useState(false);
+  const satellite = useSatelliteView(map.id);
   const [hover, setHover] = useState<MapHit | null>(null);
   const down = useRef<{ x: number; y: number } | null>(null);
   // Fingers on the map: two or more is a pinch, never a click.
@@ -297,16 +304,16 @@ export default function MapCanvas(props: MapCanvasProps) {
 
   const picture = (
     <>
-      {!imageFailed && (
-        <img
-          src={`/wow-maps/${map.id}.webp`}
-          alt={`${map.name} map`}
-          draggable={false}
-          decoding="async"
-          onError={() => setImageFailed(true)}
-          className="absolute inset-0 h-full w-full"
-        />
-      )}
+      <MapGround
+        mapId={map.id}
+        mapName={map.name}
+        drawnFailed={imageFailed}
+        onDrawnError={() => setImageFailed(true)}
+        satelliteSrc={satellite.src}
+        satelliteShown={satellite.shown}
+        onSatelliteLoad={satellite.onLoad}
+        onSatelliteError={satellite.onError}
+      />
       {fits && <ZoneFitTints data={data} map={map} fits={fits} />}
       {goTo && <MapHoverHighlight map={map} target={goTo} faction={faction} />}
       {boxSize && shownLabels.length > 0 && <ZoneLevelLabels labels={shownLabels} fits={fits} />}
@@ -317,7 +324,7 @@ export default function MapCanvas(props: MapCanvasProps) {
         role="group"
         aria-label={`${map.name} markers`}
       >
-        {imageFailed && <MapGrid width={MAP_W} height={MAP_H} />}
+        {imageFailed && !satellite.shown && <MapGrid width={MAP_W} height={MAP_H} />}
         <MapMarkerLayer
           map={map}
           player={props.player}
@@ -342,6 +349,7 @@ export default function MapCanvas(props: MapCanvasProps) {
             ref={containerRef}
             data-testid="zone-map"
             data-map-viewer
+            data-map-style={satellite.shown ? MAP_STYLE.satellite : MAP_STYLE.drawn}
             tabIndex={0}
             aria-label={`${map.name} — scroll, pinch or +/- to zoom, drag or arrow keys to move; Escape to zoom out; right-click, long-press or Shift+F10 for the map menu`}
             className={VIEWER_CLASS}
@@ -367,12 +375,23 @@ export default function MapCanvas(props: MapCanvasProps) {
               onManualZoom();
             }}
           />
+          {satellite.available && (
+            <MapStyleToggle value={satellite.value} busy={satellite.busy} onChange={satellite.choose} onPreload={satellite.preload} />
+          )}
           {press.ring && <LongPressRing ring={press.ring} />}
           {props.overlay}
         </div>
       </MapEdgeFrame>
       <MapHoverStatus map={map} hover={hover} faction={faction} />
-      {imageFailed && <p className="text-xs text-muted-foreground">The map picture didn't load — showing a grid instead.</p>}
+      {imageFailed && !satellite.shown && <p className="text-xs text-muted-foreground">The map picture didn't load — showing a grid instead.</p>}
+      {satellite.failed && (
+        <p role="status" className="text-xs text-muted-foreground">
+          The satellite view didn't load, so this is the drawn map.{" "}
+          <button type="button" onClick={() => satellite.choose(MAP_STYLE.satellite)} className="underline min-h-[44px]">
+            Try again
+          </button>
+        </p>
+      )}
       {viewer.status === MAP_VIEWER_STATUS.failed && (
         <p className="text-xs text-muted-foreground">
           Zooming didn't load.{" "}

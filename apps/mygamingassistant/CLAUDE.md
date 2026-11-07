@@ -592,6 +592,35 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   fully explored) stitched from the Forever client's map tiles — © Blizzard
   Entertainment, shown for reference in a free fan tool. One image loads per
   viewed zone. See `public/wow-maps/README.md`.
+- **Satellite view** (P4; `MapStyleToggle` "Map / Satellite", bottom-left of
+  the map box, 44 px radio group): each zone's and city's ground from the
+  Forever client's own top-down **minimap tiles** (continent WDT `MAID` chunk →
+  512 px BLP tiles), stitched by `python -m scripts.wow_satellite.build` (from
+  `backend/`; `grid.py` = ADT grid math, `wdt.py`, `render.py`) into ONE
+  2004×1336 WebP per map cropped to exactly the drawn art's frame (the zone's
+  UiMapAssignment rectangle) — so the viewer, markers, hit-testing and every
+  overlay are unchanged; only the `<img>` under them swaps (`MapGround`).
+  Per-zone, not per-continent: same bounds as the drawn art, one image per
+  view. **Drawn-only:** the world, the continents, dungeon interiors and the
+  underground capitals Ironforge / Undercity (`INDOOR_CITIES` — the minimap
+  shows the mountain over them). The build writes
+  `data/worldMap/satellite.json` (build + map ids, GENERATED); images live
+  under the download cache and are NEVER committed —
+  `python -m scripts.wow_satellite.publish --to r2` (needs `scripts/.env.r2`,
+  skips existing keys, `--dry-run`) uploads them to `wow/{build}/satellite/`,
+  served same-origin by `GET /api/wow/satellite/{build}/{uiMapId}.webp` (the
+  icon route/service, kind `satellite`, strict regex allowlist; no CSP change).
+  Both run in `wow_refresh`. The choice is `mga.wowForever.worldMap.style.v1`
+  (`hooks/useMapStyle.ts`, default Map); a map with no satellite view hides
+  the toggle and keeps the choice. The drawn art stays underneath while the
+  satellite picture loads (spinner on the segment), then it fades in; a failed
+  load falls back to the drawn map with "Try again". The viewer carries
+  `data-map-style` and `group/viewer`, so `SATELLITE_*` classes
+  (`data/worldMap/mapStyle.ts`) darken label / route halos and rim markers
+  only on the satellite view. Tests: `tests/test_wow_satellite_generator.py`
+  (grid math, crop, Farley's inn in its tile, idempotent publish),
+  `wowWorldMapSatellite.test.tsx`, `e2e/wow-world-map-satellite.spec.ts`
+  (set `MGA_SATELLITE_DIR` to the build folder for alignment screenshots).
 - **Pan / zoom viewer** (`MapCanvas` → `hooks/useMapViewer.ts`): Leaflet 1.9
   (`CRS.Simple`), wrapped by our own hook — never react-leaflet (Hippocratic
   licence) and never Leaflet's controls. Leaflet is lazy-loaded
@@ -1011,6 +1040,7 @@ once on the router. This is the no-bandaid approach (see
 | `/api/wow/map-captures` | GET, both modes (World Map locations captured in Forever) | POST import (full-auth only; prod gets captures via the committed pack) |
 | `/api/wow/prices` | GET, both modes (auction-house prices by region, refreshed by the scheduler; ETag + 10-min cache) | — |
 | `/api/wow/icons/{build}/{fdid}.webp` | GET, both modes (in-game icons streamed from object storage; year-long immutable cache, 404 + no-store when unpublished) | — |
+| `/api/wow/satellite/{build}/{uiMapId}.webp` | GET, both modes (World Map satellite pictures, same service and cache rules as icons) | — |
 | `/api/scheduler/*` | — | All |
 | `/admin/*` | — | All |
 | `/users/me*` | — | All |
