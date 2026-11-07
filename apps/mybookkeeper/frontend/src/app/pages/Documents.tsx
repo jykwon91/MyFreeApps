@@ -251,7 +251,7 @@ export default function Documents() {
       )}
 
       {isLoading ? (
-        <DocumentsSkeleton />
+        <DocumentsSkeleton canWrite={canWrite} />
       ) : (
         <DocumentTable
           table={table}

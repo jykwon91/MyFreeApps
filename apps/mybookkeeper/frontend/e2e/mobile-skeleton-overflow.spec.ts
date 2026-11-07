@@ -40,19 +40,24 @@ const PAGES_WITH_SKELETONS = [
 
 // Session and workspace lookups let the app shell render; everything else is
 // held so the page stays on its skeleton.
-const SHELL_REQUEST = /\/(users\/me|auth|organizations)/;
+const SHELL_REQUEST = /^\/api\/(users\/me|auth\/|organizations)/;
+
+function isPageRequest(url: URL): boolean {
+  return url.pathname.startsWith("/api/") && !SHELL_REQUEST.test(url.pathname);
+}
 
 test.describe("Mobile — loading skeletons fit the screen", () => {
   test.use({ viewport: PHONE, isMobile: true, hasTouch: true });
 
   for (const url of PAGES_WITH_SKELETONS) {
     test(`${url} — skeleton has no horizontal overflow`, async ({ authedPage: page }) => {
-      const release = await holdRequests(
-        page,
-        (u) => u.pathname.startsWith("/api/") && !SHELL_REQUEST.test(u.pathname),
-      );
+      await holdRequests(page, isPageRequest);
+      // The app shell has its own placeholders; a held page request proves the
+      // page itself mounted, so what's measured is its skeleton.
+      const pageRequest = page.waitForRequest((req) => isPageRequest(new URL(req.url())));
       try {
         await page.goto(url);
+        await pageRequest;
         await expect(page.locator(".animate-pulse").first()).toBeVisible({ timeout: 15000 });
 
         const { scrollWidth, offenders } = await page.evaluate((width) => {
@@ -68,7 +73,8 @@ test.describe("Mobile — loading skeletons fit the screen", () => {
 
         expect(scrollWidth, `wider than the screen: ${offenders.join(" | ")}`).toBeLessThanOrEqual(PHONE.width);
       } finally {
-        release();
+        // The page doesn't need its data after the measurement.
+        await page.unrouteAll({ behavior: "ignoreErrors" });
       }
     });
   }
