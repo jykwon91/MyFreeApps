@@ -95,9 +95,11 @@ async def insert_if_not_exists(
             parsed_payload=parsed_payload,
             status="pending",
         )
+        # The dedup guard is a unique INDEX, not a constraint, so the conflict
+        # target is inferred from its columns — Postgres rejects
+        # ``ON CONFLICT ON CONSTRAINT`` for an index name.
         .on_conflict_do_nothing(
-            index_elements=None,
-            constraint="uq_review_queue_user_message_id",
+            index_elements=["user_id", "email_message_id"],
         )
         .returning(CalendarEmailReviewQueue)
     )

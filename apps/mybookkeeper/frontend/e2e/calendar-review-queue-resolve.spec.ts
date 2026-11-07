@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
+import { listingRowBars } from "./fixtures/calendar-rows";
 import { createProperty, deleteProperty } from "./fixtures/seed-data";
 import { toasts } from "./fixtures/toasts";
 
@@ -52,12 +53,9 @@ async function deleteListing(api: APIRequestContext, id: string): Promise<void> 
 async function seedReviewQueueItem(
   api: APIRequestContext,
   payload: SeedReviewQueuePayload,
-): Promise<SeedReviewQueueResponse | null> {
+): Promise<SeedReviewQueueResponse> {
   const res = await api.post("/test/seed-review-queue-item", { data: payload });
-  if (!res.ok()) {
-    // Seed endpoint may not be wired yet — caller handles null gracefully.
-    return null;
-  }
+  if (!res.ok()) throw new Error(`seedReviewQueueItem failed: ${res.status()} ${await res.text()}`);
   return res.json() as Promise<SeedReviewQueueResponse>;
 }
 
@@ -72,14 +70,25 @@ async function deleteBlackout(api: APIRequestContext, id: string): Promise<void>
   await api.delete(`/test/blackouts/${id}`).catch(() => {});
 }
 
-async function getCalendarEvents(
+/** Calendar events on one listing — other specs seed the same June window. */
+async function getListingEvents(
   api: APIRequestContext,
+  listingId: string,
   from: string,
   to: string,
-): Promise<Array<{ id: string; starts_on?: string; ends_on?: string }>> {
-  const res = await api.get(`/calendar/events?from=${from}&to=${to}`);
-  if (!res.ok()) return [];
+): Promise<Array<{ id: string; starts_on: string; ends_on: string }>> {
+  const res = await api.get(
+    `/calendar/events?from=${from}&to=${to}&listing_ids=${listingId}`,
+  );
+  if (!res.ok()) throw new Error(`calendar events failed: ${res.status()} ${await res.text()}`);
   return res.json();
+}
+
+async function pendingQueueItemIds(api: APIRequestContext): Promise<string[]> {
+  const res = await api.get("/calendar/review-queue");
+  if (!res.ok()) throw new Error(`review queue failed: ${res.status()} ${await res.text()}`);
+  const items = (await res.json()) as Array<{ id: string }>;
+  return items.map((item) => item.id);
 }
 
 test.describe("Calendar review queue — Phase 2b resolve creates blackout", () => {
@@ -114,12 +123,7 @@ test.describe("Calendar review queue — Phase 2b resolve creates blackout", () 
       raw_subject: `Reservation confirmed - Alice E2E (Jun 5 - Jun 10) [${runId}]`,
     });
 
-    test.skip(
-      queueResult === null,
-      "Review queue seed endpoint not wired up — see test_utils.py",
-    );
-
-    const queueItemId = queueResult!.id;
+    const queueItemId = queueResult.id;
     const blackoutIdsToClean: string[] = [];
 
     try {
@@ -128,7 +132,7 @@ test.describe("Calendar review queue — Phase 2b resolve creates blackout", () 
       await page.waitForLoadState("networkidle");
 
       // Open the review queue drawer.
-      const queueBtn = page.getByTestId("review-queue-open-btn");
+      const queueBtn = page.getByTestId("review-queue-badge-btn");
       await expect(queueBtn).toBeVisible({ timeout: 5000 });
       await queueBtn.click();
 
@@ -140,7 +144,8 @@ test.describe("Calendar review queue — Phase 2b resolve creates blackout", () 
       // The seeded item's subject should be visible.
       const queueItem = page
         .getByTestId("review-queue-item")
-        .filter({ has: page.getByText(/Alice E2E/i) })
+        // The guest name repeats across runs; the subject carries this run's id.
+        .filter({ hasText: String(runId) })
         .first();
       await expect(queueItem).toBeVisible({ timeout: 5000 });
 
@@ -169,20 +174,14 @@ test.describe("Calendar review queue — Phase 2b resolve creates blackout", () 
       // Calendar should now have a blackout event in the date range.
       // The Calendar tag is invalidated by the resolve mutation.
       await page.waitForLoadState("networkidle");
-      const bars = page.getByTestId("calendar-event-bar");
+      const bars = listingRowBars(page, listingId);
       await expect(bars).toHaveCount(1, { timeout: 5000 });
 
-      // Verify via API that the blackout was actually created in the DB.
-      const events = await getCalendarEvents(api, fromIso, toIso);
-      const created = events.find((e) =>
-        "starts_on" in e
-          ? (e as { starts_on?: string }).starts_on === checkIn
-          : false,
-      );
-      if (created && "id" in created) {
-        blackoutIdsToClean.push((created as { id: string }).id);
-      }
-      expect(events.length).toBeGreaterThanOrEqual(1);
+      // Verify via API that the blackout was actually created on this listing.
+      const events = await getListingEvents(api, listingId, fromIso, toIso);
+      blackoutIdsToClean.push(...events.map((e) => e.id));
+      expect(events).toHaveLength(1);
+      expect(events[0].starts_on).toBe(checkIn);
     } finally {
       for (const id of blackoutIdsToClean) {
         await deleteBlackout(api, id);
@@ -193,27 +192,18 @@ test.describe("Calendar review queue — Phase 2b resolve creates blackout", () 
     }
   });
 
-  test("resolve with missing check_in/check_out shows error (no blackout created)", async ({
+  test("resolve against a listing that doesn't exist is rejected and leaves the item queued", async ({
     authedPage: page,
     api,
   }) => {
-    /**
-     * Edge case: if the review-queue item has no dates, the backend should
-     * return 422. The frontend shows an error state.
-     *
-     * This test seeds a queue item with no dates (simulated via blank values),
-     * then attempts to resolve it and verifies no blackout is created and the
-     * error is surfaced.
-     *
-     * NOTE: The seed endpoint always populates check_in/check_out, so we test
-     * this via direct API call rather than UI flow.
-     */
+    // A resolve the backend rejects (422 — the listing doesn't exist) must
+    // not consume the queue item: the host still needs to place the booking.
     const runId = Date.now();
-    const msgId = `e2e-missing-dates-${runId}`;
-    const property = await createProperty(api, { name: `E2E Missing Dates ${runId}` });
+    const msgId = `e2e-rejected-resolve-${runId}`;
+    const property = await createProperty(api, { name: `E2E Rejected Resolve ${runId}` });
     const listingId = await seedListing(api, {
       property_id: property.id,
-      title: `E2E Missing Dates Listing ${runId}`,
+      title: `E2E Rejected Resolve Listing ${runId}`,
       status: "active",
     });
 
@@ -226,15 +216,10 @@ test.describe("Calendar review queue — Phase 2b resolve creates blackout", () 
       email_message_id: msgId,
       check_in: "2026-06-15",
       check_out: "2026-06-20",
-      raw_subject: `Missing Dates Test [${runId}]`,
+      raw_subject: `Rejected Resolve Test [${runId}]`,
     });
 
-    test.skip(
-      queueResult === null,
-      "Review queue seed endpoint not wired up",
-    );
-
-    const queueItemId = queueResult!.id;
+    const queueItemId = queueResult.id;
 
     try {
       // Attempt to resolve with a random (non-existent) listing UUID — should 422.
@@ -245,14 +230,8 @@ test.describe("Calendar review queue — Phase 2b resolve creates blackout", () 
       // Listing not found → 422, which means no blackout was created.
       expect(resolveRes.status()).toBe(422);
 
-      // Confirm no blackout was created by checking the calendar events.
-      const events = await getCalendarEvents(api, "2026-06-01", "2026-07-01");
-      const unwanted = events.find((e) =>
-        "starts_on" in e
-          ? (e as { starts_on?: string }).starts_on === "2026-06-15"
-          : false,
-      );
-      expect(unwanted).toBeUndefined();
+      // A rejected resolve leaves the item in the queue for the host.
+      expect(await pendingQueueItemIds(api)).toContain(queueItemId);
     } finally {
       await deleteReviewQueueItem(api, queueItemId);
       await deleteListing(api, listingId);
