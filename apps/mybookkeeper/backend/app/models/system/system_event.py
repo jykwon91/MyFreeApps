@@ -5,6 +5,7 @@ from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, St
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.system_event_enums import SYSTEM_EVENT_TYPES_SQL
 from app.db.base import Base
 
 
@@ -27,10 +28,7 @@ class SystemEvent(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "event_type IN ('rate_limited', 'extraction_failed', 'extraction_retried', "
-            "'extraction_completed', 'extraction_quality_low', 'category_corrected', "
-            "'property_corrected', 'rule_applied', 'worker_error', 'db_connection_error', "
-            "'api_usage_high', 'cost_alert', 'frontend_error')",
+            f"event_type IN {SYSTEM_EVENT_TYPES_SQL}",
             name="ck_system_events_event_type",
         ),
         CheckConstraint(
