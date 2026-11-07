@@ -224,6 +224,24 @@ async def get_pending_invite(
     return result.scalar_one_or_none()
 
 
+async def delete_invite(
+    db: AsyncSession, invite_id: uuid.UUID, org_id: uuid.UUID,
+) -> bool:
+    """Delete an invite to ``org_id`` in any status. True when one was deleted."""
+    result = await db.execute(
+        select(OrganizationInvite).where(
+            OrganizationInvite.id == invite_id,
+            OrganizationInvite.organization_id == org_id,
+        )
+    )
+    invite = result.scalar_one_or_none()
+    if invite is None:
+        return False
+    await db.delete(invite)
+    await db.flush()
+    return True
+
+
 async def cancel_invite(
     db: AsyncSession, invite_id: uuid.UUID, org_id: uuid.UUID,
 ) -> OrganizationInvite | None:

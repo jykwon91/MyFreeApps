@@ -4,20 +4,10 @@
  */
 import type { Page } from "@playwright/test";
 import { test, expect, getOrgId } from "./fixtures/auth";
+import type { OrgInvite } from "@mybookkeeper/api-client/types/organization/OrgInvite";
 import { ViewerMember } from "./fixtures/viewer-member";
 
 const RUN_ID = Date.now();
-
-interface MemberData {
-  user_id: string;
-  org_role: string;
-}
-
-interface InviteData {
-  id: string;
-  email: string;
-  org_role: string;
-}
 
 // One viewer for the file. Serial, because the role-update test moves it off
 // viewer for a moment and the enforcement tests need it to be one.
@@ -29,8 +19,8 @@ test.beforeAll(async ({ playwright }) => {
   viewerMember = await ViewerMember.join(playwright, `role-${RUN_ID}`);
 });
 
-test.afterAll(async () => {
-  await viewerMember?.delete();
+test.afterAll(async ({ playwright }) => {
+  await viewerMember?.delete(playwright);
 });
 
 function viewer(): ViewerMember {
@@ -48,14 +38,14 @@ test.describe("Viewer role — API invite", () => {
     const email = `e2e-viewer-invite-${RUN_ID}@example.com`;
     const res = await api.post(`/organizations/${orgId}/invites`, { data: { email, org_role: "viewer" } });
     expect(res.status()).toBe(201);
-    const created: InviteData = await res.json();
+    const created: OrgInvite = await res.json();
     try {
       expect(created.org_role).toBe("viewer");
       expect(created.email).toBe(email);
 
       const listRes = await api.get(`/organizations/${orgId}/invites`);
       expect(listRes.ok()).toBe(true);
-      const invites: InviteData[] = await listRes.json();
+      const invites: OrgInvite[] = await listRes.json();
       expect(invites.find((i) => i.id === created.id)?.org_role).toBe("viewer");
     } finally {
       await api.delete(`/organizations/${orgId}/invites/${created.id}`);
@@ -64,35 +54,28 @@ test.describe("Viewer role — API invite", () => {
 });
 
 test.describe("Viewer role — API role update", () => {
-  async function roleOf(api: Parameters<Parameters<typeof test>[2]>[0]["api"], userId: string): Promise<string | undefined> {
-    const res = await api.get(`/organizations/${getOrgId()}/members`);
-    expect(res.ok()).toBe(true);
-    const members: MemberData[] = await res.json();
-    return members.find((m) => m.user_id === userId)?.org_role;
-  }
-
   test("the joined member is a viewer, and a role change to and from viewer persists", async ({ api }) => {
-    const { userId } = viewer();
-    const rolePath = `/organizations/${getOrgId()}/members/${userId}/role`;
-    expect(await roleOf(api, userId)).toBe("viewer");
+    const member = viewer();
+    const rolePath = `/organizations/${getOrgId()}/members/${member.userId}/role`;
+    expect(await member.roleIn(api)).toBe("viewer");
 
     try {
       const toUser = await api.patch(rolePath, { data: { org_role: "user" } });
       expect(toUser.status()).toBe(200);
-      expect(await roleOf(api, userId)).toBe("user");
+      expect(await member.roleIn(api)).toBe("user");
     } finally {
       const back = await api.patch(rolePath, { data: { org_role: "viewer" } });
       expect(back.status()).toBe(200);
     }
-    expect(await roleOf(api, userId)).toBe("viewer");
+    expect(await member.roleIn(api)).toBe("viewer");
   });
 
   for (const role of ["superadmin", "owner"]) {
     test(`a role change to "${role}" is rejected and the role is unchanged`, async ({ api }) => {
-      const { userId } = viewer();
-      const res = await api.patch(`/organizations/${getOrgId()}/members/${userId}/role`, { data: { org_role: role } });
+      const member = viewer();
+      const res = await api.patch(`/organizations/${getOrgId()}/members/${member.userId}/role`, { data: { org_role: role } });
       expect(res.status()).toBe(422);
-      expect(await roleOf(api, userId)).toBe("viewer");
+      expect(await member.roleIn(api)).toBe("viewer");
     });
   }
 });
@@ -130,7 +113,7 @@ test.describe("Viewer role — Members page (owner)", () => {
       await expect(inviteRow.getByText(/viewer/i).first()).toBeVisible({ timeout: 5000 });
     } finally {
       const invitesRes = await api.get(`/organizations/${getOrgId()}/invites`);
-      const invites: InviteData[] = await invitesRes.json();
+      const invites: OrgInvite[] = await invitesRes.json();
       const invite = invites.find((i) => i.email === email);
       if (invite) await api.delete(`/organizations/${getOrgId()}/invites/${invite.id}`);
     }

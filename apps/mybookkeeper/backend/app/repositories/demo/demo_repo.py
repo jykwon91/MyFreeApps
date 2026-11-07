@@ -19,7 +19,7 @@ from app.models.transactions.rent_attribution_review_queue import (
 )
 from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
-from app.models.user.user import Role, User
+from app.models.user.user import User
 
 _AIRBNB_CHANNELS = {"airbnb", "vrbo", "booking.com"}
 
@@ -124,23 +124,6 @@ async def list_demo_users(db: AsyncSession) -> list[dict]:
             'created_at': org.created_at, 'upload_count': upload_count,
         })
     return users_data
-
-
-async def create_user(
-    db: AsyncSession, email: str, hashed_password: str, name: str,
-) -> User:
-    user = User(
-        email=email,
-        hashed_password=hashed_password,
-        name=name,
-        role=Role.USER,
-        is_active=True,
-        is_superuser=False,
-        is_verified=True,
-    )
-    db.add(user)
-    await db.flush()
-    return user
 
 
 async def create_org_with_member(

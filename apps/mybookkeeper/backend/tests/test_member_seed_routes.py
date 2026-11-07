@@ -13,10 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.context import RequestContext
 from app.models.organization.organization import Organization
+from app.models.organization.organization_invite import OrganizationInvite
 from app.models.organization.organization_member import OrgRole
 from app.models.user.user import User
 from app.repositories import organization_repo, user_repo
-from app.test_helpers.member_seed import _CreateUserRequest, create_user, get_invite_token
+from app.test_helpers.member_seed import _CreateUserRequest, create_user, delete_invite, get_invite_token
 
 
 @pytest.fixture(autouse=True)
@@ -117,6 +118,9 @@ class TestCreateUser:
         assert verified
         claims = decode_jwt(created.access_token, settings.secret_key, ["fastapi-users:auth"])
         assert claims["sub"] == str(created.id)
+        # The platform's strategy rejects tokens without these.
+        assert isinstance(claims["iat"], int)
+        assert isinstance(claims["auth_time"], int)
 
     @pytest.mark.asyncio
     async def test_conflict_when_the_email_is_taken(self, test_user: User, test_mode: None) -> None:
@@ -135,3 +139,46 @@ class TestCreateUser:
             settings.allow_test_admin_promotion = original
         assert exc_info.value.status_code == 404
         assert await user_repo.get_by_email(db, "e2e-viewer-new@example.com") is None
+
+
+class TestDeleteInvite:
+    @pytest.mark.asyncio
+    async def test_deletes_an_accepted_invite_to_my_organization(
+        self, db: AsyncSession, test_user: User, test_org: Organization, test_mode: None,
+    ) -> None:
+        invite = await _invite(db, test_org.id, test_user)
+        invite.status = "accepted"
+        await db.flush()
+
+        await delete_invite(invite.id, ctx=_ctx(test_org.id, test_user))
+
+        assert await db.get(OrganizationInvite, invite.id) is None
+
+    @pytest.mark.asyncio
+    async def test_not_found_for_another_organizations_invite(
+        self, db: AsyncSession, test_user: User, test_org: Organization, test_mode: None,
+    ) -> None:
+        other = Organization(name="Other org", created_by=test_user.id)
+        db.add(other)
+        await db.flush()
+        invite = await _invite(db, other.id, test_user)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await delete_invite(invite.id, ctx=_ctx(test_org.id, test_user))
+        assert exc_info.value.status_code == 404
+        assert await db.get(OrganizationInvite, invite.id) is not None
+
+    @pytest.mark.asyncio
+    async def test_not_found_outside_test_mode(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        invite = await _invite(db, test_org.id, test_user)
+        original = settings.allow_test_admin_promotion
+        settings.allow_test_admin_promotion = False
+        try:
+            with pytest.raises(HTTPException) as exc_info:
+                await delete_invite(invite.id, ctx=_ctx(test_org.id, test_user))
+        finally:
+            settings.allow_test_admin_promotion = original
+        assert exc_info.value.status_code == 404
+        assert await db.get(OrganizationInvite, invite.id) is not None

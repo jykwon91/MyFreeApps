@@ -16,6 +16,24 @@ from app.db.base import Base
 from app.models.user.user import Role, User
 
 
+async def create_verified(
+    db: AsyncSession, email: str, hashed_password: str, name: str,
+) -> User:
+    """A new active, verified, non-superuser account."""
+    user = User(
+        email=email,
+        hashed_password=hashed_password,
+        name=name,
+        role=Role.USER,
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+    )
+    db.add(user)
+    await db.flush()
+    return user
+
+
 async def list_all(db: AsyncSession) -> Sequence[User]:
     result = await db.execute(
         select(User)

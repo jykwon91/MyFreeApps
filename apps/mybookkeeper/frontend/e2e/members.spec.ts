@@ -1,4 +1,4 @@
-import { test, expect, getOrgId } from "./fixtures/auth";
+import { test, expect } from "./fixtures/auth";
 import { toasts } from "./fixtures/toasts";
 import { ViewerMember } from "./fixtures/viewer-member";
 
@@ -310,21 +310,16 @@ test.describe("Members page", () => {
       member = await ViewerMember.join(playwright, `members-${RUN_ID}`);
     });
 
-    test.afterAll(async () => {
-      await member?.delete();
+    test.afterAll(async ({ playwright }) => {
+      await member?.delete(playwright);
     });
 
     test("changing a member role via dropdown shows success toast and saves it", async ({ authedPage: page, api }) => {
       if (!member) throw new Error("the second member was not created");
-      const { userId, name } = member;
-      const roleOf = async (): Promise<string | undefined> => {
-        const res = await api.get(`/organizations/${getOrgId()}/members`);
-        expect(res.ok()).toBe(true);
-        const members: Array<{ user_id: string; org_role: string }> = await res.json();
-        return members.find((m) => m.user_id === userId)?.org_role;
-      };
+      const joined = member;
+      const roleOf = (): Promise<string | undefined> => joined.roleIn(api);
 
-      const roleSelect = page.getByRole("combobox", { name: `Role for ${name}` });
+      const roleSelect = page.getByRole("combobox", { name: `Role for ${joined.name}` });
       await expect(roleSelect).toHaveValue("viewer", { timeout: 10000 });
 
       await roleSelect.selectOption("admin");
