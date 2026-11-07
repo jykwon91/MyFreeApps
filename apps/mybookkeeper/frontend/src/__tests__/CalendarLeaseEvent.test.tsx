@@ -162,6 +162,12 @@ describe("the bar on the grid", () => {
     expect(screen.getByRole("button")).toHaveTextContent("Tenant");
   });
 
+  it("tags the bar with its event id", () => {
+    const event = makeEvent();
+    renderBar(event);
+    expect(screen.getByRole("button")).toHaveAttribute("data-event-id", event.id);
+  });
+
   it("still shows the channel name on a channel bar", () => {
     // iCal sends no guest name, so the channel is all there is to show.
     renderBar(makeEvent());

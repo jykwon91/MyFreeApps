@@ -63,6 +63,7 @@ export default function CalendarEventBar({ event, startCol, span, onClick }: Cal
       aria-label={`${barLabel} ${kindWord} from ${event.starts_on} to ${event.ends_on}. Click for details.`}
       data-testid="calendar-event-bar"
       data-source={event.source}
+      data-event-id={event.id}
     >
       <span className="truncate flex-1">{barLabel}</span>
 
