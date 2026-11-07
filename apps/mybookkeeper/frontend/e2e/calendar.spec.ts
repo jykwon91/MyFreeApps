@@ -1,6 +1,7 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { listingRowBars } from "./fixtures/calendar-rows";
 import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
+import { deleteBlackout } from "./fixtures/blackouts";
 
 /**
  * E2E for the unified calendar page (Option A — read-only viewer).
@@ -44,10 +45,6 @@ async function seedBlackout(api: APIRequestContext, payload: SeedBlackoutPayload
   if (!res.ok()) throw new Error(`seedBlackout failed: ${res.status()} ${await res.text()}`);
   const body = (await res.json()) as { id: string };
   return body.id;
-}
-
-async function deleteBlackout(api: APIRequestContext, blackoutId: string): Promise<void> {
-  await api.delete(`/test/blackouts/${blackoutId}`).catch(() => {});
 }
 
 test.describe("Unified calendar viewer", () => {
