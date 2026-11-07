@@ -1,4 +1,8 @@
-"""The caller's local calendar date, sent by the client for ``today`` defaults.
+"""The caller's local calendar date, sent by the client wherever "today" matters.
+
+It fills ``today`` placeholders and computed dates in leases, dates rent
+receipts, and sets how far ahead rent charges are generated when a schedule is
+saved.
 
 The server runs in UTC and stores no time zone for users, so only the client
 knows the host's date. Real time zones span UTC-12 to UTC+14, so a genuine

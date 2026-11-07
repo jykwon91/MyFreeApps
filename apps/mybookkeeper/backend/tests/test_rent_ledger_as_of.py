@@ -336,3 +336,47 @@ class TestPastDateView:
         await _ledger_on(db, applicant_id, datetime.date(2026, 8, 20))
 
         assert await _all_charge_rows(db, applicant_id) == before
+
+    @pytest.mark.asyncio
+    async def test_end_date_change_reconciles_charges_after_the_save_date(
+        self, db: AsyncSession,
+    ) -> None:
+        """Charges already written past ``through`` are retimed or retired by the
+        schedule's new end date, not deleted for starting after ``through``."""
+        applicant_id = await _tenant(db)
+        schedule = await _create_schedule(db, applicant_id, today=datetime.date(2026, 10, 15))
+        ids = {start: charge_id for charge_id, start, _deleted in await _all_charge_rows(db, applicant_id)}
+
+        ledger_patch, schedule_patch = _patch_uow(db)
+        with ledger_patch, schedule_patch:
+            await rent_schedule_service.update_schedule(
+                organization_id=_ORG, user_id=_USER, schedule_id=schedule.id,
+                today=datetime.date(2026, 8, 20), end_date=datetime.date(2026, 9, 15),
+                fields_set={"end_date"},
+            )
+
+        async def _rows():
+            return [
+                (r.id, r.period_start, r.period_end, r.amount, r.deleted_at is None)
+                for r in (
+                    await db.execute(
+                        select(RentCharge).where(RentCharge.applicant_id == applicant_id)
+                        .order_by(RentCharge.period_start),
+                    )
+                ).scalars().all()
+            ]
+
+        after_save = await _rows()
+        assert after_save == [
+            (ids[datetime.date(2026, 8, 1)], datetime.date(2026, 8, 1),
+             datetime.date(2026, 8, 31), Decimal("1500.00"), True),
+            # Begins after the save date, still produced: retimed in place.
+            (ids[datetime.date(2026, 9, 1)], datetime.date(2026, 9, 1),
+             datetime.date(2026, 9, 15), Decimal("750.00"), True),
+            # Past the new end date: retired.
+            (ids[datetime.date(2026, 10, 1)], datetime.date(2026, 10, 1),
+             datetime.date(2026, 10, 31), Decimal("1500.00"), False),
+        ]
+
+        await _ledger_on(db, applicant_id, datetime.date(2026, 8, 20))
+        assert await _rows() == after_save
