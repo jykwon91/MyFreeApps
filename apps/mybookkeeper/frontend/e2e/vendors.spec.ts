@@ -1,4 +1,5 @@
-import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
+import { test, expect, type Page } from "./fixtures/auth";
+import { deleteVendor, seedVendor } from "./fixtures/seed-data";
 
 /**
  * PR 4.1b — Vendors frontend behavioural E2E (read-only).
@@ -7,34 +8,6 @@ import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth
  * edit / soft-delete UI lands in PR 4.2 — those specs will be added
  * alongside the write endpoints and ``Transaction.vendor_id`` FK.
  */
-
-interface SeedVendorPayload {
-  name?: string;
-  category?: string;
-  phone?: string | null;
-  email?: string | null;
-  address?: string | null;
-  hourly_rate?: string | null;
-  flat_rate_notes?: string | null;
-  preferred?: boolean;
-  notes?: string | null;
-}
-
-async function seedVendor(
-  api: APIRequestContext,
-  payload: SeedVendorPayload,
-): Promise<string> {
-  const res = await api.post("/test/seed-vendor", { data: payload });
-  if (!res.ok()) {
-    throw new Error(`seedVendor failed: ${res.status()} ${await res.text()}`);
-  }
-  const body = (await res.json()) as { id: string };
-  return body.id;
-}
-
-async function deleteVendor(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/test/vendors/${id}`).catch(() => {});
-}
 
 async function waitForVendorsPage(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "Vendors" })).toBeVisible({
@@ -272,18 +245,18 @@ test.describe("Vendors writes (PR 4.2)", () => {
         timeout: 5000,
       });
 
-      // Capture the created vendor's ID so we can clean it up if the test
-      // aborts mid-flight. Best-effort lookup via the list endpoint.
+      // Capture the created vendor's ID so it is purged even if the test
+      // aborts mid-flight.
       const listRes = await api.get("/vendors", {
         params: { limit: 100, offset: 0 },
       });
-      if (listRes.ok()) {
-        const body = (await listRes.json()) as {
-          items: Array<{ id: string; name: string }>;
-        };
-        const created = body.items.find((v) => v.name === initialName);
-        if (created) createdIds.push(created.id);
-      }
+      expect(listRes.ok(), await listRes.text()).toBe(true);
+      const body = (await listRes.json()) as {
+        items: Array<{ id: string; name: string }>;
+      };
+      const created = body.items.find((v) => v.name === initialName);
+      if (!created) throw new Error(`the new vendor "${initialName}" is not listed`);
+      createdIds.push(created.id);
 
       // ----- EDIT -----
       await page.getByTestId("vendors-desktop").getByText(initialName).click();
@@ -324,6 +297,10 @@ test.describe("Vendors writes (PR 4.2)", () => {
 
       // The deleted vendor is no longer in the rolodex.
       await expect(page.getByText(renamedName)).toHaveCount(0);
+
+      // The delete is a hard delete, so the row is gone and needs no cleanup.
+      await expect.poll(async () => (await api.get(`/vendors/${created.id}`)).status()).toBe(404);
+      createdIds.length = 0;
     } finally {
       for (const id of createdIds) await deleteVendor(api, id);
     }

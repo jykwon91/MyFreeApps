@@ -448,12 +448,14 @@ async def delete_vendor(
     """
     _require_test_mode()
     async with unit_of_work() as db:
-        await vendor_repo.hard_delete_by_id(
+        deleted = await vendor_repo.hard_delete_by_id(
             db,
             vendor_id=vendor_id,
             organization_id=ctx.organization_id,
             user_id=ctx.user_id,
         )
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Vendor not found")
 
 
 # ---------------------------------------------------------------------------

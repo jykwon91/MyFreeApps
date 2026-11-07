@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures/auth";
+import { deleteVendor, seedVendor } from "./fixtures/seed-data";
 
 /**
  * PR 4.1a — Vendors backend behavioural tests.
@@ -14,37 +15,6 @@ import { test, expect } from "./fixtures/auth";
  *  2. exercises the read endpoint(s) under test
  *  3. tears down the row via /test/vendors/{id}
  */
-
-interface SeedVendorPayload {
-  name?: string;
-  category?: string;
-  phone?: string | null;
-  email?: string | null;
-  address?: string | null;
-  hourly_rate?: string | null;
-  flat_rate_notes?: string | null;
-  preferred?: boolean;
-  notes?: string | null;
-}
-
-async function seedVendor(
-  api: import("@playwright/test").APIRequestContext,
-  payload: SeedVendorPayload,
-): Promise<string> {
-  const res = await api.post("/test/seed-vendor", { data: payload });
-  if (!res.ok()) {
-    throw new Error(`seedVendor failed: ${res.status()} ${await res.text()}`);
-  }
-  const body = (await res.json()) as { id: string };
-  return body.id;
-}
-
-async function deleteVendor(
-  api: import("@playwright/test").APIRequestContext,
-  vendorId: string,
-): Promise<void> {
-  await api.delete(`/test/vendors/${vendorId}`).catch(() => {});
-}
 
 test.describe("Vendors API (read-only, PR 4.1a)", () => {
   test("seeded vendor appears in GET /vendors and matches GET /vendors/{id}", async ({ api }) => {

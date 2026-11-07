@@ -269,17 +269,18 @@ async def hard_delete_by_id(
     vendor_id: uuid.UUID,
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
-) -> None:
+) -> bool:
     """Hard-delete a vendor scoped to (organization_id, user_id).
 
-    Test-utility only — production code uses :func:`soft_delete`. The dual
-    scope check is performed inline so cross-tenant cleanup attempts no-op
-    instead of removing data the caller does not own.
+    Returns whether a row was deleted. The dual scope check is performed
+    inline so cross-tenant cleanup attempts no-op instead of removing data
+    the caller does not own.
     """
-    await db.execute(
+    result = await db.execute(
         _sa_delete(Vendor).where(
             Vendor.id == vendor_id,
             Vendor.organization_id == organization_id,
             Vendor.user_id == user_id,
         )
     )
+    return (result.rowcount or 0) > 0

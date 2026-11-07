@@ -456,12 +456,12 @@ class TestVendorRepoHardDelete:
         db.add(v)
         await db.commit()
 
-        await vendor_repo.hard_delete_by_id(
+        assert await vendor_repo.hard_delete_by_id(
             db,
             vendor_id=v.id,
             organization_id=test_org.id,
             user_id=test_user.id,
-        )
+        ) is True
         await db.commit()
 
         # Even with include_deleted=True, the row should not exist.
@@ -483,12 +483,12 @@ class TestVendorRepoHardDelete:
         await db.commit()
 
         # Cross-tenant attempt — must no-op.
-        await vendor_repo.hard_delete_by_id(
+        assert await vendor_repo.hard_delete_by_id(
             db,
             vendor_id=v.id,
             organization_id=uuid.uuid4(),
             user_id=test_user.id,
-        )
+        ) is False
         await db.commit()
 
         result = await vendor_repo.get_by_id(
