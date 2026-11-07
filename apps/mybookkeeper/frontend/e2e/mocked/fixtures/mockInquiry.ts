@@ -32,8 +32,6 @@ export const INQUIRY_DETAIL = {
   notes: INQUIRY_NOTES,
   email_message_id: null,
   linked_applicant_id: null,
-  move_in_date: null,
-  move_out_date: null,
   occupant_count: null,
   has_pets: null,
   pets_description: null,

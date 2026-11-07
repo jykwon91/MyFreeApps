@@ -50,8 +50,6 @@ class InquiryResponse(BaseModel):
     spam_status: str = "unscored"
     spam_score: float | None = None
 
-    move_in_date: _dt.date | None = None
-    move_out_date: _dt.date | None = None
     occupant_count: int | None = None
     has_pets: bool | None = None
     pets_description: str | None = None

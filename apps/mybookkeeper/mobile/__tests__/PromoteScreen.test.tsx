@@ -150,12 +150,6 @@ describe("PromoteScreen", () => {
     expect(await screen.findByText("Applicants must be 18 or older.")).toBeTruthy();
   });
 
-  it("starts from the move-in date when that's all the inquiry has", async () => {
-    startServer(created, anInquiry({ desired_start_date: null, move_in_date: "2027-02-01" }));
-    await renderScreen();
-    expect(await screen.findByText("Feb 1, 2027")).toBeTruthy();
-  });
-
   it("lets a date of birth be cleared", async () => {
     startServer(created);
     await renderScreen();

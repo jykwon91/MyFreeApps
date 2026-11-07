@@ -78,13 +78,6 @@ def _coalesce(*values: str | None) -> str | None:
     return None
 
 
-def _coalesce_date(*values: _dt.date | None) -> _dt.date | None:
-    for value in values:
-        if value is not None:
-            return value
-    return None
-
-
 async def promote_from_inquiry(
     *,
     organization_id: uuid.UUID,
@@ -126,11 +119,7 @@ async def promote_from_inquiry(
         )
         contact_email = _coalesce(overrides.contact_email, inquiry.inquirer_email)
         contact_phone = _coalesce(overrides.contact_phone, inquiry.inquirer_phone)
-        contract_start = _coalesce_date(
-            overrides.contract_start,
-            inquiry.desired_start_date,
-            inquiry.move_in_date,
-        )
+        contract_start = overrides.contract_start or inquiry.desired_start_date
 
         # ``dob`` is stored as ISO-8601 text on an EncryptedString column
         # so the type decorator can encrypt it. The Pydantic schema accepts

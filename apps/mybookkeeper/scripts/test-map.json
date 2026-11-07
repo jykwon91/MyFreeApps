@@ -593,6 +593,8 @@
         "test_public_inquiry_request_schema.py",
         "test_public_inquiry_move_in_window_matches_form.py",
         "test_public_inquiries_api.py",
+        "test_inquiry_notification_email.py",
+        "test_inquiry_dates_migration.py",
         "test_listing_slug.py",
         "test_reply_template_renderer.py",
         "test_reply_template_repo.py",

@@ -162,9 +162,9 @@ class TestPublicInquiryHappyPath:
         assert inquiry.spam_status == "clean"
         assert inquiry.spam_score is not None
         assert float(inquiry.spam_score) == 85.0
-        assert inquiry.move_in_date is not None
-        assert inquiry.move_out_date is not None
-        assert (inquiry.move_out_date - inquiry.move_in_date).days == 180
+        # The inbox and quality score read the desired dates for every source.
+        assert inquiry.desired_start_date == _dt.date.today() + _dt.timedelta(days=14)
+        assert (inquiry.desired_end_date - inquiry.desired_start_date).days == 180
         assert inquiry.listing_id == test_listing.id
 
         # Assessments — turnstile, honeypot, submit_timing, disposable_email, claude_score
