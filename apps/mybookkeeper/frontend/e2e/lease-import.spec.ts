@@ -50,14 +50,14 @@ async function seedApplicant(
 async function seedSignedLease(
   api: APIRequestContext,
   applicantId: string,
-): Promise<{ id: string; attachment_id: string }> {
+): Promise<{ id: string; attachment_ids: string[] }> {
   const res = await api.post("/test/seed-signed-lease", {
     data: { applicant_id: applicantId, kind: "imported", status: "signed" },
   });
   if (!res.ok()) {
     throw new Error(`seedSignedLease failed: ${res.status()} ${await res.text()}`);
   }
-  return (await res.json()) as { id: string; attachment_id: string };
+  return (await res.json()) as { id: string; attachment_ids: string[] };
 }
 
 async function deleteApplicant(api: APIRequestContext, id: string): Promise<void> {
@@ -86,8 +86,10 @@ test.describe("Import Signed Lease", () => {
         const applicantId = await seedApplicant(api, applicantName);
         seededApplicantIds.push(applicantId);
 
-        const { id: leaseId } = await seedSignedLease(api, applicantId);
+        const { id: leaseId, attachment_ids: attachmentIds } = await seedSignedLease(api, applicantId);
         seededLeaseIds.push(leaseId);
+        expect(attachmentIds).toHaveLength(1);
+        const [attachmentId] = attachmentIds;
 
         // Navigate directly to the lease detail page.
         await page.goto(`/leases/${leaseId}`);
@@ -103,11 +105,9 @@ test.describe("Import Signed Lease", () => {
         await filesTab.click();
         await page.waitForLoadState("networkidle");
 
-        // Count attachment rows (exclude kind-select and dropzone which share the prefix).
-        const attachments = page.locator(
-          "[data-testid^='lease-attachment-']:not([data-testid='lease-attachment-kind-select']):not([data-testid='lease-attachment-dropzone'])",
-        );
-        await expect(attachments).toHaveCount(1, { timeout: 10000 });
+        // Each attachment is one <li> row; its buttons share the test-id prefix.
+        await expect(page.getByTestId(`lease-attachment-${attachmentId}`)).toBeVisible({ timeout: 10000 });
+        await expect(page.locator("li[data-testid^='lease-attachment-']")).toHaveCount(1);
 
         // Verify via API that kind is "imported".
         const leaseRes = await api.get(`/signed-leases/${leaseId}`);
@@ -115,12 +115,14 @@ test.describe("Import Signed Lease", () => {
         const leaseBody = (await leaseRes.json()) as {
           kind: string;
           status: string;
-          template_id: string | null;
-          attachments: Array<{ kind: string }>;
+          templates: Array<{ id: string; name: string }>;
+          attachments: Array<{ id: string; kind: string }>;
         };
         expect(leaseBody.kind).toBe("imported");
         expect(leaseBody.status).toBe("signed");
-        expect(leaseBody.template_id).toBeNull();
+        expect(leaseBody.templates).toEqual([]);
+        expect(leaseBody.attachments).toHaveLength(1);
+        expect(leaseBody.attachments[0].id).toBe(attachmentId);
         expect(leaseBody.attachments[0].kind).toBe("signed_lease");
       } finally {
         for (const id of seededLeaseIds) {
