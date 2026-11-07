@@ -410,8 +410,8 @@ async def list_tenants(
     *,
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
+    today: _dt.date,
     include_ended: bool = False,
-    today: _dt.date | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> list[Applicant]:
@@ -420,9 +420,8 @@ async def list_tenants(
     By default, excludes ended tenants (both manually ended and
     contract-expired). Pass ``include_ended=True`` for the "Show ended" toggle.
     ``today`` is the host's date, so a lease ends at their midnight, not the
-    server's. Without it, the server's date applies.
+    server's.
     """
-    today = today or _dt.date.today()
     stmt = select(Applicant).where(
         Applicant.organization_id == organization_id,
         Applicant.user_id == user_id,
@@ -450,11 +449,10 @@ async def count_tenants(
     *,
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
+    today: _dt.date,
     include_ended: bool = False,
-    today: _dt.date | None = None,
 ) -> int:
     """Count tenants — paired with ``list_tenants`` for pagination."""
-    today = today or _dt.date.today()
     stmt = select(func.count()).select_from(Applicant).where(
         Applicant.organization_id == organization_id,
         Applicant.user_id == user_id,

@@ -47,7 +47,7 @@ function buildDefaults(inquiry: InquiryResponse): PromoteFormValues {
   };
 }
 
-function formValuesToRequest(values: PromoteFormValues): ApplicantPromoteRequest {
+function formValuesToRequest(values: PromoteFormValues): Omit<ApplicantPromoteRequest, "today"> {
   // Empty strings represent "host left this blank" — send null so the
   // backend uses inquiry-side auto-fill where available.
   const trim = (s: string) => (s.trim() === "" ? null : s.trim());

@@ -1,5 +1,6 @@
 import { baseApi } from "@platform/core/store/baseApi";
 import { APPLICANT_PAGE_SIZE } from "../constants/applicantLabels";
+import { localToday } from "../utils/localToday";
 import type { ApplicantDetailResponse } from "../types/applicant/applicant-detail-response";
 import type { ApplicantSensitive } from "../types/applicant/applicant-sensitive";
 import type { ApplicantListArgs } from "../types/applicant/applicant-list-args";
@@ -77,13 +78,12 @@ const applicantsApi = baseApi.enhanceEndpoints({
     }),
     promoteFromInquiry: builder.mutation<
       ApplicantDetailResponse,
-      { inquiryId: string; data: ApplicantPromoteRequest }
+      { inquiryId: string; data: Omit<ApplicantPromoteRequest, "today"> }
     >({
-      query: ({ inquiryId, data }) => ({
-        url: `/applicants/promote/${inquiryId}`,
-        method: "POST",
-        data,
-      }),
+      query: ({ inquiryId, data }) => {
+        const body: ApplicantPromoteRequest = { ...data, today: localToday() };
+        return { url: `/applicants/promote/${inquiryId}`, method: "POST", data: body };
+      },
       invalidatesTags: (_result, _err, arg) => [
         { type: "Applicant", id: "LIST" },
         { type: "Inquiry", id: arg.inquiryId },
@@ -106,16 +106,16 @@ const applicantsApi = baseApi.enhanceEndpoints({
       ],
     }),
 
-    getTenants: builder.query<TenantListResponse, TenantListArgs | void>({
+    getTenants: builder.query<TenantListResponse, TenantListArgs>({
       query: (args) => ({
         url: "/applicants/tenants",
         params: {
-          ...(args?.include_ended !== undefined
+          today: args.today,
+          ...(args.include_ended !== undefined
             ? { include_ended: args.include_ended }
             : {}),
-          ...(args?.today !== undefined ? { today: args.today } : {}),
-          ...(args?.limit !== undefined ? { limit: args.limit } : {}),
-          ...(args?.offset !== undefined ? { offset: args.offset } : {}),
+          ...(args.limit !== undefined ? { limit: args.limit } : {}),
+          ...(args.offset !== undefined ? { offset: args.offset } : {}),
         },
       }),
       providesTags: (result) =>

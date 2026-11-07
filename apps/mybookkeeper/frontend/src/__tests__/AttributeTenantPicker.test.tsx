@@ -17,6 +17,7 @@ vi.mock("@platform/ui", async (importOriginal) => ({
 }));
 
 import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import { useAttributeTransactionManuallyMutation } from "@/shared/store/attributionApi";
 import { showSuccess } from "@platform/ui";
 
@@ -61,7 +62,7 @@ describe("AttributeTenantPicker", () => {
     // state. The picker must use the tenants endpoint with a valid limit.
     mockTenants({ data: { items: [], total: 0, has_more: false } });
     renderPicker();
-    expect(vi.mocked(useGetTenantsQuery)).toHaveBeenCalledWith({ limit: 100, include_ended: true });
+    expect(vi.mocked(useGetTenantsQuery)).toHaveBeenCalledWith({ limit: 100, include_ended: true, today: localToday() });
     const [[args]] = vi.mocked(useGetTenantsQuery).mock.calls;
     expect((args as { limit: number }).limit).toBeLessThanOrEqual(100);
   });

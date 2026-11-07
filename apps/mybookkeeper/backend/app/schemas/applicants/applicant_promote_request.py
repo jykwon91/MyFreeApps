@@ -1,6 +1,6 @@
 """Pydantic schema for POST /applicants/promote/{inquiry_id}.
 
-All fields are optional. The promotion service auto-fills missing values
+Every field but ``today`` is optional. The promotion service auto-fills missing values
 from the source inquiry where possible (legal_name, employer_or_hospital,
 contract_start) — fields with no inquiry source (dob, vehicle_make_model,
 smoker, pets, referred_by) come from this payload only.
@@ -11,7 +11,7 @@ host enters the end date when creating the lease draft.
 
 Validators:
 - ``dob`` must place the applicant at or above ``APPLICANT_MINIMUM_AGE_YEARS``
-  on the day of promotion. Violations raise 422 — never silently coerce.
+  on the host's ``today``. Violations raise 422 — never silently coerce.
 """
 from __future__ import annotations
 
@@ -29,6 +29,7 @@ from app.core.applicant_constants import (
     APPLICANT_REFERRED_BY_MAX,
     APPLICANT_VEHICLE_MAX,
 )
+from app.schemas.dates.client_local_date import ClientLocalDate
 
 
 class ApplicantPromoteRequest(BaseModel):
@@ -66,16 +67,18 @@ class ApplicantPromoteRequest(BaseModel):
     pets: str | None = Field(default=None, max_length=APPLICANT_PETS_MAX)
     referred_by: str | None = Field(default=None, max_length=APPLICANT_REFERRED_BY_MAX)
 
+    # Not stored: the host's date, for the minimum-age check on ``dob``.
+    today: ClientLocalDate
+
     model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
     def _validate_business_rules(self) -> "ApplicantPromoteRequest":
         if self.dob is not None:
-            today = _dt.date.today()
             # Compute age the way humans do — has the birthday already
             # passed this year? If not, subtract one.
-            age = today.year - self.dob.year - (
-                (today.month, today.day) < (self.dob.month, self.dob.day)
+            age = self.today.year - self.dob.year - (
+                (self.today.month, self.today.day) < (self.dob.month, self.dob.day)
             )
             if age < APPLICANT_MINIMUM_AGE_YEARS:
                 raise ValueError(

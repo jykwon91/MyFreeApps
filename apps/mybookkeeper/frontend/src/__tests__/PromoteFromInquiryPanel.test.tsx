@@ -10,7 +10,7 @@ import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inq
 
 interface PromoteArgs {
   inquiryId: string;
-  data: ApplicantPromoteRequest;
+  data: Omit<ApplicantPromoteRequest, "today">;
 }
 
 const promoteUnwrap = vi.fn();

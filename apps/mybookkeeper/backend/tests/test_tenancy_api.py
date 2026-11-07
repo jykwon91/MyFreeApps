@@ -24,6 +24,8 @@ from app.schemas.applicants.applicant_detail_response import ApplicantDetailResp
 from app.schemas.applicants.applicant_summary import ApplicantSummary
 from app.schemas.applicants.tenant_list_response import TenantListResponse
 
+_TODAY = _dt.datetime.now(_dt.timezone.utc).date()
+
 
 def _ctx(
     org_id: uuid.UUID,
@@ -94,7 +96,7 @@ class TestListTenantsEndpoint:
                 return_value=response_obj,
             ) as mock_svc:
                 client = TestClient(app)
-                resp = client.get("/applicants/tenants")
+                resp = client.get("/applicants/tenants", params={"today": _TODAY.isoformat()})
 
             assert resp.status_code == 200
             body = resp.json()
@@ -118,7 +120,10 @@ class TestListTenantsEndpoint:
                 return_value=response_obj,
             ) as mock_svc:
                 client = TestClient(app)
-                resp = client.get("/applicants/tenants?include_ended=true")
+                resp = client.get(
+                    "/applicants/tenants",
+                    params={"include_ended": "true", "today": _TODAY.isoformat()},
+                )
 
             assert resp.status_code == 200
             kwargs = mock_svc.call_args.kwargs
@@ -126,13 +131,7 @@ class TestListTenantsEndpoint:
         finally:
             app.dependency_overrides.clear()
 
-    @pytest.mark.parametrize(
-        ("query", "expected"),
-        [("", None), ("?today=2026-11-04", _dt.date(2026, 11, 4))],
-    )
-    def test_list_tenants_passes_the_hosts_date(
-        self, query: str, expected: _dt.date | None,
-    ) -> None:
+    def test_list_tenants_passes_the_hosts_date(self) -> None:
         org_id, user_id = uuid.uuid4(), uuid.uuid4()
         response_obj = TenantListResponse(items=[], total=0, has_more=False)
 
@@ -143,16 +142,39 @@ class TestListTenantsEndpoint:
                 new_callable=AsyncMock,
                 return_value=response_obj,
             ) as mock_svc:
-                resp = TestClient(app).get(f"/applicants/tenants{query}")
+                resp = TestClient(app).get(
+                    "/applicants/tenants", params={"today": _TODAY.isoformat()},
+                )
 
             assert resp.status_code == 200
-            assert mock_svc.call_args.kwargs["today"] == expected
+            assert mock_svc.call_args.kwargs["today"] == _TODAY
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.parametrize("skew_days", [None, 2, -2])
+    def test_list_tenants_rejects_a_missing_or_wrong_date(
+        self, skew_days: int | None,
+    ) -> None:
+        params = (
+            {} if skew_days is None
+            else {"today": (_TODAY + _dt.timedelta(days=skew_days)).isoformat()}
+        )
+        app.dependency_overrides[current_org_member] = lambda: _ctx(uuid.uuid4(), uuid.uuid4())
+        try:
+            with patch(
+                "app.api.applicants.tenancy_service.list_tenants",
+                new_callable=AsyncMock,
+            ) as mock_svc:
+                resp = TestClient(app).get("/applicants/tenants", params=params)
+
+            assert resp.status_code == 422
+            mock_svc.assert_not_called()
         finally:
             app.dependency_overrides.clear()
 
     def test_unauthenticated_returns_401(self) -> None:
         client = TestClient(app)
-        resp = client.get("/applicants/tenants")
+        resp = client.get("/applicants/tenants", params={"today": _TODAY.isoformat()})
         assert resp.status_code == 401
 
 

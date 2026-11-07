@@ -21,7 +21,7 @@ function textOrNull(text: string): string | null {
   return text.trim() || null;
 }
 
-export function promoteRequest(values: PromoteValues): ApplicantPromoteRequest {
+export function promoteRequest(values: PromoteValues): Omit<ApplicantPromoteRequest, "today"> {
   return {
     legal_name: textOrNull(values.legalName),
     dob: values.dob,

@@ -9,8 +9,8 @@ decorator on the model — routes interact with plaintext only.
 """
 from __future__ import annotations
 
-import datetime as _dt
 import uuid
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
@@ -25,6 +25,7 @@ from app.schemas.applicants.applicant_update_request import ApplicantUpdateReque
 from app.schemas.applicants.stage_transition_request import StageTransitionRequest
 from app.schemas.applicants.tenancy_end_request import TenancyEndRequest
 from app.schemas.applicants.tenant_list_response import TenantListResponse
+from app.schemas.dates.client_local_date import ClientLocalDate
 from app.services.applicants import (
     applicant_contract_service,
     applicant_sensitive_service,
@@ -39,8 +40,8 @@ router = APIRouter(prefix="/applicants", tags=["applicants"])
 
 @router.get("/tenants", response_model=TenantListResponse)
 async def list_tenants(
+    today: Annotated[ClientLocalDate, Query()],
     include_ended: bool = Query(False, description="Include ended tenants"),
-    today: _dt.date | None = Query(None, description="The host's date, for deciding which leases have run out"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     ctx: RequestContext = Depends(current_org_member),

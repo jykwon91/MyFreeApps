@@ -9,6 +9,7 @@ import {
 } from "@mybookkeeper/api-client/store/attributionApi";
 import { useAttributeTransactionManuallyMutation } from "@/shared/store/attributionApi";
 import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import { buildTenantOptions } from "@mybookkeeper/api-client/utils/tenantStatus";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import AttributionChannelBadge from "./AttributionChannelBadge";
@@ -65,7 +66,7 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
     isUninitialized: applicantsUninitialized,
   } = useGetTenantsQuery(
     // include_ended: a final or late payment can arrive after move-out.
-    { limit: 100, include_ended: true },
+    { limit: 100, include_ended: true, today: localToday() },
     { skip: !isUnmatched || isPropertyRow },
   );
   const tenantOptions = buildTenantOptions(tenantsResponse?.items ?? []);

@@ -15,7 +15,7 @@ interface PaymentReviewTenantSheetProps {
 export default function PaymentReviewTenantSheet({ isOpen, description, onClose, onClosed, onPick }: PaymentReviewTenantSheetProps) {
   const today = useTodayIso();
   // Ended tenants stay in the list: a final or late payment can arrive after move-out.
-  const { currentData, error } = useGetTenantsQuery({ limit: TENANT_PICKER_LIMIT, include_ended: true });
+  const { currentData, error } = useGetTenantsQuery({ limit: TENANT_PICKER_LIMIT, include_ended: true, today });
   const tenants = currentData?.items ?? [];
   const options = buildTenantOptions(tenants, today).map((option) => ({ value: option.id, label: option.label }));
 

@@ -39,8 +39,8 @@ async def list_tenants(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
     *,
+    today: _dt.date,
     include_ended: bool = False,
-    today: _dt.date | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> TenantListResponse:
