@@ -6,6 +6,8 @@ import WowWorldMapPage from "@/games/wow-forever/pages/WowWorldMapPage";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
 import type { MapCapture } from "@/games/wow-forever/types/mapCapture";
 import { PROVENANCE_LABEL } from "@/games/wow-forever/data/provenance/provenanceLabels";
+import { MAP_LAYERS_STORAGE_KEY } from "@/games/wow-forever/data/worldMap/layerCatalog";
+import { MAP_LAYER_IDS } from "@/games/wow-forever/data/worldMap/mapLayerIds";
 
 const capturesQuery = vi.hoisted(() => ({
   data: { captures: [] as MapCapture[] },
@@ -424,8 +426,10 @@ describe("WoW Forever World Map page", () => {
 
     await userEvent.selectOptions(within(find).getByLabelText("What are you looking for?"), "flight_master");
     await userEvent.click(within(find).getByLabelText("Include the other faction"));
-    await userEvent.click(screen.getByLabelText("Quest givers"));
-    await userEvent.click(screen.getByRole("checkbox", { name: "Dungeons & raids" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Layers/ }));
+    const layers = screen.getByRole("region", { name: "Map layers" });
+    await userEvent.click(within(layers).getByRole("checkbox", { name: /^Quest givers/ }));
+    await userEvent.click(within(layers).getByRole("checkbox", { name: /^Dungeons & raids/ }));
     const trainer = screen.getByRole("article", { name: "Warlock trainer: Maximillian Crowe" });
     await userEvent.click(within(trainer).getByRole("heading", { name: "Maximillian Crowe" }));
     expect(reset).toBeEnabled();
@@ -434,8 +438,8 @@ describe("WoW Forever World Map page", () => {
     expect(within(find).getByLabelText("What are you looking for?")).toHaveValue("class_trainer");
     expect(within(find).getByLabelText("Include the other faction")).not.toBeChecked();
     expect(within(find).getByLabelText("Show every class's trainers")).not.toBeChecked();
-    expect(screen.getByLabelText("Quest givers")).not.toBeChecked();
-    expect(screen.getByRole("checkbox", { name: "Dungeons & raids" })).toBeChecked();
+    expect(within(layers).getByRole("checkbox", { name: /^Quest givers/ })).not.toBeChecked();
+    expect(within(layers).getByRole("checkbox", { name: /^Dungeons & raids/ })).toBeChecked();
     expect(trainer).not.toHaveAttribute("aria-current");
     expect(reset).toBeDisabled();
     // Who you are is not a filter.
@@ -487,6 +491,9 @@ describe("WoW Forever World Map page", () => {
     });
 
     it('"warlock trainer" shows every warlock trainer on the zoomed-out map, and a marker finds its row', async () => {
+      // Every map layer off, so the only markers are the search's.
+      const allOff = Object.fromEntries(MAP_LAYER_IDS.map((id) => [id, false]));
+      window.localStorage.setItem(MAP_LAYERS_STORAGE_KEY, JSON.stringify({ layers: allOff, levelFit: true }));
       renderAt("/wow-forever/map");
       const search = await screen.findByRole("combobox", { name: "Find an NPC or place" }, { timeout: 4000 });
       await userEvent.type(search, "warlock trainer");

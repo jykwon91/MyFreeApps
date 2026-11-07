@@ -7,6 +7,7 @@
  * Run: npm run test:e2e -- wow-world-map
  */
 import { test, expect, type Page } from "@playwright/test";
+import { hideMapLayers } from "./fixtures/mapLayers";
 
 test.use({ permissions: ["clipboard-read", "clipboard-write"] });
 
@@ -15,7 +16,7 @@ test("an Alliance Warlock in Elwynn finds a trainer, gets directions and copies 
 
   await expect(page.getByText(/Say where you are above/)).toBeVisible();
   await page.getByRole("radio", { name: "Alliance" }).click();
-  await page.getByLabel("Class").selectOption("warlock");
+  await page.getByLabel("Class", { exact: true }).selectOption("warlock");
   await page.getByLabel("Zone").selectOption({ label: "Elwynn Forest" });
 
   // Stand in Goldshire: the trainer there is the nearest.
@@ -53,7 +54,7 @@ test("an Alliance Warlock in Elwynn finds a trainer, gets directions and copies 
 test("a level 1 Warlock sees Northshire's quests and the nearby dungeons", async ({ page }) => {
   await page.goto("/wow-forever/map");
   await page.getByRole("radio", { name: "Alliance" }).click();
-  await page.getByLabel("Class").selectOption("warlock");
+  await page.getByLabel("Class", { exact: true }).selectOption("warlock");
   await page.getByLabel("Zone").selectOption({ label: "Elwynn Forest" });
   await page.getByLabel("Level").fill("1");
   await page.getByRole("combobox", { name: "Where are you?" }).fill("48, 42");
@@ -69,8 +70,9 @@ test("a level 1 Warlock sees Northshire's quests and the nearby dungeons", async
   const dungeons = page.getByRole("region", { name: "Dungeons & raids" });
   await expect(dungeons.getByRole("article", { name: "Dungeon: Stormwind Stockade" })).toContainText("too low to enter yet");
 
-  // The dungeon layer is on by default; quest givers can be switched on.
-  await page.getByLabel("Quest givers").check();
+  // The dungeon layer is on by default; quest givers can be switched on in Layers.
+  await page.getByRole("button", { name: /^Layers/ }).click();
+  await page.getByRole("region", { name: "Map layers" }).getByRole("checkbox", { name: /^Quest givers/ }).check();
   await expect(page.getByRole("group", { name: "Elwynn Forest markers" })).toBeVisible();
 });
 
@@ -102,7 +104,7 @@ test("a location captured in Forever replaces the Classic spot and the waypoint 
   );
   await page.goto("/wow-forever/map");
   await page.getByRole("radio", { name: "Alliance" }).click();
-  await page.getByLabel("Class").selectOption("warlock");
+  await page.getByLabel("Class", { exact: true }).selectOption("warlock");
   await page.getByLabel("Zone").selectOption({ label: "Elwynn Forest" });
   await page.getByRole("combobox", { name: "Where are you?" }).fill("42, 65");
   await page.getByRole("button", { name: "Set", exact: true }).click();
@@ -149,7 +151,7 @@ async function standInGoldshire(page: Page) {
   await page.route("**/api/wow/map-captures", (route) => route.fulfill({ json: { captures: [] } }));
   await page.goto("/wow-forever/map");
   await page.getByRole("radio", { name: "Alliance" }).click();
-  await page.getByLabel("Class").selectOption("warlock");
+  await page.getByLabel("Class", { exact: true }).selectOption("warlock");
   await page.getByLabel("Zone").selectOption({ label: "Elwynn Forest" });
   await page.getByRole("combobox", { name: "Where are you?" }).fill("42, 65");
   await page.getByRole("button", { name: "Set", exact: true }).click();
@@ -157,6 +159,8 @@ async function standInGoldshire(page: Page) {
 }
 
 test("the map zooms out to the continent, opens zones, crosses borders and goes back", async ({ page }) => {
+  // The clicks are on zones' ground, not on layer markers standing there.
+  await hideMapLayers(page);
   await standInGoldshire(page);
   const map = page.getByTestId("zone-map");
 
@@ -297,13 +301,18 @@ test("a selected result can be let go of — click again, Clear, Esc or the map 
   const reset = find.getByRole("button", { name: "Reset filters" });
   await expect(reset).toBeDisabled();
   await find.getByLabel("What are you looking for?").selectOption("flight_master");
-  await page.getByRole("checkbox", { name: "Quest givers" }).check();
+  await page.getByRole("button", { name: /^Layers/ }).click();
+  const layers = page.getByRole("region", { name: "Map layers" });
+  await layers.getByRole("checkbox", { name: /^Quest givers/ }).check();
+  await layers.getByRole("button", { name: "Close layers" }).click();
   await name.click();
   await expect(resetZoom).toBeVisible();
   await expect(reset).toBeEnabled();
   await reset.click();
   await expect(find.getByLabel("What are you looking for?")).toHaveValue("class_trainer");
-  await expect(page.getByRole("checkbox", { name: "Quest givers" })).not.toBeChecked();
+  await page.getByRole("button", { name: /^Layers/ }).click();
+  await expect(layers.getByRole("checkbox", { name: /^Quest givers/ })).not.toBeChecked();
+  await layers.getByRole("button", { name: "Close layers" }).click();
   await expect(reset).toBeDisabled();
   await expect(selectedMarker).toHaveCount(0);
   await expect(resetZoom).toHaveCount(0);
@@ -323,7 +332,7 @@ test("a selected result can be let go of — click again, Clear, Esc or the map 
 test("a trainer in Ironforge gets directions through the Deeprun Tram", async ({ page }) => {
   await page.goto("/wow-forever/map");
   await page.getByRole("radio", { name: "Alliance" }).click();
-  await page.getByLabel("Class").selectOption("warlock");
+  await page.getByLabel("Class", { exact: true }).selectOption("warlock");
   await page.getByLabel("Zone").selectOption({ label: "Elwynn Forest" });
   await page.getByRole("combobox", { name: "Where are you?" }).fill("42, 65");
   await page.getByRole("button", { name: "Set", exact: true }).click();
@@ -352,6 +361,8 @@ test("markers keep their size when the map zooms in", async ({ page }) => {
 });
 
 test("a capital drawn on its zone's map opens on a click", async ({ page }) => {
+  // The click is on the capital's ground, not on a layer marker standing there.
+  await hideMapLayers(page);
   await page.goto("/wow-forever/map?m=1426");
   const map = page.getByTestId("zone-map");
   await expect(page.getByRole("img", { name: "Dun Morogh map" })).toBeVisible();

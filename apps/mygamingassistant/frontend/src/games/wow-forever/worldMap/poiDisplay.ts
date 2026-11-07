@@ -1,9 +1,6 @@
 import { isServiceKind, SERVICE_LABEL, SERVICE_MARKER_CLASS } from "@/games/wow-forever/data/worldMap/serviceKinds";
+import { DUNGEON_MARKER_CLASS, QUEST_MARKER_CLASS, RAID_MARKER_CLASS } from "@/games/wow-forever/data/worldMap/layerCatalog";
 import { INSTANCE_KIND, type MapPoi } from "@/games/wow-forever/types/worldMap";
-
-const QUEST_MARKER_CLASS = "fill-cyan-400";
-const DUNGEON_MARKER_CLASS = "fill-red-700";
-const RAID_MARKER_CLASS = "fill-red-950";
 
 /** "Class trainer", "Quest giver", "Dungeon", "Raid". */
 export function poiKindLabel(poi: Pick<MapPoi, "subkind">): string {

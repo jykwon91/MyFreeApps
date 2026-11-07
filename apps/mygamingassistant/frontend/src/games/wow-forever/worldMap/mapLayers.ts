@@ -5,12 +5,6 @@ import type { RankedPoi } from "@/games/wow-forever/worldMap/nearest";
 import { poiMarkerClass, poiMarkerLabel } from "@/games/wow-forever/worldMap/poiDisplay";
 import type { WorldMapModel } from "@/games/wow-forever/worldMap/worldMapModel";
 
-/** Optional map layers the player can switch on. Services are always shown. */
-export interface MapLayerChoice {
-  questGivers: boolean;
-  instances: boolean;
-}
-
 /** A result drawn on the map. */
 export interface MapMarker {
   id: string;
@@ -67,13 +61,11 @@ export interface MapFocus {
   reveal: boolean;
 }
 
-/** Result markers: the hero picks, the Find list and any switched-on layer, each once. */
-export function resultMarkers(model: WorldMapModel, layers: MapLayerChoice): MapMarker[] {
+/** Result markers: the hero picks, the Find list and the chosen result, each once (the switchable layers are `layerMarkers.ts`). */
+export function resultMarkers(model: WorldMapModel): MapMarker[] {
   const seen = new Set<string>();
   const markers: MapMarker[] = [];
   const ranked: RankedPoi[] = [...model.hero.flatMap((h) => (h.best ? [h.best] : [])), ...model.findResults];
-  if (layers.questGivers) ranked.push(...model.questGivers.map((g) => g.ranked));
-  if (layers.instances) ranked.push(...model.instances);
   if (model.selected) ranked.push(model.selected);
   for (const r of ranked) {
     if (seen.has(r.poi.id)) continue;

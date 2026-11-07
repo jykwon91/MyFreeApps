@@ -1,8 +1,23 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type MouseEvent,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import MapEdgeFrame from "@/games/wow-forever/components/worldMap/MapEdgeFrame";
 import MapGrid from "@/games/wow-forever/components/worldMap/MapGrid";
 import MapHoverHighlight from "@/games/wow-forever/components/worldMap/MapHoverHighlight";
+import ZoneFitTints from "@/games/wow-forever/components/worldMap/ZoneFitTints";
+import ZoneLevelLabels from "@/games/wow-forever/components/worldMap/ZoneLevelLabels";
+import { useElementSize } from "@/games/wow-forever/hooks/useElementSize";
+import { zoneFitsOf } from "@/games/wow-forever/worldMap/zoneFit";
+import { placeZoneLabels, zoneLabels } from "@/games/wow-forever/worldMap/zoneLabels";
 import MapHoverStatus from "@/games/wow-forever/components/worldMap/MapHoverStatus";
 import MapMarkerLayer from "@/games/wow-forever/components/worldMap/MapMarkerLayer";
 import MapZoomControls from "@/games/wow-forever/components/worldMap/MapZoomControls";
@@ -62,7 +77,14 @@ interface MapCanvasProps {
   onOpenCluster: (members: readonly MapMarker[]) => void;
   /** Clear the selected result. */
   onClearSelection: () => void;
+  /** Tint a continent's zones by how they fit this level ("Where to level"); null = no tint. */
+  zoneFitLevel: number | null;
+  /** Controls drawn over the map's corner (the Layers button and panel), outside the viewer so its keys stay its own. */
+  overlay?: ReactNode;
 }
+
+/** The fit symbol in front of a label's level line takes two characters. */
+const FIT_SYMBOL_CHARS = 2;
 
 function sameHit(a: MapHit | null, b: MapHit): boolean {
   return !!a && a.kind === b.kind && a.target?.id === b.target?.id;
@@ -94,6 +116,16 @@ export default function MapCanvas(props: MapCanvasProps) {
   const pinched = useRef(false);
   const revealed = useRef<MapFocus | null>(null);
   const edgeLabels = useMemo(() => neighbourLabels(data, map.id), [data, map.id]);
+  // Zone labels on a continent: as many as fit at the picture's on-screen size (zooming in makes room for more).
+  const boxSize = useElementSize(containerRef);
+  const { zoneFitLevel } = props;
+  const fits = useMemo(() => (zoneFitLevel === null ? null : zoneFitsOf(data, map, zoneFitLevel)), [data, map, zoneFitLevel]);
+  const pictureWidth = (boxSize?.width ?? 0) * viewer.scale;
+  const pictureHeight = (boxSize?.height ?? 0) * viewer.scale;
+  const shownLabels = useMemo(
+    () => placeZoneLabels(zoneLabels(data, map), pictureWidth, pictureHeight, fits ? FIT_SYMBOL_CHARS : 0),
+    [data, map, pictureWidth, pictureHeight, fits],
+  );
 
   // "Show on map" from the list: bring the map on screen at once, centre + zoom once the viewer is up.
   useEffect(() => {
@@ -244,7 +276,9 @@ export default function MapCanvas(props: MapCanvasProps) {
           className="absolute inset-0 h-full w-full"
         />
       )}
+      {fits && <ZoneFitTints data={data} map={map} fits={fits} />}
       {goTo && <MapHoverHighlight map={map} target={goTo} faction={faction} />}
+      {boxSize && shownLabels.length > 0 && <ZoneLevelLabels labels={shownLabels} fits={fits} />}
       <svg
         ref={svgRef}
         viewBox={`0 0 ${MAP_W} ${MAP_H}`}
@@ -268,7 +302,7 @@ export default function MapCanvas(props: MapCanvasProps) {
   );
 
   return (
-    <div ref={canvasRef} className="space-y-2">
+    <div ref={canvasRef} data-map-frame className="space-y-2">
       <MapEdgeFrame labels={edgeLabels} onOpen={onOpen}>
         <div className="relative w-full rounded-xl bg-muted/40" style={{ aspectRatio: `${MAP_W} / ${MAP_H}` }}>
           <div
@@ -299,6 +333,7 @@ export default function MapCanvas(props: MapCanvasProps) {
               onManualZoom();
             }}
           />
+          {props.overlay}
         </div>
       </MapEdgeFrame>
       <MapHoverStatus map={map} hover={hover} faction={faction} />
