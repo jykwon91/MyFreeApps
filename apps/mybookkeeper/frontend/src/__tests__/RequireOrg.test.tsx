@@ -210,4 +210,42 @@ describe("RequireOrg", () => {
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
     expect(screen.queryByTestId("create-org-prompt")).not.toBeInTheDocument();
   });
+
+  // ── Regression: a retry in flight must not read as "no organizations" ──
+  // RTK clears isError while a failed query is refetched but keeps `error`,
+  // with no data yet.
+
+  it("holds the error state with Try again busy while a retry runs", () => {
+    renderWithProviders({
+      data: undefined,
+      isLoading: false,
+      isFetching: true,
+      isError: false,
+      error: { status: 500, data: "Internal Server Error" },
+      refetch: vi.fn(),
+    });
+
+    expect(screen.getByText("Something went wrong loading your organizations.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+    expect(screen.queryByTestId("create-org-prompt")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
+  });
+
+  it("holds the error state through a retry when organizations were loaded before", () => {
+    renderWithProviders(
+      {
+        data: [{ id: "org-1", name: "Test Org", org_role: "owner" as const, is_demo: false }],
+        isLoading: false,
+        isFetching: true,
+        isError: false,
+        error: { status: 500, data: "Internal Server Error" },
+        refetch: vi.fn(),
+      },
+      { activeOrgId: "org-1" },
+    );
+
+    expect(screen.getByText("Something went wrong loading your organizations.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+    expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
+  });
 });

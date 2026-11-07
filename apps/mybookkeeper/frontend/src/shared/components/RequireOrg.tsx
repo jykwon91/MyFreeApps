@@ -1,6 +1,7 @@
 import { useLayoutEffect } from "react";
 import { useDispatch } from "react-redux";
 import { Navigate } from "react-router-dom";
+import { LoadingButton } from "@platform/ui";
 import { useListOrganizationsQuery } from "@/shared/store/organizationsApi";
 import { useGetTaxProfileQuery } from "@/shared/store/taxProfileApi";
 import { setActiveOrg, setOrganizations } from "@/shared/store/organizationSlice";
@@ -19,7 +20,7 @@ export default function RequireOrg({ children }: RequireOrgProps) {
   const {
     data: orgs,
     isLoading: orgsLoading,
-    isError,
+    isFetching,
     error,
     refetch,
   } = useListOrganizationsQuery();
@@ -47,7 +48,11 @@ export default function RequireOrg({ children }: RequireOrgProps) {
   // API error — distinguish auth failures from other errors.
   // On 401, RequireAuth's reactive subscription will redirect to /login.
   // For other errors, show a recoverable error state instead of CreateOrgPrompt.
-  if (isError) {
+  // Reads `error`, not `isError`: RTK clears `isError` while a retry is in
+  // flight but keeps `error`, so the error state holds through the retry
+  // instead of falling through to CreateOrgPrompt (no orgs loaded yet) or
+  // flashing the pages (orgs loaded from before).
+  if (error) {
     const apiError = error as ApiError;
     if (apiError?.status === 401) {
       return <Navigate to="/login" replace />;
@@ -58,13 +63,14 @@ export default function RequireOrg({ children }: RequireOrgProps) {
           <p className="text-destructive text-lg">
             Something went wrong loading your organizations.
           </p>
-          <button
+          <LoadingButton
             type="button"
+            isLoading={isFetching}
+            loadingText="Retrying..."
             onClick={() => refetch()}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
           >
             Try again
-          </button>
+          </LoadingButton>
         </div>
       </div>
     );

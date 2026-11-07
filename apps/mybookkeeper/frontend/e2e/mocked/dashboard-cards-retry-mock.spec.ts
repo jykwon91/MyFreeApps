@@ -20,6 +20,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { json } from "./fixtures/mockResponse";
 import { plantAuth, stubSignedInShell } from "./fixtures/mockSession";
+import { failUntilRecovered } from "./fixtures/flakyEndpoint";
 
 const COMPARISON_ERROR = "Couldn't compare your utility rates to the market.";
 const RENEWAL_ERROR = "Couldn't check utility plan renewals.";
@@ -93,39 +94,6 @@ const CLEAR_PREMIUM_COMPARISON = {
   total_considered: 1,
 };
 const EMPTY_ATTRIBUTION_QUEUE = { items: [], total: 0, pending_count: 0 };
-
-interface FlakyEndpoint {
-  recover: () => void;
-  release: () => void;
-  loads: () => number;
-}
-
-/**
- * Answers GET ``pattern`` with 500 until ``recover`` is called. After that its
- * loads wait until ``release`` is called, then answer with ``body``.
- */
-async function failUntilRecovered(page: Page, pattern: RegExp, body: unknown): Promise<FlakyEndpoint> {
-  let failing = true;
-  let loads = 0;
-  let release!: () => void;
-  const released = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  await page.route(pattern, async (route) => {
-    if (route.request().method() !== "GET") return route.fallback();
-    loads += 1;
-    if (failing) return route.fulfill(json({ detail: "Internal Server Error" }, 500));
-    await released;
-    return route.fulfill(json(body));
-  });
-  return {
-    recover: () => {
-      failing = false;
-    },
-    release,
-    loads: () => loads,
-  };
-}
 
 async function stubDashboard(page: Page): Promise<void> {
   await page.route("**/api/**", (route) => route.fulfill(json(route.request().method() === "GET" ? [] : {})));
