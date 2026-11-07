@@ -29,5 +29,8 @@ export const MAP_TEARDOWN_WAIT_MS = 500;
 /** Before Leaflet takes it over, the map picture simply fills the viewer. */
 export const MAP_PICTURE_CLASS = "absolute left-0 top-0 h-full w-full";
 
+/** Below Tailwind's `sm`: the Layers panel is a bottom sheet instead of a card over the map. */
+export const MOBILE_SHEET_QUERY = "(max-width: 639px)";
+
 /** Where the viewer is: Leaflet still loading, ready, or failed to load. */
 export const MAP_VIEWER_STATUS = { loading: "loading", ready: "ready", failed: "failed" } as const;

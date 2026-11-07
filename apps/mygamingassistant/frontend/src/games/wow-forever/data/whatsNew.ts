@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-07",
+    title: "Map layers and where to level",
+    summary:
+      "Pick what the World Map shows — flight masters, inns, trainers, quest givers, herbs, ore and more, each with how many are on the map — and see every zone's levels, coloured by how well it suits your level.",
+    to: "/wow-forever/map",
+  },
+  {
+    date: "2026-11-07",
     title: "Zoom and drag the World Map",
     summary:
       "Zoom into any map with the scroll wheel, a pinch or the + and − buttons, and drag it around to look closer at towns, roads and markers.",

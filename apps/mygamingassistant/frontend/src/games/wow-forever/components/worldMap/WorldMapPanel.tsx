@@ -1,19 +1,25 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import clsx from "clsx";
 import ChildMapSelect from "@/games/wow-forever/components/worldMap/ChildMapSelect";
 import MapBreadcrumb from "@/games/wow-forever/components/worldMap/MapBreadcrumb";
+import LevelFitLegend from "@/games/wow-forever/components/worldMap/LevelFitLegend";
 import MapCanvas from "@/games/wow-forever/components/worldMap/MapCanvas";
+import MapLayersControl from "@/games/wow-forever/components/worldMap/MapLayersControl";
 import PositionConfirm from "@/games/wow-forever/components/worldMap/PositionConfirm";
+import type { WowClassId } from "@/games/wow-forever/data/classes";
+import { MAP_LAYER } from "@/games/wow-forever/data/worldMap/mapLayerIds";
+import { GATHERING_SPOTS_STATUS, useGatheringMapSpots } from "@/games/wow-forever/hooks/useGatheringMapSpots";
+import type { MapLayersState } from "@/games/wow-forever/hooks/useMapLayers";
 import type { MapZoomRestore } from "@/games/wow-forever/hooks/useMapSelection";
 import type { MapViewport } from "@/games/wow-forever/types/mapViewport";
-import type { PlayerFaction, WorldMapData, WorldZone } from "@/games/wow-forever/types/worldMap";
+import { MAP_KIND, type PlayerFaction, type WorldMapData, type WorldZone } from "@/games/wow-forever/types/worldMap";
+import { layerCounts, markersByLayer, mergeMarkers, visibleLayerMarkers } from "@/games/wow-forever/worldMap/layerMarkers";
 import { childrenOf, isZoneView, mapPath } from "@/games/wow-forever/worldMap/mapHitTest";
 import {
   resultMarkers,
   selectedOnlyMarkers,
   type MapFit,
   type MapFocus,
-  type MapLayerChoice,
   type MapMarker,
   type MapRoute,
 } from "@/games/wow-forever/worldMap/mapLayers";
@@ -55,9 +61,12 @@ interface WorldMapPanelProps {
   onSelectMarker: (poiId: string) => void;
   /** Esc or a click on the map with a result selected: clear it. */
   onClearSelection: () => void;
-  /** Which optional layers are drawn (owned by the page so Reset filters can restore them). */
-  layers: MapLayerChoice;
-  onLayersChange: (layers: MapLayerChoice) => void;
+  /** Which layers are drawn and the level tint (owned by the page so Reset filters can restore them). */
+  mapLayers: MapLayersState;
+  classId: WowClassId;
+  /** The player's saved level — the You section's, shared both ways. */
+  level: number | null;
+  onLevelChange: (level: number | null) => void;
   /** Zoom the map to these points, on `fit.mapId` (opening it first). */
   onZoomTo: (fit: MapFit) => void;
   /** "Show all on the map" results: drawn on every map level, in place of the usual results. */
@@ -69,12 +78,6 @@ const PICK_PROMPT: Readonly<Record<PickTarget, string>> = {
   destination: "Click the map to set your destination. Esc to cancel.",
 };
 
-/** The search's markers plus the chosen result when it isn't one of them (picked from another list). */
-function withSelected(search: readonly MapMarker[], selected: readonly MapMarker[]): MapMarker[] {
-  const ids = new Set(search.map((m) => m.id));
-  return [...search, ...selected.filter((m) => !ids.has(m.id))];
-}
-
 interface PendingSpot {
   mapId: number;
   x: number;
@@ -83,17 +86,30 @@ interface PendingSpot {
 
 /** The map beside the list: navigable from Azeroth down to a city, with you, the results and the route. */
 export default function WorldMapPanel(props: WorldMapPanelProps) {
-  const { data, model, faction, mapId, playerZoneId, onOpen, onSetPosition, layers, onLayersChange } = props;
+  const { data, model, faction, mapId, playerZoneId, onOpen, onSetPosition, mapLayers, classId, level } = props;
+  const { settings } = mapLayers;
   const [pending, setPending] = useState<PendingSpot | null>(null);
+  const [layersOpen, setLayersOpen] = useState(false);
   const map = data.maps.get(mapId) ?? data.maps.get(data.worldMapId);
-  if (!map) return null;
+  const gatheringOn = settings.layers[MAP_LAYER.herbs] || settings.layers[MAP_LAYER.ore];
+  const gathering = useGatheringMapSpots(layersOpen || gatheringOn);
+  const byLayer = useMemo(
+    () => (map ? markersByLayer(data, map, { faction, classId, level, gathering: gathering.spots }) : null),
+    [data, map, faction, classId, level, gathering.spots],
+  );
+  const counts = useMemo(() => byLayer && layerCounts(byLayer, gathering.spots !== null), [byLayer, gathering.spots]);
+  if (!map || !byLayer || !counts) return null;
   const zoneView = isZoneView(map);
-  // Results belong on zone maps; a continent or the world shows you, the route and the destination —
-  // except a "Show all" search, whose matches show at any zoom so you can see where they all are.
-  let markers: MapMarker[] = [];
-  if (props.searchMarkers) markers = withSelected(props.searchMarkers, selectedOnlyMarkers(props.selectedPoiId, data));
-  else if (zoneView && model) markers = resultMarkers(model, layers);
-  else if (zoneView) markers = selectedOnlyMarkers(props.selectedPoiId, data);
+  const continentView = map.kind === MAP_KIND.continent;
+  const layerMarkers = visibleLayerMarkers(byLayer, settings.layers);
+  // Layers show on every map. Your results belong on zone maps; a continent or the world shows you, the route
+  // and the destination — except a "Show all" search, whose matches (drawn instead of the layers) show at any zoom.
+  let markers: MapMarker[] = layerMarkers;
+  if (props.searchMarkers) markers = mergeMarkers(props.searchMarkers, selectedOnlyMarkers(props.selectedPoiId, data));
+  else if (zoneView && model) markers = mergeMarkers(resultMarkers(model), layerMarkers);
+  else if (zoneView) markers = mergeMarkers(selectedOnlyMarkers(props.selectedPoiId, data), layerMarkers);
+  const continent = continentView ? null : (mapPath(data, map.id).find((m) => m.kind === MAP_KIND.continent) ?? null);
+  const fitLevel = settings.levelFit ? level : null;
   const destinationZone = props.destinationZoneId === null ? undefined : data.zoneById.get(props.destinationZoneId);
 
   const quickJumps: { zone: WorldZone; label: string }[] = [];
@@ -143,30 +159,6 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
         <MapBreadcrumb path={mapPath(data, map.id)} onOpen={onOpen} />
         <ChildMapSelect maps={childrenOf(data, map.id)} onOpen={onOpen} />
       </div>
-      {zoneView && !props.searchMarkers && (
-        <fieldset className="flex flex-wrap items-center gap-x-4 text-sm">
-          <legend className="sr-only">Also show on the map</legend>
-          <span className="text-muted-foreground">Also show:</span>
-          <label className="flex items-center gap-2 min-h-[44px] sm:min-h-[32px]">
-            <input
-              type="checkbox"
-              checked={layers.questGivers}
-              onChange={(e) => onLayersChange({ ...layers, questGivers: e.target.checked })}
-              className="h-4 w-4"
-            />
-            Quest givers
-          </label>
-          <label className="flex items-center gap-2 min-h-[44px] sm:min-h-[32px]">
-            <input
-              type="checkbox"
-              checked={layers.instances}
-              onChange={(e) => onLayersChange({ ...layers, instances: e.target.checked })}
-              className="h-4 w-4"
-            />
-            Dungeons &amp; raids
-          </label>
-        </fieldset>
-      )}
       {props.picking && (
         <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-blue-500 bg-blue-500/10 px-3 py-2 text-sm">
           <span>{PICK_PROMPT[props.picking]}</span>
@@ -212,14 +204,36 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
         // Several results on one spot: open the map they separate on (Ironforge from the Eastern Kingdoms), zoomed in.
         onOpenCluster={(members) => props.onZoomTo(clusterFit(data, map, members))}
         onClearSelection={props.onClearSelection}
+        zoneFitLevel={continentView ? fitLevel : null}
+        overlay={
+          <MapLayersControl
+            open={layersOpen}
+            onOpenChange={setLayersOpen}
+            mapName={map.name}
+            settings={settings}
+            counts={counts}
+            classId={classId}
+            gatheringFailed={gathering.status === GATHERING_SPOTS_STATUS.error}
+            onSetLayers={mapLayers.setLayers}
+            onRetryGathering={gathering.retry}
+            level={level}
+            onLevelChange={props.onLevelChange}
+            onLevelFitChange={mapLayers.setLevelFit}
+            continentView={continentView}
+            continent={continent}
+            onOpen={onOpen}
+            searchActive={props.searchMarkers !== null}
+          />
+        }
       />
+      {continentView && fitLevel !== null && <LevelFitLegend level={fitLevel} compact />}
       <p className="text-xs text-muted-foreground">
         <span className="font-medium text-blue-600">●</span> You ·{" "}
         <span className="font-medium text-emerald-600">A</span> start ·{" "}
         <span className="font-medium text-red-600">B</span> destination ·{" "}
         <span className="font-medium text-amber-500">●</span> direction steps (walk solid, fly dashed, boat dotted) ·{" "}
-        <span className="font-medium text-cyan-400">●</span> quest givers ·{" "}
-        <span className="font-medium text-red-700">●</span> dungeons · other coloured dots are results. With a result selected, a click on the map or Esc clears it and the map goes back to where it
+        other coloured dots are your results and the layers you've switched on (the Layers button on the map lists each
+        colour). With a result selected, a click on the map or Esc clears it and the map goes back to where it
         was — unless you've moved it yourself since.
         Otherwise click a zone to open it; right-click or Esc zooms out. On your zone's map, click to set where you are. Scroll, pinch or use + / − to zoom; drag or use the arrow keys to move.
       </p>

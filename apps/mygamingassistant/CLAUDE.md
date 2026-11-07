@@ -708,6 +708,43 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   client's AreaTrigger (the Forever client ships no dungeon triggers) joined to
   cmangos `areatrigger_teleport`; levels are Forever's own, from LFGDungeons →
   ContentTuning `MinLevelSquish`. Forever-only dungeons have no positions yet.
+- **Layers panel** (`MapLayersControl` → `MapLayersPanel` / `MapLayerGroup` /
+  `MapLayerToggle`): a "Layers (N on)" button top-left inside the map box (a
+  sibling of the viewer, so its Esc never zooms the map) opens a card on wide
+  screens and a bottom sheet (≤ 55dvh, Done) below `sm`
+  (`MOBILE_SHEET_QUERY`). Layers are `data/worldMap/mapLayerIds.ts` (ids are
+  stored — never rename) and `layerCatalog.ts` (defs, groups, marker colours,
+  defaults: flight masters, inns, your class's trainers, dungeons). Every
+  layer is backed by data we have: service subkinds + profession tags
+  (`classicServices.json`), quest givers with a quest you can take now
+  (level + 2), dungeon/raid entrances, boat/zeppelin/tram stops
+  (`travel.json`), and herb / ore sample spots (one per node type per zone,
+  from the crafting `classic/sources.json` `objectSpots`, lazy-loaded the
+  first time the panel opens or a gathering layer is on —
+  `worldMap/loadGatheringMapSpots.ts`). Never add a layer without data.
+  Counts are per viewed map (`worldMap/layerMarkers.ts`: `markersByLayer`,
+  `layerCounts`; your faction + neutral only, dungeons for all); a zero
+  count greys the toggle but keeps its choice. Layer markers show on every
+  map level; your results still only on zone maps; a "Show all" search
+  replaces them. Saved in `mga.wowForever.worldMap.layers.v1`
+  (`hooks/useMapLayers.ts`, parsed by `worldMap/mapLayerSettings.ts`);
+  "Reset filters" resets the layers but keeps the level tint switch.
+- **Where to level** (in the panel, `LevelFitControl`): the player's saved
+  level (the You section's `level`, shared both ways) tints each continent
+  zone (`ZoneFitTints`, through the zone's highlight art) right / too low /
+  too high (`worldMap/zoneFit.ts`: right = min − 2 ≤ L ≤ max). Colour plus
+  symbol (✓ ↓ ↑) and words (`data/worldMap/levelFit.ts`, legend
+  `LevelFitLegend`). Ranges are `zones.json` `levels` — the Forever client's
+  AreaTable exploration levels, outliers trimmed — tagged "Game files"
+  (`ZONE_LEVELS_PROVENANCE`). Zones with no range (cities, new in Forever)
+  are never tinted.
+- **Zone level labels** (`ZoneLevelLabels`, `worldMap/zoneLabels.ts`) on
+  continent maps: name + "5–10" / "City" / "New in Forever", at each zone's
+  deepest mask point; labels that would overlap at the picture's on-screen
+  size are dropped, biggest zones first (zooming in brings more back). Tests:
+  `wowWorldMapLayers.test.ts`, `e2e/wow-world-map-layers.spec.ts`; specs
+  that click a zone's ground switch layers off first
+  (`e2e/fixtures/mapLayers.ts`).
 - Level rules (`worldMap/levels.ts`): trainers are never filtered by level;
   quests show when min level ≤ your level + 2; dungeons are coloured by the
   Classic con bands (grey/green/yellow/orange/red) and flagged "too low to

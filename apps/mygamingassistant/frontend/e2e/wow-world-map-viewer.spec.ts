@@ -9,6 +9,7 @@
  * Run: npx playwright test --config e2e/playwright.config.ts wow-world-map-viewer
  */
 import { test, expect, type Locator, type Page } from "@playwright/test";
+import { hideMapLayers } from "./fixtures/mapLayers";
 
 const PHONE = { width: 375, height: 812 };
 
@@ -189,6 +190,8 @@ test("the keyboard zooms with + / − and pans with the arrow keys", async ({ pa
 });
 
 test("clicking a zone on a zoomed-in continent opens that zone", async ({ page }) => {
+  // The click is on Westfall's ground, not on a layer marker standing there.
+  await hideMapLayers(page);
   await page.goto("/wow-forever/map?m=1415");
   await expect(page.getByRole("img", { name: "Eastern Kingdoms map" })).toBeVisible();
   await page.getByTestId("zone-map").scrollIntoViewIfNeeded();

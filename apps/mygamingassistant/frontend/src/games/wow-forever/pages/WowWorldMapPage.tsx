@@ -14,6 +14,7 @@ import RoutePlanner from "@/games/wow-forever/components/worldMap/RoutePlanner";
 import WorldMapPanel from "@/games/wow-forever/components/worldMap/WorldMapPanel";
 import WorldMapSkeleton from "@/games/wow-forever/components/worldMap/WorldMapSkeleton";
 import { useFindFilters } from "@/games/wow-forever/hooks/useFindFilters";
+import { useMapLayers } from "@/games/wow-forever/hooks/useMapLayers";
 import { useMapSearch } from "@/games/wow-forever/hooks/useMapSearch";
 import { useMapSelection } from "@/games/wow-forever/hooks/useMapSelection";
 import { useMapView } from "@/games/wow-forever/hooks/useMapView";
@@ -36,6 +37,7 @@ export default function WowWorldMapPage() {
   const canImport = useIsAuthenticated() && !isReadOnly();
   const [settings, updateSettings] = usePlayerSettings();
   const find = useFindFilters();
+  const mapLayers = useMapLayers();
   const { findFilterId, showAllClasses, includeOtherFaction } = find.filters;
   const view = useMapView(data, settings.zoneId);
   const selection = useMapSelection(data, view);
@@ -89,9 +91,10 @@ export default function WowWorldMapPage() {
     if (patch.zoneId !== undefined && patch.zoneId !== settings.zoneId) view.followPlayer();
   }
 
-  /** Back to the default finding filters with nothing selected (and the view from before it); the You section is kept. */
+  /** Back to the default finding filters and map layers with nothing selected (and the view from before it); the You section is kept. */
   function resetFilters() {
     find.reset();
+    mapLayers.reset();
     selection.clear();
   }
 
@@ -192,7 +195,7 @@ export default function WowWorldMapPage() {
                     onShowAllClassesChange={(value) => find.update({ showAllClasses: value })}
                     includeOtherFaction={includeOtherFaction}
                     onIncludeOtherFactionChange={(value) => find.update({ includeOtherFaction: value })}
-                    canReset={!find.atDefaults || selectedPoiId !== null}
+                    canReset={!find.atDefaults || !mapLayers.atDefaults || selectedPoiId !== null}
                     onReset={resetFilters}
                     results={model.findResults}
                   />
@@ -229,8 +232,10 @@ export default function WowWorldMapPage() {
                   onSetPosition={(zoneId, x, y) => updateSettings({ zoneId, position: { x, y } })}
                   onSelectMarker={selection.selectMarker}
                   onClearSelection={selection.clear}
-                  layers={find.filters.layers}
-                  onLayersChange={(layers) => find.update({ layers })}
+                  mapLayers={mapLayers}
+                  classId={settings.classId}
+                  level={settings.level}
+                  onLevelChange={(level) => updateSettings({ level })}
                   searchMarkers={mapSearch.markers}
                 />
               </div>
