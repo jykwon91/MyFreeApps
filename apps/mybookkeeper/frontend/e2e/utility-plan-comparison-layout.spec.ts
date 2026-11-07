@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { localDateOffset } from "./fixtures/local-today";
 
 /**
  * Layout E2E for the dashboard rate-comparison card and the market-rate dialog.
@@ -25,12 +26,6 @@ const SKELETON_ROW_COUNT = 2;
 const SERVICE_TYPE = "internet";
 const BENCHMARK_URL = `/market-rate-benchmarks/${SERVICE_TYPE}`;
 
-function isoDateOffset(offsetDays: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetDays);
-  return d.toISOString().slice(0, 10);
-}
-
 async function seedPlan(
   api: APIRequestContext,
   propertyId: string,
@@ -46,8 +41,8 @@ async function seedPlan(
       // equipment fee — $90 against a $60 market is comfortably flagged.
       monthly_base_charge_cents: 8000,
       equipment_fee_monthly_cents: 1000,
-      service_start_date: isoDateOffset(-60),
-      term_end_date: isoDateOffset(300),
+      service_start_date: localDateOffset(-60),
+      term_end_date: localDateOffset(300),
     },
   });
   if (!res.ok()) {
@@ -87,7 +82,7 @@ test.describe("Utility plan comparison layout", () => {
         data: {
           monthly_cents: 6000,
           source: `E2E comparison layout ${runId}`,
-          observed_on: isoDateOffset(0),
+          observed_on: localDateOffset(0),
         },
       });
       expect(benchRes.ok()).toBe(true);
@@ -161,7 +156,7 @@ test.describe("Utility plan comparison layout", () => {
         data: {
           monthly_cents: 6000,
           source: `E2E a deliberately long provenance string for overflow ${runId}`,
-          observed_on: isoDateOffset(0),
+          observed_on: localDateOffset(0),
         },
       });
       expect(benchRes.ok()).toBe(true);

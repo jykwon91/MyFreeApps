@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
 import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { localDateOffset } from "./fixtures/local-today";
 
 /**
  * Rate-benchmark full-flow behavioural E2E.
@@ -44,13 +45,6 @@ interface Comparison {
   has_stale_benchmark: boolean;
 }
 
-/** ``offsetDays`` from today as ``YYYY-MM-DD``. Negative is in the past. */
-function isoDateOffset(offsetDays: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetDays);
-  return d.toISOString().slice(0, 10);
-}
-
 async function seedPlan(
   api: APIRequestContext,
   propertyId: string,
@@ -67,8 +61,8 @@ async function seedPlan(
       term_months: 12,
       // Well inside its term: the renewal card has nothing to say here, which
       // is exactly the blind spot the comparison covers.
-      service_start_date: isoDateOffset(-60),
-      term_end_date: isoDateOffset(300),
+      service_start_date: localDateOffset(-60),
+      term_end_date: localDateOffset(300),
     },
   });
   if (!res.ok()) {
@@ -222,7 +216,7 @@ test.describe("Utility plan rate benchmark", () => {
           // be advice they cannot act on.
           rate_type: "regulated",
           avg_price_cents_per_kwh_at_1000: "99.0000",
-          service_start_date: isoDateOffset(-60),
+          service_start_date: localDateOffset(-60),
         },
       });
       expect(planRes.ok()).toBe(true);
@@ -232,7 +226,7 @@ test.describe("Utility plan rate benchmark", () => {
         data: {
           rate_cents_per_kwh: "1.0000",
           source: `E2E regulated check ${runId}`,
-          observed_on: isoDateOffset(0),
+          observed_on: localDateOffset(0),
         },
       });
       expect(benchRes.ok()).toBe(true);
@@ -259,7 +253,7 @@ test.describe("Utility plan rate benchmark", () => {
       data: {
         rate_cents_per_kwh: "11.1000",
         monthly_cents: 6000,
-        observed_on: isoDateOffset(0),
+        observed_on: localDateOffset(0),
       },
     });
     expect(res.status()).toBe(422);
