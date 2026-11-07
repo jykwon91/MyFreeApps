@@ -18,7 +18,6 @@ import httpx2
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.wow_features import submit_daily_limiter, submit_hourly_limiter, vote_limiter
-from app.core.triage_gate import failed_auth_limiter, triage_request_limiter
 from app.models.wow.feature_story import WowFeatureStory
 from app.models.wow.feature_submission import WowFeatureSubmission
 from app.services.wow.feature_requests.feature_text import text_fingerprint
@@ -33,8 +32,6 @@ ALL_LIMITERS = (
     submit_hourly_limiter,
     submit_daily_limiter,
     vote_limiter,
-    failed_auth_limiter,
-    triage_request_limiter,
 )
 
 # Keys that must never appear anywhere in a public response.

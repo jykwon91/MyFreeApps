@@ -1,138 +1,151 @@
 /**
- * The triage API client: the key goes only in the X-MGA-Triage-Token header (no cookies, no-store, no
- * referrer), PATCH sends `updated_at` verbatim as If-Match, a 404 or 401 on the stored key locks the
- * screen, and the unlock check with a typed key never locks or stores anything.
+ * The triage API client: every call goes through the app's shared axios instance (so the operator's
+ * Bearer session is attached and a 401 signs out like any other call), with the fetch adapter for
+ * no-store / no referrer / keepalive writes; PATCH sends `updated_at` verbatim as If-Match; failures map
+ * to TriageApiError; signing out drops every cached triage row, after held-back writes are sent.
  */
+import type { AxiosRequestConfig } from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { triageApi, verifyTriageKey } from "@/games/wow-forever/api/triageApi";
-import { getTriageKey, getTriageKeySnapshot, lockTriage, unlockTriage } from "@/games/wow-forever/lib/featureRequests/triage/triageKeyStore";
+import { selectCachedTriage, triageApi } from "@/games/wow-forever/api/triageApi";
 import { triageRequest } from "@/games/wow-forever/lib/featureRequests/triage/triageRequest";
-import { clearTriageData, triageStore } from "@/games/wow-forever/lib/featureRequests/triage/triageStore";
-import { TRIAGE_KEY, inbox, inboxItem, jsonResponse, triageStory } from "./wowTriageFixtures";
+import { signOut, signOutAfterSaving } from "@/lib/auth";
+import { registerPendingWrites } from "@/lib/pendingWrites";
+import { store } from "@/lib/store";
+import { axiosFailure, axiosOk, dropSession, inbox, inboxItem, signInOperator, triageStory } from "./wowTriageFixtures";
 
-const fetchMock = vi.fn<typeof fetch>();
+const requestMock = vi.hoisted(() => vi.fn<(config: AxiosRequestConfig) => Promise<unknown>>());
 
-function lastCall(): { url: string; init: RequestInit; headers: Record<string, string> } {
-  const call = fetchMock.mock.calls[fetchMock.mock.calls.length - 1];
-  if (call === undefined) throw new Error("fetch was not called");
-  const init = call[1] ?? {};
-  return { url: String(call[0]), init, headers: init.headers as Record<string, string> };
+vi.mock("@/lib/api", () => ({ default: { request: requestMock } }));
+
+function lastConfig(): AxiosRequestConfig {
+  const call = requestMock.mock.calls[requestMock.mock.calls.length - 1];
+  if (call === undefined) throw new Error("api.request was not called");
+  return call[0];
 }
 
 beforeEach(() => {
-  fetchMock.mockReset();
-  vi.stubGlobal("fetch", fetchMock);
+  requestMock.mockReset();
+  signInOperator();
 });
 afterEach(() => {
-  lockTriage("manual");
-  clearTriageData();
-  vi.unstubAllGlobals();
+  signOut();
+  dropSession();
 });
 
 describe("triageRequest", () => {
-  it("sends nothing while locked", async () => {
+  it("reads through the shared client with no cache, no referrer and no keepalive", async () => {
+    requestMock.mockResolvedValue(axiosOk(inbox([])));
     const result = await triageRequest({ path: "/inbox", method: "GET" });
-    expect(result.ok).toBe(false);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result).toEqual({ ok: true, data: inbox([]) });
+    expect(lastConfig()).toEqual(
+      expect.objectContaining({
+        url: "/wow/feature-requests/triage/inbox",
+        method: "GET",
+        adapter: "fetch",
+        fetchOptions: { cache: "no-store", referrerPolicy: "no-referrer", keepalive: false },
+      }),
+    );
+    expect(lastConfig().headers).toBeUndefined();
   });
 
-  it("puts the key only in the header, with no cookies, cache or referrer", async () => {
-    unlockTriage(TRIAGE_KEY);
-    fetchMock.mockResolvedValue(jsonResponse(200, inbox([])));
-    await triageRequest({ path: "/inbox", method: "GET" });
-    const { url, init, headers } = lastCall();
-    expect(url).toBe("/api/wow/feature-requests/triage/inbox");
-    expect(url).not.toContain(TRIAGE_KEY);
-    expect(headers["X-MGA-Triage-Token"]).toBe(TRIAGE_KEY);
-    expect(init.cache).toBe("no-store");
-    expect(init.credentials).toBe("omit");
-    expect(init.referrerPolicy).toBe("no-referrer");
+  it("sends writes with keepalive and If-Match verbatim", async () => {
+    requestMock.mockResolvedValue(axiosOk({}));
+    await triageRequest({ path: "/stories/x", method: "PATCH", body: { hidden: true }, ifMatch: "2026-11-05T10:00:00.123456+00:00" });
+    const config = lastConfig();
+    expect(config.data).toEqual({ hidden: true });
+    expect(config.headers).toEqual({ "If-Match": "2026-11-05T10:00:00.123456+00:00" });
+    expect(config.fetchOptions).toEqual(expect.objectContaining({ keepalive: true }));
   });
 
-  it.each([404, 401])("locks the screen on a %s", async (status) => {
-    unlockTriage(TRIAGE_KEY);
-    fetchMock.mockResolvedValue(jsonResponse(status, { detail: "Not Found" }));
-    const result = await triageRequest({ path: "/inbox", method: "GET" });
-    expect(result.ok).toBe(false);
-    expect(getTriageKey()).toBeNull();
-    expect(getTriageKeySnapshot()).toEqual({ unlocked: false, lockReason: "rejected" });
-  });
-
-  it("does not lock when an accepted key asks for a story that's gone", async () => {
-    unlockTriage(TRIAGE_KEY);
-    fetchMock.mockResolvedValue(jsonResponse(404, { detail: "feature_request_not_found" }));
-    const result = await triageRequest({ path: "/stories/x", method: "PATCH", body: { hidden: true }, ifMatch: "v" });
-    expect(result).toEqual({ ok: false, error: expect.objectContaining({ status: 404 }) });
-    expect(getTriageKey()).toBe(TRIAGE_KEY);
-  });
-
-  it("does not lock on other failures", async () => {
-    unlockTriage(TRIAGE_KEY);
-    fetchMock.mockResolvedValue(jsonResponse(429, { detail: "Too Many Requests" }, { "Retry-After": "30" }));
+  it("keeps a 429's Retry-After for the undo queue", async () => {
+    requestMock.mockRejectedValue(axiosFailure(429, { detail: "Too Many Requests" }, { "retry-after": "30" }));
     const result = await triageRequest({ path: "/inbox", method: "GET" });
     expect(result).toEqual({ ok: false, error: expect.objectContaining({ status: 429, retryAfterSeconds: 30 }) });
-    expect(getTriageKey()).toBe(TRIAGE_KEY);
   });
 
-  it("checks a typed key without storing it or locking", async () => {
-    fetchMock.mockResolvedValue(jsonResponse(404, { detail: "Not Found" }));
-    const result = await verifyTriageKey("typed-key");
-    expect(result.ok).toBe(false);
-    expect(lastCall().headers["X-MGA-Triage-Token"]).toBe("typed-key");
-    expect(getTriageKey()).toBeNull();
-    expect(getTriageKeySnapshot().lockReason).not.toBe("rejected");
+  it.each([401, 403, 404])("maps a %s to its status and detail", async (status) => {
+    requestMock.mockRejectedValue(axiosFailure(status, { detail: "feature_request_not_found" }));
+    const result = await triageRequest({ path: "/stories/x", method: "PATCH", body: { hidden: true }, ifMatch: "v" });
+    expect(result).toEqual({
+      ok: false,
+      error: expect.objectContaining({ status, detail: "feature_request_not_found", data: { detail: "feature_request_not_found" } }),
+    });
   });
 
   it("reports a network failure as no status", async () => {
-    unlockTriage(TRIAGE_KEY);
-    fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
+    requestMock.mockRejectedValue(new TypeError("Failed to fetch"));
     const result = await triageRequest({ path: "/inbox", method: "GET" });
-    expect(result).toEqual({ ok: false, error: expect.objectContaining({ status: null }) });
+    expect(result).toEqual({ ok: false, error: expect.objectContaining({ status: undefined }) });
   });
 });
 
 describe("triageApi", () => {
-  it("PATCH sends updated_at verbatim as If-Match and swaps the saved story into the inbox cache", async () => {
-    unlockTriage(TRIAGE_KEY);
+  it("PATCH sends updated_at as If-Match and swaps the saved story into the inbox cache", async () => {
     const story = triageStory(1, { status: "submitted", updated_at: "2026-11-05T10:00:00.123456+00:00" });
-    fetchMock.mockResolvedValueOnce(jsonResponse(200, inbox([inboxItem(1, story)])));
-    await triageStore.dispatch(triageApi.endpoints.getTriageInbox.initiate());
+    requestMock.mockResolvedValueOnce(axiosOk(inbox([inboxItem(1, story)])));
+    const read = store.dispatch(triageApi.endpoints.getTriageInbox.initiate());
+    await read;
 
     const saved = { ...story, status: "open" as const, updated_at: "2026-11-05T10:00:01.000000+00:00" };
-    fetchMock.mockResolvedValueOnce(jsonResponse(200, saved));
-    await triageStore
-      .dispatch(triageApi.endpoints.patchTriageStory.initiate({ story, patch: { status: "open" } }))
-      .unwrap();
+    requestMock.mockResolvedValueOnce(axiosOk(saved));
+    await store.dispatch(triageApi.endpoints.patchTriageStory.initiate({ story, patch: { status: "open" } })).unwrap();
 
-    const { url, init, headers } = lastCall();
-    expect(url).toBe(`/api/wow/feature-requests/triage/stories/${story.id}`);
-    expect(init.method).toBe("PATCH");
-    expect(headers["If-Match"]).toBe("2026-11-05T10:00:00.123456+00:00");
-    expect(JSON.parse(String(init.body))).toEqual({ status: "open" });
-    const cached = triageApi.endpoints.getTriageInbox.select()(triageStore.getState()).data;
-    expect(cached?.items[0]?.story?.updated_at).toBe(saved.updated_at);
+    const config = lastConfig();
+    expect(config.url).toBe(`/wow/feature-requests/triage/stories/${story.id}`);
+    expect(config.method).toBe("PATCH");
+    expect(config.headers).toEqual({ "If-Match": "2026-11-05T10:00:00.123456+00:00" });
+    expect(config.data).toEqual({ status: "open" });
+    expect(selectCachedTriage(store.getState()).inbox?.items[0]?.story?.updated_at).toBe(saved.updated_at);
+    read.unsubscribe();
   });
 
-  it("refetches both lists after a 412", async () => {
-    unlockTriage(TRIAGE_KEY);
+  it("refetches the inbox after a 412", async () => {
     const story = triageStory(1);
-    fetchMock.mockResolvedValueOnce(jsonResponse(200, inbox([inboxItem(1, story)])));
-    await triageStore.dispatch(triageApi.endpoints.getTriageInbox.initiate());
-    const reads = fetchMock.mock.calls.length;
+    requestMock.mockResolvedValueOnce(axiosOk(inbox([inboxItem(1, story)])));
+    const read = store.dispatch(triageApi.endpoints.getTriageInbox.initiate());
+    await read;
+    const calls = requestMock.mock.calls.length;
 
-    fetchMock.mockResolvedValueOnce(jsonResponse(412, { detail: "story_changed" }));
-    fetchMock.mockResolvedValue(jsonResponse(200, inbox([inboxItem(1, story)])));
-    const result = await triageStore.dispatch(triageApi.endpoints.patchTriageStory.initiate({ story, patch: { priority: 1 } }));
+    requestMock.mockRejectedValueOnce(axiosFailure(412, { detail: "story_changed" }));
+    requestMock.mockResolvedValue(axiosOk(inbox([inboxItem(1, story)])));
+    const result = await store.dispatch(triageApi.endpoints.patchTriageStory.initiate({ story, patch: { priority: 1 } }));
     expect(result.error).toEqual(expect.objectContaining({ status: 412, detail: "story_changed" }));
-    await vi.waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(reads + 1));
-    expect(lastCall().url).toBe("/api/wow/feature-requests/triage/inbox");
+    await vi.waitFor(() => expect(requestMock.mock.calls.length).toBeGreaterThan(calls + 1));
+    expect(lastConfig().url).toBe("/wow/feature-requests/triage/inbox");
+    read.unsubscribe();
   });
 
-  it("clearTriageData drops every cached read", async () => {
-    unlockTriage(TRIAGE_KEY);
-    fetchMock.mockResolvedValueOnce(jsonResponse(200, inbox([inboxItem(1, triageStory(1))])));
-    await triageStore.dispatch(triageApi.endpoints.getTriageInbox.initiate());
-    clearTriageData();
-    expect(triageApi.endpoints.getTriageInbox.select()(triageStore.getState()).data).toBeUndefined();
+  it("signing out drops every cached triage row", async () => {
+    requestMock.mockResolvedValueOnce(axiosOk(inbox([inboxItem(1, triageStory(1))])));
+    const read = store.dispatch(triageApi.endpoints.getTriageInbox.initiate());
+    await read;
+    expect(selectCachedTriage(store.getState()).inbox).toBeDefined();
+    signOut();
+    expect(selectCachedTriage(store.getState()).inbox).toBeUndefined();
+    read.unsubscribe();
+  });
+});
+
+describe("signOutAfterSaving", () => {
+  it("sends held-back writes while still signed in, then clears the session", async () => {
+    const tokenDuringFlush: (string | null)[] = [];
+    const unregister = registerPendingWrites(async () => {
+      tokenDuringFlush.push(window.localStorage.getItem("token"));
+    });
+    await signOutAfterSaving();
+    unregister();
+    expect(tokenDuringFlush).toHaveLength(1);
+    expect(tokenDuringFlush[0]).not.toBeNull();
+    expect(window.localStorage.getItem("token")).toBeNull();
+  });
+
+  it("still signs out when a flush fails, and an unregistered flush is not called", async () => {
+    const gone = vi.fn(async () => undefined);
+    registerPendingWrites(gone)();
+    const unregister = registerPendingWrites(() => Promise.reject(new Error("offline")));
+    await signOutAfterSaving();
+    unregister();
+    expect(gone).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem("token")).toBeNull();
   });
 });

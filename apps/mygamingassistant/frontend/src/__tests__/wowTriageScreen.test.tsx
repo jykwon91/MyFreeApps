@@ -1,133 +1,174 @@
 /**
- * The triage screen (/wow-forever/triage) with a mocked `fetch`: unlock (wrong key, 429 countdown), the
- * frame guard (iframe / Discord Activity), Approve with undo, the merge confirmation, the status menu's
- * next states, and untrusted player text rendering only as text.
+ * The triage screen (/wow-forever/triage) with the shared API client mocked: signed out → /login with
+ * the triage URL kept, a 401 mid-session does the same, a non-operator account is told so, Sign out sends
+ * a pending write first; the frame guard (iframe / Discord Activity), Approve with undo, the merge
+ * confirmation, the status menu's next states, and untrusted player text rendering only as text.
  */
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { RouterProvider, createMemoryRouter } from "react-router-dom";
+import type { AxiosRequestConfig } from "axios";
+import { Provider } from "react-redux";
+import { RouterProvider, createMemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { __resetDiscordLaunchForTests } from "@platform/ui/discord-activity/launchParams";
 import TriageStatusMenu from "@/games/wow-forever/components/featureRequests/triage/TriageStatusMenu";
 import TriageSubmissionQuote from "@/games/wow-forever/components/featureRequests/triage/TriageSubmissionQuote";
-import { lockTriage } from "@/games/wow-forever/lib/featureRequests/triage/triageKeyStore";
-import { clearTriageData } from "@/games/wow-forever/lib/featureRequests/triage/triageStore";
 import WowTriagePage from "@/games/wow-forever/pages/WowTriagePage";
 import type { TriageInboxItem } from "@/games/wow-forever/types/featureRequests/triage/triageInboxItem";
 import type { TriageStory } from "@/games/wow-forever/types/featureRequests/triage/triageStory";
-import { TRIAGE_KEY, inbox, inboxItem, jsonResponse, stubMatchMedia, triageStory } from "./wowTriageFixtures";
+import { signOut } from "@/lib/auth";
+import { store } from "@/lib/store";
+import {
+  axiosFailure,
+  axiosOk,
+  dropSession,
+  inbox,
+  inboxItem,
+  signInOperator,
+  stubMatchMedia,
+  triageStory,
+} from "./wowTriageFixtures";
 
 const UNDO_MS = vi.hoisted(() => 300);
+const requestMock = vi.hoisted(() => vi.fn<(config: AxiosRequestConfig) => Promise<unknown>>());
 
 vi.mock("@/games/wow-forever/data/featureRequests/triage/triageConfig", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/games/wow-forever/data/featureRequests/triage/triageConfig")>()),
   TRIAGE_UNDO_MS: UNDO_MS,
 }));
+vi.mock("@/lib/api", () => ({ default: { request: requestMock } }));
 
-const BASE = "/api/wow/feature-requests/triage";
-const fetchMock = vi.fn<typeof fetch>();
+const BASE = "/wow/feature-requests/triage";
+const LOGIN_TEST_ID = "login-page";
 
 interface Server {
   inboxItems: TriageInboxItem[];
   stories: TriageStory[];
-  /** Answer GET /inbox with this status instead (e.g. 404 = wrong key). */
+  /** Answer GET /inbox with this status instead (401 = the session expired, 403 = not the operator). */
   inboxStatus: number;
-  inboxHeaders: Record<string, string>;
 }
 
 let server: Server;
 
-function calls(method: string, pathPart: string) {
-  return fetchMock.mock.calls.filter(([url, init]) => (init?.method ?? "GET") === method && String(url).includes(pathPart));
+function calls(method: string, pathPart: string): AxiosRequestConfig[] {
+  return requestMock.mock.calls
+    .map(([config]) => config)
+    .filter((config) => (config.method ?? "GET") === method && String(config.url).includes(pathPart));
 }
 
-function route(url: string, init: RequestInit | undefined): Response {
-  const method = init?.method ?? "GET";
-  const path = url.replace(BASE, "");
+function ifMatchOf(config: AxiosRequestConfig | undefined): string | undefined {
+  return (config?.headers as Record<string, string> | undefined)?.["If-Match"];
+}
+
+function route(config: AxiosRequestConfig): Promise<unknown> {
+  const method = config.method ?? "GET";
+  const path = String(config.url).replace(BASE, "");
+  const body = config.data as Record<string, unknown> | undefined;
   if (method === "GET" && path === "/inbox") {
-    if (server.inboxStatus !== 200) return jsonResponse(server.inboxStatus, { detail: "Not Found" }, server.inboxHeaders);
-    return jsonResponse(200, inbox(server.inboxItems));
+    if (server.inboxStatus === 401) {
+      // What the shared client's 401 interceptor does: the session is gone.
+      dropSession();
+      return Promise.reject(axiosFailure(401, { detail: "Unauthorized" }));
+    }
+    if (server.inboxStatus !== 200) return Promise.reject(axiosFailure(server.inboxStatus, { detail: "Forbidden" }));
+    return Promise.resolve(axiosOk(inbox(server.inboxItems)));
   }
-  if (method === "GET" && path === "/stories") return jsonResponse(200, { items: server.stories });
+  if (method === "GET" && path === "/stories") return Promise.resolve(axiosOk({ items: server.stories }));
   if (method === "PATCH" && path.startsWith("/stories/")) {
     const id = path.split("/")[2];
     const story = server.stories.find((s) => s.id === id) ?? server.inboxItems.find((i) => i.story?.id === id)?.story;
-    return jsonResponse(200, { ...story, ...JSON.parse(String(init?.body)), updated_at: "2026-11-06T00:00:00.000001+00:00" });
+    return Promise.resolve(axiosOk({ ...story, ...body, updated_at: "2026-11-06T00:00:00.000001+00:00" }));
   }
-  if (method === "POST" && path.endsWith("/merge")) return jsonResponse(200, { merged_story_id: "x", into_story_id: "y" });
+  if (method === "POST" && path.endsWith("/merge")) return Promise.resolve(axiosOk({ merged_story_id: "x", into_story_id: "y" }));
   if (method === "POST" && path === "/submissions/mark-triaged") {
-    const ids: string[] = JSON.parse(String(init?.body)).submission_ids;
+    const ids = body?.submission_ids as string[];
     server.inboxItems = server.inboxItems.filter((i) => !ids.includes(i.submission_id));
-    return jsonResponse(200, { updated: ids.length });
+    return Promise.resolve(axiosOk({ updated: ids.length }));
   }
-  return jsonResponse(500, { detail: `unexpected ${method} ${path}` });
+  return Promise.reject(axiosFailure(500, { detail: `unexpected ${method} ${path}` }));
+}
+
+/** Stands in for /login: shows where Login would send the operator back to. */
+function LoginStub() {
+  const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from ?? "";
+  return <p data-testid={LOGIN_TEST_ID}>{from}</p>;
 }
 
 function renderPage(entry = "/wow-forever/triage") {
-  const router = createMemoryRouter([{ path: "/wow-forever/triage", element: <WowTriagePage /> }], { initialEntries: [entry] });
-  return render(<RouterProvider router={router} />);
-}
-
-async function unlock(user: ReturnType<typeof userEvent.setup>, key = TRIAGE_KEY) {
-  await user.type(screen.getByLabelText("Triage key"), key);
-  await user.click(screen.getByRole("button", { name: "Unlock" }));
+  const router = createMemoryRouter(
+    [
+      { path: "/wow-forever/triage", element: <WowTriagePage /> },
+      { path: "/login", element: <LoginStub /> },
+    ],
+    { initialEntries: [entry] },
+  );
+  return render(
+    <Provider store={store}>
+      <RouterProvider router={router} />
+    </Provider>,
+  );
 }
 
 beforeEach(() => {
   stubMatchMedia(false);
-  server = { inboxItems: [], stories: [], inboxStatus: 200, inboxHeaders: {} };
-  fetchMock.mockReset();
-  fetchMock.mockImplementation((input, init) => Promise.resolve(route(String(input), init)));
-  vi.stubGlobal("fetch", fetchMock);
+  server = { inboxItems: [], stories: [], inboxStatus: 200 };
+  requestMock.mockReset();
+  requestMock.mockImplementation(route);
+  signInOperator();
 });
 
 afterEach(() => {
   cleanup();
-  lockTriage("manual");
-  clearTriageData();
-  vi.unstubAllGlobals();
+  signOut();
+  dropSession();
   vi.restoreAllMocks();
   window.history.replaceState(null, "", "/");
   sessionStorage.clear();
   __resetDiscordLaunchForTests();
 });
 
-describe("unlock", () => {
-  it("says the key didn't work on a 404 and stays locked", async () => {
-    server.inboxStatus = 404;
-    const user = userEvent.setup();
-    renderPage();
-    await unlock(user, "wrong-key");
-    expect(await screen.findByRole("alert")).toHaveTextContent("That key didn't work. Check you copied all of it.");
-    expect(screen.getByLabelText("Triage key")).toBeInTheDocument();
-    expect(screen.queryByTestId("triage-workspace")).not.toBeInTheDocument();
+describe("session", () => {
+  it("sends a signed-out visitor to sign in, keeping the triage URL, and calls nothing", async () => {
+    dropSession();
+    renderPage("/wow-forever/triage?tab=all&status=open");
+    expect(await screen.findByTestId(LOGIN_TEST_ID)).toHaveTextContent("/wow-forever/triage?tab=all&status=open");
+    expect(requestMock).not.toHaveBeenCalled();
   });
 
-  it("counts down a 429 and keeps Unlock off meanwhile", async () => {
-    server.inboxStatus = 429;
-    server.inboxHeaders = { "Retry-After": "30" };
-    const user = userEvent.setup();
-    renderPage();
-    await unlock(user);
-    expect(await screen.findByText("Too many tries. Wait 30 seconds.")).toHaveAttribute("role", "alert");
-    expect(screen.getByRole("button", { name: "Unlock" })).toBeDisabled();
-  });
-
-  it("the key input is never named, so a form post can't carry it", () => {
-    renderPage();
-    const input = screen.getByLabelText("Triage key");
-    expect(input).not.toHaveAttribute("name");
-    expect(input).toHaveAttribute("type", "password");
-    expect(input).toHaveAttribute("autocomplete", "current-password");
-  });
-
-  it("opens the inbox with the right key", async () => {
+  it("opens the inbox when the operator is signed in", async () => {
     server.inboxItems = [inboxItem(1, triageStory(1, { status: "submitted", title: "Herb map" }))];
-    const user = userEvent.setup();
     renderPage();
-    await unlock(user);
     expect(await screen.findByText("1 idea waiting for you")).toBeInTheDocument();
     expect(screen.getByText("Herb map")).toBeInTheDocument();
+  });
+
+  it("goes back to sign in on a 401 mid-session, keeping the place", async () => {
+    server.inboxStatus = 401;
+    renderPage("/wow-forever/triage?tab=inbox");
+    expect(await screen.findByTestId(LOGIN_TEST_ID)).toHaveTextContent("/wow-forever/triage?tab=inbox");
+  });
+
+  it("tells a signed-in account that isn't the operator so, with Sign out still there", async () => {
+    server.inboxStatus = 403;
+    renderPage();
+    expect(await screen.findByTestId("triage-not-operator")).toHaveTextContent("This account can't triage requests.");
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeEnabled();
+  });
+
+  it("Sign out sends a pending approve first, then signs out", async () => {
+    const story = triageStory(1, { status: "submitted", title: "Herb map" });
+    server.inboxItems = [inboxItem(1, story)];
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole("button", { name: "Approve" }));
+    expect(calls("PATCH", "/stories/")).toHaveLength(0);
+
+    await user.click(screen.getByRole("button", { name: "Sign out" }));
+    expect(await screen.findByTestId(LOGIN_TEST_ID)).toBeInTheDocument();
+    expect(calls("PATCH", "/stories/")).toHaveLength(1);
+    expect(calls("POST", "/mark-triaged")).toHaveLength(1);
+    expect(window.localStorage.getItem("token")).toBeNull();
   });
 });
 
@@ -136,7 +177,8 @@ describe("frame guard", () => {
     vi.spyOn(window, "top", "get").mockReturnValue({} as Window);
     renderPage();
     expect(screen.getByTestId("triage-frame-notice")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Triage key")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("triage-workspace")).not.toBeInTheDocument();
+    expect(requestMock).not.toHaveBeenCalled();
   });
 
   it("refuses inside the Discord Activity", () => {
@@ -144,7 +186,7 @@ describe("frame guard", () => {
     __resetDiscordLaunchForTests();
     renderPage();
     expect(screen.getByTestId("triage-frame-notice")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Triage key")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("triage-workspace")).not.toBeInTheDocument();
   });
 });
 
@@ -154,7 +196,6 @@ describe("approve with undo", () => {
     server.inboxItems = [inboxItem(1, story)];
     const user = userEvent.setup();
     renderPage();
-    await unlock(user);
     await user.click(await screen.findByRole("button", { name: "Approve" }));
 
     const undoBar = screen.getByTestId("triage-undo-bar");
@@ -169,8 +210,8 @@ describe("approve with undo", () => {
     await user.click(screen.getByRole("button", { name: "Approve" }));
     await waitFor(() => expect(calls("POST", "/mark-triaged")).toHaveLength(1));
     const [patch] = calls("PATCH", "/stories/");
-    expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ status: "open" });
-    expect((patch?.[1]?.headers as Record<string, string>)["If-Match"]).toBe(story.updated_at);
+    expect(patch?.data).toEqual({ status: "open" });
+    expect(ifMatchOf(patch)).toBe(story.updated_at);
     expect(await screen.findByTestId("triage-empty-inbox")).toBeInTheDocument();
   });
 });
@@ -183,7 +224,6 @@ describe("merge", () => {
     server.stories = [source, target, triageStory(3, { title: "Raid signups", i_want: "discord raid signups" })];
     const user = userEvent.setup();
     renderPage();
-    await unlock(user);
     await user.click(await screen.findByRole("button", { name: "Merge…" }));
 
     const dialog = await screen.findByRole("dialog");
@@ -197,9 +237,9 @@ describe("merge", () => {
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Merge" }));
     await waitFor(() => expect(calls("POST", "/mark-triaged")).toHaveLength(1));
     const [merge] = calls("POST", "/merge");
-    expect(String(merge?.[0])).toBe(`${BASE}/stories/${source.id}/merge`);
-    expect(JSON.parse(String(merge?.[1]?.body))).toEqual({ into_story_id: target.id });
-    expect((merge?.[1]?.headers as Record<string, string>)["If-Match"]).toBe(source.updated_at);
+    expect(merge?.url).toBe(`${BASE}/stories/${source.id}/merge`);
+    expect(merge?.data).toEqual({ into_story_id: target.id });
+    expect(ifMatchOf(merge)).toBe(source.updated_at);
   });
 });
 

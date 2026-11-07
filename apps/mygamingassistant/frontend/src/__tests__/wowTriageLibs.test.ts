@@ -1,11 +1,10 @@
 /**
  * Triage screen pure libs: hidden-character reveal, the shipped-path check (pinned to the backend),
- * merge suggestions, the in-memory key store's idle lock, and the copy a failed write shows.
+ * merge suggestions, and the copy a failed write shows.
  */
 import featureStoryModelSource from "../../../backend/app/models/wow/feature_story.py?raw";
 import triagePatchSchemaSource from "../../../backend/app/schemas/wow/feature_requests/triage_story_patch.py?raw";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { TRIAGE_IDLE_LOCK_MS } from "@/games/wow-forever/data/featureRequests/triage/triageConfig";
+import { describe, expect, it } from "vitest";
 import { rankMergeCandidates, searchMergeTargets, mergeTargets } from "@/games/wow-forever/lib/featureRequests/triage/rankMergeCandidates";
 import { hiddenCharMarker, revealHiddenChars } from "@/games/wow-forever/lib/featureRequests/triage/revealHiddenChars";
 import {
@@ -13,13 +12,6 @@ import {
   SHIPPED_PATH_SCHEMA_PATTERN,
   isValidShippedPath,
 } from "@/games/wow-forever/lib/featureRequests/triage/shippedPathValidator";
-import {
-  getTriageKey,
-  getTriageKeySnapshot,
-  lockTriage,
-  touchTriage,
-  unlockTriage,
-} from "@/games/wow-forever/lib/featureRequests/triage/triageKeyStore";
 import { triageErrorFrom } from "@/games/wow-forever/lib/featureRequests/triage/triageErrors";
 import { triageErrorView } from "@/games/wow-forever/lib/featureRequests/triage/triageErrorView";
 import { triageStory } from "./wowTriageFixtures";
@@ -118,47 +110,6 @@ describe("rankMergeCandidates", () => {
   });
 });
 
-describe("triageKeyStore", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    lockTriage("manual");
-    vi.useRealTimers();
-  });
-
-  it("keeps the key in memory and locks after the idle window", () => {
-    unlockTriage("k1");
-    expect(getTriageKey()).toBe("k1");
-    vi.advanceTimersByTime(TRIAGE_IDLE_LOCK_MS - 1);
-    expect(getTriageKey()).toBe("k1");
-    vi.advanceTimersByTime(1);
-    expect(getTriageKey()).toBeNull();
-    expect(getTriageKeySnapshot()).toEqual({ unlocked: false, lockReason: "idle" });
-  });
-
-  it("restarts the idle clock on activity", () => {
-    unlockTriage("k2");
-    vi.advanceTimersByTime(TRIAGE_IDLE_LOCK_MS - 1000);
-    touchTriage();
-    vi.advanceTimersByTime(TRIAGE_IDLE_LOCK_MS - 1000);
-    expect(getTriageKey()).toBe("k2");
-  });
-
-  it("keeps the first lock reason", () => {
-    unlockTriage("k3");
-    lockTriage("rejected");
-    lockTriage("manual");
-    expect(getTriageKeySnapshot().lockReason).toBe("rejected");
-  });
-
-  it("never writes the key to web storage", () => {
-    unlockTriage("secret-key-value");
-    const stored = [...Object.values(localStorage), ...Object.values(sessionStorage), document.cookie].join("|");
-    expect(stored).not.toContain("secret-key-value");
-  });
-});
-
 describe("triageErrorView", () => {
   it("names the field the service refused a link or @name in", () => {
     const view = triageErrorView(triageErrorFrom(422, { detail: "title: no links, HTML, markdown links or @names" }, null));
@@ -183,6 +134,12 @@ describe("triageErrorView", () => {
 
   it("reports a rate limit and a lost connection", () => {
     expect(triageErrorView(triageErrorFrom(429, null, 10)).message).toBe("Slow down a moment");
-    expect(triageErrorView(triageErrorFrom(null, null, null)).message).toMatch(/Couldn't reach the server/);
+    expect(triageErrorView(triageErrorFrom(undefined, null, null)).message).toMatch(/Couldn't reach the server/);
+  });
+
+  it("tells a signed-in account that isn't the operator so", () => {
+    expect(triageErrorView(triageErrorFrom(403, { detail: "Forbidden" }, null)).message).toBe(
+      "This account can't triage requests. Sign in as the operator.",
+    );
   });
 });

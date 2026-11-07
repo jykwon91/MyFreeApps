@@ -7,8 +7,9 @@ interface TriageFrameGuardProps {
 }
 
 /**
- * Inside the Discord Activity or any frame the triage screen never mounts its unlock form — only this
- * static notice. (Not gated on read-only: serve-only prod is read-only and triage still runs there.)
+ * Inside the Discord Activity or any frame the triage screen never mounts, never redirects to sign-in and
+ * never calls the API — only this static notice. (Not gated on read-only: serve-only prod is read-only and
+ * triage still runs there.)
  */
 export default function TriageFrameGuard({ children }: TriageFrameGuardProps) {
   const [framed] = useState(isFramedContext);

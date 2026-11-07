@@ -1,9 +1,29 @@
 /** Shared triage fixtures for the wowTriage*.test.* files (not a test itself). */
+import { AxiosError, AxiosHeaders } from "axios";
+import type { AxiosResponse, InternalAxiosRequestConfig } from "axios";
+import { notifyAuthChange } from "@platform/ui";
 import type { TriageInbox } from "@/games/wow-forever/types/featureRequests/triage/triageInbox";
 import type { TriageInboxItem } from "@/games/wow-forever/types/featureRequests/triage/triageInboxItem";
 import type { TriageStory } from "@/games/wow-forever/types/featureRequests/triage/triageStory";
 
-export const TRIAGE_KEY = "test-triage-key-0123456789";
+/** A JWT-shaped fixture (never signed, never sent anywhere real) whose `exp` is far in the future. */
+export const FIXTURE_OPERATOR_TOKEN = [
+  btoa(JSON.stringify({ alg: "HS256", typ: "JWT" })),
+  btoa(JSON.stringify({ sub: "fixture-operator", exp: 4102444800 })),
+  "fixture-signature",
+].join(".");
+
+/** Sign the operator in (the shared client reads the token from localStorage). */
+export function signInOperator(): void {
+  window.localStorage.setItem("token", FIXTURE_OPERATOR_TOKEN);
+  notifyAuthChange();
+}
+
+/** Sign out the way the shared 401 interceptor does: clear the token, tell subscribers. */
+export function dropSession(): void {
+  window.localStorage.removeItem("token");
+  notifyAuthChange();
+}
 
 export function triageStory(n: number, patch: Partial<TriageStory> = {}): TriageStory {
   const hex = n.toString(16).padStart(2, "0");
@@ -56,9 +76,16 @@ export function inbox(items: TriageInboxItem[]): TriageInbox {
   return { items, total_untriaged: items.length };
 }
 
-/** A `fetch` Response with a JSON body. */
-export function jsonResponse(status: number, body: unknown, headers: Record<string, string> = {}): Response {
-  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...headers } });
+/** A resolved axios response, as the shared `api.request` returns it. */
+export function axiosOk<T>(data: T): AxiosResponse<T> {
+  return { data, status: 200, statusText: "OK", headers: {}, config: { headers: new AxiosHeaders() } as InternalAxiosRequestConfig };
+}
+
+/** The error axios throws for a non-2xx answer (headers lowercased, as the fetch adapter gives them). */
+export function axiosFailure(status: number, data: unknown, headers: Record<string, string> = {}): AxiosError {
+  const config = { headers: new AxiosHeaders() } as InternalAxiosRequestConfig;
+  const response: AxiosResponse = { data, status, statusText: "", headers, config };
+  return new AxiosError(`Request failed with status code ${status}`, AxiosError.ERR_BAD_REQUEST, config, undefined, response);
 }
 
 /** Stub `window.matchMedia` (jsdom has none) — the shared Panel picks drawer vs dialog with it. */
