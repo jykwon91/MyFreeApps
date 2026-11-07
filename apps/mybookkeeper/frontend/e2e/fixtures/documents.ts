@@ -1,5 +1,6 @@
 import { expect, type APIRequestContext } from "@playwright/test";
 import { readFileSync } from "fs";
+import JSZip from "jszip";
 import path from "path";
 import { fileURLToPath } from "url";
 import type { DocumentType } from "./document-type";
@@ -17,6 +18,13 @@ export function uniquePdf(name: string) {
     mimeType: "application/pdf",
     buffer: Buffer.concat([readFileSync(SOURCE_PDF), Buffer.from(`\n% ${name}\n`)]),
   };
+}
+
+/** A zip of ``uniquePdf`` copies under ``entryNames``, uploaded as one batch. */
+export async function uniqueZip(name: string, entryNames: readonly string[]) {
+  const zip = new JSZip();
+  for (const entry of entryNames) zip.file(entry, uniquePdf(entry).buffer);
+  return { name, mimeType: "application/zip", buffer: await zip.generateAsync({ type: "nodebuffer" }) };
 }
 
 /**

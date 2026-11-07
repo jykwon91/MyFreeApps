@@ -168,6 +168,7 @@
         "test_document_dedup.py",
         "test_document_type.py",
         "test_document_upload_service.py",
+        "test_batch_status_counts.py",
         "test_source_documents.py",
         "test_dual_write.py"
       ],
@@ -177,6 +178,7 @@
         "upload-outcome.test.ts",
         "DocumentStatusBadge.test.tsx",
         "UploadStatusCard.test.tsx",
+        "documentUploadSlice.test.ts",
         "progress-percent.test.ts",
         "DocumentsSkeleton.test.tsx"
       ],

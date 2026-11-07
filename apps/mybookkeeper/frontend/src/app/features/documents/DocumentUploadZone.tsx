@@ -13,7 +13,6 @@ import { DOCUMENT_UPLOAD_MESSAGES } from "@/shared/lib/document-upload-messages"
 import { DOCUMENT_STATUSES, type DocumentStatus } from "@mybookkeeper/api-client/types/document/DocumentStatus";
 import { BATCH_STATUSES } from "@mybookkeeper/api-client/types/document/BatchStatus";
 import { FILE_STATUSES } from "@/shared/types/document/file-status";
-import { UPLOAD_OUTCOMES } from "@/shared/types/document/upload-outcome";
 import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
 import {
   setDragging,
@@ -25,6 +24,7 @@ import {
   uploadSucceeded,
   uploadFailed,
   processingComplete,
+  batchProcessed,
   restoreProcessing,
   dismiss,
 } from "@/shared/store/documentUploadSlice";
@@ -56,7 +56,8 @@ function resolveUploadSubstatus(snap: UploadStateSnapshot): UploadSubstatus {
       if (isMulti) return "done-multi";
       return batchId ? "done-batch" : "done-single";
     case FILE_STATUSES.FAILED:
-      return "failed-single";
+      if (isMulti) return "failed-multi";
+      return batchId ? "failed-batch" : "failed-single";
     case FILE_STATUSES.SKIPPED:
       return "skipped-single";
   }
@@ -94,7 +95,7 @@ function resolveUploadStatusText(args: UploadStatusTextArgs): string {
     case "uploading-single":
       return `${fileName} — Uploading…`;
     case "processing-batch":
-      return `${fileName} — ${batchCompleted} of ${batchTotal} extracted${batchFailed > 0 ? ` (${batchFailed} failed)` : ""}…`;
+      return `${fileName} — ${batchCompleted - batchFailed} of ${batchTotal} extracted${batchFailed > 0 ? ` (${batchFailed} failed)` : ""}…`;
     case "processing-extracting":
       return `${fileName} — Hmm, let me read this...`;
     case "processing-single":
@@ -102,9 +103,16 @@ function resolveUploadStatusText(args: UploadStatusTextArgs): string {
     case "done-multi":
       return `${fileName} — ${multiUploadCompleted} of ${multiUploadTotal} uploaded${multiUploadFailed > 0 ? ` (${multiUploadFailed} failed)` : ""}`;
     case "done-batch":
-      return `${fileName} — ${batchTotal} document${batchTotal !== 1 ? "s" : ""} processed`;
+      if (batchFailed === 0) return `${fileName} — ${batchTotal} document${batchTotal !== 1 ? "s" : ""} processed`;
+      return batchFailed === 1
+        ? `${fileName} — I read ${batchTotal - 1} of ${batchTotal}, but had trouble with 1. Want me to try that one again? It's in the list below.`
+        : `${fileName} — I read ${batchTotal - batchFailed} of ${batchTotal}, but had trouble with ${batchFailed}. Want me to try those again? They're in the list below.`;
     case "done-single":
       return `${fileName} — Got it! Check your Transactions page for the extracted data.`;
+    case "failed-multi":
+      return `${fileName} — I couldn't upload any of these. Please try again.`;
+    case "failed-batch":
+      return `${fileName} — I had trouble reading all ${batchTotal} of these. Want me to try again? They're in the list below.`;
     case "failed-single":
       return `${fileName} — I had trouble reading this one. You can have me try again from the list below.`;
     case "skipped-single":
@@ -137,7 +145,7 @@ export default function DocumentUploadZone() {
     if (!upload || upload.status !== FILE_STATUSES.PROCESSING) return;
 
     if (upload.batchId && batchStatus?.status === BATCH_STATUSES.DONE) {
-      dispatch(processingComplete(UPLOAD_OUTCOMES.DONE));
+      dispatch(batchProcessed({ total: batchStatus.total, failed: batchStatus.failed }));
       dispatch(baseApi.util.invalidateTags(["Document", "Summary", "Transaction"]));
     }
 
@@ -165,11 +173,13 @@ export default function DocumentUploadZone() {
     if (batchId) {
       const batchDocs = documents.filter((d) => d.batch_id === batchId);
       dispatch(restoreProcessing({
-        fileName: `${batchDocs.length} files`,
+        // The zip's own name isn't stored, and finished documents aren't in this list.
+        fileName: "Your zip",
         status: FILE_STATUSES.PROCESSING,
         documentId: firstDoc.id,
         batchId,
         batchTotal: batchDocs.length,
+        batchFailed: 0,
         multiUploadTotal: 0,
         multiUploadCompleted: 0,
         multiUploadFailed: 0,
@@ -181,6 +191,7 @@ export default function DocumentUploadZone() {
         documentId: firstDoc.id,
         batchId: null,
         batchTotal: 1,
+        batchFailed: 0,
         multiUploadTotal: 0,
         multiUploadCompleted: 0,
         multiUploadFailed: 0,
@@ -274,7 +285,7 @@ export default function DocumentUploadZone() {
         multiUploadFailed: upload.multiUploadFailed,
         batchTotal: upload.batchTotal,
         batchCompleted: batchStatus?.completed ?? 0,
-        batchFailed: batchStatus?.failed ?? 0,
+        batchFailed: batchStatus?.failed ?? upload.batchFailed,
       })
     : null;
 

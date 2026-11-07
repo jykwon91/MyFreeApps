@@ -220,10 +220,14 @@ async def get_email_message_ids(
 async def get_batch_status_counts(
     db: AsyncSession, organization_id: uuid.UUID, batch_id: str
 ) -> dict[str, int]:
-    """Return {status: count} for all documents in a batch."""
+    """Return {status: count} for the documents in a batch the user hasn't deleted."""
     result = await db.execute(
         select(Document.status, func.count())
-        .where(Document.organization_id == organization_id, Document.batch_id == batch_id)
+        .where(
+            Document.organization_id == organization_id,
+            Document.batch_id == batch_id,
+            Document.deleted_at.is_(None),
+        )
         .group_by(Document.status)
     )
     return {row[0]: row[1] for row in result.all()}

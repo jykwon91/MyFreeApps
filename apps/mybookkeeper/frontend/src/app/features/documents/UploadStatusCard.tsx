@@ -1,4 +1,4 @@
-import { Loader2, CheckCircle2, XCircle, RotateCcw } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, RotateCcw, AlertTriangle } from "lucide-react";
 import { LoadingButton, ProgressBar, cn } from "@platform/ui";
 import type { BatchStatusResponse } from "@mybookkeeper/api-client/types/document/BatchStatusResponse";
 import { FILE_STATUSES } from "@/shared/types/document/file-status";
@@ -20,17 +20,20 @@ export default function UploadStatusCard({ upload, statusText, batchStatus, onCa
 
   const isActive = upload.status === FILE_STATUSES.UPLOADING || upload.status === FILE_STATUSES.PROCESSING;
   const isError = upload.status === FILE_STATUSES.ERROR || upload.status === FILE_STATUSES.FAILED;
+  const isDone = upload.status === FILE_STATUSES.DONE;
+  const isPartial = isDone && (upload.batchFailed > 0 || upload.multiUploadFailed > 0);
   const batchId = upload.batchId;
 
   return (
-    <div className="border rounded-lg px-3 py-2 text-sm">
+    <div role="status" className="border rounded-lg px-3 py-2 text-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0">
           {isActive && <Loader2 size={14} className="animate-spin text-primary shrink-0" />}
-          {upload.status === FILE_STATUSES.DONE && <CheckCircle2 size={14} className="text-green-600 shrink-0" />}
+          {isDone && !isPartial && <CheckCircle2 size={14} className="text-green-600 shrink-0" />}
+          {isPartial && <AlertTriangle size={14} className="text-amber-600 shrink-0" role="img" aria-label="Some files failed" />}
           {upload.status === FILE_STATUSES.SKIPPED && <CheckCircle2 size={14} className="text-muted-foreground shrink-0" />}
-          {isError && <XCircle size={14} className="text-destructive shrink-0" />}
-          <span className={cn("truncate", isError ? "text-destructive" : "text-muted-foreground")}>
+          {isError && <XCircle size={14} className="text-destructive shrink-0" role="img" aria-label="Upload failed" />}
+          <span className={cn(isError || isPartial ? "break-words" : "truncate", isError ? "text-destructive" : "text-muted-foreground")}>
             {statusText}
           </span>
         </div>

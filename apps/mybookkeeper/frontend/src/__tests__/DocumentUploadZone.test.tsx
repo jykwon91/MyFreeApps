@@ -8,7 +8,7 @@ import type { RootState } from "@/shared/store/index";
 import documentUploadReducer from "@/shared/store/documentUploadSlice";
 import organizationReducer from "@/shared/store/organizationSlice";
 import DocumentUploadZone from "@/app/features/documents/DocumentUploadZone";
-import { useGetBatchStatusQuery, useGetSingleUploadStatusQuery } from "@mybookkeeper/api-client/store/documentsApi";
+import { useGetBatchStatusQuery, useGetDocumentsQuery, useGetSingleUploadStatusQuery } from "@mybookkeeper/api-client/store/documentsApi";
 import { showError } from "@/shared/lib/toast-store";
 import { DOCUMENT_UPLOAD_MESSAGES } from "@/shared/lib/document-upload-messages";
 import type { DocumentStatus } from "@mybookkeeper/api-client/types/document/DocumentStatus";
@@ -54,6 +54,11 @@ function renderWithStore(ui: React.ReactElement, storeOverride?: ReturnType<type
 describe("DocumentUploadZone", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // clearAllMocks keeps queued once-implementations, so a test that stops early would leak them.
+    mockUploadDocument.mockReset().mockImplementation(() => ({
+      unwrap: () => Promise.resolve({ document_id: "doc-1", batch_id: null, batch_total: 1 }),
+    }));
+    vi.mocked(useGetDocumentsQuery).mockReturnValue({ data: [] } as unknown as ReturnType<typeof useGetDocumentsQuery>);
     vi.mocked(useGetSingleUploadStatusQuery).mockReturnValue({ currentData: undefined } as unknown as ReturnType<typeof useGetSingleUploadStatusQuery>);
     vi.mocked(useGetBatchStatusQuery).mockReturnValue({ currentData: undefined } as unknown as ReturnType<typeof useGetBatchStatusQuery>);
   });
@@ -120,6 +125,7 @@ describe("DocumentUploadZone", () => {
           documentId: "doc-1",
           batchId: null,
           batchTotal: 1,
+          batchFailed: 0,
           multiUploadTotal: 0,
           multiUploadCompleted: 0,
           multiUploadFailed: 0,
@@ -142,6 +148,7 @@ describe("DocumentUploadZone", () => {
           documentId: null,
           batchId: null,
           batchTotal: 1,
+          batchFailed: 0,
           multiUploadTotal: 0,
           multiUploadCompleted: 0,
           multiUploadFailed: 0,
@@ -165,6 +172,7 @@ describe("DocumentUploadZone", () => {
           documentId: "doc-1",
           batchId: null,
           batchTotal: 1,
+          batchFailed: 0,
           multiUploadTotal: 0,
           multiUploadCompleted: 0,
           multiUploadFailed: 0,
@@ -187,6 +195,7 @@ describe("DocumentUploadZone", () => {
           documentId: null,
           batchId: null,
           batchTotal: 1,
+          batchFailed: 0,
           multiUploadTotal: 0,
           multiUploadCompleted: 0,
           multiUploadFailed: 0,
@@ -211,6 +220,7 @@ describe("DocumentUploadZone", () => {
             documentId: "doc-1",
             batchId: null,
             batchTotal: 1,
+            batchFailed: 0,
             multiUploadTotal: 0,
             multiUploadCompleted: 0,
             multiUploadFailed: 0,
@@ -261,6 +271,100 @@ describe("DocumentUploadZone", () => {
     });
   });
 
+  describe("when a batch finishes", () => {
+    function renderBatchEnding(failed: number, inProgress = 0) {
+      const status = { batch_id: "batch-1", total: 3, completed: 3 - inProgress, failed, status: inProgress ? "processing" : "done" };
+      // The real query is skipped once the upload stops processing, so the card
+      // must keep the counts itself.
+      vi.mocked(useGetBatchStatusQuery).mockImplementation(((_id: string, opts?: { skip?: boolean }) => ({
+        currentData: opts?.skip ? undefined : status,
+      })) as unknown as typeof useGetBatchStatusQuery);
+      renderWithStore(<DocumentUploadZone />, buildTestStore({
+        documentUpload: {
+          current: {
+            fileName: "3 files",
+            status: "processing" as const,
+            documentId: "doc-1",
+            batchId: "batch-1",
+            batchTotal: 3,
+            batchFailed: 0,
+            multiUploadTotal: 0,
+            multiUploadCompleted: 0,
+            multiUploadFailed: 0,
+          },
+          dragging: false,
+        },
+      }));
+    }
+
+    it("says every document was processed when none failed", async () => {
+      renderBatchEnding(0);
+      expect(await screen.findByText("3 files — 3 documents processed")).toBeInTheDocument();
+      expect(screen.queryByLabelText("Some files failed")).not.toBeInTheDocument();
+    });
+
+    it("counts the failed documents instead of calling them processed", async () => {
+      renderBatchEnding(1);
+      expect(await screen.findByText("3 files — I read 2 of 3, but had trouble with 1. Want me to try that one again? It's in the list below.")).toBeInTheDocument();
+      expect(screen.getByLabelText("Some files failed")).toBeInTheDocument();
+    });
+
+    it("says how many it had trouble with when more than one failed", async () => {
+      renderBatchEnding(2);
+      expect(await screen.findByText(/I read 1 of 3, but had trouble with 2\. Want me to try those again\? They're in the list below\./)).toBeInTheDocument();
+    });
+
+    it("says it had trouble, not that it finished, when every document failed", async () => {
+      renderBatchEnding(3);
+      expect(await screen.findByText(/I had trouble reading all 3 of these/)).toHaveClass("text-destructive");
+      expect(screen.queryByText(/processed/)).not.toBeInTheDocument();
+      expect(screen.getByTitle("Dismiss")).toBeInTheDocument();
+    });
+
+    it("does not count failed documents as extracted while the batch is still reading", () => {
+      renderBatchEnding(1, 1);
+      expect(screen.getByText("3 files — 1 of 3 extracted (1 failed)…")).toBeInTheDocument();
+    });
+  });
+
+  describe("when several files are uploaded", () => {
+    async function uploadTwo() {
+      const user = userEvent.setup();
+      renderWithStore(<DocumentUploadZone />);
+      const input = document.querySelector("input[type='file']") as HTMLInputElement;
+      await user.upload(input, [
+        new File(["a"], "a.pdf", { type: "application/pdf" }),
+        new File(["b"], "b.pdf", { type: "application/pdf" }),
+      ]);
+    }
+
+    it("counts a failed upload and warns about it", async () => {
+      mockUploadDocument.mockReturnValueOnce({ unwrap: () => Promise.reject(new Error("413")) });
+      await uploadTwo();
+      expect(await screen.findByText("2 files — 1 of 2 uploaded (1 failed)")).toBeInTheDocument();
+      expect(screen.getByLabelText("Some files failed")).toBeInTheDocument();
+    });
+
+    it("says it couldn't upload any, not that it finished, when every upload failed", async () => {
+      const reject = () => ({ unwrap: () => Promise.reject(new Error("network")) });
+      mockUploadDocument.mockImplementationOnce(reject).mockImplementationOnce(reject);
+      await uploadTwo();
+      expect(await screen.findByText(/I couldn't upload any of these/)).toHaveClass("text-destructive");
+      expect(screen.queryByText(/uploaded/)).not.toBeInTheDocument();
+    });
+  });
+
+  it("restores a zip that was still being read when the page reloaded", () => {
+    vi.mocked(useGetDocumentsQuery).mockReturnValue({
+      data: [
+        { id: "doc-1", status: "processing", source: "upload", batch_id: "batch-1", file_name: "a.pdf" },
+        { id: "doc-2", status: "processing", source: "upload", batch_id: "batch-1", file_name: "b.pdf" },
+      ],
+    } as unknown as ReturnType<typeof useGetDocumentsQuery>);
+    renderWithStore(<DocumentUploadZone />);
+    expect(screen.getByText("Your zip — Processing…")).toBeInTheDocument();
+  });
+
   describe("cancelling a batch", () => {
     it("keeps the batch on screen and says so when the cancel fails", async () => {
       vi.mocked(useGetBatchStatusQuery).mockReturnValue({
@@ -275,6 +379,7 @@ describe("DocumentUploadZone", () => {
             documentId: "doc-1",
             batchId: "batch-1",
             batchTotal: 3,
+            batchFailed: 0,
             multiUploadTotal: 0,
             multiUploadCompleted: 0,
             multiUploadFailed: 0,
