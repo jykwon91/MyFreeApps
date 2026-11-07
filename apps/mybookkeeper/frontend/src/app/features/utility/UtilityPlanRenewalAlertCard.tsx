@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
-import AlertBox from "@/shared/components/ui/AlertBox";
 import Card from "@/shared/components/ui/Card";
 import { useGetUtilityPlanRenewalAlertsQuery } from "@/shared/store/utilityPlansApi";
 import UtilityPlanAlertRow from "./UtilityPlanAlertRow";
 import UtilityPlanAlertCardSkeleton from "./UtilityPlanAlertCardSkeleton";
 import { useHasAnyUtilityPlans } from "./useHasAnyUtilityPlans";
 import { useUtilityPlanAlertCardMode } from "./useUtilityPlanAlertCardMode";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 /**
  * Dashboard card for utility plans whose fixed term has lapsed or is about to.
@@ -37,16 +37,7 @@ export default function UtilityPlanRenewalAlertCard() {
 
   if (mode === "error") {
     return (
-      <AlertBox variant="error" className="flex items-center justify-between gap-3">
-        <span>Couldn't check utility plan renewals.</span>
-        <button
-          type="button"
-          onClick={() => void refetch()}
-          className="text-sm font-medium hover:underline"
-        >
-          {isFetching ? "Retrying..." : "Retry"}
-        </button>
-      </AlertBox>
+      <LoadErrorAlert message="Couldn't check utility plan renewals." isRetrying={isFetching} onRetry={() => void refetch()} />
     );
   }
 

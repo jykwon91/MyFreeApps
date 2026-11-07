@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import AlertBox from "@/shared/components/ui/AlertBox";
-import { Button, LoadingButton } from "@platform/ui";
+import { Button } from "@platform/ui";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import {
   useGetSignedLeasesQuery,
@@ -13,6 +12,7 @@ import LeaseImportDialog from "@/app/features/leases/LeaseImportDialog";
 import { useLeasesListMode } from "@/app/features/leases/useLeasesListMode";
 import LeasesListBody from "@/app/features/leases/LeasesListBody";
 import type { SignedLeaseSummary } from "@mybookkeeper/api-client/types/lease/signed-lease-summary";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 export default function Leases() {
   const canWrite = useCanWrite();
@@ -65,18 +65,7 @@ export default function Leases() {
       />
 
       {isError ? (
-        <AlertBox variant="error" className="flex items-center justify-between gap-3">
-          <span>I couldn't load your leases. Want me to try again?</span>
-          <LoadingButton
-            variant="secondary"
-            size="sm"
-            isLoading={isFetching}
-            loadingText="Retrying..."
-            onClick={() => refetch()}
-          >
-            Retry
-          </LoadingButton>
-        </AlertBox>
+        <LoadErrorAlert message="I couldn't load your leases. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
       <LeasesListBody

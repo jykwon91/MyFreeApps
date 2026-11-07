@@ -2,8 +2,7 @@ import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Plus } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import AlertBox from "@/shared/components/ui/AlertBox";
-import { Button, LoadingButton } from "@platform/ui";
+import { Button } from "@platform/ui";
 import { useGetVendorsQuery } from "@mybookkeeper/api-client/store/vendorsApi";
 import {
   VENDOR_CATEGORIES,
@@ -15,6 +14,7 @@ import VendorPreferredToggle from "@/app/features/vendors/VendorPreferredToggle"
 import VendorForm from "@/app/features/vendors/VendorForm";
 import { useVendorsListMode } from "@/app/features/vendors/useVendorsListMode";
 import VendorsListBody from "@/app/features/vendors/VendorsListBody";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 const CATEGORY_PARAM = "category";
 const PREFERRED_PARAM = "preferred";
@@ -110,18 +110,7 @@ export default function Vendors() {
       </div>
 
       {isError ? (
-        <AlertBox variant="error" className="flex items-center justify-between gap-3">
-          <span>I couldn't load your vendors. Want me to try again?</span>
-          <LoadingButton
-            variant="secondary"
-            size="sm"
-            isLoading={isFetching}
-            loadingText="Retrying..."
-            onClick={() => refetch()}
-          >
-            Retry
-          </LoadingButton>
-        </AlertBox>
+        <LoadErrorAlert message="I couldn't load your vendors. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
       <VendorsListBody

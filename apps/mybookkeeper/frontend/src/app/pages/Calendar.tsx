@@ -3,8 +3,6 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Inbox } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import EmptyState from "@/shared/components/ui/EmptyState";
-import AlertBox from "@/shared/components/ui/AlertBox";
-import { LoadingButton } from "@platform/ui";
 import PropertyMultiSelect from "@/shared/components/PropertyMultiSelect";
 import { useGetCalendarEventsQuery, useGetReviewQueueCountQuery } from "@mybookkeeper/api-client/store/calendarApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
@@ -32,6 +30,7 @@ import CalendarViewToggle from "@/app/features/calendar/CalendarViewToggle";
 import CalendarLastSynced from "@/app/features/calendar/CalendarLastSynced";
 import ReviewQueueDrawer from "@/app/features/calendar/ReviewQueueDrawer";
 import type { CalendarView } from "@/shared/types/calendar/calendar-view";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -236,18 +235,7 @@ export default function Calendar() {
       </div>
 
       {isError ? (
-        <AlertBox variant="error" className="flex items-center justify-between gap-3">
-          <span>I couldn't load the calendar. Want me to try again?</span>
-          <LoadingButton
-            variant="secondary"
-            size="sm"
-            isLoading={isFetching}
-            loadingText="Retrying..."
-            onClick={() => refetch()}
-          >
-            Retry
-          </LoadingButton>
-        </AlertBox>
+        <LoadErrorAlert message="I couldn't load the calendar. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
       {isLoading ? (

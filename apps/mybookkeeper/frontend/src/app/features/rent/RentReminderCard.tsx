@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { AlertBox, Button } from "@platform/ui";
+import { Button } from "@platform/ui";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { useGetRentReminderOverviewQuery } from "@mybookkeeper/api-client/store/rentRemindersApi";
 import { describePlan } from "@mybookkeeper/api-client/utils/rentReminderFormat";
@@ -23,25 +24,14 @@ export interface RentReminderCardProps {
 export default function RentReminderCard({ applicantId }: RentReminderCardProps) {
   const canWrite = useCanWrite();
   const [editing, setEditing] = useState(false);
-  const { data: overview, isLoading, isError, refetch } =
+  const { data: overview, isLoading, isError, isFetching, refetch } =
     useGetRentReminderOverviewQuery(applicantId);
 
   if (isLoading) return <RentReminderSkeleton />;
 
   if (isError || !overview) {
     return (
-      <AlertBox variant="error" className="flex items-center justify-between gap-3">
-        <span>Couldn&apos;t load rent reminders.</span>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={() => void refetch()}
-          data-testid="rent-reminder-retry"
-        >
-          Retry
-        </Button>
-      </AlertBox>
+      <LoadErrorAlert message="Couldn't load rent reminders." isRetrying={isFetching} onRetry={() => void refetch()} />
     );
   }
 

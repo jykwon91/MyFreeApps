@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link, useLocation, useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Download, Trash2 } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import AlertBox from "@/shared/components/ui/AlertBox";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import { LoadingButton } from "@platform/ui";
 import { useGetLeaseTemplateByIdQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
@@ -12,6 +11,7 @@ import { showError, showSuccess } from "@/shared/lib/toast-store";
 import PlaceholderSpecEditor from "@/app/features/leases/PlaceholderSpecEditor";
 import AISuggestionsPanel from "@/app/features/leases/AISuggestionsPanel";
 import type { SuggestPlaceholdersResponse } from "@/shared/types/lease/suggest-placeholders-response";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 interface LocationState {
   aiSuggestions?: SuggestPlaceholdersResponse | null;
@@ -81,21 +81,7 @@ export default function LeaseTemplateDetail() {
       </Link>
 
       {isError ? (
-        <AlertBox
-          variant="error"
-          className="flex items-center justify-between gap-3"
-        >
-          <span>I couldn't find that template. Maybe it was deleted?</span>
-          <LoadingButton
-            variant="secondary"
-            size="sm"
-            isLoading={isFetching}
-            loadingText="Retrying..."
-            onClick={() => refetch()}
-          >
-            Retry
-          </LoadingButton>
-        </AlertBox>
+        <LoadErrorAlert message="I couldn't find that template. Maybe it was deleted?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
       {isLoading || !template ? (

@@ -1,10 +1,9 @@
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import AlertBox from "@/shared/components/ui/AlertBox";
-import { LoadingButton } from "@platform/ui";
 import { useGetInquiryByIdQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { useInquiryDetailMode } from "@/app/features/inquiries/useInquiryDetailMode";
 import InquiryDetailBody from "@/app/features/inquiries/InquiryDetailBody";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 export default function InquiryDetail() {
   const { inquiryId } = useParams<{ inquiryId: string }>();
@@ -29,18 +28,7 @@ export default function InquiryDetail() {
       </Link>
 
       {isError ? (
-        <AlertBox variant="error" className="flex items-center justify-between gap-3">
-          <span>I couldn't load this inquiry. Want me to try again?</span>
-          <LoadingButton
-            variant="secondary"
-            size="sm"
-            isLoading={isFetching}
-            loadingText="Retrying..."
-            onClick={() => refetch()}
-          >
-            Retry
-          </LoadingButton>
-        </AlertBox>
+        <LoadErrorAlert message="I couldn't load this inquiry. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
       <InquiryDetailBody mode={mode} inquiry={inquiry} />

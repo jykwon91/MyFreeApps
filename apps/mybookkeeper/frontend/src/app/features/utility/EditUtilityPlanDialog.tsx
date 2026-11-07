@@ -1,8 +1,8 @@
-import AlertBox from "@/shared/components/ui/AlertBox";
 import { useGetUtilityPlanByIdQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
 import EditUtilityPlanForm from "./EditUtilityPlanForm";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import UtilityPlanFormSkeleton from "./UtilityPlanFormSkeleton";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 export interface EditUtilityPlanDialogProps {
   planId: string;
@@ -34,16 +34,7 @@ export default function EditUtilityPlanDialog({
 
       {isError ? (
         <div className="p-5">
-          <AlertBox variant="error" className="flex items-center justify-between gap-3">
-            <span>Couldn't load this plan.</span>
-            <button
-              type="button"
-              onClick={() => void refetch()}
-              className="text-sm font-medium hover:underline"
-            >
-              {isFetching ? "Retrying..." : "Retry"}
-            </button>
-          </AlertBox>
+          <LoadErrorAlert message="Couldn't load this plan." isRetrying={isFetching} onRetry={() => void refetch()} />
         </div>
       ) : null}
 

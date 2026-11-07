@@ -298,7 +298,7 @@ describe("RentLedgerPanel", () => {
       refetch: mockRefetch,
     });
     renderPanel();
-    fireEvent.click(screen.getByTestId("rent-ledger-retry"));
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(mockRefetch).toHaveBeenCalledOnce();
   });
 

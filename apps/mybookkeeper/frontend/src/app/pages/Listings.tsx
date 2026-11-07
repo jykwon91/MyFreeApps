@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import AlertBox from "@/shared/components/ui/AlertBox";
 import { LoadingButton } from "@platform/ui";
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
@@ -14,6 +13,7 @@ import ListingForm from "@/app/features/listings/ListingForm";
 import { useListingsListMode } from "@/app/features/listings/useListingsListMode";
 import ListingsListBody from "@/app/features/listings/ListingsListBody";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 const STATUS_PARAM = "status";
 
@@ -93,18 +93,7 @@ export default function Listings() {
       <ListingStatusFilter value={status} onChange={handleFilterChange} />
 
       {isError ? (
-        <AlertBox variant="error" className="flex items-center justify-between gap-3">
-          <span>I couldn't load your listings. Want me to try again?</span>
-          <LoadingButton
-            variant="secondary"
-            size="sm"
-            isLoading={isFetching}
-            loadingText="Retrying..."
-            onClick={() => refetch()}
-          >
-            Retry
-          </LoadingButton>
-        </AlertBox>
+        <LoadErrorAlert message="I couldn't load your listings. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
       <ListingsListBody

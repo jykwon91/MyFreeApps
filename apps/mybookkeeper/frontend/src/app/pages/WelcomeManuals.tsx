@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import AlertBox from "@/shared/components/ui/AlertBox";
 import { LoadingButton } from "@platform/ui";
 import { useGetWelcomeManualsQuery } from "@mybookkeeper/api-client/store/welcomeManualsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
@@ -11,6 +10,7 @@ import type { WelcomeManualSummary } from "@mybookkeeper/api-client/types/welcom
 import WelcomeManualsListBody from "@/app/features/welcome-manuals/WelcomeManualsListBody";
 import WelcomeManualCreateDialog from "@/app/features/welcome-manuals/WelcomeManualCreateDialog";
 import { useWelcomeManualsListMode } from "@/app/features/welcome-manuals/useWelcomeManualsListMode";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 export default function WelcomeManuals() {
   const navigate = useNavigate();
@@ -67,18 +67,7 @@ export default function WelcomeManuals() {
       />
 
       {isError ? (
-        <AlertBox variant="error" className="flex items-center justify-between gap-3">
-          <span>I couldn't load your welcome manuals. Want me to try again?</span>
-          <LoadingButton
-            variant="secondary"
-            size="sm"
-            isLoading={isFetching}
-            loadingText="Retrying..."
-            onClick={() => refetch()}
-          >
-            Retry
-          </LoadingButton>
-        </AlertBox>
+        <LoadErrorAlert message="I couldn't load your welcome manuals. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
       <WelcomeManualsListBody

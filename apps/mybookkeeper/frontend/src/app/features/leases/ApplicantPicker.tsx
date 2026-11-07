@@ -1,9 +1,8 @@
-import AlertBox from "@/shared/components/ui/AlertBox";
-import { LoadingButton } from "@platform/ui";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 /**
  * Stages where generating a new lease makes sense:
@@ -36,18 +35,7 @@ export default function ApplicantPicker({ selectedId, onSelect }: ApplicantPicke
 
   if (isError) {
     return (
-      <AlertBox variant="error" className="flex items-center justify-between gap-3">
-        <span>I couldn't load your applicants. Want me to try again?</span>
-        <LoadingButton
-          variant="secondary"
-          size="sm"
-          isLoading={isFetching}
-          loadingText="Retrying..."
-          onClick={() => refetch()}
-        >
-          Retry
-        </LoadingButton>
-      </AlertBox>
+      <LoadErrorAlert message="I couldn't load your applicants. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
     );
   }
 

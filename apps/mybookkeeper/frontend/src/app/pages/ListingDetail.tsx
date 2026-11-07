@@ -2,9 +2,8 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import AlertBox from "@/shared/components/ui/AlertBox";
 import Markdown from "@/shared/components/ui/Markdown";
-import { Button, LoadingButton } from "@platform/ui";
+import { Button } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useDeleteListingMutation } from "@/shared/store/listingsApi";
 import { useGetListingByIdQuery } from "@mybookkeeper/api-client/store/listingsApi";
@@ -24,6 +23,7 @@ import DeleteListingModal from "@/app/features/listings/DeleteListingModal";
 import ChannelsSection from "@/app/features/listings/ChannelsSection";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 export default function ListingDetail() {
   const { listingId } = useParams<{ listingId: string }>();
@@ -66,18 +66,7 @@ export default function ListingDetail() {
       </Link>
 
       {isError ? (
-        <AlertBox variant="error" className="flex items-center justify-between gap-3">
-          <span>I couldn't load this listing. Want me to try again?</span>
-          <LoadingButton
-            variant="secondary"
-            size="sm"
-            isLoading={isFetching}
-            loadingText="Retrying..."
-            onClick={() => refetch()}
-          >
-            Retry
-          </LoadingButton>
-        </AlertBox>
+        <LoadErrorAlert message="I couldn't load this listing. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
       {isLoading && !isError ? <ListingDetailSkeleton /> : null}

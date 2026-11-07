@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import AlertBox from "@/shared/components/ui/AlertBox";
 import Card from "@/shared/components/ui/Card";
 import {
   useGetMarketRateBenchmarksQuery,
@@ -11,6 +10,7 @@ import UtilityPlanNotComparedRow from "./UtilityPlanNotComparedRow";
 import { useHasAnyUtilityPlans } from "./useHasAnyUtilityPlans";
 import { useUtilityPlanComparisonCardMode } from "./useUtilityPlanComparisonCardMode";
 import { UTILITY_PLAN_COMPARISON_CARD_MODES } from "@/shared/types/utility/utility-plan-comparison-card-mode";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 /**
  * Dashboard card for plans priced materially above the recorded market rate.
@@ -56,16 +56,7 @@ export default function UtilityPlanComparisonCard() {
 
   if (mode === UTILITY_PLAN_COMPARISON_CARD_MODES.ERROR) {
     return (
-      <AlertBox variant="error" className="flex items-center justify-between gap-3">
-        <span>Couldn't compare your utility rates to the market.</span>
-        <button
-          type="button"
-          onClick={() => void refetch()}
-          className="text-sm font-medium hover:underline"
-        >
-          {isFetching ? "Retrying..." : "Retry"}
-        </button>
-      </AlertBox>
+      <LoadErrorAlert message="Couldn't compare your utility rates to the market." isRetrying={isFetching} onRetry={() => void refetch()} />
     );
   }
 

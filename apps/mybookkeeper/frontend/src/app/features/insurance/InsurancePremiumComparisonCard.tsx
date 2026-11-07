@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import AlertBox from "@/shared/components/ui/AlertBox";
 import Card from "@/shared/components/ui/Card";
 import { useGetInsurancePremiumComparisonQuery } from "@/shared/store/insuranceBenchmarksApi";
 import InsurancePremiumComparisonRow from "./InsurancePremiumComparisonRow";
@@ -7,6 +6,7 @@ import InsurancePremiumComparisonCardSkeleton from "./InsurancePremiumComparison
 import InsurancePremiumNotComparedRow from "./InsurancePremiumNotComparedRow";
 import { useInsuranceComparisonCardMode } from "./useInsuranceComparisonCardMode";
 import { INSURANCE_COMPARISON_CARD_MODES } from "@/shared/types/insurance/insurance-comparison-card-mode";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 /**
  * Dashboard card for policies priced materially above the recorded market
@@ -42,16 +42,7 @@ export default function InsurancePremiumComparisonCard() {
 
   if (mode === INSURANCE_COMPARISON_CARD_MODES.ERROR) {
     return (
-      <AlertBox variant="error" className="flex items-center justify-between gap-3">
-        <span>Couldn't compare your insurance premiums to the market.</span>
-        <button
-          type="button"
-          onClick={() => void refetch()}
-          className="text-sm font-medium hover:underline"
-        >
-          {isFetching ? "Retrying..." : "Retry"}
-        </button>
-      </AlertBox>
+      <LoadErrorAlert message="Couldn't compare your insurance premiums to the market." isRetrying={isFetching} onRetry={() => void refetch()} />
     );
   }
 

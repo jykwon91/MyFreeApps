@@ -1,11 +1,10 @@
 import { Link, useLocation, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import AlertBox from "@/shared/components/ui/AlertBox";
-import { LoadingButton } from "@platform/ui";
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import ApplicantDetailSkeleton from "@/app/features/applicants/ApplicantDetailSkeleton";
 import ApplicantDetailBody from "@/app/features/applicants/ApplicantDetailBody";
 import { useApplicantDetailMode } from "@/app/features/applicants/useApplicantDetailMode";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 export default function ApplicantDetail() {
   const { applicantId } = useParams<{ applicantId: string }>();
@@ -33,18 +32,7 @@ export default function ApplicantDetail() {
       </Link>
 
       {isError ? (
-        <AlertBox variant="error" className="flex items-center justify-between gap-3">
-          <span>I couldn't find that applicant. Maybe it was removed?</span>
-          <LoadingButton
-            variant="secondary"
-            size="sm"
-            isLoading={isFetching}
-            loadingText="Retrying..."
-            onClick={() => refetch()}
-          >
-            Retry
-          </LoadingButton>
-        </AlertBox>
+        <LoadErrorAlert message="I couldn't find that applicant. Maybe it was removed?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
       {mode === "loading" ? <ApplicantDetailSkeleton /> : null}

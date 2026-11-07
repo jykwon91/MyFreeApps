@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Button } from "@platform/ui";
-import AlertBox from "@/shared/components/ui/AlertBox";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AddMortgageDialog from "@/app/features/mortgages/AddMortgageDialog";
 import EditMortgageDialog from "@/app/features/mortgages/EditMortgageDialog";
@@ -9,6 +8,7 @@ import MortgagesListBody from "@/app/features/mortgages/MortgagesListBody";
 import { useMortgagesListMode } from "@/app/features/mortgages/useMortgagesListMode";
 import { useGetMortgagesQuery } from "@mybookkeeper/api-client/store/mortgagesApi";
 import type { Mortgage } from "@mybookkeeper/api-client/types/mortgage/mortgage";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 /**
  * Every loan on record, then what the market is doing to them.
@@ -49,16 +49,7 @@ export default function Mortgages() {
       />
 
       {isError ? (
-        <AlertBox variant="error" className="flex items-center justify-between gap-3">
-          <span>Couldn&apos;t load mortgages.</span>
-          <button
-            type="button"
-            onClick={() => refetch()}
-            className="text-sm font-medium hover:underline"
-          >
-            {isFetching ? "Retrying..." : "Retry"}
-          </button>
-        </AlertBox>
+        <LoadErrorAlert message="Couldn't load mortgages." isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
       <MortgagesListBody

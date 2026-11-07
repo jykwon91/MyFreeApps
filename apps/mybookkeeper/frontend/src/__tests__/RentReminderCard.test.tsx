@@ -216,7 +216,7 @@ describe("RentReminderCard", () => {
     const refetch = vi.fn();
     mockOverview.mockReturnValue({ data: undefined, isLoading: false, isError: true, refetch });
     renderCard();
-    fireEvent.click(screen.getByTestId("rent-reminder-retry"));
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(refetch).toHaveBeenCalled();
   });
 });

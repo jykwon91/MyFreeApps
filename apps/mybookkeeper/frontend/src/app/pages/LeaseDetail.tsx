@@ -13,7 +13,6 @@ import {
   User,
 } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import AlertBox from "@/shared/components/ui/AlertBox";
 import Badge from "@/shared/components/ui/Badge";
 import { Button, LoadingButton } from "@platform/ui";
 import Skeleton from "@/shared/components/ui/Skeleton";
@@ -33,6 +32,7 @@ import LeaseAttachmentsSection from "@/app/features/leases/LeaseAttachmentsSecti
 import LeaseAddTemplateModal from "@/app/features/leases/LeaseAddTemplateModal";
 import UndoExtensionDialog from "@/app/features/leases/UndoExtensionDialog";
 import type { SignedLeaseStatus } from "@mybookkeeper/api-client/types/lease/signed-lease-status";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 type Tab = "files" | "details" | "notes";
 
@@ -153,18 +153,7 @@ export default function LeaseDetail() {
       </Link>
 
       {isError ? (
-        <AlertBox variant="error" className="flex items-center justify-between gap-3">
-          <span>I couldn't find that lease.</span>
-          <LoadingButton
-            variant="secondary"
-            size="sm"
-            isLoading={isFetching}
-            loadingText="Retrying..."
-            onClick={() => refetch()}
-          >
-            Retry
-          </LoadingButton>
-        </AlertBox>
+        <LoadErrorAlert message="I couldn't find that lease." isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
       {isLoading || !lease ? (

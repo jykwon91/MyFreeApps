@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { FileText, Plus } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import AlertBox from "@/shared/components/ui/AlertBox";
 import { LoadingButton } from "@platform/ui";
 import { useGetInquiriesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
@@ -16,6 +15,7 @@ import InquiryForm from "@/app/features/inquiries/InquiryForm";
 import { useInquiriesListMode } from "@/app/features/inquiries/useInquiriesListMode";
 import InquiriesListBody from "@/app/features/inquiries/InquiriesListBody";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 const STAGE_PARAM = "stage";
 const SPAM_PARAM = "spam";
@@ -159,18 +159,7 @@ export default function Inquiries() {
       <InquiryStageFilter value={stage} onChange={handleFilterChange} />
 
       {isError ? (
-        <AlertBox variant="error" className="flex items-center justify-between gap-3">
-          <span>I couldn't load your inquiries. Want me to try again?</span>
-          <LoadingButton
-            variant="secondary"
-            size="sm"
-            isLoading={isFetching}
-            loadingText="Retrying..."
-            onClick={() => refetch()}
-          >
-            Retry
-          </LoadingButton>
-        </AlertBox>
+        <LoadErrorAlert message="I couldn't load your inquiries. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
       <InquiriesListBody

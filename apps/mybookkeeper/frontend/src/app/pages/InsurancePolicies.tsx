@@ -3,13 +3,13 @@ import { addDays, format } from "date-fns";
 import { Button } from "@platform/ui";
 import { useGetInsurancePoliciesQuery } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import AlertBox from "@/shared/components/ui/AlertBox";
 import { useInsurancePoliciesListMode } from "@/app/features/insurance/useInsurancePoliciesListMode";
 import AddInsurancePolicyDialog from "@/app/features/insurance/AddInsurancePolicyDialog";
 import InsuranceBenchmarkDialog from "@/app/features/insurance/InsuranceBenchmarkDialog";
 import InsuranceBenchmarkSummary from "@/app/features/insurance/InsuranceBenchmarkSummary";
 import InsurancePoliciesListBody from "@/app/features/insurance/InsurancePoliciesListBody";
 import RateWatchSection from "@/app/features/insurance/RateWatchSection";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 /**
  * All-policies view: lists insurance policies across all properties.
@@ -50,16 +50,7 @@ export default function InsurancePolicies() {
       />
 
       {isError ? (
-        <AlertBox variant="error" className="flex items-center justify-between gap-3">
-          <span>Couldn't load insurance policies.</span>
-          <button
-            type="button"
-            onClick={() => refetch()}
-            className="text-sm font-medium hover:underline"
-          >
-            {isFetching ? "Retrying..." : "Retry"}
-          </button>
-        </AlertBox>
+        <LoadErrorAlert message="Couldn't load insurance policies." isRetrying={isFetching} onRetry={() => refetch()} />
       ) : null}
 
       <InsuranceBenchmarkSummary onEdit={() => setShowBenchmarkDialog(true)} />

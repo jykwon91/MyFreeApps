@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlertBox, Button } from "@platform/ui";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { useGetRentLedgerQuery } from "@mybookkeeper/api-client/store/rentLedgerApi";
 import RentChargeDialog from "./RentChargeDialog";
@@ -36,7 +36,7 @@ const CLOSED: OpenDialog = { kind: "none" };
 export default function RentLedgerPanel({ applicantId }: RentLedgerPanelProps) {
   const canWrite = useCanWrite();
   const [dialog, setDialog] = useState<OpenDialog>(CLOSED);
-  const { data: ledger, isLoading, isError, refetch } = useGetRentLedgerQuery({
+  const { data: ledger, isLoading, isError, isFetching, refetch } = useGetRentLedgerQuery({
     applicantId,
   });
 
@@ -44,18 +44,7 @@ export default function RentLedgerPanel({ applicantId }: RentLedgerPanelProps) {
 
   if (isError || !ledger) {
     return (
-      <AlertBox variant="error" className="flex items-center justify-between gap-3">
-        <span>Couldn&apos;t load the rent ledger.</span>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={() => void refetch()}
-          data-testid="rent-ledger-retry"
-        >
-          Retry
-        </Button>
-      </AlertBox>
+      <LoadErrorAlert message="Couldn't load the rent ledger." isRetrying={isFetching} onRetry={() => void refetch()} />
     );
   }
 

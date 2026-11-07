@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import AlertBox from "@/shared/components/ui/AlertBox";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { Button } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
@@ -37,6 +37,7 @@ export default function ChannelsSection({ listingId, canWrite }: ChannelsSection
     data: channelListings = [],
     isLoading,
     isError,
+    isFetching,
     refetch,
   } = useGetListingChannelsQuery(listingId);
   const { data: channels = [] } = useGetChannelsQuery();
@@ -92,12 +93,11 @@ export default function ChannelsSection({ listingId, canWrite }: ChannelsSection
 
   if (isError) {
     return (
-      <AlertBox variant="error" className="flex items-center justify-between gap-3">
-        <span>I couldn't load the channels for this listing.</span>
-        <Button variant="secondary" size="sm" onClick={() => refetch()}>
-          Retry
-        </Button>
-      </AlertBox>
+      <LoadErrorAlert
+        message="I couldn't load the channels for this listing."
+        isRetrying={isFetching}
+        onRetry={() => refetch()}
+      />
     );
   }
 
