@@ -91,12 +91,47 @@ test.describe("Analytics — Utility Trends", () => {
     await openAnalytics(page);
     await expectCards(page, SEED.totals);
 
-    await page.getByLabel("From date").first().fill(SEED.thisMonth.from);
+    await page.getByLabel("From date").fill(SEED.thisMonth.from);
 
     await expect(page).toHaveURL(new RegExp(`[?&]from=${SEED.thisMonth.from}(&|$)`));
     await expect(cardAmount(page, "Total Utilities")).toHaveText(SEED.thisMonth.total);
     await expect(page.getByText("I only have one month of data — try expanding the date range to see trends.")).toBeVisible();
     await expect(trendsChart(page)).toHaveCount(0);
+  });
+
+  test("on a phone the filters open from the Filters button", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openAnalytics(page);
+    await expectCards(page, SEED.totals);
+
+    const fromDate = page.getByLabel("From date");
+    await expect(fromDate).toBeHidden();
+
+    const toggle = page.getByRole("button", { name: "Filters", exact: true });
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await fromDate.fill(SEED.thisMonth.from);
+    await expect(page).toHaveURL(new RegExp(`[?&]from=${SEED.thisMonth.from}(&|$)`));
+    await expect(cardAmount(page, "Total Utilities")).toHaveText(SEED.thisMonth.total);
+
+    // A range with no bills keeps the panel open so the next date can be picked.
+    await fromDate.fill("2000-01-01");
+    await page.getByLabel("To date").fill("2000-12-31");
+    await expect(page.getByText("No utility expenses found between Jan 1, 2000 and Dec 31, 2000.")).toBeVisible();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await expect(fromDate).toBeVisible();
+
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(fromDate).toBeHidden();
+  });
+
+  test("on a larger screen the filters always show, without a Filters button", async ({ page }) => {
+    await openAnalytics(page);
+    await expectCards(page, SEED.totals);
+
+    await expect(page.getByLabel("From date")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Filters", exact: true })).toBeHidden();
   });
 
   test("a range ending on a bill's date counts that bill", async ({ page }) => {
