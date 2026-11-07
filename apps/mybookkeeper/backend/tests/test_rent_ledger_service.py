@@ -27,18 +27,10 @@ from app.services.rent import rent_ledger_service, rent_schedule_service
 ORG = uuid.uuid4()
 USER = uuid.uuid4()
 
-# ``create_schedule`` materializes every begun period at write time, against the
-# real clock. Pinning "today" is what keeps that deterministic: unpinned, each
-# test that back-dates a schedule gains one extra charge per calendar month that
-# elapses, which is what turned this module red in September 2026. Tests drive
-# the horizon they actually care about through an explicit ``through=``/``as_of=``.
+# The host's date sent with every schedule save: periods begun by then are
+# materialized at write time. Tests drive the horizon they actually care about
+# through an explicit ``through=``/``as_of=``.
 _TODAY = _dt.date(2026, 8, 15)
-
-
-@pytest.fixture(autouse=True)
-def _frozen_today():
-    with patch.object(rent_ledger_service, "_today", lambda: _TODAY):
-        yield
 
 
 async def _live_charges(db: AsyncSession, applicant_id: uuid.UUID) -> list[RentCharge]:
@@ -134,6 +126,7 @@ async def _create_monthly_schedule(
             amount=Decimal(amount),
             cadence=cadence,
             start_date=start,
+            today=_TODAY,
         )
 
 
@@ -199,6 +192,7 @@ class TestChargeGeneration:
             await rent_schedule_service.update_schedule(
                 organization_id=ORG,
                 user_id=USER,
+                today=_TODAY,
                 schedule_id=schedule.id,
                 end_date=_dt.date(2026, 8, 15),
                 fields_set={"end_date"},
@@ -306,7 +300,7 @@ class TestChargeGeneration:
 
         with ledger_patch, schedule_patch:
             await rent_schedule_service.update_schedule(
-                organization_id=ORG, user_id=USER, schedule_id=schedule.id,
+                organization_id=ORG, user_id=USER, today=_TODAY, schedule_id=schedule.id,
                 end_date=_dt.date(2026, 6, 30), fields_set={"end_date"},
             )
 
@@ -463,6 +457,7 @@ class TestLedger:
         with ledger_patch, pytest.raises(rent_ledger_service.TenantNotFoundError):
             await rent_ledger_service.get_ledger(
                 organization_id=ORG, user_id=USER, applicant_id=uuid.uuid4(),
+                as_of=_TODAY,
             )
 
     @pytest.mark.asyncio
@@ -475,6 +470,7 @@ class TestLedger:
         with ledger_patch:
             ledger = await rent_ledger_service.get_ledger(
                 organization_id=ORG, user_id=USER, applicant_id=applicant_id,
+                as_of=_TODAY,
             )
 
         assert ledger.schedules == []
@@ -509,7 +505,7 @@ class TestScheduleInvariants:
         ledger_patch, schedule_patch = _patch_uow(db)
         with ledger_patch, schedule_patch:
             await rent_schedule_service.update_schedule(
-                organization_id=ORG, user_id=USER, schedule_id=first.id,
+                organization_id=ORG, user_id=USER, today=_TODAY, schedule_id=first.id,
                 end_date=_dt.date(2026, 7, 31), fields_set={"end_date"},
             )
 

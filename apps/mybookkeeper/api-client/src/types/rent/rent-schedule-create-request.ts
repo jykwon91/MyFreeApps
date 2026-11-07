@@ -9,4 +9,6 @@ export interface RentScheduleCreateRequest {
   end_date?: string | null;
   grace_days?: number | null;
   notes?: string | null;
+  /** The host's local date (yyyy-MM-dd): periods begun by then are charged on save. */
+  today: string;
 }

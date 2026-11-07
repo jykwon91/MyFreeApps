@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict
 
-from app.schemas.leases.client_local_date import ClientLocalDate
+from app.schemas.dates.client_local_date import ClientLocalDate
 
 
 class SignedLeaseGenerateRequest(BaseModel):

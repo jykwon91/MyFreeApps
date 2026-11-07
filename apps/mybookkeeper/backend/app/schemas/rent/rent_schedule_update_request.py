@@ -11,8 +11,12 @@ import datetime as _dt
 
 from pydantic import BaseModel, Field
 
+from app.schemas.dates.client_local_date import ClientLocalDate
+
 
 class RentScheduleUpdateRequest(BaseModel):
     end_date: _dt.date | None = None
     grace_days: int | None = Field(default=None, ge=0, le=365)
     notes: str | None = None
+    # The host's date: charges are reconciled up to it when the schedule saves.
+    today: ClientLocalDate

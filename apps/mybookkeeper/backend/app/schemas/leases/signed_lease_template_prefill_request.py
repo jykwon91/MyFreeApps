@@ -11,7 +11,7 @@ import uuid
 
 from pydantic import BaseModel, field_validator
 
-from app.schemas.leases.client_local_date import ClientLocalDate
+from app.schemas.dates.client_local_date import ClientLocalDate
 
 
 class SignedLeaseTemplatePrefillRequest(BaseModel):

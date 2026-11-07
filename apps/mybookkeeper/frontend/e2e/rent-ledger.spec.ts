@@ -10,6 +10,12 @@ import { test, expect, type APIRequestContext } from "./fixtures/auth";
  */
 
 const MONTHLY_RENT = "1500";
+// The page evaluates the ledger on the browser's local date. Schedules are saved
+// on the real clock (the server rejects a "today" that isn't the host's real
+// date); tests whose UI assertions describe a day in August then view the ledger
+// as of that day — the same day the API reads below pass as ``as_of``. Local
+// noon keeps it the same calendar day in any test-runner time zone.
+const MID_AUGUST = new Date(2026, 7, 20, 12);
 const WEEKLY_PAYMENT = "375.00";
 
 interface Ledger {
@@ -87,6 +93,18 @@ async function cleanUp(
   }
 }
 
+/** Reloads the page with the browser clock pinned to ``day``. */
+async function viewLedgerAsOf(
+  page: import("@playwright/test").Page,
+  day: Date,
+): Promise<void> {
+  await page.clock.setFixedTime(day);
+  await page.reload();
+  await expect(page.getByTestId("rent-ledger-section")).toBeVisible({
+    timeout: 15000,
+  });
+}
+
 /** Fills the "Set up rent" dialog and saves. */
 async function createSchedule(
   page: import("@playwright/test").Page,
@@ -125,6 +143,7 @@ test.describe("Rent ledger", () => {
       await expect(page.getByTestId("rent-ledger-empty")).toBeVisible();
 
       await createSchedule(page, "2026-08-01");
+      await viewLedgerAsOf(page, MID_AUGUST);
 
       // The page states the answer as a fraction of the period, not a total.
       await expect(page.getByTestId("rent-current-allocated")).toHaveText(
@@ -198,6 +217,7 @@ test.describe("Rent ledger", () => {
         timeout: 15000,
       });
       await createSchedule(page, "2026-08-15");
+      await viewLedgerAsOf(page, MID_AUGUST);
 
       // 17 of August's 31 days of $1,500 — and the page says why, so the
       // short number cannot be mistaken for a shortfall.
@@ -247,6 +267,7 @@ test.describe("Rent ledger", () => {
         timeout: 15000,
       });
       await createSchedule(page, "2026-08-01");
+      await viewLedgerAsOf(page, MID_AUGUST);
 
       // Only the $375 of rent counts; the deposit is held, not earned.
       await expect(page.getByTestId("rent-current-allocated")).toHaveText(
@@ -276,6 +297,7 @@ test.describe("Rent ledger", () => {
         timeout: 15000,
       });
       await createSchedule(page, "2026-08-01");
+      await viewLedgerAsOf(page, MID_AUGUST);
 
       await page.getByTestId("rent-waive-charge-button").first().click();
       await expect(page.getByTestId("rent-waive-dialog")).toBeVisible();

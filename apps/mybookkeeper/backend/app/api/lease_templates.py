@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Respon
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
-from app.schemas.leases.client_local_date import ClientLocalDate
+from app.schemas.dates.client_local_date import ClientLocalDate
 from app.schemas.leases.generate_defaults_response import (
     GenerateDefaultsResponse,
     PlaceholderDefault,

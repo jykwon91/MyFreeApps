@@ -2,14 +2,16 @@
 
 Two responsibilities:
 
-1. **Materializing charges.** Periods that have begun are turned into
-   ``rent_charges`` rows on demand, when the ledger is read or a schedule is
-   written. Generation is idempotent (it skips period starts that already
-   exist), so there is no worker to run, nothing to backfill after downtime,
-   and no drift between a schedule and its charges.
+1. **Materializing charges.** Periods that have begun by the host's date are
+   turned into ``rent_charges`` rows on demand, when the ledger is read or a
+   schedule is written. Generation is idempotent (it skips period starts that
+   already exist), so there is no worker to run, nothing to backfill after
+   downtime, and no drift between a schedule and its charges.
 
 2. **Assembling the ledger.** Charges and attributed payments are handed to the
-   pure FIFO allocator and the result is shaped into the response.
+   pure FIFO allocator and the result is shaped into the response. A ledger
+   read as of a past date leaves later charges in place and leaves them out of
+   the response.
 
 All data access goes through repositories; this module never imports SQLAlchemy.
 """
@@ -46,10 +48,6 @@ class TenantNotFoundError(LookupError):
     """No applicant with that id in this organization."""
 
 
-def _today() -> _dt.date:
-    return _dt.datetime.now(_dt.timezone.utc).date()
-
-
 def _period_label(start: _dt.date, end: _dt.date, cadence: str | None) -> str:
     """Human label for a period.
 
@@ -81,28 +79,33 @@ async def _generate_charges_for_schedule(
 
     Three things happen, and all three matter:
 
-    - **Insert** a charge for any begun period that has none.
+    - **Insert** a charge for any period begun by ``through`` that has none.
     - **Re-truncate** an existing charge whose period or amount no longer
       matches the schedule. Setting an ``end_date`` part-way through a month
       has to shorten the charge already written for that month; skipping
       existing periods (the obvious implementation) silently leaves the tenant
       owing a full month they did not stay.
-    - **Retire** charges for periods that now fall entirely past ``end_date``,
-      so shortening a tenancy does not leave phantom future rent on the books.
+    - **Retire** charges for periods the schedule no longer produces at all —
+      those now entirely past ``end_date`` — so shortening a tenancy does not
+      leave phantom future rent on the books. A charge is never retired just
+      for beginning after ``through``: a ledger read as of a past date must
+      not delete what a later read wrote.
 
     Waived charges are left untouched — the host has made an explicit decision
     about them, and regenerating would quietly undo it.
 
     Returns the number of rows inserted.
     """
-    periods = period_math.billed_periods(
-        schedule.start_date, schedule.cadence, schedule.amount, through,
-        schedule.end_date,
-    )
     existing = {
         c.period_start: c
         for c in await rent_charge_repo.list_for_schedule(db, schedule_id=schedule.id)
     }
+    # Charges already written past ``through`` are reconciled too, so the
+    # schedule decides their fate rather than the date this call was made with.
+    periods = period_math.billed_periods(
+        schedule.start_date, schedule.cadence, schedule.amount,
+        max([through, *existing]), schedule.end_date,
+    )
 
     created = 0
     wanted: set[_dt.date] = set()
@@ -110,6 +113,8 @@ async def _generate_charges_for_schedule(
         wanted.add(begin)
         current = existing.get(begin)
         if current is None:
+            if begin > through:
+                continue
             await rent_charge_repo.create(
                 db,
                 user_id=schedule.user_id,
@@ -134,7 +139,7 @@ async def _generate_charges_for_schedule(
                 db, charge=current, period_end=finish, amount=amount,
             )
 
-    # Periods that no longer exist under the current end_date.
+    # Periods the schedule no longer produces under its current end_date.
     for begin, charge in existing.items():
         if begin not in wanted and charge.waived_at is None:
             await rent_charge_repo.soft_delete(db, charge=charge)
@@ -144,17 +149,16 @@ async def _generate_charges_for_schedule(
 
 async def ensure_charges_generated(
     db, *, organization_id: uuid.UUID, applicant_id: uuid.UUID,
-    through: _dt.date | None = None,
+    through: _dt.date,
 ) -> int:
-    """Bring one tenant's charges up to date across all their schedules."""
-    horizon = through or _today()
+    """Bring one tenant's charges up to the host's ``through`` across all their schedules."""
     schedules = await rent_schedule_repo.list_for_applicant(
         db, organization_id=organization_id, applicant_id=applicant_id,
     )
     total = 0
     for schedule in schedules:
         total += await _generate_charges_for_schedule(
-            db, schedule=schedule, through=horizon,
+            db, schedule=schedule, through=through,
         )
     return total
 
@@ -171,11 +175,9 @@ async def get_ledger(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
     applicant_id: uuid.UUID,
-    as_of: _dt.date | None = None,
+    as_of: _dt.date,
 ) -> RentLedgerResponse:
-    """The full rent picture for one tenant, charges refreshed first."""
-    today = as_of or _today()
-
+    """The full rent picture for one tenant as of the host's date, charges refreshed first."""
     async with unit_of_work() as db:
         applicant = await applicant_repo.get(
             db,
@@ -188,7 +190,7 @@ async def get_ledger(
 
         await ensure_charges_generated(
             db, organization_id=organization_id,
-            applicant_id=applicant_id, through=today,
+            applicant_id=applicant_id, through=as_of,
         )
 
         schedules = list(
@@ -196,11 +198,16 @@ async def get_ledger(
                 db, organization_id=organization_id, applicant_id=applicant_id,
             ),
         )
-        charges = list(
-            await rent_charge_repo.list_for_applicant(
+        # Rent for periods beginning after ``as_of`` exists once a later date has
+        # been read; a past-date view leaves it out rather than deleting it.
+        # One-off charges are entered by the host and always show.
+        charges = [
+            c
+            for c in await rent_charge_repo.list_for_applicant(
                 db, organization_id=organization_id, applicant_id=applicant_id,
-            ),
-        )
+            )
+            if c.schedule_id is None or c.period_start <= as_of
+        ]
         payments = list(
             await rent_charge_repo.list_payments_for_applicant(
                 db, organization_id=organization_id, applicant_id=applicant_id,
@@ -274,7 +281,7 @@ async def get_ledger(
                 waived_reason=charge.waived_reason,
                 allocated=settlement.allocated,
                 remaining=settlement.remaining,
-                status=settlement.status(today),
+                status=settlement.status(as_of),
                 applications=[
                     RentPaymentApplication(
                         transaction_id=app.payment_id,
@@ -315,12 +322,12 @@ async def get_ledger(
         settlement_by_id=settlement_by_id,
         cadence_by_charge=cadence_by_charge,
         full_amount_by_charge=full_amount_by_charge,
-        as_of=today,
+        as_of=as_of,
     )
 
     return RentLedgerResponse(
         applicant_id=applicant_id,
-        as_of=today,
+        as_of=as_of,
         schedules=[RentScheduleResponse.model_validate(s) for s in schedules],
         charges=charge_responses,
         payments=payment_responses,

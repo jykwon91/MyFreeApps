@@ -4,8 +4,8 @@ Route prefix: /rent-ledger.
 """
 from __future__ import annotations
 
-import datetime as _dt
 import uuid
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
@@ -13,6 +13,7 @@ from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
 from app.schemas.rent.rent_charge_create_request import RentChargeCreateRequest
 from app.schemas.rent.rent_charge_waive_request import RentChargeWaiveRequest
+from app.schemas.rent.rent_ledger_as_of import RentLedgerAsOf
 from app.schemas.rent.rent_ledger_response import RentLedgerResponse
 from app.schemas.rent.rent_schedule_create_request import RentScheduleCreateRequest
 from app.schemas.rent.rent_schedule_response import RentScheduleResponse
@@ -29,13 +30,16 @@ _CHARGE_NOT_FOUND = "Charge not found"
 @router.get("/tenants/{applicant_id}", response_model=RentLedgerResponse)
 async def get_ledger(
     applicant_id: uuid.UUID,
-    as_of: _dt.date | None = Query(
-        default=None,
-        description=(
-            "Evaluate the ledger as of this date instead of today. Charges are "
-            "generated up to it, so a past date shows the ledger as it stood."
+    as_of: Annotated[
+        RentLedgerAsOf,
+        Query(
+            description=(
+                "The host's local date, or an earlier one. Missing charges are "
+                "generated up to it; a past date shows only rent for periods begun "
+                "by then and leaves later charges untouched."
+            ),
         ),
-    ),
+    ],
     ctx: RequestContext = Depends(current_org_member),
 ) -> RentLedgerResponse:
     try:
@@ -66,6 +70,7 @@ async def create_schedule(
             end_date=payload.end_date,
             grace_days=payload.grace_days,
             notes=payload.notes,
+            today=payload.today,
         )
     except rent_schedule_service.TenantNotFoundError as exc:
         raise HTTPException(status_code=404, detail=_TENANT_NOT_FOUND) from exc
@@ -87,6 +92,7 @@ async def update_schedule(
             end_date=payload.end_date,
             grace_days=payload.grace_days,
             notes=payload.notes,
+            today=payload.today,
             # ``model_fields_set`` is what separates "omitted" from "explicitly
             # null" — without it, clearing an end date and not touching it look
             # identical on the wire.

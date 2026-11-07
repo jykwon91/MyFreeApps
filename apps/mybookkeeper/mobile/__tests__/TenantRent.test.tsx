@@ -81,12 +81,25 @@ describe("the rent section", () => {
     expect(screen.getByText("$750.00 paid of $1,500.00 charged")).toBeTruthy();
   });
 
-  it("never asks the server for a date of its own", async () => {
-    const server = startServer(IN_PROGRESS);
-    await renderRent();
-    await screen.findByText("Owes $750.00 in total");
+  it("asks for the ledger as of the phone's own date, not the server's", async () => {
+    // 11:30pm local: a UTC date would already be tomorrow for a US host.
+    jest.useFakeTimers({
+      now: new Date(2026, 10, 6, 23, 30),
+      doNotFake: [
+        "hrtime", "nextTick", "performance", "queueMicrotask", "requestAnimationFrame", "cancelAnimationFrame",
+        "requestIdleCallback", "cancelIdleCallback", "setImmediate", "clearImmediate", "setInterval",
+        "clearInterval", "setTimeout", "clearTimeout",
+      ],
+    });
+    try {
+      const server = startServer(IN_PROGRESS);
+      await renderRent();
+      await screen.findByText("Owes $750.00 in total");
 
-    expect(server.ledgerAsks.every((params) => !params || !("as_of" in params))).toBe(true);
+      expect(server.ledgerAsks).toEqual([{ as_of: "2026-11-06" }]);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it("calls a period that ended short overdue instead of still to come", async () => {

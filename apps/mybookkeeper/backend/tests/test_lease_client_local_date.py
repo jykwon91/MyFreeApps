@@ -30,7 +30,7 @@ from app.repositories.leases import (
     signed_lease_repo,
     signed_lease_template_repo,
 )
-from app.schemas.leases.client_local_date import ClientLocalDate
+from app.schemas.dates.client_local_date import ClientLocalDate
 from app.schemas.leases.signed_lease_template_prefill_response import (
     SignedLeaseTemplatePrefillResponse,
 )

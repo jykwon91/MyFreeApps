@@ -10,7 +10,7 @@ from fastapi.responses import Response
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
-from app.schemas.leases.client_local_date import ClientLocalDate
+from app.schemas.dates.client_local_date import ClientLocalDate
 from app.schemas.leases.receipt_period_rules import (
     RECEIPT_PERIOD_ORDER_MESSAGE,
     receipt_period_in_order,

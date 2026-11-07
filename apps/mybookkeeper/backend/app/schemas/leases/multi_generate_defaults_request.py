@@ -5,7 +5,7 @@ import uuid
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.leases.client_local_date import ClientLocalDate
+from app.schemas.dates.client_local_date import ClientLocalDate
 
 
 class MultiGenerateDefaultsRequest(BaseModel):
