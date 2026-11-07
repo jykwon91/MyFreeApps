@@ -2,6 +2,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { deleteApplicant } from "./fixtures/applicants";
+import { deleteSignedLease } from "./fixtures/signed-leases";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -59,10 +60,6 @@ async function seedSignedLease(
     throw new Error(`seedSignedLease failed: ${res.status()} ${await res.text()}`);
   }
   return (await res.json()) as { id: string; attachment_ids: string[] };
-}
-
-async function deleteSignedLease(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/test/signed-leases/${id}`).catch(() => {});
 }
 
 // ---------------------------------------------------------------------------

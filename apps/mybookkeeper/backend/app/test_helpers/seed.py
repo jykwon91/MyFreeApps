@@ -656,19 +656,20 @@ async def hard_delete_signed_lease(
     lease_id: uuid.UUID,
     ctx: RequestContext = Depends(current_org_member),
 ) -> None:
-    """Hard-delete a signed lease (cascades attachments). Test-only."""
+    """Hard-delete a signed lease (cascades attachments). Test-only.
+
+    404 when nothing was deleted, so a cleanup that misses fails loudly.
+    """
     _require_test_mode()
     async with unit_of_work() as db:
-        existing = await signed_lease_repo.get(
+        deleted = await signed_lease_repo.hard_delete_by_id(
             db,
             lease_id=lease_id,
             user_id=ctx.user_id,
             organization_id=ctx.organization_id,
-            include_deleted=True,
         )
-        if existing is None:
-            return
-        await db.execute(_sa_delete(SignedLease).where(SignedLease.id == lease_id))
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Signed lease not found")
 
 
 # ---------------------------------------------------------------------------

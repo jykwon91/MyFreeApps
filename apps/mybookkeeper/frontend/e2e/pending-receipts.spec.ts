@@ -2,6 +2,7 @@ import { test, expect } from "./fixtures/auth";
 import { deleteInquiry } from "./fixtures/inquiries";
 import { localToday } from "./fixtures/local-today";
 import { deleteApplicant } from "./fixtures/applicants";
+import { deleteSignedLease } from "./fixtures/signed-leases";
 
 /**
  * Behavioral E2E tests for the rent-receipt send chain.
@@ -62,8 +63,7 @@ async function cleanupRentPayment(
   // receipts, and its applicant FK is RESTRICT. The inquiry is deleted
   // separately so the email address is gone too. The transaction's
   // applicant_id goes to NULL via ON DELETE SET NULL.
-  const lease = await api.delete(`/test/signed-leases/${seed.signed_lease_id}`);
-  if (!lease.ok()) throw new Error(`delete signed lease failed: ${lease.status()} ${await lease.text()}`);
+  await deleteSignedLease(api, seed.signed_lease_id);
   await deleteApplicant(api, seed.applicant_id);
   await deleteInquiry(api, seed.inquiry_id);
 }
