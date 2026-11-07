@@ -211,7 +211,7 @@ async def list_invites(
     return result.scalars().all()
 
 
-async def cancel_invite(
+async def get_pending_invite(
     db: AsyncSession, invite_id: uuid.UUID, org_id: uuid.UUID,
 ) -> OrganizationInvite | None:
     result = await db.execute(
@@ -221,7 +221,13 @@ async def cancel_invite(
             OrganizationInvite.status == "pending",
         )
     )
-    invite = result.scalar_one_or_none()
+    return result.scalar_one_or_none()
+
+
+async def cancel_invite(
+    db: AsyncSession, invite_id: uuid.UUID, org_id: uuid.UUID,
+) -> OrganizationInvite | None:
+    invite = await get_pending_invite(db, invite_id, org_id)
     if invite:
         await db.delete(invite)
     return invite
