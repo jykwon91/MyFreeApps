@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`)
+### WoW Forever (`/wow-forever`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -432,6 +432,38 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   reference ≥10 creatures share is a "world drop" with a level range).
   `tests/test_wow_item_pages_generator.py`, `src/__tests__/wowItemPage*.test.ts(x)`,
   `e2e/wow-forever-item-page.spec.ts`.
+
+#### Dungeon pages (`/wow-forever/dungeons`, `/wow-forever/dungeons/:slug`)
+
+- Index (lowest level first) and one page per dungeon: level + "You can go in
+  from level N" (Forever LFGDungeons → ContentTuning, Game files), entrances
+  grouped by zone with their named doors and a "Show entrance on the World
+  Map" link (`/wow-forever/map?m=<zone>`, Classic data), the bosses in order
+  (Forever `DungeonEncounter`, Game files) as jump links, then each boss's
+  section (`#boss-<slug>`, a shareable deep link; `hooks/useScrollToHash.ts`
+  scrolls to it once the data has loaded) with its drops: icon,
+  `ItemNameLink` (hover tooltip → item page), slot/type and drop chance
+  (Classic data). Raids are left out; Forever-only dungeons have no rows yet.
+- Built in the browser from files the World Map already ships
+  (`classicDungeons.json`, `classicInteriors.json`, `zones.json`) plus
+  `data/dungeons/lootItems.json` (Forever item names/slots) and
+  `data/dungeons/classic/bossLoot.json` (cmangos GPL — keep LICENSE + README),
+  all lazy-loaded once by `lib/dungeons/loadDungeons.ts` and decoded by the
+  pure `decodeDungeons.ts`. Slugs: `dungeonSlug` / `uniqueSlugs` (a repeated
+  boss name gets `-2`) — don't change them, they're links.
+- **Loot is GENERATED** — `python -m scripts.wow_dungeons.build` (from
+  `backend/`, after the World Map and Items builds). The Forever client has no
+  JournalEncounter* tables, so a boss's loot is its cmangos loot table (rolled
+  by `wow_item_pages/loot_chances.py`, world pools excluded, chance ≥ 0.5%)
+  keeping only items in `items.json` — never filled from Classic Era items.
+  Encounter → creature names that differ are in `ENCOUNTER_CREATURES`
+  (`boss_loot.py`). A boss with no loot table reads "No loot list for this
+  boss yet"; one whose Classic loot isn't in Forever yet says so.
+  `tests/test_wow_dungeons_generator.py`, `src/__tests__/wowDungeons.test.ts`,
+  `e2e/wow-forever-dungeons.spec.ts`.
+- Known gap: Gnomeregan has no boss list — `interiors.py` `_DIFFICULTY`
+  (`{90: 201}`) no longer matches the client's DifficultyIDs; fix it in a
+  World Map regen.
 
 #### In-game icons (`GameIcon`)
 
