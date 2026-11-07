@@ -142,7 +142,7 @@ test.describe("Transactions", () => {
     });
 
     test("delete asks first: cancel keeps the transaction, confirm deletes it", async ({ page }) => {
-      const id = await addPending(page, "E2E Delete Me", "12.34");
+      let id: string | undefined = await addPending(page, "E2E Delete Me", "12.34");
       try {
         await row(page, "E2E Delete Me").click();
         const panel = page.getByRole("dialog", { name: "E2E Delete Me" });
@@ -161,8 +161,9 @@ test.describe("Transactions", () => {
         await expect(panel).toBeHidden();
         await expect(row(page, "E2E Delete Me")).toHaveCount(0);
         await expect.poll(() => findByVendor(org().api, "E2E Delete Me")).toBeUndefined();
+        id = undefined;
       } finally {
-        await deleteTransaction(org().api, id);
+        if (id) await deleteTransaction(org().api, id);
       }
     });
   });

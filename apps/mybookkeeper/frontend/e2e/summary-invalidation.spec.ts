@@ -1,6 +1,7 @@
 import type { APIRequestContext, Locator, Page } from "@playwright/test";
 import { test, expect } from "./fixtures/auth";
 import { createProperty, createTransaction, deleteProperty, deleteTransaction } from "./fixtures/seed-data";
+import { cleanUp } from "./fixtures/cleanup";
 import { localToday } from "./fixtures/local-today";
 
 /**
@@ -32,7 +33,7 @@ async function addIncome(
   seeded: SeededProperty,
   vendor: string,
   amount: string,
-): Promise<void> {
+): Promise<string> {
   const tx = await createTransaction(api, {
     vendor,
     amount,
@@ -42,6 +43,7 @@ async function addIncome(
     property_id: seeded.id,
   });
   seeded.transactionIds.push(tx.id);
+  return tx.id;
 }
 
 async function approve(api: APIRequestContext, ids: string[]): Promise<void> {
@@ -50,9 +52,11 @@ async function approve(api: APIRequestContext, ids: string[]): Promise<void> {
   expect(await res.json()).toEqual({ approved: ids.length, skipped: 0 });
 }
 
-async function cleanUp(api: APIRequestContext, seeded: SeededProperty): Promise<void> {
-  for (const id of seeded.transactionIds) await deleteTransaction(api, id);
-  await deleteProperty(api, seeded.id);
+function removeSeeded(api: APIRequestContext, seeded: SeededProperty): Promise<void> {
+  return cleanUp(
+    ...seeded.transactionIds.map((id) => () => deleteTransaction(api, id)),
+    () => deleteProperty(api, seeded.id),
+  );
 }
 
 function revenueCell(page: Page, propertyName: string): Locator {
@@ -93,7 +97,7 @@ test.describe("Summary cache invalidation", () => {
       await backToDashboard(page);
       await expect(revenueCell(page, seeded.name)).toHaveText("$750.00", { timeout: 10000 });
     } finally {
-      await cleanUp(api, seeded);
+      await removeSeeded(api, seeded);
     }
   });
 
@@ -105,7 +109,7 @@ test.describe("Summary cache invalidation", () => {
     const seeded = await seedProperty(api, "Delete");
     try {
       await addIncome(api, seeded, `E2E Keep Vendor ${RUN_ID}`, "250.00");
-      await addIncome(api, seeded, vendor, "500.00");
+      const deletedId = await addIncome(api, seeded, vendor, "500.00");
       await approve(api, seeded.transactionIds);
 
       await page.goto("/");
@@ -116,11 +120,13 @@ test.describe("Summary cache invalidation", () => {
       await expect(page.getByText(/are you sure you want to delete/i)).toBeVisible();
       await page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click();
       await expect(page.getByText(/are you sure you want to delete/i)).toHaveCount(0);
+      await expect.poll(async () => (await api.get(`/transactions/${deletedId}`)).status()).toBe(404);
+      seeded.transactionIds = seeded.transactionIds.filter((id) => id !== deletedId);
 
       await backToDashboard(page);
       await expect(revenueCell(page, seeded.name)).toHaveText("$250.00", { timeout: 10000 });
     } finally {
-      await cleanUp(api, seeded);
+      await removeSeeded(api, seeded);
     }
   });
 });
