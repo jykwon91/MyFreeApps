@@ -2,7 +2,7 @@ import Skeleton from "@/shared/components/ui/Skeleton";
 
 export default function TaxReturnSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="tax-return-skeleton">
       {/* Back nav + SectionHeader */}
       <div className="space-y-3">
         <Skeleton className="h-4 w-36" />

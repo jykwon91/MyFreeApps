@@ -8,7 +8,7 @@ import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { TAX_REPORT_MESSAGES } from "../../constants/taxReport";
 import { TAX_REVIEW_MESSAGES as MESSAGES } from "../../constants/taxReview";
 import { useToday } from "../../lib/useToday";
-import { isNotFound } from "../../utils/isNotFound";
+import { isNotFound } from "@platform/core/utils/isNotFound";
 import { isServerAnswer } from "../../utils/isServerAnswer";
 import PickerField from "../transactions/PickerField";
 import { useCanWrite } from "../workspace/useCanWrite";

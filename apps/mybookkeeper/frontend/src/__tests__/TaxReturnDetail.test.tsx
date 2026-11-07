@@ -1,11 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { store } from "@/shared/store";
 import TaxReturnDetail from "@/app/pages/TaxReturnDetail";
 import type { TaxReturn } from "@mybookkeeper/api-client/types/tax/TaxReturn";
 import type { ValidationResult } from "@mybookkeeper/api-client/types/tax/ValidationResult";
+import type { FormOverviewItem } from "@mybookkeeper/api-client/types/tax/FormOverviewItem";
+import type { FormWithFields } from "@/shared/types/tax/tax-form";
+import { queryData } from "@/test/rtk-query-data";
+import { queryStatus } from "@/test/rtk-query-status";
 
 const mockTaxReturn: TaxReturn = {
   id: "tr-1",
@@ -48,18 +53,9 @@ const mockValidationResults: ValidationResult[] = [
 ];
 
 vi.mock("@mybookkeeper/api-client/store/taxReturnsApi", () => ({
-  useGetTaxReturnQuery: vi.fn(() => ({
-    data: mockTaxReturn,
-    isLoading: false,
-  })),
-  useGetFormsOverviewQuery: vi.fn(() => ({
-    data: [],
-    isLoading: false,
-  })),
-  useGetValidationQuery: vi.fn(() => ({
-    data: mockValidationResults,
-    isLoading: false,
-  })),
+  useGetTaxReturnQuery: vi.fn(),
+  useGetFormsOverviewQuery: vi.fn(),
+  useGetValidationQuery: vi.fn(),
   useGetSourceDocumentsQuery: vi.fn(() => ({
     data: { documents: [], checklist: [] },
     isLoading: false,
@@ -69,10 +65,7 @@ vi.mock("@mybookkeeper/api-client/store/taxReturnsApi", () => ({
 }));
 
 vi.mock("@/shared/store/taxReturnsApi", () => ({
-  useGetFormFieldsQuery: vi.fn(() => ({
-    data: undefined,
-    isLoading: false,
-  })),
+  useGetFormFieldsQuery: vi.fn(),
   useOverrideFieldMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useGetAdvisorSuggestionsQuery: vi.fn(() => ({ data: undefined, isLoading: false, error: { status: 404 } })),
   useGenerateAdvisorSuggestionsMutation: vi.fn(() => [vi.fn(), { isLoading: false, error: undefined }]),
@@ -80,14 +73,52 @@ vi.mock("@/shared/store/taxReturnsApi", () => ({
 }));
 
 import {
+  useGetFormsOverviewQuery,
   useGetTaxReturnQuery,
   useGetValidationQuery,
 } from "@mybookkeeper/api-client/store/taxReturnsApi";
+import { useGetFormFieldsQuery } from "@/shared/store/taxReturnsApi";
 
-function renderWithRoute(id: string = "tr-1") {
+const refetch = vi.fn();
+
+/** A hook result in the state RTK leaves it: loaded, failed, retrying or pending. */
+function result<T>(data: T | undefined, { failed = false, fetching = false } = {}) {
+  return {
+    ...(data === undefined ? { data: undefined, currentData: undefined } : queryData(data)),
+    ...queryStatus({ failed, fetching }),
+    isLoading: data === undefined && !failed && fetching,
+    refetch,
+  };
+}
+
+function mockReturn(...args: Parameters<typeof result<TaxReturn>>) {
+  vi.mocked(useGetTaxReturnQuery).mockReturnValue(
+    result(...args) as unknown as ReturnType<typeof useGetTaxReturnQuery>,
+  );
+}
+
+function mockOverview(...args: Parameters<typeof result<FormOverviewItem[]>>) {
+  vi.mocked(useGetFormsOverviewQuery).mockReturnValue(
+    result(...args) as unknown as ReturnType<typeof useGetFormsOverviewQuery>,
+  );
+}
+
+function mockValidation(...args: Parameters<typeof result<ValidationResult[]>>) {
+  vi.mocked(useGetValidationQuery).mockReturnValue(
+    result(...args) as unknown as ReturnType<typeof useGetValidationQuery>,
+  );
+}
+
+function mockForm(...args: Parameters<typeof result<FormWithFields>>) {
+  vi.mocked(useGetFormFieldsQuery).mockReturnValue(
+    result(...args) as unknown as ReturnType<typeof useGetFormFieldsQuery>,
+  );
+}
+
+function renderWithRoute(id: string = "tr-1", search = "") {
   return render(
     <Provider store={store}>
-      <MemoryRouter initialEntries={[`/tax-returns/${id}`]}>
+      <MemoryRouter initialEntries={[`/tax-returns/${id}${search}`]}>
         <Routes>
           <Route path="/tax-returns/:id" element={<TaxReturnDetail />} />
         </Routes>
@@ -99,14 +130,10 @@ function renderWithRoute(id: string = "tr-1") {
 describe("TaxReturnDetail", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useGetTaxReturnQuery).mockReturnValue({
-      data: mockTaxReturn,
-      isLoading: false,
-    } as unknown as ReturnType<typeof useGetTaxReturnQuery>);
-    vi.mocked(useGetValidationQuery).mockReturnValue({
-      data: mockValidationResults,
-      isLoading: false,
-    } as unknown as ReturnType<typeof useGetValidationQuery>);
+    mockReturn(mockTaxReturn);
+    mockOverview([]);
+    mockValidation(mockValidationResults);
+    mockForm(undefined);
   });
 
   it("renders the tax return header with year", () => {
@@ -171,10 +198,7 @@ describe("TaxReturnDetail", () => {
   });
 
   it("shows needs recompute badge when flagged", () => {
-    vi.mocked(useGetTaxReturnQuery).mockReturnValue({
-      data: { ...mockTaxReturn, needs_recompute: true },
-      isLoading: false,
-    } as unknown as ReturnType<typeof useGetTaxReturnQuery>);
+    mockReturn({ ...mockTaxReturn, needs_recompute: true });
 
     renderWithRoute();
 
@@ -182,10 +206,7 @@ describe("TaxReturnDetail", () => {
   });
 
   it("shows Ready badge for ready status", () => {
-    vi.mocked(useGetTaxReturnQuery).mockReturnValue({
-      data: { ...mockTaxReturn, status: "ready" as const },
-      isLoading: false,
-    } as unknown as ReturnType<typeof useGetTaxReturnQuery>);
+    mockReturn({ ...mockTaxReturn, status: "ready" as const });
 
     renderWithRoute();
 
@@ -193,10 +214,7 @@ describe("TaxReturnDetail", () => {
   });
 
   it("shows filed date when present", () => {
-    vi.mocked(useGetTaxReturnQuery).mockReturnValue({
-      data: { ...mockTaxReturn, status: "filed" as const, filed_at: "2025-04-15T12:00:00Z" },
-      isLoading: false,
-    } as unknown as ReturnType<typeof useGetTaxReturnQuery>);
+    mockReturn({ ...mockTaxReturn, status: "filed" as const, filed_at: "2025-04-15T12:00:00Z" });
 
     renderWithRoute();
 
@@ -204,31 +222,107 @@ describe("TaxReturnDetail", () => {
     expect(screen.getByText(/Apr \d{1,2}, 2025/)).toBeInTheDocument();
   });
 
-  it("shows not found message when tax return is missing", () => {
+  it("shows skeleton when loading", () => {
+    mockReturn(undefined, { fetching: true });
+
+    const { container } = renderWithRoute();
+
+    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("waits for the validation checks before showing the forms", () => {
+    mockValidation(undefined, { fetching: true });
+
+    const { container } = renderWithRoute();
+
+    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText("No forms yet")).not.toBeInTheDocument();
+  });
+
+  it("offers a retry, not 'not found', when the return fails to load", async () => {
+    mockReturn(undefined, { failed: true });
+
+    renderWithRoute();
+
+    expect(screen.getByText("I couldn't load this tax return. Want me to try again?")).toBeInTheDocument();
+    expect(screen.queryByText(/couldn't find that tax return/)).not.toBeInTheDocument();
+    expect(screen.getByText("Back to Tax Returns")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("says the return isn't there, with no retry, when the API answers 404", () => {
     vi.mocked(useGetTaxReturnQuery).mockReturnValue({
-      data: undefined,
-      isLoading: false,
+      ...result<TaxReturn>(undefined),
+      error: { status: 404, data: { detail: "Not found" } },
     } as unknown as ReturnType<typeof useGetTaxReturnQuery>);
-    vi.mocked(useGetValidationQuery).mockReturnValue({
-      data: [],
-      isLoading: false,
-    } as unknown as ReturnType<typeof useGetValidationQuery>);
 
     renderWithRoute();
 
     expect(screen.getByText("I couldn't find that tax return.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back to Tax Returns" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
   });
 
-  it("shows skeleton when loading", () => {
-    vi.mocked(useGetTaxReturnQuery).mockReturnValue({
-      data: undefined,
-      isLoading: true,
-    } as unknown as ReturnType<typeof useGetTaxReturnQuery>);
+  it("keeps the error up while a failed load is retried", () => {
+    mockReturn(undefined, { failed: true, fetching: true });
 
     const { container } = renderWithRoute();
 
-    const skeletons = container.querySelectorAll(".animate-pulse");
-    expect(skeletons.length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("I couldn't load this tax return. Want me to try again?")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(0);
+  });
+
+  it("keeps the loaded return when a refresh fails", () => {
+    mockReturn(mockTaxReturn, { failed: true });
+
+    renderWithRoute();
+
+    expect(screen.getByText("I couldn't refresh this tax return. Want me to try again?")).toBeInTheDocument();
+    expect(screen.getByText("2025 Tax Return")).toBeInTheDocument();
+  });
+
+  it("says the forms didn't load instead of 'No forms yet'", async () => {
+    mockOverview(undefined, { failed: true });
+
+    renderWithRoute();
+
+    expect(screen.getByText("I couldn't load the forms for this return. Want me to try again?")).toBeInTheDocument();
+    expect(screen.queryByText("No forms yet")).not.toBeInTheDocument();
+    expect(screen.queryByText(/don't have any tax forms to review/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Get Tax Advice")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("says the checks didn't load instead of 'All checks passed'", () => {
+    mockOverview([{ form_name: "schedule_e", instance_count: 1, field_count: 4 }]);
+    mockValidation(undefined, { failed: true });
+
+    renderWithRoute();
+
+    expect(screen.getByText("I couldn't load the validation checks. Want me to try again?")).toBeInTheDocument();
+    expect(screen.queryByText("All checks passed")).not.toBeInTheDocument();
+    const forms = screen.getByRole("heading", { name: "Forms" }).closest("section")!;
+    expect(within(forms).getByText("Schedule E")).toBeInTheDocument();
+  });
+
+  it("says a form didn't load instead of 'No data found'", () => {
+    mockForm(undefined, { failed: true });
+
+    renderWithRoute("tr-1", "?form=schedule_e");
+
+    expect(screen.getByText("I couldn't load this form. Want me to try again?")).toBeInTheDocument();
+    expect(screen.queryByText("No data found for this form.")).not.toBeInTheDocument();
+  });
+
+  it("says a loaded form with nothing in it has no data", () => {
+    mockForm({ form_name: "schedule_e", instances: [] });
+
+    renderWithRoute("tr-1", "?form=schedule_e");
+
+    expect(screen.getByText("No data found for this form.")).toBeInTheDocument();
   });
 
   it("renders validation results from mock data", () => {

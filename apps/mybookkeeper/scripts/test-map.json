@@ -1420,7 +1420,9 @@
       "e2e_specs": [
         "tax.spec.ts",
         "tax-documents.spec.ts",
-        "tax-return-detail.spec.ts"
+        "tax-return-detail.spec.ts",
+        "mocked/detail-pages-retry-mock.spec.ts",
+        "mocked/sections-retry-mock.spec.ts"
       ]
     },
     "transactions": {

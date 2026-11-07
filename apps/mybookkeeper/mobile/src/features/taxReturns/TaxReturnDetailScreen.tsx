@@ -19,7 +19,7 @@ import { taxDocumentRowKey, taxDocumentSections } from "../tax/taxDocumentsDispl
 import TaxMissingRowView from "../tax/TaxMissingRowView";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { useIsAdmin } from "../workspace/useIsAdmin";
-import { isNotFound } from "../../utils/isNotFound";
+import { isNotFound } from "@platform/core/utils/isNotFound";
 import { bySeverity, taxReturnTitle, taxReturnWebPath } from "./taxReturnDisplay";
 import TaxReturnSection from "./TaxReturnSection";
 import TaxReturnsSkeleton from "./TaxReturnsSkeleton";
