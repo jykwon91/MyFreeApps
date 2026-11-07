@@ -8,7 +8,8 @@ test.describe("Legal pages — public access", () => {
 
   test("Privacy Policy shows last-updated date", async ({ page }) => {
     await page.goto("/privacy");
-    await expect(page.getByText(/2026-04-25/)).toBeVisible();
+    // The exact date is pinned by the page's unit test; it changes with every revision.
+    await expect(page.getByText(/^Last updated: \d{4}-\d{2}-\d{2}$/)).toBeVisible();
   });
 
   test("Privacy Policy does not expose a personal email", async ({ page }) => {
@@ -34,7 +35,8 @@ test.describe("Legal pages — public access", () => {
 
   test("Terms of Service shows last-updated date", async ({ page }) => {
     await page.goto("/terms");
-    await expect(page.getByText(/2026-04-25/)).toBeVisible();
+    // The exact date is pinned by the page's unit test; it changes with every revision.
+    await expect(page.getByText(/^Last updated: \d{4}-\d{2}-\d{2}$/)).toBeVisible();
   });
 
   test("Terms of Service does not expose a personal email", async ({ page }) => {

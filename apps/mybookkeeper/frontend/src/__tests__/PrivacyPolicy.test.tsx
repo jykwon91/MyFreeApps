@@ -20,6 +20,7 @@ describe("PrivacyPolicy — rendering", () => {
   it("renders the last-updated date", () => {
     renderPrivacyPolicy();
     expect(screen.getByText(new RegExp(PRIVACY_LAST_UPDATED))).toBeInTheDocument();
+    expect(PRIVACY_LAST_UPDATED).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   it("says the phone app asks before sending documents to Anthropic", () => {

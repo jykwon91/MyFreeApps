@@ -20,6 +20,7 @@ describe("TermsOfService — rendering", () => {
   it("renders the last-updated date", () => {
     renderTermsOfService();
     expect(screen.getByText(new RegExp(TERMS_LAST_UPDATED))).toBeInTheDocument();
+    expect(TERMS_LAST_UPDATED).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   it("renders the Acceptance section", () => {
