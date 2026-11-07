@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
+import { deleteInquiry, seedInquiry } from "./fixtures/inquiries";
 
 /**
  * E2E tests for /leases/new — the generate-lease page.
@@ -7,12 +8,12 @@ import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth
  * 1. Entry via "Generate lease" button on the Leases list page.
  * 2. Template picker → applicant picker → form → submit → navigate to lease detail.
  * 3. Deep-link with ?template_id pre-selects template, shows applicant picker.
- * 4. Deep-link with ?applicant_id pre-selects applicant, shows template picker.
- * 5. Back to leases link works.
- * 6. Applicant picker shows approved/lease_sent; excludes lease_signed.
- * 7. Entry via "Generate lease..." button on the lease templates list page.
- * 8. Entry via "Generate lease" button on the applicant detail page
- *    (stage=approved).
+ * 4. Back to leases link works.
+ * 5. Applicant picker shows approved/lease_sent; excludes lease_signed.
+ * 6. Entry via "Generate lease..." button on the lease templates list page.
+ * 7. Entry via "Generate lease" button on the applicant detail page
+ *    (stage=approved): the applicant is pre-selected and the template
+ *    picker is shown.
  */
 
 // ---------------------------------------------------------------------------
@@ -67,7 +68,7 @@ async function transitionApplicantStage(
   stage: string,
 ): Promise<void> {
   const res = await api.patch(`/applicants/${applicantId}/stage`, {
-    data: { stage },
+    data: { new_stage: stage },
   });
   if (!res.ok()) {
     throw new Error(
@@ -173,6 +174,12 @@ test.describe("Lease New page (/leases/new)", () => {
         });
         seededApplicantIds.push(approvedId);
 
+        const leaseSentId = await seedApplicant(api, {
+          legal_name: `Lease Sent Tenant ${runId}`,
+          stage: "lease_sent",
+        });
+        seededApplicantIds.push(leaseSentId);
+
         const signedId = await seedApplicant(api, {
           legal_name: `Signed Tenant ${runId}`,
         });
@@ -189,6 +196,10 @@ test.describe("Lease New page (/leases/new)", () => {
         await expect(
           page.getByTestId(`applicant-option-${approvedId}`),
         ).toBeVisible({ timeout: 10_000 });
+
+        await expect(
+          page.getByTestId(`applicant-option-${leaseSentId}`),
+        ).toBeVisible();
 
         // lease_signed applicant must NOT appear.
         await expect(
@@ -208,6 +219,7 @@ test.describe("Lease New page (/leases/new)", () => {
       const seededTemplateIds: string[] = [];
       const seededApplicantIds: string[] = [];
       const seededLeaseIds: string[] = [];
+      const seededInquiryIds: string[] = [];
 
       try {
         const templateId = await seedTemplate(api, {
@@ -215,7 +227,17 @@ test.describe("Lease New page (/leases/new)", () => {
         });
         seededTemplateIds.push(templateId);
 
+        // The linked inquiry supplies the email and dates the template
+        // requires, so every required field auto-fills.
+        const inquiryId = await seedInquiry(api, {
+          inquirer_email: `tenant-${runId}@example.com`,
+          desired_start_date: "2026-07-01",
+          desired_end_date: "2027-06-30",
+        });
+        seededInquiryIds.push(inquiryId);
+
         const applicantId = await seedApplicant(api, {
+          inquiry_id: inquiryId,
           legal_name: `Full Generate Tenant ${runId}`,
           stage: "approved",
         });
@@ -228,9 +250,9 @@ test.describe("Lease New page (/leases/new)", () => {
         // Step 1 — pick template.
         await expect(page.getByTestId("template-picker-section")).toBeVisible();
         await page.waitForLoadState("networkidle");
-        const templateOption = page.getByTestId(`template-option-${templateId}`);
-        await expect(templateOption).toBeVisible({ timeout: 10_000 });
-        await templateOption.click();
+        const templateCheckbox = page.getByTestId(`multi-template-checkbox-${templateId}`);
+        await expect(templateCheckbox).toBeVisible({ timeout: 10_000 });
+        await templateCheckbox.check();
 
         // Step 2 — pick applicant.
         await expect(
@@ -248,7 +270,7 @@ test.describe("Lease New page (/leases/new)", () => {
           page.getByTestId("lease-generate-form-section"),
         ).toBeVisible({ timeout: 15_000 });
 
-        // Submit the form (defaults should be auto-filled).
+        // Submit the form (every required field is auto-filled).
         await page.waitForLoadState("networkidle");
         const submitBtn = page.getByTestId("lease-generate-submit");
         await expect(submitBtn).toBeVisible({ timeout: 10_000 });
@@ -262,6 +284,7 @@ test.describe("Lease New page (/leases/new)", () => {
         for (const id of seededLeaseIds) await deleteSignedLease(api, id);
         for (const id of seededTemplateIds) await deleteTemplate(api, id);
         for (const id of seededApplicantIds) await deleteApplicant(api, id);
+        for (const id of seededInquiryIds) await deleteInquiry(api, id);
       }
     },
   );
@@ -320,6 +343,14 @@ test.describe("Lease New page (/leases/new)", () => {
 
         await waitForLeaseNewPage(page);
         expect(page.url()).toContain(`applicant_id=${applicantId}`);
+
+        // The applicant is pre-selected, so only the template step is left.
+        await expect(page.getByTestId("template-picker-section")).toBeVisible();
+        await expect(page.getByTestId("lease-new-summary")).toContainText(
+          `Approved Entry Tenant ${runId}`,
+          { timeout: 10_000 },
+        );
+        await expect(page.getByTestId("applicant-picker-section")).toHaveCount(0);
       } finally {
         for (const id of seededApplicantIds) await deleteApplicant(api, id);
       }
