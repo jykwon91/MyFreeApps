@@ -54,8 +54,8 @@ test("shows all-online summary and 4 rulesets on the landing page", async ({ pag
 
   const list = section.getByRole("list", { name: "Server rulesets" });
   await expect(list.getByText("Normal")).toBeVisible();
-  await expect(list.getByText("PvP")).toBeVisible();
-  await expect(list.getByText("Roleplay")).toBeVisible();
+  await expect(list.getByText("PvP", { exact: true })).toBeVisible();
+  await expect(list.getByText("Roleplay", { exact: true })).toBeVisible();
   await expect(list.getByText("Roleplay PvP")).toBeVisible();
 
   // Source credit link present
@@ -70,7 +70,7 @@ test("shows partial-outage summary with offline ruleset crossed out", async ({ p
   await expect(section.getByText(/1 of 4 servers offline/)).toBeVisible();
 
   // The offline ruleset's name should still appear (screen-readers see "PvP offline")
-  const pvpItem = section.getByRole("listitem").filter({ hasText: "PvP" });
+  const pvpItem = section.getByRole("listitem").filter({ has: page.getByText("PvP", { exact: true }) });
   await expect(pvpItem).toBeVisible();
 });
 
