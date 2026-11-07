@@ -1,6 +1,6 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import type { Locator, Page } from "@playwright/test";
-import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 import path from "path";
 import { fileURLToPath } from "url";
 import { toasts } from "./fixtures/toasts";
@@ -49,14 +49,9 @@ async function seedBlackout(api: APIRequestContext, payload: SeedBlackoutPayload
   return body.id;
 }
 
-async function deleteListing(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/test/listings/${id}`).catch(() => {});
-}
-
 async function deleteBlackout(api: APIRequestContext, id: string): Promise<void> {
   await api.delete(`/test/blackouts/${id}`).catch(() => {});
 }
-
 
 /** Seeds a property → listing → June booking, registering each cleanup as soon as it exists. */
 async function seedBooking(

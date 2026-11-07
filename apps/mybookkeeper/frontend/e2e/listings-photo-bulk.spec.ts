@@ -2,7 +2,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
-import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 
 /**
  * Photo bulk-actions E2E — multi-select + bulk delete.
@@ -50,13 +50,6 @@ async function seedListingWithPhotos(
   }
 
   return listingId;
-}
-
-async function deleteListingViaTestApi(
-  api: APIRequestContext,
-  listingId: string,
-): Promise<void> {
-  await api.delete(`/test/listings/${listingId}`).catch(() => {});
 }
 
 async function waitForPhotos(page: Page, count: number): Promise<void> {
@@ -119,7 +112,7 @@ test.describe("Photo bulk actions (PR multi-select)", () => {
       expect(afterBody.photos).toHaveLength(1);
     } finally {
       if (listingId) {
-        await deleteListingViaTestApi(api, listingId);
+        await deleteListing(api, listingId);
       }
       await deleteProperty(api, property.id);
     }
@@ -160,7 +153,7 @@ test.describe("Photo bulk actions (PR multi-select)", () => {
       await expect(page.getByTestId("photo-selection-toolbar")).not.toBeVisible();
     } finally {
       if (listingId) {
-        await deleteListingViaTestApi(api, listingId);
+        await deleteListing(api, listingId);
       }
       await deleteProperty(api, property.id);
     }

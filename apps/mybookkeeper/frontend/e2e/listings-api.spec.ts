@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures/auth";
-import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 
 /**
  * PR 1.1a — Listings backend behavioural tests.
@@ -34,13 +34,6 @@ async function seedListing(
   }
   const body = (await res.json()) as { id: string };
   return body.id;
-}
-
-async function deleteListing(
-  api: import("@playwright/test").APIRequestContext,
-  listingId: string,
-): Promise<void> {
-  await api.delete(`/test/listings/${listingId}`).catch(() => {});
 }
 
 test.describe("Listings API (read-only, PR 1.1a)", () => {

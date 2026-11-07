@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
-import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 
 /**
  * PR 1.4 — Channels (iCal sync) admin UI behavioural E2E.
@@ -9,12 +9,6 @@ import { createProperty, deleteProperty } from "./fixtures/seed-data";
  * `feedback_clean_test_data`). Cascade delete on `channel_listings`
  * cleans up the child rows when the listing is hard-deleted.
  */
-
-async function deleteListingViaTestApi(
-  api: APIRequestContext, listingId: string,
-): Promise<void> {
-  await api.delete(`/test/listings/${listingId}`).catch(() => {});
-}
 
 async function seedListing(
   api: APIRequestContext, propertyId: string, title: string,
@@ -121,7 +115,7 @@ test.describe("Listings channels (PR 1.4)", () => {
       ).toBeVisible();
     } finally {
       for (const id of listingIds) {
-        await deleteListingViaTestApi(api, id);
+        await deleteListing(api, id);
       }
       await deleteProperty(api, property.id);
     }

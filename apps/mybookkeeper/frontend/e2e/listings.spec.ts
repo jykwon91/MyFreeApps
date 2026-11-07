@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
-import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 
 /**
  * PR 1.1b — Listings frontend behavioural E2E.
@@ -25,10 +25,6 @@ async function seedListing(api: APIRequestContext, payload: SeedListingPayload):
   }
   const body = (await res.json()) as { id: string };
   return body.id;
-}
-
-async function deleteListing(api: APIRequestContext, listingId: string): Promise<void> {
-  await api.delete(`/test/listings/${listingId}`).catch(() => {});
 }
 
 async function waitForListingsPage(page: Page): Promise<void> {
