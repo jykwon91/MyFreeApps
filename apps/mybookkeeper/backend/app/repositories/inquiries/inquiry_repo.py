@@ -203,19 +203,21 @@ async def hard_delete_by_id(
     db: AsyncSession,
     inquiry_id: uuid.UUID,
     organization_id: uuid.UUID,
-) -> None:
-    """Hard-delete an inquiry scoped to an organization. Test-utility only —
-    production code uses soft-delete (set ``deleted_at``).
+) -> bool:
+    """Hard-delete an inquiry scoped to an organization; returns whether a row
+    was deleted. Test-utility only — production code uses soft-delete (set
+    ``deleted_at``).
 
     The ``inquiry_messages`` and ``inquiry_events`` rows cascade off the FK
     ``ON DELETE CASCADE`` so a single delete is enough.
     """
-    await db.execute(
+    result = await db.execute(
         delete(Inquiry).where(
             Inquiry.id == inquiry_id,
             Inquiry.organization_id == organization_id,
         )
     )
+    return (result.rowcount or 0) > 0
 
 
 async def count_by_organization(

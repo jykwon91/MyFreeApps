@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures/auth";
+import { deleteInquiry } from "./fixtures/inquiries";
 import { localToday } from "./fixtures/local-today";
 
 /**
@@ -60,7 +61,7 @@ async function cleanupRentPayment(
   // Deleting the inquiry separately ensures the email address is gone.
   // Transaction's applicant_id goes to NULL via ON DELETE SET NULL.
   await api.delete(`/test/applicants/${seed.applicant_id}`).catch(() => {});
-  await api.delete(`/test/inquiries/${seed.inquiry_id}`).catch(() => {});
+  await deleteInquiry(api, seed.inquiry_id);
 }
 
 async function seedGmailIntegration(

@@ -215,7 +215,9 @@ async def delete_inquiry(
     """
     _require_test_mode()
     async with unit_of_work() as db:
-        await inquiry_repo.hard_delete_by_id(db, inquiry_id, ctx.organization_id)
+        deleted = await inquiry_repo.hard_delete_by_id(db, inquiry_id, ctx.organization_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Inquiry not found")
 
 
 # ---------------------------------------------------------------------------

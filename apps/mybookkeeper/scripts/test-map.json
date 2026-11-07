@@ -14,6 +14,7 @@
         "test_admin_routes.py",
         "test_test_utils_routes.py",
         "test_tax_seed_routes.py",
+        "test_inquiry_seed_routes.py",
         "test_document_seed_routes.py",
         "test_extraction_seed_routes.py",
         "test_member_seed_routes.py",
@@ -584,7 +585,8 @@
         "test_reply_template_service.py",
         "test_reply_template_variables_match_phone.py",
         "test_gmail_service_send.py",
-        "test_test_utils_routes.py"
+        "test_test_utils_routes.py",
+        "test_inquiry_seed_routes.py"
       ],
       "frontend_tests": [
         "Inquiries.test.tsx",
