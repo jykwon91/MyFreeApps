@@ -1002,6 +1002,7 @@
         "WelcomeManualDetail.test.tsx",
         "WelcomeManualShareCard.test.tsx",
         "PublicWelcomeManual.test.tsx",
+        "WelcomeManuals.test.tsx",
         "WelcomeManualRoomManager.test.tsx",
         "WelcomeManualSectionCard.test.tsx",
         "WelcomeManualSectionFieldManager.test.tsx",
@@ -1011,7 +1012,8 @@
       ],
       "e2e_specs": [
         "mocked/welcome-manuals-layout-mock.spec.ts",
-        "welcome-manual-rooms.spec.ts"
+        "welcome-manual-rooms.spec.ts",
+        "welcome-manuals-layout.spec.ts"
       ]
     },
     "leases": {
