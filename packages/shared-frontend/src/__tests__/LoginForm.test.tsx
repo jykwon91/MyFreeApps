@@ -83,6 +83,24 @@ describe("LoginForm", () => {
     });
   });
 
+  it("shows readable copy for a server error code, not axios's status line", async () => {
+    const axiosErr = Object.assign(new Error("Request failed with status code 400"), {
+      response: { status: 400, data: { detail: "REGISTER_USER_ALREADY_EXISTS" } },
+    });
+    const onRegister = vi.fn().mockRejectedValue(axiosErr);
+    render(<LoginForm onSignIn={noop} onRegister={onRegister} defaultTab="register" />);
+
+    await userEvent.type(screen.getByLabelText("Email"), "user@example.com");
+    await userEvent.type(screen.getByLabelText("Password"), "a-long-enough-password");
+    await userEvent.click(screen.getByRole("button", { name: "Create Account" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "An account with this email already exists. Sign in instead.",
+      );
+    });
+  });
+
   it("clears error when switching tabs", async () => {
     const onSignIn = vi.fn().mockRejectedValue(new Error("Bad credentials"));
     render(<LoginForm onSignIn={onSignIn} onRegister={noop} />);

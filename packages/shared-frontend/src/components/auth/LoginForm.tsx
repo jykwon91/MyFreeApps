@@ -3,6 +3,7 @@ import * as Tabs from "@radix-ui/react-tabs";
 import { Eye, EyeOff } from "lucide-react";
 import AlertBox from "../ui/AlertBox";
 import LoadingButton from "../ui/LoadingButton";
+import { describeAuthError } from "../../utils/describeAuthError";
 
 export interface LoginFormProps {
   onSignIn: (email: string, password: string) => Promise<void>;
@@ -66,9 +67,7 @@ export default function LoginForm({
         await onRegister(email, password);
       }
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Something went wrong. Please try again.";
-      setError(message);
+      setError(describeAuthError(err));
     } finally {
       setIsLoading(false);
     }

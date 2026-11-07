@@ -411,7 +411,7 @@ on the first `render(...)` call. Stack trace points at `../../../node_modules/re
 while `react` resolves to the v19 nested under `apps/myjobhunter/frontend/node_modules/react`.
 The mixed runtime produces an invalid React element shape.
 
-Pure-JS Vitest tests (`src/lib/__tests__`, `src/features/auth/__tests__/useSignIn.test.ts`)
+Pure-JS Vitest tests (`src/lib/__tests__`)
 are unaffected — only JSX renders fail.
 
 **Tried (not enough on its own):**

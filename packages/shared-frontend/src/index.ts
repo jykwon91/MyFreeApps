@@ -28,6 +28,8 @@ export { formatTag } from "./utils/tag";
 export { extractErrorMessage } from "./utils/errorMessage";
 export { describeAuthError } from "./utils/describeAuthError";
 export { isAlreadyVerifiedError } from "./utils/isAlreadyVerifiedError";
+export { isRateLimitedError } from "./utils/isRateLimitedError";
+export { isUnverifiedLoginError } from "./utils/isUnverifiedLoginError";
 export { showError, showSuccess, subscribe } from "./lib/toast-store";
 export type { ToastEvent, ToastVariant } from "./lib/toast-store";
 export { notifyAuthChange, useIsAuthenticated } from "./lib/auth-store";

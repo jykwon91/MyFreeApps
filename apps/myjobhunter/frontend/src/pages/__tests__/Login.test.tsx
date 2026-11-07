@@ -116,7 +116,8 @@ describe("Login page", () => {
     await user.click(screen.getByRole("button", { name: /^create account$/i }));
 
     await waitFor(() => {
-      expect(mockRegister).toHaveBeenCalledWith("new@example.com", "supersecret123");
+      // Third argument: the Turnstile token, empty when no site key is configured.
+      expect(mockRegister).toHaveBeenCalledWith("new@example.com", "supersecret123", "");
     });
     expect(
       await screen.findByTestId("registration-success-banner"),
@@ -173,12 +174,42 @@ describe("Login page", () => {
       await user.type(screen.getByLabelText("Password"), "wrongpass12345");
       await user.click(screen.getByRole("button", { name: /^sign in$/i }));
 
-      await waitFor(() => {
-        expect(mockSignIn).toHaveBeenCalled();
-      });
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Incorrect email or password. Please try again.",
+      );
       expect(
         screen.queryByTestId("resend-verification-banner"),
       ).not.toBeInTheDocument();
+    });
+
+    it("shows the unverified message once, in the banner only", async () => {
+      mockSignIn.mockRejectedValueOnce(unverifiedAxiosError());
+      const user = userEvent.setup();
+      renderLogin();
+
+      await user.type(screen.getByLabelText("Email"), "noverify@example.com");
+      await user.type(screen.getByLabelText("Password"), "password123456");
+      await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+
+      await screen.findByTestId("resend-verification-banner");
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+
+    it("says to wait, not that the password is wrong, when sign-in is rate limited", async () => {
+      const err = Object.assign(new Error("Request failed with status code 429"), {
+        response: { status: 429, data: { detail: "Too many attempts" } },
+      });
+      mockSignIn.mockRejectedValueOnce(err);
+      const user = userEvent.setup();
+      renderLogin();
+
+      await user.type(screen.getByLabelText("Email"), "test@example.com");
+      await user.type(screen.getByLabelText("Password"), "wrongpass12345");
+      await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Too many attempts. Wait a few minutes and try again.",
+      );
     });
 
     it("clicking 'Resend verification email' POSTs the email", async () => {
