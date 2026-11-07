@@ -1,6 +1,7 @@
 import { test, expect } from "./fixtures/auth";
 import { deleteInquiry } from "./fixtures/inquiries";
 import { localToday } from "./fixtures/local-today";
+import { deleteApplicant } from "./fixtures/applicants";
 
 /**
  * Behavioral E2E tests for the rent-receipt send chain.
@@ -57,10 +58,13 @@ async function cleanupRentPayment(
   api: import("@playwright/test").APIRequestContext,
   seed: SeedRentPaymentResult,
 ): Promise<void> {
-  // Deleting the applicant cascades to signed leases and pending receipts.
-  // Deleting the inquiry separately ensures the email address is gone.
-  // Transaction's applicant_id goes to NULL via ON DELETE SET NULL.
-  await api.delete(`/test/applicants/${seed.applicant_id}`).catch(() => {});
+  // The signed lease goes first: it cascades its attachments and pending
+  // receipts, and its applicant FK is RESTRICT. The inquiry is deleted
+  // separately so the email address is gone too. The transaction's
+  // applicant_id goes to NULL via ON DELETE SET NULL.
+  const lease = await api.delete(`/test/signed-leases/${seed.signed_lease_id}`);
+  if (!lease.ok()) throw new Error(`delete signed lease failed: ${lease.status()} ${await lease.text()}`);
+  await deleteApplicant(api, seed.applicant_id);
   await deleteInquiry(api, seed.inquiry_id);
 }
 

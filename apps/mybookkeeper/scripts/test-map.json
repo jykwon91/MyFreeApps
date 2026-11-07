@@ -15,6 +15,7 @@
         "test_test_utils_routes.py",
         "test_tax_seed_routes.py",
         "test_inquiry_seed_routes.py",
+        "test_applicant_seed_routes.py",
         "test_document_seed_routes.py",
         "test_extraction_seed_routes.py",
         "test_member_seed_routes.py",
@@ -637,6 +638,7 @@
       ],
       "backend_tests": [
         "test_applicant_repo.py",
+        "test_applicant_seed_routes.py",
         "test_applicant_repo_count.py",
         "test_applicant_service.py",
         "test_applicants_api.py",

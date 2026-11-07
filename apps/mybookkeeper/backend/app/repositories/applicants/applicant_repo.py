@@ -15,7 +15,7 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
-from sqlalchemy import and_, desc, func, or_, select, update
+from sqlalchemy import and_, delete, desc, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -112,6 +112,31 @@ async def get(
     stmt = stmt.options(selectinload(Applicant.signed_leases))
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
+
+
+async def hard_delete_by_id(
+    db: AsyncSession,
+    *,
+    applicant_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> bool:
+    """Hard-delete an applicant owned by (organization_id, user_id), soft-deleted
+    or not. Returns whether a row was deleted. Test cleanup only — production
+    deletes are soft (``deleted_at``).
+
+    Screening results, references, events and video-call notes cascade off
+    their ``ON DELETE CASCADE`` foreign keys. Signed leases are ``RESTRICT``:
+    delete them first or this raises ``IntegrityError``.
+    """
+    result = await db.execute(
+        delete(Applicant).where(
+            Applicant.id == applicant_id,
+            Applicant.organization_id == organization_id,
+            Applicant.user_id == user_id,
+        )
+    )
+    return (result.rowcount or 0) > 0
 
 
 async def list_for_user(

@@ -1,6 +1,7 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { listingRowBars } from "./fixtures/calendar-rows";
 import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
+import { deleteApplicant } from "./fixtures/applicants";
 
 /**
  * E2E for tenant occupancy on the unified calendar.
@@ -163,7 +164,7 @@ test.describe("Tenant leases on the calendar", () => {
     } finally {
       await api.delete(`/test/blackouts/${blackoutId}`).catch(() => {});
       await api.delete(`/test/signed-leases/${leaseId}`).catch(() => {});
-      await api.delete(`/test/applicants/${applicantId}`).catch(() => {});
+      await deleteApplicant(api, applicantId);
       await deleteListing(api, listingId);
       await deleteProperty(api, property.id);
     }

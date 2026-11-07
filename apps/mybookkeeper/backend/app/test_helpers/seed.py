@@ -365,25 +365,19 @@ async def delete_applicant(
 
     Production code path uses soft-delete (``deleted_at``); the E2E suite needs
     a true cleanup so test artifacts don't accumulate per
-    ``feedback_clean_test_data``.
+    ``feedback_clean_test_data``. 404 when there was nothing to delete, so a
+    cleanup that misses its row fails instead of passing silently.
     """
     _require_test_mode()
     async with unit_of_work() as db:
-        # Use the repo to confirm tenant scope before deleting via raw SQL —
-        # there's no hard_delete helper on the repo (the production flow is
-        # soft-delete). The cascade FK on the children does the cleanup.
-        existing = await applicant_repo.get(
+        deleted = await applicant_repo.hard_delete_by_id(
             db,
             applicant_id=applicant_id,
             organization_id=ctx.organization_id,
             user_id=ctx.user_id,
-            include_deleted=True,
         )
-        if existing is None:
-            return
-        await db.execute(
-            _sa_delete(Applicant).where(Applicant.id == applicant_id),
-        )
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Applicant not found")
 
 
 # ---------------------------------------------------------------------------

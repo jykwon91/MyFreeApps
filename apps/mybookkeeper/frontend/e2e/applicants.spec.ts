@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
 import { deleteInquiry, seedInquiry } from "./fixtures/inquiries";
+import { deleteApplicant } from "./fixtures/applicants";
 
 /**
  * PR 3.1b — Applicants frontend behavioural E2E (read-only).
@@ -35,10 +36,6 @@ async function seedApplicant(
   }
   const body = (await res.json()) as { id: string };
   return body.id;
-}
-
-async function deleteApplicant(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/test/applicants/${id}`).catch(() => {});
 }
 
 async function waitForApplicantsPage(page: Page): Promise<void> {

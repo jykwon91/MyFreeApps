@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
+import { deleteApplicant } from "./fixtures/applicants";
 
 /**
  * E2E for the tenant rent ledger.
@@ -89,7 +90,7 @@ async function cleanUp(
     await api.delete(`/test/tenant-payments/${id}`).catch(() => {});
   }
   if (applicantId) {
-    await api.delete(`/test/applicants/${applicantId}`).catch(() => {});
+    await deleteApplicant(api, applicantId);
   }
 }
 
