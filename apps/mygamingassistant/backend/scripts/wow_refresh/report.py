@@ -9,7 +9,13 @@ from pathlib import Path
 from typing import Any
 
 WOW_DATA = "frontend/src/games/wow-forever/data"
-GENERATED_JSON = (f":(glob){WOW_DATA}/**/*.json", ":(glob)backend/data/wow/*.json")
+# Build + date of the last refresh (written by `apply`): it changes every run, so it's never a data change.
+DATA_REFRESH_FILE = f"{WOW_DATA}/dataRefresh.json"
+GENERATED_JSON = (
+    f":(glob){WOW_DATA}/**/*.json",
+    ":(glob)backend/data/wow/*.json",
+    f":(exclude){DATA_REFRESH_FILE}",
+)
 SHOWN_PER_SECTION = 40
 # Records where the data came from, which a new build always changes.
 PROVENANCE_KEYS = frozenset({"source", "generated_at", "client_build", "attribution"})

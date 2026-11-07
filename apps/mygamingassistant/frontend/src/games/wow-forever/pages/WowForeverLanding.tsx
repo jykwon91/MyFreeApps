@@ -1,39 +1,37 @@
-import { ArrowRight } from "lucide-react";
-import { Link } from "react-router-dom";
 import { AlertBox } from "@platform/ui";
+import WowFeatureTile from "@/games/wow-forever/components/hub/WowFeatureTile";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import WowServerStatusSection from "@/games/wow-forever/components/serverStatus/WowServerStatusSection";
+import DataRefreshLine from "@/games/wow-forever/components/whatsNew/DataRefreshLine";
+import WhatsNewSection from "@/games/wow-forever/components/whatsNew/WhatsNewSection";
+import { WHATS_NEW } from "@/games/wow-forever/data/whatsNew";
+import { useUpdateDots } from "@/games/wow-forever/hooks/useUpdateDots";
 import { COMPANION_GAMES, WOW_FOREVER_SLUG } from "@/games/registry";
 
 /** /wow-forever — entry point for the WoW Forever companion pages. */
 export default function WowForeverLanding() {
   const features = COMPANION_GAMES[WOW_FOREVER_SLUG].features;
+  const updates = useUpdateDots();
   return (
     <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
-      <WowPageHeader
-        title="World of Warcraft: Forever"
-        subtitle="World map with directions, profession leveling guides, gear compare and more."
-        backTo="/"
-        backLabel="Back to games"
-      />
+      <div className="space-y-2">
+        <WowPageHeader
+          title="World of Warcraft: Forever"
+          subtitle="World map with directions, profession leveling guides, gear compare and more."
+          backTo="/"
+          backLabel="Back to games"
+        />
+        <DataRefreshLine />
+      </div>
       <WowServerStatusSection />
+      <WhatsNewSection entries={WHATS_NEW} />
       <AlertBox variant="info">
         Much of this is based on Classic Era. Facts are tagged with where they come from — see &ldquo;How to read these
         tags&rdquo; at the bottom of each page.
       </AlertBox>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {features.map((f) => (
-          <Link
-            key={f.path}
-            to={f.path}
-            className="group rounded-xl border bg-card p-5 space-y-2 hover:bg-muted/40 transition-colors"
-          >
-            <span className="flex items-center justify-between gap-2 text-lg font-semibold">
-              {f.title}
-              <ArrowRight className="h-5 w-5 text-primary group-hover:translate-x-1 transition-transform" aria-hidden />
-            </span>
-            <span className="block text-sm text-muted-foreground">{f.description}</span>
-          </Link>
+          <WowFeatureTile key={f.path} feature={f} hasUpdate={updates.has(f.path)} />
         ))}
       </div>
     </main>

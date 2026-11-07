@@ -9,12 +9,19 @@ import { useScrollTopOnNavigate } from "../../hooks/useScrollTopOnNavigate";
 import { readLocalStorage, writeLocalStorage } from "../../lib/safeStorage";
 import UserAvatar, { type UserAvatarUser } from "./UserAvatar";
 import SearchBar from "./SearchBar";
+import NavItemContent from "./NavItemContent";
+import { navItemAccessibleLabel } from "../../utils/navItemAccessibleLabel";
 
 export type NavItem = {
   path: string;
   label: string;
   icon: ReactNode;
   exact?: boolean;
+  /**
+   * When set, a small dot marks the item (e.g. "this page has something new") and
+   * this text is read out after the label. Off by default.
+   */
+  dotLabel?: string;
 };
 
 /**
@@ -133,7 +140,7 @@ export default function AppShell({
                   key={item.path}
                   to={item.path}
                   end={item.exact}
-                  title={collapsed ? item.label : undefined}
+                  title={collapsed ? navItemAccessibleLabel(item, true) : undefined}
                   className={({ isActive }: NavLinkRenderProps) =>
                     cn(
                       "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors min-h-[44px]",
@@ -143,7 +150,7 @@ export default function AppShell({
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )
                   }
-                  aria-label={collapsed ? item.label : undefined}
+                  aria-label={navItemAccessibleLabel(item, collapsed)}
                   aria-current={
                     location.pathname === item.path ||
                     (!item.exact && location.pathname.startsWith(item.path))
@@ -151,8 +158,7 @@ export default function AppShell({
                       : undefined
                   }
                 >
-                  <span className="w-5 h-5 shrink-0">{item.icon}</span>
-                  {!collapsed && item.label}
+                  <NavItemContent item={item} collapsed={collapsed} />
                 </NavLink>
               ))}
             </nav>
@@ -173,7 +179,7 @@ export default function AppShell({
                       key={item.path}
                       to={item.path}
                       end={item.exact}
-                      title={collapsed ? item.label : undefined}
+                      title={collapsed ? navItemAccessibleLabel(item, true) : undefined}
                       className={({ isActive }: NavLinkRenderProps) =>
                         cn(
                           "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors min-h-[44px]",
@@ -183,7 +189,7 @@ export default function AppShell({
                             : "text-muted-foreground hover:bg-muted hover:text-foreground"
                         )
                       }
-                      aria-label={collapsed ? item.label : undefined}
+                      aria-label={navItemAccessibleLabel(item, collapsed)}
                       aria-current={
                         location.pathname === item.path ||
                         (!item.exact && location.pathname.startsWith(item.path))
@@ -191,8 +197,7 @@ export default function AppShell({
                           : undefined
                       }
                     >
-                      <span className="w-5 h-5 shrink-0">{item.icon}</span>
-                      {!collapsed && item.label}
+                      <NavItemContent item={item} collapsed={collapsed} />
                     </NavLink>
                   ))}
                 </div>
@@ -319,12 +324,12 @@ export default function AppShell({
                       isActive ? "text-primary" : "text-muted-foreground"
                     )
                   }
+                  aria-label={navItemAccessibleLabel(item, false)}
                   aria-current={
                     location.pathname === item.path ? "page" : undefined
                   }
                 >
-                  <span className="w-5 h-5">{item.icon}</span>
-                  <span>{item.label}</span>
+                  <NavItemContent item={item} collapsed={false} stacked />
                 </NavLink>
               );
             })}

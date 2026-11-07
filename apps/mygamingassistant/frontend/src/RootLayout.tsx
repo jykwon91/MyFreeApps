@@ -1,24 +1,14 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Outlet, ScrollRestoration, useLocation, useSearchParams } from "react-router-dom";
 import {
   ClipboardList,
-  Coins,
   Gamepad2,
-  Hammer,
   Heart,
-  LayoutDashboard,
-  Lightbulb,
-  Map,
   Package,
   PlaySquare,
   Radio,
-  Scale,
   Settings,
   Shield,
-  Terminal,
-  TrendingUp,
-  Trophy,
-  Utensils,
 } from "lucide-react";
 import {
   AppShell,
@@ -38,7 +28,12 @@ import { useIsSuperuser } from "@/hooks/useIsSuperuser";
 import { useGetCurrentUserQuery } from "@platform/ui/store/userApi";
 import { isTauri } from "@/lib/tauri";
 import { isServeOnly } from "@/lib/serveOnly";
-import { COMPANION_GAMES, WOW_FOREVER_SLUG } from "@/games/registry";
+import { COMPANION_GAMES, WOW_FOREVER_SLUG, type GameFeature } from "@/games/registry";
+import WowFeatureIcon from "@/games/wow-forever/components/shared/WowFeatureIcon";
+import { UPDATE_DOT_LABEL } from "@/games/wow-forever/data/whatsNewSettings";
+import { WOW_HUB_PATH } from "@/games/wow-forever/data/wowPagePaths";
+import { useRecordWowPageVisit } from "@/games/wow-forever/hooks/useRecordWowPageVisit";
+import { useUpdateDots } from "@/games/wow-forever/hooks/useUpdateDots";
 import type { CurrentUser } from "@platform/ui";
 
 const ANONYMOUS_USER = { name: "You", email: "" };
@@ -64,20 +59,6 @@ const ICONS: Record<string, React.ReactNode> = {
   Shield: <Shield className="w-5 h-5" />,
 };
 
-/** Icons for WoW Forever section items — keyed by `GameFeature.iconName`. */
-const WOW_ICONS: Record<string, React.ReactNode> = {
-  Coins: <Coins className="w-5 h-5" />,
-  Hammer: <Hammer className="w-5 h-5" />,
-  LayoutDashboard: <LayoutDashboard className="w-5 h-5" />,
-  Lightbulb: <Lightbulb className="w-5 h-5" />,
-  Map: <Map className="w-5 h-5" />,
-  Scale: <Scale className="w-5 h-5" />,
-  Terminal: <Terminal className="w-5 h-5" />,
-  TrendingUp: <TrendingUp className="w-5 h-5" />,
-  Trophy: <Trophy className="w-5 h-5" />,
-  Utensils: <Utensils className="w-5 h-5" />,
-};
-
 const LOGO = (
   <div className="flex items-center gap-2">
     <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 text-base leading-none">
@@ -94,29 +75,34 @@ const LOGO_ICON = (
   </div>
 );
 
+/** A WoW Forever nav item, with an update dot when its page has something new (in `updates`). */
+function wowNavItem(path: string, label: string, iconName: string, updates: ReadonlySet<string>): NavItem {
+  return {
+    path,
+    label,
+    icon: <WowFeatureIcon iconName={iconName} className="w-5 h-5" />,
+    exact: path === WOW_HUB_PATH || undefined,
+    dotLabel: updates.has(path) ? UPDATE_DOT_LABEL : undefined,
+  };
+}
+
 /** "Overview" hub item shown at the top of the WoW Forever sidebar section. */
-const WOW_OVERVIEW_ITEM: NavItem = {
-  path: "/wow-forever",
-  label: "Overview",
-  icon: <LayoutDashboard className="w-5 h-5" />,
-  exact: true,
-};
+function wowOverviewItem(updates: ReadonlySet<string>): NavItem {
+  return wowNavItem(WOW_HUB_PATH, "Overview", "LayoutDashboard", updates);
+}
+
+function wowFeatureItem(f: GameFeature, updates: ReadonlySet<string>): NavItem {
+  return wowNavItem(f.path, f.title, f.iconName, updates);
+}
 
 /** Full WoW nav section — displayed in the desktop sidebar on `/wow-forever*` routes. */
-function buildWowNavSection(): NavSection {
+function buildWowNavSection(updates: ReadonlySet<string>): NavSection {
   const features = COMPANION_GAMES[WOW_FOREVER_SLUG].features;
   return {
     id: "wow-forever",
     title: "WoW Forever",
     routePrefix: "/wow-forever",
-    items: [
-      WOW_OVERVIEW_ITEM,
-      ...features.map((f) => ({
-        path: f.path,
-        label: f.title,
-        icon: WOW_ICONS[f.iconName] ?? <LayoutDashboard className="w-5 h-5" />,
-      })),
-    ],
+    items: [wowOverviewItem(updates), ...features.map((f) => wowFeatureItem(f, updates))],
   };
 }
 
@@ -126,24 +112,17 @@ function buildWowNavSection(): NavSection {
  *
  * Ordering: Overview first (has "Back to games" link), then the most-used pages.
  */
-function buildWowMobileItems(): NavItem[] {
+function buildWowMobileItems(updates: ReadonlySet<string>): NavItem[] {
   const features = COMPANION_GAMES[WOW_FOREVER_SLUG].features;
   const MOBILE_ICONS: readonly string[] = ["Map", "Hammer", "Terminal", "Trophy"];
   return [
-    WOW_OVERVIEW_ITEM,
+    wowOverviewItem(updates),
     ...features
       .filter((f) => MOBILE_ICONS.includes(f.iconName))
       .sort((a, b) => MOBILE_ICONS.indexOf(a.iconName) - MOBILE_ICONS.indexOf(b.iconName))
-      .map((f) => ({
-        path: f.path,
-        label: f.title,
-        icon: WOW_ICONS[f.iconName] ?? <LayoutDashboard className="w-5 h-5" />,
-      })),
+      .map((f) => wowFeatureItem(f, updates)),
   ];
 }
-
-const WOW_NAV_SECTION = buildWowNavSection();
-const WOW_MOBILE_ITEMS = buildWowMobileItems();
 
 /**
  * RootLayout — top-level layout wrapper.
@@ -186,6 +165,12 @@ export default function RootLayout() {
   // Fixed for the page: Discord's launch parameters are read once at startup.
   const [inDiscord] = useState(isDiscordActivity);
 
+  // Update dots ("new since your last visit") on the WoW items; opening a page clears its dot.
+  useRecordWowPageVisit(location.pathname);
+  const wowUpdates = useUpdateDots();
+  const wowNavSection = useMemo(() => buildWowNavSection(wowUpdates), [wowUpdates]);
+  const wowMobileItems = useMemo(() => buildWowMobileItems(wowUpdates), [wowUpdates]);
+
   const isCompact = searchParams.get("compact") === "1";
   const isOnWowRoute = location.pathname.startsWith("/wow-forever");
 
@@ -199,7 +184,7 @@ export default function RootLayout() {
   const user = showAuthedNav ? projectUser(currentUser) : ANONYMOUS_USER;
 
   // Mobile bottom-nav: show WoW items when on a WoW route, main nav otherwise.
-  const mobileBottomNav = isOnWowRoute ? WOW_MOBILE_ITEMS : undefined;
+  const mobileBottomNav = isOnWowRoute ? wowMobileItems : undefined;
 
   // Discord Activity: the compact Activity frame. Checked first so neither a
   // stale token (AppShell) nor ?compact=1 (bare page, no way home) applies
@@ -230,7 +215,7 @@ export default function RootLayout() {
           logo={LOGO}
           logoIcon={LOGO_ICON}
           nav={nav}
-          navSections={[WOW_NAV_SECTION]}
+          navSections={[wowNavSection]}
           bottomNav={mobileBottomNav}
           collapsible
           headerActions={<ThemeToggle />}
@@ -267,7 +252,7 @@ export default function RootLayout() {
           logo={LOGO}
           logoIcon={LOGO_ICON}
           nav={nav}
-          navSections={[WOW_NAV_SECTION]}
+          navSections={[wowNavSection]}
           bottomNav={mobileBottomNav}
           collapsible
           headerActions={<ThemeToggle />}
@@ -288,7 +273,7 @@ export default function RootLayout() {
         logo={LOGO}
         logoIcon={LOGO_ICON}
         nav={nav}
-        navSections={[WOW_NAV_SECTION]}
+        navSections={[wowNavSection]}
         bottomNav={mobileBottomNav}
         collapsible
         user={user}
