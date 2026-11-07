@@ -31,7 +31,7 @@ test("reaches the page from the WoW Forever hub", async ({ page }) => {
   await expect(page.getByTestId("gear-phase-banner")).toContainText("December 9");
 });
 
-test("the Warlock pre-raid table: three items per slot, cloth only, with source chips and no links out", async ({ page }) => {
+test("the Warlock pre-raid table: three items per slot, cloth only, with source chips and names linking to item pages", async ({ page }) => {
   await openPreRaid(page);
   await expect(page.getByTestId("gear-slot-card")).toHaveCount(WARLOCK_CARDS);
 
@@ -44,7 +44,9 @@ test("the Warlock pre-raid table: three items per slot, cloth only, with source 
     /^(Crafted \(game files\)|Quest \(Classic data, may differ\)|Boss drop \(Classic data, may differ\)|Source unknown)$/,
   );
 
-  await expect(rows.first().getByRole("link")).toHaveCount(0);
+  // The name is the row's one link: our own item page, never a site outside the app.
+  await expect(rows.first().getByRole("link")).toHaveCount(1);
+  await expect(rows.first().getByRole("link")).toHaveAttribute("href", /^\/wow-forever\/items\/\d+$/);
   await expect(page.locator('a[href*="wowhead"]')).toHaveCount(0);
 
   // Felcloth is Tailoring from the Forever client: the chip says game files.

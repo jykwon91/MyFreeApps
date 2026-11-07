@@ -67,11 +67,13 @@ def generators(*, art: bool, hotfix_cache: Path) -> list[list[str]]:
         world_map,
         ["scripts.wow_food.build"],
         ["scripts.wow_professions.build"],
-        # Reads the Professions output above. Its images are published last, below.
-        ["scripts.wow_icons.build"],
         ["scripts.wow_gold.build"],
         ["scripts.wow_consumables.build"],
         ["scripts.wow_items.build", *cache],
+        # Reads the World Map, Professions and Item output above.
+        ["scripts.wow_item_pages.build", *cache],
+        # Reads the Professions and Item output above. Its images are published last, below.
+        ["scripts.wow_icons.build", *cache],
         ["scripts.wow_item_names.build"],
         ["scripts.wow_macros.build"],
         # Reads the World Map, Professions and Item output above, so it runs last.

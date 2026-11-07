@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import ItemNameLink from "@/games/wow-forever/components/itemPages/ItemNameLink";
 import GearSourceChip from "@/games/wow-forever/components/gear/GearSourceChip";
 import { QUALITY_TEXT_CLASSES } from "@/games/wow-forever/data/itemQualityStyles";
 import { describeSource, pctLabel, sourceChipKind } from "@/games/wow-forever/gear/gearSourceText";
@@ -30,7 +31,7 @@ export default function GearItemRow({ ranked, isTop, closeRuleApplied = false }:
   return (
     <li data-testid="gear-item-row" className="space-y-1.5 py-3 first:pt-0 last:pb-0">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <span className={clsx("font-medium", QUALITY_TEXT_CLASSES[item.quality])}>{item.name}</span>
+        <ItemNameLink itemId={item.id} name={item.name} className={clsx("font-medium", QUALITY_TEXT_CLASSES[item.quality])} />
         <span className="text-xs text-muted-foreground tabular-nums">
           {pctLabel(ranked.pctOfBest, isTop, closeRuleApplied)} · score {ranked.score.toFixed(1)}
         </span>

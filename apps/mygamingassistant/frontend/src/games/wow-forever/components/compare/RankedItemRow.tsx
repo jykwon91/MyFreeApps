@@ -1,3 +1,4 @@
+import ItemNameLink from "@/games/wow-forever/components/itemPages/ItemNameLink";
 import type { RankedItem } from "@/games/wow-forever/scoring/scoreTypes";
 
 export default function RankedItemRow({ entry, rank }: { entry: RankedItem; rank: number }) {
@@ -6,7 +7,8 @@ export default function RankedItemRow({ entry, rank }: { entry: RankedItem; rank
     <li className="space-y-1">
       <div className="flex items-baseline justify-between gap-3 text-sm">
         <span className="font-medium truncate">
-          {rank}. {entry.item.name}
+          {rank}.{" "}
+          {entry.item.origin ? <ItemNameLink itemId={entry.item.origin.itemId} name={entry.item.name} /> : entry.item.name}
         </span>
         <span className="whitespace-nowrap text-muted-foreground">
           {entry.score.total.toFixed(1)} pts · {entry.pctOfBest}%

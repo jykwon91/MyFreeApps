@@ -48,7 +48,7 @@ It pins the newest builds in `sources.py`, runs every generator and prints a rep
 of what changed, by name.
 
 Most Forever items aren't in the client file. The server sends them as hotfixes, so
-the item and Best gear generators also read the game's own hotfix cache,
+the item, item page, icon and Best gear generators also read the game's own hotfix cache,
 `D:\World of Warcraft\_forever_\Cache\ADB\enUS\DBCache.bin`. Point elsewhere with
 `--hotfix-cache <path>` or `WOW_FOREVER_HOTFIX_CACHE`. `apply` stops before
 repinning if the file is missing. It also stops if the client is on a build whose
@@ -56,6 +56,13 @@ item layout differs from the pinned one: log into the game once on the new build
 and run it again. The game only caches items it has seen, so playing (opening
 vendors, loot, the auction house) is what fills the item list in. A generator failing stops the run: fix the cause or leave
 it for a person, and never hand-edit generated JSON.
+
+The item pages (`/wow-forever/items/:id`) come from `scripts.wow_item_pages.build`,
+which runs after the item list: 64 shards under `data/items/pages/` (Forever client:
+the item row, bind, vendor price, recipes) and 64 under `data/items/pages/classic/`
+(cmangos: vendors, quests, drops with the server's chance, containers) plus
+`classic/unseen.json`. The icon map covers every item in `items.json`, so a refresh
+that adds items adds icons to publish.
 
 Its last step publishes the new build's icons (`scripts.wow_icons.publish --to r2`,
 WebP under `wow/{build}/icons/` in the prod R2 bucket), because `wowIcons.json`
@@ -102,7 +109,7 @@ client data itself.
 From `apps/mygamingassistant/backend`:
 
 ```bash
-pytest tests/test_wow_refresh.py tests/test_wow_food_generator.py tests/test_wow_professions_generator.py tests/test_wow_world_map_generator.py tests/test_wow_raid_consumables.py tests/test_wow_items_generator.py tests/test_wow_items_hotfix_cache.py tests/test_wow_item_names.py tests/test_wow_gear_generator.py tests/test_wow_icons_generator.py
+pytest tests/test_wow_refresh.py tests/test_wow_food_generator.py tests/test_wow_professions_generator.py tests/test_wow_world_map_generator.py tests/test_wow_raid_consumables.py tests/test_wow_items_generator.py tests/test_wow_items_hotfix_cache.py tests/test_wow_item_names.py tests/test_wow_gear_generator.py tests/test_wow_icons_generator.py tests/test_wow_item_pages_generator.py
 ```
 
 From `apps/mygamingassistant/frontend`:

@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from scripts.wow_icons.build import OUT_FILE, cooking_item_ids, gathering_item_ids, wanted_ids, write_icon_map
+from scripts.wow_icons.build import OUT_FILE, cooking_item_ids, gathering_item_ids, gear_item_ids, wanted_ids, write_icon_map
 from scripts.wow_icons.ids import (
     IconIds,
     appearance_icon_map,
@@ -124,6 +124,12 @@ def test_cooking_ingredients_are_read_from_the_guide(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     assert cooking_item_ids(path) == {2672, 769}
+
+
+def test_gear_items_are_every_row_of_the_item_list(tmp_path: Path) -> None:
+    path = tmp_path / "items.json"
+    path.write_text(json.dumps({"columns": ["id", "name"], "items": [[11815, "Hand of Justice"], [647, "Destiny"]]}), encoding="utf-8")
+    assert gear_item_ids(path) == {11815, 647}
 
 
 def test_map_file_puts_one_id_per_line_and_stays_json(tmp_path: Path) -> None:
