@@ -63,7 +63,7 @@ test.describe("Public inquiry form", () => {
 
       const detail = await api.get(`/inquiries/${inquiryId}`);
       expect(detail.ok()).toBe(true);
-      expect(((await detail.json()) as { move_in_date: string }).move_in_date).toBe(localToday());
+      expect(((await detail.json()) as { desired_start_date: string }).desired_start_date).toBe(localToday());
     } finally {
       if (inquiryId) await deleteInquiry(api, inquiryId);
       if (listing) await deleteListing(api, listing.id);
