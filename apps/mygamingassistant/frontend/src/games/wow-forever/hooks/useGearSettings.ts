@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
-import { findClass, findSpec, type WowClassId } from "@/games/wow-forever/data/classes";
-import { isGearView } from "@/games/wow-forever/data/gear/gearViews";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { findClass, findSpec, firstSpec } from "@/games/wow-forever/data/classes";
+import { GEAR_VIEW, isGearView } from "@/games/wow-forever/data/gear/gearViews";
 import { MAX_LEVEL, playerLevel } from "@/games/wow-forever/data/levelCap";
 import { PLAYER_SETTINGS_STORAGE_KEY, parsePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { readStored, writeStored } from "@/games/wow-forever/lib/safeLocalStorage";
@@ -10,19 +10,15 @@ import { FACTION, type PlayerFaction } from "@/games/wow-forever/types/worldMap"
 
 export const GEAR_SETTINGS_STORAGE_KEY = "mga.wowForever.gear.settings.v1";
 
-const PARAM = { classId: "class", specId: "spec", level: "lvl", faction: "faction", view: "view", includePvp: "pvp" } as const;
-
-/** A class's first spec — every class has at least one. */
-export function firstSpec(classId: WowClassId): string {
-  return findClass(classId)?.specs[0]?.id ?? "";
-}
+/** URL query keys for each setting. */
+export const GEAR_URL_PARAMS = { classId: "class", specId: "spec", level: "lvl", faction: "faction", view: "view", includePvp: "pvp" } as const;
 
 export const DEFAULT_GEAR_SETTINGS: GearSettings = {
   classId: "warlock",
   specId: firstSpec("warlock"),
   level: null,
   faction: FACTION.alliance,
-  view: "leveling",
+  view: GEAR_VIEW.leveling,
   includePvp: false,
 };
 
@@ -80,7 +76,7 @@ function storedSettings(): GearSettings {
 
 function fromParams(params: URLSearchParams): Record<string, unknown> {
   const raw: Record<string, unknown> = {};
-  for (const [field, key] of Object.entries(PARAM)) {
+  for (const [field, key] of Object.entries(GEAR_URL_PARAMS)) {
     const value = params.get(key);
     if (value !== null) raw[field] = value;
   }
@@ -89,13 +85,13 @@ function fromParams(params: URLSearchParams): Record<string, unknown> {
 
 function toParams(s: GearSettings): Record<string, string> {
   const out: Record<string, string> = {
-    [PARAM.classId]: s.classId,
-    [PARAM.specId]: s.specId,
-    [PARAM.faction]: s.faction,
-    [PARAM.view]: s.view,
+    [GEAR_URL_PARAMS.classId]: s.classId,
+    [GEAR_URL_PARAMS.specId]: s.specId,
+    [GEAR_URL_PARAMS.faction]: s.faction,
+    [GEAR_URL_PARAMS.view]: s.view,
   };
-  if (s.level !== null) out[PARAM.level] = String(s.level);
-  if (s.includePvp) out[PARAM.includePvp] = "1";
+  if (s.level !== null) out[GEAR_URL_PARAMS.level] = String(s.level);
+  if (s.includePvp) out[GEAR_URL_PARAMS.includePvp] = "1";
   return out;
 }
 
@@ -103,9 +99,12 @@ function toParams(s: GearSettings): Record<string, string> {
  * Best gear settings. The URL holds them (a link shares the exact question)
  * and they're remembered for the next visit. Switching table (`view`) adds a
  * history entry so Back returns to the other table; everything else replaces.
+ * Choosing a view leaves a share link's fragment; any other change keeps it.
  */
 export function useGearSettings(): [GearSettings, (patch: Partial<GearSettings>) => void] {
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
+  const { pathname, hash } = useLocation();
+  const navigate = useNavigate();
   const settings = useMemo(() => parseGearSettings(fromParams(params), storedSettings()), [params]);
 
   const update = useCallback(
@@ -117,9 +116,10 @@ export function useGearSettings(): [GearSettings, (patch: Partial<GearSettings>)
       }
       writeStored(GEAR_SETTINGS_STORAGE_KEY, next);
       const push = patch.view !== undefined && patch.view !== settings.view;
-      setParams(toParams(next), { replace: !push });
+      const search = `?${new URLSearchParams(toParams(next)).toString()}`;
+      navigate({ pathname, search, hash: patch.view === undefined ? hash : "" }, { replace: !push });
     },
-    [settings, setParams],
+    [settings, navigate, pathname, hash],
   );
 
   return [settings, update];

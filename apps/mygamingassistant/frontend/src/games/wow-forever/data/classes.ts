@@ -140,6 +140,11 @@ export function findSpec(classId: string, specId: string): WowSpec | undefined {
   return findClass(classId)?.specs.find((s) => s.id === specId);
 }
 
+/** A class's first spec — every class has at least one. */
+export function firstSpec(classId: WowClassId): string {
+  return findClass(classId)?.specs[0]?.id ?? "";
+}
+
 /** Role for a class/spec pair; "Leveling (any)" falls back to the class leveling role. */
 export function roleFor(classId: WowClassId, specId: string): SpecRole {
   const cls = findClass(classId);
