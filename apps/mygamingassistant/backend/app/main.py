@@ -31,6 +31,7 @@ from platform_shared.api.users_router import build_users_router
 from app.api import (
     account,
     admin,
+    current_user,
     discord_public,
     games,
     health,
@@ -63,7 +64,6 @@ from app.core.rate_limit import (
     require_turnstile,
 )
 from app.core.body_size_cap import BodySizeCapMiddleware
-from app.core.triage_gate import make_triage_gate
 from app.core.wow_chat_limits import CHAT_TURN_PATH, DETAIL_BODY_TOO_LARGE, MAX_BODY_BYTES
 from app.schemas.user.user_base import UserRead, UserUpdate
 from app.services.discord.startup import start_discord
@@ -113,19 +113,9 @@ async def _on_startup() -> None:
       - development: missing/invalid vars log WARNING and seed/classifier
         are skipped.
     """
-    # Serve-only mode: production runs as a pure public read-only library with
-    # ZERO auth. No operator account exists (lineups are authored locally and
-    # seeded via the import-lineups CLI), so the seed user is skipped entirely
-    # and SEED_USER_* are not required. The classifier + scheduler are still
-    # honored below (the operator may run a serve-only deploy that also syncs
-    # sources) — only the auth-bound seed step is skipped.
-    if settings.serve_only:
-        logger.info(
-            "_on_startup: SERVE_ONLY=true — public read-only deployment. "
-            "Skipping operator seed (no auth); SEED_USER_* not required."
-        )
-    else:
-        await _seed_operator_if_configured()
+    # Both modes: serve-only prod keeps an operator-only sign-in (feature-request
+    # triage), so the operator account must exist there too.
+    await _seed_operator_if_configured()
 
     # Media serving boot guard — runs in BOTH modes. If a public media base URL
     # is configured, its host MUST resolve, or the whole public clip library
@@ -181,10 +171,10 @@ def _start_scheduler() -> None:
 
 
 async def _seed_operator_if_configured() -> None:
-    """Seed the single operator user from SEED_USER_* (full-auth mode only).
+    """Seed the single operator user from SEED_USER_* (both modes).
 
-    Extracted from _on_startup so the serve_only branch can skip it cleanly.
-    Behaviour is unchanged from the prior inline implementation.
+    Production fails loud without a valid operator: in full-auth mode every
+    write surface needs it, in serve_only the operator sign-in (triage) does.
     """
     email = settings.seed_user_email
     hashed_password = settings.seed_user_password_hash
@@ -193,7 +183,10 @@ async def _seed_operator_if_configured() -> None:
         if settings.environment == "production":
             raise SeedUserNotConfiguredError(
                 "SEED_USER_EMAIL and SEED_USER_PASSWORD_HASH must be set in "
-                "production. See apps/mygamingassistant/backend/.env.docker.example."
+                "production — including SERVE_ONLY=true, where they are the "
+                "operator's sign-in for feature-request triage. Set both in "
+                "apps/mygamingassistant/backend/.env.docker (see "
+                ".env.docker.example for how to generate the hash)."
             )
         logger.warning(
             "_on_startup: SEED_USER_EMAIL or SEED_USER_PASSWORD_HASH is empty "
@@ -271,23 +264,48 @@ def _mount_public_routes(app: FastAPI) -> None:
         return {"commit": GIT_COMMIT, "timestamp": STARTUP_TIMESTAMP}
 
 
-def _mount_auth_routes(app: FastAPI) -> None:
-    """Mount the full auth + auth-write surface — full-auth mode ONLY.
+def _mount_operator_login_routes(app: FastAPI) -> None:
+    """Mount the operator sign-in — served in BOTH modes.
 
-    In serve_only mode this is NOT called, so every login / JWT / reset /
-    verify / TOTP / users-me route AND every write router (games.auth_router,
-    lineups.auth_router, lineup_packages.auth_router, sources, scheduler,
-    admin) is ABSENT (returns 404). This is the fail-closed contract: auth
-    routes are not merely unreachable, they are never registered.
+    JWT login + logout (``/auth/jwt/*``; ``/login`` gets the per-IP throttle +
+    account lockout, and refuses TOTP-enabled accounts, which must use
+    ``/auth/totp/login``) and the TOTP routes (``/auth/totp/*``: login with the
+    per-IP + TOTP throttles and TOTP lockout, plus setup / verify / disable /
+    status so the operator can manage 2FA). No registration and no reset /
+    verify email flows — those are full-auth only.
     """
-    # Auth routes — JWT login enforces email verification AND gates /login with
-    # the per-IP throttle + account-lockout.
     _auth_router = fastapi_users.get_auth_router(auth_backend, requires_verification=True)
     for _route in _auth_router.routes:
         if getattr(_route, "path", None) == "/login":
             _route.dependencies.append(Depends(check_login_rate_limit))
             _route.dependencies.append(Depends(check_account_not_locked))
     app.include_router(_auth_router, prefix="/auth/jwt", tags=["auth"])
+
+    app.include_router(totp.router)
+
+
+def _mount_serve_only_operator_routes(app: FastAPI) -> None:
+    """The operator surface of serve_only prod besides triage: the sign-in and
+    ``GET /users/me`` — nothing else.
+
+    Every other auth route (register, forgot / reset password, verify, the rest
+    of /users, account deletion / export, admin) and every write router
+    (lineups, packages, map captures, sources, scheduler) stays ABSENT (404).
+    """
+    _mount_operator_login_routes(app)
+    app.include_router(current_user.router, prefix="/users", tags=["users"])
+
+
+def _mount_auth_routes(app: FastAPI) -> None:
+    """Mount the full auth + auth-write surface — full-auth mode ONLY.
+
+    In serve_only mode this is NOT called (see
+    ``_mount_serve_only_operator_routes``), so reset / verify / the rest of
+    /users AND every write router (games.auth_router, lineups.auth_router,
+    lineup_packages.auth_router, sources, scheduler, admin) are ABSENT (404) —
+    never registered.
+    """
+    _mount_operator_login_routes(app)
 
     # MGA is single-user — registration route is NOT mounted.
     # The /auth/register endpoint is deliberately absent. The seed_operator_user
@@ -346,9 +364,6 @@ def _mount_auth_routes(app: FastAPI) -> None:
         )
     )
 
-    # TOTP routes — /auth/totp/login gets the per-IP throttle.
-    app.include_router(totp.router)
-
 
 def create_app(settings: Settings = settings) -> FastAPI:
     """Build the MGA FastAPI app.
@@ -357,14 +372,17 @@ def create_app(settings: Settings = settings) -> FastAPI:
       - serve_only=False (default, local dev / CI): mount the full
         public-read / auth-write surface exactly as before — zero behavioral
         diff from the pre-refactor module.
-      - serve_only=True (production public library): mount ONLY the public
-        read-only routes. No auth router, no auth-write router, no users/me.
-        Auth routes are ABSENT (404) — fail closed.
+      - serve_only=True (production public library): the public read-only
+        routes plus the operator-only surface — sign-in (JWT + TOTP),
+        GET /users/me and triage. Every other auth route and every write
+        router is ABSENT (404) — fail closed.
 
     The ``settings`` parameter defaults to the module-level settings (so the
     module-level ``app = create_app()`` uses the real config); tests pass a
     serve_only clone to build the alternate app without mutating the global.
     """
+    # Login itself has no CAPTCHA (only full-auth's forgot-password does) and
+    # sends no email, so serve_only's operator sign-in needs neither guard.
     turnstile_required = not settings.serve_only
     email_required = not settings.serve_only
 
@@ -392,9 +410,6 @@ def create_app(settings: Settings = settings) -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Registered BEFORE set_audit_user so it runs inside it: the access log
-    # still records triage requests, and the triage actor set here wins.
-    app.middleware("http")(make_triage_gate(settings.wow_feature_triage_tokens))
     # The Ask chat relay reads at most 64 KB before anything parses the body.
     app.add_middleware(
         BodySizeCapMiddleware, path=CHAT_TURN_PATH, max_bytes=MAX_BODY_BYTES, detail=DETAIL_BODY_TOO_LARGE
@@ -444,15 +459,16 @@ def create_app(settings: Settings = settings) -> FastAPI:
     # registered BEFORE the public_router (parametric /lineups/{id}). So in
     # full-auth mode, mount auth routes first, then public. In serve_only mode
     # only public routes exist and there is no shadowing to worry about.
-    if not settings.serve_only:
+    if settings.serve_only:
+        _mount_serve_only_operator_routes(app)
+    else:
         _mount_auth_routes(app)
     _mount_public_routes(app)
 
-    # Triage API: the one token-gated write surface, in BOTH modes, and only
-    # when WOW_FEATURE_TRIAGE_TOKEN is set — otherwise absent (404). Auth is
-    # the triage gate middleware above. See docs/wow-forever-feature-triage.md.
-    if settings.wow_feature_triage_tokens:
-        app.include_router(wow_feature_triage.build_triage_router())
+    # Triage API: operator-only (superuser sign-in), in BOTH modes. The audit
+    # actor is the signed-in operator (set_audit_user above).
+    # See docs/wow-forever-feature-triage.md.
+    app.include_router(wow_feature_triage.build_triage_router())
 
     # Public transparency / support endpoints (shared): GET /transparency +
     # POST /donations/kofi-webhook. Unauthenticated by design and mounted in

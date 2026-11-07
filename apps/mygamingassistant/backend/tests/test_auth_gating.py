@@ -385,11 +385,11 @@ async def test_authed_scheduler_status(auth_client: AsyncClient):
 
 
 # ---------------------------------------------------------------------------
-# Serve-only mode — production public read-only library, ZERO auth.
+# Serve-only mode — production public read-only library + operator sign-in.
 #
-# In serve_only the app mounts ONLY the public-read surface. Every auth route
-# and every auth-write route must be ABSENT (404) — fail closed: routes are not
-# registered at all, never present-but-bypassed. Public browse must still work.
+# Beyond the public reads, serve_only mounts only the operator's sign-in,
+# GET /users/me and triage. Every OTHER auth / auth-write route must be ABSENT
+# (404) — fail closed, never present-but-bypassed. Public browse still works.
 #
 # These tests use the conftest ``serve_only_client`` fixture: a SECOND app built
 # via create_app() with a serve_only settings clone, bound to the same test DB
@@ -399,18 +399,17 @@ async def test_authed_scheduler_status(auth_client: AsyncClient):
 @pytest.mark.parametrize(
     "method, path",
     [
-        # fastapi-users auth surface — must be entirely absent.
-        ("POST", "/api/auth/jwt/login"),
-        ("POST", "/api/auth/jwt/logout"),
+        # Auth surface beyond the operator sign-in (tests/test_serve_only_operator.py).
+        ("POST", "/api/auth/register"),
         ("POST", "/api/auth/forgot-password"),
         ("POST", "/api/auth/reset-password"),
         ("POST", "/api/auth/request-verify-token"),
         ("POST", "/api/auth/verify"),
-        ("POST", "/api/auth/totp/login"),
-        # User self-service.
-        ("GET", "/api/users/me"),
-        ("GET", "/api/users/me/export"),
+        ("PATCH", "/api/users/me"),
         ("DELETE", "/api/users/me"),
+        ("GET", "/api/users/me/export"),
+        ("GET", "/api/users/00000000-0000-0000-0000-000000000000"),
+        ("DELETE", "/api/users/00000000-0000-0000-0000-000000000000"),
         # Auth-write domain surface.
         ("POST", "/api/lineups/upload-url"),
         ("POST", "/api/lineups"),
@@ -435,14 +434,15 @@ async def test_authed_scheduler_status(auth_client: AsyncClient):
 async def test_serve_only_auth_routes_not_mounted(
     serve_only_client: AsyncClient, method: str, path: str
 ):
-    """Every auth + auth-write route must be NOT MOUNTED in serve_only.
+    """Every auth + auth-write route but the operator sign-in is NOT MOUNTED.
 
     Fail-closed contract: the operation must be impossible. Acceptable results:
-      - 404: the path is not registered at all (the auth-only surfaces — /auth/*,
-        /api/users/me, /api/sources, /api/scheduler/*, /admin/*).
-      - 405: the path IS registered by the PUBLIC read router for a different
-        method (e.g. POST /api/lineups, PATCH/DELETE /api/lineups/{id},
-        POST /api/lineup-packages), but the write method has no handler. The
+      - 404: the path is not registered at all (register / reset / verify, the
+        rest of /api/users, /api/sources, /api/scheduler/*, /admin/*).
+      - 405: the path IS registered for a different method — by the PUBLIC read
+        router (e.g. POST /api/lineups, PATCH/DELETE /api/lineups/{id},
+        POST /api/lineup-packages) or by the operator's GET /api/users/me
+        (PATCH/DELETE /api/users/me) — but the write method has no handler. The
         mutation cannot execute — 405 is as fail-closed as 404 here.
       - 422: a literal operator path (/api/lineups/pending,
         /api/lineups/bulk-accept) is, in full-auth mode, served by the
@@ -456,8 +456,8 @@ async def test_serve_only_auth_routes_not_mounted(
       - 2xx: the write/read succeeded (auth bypassed) — catastrophic.
       - 401 / 403: the route EXISTS and merely rejected the caller — that is
         present-but-bypassed, which violates the "auth routes ABSENT" guarantee.
-        In serve_only there is no auth dependency to reject, so an auth-style
-        status would mean the auth-write router leaked into the mount.
+        None of these routers is mounted in serve_only, so an auth-style status
+        would mean an auth-write router leaked into the mount.
     """
     resp = await serve_only_client.request(method, path)
     assert resp.status_code in (404, 405, 422), (

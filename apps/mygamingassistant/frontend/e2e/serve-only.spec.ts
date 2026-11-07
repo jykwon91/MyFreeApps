@@ -2,17 +2,17 @@
  * Serve-only mode E2E suite.
  *
  * Runs against a Vite dev server started with VITE_SERVE_ONLY=true (see
- * playwright.serve-only.config.ts). In serve-only mode MGA is a pure public
- * read-only lineup library with ZERO auth:
- *   - No "Sign in" CTA anywhere (the backend mounts no login route).
- *   - Gated routes (/settings, /sources, /review, /security, ...) redirect to
- *     the public home instead of showing the AuthRequired Sign-in card.
- *   - The standalone /login, /forgot-password, /reset-password, /verify-email
- *     routes redirect to home.
+ * playwright.serve-only.config.ts). In serve-only mode MGA is a public
+ * read-only lineup library for players, who never sign in:
+ *   - No "Sign in" CTA anywhere (nothing links to the operator's sign-in).
+ *   - Write routes (/settings, /sources, /review, ...) redirect to the public
+ *     home instead of showing the AuthRequired Sign-in card.
+ *   - /login is the operator's unlinked sign-in (for triage — see
+ *     serve-only-operator.spec.ts); /forgot-password, /reset-password and
+ *     /verify-email redirect to home. There is no registration.
  *   - Public browse (games, packages) works unchanged.
  *
- * Prereqs: backend on :8004 with fixtures loaded (public read endpoints). No
- * operator credentials are needed — there is no login in this mode.
+ * Prereqs: backend on :8004 with fixtures loaded (public read endpoints).
  *
  * Run: npm run test:e2e:serve-only
  */
@@ -21,8 +21,8 @@ import { test, expect, type APIRequestContext } from "@playwright/test";
 // The serve-only FRONTEND talks to the SAME backend the full-auth E2E uses
 // (:8004). That backend still has the operator API + test helpers, so we seed
 // real data through it, then verify the serve-only UI reads it publicly and
-// offers no mutation. Seeding is operator-authed; the serve-only bundle itself
-// has no login, which is the whole point.
+// offers no mutation. Seeding is operator-authed; the serve-only bundle offers
+// players no sign-in and no writes, which is the whole point.
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8004";
 
 interface SeededLineup {
@@ -79,7 +79,7 @@ async function deleteLineup(
   }
 }
 
-test.describe("MGA serve-only mode (public read-only, zero auth)", () => {
+test.describe("MGA serve-only mode (public read-only for players)", () => {
   test("home renders the public games library with NO Sign-in CTA", async ({ page }) => {
     await page.goto("/");
     await expect(page).toHaveURL(/\/$/);
@@ -122,12 +122,13 @@ test.describe("MGA serve-only mode (public read-only, zero auth)", () => {
     await expect(page.getByRole("heading", { name: "Games" })).toBeVisible();
   });
 
-  test("standalone /login route redirects to home", async ({ page }) => {
+  test("/login is the operator's sign-in form, with no way to register", async ({ page }) => {
     await page.goto("/login");
-    await page.waitForURL("**/", { timeout: 5_000 });
-    await expect(page).toHaveURL(/\/$/);
-    // The login form (email/password) must not be rendered.
-    await expect(page.getByLabel(/password/i)).toHaveCount(0);
+    await expect(page).toHaveURL(/\/login$/);
+    await expect(page.getByLabel("Email")).toBeVisible();
+    await expect(page.getByLabel("Password")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: /register|sign up|create an account/i })).toHaveCount(0);
   });
 
   test("standalone /forgot-password route redirects to home", async ({ page }) => {

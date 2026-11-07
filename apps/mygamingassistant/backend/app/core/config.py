@@ -12,33 +12,28 @@ primitives never need to be re-added if this app ever becomes multi-user.
 """
 
 
-from pydantic import field_validator
-
 from platform_shared.core.settings import BaseAppSettings
-
-from app.core.triage_tokens import TriageToken, parse_triage_tokens
 
 
 class Settings(BaseAppSettings):
     # ------------------------------------------------------------------
     # Serve-only deployment mode (env: SERVE_ONLY).
     # ------------------------------------------------------------------
-    # When True, MGA runs as a PURE PUBLIC READ-ONLY lineup library with
-    # ZERO authentication:
-    #   - No login / JWT-auth / reset-password / verify / TOTP routes are
-    #     mounted (they return 404 — fail closed: auth routes are ABSENT,
-    #     never present-but-bypassed).
-    #   - No auth-write surface (lineup/package/source/scheduler/admin
-    #     mutations, /users/me) is mounted.
-    #   - The seed-operator user is NOT created and SEED_USER_* env vars are
-    #     NOT required at boot.
-    #   - The Turnstile + email boot guards are skipped (no forgot-password
-    #     form exists with no auth), so TURNSTILE_* / EMAIL_*/SMTP_* env are
-    #     NOT required.
-    # Only the public-read surface (games, accepted lineups, packages,
-    # health, version) is served. This is the production shape: the operator
-    # authors lineups LOCALLY (full auth) and seeds prod via the
-    # ``import-lineups`` CLI; prod only ever serves the public library.
+    # When True, MGA runs as a PUBLIC READ-ONLY lineup library with an
+    # OPERATOR-ONLY sign-in (players stay anonymous):
+    #   - Mounted for the operator: JWT login/logout, the TOTP routes
+    #     (login + 2FA setup/verify/disable/status), GET /users/me and the
+    #     feature-request triage API (superuser only).
+    #   - NOT mounted (404 — fail closed, never present-but-bypassed):
+    #     register, forgot/reset-password, verify, the rest of /users, and
+    #     every write router (lineup/package/capture/source/scheduler/admin).
+    #   - The seed-operator user IS created; SEED_USER_* are REQUIRED in
+    #     production, as in full-auth mode.
+    #   - The Turnstile + email boot guards are skipped (login has no CAPTCHA
+    #     and sends no email; forgot-password is not mounted), so TURNSTILE_* /
+    #     EMAIL_*/SMTP_* are NOT required for boot.
+    # This is the production shape: the operator authors lineups LOCALLY
+    # (full auth) and seeds prod via the ``import-lineups`` CLI.
     #
     # When False (the default — local dev / CI), MGA keeps its full
     # public-read / auth-write behavior unchanged: every auth + write route
@@ -134,13 +129,6 @@ class Settings(BaseAppSettings):
     wow_feature_submit_rate_limit_per_hour: int = 5
     wow_feature_submit_rate_limit_per_day: int = 20
     wow_feature_vote_rate_limit_per_hour: int = 60
-    # Shared secrets for the triage API (header X-MGA-Triage-Token), as
-    # "label:token,label:token" (e.g. "browser:...,cli:..."; a bare token is
-    # labelled "default"). Empty = the triage router is not mounted (404).
-    # Labels [a-z0-9_-]{1,20}; each token >= 32 chars with >= 16 distinct
-    # characters, or the app refuses to boot. Generate a token with
-    #   python -c "import secrets;print(secrets.token_urlsafe(32))"
-    wow_feature_triage_token: str = ""
 
     # ------------------------------------------------------------------
     # WoW Forever "Ask" chat relay (POST /wow/chat/turn — PUBLIC, both modes).
@@ -280,17 +268,5 @@ class Settings(BaseAppSettings):
     # the history runs either way.
     wow_server_status_recording_enabled: bool = True
 
-
-    @field_validator("wow_feature_triage_token")
-    @classmethod
-    def _triage_tokens_valid(cls, value: str) -> str:
-        """Fail loud at boot on a malformed or weak triage token list."""
-        parse_triage_tokens(value)
-        return value
-
-    @property
-    def wow_feature_triage_tokens(self) -> tuple[TriageToken, ...]:
-        """The configured (label, token) pairs; empty when unset."""
-        return parse_triage_tokens(self.wow_feature_triage_token)
 
 settings = Settings()

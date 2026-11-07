@@ -22,8 +22,9 @@ import {
 } from "@platform/ui";
 import { isDiscordActivity } from "@platform/ui/discord-activity";
 import DiscordActivityShell from "@/components/discord/DiscordActivityShell";
+import ServeOnlyOperatorActions from "@/components/serveOnly/ServeOnlyOperatorActions";
 import { buildNav, PUBLIC_NAV_PATHS } from "@/constants/nav";
-import { signOut } from "@/lib/auth";
+import { signOutAfterSaving } from "@/lib/auth";
 import { useIsSuperuser } from "@/hooks/useIsSuperuser";
 import { useResetDocumentTitle } from "@/hooks/useResetDocumentTitle";
 import { MGA_LINK_PREVIEW } from "@/constants/linkPreview";
@@ -136,9 +137,10 @@ function buildWowMobileItems(updates: ReadonlySet<string>): NavItem[] {
  *     bar (Games / theme / Open in browser) and no account UI, ALWAYS — it
  *     wins over every mode below. The Activity is read-only (lib/readOnly.ts).
  *   - Serve-only mode (VITE_SERVE_ONLY) → GuestShell with NO Sign-in CTA and
- *     public nav only, ALWAYS. The production public library has zero auth;
- *     the backend mounts no login route, so no AppShell and no Sign-in
- *     affordance ever appear.
+ *     public nav only, ALWAYS. The production public library is read-only;
+ *     its only sign-in is the operator's (unlinked /login, for triage + 2FA),
+ *     so a signed-in operator gets Triage / Two-factor / Sign out in the
+ *     header and never the AppShell.
  *   - Compact mode (``?compact=1``)  → strip shell entirely; show only the
  *     game UI. Public — unauthenticated users can use compact mode too if
  *     the inner content is public.
@@ -205,11 +207,11 @@ export default function RootLayout() {
     );
   }
 
-  // Serve-only mode: the public read-only library has zero auth. Render the
-  // GuestShell with public nav and NO Sign-in CTA, regardless of any stale
-  // auth state. This short-circuits BEFORE the authenticated AppShell branch
-  // so an operator token left in storage from a full-auth build can never
-  // surface the AppShell here. Compact mode is still honored (it's public).
+  // Serve-only mode: the public read-only library, plus the operator's
+  // unlinked sign-in for triage. Always the GuestShell with public nav and NO
+  // Sign-in CTA, so the AppShell (whose pages call APIs serve-only doesn't
+  // mount) never appears. A signed-in operator gets only Triage, Two-factor and
+  // Sign out in the header. Compact mode is still honored (it's public).
   if (serveOnly && !isCompact) {
     return (
       <>
@@ -222,7 +224,12 @@ export default function RootLayout() {
           navSections={[wowNavSection]}
           bottomNav={mobileBottomNav}
           collapsible
-          headerActions={<ThemeToggle />}
+          headerActions={
+            <>
+              {isAuthenticated && <ServeOnlyOperatorActions />}
+              <ThemeToggle />
+            </>
+          }
           hideSignIn
         >
           <Outlet />
@@ -281,7 +288,7 @@ export default function RootLayout() {
         bottomNav={mobileBottomNav}
         collapsible
         user={user}
-        onSignOut={signOut}
+        onSignOut={() => void signOutAfterSaving()}
         searchPlaceholder="Search lineups..."
         headerActions={<ThemeToggle />}
       >

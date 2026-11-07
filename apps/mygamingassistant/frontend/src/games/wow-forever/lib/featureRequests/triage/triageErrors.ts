@@ -1,20 +1,23 @@
 import type { TriageApiError } from "@/games/wow-forever/types/featureRequests/triage/triageApiError";
 
-/** The detail a missing key gets — the request never left the browser. */
-export const DETAIL_LOCKED = "triage_locked";
 export const DETAIL_STORY_CHANGED = "story_changed";
 export const DETAIL_MERGE_CONFLICT = "merge_conflict";
-/** The 404 an ACCEPTED key gets for a story or submission that no longer exists (backend DETAIL_NOT_FOUND). */
+/** The 404 for a story or submission that no longer exists (backend DETAIL_NOT_FOUND). */
 export const DETAIL_STORY_NOT_FOUND = "feature_request_not_found";
 
 export function isTriageApiError(value: unknown): value is TriageApiError {
   return (
     typeof value === "object" &&
     value !== null &&
-    "status" in value &&
+    "detail" in value &&
     "fields" in value &&
     Array.isArray((value as { fields: unknown }).fields)
   );
+}
+
+/** A 403: signed in, but not as the operator (superuser). Retrying can't help — only another sign-in. */
+export function isNotOperator(error: unknown): boolean {
+  return isTriageApiError(error) && error.status === 403;
 }
 
 /** A 429 the caller should wait out (Retry-After seconds, at least 1). Null for any other failure. */
@@ -40,11 +43,16 @@ function fieldsFromDetail(detail: unknown): string[] {
   return fields;
 }
 
-/** The error a failed response becomes. `body` is the parsed JSON, or null. */
-export function triageErrorFrom(status: number | null, body: unknown, retryAfterSeconds: number | null): TriageApiError {
+/** The error a failed response becomes. `status` undefined = no response; `body` is the parsed JSON, or null. */
+export function triageErrorFrom(
+  status: number | undefined,
+  body: unknown,
+  retryAfterSeconds: number | null,
+): TriageApiError {
   const detail: unknown = typeof body === "object" && body !== null ? (body as { detail?: unknown }).detail : undefined;
   return {
     status,
+    data: body,
     detail: typeof detail === "string" ? detail : null,
     fields: status === 422 ? fieldsFromDetail(detail) : [],
     retryAfterSeconds,

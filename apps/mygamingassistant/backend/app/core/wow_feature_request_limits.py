@@ -1,6 +1,6 @@
 """Fixed limits for WoW Forever feature requests — lengths, caps, retention.
 
-Operator-tunable values (daily cap, per-IP rates, model, triage token) live in
+Operator-tunable values (daily cap, per-IP rates, model) live in
 ``app/core/config.py``; these are part of the contract (DB CHECKs, schema
 validation, the runbook) and change only with a migration or a PR.
 """
@@ -65,26 +65,9 @@ MAX_VOTES_PER_IP_PER_STORY = 3
 IPV6_VOTE_PREFIX = 64
 
 # --- Triage API -----------------------------------------------------------------
-TRIAGE_TOKEN_HEADER = "X-MGA-Triage-Token"
-TRIAGE_TOKEN_MIN_LENGTH = 32
-TRIAGE_TOKEN_MIN_DISTINCT_CHARS = 16
-TRIAGE_LABEL_PATTERN = r"^[a-z0-9_-]{1,20}$"
-# Label of a token configured without "label:" in front.
-TRIAGE_DEFAULT_LABEL = "default"
-# A wrong/missing token answers 404 like an unknown route; after this many
-# failures per IP per window the IP gets 429.
-TRIAGE_FAILED_AUTH_MAX = 10
-TRIAGE_FAILED_AUTH_WINDOW_SECONDS = 15 * 60
-# Authenticated triage requests per IP per minute.
-TRIAGE_RATE_LIMIT_PER_MINUTE = 240
 TRIAGE_PATH_PREFIX = "/wow/feature-requests/triage"
 TRIAGE_INBOX_MAX = 200
 TRIAGE_MARK_MAX_IDS = 500
-# audit_logs.changed_by for triage writes is "triage:<label>".
-TRIAGE_AUDIT_ACTOR_PREFIX = "triage:"
-# Exactly what Starlette answers for an unknown route, so a wrong token and
-# an unmounted triage router look the same to a stranger.
-NOT_FOUND_DETAIL = "Not Found"
 
 # --- Retention --------------------------------------------------------------------
 UNLINKED_SUBMISSION_RETENTION_DAYS = 14
