@@ -1,147 +1,111 @@
+import type { Page, TestInfo } from "@playwright/test";
 import { test, expect } from "./fixtures/auth";
-import { readFileSync } from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import { deleteDocumentsNamed, docIdsNamed, seedDocument, uniquePdf } from "./fixtures/documents";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const FIXTURES_DIR = path.join(__dirname, "fixtures", "documents");
-const TEST_PDF = "plumber-invoice.pdf";
+// Only this file uploads documents, and the upload zone takes one upload at a
+// time across the workspace, so its tests run in order rather than in parallel.
+test.describe.configure({ mode: "default" });
 
 test.describe("Documents — upload, verify, delete", () => {
-  test.beforeEach(async ({ authedPage: page }) => {
+  test.describe.configure({ timeout: 90_000 });
+  // The list is shared with other specs and paged, so narrow it to this test's files.
+  async function openDocuments(page: Page, search: string): Promise<void> {
     await page.goto("/documents");
     await expect(page.getByRole("heading", { name: "Documents" })).toBeVisible();
-    // Wait past skeleton state
-    await expect(
-      page.locator("table").or(page.getByText(/no documents found/i))
-    ).toBeVisible({ timeout: 15000 });
-  });
+    await expect(page.locator("table").or(page.getByText(/no documents found/i)).first()).toBeVisible({ timeout: 15000 });
+    await page.getByPlaceholder("Search by file name...").fill(search);
+  }
 
-  test("upload a PDF — appears in the list with a processing status", async ({ authedPage: page, api }) => {
-    const fileInput = page.locator("input[type='file']").first();
-    await expect(fileInput).toBeAttached();
+  function prefixFor(testInfo: TestInfo, label: string): string {
+    return `e2e-doc-${label}-${Date.now()}-${testInfo.workerIndex}`;
+  }
 
-    await fileInput.setInputFiles(path.join(FIXTURES_DIR, TEST_PDF));
+  test("uploading a PDF adds it to the list", async ({ authedPage: page, api }, testInfo) => {
+    const name = `${prefixFor(testInfo, "upload")}.pdf`;
+    try {
+      await openDocuments(page, name);
 
-    // The new row should appear and show a processing/extracting status
-    await expect(
-      page.getByText(TEST_PDF).or(page.getByText(/plumber/i))
-    ).toBeVisible({ timeout: 15000 });
+      await page.locator("input[type='file']").first().setInputFiles(uniquePdf(name));
 
-    await expect(
-      page.getByText(/processing|extracting|uploading/i).first()
-    ).toBeVisible({ timeout: 15000 });
-
-    // Cleanup
-    const res = await api.get("/documents");
-    if (res.ok()) {
-      const docs = await res.json();
-      const doc = (docs as Array<{ file_name: string; id: string }>).find(
-        (d) => d.file_name === TEST_PDF
-      );
-      if (doc) await api.delete(`/documents/${doc.id}`);
+      // The list leaves out documents still being read, so the row shows once extraction ends.
+      await expect(page.locator("tbody tr", { hasText: name })).toBeVisible({ timeout: 60000 });
+      expect(await docIdsNamed(api, name)).toHaveLength(1);
+    } finally {
+      await deleteDocumentsNamed(api, name);
     }
   });
 
-  test("upload a PDF — waits for extraction to complete and verifies completed status", async ({ authedPage: page, api }) => {
-    test.setTimeout(90000); // Extraction can take up to 60s with the worker processing queue
-    const fileInput = page.locator("input[type='file']").first();
-    await fileInput.setInputFiles(path.join(FIXTURES_DIR, TEST_PDF));
+  test("deleting a document asks first, then removes it", async ({ authedPage: page, api }, testInfo) => {
+    const name = `${prefixFor(testInfo, "delete")}.pdf`;
+    try {
+      await seedDocument(api, name);
+      await openDocuments(page, name);
+      const row = page.locator("tbody tr", { hasText: name });
+      await expect(row).toBeVisible({ timeout: 15000 });
 
-    // Wait for the upload zone to show the filename (proving the upload was received)
-    await expect(page.getByText(/plumber/i)).toBeVisible({ timeout: 15000 });
+      await row.getByRole("button", { name: "Delete document" }).click();
+      const confirm = page.getByRole("dialog", { name: "Delete document", exact: true });
+      await expect(confirm).toContainText(`Are you sure you want to delete ${name}?`);
+      await confirm.getByRole("button", { name: "Delete", exact: true }).click();
 
-    // Poll via API until the document reaches a terminal state (not "processing" or "extracting").
-    // The upload processor worker must be running for this to advance beyond "processing".
-    let docStatus = "processing";
-    let docId: string | undefined;
-
-    for (let i = 0; i < 20; i++) {
-      const res = await api.get("/documents");
-      if (res.ok()) {
-        const docs = await res.json() as Array<{ file_name: string; id: string; status: string }>;
-        const doc = docs.find((d) => d.file_name === TEST_PDF);
-        if (doc) {
-          docId = doc.id;
-          docStatus = doc.status;
-          if (!["processing", "extracting"].includes(docStatus)) break;
-        }
-      }
-      await page.waitForTimeout(3000);
-    }
-
-    // The document should have reached a terminal state if the worker is running.
-    // In environments without a worker, the test still verifies the upload succeeded (status: "processing").
-    expect(["completed", "failed", "needs_review", "processing", "extracting"]).toContain(docStatus);
-
-    // Cleanup
-    if (docId) await api.delete(`/documents/${docId}`).catch(() => {/* non-critical */});
-  });
-
-  test("delete a document — confirms dialog and verifies it is removed from the list", async ({ authedPage: page, api }) => {
-    // Seed a document via upload then delete it via the UI
-    const fileInput = page.locator("input[type='file']").first();
-    await fileInput.setInputFiles(path.join(FIXTURES_DIR, TEST_PDF));
-    await expect(page.getByText(/plumber/i)).toBeVisible({ timeout: 15000 });
-
-    // Get its API-side ID
-    let docId: string | undefined;
-    const res = await api.get("/documents");
-    if (res.ok()) {
-      const docs = await res.json();
-      const doc = (docs as Array<{ file_name: string; id: string }>).find(
-        (d) => d.file_name === TEST_PDF
-      );
-      docId = doc?.id;
-    }
-
-    // Click the per-row delete button (title="Delete")
-    const deleteBtn = page.locator("button[title='Delete']").first();
-    if (await deleteBtn.isVisible({ timeout: 10000 })) {
-      await deleteBtn.click();
-
-      // Confirm dialog
-      await expect(page.getByText(/are you sure/i)).toBeVisible({ timeout: 5000 });
-      await page.getByRole("button", { name: /^delete$/i }).click();
-
-      // Row should disappear
-      await expect(page.getByText(/plumber/i)).not.toBeVisible({ timeout: 10000 });
-    } else if (docId) {
-      // Fallback: delete via API if button wasn't visible (doc still processing)
-      await api.delete(`/documents/${docId}`);
+      await expect(confirm).toBeHidden();
+      await expect(row).toHaveCount(0, { timeout: 10000 });
+      expect(await docIdsNamed(api, name)).toEqual([]);
+    } finally {
+      await deleteDocumentsNamed(api, name);
     }
   });
 
-  test("select-all checkbox selects all rows and uncheck clears them", async ({ authedPage: page }) => {
-    const selectAll = page.locator("thead input[type='checkbox']");
-    test.skip(!(await selectAll.isVisible()), "No documents to select — table is empty");
+  test("select-all selects only the rows shown, and unchecking clears them", async ({ authedPage: page, api }, testInfo) => {
+    const prefix = prefixFor(testInfo, "select");
+    try {
+      await Promise.all([seedDocument(api, `${prefix}-a.pdf`), seedDocument(api, `${prefix}-b.pdf`)]);
+      await openDocuments(page, prefix);
+      await expect(page.locator("tbody tr", { hasText: prefix })).toHaveCount(2, { timeout: 15000 });
 
-    await selectAll.check();
-    const total = await page.locator("tbody tr").count();
-    if (total > 0) {
-      const checked = await page.locator("tbody input[type='checkbox']:checked").count();
-      expect(checked).toBe(total);
+      const selectAll = page.getByLabel("Select all documents");
+      await selectAll.check();
+      await expect(page.getByLabel(`Select ${prefix}-a.pdf`)).toBeChecked();
+      await expect(page.getByLabel(`Select ${prefix}-b.pdf`)).toBeChecked();
+      await expect(page.getByText("2 selected", { exact: true })).toBeVisible();
+
+      await selectAll.uncheck();
+      await expect(page.locator("tbody input[type='checkbox']:checked")).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Delete selected" })).toBeHidden();
+    } finally {
+      await deleteDocumentsNamed(api, prefix);
     }
-
-    await selectAll.uncheck();
-    expect(await page.locator("tbody input[type='checkbox']:checked").count()).toBe(0);
   });
 
-  test("bulk delete shows confirmation dialog and can be cancelled", async ({ authedPage: page }) => {
-    const firstCheckbox = page.locator("tbody input[type='checkbox']").first();
-    test.skip(!(await firstCheckbox.isVisible()), "No documents to select — table is empty");
+  test("bulk delete asks first: cancel keeps the documents, confirm deletes them", async ({ authedPage: page, api }, testInfo) => {
+    const prefix = prefixFor(testInfo, "bulk");
+    const names = [`${prefix}-a.pdf`, `${prefix}-b.pdf`];
+    try {
+      await Promise.all(names.map((name) => seedDocument(api, name)));
+      await openDocuments(page, prefix);
+      const rows = page.locator("tbody tr", { hasText: prefix });
+      await expect(rows).toHaveCount(2, { timeout: 15000 });
+      for (const name of names) await page.getByLabel(`Select ${name}`).check();
 
-    await firstCheckbox.check();
-    const deleteBtn = page.getByRole("button", { name: /delete selected/i });
-    test.skip(!(await deleteBtn.isVisible()), "Bulk delete button not visible after selecting a row");
+      const confirm = page.getByRole("dialog", { name: "Delete documents" });
+      await page.getByRole("button", { name: "Delete selected" }).click();
+      await expect(confirm).toContainText("Are you sure you want to delete 2 document(s)?");
+      await confirm.getByRole("button", { name: "Cancel" }).click();
+      await expect(confirm).toBeHidden();
+      await expect(rows).toHaveCount(2);
+      expect(await docIdsNamed(api, prefix)).toHaveLength(2);
 
-    await deleteBtn.click();
-    await expect(page.getByText(/are you sure/i)).toBeVisible({ timeout: 5000 });
-    await page.getByRole("button", { name: "Cancel" }).click();
-    await expect(page.getByText(/are you sure/i)).not.toBeVisible();
+      await page.getByRole("button", { name: "Delete selected" }).click();
+      await confirm.getByRole("button", { name: "Delete", exact: true }).click();
+      await expect(rows).toHaveCount(0, { timeout: 10000 });
+      expect(await docIdsNamed(api, prefix)).toEqual([]);
+    } finally {
+      await deleteDocumentsNamed(api, prefix);
+    }
   });
 
   test("upload zone accepts PDF, JPG, and PNG file types", async ({ authedPage: page }) => {
+    await page.goto("/documents");
     const fileInput = page.locator("input[type='file']").first();
     await expect(fileInput).toBeAttached();
     const accept = await fileInput.getAttribute("accept");
@@ -231,29 +195,12 @@ test.describe("Documents — search", () => {
 });
 
 test.describe("Documents — viewer on row click", () => {
-  // Each test seeds its own PDF under a unique name. Upload dedups on content
-  // hash, so a trailing PDF comment makes the bytes unique too; otherwise the
-  // upload hands back another test's plumber-invoice.pdf.
   let fileName = "";
   let docId = "";
 
   test.beforeEach(async ({ authedPage: page, api }, testInfo) => {
-    docId = "";
     fileName = `e2e-doc-viewer-${Date.now()}-${testInfo.workerIndex}.pdf`;
-    const uploadRes = await api.post("/documents/upload", {
-      multipart: {
-        file: {
-          name: fileName,
-          mimeType: "application/pdf",
-          buffer: Buffer.concat([
-            readFileSync(path.join(FIXTURES_DIR, TEST_PDF)),
-            Buffer.from(`\n% ${fileName}\n`),
-          ]),
-        },
-      },
-    });
-    expect(uploadRes.ok()).toBe(true);
-    docId = (await uploadRes.json()).document_id;
+    docId = await seedDocument(api, fileName);
 
     await page.goto("/documents");
     await expect(page.getByRole("heading", { name: "Documents" })).toBeVisible();
@@ -261,9 +208,7 @@ test.describe("Documents — viewer on row click", () => {
   });
 
   test.afterEach(async ({ api }) => {
-    if (!docId) return;
-    const del = await api.delete(`/documents/${docId}`);
-    expect(del.ok(), `cleanup: delete document ${docId}`).toBe(true);
+    await deleteDocumentsNamed(api, fileName);
   });
 
   test("clicking a document row opens the viewer panel", async ({ authedPage: page }) => {
