@@ -1,3 +1,5 @@
+import type { DocumentStatus } from "./DocumentStatus";
+
 export interface Document {
   id: string;
   user_id: string;
@@ -12,7 +14,7 @@ export interface Document {
   external_id: string | null;
   external_source: string | null;
   source: "email" | "upload";
-  status: "processing" | "extracting" | "completed" | "failed" | "duplicate" | "deleted";
+  status: DocumentStatus;
   error_message: string | null;
   batch_id: string | null;
   is_escrow_paid: boolean;

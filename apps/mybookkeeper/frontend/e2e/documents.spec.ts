@@ -29,7 +29,16 @@ test.describe("Documents — upload, verify, delete", () => {
 
       // The list leaves out documents still being read, so the row shows once extraction ends.
       await expect(page.locator("tbody tr", { hasText: name })).toBeVisible({ timeout: 60000 });
-      expect(await docIdsNamed(api, name)).toHaveLength(1);
+      const ids = await docIdsNamed(api, name);
+      expect(ids).toHaveLength(1);
+
+      // The upload card reports how extraction actually ended, not success regardless.
+      const res = await api.get(`/documents/upload-status/${ids[0]}`);
+      expect(res.ok(), await res.text()).toBe(true);
+      const { status } = (await res.json()) as { status: string };
+      expect(status).toMatch(/^(completed|failed)$/);
+      const card = status === "completed" ? /Got it!/ : /I had trouble reading this one/;
+      await expect(page.getByText(`${name} —`, { exact: false })).toContainText(card);
     } finally {
       await deleteDocumentsNamed(api, name);
     }

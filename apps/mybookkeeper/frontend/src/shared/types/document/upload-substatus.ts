@@ -12,4 +12,6 @@ export type UploadSubstatus =
   | "processing-single"
   | "done-multi"
   | "done-batch"
-  | "done-single";
+  | "done-single"
+  | "failed-single"
+  | "skipped-single";

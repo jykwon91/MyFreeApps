@@ -1,16 +1,7 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import type { FileStatus } from "@/shared/types/document/file-status";
-
-interface UploadState {
-  fileName: string;
-  status: FileStatus;
-  documentId: string | null;
-  batchId: string | null;
-  batchTotal: number;
-  multiUploadTotal: number;
-  multiUploadCompleted: number;
-  multiUploadFailed: number;
-}
+import { FILE_STATUSES } from "@/shared/types/document/file-status";
+import type { UploadState } from "@/shared/types/document/upload-state";
+import type { UploadOutcome } from "@/shared/types/document/upload-outcome";
 
 interface DocumentUploadSliceState {
   current: UploadState | null;
@@ -32,7 +23,7 @@ const documentUploadSlice = createSlice({
     startUpload(state, action: PayloadAction<string>) {
       state.current = {
         fileName: action.payload,
-        status: "uploading",
+        status: FILE_STATUSES.UPLOADING,
         documentId: null,
         batchId: null,
         batchTotal: 1,
@@ -44,7 +35,7 @@ const documentUploadSlice = createSlice({
     startMultiUpload(state, action: PayloadAction<{ total: number }>) {
       state.current = {
         fileName: `${action.payload.total} files`,
-        status: "uploading",
+        status: FILE_STATUSES.UPLOADING,
         documentId: null,
         batchId: null,
         batchTotal: action.payload.total,
@@ -63,22 +54,22 @@ const documentUploadSlice = createSlice({
     },
     multiUploadDone(state) {
       if (!state.current) return;
-      state.current.status = "done";
+      state.current.status = FILE_STATUSES.DONE;
     },
     uploadSucceeded(state, action: PayloadAction<{ documentId: string; batchId: string | null; batchTotal: number }>) {
       if (!state.current) return;
-      state.current.status = "processing";
+      state.current.status = FILE_STATUSES.PROCESSING;
       state.current.documentId = action.payload.documentId;
       state.current.batchId = action.payload.batchId;
       state.current.batchTotal = action.payload.batchTotal;
     },
     uploadFailed(state) {
       if (!state.current) return;
-      state.current.status = "error";
+      state.current.status = FILE_STATUSES.ERROR;
     },
-    processingComplete(state) {
+    processingComplete(state, action: PayloadAction<UploadOutcome>) {
       if (!state.current) return;
-      state.current.status = "done";
+      state.current.status = action.payload;
     },
     restoreProcessing(state, action: PayloadAction<UploadState>) {
       state.current = action.payload;

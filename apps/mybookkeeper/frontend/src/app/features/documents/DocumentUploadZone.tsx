@@ -1,10 +1,19 @@
 import { documentUploadForm } from "@/shared/lib/document-upload-form";
 import { useEffect, useRef } from "react";
-import { Loader2, CheckCircle2, XCircle, Upload, RotateCcw, Camera } from "lucide-react";
+import { Upload, Camera } from "lucide-react";
 import { useMediaQuery } from "@/shared/hooks/useMediaQuery";
 import { useUploadDocumentMutation, useGetBatchStatusQuery, useGetSingleUploadStatusQuery, useGetDocumentsQuery, useCancelBatchMutation } from "@mybookkeeper/api-client/store/documentsApi";
 import { baseApi } from "@/shared/store/baseApi";
 import { isSupportedFile } from "@/shared/utils/file-upload";
+import { uploadOutcome } from "@/shared/utils/upload-outcome";
+import { cn } from "@platform/ui";
+import UploadStatusCard from "./UploadStatusCard";
+import { showError } from "@/shared/lib/toast-store";
+import { DOCUMENT_UPLOAD_MESSAGES } from "@/shared/lib/document-upload-messages";
+import { DOCUMENT_STATUSES, type DocumentStatus } from "@mybookkeeper/api-client/types/document/DocumentStatus";
+import { BATCH_STATUSES } from "@mybookkeeper/api-client/types/document/BatchStatus";
+import { FILE_STATUSES } from "@/shared/types/document/file-status";
+import { UPLOAD_OUTCOMES } from "@/shared/types/document/upload-outcome";
 import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
 import {
   setDragging,
@@ -27,7 +36,7 @@ interface UploadStateSnapshot {
   fileName: string;
   batchId: string | null;
   multiUploadTotal: number;
-  singleStatusCode: string | undefined;
+  singleStatusCode: DocumentStatus | undefined;
   batchStatusReady: boolean;
 }
 
@@ -35,17 +44,21 @@ function resolveUploadSubstatus(snap: UploadStateSnapshot): UploadSubstatus {
   const { status, fileName, batchId, multiUploadTotal, singleStatusCode, batchStatusReady } = snap;
   const isMulti = multiUploadTotal > 0;
   switch (status) {
-    case "error":
+    case FILE_STATUSES.ERROR:
       return fileName ? "error-named" : "error-anonymous";
-    case "uploading":
+    case FILE_STATUSES.UPLOADING:
       return isMulti ? "uploading-multi" : "uploading-single";
-    case "processing":
+    case FILE_STATUSES.PROCESSING:
       if (batchId && batchStatusReady) return "processing-batch";
-      if (!batchId && singleStatusCode === "extracting") return "processing-extracting";
+      if (!batchId && singleStatusCode === DOCUMENT_STATUSES.EXTRACTING) return "processing-extracting";
       return "processing-single";
-    case "done":
+    case FILE_STATUSES.DONE:
       if (isMulti) return "done-multi";
       return batchId ? "done-batch" : "done-single";
+    case FILE_STATUSES.FAILED:
+      return "failed-single";
+    case FILE_STATUSES.SKIPPED:
+      return "skipped-single";
   }
 }
 
@@ -92,6 +105,10 @@ function resolveUploadStatusText(args: UploadStatusTextArgs): string {
       return `${fileName} — ${batchTotal} document${batchTotal !== 1 ? "s" : ""} processed`;
     case "done-single":
       return `${fileName} — Got it! Check your Transactions page for the extracted data.`;
+    case "failed-single":
+      return `${fileName} — I had trouble reading this one. You can have me try again from the list below.`;
+    case "skipped-single":
+      return `${fileName} — I read it, but there was nothing new to add to your transactions.`;
   }
 }
 
@@ -100,45 +117,46 @@ export default function DocumentUploadZone() {
   const dispatch = useAppDispatch();
   const { current: upload, dragging } = useAppSelector((s) => s.documentUpload);
   const [uploadDocument] = useUploadDocumentMutation();
-  const [cancelBatch] = useCancelBatchMutation();
+  const [cancelBatch, { isLoading: isCancellingBatch }] = useCancelBatchMutation();
   const inputRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
 
   // --- Poll batch status for zip uploads ---
-  const { data: batchStatus } = useGetBatchStatusQuery(upload?.batchId ?? "", {
-    pollingInterval: upload?.status === "processing" && upload.batchId ? 3000 : 0,
-    skip: !upload?.batchId || upload.status !== "processing",
+  const { currentData: batchStatus } = useGetBatchStatusQuery(upload?.batchId ?? "", {
+    pollingInterval: upload?.status === FILE_STATUSES.PROCESSING && upload.batchId ? 3000 : 0,
+    skip: !upload?.batchId || upload.status !== FILE_STATUSES.PROCESSING,
   });
 
   // --- Poll single doc status for non-zip uploads ---
-  const { data: singleStatus } = useGetSingleUploadStatusQuery(upload?.documentId ?? "", {
-    pollingInterval: upload?.status === "processing" && !upload.batchId ? 3000 : 0,
-    skip: !upload?.documentId || !!upload.batchId || upload.status !== "processing",
+  const { currentData: singleStatus } = useGetSingleUploadStatusQuery(upload?.documentId ?? "", {
+    pollingInterval: upload?.status === FILE_STATUSES.PROCESSING && !upload.batchId ? 3000 : 0,
+    skip: !upload?.documentId || !!upload.batchId || upload.status !== FILE_STATUSES.PROCESSING,
   });
 
   useEffect(() => {
-    if (!upload || upload.status !== "processing") return;
+    if (!upload || upload.status !== FILE_STATUSES.PROCESSING) return;
 
-    if (upload.batchId && batchStatus?.status === "done") {
-      dispatch(processingComplete());
+    if (upload.batchId && batchStatus?.status === BATCH_STATUSES.DONE) {
+      dispatch(processingComplete(UPLOAD_OUTCOMES.DONE));
       dispatch(baseApi.util.invalidateTags(["Document", "Summary", "Transaction"]));
     }
 
-    if (!upload.batchId && singleStatus?.status && !["processing", "extracting"].includes(singleStatus.status)) {
-      dispatch(processingComplete());
+    const outcome = !upload.batchId && singleStatus ? uploadOutcome(singleStatus.status) : null;
+    if (outcome) {
+      dispatch(processingComplete(outcome));
       dispatch(baseApi.util.invalidateTags(["Document", "Summary", "Transaction"]));
     }
   }, [batchStatus, singleStatus, upload, dispatch]);
 
   // --- Restore processing state from documents on mount ---
   const restoredRef = useRef(false);
-  const { data: documents } = useGetDocumentsQuery({ status: "processing" });
+  const { data: documents } = useGetDocumentsQuery({ status: DOCUMENT_STATUSES.PROCESSING });
 
   useEffect(() => {
     if (restoredRef.current || upload || !documents) return;
     restoredRef.current = true;
 
-    const processingDocs = documents.filter((d) => d.status === "processing" && d.source === "upload");
+    const processingDocs = documents.filter((d) => d.status === DOCUMENT_STATUSES.PROCESSING && d.source === "upload");
     if (processingDocs.length === 0) return;
 
     const batchId = processingDocs.find((d) => d.batch_id)?.batch_id ?? null;
@@ -148,7 +166,7 @@ export default function DocumentUploadZone() {
       const batchDocs = documents.filter((d) => d.batch_id === batchId);
       dispatch(restoreProcessing({
         fileName: `${batchDocs.length} files`,
-        status: "processing",
+        status: FILE_STATUSES.PROCESSING,
         documentId: firstDoc.id,
         batchId,
         batchTotal: batchDocs.length,
@@ -159,7 +177,7 @@ export default function DocumentUploadZone() {
     } else {
       dispatch(restoreProcessing({
         fileName: firstDoc.file_name || "Unknown file",
-        status: "processing",
+        status: FILE_STATUSES.PROCESSING,
         documentId: firstDoc.id,
         batchId: null,
         batchTotal: 1,
@@ -177,7 +195,7 @@ export default function DocumentUploadZone() {
       dispatch(uploadFailed());
       return;
     }
-    if (upload?.status === "uploading" || upload?.status === "processing") return;
+    if (upload?.status === FILE_STATUSES.UPLOADING || upload?.status === FILE_STATUSES.PROCESSING) return;
 
     dispatch(startUpload(file.name));
 
@@ -219,12 +237,22 @@ export default function DocumentUploadZone() {
     dispatch(setDragging(false));
     const files = Array.from(e.dataTransfer.files);
     if (files.length === 0) return;
-    if (upload?.status === "uploading" || upload?.status === "processing") return;
+    if (upload?.status === FILE_STATUSES.UPLOADING || upload?.status === FILE_STATUSES.PROCESSING) return;
     handleFiles(files);
   }
 
-  const isActive = upload?.status === "uploading" || upload?.status === "processing";
-  const isMultiUpload = upload?.multiUploadTotal !== undefined && upload.multiUploadTotal > 0;
+  const isActive = upload?.status === FILE_STATUSES.UPLOADING || upload?.status === FILE_STATUSES.PROCESSING;
+
+  async function handleCancelBatch(batchId: string) {
+    try {
+      await cancelBatch(batchId).unwrap();
+    } catch {
+      showError(DOCUMENT_UPLOAD_MESSAGES.CANCEL_FAILED);
+      return;
+    }
+    dispatch(dismiss());
+    dispatch(baseApi.util.invalidateTags(["Document", "Summary"]));
+  }
 
   const substatus = upload
     ? resolveUploadSubstatus({
@@ -256,9 +284,11 @@ export default function DocumentUploadZone() {
         onDragOver={(e) => { e.preventDefault(); dispatch(setDragging(true)); }}
         onDragLeave={() => dispatch(setDragging(false))}
         onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-lg px-6 py-12 text-center transition-colors ${
-          dragging ? "border-primary bg-primary/5" : "border-border"
-        } ${isActive ? "opacity-50 pointer-events-none" : ""}`}
+        className={cn(
+          "border-2 border-dashed rounded-lg px-6 py-12 text-center transition-colors",
+          dragging ? "border-primary bg-primary/5" : "border-border",
+          isActive && "opacity-50 pointer-events-none",
+        )}
       >
         <div className="flex flex-col items-center gap-3">
           {isMobile ? (
@@ -311,71 +341,14 @@ export default function DocumentUploadZone() {
         </div>
       </div>
 
-      {upload ? (
-        <div className="border rounded-lg px-3 py-2 text-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 min-w-0">
-              {(upload.status === "uploading" || upload.status === "processing") && (
-                <Loader2 size={14} className="animate-spin text-primary shrink-0" />
-              )}
-              {upload.status === "done" && (
-                <CheckCircle2 size={14} className="text-green-600 shrink-0" />
-              )}
-              {upload.status === "error" && (
-                <XCircle size={14} className="text-destructive shrink-0" />
-              )}
-              <span className={`truncate ${upload.status === "error" ? "text-destructive" : "text-muted-foreground"}`}>
-                {statusText}
-              </span>
-            </div>
-            <div className="flex items-center gap-1 shrink-0 ml-2">
-              {upload.status === "processing" && upload.batchId && (
-                <button
-                  onClick={() => {
-                    cancelBatch(upload.batchId!).unwrap().then(() => {
-                      dispatch(dismiss());
-                      dispatch(baseApi.util.invalidateTags(["Document", "Summary"]));
-                    });
-                  }}
-                  className="text-xs text-muted-foreground hover:text-destructive font-medium"
-                >
-                  Cancel
-                </button>
-              )}
-              {upload.status === "error" && (
-                <button onClick={() => dispatch(dismiss())} className="p-1 text-muted-foreground hover:text-foreground" title="Try again">
-                  <RotateCcw size={13} />
-                </button>
-              )}
-              {!isActive && (
-                <button onClick={() => dispatch(dismiss())} className="p-1 text-muted-foreground hover:text-destructive" title="Dismiss">
-                  <XCircle size={13} />
-                </button>
-              )}
-            </div>
-          </div>
-          {upload.status === "uploading" && isMultiUpload ? (
-            <div className="mt-2">
-              <div className="w-full bg-muted rounded-full h-1.5">
-                <div
-                  className="bg-primary h-1.5 rounded-full transition-all duration-500"
-                  style={{ width: `${upload.multiUploadTotal > 0 ? (upload.multiUploadCompleted / upload.multiUploadTotal) * 100 : 0}%` }}
-                />
-              </div>
-            </div>
-          ) : null}
-          {upload.status === "processing" && upload.batchId && batchStatus ? (
-            <div className="mt-2">
-              <div className="w-full bg-muted rounded-full h-1.5">
-                <div
-                  className="bg-primary h-1.5 rounded-full transition-all duration-500"
-                  style={{ width: `${batchStatus.total > 0 ? (batchStatus.completed / batchStatus.total) * 100 : 0}%` }}
-                />
-              </div>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+      <UploadStatusCard
+        upload={upload}
+        statusText={statusText}
+        batchStatus={batchStatus}
+        onCancelBatch={handleCancelBatch}
+        isCancellingBatch={isCancellingBatch}
+        onDismiss={() => dispatch(dismiss())}
+      />
     </div>
   );
 }

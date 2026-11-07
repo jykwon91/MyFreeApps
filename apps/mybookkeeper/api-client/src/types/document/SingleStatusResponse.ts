@@ -1,3 +1,5 @@
+import type { DocumentStatus } from "./DocumentStatus";
+
 export interface SingleStatusResponse {
-  status: string;
+  status: DocumentStatus;
 }
