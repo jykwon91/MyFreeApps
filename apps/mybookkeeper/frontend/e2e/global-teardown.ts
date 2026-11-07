@@ -1,3 +1,4 @@
+import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -8,103 +9,101 @@ const TOKEN_PATH = path.join(__dirname, ".auth-token");
 const ORG_PATH = path.join(__dirname, ".auth-org");
 const WORKER_PID_PATH = path.join(__dirname, ".worker-pid");
 
+interface Row {
+  id: string;
+}
+
+interface Cleanup<T extends Row> {
+  label: string;
+  listPaths: string[];
+  isE2e: (row: T) => boolean;
+  deletePath: (id: string) => string;
+}
+
+// Deletes every E2E row one list endpoint returns. A 404 on delete means the
+// row is already gone; anything else is recorded so the run reports it.
+async function cleanup<T extends Row>(
+  { label, listPaths, isE2e, deletePath }: Cleanup<T>,
+  headers: Record<string, string>,
+  failures: string[],
+): Promise<void> {
+  let deleted = 0;
+  for (const listPath of listPaths) {
+    const res = await fetch(`${BACKEND_URL}${listPath}`, { headers }).catch(() => null);
+    if (!res?.ok) {
+      failures.push(`list ${listPath}: ${res?.status ?? "network error"}`);
+      continue;
+    }
+    const rows = ((await res.json()) as T[]).filter(isE2e);
+    for (const row of rows) {
+      const del = await fetch(`${BACKEND_URL}${deletePath(row.id)}`, { method: "DELETE", headers })
+        .catch(() => null);
+      if (del?.ok) deleted += 1;
+      else if (del?.status !== 404) failures.push(`delete ${deletePath(row.id)}: ${del?.status ?? "network error"}`);
+    }
+  }
+  if (deleted > 0) console.log(`E2E teardown: deleted ${deleted} ${label}`);
+}
+
 async function cleanupTestData(token: string, orgId: string): Promise<void> {
   const headers: Record<string, string> = {
     Authorization: `Bearer ${token}`,
     "X-Organization-Id": orgId,
   };
+  const failures: string[] = [];
+  const thisYear = new Date().getFullYear();
 
-  // Clean up E2E transactions
-  try {
-    const res = await fetch(`${BACKEND_URL}/transactions`, { headers });
-    if (res.ok) {
-      const txns = (await res.json()) as Array<{ id: string; vendor: string | null }>;
-      const e2e = txns.filter((t) => t.vendor?.startsWith("E2E ") || t.vendor?.startsWith("Mobile E2E "));
-      for (const txn of e2e) {
-        await fetch(`${BACKEND_URL}/transactions/${txn.id}`, { method: "DELETE", headers }).catch(() => {});
-      }
-      if (e2e.length > 0) console.log(`E2E teardown: deleted ${e2e.length} transaction(s)`);
-    }
-  } catch { /* non-critical */ }
+  await cleanup<Row & { vendor: string | null }>({
+    label: "transaction(s)",
+    listPaths: ["/transactions"],
+    isE2e: (t) => !!t.vendor && (t.vendor.startsWith("E2E ") || t.vendor.startsWith("Mobile E2E ")),
+    deletePath: (id) => `/transactions/${id}`,
+  }, headers, failures);
 
-  // Clean up E2E properties
-  try {
-    const res = await fetch(`${BACKEND_URL}/properties`, { headers });
-    if (res.ok) {
-      const props = (await res.json()) as Array<{ id: string; name: string }>;
-      const e2e = props.filter((p) =>
-        p.name.startsWith("E2E ") ||
-        p.name.startsWith("Mobile E2E ") ||
-        p.name === "Unique Property 9999 ABCDE" ||
-        p.name === "Test ABCDEF12345"
-      );
-      for (const prop of e2e) {
-        await fetch(`${BACKEND_URL}/properties/${prop.id}`, { method: "DELETE", headers }).catch(() => {});
-      }
-      if (e2e.length > 0) console.log(`E2E teardown: deleted ${e2e.length} propert(ies)`);
-    }
-  } catch { /* non-critical */ }
+  await cleanup<Row & { name: string }>({
+    label: "propert(ies)",
+    listPaths: ["/properties"],
+    isE2e: (p) =>
+      p.name.startsWith("E2E ") ||
+      p.name.startsWith("Mobile E2E ") ||
+      p.name === "Unique Property 9999 ABCDE" ||
+      p.name === "Test ABCDEF12345",
+    deletePath: (id) => `/properties/${id}`,
+  }, headers, failures);
 
-  // Clean up E2E classification rules
-  try {
-    const res = await fetch(`${BACKEND_URL}/classification-rules`, { headers });
-    if (res.ok) {
-      const rules = (await res.json()) as Array<{ id: string; match_pattern: string }>;
-      const e2e = rules.filter((r) =>
-        r.match_pattern.startsWith("E2E ") || r.match_pattern.startsWith("API Test Rule ")
-      );
-      for (const rule of e2e) {
-        await fetch(`${BACKEND_URL}/classification-rules/${rule.id}`, { method: "DELETE", headers }).catch(() => {});
-      }
-      if (e2e.length > 0) console.log(`E2E teardown: deleted ${e2e.length} classification rule(s)`);
-    }
-  } catch { /* non-critical */ }
+  await cleanup<Row & { match_pattern: string }>({
+    label: "classification rule(s)",
+    listPaths: ["/classification-rules"],
+    isE2e: (r) => r.match_pattern.startsWith("E2E ") || r.match_pattern.startsWith("API Test Rule "),
+    deletePath: (id) => `/classification-rules/${id}`,
+  }, headers, failures);
 
-  // Clean up E2E reconciliation sources. Specs file them under last year.
-  try {
-    const thisYear = new Date().getFullYear();
-    for (const year of [thisYear - 2, thisYear - 1, thisYear]) {
-      const res = await fetch(`${BACKEND_URL}/reconciliation/sources?tax_year=${year}`, { headers });
-      if (res.ok) {
-        const sources = (await res.json()) as Array<{ id: string; issuer: string }>;
-        const e2e = sources.filter((s) => s.issuer?.startsWith("E2E "));
-        let deleted = 0;
-        for (const src of e2e) {
-          const del = await fetch(`${BACKEND_URL}/test/reconciliation-sources/${src.id}`, { method: "DELETE", headers })
-            .catch(() => null);
-          if (del?.ok) deleted += 1;
-          else console.warn(`E2E teardown: could not delete reconciliation source ${src.id}: ${del?.status ?? "network error"}`);
-        }
-        if (deleted > 0) console.log(`E2E teardown: deleted ${deleted} reconciliation source(s) for ${year}`);
-      }
-    }
-  } catch { /* non-critical */ }
+  // Specs file reconciliation sources under recent tax years.
+  await cleanup<Row & { issuer: string | null }>({
+    label: "reconciliation source(s)",
+    listPaths: [thisYear - 2, thisYear - 1, thisYear].map((y) => `/reconciliation/sources?tax_year=${y}`),
+    isE2e: (s) => !!s.issuer?.startsWith("E2E "),
+    deletePath: (id) => `/test/reconciliation-sources/${id}`,
+  }, headers, failures);
 
-  // Clean up E2E documents (test PDFs)
-  try {
-    const res = await fetch(`${BACKEND_URL}/documents`, { headers });
-    if (res.ok) {
-      const docs = (await res.json()) as Array<{ id: string; file_name: string | null }>;
-      const e2e = docs.filter((d) => d.file_name === "plumber-invoice.pdf" || d.file_name?.startsWith("e2e-doc-"));
-      for (const doc of e2e) {
-        await fetch(`${BACKEND_URL}/documents/${doc.id}`, { method: "DELETE", headers }).catch(() => {});
-      }
-      if (e2e.length > 0) console.log(`E2E teardown: deleted ${e2e.length} test document(s)`);
-    }
-  } catch { /* non-critical */ }
+  await cleanup<Row & { file_name: string | null }>({
+    label: "test document(s)",
+    listPaths: ["/documents"],
+    isE2e: (d) => d.file_name === "plumber-invoice.pdf" || !!d.file_name?.startsWith("e2e-doc-"),
+    deletePath: (id) => `/documents/${id}`,
+  }, headers, failures);
 
-  // Clean up E2E tax returns (tax.spec.ts and chrome-extension-sidepanel.spec.ts mark theirs head_of_household)
-  try {
-    const res = await fetch(`${BACKEND_URL}/tax-returns`, { headers });
-    if (res.ok) {
-      const returns = (await res.json()) as Array<{ id: string; filing_status: string }>;
-      const e2e = returns.filter((r) => r.filing_status === "head_of_household");
-      for (const ret of e2e) {
-        await fetch(`${BACKEND_URL}/tax-returns/${ret.id}`, { method: "DELETE", headers }).catch(() => {});
-      }
-      if (e2e.length > 0) console.log(`E2E teardown: deleted ${e2e.length} test tax return(s)`);
-    }
-  } catch { /* non-critical */ }
+  // tax.spec.ts and chrome-extension-sidepanel.spec.ts mark their returns head_of_household.
+  await cleanup<Row & { filing_status: string }>({
+    label: "test tax return(s)",
+    listPaths: ["/tax-returns"],
+    isE2e: (r) => r.filing_status === "head_of_household",
+    deletePath: (id) => `/tax-returns/${id}`,
+  }, headers, failures);
+
+  if (failures.length > 0) {
+    throw new Error(`E2E teardown left test data behind:\n  ${failures.join("\n  ")}`);
+  }
 }
 
 function stopWorker(): void {
@@ -115,8 +114,6 @@ function stopWorker(): void {
 
   try {
     if (process.platform === "win32") {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { execSync } = require("child_process");
       execSync(`taskkill /PID ${pid} /T /F`, { stdio: "ignore" });
     } else {
       process.kill(-pid, "SIGTERM");
