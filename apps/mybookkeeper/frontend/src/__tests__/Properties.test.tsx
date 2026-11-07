@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
@@ -146,9 +146,40 @@ describe("Properties", () => {
     expect(screen.getByText("Add your first property above — I'll use it to organize your transactions and put expenses on the right tax forms.")).toBeInTheDocument();
   });
 
+  it("shows the load error with Retry, not the empty state, when the list fails", () => {
+    const refetch = vi.fn();
+    vi.mocked(useGetPropertiesQuery).mockReturnValue({
+      data: undefined,
+      error: { status: 500 },
+      isFetching: false,
+      refetch,
+    } as unknown as ReturnType<typeof useGetPropertiesQuery>);
+
+    renderWithProviders(<Properties />);
+
+    expect(screen.getByText(/I couldn't load your properties/)).toBeInTheDocument();
+    expect(screen.queryByText(/Add your first property above/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps loaded properties on screen under a failed refresh", () => {
+    vi.mocked(useGetPropertiesQuery).mockReturnValue({
+      data: mockProperties,
+      error: { status: 500 },
+      isFetching: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useGetPropertiesQuery>);
+
+    renderWithProviders(<Properties />);
+
+    expect(screen.getByText(/I couldn't load your properties/)).toBeInTheDocument();
+    expect(screen.getByText(mockProperties[0].name)).toBeInTheDocument();
+  });
+
   it("shows skeleton when loading", () => {
     vi.mocked(useGetPropertiesQuery).mockReturnValue({
-      data: [],
+      data: undefined,
       isLoading: true,
     } as unknown as ReturnType<typeof useGetPropertiesQuery>);
 
