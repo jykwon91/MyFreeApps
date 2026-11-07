@@ -83,10 +83,10 @@ test.describe("Welcome Manuals CRUD (PR 4b)", () => {
       // 2) Appears in the list.
       await page.goto("/welcome-manuals");
       await waitForListPage(page);
-      await expect(page.getByText(title).first()).toBeVisible();
+      await expect(page.getByTestId("welcome-manuals-desktop").getByText(title)).toBeVisible();
 
       // Open it again.
-      await page.getByText(title).first().click();
+      await page.getByTestId("welcome-manuals-desktop").getByText(title).click();
       await expect(
         page.getByTestId("welcome-manual-header-card").getByRole("heading", { name: title }),
       ).toBeVisible();

@@ -85,10 +85,10 @@ test.describe("Inquiries frontend (PR 2.1b)", () => {
 
       // The form closes; the inbox shows the new inquiry.
       await expect(page.getByTestId("inquiry-form")).toHaveCount(0);
-      await expect(page.getByText(inquiryName).first()).toBeVisible({ timeout: 5000 });
+      await expect(page.getByTestId("inquiries-desktop").getByText(inquiryName)).toBeVisible({ timeout: 5000 });
 
       // Drill into the detail page.
-      await page.getByText(inquiryName).first().click();
+      await page.getByTestId("inquiries-desktop").getByText(inquiryName).click();
       await expect(page).toHaveURL(new RegExp(`/inquiries/${created.id}$`));
 
       // Header + key fields rendered.
@@ -111,7 +111,7 @@ test.describe("Inquiries frontend (PR 2.1b)", () => {
 
       // Expand the timeline and verify the new event renders.
       await page.getByRole("button", { name: /Activity timeline/i }).click();
-      await expect(page.getByText(/Moved to Triaged/i)).toBeVisible();
+      await expect(page.getByTestId("inquiry-event-timeline").getByText(/Moved to Triaged/i)).toBeVisible();
     } finally {
       for (const id of seededIds) await deleteInquiry(api, id);
     }
@@ -160,15 +160,15 @@ test.describe("Inquiries frontend (PR 2.1b)", () => {
       await waitForInquiriesPage(page);
 
       // All three visible under "All".
-      await expect(page.getByText(`E2E New ${runId}`).first()).toBeVisible();
-      await expect(page.getByText(`E2E Triaged ${runId}`).first()).toBeVisible();
-      await expect(page.getByText(`E2E Approved ${runId}`).first()).toBeVisible();
+      await expect(page.getByTestId("inquiries-desktop").getByText(`E2E New ${runId}`)).toBeVisible();
+      await expect(page.getByTestId("inquiries-desktop").getByText(`E2E Triaged ${runId}`)).toBeVisible();
+      await expect(page.getByTestId("inquiries-desktop").getByText(`E2E Approved ${runId}`)).toBeVisible();
 
       // Filter to Triaged.
       await page.getByTestId("inquiry-filter-triaged").click();
       await page.waitForLoadState("networkidle");
 
-      await expect(page.getByText(`E2E Triaged ${runId}`).first()).toBeVisible();
+      await expect(page.getByTestId("inquiries-desktop").getByText(`E2E Triaged ${runId}`)).toBeVisible();
       await expect(page.getByText(`E2E New ${runId}`)).toHaveCount(0);
       await expect(page.getByText(`E2E Approved ${runId}`)).toHaveCount(0);
 
@@ -178,9 +178,9 @@ test.describe("Inquiries frontend (PR 2.1b)", () => {
       // Back to All — all three return.
       await page.getByTestId("inquiry-filter-all").click();
       await page.waitForLoadState("networkidle");
-      await expect(page.getByText(`E2E New ${runId}`).first()).toBeVisible();
-      await expect(page.getByText(`E2E Triaged ${runId}`).first()).toBeVisible();
-      await expect(page.getByText(`E2E Approved ${runId}`).first()).toBeVisible();
+      await expect(page.getByTestId("inquiries-desktop").getByText(`E2E New ${runId}`)).toBeVisible();
+      await expect(page.getByTestId("inquiries-desktop").getByText(`E2E Triaged ${runId}`)).toBeVisible();
+      await expect(page.getByTestId("inquiries-desktop").getByText(`E2E Approved ${runId}`)).toBeVisible();
     } finally {
       for (const id of seededIds) await deleteInquiry(api, id);
     }

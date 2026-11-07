@@ -69,10 +69,10 @@ test.describe("Vendors frontend (PR 4.1b)", () => {
       // List page renders.
       await page.goto("/vendors");
       await waitForVendorsPage(page);
-      await expect(page.getByText(name).first()).toBeVisible({ timeout: 5000 });
+      await expect(page.getByTestId("vendors-desktop").getByText(name)).toBeVisible({ timeout: 5000 });
 
       // Drill into detail.
-      await page.getByText(name).first().click();
+      await page.getByTestId("vendors-desktop").getByText(name).click();
       await expect(page).toHaveURL(new RegExp(`/vendors/${vendorId}$`));
 
       // Header and category badge.
@@ -138,14 +138,14 @@ test.describe("Vendors frontend (PR 4.1b)", () => {
       await waitForVendorsPage(page);
 
       // Both visible by default.
-      await expect(page.getByText(`E2E Plumber ${runId}`).first()).toBeVisible();
-      await expect(page.getByText(`E2E Electrician ${runId}`).first()).toBeVisible();
+      await expect(page.getByTestId("vendors-desktop").getByText(`E2E Plumber ${runId}`)).toBeVisible();
+      await expect(page.getByTestId("vendors-desktop").getByText(`E2E Electrician ${runId}`)).toBeVisible();
 
       // Filter to plumber.
       await page.getByTestId("vendor-filter-plumber").click();
       await page.waitForLoadState("networkidle");
 
-      await expect(page.getByText(`E2E Plumber ${runId}`).first()).toBeVisible();
+      await expect(page.getByTestId("vendors-desktop").getByText(`E2E Plumber ${runId}`)).toBeVisible();
       await expect(page.getByText(`E2E Electrician ${runId}`)).toHaveCount(0);
 
       // URL state reflects the filter (deep-linkable).
@@ -154,8 +154,8 @@ test.describe("Vendors frontend (PR 4.1b)", () => {
       // Back to All — both return.
       await page.getByTestId("vendor-filter-all").click();
       await page.waitForLoadState("networkidle");
-      await expect(page.getByText(`E2E Plumber ${runId}`).first()).toBeVisible();
-      await expect(page.getByText(`E2E Electrician ${runId}`).first()).toBeVisible();
+      await expect(page.getByTestId("vendors-desktop").getByText(`E2E Plumber ${runId}`)).toBeVisible();
+      await expect(page.getByTestId("vendors-desktop").getByText(`E2E Electrician ${runId}`)).toBeVisible();
       expect(page.url()).not.toContain("category=");
     } finally {
       for (const id of seededIds) await deleteVendor(api, id);
@@ -188,14 +188,14 @@ test.describe("Vendors frontend (PR 4.1b)", () => {
       await waitForVendorsPage(page);
 
       // Both visible.
-      await expect(page.getByText(`E2E Preferred ${runId}`).first()).toBeVisible();
-      await expect(page.getByText(`E2E Regular ${runId}`).first()).toBeVisible();
+      await expect(page.getByTestId("vendors-desktop").getByText(`E2E Preferred ${runId}`)).toBeVisible();
+      await expect(page.getByTestId("vendors-desktop").getByText(`E2E Regular ${runId}`)).toBeVisible();
 
       // Flip preferred-only on.
       await page.getByTestId("vendor-preferred-toggle").click();
       await page.waitForLoadState("networkidle");
 
-      await expect(page.getByText(`E2E Preferred ${runId}`).first()).toBeVisible();
+      await expect(page.getByTestId("vendors-desktop").getByText(`E2E Preferred ${runId}`)).toBeVisible();
       await expect(page.getByText(`E2E Regular ${runId}`)).toHaveCount(0);
 
       // URL deep-links the filter.
@@ -268,7 +268,7 @@ test.describe("Vendors writes (PR 4.2)", () => {
       });
 
       // The new vendor must show up in the rolodex.
-      await expect(page.getByText(initialName).first()).toBeVisible({
+      await expect(page.getByTestId("vendors-desktop").getByText(initialName)).toBeVisible({
         timeout: 5000,
       });
 
@@ -286,7 +286,7 @@ test.describe("Vendors writes (PR 4.2)", () => {
       }
 
       // ----- EDIT -----
-      await page.getByText(initialName).first().click();
+      await page.getByTestId("vendors-desktop").getByText(initialName).click();
       await expect(
         page.getByRole("heading", { name: initialName }),
       ).toBeVisible();
