@@ -1,69 +1,71 @@
+import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures/auth";
 import { BACKEND_URL } from "./fixtures/config";
-
-/** Helper: delete all demo users with a given tag via the admin API. */
-async function cleanupDemoUsersByTag(
-  api: import("@playwright/test").APIRequestContext,
-  tag: string,
-): Promise<void> {
-  const res = await api.get("/admin/demo/users");
-  if (res.ok()) {
-    const data = await res.json();
-    for (const user of data.users ?? []) {
-      if (user.tag === tag) {
-        await api.delete(`/admin/demo/users/${user.user_id}`).catch(() => {});
-      }
-    }
-  }
-}
+import { createDemoUser, deleteDemoUsersTagged } from "./fixtures/demo-users";
+import { SuperuserSession } from "./fixtures/superuser-session";
 
 test.describe("Demo Seed Data Verification", () => {
   test.describe.configure({ mode: "serial" });
 
-  const TAG = "E2E Seed Data";
-  let demoToken: string | null = null;
-  let demoOrgId: string | null = null;
+  const TAG = `E2E Seed Data ${Date.now()}`;
+  let session: SuperuserSession | undefined;
+  let demoToken = "";
+  let demoOrgId = "";
 
-  test.beforeAll(async ({ api }) => {
-    await cleanupDemoUsersByTag(api, TAG);
-    const createRes = await api.post("/admin/demo/create", { data: { tag: TAG } });
-    if (createRes.ok()) {
-      const createData = await createRes.json();
-      const loginRes = await fetch(`${BACKEND_URL}/auth/jwt/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `username=${encodeURIComponent(createData.credentials.email)}&password=${encodeURIComponent(createData.credentials.password)}`,
-      });
-      if (loginRes.ok) {
-        const loginData = await loginRes.json();
-        demoToken = loginData.access_token;
-      }
-    }
-    if (demoToken) {
-      const orgRes = await fetch(`${BACKEND_URL}/organizations`, {
-        headers: { Authorization: `Bearer ${demoToken}` },
-      });
-      if (orgRes.ok) {
-        const orgs = await orgRes.json();
-        if (orgs.length > 0) {
-          demoOrgId = orgs[0].id;
-        }
-      }
+  // Creating a demo user takes a super admin; see superuser-session.ts.
+  test.beforeAll(async ({ playwright }) => {
+    session = await SuperuserSession.create(playwright, "seed", 2);
+    const { email, password } = await createDemoUser(session, TAG);
+
+    const loginRes = await fetch(`${BACKEND_URL}/auth/jwt/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
+    });
+    expect(loginRes.ok, await loginRes.clone().text()).toBe(true);
+    demoToken = ((await loginRes.json()) as { access_token: string }).access_token;
+
+    const orgRes = await fetch(`${BACKEND_URL}/organizations`, {
+      headers: { Authorization: `Bearer ${demoToken}` },
+    });
+    expect(orgRes.ok).toBe(true);
+    const orgs = (await orgRes.json()) as Array<{ id: string }>;
+    expect(orgs).toHaveLength(1);
+    demoOrgId = orgs[0].id;
+  });
+
+  test.afterAll(async () => {
+    if (!session) return;
+    try {
+      await deleteDemoUsersTagged(session, TAG);
+    } finally {
+      await session.delete();
     }
   });
 
-  test.afterAll(async ({ api }) => {
-    await cleanupDemoUsersByTag(api, TAG);
-  });
+  // A demo account greets every new browser with a welcome dialog; get past it
+  // the way a visitor does.
+  async function openAsDemoUser(page: Page, path: string): Promise<void> {
+    await page.goto("/login");
+    await page.evaluate(
+      ([t, o]) => {
+        localStorage.setItem("token", t);
+        localStorage.setItem("v1_activeOrgId", o);
+      },
+      [demoToken, demoOrgId],
+    );
+    await page.goto(path);
+    const welcome = page.getByRole("dialog", { name: "Welcome to the sandbox!" });
+    await welcome.getByRole("button", { name: "Got it, let me explore" }).click();
+    await expect(welcome).toBeHidden();
+  }
 
   test("demo user has seeded transactions", async ({ playwright }) => {
-    test.skip(!demoToken || !demoOrgId, "Demo user setup failed");
-
     const demoApi = await playwright.request.newContext({
       baseURL: BACKEND_URL,
       extraHTTPHeaders: {
         Authorization: `Bearer ${demoToken}`,
-        "X-Organization-Id": demoOrgId!,
+        "X-Organization-Id": demoOrgId,
       },
     });
 
@@ -89,28 +91,20 @@ test.describe("Demo Seed Data Verification", () => {
   });
 
   test("demo user documents API returns valid data", async ({ playwright }) => {
-    test.skip(!demoToken || !demoOrgId, "Demo user setup failed");
-
     const demoApi = await playwright.request.newContext({
       baseURL: BACKEND_URL,
       extraHTTPHeaders: {
         Authorization: `Bearer ${demoToken}`,
-        "X-Organization-Id": demoOrgId!,
+        "X-Organization-Id": demoOrgId,
       },
     });
 
     const docRes = await demoApi.get("/documents");
     expect(docRes.ok()).toBe(true);
-    const docs = await docRes.json();
-    expect(Array.isArray(docs)).toBe(true);
-
-    // If documents are seeded, they should all be completed
-    if (docs.length > 0) {
-      const allCompleted = docs.every(
-        (d: Record<string, string>) => d.status === "completed",
-      );
-      expect(allCompleted).toBe(true);
-    }
+    const docs = (await docRes.json()) as Array<{ status: string }>;
+    // Seeding writes its PDFs straight in as finished, never queued for extraction.
+    expect(docs.length).toBeGreaterThan(0);
+    expect(docs.filter((d) => d.status !== "completed")).toEqual([]);
 
     await demoApi.dispose();
   });
@@ -118,59 +112,51 @@ test.describe("Demo Seed Data Verification", () => {
   test("demo user transactions cover all 3 properties", async ({
     playwright,
   }) => {
-    test.skip(!demoToken || !demoOrgId, "Demo user setup failed");
-
     const demoApi = await playwright.request.newContext({
       baseURL: BACKEND_URL,
       extraHTTPHeaders: {
         Authorization: `Bearer ${demoToken}`,
-        "X-Organization-Id": demoOrgId!,
+        "X-Organization-Id": demoOrgId,
       },
     });
 
+    const propRes = await demoApi.get("/properties");
+    expect(propRes.ok()).toBe(true);
+    const properties = (await propRes.json()) as Array<{ id: string }>;
+    expect(properties).toHaveLength(3);
+
     const txnRes = await demoApi.get("/transactions");
     expect(txnRes.ok()).toBe(true);
-    const txns = await txnRes.json();
+    const txns = (await txnRes.json()) as Array<{ property_id: string | null }>;
 
-    const propertyIds = new Set(
-      txns.map((t: Record<string, string>) => t.property_id),
-    );
-    expect(propertyIds.size).toBe(3);
+    // Some payouts are seeded with no property on purpose (demo_constants.py), so
+    // they show up for attribution review; every property still has its own.
+    const attributed = new Set(txns.flatMap((t) => (t.property_id ? [t.property_id] : [])));
+    expect([...attributed].sort()).toEqual(properties.map((p) => p.id).sort());
 
     await demoApi.dispose();
   });
 
-  test("demo user can access Documents page", async ({
+  test("demo user sees seeded documents on Documents page", async ({
     page,
   }) => {
-    test.skip(!demoToken || !demoOrgId, "Demo user setup failed");
+    const docRes = await fetch(`${BACKEND_URL}/documents`, {
+      headers: { Authorization: `Bearer ${demoToken}`, "X-Organization-Id": demoOrgId },
+    });
+    expect(docRes.ok).toBe(true);
+    const [first] = (await docRes.json()) as Array<{ file_name: string }>;
 
-    await page.goto("/login");
-    await page.evaluate((t) => localStorage.setItem("token", t), demoToken!);
-    await page.evaluate(
-      (id) => localStorage.setItem("v1_activeOrgId", id),
-      demoOrgId!,
-    );
-
-    await page.goto("/documents");
+    await openAsDemoUser(page, "/documents");
     await expect(
       page.getByRole("heading", { name: "Documents" }),
     ).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole("row").filter({ hasText: first.file_name })).toHaveCount(1);
   });
 
   test("demo user sees transactions on Transactions page", async ({
     page,
   }) => {
-    test.skip(!demoToken || !demoOrgId, "Demo user setup failed");
-
-    await page.goto("/login");
-    await page.evaluate((t) => localStorage.setItem("token", t), demoToken!);
-    await page.evaluate(
-      (id) => localStorage.setItem("v1_activeOrgId", id),
-      demoOrgId!,
-    );
-
-    await page.goto("/transactions");
+    await openAsDemoUser(page, "/transactions");
     await expect(
       page.getByRole("heading", { name: "Transactions" }),
     ).toBeVisible({ timeout: 15000 });

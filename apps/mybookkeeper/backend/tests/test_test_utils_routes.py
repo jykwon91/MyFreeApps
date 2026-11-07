@@ -11,7 +11,7 @@ from app.core.config import settings
 from app.models.organization.organization_member import OrgRole
 from app.models.user.user import Role, User
 from app.repositories.user import user_repo
-from app.test_helpers.auth import force_verify_email
+from app.test_helpers.auth import force_verify_email, promote_to_superuser
 
 
 @pytest_asyncio.fixture()
@@ -443,4 +443,34 @@ class TestVerifyEmailHelper:
         with patch.object(settings, "allow_test_admin_promotion", True):
             with pytest.raises(HTTPException) as exc_info:
                 await force_verify_email(email="nobody@example.com")
+        assert exc_info.value.status_code == 404
+
+
+class TestPromoteSuperuserHelper:
+    @pytest.mark.asyncio
+    async def test_gated_by_env_var(self, db: AsyncSession, regular_user: User) -> None:
+        with patch.object(settings, "allow_test_admin_promotion", False):
+            with pytest.raises(HTTPException) as exc_info:
+                await promote_to_superuser(user=regular_user)
+        assert exc_info.value.status_code == 404
+        assert regular_user.is_superuser is False
+
+    @pytest.mark.asyncio
+    async def test_makes_the_caller_a_superuser(self, db: AsyncSession, regular_user: User) -> None:
+        with patch.object(settings, "allow_test_admin_promotion", True):
+            result = await promote_to_superuser(user=regular_user)
+
+        assert result is regular_user
+        assert regular_user.is_superuser is True
+        assert regular_user.role == Role.USER
+
+    @pytest.mark.asyncio
+    async def test_unknown_user_is_a_404(self, db: AsyncSession, regular_user: User) -> None:
+        ghost = User(
+            id=uuid.uuid4(), email="ghost@example.com", hashed_password="fakehash",
+            is_active=True, is_superuser=False, is_verified=True, role=Role.USER,
+        )
+        with patch.object(settings, "allow_test_admin_promotion", True):
+            with pytest.raises(HTTPException) as exc_info:
+                await promote_to_superuser(user=ghost)
         assert exc_info.value.status_code == 404
