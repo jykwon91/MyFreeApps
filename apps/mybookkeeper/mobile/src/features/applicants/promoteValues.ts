@@ -9,7 +9,7 @@ export function promoteValuesFrom(inquiry: InquiryResponse): PromoteValues {
     legalName: inquiry.inquirer_name ?? "",
     dob: null,
     employer: inquiry.inquirer_employer ?? "",
-    contractStart: inquiry.desired_start_date ?? inquiry.move_in_date ?? null,
+    contractStart: inquiry.desired_start_date,
     vehicle: "",
     smoker: "unknown",
     pets: "",

@@ -75,6 +75,7 @@ class Inquiry(Base):
     inquirer_phone: Mapped[str | None] = mapped_column(EncryptedString(50), nullable=True)
     inquirer_employer: Mapped[str | None] = mapped_column(EncryptedString(255), nullable=True)
 
+    # The stay the inquirer asked for, whichever way the inquiry arrived.
     desired_start_date: Mapped[_dt.date | None] = mapped_column(Date, nullable=True)
     desired_end_date: Mapped[_dt.date | None] = mapped_column(Date, nullable=True)
 
@@ -117,8 +118,6 @@ class Inquiry(Base):
 
     # Public form fields — collected on the prospect-facing form. NULL on
     # Gmail-parsed and manually-entered inquiries.
-    move_in_date: Mapped[_dt.date | None] = mapped_column(Date, nullable=True)
-    move_out_date: Mapped[_dt.date | None] = mapped_column(Date, nullable=True)
     occupant_count: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     has_pets: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     pets_description: Mapped[str | None] = mapped_column(Text, nullable=True)

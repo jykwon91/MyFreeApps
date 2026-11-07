@@ -30,8 +30,6 @@ const mockInquiry: InquiryResponse = {
   submitted_via: "manual_entry",
   spam_status: "unscored",
   spam_score: null,
-  move_in_date: null,
-  move_out_date: null,
   occupant_count: null,
   has_pets: null,
   pets_description: null,

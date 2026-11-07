@@ -148,12 +148,12 @@ async def send_inquiry_notification(
         f"{subject_prefix}[New Inquiry] {inquiry.inquirer_name or 'Anonymous'} — "
         f"{listing_title}"
     )
-    duration = stay_duration_days(inquiry.move_in_date, inquiry.move_out_date)
+    duration = stay_duration_days(inquiry.desired_start_date, inquiry.desired_end_date)
     estimated = (
         estimated_total_rent(
             monthly_rate=listing.monthly_rate if listing is not None else None,
-            move_in_date=inquiry.move_in_date,
-            move_out_date=inquiry.move_out_date,
+            move_in_date=inquiry.desired_start_date,
+            move_out_date=inquiry.desired_end_date,
         )
         if listing is not None else None
     )
@@ -165,10 +165,10 @@ async def send_inquiry_notification(
             float(inquiry.spam_score) if inquiry.spam_score is not None else None
         ),
         move_in_date=(
-            inquiry.move_in_date.isoformat() if inquiry.move_in_date else "(not set)"
+            inquiry.desired_start_date.isoformat() if inquiry.desired_start_date else "(not set)"
         ),
         move_out_date=(
-            inquiry.move_out_date.isoformat() if inquiry.move_out_date else "(not set)"
+            inquiry.desired_end_date.isoformat() if inquiry.desired_end_date else "(not set)"
         ),
         duration_days=duration,
         estimated_rent=f"{estimated:,.2f}" if estimated is not None else None,
