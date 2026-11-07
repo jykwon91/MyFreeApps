@@ -21,5 +21,6 @@ export async function seedInquiry(
 }
 
 export async function deleteInquiry(api: APIRequestContext, id: string): Promise<void> {
-  await api.delete(`/test/inquiries/${id}`).catch(() => {});
+  const res = await api.delete(`/test/inquiries/${id}`);
+  if (!res.ok()) throw new Error(`deleteInquiry failed: ${res.status()} ${await res.text()}`);
 }
