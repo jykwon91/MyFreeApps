@@ -4,6 +4,7 @@ Covers:
 - insert_if_not_exists — idempotency (same message_id → no second row)
 - list_pending — filters correctly by org and status
 - get_by_id_scoped — IDOR safety (wrong org returns None)
+- get_by_message_id — lookup on the dedup key (user + message id)
 - count_pending — accurate count
 - mark_resolved / mark_ignored / soft_delete — status transitions
 """
@@ -163,6 +164,58 @@ class TestGetByIdScoped:
         await review_queue_repo.soft_delete(db, item)
         found = await review_queue_repo.get_by_id_scoped(db, item.id, test_org.id)
         assert found is None
+
+
+class TestGetByMessageId:
+    @pytest.mark.asyncio
+    async def test_returns_users_item(self, db: AsyncSession, test_user, test_org) -> None:
+        item = await _insert(
+            db, user_id=test_user.id, org_id=test_org.id, message_id="by-msg",
+        )
+        assert item is not None
+        found = await review_queue_repo.get_by_message_id(
+            db, user_id=test_user.id, email_message_id="by-msg",
+        )
+        assert found is not None
+        assert found.id == item.id
+
+    @pytest.mark.asyncio
+    async def test_other_users_item_not_returned(
+        self, db: AsyncSession, test_user, test_org,
+    ) -> None:
+        await _insert(
+            db, user_id=uuid.uuid4(), org_id=test_org.id, message_id="other-user-msg",
+        )
+        found = await review_queue_repo.get_by_message_id(
+            db, user_id=test_user.id, email_message_id="other-user-msg",
+        )
+        assert found is None
+
+    @pytest.mark.asyncio
+    async def test_unknown_message_returns_none(
+        self, db: AsyncSession, test_user, test_org,
+    ) -> None:
+        await _insert(db, user_id=test_user.id, org_id=test_org.id, message_id="known")
+        found = await review_queue_repo.get_by_message_id(
+            db, user_id=test_user.id, email_message_id="unknown",
+        )
+        assert found is None
+
+    @pytest.mark.asyncio
+    async def test_returns_soft_deleted_item(
+        self, db: AsyncSession, test_user, test_org,
+    ) -> None:
+        """Soft-deleted rows still hold the dedup key, so the lookup finds them."""
+        item = await _insert(
+            db, user_id=test_user.id, org_id=test_org.id, message_id="del-msg",
+        )
+        assert item is not None
+        await review_queue_repo.soft_delete(db, item)
+        found = await review_queue_repo.get_by_message_id(
+            db, user_id=test_user.id, email_message_id="del-msg",
+        )
+        assert found is not None
+        assert found.id == item.id
 
 
 class TestCountPending:
