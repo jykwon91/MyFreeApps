@@ -1,9 +1,10 @@
-import { test as base, type Page, type APIRequestContext } from "@playwright/test";
+import { test as base, expect, type Page, type APIRequestContext } from "@playwright/test";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { BACKEND_URL } from "./config";
 import { storeSession } from "./session";
+import { InviteTracker } from "./invite-tracker";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TOKEN_PATH = path.join(__dirname, "..", ".auth-token");
@@ -26,7 +27,7 @@ async function setupAuth(page: Page): Promise<void> {
   await page.waitForLoadState("domcontentloaded");
 }
 
-export const test = base.extend<{ authedPage: Page; api: APIRequestContext }>({
+export const test = base.extend<{ authedPage: Page; api: APIRequestContext; invites: InviteTracker }>({
   authedPage: async ({ page }, use) => {
     await setupAuth(page);
     await use(page);
@@ -45,6 +46,13 @@ export const test = base.extend<{ authedPage: Page; api: APIRequestContext }>({
     await use(ctx);
     await ctx.dispose();
   },
+  invites: async ({ api }, use) => {
+    const orgId = getOrgId();
+    expect(orgId, "the shared E2E user should have an organization").not.toBe("");
+    const invites = new InviteTracker(api, orgId);
+    await use(invites);
+    await invites.cancelPending();
+  },
 });
 
-export { expect } from "@playwright/test";
+export { expect };
