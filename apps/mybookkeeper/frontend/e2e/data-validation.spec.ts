@@ -1,187 +1,129 @@
-import { test, expect } from "./fixtures/auth";
+import { test, expect, type APIRequestContext } from "@playwright/test";
+import { DASHBOARD_SEED } from "./fixtures/dashboard-seed";
+import { createApprovedTransaction } from "./fixtures/seed-data";
+import { seededOrg } from "./fixtures/seeded-org";
+import { TRANSACTIONS_SEED, seedTransactionsPage } from "./fixtures/transactions-seed";
 
-test.describe("Data validation — API response integrity", () => {
-  test.describe("Transactions API", () => {
-    test("returns valid transaction objects", async ({ api }) => {
-      const res = await api.get("/transactions");
-      expect(res.ok()).toBe(true);
-      const data = await res.json();
-      expect(Array.isArray(data)).toBe(true);
+const YEAR = DASHBOARD_SEED.year;
+const TAX_YEAR = YEAR - 1;
+const RECEIPT = "e2e-data-validation-receipt.pdf";
 
-      for (const txn of data) {
-        expect(txn.id).toMatch(/^[0-9a-f-]{36}$/);
-        expect(parseFloat(txn.amount)).toBeGreaterThan(0);
-        expect(txn.transaction_date).toMatch(/^\d{4}-\d{2}-\d{2}/);
-        expect(["income", "expense"]).toContain(txn.transaction_type);
-        expect(["pending", "approved", "needs_review", "duplicate", "unverified"]).toContain(txn.status);
-        expect(txn.category).toBeTruthy();
-        expect(typeof txn.tax_relevant).toBe("boolean");
-      }
-    });
+/** Prior-year rows for the tax summary; the last one isn't tax-relevant, so it must not count. */
+const TAX_ROWS = [
+  { property: "north", vendor: "E2E Tax Tenant", transaction_type: "income", category: "rental_revenue", amount: "2000.00", tax_relevant: true },
+  { property: "north", vendor: "E2E Tax Plumber", transaction_type: "expense", category: "maintenance", amount: "500.00", tax_relevant: true },
+  { property: "south", vendor: "E2E Tax Power", transaction_type: "expense", category: "utilities", amount: "300.00", tax_relevant: true },
+  { property: "south", vendor: "E2E Personal Repair", transaction_type: "expense", category: "maintenance", amount: "999.00", tax_relevant: false },
+] as const;
 
-    test("income transactions have revenue categories", async ({ api }) => {
-      const res = await api.get("/transactions");
-      const data = await res.json();
-      const revenueCats = ["rental_revenue", "cleaning_fee_revenue"];
+async function seed(api: APIRequestContext): Promise<void> {
+  await seedTransactionsPage(api);
+  const properties = (await (await api.get("/properties")).json()) as Property[];
+  const idOf = (key: "north" | "south") => properties.find((p) => p.name === DASHBOARD_SEED.properties[key])?.id;
+  for (const { property, ...row } of TAX_ROWS) {
+    await createApprovedTransaction(api, { ...row, property_id: idOf(property), transaction_date: `${TAX_YEAR}-06-15` });
+  }
+  const res = await api.post("/test/seed-document", { data: { file_name: RECEIPT, document_type: "receipt" } });
+  expect(res.status(), await res.text()).toBe(201);
+}
 
-      for (const txn of data) {
-        if (txn.transaction_type === "income" && txn.category !== "uncategorized") {
-          expect(revenueCats).toContain(txn.category);
-        }
-      }
-    });
+async function getJson<T>(api: APIRequestContext, url: string): Promise<T> {
+  const res = await api.get(url);
+  expect(res.ok(), `GET ${url}: ${res.status()} ${await res.text()}`).toBe(true);
+  return res.json();
+}
 
-    test("amounts have no floating point artifacts", async ({ api }) => {
-      const res = await api.get("/transactions");
-      const data = await res.json();
+interface Property {
+  id: string;
+  name: string;
+  type: string;
+}
 
-      for (const txn of data) {
-        const decimals = txn.amount.includes(".") ? txn.amount.split(".")[1].length : 0;
-        expect(decimals).toBeLessThanOrEqual(2);
-      }
-    });
+interface Transaction {
+  vendor: string;
+  amount: string;
+  transaction_date: string;
+  transaction_type: string;
+  category: string;
+  status: string;
+  property_id: string | null;
+}
 
-    test("property_id references exist or is null", async ({ api }) => {
-      const [txnRes, propRes] = await Promise.all([
-        api.get("/transactions"),
-        api.get("/properties"),
-      ]);
-      const transactions = await txnRes.json();
-      const properties = await propRes.json();
-      const propertyIds = new Set(properties.map((p: { id: string }) => p.id));
+test.describe("Data validation — API responses for known data", () => {
+  test.describe.configure({ mode: "serial" });
+  const org = seededOrg("data-validation", seed);
 
-      for (const txn of transactions) {
-        if (txn.property_id) {
-          expect(propertyIds.has(txn.property_id)).toBe(true);
-        }
-      }
-    });
+  async function propertyIds(): Promise<Record<string, string>> {
+    const properties = await getJson<Property[]>(org().api, "/properties");
+    return Object.fromEntries(properties.map((p) => [p.name, p.id]));
+  }
+
+  test("properties are the two seeded ones", async () => {
+    const properties = await getJson<Property[]>(org().api, "/properties");
+    expect(properties.map((p) => p.name).sort()).toEqual(Object.values(DASHBOARD_SEED.properties).sort());
+    for (const p of properties) {
+      expect(p.id).toMatch(/^[0-9a-f-]{36}$/);
+      expect(["short_term", "long_term"]).toContain(p.type);
+    }
   });
 
-  test.describe("Properties API", () => {
-    test("returns valid property objects", async ({ api }) => {
-      const res = await api.get("/properties");
-      expect(res.ok()).toBe(true);
-      const data = await res.json();
-      expect(Array.isArray(data)).toBe(true);
+  test("transactions come back exactly as seeded", async () => {
+    const ids = await propertyIds();
+    const transactions = await getJson<Transaction[]>(org().api, "/transactions");
+    expect(transactions).toHaveLength(TRANSACTIONS_SEED.count + TAX_ROWS.length);
 
-      for (const prop of data) {
-        expect(prop.id).toMatch(/^[0-9a-f-]{36}$/);
-        expect(prop.name).toBeTruthy();
-        expect(["short_term", "long_term"]).toContain(prop.type);
-      }
-    });
+    for (const row of TRANSACTIONS_SEED.approved) {
+      const txn = transactions.find((t) => t.vendor === row.vendor);
+      expect(txn, row.vendor).toMatchObject({
+        amount: row.amount,
+        transaction_date: row.date,
+        transaction_type: row.type,
+        category: row.category,
+        status: "approved",
+        property_id: ids[DASHBOARD_SEED.properties[row.property]],
+      });
+    }
+    const flagged = transactions.find((t) => t.vendor === TRANSACTIONS_SEED.flagged.vendor);
+    expect(flagged).toMatchObject({ amount: TRANSACTIONS_SEED.flagged.amount, status: "needs_review" });
   });
 
-  test.describe("Summary API", () => {
-    test("returns valid summary with consistent calculations", async ({ api }) => {
-      const res = await api.get("/summary");
-      expect(res.ok()).toBe(true);
-      const data = await res.json();
-
-      expect(typeof data.revenue).toBe("number");
-      expect(typeof data.expenses).toBe("number");
-      expect(typeof data.profit).toBe("number");
-      expect(data.revenue).toBeGreaterThanOrEqual(0);
-      expect(data.expenses).toBeGreaterThanOrEqual(0);
-
-      // Profit = revenue - expenses
-      expect(data.profit).toBeCloseTo(data.revenue - data.expenses, 2);
-    });
-
-    test("by_month entries have valid structure", async ({ api }) => {
-      const res = await api.get("/summary");
-      const data = await res.json();
-
-      for (const month of data.by_month ?? []) {
-        expect(month.month).toMatch(/^\d{4}-\d{2}$/);
-        expect(typeof month.revenue).toBe("number");
-        expect(typeof month.expenses).toBe("number");
-        expect(typeof month.profit).toBe("number");
-        expect(month.profit).toBeCloseTo(month.revenue - month.expenses, 2);
-      }
-    });
-
-    test("by_month entries are sorted chronologically", async ({ api }) => {
-      const res = await api.get("/summary");
-      const data = await res.json();
-      const months = (data.by_month ?? []).map((m: { month: string }) => m.month);
-
-      for (let i = 1; i < months.length; i++) {
-        expect(months[i] >= months[i - 1]).toBe(true);
-      }
-    });
-
-    test("by_property revenue/expense totals are non-negative", async ({ api }) => {
-      const res = await api.get("/summary");
-      const data = await res.json();
-
-      for (const prop of data.by_property ?? []) {
-        expect(prop.revenue).toBeGreaterThanOrEqual(0);
-        expect(prop.expenses).toBeGreaterThanOrEqual(0);
-        expect(prop.profit).toBeCloseTo(prop.revenue - prop.expenses, 2);
-      }
-    });
-
-    test("by_category values sum to revenue + expenses", async ({ api }) => {
-      const res = await api.get("/summary");
-      const data = await res.json();
-
-      if (data.by_category && Object.keys(data.by_category).length > 0) {
-        const total = Object.values(data.by_category as Record<string, number>).reduce(
-          (sum, val) => sum + Math.abs(val), 0
-        );
-        // Total of absolute category amounts should approximately equal revenue + expenses
-        // (with some tolerance for rounding)
-        const expected = data.revenue + data.expenses;
-        if (expected > 0) {
-          expect(total).toBeGreaterThan(0);
-        }
-      }
-    });
+  test("summary totals, months, properties and categories add up", async () => {
+    const ids = await propertyIds();
+    const summary = await getJson<Record<string, unknown>>(org().api, `/summary?start_date=${YEAR}-01-01T00:00:00&end_date=${YEAR}-12-31T23:59:59`);
+    expect(summary).toMatchObject({ revenue: 3900, expenses: 1150, profit: 2750 });
+    expect(summary.by_month).toEqual([
+      { month: `${YEAR}-01`, revenue: 1200, expenses: 400, profit: 800 },
+      { month: `${YEAR}-02`, revenue: 1800, expenses: 600, profit: 1200 },
+      { month: `${YEAR}-03`, revenue: 900, expenses: 150, profit: 750 },
+    ]);
+    expect(summary.by_property).toEqual(expect.arrayContaining([
+      { property_id: ids[DASHBOARD_SEED.properties.north], name: DASHBOARD_SEED.properties.north, revenue: 2100, expenses: 450, profit: 1650 },
+      { property_id: ids[DASHBOARD_SEED.properties.south], name: DASHBOARD_SEED.properties.south, revenue: 1800, expenses: 700, profit: 1100 },
+    ]));
+    expect(summary.by_property).toHaveLength(2);
+    expect(summary.by_category).toEqual({ rental_revenue: 3900, maintenance: 550, utilities: 600 });
   });
 
-  test.describe("Tax Summary API", () => {
-    test("returns valid tax summary", async ({ api }) => {
-      const currentYear = new Date().getFullYear();
-      const res = await api.get(`/summary/tax?year=${currentYear - 1}`);
-      expect(res.ok()).toBe(true);
-      const data = await res.json();
+  test("tax summary counts only tax-relevant transactions", async () => {
+    const ids = await propertyIds();
+    const tax = await getJson<Record<string, unknown>>(org().api, `/summary/tax?year=${TAX_YEAR}`);
+    expect(tax).toMatchObject({ year: TAX_YEAR, gross_revenue: 2000, total_deductions: 800, net_taxable_income: 1200 });
+    expect(tax.by_property).toEqual(expect.arrayContaining([
+      { property_id: ids[DASHBOARD_SEED.properties.north], name: DASHBOARD_SEED.properties.north, revenue: 2000, expenses: 500, net_income: 1500 },
+      { property_id: ids[DASHBOARD_SEED.properties.south], name: DASHBOARD_SEED.properties.south, revenue: 0, expenses: 300, net_income: -300 },
+    ]));
+    expect(tax.by_property).toHaveLength(2);
 
-      expect(typeof data.gross_revenue).toBe("number");
-      expect(typeof data.total_deductions).toBe("number");
-      expect(typeof data.net_taxable_income).toBe("number");
-      expect(data.net_taxable_income).toBeCloseTo(
-        data.gross_revenue - data.total_deductions, 2
-      );
-    });
-
-    test("by_property net income is revenue minus expenses", async ({ api }) => {
-      const currentYear = new Date().getFullYear();
-      const res = await api.get(`/summary/tax?year=${currentYear - 1}`);
-      const data = await res.json();
-
-      for (const prop of data.by_property ?? []) {
-        expect(prop.net_income).toBeCloseTo(prop.revenue - prop.expenses, 2);
-      }
-    });
+    // The dashboard rows aren't tax-relevant.
+    const thisYear = await getJson<Record<string, unknown>>(org().api, `/summary/tax?year=${YEAR}`);
+    expect(thisYear).toMatchObject({ gross_revenue: 0, total_deductions: 0, net_taxable_income: 0, by_property: [] });
   });
 
-  test.describe("Documents API", () => {
-    test("returns valid response", async ({ api }) => {
-      const res = await api.get("/documents");
-      if (!res.ok()) {
-        test.skip(true, `GET /documents returned ${res.status()}`);
-        return;
-      }
-      const data = await res.json();
-      expect(Array.isArray(data)).toBe(true);
-
-      for (const doc of data) {
-        expect(doc.id).toMatch(/^[0-9a-f-]{36}$/);
-        expect(["processing", "extracting", "completed", "failed", "needs_review", "duplicate"]).toContain(doc.status);
-        expect(doc.created_at).toBeTruthy();
-      }
-    });
+  test("documents list the seeded receipt", async () => {
+    const documents = await getJson<{ id: string; file_name: string; status: string; created_at: string }[]>(org().api, "/documents");
+    const receipt = documents.find((d) => d.file_name === RECEIPT);
+    expect(receipt).toMatchObject({ status: "completed" });
+    expect(receipt?.id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(Number.isNaN(Date.parse(receipt?.created_at ?? ""))).toBe(false);
   });
 });
