@@ -6,6 +6,7 @@ import UtilityPlanAlertCardSkeleton from "./UtilityPlanAlertCardSkeleton";
 import { useHasAnyUtilityPlans } from "./useHasAnyUtilityPlans";
 import { useUtilityPlanAlertCardMode } from "./useUtilityPlanAlertCardMode";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { hasFailedQuery, isRetryingFailedQuery, retryFailedQueries } from "@/shared/lib/retry-failed-queries";
 
 /**
  * Dashboard card for utility plans whose fixed term has lapsed or is about to.
@@ -16,18 +17,18 @@ import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
  * expiring-soon one is still just a deadline.
  */
 export default function UtilityPlanRenewalAlertCard() {
-  const { data, isLoading, isError, refetch, isFetching } =
-    useGetUtilityPlanRenewalAlertsQuery();
+  const alerts = useGetUtilityPlanRenewalAlertsQuery();
+  const { data, isLoading } = alerts;
   // The card hides itself for operators who track no plans at all.
-  const {
-    hasAnyPlans,
-    isLoading: isPlansLoading,
-    isError: isPlansError,
-  } = useHasAnyUtilityPlans();
+  const plans = useHasAnyUtilityPlans();
+  const { hasAnyPlans, isLoading: isPlansLoading } = plans;
+  // One error state covers both queries, so Retry covers both too.
+  const queries = [alerts, plans];
 
   const mode = useUtilityPlanAlertCardMode({
     isLoading: isLoading || isPlansLoading,
-    isError: isError || isPlansError,
+    // Held through a retry too, so the card never reads as empty or hides mid-retry.
+    isError: hasFailedQuery(queries),
     totalNeedingAttention: data?.total_needing_attention,
     hasAnyPlans,
   });
@@ -37,7 +38,7 @@ export default function UtilityPlanRenewalAlertCard() {
 
   if (mode === "error") {
     return (
-      <LoadErrorAlert message="Couldn't check utility plan renewals." isRetrying={isFetching} onRetry={() => void refetch()} />
+      <LoadErrorAlert message="Couldn't check utility plan renewals." isRetrying={isRetryingFailedQuery(queries)} onRetry={() => retryFailedQueries(queries)} />
     );
   }
 

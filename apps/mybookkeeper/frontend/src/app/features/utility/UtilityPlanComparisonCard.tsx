@@ -11,6 +11,7 @@ import { useHasAnyUtilityPlans } from "./useHasAnyUtilityPlans";
 import { useUtilityPlanComparisonCardMode } from "./useUtilityPlanComparisonCardMode";
 import { UTILITY_PLAN_COMPARISON_CARD_MODES } from "@/shared/types/utility/utility-plan-comparison-card-mode";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { hasFailedQuery, isRetryingFailedQuery, retryFailedQueries } from "@/shared/lib/retry-failed-queries";
 
 /**
  * Dashboard card for plans priced materially above the recorded market rate.
@@ -26,24 +27,21 @@ import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
  * many plans were actually measured and how old the yardstick is.
  */
 export default function UtilityPlanComparisonCard() {
-  const { data, isLoading, isError, refetch, isFetching } =
-    useGetUtilityPlanRateComparisonQuery();
-  const {
-    data: benchmarks,
-    isLoading: isBenchmarksLoading,
-    isError: isBenchmarksError,
-  } = useGetMarketRateBenchmarksQuery();
-  const {
-    hasAnyPlans,
-    isLoading: isPlansLoading,
-    isError: isPlansError,
-  } = useHasAnyUtilityPlans();
+  const comparison = useGetUtilityPlanRateComparisonQuery();
+  const { data, isLoading } = comparison;
+  const benchmarksQuery = useGetMarketRateBenchmarksQuery();
+  const { data: benchmarks, isLoading: isBenchmarksLoading } = benchmarksQuery;
+  const plans = useHasAnyUtilityPlans();
+  const { hasAnyPlans, isLoading: isPlansLoading } = plans;
+  // One error state covers all three queries, so Retry covers all three too.
+  const queries = [comparison, benchmarksQuery, plans];
 
   const mode = useUtilityPlanComparisonCardMode({
     isLoading: isLoading || isPlansLoading || isBenchmarksLoading,
     // A failed benchmarks or plans query must not read as "none recorded" or
     // "none tracked" — both would render as a confident all-clear.
-    isError: isError || isBenchmarksError || isPlansError,
+    // It also holds through a retry, which leaves the query with no data yet.
+    isError: hasFailedQuery(queries),
     totalAboveMarket: data?.total_above_market,
     hasAnyPlans,
     hasAnyBenchmark: (benchmarks?.length ?? 0) > 0,
@@ -56,7 +54,7 @@ export default function UtilityPlanComparisonCard() {
 
   if (mode === UTILITY_PLAN_COMPARISON_CARD_MODES.ERROR) {
     return (
-      <LoadErrorAlert message="Couldn't compare your utility rates to the market." isRetrying={isFetching} onRetry={() => void refetch()} />
+      <LoadErrorAlert message="Couldn't compare your utility rates to the market." isRetrying={isRetryingFailedQuery(queries)} onRetry={() => retryFailedQueries(queries)} />
     );
   }
 
