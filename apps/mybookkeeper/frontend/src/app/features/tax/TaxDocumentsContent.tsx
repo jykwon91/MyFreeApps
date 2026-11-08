@@ -2,21 +2,33 @@ import type { SourceDocumentsResponse } from "@mybookkeeper/api-client/types/tax
 import TaxDocumentsAccordion from "@/app/features/tax/TaxDocumentsAccordion";
 import TaxDocumentsAccordionSkeleton from "@/app/features/tax/TaxDocumentsAccordionSkeleton";
 import TaxDocumentChecklist from "@/app/features/tax/TaxDocumentChecklist";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 interface TaxDocumentsContentProps {
   /** The current year filter's answer only; undefined while it loads. */
   data: SourceDocumentsResponse | undefined;
-  isError: boolean;
+  hasError: boolean;
+  isRetrying: boolean;
+  onRetry: () => void;
   selectedYear: number | undefined;
   onViewDocument: (documentId: string) => void;
 }
 
-export default function TaxDocumentsContent({ data, isError, selectedYear, onViewDocument }: TaxDocumentsContentProps) {
-  if (isError) {
+export default function TaxDocumentsContent({
+  data,
+  hasError,
+  isRetrying,
+  onRetry,
+  selectedYear,
+  onViewDocument,
+}: TaxDocumentsContentProps) {
+  if (hasError && !data) {
     return (
-      <div className="border rounded-lg p-6 text-center text-muted-foreground">
-        <p>I had trouble loading your tax documents. Please try refreshing.</p>
-      </div>
+      <LoadErrorAlert
+        message="I had trouble loading your tax documents."
+        isRetrying={isRetrying}
+        onRetry={onRetry}
+      />
     );
   }
 

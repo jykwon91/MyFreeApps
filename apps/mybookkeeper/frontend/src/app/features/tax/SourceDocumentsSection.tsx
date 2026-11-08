@@ -4,6 +4,7 @@ import DocumentViewer from "@/app/features/documents/DocumentViewer";
 import SourceDocumentsSkeleton from "@/app/features/tax/SourceDocumentsSkeleton";
 import ReceivedDocumentsGrouped from "@/app/features/tax/ReceivedDocumentsGrouped";
 import CompletenessChecklist from "@/app/features/tax/CompletenessChecklist";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 export interface SourceDocumentsSectionProps {
   taxReturnId: string;
@@ -12,7 +13,7 @@ export interface SourceDocumentsSectionProps {
 export default function SourceDocumentsSection({ taxReturnId }: SourceDocumentsSectionProps) {
   const [viewingDocId, setViewingDocId] = useState<string | null>(null);
 
-  const { data, isLoading, isError } = useGetSourceDocumentsQuery(taxReturnId);
+  const { data, error, isFetching, refetch } = useGetSourceDocumentsQuery(taxReturnId);
 
   const handleViewDocument = useCallback((documentId: string) => {
     setViewingDocId(documentId);
@@ -22,15 +23,16 @@ export default function SourceDocumentsSection({ taxReturnId }: SourceDocumentsS
     setViewingDocId(null);
   }, []);
 
-  if (isLoading) {
-    return <SourceDocumentsSkeleton />;
-  }
-
-  if (isError || !data) {
+  // Decided on `error`, not `isError`: RTK clears `isError` while Retry
+  // refetches, which would swap the alert for the skeleton mid-retry.
+  if (!data) {
+    if (error === undefined) return <SourceDocumentsSkeleton />;
     return (
-      <div className="border rounded-lg p-6 text-center text-muted-foreground">
-        <p>I had trouble loading the source documents. Please try refreshing.</p>
-      </div>
+      <LoadErrorAlert
+        message="I had trouble loading the source documents."
+        isRetrying={isFetching}
+        onRetry={() => void refetch()}
+      />
     );
   }
 

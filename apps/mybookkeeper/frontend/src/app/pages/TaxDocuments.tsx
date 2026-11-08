@@ -16,7 +16,9 @@ export default function TaxDocuments() {
   const { data: taxReturns = [] } = useListTaxReturnsQuery();
   // currentData is only this filter's answer, so a newly picked year shows the
   // skeleton instead of the previous filter's forms while it loads.
-  const { currentData: data, isError } = useListTaxDocumentsQuery(
+  // Decided on `error`, not `isError`: RTK clears `isError` while Retry
+  // refetches, which would swap the alert for the skeleton mid-retry.
+  const { currentData: data, error, isFetching, refetch } = useListTaxDocumentsQuery(
     selectedYear ? { tax_year: selectedYear } : undefined,
   );
 
@@ -71,7 +73,9 @@ export default function TaxDocuments() {
 
       <TaxDocumentsContent
         data={data}
-        isError={isError}
+        hasError={error !== undefined}
+        isRetrying={isFetching}
+        onRetry={() => void refetch()}
         selectedYear={selectedYear}
         onViewDocument={handleViewDocument}
       />
