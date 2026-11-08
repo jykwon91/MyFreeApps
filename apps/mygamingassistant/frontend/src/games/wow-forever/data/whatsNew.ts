@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-07",
+    title: "Rares finder",
+    summary:
+      "Find rare and rare elite creatures by zone and level: where they spawn, what they drop, a /target macro to spot them and a list to tick off — and pin them on the World Map with the new Rares layer.",
+    to: "/wow-forever/rares",
+  },
+  {
+    date: "2026-11-07",
     title: "Downrank calculator",
     summary:
       "Pick a heal or damage spell and see which rank gives the most per mana and per second for your level and +healing or +spell damage, with the macro line to cast that rank.",

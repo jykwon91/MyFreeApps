@@ -50,6 +50,7 @@ DUNGEON_QUEST_FILES = (
 )
 TALENTS_DIR = WOW_DATA_DIR / "talents"
 DOWNRANK_FILE = WOW_DATA_DIR / "downrank" / "spells.json"
+RARE_SPAWNS_FILE = WOW_DATA_DIR / "rares" / "classic" / "rareSpawns.json"
 OUT_FILE = WOW_DATA_DIR / "icons" / "wowIcons.json"
 # Hand-written gathering nodes name their item as `itemId: 2447`.
 _NODE_ITEM = re.compile(r"\bitemId:\s*(\d+)")
@@ -97,6 +98,12 @@ def dungeon_quest_item_ids(paths: tuple[Path, ...] = DUNGEON_QUEST_FILES) -> set
     return ids
 
 
+def rare_drop_item_ids(path: Path = RARE_SPAWNS_FILE) -> set[int]:
+    """The items the rares finder names as a rare's drops."""
+    rares = json.loads(path.read_text(encoding="utf-8"))["rares"].values()
+    return {int(item) for rare in rares for item, _ in rare["drops"]}
+
+
 def talent_icon_files(directory: Path = TALENTS_DIR) -> set[int]:
     """The talent calculator's icons: they're file ids already (``scripts.wow_talents.build``)."""
     return talent_file_ids(json.loads(p.read_text(encoding="utf-8")) for p in sorted(directory.glob("*.json")))
@@ -109,7 +116,7 @@ def downrank_icon_files(path: Path = DOWNRANK_FILE) -> set[int]:
 
 def wanted_ids() -> IconIds:
     ids = IconIds(
-        items=gathering_item_ids() | cooking_item_ids() | gear_item_ids() | dungeon_quest_item_ids(),
+        items=gathering_item_ids() | cooking_item_ids() | gear_item_ids() | dungeon_quest_item_ids() | rare_drop_item_ids(),
         files=talent_icon_files() | downrank_icon_files(),
     )
     for path in sorted(CRAFTING_DIR.glob("*.json")):

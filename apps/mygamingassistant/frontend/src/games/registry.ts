@@ -51,6 +51,12 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "Every dungeon's level, where its door is, its bosses in order and what each one drops.",
       },
       {
+        path: "/wow-forever/rares",
+        title: "Rares",
+        iconName: "Crosshair",
+        description: "Rare and rare elite creatures: where they spawn, what they drop, a /target macro and a list to tick off.",
+      },
+      {
         path: "/wow-forever/professions",
         title: "Professions",
         iconName: "Hammer",

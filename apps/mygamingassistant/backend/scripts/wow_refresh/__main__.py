@@ -25,6 +25,7 @@ from pathlib import Path
 
 from scripts.wow_dungeons.quest_cache import QUEST_CACHE_ENV, quest_cache_path
 from scripts.wow_items.forever_items import HOTFIX_CACHE_ENV, hotfix_cache_path
+from scripts.wow_rares.creature_cache import CREATURE_CACHE_ENV, creature_cache_path
 from scripts.wow_refresh.report import DATA_REFRESH_FILE, render_report
 from scripts.wow_world_map import sources
 
@@ -48,7 +49,7 @@ def newest_build(builds: dict[str, list[dict[str, str]]], branch: str) -> str:
 def repin(text: str, *, build: str, era_build: str) -> str:
     """``sources.py`` with its two client builds replaced."""
     for name, value in (("WAGO_BUILD", build), ("WAGO_ERA_BUILD", era_build)):
-        text, count = re.subn(rf'^{name} = "[^"]+"$', f'{name} = "{value}"', text, flags=re.M)
+        text, count = re.subn(rf'^{name} = "[^"]+"$', f'{name} = "{value}"', text, flags=re.MULTILINE)
         if count != 1:
             raise SystemExit(f"could not find {name} in {SOURCES_FILE}")
     return text
@@ -66,7 +67,7 @@ def fetch_builds() -> dict[str, list[dict[str, str]]]:
         return json.load(response)
 
 
-def generators(*, art: bool, hotfix_cache: Path, quest_cache: Path) -> list[list[str]]:
+def generators(*, art: bool, hotfix_cache: Path, quest_cache: Path, creature_cache: Path) -> list[list[str]]:
     world_map = ["scripts.wow_world_map.build", "--no-walk"]
     cache = ["--hotfix-cache", str(hotfix_cache)]
     if not art:
@@ -87,7 +88,9 @@ def generators(*, art: bool, hotfix_cache: Path, quest_cache: Path) -> list[list
         ["scripts.wow_changes.build", *cache, "--quest-cache", str(quest_cache)],
         # Reads the Changes output above (a family Forever changed links to it).
         ["scripts.wow_downrank.build", *cache],
-        # Reads the Professions, Item, Talent and Downrank output above. Its images are published last, below.
+        # Reads the World Map and Item output above; its drop items are in the icon build's wanted ids.
+        ["scripts.wow_rares.build", "--creature-cache", str(creature_cache)],
+        # Reads the Professions, Item, Talent, Downrank and Rares output above. Its images are published last, below.
         ["scripts.wow_icons.build", *cache],
         ["scripts.wow_item_names.build"],
         ["scripts.wow_macros.build"],
@@ -106,10 +109,11 @@ def check() -> int:
     return 0 if latest == sources.WAGO_BUILD else EXIT_NEW_BUILD
 
 
-def apply(*, art: bool, hotfix_cache: str | None, quest_cache: str | None) -> int:
+def apply(*, art: bool, hotfix_cache: str | None, quest_cache: str | None, creature_cache: str | None) -> int:
     # Checked before anything is repinned, so a missing cache stops the run cleanly.
     cache_path = hotfix_cache_path(hotfix_cache)
     quest_path = quest_cache_path(quest_cache)
+    creature_path = creature_cache_path(creature_cache)
     builds = fetch_builds()
     latest = newest_build(builds, sources.WAGO_BRANCH)
     era = newest_build(builds, sources.WAGO_ERA_BRANCH)
@@ -118,7 +122,7 @@ def apply(*, art: bool, hotfix_cache: str | None, quest_cache: str | None) -> in
         encoding="utf-8",
     )
     print(f"pinned Forever {latest}, Classic Era {era}", flush=True)
-    for module in generators(art=art, hotfix_cache=cache_path, quest_cache=quest_path):
+    for module in generators(art=art, hotfix_cache=cache_path, quest_cache=quest_path, creature_cache=creature_path):
         print(f"running {' '.join(module)}", flush=True)
         # Each generator imports the pins at start-up, so each needs its own process.
         subprocess.run([sys.executable, "-m", *module], cwd=BACKEND_DIR, check=True)
@@ -143,13 +147,19 @@ def main() -> int:
         "--quest-cache",
         help=f"the Forever client's Cache/WDB/enUS/questcache.wdb (default: ${QUEST_CACHE_ENV}, else the install path)",
     )
+    apply_parser.add_argument(
+        "--creature-cache",
+        help=f"the Forever client's Cache/WDB/enUS/creaturecache.wdb (default: ${CREATURE_CACHE_ENV}, else the install path)",
+    )
     args = parser.parse_args()
     if args.command == "check":
         return check()
     if args.command == "report":
         print(render_report(APP_DIR))
         return 0
-    return apply(art=args.art, hotfix_cache=args.hotfix_cache, quest_cache=args.quest_cache)
+    return apply(
+        art=args.art, hotfix_cache=args.hotfix_cache, quest_cache=args.quest_cache, creature_cache=args.creature_cache,
+    )
 
 
 if __name__ == "__main__":

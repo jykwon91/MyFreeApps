@@ -6,6 +6,7 @@ import type { WowClassId } from "@/games/wow-forever/data/classes";
 import { MAP_LAYER_DEF_BY_ID } from "@/games/wow-forever/data/worldMap/layerCatalog";
 import type { MapLayerId } from "@/games/wow-forever/data/worldMap/mapLayerIds";
 import type { LayerCounts } from "@/games/wow-forever/types/mapLayers/layerCounts";
+import type { LazyLayerSource } from "@/games/wow-forever/types/mapLayers/lazyLayerSource";
 import type { MapLayerChoice } from "@/games/wow-forever/types/mapLayers/mapLayerChoice";
 import type { MapLayerGroup as LayerGroup } from "@/games/wow-forever/types/mapLayers/mapLayerGroup";
 import { layerLabel } from "@/games/wow-forever/worldMap/layerMarkers";
@@ -15,15 +16,16 @@ interface MapLayerGroupProps {
   choice: MapLayerChoice;
   counts: LayerCounts;
   classId: WowClassId;
-  gatheringFailed: boolean;
+  /** Lazy layer files that didn't load. */
+  failedSources: ReadonlySet<LazyLayerSource>;
   onSetLayers: (ids: readonly MapLayerId[], on: boolean) => void;
-  onRetryGathering: () => void;
+  onRetryLoad: () => void;
 }
 
 const SMALL_BUTTON = "rounded px-2 text-xs underline-offset-2 hover:underline min-h-[44px] sm:min-h-[32px]";
 
 /** A heading (open / close, how many are on, All / None) and its layer toggles. */
-export default function MapLayerGroup({ group, choice, counts, classId, gatheringFailed, onSetLayers, onRetryGathering }: MapLayerGroupProps) {
+export default function MapLayerGroup({ group, choice, counts, classId, failedSources, onSetLayers, onRetryLoad }: MapLayerGroupProps) {
   const [open, setOpen] = useState(group.openByDefault);
   const listId = useId();
   const on = group.layers.filter((id) => choice[id]).length;
@@ -60,9 +62,9 @@ export default function MapLayerGroup({ group, choice, counts, classId, gatherin
               label={layerLabel(def, classId)}
               checked={choice[id]}
               count={counts[id]}
-              failed={def.source.kind === "gathering" && gatheringFailed}
+              failed={failedSources.has(def.source.kind as LazyLayerSource)}
               onChange={(value) => onSetLayers([id], value)}
-              onRetry={onRetryGathering}
+              onRetry={onRetryLoad}
             />
           );
         })}

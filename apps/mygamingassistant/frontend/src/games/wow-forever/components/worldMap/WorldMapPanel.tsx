@@ -7,19 +7,23 @@ import LevelFitLegend from "@/games/wow-forever/components/worldMap/LevelFitLege
 import MapCanvas from "@/games/wow-forever/components/worldMap/MapCanvas";
 import MapContextMenu from "@/games/wow-forever/components/worldMap/MapContextMenu";
 import MapLayersControl from "@/games/wow-forever/components/worldMap/MapLayersControl";
+import RareMapCard from "@/games/wow-forever/components/rares/RareMapCard";
 import MapLegendNote from "@/games/wow-forever/components/worldMap/MapLegendNote";
 import MyMarksPanel from "@/games/wow-forever/components/worldMap/MyMarksPanel";
 import SharedViewBanner from "@/games/wow-forever/components/worldMap/SharedViewBanner";
 import ShareViewButton from "@/games/wow-forever/components/worldMap/ShareViewButton";
 import PositionConfirm from "@/games/wow-forever/components/worldMap/PositionConfirm";
 import type { WowClassId } from "@/games/wow-forever/data/classes";
+import { RARES_STATUS } from "@/games/wow-forever/data/rares/raresConfig";
 import { MAP_LAYER } from "@/games/wow-forever/data/worldMap/mapLayerIds";
 import { GATHERING_SPOTS_STATUS, useGatheringMapSpots } from "@/games/wow-forever/hooks/useGatheringMapSpots";
 import type { MapLayersState } from "@/games/wow-forever/hooks/useMapLayers";
+import { useRares } from "@/games/wow-forever/hooks/useRares";
 import { useMapMarkTools } from "@/games/wow-forever/hooks/useMapMarkTools";
 import type { MapMarksState } from "@/games/wow-forever/hooks/useMapMarks";
 import type { SharedMapViewState } from "@/games/wow-forever/hooks/useSharedMapView";
 import type { MapZoomRestore } from "@/games/wow-forever/hooks/useMapSelection";
+import type { LazyLayerSource } from "@/games/wow-forever/types/mapLayers/lazyLayerSource";
 import type { MapViewport } from "@/games/wow-forever/types/mapViewport";
 import { MAP_KIND, type PlayerFaction, type WorldMapData, type WorldZone } from "@/games/wow-forever/types/worldMap";
 import { layerCounts, markersByLayer, mergeMarkers, visibleLayerMarkers } from "@/games/wow-forever/worldMap/layerMarkers";
@@ -106,11 +110,20 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
   const map = data.maps.get(mapId) ?? data.maps.get(data.worldMapId);
   const gatheringOn = settings.layers[MAP_LAYER.herbs] || settings.layers[MAP_LAYER.ore];
   const gathering = useGatheringMapSpots(layersOpen || gatheringOn);
+  const raresState = useRares(layersOpen || settings.layers[MAP_LAYER.rares]);
+  const rares = raresState.status === RARES_STATUS.ready ? raresState.data.rares : null;
+  const lazy = useMemo(() => ({ gathering: gathering.spots, rares }), [gathering.spots, rares]);
   const byLayer = useMemo(
-    () => (map ? markersByLayer(data, map, { faction, classId, level, gathering: gathering.spots }) : null),
-    [data, map, faction, classId, level, gathering.spots],
+    () => (map ? markersByLayer(data, map, { faction, classId, level, ...lazy }) : null),
+    [data, map, faction, classId, level, lazy],
   );
-  const counts = useMemo(() => byLayer && layerCounts(byLayer, gathering.spots !== null), [byLayer, gathering.spots]);
+  const counts = useMemo(() => byLayer && layerCounts(byLayer, lazy), [byLayer, lazy]);
+  const failedSources = useMemo(() => {
+    const failed = new Set<LazyLayerSource>();
+    if (gathering.status === GATHERING_SPOTS_STATUS.error) failed.add("gathering");
+    if (raresState.status === RARES_STATUS.error) failed.add("rares");
+    return failed;
+  }, [gathering.status, raresState.status]);
   const tools = useMapMarkTools(map?.id ?? mapId, marks, mapLayers, sharedView);
   if (!map || !byLayer || !counts) return null;
   const zoneView = isZoneView(map);
@@ -262,9 +275,9 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
             settings={settings}
             counts={counts}
             classId={classId}
-            gatheringFailed={gathering.status === GATHERING_SPOTS_STATUS.error}
+            failedSources={failedSources}
             onSetLayers={mapLayers.setLayers}
-            onRetryGathering={gathering.retry}
+            onRetryLoad={gathering.retry}
             level={level}
             onLevelChange={props.onLevelChange}
             onLevelFitChange={mapLayers.setLevelFit}
@@ -291,6 +304,7 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
         }
       />
       {continentView && fitLevel !== null && <LevelFitLegend level={fitLevel} compact />}
+      <RareMapCard rares={rares} selectedId={props.selectedPoiId} />
       <MyMarksPanel
         map={map}
         state={marks}

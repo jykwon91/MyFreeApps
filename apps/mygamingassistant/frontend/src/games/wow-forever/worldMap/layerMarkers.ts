@@ -1,15 +1,16 @@
 /**
  * The switchable map layers: every marker of each layer on the viewed map
  * (so a toggle can say "Flight masters (3)"), and the markers of the layers
- * switched on. Every layer but dungeons is your faction + neutral only —
- * the other side's guards attack you.
+ * switched on. Every layer but dungeons and rares is your faction + neutral
+ * only — the other side's guards attack you.
  */
 import { findClass, type WowClassId } from "@/games/wow-forever/data/classes";
-import { MAP_LAYER_DEFS } from "@/games/wow-forever/data/worldMap/layerCatalog";
+import { LAZY_LAYER_SOURCES, MAP_LAYER_DEFS } from "@/games/wow-forever/data/worldMap/layerCatalog";
 import { MAP_LAYER_IDS, type MapLayerId } from "@/games/wow-forever/data/worldMap/mapLayerIds";
 import { PROFESSION_LABEL, SERVICE_KIND } from "@/games/wow-forever/data/worldMap/serviceKinds";
 import type { LayerContext } from "@/games/wow-forever/types/mapLayers/layerContext";
 import type { LayerCounts } from "@/games/wow-forever/types/mapLayers/layerCounts";
+import type { LazyLayerSource } from "@/games/wow-forever/types/mapLayers/lazyLayerSource";
 import type { MapLayerChoice } from "@/games/wow-forever/types/mapLayers/mapLayerChoice";
 import type { MapLayerDef } from "@/games/wow-forever/types/mapLayers/mapLayerDef";
 import type { MapLayerSource } from "@/games/wow-forever/types/mapLayers/mapLayerSource";
@@ -20,6 +21,8 @@ import type { MapMarker } from "@/games/wow-forever/worldMap/mapLayers";
 import { mapShows } from "@/games/wow-forever/worldMap/mapGeometry";
 import { usableBy } from "@/games/wow-forever/worldMap/nearest";
 import { poiMarkerClass, poiMarkerLabel } from "@/games/wow-forever/worldMap/poiDisplay";
+import { rareMarkerId } from "@/games/wow-forever/lib/rares/rareMarkerId";
+import { rareMarkerLabel } from "@/games/wow-forever/lib/rares/rareText";
 
 export type LayerMarkers = ReadonlyMap<MapLayerId, readonly MapMarker[]>;
 
@@ -93,10 +96,30 @@ function gatheringMarkers(def: MapLayerDef, skill: string, data: WorldMapData, c
     });
 }
 
+/** Every spawn spot of every rare (any faction can fight them): "Morgaine the Sly — level 10 rare". */
+function rareMarkers(def: MapLayerDef, data: WorldMapData, ctx: LayerContext): MapMarker[] {
+  return (ctx.rares ?? []).flatMap((rare) =>
+    rare.spawns.flatMap((spawn, i) => {
+      const zone = data.zoneById.get(spawn.zoneId);
+      if (!zone) return [];
+      return [
+        {
+          id: rareMarkerId(rare.id, i),
+          world: zoneToWorld(zone, spawn.x, spawn.y),
+          label: rareMarkerLabel(rare),
+          className: def.markerClass,
+          zoneId: zone.id,
+        },
+      ];
+    }),
+  );
+}
+
 function allMarkers(def: MapLayerDef, data: WorldMapData, ctx: LayerContext): MapMarker[] {
   const { source } = def;
   if (source.kind === "transport") return transportMarkers(def, data, ctx);
   if (source.kind === "gathering") return gatheringMarkers(def, source.skill, data, ctx);
+  if (source.kind === "rares") return rareMarkers(def, data, ctx);
   return poisOf(source, data, ctx).flatMap((p) => poiMarker(p, data) ?? []);
 }
 
@@ -105,11 +128,16 @@ export function markersByLayer(data: WorldMapData, map: MapView, ctx: LayerConte
   return new Map(MAP_LAYER_DEFS.map((def) => [def.id, allMarkers(def, data, ctx).filter((m) => mapShows(map, m.world))]));
 }
 
-/** How many markers each layer has on the map; Gathering layers are null until their file has loaded. */
-export function layerCounts(byLayer: LayerMarkers, gatheringLoaded: boolean): LayerCounts {
+function isLazySource(kind: MapLayerSource["kind"]): kind is LazyLayerSource {
+  return LAZY_LAYER_SOURCES.has(kind as LazyLayerSource);
+}
+
+/** How many markers each layer has on the map; the Gathering and Rares layers are null until their files have loaded. */
+export function layerCounts(byLayer: LayerMarkers, loaded: Pick<LayerContext, LazyLayerSource>): LayerCounts {
   const counts = {} as Record<MapLayerId, number | null>;
   for (const def of MAP_LAYER_DEFS) {
-    counts[def.id] = def.source.kind === "gathering" && !gatheringLoaded ? null : (byLayer.get(def.id)?.length ?? 0);
+    const { kind } = def.source;
+    counts[def.id] = isLazySource(kind) && loaded[kind] === null ? null : (byLayer.get(def.id)?.length ?? 0);
   }
   return counts;
 }
