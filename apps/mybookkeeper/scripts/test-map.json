@@ -1417,6 +1417,7 @@
         "backend/app/repositories/tax/",
         "backend/app/services/tax/",
         "backend/app/mappers/tax_advisor_mapper.py",
+        "backend/app/core/tax_return_enums.py",
         "backend/app/schemas/tax/",
         "backend/app/api/tax_documents.py",
         "backend/app/api/tax_completeness.py",
@@ -1434,6 +1435,7 @@
       ],
       "backend_tests": [
         "test_tax_advisor_service.py",
+        "test_tax_return_enums.py",
         "test_tax_completeness_service.py",
         "test_tax_extraction_service.py",
         "test_tax_documents.py",

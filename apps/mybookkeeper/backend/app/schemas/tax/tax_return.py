@@ -1,7 +1,10 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+from app.core.tax_return_enums import JURISDICTION_MAX_LENGTH, MAX_TAX_RETURN_YEAR, MIN_TAX_RETURN_YEAR
+from app.schemas.tax.filing_status import FilingStatus
 
 TAX_DISCLAIMER = (
     "Tax values are AI-generated estimates. Review all values before filing. "
@@ -26,6 +29,6 @@ class TaxReturnRead(BaseModel):
 
 
 class TaxReturnCreate(BaseModel):
-    tax_year: int
-    filing_status: str = "single"
-    jurisdiction: str = "federal"
+    tax_year: int = Field(ge=MIN_TAX_RETURN_YEAR, le=MAX_TAX_RETURN_YEAR)
+    filing_status: FilingStatus = "single"
+    jurisdiction: str = Field(default="federal", min_length=1, max_length=JURISDICTION_MAX_LENGTH)

@@ -1,10 +1,8 @@
 import uuid
-from typing import Literal
 
 from pydantic import BaseModel, Field
 
-
-FilingStatus = Literal["single", "married_filing_jointly", "married_filing_separately", "head_of_household", "qualifying_surviving_spouse"]
+from app.schemas.tax.filing_status import FilingStatus
 
 
 class TaxYearProfileUpdate(BaseModel):

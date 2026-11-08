@@ -145,6 +145,26 @@ class TestCreateTaxReturn:
         })
         assert resp.status_code == 409
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("body", [
+        {"tax_year": 2019},
+        {"tax_year": 2100},
+        {"tax_year": 2025, "filing_status": "married"},
+        {"tax_year": 2025, "jurisdiction": ""},
+        {"tax_year": 2025, "jurisdiction": "x" * 51},
+    ])
+    async def test_rejects_what_the_table_would_refuse_422(
+        self, client: AsyncClient, body: dict[str, object],
+    ) -> None:
+        resp = await client.post("/tax-returns", json=body)
+        assert resp.status_code == 422
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("year", [2020, 2099])
+    async def test_accepts_the_first_and_last_allowed_year(self, client: AsyncClient, year: int) -> None:
+        resp = await client.post("/tax-returns", json={"tax_year": year, "filing_status": "qualifying_surviving_spouse"})
+        assert resp.status_code == 201
+
 
 class TestGetTaxReturn:
     @pytest.mark.asyncio
