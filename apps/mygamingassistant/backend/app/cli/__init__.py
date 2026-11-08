@@ -6,6 +6,7 @@ Usage:
     python -m app.cli import-wow-captures [pack.json]
     python -m app.cli export-wow-captures [pack.json]
     python -m app.cli refresh-wow-prices
+    python -m app.cli record-wow-server-status
     python -m app.cli backfill-clips
     python -m app.cli backfill-technique
     python -m app.cli backfill-landing-clips
@@ -21,6 +22,8 @@ import sys
 from pathlib import Path
 
 from app.services.wow.feature_requests.feature_retention_service import purge_feature_request_data
+from app.services.wow.server_status.record_outcome import OUTCOME_FAILED as STATUS_OUTCOME_FAILED
+from app.services.wow.server_status.server_status_history_service import record_all as record_server_status
 
 
 async def _run_backfill_clips() -> int:
@@ -374,6 +377,14 @@ async def _run_refresh_wow_prices() -> int:
     return 1 if any(o.outcome == OUTCOME_FAILED for o in outcomes) else 0
 
 
+async def _run_record_wow_server_status() -> int:
+    """Record WoW Forever server status now (the scheduler does it every 5 minutes)."""
+    outcomes = await record_server_status()
+    for o in outcomes:
+        print(f"  {o.region}: {o.outcome} — {o.written} rows" + (f" ({o.error})" if o.error else ""))
+    return 1 if any(o.outcome == STATUS_OUTCOME_FAILED for o in outcomes) else 0
+
+
 def main() -> None:
     command = sys.argv[1] if len(sys.argv) > 1 else ""
 
@@ -404,6 +415,8 @@ def main() -> None:
         print(f"Wrote {asyncio.run(export_pack(pack_path))} World Map capture(s) to the pack.")
     elif command == "refresh-wow-prices":
         sys.exit(asyncio.run(_run_refresh_wow_prices()))
+    elif command == "record-wow-server-status":
+        sys.exit(asyncio.run(_run_record_wow_server_status()))
     elif command == "backfill-clips":
         sys.exit(asyncio.run(_run_backfill_clips()))
     elif command == "backfill-technique":
@@ -431,6 +444,7 @@ def main() -> None:
         print("  import-wow-captures [pack] — mirror the World Map capture pack into the database")
         print("  export-wow-captures [pack] — write stored World Map captures to the pack (local)")
         print("  refresh-wow-prices     — pull WoW Forever auction-house prices now")
+        print("  record-wow-server-status — record WoW Forever server status changes now")
         print("  backfill-clips         — generate clips for accepted lineups missing one")
         print("  backfill-technique     — name throw-technique for accepted lineups missing one")
         print("  backfill-landing-clips — generate landing clips for accepted lineups missing one")

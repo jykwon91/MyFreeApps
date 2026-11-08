@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-07",
+    title: "Server status history and login help",
+    summary:
+      "See how the realms have been over the last day or week, every recent outage with how long it lasted, and what to try for common login errors like WOW51900319.",
+    to: "/wow-forever/server-status",
+  },
+  {
+    date: "2026-11-07",
     title: "Changes vs Classic",
     summary:
       "See every talent, class spell, item, quest and zone Forever changed or added, with the Classic and Forever values side by side, filtered by category, class or a search.",

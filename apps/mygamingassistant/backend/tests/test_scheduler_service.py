@@ -6,6 +6,7 @@ Tests cover:
   - trigger_job() returns True for known jobs, False for unknown
   - cleanup_ingestion_downloads deletes oldest files when over cap
   - SchedulerNotStartedError when scheduler not running
+  - the WoW server status recorder (boot + every 5 minutes, own switch) and its daily purge
 
 All scheduler lifecycle tests run as async so the event loop is available
 when AsyncIOScheduler.start() is called.
@@ -23,11 +24,14 @@ from app.core.config import settings
 from app.services.scheduling.scheduler_service import (
     JOB_CLEANUP_DOWNLOADS,
     JOB_PURGE_FEATURE_SUBMISSIONS,
+    JOB_PURGE_SERVER_STATUS,
     JOB_RAID_NOTIFICATIONS,
+    JOB_RECORD_SERVER_STATUS,
     JOB_REFRESH_WOW_PRICES,
     JOB_SYNC_ALL_SOURCES,
     SchedulerNotStartedError,
     _run_cleanup_downloads,
+    _run_record_server_status,
     _run_refresh_wow_prices,
     get_job_status,
     get_scheduler,
@@ -56,6 +60,15 @@ def no_price_downloads():
         "app.services.wow.prices.price_refresh_service.refresh_all", new=AsyncMock(return_value=[]),
     ) as refresh:
         yield refresh
+
+
+@pytest.fixture(autouse=True)
+def no_status_calls():
+    """The server status recorder runs at boot; never let it reach Blizzard from a test."""
+    with patch(
+        "app.services.wow.server_status.server_status_history_service.record_all", new=AsyncMock(return_value=[]),
+    ) as record:
+        yield record
 
 
 # ---------------------------------------------------------------------------
@@ -172,6 +185,7 @@ async def test_get_job_status_returns_jobs_when_started(monkeypatch: pytest.Monk
     job_ids = {j["id"] for j in jobs}
     assert job_ids == {
         JOB_SYNC_ALL_SOURCES, JOB_CLEANUP_DOWNLOADS, JOB_REFRESH_WOW_PRICES, JOB_PURGE_FEATURE_SUBMISSIONS,
+        JOB_RECORD_SERVER_STATUS, JOB_PURGE_SERVER_STATUS,
     }
     for job in jobs:
         assert "name" in job
@@ -293,20 +307,57 @@ async def test_cleanup_downloads_deletes_oldest_first(tmp_path):
 @pytest.mark.asyncio
 async def test_price_refresh_runs_without_the_source_jobs(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(settings, "discord_enabled", True)
-    job_ids = {j.id for j in start_scheduler(source_jobs=False, price_refresh=True).get_jobs()}
-    assert job_ids == {JOB_PURGE_FEATURE_SUBMISSIONS, JOB_REFRESH_WOW_PRICES}
+    job_ids = {
+        j.id for j in start_scheduler(source_jobs=False, price_refresh=True, server_status_recording=False).get_jobs()
+    }
+    assert job_ids == {JOB_PURGE_FEATURE_SUBMISSIONS, JOB_PURGE_SERVER_STATUS, JOB_REFRESH_WOW_PRICES}
 
 
 @pytest.mark.asyncio
 async def test_source_jobs_run_without_the_price_refresh(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(settings, "discord_enabled", True)
-    job_ids = {j.id for j in start_scheduler(source_jobs=True, price_refresh=False).get_jobs()}
+    job_ids = {
+        j.id for j in start_scheduler(source_jobs=True, price_refresh=False, server_status_recording=False).get_jobs()
+    }
     assert job_ids == {
-        JOB_PURGE_FEATURE_SUBMISSIONS, JOB_SYNC_ALL_SOURCES, JOB_CLEANUP_DOWNLOADS, JOB_RAID_NOTIFICATIONS,
+        JOB_PURGE_FEATURE_SUBMISSIONS, JOB_PURGE_SERVER_STATUS, JOB_SYNC_ALL_SOURCES, JOB_CLEANUP_DOWNLOADS,
+        JOB_RAID_NOTIFICATIONS,
     }
 
 
 @pytest.mark.asyncio
 async def test_retention_purge_runs_with_every_switch_off():
+    job_ids = {
+        j.id for j in start_scheduler(source_jobs=False, price_refresh=False, server_status_recording=False).get_jobs()
+    }
+    assert job_ids == {JOB_PURGE_FEATURE_SUBMISSIONS, JOB_PURGE_SERVER_STATUS}
+
+
+@pytest.mark.asyncio
+async def test_server_status_recorder_runs_without_the_source_jobs():
+    # Serve-only prod: SCHEDULER_ENABLED=false must not stop the history.
     job_ids = {j.id for j in start_scheduler(source_jobs=False, price_refresh=False).get_jobs()}
-    assert job_ids == {JOB_PURGE_FEATURE_SUBMISSIONS}
+    assert job_ids == {JOB_PURGE_FEATURE_SUBMISSIONS, JOB_PURGE_SERVER_STATUS, JOB_RECORD_SERVER_STATUS}
+
+
+@pytest.mark.asyncio
+async def test_server_status_recorder_runs_at_boot_then_every_five_minutes():
+    job = start_scheduler().get_job(JOB_RECORD_SERVER_STATUS)
+    assert job is not None
+    assert job.trigger.interval.total_seconds() == 5 * 60
+    assert job.max_instances == 1
+    assert (job.next_run_time - datetime.now(timezone.utc)).total_seconds() < 60
+
+
+@pytest.mark.asyncio
+async def test_server_status_purge_runs_daily():
+    job = start_scheduler().get_job(JOB_PURGE_SERVER_STATUS)
+    assert job is not None
+    assert job.trigger.interval.total_seconds() == 24 * 3600
+
+
+@pytest.mark.asyncio
+async def test_server_status_recorder_never_raises(no_status_calls: AsyncMock):
+    no_status_calls.side_effect = RuntimeError("boom")
+    await _run_record_server_status()  # logged, not raised — the job keeps its schedule
+    no_status_calls.assert_awaited()

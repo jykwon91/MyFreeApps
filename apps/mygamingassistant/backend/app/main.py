@@ -152,8 +152,8 @@ async def _on_startup() -> None:
 
 
 def _start_scheduler() -> None:
-    """Start APScheduler. It always runs the retention purge; the source jobs
-    and the WoW price refresh each follow their own switch."""
+    """Start APScheduler. It always runs the retention purges; the source jobs,
+    the WoW price refresh and the server status recorder each follow their own switch."""
     if not settings.scheduler_enabled:
         logger.warning(
             "_on_startup: SCHEDULER_ENABLED=false — automatic source syncs and Discord raid "
@@ -167,6 +167,7 @@ def _start_scheduler() -> None:
             price_refresh_interval_hours=settings.wow_price_refresh_interval_hours,
             source_jobs=settings.scheduler_enabled,
             price_refresh=settings.wow_price_refresh_enabled,
+            server_status_recording=settings.wow_server_status_recording_enabled,
         )
     except Exception as exc:
         if settings.environment == "production":

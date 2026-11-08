@@ -252,6 +252,12 @@ class Settings(BaseAppSettings):
     # WOW_PRICE_REFRESH_ENABLED — independent of SCHEDULER_ENABLED: the public
     # GET /wow/prices is empty without it. Tests and offline dev can turn it off.
     wow_price_refresh_enabled: bool = True
+    # WOW_SERVER_STATUS_RECORDING_ENABLED — independent of SCHEDULER_ENABLED: the
+    # server status history (GET /wow/server-status/history) is filled by a
+    # 5-minute read-only call to Blizzard's public status page. Serve-only prod
+    # keeps it on; tests and offline dev can turn it off. The 90-day purge of
+    # the history runs either way.
+    wow_server_status_recording_enabled: bool = True
 
 
     @field_validator("wow_feature_triage_token")

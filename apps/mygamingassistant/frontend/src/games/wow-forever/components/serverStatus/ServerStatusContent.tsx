@@ -6,7 +6,7 @@
  */
 import { LoadingButton } from "@platform/ui";
 import { OutboundLink } from "@platform/ui/discord-activity";
-import type { ServerStatusResponse } from "@/games/wow-forever/types/serverStatus";
+import type { ServerStatusResponse } from "@/games/wow-forever/types/serverStatus/serverStatusResponse";
 import { relativeTime } from "@/games/wow-forever/lib/serverStatusTime";
 import ServerStatusSkeleton from "./ServerStatusSkeleton";
 import SummaryLine from "./SummaryLine";

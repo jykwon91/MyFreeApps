@@ -33,6 +33,7 @@ export const PROVENANCE_DETAIL = {
   betaReport: "Players reported this in the beta. It hasn't been checked since launch.",
   classicRoute: "This is the Classic route or spot.",
   classicRule: "This is the Classic rule.",
+  loginHelp: "General WoW login advice, written by us from how this error behaves in Classic. Each fix hasn't been checked in Forever.",
 } as const;
 
 /** The "How to read these tags" note in every WoW Forever page's footer. */

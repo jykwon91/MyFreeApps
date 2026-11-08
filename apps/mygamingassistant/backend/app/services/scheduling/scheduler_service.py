@@ -20,10 +20,15 @@ Scheduled jobs:
                       advisory lock keeps two processes from both writing.
   purge_wow_feature_submissions — every 24 hours. WoW feature-request
                       retention (``feature_retention_service``).
+  record_wow_server_status — every 5 minutes and once at boot: WoW Forever
+                      server status changes + hourly checkpoints, per-region
+                      advisory lock (``app/services/wow/server_status/``).
+  purge_wow_server_status_history — every 24 hours (rows older than 90 days).
 
-Switches: the purge always runs. SCHEDULER_ENABLED gates sync_all_sources,
+Switches: the purges always run. SCHEDULER_ENABLED gates sync_all_sources,
 cleanup_ingestion_downloads and raid_notifications (serve-only prod turns it
 off). WOW_PRICE_REFRESH_ENABLED gates refresh_wow_prices.
+WOW_SERVER_STATUS_RECORDING_ENABLED gates record_wow_server_status.
 
 Architecture rationale
 ----------------------
@@ -60,7 +65,10 @@ from pathlib import Path
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
+from app.core.wow_server_status import PURGE_INTERVAL_HOURS as SERVER_STATUS_PURGE_INTERVAL_HOURS
+from app.core.wow_server_status import RECORD_INTERVAL as SERVER_STATUS_RECORD_INTERVAL
 from app.services.wow.prices import price_refresh_service
+from app.services.wow.server_status import server_status_history_service
 from app.core.wow_feature_request_limits import PURGE_INTERVAL_HOURS
 from app.services.wow.feature_requests.feature_retention_service import purge_feature_request_data
 
@@ -77,6 +85,8 @@ JOB_CLEANUP_DOWNLOADS = "cleanup_ingestion_downloads"
 JOB_RAID_NOTIFICATIONS = "raid_notifications"
 JOB_REFRESH_WOW_PRICES = "refresh_wow_prices"
 JOB_PURGE_FEATURE_SUBMISSIONS = "purge_wow_feature_submissions"
+JOB_RECORD_SERVER_STATUS = "record_wow_server_status"
+JOB_PURGE_SERVER_STATUS = "purge_wow_server_status_history"
 RAID_NOTIFICATIONS_INTERVAL_SECONDS = 60
 
 
@@ -90,6 +100,7 @@ def start_scheduler(
     *,
     source_jobs: bool = True,
     price_refresh: bool = True,
+    server_status_recording: bool = True,
 ) -> AsyncIOScheduler:
     """Initialize the module-level AsyncIOScheduler and register jobs.
 
@@ -101,6 +112,8 @@ def start_scheduler(
     * ``price_refresh`` (``WOW_PRICE_REFRESH_ENABLED``) — the WoW Forever
       auction-house prices. A read-only fetch of a public file, so it stays on
       in serve-only prod, where the public price API needs it.
+    * ``server_status_recording`` (``WOW_SERVER_STATUS_RECORDING_ENABLED``) —
+      the WoW Forever server status history. Same reasoning as prices.
 
     Uses an in-memory job store (no DB required) — jobs are re-registered
     on every start from settings, so state is always fresh. Unlike MJH's
@@ -124,12 +137,14 @@ def start_scheduler(
         _add_source_jobs(_scheduler, sync_interval_hours)
     if price_refresh:
         _add_price_refresh_job(_scheduler, price_refresh_interval_hours)
+    if server_status_recording:
+        _add_server_status_job(_scheduler)
 
     _scheduler.start()
     logger.info(
         "scheduler_service: started — source_jobs=%s sync_interval_hours=%d "
-        "price_refresh=%s price_refresh_interval_hours=%d",
-        source_jobs, sync_interval_hours, price_refresh, price_refresh_interval_hours,
+        "price_refresh=%s price_refresh_interval_hours=%d server_status_recording=%s",
+        source_jobs, sync_interval_hours, price_refresh, price_refresh_interval_hours, server_status_recording,
     )
     return _scheduler
 
@@ -184,6 +199,32 @@ def _add_retention_jobs(scheduler: AsyncIOScheduler) -> None:
         coalesce=True,
         misfire_grace_time=3600,
         max_instances=1,
+    )
+    scheduler.add_job(
+        _run_purge_server_status_history,
+        trigger=IntervalTrigger(hours=SERVER_STATUS_PURGE_INTERVAL_HOURS),
+        id=JOB_PURGE_SERVER_STATUS,
+        name=JOB_PURGE_SERVER_STATUS,
+        replace_existing=True,
+        coalesce=True,
+        misfire_grace_time=3600,
+        max_instances=1,
+    )
+
+
+def _add_server_status_job(scheduler: AsyncIOScheduler) -> None:
+    interval_seconds = int(SERVER_STATUS_RECORD_INTERVAL.total_seconds())
+    scheduler.add_job(
+        _run_record_server_status,
+        trigger=IntervalTrigger(seconds=interval_seconds),
+        id=JOB_RECORD_SERVER_STATUS,
+        name=JOB_RECORD_SERVER_STATUS,
+        replace_existing=True,
+        coalesce=True,
+        misfire_grace_time=interval_seconds,
+        max_instances=1,
+        # Also once at boot, so a deploy's restart leaves no extra gap.
+        next_run_time=datetime.now(timezone.utc),
     )
 
 
@@ -348,6 +389,28 @@ async def _run_refresh_wow_prices() -> None:
         "scheduler_service: refresh_wow_prices: %s",
         ", ".join(f"{o.source}/{o.region}={o.outcome}({o.item_count})" for o in outcomes) or "nothing refreshed",
     )
+
+async def _run_record_server_status() -> None:
+    """Scheduled job: record WoW Forever server status changes."""
+    try:
+        outcomes = await server_status_history_service.record_all()
+    except Exception:
+        logger.exception("scheduler_service: record_wow_server_status: run failed")
+        return
+    logger.info(
+        "scheduler_service: record_wow_server_status: %s",
+        ", ".join(f"{o.region}={o.outcome}({o.written})" for o in outcomes),
+    )
+
+
+async def _run_purge_server_status_history() -> None:
+    """Scheduled job: WoW Forever server status retention."""
+    try:
+        await server_status_history_service.purge_old()
+    except Exception:
+        # Retried on the next tick; logged so a persistent failure is visible.
+        logger.exception("scheduler_service: purge_wow_server_status_history: run failed")
+
 
 async def _run_purge_feature_submissions() -> None:
     """Scheduled job: WoW feature-request retention."""

@@ -9,8 +9,10 @@
  *   - distinct error state ("couldn't reach Blizzard") with a retry button
  *   - region picker (the player's saved region, US by default; shared with auction prices)
  *   - source credit linking to Blizzard's status page
+ *   - on the hub, a link to the server status page (uptime history and login help)
  */
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   SERVER_STATUS_POLLING,
   useGetServerStatusQuery,
@@ -24,7 +26,12 @@ function blizzardStatusUrl(region: WowRegion): string {
   return `https://worldofwarcraft.blizzard.com/en-us/game/status/${region}`;
 }
 
-export default function WowServerStatusSection() {
+interface WowServerStatusSectionProps {
+  /** Link to the full server status page; off on that page itself. */
+  historyLink?: boolean;
+}
+
+export default function WowServerStatusSection({ historyLink = true }: WowServerStatusSectionProps) {
   const [region] = useWowRegion();
 
   const { data, isLoading, isError, isFetching, refetch } = useGetServerStatusQuery(
@@ -58,6 +65,15 @@ export default function WowServerStatusSection() {
         blizzardUrl={blizzardStatusUrl(region)}
         onRetry={() => void refetch()}
       />
+
+      {historyLink ? (
+        <Link
+          to="/wow-forever/server-status"
+          className="inline-flex min-h-[44px] items-center text-sm underline underline-offset-2 hover:text-foreground sm:min-h-0"
+        >
+          Uptime history and login error help
+        </Link>
+      ) : null}
     </section>
   );
 }

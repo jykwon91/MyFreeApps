@@ -105,6 +105,12 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "Paste or screenshot two or more items and see which is better for your class and spec.",
       },
       {
+        path: "/wow-forever/server-status",
+        title: "Server status",
+        iconName: "Activity",
+        description: "Is the realm up? See the last day or week of uptime, recent outages, and what to do about common login errors.",
+      },
+      {
         path: "/wow-forever/suggest",
         title: "Suggest a feature",
         iconName: "Lightbulb",
