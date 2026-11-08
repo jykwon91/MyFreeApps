@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { BACKEND_URL, E2E_EMAIL, E2E_PASSWORD } from "./fixtures/config";
 import { E2E_ONBOARDING } from "./fixtures/onboarding";
+import { resetAuthRateLimits } from "./fixtures/auth-rate-limits";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TOKEN_PATH = path.join(__dirname, ".auth-token");
@@ -171,6 +172,7 @@ async function globalSetup() {
   const password = E2E_PASSWORD;
 
   // Try login first
+  await resetAuthRateLimits();
   let token = await login(email, password);
 
   if (!token) {

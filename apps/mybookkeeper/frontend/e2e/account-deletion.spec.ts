@@ -3,11 +3,14 @@
  * owns a workspace of its own, which is what every sign-up gets.
  */
 import { test, expect } from "@playwright/test";
+import { resetAuthRateLimits } from "./fixtures/auth-rate-limits";
 import { BACKEND_URL } from "./fixtures/config";
 import { SoloOrg } from "./fixtures/solo-org";
 
 test.describe("Account deletion", () => {
   test("deleting my account signs me out, ends my session and blocks signing back in", async ({ page, playwright }) => {
+    // It ends with a wrong sign-in that must read "Incorrect", not "Too many".
+    await resetAuthRateLimits();
     const solo = await SoloOrg.create(playwright, "account-deletion");
     const { email, password, authHeader } = solo.account;
     let deleted = false;

@@ -11,7 +11,8 @@ from app.core.config import settings
 from app.models.organization.organization_member import OrgRole
 from app.models.user.user import Role, User
 from app.repositories.user import user_repo
-from app.test_helpers.auth import force_verify_email, promote_to_superuser
+from app.core.rate_limit import login_limiter, password_reset_limiter, register_limiter, totp_limiter
+from app.test_helpers.auth import force_verify_email, promote_to_superuser, reset_auth_rate_limits
 
 
 @pytest_asyncio.fixture()
@@ -378,6 +379,38 @@ class TestVerifyEmailHelper:
             with pytest.raises(HTTPException) as exc_info:
                 await force_verify_email(email="nobody@example.com")
         assert exc_info.value.status_code == 404
+
+
+class TestResetAuthRateLimitsHelper:
+    LIMITERS = (login_limiter, totp_limiter, register_limiter, password_reset_limiter)
+
+    @pytest.mark.asyncio
+    async def test_gated_by_env_var(self) -> None:
+        login_limiter.reset()
+        for _ in range(10):
+            login_limiter.check("203.0.113.9")
+        with patch.object(settings, "allow_test_admin_promotion", False), pytest.raises(HTTPException) as exc_info:
+            await reset_auth_rate_limits()
+        assert exc_info.value.status_code == 404
+        with pytest.raises(HTTPException):
+            login_limiter.check("203.0.113.9")
+        login_limiter.reset()
+
+    @pytest.mark.asyncio
+    async def test_clears_every_auth_limit(self) -> None:
+        ip = "203.0.113.10"
+        for limiter in self.LIMITERS:
+            limiter.reset()
+            with pytest.raises(HTTPException):
+                while True:
+                    limiter.check(ip)
+
+        with patch.object(settings, "allow_test_admin_promotion", True):
+            await reset_auth_rate_limits()
+
+        for limiter in self.LIMITERS:
+            limiter.check(ip)
+            limiter.reset()
 
 
 class TestPromoteSuperuserHelper:

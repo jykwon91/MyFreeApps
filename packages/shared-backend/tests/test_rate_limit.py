@@ -162,6 +162,19 @@ class TestRateLimiter:
 # email_domain_from_request — PII-safe parsing
 # ---------------------------------------------------------------------------
 
+    def test_reset_forgets_every_key(self) -> None:
+        limiter = RateLimiter(max_attempts=1, window_seconds=60)
+        limiter.check("a")
+        limiter.check("b")
+
+        limiter.reset()
+
+        limiter.check("a")
+        limiter.check("b")
+        with pytest.raises(HTTPException):
+            limiter.check("a")
+
+
 class TestEmailDomainFromRequest:
     def test_returns_none_when_state_has_no_login_email(self) -> None:
         request = _make_request()
