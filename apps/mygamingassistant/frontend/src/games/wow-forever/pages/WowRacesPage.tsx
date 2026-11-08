@@ -14,12 +14,12 @@ const BACK_LINK = "inline-flex min-h-[44px] items-center text-sm underline under
 
 /** /wow-forever/races and /wow-forever/races/:race — every race's faction, start, classes and racials, vs Classic. */
 export default function WowRacesPage() {
-  useDocumentTitle("Races · WoW Forever");
   const { race: slug } = useParams<{ race: string }>();
   const state = useRaces();
   const ready = state.status === RACES_STATUS.ready;
   useScrollToHash(ready);
   const race = ready && slug ? (state.data.races.find((r) => r.slug === slug) ?? null) : null;
+  useDocumentTitle(race ? `${race.name} · WoW Forever` : "Races · WoW Forever");
 
   return (
     <main className="p-4 sm:p-8 space-y-4 max-w-4xl">
