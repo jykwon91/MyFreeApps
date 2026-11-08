@@ -161,6 +161,11 @@ test.describe("Members page", () => {
       await expect(roleSelect).toHaveValue("viewer", { timeout: 10000 });
 
       await roleSelect.selectOption("admin");
+      // Making someone an admin asks first; nothing changes until it's confirmed.
+      const confirm = page.getByRole("dialog");
+      await expect(confirm).toContainText(`Make ${joined.name} an admin?`);
+      expect(await roleOf()).toBe("viewer");
+      await confirm.getByRole("button", { name: "Make admin" }).click();
       await expect(toasts(page).getByText(new RegExp(`^Updated .* to admin$`))).toBeVisible({ timeout: 5000 });
       await expect.poll(roleOf).toBe("admin");
 
