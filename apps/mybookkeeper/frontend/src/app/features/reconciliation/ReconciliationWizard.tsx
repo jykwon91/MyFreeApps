@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { getYear } from "date-fns";
 import { Link } from "react-router-dom";
 import { STEPS } from "@/shared/lib/reconciliation-config";
@@ -26,6 +26,7 @@ export default function ReconciliationWizard({ onToast, canWrite = true }: Recon
   const currentYear = getYear(new Date());
   const [taxYear, setTaxYear] = useState(currentYear - 1);
   const [step, setStep] = useState(0);
+  const fieldId = useId();
 
   const [upload1099, { isLoading: isUploading }] = useUpload1099Mutation();
   const { currentData: currentSources, isFetching: sourcesFetching } = useListSourcesQuery({ tax_year: taxYear });
@@ -72,6 +73,7 @@ export default function ReconciliationWizard({ onToast, canWrite = true }: Recon
           value={taxYear}
           onChange={(e) => setTaxYear(Number(e.target.value))}
           disabled={isComparing}
+          aria-label="Tax year"
           className="text-xs py-1.5"
         >
           {[currentYear - 1, currentYear - 2, currentYear - 3].map((y) => (
@@ -80,10 +82,12 @@ export default function ReconciliationWizard({ onToast, canWrite = true }: Recon
         </Select>
       </div>
 
-      <nav className="flex gap-1">
+      <nav aria-label="Reconciliation steps" className="flex gap-1">
         {STEPS.map((label, i) => (
           <button
             key={label}
+            type="button"
+            aria-current={step === i ? "step" : undefined}
             onClick={() => setStep(i)}
             className={`flex-1 min-w-0 sm:flex-none px-2 sm:px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
               step === i
@@ -92,7 +96,7 @@ export default function ReconciliationWizard({ onToast, canWrite = true }: Recon
             }`}
           >
             <span className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
-              <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs ${
+              <span aria-hidden="true" className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs ${
                 step === i ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
               }`}>
                 {i + 1}
@@ -103,86 +107,94 @@ export default function ReconciliationWizard({ onToast, canWrite = true }: Recon
         ))}
       </nav>
 
-      {step === 0 && (
-        <Card>
-          {canWrite ? (
-            <form onSubmit={handleUpload} className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Enter the reported amounts from your 1099 form. I'll compare them against your reservation records.
-              </p>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Source Type</label>
-                  <Select value={sourceType} onChange={(e) => setSourceType(e.target.value)}>
-                    <option value="1099_k">1099-K</option>
-                    <option value="1099_misc">1099-MISC</option>
-                    <option value="1099_nec">1099-NEC</option>
-                    <option value="year_end_statement">Year-End Statement</option>
-                  </Select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Issuer</label>
-                  <input
-                    type="text"
-                    value={issuer}
-                    onChange={(e) => setIssuer(e.target.value)}
-                    placeholder="e.g. Airbnb"
-                    className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Reported Amount</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={reportedAmount}
-                    onChange={(e) => setReportedAmount(e.target.value)}
-                    placeholder="0.00"
-                    required
-                    className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-              </div>
-              <LoadingButton type="submit" size="sm" isLoading={isUploading} loadingText="Adding...">
-                Add 1099 Source
-              </LoadingButton>
-              <p className="text-xs text-muted-foreground mt-2">
-                Have a 1099 PDF?{" "}
-                <Link to="/documents" className="text-primary hover:underline font-medium">
-                  Upload it on the Documents page
-                </Link>{" "}
-                and we'll extract the data automatically.
-              </p>
-            </form>
-          ) : (
-            <p className="text-sm text-muted-foreground">You have read-only access. Adding 1099 sources requires write access.</p>
-          )}
-        </Card>
-      )}
+      <p aria-live="polite" className="sr-only">
+        Step {step + 1} of {STEPS.length}: {STEPS[step]}
+      </p>
 
-      {step === 1 && (
-        <Card>
-          <ReconciliationSourcesBody
-            mode={sourcesMode}
-            sources={sources}
-            onUploadStep={() => setStep(0)}
-            onNext={() => setStep(2)}
-            canWrite={canWrite}
-            isComparing={isComparing}
-            onCompare={compare}
-          />
-        </Card>
-      )}
+      <section aria-label={STEPS[step]}>
+        {step === 0 && (
+          <Card>
+            {canWrite ? (
+              <form onSubmit={handleUpload} className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Enter the reported amounts from your 1099 form. I'll compare them against your reservation records.
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor={`${fieldId}-type`} className="block text-sm font-medium mb-1">Source Type</label>
+                    <Select id={`${fieldId}-type`} value={sourceType} onChange={(e) => setSourceType(e.target.value)}>
+                      <option value="1099_k">1099-K</option>
+                      <option value="1099_misc">1099-MISC</option>
+                      <option value="1099_nec">1099-NEC</option>
+                      <option value="year_end_statement">Year-End Statement</option>
+                    </Select>
+                  </div>
+                  <div>
+                    <label htmlFor={`${fieldId}-issuer`} className="block text-sm font-medium mb-1">Issuer</label>
+                    <input
+                      id={`${fieldId}-issuer`}
+                      type="text"
+                      value={issuer}
+                      onChange={(e) => setIssuer(e.target.value)}
+                      placeholder="e.g. Airbnb"
+                      className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor={`${fieldId}-amount`} className="block text-sm font-medium mb-1">Reported Amount</label>
+                    <input
+                      id={`${fieldId}-amount`}
+                      type="number"
+                      step="0.01"
+                      value={reportedAmount}
+                      onChange={(e) => setReportedAmount(e.target.value)}
+                      placeholder="0.00"
+                      required
+                      className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+                <LoadingButton type="submit" size="sm" isLoading={isUploading} loadingText="Adding...">
+                  Add 1099 Source
+                </LoadingButton>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Have a 1099 PDF?{" "}
+                  <Link to="/documents" className="text-primary hover:underline font-medium">
+                    Upload it on the Documents page
+                  </Link>{" "}
+                  and we'll extract the data automatically.
+                </p>
+              </form>
+            ) : (
+              <p className="text-sm text-muted-foreground">You have read-only access. Adding 1099 sources requires write access.</p>
+            )}
+          </Card>
+        )}
 
-      {step === 2 && (
-        <Card>
-          <ReconciliationDiscrepanciesBody
-            mode={discrepanciesMode}
-            discrepancies={discrepancies}
-            hasSources={sources.length > 0}
-          />
-        </Card>
-      )}
+        {step === 1 && (
+          <Card>
+            <ReconciliationSourcesBody
+              mode={sourcesMode}
+              sources={sources}
+              onUploadStep={() => setStep(0)}
+              onNext={() => setStep(2)}
+              canWrite={canWrite}
+              isComparing={isComparing}
+              onCompare={compare}
+            />
+          </Card>
+        )}
+
+        {step === 2 && (
+          <Card>
+            <ReconciliationDiscrepanciesBody
+              mode={discrepanciesMode}
+              discrepancies={discrepancies}
+              hasSources={sources.length > 0}
+            />
+          </Card>
+        )}
+      </section>
     </div>
   );
 }
