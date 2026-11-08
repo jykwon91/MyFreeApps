@@ -49,7 +49,9 @@ describe("ApplicantContactEmailEditor", () => {
 
     await waitFor(() => expect(showSuccess).toHaveBeenCalledWith("Email saved"));
     expect(sentBody()).toMatchObject({ method: "PATCH", data: { contact_email: "ann@example.com" } });
-    expect(screen.getByRole("link", { name: "ann@example.com" })).toHaveAttribute("href", "mailto:ann@example.com");
+    const link = screen.getByRole("link", { name: "ann@example.com" });
+    expect(link).toHaveAttribute("href", "mailto:ann%40example.com");
+    expect(decodeURIComponent(link.getAttribute("href") ?? "")).toBe("mailto:ann@example.com");
     expect(screen.getByRole("button", { name: "Change email" })).toBeInTheDocument();
   });
 

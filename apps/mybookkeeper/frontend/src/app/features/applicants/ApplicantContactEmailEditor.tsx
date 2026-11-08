@@ -101,7 +101,7 @@ export default function ApplicantContactEmailEditor({
       <dt className="text-xs text-muted-foreground">Email</dt>
       <dd data-testid="sensitive-contact-email" className="flex flex-wrap items-center gap-x-2">
         {saved ? (
-          <a href={`mailto:${saved}`} className="text-primary hover:underline">
+          <a href={`mailto:${encodeURIComponent(saved)}`} className="text-primary hover:underline">
             {saved}
           </a>
         ) : (
