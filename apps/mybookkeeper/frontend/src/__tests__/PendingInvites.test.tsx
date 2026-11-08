@@ -214,13 +214,13 @@ describe("PendingInvites", () => {
   });
 
   describe("send again", () => {
-    function resendAnswers(result: Promise<unknown>) {
-      mockCreate.mockReturnValueOnce({ unwrap: () => result });
+    function resendAnswers(result: () => Promise<unknown>) {
+      mockCreate.mockReturnValueOnce({ unwrap: result });
     }
 
     it("sends the same invite again with the same role", async () => {
       showInvites([makeInvite({ email: "again@test.com", org_role: "viewer" })]);
-      resendAnswers(Promise.resolve(makeInvite({ email: "again@test.com", email_sent: true })));
+      resendAnswers(() => Promise.resolve(makeInvite({ email: "again@test.com", email_sent: true })));
       render(<PendingInvites onSuccess={onSuccess} onError={onError} />);
 
       await userEvent.setup().click(screen.getByRole("button", { name: "Send the invite to again@test.com again" }));
@@ -232,7 +232,7 @@ describe("PendingInvites", () => {
 
     it("never resends as an owner", async () => {
       showInvites([makeInvite({ email: "owner@test.com", org_role: "owner" })]);
-      resendAnswers(Promise.resolve(makeInvite({ email_sent: true })));
+      resendAnswers(() => Promise.resolve(makeInvite({ email_sent: true })));
       render(<PendingInvites onSuccess={onSuccess} onError={onError} />);
 
       await userEvent.setup().click(screen.getByRole("button", { name: "Send the invite to owner@test.com again" }));
@@ -242,7 +242,7 @@ describe("PendingInvites", () => {
 
     it("says so when the new invite's email didn't send", async () => {
       showInvites([makeInvite({ email: "typo@test.com" })]);
-      resendAnswers(Promise.resolve(makeInvite({ email: "typo@test.com", email_sent: false })));
+      resendAnswers(() => Promise.resolve(makeInvite({ email: "typo@test.com", email_sent: false })));
       render(<PendingInvites onSuccess={onSuccess} onError={onError} />);
 
       await userEvent.setup().click(screen.getByRole("button", { name: "Send the invite to typo@test.com again" }));
@@ -253,7 +253,7 @@ describe("PendingInvites", () => {
 
     it("passes on the server's reason when they've already joined", async () => {
       showInvites([makeInvite({ email: "joined@test.com" })]);
-      resendAnswers(Promise.reject({ status: 400, data: { detail: "User is already a member of this organization" } }));
+      resendAnswers(() => Promise.reject({ status: 400, data: { detail: "User is already a member of this organization" } }));
       render(<PendingInvites onSuccess={onSuccess} onError={onError} />);
 
       await userEvent.setup().click(screen.getByRole("button", { name: "Send the invite to joined@test.com again" }));
@@ -263,7 +263,7 @@ describe("PendingInvites", () => {
 
     it("asks to try again when the resend fails for another reason", async () => {
       showInvites([makeInvite({ email: "flaky@test.com" })]);
-      resendAnswers(Promise.reject({ status: "FETCH_ERROR", error: "Network Error" }));
+      resendAnswers(() => Promise.reject({ status: "FETCH_ERROR", error: "Network Error" }));
       render(<PendingInvites onSuccess={onSuccess} onError={onError} />);
 
       await userEvent.setup().click(screen.getByRole("button", { name: "Send the invite to flaky@test.com again" }));
@@ -274,7 +274,8 @@ describe("PendingInvites", () => {
     it("locks the row while sending, so cancel and a second send wait", async () => {
       showInvites([makeInvite({ email: "slow@test.com" })]);
       let finish: (value: unknown) => void = () => {};
-      resendAnswers(new Promise((resolve) => { finish = resolve; }));
+      const pending = new Promise((resolve) => { finish = resolve; });
+      resendAnswers(() => pending);
       render(<PendingInvites onSuccess={onSuccess} onError={onError} />);
       const user = userEvent.setup();
 
