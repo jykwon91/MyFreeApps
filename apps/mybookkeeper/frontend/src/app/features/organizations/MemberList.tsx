@@ -11,10 +11,12 @@ import Select from "@/shared/components/ui/Select";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { ConfirmDialog } from "@platform/ui";
 import { ASSIGNABLE_ROLE_OPTIONS } from "@mybookkeeper/api-client/constants/orgRoles";
+import { PROMOTE_ADMIN_MESSAGES } from "@mybookkeeper/api-client/constants/promoteAdminMessages";
 import { canManageMember } from "@mybookkeeper/api-client/utils/canManageMember";
 import { ROLE_BADGE_COLORS } from "@/shared/lib/organization-config";
 import { MEMBER_LIST_MESSAGES, memberRoleLabel, removeMemberDescription } from "@/shared/lib/organization-messages";
 import MemberRowAction from "@/app/features/organizations/MemberRowAction";
+import { memberName } from "@/shared/utils/memberName";
 
 export interface MemberListProps {
   onError: (message: string) => void;
@@ -30,6 +32,19 @@ export default function MemberList({ onError, onSuccess }: MemberListProps) {
   const [updateRole, { isLoading: isUpdatingRole }] = useUpdateMemberRoleMutation();
   const [removeMember, { isLoading: isRemoving }] = useRemoveMemberMutation();
   const [confirmRemove, setConfirmRemove] = useState<OrgMember | null>(null);
+  const [confirmPromote, setConfirmPromote] = useState<OrgMember | null>(null);
+
+  function requestRoleChange(member: OrgMember, newRole: OrgRole) {
+    // Admins can remove members and change roles, so that one is asked first.
+    if (newRole === "admin" && member.org_role !== "admin") setConfirmPromote(member);
+    else void handleRoleChange(member, newRole);
+  }
+
+  async function handlePromote() {
+    if (!confirmPromote) return;
+    await handleRoleChange(confirmPromote, "admin");
+    setConfirmPromote(null);
+  }
 
   async function handleRoleChange(member: OrgMember, newRole: OrgRole) {
     if (!orgId) return;
@@ -80,7 +95,7 @@ export default function MemberList({ onError, onSuccess }: MemberListProps) {
             {members.map((member) => {
               const isSelf = member.user_id === user?.id;
               const canManage = canManageMember(member, myRole, isSelf);
-              const name = member.user_name || member.user_email || "Unnamed";
+              const name = memberName(member);
               return (
                 <tr key={member.id} className="border-b last:border-b-0">
                   <td className="px-4 py-3">
@@ -91,7 +106,7 @@ export default function MemberList({ onError, onSuccess }: MemberListProps) {
                     {canManage ? (
                       <Select
                         value={member.org_role}
-                        onChange={(e) => handleRoleChange(member, e.target.value as OrgRole)}
+                        onChange={(e) => requestRoleChange(member, e.target.value as OrgRole)}
                         disabled={isUpdatingRole}
                         aria-label={memberRoleLabel(name)}
                         className="text-xs py-1"
@@ -133,6 +148,16 @@ export default function MemberList({ onError, onSuccess }: MemberListProps) {
         isLoading={isRemoving}
         onConfirm={handleRemove}
         onCancel={() => setConfirmRemove(null)}
+      />
+
+      <ConfirmDialog
+        open={!!confirmPromote}
+        title={PROMOTE_ADMIN_MESSAGES.title(confirmPromote ? memberName(confirmPromote) : "")}
+        description={PROMOTE_ADMIN_MESSAGES.body}
+        confirmLabel={PROMOTE_ADMIN_MESSAGES.confirm}
+        isLoading={isUpdatingRole}
+        onConfirm={handlePromote}
+        onCancel={() => setConfirmPromote(null)}
       />
     </>
   );
