@@ -63,7 +63,10 @@ describe("Professions page", () => {
     await userEvent.click(screen.getByRole("radio", { name: "Horde" }));
     expect(screen.getByText("Zamja")).toBeInTheDocument();
     expect(screen.queryByText("Stephen Ryback")).not.toBeInTheDocument();
-    expect(route().getByText(/Wulan/)).toBeInTheDocument();
+    expect(route().getByText(/from Wulan in Shadowprey Village/)).toBeInTheDocument();
+    const book = route().getAllByTestId("recipe-buy-line").filter((li) => li.textContent?.includes("Expert Cookbook"));
+    expect(book).toHaveLength(1);
+    expect(book[0]).toHaveTextContent(/Buy Expert Cookbook from Wulan/);
     expect(JSON.parse(window.localStorage.getItem(PLAYER_SETTINGS_STORAGE_KEY) ?? "{}").faction).toBe("H");
   });
 

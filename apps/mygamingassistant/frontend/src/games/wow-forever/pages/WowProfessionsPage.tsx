@@ -16,18 +16,23 @@ import { GATHERING_SECTIONS } from "@/games/wow-forever/data/professions/gatheri
 import { isCraftingProfession, isGatheringProfession, parseGuideProfession } from "@/games/wow-forever/lib/guideProfession";
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
 import { PLAYER_FACTION_OPTIONS } from "@/games/wow-forever/data/playerFactionOptions";
+import { RECIPE_VENDORS_SECTION } from "@/games/wow-forever/data/recipeVendors/recipeVendorText";
 
 export const PROFESSION_PARAM = "p";
+
+const VENDORS = { id: RECIPE_VENDORS_SECTION.id, label: RECIPE_VENDORS_SECTION.navLabel } as const;
 
 const SECTIONS = [
   { id: "start", label: "Get started" },
   { id: "route", label: "Leveling route" },
+  VENDORS,
   { id: "forever", label: "What's different in Forever" },
 ] as const;
 
 const CRAFTING_SECTIONS = [
   { id: "start", label: "Get started" },
   { id: "route", label: "Leveling route" },
+  VENDORS,
   { id: "shopping", label: "Shopping list" },
   { id: "forever", label: "What's different in Forever" },
 ] as const;
@@ -86,7 +91,7 @@ export default function WowProfessionsPage() {
         <GuideSectionNav sections={guideSections(profession)} />
       </div>
 
-      <ProfessionGuideView profession={profession} faction={player.faction} zoneId={player.zoneId} level={player.level} />
+      <ProfessionGuideView profession={profession} faction={player.faction} zoneId={player.zoneId} level={player.level} position={player.position} />
     </main>
   );
 }

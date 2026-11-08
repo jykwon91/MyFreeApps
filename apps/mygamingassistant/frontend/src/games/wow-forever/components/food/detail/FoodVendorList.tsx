@@ -3,6 +3,7 @@ import { Button } from "@platform/ui";
 import FoodVendorRow from "@/games/wow-forever/components/food/detail/FoodVendorRow";
 import { FACTION_NAME } from "@/games/wow-forever/components/food/detail/detailStyles";
 import { SHARED_STOCK_NOTE, splitVendors } from "@/games/wow-forever/food/recipeSources";
+import { vendorKey } from "@/games/wow-forever/lib/recipeVendors/vendorKey";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 import type { VendorSpot } from "@/games/wow-forever/types/recipeSources";
 
@@ -13,10 +14,6 @@ interface FoodVendorListProps {
   vendors: readonly VendorSpot[];
   faction: PlayerFaction;
   zoneId: number | null;
-}
-
-function vendorKey(v: VendorSpot): string {
-  return `${v.npcId}/${v.zoneId}/${v.x}/${v.y}`;
 }
 
 /** Vendors you can buy from (your zone first), the other faction's behind a toggle. */

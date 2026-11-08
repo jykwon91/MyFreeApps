@@ -191,6 +191,8 @@ class ClassicSources(SkinningSources):
             if _i(g["map"]) in CLASSIC_CONTINENTS and _i(g["id"]) in object_name:
                 self._object_spawns[_i(g["id"])].append(g)
         self._item_names = {_i(r["entry"]): str(r["name"]) for r in t["item_template"]}
+        # What a vendor asks, in copper (Classic, before any reputation discount).
+        self._buy_price = {_i(r["entry"]): _i(r["BuyPrice"]) for r in t["item_template"]}
         self._rewarded: dict[int, list[int]] = defaultdict(list)
         for q in t["quest_template"]:
             keys = [f"RewChoiceItemId{i}" for i in range(1, 7)] + [f"RewItemId{i}" for i in range(1, 5)]
@@ -435,8 +437,11 @@ class ClassicSources(SkinningSources):
     # ---- summaries -------------------------------------------------------
 
     def recipe_sources(self, recipe_item: int) -> dict[str, object]:
+        """Where a recipe (or a rank's book) comes from; ``price`` = what its vendors ask, in copper, when anyone sells it."""
+        vendors = self.vendors(recipe_item)
         return _compact({
-            "vendors": self.vendors(recipe_item),
+            "vendors": vendors,
+            "price": self._buy_price.get(recipe_item, 0) if vendors else 0,
             "quests": self.quests(recipe_item),
             "drop": self.drop(recipe_item),
             "containers": self.containers(recipe_item),

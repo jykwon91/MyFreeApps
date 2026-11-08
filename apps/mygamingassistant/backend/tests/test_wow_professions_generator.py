@@ -286,6 +286,13 @@ class TestVendorStock:
         tilli = [v for v in data["reagents"]["10938"]["vendors"] if v[1] == "Tilli Thistlefuzz"]
         assert tilli and tilli[0][-2:] == [2, 120]  # Lesser Magic Essence: 2 at a time, every 2 hours
 
+    def test_every_sold_recipe_has_a_price(self) -> None:
+        recipes = json.loads((CRAFTING_DATA / "classic" / "sources.json").read_text(encoding="utf-8"))["recipes"]
+        sold = {k: v for k, v in recipes.items() if v.get("vendors")}
+        assert len(sold) > 100
+        assert all(v.get("price", 0) > 0 for v in sold.values())
+        assert not any("price" in v for k, v in recipes.items() if k not in sold)
+
 
 class TestClothFarmSpots:
     @pytest.fixture(scope="class")

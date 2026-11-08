@@ -74,6 +74,7 @@ function page(overrides: Partial<ItemPage["sources"]>, crafted = false): ItemPag
     sources: {
       sources: {
         vendors: [],
+        price: null,
         quests: [],
         drop: null,
         skinning: null,

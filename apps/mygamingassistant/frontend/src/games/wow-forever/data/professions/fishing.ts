@@ -39,9 +39,10 @@ export const FISHING_ROUTE: readonly RouteStep[] = [
   {
     kind: "milestone",
     skill: "125",
-    name: "Buy \"Expert Fishing – The Bass and You\"",
+    name: "Buy \"Expert Fishing - The Bass and You\"",
     detail: "1g from Old Man Heming on the Booty Bay docks, Stranglethorn Vale. Needs level 20. Raises your cap to 225.",
     confidence: "unconfirmed",
+    buysBook: true,
   },
   {
     kind: "craft",

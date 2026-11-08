@@ -29,6 +29,8 @@ export interface CraftStep {
   materials: FactionText;
   /** Every item named in `materials`, in the same order. */
   mats?: readonly MatRef[];
+  /** The foods (by food id) whose recipe the row has you buy — each gets a "Buy from" line. */
+  recipes?: readonly MatRef[];
   source: FactionText;
   note?: string;
   confidence: Confidence;
@@ -41,6 +43,8 @@ export interface MilestoneStep {
   name: string;
   detail: FactionText;
   confidence: Confidence;
+  /** The milestone is buying the rank's book (Expert Cookbook) — it gets a "Buy from" line. */
+  buysBook?: true;
 }
 
 export type RouteStep = CraftStep | MilestoneStep;

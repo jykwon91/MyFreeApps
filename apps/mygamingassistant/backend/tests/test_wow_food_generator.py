@@ -223,6 +223,21 @@ class TestRecipeSources:
         names = [dict(zip(VENDOR_COLUMNS, v))["name"] for v in sources["vendors"]]
         assert "Kendor Kabonka" in names
 
+    def test_a_sold_recipe_carries_its_price(self, foods: dict[str, dict], recipe_sources: dict) -> None:
+        assert recipe_sources["recipes"][str(foods["Westfall Stew"]["id"])]["price"] > 0
+        for record in recipe_sources["recipes"].values():
+            assert ("price" in record) == bool(record.get("vendors"))
+
+    @pytest.mark.parametrize(
+        ("guide", "book_id", "vendor"),
+        [("cooking", 16072, "Shandrina"), ("cooking", 16072, "Wulan"), ("fishing", 16083, "Old Man Heming")],
+    )
+    def test_rank_books_are_sold_at_their_classic_price(self, recipe_sources: dict, guide: str, book_id: int, vendor: str) -> None:
+        book = recipe_sources["books"][guide]
+        assert book["id"] == book_id
+        assert book["price"] == 10000
+        assert vendor in [dict(zip(VENDOR_COLUMNS, v))["name"] for v in book["vendors"]]
+
     def test_a_goretusk_drops_goretusk_snout(self, recipe_sources: dict) -> None:
         drop = recipe_sources["reagents"]["731"]["drop"]
         assert not drop["world"]

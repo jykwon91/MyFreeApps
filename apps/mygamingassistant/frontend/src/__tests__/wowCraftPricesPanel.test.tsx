@@ -44,7 +44,7 @@ const FIRST_ROWS = priceList([
 function renderSections(profession: CraftingProfession = "enchanting", data: CraftingData = ENCHANTING) {
   return render(
     <MemoryRouter initialEntries={[`/wow-forever/professions?p=${profession}`]}>
-      <CraftRouteSections profession={profession} faction={FACTION.alliance} zoneId={null} level={null} data={data} />
+      <CraftRouteSections profession={profession} faction={FACTION.alliance} zoneId={null} level={null} position={null} data={data} />
     </MemoryRouter>,
   );
 }
