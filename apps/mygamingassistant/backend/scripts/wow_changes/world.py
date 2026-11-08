@@ -52,6 +52,7 @@ def quest_changes(
             kind=KIND_NEW,
             name=quest.title.strip(),
             summary=f"New quest{level}{start}.",
+            link=("quest", quest_id),
             provenance=PROVENANCE_SEEN,
             seen_on=seen_on,
         ))

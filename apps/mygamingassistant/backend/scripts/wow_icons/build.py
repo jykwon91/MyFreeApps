@@ -50,6 +50,7 @@ DUNGEON_QUEST_FILES = (
     WOW_DATA_DIR / "dungeons" / "classic" / "dungeonQuests.json",
     WOW_DATA_DIR / "dungeons" / "dungeonQuestsSeen.json",
 )
+QUEST_REWARD_ITEMS_FILE = WOW_DATA_DIR / "quests" / "questRewardItems.json"
 TALENTS_DIR = WOW_DATA_DIR / "talents"
 DOWNRANK_FILE = WOW_DATA_DIR / "downrank" / "spells.json"
 SPELLBOOK_DIR = WOW_DATA_DIR / "spellbook"
@@ -102,6 +103,13 @@ def dungeon_quest_item_ids(paths: tuple[Path, ...] = DUNGEON_QUEST_FILES) -> set
     return ids
 
 
+def quest_database_item_ids(path: Path = QUEST_REWARD_ITEMS_FILE) -> set[int]:
+    """The reward items the quest database pages name (``scripts.wow_quests.build``)."""
+    if not path.exists():
+        return set()
+    return {int(k) for k in json.loads(path.read_text(encoding="utf-8"))["items"]}
+
+
 def rare_drop_item_ids(path: Path = RARE_SPAWNS_FILE) -> set[int]:
     """The items the rares finder names as a rare's drops."""
     rares = json.loads(path.read_text(encoding="utf-8"))["rares"].values()
@@ -142,7 +150,7 @@ def class_icon_files(path: Path = CLASS_DETAILS_FILE) -> set[int]:
 
 def wanted_ids() -> IconIds:
     ids = IconIds(
-        items=gathering_item_ids() | cooking_item_ids() | gear_item_ids() | dungeon_quest_item_ids() | rare_drop_item_ids(),
+        items=gathering_item_ids() | cooking_item_ids() | gear_item_ids() | dungeon_quest_item_ids() | quest_database_item_ids() | rare_drop_item_ids(),
         files=talent_icon_files() | downrank_icon_files() | spellbook_icon_files() | race_icon_files() | class_icon_files(),
     )
     for path in sorted(CRAFTING_DIR.glob("*.json")):

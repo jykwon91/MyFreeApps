@@ -51,6 +51,12 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "Ask where something is — the nearest trainer, a town, an item or a dungeon — and get it on a map with a route there.",
       },
       {
+        path: "/wow-forever/quests",
+        title: "Quests",
+        iconName: "ScrollText",
+        description: "Every quest the Forever client knows: search by name, filter by zone, faction or level, and see who gives it, what to do and what you get.",
+      },
+      {
         path: "/wow-forever/dungeons",
         title: "Dungeons",
         iconName: "Castle",
