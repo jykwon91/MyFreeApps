@@ -145,9 +145,26 @@ def test_a_record_that_does_not_fit_the_layout_fails(data: bytes) -> None:
         decode_record(layout, 1, data)
 
 
+def test_a_non_inline_relation_is_read_after_the_inline_fields() -> None:
+    # SpellEffect.SpellID: not in the client file's record, but a hotfix record carries it last.
+    text = """COLUMNS
+int ID
+int EffectIndex
+int SpellID
+
+LAYOUT CCCC0003
+BUILD 1.60.1.70790
+$noninline,id$ID<32>
+EffectIndex<32>
+$noninline,relation$SpellID<32>
+"""
+    layout = layout_for(parse_dbd(text), "1.60.1.70790")
+    assert decode_record(layout, 7, struct.pack("<ii", 1, 12345)) == {"ID": "7", "EffectIndex": "1", "SpellID": "12345"}
+
+
 def test_unsupported_definitions_fail() -> None:
     with pytest.raises(DbdError, match="non-inline"):
-        parse_dbd(DBD.replace("Display_lang\nDmgVariance", "$noninline,relation$Display_lang\nDmgVariance", 1))
+        parse_dbd(DBD.replace("Display_lang\nDmgVariance", "$noninline$Display_lang\nDmgVariance", 1))
     with pytest.raises(DbdError, match="no column type"):
         parse_dbd(DBD.replace("ItemLevel<u16>\nAllowableClass", "Mystery<u16>\nAllowableClass", 1))
 

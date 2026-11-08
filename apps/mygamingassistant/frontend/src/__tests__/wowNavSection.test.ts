@@ -19,6 +19,7 @@ const KNOWN_ICON_NAMES = new Set([
   "Lightbulb",
   "Map",
   "Scale",
+  "Sparkles",
   "Terminal",
   "TrendingUp",
   "Trophy",
