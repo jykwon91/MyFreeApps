@@ -57,6 +57,26 @@ TABLE_HASHES = {
     "SpellTargetRestrictions": 0xE064A75C,
     "SpellDescriptionVariables": 0x3CC89C00,
     "SpellXDescriptionVariables": 0xF3D99F2D,
+    # Legacy (scripts/wow_legacy)
+    "TraitSystem": 0x53E0E2E4,
+    "TraitTree": 0x964B11D9,
+    "TraitCurrency": 0x837C91E2,
+    "TraitCost": 0x266BF08E,
+    "TraitNode": 0xE1432D63,
+    "TraitNodeEntry": 0x82E8D5D6,
+    "TraitDefinition": 0xB292AC80,
+    "TraitCond": 0x8D6A552D,
+    "TraitEdge": 0x94D0AF81,
+    "TraitNodeXTraitNodeEntry": 0xA4379E4E,
+    "TraitCurrencySource": 0x94A4ED3B,
+    "TraitTreeXTraitCurrency": 0x373BEE7B,
+    "TraitNodeGroup": 0x601B98C1,
+    "TraitNodeGroupXTraitNode": 0x1AA6B3DB,
+    "TraitNodeGroupXTraitCond": 0xBDC77325,
+    "RenownRewards": 0x65F2637D,
+    "CurrencyTypes": 0x2F51378E,
+    "Achievement": 0xD2EE2CA7,
+    "Achievement_Category": 0x231B414D,
 }
 ITEM_TABLES = ("Item", "ItemSparse")
 

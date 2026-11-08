@@ -33,6 +33,7 @@ export const PROVENANCE_DETAIL = {
   betaReport: "Players reported this in the beta. It hasn't been checked since launch.",
   classicRoute: "This is the Classic route or spot.",
   classicRule: "This is the Classic rule.",
+  legacyFiles: "Read from the WoW Forever game files: the Legacy trees, talents, point cap, challenges and rank rewards.",
   classicTrainers: "Who teaches this rank is read from the Classic game data; Forever may move or add trainers.",
   loginHelp: "Written by us from common player reports; not from Blizzard.",
   newRaceStart: "Classic has no such race and the game files don't say where it starts; this is the World Map's own note.",

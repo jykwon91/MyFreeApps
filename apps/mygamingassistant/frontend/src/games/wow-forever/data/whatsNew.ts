@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-08",
+    title: "Legacy planner",
+    summary:
+      "Plan a character's 16 Legacy points across Professions, Adventure and Resourcefulness, share the plan as a link, tick off the 65 challenges that earn points and see the account rank rewards.",
+    to: "/wow-forever/legacy",
+  },
+  {
+    date: "2026-11-08",
     title: "Library books",
     summary:
       "See all 40 library books in the WoW Forever game files, the Friend of the Library reward (a choice of two necklaces) and tick off the books you've found.",

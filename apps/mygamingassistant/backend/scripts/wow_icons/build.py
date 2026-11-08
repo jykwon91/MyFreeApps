@@ -58,6 +58,7 @@ RACES_FILE = WOW_DATA_DIR / "races" / "races.json"
 HUNTER_PETS_FILE = WOW_DATA_DIR / "hunterPets" / "hunterPets.json"
 RARE_SPAWNS_FILE = WOW_DATA_DIR / "rares" / "classic" / "rareSpawns.json"
 LIBRARY_FILE = WOW_DATA_DIR / "library" / "library.json"
+LEGACY_FILE = WOW_DATA_DIR / "legacy" / "legacy.json"
 OUT_FILE = WOW_DATA_DIR / "icons" / "wowIcons.json"
 # Hand-written gathering nodes name their item as `itemId: 2447`.
 _NODE_ITEM = re.compile(r"\bitemId:\s*(\d+)")
@@ -162,11 +163,21 @@ def hunter_pet_icon_files(path: Path = HUNTER_PETS_FILE) -> set[int]:
     return {f["icon"] for f in doc["families"] if f["icon"]} | {a["icon"] for a in doc["abilities"] if a["icon"]}
 
 
+def legacy_icon_files(path: Path = LEGACY_FILE) -> set[int]:
+    """The Legacy planner's talent, point, challenge and reward icons: file ids already (``scripts.wow_legacy.build``)."""
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    files = {doc["currency"]["icon"]} | {r["icon"] for r in doc["rank"]["rewards"]}
+    files |= {n["icon"] for t in doc["trees"] for n in t["nodes"]}
+    files |= {c["icon"] for cat in doc["categories"] for g in cat["groups"] for c in g["challenges"]}
+    return {f for f in files if f}
+
+
 def wanted_ids() -> IconIds:
     ids = IconIds(
         items=gathering_item_ids() | cooking_item_ids() | gear_item_ids() | dungeon_quest_item_ids() | quest_database_item_ids() | rare_drop_item_ids()
         | library_item_ids(),
-        files=talent_icon_files() | downrank_icon_files() | spellbook_icon_files() | race_icon_files() | class_icon_files() | hunter_pet_icon_files(),
+        files=talent_icon_files() | downrank_icon_files() | spellbook_icon_files() | race_icon_files() | class_icon_files() | hunter_pet_icon_files()
+        | legacy_icon_files(),
     )
     for path in sorted(CRAFTING_DIR.glob("*.json")):
         ids.update(crafting_file_ids(json.loads(path.read_text(encoding="utf-8"))))

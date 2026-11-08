@@ -81,6 +81,12 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "Every collectible library book in the game files, the reward for turning them in and a list of the ones you've found.",
       },
       {
+        path: "/wow-forever/legacy",
+        title: "Legacy planner",
+        iconName: "Award",
+        description: "Plan where a character spends its 16 Legacy points, tick off the challenges that earn them and see the account rank rewards.",
+      },
+      {
         path: "/wow-forever/professions",
         title: "Professions",
         iconName: "Hammer",
