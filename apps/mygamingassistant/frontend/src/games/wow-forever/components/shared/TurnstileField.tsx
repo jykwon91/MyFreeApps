@@ -8,16 +8,18 @@ interface TurnstileFieldProps {
   onExpire: () => void;
   /** Get a new token after the last one expired. */
   onRetry: () => void;
+  /** Cloudflare action the server checks the token against (e.g. `wow-chat`). */
+  action?: string;
 }
 
 /**
  * Cloudflare's quick human check for a public call that spends API money (the
  * screenshot reader, "Suggest a feature"). Renders nothing without a site key.
  */
-export default function TurnstileField({ resetKey, expired, onVerify, onExpire, onRetry }: TurnstileFieldProps) {
+export default function TurnstileField({ resetKey, expired, onVerify, onExpire, onRetry, action }: TurnstileFieldProps) {
   return (
     <div className="space-y-1">
-      <TurnstileWidget key={resetKey} onVerify={onVerify} onExpire={onExpire} />
+      <TurnstileWidget key={resetKey} onVerify={onVerify} onExpire={onExpire} action={action} />
       {expired ? (
         <button
           type="button"

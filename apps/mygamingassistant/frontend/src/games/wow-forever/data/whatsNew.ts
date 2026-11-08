@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-08",
+    title: "Ask",
+    summary:
+      "Ask where something is in plain words — “where's the closest warlock trainer if I'm in Desolace?” — and get the answer from this site's own data on a small map, with a route there on the World Map.",
+    to: "/wow-forever/ask",
+  },
+  {
+    date: "2026-11-08",
     title: "Item browser",
     summary:
       "Browse every item the Forever game files have shown so far: search by name, filter by quality, slot, armor or weapon type and level, see what Forever changed or added, and open any item for its tooltip and how to get it.",

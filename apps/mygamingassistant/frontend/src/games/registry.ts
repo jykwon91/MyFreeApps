@@ -45,6 +45,12 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "The nearest class trainer, flight master, inn or bank for your faction — with step-by-step directions.",
       },
       {
+        path: "/wow-forever/ask",
+        title: "Ask",
+        iconName: "MessageCircle",
+        description: "Ask where something is — the nearest trainer, a town, an item or a dungeon — and get it on a map with a route there.",
+      },
+      {
         path: "/wow-forever/dungeons",
         title: "Dungeons",
         iconName: "Castle",

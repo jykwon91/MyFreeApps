@@ -1,4 +1,5 @@
 import { AlertBox } from "@platform/ui";
+import HubAskBox from "@/games/wow-forever/components/hub/HubAskBox";
 import WowFeatureTile from "@/games/wow-forever/components/hub/WowFeatureTile";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import WowServerStatusSection from "@/games/wow-forever/components/serverStatus/WowServerStatusSection";
@@ -23,6 +24,7 @@ export default function WowForeverLanding() {
         />
         <DataRefreshLine />
       </div>
+      <HubAskBox />
       <WowServerStatusSection />
       <WhatsNewSection entries={WHATS_NEW} />
       <AlertBox variant="info">
