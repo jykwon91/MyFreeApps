@@ -31,6 +31,7 @@ export const COOKING_ROUTE: readonly RouteStep[] = [
     skill: "50",
     name: "Learn Journeyman Cook",
     detail: "Any cooking trainer, 5s. Raises your cap to 150.",
+    teaches: { profession: "cooking", rank: "Journeyman" },
     confidence: "confirmed",
   },
   {
@@ -102,6 +103,7 @@ export const COOKING_ROUTE: readonly RouteStep[] = [
     name: "Artisan quest: Clamlette Surprise",
     detail:
       "From Dirge Quikcleave in the Gadgetzan inn, Tanaris. Needs level 35. Bring 12 Giant Egg, 10 Zesty Clam Meat and 20 Alterac Swiss. Raises your cap to 300.",
+    npc: { name: "Dirge Quikcleave", npcId: 8125, where: "Gadgetzan, Tanaris", x: 52.6, y: 28.1 },
     confidence: "unconfirmed",
   },
   {

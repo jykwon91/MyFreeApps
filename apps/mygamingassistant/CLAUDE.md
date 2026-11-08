@@ -153,6 +153,16 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   book in `recipeSources.json` `books` (`RANK_BOOKS` in `wow_food/build.py`:
   Expert Cookbook, Expert Fishing). A recipe with no Classic vendor is never
   given one.
+  **Rank trainers** (Journeyman / Expert / Artisan): a crafting rank-up and the
+  Cooking / Fishing milestones (`teaches`) list EVERY trainer who teaches the rank
+  to your faction (neutral too), capitals first, the World Map zone you saved
+  first (`RankTrainerList`, `data/professions/rankTrainers.ts`), each with a map
+  link and a Classic data badge. **GENERATED** by
+  `python -m scripts.wow_world_map.rank_trainers` (cmangos `npc_trainer` rank
+  spells + the committed services/zones; in `wow_refresh`) into
+  `data/worldMap/classic/classicRankTrainers.json`. A milestone's `npc` names the
+  book seller / quest giver (`MilestoneWhere`). Tests:
+  `tests/test_wow_rank_trainers_generator.py`, `src/__tests__/wowRankTrainers.test.ts`.
   Herb / ore nodes carry their gathering skill (Forever `Lock` table) in the
   `objectSpots` rows. Each guide has trainers, rank-ups (Artisan Enchanting = Annora in Uldaman), a
   hand-picked route to 300 (`data/professions/crafting/*Route.ts`, joined to

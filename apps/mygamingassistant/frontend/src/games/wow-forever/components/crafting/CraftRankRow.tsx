@@ -8,19 +8,19 @@ interface CraftRankRowProps {
   rank: CraftingRank;
   faction: PlayerFaction;
   professionLabel: string;
+  zoneId: number | null;
 }
 
 // A book is learned and a quest is earned; every other rank is trained.
 const RANK_VERB: Readonly<Record<RankTrainers["kind"], string>> = {
-  any: "train",
-  named: "train",
+  list: "train",
   dungeon: "train",
   book: "learn",
   quest: "earn",
 };
 
 /** "At 125: train Expert (needs level 20)" — a full-width break in the route. */
-export default function CraftRankRow({ rank, faction, professionLabel }: CraftRankRowProps) {
+export default function CraftRankRow({ rank, faction, professionLabel, zoneId }: CraftRankRowProps) {
   const needs = rank.level === undefined ? "" : `needs level ${rank.level}, `;
   return (
     <li className="p-3 bg-muted/40 space-y-1">
@@ -31,7 +31,7 @@ export default function CraftRankRow({ rank, faction, professionLabel }: CraftRa
         </span>{" "}
         {rank.confidence === "unconfirmed" ? <ProvenanceBadge provenance={PROVENANCE.unconfirmed} /> : null}
       </p>
-      <CraftRankTrainer rank={rank} faction={faction} professionLabel={professionLabel} />
+      <CraftRankTrainer rank={rank} faction={faction} professionLabel={professionLabel} zoneId={zoneId} />
       {rank.headsUp ? (
         <p className="text-sm">
           <span className="font-medium">Heads up: </span>

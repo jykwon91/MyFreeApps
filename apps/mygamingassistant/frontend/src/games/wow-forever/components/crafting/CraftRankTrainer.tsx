@@ -1,5 +1,5 @@
 import { AlertTriangle } from "lucide-react";
-import TrainerMapLink from "@/games/wow-forever/components/professions/TrainerMapLink";
+import RankTrainerList from "@/games/wow-forever/components/professions/RankTrainerList";
 import CraftMapLink from "@/games/wow-forever/components/crafting/CraftMapLink";
 import CraftRankErrand from "@/games/wow-forever/components/crafting/CraftRankErrand";
 import type { CraftingRank } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
@@ -9,12 +9,15 @@ interface CraftRankTrainerProps {
   rank: CraftingRank;
   faction: PlayerFaction;
   professionLabel: string;
+  zoneId: number | null;
 }
 
-/** Who trains a rank: any trainer, a named one for your faction, one inside a dungeon, a book vendor or a quest giver. */
-export default function CraftRankTrainer({ rank, faction, professionLabel }: CraftRankTrainerProps) {
+/** Who trains a rank: every trainer for your faction, one inside a dungeon, a book vendor or a quest giver. */
+export default function CraftRankTrainer({ rank, faction, professionLabel, zoneId }: CraftRankTrainerProps) {
   const t = rank.trainers;
-  if (t.kind === "any") return <p className="text-sm">Any {professionLabel} trainer.</p>;
+  if (t.kind === "list") {
+    return <RankTrainerList label={`${rank.name} ${professionLabel}`} trainers={t.trainers[faction]} zoneId={zoneId} />;
+  }
   if (t.kind === "book") {
     return <CraftRankErrand action={`Buy ${t.book} (${t.price}) from`} npc={t.vendors[faction]} trip={t.trip[faction]} />;
   }
@@ -26,17 +29,6 @@ export default function CraftRankTrainer({ rank, faction, professionLabel }: Cra
         detail={t.detail[faction]}
         trip={t.trip[faction]}
       />
-    );
-  }
-  if (t.kind === "named") {
-    const npc = t.trainers[faction];
-    return (
-      <div className="flex flex-wrap items-center gap-x-3">
-        <p className="text-sm">
-          <span className="font-medium">{npc.name}</span> <span className="text-muted-foreground">({npc.where})</span>
-        </p>
-        <TrainerMapLink npc={npc} />
-      </div>
     );
   }
   return (

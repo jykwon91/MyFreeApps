@@ -57,7 +57,7 @@ export default function CraftRouteList({
   entries.forEach((entry, i) => {
     while (pending.length && pending[0].skill < entry.step.to) {
       const rank = pending.shift() as CraftingRank;
-      rows.push(<CraftRankRow key={`rank-${rank.skill}`} rank={rank} faction={faction} professionLabel={professionLabel} />);
+      rows.push(<CraftRankRow key={`rank-${rank.skill}`} rank={rank} faction={faction} professionLabel={professionLabel} zoneId={place.zoneId} />);
     }
     if (fork && !forkShown && fork.skill < entry.step.to) {
       forkShown = true;

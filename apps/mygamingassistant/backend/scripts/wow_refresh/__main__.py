@@ -74,6 +74,8 @@ def generators(*, art: bool, hotfix_cache: Path, quest_cache: Path, creature_cac
         world_map.append("--no-art")
     return [
         world_map,
+        # Reads the World Map's committed services and zones: who trains each profession rank.
+        ["scripts.wow_world_map.rank_trainers"],
         # Reads the World Map's zones.json. Its images are published last, below.
         ["scripts.wow_satellite.build"],
         ["scripts.wow_food.build"],

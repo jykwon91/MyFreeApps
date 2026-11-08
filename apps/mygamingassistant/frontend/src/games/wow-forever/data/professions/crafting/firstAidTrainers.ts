@@ -1,3 +1,4 @@
+import { listedRankTrainers } from "@/games/wow-forever/data/professions/rankTrainers";
 import type { TrainerNpc } from "@/games/wow-forever/data/professions/professionTypes";
 import type { CraftingRank, CraftingTrainers } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
 
@@ -44,7 +45,14 @@ const DOCTOR_GREGORY: TrainerNpc = { name: "Doctor Gregory Victor", npcId: 12920
 
 /** Rank-ups on the way to 300: a trainer at 50, a book at 125, a quest at 225. */
 export const FIRST_AID_RANKS: readonly CraftingRank[] = [
-  { skill: 50, name: "Journeyman", level: 10, cap: 150, trainers: { kind: "any" }, confidence: "unconfirmed" },
+  {
+    skill: 50,
+    name: "Journeyman",
+    level: 10,
+    cap: 150,
+    trainers: { kind: "list", trainers: listedRankTrainers("firstaid", "Journeyman") },
+    confidence: "unconfirmed",
+  },
   {
     skill: 125,
     name: "Expert",
