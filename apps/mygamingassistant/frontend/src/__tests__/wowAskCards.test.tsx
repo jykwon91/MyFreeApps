@@ -12,6 +12,7 @@ import { ASK_TOOL } from "@/games/wow-forever/data/ask/askTools";
 import { runAskTool } from "@/games/wow-forever/lib/ask/runAskTool";
 import { decodeClientItems } from "@/games/wow-forever/lib/decodeClientItems";
 import type { AskNpcCard } from "@/games/wow-forever/types/ask/askNpcCard";
+import { FACTION } from "@/games/wow-forever/types/worldMap";
 import { FIXTURE_FILE } from "./wowClientItemsFixture";
 import { askToolData } from "./wowAskWorld";
 
@@ -22,6 +23,25 @@ async function desolaceCard(): Promise<AskNpcCard> {
   );
   if (out.card?.kind !== ASK_CARD.npcs) throw new Error("no card");
   return out.card;
+}
+
+async function ironforgeCard(): Promise<AskNpcCard> {
+  const out = await runAskTool(
+    { type: "tool_use", id: "t", name: ASK_TOOL.searchNpcs, input: { query: "warlock trainer", from_zone: "Ironforge" } },
+    askToolData({ faction: FACTION.alliance }),
+  );
+  if (out.card?.kind !== ASK_CARD.npcs) throw new Error("no card");
+  return out.card;
+}
+
+/** Rows the mini map shows: single pins plus every member of a "×N" pin. */
+function pinnedRows(container: HTMLElement): number {
+  const singles = container.querySelectorAll("[data-testid=ask-map-marker]").length;
+  const grouped = [...container.querySelectorAll("[data-testid=ask-map-cluster]")].reduce(
+    (sum, el) => sum + Number(el.textContent?.replace("×", "")),
+    0,
+  );
+  return singles + grouped;
 }
 
 function inRouter(node: React.ReactNode) {
@@ -53,8 +73,28 @@ describe("NpcResultsCard", () => {
     const shownZone = card.rows[0].zoneId;
     const { container } = inRouter(<NpcResultsCard card={{ ...card, origin: { ...card.origin!, zoneId: shownZone } }} />);
     const onZone = card.rows.filter((r) => r.zoneId === shownZone).length;
-    expect(container.querySelectorAll("[data-testid=ask-map-marker]")).toHaveLength(onZone);
+    expect(pinnedRows(container)).toBe(onZone);
     expect(container.querySelector("[data-testid=ask-map-you]")).not.toBeNull();
+  });
+
+  it("every result is on the map: crowded trainers are one pin with a count, never hidden", async () => {
+    const card = await ironforgeCard();
+    const { container } = inRouter(<NpcResultsCard card={card} />);
+    const onZone = card.rows.filter((r) => r.zoneId === card.rows[0].zoneId).length;
+    expect(onZone).toBeGreaterThan(1);
+    expect(pinnedRows(container)).toBe(onZone);
+    const cluster = container.querySelector("[data-testid=ask-map-cluster]");
+    expect(cluster?.textContent).toMatch(/^×\d+$/);
+  });
+
+  it("picking a row in a crowd pulls its own highlighted pin out", async () => {
+    const card = await ironforgeCard();
+    const { container } = inRouter(<NpcResultsCard card={card} />);
+    const before = pinnedRows(container);
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(card.rows[1].name) }));
+    const selected = container.querySelector("[data-testid=ask-map-marker].bg-red-600");
+    expect(selected?.textContent).toBe(String(card.rows[1].n));
+    expect(pinnedRows(container)).toBe(before);
   });
 });
 

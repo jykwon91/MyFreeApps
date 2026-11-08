@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import { askMapPins, pinTitle } from "@/games/wow-forever/lib/ask/askMapPins";
 import { ASK_COPY } from "@/games/wow-forever/data/ask/askCopy";
 import { MAP_H, MAP_W } from "@/games/wow-forever/data/worldMap/mapViewer";
 import type { AskNpcRow } from "@/games/wow-forever/types/ask/askNpcRow";
@@ -45,20 +46,33 @@ export default function AskMiniMap({ zoneId, zoneName, rows, selectedId, origin 
           {ASK_COPY.youMarker}
         </span>
       ) : null}
-      {rows.map((row) => (
-        <span
-          key={row.poiId}
-          aria-hidden
-          data-testid="ask-map-marker"
-          className={clsx(
-            "absolute flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-xs font-bold ring-2 ring-white",
-            row.poiId === selectedId ? "z-10 scale-125 bg-red-600 text-white" : "bg-amber-400 text-black",
-          )}
-          style={spot(row.x, row.y)}
-        >
-          {row.n}
-        </span>
-      ))}
+      {askMapPins(rows, selectedId).map((pin) =>
+        pin.rows.length > 1 ? (
+          <span
+            key={pin.id}
+            aria-hidden
+            data-testid="ask-map-cluster"
+            title={pinTitle(pin)}
+            className="absolute flex h-6 min-w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-orange-500 px-1 text-xs font-bold text-white ring-2 ring-white"
+            style={spot(pin.x, pin.y)}
+          >
+            ×{pin.rows.length}
+          </span>
+        ) : (
+          <span
+            key={pin.id}
+            aria-hidden
+            data-testid="ask-map-marker"
+            className={clsx(
+              "absolute flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-xs font-bold ring-2 ring-white",
+              pin.id === selectedId ? "z-10 scale-125 bg-red-600 text-white" : "bg-amber-400 text-black",
+            )}
+            style={spot(pin.x, pin.y)}
+          >
+            {pin.rows[0].n}
+          </span>
+        ),
+      )}
     </figure>
   );
 }

@@ -96,7 +96,8 @@ test("ask → the tool runs on real data → pick a trainer → Route there → 
   await expect(card).toBeVisible();
   await expect(page.getByTestId("ask-answer")).toContainText(ANSWER);
   await expect(card.getByText("Nearest to Desolace")).toBeVisible();
-  await expect(card.getByTestId("ask-map-marker").first()).toBeVisible();
+  // Trainers standing together are one "×N" pin, so a pin is either kind.
+  await expect(card.locator("[data-testid=ask-map-marker], [data-testid=ask-map-cluster]").first()).toBeVisible();
   // The step lines go once the answer is in.
   await expect(page.getByText("Searching the map for “warlock trainer”…")).toHaveCount(0);
 
@@ -121,6 +122,8 @@ test("ask → the tool runs on real data → pick a trainer → Route there → 
   await expect(card.getByRole("link", { name: "Route there" })).toHaveCount(0);
   const first = sent.results[0].name;
   await card.getByRole("button", { name: new RegExp(first) }).click();
+  // The picked row's own pin stands out, even out of a crowd.
+  await expect(card.locator("[data-testid=ask-map-marker].bg-red-600")).toHaveText("1");
   const route = card.getByRole("link", { name: "Route there" });
   const href = await route.getAttribute("href");
   expect(href).toMatch(/^\/wow-forever\/map\?to=npc%3A[^&]+&from=pt%3A1443%2C50\.0%2C50\.0&dir=1$/);
