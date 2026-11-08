@@ -109,7 +109,7 @@ export async function searchNpcsTool(input: AskNpcSearchInput, data: AskToolData
     other_faction_only: otherFaction,
   };
   const card: AskToolOutcome["card"] = rows.length
-    ? { kind: ASK_CARD.npcs, query: input.query, origin, rows, total: view.results.length, otherFaction }
+    ? { kind: ASK_CARD.npcs, query: input.query, origin, faction, rows, total: view.results.length, otherFaction }
     : { kind: ASK_CARD.noResults, tool: ASK_TOOL.searchNpcs, query: input.query };
   return { content: JSON.stringify(result), isError: false, card };
 }

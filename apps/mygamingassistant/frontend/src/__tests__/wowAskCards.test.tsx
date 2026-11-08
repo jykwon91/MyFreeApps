@@ -62,7 +62,7 @@ describe("NpcResultsCard", () => {
     fireEvent.click(screen.getByRole("button", { name: new RegExp(second.name) }));
     expect(screen.getByRole("button", { name: new RegExp(second.name) }).getAttribute("aria-pressed")).toBe("true");
     const href = screen.getByRole("link", { name: "Route there" }).getAttribute("href");
-    expect(href).toBe(`/wow-forever/map?to=npc%3A${second.poiId}&from=pt%3A1443%2C50.0%2C50.0&dir=1`);
+    expect(href).toBe(`/wow-forever/map?faction=H&to=npc%3A${second.poiId}&from=pt%3A1443%2C50.0%2C50.0&dir=1`);
 
     fireEvent.click(screen.getByRole("button", { name: new RegExp(second.name) }));
     expect(screen.queryByRole("link", { name: "Route there" })).toBeNull();
@@ -95,6 +95,18 @@ describe("NpcResultsCard", () => {
     const selected = container.querySelector("[data-testid=ask-map-marker].bg-red-600");
     expect(selected?.textContent).toBe(String(card.rows[1].n));
     expect(pinnedRows(container)).toBe(before);
+  });
+});
+
+describe("AskMiniMap crowd", () => {
+  it("keeps the count beside the picked pin when they share a spot", async () => {
+    const card = await ironforgeCard();
+    const { container } = inRouter(<NpcResultsCard card={card} />);
+    expect(container.querySelector("[data-testid=ask-map-cluster]")?.className).not.toMatch(/translate-x-2/);
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(card.rows[0].name) }));
+    const cluster = container.querySelector("[data-testid=ask-map-cluster]");
+    expect(cluster?.textContent).toMatch(/^×\d+$/);
+    expect(cluster?.className).toMatch(/translate-x-2/);
   });
 });
 

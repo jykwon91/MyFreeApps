@@ -53,7 +53,10 @@ export default function AskMiniMap({ zoneId, zoneName, rows, selectedId, origin 
             aria-hidden
             data-testid="ask-map-cluster"
             title={pinTitle(pin)}
-            className="absolute flex h-6 min-w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-orange-500 px-1 text-xs font-bold text-white ring-2 ring-white"
+            className={clsx(
+              "absolute z-20 flex h-6 min-w-6 items-center justify-center rounded-full bg-orange-500 px-1 text-xs font-bold text-white ring-2 ring-white",
+              pin.nudged ? "translate-x-2 translate-y-2" : "-translate-x-1/2 -translate-y-1/2",
+            )}
             style={spot(pin.x, pin.y)}
           >
             ×{pin.rows.length}
