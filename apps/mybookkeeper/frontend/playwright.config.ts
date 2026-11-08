@@ -14,7 +14,12 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : 2,
+  // Two everywhere: the full real-stack suite (760+ specs) passes at two
+  // locally, and one worker takes over 45 minutes on a GitHub runner.
+  workers: 2,
+  // Ends a CI run cleanly, with its HTML report, before the workflow step's
+  // 55-minute timeout kills it.
+  globalTimeout: process.env.CI ? 50 * 60_000 : 0,
   reporter: "html",
   use: {
     baseURL: frontendURL,

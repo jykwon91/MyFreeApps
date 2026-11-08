@@ -20,7 +20,7 @@ jobs:
   e2e:
     name: e2e-real-stack / mybookkeeper
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
     services:
       postgres:
         image: postgres:16-alpine
@@ -128,20 +128,23 @@ jobs:
 
       - name: Run real-stack E2E tests
         working-directory: apps/mybookkeeper/frontend
+        # Shorter than the job timeout, so a slow run fails this step instead
+        # of cancelling the job, and the report and log still upload.
+        timeout-minutes: 55
         run: npx playwright test
 
       - name: Upload Playwright report
-        if: ${{ !cancelled() }}
+        if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: playwright-report-real-stack
           path: |
             apps/mybookkeeper/frontend/playwright-report/
-            apps/mybookkeeper/frontend/test-results/
+            apps/mybookkeeper/frontend/e2e/test-results/
           retention-days: 14
 
       - name: Upload API log
-        if: ${{ !cancelled() }}
+        if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: api-log-real-stack
