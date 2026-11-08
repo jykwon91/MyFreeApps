@@ -46,6 +46,13 @@ NAMES_AT_BIT = 29
 NAME_LENGTH_BITS = 11
 NAME_SLOTS = 8
 CLASSIFICATION_AFTER_NAMES = 17
+# Offsets after the last name: the type flags (bit 0 = a hunter can tame it), the creature
+# type byte (1 = beast) and the family id (u16) — checked against cmangos for every creature
+# the cache shares with it.
+TYPE_FLAGS_AFTER_NAMES = 0
+TYPE_AFTER_NAMES = 12
+FAMILY_AFTER_NAMES = 13
+TAMEABLE_FLAG = 1
 
 CLASSIFICATION_NORMAL = 0
 CLASSIFICATION_ELITE = 1
@@ -63,6 +70,10 @@ class CachedCreature:
     creature_id: int
     name: str
     classification: int
+    # Beast fields, read from the same record (see ``parse_creature``).
+    creature_type: int = 0
+    family: int = 0
+    tameable: bool = False
 
 
 @dataclass(frozen=True)
@@ -87,7 +98,13 @@ def parse_creature(creature_id: int, body: bytes) -> CachedCreature:
     if lengths[0] == 0 or at >= len(body):
         raise CreatureCacheError(f"creature {creature_id}: record has no name or is cut short")
     name = body[BIT_HEADER_BYTES:BIT_HEADER_BYTES + lengths[0] - 1].decode("utf-8")
-    return CachedCreature(creature_id, name, body[at])
+    family_at = names_end + FAMILY_AFTER_NAMES
+    return CachedCreature(
+        creature_id, name, body[at],
+        creature_type=body[names_end + TYPE_AFTER_NAMES],
+        family=int.from_bytes(body[family_at:family_at + 2], "little"),
+        tameable=bool(body[names_end + TYPE_FLAGS_AFTER_NAMES] & TAMEABLE_FLAG),
+    )
 
 
 def parse_creature_cache(data: bytes) -> CreatureCache:

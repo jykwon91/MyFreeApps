@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-08",
+    title: "Hunter pets",
+    summary:
+      "See every pet family's damage, armor and health, every pet ability rank with the beasts that teach it, and search all tamable beasts by level, zone and attack speed.",
+    to: "/wow-forever/hunter-pets",
+  },
+  {
+    date: "2026-11-08",
     title: "Quests",
     summary:
       "Browse every quest the WoW Forever client knows: search by name, filter by zone, faction or level, and open any quest to see who gives it, what to do, what you get and which quests come before or after it.",
