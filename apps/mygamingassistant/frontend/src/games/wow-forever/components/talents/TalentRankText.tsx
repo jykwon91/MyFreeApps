@@ -1,5 +1,5 @@
 import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
-import { RANK_NOT_IN_FILES } from "@/games/wow-forever/lib/talents/talentRankLines";
+import TalentRankBody from "@/games/wow-forever/components/talents/TalentRankBody";
 import type { TalentRankLine } from "@/games/wow-forever/types/talents/talentRankLine";
 
 interface TalentRankTextProps {
@@ -18,15 +18,7 @@ export default function TalentRankText({ lines, badges }: TalentRankTextProps) {
       {lines.map((line) => (
         <div key={line.rank} className="space-y-1" data-testid="talent-rank-line">
           <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{line.label}</dt>
-          <dd className="text-sm">
-            {line.text ?? <span className="italic text-muted-foreground">{RANK_NOT_IN_FILES}</span>}
-            {badges && line.text ? (
-              <>
-                {" "}
-                <ProvenanceBadge provenance="client" />
-              </>
-            ) : null}
-          </dd>
+          <TalentRankBody line={line} badges={badges} />
           {line.classicText ? (
             <dd className="rounded-md border-l-2 border-amber-400 bg-muted/30 px-2 py-1 text-xs" data-testid="talent-classic-text">
               <span className="font-semibold">Changed in Forever. Classic: </span>

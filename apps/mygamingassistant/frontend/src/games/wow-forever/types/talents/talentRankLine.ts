@@ -8,4 +8,8 @@ export interface TalentRankLine {
   text: string | null;
   /** Classic's text when Forever changed this rank; null otherwise. */
   classicText: string | null;
+  /** Classic's text shown in place of a rank that isn't in the game files yet; null otherwise. */
+  fallbackText: string | null;
+  /** Forever changed other ranks of this talent, so the Classic fallback may be wrong. */
+  changedElsewhere: boolean;
 }

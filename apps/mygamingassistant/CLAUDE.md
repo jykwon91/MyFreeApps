@@ -548,12 +548,17 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Spell*, hotfixes layered like the item build): trees, positions,
   prerequisites, icons and each rank's text with `$s1`-style tokens filled
   from SpellEffect (`scripts/wow_food/tooltip.py`). A sentence with a token we
-  can't fill is dropped; a rank the client lacks is `null` ("This rank isn't in
-  the game files yet."); a talent with no rank in the client takes its Classic
-  Era name (`classicName`, Classic data badge). `data/talents/classic/<class>.json`
-  (cmangos `spell_template`, GPL — keep LICENSE + README) holds the Classic
-  text of ranks whose Forever text differs — shown as "Changed in Forever.
-  Classic: …". Each class is its own lazy chunk (`data/talents/talentFiles.ts`,
+  can't fill is dropped; a rank the client lacks is `null`; a talent with no
+  rank in the client takes its Classic Era name (`classicName`, Classic data
+  badge). `data/talents/classic/<class>.json` (Classic Era wording + cmangos
+  `spell_template` numbers, GPL — keep LICENSE + README) holds `talents`, the
+  Classic text of ranks whose Forever text differs ("Changed in Forever.
+  Classic: …"), and `fallback`, Classic's text for each `null` rank — shown in
+  its place with a Classic data badge (`TalentRankBody`), plus "Forever
+  changed other ranks of this talent; this rank's Forever value isn't known
+  yet." when the talent has a changed rank. Never work a rank out from its
+  neighbours; a rank neither client has reads "This rank isn't in the game
+  files yet.". Each class is its own lazy chunk (`data/talents/talentFiles.ts`,
   `lib/talents/loadTalentClass.ts`). Talent and tree icon file ids go into
   `wowIcons.json` `files` (publish them with `wow_icons.publish`).
   Tests: `tests/test_wow_talents_generator.py`,

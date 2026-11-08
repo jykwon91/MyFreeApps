@@ -16,10 +16,10 @@ Writes, per class:
   talent's place, icon (``SpellMisc`` file data id), prerequisites and the
   evaluated text of every rank the client has (``null`` for a rank the server
   hasn't sent any client yet).
-* ``data/talents/classic/<class>.json`` — the talents whose text differs from
-  Classic, with Classic's text per changed rank: the Classic Era client's
-  wording filled with cmangos classic-db's 1.12 numbers (GPL-3.0, LICENSE +
-  README next to it).
+* ``data/talents/classic/<class>.json`` — Classic's text, the Classic Era
+  client's wording filled with cmangos classic-db's 1.12 numbers (GPL-3.0,
+  LICENSE + README next to it): ``talents`` per rank whose Forever text
+  differs, ``fallback`` per rank the Forever client doesn't have yet.
 
 Game data © Blizzard Entertainment. Never hand-edit the output.
 """
@@ -32,7 +32,7 @@ from scripts.wow_food.build import CLASSIC_LICENSE, WOW_DATA_DIR
 from scripts.wow_gear.build import write_json
 from scripts.wow_items.forever_items import hotfix_cache_path, load_forever_tables
 from scripts.wow_talents.books import classic_book, forever_book, forever_icons
-from scripts.wow_talents.talents import Fallback, Gaps, build_trees, classic_changes, tree_doc
+from scripts.wow_talents.talents import Fallback, Gaps, build_trees, classic_changes, classic_fallback, tree_doc
 from scripts.wow_world_map.sources import (
     CMANGOS_COMMIT,
     WAGO_BUILD,
@@ -59,10 +59,16 @@ FOREVER_TABLES = (
 
 CLASSIC_README = """# Talent calculator — Classic talent text
 
-Each file lists, for one class, the talents whose WoW Forever tooltip differs
-from Classic's, with Classic's text for each rank that changed (`null` for a
-rank that didn't, or that can't be compared because the Forever client
-doesn't have it yet). The calculator shows it as "Changed in Forever".
+Each file holds, for one class, Classic's talent text per rank (`null` where
+it doesn't apply):
+
+* `talents` — the talents whose WoW Forever tooltip differs from Classic's,
+  with Classic's text for each rank that changed. The calculator shows it as
+  "Changed in Forever".
+* `fallback` — Classic's text for each rank the Forever client doesn't have
+  yet. The calculator shows it in that rank's place with a "Classic data"
+  badge (and, on a talent Forever changed, a note that this rank's Forever
+  value isn't known yet).
 
 Classic's text is the Classic Era client's own tooltip wording (wago.tools,
 `{era_branch}` {era_build}: `Spell`, `SpellName`, `SpellDuration`,
@@ -107,6 +113,7 @@ def main() -> None:
     )
 
     changed = 0
+    filled = 0
     for class_id, trees in classes.items():
         write_json(TALENTS_DIR / f"{class_id}.json", {
             "source": forever.source(),
@@ -116,10 +123,13 @@ def main() -> None:
         })
         changes = classic_changes(trees, classic, gaps)
         changed += len(changes)
+        fallback_texts = classic_fallback(trees, classic)
+        filled += sum(1 for texts in fallback_texts.values() for t in texts if t)
         write_json(CLASSIC_DIR / f"{class_id}.json", {
             "source": classic_source,
             "classId": class_id,
             "talents": {str(k): v for k, v in sorted(changes.items())},
+            "fallback": {str(k): v for k, v in sorted(fallback_texts.items())},
         })
     shutil.copyfile(CLASSIC_LICENSE, CLASSIC_DIR / "LICENSE")
     (CLASSIC_DIR / "README.md").write_text(
@@ -130,7 +140,7 @@ def main() -> None:
     talents = sum(len(t.talents) for trees in classes.values() for t in trees)
     ranks = sum(len(x.ranks) for trees in classes.values() for t in trees for x in t.talents)
     print(f"{len(classes)} classes, {talents} talents, {ranks} ranks; {gaps.missing_ranks} ranks not in the client yet")
-    print(f"{changed} talents changed from Classic")
+    print(f"{changed} talents changed from Classic; {filled} missing ranks shown from Classic")
     if gaps.nameless:
         print(f"talents with no rank in the client (Classic Era name): {sorted(gaps.nameless)}")
     if gaps.unresolved:

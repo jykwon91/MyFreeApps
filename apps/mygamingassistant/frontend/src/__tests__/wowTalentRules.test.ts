@@ -155,4 +155,27 @@ describe("cells, messages and keys", () => {
     expect(isChangedInForever(talent)).toBe(false);
     expect(isChangedInForever({ ...talent, classicRanks: [null, "Old text."] })).toBe(true);
   });
+
+  it("shows Classic's text only in place of a rank Forever doesn't have", () => {
+    const talent = {
+      ...TREES[0].talents[2],
+      ranks: ["Forever rank 1.", null, null],
+      classicFallback: ["Classic rank 1.", "Classic rank 2.", null],
+    };
+    const [have, next] = talentRankLines(talent, 1);
+    expect(have).toMatchObject({ text: "Forever rank 1.", fallbackText: null, changedElsewhere: false });
+    expect(next).toMatchObject({ text: null, fallbackText: "Classic rank 2.", changedElsewhere: false });
+    expect(talentRankLines(talent, 3)[0]).toMatchObject({ text: null, fallbackText: null });
+  });
+
+  it("flags a Classic fallback rank of a talent Forever changed elsewhere", () => {
+    const talent = {
+      ...TREES[0].talents[2],
+      ranks: ["Forever rank 1.", null, null],
+      classicRanks: ["Classic rank 1.", null, null],
+      classicFallback: [null, "Classic rank 2.", "Classic rank 3."],
+    };
+    expect(talentRankLines(talent, 0)[0].changedElsewhere).toBe(false);
+    expect(talentRankLines(talent, 1)[1]).toMatchObject({ fallbackText: "Classic rank 2.", changedElsewhere: true });
+  });
 });

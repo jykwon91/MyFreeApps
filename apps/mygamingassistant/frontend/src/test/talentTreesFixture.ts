@@ -13,6 +13,7 @@ function talent(id: number, tier: number, column: number, ranks: number, prereqs
     prereqs,
     classicName: false,
     classicRanks: null,
+    classicFallback: null,
   };
 }
 

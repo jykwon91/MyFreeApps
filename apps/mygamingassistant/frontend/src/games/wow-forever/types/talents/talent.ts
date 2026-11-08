@@ -15,4 +15,6 @@ export interface Talent {
   classicName: boolean;
   /** Classic's text per rank where it differs from Forever's; null when nothing changed. */
   classicRanks: readonly (string | null)[] | null;
+  /** Classic's text for ranks not in the Forever client yet, shown badged as Classic data; null when none. */
+  classicFallback: readonly (string | null)[] | null;
 }

@@ -1,9 +1,15 @@
 # Talent calculator — Classic talent text
 
-Each file lists, for one class, the talents whose WoW Forever tooltip differs
-from Classic's, with Classic's text for each rank that changed (`null` for a
-rank that didn't, or that can't be compared because the Forever client
-doesn't have it yet). The calculator shows it as "Changed in Forever".
+Each file holds, for one class, Classic's talent text per rank (`null` where
+it doesn't apply):
+
+* `talents` — the talents whose WoW Forever tooltip differs from Classic's,
+  with Classic's text for each rank that changed. The calculator shows it as
+  "Changed in Forever".
+* `fallback` — Classic's text for each rank the Forever client doesn't have
+  yet. The calculator shows it in that rank's place with a "Classic data"
+  badge (and, on a talent Forever changed, a note that this rank's Forever
+  value isn't known yet).
 
 Classic's text is the Classic Era client's own tooltip wording (wago.tools,
 `wow_classic_era` 1.15.9.70576: `Spell`, `SpellName`, `SpellDuration`,

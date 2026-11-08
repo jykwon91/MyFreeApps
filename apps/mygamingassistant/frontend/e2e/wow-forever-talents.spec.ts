@@ -67,10 +67,16 @@ test("pick a class, spend points, open the next row and take a point back", asyn
   await cell(page, ARCANE_FOCUS).click({ button: "right" });
   await expect(cell(page, ARCANE_FOCUS)).toHaveAttribute("data-rank", "4");
 
-  // Ranks the client doesn't have yet say so; − / + work without right-click.
+  // A rank the client doesn't have yet shows Classic's text, tagged Classic data, with a note that
+  // Forever changed this talent's other ranks; − / + work without right-click.
   await expect(details.getByRole("heading", { name: /Arcane Focus/ })).toBeVisible();
   await expect(details.getByTestId("talent-details-rank")).toHaveText("rank 4/5");
-  await expect(details.getByTestId("talent-rank-line").first()).toContainText("This rank isn't in the game files yet.");
+  const rank4 = details.getByTestId("talent-rank-line").first();
+  await expect(rank4.getByTestId("talent-fallback-text")).toContainText("resist your Arcane spells by 8%");
+  await expect(rank4.getByTestId("talent-fallback-text").getByTestId("provenance-badge")).toHaveAttribute("data-provenance", "classic");
+  await expect(rank4.getByTestId("talent-changed-elsewhere")).toHaveText(
+    "Forever changed other ranks of this talent; this rank's Forever value isn't known yet.",
+  );
   await details.getByRole("button", { name: "Add a point to Arcane Focus" }).click();
   await expect(cell(page, ARCANE_FOCUS)).toHaveAttribute("data-rank", "5");
 

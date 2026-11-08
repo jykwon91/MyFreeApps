@@ -19,6 +19,7 @@ from scripts.wow_talents.talents import (
     Gaps,
     build_trees,
     classic_changes,
+    classic_fallback,
     prerequisites,
     rank_spells,
     rank_text,
@@ -262,6 +263,35 @@ def test_a_classic_rank_with_an_unfillable_token_is_not_compared() -> None:
     assert _compare("Increases damage by 5%.", "Increases damage by $s1%.") == {}
 
 
+# --- the Classic fallback for ranks Forever doesn't have ------------------
+
+
+def _fallback(forever: dict[int, str], classic: dict[int, str]) -> dict[int, list[str | None]]:
+    book = SpellBook(descriptions=forever, names={s: "Talent" for s in forever})
+    trees = build_trees([_tab(41, "Fire", 128, 0)], [_talent_row(1, 41, 0, 0, [100, 101, 102])], book, {}, Gaps())["mage"]
+    return classic_fallback(trees, SpellBook(descriptions=classic))
+
+
+def test_a_missing_rank_takes_the_classic_text() -> None:
+    texts = _fallback({100: "Forever rank 1."}, {100: "Classic rank 1.", 101: "Classic rank 2.", 102: "Classic rank 3."})
+    assert texts == {1: [None, "Classic rank 2.", "Classic rank 3."]}
+
+
+def test_a_talent_with_no_forever_rank_takes_classic_text_for_every_rank() -> None:
+    texts = _fallback({}, {100: "Classic rank 1.", 101: "Classic rank 2.", 102: "Classic rank 3."})
+    assert texts == {1: ["Classic rank 1.", "Classic rank 2.", "Classic rank 3."]}
+
+
+def test_a_missing_rank_classic_lacks_too_stays_empty() -> None:
+    assert _fallback({100: "Forever rank 1."}, {101: "Classic rank 2."}) == {1: [None, "Classic rank 2.", None]}
+    assert _fallback({100: "Forever rank 1."}, {}) == {}
+
+
+def test_a_fallback_sentence_with_an_unfillable_token_is_left_out() -> None:
+    texts = _fallback({}, {100: "Lasts $d. Increases damage by 2%.", 101: "Lasts $d."})
+    assert texts == {1: ["Increases damage by 2%.", None, None]}
+
+
 # --- the committed output ---------------------------------------------------
 
 
@@ -311,6 +341,22 @@ def test_classic_files_name_talents_of_their_class_rank_for_rank() -> None:
             assert any(ranks)
             for forever, was in zip(talent["ranks"], ranks):
                 assert was is None or forever is not None
+
+
+def test_classic_fallback_fills_only_ranks_forever_lacks() -> None:
+    for path in _class_files():
+        talents = {t["id"]: t for tree in json.loads(path.read_text(encoding="utf-8"))["trees"] for t in tree["talents"]}
+        fallback = json.loads((CLASSIC_DIR / path.name).read_text(encoding="utf-8"))["fallback"]
+        for talent_id, ranks in fallback.items():
+            talent = talents[int(talent_id)]
+            assert len(ranks) == len(talent["ranks"])
+            assert any(ranks)
+            for forever, was in zip(talent["ranks"], ranks):
+                assert forever is None or was is None
+        # A talent with no rank in the Forever client shows Classic's text for every rank.
+        for talent in talents.values():
+            if talent.get("classicName"):
+                assert all(fallback[str(talent["id"])]), f"{path.stem} {talent['name']}: a rank has no text"
 
 
 @pytest.mark.parametrize(("class_id", "name", "tier"), [("warrior", "Mortal Strike", 6), ("mage", "Arcane Focus", 0), ("druid", "Moonkin Form", 6)])

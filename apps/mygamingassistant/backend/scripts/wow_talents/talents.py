@@ -9,7 +9,9 @@ its prerequisites ``PrereqTalent_N`` at ``PrereqRank_N`` — 0-based, so 0 means
 A rank's text is its spell's tooltip, evaluated. The Forever server sends
 most rank spells only when a client asks for them, so many aren't in any
 file yet: those ranks are ``None``, never worked out from their neighbours
-(Forever's ranks don't step evenly — Natural Grace goes -30, -10, -15).
+(Forever's ranks don't step evenly — Natural Grace goes -30, -10, -15). The
+calculator shows Classic's text for them instead, badged as Classic data
+(``classic_fallback``).
 """
 from __future__ import annotations
 
@@ -218,6 +220,25 @@ def classic_changes(trees: Iterable[Tree], classic: SpellBook, gaps: Gaps) -> di
             if changed:
                 changes[talent.id] = texts
     return changes
+
+
+def classic_fallback(trees: Iterable[Tree], classic: SpellBook) -> dict[int, list[str | None]]:
+    """Talent id -> Classic's text for each rank the Forever client doesn't have yet.
+
+    Shown badged as Classic data in place of the missing rank — never a value
+    worked out from the Forever ranks around it. ``None`` for a rank Forever
+    has, or that Classic can't fill either.
+    """
+    fallback: dict[int, list[str | None]] = {}
+    for tree in trees:
+        for talent in tree.talents:
+            texts = [
+                (rank_text(classic, spell) or None) if forever is None else None
+                for spell, forever in zip(talent.rank_spells, talent.ranks)
+            ]
+            if any(texts):
+                fallback[talent.id] = texts
+    return fallback
 
 
 def _classic_text(book: SpellBook, spell: int) -> str | None:

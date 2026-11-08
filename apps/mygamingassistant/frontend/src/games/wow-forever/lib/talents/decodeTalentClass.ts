@@ -7,7 +7,7 @@ import type { TalentFileTree } from "@/games/wow-forever/types/talents/talentFil
 import type { TalentPrereq } from "@/games/wow-forever/types/talents/talentPrereq";
 import type { TalentTree } from "@/games/wow-forever/types/talents/talentTree";
 
-function decodeTree(tree: TalentFileTree, classic: ClassicTalentFile["talents"]): TalentTree {
+function decodeTree(tree: TalentFileTree, classic: ClassicTalentFile): TalentTree {
   const indexOf = new Map(tree.talents.map((t, i) => [t.id, i]));
   const talents: Talent[] = tree.talents.map((t) => ({
     id: t.id,
@@ -22,7 +22,8 @@ function decodeTree(tree: TalentFileTree, classic: ClassicTalentFile["talents"])
       return talentIndex === undefined ? [] : [{ talentIndex, rank }];
     }),
     classicName: t.classicName === true,
-    classicRanks: classic[String(t.id)] ?? null,
+    classicRanks: classic.talents[String(t.id)] ?? null,
+    classicFallback: classic.fallback[String(t.id)] ?? null,
   }));
   return { id: tree.id, name: tree.name, icon: tree.icon, talents };
 }
@@ -32,6 +33,6 @@ export function decodeTalentClass(classId: WowClassId, file: TalentFile, classic
   return {
     classId,
     clientBuild: file.clientBuild,
-    trees: file.trees.map((tree) => decodeTree(tree, classic.talents)),
+    trees: file.trees.map((tree) => decodeTree(tree, classic)),
   };
 }
