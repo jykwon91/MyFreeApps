@@ -18,7 +18,7 @@ import { CRAFTING_FEATURES } from "@/games/wow-forever/data/professions/crafting
 import { CRAFTING_GUIDES } from "@/games/wow-forever/data/professions/crafting/craftingGuide";
 import { CRAFTING_SPECS } from "@/games/wow-forever/data/professions/crafting/craftingSpecs";
 import { CRAFTING_RANKS } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
-import type { CraftingData } from "@/games/wow-forever/hooks/useCraftingData";
+import type { CraftingData } from "@/games/wow-forever/types/craftingData";
 import { useCraftingSkill } from "@/games/wow-forever/hooks/useCraftingSkill";
 import { useCraftingSpec } from "@/games/wow-forever/hooks/useCraftingSpec";
 import { usePricedRoute } from "@/games/wow-forever/hooks/usePricedRoute";

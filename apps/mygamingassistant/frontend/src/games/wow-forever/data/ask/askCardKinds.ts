@@ -6,4 +6,8 @@ export const ASK_CARD = {
   dungeon: "dungeon",
   where: "where",
   noResults: "noResults",
+  rares: "rares",
+  profession: "profession",
+  gold: "gold",
+  macros: "macros",
 } as const;

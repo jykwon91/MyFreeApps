@@ -8,7 +8,7 @@ import sourcesJson from "@/games/wow-forever/data/professions/crafting/classic/s
 import enchantingJson from "@/games/wow-forever/data/professions/crafting/enchanting.json";
 import trainerSkillsJson from "@/games/wow-forever/data/professions/crafting/classic/trainerSkills.json";
 import { createSourceLookup, type RawSourcesFile } from "@/games/wow-forever/data/sourceDecode";
-import type { CraftingData } from "@/games/wow-forever/hooks/useCraftingData";
+import type { CraftingData } from "@/games/wow-forever/types/craftingData";
 import { LEGACY_PRICES_STORAGE_KEY, PRICE_OVERRIDES_STORAGE_KEY } from "@/games/wow-forever/hooks/useCraftPrices";
 import { FACTION } from "@/games/wow-forever/types/worldMap";
 import type { CraftingFile, CraftingProfession, TrainerSkills } from "@/games/wow-forever/types/crafting";

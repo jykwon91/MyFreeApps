@@ -23,12 +23,20 @@ TOOL_FIND_PLACES = "find_places"
 TOOL_SEARCH_ITEMS = "search_items"
 TOOL_DUNGEON_INFO = "dungeon_info"
 TOOL_GET_PLAYER_CONTEXT = "get_player_context"
+TOOL_FIND_RARES = "find_rares"
+TOOL_PROFESSION_GUIDE = "profession_guide"
+TOOL_GOLD_FARMING = "gold_farming"
+TOOL_FIND_MACROS = "find_macros"
 TOOL_NAMES: tuple[str, ...] = (
     TOOL_SEARCH_NPCS,
     TOOL_FIND_PLACES,
     TOOL_SEARCH_ITEMS,
     TOOL_DUNGEON_INFO,
     TOOL_GET_PLAYER_CONTEXT,
+    TOOL_FIND_RARES,
+    TOOL_PROFESSION_GUIDE,
+    TOOL_GOLD_FARMING,
+    TOOL_FIND_MACROS,
 )
 
 # --- search_npcs faction filter ----------------------------------------------------
@@ -36,6 +44,38 @@ FACTION_ALLIANCE = "alliance"
 FACTION_HORDE = "horde"
 FACTION_ANY = "any"
 FACTION_FILTERS: tuple[str, ...] = (FACTION_ALLIANCE, FACTION_HORDE, FACTION_ANY)
+
+# --- profession_guide: every guide on the Professions page (its ``?p=`` keys) -------
+PROFESSIONS: tuple[str, ...] = (
+    "alchemy",
+    "blacksmithing",
+    "enchanting",
+    "engineering",
+    "leatherworking",
+    "tailoring",
+    "herbalism",
+    "mining",
+    "skinning",
+    "cooking",
+    "firstaid",
+    "fishing",
+)
+
+# --- find_macros: the class ids the site uses (``data/classes.ts``) -----------------
+CLASS_IDS: tuple[str, ...] = (
+    "druid",
+    "hunter",
+    "mage",
+    "paladin",
+    "priest",
+    "rogue",
+    "shaman",
+    "warlock",
+    "warrior",
+)
+
+# --- gold_farming: how farm spots are ranked (``gold/goldFarms.ts`` FARM_SORT) -------
+FARM_SORTS: tuple[str, ...] = ("gold", "cloth")
 
 # --- Why the reply stopped (Anthropic's values the relay passes on) ---------------
 STOP_END_TURN = "end_turn"

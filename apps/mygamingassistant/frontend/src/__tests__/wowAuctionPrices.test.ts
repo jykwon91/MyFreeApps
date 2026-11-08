@@ -8,7 +8,8 @@ import { CRAFTING_ROUTES } from "@/games/wow-forever/data/professions/crafting/c
 import { CRAFTING_RANKS } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
 import { cheaperWay, cookCost } from "@/games/wow-forever/food/foodPrices";
 import { clothAuctionPerHour, skinAuctionPerHour } from "@/games/wow-forever/gold/farmAuctionValue";
-import { clothPerHour, goldFarms } from "@/games/wow-forever/gold/goldFarms";
+import { clothPerHour } from "@/games/wow-forever/gold/goldFarms";
+import { goldFarms } from "@/games/wow-forever/gold/goldFarmsData";
 import { relativeTime } from "@/games/wow-forever/lib/serverStatusTime";
 import {
   auctionCopper,

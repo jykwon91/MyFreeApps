@@ -1043,7 +1043,10 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`app/services/wow/chat/chat_tool_schema.py`, prompt-cached) and returns
   Claude's next message + a signed ticket. The BROWSER runs the tool calls
   (`search_npcs`, `find_places`, `search_items`, `dungeon_info`,
-  `get_player_context`) against its bundled data and sends the results back.
+  `get_player_context`, `find_rares`, `profession_guide`, `gold_farming`,
+  `find_macros`) against its bundled data and sends the results back. Tool
+  definitions go out on every turn: `test_wow_chat_schemas.py` caps their size
+  and checks the profession / class / sort enums against `wow_chat_enums.py`.
   Nothing is stored; logs carry codes and counts, never message text.
 - Gating order: `BodySizeCapMiddleware` (413 `chat_body_too_large` > 64 KB,
   before parsing) → availability (503 `chat_unavailable`, same rule as the item
@@ -1071,7 +1074,14 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - **Tools run in the browser** (`lib/ask/runAskTool.ts` → `lib/ask/tools/`),
   reusing the site's own code — never a second search: `searchAllNpcs` +
   `viewMapSearch` (nearest, `usableBy` faction), `findPlaces` / `bestPlaces`,
-  `searchItems`, `loadDungeons`. Input is checked against the schema
+  `searchItems`, `loadDungeons`; the guide tools reuse the pages' own logic:
+  `fitsLevel` + `rankRares` (the zone's rares, then its continent's),
+  `resolveRoute` / the hand-written routes (`loadProfessionRoute`,
+  `professionRouteRows` — crafts and materials from the player's skill),
+  `farmsFor` + `tipsForLevel` (gold an hour is VENDOR prices), `searchMacros`
+  over `ALL_MACROS` (the card shows the macro text; Claude only gets titles).
+  Rares, gold farms and crafting data load on first use. No level said or
+  saved = a "level not set" result and no card. Input is checked against the schema
   (`validateAskToolInput`); results are capped under the relay's 4 KB. "From"
   comes from the place named in the question, else the saved World Map
   location (`resolveAskOrigin`); an unknown place is said so, never swapped.
@@ -1102,8 +1112,13 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   visit only (`hooks/useFactionOverride.ts`), never writing the saved faction,
   and picking a faction in the You section drops it. A picked row that shares
   its spot with a "×N" pin pushes that pin aside (`AskPin.nudged`). Places, items (`ItemNameLink`), dungeon, "Where
-  are you?". Every empty-state example is checked against real data in
-  `wowAskTools.test.ts`. Tests: `src/__tests__/wowAsk*.test.ts(x)`,
+  are you?". Rares and gold farm spots share `AskSpotsPicker` (mini map,
+  numbered rows, Route there = `to=pt:<zone>,x,y`, rares also "Show on the
+  World Map" = `rareMapHref`); profession steps; macros reuse `MacroCard` (Copy
+  button). Each guide card links to its page (`lib/ask/askGuideLinks.ts`) —
+  offered, never followed for you. Every empty-state example is checked against
+  real data in `wowAskTools.test.ts` / `wowAskGuideTools.test.ts`. Tests:
+  `src/__tests__/wowAsk*.test.ts(x)`,
   `e2e/wow-forever-ask.spec.ts` (relay mocked).
 
 #### Food picker (`/wow-forever/food`, "What should I eat?")

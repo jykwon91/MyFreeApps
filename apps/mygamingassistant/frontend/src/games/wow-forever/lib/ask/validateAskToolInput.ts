@@ -1,16 +1,26 @@
 /**
  * Tool inputs Claude sent, checked against the same schema the relay gave it
  * (`chat_tool_schema.py`): known keys only, strings within their lengths, the
- * faction from its list, the limit a whole number in range. Claude's output is
+ * faction, profession, class and sort from their lists, numbers whole and in range. Claude's output is
  * untrusted — a bad input becomes an error result, never a crash.
  */
 import { ASK_FACTION_FILTER, ASK_TOOL_INPUT } from "@/games/wow-forever/data/ask/askTools";
+import { WOW_CLASSES, type WowClassId } from "@/games/wow-forever/data/classes";
+import { PROFESSION_GROUPS, type GuideProfession } from "@/games/wow-forever/data/professions/professionPicker";
+import { FARM_SORT, type FarmSort } from "@/games/wow-forever/gold/goldFarms";
 import type { AskFactionFilter } from "@/games/wow-forever/types/ask/askFactionFilter";
+import type { AskGoldInput } from "@/games/wow-forever/types/ask/askGoldInput";
 import type { AskInputCheck } from "@/games/wow-forever/types/ask/askInputCheck";
+import type { AskMacrosInput } from "@/games/wow-forever/types/ask/askMacrosInput";
 import type { AskNpcSearchInput } from "@/games/wow-forever/types/ask/askNpcSearchInput";
+import type { AskProfessionInput } from "@/games/wow-forever/types/ask/askProfessionInput";
 import type { AskQueryInput } from "@/games/wow-forever/types/ask/askQueryInput";
+import type { AskRaresInput } from "@/games/wow-forever/types/ask/askRaresInput";
 
 const FACTIONS: readonly AskFactionFilter[] = Object.values(ASK_FACTION_FILTER);
+const PROFESSIONS: readonly GuideProfession[] = PROFESSION_GROUPS.flatMap((g) => g.options.map((o) => o.id));
+const CLASS_IDS: readonly WowClassId[] = WOW_CLASSES.map((c) => c.id);
+const FARM_SORTS: readonly FarmSort[] = Object.values(FARM_SORT);
 
 function fail<T>(error: string): AskInputCheck<T> {
   return { ok: false, error };
@@ -27,9 +37,7 @@ function text(value: unknown, maxChars: number): string | null {
 }
 
 function limit(value: unknown): number | null {
-  if (value === undefined) return ASK_TOOL_INPUT.defaultLimit;
-  if (typeof value !== "number" || !Number.isInteger(value)) return null;
-  return value >= 1 && value <= ASK_TOOL_INPUT.limitMax ? value : null;
+  return value === undefined ? ASK_TOOL_INPUT.defaultLimit : wholeNumber(value, ASK_TOOL_INPUT.limitMax);
 }
 
 function queryInput(input: Record<string, unknown>, allowed: readonly string[]): AskInputCheck<AskQueryInput> {
@@ -71,4 +79,70 @@ export function checkItemSearchInput(input: Record<string, unknown>): AskInputCh
 export function checkNoInput(input: Record<string, unknown>): AskInputCheck<null> {
   const extra = unknownKey(input, []);
   return extra === undefined ? { ok: true, value: null } : fail(`unknown argument: ${extra}`);
+}
+
+function wholeNumber(value: unknown, max: number): number | null {
+  if (typeof value !== "number" || !Number.isInteger(value)) return null;
+  return value >= 1 && value <= max ? value : null;
+}
+
+function oneOf<T extends string>(value: unknown, options: readonly T[]): T | null {
+  return options.find((o) => o === value) ?? null;
+}
+
+/**
+ * An argument Claude may leave out: `null` when it did, `undefined` when it
+ * sent something `read` rejects.
+ */
+function optional<T>(value: unknown, read: (raw: unknown) => T | null): T | null | undefined {
+  if (value === undefined) return null;
+  return read(value) ?? undefined;
+}
+
+const levelError = `level must be a whole number from 1 to ${ASK_TOOL_INPUT.levelMax}`;
+
+export function checkRaresInput(input: Record<string, unknown>): AskInputCheck<AskRaresInput> {
+  const extra = unknownKey(input, ["level", "zone", "limit"]);
+  if (extra !== undefined) return fail(`unknown argument: ${extra}`);
+  const level = optional(input.level, (v) => wholeNumber(v, ASK_TOOL_INPUT.levelMax));
+  if (level === undefined) return fail(levelError);
+  const zone = optional(input.zone, (v) => text(v, ASK_TOOL_INPUT.zoneMaxChars));
+  if (zone === undefined) return fail(`zone must be 1-${ASK_TOOL_INPUT.zoneMaxChars} characters`);
+  const max = limit(input.limit);
+  if (max === null) return fail(`limit must be a whole number from 1 to ${ASK_TOOL_INPUT.limitMax}`);
+  return { ok: true, value: { level, zone, limit: max } };
+}
+
+export function checkProfessionInput(input: Record<string, unknown>): AskInputCheck<AskProfessionInput> {
+  const extra = unknownKey(input, ["profession", "skill"]);
+  if (extra !== undefined) return fail(`unknown argument: ${extra}`);
+  const profession = oneOf(input.profession, PROFESSIONS);
+  if (profession === null) return fail(`profession must be one of ${PROFESSIONS.join(", ")}`);
+  const skill = optional(input.skill, (v) => wholeNumber(v, ASK_TOOL_INPUT.skillMax));
+  if (skill === undefined) return fail(`skill must be a whole number from 1 to ${ASK_TOOL_INPUT.skillMax}`);
+  return { ok: true, value: { profession, skill } };
+}
+
+export function checkGoldInput(input: Record<string, unknown>): AskInputCheck<AskGoldInput> {
+  const extra = unknownKey(input, ["level", "skinning", "sort"]);
+  if (extra !== undefined) return fail(`unknown argument: ${extra}`);
+  const level = optional(input.level, (v) => wholeNumber(v, ASK_TOOL_INPUT.levelMax));
+  if (level === undefined) return fail(levelError);
+  const skinning = optional(input.skinning, (v) => (typeof v === "boolean" ? v : null));
+  if (skinning === undefined) return fail("skinning must be true or false");
+  const sort = optional(input.sort, (v) => oneOf(v, FARM_SORTS));
+  if (sort === undefined) return fail(`sort must be one of ${FARM_SORTS.join(", ")}`);
+  return { ok: true, value: { level, skinning: skinning ?? false, sort: sort ?? FARM_SORT.gold } };
+}
+
+export function checkMacrosInput(input: Record<string, unknown>): AskInputCheck<AskMacrosInput> {
+  const extra = unknownKey(input, ["class", "query", "limit"]);
+  if (extra !== undefined) return fail(`unknown argument: ${extra}`);
+  const classId = optional(input.class, (v) => oneOf(v, CLASS_IDS));
+  if (classId === undefined) return fail(`class must be one of ${CLASS_IDS.join(", ")}`);
+  const query = optional(input.query, (v) => text(v, ASK_TOOL_INPUT.queryMaxChars));
+  if (query === undefined) return fail(`query must be 1-${ASK_TOOL_INPUT.queryMaxChars} characters`);
+  const max = limit(input.limit);
+  if (max === null) return fail(`limit must be a whole number from 1 to ${ASK_TOOL_INPUT.limitMax}`);
+  return { ok: true, value: { classId, query, limit: max } };
 }

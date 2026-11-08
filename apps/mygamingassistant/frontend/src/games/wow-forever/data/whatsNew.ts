@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-08",
+    title: "Ask about rares, professions, gold and macros",
+    summary:
+      "Ask now answers “any rares worth killing at level 30?”, “how do I level Tailoring from 150?”, “where can I farm gold at 40?” and “best warlock macros” in the chat, with a map and a route there for rares and farm spots, the macro text to copy, and a link to the full page when you want more.",
+    to: "/wow-forever/ask",
+  },
+  {
+    date: "2026-11-08",
     title: "Legacy planner",
     summary:
       "Plan a character's 16 Legacy points across Professions, Adventure and Resourcefulness, share the plan as a link, tick off the 65 challenges that earn points and see the account rank rewards.",

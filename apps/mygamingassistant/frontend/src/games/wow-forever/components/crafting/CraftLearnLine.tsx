@@ -1,3 +1,4 @@
+import { learnText } from "@/games/wow-forever/crafting/learnText";
 import FoodSourceList from "@/games/wow-forever/components/food/detail/FoodSourceList";
 import RecipeBuyLines from "@/games/wow-forever/components/recipeVendors/RecipeBuyLines";
 import type { VendorPlace } from "@/games/wow-forever/types/recipeVendors/vendorPlace";
@@ -25,20 +26,9 @@ interface CraftLearnLineProps {
   place: CraftPlace;
 }
 
-function trainerText(learn: Extract<LearnAt, { kind: "trainer" }>, professionLabel: string): string {
-  // No Classic trainer teaches a recipe Forever added — don't name one.
-  if (learn.newInForever) return `New in Forever: source not known yet (probably a ${professionLabel} trainer, at about skill ${learn.skill})`;
-  if (learn.estimated) return `${professionLabel} trainer, at about skill ${learn.skill}`;
-  return `${professionLabel} trainer, at skill ${learn.skill}`;
-}
-
 /** How to learn a route recipe; a Pattern / Formula opens to where it's sold or dropped. */
 export default function CraftLearnLine({ learn, professionLabel, place }: CraftLearnLineProps) {
-  if (learn.kind === "start") return <p className="text-sm">Known when you train {professionLabel}</p>;
-
-  if (learn.kind === "trainer") {
-    return <p className="text-sm">{trainerText(learn, professionLabel)}</p>;
-  }
+  if (learn.kind !== "item") return <p className="text-sm">{learnText(learn, professionLabel)}</p>;
 
   const sources = place.sources.recipe(learn.itemId);
   return (

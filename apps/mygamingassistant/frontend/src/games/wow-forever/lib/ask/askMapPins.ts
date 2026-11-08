@@ -5,7 +5,7 @@
  * row is never grouped, so it always stands alone and highlighted.
  */
 import { MAP_H, MAP_W } from "@/games/wow-forever/data/worldMap/mapViewer";
-import type { AskNpcRow } from "@/games/wow-forever/types/ask/askNpcRow";
+import type { AskMapRow } from "@/games/wow-forever/types/ask/askMapRow";
 import { CLUSTER_DISTANCE, clusterMarkers, type MarkerPx } from "@/games/wow-forever/worldMap/markerClusters";
 
 /** Rendered pixels per map pixel: the mini map is about 400 px wide, so pins 20 px apart or less overlap. */
@@ -19,12 +19,12 @@ export interface AskPin {
   /** Position on the map, in percent. */
   x: number;
   y: number;
-  rows: readonly AskNpcRow[];
+  rows: readonly AskMapRow[];
   /** A "×N" pin that would sit under the picked row's pin: drawn beside it so the count stays readable. */
   nudged: boolean;
 }
 
-export function askMapPins(rows: readonly AskNpcRow[], selectedId: string | null): AskPin[] {
+export function askMapPins(rows: readonly AskMapRow[], selectedId: string | null): AskPin[] {
   const byId = new Map(rows.map((row) => [row.poiId, row]));
   const placed: MarkerPx[] = rows.map((row) => ({
     marker: { id: row.poiId, world: { continent: 0, wx: row.x, wy: row.y }, label: row.name, className: "" },

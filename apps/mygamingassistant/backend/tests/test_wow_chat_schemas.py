@@ -1,9 +1,24 @@
 """Chat contract parity: Literal types == enum tuples, tool schemas == allowed tool names."""
+import json
 from typing import get_args
 
-from app.core.wow_chat_enums import ROLES, STOP_REASONS, TOOL_NAMES
+from app.core.wow_chat_enums import (
+    CLASS_IDS,
+    FARM_SORTS,
+    PROFESSIONS,
+    ROLES,
+    STOP_REASONS,
+    TOOL_FIND_MACROS,
+    TOOL_GOLD_FARMING,
+    TOOL_NAMES,
+    TOOL_PROFESSION_GUIDE,
+)
 from app.schemas.wow.chat.chat_literals import ChatRole, ChatStopReason, ChatToolName
 from app.services.wow.chat.chat_tool_schema import CHAT_TOOLS, SYSTEM_PROMPT
+
+# Tool definitions go out (prompt-cached) on every turn; growing them costs every question.
+TOOLS_JSON_MAX_CHARS = 7_000
+TOOL_DESCRIPTION_MAX_CHARS = 500
 
 
 def test_literals_match_enum_tuples() -> None:
@@ -24,3 +39,16 @@ def test_tool_inputs_are_closed() -> None:
 def test_prompt_ties_travel_claims_to_the_tool_route() -> None:
     assert '"route" a search_npcs result' in SYSTEM_PROMPT
     assert "Never mention a boat, zeppelin" in SYSTEM_PROMPT
+
+
+def test_tool_definitions_stay_lean() -> None:
+    assert len(json.dumps(CHAT_TOOLS)) <= TOOLS_JSON_MAX_CHARS
+    for tool in CHAT_TOOLS:
+        assert len(tool["description"]) <= TOOL_DESCRIPTION_MAX_CHARS, tool["name"]
+
+
+def test_enum_inputs_list_the_shared_values() -> None:
+    by_name = {tool["name"]: tool["input_schema"]["properties"] for tool in CHAT_TOOLS}
+    assert tuple(by_name[TOOL_PROFESSION_GUIDE]["profession"]["enum"]) == PROFESSIONS
+    assert tuple(by_name[TOOL_FIND_MACROS]["class"]["enum"]) == CLASS_IDS
+    assert tuple(by_name[TOOL_GOLD_FARMING]["sort"]["enum"]) == FARM_SORTS

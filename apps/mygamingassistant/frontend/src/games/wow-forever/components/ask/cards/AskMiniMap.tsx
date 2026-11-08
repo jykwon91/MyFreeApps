@@ -2,14 +2,14 @@ import clsx from "clsx";
 import { askMapPins, pinTitle } from "@/games/wow-forever/lib/ask/askMapPins";
 import { ASK_COPY } from "@/games/wow-forever/data/ask/askCopy";
 import { MAP_H, MAP_W } from "@/games/wow-forever/data/worldMap/mapViewer";
-import type { AskNpcRow } from "@/games/wow-forever/types/ask/askNpcRow";
+import type { AskMapRow } from "@/games/wow-forever/types/ask/askMapRow";
 import type { AskOrigin } from "@/games/wow-forever/types/ask/askOrigin";
 
 interface AskMiniMapProps {
   zoneId: number;
   zoneName: string;
   /** The card's rows on this zone. */
-  rows: readonly AskNpcRow[];
+  rows: readonly AskMapRow[];
   selectedId: string | null;
   /** Drawn as "You" when it's on this zone. */
   origin: AskOrigin | null;

@@ -11,9 +11,9 @@ import {
   FARM_SORT,
   farmsFor,
   formatMoney,
-  goldFarms,
   goldPerHour,
 } from "@/games/wow-forever/gold/goldFarms";
+import { goldFarms } from "@/games/wow-forever/gold/goldFarmsData";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
 
 // Auction prices come from the API; these tests don't look at them, so they stay loading.

@@ -1,6 +1,9 @@
 import { useMemo } from "react";
+import { loadGoldFarms } from "@/games/wow-forever/gold/loadGoldFarms";
+import { loadProfessionRoute } from "@/games/wow-forever/lib/ask/loadProfessionRoute";
 import { loadClientItems } from "@/games/wow-forever/lib/clientItemsLoader";
 import { loadDungeons } from "@/games/wow-forever/lib/dungeons/loadDungeons";
+import { loadRares } from "@/games/wow-forever/lib/rares/loadRares";
 import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { loadAskWalkGraphs } from "@/games/wow-forever/lib/ask/loadAskWalkGraphs";
 import { useWorldMap } from "@/games/wow-forever/hooks/useWorldMap";
@@ -11,14 +14,27 @@ import { buildPlaces } from "@/games/wow-forever/worldMap/places";
 /**
  * The World Map loads with the page (every NPC and place answer needs it) —
  * the same merged data the map page uses, with the "Seen in game" captures over Classic;
- * the item list and dungeons load the first time Claude asks for them.
+ * everything else loads the first time Claude asks for it.
  */
 export function useAskToolData(): AskToolDataState {
   const { status, data: world, retry } = useWorldMap();
   const [player, updatePlayer] = usePlayerSettings();
   const places = useMemo(() => (world ? buildPlaces(world) : []), [world]);
   const data = useMemo<AskToolData | null>(
-    () => (world ? { world, places, loadItems: loadClientItems, loadDungeons, loadWalkGraphs: loadAskWalkGraphs, player } : null),
+    () =>
+      world
+        ? {
+            world,
+            places,
+            loadItems: loadClientItems,
+            loadDungeons,
+            loadWalkGraphs: loadAskWalkGraphs,
+            loadRares,
+            loadGoldFarms,
+            loadProfessionRoute,
+            player,
+          }
+        : null,
     [world, places, player],
   );
   return { status, data, retry, player, updatePlayer };
