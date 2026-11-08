@@ -1,4 +1,5 @@
 import { PROMOTE_MESSAGES } from "../../constants/promote";
+import { APPLICANT_CONTACT_EMAIL_MESSAGES } from "@mybookkeeper/api-client/constants/applicantContactEmail";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 
 /** The server's own wording can be a developer string, so it's never shown. */
@@ -28,4 +29,9 @@ export function promoteFailure(error: unknown): string {
   // The form caps every length, so what's left is the server's own age check, which runs on its clock.
   if (status === 422) return PROMOTE_MESSAGES.tooYoung;
   return status === 404 ? PROMOTE_MESSAGES.inquiryGone : PROMOTE_MESSAGES.retry;
+}
+
+/** A bad address is shown on the field itself, so this covers everything else. */
+export function contactEmailFailure(error: unknown): string {
+  return commonFailure(httpStatus(error)) ?? APPLICANT_CONTACT_EMAIL_MESSAGES.failed;
 }

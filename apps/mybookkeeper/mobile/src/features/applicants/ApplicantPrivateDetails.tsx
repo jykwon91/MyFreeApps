@@ -5,10 +5,10 @@ import { openBrowserAsync } from "expo-web-browser";
 import { useState } from "react";
 import { Text } from "react-native";
 import { REVEAL_MESSAGES } from "../../constants/applicantReveal";
-import InquiryContact from "../inquiries/InquiryContact";
 import InquirySection from "../inquiries/InquirySection";
 import { fullDateLabel } from "../../lib/localDate";
 import TransactionFact from "../transactions/TransactionFact";
+import ApplicantContact from "./ApplicantContact";
 import { applicantName, screeningLine } from "./applicantDisplay";
 import { useApplicantReveal } from "./useApplicantReveal";
 
@@ -20,7 +20,7 @@ function hasAnything(details: ApplicantSensitive): boolean {
   );
 }
 
-export default function ApplicantPrivateDetails({ applicant }: { applicant: ApplicantDetailResponse }) {
+export default function ApplicantPrivateDetails({ applicant, canWrite }: { applicant: ApplicantDetailResponse; canWrite: boolean }) {
   const { colors, fontSize } = useTheme();
   const { showToast } = useToast();
   const { details, hide, isBusy, problem, show } = useApplicantReveal(applicant.id);
@@ -56,8 +56,14 @@ export default function ApplicantPrivateDetails({ applicant }: { applicant: Appl
       )}
       {details.dob ? <TransactionFact label="Date of birth" value={fullDateLabel(details.dob)} /> : null}
       {details.vehicle_make_model ? <TransactionFact label="Vehicle" value={details.vehicle_make_model} /> : null}
-      {details.contact_email || details.contact_phone ? (
-        <InquiryContact email={details.contact_email} name={name} phone={details.contact_phone} />
+      {details.contact_email || details.contact_phone || canWrite ? (
+        <ApplicantContact
+          applicantId={applicant.id}
+          canWrite={canWrite}
+          email={details.contact_email}
+          name={name}
+          phone={details.contact_phone}
+        />
       ) : null}
       {details.references.map((row) => {
         // The page behind this can be older than the answer, so a name may not be there yet.

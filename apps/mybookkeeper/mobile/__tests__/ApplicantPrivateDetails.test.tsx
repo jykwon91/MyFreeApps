@@ -70,11 +70,11 @@ function reveals(server: FakeApplicantServer): number {
   return server.requests.filter((request) => request.url?.endsWith("/sensitive")).length;
 }
 
-async function renderIt(applicant: ApplicantDetailResponse = withReport) {
+async function renderIt(applicant: ApplicantDetailResponse = withReport, canWrite = false) {
   await render(
     <Provider store={store}>
       <ToastProvider bottomOffset={0}>
-        <ApplicantPrivateDetails applicant={applicant} />
+        <ApplicantPrivateDetails applicant={applicant} canWrite={canWrite} />
       </ToastProvider>
     </Provider>,
   );
@@ -224,6 +224,8 @@ describe("ApplicantPrivateDetails", () => {
     await act(async () => { await jest.advanceTimersByTimeAsync(6000); });
     expectNothingKept();
     expect(screen.getByRole("button", SHOW)).toBeTruthy();
+    // The store batches its notifications on a timer; a fake one left pending would mute it for later tests.
+    await act(async () => { await jest.runOnlyPendingTimersAsync(); });
   });
 
   it("hides when the app goes to the background", async () => {
@@ -389,5 +391,91 @@ describe("ApplicantPrivateDetails", () => {
     await renderIt();
     await showDetails();
     expect(screen.getByText("Blue Civic")).toBeTruthy();
+  });
+
+  describe("the email", () => {
+    function emailWrites(server: FakeApplicantServer): unknown[] {
+      return server.requests
+        .filter((request) => request.method === "patch" && request.url?.endsWith("/contact-email"))
+        .map((request) => JSON.parse(String(request.data)));
+    }
+
+    async function editEmail(text: string) {
+      await fireEvent.changeText(screen.getByLabelText("Email"), text);
+      await fireEvent.press(screen.getByRole("button", { name: "Save" }));
+    }
+
+    it("adds one when there's none on file", async () => {
+      const server = startApplicantServer([withReport]);
+      await renderIt(withReport, true);
+      await showDetails();
+      await fireEvent.press(screen.getByRole("button", { name: "Add email" }));
+      await editEmail("  dana@example.com ");
+      expect(await screen.findByText("Email saved")).toBeTruthy();
+      expect(emailWrites(server)).toEqual([{ contact_email: "dana@example.com" }]);
+      expect(screen.getByRole("button", { name: "Change email" })).toBeTruthy();
+      expect(screen.queryByLabelText("Email")).toBeNull();
+    });
+
+    it("starts from the saved one, and clearing it removes it", async () => {
+      const server = startApplicantServer([withReport]);
+      server.sensitive = everything();
+      await renderIt(withReport, true);
+      await showDetails();
+      await fireEvent.press(screen.getByRole("button", { name: "Change email" }));
+      expect(screen.getByLabelText("Email").props.value).toBe("dana@example.com");
+      await editEmail("   ");
+      expect(await screen.findByText("Email removed")).toBeTruthy();
+      expect(emailWrites(server)).toEqual([{ contact_email: null }]);
+      expect(screen.getByRole("button", { name: "Add email" })).toBeTruthy();
+    });
+
+    it("says on the field when the address isn't one, and keeps what was typed", async () => {
+      const server = startApplicantServer([withReport]);
+      server.writeFailure = 422;
+      await renderIt(withReport, true);
+      await showDetails();
+      await fireEvent.press(screen.getByRole("button", { name: "Add email" }));
+      await editEmail("not-an-email");
+      expect(await screen.findByText("That doesn't look like an email address.")).toBeTruthy();
+      expect(screen.getByLabelText("Email").props.value).toBe("not-an-email");
+      expect(screen.queryByText("A developer's message")).toBeNull();
+    });
+
+    it("says why any other save failed, never the server's own words", async () => {
+      const server = startApplicantServer([withReport]);
+      server.writeFailure = 403;
+      await renderIt(withReport, true);
+      await showDetails();
+      await fireEvent.press(screen.getByRole("button", { name: "Add email" }));
+      await editEmail("dana@example.com");
+      expect(await screen.findByText("You have view-only access.")).toBeTruthy();
+      server.writeFailure = 500;
+      await fireEvent.press(await screen.findByRole("button", { name: "Save" }));
+      expect(await screen.findByText("I couldn't save that email. Want to try again?")).toBeTruthy();
+      expect(screen.queryByText("A developer's message")).toBeNull();
+    });
+
+    it("cancel leaves it as it was", async () => {
+      const server = startApplicantServer([withReport]);
+      server.sensitive = everything();
+      await renderIt(withReport, true);
+      await showDetails();
+      await fireEvent.press(screen.getByRole("button", { name: "Change email" }));
+      await fireEvent.changeText(screen.getByLabelText("Email"), "other@example.com");
+      await fireEvent.press(screen.getByRole("button", { name: "Cancel" }));
+      expect(emailWrites(server)).toEqual([]);
+      await fireEvent.press(screen.getByRole("button", { name: "Change email" }));
+      expect(screen.getByLabelText("Email").props.value).toBe("dana@example.com");
+    });
+
+    it("can't be changed by a view-only member", async () => {
+      const server = startApplicantServer([withReport]);
+      server.sensitive = everything();
+      await renderIt(withReport, false);
+      await showDetails();
+      expect(screen.queryByRole("button", { name: "Change email" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Add email" })).toBeNull();
+    });
   });
 });
