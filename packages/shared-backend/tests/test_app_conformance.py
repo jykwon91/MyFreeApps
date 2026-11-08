@@ -788,9 +788,81 @@ class TestStaleAssetHandling:
             f"otherwise browsers may heuristically cache an entry point that "
             f"references a previous build's chunks."
         )
-        assert "try_files {path} /index.html" in caddy, (
+        assert "try_files {path} {path}/index.html /index.html" in caddy, (
             f"{app}: client-side routes must still fall back to index.html."
         )
+
+
+_LINK_PREVIEW_FALLBACK = "try_files {path} {path}/index.html /index.html"
+
+
+@pytest.mark.parametrize("app", _APPS)
+class TestLinkPreviewRouteFiles:
+    """Per-route `dist/<route>/index.html` files (packages/shared-frontend
+    `linkPreviewPlugin`) must be served at `/<route>`, never cached.
+
+    Regression: Discord showed no card for
+    https://mygamingassistant.myfreeapps.org/wow-forever — unfurlers don't run
+    JavaScript, and every route got the one root index.html. `{path}` (no
+    trailing slash) only matches files, so a route directory is never handed to
+    file_server, which would redirect `/wow-forever` → `/wow-forever/`.
+    """
+
+    def test_route_directory_index_is_tried_before_the_spa_entry(self, app: str) -> None:
+        caddy = _strip_caddy_comments(_read("apps", app, "docker", "Caddyfile.docker"))
+        assert _LINK_PREVIEW_FALLBACK in caddy, (
+            f"{app}: the SPA fallback must be `{_LINK_PREVIEW_FALLBACK}` so a "
+            f"listed route's own HTML (with its link-preview tags) is served. "
+            f"Fix infra/templates/Caddyfile.docker.j2 and re-render."
+        )
+        assert not re.search(r"try_files[^\n]*\{path\}/(\s|$)", caddy), (
+            f"{app}: never try `{{path}}/` — file_server would redirect to add the "
+            f"slash, and the canonical og:url has none."
+        )
+
+    def test_route_html_is_never_cached(self, app: str) -> None:
+        caddy = _strip_caddy_comments(_read("apps", app, "docker", "Caddyfile.docker"))
+        matcher = next(
+            (line.split() for line in caddy.splitlines() if line.strip().startswith("@no_cache_html path ")),
+            None,
+        )
+        assert matcher is not None, f"{app}: the docker Caddyfile has no `@no_cache_html path` matcher."
+        assert "*/" in matcher and "*/index.html" in matcher, (
+            f"{app}: `@no_cache_html` must cover per-route HTML (`*/` and "
+            f"`*/index.html`) — a cached route page would pin a previous build's chunks."
+        )
+
+
+class TestMgaLinkPreviewConfigured:
+    """MGA's vite build runs the link-preview plugin and lists /wow-forever."""
+
+    def test_vite_config_runs_the_plugin(self) -> None:
+        vite = _read("apps", "mygamingassistant", "frontend", "vite.config.ts")
+        assert "linkPreviewPlugin(MGA_LINK_PREVIEW)" in vite, (
+            "apps/mygamingassistant/frontend/vite.config.ts must add "
+            "`linkPreviewPlugin(MGA_LINK_PREVIEW)` to its plugins."
+        )
+
+    def test_config_lists_the_wow_forever_landing_page(self) -> None:
+        config = _read("apps", "mygamingassistant", "frontend", "src", "constants", "linkPreview.ts")
+        registry = _read("apps", "mygamingassistant", "frontend", "src", "games", "registry.ts")
+        assert "path: wowForever.landingPath" in config and "...wowFeatureRoutes" in config, (
+            "MGA_LINK_PREVIEW must list the WoW Forever landing page and every "
+            "registry feature page."
+        )
+        assert 'landingPath: "/wow-forever"' in registry, (
+            "The WoW Forever registry entry's landingPath must be /wow-forever."
+        )
+
+    def test_preview_images_exist_and_stay_small(self) -> None:
+        config = _read("apps", "mygamingassistant", "frontend", "src", "constants", "linkPreview.ts")
+        images = set(re.findall(r'"(/link-preview/[a-z0-9-]+\.png)"', config))
+        assert images, "MGA_LINK_PREVIEW names no /link-preview/*.png images."
+        public = _REPO_ROOT / "apps" / "mygamingassistant" / "frontend" / "public"
+        for image in images:
+            path = public / image.lstrip("/")
+            assert path.is_file(), f"{image} is missing — run backend `py -m scripts.link_preview_images`."
+            assert path.stat().st_size < 300_000, f"{image} is over 300 KB; unfurlers may drop it."
 
 
 # Data-router apps wrap their route table in the shared errorElement; MBK uses

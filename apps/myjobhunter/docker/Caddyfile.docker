@@ -69,14 +69,15 @@
     # SPA fallback for frontend
     handle {
         # Cache strategy:
-        # - HTML and the service worker MUST never be cached. They are the
+        # - HTML and the service worker MUST never be cached. `*/` and
+        #   `*/index.html` cover the pre-rendered per-route pages. They are the
         #   entry points that reference the latest asset bundles. If they
         #   were cached, users would be stuck on old bundles forever after
         #   a deploy (this happened to MBK on 2026-05-01).
         # - Hashed assets (Vite content-hashes filenames like
         #   `index-AbCd1234.js`) under /assets/ ARE safe to cache forever.
         #   See /assets/* below.
-        @no_cache_html path / /index.html /sw.js /workbox-*.js /manifest.webmanifest /registerSW.js
+        @no_cache_html path / /index.html */ */index.html /sw.js /workbox-*.js /manifest.webmanifest /registerSW.js
         header @no_cache_html Cache-Control "no-cache, no-store, must-revalidate"
 
         root * /srv/frontend
@@ -100,7 +101,12 @@
         }
 
         # Everything else is a client-side route: serve the file if it exists
-        # (favicon, robots.txt, ...), otherwise the SPA entry point. A deep
+        # (favicon, robots.txt, ...), then a pre-rendered page for the route
+        # (`/wow-forever` -> `/wow-forever/index.html`, written at build time
+        # by @platform/ui's linkPreviewPlugin so link unfurlers that don't run
+        # JS see the page's title and preview image), otherwise the SPA entry
+        # point. `{path}` without a slash only matches a FILE, so a route's
+        # directory never triggers file_server's add-a-slash redirect. A deep
         # link (`/wow-forever/professions`) is answered with index.html, so
         # it gets the same no-store policy as `/` — without it the response
         # carries only Last-Modified/ETag and browsers may heuristically
@@ -108,7 +114,7 @@
         handle {
             @spa_route not file
             header @spa_route Cache-Control "no-cache, no-store, must-revalidate"
-            try_files {path} /index.html
+            try_files {path} {path}/index.html /index.html
             file_server
         }
     }
