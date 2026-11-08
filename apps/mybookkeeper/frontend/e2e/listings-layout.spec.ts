@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
+import { holdRequests } from "./fixtures/hold-requests";
 import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 
 /**
@@ -38,10 +39,7 @@ test.describe("Listings layout (PR 1.1b)", () => {
     try {
       // Block the listings call so the skeleton stays visible long enough to
       // count its cards.
-      await page.route("**/api/listings**", async (route) => {
-        await new Promise((r) => setTimeout(r, 1500));
-        await route.continue();
-      });
+      const release = await holdRequests(page, (url) => url.pathname === "/api/listings");
 
       const navPromise = page.goto("/listings");
       await expect(page.getByTestId("listings-skeleton")).toBeVisible({ timeout: 5000 });
@@ -62,7 +60,7 @@ test.describe("Listings layout (PR 1.1b)", () => {
           }),
         );
       }
-      await page.unroute("**/api/listings**");
+      release();
       await navPromise;
       await page.reload();
       await page.waitForLoadState("networkidle");

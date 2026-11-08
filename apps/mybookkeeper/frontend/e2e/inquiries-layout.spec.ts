@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures/auth";
+import { holdRequests } from "./fixtures/hold-requests";
 import { deleteInquiry, seedInquiry } from "./fixtures/inquiries";
 
 /**
@@ -24,10 +25,7 @@ test.describe("Inquiries layout (PR 2.1b)", () => {
     const runId = Date.now();
     const inquiryIds: string[] = [];
     try {
-      await page.route("**/api/inquiries**", async (route) => {
-        await new Promise((r) => setTimeout(r, 1500));
-        await route.continue();
-      });
+      const release = await holdRequests(page, (url) => url.pathname === "/api/inquiries");
 
       const navPromise = page.goto("/inquiries");
       await expect(page.getByTestId("inquiries-skeleton")).toBeVisible({ timeout: 5000 });
@@ -44,7 +42,7 @@ test.describe("Inquiries layout (PR 2.1b)", () => {
           }),
         );
       }
-      await page.unroute("**/api/inquiries**");
+      release();
       await navPromise;
       await page.reload();
       await page.waitForLoadState("networkidle");

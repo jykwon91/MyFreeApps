@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
+import { holdRequests } from "./fixtures/hold-requests";
 import { createProperty, deleteProperty } from "./fixtures/seed-data";
 import { toasts } from "./fixtures/toasts";
 import { deleteApplicant } from "./fixtures/applicants";
@@ -195,10 +196,7 @@ test.describe("Attribution review — Airbnb payout UX (PR D)", () => {
     const property = await createProperty(api, { name: `E2E Skel Prop ${runId}` });    let seeded: SeedAttributionReviewResponse | undefined;
 
     // Delay the queue response so the skeleton is observable.
-    await page.route("**/attribution-review-queue*", async (route) => {
-      await new Promise((r) => setTimeout(r, 1500));
-      await route.continue();
-    });
+    const release = await holdRequests(page, (url) => url.pathname === "/api/transactions/attribution-review-queue");
 
     try {
       seeded = await seedAttributionReview(api, {
@@ -220,8 +218,9 @@ test.describe("Attribution review — Airbnb payout UX (PR D)", () => {
         .first()
         .evaluate((el) => getComputedStyle(el).flexDirection);
 
-      // After the queue resolves the skeleton is replaced by real rows with
+      // Once the queue answers, the skeleton is replaced by real rows with
       // the same two columns.
+      release();
       await expect(skeletonRows).toHaveCount(0, { timeout: 8000 });
       const row = page.getByTestId("attribution-review-item").filter({ hasText: desc });
       await expect(row).toBeVisible({ timeout: 5000 });
@@ -229,7 +228,6 @@ test.describe("Attribution review — Airbnb payout UX (PR D)", () => {
       await expect(row.getByTestId("attribution-review-item-actions")).toBeVisible();
       expect(await row.evaluate((el) => getComputedStyle(el).flexDirection)).toBe(skeletonDirection);
     } finally {
-      await page.unroute("**/attribution-review-queue*");
       if (seeded) await deleteAttributionReview(api, seeded.id);
       await deleteProperty(api, property.id);
     }

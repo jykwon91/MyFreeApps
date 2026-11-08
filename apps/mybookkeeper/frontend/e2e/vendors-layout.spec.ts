@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures/auth";
+import { holdRequests } from "./fixtures/hold-requests";
 import { deleteVendor, seedVendor } from "./fixtures/seed-data";
 
 /**
@@ -26,10 +27,7 @@ test.describe("Vendors layout (PR 4.1b)", () => {
     const runId = Date.now();
     const vendorIds: string[] = [];
     try {
-      await page.route("**/api/vendors**", async (route) => {
-        await new Promise((r) => setTimeout(r, 1500));
-        await route.continue();
-      });
+      const releaseList = await holdRequests(page, (url) => url.pathname === "/api/vendors");
 
       const navPromise = page.goto("/vendors");
       await expect(page.getByTestId("vendors-skeleton")).toBeVisible({
@@ -50,7 +48,7 @@ test.describe("Vendors layout (PR 4.1b)", () => {
           }),
         );
       }
-      await page.unroute("**/api/vendors**");
+      releaseList();
       await navPromise;
       await page.reload();
       await page.waitForLoadState("networkidle");
@@ -144,10 +142,7 @@ test.describe("Vendors layout (PR 4.1b)", () => {
     });
 
     try {
-      await page.route(`**/api/vendors/${vendorId}`, async (route) => {
-        await new Promise((r) => setTimeout(r, 1500));
-        await route.continue();
-      });
+      const releaseDetail = await holdRequests(page, (url) => url.pathname === `/api/vendors/${vendorId}`);
 
       const navPromise = page.goto(`/vendors/${vendorId}`);
       await expect(page.getByTestId("vendor-detail-skeleton")).toBeVisible({
@@ -165,7 +160,7 @@ test.describe("Vendors layout (PR 4.1b)", () => {
         ).toBeVisible();
       }
 
-      await page.unroute(`**/api/vendors/${vendorId}`);
+      releaseDetail();
       await navPromise;
       await page.waitForLoadState("networkidle");
 
