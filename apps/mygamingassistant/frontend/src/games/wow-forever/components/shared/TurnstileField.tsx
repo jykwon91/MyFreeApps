@@ -1,4 +1,5 @@
 import { TurnstileWidget } from "@platform/ui";
+import type { TurnstileAppearance } from "@platform/ui";
 
 interface TurnstileFieldProps {
   /** Bump to remount the widget for a fresh single-use token. */
@@ -10,16 +11,18 @@ interface TurnstileFieldProps {
   onRetry: () => void;
   /** Cloudflare action the server checks the token against (e.g. `wow-chat`). */
   action?: string;
+  /** "interaction-only" keeps the check hidden unless Cloudflare needs a click. */
+  appearance?: TurnstileAppearance;
 }
 
 /**
  * Cloudflare's quick human check for a public call that spends API money (the
  * screenshot reader, "Suggest a feature"). Renders nothing without a site key.
  */
-export default function TurnstileField({ resetKey, expired, onVerify, onExpire, onRetry, action }: TurnstileFieldProps) {
+export default function TurnstileField({ resetKey, expired, onVerify, onExpire, onRetry, action, appearance }: TurnstileFieldProps) {
   return (
     <div className="space-y-1">
-      <TurnstileWidget key={resetKey} onVerify={onVerify} onExpire={onExpire} action={action} />
+      <TurnstileWidget key={resetKey} onVerify={onVerify} onExpire={onExpire} action={action} appearance={appearance} />
       {expired ? (
         <button
           type="button"
