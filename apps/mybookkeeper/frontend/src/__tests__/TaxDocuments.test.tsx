@@ -97,7 +97,7 @@ vi.mock("@mybookkeeper/api-client/store/taxDocumentsApi", async () => {
   return {
     ...actual,
     useListTaxDocumentsQuery: vi.fn(() => ({
-      data: mockDocumentsData,
+      currentData: mockDocumentsData,
       isLoading: false,
       isError: false,
     })),
@@ -129,7 +129,7 @@ describe("TaxDocuments", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useListTaxDocumentsQuery).mockReturnValue({
-      data: mockDocumentsData,
+      currentData: mockDocumentsData,
       isLoading: false,
       isError: false,
     } as unknown as ReturnType<typeof useListTaxDocumentsQuery>);
@@ -140,7 +140,7 @@ describe("TaxDocuments", () => {
 
   it("renders skeleton when loading", () => {
     vi.mocked(useListTaxDocumentsQuery).mockReturnValue({
-      data: undefined,
+      currentData: undefined,
       isLoading: true,
       isError: false,
     } as unknown as ReturnType<typeof useListTaxDocumentsQuery>);
@@ -150,9 +150,23 @@ describe("TaxDocuments", () => {
     expect(skeletons.length).toBeGreaterThanOrEqual(1);
   });
 
+  it("shows the skeleton, not the previous year's forms, while a newly picked year loads", () => {
+    vi.mocked(useListTaxDocumentsQuery).mockReturnValue({
+      data: mockDocumentsData,
+      currentData: undefined,
+      isLoading: false,
+      isFetching: true,
+      isError: false,
+    } as unknown as ReturnType<typeof useListTaxDocumentsQuery>);
+
+    const { container } = renderPage();
+    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(mockDocumentsData.documents[0].issuer_name as string)).not.toBeInTheDocument();
+  });
+
   it("renders empty state when no documents", () => {
     vi.mocked(useListTaxDocumentsQuery).mockReturnValue({
-      data: emptyData,
+      currentData: emptyData,
       isLoading: false,
       isError: false,
     } as unknown as ReturnType<typeof useListTaxDocumentsQuery>);
@@ -163,7 +177,7 @@ describe("TaxDocuments", () => {
 
   it("renders error state on query failure", () => {
     vi.mocked(useListTaxDocumentsQuery).mockReturnValue({
-      data: undefined,
+      currentData: undefined,
       isLoading: false,
       isError: true,
     } as unknown as ReturnType<typeof useListTaxDocumentsQuery>);
