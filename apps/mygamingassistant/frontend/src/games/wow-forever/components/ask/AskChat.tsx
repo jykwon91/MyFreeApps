@@ -70,6 +70,7 @@ export default function AskChat({ tools, initialQuestion }: AskChatProps) {
         onExpire={widget.onExpire}
         onRetry={widget.reset}
         action={CHAT_TURNSTILE_ACTION}
+        appearance="interaction-only"
       />
     </div>
   );

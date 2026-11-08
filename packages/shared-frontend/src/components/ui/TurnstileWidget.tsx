@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from "react";
+import type { TurnstileAppearance } from "../../types/turnstile-appearance";
 
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY ?? "";
 
@@ -7,6 +8,8 @@ interface TurnstileWidgetProps {
   onExpire?: () => void;
   /** Cloudflare widget action; echoed in siteverify so the backend can bind the token to this widget. */
   action?: string;
+  /** Cloudflare widget appearance. "interaction-only" stays hidden unless the visitor must click. Omitted = Cloudflare's default (always shown). */
+  appearance?: TurnstileAppearance;
 }
 
 declare global {
@@ -19,7 +22,7 @@ declare global {
   }
 }
 
-export default function TurnstileWidget({ onVerify, onExpire, action }: TurnstileWidgetProps) {
+export default function TurnstileWidget({ onVerify, onExpire, action, appearance }: TurnstileWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
 
@@ -31,8 +34,9 @@ export default function TurnstileWidget({ onVerify, onExpire, action }: Turnstil
       "expired-callback": onExpire,
       theme: "auto",
       ...(action ? { action } : {}),
+      ...(appearance ? { appearance } : {}),
     });
-  }, [onVerify, onExpire, action]);
+  }, [onVerify, onExpire, action, appearance]);
 
   useEffect(() => {
     if (!TURNSTILE_SITE_KEY) return;

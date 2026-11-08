@@ -33,4 +33,18 @@ describe("TurnstileWidget", () => {
     const options = (renderMock.mock.calls[0] as unknown as [HTMLElement, Record<string, unknown>])[1];
     expect("action" in options).toBe(false);
   });
+
+  it("passes appearance to turnstile.render when provided", async () => {
+    const { default: TurnstileWidget } = await import("../components/ui/TurnstileWidget");
+    render(<TurnstileWidget onVerify={vi.fn()} appearance="interaction-only" />);
+    const options = (renderMock.mock.calls[0] as unknown as [HTMLElement, Record<string, unknown>])[1];
+    expect(options.appearance).toBe("interaction-only");
+  });
+
+  it("omits appearance when not provided, keeping Cloudflare's default", async () => {
+    const { default: TurnstileWidget } = await import("../components/ui/TurnstileWidget");
+    render(<TurnstileWidget onVerify={vi.fn()} />);
+    const options = (renderMock.mock.calls[0] as unknown as [HTMLElement, Record<string, unknown>])[1];
+    expect("appearance" in options).toBe(false);
+  });
 });
