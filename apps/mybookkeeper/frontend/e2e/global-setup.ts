@@ -78,6 +78,21 @@ async function register(email: string, password: string): Promise<void> {
   // 400 means user already exists — that's fine
 }
 
+// New accounts can't log in until their email is verified. The test-mode
+// helper does that directly, since no one reads the console-backend email.
+async function verifyEmail(email: string): Promise<void> {
+  const res = await fetch(`${BACKEND_URL}/test/verify-email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    throw new Error(
+      `E2E auth: couldn't verify ${email} (${res.status}). The backend needs ALLOW_TEST_ADMIN_PROMOTION=true.`,
+    );
+  }
+}
+
 async function promoteToAdmin(token: string): Promise<void> {
   const res = await fetch(`${BACKEND_URL}/test/promote-admin`, {
     method: "POST",
@@ -162,6 +177,7 @@ async function globalSetup() {
     // User doesn't exist — register, then login
     console.log("E2E auth: registering test user...");
     await register(email, password);
+    await verifyEmail(email);
     token = await login(email, password);
     if (!token) {
       throw new Error("E2E auth: failed to login after registration");
