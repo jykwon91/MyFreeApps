@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 import { Button, LoadingButton } from "@platform/ui";
+import { APPLICANT_CONTACT_EMAIL_MESSAGES as MESSAGES } from "@mybookkeeper/api-client/constants/applicantContactEmail";
 import { useUpdateApplicantContactEmailMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useToast } from "@/shared/hooks/useToast";
 import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
@@ -9,9 +10,6 @@ export interface ApplicantContactEmailEditorProps {
   email: string | null;
   canWrite: boolean;
 }
-
-const INVALID_EMAIL = "That doesn't look like an email address.";
-const SAVE_FAILED = "I couldn't save that email. Want to try again?";
 
 /**
  * The applicant's email, with a way to add, change or remove it. Shown inside
@@ -37,12 +35,12 @@ export default function ApplicantContactEmailEditor({
       await updateEmail({ applicantId, data: { contact_email: next } }).unwrap();
       setSaved(next);
       setDraft(null);
-      showSuccess(next ? "Email saved" : "Email removed");
+      showSuccess(next ? MESSAGES.saved : MESSAGES.removed);
     } catch (err: unknown) {
       if ((err as { status?: unknown } | undefined)?.status === 422) {
-        setError(INVALID_EMAIL);
+        setError(MESSAGES.invalid);
       } else {
-        showError(getApiErrorDetail(err, SAVE_FAILED));
+        showError(getApiErrorDetail(err, MESSAGES.failed));
       }
     }
   }
@@ -57,7 +55,7 @@ export default function ApplicantContactEmailEditor({
     return (
       <div>
         <label htmlFor={inputId} className="text-xs text-muted-foreground block">
-          Email
+          {MESSAGES.label}
         </label>
         <form onSubmit={handleSubmit} className="mt-0.5 flex flex-wrap items-center gap-2">
           <input
@@ -71,8 +69,8 @@ export default function ApplicantContactEmailEditor({
             aria-describedby={error ? `${inputId}-error` : undefined}
             className="rounded border bg-background px-2 py-1 text-sm min-h-[44px] flex-1 min-w-[12rem] disabled:opacity-50"
           />
-          <LoadingButton type="submit" size="sm" isLoading={isLoading} loadingText="Saving...">
-            Save
+          <LoadingButton type="submit" size="sm" isLoading={isLoading} loadingText={MESSAGES.saving}>
+            {MESSAGES.save}
           </LoadingButton>
           <Button
             type="button"
@@ -84,7 +82,7 @@ export default function ApplicantContactEmailEditor({
               setError(null);
             }}
           >
-            Cancel
+            {MESSAGES.cancel}
           </Button>
         </form>
         {error ? (
@@ -98,7 +96,7 @@ export default function ApplicantContactEmailEditor({
 
   return (
     <div>
-      <dt className="text-xs text-muted-foreground">Email</dt>
+      <dt className="text-xs text-muted-foreground">{MESSAGES.label}</dt>
       <dd data-testid="sensitive-contact-email" className="flex flex-wrap items-center gap-x-2">
         {saved ? (
           <a href={`mailto:${encodeURIComponent(saved)}`} className="text-primary hover:underline">
@@ -113,7 +111,7 @@ export default function ApplicantContactEmailEditor({
             onClick={() => setDraft(saved ?? "")}
             className="text-sm text-primary hover:underline min-h-[44px] px-1"
           >
-            {saved ? "Change email" : "Add email"}
+            {saved ? MESSAGES.change : MESSAGES.add}
           </button>
         ) : null}
       </dd>

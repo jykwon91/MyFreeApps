@@ -141,6 +141,7 @@ export function startApplicantServer(applicants: ApplicantDetailResponse[]): Fak
       const body = JSON.parse(String(config.data)) as { new_stage?: ApplicantDetailResponse["stage"]; contract_start?: string | null };
       const row = server.applicants.find((candidate) => config.url?.startsWith(`/applicants/${candidate.id}`));
       if (!row) return respond({ detail: "Applicant not found" }, 404);
+      if (config.url?.endsWith("/contact-email")) return respond(row);
       if (config.url?.endsWith("/stage")) row.stage = body.new_stage ?? row.stage;
       else row.contract_start = body.contract_start ?? null;
       if (server.loseNextAnswer) {

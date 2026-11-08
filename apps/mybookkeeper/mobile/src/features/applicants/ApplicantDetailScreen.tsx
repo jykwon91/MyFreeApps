@@ -134,7 +134,7 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
 
         {isTenant ? null : <ApplicantScreening applicant={applicant} />}
 
-        <ApplicantPrivateDetails applicant={applicant} key={applicant.id} />
+        <ApplicantPrivateDetails applicant={applicant} canWrite={canWrite} key={applicant.id} />
 
         {isTenant ? <ApplicantScreening applicant={applicant} /> : null}
 
