@@ -69,6 +69,16 @@ game's quest cache, `D:\World of Warcraft\_forever_\Cache\WDB\enUS\questcache.wd
 it's missing). Each row's "since" build is worked out from the files the last run wrote,
 so commit them with the refresh: the page's "Since last build" toggle needs them.
 
+The downrank calculator (`/wow-forever/downrank`) comes from `scripts.wow_downrank.build`,
+which runs after the Changes feed (a spell the feed lists as changed links to it). For
+each spell family in `scripts/wow_downrank/families.py` it reads every rank's level, max
+level, mana, cast time, amounts and spell-power coefficient from the Forever client
+(hotfixes layered like the items, so it takes the same `--hotfix-cache`) into
+`data/downrank/spells.json`. A rank the client doesn't have in full comes from Classic
+(cmangos numbers, Classic Era cast times) into `data/downrank/classic/ranks.json` and the
+run prints it; a rank in neither is left out and printed. Two complete copies of one rank
+stop the run. The family icons join the icon map, so a new family can mean icons to publish.
+
 The item pages (`/wow-forever/items/:id`) come from `scripts.wow_item_pages.build`,
 which runs after the item list: 64 shards under `data/items/pages/` (Forever client:
 the item row, bind, vendor price, recipes) and 64 under `data/items/pages/classic/`

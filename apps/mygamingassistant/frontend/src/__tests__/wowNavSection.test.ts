@@ -15,6 +15,7 @@ const KNOWN_ICON_NAMES = new Set([
   "Activity",
   "Castle",
   "Coins",
+  "Gauge",
   "GitCompare",
   "Hammer",
   "LayoutDashboard",

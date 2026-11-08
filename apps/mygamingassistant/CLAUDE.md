@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/talents`, `/wow-forever/changes`, `/wow-forever/server-status`)
+### WoW Forever (`/wow-forever`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/talents`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -602,6 +602,42 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   read from the previous files before they're overwritten). Tests:
   `tests/test_wow_changes_generator.py`, `src/__tests__/wowChanges.test.ts`,
   `e2e/wow-forever-changes.spec.ts`.
+
+#### Downrank calculator (`/wow-forever/downrank`)
+
+- `pages/WowDownrankPage.tsx`: class + spell (22 heal / nuke families), your
+  level, +healing or +spell damage and optional talent % (more amount, less
+  mana — cast-time talents aren't counted, the page says so); then "Suggested
+  ranks" (most per mana, most per second, each a `/cast Spell(Rank N)` line
+  with `MacroCopyButton`), "How it's worked out" (Game files / Classic data /
+  Unconfirmed badges + the below-20 switch), and every rank: a table from
+  `md`, cards below it (`components/downrank/`). Ranks above your level are
+  greyed and never "best"; a tie goes to the lower rank.
+- Math is pure (`lib/downrank/downrankMath.ts`, `wowDownrank.test.ts`):
+  amount = base + per-level gain (stops at max level) + bonus × coefficient ×
+  penalties, × (1 + talent %); coefficients are the Forever client's own
+  (`EffectBonusCoefficient`, per tick for periodic parts). Penalties are
+  Classic's: below level 20 = 1 − (20 − learned) × 3.75% — Forever's files
+  DON'T include it, so it's on by default, tagged Unconfirmed, and `p20=0`
+  turns it off — and downranking = (max level + 5) / your level past
+  `fullBonusUntil`. Per second = amount / max(cast, 1.5 s), or / duration for
+  a tick-only spell. Chain Heal = first target; Prayer of Healing = per target.
+- Settings are the URL (`?spell&lvl&bonus&tal&mana&p20`, replace history,
+  `hooks/useDownrankSettings.ts` on `useLiveSearchParams`); spell and level are
+  always written so a shared link means the same thing. With no URL the World
+  Map's saved class / level fill in (a class with no family → Priest); never
+  written back.
+- **Data is GENERATED** — `python -m scripts.wow_downrank.build --hotfix-cache
+  <DBCache.bin>` (from `backend/`, in `wow_refresh` after the Changes build)
+  writes `data/downrank/spells.json` (Forever: Spell, SpellName, SpellEffect,
+  SpellMisc, SpellDuration, SpellCastTimes, SpellLevels, SpellPower,
+  SkillLineAbility; SoD rune copies — AcquireMethod 3 — skipped) and
+  `data/downrank/classic/ranks.json` (ranks Forever lacks: cmangos numbers,
+  GPL — keep LICENSE + README; empty today). Both are one lazy chunk
+  (`data/downrank/downrankFiles.ts`, `lib/downrank/loadDownrank.ts`). Family
+  icons go into `wowIcons.json` `files`. Tests:
+  `tests/test_wow_downrank_generator.py`, `src/__tests__/wowDownrank.test.ts`,
+  `e2e/wow-forever-downrank.spec.ts`.
 
 #### Server status (`/wow-forever/server-status`)
 

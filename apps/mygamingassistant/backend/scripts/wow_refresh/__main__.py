@@ -85,7 +85,9 @@ def generators(*, art: bool, hotfix_cache: Path, quest_cache: Path) -> list[list
         ["scripts.wow_talents.build", *cache],
         # Reads the Item and Talent output above (and the World Map's zones).
         ["scripts.wow_changes.build", *cache, "--quest-cache", str(quest_cache)],
-        # Reads the Professions, Item and Talent output above. Its images are published last, below.
+        # Reads the Changes output above (a family Forever changed links to it).
+        ["scripts.wow_downrank.build", *cache],
+        # Reads the Professions, Item, Talent and Downrank output above. Its images are published last, below.
         ["scripts.wow_icons.build", *cache],
         ["scripts.wow_item_names.build"],
         ["scripts.wow_macros.build"],

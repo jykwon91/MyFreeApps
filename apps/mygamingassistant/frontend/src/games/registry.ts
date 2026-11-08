@@ -87,6 +87,12 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "Plan a talent build for any class and level, see what Forever changed from Classic, and share it as a link.",
       },
       {
+        path: "/wow-forever/downrank",
+        title: "Downrank calculator",
+        iconName: "Gauge",
+        description: "See which rank of a heal or damage spell gives the most per mana and per second at your level and gear, with the macro to cast it.",
+      },
+      {
         path: "/wow-forever/changes",
         title: "Changes vs Classic",
         iconName: "GitCompare",
