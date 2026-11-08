@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures/auth";
+import { resetAuthRateLimits } from "./fixtures/auth-rate-limits";
 import { BACKEND_URL } from "./fixtures/config";
 import { totpCode } from "../../../../packages/shared-frontend/src/testing/totpCode";
 
@@ -64,6 +65,7 @@ test.describe("Security page — 2FA enable flow", () => {
         body: JSON.stringify(body),
       });
 
+    await resetAuthRateLimits();
     const registered = await post("/auth/register", { email, password, name: "Two Step Test" });
     expect(registered.ok, await registered.text()).toBe(true);
     expect((await post("/test/verify-email", { email })).ok).toBe(true);

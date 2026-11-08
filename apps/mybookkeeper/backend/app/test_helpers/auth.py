@@ -5,6 +5,7 @@ from pydantic import EmailStr
 
 from app.core.auth import current_active_user
 from app.core.config import settings
+from app.core.rate_limit import login_limiter, password_reset_limiter, register_limiter, totp_limiter
 from app.db.session import unit_of_work
 from app.models.user.user import Role, User
 from app.repositories.user import user_repo
@@ -64,3 +65,15 @@ async def force_verify_email(email: EmailStr = Body(..., embed=True)) -> None:
         if not target:
             raise HTTPException(status_code=404, detail="User not found")
         target.is_verified = True
+
+
+@router.post("/test/reset-auth-rate-limits", status_code=204)
+async def reset_auth_rate_limits() -> None:
+    """Clear the per-IP sign-in, sign-up and password-reset limits.
+
+    Every E2E request comes from one IP, so without this a spec that signs in
+    a few times uses up the allowance of the specs that follow it.
+    """
+    _require_test_mode()
+    for limiter in (login_limiter, totp_limiter, register_limiter, password_reset_limiter):
+        limiter.reset()

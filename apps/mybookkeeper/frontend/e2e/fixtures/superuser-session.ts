@@ -4,6 +4,7 @@ import {
   msUntilNextTotpStep,
   totpCodeAtStep,
 } from "../../../../../packages/shared-frontend/src/testing/totpCode";
+import { resetAuthRateLimits } from "./auth-rate-limits";
 import { BACKEND_URL } from "./config";
 import { E2E_ONBOARDING } from "./onboarding";
 
@@ -48,6 +49,7 @@ export class SuperuserSession {
     let token = "";
     let recoveryCode: string | null = null;
     try {
+      await resetAuthRateLimits();
       const registered = await anon.post("/auth/register", { data: { email, password: PASSWORD, name: "E2E Super Admin" } });
       expect(registered.ok(), await registered.text()).toBe(true);
       expect((await anon.post("/test/verify-email", { data: { email } })).ok()).toBe(true);

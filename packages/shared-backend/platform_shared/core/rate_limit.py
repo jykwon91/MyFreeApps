@@ -95,6 +95,15 @@ class RateLimiter:
             oldest = bucket.timestamps[-self._config.max_attempts]
             return max(1, math.ceil(oldest + self._config.window_seconds - now))
 
+    def reset(self) -> None:
+        """Forget every recorded attempt, for every key.
+
+        For test-mode helpers: an E2E run sends every request from one IP,
+        so specs would otherwise spend each other's sign-in allowance.
+        """
+        with self._lock:
+            self._buckets.clear()
+
     def check(self, key: str) -> None:
         """Record an attempt and raise 429 if over limit."""
         now = time.monotonic()
