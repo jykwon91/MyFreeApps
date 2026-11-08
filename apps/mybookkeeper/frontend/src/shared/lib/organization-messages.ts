@@ -22,6 +22,9 @@ export const INVITE_MESSAGES = {
   expired: "Expired",
   inviteGone: "That invite is already gone.",
   couldntCancel: "I couldn't cancel that invite. Try again.",
+  sendAgain: "Send again",
+  sending: "Sending…",
+  couldntSendAgain: "I couldn't send that invite again. Try again.",
 } as const;
 
 export function inviteSentMessage(email: string): string {
@@ -34,4 +37,8 @@ export function inviteCancelledMessage(email: string): string {
 
 export function cancelInviteLabel(email: string): string {
   return `Cancel invite for ${email}`;
+}
+
+export function sendInviteAgainLabel(email: string): string {
+  return `Send the invite to ${email} again`;
 }
