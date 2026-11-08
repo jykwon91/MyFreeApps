@@ -1,6 +1,7 @@
 const BACK_LABELS: readonly (readonly [string, string])[] = [
   ["/wow-forever/gear", "Back to Best gear"],
   ["/wow-forever/compare", "Back to Item Compare"],
+  ["/wow-forever/changes", "Back to Changes vs Classic"],
   ["/wow-forever/items", "Back to the last item"],
 ];
 

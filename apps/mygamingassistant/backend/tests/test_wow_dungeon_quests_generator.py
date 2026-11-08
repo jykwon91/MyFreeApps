@@ -92,6 +92,17 @@ def test_parse_quest_refuses_a_record_whose_strings_dont_fit() -> None:
         parse_quest(_record(1, "Short") + b"extra")
 
 
+def test_parse_quest_refuses_a_record_cut_off_inside_its_string_lengths() -> None:
+    # The live cache has records like this; they used to crash the reader with "negative shift count".
+    body = _record(1, "Cut")
+    cut = body[:len(body) - len("Cut") - len("Do the thing.") - len("Go there.") - STRING_LENGTH_BYTES + 2]
+    with pytest.raises(QuestCacheError):
+        parse_quest(cut)
+    cache = parse_quest_cache(_cache_file((1, cut), (214, _record(214, "Good"))))
+    assert set(cache.quests) == {214}
+    assert cache.unreadable == frozenset({1})
+
+
 def test_parse_quest_cache_sets_aside_records_it_cant_read() -> None:
     cache = parse_quest_cache(_cache_file((214, _record(214, "Good")), (92456, _record(92456, "Writ") + b"??"),
                                           (7, _record(8, "Wrong id"))))

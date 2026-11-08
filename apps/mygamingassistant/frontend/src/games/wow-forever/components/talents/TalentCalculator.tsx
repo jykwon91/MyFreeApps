@@ -1,21 +1,20 @@
 import clsx from "clsx";
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import EmptyStateNote from "@/games/wow-forever/components/shared/EmptyStateNote";
 import TalentDetails from "@/games/wow-forever/components/talents/TalentDetails";
 import TalentLevelStepper from "@/games/wow-forever/components/talents/TalentLevelStepper";
 import TalentShareBar from "@/games/wow-forever/components/talents/TalentShareBar";
 import TalentTreeTabs from "@/games/wow-forever/components/talents/TalentTreeTabs";
 import TalentTreeView from "@/games/wow-forever/components/talents/TalentTreeView";
+import { TALENT_PICK_PARAM } from "@/games/wow-forever/data/talents/talentConfig";
 import { useTalentBuild } from "@/games/wow-forever/hooks/useTalentBuild";
+import { findTalentPosition } from "@/games/wow-forever/lib/talents/findTalentPosition";
 import { formatPoints } from "@/games/wow-forever/lib/talents/formatPoints";
 import { pointsForLevel, totalPoints, treePoints } from "@/games/wow-forever/lib/talents/talentRules";
 import type { TalentBuild } from "@/games/wow-forever/types/talents/talentBuild";
 import type { TalentClassData } from "@/games/wow-forever/types/talents/talentClassData";
-
-interface Picked {
-  tree: number;
-  talent: number;
-}
+import type { TalentPosition } from "@/games/wow-forever/types/talents/talentPosition";
 
 /** The tree with the most points (a shared build opens on its main tree), else the first. */
 function mainTree(build: TalentBuild): number {
@@ -29,8 +28,11 @@ function mainTree(build: TalentBuild): number {
 /** One class's three trees, the level, points left, the picked talent and the share bar. */
 export default function TalentCalculator({ data }: { data: TalentClassData }) {
   const { build, level, minLevel, brokenLink, add, remove, setLevel, reset } = useTalentBuild(data.trees);
-  const [activeTree, setActiveTree] = useState(() => mainTree(build));
-  const [picked, setPicked] = useState<Picked | null>(null);
+  const [params] = useSearchParams();
+  // A `?talent=` link opens on that talent; read once, so later picks are the player's own.
+  const [linked] = useState(() => findTalentPosition(data.trees, params.get(TALENT_PICK_PARAM)));
+  const [activeTree, setActiveTree] = useState(() => linked?.tree ?? mainTree(build));
+  const [picked, setPicked] = useState<TalentPosition | null>(linked);
   const spent = totalPoints(build);
   const available = pointsForLevel(level);
   const split = data.trees.map((_tree, i) => treePoints(build, i)).join(" / ");

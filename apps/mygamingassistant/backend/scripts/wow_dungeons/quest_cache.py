@@ -85,6 +85,8 @@ class QuestCache:
 
 def _bits(buf: bytes, widths: tuple[int, ...]) -> list[int]:
     """Big-endian bit fields, the way the client packs string lengths."""
+    if len(buf) * 8 < sum(widths):
+        raise QuestCacheError(f"record ends inside its bit-packed lengths ({len(buf)} bytes left)")
     value = int.from_bytes(buf, "big")
     left = len(buf) * 8
     out = []

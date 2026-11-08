@@ -33,6 +33,8 @@ export const TALENT_LONG_PRESS_SLOP_PX = 8;
 export const TALENT_BUILD_CODE_VERSION = "1";
 export const TALENT_BUILD_PARAM = "b";
 export const TALENT_LEVEL_PARAM = "lvl";
+/** `?talent=<id>` opens the calculator on that talent (its tree and its details); the Changes feed links with it. */
+export const TALENT_PICK_PARAM = "talent";
 /** Longest `?b=` we read: three trees of up to 31 talents, plus separators. */
 export const TALENT_BUILD_CODE_MAX_LENGTH = 120;
 
