@@ -12,7 +12,7 @@ import type { AskCard } from "@/games/wow-forever/types/ask/askCard";
 import type { AskStoredChat } from "@/games/wow-forever/types/ask/askStoredChat";
 import type { ChatMessage } from "@/games/wow-forever/types/ask/chatMessage";
 
-export const EMPTY_CHAT: AskStoredChat = { messages: [], cards: {} };
+export const EMPTY_CHAT: AskStoredChat = { messages: [], cards: {}, ticket: null };
 
 const ROLES: readonly unknown[] = Object.values(CHAT_ROLE);
 const BLOCKS: readonly unknown[] = Object.values(CHAT_BLOCK);
@@ -51,7 +51,10 @@ export function parseStoredChat(raw: unknown): AskStoredChat {
   for (const [id, card] of Object.entries(raw.cards)) {
     if (isCard(card)) cards[id] = card;
   }
-  return { messages: completeTurnsOnly(raw.messages), cards };
+  const messages = completeTurnsOnly(raw.messages);
+  // The ticket is only ever replaced when a question finishes, so it still covers the answered turns kept here.
+  const ticket = messages.length > 0 && typeof raw.ticket === "string" && raw.ticket !== "" ? raw.ticket : null;
+  return { messages, cards, ticket };
 }
 
 export function readStoredChat(): AskStoredChat {

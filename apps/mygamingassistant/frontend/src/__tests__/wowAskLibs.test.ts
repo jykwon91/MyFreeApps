@@ -117,19 +117,26 @@ describe("storage", () => {
   });
 
   it("round-trips, and empties the key on an empty chat", () => {
-    const chat = { messages: [q("a"), a("b")], cards: { t: { kind: ASK_CARD.where } as const } };
+    const chat = { messages: [q("a"), a("b")], cards: { t: { kind: ASK_CARD.where } as const }, ticket: "fixture-ticket" };
     writeStoredChat(chat);
     expect(readStoredChat()).toEqual(chat);
-    writeStoredChat({ messages: [], cards: {} });
+    writeStoredChat({ messages: [], cards: {}, ticket: null });
     expect(window.sessionStorage.getItem(ASK_STORAGE_KEY)).toBeNull();
   });
 
   it("throws away anything malformed", () => {
     expect(parseStoredChat({ messages: [{ role: "system", content: [] }], cards: {} }).messages).toEqual([]);
     expect(parseStoredChat({ messages: [q("a"), a("b")], cards: { x: { kind: "evil" } } }).cards).toEqual({});
-    expect(parseStoredChat("nope")).toEqual({ messages: [], cards: {} });
+    expect(parseStoredChat("nope")).toEqual({ messages: [], cards: {}, ticket: null });
+    expect(parseStoredChat({ messages: [q("a"), a("b")], cards: {}, ticket: 7 }).ticket).toBeNull();
     window.sessionStorage.setItem(ASK_STORAGE_KEY, "{not json");
-    expect(readStoredChat()).toEqual({ messages: [], cards: {} });
+    expect(readStoredChat()).toEqual({ messages: [], cards: {}, ticket: null });
+  });
+
+  it("keeps the last answer's ticket when an unfinished question is dropped, and none for an empty chat", () => {
+    const chat = { messages: [q("a"), a("b"), q("c"), toolCall("t")], cards: {}, ticket: "fixture-ticket" };
+    expect(parseStoredChat(chat)).toEqual({ messages: [q("a"), a("b")], cards: {}, ticket: "fixture-ticket" });
+    expect(parseStoredChat({ messages: [q("c")], cards: {}, ticket: "fixture-ticket" }).ticket).toBeNull();
   });
 });
 

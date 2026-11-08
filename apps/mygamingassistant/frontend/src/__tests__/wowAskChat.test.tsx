@@ -79,6 +79,22 @@ describe("useAskChat", () => {
     expect(window.sessionStorage.length).toBe(1);
   });
 
+  it("a follow-up question carries the last answer's ticket, also after a reload", async () => {
+    sendChatTurn.mockResolvedValueOnce(text("First answer.")).mockResolvedValueOnce(text("Second answer."));
+    const first = renderHook(() => useAskChat(data, turnstile));
+    act(() => first.result.current.ask("where is booty bay"));
+    await waitFor(() => expect(first.result.current.turns[0]?.answer).toBe("First answer."));
+    expect(sendChatTurn.mock.calls[0][0].ticket).toBeUndefined();
+    first.unmount();
+
+    // A new page load reads the chat (and its ticket) back from sessionStorage.
+    const { result } = renderHook(() => useAskChat(data, turnstile));
+    act(() => result.current.ask("and the nearest flight master?"));
+    await waitFor(() => expect(result.current.turns[1]?.answer).toBe("Second answer."));
+    expect(sendChatTurn.mock.calls[1][0].ticket).toBe(TICKET);
+    expect(sendChatTurn.mock.calls[1][1]).toBe(TOKEN);
+  });
+
   it("a failure rolls the chat back and Retry asks the same question", async () => {
     sendChatTurn.mockRejectedValueOnce(rateLimited());
     const { result } = renderHook(() => useAskChat(data, turnstile));

@@ -64,7 +64,7 @@ describe("runAskTurn", () => {
       runTool: vi.fn(async () => OUTCOME),
     };
     const ev = events();
-    const messages = await runAskTurn([], "where's the closest warlock trainer?", deps, ev);
+    const { messages, ticket } = await runAskTurn([], null, "where's the closest warlock trainer?", deps, ev);
 
     expect(bodies[0][1]).toBe(true);
     expect(bodies[0][0]).toEqual({ messages: [{ role: "user", content: [{ type: "text", text: "where's the closest warlock trainer?" }] }] });
@@ -76,25 +76,39 @@ describe("runAskTurn", () => {
     });
     expect(messages).toHaveLength(4);
     expect(messages[3]).toEqual(textReply("Here they are.").message);
+    expect(ticket).toBe(TICKET_2);
     expect(ev.log).toEqual(["messages:1", "messages:2", "tools:toolu_a", "card:toolu_a", "messages:3", "messages:4"]);
   });
 
-  it("answers straight away when no tool is needed", async () => {
-    const deps: AskTurnDeps = { send: async () => textReply("Hello."), runTool: vi.fn() };
+  it("a follow-up question sends the previous answer's ticket with the human check", async () => {
+    const bodies: [ChatTurnRequest, boolean][] = [];
+    const deps: AskTurnDeps = {
+      send: async (body, isNew) => {
+        bodies.push([structuredClone(body), isNew]);
+        return textReply("Hello.");
+      },
+      runTool: vi.fn(),
+    };
     const history: ChatMessage[] = [
       { role: "user", content: [{ type: "text", text: "hi" }] },
       { role: "assistant", content: [{ type: "text", text: "Hi!" }] },
     ];
-    const messages = await runAskTurn(history, "and again", deps, events());
+    const { messages, ticket } = await runAskTurn(history, TICKET_1, "and again", deps, events());
     expect(messages).toHaveLength(4);
     expect(deps.runTool).not.toHaveBeenCalled();
+    expect(bodies).toHaveLength(1);
+    expect(bodies[0][1]).toBe(true);
+    expect(bodies[0][0].ticket).toBe(TICKET_1);
+    expect(ticket).toBe(TICKET_2);
   });
 
   it("stops when no rounds are left and drops the unrun tool call", async () => {
     const deps: AskTurnDeps = { send: async () => toolUseReply("toolu_b", 0, TICKET_1), runTool: vi.fn() };
-    const messages = await runAskTurn([], "q", deps, events());
+    const { messages, ticket } = await runAskTurn([], null, "q", deps, events());
     expect(deps.runTool).not.toHaveBeenCalled();
     expect(last(messages)).toEqual({ role: "assistant", content: [{ type: "text", text: "Let me look." }] });
+    // The kept reply differs from the one the ticket signed, so there is no ticket to continue with.
+    expect(ticket).toBeNull();
   });
 
   it("an empty final reply gets the 'couldn't finish' line", async () => {
@@ -104,7 +118,7 @@ describe("runAskTurn", () => {
       ticket: TICKET_1,
       rounds_left: 2,
     };
-    const messages = await runAskTurn([], "q", { send: async () => empty, runTool: vi.fn() }, events());
+    const { messages } = await runAskTurn([], null, "q", { send: async () => empty, runTool: vi.fn() }, events());
     expect(last(messages)).toEqual({ role: "assistant", content: [{ type: "text", text: ASK_COPY.unfinished }] });
   });
 
@@ -130,12 +144,12 @@ describe("runAskTurn", () => {
       },
       runTool: async (c) => ({ content: c.id, isError: false, card: null }),
     };
-    await runAskTurn([], "q", deps, events());
+    await runAskTurn([], null, "q", deps, events());
     expect(lastBody!.messages[lastBody!.messages.length - 1].content.map((b) => (b.type === "tool_result" ? b.tool_use_id : ""))).toEqual(["toolu_1", "toolu_2"]);
   });
 
   it("throws relay errors to the caller", async () => {
     const deps: AskTurnDeps = { send: async () => Promise.reject(new Error("429")), runTool: vi.fn() };
-    await expect(runAskTurn([], "q", deps, events())).rejects.toThrow("429");
+    await expect(runAskTurn([], null, "q", deps, events())).rejects.toThrow("429");
   });
 });

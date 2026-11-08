@@ -171,6 +171,26 @@ test("the daily cap says so, with nothing to retry", async ({ page }) => {
   await expect(page.getByTestId("ask-answer")).toHaveCount(0);
 });
 
+test("a follow-up question keeps the chat going, also after a trip to the World Map", async ({ page }) => {
+  // Like the real relay: a question with history but no ticket is refused.
+  const relay = await mockRelay(page, (body) => {
+    if (body.messages.length > 1 && body.ticket !== TICKET) return json({ detail: "chat_ticket_required" }, 400);
+    return answer(`Answer ${Math.ceil(body.messages.length / 2)}.`);
+  });
+  await page.goto("/wow-forever/ask");
+  await ask(page, "Where is Booty Bay?");
+  await expect(page.getByTestId("ask-answer")).toContainText("Answer 1.");
+  await ask(page, "And Gadgetzan?");
+  await expect(page.getByTestId("ask-answer").nth(1)).toContainText("Answer 2.");
+
+  await page.goto("/wow-forever/map");
+  await page.goto("/wow-forever/ask");
+  await ask(page, "And Ratchet?");
+  await expect(page.getByTestId("ask-answer").nth(2)).toContainText("Answer 3.");
+  await expect(page.getByTestId("ask-error")).toHaveCount(0);
+  expect(relay.bodies.map((b) => b.ticket)).toEqual([undefined, TICKET, TICKET]);
+});
+
 test("an expired chat offers New chat", async ({ page }) => {
   await mockRelay(page, (body) => (body.messages.length > 2 ? json({ detail: "chat_ticket_expired" }, 409) : answer("First answer.")));
   await page.goto("/wow-forever/ask");

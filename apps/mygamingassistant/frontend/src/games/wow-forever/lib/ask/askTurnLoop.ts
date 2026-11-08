@@ -1,7 +1,9 @@
 /**
  * One question, start to finish: send it (the call that carries the human
- * check), and while Claude asks for tools, run them here and send the results
- * back with the last reply's ticket. Ends when Claude answers in text.
+ * check, plus the previous answer's ticket when the chat has history), and
+ * while Claude asks for tools, run them here and send the results back with
+ * the last reply's ticket. Ends when Claude answers in text, returning that
+ * reply's ticket for the next question.
  *
  * Pure apart from `deps` (the relay call and the tool runner) and `events`, so
  * the whole loop is unit-tested with fakes. Errors (HTTP, abort) are thrown to
@@ -11,6 +13,7 @@ import { ASK_COPY } from "@/games/wow-forever/data/ask/askCopy";
 import { CHAT_BLOCK, CHAT_ROLE, CHAT_STOP } from "@/games/wow-forever/data/ask/askChatWire";
 import type { AskTurnDeps } from "@/games/wow-forever/types/ask/askTurnDeps";
 import type { AskTurnEvents } from "@/games/wow-forever/types/ask/askTurnEvents";
+import type { AskTurnResult } from "@/games/wow-forever/types/ask/askTurnResult";
 import type { ChatMessage } from "@/games/wow-forever/types/ask/chatMessage";
 import type { ChatToolResultBlock } from "@/games/wow-forever/types/ask/chatToolResultBlock";
 import type { ChatToolUseBlock } from "@/games/wow-forever/types/ask/chatToolUseBlock";
@@ -30,6 +33,7 @@ export function toolCallsOf(message: ChatMessage): ChatToolUseBlock[] {
  * next question an invalid conversation. An empty reply gets a line saying so.
  */
 function withoutToolCalls(message: ChatMessage): ChatMessage {
+  if (toolCallsOf(message).length === 0) return message;
   const content = message.content.filter((b) => b.type !== CHAT_BLOCK.toolUse);
   return { ...message, content: content.length ? content : [{ type: CHAT_BLOCK.text, text: ASK_COPY.unfinished }] };
 }
@@ -50,13 +54,15 @@ async function runTools(calls: readonly ChatToolUseBlock[], deps: AskTurnDeps, e
 
 export async function runAskTurn(
   history: readonly ChatMessage[],
+  historyTicket: string | null,
   question: string,
   deps: AskTurnDeps,
   events: AskTurnEvents,
-): Promise<ChatMessage[]> {
+): Promise<AskTurnResult> {
   let messages: ChatMessage[] = [...history, userQuestion(question)];
   events.onMessages(messages);
-  let response = await deps.send({ messages }, true);
+  const first = history.length > 0 && historyTicket !== null ? { messages, ticket: historyTicket } : { messages };
+  let response = await deps.send(first, true);
   while (wantsTools(response)) {
     const calls = toolCallsOf(response.message);
     messages = [...messages, response.message];
@@ -66,7 +72,8 @@ export async function runAskTurn(
     events.onMessages(messages);
     response = await deps.send({ messages, ticket: response.ticket }, false);
   }
-  messages = [...messages, withoutToolCalls(response.message)];
+  const reply = withoutToolCalls(response.message);
+  messages = [...messages, reply];
   events.onMessages(messages);
-  return messages;
+  return { messages, ticket: reply === response.message ? response.ticket : null };
 }
