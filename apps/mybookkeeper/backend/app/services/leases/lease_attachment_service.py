@@ -5,12 +5,14 @@ Handles upload, list, update (kind / signing state), and delete of
 """
 from __future__ import annotations
 
+import asyncio
 import datetime as _dt
 import logging
 import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.lease_enums import LEASE_ATTACHMENT_KINDS
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
 from app.repositories.leases import (
@@ -40,8 +42,6 @@ from app.services.storage.attachment_content import (
     UnsupportedAttachmentType,
     clean_attachment,
 )
-
-from app.core.lease_enums import LEASE_ATTACHMENT_KINDS
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ async def upload_attachment(
         raise AttachmentTooLargeError(f"File exceeds {max_mb}MB limit")
 
     try:
-        cleaned = clean_attachment(content, ALLOWED_ATTACHMENT_MIME_TYPES)
+        cleaned = await asyncio.to_thread(clean_attachment, content, ALLOWED_ATTACHMENT_MIME_TYPES)
     except UnsupportedAttachmentType as exc:
         raise AttachmentTypeRejectedError(
             "Unsupported attachment type. Allowed: pdf, docx, jpg, png, webp",

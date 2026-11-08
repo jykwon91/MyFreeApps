@@ -5,6 +5,7 @@ row (kind='imported'), upload attachments to MinIO, and return the detail.
 """
 from __future__ import annotations
 
+import asyncio
 import datetime as _dt
 import logging
 import uuid
@@ -15,7 +16,6 @@ from app.repositories.applicants import applicant_repo
 from app.repositories.leases import signed_lease_attachment_repo, signed_lease_repo
 from app.repositories.listings import listing_repo
 from app.schemas.leases.signed_lease_response import SignedLeaseResponse
-from app.services.leases.listing_resolution import resolve_inquiry_listing_id
 from app.services.leases._lease_helpers import (
     ALLOWED_ATTACHMENT_MIME_TYPES,
     AttachmentTooLargeError,
@@ -24,6 +24,7 @@ from app.services.leases._lease_helpers import (
     _validate_parent_lease,
 )
 from app.services.leases.lease_lifecycle_service import get_lease
+from app.services.leases.listing_resolution import resolve_inquiry_listing_id
 from app.services.storage.attachment_content import (
     UnreadableImage,
     UnsupportedAttachmentType,
@@ -146,7 +147,7 @@ async def import_signed_lease(
             max_mb = _settings.max_blackout_attachment_size_bytes // (1024 * 1024)
             raise AttachmentTooLargeError(f"File '{filename}' exceeds {max_mb}MB limit")
         try:
-            cleaned = clean_attachment(content, ALLOWED_ATTACHMENT_MIME_TYPES)
+            cleaned = await asyncio.to_thread(clean_attachment, content, ALLOWED_ATTACHMENT_MIME_TYPES)
         except UnsupportedAttachmentType as exc:
             raise AttachmentTypeRejectedError(
                 f"Unsupported file type for '{filename}'. "

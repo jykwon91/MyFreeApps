@@ -7,6 +7,7 @@ module.
 """
 from __future__ import annotations
 
+import asyncio
 import datetime as _dt
 import logging
 import uuid
@@ -21,7 +22,7 @@ from app.repositories.insurance import (
     insurance_policy_attachment_repo,
     insurance_policy_repo,
 )
-from app.schemas.insurance.insurance_policy_validation import validate_policy_fields
+from app.repositories.properties import property_repo
 from app.schemas.insurance.insurance_policy_attachment_response import (
     InsurancePolicyAttachmentResponse,
 )
@@ -30,7 +31,7 @@ from app.schemas.insurance.insurance_policy_list_response import (
 )
 from app.schemas.insurance.insurance_policy_response import InsurancePolicyResponse
 from app.schemas.insurance.insurance_policy_summary import InsurancePolicySummary
-from app.repositories.properties import property_repo
+from app.schemas.insurance.insurance_policy_validation import validate_policy_fields
 from app.services.documents.document_ownership import owns_document
 from app.services.insurance._merged_policy import MergedPolicy
 from app.services.insurance.attachment_response_builder import attach_presigned_urls
@@ -381,7 +382,7 @@ async def upload_attachment(
         raise AttachmentTooLargeError(f"File exceeds {max_mb}MB limit")
 
     try:
-        cleaned = clean_attachment(content, ALLOWED_ATTACHMENT_MIME_TYPES)
+        cleaned = await asyncio.to_thread(clean_attachment, content, ALLOWED_ATTACHMENT_MIME_TYPES)
     except UnsupportedAttachmentType as exc:
         raise AttachmentTypeRejectedError(
             "Unsupported file type. Allowed: pdf, docx, jpg, png, webp",

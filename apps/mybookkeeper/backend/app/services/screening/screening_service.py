@@ -15,6 +15,7 @@ proves applicant ownership before touching storage or the row.
 """
 from __future__ import annotations
 
+import asyncio
 import datetime as _dt
 import logging
 import uuid
@@ -297,8 +298,8 @@ async def record_result(
     """
     _validate_upload_payload(status, adverse_action_snippet)
     provider = get_provider(provider_name)
-    processed: ProcessedReport = process_report(
-        file_content, declared_content_type=declared_content_type,
+    processed: ProcessedReport = await asyncio.to_thread(
+        process_report, file_content, declared_content_type=declared_content_type,
     )
 
     storage = get_storage()

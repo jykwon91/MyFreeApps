@@ -6,6 +6,7 @@ parent manual (org-scoped) and the section (manual-scoped) before touching any
 image. EXIF stripping is mandatory — a host's GPS coordinates must never reach
 the bucket (see image_processor).
 """
+import asyncio
 import logging
 import uuid
 from typing import Any
@@ -87,7 +88,7 @@ async def upload_images(
     # leave half a batch persisted.
     processed: list[tuple[bytes, str, str]] = []
     for content, filename, declared in files:
-        result = process_image(content, declared_content_type=declared)
+        result = await asyncio.to_thread(process_image, content, declared_content_type=declared)
         safe_name = filename or f"image-{uuid.uuid4().hex}"
         processed.append((result.content, result.content_type, safe_name))
 

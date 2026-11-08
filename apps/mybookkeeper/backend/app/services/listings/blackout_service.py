@@ -12,6 +12,7 @@ broader content-type allowlist (images + PDF + plain text).
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -144,7 +145,7 @@ async def upload_attachment(
 
     # 3-5. Type from the bytes, allowlist, photo metadata strip — fail closed
     try:
-        cleaned = clean_attachment(content, ALLOWED_ATTACHMENT_MIME_TYPES)
+        cleaned = await asyncio.to_thread(clean_attachment, content, ALLOWED_ATTACHMENT_MIME_TYPES)
     except UnsupportedAttachmentType as exc:
         raise AttachmentTypeRejectedError(
             f"Unsupported file type (sniffed={exc.sniffed!r}). "
