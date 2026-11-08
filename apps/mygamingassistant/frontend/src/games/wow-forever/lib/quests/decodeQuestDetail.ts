@@ -53,7 +53,8 @@ function numberOrNull(value: unknown): number | null {
 
 /**
  * Decodes a single quest from the shard and seen overlay.
- * Returns `null` when the quest id isn't in the shard (new Forever quest with no Classic data).
+ * A quest new in Forever has no Classic row; if it's been seen in game it is built from the
+ * seen row alone (no givers, chain or enders). Returns `null` when neither source has it.
  */
 export function decodeQuestDetail(
   questId: number,
@@ -69,10 +70,9 @@ export function decodeQuestDetail(
   const objCol = columnIndexes("questShard", doc.objectiveColumns, OBJ_COLS);
   const targetCol = columnIndexes("questShard", doc.targetColumns, TARGET_COLS);
 
-  const row = doc.quests[String(questId)];
-  if (!row) return null;
-
+  const row = doc.quests[String(questId)] ?? null;
   const seenRow = seen.quests[String(questId)] ?? null;
+  if (!row && !seenRow) return null;
 
   const target = (key: string): { name: string; instance: number | null } | null => {
     const r = doc.targets[key];
@@ -125,6 +125,26 @@ export function decodeQuestDetail(
       },
     ];
   };
+
+  if (!row) {
+    const s = seenRow as Row;
+    return {
+      id: questId,
+      title: String(s[seenCol.title]),
+      level: Number(s[seenCol.level]),
+      minLevel: Number(s[seenCol.minLevel]),
+      side: FACTION.neutral,
+      classes: [],
+      givers: [],
+      chain: [],
+      objectives: decodeObjectives(s[seenCol.objectives]),
+      rewards: decodeRewards(s[seenCol.rewards]),
+      choices: decodeRewards(s[seenCol.choices]),
+      enders: [],
+      seenOn: seen.seenOn,
+      dungeonInstanceId: null,
+    };
+  }
 
   const givers = decodeGivers(row[col.givers]);
   return {

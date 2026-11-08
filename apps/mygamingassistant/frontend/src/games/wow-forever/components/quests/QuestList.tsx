@@ -3,6 +3,7 @@ import QuestFiltersBar from "@/games/wow-forever/components/quests/QuestFiltersB
 import QuestRow from "@/games/wow-forever/components/quests/QuestRow";
 import { QUEST_PAGE_SIZE } from "@/games/wow-forever/data/quests/questsConfig";
 import { filterQuests } from "@/games/wow-forever/lib/quests/filterQuests";
+import { listableQuests } from "@/games/wow-forever/lib/quests/listableQuests";
 import { useQuestList } from "@/games/wow-forever/hooks/useQuestList";
 import type { QuestIndex } from "@/games/wow-forever/types/quests/questIndex";
 
@@ -15,7 +16,9 @@ interface QuestListProps {
 export default function QuestList({ index, seenIds }: QuestListProps) {
   const { filter, pages, updateFilter, resetFilters, showMore } = useQuestList();
   const deferredFilter = useDeferredValue(filter);
-  const filtered = useMemo(() => filterQuests(index.entries, deferredFilter, seenIds), [index.entries, deferredFilter, seenIds]);
+  const listable = useMemo(() => listableQuests(index.entries), [index.entries]);
+  const unnamedCount = index.entries.length - listable.length;
+  const filtered = useMemo(() => filterQuests(listable, deferredFilter, seenIds), [listable, deferredFilter, seenIds]);
   const pageLimit = pages * QUEST_PAGE_SIZE;
   const shown = filtered.slice(0, pageLimit);
 
@@ -48,10 +51,15 @@ export default function QuestList({ index, seenIds }: QuestListProps) {
         onReset={resetFilters}
       />
       <p className="text-sm text-muted-foreground" data-testid="quest-count">
-        {filtered.length === index.entries.length
-          ? `${index.entries.length.toLocaleString()} quests`
-          : `${filtered.length.toLocaleString()} of ${index.entries.length.toLocaleString()} quests`}
+        {filtered.length === listable.length
+          ? `${listable.length.toLocaleString()} quests`
+          : `${filtered.length.toLocaleString()} of ${listable.length.toLocaleString()} quests`}
       </p>
+      {unnamedCount > 0 ? (
+        <p className="text-xs text-muted-foreground" data-testid="quest-unnamed-note">
+          {`${unnamedCount.toLocaleString()} more quests are in the Forever game files without a name yet. A quest gets its name here once it's been seen in game.`}
+        </p>
+      ) : null}
       {shown.length > 0 ? (
         <ul className="divide-y rounded-xl border bg-card" data-testid="quest-list">
           {shown.map((q) => (

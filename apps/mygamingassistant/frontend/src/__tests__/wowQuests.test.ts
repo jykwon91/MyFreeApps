@@ -8,14 +8,18 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { decodeQuestDetail } from "@/games/wow-forever/lib/quests/decodeQuestDetail";
 import { decodeQuestIndex } from "@/games/wow-forever/lib/quests/decodeQuestIndex";
 import { filterQuests } from "@/games/wow-forever/lib/quests/filterQuests";
+import { listableQuests } from "@/games/wow-forever/lib/quests/listableQuests";
 import { DEFAULT_QUEST_FILTER, parseQuestFilter, writeQuestFilter } from "@/games/wow-forever/lib/quests/questFilterParams";
 import { questPageHref } from "@/games/wow-forever/lib/quests/questPageHref";
 import { parseQuestQuery, questMatchesQuery } from "@/games/wow-forever/lib/quests/questSearch";
+import type { QuestDetailFile } from "@/games/wow-forever/types/quests/questDetailFile";
 import type { QuestFilter } from "@/games/wow-forever/types/quests/questFilter";
 import type { QuestIndexEntry } from "@/games/wow-forever/types/quests/questIndexEntry";
 import type { QuestIndexFile } from "@/games/wow-forever/types/quests/questIndexFile";
+import type { QuestSeenFile } from "@/games/wow-forever/types/quests/questSeenFile";
 
 // --- helpers ------------------------------------------------------------------
 
@@ -315,5 +319,53 @@ describe("decodeQuestIndex", () => {
     expect(index.clientBuild).toBe("1.2.3");
     expect(index.zones).toEqual([[40, "Westfall"]]);
     expect(index.counts.total).toBe(0);
+  });
+});
+
+// --- listableQuests -----------------------------------------------------------
+
+describe("listableQuests", () => {
+  it("leaves out quests with no name", () => {
+    const named = entry({ id: 1 });
+    const unnamed = entry({ id: 2, name: null, searchWords: [] });
+    expect(listableQuests([named, unnamed]).map((e) => e.id)).toEqual([1]);
+  });
+});
+
+// --- decodeQuestDetail --------------------------------------------------------
+
+describe("decodeQuestDetail", () => {
+  const shard: QuestDetailFile = {
+    source: {},
+    questColumns: ["id", "title", "level", "minLevel", "side", "classes", "givers", "chain", "objectives", "rewards", "choices", "enders"],
+    giverColumns: ["kind", "id", "name", "zone", "subzone", "x", "y", "instance"],
+    objectiveColumns: ["kind", "id", "count"],
+    targetColumns: ["name", "instance"],
+    quests: {},
+    targets: {},
+  };
+  const seen: QuestSeenFile = {
+    source: "questcache.wdb",
+    clientBuild: 70862,
+    seenOn: "2026-11-08",
+    attribution: "",
+    columns: ["title", "level", "minLevel", "objectives", "rewards", "choices"],
+    quests: { "65602": ["A New Forever Quest", 12, 8, [], [[2589, 3]], []] },
+  };
+  const items = new Map([[2589, { name: "Linen Cloth", slot: "" }]]);
+
+  it("builds a quest that's new in Forever from its seen row", () => {
+    const quest = decodeQuestDetail(65602, shard, seen, new Map(), items);
+    expect(quest).not.toBeNull();
+    expect(quest?.title).toBe("A New Forever Quest");
+    expect(quest?.level).toBe(12);
+    expect(quest?.minLevel).toBe(8);
+    expect(quest?.givers).toEqual([]);
+    expect(quest?.rewards).toEqual([{ id: 2589, name: "Linen Cloth", count: 3 }]);
+    expect(quest?.seenOn).toBe("2026-11-08");
+  });
+
+  it("returns null when neither the shard nor the seen file has the quest", () => {
+    expect(decodeQuestDetail(1, shard, seen, new Map(), items)).toBeNull();
   });
 });

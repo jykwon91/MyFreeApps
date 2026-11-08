@@ -7,8 +7,8 @@
  *   - "View full quest details" link on the dungeon page
  *   - What's New entry
  *
- * The placeholder data has 0 quests, so list tests verify structural/UX
- * correctness. The dungeon-link test proves the cross-page wiring works.
+ * Runs against the committed quest data (Classic data plus quests seen in
+ * the Forever game files).
  *
  * Run: npx playwright test --config e2e/playwright.config.ts wow-forever-quests
  */
@@ -21,6 +21,8 @@ const DEADMINES = "/wow-forever/dungeons/deadmines";
 /** Quest 166 = The Defias Brotherhood; shard = 166 % 64 = 38. */
 const DEFIAS_BROTHERHOOD = 166;
 const DEFIAS_QUEST_PATH = `/wow-forever/quests/${DEFIAS_BROTHERHOOD}`;
+/** Quest 65602 has no Classic data; it's only known from the Forever quest cache. */
+const SEEN_ONLY_QUEST_PATH = "/wow-forever/quests/65602";
 
 async function noSideways(page: Page): Promise<number> {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -44,14 +46,24 @@ test("the quest list shows the search input, filters panel and count", async ({ 
   await expect(page.getByTestId("quest-search")).toBeVisible();
   // Filters panel (always visible on desktop sm:block)
   await expect(page.getByTestId("quest-filters")).toBeVisible();
-  // Count shows (0 quests with placeholder data)
-  await expect(page.getByTestId("quest-count")).toBeVisible();
-  await expect(page.getByTestId("quest-count")).toContainText("quests");
+  await expect(page.getByTestId("quest-count")).toContainText(/[1-9][\d,]* quests/);
+  await expect(page.getByTestId("quest-list").getByTestId("quest-row").first()).toBeVisible();
+  // Quests in the game files without a name are counted, not listed.
+  await expect(page.getByTestId("quest-unnamed-note")).toContainText("without a name yet");
+});
+
+test("searching by name finds the quest and opens its page", async ({ page }) => {
+  await page.goto(QUESTS);
+  await page.getByTestId("quest-search").fill("defias brotherhood");
+  const row = page.locator(`[data-testid="quest-row"][data-quest-id="${DEFIAS_BROTHERHOOD}"]`);
+  await expect(row).toBeVisible();
+  await row.getByRole("link", { name: /The Defias Brotherhood/ }).first().click();
+  await expect(page).toHaveURL(DEFIAS_QUEST_PATH);
+  await expect(page.getByTestId("quest-title")).toHaveText("The Defias Brotherhood");
 });
 
 test("the quest list shows empty state when no quests match", async ({ page }) => {
-  // Placeholder has 0 quests, so the empty state always shows.
-  await page.goto(QUESTS);
+  await page.goto(`${QUESTS}?q=zzqqxxnotaquest`);
   await expect(page.getByTestId("quest-empty")).toBeVisible();
   await expect(page.getByTestId("quest-empty")).toContainText("No quests match these filters");
 });
@@ -167,7 +179,7 @@ test.describe("at 375px", () => {
 // ---------------------------------------------------------------------------
 
 test("a quest not in our data shows 'Quest not found'", async ({ page }) => {
-  // ID 999999 — not in any shard (shard 999999 % 64 = 63, placeholder has empty quests)
+  // ID 999999 — not in any shard and never seen in game
   await page.goto("/wow-forever/quests/999999");
   await expect(page.getByRole("heading", { level: 1, name: "Quest not found" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Back to Quests" })).toHaveAttribute("href", QUESTS);
@@ -184,8 +196,14 @@ test("the quest detail page has the right document title while loading", async (
   await page.goto(DEFIAS_QUEST_PATH);
   await expect(page).toHaveTitle(/Quest · WoW Forever/);
   release();
-  // After load resolves, it shows "not found" (placeholder shard has no quests)
-  await expect(page.getByRole("heading", { level: 1, name: "Quest not found" })).toBeVisible();
+  await expect(page.getByTestId("quest-title")).toHaveText("The Defias Brotherhood");
+  await expect(page).toHaveTitle(/The Defias Brotherhood/);
+});
+
+test("a quest known only from the Forever game files has its own page", async ({ page }) => {
+  await page.goto(SEEN_ONLY_QUEST_PATH);
+  await expect(page.getByTestId("quest-title")).toHaveText("What Is Love?");
+  await expect(page.getByText("Who gives this quest isn't in our data.")).toBeVisible();
 });
 
 test("the quest detail skeleton shows while the shard loads", async ({ page }) => {

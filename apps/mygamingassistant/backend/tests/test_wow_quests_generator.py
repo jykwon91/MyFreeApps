@@ -361,14 +361,14 @@ def test_committed_shards_quest_ids_match_their_shard() -> None:
 
 
 @REAL_DATA
-def test_committed_seen_quests_reference_shard_quests() -> None:
+def test_committed_seen_quests_are_in_the_index() -> None:
+    # A seen quest can be new in Forever (no Classic shard row) but must be a Forever quest.
     seen = _load(SEEN_PATH)
-    # Every seen quest id should exist in some shard
-    shard_ids: set[str] = set()
-    for path in CLASSIC_DIR.glob("[0-9]*.json"):
-        shard_ids |= set(_load(path)["quests"].keys())
+    index = _load(INDEX_PATH)
+    id_col = index["columns"].index("id")
+    index_ids = {str(row[id_col]) for row in index["quests"]}
     for qid in seen["quests"]:
-        assert qid in shard_ids, f"Seen quest {qid} not in any shard"
+        assert qid in index_ids, f"Seen quest {qid} not in the quest index"
 
 
 @REAL_DATA

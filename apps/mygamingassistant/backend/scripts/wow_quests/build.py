@@ -331,7 +331,7 @@ def main() -> None:
     print(
         f"wrote {INDEX_PATH.name}: {counts['total']} quests "
         f"({counts['named']} named, {counts['withClassic']} with Classic data, "
-        f"{counts['seenInGame']} seen in game, {counts['unnamed']} unnamed) → {QUESTS_DIR}"
+        f"{counts['seenInGame']} seen in game, {counts['unnamed']} unnamed) -> {QUESTS_DIR}"
     )
     print(f"wrote {len(shards)} classic shards to {CLASSIC_DIR}")
     print(f"wrote {SEEN_PATH.name}: {len(seen)} seen quests (build {cache.build}, {seen_on})")
