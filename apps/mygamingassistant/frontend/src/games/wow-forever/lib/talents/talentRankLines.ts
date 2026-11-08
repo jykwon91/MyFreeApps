@@ -35,3 +35,12 @@ export function talentRankLines(talent: Talent, rank: number): TalentRankLine[] 
 export function isChangedInForever(talent: Talent): boolean {
   return talent.classicRanks?.some((text) => text !== null) ?? false;
 }
+
+/**
+ * All ranks for the compare view: every rank 1–max, each labelled "Rank N".
+ * Shows Classic text wherever it changed, so the detail panel can present a
+ * full side-by-side without hiding anything.
+ */
+export function allTalentRankLines(talent: Talent): TalentRankLine[] {
+  return talent.ranks.map((_text, i) => line(talent, i + 1, `Rank ${i + 1}`));
+}

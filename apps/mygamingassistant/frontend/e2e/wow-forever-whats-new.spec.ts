@@ -34,7 +34,7 @@ test("the hub shows the data build and the latest changes", async ({ page }) => 
   const whatsNew = page.getByRole("region", { name: "What’s new on this site" });
   await expect(whatsNew.getByRole("listitem")).toHaveCount(5);
   await whatsNew.getByRole("button", { name: /^Show all/ }).click();
-  await expect(whatsNew.getByRole("listitem")).toHaveCount(26);
+  await expect(whatsNew.getByRole("listitem")).toHaveCount(27);
   await whatsNew.getByRole("link", { name: /One Macros page/ }).click();
   await expect(page).toHaveURL(/\/wow-forever\/macros$/);
 });

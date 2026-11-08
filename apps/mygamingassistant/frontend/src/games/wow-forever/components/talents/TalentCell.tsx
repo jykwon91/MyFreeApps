@@ -21,6 +21,11 @@ interface TalentCellProps {
   /** Roving tabindex: only the tree's current cell is in the Tab order. */
   tabbable: boolean;
   selected: boolean;
+  /**
+   * When compare mode is on: whether this talent's text changed from Classic.
+   * Null = compare mode off (no highlight).
+   */
+  compareChanged: boolean | null;
   buttonRef: (node: HTMLButtonElement | null) => void;
   onAdd: () => void;
   onRemove: () => void;
@@ -31,7 +36,8 @@ interface TalentCellProps {
 /**
  * One talent in the grid: its icon ringed by state and a rank counter. Click /
  * tap adds a point; right-click or a long press removes one. Hover or
- * keyboard focus shows the tooltip.
+ * keyboard focus shows the tooltip. When compare mode is on, a blue outline
+ * marks talents whose text changed from Classic Era.
  */
 export default function TalentCell({
   talent,
@@ -42,6 +48,7 @@ export default function TalentCell({
   top,
   tabbable,
   selected,
+  compareChanged,
   buttonRef,
   onAdd,
   onRemove,
@@ -94,6 +101,7 @@ export default function TalentCell({
         data-talent-id={talent.id}
         data-rank={rank}
         data-state={state}
+        data-compare-changed={compareChanged === true ? "true" : undefined}
         onPointerEnter={tooltip.triggerProps.onPointerEnter}
         onPointerLeave={tooltip.triggerProps.onPointerLeave}
         onBlur={tooltip.triggerProps.onBlur}
@@ -109,7 +117,9 @@ export default function TalentCell({
         className={clsx(
           "absolute select-none touch-manipulation rounded-md border-2 bg-card [-webkit-touch-callout:none]",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-          TALENT_CELL_RING[state],
+          compareChanged === true
+            ? "border-indigo-500"
+            : TALENT_CELL_RING[state],
           selected && "ring-2 ring-primary ring-offset-1",
         )}
       >
@@ -123,6 +133,13 @@ export default function TalentCell({
         >
           {rank}/{max}
         </span>
+        {compareChanged === true ? (
+          <span
+            aria-hidden
+            className="absolute -top-1 -left-1 h-2 w-2 rounded-full bg-indigo-500"
+            data-testid="talent-compare-dot"
+          />
+        ) : null}
       </button>
       {tooltip.open ? (
         <TalentTooltip

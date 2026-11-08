@@ -40,3 +40,12 @@ export const TALENT_BUILD_CODE_MAX_LENGTH = 120;
 
 /** How long "Copied" stays on the Copy link button. */
 export const TALENT_COPIED_RESET_MS = 2000;
+
+/**
+ * `?o=` encodes the order points were spent: each point is 2 chars — a tree
+ * digit ('0'–'2') and a talent-index char ('0'–'9' for 0–9, 'a'–'u' for 10–30).
+ * Present only when order info is available; old `?b=`-only links skip it.
+ */
+export const TALENT_ORDER_PARAM = "o";
+/** Longest `?o=` we read: 51 points × 2 chars. */
+export const TALENT_ORDER_CODE_MAX_LENGTH = 102;

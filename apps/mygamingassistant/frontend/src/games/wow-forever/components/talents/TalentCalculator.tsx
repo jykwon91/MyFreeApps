@@ -2,8 +2,10 @@ import clsx from "clsx";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import EmptyStateNote from "@/games/wow-forever/components/shared/EmptyStateNote";
+import TalentCompareToggle from "@/games/wow-forever/components/talents/TalentCompareToggle";
 import TalentDetails from "@/games/wow-forever/components/talents/TalentDetails";
 import TalentLevelStepper from "@/games/wow-forever/components/talents/TalentLevelStepper";
+import TalentOrderList from "@/games/wow-forever/components/talents/TalentOrderList";
 import TalentShareBar from "@/games/wow-forever/components/talents/TalentShareBar";
 import TalentTreeTabs from "@/games/wow-forever/components/talents/TalentTreeTabs";
 import TalentTreeView from "@/games/wow-forever/components/talents/TalentTreeView";
@@ -27,12 +29,13 @@ function mainTree(build: TalentBuild): number {
 
 /** One class's three trees, the level, points left, the picked talent and the share bar. */
 export default function TalentCalculator({ data }: { data: TalentClassData }) {
-  const { build, level, minLevel, brokenLink, add, remove, setLevel, reset } = useTalentBuild(data.trees);
+  const { build, level, minLevel, brokenLink, order, add, remove, setLevel, reset } = useTalentBuild(data.trees);
   const [params] = useSearchParams();
   // A `?talent=` link opens on that talent; read once, so later picks are the player's own.
   const [linked] = useState(() => findTalentPosition(data.trees, params.get(TALENT_PICK_PARAM)));
   const [activeTree, setActiveTree] = useState(() => linked?.tree ?? mainTree(build));
   const [picked, setPicked] = useState<TalentPosition | null>(linked);
+  const [compareMode, setCompareMode] = useState(false);
   const spent = totalPoints(build);
   const available = pointsForLevel(level);
   const split = data.trees.map((_tree, i) => treePoints(build, i)).join(" / ");
@@ -43,6 +46,14 @@ export default function TalentCalculator({ data }: { data: TalentClassData }) {
   }
 
   function removeFrom(tree: number, talent: number) {
+    remove(tree, talent);
+    setPicked({ tree, talent });
+  }
+
+  /** Remove the talent at the last order entry (undo the most recent point). */
+  function removeLastOrderedPoint() {
+    if (!order || order.length === 0) return;
+    const [tree, talent] = order[order.length - 1];
     remove(tree, talent);
     setPicked({ tree, talent });
   }
@@ -76,7 +87,8 @@ export default function TalentCalculator({ data }: { data: TalentClassData }) {
             </dd>
           </div>
         </dl>
-        <div className="sm:ml-auto">
+        <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+          <TalentCompareToggle active={compareMode} onChange={setCompareMode} />
           <TalentShareBar
             canReset={spent > 0}
             onReset={() => {
@@ -86,9 +98,15 @@ export default function TalentCalculator({ data }: { data: TalentClassData }) {
           />
         </div>
       </div>
-      <p className="text-xs text-muted-foreground">
-        Click or tap a talent to add a point. Right-click, long-press or use − to take one out.
-      </p>
+      {compareMode ? (
+        <p className="text-xs text-muted-foreground" data-testid="talent-compare-note">
+          Blue outline: talent text changed from Classic Era. The Classic tree layout isn't available — the data stores text differences only, not talent positions.
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Click or tap a talent to add a point. Right-click, long-press or use − to take one out.
+        </p>
+      )}
       <TalentTreeTabs trees={data.trees} build={build} active={activeTree} onChange={setActiveTree} />
       <div className="grid gap-4 lg:grid-cols-3">
         {data.trees.map((tree, t) => (
@@ -99,6 +117,7 @@ export default function TalentCalculator({ data }: { data: TalentClassData }) {
               build={build}
               level={level}
               selected={picked?.tree === t ? picked.talent : null}
+              compareMode={compareMode}
               onSelect={(talent) => setPicked({ tree: t, talent })}
               onAdd={(talent) => addTo(t, talent)}
               onRemove={(talent) => removeFrom(t, talent)}
@@ -113,12 +132,20 @@ export default function TalentCalculator({ data }: { data: TalentClassData }) {
           level={level}
           treeIndex={picked.tree}
           talentIndex={picked.talent}
+          compareMode={compareMode}
           onAdd={() => addTo(picked.tree, picked.talent)}
           onRemove={() => removeFrom(picked.tree, picked.talent)}
         />
       ) : (
         <EmptyStateNote message="Pick a talent to see what each rank does and what it needs." />
       )}
+      {order !== null ? (
+        <TalentOrderList
+          order={order}
+          trees={data.trees}
+          onRemoveLast={removeLastOrderedPoint}
+        />
+      ) : null}
     </div>
   );
 }
