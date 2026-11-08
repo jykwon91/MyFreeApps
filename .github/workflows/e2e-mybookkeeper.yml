@@ -61,17 +61,15 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Start MinIO
-        # A service container can't pass `server /data`, so run it directly.
-        # Same image as infra/docker-compose.yml.
+        # The production definition, so this run also proves the image pulls,
+        # the volume-owner step works and the healthcheck passes.
+        env:
+          MINIO_ROOT_USER: ${{ env.MINIO_ACCESS_KEY }}
+          MINIO_ROOT_PASSWORD: ${{ env.MINIO_SECRET_KEY }}
         run: |
-          docker run -d --name minio -p 9000:9000 \
-            -e MINIO_ROOT_USER="$MINIO_ACCESS_KEY" -e MINIO_ROOT_PASSWORD="$MINIO_SECRET_KEY" \
-            minio/minio:RELEASE.2025-09-07T16-13-09Z server /data
-          for i in $(seq 1 30); do
-            curl -fsS http://127.0.0.1:9000/minio/health/live && exit 0
-            sleep 2
-          done
-          docker logs minio; exit 1
+          if ! docker compose -f infra/docker-compose.yml up -d --wait --wait-timeout 120 minio; then
+            docker compose -f infra/docker-compose.yml logs; exit 1
+          fi
 
       - name: Set up uv
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0

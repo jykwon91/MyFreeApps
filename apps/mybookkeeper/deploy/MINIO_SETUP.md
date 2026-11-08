@@ -263,8 +263,10 @@ it — they become unrecoverable. Always re-key first, then drop.
 
 ## Tech reference
 
-- App image: `minio/minio:RELEASE.2025-09-07T16-13-09Z`
-  (verified via Docker Hub API on 2026-04-26 — see commit message)
+- App image: Chainguard's MinIO build, pinned by digest in
+  `infra/docker-compose.yml` (`x-minio-image`). minio/minio left Docker Hub
+  in 2026-11 when upstream archived MinIO. It runs as uid 65532; the
+  `minio-data-owner` step in that file hands the volume to it on every `up`.
 - Default bucket: `mybookkeeper-files` — partitioned by domain prefix
   (`listings/...`, future `applicants/...`)
 - Object key format: `<organization_id>/<uuid>/<filename>`

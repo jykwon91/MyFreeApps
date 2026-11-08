@@ -19,13 +19,33 @@
 # Run from the monorepo root on the VPS:
 #   sudo docker compose -f infra/docker-compose.yml up -d
 #
+# MinIO image. Upstream archived MinIO and pulled minio/minio from Docker Hub
+# (2026-11), so this is Chainguard's build of the same server: same on-disk
+# format, same mc. Chainguard's free tier only publishes `latest`, so it is
+# pinned by digest; bump the digest on purpose, never float on latest.
+#   Digest check: docker buildx imagetools inspect cgr.dev/chainguard/minio:latest
+x-minio-image: &minio-image cgr.dev/chainguard/minio@sha256:a1ac4589a5f8136b616e667b48a0bea9719bb10bd45799ea946f24bbedfafde4
+
 services:
+  # The image runs MinIO as uid 65532, but the minio/minio image it replaced
+  # ran as root, so an existing minio_data volume holds root-owned files that
+  # 65532 can't write. This runs first on every `up`, as root, and hands the
+  # volume to 65532. Idempotent, and a no-op on a fresh volume.
+  minio-data-owner:
+    image: *minio-image
+    user: "0:0"
+    entrypoint: ["chown", "-R", "65532:65532", "/data"]
+    volumes:
+      - minio_data:/data
+    restart: "no"
+
   minio:
-    # SHA-pinned via tag — verified against Docker Hub on 2026-04-26.
-    # Tag check: gh api hub.docker.com/v2/repositories/minio/minio/tags/<tag>
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    image: *minio-image
     container_name: myfreeapps-minio
     restart: unless-stopped
+    depends_on:
+      minio-data-owner:
+        condition: service_completed_successfully
     ports:
       # Bind only to localhost — apps reach the API via the docker
       # network; public access for downloads goes through the per-app

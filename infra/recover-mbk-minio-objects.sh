@@ -145,6 +145,12 @@ green "  ✓ MinIO root credentials + KMS key loaded from $INFRA_ENV"
 # ──────────────────────────────────────────────────────────────────────────
 blue "Step 2/6: starting temporary MinIO against $OLD_VOLUME (read-only) on :$TEMP_PORT"
 
+# Same image as infra/docker-compose.yml. Root, because the old volume was
+# written by the root-run minio/minio image and is mounted read-only here, so
+# it can't be handed to the image's own uid.
+MINIO_IMAGE=$(sed -n 's/^x-minio-image: &minio-image //p' "$INFRA_DIR/docker-compose.yml")
+: "${MINIO_IMAGE:?could not read the MinIO image from infra/docker-compose.yml}"
+
 # If a stale temp container exists from a prior aborted run, remove it.
 docker rm -f "$TEMP_CONTAINER" >/dev/null 2>&1 || true
 
@@ -158,7 +164,8 @@ docker run -d \
   -e "MINIO_KMS_AUTO_ENCRYPTION=on" \
   -v "${OLD_VOLUME}:/data:ro" \
   --restart no \
-  minio/minio:RELEASE.2025-09-07T16-13-09Z \
+  --user 0:0 \
+  "$MINIO_IMAGE" \
   server /data >/dev/null
 
 # Give MinIO a few seconds to come up.
