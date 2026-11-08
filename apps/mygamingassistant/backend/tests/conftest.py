@@ -158,6 +158,7 @@ _UOW_CONSUMERS = (
     "app.services.game.source_service",
     "app.services.user.seed_user_service",
     "app.services.user.totp_service",
+    "app.services.wow.chat.chat_quota",
     "app.services.wow.feature_requests.feature_board_service",
     "app.services.wow.feature_requests.feature_retention_service",
     "app.services.wow.feature_requests.feature_submission_service",

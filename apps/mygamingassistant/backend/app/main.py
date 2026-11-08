@@ -39,6 +39,7 @@ from app.api import (
     scheduler,
     sources,
     totp,
+    wow_chat,
     wow_feature_triage,
     wow_features,
     wow_icons,
@@ -61,7 +62,9 @@ from app.core.rate_limit import (
     check_login_rate_limit,
     require_turnstile,
 )
+from app.core.body_size_cap import BodySizeCapMiddleware
 from app.core.triage_gate import make_triage_gate
+from app.core.wow_chat_limits import CHAT_TURN_PATH, DETAIL_BODY_TOO_LARGE, MAX_BODY_BYTES
 from app.schemas.user.user_base import UserRead, UserUpdate
 from app.services.discord.startup import start_discord
 from app.services.storage.bucket_initializer import ensure_bucket
@@ -252,6 +255,7 @@ def _mount_public_routes(app: FastAPI) -> None:
     app.include_router(wow_icons.router)  # in-game icons, from object storage
     app.include_router(wow_server_status.router)  # Server-cached Blizzard status
     app.include_router(wow_features.public_router)  # submit: Turnstile + per-IP + daily-capped
+    app.include_router(wow_chat.router)  # Ask chat relay: body cap + ticket + per-IP + Turnstile + token caps
 
     # Disabled = absent (404), not present-but-broken.
     if settings.discord_enabled:
@@ -391,6 +395,10 @@ def create_app(settings: Settings = settings) -> FastAPI:
     # Registered BEFORE set_audit_user so it runs inside it: the access log
     # still records triage requests, and the triage actor set here wins.
     app.middleware("http")(make_triage_gate(settings.wow_feature_triage_tokens))
+    # The Ask chat relay reads at most 64 KB before anything parses the body.
+    app.add_middleware(
+        BodySizeCapMiddleware, path=CHAT_TURN_PATH, max_bytes=MAX_BODY_BYTES, detail=DETAIL_BODY_TOO_LARGE
+    )
 
     @app.middleware("http")
     async def set_audit_user(request: Request, call_next):

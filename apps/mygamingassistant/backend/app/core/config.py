@@ -143,6 +143,27 @@ class Settings(BaseAppSettings):
     wow_feature_triage_token: str = ""
 
     # ------------------------------------------------------------------
+    # WoW Forever "Ask" chat relay (POST /wow/chat/turn — PUBLIC, both modes).
+    # A stateless relay: the browser sends the conversation, the server adds
+    # its own system prompt + fixed tools, calls Claude and returns the reply
+    # with a signed ticket; the browser runs the tool calls against its
+    # bundled game data. Same availability rule as the item reader (503
+    # ``chat_unavailable`` without ANTHROPIC_API_KEY, with a cap <= 0, or —
+    # serve-only / production — without TURNSTILE_SECRET_KEY). No boot guard.
+    # ------------------------------------------------------------------
+    claude_wow_chat_model: str = "claude-haiku-5-5"
+    wow_chat_max_tokens: int = 800
+    # Weighted Claude tokens per UTC day (input + 5 x output; cache reads
+    # count 1/10), across restarts + workers (daily_usage_counters). 0 = off.
+    wow_chat_daily_token_cap: int = 2_500_000
+    # The same budget per network (IPv4 / IPv6 /64), keyed by an HMAC. 0 = off.
+    wow_chat_ip_daily_token_cap: int = 250_000
+    # In-process per-IP limits: new questions per hour / day, tool rounds per hour.
+    wow_chat_turn_rate_limit_per_hour: int = 20
+    wow_chat_turn_rate_limit_per_day: int = 60
+    wow_chat_continuation_rate_limit_per_hour: int = 60
+
+    # ------------------------------------------------------------------
     # Test-only helpers — never set in production.
     # When true, /api/_test/* endpoints are mounted (rate-limit reset,
     # seed lineup for E2E tests). Guarded by the mga_enable_test_helpers flag.

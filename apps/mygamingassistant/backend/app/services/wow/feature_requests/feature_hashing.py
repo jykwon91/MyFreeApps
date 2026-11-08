@@ -15,9 +15,9 @@ IPv6 addresses are cut to their /64 network (one home or phone).
 """
 import hashlib
 import hmac
-import ipaddress
 import uuid
 
+from app.core.client_network import network_of
 from app.core.config import settings
 from app.core.wow_feature_request_limits import IPV6_VOTE_PREFIX
 
@@ -32,24 +32,13 @@ def _hmac(message: str) -> str:
     return hmac.new(_key(), message.encode("utf-8"), hashlib.sha256).hexdigest()
 
 
-def network_of(ip: str) -> str:
-    """The IP itself (IPv4) or its /64 network (IPv6); unparseable values as-is."""
-    try:
-        address = ipaddress.ip_address(ip)
-    except ValueError:
-        return ip
-    if address.version == 6:
-        return str(ipaddress.ip_network(f"{address}/{IPV6_VOTE_PREFIX}", strict=False))
-    return str(address)
-
-
 def voter_key(client_id: uuid.UUID) -> str:
     return _hmac(f"vote:v1:{client_id}")
 
 
 def vote_ip_hash(story_id: uuid.UUID, ip: str) -> str:
-    return _hmac(f"vote-ip:v1:{story_id}:{network_of(ip)}")
+    return _hmac(f"vote-ip:v1:{story_id}:{network_of(ip, ipv6_prefix=IPV6_VOTE_PREFIX)}")
 
 
 def submission_ip_hash(ip: str) -> str:
-    return _hmac(f"submission-ip:v1:{network_of(ip)}")
+    return _hmac(f"submission-ip:v1:{network_of(ip, ipv6_prefix=IPV6_VOTE_PREFIX)}")

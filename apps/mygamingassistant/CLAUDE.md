@@ -821,6 +821,32 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - Retention: scheduler job `purge_wow_feature_submissions` (daily) and
   `python -m app.cli purge-wow-feature-submissions`.
 
+#### "Ask" chat relay (`POST /api/wow/chat/turn`)
+
+- A stateless relay: the browser sends the whole conversation, the server adds
+  its own system prompt, tools, model and `max_tokens`
+  (`app/services/wow/chat/chat_tool_schema.py`, prompt-cached) and returns
+  Claude's next message + a signed ticket. The BROWSER runs the tool calls
+  (`search_npcs`, `find_places`, `search_items`, `dungeon_info`,
+  `get_player_context`) against its bundled data and sends the results back.
+  Nothing is stored; logs carry codes and counts, never message text.
+- Gating order: `BodySizeCapMiddleware` (413 `chat_body_too_large` > 64 KB,
+  before parsing) → availability (503 `chat_unavailable`, same rule as the item
+  reader, both token caps) → continuation: ticket signature / expiry / network
+  / rounds left, then per-IP 60/h; new message: per-IP 20/h + 60/day, then
+  Turnstile (action `wow-chat`) → strict transcript rules
+  (`chat_transcript.validate_turn`, `extra="forbid"`, text / tool_use /
+  tool_result blocks only) → ticket digest = the history this server answered
+  → durable token budgets (global `wow-chat` + per network
+  `wow-chat-ip:<hmac>`, reserved before the call, settled from Anthropic's
+  usage, released on failure) → Claude → reply filtered to known tools.
+- Ticket: `base64url(payload).base64url(HMAC)`, key HKDF'd from
+  `SECRET_KEY`; payload = network hash (IPv4 or IPv6 /64), expiry (15 min),
+  tool rounds left (3; the last round runs with `tool_choice: none`) and the
+  conversation digest. Limits and error codes: `app/core/wow_chat_limits.py`.
+  Tests: `tests/test_wow_chat_api.py`, `test_wow_chat_ticket.py`,
+  `test_wow_chat_schemas.py`.
+
 #### Food picker (`/wow-forever/food`, "What should I eat?")
 
 - Level + class + spec + activity (Leveling / Dungeon / Raid / PvP / Fishing /
@@ -1327,6 +1353,7 @@ once on the router. This is the no-bandaid approach (see
 | `/api/sources/*` | — | All |
 | `/api/wow/items/extract` | POST, both modes (Claude reads an item screenshot/text; Turnstile + per-IP limit + durable daily cap; 503 `item_reader_unavailable` when unconfigured) | — |
 | `/api/wow/feature-requests` | GET board + `/{id}` (public stories only), POST submit (Turnstile + per-IP + inbox guard + daily cap; 503 `feature_requests_unavailable` when unconfigured), POST/DELETE `/{id}/vote` — both modes | — |
+| `/api/wow/chat/turn` | POST, both modes (the "Ask" chat relay: 64 KB body cap, signed ticket, per-IP limits, Turnstile on new messages, durable token budgets; 503 `chat_unavailable` when unconfigured) | — |
 | `/api/wow/feature-requests/triage/*` | — | Token (`X-MGA-Triage-Token`), not a login — mounted only when `WOW_FEATURE_TRIAGE_TOKEN` is set, in BOTH modes. The one operator write surface in serve-only prod |
 | `/api/wow/map-captures` | GET, both modes (World Map locations captured in Forever) | POST import (full-auth only; prod gets captures via the committed pack) |
 | `/api/wow/prices` | GET, both modes (auction-house prices by region, refreshed by the scheduler; ETag + 10-min cache) | — |
@@ -1399,6 +1426,10 @@ public, or empty pages where they expected to see content.
 | `CLAUDE_FEATURE_REFINER_MODEL` | Optional | Defaults to `claude-haiku-5-5` |
 | `WOW_FEATURE_SUBMIT_RATE_LIMIT_PER_HOUR` / `_PER_DAY`, `WOW_FEATURE_VOTE_RATE_LIMIT_PER_HOUR` | Optional | Per-IP limits. Defaults 5 / 20 / 60 |
 | `WOW_FEATURE_TRIAGE_TOKEN` | Optional | `label:token,…` for the triage API. Empty = not mounted. Malformed or weak → the app refuses to boot. Same token in your local `backend/.env.triage` |
+| `CLAUDE_WOW_CHAT_MODEL` | Optional | "Ask" chat model. Defaults to `claude-haiku-5-5` |
+| `WOW_CHAT_MAX_TOKENS` | Optional | Output cap per chat reply. Default 800 |
+| `WOW_CHAT_DAILY_TOKEN_CAP` / `WOW_CHAT_IP_DAILY_TOKEN_CAP` | Optional | Weighted tokens per UTC day, global / per network (DB-backed). Defaults 2,500,000 / 250,000; `0` switches the chat off |
+| `WOW_CHAT_TURN_RATE_LIMIT_PER_HOUR` / `_PER_DAY`, `WOW_CHAT_CONTINUATION_RATE_LIMIT_PER_HOUR` | Optional | Per-IP limits. Defaults 20 / 60 / 60 |
 | `WOW_SERVER_STATUS_RECORDING_ENABLED` | Optional | Default `true`. Records realm status every 5 min for the server status page's history (also in serve-only prod). `false` stops recording; the page keeps showing what's stored |
 
 **After first deploy:**
