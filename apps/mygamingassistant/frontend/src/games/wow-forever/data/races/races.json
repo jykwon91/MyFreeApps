@@ -1,0 +1,879 @@
+{
+ "source": "wago.tools DB2 wowf 1.60.1.70790 with hotfixes, plus the Forever client hotfix cache (build 70862, 5,153 records)",
+ "classicSource": "wago.tools DB2 wow_classic_era 1.15.9.70576",
+ "attribution": "From the WoW Forever and Classic Era clients via wago.tools. Game data © Blizzard Entertainment.",
+ "clientBuild": "1.60.1.70790",
+ "classicBuild": "1.15.9.70576",
+ "counts": {
+  "races": 10,
+  "racials": 51,
+  "changed": 17,
+  "new": 17,
+  "removed": 11,
+  "unchanged": 6
+ },
+ "races": [
+  {
+   "id": 1,
+   "slug": "human",
+   "name": "Human",
+   "faction": "alliance",
+   "newInForever": false,
+   "classes": [
+    "hunter",
+    "mage",
+    "paladin",
+    "priest",
+    "rogue",
+    "warlock",
+    "warrior"
+   ],
+   "newClasses": [
+    "hunter"
+   ],
+   "racials": [
+    {
+     "key": "human-perception",
+     "name": "Perception",
+     "kind": "active",
+     "status": "unchanged",
+     "icon": 136090,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Dramatically increases stealth detection for 20 sec."
+      }
+     ]
+    },
+    {
+     "key": "human-will-to-survive",
+     "name": "Will to Survive",
+     "kind": "active",
+     "status": "new",
+     "icon": 136129,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Instantly removes all Stun effects."
+      }
+     ]
+    },
+    {
+     "key": "human-ruthless",
+     "name": "Ruthless",
+     "kind": "passive",
+     "status": "changed",
+     "icon": 132292,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Increases your critical strike chance with all spells and attacks by 1%."
+      }
+     ],
+     "wasName": "Sword Specialization"
+    },
+    {
+     "key": "human-the-human-spirit",
+     "name": "The Human Spirit",
+     "kind": "passive",
+     "status": "changed",
+     "icon": 132874,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Spirit increased by 10%."
+      }
+     ]
+    },
+    {
+     "key": "human-diplomacy",
+     "name": "Diplomacy",
+     "kind": "passive",
+     "status": "removed",
+     "icon": 134328,
+     "variants": []
+    },
+    {
+     "key": "human-mace-specialization",
+     "name": "Mace Specialization",
+     "kind": "passive",
+     "status": "removed",
+     "icon": 133042,
+     "variants": []
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "slug": "dwarf",
+   "name": "Dwarf",
+   "faction": "alliance",
+   "newInForever": false,
+   "classes": [
+    "hunter",
+    "paladin",
+    "priest",
+    "rogue",
+    "shaman",
+    "warrior"
+   ],
+   "newClasses": [
+    "shaman"
+   ],
+   "racials": [
+    {
+     "key": "dwarf-find-treasure",
+     "name": "Find Treasure",
+     "kind": "active",
+     "status": "changed",
+     "icon": 135725,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Allows the dwarf to sense nearby treasure, making it appear on the minimap and sometimes increase treasure found. Lasts ?."
+      }
+     ],
+     "partial": true
+    },
+    {
+     "key": "dwarf-stoneform",
+     "name": "Stoneform",
+     "kind": "active",
+     "status": "changed",
+     "icon": 136225,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Instantly removes and grants immunity to all Bleed, Poison, and Disease effects, and reduces all Physical damage taken by 10% for 8 sec."
+      }
+     ]
+    },
+    {
+     "key": "dwarf-artisans-precision",
+     "name": "Artisan's Precision",
+     "kind": "passive",
+     "status": "new",
+     "icon": 133046,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Increases your chance to hit with all spells and attacks by 1%."
+      }
+     ]
+    },
+    {
+     "key": "dwarf-big-game-hunter",
+     "name": "Big Game Hunter",
+     "kind": "passive",
+     "status": "new",
+     "icon": 135614,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Damage dealt versus Beasts increased by 5%."
+      }
+     ]
+    },
+    {
+     "key": "dwarf-frost-resistance",
+     "name": "Frost Resistance",
+     "kind": "passive",
+     "status": "removed",
+     "icon": 135865,
+     "variants": []
+    },
+    {
+     "key": "dwarf-gun-specialization",
+     "name": "Gun Specialization",
+     "kind": "passive",
+     "status": "removed",
+     "icon": 134537,
+     "variants": []
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "slug": "night-elf",
+   "name": "Night Elf",
+   "faction": "alliance",
+   "newInForever": false,
+   "classes": [
+    "druid",
+    "hunter",
+    "priest",
+    "rogue",
+    "warrior"
+   ],
+   "newClasses": [],
+   "racials": [
+    {
+     "key": "night-elf-elunes-light",
+     "name": "Elune's Light",
+     "kind": "active",
+     "status": "new",
+     "icon": 136057,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Increases your critical strike chance with all spells and attacks by 10% for 15 sec."
+      }
+     ]
+    },
+    {
+     "key": "night-elf-shadowmeld",
+     "name": "Shadowmeld",
+     "kind": "active",
+     "status": "changed",
+     "icon": 132089,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Activate to slip into the shadows, reducing the chance for enemies to detect your presence. Lasts until cancelled or upon moving. Using this ability in combat discourages enemies from attacking you, but increases the cooldown to 2 min."
+      }
+     ]
+    },
+    {
+     "key": "night-elf-quickness",
+     "name": "Quickness",
+     "kind": "passive",
+     "status": "changed",
+     "icon": 132279,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Dodge chance increased by 1% and movement speed increased by 2%. Night Elf Rogues and Druids are harder to detect in Stealth as if they were 1 level higher."
+      }
+     ]
+    },
+    {
+     "key": "night-elf-wisp-spirit",
+     "name": "Wisp Spirit",
+     "kind": "passive",
+     "status": "changed",
+     "icon": 136116,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Transform into a wisp upon death, increasing movement speed by 75%."
+      }
+     ]
+    },
+    {
+     "key": "night-elf-nature-resistance",
+     "name": "Nature Resistance",
+     "kind": "passive",
+     "status": "removed",
+     "icon": 136094,
+     "variants": []
+    }
+   ]
+  },
+  {
+   "id": 7,
+   "slug": "gnome",
+   "name": "Gnome",
+   "faction": "alliance",
+   "newInForever": false,
+   "classes": [
+    "mage",
+    "priest",
+    "rogue",
+    "warlock",
+    "warrior"
+   ],
+   "newClasses": [
+    "priest"
+   ],
+   "racials": [
+    {
+     "key": "gnome-escape-artist",
+     "name": "Escape Artist",
+     "kind": "active",
+     "status": "changed",
+     "icon": 132309,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Instantly escape the effects of any movement impairing effect and gain immunity to those effects for 3 sec."
+      }
+     ]
+    },
+    {
+     "key": "gnome-eureka",
+     "name": "Eureka!",
+     "kind": "active",
+     "status": "new",
+     "icon": 4226119,
+     "variants": [
+      {
+       "classes": [
+        "mage"
+       ],
+       "text": "Your damaging abilities have their Mana cost reduced by 10% and deal 10% more damage for 8 sec."
+      },
+      {
+       "classes": [
+        "priest"
+       ],
+       "text": "Your non-periodic damaging or healing abilities have their Mana cost reduced by 10% and deal 10% more damage or healing for 8 sec."
+      },
+      {
+       "classes": [
+        "rogue"
+       ],
+       "text": "Your non-periodic damaging abilities have their Energy cost reduced by 10% and deal 10% more damage for 8 sec."
+      },
+      {
+       "classes": [
+        "warlock"
+       ],
+       "text": "Your non-periodic damaging abilities have their Mana cost reduced by 10% and deal 10% more damage for 8 sec."
+      },
+      {
+       "classes": [
+        "warrior"
+       ],
+       "text": "Your non-periodic damaging abilities have their Rage cost reduced by 10% and deal 10% more damage for 8 sec."
+      }
+     ]
+    },
+    {
+     "key": "gnome-engineering-specialization",
+     "name": "Engineering Specialization",
+     "kind": "passive",
+     "status": "changed",
+     "icon": 134063,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Your gnomish ingenuity reduces the rate of engineering devices failing or backfiring when you use them by 20%."
+      }
+     ]
+    },
+    {
+     "key": "gnome-expansive-mind",
+     "name": "Expansive Mind",
+     "kind": "passive",
+     "status": "changed",
+     "icon": 132864,
+     "variants": [
+      {
+       "classes": [
+        "mage",
+        "priest",
+        "warlock"
+       ],
+       "text": "Maximum Mana increased by 5%."
+      },
+      {
+       "classes": [
+        "rogue"
+       ],
+       "text": "Maximum Energy increased by 5%."
+      },
+      {
+       "classes": [
+        "warrior"
+       ],
+       "text": "Maximum Rage increased by 5%."
+      }
+     ]
+    },
+    {
+     "key": "gnome-arcane-resistance",
+     "name": "Arcane Resistance",
+     "kind": "passive",
+     "status": "removed",
+     "icon": 136116,
+     "variants": []
+    }
+   ]
+  },
+  {
+   "id": 95,
+   "slug": "high-order-skyborne",
+   "name": "High Order Skyborne",
+   "faction": "alliance",
+   "newInForever": true,
+   "classes": [
+    "druid",
+    "hunter",
+    "mage",
+    "rogue",
+    "warrior"
+   ],
+   "newClasses": [],
+   "racials": [
+    {
+     "key": "high-order-skyborne-read-leyline",
+     "name": "Read Leyline",
+     "kind": "active",
+     "status": "new",
+     "icon": 236219,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Attempt to tap into the power of a nearby leyline, increasing your Health and Mana regeneration by 50% for 15 sec. If a leyline is nearby, you will become Attuned for the next 1 hr and the effect of this ability will be increased by 100%."
+      }
+     ]
+    },
+    {
+     "key": "high-order-skyborne-walk-on-air",
+     "name": "Walk on Air",
+     "kind": "active",
+     "status": "new",
+     "icon": 132845,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Glide downward through the air for 10 sec while controlling your direction of travel."
+      }
+     ]
+    },
+    {
+     "key": "high-order-skyborne-elemental-insight",
+     "name": "Elemental Insight",
+     "kind": "passive",
+     "status": "new",
+     "icon": 4630367,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Damage dealt versus Elementals increased by 5%."
+      }
+     ]
+    },
+    {
+     "key": "high-order-skyborne-wind-blessed",
+     "name": "Wind Blessed",
+     "kind": "passive",
+     "status": "new",
+     "icon": 463565,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Increases your spellcasting, melee, and ranged Haste by 2%."
+      }
+     ]
+    }
+   ],
+   "startZone": {
+    "name": "Zephras Isle",
+    "uiMapId": 2521
+   }
+  },
+  {
+   "id": 2,
+   "slug": "orc",
+   "name": "Orc",
+   "faction": "horde",
+   "newInForever": false,
+   "classes": [
+    "hunter",
+    "mage",
+    "rogue",
+    "shaman",
+    "warlock",
+    "warrior"
+   ],
+   "newClasses": [
+    "mage"
+   ],
+   "racials": [
+    {
+     "key": "orc-blood-fury",
+     "name": "Blood Fury",
+     "kind": "active",
+     "status": "changed",
+     "icon": 135726,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Increases Attack Power and Spell Power by 10% for 15 sec."
+      }
+     ]
+    },
+    {
+     "key": "orc-shatter-curse",
+     "name": "Shatter Curse",
+     "kind": "active",
+     "status": "new",
+     "icon": 136082,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Instantly removes all Curses and Banes, and reduces all Magical damage taken by 5% for 8 sec."
+      }
+     ]
+    },
+    {
+     "key": "orc-command",
+     "name": "Command",
+     "kind": "passive",
+     "status": "unchanged",
+     "icon": 132366,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Damage dealt by Hunter and Warlock pets increased by 5%."
+      }
+     ]
+    },
+    {
+     "key": "orc-hardiness",
+     "name": "Hardiness",
+     "kind": "passive",
+     "status": "changed",
+     "icon": 133125,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Duration of Stun effects on you reduced by 20%."
+      }
+     ]
+    },
+    {
+     "key": "orc-axe-specialization",
+     "name": "Axe Specialization",
+     "kind": "passive",
+     "status": "removed",
+     "icon": 132393,
+     "variants": []
+    }
+   ]
+  },
+  {
+   "id": 5,
+   "slug": "undead",
+   "name": "Undead",
+   "faction": "horde",
+   "newInForever": false,
+   "classes": [
+    "mage",
+    "paladin",
+    "priest",
+    "rogue",
+    "warlock",
+    "warrior"
+   ],
+   "newClasses": [
+    "paladin"
+   ],
+   "racials": [
+    {
+     "key": "undead-cannibalize",
+     "name": "Cannibalize",
+     "kind": "active",
+     "status": "changed",
+     "icon": 132278,
+     "variants": [
+      {
+       "classes": null,
+       "text": "When activated, regenerates 7% of total Health and 7% of total Mana every 2 sec for 10 sec. Only works on Humanoid or Undead corpses within 5 yds. Any movement, action, or damage taken while Cannibalizing will cancel the effect."
+      }
+     ]
+    },
+    {
+     "key": "undead-will-of-the-forsaken",
+     "name": "Will of the Forsaken",
+     "kind": "active",
+     "status": "changed",
+     "icon": 136187,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Instantly removes all Charm, Fear and Sleep effects."
+      }
+     ]
+    },
+    {
+     "key": "undead-touch-of-the-grave",
+     "name": "Touch of the Grave",
+     "kind": "passive",
+     "status": "new",
+     "icon": 136157,
+     "variants": [
+      {
+       "classes": [
+        "mage",
+        "priest",
+        "warlock"
+       ],
+       "text": "Your spells and attacks have a 30% chance to drain Health from the target, up to 5% of your maximum Health."
+      },
+      {
+       "classes": [
+        "paladin",
+        "rogue",
+        "warrior"
+       ],
+       "text": "Your spells and attacks have a 20% chance to drain Health from the target, up to 5% of your maximum Health."
+      }
+     ]
+    },
+    {
+     "key": "undead-underwater-breathing",
+     "name": "Underwater Breathing",
+     "kind": "passive",
+     "status": "unchanged",
+     "icon": 136148,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Underwater breath lasts 300% longer than normal."
+      }
+     ]
+    },
+    {
+     "key": "undead-shadow-resistance",
+     "name": "Shadow Resistance",
+     "kind": "passive",
+     "status": "removed",
+     "icon": 136152,
+     "variants": []
+    }
+   ]
+  },
+  {
+   "id": 6,
+   "slug": "tauren",
+   "name": "Tauren",
+   "faction": "horde",
+   "newInForever": false,
+   "classes": [
+    "druid",
+    "hunter",
+    "shaman",
+    "warrior"
+   ],
+   "newClasses": [],
+   "racials": [
+    {
+     "key": "tauren-cultivation",
+     "name": "Cultivation",
+     "kind": "active",
+     "status": "changed",
+     "icon": 133938,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Cultivate a nearby herb, growing a duplicate you can harvest without requiring Herbalism skill. Each herb may only be cultivated once."
+      }
+     ]
+    },
+    {
+     "key": "tauren-war-stomp",
+     "name": "War Stomp",
+     "kind": "active",
+     "status": "unchanged",
+     "icon": 132368,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Stuns up to ? enemies within 8 yds for 2 sec."
+      }
+     ],
+     "partial": true
+    },
+    {
+     "key": "tauren-endurance",
+     "name": "Endurance",
+     "kind": "passive",
+     "status": "unchanged",
+     "icon": 136112,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Total Health increased by 5%."
+      }
+     ]
+    },
+    {
+     "key": "tauren-plainsrunning",
+     "name": "Plainsrunning",
+     "kind": "passive",
+     "status": "new",
+     "icon": 236717,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Gain 2% increased movement speed every 5 sec spent moving, up to a maximum of 60% increase. Taking damage or standing still will reduce this effect."
+      }
+     ]
+    },
+    {
+     "key": "tauren-nature-resistance",
+     "name": "Nature Resistance",
+     "kind": "passive",
+     "status": "removed",
+     "icon": 136094,
+     "variants": []
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "slug": "troll",
+   "name": "Troll",
+   "faction": "horde",
+   "newInForever": false,
+   "classes": [
+    "hunter",
+    "mage",
+    "priest",
+    "rogue",
+    "shaman",
+    "warlock",
+    "warrior"
+   ],
+   "newClasses": [
+    "warlock"
+   ],
+   "racials": [
+    {
+     "key": "troll-berserking",
+     "name": "Berserking",
+     "kind": "active",
+     "status": "changed",
+     "icon": 135727,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Increases your spellcasting and attack speed by 10% for ?."
+      }
+     ],
+     "partial": true
+    },
+    {
+     "key": "troll-rapid-regeneration",
+     "name": "Rapid Regeneration",
+     "kind": "active",
+     "status": "new",
+     "icon": 1850550,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Regenerate 50% of your maximum Health over 6 sec. Any movement, action, or damage taken will cancel the effect."
+      }
+     ]
+    },
+    {
+     "key": "troll-beast-slaying",
+     "name": "Beast Slaying",
+     "kind": "passive",
+     "status": "unchanged",
+     "icon": 134357,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Damage dealt versus Beasts increased by 5%."
+      }
+     ]
+    },
+    {
+     "key": "troll-regeneration",
+     "name": "Regeneration",
+     "kind": "passive",
+     "status": "changed",
+     "icon": 136077,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Health regeneration rate increased by 20%. In addition, 20% of total Health regeneration will continue during combat."
+      }
+     ]
+    },
+    {
+     "key": "troll-bow-specialization",
+     "name": "Bow Specialization",
+     "kind": "passive",
+     "status": "removed",
+     "icon": 135500,
+     "variants": []
+    },
+    {
+     "key": "troll-throwing-specialization",
+     "name": "Throwing Specialization",
+     "kind": "passive",
+     "status": "removed",
+     "icon": 135421,
+     "variants": []
+    }
+   ]
+  },
+  {
+   "id": 96,
+   "slug": "windshaper-skyborne",
+   "name": "Windshaper Skyborne",
+   "faction": "horde",
+   "newInForever": true,
+   "classes": [
+    "druid",
+    "hunter",
+    "rogue",
+    "shaman",
+    "warrior"
+   ],
+   "newClasses": [],
+   "racials": [
+    {
+     "key": "windshaper-skyborne-skysight",
+     "name": "Skysight",
+     "kind": "active",
+     "status": "new",
+     "icon": 1029587,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Attempt to draw power from a convergence of elements and receive its blessing, increasing your movement and mounted movement speeds by 15% for 30 sec. If an elemental convergence is nearby, you will become Charged for the next 1 hr and the effect of this ability will be increased by 100%."
+      }
+     ]
+    },
+    {
+     "key": "windshaper-skyborne-walk-on-air",
+     "name": "Walk on Air",
+     "kind": "active",
+     "status": "new",
+     "icon": 132845,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Glide downward through the air for 10 sec while controlling your direction of travel."
+      }
+     ]
+    },
+    {
+     "key": "windshaper-skyborne-elemental-insight",
+     "name": "Elemental Insight",
+     "kind": "passive",
+     "status": "new",
+     "icon": 4630367,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Damage dealt versus Elementals increased by 5%."
+      }
+     ]
+    },
+    {
+     "key": "windshaper-skyborne-wind-blessed",
+     "name": "Wind Blessed",
+     "kind": "passive",
+     "status": "new",
+     "icon": 463565,
+     "variants": [
+      {
+       "classes": null,
+       "text": "Increases your spellcasting, melee, and ranged Haste by 2%."
+      }
+     ]
+    }
+   ],
+   "startZone": {
+    "name": "Zephras Isle",
+    "uiMapId": 2521
+   }
+  }
+ ]
+}

@@ -90,7 +90,9 @@ def generators(*, art: bool, hotfix_cache: Path, quest_cache: Path, creature_cac
         ["scripts.wow_downrank.build", *cache],
         # Reads the World Map and Item output above; its drop items are in the icon build's wanted ids.
         ["scripts.wow_rares.build", "--creature-cache", str(creature_cache)],
-        # Reads the Professions, Item, Talent, Downrank and Rares output above. Its images are published last, below.
+        # Reads the World Map's zones; its racial icons are in the icon build's wanted ids.
+        ["scripts.wow_races.build", *cache],
+        # Reads the Professions, Item, Talent, Downrank, Rares and Races output above. Its images are published last, below.
         ["scripts.wow_icons.build", *cache],
         ["scripts.wow_item_names.build"],
         ["scripts.wow_macros.build"],

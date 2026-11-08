@@ -19,6 +19,7 @@ from scripts.wow_icons.build import (
     dungeon_quest_item_ids,
     gathering_item_ids,
     gear_item_ids,
+    race_icon_files,
     wanted_ids,
     write_icon_map,
 )
@@ -149,6 +150,15 @@ def test_gear_items_are_every_row_of_the_item_list(tmp_path: Path) -> None:
     path = tmp_path / "items.json"
     path.write_text(json.dumps({"columns": ["id", "name"], "items": [[11815, "Hand of Justice"], [647, "Destiny"]]}), encoding="utf-8")
     assert gear_item_ids(path) == {11815, 647}
+
+
+def test_race_icons_are_every_racial_with_an_icon(tmp_path: Path) -> None:
+    path = tmp_path / "races.json"
+    path.write_text(json.dumps({"races": [
+        {"racials": [{"icon": 136225}, {"icon": 0}]},
+        {"racials": [{"icon": 4630367}]},
+    ]}), encoding="utf-8")
+    assert race_icon_files(path) == {136225, 4630367}
 
 
 def test_dungeon_quest_items_are_the_rewards_classic_and_seen(tmp_path: Path) -> None:

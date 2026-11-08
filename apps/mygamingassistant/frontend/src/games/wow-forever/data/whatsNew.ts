@@ -12,6 +12,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
  */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
+    date: "2026-11-08",
+    title: "Races",
+    summary:
+      "See every race's faction, starting zone, classes and racial traits — including the two new Skyborne races — with each racial Forever changed shown next to its Classic text.",
+    to: "/wow-forever/races",
+  },
+  {
     date: "2026-11-07",
     title: "Rares finder",
     summary:

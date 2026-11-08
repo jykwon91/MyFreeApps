@@ -34,6 +34,7 @@ export const PROVENANCE_DETAIL = {
   classicRoute: "This is the Classic route or spot.",
   classicRule: "This is the Classic rule.",
   loginHelp: "Written by us from common player reports; not from Blizzard.",
+  newRaceStart: "Classic has no such race and the game files don't say where it starts; this is the World Map's own note.",
 } as const;
 
 /** The "How to read these tags" note in every WoW Forever page's footer. */
