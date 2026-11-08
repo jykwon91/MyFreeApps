@@ -101,7 +101,7 @@ test.describe("Reconciliation workflow", () => {
     ).toBeVisible({ timeout: 10000 });
 
     // Step 1 — Upload 1099: form should be visible with source type, issuer, and amount fields
-    await expect(page.getByText("Upload 1099")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole("region", { name: "Upload 1099" })).toBeVisible({ timeout: 5000 });
     const sourceTypeSelect = page.locator("select").nth(1);
     await expect(sourceTypeSelect).toBeVisible({ timeout: 5000 });
     await expect(page.getByPlaceholder("e.g. Airbnb")).toBeVisible();
@@ -115,7 +115,7 @@ test.describe("Reconciliation workflow", () => {
     ).toBeVisible({ timeout: 10000 });
 
     // Step 3 — Discrepancies: click the step tab (not the "Review Discrepancies" action button)
-    await page.getByRole("button", { name: "3 Discrepancies" }).click();
+    await page.getByRole("navigation", { name: "Reconciliation steps" }).getByRole("button", { name: "Discrepancies" }).click();
     await expect(
       page.getByText(/discrepanc|everything matches|no discrepancies/i).first(),
     ).toBeVisible({ timeout: 10000 });
