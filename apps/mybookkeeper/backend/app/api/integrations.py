@@ -18,8 +18,8 @@ from app.models.responses.retry_response import RetryResponse
 from app.models.responses.sync_log_response import SyncLogResponse
 from app.schemas.integrations.gmail_label_update import GmailLabelUpdate
 from app.schemas.integrations.gmail_sync_response import GmailSyncResponse
-from app.services.email.constants import GMAIL_AUTH_EXPIRED_API_DETAIL
-from app.services.email.exceptions import GmailAuthExpiredError
+from app.services.email.constants import GMAIL_AUTH_EXPIRED_API_DETAIL, GMAIL_LABEL_NOT_FOUND_MESSAGE
+from app.services.email.exceptions import GmailAuthExpiredError, GmailLabelNotFoundError
 from app.services.integrations import integration_service
 from app.services.email.email_processor_service import discover_gmail_emails, drain_gmail_fetch, drain_claude_extraction, finalize_sync_log
 
@@ -76,6 +76,8 @@ async def sync_gmail(
         result = await discover_gmail_emails(ctx)
     except GmailAuthExpiredError:
         raise HTTPException(status_code=401, detail=GMAIL_AUTH_EXPIRED_API_DETAIL)
+    except GmailLabelNotFoundError as missing:
+        raise HTTPException(status_code=422, detail=GMAIL_LABEL_NOT_FOUND_MESSAGE.format(label=missing.label))
     sync_log_id: int | None = result.sync_log_id
 
     async def _fetch_then_extract(context: RequestContext) -> None:

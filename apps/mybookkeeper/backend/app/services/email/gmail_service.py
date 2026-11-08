@@ -13,7 +13,7 @@ from googleapiclient.discovery import Resource, build
 from app.core.config import settings
 from app.services.email.constants import GMAIL_HTTP_TIMEOUT_SECONDS
 from app.services.email.gmail_credentials import build_gmail_credentials
-from app.services.email.exceptions import GmailSendScopeError
+from app.services.email.exceptions import GmailLabelNotFoundError, GmailSendScopeError
 from app.services.email.gmail_request_executor import send_raw_gmail_message
 
 logger = logging.getLogger(__name__)
@@ -91,9 +91,7 @@ def list_new_email_ids(
     label_ids: list[str] | None = None
 
     if label:
-        resolved_id = _resolve_label_id(service, label)
-        if resolved_id:
-            label_ids = [resolved_id]
+        label_ids = [_resolve_label_id(service, label)]
 
     kwargs: dict = {"userId": "me", "q": query, "maxResults": 50}
     if label_ids:
@@ -127,25 +125,17 @@ def list_new_email_ids(
     return new_ids, len(messages)
 
 
-def _resolve_label_id(service, label_name: str) -> str | None:
-    """Resolve a Gmail label name to its ID."""
-    try:
-        results = service.users().labels().list(userId="me").execute()
-    except Exception:
-        logger.warning(
-            "Gmail label lookup failed for label=%r — falling back to no label filter",
-            label_name,
-            exc_info=True,
-        )
-        return None
+def _resolve_label_id(service, label_name: str) -> str:
+    """Resolve a Gmail label name to its ID.
+
+    Raises:
+        GmailLabelNotFoundError: the mailbox has no label with that name.
+    """
+    results = service.users().labels().list(userId="me").execute()
     for lbl in results.get("labels", []):
         if lbl["name"].lower() == label_name.lower():
             return lbl["id"]
-    logger.warning(
-        "Gmail label %r not found in user's label set — falling back to no label filter",
-        label_name,
-    )
-    return None
+    raise GmailLabelNotFoundError(label_name)
 
 
 def fetch_email_by_id(service, message_id: str) -> dict | None:

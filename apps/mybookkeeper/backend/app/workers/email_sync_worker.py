@@ -5,7 +5,7 @@ from app.db.session import AsyncSessionLocal
 from app.models.integrations.gmail_sync_target import GmailSyncTarget
 from app.repositories import organization_repo
 from app.services.email.email_processor_service import discover_gmail_emails, drain_gmail_fetch, drain_claude_extraction, finalize_sync_log
-from app.services.email.exceptions import GmailAuthExpiredError
+from app.services.email.exceptions import GmailAuthExpiredError, GmailLabelNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +38,9 @@ async def sync_gmail_connection(target: GmailSyncTarget) -> None:
             "Gmail auth expired for user=%s org=%s -- user must reconnect",
             target.user_id, target.organization_id,
         )
+        return
+    except GmailLabelNotFoundError:
+        # Discovery already recorded a failed sync_log row naming the label.
         return
 
     sync_log_id = result.sync_log_id

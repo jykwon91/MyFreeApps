@@ -297,7 +297,8 @@
         "test_integration_org_scope.py",
         "test_member_removal_gmail.py",
         "test_integration_org_key_migration.py",
-        "test_gmail_label_filter.py"
+        "test_gmail_label_filter.py",
+        "test_gmail_missing_label.py"
       ],
       "frontend_tests": [
         "Integrations.test.tsx",
