@@ -18,6 +18,7 @@ import pytest
 from app.core.context import RequestContext
 from app.models.organization.organization_member import OrgRole
 from app.services.properties import utility_plan_extraction_service as svc
+from tests.utc_today import utc_today
 
 DOC_ID = uuid.uuid4()
 
@@ -182,7 +183,7 @@ class TestDraftWarnings:
         assert any("TDU" in w for w in _draft(tdu_charge_cents_per_kwh="5.1461").warnings)
 
     def test_a_freshly_issued_tdu_rate_is_not_flagged(self) -> None:
-        recent = (_dt.date.today() - _dt.timedelta(days=5)).isoformat()
+        recent = (utc_today() - _dt.timedelta(days=5)).isoformat()
 
         draft = _draft(tdu_charge_cents_per_kwh="5.1461", document_issued_date=recent)
 

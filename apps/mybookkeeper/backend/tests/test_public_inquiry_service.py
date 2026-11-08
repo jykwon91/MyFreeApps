@@ -163,7 +163,7 @@ class TestPublicInquiryHappyPath:
         assert inquiry.spam_score is not None
         assert float(inquiry.spam_score) == 85.0
         # The inbox and quality score read the desired dates for every source.
-        assert inquiry.desired_start_date == _dt.date.today() + _dt.timedelta(days=14)
+        assert inquiry.desired_start_date == utc_today() + _dt.timedelta(days=14)
         assert (inquiry.desired_end_date - inquiry.desired_start_date).days == 180
         assert inquiry.listing_id == test_listing.id
 

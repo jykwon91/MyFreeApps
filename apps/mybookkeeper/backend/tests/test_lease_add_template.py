@@ -11,7 +11,6 @@ Covers:
 """
 from __future__ import annotations
 
-import datetime
 import uuid
 from unittest.mock import MagicMock, patch
 
@@ -33,8 +32,8 @@ from app.services.leases.signed_lease_service import (
     add_templates_and_generate,
 )
 from app.services.leases.lease_template_service import TemplateNotFoundError
+from tests.utc_today import utc_today
 
-_TODAY = datetime.datetime.now(datetime.timezone.utc).date()
 
 
 # ---------------------------------------------------------------------------
@@ -107,11 +106,11 @@ async def test_max_display_order_returns_highest_order(db) -> None:
 
 def test_add_templates_request_rejects_empty_list() -> None:
     with pytest.raises(ValueError):
-        SignedLeaseAddTemplatesRequest(template_ids=[], today=_TODAY)
+        SignedLeaseAddTemplatesRequest(template_ids=[], today=utc_today())
 
 
 def test_add_templates_request_accepts_one_or_more_ids() -> None:
-    req = SignedLeaseAddTemplatesRequest(template_ids=[uuid.uuid4()], today=_TODAY)
+    req = SignedLeaseAddTemplatesRequest(template_ids=[uuid.uuid4()], today=utc_today())
     assert len(req.template_ids) == 1
 
 
@@ -144,7 +143,7 @@ async def test_add_templates_raises_not_found_for_unknown_lease(db) -> None:
                 organization_id=uuid.uuid4(),
                 lease_id=uuid.uuid4(),
                 template_ids=[uuid.uuid4()],
-                today=_TODAY,
+                today=utc_today(),
             )
 
 
@@ -184,7 +183,7 @@ async def test_add_templates_imported_lease_accepted(db) -> None:
                 organization_id=org_id,
                 lease_id=lease.id,
                 template_ids=[uuid.uuid4()],
-                today=_TODAY,
+                today=utc_today(),
             )
 
 
@@ -216,7 +215,7 @@ async def test_add_templates_raises_not_found_for_unknown_template(db) -> None:
                 organization_id=org_id,
                 lease_id=lease.id,
                 template_ids=[uuid.uuid4()],  # random UUID — not in DB
-                today=_TODAY,
+                today=utc_today(),
             )
 
 
@@ -276,7 +275,7 @@ async def test_add_templates_already_linked_treated_as_regenerate(db) -> None:
             organization_id=org_id,
             lease_id=lease.id,
             template_ids=[t1.id],
-            today=_TODAY,
+            today=utc_today(),
         )
     # Regenerate did not create a duplicate join row.
     assert len(result.templates) == 1
@@ -364,7 +363,7 @@ async def test_regenerate_deletes_old_rendered_attachments(db) -> None:
             organization_id=org_id,
             lease_id=lease.id,
             template_ids=[t1.id],
-            today=_TODAY,
+            today=utc_today(),
         )
 
     # The old rendered_original DB row is gone.
@@ -446,7 +445,7 @@ async def test_add_templates_happy_path_links_and_renders(db) -> None:
             organization_id=org_id,
             lease_id=lease.id,
             template_ids=[new_t.id],
-            today=_TODAY,
+            today=utc_today(),
         )
 
     # The result should include both templates.

@@ -44,6 +44,7 @@ from app.services.properties.market_rate_benchmark_service import (
     InvalidMarketRateBenchmarkError,
     MarketRateBenchmarkNotFoundError,
 )
+from tests.utc_today import utc_today, utc_today_params
 
 ORG_ID = uuid.uuid4()
 USER_ID = uuid.uuid4()
@@ -55,8 +56,6 @@ _PLAN_ROUTE_SERVICE = "app.api.utility_plans.market_rate_benchmark_service"
 
 # The client's local date, which the routes require and bound to within a day
 # of the server's UTC date — so it is derived from the real clock, not fixed.
-TODAY = _dt.datetime.now(_dt.timezone.utc).date()
-TODAY_PARAMS = {"today": TODAY.isoformat()}
 
 
 def _ctx(role: OrgRole = OrgRole.OWNER) -> RequestContext:
@@ -79,7 +78,7 @@ def _benchmark(**overrides) -> MarketRateBenchmarkResponse:
         "rate_cents_per_kwh": Decimal("11.1000"),
         "monthly_cents": None,
         "source": "Power to Choose, 77021",
-        "observed_on": TODAY,
+        "observed_on": utc_today(),
         "notes": None,
         "is_stale": False,
         "created_at": now,
@@ -131,7 +130,7 @@ def _comparison() -> UtilityPlanRateComparisonResponse:
 class TestListBenchmarks:
     def test_returns_the_recorded_benchmarks(self, client: TestClient) -> None:
         with patch(f"{_SERVICE}.list_benchmarks", new=AsyncMock(return_value=[_benchmark()])):
-            response = client.get("/market-rate-benchmarks", params=TODAY_PARAMS)
+            response = client.get("/market-rate-benchmarks", params=utc_today_params())
 
         assert response.status_code == 200
         body = response.json()
@@ -143,14 +142,14 @@ class TestListBenchmarks:
     def test_hangs_off_the_read_permission(self, client: TestClient) -> None:
         app.dependency_overrides[current_org_member] = lambda: _ctx(OrgRole.VIEWER)
         with patch(f"{_SERVICE}.list_benchmarks", new=AsyncMock(return_value=[])):
-            assert client.get("/market-rate-benchmarks", params=TODAY_PARAMS).status_code == 200
+            assert client.get("/market-rate-benchmarks", params=utc_today_params()).status_code == 200
 
 
 def _put_body(**fields: object) -> dict[str, object]:
     """A valid upsert body, observed and sent today; ``fields`` override or add."""
     return {
-        "observed_on": TODAY.isoformat(),
-        "today": TODAY.isoformat(),
+        "observed_on": utc_today().isoformat(),
+        "today": utc_today().isoformat(),
         **fields,
     }
 
@@ -207,7 +206,7 @@ class TestUpsertBenchmark:
 
     def test_rejects_a_future_observation(self, client: TestClient) -> None:
         """A future date is a typo, and it would never age into staleness."""
-        next_week = TODAY + _dt.timedelta(days=7)
+        next_week = utc_today() + _dt.timedelta(days=7)
         response = client.put(
             f"/market-rate-benchmarks/{SERVICE_TYPE_ELECTRICITY}",
             json=_put_body(rate_cents_per_kwh="11.1", observed_on=next_week.isoformat()),
@@ -228,7 +227,7 @@ class TestUpsertBenchmark:
         self, client: TestClient,
     ) -> None:
         """The bound is the *client's* date, not the server's — no slack."""
-        tomorrow = TODAY + _dt.timedelta(days=1)
+        tomorrow = utc_today() + _dt.timedelta(days=1)
         mock = AsyncMock(return_value=_benchmark())
         with patch(f"{_SERVICE}.upsert_benchmark", new=mock):
             response = client.put(
@@ -247,7 +246,7 @@ class TestUpsertBenchmark:
 
         Both ``today`` and ``observed_on`` are that date, so it is accepted.
         """
-        client_today = TODAY + _dt.timedelta(days=1)
+        client_today = utc_today() + _dt.timedelta(days=1)
         mock = AsyncMock(return_value=_benchmark())
         with patch(f"{_SERVICE}.upsert_benchmark", new=mock):
             response = client.put(
@@ -270,7 +269,7 @@ class TestUpsertBenchmark:
         assert response.status_code == 422
 
     def test_a_today_three_days_off_is_rejected(self, client: TestClient) -> None:
-        off = (TODAY + _dt.timedelta(days=3)).isoformat()
+        off = (utc_today() + _dt.timedelta(days=3)).isoformat()
         response = client.put(
             f"/market-rate-benchmarks/{SERVICE_TYPE_ELECTRICITY}",
             json=_put_body(rate_cents_per_kwh="11.1", today=off),
@@ -286,7 +285,7 @@ class TestUpsertBenchmark:
                 f"/market-rate-benchmarks/{SERVICE_TYPE_ELECTRICITY}",
                 json=_put_body(rate_cents_per_kwh="11.1"),
             )
-        assert mock.await_args.kwargs["today"] == TODAY
+        assert mock.await_args.kwargs["today"] == utc_today()
 
     def test_rejects_unknown_fields(self, client: TestClient) -> None:
         response = client.put(
@@ -345,7 +344,7 @@ class TestRateComparisonRoute:
             f"{_PLAN_ROUTE_SERVICE}.get_rate_comparison",
             new=AsyncMock(return_value=_comparison()),
         ):
-            response = client.get("/utility-plans/rate-comparison", params=TODAY_PARAMS)
+            response = client.get("/utility-plans/rate-comparison", params=utc_today_params())
 
         assert response.status_code == 200
         body = response.json()
@@ -361,7 +360,7 @@ class TestRateComparisonRoute:
             f"{_PLAN_ROUTE_SERVICE}.get_rate_comparison",
             new=AsyncMock(return_value=_comparison()),
         ) as mock:
-            client.get("/utility-plans/rate-comparison", params=TODAY_PARAMS)
+            client.get("/utility-plans/rate-comparison", params=utc_today_params())
         assert mock.await_count == 1
 
     def test_hangs_off_the_read_permission(self, client: TestClient) -> None:
@@ -370,7 +369,7 @@ class TestRateComparisonRoute:
             f"{_PLAN_ROUTE_SERVICE}.get_rate_comparison",
             new=AsyncMock(return_value=_comparison()),
         ):
-            assert client.get("/utility-plans/rate-comparison", params=TODAY_PARAMS).status_code == 200
+            assert client.get("/utility-plans/rate-comparison", params=utc_today_params()).status_code == 200
 
 
 _TODAY_GET_ROUTES = [
@@ -389,13 +388,13 @@ class TestTodayQueryParam:
     def test_a_today_three_days_off_returns_422(
         self, client: TestClient, path: str, offset_days: int,
     ) -> None:
-        off = TODAY + _dt.timedelta(days=offset_days)
+        off = utc_today() + _dt.timedelta(days=offset_days)
         assert client.get(path, params={"today": off.isoformat()}).status_code == 422
 
     def test_today_reaches_the_benchmark_list_as_a_date(
         self, client: TestClient,
     ) -> None:
-        ahead = TODAY + _dt.timedelta(days=1)
+        ahead = utc_today() + _dt.timedelta(days=1)
         mock = AsyncMock(return_value=[])
         with patch(f"{_SERVICE}.list_benchmarks", new=mock):
             response = client.get(
@@ -409,5 +408,5 @@ class TestTodayQueryParam:
     ) -> None:
         mock = AsyncMock(return_value=_comparison())
         with patch(f"{_PLAN_ROUTE_SERVICE}.get_rate_comparison", new=mock):
-            client.get("/utility-plans/rate-comparison", params=TODAY_PARAMS)
-        assert mock.await_args.kwargs["today"] == TODAY
+            client.get("/utility-plans/rate-comparison", params=utc_today_params())
+        assert mock.await_args.kwargs["today"] == utc_today()

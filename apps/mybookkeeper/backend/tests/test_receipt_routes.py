@@ -30,6 +30,7 @@ from app.schemas.leases.receipt_response import (
 )
 from app.services.leases import exceptions as exc
 from app.services.leases.receipt_send_result import ReceiptSendResult
+from tests.utc_today import utc_today
 
 
 def _ctx(org_id: uuid.UUID, user_id: uuid.UUID) -> RequestContext:
@@ -146,14 +147,14 @@ class TestListPendingReceipts:
 # POST /rent-receipts/{transaction_id}/send
 # ---------------------------------------------------------------------------
 
-_TODAY = datetime.now(timezone.utc).date().isoformat()
 
-_SEND_BODY = {
-    "period_start": "2026-05-01",
-    "period_end": "2026-05-31",
-    "payment_method": "check",
-    "today": _TODAY,
-}
+def _send_body() -> dict[str, str]:
+    return {
+        "period_start": "2026-05-01",
+        "period_end": "2026-05-31",
+        "payment_method": "check",
+        "today": utc_today().isoformat(),
+    }
 
 
 class TestSendReceipt:
@@ -169,7 +170,7 @@ class TestSendReceipt:
             new_callable=AsyncMock,
             return_value=result,
         ):
-            resp = client.post(f"/rent-receipts/{txn_id}/send", json=_SEND_BODY)
+            resp = client.post(f"/rent-receipts/{txn_id}/send", json=_send_body())
 
         assert resp.status_code == 200
         body = resp.json()
@@ -183,7 +184,7 @@ class TestSendReceipt:
             new_callable=AsyncMock,
             side_effect=LookupError("Transaction not found"),
         ):
-            resp = client.post(f"/rent-receipts/{txn_id}/send", json=_SEND_BODY)
+            resp = client.post(f"/rent-receipts/{txn_id}/send", json=_send_body())
         assert resp.status_code == 404
 
     def test_not_attributed_returns_422(self, client, override_ctx) -> None:
@@ -193,7 +194,7 @@ class TestSendReceipt:
             new_callable=AsyncMock,
             side_effect=exc.ReceiptTransactionNotAttributedError("not attributed"),
         ):
-            resp = client.post(f"/rent-receipts/{txn_id}/send", json=_SEND_BODY)
+            resp = client.post(f"/rent-receipts/{txn_id}/send", json=_send_body())
         assert resp.status_code == 422
 
     def test_teammates_tenant_returns_422(self, client, override_ctx) -> None:
@@ -203,7 +204,7 @@ class TestSendReceipt:
             new_callable=AsyncMock,
             side_effect=exc.ReceiptTenantOfOtherMemberError("teammate's tenant"),
         ):
-            resp = client.post(f"/rent-receipts/{txn_id}/send", json=_SEND_BODY)
+            resp = client.post(f"/rent-receipts/{txn_id}/send", json=_send_body())
         assert resp.status_code == 422
         assert resp.json()["detail"] == "teammate's tenant"
 
@@ -214,7 +215,7 @@ class TestSendReceipt:
             new_callable=AsyncMock,
             side_effect=exc.ReceiptMissingApplicantEmailError("no email"),
         ):
-            resp = client.post(f"/rent-receipts/{txn_id}/send", json=_SEND_BODY)
+            resp = client.post(f"/rent-receipts/{txn_id}/send", json=_send_body())
         assert resp.status_code == 422
 
     def test_no_integration_returns_422(self, client, override_ctx) -> None:
@@ -224,7 +225,7 @@ class TestSendReceipt:
             new_callable=AsyncMock,
             side_effect=exc.ReceiptMissingIntegrationError("no gmail"),
         ):
-            resp = client.post(f"/rent-receipts/{txn_id}/send", json=_SEND_BODY)
+            resp = client.post(f"/rent-receipts/{txn_id}/send", json=_send_body())
         assert resp.status_code == 422
 
     def test_gmail_reauth_returns_503(self, client, override_ctx) -> None:
@@ -234,7 +235,7 @@ class TestSendReceipt:
             new_callable=AsyncMock,
             side_effect=exc.ReceiptGmailReauthError("token expired"),
         ):
-            resp = client.post(f"/rent-receipts/{txn_id}/send", json=_SEND_BODY)
+            resp = client.post(f"/rent-receipts/{txn_id}/send", json=_send_body())
         assert resp.status_code == 503
         assert resp.json()["detail"] == "gmail_reauth_required"
 
@@ -245,7 +246,7 @@ class TestSendReceipt:
             new_callable=AsyncMock,
             side_effect=exc.ReceiptGmailSendError("send failed"),
         ):
-            resp = client.post(f"/rent-receipts/{txn_id}/send", json=_SEND_BODY)
+            resp = client.post(f"/rent-receipts/{txn_id}/send", json=_send_body())
         assert resp.status_code == 502
 
     @pytest.mark.parametrize(
@@ -266,7 +267,7 @@ class TestSendReceipt:
             new_callable=AsyncMock,
             side_effect=error,
         ):
-            resp = client.post(f"/rent-receipts/{uuid.uuid4()}/send", json=_SEND_BODY)
+            resp = client.post(f"/rent-receipts/{uuid.uuid4()}/send", json=_send_body())
         assert resp.status_code == status
         assert resp.json()["detail"] == detail
 
@@ -276,7 +277,7 @@ class TestSendReceipt:
             new_callable=AsyncMock,
             side_effect=exc.ReceiptSentFromOtherGmailError("old@gmail.com"),
         ):
-            resp = client.post(f"/rent-receipts/{uuid.uuid4()}/send", json=_SEND_BODY)
+            resp = client.post(f"/rent-receipts/{uuid.uuid4()}/send", json=_send_body())
         assert resp.status_code == 409
         assert resp.json()["detail"] == {
             "code": "receipt_sent_from_other_gmail",
@@ -289,7 +290,7 @@ class TestSendReceipt:
             new_callable=AsyncMock,
             side_effect=exc.ReceiptMissingLeaseError("This tenant has no signed lease"),
         ):
-            resp = client.post(f"/rent-receipts/{uuid.uuid4()}/send", json=_SEND_BODY)
+            resp = client.post(f"/rent-receipts/{uuid.uuid4()}/send", json=_send_body())
         assert resp.status_code == 422
         assert resp.json()["detail"] == "This tenant has no signed lease"
 
@@ -301,7 +302,7 @@ class TestSendReceipt:
                 "period_start": "2026-05-31",
                 "period_end": "2026-05-01",
                 "payment_method": None,
-                "today": _TODAY,
+                "today": utc_today().isoformat(),
             },
         )
         assert resp.status_code == 422
@@ -372,7 +373,7 @@ class TestPreviewReceipt:
                 params={
                     "period_start": "2026-05-01",
                     "period_end": "2026-05-31",
-                    "today": _TODAY,
+                    "today": utc_today().isoformat(),
                 },
             )
         assert resp.status_code == 200
@@ -391,7 +392,7 @@ class TestPreviewReceipt:
                 params={
                     "period_start": "2026-05-01",
                     "period_end": "2026-05-31",
-                    "today": _TODAY,
+                    "today": utc_today().isoformat(),
                 },
             )
         assert resp.status_code == 422
@@ -405,7 +406,7 @@ class TestPreviewReceipt:
         ):
             resp = client.get(
                 f"/rent-receipts/preview/{txn_id}",
-                params={"period_start": "2026-05-01", "period_end": "2026-05-31", "today": _TODAY},
+                params={"period_start": "2026-05-01", "period_end": "2026-05-31", "today": utc_today().isoformat()},
             )
         assert resp.status_code == 422
         assert resp.json()["detail"] == "teammate's tenant"
@@ -422,7 +423,7 @@ class TestPreviewReceipt:
                 params={
                     "period_start": "2026-05-01",
                     "period_end": "2026-05-31",
-                    "today": _TODAY,
+                    "today": utc_today().isoformat(),
                 },
             )
         assert resp.status_code == 404
@@ -434,7 +435,7 @@ class TestPreviewReceipt:
         ) as preview:
             resp = client.get(
                 f"/rent-receipts/preview/{uuid.uuid4()}",
-                params={"period_start": "2026-05-31", "period_end": "2026-05-01", "today": _TODAY},
+                params={"period_start": "2026-05-31", "period_end": "2026-05-01", "today": utc_today().isoformat()},
             )
         assert resp.status_code == 422
         preview.assert_not_awaited()

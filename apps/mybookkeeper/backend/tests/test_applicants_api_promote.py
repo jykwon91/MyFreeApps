@@ -25,8 +25,8 @@ from app.core.permissions import current_org_member, require_write_access
 from app.main import app
 from app.models.organization.organization_member import OrgRole
 from app.schemas.applicants.applicant_detail_response import ApplicantDetailResponse
+from tests.utc_today import utc_today
 
-_TODAY = _dt.datetime.now(_dt.timezone.utc).date().isoformat()
 
 
 def _ctx(org_id: uuid.UUID, user_id: uuid.UUID) -> RequestContext:
@@ -68,7 +68,7 @@ def _build_detail(
 class TestPromoteEndpoint:
     def test_unauthenticated_returns_401(self) -> None:
         client = TestClient(app)
-        response = client.post(f"/applicants/promote/{uuid.uuid4()}", json={"today": _TODAY})
+        response = client.post(f"/applicants/promote/{uuid.uuid4()}", json={"today": utc_today().isoformat()})
         assert response.status_code == 401
 
     @pytest.mark.asyncio
@@ -94,7 +94,7 @@ class TestPromoteEndpoint:
                 client = TestClient(app)
                 response = client.post(
                     f"/applicants/promote/{inquiry_id}",
-                    json={"legal_name": "Alice Tester", "today": _TODAY},
+                    json={"legal_name": "Alice Tester", "today": utc_today().isoformat()},
                 )
 
             assert response.status_code == 200
@@ -120,7 +120,7 @@ class TestPromoteEndpoint:
             ):
                 client = TestClient(app)
                 response = client.post(
-                    f"/applicants/promote/{inquiry_id}", json={"today": _TODAY},
+                    f"/applicants/promote/{inquiry_id}", json={"today": utc_today().isoformat()},
                 )
             assert response.status_code == 404
             assert response.json()["detail"] == "Inquiry not found"
@@ -146,7 +146,7 @@ class TestPromoteEndpoint:
             ):
                 client = TestClient(app)
                 response = client.post(
-                    f"/applicants/promote/{inquiry_id}", json={"today": _TODAY},
+                    f"/applicants/promote/{inquiry_id}", json={"today": utc_today().isoformat()},
                 )
             assert response.status_code == 409
             detail = response.json()["detail"]
@@ -173,7 +173,7 @@ class TestPromoteEndpoint:
             ):
                 client = TestClient(app)
                 response = client.post(
-                    f"/applicants/promote/{inquiry_id}", json={"today": _TODAY},
+                    f"/applicants/promote/{inquiry_id}", json={"today": utc_today().isoformat()},
                 )
             assert response.status_code == 409
             detail = response.json()["detail"]
@@ -188,7 +188,7 @@ class TestPromoteEndpoint:
         app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
         try:
             client = TestClient(app)
-            response = client.post("/applicants/promote/not-a-uuid", json={"today": _TODAY})
+            response = client.post("/applicants/promote/not-a-uuid", json={"today": utc_today().isoformat()})
             assert response.status_code == 422
         finally:
             app.dependency_overrides.clear()
@@ -202,7 +202,7 @@ class TestPromoteEndpoint:
             client = TestClient(app)
             response = client.post(
                 f"/applicants/promote/{inquiry_id}",
-                json={"unknown_field": "boom", "today": _TODAY},
+                json={"unknown_field": "boom", "today": utc_today().isoformat()},
             )
             assert response.status_code == 422
         finally:
@@ -214,14 +214,14 @@ class TestPromoteEndpoint:
         inquiry_id = uuid.uuid4()
         # A dob clearly under 18 — yesterday.
         recent_dob = (
-            _dt.date.fromisoformat(_TODAY) - _dt.timedelta(days=1)
+            _dt.date.fromisoformat(utc_today().isoformat()) - _dt.timedelta(days=1)
         ).isoformat()
         app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
         try:
             client = TestClient(app)
             response = client.post(
                 f"/applicants/promote/{inquiry_id}",
-                json={"dob": recent_dob, "today": _TODAY},
+                json={"dob": recent_dob, "today": utc_today().isoformat()},
             )
             assert response.status_code == 422
         finally:
@@ -240,7 +240,7 @@ class TestPromoteEndpoint:
                 json={
                     "contract_start": "2026-06-01",
                     "contract_end": "2026-12-01",
-                    "today": _TODAY,
+                    "today": utc_today().isoformat(),
                 },
             )
             assert response.status_code == 422

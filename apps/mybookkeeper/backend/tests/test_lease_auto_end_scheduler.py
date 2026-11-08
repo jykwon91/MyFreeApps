@@ -18,8 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.applicants.applicant import Applicant
 from app.models.leases.signed_lease import SignedLease
 from app.workers.scheduler_worker import auto_end_replaced_leases
+from tests.utc_today import utc_today
 
-_UTC_TODAY = _dt.datetime.now(_dt.timezone.utc).date()
 
 
 def _fake_uow_for(session: AsyncSession):
@@ -76,7 +76,7 @@ async def test_auto_ends_parent_when_successor_started(
         user_id=user_id,
         org_id=org_id,
         status="active",
-        starts_on=_UTC_TODAY - _dt.timedelta(days=1),
+        starts_on=utc_today() - _dt.timedelta(days=1),
         parent_lease_id=parent.id,
     )
 
@@ -101,7 +101,7 @@ async def test_skips_parent_when_successor_in_future(
         db,
         user_id=user_id,
         org_id=org_id,
-        starts_on=_UTC_TODAY + _dt.timedelta(days=30),
+        starts_on=utc_today() + _dt.timedelta(days=30),
         parent_lease_id=parent.id,
     )
 
@@ -126,7 +126,7 @@ async def test_skips_parent_in_non_eligible_status(
         db,
         user_id=user_id,
         org_id=org_id,
-        starts_on=_UTC_TODAY - _dt.timedelta(days=1),
+        starts_on=utc_today() - _dt.timedelta(days=1),
         parent_lease_id=parent.id,
     )
 
@@ -151,7 +151,7 @@ async def test_skips_when_successor_soft_deleted(
         db,
         user_id=user_id,
         org_id=org_id,
-        starts_on=_UTC_TODAY - _dt.timedelta(days=1),
+        starts_on=utc_today() - _dt.timedelta(days=1),
         parent_lease_id=parent.id,
         deleted_at=_dt.datetime.now(_dt.timezone.utc),
     )
@@ -174,13 +174,13 @@ async def test_handles_multiple_parents_in_one_cycle(
     p1 = await _seed_lease(db, user_id=user_id, org_id=org_id, status="active")
     p2 = await _seed_lease(db, user_id=user_id, org_id=org_id, status="signed")
     p3 = await _seed_lease(db, user_id=user_id, org_id=org_id, status="active")
-    yesterday = _UTC_TODAY - _dt.timedelta(days=1)
+    yesterday = utc_today() - _dt.timedelta(days=1)
     await _seed_lease(db, user_id=user_id, org_id=org_id, starts_on=yesterday, parent_lease_id=p1.id)
     await _seed_lease(db, user_id=user_id, org_id=org_id, starts_on=yesterday, parent_lease_id=p2.id)
     # p3 has a future-dated successor — should be skipped.
     await _seed_lease(
         db, user_id=user_id, org_id=org_id,
-        starts_on=_UTC_TODAY + _dt.timedelta(days=10),
+        starts_on=utc_today() + _dt.timedelta(days=10),
         parent_lease_id=p3.id,
     )
 
@@ -210,14 +210,14 @@ async def test_hands_over_on_the_utc_date_whatever_the_server_zone(
         starting = await _seed_lease(db, user_id=user_id, org_id=org_id)
         await _seed_lease(
             db, user_id=user_id, org_id=org_id,
-            starts_on=_UTC_TODAY, parent_lease_id=starting.id,
+            starts_on=utc_today(), parent_lease_id=starting.id,
         )
         not_yet = await _seed_lease(db, user_id=user_id, org_id=org_id)
         await _seed_lease(
             db, user_id=user_id, org_id=org_id,
-            starts_on=_UTC_TODAY + _dt.timedelta(days=1), parent_lease_id=not_yet.id,
+            starts_on=utc_today() + _dt.timedelta(days=1), parent_lease_id=not_yet.id,
         )
-        assert _dt.date.today() != _UTC_TODAY
+        assert _dt.date.today() != utc_today()
 
         with patch("app.workers.scheduler_worker.unit_of_work", _fake_uow_for(db)):
             assert await auto_end_replaced_leases() == 1

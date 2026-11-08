@@ -39,6 +39,7 @@ from app.schemas.insurance.insurance_policy_summary import InsurancePolicySummar
 from app.services.insurance.insurance_benchmark_service import (
     InsuranceBenchmarkNotFoundError,
 )
+from tests.utc_today import utc_today, utc_today_params
 
 ORG_ID = uuid.uuid4()
 USER_ID = uuid.uuid4()
@@ -50,14 +51,12 @@ _POLICY_ROUTE_SERVICE = "app.api.insurance_policies.insurance_benchmark_service"
 
 # The client's local date, which the routes require and bound to within a day
 # of the server's UTC date — so it is derived from the real clock, not fixed.
-TODAY = _dt.datetime.now(_dt.timezone.utc).date()
-TODAY_PARAMS = {"today": TODAY.isoformat()}
 
 _VALID_PAYLOAD = {
     "annual_premium_cents": 120_000,
     "coverage_amount_cents": 40_000_000,
-    "observed_on": TODAY.isoformat(),
-    "today": TODAY.isoformat(),
+    "observed_on": utc_today().isoformat(),
+    "today": utc_today().isoformat(),
 }
 
 
@@ -81,7 +80,7 @@ def _benchmark(**overrides) -> InsuranceBenchmarkResponse:
         "coverage_amount_cents": 40_000_000,
         "region_label": "Harris County, TX",
         "source": "TDI HelpInsure, HO-3, $2,500 deductible",
-        "observed_on": TODAY,
+        "observed_on": utc_today(),
         "notes": None,
         "is_stale": False,
         "created_at": now,
@@ -134,7 +133,7 @@ def _comparison() -> InsurancePolicyPremiumComparisonResponse:
 class TestGetBenchmark:
     def test_returns_the_recorded_benchmark(self, client: TestClient) -> None:
         with patch(f"{_SERVICE}.get_benchmark", new=AsyncMock(return_value=_benchmark())):
-            response = client.get("/insurance-benchmarks", params=TODAY_PARAMS)
+            response = client.get("/insurance-benchmarks", params=utc_today_params())
 
         assert response.status_code == 200
         body = response.json()
@@ -149,7 +148,7 @@ class TestGetBenchmark:
         """"None recorded yet" is every org's starting state, not a client
         error — and the form that records one renders off this response."""
         with patch(f"{_SERVICE}.get_benchmark", new=AsyncMock(return_value=None)):
-            response = client.get("/insurance-benchmarks", params=TODAY_PARAMS)
+            response = client.get("/insurance-benchmarks", params=utc_today_params())
 
         assert response.status_code == 200
         assert response.json() is None
@@ -157,7 +156,7 @@ class TestGetBenchmark:
     def test_hangs_off_the_read_permission(self, client: TestClient) -> None:
         app.dependency_overrides[current_org_member] = lambda: _ctx(OrgRole.VIEWER)
         with patch(f"{_SERVICE}.get_benchmark", new=AsyncMock(return_value=None)):
-            assert client.get("/insurance-benchmarks", params=TODAY_PARAMS).status_code == 200
+            assert client.get("/insurance-benchmarks", params=utc_today_params()).status_code == 200
 
 
 class TestUpsertBenchmark:
@@ -177,8 +176,8 @@ class TestUpsertBenchmark:
             "/insurance-benchmarks",
             json={
                 "annual_premium_cents": 120_000,
-                "observed_on": TODAY.isoformat(),
-                "today": TODAY.isoformat(),
+                "observed_on": utc_today().isoformat(),
+                "today": utc_today().isoformat(),
             },
         )
         assert response.status_code == 422
@@ -188,8 +187,8 @@ class TestUpsertBenchmark:
             "/insurance-benchmarks",
             json={
                 "coverage_amount_cents": 40_000_000,
-                "observed_on": TODAY.isoformat(),
-                "today": TODAY.isoformat(),
+                "observed_on": utc_today().isoformat(),
+                "today": utc_today().isoformat(),
             },
         )
         assert response.status_code == 422
@@ -220,7 +219,7 @@ class TestUpsertBenchmark:
 
     def test_rejects_a_future_observation(self, client: TestClient) -> None:
         """A future date is a typo, and it would never age into staleness."""
-        next_week = TODAY + _dt.timedelta(days=7)
+        next_week = utc_today() + _dt.timedelta(days=7)
         response = client.put(
             "/insurance-benchmarks",
             json={**_VALID_PAYLOAD, "observed_on": next_week.isoformat()},
@@ -236,7 +235,7 @@ class TestUpsertBenchmark:
         self, client: TestClient,
     ) -> None:
         """The bound is the *client's* date, not the server's — no slack."""
-        tomorrow = TODAY + _dt.timedelta(days=1)
+        tomorrow = utc_today() + _dt.timedelta(days=1)
         mock = AsyncMock(return_value=_benchmark())
         with patch(f"{_SERVICE}.upsert_benchmark", new=mock):
             response = client.put(
@@ -253,7 +252,7 @@ class TestUpsertBenchmark:
 
         Both ``today`` and ``observed_on`` are that date, so it is accepted.
         """
-        client_today = (TODAY + _dt.timedelta(days=1)).isoformat()
+        client_today = (utc_today() + _dt.timedelta(days=1)).isoformat()
         mock = AsyncMock(return_value=_benchmark())
         with patch(f"{_SERVICE}.upsert_benchmark", new=mock):
             response = client.put(
@@ -261,14 +260,14 @@ class TestUpsertBenchmark:
                 json={**_VALID_PAYLOAD, "observed_on": client_today, "today": client_today},
             )
         assert response.status_code == 200
-        assert mock.await_args.kwargs["today"] == TODAY + _dt.timedelta(days=1)
+        assert mock.await_args.kwargs["today"] == utc_today() + _dt.timedelta(days=1)
 
     def test_today_is_required(self, client: TestClient) -> None:
         body = {k: v for k, v in _VALID_PAYLOAD.items() if k != "today"}
         assert client.put("/insurance-benchmarks", json=body).status_code == 422
 
     def test_a_today_three_days_off_is_rejected(self, client: TestClient) -> None:
-        off = (TODAY + _dt.timedelta(days=3)).isoformat()
+        off = (utc_today() + _dt.timedelta(days=3)).isoformat()
         response = client.put(
             "/insurance-benchmarks", json={**_VALID_PAYLOAD, "today": off},
         )
@@ -280,7 +279,7 @@ class TestUpsertBenchmark:
         mock = AsyncMock(return_value=_benchmark())
         with patch(f"{_SERVICE}.upsert_benchmark", new=mock):
             client.put("/insurance-benchmarks", json=_VALID_PAYLOAD)
-        assert mock.await_args.kwargs["today"] == TODAY
+        assert mock.await_args.kwargs["today"] == utc_today()
 
     def test_rejects_unknown_fields(self, client: TestClient) -> None:
         response = client.put(
@@ -324,7 +323,7 @@ class TestPremiumComparisonRoute:
             f"{_POLICY_ROUTE_SERVICE}.get_premium_comparison",
             new=AsyncMock(return_value=_comparison()),
         ):
-            response = client.get("/insurance-policies/premium-comparison", params=TODAY_PARAMS)
+            response = client.get("/insurance-policies/premium-comparison", params=utc_today_params())
 
         assert response.status_code == 200
         body = response.json()
@@ -343,7 +342,7 @@ class TestPremiumComparisonRoute:
             f"{_POLICY_ROUTE_SERVICE}.get_premium_comparison",
             new=AsyncMock(return_value=_comparison()),
         ) as mock:
-            client.get("/insurance-policies/premium-comparison", params=TODAY_PARAMS)
+            client.get("/insurance-policies/premium-comparison", params=utc_today_params())
         assert mock.await_count == 1
 
     def test_hangs_off_the_read_permission(self, client: TestClient) -> None:
@@ -353,7 +352,7 @@ class TestPremiumComparisonRoute:
             new=AsyncMock(return_value=_comparison()),
         ):
             assert (
-                client.get("/insurance-policies/premium-comparison", params=TODAY_PARAMS).status_code == 200
+                client.get("/insurance-policies/premium-comparison", params=utc_today_params()).status_code == 200
             )
 
 
@@ -373,13 +372,13 @@ class TestTodayQueryParam:
     def test_a_today_three_days_off_returns_422(
         self, client: TestClient, path: str, offset_days: int,
     ) -> None:
-        off = TODAY + _dt.timedelta(days=offset_days)
+        off = utc_today() + _dt.timedelta(days=offset_days)
         assert client.get(path, params={"today": off.isoformat()}).status_code == 422
 
     def test_today_reaches_the_benchmark_read_as_a_date(
         self, client: TestClient,
     ) -> None:
-        ahead = TODAY + _dt.timedelta(days=1)
+        ahead = utc_today() + _dt.timedelta(days=1)
         mock = AsyncMock(return_value=None)
         with patch(f"{_SERVICE}.get_benchmark", new=mock):
             response = client.get(
@@ -393,5 +392,5 @@ class TestTodayQueryParam:
     ) -> None:
         mock = AsyncMock(return_value=_comparison())
         with patch(f"{_POLICY_ROUTE_SERVICE}.get_premium_comparison", new=mock):
-            client.get("/insurance-policies/premium-comparison", params=TODAY_PARAMS)
-        assert mock.await_args.kwargs["today"] == TODAY
+            client.get("/insurance-policies/premium-comparison", params=utc_today_params())
+        assert mock.await_args.kwargs["today"] == utc_today()

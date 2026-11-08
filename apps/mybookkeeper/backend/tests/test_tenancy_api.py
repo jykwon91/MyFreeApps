@@ -23,8 +23,8 @@ from app.models.organization.organization_member import OrgRole
 from app.schemas.applicants.applicant_detail_response import ApplicantDetailResponse
 from app.schemas.applicants.applicant_summary import ApplicantSummary
 from app.schemas.applicants.tenant_list_response import TenantListResponse
+from tests.utc_today import utc_today
 
-_TODAY = _dt.datetime.now(_dt.timezone.utc).date()
 
 
 def _ctx(
@@ -96,7 +96,7 @@ class TestListTenantsEndpoint:
                 return_value=response_obj,
             ) as mock_svc:
                 client = TestClient(app)
-                resp = client.get("/applicants/tenants", params={"today": _TODAY.isoformat()})
+                resp = client.get("/applicants/tenants", params={"today": utc_today().isoformat()})
 
             assert resp.status_code == 200
             body = resp.json()
@@ -122,7 +122,7 @@ class TestListTenantsEndpoint:
                 client = TestClient(app)
                 resp = client.get(
                     "/applicants/tenants",
-                    params={"include_ended": "true", "today": _TODAY.isoformat()},
+                    params={"include_ended": "true", "today": utc_today().isoformat()},
                 )
 
             assert resp.status_code == 200
@@ -143,11 +143,11 @@ class TestListTenantsEndpoint:
                 return_value=response_obj,
             ) as mock_svc:
                 resp = TestClient(app).get(
-                    "/applicants/tenants", params={"today": _TODAY.isoformat()},
+                    "/applicants/tenants", params={"today": utc_today().isoformat()},
                 )
 
             assert resp.status_code == 200
-            assert mock_svc.call_args.kwargs["today"] == _TODAY
+            assert mock_svc.call_args.kwargs["today"] == utc_today()
         finally:
             app.dependency_overrides.clear()
 
@@ -157,7 +157,7 @@ class TestListTenantsEndpoint:
     ) -> None:
         params = (
             {} if skew_days is None
-            else {"today": (_TODAY + _dt.timedelta(days=skew_days)).isoformat()}
+            else {"today": (utc_today() + _dt.timedelta(days=skew_days)).isoformat()}
         )
         app.dependency_overrides[current_org_member] = lambda: _ctx(uuid.uuid4(), uuid.uuid4())
         try:
@@ -174,7 +174,7 @@ class TestListTenantsEndpoint:
 
     def test_unauthenticated_returns_401(self) -> None:
         client = TestClient(app)
-        resp = client.get("/applicants/tenants", params={"today": _TODAY.isoformat()})
+        resp = client.get("/applicants/tenants", params={"today": utc_today().isoformat()})
         assert resp.status_code == 401
 
 
