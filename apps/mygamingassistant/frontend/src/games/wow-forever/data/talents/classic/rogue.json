@@ -31,6 +31,7 @@
 "278":["Increases the armor reduced by your Expose Armor ability by 25%.",null],
 "279":["While affected by your Kidney Shot ability, the target receives an additional 3% damage from all sources.",null,null],
 "280":["When activated, increases the critical strike chance of your next Sinister Strike, Backstab, Ambush, or Eviscerate by 100%."],
+"281":["Your finishing moves have a 20% chance per combo point to restore 25 energy."],
 "283":["Your critical strikes from abilities that add combo points have a 20% chance to add an additional combo point.",null,null,null,null],
 "303":["A strike that deals 125% weapon damage and increases your chance to dodge by 15% for 7 sec. Awards 1 combo point."],
 "381":["When used, adds 2 combo points to your target. You must add to or use those combo points within 10 sec or the combo points are lost."],

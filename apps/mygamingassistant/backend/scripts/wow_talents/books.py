@@ -13,13 +13,27 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Iterable, Mapping
 
-from scripts.wow_food.tooltip import AuraOptions, Effect, SpellBook
+from scripts.wow_food.tooltip import AuraOptions, Effect, SpellBook, parse_variables
 from scripts.wow_world_map.sql_dump import SqlValue
 
 Row = Mapping[str, str]
 SqlRow = Mapping[str, SqlValue]
 
 CLASSIC_EFFECTS = 3
+# The Forever tables ``forever_book`` reads; every generator that builds one loads these.
+FOREVER_BOOK_TABLES = (
+    "Spell",
+    "SpellName",
+    "SpellEffect",
+    "SpellMisc",
+    "SpellAuraOptions",
+    "SpellDuration",
+    "SpellRadius",
+    "SpellRange",
+    "SpellTargetRestrictions",
+    "SpellDescriptionVariables",
+    "SpellXDescriptionVariables",
+)
 
 
 def _int(value: SqlValue) -> int:
@@ -42,7 +56,7 @@ def _base(rows: Iterable[Row]) -> list[Row]:
 
 
 def forever_book(tables: Mapping[str, Iterable[Row]]) -> SpellBook:
-    """A spell book from the Forever tables (``Spell``, ``SpellName``, ``SpellEffect``, ``SpellMisc``, ...)."""
+    """A spell book from the Forever tables (``FOREVER_BOOK_TABLES``)."""
     book = SpellBook()
     for r in tables["SpellName"]:
         book.names[_int(r["ID"])] = r["Name_lang"]
@@ -51,9 +65,24 @@ def forever_book(tables: Mapping[str, Iterable[Row]]) -> SpellBook:
         book.aura_descriptions[_int(r["ID"])] = r.get("AuraDescription_lang", "")
     durations = {_int(r["ID"]): _int(r["Duration"]) for r in tables["SpellDuration"]}
     radii = {_int(r["ID"]): _float(r["Radius"]) for r in tables["SpellRadius"]}
+    # Range against an enemy, else against a friend (a heal's only range).
+    ranges = {_int(r["ID"]): _float(r["RangeMax_0"]) or _float(r["RangeMax_1"]) for r in tables["SpellRange"]}
     for r in _base(tables["SpellMisc"]):
+        spell = _int(r["SpellID"])
         if ms := durations.get(_int(r["DurationIndex"])):
-            book.durations_ms.setdefault(_int(r["SpellID"]), ms)
+            book.durations_ms.setdefault(spell, ms)
+        if yards := ranges.get(_int(r["RangeIndex"])):
+            book.ranges_yards.setdefault(spell, yards)
+    for r in _base(tables["SpellTargetRestrictions"]):
+        spell = _int(r["SpellID"])
+        if most := _int(r["MaxTargets"]):
+            book.max_targets.setdefault(spell, most)
+        if level := _int(r["MaxTargetLevel"]):
+            book.max_target_levels.setdefault(spell, level)
+    variables = {_int(r["ID"]): parse_variables(r["Variables"]) for r in tables["SpellDescriptionVariables"]}
+    for r in tables["SpellXDescriptionVariables"]:
+        if found := variables.get(_int(r["SpellDescriptionVariablesID"])):
+            book.variables.setdefault(_int(r["SpellID"]), found)
     for r in _base(tables["SpellAuraOptions"]):
         book.aura_options.setdefault(
             _int(r["SpellID"]),
@@ -71,10 +100,13 @@ def forever_book(tables: Mapping[str, Iterable[Row]]) -> SpellBook:
                 period_ms=_int(r["EffectAuraPeriod"]),
                 trigger=_int(r["EffectTriggerSpell"]),
                 variance=_float(r.get("Variance")),
-                # A radius belongs to one of the effect's two targets; `$a` reads whichever is set
-                # (War Stomp's is on its second target).
-                radius_yards=radii.get(_int(r.get("EffectRadiusIndex_0")) or _int(r.get("EffectRadiusIndex_1")), 0.0),
+                # The client keeps an effect's radius in either slot (Arcane Explosion: the second).
+                radius_yards=radii.get(_int(r.get("EffectRadiusIndex_0")))
+                or radii.get(_int(r.get("EffectRadiusIndex_1")), 0.0),
                 chain_targets=_int(r.get("EffectChainTargets")),
+                points_per_resource=_float(r.get("EffectPointsPerResource")),
+                amplitude=_float(r.get("EffectAmplitude")),
+                chain_amplitude=_float(r.get("EffectChainAmplitude")),
             )
         )
     book.effects = {spell: sorted(rows, key=lambda e: e.index) for spell, rows in effects.items()}
@@ -117,6 +149,10 @@ def classic_effect(row: SqlRow, number: int, radii: Mapping[int, float]) -> Effe
         variance=variance,
         radius_yards=radii.get(_int(row.get(f"EffectRadiusIndex{number}")), 0.0),
         chain_targets=_int(row.get(f"EffectChainTarget{number}")),
+        # 1.12's names for the fields the modern client renamed.
+        points_per_resource=_float(row.get(f"EffectPointsPerComboPoint{number}")),
+        amplitude=_float(row.get(f"EffectMultipleValue{number}")),
+        chain_amplitude=_float(row.get(f"DmgMultiplier{number}")),
     )
 
 
@@ -125,6 +161,7 @@ def classic_book(
     era_names: Iterable[Row],
     era_durations: Iterable[Row],
     era_radii: Iterable[Row],
+    era_ranges: Iterable[Row],
     spell_template: Iterable[SqlRow],
 ) -> SpellBook:
     """A spell book of the Classic Era client's wording and cmangos' numbers."""
@@ -136,10 +173,17 @@ def classic_book(
         book.aura_descriptions[_int(r["ID"])] = r.get("AuraDescription_lang", "")
     durations = {_int(r["ID"]): _int(r["Duration"]) for r in era_durations}
     radii = {_int(r["ID"]): _float(r["Radius"]) for r in era_radii}
+    ranges = {_int(r["ID"]): _float(r["RangeMax_0"]) or _float(r["RangeMax_1"]) for r in era_ranges}
     for row in spell_template:
         spell = _int(row["Id"])
         if ms := durations.get(_int(row.get("DurationIndex"))):
             book.durations_ms[spell] = ms
+        if yards := ranges.get(_int(row.get("RangeIndex"))):
+            book.ranges_yards[spell] = yards
+        if most := _int(row.get("MaxAffectedTargets")):
+            book.max_targets[spell] = most
+        if level := _int(row.get("MaxTargetLevel")):
+            book.max_target_levels[spell] = level
         chance, charges, stacks = _int(row.get("ProcChance")), _int(row.get("ProcCharges")), _int(row.get("StackAmount"))
         if chance or charges or stacks:
             book.aura_options[spell] = AuraOptions(chance, charges, stacks)

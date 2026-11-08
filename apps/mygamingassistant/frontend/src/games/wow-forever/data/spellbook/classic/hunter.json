@@ -113,9 +113,5 @@
 },
 "quests":[883,982,1515,2641,6991],
 "books":[19801,25295,25296],
-"texts":{
-"13813":"Place a fire trap that explodes when an enemy approaches, causing 100 to 130 Fire damage and 150 additional Fire damage over 20 sec to all within 10 yards. Trap will exist for 1 min. Traps can only be placed when out of combat. Only one trap can be active at a time.",
-"14316":"Place a fire trap that explodes when an enemy approaches, causing 139 to 187 Fire damage and 240 additional Fire damage over 20 sec to all within 10 yards. Trap will exist for 1 min. Traps can only be placed when out of combat. Only one trap can be active at a time.",
-"14317":"Place a fire trap that explodes when an enemy approaches, causing 201 to 257 Fire damage and 330 additional Fire damage over 20 sec to all within 10 yards. Trap will exist for 1 min. Traps can only be placed when out of combat. Only one trap can be active at a time."
-},
+"texts":{},
 "levels":{}}

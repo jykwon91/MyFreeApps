@@ -33,6 +33,7 @@
 "81":["Increases the critical strike chance of your Arcane Explosion spell by an additional 2%.",null,null],
 "82":["Increases the effect of your Amplify Magic and Dampen Magic spells by 25%.",null],
 "83":["Decreases the mana lost per point of damage taken when Mana Shield is active by 10%.",null],
+"87":["When activated, your spells deal 30% more damage while costing 30% more mana to cast. This effect lasts 15 sec."],
 "88":["Gives your Counterspell a 50% chance to silence the target for 4 sec.",null],
 "421":["Increases your spell damage and critical strike chance by 1%.",null,null],
 "741":["Increases the range of your Frostbolt and Blizzard spells and the radius of your Frost Nova and Cone of Cold spells by 10%.",null],

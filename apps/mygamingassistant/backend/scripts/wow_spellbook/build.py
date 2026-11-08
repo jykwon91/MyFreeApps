@@ -40,7 +40,7 @@ from scripts.wow_macros.build import CLASS_LINES
 from scripts.wow_spellbook.docs import ClassicFill, FieldCounts, change_info, spell_doc, write_lines
 from scripts.wow_spellbook.spells import Learned, SpellFacts, SpellGaps, class_spells, talent_spells
 from scripts.wow_spellbook.trainers import book_spells, quest_spells, teaching_map, trainer_costs
-from scripts.wow_talents.books import classic_book, forever_book
+from scripts.wow_talents.books import FOREVER_BOOK_TABLES, classic_book, forever_book
 from scripts.wow_world_map.sources import (
     CMANGOS_COMMIT,
     WAGO_BUILD,
@@ -55,18 +55,7 @@ SPELLBOOK_DIR = WOW_DATA_DIR / "spellbook"
 CLASSIC_DIR = SPELLBOOK_DIR / "classic"
 CHANGED_SPELLS_FILE = WOW_DATA_DIR / "changes" / "classic" / "spells.json"
 DOWNRANK_FILE = WOW_DATA_DIR / "downrank" / "spells.json"
-FOREVER_TABLES = (
-    "Spell",
-    "SpellName",
-    "SpellEffect",
-    "SpellMisc",
-    "SpellAuraOptions",
-    "SpellDuration",
-    "SpellRadius",
-    "SpellLevels",
-    "SkillLineAbility",
-    "Talent",
-)
+FOREVER_TABLES = (*FOREVER_BOOK_TABLES, "SpellLevels", "SkillLineAbility", "Talent")
 
 CLASSIC_README = """# Spellbook — Classic trainer data and text
 
@@ -124,6 +113,7 @@ def main() -> None:
         wago_table("SpellName", **era),
         wago_table("SpellDuration", **era),
         wago_table("SpellRadius", **era),
+        wago_table("SpellRange", **era),
         dump["spell_template"],
     )
     classic_level = {

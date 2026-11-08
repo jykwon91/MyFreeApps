@@ -20,6 +20,7 @@
 "408":["Reduces the Mana cost of your Lesser Heal, Heal, and Greater Heal spells by 5%.",null,null],
 "410":["Gives you a 35% chance to avoid interruption caused by damage while casting any healing spell.",null],
 "411":["Reduces all spell damage taken by 2%.",null,null,null,null],
+"442":["Causes an explosion of holy light around the caster, causing 28 to 32 Holy damage to all enemy targets within 10 yards and healing all party members within 10 yards for 52 to 60. These effects cause no threat."],
 "461":["Your Shadow damage spells have a 20% chance to cause your target to be vulnerable to Shadow damage. This vulnerability increases the Shadow damage dealt to your target by 3% and lasts 15 sec. Stacks up to 5 times.",null,null,null,null],
 "462":["Increases your Shadow spell damage by 2%.",null,null,null,null],
 "463":["Reduces your target's chance to resist your Shadow spells by 2%.",null,null,null,null],

@@ -152,6 +152,7 @@ def main() -> None:
         era_names,
         wago_table("SpellDuration", **era),
         wago_table("SpellRadius", **era),
+        wago_table("SpellRange", **era),
         read_dump(cmangos_dump(), {"spell_template"})["spell_template"],
     )
     era_talents = wago_table("Talent", **era)

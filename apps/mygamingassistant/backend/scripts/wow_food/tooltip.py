@@ -5,31 +5,47 @@ The Forever client describes every food with a template such as
 well fed and gain $s2 Stamina for $1248406d.`` Reading the client's own
 wording keeps the picker honest: the amount, the stat and any condition
 ("while in Westfall") come out exactly as the game shows them. The talent
-calculator reads its rank descriptions the same way.
+calculator and the spellbook read their rank descriptions the same way.
 
-Supported tokens:
+Supported tokens (each may name another spell first, ``$<id>s1``):
 
-* ``$@spelldesc<id>`` / ``$@spellname<id>`` / ``$@spellicon<id>``
-* ``$s<n>`` ``$S<n>`` ``$w<n>`` ``$m<n>`` ``$M<n>`` — effect ``n`` base points, of this
-  spell or of ``$<id>s<n>``; an effect that rolls (``Variance``, the Forever
-  client's form of Classic's dice) reads "26 to 34", as the game shows it.
-  Shown without a sign, as the game does ("reduces the cast time by 0.5 sec").
+* ``$@spelldesc<id>`` / ``$@spelltooltip<id>`` / ``$@spellname<id>`` / ``$@spellicon<id>``
+* ``$s<n>`` ``$S<n>`` ``$w<n>`` — effect ``n`` base points; an effect that rolls
+  (``Variance``, the Forever client's form of Classic's dice) reads "26 to 34",
+  as the game shows it. Shown without a sign, as the game does ("reduces the
+  cast time by 0.5 sec").
+* ``$m<n>`` / ``$M<n>`` — the low / high end of that roll (the base when it doesn't roll)
 * ``$o<n>`` — the effect's total over the duration (a tick every 5 s)
-* ``$t<n>`` — the effect's tick period, in seconds
-* ``$a<n>`` — the effect's radius, in yards; ``$x<n>`` — its chain targets
-* ``$h`` / ``$n`` / ``$u`` (also ``$<id>h`` ...) — proc chance, proc charges, most stacks
-* ``$d`` / ``$<id>d`` (also written ``$<id>d1``) — duration
-* ``$/<div>;<token>`` — a value divided
+* ``$t<n>`` — the effect's tick period, in seconds; bare ``$t``, the first periodic effect's
+* ``$a<n>`` — the effect's radius, in yards (bare ``$a``, the first effect with one);
+  ``$x<n>`` — its chain targets
+* ``$b<n>`` — points per combo point (``EffectPointsPerResource``); ``$e<n>`` — the
+  effect's multiple (``EffectAmplitude``, Mana Shield's mana per damage);
+  ``$f<n>`` — its chain amplitude (Execute's damage per rage); ``$q<n>`` — its misc
+  value (the mana a resurrection gives back). Bare, these read effect 1.
+* ``$i`` — most targets; ``$v`` — highest target level; ``$r`` — range, in yards
+* ``$h`` / ``$n`` / ``$u`` — proc chance, proc charges, most stacks
+* ``$d`` (also written ``$<id>d1``) — duration
+* ``$/<n>;<token>`` / ``$*<n>;<token>`` — a value divided / multiplied
+* ``$<name>`` — the spell's description variable (``SpellDescriptionVariables``),
+  worked out like an expression
 * ``${<expression>}`` / ``${...}.<decimals>`` — arithmetic over the tokens above,
-  which keep their sign there (``${$m1/-1000}`` of -200 is 0.2)
+  which keep their sign there (``${$m1/-1000}.1`` of -200 is 0.2); a whole number
+  unless decimals are asked for
 * ``$l<singular>:<plural>;`` — the word for the number before it
-* ``$?<cond>[yes][no]`` — the condition is about the player's own spells and
-  auras, which a page can't know: dropped by default (the food picker reports
-  the one it cares about, the Well Fed XP boost, separately), or the ``no``
-  branch with ``conditional_else=True`` — what a player without that spell sees
+* ``$g<male>:<female>;`` — both words ("he or she"); the page doesn't know the player
+* ``$?<cond>[yes][no]`` (``<cond>`` may join several with ``|`` / ``&``) — the
+  condition is about the player's own spells and auras, which a page can't know:
+  dropped by default (the food picker reports the one it cares about, the Well Fed
+  XP boost, separately), or the ``no`` branch with ``conditional_else=True`` —
+  what a player without that spell sees. Description variables always take the
+  ``no`` branch: their value for a player without the talents they check.
 
-A token the evaluator can't fill is left in the text as it is, so a caller can
-spot it (``unresolved_tokens``).
+Stats of the player reading the tooltip (``$SPI``, ``$AP``, ``$rap``, ``$PL`` ...)
+and their home (``$z``) are what the game fills from the character, so they
+can't be worked out here. A token the evaluator can't fill is left in the text
+as it is, so a caller can spot it (``unresolved_tokens``) and leave that
+sentence out.
 """
 from __future__ import annotations
 
@@ -41,20 +57,23 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 TICK_MS = 5000
-# The value letters for the low and high end of a rolled amount.
-ROLL_END = ("m", "M")
+MAX_DEPTH = 4
+MAX_VARIABLE_DEPTH = 8
 
-_CONDITIONAL = re.compile(r"\$\?!?[a-z]+\d+\[([^\[\]]*)\]\[([^\[\]]*)\]", re.IGNORECASE)
-_SPELL_REF = re.compile(r"\$@spell(desc|name|icon)(\d+)")
+_COND_TERM = r"!?\$?[a-zA-Z]+\d+"
+_CONDITIONAL = re.compile(rf"\$\?{_COND_TERM}(?:[|&]{_COND_TERM})*\[([^\[\]]*)\]\[([^\[\]]*)\]")
+_SPELL_REF = re.compile(r"\$@spell(desc|tooltip|name|icon)(\d+)")
 _EXPRESSION = re.compile(r"\$\{([^{}]*)\}(?:\.(\d))?")
-_DIVIDED = re.compile(r"\$/(\d+);(\d*)([swmMoS])(\d)")
-_VALUE = re.compile(r"\$(\d*)([swmMoS])(\d)")
-_PERIOD = re.compile(r"\$(\d*)t(\d)")
-_RADIUS = re.compile(r"\$(\d*)([ax])(\d)")
-_AURA_OPTION = re.compile(r"\$(\d*)([hnu])(?![a-zA-Z])")
-_DURATION = re.compile(r"\$(\d*)d\d?(?![a-z])")
+_VARIABLE = re.compile(r"\$<(\w+)>")
+# A stray "$*" inside an expression (Frostbolt's "$m2$*$<frostdamage>") is a multiplication.
+_STRAY_TIMES = re.compile(r"\$\*(?!\d)")
+_TOKEN_LETTERS = "smMwWSoObBeEfFqQxXaAtThHnNuUiIvVrRdD"
+_SCALED = re.compile(rf"\$([/*])(\d+);(\d*)([{_TOKEN_LETTERS}])(\d?)(?![a-zA-Z\d])")
+_TOKEN = re.compile(rf"\$(\d*)([{_TOKEN_LETTERS}])(\d?)(?![a-zA-Z\d])")
+_GENDER = re.compile(r"\$[gG]([^:;$]*):([^;$]*);")
 _PLURAL = re.compile(r"\$[lL]([^:;$]*):([^;$]*);")
 _NUMBER_BEFORE = re.compile(r"(\d+(?:\.\d+)?)\D*$")
+_VARIABLE_LINE = re.compile(r"^\s*\$(\w+)\s*=(.*)$")
 # What's left of an expression once its tokens are numbers.
 _ARITHMETIC = re.compile(r"^[\d\s.+\-*/()]+$")
 _UNRESOLVED = re.compile(r"\$\{[^{}]*\}|\$[^\s.,;:)]*")
@@ -66,6 +85,10 @@ _OPERATORS: dict[type, Callable[..., float]] = {
     ast.USub: operator.neg,
     ast.UAdd: operator.pos,
 }
+# Tokens whose 0 means "the spell has none" rather than an amount of 0.
+_ZERO_IS_MISSING = set("xXaAtTbBeEfFqQhHnNuUiIvVrRdD")
+# Stands in for a referenced spell's finished text until the outer passes are done.
+_SHIELD = re.compile("\ue000([\ue100-\uf8ff])\ue000")
 
 
 @dataclass(frozen=True)
@@ -82,6 +105,9 @@ class Effect:
     variance: float = 0.0
     radius_yards: float = 0.0
     chain_targets: int = 0
+    points_per_resource: float = 0.0
+    amplitude: float = 0.0
+    chain_amplitude: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -103,6 +129,11 @@ class SpellBook:
     durations_ms: dict[int, int] = field(default_factory=dict)
     effects: dict[int, list[Effect]] = field(default_factory=dict)
     aura_options: dict[int, AuraOptions] = field(default_factory=dict)
+    # A spell's description variables, name -> its expression (``$mult=...``).
+    variables: dict[int, dict[str, str]] = field(default_factory=dict)
+    max_targets: dict[int, int] = field(default_factory=dict)
+    max_target_levels: dict[int, int] = field(default_factory=dict)
+    ranges_yards: dict[int, float] = field(default_factory=dict)
 
     def effect(self, spell_id: int, number: int) -> Effect | None:
         """Effect ``number`` (1-based, as tooltips count) of a spell.
@@ -115,6 +146,15 @@ class SpellBook:
             if e.index == number - 1:
                 return e
         return effects[0] if len(effects) == 1 else None
+
+
+def parse_variables(text: str) -> dict[str, str]:
+    """``SpellDescriptionVariables.Variables`` — one ``$name=expression`` a line — as a dict."""
+    out: dict[str, str] = {}
+    for line in text.splitlines():
+        if m := _VARIABLE_LINE.match(line):
+            out[m.group(1)] = m.group(2).strip()
+    return out
 
 
 def format_duration(ms: int) -> str:
@@ -140,27 +180,24 @@ def _half_up(value: float) -> int:
     return int(math.floor(value + 0.5))
 
 
+def _whole(value: float) -> str:
+    """An expression's result as the game prints it with no decimals asked for."""
+    return str(int(math.copysign(_half_up(abs(value)), value)))
+
+
 def roll_range(e: Effect) -> str:
     """An effect's amount as the game prints it: "30", or "26 to 34" when it rolls."""
-    base = abs(e.base_points)
     if not e.variance:
-        return _number(base)
-    return f"{_half_up(base * (1 - e.variance / 2))} to {_half_up(base * (1 + e.variance / 2))}"
+        return _number(abs(e.base_points))
+    return f"{abs(_roll_end(e, low=True)):.0f} to {abs(_roll_end(e, low=False)):.0f}"
 
 
-def _signed_value(book: SpellBook, spell_id: int, kind: str, number: int) -> float | None:
-    e = book.effect(spell_id, number)
-    if e is None:
-        return None
-    if kind == "o":
-        ticks = book.durations_ms.get(spell_id, 0) / (e.period_ms or TICK_MS)
-        return e.base_points * ticks
-    return e.base_points
-
-
-def _value(book: SpellBook, spell_id: int, kind: str, number: int) -> float | None:
-    v = _signed_value(book, spell_id, kind, number)
-    return None if v is None else abs(v)
+def _roll_end(e: Effect, *, low: bool) -> float:
+    """The low or high end of an effect's roll, signed like its base."""
+    if not e.variance:
+        return e.base_points
+    spread = -e.variance / 2 if low else e.variance / 2
+    return math.copysign(_half_up(abs(e.base_points) * (1 + spread)), e.base_points)
 
 
 def _arithmetic(text: str) -> float | None:
@@ -185,6 +222,165 @@ def _arithmetic(text: str) -> float | None:
         return None
 
 
+def _effect_for(book: SpellBook, spell_id: int, letter: str, number: str) -> Effect | None:
+    if number:
+        return book.effect(spell_id, int(number))
+    effects = book.effects.get(spell_id, [])
+    if letter in "tT":
+        return next((e for e in effects if e.period_ms), None)
+    if letter in "aA":
+        return next((e for e in effects if e.radius_yards), None)
+    return book.effect(spell_id, 1)
+
+
+def _signed(book: SpellBook, spell_id: int, letter: str, number: str) -> float | None:
+    """A token's value with its sign; None when the spell has nothing for it."""
+    lower = letter.lower()
+    value: float | None
+    if lower in "hnu":
+        options = book.aura_options.get(spell_id)
+        value = None if options is None else {"h": options.proc_chance, "n": options.proc_charges, "u": options.stacks}[lower]
+    elif lower == "d":
+        ms = book.durations_ms.get(spell_id)
+        # A negative duration means "until cancelled"; the client's wording for that isn't in the files.
+        value = ms / 1000 if ms and ms > 0 else None
+    elif lower == "i":
+        value = book.max_targets.get(spell_id)
+    elif lower == "v":
+        value = book.max_target_levels.get(spell_id)
+    elif lower == "r":
+        value = book.ranges_yards.get(spell_id)
+    else:
+        e = _effect_for(book, spell_id, letter, number)
+        if e is None:
+            return None
+        if letter in "mM":
+            value = _roll_end(e, low=letter == "m")
+        elif lower == "o":
+            # A total over a duration the spell doesn't have (or that runs until cancelled) has no number.
+            ms = book.durations_ms.get(spell_id, 0)
+            value = e.base_points * ms / (e.period_ms or TICK_MS) if ms > 0 else None
+        else:
+            value = {
+                "s": e.base_points,
+                "w": e.base_points,
+                "b": e.points_per_resource,
+                "e": e.amplitude,
+                "f": e.chain_amplitude,
+                "q": float(e.misc),
+                "x": float(e.chain_targets),
+                "a": e.radius_yards,
+                "t": e.period_ms / 1000,
+            }.get(lower)
+    if value is None or (not value and letter in _ZERO_IS_MISSING):
+        return None
+    return float(value)
+
+
+def unresolved_tokens(text: str) -> list[str]:
+    """The tokens ``evaluate`` left in its text — ones it has no data or rule for."""
+    return _UNRESOLVED.findall(text)
+
+
+def _resolve_conditionals(text: str, conditional_else: bool) -> str:
+    """Every ``$?cond[yes][no]``, innermost first, as its ``no`` branch or nothing."""
+    while True:
+        out = _CONDITIONAL.sub(lambda m: m.group(2) if conditional_else else "", text)
+        if out == text:
+            return out
+        text = out
+
+
+class _Evaluator:
+    """One spell's tooltip worked out: the tokens of ``spell_id`` unless a token names another spell."""
+
+    def __init__(self, book: SpellBook, spell_id: int, depth: int, conditional_else: bool) -> None:
+        self.book = book
+        self.spell_id = spell_id
+        self.depth = depth
+        self.conditional_else = conditional_else
+        self.shielded: list[str] = []
+
+    def ref(self, group: str) -> int:
+        return int(group) if group else self.spell_id
+
+    def variable(self, name: str, seen: frozenset[str] = frozenset()) -> float | None:
+        expression = self.book.variables.get(self.spell_id, {}).get(name)
+        if expression is None or name in seen or len(seen) >= MAX_VARIABLE_DEPTH:
+            return None
+        expression = _resolve_conditionals(expression, conditional_else=True).strip()
+        whole = _EXPRESSION.fullmatch(expression)
+        return self.compute(whole.group(1) if whole else expression, seen | {name})
+
+    def variable_places(self, name: str) -> int | None:
+        """The decimals a variable's ``${...}.N`` asks for; None for a whole number."""
+        expression = self.book.variables.get(self.spell_id, {}).get(name, "")
+        whole = _EXPRESSION.fullmatch(_resolve_conditionals(expression, conditional_else=True).strip())
+        return int(whole.group(2)) if whole and whole.group(2) else None
+
+    def compute(self, inner: str, seen: frozenset[str] = frozenset()) -> float | None:
+        """An expression's value, every token in it read with its sign; None if any can't be."""
+        inner = _STRAY_TIMES.sub("*", inner)
+        inner = _VARIABLE.sub(lambda v: _text_or(self.variable(v.group(1), seen), v.group(0)), inner)
+        inner = _TOKEN.sub(
+            lambda t: _text_or(_signed(self.book, self.ref(t.group(1)), t.group(2), t.group(3)), t.group(0)),
+            inner,
+        )
+        return _arithmetic(inner)
+
+    def spell_ref(self, m: re.Match[str]) -> str:
+        ref = int(m.group(2))
+        if m.group(1) in ("desc", "tooltip"):
+            # Shielded so the outer spell's tokens never fill what the referenced spell left unfilled.
+            self.shielded.append(evaluate(self.book, ref, depth=self.depth + 1, conditional_else=self.conditional_else))
+            return f"\ue000{chr(0xE100 + len(self.shielded) - 1)}\ue000"
+        if m.group(1) == "name":
+            return self.book.names.get(ref, "")
+        return ""
+
+    def expression(self, m: re.Match[str]) -> str:
+        result = self.compute(m.group(1))
+        if result is None:
+            return m.group(0)
+        return _decimals(result, int(m.group(2))) if m.group(2) else _whole(result)
+
+    def scaled(self, m: re.Match[str]) -> str:
+        v = _signed(self.book, self.ref(m.group(3)), m.group(4), m.group(5))
+        if v is None:
+            return m.group(0)
+        return _number(abs(v) / int(m.group(2)) if m.group(1) == "/" else abs(v) * int(m.group(2)))
+
+    def named(self, m: re.Match[str]) -> str:
+        v = self.variable(m.group(1))
+        if v is None:
+            return m.group(0)
+        places = self.variable_places(m.group(1))
+        return _whole(v) if places is None else _decimals(v, places)
+
+    def token(self, m: re.Match[str]) -> str:
+        ref, letter, number = self.ref(m.group(1)), m.group(2), m.group(3)
+        if letter in "sSwW":
+            e = _effect_for(self.book, ref, letter, number)
+            if e is not None and e.variance:
+                return roll_range(e)
+        v = _signed(self.book, ref, letter, number)
+        if v is None:
+            return m.group(0)
+        return format_duration(int(v * 1000)) if letter in "dD" else _number(abs(v))
+
+    def run(self, text: str) -> str:
+        text = _resolve_conditionals(text, self.conditional_else)
+        text = _SPELL_REF.sub(self.spell_ref, text)
+        text = _EXPRESSION.sub(self.expression, text)
+        text = _SCALED.sub(self.scaled, text)
+        text = _VARIABLE.sub(self.named, text)
+        text = _GENDER.sub(lambda g: f"{g.group(1)} or {g.group(2)}", text)
+        text = _TOKEN.sub(self.token, text)
+        text = _SHIELD.sub(lambda s: self.shielded[ord(s.group(1)) - 0xE100], text)
+        text = _plural(text)
+        return re.sub(r"\s+", " ", text).strip()
+
+
 def _plural(text: str) -> str:
     """Each ``$lsingular:plural;`` as the word for the last number before it."""
     out: list[str] = []
@@ -199,11 +395,6 @@ def _plural(text: str) -> str:
     return "".join(out)
 
 
-def unresolved_tokens(text: str) -> list[str]:
-    """The tokens ``evaluate`` left in its text — ones it has no data or rule for."""
-    return _UNRESOLVED.findall(text)
-
-
 def evaluate(
     book: SpellBook,
     spell_id: int,
@@ -213,91 +404,10 @@ def evaluate(
     conditional_else: bool = False,
 ) -> str:
     """The tooltip of ``spell_id`` (or ``template`` read in its context) as plain text."""
+    if depth > MAX_DEPTH:
+        return ""
     text = book.descriptions.get(spell_id, "") if template is None else template
-    if depth > 4:
-        return ""
-    text = _CONDITIONAL.sub(lambda m: m.group(2) if conditional_else else "", text)
-
-    def ref_of(group: str) -> int:
-        return int(group) if group else spell_id
-
-    def spell_ref(m: re.Match[str]) -> str:
-        ref = int(m.group(2))
-        if m.group(1) == "desc":
-            return evaluate(book, ref, depth=depth + 1, conditional_else=conditional_else)
-        if m.group(1) == "name":
-            return book.names.get(ref, "")
-        return ""
-
-    def duration_seconds(ref: int) -> float | None:
-        ms = book.durations_ms.get(ref)
-        return ms / 1000 if ms else None
-
-    def expression(m: re.Match[str]) -> str:
-        inner = m.group(1)
-        inner = _VALUE.sub(
-            lambda v: _text_or(_signed_value(book, ref_of(v.group(1)), _kind(v.group(2)), int(v.group(3))), v.group(0)),
-            inner,
-        )
-        inner = _DURATION.sub(lambda d: _text_or(duration_seconds(ref_of(d.group(1))), d.group(0)), inner)
-        result = _arithmetic(inner)
-        if result is None:
-            return m.group(0)
-        return _decimals(result, int(m.group(2))) if m.group(2) else _number(result)
-
-    def divided(m: re.Match[str]) -> str:
-        v = _value(book, ref_of(m.group(2)), _kind(m.group(3)), int(m.group(4)))
-        return m.group(0) if v is None else _number(v / int(m.group(1)))
-
-    def value(m: re.Match[str]) -> str:
-        ref = ref_of(m.group(1))
-        kind = _kind(m.group(2))
-        e = book.effect(ref, int(m.group(3)))
-        if kind == "s" and e is not None and e.variance:
-            # `$m1` / `$M1` are the low and high ends of the roll ("by $m1% to $M1%").
-            if m.group(2) in ROLL_END:
-                low, high = roll_range(e).split(" to ")
-                return low if m.group(2) == "m" else high
-            return roll_range(e)
-        v = _value(book, ref, kind, int(m.group(3)))
-        return m.group(0) if v is None else _number(v)
-
-    def period(m: re.Match[str]) -> str:
-        e = book.effect(ref_of(m.group(1)), int(m.group(2)))
-        return m.group(0) if e is None or not e.period_ms else _number(e.period_ms / 1000)
-
-    def radius(m: re.Match[str]) -> str:
-        e = book.effect(ref_of(m.group(1)), int(m.group(3)))
-        amount = None if e is None else (e.radius_yards if m.group(2) == "a" else e.chain_targets)
-        return m.group(0) if not amount else _number(amount)
-
-    def aura_option(m: re.Match[str]) -> str:
-        options = book.aura_options.get(ref_of(m.group(1)))
-        if options is None:
-            return m.group(0)
-        amount = {"h": options.proc_chance, "n": options.proc_charges, "u": options.stacks}[m.group(2)]
-        return m.group(0) if not amount else str(amount)
-
-    def duration(m: re.Match[str]) -> str:
-        ms = book.durations_ms.get(ref_of(m.group(1)))
-        # A negative duration means "until cancelled"; the client's wording for that isn't in the files.
-        return m.group(0) if not ms or ms < 0 else format_duration(ms)
-
-    text = _SPELL_REF.sub(spell_ref, text)
-    text = _EXPRESSION.sub(expression, text)
-    text = _DIVIDED.sub(divided, text)
-    text = _VALUE.sub(value, text)
-    text = _PERIOD.sub(period, text)
-    text = _RADIUS.sub(radius, text)
-    text = _AURA_OPTION.sub(aura_option, text)
-    text = _DURATION.sub(duration, text)
-    text = _plural(text)
-    return re.sub(r"\s+", " ", text).strip()
-
-
-def _kind(letter: str) -> str:
-    """``$o`` is a total over time; every other value letter reads the base points."""
-    return "o" if letter == "o" else "s"
+    return _Evaluator(book, spell_id, depth, conditional_else).run(text)
 
 
 def _text_or(value: float | None, fallback: str) -> str:

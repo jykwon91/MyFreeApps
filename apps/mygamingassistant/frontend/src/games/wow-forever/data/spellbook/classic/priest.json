@@ -177,17 +177,5 @@
 },
 "quests":[2651,2652,2944,6346,9035,10797,13896,13908,18137],
 "books":[21562,21564,25314,25315,25316,27683],
-"texts":{
-"596":"A powerful prayer heals party members within 30 yards for 301 to 321.",
-"996":"A powerful prayer heals party members within 30 yards for 444 to 472.",
-"10960":"A powerful prayer heals party members within 30 yards for 657 to 695.",
-"10961":"A powerful prayer heals party members within 30 yards for 939 to 991.",
-"15237":"Causes an explosion of holy light around the caster, causing 28 to 32 Holy damage to all enemy targets within 10 yards and healing all party members within 10 yards for 52 to 60. These effects cause no threat.",
-"15430":"Causes an explosion of holy light around the caster, causing 50 to 58 Holy damage to all enemy targets within 10 yards and healing all party members within 10 yards for 86 to 98. These effects cause no threat.",
-"15431":"Causes an explosion of holy light around the caster, causing 76 to 88 Holy damage to all enemy targets within 10 yards and healing all party members within 10 yards for 121 to 139. These effects cause no threat.",
-"25316":"A powerful prayer heals party members within 30 yards for 1041 to 1099.",
-"27799":"Causes an explosion of holy light around the caster, causing 106 to 122 Holy damage to all enemy targets within 10 yards and healing all party members within 10 yards for 161 to 187. These effects cause no threat.",
-"27800":"Causes an explosion of holy light around the caster, causing 140 to 162 Holy damage to all enemy targets within 10 yards and healing all party members within 10 yards for 235 to 271. These effects cause no threat.",
-"27801":"Causes an explosion of holy light around the caster, causing 181 to 209 Holy damage to all enemy targets within 10 yards and healing all party members within 10 yards for 302 to 350. These effects cause no threat."
-},
+"texts":{},
 "levels":{}}

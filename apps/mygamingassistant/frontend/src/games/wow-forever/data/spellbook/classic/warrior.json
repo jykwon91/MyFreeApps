@@ -100,18 +100,11 @@
 "quests":[71,355,2458,7386,20252],
 "books":[25286,25288,25289],
 "texts":{
-"1160":"Reduces the melee attack power of all enemies within 10 yards by 35 for 30 sec.",
-"1161":"Forces all nearby enemies to focus attacks on you for 6 sec.",
-"6190":"Reduces the melee attack power of all enemies within 10 yards by 55 for 30 sec.",
 "6572":"Instantly counterattack an enemy for 12 to 14 damage and a high amount of threat. Revenge must follow a block, dodge or parry.",
 "6574":"Instantly counterattack an enemy for 18 to 22 damage and a high amount of threat. Revenge must follow a block, dodge or parry.",
 "7379":"Instantly counterattack an enemy for 25 to 31 damage and a high amount of threat. Revenge must follow a block, dodge or parry.",
-"11554":"Reduces the melee attack power of all enemies within 10 yards by 70 for 30 sec.",
-"11555":"Reduces the melee attack power of all enemies within 10 yards by 105 for 30 sec.",
-"11556":"Reduces the melee attack power of all enemies within 10 yards by 140 for 30 sec.",
 "11600":"Instantly counterattack an enemy for 43 to 53 damage and a high amount of threat. Revenge must follow a block, dodge or parry.",
 "11601":"Instantly counterattack an enemy for 64 to 78 damage and a high amount of threat. Revenge must follow a block, dodge or parry.",
-"12323":"Causes all enemies near the warrior to be dazed, reducing movement speed by 50% for 6 sec.",
 "25288":"Instantly counterattack an enemy for 81 to 99 damage and a high amount of threat. Revenge must follow a block, dodge or parry."
 },
 "levels":{}}

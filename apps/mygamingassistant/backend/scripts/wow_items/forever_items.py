@@ -53,6 +53,10 @@ TABLE_HASHES = {
     "SpellLevels": 0x1DDEC5E6,
     "SpellPower": 0xA1ACE1DF,
     "SkillLineAbility": 0xFF4446F6,
+    "SpellRange": 0xE051A69C,
+    "SpellTargetRestrictions": 0xE064A75C,
+    "SpellDescriptionVariables": 0x3CC89C00,
+    "SpellXDescriptionVariables": 0xF3D99F2D,
 }
 ITEM_TABLES = ("Item", "ItemSparse")
 

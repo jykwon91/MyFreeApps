@@ -761,6 +761,13 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - Talent ranks never carry a level: a talent's spell level isn't when you can take it.
   A blank tooltip reads "This rank's tooltip has numbers we can't read from the game files
   yet." — never worked out from its neighbours.
+- Tooltip text is evaluated by `scripts/wow_food/tooltip.py` (shared with talents, changes,
+  food, professions): effect values and rolls, description variables (`$<name>`, from
+  SpellXDescriptionVariables), `${}` expressions (whole numbers unless `.N`), radius, range,
+  target caps (SpellTargetRestrictions), `$e`/`$f`/`$b` (Classic: EffectMultipleValue /
+  DmgMultiplier / EffectPointsPerComboPoint) and `$g`. Formulas on the player's own stats
+  (`$SPI`, `$SPFR`, `$apm`, `$rap`, `$bh`, …) have no static number and stay unresolved — the
+  rank then falls back to Classic's text, else blank. Never fill one in.
 - **Data is GENERATED** — `python -m scripts.wow_spellbook.build --hotfix-cache
   <DBCache.bin>` (from `backend/`, in `wow_refresh` after the downrank build) writes
   `data/spellbook/<class>.json` (Forever: tabs, spells, ranks, levels, icons, text, talent
