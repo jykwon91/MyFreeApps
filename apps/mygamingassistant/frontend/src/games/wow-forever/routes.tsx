@@ -22,6 +22,7 @@ const WowDungeonPage = lazy(() => import("@/games/wow-forever/pages/WowDungeonPa
 const WowHunterPetsPage = lazy(() => import("@/games/wow-forever/pages/WowHunterPetsPage"));
 const WowRaresPage = lazy(() => import("@/games/wow-forever/pages/WowRaresPage"));
 const WowLibraryPage = lazy(() => import("@/games/wow-forever/pages/WowLibraryPage"));
+const WowLegacyPage = lazy(() => import("@/games/wow-forever/pages/WowLegacyPage"));
 const WowTalentsPage = lazy(() => import("@/games/wow-forever/pages/WowTalentsPage"));
 const WowRacesPage = lazy(() => import("@/games/wow-forever/pages/WowRacesPage"));
 const WowSpellbookPage = lazy(() => import("@/games/wow-forever/pages/WowSpellbookPage"));
@@ -112,6 +113,7 @@ export const wowForeverRoutes: RouteObject[] = [
   { path: "/wow-forever/hunter-pets", element: withSuggestFooter(<WowHunterPetsPage />, "class_guides") },
   { path: "/wow-forever/rares", element: withSuggestFooter(<WowRaresPage />, "map_travel") },
   { path: "/wow-forever/library", element: withSuggestFooter(<WowLibraryPage />, "map_travel") },
+  { path: "/wow-forever/legacy", element: withSuggestFooter(<WowLegacyPage />, "class_guides") },
   { path: "/wow-forever/raids/:webId", element: withSuggestFooter(<WowRaidPage />, "dungeons_raids") },
   { path: "/wow-forever/raids/:webId/plan", element: withSuggestFooter(<WowRaidPlannerPage />, "dungeons_raids") },
   // The suggest page itself: no footer.

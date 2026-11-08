@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/items`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/rares`, `/wow-forever/library`, `/wow-forever/races`, `/wow-forever/races/:race`, `/wow-forever/talents`, `/wow-forever/spellbook`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`, `/wow-forever/ask`)
+### WoW Forever (`/wow-forever`, `/wow-forever/items`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/rares`, `/wow-forever/library`, `/wow-forever/legacy`, `/wow-forever/races`, `/wow-forever/races/:race`, `/wow-forever/talents`, `/wow-forever/spellbook`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`, `/wow-forever/ask`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -654,6 +654,47 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   are in `wanted_ids()` for icons. Tests:
   `tests/test_wow_library_generator.py`, `src/__tests__/wowLibrary.test.ts`,
   `e2e/wow-forever-library.spec.ts`.
+
+#### Legacy planner (`/wow-forever/legacy`)
+
+- `pages/WowLegacyPage.tsx` + `components|lib|hooks|data|types/legacy/`: a
+  summary strip (this character's points spent / left of the cap, the points
+  the ticked challenges add up to for the whole account, the account rank),
+  the planner, the challenges checklist and the account rank's reward track.
+  Points are earned once per challenge and shared by every non-Hardcore
+  character; each character spends up to the cap (16) over the three trees
+  (Professions, Adventure, Resourcefulness). Everything the game files don't
+  say reads "Not known yet" (`LEGACY_UNKNOWN`: how a talent grows per rank,
+  whether linked talents need the earlier one, how the account rank goes up).
+- Trees are drawn from the nodes' own grid positions (`col` / `row`, tiers
+  left to right) with their edges (`LegacyEdges`; dashed into a "coming in a
+  future update" placeholder). Side by side from `lg`, tabs below it. Click /
+  tap adds a rank; right-click, a long press (`useLongPress`) or the details
+  panel's − removes one. Rules are pure (`lib/legacy/legacyRules.ts`): a node
+  takes up to its max ranks (placeholders none), the total is capped, and a
+  gated node (5 / 10) opens once that many points are in its tree in nodes
+  with a lower gate. Edges are drawn but NOT enforced (the files don't say
+  what they require).
+- **The plan is the URL**: `?b=1-<tree1>-<tree2>-<tree3>` (one digit per node
+  in file order, trailing zeros dropped, `lib/legacy/legacyPlanCode.ts`;
+  replace history). Decoding is strict (length, version, tree count, digits,
+  then `isLegalPlan`) → an empty plan and "That plan link doesn't work". Bump
+  the version for any format change; never reorder a tree's nodes. Copy link
+  + Reset reuse `TalentShareBar`.
+- Challenge ticks: `mga.wowForever.legacy.checklist.v1` (`useChecklist`,
+  "Clear ticks"), per browser — the page says points are per account.
+  Rewards are plain names (their items aren't in `items.json`).
+- **Data is GENERATED** — `python -m scripts.wow_legacy.build --hotfix-cache
+  <DBCache.bin>` (from
+  `backend/`, in `wow_refresh` before the icons build) writes
+  `data/legacy/legacy.json` from the Forever client (`load_forever_tables`,
+  wago `wowf` + hotfixes): TraitSystem 45's trees (TraitTree / TraitNode /
+  TraitNodeEntry / TraitDefinition, gates from TraitCond, edges from
+  TraitEdge), the "Legacy" currency cap, challenges from the currency's
+  source rows (merged by text + title, by category), and the "Renown - Legacy
+  Rank" reward track. Currency, node, challenge and reward icons are in
+  `wanted_ids()`. Tests: `tests/test_wow_legacy_generator.py`,
+  `src/__tests__/wowLegacy.test.ts`, `e2e/wow-forever-legacy.spec.ts`.
 
 #### Races (`/wow-forever/races`, `/wow-forever/races/:race`)
 

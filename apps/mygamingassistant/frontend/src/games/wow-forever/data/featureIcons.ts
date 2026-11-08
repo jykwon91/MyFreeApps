@@ -1,5 +1,6 @@
 import {
   Activity,
+  Award,
   Backpack,
   BookOpen,
   Castle,
@@ -29,6 +30,7 @@ import {
 /** Lucide icons for the WoW Forever pages, keyed by `GameFeature.iconName` (left nav + hub tiles). */
 export const FEATURE_ICONS: Readonly<Record<string, LucideIcon>> = {
   Activity,
+  Award,
   Backpack,
   BookOpen,
   Castle,
