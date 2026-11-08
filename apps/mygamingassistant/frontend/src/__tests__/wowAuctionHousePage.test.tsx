@@ -10,9 +10,9 @@ import { PRICE_COLUMNS, TSM_CREDIT, pricesFailed, pricesLoading, pricesReady } f
 const usePricesQuery = vi.hoisted(() => vi.fn());
 vi.mock("@/games/wow-forever/api/wowPricesApi", () => ({ useGetWowPricesQuery: usePricesQuery }));
 
-function response(region: string, items: PriceListResponse["items"]): PriceListResponse {
+function response(items: PriceListResponse["items"]): PriceListResponse {
   return {
-    region,
+    region: "us",
     credit: TSM_CREDIT,
     source_updated_at: items.length ? "2026-11-06T09:00:00Z" : null,
     fetched_at: null,
@@ -52,7 +52,7 @@ describe("Auction house page", () => {
   });
 
   it("lists items most traded first with prices, a dash for no average, and the credit", () => {
-    usePricesQuery.mockReturnValue(pricesReady(response("us", US_ITEMS)));
+    usePricesQuery.mockReturnValue(pricesReady(response(US_ITEMS)));
     renderPage();
     expect(rows().map((r) => r.firstElementChild?.textContent)).toEqual(["Linen Cloth", "Silk Cloth", "Wool Cloth"]);
     const silk = rows()[1];
@@ -64,7 +64,7 @@ describe("Auction house page", () => {
   });
 
   it("filters as you type and keeps the search in the URL", async () => {
-    usePricesQuery.mockReturnValue(pricesReady(response("us", US_ITEMS)));
+    usePricesQuery.mockReturnValue(pricesReady(response(US_ITEMS)));
     renderPage();
     await userEvent.type(screen.getByLabelText("Search items"), "silk");
     expect(rows()).toHaveLength(1);
@@ -72,54 +72,48 @@ describe("Auction house page", () => {
   });
 
   it("starts from ?q=", () => {
-    usePricesQuery.mockReturnValue(pricesReady(response("us", US_ITEMS)));
+    usePricesQuery.mockReturnValue(pricesReady(response(US_ITEMS)));
     renderPage("/wow-forever/auction-house?q=wool");
     expect(screen.getByLabelText("Search items")).toHaveValue("wool");
     expect(rows()).toHaveLength(1);
   });
 
-  it("a ?region= link picks that region, keeps the search and drops the region from the URL", () => {
-    usePricesQuery.mockReturnValue(pricesReady(response("eu", US_ITEMS)));
+  it("an old ?region= link is ignored: the search stays and the URL drops nothing else", () => {
+    usePricesQuery.mockReturnValue(pricesReady(response(US_ITEMS)));
     renderPage("/wow-forever/auction-house?q=wool&region=eu");
-    expect(window.localStorage.getItem(REGION_STORAGE_KEY)).toContain("eu");
-    expect(usePricesQuery).toHaveBeenLastCalledWith("eu");
-    expect(screen.getByTestId("search")).toHaveTextContent("?q=wool");
-    expect(screen.getByTestId("search")).not.toHaveTextContent("region");
-  });
-
-  it("ignores an unknown ?region= value", () => {
-    usePricesQuery.mockReturnValue(pricesReady(response("us", US_ITEMS)));
-    renderPage("/wow-forever/auction-house?q=wool&region=mars");
     expect(window.localStorage.getItem(REGION_STORAGE_KEY)).toBeNull();
-    expect(screen.getByTestId("search")).toHaveTextContent("?q=wool");
+    expect(usePricesQuery).toHaveBeenLastCalledWith();
+    expect(screen.getByLabelText("Search items")).toHaveValue("wool");
   });
 
   it("has its own empty state for a search with no match", () => {
-    usePricesQuery.mockReturnValue(pricesReady(response("us", US_ITEMS)));
+    usePricesQuery.mockReturnValue(pricesReady(response(US_ITEMS)));
     renderPage("/wow-forever/auction-house?q=zzz");
     expect(screen.getByText('No items match "zzz".')).toBeInTheDocument();
   });
 
   it("re-sorts by name", async () => {
-    usePricesQuery.mockReturnValue(pricesReady(response("us", US_ITEMS)));
+    usePricesQuery.mockReturnValue(pricesReady(response(US_ITEMS)));
     renderPage();
     await userEvent.selectOptions(screen.getByLabelText("Sort by"), "high");
     expect(rows()[0].firstElementChild).toHaveTextContent("Silk Cloth");
   });
 
-  it("switches region and asks for that region's prices", async () => {
-    usePricesQuery.mockReturnValue(pricesReady(response("us", US_ITEMS)));
+  it("is US only: no region picker or Korea/Taiwan note, and a saved server status region is ignored", () => {
+    window.localStorage.setItem(REGION_STORAGE_KEY, JSON.stringify("eu"));
+    usePricesQuery.mockReturnValue(pricesReady(response(US_ITEMS)));
     renderPage();
-    await userEvent.click(screen.getByRole("radio", { name: "EU" }));
-    expect(window.localStorage.getItem(REGION_STORAGE_KEY)).toContain("eu");
-    expect(usePricesQuery).toHaveBeenLastCalledWith("eu");
+    expect(screen.queryByRole("radiogroup", { name: "Region" })).toBeNull();
+    expect(screen.queryByRole("radio", { name: "EU" })).toBeNull();
+    expect(screen.queryByText(/Korea and Taiwan/)).toBeNull();
+    expect(usePricesQuery).toHaveBeenLastCalledWith();
+    expect(screen.getByTestId("price-credit")).toHaveTextContent("Prices from TradeSkillMaster (US) · updated");
   });
 
-  it("says a region with no prices has none", () => {
-    window.localStorage.setItem(REGION_STORAGE_KEY, JSON.stringify("kr"));
-    usePricesQuery.mockReturnValue(pricesReady(response("kr", [])));
+  it("says when there are no prices yet", () => {
+    usePricesQuery.mockReturnValue(pricesReady(response([])));
     renderPage();
-    expect(screen.getByText("No auction prices for this region yet.")).toBeInTheDocument();
+    expect(screen.getByText("No US auction prices yet.")).toBeInTheDocument();
     expect(screen.queryByTestId("auction-results")).toBeNull();
   });
 

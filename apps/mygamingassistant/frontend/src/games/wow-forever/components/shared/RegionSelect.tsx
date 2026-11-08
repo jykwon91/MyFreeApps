@@ -1,7 +1,7 @@
 import { WOW_REGIONS, parseWowRegion } from "@/games/wow-forever/data/wowRegions";
 import { useWowRegion } from "@/games/wow-forever/hooks/useWowRegion";
 
-/** The player's region. It's saved and shared, so every section on the page follows the change. */
+/** The server status region. It's saved and shared, so every status section follows the change. */
 export default function RegionSelect({ className = "" }: { className?: string }) {
   const [region, setRegion] = useWowRegion();
   return (

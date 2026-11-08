@@ -2,7 +2,7 @@
 
 Covers:
   - a real (trimmed) TSM file parses to copper, with 0 avg sale price = unknown
-  - the header-only file TSM serves for kr / tw = no prices
+  - a header-only file = no prices
   - missing / bad cells skip the row; a changed header is an error, never "empty"
   - the provider sends conditional-GET headers, maps 304 / 5xx / network errors
 """

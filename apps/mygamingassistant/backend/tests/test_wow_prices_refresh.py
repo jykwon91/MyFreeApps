@@ -6,7 +6,8 @@ Covers:
   - a failed fetch, and a file that suddenly has no prices, keep the old prices
   - a 304 only stamps the check; a locked feed is skipped (two API workers)
   - refresh_all keeps going past a feed that fails
-  - the endpoint: public in both modes, compact columns, ETag / 304, bad region
+  - the endpoint: public in both modes, compact columns, ETag / 304, US only
+  - migration 0051 narrows the region CHECK to US
 """
 from __future__ import annotations
 
@@ -16,6 +17,7 @@ import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy import delete
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.wow_prices import PRICE_SOURCE_TSM, WOW_FOREVER_GAME_SLUG
@@ -92,8 +94,8 @@ async def wow_game(db: AsyncSession) -> Game:
     return game
 
 
-async def _stored(db: AsyncSession, game: Game, region: str = "us") -> dict[int, int]:
-    feed = await price_feed_repo.get(db, game.id, region, None, PRICE_SOURCE_TSM)
+async def _stored(db: AsyncSession, game: Game, ruleset: str | None = None) -> dict[int, int]:
+    feed = await price_feed_repo.get(db, game.id, "us", ruleset, PRICE_SOURCE_TSM)
     assert feed is not None
     return {row.item_id: row.market_value for row in await item_price_repo.list_for_feed(db, feed.id)}
 
@@ -103,7 +105,7 @@ async def _stored(db: AsyncSession, game: Game, region: str = "us") -> dict[int,
 # ---------------------------------------------------------------------------
 
 async def test_refresh_stores_prices_and_validators(db: AsyncSession, wow_game: Game) -> None:
-    outcome = await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(LINEN, WOOL)), wow_game.id, "us", now=NOW)
+    outcome = await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(LINEN, WOOL)), wow_game.id, now=NOW)
     assert (outcome.outcome, outcome.item_count) == (OUTCOME_UPDATED, 2)
     assert await _stored(db, wow_game) == {2589: 28, 2592: 868}
 
@@ -115,20 +117,20 @@ async def test_refresh_stores_prices_and_validators(db: AsyncSession, wow_game: 
 
 
 async def test_second_refresh_replaces_the_set(db: AsyncSession, wow_game: Game) -> None:
-    await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(LINEN, WOOL)), wow_game.id, "us", now=NOW)
+    await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(LINEN, WOOL)), wow_game.id, now=NOW)
     cheaper_linen = _price(2589, "Linen Cloth", 31)
     provider = FakeProvider(_fresh(cheaper_linen, DUST, etag='"v2"'))
-    await price_refresh_service.refresh_feed(db, provider, wow_game.id, "us", now=NOW + timedelta(hours=3))
+    await price_refresh_service.refresh_feed(db, provider, wow_game.id, now=NOW + timedelta(hours=3))
 
     assert provider.calls == [("us", '"v1"', "Thu, 05 Nov 2026 14:50:00 GMT")]
     assert await _stored(db, wow_game) == {2589: 31, 10940: 60}  # wool left the file
 
 
 async def test_failed_fetch_keeps_the_old_prices(db: AsyncSession, wow_game: Game, caplog: pytest.LogCaptureFixture) -> None:
-    await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(LINEN, WOOL)), wow_game.id, "us", now=NOW)
+    await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(LINEN, WOOL)), wow_game.id, now=NOW)
     later = NOW + timedelta(hours=3)
     outcome = await price_refresh_service.refresh_feed(
-        db, FakeProvider(PriceFetchError("Service Unavailable", status_code=503)), wow_game.id, "us", now=later,
+        db, FakeProvider(PriceFetchError("Service Unavailable", status_code=503)), wow_game.id, now=later,
     )
 
     assert outcome.outcome == OUTCOME_FAILED
@@ -141,8 +143,8 @@ async def test_failed_fetch_keeps_the_old_prices(db: AsyncSession, wow_game: Gam
 
 
 async def test_a_suddenly_empty_file_keeps_the_old_prices(db: AsyncSession, wow_game: Game) -> None:
-    await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(LINEN)), wow_game.id, "us", now=NOW)
-    outcome = await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(etag='"v2"')), wow_game.id, "us", now=NOW)
+    await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(LINEN)), wow_game.id, now=NOW)
+    outcome = await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(etag='"v2"')), wow_game.id, now=NOW)
 
     assert outcome.outcome == OUTCOME_EMPTY
     assert await _stored(db, wow_game) == {2589: 28}
@@ -151,18 +153,30 @@ async def test_a_suddenly_empty_file_keeps_the_old_prices(db: AsyncSession, wow_
     assert feed.last_error is not None
 
 
-async def test_header_only_region_is_empty_not_failed(db: AsyncSession, wow_game: Game) -> None:
-    outcome = await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(etag='"kr"')), wow_game.id, "kr", now=NOW)
+async def test_an_empty_first_file_is_empty_not_failed(db: AsyncSession, wow_game: Game) -> None:
+    outcome = await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(etag='"e"')), wow_game.id, now=NOW)
     assert (outcome.outcome, outcome.item_count) == (OUTCOME_EMPTY, 0)
-    feed = await price_feed_repo.get(db, wow_game.id, "kr", None, PRICE_SOURCE_TSM)
-    assert feed.etag == '"kr"' and feed.last_error is None and feed.fetched_at is None
+    feed = await price_feed_repo.get(db, wow_game.id, "us", None, PRICE_SOURCE_TSM)
+    assert feed.etag == '"e"' and feed.last_error is None and feed.fetched_at is None
+
+
+async def test_refresh_only_ever_asks_for_us(db: AsyncSession, wow_game: Game) -> None:
+    provider = FakeProvider(_fresh(LINEN))
+    await price_refresh_service.refresh_feed(db, provider, wow_game.id, now=NOW)
+    assert [call[0] for call in provider.calls] == ["us"]
+
+
+async def test_a_non_us_feed_is_rejected_by_the_database(db: AsyncSession, wow_game: Game) -> None:
+    with pytest.raises(IntegrityError, match="ck_wowpricefeed_region"):
+        async with db.begin_nested():
+            await price_feed_repo.get_or_create(db, wow_game.id, "eu", None, PRICE_SOURCE_TSM)
 
 
 async def test_not_modified_only_stamps_the_check(db: AsyncSession, wow_game: Game) -> None:
-    await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(LINEN)), wow_game.id, "us", now=NOW)
+    await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(LINEN)), wow_game.id, now=NOW)
     later = NOW + timedelta(hours=3)
     outcome = await price_refresh_service.refresh_feed(
-        db, FakeProvider(PriceFetchResult(not_modified=True)), wow_game.id, "us", now=later,
+        db, FakeProvider(PriceFetchResult(not_modified=True)), wow_game.id, now=later,
     )
 
     assert outcome.outcome == OUTCOME_NOT_MODIFIED
@@ -177,7 +191,7 @@ async def test_a_feed_another_worker_is_refreshing_is_skipped(db: AsyncSession, 
     async with other_worker() as other, other.begin():
         assert await price_feed_repo.try_lock(other, feed.id)
         provider = FakeProvider()
-        outcome = await price_refresh_service.refresh_feed(db, provider, wow_game.id, "us", now=NOW)
+        outcome = await price_refresh_service.refresh_feed(db, provider, wow_game.id, now=NOW)
 
     assert outcome.outcome == OUTCOME_LOCKED
     assert provider.calls == []
@@ -187,12 +201,20 @@ async def test_a_feed_another_worker_is_refreshing_is_skipped(db: AsyncSession, 
 # refresh_all
 # ---------------------------------------------------------------------------
 
-async def test_refresh_all_keeps_going_past_a_failing_feed(bound_unit_of_work: AsyncSession, wow_game: Game) -> None:
-    provider = FakeProvider(PriceFetchError("boom", status_code=500), _fresh(LINEN))
-    outcomes = await price_refresh_service.refresh_all(providers=[provider], regions=("us", "eu"))
+class RulesetProvider(FakeProvider):
+    """A second feed: same source, its own ruleset (a provider that splits a region)."""
 
-    assert [(o.region, o.outcome) for o in outcomes] == [("us", OUTCOME_FAILED), ("eu", OUTCOME_UPDATED)]
-    assert await _stored(bound_unit_of_work, wow_game, "eu") == {2589: 28}
+    ruleset = "hardcore"
+
+
+async def test_refresh_all_keeps_going_past_a_failing_feed(bound_unit_of_work: AsyncSession, wow_game: Game) -> None:
+    failing = FakeProvider(PriceFetchError("boom", status_code=500))
+    working = RulesetProvider(_fresh(LINEN))
+    outcomes = await price_refresh_service.refresh_all(providers=[failing, working])
+
+    assert [(o.region, o.outcome) for o in outcomes] == [("us", OUTCOME_FAILED), ("us", OUTCOME_UPDATED)]
+    assert working.calls[0][0] == "us"
+    assert await _stored(bound_unit_of_work, wow_game, "hardcore") == {2589: 28}
 
 
 # ---------------------------------------------------------------------------
@@ -200,9 +222,9 @@ async def test_refresh_all_keeps_going_past_a_failing_feed(bound_unit_of_work: A
 # ---------------------------------------------------------------------------
 
 async def test_endpoint_serves_compact_rows(client: AsyncClient, db: AsyncSession, wow_game: Game) -> None:
-    await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(LINEN, DUST)), wow_game.id, "us", now=NOW)
+    await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(LINEN, DUST)), wow_game.id, now=NOW)
 
-    resp = await client.get(URL, params={"region": "us"})
+    resp = await client.get(URL)
     assert resp.status_code == 200
     body = resp.json()
     assert body["region"] == "us"
@@ -213,44 +235,50 @@ async def test_endpoint_serves_compact_rows(client: AsyncClient, db: AsyncSessio
     assert body["fetched_at"].startswith("2026-11-06T12:00:00")
     assert resp.headers["cache-control"] == "public, max-age=600"
 
-    again = await client.get(URL, params={"region": "us"}, headers={"If-None-Match": resp.headers["etag"]})
+    again = await client.get(URL, headers={"If-None-Match": resp.headers["etag"]})
     assert again.status_code == 304
 
 
 async def test_endpoint_names_items_the_source_left_blank(client: AsyncClient, db: AsyncSession, wow_game: Game) -> None:
     # TSM lists Forever's new items with no name; the client's name is served.
     pyrite = _price(249391, "", 104)
-    await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(LINEN, pyrite)), wow_game.id, "us", now=NOW)
+    await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(LINEN, pyrite)), wow_game.id, now=NOW)
 
-    items = (await client.get(URL, params={"region": "us"})).json()["items"]
+    items = (await client.get(URL)).json()["items"]
     assert [(row[0], row[5]) for row in items] == [(2589, "Linen Cloth"), (249391, "Pyrite")]
 
 
 async def test_etag_changes_when_new_prices_land(client: AsyncClient, db: AsyncSession, wow_game: Game) -> None:
-    await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(LINEN)), wow_game.id, "us", now=NOW)
-    first = (await client.get(URL)).headers["etag"]  # region defaults to us
+    await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(LINEN)), wow_game.id, now=NOW)
+    first = (await client.get(URL)).headers["etag"]
     await price_refresh_service.refresh_feed(
-        db, FakeProvider(_fresh(DUST, etag='"v2"')), wow_game.id, "us", now=NOW + timedelta(hours=3),
+        db, FakeProvider(_fresh(DUST, etag='"v2"')), wow_game.id, now=NOW + timedelta(hours=3),
     )
     resp = await client.get(URL, headers={"If-None-Match": first})
     assert resp.status_code == 200
     assert [row[0] for row in resp.json()["items"]] == [10940]
 
 
-async def test_region_with_no_prices_yet_is_an_empty_list(client: AsyncClient, wow_game: Game) -> None:
-    resp = await client.get(URL, params={"region": "tw"})
+async def test_no_prices_yet_is_an_empty_list(client: AsyncClient, wow_game: Game) -> None:
+    resp = await client.get(URL)
     assert resp.status_code == 200
     body = resp.json()
+    assert body["region"] == "us"
     assert body["items"] == [] and body["fetched_at"] is None
     assert body["credit"]["name"] == "TradeSkillMaster"
 
 
-async def test_unknown_region_is_rejected(client: AsyncClient) -> None:
-    assert (await client.get(URL, params={"region": "cn"})).status_code == 422
+async def test_a_region_param_still_gets_us_prices(client: AsyncClient, db: AsyncSession, wow_game: Game) -> None:
+    # An old bundle still sends ?region=eu; prices are US only, so it gets US.
+    await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(LINEN)), wow_game.id, now=NOW)
+    resp = await client.get(URL, params={"region": "eu"})
+    assert resp.status_code == 200
+    assert resp.json()["region"] == "us"
+    assert [row[0] for row in resp.json()["items"]] == [2589]
 
 
 async def test_endpoint_is_public_in_serve_only(serve_only_client: AsyncClient, db: AsyncSession, wow_game: Game) -> None:
-    await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(WOOL)), wow_game.id, "eu", now=NOW)
-    resp = await serve_only_client.get(URL, params={"region": "eu"})
+    await price_refresh_service.refresh_feed(db, FakeProvider(_fresh(WOOL)), wow_game.id, now=NOW)
+    resp = await serve_only_client.get(URL)
     assert resp.status_code == 200
     assert resp.json()["items"][0][0] == 2592

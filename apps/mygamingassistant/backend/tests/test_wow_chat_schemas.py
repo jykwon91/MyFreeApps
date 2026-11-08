@@ -15,7 +15,6 @@ from app.core.wow_chat_enums import (
     TOOL_PROFESSION_GUIDE,
     TOOL_SERVER_STATUS,
 )
-from app.core.wow_prices import PRICE_REGIONS
 from app.core.wow_server_status import SERVER_STATUS_REGIONS
 from app.schemas.wow.chat.chat_literals import ChatRole, ChatStopReason, ChatToolName
 from app.services.wow.chat.chat_tool_schema import CHAT_TOOLS, SYSTEM_PROMPT
@@ -60,6 +59,6 @@ def test_enum_inputs_list_the_shared_values() -> None:
     by_name = {tool["name"]: tool["input_schema"]["properties"] for tool in CHAT_TOOLS}
     assert tuple(by_name[TOOL_PROFESSION_GUIDE]["profession"]["enum"]) == PROFESSIONS
     assert tuple(by_name[TOOL_FIND_MACROS]["class"]["enum"]) == CLASS_IDS
-    assert tuple(by_name[TOOL_AUCTION_PRICES]["region"]["enum"]) == PRICE_REGIONS
+    assert "region" not in by_name[TOOL_AUCTION_PRICES]
     assert tuple(by_name[TOOL_SERVER_STATUS]["region"]["enum"]) == SERVER_STATUS_REGIONS
     assert tuple(by_name[TOOL_GOLD_FARMING]["sort"]["enum"]) == FARM_SORTS

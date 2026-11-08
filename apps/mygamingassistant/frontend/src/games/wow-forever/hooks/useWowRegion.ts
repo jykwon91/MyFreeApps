@@ -4,8 +4,8 @@ import { readStored, writeStored } from "@/games/wow-forever/lib/safeLocalStorag
 import type { WowRegion } from "@/games/wow-forever/types/wowRegion";
 
 /**
- * The player's region, saved on this device. Server status was the first to
- * ask for it, so the key still has that name; a region picked there carries over.
+ * The server status page's region, saved on this device. Auction prices don't
+ * use it: they are US only (`useAuctionPrices`).
  */
 export const REGION_STORAGE_KEY = "mga.wowForever.serverStatus.region.v1";
 
@@ -27,7 +27,7 @@ function setRegion(region: WowRegion): void {
   for (const listener of listeners) listener();
 }
 
-/** One region for every section of the page, so changing it in one place changes it everywhere. */
+/** One region for every server status section, so changing it in one place changes it everywhere. */
 export function useWowRegion(): [WowRegion, (region: WowRegion) => void] {
   const region = useSyncExternalStore(subscribe, read, () => DEFAULT_WOW_REGION);
   return [region, setRegion];

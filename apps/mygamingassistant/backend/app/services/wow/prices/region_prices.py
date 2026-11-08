@@ -1,4 +1,4 @@
-"""A region's prices plus the ETag the API sends with them."""
+"""The served (US) prices plus the ETag the API sends with them."""
 from dataclasses import dataclass
 
 from app.schemas.wow.price_list import WowPriceList

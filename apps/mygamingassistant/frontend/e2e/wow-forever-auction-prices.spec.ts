@@ -2,7 +2,8 @@
  * WoW Forever auction-house prices on the pages, with GET /api/wow/prices stubbed.
  *
  * The prices are filled in automatically, so nothing here types a price. It checks:
- *   - Tailoring and Enchanting show a cheapest route with a total, and the TSM credit
+ *   - Tailoring and Enchanting show a cheapest route with a total, and the TSM (US) credit
+ *     with no region picker — prices are US only
  *   - every priced material shows its price filled in; one nobody sells yet is
  *     worked out from its materials ("From its materials") or says it isn't sold yet
  *   - route lines show what one of each material costs ("50c each")
@@ -19,7 +20,7 @@
 import { readFileSync } from "node:fs";
 import { test, expect, type Page } from "@playwright/test";
 
-const PRICES = "**/wow/prices?region=*";
+const PRICES = "**/wow/prices**";
 const COLUMNS = ["item_id", "market_value", "avg_sale_price", "historical", "sold_per_day", "name"];
 const UPDATED_AT = "2026-11-06T09:00:00Z";
 const NOW = new Date("2026-11-06T12:00:00Z");
@@ -65,21 +66,20 @@ const FOOD_ROWS: Row[] = [
 ];
 
 async function stubPrices(page: Page, rows: Row[]) {
-  await page.route(PRICES, (route) => {
-    const region = new URL(route.request().url()).searchParams.get("region") ?? "us";
-    return route.fulfill({
+  await page.route(PRICES, (route) =>
+    route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
-        region,
+        region: "us",
         credit: { source: "tsm", name: "TradeSkillMaster", url: "https://www.tradeskillmaster.com" },
         source_updated_at: UPDATED_AT,
         fetched_at: UPDATED_AT,
         columns: COLUMNS,
         items: rows.map(([id, value, name]) => [id, value, null, value, null, name]),
       }),
-    });
-  });
+    }),
+  );
 }
 
 async function expectNoSidewaysScroll(page: Page) {
@@ -96,8 +96,10 @@ test("Tailoring finds the cheapest route at auction prices and totals it, with n
   await page.goto("/wow-forever/professions?p=tailoring");
   const route = page.locator("#route");
   const credit = route.getByTestId("price-credit");
-  await expect(credit).toContainText("Prices from TradeSkillMaster · updated 3 hours ago");
+  await expect(credit).toContainText("Prices from TradeSkillMaster (US) · updated 3 hours ago");
   await expect(credit.getByRole("link", { name: "TradeSkillMaster" })).toHaveAttribute("href", "https://www.tradeskillmaster.com");
+  // US only: no region picker.
+  await expect(credit.getByRole("combobox", { name: "Region" })).toHaveCount(0);
   await expect(route.getByText("Cheapest at auction prices")).toBeVisible();
   // 265-300 is a "pick what you can get" row, so the total stops there.
   await expect(route.getByText(/^Estimated cost to reach skill 265: ~\d+g.*Past that, you pick a recipe, so it isn't counted\.$/)).toBeVisible();
@@ -176,7 +178,7 @@ test("a food page says whether to buy or cook, from auction prices", async ({ pa
   await stubPrices(page, FOOD_ROWS);
   await page.goto("/wow-forever/food/6890");
   const section = page.locator("section", { has: page.getByRole("heading", { name: "Buy or cook?" }) });
-  await expect(section.getByTestId("price-credit")).toContainText("Prices from TradeSkillMaster · updated 3 hours ago");
+  await expect(section.getByTestId("price-credit")).toContainText("Prices from TradeSkillMaster (US) · updated 3 hours ago");
   const prices = section.getByTestId("food-prices");
   await expect(prices).toContainText("Ingredients for one cook~40c");
   await expect(prices).toContainText("Buy Smoked Bear Meat at the auction house~1s 50c");

@@ -21,7 +21,7 @@ function verdict(cook: CookCost, buy: number | undefined): string | null {
 /**
  * Buy or cook: the food's own auction price beside its ingredients', and
  * the recipe's when a recipe item teaches it. Nothing to type, because the prices
- * come from the auction house for the player's region.
+ * come from the US auction house.
  */
 export default function FoodPriceSection({ food }: { food: FoodRecord }) {
   const { prices } = useAuctionPrices();

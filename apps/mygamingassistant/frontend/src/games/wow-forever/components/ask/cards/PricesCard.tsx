@@ -4,7 +4,7 @@ import PriceCreditLine from "@/games/wow-forever/components/prices/PriceCreditLi
 import { ASK_COPY } from "@/games/wow-forever/data/ask/askCopy";
 import { ASK_LIVE } from "@/games/wow-forever/data/ask/askLiveStates";
 import { useNow } from "@/games/wow-forever/hooks/useNow";
-import { regionLabel } from "@/games/wow-forever/lib/ask/askRegion";
+import { AUCTION_PRICE_REGION_LABEL } from "@/games/wow-forever/data/auctionPriceRegion";
 import { pricesAreOld } from "@/games/wow-forever/prices/priceFreshness";
 import type { AskPricesCard } from "@/games/wow-forever/types/ask/askPricesCard";
 
@@ -21,7 +21,7 @@ interface PricesCardProps {
  */
 export default function PricesCard({ card }: PricesCardProps) {
   const now = useNow(CLOCK_MS);
-  const heading = ASK_COPY.pricesHeading(regionLabel(card.region));
+  const heading = ASK_COPY.pricesHeading(AUCTION_PRICE_REGION_LABEL);
   const old = card.state === ASK_LIVE.ready && pricesAreOld(card.sourceUpdatedAt, now);
   return (
     <section aria-label={heading} className="space-y-2 rounded-xl border bg-card p-3">

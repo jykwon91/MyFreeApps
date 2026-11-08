@@ -9,8 +9,8 @@ import type { ServerStatusResponse } from "@/games/wow-forever/types/serverStatu
 import type { WowRegion } from "@/games/wow-forever/types/wowRegion";
 import { store } from "@/lib/store";
 
-export async function fetchAskPrices(region: WowRegion): Promise<PriceListResponse> {
-  const request = store.dispatch(wowPricesApi.endpoints.getWowPrices.initiate(region));
+export async function fetchAskPrices(): Promise<PriceListResponse> {
+  const request = store.dispatch(wowPricesApi.endpoints.getWowPrices.initiate());
   try {
     return await request.unwrap();
   } finally {

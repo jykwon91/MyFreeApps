@@ -24,7 +24,7 @@ const PAGES = [
 ] as const;
 
 async function stubPrices(page: Page) {
-  await page.route("**/wow/prices?region=*", (route) => route.fulfill({ json: EMPTY_PRICES }));
+  await page.route("**/wow/prices**", (route) => route.fulfill({ json: EMPTY_PRICES }));
 }
 
 async function expectNoHorizontalOverflow(page: Page) {

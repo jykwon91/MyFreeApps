@@ -73,7 +73,7 @@ describe("auction prices on a crafting guide", () => {
     expect(routeSection().getByText(/^Priced \d+ of \d+ materials automatically\.$/)).toBeInTheDocument();
     const credit = screen.getByTestId("price-credit");
     expect(within(credit).getByRole("link", { name: "TradeSkillMaster" })).toHaveAttribute("href", "https://www.tradeskillmaster.com");
-    expect(credit).toHaveTextContent(/Prices from TradeSkillMaster · updated/);
+    expect(credit).toHaveTextContent(/Prices from TradeSkillMaster \(US\) · updated/);
 
     await userEvent.click(screen.getByRole("checkbox", { name: "Use default route" }));
     expect(routeSection().getByText("Default route")).toBeInTheDocument();

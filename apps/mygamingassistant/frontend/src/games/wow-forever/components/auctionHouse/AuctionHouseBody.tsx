@@ -19,7 +19,7 @@ interface ReadyBodyProps extends AuctionHouseBodyProps {
 
 function ReadyBody({ prices, query, sort }: ReadyBodyProps) {
   const result = useMemo(() => searchAuctionItems(prices.byId.values(), query, sort), [prices, query, sort]);
-  if (prices.byId.size === 0) return <EmptyStateNote message="No auction prices for this region yet." />;
+  if (prices.byId.size === 0) return <EmptyStateNote message="No US auction prices yet." />;
   return <AuctionResults result={result} query={query} />;
 }
 

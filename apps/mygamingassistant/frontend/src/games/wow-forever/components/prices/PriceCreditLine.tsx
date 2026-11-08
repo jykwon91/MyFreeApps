@@ -1,4 +1,5 @@
 import { OutboundLink } from "@platform/ui/discord-activity";
+import { AUCTION_PRICE_REGION_LABEL } from "@/games/wow-forever/data/auctionPriceRegion";
 import { useNow } from "@/games/wow-forever/hooks/useNow";
 import { relativeTime } from "@/games/wow-forever/lib/serverStatusTime";
 import type { PriceCredit } from "@/games/wow-forever/types/priceCredit";
@@ -12,7 +13,7 @@ interface PriceCreditLineProps {
   hasPrices: boolean;
 }
 
-/** "Prices from TradeSkillMaster · updated 3 hours ago" (linked), or that the region has none yet. */
+/** "Prices from TradeSkillMaster (US) · updated 3 hours ago" (linked), or that there are none yet. */
 export default function PriceCreditLine({ credit, sourceUpdatedAt, hasPrices }: PriceCreditLineProps) {
   useNow(CLOCK_MS);
   const source = (
@@ -23,9 +24,13 @@ export default function PriceCreditLine({ credit, sourceUpdatedAt, hasPrices }: 
   if (hasPrices && sourceUpdatedAt) {
     return (
       <p>
-        Prices from {source} · updated {relativeTime(sourceUpdatedAt)}
+        Prices from {source} ({AUCTION_PRICE_REGION_LABEL}) · updated {relativeTime(sourceUpdatedAt)}
       </p>
     );
   }
-  return <p>No auction prices for this region yet. Prices come from {source}.</p>;
+  return (
+    <p>
+      No {AUCTION_PRICE_REGION_LABEL} auction prices yet. Prices come from {source}.
+    </p>
+  );
 }

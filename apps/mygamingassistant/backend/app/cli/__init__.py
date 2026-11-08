@@ -364,7 +364,7 @@ def _run_discord_sync_emojis() -> int:
 
 
 async def _run_refresh_wow_prices() -> int:
-    """Pull WoW Forever auction-house prices now (the scheduler does it every few hours)."""
+    """Pull WoW Forever US auction-house prices now (the scheduler does it every few hours)."""
     from app.services.wow.prices.feed_refresh import OUTCOME_FAILED
     from app.services.wow.prices.price_refresh_service import refresh_all
 
@@ -443,7 +443,7 @@ def main() -> None:
         print("  import-lineups [pack]  — seed the public library from a published pack (after load-fixtures)")
         print("  import-wow-captures [pack] — mirror the World Map capture pack into the database")
         print("  export-wow-captures [pack] — write stored World Map captures to the pack (local)")
-        print("  refresh-wow-prices     — pull WoW Forever auction-house prices now")
+        print("  refresh-wow-prices     — pull WoW Forever US auction-house prices now")
         print("  record-wow-server-status — record WoW Forever server status changes now")
         print("  backfill-clips         — generate clips for accepted lineups missing one")
         print("  backfill-technique     — name throw-technique for accepted lineups missing one")

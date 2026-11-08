@@ -108,7 +108,7 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         path: "/wow-forever/auction-house",
         title: "Auction house prices",
         iconName: "TrendingUp",
-        description: "Look up what any item sells for: market value, average sale price and how many sell a day, in the US or Europe.",
+        description: "Look up what any item sells for: market value, average sale price and how many sell a day, on the US auction house.",
       },
       {
         path: "/wow-forever/classes",

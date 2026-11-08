@@ -17,7 +17,7 @@ function textWithoutVendorPrices(page: Page): Promise<string> {
 // Auction prices are covered with stubbed prices in wow-forever-auction-prices.spec.ts.
 // Here the region has none, so the guides show their routes without costs.
 test.beforeEach(async ({ page }) => {
-  await page.route("**/wow/prices?region=*", (route) =>
+  await page.route("**/wow/prices**", (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -201,7 +201,7 @@ test("Alchemy shows a hand-picked herb route with no prices, and where each herb
   await expect(page).toHaveURL(/skill=150/);
   await expect(route.getByText("Craft Lesser Mana Potion until 165.")).toBeVisible();
   await expect(route.locator('[aria-current="step"]').getByText("Lesser Mana Potion")).toBeVisible();
-  // No auction prices in this region: no prices panel, no "cheapest" claim, no gold anywhere.
+  // No auction prices (stubbed empty): no prices panel, no "cheapest" claim, no gold anywhere.
   await expect(page.getByRole("region", { name: "Prices", exact: true })).toHaveCount(0);
   await expect(page.getByText(/cheapest/i)).toHaveCount(0);
   await expect.poll(() => textWithoutVendorPrices(page)).not.toMatch(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
@@ -292,7 +292,7 @@ test("Blacksmithing forks at 200: pick a specialization and the route keeps only
   await page.goto("/wow-forever/professions?p=blacksmithing");
   await expect(page.getByRole("radiogroup", { name: "Your Blacksmithing specialization" }).getByRole("radio", { name: "Armorsmith" })).toBeChecked();
 
-  // No auction prices in this region, so no prices anywhere; bars are smelted from ore.
+  // No auction prices (stubbed empty), so no prices anywhere; bars are smelted from ore.
   await expect(page.getByRole("region", { name: "Prices", exact: true })).toHaveCount(0);
   await expect(page.getByText(/cheapest/i)).toHaveCount(0);
   await expect.poll(() => textWithoutVendorPrices(page)).not.toMatch(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
@@ -342,7 +342,7 @@ test("Leatherworking forks at 225, and leather points at beasts to skin", async 
   await page.goto("/wow-forever/professions?p=leatherworking");
   await expect(page.getByRole("radiogroup", { name: "Your Leatherworking specialization" }).getByRole("radio", { name: "Tribal" })).toBeChecked();
 
-  // No auction prices in this region, so no prices anywhere; leather is skinned, with directions to the beasts.
+  // No auction prices (stubbed empty), so no prices anywhere; leather is skinned, with directions to the beasts.
   await expect(page.getByRole("region", { name: "Prices", exact: true })).toHaveCount(0);
   await expect(page.getByText(/cheapest/i)).toHaveCount(0);
   await expect.poll(() => textWithoutVendorPrices(page)).not.toMatch(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
@@ -413,7 +413,7 @@ test("Engineering says what each item does, forks at 200, and smelts its bars", 
   await page.goto("/wow-forever/professions?p=engineering");
   await expect(page.getByRole("radiogroup", { name: "Your Engineering specialization" }).getByRole("radio", { name: "Gnomish" })).toBeChecked();
 
-  // No auction prices in this region, so no prices anywhere; bars are smelted from ore.
+  // No auction prices (stubbed empty), so no prices anywhere; bars are smelted from ore.
   await expect(page.getByRole("region", { name: "Prices", exact: true })).toHaveCount(0);
   await expect(page.getByText(/cheapest/i)).toHaveCount(0);
   await expect.poll(() => textWithoutVendorPrices(page)).not.toMatch(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
