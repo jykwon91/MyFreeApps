@@ -1,3 +1,4 @@
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
@@ -19,21 +20,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  *         both an applicant and a file are provided.
  *
  * Test 3: Full happy path — submits the import dialog and asserts navigation
- *         to the new lease detail page. Requires MinIO to be reachable;
- *         skips with a clear message if not (start it with
- *         `docker compose -f infra/docker-compose.yml up -d minio`).
+ *         to the new lease detail page. Stores the file in MinIO, which the
+ *         E2E stack runs.
  */
-
-async function isMinioReachable(api: APIRequestContext): Promise<boolean> {
-  try {
-    const res = await api.get("/admin/storage-health");
-    if (!res.ok()) return false;
-    const body = (await res.json()) as { bucket_reachable: boolean | null };
-    return body.bucket_reachable === true;
-  } catch {
-    return false;
-  }
-}
 
 async function seedApplicant(
   api: APIRequestContext,
@@ -157,15 +146,6 @@ test.describe("Import Signed Lease", () => {
   test(
     "import dialog — full upload happy path navigates to lease detail",
     async ({ authedPage: page, api }) => {
-      // The import endpoint requires MinIO. Skip cleanly with a clear
-      // remediation message if storage isn't reachable, instead of
-      // silently passing on an error toast.
-      const minioUp = await isMinioReachable(api);
-      test.skip(
-        !minioUp,
-        "MinIO is not reachable — start it with `docker compose -f infra/docker-compose.yml up -d minio` and re-run.",
-      );
-
       const runId = Date.now();
       const applicantName = `E2E Dialog Submit ${runId}`;
       const seededApplicantIds: string[] = [];
@@ -219,6 +199,24 @@ test.describe("Import Signed Lease", () => {
         const kindBadge = page.getByTestId("lease-kind-badge");
         await expect(kindBadge).toBeVisible({ timeout: 10000 });
         await expect(kindBadge).toContainText("Imported");
+
+        // The file reached storage: the lease's one attachment downloads as the
+        // bytes that were uploaded.
+        const leaseRes = await api.get(`/signed-leases/${leaseId}`);
+        expect(leaseRes.status(), await leaseRes.text()).toBe(200);
+        const lease = (await leaseRes.json()) as {
+          kind: string;
+          attachments: { filename: string; is_available: boolean; presigned_url: string | null }[];
+        };
+        expect(lease.kind).toBe("imported");
+        expect(lease.attachments.map((a) => [a.filename, a.is_available])).toEqual([
+          ["advertising-invoice.pdf", true],
+        ]);
+        const { presigned_url } = lease.attachments[0];
+        if (!presigned_url) throw new Error("the imported attachment has no download URL");
+        const download = await page.request.get(presigned_url);
+        expect(download.status()).toBe(200);
+        expect(Buffer.compare(await download.body(), fs.readFileSync(pdfFixture))).toBe(0);
       } finally {
         for (const id of seededLeaseIds) {
           await deleteSignedLease(api, id);
