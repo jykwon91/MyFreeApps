@@ -9,7 +9,7 @@ and writes an ``oauth.disconnect`` auth event for each, as the app does.
 The downgrade can't bring them back (the tokens are gone): the org reconnects.
 
 Revision ID: intgcleanup261106
-Revises: intgorgkey261106
+Revises: inqdates261107
 Create Date: 2026-11-06
 """
 from typing import Sequence, Union
@@ -18,7 +18,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "intgcleanup261106"
-down_revision: Union[str, None] = "intgorgkey261106"
+down_revision: Union[str, None] = "inqdates261107"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

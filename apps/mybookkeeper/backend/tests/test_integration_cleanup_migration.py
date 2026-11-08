@@ -24,8 +24,8 @@ def source() -> str:
     return MIGRATION_FILE.read_text(encoding="utf-8")
 
 
-def test_chains_after_the_org_key_migration(source: str) -> None:
-    assert 'down_revision: Union[str, None] = "intgorgkey261106"' in source
+def test_chains_after_the_inquiry_dates_migration(source: str) -> None:
+    assert 'down_revision: Union[str, None] = "inqdates261107"' in source
 
 
 def test_deletes_only_connections_without_a_non_viewer_membership(source: str) -> None:
