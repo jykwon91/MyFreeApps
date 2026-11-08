@@ -10,6 +10,7 @@ interactions go through `core/storage.py:get_storage()` so test environments
 without MinIO configured can still exercise the full pipeline (see
 `StorageClient` for the in-memory fallback).
 """
+import asyncio
 import logging
 import uuid
 from typing import Any
@@ -62,7 +63,7 @@ async def upload_photos(
     # doesn't leave half a batch persisted.
     processed: list[tuple[bytes, str, str]] = []
     for content, filename, declared in files:
-        result = process_image(content, declared_content_type=declared)
+        result = await asyncio.to_thread(process_image, content, declared_content_type=declared)
         # filename can be empty (some clients send no filename); generate one
         # from the sniffed content type so the storage key is stable.
         safe_name = filename or f"photo-{uuid.uuid4().hex}"

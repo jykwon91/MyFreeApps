@@ -450,6 +450,7 @@
         "test_ical_serializer.py",
         "test_ical_parser.py",
         "test_attachment_content.py",
+        "test_image_cleaning_off_event_loop.py",
         "test_blackout_attachment_metadata.py",
         "test_lease_insurance_attachment_metadata.py",
         "test_strip_metadata_phone_photos.py"
@@ -875,6 +876,7 @@
         "test_tdi_rate_filings_client.py",
         "test_document_draft_reader.py",
         "test_attachment_content.py",
+        "test_image_cleaning_off_event_loop.py",
         "test_lease_insurance_attachment_metadata.py"
       ],
       "frontend_tests": [
@@ -1213,6 +1215,7 @@
         "test_signed_lease_seed_routes.py",
         "test_suggest_placeholders_api.py",
         "test_attachment_content.py",
+        "test_image_cleaning_off_event_loop.py",
         "test_lease_insurance_attachment_metadata.py"
       ],
       "frontend_tests": [
