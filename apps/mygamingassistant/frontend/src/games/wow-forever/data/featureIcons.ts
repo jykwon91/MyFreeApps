@@ -1,6 +1,7 @@
 import {
   Activity,
   Backpack,
+  BookOpen,
   Castle,
   Coins,
   Crosshair,
@@ -25,6 +26,7 @@ import {
 export const FEATURE_ICONS: Readonly<Record<string, LucideIcon>> = {
   Activity,
   Backpack,
+  BookOpen,
   Castle,
   Coins,
   Crosshair,

@@ -28,6 +28,7 @@
 "157":["Increases your chance to get a critical strike with melee weapons by 1%.",null,null,null,null],
 "158":["Increases the area of effect and duration of your Battle Shout and Demoralizing Shout by 10%.",null,null,null,null],
 "159":["Gives you a 8% chance to generate an additional Rage point when you deal melee damage with a weapon.",null,null,null,null],
+"160":["Causes all enemies near the warrior to be dazed, reducing movement speed by 50% for 6 sec."],
 "165":["When activated, increases your physical damage by 20% and makes you immune to Fear effects, but lowers your armor and all resistances by 20%. Lasts 30 sec."],
 "166":["Increases the bonus damage done by your Cleave ability by 40%.",null,null],
 "167":["Instantly attack the target causing damage equal to 45% of your attack power. In addition, the next 5 successful melee attacks will restore 10 health. This effect lasts 8 sec."],

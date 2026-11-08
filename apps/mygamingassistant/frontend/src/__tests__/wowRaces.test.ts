@@ -67,9 +67,9 @@ describe("decodeRaces on the committed data", () => {
 
   it("marks only the racials with a value missing from the game files as partial, shown as ?", () => {
     const partial = allRacials.filter((r) => r.partial).map((r) => r.key);
-    expect(partial.sort()).toEqual(["dwarf-find-treasure", "tauren-war-stomp", "troll-berserking"]);
-    const stomp = allRacials.find((r) => r.key === "tauren-war-stomp");
-    expect(stomp?.variants[0].text).toContain("?");
+    expect(partial.sort()).toEqual(["dwarf-find-treasure", "troll-berserking"]);
+    const berserking = allRacials.find((r) => r.key === "troll-berserking");
+    expect(berserking?.variants[0].text).toContain("?");
   });
 
   it("throws on a class, faction or status the page doesn't know", () => {

@@ -23,7 +23,7 @@ test("filter by category, class and search; the URL keeps it", async ({ page }) 
   await expect(page).toHaveTitle(/Changes vs Classic/);
   // Talents by default.
   await expect(entries(page).first()).toBeVisible();
-  await expect(page.getByTestId("change-count")).toContainText("313 changes");
+  await expect(page.getByTestId("change-count")).toContainText("317 changes");
 
   await page.getByLabel("Class").selectOption("mage");
   await expect(page).toHaveURL(/[?&]class=mage(&|$)/);

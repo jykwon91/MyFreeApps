@@ -58,12 +58,16 @@ def _forever_tables(**overrides: list[dict[str, str]]) -> dict[str, list[dict[st
         "Spell": [{"ID": "100", "Description_lang": "Reduces the casting time of your Fireball by ${$m1/-1000}.1 sec."}],
         "SpellEffect": [_effect_row(100, -100), _effect_row(100, -999, difficulty=1)],
         "SpellMisc": [
-            {"SpellID": "100", "DifficultyID": "0", "DurationIndex": "0", "SpellIconFileDataID": "135807"},
-            {"SpellID": "100", "DifficultyID": "1", "DurationIndex": "0", "SpellIconFileDataID": "1"},
+            {"SpellID": "100", "DifficultyID": "0", "DurationIndex": "0", "RangeIndex": "0", "SpellIconFileDataID": "135807"},
+            {"SpellID": "100", "DifficultyID": "1", "DurationIndex": "0", "RangeIndex": "0", "SpellIconFileDataID": "1"},
         ],
         "SpellAuraOptions": [],
         "SpellDuration": [],
         "SpellRadius": [],
+        "SpellRange": [],
+        "SpellTargetRestrictions": [],
+        "SpellDescriptionVariables": [],
+        "SpellXDescriptionVariables": [],
     }
     tables.update(overrides)
     return tables
@@ -96,13 +100,44 @@ def test_forever_book_fills_radius_proc_options_and_durations() -> None:
         SpellEffect=[_effect_row(100, 5, EffectRadiusIndex_0="8", EffectChainTargets="3")],
         SpellRadius=[{"ID": "8", "Radius": "10"}],
         SpellAuraOptions=[{"SpellID": "100", "DifficultyID": "0", "ProcChance": "20", "ProcCharges": "2", "CumulativeAura": "5"}],
-        SpellMisc=[{"SpellID": "100", "DifficultyID": "0", "DurationIndex": "4", "SpellIconFileDataID": "1"}],
+        SpellMisc=[{"SpellID": "100", "DifficultyID": "0", "DurationIndex": "4", "RangeIndex": "0", "SpellIconFileDataID": "1"}],
         SpellDuration=[{"ID": "4", "Duration": "12000"}],
     )
     book = forever_book(tables)
     assert (book.effects[100][0].radius_yards, book.effects[100][0].chain_targets) == (10.0, 3)
     assert (book.aura_options[100].proc_chance, book.aura_options[100].proc_charges, book.aura_options[100].stacks) == (20, 2, 5)
     assert book.durations_ms[100] == 12000
+
+
+def test_forever_book_fills_targets_range_variables_and_effect_multiples() -> None:
+    # Psychic Scream / Searing Totem / Immolate shaped rows from the Forever client.
+    tables = _forever_tables(
+        SpellEffect=[_effect_row(
+            100, 5, EffectRadiusIndex_1="14", EffectPointsPerResource="5.5", EffectAmplitude="2",
+            EffectChainAmplitude="0.3",
+        )],
+        SpellRadius=[{"ID": "14", "Radius": "8"}],
+        SpellRange=[{"ID": "3", "RangeMax_0": "20", "RangeMax_1": "20"}, {"ID": "6", "RangeMax_0": "0", "RangeMax_1": "40"}],
+        SpellMisc=[
+            {"SpellID": "100", "DifficultyID": "0", "DurationIndex": "0", "RangeIndex": "3", "SpellIconFileDataID": "1"},
+            {"SpellID": "101", "DifficultyID": "0", "DurationIndex": "0", "RangeIndex": "6", "SpellIconFileDataID": "1"},
+        ],
+        SpellTargetRestrictions=[
+            {"SpellID": "100", "DifficultyID": "0", "MaxTargets": "2", "MaxTargetLevel": "40"},
+            {"SpellID": "100", "DifficultyID": "1", "MaxTargets": "9", "MaxTargetLevel": "0"},
+        ],
+        SpellDescriptionVariables=[{"ID": "859", "Variables": "$mult1=$?s17815[${1.05}][${1.0}]\n$mult=${$<mult1>}"}],
+        SpellXDescriptionVariables=[{"ID": "1", "SpellID": "100", "SpellDescriptionVariablesID": "859"}],
+    )
+    book = forever_book(tables)
+    effect = book.effects[100][0]
+    # The radius sits in the second slot when the first is empty (Arcane Explosion's 10 yards).
+    assert effect.radius_yards == 8.0
+    assert (effect.points_per_resource, effect.amplitude, effect.chain_amplitude) == (5.5, 2.0, 0.3)
+    assert (book.max_targets, book.max_target_levels) == ({100: 2}, {100: 40})
+    # A heal has only a friendly range.
+    assert book.ranges_yards == {100: 20.0, 101: 40.0}
+    assert book.variables == {100: {"mult1": "$?s17815[${1.05}][${1.0}]", "mult": "${$<mult1>}"}}
 
 
 # --- the Classic book -------------------------------------------------------
@@ -125,6 +160,7 @@ def test_classic_effect_that_rolls_reads_as_a_range() -> None:
         [],
         [],
         [],
+        [],
         [_template(7, Effect1=2, EffectBasePoints1=9, EffectBaseDice1=1, EffectDieSides1=5)],
     )
     assert evaluate(book, 7) == "Deals 10 to 14 damage."
@@ -140,9 +176,28 @@ def test_classic_book_reads_procs_durations_and_radius() -> None:
         [{"ID": "7", "Name_lang": "Test"}],
         [{"ID": "21", "Duration": "6000"}],
         [{"ID": "13", "Radius": "8"}],
+        [],
         [_template(7, ProcChance=25, DurationIndex=21, Effect1=6, EffectBasePoints1=0, EffectBaseDice1=1, EffectDieSides1=1, EffectRadiusIndex1=13)],
     )
     assert evaluate(book, 7) == "A 25% chance for 6 sec to hit everyone within 8 yards."
+
+
+def test_classic_book_reads_the_renamed_effect_fields_targets_and_range() -> None:
+    """1.12's EffectMultipleValue / DmgMultiplier / EffectPointsPerComboPoint are
+    the modern client's EffectAmplitude / EffectChainAmplitude / EffectPointsPerResource."""
+    book = classic_book(
+        [{"ID": "7", "Description_lang": "Drains $e1 mana, $f1 more, $b1 per point; $i foes up to level $v within $r yds."}],
+        [],
+        [],
+        [],
+        [{"ID": "5", "RangeMax_0": "30", "RangeMax_1": "30"}],
+        [_template(
+            7, Effect1=2, EffectBasePoints1=0, EffectBaseDice1=1, EffectDieSides1=1,
+            EffectMultipleValue1=2, DmgMultiplier1=3, EffectPointsPerComboPoint1=-80,
+            MaxAffectedTargets=5, MaxTargetLevel=40, RangeIndex=5,
+        )],
+    )
+    assert evaluate(book, 7) == "Drains 2 mana, 3 more, 80 per point; 5 foes up to level 40 within 30 yds."
 
 
 # --- rank text --------------------------------------------------------------

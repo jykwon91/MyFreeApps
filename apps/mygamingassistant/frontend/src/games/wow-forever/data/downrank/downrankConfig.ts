@@ -1,5 +1,7 @@
 import type { WowClassId } from "@/games/wow-forever/data/classes";
 
+export const DOWNRANK_PATH = "/wow-forever/downrank";
+
 /** URL params (replace history): the spell family, level, bonus, talent %s and the below-20 penalty switch. */
 export const DOWNRANK_SPELL_PARAM = "spell";
 export const DOWNRANK_LEVEL_PARAM = "lvl";
