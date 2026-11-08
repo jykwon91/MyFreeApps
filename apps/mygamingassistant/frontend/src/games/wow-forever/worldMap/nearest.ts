@@ -6,8 +6,10 @@
  *      it sits in as one area (Stormwind is walkable from Goldshire);
  *   2. elsewhere on the same continent;
  *   3. another continent — a boat or zeppelin is needed.
- * Within groups 2 and 3 a capital city wins over a slightly closer village:
- * capitals have every service in one place and a flight path.
+ * Within a group, nearest first by the same straight-line yards each result
+ * shows — the order and the distances always agree. (A capital used to count
+ * as 1.5x closer, which listed a 7,000 yd Orgrimmar trainer above a 6,100 yd
+ * one.) Where yards can't be measured (another continent) capitals lead.
  */
 import type { MapPoi, PlayerFaction, WorldMapData, WorldPoint, WorldZone } from "@/games/wow-forever/types/worldMap";
 import { FACTION } from "@/games/wow-forever/types/worldMap";
@@ -21,9 +23,6 @@ export const NEAR_GROUP = {
 export type NearGroup = (typeof NEAR_GROUP)[keyof typeof NEAR_GROUP];
 
 const GROUP_ORDER: Readonly<Record<NearGroup, number>> = { sameArea: 0, sameContinent: 1, otherContinent: 2 };
-
-/** A capital counts as this much closer than it is (1.5 = 3,000 yd beats a 2,000 yd village). */
-export const CAPITAL_PREFERENCE = 1.5;
 
 export interface RankedPoi {
   poi: MapPoi;
@@ -94,8 +93,7 @@ export function locatePoi(poi: MapPoi, data: WorldMapData): { zone: WorldZone; w
 
 function sortKey(r: RankedPoi): number {
   if (r.yards === null) return isCapital(r.zone) ? 0 : 1;
-  if (r.group === NEAR_GROUP.sameArea) return r.yards;
-  return isCapital(r.zone) ? r.yards / CAPITAL_PREFERENCE : r.yards;
+  return r.yards;
 }
 
 export function rankPois(

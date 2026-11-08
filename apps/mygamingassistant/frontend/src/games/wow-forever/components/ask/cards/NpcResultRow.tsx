@@ -3,6 +3,8 @@ import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBad
 import { poiProvenance } from "@/games/wow-forever/lib/provenance/poiProvenance";
 import type { AskNpcRow } from "@/games/wow-forever/types/ask/askNpcRow";
 
+const WALK_ONLY = "walk";
+
 interface NpcResultRowProps {
   row: AskNpcRow;
   selected: boolean;
@@ -40,6 +42,9 @@ export default function NpcResultRow({ row, selected, onToggle }: NpcResultRowPr
           <span className="block text-xs text-muted-foreground">
             {row.area} · {row.distance}
           </span>
+          {row.route && row.route !== WALK_ONLY ? (
+            <span className="block text-xs text-muted-foreground">Route: {row.route}</span>
+          ) : null}
         </span>
       </button>
       <ProvenanceBadge {...poiProvenance(row)} />

@@ -66,6 +66,7 @@ async function mockRelay(page: Page, reply: Reply): Promise<Relay> {
     (url) => url.pathname.startsWith("/api/"),
     (route) => route.fulfill({ status: 404, json: { detail: "Not Found" } }),
   );
+  await page.route("**/api/wow/map-captures", (route) => route.fulfill({ json: { captures: [] } }));
   await page.route(
     (url) => url.pathname === TURN_PATH,
     async (route) => {
@@ -115,6 +116,8 @@ test("ask → the tool runs on real data → pick a trainer → Route there → 
   // The card's rows are those same real trainers.
   const rows = card.locator("ol > li");
   await expect(rows).toHaveCount(sent.results.length);
+  // Distances are the planned route's trip time, in the order the rows are listed.
+  await expect(rows.first()).toContainText(/about \d+ min, ~[\d,]+ yd/);
   await expect(card.getByRole("link", { name: "Route there" })).toHaveCount(0);
   const first = sent.results[0].name;
   await card.getByRole("button", { name: new RegExp(first) }).click();
