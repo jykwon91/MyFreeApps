@@ -11,14 +11,13 @@ import { LOOT_SECTION_ID } from "@/games/wow-forever/data/professions/crafting/d
 import { PROFESSIONS_DATA_STATUS } from "@/games/wow-forever/data/professions/professionsStatus";
 import { levelCap, playerLevel } from "@/games/wow-forever/data/levelCap";
 import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
-import type { GuideProfession } from "@/games/wow-forever/data/professions/professionPicker";
+import { PROFESSION_PARAM, type GuideProfession } from "@/games/wow-forever/data/professions/professionPicker";
 import { GATHERING_SECTIONS } from "@/games/wow-forever/data/professions/gathering/gatheringConfig";
 import { isCraftingProfession, isGatheringProfession, parseGuideProfession } from "@/games/wow-forever/lib/guideProfession";
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
 import { PLAYER_FACTION_OPTIONS } from "@/games/wow-forever/data/playerFactionOptions";
 import { RECIPE_VENDORS_SECTION } from "@/games/wow-forever/data/recipeVendors/recipeVendorText";
 
-export const PROFESSION_PARAM = "p";
 
 const VENDORS = { id: RECIPE_VENDORS_SECTION.id, label: RECIPE_VENDORS_SECTION.navLabel } as const;
 

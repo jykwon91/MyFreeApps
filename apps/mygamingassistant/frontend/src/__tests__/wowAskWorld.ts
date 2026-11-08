@@ -8,7 +8,10 @@ import masksJson from "@/games/wow-forever/data/worldMap/mapMasks.json";
 import areasJson from "@/games/wow-forever/data/worldMap/areas.json";
 import interiorsJson from "@/games/wow-forever/data/worldMap/classic/classicInteriors.json";
 import { DEFAULT_PLAYER_SETTINGS, type PlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
+import { loadGoldFarms } from "@/games/wow-forever/gold/loadGoldFarms";
+import { loadProfessionRoute } from "@/games/wow-forever/lib/ask/loadProfessionRoute";
 import { loadDungeons } from "@/games/wow-forever/lib/dungeons/loadDungeons";
+import { loadRares } from "@/games/wow-forever/lib/rares/loadRares";
 import { decodeClientItems } from "@/games/wow-forever/lib/decodeClientItems";
 import type { AskToolData } from "@/games/wow-forever/types/ask/askToolData";
 import { decodeWorldMap } from "@/games/wow-forever/worldMap/decodeWorldMap";
@@ -34,6 +37,9 @@ export function askToolData(player: Partial<PlayerSettings> = {}): AskToolData {
     loadItems: () => Promise.resolve(decodeClientItems(FIXTURE_FILE, [])),
     loadDungeons,
     loadWalkGraphs: () => Promise.resolve(new Map()),
+    loadRares,
+    loadGoldFarms,
+    loadProfessionRoute,
     player: { ...DEFAULT_PLAYER_SETTINGS, ...player },
   };
 }

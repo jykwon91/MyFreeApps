@@ -18,7 +18,7 @@ import { CRAFTING_GUIDES } from "@/games/wow-forever/data/professions/crafting/c
 import { CRAFTING_ROUTES } from "@/games/wow-forever/data/professions/crafting/craftingRoutes";
 import { CRAFTING_RANKS } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
 import { useAuctionPrices } from "@/games/wow-forever/hooks/useAuctionPrices";
-import type { CraftingData } from "@/games/wow-forever/hooks/useCraftingData";
+import type { CraftingData } from "@/games/wow-forever/types/craftingData";
 import { useExcludedSlots, useKnownRecipes, usePriceOverrides, type PriceOverrides } from "@/games/wow-forever/hooks/useCraftPrices";
 import { auctionCopper, effectivePrices } from "@/games/wow-forever/prices/auctionPrices";
 import type { AuctionPrices } from "@/games/wow-forever/types/auctionPrices";

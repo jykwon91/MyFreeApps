@@ -8,15 +8,21 @@ export const ASK_TOOL = {
   searchItems: "search_items",
   dungeonInfo: "dungeon_info",
   playerContext: "get_player_context",
+  findRares: "find_rares",
+  professionGuide: "profession_guide",
+  goldFarming: "gold_farming",
+  findMacros: "find_macros",
 } as const;
 
 /** `search_npcs`'s `faction` argument. */
 export const ASK_FACTION_FILTER = { alliance: "alliance", horde: "horde", any: "any" } as const;
 
-/** The schema's limits on tool inputs (`QUERY_MAX_CHARS`, `ZONE_MAX_CHARS`, `RESULT_LIMIT_MAX`). */
+/** The schema's limits on tool inputs (`QUERY_MAX_CHARS`, `ZONE_MAX_CHARS`, `RESULT_LIMIT_MAX`, `LEVEL_MAX`, `SKILL_MAX`). */
 export const ASK_TOOL_INPUT = {
   queryMaxChars: 80,
   zoneMaxChars: 40,
   limitMax: 10,
   defaultLimit: 5,
+  levelMax: 60,
+  skillMax: 300,
 } as const;

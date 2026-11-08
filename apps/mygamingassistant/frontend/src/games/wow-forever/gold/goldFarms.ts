@@ -6,7 +6,7 @@
  * vendor for, times kills an hour. Cloth, greens and leather sell for more to
  * players — those are counted, not priced.
  */
-import goldFarmsJson from "@/games/wow-forever/data/gold/classic/goldFarms.json";
+import type { GoldFarmsFile } from "@/games/wow-forever/gold/goldFarmsFile";
 
 export interface GoldFarm {
   npcId: number;
@@ -36,12 +36,6 @@ export interface GoldFarm {
   skinVendor: number;
 }
 
-interface GoldFarmsFile {
-  columns: readonly string[];
-  zones: Readonly<Record<string, string>>;
-  farms: readonly (readonly (string | number)[])[];
-}
-
 export const FARM_SORT = { gold: "gold", cloth: "cloth" } as const;
 export type FarmSort = (typeof FARM_SORT)[keyof typeof FARM_SORT];
 
@@ -49,6 +43,8 @@ export type FarmSort = (typeof FARM_SORT)[keyof typeof FARM_SORT];
 export const LEVELS_BELOW = 3;
 export const LEVELS_ABOVE = 1;
 export const FARMS_SHOWN = 5;
+/** The Making gold page's "Where to farm" section (`#farm`). */
+export const GOLD_FARM_SECTION_ID = "farm";
 
 export function decodeGoldFarms(file: GoldFarmsFile): GoldFarm[] {
   return file.farms.map((row) => {
@@ -79,13 +75,6 @@ export function decodeGoldFarms(file: GoldFarmsFile): GoldFarm[] {
       skinVendor: Number(r.skinVendor),
     };
   });
-}
-
-let decoded: GoldFarm[] | null = null;
-
-export function goldFarms(): readonly GoldFarm[] {
-  decoded ??= decodeGoldFarms(goldFarmsJson as unknown as GoldFarmsFile);
-  return decoded;
 }
 
 /** Copper an hour at vendor prices; Skinning adds the leather. */

@@ -181,6 +181,10 @@ async def test_first_message_returns_reply_and_ticket(client: AsyncClient) -> No
         "search_items",
         "dungeon_info",
         "get_player_context",
+        "find_rares",
+        "profession_guide",
+        "gold_farming",
+        "find_macros",
     ]
     assert kwargs["messages"] == [user_text()]
 

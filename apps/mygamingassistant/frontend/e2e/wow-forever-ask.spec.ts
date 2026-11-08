@@ -2,7 +2,8 @@
  * WoW Forever "Ask" (/wow-forever/ask) — a question goes to the relay, the
  * browser runs Claude's tool call against the site's own map data, the card
  * lists the real nearest trainers, and "Route there" opens the World Map with
- * directions. Also: the hub's ask box, the rate-limit and daily-cap notices,
+ * directions. The guide tools (rares, professions) answer from the site's own
+ * data too. Also: the hub's ask box, the rate-limit and daily-cap notices,
  * Cancel, the phone layout and the loading skeleton.
  *
  * The relay (`POST /api/wow/chat/turn`) is mocked; every other /api call
@@ -33,13 +34,16 @@ type Reply = (body: TurnBody, n: number) => (route: Route) => Promise<void>;
 const json = (body: unknown, status = 200, headers: Record<string, string> = {}) => (route: Route) =>
   route.fulfill({ status, json: body, headers });
 
-function toolUse(extra: Record<string, string> = {}) {
+function toolUse(
+  name = "search_npcs",
+  input: Record<string, unknown> = { query: "warlock trainer", from_zone: "Desolace" },
+) {
   return json({
     message: {
       role: "assistant",
       content: [
         { type: "text", text: "Let me look that up." },
-        { type: "tool_use", id: "toolu_fixture_1", name: "search_npcs", input: { query: "warlock trainer", from_zone: "Desolace", ...extra } },
+        { type: "tool_use", id: "toolu_fixture_1", name, input },
       ],
     },
     stop_reason: "tool_use",
@@ -140,7 +144,7 @@ test("ask → the tool runs on real data → pick a trainer → Route there → 
 });
 
 test("a Horde search's Route there plans as Horde on the map, without changing the saved faction", async ({ page }) => {
-  await mockRelay(page, (body) => (body.ticket ? answer() : toolUse({ faction: "horde" })));
+  await mockRelay(page, (body) => (body.ticket ? answer() : toolUse("search_npcs", { query: "warlock trainer", from_zone: "Desolace", faction: "horde" })));
   await page.goto("/wow-forever/ask");
   await ask(page);
   const card = page.getByRole("region", { name: "warlock trainer" });
@@ -156,6 +160,66 @@ test("a Horde search's Route there plans as Horde on the map, without changing t
   // Planned as Horde for this visit only: the saved faction is untouched.
   const saved = await page.evaluate(() => window.localStorage.getItem("mga.wowForever.worldMap.player.v1"));
   expect(saved === null || !saved.includes('"faction":"H"')).toBe(true);
+});
+
+function sentResult<T>(relay: Relay): T {
+  const result = relay.bodies[1].messages.at(-1)!.content[0];
+  expect(result.type).toBe("tool_result");
+  return JSON.parse(result.content ?? "{}") as T;
+}
+
+test("rares near a level-30 player in Ashenvale → pick one → Route there → World Map directions", async ({ page }) => {
+  const relay = await mockRelay(page, (body) =>
+    body.ticket ? answer("Prince Raze and a few others fit level 30.") : toolUse("find_rares", { level: 30, zone: "Ashenvale" }),
+  );
+  await page.goto("/wow-forever/ask");
+  await ask(page, "any rares worth killing at level 30 in ashenvale");
+  const card = page.getByRole("region", { name: "Rares for level 30" });
+  await expect(card).toBeVisible();
+  await expect(card.getByText(/Near Ashenvale/)).toBeVisible();
+
+  const sent = sentResult<{ level: number; in_zone: number; results: { name: string }[] }>(relay);
+  expect(sent.level).toBe(30);
+  expect(sent.in_zone).toBeGreaterThan(0);
+  await expect(card.locator("ol > li")).toHaveCount(sent.results.length);
+  await expect(card.getByRole("link", { name: "Open the Rares list" })).toHaveAttribute(
+    "href",
+    /^\/wow-forever\/rares\?zone=\d+&min=27&max=32$/,
+  );
+
+  const first = sent.results[0].name;
+  await card.getByRole("button", { name: new RegExp(first) }).click();
+  await expect(card.getByRole("link", { name: "Show on the World Map" })).toBeVisible();
+  const route = card.getByRole("link", { name: "Route there" });
+  expect(await route.getAttribute("href")).toMatch(/^\/wow-forever\/map\?to=pt%3A\d+%2C[^&]+&from=pt%3A[^&]+&dir=1$/);
+  await route.click();
+  await expect(page).toHaveURL(/\/wow-forever\/map\?to=pt/);
+  const planner = page.getByRole("region", { name: "Route planner" });
+  await expect(planner.getByRole("list", { name: "Directions" })).toBeVisible({ timeout: 20_000 });
+
+  await page.goBack();
+  await expect(page.getByRole("region", { name: "Rares for level 30" })).toBeVisible();
+});
+
+test("how to level Tailoring from 150 → the guide's next steps, with the guide offered, not opened", async ({ page }) => {
+  const relay = await mockRelay(page, (body) =>
+    body.ticket ? answer("From 150, follow the steps below.") : toolUse("profession_guide", { profession: "tailoring", skill: 150 }),
+  );
+  await page.goto("/wow-forever/ask");
+  await ask(page, "how do I level tailoring from 150");
+  const card = page.getByRole("region", { name: "Tailoring from skill 150" });
+  await expect(card).toBeVisible();
+  await expect(page.getByTestId("ask-answer")).toContainText("From 150, follow the steps below.");
+  await expect(page).toHaveURL(/\/wow-forever\/ask$/);
+
+  const sent = sentResult<{ profession: string; from_skill: number }>(relay);
+  expect(sent).toMatchObject({ profession: "Tailoring", from_skill: 150 });
+  await expect(card.locator("ol > li").first()).toContainText(/^150–\d+/);
+  await expect(card.getByText(/^Materials: /).first()).toBeVisible();
+  const open = card.getByRole("link", { name: "Open the Tailoring guide" });
+  await expect(open).toHaveAttribute("href", "/wow-forever/professions?p=tailoring&skill=150");
+  await open.click();
+  await expect(page).toHaveURL(/\/wow-forever\/professions\?p=tailoring&skill=150/);
 });
 
 test("the hub's ask box opens the page and sends the question once", async ({ page }) => {

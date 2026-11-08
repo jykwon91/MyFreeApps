@@ -6,16 +6,24 @@
  */
 import { ASK_LIMITS } from "@/games/wow-forever/data/ask/askLimits";
 import { ASK_TOOL } from "@/games/wow-forever/data/ask/askTools";
+import { findMacrosTool } from "@/games/wow-forever/lib/ask/tools/findMacrosTool";
+import { findRaresTool } from "@/games/wow-forever/lib/ask/tools/findRaresTool";
+import { goldFarmingTool } from "@/games/wow-forever/lib/ask/tools/goldFarmingTool";
 import { dungeonInfoTool } from "@/games/wow-forever/lib/ask/tools/dungeonInfoTool";
 import { findPlacesTool } from "@/games/wow-forever/lib/ask/tools/findPlacesTool";
+import { professionGuideTool } from "@/games/wow-forever/lib/ask/tools/professionGuideTool";
 import { playerContextTool } from "@/games/wow-forever/lib/ask/tools/playerContextTool";
 import { searchItemsTool } from "@/games/wow-forever/lib/ask/tools/searchItemsTool";
 import { searchNpcsTool } from "@/games/wow-forever/lib/ask/tools/searchNpcsTool";
 import {
+  checkGoldInput,
   checkItemSearchInput,
+  checkMacrosInput,
   checkNoInput,
   checkNpcSearchInput,
+  checkProfessionInput,
   checkQueryOnlyInput,
+  checkRaresInput,
 } from "@/games/wow-forever/lib/ask/validateAskToolInput";
 import type { AskInputCheck } from "@/games/wow-forever/types/ask/askInputCheck";
 import type { AskToolData } from "@/games/wow-forever/types/ask/askToolData";
@@ -45,6 +53,14 @@ function dispatch(call: ChatToolUseBlock, data: AskToolData): Promise<AskToolOut
       return withInput(checkQueryOnlyInput(call.input), (input) => dungeonInfoTool(input, data));
     case ASK_TOOL.playerContext:
       return withInput(checkNoInput(call.input), () => playerContextTool(data));
+    case ASK_TOOL.findRares:
+      return withInput(checkRaresInput(call.input), (input) => findRaresTool(input, data));
+    case ASK_TOOL.professionGuide:
+      return withInput(checkProfessionInput(call.input), (input) => professionGuideTool(input, data));
+    case ASK_TOOL.goldFarming:
+      return withInput(checkGoldInput(call.input), (input) => goldFarmingTool(input, data));
+    case ASK_TOOL.findMacros:
+      return withInput(checkMacrosInput(call.input), (input) => findMacrosTool(input));
     default:
       return Promise.resolve(toolError("unknown tool"));
   }

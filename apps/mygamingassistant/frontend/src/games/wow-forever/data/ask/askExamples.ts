@@ -7,4 +7,6 @@ export const ASK_EXAMPLES: readonly string[] = [
   "Where is the nearest flight master to Goldshire?",
   "What level is the Deadmines and what bosses are in it?",
   "Where is Booty Bay?",
+  "Any rares worth killing around level 30 in Ashenvale?",
+  "How do I level Tailoring from 150?",
 ];

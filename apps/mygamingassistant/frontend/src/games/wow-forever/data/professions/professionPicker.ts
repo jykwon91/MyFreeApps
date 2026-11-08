@@ -44,6 +44,9 @@ export const SECONDARY_GROUP: ProfessionGroup<SecondaryProfession | typeof CRAFT
   ],
 };
 
+/** The Professions page's `?p=` key: which guide is open. */
+export const PROFESSION_PARAM = "p";
+
 /** The picker's groups, in order. */
 export const PROFESSION_GROUPS: readonly ProfessionGroup<GuideProfession>[] = [CRAFTING_GROUP, GATHERING_GROUP, SECONDARY_GROUP];
 

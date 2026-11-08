@@ -7,5 +7,15 @@
 from typing import Literal
 
 ChatRole = Literal["user", "assistant"]
-ChatToolName = Literal["search_npcs", "find_places", "search_items", "dungeon_info", "get_player_context"]
+ChatToolName = Literal[
+    "search_npcs",
+    "find_places",
+    "search_items",
+    "dungeon_info",
+    "get_player_context",
+    "find_rares",
+    "profession_guide",
+    "gold_farming",
+    "find_macros",
+]
 ChatStopReason = Literal["end_turn", "tool_use", "max_tokens", "refusal"]

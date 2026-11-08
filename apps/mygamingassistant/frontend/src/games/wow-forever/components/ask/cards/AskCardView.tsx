@@ -1,8 +1,12 @@
 import DungeonCard from "@/games/wow-forever/components/ask/cards/DungeonCard";
+import GoldCard from "@/games/wow-forever/components/ask/cards/GoldCard";
 import ItemsCard from "@/games/wow-forever/components/ask/cards/ItemsCard";
+import MacrosCard from "@/games/wow-forever/components/ask/cards/MacrosCard";
 import NoResultsCard from "@/games/wow-forever/components/ask/cards/NoResultsCard";
 import NpcResultsCard from "@/games/wow-forever/components/ask/cards/NpcResultsCard";
 import PlacesCard from "@/games/wow-forever/components/ask/cards/PlacesCard";
+import ProfessionCard from "@/games/wow-forever/components/ask/cards/ProfessionCard";
+import RaresCard from "@/games/wow-forever/components/ask/cards/RaresCard";
 import WhereAreYouCard from "@/games/wow-forever/components/ask/cards/WhereAreYouCard";
 import { ASK_CARD } from "@/games/wow-forever/data/ask/askCardKinds";
 import type { AskCard } from "@/games/wow-forever/types/ask/askCard";
@@ -28,5 +32,13 @@ export default function AskCardView({ card, tools }: AskCardViewProps) {
       return <WhereAreYouCard tools={tools} />;
     case ASK_CARD.noResults:
       return <NoResultsCard card={card} />;
+    case ASK_CARD.rares:
+      return <RaresCard card={card} />;
+    case ASK_CARD.profession:
+      return <ProfessionCard card={card} />;
+    case ASK_CARD.gold:
+      return <GoldCard card={card} />;
+    case ASK_CARD.macros:
+      return <MacrosCard card={card} />;
   }
 }

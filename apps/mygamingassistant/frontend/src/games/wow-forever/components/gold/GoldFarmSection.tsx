@@ -6,11 +6,12 @@ import SegmentedToggle from "@/games/wow-forever/components/shared/SegmentedTogg
 import {
   FARM_SORT,
   farmsFor,
-  goldFarms,
+  GOLD_FARM_SECTION_ID,
   LEVELS_ABOVE,
   LEVELS_BELOW,
   type FarmSort,
 } from "@/games/wow-forever/gold/goldFarms";
+import { goldFarms } from "@/games/wow-forever/gold/goldFarmsData";
 import { useAuctionPrices } from "@/games/wow-forever/hooks/useAuctionPrices";
 import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
 import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
@@ -35,7 +36,7 @@ export default function GoldFarmSection({ level }: GoldFarmSectionProps) {
   );
   return (
     <GuideSection
-      id="farm"
+      id={GOLD_FARM_SECTION_ID}
       title="Where to farm at your level"
       intro="When you'd rather make gold than quest: go to the top spot, kill and loot everything, and vendor what isn't cloth, leather or a green."
     >
