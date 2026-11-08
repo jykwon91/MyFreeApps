@@ -20,6 +20,7 @@
         "test_inquiry_seed_routes.py",
         "test_applicant_seed_routes.py",
         "test_document_seed_routes.py",
+        "test_gmail_sync_seed_routes.py",
         "test_extraction_seed_routes.py",
         "test_member_seed_routes.py",
         "test_listing_seed_routes.py",
