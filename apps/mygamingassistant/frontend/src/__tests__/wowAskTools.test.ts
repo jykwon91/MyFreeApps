@@ -62,7 +62,7 @@ describe("search_npcs — the Desolace warlock trainer question", () => {
     const real = warlockTrainers(FACTION.horde);
     expect(card.rows.every((row) => real.has(row.poiId))).toBe(true);
     expect(card.rows.some((row) => row.zoneName === "Orgrimmar")).toBe(true);
-    expect(card.rows.every((row) => /yd away/.test(row.distance))).toBe(true);
+    expect(card.rows.every((row) => /^about \d+ min, ~[\d,]+ yd$/.test(row.distance))).toBe(true);
   });
 
   it("uses the saved location when the question names no place", async () => {

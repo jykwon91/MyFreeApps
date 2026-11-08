@@ -72,6 +72,10 @@ export interface DirectionStep {
 export interface Directions {
   steps: DirectionStep[];
   usesFlight: boolean;
+  /** Estimated travel time, the cost the planner minimised. */
+  seconds: number;
+  /** Straight-line yards along the route: walks end to end, a flight's own length, a ride dock to dock. */
+  yards: number;
   /** Some walk is a straight line (no walk graph there, or it can't join the two points). */
   straightWalks: boolean;
 }
@@ -112,13 +116,32 @@ interface Visit {
   edge: Edge | null;
 }
 
+/** A flight step's place reads "the flight master at <name>". */
+export const FLIGHT_MASTER_PREFIX = "the flight master at ";
+
+/** Length of a drawn path; a hop between continents (a boat's crossing) adds nothing. */
+function pathYards(points: readonly WorldPoint[]): number {
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    const hop = yardsBetween(points[i - 1], points[i]);
+    if (Number.isFinite(hop)) total += hop;
+  }
+  return total;
+}
+
+function edgeYards(edge: Edge, from: GraphNode, to: GraphNode): number {
+  if (edge.kind === STEP_KIND.fly) return edge.route.yards;
+  if (edge.kind === STEP_KIND.walk) return yardsBetween(from.end.world, to.end.world);
+  return from.dock && to.dock ? pathYards(sailPath(edge.transport, from.dock.index, to.dock.index)) : 0;
+}
+
 function zoneName(data: WorldMapData, zoneId: number): string {
   return data.zoneById.get(zoneId)?.name ?? "Unknown zone";
 }
 
 function flightPlace(data: WorldMapData, node: FlightNode): StepPlace {
   return {
-    label: `the flight master at ${node.name}`,
+    label: `${FLIGHT_MASTER_PREFIX}${node.name}`,
     zoneId: node.zone,
     zoneName: zoneName(data, node.zone),
     subzone: node.subzone,
@@ -379,9 +402,11 @@ export function planDirections(
 
   if (!visits[1]) return null;
   const steps: DirectionStep[] = [];
+  let yards = 0;
   for (let v = 1; v > 0; ) {
     const visit = visits[v];
     if (!visit || !visit.edge) break;
+    yards += edgeYards(visit.edge, graph[visit.prev], graph[v]);
     const step = stepFor(visit.edge, visit.prev, v, graph, walking, data);
     steps.unshift({ ...step, text: sentence(step.text) });
     v = visit.prev;
@@ -392,6 +417,8 @@ export function planDirections(
   return {
     steps,
     usesFlight: steps.some((s) => s.kind === STEP_KIND.fly),
+    seconds: visits[1].seconds,
+    yards,
     straightWalks: walking.straightUsed,
   };
 }

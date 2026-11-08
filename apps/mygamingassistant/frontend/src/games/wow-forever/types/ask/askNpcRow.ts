@@ -14,8 +14,10 @@ export interface AskNpcRow {
   x: number;
   y: number;
   faction: Faction;
-  /** "~350 yd away", "Kalimdor — boat or zeppelin needed". */
+  /** "about 6 min, ~6,100 yd" from the planned route; the map's "~350 yd away" when none could be planned. */
   distance: string;
+  /** The planned route's steps, "walk → fly to Auberdine → boat to Darkshore"; null when none was planned. */
+  route: string | null;
   source: PoiSource;
   capturedAt?: string;
 }

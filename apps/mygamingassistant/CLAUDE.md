@@ -1034,6 +1034,14 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`validateAskToolInput`); results are capped under the relay's 4 KB. "From"
   comes from the place named in the question, else the saved World Map
   location (`resolveAskOrigin`); an unknown place is said so, never swapped.
+  The World Map is `useWorldMap` (Classic + "Seen in game" captures), the
+  same merged data the map page uses. `search_npcs` plans a route (the World
+  Map's `planDirections`, walk graphs via `loadAskWalkGraphs`) to the
+  `TRIP_CANDIDATES` straight-line nearest and orders by its travel seconds
+  (`lib/ask/askTrip.ts`); each row's `distance` is "about N min, ~Y yd" and
+  `route` the real steps ("walk → fly to X → boat to Y"), which is the only
+  travel Claude may describe (SYSTEM_PROMPT). `rankPois` itself is plain
+  nearest-yards (no capital bonus), so list order = shown distance.
 - Turn loop `lib/ask/askTurnLoop.ts` (pure; question with the human check,
   tool results with the ticket); state `hooks/ask/useAskChat.ts`: a failed
   question rolls back and offers Try again (counting down Retry-After),

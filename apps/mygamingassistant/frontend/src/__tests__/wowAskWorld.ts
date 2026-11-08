@@ -33,6 +33,7 @@ export function askToolData(player: Partial<PlayerSettings> = {}): AskToolData {
     places: ASK_PLACES,
     loadItems: () => Promise.resolve(decodeClientItems(FIXTURE_FILE, [])),
     loadDungeons,
+    loadWalkGraphs: () => Promise.resolve(new Map()),
     player: { ...DEFAULT_PLAYER_SETTINGS, ...player },
   };
 }

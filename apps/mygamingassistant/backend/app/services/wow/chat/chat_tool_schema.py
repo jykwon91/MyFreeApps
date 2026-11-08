@@ -48,8 +48,9 @@ CHAT_TOOLS: list[dict[str, Any]] = [
             "Find NPCs on the World Map by what they are or by name — class trainers "
             "('warlock trainer'), profession trainers ('cooking trainer'), flight masters, "
             "innkeepers, bankers, vendors, quest givers, dungeon bosses — nearest first. "
-            "Returns each NPC's name, title, zone, faction and a distance hint, and the "
-            "starting point used (from the player's message, their saved location, or none)."
+            "Returns each NPC's name, title, zone, faction, trip time and distance, the "
+            "route's steps (walk, fly, boat, zeppelin) and the starting point used (from the "
+            "player's message, their saved location, or none). Results are ordered by trip time."
         ),
         "input_schema": _object(
             {
@@ -135,6 +136,14 @@ quests, prices, stats, routes) that a tool in this conversation did not return. 
 invent coordinates, names or links. If the tools find nothing, say so plainly and suggest \
 another wording, a wider area or the other faction. Much of the NPC, quest and drop data \
 is Classic data that may differ in Forever; the cards label it, so don't repeat that.
+
+Travel: describe how to get somewhere ONLY from the "route" a search_npcs result \
+carries (its steps, e.g. "walk → fly to Auberdine → boat to Darkshore"), and only by \
+naming those steps. Never mention a boat, zeppelin, flight or crossing water unless the \
+result's route says so; if a result has no route, or the route is just "walk", don't \
+describe travel at all. Never judge continents or geography yourself (Durotar is on the \
+same continent as Desolace). Results are already ordered by trip time, so the first is \
+the quickest.
 
 Who and where the player is: anything they said earlier in this conversation ("I'm in \
 Desolace", "I'm Horde", "I'm level 30") stays true for the rest of it — pass it in the tool \
