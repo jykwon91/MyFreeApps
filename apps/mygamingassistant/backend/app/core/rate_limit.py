@@ -23,6 +23,7 @@ from platform_shared.core.rate_limit import (
 from platform_shared.services.turnstile_service import verify_turnstile_token
 
 from app.core.config import settings
+from app.core.wow_chat_limits import WOW_CHAT_TURNSTILE_ACTION
 from app.db.session import get_db
 # Case-insensitive like fastapi-users, or changing one letter's case gets past the lock check.
 from app.repositories.user.user_repo import get_by_email_ci as get_user_by_email
@@ -41,6 +42,7 @@ __all__ = [
     "check_totp_account_not_locked",
     "verify_turnstile_token",
     "require_turnstile",
+    "require_wow_chat_turnstile",
 ]
 
 
@@ -75,6 +77,14 @@ async def _verify_turnstile(*args: object, **kwargs: object) -> tuple[bool, list
 require_turnstile = make_require_turnstile(
     lambda: settings.turnstile_secret_key,
     verify=_verify_turnstile,
+)
+
+# The WoW "Ask" chat's own widget action, so a token minted for another form
+# on the site can't be spent on a chat message.
+require_wow_chat_turnstile = make_require_turnstile(
+    lambda: settings.turnstile_secret_key,
+    verify=_verify_turnstile,
+    expected_action=WOW_CHAT_TURNSTILE_ACTION,
 )
 
 
