@@ -75,10 +75,12 @@ def _parse_field(line: str, types: dict[str, str]) -> Field | None:
         raise DbdError(f"can't read field line {line!r}")
     annotations, name, unsigned, bits, count = match.groups()
     flags = set((annotations or "").split(","))
-    if "noninline" in flags:
-        if "id" not in flags:
-            raise DbdError(f"non-inline field {name} other than the id isn't supported")
+    if "noninline" in flags and "id" in flags:
         return None
+    # A non-inline relation (SpellEffect.SpellID) isn't in the client file's record, but a hotfix
+    # record carries it after the inline fields — where the definition lists it, last.
+    if "noninline" in flags and "relation" not in flags:
+        raise DbdError(f"non-inline field {name} other than the id or a relation isn't supported")
     column_type = types.get(name)
     if column_type is None:
         raise DbdError(f"field {name} has no column type")

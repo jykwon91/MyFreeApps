@@ -30,6 +30,7 @@ from scripts.wow_icons.ids import (
     item_icons,
     recipe_ids,
     spell_icons,
+    talent_file_ids,
 )
 from scripts.wow_icons.images import ICON_SIZE, blp_to_webp, icon_key
 from scripts.wow_icons.publish import publish
@@ -116,6 +117,16 @@ def test_appearance_map_uses_order_zero() -> None:
 def test_distinct_icon_files_cover_items_and_spells() -> None:
     icon_map = {"items": {"1": [10, 1], "2": [10, 2], "3": [11, 1]}, "spells": {"9": 12, "8": 10}}
     assert icon_file_ids(icon_map) == [10, 11, 12]
+
+
+def test_distinct_icon_files_include_the_files_named_directly() -> None:
+    icon_map = {"items": {"1": [10, 1]}, "spells": {"9": 12}, "files": [12, 13]}
+    assert icon_file_ids(icon_map) == [10, 12, 13]
+
+
+def test_talent_icons_are_each_tree_and_talent_without_the_placeholder() -> None:
+    doc = {"trees": [{"icon": 135932, "talents": [{"icon": 135894}, {"icon": 0}]}, {"icon": 0, "talents": [{"icon": 135894}]}]}
+    assert talent_file_ids([doc]) == {135932, 135894}
 
 
 def test_gathering_nodes_are_read_from_the_guides(tmp_path: Path) -> None:
@@ -215,4 +226,5 @@ def test_committed_map_covers_every_id_the_pages_name() -> None:
     wanted: IconIds = wanted_ids()
     assert wanted.items <= {int(k) for k in icon_map["items"]}
     assert wanted.spells <= {int(k) for k in icon_map["spells"]}
+    assert wanted.files <= set(icon_map["files"])
     assert icon_map["build"] in icon_map["source"]

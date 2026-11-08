@@ -35,8 +35,22 @@ Row = dict[str, str]
 
 HOTFIX_CACHE_ENV = "WOW_FOREVER_HOTFIX_CACHE"
 DEFAULT_HOTFIX_CACHE = Path(r"D:\World of Warcraft\_forever_\Cache\ADB\enUS\DBCache.bin")
-# Table hash in each table's DB2 header (checked on 1.60.1.70862).
-TABLE_HASHES = {"Item": 0x50238EC2, "ItemSparse": 0x919BE54E}
+# Table hash in each table's DB2 header (Item/ItemSparse checked on 1.60.1.70862; the spell
+# tables are WoWDBDefs' manifest.json hashes, matched against the 70862 cache's entries).
+TABLE_HASHES = {
+    "Item": 0x50238EC2,
+    "ItemSparse": 0x919BE54E,
+    "Spell": 0xE111669E,
+    "SpellName": 0x46C66698,
+    "SpellEffect": 0xF04238A5,
+    "SpellMisc": 0xC603EE28,
+    "SpellAuraOptions": 0xF42FC065,
+    "SpellDuration": 0xB423FA7A,
+    "SpellRadius": 0xAB7E4841,
+    "Talent": 0xF9A4265F,
+    "TalentTab": 0x425D88C8,
+}
+ITEM_TABLES = ("Item", "ItemSparse")
 
 
 @dataclass(frozen=True)
@@ -44,6 +58,24 @@ class ForeverItemTables:
     item: dict[int, Row]
     sparse: list[Row]
     source: str
+
+
+@dataclass(frozen=True)
+class ForeverTables:
+    """Client tables by name, each row by id with the hotfix layers applied."""
+
+    rows: dict[str, dict[int, Row]]
+    cache_build: int
+    from_cache: int
+
+    def table(self, name: str) -> list[Row]:
+        return list(self.rows[name].values())
+
+    def source(self) -> str:
+        return (
+            f"wago.tools DB2 {WAGO_BRANCH} {WAGO_BUILD} with hotfixes, plus the Forever client hotfix cache "
+            f"(build {self.cache_build}, {self.from_cache:,} records)"
+        )
 
 
 def hotfix_cache_path(cli_value: str | None) -> Path:
@@ -100,21 +132,24 @@ def cache_overlay(cache: HotfixCache, table: str, definition: str) -> dict[int, 
     }
 
 
-def load_forever_item_tables(cache_path: Path) -> ForeverItemTables:
+def load_forever_tables(cache_path: Path, tables: Iterable[str]) -> ForeverTables:
+    """``tables`` in three layers: the client file, wago.tools' hotfixes, then the client cache."""
     cache = read_hotfix_cache(cache_path)
     merged: dict[str, dict[int, Row]] = {}
     from_cache = 0
-    for table in TABLE_HASHES:
+    for table in tables:
         overlay = cache_overlay(cache, table, wowdbdefs_definition(table, cache.build))
         merged[table] = merge_rows(wago_table(table, hotfixes=True), overlay)
         from_cache += len(overlay)
+    return ForeverTables(merged, cache.build, from_cache)
+
+
+def load_forever_item_tables(cache_path: Path) -> ForeverItemTables:
+    forever = load_forever_tables(cache_path, ITEM_TABLES)
     plain = len(wago_table("ItemSparse"))
-    source = (
-        f"wago.tools DB2 {WAGO_BRANCH} {WAGO_BUILD} with hotfixes, plus the Forever client hotfix cache "
-        f"(build {cache.build}, {from_cache:,} records)"
-    )
+    source = forever.source()
     print(
-        f"ItemSparse: {plain:,} rows in the client file, {len(merged['ItemSparse']):,} with hotfixes "
-        f"({from_cache:,} Item/ItemSparse records from the client cache, build {cache.build})"
+        f"ItemSparse: {plain:,} rows in the client file, {len(forever.rows['ItemSparse']):,} with hotfixes "
+        f"({forever.from_cache:,} Item/ItemSparse records from the client cache, build {forever.cache_build})"
     )
-    return ForeverItemTables(merged["Item"], list(merged["ItemSparse"].values()), source)
+    return ForeverItemTables(forever.rows["Item"], forever.table("ItemSparse"), source)

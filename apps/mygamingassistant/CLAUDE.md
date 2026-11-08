@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`)
+### WoW Forever (`/wow-forever`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/talents`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -518,13 +518,55 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `src/__tests__/wowDungeonQuests.test.tsx`,
   `e2e/wow-forever-dungeon-quests.spec.ts`.
 
+#### Talent calculator (`/wow-forever/talents`, `/wow-forever/talents/:class`)
+
+- `pages/WowTalentsPage.tsx`: the class picker (links, so Back returns to the
+  last class), then the class's three trees in the game's 7 × 4 grid
+  (`components/talents/`): side by side from `lg`, one at a time behind tabs
+  below it. Click / tap adds a point; right-click, a long press
+  (`hooks/useLongPress.ts`, touch / pen only) or the details panel's − takes
+  one out. Each grid is one Tab stop (roving tabindex): arrows move, Enter
+  adds, Shift+Enter removes. Hover / keyboard focus shows `TalentTooltip`
+  (`useHoverTooltip`); the picked talent's `TalentDetails` shows the rank you
+  have and the next one, what blocks a change, and − / + (44 px).
+- Rules are Classic and pure (`lib/talents/talentRules.ts`): level 10–60,
+  points = level − 9; a row opens at 5 points per row above it in that tree;
+  prerequisites need their ranks (same-row and diagonal ones exist); a point
+  can't come out while a dependent or a lower row needs it. Grid / arrow
+  geometry is `data/talents/talentGridLayout.ts` + `lib/talents/talentArrows.ts`.
+- **The build is the URL** (`hooks/useTalentBuild.ts`, `useLiveSearchParams`,
+  every change replaces history): `?b=1-<tree1>-<tree2>-<tree3>` — one digit
+  per talent in the file's order (tier, then column), trailing zeros dropped
+  (`lib/talents/talentBuildCode.ts`) — and `?lvl=` (omitted at 60). Decoding is
+  strict: wrong version / tree count / characters / length or a build no
+  character could have (`isLegalBuild`) → an empty build and "That build link
+  doesn't work". Bump the version (and keep decoding 1) for any format change;
+  never reorder a class's talents. "Copy link" = `shareOrigin()` + path + query.
+- **Data is GENERATED** — `python -m scripts.wow_talents.build --hotfix-cache
+  <DBCache.bin>` (from `backend/`, in `wow_refresh` before the icons build)
+  writes `data/talents/<class>.json` from the Forever client (Talent, TalentTab,
+  Spell*, hotfixes layered like the item build): trees, positions,
+  prerequisites, icons and each rank's text with `$s1`-style tokens filled
+  from SpellEffect (`scripts/wow_food/tooltip.py`). A sentence with a token we
+  can't fill is dropped; a rank the client lacks is `null` ("This rank isn't in
+  the game files yet."); a talent with no rank in the client takes its Classic
+  Era name (`classicName`, Classic data badge). `data/talents/classic/<class>.json`
+  (cmangos `spell_template`, GPL — keep LICENSE + README) holds the Classic
+  text of ranks whose Forever text differs — shown as "Changed in Forever.
+  Classic: …". Each class is its own lazy chunk (`data/talents/talentFiles.ts`,
+  `lib/talents/loadTalentClass.ts`). Talent and tree icon file ids go into
+  `wowIcons.json` `files` (publish them with `wow_icons.publish`).
+  Tests: `tests/test_wow_talents_generator.py`,
+  `tests/test_wow_spell_tooltip.py`, `src/__tests__/wowTalentRules.test.ts`,
+  `src/__tests__/wowTalentBuildCode.test.ts`, `e2e/wow-forever-talents.spec.ts`.
+
 #### In-game icons (`GameIcon`)
 
 - `components/shared/GameIcon.tsx` (`icon`, `size` 16/24/32/48, `alt` — "" when
   the name is printed next to it) shows an item/spell icon in a frame ringed in
   the item's quality colour, lazy-loaded; no icon or a failed load = a same-size
   neutral placeholder. Look-ups: `lib/icons/wowIcons.ts` (`itemIcon`,
-  `spellIcon`, `recipeIcon`, `iconUrl`) against
+  `spellIcon`, `recipeIcon`, `fileIcon`, `iconUrl`) against
   `data/icons/wowIcons.json` — **GENERATED** by `python -m scripts.wow_icons.build`
   (item → `Item.IconFileDataID`, else its default appearance's icon; spell →
   `SpellMisc`; quality from ItemSparse, hotfixes included — it takes

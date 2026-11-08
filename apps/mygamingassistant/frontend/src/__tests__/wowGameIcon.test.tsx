@@ -15,6 +15,7 @@ const FIXTURE: WowIconFile = {
   build: "1.2.3.4",
   items: { "2840": [133217, 1], "14048": [132905, 2], "99": [10, 42] },
   spells: { "7418": 135913 },
+  files: [],
 };
 
 describe("icon lookups", () => {

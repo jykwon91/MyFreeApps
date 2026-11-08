@@ -81,6 +81,12 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "Hover-cast (mouseover) and other macros to paste into the game, for every class, with names checked against the client.",
       },
       {
+        path: "/wow-forever/talents",
+        title: "Talents",
+        iconName: "Sparkles",
+        description: "Plan a talent build for any class and level, see what Forever changed from Classic, and share it as a link.",
+      },
+      {
         path: "/wow-forever/gear",
         title: "Best gear",
         iconName: "Trophy",

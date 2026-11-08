@@ -19,10 +19,13 @@ class IconIds:
 
     items: set[int] = field(default_factory=set)
     spells: set[int] = field(default_factory=set)
+    # Icon files a page names directly (the talent calculator's talents and trees).
+    files: set[int] = field(default_factory=set)
 
     def update(self, other: "IconIds") -> None:
         self.items |= other.items
         self.spells |= other.spells
+        self.files |= other.files
 
 
 def _reagent_ids(reagents: Iterable[Mapping[str, Any]]) -> set[int]:
@@ -116,8 +119,20 @@ def appearance_icon_map(
     return out
 
 
+def talent_file_ids(talent_files: Iterable[Mapping[str, Any]]) -> set[int]:
+    """The icon files a generated ``talents/<class>.json`` names: each tree's and each talent's."""
+    files: set[int] = set()
+    for doc in talent_files:
+        for tree in doc["trees"]:
+            files.add(int(tree["icon"]))
+            files |= {int(t["icon"]) for t in tree["talents"]}
+    files.discard(0)
+    return files
+
+
 def icon_file_ids(icon_map: Mapping[str, Any]) -> list[int]:
     """Every distinct icon file the map uses — what the publish step uploads."""
     files = {fdid for fdid, _quality in icon_map["items"].values()}
     files |= set(icon_map["spells"].values())
+    files |= set(icon_map.get("files", []))
     return sorted(files)

@@ -19,6 +19,7 @@ const WowMacrosPage = lazy(() => import("@/games/wow-forever/pages/WowMacrosPage
 const WowGearPage = lazy(() => import("@/games/wow-forever/pages/WowGearPage"));
 const WowDungeonsPage = lazy(() => import("@/games/wow-forever/pages/WowDungeonsPage"));
 const WowDungeonPage = lazy(() => import("@/games/wow-forever/pages/WowDungeonPage"));
+const WowTalentsPage = lazy(() => import("@/games/wow-forever/pages/WowTalentsPage"));
 const WowItemPage = lazy(() => import("@/games/wow-forever/pages/WowItemPage"));
 const WowRaidPage = lazy(() => import("@/games/wow-forever/pages/WowRaidPage"));
 const WowRaidPlannerPage = lazy(() => import("@/games/wow-forever/pages/WowRaidPlannerPage"));
@@ -73,6 +74,8 @@ export const wowForeverRoutes: RouteObject[] = [
   { path: "/wow-forever/gold", element: withSuggestFooter(<WowGoldPage />, "gold_economy") },
   { path: "/wow-forever/auction-house", element: withSuggestFooter(<WowAuctionHousePage />, "gold_economy") },
   { path: "/wow-forever/macros", element: withSuggestFooter(<WowMacrosPage />, "class_guides") },
+  { path: "/wow-forever/talents", element: withSuggestFooter(<WowTalentsPage />, "class_guides") },
+  { path: "/wow-forever/talents/:class", element: withSuggestFooter(<WowTalentsPage />, "class_guides") },
   // The old Warlock-only page: same macros, now the Warlock filter of the Macros page.
   { path: "/wow-forever/warlock-macros", element: <Navigate to="/wow-forever/macros?class=warlock" replace /> },
   { path: "/wow-forever/gear", element: withSuggestFooter(<WowGearPage />, "gear_upgrades") },

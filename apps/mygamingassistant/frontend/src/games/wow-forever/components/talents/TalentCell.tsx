@@ -1,0 +1,141 @@
+import clsx from "clsx";
+import { useRef, type FocusEvent, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
+import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
+import TalentTooltip from "@/games/wow-forever/components/talents/TalentTooltip";
+import { TALENT_CELL_RING, TALENT_RANK_TEXT } from "@/games/wow-forever/data/talents/talentCellStyles";
+import { TALENT_CELL_PX } from "@/games/wow-forever/data/talents/talentGridLayout";
+import { useHoverTooltip } from "@/games/wow-forever/hooks/useHoverTooltip";
+import { useLongPress } from "@/games/wow-forever/hooks/useLongPress";
+import { fileIcon } from "@/games/wow-forever/lib/icons/wowIcons";
+import type { Talent } from "@/games/wow-forever/types/talents/talent";
+import type { TalentCellState } from "@/games/wow-forever/types/talents/talentCellState";
+
+interface TalentCellProps {
+  talent: Talent;
+  rank: number;
+  state: TalentCellState;
+  /** Why a point can't go in right now (shown in the tooltip), or null. */
+  blocked: string | null;
+  left: number;
+  top: number;
+  /** Roving tabindex: only the tree's current cell is in the Tab order. */
+  tabbable: boolean;
+  selected: boolean;
+  buttonRef: (node: HTMLButtonElement | null) => void;
+  onAdd: () => void;
+  onRemove: () => void;
+  onFocusCell: () => void;
+  onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
+}
+
+/**
+ * One talent in the grid: its icon ringed by state and a rank counter. Click /
+ * tap adds a point; right-click or a long press removes one. Hover or
+ * keyboard focus shows the tooltip.
+ */
+export default function TalentCell({
+  talent,
+  rank,
+  state,
+  blocked,
+  left,
+  top,
+  tabbable,
+  selected,
+  buttonRef,
+  onAdd,
+  onRemove,
+  onFocusCell,
+  onKeyDown,
+}: TalentCellProps) {
+  const tooltip = useHoverTooltip();
+  const { pressProps, consumeLongPress } = useLongPress(onRemove);
+  const pointerType = useRef("");
+  const max = talent.ranks.length;
+
+  function onPointerDown(event: PointerEvent<HTMLButtonElement>) {
+    pointerType.current = event.pointerType;
+    pressProps.onPointerDown(event);
+  }
+
+  function onClick() {
+    pointerType.current = "";
+    if (consumeLongPress()) return;
+    onAdd();
+  }
+
+  function onContextMenu(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    // A finger's long press fires this too; useLongPress already took the point out.
+    if (pointerType.current === "touch" || pointerType.current === "pen") return;
+    onRemove();
+  }
+
+  function onFocus(event: FocusEvent<HTMLButtonElement>) {
+    tooltip.triggerProps.onFocus(event);
+    onFocusCell();
+  }
+
+  function setRefs(node: HTMLButtonElement | null) {
+    buttonRef(node);
+    tooltip.setReference(node);
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        ref={setRefs}
+        tabIndex={tabbable ? 0 : -1}
+        aria-label={`${talent.name}, rank ${rank} of ${max}`}
+        aria-describedby={tooltip.triggerProps["aria-describedby"]}
+        aria-pressed={selected}
+        data-testid="talent-cell"
+        data-talent-id={talent.id}
+        data-rank={rank}
+        data-state={state}
+        onPointerEnter={tooltip.triggerProps.onPointerEnter}
+        onPointerLeave={tooltip.triggerProps.onPointerLeave}
+        onBlur={tooltip.triggerProps.onBlur}
+        onFocus={onFocus}
+        onPointerDown={onPointerDown}
+        onPointerMove={pressProps.onPointerMove}
+        onPointerUp={pressProps.onPointerUp}
+        onPointerCancel={pressProps.onPointerCancel}
+        onClick={onClick}
+        onContextMenu={onContextMenu}
+        onKeyDown={onKeyDown}
+        style={{ left, top, width: TALENT_CELL_PX, height: TALENT_CELL_PX }}
+        className={clsx(
+          "absolute select-none touch-manipulation rounded-md border-2 bg-card [-webkit-touch-callout:none]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          TALENT_CELL_RING[state],
+          selected && "ring-2 ring-primary ring-offset-1",
+        )}
+      >
+        <GameIcon icon={fileIcon(talent.icon)} size={48} alt="" className="pointer-events-none" />
+        <span
+          aria-hidden
+          className={clsx(
+            "absolute -bottom-2 -right-2 rounded border bg-card px-1 text-[11px] font-semibold leading-4 tabular-nums",
+            TALENT_RANK_TEXT[state],
+          )}
+        >
+          {rank}/{max}
+        </span>
+      </button>
+      {tooltip.open ? (
+        <TalentTooltip
+          id={tooltip.tooltipId}
+          talent={talent}
+          rank={rank}
+          blocked={blocked}
+          setFloating={tooltip.setFloating}
+          floatingStyles={tooltip.floatingStyles}
+          isPositioned={tooltip.isPositioned}
+          placement={tooltip.placement}
+        />
+      ) : null}
+    </>
+  );
+}

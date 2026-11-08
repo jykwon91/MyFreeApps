@@ -26,6 +26,12 @@ export function spellIcon(spellId: number, icons: WowIconFile = WOW_ICONS): WowI
   return { fileDataId, quality: null };
 }
 
+/** An icon named by its file id (talents and talent trees); 0 = none, so the placeholder shows. */
+export function fileIcon(fileDataId: number): WowIcon | null {
+  if (fileDataId <= 0) return null;
+  return { fileDataId, quality: null };
+}
+
 /** What a recipe row shows: the item it makes, else (an enchant) its spell. */
 export function recipeIcon(recipe: Pick<CraftRecipe, "spell" | "creates">, icons: WowIconFile = WOW_ICONS): WowIcon | null {
   if (recipe.creates) return itemIcon(recipe.creates.id, icons);
