@@ -10,6 +10,6 @@ export const ASK_SITE_PAGES: readonly AskSitePage[] = [
   { title: "Making gold", path: ASK_GUIDE_PATH.gold, mentions: ["making gold"] },
   { title: "Macros", path: ASK_GUIDE_PATH.macros, mentions: ["macros"] },
   { title: "Talents", path: "/wow-forever/talents", mentions: ["talents"] },
-  { title: "Auction house prices", path: "/wow-forever/auction-house", mentions: ["auction house"] },
+  { title: "Auction house prices", path: ASK_GUIDE_PATH.auctionHouse, mentions: ["auction house"] },
   { title: "Best gear", path: "/wow-forever/gear", mentions: ["best gear"] },
 ];

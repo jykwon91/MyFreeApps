@@ -9,7 +9,7 @@ export const ASK_COPY = {
   title: "Ask",
   documentTitle: "Ask · WoW Forever",
   subtitle:
-    "Ask anything about WoW: Forever — where things are, rares, professions, gold and macros. Answers come from this site's own data.",
+    "Ask anything about WoW: Forever — where things are, rares, professions, gold, macros, auction prices and server status. Answers come from this site's own data.",
   hubLabel: "Ask about WoW: Forever",
   hubPlaceholder: "Where's the closest warlock trainer?",
   hubSubmit: "Ask",
@@ -96,6 +96,15 @@ export const ASK_COPY = {
   learn: (where: string): string => `Learn: ${where}`,
   macrosMore: (total: number, shown: number): string => `${total - shown} more on the Macros page.`,
   openMacros: "Open Macros",
+  pricesHeading: (region: string): string => `Auction prices · ${region}`,
+  soldPerDay: (sold: string): string => `${sold} sold a day`,
+  pricesOld: "These prices are more than 12 hours old — they may have changed.",
+  pricesFailed: "Couldn't load the auction prices. Ask again in a moment.",
+  openAuctionHouse: "Open the Auction house",
+  serverStatusHeading: (region: string): string => `Server status · ${region}`,
+  serverStatusNone: (region: string): string => `Blizzard's status page listed no WoW: Forever servers for ${region}.`,
+  checked: (when: string): string => `Checked ${when}`,
+  openServerStatus: "Open Server status",
 } as const;
 
 /** The step line while a tool runs. */
@@ -109,4 +118,6 @@ export const ASK_STEP: Readonly<Record<AskToolName, (query: string) => string>> 
   [ASK_TOOL.professionGuide]: () => "Looking up the profession route…",
   [ASK_TOOL.goldFarming]: () => "Looking up where to farm gold…",
   [ASK_TOOL.findMacros]: () => "Looking up macros…",
+  [ASK_TOOL.auctionPrices]: (query) => `Checking auction prices for \u201c${query}\u201d…`,
+  [ASK_TOOL.serverStatus]: () => "Checking the server status…",
 };

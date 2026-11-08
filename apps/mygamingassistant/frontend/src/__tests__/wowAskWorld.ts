@@ -30,7 +30,12 @@ export const ASK_WORLD = decodeWorldMap({
 });
 export const ASK_PLACES = buildPlaces(ASK_WORLD);
 
-export function askToolData(player: Partial<PlayerSettings> = {}): AskToolData {
+/** No test fetches live data unless it passes `loadPrices` / `loadServerStatus` itself. */
+function noLiveData(): Promise<never> {
+  return Promise.reject(new Error("no live data in this test"));
+}
+
+export function askToolData(player: Partial<PlayerSettings> = {}, overrides: Partial<AskToolData> = {}): AskToolData {
   return {
     world: ASK_WORLD,
     places: ASK_PLACES,
@@ -40,6 +45,10 @@ export function askToolData(player: Partial<PlayerSettings> = {}): AskToolData {
     loadRares,
     loadGoldFarms,
     loadProfessionRoute,
+    loadPrices: noLiveData,
+    loadServerStatus: noLiveData,
     player: { ...DEFAULT_PLAYER_SETTINGS, ...player },
+    region: "us",
+    ...overrides,
   };
 }

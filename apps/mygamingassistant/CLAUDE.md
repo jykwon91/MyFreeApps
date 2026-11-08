@@ -1044,9 +1044,12 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Claude's next message + a signed ticket. The BROWSER runs the tool calls
   (`search_npcs`, `find_places`, `search_items`, `dungeon_info`,
   `get_player_context`, `find_rares`, `profession_guide`, `gold_farming`,
-  `find_macros`) against its bundled data and sends the results back. Tool
+  `find_macros`) against its bundled data — and `auction_prices` /
+  `server_status` against the site's own `/api/wow/prices` and
+  `/api/wow/server-status` — and sends the results back. Tool
   definitions go out on every turn: `test_wow_chat_schemas.py` caps their size
-  and checks the profession / class / sort enums against `wow_chat_enums.py`.
+  and checks the profession / class / sort / region enums against
+  `wow_chat_enums.py`, `PRICE_REGIONS` and `SERVER_STATUS_REGIONS`.
   Nothing is stored; logs carry codes and counts, never message text.
 - Gating order: `BodySizeCapMiddleware` (413 `chat_body_too_large` > 64 KB,
   before parsing) → availability (503 `chat_unavailable`, same rule as the item
@@ -1080,7 +1083,16 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `professionRouteRows` — crafts and materials from the player's skill),
   `farmsFor` + `tipsForLevel` (gold an hour is VENDOR prices), `searchMacros`
   over `ALL_MACROS` (the card shows the macro text; Claude only gets titles).
-  Rares, gold farms and crafting data load on first use. No level said or
+  Rares, gold farms and crafting data load on first use. The live tools call
+  the pages' own RTK Query endpoints outside React (`lib/ask/askLiveData.ts`,
+  same cache), for the saved region (`useWowRegion`) unless the player named
+  one: `auction_prices` = `mapPriceList` + the Auction house search, exact
+  name first (`askPriceMatches`), the market value only as formatted, how old
+  the prices are and a "more than 12 hours old" note (`pricesAreOld`,
+  `PRICE_STALE_HOURS`); no prices for the region, no match, or a failed load
+  each come back as a note / error telling Claude not to guess.
+  `server_status` lists each ruleset up / down + when it was checked; a
+  failed check (502) is an error saying never to call the servers up or down. No level said or
   saved = a "level not set" result and no card. Input is checked against the schema
   (`validateAskToolInput`); results are capped under the relay's 4 KB. "From"
   comes from the place named in the question, else the saved World Map
@@ -1115,9 +1127,14 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   are you?". Rares and gold farm spots share `AskSpotsPicker` (mini map,
   numbered rows, Route there = `to=pt:<zone>,x,y`, rares also "Show on the
   World Map" = `rareMapHref`); profession steps; macros reuse `MacroCard` (Copy
-  button). Each guide card links to its page (`lib/ask/askGuideLinks.ts`) —
+  button); prices (`PricesCard`: rows + the TSM credit via `PriceCreditLine`,
+  shared with `PriceCredit`; old-price warning; "Couldn't load" with no
+  figures) and server status (`ServerStatusCard`: `SummaryLine` +
+  `ServerRulesetList`, shared with the server status section; Blizzard
+  unreachable is never "down"). Each guide card links to its page (`lib/ask/askGuideLinks.ts`) —
   offered, never followed for you. Every empty-state example is checked against
-  real data in `wowAskTools.test.ts` / `wowAskGuideTools.test.ts`. Tests:
+  real data in `wowAskTools.test.ts` / `wowAskGuideTools.test.ts` (no live-data
+  examples: they'd depend on today's prices). Live tools: `wowAskLiveTools.test.tsx`. Tests:
   `src/__tests__/wowAsk*.test.ts(x)`,
   `e2e/wow-forever-ask.spec.ts` (relay mocked).
 

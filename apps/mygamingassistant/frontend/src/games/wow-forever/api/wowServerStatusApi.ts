@@ -14,7 +14,7 @@ const SERVER_STATUS_HISTORY_POLLING = {
   skipPollingIfUnfocused: true,
 } as const;
 
-const wowServerStatusApi = baseApi.injectEndpoints({
+export const wowServerStatusApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getServerStatus: build.query<ServerStatusResponse, string>({
       query: (region) => ({ url: `/wow/server-status?region=${region}`, method: "GET" }),

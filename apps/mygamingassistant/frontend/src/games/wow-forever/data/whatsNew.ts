@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-08",
+    title: "Ask about auction prices and server status",
+    summary:
+      "Ask “how much is Linen Cloth selling for?” or “are the servers up?” and the chat shows the auction-house price (from TradeSkillMaster, with when it was updated) or each server's status, and says so plainly when prices are old or missing or the status couldn't be checked.",
+    to: "/wow-forever/ask",
+  },
+  {
+    date: "2026-11-08",
     title: "Ask about rares, professions, gold and macros",
     summary:
       "Ask now answers “any rares worth killing at level 30?”, “how do I level Tailoring from 150?”, “where can I farm gold at 40?” and “best warlock macros” in the chat, with a map and a route there for rares and farm spots, the macro text to copy, and a link to the full page when you want more.",

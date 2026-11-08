@@ -78,6 +78,22 @@ describe("Auction house page", () => {
     expect(rows()).toHaveLength(1);
   });
 
+  it("a ?region= link picks that region, keeps the search and drops the region from the URL", () => {
+    usePricesQuery.mockReturnValue(pricesReady(response("eu", US_ITEMS)));
+    renderPage("/wow-forever/auction-house?q=wool&region=eu");
+    expect(window.localStorage.getItem(REGION_STORAGE_KEY)).toContain("eu");
+    expect(usePricesQuery).toHaveBeenLastCalledWith("eu");
+    expect(screen.getByTestId("search")).toHaveTextContent("?q=wool");
+    expect(screen.getByTestId("search")).not.toHaveTextContent("region");
+  });
+
+  it("ignores an unknown ?region= value", () => {
+    usePricesQuery.mockReturnValue(pricesReady(response("us", US_ITEMS)));
+    renderPage("/wow-forever/auction-house?q=wool&region=mars");
+    expect(window.localStorage.getItem(REGION_STORAGE_KEY)).toBeNull();
+    expect(screen.getByTestId("search")).toHaveTextContent("?q=wool");
+  });
+
   it("has its own empty state for a search with no match", () => {
     usePricesQuery.mockReturnValue(pricesReady(response("us", US_ITEMS)));
     renderPage("/wow-forever/auction-house?q=zzz");

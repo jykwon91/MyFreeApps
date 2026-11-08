@@ -27,6 +27,8 @@ TOOL_FIND_RARES = "find_rares"
 TOOL_PROFESSION_GUIDE = "profession_guide"
 TOOL_GOLD_FARMING = "gold_farming"
 TOOL_FIND_MACROS = "find_macros"
+TOOL_AUCTION_PRICES = "auction_prices"
+TOOL_SERVER_STATUS = "server_status"
 TOOL_NAMES: tuple[str, ...] = (
     TOOL_SEARCH_NPCS,
     TOOL_FIND_PLACES,
@@ -37,6 +39,8 @@ TOOL_NAMES: tuple[str, ...] = (
     TOOL_PROFESSION_GUIDE,
     TOOL_GOLD_FARMING,
     TOOL_FIND_MACROS,
+    TOOL_AUCTION_PRICES,
+    TOOL_SERVER_STATUS,
 )
 
 # --- search_npcs faction filter ----------------------------------------------------
