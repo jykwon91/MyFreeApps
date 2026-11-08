@@ -631,9 +631,10 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - Login errors are hand-written in `data/serverStatus/loginErrors.ts` — our
   own words, never copied from Blizzard / Wowhead / other sites. Search is
   `searchLoginErrors` (words in any order, or the code's digits); each card
-  is `#err-<id>` (ids are links — never change one). Tagged Classic data
-  (`PROVENANCE_DETAIL.loginHelp`); "Official" only with a linked Blizzard
-  article for that error. Tests: `tests/test_wow_server_status_history.py`,
+  is `#err-<id>` (ids are links — never change one). Tagged Unconfirmed
+  (`PROVENANCE_DETAIL.loginHelp`: our own advice from common player reports,
+  not from Blizzard); "Official" only with a linked Blizzard article for
+  that error. Tests: `tests/test_wow_server_status_history.py`,
   `src/__tests__/wowServerStatusHistory.test.ts`,
   `src/__tests__/wowServerStatusPage.test.tsx`,
   `e2e/wow-server-status-history.spec.ts`.

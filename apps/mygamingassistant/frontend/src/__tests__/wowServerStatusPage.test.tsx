@@ -173,9 +173,10 @@ describe("WowServerStatusPage — login errors", () => {
     );
   });
 
-  it("tags every error with a provenance badge", () => {
+  it("tags every error Unconfirmed — our own advice, not from Blizzard", () => {
     renderPage();
-    const cards = within(screen.getByRole("list", { name: "Login errors" })).getAllByTestId("provenance-badge");
-    cards.forEach((badge) => expect(badge).toHaveAttribute("data-provenance", "classic"));
+    const badges = within(screen.getByRole("list", { name: "Login errors" })).getAllByTestId("provenance-badge");
+    expect(badges.length).toBeGreaterThan(5);
+    badges.forEach((badge) => expect(badge).toHaveAttribute("data-provenance", "unconfirmed"));
   });
 });

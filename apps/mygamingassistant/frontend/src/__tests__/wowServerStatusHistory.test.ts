@@ -2,6 +2,7 @@
  * WoW Forever server status history — the pure timeline, uptime, outage, streak and login-error search logic.
  */
 import { describe, expect, it } from "vitest";
+import { PROVENANCE_DETAIL } from "@/games/wow-forever/data/provenance/provenanceLabels";
 import { LOGIN_ERRORS } from "@/games/wow-forever/data/serverStatus/loginErrors";
 import { formatDuration } from "@/games/wow-forever/lib/serverStatus/formatDuration";
 import { formatLocalDateTime } from "@/games/wow-forever/lib/serverStatus/formatLocalTime";
@@ -248,9 +249,10 @@ describe("LOGIN_ERRORS data", () => {
     }
   });
 
-  it("tags every entry, and never as Official (no Blizzard article is linked)", () => {
+  it("tags every entry Unconfirmed with the our-own-advice detail (no Blizzard article is linked)", () => {
     LOGIN_ERRORS.forEach((e) => {
-      expect(e.provenance.provenance).not.toBe("published");
+      expect(e.provenance.provenance).toBe("unconfirmed");
+      expect(e.provenance.detail).toBe(PROVENANCE_DETAIL.loginHelp);
       expect(e.steps.length).toBeGreaterThan(0);
       expect(e.meaning.length).toBeGreaterThan(0);
     });

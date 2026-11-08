@@ -3,7 +3,7 @@ import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
 import type { LoginErrorEntry } from "@/games/wow-forever/types/serverStatus/loginErrorEntry";
 import type { ProvenanceTag } from "@/games/wow-forever/types/provenance/provenanceTag";
 
-const LOGIN_HELP: ProvenanceTag = { provenance: PROVENANCE.classic, detail: PROVENANCE_DETAIL.loginHelp };
+const LOGIN_HELP: ProvenanceTag = { provenance: PROVENANCE.unconfirmed, detail: PROVENANCE_DETAIL.loginHelp };
 
 /**
  * Common login and connection problems, in our own words — never copied from Blizzard, Wowhead or

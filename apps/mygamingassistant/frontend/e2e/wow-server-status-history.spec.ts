@@ -160,7 +160,7 @@ test("searches login errors by code and words", async ({ page }) => {
   await search.fill("51900319");
   await expect(cards).toHaveCount(1);
   await expect(cards.first()).toContainText("WOW51900319");
-  await expect(cards.first().getByTestId("provenance-badge")).toBeVisible();
+  await expect(cards.first().getByTestId("provenance-badge")).toHaveAttribute("data-provenance", "unconfirmed");
 
   await search.fill("stuck transferring");
   await expect(cards).toHaveCount(1);
