@@ -16,8 +16,8 @@ import type { AskFailure } from "@/games/wow-forever/types/ask/askFailure";
 import type { AskPhase } from "@/games/wow-forever/types/ask/askPhase";
 import type { AskStoredChat } from "@/games/wow-forever/types/ask/askStoredChat";
 import type { AskToolData } from "@/games/wow-forever/types/ask/askToolData";
+import type { AskTurnResult } from "@/games/wow-forever/types/ask/askTurnResult";
 import type { AskTurnstileState } from "@/games/wow-forever/types/ask/askTurnstileState";
-import type { ChatMessage } from "@/games/wow-forever/types/ask/chatMessage";
 
 /**
  * The chat: asks a question through the turn loop, tracks what's happening
@@ -77,12 +77,13 @@ export function useAskChat(data: AskToolData | null, turnstile: AskTurnstileStat
       setSteps([]);
       setBusySince(Date.now());
       setPhase(ASK_PHASE.checking);
-      setChat({ messages: [...before.messages], cards });
+      setChat({ ...before, messages: [...before.messages], cards });
 
-      const run = async (): Promise<ChatMessage[]> => {
+      const run = async (): Promise<AskTurnResult> => {
         const token = await takeToken(controller.signal);
         return runAskTurn(
           before.messages,
+          before.ticket,
           question,
           {
             send: (body, isNewMessage) => {
@@ -92,7 +93,7 @@ export function useAskChat(data: AskToolData | null, turnstile: AskTurnstileStat
             runTool: (call) => runAskTool(call, tools),
           },
           {
-            onMessages: (messages) => setChat({ messages, cards: { ...cards } }),
+            onMessages: (messages) => setChat({ messages, cards: { ...cards }, ticket: before.ticket }),
             onCard: (id, card) => {
               cards[id] = card;
             },
@@ -105,9 +106,9 @@ export function useAskChat(data: AskToolData | null, turnstile: AskTurnstileStat
       };
 
       run()
-        .then((messages) => {
+        .then(({ messages, ticket }) => {
           if (controllerRef.current !== controller) return;
-          setChat({ messages, cards: { ...cards } });
+          setChat({ messages, cards: { ...cards }, ticket });
           finish();
         })
         .catch((err: unknown) => {
@@ -142,8 +143,9 @@ export function useAskChat(data: AskToolData | null, turnstile: AskTurnstileStat
     controllerRef.current = null;
     running?.abort();
     finish();
-    const kept = completeTurnsOnly(chatRef.current.messages);
-    setUndoChat(kept.length ? { messages: kept, cards: chatRef.current.cards } : null);
+    const current = chatRef.current;
+    const kept = completeTurnsOnly(current.messages);
+    setUndoChat(kept.length ? { messages: kept, cards: current.cards, ticket: current.ticket } : null);
     setChat(EMPTY_CHAT);
     setFailure(null);
     setFailedQuestion(null);
