@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
 import { TENANCY_END_REASON_MAX_LENGTH } from "@mybookkeeper/api-client/constants/tenancy";
 import { useEndTenancyMutation } from "@mybookkeeper/api-client/store/applicantsApi";
+import { hasHttpStatus } from "@/shared/utils/http-status";
 
 export interface EndTenancyDialogProps {
   applicantId: string;
@@ -27,7 +28,7 @@ export default function EndTenancyDialog({ applicantId, tenantName, onClose }: E
       showSuccess(`Tenancy ended for ${tenantName}.`);
       onClose();
     } catch (error) {
-      if ((error as { status?: number }).status === 409) {
+      if (hasHttpStatus(error, 409)) {
         showError("That tenancy changed since you opened it.");
         onClose();
         return;
