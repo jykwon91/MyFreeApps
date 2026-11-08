@@ -1,3 +1,4 @@
+import { PROMOTE_ADMIN_MESSAGES } from "@mybookkeeper/api-client/constants/promoteAdminMessages";
 import { INVITE_EMAIL_MESSAGES } from "@mybookkeeper/api-client/constants/inviteMessages";
 import type { AssignableRole } from "@mybookkeeper/api-client/types/organization/AssignableRole";
 
@@ -35,9 +36,9 @@ export const MEMBERS_MESSAGES = {
   close: "Close",
   role: "Role",
   removeFrom: (org: string) => `Remove from ${org}`,
-  promoteTitle: (name: string) => `Make ${name} an admin?`,
-  promoteBody: "They'll be able to invite people, change roles and remove members.",
-  promoteConfirm: "Make admin",
+  promoteTitle: PROMOTE_ADMIN_MESSAGES.title,
+  promoteBody: PROMOTE_ADMIN_MESSAGES.body,
+  promoteConfirm: PROMOTE_ADMIN_MESSAGES.confirm,
   removeTitle: (name: string) => `Remove ${name}?`,
   removeBody: (org: string) =>
     `They'll lose access to ${org} right away: its transactions, documents, leases and everything else in it. Their account stays, and what they added stays in ${org}. If they connected ${org}'s Gmail, it's disconnected too. You can invite them again later.`,

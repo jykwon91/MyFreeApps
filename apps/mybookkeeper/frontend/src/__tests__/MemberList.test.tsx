@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import MemberList from "@/app/features/organizations/MemberList";
 import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
@@ -248,5 +248,76 @@ describe("MemberList", () => {
     expect(screen.getByText("Remove member")).toBeInTheDocument();
     expect(screen.getByText(/Are you sure you want to remove other@test.com/)).toBeInTheDocument();
     expect(screen.getByText(/If they connected this workspace's Gmail, it's disconnected too/)).toBeInTheDocument();
+  });
+
+  describe("promoting to admin", () => {
+    function showMember(overrides: Partial<OrgMember> = {}) {
+      vi.mocked(useListMembersQuery).mockReturnValue({
+        currentData: [makeMember(overrides)],
+        isLoading: false,
+      } as unknown as ReturnType<typeof useListMembersQuery>);
+      render(<MemberList onError={onError} onSuccess={onSuccess} />);
+    }
+
+    it("asks before making someone an admin, then changes the role", async () => {
+      const user = userEvent.setup();
+      showMember();
+
+      await user.selectOptions(screen.getByRole("combobox", { name: "Role for Other User" }), "admin");
+      expect(mockUpdateRole).not.toHaveBeenCalled();
+      const dialog = screen.getByRole("dialog");
+      expect(within(dialog).getByText("Make Other User an admin?")).toBeInTheDocument();
+      expect(within(dialog).getByText(/invite people, change roles and remove members/)).toBeInTheDocument();
+      await user.click(within(dialog).getByRole("button", { name: "Make admin" }));
+
+      expect(mockUpdateRole).toHaveBeenCalledWith({ orgId: "org-1", userId: "user-2", orgRole: "admin" });
+      expect(onSuccess).toHaveBeenCalledWith("Updated other@test.com to admin");
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    });
+
+    it("leaves the role alone when the host cancels", async () => {
+      const user = userEvent.setup();
+      showMember();
+      const select = screen.getByRole("combobox", { name: "Role for Other User" });
+
+      await user.selectOptions(select, "admin");
+      await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: /cancel/i }));
+
+      expect(mockUpdateRole).not.toHaveBeenCalled();
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+      expect(select).toHaveValue("user");
+    });
+
+    it("changes other roles straight away", async () => {
+      const user = userEvent.setup();
+      showMember();
+
+      await user.selectOptions(screen.getByRole("combobox", { name: "Role for Other User" }), "viewer");
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(mockUpdateRole).toHaveBeenCalledWith({ orgId: "org-1", userId: "user-2", orgRole: "viewer" });
+    });
+
+    it("doesn't ask when an admin is moved down", async () => {
+      const user = userEvent.setup();
+      showMember({ org_role: "admin" });
+
+      await user.selectOptions(screen.getByRole("combobox", { name: "Role for Other User" }), "user");
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(mockUpdateRole).toHaveBeenCalledWith(expect.objectContaining({ orgRole: "user" }));
+    });
+
+    it("closes the question and explains when the promotion fails", async () => {
+      const user = userEvent.setup();
+      mockUpdateRole.mockReturnValueOnce({ unwrap: () => Promise.reject({ status: 403, data: { detail: "Only the owner can do that" } }) });
+      showMember();
+
+      await user.selectOptions(screen.getByRole("combobox", { name: "Role for Other User" }), "admin");
+      await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Make admin" }));
+
+      expect(onError).toHaveBeenCalledWith("Only the owner can do that");
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    });
   });
 });
