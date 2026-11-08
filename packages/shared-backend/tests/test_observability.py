@@ -38,6 +38,7 @@ class TestSentryInit:
         assert call_kwargs["dsn"] == "https://abc@o123.ingest.sentry.io/456"
         assert call_kwargs["environment"] == "production"
         assert call_kwargs["send_default_pii"] is False
+        assert call_kwargs["max_request_body_size"] == "never"
         assert call_kwargs["traces_sample_rate"] == 0.1
         assert len(call_kwargs["integrations"]) == 1
 
