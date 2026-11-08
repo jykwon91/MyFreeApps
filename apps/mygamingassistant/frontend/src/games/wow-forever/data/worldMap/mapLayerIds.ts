@@ -32,6 +32,7 @@ export const MAP_LAYER = {
   dungeons: "dungeons",
   herbs: "herbs",
   ore: "ore",
+  rares: "rares",
 } as const;
 
 export type MapLayerId = (typeof MAP_LAYER)[keyof typeof MAP_LAYER];

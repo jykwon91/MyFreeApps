@@ -1,8 +1,9 @@
 /**
  * The World Map's switchable layers — only kinds we have data for:
  * service NPCs, quest givers and dungeon entrances (`classic*.json`),
- * boat / zeppelin / tram stops (`travel.json`) and herb / ore sample spots
- * (the crafting `sources.json` `objectSpots`, loaded only when wanted).
+ * boat / zeppelin / tram stops (`travel.json`), herb / ore sample spots
+ * (the crafting `sources.json` `objectSpots`) and rare spawns (`rares/`) —
+ * the last two loaded only when wanted.
  */
 import { MAP_LAYER, type MapLayerId } from "@/games/wow-forever/data/worldMap/mapLayerIds";
 import { PROFESSION_LABEL, SERVICE_KIND, SERVICE_MARKER_CLASS, type ServiceKind } from "@/games/wow-forever/data/worldMap/serviceKinds";
@@ -10,6 +11,7 @@ import { GATHER_SKILL } from "@/games/wow-forever/types/recipeSources";
 import type { MapLayerChoice } from "@/games/wow-forever/types/mapLayers/mapLayerChoice";
 import type { MapLayerDef } from "@/games/wow-forever/types/mapLayers/mapLayerDef";
 import type { MapLayerGroup } from "@/games/wow-forever/types/mapLayers/mapLayerGroup";
+import type { LazyLayerSource } from "@/games/wow-forever/types/mapLayers/lazyLayerSource";
 
 export const MAP_LAYERS_STORAGE_KEY = "mga.wowForever.worldMap.layers.v1";
 
@@ -19,6 +21,10 @@ export const RAID_MARKER_CLASS = "fill-red-950";
 export const TRANSPORT_MARKER_CLASS = "fill-indigo-400";
 export const HERB_MARKER_CLASS = "fill-green-300";
 export const ORE_MARKER_CLASS = "fill-yellow-700";
+export const RARE_MARKER_CLASS = "fill-pink-500";
+
+/** Layer sources whose data loads only when wanted. */
+export const LAZY_LAYER_SOURCES: ReadonlySet<LazyLayerSource> = new Set<LazyLayerSource>(["gathering", "rares"]);
 
 function service(id: MapLayerId, label: string, subkind: ServiceKind): MapLayerDef {
   return { id, label, source: { kind: "service", subkind }, markerClass: SERVICE_MARKER_CLASS[subkind] };
@@ -88,6 +94,13 @@ export const MAP_LAYER_DEFS: readonly MapLayerDef[] = [
     markerClass: ORE_MARKER_CLASS,
     note: SAMPLE_NOTE,
   },
+  {
+    id: MAP_LAYER.rares,
+    label: "Rares",
+    source: { kind: "rares" },
+    markerClass: RARE_MARKER_CLASS,
+    note: "Only rares the Forever game files have shown so far.",
+  },
 ];
 
 export const MAP_LAYER_DEF_BY_ID: ReadonlyMap<MapLayerId, MapLayerDef> = new Map(MAP_LAYER_DEFS.map((d) => [d.id, d]));
@@ -132,6 +145,7 @@ export const MAP_LAYER_GROUPS: readonly MapLayerGroup[] = [
   },
   { id: "quests", label: "Quests & dungeons", layers: [MAP_LAYER.questGivers, MAP_LAYER.dungeons], openByDefault: true },
   { id: "gathering", label: "Gathering", layers: [MAP_LAYER.herbs, MAP_LAYER.ore], openByDefault: false },
+  { id: "rares", label: "Rares", layers: [MAP_LAYER.rares], openByDefault: true },
 ];
 
 const ON_BY_DEFAULT: ReadonlySet<MapLayerId> = new Set([

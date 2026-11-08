@@ -68,14 +68,33 @@ def boss_loot(
         return None
     best: dict[int, float] = {}
     for template in templates:
-        loot_id = as_int(template.get("LootId"))
-        if loot_id <= 0:
-            continue
-        for item, chance in table_chances(creature_loot.get(loot_id, []), references, pools).items():
-            percent = round(chance * 100.0, 1)
-            if item in forever_items and percent >= MIN_BOSS_CHANCE:
-                best[item] = max(percent, best.get(item, 0.0))
-    return [[item, percent] for item, percent in sorted(best.items(), key=lambda kv: (-kv[1], kv[0]))]
+        for item, percent in creature_drops(template, creature_loot, references, pools, forever_items).items():
+            best[item] = max(percent, best.get(item, 0.0))
+    return drop_rows(best)
+
+
+def creature_drops(
+    template: Row,
+    creature_loot: Mapping[int, list[Row]],
+    references: Mapping[int, list[Row]],
+    pools: set[int],
+    forever_items: set[int],
+) -> dict[int, float]:
+    """Item -> percent per kill for one creature: Forever items only, MIN_BOSS_CHANCE and up."""
+    loot_id = as_int(template.get("LootId"))
+    if loot_id <= 0:
+        return {}
+    out: dict[int, float] = {}
+    for item, chance in table_chances(creature_loot.get(loot_id, []), references, pools).items():
+        percent = round(chance * 100.0, 1)
+        if item in forever_items and percent >= MIN_BOSS_CHANCE:
+            out[item] = percent
+    return out
+
+
+def drop_rows(drops: Mapping[int, float]) -> list[list[Any]]:
+    """[[item, percent], ...] most likely first, ties by item id."""
+    return [[item, percent] for item, percent in sorted(drops.items(), key=lambda kv: (-kv[1], kv[0]))]
 
 
 def dungeon_loot(

@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/talents`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`)
+### WoW Forever (`/wow-forever`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/rares`, `/wow-forever/talents`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -517,6 +517,46 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `tests/test_wow_dungeon_quests_generator.py`,
   `src/__tests__/wowDungeonQuests.test.tsx`,
   `e2e/wow-forever-dungeon-quests.spec.ts`.
+
+#### Rares (`/wow-forever/rares`)
+
+- `pages/WowRaresPage.tsx`: rare and rare elite creatures, lowest level first
+  (rares new in Forever last). Each card (`components/rares/RareRow`): name,
+  classification chip (Game files), level (Classic data), where it spawns +
+  "Show on map", a `/target <Name>` line with Copy, its own drops
+  (`BossLootRow` → `ItemNameLink`) and a "Seen / killed" tick
+  (`mga.wowForever.rares.checklist.v1`, `useChecklist`, "Clear seen / killed").
+- Filters live in the URL (`?zone&min&max&fit=1`, replace history,
+  `hooks/useRareFilters.ts`, pure `lib/rares/rareFilterParams.ts` +
+  `filterRares.ts`). "Fits my level" = 3 below to 2 above the World Map's
+  saved level (`mga.wowForever.worldMap.player.v1`, edited here too); level
+  filters drop rares with no level. "Copy macro" packs the filtered names into
+  `/target` macros of at most 255 characters each (`lib/rares/targetMacros.ts`,
+  a line break counts as one; shows "N / 255 characters" per macro).
+- "Show on map" = the World Map's own `#view=` share link
+  (`lib/rares/rareMapHref.ts`): the zone with most of its spots, fitted to
+  them, a read-only ★ mark per spot, the Rares layer previewed on.
+- **World Map "Rares" layer** (`MAP_LAYER.rares`, share code `ra`, off by
+  default): every spawn of every rare for both factions, marker id
+  `rare:<id>:<i>`. Rares load lazily (`lib/rares/loadRares.ts`, `useRares`)
+  like the gathering spots; `layerCounts` takes the loaded lazy sources
+  (`LazyLayerSource`) and shows "loading" / "didn't load" until then. Picking
+  a rare pin shows `RareMapCard` under the map (drops with item tooltips).
+- **Data is GENERATED** — `python -m scripts.wow_rares.build --creature-cache
+  <creaturecache.wdb>` (from `backend/`, in `wow_refresh` after the changes
+  build; `--creature-cache` / `WOW_FOREVER_CREATURE_CACHE`, stops when missing;
+  never commit the raw cache). Which creatures are rares and their names come
+  from the operator's Forever `Cache/WDB/enUS/creaturecache.wdb`
+  (`wow_rares/creature_cache.py`; classification 2 = rare elite, 4 = rare) —
+  only rares the client has met are listed, so the list grows with each
+  refresh. Levels, spawns (continents only, event-only spawns dropped, spots
+  within a few yards merged) and drops come from cmangos
+  (`data/rares/classic/rareSpawns.json`, GPL — keep LICENSE + README). Drops
+  are the creature's own loot (`boss_loot.creature_drops`) at ≥ 2%
+  (`NOTABLE_DROP_CHANCE`; shared-table greens drop out) and only items in
+  `items.json`; their ids are in `wanted_ids()` for icons.
+  Tests: `tests/test_wow_rares_generator.py`, `src/__tests__/wowRares.test.ts`,
+  `e2e/wow-forever-rares.spec.ts`.
 
 #### Talent calculator (`/wow-forever/talents`, `/wow-forever/talents/:class`)
 
@@ -994,7 +1034,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`travel.json`), and herb / ore sample spots (one per node type per zone,
   from the crafting `classic/sources.json` `objectSpots`, lazy-loaded the
   first time the panel opens or a gathering layer is on —
-  `worldMap/loadGatheringMapSpots.ts`). Never add a layer without data.
+  `worldMap/loadGatheringMapSpots.ts`), and rares (every Classic spawn of the rares in
+  `data/rares/`, lazy-loaded the same way — see Rares). Never add a layer without data.
   Counts are per viewed map (`worldMap/layerMarkers.ts`: `markersByLayer`,
   `layerCounts`; your faction + neutral only, dungeons for all); a zero
   count greys the toggle but keeps its choice. Layer markers show on every

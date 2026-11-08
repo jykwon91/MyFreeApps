@@ -1,0 +1,16 @@
+{"source":{"repo":"cmangos/classic-db","commit":"ec4f596146be6467ea93c57397858e329e2db852","license":"GPL-3.0-or-later"},
+"spawnColumns":["zone","subzone","x","y"],
+"dropColumns":["item","chance"],
+"rares":{
+"99":{"minLevel":10,"maxLevel":10,"spawns":[[1429,"Forest's Edge",30.8,64.7]],"drops":[[6201,80.0],[1917,20.0]]},
+"584":{"minLevel":27,"maxLevel":27,"spawns":[[1433,"Render's Camp",29.8,8.3],[1433,"Render's Camp",31.8,12.0]],"drops":[[3231,75.0],[2058,25.0]]},
+"616":{"minLevel":23,"maxLevel":23,"spawns":[[1433,"Alther's Mill",47.0,45.2],[1433,"Alther's Mill",47.0,32.6],[1433,"Alther's Mill",45.5,34.6],[1433,"Alther's Mill",46.3,38.7],[1433,"Alther's Mill",47.4,36.1],[1433,"Alther's Mill",50.1,37.7],[1433,"Alther's Mill",49.7,41.8],[1433,"Alther's Mill",53.2,48.3],[1433,"Alther's Mill",51.4,47.1],[1433,"Alther's Mill",48.3,49.1],[1433,"Alther's Mill",43.1,41.1]],"drops":[[3229,25.0]]},
+"1398":{"minLevel":22,"maxLevel":22,"spawns":[[1432,"Ironband's Excavation Site",68.1,65.9]],"drops":[[1215,60.0],[1938,40.0]]},
+"5797":{"minLevel":25,"maxLevel":25,"spawns":[[1413,"Bael Modan",48.5,79.7]],"drops":[]},
+"5798":{"minLevel":25,"maxLevel":25,"spawns":[[1413,"Bael Modan",48.5,79.7]],"drops":[]},
+"5799":{"minLevel":24,"maxLevel":24,"spawns":[[1413,"Bael Modan",48.5,79.7]],"drops":[]},
+"5800":{"minLevel":24,"maxLevel":24,"spawns":[[1413,"Bael Modan",48.5,79.7]],"drops":[]},
+"5928":{"minLevel":27,"maxLevel":27,"spawns":[[1442,"Mirkfallon Lake",49.3,36.2]],"drops":[]},
+"14269":{"minLevel":21,"maxLevel":21,"spawns":[[1433,"Stonewatch",55.0,56.2],[1433,"Stonewatch",57.3,61.2],[1433,"Stonewatch",62.0,71.4]],"drops":[]},
+"14433":{"minLevel":30,"maxLevel":30,"spawns":[[1437,"",12.6,67.5]],"drops":[]}
+}}

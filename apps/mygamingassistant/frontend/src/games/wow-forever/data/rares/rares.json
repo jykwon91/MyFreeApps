@@ -1,0 +1,24 @@
+{"source":"The WoW Forever client's creature cache (Cache/WDB/enUS/creaturecache.wdb) on the operator's machine",
+"clientBuild":70862,
+"seenOn":"2026-11-08",
+"attribution":"Game data from the WoW Forever client. © Blizzard Entertainment.",
+"columns":["id","name","classification"],
+"rares":[[5797,"Aean Swiftriver",2],[1398,"Boss Galgosh",4],[211965,"Carrodin",4],[616,"Chatter",4],[5799,"Hannah Bladeleaf",2],[210107,"Kackle",4],[584,"Kazon",4],[5800,"Marcus Bel",2],[99,"Morgaine the Sly",4],[14269,"Seeker Aqualon",4],[14433,"Sludginn",4],[5928,"Sorrow Wing",2],[5798,"Thora Feathermoon",2]],
+"itemColumns":["name","slot","itemType"],
+"items":{
+"1215":["Support Girdle","waist","Leather"],
+"1917":["Jeweled Dagger","one_hand","Dagger"],
+"1938":["Block Mallet","main_hand","Mace"],
+"2058":["Kazon's Maul","two_hand","Mace"],
+"3229":["Tarantula Silk Sash","waist","Cloth"],
+"3231":["Cutthroat Pauldrons","shoulder","Mail"],
+"6201":["Lithe Boots","feet","Leather"]
+},
+"zones":{
+"1413":"The Barrens",
+"1429":"Elwynn Forest",
+"1432":"Loch Modan",
+"1433":"Redridge Mountains",
+"1437":"Wetlands",
+"1442":"Stonetalon Mountains"
+}}

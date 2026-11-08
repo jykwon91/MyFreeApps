@@ -34,4 +34,5 @@ export const MAP_LAYER_SHARE_CODES: Readonly<Record<MapLayerId, string>> = {
   [MAP_LAYER.dungeons]: "dg",
   [MAP_LAYER.herbs]: "he",
   [MAP_LAYER.ore]: "or",
+  [MAP_LAYER.rares]: "ra",
 };

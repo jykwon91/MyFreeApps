@@ -8,6 +8,7 @@ import type { WowClassId } from "@/games/wow-forever/data/classes";
 import { MAP_LAYER_DEF_BY_ID, MAP_LAYER_GROUPS } from "@/games/wow-forever/data/worldMap/layerCatalog";
 import type { MapLayerId } from "@/games/wow-forever/data/worldMap/mapLayerIds";
 import type { LayerCounts } from "@/games/wow-forever/types/mapLayers/layerCounts";
+import type { LazyLayerSource } from "@/games/wow-forever/types/mapLayers/lazyLayerSource";
 import type { MapLayerSettings } from "@/games/wow-forever/types/mapLayers/mapLayerSettings";
 import type { MapView } from "@/games/wow-forever/types/worldMap";
 import { layerCountText, layerLabel } from "@/games/wow-forever/worldMap/layerMarkers";
@@ -17,9 +18,10 @@ export interface MapLayersPanelProps {
   settings: MapLayerSettings;
   counts: LayerCounts;
   classId: WowClassId;
-  gatheringFailed: boolean;
+  /** Lazy layer files (herbs / ore, rares) that didn't load. */
+  failedSources: ReadonlySet<LazyLayerSource>;
   onSetLayers: (ids: readonly MapLayerId[], on: boolean) => void;
-  onRetryGathering: () => void;
+  onRetryLoad: () => void;
   level: number | null;
   onLevelChange: (level: number | null) => void;
   onLevelFitChange: (on: boolean) => void;
@@ -88,9 +90,9 @@ const MapLayersPanel = forwardRef<HTMLHeadingElement, MapLayersPanelProps>(funct
           choice={settings.layers}
           counts={counts}
           classId={classId}
-          gatheringFailed={props.gatheringFailed}
+          failedSources={props.failedSources}
           onSetLayers={setLayers}
-          onRetryGathering={props.onRetryGathering}
+          onRetryLoad={props.onRetryLoad}
         />
       ))}
       <p role="status" aria-live="polite" className="sr-only">

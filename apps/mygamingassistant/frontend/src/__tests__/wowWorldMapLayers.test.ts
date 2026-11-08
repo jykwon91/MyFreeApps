@@ -10,6 +10,11 @@ import { createSourceLookup, type RawSourcesFile } from "@/games/wow-forever/dat
 import { DEFAULT_MAP_LAYERS, MAP_LAYER_DEFS, MAP_LAYER_GROUPS } from "@/games/wow-forever/data/worldMap/layerCatalog";
 import { MAP_LAYER, MAP_LAYER_IDS } from "@/games/wow-forever/data/worldMap/mapLayerIds";
 import { SERVICE_KIND } from "@/games/wow-forever/data/worldMap/serviceKinds";
+import raresJson from "@/games/wow-forever/data/rares/rares.json";
+import rareSpawnsJson from "@/games/wow-forever/data/rares/classic/rareSpawns.json";
+import { decodeRares } from "@/games/wow-forever/lib/rares/decodeRares";
+import { rareIdOfMarker } from "@/games/wow-forever/lib/rares/rareMarkerId";
+import type { RareDataFiles } from "@/games/wow-forever/types/rares/rareDataFiles";
 import type { LayerContext } from "@/games/wow-forever/types/mapLayers/layerContext";
 import { ZONE_FIT } from "@/games/wow-forever/types/mapLayers/zoneFit";
 import { FACTION } from "@/games/wow-forever/types/worldMap";
@@ -51,7 +56,7 @@ function map(id: number) {
   return found;
 }
 
-const alliance: LayerContext = { faction: FACTION.alliance, classId: "warlock", level: 12, gathering: null };
+const alliance: LayerContext = { faction: FACTION.alliance, classId: "warlock", level: 12, gathering: null, rares: null };
 const horde: LayerContext = { ...alliance, faction: FACTION.horde };
 
 function marker(id: string): MapMarker {
@@ -82,7 +87,7 @@ describe("map layer catalog", () => {
 describe("layer markers and counts", () => {
   it("counts each layer on the viewed map, your faction and neutral only", () => {
     const elwynn = markersByLayer(data, map(ELWYNN), alliance);
-    const counts = layerCounts(elwynn, false);
+    const counts = layerCounts(elwynn, alliance);
     expect(counts[MAP_LAYER.flightMasters]).toBeGreaterThan(0);
     expect(counts[MAP_LAYER.innkeepers]).toBeGreaterThan(0);
     // Every flight master on the Alliance's Elwynn map is Alliance or neutral.
@@ -90,13 +95,13 @@ describe("layer markers and counts", () => {
       const poi = data.poiById.get(m.id);
       expect(poi && poi.faction !== FACTION.horde).toBe(true);
     }
-    const hordeView = layerCounts(markersByLayer(data, map(ELWYNN), horde), false);
+    const hordeView = layerCounts(markersByLayer(data, map(ELWYNN), horde), alliance);
     expect(hordeView[MAP_LAYER.flightMasters]).toBeLessThan(counts[MAP_LAYER.flightMasters]!);
   });
 
   it("a continent counts more than one of its zones", () => {
-    const zone = layerCounts(markersByLayer(data, map(ELWYNN), alliance), false);
-    const continent = layerCounts(markersByLayer(data, map(EASTERN_KINGDOMS), alliance), false);
+    const zone = layerCounts(markersByLayer(data, map(ELWYNN), alliance), alliance);
+    const continent = layerCounts(markersByLayer(data, map(EASTERN_KINGDOMS), alliance), alliance);
     expect(continent[MAP_LAYER.flightMasters]!).toBeGreaterThan(zone[MAP_LAYER.flightMasters]!);
     expect(continent[MAP_LAYER.dungeons]!).toBeGreaterThan(0);
   });
@@ -112,8 +117,8 @@ describe("layer markers and counts", () => {
   });
 
   it("quest givers follow your level (+2 lookahead)", () => {
-    const low = layerCounts(markersByLayer(data, map(ELWYNN), { ...alliance, level: 1 }), false)[MAP_LAYER.questGivers]!;
-    const high = layerCounts(markersByLayer(data, map(ELWYNN), { ...alliance, level: 10 }), false)[MAP_LAYER.questGivers]!;
+    const low = layerCounts(markersByLayer(data, map(ELWYNN), { ...alliance, level: 1 }), alliance)[MAP_LAYER.questGivers]!;
+    const high = layerCounts(markersByLayer(data, map(ELWYNN), { ...alliance, level: 10 }), alliance)[MAP_LAYER.questGivers]!;
     expect(high).toBeGreaterThan(low);
   });
 
@@ -125,15 +130,30 @@ describe("layer markers and counts", () => {
     expect(hordeStops.map((m) => m.id)).not.toEqual(stops.map((m) => m.id));
   });
 
+  it("rare pins are unknown until the rares load, then every spawn shows for both factions", () => {
+    expect(layerCounts(markersByLayer(data, map(ELWYNN), alliance), alliance)[MAP_LAYER.rares]).toBeNull();
+    const { rares } = decodeRares({ forever: raresJson, classic: rareSpawnsJson } as unknown as RareDataFiles);
+    const withRares = { ...alliance, rares };
+    const elwynn = markersByLayer(data, map(ELWYNN), withRares).get(MAP_LAYER.rares) ?? [];
+    const morgaine = elwynn.filter((m) => rareIdOfMarker(m.id) === 99);
+    expect(morgaine.length).toBeGreaterThan(0);
+    expect(morgaine[0].label).toBe("Morgaine the Sly — level 10 rare");
+    expect(layerCounts(markersByLayer(data, map(ELWYNN), withRares), withRares)[MAP_LAYER.rares]).toBe(elwynn.length);
+    const hordeView = markersByLayer(data, map(ELWYNN), { ...horde, rares }).get(MAP_LAYER.rares) ?? [];
+    expect(hordeView.map((m) => m.id)).toEqual(elwynn.map((m) => m.id));
+    // Rares new in Forever have no Classic spawns, so no pins.
+    expect((markersByLayer(data, map(EASTERN_KINGDOMS), withRares).get(MAP_LAYER.rares) ?? []).some((m) => rareIdOfMarker(m.id) === 210107)).toBe(false);
+  });
+
   it("gathering counts are unknown until the file loads, then counted", () => {
-    expect(layerCounts(markersByLayer(data, map(ELWYNN), alliance), false)[MAP_LAYER.herbs]).toBeNull();
+    expect(layerCounts(markersByLayer(data, map(ELWYNN), alliance), alliance)[MAP_LAYER.herbs]).toBeNull();
     const lookup = createSourceLookup(sourcesJson as unknown as RawSourcesFile);
     const spots = gatheringMapSpots((itemId) => lookup.reagent(itemId));
     expect(spots.some((s) => s.skill === "herbalism")).toBe(true);
     expect(spots.some((s) => s.skill === "mining")).toBe(true);
     // One spot per node type per zone.
     expect(new Set(spots.map((s) => s.id)).size).toBe(spots.length);
-    const counts = layerCounts(markersByLayer(data, map(ELWYNN), { ...alliance, gathering: spots }), true);
+    const counts = layerCounts(markersByLayer(data, map(ELWYNN), { ...alliance, gathering: spots }), { ...alliance, gathering: spots });
     expect(counts[MAP_LAYER.herbs]).toBeGreaterThan(0);
     expect(counts[MAP_LAYER.ore]).toBeGreaterThan(0);
   });

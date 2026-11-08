@@ -8,7 +8,8 @@ import type { GatherSkill } from "@/games/wow-forever/types/recipeSources";
  * - `quest_givers`: quest givers with a quest this player could take now;
  * - `instances`: dungeon and raid entrances;
  * - `transport`: boat, zeppelin and tram stops;
- * - `gathering`: one sample herb / ore spot per node type per zone.
+ * - `gathering`: one sample herb / ore spot per node type per zone;
+ * - `rares`: every spawn spot of the rares the Forever client knows.
  */
 export type MapLayerSource =
   | { kind: "service"; subkind: ServiceKind; tag?: string }
@@ -16,4 +17,5 @@ export type MapLayerSource =
   | { kind: "quest_givers" }
   | { kind: "instances" }
   | { kind: "transport" }
-  | { kind: "gathering"; skill: GatherSkill };
+  | { kind: "gathering"; skill: GatherSkill }
+  | { kind: "rares" };
