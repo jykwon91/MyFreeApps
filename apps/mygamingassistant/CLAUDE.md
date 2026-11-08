@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/items`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/rares`, `/wow-forever/races`, `/wow-forever/races/:race`, `/wow-forever/talents`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`, `/wow-forever/ask`)
+### WoW Forever (`/wow-forever`, `/wow-forever/items`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/rares`, `/wow-forever/races`, `/wow-forever/races/:race`, `/wow-forever/talents`, `/wow-forever/spellbook`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`, `/wow-forever/ask`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -740,6 +740,39 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   read from the previous files before they're overwritten). Tests:
   `tests/test_wow_changes_generator.py`, `src/__tests__/wowChanges.test.ts`,
   `e2e/wow-forever-changes.spec.ts`.
+
+#### Spellbook (`/wow-forever/spellbook`, `/wow-forever/spellbook/:class`)
+
+- `pages/WowSpellbookPage.tsx`: the class picker (`components/shared/ClassLinkPicker`,
+  shared with the talent calculator), then every spell the class can train in Forever,
+  grouped by spell tab, lowest learn level first (`components/spellbook/`). Each card:
+  icon, name, tags (Different from Classic / New in Forever, Talent, Passive, race-only),
+  first learn level, its ranks behind "Show all N ranks" (each: level, how it's learned —
+  "Trainer: <cost>", "From a quest", "From a book" with a Classic data badge, or "Talent
+  point" — and its tooltip), then links: the Changes feed (`?cat=spells&class&q`), the
+  talent calculator (`?talent=`) and the downrank calculator (`?spell=`). Each card is
+  `#spell-<id>` (ids are links — never change one); a deep link scrolls to it with its
+  ranks open.
+- Filters live in the URL (`?tab&diff=1&q&lvl`, replace history,
+  `hooks/useSpellbookFilters.ts`, pure `lib/spellbook/spellbookFilterParams.ts` +
+  `filterSpells.ts`): a tab chip counts that tab with the other filters on, the
+  "Only different from Classic" chip counts with the tab on. "Your level" keeps spells
+  with a rank learnable by then; talent spells (no learn level) drop out and the page says so.
+- Talent ranks never carry a level: a talent's spell level isn't when you can take it.
+  A blank tooltip reads "This rank's tooltip has numbers we can't read from the game files
+  yet." — never worked out from its neighbours.
+- **Data is GENERATED** — `python -m scripts.wow_spellbook.build --hotfix-cache
+  <DBCache.bin>` (from `backend/`, in `wow_refresh` after the downrank build) writes
+  `data/spellbook/<class>.json` (Forever: tabs, spells, ranks, levels, icons, text, talent
+  ids, changed marks, downrank families) and `data/spellbook/classic/<class>.json`
+  (cmangos GPL — keep LICENSE + README: `costs`, `quests`, `books`, plus `texts` /
+  `levels` for ranks the client lacks, each shown with a Classic data badge). A spell is
+  in the book when Classic taught it (trainer, quest reward or book) or Forever added it
+  with a level or a talent; SoD copies, hidden and placeholder spells are left out. Each
+  class is its own lazy chunk (`data/spellbook/spellbookFiles.ts`,
+  `lib/spellbook/loadSpellbookClass.ts`). Spell icons go into `wowIcons.json` `files`
+  (publish them with `wow_icons.publish`). Tests: `tests/test_wow_spellbook_generator.py`,
+  `src/__tests__/wowSpellbook.test.ts`, `e2e/wow-forever-spellbook.spec.ts`.
 
 #### Downrank calculator (`/wow-forever/downrank`)
 

@@ -105,6 +105,12 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "Every race's faction, starting zone, classes and racial traits, and what Forever changed from Classic.",
       },
       {
+        path: "/wow-forever/spellbook",
+        title: "Spellbook",
+        iconName: "BookOpen",
+        description: "Every spell each class can train in Forever: ranks, learn levels, trainer costs, tooltips and what changed from Classic.",
+      },
+      {
         path: "/wow-forever/downrank",
         title: "Downrank calculator",
         iconName: "Gauge",

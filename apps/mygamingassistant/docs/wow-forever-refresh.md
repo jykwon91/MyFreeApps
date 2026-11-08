@@ -79,6 +79,18 @@ level, mana, cast time, amounts and spell-power coefficient from the Forever cli
 run prints it; a rank in neither is left out and printed. Two complete copies of one rank
 stop the run. The family icons join the icon map, so a new family can mean icons to publish.
 
+The spellbook (`/wow-forever/spellbook/:class`) comes from `scripts.wow_spellbook.build`,
+which runs after the downrank build (it reads the Changes output for the "different from
+Classic" mark and the downrank output for its links). For each class's three spell tabs it
+reads every trainable spell from the Forever client (`SkillLineAbility`, Spell, SpellName,
+SpellLevels, SpellMisc, hotfixes layered, so the same `--hotfix-cache`): ranks, learn
+levels, icons and tooltip text with tokens filled. A spell is kept when Classic taught it
+(cmangos trainers, quest rewards or books) or Forever added it with a learn level or a
+talent. Trainer costs, quest- and book-taught spells, and the text or level of ranks the
+client lacks come from Classic into `data/spellbook/classic/<class>.json` (cmangos GPL —
+keep LICENSE + README). The run prints how many ranks took a Classic text or level and how
+many stayed blank. Spell icons join the icon map, so new spells can mean icons to publish.
+
 The item pages (`/wow-forever/items/:id`) come from `scripts.wow_item_pages.build`,
 which runs after the item list: 64 shards under `data/items/pages/` (Forever client:
 the item row, bind, vendor price, recipes) and 64 under `data/items/pages/classic/`

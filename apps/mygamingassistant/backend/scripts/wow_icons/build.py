@@ -14,7 +14,7 @@ client tables (pinned build, ``scripts/wow_world_map/sources.py``) and writes
     {"source": ..., "build": "1.60.1.70790",
      "items": {"2447": [133939, 1], ...},   # item id -> [icon file id, quality]
      "spells": {"7418": 135913, ...},       # spell id -> icon file id
-     "files": [132152, ...]}                # icon files a page names directly (talents, downrank, races)
+     "files": [132152, ...]}                # icon files a page names directly (talents, downrank, spellbook, races)
 
 The frontend joins names to icons by id; the images themselves are published
 by ``python -m scripts.wow_icons.publish`` (never committed). Game data and
@@ -51,8 +51,9 @@ DUNGEON_QUEST_FILES = (
 )
 TALENTS_DIR = WOW_DATA_DIR / "talents"
 DOWNRANK_FILE = WOW_DATA_DIR / "downrank" / "spells.json"
+SPELLBOOK_DIR = WOW_DATA_DIR / "spellbook"
 RACES_FILE = WOW_DATA_DIR / "races" / "races.json"
-RARE_SPAWNS_FILE =WOW_DATA_DIR / "rares" / "classic" / "rareSpawns.json"
+RARE_SPAWNS_FILE = WOW_DATA_DIR / "rares" / "classic" / "rareSpawns.json"
 OUT_FILE = WOW_DATA_DIR / "icons" / "wowIcons.json"
 # Hand-written gathering nodes name their item as `itemId: 2447`.
 _NODE_ITEM = re.compile(r"\bitemId:\s*(\d+)")
@@ -116,6 +117,16 @@ def downrank_icon_files(path: Path = DOWNRANK_FILE) -> set[int]:
     return {f["icon"] for f in json.loads(path.read_text(encoding="utf-8"))["families"] if f["icon"]}
 
 
+def spellbook_icon_files(directory: Path = SPELLBOOK_DIR) -> set[int]:
+    """The spellbook's spell icons: file ids already (``scripts.wow_spellbook.build``)."""
+    return {
+        spell["icon"]
+        for path in sorted(directory.glob("*.json"))
+        for spell in json.loads(path.read_text(encoding="utf-8"))["spells"]
+        if spell["icon"]
+    }
+
+
 def race_icon_files(path: Path = RACES_FILE) -> set[int]:
     """The races page's racial icons: file ids already (``scripts.wow_races.build``)."""
     races = json.loads(path.read_text(encoding="utf-8"))["races"]
@@ -125,7 +136,7 @@ def race_icon_files(path: Path = RACES_FILE) -> set[int]:
 def wanted_ids() -> IconIds:
     ids = IconIds(
         items=gathering_item_ids() | cooking_item_ids() | gear_item_ids() | dungeon_quest_item_ids() | rare_drop_item_ids(),
-        files=talent_icon_files() | downrank_icon_files() | race_icon_files(),
+        files=talent_icon_files() | downrank_icon_files() | spellbook_icon_files() | race_icon_files(),
     )
     for path in sorted(CRAFTING_DIR.glob("*.json")):
         ids.update(crafting_file_ids(json.loads(path.read_text(encoding="utf-8"))))

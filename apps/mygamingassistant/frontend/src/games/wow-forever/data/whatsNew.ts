@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-08",
+    title: "Spellbook",
+    summary:
+      "See every spell your class can train in Forever: each rank's learn level, trainer cost and tooltip, which spells are different from Classic, and links to the talent and downrank calculators.",
+    to: "/wow-forever/spellbook",
+  },
+  {
+    date: "2026-11-08",
     title: "Recipe vendors in every profession guide",
     summary:
       "Each profession guide now lists every recipe a vendor sells, grouped by vendor with price, limited stock and directions on the World Map, and route rows say which vendor near you sells the recipe to buy.",
