@@ -60,6 +60,27 @@ class TestSniffContentType:
     def test_plain_text(self) -> None:
         assert sniff_content_type(b"Hello world\nplain text here") == "text/plain"
 
+    @pytest.mark.parametrize("text", [
+        "Guest said \u201cnoon checkout\u201d \u2014 caf\u00e9 keys left",
+        "\ufeffNotes saved by Notepad with a BOM",
+        "Plumber visit \U0001f527 booked",
+    ])
+    def test_utf8_text(self, text: str) -> None:
+        assert sniff_content_type(text.encode("utf-8")) == "text/plain"
+
+    def test_utf8_text_cut_mid_character_after_the_first_512_bytes(self) -> None:
+        content = ("a" * 511 + "\u00e9 rest of the note").encode("utf-8")
+        assert sniff_content_type(content) == "text/plain"
+
+    @pytest.mark.parametrize("content", [
+        "caf\u00e9".encode("latin-1"),
+        b"text\x00with a null byte",
+        b"plain start" + b"\x01\x02" * 400,
+        b"a" * 600 + b"\x00binary after the first 512 bytes",
+    ])
+    def test_bytes_that_arent_utf8_text(self, content: bytes) -> None:
+        assert sniff_content_type(content) is None
+
     @pytest.mark.parametrize("content", [b"", b"MZ\x90\x00\x03\x00\x00\x00"])
     def test_unrecognised(self, content: bytes) -> None:
         assert sniff_content_type(content) is None
@@ -81,6 +102,14 @@ class TestCleanAttachment:
     @pytest.mark.parametrize("content", [b"%PDF-1.4 x", b"plain notes", _gif()])
     def test_non_photo_types_are_stored_unchanged(self, content: bytes) -> None:
         assert clean_attachment(content, _ALL).content == content
+
+    def test_text_is_stored_as_utf8(self) -> None:
+        cleaned = clean_attachment("caf\u00e9".encode("utf-8"), _ALL)
+        assert cleaned.content_type == "text/plain"
+        assert cleaned.storage_content_type == "text/plain; charset=utf-8"
+
+    def test_other_types_are_stored_under_their_own_type(self) -> None:
+        assert clean_attachment(b"%PDF-1.4 x", _ALL).storage_content_type == "application/pdf"
 
     def test_a_photo_that_cant_be_re_encoded_is_rejected(self) -> None:
         with pytest.raises(UnreadableImage):

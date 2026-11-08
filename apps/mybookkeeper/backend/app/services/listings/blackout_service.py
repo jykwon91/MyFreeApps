@@ -155,7 +155,7 @@ async def upload_attachment(
 
     # 6. MinIO upload
     storage_key = f"blackout-attachments/{blackout_id}/{uuid.uuid4()}"
-    storage.upload_file(storage_key, cleaned.content, cleaned.content_type)
+    storage.upload_file(storage_key, cleaned.content, cleaned.storage_content_type)
 
     # 7. DB insert
     try:

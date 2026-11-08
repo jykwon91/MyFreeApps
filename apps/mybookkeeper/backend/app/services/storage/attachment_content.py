@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import io
 import logging
+import re
 import zipfile
 from dataclasses import dataclass
 
@@ -39,6 +40,10 @@ METADATA_STRIPPED_MIME_TYPES: frozenset[str] = frozenset({
 })
 
 _DOCX_MAIN_PART = "word/document.xml"
+
+# Text is UTF-8 (ASCII included, BOM allowed). Control characters other than
+# tab, newline, vertical tab, form feed and carriage return mean binary data.
+_CONTROL_CHARACTERS = re.compile(r"[\x00-\x08\x0e-\x1f\x7f-\x9f]")
 
 
 class UnsupportedAttachmentType(ValueError):
@@ -62,6 +67,13 @@ class CleanAttachment:
     content: bytes
     content_type: str
 
+    @property
+    def storage_content_type(self) -> str:
+        """The type to store the object under, so a browser opening it decodes text as UTF-8."""
+        if self.content_type == "text/plain":
+            return "text/plain; charset=utf-8"
+        return self.content_type
+
 
 def _is_docx(content: bytes) -> bool:
     try:
@@ -72,8 +84,11 @@ def _is_docx(content: bytes) -> bool:
 
 
 def _is_plain_text(content: bytes) -> bool:
-    sample = content[:512]
-    return all(0x09 <= b <= 0x7E or b in (0x0A, 0x0D) for b in sample)
+    try:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return False
+    return _CONTROL_CHARACTERS.search(text) is None
 
 
 def sniff_content_type(content: bytes) -> str | None:
