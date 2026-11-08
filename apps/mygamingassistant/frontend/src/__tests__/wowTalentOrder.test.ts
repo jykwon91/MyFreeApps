@@ -9,6 +9,7 @@ import {
   encodeTalentOrder,
   isValidOrder,
   removeFromOrder,
+  settleOrder,
 } from "@/games/wow-forever/lib/talents/talentOrderCode";
 import type { TalentOrderEntry } from "@/games/wow-forever/types/talents/talentOrderEntry";
 import type { TalentTree } from "@/games/wow-forever/types/talents/talentTree";
@@ -217,5 +218,34 @@ describe("backward compatibility — no order param", () => {
   it("decodeTalentOrder returns null for null (param absent)", () => {
     // Callers skip decode when param is null; just verify it doesn't crash.
     expect(() => decodeTalentOrder("", TREES)).not.toThrow();
+  });
+});
+
+// ── settleOrder ───────────────────────────────────────────────────────────────
+
+describe("settleOrder", () => {
+  it("keeps an already-legal order unchanged", () => {
+    const order: TalentOrderEntry[] = [[0, 0], [0, 1], [0, 2], [0, 3], [0, 0], [0, 4]];
+    expect(settleOrder(order, TIERED_TREES)).toEqual(order);
+  });
+
+  it("repairs the order after a point comes out mid-build", () => {
+    // 5 tier-0 points, a tier-1 point, then a 6th tier-0 point; remove one [0][0].
+    const order: TalentOrderEntry[] = [[0, 0], [0, 1], [0, 2], [0, 3], [0, 0], [0, 4], [0, 1]];
+    const removed = removeFromOrder(order, 0, 0);
+    const build = emptyBuild(TIERED_TREES) as number[][];
+    build[0][0] = 1;
+    build[0][1] = 2;
+    build[0][2] = 1;
+    build[0][3] = 1;
+    build[0][4] = 1;
+    expect(isValidOrder(removed, TIERED_TREES, build)).toBe(false);
+    const settled = settleOrder(removed, TIERED_TREES);
+    expect(settled).toEqual([[0, 0], [0, 1], [0, 2], [0, 3], [0, 1], [0, 4]]);
+    expect(isValidOrder(settled ?? [], TIERED_TREES, build)).toBe(true);
+  });
+
+  it("returns null when the entries can't form a legal build", () => {
+    expect(settleOrder([[0, 4]], TIERED_TREES)).toBeNull();
   });
 });

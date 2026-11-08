@@ -95,3 +95,31 @@ export function removeFromOrder(
   const removeAt = order.length - 1 - idx;
   return [...order.slice(0, removeAt), ...order.slice(removeAt + 1)];
 }
+
+/**
+ * Reorder `order` so every step is legal when replayed, keeping it as close to
+ * the original as possible: each step spends the earliest remaining entry that
+ * can be spent now. Needed after a point comes out mid-build — dropping that
+ * talent's last entry can leave a later point gated on it (a tier-2 point
+ * replayed with only 4 points above it). Spending a point never makes another
+ * point illegal, so this succeeds whenever the entries form a legal build;
+ * returns null when they don't.
+ */
+export function settleOrder(
+  order: readonly TalentOrderEntry[],
+  trees: readonly TalentTree[],
+): TalentOrderEntry[] | null {
+  const replay = emptyBuild(trees) as number[][];
+  const left = [...order];
+  const settled: TalentOrderEntry[] = [];
+  while (left.length > 0) {
+    const level = settled.length + MIN_TALENT_LEVEL;
+    const next = left.findIndex(([tree, talent]) => addBlock(trees, replay, tree, talent, level) === null);
+    if (next === -1) return null;
+    const [tree, talent] = left[next];
+    replay[tree][talent]++;
+    settled.push(left[next]);
+    left.splice(next, 1);
+  }
+  return settled;
+}

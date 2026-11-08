@@ -12,6 +12,7 @@ import {
   encodeTalentOrder,
   isValidOrder,
   removeFromOrder,
+  settleOrder,
 } from "@/games/wow-forever/lib/talents/talentOrderCode";
 import { addPoint, emptyBuild, minimumLevel, removePoint } from "@/games/wow-forever/lib/talents/talentRules";
 import type { TalentBuild } from "@/games/wow-forever/types/talents/talentBuild";
@@ -110,8 +111,9 @@ export function useTalentBuild(trees: readonly TalentTree[]): TalentBuildState {
       change((r) => ({
         build: removePoint(trees, r.build, tree, talent),
         level: r.level,
-        // Remove the last occurrence of this talent from order.
-        order: r.order !== null ? removeFromOrder(r.order, tree, talent) : null,
+        // Drop this talent's last entry, then reorder so later points that
+        // relied on it still replay legally.
+        order: r.order !== null ? settleOrder(removeFromOrder(r.order, tree, talent), trees) : null,
       })),
     [change, trees],
   );
