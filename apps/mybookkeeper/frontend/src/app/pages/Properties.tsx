@@ -22,6 +22,8 @@ import PropertyEditCard from "@/app/features/properties/PropertyEditCard";
 import PropertyListItem from "@/app/features/properties/PropertyListItem";
 import PropertiesSkeleton from "@/app/features/properties/PropertiesSkeleton";
 import EmptyState from "@/shared/components/ui/EmptyState";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { useDismissable } from "@/shared/hooks/useDismissable";
 
@@ -33,7 +35,9 @@ export default function Properties() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const { showSuccess, showError } = useToast();
 
-  const { data: properties = [], isLoading } = useGetPropertiesQuery();
+  const { data, error, isFetching, refetch } = useGetPropertiesQuery();
+  const properties = data ?? [];
+  const mode = resolveListLoadMode({ hasData: data !== undefined, hasError: error !== undefined, itemCount: properties.length });
   const [createProperty, { isLoading: isCreating }] = useCreatePropertyMutation();
   const [updateProperty] = useUpdatePropertyMutation();
   const [deleteProperty, { isLoading: isDeletePending }] = useDeletePropertyMutation();
@@ -152,15 +156,19 @@ export default function Properties() {
         </section>
       ) : null}
 
-      {!isLoading && properties.some((p) => p.classification === "unclassified") && (
+      {properties.some((p) => p.classification === "unclassified") && (
         <AlertBox variant="warning">
           I found some properties that still need to be classified. Can you take a moment to let me know if they are rental investments or personal homes? This helps me put your expenses on the right tax forms.
         </AlertBox>
       )}
 
-      {isLoading ? (
+      {error ? (
+        <LoadErrorAlert message="I couldn't load your properties. Want me to try again?" isRetrying={isFetching} onRetry={() => refetch()} />
+      ) : null}
+
+      {mode === "loading" ? (
         <PropertiesSkeleton />
-      ) : (
+      ) : mode === "error" ? null : (
         <ul className="space-y-2">
           {properties.map((property) =>
             canWrite && editingId === property.id ? (
@@ -179,7 +187,7 @@ export default function Properties() {
               </li>
             )
           )}
-          {properties.length === 0 && (
+          {mode === "empty" && (
             <li><EmptyState message="Add your first property above — I'll use it to organize your transactions and put expenses on the right tax forms." /></li>
           )}
         </ul>

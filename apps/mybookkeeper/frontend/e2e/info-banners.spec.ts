@@ -136,18 +136,3 @@ test.describe("Info Banners — Visibility & Dismiss", () => {
     });
   }
 });
-
-test.describe("Info Banners — Empty States", () => {
-  test("Properties: shows actionable empty state when no properties", async ({ authedPage: page }) => {
-    await page.goto("/properties");
-    await expect(page.getByText("Properties").first()).toBeVisible({ timeout: 10000 });
-
-    const emptyMsg = page.getByText(/Add your first property above/);
-    const isEmpty = await emptyMsg.isVisible().catch(() => false);
-    if (!isEmpty) {
-      test.skip(true, "User has properties — empty state not shown");
-      return;
-    }
-    await expect(emptyMsg).toContainText("organize your transactions");
-  });
-});

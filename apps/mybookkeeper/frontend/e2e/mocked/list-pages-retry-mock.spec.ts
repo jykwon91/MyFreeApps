@@ -1,5 +1,5 @@
 /**
- * No-backend E2E for Retry on the list pages (tenants, vendors, inquiries,
+ * No-backend E2E for Retry on the list pages (properties, tenants, vendors, inquiries,
  * leases, lease templates, listings, welcome manuals, applicants, insurance,
  * mortgages, utility plans).
  *
@@ -27,6 +27,8 @@ interface ListPage {
   endpoint: RegExp;
   error: string;
   empty: (page: Page) => Locator;
+  /** The list's empty answer; paged endpoints by default. */
+  emptyAnswer?: unknown;
   /** Answers for the page's other panels, where the catch-all's `[]` isn't their shape. */
   stubPanels?: (page: Page) => Promise<void>;
 }
@@ -36,6 +38,7 @@ async function stubInsurancePanels(page: Page): Promise<void> {
 }
 
 const LIST_PAGES: ListPage[] = [
+  { name: "properties", path: "/properties", endpoint: /\/api\/properties(\?|$)/, error: "I couldn't load your properties.", empty: (p) => p.getByText(/Add your first property above/), emptyAnswer: [] },
   { name: "tenants", path: "/tenants", endpoint: /\/api\/applicants\/tenants(\?|$)/, error: "I couldn't load your tenants.", empty: (p) => p.getByText(/No active tenants/) },
   { name: "vendors", path: "/vendors", endpoint: /\/api\/vendors(\?|$)/, error: "I couldn't load your vendors.", empty: (p) => p.getByText(/No vendors yet/) },
   { name: "inquiries", path: "/inquiries", endpoint: /\/api\/inquiries(\?|$)/, error: "I couldn't load your inquiries.", empty: (p) => p.getByText(/No inquiries yet/) },
@@ -59,7 +62,7 @@ for (const listPage of LIST_PAGES) {
     await page.route("**/api/**", (route) => route.fulfill(json(route.request().method() === "GET" ? [] : {})));
     await stubSignedInShell(page, "admin");
     await listPage.stubPanels?.(page);
-    const list = await failUntilRecovered(page, listPage.endpoint, EMPTY_PAGE);
+    const list = await failUntilRecovered(page, listPage.endpoint, listPage.emptyAnswer ?? EMPTY_PAGE);
 
     await page.goto(listPage.path);
     await expect(page.getByText(listPage.error)).toBeVisible();
