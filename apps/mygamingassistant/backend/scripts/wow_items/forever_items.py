@@ -49,6 +49,10 @@ TABLE_HASHES = {
     "SpellRadius": 0xAB7E4841,
     "Talent": 0xF9A4265F,
     "TalentTab": 0x425D88C8,
+    "SpellCastTimes": 0xFDBA5A66,
+    "SpellLevels": 0x1DDEC5E6,
+    "SpellPower": 0xA1ACE1DF,
+    "SkillLineAbility": 0xFF4446F6,
 }
 ITEM_TABLES = ("Item", "ItemSparse")
 

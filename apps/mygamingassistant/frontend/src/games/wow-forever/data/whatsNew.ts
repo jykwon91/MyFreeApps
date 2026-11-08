@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-07",
+    title: "Downrank calculator",
+    summary:
+      "Pick a heal or damage spell and see which rank gives the most per mana and per second for your level and +healing or +spell damage, with the macro line to cast that rank.",
+    to: "/wow-forever/downrank",
+  },
+  {
+    date: "2026-11-07",
     title: "Server status history and login help",
     summary:
       "See how the realms have been over the last day or week, every recent outage with how long it lasted, and what to try for common login errors like WOW51900319.",
