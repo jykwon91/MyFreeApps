@@ -14,6 +14,7 @@ import SharedViewBanner from "@/games/wow-forever/components/worldMap/SharedView
 import ShareViewButton from "@/games/wow-forever/components/worldMap/ShareViewButton";
 import PositionConfirm from "@/games/wow-forever/components/worldMap/PositionConfirm";
 import type { WowClassId } from "@/games/wow-forever/data/classes";
+import { RARES_STATUS } from "@/games/wow-forever/data/rares/raresConfig";
 import { MAP_LAYER } from "@/games/wow-forever/data/worldMap/mapLayerIds";
 import { GATHERING_SPOTS_STATUS, useGatheringMapSpots } from "@/games/wow-forever/hooks/useGatheringMapSpots";
 import type { MapLayersState } from "@/games/wow-forever/hooks/useMapLayers";
@@ -110,7 +111,7 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
   const gatheringOn = settings.layers[MAP_LAYER.herbs] || settings.layers[MAP_LAYER.ore];
   const gathering = useGatheringMapSpots(layersOpen || gatheringOn);
   const raresState = useRares(layersOpen || settings.layers[MAP_LAYER.rares]);
-  const rares = raresState.status === "ready" ? raresState.data.rares : null;
+  const rares = raresState.status === RARES_STATUS.ready ? raresState.data.rares : null;
   const lazy = useMemo(() => ({ gathering: gathering.spots, rares }), [gathering.spots, rares]);
   const byLayer = useMemo(
     () => (map ? markersByLayer(data, map, { faction, classId, level, ...lazy }) : null),
@@ -120,7 +121,7 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
   const failedSources = useMemo(() => {
     const failed = new Set<LazyLayerSource>();
     if (gathering.status === GATHERING_SPOTS_STATUS.error) failed.add("gathering");
-    if (raresState.status === "error") failed.add("rares");
+    if (raresState.status === RARES_STATUS.error) failed.add("rares");
     return failed;
   }, [gathering.status, raresState.status]);
   const tools = useMapMarkTools(map?.id ?? mapId, marks, mapLayers, sharedView);

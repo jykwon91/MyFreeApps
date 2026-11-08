@@ -47,3 +47,6 @@ export const RARES_EMPTY = {
   noDrops: "No drops of its own in the Classic data.",
   newInForever: "New in Forever — where it spawns and what it drops aren't in our data yet.",
 } as const;
+
+/** The rares data's load states (`RaresState.status`). */
+export const RARES_STATUS = { idle: "idle", loading: "loading", ready: "ready", error: "error" } as const;

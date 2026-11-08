@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { RARES_STATUS } from "@/games/wow-forever/data/rares/raresConfig";
 import { loadRares } from "@/games/wow-forever/lib/rares/loadRares";
 import type { RaresData } from "@/games/wow-forever/types/rares/raresData";
 import type { RaresState } from "@/games/wow-forever/types/rares/raresState";
@@ -26,8 +27,8 @@ export function useRares(wanted: boolean = true): RaresState {
     };
   }, [started]);
 
-  if (data) return { status: "ready", data };
-  if (failed) return { status: "error", retry: reloadPage };
-  if (started) return { status: "loading" };
-  return { status: "idle" };
+  if (data) return { status: RARES_STATUS.ready, data };
+  if (failed) return { status: RARES_STATUS.error, retry: reloadPage };
+  if (started) return { status: RARES_STATUS.loading };
+  return { status: RARES_STATUS.idle };
 }
