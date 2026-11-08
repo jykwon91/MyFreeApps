@@ -1049,6 +1049,9 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   the question back in the box. Finished questions persist in sessionStorage
   (`lib/ask/askStorage.ts`, re-validated on read). Turnstile action `wow-chat`,
   one token per question (`useAskTurnstile`).
+- Mini-map pins (`lib/ask/askMapPins.ts`) reuse the World Map's
+  `clusterMarkers`: results that overlap are one "×N" pin; the picked row is
+  never grouped and is drawn red.
 - Cards (`components/ask/cards/`): NPC results with a mini map and numbered
   rows; picking a row shows **Route there** =
   `/wow-forever/map?to=npc:<id>&dir=1`, plus `&from=pt:<zone>,x,y` ONLY when
