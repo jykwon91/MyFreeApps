@@ -1,12 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import FoodPriceSection from "@/games/wow-forever/components/food/detail/FoodPriceSection";
 import FoodPriceLine from "@/games/wow-forever/components/food/FoodPriceLine";
 import GoldFarmCard from "@/games/wow-forever/components/gold/GoldFarmCard";
 import PriceStatus from "@/games/wow-forever/components/prices/PriceStatus";
-import RegionSelect from "@/games/wow-forever/components/shared/RegionSelect";
 import { FOODS } from "@/games/wow-forever/data/food/foodData";
 import { clothPerHour } from "@/games/wow-forever/gold/goldFarms";
 import { goldFarms } from "@/games/wow-forever/gold/goldFarmsData";
@@ -43,7 +41,7 @@ describe("Buy or cook?", () => {
     expect(within(prices).getByText("Buy Smoked Bear Meat at the auction house").nextSibling).toHaveTextContent("~1s 50c");
     expect(within(prices).getByText("Cheaper to cook: saves ~1s 10c on each one.")).toBeInTheDocument();
     expect(within(prices).getByText("The recipe (Recipe: Smoked Bear Meat)").nextSibling).toHaveTextContent("~25s");
-    expect(screen.getByTestId("price-credit")).toHaveTextContent("Prices from TradeSkillMaster · updated");
+    expect(screen.getByTestId("price-credit")).toHaveTextContent("Prices from TradeSkillMaster (US) · updated");
   });
 
   it("labels what has no auction price and gives no verdict", () => {
@@ -95,30 +93,30 @@ describe("gold farm card", () => {
   });
 });
 
-describe("region", () => {
+describe("US only", () => {
   beforeEach(() => {
     window.localStorage.clear();
-    usePricesQuery.mockImplementation((region: string) => pricesReady({ ...priceList([[2589, 28, "Linen Cloth"]]), region }));
+    usePricesQuery.mockReset();
+    usePricesQuery.mockReturnValue(pricesReady(priceList([[2589, 28, "Linen Cloth"]])));
   });
 
-  it("is one saved choice: changing it anywhere changes it everywhere, and asks for that region's prices", async () => {
-    render(
-      <>
-        <RegionSelect />
-        <PriceStatus withoutPrices="showing routes without prices" />
-      </>,
-    );
-    const [first] = screen.getAllByRole("combobox", { name: "Region" });
-    expect(usePricesQuery).toHaveBeenLastCalledWith("us");
-    await userEvent.selectOptions(first, "eu");
-    for (const select of screen.getAllByRole("combobox", { name: "Region" })) expect(select).toHaveValue("eu");
-    expect(usePricesQuery).toHaveBeenLastCalledWith("eu");
-    expect(JSON.parse(window.localStorage.getItem(REGION_STORAGE_KEY) ?? "null")).toBe("eu");
+  it("credits US prices with no region picker, and asks for prices without a region", () => {
+    render(<PriceStatus withoutPrices="showing routes without prices" />);
+    expect(screen.getByTestId("price-credit")).toHaveTextContent(/^Prices from TradeSkillMaster \(US\) · updated /);
+    expect(screen.queryByRole("combobox", { name: "Region" })).toBeNull();
+    expect(usePricesQuery).toHaveBeenLastCalledWith();
   });
 
-  it("says when a region has no prices yet", () => {
+  it("ignores the server status region", () => {
+    window.localStorage.setItem(REGION_STORAGE_KEY, JSON.stringify("eu"));
+    render(<PriceStatus withoutPrices="showing routes without prices" />);
+    expect(usePricesQuery).toHaveBeenLastCalledWith();
+    expect(screen.getByTestId("price-credit")).toHaveTextContent("(US)");
+  });
+
+  it("says when there are no prices yet", () => {
     usePricesQuery.mockReturnValue(pricesReady(priceList([])));
     render(<PriceStatus withoutPrices="showing routes without prices" />);
-    expect(screen.getByTestId("price-credit")).toHaveTextContent("No auction prices for this region yet. Prices come from TradeSkillMaster.");
+    expect(screen.getByTestId("price-credit")).toHaveTextContent("No US auction prices yet. Prices come from TradeSkillMaster.");
   });
 });

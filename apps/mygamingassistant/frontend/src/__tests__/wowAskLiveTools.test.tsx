@@ -91,11 +91,11 @@ describe("pricesAreOld", () => {
 });
 
 describe("auction_prices", () => {
-  it("answers with the market value as formatted, the region and how old the prices are", async () => {
+  it("answers with the market value as formatted, US and how old the prices are", async () => {
     const out = await run(ASK_TOOL.auctionPrices, { query: "Linen Cloth" }, prices(priceList(CLOTH, TWO_HOURS_AGO)));
     expect(out.isError).toBe(false);
     const result = JSON.parse(out.content);
-    expect(result.region).toBe("Americas");
+    expect(result.region).toBe("US");
     expect(result.source).toBe(ASK_TOOL_NOTE.pricesSource);
     expect(result.updated).toBe("2 hours ago");
     expect(result.note).toBeNull();
@@ -111,25 +111,16 @@ describe("auction_prices", () => {
     expect(JSON.parse(out.content).note).toBe(ASK_TOOL_NOTE.pricesOld);
   });
 
-  it("uses the saved region, or the one the player named", async () => {
-    const loadPrices = vi.fn((region: string) => Promise.resolve({ ...priceList(CLOTH), region }));
-    await run(ASK_TOOL.auctionPrices, { query: "silk" }, { loadPrices, region: "eu" });
-    expect(loadPrices).toHaveBeenLastCalledWith("eu");
-    const out = await run(ASK_TOOL.auctionPrices, { query: "silk", region: "kr" }, { loadPrices, region: "eu" });
-    expect(loadPrices).toHaveBeenLastCalledWith("kr");
-    expect(JSON.parse(out.content).region).toBe("Korea");
+  it("always asks for the US prices, whatever region is saved", async () => {
+    const loadPrices = vi.fn(() => Promise.resolve(priceList(CLOTH)));
+    const out = await run(ASK_TOOL.auctionPrices, { query: "silk" }, { loadPrices, region: "eu" });
+    expect(loadPrices).toHaveBeenLastCalledWith();
+    expect(JSON.parse(out.content).region).toBe("US");
+    expect(cardOf(out, ASK_CARD.prices).pageHref).toBe("/wow-forever/auction-house?q=silk");
   });
 
-  it("links the Auction house at the asked region only when it isn't the saved one", async () => {
-    const loadPrices = vi.fn((region: string) => Promise.resolve({ ...priceList(CLOTH), region }));
-    const saved = await run(ASK_TOOL.auctionPrices, { query: "silk", region: "eu" }, { loadPrices, region: "eu" });
-    expect(cardOf(saved, ASK_CARD.prices).pageHref).toBe("/wow-forever/auction-house?q=silk");
-    const other = await run(ASK_TOOL.auctionPrices, { query: "silk", region: "kr" }, { loadPrices, region: "eu" });
-    expect(cardOf(other, ASK_CARD.prices).pageHref).toBe("/wow-forever/auction-house?q=silk&region=kr");
-  });
-
-  it("with no prices for the region, says so and gives no number", async () => {
-    const out = await run(ASK_TOOL.auctionPrices, { query: "Linen Cloth", region: "tw" }, prices(priceList([])));
+  it("with no prices yet, says so and gives no number", async () => {
+    const out = await run(ASK_TOOL.auctionPrices, { query: "Linen Cloth" }, prices(priceList([])));
     const result = JSON.parse(out.content);
     expect(result.note).toBe(ASK_TOOL_NOTE.pricesNone);
     expect(result.results).toEqual([]);
@@ -152,7 +143,7 @@ describe("auction_prices", () => {
   });
 
   it("rejects a bad input", async () => {
-    for (const input of [{}, { query: "silk", region: "cn" }, { query: "silk", realm: "x" }]) {
+    for (const input of [{}, { query: "silk", region: "us" }, { query: "silk", realm: "x" }]) {
       const out = await run(ASK_TOOL.auctionPrices, input, prices(priceList(CLOTH)));
       expect(out.isError).toBe(true);
       expect(out.card).toBeNull();
@@ -193,7 +184,7 @@ describe("PricesCard", () => {
   it("shows the prices with TradeSkillMaster's credit and a link to the Auction house", async () => {
     const out = await run(ASK_TOOL.auctionPrices, { query: "Linen Cloth" }, prices(priceList(CLOTH, TWO_HOURS_AGO)));
     inRouter(<PricesCard card={cardOf(out, ASK_CARD.prices)} />);
-    expect(screen.getByRole("region", { name: "Auction prices · Americas" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Auction prices · US" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Linen Cloth" })).toBeTruthy();
     expect(screen.getByText("12s")).toBeTruthy();
     expect(screen.getByTestId("price-credit").textContent).toContain("updated 2 hours ago");
@@ -210,10 +201,10 @@ describe("PricesCard", () => {
     expect(screen.getByText(/more than 12 hours old/)).toBeTruthy();
   });
 
-  it("says the region has no prices yet", async () => {
+  it("says there are no prices yet", async () => {
     const out = await run(ASK_TOOL.auctionPrices, { query: "silk" }, prices(priceList([])));
     inRouter(<PricesCard card={cardOf(out, ASK_CARD.prices)} />);
-    expect(screen.getByText(/No auction prices for this region yet/)).toBeTruthy();
+    expect(screen.getByText(/No US auction prices yet/)).toBeTruthy();
     expect(screen.queryAllByRole("listitem")).toHaveLength(0);
   });
 

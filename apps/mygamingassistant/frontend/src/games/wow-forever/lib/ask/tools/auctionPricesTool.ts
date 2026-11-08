@@ -10,7 +10,7 @@ import { ASK_TOOL } from "@/games/wow-forever/data/ask/askTools";
 import { ASK_TOOL_NOTE } from "@/games/wow-forever/data/ask/askToolNotes";
 import { auctionHouseHref } from "@/games/wow-forever/lib/ask/askGuideLinks";
 import { askPriceMatches } from "@/games/wow-forever/lib/ask/askPriceMatches";
-import { regionLabel } from "@/games/wow-forever/lib/ask/askRegion";
+import { AUCTION_PRICE_REGION_LABEL } from "@/games/wow-forever/data/auctionPriceRegion";
 import { relativeTime } from "@/games/wow-forever/lib/serverStatusTime";
 import { itemLabel, priceOrDash, soldPerDayText } from "@/games/wow-forever/prices/auctionFormat";
 import { mapPriceList } from "@/games/wow-forever/prices/auctionPrices";
@@ -33,28 +33,26 @@ function priceRow(item: AuctionPrice): AskPriceRow {
 }
 
 export async function auctionPricesTool(input: AskPricesInput, data: AskToolData): Promise<AskToolOutcome> {
-  const region = input.region ?? data.region;
   const card: AskPricesCard = {
     kind: ASK_CARD.prices,
-    region,
     query: input.query,
     state: ASK_LIVE.error,
     rows: [],
     total: 0,
     credit: null,
     sourceUpdatedAt: null,
-    pageHref: auctionHouseHref(input.query, region === data.region ? undefined : region),
+    pageHref: auctionHouseHref(input.query),
   };
 
   let response: PriceListResponse;
   try {
-    response = await data.loadPrices(region);
+    response = await data.loadPrices();
   } catch {
     return { content: JSON.stringify({ error: ASK_TOOL_NOTE.pricesFailed }), isError: true, card };
   }
 
   const prices = mapPriceList(response);
-  const base = { region: regionLabel(region), source: ASK_TOOL_NOTE.pricesSource };
+  const base = { region: AUCTION_PRICE_REGION_LABEL, source: ASK_TOOL_NOTE.pricesSource };
   const withCredit = { ...card, credit: prices.credit, sourceUpdatedAt: prices.sourceUpdatedAt };
   if (prices.byId.size === 0) {
     return {

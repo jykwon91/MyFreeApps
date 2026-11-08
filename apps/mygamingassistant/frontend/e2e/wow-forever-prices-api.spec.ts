@@ -4,7 +4,7 @@
  * The prices are filled by the backend's scheduled refresh (or
  * `python -m app.cli refresh-wow-prices`), never by a user, so this suite is
  * read-only: it checks the public contract the pages rely on — the TSM credit,
- * the columnar rows, the ETag round trip and region validation. The page flows
+ * the columnar rows, the ETag round trip and that it is US only. The page flows
  * that use these prices stub this endpoint in their own specs.
  *
  * Prereqs: backend on BACKEND_URL (default :8004) with fixtures loaded. Rows
@@ -22,8 +22,8 @@ test.describe("WoW Forever prices API", () => {
     test.skip(!health?.ok(), `backend not reachable at ${BACKEND_URL}`);
   });
 
-  test("serves a region's prices with the credit, then a 304 for the same set", async ({ request }) => {
-    const resp = await request.get(PRICES_URL, { params: { region: "us" } });
+  test("serves the US prices with the credit, then a 304 for the same set", async ({ request }) => {
+    const resp = await request.get(PRICES_URL);
     expect(resp.status()).toBe(200);
     expect(resp.headers()["cache-control"]).toBe("public, max-age=600");
 
@@ -50,23 +50,18 @@ test.describe("WoW Forever prices API", () => {
     const etag = resp.headers()["etag"];
     expect(etag).toBeTruthy();
     const again = await request.get(PRICES_URL, {
-      params: { region: "us" },
       headers: { "If-None-Match": etag },
     });
     expect(again.status()).toBe(304);
   });
 
-  test("a region with no prices yet answers an empty list, not an error", async ({ request }) => {
-    const resp = await request.get(PRICES_URL, { params: { region: "kr" } });
-    expect(resp.status()).toBe(200);
-    const body = await resp.json();
-    expect(body.region).toBe("kr");
-    expect(Array.isArray(body.items)).toBe(true);
-    expect(body.credit.name).toBe("TradeSkillMaster");
-  });
-
-  test("rejects a region that isn't Blizzard's", async ({ request }) => {
-    const resp = await request.get(PRICES_URL, { params: { region: "cn" } });
-    expect(resp.status()).toBe(422);
+  test("is US only: an old ?region= link still gets the US prices", async ({ request }) => {
+    for (const region of ["eu", "kr", "cn"]) {
+      const resp = await request.get(PRICES_URL, { params: { region } });
+      expect(resp.status()).toBe(200);
+      const body = await resp.json();
+      expect(body.region).toBe("us");
+      expect(body.credit.name).toBe("TradeSkillMaster");
+    }
   });
 });

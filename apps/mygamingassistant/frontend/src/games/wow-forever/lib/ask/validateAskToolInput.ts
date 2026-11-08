@@ -155,11 +155,7 @@ export function checkMacrosInput(input: Record<string, unknown>): AskInputCheck<
 const regionError = `region must be one of ${REGIONS.join(", ")}`;
 
 export function checkPricesInput(input: Record<string, unknown>): AskInputCheck<AskPricesInput> {
-  const base = queryInput(input, ["query", "region", "limit"]);
-  if (!base.ok) return base;
-  const region = optional(input.region, (v) => oneOf(v, REGIONS));
-  if (region === undefined) return fail(regionError);
-  return { ok: true, value: { ...base.value, region } };
+  return queryInput(input, ["query", "limit"]);
 }
 
 export function checkServerStatusInput(input: Record<string, unknown>): AskInputCheck<AskRegionInput> {

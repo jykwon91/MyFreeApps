@@ -5,7 +5,7 @@ import hashlib
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.wow_prices import PRICE_SOURCE_CREDITS, PRICE_SOURCE_TSM, WOW_FOREVER_GAME_SLUG
+from app.core.wow_prices import PRICE_REGION, PRICE_SOURCE_CREDITS, PRICE_SOURCE_TSM, WOW_FOREVER_GAME_SLUG
 from app.repositories.game.game_repo import get_game_by_slug
 from app.repositories.wow import item_price_repo, price_feed_repo
 from app.schemas.wow.price_credit import WowPriceCredit
@@ -21,14 +21,14 @@ def _credit(source: str) -> WowPriceCredit:
     return WowPriceCredit(source=source, name=name, url=url)
 
 
-def _etag(region: str, version: str) -> str:
-    return '"' + hashlib.sha256(f"{SERVED_SOURCE}:{region}:{version}".encode()).hexdigest()[:32] + '"'
+def _etag(version: str) -> str:
+    return '"' + hashlib.sha256(f"{SERVED_SOURCE}:{PRICE_REGION}:{version}".encode()).hexdigest()[:32] + '"'
 
 
-async def region_prices(db: AsyncSession, region: str) -> RegionPrices:
-    """Every stored price for ``region``; an empty list when there are none yet."""
+async def served_prices(db: AsyncSession) -> RegionPrices:
+    """Every stored US price; an empty list when there are none yet."""
     empty = WowPriceList(
-        region=region,
+        region=PRICE_REGION,
         credit=_credit(SERVED_SOURCE),
         source_updated_at=None,
         fetched_at=None,
@@ -36,9 +36,9 @@ async def region_prices(db: AsyncSession, region: str) -> RegionPrices:
         items=[],
     )
     game = await get_game_by_slug(db, WOW_FOREVER_GAME_SLUG)
-    feed = await price_feed_repo.get(db, game.id, region, None, SERVED_SOURCE) if game else None
+    feed = await price_feed_repo.get(db, game.id, PRICE_REGION, None, SERVED_SOURCE) if game else None
     if feed is None or feed.fetched_at is None:
-        return RegionPrices(body=empty, etag=_etag(region, "none"))
+        return RegionPrices(body=empty, etag=_etag("none"))
 
     rows = await item_price_repo.list_for_feed(db, feed.id)
     names = client_item_names()
@@ -50,4 +50,4 @@ async def region_prices(db: AsyncSession, region: str) -> RegionPrices:
             for r in rows
         ],
     })
-    return RegionPrices(body=body, etag=_etag(region, f"{feed.fetched_at.isoformat()}:{names.client_build}"))
+    return RegionPrices(body=body, etag=_etag(f"{feed.fetched_at.isoformat()}:{names.client_build}"))

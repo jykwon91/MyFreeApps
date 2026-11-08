@@ -26,7 +26,7 @@ const SILVER = 100;
 describe("mapPriceList", () => {
   it("reads rows by column name, in copper", () => {
     const response: PriceListResponse = {
-      region: "eu",
+      region: "us",
       credit: TSM_CREDIT,
       source_updated_at: "2026-11-05T14:49:31Z",
       fetched_at: "2026-11-06T09:00:00Z",
@@ -35,7 +35,6 @@ describe("mapPriceList", () => {
       items: [["Linen Cloth", 7130.1, 2589, 28, 24, 28]],
     };
     const prices = mapPriceList(response);
-    expect(prices.region).toBe("eu");
     expect(prices.credit).toEqual(TSM_CREDIT);
     expect(prices.sourceUpdatedAt).toBe("2026-11-05T14:49:31Z");
     expect(prices.byId.get(2589)).toEqual({ itemId: 2589, name: "Linen Cloth", marketValue: 28, avgSalePrice: 24, soldPerDay: 7130.1 });

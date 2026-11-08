@@ -1,5 +1,4 @@
 import { useGetWowPricesQuery } from "@/games/wow-forever/api/wowPricesApi";
-import { useWowRegion } from "@/games/wow-forever/hooks/useWowRegion";
 import { mapPriceList } from "@/games/wow-forever/prices/auctionPrices";
 import type { AuctionPrices } from "@/games/wow-forever/types/auctionPrices";
 import type { PriceListResponse } from "@/games/wow-forever/types/priceListResponse";
@@ -26,14 +25,13 @@ function mapOnce(response: PriceListResponse): AuctionPrices {
 }
 
 /**
- * The auction-house prices for the player's region. Every caller shares one
+ * The US auction-house prices (the only region the site keeps). Every caller shares one
  * request and one cache. Nobody types anything: the server keeps the prices up to date.
  */
 export function useAuctionPrices(): AuctionPricesState {
-  const [region] = useWowRegion();
-  const { data, isError, isFetching, refetch } = useGetWowPricesQuery(region);
+  const { data, isError, isFetching, refetch } = useGetWowPricesQuery();
   const retry = () => void refetch();
-  if (data && data.region === region) return { status: "ready", prices: mapOnce(data), retry, retrying: false };
+  if (data) return { status: "ready", prices: mapOnce(data), retry, retrying: false };
   if (isError) return { status: "error", prices: null, retry, retrying: isFetching };
   return { status: "loading", prices: null, retry, retrying: false };
 }

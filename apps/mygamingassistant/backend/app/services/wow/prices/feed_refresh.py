@@ -4,7 +4,7 @@ from typing import Final
 
 OUTCOME_UPDATED: Final = "updated"
 OUTCOME_NOT_MODIFIED: Final = "not_modified"
-# The source answered with no prices (kr / tw today); stored prices, if any, kept.
+# The source answered with no prices; stored prices, if any, kept.
 OUTCOME_EMPTY: Final = "empty"
 OUTCOME_FAILED: Final = "failed"
 # Another worker holds this feed's refresh lock.

@@ -9,7 +9,7 @@ Prices are copper. ``avgSalePrice`` is 0 for an item TSM has seen no sales of
 (659 of 1,128 US rows on 2026-11-06) — that is "unknown", not free, so it
 becomes None; the same goes for a 0 ``historical``. ``saleRate`` /
 ``soldPerDay`` of 0 are real measurements and stay 0. A file with only the
-header (kr / tw today) parses to no prices. A row without a usable item id,
+header parses to no prices. A row without a usable item id,
 market value or time is skipped and counted — never guessed.
 """
 from __future__ import annotations

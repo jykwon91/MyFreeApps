@@ -2,17 +2,16 @@
 
 Run by the scheduler (``refresh_wow_prices``, every
 ``WOW_PRICE_REFRESH_INTERVAL_HOURS`` and once at boot) and by
-``python -m app.cli refresh-wow-prices``. Each feed (region × provider) is its
-own transaction:
+``python -m app.cli refresh-wow-prices``. Prices are US only, so there is one
+feed per provider, each its own transaction:
 
 * a 304 / "not modified" only stamps ``checked_at``;
 * new prices replace the feed's set atomically (upsert + delete the rest);
 * any failure — HTTP error, network, a changed CSV header — is logged at
   WARNING with the status, recorded on the feed, and the stored prices stay;
-* a file with no prices never wipes a feed that has some (TSM serves the
-  header alone for regions it has no data for yet — kr / tw today — and a
-  region that suddenly goes empty is far likelier a TSM hiccup than a market
-  with nothing on it).
+* a file with no prices never wipes a feed that has some (a region file that
+  suddenly goes empty is far likelier a TSM hiccup than a market with nothing
+  on it).
 
 Two API workers both run the scheduler; a per-feed advisory lock makes the
 second one skip a feed the first is refreshing.
@@ -26,7 +25,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.wow_prices import PRICE_REGIONS, WOW_FOREVER_GAME_SLUG
+from app.core.wow_prices import PRICE_REGION, WOW_FOREVER_GAME_SLUG
 from app.db.session import unit_of_work
 from app.models.wow.price_feed import WowPriceFeed
 from app.repositories.game.game_repo import get_game_by_slug
@@ -65,12 +64,12 @@ async def refresh_feed(
     db: AsyncSession,
     provider: PriceProvider,
     game_id: uuid.UUID,
-    region: str,
     *,
     now: datetime | None = None,
 ) -> FeedRefresh:
-    """Refresh one feed inside the caller's transaction."""
+    """Refresh the provider's US feed inside the caller's transaction."""
     at = now or _now()
+    region = PRICE_REGION
     feed = await price_feed_repo.get_or_create(db, game_id, region, provider.ruleset, provider.source)
     if not await price_feed_repo.try_lock(db, feed.id):
         logger.info("wow prices: %s/%s is being refreshed by another worker — skipped", provider.source, region)
@@ -129,11 +128,8 @@ async def refresh_feed(
     return FeedRefresh(region, provider.source, OUTCOME_UPDATED, len(result.prices))
 
 
-async def refresh_all(
-    providers: Sequence[PriceProvider] | None = None,
-    regions: Sequence[str] = PRICE_REGIONS,
-) -> list[FeedRefresh]:
-    """Refresh every (provider, region) feed, each in its own transaction.
+async def refresh_all(providers: Sequence[PriceProvider] | None = None) -> list[FeedRefresh]:
+    """Refresh every provider's US feed, each in its own transaction.
 
     One feed failing never stops the others. Returns what happened to each.
     """
@@ -149,12 +145,11 @@ async def refresh_all(
 
     outcomes: list[FeedRefresh] = []
     for provider in providers if providers is not None else default_providers():
-        for region in regions:
-            try:
-                async with unit_of_work() as db:
-                    outcomes.append(await refresh_feed(db, provider, game_id, region))
-            except Exception:
-                # A DB error mid-write rolls the whole feed back: the old prices stay.
-                logger.exception("wow prices: %s/%s refresh crashed — stored prices kept", provider.source, region)
-                outcomes.append(FeedRefresh(region, provider.source, OUTCOME_FAILED, 0))
+        try:
+            async with unit_of_work() as db:
+                outcomes.append(await refresh_feed(db, provider, game_id))
+        except Exception:
+            # A DB error mid-write rolls the whole feed back: the old prices stay.
+            logger.exception("wow prices: %s/%s refresh crashed — stored prices kept", provider.source, PRICE_REGION)
+            outcomes.append(FeedRefresh(PRICE_REGION, provider.source, OUTCOME_FAILED, 0))
     return outcomes

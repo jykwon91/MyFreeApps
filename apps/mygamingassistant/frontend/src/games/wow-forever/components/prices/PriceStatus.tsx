@@ -5,8 +5,6 @@ import { useAuctionPrices } from "@/games/wow-forever/hooks/useAuctionPrices";
 interface PriceStatusProps {
   /** What the section shows when the prices don't load, e.g. "showing routes without prices". */
   withoutPrices: string;
-  /** False when the page has its own region control. */
-  showRegion?: boolean;
   /** True when the page shows the failure itself, so it isn't said twice. */
   hideError?: boolean;
 }
@@ -16,17 +14,16 @@ interface PriceStatusProps {
  * prices were updated. While loading it's a skeleton of that line, and if the
  * prices fail it's a retry. The section still renders either way, only without prices.
  */
-export default function PriceStatus({ withoutPrices, showRegion = true, hideError = false }: PriceStatusProps) {
+export default function PriceStatus({ withoutPrices, hideError = false }: PriceStatusProps) {
   const { status, prices, retry, retrying } = useAuctionPrices();
-  if (status === "ready" && prices) return <PriceCredit prices={prices} showRegion={showRegion} />;
+  if (status === "ready" && prices) return <PriceCredit prices={prices} />;
   if (status === "error" && hideError) return null;
   if (status === "error") {
     return <LoadErrorRetry message={`Couldn't load prices — ${withoutPrices}.`} onRetry={retry} retrying={retrying} />;
   }
   return (
-    <div className="flex items-center gap-3" aria-busy="true" aria-label="Loading auction prices" data-testid="price-credit-skeleton">
-      <div className="h-4 w-56 max-w-full rounded bg-muted/40 animate-pulse" aria-hidden />
-      <div className="h-8 w-24 rounded bg-muted/40 animate-pulse" aria-hidden />
+    <div aria-busy="true" aria-label="Loading auction prices" data-testid="price-credit-skeleton">
+      <div className="h-4 w-64 max-w-full rounded bg-muted/40 animate-pulse" aria-hidden />
     </div>
   );
 }

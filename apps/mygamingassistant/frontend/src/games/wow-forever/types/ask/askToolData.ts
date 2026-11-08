@@ -28,9 +28,9 @@ export interface AskToolData {
   loadGoldFarms: () => Promise<readonly GoldFarm[]>;
   loadProfessionRoute: (profession: GuideProfession) => Promise<AskProfessionRoute>;
   /** The live data: same endpoints and cache as the Auction house and Server status pages. */
-  loadPrices: (region: WowRegion) => Promise<PriceListResponse>;
+  loadPrices: () => Promise<PriceListResponse>;
   loadServerStatus: (region: WowRegion) => Promise<ServerStatusResponse>;
   player: PlayerSettings;
-  /** The player's saved region (the one the price and status pages show). */
+  /** The player's saved server status region. */
   region: WowRegion;
 }

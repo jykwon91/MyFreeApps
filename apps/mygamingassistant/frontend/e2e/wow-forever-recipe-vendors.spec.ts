@@ -8,7 +8,7 @@ import { test, expect } from "@playwright/test";
 
 // No auction prices here — the vendor list doesn't need them.
 test.beforeEach(async ({ page }) => {
-  await page.route("**/wow/prices?region=*", (route) =>
+  await page.route("**/wow/prices**", (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",

@@ -14,7 +14,7 @@ const WEBP_1X1 = Buffer.from("UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==",
 const ICON_URL = /\/api\/wow\/icons\/\d+\.\d+\.\d+\.\d+\/\d+\.webp$/;
 
 async function stubPrices(page: Page): Promise<void> {
-  await page.route("**/wow/prices?region=*", (route) =>
+  await page.route("**/wow/prices**", (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
