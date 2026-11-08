@@ -106,7 +106,9 @@ def generators(*, art: bool, hotfix_cache: Path, quest_cache: Path, creature_cac
         ["scripts.wow_hunter_pets.build", *cache, "--creature-cache", str(creature_cache)],
         # Reads the Item output above; its books, cards and rewards are in the icon build's wanted ids.
         ["scripts.wow_library.build", *cache, "--quest-cache", str(quest_cache)],
-        # Reads the Professions, Item, Talent, Downrank, Spellbook, Rares, Races, Classes, Hunter pets and Library output above. Its images are published last, below.
+        # Its talent, challenge and reward icons are in the icon build's wanted ids.
+        ["scripts.wow_legacy.build", *cache],
+        # Reads the Professions, Item, Talent, Downrank, Spellbook, Rares, Races, Classes, Hunter pets, Library and Legacy output above. Its images are published last, below.
         ["scripts.wow_icons.build", *cache],
         ["scripts.wow_item_names.build"],
         ["scripts.wow_macros.build"],
