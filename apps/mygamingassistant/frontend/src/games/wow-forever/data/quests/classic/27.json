@@ -1,0 +1,9 @@
+{
+  "source": {"repo": "cmangos/classic-db", "commit": "placeholder", "license": "GPL-3.0-or-later"},
+  "questColumns": ["id", "title", "level", "minLevel", "side", "classes", "givers", "chain", "objectives", "rewards", "choices", "enders"],
+  "giverColumns": ["kind", "id", "name", "zone", "subzone", "x", "y", "instance"],
+  "objectiveColumns": ["kind", "id", "count"],
+  "targetColumns": ["name", "instance"],
+  "quests": {},
+  "targets": {}
+}

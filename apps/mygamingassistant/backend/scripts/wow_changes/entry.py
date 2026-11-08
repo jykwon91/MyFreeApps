@@ -25,7 +25,7 @@ class Change:
     summary: str
     rows: tuple[Row, ...] = ()
     classes: tuple[str, ...] = ()
-    # ("item", id) | ("talent", class, talent id) | ("map", uiMapId)
+    # ("item", id) | ("quest", id) | ("talent", class, talent id) | ("map", uiMapId)
     link: tuple[Any, ...] | None = None
     # ("item", id) | ("file", file data id)
     icon: tuple[Any, ...] | None = None

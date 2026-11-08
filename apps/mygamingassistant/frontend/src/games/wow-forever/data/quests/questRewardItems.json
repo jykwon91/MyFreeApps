@@ -1,0 +1,6 @@
+{
+  "source": "placeholder — run python -m scripts.wow_quests.build to populate",
+  "clientBuild": "0.0.0",
+  "columns": ["name", "slot", "itemType"],
+  "items": {}
+}

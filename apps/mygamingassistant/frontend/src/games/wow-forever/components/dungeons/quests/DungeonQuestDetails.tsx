@@ -1,10 +1,14 @@
+import { Link } from "react-router-dom";
+import { ExternalLink } from "lucide-react";
 import InsideDungeonChip from "@/games/wow-forever/components/dungeons/quests/InsideDungeonChip";
 import QuestChain from "@/games/wow-forever/components/dungeons/quests/QuestChain";
 import QuestFact from "@/games/wow-forever/components/dungeons/quests/QuestFact";
 import QuestGiverLine from "@/games/wow-forever/components/dungeons/quests/QuestGiverLine";
 import QuestRewards from "@/games/wow-forever/components/dungeons/quests/QuestRewards";
+import { DETAIL_LINK } from "@/games/wow-forever/components/food/detail/detailStyles";
 import { objectiveText } from "@/games/wow-forever/lib/dungeons/describeQuest";
 import { questProvenance } from "@/games/wow-forever/lib/provenance/questProvenance";
+import { questPageHref } from "@/games/wow-forever/lib/quests/questPageHref";
 import type { DungeonQuest } from "@/games/wow-forever/types/dungeons/dungeonQuest";
 import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
 
@@ -58,6 +62,10 @@ export default function DungeonQuestDetails({ quest, id }: { quest: DungeonQuest
           <p className="text-sm">{quest.enders.join(", ")}</p>
         </QuestFact>
       ) : null}
+      <Link to={questPageHref(quest.id)} className={DETAIL_LINK} data-testid="view-quest-link">
+        <ExternalLink className="h-4 w-4" aria-hidden />
+        View full quest details
+      </Link>
     </div>
   );
 }

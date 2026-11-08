@@ -88,6 +88,8 @@ def generators(*, art: bool, hotfix_cache: Path, quest_cache: Path, creature_cac
         ["scripts.wow_changes.build", *cache, "--quest-cache", str(quest_cache)],
         # The item browser's index, beside the item pages: reads the Item output and the Changes feed above.
         ["scripts.wow_item_pages.index"],
+        # Reads the World Map, Item and quest-cache output above; reward items are in the icon build's wanted ids.
+        ["scripts.wow_quests.build", "--quest-cache", str(quest_cache)],
         # Reads the Changes output above (a family Forever changed links to it).
         ["scripts.wow_downrank.build", *cache],
         # Reads the Changes and Downrank output above (changed marks, downrank links).

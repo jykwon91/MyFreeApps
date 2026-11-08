@@ -1,0 +1,8 @@
+{
+  "source": {},
+  "clientBuild": "placeholder",
+  "columns": ["id", "name", "level", "minLevel", "side", "zoneId", "isNew"],
+  "zones": [],
+  "counts": {"total": 0, "named": 0, "withClassic": 0, "seenInGame": 0, "unnamed": 0},
+  "quests": []
+}

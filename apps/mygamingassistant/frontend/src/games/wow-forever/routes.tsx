@@ -35,6 +35,8 @@ const WowAskPage = lazy(() => import("@/games/wow-forever/pages/WowAskPage"));
 const WowTriagePage = lazy(() => import("@/games/wow-forever/pages/WowTriagePage"));
 const WowClassesPage = lazy(() => import("@/games/wow-forever/pages/WowClassesPage"));
 const WowClassPage = lazy(() => import("@/games/wow-forever/pages/WowClassPage"));
+const WowQuestsPage = lazy(() => import("@/games/wow-forever/pages/WowQuestsPage"));
+const WowQuestPage = lazy(() => import("@/games/wow-forever/pages/WowQuestPage"));
 
 function withSuspense(page: ReactElement): ReactElement {
   return <Suspense fallback={<WowPageSkeleton />}>{page}</Suspense>;
@@ -101,6 +103,8 @@ export const wowForeverRoutes: RouteObject[] = [
   { path: "/wow-forever/gear", element: withSuggestFooter(<WowGearPage />, "gear_upgrades") },
   { path: "/wow-forever/items", element: withSuggestFooter(<WowItemsPage />, "gear_upgrades") },
   { path: "/wow-forever/items/:id", element: withSuggestFooter(<WowItemPage />, "gear_upgrades") },
+  { path: "/wow-forever/quests", element: withSuggestFooter(<WowQuestsPage />, "dungeons_raids") },
+  { path: "/wow-forever/quests/:id", element: withSuggestFooter(<WowQuestPage />, "dungeons_raids") },
   { path: "/wow-forever/dungeons", element: withSuggestFooter(<WowDungeonsPage />, "dungeons_raids") },
   { path: "/wow-forever/dungeons/:slug", element: withSuggestFooter(<WowDungeonPage />, "dungeons_raids") },
   { path: "/wow-forever/rares", element: withSuggestFooter(<WowRaresPage />, "map_travel") },

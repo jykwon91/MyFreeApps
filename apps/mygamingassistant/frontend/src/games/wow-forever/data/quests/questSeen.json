@@ -1,0 +1,8 @@
+{
+  "source": "placeholder",
+  "clientBuild": 0,
+  "seenOn": "2026-01-01",
+  "attribution": "",
+  "columns": ["title", "level", "minLevel", "objectives", "rewards", "choices"],
+  "quests": {}
+}
