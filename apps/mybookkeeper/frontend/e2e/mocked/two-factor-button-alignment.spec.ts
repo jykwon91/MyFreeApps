@@ -11,6 +11,7 @@
  * parent-flex-container level, not on the button itself.
  */
 import { test, expect, type Locator } from "@playwright/test";
+import { VERSION_INFO } from "./fixtures/mockSession";
 
 async function expectHorizontallyCenteredWithin(
   child: Locator,
@@ -147,7 +148,7 @@ test.describe("2FA — Security setup Verify & Enable button alignment", () => {
 
     // Other routes the auth-gated app probes on first render.
     await page.route("**/api/version", (route) => {
-      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ version: "test" }) });
+      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(VERSION_INFO) });
     });
     await page.route("**/api/tax-profile", (route) => {
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ onboarding_completed: true, tax_situations: [], filing_status: null, dependents_count: 0 }) });

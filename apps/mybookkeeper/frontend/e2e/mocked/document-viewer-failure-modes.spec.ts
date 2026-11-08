@@ -4,6 +4,7 @@
  * report. Mocks the API surface so the test runs without a backend.
  */
 import { test, expect } from "@playwright/test";
+import { VERSION_INFO } from "./fixtures/mockSession";
 
 async function plantValidJwtAndOrgInLocalStorage(page: import("@playwright/test").Page): Promise<void> {
   await page.addInitScript(() => {
@@ -41,7 +42,7 @@ async function stubAuthAndOrg(page: import("@playwright/test").Page): Promise<vo
     });
   });
   await page.route("**/api/version", (route) => {
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ version: "test" }) });
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(VERSION_INFO) });
   });
   await page.route("**/api/tax-profile", (route) => {
     route.fulfill({

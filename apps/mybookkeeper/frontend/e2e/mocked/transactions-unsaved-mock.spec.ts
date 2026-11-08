@@ -15,7 +15,7 @@
  *   - Fields are named by their visible labels, and clicking a label focuses its field.
  */
 import { test, expect, type Page, type Request } from "@playwright/test";
-import { ORG_ID, plantAuth } from "./fixtures/mockSession";
+import { VERSION_INFO, ORG_ID, plantAuth } from "./fixtures/mockSession";
 import { json } from "./fixtures/mockResponse";
 
 const TXN_ID = "00000000-0000-0000-0000-0000000000a1";
@@ -74,7 +74,7 @@ async function stubApi(page: Page): Promise<FakeServer> {
   await page.route("**/api/organizations", (route) =>
     route.fulfill(json([{ id: ORG_ID, name: "Test Workspace", role: "owner", org_role: "owner" }])),
   );
-  await page.route("**/api/version", (route) => route.fulfill(json({ version: "test" })));
+  await page.route("**/api/version", (route) => route.fulfill(json(VERSION_INFO)));
   await page.route("**/api/tax-profile", (route) =>
     route.fulfill(json({ onboarding_completed: true, tax_situations: [], filing_status: null, dependents_count: 0 })),
   );
