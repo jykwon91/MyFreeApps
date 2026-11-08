@@ -5,10 +5,12 @@ import PendingInvites from "@/app/features/organizations/PendingInvites";
 import type { OrgInvite } from "@mybookkeeper/api-client/types/organization/OrgInvite";
 
 const mockCancel = vi.fn();
+const mockCreate = vi.fn();
 
 vi.mock("@mybookkeeper/api-client/store/membersApi", () => ({
   useListInvitesQuery: vi.fn(),
   useCancelInviteMutation: vi.fn(() => [mockCancel, { isLoading: false }]),
+  useCreateInviteMutation: vi.fn(() => [mockCreate, { isLoading: false }]),
 }));
 
 vi.mock("@/shared/hooks/useCurrentOrg", () => ({
@@ -209,5 +211,83 @@ describe("PendingInvites", () => {
     await act(async () => finish());
     expect(button).not.toBeDisabled();
     expect(onSuccess).toHaveBeenCalledWith("Invite for slow@test.com cancelled");
+  });
+
+  describe("send again", () => {
+    function resendAnswers(result: () => Promise<unknown>) {
+      mockCreate.mockReturnValueOnce({ unwrap: result });
+    }
+
+    it("sends the same invite again with the same role", async () => {
+      showInvites([makeInvite({ email: "again@test.com", org_role: "viewer" })]);
+      resendAnswers(() => Promise.resolve(makeInvite({ email: "again@test.com", email_sent: true })));
+      render(<PendingInvites onSuccess={onSuccess} onError={onError} />);
+
+      await userEvent.setup().click(screen.getByRole("button", { name: "Send the invite to again@test.com again" }));
+
+      expect(mockCreate).toHaveBeenCalledWith({ orgId: "org-1", email: "again@test.com", orgRole: "viewer" });
+      expect(onSuccess).toHaveBeenCalledWith("Invite sent to again@test.com");
+      expect(mockCancel).not.toHaveBeenCalled();
+    });
+
+    it("never resends as an owner", async () => {
+      showInvites([makeInvite({ email: "owner@test.com", org_role: "owner" })]);
+      resendAnswers(() => Promise.resolve(makeInvite({ email_sent: true })));
+      render(<PendingInvites onSuccess={onSuccess} onError={onError} />);
+
+      await userEvent.setup().click(screen.getByRole("button", { name: "Send the invite to owner@test.com again" }));
+
+      expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ orgRole: "user" }));
+    });
+
+    it("says so when the new invite's email didn't send", async () => {
+      showInvites([makeInvite({ email: "typo@test.com" })]);
+      resendAnswers(() => Promise.resolve(makeInvite({ email: "typo@test.com", email_sent: false })));
+      render(<PendingInvites onSuccess={onSuccess} onError={onError} />);
+
+      await userEvent.setup().click(screen.getByRole("button", { name: "Send the invite to typo@test.com again" }));
+
+      expect(onError).toHaveBeenCalledWith(expect.stringContaining("couldn't send the email to typo@test.com"));
+      expect(onSuccess).not.toHaveBeenCalled();
+    });
+
+    it("passes on the server's reason when they've already joined", async () => {
+      showInvites([makeInvite({ email: "joined@test.com" })]);
+      resendAnswers(() => Promise.reject({ status: 400, data: { detail: "User is already a member of this organization" } }));
+      render(<PendingInvites onSuccess={onSuccess} onError={onError} />);
+
+      await userEvent.setup().click(screen.getByRole("button", { name: "Send the invite to joined@test.com again" }));
+
+      expect(onError).toHaveBeenCalledWith("User is already a member of this organization");
+    });
+
+    it("asks to try again when the resend fails for another reason", async () => {
+      showInvites([makeInvite({ email: "flaky@test.com" })]);
+      resendAnswers(() => Promise.reject({ status: "FETCH_ERROR", error: "Network Error" }));
+      render(<PendingInvites onSuccess={onSuccess} onError={onError} />);
+
+      await userEvent.setup().click(screen.getByRole("button", { name: "Send the invite to flaky@test.com again" }));
+
+      expect(onError).toHaveBeenCalledWith("I couldn't send that invite again. Try again.");
+    });
+
+    it("locks the row while sending, so cancel and a second send wait", async () => {
+      showInvites([makeInvite({ email: "slow@test.com" })]);
+      let finish: (value: unknown) => void = () => {};
+      const pending = new Promise((resolve) => { finish = resolve; });
+      resendAnswers(() => pending);
+      render(<PendingInvites onSuccess={onSuccess} onError={onError} />);
+      const user = userEvent.setup();
+
+      await user.click(screen.getByRole("button", { name: "Send the invite to slow@test.com again" }));
+      expect(screen.getByRole("button", { name: "Send the invite to slow@test.com again" })).toBeDisabled();
+      expect(screen.getByText("Sending…")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Cancel invite for slow@test.com" })).toBeDisabled();
+      expect(mockCreate).toHaveBeenCalledTimes(1);
+
+      await act(async () => finish(makeInvite({ email: "slow@test.com", email_sent: true })));
+      expect(screen.getByRole("button", { name: "Cancel invite for slow@test.com" })).not.toBeDisabled();
+      expect(onSuccess).toHaveBeenCalledWith("Invite sent to slow@test.com");
+    });
   });
 });

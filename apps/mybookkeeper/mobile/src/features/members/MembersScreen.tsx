@@ -1,3 +1,4 @@
+import { inviteAgainRole } from "@mybookkeeper/api-client/utils/inviteAgainRole";
 import { canManageMember } from "@mybookkeeper/api-client/utils/canManageMember";
 import { useListInvitesQuery, useListMembersQuery } from "@mybookkeeper/api-client/store/membersApi";
 import type { AssignableRole } from "@mybookkeeper/api-client/types/organization/AssignableRole";
@@ -145,7 +146,7 @@ export default function MembersScreen({ workspace }: { workspace: Workspace }) {
             key={invite.id}
             now={now}
             onCancel={() => cancelInvite(invite)}
-            onInviteAgain={() => setInviteSeed({ email: invite.email, role: invite.org_role === "owner" ? "user" : invite.org_role, resendingTo: invite.email })}
+            onInviteAgain={() => setInviteSeed({ email: invite.email, role: inviteAgainRole(invite), resendingTo: invite.email })}
           />
         ))}
       </View>
