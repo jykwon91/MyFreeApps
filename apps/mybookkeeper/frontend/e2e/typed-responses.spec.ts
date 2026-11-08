@@ -6,6 +6,8 @@
  * the backend serialises correctly and no schema mismatch exists.
  */
 import { test, expect } from "./fixtures/auth";
+import { seededOrg } from "./fixtures/seeded-org";
+import { createApprovedTransaction, createProperty } from "./fixtures/seed-data";
 
 test.describe("Typed response shapes — common mutations", () => {
   test.describe("Health dashboard endpoints", () => {
@@ -74,79 +76,57 @@ test.describe("Typed response shapes — common mutations", () => {
     });
   });
 
-  test.describe("Tax return forms overview", () => {
-    test("GET /tax-returns/{id}/forms-overview returns list with form_name, instance_count, field_count", async ({ api }) => {
-      // First fetch any existing tax return
-      const listRes = await api.get("/tax-returns");
-      expect(listRes.ok()).toBe(true);
-      const returns = await listRes.json();
-
-      if (returns.length === 0) {
-        test.skip();
-        return;
-      }
-
-      const returnId = returns[0].id;
-      const res = await api.get(`/tax-returns/${returnId}/forms-overview`);
-      expect(res.ok()).toBe(true);
-      const data = await res.json();
-      expect(Array.isArray(data)).toBe(true);
-
-      if (data.length > 0) {
-        const item = data[0];
-        expect(typeof item.form_name).toBe("string");
-        expect(typeof item.instance_count).toBe("number");
-        expect(typeof item.field_count).toBe("number");
-      }
+  test.describe("Tax return endpoints", () => {
+    // A fresh organization with one return: a manual, field-less W-2 and $2,000
+    // of rent on one investment property, recomputed once. Each response is then
+    // exact rather than whatever the shared account has, in any test order.
+    let returnId = "";
+    const org = seededOrg("typed-responses-tax", async (api) => {
+      const created = await api.post("/tax-returns", { data: { tax_year: 2024 } });
+      expect(created.status(), await created.text()).toBe(201);
+      returnId = ((await created.json()) as { id: string }).id;
+      const form = await api.post(`/test/tax-returns/${returnId}/seed-form-instance`, { data: { form_name: "w2" } });
+      expect(form.status(), await form.text()).toBe(201);
+      const property = await createProperty(api, { name: "E2E Typed Rental", type: "long_term", classification: "investment" });
+      await createApprovedTransaction(api, {
+        property_id: property.id, vendor: "E2E Typed Tenant", transaction_type: "income",
+        category: "rental_revenue", amount: "2000.00", tax_relevant: true, transaction_date: "2024-06-15",
+      });
+      const recomputed = await api.post(`/tax-returns/${returnId}/recompute`);
+      expect(recomputed.status(), await recomputed.text()).toBe(200);
     });
 
-    test("POST /tax-returns/{id}/recompute returns { status, forms_updated }", async ({ api }) => {
-      const listRes = await api.get("/tax-returns");
-      expect(listRes.ok()).toBe(true);
-      const returns = await listRes.json();
-
-      if (returns.length === 0) {
-        test.skip();
-        return;
-      }
-
-      const returnId = returns[0].id;
-      const res = await api.post(`/tax-returns/${returnId}/recompute`);
-      expect(res.ok()).toBe(true);
-      const data = await res.json();
-      expect(data.status).toBe("ok");
-      expect(typeof data.forms_updated).toBe("number");
+    test("GET /tax-returns/{id}/forms-overview returns form_name, instance_count, field_count", async () => {
+      const res = await org().api.get(`/tax-returns/${returnId}/forms-overview`);
+      expect(res.status(), await res.text()).toBe(200);
+      expect(await res.json()).toEqual([
+        { form_name: "1040", instance_count: 1, field_count: 1 },
+        { form_name: "schedule_1", instance_count: 1, field_count: 2 },
+        // One for the property, one for the all-properties total.
+        { form_name: "schedule_e", instance_count: 2, field_count: 4 },
+        { form_name: "w2", instance_count: 1, field_count: 0 },
+      ]);
     });
 
-    test("GET /tax-returns/{id}/validation returns array with severity, form_name, message", async ({ api }) => {
-      const listRes = await api.get("/tax-returns");
-      expect(listRes.ok()).toBe(true);
-      const returns = await listRes.json();
+    test("POST /tax-returns/{id}/recompute returns { status, forms_updated }", async () => {
+      const res = await org().api.post(`/tax-returns/${returnId}/recompute`);
+      expect(res.status(), await res.text()).toBe(200);
+      expect(await res.json()).toEqual({ status: "ok", forms_updated: 2 });
+    });
 
-      if (returns.length === 0) {
-        test.skip();
-        return;
-      }
-
-      const returnId = returns[0].id;
-      const res = await api.get(`/tax-returns/${returnId}/validation`);
-      expect(res.ok()).toBe(true);
-      const data = await res.json();
-      expect(Array.isArray(data)).toBe(true);
-
-      if (data.length > 0) {
-        const item = data[0];
-        expect(typeof item.severity).toBe("string");
-        expect(typeof item.form_name).toBe("string");
-        expect(typeof item.message).toBe("string");
-        // expected_value and actual_value may be null or number
-        if (item.expected_value !== null && item.expected_value !== undefined) {
-          expect(typeof item.expected_value).toBe("number");
-        }
-        if (item.actual_value !== null && item.actual_value !== undefined) {
-          expect(typeof item.actual_value).toBe("number");
-        }
-      }
+    test("GET /tax-returns/{id}/validation flags the missing depreciation and the QBI deduction", async () => {
+      const res = await org().api.get(`/tax-returns/${returnId}/validation`);
+      expect(res.status(), await res.text()).toBe(200);
+      expect(await res.json()).toEqual([
+        {
+          severity: "warning", form_name: "form_4562", field_id: null, expected_value: null, actual_value: 0,
+          message: expect.stringMatching(/^A rental property with \$2,000\.00 in income has no depreciation claimed\./),
+        },
+        {
+          severity: "info", form_name: "1040", field_id: null, expected_value: null, actual_value: 400,
+          message: expect.stringMatching(/^You may qualify for a \$400\.00 QBI deduction \(20% of \$2,000\.00/),
+        },
+      ]);
     });
   });
 
