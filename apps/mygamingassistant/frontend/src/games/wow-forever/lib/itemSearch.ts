@@ -57,7 +57,7 @@ function tokenMatchesWord(token: string, word: string, fuzzy: boolean): boolean 
 }
 
 /** Every token matches the start of some word, in any order; unmatched number tokens are ignored. */
-function matches(tokens: readonly string[], words: readonly string[], fuzzy: boolean): boolean {
+export function matchesNameWords(tokens: readonly string[], words: readonly string[], fuzzy: boolean): boolean {
   let matchedWords = 0;
   for (const token of tokens) {
     const hit = words.some((w) => tokenMatchesWord(token, w, fuzzy));
@@ -89,7 +89,7 @@ function run(list: ClientItemList, query: string, tokens: readonly string[], fil
   list.items.forEach((item, i) => {
     if (filters.slot !== null && item.slot !== filters.slot) return;
     if (filters.fits && !filters.fits(item)) return;
-    if (!matches(tokens, list.searchWords[i], fuzzy)) return;
+    if (!matchesNameWords(tokens, list.searchWords[i], fuzzy)) return;
     if (!usableBy(item, filters.usableBy)) {
       hiddenByClass += 1;
       return;

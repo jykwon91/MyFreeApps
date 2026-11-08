@@ -111,6 +111,12 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "Every talent, class spell, item, quest and zone Forever changed or added, old and new side by side, from the game files.",
       },
       {
+        path: "/wow-forever/items",
+        title: "Items",
+        iconName: "Backpack",
+        description: "Search the gear the Forever game files have shown so far by name, quality, slot, type and level, and see what Forever changed or added.",
+      },
+      {
         path: "/wow-forever/gear",
         title: "Best gear",
         iconName: "Trophy",

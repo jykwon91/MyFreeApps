@@ -86,6 +86,8 @@ def generators(*, art: bool, hotfix_cache: Path, quest_cache: Path, creature_cac
         ["scripts.wow_talents.build", *cache],
         # Reads the Item and Talent output above (and the World Map's zones).
         ["scripts.wow_changes.build", *cache, "--quest-cache", str(quest_cache)],
+        # The item browser's index, beside the item pages: reads the Item output and the Changes feed above.
+        ["scripts.wow_item_pages.index"],
         # Reads the Changes output above (a family Forever changed links to it).
         ["scripts.wow_downrank.build", *cache],
         # Reads the World Map and Item output above; its drop items are in the icon build's wanted ids.

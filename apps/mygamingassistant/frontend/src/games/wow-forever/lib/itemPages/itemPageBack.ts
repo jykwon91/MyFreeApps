@@ -2,7 +2,9 @@ const BACK_LABELS: readonly (readonly [string, string])[] = [
   ["/wow-forever/gear", "Back to Best gear"],
   ["/wow-forever/compare", "Back to Item Compare"],
   ["/wow-forever/changes", "Back to Changes vs Classic"],
-  ["/wow-forever/items", "Back to the last item"],
+  // An item page ("/wow-forever/items/19") before the item browser ("/wow-forever/items?q=…").
+  ["/wow-forever/items/", "Back to the last item"],
+  ["/wow-forever/items", "Back to Items"],
 ];
 
 /** Where Back goes when the page was opened from another WoW Forever page (router state `{ from }`). */

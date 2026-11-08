@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/rares`, `/wow-forever/races`, `/wow-forever/races/:race`, `/wow-forever/talents`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`)
+### WoW Forever (`/wow-forever`, `/wow-forever/items`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/rares`, `/wow-forever/races`, `/wow-forever/races/:race`, `/wow-forever/talents`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -432,6 +432,47 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   reference ≥10 creatures share is a "world drop" with a level range).
   `tests/test_wow_item_pages_generator.py`, `src/__tests__/wowItemPage*.test.ts(x)`,
   `e2e/wow-forever-item-page.spec.ts`.
+
+#### Item browser (`/wow-forever/items`)
+
+- `pages/WowItemsPage.tsx` + `components/itemBrowser/`: every item in
+  `items.json` — "the items the Forever game files have shown so far", never
+  "all items"; a missing item is "not seen yet", never "removed". Name search
+  (every word, any order; one-letter-off only when no name matches at all — a name the chips hide
+  still counts, so a chip never swaps in near misses; reusing
+  `lib/itemSearch.ts`), chips with counts for quality, item class (Armor /
+  Weapons / Shields & off-hands / Jewelry & trinkets / Cloaks / Other — by
+  slot, so a cloak is never Cloth; a Shield-type off hand is a shield), slot,
+  armor / weapon type and "Changed" / "New in Forever", plus required / item
+  level ranges. Sort: item level (default) or required level high→low, name
+  A→Z; a new sort starts in its own direction. List / Grid. `ITEM_BROWSER_PAGE_SIZE`
+  (60) rows per "Show more" — no virtualisation library; the open page count is
+  `?pages` so Back from an item keeps the spot, and a new search / filter / sort resets it.
+  Level boxes clamp to their ends (never silently drop an out-of-range number). On a phone the filters
+  fold behind one "Filters (n)" button.
+- Everything is the URL (`?q&quality&class&slot&type&change&rmin&rmax&imin&imax&sort&dir&view&pages`,
+  replace history, defaults left out; `hooks/useItemBrowserQuery.ts` on
+  `useLiveSearchParams`, pure `lib/itemBrowser/itemBrowserParams.ts`).
+  Filtering / chip counts are `lib/itemBrowser/filterItems.ts` (a chip counts
+  with every other group applied but not its own), sorting `sortItems.ts`
+  (ties by name, then id). Rows link through `ItemNameLink` (tooltip; the item
+  page's Back reads "Back to Items" and returns to the same search). An item
+  page counts as the Items tile for update dots.
+- "Changed in Forever" compares only what the Changes feed compares (name,
+  quality, ilvl, required level, armor, weapon damage / speed, main stats —
+  not equip effects), so no mark ≠ unchanged; "New" = not in the Classic Era
+  game files. Tagged Game files (`ItemBrowserNote`). No drop sources, BiS or
+  scores here — that's the item page and Best gear.
+- **Index is GENERATED** — `python -m scripts.wow_item_pages.index` (from
+  `backend/`, in `wow_refresh` right after the Changes build, which it reads)
+  writes `data/items/itemIndex.json` from `items.json` +
+  `data/changes/items.json` / `itemsNew.json`: one row per item
+  (`[id, name, quality, slot, type, ilvl, req, change]`, enums as positions in
+  the header lists; ~106 KB gzipped). It's its own lazy chunk
+  (`lib/itemBrowser/loadItemIndex.ts`), decoded by `decodeItemIndex.ts`; never
+  import the item-page shards for the list. Tests:
+  `tests/test_wow_item_index_generator.py`, `src/__tests__/wowItemBrowser.test.ts`,
+  `e2e/wow-forever-item-browser.spec.ts`.
 
 #### Dungeon pages (`/wow-forever/dungeons`, `/wow-forever/dungeons/:slug`)
 
