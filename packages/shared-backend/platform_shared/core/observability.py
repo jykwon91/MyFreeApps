@@ -113,6 +113,7 @@ def init_sentry(*, dsn: str, environment: str) -> None:
         sentry_sdk.init(
             dsn=dsn,
             send_default_pii=False,
+            max_request_body_size="never",
             traces_sample_rate=0.1,
             environment=environment,
             integrations=[logging_integration],

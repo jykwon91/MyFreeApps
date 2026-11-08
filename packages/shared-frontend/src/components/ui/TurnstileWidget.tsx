@@ -5,6 +5,8 @@ const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY ?? "";
 interface TurnstileWidgetProps {
   onVerify: (token: string) => void;
   onExpire?: () => void;
+  /** Cloudflare widget action; echoed in siteverify so the backend can bind the token to this widget. */
+  action?: string;
 }
 
 declare global {
@@ -17,7 +19,7 @@ declare global {
   }
 }
 
-export default function TurnstileWidget({ onVerify, onExpire }: TurnstileWidgetProps) {
+export default function TurnstileWidget({ onVerify, onExpire, action }: TurnstileWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
 
@@ -28,8 +30,9 @@ export default function TurnstileWidget({ onVerify, onExpire }: TurnstileWidgetP
       callback: onVerify,
       "expired-callback": onExpire,
       theme: "auto",
+      ...(action ? { action } : {}),
     });
-  }, [onVerify, onExpire]);
+  }, [onVerify, onExpire, action]);
 
   useEffect(() => {
     if (!TURNSTILE_SITE_KEY) return;

@@ -194,6 +194,34 @@ class TestEmailDomainFromRequest:
 
 class TestMakeRequireTurnstile:
     @pytest.mark.anyio
+    async def test_binding_forwarded_to_verify_only_when_set(self) -> None:
+        verify = AsyncMock(return_value=(True, []))
+        hosts = frozenset({"a.example"})
+        dep = make_require_turnstile(
+            lambda: "secret", verify=verify, expected_action="act", expected_hostnames=hosts,
+        )
+        await dep(_make_request(headers={"X-Turnstile-Token": "tok"}))
+        kwargs = verify.await_args.kwargs
+        assert kwargs["expected_action"] == "act"
+        assert kwargs["expected_hostnames"] == hosts
+
+        plain = AsyncMock(return_value=(True, []))
+        await make_require_turnstile(lambda: "secret", verify=plain)(
+            _make_request(headers={"X-Turnstile-Token": "tok"}),
+        )
+        assert "expected_action" not in plain.await_args.kwargs
+        assert "expected_hostnames" not in plain.await_args.kwargs
+
+    @pytest.mark.anyio
+    async def test_binding_mismatch_returns_400(self) -> None:
+        verify = AsyncMock(return_value=(False, ["action-mismatch"]))
+        dep = make_require_turnstile(lambda: "secret", verify=verify, expected_action="act")
+        with pytest.raises(HTTPException) as exc_info:
+            await dep(_make_request(headers={"X-Turnstile-Token": "tok"}))
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.detail == "captcha_verification_failed"
+
+    @pytest.mark.anyio
     async def test_dev_mode_passes_without_token(self) -> None:
         """Empty secret_key (dev / CI) skips the check entirely."""
         verify = AsyncMock(return_value=(True, []))

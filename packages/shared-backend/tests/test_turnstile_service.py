@@ -162,3 +162,49 @@ class TestVerification:
         success, error_codes = await verify_turnstile_token("abc", secret_key="real-secret")
         assert success is False
         assert error_codes == []
+
+
+class TestActionAndHostnameBinding:
+    @staticmethod
+    def _respond(monkeypatch: pytest.MonkeyPatch, body: dict) -> None:
+        _install_mock_transport(monkeypatch, lambda _: httpx.Response(200, json=body))
+
+    @pytest.mark.anyio
+    async def test_matching_action_and_hostname_pass(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._respond(monkeypatch, {"success": True, "action": "feature_request", "hostname": "a.example"})
+        result = await verify_turnstile_token(
+            "t", secret_key="s",
+            expected_action="feature_request", expected_hostnames=frozenset({"a.example"}),
+        )
+        assert result == (True, [])
+
+    @pytest.mark.anyio
+    async def test_mismatched_action_fails_and_logs(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        self._respond(monkeypatch, {"success": True, "action": "login", "hostname": "a.example"})
+        with caplog.at_level(logging.WARNING):
+            ok, codes = await verify_turnstile_token(
+                "t", secret_key="s", expected_action="feature_request",
+            )
+        assert ok is False
+        assert codes == ["action-mismatch"]
+        assert "observed_action=login" in caplog.text
+
+    @pytest.mark.anyio
+    async def test_mismatched_hostname_fails(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        self._respond(monkeypatch, {"success": True, "action": "x", "hostname": "evil.example"})
+        with caplog.at_level(logging.WARNING):
+            ok, codes = await verify_turnstile_token(
+                "t", secret_key="s", expected_hostnames=frozenset({"a.example"}),
+            )
+        assert ok is False
+        assert codes == ["hostname-mismatch"]
+        assert "observed_hostname=evil.example" in caplog.text
+
+    @pytest.mark.anyio
+    async def test_none_ignores_action_and_hostname(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._respond(monkeypatch, {"success": True, "action": "anything", "hostname": "any.example"})
+        assert await verify_turnstile_token("t", secret_key="s") == (True, [])

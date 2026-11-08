@@ -164,12 +164,22 @@ def make_require_turnstile(
     secret_key_provider: SecretKeyProvider,
     *,
     verify: Callable[..., Awaitable[tuple[bool, list[str]]]] = verify_turnstile_token,
+    expected_action: str | None = None,
+    expected_hostnames: frozenset[str] | None = None,
 ) -> Callable[[Request], Awaitable[None]]:
     """Build a FastAPI dependency that enforces Turnstile CAPTCHA.
 
     The returned dependency is a no-op when ``secret_key_provider()`` is
     empty (dev / CI mode), matching MyBookkeeper's pre-PR-M6 behaviour.
+
+    ``expected_action`` / ``expected_hostnames`` optionally bind accepted tokens
+    to a specific widget action and site hostname (default None: not checked).
     """
+    binding: dict[str, object] = {}
+    if expected_action is not None:
+        binding["expected_action"] = expected_action
+    if expected_hostnames is not None:
+        binding["expected_hostnames"] = expected_hostnames
 
     async def _require_turnstile(request: Request) -> None:
         secret_key = secret_key_provider()
@@ -182,6 +192,7 @@ def make_require_turnstile(
             token,
             get_client_ip(request),
             secret_key=secret_key,
+            **binding,
         )
         if not success:
             # Config bug — alert ops, don't blame the user.
