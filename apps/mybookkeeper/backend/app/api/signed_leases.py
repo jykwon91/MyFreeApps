@@ -109,10 +109,10 @@ async def import_lease(
     if notes is not None and len(notes) > 2000:
         raise HTTPException(status_code=422, detail="Notes must be 2000 characters or fewer")
 
-    file_tuples: list[tuple[bytes, str, str | None]] = []
+    file_tuples: list[tuple[bytes, str]] = []
     for f in files:
         content = await f.read()
-        file_tuples.append((content, f.filename or "", f.content_type))
+        file_tuples.append((content, f.filename or ""))
 
     try:
         return await signed_lease_service.import_signed_lease(

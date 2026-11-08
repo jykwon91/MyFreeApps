@@ -24,6 +24,11 @@ from app.services.leases._lease_helpers import (
     _validate_parent_lease,
 )
 from app.services.leases.lease_lifecycle_service import get_lease
+from app.services.storage.attachment_content import (
+    UnreadableImage,
+    UnsupportedAttachmentType,
+    clean_attachment,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -102,41 +107,6 @@ def _infer_attachment_kind(filename: str, position: int) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Content-type resolution + EXIF strip
-# ---------------------------------------------------------------------------
-
-def _resolve_content_type(
-    content: bytes, filename: str, declared: str | None,
-) -> str | None:
-    """Return a validated MIME type or None if not in the allowlist."""
-    if declared and declared in ALLOWED_ATTACHMENT_MIME_TYPES:
-        return declared
-    lower = filename.lower()
-    ext_map = {
-        ".pdf": "application/pdf",
-        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".png": "image/png",
-        ".webp": "image/webp",
-    }
-    for ext, ct in ext_map.items():
-        if lower.endswith(ext):
-            return ct
-    return None
-
-
-def _exif_strip_image(content: bytes, content_type: str) -> bytes:
-    """EXIF-strip an image via Pillow. Returns cleaned bytes."""
-    from app.services.storage.image_processor import process_image, ImageRejected
-    try:
-        result = process_image(content, declared_content_type=content_type)
-        return result.content
-    except ImageRejected:
-        return content
-
-
-# ---------------------------------------------------------------------------
 # Import
 # ---------------------------------------------------------------------------
 
@@ -150,7 +120,7 @@ async def import_signed_lease(
     ends_on: _dt.date | None,
     notes: str | None,
     status: str,
-    files: list[tuple[bytes, str, str | None]],  # (content, filename, declared_ct)
+    files: list[tuple[bytes, str]],  # (content, filename)
     parent_lease_id: uuid.UUID | None = None,
 ) -> SignedLeaseResponse:
     """Create an imported signed lease from externally-signed PDFs.
@@ -159,9 +129,10 @@ async def import_signed_lease(
     is created with ``kind='imported'``, no template links, and
     ``signed_at=now()`` since by definition the documents are already signed.
 
-    ``files`` is an ordered list of ``(content_bytes, filename, content_type)``
-    tuples. The first file becomes ``kind=signed_lease``; subsequent files use
-    the ``_infer_attachment_kind`` heuristic.
+    ``files`` is an ordered list of ``(content_bytes, filename)`` tuples; each
+    file's type comes from its bytes. The first file becomes
+    ``kind=signed_lease``; subsequent files use the ``_infer_attachment_kind``
+    heuristic.
     """
     from app.core.config import settings as _settings
 
@@ -170,19 +141,20 @@ async def import_signed_lease(
         raise StorageNotConfiguredError("Object storage is not configured")
 
     processed: list[tuple[bytes, str, str]] = []
-    for content, filename, declared_ct in files:
+    for content, filename in files:
         if len(content) > _settings.max_blackout_attachment_size_bytes:
             max_mb = _settings.max_blackout_attachment_size_bytes // (1024 * 1024)
             raise AttachmentTooLargeError(f"File '{filename}' exceeds {max_mb}MB limit")
-        ct = _resolve_content_type(content, filename, declared_ct)
-        if ct is None:
+        try:
+            cleaned = clean_attachment(content, ALLOWED_ATTACHMENT_MIME_TYPES)
+        except UnsupportedAttachmentType as exc:
             raise AttachmentTypeRejectedError(
                 f"Unsupported file type for '{filename}'. "
                 "Allowed: pdf, docx, jpg, png, webp",
-            )
-        if ct in ("image/jpeg", "image/png", "image/webp"):
-            content = _exif_strip_image(content, ct)
-        processed.append((content, filename, ct))
+            ) from exc
+        except UnreadableImage as exc:
+            raise AttachmentTypeRejectedError(f"Couldn't read the image '{filename}'") from exc
+        processed.append((cleaned.content, filename, cleaned.content_type))
 
     async with unit_of_work() as db:
         applicant = await applicant_repo.get(

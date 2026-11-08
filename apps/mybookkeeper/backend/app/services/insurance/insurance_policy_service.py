@@ -35,6 +35,11 @@ from app.services.documents.document_ownership import owns_document
 from app.services.insurance._merged_policy import MergedPolicy
 from app.services.insurance.attachment_response_builder import attach_presigned_urls
 from app.services.properties.property_ownership import owns_property
+from app.services.storage.attachment_content import (
+    UnreadableImage,
+    UnsupportedAttachmentType,
+    clean_attachment,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -357,27 +362,6 @@ async def soft_delete_policy(
 # Attachments
 # ---------------------------------------------------------------------------
 
-def _resolve_content_type(
-    content: bytes, filename: str, declared: str | None,
-) -> str | None:
-    """Return a validated MIME type or None if not in the allowlist."""
-    if declared and declared in ALLOWED_ATTACHMENT_MIME_TYPES:
-        return declared
-    lower = filename.lower()
-    ext_map = {
-        ".pdf": "application/pdf",
-        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".png": "image/png",
-        ".webp": "image/webp",
-    }
-    for ext, ct in ext_map.items():
-        if lower.endswith(ext):
-            return ct
-    return None
-
-
 async def upload_attachment(
     *,
     user_id: uuid.UUID,
@@ -385,7 +369,6 @@ async def upload_attachment(
     policy_id: uuid.UUID,
     content: bytes,
     filename: str,
-    declared_content_type: str | None,
     kind: str,
 ) -> InsurancePolicyAttachmentResponse:
     storage = get_storage()
@@ -397,11 +380,14 @@ async def upload_attachment(
         max_mb = _settings.max_blackout_attachment_size_bytes // (1024 * 1024)
         raise AttachmentTooLargeError(f"File exceeds {max_mb}MB limit")
 
-    ct = _resolve_content_type(content, filename, declared_content_type)
-    if ct is None:
+    try:
+        cleaned = clean_attachment(content, ALLOWED_ATTACHMENT_MIME_TYPES)
+    except UnsupportedAttachmentType as exc:
         raise AttachmentTypeRejectedError(
             "Unsupported file type. Allowed: pdf, docx, jpg, png, webp",
-        )
+        ) from exc
+    except UnreadableImage as exc:
+        raise AttachmentTypeRejectedError("Couldn't read this image") from exc
 
     # Tenant scope — 404 if policy doesn't belong to this org/user.
     async with unit_of_work() as db:
@@ -416,7 +402,7 @@ async def upload_attachment(
 
     attachment_id = uuid.uuid4()
     storage_key = f"insurance-policies/{policy_id}/{attachment_id}"
-    storage.upload_file(storage_key, content, ct)
+    storage.upload_file(storage_key, cleaned.content, cleaned.content_type)
 
     try:
         async with unit_of_work() as db:
@@ -425,8 +411,8 @@ async def upload_attachment(
                 policy_id=policy_id,
                 storage_key=storage_key,
                 filename=filename or f"attachment-{attachment_id.hex}",
-                content_type=ct,
-                size_bytes=len(content),
+                content_type=cleaned.content_type,
+                size_bytes=len(cleaned.content),
                 kind=kind,
                 uploaded_by_user_id=user_id,
                 uploaded_at=_dt.datetime.now(_dt.timezone.utc),

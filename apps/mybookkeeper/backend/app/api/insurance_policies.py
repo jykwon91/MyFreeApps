@@ -253,7 +253,6 @@ async def upload_attachment(
             policy_id=policy_id,
             content=content,
             filename=file.filename or "",
-            declared_content_type=file.content_type,
             kind=kind,
         )
     except insurance_policy_service.InsurancePolicyNotFoundError as exc:

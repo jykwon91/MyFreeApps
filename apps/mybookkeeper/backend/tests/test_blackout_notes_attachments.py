@@ -30,7 +30,6 @@ from app.core.permissions import current_org_member, require_write_access
 from app.main import app
 from app.models.organization.organization_member import OrgRole
 from app.repositories.listings import listing_blackout_repo, listing_blackout_attachment_repo
-from app.services.listings.blackout_service import _sniff_content_type
 
 
 # ---------------------------------------------------------------------------
@@ -46,41 +45,6 @@ def _build_jpeg() -> bytes:
     buf = io.BytesIO()
     img.save(buf, format="JPEG")
     return buf.getvalue()
-
-
-def _build_png() -> bytes:
-    img = Image.new("RGB", (32, 32), color=(50, 50, 200))
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    return buf.getvalue()
-
-
-# ---------------------------------------------------------------------------
-# Content-type sniffing unit tests (pure function)
-# ---------------------------------------------------------------------------
-
-class TestSniffContentType:
-    def test_jpeg_sniff(self) -> None:
-        assert _sniff_content_type(_build_jpeg()) == "image/jpeg"
-
-    def test_png_sniff(self) -> None:
-        assert _sniff_content_type(_build_png()) == "image/png"
-
-    def test_pdf_sniff(self) -> None:
-        assert _sniff_content_type(b"%PDF-1.4 some content") == "application/pdf"
-
-    def test_plain_text_sniff(self) -> None:
-        assert _sniff_content_type(b"Hello world\nplain text here") == "text/plain"
-
-    def test_exe_rejected(self) -> None:
-        # Windows PE: MZ header
-        assert _sniff_content_type(b"MZ\x90\x00\x03\x00\x00\x00") is None
-
-    def test_exe_disguised_as_jpg_rejected(self) -> None:
-        # JPEG header on first 3 bytes but then binary garbage — Pillow will
-        # fail on the actual image decode. This tests the sniff layer only;
-        # the Pillow re-encode would reject it too.
-        assert _sniff_content_type(b"\xff\xd8\xff" + b"MZ\x90\x00" * 100) == "image/jpeg"
 
 
 # ---------------------------------------------------------------------------

@@ -4,6 +4,7 @@ import { fileURLToPath } from "url";
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { deleteApplicant } from "./fixtures/applicants";
 import { deleteSignedLease } from "./fixtures/signed-leases";
+import { toasts } from "./fixtures/toasts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -22,6 +23,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * Test 3: Full happy path — submits the import dialog and asserts navigation
  *         to the new lease detail page. Stores the file in MinIO, which the
  *         E2E stack runs.
+ *
+ * Test 4: A photo that can't be re-encoded without its location metadata is
+ *         refused, and no lease is created.
  */
 
 async function seedApplicant(
@@ -224,6 +228,50 @@ test.describe("Import Signed Lease", () => {
         for (const id of seededApplicantIds) {
           await deleteApplicant(api, id);
         }
+      }
+    },
+  );
+
+  test(
+    "import dialog — a photo that can't be cleaned of its location is refused and nothing is created",
+    async ({ authedPage: page, api }) => {
+      const applicantName = `E2E Import Broken Photo ${Date.now()}`;
+      const applicantId = await seedApplicant(api, applicantName);
+
+      try {
+        await page.goto("/leases");
+        await expect(page.getByRole("heading", { name: "Leases" })).toBeVisible({ timeout: 10000 });
+        await page.waitForLoadState("networkidle");
+
+        await page.getByTestId("import-signed-lease-button").click();
+        const dialog = page.getByTestId("lease-import-dialog");
+        await expect(dialog).toBeVisible({ timeout: 5000 });
+        await page.getByTestId("import-applicant-select").selectOption({ label: applicantName });
+
+        // JPEG magic bytes on a body that isn't an image, labelled as a PDF:
+        // the server reads the bytes, sees a photo, and can't re-encode it.
+        await page.getByTestId("import-file-input").setInputFiles({
+          name: "lease.pdf",
+          mimeType: "application/pdf",
+          buffer: Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(400, 0x4d)]),
+        });
+        const importResponse = page.waitForResponse(
+          (res) => res.url().includes("/signed-leases/import") && res.request().method() === "POST",
+        );
+        await page.getByTestId("import-submit").click();
+
+        expect((await importResponse).status()).toBe(415);
+        await expect(
+          toasts(page).getByText("Couldn't import the lease. Please check the files and try again."),
+        ).toBeVisible({ timeout: 10000 });
+        await expect(dialog).toBeVisible();
+        await expect(page).toHaveURL(/\/leases$/);
+
+        const res = await api.get(`/signed-leases?applicant_id=${applicantId}`);
+        expect(res.status(), await res.text()).toBe(200);
+        expect(((await res.json()) as { items: unknown[] }).items).toEqual([]);
+      } finally {
+        await deleteApplicant(api, applicantId);
       }
     },
   );

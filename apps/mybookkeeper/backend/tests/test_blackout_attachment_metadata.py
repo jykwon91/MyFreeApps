@@ -14,15 +14,14 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from PIL import Image, TiffImagePlugin
+from PIL import Image
 
 from app.services.listings import blackout_service
 from app.services.listings.blackout_service import (
     AttachmentTypeRejectedError,
     upload_attachment,
 )
-
-GPS_IFD = 0x8825
+from tests.gps_photo import gps_of, photo_with_gps
 
 
 @dataclass
@@ -61,24 +60,6 @@ def upload() -> Iterator[_Upload]:
         yield recorded
 
 
-def _photo_with_gps(fmt: str) -> bytes:
-    img = Image.new("RGB", (32, 32), color=(200, 100, 50))
-    exif = img.getexif()
-    gps = exif.get_ifd(GPS_IFD)
-    gps[1] = "N"
-    gps[2] = tuple(TiffImagePlugin.IFDRational(v, 1) for v in (37, 33, 45))
-    gps[3] = "W"
-    gps[4] = tuple(TiffImagePlugin.IFDRational(v, 1) for v in (122, 25, 10))
-    buf = io.BytesIO()
-    img.save(buf, format=fmt, exif=exif.tobytes())
-    return buf.getvalue()
-
-
-def _gps_of(content: bytes) -> dict[int, object]:
-    with Image.open(io.BytesIO(content)) as img:
-        return dict(img.getexif().get_ifd(GPS_IFD))
-
-
 async def _upload(content: bytes, filename: str = "photo") -> None:
     await upload_attachment(
         organization_id=uuid.uuid4(),
@@ -86,19 +67,18 @@ async def _upload(content: bytes, filename: str = "photo") -> None:
         blackout_id=uuid.uuid4(),
         content=content,
         filename=filename,
-        declared_content_type=None,
     )
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(("fmt", "mime"), [("JPEG", "image/jpeg"), ("PNG", "image/png"), ("WEBP", "image/webp")])
 async def test_stored_photo_has_no_gps(upload: _Upload, fmt: str, mime: str) -> None:
-    photo = _photo_with_gps(fmt)
-    assert _gps_of(photo), "fixture must carry GPS"
+    photo = photo_with_gps(fmt)
+    assert gps_of(photo), "fixture must carry GPS"
 
     await _upload(photo)
 
-    assert _gps_of(upload.stored_bytes) == {}
+    assert gps_of(upload.stored_bytes) == {}
     assert upload.rows[0]["content_type"] == mime
     assert upload.rows[0]["size_bytes"] == len(upload.stored_bytes)
 

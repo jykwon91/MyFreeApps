@@ -73,7 +73,6 @@ async def upload_attachment(
             blackout_id=blackout_id,
             content=content,
             filename=file.filename or "",
-            declared_content_type=file.content_type,
         )
     except blackout_service.BlackoutNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Blackout not found") from exc
