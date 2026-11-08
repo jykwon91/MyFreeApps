@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
+from collections.abc import Iterable
 
 from scripts.wow_world_map import sources
 from scripts.wow_world_map.sql_dump import SqlValue, read_dump
@@ -48,19 +49,26 @@ _STAND_INS = {
     "The Four Horsemen": "Thane Korth'azz",
 }
 
-# Maps whose encounters are listed for more than one difficulty: the
-# 5-player one (Gnomeregan also lists its Season of Discovery raid, 198).
-_DIFFICULTY = {90: 201}
+# The Classic list of a map's encounters: DifficultyID 0 (none) and 1 (Normal,
+# 5-player) together, in OrderIndex order. The client splits one dungeon across
+# both — Gnomeregan's Grubbis and Blackfathom's last three bosses are 1, the rest
+# 0 — and lists other modes on other ids (198 / 201 / 215: Season of Discovery
+# raids and the like), which are left out.
+CLASSIC_DIFFICULTIES = frozenset({0, 1})
+
+
+def encounters_by_map(rows: Iterable[dict[str, str]], instances: set[int]) -> dict[int, list[tuple[int, str]]]:
+    """``(encounter id, name)`` per map, in the client's order (OrderIndex, then id)."""
+    found: dict[int, list[tuple[int, int, str]]] = defaultdict(list)
+    for r in rows:
+        map_id = int(r["MapID"])
+        if map_id in instances and int(r["DifficultyID"]) in CLASSIC_DIFFICULTIES:
+            found[map_id].append((int(r["OrderIndex"]), int(r["ID"]), r["Name_lang"].strip()))
+    return {m: [(e, n) for _, e, n in sorted(v)] for m, v in found.items()}
 
 
 def _encounters(instances: set[int]) -> dict[int, list[tuple[int, str]]]:
-    """``(encounter id, name)`` per map, in the client's order."""
-    rows: dict[int, list[tuple[int, int, str]]] = defaultdict(list)
-    for r in sources.wago_table("DungeonEncounter"):
-        map_id = int(r["MapID"])
-        if map_id in instances and int(r["DifficultyID"]) == _DIFFICULTY.get(map_id, 0):
-            rows[map_id].append((int(r["OrderIndex"]), int(r["ID"]), r["Name_lang"].strip()))
-    return {m: [(e, n) for _, e, n in sorted(v)] for m, v in rows.items()}
+    return encounters_by_map(sources.wago_table("DungeonEncounter"), instances)
 
 
 def _spawns(tables: dict[str, list[dict[str, SqlValue]]], instances: set[int]) -> dict[tuple[int, str], list[tuple[float, float, float]]]:

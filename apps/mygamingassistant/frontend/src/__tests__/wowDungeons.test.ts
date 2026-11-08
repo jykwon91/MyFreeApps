@@ -195,6 +195,27 @@ describe("the committed dungeon data", () => {
     }
     expect(data.dungeons.some((d) => d.name === "Molten Core")).toBe(false);
   });
+
+  // Dungeons allowed to show "no boss list", by slug, each with the reason.
+  // Empty: every dungeon on the index has its bosses. Add one only with a reason
+  // the client data can't fix (the generator's DifficultyID rule is in interiors.py).
+  const NO_BOSS_LIST_EXCEPTIONS: Readonly<Record<string, string>> = {};
+
+  it("gives every dungeon on the index at least one boss", async () => {
+    const data = await loadDungeons();
+    const missing = data.dungeons
+      .filter((d) => d.bosses.length === 0 && !(d.slug in NO_BOSS_LIST_EXCEPTIONS))
+      .map((d) => d.slug);
+    expect(missing).toEqual([]);
+    expect(findDungeon(data, "gnomeregan")?.bosses.map((b) => b.slug)).toEqual([
+      "grubbis",
+      "viscous-fallout",
+      "electrocutioner-6000",
+      "crowd-pummeler-9-60",
+      "mekgineer-thermaplugg",
+    ]);
+    expect(findDungeon(data, "blackfathom-deeps")?.bosses.map((b) => b.slug).slice(-1)).toEqual(["akumai"]);
+  });
 });
 
 describe("dungeon slugs and links", () => {

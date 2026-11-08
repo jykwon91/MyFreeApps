@@ -483,9 +483,9 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   boss yet"; one whose Classic loot isn't in Forever yet says so.
   `tests/test_wow_dungeons_generator.py`, `src/__tests__/wowDungeons.test.ts`,
   `e2e/wow-forever-dungeons.spec.ts`.
-- Known gap: Gnomeregan has no boss list — `interiors.py` `_DIFFICULTY`
-  (`{90: 201}`) no longer matches the client's DifficultyIDs; fix it in a
-  World Map regen.
+- Every dungeon on the index has a boss list — `test_wow_interiors_generator.py`
+  and `wowDungeons.test.ts` fail otherwise (the vitest's
+  `NO_BOSS_LIST_EXCEPTIONS` is the only place to excuse one, with a reason).
 
 #### In-game icons (`GameIcon`)
 
@@ -929,7 +929,10 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
     its own `public/wow-walk/<instance map id>.walk` (meta `instance: 1`;
     hubs `e<trigger>` = where an entrance puts you, `b<encounter>` = a boss),
     built from `classicInteriors.json` (`scripts/wow_world_map/interiors.py`:
-    Forever `DungeonEncounter` order + cmangos spawns matched by name;
+    Forever `DungeonEncounter` rows with DifficultyID 0 **and** 1 together, in
+    OrderIndex order — the client splits one dungeon across both (Gnomeregan's
+    Grubbis, Blackfathom's last three bosses are 1); 198/201/215 are other
+    modes, left out — + cmangos spawns matched by name;
     group encounters use a stand-in creature, `_STAND_INS`). A boss is listed
     under the entrance it's the shortest walk from (Dire Maul / Scarlet
     Monastery wings never route into each other); routes start from the boss
