@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-08",
+    title: "Library books",
+    summary:
+      "See all 40 library books in the WoW Forever game files, the Friend of the Library reward (a choice of two necklaces) and tick off the books you've found.",
+    to: "/wow-forever/library",
+  },
+  {
+    date: "2026-11-08",
     title: "Hunter pets",
     summary:
       "See every pet family's damage, armor and health, every pet ability rank with the beasts that teach it, and search all tamable beasts by level, zone and attack speed.",

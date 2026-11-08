@@ -57,6 +57,7 @@ SPELLBOOK_DIR = WOW_DATA_DIR / "spellbook"
 RACES_FILE = WOW_DATA_DIR / "races" / "races.json"
 HUNTER_PETS_FILE = WOW_DATA_DIR / "hunterPets" / "hunterPets.json"
 RARE_SPAWNS_FILE = WOW_DATA_DIR / "rares" / "classic" / "rareSpawns.json"
+LIBRARY_FILE = WOW_DATA_DIR / "library" / "library.json"
 OUT_FILE = WOW_DATA_DIR / "icons" / "wowIcons.json"
 # Hand-written gathering nodes name their item as `itemId: 2447`.
 _NODE_ITEM = re.compile(r"\bitemId:\s*(\d+)")
@@ -117,6 +118,12 @@ def rare_drop_item_ids(path: Path = RARE_SPAWNS_FILE) -> set[int]:
     return {int(item) for rare in rares for item, _ in rare["drops"]}
 
 
+def library_item_ids(path: Path = LIBRARY_FILE) -> set[int]:
+    """The library page's books, library cards and reward items (``scripts.wow_library.build``)."""
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    return {int(row[0]) for row in doc["books"]} | {int(row[0]) for row in doc["cards"]} | {int(k) for k in doc["items"]}
+
+
 def talent_icon_files(directory: Path = TALENTS_DIR) -> set[int]:
     """The talent calculator's icons: they're file ids already (``scripts.wow_talents.build``)."""
     return talent_file_ids(json.loads(p.read_text(encoding="utf-8")) for p in sorted(directory.glob("*.json")))
@@ -157,7 +164,8 @@ def hunter_pet_icon_files(path: Path = HUNTER_PETS_FILE) -> set[int]:
 
 def wanted_ids() -> IconIds:
     ids = IconIds(
-        items=gathering_item_ids() | cooking_item_ids() | gear_item_ids() | dungeon_quest_item_ids() | quest_database_item_ids() | rare_drop_item_ids(),
+        items=gathering_item_ids() | cooking_item_ids() | gear_item_ids() | dungeon_quest_item_ids() | quest_database_item_ids() | rare_drop_item_ids()
+        | library_item_ids(),
         files=talent_icon_files() | downrank_icon_files() | spellbook_icon_files() | race_icon_files() | class_icon_files() | hunter_pet_icon_files(),
     )
     for path in sorted(CRAFTING_DIR.glob("*.json")):
