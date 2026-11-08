@@ -59,6 +59,17 @@ function fixture(): DungeonDataFiles {
     },
     facts: { maxPlayers: { "10": 5 } },
     entry: { columns: ["trigger", "item", "quest"], instances: { "12": [[4, 7001, 0]] } },
+    // Quests are decoded by decodeDungeonQuests — wowDungeonQuests.test.ts.
+    quests: {
+      questColumns: ["id", "title", "level", "minLevel", "side", "classes", "givers", "chain", "objectives", "rewards", "choices", "enders"],
+      giverColumns: ["kind", "id", "name", "zone", "subzone", "x", "y", "instance"],
+      objectiveColumns: ["kind", "id", "count"],
+      targetColumns: ["name", "instance"],
+      instances: {},
+      quests: {},
+      targets: {},
+    },
+    seenQuests: { seenOn: "2026-11-07", columns: ["title", "level", "minLevel", "objectives", "rewards", "choices"], quests: {} },
   };
 }
 

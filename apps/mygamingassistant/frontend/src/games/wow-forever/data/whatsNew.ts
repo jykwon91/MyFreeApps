@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-07",
+    title: "Dungeon quests",
+    summary:
+      "Each dungeon page now lists its quests for your faction: who gives them (with a link to them on the World Map), the quests that lead up to them, what to do inside and what you get.",
+    to: "/wow-forever/dungeons",
+  },
+  {
+    date: "2026-11-07",
     title: "Gnomeregan and Blackfathom boss lists",
     summary:
       "Gnomeregan's page now lists all five bosses with their drops, and Blackfathom Deeps shows its last three bosses too, Aku'mai included, each with a walking route inside.",

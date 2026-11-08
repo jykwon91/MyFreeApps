@@ -1,6 +1,7 @@
 import type { DungeonBoss } from "@/games/wow-forever/types/dungeons/dungeonBoss";
 import type { DungeonEntranceZone } from "@/games/wow-forever/types/dungeons/dungeonEntranceZone";
 import type { DungeonEntryRequirement } from "@/games/wow-forever/types/dungeons/dungeonEntryRequirement";
+import type { DungeonQuest } from "@/games/wow-forever/types/dungeons/dungeonQuest";
 import type { Interior } from "@/games/wow-forever/worldMap/interiors";
 
 /**
@@ -29,4 +30,6 @@ export interface Dungeon {
   bosses: readonly DungeonBoss[];
   /** The World Map's interior (bosses + doors), for the per-door "Inside · bosses & routes"; null when we have none. */
   interior: Interior | null;
+  /** The dungeon's quests in Forever, lowest level first (both factions; the page filters). */
+  quests: readonly DungeonQuest[];
 }

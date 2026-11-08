@@ -6,10 +6,13 @@
  * Map, `DungeonWorld`), plus the dungeon generator's boss loot
  * (`dungeons/classic/bossLoot.json`, Classic chances), item names
  * (`dungeons/lootItems.json`), group sizes (`dungeons/dungeonFacts.json`, the
- * Forever client) and entry requirements (`dungeons/classic/entryRequirements.json`).
+ * Forever client), entry requirements (`dungeons/classic/entryRequirements.json`)
+ * and quests (`decodeDungeonQuests`).
  */
 import { isItemSlot } from "@/games/wow-forever/data/itemSlots";
 import { INSTANCE_ALIASES } from "@/games/wow-forever/data/worldMap/placeNames";
+import { columnIndexes } from "@/games/wow-forever/lib/dungeons/columnIndexes";
+import { decodeDungeonQuests } from "@/games/wow-forever/lib/dungeons/decodeDungeonQuests";
 import { uniqueSlugs, dungeonSlug } from "@/games/wow-forever/lib/dungeons/dungeonSlug";
 import { nearestFlightPaths } from "@/games/wow-forever/lib/dungeons/nearestFlightPaths";
 import type { BossLootItem } from "@/games/wow-forever/types/dungeons/bossLootItem";
@@ -21,24 +24,14 @@ import type { DungeonEntranceZone } from "@/games/wow-forever/types/dungeons/dun
 import type { DungeonEntryRequirement } from "@/games/wow-forever/types/dungeons/dungeonEntryRequirement";
 import type { DungeonsData } from "@/games/wow-forever/types/dungeons/dungeonsData";
 import type { DungeonWorld } from "@/games/wow-forever/types/dungeons/dungeonWorld";
+import type { LootItemInfo } from "@/games/wow-forever/types/dungeons/lootItemInfo";
 import type { FlightNode, WorldZone } from "@/games/wow-forever/types/worldMap";
 import { zoneToWorld } from "@/games/wow-forever/worldMap/geometry";
 import { decodeInteriors, type Interior } from "@/games/wow-forever/worldMap/interiors";
 
 const DUNGEON_TYPE = "dungeon";
 
-type LootItemInfo = Omit<BossLootItem, "id" | "chance">;
-type DungeonBase = Omit<Dungeon, "bosses" | "interior" | "maxPlayers" | "entryRequirements" | "lockedDoorKeys">;
-
-function columnIndexes<const T extends readonly string[]>(file: string, names: readonly string[], wanted: T): Record<T[number], number> {
-  const out = {} as Record<T[number], number>;
-  for (const w of wanted as readonly T[number][]) {
-    const i = names.indexOf(w);
-    if (i < 0) throw new Error(`${file}: missing column ${w}`);
-    out[w] = i;
-  }
-  return out;
-}
+type DungeonBase = Omit<Dungeon, "bosses" | "interior" | "maxPlayers" | "entryRequirements" | "lockedDoorKeys" | "quests">;
 
 function lootItems(files: DungeonDataFiles): ReadonlyMap<number, LootItemInfo> {
   const col = columnIndexes("lootItems.json", files.lootItems.columns, ["name", "slot", "itemType"] as const);
@@ -125,6 +118,7 @@ export function decodeDungeons(files: DungeonDataFiles, world: DungeonWorld): Du
   const zoneById = new Map(world.zones.map((z) => [z.id, z]));
   const interiors = decodeInteriors(files.interiors);
   const items = lootItems(files);
+  const quests = decodeDungeonQuests(files, items, zoneById);
   const byInstance = new Map<number, DungeonBase>();
   for (const row of files.dungeons.rows) {
     if (row[col.type] !== DUNGEON_TYPE) continue;
@@ -174,6 +168,7 @@ export function decodeDungeons(files: DungeonDataFiles, world: DungeonWorld): Du
       lockedDoorKeys: lockedDoorKeys(interior),
       bosses: bossesOf(interior, instanceLoot(files, d.instanceId, items)),
       interior: interior ?? null,
+      quests: quests(d.instanceId),
     };
   });
   return { dungeons, clientBuild: files.lootItems.clientBuild };

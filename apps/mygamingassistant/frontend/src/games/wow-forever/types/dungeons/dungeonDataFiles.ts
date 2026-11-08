@@ -13,4 +13,14 @@ export interface DungeonDataFiles {
   lootItems: { clientBuild: string; columns: string[]; items: Record<string, unknown[]> };
   facts: { maxPlayers: Record<string, number> };
   entry: { columns: string[]; instances: Record<string, unknown[][]> };
+  quests: {
+    questColumns: string[];
+    giverColumns: string[];
+    objectiveColumns: string[];
+    targetColumns: string[];
+    instances: Record<string, number[]>;
+    quests: Record<string, unknown[]>;
+    targets: Record<string, unknown[]>;
+  };
+  seenQuests: { seenOn: string; columns: string[]; quests: Record<string, unknown[]> };
 }

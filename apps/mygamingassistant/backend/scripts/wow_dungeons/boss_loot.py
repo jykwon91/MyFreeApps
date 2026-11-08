@@ -108,8 +108,13 @@ def dungeon_loot(
     return out
 
 
-def loot_item_rows(loot: Mapping[str, Mapping[str, list[list[Any]]]], items: Mapping[int, list[Any]], columns: list[str]) -> dict[str, list[Any]]:
-    """Item id -> [name, slot, itemType] (Forever's ``items.json``) for every item the loot names."""
+def loot_item_rows(
+    loot: Mapping[str, Mapping[str, list[list[Any]]]],
+    items: Mapping[int, list[Any]],
+    columns: list[str],
+    also: Iterable[int] = (),
+) -> dict[str, list[Any]]:
+    """Item id -> [name, slot, itemType] (Forever's ``items.json``) for every item the loot names, plus ``also``."""
     at = [columns.index(c) for c in ("name", "slot", "itemType")]
-    ids = sorted({int(row[0]) for bosses in loot.values() for rows in bosses.values() for row in rows})
+    ids = sorted({int(row[0]) for bosses in loot.values() for rows in bosses.values() for row in rows} | set(also))
     return {str(i): [items[i][a] for a in at] for i in ids}

@@ -16,3 +16,17 @@ export const DUNGEON_LOOT_EMPTY = {
   notInForever: "None of this boss's Classic loot is in the Forever game files yet.",
   noBosses: "The boss list for this dungeon isn't in our data yet.",
 } as const;
+
+/** Quest rows the dungeon page's skeleton draws in its Quests section. */
+export const DUNGEON_SKELETON_QUESTS = 4;
+
+/** What the Quests section shows when there's nothing to list. */
+export const DUNGEON_QUESTS_EMPTY = {
+  none: "No quests for this dungeon in our data yet.",
+  noneForFaction: "No quests for this dungeon for your faction in our data yet.",
+} as const;
+
+/** How far the World Map zooms in on a quest giver its link marks (1 = the whole zone). */
+export const QUEST_GIVER_MAP_SCALE = 2;
+/** The id of the one mark a quest giver's World Map link carries. */
+export const QUEST_GIVER_MARK_ID = "quest-giver";

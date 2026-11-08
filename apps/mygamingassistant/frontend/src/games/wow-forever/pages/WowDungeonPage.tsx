@@ -7,6 +7,7 @@ import DungeonFootnote from "@/games/wow-forever/components/dungeons/DungeonFoot
 import DungeonWhen from "@/games/wow-forever/components/dungeons/DungeonWhen";
 import DungeonNotFound from "@/games/wow-forever/components/dungeons/DungeonNotFound";
 import DungeonPageSkeleton from "@/games/wow-forever/components/dungeons/DungeonPageSkeleton";
+import DungeonQuests from "@/games/wow-forever/components/dungeons/quests/DungeonQuests";
 import EmptyStateNote from "@/games/wow-forever/components/shared/EmptyStateNote";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import { DUNGEON_LOOT_EMPTY, DUNGEONS_PAGE_PATH } from "@/games/wow-forever/data/dungeons/dungeonPageConfig";
@@ -17,7 +18,7 @@ import { findDungeon } from "@/games/wow-forever/lib/dungeons/decodeDungeons";
 
 const BACK_LABEL = "Back to Dungeons";
 
-/** /wow-forever/dungeons/:slug — one dungeon: when you can go, where it is, bosses in order and their loot. */
+/** /wow-forever/dungeons/:slug — one dungeon: when you can go, where it is, its quests, bosses in order and their loot. */
 export default function WowDungeonPage() {
   const { slug } = useParams();
   const state = useDungeons();
@@ -47,6 +48,7 @@ export default function WowDungeonPage() {
           />
           <DungeonWhen dungeon={dungeon} />
           <DungeonLocation dungeon={dungeon} />
+          <DungeonQuests dungeon={dungeon} />
           {dungeon.bosses.length === 0 ? <EmptyStateNote message={DUNGEON_LOOT_EMPTY.noBosses} /> : null}
           {dungeon.bosses.length > 0 ? <DungeonBossNav bosses={dungeon.bosses} /> : null}
           {dungeon.bosses.map((boss, i) => (
