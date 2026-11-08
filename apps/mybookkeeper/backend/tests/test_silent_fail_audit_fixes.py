@@ -1,9 +1,8 @@
 """Tests for silent-fail audit fixes (PR: fix(integrations): close silent-fail gaps).
 
 Covers:
-- gmail_service._resolve_label_id logs warning + returns None on API error
-- gmail_service._resolve_label_id logs warning + returns None when label not found
-- gmail_service._resolve_label_id returns the id when label exists
+- gmail_service._resolve_label_id returns the id when the label exists, raises
+  GmailLabelNotFoundError when it doesn't, and lets API errors propagate
 - email_discovery_service per-message warning includes exc_info
 """
 from __future__ import annotations
@@ -13,6 +12,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from app.services.email.exceptions import GmailLabelNotFoundError
 from app.services.email.gmail_service import _resolve_label_id
 
 
@@ -33,84 +33,26 @@ class TestResolveLabelId:
 
     def test_returns_id_when_label_found(self) -> None:
         service = self._make_service(labels=[
+            {"id": "Label_1", "name": "Other"},
             {"id": "Label_42", "name": "MyInvoices"},
-            {"id": "Label_99", "name": "Other"},
         ])
-        result = _resolve_label_id(service, "MyInvoices")
-        assert result == "Label_42"
+        assert _resolve_label_id(service, "MyInvoices") == "Label_42"
 
-    def test_case_insensitive_match(self) -> None:
+    def test_label_match_is_case_insensitive(self) -> None:
         service = self._make_service(labels=[{"id": "Label_42", "name": "MYINVOICES"}])
-        result = _resolve_label_id(service, "myinvoices")
-        assert result == "Label_42"
+        assert _resolve_label_id(service, "myinvoices") == "Label_42"
 
-    def test_returns_none_and_logs_warning_when_label_not_found(
-        self, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        service = self._make_service(labels=[{"id": "Label_1", "name": "SomethingElse"}])
-        with caplog.at_level(logging.WARNING, logger="app.services.email.gmail_service"):
-            result = _resolve_label_id(service, "MissingLabel")
+    @pytest.mark.parametrize("labels", [[{"id": "Label_1", "name": "SomethingElse"}], []])
+    def test_raises_when_label_not_found(self, labels: list[dict]) -> None:
+        service = self._make_service(labels=labels)
+        with pytest.raises(GmailLabelNotFoundError) as caught:
+            _resolve_label_id(service, "MissingLabel")
+        assert caught.value.label == "MissingLabel"
 
-        assert result is None
-        assert any("MissingLabel" in r.message for r in caplog.records), (
-            f"Expected warning mentioning 'MissingLabel'; got: {[r.message for r in caplog.records]}"
-        )
-
-    def test_returns_none_when_label_list_empty(
-        self, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        service = self._make_service(labels=[])
-        with caplog.at_level(logging.WARNING, logger="app.services.email.gmail_service"):
-            result = _resolve_label_id(service, "AnyLabel")
-
-        assert result is None
-
-    def test_returns_none_and_logs_warning_on_api_error(
-        self, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        service = self._make_service(raise_exc=Exception("network timeout"))
-        with caplog.at_level(logging.WARNING, logger="app.services.email.gmail_service"):
-            result = _resolve_label_id(service, "MyLabel")
-
-        assert result is None
-        records = caplog.records
-        assert any(r.levelno == logging.WARNING for r in records), (
-            "Expected a WARNING log record when the Gmail API raises"
-        )
-
-    def test_api_error_log_includes_exc_info(
-        self, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """exc_info=True means the log record carries the exception tuple."""
-        service = self._make_service(raise_exc=Exception("boom"))
-        with caplog.at_level(logging.WARNING, logger="app.services.email.gmail_service"):
+    def test_api_error_is_not_swallowed(self) -> None:
+        service = self._make_service(raise_exc=RuntimeError("network timeout"))
+        with pytest.raises(RuntimeError, match="network timeout"):
             _resolve_label_id(service, "MyLabel")
-
-        warning_records = [r for r in caplog.records if r.levelno == logging.WARNING]
-        assert warning_records, "Expected at least one WARNING record"
-        # When exc_info=True the record's exc_info is a 3-tuple (type, value, tb)
-        has_exc_info = any(
-            r.exc_info is not None and r.exc_info[0] is not None
-            for r in warning_records
-        )
-        assert has_exc_info, (
-            "Expected WARNING record to carry exc_info (exc_info=True not set on the logger.warning call)"
-        )
-
-    def test_not_found_log_does_not_carry_exc_info(
-        self, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """The 'label not found' warning is informational — no exception to attach."""
-        service = self._make_service(labels=[])
-        with caplog.at_level(logging.WARNING, logger="app.services.email.gmail_service"):
-            _resolve_label_id(service, "AnyLabel")
-
-        warning_records = [r for r in caplog.records if r.levelno == logging.WARNING]
-        # exc_info should be falsy (None or (None, None, None))
-        for r in warning_records:
-            assert not (r.exc_info and r.exc_info[0] is not None), (
-                "Not-found warning should not carry exc_info — no exception was raised"
-            )
 
 
 # ---------------------------------------------------------------------------

@@ -22,8 +22,9 @@ from app.services.email.constants import (
     EMAIL_FILTER_LOG_FROM_ADDRESS_MAX_LEN,
     EMAIL_FILTER_LOG_SUBJECT_MAX_LEN,
     GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR,
+    GMAIL_LABEL_NOT_FOUND_MESSAGE,
 )
-from app.services.email.exceptions import GmailAuthExpiredError, GmailDiscoveryAuthRejectedError
+from app.services.email.exceptions import GmailAuthExpiredError, GmailDiscoveryAuthRejectedError, GmailLabelNotFoundError
 from app.services.email.gmail_credentials import persist_refreshed_token
 from app.services.email.gmail_service import (
     get_gmail_service,
@@ -43,6 +44,9 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
             caller is responsible for surfacing this to the user; this service
             sets the integration's reauth flag and records a failed sync_log
             row so the failure appears in the UI.
+        GmailLabelNotFoundError: the connection is limited to a label the
+            mailbox doesn't have. Nothing is synced; a failed sync_log row
+            records why.
     """
     try:
         outcome = await _discover(ctx)
@@ -53,10 +57,15 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
                 db, rejected.connection, rejected.reason[:200], datetime.now(timezone.utc)
             )
             if marked:
-                await _record_auth_expired_sync_log(db, ctx)
+                await _record_failed_sync_log(db, ctx, GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR)
         if not marked:
             logger.info("Gmail was reconnected during discovery; not recording the old connection's failure")
         raise GmailAuthExpiredError(str(rejected)) from rejected.__cause__
+    except GmailLabelNotFoundError as missing:
+        logger.warning("Gmail label %r not found for org=%s; not syncing", missing.label, ctx.organization_id)
+        async with unit_of_work() as db:
+            await _record_failed_sync_log(db, ctx, GMAIL_LABEL_NOT_FOUND_MESSAGE.format(label=missing.label))
+        raise
     # After the commit, so the token write's row lock never waits on discovery's transaction.
     if outcome.token is not None:
         await persist_refreshed_token(outcome.token.connection, outcome.token.creds, outcome.token.prior_token)
@@ -264,11 +273,11 @@ def _detect_bounce(
     return detector.detect(signals)
 
 
-async def _record_auth_expired_sync_log(db: AsyncSession, ctx: RequestContext) -> None:
-    """Record a failed sync_log row so the auth-expired failure is visible in the UI."""
+async def _record_failed_sync_log(db: AsyncSession, ctx: RequestContext, error: str) -> None:
+    """Record a failed sync_log row so a sync that never started is visible in the UI."""
     now = datetime.now(timezone.utc)
     log = await sync_log_repo.create(
         db, ctx.organization_id, ctx.user_id, "gmail", "running",
         started_at=now,
     )
-    await sync_log_repo.mark_completed(db, log, "failed", error=GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR)
+    await sync_log_repo.mark_completed(db, log, "failed", error=error)
