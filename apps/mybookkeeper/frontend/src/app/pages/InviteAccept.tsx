@@ -4,9 +4,8 @@ import { useAcceptInviteMutation, useGetInviteInfoQuery } from "@mybookkeeper/ap
 import { login, notifyAuthChange } from "@/shared/lib/auth";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import { extractErrorMessage } from "@platform/ui";
-import { LoadingButton } from "@platform/ui";
+import { LoadingButton, TurnstileWidget } from "@platform/ui";
 import Skeleton from "@/shared/components/ui/Skeleton";
-import TurnstileWidget from "@/shared/components/ui/TurnstileWidget";
 import api from "@/shared/lib/api";
 import { USER_NAME_INPUT_MAX_LENGTH } from "@/shared/lib/constants";
 

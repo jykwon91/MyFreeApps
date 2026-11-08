@@ -22,8 +22,9 @@ vi.mock("@/shared/lib/api", () => ({
   default: { get: vi.fn(), post: vi.fn() },
 }));
 
-vi.mock("@/shared/components/ui/TurnstileWidget", () => ({
-  default: () => null,
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
+  TurnstileWidget: () => null,
 }));
 
 import { addDays, format } from "date-fns";
