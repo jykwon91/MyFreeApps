@@ -8,14 +8,6 @@ const CURRENT_YEAR = getYear(new Date());
 const TEST_YEAR = CURRENT_YEAR - 1;
 
 test.describe("Reconciliation — add and delete 1099 source", () => {
-  let createdSourceId: string | null = null;
-
-  test.afterAll(async ({ api }) => {
-    if (createdSourceId) {
-      await deleteReconciliationSource(api, createdSourceId);
-    }
-  });
-
   test.beforeEach(async ({ authedPage: page }) => {
     await page.goto("/reconciliation");
     await expect(page.getByRole("heading", { name: /reconciliation/i })).toBeVisible();
@@ -25,7 +17,7 @@ test.describe("Reconciliation — add and delete 1099 source", () => {
 
   test("add a 1099 source — fills form, submits, and verifies it appears in sources", async ({ authedPage: page, api }) => {
     // Step 1 (Upload 1099) should be visible by default
-    await expect(page.getByText("Upload 1099")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole("region", { name: "Upload 1099" })).toBeVisible({ timeout: 5000 });
 
     // Source type select is the SECOND select on the page (first is the year selector)
     // Default is already 1099_k — just confirm the form is in step 1
@@ -40,27 +32,27 @@ test.describe("Reconciliation — add and delete 1099 source", () => {
     // Fill reported amount (only number input with placeholder 0.00 in the form)
     await page.locator("input[type='number']").fill("5000.00");
 
-    // Submit
-    await page.getByRole("button", { name: /add 1099 source/i }).click();
+    // The test cleans up after itself: with fullyParallel, a describe-level afterAll
+    // runs after every test a worker finishes, not once.
+    try {
+      // Submit
+      await page.getByRole("button", { name: /add 1099 source/i }).click();
 
-    await expect(toasts(page).getByText(/1099 source added/i)).toBeVisible({ timeout: 10000 });
+      await expect(toasts(page).getByText(/1099 source added/i)).toBeVisible({ timeout: 10000 });
 
-    // Should advance to step 2 (Review Sources) automatically — the table or empty state card appears
-    await expect(
-      page.locator("table").or(page.getByText(/no reconciliation sources/i))
-    ).toBeVisible({ timeout: 10000 });
+      // Should advance to step 2 (Review Sources) automatically — the table or empty state card appears
+      await expect(
+        page.locator("table").or(page.getByText(/no reconciliation sources/i))
+      ).toBeVisible({ timeout: 10000 });
 
-    // The row should appear in the sources table
-    await expect(page.getByText(`E2E Issuer ${RUN_ID}`)).toBeVisible({ timeout: 10000 });
-
-    // Capture ID for cleanup
-    const res = await api.get(`/reconciliation/sources?tax_year=${TEST_YEAR}`);
-    if (res.ok()) {
-      const sources = await res.json();
-      const src = sources.find((s: { issuer: string; id: string }) =>
-        s.issuer === `E2E Issuer ${RUN_ID}`
-      );
-      if (src) createdSourceId = src.id;
+      // The row should appear in the sources table
+      await expect(page.getByText(`E2E Issuer ${RUN_ID}`)).toBeVisible({ timeout: 10000 });
+    } finally {
+      const sources: { id: string; issuer: string }[] = await (
+        await api.get(`/reconciliation/sources?tax_year=${TEST_YEAR}`)
+      ).json();
+      const created = sources.find((source) => source.issuer === `E2E Issuer ${RUN_ID}`);
+      if (created) await deleteReconciliationSource(api, created.id);
     }
   });
 
