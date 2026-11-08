@@ -517,6 +517,7 @@
         "test_calendar_events_route.py",
         "test_calendar_route.py",
         "test_blackout_notes_attachments.py",
+        "test_blackout_attachment_metadata.py",
         "test_input_validation_hardening.py",
         "test_review_queue_routes.py",
         "test_review_queue_service.py",
@@ -1329,6 +1330,7 @@
       ],
       "backend_tests": [
         "test_screening.py",
+        "test_screening_report_image.py",
         "test_screening_result_repo.py",
         "test_input_validation_hardening.py",
         "test_cleanup_seed_routes.py"

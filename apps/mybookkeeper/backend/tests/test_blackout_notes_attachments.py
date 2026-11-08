@@ -7,8 +7,7 @@ Coverage:
 - POST /listings/blackouts/{id}/attachments — file too large → 413
 - POST /listings/blackouts/{id}/attachments — disallowed type → 415
     (enforced even when extension is .jpg but content is .exe)
-- POST /listings/blackouts/{id}/attachments — EXIF strip: JPEG with GPS
-    uploaded → stored copy has no GPS metadata
+- Metadata strip on the real upload path: test_blackout_attachment_metadata.py
 - DELETE /listings/blackouts/{id}/attachments/{att_id} — removes DB row +
     attempts MinIO cleanup
 - iCal poller preservation: create blackout via upsert_by_uid → set
@@ -24,14 +23,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
-from PIL import Image, TiffImagePlugin
+from PIL import Image
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
 from app.main import app
 from app.models.organization.organization_member import OrgRole
 from app.repositories.listings import listing_blackout_repo, listing_blackout_attachment_repo
-from app.services.listings.blackout_service import _sniff_content_type, _strip_exif_if_image
+from app.services.listings.blackout_service import _sniff_content_type
 
 
 # ---------------------------------------------------------------------------
@@ -40,29 +39,6 @@ from app.services.listings.blackout_service import _sniff_content_type, _strip_e
 
 def _ctx(org_id: uuid.UUID, user_id: uuid.UUID) -> RequestContext:
     return RequestContext(organization_id=org_id, user_id=user_id, org_role=OrgRole.OWNER)
-
-
-def _build_jpeg_with_gps() -> bytes:
-    """Build a small JPEG with GPS EXIF embedded."""
-    img = Image.new("RGB", (32, 32), color=(200, 100, 50))
-    exif = img.getexif()
-    exif[0x010F] = "TestMaker"
-    gps_ifd = exif.get_ifd(0x8825)
-    gps_ifd[1] = "N"
-    gps_ifd[2] = (
-        TiffImagePlugin.IFDRational(37, 1),
-        TiffImagePlugin.IFDRational(33, 1),
-        TiffImagePlugin.IFDRational(45, 1),
-    )
-    gps_ifd[3] = "W"
-    gps_ifd[4] = (
-        TiffImagePlugin.IFDRational(122, 1),
-        TiffImagePlugin.IFDRational(25, 1),
-        TiffImagePlugin.IFDRational(10, 1),
-    )
-    buf = io.BytesIO()
-    img.save(buf, format="JPEG", exif=exif)
-    return buf.getvalue()
 
 
 def _build_jpeg() -> bytes:
@@ -105,31 +81,6 @@ class TestSniffContentType:
         # fail on the actual image decode. This tests the sniff layer only;
         # the Pillow re-encode would reject it too.
         assert _sniff_content_type(b"\xff\xd8\xff" + b"MZ\x90\x00" * 100) == "image/jpeg"
-
-
-# ---------------------------------------------------------------------------
-# EXIF strip unit test (pure function)
-# ---------------------------------------------------------------------------
-
-class TestStripExif:
-    def test_strips_gps_from_jpeg(self) -> None:
-        jpeg_with_gps = _build_jpeg_with_gps()
-
-        # Before stripping: GPS metadata present.
-        before = Image.open(io.BytesIO(jpeg_with_gps))
-        gps_before = before.getexif().get_ifd(0x8825)
-        assert len(gps_before) > 0, "Fixture must contain GPS EXIF"
-
-        # After stripping: GPS metadata gone.
-        stripped = _strip_exif_if_image(jpeg_with_gps, "image/jpeg")
-        after = Image.open(io.BytesIO(stripped))
-        gps_after = after.getexif().get_ifd(0x8825)
-        assert len(gps_after) == 0, "GPS EXIF must be stripped"
-
-    def test_pdf_passes_through_unchanged(self) -> None:
-        pdf_bytes = b"%PDF-1.4 some content"
-        result = _strip_exif_if_image(pdf_bytes, "application/pdf")
-        assert result == pdf_bytes
 
 
 # ---------------------------------------------------------------------------

@@ -23,6 +23,7 @@ from app.services.storage.image_processor import (
     ImageRejected,
     process_image,
     sniff_content_type,
+    strip_metadata,
 )
 
 
@@ -220,3 +221,42 @@ class TestProcessImagePurity:
         # PNG re-encode is deterministic when there's no EXIF involved.
         assert a.content == b.content
         assert a.content_type == b.content_type
+
+
+class TestStripMetadata:
+    def test_strips_gps_exif_from_webp(self) -> None:
+        with Image.open(io.BytesIO(_build_jpeg_with_gps_exif())) as source:
+            exif = source.getexif()
+            buffer = io.BytesIO()
+            source.save(buffer, format="WEBP", exif=exif.tobytes())
+        webp = buffer.getvalue()
+        with Image.open(io.BytesIO(webp)) as before:
+            assert before.getexif().get_ifd(0x8825), "fixture must carry GPS"
+
+        stripped = strip_metadata(webp, "image/webp")
+
+        with Image.open(io.BytesIO(stripped)) as after:
+            assert after.format == "WEBP"
+            assert not after.getexif().get_ifd(0x8825)
+
+    def test_undecodable_image_is_rejected_not_passed_through(self) -> None:
+        with pytest.raises(ImageRejected):
+            strip_metadata(b"\xff\xd8\xff" + b"MZ\x90\x00" * 100, "image/jpeg")
+
+    def test_image_that_decodes_as_another_format_is_rejected(self) -> None:
+        with pytest.raises(ImageRejected) as exc_info:
+            strip_metadata(_build_png(), "image/jpeg")
+        assert "does not match" in exc_info.value.reason
+
+    def test_image_over_the_pixel_cap_is_rejected(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr("app.services.storage.image_processor.MAX_IMAGE_PIXELS", 100)
+        with pytest.raises(ImageRejected) as exc_info:
+            strip_metadata(_build_png(width=11, height=10), "image/png")
+        assert "dimensions" in exc_info.value.reason
+
+    def test_photo_uploads_still_refuse_webp(self) -> None:
+        with Image.open(io.BytesIO(_build_png())) as source:
+            buffer = io.BytesIO()
+            source.save(buffer, format="WEBP")
+        with pytest.raises(ImageRejected):
+            process_image(buffer.getvalue())

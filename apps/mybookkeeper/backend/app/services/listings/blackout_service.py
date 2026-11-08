@@ -12,7 +12,6 @@ broader content-type allowlist (images + PDF + plain text).
 """
 from __future__ import annotations
 
-import io
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -22,13 +21,16 @@ from platform_shared.core.storage import StorageNotConfiguredError  # noqa: F401
 from app.core.config import settings
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
-from app.repositories.listings import listing_blackout_repo
-from app.repositories.listings import listing_blackout_attachment_repo
+from app.repositories.listings import (
+    listing_blackout_attachment_repo,
+    listing_blackout_repo,
+)
 from app.schemas.listings.blackout_response import BlackoutResponse
 from app.schemas.listings.listing_blackout_attachment_response import (
     ListingBlackoutAttachmentResponse,
 )
 from app.services.listings.attachment_response_builder import attach_presigned_urls
+from app.services.storage.image_processor import ImageRejected, strip_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +48,15 @@ ALLOWED_ATTACHMENT_MIME_TYPES: frozenset[str] = frozenset({
 })
 
 _ALLOWED_DISPLAY = ", ".join(sorted(ALLOWED_ATTACHMENT_MIME_TYPES))
+
+# Image types re-encoded without metadata before storage. An image that can't be
+# re-encoded is rejected — its original bytes could carry the host's GPS location.
+# GIF has no EXIF block (where phones write GPS), so it is stored as-is.
+METADATA_STRIPPED_MIME_TYPES: frozenset[str] = frozenset({
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+})
 
 
 # ---------------------------------------------------------------------------
@@ -110,38 +121,6 @@ def _sniff_content_type(content: bytes) -> str | None:
 
 
 # ---------------------------------------------------------------------------
-# EXIF strip helper (images only)
-# ---------------------------------------------------------------------------
-
-def _strip_exif_if_image(content: bytes, content_type: str) -> bytes:
-    """Strip EXIF metadata from JPEG/PNG/WebP images via Pillow.
-
-    Non-image types (PDF, plain text) pass through unchanged. Mirrors the
-    approach in services/storage/image_processor.py.
-    """
-    if content_type not in ("image/jpeg", "image/png", "image/webp"):
-        return content
-
-    try:
-        from PIL import Image  # type: ignore[import-untyped]
-
-        with Image.open(io.BytesIO(content)) as img:
-            img.load()
-            buf = io.BytesIO()
-            fmt = img.format or ("JPEG" if content_type == "image/jpeg" else "PNG")
-            save_kwargs: dict[str, object] = {"format": fmt}
-            if fmt == "JPEG":
-                save_kwargs["quality"] = 90
-                save_kwargs["optimize"] = True
-                save_kwargs["exif"] = b""
-            img.save(buf, **save_kwargs)
-            return buf.getvalue()
-    except Exception:  # noqa: BLE001
-        logger.warning("EXIF strip failed — uploading original bytes", exc_info=True)
-        return content
-
-
-# ---------------------------------------------------------------------------
 # Notes update
 # ---------------------------------------------------------------------------
 
@@ -186,7 +165,7 @@ async def upload_attachment(
       2. Size cap — 413 if exceeded.
       3. Content-type sniff (header bytes, not extension).
       4. Allowlist check — 415 if not in allowlist.
-      5. EXIF strip (images only).
+      5. Metadata strip (images only) — 415 if the image can't be re-encoded.
       6. MinIO upload.
       7. DB insert.
       8. Return response with presigned URL.
@@ -218,8 +197,14 @@ async def upload_attachment(
             f"Allowed: {_ALLOWED_DISPLAY}"
         )
 
-    # 5. EXIF strip
-    clean_content = _strip_exif_if_image(content, sniffed)
+    # 5. Metadata strip (images only) — fail closed
+    clean_content = content
+    if sniffed in METADATA_STRIPPED_MIME_TYPES:
+        try:
+            clean_content = strip_metadata(content, sniffed)
+        except ImageRejected as exc:
+            logger.warning("Blackout attachment rejected: %s", exc.reason)
+            raise AttachmentTypeRejectedError("Couldn't read this image") from exc
 
     # 6. MinIO upload
     storage_key = f"blackout-attachments/{blackout_id}/{uuid.uuid4()}"

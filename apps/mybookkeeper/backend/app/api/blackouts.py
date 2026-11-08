@@ -62,7 +62,8 @@ async def upload_attachment(
     - Content-type is sniffed from header bytes, not the filename extension.
     - Allowlist: images (PNG/JPEG/WebP/GIF), PDF, plain text.
     - 25MB size cap (configurable via MAX_BLACKOUT_ATTACHMENT_SIZE_BYTES).
-    - JPEG/PNG/WebP images have EXIF metadata stripped before storage.
+    - JPEG/PNG/WebP images have metadata stripped before storage; one that
+      can't be re-encoded is rejected (415), never stored as-is.
     """
     content = await file.read()
     try:
