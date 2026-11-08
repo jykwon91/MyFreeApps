@@ -3,9 +3,10 @@ import type { RareClassification } from "@/games/wow-forever/types/rares/rareCla
 import type { RareSpawn } from "@/games/wow-forever/types/rares/rareSpawn";
 
 /**
- * A rare the Forever client knows: its name and classification are Forever's
- * (Game files); level, spawns and drops are Classic data, and missing when
- * Classic doesn't have the creature (`classic` false).
+ * A Classic rare / rare elite, or a rare the Forever client has met. Once the
+ * client has met it (`seenOn` set), its name and classification are Forever's;
+ * otherwise they're Classic data. Level, spawns and drops are always Classic
+ * data, and missing when Classic doesn't have the creature (`classic` false).
  */
 export interface Rare {
   id: number;
@@ -13,6 +14,8 @@ export interface Rare {
   classification: RareClassification;
   /** False for a rare new in Forever: no level, spawns or drops yet. */
   classic: boolean;
+  /** When the Forever client was last seen to know it ("Confirmed in Forever"); null = Classic data only. */
+  seenOn: string | null;
   minLevel: number | null;
   maxLevel: number | null;
   spawns: readonly RareSpawn[];

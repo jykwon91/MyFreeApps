@@ -1,8 +1,8 @@
 /**
- * The rares finder's data from the generator's two files: names and
- * classifications from the Forever client (`rares/rares.json`, which also
- * names the drop items and zones) and levels, spawns and drops from Classic
- * (`rares/classic/rareSpawns.json`).
+ * The rares finder's data from the generator's two files: every Classic rare
+ * with its name, rank, level, spawns and drops (`rares/classic/rareSpawns.json`),
+ * and the rares the Forever client has met, with Forever's name and
+ * classification (`rares/rares.json`, which also names the drop items and zones).
  */
 import { isItemSlot } from "@/games/wow-forever/data/itemSlots";
 import { RARE_CLASSIFICATION_CODE } from "@/games/wow-forever/data/rares/raresConfig";
@@ -56,19 +56,38 @@ export function compareRares(a: Rare, b: Rare): number {
   return a.name.localeCompare(b.name);
 }
 
-export function decodeRares(files: RareDataFiles): RaresData {
+interface RareIdentity {
+  name: string;
+  classificationCode: number;
+}
+
+/** Creature id -> Forever's name and classification, for every rare the client has met. */
+function confirmedRares(files: RareDataFiles): Map<number, RareIdentity> {
   const col = columnIndexes("rares.json", files.forever.columns, ["id", "name", "classification"] as const);
-  const rares: Rare[] = files.forever.rares.flatMap((row) => {
-    const classification = RARE_CLASSIFICATION_CODE[Number(row[col.classification])];
-    if (!classification) return [];
-    const id = Number(row[col.id]);
+  return new Map(
+    files.forever.rares.map((row) => [
+      Number(row[col.id]),
+      { name: String(row[col.name]), classificationCode: Number(row[col.classification]) },
+    ]),
+  );
+}
+
+export function decodeRares(files: RareDataFiles): RaresData {
+  const confirmed = confirmedRares(files);
+  const ids = new Set([...confirmed.keys(), ...Object.keys(files.classic.rares).map(Number)]);
+  const rares: Rare[] = [...ids].flatMap((id) => {
     const classic = files.classic.rares[String(id)];
+    const forever = confirmed.get(id);
+    const identity = forever ?? (classic ? { name: classic.name, classificationCode: classic.classification } : undefined);
+    const classification = identity ? RARE_CLASSIFICATION_CODE[identity.classificationCode] : undefined;
+    if (!identity || !classification) return [];
     return [
       {
         id,
-        name: String(row[col.name]),
+        name: identity.name,
         classification,
         classic: classic !== undefined,
+        seenOn: forever ? files.forever.seenOn : null,
         minLevel: classic?.minLevel ?? null,
         maxLevel: classic?.maxLevel ?? null,
         spawns: classic ? spawns(files, classic.spawns) : [],

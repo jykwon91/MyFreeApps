@@ -16,6 +16,8 @@ export interface RareDataFiles {
       Record<
         string,
         {
+          name: string;
+          classification: number;
           minLevel: number;
           maxLevel: number;
           spawns: readonly (readonly (string | number)[])[];

@@ -520,17 +520,20 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 
 #### Rares (`/wow-forever/rares`)
 
-- `pages/WowRaresPage.tsx`: rare and rare elite creatures, lowest level first
-  (rares new in Forever last). Each card (`components/rares/RareRow`): name,
-  classification chip (Game files), level (Classic data), where it spawns +
+- `pages/WowRaresPage.tsx`: every Classic rare and rare elite with an
+  open-world spawn plus the rares new in Forever, lowest level first (new in
+  Forever last). Each card (`components/rares/RareRow`): name,
+  classification chip ("Seen in game" + date when the Forever client has met
+  it — `Rare.seenOn` — else Classic data), level (Classic data), where it spawns +
   "Show on map", a `/target <Name>` line with Copy, its own drops
   (`BossLootRow` → `ItemNameLink`) and a "Seen / killed" tick
   (`mga.wowForever.rares.checklist.v1`, `useChecklist`, "Clear seen / killed").
-- Filters live in the URL (`?zone&min&max&fit=1`, replace history,
+- Filters live in the URL (`?zone&min&max&fit=1&confirmed=1`, replace history,
   `hooks/useRareFilters.ts`, pure `lib/rares/rareFilterParams.ts` +
   `filterRares.ts`). "Fits my level" = 3 below to 2 above the World Map's
   saved level (`mga.wowForever.worldMap.player.v1`, edited here too); level
-  filters drop rares with no level. "Copy macro" packs the filtered names into
+  filters drop rares with no level. "Confirmed in Forever" (chip) keeps only
+  rares the client has met. "Copy macro" packs the filtered names into
   `/target` macros of at most 255 characters each (`lib/rares/targetMacros.ts`,
   a line break counts as one; shows "N / 255 characters" per macro).
 - "Show on map" = the World Map's own `#view=` share link
@@ -545,12 +548,14 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - **Data is GENERATED** — `python -m scripts.wow_rares.build --creature-cache
   <creaturecache.wdb>` (from `backend/`, in `wow_refresh` after the changes
   build; `--creature-cache` / `WOW_FOREVER_CREATURE_CACHE`, stops when missing;
-  never commit the raw cache). Which creatures are rares and their names come
-  from the operator's Forever `Cache/WDB/enUS/creaturecache.wdb`
-  (`wow_rares/creature_cache.py`; classification 2 = rare elite, 4 = rare) —
-  only rares the client has met are listed, so the list grows with each
-  refresh. Levels, spawns (continents only, event-only spawns dropped, spots
-  within a few yards merged) and drops come from cmangos
+  never commit the raw cache). The list = every cmangos `creature_template`
+  with `Rank` 2 (rare elite) / 4 (rare) and an open-world spawn, plus every
+  creature the operator's Forever `Cache/WDB/enUS/creaturecache.wdb` calls a
+  rare (`wow_rares/creature_cache.py`; same codes). A creature the client has
+  met is "confirmed" (`data/rares/rares.json`: Forever's name and
+  classification); a Classic rare the client shows as something else is left
+  out. Classic name, rank, levels, spawns (continents only, event-only spawns
+  dropped, spots within a few yards merged) and drops come from cmangos
   (`data/rares/classic/rareSpawns.json`, GPL — keep LICENSE + README). Drops
   are the creature's own loot (`boss_loot.creature_drops`) at ≥ 2%
   (`NOTABLE_DROP_CHANCE`; shared-table greens drop out) and only items in

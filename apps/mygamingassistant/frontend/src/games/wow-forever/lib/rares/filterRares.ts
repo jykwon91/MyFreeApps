@@ -14,9 +14,10 @@ export function fitsLevel(rare: Rare, level: number): boolean {
  * the player has a level.
  */
 export function filterRares(rares: readonly Rare[], filters: RareFilters, playerLevel: number | null): Rare[] {
-  const { zoneId, minLevel, maxLevel, fitsMyLevel } = filters;
+  const { zoneId, minLevel, maxLevel, fitsMyLevel, confirmedOnly } = filters;
   const fitLevel = fitsMyLevel ? playerLevel : null;
   return rares.filter((rare) => {
+    if (confirmedOnly && rare.seenOn === null) return false;
     if (zoneId !== null && !rare.spawns.some((s) => s.zoneId === zoneId)) return false;
     if (minLevel !== null && (rare.maxLevel === null || rare.maxLevel < minLevel)) return false;
     if (maxLevel !== null && (rare.minLevel === null || rare.minLevel > maxLevel)) return false;

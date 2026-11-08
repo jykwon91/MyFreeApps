@@ -36,6 +36,7 @@ function rare(overrides: Partial<Rare>): Rare {
     name: "Test Rare",
     classification: RARE_CLASSIFICATION.rare,
     classic: true,
+    seenOn: null,
     minLevel: 10,
     maxLevel: 10,
     spawns: [spawn(ELWYNN, 50, 50)],
@@ -56,14 +57,25 @@ describe("decodeRares (committed data)", () => {
     expect(morgaine.name).toBe("Morgaine the Sly");
     expect(morgaine.classification).toBe(RARE_CLASSIFICATION.rare);
     expect(morgaine.classic).toBe(true);
+    expect(morgaine.seenOn).toBe(raresJson.seenOn);
     expect(morgaine.minLevel).toBe(10);
     expect(morgaine.spawns.every((s) => s.zoneId === ELWYNN && s.zoneName === "Elwynn Forest")).toBe(true);
     expect(morgaine.drops[0]).toMatchObject({ id: 6201, name: "Lithe Boots" });
   });
 
+  it("lists every Classic rare, unconfirmed ones with their Classic name and rank", () => {
+    expect(data.rares.length).toBe(new Set([...Object.keys(rareSpawnsJson.rares), ...raresJson.rares.map((r) => String(r[0]))]).size);
+    expect(data.rares.filter((r) => r.seenOn !== null)).toHaveLength(raresJson.rares.length);
+    const digger = byId(1424);
+    expect(digger).toMatchObject({ name: "Master Digger", classification: RARE_CLASSIFICATION.rare, classic: true, seenOn: null });
+    expect(digger.spawns[0].zoneName).toBe("Westfall");
+    expect(data.rares.some((r) => r.classification === RARE_CLASSIFICATION.rareElite && r.seenOn === null)).toBe(true);
+  });
+
   it("keeps rares new in Forever with no level, spawns or drops", () => {
     const kackle = byId(210107);
     expect(kackle.classic).toBe(false);
+    expect(kackle.seenOn).toBe(raresJson.seenOn);
     expect(kackle.minLevel).toBeNull();
     expect(kackle.spawns).toEqual([]);
     expect(kackle.drops).toEqual([]);
@@ -85,11 +97,16 @@ describe("decodeRares (committed data)", () => {
 describe("filterRares", () => {
   const low = rare({ id: 1, minLevel: 10, maxLevel: 10 });
   const mid = rare({ id: 2, minLevel: 24, maxLevel: 26, spawns: [spawn(REDRIDGE, 10, 10)] });
-  const unknown = rare({ id: 3, classic: false, minLevel: null, maxLevel: null, spawns: [] });
+  const unknown = rare({ id: 3, classic: false, seenOn: "2026-11-07", minLevel: null, maxLevel: null, spawns: [] });
   const all = [low, mid, unknown];
 
   it("keeps everything with no filters, in order", () => {
     expect(filterRares(all, DEFAULT_RARE_FILTERS, null)).toEqual(all);
+  });
+
+  it("confirmed in Forever keeps only rares the client has met", () => {
+    expect(filterRares(all, { ...DEFAULT_RARE_FILTERS, confirmedOnly: true }, null)).toEqual([unknown]);
+    expect(filterRares(all, { ...DEFAULT_RARE_FILTERS, confirmedOnly: true, zoneId: REDRIDGE }, null)).toEqual([]);
   });
 
   it("filters by zone", () => {
@@ -116,17 +133,18 @@ describe("filterRares", () => {
 
 describe("rare filter URL params", () => {
   it("round-trips and leaves unset filters out", () => {
-    const filters = { zoneId: ELWYNN, minLevel: 5, maxLevel: 20, fitsMyLevel: true };
+    const filters = { zoneId: ELWYNN, minLevel: 5, maxLevel: 20, fitsMyLevel: true, confirmedOnly: true };
     const params = writeRareFilters(new URLSearchParams("keep=1"), filters);
-    expect(params.toString()).toBe("keep=1&zone=1429&min=5&max=20&fit=1");
+    expect(params.toString()).toBe("keep=1&zone=1429&min=5&max=20&fit=1&confirmed=1");
     expect(parseRareFilters(params)).toEqual(filters);
     expect(writeRareFilters(params, DEFAULT_RARE_FILTERS).toString()).toBe("keep=1");
   });
 
   it("reads malformed values as no filter", () => {
-    expect(parseRareFilters(new URLSearchParams("zone=abc&min=0&max=99&fit=yes"))).toEqual(DEFAULT_RARE_FILTERS);
+    expect(parseRareFilters(new URLSearchParams("zone=abc&min=0&max=99&fit=yes&confirmed=true"))).toEqual(DEFAULT_RARE_FILTERS);
     expect(isDefaultRareFilters(DEFAULT_RARE_FILTERS)).toBe(true);
     expect(isDefaultRareFilters({ ...DEFAULT_RARE_FILTERS, fitsMyLevel: true })).toBe(false);
+    expect(isDefaultRareFilters({ ...DEFAULT_RARE_FILTERS, confirmedOnly: true })).toBe(false);
   });
 
   it("rounds typed levels and rejects ones outside the game", () => {

@@ -138,6 +138,8 @@ describe("layer markers and counts", () => {
     const morgaine = elwynn.filter((m) => rareIdOfMarker(m.id) === 99);
     expect(morgaine.length).toBeGreaterThan(0);
     expect(morgaine[0].label).toBe("Morgaine the Sly — level 10 rare");
+    // Classic rares the Forever client hasn't met yet get pins too.
+    expect(elwynn.filter((m) => rareIdOfMarker(m.id) === 61).map((m) => m.label)).toContain("Thuros Lightfingers — level 11 rare");
     expect(layerCounts(markersByLayer(data, map(ELWYNN), withRares), withRares)[MAP_LAYER.rares]).toBe(elwynn.length);
     const hordeView = markersByLayer(data, map(ELWYNN), { ...horde, rares }).get(MAP_LAYER.rares) ?? [];
     expect(hordeView.map((m) => m.id)).toEqual(elwynn.map((m) => m.id));

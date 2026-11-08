@@ -6,4 +6,6 @@ export interface RareFilters {
   maxLevel: number | null;
   /** Only rares near the player's saved level. */
   fitsMyLevel: boolean;
+  /** Only rares the Forever client has met. */
+  confirmedOnly: boolean;
 }

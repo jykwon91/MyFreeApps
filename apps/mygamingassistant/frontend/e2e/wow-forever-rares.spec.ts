@@ -1,5 +1,6 @@
 /**
- * WoW Forever rares finder — the list, its filters (kept in the URL), the
+ * WoW Forever rares finder — the list (every Classic rare, the ones the Forever
+ * client has met marked "Seen in game"), its filters (kept in the URL), the
  * /target line and macro copy, the seen / killed checklist across a reload,
  * the "Show on map" deep link, the World Map's Rares layer, the phone layout
  * and the loading skeleton.
@@ -13,6 +14,10 @@ const PLAYER_KEY = "mga.wowForever.worldMap.player.v1";
 const CHECKLIST_KEY = "mga.wowForever.rares.checklist.v1";
 const ELWYNN = 1429;
 const REDRIDGE = 1433;
+/** Every Classic rare / rare elite with a map spot, plus the two new in Forever (committed data). */
+const ALL_RARES = 332;
+/** The rares the Forever client has met (committed data). */
+const CONFIRMED_RARES = 13;
 
 function setPlayerLevel(page: Page, level: number | null) {
   return page.addInitScript(
@@ -41,17 +46,21 @@ test("the list shows every rare lowest level first, with level, place, drops and
   await expect(page.getByRole("heading", { level: 1, name: "Rares" })).toBeVisible();
   await expect(page).toHaveTitle(/Rares/);
   const rows = page.getByTestId("rare-row");
-  await expect(rows).toHaveCount(13);
-  await expect(page.getByTestId("rares-count")).toHaveText("13 rares · 0 seen / killed");
+  await expect(rows).toHaveCount(ALL_RARES);
+  await expect(page.getByTestId("rares-count")).toHaveText(`${ALL_RARES} rares · 0 seen / killed`);
+  await expect(rows.first()).toContainText("Lost Soul");
+  await expect(rows.first().getByTestId("rare-level")).toContainText("Level 6");
 
-  const morgaine = rows.first();
-  await expect(morgaine).toContainText("Morgaine the Sly");
+  const morgaine = rows.filter({ hasText: "Morgaine the Sly" });
   await expect(morgaine.getByTestId("rare-level")).toContainText("Level 10");
   await expect(morgaine.getByTestId("rare-where")).toContainText("Elwynn Forest");
   await expect(morgaine.getByTestId("rare-target-line")).toHaveText("/target Morgaine the Sly");
   await expect(morgaine.getByTestId("rare-drops")).toContainText("Lithe Boots");
-  // Classification from the game files, the rest Classic data.
-  await expect(morgaine.getByTestId("provenance-badge").first()).toBeVisible();
+  // The Forever client has met Morgaine: her classification is seen in game; the rest is Classic data.
+  await expect(morgaine.getByTestId("provenance-badge").first()).toHaveAttribute("data-provenance", "seen");
+  await expect(morgaine.getByTestId("rare-level").getByTestId("provenance-badge")).toHaveAttribute("data-provenance", "classic");
+  // An unconfirmed Classic rare is Classic data throughout.
+  await expect(rows.first().getByTestId("provenance-badge").first()).toHaveAttribute("data-provenance", "classic");
 
   // Rares new in Forever come last and say so, with no map link.
   const kackle = rows.filter({ hasText: "Kackle" });
@@ -66,40 +75,64 @@ test("filters narrow the list, live in the URL and reset", async ({ page }) => {
   await setPlayerLevel(page, null);
   await page.goto(RARES);
   const rows = page.getByTestId("rare-row");
-  await expect(rows).toHaveCount(13);
+  await expect(rows).toHaveCount(ALL_RARES);
 
   await page.getByLabel("Zone").selectOption(String(REDRIDGE));
   await expect(page).toHaveURL(new RegExp(`zone=${REDRIDGE}`));
-  await expect(rows).toHaveCount(3);
+  await expect(rows).toHaveCount(8);
   await expect(rows.filter({ hasText: "Morgaine" })).toHaveCount(0);
 
   await page.getByLabel("Lowest level").fill("25");
   await expect(page).toHaveURL(/min=25/);
-  await expect(rows).toHaveCount(1);
-  await expect(rows.first()).toContainText("Kazon");
+  await expect(rows).toHaveCount(3);
+  await expect(rows.last()).toContainText("Kazon");
 
   // A shared link opens with the same filters.
   await page.reload();
   await expect(page.getByLabel("Zone")).toHaveValue(String(REDRIDGE));
-  await expect(rows).toHaveCount(1);
+  await expect(rows).toHaveCount(3);
 
   await page.getByLabel("Highest level").fill("20");
   await expect(rows).toHaveCount(0);
   await expect(page.getByTestId("rares-empty")).toBeVisible();
   await page.getByTestId("rares-empty").getByRole("button", { name: "Reset filters" }).click();
   await expect(page).toHaveURL(RARES);
-  await expect(rows).toHaveCount(13);
+  await expect(rows).toHaveCount(ALL_RARES);
+});
+
+test("Confirmed in Forever narrows to the rares the game has met, in the URL", async ({ page }) => {
+  await page.goto(RARES);
+  const rows = page.getByTestId("rare-row");
+  const chip = page.getByRole("button", { name: "Confirmed in Forever" });
+  await expect(chip).toHaveAttribute("aria-pressed", "false");
+  await chip.click();
+  await expect(chip).toHaveAttribute("aria-pressed", "true");
+  await expect(page).toHaveURL(/confirmed=1/);
+  await expect(rows).toHaveCount(CONFIRMED_RARES);
+  // Every confirmed row's classification is seen in game; rares new in Forever stay in.
+  await expect(rows.locator('[data-testid="provenance-badge"][data-provenance="seen"]')).toHaveCount(CONFIRMED_RARES);
+  await expect(rows.filter({ hasText: "Kackle" })).toHaveCount(1);
+
+  await page.getByLabel("Zone").selectOption(String(REDRIDGE));
+  await expect(rows).toHaveCount(3);
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Confirmed in Forever" })).toHaveAttribute("aria-pressed", "true");
+  await expect(rows).toHaveCount(3);
+  await page.getByRole("button", { name: "Confirmed in Forever" }).click();
+  await expect(rows).toHaveCount(8);
 });
 
 test("fits my level uses the World Map's saved level, and setting it here saves it there", async ({ page }) => {
   await setPlayerLevel(page, null);
   await page.goto(`${RARES}?fit=1`);
   await expect(page.getByTestId("rare-fit-no-level")).toBeVisible();
-  await expect(page.getByTestId("rare-row")).toHaveCount(13);
+  await expect(page.getByTestId("rare-row")).toHaveCount(ALL_RARES);
 
   await page.getByLabel("Your level").fill("11");
-  await expect(page.getByTestId("rare-row")).toHaveCount(1);
-  await expect(page.getByTestId("rare-row").first()).toContainText("Morgaine the Sly");
+  // Levels 8 to 13.
+  await expect(page.getByTestId("rare-row")).toHaveCount(39);
+  await expect(page.getByTestId("rare-row").filter({ hasText: "Morgaine the Sly" })).toHaveCount(1);
+  await expect(page.getByTestId("rare-row").filter({ hasText: "Lost Soul" })).toHaveCount(0);
   const saved = await page.evaluate((key) => JSON.parse(window.localStorage.getItem(key) ?? "{}").level, PLAYER_KEY);
   expect(saved).toBe(11);
 });
@@ -178,7 +211,7 @@ test.describe("at 375px", () => {
 
   test("the list fits a phone with 44px controls and no sideways scroll", async ({ page }) => {
     await page.goto(RARES);
-    await expect(page.getByTestId("rare-row")).toHaveCount(13);
+    await expect(page.getByTestId("rare-row")).toHaveCount(ALL_RARES);
     expect(await noSideways(page)).toBeLessThanOrEqual(0);
     const box = await page.getByTestId("rare-row").first().getByRole("link", { name: "Show on map" }).boundingBox();
     expect(box?.height).toBeGreaterThanOrEqual(44);

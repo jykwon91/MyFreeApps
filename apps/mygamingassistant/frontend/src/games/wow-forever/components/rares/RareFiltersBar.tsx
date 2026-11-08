@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import ChoiceSelect from "@/games/wow-forever/components/shared/ChoiceSelect";
 import NumberField from "@/games/wow-forever/components/shared/NumberField";
 import {
@@ -21,7 +22,7 @@ interface RareFiltersBarProps {
   onLevelChange: (level: number | null) => void;
 }
 
-/** Zone, level range, and "Fits my level" with the player's level next to it. */
+/** Zone, level range, "Confirmed in Forever", and "Fits my level" with the player's level next to it. */
 export default function RareFiltersBar({ zones, filters, onChange, onReset, level, onLevelChange }: RareFiltersBarProps) {
   const zoneIds = zones.map((z) => String(z.id));
   const zoneLabels = Object.fromEntries(zones.map((z) => [String(z.id), z.name]));
@@ -71,6 +72,18 @@ export default function RareFiltersBar({ zones, filters, onChange, onReset, leve
           />
           Fits my level ({RARE_FIT_LEVELS_BELOW} below to {RARE_FIT_LEVELS_ABOVE} above)
         </label>
+        <button
+          type="button"
+          aria-pressed={filters.confirmedOnly}
+          onClick={() => onChange({ confirmedOnly: !filters.confirmedOnly })}
+          className={clsx(
+            "rounded-full border px-3 text-sm min-h-[44px]",
+            filters.confirmedOnly ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted/40",
+          )}
+          data-testid="rare-confirmed-chip"
+        >
+          Confirmed in Forever
+        </button>
         {!isDefaultRareFilters(filters) ? (
           <button type="button" onClick={onReset} className="rounded-md border px-3 text-sm min-h-[44px] hover:bg-muted/40">
             Reset filters

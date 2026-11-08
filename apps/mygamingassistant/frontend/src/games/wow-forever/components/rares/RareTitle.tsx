@@ -11,7 +11,7 @@ interface RareTitleProps {
   as: "h3" | "p";
 }
 
-/** Name, "Rare" / "Rare elite" (Game files) and level (Classic data). */
+/** Name, "Rare" / "Rare elite" (seen in game once the Forever client has met it, else Classic data) and level (Classic data). */
 export default function RareTitle({ rare, as: Heading }: RareTitleProps) {
   const level = rareLevelText(rare);
   const elite = rare.classification === RARE_CLASSIFICATION.rareElite;
@@ -31,7 +31,11 @@ export default function RareTitle({ rare, as: Heading }: RareTitleProps) {
             {elite ? "★ " : ""}
             {RARE_CLASSIFICATION_LABEL[rare.classification]}
           </span>
-          <ProvenanceBadge provenance={PROVENANCE.client} />
+          {rare.seenOn !== null ? (
+            <ProvenanceBadge provenance={PROVENANCE.seen} date={rare.seenOn} />
+          ) : (
+            <ProvenanceBadge provenance={PROVENANCE.classic} />
+          )}
         </span>
         {level ? (
           <span className="inline-flex items-center gap-1.5 text-muted-foreground" data-testid="rare-level">

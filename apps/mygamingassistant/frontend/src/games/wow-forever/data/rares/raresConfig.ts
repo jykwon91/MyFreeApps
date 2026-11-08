@@ -9,6 +9,8 @@ export const RARE_ZONE_PARAM = "zone";
 export const RARE_MIN_LEVEL_PARAM = "min";
 export const RARE_MAX_LEVEL_PARAM = "max";
 export const RARE_FIT_PARAM = "fit";
+export const RARE_CONFIRMED_PARAM = "confirmed";
+/** The value a yes/no URL param ("fit", "confirmed") takes when on. */
 export const RARE_FIT_ON = "1";
 
 export const RARE_LEVEL_MIN = 1;

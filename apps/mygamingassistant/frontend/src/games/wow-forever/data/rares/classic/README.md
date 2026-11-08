@@ -1,7 +1,9 @@
-# Rares finder — Classic levels, spawns and drops
+# Rares finder — Classic rares, levels, spawns and drops
 
-`rareSpawns.json` lists, for each rare the WoW Forever client knows (its id in
-`../rares.json`), the level range (`creature_template` `MinLevel` /
+`rareSpawns.json` lists every creature cmangos ranks rare (`Rank` 4) or rare
+elite (`Rank` 2) with an open-world spawn, plus any other creature the WoW
+Forever client calls a rare (`../rares.json`). For each: the Classic name and
+rank (`creature_template` `Name` / `Rank`), the level range (`MinLevel` /
 `MaxLevel`), the World Map spots it spawns at (`creature`: open world only,
 seasonal-event spawns left out, spawns within 40 yards merged) as
 `[uiMapId, subzone, x, y]`, and what it drops with the chance the server rolls
@@ -9,7 +11,9 @@ per kill, most likely first. Loot is followed the way the item pages follow it
 (equal-share groups, references rolled `maxcount` times, a reference ten or
 more creatures share is a random world drop and left out). Only items the WoW
 Forever client has (`items/items.json`) are kept, and only a rare's own items:
-chances under 2% (shared tables of random greens) are left out. A rare Forever has and cmangos doesn't is missing here.
+chances under 2% (shared tables of random greens) are left out. A Classic rare
+the Forever client has met as something other than a rare is left out; a rare
+Forever has and cmangos doesn't is missing here.
 
 Derived from [cmangos classic-db](https://github.com/cmangos/classic-db) at
 commit `ec4f596146be6467ea93c57397858e329e2db852` (`creature_template`, `creature`, `game_event_creature`,

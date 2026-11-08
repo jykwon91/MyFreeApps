@@ -4,21 +4,23 @@ Usage (from ``apps/mygamingassistant/backend``)::
 
     python -m scripts.wow_rares.build [--creature-cache <creaturecache.wdb>]
 
-Run after the World Map and Items generators (it reads ``items.json``). Which
-creatures are rares comes from the operator's own Forever client:
-``--creature-cache``, else ``WOW_FOREVER_CREATURE_CACHE``, else the default
-install path (``creature_cache.py``). The run stops without it. The cache is
-read, never committed — so the list grows as the client meets more rares.
+Run after the World Map and Items generators (it reads ``items.json``). The
+list is every Classic rare / rare elite with an open-world spawn, plus every
+rare the operator's own Forever client has met: ``--creature-cache``, else
+``WOW_FOREVER_CREATURE_CACHE``, else the default install path
+(``creature_cache.py``). The run stops without it. The cache is read, never
+committed — so more rares become "confirmed" as the client meets them.
 
 Writes two files; the Forever one and the Classic one are kept apart because
 their licences differ:
 
-* ``data/rares/rares.json`` — the Forever client: each rare's name and
-  classification (rare / rare elite), plus the names, slots and types
-  (``items.json``) of the items they drop and the names of the zones they're in.
+* ``data/rares/rares.json`` — the Forever client: the name and classification
+  (rare / rare elite) of each rare it has met, plus the names, slots and types
+  (``items.json``) of the items the listed rares drop and the names of the
+  zones they're in.
 * ``data/rares/classic/rareSpawns.json`` — cmangos classic-db (GPL-3.0,
-  LICENSE + README next to it): each rare's level range, spawn spots on the
-  World Map and drops with the chance the server rolls.
+  LICENSE + README next to it): each listed rare's Classic name, rank, level
+  range, spawn spots on the World Map and drops with the chance the server rolls.
 
 Game data © Blizzard Entertainment. Never hand-edit the output.
 """
@@ -38,10 +40,12 @@ from scripts.wow_rares.rares import (
     DROP_COLUMNS,
     RARE_COLUMNS,
     SPAWN_COLUMNS,
+    classic_rare_ids,
     classic_rares,
     drop_item_ids,
     event_only_guids,
     forever_rares,
+    listed_rare_ids,
     rare_spawns,
     zone_names,
 )
@@ -58,10 +62,12 @@ CLASSIC_DIR = RARES_DIR / "classic"
 SPAWNS_PATH = CLASSIC_DIR / "rareSpawns.json"
 ITEM_COLUMNS = ["name", "slot", "itemType"]
 
-CLASSIC_README = """# Rares finder — Classic levels, spawns and drops
+CLASSIC_README = """# Rares finder — Classic rares, levels, spawns and drops
 
-`rareSpawns.json` lists, for each rare the WoW Forever client knows (its id in
-`../rares.json`), the level range (`creature_template` `MinLevel` /
+`rareSpawns.json` lists every creature cmangos ranks rare (`Rank` 4) or rare
+elite (`Rank` 2) with an open-world spawn, plus any other creature the WoW
+Forever client calls a rare (`../rares.json`). For each: the Classic name and
+rank (`creature_template` `Name` / `Rank`), the level range (`MinLevel` /
 `MaxLevel`), the World Map spots it spawns at (`creature`: open world only,
 seasonal-event spawns left out, spawns within 40 yards merged) as
 `[uiMapId, subzone, x, y]`, and what it drops with the chance the server rolls
@@ -69,7 +75,9 @@ per kill, most likely first. Loot is followed the way the item pages follow it
 (equal-share groups, references rolled `maxcount` times, a reference ten or
 more creatures share is a random world drop and left out). Only items the WoW
 Forever client has (`items/items.json`) are kept, and only a rare's own items:
-chances under 2% (shared tables of random greens) are left out. A rare Forever has and cmangos doesn't is missing here.
+chances under 2% (shared tables of random greens) are left out. A Classic rare
+the Forever client has met as something other than a rare is left out; a rare
+Forever has and cmangos doesn't is missing here.
 
 Derived from [cmangos classic-db](https://github.com/cmangos/classic-db) at
 commit `{commit}` (`creature_template`, `creature`, `game_event_creature`,
@@ -85,7 +93,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Build the WoW Forever rares finder's data.")
     parser.add_argument("--creature-cache", help="the Forever client's Cache/WDB/enUS/creaturecache.wdb")
     cache, seen_on = read_creature_cache(creature_cache_path(parser.parse_args().creature_cache))
-    rares = forever_rares(cache)
+    confirmed = forever_rares(cache)
     items_doc = json.loads(ITEMS_PATH.read_text(encoding="utf-8"))
     items = {int(row[0]): row for row in items_doc["items"]}
     print("Reading cmangos classic-db...")
@@ -93,6 +101,7 @@ def main() -> None:
         cmangos_dump(),
         {"creature", "creature_template", "game_event_creature", "creature_loot_template", "reference_loot_template"},
     )
+    templates = {as_int(t["Entry"]): t for t in tables["creature_template"]}
     _entries, bounds = load_zones()
     art = WorldMapArt()
 
@@ -100,12 +109,15 @@ def main() -> None:
         spot = place(bounds, art, continent, wx, wy, exclude=FOREVER_ONLY_ZONES)
         return None if spot is None else spot.as_row()
 
+    classic_ids = classic_rare_ids(templates)
     spawns = rare_spawns(
-        tables["creature"], {r.creature_id for r in rares}, event_only_guids(tables["game_event_creature"]), placer,
+        tables["creature"], classic_ids | {r.creature_id for r in confirmed},
+        event_only_guids(tables["game_event_creature"]), placer,
     )
+    listed = listed_rare_ids(cache, classic_ids, spawns)
     creature_loot = loot_index(tables["creature_loot_template"])
     classic = classic_rares(
-        rares, {as_int(t["Entry"]): t for t in tables["creature_template"]}, spawns,
+        listed, templates, spawns,
         creature_loot, loot_index(tables["reference_loot_template"]), world_pools(creature_loot), set(items),
     )
     write_json(RARES_PATH, {
@@ -114,7 +126,7 @@ def main() -> None:
         "seenOn": seen_on,
         "attribution": "Game data from the WoW Forever client. © Blizzard Entertainment.",
         "columns": RARE_COLUMNS,
-        "rares": [[r.creature_id, r.name, r.classification] for r in rares],
+        "rares": [[r.creature_id, r.name, r.classification] for r in confirmed],
         "itemColumns": ITEM_COLUMNS,
         "items": loot_item_rows({}, items, items_doc["columns"], drop_item_ids(classic)),
         "zones": zone_names(classic, {b.ui_map_id: b.name for b in bounds}),
@@ -128,8 +140,10 @@ def main() -> None:
     shutil.copyfile(CLASSIC_LICENSE, CLASSIC_DIR / "LICENSE")
     (CLASSIC_DIR / "README.md").write_text(CLASSIC_README.format(commit=CMANGOS_COMMIT), encoding="utf-8")
     placed = sum(1 for rare in classic.values() if rare.spawns)
+    demoted = len({cid for cid in classic_ids if spawns.get(cid)} - listed)
     print(
-        f"{len(rares)} rares in the client cache (build {cache.build}, {seen_on}) of {len(cache.creatures)} creatures; "
+        f"{len(listed)} rares listed ({len(confirmed)} confirmed by the client cache, build {cache.build}, {seen_on}; "
+        f"{demoted} Classic rares the client shows as something else left out); "
         f"{len(classic)} in cmangos, {placed} with map spots, {len(drop_item_ids(classic))} drop items -> {RARES_DIR}"
     )
 

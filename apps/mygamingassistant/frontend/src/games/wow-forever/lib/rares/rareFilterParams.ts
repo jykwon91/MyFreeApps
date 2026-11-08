@@ -1,4 +1,5 @@
 import {
+  RARE_CONFIRMED_PARAM,
   RARE_FIT_ON,
   RARE_FIT_PARAM,
   RARE_LEVEL_MAX,
@@ -9,7 +10,13 @@ import {
 } from "@/games/wow-forever/data/rares/raresConfig";
 import type { RareFilters } from "@/games/wow-forever/types/rares/rareFilters";
 
-export const DEFAULT_RARE_FILTERS: RareFilters = { zoneId: null, minLevel: null, maxLevel: null, fitsMyLevel: false };
+export const DEFAULT_RARE_FILTERS: RareFilters = {
+  zoneId: null,
+  minLevel: null,
+  maxLevel: null,
+  fitsMyLevel: false,
+  confirmedOnly: false,
+};
 
 function positiveInt(value: string | null): number | null {
   if (value === null || !/^\d{1,6}$/.test(value)) return null;
@@ -36,6 +43,7 @@ export function parseRareFilters(params: URLSearchParams): RareFilters {
     minLevel: level(params.get(RARE_MIN_LEVEL_PARAM)),
     maxLevel: level(params.get(RARE_MAX_LEVEL_PARAM)),
     fitsMyLevel: params.get(RARE_FIT_PARAM) === RARE_FIT_ON,
+    confirmedOnly: params.get(RARE_CONFIRMED_PARAM) === RARE_FIT_ON,
   };
 }
 
@@ -51,9 +59,16 @@ export function writeRareFilters(params: URLSearchParams, filters: RareFilters):
   setOrDelete(next, RARE_MIN_LEVEL_PARAM, filters.minLevel === null ? null : String(filters.minLevel));
   setOrDelete(next, RARE_MAX_LEVEL_PARAM, filters.maxLevel === null ? null : String(filters.maxLevel));
   setOrDelete(next, RARE_FIT_PARAM, filters.fitsMyLevel ? RARE_FIT_ON : null);
+  setOrDelete(next, RARE_CONFIRMED_PARAM, filters.confirmedOnly ? RARE_FIT_ON : null);
   return next;
 }
 
 export function isDefaultRareFilters(filters: RareFilters): boolean {
-  return filters.zoneId === null && filters.minLevel === null && filters.maxLevel === null && !filters.fitsMyLevel;
+  return (
+    filters.zoneId === null &&
+    filters.minLevel === null &&
+    filters.maxLevel === null &&
+    !filters.fitsMyLevel &&
+    !filters.confirmedOnly
+  );
 }

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
 from scripts.wow_rares.build import RARES_PATH, SPAWNS_PATH
 from scripts.wow_rares.creature_cache import (
     CLASSIFICATION_ELITE,
@@ -20,9 +21,11 @@ from scripts.wow_rares.creature_cache import (
 )
 from scripts.wow_rares.rares import (
     NOTABLE_DROP_CHANCE,
+    classic_rare_ids,
     classic_rares,
     event_only_guids,
     forever_rares,
+    listed_rare_ids,
     notable_drops,
     rare_spawns,
     zone_names,
@@ -97,6 +100,27 @@ def test_only_rares_and_rare_elites_by_name() -> None:
     assert [c.creature_id for c in forever_rares(cache)] == [2, 1]
 
 
+def test_classic_rares_are_rank_rare_and_rare_elite() -> None:
+    templates = {
+        1: {"Rank": CLASSIFICATION_RARE},
+        2: {"Rank": CLASSIFICATION_RARE_ELITE},
+        3: {"Rank": CLASSIFICATION_ELITE},
+        4: {"Rank": CLASSIFICATION_NORMAL},
+    }
+    assert classic_rare_ids(templates) == {1, 2}
+
+
+def test_listed_rares_are_forever_rares_plus_placed_classic_rares_forever_has_not_demoted() -> None:
+    cache = CreatureCache(1, {
+        99: _creature(99, "Morgaine the Sly", CLASSIFICATION_RARE),  # Classic rare, confirmed
+        210107: _creature(210107, "Kackle", CLASSIFICATION_RARE),  # new in Forever
+        500: _creature(500, "Demoted", CLASSIFICATION_NORMAL),  # Classic rare Forever shows as normal
+    })
+    spots = {99: [[1429, "a", 1.0, 1.0]], 61: [[1429, "b", 2.0, 2.0]], 500: [[1429, "c", 3.0, 3.0]]}
+    # 61 is an unconfirmed Classic rare with a spot; 77 is a Classic rare with no open-world spot.
+    assert listed_rare_ids(cache, {99, 61, 77, 500}, spots) == {99, 61, 210107}
+
+
 def _spawn(guid: int, creature: int, x: float, y: float, map_id: int = 0) -> dict[str, Any]:
     return {"guid": guid, "id": creature, "map": map_id, "position_x": x, "position_y": y}
 
@@ -124,17 +148,18 @@ def test_spawns_skip_events_instances_far_off_and_merge_close_spots() -> None:
 
 
 def test_classic_rares_keep_level_spots_and_notable_forever_drops() -> None:
-    rares = [_creature(99, "Morgaine the Sly", CLASSIFICATION_RARE), _creature(210107, "Kackle", CLASSIFICATION_RARE)]
-    templates = {99: {"Entry": 99, "MinLevel": 10, "MaxLevel": 11, "LootId": 99}}
+    templates = {99: {"Entry": 99, "Name": "Morgaine the Sly", "Rank": 4, "MinLevel": 10, "MaxLevel": 11, "LootId": 99}}
     loot = {99: [
         {"item": 6201, "ChanceOrQuestChance": 80, "groupid": 0, "mincountOrRef": 1, "maxcount": 1},
         {"item": 1917, "ChanceOrQuestChance": 20, "groupid": 0, "mincountOrRef": 1, "maxcount": 1},
         {"item": 4444, "ChanceOrQuestChance": 50, "groupid": 0, "mincountOrRef": 1, "maxcount": 1},  # not in Forever
         {"item": 5555, "ChanceOrQuestChance": 1, "groupid": 0, "mincountOrRef": 1, "maxcount": 1},  # too rare to name
     ]}
-    out = classic_rares(rares, templates, {99: [[1429, "Forest's Edge", 30.8, 64.7]]}, loot, {}, set(), {6201, 1917, 5555})
+    out = classic_rares([99, 210107], templates, {99: [[1429, "Forest's Edge", 30.8, 64.7]]}, loot, {}, set(), {6201, 1917, 5555})
     assert set(out) == {99}  # Kackle is new in Forever: no Classic data
     assert out[99].as_json() == {
+        "name": "Morgaine the Sly",
+        "classification": CLASSIFICATION_RARE,
         "minLevel": 10,
         "maxLevel": 11,
         "spawns": [[1429, "Forest's Edge", 30.8, 64.7]],
@@ -161,9 +186,13 @@ def test_committed_output_is_consistent() -> None:
     rares = {int(r[0]): r for r in forever["rares"]}
     assert rares, "no rares — was the build run against an empty creature cache?"
     assert all(r[2] in (CLASSIFICATION_RARE, CLASSIFICATION_RARE_ELITE) for r in rares.values())
-    assert set(map(int, classic["rares"])) <= set(rares)
-    for rare in classic["rares"].values():
+    # Every Classic rare / rare elite with a map spot is listed, not only the confirmed ones.
+    assert len(classic["rares"]) > 10 * len(rares)
+    for cid, rare in classic["rares"].items():
         assert rare["minLevel"] <= rare["maxLevel"]
+        assert rare["name"]
+        # A listed rare is either Classic-ranked rare with a spot, or confirmed by the client.
+        assert int(cid) in rares or (rare["classification"] in (CLASSIFICATION_RARE, CLASSIFICATION_RARE_ELITE) and rare["spawns"])
         for zone, _subzone, x, y in rare["spawns"]:
             assert str(zone) in forever["zones"]
             assert 0 <= x <= 100 and 0 <= y <= 100
@@ -175,10 +204,15 @@ def test_committed_output_is_consistent() -> None:
 
 
 def test_committed_output_pins_a_known_rare() -> None:
-    """Morgaine the Sly: a Forever rare, level 10, in Elwynn Forest, dropping Lithe Boots."""
+    """Morgaine the Sly: a confirmed rare, level 10, in Elwynn Forest, dropping Lithe Boots;
+    Master Digger: an unconfirmed Classic rare in Westfall."""
     forever = _load(RARES_PATH)
     assert [99, "Morgaine the Sly", CLASSIFICATION_RARE] in forever["rares"]
     morgaine = _load(SPAWNS_PATH)["rares"]["99"]
     assert morgaine["minLevel"] == 10
     assert forever["zones"][str(morgaine["spawns"][0][0])] == "Elwynn Forest"
     assert morgaine["drops"][0][0] == 6201
+    digger = _load(SPAWNS_PATH)["rares"]["1424"]
+    assert digger["name"] == "Master Digger" and digger["classification"] == CLASSIFICATION_RARE
+    assert forever["zones"][str(digger["spawns"][0][0])] == "Westfall"
+    assert 1424 not in {r[0] for r in forever["rares"]}

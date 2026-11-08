@@ -49,7 +49,7 @@ def newest_build(builds: dict[str, list[dict[str, str]]], branch: str) -> str:
 def repin(text: str, *, build: str, era_build: str) -> str:
     """``sources.py`` with its two client builds replaced."""
     for name, value in (("WAGO_BUILD", build), ("WAGO_ERA_BUILD", era_build)):
-        text, count = re.subn(rf'^{name} = "[^"]+"$', f'{name} = "{value}"', text, flags=re.M)
+        text, count = re.subn(rf'^{name} = "[^"]+"$', f'{name} = "{value}"', text, flags=re.MULTILINE)
         if count != 1:
             raise SystemExit(f"could not find {name} in {SOURCES_FILE}")
     return text
