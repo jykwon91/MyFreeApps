@@ -435,24 +435,46 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 
 #### Dungeon pages (`/wow-forever/dungeons`, `/wow-forever/dungeons/:slug`)
 
-- Index (lowest level first) and one page per dungeon: level + "You can go in
-  from level N" (Forever LFGDungeons → ContentTuning, Game files), entrances
-  grouped by zone with their named doors and a "Show entrance on the World
-  Map" link (`/wow-forever/map?m=<zone>`, Classic data), the bosses in order
-  (Forever `DungeonEncounter`, Game files) as jump links, then each boss's
-  section (`#boss-<slug>`, a shareable deep link; `hooks/useScrollToHash.ts`
-  scrolls to it once the data has loaded) with its drops: icon,
-  `ItemNameLink` (hover tooltip → item page), slot/type and drop chance
-  (Classic data). Raids are left out; Forever-only dungeons have no rows yet.
+- Index (lowest level first) and one page per dungeon, in this order:
+  - **When you can go** (`DungeonWhen`, one `DungeonFactRow` + badge per
+    fact): recommended level (Forever LFGDungeons → ContentTuning, Game
+    files), lowest level to go in (cmangos `areatrigger_teleport.required_level`,
+    **Classic data** — never Game files), group size (Forever `Map.MaxPlayers`,
+    Game files; hidden when unknown), key or attunement to go in (Classic
+    `areatrigger_teleport` item/quest — no Classic 5-player dungeon has one)
+    and, when there are any, the keys the interior's locked doors take
+    (`classicInteriors.json` doors, Classic data). Never write "no locked
+    doors": the door data isn't complete (UBRS's Seal of Ascension is missing).
+  - **Where it is** (`DungeonLocation`): per zone, zone · sub-zone, "Show
+    entrance on the World Map" (`/wow-forever/map?m=<zone>`), the nearest
+    flight master per faction (own or neutral, same continent, straight-line
+    yards from the zone's first door — `lib/dungeons/nearestFlightPaths.ts`,
+    `travel.json`, Game files), then each door (`DungeonDoorRow`: its wing or
+    "Entrance", coords, "Directions to …" = `directionsHref` →
+    `/wow-forever/map?to=pt:...&dir=1`, and the World Map's
+    `InstanceInterior` — the bosses behind that door, i.e. the wing breakdown).
+  - The bosses in order (Forever `DungeonEncounter`, Game files) as jump
+    links, then each boss's section (`#boss-<slug>`, a shareable deep link;
+    `hooks/useScrollToHash.ts` scrolls to it once the data has loaded) with its
+    drops: icon, `ItemNameLink` (hover tooltip → item page), slot/type and
+    drop chance (Classic data). Raids are left out; Forever-only dungeons have
+    no rows yet.
+  - A Quests section goes after "Where it is" as its own `Dungeon` field and
+    component — don't fold quests into the facts.
 - Built in the browser from files the World Map already ships
-  (`classicDungeons.json`, `classicInteriors.json`, `zones.json`) plus
-  `data/dungeons/lootItems.json` (Forever item names/slots) and
-  `data/dungeons/classic/bossLoot.json` (cmangos GPL — keep LICENSE + README),
-  all lazy-loaded once by `lib/dungeons/loadDungeons.ts` and decoded by the
-  pure `decodeDungeons.ts`. Slugs: `dungeonSlug` / `uniqueSlugs` (a repeated
-  boss name gets `-2`) — don't change them, they're links.
-- **Loot is GENERATED** — `python -m scripts.wow_dungeons.build` (from
-  `backend/`, after the World Map and Items builds). The Forever client has no
+  (`classicDungeons.json`, `classicInteriors.json`, `zones.json`,
+  `travel.json` — decoded with the World Map's own `decodeZone` /
+  `decodeTravel` into a `DungeonWorld`) plus `data/dungeons/lootItems.json`
+  (Forever item names/slots), `data/dungeons/dungeonFacts.json` (Forever group
+  sizes), `data/dungeons/classic/bossLoot.json` and
+  `data/dungeons/classic/entryRequirements.json` (cmangos GPL — keep LICENSE +
+  README), all lazy-loaded once by `lib/dungeons/loadDungeons.ts` and decoded
+  by the pure `decodeDungeons.ts`. Slugs: `dungeonSlug` / `uniqueSlugs` (a
+  repeated boss name gets `-2`) — don't change them, they're links.
+- **Loot, group sizes and entry requirements are GENERATED** —
+  `python -m scripts.wow_dungeons.build` (from `backend/`, after the World Map
+  and Items builds; group sizes from wago.tools `Map`, entry requirements in
+  `wow_dungeons/entry.py`). The Forever client has no
   JournalEncounter* tables, so a boss's loot is its cmangos loot table (rolled
   by `wow_item_pages/loot_chances.py`, world pools excluded, chance ≥ 0.5%)
   keeping only items in `items.json` — never filled from Classic Era items.

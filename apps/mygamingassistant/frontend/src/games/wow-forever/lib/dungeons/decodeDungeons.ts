@@ -1,23 +1,34 @@
 /**
  * The dungeon pages' data, built from files other pages already ship: the
  * World Map's entrances (`classicDungeons.json` — Forever levels, Classic
- * doors) and interiors (`classicInteriors.json` — the Forever client's bosses
- * in order), the zone names (`zones.json`), plus the dungeon generator's
- * boss loot (`dungeons/classic/bossLoot.json`, Classic chances) and its item
- * names (`dungeons/lootItems.json`, the Forever client).
+ * doors), interiors (`classicInteriors.json` — the Forever client's bosses in
+ * order, Classic locked doors), zones and flight masters (decoded by the World
+ * Map, `DungeonWorld`), plus the dungeon generator's boss loot
+ * (`dungeons/classic/bossLoot.json`, Classic chances), item names
+ * (`dungeons/lootItems.json`), group sizes (`dungeons/dungeonFacts.json`, the
+ * Forever client) and entry requirements (`dungeons/classic/entryRequirements.json`).
  */
 import { isItemSlot } from "@/games/wow-forever/data/itemSlots";
 import { INSTANCE_ALIASES } from "@/games/wow-forever/data/worldMap/placeNames";
 import { uniqueSlugs, dungeonSlug } from "@/games/wow-forever/lib/dungeons/dungeonSlug";
+import { nearestFlightPaths } from "@/games/wow-forever/lib/dungeons/nearestFlightPaths";
 import type { BossLootItem } from "@/games/wow-forever/types/dungeons/bossLootItem";
 import type { Dungeon } from "@/games/wow-forever/types/dungeons/dungeon";
 import type { DungeonBoss } from "@/games/wow-forever/types/dungeons/dungeonBoss";
 import type { DungeonDataFiles } from "@/games/wow-forever/types/dungeons/dungeonDataFiles";
+import type { DungeonDoor } from "@/games/wow-forever/types/dungeons/dungeonDoor";
 import type { DungeonEntranceZone } from "@/games/wow-forever/types/dungeons/dungeonEntranceZone";
+import type { DungeonEntryRequirement } from "@/games/wow-forever/types/dungeons/dungeonEntryRequirement";
 import type { DungeonsData } from "@/games/wow-forever/types/dungeons/dungeonsData";
-import { decodeInteriors } from "@/games/wow-forever/worldMap/interiors";
+import type { DungeonWorld } from "@/games/wow-forever/types/dungeons/dungeonWorld";
+import type { FlightNode, WorldZone } from "@/games/wow-forever/types/worldMap";
+import { zoneToWorld } from "@/games/wow-forever/worldMap/geometry";
+import { decodeInteriors, type Interior } from "@/games/wow-forever/worldMap/interiors";
 
 const DUNGEON_TYPE = "dungeon";
+
+type LootItemInfo = Omit<BossLootItem, "id" | "chance">;
+type DungeonBase = Omit<Dungeon, "bosses" | "interior" | "maxPlayers" | "entryRequirements" | "lockedDoorKeys">;
 
 function columnIndexes<const T extends readonly string[]>(file: string, names: readonly string[], wanted: T): Record<T[number], number> {
   const out = {} as Record<T[number], number>;
@@ -29,9 +40,9 @@ function columnIndexes<const T extends readonly string[]>(file: string, names: r
   return out;
 }
 
-function lootItems(files: DungeonDataFiles): ReadonlyMap<number, Omit<BossLootItem, "id" | "chance">> {
+function lootItems(files: DungeonDataFiles): ReadonlyMap<number, LootItemInfo> {
   const col = columnIndexes("lootItems.json", files.lootItems.columns, ["name", "slot", "itemType"] as const);
-  const out = new Map<number, Omit<BossLootItem, "id" | "chance">>();
+  const out = new Map<number, LootItemInfo>();
   for (const [id, row] of Object.entries(files.lootItems.items)) {
     const slot = String(row[col.slot] ?? "");
     const itemType = row[col.itemType];
@@ -48,7 +59,7 @@ function lootItems(files: DungeonDataFiles): ReadonlyMap<number, Omit<BossLootIt
 function instanceLoot(
   files: DungeonDataFiles,
   instanceId: number,
-  items: ReadonlyMap<number, Omit<BossLootItem, "id" | "chance">>,
+  items: ReadonlyMap<number, LootItemInfo>,
 ): ReadonlyMap<number, BossLootItem[]> {
   const col = columnIndexes("bossLoot.json", files.bossLoot.lootColumns, ["item", "chance"] as const);
   const out = new Map<number, BossLootItem[]>();
@@ -64,68 +75,106 @@ function instanceLoot(
   return out;
 }
 
-function addEntrance(zones: DungeonEntranceZone[], zoneId: number, zoneName: string, wing: string, subzone: string): DungeonEntranceZone[] {
+function entryRequirements(files: DungeonDataFiles, instanceId: number): DungeonEntryRequirement[] {
+  const col = columnIndexes("entryRequirements.json", files.entry.columns, ["trigger", "item", "quest"] as const);
+  return (files.entry.instances[String(instanceId)] ?? []).map((row) => ({
+    trigger: Number(row[col.trigger]),
+    itemId: Number(row[col.item]),
+    questId: Number(row[col.quest]),
+  }));
+}
+
+function lockedDoorKeys(interior: Interior | undefined): string[] {
+  return [...new Set(interior?.doors.map((d) => d.key) ?? [])];
+}
+
+/** The zone's flight paths are measured from its first door. */
+function entranceZone(zone: WorldZone | undefined, zoneId: number, subzone: string, door: DungeonDoor, nodes: readonly FlightNode[]): DungeonEntranceZone {
+  return {
+    zoneId,
+    zoneName: zone?.name ?? "",
+    subzone,
+    doors: [door],
+    flightPaths: zone ? nearestFlightPaths(zoneToWorld(zone, door.x, door.y), nodes) : [],
+  };
+}
+
+function addDoor(
+  zones: readonly DungeonEntranceZone[],
+  make: () => DungeonEntranceZone,
+  zoneId: number,
+  subzone: string,
+  door: DungeonDoor,
+): DungeonEntranceZone[] {
   const at = zones.findIndex((z) => z.zoneId === zoneId);
-  if (at < 0) return [...zones, { zoneId, zoneName, wings: wing ? [wing] : [], subzone }];
-  const zone = zones[at];
-  const next = { ...zone, wings: wing ? [...zone.wings, wing] : zone.wings, subzone: zone.subzone || subzone };
-  return zones.map((z, i) => (i === at ? next : z));
+  if (at < 0) return [...zones, make()];
+  return zones.map((z, i) => (i === at ? { ...z, doors: [...z.doors, door], subzone: z.subzone || subzone } : z));
+}
+
+function bossesOf(interior: Interior | undefined, loot: ReadonlyMap<number, BossLootItem[]>): DungeonBoss[] {
+  const bosses = interior?.bosses ?? [];
+  const slugs = uniqueSlugs(bosses.map((b) => b.name));
+  return bosses.map((b, i) => ({ encounter: b.encounter, name: b.name, slug: slugs[i], loot: loot.get(b.encounter) ?? null }));
 }
 
 /** Every dungeon (raids are left out), in the entrances file's order: lowest level first. */
-export function decodeDungeons(files: DungeonDataFiles): DungeonsData {
+export function decodeDungeons(files: DungeonDataFiles, world: DungeonWorld): DungeonsData {
   const col = columnIndexes("classicDungeons.json", files.dungeons.columns, [
-    "instance", "name", "wing", "type", "minLevel", "maxLevel", "requiredLevel", "zone", "subzone",
+    "trigger", "instance", "name", "wing", "type", "minLevel", "maxLevel", "requiredLevel", "zone", "subzone", "x", "y",
   ] as const);
-  const zoneNames = new Map(files.zones.zones.map((z) => [z.id, z.name]));
+  const zoneById = new Map(world.zones.map((z) => [z.id, z]));
   const interiors = decodeInteriors(files.interiors);
   const items = lootItems(files);
-  const byInstance = new Map<number, Omit<Dungeon, "bosses">>();
+  const byInstance = new Map<number, DungeonBase>();
   for (const row of files.dungeons.rows) {
     if (row[col.type] !== DUNGEON_TYPE) continue;
     const instanceId = Number(row[col.instance]);
     const name = String(row[col.name]);
     const zoneId = Number(row[col.zone]);
-    const wing = String(row[col.wing] ?? "");
     const subzone = String(row[col.subzone] ?? "");
-    const zoneName = zoneNames.get(zoneId) ?? "";
-    const known = byInstance.get(instanceId);
+    const door: DungeonDoor = {
+      trigger: Number(row[col.trigger]),
+      wing: String(row[col.wing] ?? ""),
+      x: Number(row[col.x]),
+      y: Number(row[col.y]),
+    };
+    const make = () => entranceZone(zoneById.get(zoneId), zoneId, subzone, door, world.flightNodes);
     const levelMin = Number(row[col.minLevel]);
     const levelMax = Number(row[col.maxLevel]);
     const requiredLevel = Number(row[col.requiredLevel]);
-    if (!known) {
-      byInstance.set(instanceId, {
-        slug: dungeonSlug(name),
-        instanceId,
-        name,
-        aliases: INSTANCE_ALIASES[name] ?? [],
-        levelMin,
-        levelMax,
-        requiredLevel,
-        entrances: addEntrance([], zoneId, zoneName, wing, subzone),
-      });
-      continue;
-    }
-    byInstance.set(instanceId, {
-      ...known,
-      levelMin: Math.min(known.levelMin, levelMin),
-      levelMax: Math.max(known.levelMax, levelMax),
-      requiredLevel: Math.min(known.requiredLevel, requiredLevel),
-      entrances: addEntrance([...known.entrances], zoneId, zoneName, wing, subzone),
-    });
+    const known = byInstance.get(instanceId);
+    byInstance.set(
+      instanceId,
+      known
+        ? {
+            ...known,
+            levelMin: Math.min(known.levelMin, levelMin),
+            levelMax: Math.max(known.levelMax, levelMax),
+            requiredLevel: Math.min(known.requiredLevel, requiredLevel),
+            entrances: addDoor(known.entrances, make, zoneId, subzone, door),
+          }
+        : {
+            slug: dungeonSlug(name),
+            instanceId,
+            name,
+            aliases: INSTANCE_ALIASES[name] ?? [],
+            levelMin,
+            levelMax,
+            requiredLevel,
+            entrances: [make()],
+          },
+    );
   }
   const dungeons: Dungeon[] = [...byInstance.values()].map((d) => {
     const interior = interiors.get(d.instanceId);
-    const loot = instanceLoot(files, d.instanceId, items);
-    const names = interior?.bosses.map((b) => b.name) ?? [];
-    const slugs = uniqueSlugs(names);
-    const bosses: DungeonBoss[] = (interior?.bosses ?? []).map((b, i) => ({
-      encounter: b.encounter,
-      name: b.name,
-      slug: slugs[i],
-      loot: loot.get(b.encounter) ?? null,
-    }));
-    return { ...d, bosses };
+    return {
+      ...d,
+      maxPlayers: files.facts.maxPlayers[String(d.instanceId)] ?? null,
+      entryRequirements: entryRequirements(files, d.instanceId),
+      lockedDoorKeys: lockedDoorKeys(interior),
+      bosses: bossesOf(interior, instanceLoot(files, d.instanceId, items)),
+      interior: interior ?? null,
+    };
   });
   return { dungeons, clientBuild: files.lootItems.clientBuild };
 }

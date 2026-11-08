@@ -1,8 +1,8 @@
 import { Skeleton } from "@platform/ui";
 import { DETAIL_SECTION } from "@/games/wow-forever/components/food/detail/detailStyles";
-import { DUNGEON_SKELETON_BOSSES, DUNGEON_SKELETON_LOOT_ROWS } from "@/games/wow-forever/data/dungeons/dungeonPageConfig";
+import { DUNGEON_SKELETON_BOSSES, DUNGEON_SKELETON_FACTS, DUNGEON_SKELETON_LOOT_ROWS } from "@/games/wow-forever/data/dungeons/dungeonPageConfig";
 
-/** Stand-in while the dungeon data loads: header, level and entrance, boss list and boss sections in the same places. */
+/** Stand-in while the dungeon data loads: header, when / where, boss list and boss sections in the same places. */
 export default function DungeonPageSkeleton() {
   return (
     <div aria-hidden className="space-y-4" data-testid="dungeon-page-skeleton">
@@ -14,10 +14,17 @@ export default function DungeonPageSkeleton() {
         </div>
       </div>
       <div className={DETAIL_SECTION}>
-        <Skeleton className="h-5 w-24" />
-        <Skeleton className="h-4 w-48" />
+        <Skeleton className="h-5 w-36" />
+        {Array.from({ length: DUNGEON_SKELETON_FACTS }, (_, i) => (
+          <Skeleton key={i} className="h-4 w-2/3" />
+        ))}
+      </div>
+      <div className={DETAIL_SECTION}>
         <Skeleton className="h-5 w-28" />
-        <Skeleton className="h-4 w-2/3" />
+        <Skeleton className="h-4 w-48" />
+        <Skeleton className="h-4 w-56" />
+        <Skeleton className="h-4 w-1/2" />
+        <Skeleton className="h-4 w-40" />
       </div>
       <div className={DETAIL_SECTION}>
         <Skeleton className="h-5 w-24" />

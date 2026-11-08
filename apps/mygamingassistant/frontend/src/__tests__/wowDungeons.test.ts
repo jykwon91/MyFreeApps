@@ -4,14 +4,19 @@ import { decodeDungeons, findDungeon } from "@/games/wow-forever/lib/dungeons/de
 import {
   bossCountText,
   chanceText,
-  entranceDoorsText,
+  doorLabel,
   entranceZonesText,
+  entryText,
+  groupSizeText,
   lootKindText,
 } from "@/games/wow-forever/lib/dungeons/describeDungeon";
 import { bossAnchorId, bossHref, dungeonPageHref, worldMapZoneHref } from "@/games/wow-forever/lib/dungeons/dungeonHref";
 import { dungeonSlug, uniqueSlugs } from "@/games/wow-forever/lib/dungeons/dungeonSlug";
 import { loadDungeons } from "@/games/wow-forever/lib/dungeons/loadDungeons";
+import { nearestFlightPaths } from "@/games/wow-forever/lib/dungeons/nearestFlightPaths";
 import type { DungeonDataFiles } from "@/games/wow-forever/types/dungeons/dungeonDataFiles";
+import type { DungeonWorld } from "@/games/wow-forever/types/dungeons/dungeonWorld";
+import type { FlightNode, WorldZone } from "@/games/wow-forever/types/worldMap";
 
 const DUNGEON_COLUMNS = ["trigger", "instance", "name", "wing", "type", "minLevel", "maxLevel", "requiredLevel", "zone", "subzone", "x", "y", "z"];
 
@@ -20,11 +25,11 @@ function fixture(): DungeonDataFiles {
     dungeons: {
       columns: DUNGEON_COLUMNS,
       rows: [
-        [1, 10, "Test Keep", "", "dungeon", 20, 20, 15, 100, "Old Hill", 1, 1, 1],
-        [2, 10, "Test Keep", "Back door", "dungeon", 22, 22, 18, 200, "Far Gulch", 1, 1, 1],
+        [1, 10, "Test Keep", "", "dungeon", 20, 20, 15, 100, "Old Hill", 50, 50, 1],
+        [2, 10, "Test Keep", "Back door", "dungeon", 22, 22, 18, 200, "Far Gulch", 10, 20, 1],
         [3, 11, "Big Raid", "", "raid", 60, 60, 50, 100, "", 1, 1, 1],
-        [4, 12, "Twin Halls", "East", "dungeon", 30, 30, 25, 100, "", 1, 1, 1],
-        [5, 12, "Twin Halls", "East, back door", "dungeon", 30, 30, 25, 100, "Lower Wilds", 1, 1, 1],
+        [4, 12, "Twin Halls", "East", "dungeon", 30, 30, 25, 100, "", 40, 60, 1],
+        [5, 12, "Twin Halls", "East, back door", "dungeon", 30, 30, 25, 100, "Lower Wilds", 41, 61, 1],
       ],
     },
     interiors: {
@@ -39,11 +44,10 @@ function fixture(): DungeonDataFiles {
             [502, "Guard Captain", null, null, null, 0],
             [503, "The Lord", 0, 0, 0, 1],
           ],
-          doors: [],
+          doors: [[0, 0, 0, "Iron Key"], [5, 5, 0, "Iron Key"], [9, 9, 0, "Tower Key"]],
         },
       },
     },
-    zones: { zones: [{ id: 100, name: "Hillshire" }, { id: 200, name: "Gulchland" }] },
     bossLoot: {
       lootColumns: ["item", "chance"],
       instances: { "10": { "501": [[9001, 45], [9999, 30]], "502": [] } },
@@ -53,11 +57,32 @@ function fixture(): DungeonDataFiles {
       columns: ["name", "slot", "itemType"],
       items: { "9001": ["Captain's Blade", "one_hand", "Sword"] },
     },
+    facts: { maxPlayers: { "10": 5 } },
+    entry: { columns: ["trigger", "item", "quest"], instances: { "12": [[4, 7001, 0]] } },
   };
 }
 
+function zone(id: number, name: string, continent: number): WorldZone {
+  return { id, name, kind: "zone", continent, parent: 0, bounds: [0, 1000, 0, 1000] };
+}
+
+function node(id: number, name: string, continent: number, faction: FlightNode["faction"], wx: number, wy: number): FlightNode {
+  return { id, name, continent, world: { continent, wx, wy }, faction, zone: 100, subzone: "", x: 0, y: 0 };
+}
+
+/** Test Keep's main door (50, 50) on Hillshire is world (500, 500). */
+const WORLD: DungeonWorld = {
+  zones: [zone(100, "Hillshire", 0), zone(200, "Gulchland", 1)],
+  flightNodes: [
+    node(1, "Near Alliance", 0, "A", 500, 600),
+    node(2, "Far Alliance", 0, "A", 500, 900),
+    node(3, "Neutral Post", 0, "N", 500, 300),
+    node(4, "Other Continent Horde", 1, "H", 500, 500),
+  ],
+};
+
 describe("decodeDungeons", () => {
-  const data = decodeDungeons(fixture());
+  const data = decodeDungeons(fixture(), WORLD);
 
   it("keeps dungeons only, one per instance, in the file's order", () => {
     expect(data.dungeons.map((d) => d.name)).toEqual(["Test Keep", "Twin Halls"]);
@@ -69,14 +94,40 @@ describe("decodeDungeons", () => {
     expect([keep.levelMin, keep.levelMax, keep.requiredLevel]).toEqual([20, 22, 15]);
   });
 
-  it("groups entrances by zone, with zone names, doors and the sub-zone", () => {
+  it("groups entrances by zone, with zone names, each door and the nearest flight path per faction", () => {
     expect(data.dungeons[0].entrances).toEqual([
-      { zoneId: 100, zoneName: "Hillshire", wings: [], subzone: "Old Hill" },
-      { zoneId: 200, zoneName: "Gulchland", wings: ["Back door"], subzone: "Far Gulch" },
+      {
+        zoneId: 100,
+        zoneName: "Hillshire",
+        subzone: "Old Hill",
+        doors: [{ trigger: 1, wing: "", x: 50, y: 50 }],
+        flightPaths: [
+          { faction: "A", name: "Near Alliance", yards: 100 },
+          { faction: "H", name: "Neutral Post", yards: 200 },
+        ],
+      },
+      {
+        zoneId: 200,
+        zoneName: "Gulchland",
+        subzone: "Far Gulch",
+        doors: [{ trigger: 2, wing: "Back door", x: 10, y: 20 }],
+        flightPaths: [{ faction: "H", name: "Other Continent Horde", yards: expect.any(Number) }],
+      },
     ]);
-    expect(data.dungeons[1].entrances).toEqual([
-      { zoneId: 100, zoneName: "Hillshire", wings: ["East", "East, back door"], subzone: "Lower Wilds" },
-    ]);
+    expect(data.dungeons[1].entrances[0].doors.map((d) => d.wing)).toEqual(["East", "East, back door"]);
+    expect(data.dungeons[1].entrances[0].subzone).toBe("Lower Wilds");
+  });
+
+  it("carries group size, entry requirements and the keys locked doors take", () => {
+    const [keep, halls] = data.dungeons;
+    expect(keep.maxPlayers).toBe(5);
+    expect(halls.maxPlayers).toBeNull();
+    expect(keep.entryRequirements).toEqual([]);
+    expect(halls.entryRequirements).toEqual([{ trigger: 4, itemId: 7001, questId: 0 }]);
+    expect(keep.lockedDoorKeys).toEqual(["Iron Key", "Tower Key"]);
+    expect(halls.lockedDoorKeys).toEqual([]);
+    expect(keep.interior?.mapId).toBe(10);
+    expect(halls.interior).toBeNull();
   });
 
   it("lists bosses in the interiors' order, with unique slugs", () => {
@@ -101,7 +152,13 @@ describe("decodeDungeons", () => {
   it("throws on a missing column", () => {
     const files = fixture();
     files.lootItems.columns = ["name", "slot"];
-    expect(() => decodeDungeons(files)).toThrow(/itemType/);
+    expect(() => decodeDungeons(files, WORLD)).toThrow(/itemType/);
+  });
+
+  it("leaves out flight paths on another continent, and a zone it can't place", () => {
+    expect(nearestFlightPaths({ continent: 0, wx: 0, wy: 0 }, [node(9, "Away", 1, "A", 0, 0)])).toEqual([]);
+    const lost = decodeDungeons(fixture(), { zones: [], flightNodes: WORLD.flightNodes });
+    expect(lost.dungeons[0].entrances[0]).toMatchObject({ zoneName: "", flightPaths: [] });
   });
 
   it("finds a dungeon by slug", () => {
@@ -118,11 +175,17 @@ describe("the committed dungeon data", () => {
     expect(new Set(data.dungeons.map((d) => d.slug)).size).toBe(data.dungeons.length);
     const deadmines = findDungeon(data, "deadmines");
     expect(deadmines?.entrances.map((e) => e.zoneId)).toEqual([1436]);
+    expect(deadmines?.maxPlayers).toBe(10);
+    expect(deadmines?.entrances[0].flightPaths.find((f) => f.faction === "A")?.name).toBe("Sentinel Hill, Westfall");
+    const sm = findDungeon(data, "scarlet-monastery");
+    expect(sm?.lockedDoorKeys).toContain("The Scarlet Key");
+    expect(sm?.entrances.flatMap((e) => e.doors).length).toBeGreaterThan(1);
     const lastBoss = deadmines?.bosses[deadmines.bosses.length - 1];
     expect(lastBoss?.slug).toBe("edwin-vancleef");
     expect(lastBoss?.loot?.some((l) => l.id === 5193)).toBe(true);
     for (const d of data.dungeons) {
-      expect(d.entrances.every((e) => e.zoneName !== "")).toBe(true);
+      expect(d.entrances.every((e) => e.zoneName !== "" && e.doors.length > 0)).toBe(true);
+      expect(d.entryRequirements).toEqual([]);
       for (const b of d.bosses) {
         for (const l of b.loot ?? []) {
           expect(l.name).not.toBe("");
@@ -162,13 +225,13 @@ describe("dungeon text", () => {
     expect(bossCountText(8)).toBe("8 bosses");
   });
 
-  it("describes doors and zones", () => {
-    expect(entranceDoorsText({ zoneId: 1, zoneName: "A", wings: [], subzone: "" })).toBe("");
-    expect(entranceDoorsText({ zoneId: 1, zoneName: "A", wings: ["Back door"], subzone: "" })).toBe("Door: Back door");
-    expect(entranceDoorsText({ zoneId: 1, zoneName: "A", wings: ["Armory", "Library"], subzone: "" })).toBe(
-      "Doors: Armory · Library",
-    );
-    const zone = (zoneName: string) => ({ zoneId: 1, zoneName, wings: [], subzone: "" });
+  it("describes doors, group size, entry and zones", () => {
+    expect(doorLabel({ wing: "" })).toBe("Entrance");
+    expect(doorLabel({ wing: "Armory" })).toBe("Armory");
+    expect(groupSizeText(10)).toBe("Up to 10 players");
+    expect(entryText([])).toBe("None. Only the level.");
+    expect(entryText([{ trigger: 1, itemId: 2, questId: 0 }])).toMatch(/item or a finished quest/);
+    const zone = (zoneName: string) => ({ zoneId: 1, zoneName, subzone: "", doors: [], flightPaths: [] });
     expect(entranceZonesText([zone("Westfall")])).toBe("Westfall");
     expect(entranceZonesText([zone("Badlands"), zone("Searing Gorge")])).toBe("Badlands and Searing Gorge");
     expect(entranceZonesText([zone("A"), zone("B"), zone("C")])).toBe("A, B and C");

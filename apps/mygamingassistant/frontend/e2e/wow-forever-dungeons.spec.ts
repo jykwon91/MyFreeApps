@@ -1,6 +1,7 @@
 /**
- * WoW Forever dungeon pages — the index, one dungeon's page, boss deep links,
- * the World Map link, loot tooltips, the phone layout and the loading skeletons.
+ * WoW Forever dungeon pages — the index, one dungeon's page (when you can go,
+ * where it is, directions, the wing breakdown), boss deep links, the World Map
+ * link, loot tooltips, the phone layout and the loading skeletons.
  *
  * Run: npx playwright test --config e2e/playwright.config.ts wow-forever-dungeons
  */
@@ -24,8 +25,11 @@ test("the index lists the dungeons lowest level first and opens one", async ({ p
   await expect(page).toHaveURL(DEADMINES);
   await expect(page.getByRole("heading", { level: 1, name: "Deadmines" })).toBeVisible();
   await expect(page).toHaveTitle(/Deadmines/);
-  await expect(page.getByText("Level 16", { exact: true })).toBeVisible();
-  await expect(page.getByText("You can go in from level 10.")).toBeVisible();
+  const when = page.getByRole("region", { name: "When you can go" });
+  await expect(when.getByText("Level 16", { exact: true })).toBeVisible();
+  await expect(when.getByText("Level 10", { exact: true })).toBeVisible();
+  await expect(when.getByText("Up to 10 players")).toBeVisible();
+  await expect(when.getByText("None. Only the level.")).toBeVisible();
 
   // The left nav carries the page.
   await expect(page.getByRole("link", { name: "Dungeons" }).first()).toBeVisible();
@@ -49,6 +53,30 @@ test("the entrance links to its zone on the World Map", async ({ page }) => {
   await expect(page).toHaveURL(/\/wow-forever\/map\?m=1436/);
 });
 
+test("where it is: the nearest flight paths, then walking directions to the door", async ({ page }) => {
+  await page.goto(DEADMINES);
+  const where = page.getByRole("region", { name: "Where it is" });
+  await expect(where.getByTestId("dungeon-flight-paths")).toContainText("Alliance: Sentinel Hill, Westfall");
+  await expect(where.getByTestId("dungeon-flight-paths")).toContainText("yd");
+  const directions = where.getByRole("link", { name: "Directions to the entrance" });
+  await expect(directions).toHaveAttribute("href", /^\/wow-forever\/map\?to=pt%3A1436%2C[\d.]+%2C[\d.]+&dir=1$/);
+  await directions.click();
+  await expect(page).toHaveURL(/\/wow-forever\/map\?to=pt%3A1436/);
+  await expect(page.getByRole("link", { name: "Directions to the entrance" })).toHaveCount(0);
+});
+
+test("a dungeon with wings lists each door with the bosses behind it", async ({ page }) => {
+  await page.goto("/wow-forever/dungeons/scarlet-monastery");
+  await expect(page.getByRole("region", { name: "When you can go" })).toContainText("The Scarlet Key");
+  const armory = page.getByTestId("dungeon-door").filter({ hasText: "Armory" });
+  await expect(armory.getByRole("link", { name: "Directions to the Armory door" })).toBeVisible();
+  const inside = armory.getByRole("button", { name: /Inside · bosses & routes/ });
+  await expect(inside).toHaveAttribute("aria-expanded", "false");
+  await inside.click();
+  await expect(inside).toHaveAttribute("aria-expanded", "true");
+  await expect(armory.getByRole("region", { name: "Inside Scarlet Monastery" })).toContainText("Herod");
+});
+
 test("hovering a loot item shows its tooltip; a click opens its item page", async ({ page }) => {
   await page.goto(DEADMINES);
   const row = page.locator("#boss-edwin-vancleef").getByTestId("boss-loot-row").filter({ hasText: "Cape of the Brotherhood" });
@@ -66,7 +94,11 @@ test("hovering a loot item shows its tooltip; a click opens its item page", asyn
 
 test("every fact carries a provenance badge and nothing links to Wowhead", async ({ page }) => {
   await page.goto(DEADMINES);
-  await expect(page.getByRole("region", { name: "Level and entrance" }).getByTestId("provenance-badge")).toHaveCount(2);
+  // Recommended level, group size (Game files); lowest level, key (Classic data). Deadmines has no locked doors.
+  await expect(page.getByRole("region", { name: "When you can go" }).getByTestId("dungeon-fact")).toHaveCount(4);
+  await expect(page.getByRole("region", { name: "When you can go" }).getByTestId("provenance-badge")).toHaveCount(4);
+  // The entrances (Classic data) and the flight paths (Game files).
+  await expect(page.getByRole("region", { name: "Where it is" }).getByTestId("provenance-badge")).toHaveCount(2);
   await expect(page.getByRole("navigation", { name: "Bosses" }).getByTestId("provenance-badge")).toHaveCount(1);
   await expect(page.locator("#boss-sneed").getByTestId("provenance-badge")).toHaveCount(1);
   await expect(page.locator('a[href*="wowhead"]')).toHaveCount(0);
@@ -88,7 +120,9 @@ test.describe("at 375px", () => {
     expect(await noSideways(page)).toBeLessThanOrEqual(0);
 
     await page.goto("/wow-forever/dungeons/scarlet-monastery");
-    await expect(page.getByTestId("dungeon-entrance")).toContainText("Doors: Armory");
+    await expect(page.getByTestId("dungeon-door").filter({ hasText: "Armory" })).toBeVisible();
+    const directions = page.getByRole("link", { name: "Directions to the Armory door" });
+    expect((await directions.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
     expect(await noSideways(page)).toBeLessThanOrEqual(0);
     const box = await page.getByTestId("boss-loot-row").first().boundingBox();
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);

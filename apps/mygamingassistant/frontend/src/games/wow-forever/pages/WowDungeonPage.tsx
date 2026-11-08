@@ -2,8 +2,9 @@ import { useParams } from "react-router-dom";
 import LoadErrorRetry from "@/components/game/LoadErrorRetry";
 import DungeonBossNav from "@/games/wow-forever/components/dungeons/DungeonBossNav";
 import DungeonBossSection from "@/games/wow-forever/components/dungeons/DungeonBossSection";
-import DungeonFacts from "@/games/wow-forever/components/dungeons/DungeonFacts";
+import DungeonLocation from "@/games/wow-forever/components/dungeons/DungeonLocation";
 import DungeonFootnote from "@/games/wow-forever/components/dungeons/DungeonFootnote";
+import DungeonWhen from "@/games/wow-forever/components/dungeons/DungeonWhen";
 import DungeonNotFound from "@/games/wow-forever/components/dungeons/DungeonNotFound";
 import DungeonPageSkeleton from "@/games/wow-forever/components/dungeons/DungeonPageSkeleton";
 import EmptyStateNote from "@/games/wow-forever/components/shared/EmptyStateNote";
@@ -16,7 +17,7 @@ import { findDungeon } from "@/games/wow-forever/lib/dungeons/decodeDungeons";
 
 const BACK_LABEL = "Back to Dungeons";
 
-/** /wow-forever/dungeons/:slug — one dungeon: level, entrance, bosses in order and their loot. */
+/** /wow-forever/dungeons/:slug — one dungeon: when you can go, where it is, bosses in order and their loot. */
 export default function WowDungeonPage() {
   const { slug } = useParams();
   const state = useDungeons();
@@ -44,7 +45,8 @@ export default function WowDungeonPage() {
             backTo={DUNGEONS_PAGE_PATH}
             backLabel={BACK_LABEL}
           />
-          <DungeonFacts dungeon={dungeon} />
+          <DungeonWhen dungeon={dungeon} />
+          <DungeonLocation dungeon={dungeon} />
           {dungeon.bosses.length === 0 ? <EmptyStateNote message={DUNGEON_LOOT_EMPTY.noBosses} /> : null}
           {dungeon.bosses.length > 0 ? <DungeonBossNav bosses={dungeon.bosses} /> : null}
           {dungeon.bosses.map((boss, i) => (

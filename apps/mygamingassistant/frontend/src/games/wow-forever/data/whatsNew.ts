@@ -15,7 +15,7 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
     date: "2026-11-07",
     title: "Dungeon pages",
     summary:
-      "Open any dungeon to see its level, where the door is (with a link to it on the World Map), its bosses in order and what each boss drops, with drop chances.",
+      "Open any dungeon to see when you can go (level, group size, keys), where it is (nearest flight path, walking directions, each wing's bosses), its bosses in order and what each boss drops, with drop chances.",
     to: "/wow-forever/dungeons",
   },
   {

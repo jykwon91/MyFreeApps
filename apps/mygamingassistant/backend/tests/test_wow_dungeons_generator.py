@@ -1,4 +1,4 @@
-"""Tests for the WoW Forever dungeon pages' boss-loot generator (``scripts/wow_dungeons``).
+"""Tests for the WoW Forever dungeon pages' boss-loot and entry-facts generator (``scripts/wow_dungeons``).
 
 Pure functions over small hand-made rows, then sanity checks on the committed
 output. No network.
@@ -15,7 +15,16 @@ from scripts.wow_dungeons.boss_loot import (
     encounter_names,
     loot_item_rows,
 )
-from scripts.wow_dungeons.build import BOSS_LOOT_PATH, ITEMS_PATH, LOOT_ITEMS_PATH, WORLD_MAP_CLASSIC, dungeon_ids
+from scripts.wow_dungeons.build import (
+    BOSS_LOOT_PATH,
+    ENTRY_PATH,
+    FACTS_PATH,
+    ITEMS_PATH,
+    LOOT_ITEMS_PATH,
+    WORLD_MAP_CLASSIC,
+    dungeon_ids,
+)
+from scripts.wow_dungeons.entry import entry_requirements, group_sizes
 from scripts.wow_gear.loot import creature_maps
 from scripts.wow_item_pages.loot_chances import loot_index
 
@@ -152,3 +161,35 @@ def test_committed_loot_pins_known_drops() -> None:
     # Edwin VanCleef: Cape of the Brotherhood; Rhahk'Zor: his hammer.
     assert 5193 in {item for item, _ in deadmines["2747"]}
     assert deadmines["2741"][0][0] == 5187
+
+
+def test_group_sizes_keeps_dungeons_with_a_cap() -> None:
+    rows = [{"ID": "36", "MaxPlayers": "10"}, {"ID": "230", "MaxPlayers": "5"}, {"ID": "1", "MaxPlayers": "40"}, {"ID": "47", "MaxPlayers": "0"}]
+    assert group_sizes(rows, {36, 230, 47}) == {"36": 10, "230": 5}
+
+
+def _teleport(trigger: int, target: int, item: int = 0, quest: int = 0) -> dict[str, Any]:
+    return {"id": trigger, "target_map": target, "required_level": 10, "required_item": item, "required_quest_done": quest}
+
+
+def test_entry_requirements_lists_only_doors_asking_for_an_item_or_quest() -> None:
+    rows = [_teleport(78, 36), _teleport(2848, 249, item=16309), _teleport(3528, 409, quest=7848), _teleport(3529, 409, quest=7848)]
+    assert entry_requirements(rows, {36, 249, 409}) == {"249": [[2848, 16309, 0]], "409": [[3528, 0, 7848], [3529, 0, 7848]]}
+    assert entry_requirements(rows, {36}) == {}
+
+
+def test_committed_facts_give_every_dungeon_its_group_size() -> None:
+    dungeons = dungeon_ids(json.loads((WORLD_MAP_CLASSIC / "classicDungeons.json").read_text(encoding="utf-8")))
+    facts = json.loads(FACTS_PATH.read_text(encoding="utf-8"))
+    assert {int(k) for k in facts["maxPlayers"]} == dungeons
+    # Pins checked against the Forever client's Map table.
+    assert facts["maxPlayers"]["36"] == 10
+    assert facts["maxPlayers"]["230"] == 5
+    assert facts["maxPlayers"]["109"] == 20
+
+
+def test_committed_entry_requirements_cover_dungeons_only() -> None:
+    dungeons = dungeon_ids(json.loads((WORLD_MAP_CLASSIC / "classicDungeons.json").read_text(encoding="utf-8")))
+    entry = json.loads(ENTRY_PATH.read_text(encoding="utf-8"))
+    assert entry["columns"] == ["trigger", "item", "quest"]
+    assert {int(k) for k in entry["instances"]} <= dungeons

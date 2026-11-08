@@ -7,6 +7,8 @@ export const DUNGEON_LIST_SKELETON_ROWS = 19;
 /** Boss sections, and loot rows in each, the dungeon page's skeleton draws. */
 export const DUNGEON_SKELETON_BOSSES = 3;
 export const DUNGEON_SKELETON_LOOT_ROWS = 2;
+/** Fact rows in the skeleton's "When you can go" section (level, lowest level, group size, key). */
+export const DUNGEON_SKELETON_FACTS = 4;
 
 /** What a boss's Drops shows when there's nothing to list, and a dungeon with no boss list. */
 export const DUNGEON_LOOT_EMPTY = {

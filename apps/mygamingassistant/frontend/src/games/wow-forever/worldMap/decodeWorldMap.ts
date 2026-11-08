@@ -283,7 +283,7 @@ function withBosses(instances: MapPoi[], raw: unknown): MapPoi[] {
   });
 }
 
-function decodeTravel(raw: unknown): Pick<WorldMapData, "flightNodes" | "flightEdges" | "flightPaths" | "transports"> {
+export function decodeTravel(raw: unknown): Pick<WorldMapData, "flightNodes" | "flightEdges" | "flightPaths" | "transports"> {
   const payload = record(raw, "travel");
   const nodeCol = columnReader(payload.nodeColumns, "flight nodes");
   const flightNodes: FlightNode[] = list(payload.nodes, "flight nodes").map((r) => {
