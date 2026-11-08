@@ -38,6 +38,8 @@ jobs:
     env:
       DATABASE_URL: postgresql+asyncpg://mbk:e2e_only_pw@127.0.0.1:5432/mbk
       DATABASE_URL_SYNC: postgresql://mbk:e2e_only_pw@127.0.0.1:5432/mbk
+      SECRET_KEY: ci-placeholder-secret-key-not-real-32chars # gitleaks:allow
+      ENCRYPTION_KEY: ci-placeholder-encryption-key-not-real-32 # gitleaks:allow
       ANTHROPIC_API_KEY: sk-ant-placeholder-not-real
       GOOGLE_CLIENT_ID: placeholder-not-real-google-client
       GOOGLE_CLIENT_SECRET: placeholder-not-real-google-secret
