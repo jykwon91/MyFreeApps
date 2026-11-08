@@ -3,31 +3,16 @@
  *
  * Verifies:
  *   - Every feature in the registry has a unique path and a non-empty iconName
- *   - The iconName is one of the icons actually imported in RootLayout
+ *   - The iconName has an icon in FEATURE_ICONS (the left nav + hub tiles)
  *   - Every feature path matches a registered WoW route
  *   - The registry is the single source of truth (hub tile count === section item count)
  */
 import { describe, expect, it } from "vitest";
 import { COMPANION_GAMES, WOW_FOREVER_SLUG } from "@/games/registry";
 import { wowForeverRoutes } from "@/games/wow-forever/routes";
+import { FEATURE_ICONS } from "@/games/wow-forever/data/featureIcons";
 
-const KNOWN_ICON_NAMES = new Set([
-  "Activity",
-  "Castle",
-  "Coins",
-  "Gauge",
-  "GitCompare",
-  "Hammer",
-  "LayoutDashboard",
-  "Lightbulb",
-  "Map",
-  "Scale",
-  "Sparkles",
-  "Terminal",
-  "TrendingUp",
-  "Trophy",
-  "Utensils",
-]);
+const KNOWN_ICON_NAMES = new Set(Object.keys(FEATURE_ICONS));
 
 const registeredPaths = new Set(wowForeverRoutes.map((r) => r.path).filter(Boolean));
 
@@ -47,7 +32,7 @@ describe("WoW Forever registry — nav section contract", () => {
     for (const f of features) {
       expect(
         KNOWN_ICON_NAMES.has(f.iconName),
-        `"${f.iconName}" on "${f.title}" is not in KNOWN_ICON_NAMES — add it to WOW_ICONS in RootLayout.tsx`
+        `"${f.iconName}" on "${f.title}" has no icon — add it to FEATURE_ICONS in data/featureIcons.ts`
       ).toBe(true);
     }
   });
