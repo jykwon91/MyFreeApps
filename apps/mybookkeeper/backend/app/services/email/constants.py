@@ -8,6 +8,7 @@ GMAIL_LABEL_NOT_FOUND_MESSAGE = (
     "I couldn't find a Gmail label called \"{label}\", so I didn't sync anything. "
     "Check the spelling, or clear the label to sync every email."
 )
+UNREADABLE_EMAIL_PHOTO_ERROR = "Couldn't read this photo, so I didn't save it"
 
 
 # -- Bounce / non-deliverable email detection signals --

@@ -7,6 +7,7 @@ from app.core.context import RequestContext
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
 from app.repositories import document_repo, transaction_repo
+from app.services.documents.document_upload_service import clean_document_file
 from app.services.extraction.extractor_service import detect_file_type
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,8 @@ async def replace_file(
     file_type = detect_file_type(filename, content_type)
     if file_type == "unknown":
         raise ValueError("Unsupported file type")
+
+    content = await clean_document_file(content, filename)
 
     async with unit_of_work() as db:
         doc = await document_repo.get_by_id(db, document_id, ctx.organization_id)

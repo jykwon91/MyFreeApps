@@ -188,6 +188,7 @@
         "test_document_dedup.py",
         "test_document_type.py",
         "test_document_upload_service.py",
+        "test_document_photo_metadata.py",
         "test_batch_status_counts.py",
         "test_source_documents.py",
         "test_dual_write.py"
@@ -216,6 +217,7 @@
       ],
       "backend_tests": [
         "test_email_queue_split.py",
+        "test_document_photo_metadata.py",
         "test_sync_log_cancel.py",
         "test_email_queue_dedup_filter.py",
         "test_booking_parser.py",
@@ -531,7 +533,8 @@
         "test_blocklist_repo.py",
         "test_on_conflict_targets.py",
         "test_cleanup_seed_routes.py",
-        "test_attachment_content.py"
+        "test_attachment_content.py",
+        "test_document_photo_metadata.py"
       ],
       "frontend_tests": [
         "Calendar.test.tsx",
