@@ -65,7 +65,7 @@ export default function ReconciliationScreen() {
         data={sourcesFor(sources, filter)}
         keyExtractor={(source) => source.id}
         refreshControl={refreshControl}
-        renderItem={({ item }) => <ReconciliationRow source={item} />}
+        renderItem={({ item }) => <ReconciliationRow canWrite={canWrite} source={item} />}
         testID="reconciliation-list"
       />
       <OptionSheet

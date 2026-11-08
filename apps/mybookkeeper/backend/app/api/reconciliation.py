@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+import uuid
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
@@ -33,6 +35,18 @@ async def list_sources(
     ctx: RequestContext = Depends(current_org_member),
 ) -> list[ReconciliationSourceRead]:
     return list(await reconciliation_route_service.list_sources(ctx, tax_year))
+
+
+@router.delete("/sources/{source_id}", status_code=204)
+async def delete_source(
+    source_id: uuid.UUID,
+    ctx: RequestContext = Depends(require_write_access),
+) -> Response:
+    try:
+        await reconciliation_route_service.delete_source(ctx, source_id)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    return Response(status_code=204)
 
 
 @router.get("/discrepancies", response_model=list[ReconciliationSourceRead])

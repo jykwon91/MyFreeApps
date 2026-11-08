@@ -286,3 +286,65 @@ class TestCreateMatch:
             "matched_amount": "100.00",
         })
         assert resp.status_code == 404
+
+
+async def _source(db: AsyncSession, org_id: uuid.UUID, user_id: uuid.UUID) -> ReconciliationSource:
+    source = ReconciliationSource(
+        id=uuid.uuid4(),
+        organization_id=org_id,
+        user_id=user_id,
+        source_type="1099_k",
+        tax_year=2025,
+        issuer="Typo Inc",
+        reported_amount=Decimal("1234.00"),
+    )
+    await reconciliation_repo.create_source(db, source)
+    await db.commit()
+    return source
+
+
+class TestDeleteSource:
+    @pytest.mark.asyncio
+    async def test_removes_a_mistaken_1099(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User,
+    ) -> None:
+        source = await _source(db, org.id, owner.id)
+
+        resp = await client.delete(f"/reconciliation/sources/{source.id}")
+
+        assert resp.status_code == 204
+        assert await reconciliation_repo.get_source_by_id(db, source.id, org.id) is None
+        listed = await client.get("/reconciliation/sources", params={"tax_year": 2025})
+        assert str(source.id) not in [row["id"] for row in listed.json()]
+
+    @pytest.mark.asyncio
+    async def test_cannot_delete_another_organizations_source(
+        self, client: AsyncClient, db: AsyncSession, owner: User,
+    ) -> None:
+        other_org = uuid.uuid4()
+        source = await _source(db, other_org, owner.id)
+
+        resp = await client.delete(f"/reconciliation/sources/{source.id}")
+
+        assert resp.status_code == 404
+        assert await reconciliation_repo.get_source_by_id(db, source.id, other_org) is not None
+
+    @pytest.mark.asyncio
+    async def test_unknown_source_is_404(self, client: AsyncClient) -> None:
+        resp = await client.delete(f"/reconciliation/sources/{uuid.uuid4()}")
+        assert resp.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_viewers_cannot_delete(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User,
+    ) -> None:
+        source = await _source(db, org.id, owner.id)
+
+        async def _viewer() -> RequestContext:
+            return RequestContext(organization_id=org.id, user_id=owner.id, org_role="viewer")
+
+        app.dependency_overrides[current_org_member] = _viewer
+        resp = await client.delete(f"/reconciliation/sources/{source.id}")
+
+        assert resp.status_code == 403
+        assert await reconciliation_repo.get_source_by_id(db, source.id, org.id) is not None

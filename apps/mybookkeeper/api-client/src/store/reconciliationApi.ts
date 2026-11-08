@@ -23,6 +23,10 @@ export const reconciliationApi = baseApi.enhanceEndpoints({
       query: (params) => ({ url: "/reconciliation/auto-reconcile", method: "POST", params }),
       invalidatesTags: ["Reconciliation"],
     }),
+    deleteReconciliationSource: builder.mutation<void, string>({
+      query: (sourceId) => ({ url: `/reconciliation/sources/${sourceId}`, method: "DELETE" }),
+      invalidatesTags: ["Reconciliation"],
+    }),
   }),
 });
 
@@ -31,4 +35,5 @@ export const {
   useListSourcesQuery,
   useGetDiscrepanciesQuery,
   useAutoReconcileMutation,
+  useDeleteReconciliationSourceMutation,
 } = reconciliationApi;
