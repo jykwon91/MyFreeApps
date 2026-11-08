@@ -7,7 +7,7 @@
   `ec4f596146be6467ea93c57397858e329e2db852` (`playercreateinfo`). The page tags it "Classic data".
 * `racials` — the Classic text of every racial Forever changed or removed:
   the Classic Era client's own tooltip wording (wago.tools, `wow_classic_era`
-  1.15.9.70576: `Spell`, `SpellName`, `SpellDuration`, `SpellRadius`) filled
+  1.15.9.70576: `Spell`, `SpellName`, `SpellDuration`, `SpellRadius`, `SpellRange`) filled
   with cmangos' 1.12 numbers (`spell_template`).
 
 cmangos classic-db is licensed GPL-3.0 — see `LICENSE`. No cmangos code is used.

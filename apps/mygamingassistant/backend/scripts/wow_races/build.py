@@ -59,7 +59,7 @@ from scripts.wow_races.racials import (
     racial_status,
     slug,
 )
-from scripts.wow_talents.books import classic_book, forever_book, forever_icons
+from scripts.wow_talents.books import FOREVER_BOOK_TABLES, classic_book, forever_book, forever_icons
 from scripts.wow_world_map.sources import (
     CMANGOS_COMMIT,
     WAGO_BUILD,
@@ -73,16 +73,7 @@ from scripts.wow_world_map.sql_dump import read_dump
 RACES_DIR = WOW_DATA_DIR / "races"
 CLASSIC_DIR = RACES_DIR / "classic"
 ZONES_PATH = WOW_DATA_DIR / "worldMap" / "zones.json"
-FOREVER_TABLES = (
-    "Spell",
-    "SpellName",
-    "SpellEffect",
-    "SpellMisc",
-    "SpellAuraOptions",
-    "SpellDuration",
-    "SpellRadius",
-    "SkillLineAbility",
-)
+FOREVER_TABLES = (*FOREVER_BOOK_TABLES, "SkillLineAbility")
 ATTRIBUTION = "From the WoW Forever and Classic Era clients via wago.tools. Game data © Blizzard Entertainment."
 
 CLASSIC_README = """# Races — Classic racial text and starting zones
@@ -94,7 +85,7 @@ CLASSIC_README = """# Races — Classic racial text and starting zones
   `{commit}` (`playercreateinfo`). The page tags it "Classic data".
 * `racials` — the Classic text of every racial Forever changed or removed:
   the Classic Era client's own tooltip wording (wago.tools, `{era_branch}`
-  {era_build}: `Spell`, `SpellName`, `SpellDuration`, `SpellRadius`) filled
+  {era_build}: `Spell`, `SpellName`, `SpellDuration`, `SpellRadius`, `SpellRange`) filled
   with cmangos' 1.12 numbers (`spell_template`).
 
 cmangos classic-db is licensed GPL-3.0 — see `LICENSE`. No cmangos code is used.
@@ -222,6 +213,7 @@ def main() -> None:
         wago_table("SpellName", **era),
         wago_table("SpellDuration", **era),
         wago_table("SpellRadius", **era),
+        wago_table("SpellRange", **era),
         dump["spell_template"],
     )
 

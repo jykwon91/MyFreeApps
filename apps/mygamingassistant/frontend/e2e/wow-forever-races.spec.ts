@@ -50,9 +50,9 @@ test("the list shows every race with its zone, classes and racials, with statuse
   await expect(page.locator("#human-diplomacy")).toBeHidden();
 
   // A value missing from the game files is "?" and explained.
-  const stomp = page.locator("#tauren-war-stomp");
-  await expect(stomp).toContainText("?");
-  await expect(stomp.getByTestId("racial-partial")).toBeVisible();
+  const berserking = page.locator("#troll-berserking");
+  await expect(berserking).toContainText("?");
+  await expect(berserking.getByTestId("racial-partial")).toBeVisible();
 
   // The Skyborne start is unconfirmed, with a World Map link.
   const skyborne = page.locator("#high-order-skyborne");
