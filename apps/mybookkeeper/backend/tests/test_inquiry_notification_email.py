@@ -15,15 +15,12 @@ from app.models.user.user import User
 from app.services.system import inquiry_notification_email
 
 
-async def _send_for(db: AsyncSession, inquiry: Inquiry) -> str:
-    db.add(inquiry)
-    await db.flush()
-
+@asynccontextmanager
+async def _patched(db: AsyncSession, sent: list[str]):
     @asynccontextmanager
     async def _same_session():
         yield db
 
-    sent: list[str] = []
     with (
         patch.object(inquiry_notification_email, "AsyncSessionLocal", _same_session),
         patch.object(inquiry_notification_email.settings, "cost_alert_recipients", "host@example.com"),
@@ -32,7 +29,18 @@ async def _send_for(db: AsyncSession, inquiry: Inquiry) -> str:
             side_effect=lambda to, subject, body: sent.append(body) or True,
         ),
     ):
-        assert await inquiry_notification_email.send_inquiry_notification(inquiry_id=inquiry.id)
+        yield
+
+
+async def _send_for(db: AsyncSession, inquiry: Inquiry) -> str:
+    db.add(inquiry)
+    await db.flush()
+
+    sent: list[str] = []
+    async with _patched(db, sent):
+        assert await inquiry_notification_email.send_inquiry_notification(
+            inquiry_id=inquiry.id, organization_id=inquiry.organization_id,
+        )
     return sent[0]
 
 
@@ -59,3 +67,19 @@ async def test_shows_the_requested_dates(db: AsyncSession, test_user: User, test
 async def test_says_when_no_dates_were_given(db: AsyncSession, test_user: User, test_org: Organization) -> None:
     body = await _send_for(db, _inquiry(test_user, test_org))
     assert body.count("(not set)") == 2
+
+
+@pytest.mark.asyncio
+async def test_sends_nothing_for_an_inquiry_outside_the_given_organization(
+    db: AsyncSession, test_user: User, test_org: Organization,
+) -> None:
+    inquiry = _inquiry(test_user, test_org)
+    db.add(inquiry)
+    await db.flush()
+
+    sent: list[str] = []
+    async with _patched(db, sent):
+        assert not await inquiry_notification_email.send_inquiry_notification(
+            inquiry_id=inquiry.id, organization_id=uuid.uuid4(),
+        )
+    assert sent == []

@@ -104,7 +104,7 @@ def _resolve_operator_email() -> str | None:
 
 
 async def send_inquiry_notification(
-    *, inquiry_id: uuid.UUID, subject_prefix: str = "",
+    *, inquiry_id: uuid.UUID, organization_id: uuid.UUID, subject_prefix: str = "",
 ) -> bool:
     """Email the operator about a new inquiry. Returns False if not sent.
 
@@ -123,15 +123,7 @@ async def send_inquiry_notification(
         return False
 
     async with AsyncSessionLocal() as db:
-        # Fetching by ID without org scope because the notification path is
-        # internal — we know the inquiry is real (the public service just
-        # wrote it). Using a more permissive lookup avoids needing to plumb
-        # organization_id through the background task signature.
-        from sqlalchemy import select
-        from app.models.inquiries.inquiry import Inquiry
-
-        result = await db.execute(select(Inquiry).where(Inquiry.id == inquiry_id))
-        inquiry = result.scalar_one_or_none()
+        inquiry = await inquiry_repo.get_by_id(db, inquiry_id, organization_id)
         if inquiry is None:
             logger.warning("Inquiry %s not found at notification time", inquiry_id)
             return False
