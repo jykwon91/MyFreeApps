@@ -1,13 +1,14 @@
 import { test, expect } from "./fixtures/auth";
 import { holdRequests } from "./fixtures/hold-requests";
+import { expectCardsMatchSkeleton, skeletonCardHeight } from "./fixtures/skeleton-card-fit";
 import { deleteVendor, seedVendor } from "./fixtures/seed-data";
 
 /**
  * Layout E2E for the Vendors rolodex list + detail (PR 4.1b).
  *
  * Verifies:
- *   1. The list skeleton has roughly the same number of cards/rows as the
- *      loaded list (no large layout shift when data arrives).
+ *   1. The list skeleton's cards are the size of the loaded cards (no
+ *      layout shift when data arrives).
  *   2. The list renders without horizontal overflow at mobile / tablet /
  *      desktop viewports.
  *   3. The category chip filter has 44px touch targets.
@@ -18,7 +19,7 @@ import { deleteVendor, seedVendor } from "./fixtures/seed-data";
 const VENDOR_COUNT = 3;
 
 test.describe("Vendors layout (PR 4.1b)", () => {
-  test("list skeleton card count is in the same order of magnitude as the loaded card count on mobile", async ({
+  test("list skeleton cards are the size of the loaded cards on mobile", async ({
     authedPage: page,
     api,
   }) => {
@@ -27,19 +28,6 @@ test.describe("Vendors layout (PR 4.1b)", () => {
     const runId = Date.now();
     const vendorIds: string[] = [];
     try {
-      const releaseList = await holdRequests(page, (url) => url.pathname === "/api/vendors");
-
-      const navPromise = page.goto("/vendors");
-      await expect(page.getByTestId("vendors-skeleton")).toBeVisible({
-        timeout: 5000,
-      });
-
-      const skeletonMobileList = page.locator(
-        '[data-testid="vendors-skeleton"] ul.md\\:hidden li',
-      );
-      const skeletonCount = await skeletonMobileList.count();
-      expect(skeletonCount).toBeGreaterThan(0);
-
       for (let i = 0; i < VENDOR_COUNT; i++) {
         vendorIds.push(
           await seedVendor(api, {
@@ -48,17 +36,17 @@ test.describe("Vendors layout (PR 4.1b)", () => {
           }),
         );
       }
+      const releaseList = await holdRequests(page, (url) => url.pathname === "/api/vendors");
+      await page.goto("/vendors");
+      await expect(page.getByTestId("vendors-skeleton")).toBeVisible({ timeout: 5000 });
+      const skeletonHeight = await skeletonCardHeight(page.locator('[data-testid="vendors-skeleton"] ul.md\\:hidden li'));
+
       releaseList();
-      await navPromise;
-      await page.reload();
-      await page.waitForLoadState("networkidle");
-
-      const loadedMobileCards = page.locator('[data-testid="vendors-mobile"] li');
-      const loadedCount = await loadedMobileCards.count();
-      expect(loadedCount).toBeGreaterThanOrEqual(VENDOR_COUNT);
-
-      // Same skeleton-vs-loaded tolerance as the applicants layout spec.
-      expect(Math.abs(skeletonCount - loadedCount)).toBeLessThanOrEqual(4);
+      await expectCardsMatchSkeleton(
+        page.locator('[data-testid="vendors-mobile"] li').filter({ hasText: `E2E Layout Vendor ${runId}` }),
+        VENDOR_COUNT,
+        skeletonHeight,
+      );
     } finally {
       for (const id of vendorIds) await deleteVendor(api, id);
     }

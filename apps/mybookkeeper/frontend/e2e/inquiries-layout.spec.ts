@@ -1,5 +1,6 @@
 import { test, expect } from "./fixtures/auth";
 import { holdRequests } from "./fixtures/hold-requests";
+import { expectCardsMatchSkeleton, skeletonCardHeight } from "./fixtures/skeleton-card-fit";
 import { deleteInquiry, seedInquiry } from "./fixtures/inquiries";
 
 /**
@@ -16,7 +17,7 @@ import { deleteInquiry, seedInquiry } from "./fixtures/inquiries";
 const INQUIRY_COUNT = 3;
 
 test.describe("Inquiries layout (PR 2.1b)", () => {
-  test("skeleton card count is in the same order of magnitude as the loaded card count on mobile", async ({
+  test("list skeleton cards are the size of the loaded cards on mobile", async ({
     authedPage: page,
     api,
   }) => {
@@ -25,15 +26,6 @@ test.describe("Inquiries layout (PR 2.1b)", () => {
     const runId = Date.now();
     const inquiryIds: string[] = [];
     try {
-      const release = await holdRequests(page, (url) => url.pathname === "/api/inquiries");
-
-      const navPromise = page.goto("/inquiries");
-      await expect(page.getByTestId("inquiries-skeleton")).toBeVisible({ timeout: 5000 });
-
-      const skeletonMobileList = page.locator('[data-testid="inquiries-skeleton"] ul.md\\:hidden li');
-      const skeletonCount = await skeletonMobileList.count();
-      expect(skeletonCount).toBeGreaterThan(0);
-
       for (let i = 0; i < INQUIRY_COUNT; i++) {
         inquiryIds.push(
           await seedInquiry(api, {
@@ -42,17 +34,17 @@ test.describe("Inquiries layout (PR 2.1b)", () => {
           }),
         );
       }
+      const release = await holdRequests(page, (url) => url.pathname === "/api/inquiries");
+      await page.goto("/inquiries");
+      await expect(page.getByTestId("inquiries-skeleton")).toBeVisible({ timeout: 5000 });
+      const skeletonHeight = await skeletonCardHeight(page.locator('[data-testid="inquiries-skeleton"] ul.md\\:hidden li'));
+
       release();
-      await navPromise;
-      await page.reload();
-      await page.waitForLoadState("networkidle");
-
-      const loadedMobileCards = page.locator('[data-testid="inquiries-mobile"] li');
-      const loadedCount = await loadedMobileCards.count();
-      expect(loadedCount).toBeGreaterThanOrEqual(INQUIRY_COUNT);
-
-      // Same skeleton-vs-loaded tolerance as the listings layout spec.
-      expect(Math.abs(skeletonCount - loadedCount)).toBeLessThanOrEqual(4);
+      await expectCardsMatchSkeleton(
+        page.locator('[data-testid="inquiries-mobile"] li').filter({ hasText: `E2E Layout Inquiry ${runId}` }),
+        INQUIRY_COUNT,
+        skeletonHeight,
+      );
     } finally {
       for (const id of inquiryIds) await deleteInquiry(api, id);
     }

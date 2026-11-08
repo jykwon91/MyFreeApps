@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { holdRequests } from "./fixtures/hold-requests";
+import { expectCardsMatchSkeleton, skeletonCardHeight } from "./fixtures/skeleton-card-fit";
 import { deleteApplicant } from "./fixtures/applicants";
 
 /**
@@ -40,7 +41,7 @@ async function seedApplicant(
 const APPLICANT_COUNT = 3;
 
 test.describe("Applicants layout (PR 3.1b)", () => {
-  test("list skeleton card count is in the same order of magnitude as the loaded card count on mobile", async ({
+  test("list skeleton cards are the size of the loaded cards on mobile", async ({
     authedPage: page,
     api,
   }) => {
@@ -49,17 +50,6 @@ test.describe("Applicants layout (PR 3.1b)", () => {
     const runId = Date.now();
     const applicantIds: string[] = [];
     try {
-      const releaseList = await holdRequests(page, (url) => url.pathname === "/api/applicants");
-
-      const navPromise = page.goto("/applicants");
-      await expect(page.getByTestId("applicants-skeleton")).toBeVisible({ timeout: 5000 });
-
-      const skeletonMobileList = page.locator(
-        '[data-testid="applicants-skeleton"] ul.md\\:hidden li',
-      );
-      const skeletonCount = await skeletonMobileList.count();
-      expect(skeletonCount).toBeGreaterThan(0);
-
       for (let i = 0; i < APPLICANT_COUNT; i++) {
         applicantIds.push(
           await seedApplicant(api, {
@@ -69,17 +59,17 @@ test.describe("Applicants layout (PR 3.1b)", () => {
           }),
         );
       }
+      const releaseList = await holdRequests(page, (url) => url.pathname === "/api/applicants");
+      await page.goto("/applicants");
+      await expect(page.getByTestId("applicants-skeleton")).toBeVisible({ timeout: 5000 });
+      const skeletonHeight = await skeletonCardHeight(page.locator('[data-testid="applicants-skeleton"] ul.md\\:hidden li'));
+
       releaseList();
-      await navPromise;
-      await page.reload();
-      await page.waitForLoadState("networkidle");
-
-      const loadedMobileCards = page.locator('[data-testid="applicants-mobile"] li');
-      const loadedCount = await loadedMobileCards.count();
-      expect(loadedCount).toBeGreaterThanOrEqual(APPLICANT_COUNT);
-
-      // Same skeleton-vs-loaded tolerance as the inquiries layout spec.
-      expect(Math.abs(skeletonCount - loadedCount)).toBeLessThanOrEqual(4);
+      await expectCardsMatchSkeleton(
+        page.locator('[data-testid="applicants-mobile"] li').filter({ hasText: `E2E Layout Applicant ${runId}` }),
+        APPLICANT_COUNT,
+        skeletonHeight,
+      );
     } finally {
       for (const id of applicantIds) await deleteApplicant(api, id);
     }

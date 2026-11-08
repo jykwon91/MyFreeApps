@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures/auth";
 import { createWelcomeManual, deleteWelcomeManual } from "./fixtures/welcome-manual";
 import { holdRequests } from "./fixtures/hold-requests";
+import { expectCardsMatchSkeleton, skeletonCardHeight } from "./fixtures/skeleton-card-fit";
 
 /**
  * Layout E2E for the Welcome Manuals list + detail pages (PR 4b).
@@ -16,7 +17,6 @@ import { holdRequests } from "./fixtures/hold-requests";
  */
 
 const MANUAL_COUNT = 3;
-const LAYOUT_SHIFT_TOLERANCE_PX = 2;
 
 test.describe("Welcome Manuals layout (PR 4b)", () => {
   test("list skeleton cards are the size of the loaded cards on mobile", async ({
@@ -41,21 +41,14 @@ test.describe("Welcome Manuals layout (PR 4b)", () => {
       await page.goto("/welcome-manuals");
       await expect(page.getByTestId("welcome-manuals-skeleton")).toBeVisible({ timeout: 5000 });
 
-      const skeletonCards = page.locator('[data-testid="welcome-manuals-skeleton"] ul.md\\:hidden li');
-      expect(await skeletonCards.count()).toBeGreaterThan(0);
-      const skeletonBox = await skeletonCards.first().boundingBox();
-      expect(skeletonBox, "skeleton card has a box").not.toBeNull();
+      const skeletonHeight = await skeletonCardHeight(page.locator('[data-testid="welcome-manuals-skeleton"] ul.md\\:hidden li'));
 
       release();
-      // The list is shared with other specs, so compare card size rather than card count.
-      const ourCards = page
-        .locator('[data-testid="welcome-manuals-mobile"] li')
-        .filter({ hasText: titlePrefix });
-      await expect(ourCards).toHaveCount(MANUAL_COUNT);
-      const loadedBox = await ourCards.first().boundingBox();
-      expect(loadedBox, "loaded card has a box").not.toBeNull();
-      expect(skeletonBox!.height).toBeGreaterThan(0);
-      expect(Math.abs(skeletonBox!.height - loadedBox!.height)).toBeLessThanOrEqual(LAYOUT_SHIFT_TOLERANCE_PX);
+      await expectCardsMatchSkeleton(
+        page.locator('[data-testid="welcome-manuals-mobile"] li').filter({ hasText: titlePrefix }),
+        MANUAL_COUNT,
+        skeletonHeight,
+      );
     } finally {
       for (const id of manualIds) await deleteWelcomeManual(api, id);
     }
