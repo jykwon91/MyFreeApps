@@ -9,7 +9,26 @@ from app.db.session import unit_of_work
 from app.models.documents.document import Document
 from app.repositories import document_repo, usage_log_repo
 from app.repositories.demo import demo_repo
-from app.services.extraction.extractor_service import detect_file_type, extract_zip_files
+from app.services.extraction.extractor_service import (
+    detect_file_type,
+    extract_zip_files,
+)
+from app.services.storage.attachment_content import (
+    UnreadableImage,
+    strip_photo_metadata,
+)
+
+
+async def clean_document_file(content: bytes, filename: str) -> bytes:
+    """Strip a photo's metadata (GPS location included) before it is stored.
+
+    Raises:
+        ValueError: the file is a photo that can't be re-encoded.
+    """
+    try:
+        return await asyncio.to_thread(strip_photo_metadata, content)
+    except UnreadableImage as exc:
+        raise ValueError(f"Couldn't read the image '{filename}'") from exc
 
 
 def _store_file(
@@ -62,6 +81,9 @@ async def accept_upload(
     if file_type == "unknown":
         raise ValueError("Unsupported file type")
 
+    if file_type != "zip":
+        content = await clean_document_file(content, filename)
+
     async with unit_of_work() as db:
         today_count = await usage_log_repo.count_today(db, ctx.organization_id)
 
@@ -75,6 +97,9 @@ async def accept_upload(
             extracted = await asyncio.to_thread(extract_zip_files, content)
             if not extracted:
                 raise ValueError("No supported files found in zip")
+            # Every photo is cleaned before any file is stored, so one that
+            # can't be read rejects the zip without leaving files behind.
+            extracted = [(name, await clean_document_file(data, name), mime) for name, data, mime in extracted]
 
             batch_id = str(uuid.uuid4())
             first_doc_id: uuid.UUID | None = None

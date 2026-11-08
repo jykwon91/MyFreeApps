@@ -1,9 +1,12 @@
-"""Content checks for file attachments stored as uploaded.
+"""Content checks for files stored as uploaded.
 
-Every attachment upload (blackout notes, signed leases, imported leases,
-insurance policies) runs through ``clean_attachment`` before storage:
+Attachment uploads (blackout notes, signed leases, imported leases, insurance
+policies) run through ``clean_attachment`` before storage:
 
     sniff the type from the bytes → allowlist → re-encode photos without metadata
+
+Documents (uploads, replaced files and Gmail attachments) accept more types
+and run through ``strip_photo_metadata``, which only re-encodes photos.
 
 The type always comes from the bytes. The browser's declared type and the
 filename are never trusted, because a photo labelled ``lease.pdf`` would
@@ -104,10 +107,23 @@ def clean_attachment(content: bytes, allowed: frozenset[str]) -> CleanAttachment
     sniffed = sniff_content_type(content)
     if sniffed is None or sniffed not in allowed:
         raise UnsupportedAttachmentType(sniffed)
-    if sniffed not in METADATA_STRIPPED_MIME_TYPES:
-        return CleanAttachment(content=content, content_type=sniffed)
+    return CleanAttachment(content=_strip_if_photo(content, sniffed), content_type=sniffed)
+
+
+def strip_photo_metadata(content: bytes) -> bytes:
+    """Return a photo re-encoded without its metadata; any other bytes unchanged.
+
+    Raises:
+        UnreadableImage: a photo that can't be re-encoded without metadata.
+    """
+    return _strip_if_photo(content, sniff_content_type(content))
+
+
+def _strip_if_photo(content: bytes, sniffed: str | None) -> bytes:
+    if sniffed is None or sniffed not in METADATA_STRIPPED_MIME_TYPES:
+        return content
     try:
-        return CleanAttachment(content=strip_metadata(content, sniffed), content_type=sniffed)
+        return strip_metadata(content, sniffed)
     except ImageRejected as exc:
-        logger.warning("Attachment photo rejected: %s", exc.reason)
+        logger.warning("Photo rejected: %s", exc.reason)
         raise UnreadableImage(exc.reason) from exc

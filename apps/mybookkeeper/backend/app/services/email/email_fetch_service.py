@@ -14,12 +14,17 @@ from app.core.context import RequestContext
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.email.email_types import EmailBodyData, FetchResult
 from app.repositories import email_queue_repo, integration_repo, sync_log_repo
+from app.services.email.constants import UNREADABLE_EMAIL_PHOTO_ERROR
 from app.services.email.exceptions import GmailReauthRequiredError
 from app.services.email.gmail_credentials import persist_refreshed_token
 from app.services.email.gmail_service import (
     fetch_attachment_bytes,
     fetch_email_body,
     get_gmail_service,
+)
+from app.services.storage.attachment_content import (
+    UnreadableImage,
+    strip_photo_metadata,
 )
 
 logger = logging.getLogger(__name__)
@@ -99,7 +104,8 @@ async def _fetch_next_pending(ctx: RequestContext) -> FetchResult:
             )
             raw_bytes = json.dumps(email_data).encode("utf-8")
         else:
-            raw_bytes = await asyncio.to_thread(fetch_attachment_bytes, service, message_id, attachment_id)
+            attachment_bytes = await asyncio.to_thread(fetch_attachment_bytes, service, message_id, attachment_id)
+            raw_bytes = await asyncio.to_thread(strip_photo_metadata, attachment_bytes)
 
         logger.info("Fetched %d bytes for queue item %s (attachment=%s)", len(raw_bytes), item_id, attachment_id)
 
@@ -150,6 +156,16 @@ async def _fetch_next_pending(ctx: RequestContext) -> FetchResult:
                 await email_queue_repo.mark_status(db, item_ref, "failed", error=str(exc)[:1000])
             await _fail_sync_log_if_done(db, sync_log_id, str(exc))
         return FetchResult("failed", error=str(exc))
+
+    except UnreadableImage:
+        # Stored as emailed it would keep the photo's GPS location, so it isn't stored.
+        async with unit_of_work() as db:
+            item_ref = await email_queue_repo.get_by_id(db, item_id)
+            if item_ref:
+                await email_queue_repo.mark_status(db, item_ref, "failed", error=UNREADABLE_EMAIL_PHOTO_ERROR)
+            await _fail_sync_log_if_done(db, sync_log_id, UNREADABLE_EMAIL_PHOTO_ERROR)
+        await persist_refreshed_token(integration, creds, prior_token)
+        return FetchResult("failed", error=UNREADABLE_EMAIL_PHOTO_ERROR)
 
     except Exception as e:
         logger.exception("Failed to fetch queue item %s", item_id)
