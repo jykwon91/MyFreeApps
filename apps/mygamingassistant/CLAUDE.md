@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/rares`, `/wow-forever/talents`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`)
+### WoW Forever (`/wow-forever`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/rares`, `/wow-forever/races`, `/wow-forever/races/:race`, `/wow-forever/talents`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -562,6 +562,44 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `items.json`; their ids are in `wanted_ids()` for icons.
   Tests: `tests/test_wow_rares_generator.py`, `src/__tests__/wowRares.test.ts`,
   `e2e/wow-forever-rares.spec.ts`.
+
+#### Races (`/wow-forever/races`, `/wow-forever/races/:race`)
+
+- `pages/WowRacesPage.tsx`: every playable race (Alliance then Horde, races new
+  in Forever last in each) as a card (`components/races/RaceCard`): faction,
+  starting zone + its badge (Classic data; Unconfirmed for the Skyborne, whose
+  Zephras Isle start is the World Map's own note — `UNCONFIRMED_START_ZONES`)
+  + "Show on the World Map", class chips ("New in Forever" on a combination
+  Classic didn't allow), the racial names as jump links, then each racial
+  (`RacialRow`: icon, Active / Passive, status). Statuses: New / Changed /
+  Same as Classic / Removed in Forever. A changed racial shows Classic Era |
+  Forever side by side (`RacialCompare`) and "Was: <name>" when renamed;
+  removed ones are collapsed at the bottom with their Classic text
+  (`RemovedRacials`, opened by a link to one of them). Class versions read
+  "Warrior, Rogue: …". `/races/:race` shows one card (an unknown slug says so).
+  Never write a "best race" verdict.
+- Anchors: `#<race slug>` and `#<race slug>-<racial slug>` (`Racial.key`) —
+  links; never change one. `useScrollToHash` scrolls once loaded.
+- Filters live in the URL (`?faction&class&status&changed=1`, replace history,
+  `hooks/useRaceFilters.ts`, pure `lib/races/raceFilterParams.ts` +
+  `filterRaces.ts`); every chip shows what the list would hold with it picked
+  (`raceFilterCounts`). A racial filter drops races left with no racial;
+  "Only changed" hides "Same as Classic" and keeps removed racials.
+- **Data is GENERATED** — `python -m scripts.wow_races.build --hotfix-cache
+  <DBCache.bin>` (from `backend/`, in `wow_refresh` after the Rares build,
+  before icons) writes `data/races/races.json` from the Forever client
+  (ChrRaces, CharBaseInfo, SkillLine / SkillLineAbility / SkillRaceClassInfo
+  racial lines, Spell* with hotfixes; tooltip text from
+  `scripts/wow_food/tooltip.py`) compared with the Classic Era client, and
+  `data/races/classic/racials.json` (the Classic Era client's text of
+  changed / removed racials, and Classic starting zones from cmangos
+  `playercreateinfo` — GPL, keep LICENSE + README). Racials are paired by spell id, then name. A token
+  the game files can't fill (War Stomp's target count, Berserking's linked
+  spell, Find Treasure's until-cancelled duration) is printed as "?" and the
+  racial is `partial`; statuses compare the texts with "?" in place. Never
+  fill one from another source. Racial icons go into `wowIcons.json` `files`.
+  Tests: `tests/test_wow_races_generator.py`, `tests/test_wow_spell_tooltip.py`,
+  `src/__tests__/wowRaces.test.ts`, `e2e/wow-forever-races.spec.ts`.
 
 #### Talent calculator (`/wow-forever/talents`, `/wow-forever/talents/:class`)
 

@@ -71,7 +71,9 @@ def forever_book(tables: Mapping[str, Iterable[Row]]) -> SpellBook:
                 period_ms=_int(r["EffectAuraPeriod"]),
                 trigger=_int(r["EffectTriggerSpell"]),
                 variance=_float(r.get("Variance")),
-                radius_yards=radii.get(_int(r.get("EffectRadiusIndex_0")), 0.0),
+                # A radius belongs to one of the effect's two targets; `$a` reads whichever is set
+                # (War Stomp's is on its second target).
+                radius_yards=radii.get(_int(r.get("EffectRadiusIndex_0")) or _int(r.get("EffectRadiusIndex_1")), 0.0),
                 chain_targets=_int(r.get("EffectChainTargets")),
             )
         )

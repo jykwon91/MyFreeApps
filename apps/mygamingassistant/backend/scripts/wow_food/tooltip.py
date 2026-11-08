@@ -41,6 +41,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 TICK_MS = 5000
+# The value letters for the low and high end of a rolled amount.
+ROLL_END = ("m", "M")
 
 _CONDITIONAL = re.compile(r"\$\?!?[a-z]+\d+\[([^\[\]]*)\]\[([^\[\]]*)\]", re.IGNORECASE)
 _SPELL_REF = re.compile(r"\$@spell(desc|name|icon)(\d+)")
@@ -252,6 +254,10 @@ def evaluate(
         kind = _kind(m.group(2))
         e = book.effect(ref, int(m.group(3)))
         if kind == "s" and e is not None and e.variance:
+            # `$m1` / `$M1` are the low and high ends of the roll ("by $m1% to $M1%").
+            if m.group(2) in ROLL_END:
+                low, high = roll_range(e).split(" to ")
+                return low if m.group(2) == "m" else high
             return roll_range(e)
         v = _value(book, ref, kind, int(m.group(3)))
         return m.group(0) if v is None else _number(v)
@@ -274,7 +280,8 @@ def evaluate(
 
     def duration(m: re.Match[str]) -> str:
         ms = book.durations_ms.get(ref_of(m.group(1)))
-        return m.group(0) if not ms else format_duration(ms)
+        # A negative duration means "until cancelled"; the client's wording for that isn't in the files.
+        return m.group(0) if not ms or ms < 0 else format_duration(ms)
 
     text = _SPELL_REF.sub(spell_ref, text)
     text = _EXPRESSION.sub(expression, text)

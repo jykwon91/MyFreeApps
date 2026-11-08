@@ -93,6 +93,12 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "Plan a talent build for any class and level, see what Forever changed from Classic, and share it as a link.",
       },
       {
+        path: "/wow-forever/races",
+        title: "Races",
+        iconName: "Users",
+        description: "Every race's faction, starting zone, classes and racial traits, and what Forever changed from Classic.",
+      },
+      {
         path: "/wow-forever/downrank",
         title: "Downrank calculator",
         iconName: "Gauge",

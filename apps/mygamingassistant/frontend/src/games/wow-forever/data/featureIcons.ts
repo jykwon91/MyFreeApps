@@ -14,6 +14,7 @@ import {
   Terminal,
   TrendingUp,
   Trophy,
+  Users,
   Utensils,
   type LucideIcon,
 } from "lucide-react";
@@ -35,6 +36,7 @@ export const FEATURE_ICONS: Readonly<Record<string, LucideIcon>> = {
   Terminal,
   TrendingUp,
   Trophy,
+  Users,
   Utensils,
 };
 

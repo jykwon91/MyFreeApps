@@ -5,7 +5,13 @@ from __future__ import annotations
 
 import pytest
 
-from scripts.wow_food.tooltip import AuraOptions, Effect, SpellBook, evaluate, unresolved_tokens
+from scripts.wow_food.tooltip import (
+    AuraOptions,
+    Effect,
+    SpellBook,
+    evaluate,
+    unresolved_tokens,
+)
 
 
 def _effect(index: int, base: float, **kwargs: float) -> Effect:
@@ -111,3 +117,14 @@ def test_a_conditional_inside_a_referenced_description_follows_the_choice() -> N
 def test_unresolved_tokens_lists_nothing_for_plain_text() -> None:
     assert unresolved_tokens("Increases damage by 5%.") == []
     assert unresolved_tokens("Reduces cooldown by $proccooldown sec.") == ["$proccooldown"]
+
+
+def test_low_and_high_letters_read_the_ends_of_a_roll() -> None:
+    # Classic Berserking: "by $m1% to $M1%" — each letter is one end, not the whole range.
+    book = _book("Increases attack speed by $m1% to $M1%.", _effect(0, 20, variance=1.0))
+    assert evaluate(book, 1) == "Increases attack speed by 10% to 30%."
+
+
+def test_an_until_cancelled_duration_stays_unresolved() -> None:
+    book = _book("Lasts $d.", _effect(0, 0), durations_ms={1: -1})
+    assert unresolved_tokens(evaluate(book, 1)) == ["$d"]
