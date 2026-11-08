@@ -17,19 +17,21 @@ _START = "app.services.scheduling.scheduler_service.start_scheduler"
 
 
 @pytest.mark.parametrize(
-    ("scheduler_enabled", "price_enabled"),
-    [(False, False), (False, True), (True, False), (True, True)],
+    ("scheduler_enabled", "price_enabled", "status_enabled"),
+    [(False, False, False), (False, True, True), (True, False, True), (True, True, False)],
 )
 def test_starts_the_enabled_job_groups(
-    monkeypatch: pytest.MonkeyPatch, scheduler_enabled: bool, price_enabled: bool,
+    monkeypatch: pytest.MonkeyPatch, scheduler_enabled: bool, price_enabled: bool, status_enabled: bool,
 ) -> None:
     monkeypatch.setattr(settings, "scheduler_enabled", scheduler_enabled)
     monkeypatch.setattr(settings, "wow_price_refresh_enabled", price_enabled)
+    monkeypatch.setattr(settings, "wow_server_status_recording_enabled", status_enabled)
     with patch(_START) as start:
         main._start_scheduler()
     start.assert_called_once()
     assert start.call_args.kwargs["source_jobs"] is scheduler_enabled
     assert start.call_args.kwargs["price_refresh"] is price_enabled
+    assert start.call_args.kwargs["server_status_recording"] is status_enabled
 
 
 def test_production_fails_loud_when_the_scheduler_cannot_start(monkeypatch: pytest.MonkeyPatch) -> None:

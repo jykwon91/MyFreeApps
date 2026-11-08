@@ -37,8 +37,8 @@ def test_single_head_is_the_latest_revision(script_directory: ScriptDirectory) -
         "Orphan heads usually mean a migration's down_revision is stale "
         "after a merge — rebase and re-point the down_revision."
     )
-    assert heads[0] == "0049", (
-        f"Expected head 0049 (WoW feature requests), "
+    assert heads[0] == "0050", (
+        f"Expected head 0050 (WoW server status history), "
         f"got {heads[0]}."
     )
 
@@ -327,3 +327,12 @@ def test_0044_down_revision_points_at_0043(
     """0044 must chain directly off 0043 (a raid's groups and planner links, after the page's web id)."""
     rev = script_directory.get_revision("0044")
     assert rev.down_revision == "0043"
+
+
+def test_0050_down_revision_points_at_0049(
+    script_directory: ScriptDirectory,
+) -> None:
+    """0050 (server status history) must chain directly off 0049 (feature requests)."""
+    rev = script_directory.get_revision("0050")
+    assert rev is not None
+    assert rev.down_revision == "0049"

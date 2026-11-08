@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/talents`, `/wow-forever/changes`)
+### WoW Forever (`/wow-forever`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/talents`, `/wow-forever/changes`, `/wow-forever/server-status`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -602,6 +602,42 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   read from the previous files before they're overwritten). Tests:
   `tests/test_wow_changes_generator.py`, `src/__tests__/wowChanges.test.ts`,
   `e2e/wow-forever-changes.spec.ts`.
+
+#### Server status (`/wow-forever/server-status`)
+
+- `pages/WowServerStatusPage.tsx`: the live section (`WowServerStatusSection`,
+  also on the hub with a link here), **Uptime history** and **Can't log in?**.
+- **Recording** (`app/services/wow/server_status/`, table
+  `wow_server_status_sample`, migration 0050): scheduler job
+  `record_wow_server_status` every 5 min + once at boot, its own switch
+  `WOW_SERVER_STATUS_RECORDING_ENABLED` (default true) — runs in serve-only
+  prod like the prices job. A row is written only on a ruleset's first
+  sighting, a status change, or as an hourly checkpoint
+  (`CHECKPOINT_INTERVAL`); a failed Blizzard call stores nothing and logs a
+  WARNING with Blizzard's error (a gap, never "down"). Two API workers both
+  run it — a per-region advisory lock makes one skip. Retention 90 days
+  (`purge_wow_server_status_history`, daily, always on). By hand:
+  `python -m app.cli record-wow-server-status`. Constants:
+  `app/core/wow_server_status.py`.
+- `GET /api/wow/server-status/history?region=` (public, both modes,
+  `max-age=60`): 7 days of points per ruleset (+ the row before the window),
+  the current streak's start (`since`, `since_exact` false = older than the
+  rows kept) and `max_gap_seconds` (1 h + 2 checks): a point older than that
+  with nothing after it is drawn as **no data**.
+- Frontend math is pure and tested (`lib/serverStatus/`: `rulesetTimeline`,
+  `uptimePercent` — recorded time only, `listOutages`, `streakLine`,
+  `formatDuration`); 24h / 7d in `?range=` (replace history). Times are in
+  the reader's time zone (`formatLocalDateTime`).
+- Login errors are hand-written in `data/serverStatus/loginErrors.ts` — our
+  own words, never copied from Blizzard / Wowhead / other sites. Search is
+  `searchLoginErrors` (words in any order, or the code's digits); each card
+  is `#err-<id>` (ids are links — never change one). Tagged Unconfirmed
+  (`PROVENANCE_DETAIL.loginHelp`: our own advice from common player reports,
+  not from Blizzard); "Official" only with a linked Blizzard article for
+  that error. Tests: `tests/test_wow_server_status_history.py`,
+  `src/__tests__/wowServerStatusHistory.test.ts`,
+  `src/__tests__/wowServerStatusPage.test.tsx`,
+  `e2e/wow-server-status-history.spec.ts`.
 
 #### In-game icons (`GameIcon`)
 
@@ -1212,6 +1248,7 @@ once on the router. This is the no-bandaid approach (see
 | `/api/wow/feature-requests/triage/*` | — | Token (`X-MGA-Triage-Token`), not a login — mounted only when `WOW_FEATURE_TRIAGE_TOKEN` is set, in BOTH modes. The one operator write surface in serve-only prod |
 | `/api/wow/map-captures` | GET, both modes (World Map locations captured in Forever) | POST import (full-auth only; prod gets captures via the committed pack) |
 | `/api/wow/prices` | GET, both modes (auction-house prices by region, refreshed by the scheduler; ETag + 10-min cache) | — |
+| `/api/wow/server-status`, `/api/wow/server-status/history` | GET, both modes (live status from Blizzard, 60-s cache; 7 days of recorded status per ruleset) | — |
 | `/api/wow/icons/{build}/{fdid}.webp` | GET, both modes (in-game icons streamed from object storage; year-long immutable cache, 404 + no-store when unpublished) | — |
 | `/api/wow/satellite/{build}/{uiMapId}.webp` | GET, both modes (World Map satellite pictures, same service and cache rules as icons) | — |
 | `/api/scheduler/*` | — | All |
@@ -1280,6 +1317,7 @@ public, or empty pages where they expected to see content.
 | `CLAUDE_FEATURE_REFINER_MODEL` | Optional | Defaults to `claude-haiku-5-5` |
 | `WOW_FEATURE_SUBMIT_RATE_LIMIT_PER_HOUR` / `_PER_DAY`, `WOW_FEATURE_VOTE_RATE_LIMIT_PER_HOUR` | Optional | Per-IP limits. Defaults 5 / 20 / 60 |
 | `WOW_FEATURE_TRIAGE_TOKEN` | Optional | `label:token,…` for the triage API. Empty = not mounted. Malformed or weak → the app refuses to boot. Same token in your local `backend/.env.triage` |
+| `WOW_SERVER_STATUS_RECORDING_ENABLED` | Optional | Default `true`. Records realm status every 5 min for the server status page's history (also in serve-only prod). `false` stops recording; the page keeps showing what's stored |
 
 **After first deploy:**
 ```bash

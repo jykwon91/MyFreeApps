@@ -33,6 +33,7 @@ export const PROVENANCE_DETAIL = {
   betaReport: "Players reported this in the beta. It hasn't been checked since launch.",
   classicRoute: "This is the Classic route or spot.",
   classicRule: "This is the Classic rule.",
+  loginHelp: "Written by us from common player reports; not from Blizzard.",
 } as const;
 
 /** The "How to read these tags" note in every WoW Forever page's footer. */

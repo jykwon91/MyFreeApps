@@ -26,6 +26,7 @@ from typing import Final
 
 import httpx
 
+from app.core.wow_server_status import RULESET_ORDER, SERVER_STATUS_REGIONS
 from app.schemas.wow.server_status import ServerRuleset, ServerStatusResponse
 
 logger = logging.getLogger(__name__)
@@ -54,13 +55,10 @@ DEFAULT_DOCUMENT_ID: Final = (
 
 OPERATION_NAME: Final = "GetRealmStatusData"
 
-# Rulesets in stable display order. Unknown extras are appended after.
-RULESET_ORDER: Final = ["normal", "pvp", "roleplay", "roleplay-pvp"]
-
 CACHE_TTL_SECONDS: Final = 60
 REQUEST_TIMEOUT_SECONDS: Final = 8.0
 
-ALLOWED_REGIONS: Final = frozenset({"us", "eu", "kr", "tw"})
+ALLOWED_REGIONS: Final = frozenset(SERVER_STATUS_REGIONS)
 
 # "PersistedQueryNotFound" or "PersistedQueryNotSupported" both mean the hash
 # is stale and we should rediscover.

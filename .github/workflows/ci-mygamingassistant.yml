@@ -86,6 +86,7 @@ jobs:
       ENABLE_CLASSIFIER: "false"
       SCHEDULER_ENABLED: "false"
       WOW_PRICE_REFRESH_ENABLED: "false"
+      WOW_SERVER_STATUS_RECORDING_ENABLED: "false"
       # Environment kept at default ("development") so the production boot
       # guards (seed user, classifier, scheduler) stay off.
 
